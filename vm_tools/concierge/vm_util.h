@@ -10,8 +10,10 @@
 #include <string>
 #include <vector>
 
+#include <base/files/file_path.h>
 #include <base/strings/string_split.h>
 #include <base/time/time.h>
+#include <brillo/process/process.h>
 #include <vm_tools/concierge/usb_control.h>
 
 namespace base {
@@ -21,8 +23,39 @@ class FilePath;
 namespace vm_tools {
 namespace concierge {
 
+class Disk {
+ public:
+  Disk(base::FilePath path, bool writable);
+  Disk(base::FilePath path, bool writable, bool sparse);
+  Disk(Disk&&);
+  virtual ~Disk();
+
+  // Gets the command line argument that needs to be passed to crosvm
+  // corresponding to this disk.
+  base::StringPairs GetCrosvmArgs() const;
+
+ private:
+  // Path to the disk image on the host.
+  base::FilePath path_;
+
+  // Whether the disk should be writable by the VM.
+  bool writable_;
+
+  // Whether the disk should allow sparse file operations (discard) by the VM.
+  base::Optional<bool> sparse_;
+
+  DISALLOW_COPY_AND_ASSIGN(Disk);
+};
+
 // Path to the crosvm binary.
 extern const char kCrosvmBin[];
+
+// Uid and gid mappings for the android data directory. This is a
+// comma-separated list of 3 values: <start of range inside the user namespace>
+// <start of range outside the user namespace> <count>. The values are taken
+// from platform2/arc/container-bundle/pi/config.json.
+extern const char kAndroidUidMap[];
+extern const char kAndroidGidMap[];
 
 // Calculates the amount of memory to give the virtual machine. Currently
 // configured to provide 75% of system memory. This is deliberately over
@@ -51,8 +84,8 @@ bool CheckProcessExists(pid_t pid);
 // Runs a crosvm subcommand.
 void RunCrosvmCommand(std::string command, std::string socket_path);
 
-// Attaches an usb device at host |bus|:|addr|, with |vid|, |pid| and an opened
-// |fd|.
+// Attaches an usb device at host |bus|:|addr|, with |vid|, |pid| and an
+// opened |fd|.
 bool AttachUsbDevice(std::string socket_path,
                      uint8_t bus,
                      uint8_t addr,
@@ -82,12 +115,18 @@ bool UpdateCpuShares(const base::FilePath& cpu_cgroup, int cpu_shares);
 // for the list of supported directives.
 void LoadCustomParameters(const std::string& data, base::StringPairs* args);
 
-// Removes all parameters with |key| from |args|. If it exists, the value of its
-// last occurence in |args| will be returned. Otherwise, |default_value| will be
-// returned.
+// Removes all parameters with |key| from |args|. If it exists, the value of
+// its last occurrence in |args| will be returned. Otherwise, |default_value|
+// will be returned.
 std::string RemoveParametersWithKey(const std::string& key,
                                     const std::string& default_value,
                                     base::StringPairs* args);
+
+// Creates shared data parameter for crovm.
+std::string CreateSharedDataParam(const base::FilePath& data_dir,
+                                  const std::string& tag,
+                                  bool enable_caches,
+                                  bool ascii_casefold);
 
 }  // namespace concierge
 }  // namespace vm_tools

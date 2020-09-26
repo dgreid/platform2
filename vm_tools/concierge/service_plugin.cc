@@ -228,13 +228,22 @@ std::unique_ptr<dbus::Response> Service::StartPluginVm(
   VmId vm_id(request.owner_id(), request.name());
   SendVmStartingUpSignal(vm_id, *vm_info);
 
-  std::unique_ptr<PluginVm> vm = PluginVm::Create(
-      vm_id, request.cpus(), std::move(params), std::move(stateful_dir),
-      std::move(iso_dir), root_dir.Take(), runtime_dir.Take(),
-      std::move(network_client), request.subnet_index(),
+  VmBuilder vm_builder;
+  vm_builder.SetCpus(request.cpus());
+  for (auto& param : params) {
+    // Because additional parameters may start with a '--', we should use
+    // --params=<Param> instead of --params <Param> to make explicit <Param>
+    // is a parameter for the plugin rather than just another parameter to
+    // the crosvm process.
+    vm_builder.AppendCustomParam(std::string("--params=") + param, "");
+  }
+
+  auto vm = PluginVm::Create(
+      vm_id, std::move(stateful_dir), std::move(iso_dir), root_dir.Take(),
+      runtime_dir.Take(), std::move(network_client), request.subnet_index(),
       request.net_options().enable_vnet_hdr(),
       std::move(seneschal_server_proxy), vm_permission_service_proxy_,
-      vmplugin_service_proxy_);
+      vmplugin_service_proxy_, std::move(vm_builder));
   if (!vm) {
     LOG(ERROR) << "Unable to start VM";
     response.set_failure_reason("Unable to start VM");

@@ -30,8 +30,13 @@
 namespace vm_tools {
 namespace concierge {
 
-// Path to the crosvm binary.
 const char kCrosvmBin[] = "/usr/bin/crosvm";
+
+const char kAndroidUidMap[] = "0 655360 5000,5000 600 50,5050 660410 1994950";
+
+const char kAndroidGidMap[] =
+    "0 655360 1065,1065 20119 1,1066 656426 3934,5000 600 50,5050 660410 "
+    "1994950";
 
 namespace {
 
@@ -140,6 +145,34 @@ bool CallUsbControl(brillo::ProcessImpl crosvm, UsbControlResponse* response) {
 }
 
 }  // namespace
+
+Disk::Disk(base::FilePath path, bool writable)
+    : path_(std::move(path)), writable_(writable) {}
+
+Disk::Disk(base::FilePath path, bool writable, bool sparse)
+    : path_(std::move(path)), writable_(writable), sparse_(sparse) {}
+
+Disk::Disk(Disk&&) = default;
+
+base::StringPairs Disk::GetCrosvmArgs() const {
+  std::string first;
+  if (writable_)
+    first = "--rwdisk";
+  else
+    first = "--disk";
+
+  std::string sparse_arg;
+  if (sparse_) {
+    std::string boolean = sparse_.value() ? "true" : "false";
+    sparse_arg = ",sparse=" + boolean;
+  }
+
+  std::string second = path_.value() + sparse_arg;
+  base::StringPairs result = {{std::move(first), std::move(second)}};
+  return result;
+}
+
+Disk::~Disk() = default;
 
 std::string GetVmMemoryMiB() {
   int64_t sys_memory_mb = base::SysInfo::AmountOfPhysicalMemoryMB();
@@ -378,6 +411,20 @@ std::string RemoveParametersWithKey(const std::string& key,
                   [&key](const auto& pair) { return pair.first == key; });
   }
   return target_value;
+}
+
+std::string CreateSharedDataParam(const base::FilePath& data_dir,
+                                  const std::string& tag,
+                                  bool enable_caches,
+                                  bool ascii_casefold) {
+  // TODO(b/169446394): Go back to using "never" when caching is disabled
+  // once we can switch /data/media to use 9p.
+  return base::StringPrintf(
+      "%s:%s:type=fs:cache=%s:uidmap=%s:gidmap=%s:timeout=%d:rewrite-"
+      "security-xattrs=true:ascii_casefold=%s:writeback=%s",
+      data_dir.value().c_str(), tag.c_str(), enable_caches ? "always" : "auto",
+      kAndroidUidMap, kAndroidGidMap, enable_caches ? 3600 : 1,
+      ascii_casefold ? "true" : "false", enable_caches ? "true" : "false");
 }
 
 }  // namespace concierge

@@ -24,6 +24,7 @@
 
 #include "vm_tools/concierge/plugin_vm_helper.h"
 #include "vm_tools/concierge/tap_device_builder.h"
+#include "vm_tools/concierge/vm_builder.h"
 #include "vm_tools/concierge/vm_permission_interface.h"
 #include "vm_tools/concierge/vm_util.h"
 #include "vm_tools/concierge/vmplugin_dispatcher_interface.h"
@@ -112,8 +113,6 @@ void TrySuspendVm(dbus::ObjectProxy* vmplugin_service_proxy, const VmId& id) {
 // static
 std::unique_ptr<PluginVm> PluginVm::Create(
     VmId id,
-    uint32_t cpus,
-    std::vector<string> params,
     base::FilePath stateful_dir,
     base::FilePath iso_dir,
     base::FilePath root_dir,
@@ -123,15 +122,17 @@ std::unique_ptr<PluginVm> PluginVm::Create(
     bool enable_vnet_hdr,
     std::unique_ptr<SeneschalServerProxy> seneschal_server_proxy,
     dbus::ObjectProxy* vm_permission_service_proxy,
-    dbus::ObjectProxy* vmplugin_service_proxy) {
-  auto vm = base::WrapUnique(new PluginVm(
-      std::move(id), std::move(network_client), subnet_index, enable_vnet_hdr,
+    dbus::ObjectProxy* vmplugin_service_proxy,
+    VmBuilder vm_builder) {
+  auto vm = std::unique_ptr<PluginVm>(new PluginVm(
+      std::move(id), std::move(network_client),
       std::move(seneschal_server_proxy), vm_permission_service_proxy,
       vmplugin_service_proxy, std::move(iso_dir), std::move(root_dir),
       std::move(runtime_dir)));
 
   if (!vm->CreateUsbListeningSocket() ||
-      !vm->Start(cpus, std::move(params), std::move(stateful_dir))) {
+      !vm->Start(std::move(stateful_dir), subnet_index, enable_vnet_hdr,
+                 std::move(vm_builder))) {
     vm.reset();
   }
 
@@ -628,20 +629,17 @@ void PluginVm::VmToolsStateChanged(bool running) {
 
 PluginVm::PluginVm(VmId id,
                    std::unique_ptr<patchpanel::Client> network_client,
-                   int subnet_index,
-                   bool enable_vnet_hdr,
                    std::unique_ptr<SeneschalServerProxy> seneschal_server_proxy,
                    dbus::ObjectProxy* vm_permission_service_proxy,
                    dbus::ObjectProxy* vmplugin_service_proxy,
                    base::FilePath iso_dir,
                    base::FilePath root_dir,
                    base::FilePath runtime_dir)
-    : VmBaseImpl(std::move(network_client)),
+    : VmBaseImpl(std::move(network_client),
+                 std::move(seneschal_server_proxy),
+                 std::move(runtime_dir)),
       id_(std::move(id)),
       iso_dir_(std::move(iso_dir)),
-      subnet_index_(subnet_index),
-      enable_vnet_hdr_(enable_vnet_hdr),
-      seneschal_server_proxy_(std::move(seneschal_server_proxy)),
       vm_permission_service_proxy_(vm_permission_service_proxy),
       vmplugin_service_proxy_(vmplugin_service_proxy),
       usb_last_handle_(0) {
@@ -649,20 +647,19 @@ PluginVm::PluginVm(VmId id,
   CHECK(vmplugin_service_proxy_);
   CHECK(base::DirectoryExists(iso_dir_));
   CHECK(base::DirectoryExists(root_dir));
-  CHECK(base::DirectoryExists(runtime_dir));
 
   // Take ownership of the root and runtime directories.
   CHECK(root_dir_.Set(root_dir));
-  CHECK(runtime_dir_.Set(runtime_dir));
 
   std::ostringstream oss;
   oss << id_;
   id_hash_ = std::hash<std::string>{}(oss.str());
 }
 
-bool PluginVm::Start(uint32_t cpus,
-                     std::vector<string> params,
-                     base::FilePath stateful_dir) {
+bool PluginVm::Start(base::FilePath stateful_dir,
+                     int subnet_index,
+                     bool enable_vnet_hdr,
+                     VmBuilder vm_builder) {
   if (!pvm::helper::IsDlcVm()) {
     LOG(ERROR) << "PluginVM DLC is not installed.";
     return false;
@@ -679,7 +676,7 @@ bool PluginVm::Start(uint32_t cpus,
 
   // Get the network interface.
   patchpanel::NetworkDevice network_device;
-  if (!network_client_->NotifyPluginVmStartup(id_hash_, subnet_index_,
+  if (!network_client_->NotifyPluginVmStartup(id_hash_, subnet_index,
                                               &network_device)) {
     LOG(ERROR) << "No network devices available";
     return false;
@@ -688,7 +685,7 @@ bool PluginVm::Start(uint32_t cpus,
 
   // Open the tap device.
   base::ScopedFD tap_fd = OpenTapDevice(
-      network_device.ifname(), enable_vnet_hdr_, nullptr /*ifname_out*/);
+      network_device.ifname(), enable_vnet_hdr, nullptr /*ifname_out*/);
   if (!tap_fd.is_valid()) {
     LOG(ERROR) << "Unable to open and configure TAP device "
                << network_device.ifname();
@@ -698,19 +695,11 @@ bool PluginVm::Start(uint32_t cpus,
   auto plugin_bin_path = base::FilePath(kPluginDlcDir).Append(kPluginBin);
   auto plugin_policy_dir =
       base::FilePath(kPluginDlcDir).Append(kPluginPolicyDir);
-  // Build up the process arguments.
-  // clang-format off
-  std::vector<string> args = {
-    kCrosvmBin,                 "run",
-    "--cpus",                   std::to_string(cpus),
-    "--tap-fd",                 std::to_string(tap_fd.get()),
-    "--plugin",                 plugin_bin_path.value(),
-    "--seccomp-policy-dir",     plugin_policy_dir.value(),
-    "--plugin-gid-map-file",    plugin_bin_path
-                                    .AddExtension("gid_maps")
-                                    .value(),
-  };
-  // clang-format on
+  vm_builder.AppendTapFd(std::move(tap_fd))
+      .AppendCustomParam("--plugin", plugin_bin_path.value())
+      .AppendCustomParam("--seccomp-policy-dir", plugin_policy_dir.value())
+      .AppendCustomParam("--plugin-gid-map-file",
+                         plugin_bin_path.AddExtension("gid_maps").value());
 
   // These are bind mounts with parts may change (i.e. they are either VM
   // or config specific).
@@ -754,29 +743,14 @@ bool PluginVm::Start(uint32_t cpus,
   // can be leveraged.
   bind_mounts.push_back(
       base::StringPrintf("%s:%s:false", kPluginDlcDir, kPluginDlcDir));
-
-  // Put everything into the brillo::ProcessImpl.
-  for (auto& arg : args) {
-    process_.AddArg(std::move(arg));
-  }
-
-  for (auto& mount : bind_mounts) {
-    process_.AddArg("--plugin-mount");
-    process_.AddArg(std::move(mount));
-  }
+  for (auto& mount : bind_mounts)
+    vm_builder.AppendCustomParam("--plugin-mount", std::move(mount));
 
   // Because some of the static paths are mounted in /run/pvm... in the
   // plugin jail, they have to come after the dynamic paths above.
-  process_.AddArg("--plugin-mount-file");
-  process_.AddArg(plugin_bin_path.AddExtension("bind_mounts").value());
-
-  for (auto& param : params) {
-    // Because additional parameters may start with a '--', we should use
-    // --params=<Param> instead of --params <Param> to make explicit <Param>
-    // is a parameter for the plugin rather than just another parameter to
-    // the crosvm process.
-    process_.AddArg(std::string("--params=") + param);
-  }
+  vm_builder.AppendCustomParam(
+      "--plugin-mount-file",
+      plugin_bin_path.AddExtension("bind_mounts").value());
 
   // Change the process group before exec so that crosvm sending SIGKILL to
   // the whole process group doesn't kill us as well. The function also
@@ -784,7 +758,7 @@ bool PluginVm::Start(uint32_t cpus,
   process_.SetPreExecCallback(base::Bind(
       &SetUpCrosvmProcess, base::FilePath(kPluginVmCpuCgroup).Append("tasks")));
 
-  if (!process_.Start()) {
+  if (!StartProcess(vm_builder.BuildVmArgs())) {
     LOG(ERROR) << "Failed to start VM process";
     return false;
   }

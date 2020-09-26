@@ -25,6 +25,8 @@
 
 #include "vm_tools/concierge/seneschal_server_proxy.h"
 #include "vm_tools/concierge/vm_base_impl.h"
+#include "vm_tools/concierge/vm_builder.h"
+#include "vm_tools/concierge/vm_util.h"
 #include "vm_tools/concierge/vsock_cid_pool.h"
 
 namespace vm_tools {
@@ -53,18 +55,6 @@ class TerminaVm final : public VmBaseImpl {
     QCOW2,
   };
 
-  // Describes a disk image to be mounted inside the VM.
-  struct Disk {
-    // Path to the disk image on the host.
-    base::FilePath path;
-
-    // Whether the disk should be writable by the VM.
-    bool writable;
-
-    // Whether the disk should allow sparse file operations (discard) by the VM.
-    bool sparse;
-  };
-
   enum class DiskResizeType {
     NONE,
     EXPAND,
@@ -74,22 +64,17 @@ class TerminaVm final : public VmBaseImpl {
   // Starts a new virtual machine.  Returns nullptr if the virtual machine
   // failed to start for any reason.
   static std::unique_ptr<TerminaVm> Create(
-      base::FilePath kernel,
-      base::FilePath initrd,
-      base::FilePath rootfs,
-      int32_t cpus,
-      std::vector<Disk> disks,
       uint32_t vsock_cid,
       std::unique_ptr<patchpanel::Client> network_client,
       std::unique_ptr<SeneschalServerProxy> seneschal_server_proxy,
       base::FilePath runtime_dir,
       base::FilePath log_path,
       base::FilePath gpu_cache_path,
-      std::string rootfs_device,
       std::string stateful_device,
       uint64_t stateful_size,
       VmFeatures features,
-      bool is_termina);
+      bool is_termina,
+      VmBuilder vm_builder);
   ~TerminaVm() override;
 
   // Configures the network interfaces inside the VM.  Returns true iff
@@ -144,17 +129,6 @@ class TerminaVm final : public VmBaseImpl {
   // The VM's cid.
   uint32_t cid() const { return vsock_cid_; }
 
-  // The 9p server managed by seneschal that provides access to shared files for
-  // this VM.  Returns 0 if there is no seneschal server associated with this
-  // VM.
-  uint32_t seneschal_server_handle() const {
-    if (seneschal_server_proxy_) {
-      return seneschal_server_proxy_->handle();
-    }
-
-    return 0;
-  }
-
   // The IPv4 address of the VM's gateway in network byte order.
   uint32_t GatewayAddress() const;
 
@@ -175,9 +149,6 @@ class TerminaVm final : public VmBaseImpl {
   // The first address in the VM's container subnet in network byte order.
   // Returns INADDR_ANY if there is no container subnet.
   uint32_t ContainerSubnet() const;
-
-  // Name of the guest block device for the rootfs (e.g. /dev/vda, /dev/pmem0).
-  std::string RootfsDevice() const { return rootfs_device_; }
 
   // Name of the guest block device for the stateful filesystem (e.g. /dev/vdb).
   std::string StatefulDevice() const { return stateful_device_; }
@@ -222,12 +193,12 @@ class TerminaVm final : public VmBaseImpl {
       base::FilePath runtime_dir,
       base::FilePath log_path,
       base::FilePath gpu_cache_path,
-      std::string rootfs_device,
       std::string stateful_device,
       uint64_t stateful_size,
       std::string kernel_version,
       std::unique_ptr<vm_tools::Maitred::Stub> stub,
-      bool is_termina);
+      bool is_termina,
+      VmBuilder vm_builder);
 
  private:
   TerminaVm(uint32_t vsock_cid,
@@ -236,7 +207,6 @@ class TerminaVm final : public VmBaseImpl {
             base::FilePath runtime_dir,
             base::FilePath log_path,
             base::FilePath gpu_cache_path,
-            std::string rootfs_device,
             std::string stateful_device,
             uint64_t stateful_size,
             VmFeatures features,
@@ -249,11 +219,11 @@ class TerminaVm final : public VmBaseImpl {
             base::FilePath runtime_dir,
             base::FilePath log_path,
             base::FilePath gpu_cache_path,
-            std::string rootfs_device,
             std::string stateful_device,
             uint64_t stateful_size,
             VmFeatures features,
             bool is_termina);
+
   void HandleSuspendImminent() override;
   void HandleSuspendDone() override;
   // Returns the path to the VM control socket.
@@ -267,11 +237,7 @@ class TerminaVm final : public VmBaseImpl {
                               std::string console_type) const;
 
   // Starts the VM with the given kernel and root file system.
-  bool Start(base::FilePath kernel,
-             base::FilePath initrd,
-             base::FilePath rootfs,
-             int32_t cpus,
-             std::vector<Disk> disks);
+  bool Start(VmBuilder vm_builder);
 
   // Runs a crosvm subcommend.
   void RunCrosvmCommand(std::string command);
@@ -291,14 +257,8 @@ class TerminaVm final : public VmBaseImpl {
   // An optional /28 container subnet.
   std::unique_ptr<patchpanel::Subnet> container_subnet_;
 
-  // Virtual socket context id to be used when communicating with this VM.
-  uint32_t vsock_cid_;
-
   // Termina network device.
   patchpanel::NetworkDevice network_device_;
-
-  // Proxy to the server providing shared directory access for this VM.
-  std::unique_ptr<SeneschalServerProxy> seneschal_server_proxy_;
 
   // Flags passed to vmc start.
   VmFeatures features_;
@@ -311,9 +271,6 @@ class TerminaVm final : public VmBaseImpl {
 
   // Kernel version retrieved at startup.
   std::string kernel_version_;
-
-  // Rootfs device name.
-  std::string rootfs_device_;
 
   // Stateful device name.
   std::string stateful_device_;

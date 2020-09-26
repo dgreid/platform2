@@ -72,6 +72,7 @@
 #include "vm_tools/concierge/seneschal_server_proxy.h"
 #include "vm_tools/concierge/shared_data.h"
 #include "vm_tools/concierge/ssh_keys.h"
+#include "vm_tools/concierge/vm_builder.h"
 #include "vm_tools/concierge/vm_permission_interface.h"
 #include "vm_tools/concierge/vmplugin_dispatcher_interface.h"
 
@@ -1155,17 +1156,15 @@ std::unique_ptr<dbus::Response> Service::StartVm(
                   USE_PMEM_DEVICE_FOR_ROOTFS;
   string rootfs_device = use_pmem ? "/dev/pmem0" : "/dev/vda";
   unsigned char disk_letter = use_pmem ? 'a' : 'b';
-  std::vector<TerminaVm::Disk> disks;
+  std::vector<Disk> disks;
 
   // In newer components, the /opt/google/cros-containers directory
   // is split into its own disk image(vm_tools.img).  Detect whether it exists
   // to keep compatibility with older components with only vm_rootfs.img.
   string tools_device;
   if (base::PathExists(image_spec.tools_disk)) {
-    disks.push_back(TerminaVm::Disk{
-        .path = std::move(image_spec.tools_disk),
-        .writable = false,
-    });
+    disks.push_back(
+        Disk(std::move(image_spec.tools_disk), false /* writable */));
     tools_device = base::StringPrintf("/dev/vd%c", disk_letter++);
   }
 
@@ -1197,11 +1196,8 @@ std::unique_ptr<dbus::Response> Service::StartVm(
       return dbus_response;
     }
 
-    disks.push_back(TerminaVm::Disk{
-        .path = base::FilePath(disk.path()),
-        .writable = disk.writable(),
-        .sparse = !IsDiskUserChosenSize(disk.path()),
-    });
+    disks.push_back(Disk(base::FilePath(disk.path()), disk.writable(),
+                         !IsDiskUserChosenSize(disk.path())));
   }
 
   // Check if an opened storage image was passed over D-BUS.
@@ -1227,11 +1223,9 @@ std::unique_ptr<dbus::Response> Service::StartVm(
       return dbus_response;
     }
 
-    disks.push_back(TerminaVm::Disk{
-        .path = base::FilePath(kProcFileDescriptorsPath)
-                    .Append(base::NumberToString(raw_fd)),
-        .writable = true,
-    });
+    disks.push_back(Disk(base::FilePath(kProcFileDescriptorsPath)
+                             .Append(base::NumberToString(raw_fd)),
+                         true /* writable */));
   }
 
   // Create the runtime directory.
@@ -1325,13 +1319,19 @@ std::unique_ptr<dbus::Response> Service::StartVm(
   VmId vm_id(request.owner_id(), request.name());
   SendVmStartingUpSignal(vm_id, *vm_info);
 
+  VmBuilder vm_builder;
+  vm_builder.SetKernel(std::move(image_spec.kernel))
+      .SetInitrd(std::move(image_spec.initrd))
+      .SetRootfs({.device = std::move(rootfs_device),
+                  .path = std::move(image_spec.rootfs)})
+      .SetCpus(cpus)
+      .AppendDisks(std::move(disks))
+      .EnableSmt(false /* enable */);
   auto vm = TerminaVm::Create(
-      std::move(image_spec.kernel), std::move(image_spec.initrd),
-      std::move(image_spec.rootfs), cpus, std::move(disks), vsock_cid,
-      std::move(network_client), std::move(server_proxy),
+      vsock_cid, std::move(network_client), std::move(server_proxy),
       std::move(runtime_dir), std::move(log_path), std::move(gpu_cache_path),
-      std::move(rootfs_device), std::move(stateful_device),
-      std::move(stateful_size), features, request.start_termina());
+      std::move(stateful_device), std::move(stateful_size), features,
+      request.start_termina(), std::move(vm_builder));
   if (!vm) {
     LOG(ERROR) << "Unable to start VM";
 

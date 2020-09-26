@@ -30,6 +30,7 @@
 #include <vboot/crossystem.h>
 
 #include "vm_tools/concierge/tap_device_builder.h"
+#include "vm_tools/concierge/vm_builder.h"
 #include "vm_tools/concierge/vm_util.h"
 
 namespace vm_tools {
@@ -66,16 +67,6 @@ constexpr char kMediaSharedDirTag[] = "media";
 
 constexpr char kTestHarnessSharedDir[] = "/run/arcvm/testharness";
 constexpr char kTestHarnessSharedDirTag[] = "testharness";
-
-// Uid and gid mappings for the android data directory. This is a
-// comma-separated list of 3 values: <start of range inside the user namespace>
-// <start of range outside the user namespace> <count>. The values are taken
-// from platform2/arc/container-bundle/pi/config.json.
-constexpr char kAndroidUidMap[] =
-    "0 655360 5000,5000 600 50,5050 660410 1994950";
-constexpr char kAndroidGidMap[] =
-    "0 655360 1065,1065 20119 1,1066 656426 3934,5000 600 50,5050 660410 "
-    "1994950";
 
 // For |kOemEtcSharedDir|, map host's chronos to guest's root, also arc-camera
 // (603) to vendor_arc_camera (5003).
@@ -124,20 +115,6 @@ bool ShutdownArcVm(int cid) {
   return true;
 }
 
-std::string CreateSharedDataParam(const base::FilePath& data_dir,
-                                  const std::string& tag,
-                                  bool enable_caches,
-                                  bool ascii_casefold) {
-  // TODO(b/169446394): Go back to using "never" when caching is disabled once
-  // we can switch /data/media to use 9p.
-  return base::StringPrintf(
-      "%s:%s:type=fs:cache=%s:uidmap=%s:gidmap=%s:timeout=%d:rewrite-"
-      "security-xattrs=true:ascii_casefold=%s:writeback=%s",
-      data_dir.value().c_str(), tag.c_str(), enable_caches ? "always" : "auto",
-      kAndroidUidMap, kAndroidGidMap, enable_caches ? 3600 : 1,
-      ascii_casefold ? "true" : "false", enable_caches ? "true" : "false");
-}
-
 }  // namespace
 
 ArcVm::ArcVm(int32_t vsock_cid,
@@ -145,15 +122,12 @@ ArcVm::ArcVm(int32_t vsock_cid,
              std::unique_ptr<SeneschalServerProxy> seneschal_server_proxy,
              base::FilePath runtime_dir,
              ArcVmFeatures features)
-    : VmBaseImpl(std::move(network_client)),
-      vsock_cid_(vsock_cid),
-      seneschal_server_proxy_(std::move(seneschal_server_proxy)),
-      features_(features) {
-  CHECK(base::DirectoryExists(runtime_dir));
-
-  // Take ownership of the runtime directory.
-  CHECK(runtime_dir_.Set(runtime_dir));
-}
+    : VmBaseImpl(std::move(network_client),
+                 vsock_cid,
+                 std::move(seneschal_server_proxy),
+                 kCrosvmSocket,
+                 std::move(runtime_dir)),
+      features_(features) {}
 
 ArcVm::~ArcVm() {
   Shutdown();
@@ -161,26 +135,17 @@ ArcVm::~ArcVm() {
 
 std::unique_ptr<ArcVm> ArcVm::Create(
     base::FilePath kernel,
-    base::FilePath rootfs,
-    base::FilePath fstab,
-    uint32_t cpus,
-    base::FilePath pstore_path,
-    uint32_t pstore_size,
-    std::vector<ArcVm::Disk> disks,
     uint32_t vsock_cid,
-    base::FilePath data_dir,
     std::unique_ptr<patchpanel::Client> network_client,
     std::unique_ptr<SeneschalServerProxy> seneschal_server_proxy,
     base::FilePath runtime_dir,
     ArcVmFeatures features,
-    std::vector<std::string> params) {
-  auto vm = base::WrapUnique(new ArcVm(vsock_cid, std::move(network_client),
-                                       std::move(seneschal_server_proxy),
-                                       std::move(runtime_dir), features));
+    VmBuilder vm_builder) {
+  auto vm = std::unique_ptr<ArcVm>(new ArcVm(
+      vsock_cid, std::move(network_client), std::move(seneschal_server_proxy),
+      std::move(runtime_dir), features));
 
-  if (!vm->Start(std::move(kernel), std::move(rootfs), std::move(fstab), cpus,
-                 std::move(pstore_path), pstore_size, std::move(disks),
-                 std::move(data_dir), std::move(params))) {
+  if (!vm->Start(std::move(kernel), std::move(vm_builder))) {
     vm.reset();
   }
 
@@ -191,15 +156,7 @@ std::string ArcVm::GetVmSocketPath() const {
   return runtime_dir_.GetPath().Append(kCrosvmSocket).value();
 }
 
-bool ArcVm::Start(base::FilePath kernel,
-                  base::FilePath rootfs,
-                  base::FilePath fstab,
-                  uint32_t cpus,
-                  base::FilePath pstore_path,
-                  uint32_t pstore_size,
-                  std::vector<ArcVm::Disk> disks,
-                  base::FilePath data_dir,
-                  std::vector<std::string> params) {
+bool ArcVm::Start(base::FilePath kernel, VmBuilder vm_builder) {
   // Get the available network interfaces.
   network_devices_ = network_client_->NotifyArcVmStartup(vsock_cid_);
   if (network_devices_.empty()) {
@@ -208,90 +165,58 @@ bool ArcVm::Start(base::FilePath kernel,
   }
 
   // Open the tap device(s).
-  std::vector<base::ScopedFD> tap_fds;
+  bool no_tap_fd_added = true;
   for (const auto& dev : network_devices_) {
     auto fd =
         OpenTapDevice(dev.ifname(), true /*vnet_hdr*/, nullptr /*ifname_out*/);
     if (!fd.is_valid()) {
       LOG(ERROR) << "Unable to open and configure TAP device " << dev.ifname();
     } else {
-      tap_fds.emplace_back(std::move(fd));
+      vm_builder.AppendTapFd(std::move(fd));
+      no_tap_fd_added = false;
     }
   }
-  if (tap_fds.empty()) {
+
+  if (no_tap_fd_added) {
     LOG(ERROR) << "No TAP devices available";
     return false;
   }
 
-  const std::string rootfs_flag = rootfs_writable() ? "--rwdisk" : "--disk";
+  if (USE_CROSVM_WL_DMABUF)
+    vm_builder.EnableWaylandDmaBuf(true /* enable */);
+
+  if (USE_CROSVM_VIRTIO_VIDEO) {
+    vm_builder.EnableVideoDecoder(true /* enable */);
+    vm_builder.EnableVideoEncoder(true /* enable */);
+  }
 
   std::string oem_etc_shared_dir = base::StringPrintf(
       "%s:%s:type=fs:cache=always:uidmap=%s:gidmap=%s:timeout=3600:rewrite-"
       "security-xattrs=true",
       kOemEtcSharedDir, kOemEtcSharedDirTag, kOemEtcUgidMap, kOemEtcUgidMap);
-
-  std::string shared_data =
-      CreateSharedDataParam(data_dir, "_data", true, false);
-  std::string shared_data_media =
-      CreateSharedDataParam(data_dir, "_data_media", false, true);
-
   std::string shared_media = base::StringPrintf(
       "%s:%s:type=9p:cache=never:uidmap=%s:gidmap=%s:ascii_casefold=true",
       kMediaSharedDir, kMediaSharedDirTag, kAndroidUidMap, kAndroidGidMap);
-
   const base::FilePath testharness_dir(kTestHarnessSharedDir);
   std::string shared_testharness = CreateSharedDataParam(
       testharness_dir, kTestHarnessSharedDirTag, true, false);
 
-  // Build up the process arguments.
-  // clang-format off
-  base::StringPairs args = {
-    { kCrosvmBin,          "run" },
-    { "--cpus",            std::to_string(cpus) },
-    { "--mem",             GetVmMemoryMiB() },
-    { rootfs_flag,         rootfs.value() },
-    { "--cid",             std::to_string(vsock_cid_) },
-    { "--socket",          GetVmSocketPath() },
-    { "--gpu",             "" },
-    { "--wayland-sock",    kWaylandSocket },
-    { "--wayland-sock",    "/run/arcvm/mojo/mojo-proxy.sock,name=mojo" },
-    { "--syslog-tag",      base::StringPrintf("ARCVM(%u)", vsock_cid_) },
-    { "--ac97",            "backend=cras,capture=true" },
-    // Second AC97 for the aaudio path.
-    { "--ac97",            "backend=cras,capture=true" },
-    { "--android-fstab",   fstab.value() },
-    { "--pstore",          base::StringPrintf("path=%s,size=%d",
-                              pstore_path.value().c_str(), pstore_size) },
-    { "--shared-dir",     std::move(oem_etc_shared_dir) },
-    { "--shared-dir",     std::move(shared_data) },
-    { "--shared-dir",     std::move(shared_data_media) },
-    { "--shared-dir",     std::move(shared_media) },
-    { "--shared-dir",     std::move(shared_testharness) },
-    { "--no-smt",         "" },
-    { "--params",         base::JoinString(params, " ") },
-  };
-  // clang-format on
+  vm_builder.SetMemory(GetVmMemoryMiB())
+      .SetVsockCid(vsock_cid_)
+      .SetSocketPath(GetVmSocketPath())
+      .AppendWaylandSocket(kWaylandSocket)
+      .AppendWaylandSocket("/run/arcvm/mojo/mojo-proxy.sock,name=mojo")
+      .SetSyslogTag(base::StringPrintf("ARCVM(%u)", vsock_cid_))
+      .EnableGpu(true /* enable */)
+      .EnableVideoDecoder(true /* enable */)
+      .AppendAudioDevice("backend=cras,capture=true")
+      // Second AC97 for the audio path.
+      .AppendAudioDevice("backend=cras,capture=true")
+      .AppendSharedDir(oem_etc_shared_dir)
+      .AppendSharedDir(shared_media)
+      .AppendSharedDir(shared_testharness);
 
-  if (USE_CROSVM_WL_DMABUF)
-    args.emplace_back("--wayland-dmabuf", "");
-
-  if (USE_CROSVM_VIRTIO_VIDEO) {
-    args.emplace_back("--video-decoder", "");
-    args.emplace_back("--video-encoder", "");
-  }
-
-  for (const auto& fd : tap_fds) {
-    args.emplace_back("--tap-fd", std::to_string(fd.get()));
-  }
-
-  // Add any extra disks.
-  for (const auto& disk : disks) {
-    if (disk.writable) {
-      args.emplace_back("--rwdisk", disk.path.value());
-    } else {
-      args.emplace_back("--disk", disk.path.value());
-    }
-  }
+  auto args = vm_builder.BuildVmArgs();
 
   // Load any custom parameters from the development configuration file if the
   // feature is turned on (default) and path exists (dev mode only).
@@ -322,20 +247,13 @@ bool ArcVm::Start(base::FilePath kernel,
       RemoveParametersWithKey(kKeyToOverrideKernelPath, kernel.value(), &args);
   args.emplace_back(kernel_path, "");
 
-  // Put everything into the brillo::ProcessImpl.
-  for (std::pair<std::string, std::string>& arg : args) {
-    process_.AddArg(std::move(arg.first));
-    if (!arg.second.empty())
-      process_.AddArg(std::move(arg.second));
-  }
-
   // Change the process group before exec so that crosvm sending SIGKILL to the
   // whole process group doesn't kill us as well. The function also changes the
   // cpu cgroup for ARCVM's crosvm processes.
   process_.SetPreExecCallback(base::Bind(
       &SetUpCrosvmProcess, base::FilePath(kArcvmCpuCgroup).Append("tasks")));
 
-  if (!process_.Start()) {
+  if (!StartProcess(std::move(args))) {
     LOG(ERROR) << "Failed to start VM process";
     // Release any network resources.
     network_client_->NotifyArcVmShutdown(vsock_cid_);
@@ -377,7 +295,7 @@ bool ArcVm::Shutdown() {
 
   LOG(WARNING) << "Failed to shut down ARCVM gracefully. Trying to turn it "
                << "down via the crosvm socket.";
-  RunCrosvmCommand("stop", GetVmSocketPath());
+  RunCrosvmCommand("stop");
 
   // We can't actually trust the exit codes that crosvm gives us so just see if
   // it exited.
@@ -426,11 +344,11 @@ bool ArcVm::ListUsbDevice(std::vector<UsbDevice>* devices) {
 }
 
 void ArcVm::HandleSuspendImminent() {
-  RunCrosvmCommand("suspend", GetVmSocketPath());
+  RunCrosvmCommand("suspend");
 }
 
 void ArcVm::HandleSuspendDone() {
-  RunCrosvmCommand("resume", GetVmSocketPath());
+  RunCrosvmCommand("resume");
 }
 
 // static

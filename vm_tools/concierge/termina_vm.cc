@@ -30,6 +30,7 @@
 #include <chromeos/constants/vm_tools.h>
 
 #include "vm_tools/concierge/tap_device_builder.h"
+#include "vm_tools/concierge/vm_builder.h"
 #include "vm_tools/concierge/vm_util.h"
 
 using std::string;
@@ -94,27 +95,22 @@ TerminaVm::TerminaVm(
     base::FilePath runtime_dir,
     base::FilePath log_path,
     base::FilePath gpu_cache_path,
-    std::string rootfs_device,
     std::string stateful_device,
     uint64_t stateful_size,
     VmFeatures features,
     bool is_termina)
-    : VmBaseImpl(std::move(network_client)),
-      vsock_cid_(vsock_cid),
-      seneschal_server_proxy_(std::move(seneschal_server_proxy)),
+    : VmBaseImpl(std::move(network_client),
+                 vsock_cid,
+                 std::move(seneschal_server_proxy),
+                 kCrosvmSocket,
+                 std::move(runtime_dir)),
       features_(features),
-      rootfs_device_(rootfs_device),
       stateful_device_(stateful_device),
       stateful_size_(stateful_size),
       stateful_resize_type_(DiskResizeType::NONE),
       log_path_(std::move(log_path)),
       gpu_cache_path_(std::move(gpu_cache_path)),
-      is_termina_(is_termina) {
-  CHECK(base::DirectoryExists(runtime_dir));
-
-  // Take ownership of the runtime directory.
-  CHECK(runtime_dir_.Set(runtime_dir));
-}
+      is_termina_(is_termina) {}
 
 // For testing.
 TerminaVm::TerminaVm(
@@ -124,17 +120,17 @@ TerminaVm::TerminaVm(
     base::FilePath runtime_dir,
     base::FilePath log_path,
     base::FilePath gpu_cache_path,
-    std::string rootfs_device,
     std::string stateful_device,
     uint64_t stateful_size,
     VmFeatures features,
     bool is_termina)
-    : VmBaseImpl(nullptr),
+    : VmBaseImpl(nullptr /* network_client */,
+                 vsock_cid,
+                 std::move(seneschal_server_proxy),
+                 "" /* cros_vm_socket */,
+                 std::move(runtime_dir)),
       subnet_(std::move(subnet)),
-      vsock_cid_(vsock_cid),
-      seneschal_server_proxy_(std::move(seneschal_server_proxy)),
       features_(features),
-      rootfs_device_(rootfs_device),
       stateful_device_(stateful_device),
       stateful_size_(stateful_size),
       stateful_resize_type_(DiskResizeType::NONE),
@@ -142,10 +138,6 @@ TerminaVm::TerminaVm(
       gpu_cache_path_(std::move(gpu_cache_path)),
       is_termina_(is_termina) {
   CHECK(subnet_);
-  CHECK(base::DirectoryExists(runtime_dir));
-
-  // Take ownership of the runtime directory.
-  CHECK(runtime_dir_.Set(runtime_dir));
 }
 
 TerminaVm::~TerminaVm() {
@@ -153,32 +145,25 @@ TerminaVm::~TerminaVm() {
 }
 
 std::unique_ptr<TerminaVm> TerminaVm::Create(
-    base::FilePath kernel,
-    base::FilePath initrd,
-    base::FilePath rootfs,
-    int32_t cpus,
-    std::vector<TerminaVm::Disk> disks,
     uint32_t vsock_cid,
     std::unique_ptr<patchpanel::Client> network_client,
     std::unique_ptr<SeneschalServerProxy> seneschal_server_proxy,
     base::FilePath runtime_dir,
     base::FilePath log_path,
     base::FilePath gpu_cache_path,
-    std::string rootfs_device,
     std::string stateful_device,
     uint64_t stateful_size,
     VmFeatures features,
-    bool is_termina) {
+    bool is_termina,
+    VmBuilder vm_builder) {
   auto vm = base::WrapUnique(new TerminaVm(
       vsock_cid, std::move(network_client), std::move(seneschal_server_proxy),
       std::move(runtime_dir), std::move(log_path), std::move(gpu_cache_path),
-      std::move(rootfs_device), std::move(stateful_device),
-      std::move(stateful_size), features, is_termina));
+      std::move(stateful_device), std::move(stateful_size), features,
+      is_termina));
 
-  if (!vm->Start(std::move(kernel), std::move(initrd), std::move(rootfs), cpus,
-                 std::move(disks))) {
+  if (!vm->Start(std::move(vm_builder)))
     vm.reset();
-  }
 
   return vm;
 }
@@ -197,11 +182,7 @@ std::string TerminaVm::GetCrosVmSerial(std::string hardware,
   return common_params + ",type=unix,path=" + log_path_.value();
 }
 
-bool TerminaVm::Start(base::FilePath kernel,
-                      base::FilePath initrd,
-                      base::FilePath rootfs,
-                      int32_t cpus,
-                      std::vector<TerminaVm::Disk> disks) {
+bool TerminaVm::Start(VmBuilder vm_builder) {
   // Get the network interface.
   patchpanel::IPv4Subnet container_subnet;
   if (!network_client_->NotifyTerminaVmStartup(vsock_cid_, &network_device_,
@@ -221,38 +202,19 @@ bool TerminaVm::Start(base::FilePath kernel,
     return false;
   }
 
-  // Build up the process arguments.
-  // clang-format off
-  std::vector<string> args = {
-      kCrosvmBin,       "run",
-      "--cpus",         std::to_string(cpus),
-      "--mem",          GetVmMemoryMiB(),
-      "--tap-fd",       std::to_string(tap_fd.get()),
-      "--cid",          std::to_string(vsock_cid_),
-      "--socket",       GetVmSocketPath(),
-      "--wayland-sock", kWaylandSocket,
-      "--serial",       GetCrosVmSerial("serial", "earlycon"),
-      "--serial",       GetCrosVmSerial("virtio-console", "console"),
-      "--syslog-tag",   base::StringPrintf("VM(%u)", vsock_cid_),
-      "--no-smt",
-      "--params",      "snd_intel8x0.inside_vm=1 snd_intel8x0.ac97_clock=48000",
-  };
-  // clang-format on
-
-  if (RootfsDevice().find("pmem") != std::string::npos) {
-    args.emplace_back("--pmem-device");
-    args.emplace_back(rootfs.value());
-    args.emplace_back("--params");
-    // TODO(davidriley): Re-add rootflags=dax once guest kernel has fix
-    // for b/169339326.
-    args.emplace_back("root=/dev/pmem0 ro");
-  } else {
-    args.emplace_back("--root");
-    args.emplace_back(rootfs.value());
-  }
+  vm_builder.AppendTapFd(std::move(tap_fd))
+      .AppendWaylandSocket(kWaylandSocket)
+      .SetVsockCid(vsock_cid_)
+      .SetSocketPath(GetVmSocketPath())
+      .SetMemory(GetVmMemoryMiB())
+      .AppendSerialDevice(GetCrosVmSerial("serial", "earlycon"))
+      .AppendSerialDevice(GetCrosVmSerial("virtio-console", "console"))
+      .SetSyslogTag(base::StringPrintf("VM(%u)", vsock_cid_))
+      .AppendKernelParam(
+          "snd_intel8x0.inside_vm=1 snd_intel8x0.ac97_clock=48000");
 
   if (USE_CROSVM_WL_DMABUF)
-    args.emplace_back("--wayland-dmabuf");
+    vm_builder.EnableWaylandDmaBuf(true /* enable */);
 
   if (features_.gpu) {
     std::string gpu_arg = "--gpu";
@@ -261,44 +223,16 @@ bool TerminaVm::Start(base::FilePath kernel,
       gpu_arg += ",cache-size=";
       gpu_arg += kGpuCacheSizeString;
     }
-    args.emplace_back(gpu_arg);
+    vm_builder.EnableGpu(true /* enable */, gpu_arg);
   }
 
   if (features_.software_tpm)
-    args.emplace_back("--software-tpm");
+    vm_builder.EnableSoftwareTpm(true /* enable */);
 
   if (features_.audio_capture) {
-    args.emplace_back("--ac97");
-    args.emplace_back("backend=cras,capture=true");
+    vm_builder.AppendAudioDevice("backend=cras,capture=true");
   } else {
-    args.emplace_back("--ac97");
-    args.emplace_back("backend=cras");
-  }
-
-  // Add any extra disks.
-  for (const auto& disk : disks) {
-    if (disk.writable) {
-      args.emplace_back("--rwdisk");
-    } else {
-      args.emplace_back("--disk");
-    }
-
-    args.emplace_back(disk.path.value() +
-                      ",sparse=" + (disk.sparse ? "true" : "false"));
-  }
-
-  // Optionally add the path to the initrd.
-  if (!initrd.empty()) {
-    args.emplace_back("-i");
-    args.emplace_back(initrd.value());
-  }
-
-  // Finally list the path to the kernel.
-  args.emplace_back(kernel.value());
-
-  // Put everything into the brillo::ProcessImpl.
-  for (string& arg : args) {
-    process_.AddArg(std::move(arg));
+    vm_builder.AppendAudioDevice("backend=cras");
   }
 
   // Change the process group before exec so that crosvm sending SIGKILL to the
@@ -307,10 +241,8 @@ bool TerminaVm::Start(base::FilePath kernel,
   process_.SetPreExecCallback(base::Bind(
       &SetUpCrosvmProcess, base::FilePath(kTerminaCpuCgroup).Append("tasks")));
 
-  if (!process_.Start()) {
-    LOG(ERROR) << "Failed to start VM process";
+  if (!StartProcess(vm_builder.BuildVmArgs()))
     return false;
-  }
 
   // Create a stub for talking to the maitre'd instance inside the VM.
   stub_ = std::make_unique<vm_tools::Maitred::Stub>(grpc::CreateChannel(
@@ -980,22 +912,22 @@ std::unique_ptr<TerminaVm> TerminaVm::CreateForTesting(
     base::FilePath runtime_dir,
     base::FilePath log_path,
     base::FilePath gpu_cache_path,
-    std::string rootfs_device,
     std::string stateful_device,
     uint64_t stateful_size,
     std::string kernel_version,
     std::unique_ptr<vm_tools::Maitred::Stub> stub,
-    bool is_termina) {
+    bool is_termina,
+    VmBuilder vm_builder) {
   VmFeatures features{
       .gpu = false,
       .software_tpm = false,
       .audio_capture = false,
   };
-  auto vm = base::WrapUnique(new TerminaVm(
-      std::move(subnet), vsock_cid, nullptr, std::move(runtime_dir),
-      std::move(log_path), std::move(gpu_cache_path), std::move(rootfs_device),
-      std::move(stateful_device), std::move(stateful_size), features,
-      is_termina));
+  auto vm = base::WrapUnique(
+      new TerminaVm(std::move(subnet), vsock_cid, nullptr,
+                    std::move(runtime_dir), std::move(log_path),
+                    std::move(gpu_cache_path), std::move(stateful_device),
+                    std::move(stateful_size), features, is_termina));
   vm->set_kernel_version_for_testing(kernel_version);
   vm->set_stub_for_testing(std::move(stub));
 

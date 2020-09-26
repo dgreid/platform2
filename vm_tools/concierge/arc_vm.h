@@ -19,6 +19,8 @@
 
 #include "vm_tools/concierge/seneschal_server_proxy.h"
 #include "vm_tools/concierge/vm_base_impl.h"
+#include "vm_tools/concierge/vm_builder.h"
+#include "vm_tools/concierge/vm_util.h"
 #include "vm_tools/concierge/vsock_cid_pool.h"
 
 namespace vm_tools {
@@ -35,36 +37,17 @@ struct ArcVmFeatures {
 // Represents a single instance of a running termina VM.
 class ArcVm final : public VmBaseImpl {
  public:
-  // Describes a disk image to be mounted inside the VM.
-  struct Disk {
-    // Path to the disk image on the host.
-    base::FilePath path;
-
-    // Whether the disk should be writable by the VM.
-    bool writable;
-  };
-
   // Starts a new virtual machine.  Returns nullptr if the virtual machine
   // failed to start for any reason.
   static std::unique_ptr<ArcVm> Create(
       base::FilePath kernel,
-      base::FilePath rootfs,
-      base::FilePath fstab,
-      uint32_t cpus,
-      base::FilePath pstore_path,
-      uint32_t pstore_size,
-      std::vector<Disk> disks,
       uint32_t vsock_cid,
-      base::FilePath data_dir,
       std::unique_ptr<patchpanel::Client> network_client,
       std::unique_ptr<SeneschalServerProxy> seneschal_server_proxy,
       base::FilePath runtime_dir,
       ArcVmFeatures features,
-      std::vector<std::string> params);
+      VmBuilder vm_builder);
   ~ArcVm() override;
-
-  // The pid of the child process.
-  pid_t pid() { return process_.pid(); }
 
   // The VM's cid.
   uint32_t cid() const { return vsock_cid_; }
@@ -129,18 +112,7 @@ class ArcVm final : public VmBaseImpl {
   std::string GetVmSocketPath() const;
 
   // Starts the VM with the given kernel and root file system.
-  bool Start(base::FilePath kernel,
-             base::FilePath rootfs,
-             base::FilePath fstab,
-             uint32_t cpus,
-             base::FilePath pstore_path,
-             uint32_t pstore_size,
-             std::vector<Disk> disks,
-             base::FilePath data_dir,
-             std::vector<std::string> params);
-
-  // Virtual socket context id to be used when communicating with this VM.
-  uint32_t vsock_cid_;
+  bool Start(base::FilePath kernel, VmBuilder vm_builder);
 
   std::vector<patchpanel::NetworkDevice> network_devices_;
 

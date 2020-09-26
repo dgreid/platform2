@@ -29,6 +29,7 @@
 #include "vm_tools/concierge/plugin_vm_usb.h"
 #include "vm_tools/concierge/seneschal_server_proxy.h"
 #include "vm_tools/concierge/vm_base_impl.h"
+#include "vm_tools/concierge/vm_builder.h"
 
 namespace vm_tools {
 namespace concierge {
@@ -37,8 +38,6 @@ class PluginVm final : public VmBaseImpl {
  public:
   static std::unique_ptr<PluginVm> Create(
       const VmId id,
-      uint32_t cpus,
-      std::vector<std::string> params,
       base::FilePath stateful_dir,
       base::FilePath iso_dir,
       base::FilePath root_dir,
@@ -48,7 +47,8 @@ class PluginVm final : public VmBaseImpl {
       bool enable_vnet_hdr,
       std::unique_ptr<SeneschalServerProxy> seneschal_server_proxy,
       dbus::ObjectProxy* vm_permission_service_proxy,
-      dbus::ObjectProxy* vmplugin_service_proxy);
+      dbus::ObjectProxy* vmplugin_service_proxy,
+      VmBuilder vm_builder);
   ~PluginVm() override;
 
   // VmInterface overrides.
@@ -98,8 +98,6 @@ class PluginVm final : public VmBaseImpl {
  private:
   PluginVm(const VmId id,
            std::unique_ptr<patchpanel::Client> network_client,
-           int subnet_index,
-           bool enable_vnet_hdr,
            std::unique_ptr<SeneschalServerProxy> seneschal_server_proxy,
            dbus::ObjectProxy* vm_perrmission_service_proxy,
            dbus::ObjectProxy* vmplugin_service_proxy,
@@ -108,9 +106,10 @@ class PluginVm final : public VmBaseImpl {
            base::FilePath runtime_dir);
   void HandleSuspendImminent() override {}
   void HandleSuspendDone() override {}
-  bool Start(uint32_t cpus,
-             std::vector<std::string> params,
-             base::FilePath stateful_dir);
+  bool Start(base::FilePath stateful_dir,
+             int subnet_index,
+             bool enable_vnet_hdr,
+             VmBuilder vm_builder);
   bool CreateUsbListeningSocket();
   void HandleUsbControlResponse();
 
@@ -135,13 +134,6 @@ class PluginVm final : public VmBaseImpl {
 
   // The subnet assigned to the VM.
   std::unique_ptr<patchpanel::Subnet> subnet_;
-  // The requested subnet index.
-  const int subnet_index_;
-  // Toggles the use of the IFF_VNET_HDR option on the TAP device.
-  const bool enable_vnet_hdr_;
-
-  // Proxy to the server providing shared directory access for this VM.
-  std::unique_ptr<SeneschalServerProxy> seneschal_server_proxy_;
 
   // Proxy to the dispatcher service.  Not owned.
   dbus::ObjectProxy* vm_permission_service_proxy_;

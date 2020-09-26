@@ -10,6 +10,7 @@
 #include "vm_tools/concierge/arc_vm.h"
 #include "vm_tools/concierge/service.h"
 #include "vm_tools/concierge/shared_data.h"
+#include "vm_tools/concierge/vm_util.h"
 
 namespace vm_tools {
 namespace concierge {
@@ -80,7 +81,10 @@ std::unique_ptr<dbus::Response> Service::StartArcVm(
     return dbus_response;
   }
 
-  std::vector<ArcVm::Disk> disks;
+  std::vector<Disk> disks;
+  // The rootfs can be treated as a disk as well and needs to be added before
+  // other disks.
+  disks.push_back(Disk(std::move(rootfs), request.rootfs_writable()));
   for (const auto& disk : request.disks()) {
     if (!base::PathExists(base::FilePath(disk.path()))) {
       LOG(ERROR) << "Missing disk path: " << disk.path();
@@ -88,10 +92,7 @@ std::unique_ptr<dbus::Response> Service::StartArcVm(
       writer.AppendProtoAsArrayOfBytes(response);
       return dbus_response;
     }
-    disks.push_back(ArcVm::Disk{
-        .path = base::FilePath(disk.path()),
-        .writable = disk.writable(),
-    });
+    disks.push_back(Disk(base::FilePath(disk.path()), disk.writable()));
   }
 
   // Create the runtime directory.
@@ -155,6 +156,10 @@ std::unique_ptr<dbus::Response> Service::StartArcVm(
   params.emplace_back("snd_intel8x0.ac97_clock=48000");
   params.emplace_back("snd_intel8x0.inside_vm=1");
 
+  // Parameters for drivers of the ac97 devices.
+  params.emplace_back("snd_intel8x0.ac97_clock=48000");
+  params.emplace_back("snd_intel8x0.inside_vm=1");
+
   // Start the VM and build the response.
   ArcVmFeatures features;
   features.rootfs_writable = request.rootfs_writable();
@@ -183,11 +188,27 @@ std::unique_ptr<dbus::Response> Service::StartArcVm(
   VmId vm_id(request.owner_id(), request.name());
   SendVmStartingUpSignal(vm_id, *vm_info);
 
-  auto vm = ArcVm::Create(
-      std::move(kernel), std::move(rootfs), std::move(fstab), request.cpus(),
-      std::move(*pstore_path), kPstoreSize, std::move(disks), vsock_cid,
-      std::move(data_dir), std::move(network_client), std::move(server_proxy),
-      std::move(runtime_dir), features, std::move(params));
+  std::string shared_data =
+      CreateSharedDataParam(data_dir, "_data", true, false);
+  std::string shared_data_media =
+      CreateSharedDataParam(data_dir, "_data_media", false, true);
+  VmBuilder vm_builder;
+  vm_builder.AppendDisks(std::move(disks))
+      .SetCpus(request.cpus())
+      .AppendKernelParam(base::JoinString(params, " "))
+      .AppendCustomParam("--android-fstab", fstab.value())
+      .AppendCustomParam(
+          "--pstore",
+          base::StringPrintf("path=%s,size=%d", (*pstore_path).value().c_str(),
+                             kPstoreSize))
+      .AppendSharedDir(shared_data)
+      .AppendSharedDir(shared_data_media)
+      .EnableSmt(false /* enable */);
+
+  auto vm =
+      ArcVm::Create(std::move(kernel), vsock_cid, std::move(network_client),
+                    std::move(server_proxy), std::move(runtime_dir), features,
+                    std::move(vm_builder));
   if (!vm) {
     LOG(ERROR) << "Unable to start VM";
 
