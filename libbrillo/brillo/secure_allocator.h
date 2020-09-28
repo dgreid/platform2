@@ -15,6 +15,7 @@
 #include <base/callback_helpers.h>
 #include <base/logging.h>
 #include <brillo/brillo_export.h>
+#include <brillo/secure_string.h>
 
 namespace brillo {
 // SecureAllocator is a stateless derivation of std::allocator that clears
@@ -170,23 +171,13 @@ class BRILLO_PRIVATE SecureAllocator {
   }
 
  protected:
-// Force memset to not be optimized out.
-// Original source commit: 31b02653c2560f8331934e879263beda44c6cc76
-// Repo: https://android.googlesource.com/platform/external/minijail
-#if defined(__clang__)
-#define __attribute_no_opt __attribute__((optnone))
-#else
-#define __attribute_no_opt __attribute__((__optimize__(0)))
-#endif
-
   // Zero-out all bytes in the allocated buffer.
-  virtual void __attribute_no_opt clear_contents(pointer v, size_type n) {
+  virtual void clear_contents(pointer v, size_type n) {
     if (!v)
       return;
-    memset(v, 0, n);
+    // This is guaranteed not to be optimized out.
+    SecureMemset(v, 0, n);
   }
-
-#undef __attribute_no_opt
 
  private:
   // Calculates the page-aligned buffer size.
