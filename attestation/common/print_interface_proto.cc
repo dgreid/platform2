@@ -54,6 +54,9 @@ std::string GetProtoDebugStringWithIndent(AttestationStatus value,
   if (value == STATUS_NOT_SUPPORTED) {
     return "STATUS_NOT_SUPPORTED";
   }
+  if (value == STATUS_DBUS_ERROR) {
+    return "STATUS_DBUS_ERROR";
+  }
   return "<unknown>";
 }
 
