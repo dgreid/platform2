@@ -77,6 +77,9 @@ constexpr char kServerPath[] = "/usr/bin/9s";
 constexpr char kServerRoot[] = "/fsroot";
 constexpr char kSeccompPolicyPath[] = "/usr/share/policy/9s-seccomp.policy";
 
+// Static prefix of SmbFs mount names.
+constexpr char kSmbFsMountNamePrefix[] = "smbfs-";
+
 // `mkdir -p`, essentially.  Reimplement all of base::CreateDirectory because
 // we want mode 0755 instead of mode 0700.
 bool MkdirRecursively(const base::FilePath& full_path) {
@@ -764,6 +767,28 @@ std::unique_ptr<dbus::Response> Service::SharePath(
     return dbus_response;
   }
 
+  // Validate smbfs_mount_name and set smbfs_dst_prefix.
+  base::FilePath smbfs_mount_name(request.smbfs_mount_name());
+  std::string smbfs_dst_prefix;
+  if (request.storage_location() == SharePathRequest::SMBFS) {
+    if (smbfs_mount_name.ReferencesParent() ||
+        smbfs_mount_name.BaseName() != smbfs_mount_name ||
+        !base::StartsWith(smbfs_mount_name.value(), kSmbFsMountNamePrefix,
+                          base::CompareCase::SENSITIVE)) {
+      LOG(ERROR) << "smbfs_mount_name references parent, or is more than 1 "
+                    "component, or is not populated";
+      response.set_failure_reason(
+          "smbfs_mount_name must be a single valid component");
+      writer.AppendProtoAsArrayOfBytes(response);
+      return dbus_response;
+    }
+
+    // Paths within SMB shares are all mounted within a parent directory
+    // that is named based on the share ID itself.
+    smbfs_dst_prefix = smbfs_mount_name.value().substr(
+        std::string(kSmbFsMountNamePrefix).size());
+  }
+
   // Build the source and destination directories.
   base::FilePath src;
   base::FilePath dst =
@@ -823,6 +848,10 @@ std::unique_ptr<dbus::Response> Service::SharePath(
     case SharePathRequest::ARCHIVE:
       src = base::FilePath("/media/archive");
       dst = dst.Append("archive");
+      break;
+    case SharePathRequest::SMBFS:
+      src = base::FilePath("/media/fuse").Append(smbfs_mount_name);
+      dst = dst.Append("SMB").Append(smbfs_dst_prefix);
       break;
     default:
       LOG(ERROR) << "Unknown storage location: " << request.storage_location();
@@ -979,7 +1008,7 @@ std::unique_ptr<dbus::Response> Service::UnsharePath(
   base::FilePath dst = server_root.Append(path);
   base::FilePath my_files = server_root.Append("MyFiles");
   base::FilePath my_files_downloads = my_files.Append("Downloads");
-  // Ensure path exists.
+  // Ensure path exists. TODO(crbug.com/1132707) fix race condition.
   if (!base::PathExists(dst)) {
     LOG(ERROR) << "Unshare path does not exist";
     response.set_failure_reason("Unshare path does not exist");
