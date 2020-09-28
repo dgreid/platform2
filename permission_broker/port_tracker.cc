@@ -19,13 +19,14 @@
 #include <base/posix/eintr_wrapper.h>
 #include <base/strings/string_util.h>
 #include <base/threading/thread_task_runner_handle.h>
+#include <base/time/time.h>
 #include <chromeos/patchpanel/dbus/client.h>
 
 namespace permission_broker {
 
 namespace {
 constexpr const int kMaxEvents = 10;
-constexpr const int64_t kLifelineIntervalSeconds = 5;
+constexpr base::TimeDelta kLifelineInterval = base::TimeDelta::FromSeconds(5);
 constexpr const int kInvalidHandle = -1;
 // Port forwarding is only allowed for non-reserved ports.
 constexpr const uint16_t kLastSystemPort = 1023;
@@ -479,7 +480,7 @@ void PortTracker::ScheduleLifelineCheck() {
   task_runner_->PostDelayedTask(
       FROM_HERE,
       base::Bind(&PortTracker::CheckLifelineFds, base::Unretained(this), true),
-      base::TimeDelta::FromSeconds(kLifelineIntervalSeconds));
+      kLifelineInterval);
 }
 
 bool PortTracker::HasActiveRules() {
