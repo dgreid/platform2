@@ -135,12 +135,22 @@ class ChromeCollectorTest : public ::testing::Test {
         .WillRepeatedly(Return());
   }
 
+  // Sets up the logs config so that HandleCrash will not produce a
+  // chrome.txt.gz file.
+  void SetUpLogsNone() {
+    base::FilePath config_file =
+        scoped_temp_dir_.GetPath().Append("crash_config");
+    const char kConfigContents[] = "";
+    ASSERT_TRUE(test_util::CreateFile(config_file, kConfigContents));
+    collector_.set_log_config_path(config_file.value());
+  }
+
   // Sets up the logs config so that HandleCrash will produce a relatively small
   // chrome.txt.gz.
   void SetUpLogsShort() {
     base::FilePath config_file =
         scoped_temp_dir_.GetPath().Append("crash_config");
-    const char kConfigContents[] = "chrome_test=echo hello there";
+    const char kConfigContents[] = "chrome=echo hello there";
     ASSERT_TRUE(test_util::CreateFile(config_file, kConfigContents));
     collector_.set_log_config_path(config_file.value());
   }
@@ -150,7 +160,7 @@ class ChromeCollectorTest : public ::testing::Test {
   void SetUpLogsLong() {
     base::FilePath config_file =
         scoped_temp_dir_.GetPath().Append("crash_config");
-    const char kConfigContents[] = "chrome_test=seq 1 10000";
+    const char kConfigContents[] = "chrome=seq 1 10000";
     ASSERT_TRUE(test_util::CreateFile(config_file, kConfigContents));
     collector_.set_log_config_path(config_file.value());
   }
@@ -242,6 +252,7 @@ TEST_F(ChromeCollectorTest, HandleCrash) {
   FilePath input_dump_file = dir.Append("test.dmp");
   ASSERT_TRUE(test_util::CreateFile(input_dump_file, kCrashFormatWithDumpFile));
   SetUpDriErrorStateToReturn("<empty>");
+  SetUpLogsNone();
 
   FilePath log_file;
   {
@@ -299,6 +310,7 @@ TEST_F(ChromeCollectorTest, HandleCrashWithEmbeddedNuls) {
                     sizeof(kCrashFormatWithDumpFileWithEmbeddedNulBytes) - 1);
   ASSERT_TRUE(test_util::CreateFile(input_dump_file, input));
   SetUpDriErrorStateToReturn("<empty>");
+  SetUpLogsNone();
 
   FilePath log_file;
   {
@@ -358,6 +370,7 @@ TEST_F(ChromeCollectorTest, HandleCrashWithWeirdFilename) {
                     sizeof(kCrashFormatWithWeirdFilename) - 1);
   ASSERT_TRUE(test_util::CreateFile(input_dump_file, input));
   SetUpDriErrorStateToReturn("<empty>");
+  SetUpLogsNone();
 
   FilePath log_file;
   {

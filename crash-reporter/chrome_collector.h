@@ -80,13 +80,11 @@ class ChromeCollector : public CrashCollector {
   // Returns true on success.
   bool GetDriErrorState(const base::FilePath& error_state_path);
 
-  // Writes additional logs for |exe_name| to files based on |basename| within
+  // Writes additional logs for the crash to files based on |basename| within
   // |dir|. Crash report metadata key names and the corresponding file paths are
   // returned.
   std::map<std::string, base::FilePath> GetAdditionalLogs(
-      const base::FilePath& dir,
-      const std::string& basename,
-      const std::string& exe_name);
+      const base::FilePath& dir, const std::string& basename);
 
   // Add the (|log_map_key|, |complete_file_name|) pair to |logs| if we are not
   // over kDefaultMaxUploadBytes. If we are over kDefaultMaxUploadBytes,

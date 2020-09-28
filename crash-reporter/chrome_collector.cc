@@ -103,9 +103,8 @@ bool ChromeCollector::HandleCrashWithDumpData(const std::string& data,
     return false;
   }
 
-  // Keyed by crash metadata key name.
   const std::map<std::string, base::FilePath> additional_logs =
-      GetAdditionalLogs(dir, dump_basename, exe_name);
+      GetAdditionalLogs(dir, dump_basename);
   for (const auto& it : additional_logs) {
     VLOG(1) << "Adding metadata: " << it.first << " -> " << it.second.value();
     // Call AddCrashMetaUploadFile() rather than AddCrashMetaData() here. The
@@ -282,9 +281,7 @@ void ChromeCollector::AddLogIfNotTooBig(
 }
 
 std::map<std::string, base::FilePath> ChromeCollector::GetAdditionalLogs(
-    const FilePath& dir,
-    const std::string& basename,
-    const std::string& exe_name) {
+    const FilePath& dir, const std::string& basename) {
   std::map<std::string, base::FilePath> logs;
   if (get_bytes_written() > max_upload_bytes_) {
     // Minidump is already too big, no point in processing logs or querying
@@ -297,7 +294,12 @@ std::map<std::string, base::FilePath> ChromeCollector::GetAdditionalLogs(
   // Run the command specified by the config file to gather logs.
   const FilePath chrome_log_path =
       GetCrashPath(dir, basename, kChromeLogFilename).AddExtension("gz");
-  if (GetLogContents(log_config_path_, exe_name, chrome_log_path)) {
+  // "Chrome" can actually be several different binaries. Also, we can get the
+  // exec_name "chrome-crash-unknown-process" if Breakpad can't figure out the
+  // correct name. In all those cases, we still want to get the same set of
+  // logs, so always use the key "chrome" in the logging config.
+  constexpr char kLogKeyName[] = "chrome";
+  if (GetLogContents(log_config_path_, kLogKeyName, chrome_log_path)) {
     AddLogIfNotTooBig(kChromeLogFilename, chrome_log_path, &logs);
   }
 
