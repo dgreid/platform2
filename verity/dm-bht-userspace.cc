@@ -6,6 +6,7 @@
  * This file is released under the GPL.
  */
 
+// NOLINTNEXTLINE(build/include)
 #include <errno.h>
 #include <string.h>
 
@@ -16,12 +17,12 @@
 
 #define DM_MSG_PREFIX "dm bht"
 
+namespace verity {
+namespace {
 /**
  * dm_bht_compute_hash: hashes a page of data
  */
-static int dm_bht_compute_hash(struct dm_bht* bht,
-                               const u8* buffer,
-                               u8* digest) {
+int dm_bht_compute_hash(struct dm_bht* bht, const u8* buffer, u8* digest) {
   struct hash_desc* hash_desc = &bht->hash_desc[0];
 
   /* Note, this is synchronous. */
@@ -46,21 +47,23 @@ static int dm_bht_compute_hash(struct dm_bht* bht,
 
   return 0;
 }
+}  // namespace
 
 void dm_bht_set_buffer(struct dm_bht* bht, void* buffer) {
   int depth;
   /* Buffers are externally allocated, so mark them as such. */
   bht->externally_allocated = true;
 
+  auto buffer_p = static_cast<u8*>(buffer);
   for (depth = 0; depth < bht->depth; ++depth) {
     struct dm_bht_level* level = dm_bht_get_level(bht, depth);
     struct dm_bht_entry* entry_end = level->entries + level->count;
     struct dm_bht_entry* entry;
 
     for (entry = level->entries; entry < entry_end; ++entry) {
-      entry->nodes = buffer;
-      memset(buffer, 0, PAGE_SIZE);
-      buffer += PAGE_SIZE;
+      entry->nodes = buffer_p;
+      memset(buffer_p, 0, PAGE_SIZE);
+      buffer_p += PAGE_SIZE;
     }
   }
 }
@@ -135,3 +138,5 @@ int dm_bht_store_block(struct dm_bht* bht, unsigned int block, u8* block_data) {
 
   return dm_bht_compute_hash(bht, block_data, node);
 }
+
+}  // namespace verity

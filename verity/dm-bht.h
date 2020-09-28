@@ -12,9 +12,11 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
 #include <linux/crypto.h>
 #include <linux/types.h>
+#ifdef __cplusplus
+}
+#endif
 
 /* To avoid allocating memory for digest tests, we just setup a
  * max to use for now.
@@ -34,6 +36,8 @@ extern "C" {
 
 /* Additional possible return codes */
 #define DM_BHT_ENTRY_ERROR_MISMATCH -3 /* Digest mismatch */
+
+namespace verity {
 
 /* dm_bht_entry
  * Contains dm_bht->node_count tree nodes at a given tree depth.
@@ -144,51 +148,47 @@ void dm_bht_read_completed(struct dm_bht_entry* entry, int status);
 
 /* Functions for converting indices to nodes. */
 
-static inline struct dm_bht_level* dm_bht_get_level(struct dm_bht* bht,
-                                                    int depth) {
+inline struct dm_bht_level* dm_bht_get_level(struct dm_bht* bht, int depth) {
   return &bht->levels[depth];
 }
 
-static inline unsigned int dm_bht_get_level_shift(struct dm_bht* bht,
-                                                  int depth) {
+inline unsigned int dm_bht_get_level_shift(struct dm_bht* bht, int depth) {
   return (bht->depth - depth) * bht->node_count_shift;
 }
 
 /* For the given depth, this is the entry index.  At depth+1 it is the node
  * index for depth.
  */
-static inline unsigned int dm_bht_index_at_level(struct dm_bht* bht,
-                                                 int depth,
-                                                 unsigned int leaf) {
+inline unsigned int dm_bht_index_at_level(struct dm_bht* bht,
+                                          int depth,
+                                          unsigned int leaf) {
   return leaf >> dm_bht_get_level_shift(bht, depth);
 }
 
-static inline u8* dm_bht_node(struct dm_bht* bht,
-                              struct dm_bht_entry* entry,
-                              unsigned int node_index) {
+inline u8* dm_bht_node(struct dm_bht* bht,
+                       struct dm_bht_entry* entry,
+                       unsigned int node_index) {
   return &entry->nodes[node_index * bht->digest_size];
 }
 
-static inline struct dm_bht_entry* dm_bht_get_entry(struct dm_bht* bht,
-                                                    int depth,
-                                                    unsigned int block) {
+inline struct dm_bht_entry* dm_bht_get_entry(struct dm_bht* bht,
+                                             int depth,
+                                             unsigned int block) {
   unsigned int index = dm_bht_index_at_level(bht, depth, block);
   struct dm_bht_level* level = dm_bht_get_level(bht, depth);
 
   return &level->entries[index];
 }
 
-static inline u8* dm_bht_get_node(struct dm_bht* bht,
-                                  struct dm_bht_entry* entry,
-                                  int depth,
-                                  unsigned int block) {
+inline u8* dm_bht_get_node(struct dm_bht* bht,
+                           struct dm_bht_entry* entry,
+                           int depth,
+                           unsigned int block) {
   unsigned int index = dm_bht_index_at_level(bht, depth, block);
 
   return dm_bht_node(bht, entry, index % bht->node_count);
 }
 
-#ifdef __cplusplus
-}
-#endif
+}  // namespace verity
 
 #endif  // VERITY_DM_BHT_H_

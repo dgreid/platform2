@@ -38,15 +38,18 @@
 #define nr_cpu_ids 1
 #define smp_processor_id(_x) 0
 
-static inline void* alloc_page(void) {
+namespace verity {
+namespace {
+
+inline void* alloc_page(void) {
   void* memptr;
 
-  if (posix_memalign((void**)&memptr, PAGE_SIZE, PAGE_SIZE))
+  if (posix_memalign(static_cast<void**>(&memptr), PAGE_SIZE, PAGE_SIZE))
     return NULL;
   return memptr;
 }
 
-static u8 from_hex(u8 ch) {
+u8 from_hex(u8 ch) {
   if ((ch >= '0') && (ch <= '9'))
     return ch - '0';
   if ((ch >= 'a') && (ch <= 'f'))
@@ -61,8 +64,9 @@ static u8 from_hex(u8 ch) {
  * @binary: a byte array of length @binary_len
  * @hex: a byte array of length @binary_len * 2 + 1
  */
-static void dm_bht_bin_to_hex(u8* binary, u8* hex, unsigned int binary_len) {
+void dm_bht_bin_to_hex(u8* binary, u8* hex, unsigned int binary_len) {
   while (binary_len-- > 0) {
+    // NOLINTNEXTLINE(runtime/printf)
     sprintf((char* __restrict__)hex, "%02hhx", (unsigned char)*binary);
     hex += 2;
     binary++;
@@ -74,9 +78,7 @@ static void dm_bht_bin_to_hex(u8* binary, u8* hex, unsigned int binary_len) {
  * @binary: a byte array of length @binary_len
  * @hex: a byte array of length @binary_len * 2 + 1
  */
-static void dm_bht_hex_to_bin(u8* binary,
-                              const u8* hex,
-                              unsigned int binary_len) {
+void dm_bht_hex_to_bin(u8* binary, const u8* hex, unsigned int binary_len) {
   while (binary_len-- > 0) {
     *binary = from_hex(*(hex++));
     *binary *= 16;
@@ -85,7 +87,7 @@ static void dm_bht_hex_to_bin(u8* binary,
   }
 }
 
-static void dm_bht_log_mismatch(struct dm_bht* bht, u8* given, u8* computed) {
+void dm_bht_log_mismatch(struct dm_bht* bht, u8* given, u8* computed) {
   u8 given_hex[DM_BHT_MAX_DIGEST_SIZE * 2 + 1];
   u8 computed_hex[DM_BHT_MAX_DIGEST_SIZE * 2 + 1];
   dm_bht_bin_to_hex(given, given_hex, bht->digest_size);
@@ -99,9 +101,7 @@ typedef int (*dm_bht_compare_cb)(struct dm_bht*, u8*, u8*);
 /**
  * dm_bht_compute_hash: hashes a page of data
  */
-static int dm_bht_compute_hash(struct dm_bht* bht,
-                               const u8* buffer,
-                               u8* digest) {
+int dm_bht_compute_hash(struct dm_bht* bht, const u8* buffer, u8* digest) {
   struct hash_desc* hash_desc = &bht->hash_desc[smp_processor_id()];
 
   /* Note, this is synchronous. */
@@ -131,13 +131,14 @@ static int dm_bht_compute_hash(struct dm_bht* bht,
  * Implementation functions
  *-----------------------------------------------*/
 
-static int dm_bht_initialize_entries(struct dm_bht* bht);
+int dm_bht_initialize_entries(struct dm_bht* bht);
 
-static int dm_bht_read_callback_stub(void* ctx,
-                                     sector_t start,
-                                     u8* dst,
-                                     sector_t count,
-                                     struct dm_bht_entry* entry);
+int dm_bht_read_callback_stub(void* ctx,
+                              sector_t start,
+                              u8* dst,
+                              sector_t count,
+                              struct dm_bht_entry* entry);
+}  // namespace
 
 /**
  * dm_bht_create - prepares @bht for us
@@ -260,7 +261,9 @@ bad_hash_alg:
   return status;
 }
 
-static int dm_bht_initialize_entries(struct dm_bht* bht) {
+namespace {
+
+int dm_bht_initialize_entries(struct dm_bht* bht) {
   /* The last_index represents the index into the last
    * block digest that will be stored in the tree.  By walking the
    * tree with that index, it is possible to compute the total number
@@ -324,15 +327,17 @@ static int dm_bht_initialize_entries(struct dm_bht* bht) {
   return 0;
 }
 
-static int dm_bht_read_callback_stub(void* ctx,
-                                     sector_t start,
-                                     u8* dst,
-                                     sector_t count,
-                                     struct dm_bht_entry* entry) {
+int dm_bht_read_callback_stub(void* ctx,
+                              sector_t start,
+                              u8* dst,
+                              sector_t count,
+                              struct dm_bht_entry* entry) {
   DMCRIT("dm_bht_read_callback_stub called!");
   dm_bht_read_completed(entry, -EIO);
   return -EIO;
 }
+
+}  // namespace
 
 /**
  * dm_bht_read_completed
@@ -352,12 +357,14 @@ void dm_bht_read_completed(struct dm_bht_entry* entry, int status) {
   entry->state = DM_BHT_ENTRY_READY;
 }
 
+namespace {
+
 /* dm_bht_verify_path
  * Verifies the path. Returns 0 on ok.
  */
-static int dm_bht_verify_path(struct dm_bht* bht,
-                              unsigned int block,
-                              const u8* buffer) {
+int dm_bht_verify_path(struct dm_bht* bht,
+                       unsigned int block,
+                       const u8* buffer) {
   int depth = bht->depth;
   u8 digest[DM_BHT_MAX_DIGEST_SIZE];
   struct dm_bht_entry* entry;
@@ -409,6 +416,8 @@ mismatch:
   dm_bht_log_mismatch(bht, node, digest);
   return DM_BHT_ENTRY_ERROR_MISMATCH;
 }
+
+}  // namespace
 
 /**
  * dm_bht_zeroread_callback - read callback which always returns 0s
@@ -491,7 +500,7 @@ int dm_bht_populate(struct dm_bht* bht, void* ctx, unsigned int block) {
       continue;
 
     /* Current entry is claimed for allocation and loading */
-    buffer = (u8*)alloc_page();
+    buffer = static_cast<u8*>(alloc_page());
     if (!buffer)
       goto nomem;
 
@@ -607,7 +616,8 @@ void dm_bht_set_read_cb(struct dm_bht* bht, dm_bht_callback read_cb) {
  */
 int dm_bht_set_root_hexdigest(struct dm_bht* bht, const u8* hexdigest) {
   /* Make sure we have at least the bytes expected */
-  if (strnlen((char*)hexdigest, bht->digest_size * 2) != bht->digest_size * 2) {
+  if (strnlen(reinterpret_cast<const char*>(hexdigest), bht->digest_size * 2) !=
+      bht->digest_size * 2) {
     DMERR("root digest length does not match hash algorithm");
     return -1;
   }
@@ -655,6 +665,9 @@ void dm_bht_set_salt(struct dm_bht* bht, const char* hexsalt) {
 int dm_bht_salt(struct dm_bht* bht, char* hexsalt) {
   if (!bht->have_salt)
     return -EINVAL;
-  dm_bht_bin_to_hex(bht->salt, (u8*)hexsalt, sizeof(bht->salt));
+  dm_bht_bin_to_hex(bht->salt, reinterpret_cast<u8*>(hexsalt),
+                    sizeof(bht->salt));
   return 0;
 }
+
+}  // namespace verity

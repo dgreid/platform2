@@ -9,15 +9,15 @@
 #include <string>
 #include <vector>
 
+#include <asm/page.h>
 #include <base/logging.h>
 #include <gtest/gtest.h>
+#include <linux/device-mapper.h>
 
-// Pull in dm-bht.c so that we can access static functions.
-// But disable verbose logging.
-extern "C" {
-#include "dm-bht.c"
-}
+#include "verity/dm-bht.h"
 #include "verity/dm-bht-userspace.h"
+
+namespace verity {
 
 void* my_memalign(size_t boundary, size_t size) {
   void* memptr;
@@ -373,3 +373,5 @@ TEST_F(MemoryBhtTest, CreateThenVerifyOkLongSalt) {
   EXPECT_EQ(0, dm_bht_destroy(bht_));
   free(zero_page);
 }
+
+}  // namespace verity

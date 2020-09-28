@@ -181,14 +181,14 @@ ssize_t WriteHash(const std::string& dev,
 }
 
 struct ScopedDmBhtDestroyTraits {
-  static struct dm_bht* InvalidValue() { return nullptr; }
-  static void Free(struct dm_bht* bht) {
+  static struct verity::dm_bht* InvalidValue() { return nullptr; }
+  static void Free(struct verity::dm_bht* bht) {
     if (bht != nullptr) {
-      dm_bht_destroy(bht);
+      verity::dm_bht_destroy(bht);
     }
   }
 };
-typedef base::ScopedGeneric<struct dm_bht*, ScopedDmBhtDestroyTraits>
+typedef base::ScopedGeneric<struct verity::dm_bht*, ScopedDmBhtDestroyTraits>
     ScopedDmBht;
 
 }  // namespace
@@ -201,8 +201,8 @@ int chromeos_verity(const std::string& alg,
                     const std::string& expected,
                     bool enforce_rootfs_verification) {
   int ret;
-  struct dm_bht bht;
-  if ((ret = dm_bht_create(&bht, fs_blocks, alg.c_str()))) {
+  struct verity::dm_bht bht;
+  if ((ret = verity::dm_bht_create(&bht, fs_blocks, alg.c_str()))) {
     LOG(ERROR) << "dm_bht_create failed: " << ret;
     return ret;
   }
@@ -216,9 +216,9 @@ int chromeos_verity(const std::string& alg,
   }
 
   // We aren't going to do any automatic reading.
-  dm_bht_set_read_cb(&bht, dm_bht_zeroread_callback);
-  dm_bht_set_salt(&bht, salt.c_str());
-  size_t hash_size = dm_bht_sectors(&bht) << SECTOR_SHIFT;
+  verity::dm_bht_set_read_cb(&bht, verity::dm_bht_zeroread_callback);
+  verity::dm_bht_set_salt(&bht, salt.c_str());
+  size_t hash_size = verity::dm_bht_sectors(&bht) << SECTOR_SHIFT;
 
   std::unique_ptr<uint8_t, base::AlignedFreeDeleter> hash_buffer(
       static_cast<uint8_t*>(base::AlignedAlloc(hash_size, blocksize)));
@@ -228,7 +228,7 @@ int chromeos_verity(const std::string& alg,
   }
 
   memset(hash_buffer.get(), 0, hash_size);
-  dm_bht_set_buffer(&bht, hash_buffer.get());
+  verity::dm_bht_set_buffer(&bht, hash_buffer.get());
 
   base::ScopedFD fd(open(device.c_str(), O_RDONLY | O_CLOEXEC));
   if (!fd.is_valid()) {
@@ -253,8 +253,8 @@ int chromeos_verity(const std::string& alg,
     }
 
     for (i = 0; i < (count / blocksize); i++) {
-      ret = dm_bht_store_block(&bht, cur_block,
-                               io_buffer.get() + (i * blocksize));
+      ret = verity::dm_bht_store_block(&bht, cur_block,
+                                       io_buffer.get() + (i * blocksize));
       if (ret) {
         LOG(ERROR) << "dm_bht_store_block returned error: " << ret;
         return ret;
@@ -265,13 +265,13 @@ int chromeos_verity(const std::string& alg,
   io_buffer.reset();
   fd.reset();
 
-  if ((ret = dm_bht_compute(&bht))) {
+  if ((ret = verity::dm_bht_compute(&bht))) {
     LOG(ERROR) << "dm_bht_compute returned error: " << ret;
     return ret;
   }
 
   uint8_t digest[DM_BHT_MAX_DIGEST_SIZE];
-  dm_bht_root_hexdigest(&bht, digest, DM_BHT_MAX_DIGEST_SIZE);
+  verity::dm_bht_root_hexdigest(&bht, digest, DM_BHT_MAX_DIGEST_SIZE);
 
   if (memcmp(digest, expected.c_str(), bht.digest_size)) {
     LOG(ERROR) << "Filesystem hash verification failed";
