@@ -253,6 +253,7 @@ void PortalDetector::HttpRequestSuccessCallback(
         LOG(ERROR) << "Unable to parse redirect URL: " << redirect_url_string;
         http_result_->status = Status::kFailure;
       } else {
+        LOG(INFO) << "Redirect URL: " << redirect_url_string;
         http_result_->redirect_url_string = redirect_url_string;
         http_result_->probe_url_string = http_url_string_;
       }

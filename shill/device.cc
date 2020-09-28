@@ -102,23 +102,20 @@ Service::ConnectState CalculatePortalStateFromProbeResults(
   if (http_result.phase != PortalDetector::Phase::kContent) {
     return Service::kStateNoConnectivity;
   }
-
   if (http_result.status == PortalDetector::Status::kSuccess &&
       https_result.status == PortalDetector::Status::kSuccess) {
     return Service::kStateOnline;
-  } else if (http_result.status == PortalDetector::Status::kRedirect) {
-    if (http_result.redirect_url_string.empty()) {
-      return Service::kStatePortalSuspected;
-    }
-    return Service::kStateRedirectFound;
-  } else if ((http_result.status == PortalDetector::Status::kSuccess &&
-              https_result.status != PortalDetector::Status::kSuccess) ||
-             http_result.status == PortalDetector::Status::kFailure ||
-             (http_result.status == PortalDetector::Status::kTimeout &&
-              https_result.status == PortalDetector::Status::kSuccess)) {
-    return Service::kStatePortalSuspected;
   }
-  return Service::kStateNoConnectivity;
+  if (http_result.status == PortalDetector::Status::kRedirect) {
+    return http_result.redirect_url_string.empty()
+               ? Service::kStatePortalSuspected
+               : Service::kStateRedirectFound;
+  }
+  if (http_result.status == PortalDetector::Status::kTimeout &&
+      https_result.status != PortalDetector::Status::kSuccess) {
+    return Service::kStateNoConnectivity;
+  }
+  return Service::kStatePortalSuspected;
 }
 
 }  // namespace
