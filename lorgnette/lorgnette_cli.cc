@@ -128,7 +128,7 @@ bool ScanHandler::StartScan(uint32_t resolution,
   lorgnette::StartScanRequest request;
   request.set_device_name(scanner_name_);
   request.mutable_settings()->set_resolution(resolution);
-  *request.mutable_settings()->mutable_source() = scan_source;
+  request.mutable_settings()->set_source_name(scan_source.name());
   request.mutable_settings()->set_color_mode(lorgnette::MODE_COLOR);
   std::vector<uint8_t> request_in(request.ByteSizeLong());
   request.SerializeToArray(request_in.data(), request_in.size());

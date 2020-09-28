@@ -569,10 +569,10 @@ bool Manager::StartScanInternal(brillo::ErrorPtr* error,
     }
   }
 
-  if (settings.has_source()) {
-    LOG(INFO) << "User requested document source: '" << settings.source().name()
+  if (!settings.source_name().empty()) {
+    LOG(INFO) << "User requested document source: '" << settings.source_name()
               << "'";
-    if (!device->SetDocumentSource(error, settings.source().name())) {
+    if (!device->SetDocumentSource(error, settings.source_name())) {
       return false;
     }
   }

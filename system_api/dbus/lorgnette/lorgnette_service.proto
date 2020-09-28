@@ -71,11 +71,14 @@ message ScanSettings {
   // The resolution, in DPI, to use for the scan.
   uint32 resolution = 1;
 
-  // The source to scan the document from.
-  DocumentSource source = 2;
+  reserved "source";
+  reserved 2;
 
   // The color mode to use for the scan.
   ColorMode color_mode = 3;
+
+  // The name of the source to scan the document from.
+  string source_name = 4;
 }
 
 // The status of a scan job.
