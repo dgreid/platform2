@@ -68,3 +68,4 @@ target/
 
 # clangd cache dir
 .clangd
+.cache
