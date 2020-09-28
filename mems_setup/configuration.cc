@@ -75,9 +75,14 @@ constexpr char kDevString[] = "/dev/";
 constexpr char kFilesToSetReadAndOwnership[][24] = {
     "buffer/hwfifo_timeout", "buffer/enable", "buffer/length",
     "trigger/current_trigger"};
-constexpr char kFilesToSetWriteAndOwnership[][24] = {
-    "sampling_frequency", "buffer/hwfifo_timeout", "buffer/hwfifo_flush",
-    "buffer/enable",      "buffer/length",         "trigger/current_trigger"};
+constexpr char kFilesToSetWriteAndOwnership[][24] = {"sampling_frequency",
+                                                     "buffer/hwfifo_timeout",
+                                                     "buffer/hwfifo_flush",
+                                                     "buffer/enable",
+                                                     "buffer/length",
+                                                     "trigger/current_trigger",
+                                                     "flush",
+                                                     "frequency"};
 
 constexpr char kScanElementsString[] = "scan_elements";
 constexpr char kChnEnableFormatString[] = "in_%s_en";
