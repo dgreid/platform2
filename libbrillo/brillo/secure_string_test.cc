@@ -19,6 +19,12 @@ static constexpr char str3[] = "abc";
 
 static_assert(str1 != str3, "The strings should have different addresses");
 
+TEST(SecureMemset, SecureMemset) {
+  std::vector<uint8_t> input = {0xFF, 0xFF, 0xFF};
+  SecureMemset(input.data(), 0, input.size());
+  EXPECT_EQ(input, std::vector<uint8_t>({0x00, 0x00, 0x00}));
+}
+
 TEST(SecureMemcmp, Zero_Size) {
   // Note that this is different than memcmp, which will return 0 when passed
   // a zero length.
