@@ -1670,63 +1670,6 @@ TEST_F(DeviceInfoDelayedCreationTest, WiFiDevice) {
   TriggerOnWiFiInterfaceInfoReceived(message);
 }
 
-class DeviceInfoWithMockedGetUserId : public DeviceInfo {
- public:
-  explicit DeviceInfoWithMockedGetUserId(Manager* manager)
-      : DeviceInfo(manager) {}
-  MOCK_METHOD(bool, GetUserId, (const std::string&, uid_t*), (override));
-};
-
-class DeviceInfoMockedGetUserId : public DeviceInfoTechnologyTest {
- public:
-  DeviceInfoMockedGetUserId() : test_device_info_(&manager_) {}
-
-  void SetUp() override {
-    DeviceInfoTechnologyTest::SetUp();
-    test_device_info_.rtnl_handler_ = &rtnl_handler_;
-    test_device_info_.routing_table_ = &routing_table_;
-    manager_.set_mock_device_info(&test_device_info_);
-  }
-
- protected:
-  static const int kVmTapTestDeviceIndex;
-  static const char kVmTapTestDeviceName[];
-  static const uid_t kCrosvmUid;
-
-  DeviceInfoWithMockedGetUserId test_device_info_;
-};
-
-const int DeviceInfoMockedGetUserId::kVmTapTestDeviceIndex = 234567;
-const char DeviceInfoMockedGetUserId::kVmTapTestDeviceName[] = "vmtap0";
-const uid_t DeviceInfoMockedGetUserId::kCrosvmUid = 299;
-
-TEST_F(DeviceInfoMockedGetUserId, AddRemoveAllowedInterface) {
-  MockVPNProvider* vpn_provider = new StrictMock<MockVPNProvider>;
-  SetVPNProvider(vpn_provider);
-  SetDeviceName(kVmTapTestDeviceName);
-  test_device_info_.device_info_root_ = device_info_root_;
-  CreateInfoFile("owner", base::NumberToString(kCrosvmUid));
-
-  EXPECT_CALL(test_device_info_, GetUserId("crosvm", _))
-      .WillOnce(DoAll(SetArgPointee<1>(kCrosvmUid), Return(true)));
-
-  EXPECT_EQ(0, vpn_provider->allowed_iifs().size());
-  unique_ptr<RTNLMessage> message_add = BuildLinkMessageWithInterfaceName(
-      RTNLMessage::kModeAdd, kVmTapTestDeviceName, kVmTapTestDeviceIndex);
-  test_device_info_.LinkMsgHandler(*message_add);
-  // Test that the new interface belonging to a virtual machine is allowed
-  // in the VPN provider.
-  EXPECT_EQ(1, vpn_provider->allowed_iifs().size());
-
-  unique_ptr<RTNLMessage> message_remove = BuildLinkMessageWithInterfaceName(
-      RTNLMessage::kModeDelete, kVmTapTestDeviceName, kVmTapTestDeviceIndex);
-  test_device_info_.LinkMsgHandler(*message_remove);
-  // Test that the allowed interface was removed from the VPN provider
-  // list of allowed interfaces when rtnetlink signaled that the interface is
-  // down.
-  EXPECT_EQ(0, vpn_provider->allowed_iifs().size());
-}
-
 #endif  // DISABLE_WIFI
 
 }  // namespace shill

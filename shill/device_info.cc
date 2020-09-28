@@ -656,11 +656,6 @@ DeviceRefPtr DeviceInfo::CreateDevice(const string& link_name,
       DelayDeviceCreation(interface_index);
       return nullptr;
     case Technology::kGuestInterface:
-      // Traffic that comes from guest devices should be routed through VPNs.
-      // TODO(b/154183305) Move to platform2/patchpanel once it becomes aware of
-      // the VPN routing table id and fwmark policies for output network
-      // selection are implemented.
-      manager_->vpn_provider()->AddAllowedInterface(link_name);
       return nullptr;
     default:
       // We will not manage this device in shill.  Do not create a device
@@ -805,9 +800,6 @@ void DeviceInfo::DelLinkMsgHandler(const RTNLMessage& msg) {
     LOG(ERROR) << "Del Link message does not contain a link name!";
     return;
   }
-  // Remove the interface from the list of interfaces that should route
-  // traffic through VPNs.
-  manager_->vpn_provider()->RemoveAllowedInterface(link_name);
 
   DeregisterDevice(msg.interface_index());
 }

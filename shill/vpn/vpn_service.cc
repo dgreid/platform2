@@ -195,20 +195,9 @@ void VPNService::ConfigureDevice() {
     return;
   }
 
-  IPConfig::Properties ip_properties = driver_->GetIPProperties();
-
-  // TODO(taoyl): Remove routing policy from IPProperties.
-  manager()->vpn_provider()->SetDefaultRoutingPolicy(&ip_properties);
-  // Remove vpn virtual device from allow_iifs list to avoid route loop.
-  // This is mainly for ARC bridge on ARC VPN (note ARC bridge needs to
-  // be in allow_iifs for non-ARC VPNs). PPP and tunnel interface should
-  // never be in allow_iifs.
-  // TODO(taoyl): Remove this as part of routing policy migration.
-  base::Erase(ip_properties.allowed_iifs, device_->link_name());
-
   device_->SetEnabled(true);
   device_->SelectService(this);
-  device_->UpdateIPConfig(ip_properties);
+  device_->UpdateIPConfig(driver_->GetIPProperties());
   device_->SetLooseRouting(true);
 }
 

@@ -174,11 +174,8 @@ TEST_F(VPNProviderTest, ArcDeviceFound) {
   const string kInterfaceName("arcbr0");
   const int kInterfaceIndex = 1;
 
-  EXPECT_EQ(provider_.allowed_iifs_.size(), 0);
   EXPECT_TRUE(provider_.OnDeviceInfoAvailable(kInterfaceName, kInterfaceIndex,
                                               Technology::kArcBridge));
-  EXPECT_EQ(provider_.allowed_iifs_.size(), 1);
-  EXPECT_EQ(provider_.allowed_iifs_[0], kInterfaceName);
 }
 
 TEST_F(VPNProviderTest, RemoveService) {
@@ -364,19 +361,4 @@ TEST_F(VPNProviderTest, HasActiveService) {
   SetConnectState(service1, Service::kStateOnline);
   EXPECT_TRUE(provider_.HasActiveService());
 }
-
-TEST_F(VPNProviderTest, SetDefaultRoutingPolicy) {
-  manager_.user_traffic_uids_.push_back(1000);
-  RoutingPolicyEntry::FwMark expected_fwmark;
-  expected_fwmark.value = 0x00008000;
-  expected_fwmark.mask = 0x0000c000;
-
-  IPConfig::Properties properties;
-  provider_.SetDefaultRoutingPolicy(&properties);
-
-  EXPECT_EQ(1, properties.allowed_uids.size());
-  EXPECT_EQ(1000, properties.allowed_uids[0]);
-  EXPECT_EQ(expected_fwmark, properties.included_fwmarks[0]);
-}
-
 }  // namespace shill

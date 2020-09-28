@@ -39,18 +39,6 @@ static string ObjectID(const VPNProvider* v) {
 
 namespace {
 
-// TODO(b/151879931) Import these from libarcnetwork after platform2/arc/network
-// has been moved to platform2/patchpanel
-constexpr const uint32_t kFwMarkRouteOnVpnBit = 0x00008000;
-constexpr const uint32_t kFwMarkBypassVpnBit = 0x00004000;
-constexpr const uint32_t kFwMarkVpnMask =
-    kFwMarkBypassVpnBit | kFwMarkRouteOnVpnBit;
-
-constexpr const RoutingPolicyEntry::FwMark kFwMarkRouteOnVpn = {
-    .value = kFwMarkRouteOnVpnBit,
-    .mask = kFwMarkVpnMask,
-};
-
 // Populates |type_ptr|, |name_ptr| and |host_ptr| with the appropriate
 // values from |args|.  Returns True on success, otherwise if any of
 // these arguments are not available, |error| is populated and False is
@@ -133,36 +121,6 @@ void VPNProvider::Start() {}
 
 void VPNProvider::Stop() {}
 
-void VPNProvider::AddAllowedInterface(const std::string& interface_name) {
-  if (base::Contains(allowed_iifs_, interface_name))
-    return;
-
-  // Add to the list of allowed nterfaces via |SetDefaultRoutingPolicy|
-  // when connecting.
-  allowed_iifs_.push_back(interface_name);
-
-  // Update the routing table if there's an active VPN connection.
-  for (auto& service : services_) {
-    if (service->IsConnected()) {
-      service->connection()->AddInputInterfaceToRoutingTable(interface_name);
-    }
-  }
-}
-
-void VPNProvider::RemoveAllowedInterface(const std::string& interface_name) {
-  if (!base::Contains(allowed_iifs_, interface_name))
-    return;
-
-  base::Erase(allowed_iifs_, interface_name);
-  // Update the routing table if there's an active VPN connection.
-  for (auto& service : services_) {
-    if (service->IsConnected()) {
-      service->connection()->RemoveInputInterfaceFromRoutingTable(
-          interface_name);
-    }
-  }
-}
-
 ServiceRefPtr VPNProvider::GetService(const KeyValueStore& args, Error* error) {
   SLOG(this, 2) << __func__;
   string type;
@@ -213,8 +171,6 @@ bool VPNProvider::OnDeviceInfoAvailable(const string& link_name,
     arc_device_ = base::MakeRefCounted<VirtualDevice>(
         manager_, link_name, interface_index, Technology::kArcBridge);
     arc_device_->SetFixedIpParams(true);
-    // Forward ARC->internet traffic over third-party VPN services.
-    allowed_iifs_.push_back(link_name);
     return true;
   }
   return false;
@@ -378,16 +334,6 @@ void VPNProvider::DisconnectAll() {
       service->Disconnect(nullptr, "user selected new config");
     }
   }
-}
-
-// TODO(crbug.com/1022028, b/154183305) Do not reuse IP properties object to
-// carry routing policies related to VPN services. IP properties should be
-// strictly layer 3 data only ideally.
-void VPNProvider::SetDefaultRoutingPolicy(IPConfig::Properties* properties) {
-  CHECK(!manager_->user_traffic_uids().empty());
-  properties->allowed_uids = manager_->user_traffic_uids();
-  properties->allowed_iifs = allowed_iifs_;
-  properties->included_fwmarks = {kFwMarkRouteOnVpn};
 }
 
 }  // namespace shill

@@ -43,7 +43,6 @@
 #include "shill/ppp_device.h"
 #include "shill/process_manager.h"
 #include "shill/scope_logger.h"
-#include "shill/vpn/vpn_provider.h"
 #include "shill/vpn/vpn_service.h"
 
 using base::Bind;

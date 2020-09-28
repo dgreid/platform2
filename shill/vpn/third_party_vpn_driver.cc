@@ -27,7 +27,6 @@
 #include "shill/property_accessor.h"
 #include "shill/store_interface.h"
 #include "shill/virtual_device.h"
-#include "shill/vpn/vpn_provider.h"
 #include "shill/vpn/vpn_service.h"
 
 namespace shill {

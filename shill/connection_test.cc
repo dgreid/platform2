@@ -255,6 +255,32 @@ class ConnectionTest : public Test {
                         IsValidOifRule(IPAddress::kFamilyIPv6, priority,
                                        device->link_name())))
         .WillOnce(Return(true));
+
+    // Virtual interfaces will create rules for routing any destinations
+    // matching the specified additional included routes.
+    for (const auto& dst : included_route_dsts_) {
+      EXPECT_CALL(routing_table_,
+                  AddRule(device->interface_index(),
+                          IsValidDstRule(dst.family(),
+                                         Connection::kDstRulePriority, dst)))
+          .WillOnce(Return(true));
+    }
+
+    // Virtual interfaces will have fwmark rules to send to the per-interface
+    // table if the fwmark routing tag matches.
+    RoutingPolicyEntry::FwMark routing_fwmark;
+    routing_fwmark.value = (1000 + device->interface_index()) << 16;
+    routing_fwmark.mask = 0xffff0000;
+    EXPECT_CALL(routing_table_,
+                AddRule(device->interface_index(),
+                        IsValidFwMarkRule(IPAddress::kFamilyIPv4, priority,
+                                          routing_fwmark)))
+        .WillOnce(Return(true));
+    EXPECT_CALL(routing_table_,
+                AddRule(device->interface_index(),
+                        IsValidFwMarkRule(IPAddress::kFamilyIPv6, priority,
+                                          routing_fwmark)))
+        .WillOnce(Return(true));
   }
 
   void AddPhysicalRoutingPolicyExpectations(DeviceRefPtr device,
@@ -299,6 +325,9 @@ class ConnectionTest : public Test {
                           IsValidRoutingRule(address.family(), priority)))
           .WillOnce(Return(true));
     }
+
+    // Physical interfaces will create rules for routing any destinations
+    // matching the specified additional included routes.
     for (const auto& dst : included_route_dsts_) {
       EXPECT_CALL(routing_table_,
                   AddRule(device->interface_index(),
@@ -306,6 +335,7 @@ class ConnectionTest : public Test {
                                          Connection::kDstRulePriority, dst)))
           .WillOnce(Return(true));
     }
+
     // Physical interfaces will have both iif and oif rules to send to the
     // per-interface table if the interface name matches.
     EXPECT_CALL(routing_table_,

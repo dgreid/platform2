@@ -438,32 +438,6 @@ TEST_F(VPNServiceTest, GetTethering) {
   EXPECT_CALL(device_info_, FlushAddresses(0));
 }
 
-// Test that adding/removing VM allowed interfaces to/from the VPN provider
-// list triggers calls to the active VPN connection to update the routing table.
-TEST_F(VPNServiceTest, AddRemoveVMInterface) {
-  const std::string kTestVMTapInterfaceName = "vmtap0";
-  auto provider = std::make_unique<MockVPNProvider>();
-  provider->services_.push_back(service_);
-
-  service_->SetConnection(connection_);
-  SetServiceState(Service::kStateOnline);
-
-  EXPECT_CALL(*connection_,
-              AddInputInterfaceToRoutingTable(kTestVMTapInterfaceName));
-  provider->AddAllowedInterface(kTestVMTapInterfaceName);
-  EXPECT_EQ(1, provider->allowed_iifs().size());
-
-  EXPECT_CALL(*connection_,
-              RemoveInputInterfaceFromRoutingTable(kTestVMTapInterfaceName));
-  provider->RemoveAllowedInterface(kTestVMTapInterfaceName);
-  EXPECT_EQ(0, provider->allowed_iifs().size());
-}
-
-MATCHER(BaseIPConfig, "") {
-  IPConfig::Properties ip_properties = arg;
-  return !ip_properties.allowed_uids.empty();
-}
-
 TEST_F(VPNServiceTest, ConfigureDeviceAndCleanupDevice) {
   scoped_refptr<MockVirtualDevice> device = new MockVirtualDevice(
       &manager_, kInterfaceName, kInterfaceIndex, Technology::kVPN);
@@ -472,7 +446,7 @@ TEST_F(VPNServiceTest, ConfigureDeviceAndCleanupDevice) {
   EXPECT_CALL(*device, SetEnabled(true));
   EXPECT_CALL(*driver_, GetIPProperties())
       .WillOnce(Return(IPConfig::Properties()));
-  EXPECT_CALL(*device, UpdateIPConfig(BaseIPConfig()));
+  EXPECT_CALL(*device, UpdateIPConfig(_));
   service_->ConfigureDevice();
 
   EXPECT_CALL(*device, SetEnabled(false));

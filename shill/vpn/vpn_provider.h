@@ -64,22 +64,7 @@ class VPNProvider : public ProviderInterface {
   // Disconnect any other active VPN services.
   virtual void DisconnectAll();
 
-  // Default lists of allowed input interfaces, for VPNs that
-  // do not want to handle all system traffic.
-  const std::vector<std::string>& allowed_iifs() const { return allowed_iifs_; }
-
-  // Allow Chrome and crosh UIDs, plus any ARC interface(s) on this system.
-  // Chrome OS VPNs will use this policy.  ARC VPN will not.
-  void SetDefaultRoutingPolicy(IPConfig::Properties* properties);
-
   VirtualDeviceRefPtr arc_device() const { return arc_device_; }
-
-  // Adds |interface_name| to the list of allowed networking interfaces
-  // |allowed_iifs_| that route traffic through VPNs.
-  void AddAllowedInterface(const std::string& interface_name);
-  // Removes |interface_name| from the list of allowed networking interfaces
-  // |allowed_iifs_| that route traffic through VPNs.
-  void RemoveAllowedInterface(const std::string& interface_name);
 
  private:
   friend class ArcVpnDriverTest;
@@ -120,10 +105,6 @@ class VPNProvider : public ProviderInterface {
 
   Manager* manager_;
   std::vector<VPNServiceRefPtr> services_;
-  // List of allowed networking interfaces that route traffic through VPNs
-  // via policy-based routing rules.
-  std::vector<std::string> allowed_iifs_;
-
   VirtualDeviceRefPtr arc_device_;
 };
 
