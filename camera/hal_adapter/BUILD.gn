@@ -44,6 +44,7 @@ executable("cros_camera_service") {
     "camera_hal_server_impl.cc",
     "camera_hal_test_adapter.cc",
     "camera_metadata_inspector.cc",
+    "camera_module_callbacks_associated_delegate.cc",
     "camera_module_callbacks_delegate.cc",
     "camera_module_delegate.cc",
     "camera_trace_event.cc",

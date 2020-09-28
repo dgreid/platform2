@@ -34,6 +34,8 @@ class CameraDeviceAdapter;
 
 class CameraModuleDelegate;
 
+class CameraModuleCallbacksAssociatedDelegate;
+
 class CameraModuleCallbacksDelegate;
 
 class VendorTagOpsDelegate;
@@ -70,6 +72,8 @@ class CameraHalAdapter {
   virtual int32_t GetCameraInfo(int32_t camera_id,
                                 mojom::CameraInfoPtr* camera_info);
 
+  // TODO(b/169324225): Remove when all camera clients transition to
+  // SetCallbacksAssociated.
   int32_t SetCallbacks(mojom::CameraModuleCallbacksPtr callbacks);
 
   virtual int32_t SetTorchMode(int32_t camera_id, bool enabled);
@@ -83,6 +87,12 @@ class CameraHalAdapter {
   void CloseDeviceCallback(
       scoped_refptr<base::SingleThreadTaskRunner> task_runner,
       int32_t camera_id);
+
+  // A fork of SetCallbacks() that uses associated interfaces. This ensures that
+  // CameraModuleCallbacks runs with the same message pipe as CameraModule which
+  // guarantees FIFO order. See b/169324225 for context.
+  int32_t SetCallbacksAssociated(
+      mojom::CameraModuleCallbacksAssociatedPtrInfo callbacks_info);
 
  protected:
   // Convert the unified external |camera_id| into the corresponding camera
@@ -98,8 +108,18 @@ class CameraHalAdapter {
       int camera_id,
       camera_device_status_t status);
 
+  virtual void NotifyCameraDeviceStatusChange(
+      CameraModuleCallbacksAssociatedDelegate* delegate,
+      int camera_id,
+      camera_device_status_t status);
+
   virtual void NotifyTorchModeStatusChange(
       CameraModuleCallbacksDelegate* delegate,
+      int camera_id,
+      torch_mode_status_t status);
+
+  virtual void NotifyTorchModeStatusChange(
+      CameraModuleCallbacksAssociatedDelegate* delegate,
       int camera_id,
       torch_mode_status_t status);
 
@@ -185,6 +205,8 @@ class CameraHalAdapter {
   // the map is got from |callbacks_id_|.
   std::map<uint32_t, std::unique_ptr<CameraModuleCallbacksDelegate>>
       callbacks_delegates_;
+  std::map<uint32_t, std::unique_ptr<CameraModuleCallbacksAssociatedDelegate>>
+      callbacks_associated_delegates_;
 
   // Protects |module_delegates_|.
   base::Lock module_delegates_lock_;

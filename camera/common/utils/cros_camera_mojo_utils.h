@@ -58,25 +58,27 @@ ScopedCameraMetadata DeserializeCameraMetadata(
 
 // A wrapper around a mojo::InterfacePtr<T>.  This template class represents a
 // Mojo communication channel to a remote Mojo binding implementation of T.
-template <typename T>
-class MojoChannel : public base::SupportsWeakPtr<MojoChannel<T>> {
+template <typename InterfacePtrType>
+class MojoChannelBase
+    : public base::SupportsWeakPtr<MojoChannelBase<InterfacePtrType>> {
  public:
-  explicit MojoChannel(scoped_refptr<base::SingleThreadTaskRunner> task_runner)
+  using Self = MojoChannelBase<InterfacePtrType>;
+  explicit MojoChannelBase(
+      scoped_refptr<base::SingleThreadTaskRunner> task_runner)
       : task_runner_(task_runner) {
     VLOGF_ENTER();
   }
 
-  void Bind(mojo::InterfacePtrInfo<T> interface_ptr_info,
+  void Bind(typename InterfacePtrType::PtrInfoType interface_ptr_info,
             const base::Closure& connection_error_handler) {
     VLOGF_ENTER();
     task_runner_->PostTask(
-        FROM_HERE,
-        base::Bind(&MojoChannel<T>::BindOnThread, base::AsWeakPtr(this),
-                   base::Passed(&interface_ptr_info),
-                   connection_error_handler));
+        FROM_HERE, base::Bind(&Self::BindOnThread, base::AsWeakPtr(this),
+                              base::Passed(&interface_ptr_info),
+                              connection_error_handler));
   }
 
-  ~MojoChannel() {
+  ~MojoChannelBase() {
     VLOGF_ENTER();
     // We need to wait for ResetInterfacePtrOnThread to finish before return
     // otherwise it would cause race condition in destruction of
@@ -87,8 +89,8 @@ class MojoChannel : public base::SupportsWeakPtr<MojoChannel<T>> {
     } else {
       task_runner_->PostTask(
           FROM_HERE,
-          base::Bind(&MojoChannel<T>::ResetInterfacePtrOnThread,
-                     base::AsWeakPtr(this), cros::GetFutureCallback(future)));
+          base::Bind(&Self::ResetInterfacePtrOnThread, base::AsWeakPtr(this),
+                     cros::GetFutureCallback(future)));
     }
     future->Wait();
   }
@@ -97,24 +99,24 @@ class MojoChannel : public base::SupportsWeakPtr<MojoChannel<T>> {
   // All the Mojo communication happens on |task_runner_|.
   const scoped_refptr<base::SingleThreadTaskRunner> task_runner_;
 
-  mojo::InterfacePtr<T> interface_ptr_;
+  InterfacePtrType interface_ptr_;
 
   // For the future objects in derived class.
   CancellationRelay relay_;
 
  private:
-  void BindOnThread(mojo::InterfacePtrInfo<T> interface_ptr_info,
+  void BindOnThread(typename InterfacePtrType::PtrInfoType interface_ptr_info,
                     const base::Closure& connection_error_handler) {
     VLOGF_ENTER();
     DCHECK(task_runner_->BelongsToCurrentThread());
-    interface_ptr_ = mojo::MakeProxy(std::move(interface_ptr_info));
+    interface_ptr_.Bind(std::move(interface_ptr_info));
     if (!interface_ptr_.is_bound()) {
       LOGF(ERROR) << "Failed to bind interface_ptr_";
       return;
     }
     interface_ptr_.set_connection_error_handler(connection_error_handler);
-    interface_ptr_.QueryVersion(base::Bind(
-        &MojoChannel<T>::OnQueryVersionOnThread, base::AsWeakPtr(this)));
+    interface_ptr_.QueryVersion(
+        base::Bind(&Self::OnQueryVersionOnThread, base::AsWeakPtr(this)));
   }
 
   void OnQueryVersionOnThread(uint32_t version) {
@@ -130,8 +132,14 @@ class MojoChannel : public base::SupportsWeakPtr<MojoChannel<T>> {
     callback.Run();
   }
 
-  DISALLOW_IMPLICIT_CONSTRUCTORS(MojoChannel);
+  DISALLOW_IMPLICIT_CONSTRUCTORS(MojoChannelBase);
 };
+
+template <typename T>
+using MojoChannel = MojoChannelBase<mojo::InterfacePtr<T>>;
+
+template <typename T>
+using MojoAssociatedChannel = MojoChannelBase<mojo::AssociatedInterfacePtr<T>>;
 
 // A wrapper around a mojo::Binding<T>.  This template class represents an
 // implementation of Mojo interface T.

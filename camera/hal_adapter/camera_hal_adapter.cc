@@ -25,6 +25,7 @@
 #include "cros-camera/common.h"
 #include "cros-camera/future.h"
 #include "hal_adapter/camera_device_adapter.h"
+#include "hal_adapter/camera_module_callbacks_associated_delegate.h"
 #include "hal_adapter/camera_module_callbacks_delegate.h"
 #include "hal_adapter/camera_module_delegate.h"
 #include "hal_adapter/camera_trace_event.h"
@@ -434,6 +435,10 @@ void CameraHalAdapter::CameraDeviceStatusChange(
     NotifyCameraDeviceStatusChange(it.second.get(), external_camera_id,
                                    new_status);
   }
+  for (auto& it : callbacks_associated_delegates_) {
+    NotifyCameraDeviceStatusChange(it.second.get(), external_camera_id,
+                                   new_status);
+  }
 }
 
 void CameraHalAdapter::TorchModeStatusChange(
@@ -456,6 +461,9 @@ void CameraHalAdapter::TorchModeStatusChange(
 
   base::AutoLock l(callbacks_delegates_lock_);
   for (auto& it : callbacks_delegates_) {
+    NotifyTorchModeStatusChange(it.second.get(), camera_id, new_status);
+  }
+  for (auto& it : callbacks_associated_delegates_) {
     NotifyTorchModeStatusChange(it.second.get(), camera_id, new_status);
   }
 }
@@ -603,8 +611,22 @@ void CameraHalAdapter::NotifyCameraDeviceStatusChange(
   delegate->CameraDeviceStatusChange(camera_id, status);
 }
 
+void CameraHalAdapter::NotifyCameraDeviceStatusChange(
+    CameraModuleCallbacksAssociatedDelegate* delegate,
+    int camera_id,
+    camera_device_status_t status) {
+  delegate->CameraDeviceStatusChange(camera_id, status);
+}
+
 void CameraHalAdapter::NotifyTorchModeStatusChange(
     CameraModuleCallbacksDelegate* delegate,
+    int camera_id,
+    torch_mode_status_t status) {
+  delegate->TorchModeStatusChange(camera_id, status);
+}
+
+void CameraHalAdapter::NotifyTorchModeStatusChange(
+    CameraModuleCallbacksAssociatedDelegate* delegate,
     int camera_id,
     torch_mode_status_t status) {
   delegate->TorchModeStatusChange(camera_id, status);
@@ -665,8 +687,10 @@ void CameraHalAdapter::ResetCallbacksDelegateOnThread(uint32_t callbacks_id) {
   base::AutoLock l(callbacks_delegates_lock_);
   if (callbacks_id == kIdAll) {
     callbacks_delegates_.clear();
+    callbacks_associated_delegates_.clear();
   } else {
     callbacks_delegates_.erase(callbacks_id);
+    callbacks_associated_delegates_.erase(callbacks_id);
   }
 }
 
@@ -682,4 +706,40 @@ void CameraHalAdapter::ResetVendorTagOpsDelegateOnThread(
   }
 }
 
+int32_t CameraHalAdapter::SetCallbacksAssociated(
+    mojom::CameraModuleCallbacksAssociatedPtrInfo callbacks_info) {
+  VLOGF_ENTER();
+  DCHECK(camera_module_thread_.task_runner()->BelongsToCurrentThread());
+  TRACE_CAMERA_SCOPED();
+
+  auto callbacks_delegate =
+      std::make_unique<CameraModuleCallbacksAssociatedDelegate>(
+          camera_module_callbacks_thread_.task_runner());
+  uint32_t callbacks_id = callbacks_id_++;
+  callbacks_delegate->Bind(
+      std::move(callbacks_info),
+      base::Bind(&CameraHalAdapter::ResetCallbacksDelegateOnThread,
+                 base::Unretained(this), callbacks_id));
+
+  // Send latest status to the new client, so all presented external cameras are
+  // available to the client after SetCallbacks() returns.
+  for (const auto& it : device_status_map_) {
+    int camera_id = it.first;
+    camera_device_status_t device_status = it.second;
+    if (device_status != default_device_status_map_[camera_id]) {
+      NotifyCameraDeviceStatusChange(callbacks_delegate.get(), camera_id,
+                                     device_status);
+    }
+    torch_mode_status_t torch_status = torch_mode_status_map_[camera_id];
+    if (torch_status != default_torch_mode_status_map_[camera_id]) {
+      NotifyTorchModeStatusChange(callbacks_delegate.get(), camera_id,
+                                  torch_status);
+    }
+  }
+
+  base::AutoLock l(callbacks_delegates_lock_);
+  callbacks_associated_delegates_[callbacks_id] = std::move(callbacks_delegate);
+
+  return 0;
+}
 }  // namespace cros

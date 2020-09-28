@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// Next min version: 3
+// Next min version: 4
 
 module cros.mojom;
 
@@ -86,7 +86,7 @@ interface VendorTagOps {
 // (https://goo.gl/8Hf8S8).  CameraModule is the interface to interact with a
 // camera HAL to query device info and open camera devices.
 //
-// Next method ID: 7
+// Next method ID: 8
 interface CameraModule {
   // Opens the camera device specified by |camera_id|.  On success, the camera
   // device is accessible through the |device_ops| returned.
@@ -99,6 +99,7 @@ interface CameraModule {
   // Gets various info about the camera specified by |camera_id|.
   GetCameraInfo@2(int32 camera_id) => (int32 result, CameraInfo? camera_info);
 
+  // [Deprecated in version 3]
   // Registers the CameraModuleCallbacks interface with the camera HAL.
   SetCallbacks@3(CameraModuleCallbacks callbacks) => (int32 result);
 
@@ -118,4 +119,10 @@ interface CameraModule {
   // if no vendor tags are defined.
   [MinVersion=2]
   GetVendorTagOps@6(VendorTagOps& vendor_tag_ops_request) => ();
+
+  // Registers the CameraModuleCallbacks associated interface with the camera
+  // HAL. TODO(b/169324225): Migrate all camera HAL clients to use this.
+  [MinVersion=3]
+  SetCallbacksAssociated@7(associated CameraModuleCallbacks callbacks)
+      => (int32 result);
 };
