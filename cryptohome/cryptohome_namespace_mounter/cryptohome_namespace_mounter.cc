@@ -199,6 +199,18 @@ int main(int argc, char** argv) {
 
   base::RunLoop run_loop;
 
+  // |STDIN_FILENO| is the read end of a pipe whose write end is a file
+  // descriptor in 'cryptohomed'. |WatchReadable()| will execute the callback
+  // when |STDIN_FILENO| can be read without blocking, or when there is a pipe
+  // error. The code does not need to read any more input from 'cryptohomed' at
+  // this point so the only expected event on the pipe is the write end of the
+  // pipe being closed because of a 'cryptohomed' crash.
+  // The resulting behavior is that the code will quit the run loop, clean up
+  // the mount, and exit if 'cryptohomed' crashes.
+  std::unique_ptr<base::FileDescriptorWatcher::Controller> watcher =
+      base::FileDescriptorWatcher::WatchReadable(STDIN_FILENO,
+                                                 run_loop.QuitClosure());
+
   // Quit the run loop when signalled.
   sig_handler.RegisterHandler(
       SIGTERM, base::Bind(&HandleSignal, run_loop.QuitClosure()));
