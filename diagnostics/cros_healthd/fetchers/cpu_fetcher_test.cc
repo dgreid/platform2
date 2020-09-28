@@ -51,7 +51,8 @@ constexpr char kFirstCStateDir[] = "state0";
 constexpr char kNonIntegralFileContents[] = "Not an integer!";
 
 constexpr char kBadCpuinfoContents[] =
-    "processor\t: 0\nmodel \t: Dank CPU 1 @ 8.90GHz\n\n";
+    "calculator\t: 0\nmodel name\t: Dank CPU 1 @ 8.90GHz\n\n";
+constexpr char kNoModelNameCpuinfoContents[] = "processor\t: 0\n\n";
 constexpr char kNoPhysicalIdCpuinfoContents[] =
     "processor\t: 0\nmodel name\t: Dank CPU 1 @ 8.90GHz\n\n"
     "processor\t: 1\nmodel name\t: Dank CPU 1 @ 8.90GHzn\n\n"
@@ -386,6 +387,19 @@ TEST_F(CpuFetcherTest, IncorrectlyFormattedCpuinfoFile) {
 
   ASSERT_TRUE(cpu_result->is_error());
   EXPECT_EQ(cpu_result->get_error()->type, mojo_ipc::ErrorType::kParseError);
+}
+
+// Test that we handle a cpuinfo file without a model name.
+TEST_F(CpuFetcherTest, NoModelNameCpuinfoFile) {
+  ASSERT_TRUE(WriteFileAndCreateParentDirs(GetProcCpuInfoPath(temp_dir_path()),
+                                           kNoModelNameCpuinfoContents));
+
+  auto cpu_result = FetchCpuInfo();
+
+  ASSERT_TRUE(cpu_result->is_cpu_info());
+  ASSERT_EQ(cpu_result->get_cpu_info()->physical_cpus.size(), 1);
+  EXPECT_FALSE(
+      cpu_result->get_cpu_info()->physical_cpus[0]->model_name.has_value());
 }
 
 // Test that we handle a missing stat file.

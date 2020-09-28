@@ -304,7 +304,8 @@ void DisplayCpuInfo(
     std::cout << "\tmodel_name" << std::endl;
     // Remove commas from the model name before printing CSVs.
     std::string csv_model_name;
-    base::RemoveChars(physical_cpu->model_name, ",", &csv_model_name);
+    base::RemoveChars(physical_cpu->model_name.value_or("N/A"), ",",
+                      &csv_model_name);
     std::cout << "\t" << csv_model_name << std::endl;
 
     for (const auto& logical_cpu : physical_cpu->logical_cpus) {

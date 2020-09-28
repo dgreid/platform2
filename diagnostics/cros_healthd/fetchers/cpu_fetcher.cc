@@ -137,8 +137,8 @@ base::Optional<std::map<std::string, uint32_t>> ParseStatContents(
   return idle_times;
 }
 
-// Parses |processor| to obtain |processor_id|, |physical_id|, and |model_name|.
-// Returns true on success.
+// Parses |processor| to obtain |processor_id|, |physical_id|, and |model_name|
+// if applicable. Returns true on success.
 bool ParseProcessor(const std::string& processor,
                     std::string* processor_id,
                     std::string* physical_id,
@@ -160,8 +160,7 @@ bool ParseProcessor(const std::string& processor,
     *physical_id = *processor_id;
   }
 
-  return (!processor_id->empty() && !physical_id->empty() &&
-          !model_name->empty());
+  return (!processor_id->empty() && !physical_id->empty());
 }
 
 // Aggregates data from |processor_info| and |logical_ids_to_idle_times| to form
@@ -188,7 +187,8 @@ mojo_ipc::CpuResultPtr GetCpuInfoFromProcessorInfo(
     auto itr = physical_cpus.find(physical_id);
     if (itr == physical_cpus.end()) {
       mojo_ipc::PhysicalCpuInfo physical_cpu;
-      physical_cpu.model_name = std::move(model_name);
+      if (!model_name.empty())
+        physical_cpu.model_name = std::move(model_name);
       const auto result =
           physical_cpus.insert({physical_id, physical_cpu.Clone()});
       DCHECK(result.second);
