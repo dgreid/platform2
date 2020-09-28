@@ -30,6 +30,8 @@ using org::chromium::SessionManagerInterfaceProxy;
 namespace {
 
 const char kUMAEventsPath[] = "/var/lib/metrics/uma-events";
+// If you change this path make sure to also change the corresponding rollback
+// constant: src/platform2/oobe_config/rollback_constants.cc
 const char kConsentFile[] = "/home/chronos/Consent To Send Stats";
 const char kCrosEventHistogramName[] = "Platform.CrOSEvent";
 const int kCrosEventHistogramMax = 100;
