@@ -383,10 +383,47 @@ properties:
                         - 90
                         - 180
                         - 270
+                      flags:
+                        type: object
+                        description: Bit flags representing camera capabilities
+                          of this device. A camera module can be mounted on this
+                          slot only if all the flags match.
+                        properties:
+                          support-1080p:
+                            type: boolean
+                            description: Supports 1920x1080 resolution.
+                          support-autofocus:
+                            type: boolean
+                            description: Supports auto-focus.
+                        required:
+                        - support-1080p
+                        - support-autofocus
+                        additionalProperties: false
+                      ids:
+                        type: array
+                        description: List of strings each identifies a possible
+                          camera module on this slot. An empty list means this
+                          information is not available.
+                        items:
+                          type: string
+                          description: An identifier string of camera module.
+                            For USB cameras this must be 4-digit hexadecimal VID
+                            and PID separated by a colon, e.g. 0123:abcd. For
+                            MIPI cameras it depends on vendor software usage.
+                    if:
+                      properties:
+                        interface:
+                          const: usb
+                    then:
+                      properties:
+                        ids:
+                          items:
+                            pattern: "[0-9a-f]{4}:[0-9a-f]{4}"
                     required:
                     - interface
                     - facing
                     - orientation
+                    - flags
                     additionalProperties: false
               additionalProperties: false
             fingerprint:

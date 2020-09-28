@@ -316,11 +316,20 @@ class ValidateCameraSchema(cros_test_lib.TestCase):
                                 'interface': 'usb',
                                 'facing': 'front',
                                 'orientation': 180,
+                                'flags': {
+                                    'support-1080p': False,
+                                    'support-autofocus': False,
+                                },
+                                'ids': ['0123:abcd', '4567:efef'],
                             },
                             {
                                 'interface': 'mipi',
                                 'facing': 'back',
                                 'orientation': 0,
+                                'flags': {
+                                    'support-1080p': True,
+                                    'support-autofocus': True,
+                                },
                             },
                         ],
                     }
@@ -330,6 +339,41 @@ class ValidateCameraSchema(cros_test_lib.TestCase):
     }
     libcros_schema.ValidateConfigSchema(self._schema,
                                         libcros_schema.FormatJson(config))
+
+  def testInvalidUsbId(self):
+    if version.parse(jsonschema.__version__) < version.Version('3.0.0'):
+      self.skipTest('jsonschema needs upgrade to support conditionals')
+
+    for invalid_usb_id in ('0123-abcd', '0123:Abcd', '123:abcd'):
+      config = {
+          'chromeos': {
+              'configs': [
+                  {
+                      'identity': {'platform-name': 'foo', 'sku-id': 1},
+                      'name': 'foo',
+                      'camera': {
+                          'count': 1,
+                          'devices': [
+                              {
+                                  'interface': 'usb',
+                                  'facing': 'front',
+                                  'orientation': 0,
+                                  'flags': {
+                                      'support-1080p': False,
+                                      'support-autofocus': True,
+                                  },
+                                  'ids': [invalid_usb_id],
+                              },
+                          ],
+                      }
+                  },
+              ],
+          },
+      }
+      with self.assertRaises(jsonschema.ValidationError) as ctx:
+        libcros_schema.ValidateConfigSchema(self._schema,
+                                            libcros_schema.FormatJson(config))
+      self.assertIn('%r does not match' % invalid_usb_id, str(ctx.exception))
 
 
 WHITELABEL_CONFIG = """
