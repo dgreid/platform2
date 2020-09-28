@@ -187,8 +187,6 @@ class TpmImpl : public Tpm {
   void HandleOwnershipTakenEvent() override;
   bool DoesUseTpmManager() override;
   bool IsCurrentPCR0ValueValid() override;
-  void SetDelegateData(const std::string& delegate_blob,
-                       bool has_reset_lock_permissions) override;
   base::Optional<bool> IsDelegateBoundToPcr() override;
   bool DelegateCanResetDACounter() override;
   // Returns the map with expected PCR values for the user.
@@ -236,6 +234,20 @@ class TpmImpl : public Tpm {
                                 UINT32 signature_scheme,
                                 UINT32 encryption_scheme,
                                 TSS_HKEY* key_handle);
+
+ protected:
+  // Processes the delegate blob and establishes if it's bound to any PCR. Also
+  // keeps the information about reset_lock_permissions. Returns |true| iff the
+  // attributes of the delegate is successfully determined.
+  //
+  // Note that this is supposed to belong to TpmNewImpl; TpmImpl doesn't have
+  // any internal caller to this function; regardless, we should just move it to
+  // tpm manager eventually.
+  //
+  // TODO(b/169392230): Remove this function once tpm manager performs the
+  // check.
+  bool SetDelegateData(const brillo::Blob& delegate_blob,
+                       bool has_reset_lock_permissions);
 
  private:
   // Connects to the TPM and return its context at |context_handle|.

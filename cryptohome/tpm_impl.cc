@@ -3260,27 +3260,38 @@ bool TpmImpl::GetIFXFieldUpgradeInfo(IFXFieldUpgradeInfo* info) {
   return true;
 }
 
-void TpmImpl::SetDelegateData(const std::string& delegate_blob,
+bool TpmImpl::SetDelegateData(const brillo::Blob& delegate_blob,
                               bool has_reset_lock_permissions) {
   if (delegate_blob.size() == 0) {
-    return;
+    LOG(ERROR) << __func__ << ": Empty blob.";
+    return false;
   }
 
   has_reset_lock_permissions_ = has_reset_lock_permissions;
   UINT64 offset = 0;
   TPM_DELEGATE_OWNER_BLOB ownerBlob;
-  brillo::Blob blob = brillo::BlobFromString(delegate_blob);
-  TSS_RESULT tss_result = Trspi_UnloadBlob_TPM_DELEGATE_OWNER_BLOB(
-      &offset, blob.data(), &ownerBlob);
+  // TODO(b/169392230): Fix the potential memory leak while migrating to tpm
+  // manager.
+  TSS_RESULT result = Trspi_UnloadBlob_TPM_DELEGATE_OWNER_BLOB(
+      &offset, const_cast<BYTE*>(delegate_blob.data()), &ownerBlob);
 
-  if (tss_result != TSS_SUCCESS) {
-    LOG(ERROR) << "Failed to unload delegate blob";
-    return;
+  if (result != TSS_SUCCESS) {
+    TPM_LOG(ERROR, result) << __func__ << ": Failed to unload delegate blob.";
+    return false;
   }
 
-  is_delegate_bound_to_pcr_ =
-      (ownerBlob.pub.pcrInfo.pcrSelection.pcrSelect[0] != 0) ||
-      (ownerBlob.pub.pcrInfo.pcrSelection.pcrSelect[1] != 0);
+  if (ownerBlob.pub.pcrInfo.pcrSelection.sizeOfSelect > 1 &&
+      ownerBlob.pub.pcrInfo.pcrSelection.pcrSelect != nullptr) {
+    is_delegate_bound_to_pcr_ =
+        (ownerBlob.pub.pcrInfo.pcrSelection.pcrSelect[0] != 0) ||
+        (ownerBlob.pub.pcrInfo.pcrSelection.pcrSelect[1] != 0);
+  } else {
+    LOG(WARNING) << __func__ << ": Unexpected PCR information: "
+                 << ownerBlob.pub.pcrInfo.pcrSelection.sizeOfSelect << " (at "
+                 << ownerBlob.pub.pcrInfo.pcrSelection.pcrSelect << ").";
+    return false;
+  }
+  return true;
 }
 
 base::Optional<bool> TpmImpl::IsDelegateBoundToPcr() {

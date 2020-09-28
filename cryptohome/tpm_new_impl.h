@@ -48,6 +48,8 @@ class TpmNewImpl : public TpmImpl {
       TpmPersistentState::TpmOwnerDependency dependency) override;
   bool ClearStoredPassword() override;
   bool GetVersionInfo(TpmVersionInfo* version_info) override;
+  base::Optional<bool> IsDelegateBoundToPcr() override;
+  bool DelegateCanResetDACounter() override;
 
  private:
   // Initializes |tpm_manager_utility_|; returns |true| iff successful.
@@ -68,6 +70,9 @@ class TpmNewImpl : public TpmImpl {
   // until the signal is confirmed to be connected).
   bool UpdateLocalDataFromTpmManager();
 
+  // Gets delegate from tpm manager and call feed the value to |SetDelegate|.
+  bool SetDelegateDataFromTpmManager();
+
   //  wrapped tpm_manager proxy to get information from |tpm_manager|.
   tpm_manager::TpmManagerUtility* tpm_manager_utility_{nullptr};
 
@@ -76,6 +81,11 @@ class TpmNewImpl : public TpmImpl {
   // move data members in |TpmImpl| to |protected| field.
   bool is_enabled_{false};
   bool is_owned_{false};
+
+  // Indicates if the delegate has been set and the parent class |TpmImpl|
+  // already has the information about the owner delegate we have from tpm
+  // manager.
+  bool has_set_delegate_data_ = false;
 
   // This flag indicates |CacheTpmManagerStatus| shall be called when the
   // ownership taken signal is confirmed to be connected.

@@ -237,4 +237,34 @@ bool TpmNewImpl::GetVersionInfo(TpmVersionInfo* version_info) {
   return true;
 }
 
+bool TpmNewImpl::SetDelegateDataFromTpmManager() {
+  if (has_set_delegate_data_) {
+    return true;
+  }
+  brillo::Blob blob, unused_secret;
+  bool has_reset_lock_permissions = false;
+  if (GetDelegate(&blob, &unused_secret, &has_reset_lock_permissions)) {
+    // Don't log the error at this level but by the called function and the
+    // functions that call it.
+    has_set_delegate_data_ |= SetDelegateData(blob, has_reset_lock_permissions);
+  }
+  return has_set_delegate_data_;
+}
+
+base::Optional<bool> TpmNewImpl::IsDelegateBoundToPcr() {
+  if (!SetDelegateDataFromTpmManager()) {
+    LOG(WARNING) << __func__
+                 << ": failed to call |SetDelegateDataFromTpmManager|.";
+  }
+  return TpmImpl::IsDelegateBoundToPcr();
+}
+
+bool TpmNewImpl::DelegateCanResetDACounter() {
+  if (!SetDelegateDataFromTpmManager()) {
+    LOG(WARNING) << __func__
+                 << ": failed to call |SetDelegateDataFromTpmManager|.";
+  }
+  return TpmImpl::DelegateCanResetDACounter();
+}
+
 }  // namespace cryptohome

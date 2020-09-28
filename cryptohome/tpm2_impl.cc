@@ -1583,9 +1583,6 @@ bool Tpm2Impl::IsCurrentPCR0ValueValid() {
   return true;
 }
 
-void Tpm2Impl::SetDelegateData(const std::string& delegate_blob,
-                               bool has_reset_lock_permissions) {}
-
 base::Optional<bool> Tpm2Impl::IsDelegateBoundToPcr() {
   return false;
 }

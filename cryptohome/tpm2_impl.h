@@ -229,8 +229,6 @@ class Tpm2Impl : public Tpm {
   bool DoesUseTpmManager() override;
 
   bool IsCurrentPCR0ValueValid() override;
-  void SetDelegateData(const std::string& delegate_blob,
-                       bool has_reset_lock_permissions) override;
   base::Optional<bool> IsDelegateBoundToPcr() override;
   bool DelegateCanResetDACounter() override;
   std::map<uint32_t, std::string> GetPcrMap(

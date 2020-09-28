@@ -804,16 +804,10 @@ class Tpm {
   // returns true;
   virtual bool IsCurrentPCR0ValueValid() = 0;
 
-  // Processes the delegate blob and establishes if it's bound to any PCR. Also
-  // keeps the information about reset_lock_permissions.
-  virtual void SetDelegateData(const std::string& delegate_blob,
-                               bool has_reset_lock_permissions) = 0;
-
-  // Returns whether the delegate set by SetDelegateData() is bound to PCR.
+  // Returns whether the owner auth delegate set by is bound to PCR.
   virtual base::Optional<bool> IsDelegateBoundToPcr() = 0;
 
-  // Returns whether the delegate set by SetDelegateData() has reset lock
-  // permissions.
+  // Returns whether the owner auth delegate set by has reset lock permissions.
   virtual bool DelegateCanResetDACounter() = 0;
 
   // Returns the map with expected PCR values for the user.
