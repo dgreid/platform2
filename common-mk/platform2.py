@@ -84,6 +84,7 @@ _IUSE = [
     'msan',
     'mtd',
     'ndk_translation',
+    'ondevice_grammar',
     'ondevice_handwriting',
     'ondevice_handwriting_dlc',
     'ondevice_speech',

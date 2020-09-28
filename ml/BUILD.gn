@@ -59,6 +59,12 @@ pkg_config("ml_common_pkg_deps") {
   ]
 }
 
+proto_library("ml_grammar_proto") {
+  proto_in_dir = "${sysroot}/usr/include/chromeos/libgrammar/proto"
+  proto_out_dir = "chrome/knowledge/grammar/"
+  sources = [ "${proto_in_dir}/grammar_interface.proto" ]
+}
+
 proto_library("ml_handwriting_proto") {
   proto_in_dir = "${sysroot}/usr/include/chromeos/libhandwriting/proto"
   proto_out_dir = "chrome/knowledge/handwriting/"
@@ -89,12 +95,16 @@ static_library("ml_common") {
     "utf",
   ]
   pkg_deps = [ "protobuf" ]
-  deps = [ ":ml_handwriting_proto" ]
+  deps = [
+    ":ml_grammar_proto",
+    ":ml_handwriting_proto",
+  ]
   public_deps = [ ":ml_mojo_bindings_lib" ]
   all_dependent_configs = [ ":ml_common_pkg_deps" ]
   sources = [
     "daemon.cc",
     "dlcservice_client.cc",
+    "grammar_library.cc",
     "graph_executor_impl.cc",
     "handwriting.cc",
     "handwriting_proto_mojom_conversion.cc",
@@ -119,6 +129,7 @@ static_library("ml_common") {
     sources += [ "soda_recognizer_impl_dummy.cc" ]
   }
   defines = [
+    "USE_ONDEVICE_GRAMMAR=${use.ondevice_grammar}",
     "USE_ONDEVICE_HANDWRITING=${use.ondevice_handwriting}",
     "USE_ONDEVICE_HANDWRITING_DLC=${use.ondevice_handwriting_dlc}",
     "TC3_VOCAB_ANNOTATOR_DUMMY",
@@ -147,11 +158,13 @@ if (use.test) {
     include_dirs = [ "${sysroot}/usr/include/tensorflow" ]
     deps = [
       ":ml_common",
+      ":ml_grammar_proto",
       ":ml_handwriting_proto",
       "//common-mk/testrunner:testrunner",
     ]
     sources = [
       "dlcservice_client_test.cc",
+      "grammar_library_test.cc",
       "graph_executor_impl_test.cc",
       "handwriting_proto_mojom_conversion_test.cc",
       "handwriting_test.cc",
@@ -162,6 +175,7 @@ if (use.test) {
       "util_test.cc",
     ]
     defines = [
+      "USE_ONDEVICE_GRAMMAR=${use.ondevice_grammar}",
       "USE_ONDEVICE_HANDWRITING=${use.ondevice_handwriting}",
       "USE_ONDEVICE_HANDWRITING_DLC=${use.ondevice_handwriting_dlc}",
     ]
