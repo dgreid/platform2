@@ -23,6 +23,11 @@
 
 namespace cros {
 
+// JPEG format uses 2 bytes to denote the size of a segment, and the size
+// includes the 2 bytes used for specifying it. Therefore, maximum data size
+// allowed is: 65535 - 2 = 65533.
+constexpr size_t kMaxMarkerSizeAllowed = 65533;
+
 // The destination manager that can access members in JpegCompressorImpl.
 struct destination_mgr {
  public:
@@ -70,6 +75,11 @@ bool JpegCompressorImpl::CompressImage(const void* image,
 
   if (out_data_size == nullptr || out_buffer == nullptr) {
     LOGF(ERROR) << "Output should not be nullptr";
+    return false;
+  }
+
+  if (app1_size > kMaxMarkerSizeAllowed) {
+    LOGF(ERROR) << "App1 size " << app1_size << " > " << kMaxMarkerSizeAllowed;
     return false;
   }
 
@@ -129,6 +139,11 @@ bool JpegCompressorImpl::CompressImageFromHandle(buffer_handle_t input,
 
   if (out_data_size == nullptr) {
     LOGF(ERROR) << "Output size should not be nullptr";
+    return false;
+  }
+
+  if (app1_size > kMaxMarkerSizeAllowed) {
+    LOGF(ERROR) << "App1 size " << app1_size << " > " << kMaxMarkerSizeAllowed;
     return false;
   }
 
