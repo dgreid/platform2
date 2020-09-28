@@ -358,20 +358,12 @@ void ProxyConnectJob::DoCurlServerConnection() {
     return;
   }
 
-  auto fwd =
-      CreateSocketForwarder(std::move(client_socket_), std::move(server_conn));
+  auto fwd = std::make_unique<patchpanel::SocketForwarder>(
+      base::StringPrintf("%d-%d", client_socket_->fd(), server_conn->fd()),
+      std::move(client_socket_), std::move(server_conn));
   // Start forwarding data between sockets.
   fwd->Start();
   std::move(setup_finished_callback_).Run(std::move(fwd), this);
-}
-
-std::unique_ptr<patchpanel::SocketForwarder>
-ProxyConnectJob::CreateSocketForwarder(
-    std::unique_ptr<patchpanel::Socket> peer0,
-    std::unique_ptr<patchpanel::Socket> peer1) {
-  return std::make_unique<patchpanel::SocketForwarder>(
-      base::StringPrintf("%d-%d", peer0->fd(), peer1->fd()), std::move(peer0),
-      std::move(peer1));
 }
 
 bool ProxyConnectJob::SendHttpResponseToClient(

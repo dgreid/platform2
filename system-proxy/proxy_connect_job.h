@@ -86,12 +86,6 @@ class ProxyConnectJob {
   friend std::ostream& operator<<(std::ostream& stream,
                                   const ProxyConnectJob& job);
 
- protected:
-  // Overridden in tests.
-  virtual std::unique_ptr<patchpanel::SocketForwarder> CreateSocketForwarder(
-      std::unique_ptr<patchpanel::Socket> peer0,
-      std::unique_ptr<patchpanel::Socket> peer1);
-
  private:
   friend class ServerProxyTest;
   friend class ProxyConnectJobTest;
