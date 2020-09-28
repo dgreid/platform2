@@ -75,3 +75,26 @@ service StartupListener {
   // incoming requests.
   rpc VmReady(EmptyMessage) returns (EmptyMessage);
 }
+
+// A message representing one of more log messages from the serial out
+// of a specific VM. Used by anomaly_detector. Placed in this package
+// because it needs to include LogRequest.
+message VmKernelLogRequest {
+  // The type of VM sending logs. Note that the values here should match
+  // the ones in concierge_service.proto for ease of conversion.
+  enum VmType {
+    // Default value indicating an unknown or custom VM.
+    UNKNOWN = 0;
+
+    // VM is associated with a specific feature.
+    TERMINA = 1;
+    ARC_VM = 2;
+    PLUGIN_VM = 3;
+  };
+
+  VmType vm_type = 1;
+
+  int32 cid = 2;
+
+  repeated LogRecord records = 3;
+}

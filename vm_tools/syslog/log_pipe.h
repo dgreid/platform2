@@ -38,7 +38,7 @@ class LogPipe {
                                          int64_t cid,
                                          const vm_tools::VmId& id,
                                          base::ScopedFD dest,
-                                         anomaly_detector::VmType vm_type,
+                                         VmKernelLogRequest::VmType vm_type,
                                          base::WeakPtr<LogPipeManager> manager);
 
   static std::unique_ptr<LogPipe> CreateForTesting(

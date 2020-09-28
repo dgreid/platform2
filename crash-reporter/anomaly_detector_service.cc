@@ -6,7 +6,6 @@
 
 #include <utility>
 
-#include <anomaly_detector/proto_bindings/anomaly_detector.pb.h>
 #include <base/time/default_clock.h>
 #include <chromeos/dbus/service_constants.h>
 #include <metrics/metrics_library.h>
@@ -193,7 +192,7 @@ void Service::ProcessVmKernelLog(dbus::MethodCall* method_call,
   dbus::MessageReader reader(method_call);
   auto response = dbus::Response::FromMethodCall(method_call);
 
-  anomaly_detector::VmKernelLogRequest request;
+  vm_tools::VmKernelLogRequest request;
   if (!reader.PopArrayOfBytesAsProto(&request)) {
     LOG(ERROR) << "Unable to parse VmKernelLogRequest from DBus call";
     std::move(sender).Run(std::move(response));
@@ -202,19 +201,12 @@ void Service::ProcessVmKernelLog(dbus::MethodCall* method_call,
 
   // We don't currently care about logs from non-termina VMs, so just ignore
   // such calls.
-  if (request.vm_type() != anomaly_detector::TERMINA) {
+  if (request.vm_type() != vm_tools::VmKernelLogRequest::TERMINA) {
     std::move(sender).Run(std::move(response));
     return;
   }
 
-  vm_tools::LogRequest records;
-  if (!request.records().UnpackTo(&records)) {
-    LOG(ERROR) << "Unable to parse LogRequest from DBus call";
-    std::move(sender).Run(std::move(response));
-    return;
-  }
-
-  for (const auto& message : records.records()) {
+  for (const auto& message : request.records()) {
     termina_parser_->ParseLogEntry(request.cid(), message.content());
   }
 

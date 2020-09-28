@@ -8,36 +8,9 @@ option optimize_for = LITE_RUNTIME;
 // This file defines messages used by anomaly_detector.
 package anomaly_detector;
 
-import "google/protobuf/any.proto";
-
 // This signal is sent whenever anomaly_detector sees that a VM has
 // encountered filesystem corruption.
 message GuestFileCorruptionSignal {
   // The vsock context identifier used by the VM that triggered this signal.
   int32 vsock_cid = 1;
-}
-
-// The type of VM sending logs. Note that the values here should match
-// the ones in concierge_service.proto for ease of conversion.
-enum VmType {
-  // Default value indicating an unknown or custom VM.
-  UNKNOWN = 0;
-
-  // VM is associated with a specific feature.
-  TERMINA = 1;
-  ARC_VM = 2;
-  PLUGIN_VM = 3;
-};
-
-// A message representing one of more log messages from the serial out
-// of a specific VM.
-message VmKernelLogRequest {
-  VmType vm_type = 1;
-
-  int32 cid = 2;
-
-  // This should be a LogRequest message from the vm_protos package,
-  // but we can't import the proto file here and it has more structure
-  // then the VmType enum.
-  google.protobuf.Any records = 3;
 }

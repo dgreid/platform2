@@ -22,7 +22,7 @@ namespace syslog {
 
 HostCollector::HostCollector(scoped_refptr<dbus::Bus> bus,
                              int64_t cid,
-                             anomaly_detector::VmType vm_type,
+                             VmKernelLogRequest::VmType vm_type,
                              base::WeakPtr<LogPipeManager> log_pipe_manager)
     : cid_(cid),
       log_pipe_manager_(log_pipe_manager),
@@ -44,7 +44,7 @@ std::unique_ptr<HostCollector> HostCollector::Create(
     scoped_refptr<dbus::Bus> bus,
     int64_t cid,
     base::FilePath logsocket_path,
-    anomaly_detector::VmType vm_type,
+    VmKernelLogRequest::VmType vm_type,
     base::WeakPtr<LogPipeManager> log_pipe_manager) {
   LOG(INFO) << "Creating HostCollector watching " << logsocket_path;
   auto collector = base::WrapUnique<HostCollector>(
@@ -69,7 +69,7 @@ std::unique_ptr<HostCollector> HostCollector::CreateForTesting(
   CHECK(syslog_fd.is_valid());
 
   auto collector = base::WrapUnique(new HostCollector(
-      /*bus=*/nullptr, cid, /*vm_type=*/anomaly_detector::VmType::UNKNOWN,
+      /*bus=*/nullptr, cid, /*vm_type=*/VmKernelLogRequest::UNKNOWN,
       log_pipe_manager));
   collector->SetSyslogFDForTesting(std::move(syslog_fd));
 
@@ -96,10 +96,10 @@ bool HostCollector::SendUserLogs() {
                                anomaly_detector::kAnomalyVmKernelLogMethod);
   dbus::MessageWriter writer(&method_call);
 
-  anomaly_detector::VmKernelLogRequest request;
+  VmKernelLogRequest request;
   request.set_vm_type(vm_type_);
   request.set_cid(cid_);
-  request.mutable_records()->PackFrom(syslog_request());
+  *request.mutable_records() = syslog_request().records();
 
   writer.AppendProtoAsArrayOfBytes(request);
   anomaly_detector_proxy_->CallMethod(

@@ -87,7 +87,7 @@ std::unique_ptr<LogPipe> LogPipe::Create(
     int64_t cid,
     const VmId& id,
     base::ScopedFD dest,
-    anomaly_detector::VmType vm_type,
+    VmKernelLogRequest::VmType vm_type,
     base::WeakPtr<LogPipeManager> manager) {
   auto forwarder = std::make_unique<Forwarder>(std::move(dest), false);
   auto collector =
@@ -255,11 +255,11 @@ void LogPipeManager::OnVmStartingUpSignal(dbus::Signal* signal) {
   }
   VmId vm_id(vm_started_signal.owner_id(), vm_started_signal.name());
   int64_t cid = vm_started_signal.vm_info().cid();
-  auto vm_type = static_cast<anomaly_detector::VmType>(
+  auto vm_type = static_cast<VmKernelLogRequest::VmType>(
       vm_started_signal.vm_info().vm_type());
 
   LOG(INFO) << "Received VmStartingUpSignal for " << vm_id << ", cid " << cid
-            << ", type " << anomaly_detector::VmType_Name(vm_type);
+            << ", type " << VmKernelLogRequest::VmType_Name(vm_type);
 
   base::ScopedFD dest = OpenForwarderPath(vm_id);
   if (!dest.is_valid()) {
