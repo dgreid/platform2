@@ -13,6 +13,7 @@ fi
 # Load functions and constants for chromeos-install.
 . /usr/share/misc/chromeos-common.sh || exit 1
 . /usr/share/misc/shflags || exit 1
+. /usr/share/misc/lvm-utils.sh || exit 1
 
 # Source blocksize
 SRC_BLKSIZE=512
@@ -63,6 +64,8 @@ DEFINE_string oobe_pub_key "" "Path to public key for OOBE auto-configuration \
 validation"
 DEFINE_string oobe_priv_key "" "Path to private key for OOBE \
 auto-configuration signing"
+DEFINE_boolean lvm_stateful "${FLAGS_FALSE}" "Create LVM-based stateful \
+partition"
 
 
 # Parse command line
@@ -461,10 +464,51 @@ check_removable() {
   fi
 }
 
+mkfs() {
+  local fs_format="$1"
+  local fs_sector_count="$2"
+  local device="$3"
+  local label="$4"
+  # We re-use $@ for our custom options below, so reset it.
+  set --
+
+  # Check if the kernel we are going to install support ext4 crypto.
+  if ext4_dir_encryption_supported; then
+    set -- "$@" -O encrypt
+  fi
+
+  # Check if the kernel we are going to install support ext4 fs-verity.
+  if ext4_fsverity_supported; then
+    set -- "$@" -O verity
+  fi
+
+  # Calculate the number of 4k sectors for the ext4 partition.
+  local num_4k_sectors
+  local sector_size=4096
+  if [ "${DST_BLKSIZE}" -gt "${sector_size}" ]; then
+    num_4k_sectors=$(( fs_sector_count * (DST_BLKSIZE / sector_size) ))
+  else
+    num_4k_sectors=$(( fs_sector_count / (sector_size / DST_BLKSIZE) ))
+  fi
+
+  # We always make any ext* stateful partitions ext4.
+  case "${fs_format}" in
+  ext[234])
+    mkfs.ext4 -F -b ${sector_size} -L "${label}" "$@" "${device}" \
+      ${num_4k_sectors}
+    ;;
+  ubifs)
+    mkfs.ubifs -y -x none -R 0 "/dev/ubi${PARTITION_NUM_STATE}_0"
+    ;;
+  esac
+
+}
+
 # Wipes and expands the stateful partition.
 wipe_stateful() {
   echo "Clearing the stateful partition..."
   local stateful_fs_format
+  local vg_name
   stateful_fs_format="$(get_fs_format "${PARTITION_NUM_STATE}")"
   # state options are stored in $@.
   set --
@@ -487,33 +531,39 @@ wipe_stateful() {
     ;;
   esac
 
-  # Check if the kernel we are going to install support ext4 crypto.
-  if ext4_dir_encryption_supported; then
-    set -- "$@" -O encrypt
+  if [ "${FLAGS_lvm_stateful}" -eq "${FLAGS_TRUE}" ]; then
+    # Now we recreate the logical volume set up.
+    # Create physical volume on the partition.
+    echo "Creating physical volumes"
+    pvcreate -ff --yes "${DEV}"
+
+    vg_name="$(generate_random_vg_name)"
+    if [ -z "${vg_name}" ]; then
+      die "Failed to generate valid volume group name"
+    fi
+
+    echo "Creating volume group"
+    vgcreate -p 1 "${vg_name}" "${DEV}"
+
+    vgchange -ay "${vg_name}"
+
+    echo "Creating thinpool"
+    local thinpool_size="$(get_thinpool_size "${DEV}")"
+    local thinpool_metadata_size="$(get_thinpool_metadata_size \
+      "${thinpool_size}")"
+
+    lvcreate --size "${thinpool_size}M" --poolmetadatasize \
+      "${thinpool_metadata_size}M" --thinpool "thinpool" "${vg_name}/thinpool"
+
+    echo "Creating unencrypted volume"
+    local lv_size="$(get_logical_volume_size "${DEV}")"
+    lvcreate --thin -V "${lv_size}M" -n "unencrypted" "${vg_name}/thinpool"
+
+    NUM_STATEFUL_SECTORS=$(( lv_size * 2 * 1024 ))
+    DEV="/dev/${vg_name}/unencrypted"
   fi
 
-  # Check if the kernel we are going to install support ext4 fs-verity.
-  if ext4_fsverity_supported; then
-    set -- "$@" -O verity
-  fi
-
-  local num_4k_sectors
-  if [ "${DST_BLKSIZE}" -gt 4096 ]; then
-    num_4k_sectors=$(( NUM_STATEFUL_SECTORS * (DST_BLKSIZE / 4096) ))
-  else
-    num_4k_sectors=$(( NUM_STATEFUL_SECTORS / (4096 / DST_BLKSIZE) ))
-  fi
-
-  # We always make any ext* stateful partitions ext4.
-  case "${stateful_fs_format}" in
-  ext[234])
-    mkfs.ext4 -F -b 4096 -L "H-STATE" "$@" "${DEV}" \
-      ${num_4k_sectors}
-    ;;
-  ubifs)
-    mkfs.ubifs -y -x none -R 0 "/dev/ubi${PARTITION_NUM_STATE}_0"
-    ;;
-  esac
+  mkfs "${stateful_fs_format}" ${NUM_STATEFUL_SECTORS} "${DEV}" "H-STATE"
 
   case ${STATEFUL_FORMAT} in
   ubi) ;;
@@ -521,7 +571,9 @@ wipe_stateful() {
     # Need to synchronize before releasing loop device, otherwise calling
     # loop_offset_cleanup may return "device busy" error.
     sync
-    if [ ! -b "${DST}" ]; then
+    if [ "${FLAGS_lvm_stateful}" -eq "${FLAGS_TRUE}" ]; then
+      vgchange --force -an "${vg_name}"
+    elif [ ! -b "${DST}" ]; then
       loop_offset_cleanup
     fi
     ;;
@@ -559,6 +611,9 @@ install_stateful() {
   # Every exception added makes the dev image different from
   # the release image, which could mask bugs.  Make sure every
   # item you add here is well justified.
+  local dst_stateful_partition
+  local vg_name
+
   echo "Installing the stateful partition..."
   case "${STATEFUL_FORMAT}" in
   ubi)
@@ -566,7 +621,15 @@ install_stateful() {
     LOOP_DEV="/dev/ubi${PARTITION_NUM_STATE}_0"
     ;;
   *)
-    loop_offset_setup "${DST}" "${START_STATEFUL}" "${DST_BLKSIZE}"
+    if [ "${FLAGS_lvm_stateful}" -eq "${FLAGS_TRUE}" ]; then
+      dst_stateful_partition="$(make_partition_dev ${DST} \
+        ${PARTITION_NUM_STATE})"
+      vg_name="$(get_volume_group ${dst_stateful_partition})"
+      vgchange -ay "${vg_name}"
+      LOOP_DEV="/dev/${vg_name}/unencrypted"
+    else
+      loop_offset_setup "${DST}" "${START_STATEFUL}" "${DST_BLKSIZE}"
+    fi
     ;;
   esac
   mount_on_loop_dev readwrite
@@ -611,6 +674,20 @@ install_stateful() {
   "
 
   if crossystem 'cros_debug?1'; then
+    # For a debug install, add a separate partition for developer-tools.
+    if [ "${FLAGS_lvm_stateful}" -eq "${FLAGS_TRUE}" ]; then
+      local lv_size="$(get_logical_volume_size "${dst_stateful_partition}")"
+      local stateful_fs_format="$(get_fs_format "${PARTITION_NUM_STATE}")"
+
+      lvcreate --thin -V "${lv_size}M" -n "dev-image" "${vg_name}/thinpool"
+      lvchange -ay "${vg_name}/dev-image"
+
+      mkfs "${stateful_fs_format}" ${NUM_STATEFUL_SECTORS} \
+        "/dev/${vg_name}/dev-image" "DEVTOOLS"
+      mkdir -p "${TMPMNT}/dev_image"
+      mount "/dev/${vg_name}/dev-image" "${TMPMNT}/dev_image"
+    fi
+
     dirlist="
       ${dirlist}
       var_overlay/db/pkg
@@ -663,7 +740,9 @@ install_stateful() {
     local parent
     parent=$(dirname "${dir}")
     mkdir -p "${TMPMNT}/${parent}"
-    cp -au "${ROOT}/mnt/stateful_partition/${dir}" "${TMPMNT}/${dir}"
+    # The target directory may already exist (eg. dev_image mounted from a
+    # separate volume), use the parent directory as destination for cp.
+    cp -au "${ROOT}/mnt/stateful_partition/${dir}" "${TMPMNT}/${parent}"
   done
 
   if [ -n "${FLAGS_oobe_pub_key}" ] && [ -n "${FLAGS_oobe_priv_key}" ]; then
@@ -686,11 +765,19 @@ install_stateful() {
       --dst_stateful="${TMPMNT}"
   fi
 
+  if mountpoint -q "${TMPMNT}/dev_image"; then
+    umount "${TMPMNT}/dev_image"
+  fi
+
   umount_from_loop_dev
   case ${STATEFUL_FORMAT} in
   ubi) ;;
   *)
-    loop_offset_cleanup
+    if [ "${FLAGS_lvm_stateful}" -eq "${FLAGS_TRUE}" ]; then
+      vgchange -an "${vg_name}"
+    else
+      loop_offset_cleanup
+    fi
     ;;
   esac
 }
@@ -981,6 +1068,16 @@ main() {
       trap - EXIT
       cleanup
       die "Ok, better safe than sorry; you answered '${sure}'."
+    fi
+  fi
+
+  # For LVM partitions, the logical volumes/volume groups on the stateful
+  # partition may be active. Deactivate the partitions.
+  if [ "${FLAGS_lvm_stateful}" -eq "${FLAGS_TRUE}" ]; then
+    local dst_stateful="$(make_partition_dev "${DST}" "${PARTITION_NUM_STATE}")"
+    local vg_name="$(get_volume_group "${dst_stateful}")"
+    if [ -n "${vg_name}" ]; then
+      vgchange -an --force "${vg_name}"
     fi
   fi
 
