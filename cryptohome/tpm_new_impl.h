@@ -12,6 +12,11 @@
 
 #include "cryptohome/tpm_impl.h"
 
+// This class should be squashed into |TpmImpl| now that the transition from
+// monilithic mode to distributed mode is done.
+//
+// TODO(b/169388941): Remove this class after merge it back.
+
 namespace cryptohome {
 
 // |TpmNewImpl| is derived from |TpmImpl| and refines a set of interfaces with
