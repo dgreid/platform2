@@ -22,6 +22,9 @@ using base::FilePath;
 
 namespace cryptohome {
 
+// Note: Changes in the format of the install attributes file might break
+// rollback (go/rollback-data-restore). If possible, try to maintain backwards
+// compatibility for four release cycles.
 // By default, we store this with other cryptohome state.
 const char InstallAttributes::kDefaultDataFile[] =
     "/home/.shadow/install_attributes.pb";
