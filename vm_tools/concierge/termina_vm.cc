@@ -243,7 +243,9 @@ bool TerminaVm::Start(base::FilePath kernel,
     args.emplace_back("--pmem-device");
     args.emplace_back(rootfs.value());
     args.emplace_back("--params");
-    args.emplace_back("root=/dev/pmem0 ro rootflags=dax");
+    // TODO(davidriley): Re-add rootflags=dax once guest kernel has fix
+    // for b/169339326.
+    args.emplace_back("root=/dev/pmem0 ro");
   } else {
     args.emplace_back("--root");
     args.emplace_back(rootfs.value());
