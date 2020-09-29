@@ -2987,7 +2987,8 @@ void AttestationService::SignEnterpriseChallengeTask(
       std::string spkac;
       if (!crypto_utility_->CreateSPKAC(
               key_for_certificate_and_spkac.value().key_blob(),
-              key_for_certificate_and_spkac.value().public_key(), &spkac)) {
+              key_for_certificate_and_spkac.value().public_key(),
+              key_for_certificate_and_spkac.value().key_type(), &spkac)) {
         LOG(ERROR) << __func__ << ": Failed to create signed public key.";
         result->set_status(STATUS_UNEXPECTED_DEVICE_ERROR);
         return;

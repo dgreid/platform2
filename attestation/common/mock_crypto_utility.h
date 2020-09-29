@@ -80,7 +80,7 @@ class MockCryptoUtility : public CryptoUtility {
               (override));
   MOCK_METHOD(bool,
               CreateSPKAC,
-              (const std::string&, const std::string&, std::string*),
+              (const std::string&, const std::string&, KeyType, std::string*),
               (override));
   MOCK_METHOD(bool,
               VerifyCertificate,

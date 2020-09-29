@@ -759,7 +759,12 @@ bool CryptoUtilityImpl::OAEPEncryptWithLabel(const std::string& label,
 
 bool CryptoUtilityImpl::CreateSPKAC(const std::string& key_blob,
                                     const std::string& public_key,
+                                    KeyType key_type,
                                     std::string* spkac) {
+  if (key_type != KEY_TYPE_RSA) {
+    LOG(ERROR) << __func__ << ": Unsupported key type: " << key_type;
+    return false;
+  }
   // Get the certified public key as an EVP_PKEY.
   const unsigned char* asn1_ptr =
       reinterpret_cast<const unsigned char*>(public_key.data());

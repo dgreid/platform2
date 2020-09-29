@@ -68,6 +68,7 @@ class CryptoUtilityImpl : public CryptoUtility {
                             EncryptedData* encrypted_data) override;
   bool CreateSPKAC(const std::string& key_blob,
                    const std::string& public_key,
+                   KeyType key_type,
                    std::string* spkac) override;
   bool VerifyCertificate(const std::string& certificate,
                          const std::string& ca_public_key_hex) override;

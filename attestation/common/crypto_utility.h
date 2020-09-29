@@ -8,6 +8,7 @@
 #include <string>
 
 #include <attestation/proto_bindings/attestation_ca.pb.h>
+#include <attestation/proto_bindings/keystore.pb.h>
 
 namespace attestation {
 
@@ -110,12 +111,15 @@ class CryptoUtility {
                                     EncryptedData* encrypted_data) = 0;
 
   // Creates a SignedPublicKeyAndChallenge signed with |key_blob| from
-  // |public_key| in PKCS #1 RSAPublicKey (ASN.1 DER) format with a random
-  // challenge. On success returns true and provides the |spkac|.
-  // |key_blob| and |public_key| are taken from the already loaded
-  // CertifiedKey.
+  // |public_key| of |key_type| in DER format with a random challenge. On
+  // success returns true and provides the |spkac|. |key_blob| and |public_key|
+  // are taken from the already loaded CertifiedKey.
+  //
+  // Currently only RSA key type is supported.
+  // TODO(b/140577280): Support ECC key.
   virtual bool CreateSPKAC(const std::string& key_blob,
                            const std::string& public_key,
+                           KeyType key_type,
                            std::string* spkac) = 0;
 
   // Verifies that the X.509 |certificate| is signed by CA with the public key

@@ -919,10 +919,11 @@ TEST_P(AttestationServiceEnterpriseTest,
                 Return(true)));
 
   // Expect |CreateSPKAC| to be called for |key_name_for_spkac|.
-  EXPECT_CALL(mock_crypto_utility_, CreateSPKAC(key_for_spkac.key_blob(),
-                                                key_for_spkac.public_key(), _))
+  EXPECT_CALL(
+      mock_crypto_utility_,
+      CreateSPKAC(key_for_spkac.key_blob(), key_for_spkac.public_key(), _, _))
       .WillOnce(
-          DoAll(SetArgPointee<2>(std::string("fake_spkac")), Return(true)));
+          DoAll(SetArgPointee<3>(std::string("fake_spkac")), Return(true)));
 
   EXPECT_CALL(mock_tpm_utility_, Sign(_, _, _))
       .WillOnce(
