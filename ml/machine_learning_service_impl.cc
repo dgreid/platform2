@@ -51,7 +51,7 @@ constexpr char kSystemModelDir[] = "/opt/google/chrome/ml_models/";
 constexpr char kMetricsRequestName[] = "LoadModelResult";
 
 constexpr char kTextClassifierModelFile[] =
-    "mlservice-model-text_classifier_en-v706.fb";
+    "mlservice-model-text_classifier_en-v711.fb";
 
 constexpr char kLanguageIdentificationModelFile[] =
     "mlservice-model-language_identification-20190924.smfb";
