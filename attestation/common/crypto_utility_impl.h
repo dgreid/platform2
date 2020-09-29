@@ -189,6 +189,14 @@ class CryptoUtilityImpl : public CryptoUtility {
                             const std::string& data,
                             const std::string& signature);
 
+  // Creates a SignedPublicKeyAndChallenge signed with |key_blob| from
+  // |public_key| with a random challenge. On success returns true and provides
+  // the |spkac|. |key_blob| is taken from the already loaded CertifiedKey and
+  // |public_key| is the corresponding public part of |key_blob|.
+  bool CreateSPKACInternal(const std::string& key_blob,
+                           const crypto::ScopedEVP_PKEY& public_key,
+                           std::string* spkac);
+
   TpmUtility* tpm_utility_;
 };
 

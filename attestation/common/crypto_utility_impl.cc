@@ -761,27 +761,54 @@ bool CryptoUtilityImpl::CreateSPKAC(const std::string& key_blob,
                                     const std::string& public_key,
                                     KeyType key_type,
                                     std::string* spkac) {
-  if (key_type != KEY_TYPE_RSA) {
-    LOG(ERROR) << __func__ << ": Unsupported key type: " << key_type;
-    return false;
-  }
   // Get the certified public key as an EVP_PKEY.
   const unsigned char* asn1_ptr =
       reinterpret_cast<const unsigned char*>(public_key.data());
-  crypto::ScopedRSA rsa(
-      d2i_RSAPublicKey(nullptr, &asn1_ptr, public_key.size()));
-  if (!rsa.get()) {
-    LOG(ERROR) << __func__
-               << ": Failed to decode public key: " << GetOpenSSLError();
-    return false;
-  }
   crypto::ScopedEVP_PKEY evp_pkey(EVP_PKEY_new());
   if (!evp_pkey.get()) {
-    LOG(ERROR) << __func__ << ": Failed to get public key as EVP PKEY.";
+    LOG(ERROR) << __func__
+               << ": Failed to call EVP_PKEY_new: " << GetOpenSSLError();
     return false;
   }
-  EVP_PKEY_assign_RSA(evp_pkey.get(), rsa.release());
+  if (key_type == KEY_TYPE_RSA) {
+    crypto::ScopedRSA rsa(
+        d2i_RSAPublicKey(nullptr, &asn1_ptr, public_key.size()));
+    if (!rsa.get()) {
+      LOG(ERROR) << __func__
+                 << ": Failed to decode public key: " << GetOpenSSLError();
+      return false;
+    }
+    if (!EVP_PKEY_set1_RSA(evp_pkey.get(), rsa.get())) {
+      LOG(ERROR) << __func__
+                 << ": Failed to call EVP_PKEY_set1_RSA: " << GetOpenSSLError();
+      return false;
+    }
+  } else if (key_type == KEY_TYPE_ECC) {
+    crypto::ScopedEC_KEY ec_key(
+        d2i_EC_PUBKEY(nullptr, &asn1_ptr, public_key.size()));
+    if (!ec_key.get()) {
+      LOG(ERROR) << __func__
+                 << ": Failed to decode ECC public key: " << GetOpenSSLError();
+      return false;
+    }
+    if (EVP_PKEY_set1_EC_KEY(evp_pkey.get(), ec_key.get()) != 1) {
+      LOG(ERROR) << __func__ << ": Failed to call EVP_PKEY_set1_EC_KEY: "
+                 << GetOpenSSLError();
+      return false;
+    }
+  } else {
+    LOG(DFATAL) << __func__ << ": Unrecognized key type.";
+    return false;
+  }
 
+  return CreateSPKACInternal(key_blob, evp_pkey, spkac);
+}
+
+bool CryptoUtilityImpl::CreateSPKACInternal(
+    const std::string& key_blob,
+    const crypto::ScopedEVP_PKEY& public_key,
+    std::string* spkac) {
+  CHECK(public_key.get());
   // Fill in the public key.
   crypto::ScopedOpenSSL<NETSCAPE_SPKI, NETSCAPE_SPKI_free> spki(
       NETSCAPE_SPKI_new());
@@ -789,7 +816,7 @@ bool CryptoUtilityImpl::CreateSPKAC(const std::string& key_blob,
     LOG(ERROR) << __func__ << ": Failed to create SPKI.";
     return false;
   }
-  if (!NETSCAPE_SPKI_set_pubkey(spki.get(), evp_pkey.get())) {
+  if (!NETSCAPE_SPKI_set_pubkey(spki.get(), public_key.get())) {
     LOG(ERROR) << __func__ << ": Failed to set pubkey for SPKI.";
     return false;
   }
@@ -842,8 +869,10 @@ bool CryptoUtilityImpl::CreateSPKAC(const std::string& key_blob,
 #else
   X509_ALGOR* sig_algor = &spki.get()->sig_algor;
 #endif
-  X509_ALGOR_set0(sig_algor, OBJ_nid2obj(NID_sha256WithRSAEncryption),
-                  V_ASN1_NULL, NULL);
+  const int sig_algo_nid = EVP_PKEY_base_id(public_key.get()) == EVP_PKEY_RSA
+                               ? NID_sha256WithRSAEncryption
+                               : NID_ecdsa_with_SHA256;
+  X509_ALGOR_set0(sig_algor, OBJ_nid2obj(sig_algo_nid), V_ASN1_NULL, NULL);
 
   // DER encode.
   buffer = NULL;
