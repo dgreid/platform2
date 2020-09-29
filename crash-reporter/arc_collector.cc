@@ -40,7 +40,7 @@ const FilePath kContainersDir("/run/containers");
 const char kArcDirPattern[] = "android*";
 const FilePath kContainerPid("container.pid");
 
-const FilePath kArcBuildProp("system/build.prop");  // Relative to ARC root.
+const char kArcBuildProp[] = "/run/arc/host_generated/build.prop";
 
 const char kCoreCollectorPath[] = "/usr/bin/core_collector";
 const char kCoreCollector32Path[] = "/usr/bin/core_collector32";
@@ -535,7 +535,7 @@ bool GetArcRoot(FilePath* root) {
 bool GetArcProperties(arc_util::BuildProperty* build_property) {
   FilePath root;
   brillo::KeyValueStore store;
-  if (GetArcRoot(&root) && store.Load(root.Append(kArcBuildProp)) &&
+  if (store.Load(FilePath(kArcBuildProp)) &&
       store.GetString(kFingerprintProperty, &(build_property->fingerprint)) &&
       store.GetString(kDeviceProperty, &(build_property->device)) &&
       store.GetString(kBoardProperty, &(build_property->board)) &&
