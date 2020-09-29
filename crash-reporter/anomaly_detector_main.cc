@@ -13,6 +13,7 @@
 
 #include <base/at_exit.h>
 #include <base/files/file_util.h>
+#include <base/run_loop.h>
 #include <base/task/single_thread_task_executor.h>
 #include <brillo/flag_helper.h>
 #include <brillo/syslog_logging.h>
