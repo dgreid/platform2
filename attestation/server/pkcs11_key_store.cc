@@ -13,10 +13,10 @@
 #include <base/logging.h>
 #include <base/stl_util.h>
 #include <base/strings/string_util.h>
+#include <brillo/cryptohome.h>
 #include <chaps/isolate.h>
 #include <chaps/pkcs11/cryptoki.h>
 #include <chaps/token_manager_client.h>
-#include <brillo/cryptohome.h>
 #include <crypto/libcrypto-compat.h>
 #include <crypto/scoped_openssl_types.h>
 #include <openssl/rsa.h>
