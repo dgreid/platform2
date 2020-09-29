@@ -1003,7 +1003,7 @@ bool Mount::ShouldReSaveKeyset(VaultKeyset* vault_keyset) const {
 
   // If the keyset was TPM-wrapped, but there was no public key hash,
   // always re-save.
-  if (!has_tpm_public_key_hash) {
+  if (tpm_wrapped && !has_tpm_public_key_hash) {
     LOG(INFO) << "Migrating keyset " << vault_keyset->legacy_index()
               << " as there is no public hash";
     return true;

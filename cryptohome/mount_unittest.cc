@@ -1548,7 +1548,7 @@ TEST_P(MountTest, MountCryptohomeNoChapsKey) {
   MountError error;
   int key_index = -1;
   EXPECT_CALL(platform_, ReadFile(user->keyset_path, _))
-      .Times(3)
+      .Times(2)
       .WillRepeatedly(DoAll(SetArgPointee<1>(user->credentials), Return(true)));
 
   ASSERT_TRUE(mount_->DecryptVaultKeyset(credentials, &vault_keyset,
