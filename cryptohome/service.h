@@ -89,12 +89,12 @@ class MountThreadObserver : public base::TaskObserver {
   void PostTask();
 
   // This method is called before processing a task.
-  void WillProcessTask(const base::PendingTask& pending_task
 #if BASE_VER > 780000
-                       ,
-                       bool was_blocked_or_low_priority
+  void WillProcessTask(const base::PendingTask& pending_task,
+                       bool was_blocked_or_low_priority) override;
+#else
+  void WillProcessTask(const base::PendingTask& pending_task) override;
 #endif
-                       ) override;
 
   // This method is called after processing a task.
   void DidProcessTask(const base::PendingTask& pending_task) override;
@@ -102,7 +102,7 @@ class MountThreadObserver : public base::TaskObserver {
   int GetParallelTaskCount() const;
 
  private:
-  std::atomic<int> parallel_task_count_;
+  std::atomic<int> parallel_task_count_{0};
 };
 
 // Service

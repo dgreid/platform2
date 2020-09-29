@@ -82,6 +82,11 @@ using brillo::BlobFromString;
 using brillo::SecureBlob;
 using brillo::cryptohome::home::SanitizeUserNameWithSalt;
 
+namespace {
+constexpr const char* kIgnoreParallelTaskNames[] = {"LowDiskCallback",
+                                                    "UploadAlertsDataCallback"};
+}
+
 // Forcibly namespace the dbus-bindings generated server bindings instead of
 // modifying the files afterward.
 namespace cryptohome {
@@ -114,7 +119,7 @@ bool KeyHasWrappedAuthorizationSecrets(const Key& k) {
 }
 
 void AddTaskObserverToThread(base::Thread* thread,
-                             base::TaskObserver* task_observer) {
+                             MountThreadObserver* task_observer) {
   // Since MessageLoopCurrent::AddTaskObserver need to be executed in the same
   // thread of that message loop. So we need to wrap it and post as a task.
 
@@ -125,10 +130,11 @@ void AddTaskObserverToThread(base::Thread* thread,
     return;
   }
 
+  task_observer->PostTask();
   task_runner->PostTask(
       FROM_HERE,
       base::BindOnce(
-          [](base::TaskObserver* task_observer) {
+          [](MountThreadObserver* task_observer) {
             base::MessageLoopCurrent::Get().AddTaskObserver(task_observer);
           },
           base::Unretained(task_observer)));
@@ -240,6 +246,11 @@ void MountThreadObserver::WillProcessTask(const base::PendingTask& pending_task
 
 void MountThreadObserver::DidProcessTask(
     const base::PendingTask& pending_task) {
+  for (const char* name : kIgnoreParallelTaskNames) {
+    if (pending_task.posted_from.function_name() == name) {
+      return;
+    }
+  }
   parallel_task_count_ -= 1;
 }
 
@@ -380,11 +391,11 @@ CryptohomeErrorCode Service::MountErrorToCryptohomeError(
 
 void Service::PostTask(const base::Location& from_here,
                        base::OnceClosure task) {
+  mount_thread_observer_.PostTask();
   int task_count = mount_thread_observer_.GetParallelTaskCount();
   if (task_count > 1) {
     ReportParallelTasks(task_count);
   }
-  mount_thread_observer_.PostTask();
   mount_thread_.task_runner()->PostTask(from_here, std::move(task));
 }
 
@@ -889,6 +900,7 @@ void Service::InitializePkcs11(cryptohome::Mount* mount) {
   ReportTimerStart(kPkcs11InitTimer);
   mount->set_pkcs11_state(cryptohome::Mount::kIsBeingInitialized);
 
+  mount_thread_observer_.PostTask();
   mount_thread_.task_runner()->PostTask(
       FROM_HERE,
       base::BindOnce(&Service::DoInitializePkcs11, base::Unretained(this),
@@ -930,6 +942,8 @@ void Service::UploadAlertsDataCallback() {
     ReportAlertsData(alerts);
   }
 
+  // We don't care about the parallel delay tasks number. Don't increase the
+  // parallel tasks count here.
   mount_thread_.task_runner()->PostDelayedTask(
       FROM_HERE,
       base::Bind(&Service::UploadAlertsDataCallback, base::Unretained(this)),
@@ -1055,6 +1069,7 @@ void Service::OwnershipCallback(bool status, bool took_ownership) {
     {
       base::AutoLock _lock(mounts_lock_);
       for (const auto& mount_pair : mounts_) {
+        mount_thread_observer_.PostTask();
         mount_thread_.task_runner()->PostTask(
             FROM_HERE,
             base::Bind(&Service::DoResetTPMContext, base::Unretained(this),
@@ -3010,6 +3025,7 @@ gboolean Service::UnmountEx(GArray* request, DBusGMethodInvocation* context) {
   if (!request_pb->ParseFromArray(request->data, request->len))
     request_pb.reset(nullptr);
 
+  mount_thread_observer_.PostTask();
   mount_thread_.task_runner()->PostTask(
       FROM_HERE, base::Bind(&Service::DoUnmountEx, base::Unretained(this),
                             base::Passed(std::move(request_pb)),
@@ -3449,6 +3465,7 @@ void Service::DoTpmAttestationGetEnrollmentPreparationsEx(
 
 gboolean Service::TpmAttestationGetEnrollmentPreparationsEx(
     const GArray* request, DBusGMethodInvocation* context) {
+  mount_thread_observer_.PostTask();
   mount_thread_.task_runner()->PostTask(
       FROM_HERE,
       base::Bind(&Service::DoTpmAttestationGetEnrollmentPreparationsEx,
@@ -3822,6 +3839,8 @@ void Service::LowDiskCallback() {
   // Schedule our next call. If the thread is terminating, we would
   // not be called. We use base::Unretained here because the Service object is
   // never destroyed.
+  // We don't care about the parallel delay tasks number. Don't increase the
+  // parallel tasks count here.
   mount_thread_.task_runner()->PostDelayedTask(
       FROM_HERE, base::Bind(&Service::LowDiskCallback, base::Unretained(this)),
       base::TimeDelta::FromMilliseconds(low_disk_notification_period_ms_));
@@ -4198,6 +4217,7 @@ gboolean Service::LockToSingleUserMountUntilReboot(
 
   const std::string obfuscated_username = SanitizeUserNameWithSalt(
       GetAccountId(request_pb.account_id()), system_salt_);
+  mount_thread_observer_.PostTask();
   mount_thread_.task_runner()->PostTask(
       FROM_HERE, base::Bind(&Service::DoLockToSingleUserMountUntilReboot,
                             base::Unretained(this), obfuscated_username,
