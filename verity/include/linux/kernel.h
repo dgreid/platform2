@@ -32,6 +32,4 @@
     _max1 > _max2 ? _max1 : _max2; \
   })
 
-#include <linux/bitops.h>
-
 #endif /* VERITY_INCLUDE_LINUX_KERNEL_H_ */

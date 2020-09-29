@@ -18,36 +18,6 @@
 #define DM_MSG_PREFIX "dm bht"
 
 namespace verity {
-namespace {
-/**
- * dm_bht_compute_hash: hashes a page of data
- */
-int dm_bht_compute_hash(struct dm_bht* bht, const u8* buffer, u8* digest) {
-  struct hash_desc* hash_desc = &bht->hash_desc[0];
-
-  /* Note, this is synchronous. */
-  if (crypto_hash_init(hash_desc)) {
-    DMCRIT("failed to reinitialize crypto hash");
-    return -EINVAL;
-  }
-  if (crypto_hash_update(hash_desc, buffer, PAGE_SIZE)) {
-    DMCRIT("crypto_hash_update failed");
-    return -EINVAL;
-  }
-  if (bht->have_salt) {
-    if (crypto_hash_update(hash_desc, bht->salt, sizeof(bht->salt))) {
-      DMCRIT("crypto_hash_update failed");
-      return -EINVAL;
-    }
-  }
-  if (crypto_hash_final(hash_desc, digest)) {
-    DMCRIT("crypto_hash_final failed");
-    return -EINVAL;
-  }
-
-  return 0;
-}
-}  // namespace
 
 void dm_bht_set_buffer(struct dm_bht* bht, void* buffer) {
   int depth;

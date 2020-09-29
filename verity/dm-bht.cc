@@ -10,8 +10,14 @@
 #include <limits.h>
 #include <string.h>
 
+#include <memory>
+#include <string>
+
+#include <crypto/secure_hash.h>
+#include <crypto/sha2.h>
+
 #include <asm/page.h>
-#include <linux/bitops.h> /* for fls() */
+#include <asm-generic/bitops/fls.h>
 #include <linux/bug.h>
 /* #define CONFIG_DM_DEBUG 1 */
 #include <linux/device-mapper.h>
@@ -95,38 +101,6 @@ void dm_bht_log_mismatch(struct dm_bht* bht, u8* given, u8* computed) {
   DMERR_LIMIT("%s != %s", given_hex, computed_hex);
 }
 
-/* Used for turning verifiers into computers */
-typedef int (*dm_bht_compare_cb)(struct dm_bht*, u8*, u8*);
-
-/**
- * dm_bht_compute_hash: hashes a page of data
- */
-int dm_bht_compute_hash(struct dm_bht* bht, const u8* buffer, u8* digest) {
-  struct hash_desc* hash_desc = &bht->hash_desc[smp_processor_id()];
-
-  /* Note, this is synchronous. */
-  if (crypto_hash_init(hash_desc)) {
-    DMCRIT("failed to reinitialize crypto hash (proc:%d)", smp_processor_id());
-    return -EINVAL;
-  }
-  if (crypto_hash_update(hash_desc, buffer, PAGE_SIZE)) {
-    DMCRIT("crypto_hash_update failed");
-    return -EINVAL;
-  }
-  if (bht->have_salt) {
-    if (crypto_hash_update(hash_desc, bht->salt, sizeof(bht->salt))) {
-      DMCRIT("crypto_hash_update failed");
-      return -EINVAL;
-    }
-  }
-  if (crypto_hash_final(hash_desc, digest)) {
-    DMCRIT("crypto_hash_final failed");
-    return -EINVAL;
-  }
-
-  return 0;
-}
-
 /*-----------------------------------------------
  * Implementation functions
  *-----------------------------------------------*/
@@ -139,6 +113,22 @@ int dm_bht_read_callback_stub(void* ctx,
                               sector_t count,
                               struct dm_bht_entry* entry);
 }  // namespace
+
+/**
+ * dm_bht_compute_hash: hashes a page of data
+ */
+int dm_bht_compute_hash(struct dm_bht* bht, const u8* buffer, u8* digest) {
+  std::unique_ptr<crypto::SecureHash> hash(
+      crypto::SecureHash::Create(crypto::SecureHash::SHA256));
+  hash->Update(buffer, PAGE_SIZE);
+  if (bht->have_salt) {
+    hash->Update(bht->salt, sizeof(bht->salt));
+  }
+  hash->Finish(digest, DM_BHT_MAX_DIGEST_SIZE);
+  return 0;
+}
+
+const char kSha256HashName[] = "sha256";
 
 /**
  * dm_bht_create - prepares @bht for us
@@ -156,22 +146,16 @@ int dm_bht_create(struct dm_bht* bht,
                   unsigned int block_count,
                   const char* alg_name) {
   int status = 0;
-  int cpu = 0;
+
+  if (std::string(alg_name) != kSha256HashName) {
+    status = -EINVAL;
+    goto bad_hash_alg;
+  }
 
   bht->have_salt = false;
   bht->externally_allocated = false;
 
-  /* Setup the hash first. Its length determines much of the bht layout */
-  for (cpu = 0; cpu < nr_cpu_ids; ++cpu) {
-    bht->hash_desc[cpu].tfm = crypto_alloc_hash(alg_name, 0, 0);
-    if (bht->hash_desc[cpu].tfm == NULL) {
-      DMERR("failed to allocate crypto hash '%s'", alg_name);
-      status = -ENOMEM;
-      bht->hash_desc[cpu].tfm = NULL;
-      goto bad_hash_alg;
-    }
-  }
-  bht->digest_size = crypto_hash_digestsize(bht->hash_desc[0].tfm);
+  bht->digest_size = crypto::kSHA256Length;
   /* We expect to be able to pack >=2 hashes into a page */
   if (PAGE_SIZE / bht->digest_size < 2) {
     DMERR("too few hashes fit in a page");
@@ -255,9 +239,6 @@ bad_level_alloc:
 bad_block_count:
 bad_digest_len:
 bad_hash_alg:
-  for (cpu = 0; cpu < nr_cpu_ids; ++cpu)
-    if (bht->hash_desc[cpu].tfm)
-      crypto_free_hash(bht->hash_desc[cpu].tfm);
   return status;
 }
 
@@ -554,7 +535,6 @@ int dm_bht_verify_block(struct dm_bht* bht,
  */
 int dm_bht_destroy(struct dm_bht* bht) {
   int depth;
-  int cpu = 0;
 
   depth = bht->depth;
   while (depth-- != 0) {
@@ -581,9 +561,6 @@ int dm_bht_destroy(struct dm_bht* bht) {
     bht->levels[depth].entries = NULL;
   }
   free(bht->levels);
-  for (cpu = 0; cpu < nr_cpu_ids; ++cpu)
-    if (bht->hash_desc[cpu].tfm)
-      crypto_free_hash(bht->hash_desc[cpu].tfm);
   return 0;
 }
 

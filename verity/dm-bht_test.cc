@@ -28,8 +28,12 @@ void* my_memalign(size_t boundary, size_t size) {
 
 TEST(DmBht, CreateFailOnOverflow) {
   struct dm_bht bht;
-  // This should fail.
-  EXPECT_EQ(-EINVAL, dm_bht_create(&bht, UINT_MAX, "sha1"));
+  EXPECT_EQ(-EINVAL, dm_bht_create(&bht, UINT_MAX, "sha256"));
+}
+
+TEST(DmBht, BadAlgorithmName) {
+  struct dm_bht bht;
+  EXPECT_EQ(-EINVAL, dm_bht_create(&bht, 10, "foo"));
 }
 
 // Simple test to help valgrind/tcmalloc catch bad mem management

@@ -12,7 +12,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-#include <linux/crypto.h>
 #include <linux/types.h>
 #ifdef __cplusplus
 }
@@ -38,6 +37,8 @@ extern "C" {
 #define DM_BHT_ENTRY_ERROR_MISMATCH -3 /* Digest mismatch */
 
 namespace verity {
+
+extern const char kSha256HashName[];
 
 /* dm_bht_entry
  * Contains dm_bht->node_count tree nodes at a given tree depth.
@@ -91,7 +92,6 @@ struct dm_bht {
   /* Configured values */
   int depth;                /* Depth of the tree including the root */
   unsigned int block_count; /* Number of blocks hashed */
-  char hash_alg[CRYPTO_MAX_ALG_NAME];
   unsigned char salt[DM_BHT_SALT_SIZE];
 
   /* This is a temporary hack to ease the transition to salting. It will
@@ -104,7 +104,6 @@ struct dm_bht {
   unsigned int node_count_shift; /* first bit set - 1 */
   /* There is one per CPU so that verified can be simultaneous. */
   /* We assume we only have one CPU in userland. */
-  struct hash_desc hash_desc[1]; /* Container for the hash alg */
   unsigned int digest_size;
   sector_t sectors; /* Number of disk sectors used */
 
@@ -145,6 +144,8 @@ int dm_bht_zeroread_callback(void* ctx,
                              sector_t count,
                              struct dm_bht_entry* entry);
 void dm_bht_read_completed(struct dm_bht_entry* entry, int status);
+
+int dm_bht_compute_hash(struct dm_bht* bht, const u8* buffer, u8* digest);
 
 /* Functions for converting indices to nodes. */
 
