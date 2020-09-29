@@ -241,23 +241,6 @@ int CameraHal::Init() {
     return -ENODEV;
   }
 
-  if (cros_device_config_.usb_camera_count.has_value()) {
-    if (num_builtin_cameras_ != *cros_device_config_.usb_camera_count) {
-      LOGF(ERROR) << "Expected " << *cros_device_config_.usb_camera_count
-                  << " cameras from Chrome OS config, found "
-                  << num_builtin_cameras_;
-      return -ENODEV;
-    }
-  } else {
-    // TODO(shik): possible race here. We may have 2 built-in cameras but just
-    // detect one.
-    if (CameraCharacteristics::ConfigFileExists() &&
-        num_builtin_cameras_ == 0) {
-      LOGF(ERROR) << "Expect to find at least one camera if config file exists";
-      return -ENODEV;
-    }
-  }
-
   // TODO(shik): Some unibuild devices like vayne may have only user-facing
   // camera as "camera1" in |characteristics_|. It's a workaround for them until
   // we revise our config format. (b/111770440)
@@ -284,6 +267,23 @@ int CameraHal::Init() {
     request_template_.erase(1);
 
     num_builtin_cameras_ = 1;
+  }
+
+  if (cros_device_config_.usb_camera_count.has_value()) {
+    if (num_builtin_cameras_ != *cros_device_config_.usb_camera_count) {
+      LOGF(ERROR) << "Expected " << *cros_device_config_.usb_camera_count
+                  << " cameras from Chrome OS config, found "
+                  << num_builtin_cameras_;
+      return -ENODEV;
+    }
+  } else {
+    // TODO(shik): possible race here. We may have 2 built-in cameras but just
+    // detect one.
+    if (CameraCharacteristics::ConfigFileExists() &&
+        num_builtin_cameras_ == 0) {
+      LOGF(ERROR) << "Expect to find at least one camera if config file exists";
+      return -ENODEV;
+    }
   }
 
   for (int i = 0; i < num_builtin_cameras_; i++) {
