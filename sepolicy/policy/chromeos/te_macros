@@ -94,7 +94,11 @@ typeattribute $1 cros_cras_client_domain;
 
 define(`uma_writer', `
 typeattribute $1 cros_uma_events_writer_domain;
-')
+');
+
+define(`cros_run_camera_creator', `
+typeattribute $1 cros_run_camera_creator_domain;
+');
 
 define(`cros_cron', `
 domain_auto_trans(cros_periodic_scheduler, $2, $1);

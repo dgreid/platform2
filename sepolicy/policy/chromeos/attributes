@@ -6,6 +6,7 @@ attribute cros_metrics_client_domain;
 attribute cros_tcsd_client_domain;
 attribute cros_cras_client_domain;
 attribute cros_launched_by_periodic_scheduler_domain;
+attribute cros_run_camera_creator_domain;
 
 attribute cros_file_type;
 attribute cros_home_file_type;

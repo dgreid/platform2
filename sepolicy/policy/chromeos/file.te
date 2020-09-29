@@ -334,6 +334,9 @@ filetrans_pattern_no_target_perm(chromeos_domain, cros_var, cros_var_empty, dir,
 filetrans_pattern_no_target_perm(chromeos_domain, cros_var, cros_var_log, dir, "log");
 filetrans_pattern_no_target_perm(chromeos_domain, cros_var, cros_var_spool, dir, "spool");
 
+# /run files creation.
+filetrans_pattern(cros_run_camera_creator_domain, cros_run, camera_socket, dir, "camera");
+
 neverallow domain cros_system_file_type:file { unlink append write };
 
 allow chromeos_domain cros_system_file_type:dir { read search getattr open };

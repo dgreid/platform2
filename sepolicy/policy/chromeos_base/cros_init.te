@@ -84,3 +84,6 @@ filetrans_pattern_no_target_perm(cros_init_scripts, cros_run, cros_run_tcsd, dir
 
 # init/preload-network.conf
 filetrans_pattern(cros_init_scripts, cros_var_lib, cros_var_lib_preload_network_drivers, file, "preload-network-drivers");
+
+# init/vm_concierge.conf
+cros_run_camera_creator(cros_init_scripts);
