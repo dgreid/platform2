@@ -76,7 +76,6 @@ class BiodMetricsInterface {
   virtual bool SendReadPositiveMatchSecretSuccess(bool success) = 0;
   virtual bool SendPositiveMatchSecretCorrect(bool correct) = 0;
   virtual bool SendRecordFormatVersion(int version) = 0;
-  virtual bool SendMigrationForPositiveMatchSecretResult(bool success) = 0;
   virtual bool SendDeadPixelCount(int num_dead_pixels) = 0;
   virtual bool SendUploadTemplateResult(int ec_result) = 0;
 };
@@ -123,9 +122,6 @@ class BiodMetrics : public BiodMetricsInterface {
 
   // Template record file format version.
   bool SendRecordFormatVersion(int version) override;
-
-  // Migration of templates to have positive match secret succeeded or not?
-  bool SendMigrationForPositiveMatchSecretResult(bool success) override;
 
   bool SendDeadPixelCount(int num_dead_pixels) override;
 

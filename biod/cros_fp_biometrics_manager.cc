@@ -773,7 +773,6 @@ void CrosFpBiometricsManager::DoMatchEvent(int attempt, uint32_t event) {
   if (migration_status == MigrationStatus::kSuccess) {
     LOG(INFO) << "Successfully migrated record "
               << records_[match_idx].record_id << " to have validation value.";
-    biod_metrics_->SendMigrationForPositiveMatchSecretResult(true);
   } else if (migration_status == MigrationStatus::kError) {
     // If in migration we never succeeded to fetch template (with new
     // positive_match_salt) and write it to record before biod stops, the
@@ -781,7 +780,6 @@ void CrosFpBiometricsManager::DoMatchEvent(int attempt, uint32_t event) {
     // has empty validation value, and will be migrated next time biod starts.
     LOG(ERROR) << "Failed to migrate record " << records_[match_idx].record_id
                << " to have validation value.";
-    biod_metrics_->SendMigrationForPositiveMatchSecretResult(false);
   }
 }
 

@@ -42,10 +42,6 @@ class MockBiodMetrics : public BiodMetricsInterface {
               (override));
   MOCK_METHOD(bool, SendPositiveMatchSecretCorrect, (bool correct), (override));
   MOCK_METHOD(bool, SendRecordFormatVersion, (int version), (override));
-  MOCK_METHOD(bool,
-              SendMigrationForPositiveMatchSecretResult,
-              (bool success),
-              (override));
   MOCK_METHOD(bool, SendDeadPixelCount, (int num_dead_pixels), (override));
   MOCK_METHOD(bool, SendUploadTemplateResult, (int ec_result), (override));
 };

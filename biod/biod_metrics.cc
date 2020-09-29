@@ -47,8 +47,6 @@ constexpr char kFpPositiveMatchSecretCorrect[] =
     "Fingerprint.Unlock.Match.PositiveMatchSecretCorrect";
 constexpr char kRecordFormatVersionMetric[] =
     "Fingerprint.Unlock.RecordFormatVersion";
-constexpr char kMigrationForPositiveMatchSecretResult[] =
-    "Fingerprint.Unlock.MigrationForPositiveMatchSecretResult";
 constexpr char kNumDeadPixels[] = "Fingerprint.Sensor.NumDeadPixels";
 constexpr char kUploadTemplateSuccess[] = "Fingerprint.UploadTemplate.Success";
 
@@ -156,11 +154,6 @@ bool BiodMetrics::SendPositiveMatchSecretCorrect(bool correct) {
 bool BiodMetrics::SendRecordFormatVersion(int version) {
   return metrics_lib_->SendEnumToUMA(metrics::kRecordFormatVersionMetric,
                                      version, kRecordFormatVersion);
-}
-
-bool BiodMetrics::SendMigrationForPositiveMatchSecretResult(bool success) {
-  return metrics_lib_->SendBoolToUMA(
-      metrics::kMigrationForPositiveMatchSecretResult, success);
 }
 
 void BiodMetrics::SetMetricsLibraryForTesting(
