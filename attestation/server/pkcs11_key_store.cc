@@ -34,6 +34,22 @@ std::string Sha1(const std::string& input) {
   return std::string(reinterpret_cast<char*>(output), SHA_DIGEST_LENGTH);
 }
 
+// TODO(b/140577280): add ECC for TPM2.0 once supported.
+bool IsSupportedRegisterKeyType(KeyType key_type) {
+  return key_type == KEY_TYPE_RSA;
+}
+
+CK_KEY_TYPE ToPkcs11KeyType(KeyType key_type) {
+  switch (key_type) {
+    case KEY_TYPE_RSA:
+      return CKK_RSA;
+    case KEY_TYPE_ECC:
+      return CKK_EC;
+    default:
+      LOG(DFATAL) << "Unsupported key type input: " << key_type;
+      return CKK_RSA;
+  }
+}
 
 typedef crypto::ScopedOpenSSL<X509, X509_free> ScopedX509;
 
@@ -212,8 +228,8 @@ bool Pkcs11KeyStore::Register(const std::string& username,
                               const std::string& certificate) {
   const CK_ATTRIBUTE_TYPE kKeyBlobAttribute = CKA_VENDOR_DEFINED + 1;
 
-  if (key_type != KEY_TYPE_RSA) {
-    LOG(ERROR) << "Pkcs11KeyStore: Only RSA supported.";
+  if (!IsSupportedRegisterKeyType(key_type)) {
+    LOG(ERROR) << "Pkcs11KeyStore: Unsupported key type: " << key_type << ".";
     return false;
   }
   CK_SLOT_ID slot;
@@ -250,7 +266,7 @@ bool Pkcs11KeyStore::Register(const std::string& username,
   // Construct a PKCS #11 template for the public key object.
   CK_BBOOL true_value = CK_TRUE;
   CK_BBOOL false_value = CK_FALSE;
-  CK_KEY_TYPE p11_key_type = CKK_RSA;
+  CK_KEY_TYPE p11_key_type = ToPkcs11KeyType(key_type);
   CK_OBJECT_CLASS public_key_class = CKO_PUBLIC_KEY;
   std::string id = Sha1(modulus);
   std::string mutable_label(label);
