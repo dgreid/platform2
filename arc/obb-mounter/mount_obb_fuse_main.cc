@@ -223,7 +223,7 @@ int mount_obb_fuse_main(const std::string& file_system_name,
   g_volume = &volume;
 
   const std::string mount_options =
-      std::string("allow_other,default_permissions,uid=") + owner_uid +
+      std::string("allow_other,default_permissions,noexec,uid=") + owner_uid +
       ",gid=" + owner_gid;
   const char* fuse_argv[] = {
       file_system_name.c_str(), mount_path.c_str(), "-f", "-o",
