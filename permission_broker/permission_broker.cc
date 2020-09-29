@@ -108,7 +108,9 @@ bool PermissionBroker::CheckPathAccess(const std::string& in_path) {
 bool PermissionBroker::OpenPath(brillo::ErrorPtr* error,
                                 const std::string& in_path,
                                 brillo::dbus_utils::FileDescriptor* out_fd) {
-  return OpenPathImpl(error, in_path, kAllInterfacesMask, out_fd);
+  VLOG(1) << "Received OpenPath request";
+  return OpenPathImpl(error, in_path, kAllInterfacesMask, kInvalidLifelineFD,
+                      out_fd);
 }
 
 bool PermissionBroker::OpenPathWithDroppedPrivileges(
@@ -116,7 +118,20 @@ bool PermissionBroker::OpenPathWithDroppedPrivileges(
     const std::string& in_path,
     uint32_t drop_privileges_mask,
     brillo::dbus_utils::FileDescriptor* out_fd) {
-  return OpenPathImpl(error, in_path, drop_privileges_mask, out_fd);
+  VLOG(1) << "Received OpenPathWithDroppedPrivileges request";
+  return OpenPathImpl(error, in_path, drop_privileges_mask, kInvalidLifelineFD,
+                      out_fd);
+}
+
+bool PermissionBroker::ClaimDevicePath(
+    brillo::ErrorPtr* error,
+    const std::string& in_path,
+    uint32_t drop_privileges_mask,
+    const base::ScopedFD& in_lifeline_fd,
+    brillo::dbus_utils::FileDescriptor* out_fd) {
+  VLOG(1) << "Received ClaimDevicePath request";
+  return OpenPathImpl(error, in_path, drop_privileges_mask,
+                      in_lifeline_fd.get(), out_fd);
 }
 
 bool PermissionBroker::RequestLoopbackTcpPortLockdown(
@@ -203,6 +218,7 @@ bool PermissionBroker::OpenPathImpl(
     brillo::ErrorPtr* error,
     const std::string& in_path,
     uint32_t drop_privileges_mask,
+    int lifeline_fd,
     brillo::dbus_utils::FileDescriptor* out_fd) {
   Rule::Result rule_result = rule_engine_.ProcessPath(in_path);
   if (rule_result != Rule::ALLOW && rule_result != Rule::ALLOW_WITH_LOCKDOWN &&
@@ -223,7 +239,8 @@ bool PermissionBroker::OpenPathImpl(
   }
 
   if (rule_result == Rule::ALLOW_WITH_DETACH) {
-    if (!usb_driver_tracker_.DetachPathFromKernel(fd.get(), in_path))
+    if (!usb_driver_tracker_.DetachPathFromKernel(fd.get(), lifeline_fd,
+                                                  in_path))
       return false;
   }
 

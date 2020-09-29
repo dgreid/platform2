@@ -6,17 +6,16 @@
 #define PERMISSION_BROKER_USB_DRIVER_TRACKER_H_
 
 #include <map>
-#include <memory>
 #include <string>
 #include <tuple>
 #include <vector>
 
-#include <base/files/file_descriptor_watcher_posix.h>
 #include <base/macros.h>
 #include <base/message_loop/message_loop.h>
-#include <base/sequenced_task_runner.h>
 
 namespace permission_broker {
+
+constexpr const int kInvalidLifelineFD = -1;
 
 class UsbDriverTracker {
  public:
@@ -25,9 +24,10 @@ class UsbDriverTracker {
 
   // Detach all the interfaces of the USB device at |path| from their
   // kernel drivers using the |fd| file descriptor pointing to the devfs node.
-  bool DetachPathFromKernel(int fd, const std::string& path);
+  // Monitor |lifeline_fd| to reattach kernel drivers on close.
+  bool DetachPathFromKernel(int fd, int lifeline_fd, const std::string& path);
 
-  // Try to attach a kernel driver to the interface number |iface|
+  // Try to attach kernel drivers to the interface numbers in  |ifaces|
   // of the USB device at |path|.
   bool ReAttachPathToKernel(const std::string& path,
                             const std::vector<uint8_t>& ifaces);
@@ -35,13 +35,17 @@ class UsbDriverTracker {
  private:
   struct UsbInterfaces;
 
-  void ScanClosedFd(int fd);
+  void HandleClosedFd(int fd);
+  void WatchLifelineFd(int lifeline_fd,
+                       std::string path,
+                       std::vector<uint8_t> ifaces);
 
   // File descriptors watcher callback.
   static void OnFdEvent(UsbDriverTracker* obj, int fd);
 
   std::map<int, UsbInterfaces> dev_fds_;
 
+  base::WeakPtrFactory<UsbDriverTracker> weak_ptr_factory_{this};
   DISALLOW_COPY_AND_ASSIGN(UsbDriverTracker);
 };
 

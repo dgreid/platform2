@@ -11,10 +11,13 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <memory>
 #include <string>
 #include <utility>
 
 #include <base/bind.h>
+#include <base/files/file_descriptor_watcher_posix.h>
+#include <base/files/scoped_file.h>
 #include <base/logging.h>
 #include <base/posix/eintr_wrapper.h>
 #include <base/strings/string_number_conversions.h>
@@ -27,6 +30,7 @@ struct UsbDriverTracker::UsbInterfaces {
   std::string path;
   std::unique_ptr<base::FileDescriptorWatcher::Controller> controller;
   std::vector<uint8_t> ifaces;
+  base::ScopedFD fd;
 };
 
 UsbDriverTracker::UsbDriverTracker() = default;
@@ -39,20 +43,17 @@ UsbDriverTracker::~UsbDriverTracker() {
   }
 }
 
-void UsbDriverTracker::ScanClosedFd(int fd) {
+void UsbDriverTracker::HandleClosedFd(int fd) {
   auto iter = dev_fds_.find(fd);
   if (iter != dev_fds_.end()) {
-    int res = fcntl(fd, F_GETFL);
-    if (res < 0) {  // the browser has close the file descriptor
-      auto entry = std::move(iter->second);
-      // re-attaching the kernel driver to the USB interface.
-      ReAttachPathToKernel(entry.path, entry.ifaces);
+    auto entry = std::move(iter->second);
+    // Re-attaching the kernel driver to the USB interface.
+    ReAttachPathToKernel(entry.path, entry.ifaces);
 
-      // we are done with the USB interface.
-      dev_fds_.erase(iter);
-    }
+    // We are done with the lifeline_fd.
+    dev_fds_.erase(iter);
   } else {
-    LOG(WARNING) << "Untracked USB file descriptor " << fd;
+    LOG(WARNING) << "Untracked USB lifeline_fd " << fd;
   }
 }
 
@@ -76,7 +77,7 @@ bool UsbDriverTracker::ReAttachPathToKernel(
                    << " on interface " << iface_num << " failed " << errno;
     } else {
       LOG(INFO) << "Kernel USB driver attached on " << path << " interface "
-                << iface_num;
+                << static_cast<int>(iface_num);
     }
   }
   IGNORE_EINTR(close(fd));
@@ -84,7 +85,9 @@ bool UsbDriverTracker::ReAttachPathToKernel(
   return true;
 }
 
-bool UsbDriverTracker::DetachPathFromKernel(int fd, const std::string& path) {
+bool UsbDriverTracker::DetachPathFromKernel(int fd,
+                                            int lifeline_fd,
+                                            const std::string& path) {
   // Use the USB device node major/minor to find the udev entry.
   struct stat st;
   if (fstat(fd, &st) || !S_ISCHR(st.st_mode)) {
@@ -148,19 +151,29 @@ bool UsbDriverTracker::DetachPathFromKernel(int fd, const std::string& path) {
     }
   }
 
-  if (detached) {
-    auto controller = base::FileDescriptorWatcher::WatchWritable(
-        fd, base::BindRepeating(&UsbDriverTracker::ScanClosedFd,
-                                base::Unretained(this), fd));
-    if (!controller) {
-      LOG(ERROR) << "Unable to watch FD: " << fd;
-      return true;
-    }
-    dev_fds_.emplace(fd, UsbInterfaces{std::move(path), std::move(controller),
-                                       std::move(ifaces)});
+  if (detached && lifeline_fd != kInvalidLifelineFD) {
+    WatchLifelineFd(lifeline_fd, std::move(path), std::move(ifaces));
   }
 
   return detached;
+}
+
+void UsbDriverTracker::WatchLifelineFd(int lifeline_fd,
+                                       std::string path,
+                                       std::vector<uint8_t> ifaces) {
+  base::ScopedFD lifeline(HANDLE_EINTR(dup(lifeline_fd)));
+  int dup_fd = lifeline.get();
+  auto controller = base::FileDescriptorWatcher::WatchReadable(
+      dup_fd, base::BindRepeating(&UsbDriverTracker::HandleClosedFd,
+                                  weak_ptr_factory_.GetWeakPtr(), dup_fd));
+  if (!controller) {
+    LOG(ERROR) << "Unable to watch lifeline_fd " << dup_fd;
+    return;
+  }
+  VLOG(1) << "Watching lifeline_fd " << dup_fd;
+  dev_fds_.emplace(dup_fd,
+                   UsbInterfaces{std::move(path), std::move(controller),
+                                 std::move(ifaces), std::move(lifeline)});
 }
 
 }  // namespace permission_broker

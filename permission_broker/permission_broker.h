@@ -51,6 +51,11 @@ class PermissionBroker : public org::chromium::PermissionBrokerAdaptor,
       const std::string& in_path,
       uint32_t drop_privileges_mask,
       brillo::dbus_utils::FileDescriptor* out_fd) override;
+  bool ClaimDevicePath(brillo::ErrorPtr* error,
+                       const std::string& in_path,
+                       uint32_t drop_privileges_mask,
+                       const base::ScopedFD& in_lifeline_fd,
+                       brillo::dbus_utils::FileDescriptor* out_fd) override;
   bool RequestTcpPortAccess(uint16_t in_port,
                             const std::string& in_interface,
                             const base::ScopedFD& dbus_fd) override;
@@ -86,6 +91,7 @@ class PermissionBroker : public org::chromium::PermissionBrokerAdaptor,
   bool OpenPathImpl(brillo::ErrorPtr* error,
                     const std::string& in_path,
                     uint32_t drop_privileges_mask,
+                    int lifeline_fd,
                     brillo::dbus_utils::FileDescriptor* out_fd);
 
   RuleEngine rule_engine_;

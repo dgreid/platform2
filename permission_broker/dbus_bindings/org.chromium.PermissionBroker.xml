@@ -27,6 +27,24 @@
       <arg type="h" name="fd" direction="out"/>
       <annotation name="org.chromium.DBus.Method.Kind" value="normal"/>
     </method>
+    <method name="ClaimDevicePath">
+      <tp:docstring>
+        The |drop_privileges_mask| is a bit mask indicating which interface
+        numbers of a USB device are allowed. The interface number 0 corresponds
+        to the LSB of the mask. A device which has an ADB interface and other
+        interfaces for Camera or Storage may be opened purely as an ADB device
+        using a mask that zeros out the Camera and Storage interface number
+        bit positions. The |lifeline_fd| is an file descriptor by which clients
+        manage the lifetime of their device claim. Kernel drivers that were
+        detached from the device's interfaces on claim are reattached when
+        |lifeline_fd| is closed.
+      </tp:docstring>
+      <arg name="path" type="s" direction="in"/>
+      <arg name="drop_privileges_mask" type="u" direction="in"/>
+      <arg type="h" name="lifeline_fd" direction="in"/>
+      <arg type="h" name="fd" direction="out"/>
+      <annotation name="org.chromium.DBus.Method.Kind" value="normal"/>
+    </method>
     <method name="PowerCycleUsbPorts">
       <tp:docstring>
         This API uses USB VBUS to power-cycle one or more USB devices.
