@@ -532,6 +532,9 @@ void AddUiFlags(ChromiumCommandBuilder* builder,
   if (builder->UseFlagIsSet("biod"))
     builder->AddFeatureEnableOverride("QuickUnlockFingerprint");
 
+  if (builder->UseFlagIsSet("clear_fast_ink_buffer"))
+    builder->AddArg("--ash-clear-fast-ink-buffer");
+
   SetUpPowerButtonPositionFlag(builder, cros_config);
   SetUpSideVolumeButtonPositionFlag(builder, cros_config);
   SetUpRegulatoryLabelFlag(builder, cros_config);
