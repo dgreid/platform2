@@ -114,7 +114,7 @@ Commands:
       |input_file|, and stores it in the key with the specified |label|.
   get_cert [--attestation-server=default|test] [--profile=<profile>]
         [--label=<label>] [--user=<user>] [--origin=<origin>]
-        [--output=<output_file>]
+        [--output=<output_file>] [--key-type={rsa|ecc}]
       Creates certificate request to CA for |user|, using provided certificate
       |profile| and |origin|, and sends to the specified CA, then stores it
       with the specified |label|.
@@ -424,6 +424,11 @@ class ClientLoop : public ClientLoopBase {
       if (status != EX_OK) {
         return status;
       }
+      KeyType key_type;
+      status = GetKeyType(command_line, &key_type);
+      if (status != EX_OK) {
+        return status;
+      }
       std::string profile_str = command_line->GetSwitchValueASCII("profile");
       CertificateProfile profile;
       if (profile_str.empty() || profile_str == "enterprise_user" ||
@@ -448,14 +453,15 @@ class ClientLoop : public ClientLoopBase {
       } else {
         return EX_USAGE;
       }
+
       bool forced = command_line->HasSwitch("forced");
       bool shall_trigger_enrollment = command_line->HasSwitch("enroll");
       task = base::Bind(&ClientLoop::CallGetCert, weak_factory_.GetWeakPtr(),
                         aca_type, profile,
                         command_line->GetSwitchValueASCII("label"),
                         command_line->GetSwitchValueASCII("user"),
-                        command_line->GetSwitchValueASCII("origin"), forced,
-                        shall_trigger_enrollment);
+                        command_line->GetSwitchValueASCII("origin"), key_type,
+                        forced, shall_trigger_enrollment);
     } else if (args.front() == kSignChallengeCommand) {
       if (!command_line->HasSwitch("input")) {
         return EX_USAGE;
@@ -543,6 +549,18 @@ class ClientLoop : public ClientLoopBase {
       *aca_type = TEST_ACA;
     } else if (aca_server != "" && aca_server != "default") {
       LOG(ERROR) << "Invalid attestation-server value: " << aca_server;
+      return EX_USAGE;
+    }
+    return EX_OK;
+  }
+
+  int GetKeyType(base::CommandLine* command_line, KeyType* key_type) {
+    *key_type = KEY_TYPE_RSA;
+    std::string key_type_str = command_line->GetSwitchValueASCII("key-type");
+    if (key_type_str == "ecc") {
+      *key_type = KEY_TYPE_ECC;
+    } else if (key_type_str != "" && key_type_str != "rsa") {
+      LOG(ERROR) << "Invalid key-type value: " << key_type_str;
       return EX_USAGE;
     }
     return EX_OK;
@@ -871,6 +889,7 @@ class ClientLoop : public ClientLoopBase {
                    const std::string& label,
                    const std::string& username,
                    const std::string& origin,
+                   KeyType key_type,
                    bool forced,
                    bool shall_trigger_enrollment) {
     GetCertificateRequest request;
@@ -879,6 +898,7 @@ class ClientLoop : public ClientLoopBase {
     request.set_key_label(label);
     request.set_username(username);
     request.set_request_origin(origin);
+    request.set_key_type(key_type);
     request.set_forced(forced);
     request.set_shall_trigger_enrollment(shall_trigger_enrollment);
     attestation_->GetCertificate(
