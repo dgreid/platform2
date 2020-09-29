@@ -155,6 +155,8 @@ class CellularCapability3gpp : public CellularCapability {
   static const int64_t kRegistrationDroppedUpdateTimeoutMilliseconds;
   static const int kSetPowerStateTimeoutMilliseconds;
 
+  static const int kUnknownLockRetriesLeft;
+
   // Root path. The SIM path is reported by ModemManager to be the root path
   // when no SIM is present.
   static const RpcIdentifier kRootPath;

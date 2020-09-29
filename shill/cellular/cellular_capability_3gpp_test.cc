@@ -1743,12 +1743,13 @@ TEST_F(CellularCapability3gppMainTest, SimLockStatusToProperty) {
 
 TEST_F(CellularCapability3gppMainTest, OnLockRetriesChanged) {
   CellularCapability3gpp::LockRetryData data;
-  const uint32_t kDefaultRetries = 999;
 
   capability_->OnLockRetriesChanged(data);
-  EXPECT_EQ(kDefaultRetries, capability_->sim_lock_status_.retries_left);
+  EXPECT_EQ(CellularCapability3gpp::kUnknownLockRetriesLeft,
+            capability_->sim_lock_status_.retries_left);
 
   data[MM_MODEM_LOCK_SIM_PIN] = 3;
+  data[MM_MODEM_LOCK_SIM_PIN2] = 5;
   data[MM_MODEM_LOCK_SIM_PUK] = 10;
   capability_->OnLockRetriesChanged(data);
   EXPECT_EQ(3, capability_->sim_lock_status_.retries_left);
@@ -1761,9 +1762,16 @@ TEST_F(CellularCapability3gppMainTest, OnLockRetriesChanged) {
   capability_->OnLockRetriesChanged(data);
   EXPECT_EQ(3, capability_->sim_lock_status_.retries_left);
 
+  capability_->sim_lock_status_.lock_type = MM_MODEM_LOCK_SIM_PIN2;
+  capability_->OnLockRetriesChanged(data);
+  // retries_left should always indicate the number of SIM_PIN retries if the
+  // lock is not SIM_PUK
+  EXPECT_EQ(3, capability_->sim_lock_status_.retries_left);
+
   data.clear();
   capability_->OnLockRetriesChanged(data);
-  EXPECT_EQ(kDefaultRetries, capability_->sim_lock_status_.retries_left);
+  EXPECT_EQ(CellularCapability3gpp::kUnknownLockRetriesLeft,
+            capability_->sim_lock_status_.retries_left);
 }
 
 TEST_F(CellularCapability3gppMainTest, OnLockTypeChanged) {
@@ -1819,13 +1827,14 @@ TEST_F(CellularCapability3gppMainTest, OnSimLockPropertiesChanged) {
   EXPECT_EQ(2, capability_->sim_lock_status_.retries_left);
 
   // Unlock retries changed with a value that doesn't match the current
-  // lock type. Default to whatever count is available.
+  // lock type. Default to unknown if PIN1 is unavailable.
   retry_data.clear();
   retry_data[MM_MODEM_LOCK_SIM_PIN2] = 2;
   changed.SetVariant(MM_MODEM_PROPERTY_UNLOCKRETRIES, brillo::Any(retry_data));
   capability_->OnModemPropertiesChanged(changed, invalidated);
   EXPECT_EQ(MM_MODEM_LOCK_SIM_PIN, capability_->sim_lock_status_.lock_type);
-  EXPECT_EQ(2, capability_->sim_lock_status_.retries_left);
+  EXPECT_EQ(CellularCapability3gpp::kUnknownLockRetriesLeft,
+            capability_->sim_lock_status_.retries_left);
 }
 
 }  // namespace shill

@@ -64,6 +64,7 @@ const char CellularCapability3gpp::kOperatorCodeProperty[] = "operator-code";
 const char CellularCapability3gpp::kOperatorAccessTechnologyProperty[] =
     "access-technology";
 const int CellularCapability3gpp::kSetPowerStateTimeoutMilliseconds = 20000;
+const int CellularCapability3gpp::kUnknownLockRetriesLeft = 999;
 
 namespace {
 
@@ -1316,18 +1317,20 @@ void CellularCapability3gpp::OnLockRetriesChanged(
     const LockRetryData& lock_retries) {
   SLOG(this, 3) << __func__;
 
-  // Look for the retries left for the current lock. Try the obtain the count
-  // that matches the current count. If no count for the current lock is
-  // available, report the first one in the dictionary.
-  LockRetryData::const_iterator it =
-      lock_retries.find(sim_lock_status_.lock_type);
-  if (it == lock_retries.end())
-    it = lock_retries.begin();
-  if (it != lock_retries.end())
-    sim_lock_status_.retries_left = it->second;
-  else
-    // Unknown, use 999
-    sim_lock_status_.retries_left = 999;
+  // UI uses lock_retries to indicate the number of attempts remaining
+  // for enable pin/disable pin/change pin
+  // By default, the UI operates on PIN1, thus lock_retries should return
+  // number of PIN1 retries. The only exception is PUK lock, where the UI needs
+  // to report the number of PUK retries.
+  // TODO(pholla): Personalization requires the UI to display multiple locks,
+  // so shill needs to communicate an array of sim_lock_status (b/169615875)
+  auto retry_lock_type = (sim_lock_status_.lock_type == MM_MODEM_LOCK_SIM_PUK)
+                             ? MM_MODEM_LOCK_SIM_PUK
+                             : MM_MODEM_LOCK_SIM_PIN;
+  auto it = lock_retries.find(retry_lock_type);
+
+  sim_lock_status_.retries_left =
+      (it != lock_retries.end()) ? it->second : kUnknownLockRetriesLeft;
 }
 
 void CellularCapability3gpp::OnLockTypeChanged(MMModemLock lock_type) {
