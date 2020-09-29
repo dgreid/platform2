@@ -308,4 +308,26 @@ TEST_F(LogParserAuditTest, ParseWithTimezone) {
   }
 }
 
+TEST_F(LogParserAuditTest, ParseLeadingNull) {
+  LogParserAudit parser;
+  LogLineReader reader(LogLineReader::Backend::FILE);
+  reader.OpenFile(base::FilePath("./testdata/TEST_AUDIT_LOG_LEADING_NULL"));
+
+  {
+    base::Optional<std::string> maybe_line = reader.Forward();
+    EXPECT_TRUE(maybe_line.has_value());
+    MaybeLogEntry e = parser.Parse(std::move(maybe_line.value()));
+    EXPECT_TRUE(e.has_value());
+
+    const std::string& s = e->entire_line();
+    EXPECT_EQ("2020-01-18T23:17:27.098000+00:00", s.substr(0, 32));
+    EXPECT_EQ(TimeFromExploded(2020, 1, 18, 23, 17, 27, 98000), e->time());
+    EXPECT_EQ(0, e->pid());
+    EXPECT_EQ("audit", e->tag());
+
+    EXPECT_EQ("INFO audit[0]: SECCOMP pid=0 auid=4294967296 uid=1000 gid=1000",
+              s.substr(33, s.size()));
+  }
+}
+
 }  // namespace croslog

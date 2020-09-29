@@ -18,6 +18,8 @@ class LogParserAudit : public LogParser {
   MaybeLogEntry Parse(std::string&& entire_line) override;
 
  private:
+  MaybeLogEntry ParseInternal(std::string&& entire_line);
+
   DISALLOW_COPY_AND_ASSIGN(LogParserAudit);
 };
 
