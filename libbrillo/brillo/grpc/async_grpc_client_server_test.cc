@@ -110,13 +110,15 @@ class PendingIncomingRpcQueue {
 template <typename ResponseType>
 class RpcReply {
  public:
+  using ReplyCallback =
+      base::Callback<void(grpc::Status status, std::unique_ptr<ResponseType>)>;
+
   RpcReply() : weak_ptr_factory_(this) {}
   ~RpcReply() = default;
 
   // Returns a callback that should be called when a response to the outgoing
   // RPC is available.
-  base::Callback<void(grpc::Status status, std::unique_ptr<ResponseType>)>
-  MakeWriter() {
+  ReplyCallback MakeWriter() {
     return base::Bind(&RpcReply::OnReply, weak_ptr_factory_.GetWeakPtr());
   }
 
@@ -623,9 +625,37 @@ TEST_F(AsyncGrpcClientServerTest, TwoRpcClients) {
   ShutDownSecondClient();
 }
 
+namespace {
+
+void CallEchoIntRpcWithRetry(
+    AsyncGrpcClient<test_rpcs::ExampleService>* client,
+    const test_rpcs::EchoIntRpcRequest& request,
+    const RpcReply<test_rpcs::EchoIntRpcResponse>::ReplyCallback&
+        reply_callback) {
+  client->CallRpc(&test_rpcs::ExampleService::Stub::AsyncEchoIntRpc, request,
+                  reply_callback);
+}
+
+void OnRetryableEchoIntRpcReply(
+    AsyncGrpcClient<test_rpcs::ExampleService>* client,
+    const test_rpcs::EchoIntRpcRequest& request,
+    const RpcReply<test_rpcs::EchoIntRpcResponse>::ReplyCallback&
+        reply_callback,
+    grpc::Status status,
+    std::unique_ptr<test_rpcs::EchoIntRpcResponse> response) {
+  if (status.error_code() == grpc::StatusCode::UNAVAILABLE) {
+    CallEchoIntRpcWithRetry(client, request,
+                            base::Bind(&OnRetryableEchoIntRpcReply, client,
+                                       request, reply_callback));
+    return;
+  }
+  reply_callback.Run(status, std::move(response));
+}
+
+}  // namespace
+
 // Set up a RPC server, then restart it. Send one RPC to each instance.
-// TODO(https://crbug.com/1115145): Reenable when deadlock is fixed.
-TEST_F(AsyncGrpcClientServerTest, DISABLED_RpcServerRestarted) {
+TEST_F(AsyncGrpcClientServerTest, RpcServerRestarted) {
   {
     RpcReply<test_rpcs::EchoIntRpcResponse> rpc_reply;
     test_rpcs::EchoIntRpcRequest request;
@@ -653,8 +683,23 @@ TEST_F(AsyncGrpcClientServerTest, DISABLED_RpcServerRestarted) {
     RpcReply<test_rpcs::EchoIntRpcResponse> rpc_reply;
     test_rpcs::EchoIntRpcRequest request;
     request.set_int_to_echo(2);
-    client_->CallRpc(&test_rpcs::ExampleService::Stub::AsyncEchoIntRpc, request,
-                     rpc_reply.MakeWriter());
+
+    // gRPC has retry mechanism with backoff, however old version of gRPC
+    // library (which obviously we use in ChromeOS) does not retry if "RPC goes
+    // all the way through the channel, lb_policy, subchannel, to the transport
+    // before it realizes the connection has terminated, and at that point it is
+    // too late to try to reconnect, so the RPC fails" (check
+    // github.com/grpc/grpc/issues/9767 for more details).
+    //
+    // This error happens one per 20'000 test runs. We are automatically
+    // retrying the RPC on |UNAVAILABLE| error. In practice we need to perform
+    // only one retry, however it's safer to retry infinitely.
+    //
+    // TODO(crbug.com/1044752): try to remove retry once gRPC will be upreved.
+    CallEchoIntRpcWithRetry(
+        client_.get(), request,
+        base::Bind(&OnRetryableEchoIntRpcReply, client_.get(), request,
+                   rpc_reply.MakeWriter()));
 
     pending_echo_int_rpcs_.WaitUntilPendingRpcCount(1);
     auto pending_rpc = pending_echo_int_rpcs_.GetOldestPendingRpc();
