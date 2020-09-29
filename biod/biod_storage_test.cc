@@ -80,7 +80,6 @@ class TestRecord : public BiometricsManager::Record {
   bool SupportsPositiveMatchSecret() const override {
     return test_record_supports_positive_match_secret;
   }
-  bool NeedsNewValidationValue() const override { return false; }
 
   void ClearValidationValue() { validation_val_.clear(); }
 

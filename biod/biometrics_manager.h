@@ -113,9 +113,6 @@ class BiometricsManager {
     // Whether the BiometricsManager's device supports positive match secret.
     virtual bool SupportsPositiveMatchSecret() const = 0;
 
-    // Whether the record needs migration to have a validation value.
-    virtual bool NeedsNewValidationValue() const = 0;
-
     // Returns true on success.
     virtual bool Remove() = 0;
 

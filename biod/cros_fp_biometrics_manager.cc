@@ -119,12 +119,6 @@ bool CrosFpBiometricsManager::Record::SetLabel(std::string label) {
   return true;
 }
 
-bool CrosFpBiometricsManager::Record::NeedsNewValidationValue() const {
-  return biometrics_manager_->records_[index_].record_format_version ==
-             kRecordFormatVersionNoValidationValue &&
-         biometrics_manager_->records_[index_].validation_val.empty();
-}
-
 bool CrosFpBiometricsManager::Record::SupportsPositiveMatchSecret() const {
   return biometrics_manager_->use_positive_match_secret_;
 }
@@ -563,41 +557,16 @@ BiometricsManager::AttemptMatches CrosFpBiometricsManager::CalculateMatches(
   if (!matched)
     return matches;
 
-  Record current_record(weak_factory_.GetWeakPtr(), match_idx);
   if (match_idx >= records_.size()) {
     LOG(ERROR) << "Invalid finger index " << match_idx;
     return matches;
   }
 
-  if (!use_positive_match_secret_ || current_record.NeedsNewValidationValue() ||
-      ValidationValueIsCorrect(match_idx)) {
+  if (!use_positive_match_secret_ || ValidationValueIsCorrect(match_idx)) {
     matches.emplace(records_[match_idx].user_id,
                     std::vector<std::string>({records_[match_idx].record_id}));
   }
   return matches;
-}
-
-CrosFpBiometricsManager::MigrationStatus
-CrosFpBiometricsManager::MigrateToValidationValue(int match_idx) {
-  base::Optional<brillo::SecureVector> secret =
-      cros_dev_->GetPositiveMatchSecret(match_idx);
-  if (!secret) {
-    LOG(ERROR) << "In migration to validation value: failed to read positive "
-                  "match secret on match for finger "
-               << match_idx << ".";
-    return MigrationStatus::kError;
-  }
-
-  if (!BiodCrypto::ComputeValidationValue(
-          *secret, records_[match_idx].user_id,
-          &records_[match_idx].validation_val)) {
-    LOG(ERROR) << "In migration to validation value: failed to compute "
-                  "validation value from secret on match for finger "
-               << match_idx << ".";
-    return MigrationStatus::kError;
-  }
-
-  return MigrationStatus::kSuccess;
 }
 
 void CrosFpBiometricsManager::DoMatchEvent(int attempt, uint32_t event) {
@@ -713,23 +682,6 @@ void CrosFpBiometricsManager::DoMatchEvent(int attempt, uint32_t event) {
   if (matches.empty())
     matched = false;
 
-  Record current_record(weak_factory_.GetWeakPtr(), match_idx);
-  MigrationStatus migration_status;
-  if (use_positive_match_secret_ && current_record.NeedsNewValidationValue()) {
-    migration_status = MigrateToValidationValue(match_idx);
-    if (migration_status == MigrationStatus::kError)
-      matched = false;
-  } else {
-    migration_status = MigrationStatus::kNotDoingMigration;
-  }
-
-  // Fetch template even if it's not updated so that we have the
-  // positive_match_salt.
-  if (migration_status == MigrationStatus::kSuccess &&
-      std::find(dirty_list.begin(), dirty_list.end(), match_idx) ==
-          dirty_list.end())
-    dirty_list.emplace_back(match_idx);
-
   // Send back the result directly (as we are running on the main thread).
   OnAuthScanDone(result, std::move(matches));
 
@@ -746,50 +698,23 @@ void CrosFpBiometricsManager::DoMatchEvent(int attempt, uint32_t event) {
     // accept it until it comes with correct validation value.
     if (suspicious_templates_.find(i) != suspicious_templates_.end())
       continue;
-    // If we are doing migration and already have an error, do not write the
-    // template into record.
-    if (i == match_idx && migration_status == MigrationStatus::kError)
-      continue;
 
     std::unique_ptr<VendorTemplate> templ = cros_dev_->GetTemplate(i);
-    LOG(INFO) << "Retrieve updated template " << i << " -> "
-              << (templ != nullptr);
-    if (!templ) {
-      if (i == match_idx && migration_status == MigrationStatus::kSuccess)
-        migration_status = MigrationStatus::kError;
+    LOG(INFO) << "Retrieve updated template " << i << " -> " << std::boolalpha
+              << templ.get();
+    if (!templ)
       continue;
-    }
 
     Record current_record(weak_factory_.GetWeakPtr(), i);
     if (!WriteRecord(current_record, templ->data(), templ->size())) {
       LOG(ERROR) << "Cannot update record " << records_[i].record_id
                  << " in storage during AuthSession because writing failed.";
-      if (i == match_idx && migration_status == MigrationStatus::kSuccess)
-        migration_status = MigrationStatus::kError;
-      continue;
     }
-  }
-
-  if (migration_status == MigrationStatus::kSuccess) {
-    LOG(INFO) << "Successfully migrated record "
-              << records_[match_idx].record_id << " to have validation value.";
-  } else if (migration_status == MigrationStatus::kError) {
-    // If in migration we never succeeded to fetch template (with new
-    // positive_match_salt) and write it to record before biod stops, the
-    // template on record would remain kRecordFormatVersionNoValidationValue and
-    // has empty validation value, and will be migrated next time biod starts.
-    LOG(ERROR) << "Failed to migrate record " << records_[match_idx].record_id
-               << " to have validation value.";
   }
 }
 
 void CrosFpBiometricsManager::OnTaskComplete() {
   next_session_action_ = SessionAction();
-}
-
-void CrosFpBiometricsManager::InsertEmptyPositiveMatchSalt(
-    VendorTemplate* tmpl) {
-  tmpl->resize(tmpl->size() + FP_POSITIVE_MATCH_SALT_BYTES);
 }
 
 bool CrosFpBiometricsManager::LoadRecord(
@@ -820,20 +745,11 @@ bool CrosFpBiometricsManager::LoadRecord(
   auto* metadata =
       reinterpret_cast<const ec_fp_template_encryption_metadata*>(tmpl.data());
   if (metadata->struct_version != cros_dev_->TemplateVersion()) {
-    bool should_migrate =
-        (metadata->struct_version == 3 && cros_dev_->TemplateVersion() == 4);
-    if (!use_positive_match_secret_ || !should_migrate) {
-      LOG(ERROR) << "use_positive_match_secret_ = "
-                 << use_positive_match_secret_
-                 << ", should_migrate = " << should_migrate
-                 << ". Version mismatch between template ("
-                 << metadata->struct_version << ") and hardware ("
-                 << cros_dev_->TemplateVersion() << ")";
-      biod_storage_.DeleteRecord(user_id, record_id);
-      return false;
-    }
-    if (should_migrate)
-      InsertEmptyPositiveMatchSalt(&tmpl);
+    LOG(ERROR) << "Version mismatch between template ("
+               << metadata->struct_version << ") and hardware ("
+               << cros_dev_->TemplateVersion() << ")";
+    biod_storage_.DeleteRecord(user_id, record_id);
+    return false;
   }
   if (!cros_dev_->UploadTemplate(tmpl)) {
     LOG(ERROR) << "Cannot send template to the MCU from " << record_id << ".";

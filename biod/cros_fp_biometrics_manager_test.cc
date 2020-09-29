@@ -169,22 +169,6 @@ class CrosFpBiometricsManagerPeer {
     return cros_fp_biometrics_manager_->CalculateMatches(match_idx, matched);
   }
 
-  bool MigrateToValidationValue(int match_idx) {
-    CrosFpBiometricsManager::MigrationStatus status =
-        cros_fp_biometrics_manager_->MigrateToValidationValue(match_idx);
-    return status == CrosFpBiometricsManager::MigrationStatus::kSuccess;
-  }
-
-  static void InsertEmptyPositiveMatchSalt(VendorTemplate* tmpl) {
-    CrosFpBiometricsManager::InsertEmptyPositiveMatchSalt(tmpl);
-  }
-
-  bool RecordNeedsValidationValue(int index) {
-    CrosFpBiometricsManager::Record current_record(
-        cros_fp_biometrics_manager_->weak_factory_.GetWeakPtr(), index);
-    return current_record.NeedsNewValidationValue();
-  }
-
  private:
   base::test::TaskEnvironment task_environment_{
       base::test::TaskEnvironment::TimeSource::MOCK_TIME};
@@ -193,12 +177,6 @@ class CrosFpBiometricsManagerPeer {
 };
 
 class CrosFpBiometricsManagerTest : public ::testing::Test {
- public:
-  bool BytesAreZeros(const uint8_t* start, size_t size) {
-    const std::vector<uint8_t> zeros(size);
-    return std::memcmp(start, zeros.data(), size) == 0;
-  }
-
  protected:
   CrosFpBiometricsManagerPeer cros_fp_biometrics_manager_peer_;
 };
@@ -274,58 +252,6 @@ TEST_F(CrosFpBiometricsManagerTest,
       cros_fp_biometrics_manager_peer_.CalculateMatches(index, true);
   EXPECT_EQ(matches,
             BiometricsManager::AttemptMatches({{kUserID, {kRecordID}}}));
-}
-
-TEST_F(CrosFpBiometricsManagerTest, TestCalculateMatchesOnMigration) {
-  int index = cros_fp_biometrics_manager_peer_.AddRecord(
-      kRecordFormatVersionNoValidationValue, kRecordID, kUserID, kLabel,
-      std::vector<uint8_t>());
-
-  // IF firmware supports positive match secret but the record does not have
-  // validation value:
-  EXPECT_TRUE(cros_fp_biometrics_manager_peer_.SupportsPositiveMatchSecret());
-  EXPECT_TRUE(
-      cros_fp_biometrics_manager_peer_.RecordNeedsValidationValue(index));
-
-  // THEN we accept the match since we are going to do migration.
-  auto matches = cros_fp_biometrics_manager_peer_.CalculateMatches(index, true);
-  EXPECT_EQ(matches,
-            BiometricsManager::AttemptMatches({{kUserID, {kRecordID}}}));
-}
-
-TEST_F(CrosFpBiometricsManagerTest, TestMigrateToValidationValue) {
-  int index = cros_fp_biometrics_manager_peer_.AddRecord(
-      kRecordFormatVersion, kRecordID, kUserID, kLabel, std::vector<uint8_t>());
-  bool ret = cros_fp_biometrics_manager_peer_.MigrateToValidationValue(index);
-  EXPECT_TRUE(ret);
-  // After migration, the record at |index| should have the validation value
-  // corresponding to the device's positive match secret.
-  EXPECT_TRUE(cros_fp_biometrics_manager_peer_.ValidationValueEquals(
-      index, kFakeValidationValue1));
-}
-
-TEST_F(CrosFpBiometricsManagerTest, TestMigrateToValidationValueFailures) {
-  int index = cros_fp_biometrics_manager_peer_.AddRecord(
-      kRecordFormatVersion, kRecordID, kUserID, kLabel, std::vector<uint8_t>());
-
-  // Setting the devices positive match secret to empty will make the fake
-  // device return false when asked for positive match secret.
-  cros_fp_biometrics_manager_peer_.SetDevicePositiveMatchSecret(
-      brillo::SecureVector());
-  EXPECT_FALSE(
-      cros_fp_biometrics_manager_peer_.MigrateToValidationValue(index));
-}
-
-TEST_F(CrosFpBiometricsManagerTest, TestInsertEmptyPositiveMatchSalt) {
-  // Prepare a template of old format, with zero-length template field.
-  size_t metadata_size = sizeof(struct ec_fp_template_encryption_metadata);
-  VendorTemplate tmpl(metadata_size, 0xff);
-
-  CrosFpBiometricsManagerPeer::InsertEmptyPositiveMatchSalt(&tmpl);
-
-  EXPECT_EQ(tmpl.size(), metadata_size + FP_POSITIVE_MATCH_SALT_BYTES);
-  EXPECT_TRUE(
-      BytesAreZeros(tmpl.data() + metadata_size, FP_POSITIVE_MATCH_SALT_BYTES));
 }
 
 class CrosFpBiometricsManagerMockTest : public ::testing::Test {

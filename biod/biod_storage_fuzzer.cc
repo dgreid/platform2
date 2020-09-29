@@ -45,7 +45,6 @@ class TestRecord : public biod::BiometricsManager::Record {
   bool SetLabel(std::string label) override { return true; }
   bool Remove() override { return true; }
   bool SupportsPositiveMatchSecret() const override { return true; }
-  bool NeedsNewValidationValue() const override { return false; }
 
  private:
   std::string id_;
