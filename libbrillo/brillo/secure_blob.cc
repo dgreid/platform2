@@ -8,6 +8,7 @@
 #include <base/strings/string_number_conversions.h>
 
 #include "brillo/secure_blob.h"
+#include "brillo/secure_string.h"
 
 namespace brillo {
 
@@ -100,29 +101,6 @@ bool SecureBlob::HexStringToSecureBlob(const std::string& input,
   output->assign(temp.begin(), temp.end());
   SecureMemset(temp.data(), 0, temp.capacity());
   return true;
-}
-
-BRILLO_DISABLE_ASAN void* SecureMemset(void* v, int c, size_t n) {
-  volatile uint8_t* p = reinterpret_cast<volatile uint8_t*>(v);
-  while (n--)
-    *p++ = c;
-  return v;
-}
-
-int SecureMemcmp(const void* s1, const void* s2, size_t n) {
-  const uint8_t* us1 = reinterpret_cast<const uint8_t*>(s1);
-  const uint8_t* us2 = reinterpret_cast<const uint8_t*>(s2);
-  int result = 0;
-
-  if (0 == n)
-    return 1;
-
-  /* Code snippet without data-dependent branch due to
-   * Nate Lawson (nate@root.org) of Root Labs. */
-  while (n--)
-    result |= *us1++ ^ *us2++;
-
-  return result != 0;
 }
 
 // base::HexEncode and base::HexStringToBytes use strings, which may leak
