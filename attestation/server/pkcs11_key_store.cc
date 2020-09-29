@@ -23,6 +23,8 @@
 #include <openssl/sha.h>
 #include <openssl/x509.h>
 
+namespace attestation {
+
 namespace {
 
 std::string Sha1(const std::string& input) {
@@ -32,11 +34,10 @@ std::string Sha1(const std::string& input) {
   return std::string(reinterpret_cast<char*>(output), SHA_DIGEST_LENGTH);
 }
 
-}  // namespace
-
-namespace attestation {
 
 typedef crypto::ScopedOpenSSL<X509, X509_free> ScopedX509;
+
+}  // namespace
 
 // An arbitrary application ID to identify PKCS #11 objects.
 const char kApplicationID[] = "CrOS_d5bbc079d2497110feadfc97c40d718ae46f4658";
