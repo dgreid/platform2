@@ -30,7 +30,7 @@ namespace {
 const uint64_t kSession = 7;  // Arbitrary non-zero value.
 const char kDefaultUser[] = "test_user";
 
-const char kValidPublicKeyHex[] =
+const char kValidRsaPublicKeyHex[] =
     "3082010A0282010100"
     "961037BC12D2A298BEBF06B2D5F8C9B64B832A2237F8CF27D5F96407A6041A4D"
     "AD383CB5F88E625F412E8ACD5E9D69DF0F4FA81FCE7955829A38366CBBA5A2B1"
@@ -43,7 +43,7 @@ const char kValidPublicKeyHex[] =
     "0203"
     "010001";
 
-const char kValidCertificateHex[] =
+const char kValidRsaCertificateHex[] =
     "3082040f308202f7a003020102020900bd0f8fd6bf496b67300d06092a864886"
     "f70d01010b050030819d310b3009060355040613025553311330110603550408"
     "0c0a43616c69666f726e69613116301406035504070c0d4d6f756e7461696e20"
@@ -77,6 +77,35 @@ const char kValidCertificateHex[] =
     "c63be8475bb23d0485985fb77c7cdd9d9fe008211a9ddd0fe68efb0b47cf629c"
     "941d31e3c2f88e670e7e4ef1129febad000e6a16222779fbfe34641e5243ca38"
     "74e2ad06f9585a00bec014744d3175ecc4808d";
+
+constexpr char kValidEccPublicKeyHex[] =
+    "3059301306072A8648CE3D020106082A8648CE3D030107034200045C9633047E7518B3E0DF"
+    "6C019BAA7CC8D0CB1F18DB781B382E02273054A304CCBEEAD2ED273DA1D6FCDFAB8B55DE4E"
+    "830FF43899F82DB6104381615992542F3D";
+
+constexpr char kValidEccCertificateHex[] =
+    "3082032930820211a00302010202160174fb9852da9f991b7fd47ebd190000000000001418"
+    "300d06092a864886f70d01010505003081853120301e060355040313175072697661637920"
+    "434120496e7465726d65646961746531123010060355040b13094368726f6d65204f533113"
+    "3011060355040a130a476f6f676c6520496e63311630140603550407130d4d6f756e746169"
+    "6e2056696577311330110603550408130a43616c69666f726e6961310b3009060355040613"
+    "025553301e170d3230313030363034313032395a170d3232313030363034313032395a303d"
+    "31183016060355040b130f73746174653a646576656c6f7065723121301f060355040a1318"
+    "4368726f6d652044657669636520456e74657270726973653059301306072a8648ce3d0201"
+    "06082a8648ce3d030107034200045c9633047e7518b3e0df6c019baa7cc8d0cb1f18db781b"
+    "382e02273054a304ccbeead2ed273da1d6fcdfab8b55de4e830ff43899f82db61043816159"
+    "92542f3da381a030819d30290603551d0e04220420837f40ecb000f7ffccda6dab8cd526d9"
+    "43b6fe8ce56c84be5dc70cd3ed8f7410302b0603551d23042430228020f420b6d9d862f68b"
+    "0915ce8b57a4fc574eb8c17ca5f9e656dbd0529429bd6d7f300e0603551d0f0101ff040403"
+    "020780300c0603551d130101ff0402300030110603551d20040a300830060604551d200030"
+    "12060a2b06010401d679020113040404020802300d06092a864886f70d0101050500038201"
+    "010028a2e3a90c10a850cbee4e575da068bee21753212cc551b0f09eb327a15df01dffec87"
+    "2509dedf06c9f34a5e9c987fb5c0d0878a400056c082f015d3153159a38dd71b6dd73e8dad"
+    "2f1ce6ac43ed7cf550e8627b5d21dcf41661fcbc58075be7993b8cd7c06941b712ae052609"
+    "6a20e559c9fb0cf3da807d261563cdddc74c18998ebd2859b26156d0c8bee2784dc8d6aeff"
+    "d5400331466bdec5f6384cdad7f5e5eb620a246eb0e0ac8624e2f76d70207a4574adb53277"
+    "4974ef08aedfb8dd3c05979b126414d17a7c1ad5bbc13f0bf95b1cded312837839aa344979"
+    "151dc4f70ad86c842091d305a9b667b4e4bd67d6b2e3aa1df385a09553ae2028c9f18b45";
 
 std::string HexDecode(const std::string hex) {
   std::vector<uint8_t> output;
@@ -448,7 +477,7 @@ TEST_F(KeyStoreTest, RegisterKeyWithoutCertificate) {
                                   KEY_USAGE_SIGN, "private_key_blob",
                                   "bad_pubkey", ""));
   // Try with a well-formed public key.
-  std::string public_key_der = HexDecode(kValidPublicKeyHex);
+  std::string public_key_der = HexDecode(kValidRsaPublicKeyHex);
   EXPECT_CALL(pkcs11_, CreateObject(_, _, _, _))
       .Times(2)  // Public, private (no certificate).
       .WillRepeatedly(Return(CKR_OK));
@@ -462,8 +491,8 @@ TEST_F(KeyStoreTest, RegisterKeyWithCertificate) {
       .Times(3)  // Public, private, and certificate.
       .WillRepeatedly(Return(CKR_OK));
   Pkcs11KeyStore key_store(&token_manager_);
-  std::string public_key_der = HexDecode(kValidPublicKeyHex);
-  std::string certificate_der = HexDecode(kValidCertificateHex);
+  std::string public_key_der = HexDecode(kValidRsaPublicKeyHex);
+  std::string certificate_der = HexDecode(kValidRsaCertificateHex);
   EXPECT_TRUE(key_store.Register(kDefaultUser, "test_label", KEY_TYPE_RSA,
                                  KEY_USAGE_SIGN, "private_key_blob",
                                  public_key_der, certificate_der));
@@ -476,20 +505,55 @@ TEST_F(KeyStoreTest, RegisterKeyWithCertificate) {
                                  public_key_der, certificate_der));
 }
 
+TEST_F(KeyStoreTest, RegisterEccKeyWithoutCertificate) {
+  Pkcs11KeyStore key_store(&token_manager_);
+  // Try with a malformed public key.
+  EXPECT_FALSE(key_store.Register(kDefaultUser, "test_label", KEY_TYPE_ECC,
+                                  KEY_USAGE_SIGN, "private_key_blob",
+                                  "bad_pubkey", ""));
+  // Try with a well-formed public key.
+  std::string public_key_der = HexDecode(kValidEccPublicKeyHex);
+  EXPECT_CALL(pkcs11_, CreateObject(_, _, _, _))
+      .Times(2)  // Public, private (no certificate).
+      .WillRepeatedly(Return(CKR_OK));
+  EXPECT_TRUE(key_store.Register(kDefaultUser, "test_label", KEY_TYPE_ECC,
+                                 KEY_USAGE_SIGN, "private_key_blob",
+                                 public_key_der, ""));
+}
+
+TEST_F(KeyStoreTest, RegisterEccKeyWithCertificate) {
+  EXPECT_CALL(pkcs11_, CreateObject(_, _, _, _))
+      .Times(3)  // Public, private, and certificate.
+      .WillRepeatedly(Return(CKR_OK));
+  Pkcs11KeyStore key_store(&token_manager_);
+  std::string public_key_der = HexDecode(kValidEccPublicKeyHex);
+  std::string certificate_der = HexDecode(kValidEccCertificateHex);
+  EXPECT_TRUE(key_store.Register(kDefaultUser, "test_label", KEY_TYPE_ECC,
+                                 KEY_USAGE_SIGN, "private_key_blob",
+                                 public_key_der, certificate_der));
+  // Also try with the system token.
+  EXPECT_CALL(pkcs11_, CreateObject(_, _, _, _))
+      .Times(3)  // Public, private, and certificate.
+      .WillRepeatedly(Return(CKR_OK));
+  EXPECT_TRUE(key_store.Register(kDefaultUser, "test_label", KEY_TYPE_ECC,
+                                 KEY_USAGE_SIGN, "private_key_blob",
+                                 public_key_der, certificate_der));
+}
+
 TEST_F(KeyStoreTest, RegisterKeyWithBadCertificate) {
   EXPECT_CALL(pkcs11_, CreateObject(_, _, _, _))
       .Times(3)  // Public, private, and certificate.
       .WillRepeatedly(Return(CKR_OK));
   Pkcs11KeyStore key_store(&token_manager_);
-  std::string public_key_der = HexDecode(kValidPublicKeyHex);
+  std::string public_key_der = HexDecode(kValidRsaPublicKeyHex);
   EXPECT_TRUE(key_store.Register(kDefaultUser, "test_label", KEY_TYPE_RSA,
                                  KEY_USAGE_SIGN, "private_key_blob",
                                  public_key_der, "bad_certificate"));
 }
 
-TEST_F(KeyStoreTest, RegisterWithUnsupportedKeyType) {
+TEST_F(KeyStoreTest, RegisterWithWrongKeyType) {
   Pkcs11KeyStore key_store(&token_manager_);
-  std::string public_key_der = HexDecode(kValidPublicKeyHex);
+  std::string public_key_der = HexDecode(kValidRsaPublicKeyHex);
   EXPECT_FALSE(key_store.Register(kDefaultUser, "test_label", KEY_TYPE_ECC,
                                   KEY_USAGE_SIGN, "private_key_blob",
                                   public_key_der, ""));
@@ -498,7 +562,7 @@ TEST_F(KeyStoreTest, RegisterWithUnsupportedKeyType) {
 TEST_F(KeyStoreTest, RegisterDecryptionKey) {
   EXPECT_CALL(pkcs11_, CreateObject(_, _, _, _)).WillRepeatedly(Return(CKR_OK));
   Pkcs11KeyStore key_store(&token_manager_);
-  std::string public_key_der = HexDecode(kValidPublicKeyHex);
+  std::string public_key_der = HexDecode(kValidRsaPublicKeyHex);
   EXPECT_TRUE(key_store.Register(kDefaultUser, "test_label", KEY_TYPE_RSA,
                                  KEY_USAGE_DECRYPT, "private_key_blob",
                                  public_key_der, ""));
@@ -506,7 +570,7 @@ TEST_F(KeyStoreTest, RegisterDecryptionKey) {
 
 TEST_F(KeyStoreTest, RegisterCertificate) {
   Pkcs11KeyStore key_store(&token_manager_);
-  std::string certificate_der = HexDecode(kValidCertificateHex);
+  std::string certificate_der = HexDecode(kValidRsaCertificateHex);
   EXPECT_CALL(pkcs11_, CreateObject(_, _, _, _))
       .Times(2);  // Once for valid, once for invalid.
   // Try with a valid certificate (hit multiple times to check dup logic).
@@ -519,7 +583,7 @@ TEST_F(KeyStoreTest, RegisterCertificate) {
 
 TEST_F(KeyStoreTest, RegisterCertificateError) {
   Pkcs11KeyStore key_store(&token_manager_);
-  std::string certificate_der = HexDecode(kValidCertificateHex);
+  std::string certificate_der = HexDecode(kValidRsaCertificateHex);
   // Handle an error from PKCS #11.
   EXPECT_CALL(pkcs11_, CreateObject(_, _, _, _))
       .WillOnce(Return(CKR_GENERAL_ERROR));
@@ -528,7 +592,7 @@ TEST_F(KeyStoreTest, RegisterCertificateError) {
 
 TEST_F(KeyStoreTest, RegisterCertificateSystemToken) {
   Pkcs11KeyStore key_store(&token_manager_);
-  std::string certificate_der = HexDecode(kValidCertificateHex);
+  std::string certificate_der = HexDecode(kValidRsaCertificateHex);
   // Try with the system token.
   EXPECT_CALL(pkcs11_, CreateObject(_, _, _, _)).WillOnce(Return(CKR_OK));
   EXPECT_TRUE(key_store.RegisterCertificate(kDefaultUser, certificate_der));

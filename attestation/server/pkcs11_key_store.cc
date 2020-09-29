@@ -6,6 +6,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include <base/bind.h>
 #include <base/callback.h>
@@ -34,9 +35,8 @@ std::string Sha1(const std::string& input) {
   return std::string(reinterpret_cast<char*>(output), SHA_DIGEST_LENGTH);
 }
 
-// TODO(b/140577280): add ECC for TPM2.0 once supported.
 bool IsSupportedRegisterKeyType(KeyType key_type) {
-  return key_type == KEY_TYPE_RSA;
+  return key_type == KEY_TYPE_RSA || key_type == KEY_TYPE_ECC;
 }
 
 CK_KEY_TYPE ToPkcs11KeyType(KeyType key_type) {
@@ -243,25 +243,99 @@ bool Pkcs11KeyStore::Register(const std::string& username,
     return false;
   }
 
-  // Extract the modulus from the public key.
+  // Extract the modulus from the public key if it's RSA; or, extract the ecc
+  // parameters and the ecc point if it's ECC. We do the parsing here because
+  // both private and public key objects need them.
+  std::string modulus;
+  std::string ecc_params, ecc_point;
   const unsigned char* asn1_ptr =
       reinterpret_cast<const unsigned char*>(public_key_der.data());
-  crypto::ScopedRSA public_key(
-      d2i_RSAPublicKey(nullptr, &asn1_ptr, public_key_der.size()));
-  if (!public_key.get()) {
-    LOG(ERROR) << "Pkcs11KeyStore: Failed to decode public key.";
-    return false;
+  if (key_type == KEY_TYPE_RSA) {
+    crypto::ScopedRSA public_key(
+        d2i_RSAPublicKey(nullptr, &asn1_ptr, public_key_der.size()));
+    if (!public_key.get()) {
+      LOG(ERROR) << "Pkcs11KeyStore: Failed to decode RSA public key.";
+      return false;
+    }
+    modulus.resize(RSA_size(public_key.get()), 0);
+    const BIGNUM* n = nullptr;
+    RSA_get0_key(public_key.get(), &n, nullptr, nullptr);
+    int length =
+        BN_bn2bin(n, reinterpret_cast<unsigned char*>(base::data(modulus)));
+    if (length <= 0) {
+      LOG(ERROR) << "Pkcs11KeyStore: Failed to extract public key modulus.";
+      return false;
+    }
+    modulus.resize(length);
+  } else if (key_type == KEY_TYPE_ECC) {
+    crypto::ScopedEC_KEY public_key(
+        d2i_EC_PUBKEY(nullptr, &asn1_ptr, public_key_der.size()));
+    if (!public_key.get()) {
+      LOG(ERROR) << "Pkcs11KeyStore: Failed to decode ECC public key.";
+      return false;
+    }
+    int output_size = i2d_ECParameters(public_key.get(), nullptr);
+    if (output_size <= 0) {
+      LOG(ERROR) << "Pkcs11KeyStore: Failed to call i2d_ECParameters to get "
+                    "output size.";
+      return false;
+    }
+    std::unique_ptr<uint8_t[]> output =
+        std::make_unique<uint8_t[]>(output_size);
+    uint8_t* output_buffer = output.get();
+    if (i2d_ECParameters(public_key.get(), &output_buffer) <= 0) {
+      LOG(ERROR) << "Pkcs11KeyStore: Failed to call i2d_ECParameters.";
+      return false;
+    }
+    ecc_params.assign(output.get(), output.get() + output_size);
+
+    output_size = i2o_ECPublicKey(public_key.get(), nullptr);
+    if (output_size <= 0) {
+      LOG(ERROR) << "Pkcs11KeyStore: Failed to call i2o_ECPublicKey to get "
+                    "output size.";
+      return false;
+    }
+    output = std::make_unique<uint8_t[]>(output_size);
+    output_buffer = output.get();
+    if (i2o_ECPublicKey(public_key.get(), &output_buffer) <= 0) {
+      LOG(ERROR) << "Pkcs11KeyStore: Failed to call i2o_ECPublicKey.";
+      return false;
+    }
+
+    // CKA_EC_POINT is DER-encoded ANSI X9.62 ECPoint value. The format should
+    // be 04 LEN 04 X Y, where the first 04 is the octet string tag, LEN is the
+    // the content length, the second 04 identifies the uncompressed form, and X
+    // and Y are the point coordinates.
+    //
+    // i2o_ECPublicKey() returns only the content (04 X Y)
+    crypto::ScopedOpenSSL<ASN1_OCTET_STRING, ASN1_OCTET_STRING_free>
+        asn1_oct_string(ASN1_OCTET_STRING_new());
+    if (!asn1_oct_string) {
+      LOG(ERROR) << "Pkcs11KeyStore: Failed to call ASN1_OCTET_STRING_new.";
+      return false;
+    }
+    if (!ASN1_OCTET_STRING_set(asn1_oct_string.get(), output.get(),
+                               output_size)) {
+      LOG(ERROR) << "Pkcs11KeyStore: Failed to call ASN1_OCTET_STRING_set.";
+      return false;
+    }
+    output_size = i2d_ASN1_OCTET_STRING(asn1_oct_string.get(), nullptr);
+    if (output_size <= 0) {
+      LOG(ERROR) << "Pkcs11KeyStore: Failed to call i2d_ASN1_OCTET_STRING to "
+                    "get output size.";
+      return false;
+    }
+    output = std::make_unique<uint8_t[]>(output_size);
+    output_buffer = output.get();
+
+    if (i2d_ASN1_OCTET_STRING(asn1_oct_string.get(), &output_buffer) <= 0) {
+      LOG(ERROR) << "Pkcs11KeyStore: Failed to call i2d_ASN1_OCTET_STRING.";
+      return false;
+    }
+    ecc_point.assign(output.get(), output.get() + output_size);
+  } else {
+    NOTREACHED();
   }
-  std::string modulus(RSA_size(public_key.get()), 0);
-  const BIGNUM* n;
-  RSA_get0_key(public_key.get(), &n, nullptr, nullptr);
-  int length =
-      BN_bn2bin(n, reinterpret_cast<unsigned char*>(base::data(modulus)));
-  if (length <= 0) {
-    LOG(ERROR) << "Pkcs11KeyStore: Failed to extract public key modulus.";
-    return false;
-  }
-  modulus.resize(length);
 
   // Construct a PKCS #11 template for the public key object.
   CK_BBOOL true_value = CK_TRUE;
@@ -274,7 +348,7 @@ bool Pkcs11KeyStore::Register(const std::string& username,
   CK_BBOOL sign_usage = (key_usage == KEY_USAGE_SIGN);
   CK_BBOOL decrypt_usage = (key_usage == KEY_USAGE_DECRYPT);
   unsigned char public_exponent[] = {1, 0, 1};
-  CK_ATTRIBUTE public_key_attributes[] = {
+  std::vector<CK_ATTRIBUTE> public_key_attributes = {
       {CKA_CLASS, &public_key_class, sizeof(public_key_class)},
       {CKA_TOKEN, &true_value, sizeof(true_value)},
       {CKA_DERIVE, &false_value, sizeof(false_value)},
@@ -285,14 +359,33 @@ bool Pkcs11KeyStore::Register(const std::string& username,
       {CKA_KEY_TYPE, &p11_key_type, sizeof(p11_key_type)},
       {CKA_ID, base::data(id), id.size()},
       {CKA_LABEL, base::data(mutable_label), mutable_label.size()},
-      {CKA_MODULUS_BITS, &modulus_bits, sizeof(modulus_bits)},
-      {CKA_PUBLIC_EXPONENT, public_exponent, base::size(public_exponent)},
-      {CKA_MODULUS, base::data(modulus), modulus.size()}};
+  };
+  if (key_type == KEY_TYPE_RSA) {
+    const CK_ATTRIBUTE rsa_key_attributes[] = {
+        {CKA_MODULUS_BITS, &modulus_bits, sizeof(modulus_bits)},
+        {CKA_PUBLIC_EXPONENT, public_exponent, base::size(public_exponent)},
+        {CKA_MODULUS, base::data(modulus), modulus.size()},
+    };
+    public_key_attributes.insert(public_key_attributes.end(),
+                                 std::begin(rsa_key_attributes),
+                                 std::end(rsa_key_attributes));
+  } else if (key_type == KEY_TYPE_ECC) {
+    const CK_ATTRIBUTE ecc_key_attributes[] = {
+        {CKA_EC_PARAMS, const_cast<char*>(ecc_params.c_str()),
+         ecc_params.length()},
+        {CKA_EC_POINT, const_cast<char*>(ecc_point.c_str()),
+         ecc_point.length()},
+    };
+    public_key_attributes.insert(public_key_attributes.end(),
+                                 std::begin(ecc_key_attributes),
+                                 std::end(ecc_key_attributes));
+  } else {
+    NOTREACHED();
+  }
 
   CK_OBJECT_HANDLE object_handle = CK_INVALID_HANDLE;
-  if (C_CreateObject(session.handle(), public_key_attributes,
-                     base::size(public_key_attributes),
-                     &object_handle) != CKR_OK) {
+  if (C_CreateObject(session.handle(), public_key_attributes.data(),
+                     public_key_attributes.size(), &object_handle) != CKR_OK) {
     LOG(ERROR) << "Pkcs11KeyStore: Failed to create public key object.";
     return false;
   }
@@ -300,7 +393,7 @@ bool Pkcs11KeyStore::Register(const std::string& username,
   // Construct a PKCS #11 template for the private key object.
   std::string mutable_private_key_blob(private_key_blob);
   CK_OBJECT_CLASS private_key_class = CKO_PRIVATE_KEY;
-  CK_ATTRIBUTE private_key_attributes[] = {
+  std::vector<CK_ATTRIBUTE> private_key_attributes = {
       {CKA_CLASS, &private_key_class, sizeof(private_key_class)},
       {CKA_TOKEN, &true_value, sizeof(true_value)},
       {CKA_PRIVATE, &true_value, sizeof(true_value)},
@@ -314,14 +407,32 @@ bool Pkcs11KeyStore::Register(const std::string& username,
       {CKA_KEY_TYPE, &p11_key_type, sizeof(p11_key_type)},
       {CKA_ID, base::data(id), id.size()},
       {CKA_LABEL, base::data(mutable_label), mutable_label.size()},
-      {CKA_PUBLIC_EXPONENT, public_exponent, base::size(public_exponent)},
-      {CKA_MODULUS, base::data(modulus), modulus.size()},
       {kKeyBlobAttribute, base::data(mutable_private_key_blob),
-       mutable_private_key_blob.size()}};
-
-  if (C_CreateObject(session.handle(), private_key_attributes,
-                     base::size(private_key_attributes),
-                     &object_handle) != CKR_OK) {
+       mutable_private_key_blob.size()},
+  };
+  if (key_type == KEY_TYPE_RSA) {
+    const CK_ATTRIBUTE rsa_key_attributes[] = {
+        {CKA_PUBLIC_EXPONENT, public_exponent, base::size(public_exponent)},
+        {CKA_MODULUS, base::data(modulus), modulus.size()},
+    };
+    private_key_attributes.insert(private_key_attributes.end(),
+                                  std::begin(rsa_key_attributes),
+                                  std::end(rsa_key_attributes));
+  } else if (key_type == KEY_TYPE_ECC) {
+    const CK_ATTRIBUTE ecc_key_attributes[] = {
+        {CKA_EC_PARAMS, const_cast<char*>(ecc_params.c_str()),
+         ecc_params.length()},
+        {CKA_EC_POINT, const_cast<char*>(ecc_point.c_str()),
+         ecc_point.length()},
+    };
+    private_key_attributes.insert(private_key_attributes.end(),
+                                  std::begin(ecc_key_attributes),
+                                  std::end(ecc_key_attributes));
+  } else {
+    NOTREACHED();
+  }
+  if (C_CreateObject(session.handle(), private_key_attributes.data(),
+                     private_key_attributes.size(), &object_handle) != CKR_OK) {
     LOG(ERROR) << "Pkcs11KeyStore: Failed to create private key object.";
     return false;
   }
