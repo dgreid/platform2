@@ -58,6 +58,10 @@ bool MountObb(const std::string& obb_file,
   // Add UID namespace offsets.
   pid_t owner_uid = kRootUid + kUidNamespaceOffset;
   owner_gid += kGidNamespaceOffset;
+  if (owner_gid < kGidNamespaceOffset) {
+    LOG(ERROR) << "Invalid owner_gid value: " << owner_gid;
+    return false;
+  }
   // Run mount-obb.
   std::string owner_uid_string = base::NumberToString(owner_uid);
   std::string owner_gid_string = base::NumberToString(owner_gid);
