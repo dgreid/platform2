@@ -353,6 +353,12 @@ class Device : public base::RefCounted<Device> {
   // the active connection with the right setting.
   mockable void UpdateBlackholeUserTraffic();
 
+  // Responds to a neighbor disconnected event from patchpanel. Currently it
+  // will only send the UMA metrics about the type of the detected failure.
+  mockable void OnNeighborDisconnected(
+      const IPAddress& ip_address,
+      patchpanel::NeighborConnectedStateChangedSignal::Role role);
+
  protected:
   friend class base::RefCounted<Device>;
   FRIEND_TEST(CellularServiceTest, IsAutoConnectable);

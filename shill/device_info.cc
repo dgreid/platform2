@@ -1484,6 +1484,37 @@ bool DeviceInfo::IsGuestDevice(const std::string& interface_name) {
   return owner_id == crosvm_user_uid;
 }
 
+void DeviceInfo::OnPatchpanelClientReady() {
+  manager_->patchpanel_client()->RegisterNeighborConnectedStateChangedHandler(
+      base::BindRepeating(&DeviceInfo::OnNeighborConnectedStateChanged,
+                          weak_factory_.GetWeakPtr()));
+}
+
+void DeviceInfo::OnNeighborConnectedStateChanged(
+    const patchpanel::NeighborConnectedStateChangedSignal& signal) {
+  SLOG(this, 2) << __func__ << ": interface index: " << signal.ifindex()
+                << ", ip address: " << signal.ip_addr()
+                << ", role: " << signal.role()
+                << ", connected: " << signal.connected();
+  using SignalProto = patchpanel::NeighborConnectedStateChangedSignal;
+
+  auto device = GetDevice(signal.ifindex());
+  if (!device) {
+    LOG(ERROR) << "Device not found for interface index " << signal.ifindex();
+    return;
+  }
+
+  IPAddress address(signal.ip_addr());
+  if (!address.IsValid()) {
+    LOG(ERROR) << "Invalid IP address " << signal.ip_addr();
+    return;
+  }
+
+  if (!signal.connected()) {
+    device->OnNeighborDisconnected(address, signal.role());
+  }
+}
+
 bool DeviceInfo::GetUserId(const std::string& user_name, uid_t* uid) {
   return brillo::userdb::GetUserInfo(user_name, uid, nullptr);
 }

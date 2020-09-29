@@ -14,6 +14,7 @@
 #include <metrics/cumulative_metrics.h>
 #include <metrics/metrics_library.h>
 #include <metrics/timer.h>
+#include <patchpanel/proto_bindings/patchpanel_service.pb.h>
 
 #include "shill/default_service_observer.h"
 #include "shill/portal_detector.h"
@@ -170,6 +171,18 @@ class Metrics : public DefaultServiceObserver {
     kLinkMonitorFailureThresholdReached = 3,
 
     kLinkMonitorFailureMax
+  };
+
+  enum NeighborLinkMonitorFailure {
+    kNeighborLinkMonitorFailureUnknown = 0,
+    kNeighborIPv4GatewayFailure = 1,
+    kNeighborIPv4DNSServerFailure = 2,
+    kNeighborIPv4GatewayAndDNSServerFailure = 3,
+    kNeighborIPv6GatewayFailure = 4,
+    kNeighborIPv6DNSServerFailure = 5,
+    kNeighborIPv6GatewayAndDNSServerFailure = 6,
+
+    kNeighborLinkMonitorFailureMax
   };
 
   enum WiFiApChannelSwitch {
@@ -706,6 +719,9 @@ class Metrics : public DefaultServiceObserver {
   static const int kMetricLinkMonitorErrorCountMax;
   static const int kMetricLinkMonitorErrorCountNumBuckets;
 
+  // patchpanel::NeighborLinkMonitor statistics.
+  static const char kMetricNeighborLinkMonitorFailureSuffix[];
+
   // Signal strength when link becomes unreliable (multiple link monitor
   // failures in short period of time).
   static const char kMetricUnreliableLinkSignalStrengthSuffix[];
@@ -1069,6 +1085,12 @@ class Metrics : public DefaultServiceObserver {
   // for |connection| with a value of |response_time_milliseconds|.
   void NotifyLinkMonitorResponseTimeSampleAdded(Technology technology,
                                                 int response_time_milliseconds);
+
+  // Notifies this object of a failure in patchpanel::NeighborLinkMonitor.
+  void NotifyNeighborLinkMonitorFailure(
+      Technology technology,
+      IPAddress::Family family,
+      patchpanel::NeighborConnectedStateChangedSignal::Role role);
 
   // Notifies this object that an AP was discovered and of that AP's 802.11k
   // support.

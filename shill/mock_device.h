@@ -73,6 +73,11 @@ class MockDevice : public Device {
   MOCK_METHOD(bool, StartConnectivityTest, (), (override));
   MOCK_METHOD(const ConnectionRefPtr&, connection, (), (const, override));
   MOCK_METHOD(void, UpdateBlackholeUserTraffic, (), (override));
+  MOCK_METHOD(void,
+              OnNeighborDisconnected,
+              (const IPAddress&,
+               patchpanel::NeighborConnectedStateChangedSignal::Role),
+              (override));
 };
 
 }  // namespace shill

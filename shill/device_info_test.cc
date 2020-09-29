@@ -19,6 +19,7 @@
 #include <base/files/scoped_temp_dir.h>
 #include <base/memory/ref_counted.h>
 #include <base/strings/string_number_conversions.h>
+#include <chromeos/patchpanel/dbus/fake_client.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -84,6 +85,8 @@ class DeviceInfoTest : public Test {
     manager_.set_mock_device_info(&device_info_);
     EXPECT_CALL(manager_, FilterPrependDNSServersByFamily(_))
         .WillRepeatedly(Return(vector<string>()));
+    patchpanel_client_ = new patchpanel::FakeClient();
+    manager_.patchpanel_client_.reset(patchpanel_client_);
   }
 
   IPAddress CreateInterfaceAddress() {
@@ -169,6 +172,7 @@ class DeviceInfoTest : public Test {
   StrictMock<MockRTNLHandler> rtnl_handler_;
   MockSockets* mock_sockets_;  // Owned by DeviceInfo.
   MockTime time_;
+  patchpanel::FakeClient* patchpanel_client_;  // Owned by Manager
 };
 
 const int DeviceInfoTest::kTestDeviceIndex = 123456;
@@ -1232,6 +1236,37 @@ TEST_F(DeviceInfoTest, IPv6DnsServerAddressesChanged) {
   EXPECT_EQ(2, dns_server_addresses_out.size());
   EXPECT_EQ(kTestIPAddress1, dns_server_addresses_out.at(0).ToString());
   EXPECT_EQ(kTestIPAddress2, dns_server_addresses_out.at(1).ToString());
+}
+
+TEST_F(DeviceInfoTest, NeighborConnectedStateChanged) {
+  device_info_.OnPatchpanelClientReady();
+
+  scoped_refptr<MockDevice> device0(
+      new MockDevice(&manager_, "null0", "addr0", kTestDeviceIndex));
+  scoped_refptr<MockDevice> device1(
+      new MockDevice(&manager_, "null1", "addr1", kTestDeviceIndex + 1));
+  device_info_.RegisterDevice(device0);
+  device_info_.RegisterDevice(device1);
+
+  using NeighborSignal = patchpanel::NeighborConnectedStateChangedSignal;
+
+  NeighborSignal signal0;
+  signal0.set_ifindex(kTestDeviceIndex);
+  signal0.set_ip_addr(kTestIPAddress0);
+  signal0.set_role(NeighborSignal::GATEWAY);
+  signal0.set_connected(false);
+  EXPECT_CALL(*device0, OnNeighborDisconnected(IPAddress(kTestIPAddress0),
+                                               NeighborSignal::GATEWAY));
+  patchpanel_client_->TriggerNeighborConnectedStateChange(signal0);
+
+  NeighborSignal signal1;
+  signal1.set_ifindex(kTestDeviceIndex + 1);
+  signal1.set_ip_addr(kTestIPAddress1);
+  signal1.set_role(NeighborSignal::DNS_SERVER);
+  signal1.set_connected(false);
+  EXPECT_CALL(*device1, OnNeighborDisconnected(IPAddress(kTestIPAddress1),
+                                               NeighborSignal::DNS_SERVER));
+  patchpanel_client_->TriggerNeighborConnectedStateChange(signal1);
 }
 
 class DeviceInfoTechnologyTest : public DeviceInfoTest {

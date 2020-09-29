@@ -1300,6 +1300,51 @@ TEST_F(MetricsTest, CumulativeCellWifiTest) {
                                   cumulative_names, cumulative_metrics.get());
 }
 
+TEST_F(MetricsTest, NotifyNeighborLinkMonitorFailure) {
+  using NeighborSignal = patchpanel::NeighborConnectedStateChangedSignal;
+  const std::string histogram = "Network.Shill.Wifi.NeighborLinkMonitorFailure";
+
+  EXPECT_CALL(library_,
+              SendEnumToUMA(histogram, Metrics::kNeighborIPv4GatewayFailure,
+                            Metrics::kNeighborLinkMonitorFailureMax));
+  metrics_.NotifyNeighborLinkMonitorFailure(
+      Technology::kWifi, IPAddress::kFamilyIPv4, NeighborSignal::GATEWAY);
+
+  EXPECT_CALL(library_,
+              SendEnumToUMA(histogram, Metrics::kNeighborIPv4DNSServerFailure,
+                            Metrics::kNeighborLinkMonitorFailureMax));
+  metrics_.NotifyNeighborLinkMonitorFailure(
+      Technology::kWifi, IPAddress::kFamilyIPv4, NeighborSignal::DNS_SERVER);
+
+  EXPECT_CALL(
+      library_,
+      SendEnumToUMA(histogram, Metrics::kNeighborIPv4GatewayAndDNSServerFailure,
+                    Metrics::kNeighborLinkMonitorFailureMax));
+  metrics_.NotifyNeighborLinkMonitorFailure(
+      Technology::kWifi, IPAddress::kFamilyIPv4,
+      NeighborSignal::GATEWAY_AND_DNS_SERVER);
+
+  EXPECT_CALL(library_,
+              SendEnumToUMA(histogram, Metrics::kNeighborIPv6GatewayFailure,
+                            Metrics::kNeighborLinkMonitorFailureMax));
+  metrics_.NotifyNeighborLinkMonitorFailure(
+      Technology::kWifi, IPAddress::kFamilyIPv6, NeighborSignal::GATEWAY);
+
+  EXPECT_CALL(library_,
+              SendEnumToUMA(histogram, Metrics::kNeighborIPv6DNSServerFailure,
+                            Metrics::kNeighborLinkMonitorFailureMax));
+  metrics_.NotifyNeighborLinkMonitorFailure(
+      Technology::kWifi, IPAddress::kFamilyIPv6, NeighborSignal::DNS_SERVER);
+
+  EXPECT_CALL(
+      library_,
+      SendEnumToUMA(histogram, Metrics::kNeighborIPv6GatewayAndDNSServerFailure,
+                    Metrics::kNeighborLinkMonitorFailureMax));
+  metrics_.NotifyNeighborLinkMonitorFailure(
+      Technology::kWifi, IPAddress::kFamilyIPv6,
+      NeighborSignal::GATEWAY_AND_DNS_SERVER);
+}
+
 #ifndef NDEBUG
 
 using MetricsDeathTest = MetricsTest;

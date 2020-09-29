@@ -18,6 +18,7 @@
 #include <base/memory/weak_ptr.h>
 #include <base/optional.h>
 #include <gtest/gtest_prod.h>  // for FRIEND_TEST
+#include <patchpanel/proto_bindings/patchpanel_service.pb.h>
 
 #include "shill/net/byte_string.h"
 #include "shill/net/ip_address.h"
@@ -151,6 +152,10 @@ class DeviceInfo {
   // Returns true on success.
   virtual bool GetUserId(const std::string& user_name, uid_t* uid);
 
+  // Notifies this object that patchpanel::Client is ready in Manager. Registers
+  // neighbor connected events handler via manager_->patchpanel_client().
+  void OnPatchpanelClientReady();
+
   Manager* manager() const { return manager_; }
 
  private:
@@ -277,6 +282,9 @@ class DeviceInfo {
 
   // Returns whether a device with name |interface_name| is guest.
   bool IsGuestDevice(const std::string& interface_name);
+
+  void OnNeighborConnectedStateChanged(
+      const patchpanel::NeighborConnectedStateChangedSignal& signal);
 
   void set_sockets_for_test(std::unique_ptr<Sockets> sockets) {
     sockets_ = std::move(sockets);

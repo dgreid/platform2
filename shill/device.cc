@@ -882,6 +882,13 @@ void Device::FetchTrafficCounters(const ServiceRefPtr& old_service,
                         AsWeakPtr(), traffic_counter_callback_id_));
 }
 
+void Device::OnNeighborDisconnected(
+    const IPAddress& ip_address,
+    patchpanel::NeighborConnectedStateChangedSignal::Role role) {
+  metrics()->NotifyNeighborLinkMonitorFailure(technology_, ip_address.family(),
+                                              role);
+}
+
 void Device::AssignIPConfig(const IPConfig::Properties& properties) {
   DestroyIPConfig();
   StartIPv6();

@@ -2729,6 +2729,7 @@ void Manager::InitializePatchpanelClient() {
   }
 
   // Kick off any patchpanel related communication below.
+  device_info_.OnPatchpanelClientReady();
 
   // Start task for refreshing traffic counters.
   refresh_traffic_counter_task_.Reset(Bind(

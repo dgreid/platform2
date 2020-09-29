@@ -303,6 +303,10 @@ const int Metrics::kMetricLinkMonitorErrorCountNumBuckets =
     LinkMonitor::kFailureThreshold + 1;
 
 // static
+const char Metrics::kMetricNeighborLinkMonitorFailureSuffix[] =
+    "NeighborLinkMonitorFailure";
+
+// static
 const char Metrics::kMetricApChannelSwitch[] =
     "Network.Shill.WiFi.ApChannelSwitch";
 
@@ -1218,6 +1222,50 @@ void Metrics::NotifyLinkMonitorResponseTimeSampleAdded(
             kMetricLinkMonitorResponseTimeSampleMin,
             kMetricLinkMonitorResponseTimeSampleMax,
             kMetricLinkMonitorResponseTimeSampleNumBuckets);
+}
+
+void Metrics::NotifyNeighborLinkMonitorFailure(
+    Technology technology,
+    IPAddress::Family family,
+    patchpanel::NeighborConnectedStateChangedSignal::Role role) {
+  string histogram =
+      GetFullMetricName(kMetricNeighborLinkMonitorFailureSuffix, technology);
+  NeighborLinkMonitorFailure failure = kNeighborLinkMonitorFailureUnknown;
+  using NeighborSignal = patchpanel::NeighborConnectedStateChangedSignal;
+  if (family == IPAddress::kFamilyIPv4) {
+    switch (role) {
+      case NeighborSignal::GATEWAY:
+        failure = kNeighborIPv4GatewayFailure;
+        break;
+      case NeighborSignal::DNS_SERVER:
+        failure = kNeighborIPv4DNSServerFailure;
+        break;
+      case NeighborSignal::GATEWAY_AND_DNS_SERVER:
+        failure = kNeighborIPv4GatewayAndDNSServerFailure;
+        break;
+      default:
+        failure = kNeighborLinkMonitorFailureUnknown;
+    }
+  } else if (family == IPAddress::kFamilyIPv6) {
+    switch (role) {
+      case NeighborSignal::GATEWAY:
+        failure = kNeighborIPv6GatewayFailure;
+        break;
+      case NeighborSignal::DNS_SERVER:
+        failure = kNeighborIPv6DNSServerFailure;
+        break;
+      case NeighborSignal::GATEWAY_AND_DNS_SERVER:
+        failure = kNeighborIPv6GatewayAndDNSServerFailure;
+        break;
+      default:
+        failure = kNeighborLinkMonitorFailureUnknown;
+    }
+  } else {
+    LOG(ERROR) << __func__ << " with kFamilyUnknown";
+    return;
+  }
+
+  SendEnumToUMA(histogram, failure, kNeighborLinkMonitorFailureMax);
 }
 
 void Metrics::NotifyApChannelSwitch(uint16_t frequency,
