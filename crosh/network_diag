@@ -1108,7 +1108,7 @@ valid_host () {
   # rely on the network to do the final resolution.
   # Note: This probably doesn't support IDN, so people will have to handle the
   # punycode transformations themselves.
-  echo "${host}" | grep -q -E '^[-A-Za-z0-9.:]+$'
+  [ "${host}" == "$(printf '%s' "${host}" | tr -cd 'A-Za-z0-9.:-')" ]
 }
 
 usage () {
