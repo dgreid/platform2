@@ -39,6 +39,7 @@ proto_library("protos") {
 libpatchpanel_client_sources = [
   "../net_util.cc",
   "client.cc",
+  "fake_client.cc",
 ]
 
 static_library("libpatchpanel-client_test") {

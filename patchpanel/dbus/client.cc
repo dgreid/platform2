@@ -85,35 +85,70 @@ void OnSignalConnectedCallback(const std::string& interface_name,
     LOG(ERROR) << "Failed to connect to " << signal_name;
 }
 
-}  // namespace
+class ClientImpl : public Client {
+ public:
+  ClientImpl(const scoped_refptr<dbus::Bus>& bus, dbus::ObjectProxy* proxy)
+      : bus_(std::move(bus)), proxy_(proxy) {}
+  ~ClientImpl();
 
-// static
-std::unique_ptr<Client> Client::New() {
-  dbus::Bus::Options opts;
-  opts.bus_type = dbus::Bus::SYSTEM;
-  scoped_refptr<dbus::Bus> bus(new dbus::Bus(std::move(opts)));
+  bool NotifyArcStartup(pid_t pid) override;
+  bool NotifyArcShutdown() override;
 
-  if (!bus->Connect()) {
-    LOG(ERROR) << "Failed to connect to system bus";
-    return nullptr;
-  }
+  std::vector<NetworkDevice> NotifyArcVmStartup(uint32_t cid) override;
+  bool NotifyArcVmShutdown(uint32_t cid) override;
 
-  dbus::ObjectProxy* proxy = bus->GetObjectProxy(
-      kPatchPanelServiceName, dbus::ObjectPath(kPatchPanelServicePath));
-  if (!proxy) {
-    LOG(ERROR) << "Unable to get dbus proxy for " << kPatchPanelServiceName;
-    return nullptr;
-  }
+  bool NotifyTerminaVmStartup(uint32_t cid,
+                              NetworkDevice* device,
+                              IPv4Subnet* container_subnet) override;
+  bool NotifyTerminaVmShutdown(uint32_t cid) override;
 
-  return std::make_unique<Client>(std::move(bus), proxy);
-}
+  bool NotifyPluginVmStartup(uint64_t vm_id,
+                             int subnet_index,
+                             NetworkDevice* device) override;
+  bool NotifyPluginVmShutdown(uint64_t vm_id) override;
 
-Client::~Client() {
+  bool DefaultVpnRouting(int socket) override;
+
+  bool RouteOnVpn(int socket) override;
+
+  bool BypassVpn(int socket) override;
+
+  std::pair<base::ScopedFD, patchpanel::ConnectNamespaceResponse>
+  ConnectNamespace(pid_t pid,
+                   const std::string& outbound_ifname,
+                   bool forward_user_traffic) override;
+
+  void GetTrafficCounters(const std::set<std::string>& devices,
+                          GetTrafficCountersCallback callback) override;
+
+  bool ModifyPortRule(patchpanel::ModifyPortRuleRequest::Operation op,
+                      patchpanel::ModifyPortRuleRequest::RuleType type,
+                      patchpanel::ModifyPortRuleRequest::Protocol proto,
+                      const std::string& input_ifname,
+                      const std::string& input_dst_ip,
+                      uint32_t input_dst_port,
+                      const std::string& dst_ip,
+                      uint32_t dst_port) override;
+
+  void RegisterNeighborConnectedStateChangedHandler(
+      NeighborConnectedStateChangedHandler handler) override;
+
+ private:
+  scoped_refptr<dbus::Bus> bus_;
+  dbus::ObjectProxy* proxy_ = nullptr;  // owned by bus_
+
+  bool SendSetVpnIntentRequest(int socket,
+                               SetVpnIntentRequest::VpnRoutingPolicy policy);
+
+  DISALLOW_COPY_AND_ASSIGN(ClientImpl);
+};
+
+ClientImpl::~ClientImpl() {
   if (bus_)
     bus_->ShutdownAndBlock();
 }
 
-bool Client::NotifyArcStartup(pid_t pid) {
+bool ClientImpl::NotifyArcStartup(pid_t pid) {
   dbus::MethodCall method_call(kPatchPanelInterface, kArcStartupMethod);
   dbus::MessageWriter writer(&method_call);
 
@@ -142,7 +177,7 @@ bool Client::NotifyArcStartup(pid_t pid) {
   return true;
 }
 
-bool Client::NotifyArcShutdown() {
+bool ClientImpl::NotifyArcShutdown() {
   dbus::MethodCall method_call(kPatchPanelInterface, kArcShutdownMethod);
   dbus::MessageWriter writer(&method_call);
 
@@ -169,7 +204,7 @@ bool Client::NotifyArcShutdown() {
   return true;
 }
 
-std::vector<NetworkDevice> Client::NotifyArcVmStartup(uint32_t cid) {
+std::vector<NetworkDevice> ClientImpl::NotifyArcVmStartup(uint32_t cid) {
   dbus::MethodCall method_call(kPatchPanelInterface, kArcVmStartupMethod);
   dbus::MessageWriter writer(&method_call);
 
@@ -202,7 +237,7 @@ std::vector<NetworkDevice> Client::NotifyArcVmStartup(uint32_t cid) {
   return devices;
 }
 
-bool Client::NotifyArcVmShutdown(uint32_t cid) {
+bool ClientImpl::NotifyArcVmShutdown(uint32_t cid) {
   dbus::MethodCall method_call(kPatchPanelInterface, kArcVmShutdownMethod);
   dbus::MessageWriter writer(&method_call);
 
@@ -231,9 +266,9 @@ bool Client::NotifyArcVmShutdown(uint32_t cid) {
   return true;
 }
 
-bool Client::NotifyTerminaVmStartup(uint32_t cid,
-                                    NetworkDevice* device,
-                                    IPv4Subnet* container_subnet) {
+bool ClientImpl::NotifyTerminaVmStartup(uint32_t cid,
+                                        NetworkDevice* device,
+                                        IPv4Subnet* container_subnet) {
   dbus::MethodCall method_call(kPatchPanelInterface, kTerminaVmStartupMethod);
   dbus::MessageWriter writer(&method_call);
 
@@ -274,7 +309,7 @@ bool Client::NotifyTerminaVmStartup(uint32_t cid,
   return true;
 }
 
-bool Client::NotifyTerminaVmShutdown(uint32_t cid) {
+bool ClientImpl::NotifyTerminaVmShutdown(uint32_t cid) {
   dbus::MethodCall method_call(kPatchPanelInterface, kTerminaVmShutdownMethod);
   dbus::MessageWriter writer(&method_call);
 
@@ -303,9 +338,9 @@ bool Client::NotifyTerminaVmShutdown(uint32_t cid) {
   return true;
 }
 
-bool Client::NotifyPluginVmStartup(uint64_t vm_id,
-                                   int subnet_index,
-                                   NetworkDevice* device) {
+bool ClientImpl::NotifyPluginVmStartup(uint64_t vm_id,
+                                       int subnet_index,
+                                       NetworkDevice* device) {
   dbus::MethodCall method_call(kPatchPanelInterface, kPluginVmStartupMethod);
   dbus::MessageWriter writer(&method_call);
 
@@ -341,7 +376,7 @@ bool Client::NotifyPluginVmStartup(uint64_t vm_id,
   return true;
 }
 
-bool Client::NotifyPluginVmShutdown(uint64_t vm_id) {
+bool ClientImpl::NotifyPluginVmShutdown(uint64_t vm_id) {
   dbus::MethodCall method_call(kPatchPanelInterface, kPluginVmShutdownMethod);
   dbus::MessageWriter writer(&method_call);
 
@@ -370,19 +405,19 @@ bool Client::NotifyPluginVmShutdown(uint64_t vm_id) {
   return true;
 }
 
-bool Client::DefaultVpnRouting(int socket) {
+bool ClientImpl::DefaultVpnRouting(int socket) {
   return SendSetVpnIntentRequest(socket, SetVpnIntentRequest::DEFAULT_ROUTING);
 }
 
-bool Client::RouteOnVpn(int socket) {
+bool ClientImpl::RouteOnVpn(int socket) {
   return SendSetVpnIntentRequest(socket, SetVpnIntentRequest::ROUTE_ON_VPN);
 }
 
-bool Client::BypassVpn(int socket) {
+bool ClientImpl::BypassVpn(int socket) {
   return SendSetVpnIntentRequest(socket, SetVpnIntentRequest::BYPASS_VPN);
 }
 
-bool Client::SendSetVpnIntentRequest(
+bool ClientImpl::SendSetVpnIntentRequest(
     int socket, SetVpnIntentRequest::VpnRoutingPolicy policy) {
   dbus::MethodCall method_call(kPatchPanelInterface, kSetVpnIntentMethod);
   dbus::MessageWriter writer(&method_call);
@@ -419,9 +454,9 @@ bool Client::SendSetVpnIntentRequest(
 }
 
 std::pair<base::ScopedFD, patchpanel::ConnectNamespaceResponse>
-Client::ConnectNamespace(pid_t pid,
-                         const std::string& outbound_ifname,
-                         bool forward_user_traffic) {
+ClientImpl::ConnectNamespace(pid_t pid,
+                             const std::string& outbound_ifname,
+                             bool forward_user_traffic) {
   // Prepare and serialize the request proto.
   ConnectNamespaceRequest request;
   request.set_pid(static_cast<int32_t>(pid));
@@ -480,8 +515,8 @@ Client::ConnectNamespace(pid_t pid,
   return std::make_pair(std::move(fd_local), std::move(response));
 }
 
-void Client::GetTrafficCounters(const std::set<std::string>& devices,
-                                GetTrafficCountersCallback callback) {
+void ClientImpl::GetTrafficCounters(const std::set<std::string>& devices,
+                                    GetTrafficCountersCallback callback) {
   dbus::MethodCall method_call(kPatchPanelInterface, kGetTrafficCountersMethod);
   dbus::MessageWriter writer(&method_call);
 
@@ -501,14 +536,14 @@ void Client::GetTrafficCounters(const std::set<std::string>& devices,
       base::BindOnce(&OnGetTrafficCountersDBusResponse, std::move(callback)));
 }
 
-bool Client::ModifyPortRule(ModifyPortRuleRequest::Operation op,
-                            ModifyPortRuleRequest::RuleType type,
-                            ModifyPortRuleRequest::Protocol proto,
-                            const std::string& input_ifname,
-                            const std::string& input_dst_ip,
-                            uint32_t input_dst_port,
-                            const std::string& dst_ip,
-                            uint32_t dst_port) {
+bool ClientImpl::ModifyPortRule(ModifyPortRuleRequest::Operation op,
+                                ModifyPortRuleRequest::RuleType type,
+                                ModifyPortRuleRequest::Protocol proto,
+                                const std::string& input_ifname,
+                                const std::string& input_dst_ip,
+                                uint32_t input_dst_port,
+                                const std::string& dst_ip,
+                                uint32_t dst_port) {
   dbus::MethodCall method_call(kPatchPanelInterface, kModifyPortRuleMethod);
   dbus::MessageWriter writer(&method_call);
 
@@ -551,12 +586,40 @@ bool Client::ModifyPortRule(ModifyPortRuleRequest::Operation op,
   return true;
 }
 
-void Client::RegisterNeighborConnectedStateChangedHandler(
+void ClientImpl::RegisterNeighborConnectedStateChangedHandler(
     NeighborConnectedStateChangedHandler handler) {
   proxy_->ConnectToSignal(
       kPatchPanelInterface, kNeighborConnectedStateChangedSignal,
       base::BindRepeating(OnNeighborConnectedStateChangedSignal, handler),
       base::BindOnce(OnSignalConnectedCallback));
+}
+
+}  // namespace
+
+// static
+std::unique_ptr<Client> Client::New() {
+  dbus::Bus::Options opts;
+  opts.bus_type = dbus::Bus::SYSTEM;
+  scoped_refptr<dbus::Bus> bus(new dbus::Bus(std::move(opts)));
+
+  if (!bus->Connect()) {
+    LOG(ERROR) << "Failed to connect to system bus";
+    return nullptr;
+  }
+
+  dbus::ObjectProxy* proxy = bus->GetObjectProxy(
+      kPatchPanelServiceName, dbus::ObjectPath(kPatchPanelServicePath));
+  if (!proxy) {
+    LOG(ERROR) << "Unable to get dbus proxy for " << kPatchPanelServiceName;
+    return nullptr;
+  }
+
+  return std::make_unique<ClientImpl>(std::move(bus), proxy);
+}
+
+std::unique_ptr<Client> Client::New(const scoped_refptr<dbus::Bus>& bus,
+                                    dbus::ObjectProxy* proxy) {
+  return std::make_unique<ClientImpl>(std::move(bus), proxy);
 }
 
 }  // namespace patchpanel

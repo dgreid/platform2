@@ -33,47 +33,49 @@ class BRILLO_EXPORT Client {
 
   static std::unique_ptr<Client> New();
 
-  Client(const scoped_refptr<dbus::Bus>& bus, dbus::ObjectProxy* proxy)
-      : bus_(std::move(bus)), proxy_(proxy) {}
-  ~Client();
+  // Only used in tests.
+  static std::unique_ptr<Client> New(const scoped_refptr<dbus::Bus>& bus,
+                                     dbus::ObjectProxy* proxy);
 
-  bool NotifyArcStartup(pid_t pid);
-  bool NotifyArcShutdown();
+  virtual ~Client() = default;
 
-  std::vector<NetworkDevice> NotifyArcVmStartup(uint32_t cid);
-  bool NotifyArcVmShutdown(uint32_t cid);
+  virtual bool NotifyArcStartup(pid_t pid) = 0;
+  virtual bool NotifyArcShutdown() = 0;
 
-  bool NotifyTerminaVmStartup(uint32_t cid,
-                              NetworkDevice* device,
-                              IPv4Subnet* container_subnet);
-  bool NotifyTerminaVmShutdown(uint32_t cid);
+  virtual std::vector<NetworkDevice> NotifyArcVmStartup(uint32_t cid) = 0;
+  virtual bool NotifyArcVmShutdown(uint32_t cid) = 0;
 
-  bool NotifyPluginVmStartup(uint64_t vm_id,
-                             int subnet_index,
-                             NetworkDevice* device);
-  bool NotifyPluginVmShutdown(uint64_t vm_id);
+  virtual bool NotifyTerminaVmStartup(uint32_t cid,
+                                      NetworkDevice* device,
+                                      IPv4Subnet* container_subnet) = 0;
+  virtual bool NotifyTerminaVmShutdown(uint32_t cid) = 0;
+
+  virtual bool NotifyPluginVmStartup(uint64_t vm_id,
+                                     int subnet_index,
+                                     NetworkDevice* device) = 0;
+  virtual bool NotifyPluginVmShutdown(uint64_t vm_id) = 0;
 
   // Reset the VPN routing intent mark on a socket to the default policy for
   // the current uid. This is in general incorrect to call this method for
   // a socket that is already connected.
-  bool DefaultVpnRouting(int socket);
+  virtual bool DefaultVpnRouting(int socket) = 0;
 
   // Mark a socket to be always routed through a VPN if there is one.
   // Must be called before the socket is connected.
-  bool RouteOnVpn(int socket);
+  virtual bool RouteOnVpn(int socket) = 0;
 
   // Mark a socket to be always routed through the physical network.
   // Must be called before the socket is connected.
-  bool BypassVpn(int socket);
+  virtual bool BypassVpn(int socket) = 0;
 
   // Sends a ConnectNamespaceRequest for the given namespace pid. Returns a
   // pair with a valid ScopedFD and the ConnectNamespaceResponse proto message
   // received if the request succeeded. Closing the ScopedFD will teardown the
   // veth and routing setup and free the allocated IPv4 subnet.
-  std::pair<base::ScopedFD, patchpanel::ConnectNamespaceResponse>
+  virtual std::pair<base::ScopedFD, patchpanel::ConnectNamespaceResponse>
   ConnectNamespace(pid_t pid,
                    const std::string& outbound_ifname,
-                   bool forward_user_traffic);
+                   bool forward_user_traffic) = 0;
 
   // Gets the traffic counters kept by patchpanel asynchronously, |callback|
   // will be called with the counters once they are ready, or with an empty
@@ -81,35 +83,29 @@ class BRILLO_EXPORT Client {
   // devices) for which counters should be returned, any unknown interfaces will
   // be ignored. If |devices| is empty, counters for all known interfaces will
   // be returned.
-  void GetTrafficCounters(const std::set<std::string>& devices,
-                          GetTrafficCountersCallback callback);
+  virtual void GetTrafficCounters(const std::set<std::string>& devices,
+                                  GetTrafficCountersCallback callback) = 0;
 
   // Sends a ModifyPortRuleRequest to modify iptables ingress rules.
   // This should only be called by permission_broker's 'devbroker'.
-  bool ModifyPortRule(patchpanel::ModifyPortRuleRequest::Operation op,
-                      patchpanel::ModifyPortRuleRequest::RuleType type,
-                      patchpanel::ModifyPortRuleRequest::Protocol proto,
-                      const std::string& input_ifname,
-                      const std::string& input_dst_ip,
-                      uint32_t input_dst_port,
-                      const std::string& dst_ip,
-                      uint32_t dst_port);
+  virtual bool ModifyPortRule(patchpanel::ModifyPortRuleRequest::Operation op,
+                              patchpanel::ModifyPortRuleRequest::RuleType type,
+                              patchpanel::ModifyPortRuleRequest::Protocol proto,
+                              const std::string& input_ifname,
+                              const std::string& input_dst_ip,
+                              uint32_t input_dst_port,
+                              const std::string& dst_ip,
+                              uint32_t dst_port) = 0;
 
   // Registers a handler that will be called on receiving a signal of neighbor
   // connected state changed. Currently these events are generated only for WiFi
   // devices. The handler is registered for as long as this patchpanel::Client
   // instance is alive.
-  void RegisterNeighborConnectedStateChangedHandler(
-      NeighborConnectedStateChangedHandler handler);
+  virtual void RegisterNeighborConnectedStateChangedHandler(
+      NeighborConnectedStateChangedHandler handler) = 0;
 
- private:
-  scoped_refptr<dbus::Bus> bus_;
-  dbus::ObjectProxy* proxy_ = nullptr;  // owned by bus_
-
-  bool SendSetVpnIntentRequest(int socket,
-                               SetVpnIntentRequest::VpnRoutingPolicy policy);
-
-  DISALLOW_COPY_AND_ASSIGN(Client);
+ protected:
+  Client() = default;
 };
 
 }  // namespace patchpanel

@@ -31,11 +31,11 @@ class ClientTest : public testing::Test {
             dbus_.get(),
             kPatchPanelServiceName,
             dbus::ObjectPath(kPatchPanelServicePath))),
-        client_(dbus_, proxy_.get()) {}
+        client_(Client::New(dbus_, proxy_.get())) {}
 
   scoped_refptr<dbus::MockBus> dbus_;
   scoped_refptr<dbus::MockObjectProxy> proxy_;
-  Client client_;
+  std::unique_ptr<Client> client_;
 };
 
 TEST_F(ClientTest, ConnectNamespace) {
@@ -43,7 +43,7 @@ TEST_F(ClientTest, ConnectNamespace) {
   std::string outboud_ifname = "";
 
   // Failure case
-  auto result = client_.ConnectNamespace(pid, outboud_ifname, false);
+  auto result = client_->ConnectNamespace(pid, outboud_ifname, false);
   EXPECT_FALSE(result.first.is_valid());
   EXPECT_TRUE(result.second.peer_ifname().empty());
   EXPECT_TRUE(result.second.host_ifname().empty());
@@ -67,7 +67,7 @@ TEST_F(ClientTest, ConnectNamespace) {
   EXPECT_CALL(*proxy_, CallMethodAndBlock(_, _))
       .WillOnce(Return(ByMove(std::move(response))));
 
-  result = client_.ConnectNamespace(pid, outboud_ifname, false);
+  result = client_->ConnectNamespace(pid, outboud_ifname, false);
   EXPECT_TRUE(result.first.is_valid());
   EXPECT_EQ("arc_ns0", result.second.host_ifname());
   EXPECT_EQ("veth0", result.second.peer_ifname());
@@ -93,7 +93,7 @@ TEST_F(ClientTest, RegisterNeighborEventHandler) {
               DoConnectToSignal(kPatchPanelInterface,
                                 kNeighborConnectedStateChangedSignal, _, _))
       .WillOnce(SaveArg<2>(&registered_dbus_callback));
-  client_.RegisterNeighborConnectedStateChangedHandler(callback);
+  client_->RegisterNeighborConnectedStateChangedHandler(callback);
 
   NeighborConnectedStateChangedSignal signal_proto;
   signal_proto.set_ifindex(1);

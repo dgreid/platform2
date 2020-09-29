@@ -4,6 +4,7 @@
 
 #include <net/if.h>
 
+#include <base/bind_helpers.h>
 #include <base/logging.h>
 #include <dbus/message.h>
 #include <fuzzer/FuzzedDataProvider.h>
@@ -65,13 +66,13 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   dbus::Bus::Options options;
   scoped_refptr<dbus::Bus> bus = new dbus::Bus(options);
   scoped_refptr<dbus::ObjectProxy> proxy(new FakeObjectProxy(bus.get()));
-  Client client(bus, proxy.get());
+  auto client = Client::New(bus, proxy.get());
   FuzzedDataProvider provider(data, size);
 
   while (provider.remaining_bytes() > 0) {
-    client.NotifyArcStartup(provider.ConsumeIntegral<pid_t>());
-    client.NotifyArcVmStartup(provider.ConsumeIntegral<uint32_t>());
-    client.NotifyArcVmShutdown(provider.ConsumeIntegral<uint32_t>());
+    client->NotifyArcStartup(provider.ConsumeIntegral<pid_t>());
+    client->NotifyArcVmStartup(provider.ConsumeIntegral<uint32_t>());
+    client->NotifyArcVmShutdown(provider.ConsumeIntegral<uint32_t>());
     NetworkDevice device;
     device.set_ifname(provider.ConsumeRandomLengthString(IFNAMSIZ * 2));
     device.set_ipv4_addr(provider.ConsumeIntegral<uint32_t>());
@@ -82,20 +83,20 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     IPv4Subnet subnet;
     subnet.set_base_addr(provider.ConsumeIntegral<uint32_t>());
     subnet.set_prefix_len(provider.ConsumeIntegral<uint32_t>());
-    client.NotifyTerminaVmStartup(provider.ConsumeIntegral<uint32_t>(), &device,
-                                  &subnet);
-    client.NotifyTerminaVmShutdown(provider.ConsumeIntegral<uint32_t>());
-    client.NotifyPluginVmStartup(provider.ConsumeIntegral<uint64_t>(),
-                                 provider.ConsumeIntegral<int>(), &device);
-    client.NotifyPluginVmShutdown(provider.ConsumeIntegral<uint64_t>());
+    client->NotifyTerminaVmStartup(provider.ConsumeIntegral<uint32_t>(),
+                                   &device, &subnet);
+    client->NotifyTerminaVmShutdown(provider.ConsumeIntegral<uint32_t>());
+    client->NotifyPluginVmStartup(provider.ConsumeIntegral<uint64_t>(),
+                                  provider.ConsumeIntegral<int>(), &device);
+    client->NotifyPluginVmShutdown(provider.ConsumeIntegral<uint64_t>());
     // TODO(garrick): Enable the following once the memory leaks in Chrome OS
     // DBus are resolved.
-    //    client.DefaultVpnRouting(provider.ConsumeIntegral<int>());
-    //    client.RouteOnVpn(provider.ConsumeIntegral<int>());
-    //    client.BypassVpn(provider.ConsumeIntegral<int>());
-    client.ConnectNamespace(provider.ConsumeIntegral<pid_t>(),
-                            provider.ConsumeRandomLengthString(100),
-                            provider.ConsumeBool());
+    //    client->DefaultVpnRouting(provider.ConsumeIntegral<int>());
+    //    client->RouteOnVpn(provider.ConsumeIntegral<int>());
+    //    client->BypassVpn(provider.ConsumeIntegral<int>());
+    client->ConnectNamespace(provider.ConsumeIntegral<pid_t>(),
+                             provider.ConsumeRandomLengthString(100),
+                             provider.ConsumeBool());
     std::set<std::string> devices_for_counters;
     for (int i = 0; i < 10; i++) {
       if (provider.ConsumeBool()) {
@@ -103,7 +104,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
             provider.ConsumeRandomLengthString(IFNAMSIZ * 2));
       }
     }
-    client.GetTrafficCounters(devices_for_counters);
+    client->GetTrafficCounters(devices_for_counters, base::DoNothing());
   }
   bus->ShutdownAndBlock();
   return 0;
