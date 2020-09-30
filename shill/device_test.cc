@@ -658,6 +658,115 @@ TEST_F(DeviceTest, LinkMonitorFailure) {
   EXPECT_FALSE(service->unreliable());
 }
 
+TEST_F(DeviceTest, LinkMonitorComparison) {
+  auto& task_environment = dispatcher_.task_environment();
+  const IPAddress ip_addr = IPAddress("1.2.3.4");
+  using NeighborSignal = patchpanel::NeighborReachabilityEventSignal;
+  const NeighborSignal::Role role = NeighborSignal::GATEWAY;
+
+  scoped_refptr<MockService> service(new StrictMock<MockService>(manager()));
+  SelectService(service);
+
+  struct timeval current_time;
+  current_time.tv_sec = 10;
+  current_time.tv_usec = 5000;
+  EXPECT_CALL(time_, GetSecondsBoottime(_)).Times(::testing::AnyNumber());
+  EXPECT_CALL(time_, GetTimeMonotonic(_))
+      .WillRepeatedly(
+          ::testing::Invoke([&current_time](struct timeval* t) -> int {
+            *t = current_time;
+            return 0;
+          }));
+
+  // Keeps the consistency between the calls to GetTimeMonotonic() and
+  // PostDelayedTask().
+  auto advance_time = [&task_environment,
+                       &current_time](base::TimeDelta delta) {
+    const auto temp_usec = current_time.tv_usec + delta.InMicroseconds();
+    current_time.tv_usec = temp_usec % 1000000;
+    current_time.tv_sec += temp_usec / 1000000;
+    task_environment.FastForwardBy(delta);
+  };
+
+  // patchpanel::NeighborLinkMonitor performs better: its first detection
+  // happens at 0 ms, while that of shill::LinkMonitor happens at 300 ms.
+  EXPECT_CALL(metrics_, NotifyLinkMonitorsDetectionTimeDiff(_, 300));
+  device_->OnNeighborLinkFailure(ip_addr, role);  // 0
+  advance_time(base::TimeDelta::FromMilliseconds(100));
+  device_->OnNeighborLinkFailure(ip_addr, role);  // 100
+  advance_time(base::TimeDelta::FromMilliseconds(200));
+  device_->OnLinkMonitorFailure();  // 300
+  advance_time(base::TimeDelta::FromMilliseconds(400));
+  device_->OnLinkMonitorFailure();  // 700
+  advance_time(base::TimeDelta::FromMilliseconds(800));
+  device_->OnNeighborLinkFailure(ip_addr, role);  // 1500
+  // The callback should have been cancelled.
+  advance_time(Device::kLinkMonitorsDetectionTimeDiffMax * 2);
+  Mock::VerifyAndClearExpectations(&metrics_);
+
+  device_->OnNeighborLinkRecovered(ip_addr, role);
+
+  // shill::LinkMonitor performs better: its first detection happens at 0 ms,
+  // while that of patchpanel::NeighborLinkMonitor happens at 3000 ms.
+  // 3000 ms.
+  EXPECT_CALL(metrics_, NotifyLinkMonitorsDetectionTimeDiff(_, -3000));
+  device_->OnLinkMonitorFailure();  // 0
+  advance_time(base::TimeDelta::FromMilliseconds(1000));
+  device_->OnLinkMonitorFailure();  // 1000
+  advance_time(base::TimeDelta::FromMilliseconds(2000));
+  device_->OnNeighborLinkFailure(ip_addr, role);  // 3000
+  advance_time(base::TimeDelta::FromMilliseconds(4000));
+  device_->OnNeighborLinkFailure(ip_addr, role);  // 7000
+  // The callback should have been cancelled.
+  advance_time(Device::kLinkMonitorsDetectionTimeDiffMax * 2);
+  Mock::VerifyAndClearExpectations(&metrics_);
+
+  device_->OnNeighborLinkRecovered(ip_addr, role);
+
+  // patchpanel::NeighborLinkMonitor detects the error but shill::LinkMonitor
+  // fails (or not in the given time period).
+  EXPECT_CALL(
+      metrics_,
+      NotifyLinkMonitorsDetectionTimeDiff(
+          _, Device::kLinkMonitorsDetectionTimeDiffMax.InMilliseconds()));
+  device_->OnNeighborLinkFailure(ip_addr, role);
+  advance_time(Device::kLinkMonitorsDetectionTimeDiffMax);
+  device_->OnLinkMonitorFailure();
+  advance_time(Device::kLinkMonitorsDetectionTimeDiffMax * 2);
+  Mock::VerifyAndClearExpectations(&metrics_);
+
+  device_->OnNeighborLinkRecovered(ip_addr, role);
+
+  // shill::LinkMonitor detects the error but patchpanel::NeighborLinkMonitor
+  // fails (or not in the given time period).
+  EXPECT_CALL(
+      metrics_,
+      NotifyLinkMonitorsDetectionTimeDiff(
+          _, -1 * Device::kLinkMonitorsDetectionTimeDiffMax.InMilliseconds()));
+  device_->OnLinkMonitorFailure();
+  advance_time(Device::kLinkMonitorsDetectionTimeDiffMax);
+  device_->OnNeighborLinkFailure(ip_addr, role);
+  advance_time(Device::kLinkMonitorsDetectionTimeDiffMax * 2);
+  Mock::VerifyAndClearExpectations(&metrics_);
+
+  device_->OnNeighborLinkRecovered(ip_addr, role);
+
+  // "connected" signal should trigger the pending send metrics callback.
+  EXPECT_CALL(
+      metrics_,
+      NotifyLinkMonitorsDetectionTimeDiff(
+          _, Device::kLinkMonitorsDetectionTimeDiffMax.InMilliseconds()));
+  device_->OnNeighborLinkFailure(ip_addr, role);
+  device_->OnNeighborLinkRecovered(ip_addr, role);
+
+  EXPECT_CALL(
+      metrics_,
+      NotifyLinkMonitorsDetectionTimeDiff(
+          _, -1 * Device::kLinkMonitorsDetectionTimeDiffMax.InMilliseconds()));
+  device_->OnLinkMonitorFailure();
+  device_->OnNeighborLinkRecovered(ip_addr, role);
+}
+
 TEST_F(DeviceTest, LinkStatusResetOnSelectService) {
   scoped_refptr<MockService> service(new StrictMock<MockService>(manager()));
   SelectService(service);

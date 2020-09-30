@@ -14,6 +14,7 @@
 #include <base/macros.h>
 #include <base/memory/ref_counted.h>
 #include <base/memory/weak_ptr.h>
+#include <base/time/time.h>
 #include <chromeos/patchpanel/dbus/client.h>
 #include <gtest/gtest_prod.h>  // for FRIEND_TEST
 #include <patchpanel/proto_bindings/patchpanel_service.pb.h>
@@ -51,6 +52,24 @@ class TrafficMonitor;
 // this class.
 class Device : public base::RefCounted<Device> {
  public:
+  // The maximum value of time difference between the detection time of the two
+  // link monitors. If one link monitor detects a failure at time t, but the
+  // other one does not report a failure before (t + this value), we could
+  // consider the second link monitor fails to detect this failure, and we will
+  // report this value (or its opposite number) to UMA metrics in this case.
+  //
+  // In theory, the link monitor should detect a failure after it happens in a
+  // given time period:
+  // - For shill::LinkMonitor, this value is 75 seconds (two passive periods and
+  //   one active period, each period is 25 seconds).
+  // - For patchpanel::NeighborLinkMonitor, this value is 68 seconds (60 seconds
+  //   for probe period, 8 seconds to wait for the state transiting from
+  //   NUD_DELAY ot NUD_FAILED, which is the worst case).
+  // So 80 seconds should be a good enough value to accommodate these two
+  // theoretical values.
+  static constexpr base::TimeDelta kLinkMonitorsDetectionTimeDiffMax =
+      base::TimeDelta::FromSeconds(80);
+
   // A constructor for the Device object
   Device(Manager* manager,
          const std::string& link_name,
@@ -353,9 +372,16 @@ class Device : public base::RefCounted<Device> {
   // the active connection with the right setting.
   mockable void UpdateBlackholeUserTraffic();
 
-  // Responds to a neighbor failure event from patchpanel. Currently it will
-  // only send the UMA metrics about the type of the detected failure.
+  // Responds to a neighbor failure event from patchpanel. Currently it
+  // will send the UMA metrics about the type of the detected failure, and also
+  // be used for comparing performance between the two types of link monitors.
   mockable void OnNeighborLinkFailure(
+      const IPAddress& ip_address,
+      patchpanel::NeighborReachabilityEventSignal::Role role);
+  // Responds to a neighbor recovered event from patchpanel. Currently it will
+  // only call LinkMonitorComparisonReset() for the link monitor comparison
+  // purposes.
+  mockable void OnNeighborLinkRecovered(
       const IPAddress& ip_address,
       patchpanel::NeighborReachabilityEventSignal::Role role);
 
@@ -378,6 +404,7 @@ class Device : public base::RefCounted<Device> {
   FRIEND_TEST(DeviceTest, IPConfigUpdatedFailureWithIPv6Config);
   FRIEND_TEST(DeviceTest, IPConfigUpdatedFailureWithIPv6Connection);
   FRIEND_TEST(DeviceTest, IsConnectedViaTether);
+  FRIEND_TEST(DeviceTest, LinkMonitorComparison);
   FRIEND_TEST(DeviceTest, LinkMonitorFailure);
   FRIEND_TEST(DeviceTest, Load);
   FRIEND_TEST(DeviceTest, OnDHCPv6ConfigExpired);
@@ -820,6 +847,32 @@ class Device : public base::RefCounted<Device> {
   void set_traffic_monitor_for_test(
       std::unique_ptr<TrafficMonitor> traffic_monitor);
 
+  // b/162194516: Functions for comparing two types of link monitors. The basic
+  // idea is that we try to record and compare the time that link monitors
+  // detect one failure (i.e., the IPv4 gateway neighbor lost since
+  // shill::LinkMonitor is only able to detect such failures) (in
+  // |arp_link_monitor_failed_time_| and |neighbor_link_monitor_failed_time_|).
+  // To make sure those two variables are pointing to the same failure:
+  // 1) We will not update the time each time a link monitor reports a failure,
+  //    but only record the first one (for each link monitor). Only after
+  //    receiving a clear signal that the device has been recovered from the
+  //    failure, we reset the times which we store and move to wait for the next
+  //    failure. The signal could be a) patchpanel reports the link is connected
+  //    again, or b) another service is selected (i.e., Device::SelectService()
+  //    is called).
+  // 2) When one link monitor reports a failure and the other one haven't yet,
+  //    we will setup a one shot timer to send the result, in case that another
+  //    link monitor fails to detect this failure.
+
+  // Resets all related variables to make us ready for the next failure.
+  void LinkMonitorComparisonReset();
+  // Records a failure from one link monitor and set a timer to or directly call
+  // LinkMonitorComparisonSendResult(). |t| must be the pointer to either
+  // |arp_link_monitor_failed_time_| or |neighbor_link_monitor_failed_time_|.
+  void LinkMonitorComparisonSetFailedTime(struct timeval* t);
+  // Sends UMA metrics for the comparison result.
+  void LinkMonitorComparisonSendResult();
+
   // |enabled_persistent_| is the value of the Powered property, as
   // read from the profile. If it is not found in the profile, it
   // defaults to true. |enabled_| reflects the real-time state of
@@ -893,6 +946,19 @@ class Device : public base::RefCounted<Device> {
   // Callback to invoke when link becomes reliable again after it was previously
   // unreliable.
   base::CancelableClosure reliable_link_callback_;
+
+  // b/162194516: Temporary variables for comparing two types of link monitors.
+  // "arp_link_monitor" represents shill::LinkMonitor and
+  // "neighbor_link_monitor" represents patchpanel::NeighborLinkMonitor. See the
+  // above comments for LinkMonitorComparison*() functions for more details.
+  struct timeval arp_link_monitor_failed_time_;
+  struct timeval neighbor_link_monitor_failed_time_;
+  // Indicates whether the current failure has already been reported. This
+  // variable is checked and set to true in LinkMonitorComparisonSendResult() to
+  // make sure we only send each result once.
+  bool link_monitor_comparison_reported_;
+  // To call LinkMonitorComparisonSendResult() to send the UMA metrics.
+  base::CancelableClosure link_monitor_comparison_send_result_callback_;
 
   std::unique_ptr<PortalDetector> connection_tester_;
 

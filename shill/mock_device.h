@@ -78,6 +78,11 @@ class MockDevice : public Device {
               (const IPAddress&,
                patchpanel::NeighborReachabilityEventSignal::Role),
               (override));
+  MOCK_METHOD(void,
+              OnNeighborLinkRecovered,
+              (const IPAddress&,
+               patchpanel::NeighborReachabilityEventSignal::Role),
+              (override));
 };
 
 }  // namespace shill

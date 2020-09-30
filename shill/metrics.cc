@@ -17,6 +17,7 @@
 
 #include "shill/active_link_monitor.h"
 #include "shill/connection_diagnostics.h"
+#include "shill/device.h"
 #include "shill/link_monitor.h"
 #include "shill/logging.h"
 
@@ -305,6 +306,16 @@ const int Metrics::kMetricLinkMonitorErrorCountNumBuckets =
 // static
 const char Metrics::kMetricNeighborLinkMonitorFailureSuffix[] =
     "NeighborLinkMonitorFailure";
+
+// static
+const char Metrics::kMetricLinkMonitorsDetectionTimeDiffNeighborBetterSuffix[] =
+    "LinkMonitorsDetectionTimeDiff.NeighborBetter";
+const char Metrics::kMetricLinkMonitorsDetectionTimeDiffArpBetterSuffix[] =
+    "LinkMonitorsDetectionTimeDiff.ArpBetter";
+const int Metrics::kMetricLinkMonitorsDetectionTimeDiffMin = 0;
+const int Metrics::kMetricLinkMonitorsDetectionTimeDiffMax =
+    Device::kLinkMonitorsDetectionTimeDiffMax.InMilliseconds();
+const int Metrics::kMetricLinkMonitorsDetectionTimeDiffNumBuckets = 50;
 
 // static
 const char Metrics::kMetricApChannelSwitch[] =
@@ -1261,6 +1272,35 @@ void Metrics::NotifyNeighborLinkMonitorFailure(
   }
 
   SendEnumToUMA(histogram, failure, kNeighborLinkMonitorFailureMax);
+}
+
+void Metrics::NotifyLinkMonitorsDetectionTimeDiff(Technology technology,
+                                                  int time_diff_milliseconds) {
+  // These two histograms has the same range and buckets numbers. To compensate
+  // for any sampling bias due to the two histograms, we emit one value to each
+  // histogram when we have a result: the absolute value of time diff to the
+  // histogram that indicates that link monitor is better, and 0 to the another.
+  string neighbor_histogram = GetFullMetricName(
+      kMetricLinkMonitorsDetectionTimeDiffNeighborBetterSuffix, technology);
+  string arp_histogram = GetFullMetricName(
+      kMetricLinkMonitorsDetectionTimeDiffArpBetterSuffix, technology);
+  if (time_diff_milliseconds > 0) {
+    SendToUMA(neighbor_histogram, time_diff_milliseconds,
+              kMetricLinkMonitorsDetectionTimeDiffMin,
+              kMetricLinkMonitorsDetectionTimeDiffMax,
+              kMetricLinkMonitorsDetectionTimeDiffNumBuckets);
+    SendToUMA(arp_histogram, 0, kMetricLinkMonitorsDetectionTimeDiffMin,
+              kMetricLinkMonitorsDetectionTimeDiffMax,
+              kMetricLinkMonitorsDetectionTimeDiffNumBuckets);
+  } else {
+    SendToUMA(arp_histogram, -1 * time_diff_milliseconds,
+              kMetricLinkMonitorsDetectionTimeDiffMin,
+              kMetricLinkMonitorsDetectionTimeDiffMax,
+              kMetricLinkMonitorsDetectionTimeDiffNumBuckets);
+    SendToUMA(neighbor_histogram, 0, kMetricLinkMonitorsDetectionTimeDiffMin,
+              kMetricLinkMonitorsDetectionTimeDiffMax,
+              kMetricLinkMonitorsDetectionTimeDiffNumBuckets);
+  }
 }
 
 void Metrics::NotifyApChannelSwitch(uint16_t frequency,

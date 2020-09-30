@@ -722,6 +722,13 @@ class Metrics : public DefaultServiceObserver {
   // patchpanel::NeighborLinkMonitor statistics.
   static const char kMetricNeighborLinkMonitorFailureSuffix[];
 
+  // Link monitor comparison metrics statistics.
+  static const char kMetricLinkMonitorsDetectionTimeDiffNeighborBetterSuffix[];
+  static const char kMetricLinkMonitorsDetectionTimeDiffArpBetterSuffix[];
+  static const int kMetricLinkMonitorsDetectionTimeDiffMin;
+  static const int kMetricLinkMonitorsDetectionTimeDiffMax;
+  static const int kMetricLinkMonitorsDetectionTimeDiffNumBuckets;
+
   // Signal strength when link becomes unreliable (multiple link monitor
   // failures in short period of time).
   static const char kMetricUnreliableLinkSignalStrengthSuffix[];
@@ -1091,6 +1098,14 @@ class Metrics : public DefaultServiceObserver {
       Technology technology,
       IPAddress::Family family,
       patchpanel::NeighborReachabilityEventSignal::Role role);
+
+  // Notifies this object of comparison on the time difference for detecting the
+  // same failure between shill::LinkMonitor and
+  // patchpanel::NeighborLinkMonitor. If |time_diff_milliseconds| > 0, it means
+  // NeighborLinkMonitor detects the failure early and thus has better
+  // performance.
+  virtual void NotifyLinkMonitorsDetectionTimeDiff(Technology technology,
+                                                   int time_diff_milliseconds);
 
   // Notifies this object that an AP was discovered and of that AP's 802.11k
   // support.

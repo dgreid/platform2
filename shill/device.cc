@@ -119,6 +119,10 @@ Service::ConnectState CalculatePortalStateFromProbeResults(
   return Service::kStatePortalSuspected;
 }
 
+bool IsTimevalZero(const struct timeval& t) {
+  return t.tv_sec == 0 && t.tv_usec == 0;
+}
+
 }  // namespace
 
 const char Device::kIPFlagDisableIPv6[] = "disable_ipv6";
@@ -150,6 +154,9 @@ Device::Device(Manager* manager,
       rtnl_handler_(RTNLHandler::GetInstance()),
       time_(Time::GetInstance()),
       last_link_monitor_failed_time_(0),
+      arp_link_monitor_failed_time_{},
+      neighbor_link_monitor_failed_time_{},
+      link_monitor_comparison_reported_(false),
       ipv6_disabled_(false),
       is_loose_routing_(false),
       is_multi_homed_(false),
@@ -887,6 +894,28 @@ void Device::OnNeighborLinkFailure(
     patchpanel::NeighborReachabilityEventSignal::Role role) {
   metrics()->NotifyNeighborLinkMonitorFailure(technology_, ip_address.family(),
                                               role);
+
+  // Only uses signals for IPv4 gateway role for comparing.
+  using NeighborSignal = patchpanel::NeighborReachabilityEventSignal;
+  if (ip_address.family() == IPAddress::kFamilyIPv6 ||
+      role == NeighborSignal::DNS_SERVER) {
+    return;
+  }
+
+  LinkMonitorComparisonSetFailedTime(&neighbor_link_monitor_failed_time_);
+}
+
+void Device::OnNeighborLinkRecovered(
+    const IPAddress& ip_address,
+    patchpanel::NeighborReachabilityEventSignal::Role role) {
+  // Only uses signals for IPv4 gateway role for comparing.
+  using NeighborSignal = patchpanel::NeighborReachabilityEventSignal;
+  if (ip_address.family() == IPAddress::kFamilyIPv6 ||
+      role == NeighborSignal::DNS_SERVER) {
+    return;
+  }
+
+  LinkMonitorComparisonReset();
 }
 
 void Device::AssignIPConfig(const IPConfig::Properties& properties) {
@@ -1333,6 +1362,8 @@ void Device::SelectService(const ServiceRefPtr& service) {
   // anymore.
   last_link_monitor_failed_time_ = 0;
 
+  LinkMonitorComparisonReset();
+
   selected_service_ = service;
   FetchTrafficCounters(old_service, selected_service_);
   adaptor_->EmitRpcIdentifierChanged(kSelectedServiceProperty,
@@ -1589,6 +1620,8 @@ void Device::OnLinkMonitorFailure() {
     OnUnreliableLink();
   }
   last_link_monitor_failed_time_ = now;
+
+  LinkMonitorComparisonSetFailedTime(&arp_link_monitor_failed_time_);
 }
 
 void Device::OnLinkMonitorGatewayChange() {
@@ -1600,6 +1633,88 @@ void Device::OnLinkMonitorGatewayChange() {
   selected_service_->set_connection_id(connection_id);
 
   manager_->ReportServicesOnSameNetwork(connection_id);
+}
+
+void Device::LinkMonitorComparisonReset() {
+  if (!link_monitor_comparison_send_result_callback_.IsCancelled()) {
+    link_monitor_comparison_send_result_callback_.Cancel();
+    LinkMonitorComparisonSendResult();
+  }
+
+  arp_link_monitor_failed_time_ = {};
+  neighbor_link_monitor_failed_time_ = {};
+  link_monitor_comparison_reported_ = false;
+}
+
+void Device::LinkMonitorComparisonSetFailedTime(struct timeval* t) {
+  DCHECK(t == &arp_link_monitor_failed_time_ ||
+         t == &neighbor_link_monitor_failed_time_);
+  if (!IsTimevalZero(*t) || link_monitor_comparison_reported_) {
+    // We have already recorded this failure for this link monitor or this
+    // failure has already been reported.
+    return;
+  }
+
+  time_->GetTimeMonotonic(t);
+
+  // We already get the two times. Cancels the timer and sends result directly.
+  if (!IsTimevalZero(arp_link_monitor_failed_time_) &&
+      !IsTimevalZero(neighbor_link_monitor_failed_time_)) {
+    link_monitor_comparison_send_result_callback_.Cancel();
+    LinkMonitorComparisonSendResult();
+    return;
+  }
+
+  // We only have one time. Sets a timer to send the result.
+  link_monitor_comparison_send_result_callback_.Reset(base::BindRepeating(
+      &Device::LinkMonitorComparisonSendResult, base::Unretained(this)));
+  dispatcher()->PostDelayedTask(
+      FROM_HERE, link_monitor_comparison_send_result_callback_.callback(),
+      kLinkMonitorsDetectionTimeDiffMax.InMilliseconds());
+}
+
+void Device::LinkMonitorComparisonSendResult() {
+  if (link_monitor_comparison_reported_) {
+    return;
+  }
+
+  if (IsTimevalZero(arp_link_monitor_failed_time_) &&
+      IsTimevalZero(neighbor_link_monitor_failed_time_)) {
+    LOG(ERROR) << __func__ << " called but both of the failed_time are 0";
+    return;
+  }
+
+  link_monitor_comparison_reported_ = true;
+  link_monitor_comparison_send_result_callback_.Cancel();
+
+  const int neighbor_link_monitor_is_better =
+      kLinkMonitorsDetectionTimeDiffMax.InMilliseconds();
+  const int arp_link_monitor_is_better =
+      -1 * kLinkMonitorsDetectionTimeDiffMax.InMilliseconds();
+
+  if (IsTimevalZero(arp_link_monitor_failed_time_)) {
+    metrics()->NotifyLinkMonitorsDetectionTimeDiff(
+        technology_, neighbor_link_monitor_is_better);
+    return;
+  }
+  if (IsTimevalZero(neighbor_link_monitor_failed_time_)) {
+    metrics()->NotifyLinkMonitorsDetectionTimeDiff(technology_,
+                                                   arp_link_monitor_is_better);
+    return;
+  }
+
+  int time_diff_second_part = arp_link_monitor_failed_time_.tv_sec -
+                              neighbor_link_monitor_failed_time_.tv_sec;
+  int time_diff_usecond_part = arp_link_monitor_failed_time_.tv_usec -
+                               neighbor_link_monitor_failed_time_.tv_usec;
+  int time_diff_milliseconds =
+      time_diff_second_part * 1000 + time_diff_usecond_part / 1000;
+
+  DCHECK(time_diff_milliseconds <= neighbor_link_monitor_is_better);
+  DCHECK(time_diff_milliseconds >= arp_link_monitor_is_better);
+
+  metrics()->NotifyLinkMonitorsDetectionTimeDiff(technology_,
+                                                 time_diff_milliseconds);
 }
 
 bool Device::StartDNSTest(

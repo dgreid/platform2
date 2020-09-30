@@ -1267,6 +1267,15 @@ TEST_F(DeviceInfoTest, OnNeighborReachabilityEvent) {
   EXPECT_CALL(*device1, OnNeighborLinkFailure(IPAddress(kTestIPAddress1),
                                               NeighborSignal::DNS_SERVER));
   patchpanel_client_->TriggerNeighborReachabilityEvent(signal1);
+
+  NeighborSignal signal_recovered;
+  signal_recovered.set_ifindex(kTestDeviceIndex);
+  signal_recovered.set_ip_addr(kTestIPAddress0);
+  signal_recovered.set_role(NeighborSignal::GATEWAY);
+  signal_recovered.set_type(NeighborSignal::RECOVERED);
+  EXPECT_CALL(*device0, OnNeighborLinkRecovered(IPAddress(kTestIPAddress0),
+                                                NeighborSignal::GATEWAY));
+  patchpanel_client_->TriggerNeighborReachabilityEvent(signal_recovered);
 }
 
 class DeviceInfoTechnologyTest : public DeviceInfoTest {

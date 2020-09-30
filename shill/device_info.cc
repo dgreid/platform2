@@ -1506,7 +1506,7 @@ void DeviceInfo::OnNeighborReachabilityEvent(
       device->OnNeighborLinkFailure(address, signal.role());
       return;
     case SignalProto::RECOVERED:
-      // TODO(jiejiang): handle this event.
+      device->OnNeighborLinkRecovered(address, signal.role());
       return;
     default:
       LOG(ERROR) << "Invalid NeighborRecabilityEvent type " << signal.type();

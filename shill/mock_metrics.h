@@ -41,6 +41,11 @@ class MockMetrics : public Metrics {
               NotifyServiceStateChanged,
               (const Service&, Service::ConnectState),
               (override));
+  MOCK_METHOD(void,
+              NotifyLinkMonitorsDetectionTimeDiff,
+              (Technology, int),
+              (override));
+
 #if !defined(DISABLE_WIFI)
   MOCK_METHOD(void,
               Notify80211Disconnect,
