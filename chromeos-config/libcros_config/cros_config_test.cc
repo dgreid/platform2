@@ -168,6 +168,10 @@ TEST_F(CrosConfigTest, CheckWriteFallbackFS) {
   ASSERT_TRUE(base::ReadFileToString(
       tempdir.Append("firmware").Append("image-name"), &contents));
   EXPECT_EQ("test_mosys_model_string", contents);
+
+  ASSERT_TRUE(base::ReadFileToString(
+      tempdir.Append("ui").Append("help-content-id"), &contents));
+  EXPECT_EQ("ABC123-MODEL", contents);
 }
 
 int main(int argc, char** argv) {

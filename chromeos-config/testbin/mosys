@@ -26,6 +26,9 @@ case "$2" in
   sku )
     echo 123
     ;;
+  customization )
+    echo ABC123-MODEL
+    ;;
   * )
     exit 1
     ;;

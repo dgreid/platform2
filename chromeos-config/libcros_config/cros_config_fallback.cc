@@ -82,7 +82,10 @@ const FunctionMapEntry kFunctionMap[] = {
     {"/hardware-properties", "psu-type",
      base::BindRepeating(&GetOutputForCommand, "mosys psu type")},
     {"/hardware-properties", "has-backlight",
-     base::BindRepeating(&GetHasBacklight)}};
+     base::BindRepeating(&GetHasBacklight)},
+    {"/ui", "help-content-id",
+     base::BindRepeating(&GetOutputForCommand, "mosys platform customization")},
+};
 
 // Helper function to write a single value to ConfigFS at the given path.
 // Returns true if successful and false otherwise.
