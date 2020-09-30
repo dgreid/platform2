@@ -5,6 +5,7 @@
 #ifndef DIAGNOSTICS_CROS_HEALTHD_SYSTEM_MOCK_CONTEXT_H_
 #define DIAGNOSTICS_CROS_HEALTHD_SYSTEM_MOCK_CONTEXT_H_
 
+#include <base/files/scoped_temp_dir.h>
 #include <base/memory/scoped_refptr.h>
 #include <base/test/simple_test_tick_clock.h>
 #include <dbus/mock_bus.h>
@@ -58,6 +59,8 @@ class MockContext final : public Context {
   dbus::Bus::Options options_;
   scoped_refptr<dbus::MockBus> mock_bus_;
   scoped_refptr<dbus::MockObjectProxy> mock_power_manager_proxy_;
+  // Used to create a temporary root directory.
+  base::ScopedTempDir temp_dir_;
 };
 
 }  // namespace diagnostics

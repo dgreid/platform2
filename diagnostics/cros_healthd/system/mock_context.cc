@@ -38,6 +38,10 @@ bool MockContext::Initialize() {
   executor_ = std::make_unique<MockExecutorAdapter>();
   tick_clock_ = std::make_unique<base::SimpleTestTickClock>();
 
+  if (!temp_dir_.CreateUniqueTempDir())
+    return false;
+  root_dir_ = temp_dir_.GetPath();
+
   return true;
 }
 

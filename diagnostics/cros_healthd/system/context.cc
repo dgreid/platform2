@@ -26,7 +26,7 @@ namespace diagnostics {
 Context::Context() = default;
 
 Context::Context(mojo::PlatformChannelEndpoint endpoint)
-    : endpoint_(std::move(endpoint)) {}
+    : endpoint_(std::move(endpoint)), root_dir_(base::FilePath("/")) {}
 
 Context::~Context() = default;
 
@@ -101,6 +101,10 @@ dbus::ObjectProxy* Context::power_manager_proxy() const {
 
 PowerdAdapter* Context::powerd_adapter() const {
   return powerd_adapter_.get();
+}
+
+const base::FilePath& Context::root_dir() const {
+  return root_dir_;
 }
 
 SystemConfigInterface* Context::system_config() const {

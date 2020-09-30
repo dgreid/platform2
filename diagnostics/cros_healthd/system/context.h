@@ -7,6 +7,7 @@
 
 #include <memory>
 
+#include <base/files/file_path.h>
 #include <base/memory/scoped_refptr.h>
 #include <base/time/tick_clock.h>
 #include <brillo/dbus/dbus_connection.h>
@@ -80,6 +81,9 @@ class Context {
   // Use the object returned by powerd_adapter() to subscribe to notifications
   // from powerd.
   PowerdAdapter* powerd_adapter() const;
+  // Use the object returned by root_dir() to determine the root directory of
+  // the system.
+  const base::FilePath& root_dir() const;
   // Use the object returned by system_config() to determine which conditional
   // features a device supports.
   SystemConfigInterface* system_config() const;
@@ -121,6 +125,7 @@ class Context {
   std::unique_ptr<ExecutorAdapter> executor_;
   std::unique_ptr<SystemUtilities> system_utils_;
   std::unique_ptr<base::TickClock> tick_clock_;
+  base::FilePath root_dir_;
 };
 
 }  // namespace diagnostics
