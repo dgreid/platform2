@@ -277,7 +277,7 @@ void RegisterVshSession(dbus::ObjectProxy* cicerone_proxy,
 
 int main(int argc, char** argv) {
   base::AtExitManager exit_manager;
-  brillo::InitLog(brillo::kLogToStderrIfTty);
+  brillo::InitLog(brillo::kLogToStderr);
 
   DEFINE_uint64(listen_port, VMADDR_PORT_ANY, "Port to listen on");
   DEFINE_uint64(cid, 0, "Cid of VM");
