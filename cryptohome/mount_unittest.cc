@@ -457,6 +457,11 @@ class MountTest
     EXPECT_CALL(platform_, Mount(kLoopDevice, _, kEphemeralMountType,
                                  kDefaultMountFlags, _))
         .WillRepeatedly(Return(true));
+    EXPECT_CALL(platform_,
+                SetSELinuxContext(Property(&FilePath::value,
+                                           StartsWith(kEphemeralCryptohomeDir)),
+                                  cryptohome::kEphemeralCryptohomeRootContext))
+        .WillOnce(Return(true));
     EXPECT_CALL(platform_, IsDirectoryMounted(FilePath("/home/chronos/user")))
         .WillOnce(Return(false));  // first mount
     EXPECT_CALL(
@@ -3458,6 +3463,12 @@ TEST_P(EphemeralNoUserSystemTest, MountGuestUserDir) {
   EXPECT_CALL(platform_, Mount(FilePath("/dev/loop7"), _, kEphemeralMountType,
                                kDefaultMountFlags, _))
       .WillOnce(Return(true));
+  EXPECT_CALL(platform_,
+              SetSELinuxContext(Property(&FilePath::value,
+                                         StartsWith(kEphemeralCryptohomeDir)),
+                                cryptohome::kEphemeralCryptohomeRootContext))
+      .WillOnce(Return(true));
+
   EXPECT_CALL(
       platform_,
       Bind(Property(&FilePath::value, StartsWith(kEphemeralCryptohomeDir)),
@@ -3555,6 +3566,11 @@ TEST_P(EphemeralNoUserSystemTest, MountGuestUserFailSetUserType) {
       .WillOnce(Return(false));
   EXPECT_CALL(platform_, Mount(_, _, _, kDefaultMountFlags, _))
       .WillRepeatedly(Return(true));
+  EXPECT_CALL(platform_,
+              SetSELinuxContext(Property(&FilePath::value,
+                                         StartsWith(kEphemeralCryptohomeDir)),
+                                cryptohome::kEphemeralCryptohomeRootContext))
+      .WillOnce(Return(true));
   EXPECT_CALL(platform_, Bind(_, _)).WillRepeatedly(Return(true));
 
   EXPECT_CALL(tpm_, SetUserType(Tpm::UserType::NonOwner))

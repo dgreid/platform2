@@ -852,6 +852,15 @@ class Platform {
   //   blocks - number of blocks to be resized to.
   virtual bool ResizeFilesystem(const base::FilePath& file, uint64_t blocks);
 
+  // Set the SELinux context for the file/directory pointed by path.
+  // Returns true if the context is set successfully.
+  //
+  // Parameters
+  //   path - Path to set the SELinux context
+  //   context - Name of the context that we want to set for path.
+  virtual bool SetSELinuxContext(const base::FilePath& path,
+                                 const std::string& context);
+
   // Restore SELinux file contexts. No-op if not compiled with -DUSE_SELINUX=1
   // Returns true if restorecon succeeded.
   //

@@ -39,6 +39,7 @@
 
 #if USE_SELINUX
 #include <selinux/restorecon.h>
+#include <selinux/selinux.h>
 #endif
 
 #include <base/bind.h>
@@ -1352,6 +1353,22 @@ bool Platform::RestoreSELinuxContexts(const base::FilePath& path,
     PLOG(ERROR) << "restorecon(" << path.value() << ") failed";
     return false;
   }
+#endif
+  return true;
+}
+
+bool Platform::SetSELinuxContext(const base::FilePath& path,
+                                 const std::string& context) {
+#if USE_SELINUX
+  int result = setfilecon(path.value().c_str(), context.c_str());
+  if (result != 0) {
+    LOG(ERROR) << "Failed to set SELinux context for " << path
+               << ", errno = " << errno;
+    return false;
+  }
+#else
+  LOG(WARNING)
+      << "Try to set SELinux context when SELinux is disabled at compile time.";
 #endif
   return true;
 }

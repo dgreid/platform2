@@ -30,6 +30,7 @@ using base::FilePath;
 namespace cryptohome {
 
 extern const char kDefaultHomeDir[];
+extern const char kEphemeralCryptohomeRootContext[];
 
 // Objects that implement MountHelperInterface can perform mount operations.
 // This interface will be used as we transition all cryptohome mounts to be

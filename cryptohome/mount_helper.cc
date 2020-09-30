@@ -30,6 +30,11 @@ using brillo::cryptohome::home::GetUserPath;
 using brillo::cryptohome::home::SanitizeUserName;
 using brillo::cryptohome::home::SanitizeUserNameWithSalt;
 
+namespace cryptohome {
+const char kEphemeralCryptohomeRootContext[] =
+    "u:object_r:cros_home_shadow_uid:s0";
+}
+
 namespace {
 constexpr uid_t kMountOwnerUid = 0;
 constexpr gid_t kMountOwnerGid = 0;
@@ -62,6 +67,16 @@ FilePath VaultPathToUserPath(const FilePath& vault) {
 
 FilePath VaultPathToRootPath(const FilePath& vault) {
   return vault.Append(cryptohome::kRootHomeSuffix);
+}
+
+// Sets up the SELinux context for a freshly mounted ephemeral cryptohome.
+bool SetUpSELinuxContextForEphemeralCryptohome(cryptohome::Platform* platform,
+                                               const FilePath& source_path) {
+  // Note that this is needed because the newly mounted ephemeral cryptohome is
+  // a new file system, and thus the SELinux context that applies to the
+  // mountpoint will not apply to the new root directory in the filesystem.
+  return platform->SetSELinuxContext(
+      source_path, cryptohome::kEphemeralCryptohomeRootContext);
 }
 
 }  // namespace
@@ -846,6 +861,13 @@ bool MountHelper::PerformEphemeralMount(const std::string& username) {
   if (!MountAndPush(ephemeral_loop_device_, mount_point, kEphemeralMountType,
                     kEphemeralMountOptions)) {
     LOG(ERROR) << "Can't mount ephemeral mount point";
+    return false;
+  }
+
+  // Set SELinux context first, so that the created user & root directory have
+  // the correct context.
+  if (!::SetUpSELinuxContextForEphemeralCryptohome(platform_, mount_point)) {
+    // Logging already done in SetUpSELinuxContextForEphemeralCryptohome.
     return false;
   }
 
