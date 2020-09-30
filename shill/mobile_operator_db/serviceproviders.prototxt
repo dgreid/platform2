@@ -13750,6 +13750,22 @@ mno {
     localized_name {
       name : "US Cellular"
     }
+    mccmnc : "311580"
+    mccmnc : "311581"
+    mccmnc : "311582"
+    mccmnc : "311583"
+    mccmnc : "311584"
+    mccmnc : "311585"
+    mccmnc : "311586"
+    mccmnc : "311587"
+    mccmnc : "311588"
+    mccmnc : "311589"
+    mobile_apn {
+      apn : "usccinternet"
+      localized_name {
+        name : "LTE"
+      }
+    }
     sid : "5"
     sid : "104"
     sid : "166"
