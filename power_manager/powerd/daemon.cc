@@ -614,19 +614,12 @@ bool Daemon::IsLidClosedForSuspend() {
 
 bool Daemon::ReadSuspendWakeupCount(uint64_t* wakeup_count) {
   DCHECK(wakeup_count);
-  std::string buf;
   LOG(INFO) << "Reading wakeup count from " << wakeup_count_path_.value();
-  if (base::ReadFileToString(wakeup_count_path_, &buf)) {
-    base::TrimWhitespaceASCII(buf, base::TRIM_TRAILING, &buf);
-    if (base::StringToUint64(buf, wakeup_count)) {
-      LOG(INFO) << "Read wakeup count " << *wakeup_count;
-      return true;
-    }
-    LOG(ERROR) << "Could not parse wakeup count from \"" << buf << "\"";
-  } else {
-    PLOG(ERROR) << "Could not read " << wakeup_count_path_.value();
+  if (!util::ReadUint64File(wakeup_count_path_, wakeup_count)) {
+    return false;
   }
-  return false;
+  LOG(INFO) << "Read wakeup count " << *wakeup_count;
+  return true;
 }
 
 void Daemon::SetSuspendAnnounced(bool announced) {

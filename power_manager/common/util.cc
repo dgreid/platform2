@@ -33,12 +33,9 @@ bool ReadTypeFile(const base::FilePath& path,
   DCHECK(value_out);
 
   std::string str;
-  if (!base::ReadFileToString(path, &str)) {
-    PLOG(ERROR) << "Unable to read from " << path.value();
+  if (!ReadStringFile(path, &str))
     return false;
-  }
 
-  base::TrimWhitespaceASCII(str, base::TRIM_TRAILING, &str);
   if (!StringToType(str, value_out)) {
     LOG(ERROR) << "Unable to parse \"" << str << "\" from " << path.value();
     return false;
@@ -101,6 +98,17 @@ bool WriteInt64File(const base::FilePath& path, int64_t value) {
     PLOG(ERROR) << "Unable to write \"" << buf << "\" to " << path.value();
     return false;
   }
+  return true;
+}
+
+bool ReadStringFile(const base::FilePath& path, std::string* value_out) {
+  DCHECK(value_out);
+
+  if (!base::ReadFileToString(path, value_out)) {
+    PLOG(ERROR) << "Unable to read from " << path.value();
+    return false;
+  }
+  base::TrimWhitespaceASCII(*value_out, base::TRIM_TRAILING, value_out);
   return true;
 }
 

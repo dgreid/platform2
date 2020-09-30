@@ -88,8 +88,7 @@ bool InternalBacklight::Init(const base::FilePath& base_path,
     const base::FilePath scale_path = device_path.Append(kScaleFilename);
     if (base::PathExists(scale_path)) {
       std::string scale;
-      base::ReadFileToString(scale_path, &scale);
-      base::TrimWhitespaceASCII(scale, base::TRIM_TRAILING, &scale);
+      util::ReadStringFile(scale_path, &scale);
       if (scale == "linear")
         brightness_scale_ = BrightnessScale::kLinear;
       else if (scale == "non-linear")

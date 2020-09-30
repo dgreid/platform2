@@ -105,8 +105,7 @@ int main(int argc, char** argv) {
       continue;
     }
 
-    base::ReadFileToString(domain_file_path, &domain_name);
-    base::TrimWhitespaceASCII(domain_name, base::TRIM_ALL, &domain_name);
+    power_manager::util::ReadStringFile(domain_file_path, &domain_name);
     power_manager::util::ReadUint64File(maxeng_file_path, &max_energy_uj);
     power_domains.push_back({energy_file_path, domain_name, max_energy_uj});
     if (FLAGS_verbose)

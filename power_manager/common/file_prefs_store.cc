@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "power_manager/common/file_prefs_store.h"
+#include "power_manager/common/util.h"
 
 #include <base/files/file_enumerator.h>
 #include <base/files/file_util.h>
@@ -25,10 +26,7 @@ std::string FilePrefsStore::GetDescription() const {
 bool FilePrefsStore::ReadPrefString(const std::string& name,
                                     std::string* value_out) {
   base::FilePath path = pref_path_.Append(name);
-  if (!base::ReadFileToString(path, value_out))
-    return false;
-  base::TrimWhitespaceASCII(*value_out, base::TRIM_TRAILING, value_out);
-  return true;
+  return util::ReadStringFile(path, value_out);
 }
 
 bool FilePrefsStore::WritePrefString(const std::string& name,

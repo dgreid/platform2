@@ -17,6 +17,7 @@
 #include <base/strings/string_util.h>
 #include <base/macros.h>
 
+#include "power_manager/common/util.h"
 #include "power_manager/powerd/system/thermal/device_thermal_state.h"
 
 namespace power_manager {
@@ -62,23 +63,6 @@ const std::unordered_set<std::string> kProcessorTypes = {
 const std::unordered_set<std::string> kFanTypes = {"TFN1"};
 const std::unordered_set<std::string> kChargerTypes = {"TCHG"};
 
-bool read_file_to_string(const base::FilePath& path, std::string* value) {
-  std::string temp;
-  if (!base::ReadFileToString(path, &temp)) {
-    return false;
-  }
-  base::TrimWhitespaceASCII(temp, base::TRIM_ALL, value);
-  return true;
-}
-
-bool read_file_to_int(const base::FilePath& path, int* value) {
-  std::string str;
-  if (!read_file_to_string(path, &str)) {
-    return false;
-  }
-  return base::StringToInt(str, value);
-}
-
 }  // namespace
 
 bool CoolingDevice::InitSysfsFile() {
@@ -88,11 +72,9 @@ bool CoolingDevice::InitSysfsFile() {
   }
 
   base::FilePath max_state_path = device_path_.Append(kMaxStateFileName);
-  int max_state;
-  if (!read_file_to_int(max_state_path, &max_state)) {
-    LOG(ERROR) << "Error reading file: " << max_state_path;
+  int64_t max_state;
+  if (!util::ReadInt64File(max_state_path, &max_state))
     return false;
-  }
 
   if (max_state == 0) {
     LOG(INFO) << "Ignore max_state = 0 cooling device: " << device_path_;
@@ -101,17 +83,13 @@ bool CoolingDevice::InitSysfsFile() {
 
   base::FilePath type_path = device_path_.Append(kTypeFileName);
   std::string type;
-  if (!read_file_to_string(type_path, &type)) {
-    LOG(ERROR) << "Error reading file: " << type_path;
+  if (!util::ReadStringFile(type_path, &type))
     type = "Unknown";
-  }
 
   base::FilePath cur_state_path = device_path_.Append(kCurStateFileName);
-  int cur_state;
-  if (!read_file_to_int(cur_state_path, &cur_state)) {
-    LOG(ERROR) << "Error reading file: " << cur_state_path;
+  int64_t cur_state;
+  if (!util::ReadInt64File(cur_state_path, &cur_state))
     return false;
-  }
 
   // DCHECK since it would be an unlikely kernel bug if this happened.
   DCHECK(cur_state <= max_state);
