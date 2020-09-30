@@ -844,7 +844,7 @@ void ArcSetup::ApplyPerBoardConfigurationsInternal(
         base::FilePath(oem_mount_directory)
             .Append("etc")
             .Append(arc_paths_->media_profile_file);
-    EXIT_IF(!base::CopyFile(media_profile_xml, new_media_profile_xml));
+    EXIT_IF(!SafeCopyFile(media_profile_xml, new_media_profile_xml));
     EXIT_IF(
         !Chown(kHostArcCameraUid, kHostArcCameraGid, new_media_profile_xml));
   }
@@ -863,7 +863,7 @@ void ArcSetup::ApplyPerBoardConfigurationsInternal(
   const base::FilePath platform_xml_file =
       base::FilePath(oem_mount_directory)
           .Append(arc_paths_->platform_xml_file_relative);
-  EXIT_IF(!base::CopyFile(hardware_features_xml, platform_xml_file));
+  EXIT_IF(!SafeCopyFile(hardware_features_xml, platform_xml_file));
 
   // TODO(chromium:1083652) Remove dynamic shell scripts once all overlays
   // are migrated to static XML config.
