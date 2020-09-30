@@ -79,7 +79,6 @@ source_set("libdiag_routine") {
     "lan_connectivity/lan_connectivity.cc",
     "memory/memory.cc",
     "memory/memory_constants.cc",
-    "network_routine.h",
     "nvme_self_test/nvme_self_test.cc",
     "nvme_wear_level/nvme_wear_level.cc",
     "prime_search/prime_search.cc",

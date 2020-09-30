@@ -52,8 +52,6 @@ class SignalStrengthRoutineTest : public testing::Test {
     routine_ = CreateSignalStrengthRoutine(network_diagnostics_adapter());
   }
 
-  DiagnosticRoutine* routine() { return routine_.get(); }
-
   mojo_ipc::RoutineUpdatePtr RunRoutineAndWaitForExit() {
     DCHECK(routine_);
     mojo_ipc::RoutineUpdate update{0, mojo::ScopedHandle(),
@@ -74,12 +72,6 @@ class SignalStrengthRoutineTest : public testing::Test {
   MockContext mock_context_;
   std::unique_ptr<DiagnosticRoutine> routine_;
 };
-
-// Test that the SignalStrength routine starts in the ready state.
-TEST_F(SignalStrengthRoutineTest, RoutineReady) {
-  EXPECT_EQ(routine()->GetStatus(),
-            mojo_ipc::DiagnosticRoutineStatusEnum::kReady);
-}
 
 // Test that the SignalStrength routine can be run successfully.
 TEST_F(SignalStrengthRoutineTest, RoutineSuccess) {
