@@ -274,6 +274,8 @@ if [ "$ROOTDEV_RET_CODE" = "0" ] && [ "$ROOTDEV_TYPE" != "/dev/ram" ]; then
 
   # Check if we enable ext4 features.
   if [ "${FS_FORMAT_STATE}" = "ext4" ]; then
+    SB_FEATURES=""
+    SB_OPTIONS=""
     FS_FEATURES=$(dumpe2fs -h "${STATE_DEV}" 2>/dev/null |
       grep -e "^Filesystem features:.*")
 
@@ -282,10 +284,8 @@ if [ "$ROOTDEV_RET_CODE" = "0" ] && [ "$ROOTDEV_TYPE" != "/dev/ram" ]; then
       # The stateful partition is not set for encryption.
       # Check if we should migrate.
       if ext4_dir_encryption_supported; then
-        # Ensure to replay the journal first so it doesn't overwrite the flag.
-        e2fsck -p -E journal_only "${STATE_DEV}" || :
         # The kernel support encryption, do it!
-        tune2fs -O encrypt "${STATE_DEV}" || :
+        SB_OPTIONS="${SB_OPTIONS},encrypt"
       fi
     fi
 
@@ -294,10 +294,8 @@ if [ "$ROOTDEV_RET_CODE" = "0" ] && [ "$ROOTDEV_TYPE" != "/dev/ram" ]; then
       # The stateful partition is not set for fs-verity.
       # Check if we should migrate.
       if ext4_fsverity_supported; then
-        # Ensure to replay the journal first so it doesn't overwrite the flag.
-        e2fsck -p -E journal_only "${STATE_DEV}" || :
         # The kernel support fs-verity, do it!
-        tune2fs -O verity "${STATE_DEV}" || :
+        SB_OPTIONS="${SB_OPTIONS},verity"
       fi
     fi
 
@@ -305,20 +303,32 @@ if [ "$ROOTDEV_RET_CODE" = "0" ] && [ "$ROOTDEV_TYPE" != "/dev/ram" ]; then
     if ! dumpe2fs -h "${STATE_DEV}" 2>/dev/null | \
          grep -qe "^Reserved blocks gid.*20119"; then
       # Add Android's AID_RESERVED_DISK to resgid.
-      tune2fs -g 20119 "${STATE_DEV}" || :
+      SB_FEATURES="${SB_FEATURES} -g 20119"
     fi
     if [ -d /proc/sys/fs/quota ]; then
       # Quota is enabled in the kernel, make sure that quota is enabled in the
       # filesystem.
       if ! string_contains "${FS_FEATURES}" "quota"; then
-        tune2fs -Oquota -Qusrquota,grpquota "${STATE_DEV}" || :
+        SB_OPTIONS="${SB_OPTIONS},quota"
+        SB_FEATURES="${SB_FEATURES} -Qusrquota,grpquota"
       fi
     else
       # Quota is not enabled in the kernel, make sure that quota is disabled in
       # the filesystem.
       if string_contains "${FS_FEATURES}" "quota"; then
-        tune2fs -O^quota -Q^usrquota,^grpquota "${STATE_DEV}" || :
+        SB_OPTIONS="${SB_OPTIONS},^quota"
+        SB_FEATURES="${SB_FEATURES} -Q^usrquota,^grpquota"
       fi
+    fi
+
+    if [ -n "${SB_FEATURES}" ] || [ -n "${SB_OPTIONS}" ]; then
+      # Ensure to replay the journal first so it doesn't overwrite the flag.
+      e2fsck -p -E journal_only "${STATE_DEV}" || :
+      if [ -n "${SB_OPTIONS}" ]; then
+          SB_FEATURES="${SB_FEATURES} -O ${SB_OPTIONS#,}"
+      fi
+      # Remove quote to treat ' ' as argument separators.
+      tune2fs ${SB_FEATURES} "${STATE_DEV}" || :
     fi
   fi
 
