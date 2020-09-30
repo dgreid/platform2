@@ -3,6 +3,7 @@ name = "memd"
 version = "0.1.0"
 authors = ["The Chromium OS Authors"]
 build = "build.rs"
+include = ["Cargo.toml", "*.rs", "src/**/*"]
 
 [dependencies]
 chrono = "~0.4.2"

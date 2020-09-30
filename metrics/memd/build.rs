@@ -7,9 +7,22 @@ extern crate protoc_rust;
 use std::env;
 use std::fs;
 use std::io::Write;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use protoc_rust::Customize;
+
+/// Outputs rerun-if-changed directives to cargo, as described
+/// in https://doc.rust-lang.org/cargo/reference/build-scripts.html. These are required if we want
+/// `cargo` to rerun this script when external dependencies (e.g., proto files) get updated.
+fn note_rerun_if_changed(p: &Path) {
+    println!("cargo:rerun-if-changed={}", p.display());
+    if p.is_dir() {
+        let error_message = format!("reading dir {}", p.display());
+        for ent in p.read_dir().expect(&error_message) {
+            note_rerun_if_changed(&ent.expect(&error_message).path());
+        }
+    }
+}
 
 fn main() {
     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
@@ -21,10 +34,25 @@ fn main() {
     let proto_dir = proto_root.join("dbus/metrics_event");
     let proto_file = proto_dir.join("metrics_event.proto");
 
+    let input_files = &[proto_file];
+    for file in input_files {
+        note_rerun_if_changed(file);
+    }
+    let includes_files = &[proto_dir];
+    for file in includes_files {
+        note_rerun_if_changed(file);
+    }
+
     protoc_rust::run(protoc_rust::Args {
         out_dir: out_dir.as_os_str().to_str().unwrap(),
-        input: &[&proto_file.as_os_str().to_str().unwrap()],
-        includes: &[&proto_dir.as_os_str().to_str().unwrap()],
+        input: &input_files
+            .iter()
+            .map(|x| x.to_str().unwrap())
+            .collect::<Vec<&str>>(),
+        includes: &includes_files
+            .iter()
+            .map(|x| x.to_str().unwrap())
+            .collect::<Vec<&str>>(),
         customize: Customize {
             ..Default::default()
         },
