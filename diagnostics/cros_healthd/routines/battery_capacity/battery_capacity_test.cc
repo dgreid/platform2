@@ -7,12 +7,13 @@
 #include <string>
 
 #include <base/files/file_path.h>
-#include <base/files/scoped_temp_dir.h>
 #include <gtest/gtest.h>
 
 #include "diagnostics/common/file_test_utils.h"
 #include "diagnostics/cros_healthd/routines/battery_capacity/battery_capacity.h"
 #include "diagnostics/cros_healthd/routines/routine_test_utils.h"
+#include "diagnostics/cros_healthd/system/mock_context.h"
+#include "diagnostics/cros_healthd/utils/battery_utils.h"
 #include "mojo/cros_healthd_diagnostics.mojom.h"
 
 namespace diagnostics {
@@ -41,15 +42,12 @@ class BatteryCapacityRoutineTest : public testing::Test {
   BatteryCapacityRoutineTest& operator=(const BatteryCapacityRoutineTest&) =
       delete;
 
-  void SetUp() override { ASSERT_TRUE(temp_dir_.CreateUniqueTempDir()); }
-
-  DiagnosticRoutine* routine() { return routine_.get(); }
+  void SetUp() override { ASSERT_TRUE(mock_context_.Initialize()); }
 
   mojo_ipc::RoutineUpdate* update() { return &update_; }
 
   void CreateRoutine(uint32_t low_mah = kLowmAh, uint32_t high_mah = kHighmAh) {
-    routine_ = std::make_unique<BatteryCapacityRoutine>(low_mah, high_mah);
-    routine_->set_root_dir_for_testing(temp_dir_.GetPath());
+    routine_ = CreateBatteryCapacityRoutine(&mock_context_, low_mah, high_mah);
   }
 
   void RunRoutineAndWaitForExit() {
@@ -62,16 +60,19 @@ class BatteryCapacityRoutineTest : public testing::Test {
 
   void WriteChargeFullDesign(const std::string& file_contents) {
     EXPECT_TRUE(WriteFileAndCreateParentDirs(
-        temp_dir_path().Append(
-            base::FilePath(kBatteryCapacityChargeFullDesignPath)),
+        temp_dir_path()
+            .AppendASCII(kBatteryDirectoryPath)
+            .AppendASCII(kBatteryChargeFullDesignFileName),
         file_contents));
   }
 
-  const base::FilePath& temp_dir_path() const { return temp_dir_.GetPath(); }
+  const base::FilePath& temp_dir_path() const {
+    return mock_context_.root_dir();
+  }
 
  private:
-  base::ScopedTempDir temp_dir_;
-  std::unique_ptr<BatteryCapacityRoutine> routine_;
+  MockContext mock_context_;
+  std::unique_ptr<DiagnosticRoutine> routine_;
   mojo_ipc::RoutineUpdate update_{0, mojo::ScopedHandle(),
                                   mojo_ipc::RoutineUpdateUnion::New()};
 };
@@ -129,25 +130,6 @@ TEST_F(BatteryCapacityRoutineTest, InvalidParameters) {
   VerifyNonInteractiveUpdate(update()->routine_update_union,
                              mojo_ipc::DiagnosticRoutineStatusEnum::kError,
                              kBatteryCapacityRoutineParametersInvalidMessage);
-}
-
-// Test that calling resume doesn't crash.
-TEST_F(BatteryCapacityRoutineTest, Resume) {
-  CreateRoutine();
-  routine()->Resume();
-}
-
-// Test that calling cancel doesn't crash.
-TEST_F(BatteryCapacityRoutineTest, Cancel) {
-  CreateRoutine();
-  routine()->Cancel();
-}
-
-// Test that we can retrieve the status of the battery routine.
-TEST_F(BatteryCapacityRoutineTest, GetStatus) {
-  CreateRoutine();
-  EXPECT_EQ(routine()->GetStatus(),
-            mojo_ipc::DiagnosticRoutineStatusEnum::kReady);
 }
 
 }  // namespace diagnostics

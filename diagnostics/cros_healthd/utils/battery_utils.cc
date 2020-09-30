@@ -15,6 +15,7 @@ namespace diagnostics {
 const char kBatteryDirectoryPath[] = "sys/class/power_supply/BAT0";
 const char kBatteryChargeNowFileName[] = "charge_now";
 const char kBatteryChargeFullFileName[] = "charge_full";
+const char kBatteryChargeFullDesignFileName[] = "charge_full_design";
 const char kBatteryStatusFileName[] = "status";
 const char kBatteryStatusChargingValue[] = "Charging";
 const char kBatteryStatusDischargingValue[] = "Discharging";

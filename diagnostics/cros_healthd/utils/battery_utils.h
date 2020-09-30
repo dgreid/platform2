@@ -18,6 +18,7 @@ extern const char kBatteryDirectoryPath[];
 // Files read from kBatteryDirectoryPath.
 extern const char kBatteryChargeNowFileName[];
 extern const char kBatteryChargeFullFileName[];
+extern const char kBatteryChargeFullDesignFileName[];
 extern const char kBatteryStatusFileName[];
 
 // Value of the status file that indicates the battery is charging.

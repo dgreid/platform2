@@ -41,7 +41,7 @@ CrosHealthdRoutineFactoryImpl::MakeUrandomRoutine(uint32_t length_seconds) {
 std::unique_ptr<DiagnosticRoutine>
 CrosHealthdRoutineFactoryImpl::MakeBatteryCapacityRoutine(uint32_t low_mah,
                                                           uint32_t high_mah) {
-  return std::make_unique<BatteryCapacityRoutine>(low_mah, high_mah);
+  return CreateBatteryCapacityRoutine(context_, low_mah, high_mah);
 }
 
 std::unique_ptr<DiagnosticRoutine>
