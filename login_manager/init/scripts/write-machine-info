@@ -53,6 +53,6 @@ else
   # Dump full information in the VPD, including the serial number.
   dump_vpd_log --full --stdout
   # Dynamic information.
-  echo "customization_id=\"$(mosys platform customization)\""
-  echo "rlz_brand_code=\"$(mosys platform brand)\""
+  echo "customization_id=\"$(cros_config /ui help-content-id)\""
+  echo "rlz_brand_code=\"$(cros_config / brand-code)\""
 fi >> "${MACHINE_INFO}"
