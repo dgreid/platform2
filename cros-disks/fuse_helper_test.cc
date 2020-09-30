@@ -64,12 +64,12 @@ TEST_F(FUSEHelperTest, GetTargetSuffix) {
 
 // Verifies that generic implementation applies default rules to MountOptions.
 TEST_F(FUSEHelperTest, PrepareMountOptions) {
-  std::vector<std::string> options = {"bind", "foo=bar", "baz", "dirsync"};
+  std::vector<std::string> options = {"sync", "foo=bar", "baz", "dirsync"};
   auto mounter =
       helper_.CreateMounter(kWorkingDir, kSomeUri, kMountDir, options);
   EXPECT_EQ(kFUSEType, mounter->filesystem_type());
   std::string opts = mounter->mount_options().ToString();
-  EXPECT_THAT(opts, testing::StartsWith("bind,dirsync,"));
+  EXPECT_THAT(opts, testing::StartsWith("sync,dirsync,"));
   EXPECT_THAT(opts, testing::Not(testing::HasSubstr("uid=")));
 }
 

@@ -42,8 +42,8 @@ const char kOptionTimeOffsetPrefix[] = "time_offset=";
 }  // namespace
 
 MountOptions::MountOptions()
-    : allow_exact_({kOptionBind, kOptionDirSync, kOptionFlush,
-                    kOptionSynchronous, kOptionUtf8}),
+    : allow_exact_(
+          {kOptionDirSync, kOptionFlush, kOptionSynchronous, kOptionUtf8}),
       allow_prefix_({kOptionShortNamePrefix, kOptionTimeOffsetPrefix}),
       enforced_options_({kOptionNoDev, kOptionNoExec, kOptionNoSuid}) {}
 
