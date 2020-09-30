@@ -75,6 +75,20 @@ mno {
 
 mno {
   data {
+    uuid : "654224ae-cda5-4c32-b455-ee16e2a48123"
+    country : "al"
+    localized_name {
+      name : "Telekom.al"
+    }
+    mccmnc : "27601"
+    mobile_apn {
+      apn : "internet.t"
+    }
+  }
+}
+
+mno {
+  data {
     uuid : "1cb3046b-e6a2-4879-94da-ef2e3b7e9f56"
     country : "al"
     localized_name {
@@ -258,7 +272,7 @@ mno {
     uuid : "c4288d9d-8c56-490f-9b1e-0107dbaa150d"
     country : "ar"
     localized_name {
-      name : "Movistar"
+      name : "Movistar (Telefónica)"
     }
     mccmnc : "722010"
     mccmnc : "722070"
@@ -960,6 +974,24 @@ mno {
       apn : "telstra.bigpond"
       localized_name {
         name : "Telstra BigPond"
+      }
+    }
+  }
+}
+
+mno {
+  data {
+    uuid : "86a87384-21aa-48c4-9f6d-690c3943a4dc"
+    country : "au"
+    localized_name {
+      name : "Telstra"
+    }
+    mccmnc : "50571"
+    mccmnc : "50572"
+    mobile_apn {
+      apn : "telstra.lanes"
+      localized_name {
+        name : "Telstra LANES"
       }
     }
   }
@@ -1845,6 +1877,20 @@ mno {
 
 mno {
   data {
+    uuid : "92a409e6-c187-41bd-8ce7-d156a3a09c35"
+    country : "bw"
+    localized_name {
+      name : "Orange"
+    }
+    mccmnc : "65202"
+    mobile_apn {
+      apn : "internet.orange.co.bw"
+    }
+  }
+}
+
+mno {
+  data {
     uuid : "bd298a4e-67b3-42db-96ca-7304691f299a"
     country : "by"
     localized_name {
@@ -2232,6 +2278,20 @@ mno {
 
 mno {
   data {
+    uuid : "f2653524-2e6e-40b6-a518-560e8957b21c"
+    country : "cd"
+    localized_name {
+      name : "Orange"
+    }
+    mccmnc : "63086"
+    mobile_apn {
+      apn : "iew.orange.com"
+    }
+  }
+}
+
+mno {
+  data {
     uuid : "f51eae48-2912-4ba4-8ba9-e7938e834515"
     country : "ch"
     localized_name {
@@ -2350,6 +2410,66 @@ mno {
 
 mno {
   data {
+    uuid : "8abf2f58-16af-4ec6-b0d1-dc0b265b8acc"
+    country : "gp"
+    localized_name {
+      name : "Orange"
+    }
+    mccmnc : "34001"
+    mobile_apn {
+	apn : "orangeweb"
+        username : "web"
+        password : "web"
+    }
+  }
+}
+
+mno {
+  data {
+    uuid : "fc0bc72d-c31f-4284-b582-643296186168"
+    country : "gn"
+    localized_name {
+      name : "Orange"
+    }
+    mccmnc : "61101"
+    mobile_apn {
+	apn : "internetogn"
+    }
+  }
+}
+
+mno {
+  data {
+    uuid : "5ef4dc1a-a3e1-402f-bea7-dd83481435de"
+    country : "gw"
+    localized_name {
+      name : "Orange"
+    }
+    mccmnc : "63203"
+    mobile_apn {
+	apn : "internetogw"
+    }
+  }
+}
+
+mno {
+  data {
+    uuid : "02492fd2-5e8f-4a55-aac9-febf10694b5a"
+    country : "ci"
+    localized_name {
+      name : "Orange"
+    }
+    mccmnc : "61203"
+    mobile_apn {
+	apn : "orangeciweb"
+        username : "web"
+        password : "web"
+    }
+  }
+}
+
+mno {
+  data {
     uuid : "65917911-941f-410a-ba3f-2e8119f698c6"
     country : "ci"
     localized_name {
@@ -2427,8 +2547,10 @@ mno {
     uuid : "e456cd8d-2316-45f1-81c0-ee8843743d75"
     country : "cl"
     localized_name {
-      name : "Movistar"
+      name : "Movistar (Telefónica)"
     }
+    mccmnc : "73002"
+    mccmnc : "73007"
     mccmnc : "73010"
     mobile_apn {
       apn : "web.tmovil.cl"
@@ -2437,6 +2559,14 @@ mno {
       }
       username : "web"
       password : "web"
+    }
+    mobile_apn {
+      apn : "web.gtdmovil.cl"
+      localized_name {
+        name : "Web"
+      }
+      username : "webgtd"
+      password : "webgtd"
     }
     mobile_apn {
       apn : "wap.tmovil.cl"
@@ -8733,6 +8863,34 @@ mno {
 
 mno {
   data {
+    uuid : "bfec1527-e621-4baf-8143-831e12ac27ad"
+    country : "ne"
+    localized_name {
+      name : "Orange"
+    }
+    mccmnc : "61404"
+    mobile_apn {
+	apn : "orange.ne"
+    }
+  }
+}
+
+mno {
+  data {
+    uuid : "0f1b2610-dd98-4c77-a640-0c9cc2009f6e"
+    country : "mu"
+    localized_name {
+      name : "Orange"
+    }
+    mccmnc : "61701"
+    mobile_apn {
+	apn : "orange"
+    }
+  }
+}
+
+mno {
+  data {
     uuid : "29cf8e53-b245-427b-aa7b-29836dd3c292"
     country : "mu"
     localized_name {
@@ -11004,9 +11162,10 @@ mno {
     uuid : "7f39c0e6-beb9-46a3-a7b9-947430092fb9"
     country : "ro"
     localized_name {
-      name : "Telekom"
+      name : "Telekom/Orange"
     }
     mccmnc : "22603"
+    mccmnc : "22606"
     mobile_apn {
       apn : "broadband"
       localized_name {
