@@ -18,6 +18,7 @@
 
 #include "camera3_test/camera3_device_connector.h"
 #include "cros-camera/constants.h"
+#include "cros-camera/future.h"
 #include "cros-camera/ipc_util.h"
 
 namespace camera3_test {
@@ -129,8 +130,9 @@ int ClientModuleConnector::GetNumberOfCameras() {
 }
 
 std::unique_ptr<DeviceConnector> ClientModuleConnector::OpenDevice(int cam_id) {
-  cros::mojom::Camera3DeviceOpsPtr dev_ops = cam_client_->OpenDevice(cam_id);
-  return std::make_unique<ClientDeviceConnector>(dev_ops.PassInterface());
+  auto dev_connector = std::make_unique<ClientDeviceConnector>();
+  cam_client_->OpenDevice(cam_id, dev_connector->GetDeviceOpsRequest());
+  return dev_connector;
 }
 
 int ClientModuleConnector::GetCameraInfo(int cam_id, camera_info* info) {
@@ -178,25 +180,16 @@ int CameraHalClient::Start(camera_module_callbacks_t* callbacks) {
       ipc_thread_.task_runner(),
       mojo::core::ScopedIPCSupport::ShutdownPolicy::FAST);
 
-  mojo::ScopedMessagePipeHandle child_pipe;
-  base::FilePath socket_path(cros::constants::kCrosCameraSocketPathString);
-  if (cros::CreateMojoChannelToParentByUnixDomainSocket(
-          socket_path, &child_pipe) != MOJO_RESULT_OK) {
-    LOGF(ERROR) << "Failed to create mojo channel";
-    return -EIO;
-  }
-
-  dispatcher_ = mojo::MakeProxy(
-      cros::mojom::CameraHalDispatcherPtrInfo(std::move(child_pipe), 0u),
-      ipc_thread_.task_runner());
-  if (!dispatcher_.is_bound()) {
-    LOGF(ERROR) << "Failed to bind mojo dispatcher";
-    return -EIO;
-  }
-
+  auto future = cros::Future<int>::Create(nullptr);
   ipc_thread_.task_runner()->PostTask(
       FROM_HERE,
-      base::BindOnce(&CameraHalClient::RegisterClient, base::Unretained(this)));
+      base::BindOnce(&CameraHalClient::ConnectToDispatcher,
+                     base::Unretained(this), cros::GetFutureCallback(future)));
+  int result = future->Get();
+  if (result != 0) {
+    LOGF(ERROR) << "Failed to connect to dispatcher";
+    return result;
+  }
 
   if (!ipc_initialized_.TimedWait(kIpcTimeout)) {
     LOGF(ERROR) << "Failed to set up channel and get vendor tags";
@@ -206,12 +199,31 @@ int CameraHalClient::Start(camera_module_callbacks_t* callbacks) {
   return 0;
 }
 
-void CameraHalClient::RegisterClient() {
+void CameraHalClient::ConnectToDispatcher(base::Callback<void(int)> callback) {
   VLOGF_ENTER();
   ASSERT_TRUE(ipc_thread_.task_runner()->BelongsToCurrentThread());
+  mojo::ScopedMessagePipeHandle child_pipe;
+  base::FilePath socket_path(cros::constants::kCrosCameraSocketPathString);
+  if (cros::CreateMojoChannelToParentByUnixDomainSocket(
+          socket_path, &child_pipe) != MOJO_RESULT_OK) {
+    LOGF(ERROR) << "Failed to create mojo channel";
+    callback.Run(-EIO);
+    return;
+  }
+
+  dispatcher_ = mojo::MakeProxy(
+      cros::mojom::CameraHalDispatcherPtrInfo(std::move(child_pipe), 0u),
+      ipc_thread_.task_runner());
+  if (!dispatcher_.is_bound()) {
+    LOGF(ERROR) << "Failed to bind mojo dispatcher";
+    callback.Run(-EIO);
+    return;
+  }
+
   cros::mojom::CameraHalClientPtr client_ptr;
   camera_hal_client_.Bind(mojo::MakeRequest(&client_ptr));
   dispatcher_->RegisterClient(std::move(client_ptr));
+  callback.Run(0);
 }
 
 void CameraHalClient::SetUpChannel(cros::mojom::CameraModulePtr camera_module) {
@@ -390,33 +402,30 @@ void CameraHalClient::OnGotCameraInfo(int cam_id,
   cb.Run(result);
 }
 
-cros::mojom::Camera3DeviceOpsPtr CameraHalClient::OpenDevice(int cam_id) {
+void CameraHalClient::OpenDevice(
+    int cam_id, cros::mojom::Camera3DeviceOpsRequest dev_ops_req) {
   VLOGF_ENTER();
-  cros::mojom::Camera3DeviceOpsPtr dev_ops;
   auto future = cros::Future<int32_t>::Create(nullptr);
   ipc_thread_.task_runner()->PostTask(
-      FROM_HERE, base::BindOnce(&CameraHalClient::OpenDeviceOnIpcThread,
-                                base::Unretained(this), cam_id, &dev_ops,
-                                cros::GetFutureCallback(future)));
+      FROM_HERE,
+      base::BindOnce(&CameraHalClient::OpenDeviceOnIpcThread,
+                     base::Unretained(this), cam_id, std::move(dev_ops_req),
+                     cros::GetFutureCallback(future)));
   if (!future->Wait()) {
     ADD_FAILURE() << __func__ << " timeout";
-    return nullptr;
   }
-  return dev_ops;
 }
 
 void CameraHalClient::OpenDeviceOnIpcThread(
     int cam_id,
-    cros::mojom::Camera3DeviceOpsPtr* dev_ops,
+    cros::mojom::Camera3DeviceOpsRequest dev_ops_req,
     base::Callback<void(int32_t)> cb) {
   VLOGF_ENTER();
   if (!ipc_initialized_.IsSignaled()) {
     cb.Run(-ENODEV);
     return;
   }
-  cros::mojom::Camera3DeviceOpsRequest device_ops_request =
-      mojo::MakeRequest(dev_ops);
-  camera_module_->OpenDevice(cam_id, std::move(device_ops_request), cb);
+  camera_module_->OpenDevice(cam_id, std::move(dev_ops_req), cb);
 }
 
 bool CameraHalClient::GetVendorTagByName(const std::string name,

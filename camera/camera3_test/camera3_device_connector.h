@@ -85,10 +85,11 @@ class HalDeviceConnector final : public DeviceConnector {
 class ClientDeviceConnector final : public DeviceConnector,
                                     public cros::mojom::Camera3CallbackOps {
  public:
-  explicit ClientDeviceConnector(
-      cros::mojom::Camera3DeviceOpsPtrInfo dev_ops_info);
+  ClientDeviceConnector();
 
   ~ClientDeviceConnector();
+
+  cros::mojom::Camera3DeviceOpsRequest GetDeviceOpsRequest();
 
   // DeviceConnector implementation.
   int Initialize(const camera3_callback_ops_t* callback_ops) override;
@@ -99,9 +100,11 @@ class ClientDeviceConnector final : public DeviceConnector,
   int Flush() override;
 
  private:
+  void MakeDeviceOpsRequestOnThread(
+      cros::mojom::Camera3DeviceOpsRequest* dev_ops_req);
+
   void CloseOnThread(base::OnceCallback<void(int32_t)> cb);
-  void ReceiveInterfaceOnThread(
-      cros::mojom::Camera3DeviceOpsPtrInfo dev_ops_info);
+  void OnClosedOnThread(base::OnceCallback<void(int32_t)> cb, int32_t result);
   void InitializeOnThread(const camera3_callback_ops_t* callback_ops,
                           base::OnceCallback<void(int32_t)> cb);
   void ConfigureStreamsOnThread(camera3_stream_configuration_t* stream_list,

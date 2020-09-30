@@ -11,15 +11,16 @@
 #include <string>
 #include <vector>
 
+#include <base/callback.h>
 #include <base/logging.h>
 #include <cros-camera/camera_thread.h>
 #include <hardware/camera3.h>
 
 #include "common/utils/cros_camera_mojo_utils.h"
 #include "common/vendor_tag_manager.h"
+#include "mojo/camera_common.mojom.h"
 #include "mojo/core/embedder/scoped_ipc_support.h"
 #include "mojo/cros_camera_service.mojom.h"
-#include "mojo/camera_common.mojom.h"
 
 namespace camera3_test {
 
@@ -121,15 +122,15 @@ class CameraHalClient final : public cros::mojom::CameraHalClient,
   int GetCameraInfo(int cam_id, camera_info* info);
 
   // Open camera device
-  cros::mojom::Camera3DeviceOpsPtr OpenDevice(int cam_id);
+  void OpenDevice(int cam_id, cros::mojom::Camera3DeviceOpsRequest dev_ops_req);
 
   // Get vendor tag by the tag name; False is returned if not found.
   bool GetVendorTagByName(const std::string name, uint32_t* tag);
 
  private:
-  // Asynchronously registers to CameraHalDispatcher to acquire camera HAL
-  // handle.
-  void RegisterClient();
+  // Establishes a connection to dispatcher and registers to CameraHalDispatcher
+  // to acquire camera HAL handle.
+  void ConnectToDispatcher(base::Callback<void(int)> callback);
 
   // Implementation of cros::mojom::CameraHalClient.
   void SetUpChannel(cros::mojom::CameraModulePtr camera_module) override;
@@ -152,8 +153,11 @@ class CameraHalClient final : public cros::mojom::CameraHalClient,
                        base::Callback<void(int32_t)> cb,
                        int32_t result,
                        cros::mojom::CameraInfoPtr camera_info);
+
+  void OnDeviceOpsRequestReceived(
+      cros::mojom::Camera3DeviceOpsRequest dev_ops_req);
   void OpenDeviceOnIpcThread(int cam_id,
-                             cros::mojom::Camera3DeviceOpsPtr* dev_ops,
+                             cros::mojom::Camera3DeviceOpsRequest dev_ops_req,
                              base::Callback<void(int32_t)> cb);
   void CameraDeviceStatusChange(
       int32_t camera_id, cros::mojom::CameraDeviceStatus new_status) override;

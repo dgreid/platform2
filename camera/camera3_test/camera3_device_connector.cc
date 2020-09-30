@@ -140,17 +140,11 @@ int HalDeviceConnector::Flush() {
   return cam_device_->ops->flush(cam_device_);
 }
 
-ClientDeviceConnector::ClientDeviceConnector(
-    cros::mojom::Camera3DeviceOpsPtrInfo dev_ops_info)
+ClientDeviceConnector::ClientDeviceConnector()
     : mojo_callback_ops_(this),
       user_callback_ops_(nullptr),
       dev_thread_("Camera3TestClientDeviceConnectorThread") {
   dev_thread_.Start();
-
-  dev_thread_.PostTaskAsync(
-      FROM_HERE,
-      base::Bind(&ClientDeviceConnector::ReceiveInterfaceOnThread,
-                 base::Unretained(this), base::Passed(&dev_ops_info)));
 }
 
 ClientDeviceConnector::~ClientDeviceConnector() {
@@ -165,14 +159,33 @@ ClientDeviceConnector::~ClientDeviceConnector() {
   dev_thread_.Stop();
 }
 
-void ClientDeviceConnector::CloseOnThread(
-    base::OnceCallback<void(int32_t)> cb) {
-  dev_ops_->Close(std::move(cb));
+cros::mojom::Camera3DeviceOpsRequest
+ClientDeviceConnector::GetDeviceOpsRequest() {
+  cros::mojom::Camera3DeviceOpsRequest dev_ops_req;
+  dev_thread_.PostTaskSync(
+      FROM_HERE,
+      base::Bind(&ClientDeviceConnector::MakeDeviceOpsRequestOnThread,
+                 base::Unretained(this), &dev_ops_req));
+  return dev_ops_req;
 }
 
-void ClientDeviceConnector::ReceiveInterfaceOnThread(
-    cros::mojom::Camera3DeviceOpsPtrInfo dev_ops_info) {
-  dev_ops_ = mojo::MakeProxy(std::move(dev_ops_info));
+void ClientDeviceConnector::MakeDeviceOpsRequestOnThread(
+    cros::mojom::Camera3DeviceOpsRequest* dev_ops_req) {
+  dev_ops_.reset();
+  *dev_ops_req = mojo::MakeRequest(&dev_ops_);
+}
+
+void ClientDeviceConnector::CloseOnThread(
+    base::OnceCallback<void(int32_t)> cb) {
+  dev_ops_->Close(base::BindOnce(&ClientDeviceConnector::OnClosedOnThread,
+                                 base::Unretained(this), std::move(cb)));
+}
+
+void ClientDeviceConnector::OnClosedOnThread(
+    base::OnceCallback<void(int32_t)> cb, int32_t result) {
+  dev_ops_.reset();
+  mojo_callback_ops_.Close();
+  std::move(cb).Run(result);
 }
 
 int ClientDeviceConnector::Initialize(
