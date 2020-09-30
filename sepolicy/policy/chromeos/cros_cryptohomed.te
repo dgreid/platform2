@@ -20,6 +20,14 @@ filetrans_pattern(cros_cryptohomed, cros_home_shadow_uid_root, cros_home_shadow_
 filetrans_pattern(cros_cryptohomed, cros_home_shadow_uid_root, cros_home_shadow_uid_root_usb_bouncer, dir, "usb_bouncer");
 filetrans_pattern(cros_cryptohomed, cros_home_shadow_uid_root, cros_home_shadow_uid_root_authpolicyd, dir, "authpolicyd");
 
+# Ephemeral mount should have the same treatment as normal mount.
+filetrans_pattern({cros_init_scripts cros_cryptohomed}, cros_run, cros_run_cryptohome, dir, "cryptohome");
+filetrans_pattern({cros_init_scripts cros_cryptohomed}, cros_run_cryptohome, cros_ephemeral_mount, dir, "ephemeral_mount");
+
+# Note that this transition is currently ineffective as the ephemeral mount is a new filesystem.
+# Setting the new ephemeral mount to cros_home_shadow_uid is done by cryptohome at the moment.
+filetrans_pattern({cros_init_scripts cros_cryptohomed}, cros_ephemeral_mount, cros_home_shadow_uid, dir);
+
 dev_only(
 auditallow domain cros_home_shadow_uid_root:dir create;
 auditallow domain cros_home_shadow_uid_user:dir create;

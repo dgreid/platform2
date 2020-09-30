@@ -16,3 +16,8 @@ filetrans_pattern(cros_cryptohome_namespace_mounter, cros_home_shadow_uid_user, 
 filetrans_pattern(cros_cryptohome_namespace_mounter, cros_home_shadow_uid_root, cros_home_shadow_uid_root_chaps, dir, "chaps");
 filetrans_pattern(cros_cryptohome_namespace_mounter, cros_home_shadow_uid_root, cros_home_shadow_uid_root_usb_bouncer, dir, "usb_bouncer");
 filetrans_pattern(cros_cryptohome_namespace_mounter, cros_home_shadow_uid_root, cros_home_shadow_uid_root_authpolicyd, dir, "authpolicyd");
+
+# Ephemeral mount should be considered home directory as well.
+# Note that this transition is currently ineffective as the ephemeral mount is a new filesystem.
+# Setting the new ephemeral mount to cros_home_shadow_uid is done by cryptohome at the moment.
+filetrans_pattern(cros_cryptohome_namespace_mounter, cros_ephemeral_mount, cros_home_shadow_uid, dir);

@@ -253,6 +253,8 @@ include(sepolicy/file_contexts/sysfs_contexts)
 /run/lock                       u:object_r:cros_run_lock:s0
 /run/arc/debugfs                u:object_r:debugfs:s0
 /run/arc/sdcard(/.*)?           u:object_r:storage_file:s0
+/run/cryptohome                 u:object_r:cros_run_cryptohome:s0
+/run/cryptohome/ephemeral_mount u:object_r:cros_ephemeral_mount:s0
 /run/dbus                       u:object_r:cros_run_dbus:s0
 /run/dbus.pid                   u:object_r:cros_dbus_pid_file:s0
 /run/dbus/system_bus_socket     u:object_r:cros_system_bus_socket:s0

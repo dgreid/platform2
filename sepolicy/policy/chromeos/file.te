@@ -257,6 +257,8 @@ type cros_run, file_type, cros_file_type, cros_run_file_type;
 type cros_run_avahi_daemon, file_type, cros_file_type, cros_run_file_type;
 type cros_run_containers, file_type, cros_file_type, cros_run_file_type;
 type cros_run_crash_reporter, file_type, cros_file_type, cros_run_file_type;
+type cros_run_cryptohome, file_type, cros_file_type, cros_run_file_type;
+type cros_ephemeral_mount, file_type, cros_file_type, cros_run_file_type;
 type cros_run_dbus, file_type, cros_file_type, cros_run_file_type;
 type cros_run_frecon, file_type, cros_file_type, cros_run_file_type;
 type cros_run_ipsec, file_type, cros_file_type, cros_run_file_type;
