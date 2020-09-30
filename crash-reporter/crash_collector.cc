@@ -322,7 +322,8 @@ CrashCollector::CrashCollector(
     CrashSendingMode crash_sending_mode,
     const std::string& tag)
 
-    : lsb_release_(FilePath(paths::kEtcDirectory).Append(paths::kLsbRelease)),
+    : collector_name_(collector_name),
+      lsb_release_(FilePath(paths::kEtcDirectory).Append(paths::kLsbRelease)),
       system_crash_path_(paths::kSystemCrashDirectory),
       crash_reporter_state_path_(paths::kCrashReporterStateDirectory),
       log_config_path_(kDefaultLogConfig),
@@ -1444,10 +1445,13 @@ bool CrashCollector::ParseProcessTicksFromStat(base::StringPiece stat,
          base::StringToUint64(fields[kStartTimePos], ticks);
 }
 
-void CrashCollector::EnqueueCollectionErrorLog(ErrorType error_type) {
+void CrashCollector::EnqueueCollectionErrorLog(ErrorType error_type,
+                                               const std::string& orig_exec) {
   LOG(INFO) << "Writing conversion problems as separate crash report.";
 
   const std::string exec = "crash_reporter_failure";
+  // We use a distinct basename to avoid having to deal with any possible files
+  // that the collector may have started to write before failing.
   const std::string basename =
       FormatDumpBasename(exec, time(nullptr), getpid());
 
@@ -1455,6 +1459,10 @@ void CrashCollector::EnqueueCollectionErrorLog(ErrorType error_type) {
   // errors *pertaining to collection* rather than the original program.
   extra_metadata_.clear();
   AddCrashMetaUploadData(kCollectorNameKey, exec);
+  // Record the original collector name for analytics purposes. (e.g. to see
+  // if one collector fails more often than others.)
+  AddCrashMetaUploadData("orig_collector", collector_name_);
+  AddCrashMetaUploadData("orig_exec", orig_exec);
 
   FilePath crash_path;
   if (!GetCreatedCrashDirectoryByEuid(0, &crash_path, nullptr)) {

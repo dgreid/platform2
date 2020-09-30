@@ -45,7 +45,7 @@ bool ArcvmNativeCollector::HandleCrash(
                                       &out_of_capacity)) {
     LOG(ERROR) << "Failed to create or find crash directory";
     if (!out_of_capacity)
-      EnqueueCollectionErrorLog(kErrorSystemIssue);
+      EnqueueCollectionErrorLog(kErrorSystemIssue, crash_info.exec_name);
     return false;
   }
 

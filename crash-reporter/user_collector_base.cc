@@ -115,7 +115,7 @@ bool UserCollectorBase::HandleCrash(
         attrs.pid, exec, attrs.uid, attrs.gid, crash_time, &out_of_capacity);
     if (error_type != kErrorNone) {
       if (!out_of_capacity) {
-        EnqueueCollectionErrorLog(error_type);
+        EnqueueCollectionErrorLog(error_type, exec);
       }
       return false;
     }

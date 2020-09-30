@@ -397,6 +397,7 @@ class CrashCollector {
 
   IsFeedbackAllowedFunction is_feedback_allowed_function_;
   std::string extra_metadata_;
+  const std::string collector_name_;
   base::FilePath forced_crash_directory_;
   base::FilePath lsb_release_;
   base::FilePath system_crash_path_;
@@ -427,7 +428,10 @@ class CrashCollector {
 
   // Record information about a crash collector failure in a new crash report.
   // Clears metadata for existing report.
-  void EnqueueCollectionErrorLog(ErrorType error_type);
+  // orig_exec: Name of the executable in which we were processing a crash when
+  // the failure happened.
+  void EnqueueCollectionErrorLog(ErrorType error_type,
+                                 const std::string& orig_exec);
 
   // Logs a |message| detailing a crash, along with the |reason| for which the
   // collector handled or ignored it.

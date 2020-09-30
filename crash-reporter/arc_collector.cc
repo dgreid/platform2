@@ -134,7 +134,7 @@ bool ArcCollector::HandleJavaCrash(
   if (!CreateReportForJavaCrash(crash_type, build_property, map, exception_info,
                                 log, &out_of_capacity)) {
     if (!out_of_capacity) {
-      EnqueueCollectionErrorLog(kErrorSystemIssue);
+      EnqueueCollectionErrorLog(kErrorSystemIssue, exec);
     }
     return false;
   }

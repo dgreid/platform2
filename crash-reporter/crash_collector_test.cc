@@ -976,7 +976,7 @@ TEST_F(CrashCollectorTest, ErrorCollectionMetaData) {
   collector_.set_crash_directory_for_test(test_dir_);
 
   collector_.EnqueueCollectionErrorLog(
-      CrashCollector::kErrorUnsupported32BitCoreFile);
+      CrashCollector::kErrorUnsupported32BitCoreFile, "some_exec");
 
   base::FilePath meta_file_path;
   ASSERT_TRUE(test_util::DirectoryHasFileWithPattern(
@@ -989,6 +989,8 @@ TEST_F(CrashCollectorTest, ErrorCollectionMetaData) {
   EXPECT_TRUE(base::ReadFileToString(meta_file_path, &contents));
   std::string expected_meta = StringPrintf(
       "upload_var_collector=crash_reporter_failure\n"
+      "upload_var_orig_collector=mock\n"
+      "upload_var_orig_exec=some_exec\n"
       "sig=crash_reporter-user-collection_unsupported-32bit-core-file\n"
       "error_type=unsupported-32bit-core-file\n"
       "upload_file_pslog=%s\n"
