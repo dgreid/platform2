@@ -22,6 +22,7 @@
 #include <string.h>
 #include <sys/ioctl.h>
 #include <sys/mount.h>
+#include <sys/sendfile.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/statfs.h>
@@ -1003,6 +1004,58 @@ bool GetUserId(const std::string& user, uid_t* user_id, gid_t* group_id) {
     return false;  // no such user
   *user_id = user_info.pw_uid;
   *group_id = user_info.pw_gid;
+  return true;
+}
+
+bool SafeCopyFile(const base::FilePath& src_path,
+                  brillo::SafeFD src_parent,
+                  const base::FilePath& dest_path,
+                  brillo::SafeFD dest_parent,
+                  mode_t permissions,
+                  uid_t uid,
+                  gid_t gid) {
+  struct stat st;
+  ssize_t len, ret;
+
+  if (!src_parent.is_valid()) {
+    LOG(ERROR) << "Invalid src_parent fd";
+    return false;
+  }
+
+  if (!dest_parent.is_valid()) {
+    LOG(ERROR) << "Invalid dest_parent fd";
+    return false;
+  }
+
+  brillo::SafeFD root = brillo::SafeFD::Root().first;
+  brillo::SafeFD::SafeFDResult result(
+      src_parent.OpenExistingFile(src_path, O_RDONLY | O_CLOEXEC));
+  if (brillo::SafeFD::IsError(result.second)) {
+    LOG(ERROR) << "Failed to open src path " << src_path;
+    return false;
+  }
+  brillo::SafeFD src_fd(std::move(result.first));
+
+  brillo::SafeFD dest_fd(
+      dest_parent.MakeFile(dest_path, permissions, uid, gid).first);
+  if (!dest_fd.is_valid()) {
+    LOG(ERROR) << "Failed to open dest path " << dest_path;
+    return false;
+  }
+
+  fstat(src_fd.get(), &st);
+  len = st.st_size;
+
+  do {
+    ret = sendfile(dest_fd.get(), src_fd.get(), NULL, len);
+    if (ret == -1) {
+      PLOG(ERROR) << "Fail to copy file " << src_path << " to " << dest_path
+                  << errno;
+      return false;
+    }
+    len -= ret;
+  } while (len > 0 && ret > 0);
+
   return true;
 }
 

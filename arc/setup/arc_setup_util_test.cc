@@ -32,6 +32,7 @@
 #include <base/time/time.h>
 #include <base/timer/elapsed_timer.h>
 #include <brillo/file_utils.h>
+#include <brillo/files/safe_fd.h>
 #include <gtest/gtest.h>
 
 namespace arc {
@@ -928,6 +929,25 @@ TEST(ArcSetupUtil, TestGetUserId) {
     EXPECT_NE(655360, uid);
     EXPECT_NE(655360, gid);
   }
+}
+
+TEST(ArcSetupUtil, SafeCopyFile) {
+  base::ScopedTempDir temp_dir;
+  ASSERT_TRUE(temp_dir.CreateUniqueTempDir());
+  const base::FilePath src_file = temp_dir.GetPath().Append("srcfile");
+
+  // Create a new source file and write it.
+  ASSERT_TRUE(WriteToFile(src_file, 0755, "testabc"));
+
+  const base::FilePath dest_file =
+      temp_dir.GetPath().Append("dest").Append("destfile");
+  ASSERT_TRUE(SafeCopyFile(src_file, brillo::SafeFD::Root().first, dest_file,
+                           brillo::SafeFD::Root().first));
+
+  const base::FilePath symlink = temp_dir.GetPath().Append("symlink");
+  ASSERT_TRUE(base::CreateSymbolicLink(dest_file, symlink));
+  ASSERT_FALSE(SafeCopyFile(src_file, brillo::SafeFD::Root().first, symlink,
+                            brillo::SafeFD::Root().first));
 }
 
 }  // namespace arc

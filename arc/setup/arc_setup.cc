@@ -844,9 +844,15 @@ void ArcSetup::ApplyPerBoardConfigurationsInternal(
         base::FilePath(oem_mount_directory)
             .Append("etc")
             .Append(arc_paths_->media_profile_file);
-    EXIT_IF(!base::CopyFile(media_profile_xml, new_media_profile_xml));
-    EXIT_IF(
-        !Chown(kHostArcCameraUid, kHostArcCameraGid, new_media_profile_xml));
+    brillo::SafeFD dest_parent(
+        brillo::SafeFD::Root()
+            .first.OpenExistingDir(new_media_profile_xml.DirName())
+            .first);
+    (void)dest_parent.Unlink(new_media_profile_xml.BaseName().value());
+    EXIT_IF(!SafeCopyFile(
+        media_profile_xml, brillo::SafeFD::Root().first /*src_parent*/,
+        new_media_profile_xml.BaseName(), std::move(dest_parent),
+        0644 /*permissions*/, kHostArcCameraUid, kHostArcCameraGid));
   }
 
   base::FilePath hardware_features_xml("/etc/hardware_features.xml");
@@ -863,7 +869,15 @@ void ArcSetup::ApplyPerBoardConfigurationsInternal(
   const base::FilePath platform_xml_file =
       base::FilePath(oem_mount_directory)
           .Append(arc_paths_->platform_xml_file_relative);
-  EXIT_IF(!base::CopyFile(hardware_features_xml, platform_xml_file));
+  brillo::SafeFD dest_parent(
+      brillo::SafeFD::Root()
+          .first.OpenExistingDir(platform_xml_file.DirName())
+          .first);
+  (void)dest_parent.Unlink(platform_xml_file.BaseName().value());
+  EXIT_IF(!SafeCopyFile(hardware_features_xml,
+                        brillo::SafeFD::Root().first /*src_parent*/,
+                        platform_xml_file.BaseName(), std::move(dest_parent),
+                        0644 /*permissions*/));
 
   // TODO(chromium:1083652) Remove dynamic shell scripts once all overlays
   // are migrated to static XML config.

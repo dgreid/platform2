@@ -18,6 +18,7 @@
 #include <base/files/file_path.h>
 #include <base/files/scoped_file.h>
 #include <base/macros.h>
+#include <brillo/files/safe_fd.h>
 
 #include "arc/setup/android_sdk_version.h"
 
@@ -270,6 +271,16 @@ bool FindFingerprintAndSdkVersion(std::string* out_fingerprint,
 
 // Returns the user and group ids for a user.
 bool GetUserId(const std::string& user, uid_t* user_id, gid_t* group_id);
+
+// Make a copy of file |src_path| to |dest_path|.
+// Use SafeFD to validate there is no symlink in the path.
+bool SafeCopyFile(const base::FilePath& src_path,
+                  brillo::SafeFD src_parent,
+                  const base::FilePath& dest_path,
+                  brillo::SafeFD dest_parent,
+                  mode_t permissions = 0640,
+                  uid_t uid = getuid(),
+                  gid_t gid = getgid());
 
 }  // namespace arc
 
