@@ -43,22 +43,49 @@ int main(int argc, char* argv[]) {
 
     // Keep receiving clockid and returning the corresponding clock value.
     while (true) {
-      clockid_t clockid = 0;
-      if (!base::ReadFromFD(fd.get(), reinterpret_cast<char*>(&clockid),
-                            sizeof(clockid))) {
-        PLOG(ERROR) << "ReadFromFD failed.";
-        break;
+      // Maximum number of messages processed in a batch. Chosen arbitrarily.
+      constexpr int kNumElements = 16;
+      clockid_t message[kNumElements];
+
+      size_t num_bytes = 0;
+      bool read_success = false;
+      while (!read_success) {
+        auto buf = reinterpret_cast<char*>(message) + num_bytes;
+        size_t buf_remaining = sizeof(message) - num_bytes;
+        ssize_t res = HANDLE_EINTR(read(fd.get(), buf, buf_remaining));
+        if (res <= 0) {
+          LOG(ERROR) << "Read failed: num_bytes = " << num_bytes << " "
+                     << (res < 0 ? logging::SystemErrorCodeToString(
+                                       logging::GetLastSystemErrorCode())
+                                 : "incomplete message");
+          break;
+        }
+        num_bytes += res;
+        read_success = num_bytes % sizeof(message[0]) == 0;
       }
-      struct timespec ts = {};
-      if (clock_gettime(clockid, &ts) != 0) {
-        PLOG(ERROR) << "clock_gettime failed: clock_id = " << clockid;
+
+      if (!read_success)
         break;
+
+      const size_t num_requests = num_bytes / sizeof(message[0]);
+      int64_t response[kNumElements];
+      bool error = false;
+      for (size_t idx = 0; idx < num_requests; ++idx) {
+        struct timespec ts = {};
+        if (clock_gettime(message[idx], &ts) != 0) {
+          PLOG(ERROR) << "clock_gettime failed: clock_id = " << message[idx];
+          error = true;
+          break;
+        }
+        response[idx] =
+            ts.tv_sec * base::Time::kNanosecondsPerSecond + ts.tv_nsec;
       }
-      const int64_t result =
-          ts.tv_sec * base::Time::kNanosecondsPerSecond + ts.tv_nsec;
+      if (error)
+        break;
+
       if (!base::WriteFileDescriptor(fd.get(),
-                                     reinterpret_cast<const char*>(&result),
-                                     sizeof(result))) {
+                                     reinterpret_cast<const char*>(&response),
+                                     num_requests * sizeof(response[0]))) {
         PLOG(ERROR) << "WriteFileDescriptor failed.";
         break;
       }
