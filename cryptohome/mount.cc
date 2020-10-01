@@ -358,7 +358,8 @@ bool Mount::MountCryptohome(const Credentials& credentials,
   MountError local_mount_error = MOUNT_ERROR_NONE;
   if (!DecryptVaultKeyset(credentials, &vault_keyset, &local_mount_error)) {
     *mount_error = local_mount_error;
-    if (recreate_on_decrypt_fatal && local_mount_error == MOUNT_ERROR_FATAL) {
+    if (recreate_on_decrypt_fatal &&
+        local_mount_error == MOUNT_ERROR_VAULT_UNRECOVERABLE) {
       LOG(ERROR) << "cryptohome must be re-created because of fatal error.";
       if (!homedirs_->Remove(credentials.username())) {
         LOG(ERROR) << "Fatal decryption error, but unable to remove "
@@ -377,6 +378,14 @@ bool Mount::MountCryptohome(const Credentials& credentials,
         *mount_error = MOUNT_ERROR_RECREATED;
       }
       return local_result;
+    }
+
+    // Return VAULT_UNRECOVERABLE as FATAL for the higher level code doesn't
+    // know such an error.
+    // TODO(chromium:1140868, dlunev): extract the recreation behaviour to the
+    // higher layer and then return VAULT_UNRECOVERABLE directly.
+    if (*mount_error == MOUNT_ERROR_VAULT_UNRECOVERABLE) {
+      *mount_error = MOUNT_ERROR_FATAL;
     }
 
     LOG(ERROR) << "Failed to decrypt VK, error = " << local_mount_error;

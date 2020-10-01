@@ -149,7 +149,7 @@ bool HomeDirs::GetValidKeyset(const Credentials& creds,
   if (!GetVaultKeysets(obfuscated, &key_indices)) {
     LOG(WARNING) << "No valid keysets on disk for " << obfuscated;
     if (error)
-      *error = MOUNT_ERROR_FATAL;
+      *error = MOUNT_ERROR_VAULT_UNRECOVERABLE;
     return false;
   }
 
@@ -180,7 +180,7 @@ bool HomeDirs::GetValidKeyset(const Credentials& creds,
   MountError local_error = MOUNT_ERROR_NONE;
   if (!any_keyset_exists) {
     LOG(ERROR) << "No parsable keysets found for " << obfuscated;
-    local_error = MOUNT_ERROR_FATAL;
+    local_error = MOUNT_ERROR_VAULT_UNRECOVERABLE;
   } else if (last_crypto_error == CryptoError::CE_NONE) {
     // If we're searching by label, don't let a no-key-found become
     // MOUNT_ERROR_FATAL.  In the past, no parseable key was a fatal
@@ -198,7 +198,7 @@ bool HomeDirs::GetValidKeyset(const Credentials& creds,
     switch (last_crypto_error) {
       case CryptoError::CE_TPM_FATAL:
       case CryptoError::CE_OTHER_FATAL:
-        local_error = MOUNT_ERROR_FATAL;
+        local_error = MOUNT_ERROR_VAULT_UNRECOVERABLE;
         break;
       case CryptoError::CE_TPM_COMM_ERROR:
         local_error = MOUNT_ERROR_TPM_COMM_ERROR;
