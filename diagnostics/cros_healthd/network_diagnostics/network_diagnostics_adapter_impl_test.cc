@@ -82,6 +82,11 @@ class MockNetworkDiagnosticsRoutines final
               (network_diagnostics_ipc::NetworkDiagnosticsRoutines::
                    HttpFirewallCallback),
               (override));
+  MOCK_METHOD(void,
+              HttpsLatency,
+              (network_diagnostics_ipc::NetworkDiagnosticsRoutines::
+                   HttpsLatencyCallback),
+              (override));
 
   mojo::PendingRemote<network_diagnostics_ipc::NetworkDiagnosticsRoutines>
   pending_remote() {
