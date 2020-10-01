@@ -85,4 +85,9 @@ base::FilePath GetTestDataPath(const std::string& name) {
   return base::FilePath(getenv("SRC")).Append(name);
 }
 
+bool TouchFileHelper(const base::FilePath& file_name,
+                     base::Time modified_time) {
+  return base::TouchFile(file_name, modified_time, modified_time);
+}
+
 }  // namespace test_util

@@ -40,6 +40,7 @@
 #include <metrics/metrics_library_mock.h>
 #include <shill/dbus-proxy-mocks.h>
 
+#include "crash-reporter/crash_sender_base.h"
 #include "crash-reporter/crash_sender_paths.h"
 #include "crash-reporter/paths.h"
 #include "crash-reporter/test_util.h"
@@ -100,12 +101,6 @@ std::vector<base::Optional<base::Value>> ParseChromeUploadsLog(
 // Helper function for calling GetBasePartOfCrashFile() concisely for tests.
 std::string GetBasePartHelper(const std::string& file_name) {
   return GetBasePartOfCrashFile(base::FilePath(file_name)).value();
-}
-
-// Helper function for calling base::TouchFile() concisely for tests.
-bool TouchFileHelper(const base::FilePath& file_name,
-                     base::Time modified_time) {
-  return base::TouchFile(file_name, modified_time, modified_time);
 }
 
 // Creates lsb-release file with information about the build type.
@@ -287,7 +282,7 @@ class CrashSenderUtilTest : public testing::Test {
     if (!test_util::CreateFile(file_path, content))
       return false;
 
-    if (!TouchFileHelper(file_path, timestamp))
+    if (!test_util::TouchFileHelper(file_path, timestamp))
       return false;
 
     return true;
@@ -387,7 +382,7 @@ class CrashSenderUtilTest : public testing::Test {
     old_incomplete_meta_ = crash_directory.Append("old_incomplete.meta");
     if (!CreateFile(old_incomplete_meta_, "payload=good.log\n", now))
       return false;
-    if (!TouchFileHelper(old_incomplete_meta_, now - hour * 24))
+    if (!test_util::TouchFileHelper(old_incomplete_meta_, now - hour * 24))
       return false;
 
     // This should be ignored, even though the payload doesn't exist,
@@ -705,20 +700,25 @@ TEST_F(CrashSenderUtilTest, RemoveOrphanedCrashFiles) {
   // old1_log is old but comes with the meta file thus should not be removed.
   ASSERT_TRUE(test_util::CreateFile(old1_log, ""));
   ASSERT_TRUE(test_util::CreateFile(old1_meta, ""));
-  ASSERT_TRUE(TouchFileHelper(old1_log, now - base::TimeDelta::FromHours(24)));
-  ASSERT_TRUE(TouchFileHelper(old1_meta, now - base::TimeDelta::FromHours(24)));
+  ASSERT_TRUE(test_util::TouchFileHelper(old1_log,
+                                         now - base::TimeDelta::FromHours(24)));
+  ASSERT_TRUE(test_util::TouchFileHelper(old1_meta,
+                                         now - base::TimeDelta::FromHours(24)));
 
   // old2_log is old without the meta file thus should be removed.
   ASSERT_TRUE(test_util::CreateFile(old2_log, ""));
-  ASSERT_TRUE(TouchFileHelper(old2_log, now - base::TimeDelta::FromHours(24)));
+  ASSERT_TRUE(test_util::TouchFileHelper(old2_log,
+                                         now - base::TimeDelta::FromHours(24)));
 
   // old3_log is very old without the meta file thus should be removed.
   ASSERT_TRUE(test_util::CreateFile(old3_log, ""));
-  ASSERT_TRUE(TouchFileHelper(old3_log, now - base::TimeDelta::FromDays(365)));
+  ASSERT_TRUE(test_util::TouchFileHelper(old3_log,
+                                         now - base::TimeDelta::FromDays(365)));
 
   // old4_log is misnamed, but should be removed since it's old.
   ASSERT_TRUE(test_util::CreateFile(old4_log, ""));
-  ASSERT_TRUE(TouchFileHelper(old4_log, now - base::TimeDelta::FromHours(24)));
+  ASSERT_TRUE(test_util::TouchFileHelper(old4_log,
+                                         now - base::TimeDelta::FromHours(24)));
 
   RemoveOrphanedCrashFiles(crash_directory);
 
@@ -1160,11 +1160,16 @@ TEST_F(CrashSenderUtilTest, GetMetaFiles) {
 
   // Change timestamps so that meta_1 is the newest and metal_5 is the oldest.
   base::Time now = base::Time::Now();
-  ASSERT_TRUE(TouchFileHelper(meta_1, now - base::TimeDelta::FromHours(1)));
-  ASSERT_TRUE(TouchFileHelper(meta_2, now - base::TimeDelta::FromHours(2)));
-  ASSERT_TRUE(TouchFileHelper(meta_3, now - base::TimeDelta::FromHours(3)));
-  ASSERT_TRUE(TouchFileHelper(meta_4, now - base::TimeDelta::FromHours(4)));
-  ASSERT_TRUE(TouchFileHelper(metal_5, now - base::TimeDelta::FromHours(5)));
+  ASSERT_TRUE(
+      test_util::TouchFileHelper(meta_1, now - base::TimeDelta::FromHours(1)));
+  ASSERT_TRUE(
+      test_util::TouchFileHelper(meta_2, now - base::TimeDelta::FromHours(2)));
+  ASSERT_TRUE(
+      test_util::TouchFileHelper(meta_3, now - base::TimeDelta::FromHours(3)));
+  ASSERT_TRUE(
+      test_util::TouchFileHelper(meta_4, now - base::TimeDelta::FromHours(4)));
+  ASSERT_TRUE(
+      test_util::TouchFileHelper(metal_5, now - base::TimeDelta::FromHours(5)));
 
   std::vector<base::FilePath> meta_files = GetMetaFiles(crash_directory);
   ASSERT_EQ(4, meta_files.size());
@@ -1173,75 +1178,6 @@ TEST_F(CrashSenderUtilTest, GetMetaFiles) {
   EXPECT_EQ(meta_3.value(), meta_files[1].value());
   EXPECT_EQ(meta_2.value(), meta_files[2].value());
   EXPECT_EQ(meta_1.value(), meta_files[3].value());
-}
-
-TEST_F(CrashSenderUtilTest, GetBaseNameFromMetadata) {
-  brillo::KeyValueStore metadata;
-  metadata.LoadFromString("");
-  EXPECT_EQ("", GetBaseNameFromMetadata(metadata, "payload").value());
-
-  metadata.LoadFromString("payload=test.log\n");
-  EXPECT_EQ("test.log", GetBaseNameFromMetadata(metadata, "payload").value());
-
-  metadata.LoadFromString("payload=/foo/test.log\n");
-  EXPECT_EQ("test.log", GetBaseNameFromMetadata(metadata, "payload").value());
-}
-
-TEST_F(CrashSenderUtilTest, GetKindFromPayloadPath) {
-  EXPECT_EQ("", GetKindFromPayloadPath(base::FilePath()));
-  EXPECT_EQ("", GetKindFromPayloadPath(base::FilePath("foo")));
-  EXPECT_EQ("log", GetKindFromPayloadPath(base::FilePath("foo.log")));
-  // "dmp" is a special case.
-  EXPECT_EQ("minidump", GetKindFromPayloadPath(base::FilePath("foo.dmp")));
-
-  // ".gz" should be ignored.
-  EXPECT_EQ("log", GetKindFromPayloadPath(base::FilePath("foo.log.gz")));
-  EXPECT_EQ("minidump", GetKindFromPayloadPath(base::FilePath("foo.dmp.gz")));
-  EXPECT_EQ("", GetKindFromPayloadPath(base::FilePath("foo.gz")));
-
-  // The directory name should not afect the function.
-  EXPECT_EQ("minidump",
-            GetKindFromPayloadPath(base::FilePath("/1.2.3/foo.dmp.gz")));
-}
-
-TEST_F(CrashSenderUtilTest, ParseMetadata) {
-  brillo::KeyValueStore metadata;
-  std::string value;
-  EXPECT_TRUE(ParseMetadata("", &metadata));
-  EXPECT_TRUE(ParseMetadata("log=test.log\n", &metadata));
-  EXPECT_TRUE(ParseMetadata("#comment\nlog=test.log\n", &metadata));
-
-  EXPECT_TRUE(metadata.GetString("log", &value));
-  // This will clear the previouly parsed data.
-  EXPECT_TRUE(ParseMetadata("payload=test.dmp\n", &metadata));
-  EXPECT_FALSE(metadata.GetString("log", &value));
-
-  // Underscores, dashes, and periods should allowed, as Chrome uses them.
-  // https://crbug.com/821530.
-  EXPECT_TRUE(ParseMetadata("abcABC012_.-=test.log\n", &metadata));
-  EXPECT_TRUE(metadata.GetString("abcABC012_.-", &value));
-  EXPECT_EQ("test.log", value);
-
-  // Invalid metadata should be detected.
-  EXPECT_FALSE(ParseMetadata("=test.log\n", &metadata));
-  EXPECT_FALSE(ParseMetadata("***\n", &metadata));
-  EXPECT_FALSE(ParseMetadata("***=test.log\n", &metadata));
-  EXPECT_FALSE(ParseMetadata("log\n", &metadata));
-}
-
-TEST_F(CrashSenderUtilTest, IsCompleteMetadata) {
-  brillo::KeyValueStore metadata;
-  metadata.LoadFromString("");
-  EXPECT_FALSE(IsCompleteMetadata(metadata));
-
-  metadata.LoadFromString("log=test.log\n");
-  EXPECT_FALSE(IsCompleteMetadata(metadata));
-
-  metadata.LoadFromString("log=test.log\ndone=1\n");
-  EXPECT_TRUE(IsCompleteMetadata(metadata));
-
-  metadata.LoadFromString("done=1\n");
-  EXPECT_TRUE(IsCompleteMetadata(metadata));
 }
 
 TEST_F(CrashSenderUtilTest, IsTimestampNewEnough) {
@@ -1253,7 +1189,8 @@ TEST_F(CrashSenderUtilTest, IsTimestampNewEnough) {
 
   // Make it older than 24 hours.
   const base::Time now = base::Time::Now();
-  ASSERT_TRUE(TouchFileHelper(file, now - base::TimeDelta::FromHours(25)));
+  ASSERT_TRUE(
+      test_util::TouchFileHelper(file, now - base::TimeDelta::FromHours(25)));
 
   // Should be no longer new enough.
   ASSERT_FALSE(IsTimestampNewEnough(file));
@@ -1284,7 +1221,8 @@ TEST_F(CrashSenderUtilTest, IsBelowRateReachesMaxRate) {
   const base::Time now = base::Time::Now();
 
   // Make one of them older than 24 hours.
-  ASSERT_TRUE(TouchFileHelper(files[0], now - base::TimeDelta::FromHours(25)));
+  ASSERT_TRUE(test_util::TouchFileHelper(files[0],
+                                         now - base::TimeDelta::FromHours(25)));
 
   // It should now pass the rate limit.
   EXPECT_TRUE(IsBelowRate(timestamp_dir, kMaxRate, kMaxBytes));
@@ -1318,69 +1256,9 @@ TEST_F(CrashSenderUtilTest, IsBelowRateReachesMaxBytes) {
   std::vector<base::FilePath> files = GetFileNamesIn(timestamp_dir);
   ASSERT_EQ(5, files.size());
   const base::Time now = base::Time::Now();
-  ASSERT_TRUE(TouchFileHelper(files[0], now - base::TimeDelta::FromHours(25)));
+  ASSERT_TRUE(test_util::TouchFileHelper(files[0],
+                                         now - base::TimeDelta::FromHours(25)));
   EXPECT_TRUE(IsBelowRate(timestamp_dir, kMaxRate, kMaxBytes));
-}
-
-TEST_F(CrashSenderUtilTest, GetSleepTime) {
-  const base::FilePath meta_file = test_dir_.Append("test.meta");
-  base::TimeDelta max_spread_time = base::TimeDelta::FromSeconds(0);
-
-  // This should fail since meta_file does not exist.
-  base::TimeDelta sleep_time;
-  EXPECT_FALSE(
-      GetSleepTime(meta_file, max_spread_time, kMaxHoldOffTime, &sleep_time));
-
-  ASSERT_TRUE(test_util::CreateFile(meta_file, ""));
-
-  // sleep_time should be close enough to kMaxHoldOffTime since the meta file
-  // was just created, but 10% error is allowed just in case.
-  EXPECT_TRUE(
-      GetSleepTime(meta_file, max_spread_time, kMaxHoldOffTime, &sleep_time));
-  EXPECT_NEAR(kMaxHoldOffTime.InSecondsF(), sleep_time.InSecondsF(),
-              kMaxHoldOffTime.InSecondsF() * 0.1);
-
-  // Zero hold-off time and zero sleep time should always give zero sleep time.
-  EXPECT_TRUE(GetSleepTime(meta_file, max_spread_time,
-                           base::TimeDelta::FromSeconds(0) /*hold_off_time*/,
-                           &sleep_time));
-  EXPECT_EQ(base::TimeDelta::FromSeconds(0), sleep_time);
-
-  // Even if file is new, a zero hold-off time means we choose a time between
-  // 0 and max_spread_time.
-  ASSERT_TRUE(TouchFileHelper(meta_file, base::Time::Now()));
-  EXPECT_TRUE(GetSleepTime(
-      meta_file, base::TimeDelta::FromSeconds(60) /*max_spread_time*/,
-      base::TimeDelta::FromSeconds(0) /*hold_off_time*/, &sleep_time));
-  EXPECT_LE(base::TimeDelta::FromSeconds(0), sleep_time);
-  EXPECT_GE(base::TimeDelta::FromSeconds(60), sleep_time);
-
-  // Make the meta file old enough so hold-off time is not necessary.
-  const base::Time now = base::Time::Now();
-  ASSERT_TRUE(TouchFileHelper(meta_file, now - kMaxHoldOffTime));
-
-  // sleep_time should always be 0, since max_spread_time is set to 0.
-  EXPECT_TRUE(
-      GetSleepTime(meta_file, max_spread_time, kMaxHoldOffTime, &sleep_time));
-  EXPECT_EQ(base::TimeDelta::FromSeconds(0), sleep_time);
-
-  // sleep_time should be in range [0, 10].
-  max_spread_time = base::TimeDelta::FromSeconds(10);
-  EXPECT_TRUE(
-      GetSleepTime(meta_file, max_spread_time, kMaxHoldOffTime, &sleep_time));
-  EXPECT_LE(base::TimeDelta::FromSeconds(0), sleep_time);
-  EXPECT_GE(base::TimeDelta::FromSeconds(10), sleep_time);
-
-  // If the meta file is current, the minimum sleep time should be
-  // kMaxHoldOffTime but the maximum is still max_spread_time.
-  max_spread_time = base::TimeDelta::FromSeconds(60);
-  ASSERT_TRUE(TouchFileHelper(meta_file, base::Time::Now()));
-  EXPECT_TRUE(
-      GetSleepTime(meta_file, max_spread_time, kMaxHoldOffTime, &sleep_time));
-  // 0.9 in case we got preempted for 3 seconds between the file touch and the
-  // GetSleepTime().
-  EXPECT_LE(kMaxHoldOffTime * 0.9, sleep_time);
-  EXPECT_GE(base::TimeDelta::FromSeconds(60), sleep_time);
 }
 
 TEST_F(CrashSenderUtilTest, SortReports) {
@@ -2020,18 +1898,6 @@ TEST_F(CrashSenderUtilDeathTest, LockFileDiesIfFileIsLocked) {
                 std::make_unique<test_util::AdvancingClock>(), options);
   EXPECT_EXIT(sender.AcquireLockFileOrDie(), ExitedWithCode(EXIT_FAILURE),
               "Failed to acquire a lock");
-}
-
-TEST_F(CrashSenderUtilTest, CreateClientId) {
-  std::string client_id = GetClientId();
-  EXPECT_EQ(client_id.length(), 32);
-  // Make sure it returns the same one multiple times.
-  EXPECT_EQ(client_id, GetClientId());
-}
-
-TEST_F(CrashSenderUtilTest, RetrieveClientId) {
-  CreateClientIdFile();
-  EXPECT_EQ(kFakeClientId, GetClientId());
 }
 
 class IsNetworkOnlineTest : public CrashSenderUtilTest {

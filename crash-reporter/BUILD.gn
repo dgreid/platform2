@@ -158,7 +158,10 @@ proto_library("crash_sender_proto") {
 
 static_library("libcrash_sender") {
   all_dependent_configs = [ ":libcrash_sender_config" ]
-  sources = [ "crash_sender_util.cc" ]
+  sources = [
+    "crash_sender_base.cc",
+    "crash_sender_util.cc",
+  ]
   defines = [ "USE_CHROMELESS_TTY=${use.chromeless_tty}" ]
   deps = [ ":crash_sender_proto" ]
 }
@@ -307,6 +310,7 @@ if (use.test) {
       "crash_collector_test.h",
       "crash_reporter_failure_collector_test.cc",
       "crash_reporter_logs_test.cc",
+      "crash_sender_base_test.cc",
       "crash_sender_util_test.cc",
       "ec_collector_test.cc",
       "ephemeral_crash_collector_test.cc",
