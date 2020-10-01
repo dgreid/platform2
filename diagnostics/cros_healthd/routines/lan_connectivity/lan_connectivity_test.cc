@@ -40,11 +40,8 @@ class LanConnectivityRoutineTest : public testing::Test {
 
   void SetUp() override {
     ASSERT_TRUE(mock_context_.Initialize());
-    routine_ =
-        std::make_unique<LanConnectivityRoutine>(network_diagnostics_adapter());
+    routine_ = CreateLanConnectivityRoutine(network_diagnostics_adapter());
   }
-
-  DiagnosticRoutine* routine() { return routine_.get(); }
 
   mojo_ipc::RoutineUpdatePtr RunRoutineAndWaitForExit() {
     DCHECK(routine_);
@@ -66,12 +63,6 @@ class LanConnectivityRoutineTest : public testing::Test {
   MockContext mock_context_;
   std::unique_ptr<DiagnosticRoutine> routine_;
 };
-
-// Test that the LanConnectivity routine is in the ready state when created.
-TEST_F(LanConnectivityRoutineTest, RoutineReady) {
-  EXPECT_EQ(routine()->GetStatus(),
-            mojo_ipc::DiagnosticRoutineStatusEnum::kReady);
-}
 
 // Test that the LanConnectivity routine returns
 // cros_healthd::mojom::DiagnosticRoutineStatusEnum::kPassed when the the

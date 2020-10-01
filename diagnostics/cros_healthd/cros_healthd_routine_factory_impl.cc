@@ -15,8 +15,8 @@
 #include "diagnostics/cros_healthd/routines/cpu_stress/cpu_stress.h"
 #include "diagnostics/cros_healthd/routines/disk_read/disk_read.h"
 #include "diagnostics/cros_healthd/routines/floating_point/floating_point_accuracy.h"
-#include "diagnostics/cros_healthd/routines/memory/memory.h"
 #include "diagnostics/cros_healthd/routines/lan_connectivity/lan_connectivity.h"
+#include "diagnostics/cros_healthd/routines/memory/memory.h"
 #include "diagnostics/cros_healthd/routines/nvme_self_test/nvme_self_test.h"
 #include "diagnostics/cros_healthd/routines/nvme_wear_level/nvme_wear_level.h"
 #include "diagnostics/cros_healthd/routines/prime_search/prime_search.h"
@@ -139,8 +139,7 @@ CrosHealthdRoutineFactoryImpl::MakeMemoryRoutine() {
 
 std::unique_ptr<DiagnosticRoutine>
 CrosHealthdRoutineFactoryImpl::MakeLanConnectivityRoutine() {
-  return std::make_unique<LanConnectivityRoutine>(
-      context_->network_diagnostics_adapter());
+  return CreateLanConnectivityRoutine(context_->network_diagnostics_adapter());
 }
 
 std::unique_ptr<DiagnosticRoutine>
