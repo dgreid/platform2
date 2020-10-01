@@ -16,10 +16,17 @@ namespace diagnostics {
 extern const char kBatteryDirectoryPath[];
 
 // Files read from kBatteryDirectoryPath.
-extern const char kBatteryChargeNowFileName[];
 extern const char kBatteryChargeFullFileName[];
 extern const char kBatteryChargeFullDesignFileName[];
+extern const char kBatteryChargeNowFileName[];
+extern const char kBatteryCurrentNowFileName[];
+extern const char kBatteryCycleCountFileName[];
+extern const char kBatteryEnergyFullFileName[];
+extern const char kBatteryEnergyFullDesignFileName[];
+extern const char kBatteryManufacturerFileName[];
+extern const char kBatteryPresentFileName[];
 extern const char kBatteryStatusFileName[];
+extern const char kBatteryVoltageNowFileName[];
 
 // Value of the status file that indicates the battery is charging.
 extern const char kBatteryStatusChargingValue[];

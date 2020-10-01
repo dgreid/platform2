@@ -4,42 +4,38 @@
 
 #include "diagnostics/cros_healthd/routines/battery_health/battery_health.h"
 
-#include <utility>
+#include <cstdint>
+#include <string>
 
+#include <base/files/file_path.h>
 #include <base/files/file_util.h>
 #include <base/logging.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_util.h>
+#include <base/strings/stringprintf.h>
 
-#include "diagnostics/common/mojo_utils.h"
+#include "diagnostics/cros_healthd/routines/simple_routine.h"
+#include "diagnostics/cros_healthd/utils/battery_utils.h"
+#include "mojo/cros_healthd_diagnostics.mojom.h"
 
 namespace diagnostics {
-namespace mojo_ipc = ::chromeos::cros_healthd::mojom;
 
 namespace {
 
-uint32_t CalculateProgressPercent(
-    mojo_ipc::DiagnosticRoutineStatusEnum status) {
-  // Since the battery health routine cannot be cancelled, the progress percent
-  // can only be 0 or 100.
-  if (status == mojo_ipc::DiagnosticRoutineStatusEnum::kPassed ||
-      status == mojo_ipc::DiagnosticRoutineStatusEnum::kFailed)
-    return 100;
-  return 0;
-}
+namespace mojo_ipc = ::chromeos::cros_healthd::mojom;
 
 const struct {
   const char* battery_log_key;
   const char* relative_file_path;
 } kBatteryLogKeyPaths[] = {
-    {"Manufacturer", kBatteryHealthManufacturerPath},
-    {"Current Now", kBatteryHealthCurrentNowPath},
-    {"Present", kBatteryHealthPresentPath},
-    {"Status", kBatteryHealthStatusPath},
-    {"Voltage Now", kBatteryHealthVoltageNowPath},
-    {"Charge Full", kBatteryHealthChargeFullPath},
-    {"Charge Full Design", kBatteryHealthChargeFullDesignPath},
-    {"Charge Now", kBatteryHealthChargeNowPath}};
+    {"Manufacturer", kBatteryManufacturerFileName},
+    {"Current Now", kBatteryCurrentNowFileName},
+    {"Present", kBatteryPresentFileName},
+    {"Status", kBatteryStatusFileName},
+    {"Voltage Now", kBatteryVoltageNowFileName},
+    {"Charge Full", kBatteryChargeFullFileName},
+    {"Charge Full Design", kBatteryChargeFullDesignFileName},
+    {"Charge Now", kBatteryChargeNowFileName}};
 
 bool TryReadFileToString(const base::FilePath& absolute_file_path,
                          std::string* file_contents) {
@@ -68,20 +64,148 @@ bool TryReadFileToUint(const base::FilePath& absolute_file_path,
   return true;
 }
 
-}  // namespace
+bool ReadBatteryCapacities(const base::FilePath& root_dir,
+                           uint32_t* capacity,
+                           uint32_t* design_capacity) {
+  DCHECK(capacity);
+  DCHECK(design_capacity);
 
-const char kBatterySysfsPath[] = "sys/class/power_supply/BAT0/";
-const char kBatteryHealthChargeFullPath[] = "charge_full";
-const char kBatteryHealthChargeFullDesignPath[] = "charge_full_design";
-const char kBatteryHealthEnergyFullPath[] = "energy_full";
-const char kBatteryHealthEnergyFullDesignPath[] = "energy_full_design";
-const char kBatteryHealthCycleCountPath[] = "cycle_count";
-const char kBatteryHealthManufacturerPath[] = "manufacturer";
-const char kBatteryHealthCurrentNowPath[] = "current_now";
-const char kBatteryHealthPresentPath[] = "present";
-const char kBatteryHealthStatusPath[] = "status";
-const char kBatteryHealthVoltageNowPath[] = "voltage_now";
-const char kBatteryHealthChargeNowPath[] = "charge_now";
+  base::FilePath absolute_charge_full_path(
+      root_dir.AppendASCII(kBatteryDirectoryPath)
+          .AppendASCII(kBatteryChargeFullFileName));
+  base::FilePath absolute_charge_full_design_path(
+      root_dir.AppendASCII(kBatteryDirectoryPath)
+          .AppendASCII(kBatteryChargeFullDesignFileName));
+  if (!TryReadFileToUint(absolute_charge_full_path, capacity) ||
+      !TryReadFileToUint(absolute_charge_full_design_path, design_capacity)) {
+    // No charge values, check for energy-reporting batteries.
+    base::FilePath absolute_energy_full_path(
+        root_dir.AppendASCII(kBatteryDirectoryPath)
+            .AppendASCII(kBatteryEnergyFullFileName));
+    base::FilePath absolute_energy_full_design_path(
+        root_dir.AppendASCII(kBatteryDirectoryPath)
+            .AppendASCII(kBatteryEnergyFullDesignFileName));
+    if (!TryReadFileToUint(absolute_energy_full_path, capacity) ||
+        !TryReadFileToUint(absolute_energy_full_design_path, design_capacity)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+bool ReadCycleCount(const base::FilePath& root_dir, uint32_t* cycle_count) {
+  DCHECK(cycle_count);
+
+  base::FilePath absolute_cycle_count_path(
+      root_dir.AppendASCII(kBatteryDirectoryPath)
+          .AppendASCII(kBatteryCycleCountFileName));
+  if (!TryReadFileToUint(absolute_cycle_count_path, cycle_count))
+    return false;
+
+  return true;
+}
+
+bool TestWearPercentage(const base::FilePath& root_dir,
+                        uint32_t percent_battery_wear_allowed,
+                        mojo_ipc::DiagnosticRoutineStatusEnum* status,
+                        std::string* status_message,
+                        std::string* output) {
+  uint32_t capacity;
+  uint32_t design_capacity;
+
+  if (percent_battery_wear_allowed > 100) {
+    *status_message = kBatteryHealthInvalidParametersMessage;
+    *status = mojo_ipc::DiagnosticRoutineStatusEnum::kError;
+    return false;
+  }
+
+  if (!ReadBatteryCapacities(root_dir, &capacity, &design_capacity) ||
+      capacity < 0 || design_capacity < 0) {
+    *status_message = kBatteryHealthFailedCalculatingWearPercentageMessage;
+    *status = mojo_ipc::DiagnosticRoutineStatusEnum::kError;
+    return false;
+  }
+
+  // Cap the wear percentage at 0. There are cases where the capacity can be
+  // higher than the design capacity, due to variance in batteries or vendors
+  // setting conservative design capacities.
+  uint32_t wear_percentage =
+      capacity > design_capacity ? 0 : 100 - capacity * 100 / design_capacity;
+
+  *output += "Wear Percentage: " + std::to_string(wear_percentage) + "\n";
+  if (wear_percentage > percent_battery_wear_allowed) {
+    *status_message = kBatteryHealthExcessiveWearMessage;
+    *status = mojo_ipc::DiagnosticRoutineStatusEnum::kFailed;
+    return false;
+  }
+
+  return true;
+}
+
+bool TestCycleCount(const base::FilePath& root_dir,
+                    uint32_t maximum_cycle_count,
+                    mojo_ipc::DiagnosticRoutineStatusEnum* status,
+                    std::string* status_message,
+                    std::string* output) {
+  uint32_t cycle_count;
+  if (!ReadCycleCount(root_dir, &cycle_count) || cycle_count < 0) {
+    *status_message = kBatteryHealthFailedReadingCycleCountMessage;
+    *status = mojo_ipc::DiagnosticRoutineStatusEnum::kError;
+    return false;
+  }
+
+  *output += "Cycle Count: " + std::to_string(cycle_count) + "\n";
+  if (cycle_count > maximum_cycle_count) {
+    *status_message = kBatteryHealthExcessiveCycleCountMessage;
+    *status = mojo_ipc::DiagnosticRoutineStatusEnum::kFailed;
+    return false;
+  }
+
+  return true;
+}
+
+void RunBatteryHealthRoutine(Context* const context,
+                             uint32_t maximum_cycle_count,
+                             uint32_t percent_battery_wear_allowed,
+                             mojo_ipc::DiagnosticRoutineStatusEnum* status,
+                             std::string* status_message,
+                             std::string* output) {
+  DCHECK(context);
+  DCHECK(status);
+  DCHECK(status_message);
+  DCHECK(output);
+
+  const base::FilePath root_dir = context->root_dir();
+  for (const auto& item : kBatteryLogKeyPaths) {
+    std::string file_contents;
+    base::FilePath absolute_file_path(
+        root_dir.AppendASCII(kBatteryDirectoryPath)
+            .AppendASCII(item.relative_file_path));
+    if (!TryReadFileToString(absolute_file_path, &file_contents)) {
+      // Failing to read and log a file should not cause the routine to fail,
+      // but we should record the event.
+      PLOG(WARNING) << "Battery attribute unavailable: "
+                    << item.battery_log_key;
+      continue;
+    }
+
+    *output += base::StringPrintf("%s: %s\n", item.battery_log_key,
+                                  file_contents.c_str());
+  }
+
+  if (!TestWearPercentage(root_dir, percent_battery_wear_allowed, status,
+                          status_message, output) ||
+      !TestCycleCount(root_dir, maximum_cycle_count, status, status_message,
+                      output)) {
+    return;
+  }
+
+  *status_message = kBatteryHealthRoutinePassedMessage;
+  *status = mojo_ipc::DiagnosticRoutineStatusEnum::kPassed;
+}
+
+}  // namespace
 
 const char kBatteryHealthInvalidParametersMessage[] =
     "Invalid battery health routine parameters.";
@@ -94,168 +218,13 @@ const char kBatteryHealthExcessiveCycleCountMessage[] =
     "Battery cycle count is too high.";
 const char kBatteryHealthRoutinePassedMessage[] = "Routine passed.";
 
-BatteryHealthRoutine::BatteryHealthRoutine(
-    uint32_t maximum_cycle_count, uint32_t percent_battery_wear_allowed)
-    : status_(mojo_ipc::DiagnosticRoutineStatusEnum::kReady),
-      maximum_cycle_count_(maximum_cycle_count),
-      percent_battery_wear_allowed_(percent_battery_wear_allowed) {}
-
-BatteryHealthRoutine::~BatteryHealthRoutine() = default;
-
-void BatteryHealthRoutine::Start() {
-  DCHECK_EQ(status_, mojo_ipc::DiagnosticRoutineStatusEnum::kReady);
-  if (!RunBatteryHealthRoutine())
-    LOG(ERROR) << "Routine failed: " << status_message_;
-}
-
-// The battery health routine can only be started.
-void BatteryHealthRoutine::Resume() {}
-void BatteryHealthRoutine::Cancel() {}
-
-void BatteryHealthRoutine::PopulateStatusUpdate(
-    mojo_ipc::RoutineUpdate* response, bool include_output) {
-  // Because the battery health routine is non-interactive, we will never
-  // include a user message.
-  mojo_ipc::NonInteractiveRoutineUpdate update;
-  update.status = status_;
-  update.status_message = status_message_;
-
-  response->routine_update_union->set_noninteractive_update(update.Clone());
-  response->progress_percent = CalculateProgressPercent(status_);
-
-  if (include_output) {
-    std::string output;
-    for (const auto& key_val : battery_health_log_)
-      output += key_val.first + ": " + key_val.second + "\n";
-    response->output =
-        CreateReadOnlySharedMemoryRegionMojoHandle(base::StringPiece(output));
-  }
-}
-
-mojo_ipc::DiagnosticRoutineStatusEnum BatteryHealthRoutine::GetStatus() {
-  return status_;
-}
-
-void BatteryHealthRoutine::set_root_dir_for_testing(
-    const base::FilePath& root_dir) {
-  root_dir_ = root_dir;
-}
-
-bool BatteryHealthRoutine::RunBatteryHealthRoutine() {
-  for (const auto& item : kBatteryLogKeyPaths) {
-    std::string file_contents;
-    base::FilePath absolute_file_path(
-        root_dir_.AppendASCII(kBatterySysfsPath)
-            .AppendASCII(item.relative_file_path));
-    if (!TryReadFileToString(absolute_file_path, &file_contents)) {
-      // Failing to read and log a file should not cause the routine to fail,
-      // but we should record the event.
-      PLOG(WARNING) << "Battery attribute unavailable: "
-                    << item.battery_log_key;
-      continue;
-    }
-
-    battery_health_log_[item.battery_log_key] = file_contents;
-  }
-
-  if (!TestWearPercentage() || !TestCycleCount())
-    return false;
-
-  status_message_ = kBatteryHealthRoutinePassedMessage;
-  status_ = mojo_ipc::DiagnosticRoutineStatusEnum::kPassed;
-  return true;
-}
-
-bool BatteryHealthRoutine::ReadBatteryCapacities(uint32_t* capacity,
-                                                 uint32_t* design_capacity) {
-  DCHECK(capacity);
-  DCHECK(design_capacity);
-
-  base::FilePath absolute_charge_full_path(
-      root_dir_.AppendASCII(kBatterySysfsPath)
-          .AppendASCII(kBatteryHealthChargeFullPath));
-  base::FilePath absolute_charge_full_design_path(
-      root_dir_.AppendASCII(kBatterySysfsPath)
-          .AppendASCII(kBatteryHealthChargeFullDesignPath));
-  if (!TryReadFileToUint(absolute_charge_full_path, capacity) ||
-      !TryReadFileToUint(absolute_charge_full_design_path, design_capacity)) {
-    // No charge values, check for energy-reporting batteries.
-    base::FilePath absolute_energy_full_path(
-        root_dir_.AppendASCII(kBatterySysfsPath)
-            .AppendASCII(kBatteryHealthEnergyFullPath));
-    base::FilePath absolute_energy_full_design_path(
-        root_dir_.AppendASCII(kBatterySysfsPath)
-            .AppendASCII(kBatteryHealthEnergyFullDesignPath));
-    if (!TryReadFileToUint(absolute_energy_full_path, capacity) ||
-        !TryReadFileToUint(absolute_energy_full_design_path, design_capacity)) {
-      return false;
-    }
-  }
-
-  return true;
-}
-
-bool BatteryHealthRoutine::ReadCycleCount(uint32_t* cycle_count) {
-  DCHECK(cycle_count);
-
-  base::FilePath absolute_cycle_count_path(
-      root_dir_.AppendASCII(kBatterySysfsPath)
-          .AppendASCII(kBatteryHealthCycleCountPath));
-  if (!TryReadFileToUint(absolute_cycle_count_path, cycle_count))
-    return false;
-
-  return true;
-}
-
-bool BatteryHealthRoutine::TestWearPercentage() {
-  uint32_t capacity;
-  uint32_t design_capacity;
-
-  if (percent_battery_wear_allowed_ > 100) {
-    status_message_ = kBatteryHealthInvalidParametersMessage;
-    status_ = mojo_ipc::DiagnosticRoutineStatusEnum::kError;
-    return false;
-  }
-
-  if (!ReadBatteryCapacities(&capacity, &design_capacity) || capacity < 0 ||
-      design_capacity < 0) {
-    status_message_ = kBatteryHealthFailedCalculatingWearPercentageMessage;
-    status_ = mojo_ipc::DiagnosticRoutineStatusEnum::kError;
-    return false;
-  }
-
-  // Cap the wear percentage at 0. There are cases where the capacity can be
-  // higher than the design capacity, due to variance in batteries or vendors
-  // setting conservative design capacities.
-  uint32_t wear_percentage =
-      capacity > design_capacity ? 0 : 100 - capacity * 100 / design_capacity;
-
-  battery_health_log_["Wear Percentage"] = std::to_string(wear_percentage);
-  if (wear_percentage > percent_battery_wear_allowed_) {
-    status_message_ = kBatteryHealthExcessiveWearMessage;
-    status_ = mojo_ipc::DiagnosticRoutineStatusEnum::kFailed;
-    return false;
-  }
-
-  return true;
-}
-
-bool BatteryHealthRoutine::TestCycleCount() {
-  uint32_t cycle_count;
-  if (!ReadCycleCount(&cycle_count) || cycle_count < 0) {
-    status_message_ = kBatteryHealthFailedReadingCycleCountMessage;
-    status_ = mojo_ipc::DiagnosticRoutineStatusEnum::kError;
-    return false;
-  }
-
-  battery_health_log_["Cycle Count"] = std::to_string(cycle_count);
-  if (cycle_count > maximum_cycle_count_) {
-    status_message_ = kBatteryHealthExcessiveCycleCountMessage;
-    status_ = mojo_ipc::DiagnosticRoutineStatusEnum::kFailed;
-    return false;
-  }
-
-  return true;
+std::unique_ptr<DiagnosticRoutine> CreateBatteryHealthRoutine(
+    Context* const context,
+    uint32_t maximum_cycle_count,
+    uint32_t percent_battery_wear_allowed) {
+  return std::make_unique<SimpleRoutine>(
+      base::BindOnce(&RunBatteryHealthRoutine, context, maximum_cycle_count,
+                     percent_battery_wear_allowed));
 }
 
 }  // namespace diagnostics

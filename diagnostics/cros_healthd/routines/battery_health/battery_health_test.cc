@@ -17,6 +17,8 @@
 #include "diagnostics/common/mojo_utils.h"
 #include "diagnostics/cros_healthd/routines/battery_health/battery_health.h"
 #include "diagnostics/cros_healthd/routines/routine_test_utils.h"
+#include "diagnostics/cros_healthd/system/mock_context.h"
+#include "diagnostics/cros_healthd/utils/battery_utils.h"
 #include "mojo/cros_healthd_diagnostics.mojom.h"
 
 namespace diagnostics {
@@ -39,8 +41,6 @@ constexpr int kFakePresent = 1;
 constexpr char kFakeStatus[] = "Full";
 constexpr int kFakeVoltageNow = 90872;
 constexpr int kFakeChargeNow = 98123;
-constexpr char kFullCycleCountPath[] =
-    "sys/class/power_supply/BAT0/cycle_count";
 
 std::string ConstructOutput() {
   std::string output;
@@ -69,18 +69,15 @@ class BatteryHealthRoutineTest : public testing::Test {
   BatteryHealthRoutineTest(const BatteryHealthRoutineTest&) = delete;
   BatteryHealthRoutineTest& operator=(const BatteryHealthRoutineTest&) = delete;
 
-  void SetUp() override { ASSERT_TRUE(temp_dir_.CreateUniqueTempDir()); }
-
-  DiagnosticRoutine* routine() { return routine_.get(); }
+  void SetUp() override { ASSERT_TRUE(mock_context_.Initialize()); }
 
   mojo_ipc::RoutineUpdate* update() { return &update_; }
 
   void CreateRoutine(
       uint32_t maximum_cycle_count = kMaximumCycleCount,
       uint32_t percent_battery_wear_allowed = kPercentBatteryWearAllowed) {
-    routine_ = std::make_unique<BatteryHealthRoutine>(
-        maximum_cycle_count, percent_battery_wear_allowed);
-    routine_->set_root_dir_for_testing(temp_dir_.GetPath());
+    routine_ = CreateBatteryHealthRoutine(&mock_context_, maximum_cycle_count,
+                                          percent_battery_wear_allowed);
   }
 
   void RunRoutineAndWaitForExit() {
@@ -93,14 +90,14 @@ class BatteryHealthRoutineTest : public testing::Test {
   }
 
   void WriteFilesReadByLog() {
-    WriteFileContents(kBatteryHealthManufacturerPath, kFakeManufacturer);
-    WriteFileContents(kBatteryHealthCurrentNowPath,
+    WriteFileContents(kBatteryManufacturerFileName, kFakeManufacturer);
+    WriteFileContents(kBatteryCurrentNowFileName,
                       std::to_string(kFakeCurrentNow));
-    WriteFileContents(kBatteryHealthPresentPath, std::to_string(kFakePresent));
-    WriteFileContents(kBatteryHealthStatusPath, kFakeStatus);
-    WriteFileContents(kBatteryHealthVoltageNowPath,
+    WriteFileContents(kBatteryPresentFileName, std::to_string(kFakePresent));
+    WriteFileContents(kBatteryStatusFileName, kFakeStatus);
+    WriteFileContents(kBatteryVoltageNowFileName,
                       std::to_string(kFakeVoltageNow));
-    WriteFileContents(kBatteryHealthChargeNowPath,
+    WriteFileContents(kBatteryChargeNowFileName,
                       std::to_string(kFakeChargeNow));
   }
 
@@ -108,16 +105,18 @@ class BatteryHealthRoutineTest : public testing::Test {
                          const std::string& file_contents) {
     EXPECT_TRUE(
         WriteFileAndCreateParentDirs(temp_dir_path()
-                                         .AppendASCII(kBatterySysfsPath)
+                                         .AppendASCII(kBatteryDirectoryPath)
                                          .AppendASCII(relative_file_path),
                                      file_contents));
   }
 
-  const base::FilePath& temp_dir_path() const { return temp_dir_.GetPath(); }
+  const base::FilePath& temp_dir_path() const {
+    return mock_context_.root_dir();
+  }
 
  private:
-  base::ScopedTempDir temp_dir_;
-  std::unique_ptr<BatteryHealthRoutine> routine_;
+  MockContext mock_context_;
+  std::unique_ptr<DiagnosticRoutine> routine_;
   mojo_ipc::RoutineUpdate update_{0, mojo::ScopedHandle(),
                                   mojo_ipc::RoutineUpdateUnion::New()};
 };
@@ -125,11 +124,11 @@ class BatteryHealthRoutineTest : public testing::Test {
 // Test that the battery health routine fails if the cycle count is too high.
 TEST_F(BatteryHealthRoutineTest, HighCycleCount) {
   CreateRoutine();
-  WriteFileContents(kBatteryHealthChargeFullPath,
+  WriteFileContents(kBatteryChargeFullFileName,
                     std::to_string(kHighChargeFull));
-  WriteFileContents(kBatteryHealthChargeFullDesignPath,
+  WriteFileContents(kBatteryChargeFullDesignFileName,
                     std::to_string(kFakeBatteryChargeFullDesign));
-  WriteFileContents(kBatteryHealthCycleCountPath,
+  WriteFileContents(kBatteryCycleCountFileName,
                     std::to_string(kHighCycleCount));
   RunRoutineAndWaitForExit();
   VerifyNonInteractiveUpdate(update()->routine_update_union,
@@ -140,9 +139,9 @@ TEST_F(BatteryHealthRoutineTest, HighCycleCount) {
 // Test that the battery health routine fails if cycle_count is not present.
 TEST_F(BatteryHealthRoutineTest, NoCycleCount) {
   CreateRoutine();
-  WriteFileContents(kBatteryHealthChargeFullPath,
+  WriteFileContents(kBatteryChargeFullFileName,
                     std::to_string(kHighChargeFull));
-  WriteFileContents(kBatteryHealthChargeFullDesignPath,
+  WriteFileContents(kBatteryChargeFullDesignFileName,
                     std::to_string(kFakeBatteryChargeFullDesign));
   RunRoutineAndWaitForExit();
   VerifyNonInteractiveUpdate(update()->routine_update_union,
@@ -154,12 +153,10 @@ TEST_F(BatteryHealthRoutineTest, NoCycleCount) {
 // high.
 TEST_F(BatteryHealthRoutineTest, HighWearPercentage) {
   CreateRoutine();
-  WriteFileContents(kBatteryHealthChargeFullPath,
-                    std::to_string(kLowChargeFull));
-  WriteFileContents(kBatteryHealthChargeFullDesignPath,
+  WriteFileContents(kBatteryChargeFullFileName, std::to_string(kLowChargeFull));
+  WriteFileContents(kBatteryChargeFullDesignFileName,
                     std::to_string(kFakeBatteryChargeFullDesign));
-  WriteFileContents(kBatteryHealthCycleCountPath,
-                    std::to_string(kLowCycleCount));
+  WriteFileContents(kBatteryCycleCountFileName, std::to_string(kLowCycleCount));
   RunRoutineAndWaitForExit();
   VerifyNonInteractiveUpdate(update()->routine_update_union,
                              mojo_ipc::DiagnosticRoutineStatusEnum::kFailed,
@@ -170,8 +167,7 @@ TEST_F(BatteryHealthRoutineTest, HighWearPercentage) {
 // energy_full are present.
 TEST_F(BatteryHealthRoutineTest, NoWearPercentage) {
   CreateRoutine();
-  WriteFileContents(kBatteryHealthCycleCountPath,
-                    std::to_string(kLowCycleCount));
+  WriteFileContents(kBatteryCycleCountFileName, std::to_string(kLowCycleCount));
   RunRoutineAndWaitForExit();
   VerifyNonInteractiveUpdate(
       update()->routine_update_union,
@@ -183,12 +179,11 @@ TEST_F(BatteryHealthRoutineTest, NoWearPercentage) {
 // percentage are within acceptable limits.
 TEST_F(BatteryHealthRoutineTest, GoodParameters) {
   CreateRoutine();
-  WriteFileContents(kBatteryHealthChargeFullPath,
+  WriteFileContents(kBatteryChargeFullFileName,
                     std::to_string(kHighChargeFull));
-  WriteFileContents(kBatteryHealthChargeFullDesignPath,
+  WriteFileContents(kBatteryChargeFullDesignFileName,
                     std::to_string(kFakeBatteryChargeFullDesign));
-  WriteFileContents(kBatteryHealthCycleCountPath,
-                    std::to_string(kLowCycleCount));
+  WriteFileContents(kBatteryCycleCountFileName, std::to_string(kLowCycleCount));
   WriteFilesReadByLog();
   RunRoutineAndWaitForExit();
   VerifyNonInteractiveUpdate(update()->routine_update_union,
@@ -213,12 +208,11 @@ TEST_F(BatteryHealthRoutineTest, GoodParameters) {
 // Test that the battery health routine will find energy-reporting batteries.
 TEST_F(BatteryHealthRoutineTest, EnergyReportingBattery) {
   CreateRoutine();
-  WriteFileContents(kBatteryHealthEnergyFullPath,
+  WriteFileContents(kBatteryEnergyFullFileName,
                     std::to_string(kHighChargeFull));
-  WriteFileContents(kBatteryHealthEnergyFullDesignPath,
+  WriteFileContents(kBatteryEnergyFullDesignFileName,
                     std::to_string(kFakeBatteryChargeFullDesign));
-  WriteFileContents(kBatteryHealthCycleCountPath,
-                    std::to_string(kLowCycleCount));
+  WriteFileContents(kBatteryCycleCountFileName, std::to_string(kLowCycleCount));
   RunRoutineAndWaitForExit();
   VerifyNonInteractiveUpdate(update()->routine_update_union,
                              mojo_ipc::DiagnosticRoutineStatusEnum::kPassed,
@@ -229,13 +223,15 @@ TEST_F(BatteryHealthRoutineTest, EnergyReportingBattery) {
 // cycle_count, relative to the temporary test directory.
 TEST_F(BatteryHealthRoutineTest, FullCycleCountPath) {
   CreateRoutine();
-  WriteFileContents(kBatteryHealthChargeFullPath,
+  WriteFileContents(kBatteryChargeFullFileName,
                     std::to_string(kHighChargeFull));
-  WriteFileContents(kBatteryHealthChargeFullDesignPath,
+  WriteFileContents(kBatteryChargeFullDesignFileName,
                     std::to_string(kFakeBatteryChargeFullDesign));
-  EXPECT_TRUE(WriteFileAndCreateParentDirs(
-      temp_dir_path().AppendASCII(kFullCycleCountPath),
-      std::to_string(kLowCycleCount)));
+  EXPECT_TRUE(
+      WriteFileAndCreateParentDirs(temp_dir_path()
+                                       .AppendASCII(kBatteryDirectoryPath)
+                                       .AppendASCII(kBatteryCycleCountFileName),
+                                   std::to_string(kLowCycleCount)));
   RunRoutineAndWaitForExit();
   VerifyNonInteractiveUpdate(update()->routine_update_union,
                              mojo_ipc::DiagnosticRoutineStatusEnum::kPassed,
@@ -262,13 +258,15 @@ TEST_F(BatteryHealthRoutineTest, CapacityExceedsDesignCapacity) {
   // Set the capacity to anything higher than the design capacity.
   constexpr int kHigherCapacity = 100;
   constexpr int kLowerDesignCapacity = 20;
-  WriteFileContents(kBatteryHealthChargeFullPath,
+  WriteFileContents(kBatteryChargeFullFileName,
                     std::to_string(kHigherCapacity));
-  WriteFileContents(kBatteryHealthChargeFullDesignPath,
+  WriteFileContents(kBatteryChargeFullDesignFileName,
                     std::to_string(kLowerDesignCapacity));
-  EXPECT_TRUE(WriteFileAndCreateParentDirs(
-      temp_dir_path().AppendASCII(kFullCycleCountPath),
-      std::to_string(kLowCycleCount)));
+  EXPECT_TRUE(
+      WriteFileAndCreateParentDirs(temp_dir_path()
+                                       .AppendASCII(kBatteryDirectoryPath)
+                                       .AppendASCII(kBatteryCycleCountFileName),
+                                   std::to_string(kLowCycleCount)));
   RunRoutineAndWaitForExit();
   VerifyNonInteractiveUpdate(update()->routine_update_union,
                              mojo_ipc::DiagnosticRoutineStatusEnum::kPassed,
@@ -279,36 +277,20 @@ TEST_F(BatteryHealthRoutineTest, CapacityExceedsDesignCapacity) {
 // read.
 TEST_F(BatteryHealthRoutineTest, InvalidFileContents) {
   CreateRoutine();
-  WriteFileContents(kBatteryHealthChargeFullPath,
+  WriteFileContents(kBatteryChargeFullFileName,
                     std::to_string(kHighChargeFull));
-  WriteFileContents(kBatteryHealthChargeFullDesignPath,
+  WriteFileContents(kBatteryChargeFullDesignFileName,
                     std::to_string(kFakeBatteryChargeFullDesign));
   constexpr char kInvalidUnsignedInt[] = "Invalid unsigned int!";
-  EXPECT_TRUE(WriteFileAndCreateParentDirs(
-      temp_dir_path().AppendASCII(kFullCycleCountPath), kInvalidUnsignedInt));
+  EXPECT_TRUE(
+      WriteFileAndCreateParentDirs(temp_dir_path()
+                                       .AppendASCII(kBatteryDirectoryPath)
+                                       .AppendASCII(kBatteryCycleCountFileName),
+                                   kInvalidUnsignedInt));
   RunRoutineAndWaitForExit();
   VerifyNonInteractiveUpdate(update()->routine_update_union,
                              mojo_ipc::DiagnosticRoutineStatusEnum::kError,
                              kBatteryHealthFailedReadingCycleCountMessage);
-}
-
-// Test that calling resume doesn't crash.
-TEST_F(BatteryHealthRoutineTest, Resume) {
-  CreateRoutine();
-  routine()->Resume();
-}
-
-// Test that calling cancel doesn't crash.
-TEST_F(BatteryHealthRoutineTest, Cancel) {
-  CreateRoutine();
-  routine()->Cancel();
-}
-
-// Test that we can retrieve the status of the battery health routine.
-TEST_F(BatteryHealthRoutineTest, GetStatus) {
-  CreateRoutine();
-  EXPECT_EQ(routine()->GetStatus(),
-            mojo_ipc::DiagnosticRoutineStatusEnum::kReady);
 }
 
 }  // namespace diagnostics

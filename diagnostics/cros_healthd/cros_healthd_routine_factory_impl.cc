@@ -47,8 +47,8 @@ CrosHealthdRoutineFactoryImpl::MakeBatteryCapacityRoutine(uint32_t low_mah,
 std::unique_ptr<DiagnosticRoutine>
 CrosHealthdRoutineFactoryImpl::MakeBatteryHealthRoutine(
     uint32_t maximum_cycle_count, uint32_t percent_battery_wear_allowed) {
-  return std::make_unique<BatteryHealthRoutine>(maximum_cycle_count,
-                                                percent_battery_wear_allowed);
+  return CreateBatteryHealthRoutine(context_, maximum_cycle_count,
+                                    percent_battery_wear_allowed);
 }
 
 std::unique_ptr<DiagnosticRoutine>
