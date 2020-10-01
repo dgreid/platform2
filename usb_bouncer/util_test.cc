@@ -14,7 +14,8 @@ namespace usb_bouncer {
 
 namespace {
 
-constexpr char kSubdirName[] = "subdir";
+constexpr char kSubdirName[] = "usb1";
+constexpr char kNonUsbName[] = "domain0";
 constexpr char kSysFSAuthorized[] = "authorized";
 constexpr char kSysFSAuthorizedDefault[] = "authorized_default";
 constexpr char kSysFSEnabled[] = "1";
@@ -100,9 +101,19 @@ TEST(UtilTest, AuthorizeAll_Success) {
   ASSERT_TRUE(CreateDeviceNode(deepdir))
       << "CreateDeviceNode('" << deepdir.value() << "') failed.";
 
+  const base::FilePath non_usb_dir = temp_dir_.GetPath().Append(kNonUsbName);
+  ASSERT_TRUE(CreateDeviceNode(non_usb_dir))
+      << "CreateDeviceNode('" << non_usb_dir.value() << "') failed.";
+  const base::FilePath non_usb_deepdir =
+      temp_dir_.GetPath().Append(kNonUsbName).Append(kNonUsbName);
+  ASSERT_TRUE(CreateDeviceNode(non_usb_deepdir))
+      << "CreateDeviceNode('" << non_usb_deepdir.value() << "') failed.";
+
   EXPECT_TRUE(AuthorizeAll(temp_dir_.GetPath().value()));
   EXPECT_TRUE(CheckDeviceNodeAuthorized(subdir));
   EXPECT_TRUE(CheckDeviceNodeAuthorized(deepdir));
+  EXPECT_FALSE(CheckDeviceNodeAuthorized(non_usb_dir));
+  EXPECT_FALSE(CheckDeviceNodeAuthorized(non_usb_deepdir));
 }
 
 TEST(UtilTest, AuthorizeAll_Failure) {

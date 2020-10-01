@@ -55,6 +55,11 @@ constexpr char kUmaDeviceAttachedHistogram[] = "ChromeOS.USB.DeviceAttached";
 constexpr int kMaxWriteAttempts = 10;
 constexpr int kAttemptDelayMicroseconds = 10000;
 
+enum class Subsystem {
+  kNone,
+  kUsb,
+};
+
 // Returns base64 encoded strings since proto strings must be valid UTF-8.
 std::string EncodeDigest(const std::vector<uint8_t>& digest) {
   std::string result;
@@ -204,7 +209,12 @@ SafeFD::SafeFDResult OpenIfSubdirectory(SafeFD* parent,
   return subdir;
 }
 
+// dir is the path being walked.
+// sub is used to exclude authorized attributes for devices that shouldn't be
+//   touched.
+// max_depth is used to limit the recursion.
 bool AuthorizeAllImpl(SafeFD* dir,
+                      Subsystem subsystem = Subsystem::kNone,
                       size_t max_depth = SafeFD::kDefaultMaxPathDepth) {
   if (max_depth == 0) {
     LOG(ERROR) << "AuthorizeAll read max depth at '"
@@ -213,23 +223,26 @@ bool AuthorizeAllImpl(SafeFD* dir,
   }
 
   bool success = true;
-  if (!WriteWithTimeoutIfExists(dir, base::FilePath(kSysFSAuthorizedDefault),
-                                kSysFSEnabled)) {
-    success = false;
-  }
-
-  if (!WriteWithTimeoutIfExists(dir, base::FilePath(kSysFSAuthorized),
-                                kSysFSEnabled)) {
-    // EPIPE: wireless USB device that fails in usb_get_device_descriptor().
-    // ENODEV: device that disappears before they can be authorized or fails
-    //   during usb_autoresume_device()
-    // EPROTO: usb_set_configuration() failed, but the device is still
-    //   authorized. This is often caused the device not having adequate power.
-    if (errno == EPIPE || errno == ENODEV || errno == EPROTO) {
-      PLOG(WARNING) << "Failed to authorize USB device: '"
-                    << GetFDPath(dir->get()).value() << "'";
-    } else {
+  if (subsystem == Subsystem::kUsb) {
+    if (!WriteWithTimeoutIfExists(dir, base::FilePath(kSysFSAuthorizedDefault),
+                                  kSysFSEnabled)) {
       success = false;
+    }
+
+    if (!WriteWithTimeoutIfExists(dir, base::FilePath(kSysFSAuthorized),
+                                  kSysFSEnabled)) {
+      // EPIPE: wireless USB device that fails in usb_get_device_descriptor().
+      // ENODEV: device that disappears before they can be authorized or fails
+      //   during usb_autoresume_device()
+      // EPROTO: usb_set_configuration() failed, but the device is still
+      //   authorized. This is often caused by the device not having adequate
+      //   power.
+      if (errno == EPIPE || errno == ENODEV || errno == EPROTO) {
+        PLOG(WARNING) << "Failed to authorize USB device: '"
+                      << GetFDPath(dir->get()).value() << "'";
+      } else {
+        success = false;
+      }
     }
   }
 
@@ -269,8 +282,13 @@ bool AuthorizeAllImpl(SafeFD* dir,
       success = false;
     }
 
+    Subsystem child_subsystem = subsystem;
+    if (base::StartsWith(entry->d_name, "usb", base::CompareCase::SENSITIVE)) {
+      child_subsystem = Subsystem::kUsb;
+    }
+
     if (subdir.first.is_valid()) {
-      if (!AuthorizeAllImpl(&subdir.first, max_depth - 1)) {
+      if (!AuthorizeAllImpl(&subdir.first, child_subsystem, max_depth - 1)) {
         success = false;
       }
     }
