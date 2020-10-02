@@ -35,6 +35,11 @@
 
 typedef uint64_t sector_t;
 
+/* The value is 9 because the sector size is 512 bytes. */
+#define SECTOR_SHIFT 9
+#define to_sector(x) ((x) >> SECTOR_SHIFT)
+#define verity_to_bytes(x) ((x) << SECTOR_SHIFT)
+
 namespace verity {
 
 extern const char kSha256HashName[];

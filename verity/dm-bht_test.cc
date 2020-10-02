@@ -11,7 +11,6 @@
 
 #include <base/logging.h>
 #include <gtest/gtest.h>
-#include <linux/device-mapper.h>
 
 #include "verity/dm-bht.h"
 #include "verity/dm-bht-userspace.h"

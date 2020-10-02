@@ -19,8 +19,6 @@
 #include <crypto/sha2.h>
 
 #include <asm-generic/bitops/fls.h>
-/* #define CONFIG_DM_DEBUG 1 */
-#include <linux/device-mapper.h>
 #include <linux/errno.h>
 
 #include "verity/dm-bht.h"
@@ -105,7 +103,7 @@ void dm_bht_log_mismatch(struct dm_bht* bht,
   uint8_t computed_hex[DM_BHT_MAX_DIGEST_SIZE * 2 + 1];
   dm_bht_bin_to_hex(given, given_hex, bht->digest_size);
   dm_bht_bin_to_hex(computed, computed_hex, bht->digest_size);
-  DMERR_LIMIT("%s != %s", given_hex, computed_hex);
+  DLOG(ERROR) << given_hex << " != " << computed_hex;
 }
 
 /*-----------------------------------------------
@@ -167,22 +165,22 @@ int dm_bht_create(struct dm_bht* bht,
   bht->digest_size = crypto::kSHA256Length;
   /* We expect to be able to pack >=2 hashes into a page */
   if (PAGE_SIZE / bht->digest_size < 2) {
-    DMERR("too few hashes fit in a page");
+    DLOG(ERROR) << "too few hashes fit in a page";
     status = -EINVAL;
     goto bad_digest_len;
   }
 
   if (bht->digest_size > DM_BHT_MAX_DIGEST_SIZE) {
-    DMERR("DM_BHT_MAX_DIGEST_SIZE too small for chosen digest");
+    DLOG(ERROR) << "DM_BHT_MAX_DIGEST_SIZE too small for chosen digest";
     status = -EINVAL;
     goto bad_digest_len;
   }
 
   /* Configure the tree */
   bht->block_count = block_count;
-  DMDEBUG("Setting block_count %u", block_count);
+  DLOG(INFO) << "Setting block_count " << block_count;
   if (block_count == 0) {
-    DMERR("block_count must be non-zero");
+    DLOG(ERROR) << "block_count must be non-zero";
     status = -EINVAL;
     goto bad_block_count;
   }
@@ -199,17 +197,17 @@ int dm_bht_create(struct dm_bht* bht,
 
   /* This is unlikely to happen, but with 64k pages, who knows. */
   if (bht->node_count > UINT_MAX / bht->digest_size) {
-    DMERR("node_count * hash_len exceeds UINT_MAX!");
+    DLOG(ERROR) << "node_count * hash_len exceeds UINT_MAX!";
     status = -EINVAL;
     goto bad_node_count;
   }
 
   bht->depth = DIV_ROUND_UP(fls(block_count - 1), bht->node_count_shift);
-  DMDEBUG("Setting depth to %d.", bht->depth);
+  DLOG(INFO) << "Setting depth to " << bht->depth;
 
   /* Ensure that we can safely shift by this value. */
   if (bht->depth * bht->node_count_shift >= sizeof(unsigned int) * 8) {
-    DMERR("specified depth and node_count_shift is too large");
+    DLOG(ERROR) << "specified depth and node_count_shift is too large";
     status = -EINVAL;
     goto bad_node_count;
   }
@@ -222,7 +220,7 @@ int dm_bht_create(struct dm_bht* bht,
   bht->levels =
       (struct dm_bht_level*)calloc(bht->depth, sizeof(struct dm_bht_level));
   if (!bht->levels) {
-    DMERR("failed to allocate tree levels");
+    DLOG(ERROR) << "failed to allocate tree levels";
     status = -ENOMEM;
     goto bad_level_alloc;
   }
@@ -279,7 +277,7 @@ int dm_bht_initialize_entries(struct dm_bht* bht) {
   if (((last_index >> bht->node_count_shift) + 1) >
       UINT_MAX / std::max((unsigned int)sizeof(struct dm_bht_entry),
                           (unsigned int)to_sector(PAGE_SIZE))) {
-    DMCRIT("required entries %u is too large", last_index + 1);
+    LOG(ERROR) << "required entries " << last_index + 1 << " is too large.";
     return -EINVAL;
   }
 
@@ -290,7 +288,7 @@ int dm_bht_initialize_entries(struct dm_bht* bht) {
   for (depth = 0; depth < bht->depth; ++depth) {
     level = dm_bht_get_level(bht, depth);
     level->count = dm_bht_index_at_level(bht, depth, last_index) + 1;
-    DMDEBUG("depth: %d entries: %u", depth, level->count);
+    DLOG(INFO) << "depth: " << depth << " entries: " << level->count;
     /* TODO(wad) consider the case where the data stored for each
      * level is done with contiguous pages (instead of using
      * entry->nodes) and the level just contains two bitmaps:
@@ -300,7 +298,7 @@ int dm_bht_initialize_entries(struct dm_bht* bht) {
     level->entries =
         (struct dm_bht_entry*)calloc(level->count, sizeof(struct dm_bht_entry));
     if (!level->entries) {
-      DMERR("failed to allocate entries for depth %d", bht->depth);
+      DLOG(ERROR) << "failed to allocate entries for depth " << bht->depth;
       /* let the caller clean up the mess */
       return -ENOMEM;
     }
@@ -310,7 +308,7 @@ int dm_bht_initialize_entries(struct dm_bht* bht) {
     bht->sectors += level->count * to_sector(PAGE_SIZE);
     /* not ideal, but since unsigned overflow behavior is defined */
     if (bht->sectors < level->sector) {
-      DMCRIT("level sector calculation overflowed");
+      LOG(ERROR) << "level sector calculation overflowed.";
       return -EINVAL;
     }
   }
@@ -323,7 +321,7 @@ int dm_bht_read_callback_stub(void* ctx,
                               uint8_t* dst,
                               sector_t count,
                               struct dm_bht_entry* entry) {
-  DMCRIT("dm_bht_read_callback_stub called!");
+  LOG(ERROR) << "dm_bht_read_callback_stub called!";
   dm_bht_read_completed(entry, -EIO);
   return -EIO;
 }
@@ -339,7 +337,7 @@ int dm_bht_read_callback_stub(void* ctx,
 void dm_bht_read_completed(struct dm_bht_entry* entry, int status) {
   if (status) {
     /* TODO(wad) add retry support */
-    DMCRIT("an I/O error occurred while reading entry");
+    LOG(ERROR) << "an I/O error occurred while reading entry.";
     entry->state = DM_BHT_ENTRY_ERROR_IO;
     /* entry->nodes will be freed later */
     return;
@@ -400,12 +398,13 @@ int dm_bht_verify_path(struct dm_bht* bht,
   }
 
 #if VERBOSE_DEBUG
-  DMDEBUG("verify_path: node %u is verified to root", block);
+  DLOG(INFO) << "verify_path: node " << block << " is verified to root";
 #endif
   return 0;
 
 mismatch:
-  DMERR_LIMIT("verify_path: failed to verify hash (d=%d,bi=%u)", depth, block);
+  DLOG(ERROR) << "verify_path: failed to verify hash (d=" << depth
+              << ",bi=" << block << ")";
   dm_bht_log_mismatch(bht, node, digest);
   return DM_BHT_ENTRY_ERROR_MISMATCH;
 }
@@ -473,7 +472,7 @@ int dm_bht_populate(struct dm_bht* bht, void* ctx, unsigned int block) {
   bht->externally_allocated = false;
 
 #if VERBOSE_DEBUG
-  DMDEBUG("dm_bht_populate(%u)", block);
+  DLOG(INFO) << "dm_bht_populate %u" << block;
 #endif
 
   for (depth = bht->depth - 1; depth >= 0; --depth) {
@@ -513,11 +512,12 @@ int dm_bht_populate(struct dm_bht* bht, void* ctx, unsigned int block) {
   return 0;
 
 error_state:
-  DMCRIT("block %u at depth %d is in an error state", block, depth);
+  LOG(ERROR) << "block " << block << " at depth " << depth
+             << " is in an error state";
   return state;
 
 nomem:
-  DMCRIT("failed to allocate memory for entry->nodes");
+  LOG(ERROR) << "failed to allocate memory for entry->nodes";
   return -ENOMEM;
 }
 
@@ -609,12 +609,12 @@ int dm_bht_set_root_hexdigest(struct dm_bht* bht, const uint8_t* hexdigest) {
   /* Make sure we have at least the bytes expected */
   if (strnlen(reinterpret_cast<const char*>(hexdigest), bht->digest_size * 2) !=
       bht->digest_size * 2) {
-    DMERR("root digest length does not match hash algorithm");
+    DLOG(ERROR) << "root digest length does not match hash algorithm";
     return -1;
   }
   dm_bht_hex_to_bin(bht->root_digest, hexdigest, bht->digest_size);
 #ifdef CONFIG_DM_DEBUG
-  DMINFO("Set root digest to %s. Parsed as -> ", hexdigest);
+  DLOG(INFO) << "Set root digest to " << hexdigest << ". Parsed as -> ";
   dm_bht_log_mismatch(bht, bht->root_digest, bht->root_digest);
 #endif
   return 0;
@@ -630,7 +630,7 @@ int dm_bht_root_hexdigest(struct dm_bht* bht,
                           uint8_t* hexdigest,
                           int available) {
   if (available < 0 || ((unsigned int)available) < bht->digest_size * 2 + 1) {
-    DMERR("hexdigest has too few bytes available");
+    DLOG(ERROR) << "hexdigest has too few bytes available";
     return -EINVAL;
   }
   dm_bht_bin_to_hex(bht->root_digest, hexdigest, bht->digest_size);

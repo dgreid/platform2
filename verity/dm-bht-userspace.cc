@@ -10,7 +10,7 @@
 #include <errno.h>
 #include <string.h>
 
-#include <linux/device-mapper.h>
+#include <base/logging.h>
 
 #include "verity/dm-bht.h"
 
@@ -72,7 +72,7 @@ int dm_bht_compute(struct dm_bht* bht) {
 
         r = dm_bht_compute_hash(bht, child->nodes, digest);
         if (r) {
-          DMERR("Failed to update (d=%d,i=%u)", depth, i);
+          DLOG(ERROR) << "Failed to update (d=" << depth << ",i=" << i << ")";
           goto out;
         }
       }
@@ -80,7 +80,7 @@ int dm_bht_compute(struct dm_bht* bht) {
   }
   r = dm_bht_compute_hash(bht, bht->levels[0].entries->nodes, bht->root_digest);
   if (r)
-    DMERR("Failed to update root hash");
+    DLOG(ERROR) << "Failed to update root hash";
 
 out:
   return r;
