@@ -168,7 +168,6 @@ TEST_F(MemoryBhtTest, CreateThenVerifyOk) {
   dm_bht_set_root_hexdigest(bht_, reinterpret_cast<const u8*>(kRootDigest));
 
   for (unsigned int blocks = 0; blocks < total_blocks; ++blocks) {
-    DLOG(INFO) << "verifying block: " << blocks;
     EXPECT_EQ(0, dm_bht_verify_block(bht_, blocks, zero_page, 0));
   }
 
@@ -190,7 +189,6 @@ TEST_F(MemoryBhtTest, CreateThenVerifySingleLevel) {
   dm_bht_set_root_hexdigest(bht_, reinterpret_cast<const u8*>(kRootDigest));
 
   for (unsigned int blocks = 0; blocks < total_blocks; ++blocks) {
-    DLOG(INFO) << "verifying block: " << blocks;
     EXPECT_EQ(0, dm_bht_verify_block(bht_, blocks, zero_page, 0));
   }
 
@@ -212,7 +210,6 @@ TEST_F(MemoryBhtTest, CreateThenVerifyRealParameters) {
   dm_bht_set_root_hexdigest(bht_, reinterpret_cast<const u8*>(kRootDigest));
 
   for (unsigned int blocks = 0; blocks < total_blocks; ++blocks) {
-    DLOG(INFO) << "verifying block: " << blocks;
     EXPECT_EQ(0, dm_bht_verify_block(bht_, blocks, zero_page, 0));
   }
 
@@ -234,7 +231,6 @@ TEST_F(MemoryBhtTest, CreateThenVerifyOddLeafCount) {
   dm_bht_set_root_hexdigest(bht_, reinterpret_cast<const u8*>(kRootDigest));
 
   for (unsigned int blocks = 0; blocks < total_blocks; ++blocks) {
-    DLOG(INFO) << "verifying block: " << blocks;
     EXPECT_EQ(0, dm_bht_verify_block(bht_, blocks, zero_page, 0));
   }
 
@@ -256,7 +252,6 @@ TEST_F(MemoryBhtTest, CreateThenVerifyOddNodeCount) {
   dm_bht_set_root_hexdigest(bht_, reinterpret_cast<const u8*>(kRootDigest));
 
   for (unsigned int blocks = 0; blocks < total_blocks; ++blocks) {
-    DLOG(INFO) << "verifying block: " << blocks;
     EXPECT_EQ(0, dm_bht_verify_block(bht_, blocks, zero_page, 0));
   }
 
@@ -345,7 +340,6 @@ TEST_F(MemoryBhtTest, CreateThenVerifyOkSalt) {
   dm_bht_set_root_hexdigest(bht_, reinterpret_cast<const u8*>(kRootDigest));
 
   for (unsigned int blocks = 0; blocks < total_blocks; ++blocks) {
-    DLOG(INFO) << "verifying block: " << blocks;
     EXPECT_EQ(0, dm_bht_verify_block(bht_, blocks, zero_page, 0));
   }
 
@@ -370,7 +364,6 @@ TEST_F(MemoryBhtTest, CreateThenVerifyOkLongSalt) {
   dm_bht_set_root_hexdigest(bht_, reinterpret_cast<const u8*>(kRootDigest));
 
   for (unsigned int blocks = 0; blocks < total_blocks; ++blocks) {
-    DLOG(INFO) << "verifying block: " << blocks;
     EXPECT_EQ(0, dm_bht_verify_block(bht_, blocks, zero_page, 0));
   }
 

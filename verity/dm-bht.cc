@@ -44,6 +44,8 @@
 #define nr_cpu_ids 1
 #define smp_processor_id(_x) 0
 
+#define VERBOSE_DEBUG 0
+
 namespace verity {
 namespace {
 
@@ -389,7 +391,9 @@ int dm_bht_verify_path(struct dm_bht* bht,
     entry->state = DM_BHT_ENTRY_VERIFIED;
   }
 
+#if VERBOSE_DEBUG
   DMDEBUG("verify_path: node %u is verified to root", block);
+#endif
   return 0;
 
 mismatch:
@@ -460,7 +464,9 @@ int dm_bht_populate(struct dm_bht* bht, void* ctx, unsigned int block) {
   BUG_ON(block >= bht->block_count);
   bht->externally_allocated = false;
 
+#if VERBOSE_DEBUG
   DMDEBUG("dm_bht_populate(%u)", block);
+#endif
 
   for (depth = bht->depth - 1; depth >= 0; --depth) {
     struct dm_bht_level* level;
