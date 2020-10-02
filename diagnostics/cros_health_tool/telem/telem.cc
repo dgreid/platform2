@@ -445,12 +445,18 @@ void DisplaySystemInfo(
                         system_info->os_version->patch_number},
                        ".");
 
+  // The marketing name sometimes has a comma, for example:
+  // "Acer Chromebook Spin 11 (CP311-H1, CP311-1HN)"
+  // This messes up the tast logic, which splits on commas. To fix it, we
+  // replace any ", " patterns found with "/".
+  std::string marketing_name = system_info->marketing_name;
+  base::ReplaceSubstringsAfterOffset(&marketing_name, 0, ", ", "/");
+
   std::cout << system_info->first_power_date.value_or("NA") << ","
             << system_info->manufacture_date.value_or("NA") << ","
             << system_info->product_sku_number.value_or("NA") << ","
-            << system_info->marketing_name << ","
-            << system_info->bios_version.value_or("NA") << ","
-            << system_info->board_name.value_or("NA") << ","
+            << marketing_name << "," << system_info->bios_version.value_or("NA")
+            << "," << system_info->board_name.value_or("NA") << ","
             << system_info->board_version.value_or("NA") << "," << chassis_type
             << "," << system_info->product_name.value_or("NA") << ","
             << os_version << ',' << system_info->os_version->release_channel
