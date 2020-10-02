@@ -1812,7 +1812,8 @@ void Device::PortalDetectorCallback(
     if (selected_service_) {
       selected_service_->SetPortalDetectionFailure(
           PortalDetector::PhaseToString(http_result.phase),
-          PortalDetector::StatusToString(http_result.status));
+          PortalDetector::StatusToString(http_result.status),
+          http_result.status_code);
     }
     SetServiceConnectedState(state);
 

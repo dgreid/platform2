@@ -1291,6 +1291,11 @@ Properties	string ArcVpn.TunnelChrome [writeonly]
 				Success - The attempt succeeded at this phase
 				Timeout - The attempt timed out at this phase
 
+		string PortalDetectionFailedStatusCode [readonly]
+
+			Provides the HTTP response status code from the portal
+			detection probe if it failed.
+
 		string PreviousError [readonly]
 
 			The most recent service error status logged.  Even

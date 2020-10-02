@@ -758,6 +758,7 @@ TEST_F(ServiceTest, State) {
 }
 
 TEST_F(ServiceTest, PortalDetectionFailure) {
+  const int kStatusCode = 204;
   EXPECT_CALL(*GetAdaptor(),
               EmitStringChanged(kPortalDetectionFailedPhaseProperty,
                                 kPortalDetectionPhaseDns))
@@ -766,12 +767,17 @@ TEST_F(ServiceTest, PortalDetectionFailure) {
               EmitStringChanged(kPortalDetectionFailedStatusProperty,
                                 kPortalDetectionStatusTimeout))
       .Times(1);
-  service_->SetPortalDetectionFailure(kPortalDetectionPhaseDns,
-                                      kPortalDetectionStatusTimeout);
+  EXPECT_CALL(
+      *GetAdaptor(),
+      EmitIntChanged(kPortalDetectionFailedStatusCodeProperty, kStatusCode))
+      .Times(1);
+  service_->SetPortalDetectionFailure(
+      kPortalDetectionPhaseDns, kPortalDetectionStatusTimeout, kStatusCode);
   EXPECT_EQ(kPortalDetectionPhaseDns,
             service_->portal_detection_failure_phase_);
   EXPECT_EQ(kPortalDetectionStatusTimeout,
             service_->portal_detection_failure_status_);
+  EXPECT_EQ(kStatusCode, service_->portal_detection_failure_status_code_);
 }
 
 TEST_F(ServiceTest, StateResetAfterFailure) {

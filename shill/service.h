@@ -221,10 +221,11 @@ class Service : public base::RefCounted<Service> {
   // during portal detection.
   mockable void SetProbeUrl(const std::string& probe_url_string);
 
-  // Set portal detection failure phase and status (reason). This function
-  // is called when portal detection failed for the Service.
+  // Set portal detection failure phase, status (reason), and http status code.
+  // This function is called when portal detection failed for the Service.
   mockable void SetPortalDetectionFailure(const std::string& phase,
-                                          const std::string& status);
+                                          const std::string& status,
+                                          int status_code);
 
   // State utility functions
   static bool IsConnectedState(ConnectState state);
@@ -906,6 +907,7 @@ class Service : public base::RefCounted<Service> {
   std::string probe_url_string_;
   std::string portal_detection_failure_phase_;
   std::string portal_detection_failure_status_;
+  int portal_detection_failure_status_code_;
 
   uint8_t strength_;
   std::string proxy_config_;

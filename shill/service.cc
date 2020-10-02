@@ -158,6 +158,7 @@ Service::Service(Manager* manager, Technology technology)
       crypto_algorithm_(kCryptoNone),
       key_rotation_(false),
       endpoint_auth_(false),
+      portal_detection_failure_status_code_(0),
       strength_(0),
       save_credentials_(true),
       dhcp_properties_(new DhcpProperties(/*manager=*/nullptr)),
@@ -264,6 +265,8 @@ Service::Service(Manager* manager, Technology technology)
                              &portal_detection_failure_phase_);
   store_.RegisterConstString(kPortalDetectionFailedStatusProperty,
                              &portal_detection_failure_status_);
+  store_.RegisterConstInt32(kPortalDetectionFailedStatusCodeProperty,
+                            &portal_detection_failure_status_code_);
 
   metrics()->RegisterService(*this);
 
@@ -537,11 +540,21 @@ void Service::SetState(ConnectState state) {
 }
 
 void Service::SetPortalDetectionFailure(const string& phase,
-                                        const string& status) {
-  portal_detection_failure_phase_ = phase;
-  portal_detection_failure_status_ = status;
-  adaptor_->EmitStringChanged(kPortalDetectionFailedPhaseProperty, phase);
-  adaptor_->EmitStringChanged(kPortalDetectionFailedStatusProperty, status);
+                                        const string& status,
+                                        int status_code) {
+  if (portal_detection_failure_phase_ != phase) {
+    portal_detection_failure_phase_ = phase;
+    adaptor_->EmitStringChanged(kPortalDetectionFailedPhaseProperty, phase);
+  }
+  if (portal_detection_failure_status_ != status) {
+    portal_detection_failure_status_ = status;
+    adaptor_->EmitStringChanged(kPortalDetectionFailedStatusProperty, status);
+  }
+  if (portal_detection_failure_status_code_ != status_code) {
+    portal_detection_failure_status_code_ = status_code;
+    adaptor_->EmitIntChanged(kPortalDetectionFailedStatusCodeProperty,
+                             status_code);
+  }
 }
 
 void Service::SetProbeUrl(const string& probe_url_string) {

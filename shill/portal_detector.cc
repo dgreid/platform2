@@ -261,6 +261,8 @@ void PortalDetector::HttpRequestSuccessCallback(
   } else {
     http_result_ = std::make_unique<Result>(Phase::kContent, Status::kFailure);
   }
+  http_result_->status_code = status_code;
+
   CompleteRequest();
 }
 

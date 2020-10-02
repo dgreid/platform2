@@ -83,25 +83,26 @@ class PortalDetector {
   };
 
   struct Result {
-    Result()
-        : phase(Phase::kUnknown), status(Status::kFailure), num_attempts(0) {}
-    Result(Phase phase, Status status)
-        : phase(phase), status(status), num_attempts(0) {}
+    Result() {}
+    Result(Phase phase, Status status) : phase(phase), status(status) {}
     Result(Phase phase, Status status, int num_attempts)
         : phase(phase), status(status), num_attempts(num_attempts) {}
 
-    Phase phase;
-    Status status;
+    Phase phase = Phase::kUnknown;
+    Status status = Status::kFailure;
 
     // Total number of connectivity trials attempted.
     // This includes failure, timeout and successful attempts.
-    int num_attempts;
+    int num_attempts = 0;
 
     // Non-empty redirect URL if status is kRedirect.
     std::string redirect_url_string;
 
     // Probe URL used to reach redirect URL if status is kRedirect.
     std::string probe_url_string;
+
+    // The http response status code.
+    int status_code = 0;
   };
 
   static const char kDefaultHttpUrl[];
