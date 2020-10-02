@@ -10,6 +10,7 @@ group("all") {
     ":anomaly_detector",
     ":crash_reporter",
     ":crash_sender",
+    ":crash_serializer_main",
     ":libcrash",
     ":libcrash_reporter",
   ]
@@ -174,6 +175,41 @@ executable("crash_sender") {
   ]
 }
 
+pkg_config("crash_serializer_config") {
+  pkg_deps = [
+    "libbrillo",
+    "libchrome",
+    "libsession_manager-client",
+    "protobuf",
+  ]
+}
+
+static_library("libcrash_serializer") {
+  all_dependent_configs = [ ":crash_serializer_config" ]
+  sources = [ "crash_serializer.cc" ]
+  deps = [
+    ":crash_serializer_proto",
+    ":libcrash",
+    ":libcrash_sender",
+  ]
+}
+
+executable("crash_serializer_main") {
+  output_name = "crash_serializer"
+  sources = [ "crash_serializer_main.cc" ]
+  deps = [
+    ":libcrash",
+    ":libcrash_sender",
+    ":libcrash_serializer",
+  ]
+}
+
+proto_library("crash_serializer_proto") {
+  proto_in_dir = "./proto"
+  proto_out_dir = "include/crash-reporter"
+  sources = [ "${proto_in_dir}/crash_serializer.proto" ]
+}
+
 pkg_config("anomaly_detector_config") {
   # NOSORT
   pkg_deps = [
@@ -312,6 +348,7 @@ if (use.test) {
       "crash_reporter_logs_test.cc",
       "crash_sender_base_test.cc",
       "crash_sender_util_test.cc",
+      "crash_serializer_test.cc",
       "ec_collector_test.cc",
       "ephemeral_crash_collector_test.cc",
       "generic_failure_collector_test.cc",
@@ -333,10 +370,12 @@ if (use.test) {
       "USE_CHROMELESS_TTY=${use.chromeless_tty}",
     ]
     deps = [
+      ":crash_serializer_proto",
       ":hold_lock_file",
       ":libcrash",
       ":libcrash_reporter",
       ":libcrash_sender",
+      ":libcrash_serializer",
       ":libcrash_test_util",
       ":lock_file_tester",
     ]
