@@ -540,7 +540,9 @@ constexpr char kVirtualFileProviderServicePath[] =
 constexpr char kVirtualFileProviderInterface[] =
     "org.chromium.VirtualFileProvider";
 // Methods
+constexpr char kGenerateVirtualFileIdMethod[] = "GenerateVirtualFileId";
 constexpr char kOpenFileMethod[] = "OpenFile";
+constexpr char kOpenFileByIdMethod[] = "OpenFileById";
 }  // namespace virtual_file_provider
 
 namespace crosdns {
