@@ -118,10 +118,8 @@ class MountHelper : public MountHelperInterface {
   // Parameters
   //   obfuscated_username - The obfuscated form of the username
   //   type - Mount type: eCryptfs or dircrypto
-  //   is_pristine - True, if the cryptohome is being created
   bool CreateTrackedSubdirectories(const std::string& obfuscated_username,
-                                   const MountType& type,
-                                   bool is_pristine) const;
+                                   const MountType& type) const;
 
   // Carries out eCryptfs/dircrypto mount(2) operations for a regular
   // cryptohome.

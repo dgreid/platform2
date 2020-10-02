@@ -656,9 +656,7 @@ bool MountHelper::MountHomesAndDaemonStores(
 }
 
 bool MountHelper::CreateTrackedSubdirectories(
-    const std::string& obfuscated_username,
-    const MountType& mount_type,
-    bool is_pristine) const {
+    const std::string& obfuscated_username, const MountType& mount_type) const {
   brillo::ScopedUmask scoped_umask(kDefaultUmask);
 
   // Add the subdirectories if they do not exist.
@@ -685,7 +683,7 @@ bool MountHelper::CreateTrackedSubdirectories(
       const FilePath userside_dir = mount_dir.Append(tracked_dir);
       // If non-pass-through dir with the same name existed - delete it
       // to prevent duplication.
-      if (!is_pristine && platform_->DirectoryExists(userside_dir) &&
+      if (platform_->DirectoryExists(userside_dir) &&
           !platform_->DirectoryExists(tracked_dir_path)) {
         platform_->DeleteFile(userside_dir, true);
       }
@@ -760,8 +758,7 @@ bool MountHelper::PerformMount(const Options& mount_opts,
 
   // Move the tracked subdirectories from <mount_point_>/user to <vault_path>
   // as passthrough directories.
-  CreateTrackedSubdirectories(obfuscated_username, mount_opts.type,
-                              is_pristine);
+  CreateTrackedSubdirectories(obfuscated_username, mount_opts.type);
 
   const FilePath user_home = GetMountedUserHomePath(obfuscated_username);
   const FilePath root_home = GetMountedRootHomePath(obfuscated_username);

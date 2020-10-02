@@ -292,10 +292,8 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   //
   // Parameters
   //   credentials - The Credentials representing the user
-  //   is_new - True, if the cryptohome is being created and there is
-  //            no need to migrate contents
-  virtual bool CreateTrackedSubdirectories(const Credentials& credentials,
-                                           bool is_new) const;
+  virtual bool CreateTrackedSubdirectories(
+      const Credentials& credentials) const;
 
   // Creates the cryptohome salt, key, (and vault if necessary) for the
   // specified credentials.

@@ -792,10 +792,9 @@ bool Mount::CreateCryptohome(const Credentials& credentials) const {
   return true;
 }
 
-bool Mount::CreateTrackedSubdirectories(const Credentials& credentials,
-                                        bool is_new) const {
+bool Mount::CreateTrackedSubdirectories(const Credentials& credentials) const {
   return mounter_->CreateTrackedSubdirectories(
-      credentials.GetObfuscatedUsername(system_salt_), mount_type_, is_new);
+      credentials.GetObfuscatedUsername(system_salt_), mount_type_);
 }
 
 bool Mount::UpdateCurrentUserActivityTimestamp(int time_shift_sec) {

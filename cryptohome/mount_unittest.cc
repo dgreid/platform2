@@ -2085,47 +2085,6 @@ TEST_P(MountTest, BothFlagsMigrationTest) {
             (flags & SerializedVaultKeyset::SCRYPT_DERIVED));
 }
 
-TEST_P(MountTest, CreateTrackedSubdirectories) {
-  EXPECT_TRUE(DoMountInit());
-  InsertTestUsers(&kDefaultUsers[0], 1);
-  TestUser* user = &helper_.users[0];
-  Credentials credentials(user->username, user->passkey);
-
-  FilePath dest_dir;
-  if (ShouldTestEcryptfs()) {
-    dest_dir = user->vault_path;
-    mount_->mount_type_ = ::cryptohome::MountType::ECRYPTFS;
-  } else {
-    dest_dir = user->vault_mount_path;
-    mount_->mount_type_ = ::cryptohome::MountType::DIR_CRYPTO;
-  }
-  EXPECT_CALL(platform_, DirectoryExists(dest_dir)).WillOnce(Return(true));
-
-  // Expectations for each tracked subdirectory.
-  for (const auto& tracked_dir : MountHelper::GetTrackedSubdirectories()) {
-    const FilePath tracked_dir_path = dest_dir.Append(tracked_dir);
-    EXPECT_CALL(platform_, DirectoryExists(tracked_dir_path))
-        .WillOnce(Return(false));
-    EXPECT_CALL(platform_, CreateDirectory(tracked_dir_path))
-        .WillOnce(Return(true));
-    EXPECT_CALL(platform_, SetOwnership(tracked_dir_path, chronos_uid_,
-                                        chronos_gid_, true))
-        .WillOnce(Return(true));
-    if (!ShouldTestEcryptfs()) {
-      // For dircrypto, xattr should be set.
-      EXPECT_CALL(platform_,
-                  SetExtendedFileAttribute(
-                      tracked_dir_path, kTrackedDirectoryNameAttribute,
-                      StrEq(tracked_dir_path.BaseName().value()),
-                      tracked_dir_path.BaseName().value().size()))
-          .WillOnce(Return(true));
-    }
-  }
-  // Run the method.
-  EXPECT_TRUE(
-      mount_->CreateTrackedSubdirectories(credentials, true /* is_new */));
-}
-
 TEST_P(MountTest, CreateTrackedSubdirectoriesReplaceExistingDir) {
   EXPECT_TRUE(DoMountInit());
   InsertTestUsers(&kDefaultUsers[0], 1);
@@ -2176,8 +2135,7 @@ TEST_P(MountTest, CreateTrackedSubdirectoriesReplaceExistingDir) {
     }
   }
   // Run the method.
-  EXPECT_TRUE(
-      mount_->CreateTrackedSubdirectories(credentials, false /* is_new */));
+  EXPECT_TRUE(mount_->CreateTrackedSubdirectories(credentials));
 }
 
 TEST_P(MountTest, MountCryptohomePreviousMigrationIncomplete) {
