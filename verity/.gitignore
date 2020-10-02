@@ -1,7 +1,0 @@
-*.[ado]
-*.depends
-
-/libdm-bht.so
-/verity
-/verity-static
-/verity_testrunner
