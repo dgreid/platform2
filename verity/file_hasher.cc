@@ -16,13 +16,13 @@
 #include <string>
 #include <vector>
 
+#include <base/bits.h>
 #include <base/files/file.h>
 #include <base/logging.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_util.h>
 
 #include <linux/device-mapper.h>
-#include <linux/kernel.h>
 #include "verity/file_hasher.h"
 
 namespace verity {
@@ -71,7 +71,8 @@ bool FileHasher::Initialize() {
     if (source_size % PAGE_SIZE) {
       LOG(ERROR) << "The source file size must be divisible by the block size, "
                  << "Size: " << source_size;
-      LOG(INFO) << "Suggested size: " << ALIGN(source_size, PAGE_SIZE);
+      LOG(INFO) << "Suggested size: "
+                << base::bits::Align(source_size, PAGE_SIZE);
       return false;
     }
   }

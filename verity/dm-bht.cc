@@ -10,9 +10,11 @@
 #include <limits.h>
 #include <string.h>
 
+#include <algorithm>
 #include <memory>
 #include <string>
 
+#include <base/bits.h>
 #include <crypto/secure_hash.h>
 #include <crypto/sha2.h>
 
@@ -20,7 +22,6 @@
 /* #define CONFIG_DM_DEBUG 1 */
 #include <linux/device-mapper.h>
 #include <linux/errno.h>
-#include <linux/kernel.h>
 
 #include "verity/dm-bht.h"
 
@@ -33,6 +34,8 @@
 #define __PRIS_PREFIX "ll"
 #endif
 #define PRIu64 __PRIS_PREFIX "u"
+
+#define DIV_ROUND_UP(n, d) (((n) + (d)-1) / (d))
 
 /*-----------------------------------------------
  * Utilities
@@ -258,7 +261,8 @@ int dm_bht_initialize_entries(struct dm_bht* bht) {
    * independently from the bht data structures.  Logically, the root is
    * depth=-1 and the block layer level is depth=bht->depth
    */
-  unsigned int last_index = ALIGN(bht->block_count, bht->node_count) - 1;
+  unsigned int last_index =
+      base::bits::Align(bht->block_count, bht->node_count) - 1;
   unsigned int total_entries = 0;
   struct dm_bht_level* level = NULL;
   int depth;
@@ -267,8 +271,8 @@ int dm_bht_initialize_entries(struct dm_bht* bht) {
    * on allocation or sector calculation.
    */
   if (((last_index >> bht->node_count_shift) + 1) >
-      UINT_MAX / MAX((unsigned int)sizeof(struct dm_bht_entry),
-                     (unsigned int)to_sector(PAGE_SIZE))) {
+      UINT_MAX / std::max((unsigned int)sizeof(struct dm_bht_entry),
+                          (unsigned int)to_sector(PAGE_SIZE))) {
     DMCRIT("required entries %u is too large", last_index + 1);
     return -EINVAL;
   }
@@ -632,7 +636,7 @@ int dm_bht_root_hexdigest(struct dm_bht* bht, u8* hexdigest, int available) {
  *            DM_BHT_SALT_SIZE * 2 hex digits.
  */
 void dm_bht_set_salt(struct dm_bht* bht, const char* hexsalt) {
-  size_t saltlen = MIN(strlen(hexsalt) / 2, sizeof(bht->salt));
+  size_t saltlen = std::min(strlen(hexsalt) / 2, sizeof(bht->salt));
   bht->have_salt = true;
   memset(bht->salt, 0, sizeof(bht->salt));
   dm_bht_hex_to_bin(bht->salt, (const u8*)hexsalt, saltlen);
