@@ -96,7 +96,7 @@ class MemoryRoutineTest : public testing::Test {
                 return;
               }
 
-              base::PostDelayedTask(
+              base::ThreadTaskRunnerHandle::Get()->PostDelayedTask(
                   FROM_HERE,
                   base::BindOnce(
                       [](executor_ipc::Executor::RunMemtesterCallback callback,
