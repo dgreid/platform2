@@ -58,7 +58,7 @@ inline void* alloc_page(void) {
   return memptr;
 }
 
-u8 from_hex(u8 ch) {
+uint8_t from_hex(uint8_t ch) {
   if ((ch >= '0') && (ch <= '9'))
     return ch - '0';
   if ((ch >= 'a') && (ch <= 'f'))
@@ -73,7 +73,7 @@ u8 from_hex(u8 ch) {
  * @binary: a byte array of length @binary_len
  * @hex: a byte array of length @binary_len * 2 + 1
  */
-void dm_bht_bin_to_hex(u8* binary, u8* hex, unsigned int binary_len) {
+void dm_bht_bin_to_hex(uint8_t* binary, uint8_t* hex, unsigned int binary_len) {
   while (binary_len-- > 0) {
     // NOLINTNEXTLINE(runtime/printf)
     sprintf((char* __restrict__)hex, "%02hhx", (unsigned char)*binary);
@@ -87,7 +87,9 @@ void dm_bht_bin_to_hex(u8* binary, u8* hex, unsigned int binary_len) {
  * @binary: a byte array of length @binary_len
  * @hex: a byte array of length @binary_len * 2 + 1
  */
-void dm_bht_hex_to_bin(u8* binary, const u8* hex, unsigned int binary_len) {
+void dm_bht_hex_to_bin(uint8_t* binary,
+                       const uint8_t* hex,
+                       unsigned int binary_len) {
   while (binary_len-- > 0) {
     *binary = from_hex(*(hex++));
     *binary *= 16;
@@ -96,9 +98,11 @@ void dm_bht_hex_to_bin(u8* binary, const u8* hex, unsigned int binary_len) {
   }
 }
 
-void dm_bht_log_mismatch(struct dm_bht* bht, u8* given, u8* computed) {
-  u8 given_hex[DM_BHT_MAX_DIGEST_SIZE * 2 + 1];
-  u8 computed_hex[DM_BHT_MAX_DIGEST_SIZE * 2 + 1];
+void dm_bht_log_mismatch(struct dm_bht* bht,
+                         uint8_t* given,
+                         uint8_t* computed) {
+  uint8_t given_hex[DM_BHT_MAX_DIGEST_SIZE * 2 + 1];
+  uint8_t computed_hex[DM_BHT_MAX_DIGEST_SIZE * 2 + 1];
   dm_bht_bin_to_hex(given, given_hex, bht->digest_size);
   dm_bht_bin_to_hex(computed, computed_hex, bht->digest_size);
   DMERR_LIMIT("%s != %s", given_hex, computed_hex);
@@ -112,7 +116,7 @@ int dm_bht_initialize_entries(struct dm_bht* bht);
 
 int dm_bht_read_callback_stub(void* ctx,
                               sector_t start,
-                              u8* dst,
+                              uint8_t* dst,
                               sector_t count,
                               struct dm_bht_entry* entry);
 }  // namespace
@@ -120,7 +124,9 @@ int dm_bht_read_callback_stub(void* ctx,
 /**
  * dm_bht_compute_hash: hashes a page of data
  */
-int dm_bht_compute_hash(struct dm_bht* bht, const u8* buffer, u8* digest) {
+int dm_bht_compute_hash(struct dm_bht* bht,
+                        const uint8_t* buffer,
+                        uint8_t* digest) {
   std::unique_ptr<crypto::SecureHash> hash(
       crypto::SecureHash::Create(crypto::SecureHash::SHA256));
   hash->Update(buffer, PAGE_SIZE);
@@ -314,7 +320,7 @@ int dm_bht_initialize_entries(struct dm_bht* bht) {
 
 int dm_bht_read_callback_stub(void* ctx,
                               sector_t start,
-                              u8* dst,
+                              uint8_t* dst,
                               sector_t count,
                               struct dm_bht_entry* entry) {
   DMCRIT("dm_bht_read_callback_stub called!");
@@ -349,11 +355,11 @@ namespace {
  */
 int dm_bht_verify_path(struct dm_bht* bht,
                        unsigned int block,
-                       const u8* buffer) {
+                       const uint8_t* buffer) {
   int depth = bht->depth;
-  u8 digest[DM_BHT_MAX_DIGEST_SIZE];
+  uint8_t digest[DM_BHT_MAX_DIGEST_SIZE];
   struct dm_bht_entry* entry;
-  u8* node;
+  uint8_t* node;
   int state;
 
   do {
@@ -422,7 +428,7 @@ mismatch:
  */
 int dm_bht_zeroread_callback(void* ctx,
                              sector_t start,
-                             u8* dst,
+                             uint8_t* dst,
                              sector_t count,
                              struct dm_bht_entry* entry) {
   memset(dst, 0, verity_to_bytes(count));
@@ -474,7 +480,7 @@ int dm_bht_populate(struct dm_bht* bht, void* ctx, unsigned int block) {
     struct dm_bht_level* level;
     struct dm_bht_entry* entry;
     unsigned int index;
-    u8* buffer;
+    uint8_t* buffer;
 
     entry = dm_bht_get_entry(bht, depth, block);
     state = entry->state;
@@ -489,7 +495,7 @@ int dm_bht_populate(struct dm_bht* bht, void* ctx, unsigned int block) {
       continue;
 
     /* Current entry is claimed for allocation and loading */
-    buffer = static_cast<u8*>(alloc_page());
+    buffer = static_cast<uint8_t*>(alloc_page());
     if (!buffer)
       goto nomem;
 
@@ -528,7 +534,7 @@ nomem:
  */
 int dm_bht_verify_block(struct dm_bht* bht,
                         unsigned int block,
-                        const u8* buffer,
+                        const uint8_t* buffer,
                         unsigned int offset) {
   CHECK_EQ(offset, 0);
 
@@ -596,10 +602,10 @@ void dm_bht_set_read_cb(struct dm_bht* bht, dm_bht_callback read_cb) {
 /**
  * dm_bht_set_root_hexdigest - sets an unverified root digest hash from hex
  * @bht: pointer to a dm_bht_create()d bht
- * @hexdigest: array of u8s containing the new digest in binary
+ * @hexdigest: array of uint8_ts containing the new digest in binary
  * Returns non-zero on error.  hexdigest should be NUL terminated.
  */
-int dm_bht_set_root_hexdigest(struct dm_bht* bht, const u8* hexdigest) {
+int dm_bht_set_root_hexdigest(struct dm_bht* bht, const uint8_t* hexdigest) {
   /* Make sure we have at least the bytes expected */
   if (strnlen(reinterpret_cast<const char*>(hexdigest), bht->digest_size * 2) !=
       bht->digest_size * 2) {
@@ -617,10 +623,12 @@ int dm_bht_set_root_hexdigest(struct dm_bht* bht, const u8* hexdigest) {
 /**
  * dm_bht_root_hexdigest - returns root digest in hex
  * @bht: pointer to a dm_bht_create()d bht
- * @hexdigest: u8 array of size @available
+ * @hexdigest: uint8_t array of size @available
  * @available: must be bht->digest_size * 2 + 1
  */
-int dm_bht_root_hexdigest(struct dm_bht* bht, u8* hexdigest, int available) {
+int dm_bht_root_hexdigest(struct dm_bht* bht,
+                          uint8_t* hexdigest,
+                          int available) {
   if (available < 0 || ((unsigned int)available) < bht->digest_size * 2 + 1) {
     DMERR("hexdigest has too few bytes available");
     return -EINVAL;
@@ -639,7 +647,7 @@ void dm_bht_set_salt(struct dm_bht* bht, const char* hexsalt) {
   size_t saltlen = std::min(strlen(hexsalt) / 2, sizeof(bht->salt));
   bht->have_salt = true;
   memset(bht->salt, 0, sizeof(bht->salt));
-  dm_bht_hex_to_bin(bht->salt, (const u8*)hexsalt, saltlen);
+  dm_bht_hex_to_bin(bht->salt, (const uint8_t*)hexsalt, saltlen);
 }
 
 /**
@@ -650,7 +658,7 @@ void dm_bht_set_salt(struct dm_bht* bht, const char* hexsalt) {
 int dm_bht_salt(struct dm_bht* bht, char* hexsalt) {
   if (!bht->have_salt)
     return -EINVAL;
-  dm_bht_bin_to_hex(bht->salt, reinterpret_cast<u8*>(hexsalt),
+  dm_bht_bin_to_hex(bht->salt, reinterpret_cast<uint8_t*>(hexsalt),
                     sizeof(bht->salt));
   return 0;
 }

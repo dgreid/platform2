@@ -23,7 +23,7 @@ void dm_bht_set_buffer(struct dm_bht* bht, void* buffer) {
   /* Buffers are externally allocated, so mark them as such. */
   bht->externally_allocated = true;
 
-  auto buffer_p = static_cast<u8*>(buffer);
+  auto buffer_p = static_cast<uint8_t*>(buffer);
   for (depth = 0; depth < bht->depth; ++depth) {
     struct dm_bht_level* level = dm_bht_get_level(bht, depth);
     struct dm_bht_entry* entry_end = level->entries + level->count;
@@ -68,7 +68,7 @@ int dm_bht_compute(struct dm_bht* bht) {
       if (count == 0)
         count = bht->node_count;
       for (j = 0; j < count; j++, child++) {
-        u8* digest = dm_bht_node(bht, entry, j);
+        uint8_t* digest = dm_bht_node(bht, entry, j);
 
         r = dm_bht_compute_hash(bht, child->nodes, digest);
         if (r) {
@@ -90,7 +90,7 @@ out:
  * dm_bht_store_block - sets a given block's hash in the tree
  * @bht: pointer to a dm_bht_create()d bht
  * @block: numeric index of the block in the tree
- * @block_data: array of u8s containing the block of data to hash
+ * @block_data: array of uint8_ts containing the block of data to hash
  *
  * Returns 0 on success.
  *
@@ -100,10 +100,12 @@ out:
  * It is up to the users of the update interface to ensure the entry data is
  * fully populated prior to use. The number of updated entries is NOT tracked.
  */
-int dm_bht_store_block(struct dm_bht* bht, unsigned int block, u8* block_data) {
+int dm_bht_store_block(struct dm_bht* bht,
+                       unsigned int block,
+                       uint8_t* block_data) {
   int depth = bht->depth;
   struct dm_bht_entry* entry = dm_bht_get_entry(bht, depth - 1, block);
-  u8* node = dm_bht_get_node(bht, entry, depth, block);
+  uint8_t* node = dm_bht_get_node(bht, entry, depth, block);
 
   return dm_bht_compute_hash(bht, block_data, node);
 }

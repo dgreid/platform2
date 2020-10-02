@@ -100,7 +100,7 @@ bool FileHasher::Store() {
 
 bool FileHasher::Hash() {
   // TODO(wad) abstract size when dm-bht needs to do break from PAGE_SIZE
-  u8 block_data[PAGE_SIZE];
+  uint8_t block_data[PAGE_SIZE];
   uint32_t block = 0;
 
   while (block < block_limit_) {

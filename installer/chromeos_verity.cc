@@ -35,9 +35,6 @@ namespace {
 
 #define IO_BUF_SIZE (1UL * 1024 * 1024)
 
-// 512 bytes in a sector.
-#define SECTOR_SHIFT (9ULL)
-
 // Obtain LEB size of a UBI volume. Return -1 if |dev| is not a UBI volume.
 int64_t GetUbiLebSize(const std::string& dev) {
   struct stat stat_buf;

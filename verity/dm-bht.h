@@ -9,13 +9,7 @@
 #ifndef VERITY_DM_BHT_H_
 #define VERITY_DM_BHT_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-#include <linux/types.h>
-#ifdef __cplusplus
-}
-#endif
+#include <cstdint>
 
 /* To avoid allocating memory for digest tests, we just setup a
  * max to use for now.
@@ -39,6 +33,8 @@ extern "C" {
 #define PAGE_SIZE 4096
 #define PAGE_SHIFT 12
 
+typedef uint64_t sector_t;
+
 namespace verity {
 
 extern const char kSha256HashName[];
@@ -57,8 +53,8 @@ struct dm_bht_entry {
   void* io_context; /* Reserve a pointer for use during io */
   /* data should only be non-NULL if fully populated. */
   // NOLINTNEXTLINE(readability/multiline_comment)
-  u8* nodes; /* The hash data used to verify the children.
-              * Guaranteed to be page-aligned. */
+  uint8_t* nodes; /* The hash data used to verify the children.
+                   * Guaranteed to be page-aligned. */
 };
 
 /* dm_bht_level
@@ -74,7 +70,7 @@ struct dm_bht_level {
 /* opaque context, start, databuf, sector_count */
 typedef int (*dm_bht_callback)(void*,    /* external context */
                                sector_t, /* start sector */
-                               u8*,      /* destination page */
+                               uint8_t*, /* destination page */
                                sector_t, /* num sectors */
                                struct dm_bht_entry*);
 /* dm_bht - Device mapper block hash tree
@@ -111,7 +107,7 @@ struct dm_bht {
   sector_t sectors; /* Number of disk sectors used */
 
   /* bool verified;  Full tree is verified */
-  u8 root_digest[DM_BHT_MAX_DIGEST_SIZE];
+  uint8_t root_digest[DM_BHT_MAX_DIGEST_SIZE];
   struct dm_bht_level* levels; /* in reverse order */
   /* Callback for reading from the hash device */
   dm_bht_callback read_cb;
@@ -129,8 +125,10 @@ int dm_bht_destroy(struct dm_bht* bht);
 /* Basic accessors for struct dm_bht */
 sector_t dm_bht_sectors(const struct dm_bht* bht);
 void dm_bht_set_read_cb(struct dm_bht* bht, dm_bht_callback read_cb);
-int dm_bht_set_root_hexdigest(struct dm_bht* bht, const u8* hexdigest);
-int dm_bht_root_hexdigest(struct dm_bht* bht, u8* hexdigest, int available);
+int dm_bht_set_root_hexdigest(struct dm_bht* bht, const uint8_t* hexdigest);
+int dm_bht_root_hexdigest(struct dm_bht* bht,
+                          uint8_t* hexdigest,
+                          int available);
 void dm_bht_set_salt(struct dm_bht* bht, const char* hexsalt);
 int dm_bht_salt(struct dm_bht* bht, char* hexsalt);
 
@@ -139,16 +137,18 @@ bool dm_bht_is_populated(struct dm_bht* bht, unsigned int block);
 int dm_bht_populate(struct dm_bht* bht, void* read_cb_ctx, unsigned int block);
 int dm_bht_verify_block(struct dm_bht* bht,
                         unsigned int block,
-                        const u8* buffer,
+                        const uint8_t* buffer,
                         unsigned int offset);
 int dm_bht_zeroread_callback(void* ctx,
                              sector_t start,
-                             u8* dst,
+                             uint8_t* dst,
                              sector_t count,
                              struct dm_bht_entry* entry);
 void dm_bht_read_completed(struct dm_bht_entry* entry, int status);
 
-int dm_bht_compute_hash(struct dm_bht* bht, const u8* buffer, u8* digest);
+int dm_bht_compute_hash(struct dm_bht* bht,
+                        const uint8_t* buffer,
+                        uint8_t* digest);
 
 /* Functions for converting indices to nodes. */
 
@@ -169,9 +169,9 @@ inline unsigned int dm_bht_index_at_level(struct dm_bht* bht,
   return leaf >> dm_bht_get_level_shift(bht, depth);
 }
 
-inline u8* dm_bht_node(struct dm_bht* bht,
-                       struct dm_bht_entry* entry,
-                       unsigned int node_index) {
+inline uint8_t* dm_bht_node(struct dm_bht* bht,
+                            struct dm_bht_entry* entry,
+                            unsigned int node_index) {
   return &entry->nodes[node_index * bht->digest_size];
 }
 
@@ -184,10 +184,10 @@ inline struct dm_bht_entry* dm_bht_get_entry(struct dm_bht* bht,
   return &level->entries[index];
 }
 
-inline u8* dm_bht_get_node(struct dm_bht* bht,
-                           struct dm_bht_entry* entry,
-                           int depth,
-                           unsigned int block) {
+inline uint8_t* dm_bht_get_node(struct dm_bht* bht,
+                                struct dm_bht_entry* entry,
+                                int depth,
+                                unsigned int block) {
   unsigned int index = dm_bht_index_at_level(bht, depth, block);
 
   return dm_bht_node(bht, entry, index % bht->node_count);
