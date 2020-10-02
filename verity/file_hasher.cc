@@ -6,11 +6,20 @@
 
 #define __STDC_LIMIT_MACROS 1
 #define __STDC_FORMAT_MACROS 1
+
 #include <errno.h>
 #include <inttypes.h>
+#include <linux/fs.h>
 #include <stdint.h>
+#include <sys/ioctl.h>
 
+#include <string>
+#include <vector>
+
+#include <base/files/file.h>
 #include <base/logging.h>
+#include <base/strings/string_number_conversions.h>
+#include <base/strings/string_util.h>
 
 #include <asm/page.h>
 #include <linux/device-mapper.h>
@@ -19,45 +28,54 @@
 
 namespace verity {
 
-// Simple helper for Initialize.
-template <typename T>
-static inline bool power_of_two(T num) {
-  if (num == 0)
-    return false;
-  if (!(num & (num - 1)))
-    return true;
-  return false;
+namespace {
+// |base::File| doesn't have a good way of getting block device's size. So we
+// have to do linux trickery here.
+int64_t GetFileSize(base::File* file) {
+  struct stat statbuf;
+  int rc = fstat(file->GetPlatformFile(), &statbuf);
+  PLOG_IF(FATAL, rc != 0) << "Failed to get file status";
+  if (S_ISBLK(statbuf.st_mode)) {
+    int64_t size = 0;
+    rc = ioctl(file->GetPlatformFile(), BLKGETSIZE64, &size);
+    PLOG_IF(FATAL, rc != 0) << "Failed to get block size of input device";
+    return size;
+  }
+  return file->GetLength();
+}
+}  // namespace
+
+FileHasher::~FileHasher() {
+  if (initialized_)
+    dm_bht_destroy(&tree_);
 }
 
-bool FileHasher::Initialize(simple_file::File* source,
-                            simple_file::File* destination,
-                            unsigned int blocks,
-                            const char* alg) {
-  if (!alg || !source || !destination) {
-    LOG(ERROR) << "Invalid arguments supplied to Initialize";
-    LOG(INFO) << "s: " << source << " d: " << destination;
+bool FileHasher::Initialize() {
+  CHECK(!initialized_);
+
+  if (!alg_ || !source_ || !destination_) {
+    LOG(ERROR) << "Invalid arguments supplied to ctor.";
+    LOG(INFO) << "s: " << source_ << " d: " << destination_;
     return false;
   }
-  if (source_ || destination_) {
-    LOG(ERROR) << "Initialize called more than once";
+  int64_t source_size = GetFileSize(source_.get());
+  if (source_size < 0) {
+    PLOG(ERROR) << "Failed to get the file size";
     return false;
   }
-  if (blocks > source->Size() / PAGE_SIZE) {
-    LOG(ERROR) << blocks << " blocks exceeds image size of " << source->Size();
+  if (block_limit_ > source_size / PAGE_SIZE) {
+    LOG(ERROR) << block_limit_ << " blocks exceeds image size of "
+               << source_size;
     return false;
-  } else if (blocks == 0) {
-    blocks = source->Size() / PAGE_SIZE;
-    if (source->Size() % PAGE_SIZE) {
-      LOG(ERROR) << "The source file size must be divisible by the block size";
-      LOG(ERROR) << "Size: " << source->Size();
-      LOG(INFO) << "Suggested size: " << ALIGN(source->Size(), PAGE_SIZE);
+  } else if (block_limit_ == 0) {
+    block_limit_ = source_size / PAGE_SIZE;
+    if (source_size % PAGE_SIZE) {
+      LOG(ERROR) << "The source file size must be divisible by the block size, "
+                 << "Size: " << source_size;
+      LOG(INFO) << "Suggested size: " << ALIGN(source_size, PAGE_SIZE);
       return false;
     }
   }
-  alg_ = alg;
-  source_ = source;
-  destination_ = destination;
-  block_limit_ = blocks;
 
   // Now we initialize the tree
   if (dm_bht_create(&tree_, block_limit_, alg_)) {
@@ -66,16 +84,18 @@ bool FileHasher::Initialize(simple_file::File* source,
   }
 
   sectors_ = dm_bht_sectors(&tree_);
-  hash_data_ = new u8[verity_to_bytes(sectors_)];
+  hash_data_.resize(verity_to_bytes(sectors_));
 
   // No reading is needed.
   dm_bht_set_read_cb(&tree_, dm_bht_zeroread_callback);
-  dm_bht_set_buffer(&tree_, hash_data_);
+  dm_bht_set_buffer(&tree_, hash_data_.data());
+  initialized_ = true;
   return true;
 }
 
 bool FileHasher::Store() {
-  return destination_->WriteAt(verity_to_bytes(sectors_), hash_data_, 0);
+  return destination_->WriteAtCurrentPos(hash_data_.data(),
+                                         hash_data_.size()) >= 0;
 }
 
 bool FileHasher::Hash() {
@@ -84,8 +104,9 @@ bool FileHasher::Hash() {
   uint32_t block = 0;
 
   while (block < block_limit_) {
-    if (!source_->Read(PAGE_SIZE, block_data)) {
-      LOG(ERROR) << "Failed to read for block: " << block;
+    if (source_->ReadAtCurrentPos(reinterpret_cast<char*>(block_data),
+                                  PAGE_SIZE) < 0) {
+      PLOG(ERROR) << "Failed to read for block: " << block;
       return false;
     }
     if (dm_bht_store_block(&tree_, block, block_data)) {
@@ -98,13 +119,14 @@ bool FileHasher::Hash() {
 }
 
 const char* FileHasher::RandomSalt() {
-  uint8_t buf[DM_BHT_SALT_SIZE];
-  const char urandom_path[] = "/dev/urandom";
-  simple_file::File source;
+  char buf[DM_BHT_SALT_SIZE];
+  base::FilePath urandom_path("/dev/urandom");
+  base::File source(urandom_path,
+                    base::File::FLAG_OPEN | base::File::FLAG_READ);
 
-  LOG_IF(FATAL, !source.Initialize(urandom_path, O_RDONLY, NULL))
+  LOG_IF(FATAL, !source.IsValid())
       << "Failed to open the random source: " << urandom_path;
-  PLOG_IF(FATAL, !source.Read(sizeof(buf), buf))
+  PLOG_IF(FATAL, source.ReadAtCurrentPos(buf, sizeof(buf)) < 0)
       << "Failed to read the random source";
 
   for (size_t i = 0; i < sizeof(buf); ++i) {
@@ -116,7 +138,7 @@ const char* FileHasher::RandomSalt() {
   return random_salt_;
 }
 
-void FileHasher::PrintTable(bool colocated) {
+std::string FileHasher::GetTable(bool colocated) {
   // Grab the digest (up to 1kbit supported)
   uint8_t digest[128];
   char hexsalt[DM_BHT_SALT_SIZE * 2 + 1];
@@ -130,13 +152,25 @@ void FileHasher::PrintTable(bool colocated) {
   unsigned int root_end = to_sector(block_limit_ << PAGE_SHIFT);
   if (colocated)
     hash_start = root_end;
-  printf(
-      "0 %u verity payload=ROOT_DEV hashtree=HASH_DEV hashstart=%u alg=%s "
-      "root_hexdigest=%s",
-      root_end, hash_start, alg_, digest);
+
+  std::vector<std::string> parts = {
+      "0",
+      base::NumberToString(root_end),
+      "verity",
+      "payload=ROOT_DEV",
+      "hashtree=HASH_DEV",
+      "hashstart=" + base::NumberToString(hash_start),
+      "alg=" + std::string(alg_),
+      "root_hexdigest=" + std::string(reinterpret_cast<char*>(digest)),
+  };
   if (have_salt)
-    printf(" salt=%s", hexsalt);
-  printf("\n");
+    parts.push_back("salt=" + std::string(hexsalt));
+
+  return base::JoinString(parts, " ");
+}
+
+void FileHasher::PrintTable(bool colocated) {
+  printf("%s\n", GetTable(colocated).c_str());
 }
 
 }  // namespace verity

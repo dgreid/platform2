@@ -3,16 +3,17 @@
 // be found in the LICENSE file.
 //
 // Driver program for creating verity hash images.
+
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <memory>
+
+#include <base/files/file.h>
 #include <base/logging.h>
 #include <brillo/syslog_logging.h>
 
 #include "verity/file_hasher.h"
-#include "verity/simple_file/env.h"
-#include "verity/simple_file/file.h"
-#include "verity/utils.h"
 
 namespace {
 void print_usage(const char* name) {
@@ -113,21 +114,21 @@ static int verity_create(const char* alg,
                          unsigned int image_blocks,
                          const char* hash_path,
                          const char* salt) {
-  // Configure files
-  simple_file::Env env;
-
-  simple_file::File source;
-  LOG_IF(FATAL, !source.Initialize(image_path, O_RDONLY, &env))
+  auto source = std::make_unique<base::File>(
+      base::FilePath(image_path),
+      base::File::FLAG_OPEN | base::File::FLAG_READ);
+  LOG_IF(FATAL, source && !source->IsValid())
       << "Failed to open the source file: " << image_path;
-  simple_file::File destination;
-  LOG_IF(FATAL,
-         !destination.Initialize(hash_path, O_CREAT | O_RDWR | O_TRUNC, &env))
+  auto destination = std::make_unique<base::File>(
+      base::FilePath(hash_path),
+      base::File::FLAG_CREATE_ALWAYS | base::File::FLAG_WRITE);
+  LOG_IF(FATAL, destination && !destination->IsValid())
       << "Failed to open destination file: " << hash_path;
 
   // Create the actual worker and create the hash image.
-  verity::FileHasher hasher;
-  LOG_IF(FATAL, !hasher.Initialize(&source, &destination, image_blocks, alg))
-      << "Failed to initialize hasher";
+  verity::FileHasher hasher(std::move(source), std::move(destination),
+                            image_blocks, alg);
+  LOG_IF(FATAL, !hasher.Initialize()) << "Failed to initialize hasher";
   if (salt)
     hasher.set_salt(salt);
   LOG_IF(FATAL, !hasher.Hash()) << "Failed to hash hasher";

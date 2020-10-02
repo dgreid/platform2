@@ -29,9 +29,6 @@ static_library("libdm-bht") {
     "dm-bht-userspace.cc",
     "dm-bht.cc",
     "file_hasher.cc",
-    "simple_file/env.cc",
-    "simple_file/file.cc",
-    "utils.cc",
   ]
 }
 
