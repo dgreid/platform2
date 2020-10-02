@@ -120,7 +120,7 @@ class SessionManagerService
   SessionManagerService(std::unique_ptr<BrowserJobInterface> child_job,
                         uid_t uid,
                         base::Optional<base::FilePath> ns_path,
-                        int kill_timeout,
+                        base::TimeDelta kill_timeout,
                         bool enable_browser_abort_on_hang,
                         base::TimeDelta hang_detection_interval,
                         LoginMetrics* metrics,

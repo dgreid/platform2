@@ -114,25 +114,7 @@ constexpr base::TimeDelta kHangDetectionIntervalTest =
 
 // Time to wait for children to exit gracefully before killing them
 // with a SIGABRT.
-constexpr int kKillTimeoutDefaultSeconds = 3;
-constexpr int kKillTimeoutLongSeconds = 12;
-
-bool BootDeviceIsRotationalDisk() {
-  char full_rootdev_path[PATH_MAX];
-  if (rootdev(full_rootdev_path, PATH_MAX - 1, true, true) != 0) {
-    PLOG(WARNING) << "Couldn't find root device. Guessing it's not rotational.";
-    return false;
-  }
-  CHECK(base::StartsWith(full_rootdev_path, "/dev/",
-                         base::CompareCase::SENSITIVE));
-  string device_only(full_rootdev_path + 5, PATH_MAX - 5);
-  base::FilePath sysfs_path(base::StringPrintf("/sys/block/%s/queue/rotational",
-                                               device_only.c_str()));
-  string rotational_contents;
-  if (!base::ReadFileToString(sysfs_path, &rotational_contents))
-    PLOG(WARNING) << "Couldn't read from " << sysfs_path.value();
-  return rotational_contents == "1";
-}
+constexpr base::TimeDelta kKillTimeout = base::TimeDelta::FromSeconds(3);
 
 }  // namespace
 
@@ -213,14 +195,6 @@ int main(int argc, char* argv[]) {
   if (hang_detection_file_exists)
     hang_detection_interval = kHangDetectionIntervalTest;
 
-  // On platforms with rotational disks, Chrome takes longer to shut down. As
-  // such, we need to change our baseline assumption about what "taking too long
-  // to shutdown" means and wait for longer before killing Chrome and triggering
-  // a report.
-  int kill_timeout = kKillTimeoutDefaultSeconds;
-  if (BootDeviceIsRotationalDisk())
-    kill_timeout = kKillTimeoutLongSeconds;
-
   // Job configuration.
   BrowserJob::Config config;
   base::Optional<base::FilePath> ns_path;
@@ -293,7 +267,7 @@ int main(int argc, char* argv[]) {
   brillo_loop.SetAsCurrent();
 
   scoped_refptr<SessionManagerService> manager = new SessionManagerService(
-      std::move(browser_job), uid, ns_path, kill_timeout, enable_hang_detection,
+      std::move(browser_job), uid, ns_path, kKillTimeout, enable_hang_detection,
       hang_detection_interval, &metrics, &system);
 
   if (manager->Initialize()) {
