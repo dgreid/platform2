@@ -331,23 +331,14 @@ def GenerateMosysCBindings(config):
      .sku_id = %s,
      .customization_id = "%s",
      .whitelabel_tag = "%s",
-     .info = {.brand = "%s",
-              .model = "%s",
-              .customization = "%s"}}"""
+     .info = {.model = "%s"}}"""
   structs = []
   json_config = json.loads(config)
-
-  # TODO(crbug.com/1106930): remove when customization id gets
-  # decoupled from mosys.
-  json_config = _GenerateInferredElements(json_config)
-
   for device_config in json_config[CHROMEOS][CONFIGS]:
     identity = device_config['identity']
     name = device_config['name']
     whitelabel_tag = identity.get('whitelabel-tag', '')
     customization_id = identity.get('customization-id', '')
-    help_content_id = device_config.get('ui', {}).get('help-content-id', '')
-    brand_code = device_config.get('brand-code', '')
     platform_name = identity.get('platform-name', '')
     sku_id = identity.get('sku-id', -1)
 
@@ -362,9 +353,7 @@ def GenerateMosysCBindings(config):
                          sku_id,
                          customization_id,
                          whitelabel_tag,
-                         brand_code,
-                         name,
-                         help_content_id))
+                         name))
 
   file_format = """\
 /* Copyright 2020 The Chromium OS Authors. All rights reserved.
