@@ -52,6 +52,7 @@ pipe2: 1
 pivot_root: 1
 ppoll: 1
 prctl: arg0 == PR_SET_SECCOMP || arg0 == PR_SET_NO_NEW_PRIVS
+pread64: 1
 prlimit64: 1
 read: 1
 readlinkat: 1
