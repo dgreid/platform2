@@ -16,7 +16,8 @@ MOUNT_FLAGS="MS_NOSUID|MS_NODEV|MS_NOEXEC"
 # -e    Enter a new network namespace.
 # -p -I Enter a new PID namespace and run the process as init (pid=1).
 # -l    Enter a new IPC namespace.
-# -c    Forbid all caps except CAP_SYS_ADMIN and CAP_SETPCAP.
+# -c    Forbid all caps except CAP_SYS_ADMIN (for mount() syscall) and
+#       CAP_SETPCAP (to drop capabilities when it's not needed).
 # -u/-g Run as virtual-file-provider user/group.
 # -k    Mount tmpfs on /mnt and /run.
 # -b    /run/dbus is for D-Bus system bus socket.
