@@ -20,11 +20,15 @@
 namespace patchpanel {
 
 // Simple wrapper around patchpanel DBus API. All public functions are blocking
-// DBus calls to patchpaneld. The method names and protobuf schema used by
-// patchpanel DBus API are defined in platform2/system_api/dbus/patchpanel.
-// Access control for clients is defined in platform2/patchpanel/dbus.
+// DBus calls to patchpaneld (asynchronous calls are mentioned explicitly). The
+// method names and protobuf schema used by patchpanel DBus API are defined in
+// platform2/system_api/dbus/patchpanel. Access control for clients is defined
+// in platform2/patchpanel/dbus.
 class BRILLO_EXPORT Client {
  public:
+  using GetTrafficCountersCallback =
+      base::OnceCallback<void(const std::vector<TrafficCounter>&)>;
+
   static std::unique_ptr<Client> New();
 
   Client(const scoped_refptr<dbus::Bus>& bus, dbus::ObjectProxy* proxy)
@@ -69,12 +73,14 @@ class BRILLO_EXPORT Client {
                    const std::string& outbound_ifname,
                    bool forward_user_traffic);
 
-  // Gets the traffic counters kept by patchpanel. |devices| is the set of
-  // interfaces (shill devices) for which counters should be returned, any
-  // unknown interfaces will be ignored. If |devices| is empty, counters for all
-  // known interfaces will be returned.
-  std::vector<TrafficCounter> GetTrafficCounters(
-      const std::set<std::string>& devices);
+  // Gets the traffic counters kept by patchpanel asynchronously, |callback|
+  // will be called with the counters once they are ready, or with an empty
+  // vector when an error happen. |devices| is the set of interfaces (shill
+  // devices) for which counters should be returned, any unknown interfaces will
+  // be ignored. If |devices| is empty, counters for all known interfaces will
+  // be returned.
+  void GetTrafficCounters(const std::set<std::string>& devices,
+                          GetTrafficCountersCallback callback);
 
   // Sends a ModifyPortRuleRequest to modify iptables ingress rules.
   // This should only be called by permission_broker's 'devbroker'.

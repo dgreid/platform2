@@ -6,6 +6,7 @@
 
 #include <fcntl.h>
 
+#include <base/bind.h>
 #include <base/logging.h>
 #include <chromeos/dbus/service_constants.h>
 #include <dbus/message.h>
@@ -40,6 +41,28 @@ std::ostream& operator<<(std::ostream& stream,
   }
   stream << " }";
   return stream;
+}
+
+void OnGetTrafficCountersDBusResponse(
+    Client::GetTrafficCountersCallback callback,
+    dbus::Response* dbus_response) {
+  if (!dbus_response) {
+    LOG(ERROR) << "Failed to send TrafficCountersRequest message to patchpanel "
+                  "service";
+    std::move(callback).Run({});
+    return;
+  }
+
+  TrafficCountersResponse response;
+  dbus::MessageReader reader(dbus_response);
+  if (!reader.PopArrayOfBytesAsProto(&response)) {
+    LOG(ERROR) << "Failed to parse TrafficCountersResponse proto";
+    std::move(callback).Run({});
+    return;
+  }
+
+  std::move(callback).Run(
+      {response.counters().begin(), response.counters().end()});
 }
 
 }  // namespace
@@ -437,8 +460,8 @@ Client::ConnectNamespace(pid_t pid,
   return std::make_pair(std::move(fd_local), std::move(response));
 }
 
-std::vector<TrafficCounter> Client::GetTrafficCounters(
-    const std::set<std::string>& devices) {
+void Client::GetTrafficCounters(const std::set<std::string>& devices,
+                                GetTrafficCountersCallback callback) {
   dbus::MethodCall method_call(kPatchPanelInterface, kGetTrafficCountersMethod);
   dbus::MessageWriter writer(&method_call);
 
@@ -449,25 +472,13 @@ std::vector<TrafficCounter> Client::GetTrafficCounters(
 
   if (!writer.AppendProtoAsArrayOfBytes(request)) {
     LOG(ERROR) << "Failed to encode TrafficCountersRequest proto";
-    return {};
+    std::move(callback).Run({});
+    return;
   }
 
-  std::unique_ptr<dbus::Response> dbus_response = proxy_->CallMethodAndBlock(
-      &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
-  if (!dbus_response) {
-    LOG(ERROR) << "Failed to send TrafficCountersRequest message to patchpanel "
-                  "service";
-    return {};
-  }
-
-  TrafficCountersResponse response;
-  dbus::MessageReader reader(dbus_response.get());
-  if (!reader.PopArrayOfBytesAsProto(&response)) {
-    LOG(ERROR) << "Failed to parse TrafficCountersResponse proto";
-    return {};
-  }
-
-  return {response.counters().begin(), response.counters().end()};
+  proxy_->CallMethod(
+      &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT,
+      base::BindOnce(&OnGetTrafficCountersDBusResponse, std::move(callback)));
 }
 
 bool Client::ModifyPortRule(ModifyPortRuleRequest::Operation op,
