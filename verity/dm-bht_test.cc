@@ -9,7 +9,6 @@
 #include <string>
 #include <vector>
 
-#include <asm/page.h>
 #include <base/logging.h>
 #include <gtest/gtest.h>
 #include <linux/device-mapper.h>

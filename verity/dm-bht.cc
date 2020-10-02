@@ -16,7 +16,6 @@
 #include <crypto/secure_hash.h>
 #include <crypto/sha2.h>
 
-#include <asm/page.h>
 #include <asm-generic/bitops/fls.h>
 /* #define CONFIG_DM_DEBUG 1 */
 #include <linux/device-mapper.h>

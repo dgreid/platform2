@@ -10,7 +10,6 @@
 #include <errno.h>
 #include <string.h>
 
-#include <asm/page.h>
 #include <linux/device-mapper.h>
 
 #include "verity/dm-bht.h"

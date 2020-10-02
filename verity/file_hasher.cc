@@ -21,7 +21,6 @@
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_util.h>
 
-#include <asm/page.h>
 #include <linux/device-mapper.h>
 #include <linux/kernel.h>
 #include "verity/file_hasher.h"

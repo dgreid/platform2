@@ -36,6 +36,9 @@ extern "C" {
 /* Additional possible return codes */
 #define DM_BHT_ENTRY_ERROR_MISMATCH -3 /* Digest mismatch */
 
+#define PAGE_SIZE 4096
+#define PAGE_SHIFT 12
+
 namespace verity {
 
 extern const char kSha256HashName[];

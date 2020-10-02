@@ -16,7 +16,6 @@
 
 #include "verity/dm-bht.h"
 #include "verity/dm-bht-userspace.h"
-#include "verity/include/asm/page.h"
 
 namespace verity {
 // FileHasher takes a |base::File| object and reads in |block_size|
