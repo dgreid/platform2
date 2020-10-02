@@ -18,7 +18,6 @@
 
 #include <asm/page.h>
 #include <asm-generic/bitops/fls.h>
-#include <linux/bug.h>
 /* #define CONFIG_DM_DEBUG 1 */
 #include <linux/device-mapper.h>
 #include <linux/errno.h>
@@ -228,7 +227,7 @@ int dm_bht_create(struct dm_bht* bht,
     goto bad_entries_alloc;
 
   /* We compute depth such that there is only be 1 block at level 0. */
-  BUG_ON(bht->levels[0].count != 1);
+  CHECK_EQ(bht->levels[0].count, 1);
 
   return 0;
 
@@ -336,7 +335,7 @@ void dm_bht_read_completed(struct dm_bht_entry* entry, int status) {
     /* entry->nodes will be freed later */
     return;
   }
-  BUG_ON(entry->state != DM_BHT_ENTRY_PENDING);
+  CHECK_EQ(entry->state, DM_BHT_ENTRY_PENDING);
   entry->state = DM_BHT_ENTRY_READY;
 }
 
@@ -363,7 +362,7 @@ int dm_bht_verify_path(struct dm_bht* bht,
     /* This call is only safe if all nodes along the path
      * are already populated (i.e. READY) via dm_bht_populate.
      */
-    BUG_ON(state < DM_BHT_ENTRY_READY);
+    CHECK_GE(state, DM_BHT_ENTRY_READY);
     node = dm_bht_get_node(bht, entry, depth, block);
 
     if (dm_bht_compute_hash(bht, buffer, digest) ||
@@ -461,7 +460,7 @@ int dm_bht_populate(struct dm_bht* bht, void* ctx, unsigned int block) {
   int depth;
   int state = 0;
 
-  BUG_ON(block >= bht->block_count);
+  CHECK_LT(block, bht->block_count);
   bht->externally_allocated = false;
 
 #if VERBOSE_DEBUG
@@ -528,7 +527,7 @@ int dm_bht_verify_block(struct dm_bht* bht,
                         unsigned int block,
                         const u8* buffer,
                         unsigned int offset) {
-  BUG_ON(offset != 0);
+  CHECK_EQ(offset, 0);
 
   return dm_bht_verify_path(bht, block, buffer);
 }
@@ -554,10 +553,10 @@ int dm_bht_destroy(struct dm_bht* bht) {
            */
           case DM_BHT_ENTRY_UNALLOCATED:
             /* Allocated with improper state */
-            BUG_ON(entry->nodes);
+            CHECK(!entry->nodes);
             continue;
           default:
-            BUG_ON(!entry->nodes);
+            CHECK(entry->nodes);
             free(entry->nodes);
             break;
         }
