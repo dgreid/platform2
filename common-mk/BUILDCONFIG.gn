@@ -134,7 +134,7 @@ set_default_toolchain("//common-mk/toolchain")
 #   public_pkg_deps(optional): Similart to pkg_deps, but injected to
 #     |public_configs| instead.
 #   all_dependent_pkg_deps(optional): Similar to pkg_deps, but injected to
-#     |all_dependent_pkg_deps|.
+#     |all_dependent_configs|.
 #   run_test(optional): A boolean if this is a unittest program that should be
 #     automatically run. A corresponding metadata is injected to itself.
 #   test_config(optional): A scope of configs for tests.
@@ -182,17 +182,11 @@ template("_generate_config_rule") {
         type = invoker.target_type
       }
       if (invoker.target_type == "shared_library") {
-        sources = [
-          "${source_dir}/lib/${source_name}.so",
-        ]
+        sources = [ "${source_dir}/lib/${source_name}.so" ]
       } else if (invoker.target_type == "static_library") {
-        sources = [
-          "${source_dir}/${source_name}.a",
-        ]
+        sources = [ "${source_dir}/${source_name}.a" ]
       } else {
-        sources = [
-          "${source_dir}/${source_name}",
-        ]
+        sources = [ "${source_dir}/${source_name}" ]
       }
       install_path = invoker.install_path
     }
