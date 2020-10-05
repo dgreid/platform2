@@ -1,9 +1,8 @@
-#!/usr/bin/env python3
 # Copyright 2020 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-"""Android Installer
+"""Android Installer for Chrome OS
 
 This script will be called by push_to_device, chromeos-base/android-{container,
 vm}-* ebuilds and board_specific_setup.
@@ -148,7 +147,3 @@ class AndroidInstaller:
   def board_specific_setup_test(self) -> None:
     # TODO(boleynsu): implement this
     raise NotImplementedError()
-
-
-if __name__ == '__main__':
-  AndroidInstaller(sys.argv[1:]).main()
