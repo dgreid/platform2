@@ -381,6 +381,12 @@ void CreateDirectories(ChromiumCommandBuilder* builder) {
     CHECK(brillo::userdb::GetGroupInfo("arc-camera", &arc_camera_gid));
     CHECK(EnsureDirectoryExists(base::FilePath("/run/camera"), uid,
                                 arc_camera_gid, 0770));
+    // This directory stores the tokens used for identification of camera HAL
+    // clients. Clients would read from this directory to retrieve their
+    // respective tokens. Untrusted clients such as pluginvm clients would only
+    // have access to a subdirectory inside to limit their access.
+    CHECK(EnsureDirectoryExists(base::FilePath("/run/camera_tokens"), uid,
+                                arc_camera_gid, 0770));
     // The /var/cache/camera folder is used to store camera-related configs and
     // settings that are either extracted from Android container, or generated
     // by the camera HAL at runtime.
