@@ -52,7 +52,7 @@ bool SocketQrtr::Open() {
 void SocketQrtr::Close() {
   if (IsValid()) {
     watcher_ = nullptr;
-    qrtr_close(socket_.get());
+    // Since socket_ is a ScopedFD, socket_.reset() calls close() on the socket.
     socket_.reset();
   }
 }
