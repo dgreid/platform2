@@ -27,6 +27,7 @@ group("all") {
     ":system_api-metrics_event-goprotos",
     ":system_api-metrics_event-protos",
     ":system_api-oobe_config-protos",
+    ":system_api-patchpanel-goprotos",
     ":system_api-patchpanel-protos",
     ":system_api-plugin_vm_service-goprotos",
     ":system_api-plugin_vm_service-protos",
@@ -396,6 +397,12 @@ proto_library("system_api-patchpanel-protos") {
   sources = [ "${proto_in_dir}/patchpanel_service.proto" ]
   standalone = true
   use_pic = true
+}
+
+goproto_library("system_api-patchpanel-goprotos") {
+  proto_in_dir = "dbus/patchpanel"
+  proto_out_dir = "go/src/chromiumos/system_api/patchpanel_proto"
+  sources = [ "${proto_in_dir}/patchpanel_service.proto" ]
 }
 
 proto_library("system_api-anomaly_detector-protos") {
