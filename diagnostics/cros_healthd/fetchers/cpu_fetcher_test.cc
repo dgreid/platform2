@@ -50,8 +50,9 @@ constexpr char kFirstCStateDir[] = "state0";
 
 constexpr char kNonIntegralFileContents[] = "Not an integer!";
 
-constexpr char kBadCpuinfoContents[] =
-    "calculator\t: 0\nmodel name\t: Dank CPU 1 @ 8.90GHz\n\n";
+constexpr char kHardwareDescriptionCpuinfoContents[] =
+    "Hardware\t: Rockchip (Device Tree)\nRevision\t: 0000\nSerial\t: "
+    "0000000000000000\n\n";
 constexpr char kNoModelNameCpuinfoContents[] = "processor\t: 0\n\n";
 constexpr char kNoPhysicalIdCpuinfoContents[] =
     "processor\t: 0\nmodel name\t: Dank CPU 1 @ 8.90GHz\n\n"
@@ -378,15 +379,40 @@ TEST_F(CpuFetcherTest, MissingCpuinfoFile) {
   EXPECT_EQ(cpu_result->get_error()->type, mojo_ipc::ErrorType::kFileReadError);
 }
 
-// Test that we handle an incorrectly-formatted cpuinfo file.
-TEST_F(CpuFetcherTest, IncorrectlyFormattedCpuinfoFile) {
+// Test that we handle a cpuinfo file with a hardware description block.
+TEST_F(CpuFetcherTest, HardwareDescriptionCpuinfoFile) {
+  std::string cpu_info_contents = kFakeCpuinfoContents;
+  cpu_info_contents += kHardwareDescriptionCpuinfoContents;
   ASSERT_TRUE(WriteFileAndCreateParentDirs(GetProcCpuInfoPath(temp_dir_path()),
-                                           kBadCpuinfoContents));
+                                           cpu_info_contents));
 
   auto cpu_result = FetchCpuInfo();
 
-  ASSERT_TRUE(cpu_result->is_error());
-  EXPECT_EQ(cpu_result->get_error()->type, mojo_ipc::ErrorType::kParseError);
+  ASSERT_TRUE(cpu_result->is_cpu_info());
+  const auto& cpu_info = cpu_result->get_cpu_info();
+  EXPECT_EQ(cpu_info->num_total_threads, kExpectedNumTotalThreads);
+  EXPECT_EQ(cpu_info->architecture, mojo_ipc::CpuArchitectureEnum::kX86_64);
+  const auto& physical_cpus = cpu_info->physical_cpus;
+  ASSERT_EQ(physical_cpus.size(), 2);
+  const auto& first_physical_cpu = physical_cpus[0];
+  ASSERT_FALSE(first_physical_cpu.is_null());
+  EXPECT_EQ(first_physical_cpu->model_name, kFirstFakeModelName);
+  const auto& first_logical_cpus = first_physical_cpu->logical_cpus;
+  ASSERT_EQ(first_logical_cpus.size(), 2);
+  VerifyLogicalCpu(kFirstFakeMaxClockSpeed, kFirstFakeScalingMaxFrequency,
+                   kFirstFakeScalingCurrentFrequency, kFirstFakeIdleTime,
+                   GetCStateVector(kFirstLogicalId), first_logical_cpus[0]);
+  VerifyLogicalCpu(kSecondFakeMaxClockSpeed, kSecondFakeScalingMaxFrequency,
+                   kSecondFakeScalingCurrentFrequency, kSecondFakeIdleTime,
+                   GetCStateVector(kSecondLogicalId), first_logical_cpus[1]);
+  const auto& second_physical_cpu = physical_cpus[1];
+  ASSERT_FALSE(second_physical_cpu.is_null());
+  EXPECT_EQ(second_physical_cpu->model_name, kSecondFakeModelName);
+  const auto& second_logical_cpus = second_physical_cpu->logical_cpus;
+  ASSERT_EQ(second_logical_cpus.size(), 1);
+  VerifyLogicalCpu(kThirdFakeMaxClockSpeed, kThirdFakeScalingMaxFrequency,
+                   kThirdFakeScalingCurrentFrequency, kThirdFakeIdleTime,
+                   GetCStateVector(kThirdLogicalId), second_logical_cpus[0]);
 }
 
 // Test that we handle a cpuinfo file without a model name.

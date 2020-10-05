@@ -137,6 +137,20 @@ base::Optional<std::map<std::string, uint32_t>> ParseStatContents(
   return idle_times;
 }
 
+// Parses |block| to determine if the block parsed from /proc/cpuinfo is a
+// processor block.
+bool IsProcessorBlock(const std::string& block) {
+  base::StringPairs pairs;
+  base::SplitStringIntoKeyValuePairs(block, ':', '\n', &pairs);
+
+  if (pairs.size() &&
+      pairs[0].first.find(kProcessorIdKey) != std::string::npos) {
+    return true;
+  }
+
+  return false;
+}
+
 // Parses |processor| to obtain |processor_id|, |physical_id|, and |model_name|
 // if applicable. Returns true on success.
 bool ParseProcessor(const std::string& processor,
@@ -173,6 +187,9 @@ mojo_ipc::CpuResultPtr GetCpuInfoFromProcessorInfo(
     mojo_ipc::CpuArchitectureEnum architecture) {
   std::map<std::string, mojo_ipc::PhysicalCpuInfoPtr> physical_cpus;
   for (const auto& processor : processor_info) {
+    if (!IsProcessorBlock(processor))
+      continue;
+
     std::string processor_id;
     std::string physical_id;
     std::string model_name;
