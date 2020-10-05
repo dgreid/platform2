@@ -5,10 +5,12 @@
 openat: 1
 read: 1
 brk: 1
+# CROS_EC_DEV_IOCRDMEM = 0xc00c3a01
 # CROS_EC_DEV_IOCXCMD = 0xc01c3a00
 # CROS_EC_DEV_IOCRDMEM_V2 = 0xc108ec01
 # CROS_EC_DEV_IOCXCMD_V2 = 0xc014ec00
-ioctl: arg1 == 0xc01c3a00 || arg1 == 0xc108ec01 || arg1 == 0xc014ec00
+ioctl: arg1 == 0xc00c3a01 || arg1 == 0xc01c3a00 || arg1 == 0xc108ec01 || \
+       arg1 == 0xc014ec00
 uname: 1
 write: 1
 exit_group: 1
