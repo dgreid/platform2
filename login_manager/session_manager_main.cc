@@ -100,9 +100,6 @@ namespace {
 // Directory in which per-boot metrics flag files will be stored.
 constexpr char kFlagFileDir[] = "/run/session_manager";
 
-// File to create the test mount namespace.
-constexpr char kChromeTestNamespacePath[] = "/run/namespaces/test_ns";
-
 // Hang-detection magic file and constants.
 constexpr char kHangDetectionFlagFile[] = "enable_hang_detection";
 constexpr base::TimeDelta kHangDetectionIntervalStable =
@@ -234,25 +231,13 @@ int main(int argc, char* argv[]) {
     // create the mount namespace here before Chrome launches.
     chrome_mnt_ns =
         std::make_unique<brillo::MountNamespace>(ns_path.value(), &platform);
-    if (chrome_mnt_ns->Create()) {
+    bool status = chrome_mnt_ns->Create();
+    metrics.SendNamespaceCreationResult(status);
+    if (status) {
       LOG(INFO) << "Mount namespace created at " << ns_path.value();
     } else {
       LOG(WARNING) << "Failed to create mount namespace at " << ns_path.value();
     }
-  }
-
-  // Chrome mount namespace is created by Cryptohome for Guest sessions. To
-  // report the namespace creation metrics a mount namespace different from the
-  // Chrome mount namespace is created. Therefore there is no possibility of
-  // remounting on top of the Chrome mount namespace created by Cryptohome.
-  // TODO(betuls): Change namespace metrics reporting to report the status of
-  // the chrome_mnt_ns->Create() call above once USE flag is removed and user
-  // session isolation is enabled by default.
-  base::FilePath test_ns_path(kChromeTestNamespacePath);
-  if (base::CreateTemporaryFile(&test_ns_path)) {
-    brillo::MountNamespace test_mnt_ns(test_ns_path, &platform);
-    bool status = test_mnt_ns.Create();
-    metrics.SendNamespaceCreationResult(status);
   }
 
   // This job encapsulates the command specified on the command line, and the
