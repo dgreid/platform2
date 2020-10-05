@@ -441,7 +441,7 @@ void CreateECCPublicKey(CK_SESSION_HANDLE session,
                         const vector<uint8_t>& object_id,
                         string label,
                         EC_KEY* ecc) {
-  CK_OBJECT_CLASS priv_class = CKO_PUBLIC_KEY;
+  CK_OBJECT_CLASS pub_class = CKO_PUBLIC_KEY;
   CK_KEY_TYPE key_type = CKK_EC;
   CK_BBOOL false_value = CK_FALSE;
   CK_BBOOL true_value = CK_TRUE;
@@ -449,24 +449,23 @@ void CreateECCPublicKey(CK_SESSION_HANDLE session,
   string params = ecparameters2bin(ecc);
   string point = ecpoint2bin(ecc);
 
-  CK_ATTRIBUTE private_attributes[] = {
-      {CKA_CLASS, &priv_class, sizeof(priv_class)},
+  CK_ATTRIBUTE public_attributes[] = {
+      {CKA_CLASS, &pub_class, sizeof(pub_class)},
       {CKA_KEY_TYPE, &key_type, sizeof(key_type)},
-      {CKA_DECRYPT, &true_value, sizeof(true_value)},
-      {CKA_SIGN, &true_value, sizeof(true_value)},
-      {CKA_UNWRAP, &false_value, sizeof(false_value)},
-      {CKA_SENSITIVE, &true_value, sizeof(true_value)},
+      {CKA_ENCRYPT, &true_value, sizeof(true_value)},
+      {CKA_VERIFY, &true_value, sizeof(true_value)},
+      {CKA_WRAP, &false_value, sizeof(false_value)},
       {CKA_TOKEN, &true_value, sizeof(true_value)},
-      {CKA_PRIVATE, &true_value, sizeof(true_value)},
+      {CKA_PRIVATE, &false_value, sizeof(false_value)},
       {CKA_ID, const_cast<uint8_t*>(object_id.data()), object_id.size()},
       {CKA_LABEL, const_cast<char*>(label.c_str()), label.length()},
       {CKA_EC_PARAMS, const_cast<char*>(params.c_str()), params.length()},
       {CKA_EC_POINT, const_cast<char*>(point.c_str()), point.length()},
   };
-  CK_OBJECT_HANDLE private_key_handle = 0;
+  CK_OBJECT_HANDLE public_key_handle = 0;
   CK_RV result =
-      C_CreateObject(session, private_attributes,
-                     base::size(private_attributes), &private_key_handle);
+      C_CreateObject(session, public_attributes, base::size(public_attributes),
+                     &public_key_handle);
   LOG(INFO) << "C_CreateObject: " << chaps::CK_RVToString(result);
   if (result != CKR_OK) {
     exit(-1);
