@@ -63,6 +63,9 @@ constexpr char kOemEtcSharedDirTag[] = "oem_etc";
 constexpr char kMediaSharedDir[] = "/run/arcvm/media";
 constexpr char kMediaSharedDirTag[] = "media";
 
+constexpr char kTestHarnessSharedDir[] = "/run/arcvm/testharness";
+constexpr char kTestHarnessSharedDirTag[] = "testharness";
+
 // Uid and gid mappings for the android data directory. This is a
 // comma-separated list of 3 values: <start of range inside the user namespace>
 // <start of range outside the user namespace> <count>. The values are taken
@@ -237,6 +240,10 @@ bool ArcVm::Start(base::FilePath kernel,
       "%s:%s:type=9p:cache=never:uidmap=%s:gidmap=%s:ascii_casefold=true",
       kMediaSharedDir, kMediaSharedDirTag, kAndroidUidMap, kAndroidGidMap);
 
+  const base::FilePath testharness_dir(kTestHarnessSharedDir);
+  std::string shared_testharness = CreateSharedDataParam(
+      testharness_dir, kTestHarnessSharedDirTag, true, false);
+
   // Build up the process arguments.
   // clang-format off
   base::StringPairs args = {
@@ -261,6 +268,7 @@ bool ArcVm::Start(base::FilePath kernel,
     { "--shared-dir",     std::move(shared_data) },
     { "--shared-dir",     std::move(shared_data_media) },
     { "--shared-dir",     std::move(shared_media) },
+    { "--shared-dir",     std::move(shared_testharness) },
     { "--params",         base::JoinString(params, " ") },
   };
   // clang-format on
