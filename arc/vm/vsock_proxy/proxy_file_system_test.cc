@@ -70,6 +70,19 @@ class ProxyFileSystemTest : public testing::Test,
       std::move(callback).Run(EBADF, std::string());
     }
   }
+  void Pwrite(int64_t handle,
+              std::string blob,
+              uint64_t offset,
+              PwriteCallback callback) override {
+    if (handle == kHandle) {
+      data_written_.resize(std::max(data_written_.size(),
+                                    static_cast<size_t>(offset + blob.size())));
+      data_written_.replace(offset, blob.size(), blob);
+      std::move(callback).Run(0, blob.size());
+    } else {
+      std::move(callback).Run(EBADF, 0);
+    }
+  }
   void Close(int64_t handle) override {
     EXPECT_FALSE(close_was_called_.IsSignaled());
     EXPECT_EQ(kHandle, handle);
@@ -100,17 +113,23 @@ class ProxyFileSystemTest : public testing::Test,
   base::WaitableEvent close_was_called_{
       base::WaitableEvent::ResetPolicy::MANUAL,
       base::WaitableEvent::InitialState::NOT_SIGNALED};
+
+  std::string data_written_;
 };
 
 // On ARM devices, unit tests run without necessary capabilities in QEMU.
 #if defined(ARCH_CPU_ARM_FAMILY)
 #define MAYBE_RegularFileReadTest DISABLED_RegularFileReadTest
+#define MAYBE_RegularFileWriteTest DISABLED_RegularFileWriteTest
+#define MAYBE_RegularFileReadWriteTest DISABLED_RegularFileReadWriteTest
 #else
 #define MAYBE_RegularFileReadTest RegularFileReadTest
+#define MAYBE_RegularFileWriteTest RegularFileWriteTest
+#define MAYBE_RegularFileReadWriteTest RegularFileReadWriteTest
 #endif
 
 TEST_F(ProxyFileSystemTest, MAYBE_RegularFileReadTest) {
-  base::ScopedFD fd = file_system_->RegisterHandle(kHandle);
+  base::ScopedFD fd = file_system_->RegisterHandle(kHandle, O_RDONLY);
   char buf[10];
   ASSERT_EQ(sizeof(buf), HANDLE_EINTR(read(fd.get(), buf, sizeof(buf))));
   EXPECT_EQ("abcdefghij", std::string(buf, sizeof(buf)));
@@ -120,6 +139,32 @@ TEST_F(ProxyFileSystemTest, MAYBE_RegularFileReadTest) {
   EXPECT_EQ("uvwxyz", std::string(buf, 6));
   // Make sure EOF.
   ASSERT_EQ(0, HANDLE_EINTR(read(fd.get(), buf, sizeof(buf))));
+
+  // Close the file descriptor.
+  fd.reset();
+  close_was_called_.Wait();
+}
+
+TEST_F(ProxyFileSystemTest, MAYBE_RegularFileWriteTest) {
+  base::ScopedFD fd = file_system_->RegisterHandle(kHandle, O_WRONLY);
+  ASSERT_EQ(10, HANDLE_EINTR(write(fd.get(), kTestData, 10)));
+  ASSERT_EQ(10, HANDLE_EINTR(write(fd.get(), kTestData + 10, 10)));
+  ASSERT_EQ(6, HANDLE_EINTR(write(fd.get(), kTestData + 20, 6)));
+  EXPECT_EQ(kTestData, data_written_);
+
+  // Close the file descriptor.
+  fd.reset();
+  close_was_called_.Wait();
+}
+
+TEST_F(ProxyFileSystemTest, MAYBE_RegularFileReadWriteTest) {
+  base::ScopedFD fd = file_system_->RegisterHandle(kHandle, O_RDWR);
+  ASSERT_EQ(26, HANDLE_EINTR(pwrite(fd.get(), kTestData, 26, 0)));
+  EXPECT_EQ(kTestData, data_written_);
+
+  char buf[26];
+  ASSERT_EQ(sizeof(buf), HANDLE_EINTR(pread(fd.get(), buf, sizeof(buf), 0)));
+  EXPECT_EQ(kTestData, std::string(buf, sizeof(buf)));
 
   // Close the file descriptor.
   fd.reset();

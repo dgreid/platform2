@@ -101,6 +101,27 @@ void LocalFile::Pread(uint64_t count, uint64_t offset, PreadCallback callback) {
       std::move(callback));
 }
 
+void LocalFile::Pwrite(std::string blob,
+                       uint64_t offset,
+                       PwriteCallback callback) {
+  base::PostTaskAndReplyWithResult(
+      blocking_task_runner_.get(), FROM_HERE,
+      base::BindOnce(
+          [](int fd, std::string blob, uint64_t offset) {
+            arc_proxy::PwriteResponse response;
+            int result =
+                HANDLE_EINTR(pwrite(fd, &blob[0], blob.size(), offset));
+            if (result < 0) {
+              response.set_error_code(errno);
+            } else {
+              response.set_bytes_written(result);
+            }
+            return response;
+          },
+          fd_.get(), std::move(blob), offset),
+      std::move(callback));
+}
+
 void LocalFile::Fstat(FstatCallback callback) {
   base::PostTaskAndReplyWithResult(blocking_task_runner_.get(), FROM_HERE,
                                    base::BindOnce(

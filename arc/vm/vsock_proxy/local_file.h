@@ -57,6 +57,11 @@ class LocalFile {
   using PreadCallback = base::OnceCallback<void(arc_proxy::PreadResponse)>;
   void Pread(uint64_t count, uint64_t offset, PreadCallback callback);
 
+  // Writes |blob| to the file starting at |offset| and runs the callback with
+  // the result.
+  using PwriteCallback = base::OnceCallback<void(arc_proxy::PwriteResponse)>;
+  void Pwrite(std::string blob, uint64_t offset, PwriteCallback callback);
+
   // Runs the callback with the file descriptor's stat attribute.
   using FstatCallback = base::OnceCallback<void(arc_proxy::FstatResponse)>;
   void Fstat(FstatCallback callback);

@@ -45,7 +45,8 @@ class TestDelegate : public VSockProxy::Delegate {
 
   VSockProxy::Type GetType() const override { return type_; }
   int GetPollFd() override { return stream_->Get(); }
-  base::ScopedFD CreateProxiedRegularFile(int64_t handle) override {
+  base::ScopedFD CreateProxiedRegularFile(int64_t handle,
+                                          int32_t flags) override {
     return {};
   }
   bool SendMessage(const arc_proxy::VSockMessage& message,

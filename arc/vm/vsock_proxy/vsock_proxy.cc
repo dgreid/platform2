@@ -145,6 +145,23 @@ void VSockProxy::Pread(int64_t handle,
     Stop();
 }
 
+void VSockProxy::Pwrite(int64_t handle,
+                        std::string blob,
+                        uint64_t offset,
+                        PwriteCallback callback) {
+  const int64_t cookie = GenerateCookie();
+
+  arc_proxy::VSockMessage message;
+  auto* request = message.mutable_pwrite_request();
+  request->set_cookie(cookie);
+  request->set_handle(handle);
+  request->set_blob(std::move(blob));
+  request->set_offset(offset);
+  pending_pwrite_.emplace(cookie, std::move(callback));
+  if (!delegate_->SendMessage(message, {}))
+    Stop();
+}
+
 void VSockProxy::Fstat(int64_t handle, FstatCallback callback) {
   const int64_t cookie = GenerateCookie();
 
@@ -188,6 +205,11 @@ bool VSockProxy::HandleMessage(arc_proxy::VSockMessage* message,
       return true;
     case arc_proxy::VSockMessage::kPreadResponse:
       return OnPreadResponse(message->mutable_pread_response());
+    case arc_proxy::VSockMessage::kPwriteRequest:
+      OnPwriteRequest(message->mutable_pwrite_request());
+      return true;
+    case arc_proxy::VSockMessage::kPwriteResponse:
+      return OnPwriteResponse(message->mutable_pwrite_response());
     case arc_proxy::VSockMessage::kFstatRequest:
       OnFstatRequest(message->mutable_fstat_request());
       return true;
@@ -211,6 +233,10 @@ void VSockProxy::Stop() {
   for (auto& x : pending_pread_) {
     PreadCallback& callback = x.second;
     std::move(callback).Run(ECONNREFUSED, std::string());
+  }
+  for (auto& x : pending_pwrite_) {
+    PwriteCallback& callback = x.second;
+    std::move(callback).Run(ECONNREFUSED, 0);
   }
   for (auto& x : pending_connect_) {
     ConnectCallback& callback = x.second;
@@ -265,8 +291,8 @@ bool VSockProxy::OnData(arc_proxy::Data* data,
         break;
       }
       case arc_proxy::FileDescriptor::REGULAR_FILE: {
-        remote_fd =
-            delegate_->CreateProxiedRegularFile(transferred_fd.handle());
+        remote_fd = delegate_->CreateProxiedRegularFile(transferred_fd.handle(),
+                                                        transferred_fd.flags());
         if (!remote_fd.is_valid())
           return false;
         break;
@@ -396,6 +422,44 @@ bool VSockProxy::OnPreadResponse(arc_proxy::PreadResponse* response) {
   pending_pread_.erase(it);
   std::move(callback).Run(response->error_code(),
                           std::move(*response->mutable_blob()));
+  return true;
+}
+
+void VSockProxy::OnPwriteRequest(arc_proxy::PwriteRequest* request) {
+  auto it = fd_map_.find(request->handle());
+  if (it == fd_map_.end()) {
+    LOG(ERROR) << "Couldn't find handle: handle=" << request->handle();
+    arc_proxy::PwriteResponse response;
+    response.set_error_code(EBADF);
+    SendPwriteResponse(request->cookie(), response);
+    return;
+  }
+  it->second.file->Pwrite(
+      std::move(request->blob()), request->offset(),
+      base::BindOnce(&VSockProxy::SendPwriteResponse,
+                     weak_factory_.GetWeakPtr(), request->cookie()));
+}
+
+void VSockProxy::SendPwriteResponse(int64_t cookie,
+                                    arc_proxy::PwriteResponse response) {
+  response.set_cookie(cookie);
+  arc_proxy::VSockMessage reply;
+  *reply.mutable_pwrite_response() = std::move(response);
+
+  if (!delegate_->SendMessage(reply, {}))
+    Stop();
+}
+
+bool VSockProxy::OnPwriteResponse(arc_proxy::PwriteResponse* response) {
+  auto it = pending_pwrite_.find(response->cookie());
+  if (it == pending_pwrite_.end()) {
+    LOG(ERROR) << "Unexpected pwrite response: cookie=" << response->cookie();
+    return false;
+  }
+
+  auto callback = std::move(it->second);
+  pending_pwrite_.erase(it);
+  std::move(callback).Run(response->error_code(), response->bytes_written());
   return true;
 }
 

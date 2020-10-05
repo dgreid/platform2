@@ -51,8 +51,10 @@ class VSockProxy {
     virtual int GetPollFd() = 0;
 
     // Creates a proxied file descriptor for the given handle.
-    // Accessing the returned FD results in calling Pread() and Fstat().
-    virtual base::ScopedFD CreateProxiedRegularFile(int64_t handle) = 0;
+    // Accessing the returned FD results in calling Pread(), Pwrite(), and
+    // Fstat().
+    virtual base::ScopedFD CreateProxiedRegularFile(int64_t handle,
+                                                    int32_t flags) = 0;
 
     // Sends the message to the proxy process on the other side and returns true
     // on success.
@@ -95,6 +97,15 @@ class VSockProxy {
              uint64_t offset,
              PreadCallback callback);
 
+  // Requests to call pwrite(2) for the file in the other side represented by
+  // the |handle| with |blob| and |offset|.
+  // |callback| will be called with errno and the number of bytes written.
+  using PwriteCallback = base::OnceCallback<void(int, int64_t)>;
+  void Pwrite(int64_t handle,
+              std::string blob,
+              uint64_t offset,
+              PwriteCallback callback);
+
   // Sends an event to close the given |handle| to the other side.
   void Close(int64_t handle);
 
@@ -128,6 +139,9 @@ class VSockProxy {
   void OnPreadRequest(arc_proxy::PreadRequest* request);
   void SendPreadResponse(int64_t cookie, arc_proxy::PreadResponse response);
   bool OnPreadResponse(arc_proxy::PreadResponse* response);
+  void OnPwriteRequest(arc_proxy::PwriteRequest* request);
+  void SendPwriteResponse(int64_t cookie, arc_proxy::PwriteResponse response);
+  bool OnPwriteResponse(arc_proxy::PwriteResponse* response);
   void OnFstatRequest(arc_proxy::FstatRequest* request);
   void SendFstatResponse(int64_t cookie, arc_proxy::FstatResponse response);
   bool OnFstatResponse(arc_proxy::FstatResponse* response);
@@ -177,6 +191,7 @@ class VSockProxy {
   // Map from cookie to its pending callback.
   std::map<int64_t, ConnectCallback> pending_connect_;
   std::map<int64_t, PreadCallback> pending_pread_;
+  std::map<int64_t, PwriteCallback> pending_pwrite_;
   std::map<int64_t, FstatCallback> pending_fstat_;
 
   // WeakPtrFactory needs to be declared as the member of the class, so that

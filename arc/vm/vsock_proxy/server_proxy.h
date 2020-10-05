@@ -6,6 +6,7 @@
 #define ARC_VM_VSOCK_PROXY_SERVER_PROXY_H_
 
 #include <memory>
+#include <string>
 #include <vector>
 
 #include <base/macros.h>
@@ -36,7 +37,8 @@ class ServerProxy : public VSockProxy::Delegate,
   // VSockProxy::Delegate overrides:
   VSockProxy::Type GetType() const override { return VSockProxy::Type::SERVER; }
   int GetPollFd() override { return message_stream_->Get(); }
-  base::ScopedFD CreateProxiedRegularFile(int64_t handle) override;
+  base::ScopedFD CreateProxiedRegularFile(int64_t handle,
+                                          int32_t flags) override;
   bool SendMessage(const arc_proxy::VSockMessage& message,
                    const std::vector<base::ScopedFD>& fds) override;
   bool ReceiveMessage(arc_proxy::VSockMessage* message,
@@ -48,6 +50,10 @@ class ServerProxy : public VSockProxy::Delegate,
              uint64_t count,
              uint64_t offset,
              PreadCallback callback) override;
+  void Pwrite(int64_t handle,
+              std::string blob,
+              uint64_t offset,
+              PwriteCallback callback) override;
   void Close(int64_t handle) override;
   void Fstat(int64_t handle, FstatCallback callback) override;
 

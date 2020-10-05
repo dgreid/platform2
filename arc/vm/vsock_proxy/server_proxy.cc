@@ -218,9 +218,10 @@ bool ServerProxy::Initialize() {
   return true;
 }
 
-base::ScopedFD ServerProxy::CreateProxiedRegularFile(int64_t handle) {
+base::ScopedFD ServerProxy::CreateProxiedRegularFile(int64_t handle,
+                                                     int32_t flags) {
   // Create a file descriptor which is handled by |proxy_file_system_|.
-  return proxy_file_system_.RegisterHandle(handle);
+  return proxy_file_system_.RegisterHandle(handle, flags);
 }
 
 bool ServerProxy::SendMessage(const arc_proxy::VSockMessage& message,
@@ -273,6 +274,13 @@ void ServerProxy::Pread(int64_t handle,
                         uint64_t offset,
                         PreadCallback callback) {
   vsock_proxy_->Pread(handle, count, offset, std::move(callback));
+}
+
+void ServerProxy::Pwrite(int64_t handle,
+                         std::string blob,
+                         uint64_t offset,
+                         PwriteCallback callback) {
+  vsock_proxy_->Pwrite(handle, std::move(blob), offset, std::move(callback));
 }
 
 void ServerProxy::Close(int64_t handle) {

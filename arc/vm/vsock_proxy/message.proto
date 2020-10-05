@@ -37,7 +37,8 @@ message VSockMessage {
     ConnectResponse connect_response = 4;
     PreadRequest pread_request = 5;
     PreadResponse pread_response = 6;
-    // Reserved 7,8 for pwrite support.
+    PwriteRequest pwrite_request = 7;
+    PwriteResponse pwrite_response = 8;
     FstatRequest fstat_request = 9;
     FstatResponse fstat_response = 10;
   }
@@ -120,6 +121,27 @@ message PreadResponse {
 
   // Read data.
   bytes blob = 3;
+}
+
+// Request to pwrite(2) a file.
+message PwriteRequest {
+  int64 cookie = 1;
+
+  // Handle to write the data. Its type needs to be REGULAR_FILE.
+  int64 handle = 2;
+
+  // Data.
+  bytes blob = 3;
+
+  // The file position to write the data.
+  uint64 offset = 4;
+}
+
+// Response to the PwriteRequest.
+message PwriteResponse {
+  int64 cookie = 1;
+  int32 error_code = 2;
+  int64 bytes_written = 3;
 }
 
 // Request to fstat(2) a file.

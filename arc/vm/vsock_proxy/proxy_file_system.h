@@ -13,6 +13,7 @@
 
 #include <map>
 #include <memory>
+#include <string>
 
 #include <base/callback.h>
 #include <base/files/file_path.h>
@@ -41,6 +42,7 @@ class ProxyFileSystem {
     virtual ~Delegate() = default;
 
     using PreadCallback = VSockProxy::PreadCallback;
+    using PwriteCallback = VSockProxy::PwriteCallback;
     using FstatCallback = VSockProxy::FstatCallback;
 
     // Implement these methods to handle file operation requests.
@@ -48,6 +50,10 @@ class ProxyFileSystem {
                        uint64_t count,
                        uint64_t offset,
                        PreadCallback callback) = 0;
+    virtual void Pwrite(int64_t handle,
+                        std::string blbo,
+                        uint64_t offset,
+                        PwriteCallback callback) = 0;
     virtual void Close(int64_t handle) = 0;
     virtual void Fstat(int64_t handle, FstatCallback callback) = 0;
   };
@@ -72,6 +78,12 @@ class ProxyFileSystem {
             size_t size,
             off_t off,
             struct fuse_file_info* fi);
+  void Write(fuse_req_t req,
+             fuse_ino_t ino,
+             const char* buf,
+             size_t size,
+             off_t off,
+             struct fuse_file_info* fi);
   void Release(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info* fi);
   void ReadDir(fuse_req_t req,
                fuse_ino_t ino,
@@ -83,7 +95,7 @@ class ProxyFileSystem {
   // descriptor corresponding to the registered file.
   // Operations for the returned file descriptor will be directed to the
   // fuse operation implementation declared above.
-  base::ScopedFD RegisterHandle(int64_t handle);
+  base::ScopedFD RegisterHandle(int64_t handle, int32_t flags);
 
  private:
   // Helper to operate GetAttr(). Called on the |delegate_task_runner_|.
@@ -91,6 +103,12 @@ class ProxyFileSystem {
 
   // Helper to operate Read(). Called on the |delegate_task_runner_|.
   void ReadInternal(fuse_req_t req, int64_t handle, size_t size, off_t off);
+
+  // Helper to operate Write(). Called on the |delegate_task_runner_|.
+  void WriteInternal(fuse_req_t req,
+                     int64_t handle,
+                     std::string blob,
+                     off_t off);
 
   // Returns the state of the given inode.
   // If not registered, base::nullopt is returned.

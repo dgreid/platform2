@@ -54,6 +54,15 @@ void Read(fuse_req_t req,
   GetFileSystem(req)->Read(req, ino, size, off, fi);
 }
 
+void Write(fuse_req_t req,
+           fuse_ino_t ino,
+           const char* buf,
+           size_t size,
+           off_t off,
+           struct fuse_file_info* fi) {
+  GetFileSystem(req)->Write(req, ino, buf, size, off, fi);
+}
+
 void Release(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info* fi) {
   GetFileSystem(req)->Release(req, ino, fi);
 }
@@ -107,6 +116,7 @@ bool ProxyFileSystem::Init() {
       .getattr = arc::GetAttr,
       .open = arc::Open,
       .read = arc::Read,
+      .write = arc::Write,
       .release = arc::Release,
       .readdir = arc::ReadDir,
   };
@@ -241,6 +251,35 @@ void ProxyFileSystem::ReadInternal(fuse_req_t req,
           req));
 }
 
+void ProxyFileSystem::Write(fuse_req_t req,
+                            fuse_ino_t ino,
+                            const char* buf,
+                            size_t size,
+                            off_t off,
+                            struct fuse_file_info* fi) {
+  delegate_task_runner_->PostTask(
+      FROM_HERE,
+      base::BindOnce(&ProxyFileSystem::WriteInternal, base::Unretained(this),
+                     req, fi->fh, std::string(buf, size), off));
+}
+
+void ProxyFileSystem::WriteInternal(fuse_req_t req,
+                                    int64_t handle,
+                                    std::string blob,
+                                    off_t off) {
+  delegate_->Pwrite(
+      handle, std::move(blob), off,
+      base::BindOnce(
+          [](fuse_req_t req, int error_code, int64_t bytes_written) {
+            if (error_code == 0) {
+              fuse_reply_write(req, bytes_written);
+            } else {
+              fuse_reply_err(req, error_code);
+            }
+          },
+          req));
+}
+
 void ProxyFileSystem::Release(fuse_req_t req,
                               fuse_ino_t ino,
                               struct fuse_file_info* fi) {
@@ -300,7 +339,7 @@ void ProxyFileSystem::ReadDir(fuse_req_t req,
                  std::min(buf.size() - static_cast<size_t>(off), size));
 }
 
-base::ScopedFD ProxyFileSystem::RegisterHandle(int64_t handle) {
+base::ScopedFD ProxyFileSystem::RegisterHandle(int64_t handle, int32_t flags) {
   fuse_ino_t inode = 0;
   {
     base::AutoLock lock(inode_lock_);
@@ -315,10 +354,10 @@ base::ScopedFD ProxyFileSystem::RegisterHandle(int64_t handle) {
     }
   }
 
-  // Currently read-only file descriptor is only supported.
+  const int32_t new_flags = O_CLOEXEC | (flags & O_ACCMODE);
   return base::ScopedFD(HANDLE_EINTR(
       open(mount_path_.Append(base::NumberToString(inode)).value().c_str(),
-           O_RDONLY | O_CLOEXEC)));
+           new_flags)));
 }
 
 base::Optional<ProxyFileSystem::State> ProxyFileSystem::GetState(
