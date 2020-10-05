@@ -174,6 +174,9 @@ void Daemon::ProbeCategories(
       output_js, &placeholder, options);
   reply.MergeFrom(placeholder);
   VLOG(3) << "serialize JSON to Protobuf status: " << json_parse_status;
+  if (!json_parse_status.ok()) {
+    reply.set_error(RUNTIME_PROBE_ERROR_PROBE_RESULT_INVALID);
+  }
 
   return SendProbeResult(reply, method_call, std::move(response_sender));
 }

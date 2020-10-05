@@ -14,7 +14,7 @@ enum ErrorCode {
   // 0 is the default value of ProbeResult::error. It should never be used.
   RUNTIME_PROBE_ERROR_NOT_SET = 0;
 
-  // Not able to read the ProbeResult as DBus signature indicated.
+  // Not able to read the ProbeRequest as DBus signature indicated.
   RUNTIME_PROBE_ERROR_PROBE_REQUEST_INVALID = 1;
   // Not able to find default probe config in the rootfs image.
   RUNTIME_PROBE_ERROR_DEFAULT_PROBE_CONFIG_NOT_FOUND = 2;
@@ -22,6 +22,8 @@ enum ErrorCode {
   RUNTIME_PROBE_ERROR_PROBE_CONFIG_SYNTAX_ERROR = 3;
   // Assigned probe config contains functions not able to be constructed.
   RUNTIME_PROBE_ERROR_PROBE_CONFIG_INCOMPLETE_PROBE_FUNCTION = 4;
+  // Not able to parse the ProbeResult JSON string as protobuf message.
+  RUNTIME_PROBE_ERROR_PROBE_RESULT_INVALID = 5;
 }
 
 // Request from client that indicates what categories to probe. Category must
