@@ -36,6 +36,31 @@ TEST(NvmeDeviceAdapterTest, OkData) {
             adapter.GetFirmwareVersion().value().get_nvme_firmware_rev());
 }
 
+TEST(NvmeDeviceAdapterTest, LegacyRevision) {
+  constexpr char kPath[] =
+      "cros_healthd/fetchers/storage/testdata/sys/block/missing_revision";
+  NvmeDeviceAdapter adapter{base::FilePath(kPath)};
+
+  ASSERT_TRUE(adapter.GetVendorId().ok());
+  ASSERT_TRUE(adapter.GetProductId().ok());
+  ASSERT_TRUE(adapter.GetRevision().ok());
+  ASSERT_TRUE(adapter.GetModel().ok());
+  ASSERT_TRUE(adapter.GetFirmwareVersion().ok());
+
+  ASSERT_TRUE(adapter.GetVendorId().value().is_nvme_subsystem_vendor());
+  ASSERT_TRUE(adapter.GetProductId().value().is_nvme_subsystem_device());
+  ASSERT_TRUE(adapter.GetRevision().value().is_nvme_pcie_rev());
+  ASSERT_TRUE(adapter.GetFirmwareVersion().value().is_nvme_firmware_rev());
+
+  EXPECT_EQ("missing_revision", adapter.GetDeviceName());
+  EXPECT_EQ(0x1812, adapter.GetVendorId().value().get_nvme_subsystem_vendor());
+  EXPECT_EQ(0x3243, adapter.GetProductId().value().get_nvme_subsystem_device());
+  EXPECT_EQ(0x17, adapter.GetRevision().value().get_nvme_pcie_rev());
+  EXPECT_EQ("test_nvme_model", adapter.GetModel().value());
+  EXPECT_EQ(0x5645525F54534554,
+            adapter.GetFirmwareVersion().value().get_nvme_firmware_rev());
+}
+
 // Test when device is present, but data is missing.
 TEST(NvmeDeviceAdapterTest, NoData) {
   constexpr char kPath[] =

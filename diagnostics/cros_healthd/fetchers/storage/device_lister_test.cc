@@ -32,10 +32,10 @@ TEST(StorageDeviceListerTest, EmmcRoot) {
   StorageDeviceLister lister(std::move(mock_platform));
 
   auto result = lister.ListDevices(base::FilePath(kFakeRoot));
-  EXPECT_THAT(result,
-              UnorderedElementsAre("mmcblk0", "nvme0n1", "nvme0n2",
-                                   "missing_model_and_name_test",
-                                   "name_file_test", "model_file_test"));
+  EXPECT_THAT(result, UnorderedElementsAre("mmcblk0", "nvme0n1", "nvme0n2",
+                                           "missing_model_and_name_test",
+                                           "missing_revision", "name_file_test",
+                                           "model_file_test"));
 }
 
 TEST(StorageDeviceListerTest, NvmeRoot) {
@@ -45,9 +45,10 @@ TEST(StorageDeviceListerTest, NvmeRoot) {
   StorageDeviceLister lister(std::move(mock_platform));
 
   auto result = lister.ListDevices(base::FilePath(kFakeRoot));
-  EXPECT_THAT(result, UnorderedElementsAre(
-                          "nvme0n1", "nvme0n2", "missing_model_and_name_test",
-                          "name_file_test", "model_file_test"));
+  EXPECT_THAT(result, UnorderedElementsAre("nvme0n1", "nvme0n2",
+                                           "missing_model_and_name_test",
+                                           "missing_revision", "name_file_test",
+                                           "model_file_test"));
 }
 
 }  // namespace diagnostics

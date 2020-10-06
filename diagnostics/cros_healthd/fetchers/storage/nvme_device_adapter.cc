@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <string>
+#include <vector>
 
 #include <base/files/file_path.h>
 #include <base/files/file_util.h>
@@ -26,10 +27,19 @@ namespace mojo_ipc = ::chromeos::cros_healthd::mojom;
 constexpr char kVendorIdFile[] = "device/device/subsystem_vendor";
 constexpr char kProductIdFile[] = "device/device/subsystem_device";
 constexpr char kRevisionFile[] = "device/device/revision";
+constexpr char kConfigFile[] = "device/device/config";
 constexpr char kModelFile[] = "device/model";
 constexpr char kFirmwareVersionFile[] = "device/firmware_rev";
 
 constexpr size_t kU64Size = 8;
+
+// Extract from PCI local bus spec 2.2 from December 18, 1998
+// (page 191, figure 6-1)
+struct pci_config_space {
+  uint16_t notrequired[4];
+  uint8_t revision;
+  char rest[0];
+} __attribute__((packed));
 
 // Convenience wrapper for error status.
 Status ReadFailure(const base::FilePath& path) {
@@ -70,8 +80,37 @@ StatusOr<mojo_ipc::BlockDeviceProduct> NvmeDeviceAdapter::GetProductId() const {
   return result;
 }
 
+StatusOr<mojo_ipc::BlockDeviceRevision>
+NvmeDeviceAdapter::GetRevisionOnPre410Kernel() const {
+  mojo_ipc::BlockDeviceRevision result;
+  std::vector<char> bytes;
+  bytes.resize(sizeof(pci_config_space));
+
+  int read = base::ReadFile(dev_sys_path_.Append(kConfigFile), bytes.data(),
+                            bytes.size());
+
+  // Failed to read the file.
+  if (read < 0)
+    return ReadFailure(dev_sys_path_.Append(kConfigFile));
+
+  // File present, but the config space is truncated, assume revision == 0.
+  if (read < sizeof(pci_config_space)) {
+    result.set_nvme_pcie_rev(0);
+    return result;
+  }
+
+  pci_config_space* pci = reinterpret_cast<pci_config_space*>(bytes.data());
+  result.set_nvme_pcie_rev(pci->revision);
+  return result;
+}
+
 StatusOr<mojo_ipc::BlockDeviceRevision> NvmeDeviceAdapter::GetRevision() const {
   uint32_t value;
+
+  // Try legacy method if the revision file is missing.
+  if (!base::PathExists(dev_sys_path_.Append(kRevisionFile)))
+    return GetRevisionOnPre410Kernel();
+
   if (!ReadInteger(dev_sys_path_, kRevisionFile, &base::HexStringToUInt,
                    &value))
     return ReadFailure(dev_sys_path_.Append(kRevisionFile));

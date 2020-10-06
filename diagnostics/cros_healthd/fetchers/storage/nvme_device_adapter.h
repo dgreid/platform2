@@ -37,6 +37,9 @@ class NvmeDeviceAdapter : public StorageDeviceAdapter {
   GetFirmwareVersion() const override;
 
  private:
+  StatusOr<chromeos::cros_healthd::mojom::BlockDeviceRevision>
+  GetRevisionOnPre410Kernel() const;
+
   const base::FilePath dev_sys_path_;
 };
 
