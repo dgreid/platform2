@@ -185,7 +185,13 @@ class NeighborLinkMonitorTest : public testing::Test {
   // The internal implementation of Timer uses Now() so we need
   // MOCK_TIME_AND_NOW here.
   base::test::TaskEnvironment task_env_{
-      base::test::TaskEnvironment::TimeSource::MOCK_TIME_AND_NOW};
+#if BASE_VER < 780000
+    base::test::TaskEnvironment::TimeSource::MOCK_TIME_AND_NOW
+  };
+#else
+    base::test::TaskEnvironment::TimeSource::MOCK_TIME
+  };
+#endif
   FakeNeighborConnectedStateChangedHandler fake_neighbor_event_handler_;
   NeighborLinkMonitor::ConnectedStateChangedHandler callback_;
   std::unique_ptr<shill::MockRTNLHandler> mock_rtnl_handler_;
