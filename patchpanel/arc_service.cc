@@ -4,10 +4,12 @@
 
 #include "patchpanel/arc_service.h"
 
+#include <fcntl.h>
 #include <linux/rtnetlink.h>
 #include <net/if.h>
 #include <sys/ioctl.h>
 #include <sys/utsname.h>
+#include <unistd.h>
 
 #include <utility>
 #include <vector>
@@ -15,6 +17,7 @@
 #include <base/bind.h>
 #include <base/files/file_path.h>
 #include <base/files/file_util.h>
+#include <base/files/scoped_file.h>
 #include <base/logging.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_util.h>
@@ -33,6 +36,7 @@
 
 namespace patchpanel {
 namespace {
+const int32_t kAndroidRootUid = 655360;
 constexpr uint32_t kInvalidId = 0;
 constexpr char kArcNetnsName[] = "arc_netns";
 constexpr char kArcIfname[] = "arc0";
@@ -115,6 +119,39 @@ void OneTimeContainerSetup(const Datapath& datapath) {
   }
 
   done = true;
+}
+
+// Makes Android root(the owner of the mtu sysfs file for device |ifname|.
+void SetContainerSysfsMtuOwner(uint32_t pid,
+                               const std::string& ifname,
+                               const std::string& basename) {
+  const std::string current_mnt_ns = "/proc/self/ns/mnt";
+  const std::string target_mnt_ns = "/proc/" + std::to_string(pid) + "/ns/mnt";
+  const std::string sysfs_mtu_path =
+      "/sys/class/net/" + ifname + "/" + basename;
+
+  base::ScopedFD current_ns_fd(open(current_mnt_ns.c_str(), O_RDONLY));
+  if (!current_ns_fd.is_valid()) {
+    PLOG(ERROR) << " Could not open " << current_mnt_ns;
+    return;
+  }
+
+  base::ScopedFD target_ns_fd(open(target_mnt_ns.c_str(), O_RDONLY));
+  if (!target_ns_fd.is_valid()) {
+    PLOG(ERROR) << " Could not open " << target_mnt_ns;
+    return;
+  }
+
+  if (setns(target_ns_fd.get(), CLONE_NEWNS) == -1) {
+    PLOG(ERROR) << "Could not enter " << target_mnt_ns;
+    return;
+  }
+
+  if (chown(sysfs_mtu_path.c_str(), kAndroidRootUid, kAndroidRootUid) == -1)
+    LOG(ERROR) << "Failed to change ownership of " + sysfs_mtu_path;
+
+  if (setns(current_ns_fd.get(), CLONE_NEWNS) == -1)
+    PLOG(ERROR) << "Could not re-enter " << current_mnt_ns;
 }
 
 ArcService::InterfaceType InterfaceTypeFor(const std::string& ifname) {
@@ -488,6 +525,8 @@ void ArcService::AddDevice(const std::string& ifname) {
       LOG(ERROR) << "Cannot create veth link for device " << *device;
       return;
     }
+    // Allow netd to write to /sys/class/net/<guest_ifname>/mtu (b/169936104).
+    SetContainerSysfsMtuOwner(id_, device->guest_ifname(), "mtu");
   }
 
   if (!datapath_->AddToBridge(device->host_ifname(), virtual_device_ifname)) {
