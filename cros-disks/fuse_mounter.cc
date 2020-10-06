@@ -125,8 +125,6 @@ MountErrorType ConfigureCommonSandbox(SandboxedProcess* sandbox,
   // The FUSE mount program is put under a new mount namespace, so mounts
   // inside that namespace don't normally propagate.
   sandbox->NewMountNamespace();
-
-  // TODO(crbug.com/707327): Remove this when we get rid of AVFS.
   sandbox->SkipRemountPrivate();
 
   // TODO(benchan): Re-enable cgroup namespace when either Chrome OS
