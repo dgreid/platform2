@@ -344,11 +344,11 @@ void Datapath::StartRoutingDevice(const std::string& ext_ifname,
     LOG(ERROR) << "Failed to configure ingress traffic rules for " << ext_ifname
                << "->" << int_ifname;
 
-  if (StartIpForwarding(IpFamily::IPv4, ext_ifname, int_ifname))
+  if (!StartIpForwarding(IpFamily::IPv4, ext_ifname, int_ifname))
     LOG(ERROR) << "Failed to enable IP forwarding for " << ext_ifname << "->"
                << int_ifname;
 
-  if (StartIpForwarding(IpFamily::IPv4, int_ifname, ext_ifname))
+  if (!StartIpForwarding(IpFamily::IPv4, int_ifname, ext_ifname))
     LOG(ERROR) << "Failed to enable IP forwarding for " << ext_ifname << "<-"
                << int_ifname;
 
@@ -585,7 +585,7 @@ bool Datapath::ModifyFwmarkPrerouting(IpFamily family,
     success &= process_runner_->iptables("mangle", args, log_failures) == 0;
   if (family & IPv6)
     success &= process_runner_->ip6tables("mangle", args, log_failures) == 0;
-  return false;
+  return success;
 }
 
 bool Datapath::ModifyIpForwarding(IpFamily family,
