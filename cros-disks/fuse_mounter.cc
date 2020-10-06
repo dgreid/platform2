@@ -48,9 +48,6 @@ const char kFuseDeviceFile[] = "/dev/fuse";
 const MountOptions::Flags kRequiredFuseMountFlags =
     MS_NODEV | MS_NOEXEC | MS_NOSUID;
 
-const char kBaseFreezerCgroup[] = "/sys/fs/cgroup/freezer";
-const char kCgroupProcsFile[] = "cgroup.procs";
-
 class FUSEMountPoint : public MountPoint {
  public:
   FUSEMountPoint(const base::FilePath& path, const Platform* platform)
@@ -114,11 +111,8 @@ void CleanUpCallback(base::OnceClosure cleanup,
 
 MountErrorType ConfigureCommonSandbox(SandboxedProcess* sandbox,
                                       const Platform* platform,
-                                      const std::string& name,
                                       bool network_access,
                                       const std::string& seccomp_policy) {
-  base::FilePath cgroup =
-      base::FilePath(kBaseFreezerCgroup).Append(name).Append(kCgroupProcsFile);
   sandbox->SetCapabilities(0);
   sandbox->SetNoNewPrivileges();
 
@@ -131,18 +125,6 @@ MountErrorType ConfigureCommonSandbox(SandboxedProcess* sandbox,
   // kernel 3.8 supports it or no more supported devices use kernel
   // 3.8.
   // mount_process.NewCgroupNamespace();
-
-  // Add the sandboxed process to its cgroup that should be setup. Return an
-  // error if it's not there.
-  if (!platform->PathExists(cgroup.value())) {
-    LOG(ERROR) << "Freezer cgroup, " << cgroup << " is missing";
-    return MOUNT_ERROR_INTERNAL;
-  }
-
-  if (!sandbox->AddToCgroup(cgroup.value())) {
-    LOG(ERROR) << "Unable to add sandboxed process to cgroup " << cgroup;
-    return MOUNT_ERROR_INTERNAL;
-  }
 
   sandbox->NewIpcNamespace();
 
@@ -326,10 +308,8 @@ std::unique_ptr<MountPoint> FUSEMounter::Mount(
     std::vector<std::string> options,
     MountErrorType* error) const {
   auto mount_process = CreateSandboxedProcess();
-  *error =
-      ConfigureCommonSandbox(mount_process.get(), platform_,
-                             base::FilePath(mount_program_).BaseName().value(),
-                             network_access_, seccomp_policy_);
+  *error = ConfigureCommonSandbox(mount_process.get(), platform_,
+                                  network_access_, seccomp_policy_);
   if (*error != MOUNT_ERROR_NONE) {
     return nullptr;
   }

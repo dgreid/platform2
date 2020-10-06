@@ -41,7 +41,6 @@ const char kFUSEType[] = "fuse";
 const char kMountProgram[] = "dummy";
 const char kSomeSource[] = "/dev/dummy";
 const char kMountDir[] = "/mnt";
-const char kCgroup[] = "/sys/fs/cgroup/freezer/dummy/cgroup.procs";
 const int kPasswordNeededCode = 42;
 
 // Mock Platform implementation for testing.
@@ -135,7 +134,6 @@ class MockSandboxedProcess : public SandboxedProcess {
               (override));
   MOCK_METHOD(int, WaitImpl, (), (override));
   MOCK_METHOD(int, WaitNonBlockingImpl, (), (override));
-  MOCK_METHOD(void, AddToCgroup, (const std::string& cgroup));
 };
 
 class FUSEMounterForTesting : public FUSEMounter {
@@ -167,7 +165,6 @@ class FUSEMounterForTesting : public FUSEMounter {
 
           return InvokeMountTool(process->arguments());
         }));
-    EXPECT_CALL(*mock, AddToCgroup(kCgroup)).Times(0);
     return mock;
   }
 };
@@ -188,7 +185,6 @@ class FUSEMounterTest : public ::testing::Test {
                               kMountProgram, "-o", MountOptions().ToString(),
                               kSomeSource, StartsWith("/dev/fd/"))))
         .WillOnce(Return(0));
-    EXPECT_CALL(platform_, PathExists(kCgroup)).WillOnce(Return(true));
     EXPECT_CALL(platform_, PathExists(kMountProgram)).WillOnce(Return(true));
     EXPECT_CALL(platform_, SetOwnership(kSomeSource, getuid(), kMountGID))
         .WillOnce(Return(true));
