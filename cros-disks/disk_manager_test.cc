@@ -29,12 +29,15 @@
 #include "cros-disks/mounter.h"
 #include "cros-disks/ntfs_mounter.h"
 #include "cros-disks/platform.h"
+#include "cros-disks/system_mounter.h"
 
 namespace cros_disks {
 namespace {
 
 using testing::_;
+using testing::Contains;
 using testing::Return;
+using testing::StrEq;
 
 const char kMountRootDirectory[] = "/media/removable";
 
@@ -109,7 +112,6 @@ TEST_F(DiskManagerTest, CreateExFATMounter) {
 
   auto mounter = manager_.CreateMounter(disk, filesystem, target_path, options);
   EXPECT_NE(nullptr, mounter.get());
-  EXPECT_EQ(filesystem.mount_type, mounter->filesystem_type());
   EXPECT_EQ("rw,nodev,noexec,nosuid", mounter->mount_options().ToString());
 }
 
@@ -125,7 +127,6 @@ TEST_F(DiskManagerTest, CreateNTFSMounter) {
 
   auto mounter = manager_.CreateMounter(disk, filesystem, target_path, options);
   EXPECT_NE(nullptr, mounter.get());
-  EXPECT_EQ(filesystem.mount_type, mounter->filesystem_type());
   EXPECT_EQ("rw,nodev,noexec,nosuid", mounter->mount_options().ToString());
 }
 
@@ -146,10 +147,11 @@ TEST_F(DiskManagerTest, CreateVFATSystemMounter) {
   setenv("TZ", "UTC-8", 1);
 
   auto mounter = manager_.CreateMounter(disk, filesystem, target_path, options);
-  EXPECT_NE(nullptr, mounter.get());
-  EXPECT_EQ(filesystem.mount_type, mounter->filesystem_type());
-  EXPECT_EQ("utf8,shortname=mixed,time_offset=480,rw,nodev,noexec,nosuid",
-            mounter->mount_options().ToString());
+  ASSERT_NE(nullptr, mounter.get());
+  const SystemMounter* sysmounter =
+      static_cast<const SystemMounter*>(mounter->mounter());
+  EXPECT_FALSE(sysmounter->read_only());
+  EXPECT_THAT(sysmounter->options(), Contains(StrEq("time_offset=480")));
 }
 
 TEST_F(DiskManagerTest, CreateExt4SystemMounter) {
@@ -163,9 +165,10 @@ TEST_F(DiskManagerTest, CreateExt4SystemMounter) {
 
   Filesystem filesystem("ext4");
   auto mounter = manager_.CreateMounter(disk, filesystem, target_path, options);
-  EXPECT_NE(nullptr, mounter.get());
-  EXPECT_EQ(filesystem.mount_type, mounter->filesystem_type());
-  EXPECT_EQ("rw,nodev,noexec,nosuid", mounter->mount_options().ToString());
+  ASSERT_NE(nullptr, mounter.get());
+  const SystemMounter* sysmounter =
+      static_cast<const SystemMounter*>(mounter->mounter());
+  EXPECT_FALSE(sysmounter->read_only());
 }
 
 TEST_F(DiskManagerTest, GetFilesystem) {

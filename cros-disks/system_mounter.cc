@@ -11,6 +11,8 @@
 #include <utility>
 
 #include <base/logging.h>
+#include <base/containers/util.h>
+#include <base/strings/string_util.h>
 
 #include "cros-disks/mount_options.h"
 #include "cros-disks/mount_point.h"
@@ -19,6 +21,9 @@
 namespace cros_disks {
 
 namespace {
+
+constexpr MountOptions::Flags kExternalDiskMountFlags =
+    MountOptions::kMountFlags | MS_NOSYMFOLLOW | MS_DIRSYNC;
 
 // A MountPoint that uses the umount() syscall for unmounting.
 class SystemMountPoint : public MountPoint {
@@ -47,28 +52,31 @@ class SystemMountPoint : public MountPoint {
 
 }  // namespace
 
-SystemMounter::SystemMounter(const std::string& filesystem_type,
-                             const Platform* platform)
-    : Mounter(filesystem_type), platform_(platform) {}
+SystemMounter::SystemMounter(const Platform* platform,
+                             std::string filesystem_type,
+                             bool read_only,
+                             std::vector<std::string> options)
+    : platform_(platform),
+      filesystem_type_(std::move(filesystem_type)),
+      flags_(kExternalDiskMountFlags | (read_only ? MS_RDONLY : 0)),
+      options_(std::move(options)) {}
 
 SystemMounter::~SystemMounter() = default;
 
 std::unique_ptr<MountPoint> SystemMounter::Mount(
     const std::string& source,
     const base::FilePath& target_path,
-    std::vector<std::string> options,
+    std::vector<std::string> params,
     MountErrorType* error) const {
-  MountOptions mount_options;
-  // If the |options| vector contains uid/gid options, these need to be accepted
-  // by MountOptions::Initialize(). To do this, |set_user_and_group_id| must be
-  // true. However, if |options| doesn't have these options,
-  // MountOptions::Initialize() won't create these, because the
-  // |default_user_id| and |default_group_id arguments| are empty.
-  mount_options.Initialize(options, true /* set_user_and_group_id */, "", "");
-  auto flags_and_data = mount_options.ToMountFlagsAndData();
+  int flags = flags_;
 
-  *error = platform_->Mount(source, target_path.value(), filesystem_type(),
-                            flags_and_data.first, flags_and_data.second);
+  // All params are ignored except "ro".
+  if (base::Contains(params, MountOptions::kOptionReadOnly)) {
+    flags |= MS_RDONLY;
+  }
+
+  *error = platform_->Mount(source, target_path.value(), filesystem_type_,
+                            flags_, base::JoinString(options_, ","));
   if (*error != MOUNT_ERROR_NONE) {
     return nullptr;
   }
@@ -77,7 +85,7 @@ std::unique_ptr<MountPoint> SystemMounter::Mount(
 }
 
 bool SystemMounter::CanMount(const std::string& source,
-                             const std::vector<std::string>& options,
+                             const std::vector<std::string>& params,
                              base::FilePath* suggested_dir_name) const {
   if (source.empty()) {
     *suggested_dir_name = base::FilePath("disk");

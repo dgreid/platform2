@@ -108,12 +108,12 @@ const Filesystem* DiskManager::GetFilesystem(
 }
 
 void DiskManager::RegisterDefaultFilesystems() {
-  // TODO(benchan): Perhaps these settings can be read from a config file.
+  std::string uid = base::StringPrintf("uid=%d", platform()->mount_user_id());
+  std::string gid = base::StringPrintf("gid=%d", platform()->mount_group_id());
+
   Filesystem vfat_fs("vfat");
-  vfat_fs.accepts_user_and_group_id = true;
-  vfat_fs.extra_mount_options = {MountOptions::kOptionDirSync,
-                                 MountOptions::kOptionFlush, "shortname=mixed",
-                                 MountOptions::kOptionUtf8};
+  vfat_fs.extra_mount_options = {MountOptions::kOptionFlush, "shortname=mixed",
+                                 MountOptions::kOptionUtf8, uid, gid};
   RegisterFilesystem(vfat_fs);
 
   Filesystem exfat_fs("exfat");
@@ -129,32 +129,26 @@ void DiskManager::RegisterDefaultFilesystems() {
   RegisterFilesystem(ntfs_fs);
 
   Filesystem hfsplus_fs("hfsplus");
-  hfsplus_fs.accepts_user_and_group_id = true;
-  hfsplus_fs.extra_mount_options = {MountOptions::kOptionDirSync};
+  hfsplus_fs.extra_mount_options = {uid, gid};
   RegisterFilesystem(hfsplus_fs);
 
   Filesystem iso9660_fs("iso9660");
   iso9660_fs.is_mounted_read_only = true;
-  iso9660_fs.accepts_user_and_group_id = true;
-  iso9660_fs.extra_mount_options = {MountOptions::kOptionUtf8};
+  iso9660_fs.extra_mount_options = {MountOptions::kOptionUtf8, uid, gid};
   RegisterFilesystem(iso9660_fs);
 
   Filesystem udf_fs("udf");
   udf_fs.is_mounted_read_only = true;
-  udf_fs.accepts_user_and_group_id = true;
-  udf_fs.extra_mount_options = {MountOptions::kOptionUtf8};
+  udf_fs.extra_mount_options = {MountOptions::kOptionUtf8, uid, gid};
   RegisterFilesystem(udf_fs);
 
   Filesystem ext2_fs("ext2");
-  ext2_fs.extra_mount_options = {MountOptions::kOptionDirSync};
   RegisterFilesystem(ext2_fs);
 
   Filesystem ext3_fs("ext3");
-  ext3_fs.extra_mount_options = {MountOptions::kOptionDirSync};
   RegisterFilesystem(ext3_fs);
 
   Filesystem ext4_fs("ext4");
-  ext4_fs.extra_mount_options = {MountOptions::kOptionDirSync};
   RegisterFilesystem(ext4_fs);
 }
 
@@ -167,14 +161,7 @@ std::unique_ptr<MounterCompat> DiskManager::CreateMounter(
     const Filesystem& filesystem,
     const std::string& target_path,
     const std::vector<std::string>& options) const {
-  const std::vector<std::string>& extra_options =
-      filesystem.extra_mount_options;
-  std::vector<std::string> extended_options;
-  extended_options.reserve(options.size() + extra_options.size());
-  extended_options.assign(options.begin(), options.end());
-  extended_options.insert(extended_options.end(), extra_options.begin(),
-                          extra_options.end());
-
+  std::vector<std::string> extended_options = filesystem.extra_mount_options;
   if (filesystem.type == "vfat") {
     // FAT32 stores times as local time instead of UTC. By default, the vfat
     // kernel module will use the kernel's time zone, which is set using
@@ -207,27 +194,40 @@ std::unique_ptr<MounterCompat> DiskManager::CreateMounter(
 
   MountOptions mount_options;
   mount_options.AllowOption(MountOptions::kOptionNoSymFollow);
-  mount_options.Initialize(extended_options,
+  // TODO(crbug.com/950442): Remove this hack when MountOptions are gone.
+  std::vector<std::string> workaround_options = extended_options;
+  MountOptions junk_options;
+  junk_options.Initialize(options, false, "", "");
+  bool read_only_requested =
+      (junk_options.ToMountFlagsAndData().first & MS_RDONLY) == MS_RDONLY;
+  if (!read_only_requested)
+    workaround_options.push_back(MountOptions::kOptionReadWrite);
+  mount_options.Initialize(workaround_options,
                            filesystem.accepts_user_and_group_id,
                            default_user_id, default_group_id);
 
+  bool mount_read_only = read_only_requested;
   if (filesystem.is_mounted_read_only || disk.is_read_only ||
       disk.IsOpticalDisk()) {
+    mount_read_only = true;
     mount_options.SetReadOnlyOption();
   }
 
   if (filesystem.mounter_type.empty())
     return std::make_unique<MounterCompat>(
-        std::make_unique<SystemMounter>(filesystem.mount_type, platform()),
-        mount_options);
+        MountOptions(), std::make_unique<SystemMounter>(
+                            platform(), filesystem.mount_type, mount_read_only,
+                            std::move(extended_options)));
 
   if (filesystem.mounter_type == ExFATMounter::kMounterType)
-    return std::make_unique<ExFATMounter>(filesystem.mount_type, mount_options,
-                                          platform(), process_reaper());
+    return std::make_unique<ExFATMounter>(filesystem.mount_type,
+                                          std::move(mount_options), platform(),
+                                          process_reaper());
 
   if (filesystem.mounter_type == NTFSMounter::kMounterType)
-    return std::make_unique<NTFSMounter>(filesystem.mount_type, mount_options,
-                                         platform(), process_reaper());
+    return std::make_unique<NTFSMounter>(filesystem.mount_type,
+                                         std::move(mount_options), platform(),
+                                         process_reaper());
 
   LOG(FATAL) << "Invalid mounter type " << quote(filesystem.mounter_type);
   return nullptr;

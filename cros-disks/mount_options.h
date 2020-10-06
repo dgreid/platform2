@@ -9,12 +9,17 @@
 #include <utility>
 #include <vector>
 
+#include "cros-disks/platform.h"
+
 namespace cros_disks {
 
 // A class for holding and manipulating mount options.
 class MountOptions {
  public:
   using Flags = unsigned long;  // NOLINT(runtime/int)
+
+  // The bare minimum of flags to be used on any cros-disks mount.
+  static constexpr Flags kMountFlags = MS_NODEV | MS_NOEXEC | MS_NOSUID;
 
   static const char kOptionBind[];
   static const char kOptionDirSync[];

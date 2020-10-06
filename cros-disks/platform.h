@@ -5,8 +5,14 @@
 #ifndef CROS_DISKS_PLATFORM_H_
 #define CROS_DISKS_PLATFORM_H_
 
+#include <sys/mount.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+
+#ifndef MS_NOSYMFOLLOW
+// Added locally in kernel 5.4, upstream TBD.
+#define MS_NOSYMFOLLOW 256
+#endif
 
 #include <set>
 #include <string>

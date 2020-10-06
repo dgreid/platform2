@@ -193,7 +193,6 @@ TEST_F(DrivefsHelperTest, CreateMounter) {
       {"rw", "datadir=/foo//bar/./", "datadir=/ignored/second/datadir/value"});
   ASSERT_TRUE(mounter);
 
-  EXPECT_EQ("drivefs", mounter->filesystem_type());
   auto options_string = mounter->mount_options().ToString();
   EXPECT_THAT(options_string,
               HasSubstr("datadir=" + platform_.datadir().value()));
@@ -217,7 +216,6 @@ TEST_F(DrivefsHelperTest, CreateMounterWithMyFiles) {
        "myfiles=/baz/.//qux/", "myfiles=/ignored/second/"});
   ASSERT_TRUE(mounter);
 
-  EXPECT_EQ("drivefs", mounter->filesystem_type());
   auto options_string = mounter->mount_options().ToString();
   EXPECT_THAT(options_string,
               HasSubstr("datadir=" + platform_.datadir().value()));
@@ -243,7 +241,6 @@ TEST_F(DrivefsHelperTest, CreateMounter_CreateDataDir) {
       {"rw", "datadir=/foo//bar/", "datadir=/ignored/second/datadir/value"});
   ASSERT_TRUE(mounter);
 
-  EXPECT_EQ("drivefs", mounter->filesystem_type());
   auto options_string = mounter->mount_options().ToString();
   EXPECT_THAT(options_string,
               HasSubstr("datadir=" + platform_.datadir().value()));

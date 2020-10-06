@@ -110,6 +110,9 @@ class FUSEMounter : public MounterCompat {
   // Protected for mocking out in testing.
   virtual std::unique_ptr<SandboxedProcess> CreateSandboxedProcess() const;
 
+  // Filesystem type to register the mount point.
+  const std::string filesystem_type_;
+
   // An object that provides platform service.
   const Platform* const platform_;
 

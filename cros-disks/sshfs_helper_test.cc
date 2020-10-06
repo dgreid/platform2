@@ -106,7 +106,6 @@ class SshfsHelperTest : public ::testing::Test {
 // Verifies that CreateMounter creates mounter in a simple case.
 TEST_F(SshfsHelperTest, CreateMounter_SimpleOptions) {
   auto mounter = helper_.CreateMounter(kWorkingDir, kSomeSource, kMountDir, {});
-  EXPECT_EQ("sshfs", mounter->filesystem_type());
   std::string opts = mounter->mount_options().ToString();
   EXPECT_THAT(opts, HasSubstr("BatchMode=yes"));
   EXPECT_THAT(opts, HasSubstr("PasswordAuthentication=no"));

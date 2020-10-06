@@ -13,31 +13,40 @@
 
 #include "cros-disks/mount_point.h"
 #include "cros-disks/mounter.h"
+#include "cros-disks/platform.h"
 
 namespace cros_disks {
-
-class Platform;
 
 // A class for mounting a device file using the system mount() call.
 class SystemMounter : public Mounter {
  public:
-  SystemMounter(const std::string& filesystem_type, const Platform* platform);
+  SystemMounter(const Platform* platform,
+                std::string filesystem_type,
+                bool read_only,
+                std::vector<std::string> options);
   ~SystemMounter() override;
+
+  const std::string& filesystem_type() const { return filesystem_type_; }
+  bool read_only() const { return (flags_ & MS_RDONLY) == MS_RDONLY; }
+  const std::vector<std::string>& options() const { return options_; }
 
   // Mounts a device file using the system mount() call.
   std::unique_ptr<MountPoint> Mount(const std::string& source,
                                     const base::FilePath& target_path,
-                                    std::vector<std::string> options,
+                                    std::vector<std::string> params,
                                     MountErrorType* error) const override;
 
   // As there is no way to figure out beforehand if that would work, always
   // returns true, so this mounter is a "catch-all".
   bool CanMount(const std::string& source,
-                const std::vector<std::string>& options,
+                const std::vector<std::string>& params,
                 base::FilePath* suggested_dir_name) const override;
 
  private:
   const Platform* const platform_;
+  const std::string filesystem_type_;
+  const int flags_;
+  const std::vector<std::string> options_;
 
   DISALLOW_COPY_AND_ASSIGN(SystemMounter);
 };

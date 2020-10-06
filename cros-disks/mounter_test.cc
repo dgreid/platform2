@@ -27,7 +27,7 @@ const char kPath[] = "/mnt/foo/bar";
 
 class MounterForTest : public Mounter {
  public:
-  MounterForTest() : Mounter("fs_type") {}
+  MounterForTest() = default;
 
   MOCK_METHOD(MountErrorType,
               MountImpl,
@@ -43,7 +43,7 @@ class MounterForTest : public Mounter {
 
   std::unique_ptr<MountPoint> Mount(const std::string& source,
                                     const base::FilePath& target_path,
-                                    std::vector<std::string> options,
+                                    std::vector<std::string> params,
                                     MountErrorType* error) const override {
     *error = MountImpl(source, target_path);
     if (*error != MOUNT_ERROR_NONE) {
@@ -73,9 +73,8 @@ class MounterForTest : public Mounter {
 
 class MounterCompatForTest : public MounterCompat {
  public:
-  MounterCompatForTest(const std::string& filesystem_type,
-                       const MountOptions& mount_options)
-      : MounterCompat(filesystem_type, mount_options) {}
+  explicit MounterCompatForTest(const MountOptions& mount_options)
+      : MounterCompat(mount_options) {}
 
   MOCK_METHOD(std::unique_ptr<MountPoint>,
               Mount,
@@ -119,15 +118,17 @@ TEST(MounterTest, Leaking) {
 }
 
 TEST(MounterCompatTest, Properties) {
-  MounterCompatForTest mounter("fstype", {});
-  EXPECT_EQ("fstype", mounter.filesystem_type());
+  MountOptions opts;
+  opts.Initialize({MountOptions::kOptionDirSync}, false, "", "");
+  MounterCompatForTest mounter(opts);
+  EXPECT_TRUE(mounter.mount_options().HasOption(MountOptions::kOptionDirSync));
 }
 
 TEST(MounterCompatTest, MountSuccess) {
   const base::FilePath kMountPath = base::FilePath("/mnt");
   const std::vector<std::string> options;
 
-  MounterCompatForTest mounter("fstype", {});
+  MounterCompatForTest mounter({});
   EXPECT_CALL(mounter, Mount("foo", kMountPath, options, _))
       .WillOnce(WithArg<3>([kMountPath](MountErrorType* error) {
         *error = MOUNT_ERROR_NONE;
@@ -144,7 +145,7 @@ TEST(MounterCompatTest, MountFail) {
   const base::FilePath kMountPath = base::FilePath("/mnt");
   const std::vector<std::string> options;
 
-  MounterCompatForTest mounter("fstype", {});
+  MounterCompatForTest mounter({});
   EXPECT_CALL(mounter, Mount("foo", kMountPath, options, _))
       .WillOnce(WithArg<3>([](MountErrorType* error) {
         *error = MOUNT_ERROR_UNKNOWN;

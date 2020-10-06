@@ -4,8 +4,6 @@
 
 #include "cros-disks/mount_options.h"
 
-#include <sys/mount.h>
-
 #include <algorithm>
 
 #include <base/containers/adapters.h>
@@ -13,11 +11,6 @@
 #include <base/strings/string_util.h>
 
 #include "cros-disks/quote.h"
-
-#ifndef MS_NOSYMFOLLOW
-// Added locally in kernel 5.4, upstream TBD.
-#define MS_NOSYMFOLLOW 256
-#endif
 
 namespace cros_disks {
 

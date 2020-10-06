@@ -22,32 +22,27 @@ class MountPoint;
 // Interface for mounting a given filesystem.
 class Mounter {
  public:
-  explicit Mounter(std::string filesystem_type);
+  Mounter();
   virtual ~Mounter();
 
   // Mounts the filesystem. On failure returns nullptr and |error| is
-  // set accordingly. Both |source| and |options| are just some strings
+  // set accordingly. Both |source| and |params| are just some strings
   // that can be interpreted by this mounter.
   virtual std::unique_ptr<MountPoint> Mount(const std::string& source,
                                             const base::FilePath& target_path,
-                                            std::vector<std::string> options,
+                                            std::vector<std::string> params,
                                             MountErrorType* error) const = 0;
 
   // Whether this mounter is able to mount given |source| with provided
-  // |options|. If so - it may suggest a directory name for the mount point
+  // |params|. If so - it may suggest a directory name for the mount point
   // to be created. Note that in many cases it's impossible to tell beforehand
   // if the particular source is mountable so it may blanketly return true for
   // any arguments.
   virtual bool CanMount(const std::string& source,
-                        const std::vector<std::string>& options,
+                        const std::vector<std::string>& params,
                         base::FilePath* suggested_dir_name) const = 0;
 
-  const std::string& filesystem_type() const { return filesystem_type_; }
-
  private:
-  // Type of filesystem to mount.
-  const std::string filesystem_type_;
-
   DISALLOW_COPY_AND_ASSIGN(Mounter);
 };
 
@@ -56,20 +51,21 @@ class Mounter {
 // TODO(crbug.com/933018): Remove when done.
 class MounterCompat : public Mounter {
  public:
-  MounterCompat(std::unique_ptr<Mounter> mounter, MountOptions mount_options);
-  MounterCompat(std::string filesystem_type, MountOptions mount_options);
+  explicit MounterCompat(MountOptions mount_options,
+                         std::unique_ptr<Mounter> mounter = {});
   ~MounterCompat() override;
 
   // Mounter overrides.
   std::unique_ptr<MountPoint> Mount(const std::string& source,
                                     const base::FilePath& target_path,
-                                    std::vector<std::string> options,
+                                    std::vector<std::string> params,
                                     MountErrorType* error) const override;
   // Always returns true.
   bool CanMount(const std::string& source,
-                const std::vector<std::string>& options,
+                const std::vector<std::string>& params,
                 base::FilePath* suggested_dir_name) const override;
 
+  const Mounter* mounter() const { return mounter_.get(); }
   const MountOptions& mount_options() const { return mount_options_; }
 
  private:

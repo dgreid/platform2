@@ -45,8 +45,6 @@ namespace {
 const mode_t kSourcePathPermissions = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP;
 
 const char kFuseDeviceFile[] = "/dev/fuse";
-const MountOptions::Flags kRequiredFuseMountFlags =
-    MS_NODEV | MS_NOEXEC | MS_NOSUID;
 
 class FUSEMountPoint : public MountPoint {
  public:
@@ -223,14 +221,6 @@ MountErrorType MountFuseDevice(const Platform* platform,
       "rootmode=%o",
       fuse_file.GetPlatformFile(), mount_user_id, mount_group_id, S_IFDIR);
 
-  // "nosymfollow" is a special mount option that's passed to the Chromium LSM
-  // and not forwarded to the FUSE driver. If it's set, add it as a mount
-  // option.
-  if (options.HasOption(MountOptions::kOptionNoSymFollow)) {
-    fuse_mount_options.append(",");
-    fuse_mount_options.append(MountOptions::kOptionNoSymFollow);
-  }
-
   std::string fuse_type = "fuse";
   struct stat statbuf = {0};
   if (stat(source.c_str(), &statbuf) == 0 && S_ISBLK(statbuf.st_mode)) {
@@ -260,14 +250,14 @@ MountErrorType MountFuseDevice(const Platform* platform,
 
   return platform->Mount(source.empty() ? filesystem_type : source,
                          target.value(), fuse_type,
-                         flags | kRequiredFuseMountFlags, fuse_mount_options);
+                         flags | MountOptions::kMountFlags, fuse_mount_options);
 }
 
 }  // namespace
 
 FUSEMounter::FUSEMounter(Params params)
-    : MounterCompat(std::move(params.filesystem_type),
-                    std::move(params.mount_options)),
+    : MounterCompat(std::move(params.mount_options)),
+      filesystem_type_(std::move(params.filesystem_type)),
       platform_(params.platform),
       process_reaper_(params.process_reaper),
       metrics_(params.metrics),
@@ -350,7 +340,7 @@ std::unique_ptr<MountPoint> FUSEMounter::Mount(
     return nullptr;
   }
 
-  *error = MountFuseDevice(platform_, source, filesystem_type(), target_path,
+  *error = MountFuseDevice(platform_, source, filesystem_type_, target_path,
                            fuse_file, mount_user_id, mount_group_id,
                            mount_options());
   if (*error != MOUNT_ERROR_NONE) {

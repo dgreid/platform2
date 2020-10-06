@@ -15,9 +15,25 @@
 
 namespace cros_disks {
 
+namespace {
+class PlatformForTest : public Platform {
+ public:
+  // Tests are being run on devices that don't support nosymfollow. Strip it.
+  MountErrorType Mount(const std::string& source,
+                       const std::string& target,
+                       const std::string& filesystem_type,
+                       uint64_t flags,
+                       const std::string& options) const override {
+    EXPECT_TRUE((flags & MS_NOSYMFOLLOW) == MS_NOSYMFOLLOW);
+    return Platform::Mount(source, target, filesystem_type,
+                           flags & ~MS_NOSYMFOLLOW, options);
+  }
+};
+}  // namespace
+
 TEST(SystemMounterTest, RunAsRootMount) {
-  Platform platform;
-  SystemMounter mounter("tmpfs", &platform);
+  PlatformForTest platform;
+  SystemMounter mounter(&platform, "tmpfs", false, {});
 
   base::ScopedTempDir temp_dir;
   ASSERT_TRUE(temp_dir.CreateUniqueTempDir());
@@ -31,8 +47,8 @@ TEST(SystemMounterTest, RunAsRootMount) {
 }
 
 TEST(SystemMounterTest, RunAsRootMountWithNonexistentSourcePath) {
-  Platform platform;
-  SystemMounter mounter("ext2", &platform);
+  PlatformForTest platform;
+  SystemMounter mounter(&platform, "ext2", false, {});
 
   base::ScopedTempDir temp_dir;
   ASSERT_TRUE(temp_dir.CreateUniqueTempDir());
@@ -48,8 +64,8 @@ TEST(SystemMounterTest, RunAsRootMountWithNonexistentSourcePath) {
 }
 
 TEST(SystemMounterTest, RunAsRootMountWithNonexistentTargetPath) {
-  Platform platform;
-  SystemMounter mounter("tmpfs", &platform);
+  PlatformForTest platform;
+  SystemMounter mounter(&platform, "tmpfs", false, {});
 
   MountErrorType error = MOUNT_ERROR_NONE;
   auto mountpoint =
@@ -59,8 +75,8 @@ TEST(SystemMounterTest, RunAsRootMountWithNonexistentTargetPath) {
 }
 
 TEST(SystemMounterTest, RunAsRootMountWithNonexistentFilesystemType) {
-  Platform platform;
-  SystemMounter mounter("nonexistentfs", &platform);
+  PlatformForTest platform;
+  SystemMounter mounter(&platform, "nonexistentfs", false, {});
 
   base::ScopedTempDir temp_dir;
   ASSERT_TRUE(temp_dir.CreateUniqueTempDir());
