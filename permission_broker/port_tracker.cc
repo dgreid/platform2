@@ -25,9 +25,6 @@
 namespace permission_broker {
 
 namespace {
-constexpr const int kMaxEvents = 10;
-constexpr base::TimeDelta kLifelineInterval = base::TimeDelta::FromSeconds(5);
-constexpr const int kInvalidHandle = -1;
 // Port forwarding is only allowed for non-reserved ports.
 constexpr const uint16_t kLastSystemPort = 1023;
 // Port forwarding is only allowed for some physical interfaces: Ethernet, USB
@@ -94,19 +91,14 @@ std::ostream& operator<<(std::ostream& stream,
 }  // namespace
 
 PortTracker::PortTracker()
-    : task_runner_{base::ThreadTaskRunnerHandle::Get()},
-      epfd_{kInvalidHandle} {}
+    : task_runner_{base::ThreadTaskRunnerHandle::Get()} {}
 
 // Test-only.
 PortTracker::PortTracker(scoped_refptr<base::SequencedTaskRunner> task_runner)
-    : task_runner_{task_runner}, epfd_{kInvalidHandle} {}
+    : task_runner_{task_runner} {}
 
 PortTracker::~PortTracker() {
   RevokeAllPortRules();
-
-  if (epfd_ >= 0) {
-    close(epfd_);
-  }
 }
 
 bool PortTracker::ModifyPortRule(Operation op, const PortRule& rule) {
@@ -192,18 +184,15 @@ bool PortTracker::AddPortRule(const PortRule& rule, int dbus_fd) {
 
   // Check if the port is not already being forwarded or allowed for access.
   if (port_rules_.find(key) != port_rules_.end()) {
-    // This can happen when a requesting process has just been restarted but
-    // the scheduled lifeline FD check hasn't yet been performed, so we might
-    // have stale file descriptors around.
-    // Force the FD check to see if they will be removed now.
-    CheckLifelineFds(false /* reschedule_check */);
-
-    // Then try again. If this still fails, we know it's an invalid request.
-    if (port_rules_.find(key) != port_rules_.end()) {
-      LOG(ERROR) << "Tried to add rule " << rule << " but rule "
-                 << port_rules_[key] << " already existed";
-      return false;
-    }
+    // There is a very very small chance of a race here: a process exits without
+    // closing a firewall hole, and before the lifeline fd can trigger, another
+    // process requests the same port. This should be allowed, but if the
+    // lifeline fd hasn't triggered yet, it won't.
+    // Since permission_broker is single-threaded, this race is extremely
+    // unlikely to happen: the second request needs to come in at exactly the
+    // right time, after the first process exits but before the lifeline fd
+    // has triggered.
+    return false;
   }
 
   // We use |lifeline_fd| to track the lifetime of the process requesting
@@ -388,99 +377,51 @@ bool PortTracker::ValidatePortRule(const PortRule& rule) {
   return true;
 }
 
+void PortTracker::OnFileDescriptorReadable(int fd) {
+  // The process that requested this port has died/exited, so we need to plug
+  // the hole.
+  if (lifeline_fds_.find(fd) == lifeline_fds_.end()) {
+    LOG(ERROR) << "File descriptor " << fd << " was not being tracked";
+    DeleteLifelineFd(fd);
+  } else {
+    if (!RevokePortRule(lifeline_fds_[fd])) {
+      DeleteLifelineFd(fd);
+    }
+  }
+}
+
 int PortTracker::AddLifelineFd(int dbus_fd) {
-  if (!InitializeEpollOnce()) {
-    return kInvalidHandle;
-  }
   int fd = dup(dbus_fd);
-
-  struct epoll_event epevent;
-  epevent.events = EPOLLIN;  // EPOLLERR | EPOLLHUP are always waited for.
-  epevent.data.fd = fd;
-  VLOG(1) << "Adding file descriptor " << fd << " to epoll instance";
-  if (epoll_ctl(epfd_, EPOLL_CTL_ADD, fd, &epevent) != 0) {
-    PLOG(ERROR) << "epoll_ctl(EPOLL_CTL_ADD)";
-    return kInvalidHandle;
+  if (fd < 0) {
+    PLOG(ERROR) << "dup(dbus_fd) failed";
+    return -1;
   }
 
-  // If this is the first port request, start lifeline checks.
-  if (HasActiveRules()) {
-    VLOG(1) << "Starting lifeline checks";
-    ScheduleLifelineCheck();
-  }
+  lifeline_fd_controllers_[fd] = base::FileDescriptorWatcher::WatchReadable(
+      fd, base::BindRepeating(&PortTracker::OnFileDescriptorReadable,
+                              // The callback will not outlive the object.
+                              base::Unretained(this), fd));
 
   return fd;
 }
 
 bool PortTracker::DeleteLifelineFd(int fd) {
-  if (epfd_ < 0) {
-    LOG(ERROR) << "epoll instance not created";
+  auto iter = lifeline_fd_controllers_.find(fd);
+  if (iter == lifeline_fd_controllers_.end()) {
     return false;
   }
 
-  VLOG(1) << "Deleting file descriptor " << fd << " from epoll instance";
-  if (epoll_ctl(epfd_, EPOLL_CTL_DEL, fd, nullptr) != 0) {
-    PLOG(ERROR) << "epoll_ctl(EPOLL_CTL_DEL)";
-    return false;
-  }
+  iter->second.reset();  // Destruct the controller, which removes the callback.
+  lifeline_fd_controllers_.erase(iter);
 
   // AddLifelineFd() calls dup(), so this function should close the fd.
-  // We still return true since at this point the fd has been deleted from the
-  // epoll instance.
+  // We still return true since at this point the FileDescriptorWatcher object
+  // has been destructed.
   if (IGNORE_EINTR(close(fd)) < 0) {
     PLOG(ERROR) << "close(lifeline_fd)";
   }
+
   return true;
-}
-
-void PortTracker::CheckLifelineFds(bool reschedule_check) {
-  if (epfd_ < 0) {
-    return;
-  }
-  struct epoll_event epevents[kMaxEvents];
-  int nready = epoll_wait(epfd_, epevents, kMaxEvents, 0 /* do not block */);
-  if (nready < 0) {
-    PLOG(ERROR) << "epoll_wait(0)";
-    return;
-  }
-  if (nready == 0) {
-    if (reschedule_check)
-      ScheduleLifelineCheck();
-    return;
-  }
-
-  for (size_t eidx = 0; eidx < (size_t)nready; eidx++) {
-    uint32_t events = epevents[eidx].events;
-    int fd = epevents[eidx].data.fd;
-    if ((events & (EPOLLHUP | EPOLLERR))) {
-      // The process that requested this port has died/exited,
-      // so we need to plug the hole.
-      if (lifeline_fds_.find(fd) == lifeline_fds_.end()) {
-        LOG(ERROR) << "File descriptor " << fd << " was not being tracked";
-        DeleteLifelineFd(fd);
-        continue;
-      }
-      if (!RevokePortRule(lifeline_fds_[fd])) {
-        DeleteLifelineFd(fd);
-      }
-    }
-  }
-
-  if (reschedule_check) {
-    // If there's still processes to track, schedule lifeline checks.
-    if (HasActiveRules()) {
-      ScheduleLifelineCheck();
-    } else {
-      VLOG(1) << "Stopping lifeline checks";
-    }
-  }
-}
-
-void PortTracker::ScheduleLifelineCheck() {
-  task_runner_->PostDelayedTask(
-      FROM_HERE,
-      base::Bind(&PortTracker::CheckLifelineFds, base::Unretained(this), true),
-      kLifelineInterval);
 }
 
 bool PortTracker::HasActiveRules() {
@@ -496,25 +437,12 @@ bool PortTracker::RevokePortRule(const PortRuleKey key) {
   PortRule rule = port_rules_[key];
   bool deleted = DeleteLifelineFd(rule.lifeline_fd);
   if (!deleted) {
-    LOG(ERROR) << "Failed to delete file descriptor " << rule.lifeline_fd
-               << " from epoll instance";
+    LOG(ERROR) << "Failed to delete watcher for file descriptor "
+               << rule.lifeline_fd << " from task runner";
   }
   port_rules_.erase(key);
   lifeline_fds_.erase(rule.lifeline_fd);
   return deleted && ModifyPortRule(ModifyPortRuleRequest::DELETE, rule);
-}
-
-bool PortTracker::InitializeEpollOnce() {
-  if (epfd_ < 0) {
-    // |size| needs to be > 0, but is otherwise ignored.
-    VLOG(1) << "Creating epoll instance";
-    epfd_ = epoll_create(1 /* size */);
-    if (epfd_ < 0) {
-      PLOG(ERROR) << "epoll_create()";
-      return false;
-    }
-  }
-  return true;
 }
 
 }  // namespace permission_broker

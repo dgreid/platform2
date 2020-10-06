@@ -27,10 +27,6 @@ class MockPortTracker : public PortTracker {
 
   MOCK_METHOD(int, AddLifelineFd, (int), (override));
   MOCK_METHOD(bool, DeleteLifelineFd, (int), (override));
-  MOCK_METHOD(void, CheckLifelineFds, (bool), (override));
-  MOCK_METHOD(void, ScheduleLifelineCheck, (), (override));
-
-  MOCK_METHOD(bool, InitializeEpollOnce, (), (override));
 
  private:
   DISALLOW_COPY_AND_ASSIGN(MockPortTracker);
@@ -80,7 +76,6 @@ TEST_F(PortTrackerTest, AllowUdpPortAccess_Success) {
 TEST_F(PortTrackerTest, AllowTcpPortAccess_Twice) {
   EXPECT_CALL(port_tracker_, ModifyPortRule(_, _)).WillRepeatedly(Return(true));
   EXPECT_CALL(port_tracker_, AddLifelineFd(dbus_fd)).WillOnce(Return(0));
-  EXPECT_CALL(port_tracker_, CheckLifelineFds(false));
   ASSERT_TRUE(port_tracker_.AllowTcpPortAccess(tcp_port, interface, dbus_fd));
   ASSERT_FALSE(port_tracker_.AllowTcpPortAccess(tcp_port, interface, dbus_fd));
   ASSERT_TRUE(port_tracker_.HasActiveRules());
@@ -89,7 +84,6 @@ TEST_F(PortTrackerTest, AllowTcpPortAccess_Twice) {
 TEST_F(PortTrackerTest, AllowUdpPortAccess_Twice) {
   EXPECT_CALL(port_tracker_, ModifyPortRule(_, _)).WillRepeatedly(Return(true));
   EXPECT_CALL(port_tracker_, AddLifelineFd(dbus_fd)).WillOnce(Return(0));
-  EXPECT_CALL(port_tracker_, CheckLifelineFds(false));
   ASSERT_TRUE(port_tracker_.AllowUdpPortAccess(udp_port, interface, dbus_fd));
   ASSERT_FALSE(port_tracker_.AllowUdpPortAccess(udp_port, interface, dbus_fd));
   ASSERT_TRUE(port_tracker_.HasActiveRules());
@@ -228,7 +222,6 @@ TEST_F(PortTrackerTest, LockDownLoopbackTcpPort_Success) {
 TEST_F(PortTrackerTest, LockDownLoopbackTcpPort_Twice) {
   EXPECT_CALL(port_tracker_, ModifyPortRule(_, _)).WillRepeatedly(Return(true));
   EXPECT_CALL(port_tracker_, AddLifelineFd(dbus_fd)).WillOnce(Return(0));
-  EXPECT_CALL(port_tracker_, CheckLifelineFds(false));
   ASSERT_TRUE(port_tracker_.LockDownLoopbackTcpPort(tcp_port, dbus_fd));
   ASSERT_FALSE(port_tracker_.LockDownLoopbackTcpPort(tcp_port, dbus_fd));
   ASSERT_TRUE(port_tracker_.HasActiveRules());

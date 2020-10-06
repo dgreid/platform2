@@ -6,11 +6,13 @@
 #define PERMISSION_BROKER_PORT_TRACKER_H_
 
 #include <map>
+#include <memory>
 #include <string>
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
+#include <base/files/file_descriptor_watcher_posix.h>
 #include <base/macros.h>
 #include <base/message_loop/message_loop.h>
 #include <base/sequenced_task_runner.h>
@@ -108,11 +110,12 @@ class PortTracker {
   // Call patchpanel's DBus API to create or remove firewall rule.
   virtual bool ModifyPortRule(Operation op, const PortRule& rule);
 
+  // Callback to call when a lifeline file descriptor is triggered.
+  virtual void OnFileDescriptorReadable(int fd);
+
   // Helper functions for process lifetime tracking.
   virtual int AddLifelineFd(int dbus_fd);
   virtual bool DeleteLifelineFd(int fd);
-  virtual void CheckLifelineFds(bool reschedule_check);
-  virtual void ScheduleLifelineCheck();
 
   bool AddPortRule(const PortRule& rule, int dbus_fd);
   bool ValidatePortRule(const PortRule& rule);
@@ -121,11 +124,7 @@ class PortTracker {
   // accidentally deleting |key| through |lifeline_fds_| or |port_rules_|.
   bool RevokePortRule(const PortRuleKey key);
 
-  // epoll(7) helper functions.
-  virtual bool InitializeEpollOnce();
-
   scoped_refptr<base::SequencedTaskRunner> task_runner_;
-  int epfd_;
 
   // For each port rule (protocol, port, interface), keep track of which fd
   // requested it.  We need this for Release{Tcp|Udp}Port(), to avoid
@@ -135,6 +134,11 @@ class PortTracker {
   // For each fd (process), keep track of which rule (protocol, port, interface)
   // it requested.
   std::map<int, PortRuleKey> lifeline_fds_;
+
+  // For each fd (process), keep track of the FileDescriptorWatcher::Controller
+  // object associated with it.
+  std::map<int, std::unique_ptr<base::FileDescriptorWatcher::Controller>>
+      lifeline_fd_controllers_;
 
   DISALLOW_COPY_AND_ASSIGN(PortTracker);
 };
