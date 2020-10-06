@@ -14,9 +14,14 @@
 namespace ml {
 namespace {
 
+using ::chromeos::machine_learning::mojom::EndpointReason;
+using ::chromeos::machine_learning::mojom::FinalResult;
+using ::chromeos::machine_learning::mojom::FinalResultPtr;
 using ::chromeos::machine_learning::mojom::SodaClient;
 using ::chromeos::machine_learning::mojom::SodaConfigPtr;
 using ::chromeos::machine_learning::mojom::SodaRecognizer;
+using ::chromeos::machine_learning::mojom::SpeechRecognizerEvent;
+using ::chromeos::machine_learning::mojom::SpeechRecognizerEventPtr;
 
 constexpr char kSodaDefaultConfigFilePath[] =
     "/opt/google/chrome/ml_models/soda/models/en_us/dictation.ascii_proto";
@@ -24,6 +29,7 @@ constexpr char kSodaDefaultConfigFilePath[] =
 void SodaCallback(const char* soda_response_str,
                   int size,
                   void* soda_recognizer_impl) {
+  // TODO(robsc): Parse this callback appropriately.
   speech::soda::chrome::SodaResponse response;
   if (!response.ParseFromArray(soda_response_str, size)) {
     LOG(ERROR) << "Parse SODA response failed." << std::endl;
@@ -80,7 +86,13 @@ void SodaRecognizerImpl::MarkDone() {
 }
 
 void SodaRecognizerImpl::OnSodaEvent(const std::string& event_string) {
-  client_remote_->OnSodaEvent(event_string);
+  // TODO(robsc): actually implement appropriate behavior here.
+  SpeechRecognizerEventPtr event = SpeechRecognizerEvent::New();
+  FinalResultPtr final_result = FinalResult::New();
+  final_result->final_hypotheses.push_back(event_string);
+  final_result->endpoint_reason = EndpointReason::ENDPOINT_UNKNOWN;
+  event->set_final_result(std::move(final_result));
+  client_remote_->OnSpeechRecognizerEvent(std::move(event));
 }
 
 SodaRecognizerImpl::SodaRecognizerImpl(

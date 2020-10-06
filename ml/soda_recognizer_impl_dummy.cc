@@ -14,9 +14,14 @@
 namespace ml {
 namespace {
 
+using ::chromeos::machine_learning::mojom::EndpointReason;
+using ::chromeos::machine_learning::mojom::FinalResult;
+using ::chromeos::machine_learning::mojom::FinalResultPtr;
 using ::chromeos::machine_learning::mojom::SodaClient;
 using ::chromeos::machine_learning::mojom::SodaConfigPtr;
 using ::chromeos::machine_learning::mojom::SodaRecognizer;
+using ::chromeos::machine_learning::mojom::SpeechRecognizerEvent;
+using ::chromeos::machine_learning::mojom::SpeechRecognizerEventPtr;
 
 constexpr char kOnDeviceSpeechNotSupportedMessage[] =
     "On-device speech is not supported.";
@@ -68,7 +73,12 @@ void SodaRecognizerImpl::MarkDone() {
 }
 
 void SodaRecognizerImpl::OnSodaEvent(const std::string& event_string) {
-  client_remote_->OnSodaEvent(event_string);
+  SpeechRecognizerEventPtr event = SpeechRecognizerEvent::New();
+  FinalResultPtr final_result = FinalResult::New();
+  final_result->final_hypotheses.push_back(event_string);
+  final_result->endpoint_reason = EndpointReason::ENDPOINT_UNKNOWN;
+  event->set_final_result(std::move(final_result));
+  client_remote_->OnSpeechRecognizerEvent(std::move(event));
 }
 
 SodaRecognizerImpl::SodaRecognizerImpl(

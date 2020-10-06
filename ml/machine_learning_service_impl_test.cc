@@ -235,7 +235,13 @@ class MachineLearningServiceImplForTesting : public MachineLearningServiceImpl {
 class MockSodaClientImpl
     : public chromeos::machine_learning::mojom::SodaClient {
  public:
-  MOCK_METHOD(void, OnSodaEvent, (const std::string& event_string), (override));
+  MOCK_METHOD(void, OnStop, (), (override));
+  MOCK_METHOD(void, OnStart, (), (override));
+  MOCK_METHOD(
+      void,
+      OnSpeechRecognizerEvent,
+      (chromeos::machine_learning::mojom::SpeechRecognizerEventPtr event),
+      (override));
 };
 
 // Loads builtin model specified by `model_id`, binding the impl to `model`.
@@ -1266,6 +1272,10 @@ TEST_F(HandwritingRecognizerTest, FailOnEmptyInk) {
   ASSERT_TRUE(infer_callback_done);
 }
 
+MATCHER_P(StructPtrEq, n, "") {
+  return n.get().Equals(arg);
+}
+
 // Tests the SODA CrOS mojo callback for the dummy implementation can return
 // expected error string.
 TEST(SODARecognizerTest, DummyImplMojoCallback) {
@@ -1285,27 +1295,39 @@ TEST(SODARecognizerTest, DummyImplMojoCallback) {
                                    soda_client.BindNewPipeAndPassRemote(),
                                    soda_recognizer.BindNewPipeAndPassReceiver(),
                                    base::BindOnce([](LoadModelResult) {}));
+  chromeos::machine_learning::mojom::SpeechRecognizerEventPtr event =
+      chromeos::machine_learning::mojom::SpeechRecognizerEvent::New();
+  chromeos::machine_learning::mojom::FinalResultPtr final_result =
+      chromeos::machine_learning::mojom::FinalResult::New();
+  final_result->final_hypotheses.push_back(
+      "On-device speech is not supported.");
+  final_result->endpoint_reason =
+      chromeos::machine_learning::mojom::EndpointReason::ENDPOINT_UNKNOWN;
+  event->set_final_result(std::move(final_result));
 
+  // TODO(robsc): Update this unittest to use regular Eq() once
+  // https://chromium-review.googlesource.com/c/chromium/src/+/2456184 is
+  // submitted.
   EXPECT_CALL(soda_client_impl,
-              OnSodaEvent("On-device speech is not supported."))
+              OnSpeechRecognizerEvent(StructPtrEq(std::ref(event))))
       .Times(1);
   soda_recognizer->Start();
   base::RunLoop().RunUntilIdle();
 
   EXPECT_CALL(soda_client_impl,
-              OnSodaEvent("On-device speech is not supported."))
+              OnSpeechRecognizerEvent(StructPtrEq(std::ref(event))))
       .Times(1);
   soda_recognizer->AddAudio({});
   base::RunLoop().RunUntilIdle();
 
   EXPECT_CALL(soda_client_impl,
-              OnSodaEvent("On-device speech is not supported."))
+              OnSpeechRecognizerEvent(StructPtrEq(std::ref(event))))
       .Times(1);
   soda_recognizer->MarkDone();
   base::RunLoop().RunUntilIdle();
 
   EXPECT_CALL(soda_client_impl,
-              OnSodaEvent("On-device speech is not supported."))
+              OnSpeechRecognizerEvent(StructPtrEq(std::ref(event))))
       .Times(1);
   soda_recognizer->Stop();
   base::RunLoop().RunUntilIdle();
