@@ -6,10 +6,8 @@
 
 use std::env;
 use std::fmt::{self, Debug, Display};
-use std::fs::remove_file;
-use std::io::{BufRead, BufReader, Error as IoError, Read};
-use std::os::unix::io::{AsRawFd, RawFd};
-use std::os::unix::net::{UnixListener, UnixStream};
+use std::io::{BufRead, BufReader};
+use std::os::unix::io::AsRawFd;
 use std::path::Path;
 use std::result::Result as StdResult;
 use std::string::String;
@@ -18,13 +16,15 @@ use std::thread::spawn;
 use sirenia::build_info::BUILD_TIMESTAMP;
 use sirenia::cli::initialize_common_arguments;
 use sirenia::communication::{self, get_app_path, read_message, write_message, Request, Response};
+use sirenia::linux::events::EventMultiplexer;
+use sirenia::linux::syslog::Syslog;
 use sirenia::sandbox::{self, Sandbox};
 use sirenia::to_sys_util;
 use sirenia::transport::{
     IPServerTransport, ReadDebugSend, ServerTransport, Transport, TransportType,
     VsockServerTransport, WriteDebugSend,
 };
-use sys_util::{self, error, handle_eintr, info, pipe, syslog};
+use sys_util::{self, error, info, pipe, syslog};
 
 #[derive(Debug)]
 pub enum Error {
@@ -76,54 +76,21 @@ fn log_info(w: &mut Box<dyn WriteDebugSend>, s: String) {
     }
 }
 
-const SYSLOG_PATH: &str = "/dev/log";
-
-struct Syslog(UnixListener);
-
-impl Syslog {
-    fn new() -> StdResult<Self, IoError> {
-        Ok(Syslog(UnixListener::bind(Path::new(SYSLOG_PATH))?))
-    }
-}
-
-impl Drop for Syslog {
-    fn drop(&mut self) {
-        if let Err(e) = remove_file(SYSLOG_PATH) {
-            eprintln!("Failed to cleanup syslog: {:?}", e);
-        }
-    }
-}
-
-impl AsRawFd for Syslog {
-    fn as_raw_fd(&self) -> RawFd {
-        self.0.as_raw_fd()
-    }
-}
-
-fn handle_log_listener(listener: Syslog) {
-    while let Ok((instance, _)) = handle_eintr!(listener.0.accept()) {
-        spawn(move || {
-            handle_log_instance(instance);
-        });
-    }
-}
-
-fn handle_log_instance(mut instance: UnixStream) {
-    let mut buffer = [0; 1024];
-    while handle_eintr!(instance.read(&mut buffer)).is_ok() {}
-}
-
 // TODO: Figure out how to clean up TEEs that are no longer in use
 // TODO: Figure out rate limiting and prevention against DOS attacks
 // TODO: What happens if dugong crashes? How do we want to handle
 fn main() -> Result<()> {
-    let syslog_path = Path::new(SYSLOG_PATH);
-    if !syslog_path.exists() {
+    if !Syslog::is_syslog_present() {
         eprintln!("creating syslog");
         let listener = Syslog::new().unwrap();
-        eprintln!("reading syslog");
         spawn(move || {
-            handle_log_listener(listener);
+            let mut ctx = EventMultiplexer::new().unwrap();
+            ctx.add_event(Box::new(listener)).unwrap();
+            while !ctx.is_empty() {
+                if let Err(e) = ctx.run_once() {
+                    eprintln!("{}", e);
+                };
+            }
         });
     } else {
         eprintln!("syslog exists");

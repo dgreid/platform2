@@ -5,3 +5,4 @@
 //! A module for Linux specific functionality like epoll and syslog handling.
 
 pub mod events;
+pub mod syslog;
