@@ -46,6 +46,7 @@ static_library("libcroslog_static") {
 
 pkg_config("target_defaults") {
   pkg_deps = [
+    "libbrillo",
     "libchrome-${libbase_ver}",
     "re2",
   ]

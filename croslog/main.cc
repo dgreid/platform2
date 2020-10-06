@@ -9,6 +9,8 @@
 #include <base/logging.h>
 #include <base/task/single_thread_task_executor.h>
 
+#include <brillo/syslog_logging.h>
+
 #include "croslog/config.h"
 #include "croslog/viewer_journal.h"
 #include "croslog/viewer_plaintext.h"
@@ -24,11 +26,19 @@ void ShowUsage() {
 
 int main(int argc, char* argv[]) {
   base::CommandLine::Init(argc, argv);
+  const base::CommandLine* const command_line =
+      base::CommandLine::ForCurrentProcess();
+
+  // Configure the log destination. This should be placed before any code which
+  // potentially write logs.
+  int log_flags = brillo::kLogToStderr;
+  // if the stdin is not tty, send logs to syslog as well.
+  if (!isatty(0) || command_line->HasSwitch("send-syslog"))
+    log_flags |= brillo::kLogToSyslog;
+  brillo::InitLog(log_flags);
 
   croslog::Config config;
-
-  bool parse_result =
-      config.ParseCommandLineArgs(base::CommandLine::ForCurrentProcess());
+  bool parse_result = config.ParseCommandLineArgs(command_line);
   if (!parse_result || config.show_help) {
     ShowUsage();
     return parse_result ? 0 : 1;
