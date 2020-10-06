@@ -9,6 +9,7 @@ mprotect: arg2 in ~PROT_EXEC || arg2 in ~PROT_WRITE
 close: 1
 fstat: 1
 stat: 1
+lseek: 1
 brk: 1
 rt_sigaction: 1
 write: 1
