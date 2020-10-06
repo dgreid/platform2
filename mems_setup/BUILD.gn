@@ -68,5 +68,6 @@ if (use.test) {
       "test_helper.cc",
       "vpd_loader_test.cc",
     ]
+    defines = [ "USE_IIOSERVICE=${use.iioservice}" ]
   }
 }

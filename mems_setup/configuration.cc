@@ -534,19 +534,21 @@ bool Configuration::SetupPermissions() {
 
   std::string dev_name =
       libmems::IioDeviceImpl::GetStringFromId(sensor_->GetId());
-  // /dev/iio:deviceX
-  base::FilePath dev_path = base::FilePath(kDevString).Append(dev_name.c_str());
-  if (!delegate_->Exists(dev_path)) {
-    LOG(ERROR) << "Missing path: " << dev_path.value();
-    return false;
+  if (USE_IIOSERVICE) {
+    // /dev/iio:deviceX
+    base::FilePath dev_path =
+        base::FilePath(kDevString).Append(dev_name.c_str());
+    if (!delegate_->Exists(dev_path)) {
+      LOG(ERROR) << "Missing path: " << dev_path.value();
+      return false;
+    }
+    // Setup files_to_set_read_own.
+    files_to_set_read_own.push_back(dev_path);
   }
 
   // /sys/bus/iio/devices/iio:deviceX
   base::FilePath sys_dev_path =
       base::FilePath(libmems::kSysDevString).Append(dev_name.c_str());
-
-  // Setup files_to_set_read_own.
-  files_to_set_read_own.push_back(dev_path);
 
   // Files under /sys/bus/iio/devices/iio:deviceX/.
   auto files = EnumerateAllFiles(sys_dev_path);
@@ -559,9 +561,6 @@ bool Configuration::SetupPermissions() {
 
   for (auto file : kFilesToSetReadAndOwnership)
     files_to_set_read_own.push_back(sys_dev_path.Append(file));
-
-  // Setup files_to_set_write_own.
-  files_to_set_write_own.push_back(dev_path);
 
   for (auto file : kFilesToSetWriteAndOwnership)
     files_to_set_write_own.push_back(sys_dev_path.Append(file));

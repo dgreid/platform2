@@ -64,14 +64,16 @@ TEST_F(AccelerometerTest, CheckPermissionsAndOwnership) {
   uid_t user;
   gid_t group;
 
-  // /dev/iio:deviceX
-  base::FilePath dev_path = base::FilePath(kDevString).Append(dev_name.c_str());
+  if (USE_IIOSERVICE) {
+    // /dev/iio:deviceX
+    base::FilePath dev_path =
+        base::FilePath(kDevString).Append(dev_name.c_str());
 
-  EXPECT_TRUE(mock_delegate_->GetOwnership(dev_path, &user, &group));
-  EXPECT_EQ(group, kIioserviceGroupId);
-  EXPECT_EQ(base::FILE_PERMISSION_WRITE_BY_GROUP |
-                base::FILE_PERMISSION_READ_BY_GROUP,
-            mock_delegate_->GetPermissions(dev_path));
+    EXPECT_TRUE(mock_delegate_->GetOwnership(dev_path, &user, &group));
+    EXPECT_EQ(group, kIioserviceGroupId);
+    EXPECT_EQ(base::FILE_PERMISSION_READ_BY_GROUP,
+              mock_delegate_->GetPermissions(dev_path));
+  }
 }
 
 TEST_F(AccelerometerTest, MissingVpd) {
