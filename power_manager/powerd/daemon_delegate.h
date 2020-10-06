@@ -152,9 +152,6 @@ class DaemonDelegate {
   virtual std::unique_ptr<system::SuspendConfiguratorInterface>
   CreateSuspendConfigurator(PrefsInterface* prefs) = 0;
 
-  virtual std::unique_ptr<system::SuspendFreezerInterface> CreateSuspendFreezer(
-      PrefsInterface* prefs) = 0;
-
   virtual std::vector<std::unique_ptr<system::ThermalDeviceInterface>>
   CreateThermalDevices() = 0;
 

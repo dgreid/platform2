@@ -59,7 +59,6 @@
 #include "power_manager/powerd/system/power_supply.h"
 #include "power_manager/powerd/system/smart_discharge_configurator.h"
 #include "power_manager/powerd/system/suspend_configurator.h"
-#include "power_manager/powerd/system/suspend_freezer.h"
 #include "power_manager/powerd/system/thermal/thermal_device.h"
 #include "power_manager/powerd/system/udev.h"
 #include "power_manager/powerd/system/user_proximity_watcher_interface.h"
@@ -314,7 +313,6 @@ void Daemon::Init() {
   udev_ = delegate_->CreateUdev();
   input_watcher_ = delegate_->CreateInputWatcher(prefs_.get(), udev_.get());
   suspend_configurator_ = delegate_->CreateSuspendConfigurator(prefs_.get());
-  suspend_freezer_ = delegate_->CreateSuspendFreezer(prefs_.get());
   wakeup_source_identifier_ =
       std::make_unique<system::WakeupSourceIdentifier>(udev_.get());
 
@@ -694,16 +692,6 @@ policy::Suspender::Delegate::SuspendResult Daemon::DoSuspend(
     args.push_back("--suspend_to_idle");
 
   suspend_configurator_->PrepareForSuspend(duration);
-
-  system::FreezeResult freeze_result =
-      suspend_freezer_->FreezeUserspace(wakeup_count, wakeup_count_valid);
-  if (freeze_result == system::FreezeResult::FAILURE) {
-    LOG(ERROR) << "Failed to freeze userspace processes. Aborting suspend";
-    return policy::Suspender::Delegate::SuspendResult::FAILURE;
-  } else if (freeze_result == system::FreezeResult::CANCELED) {
-    return policy::Suspender::Delegate::SuspendResult::CANCELED;
-  }
-
   const int exit_code =
       RunSetuidHelper("suspend", base::JoinString(args, " "), true);
   LOG(INFO) << "powerd_suspend returned " << exit_code;
@@ -714,12 +702,6 @@ policy::Suspender::Delegate::SuspendResult Daemon::DoSuspend(
   if (created_suspended_state_file_) {
     if (!base::DeleteFile(base::FilePath(suspended_state_path_), false))
       PLOG(ERROR) << "Failed to delete " << suspended_state_path_.value();
-  }
-
-  if (!suspend_freezer_->ThawUserspace()) {
-    LOG(ERROR) << "Failed to thaw userspace processes";
-    suspend_configurator_->UndoPrepareForSuspend();
-    return policy::Suspender::Delegate::SuspendResult::FAILURE;
   }
 
   if (!suspend_configurator_->UndoPrepareForSuspend())

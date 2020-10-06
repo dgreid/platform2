@@ -42,7 +42,6 @@
 #include "power_manager/powerd/system/power_supply.h"
 #include "power_manager/powerd/system/power_supply_stub.h"
 #include "power_manager/powerd/system/suspend_configurator_stub.h"
-#include "power_manager/powerd/system/suspend_freezer_stub.h"
 #include "power_manager/powerd/system/thermal/thermal_device.h"
 #include "power_manager/powerd/system/udev_stub.h"
 #include "power_manager/powerd/system/user_proximity_watcher_stub.h"
@@ -84,7 +83,6 @@ class DaemonTest : public ::testing::Test, public DaemonDelegate {
         passed_charge_controller_helper_(
             new system::ChargeControllerHelperStub()),
         passed_suspend_configurator_(new system::SuspendConfiguratorStub()),
-        passed_suspend_freezer_(new system::SuspendFreezerStub()),
         prefs_(passed_prefs_.get()),
         dbus_wrapper_(passed_dbus_wrapper_.get()),
         udev_(passed_udev_.get()),
@@ -307,11 +305,6 @@ class DaemonTest : public ::testing::Test, public DaemonDelegate {
     EXPECT_EQ(prefs_, prefs);
     return std::move(passed_suspend_configurator_);
   }
-  std::unique_ptr<system::SuspendFreezerInterface> CreateSuspendFreezer(
-      PrefsInterface* prefs) override {
-    EXPECT_EQ(prefs_, prefs);
-    return std::move(passed_suspend_freezer_);
-  }
   std::vector<std::unique_ptr<system::ThermalDeviceInterface>>
   CreateThermalDevices() override {
     // Not using pass_* pattern because this is a vector, not just an
@@ -384,7 +377,6 @@ class DaemonTest : public ::testing::Test, public DaemonDelegate {
       passed_charge_controller_helper_;
   std::unique_ptr<system::SuspendConfiguratorInterface>
       passed_suspend_configurator_;
-  std::unique_ptr<system::SuspendFreezerInterface> passed_suspend_freezer_;
 
   // Pointers to objects originally stored in |passed_*| members. These
   // allow continued access by tests even after the corresponding Create*

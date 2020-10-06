@@ -102,10 +102,6 @@ const char kSmartDischargeToZeroHrPref[] = "smart_discharge_to_zero_hr";
 const char kCutoffPowerUaPref[] = "cutoff_power_ua";
 const char kHibernatePowerUaPref[] = "hibernate_power_ua";
 
-// This pref is incomplete. Prefs based on it are defined by other packages
-// populating them.
-const char kSuspendFreezerDepsPrefix[] = "suspend_freezer_deps_";
-
 // Miscellaneous constants.
 const char kCrosFpInputDevName[] = "cros_fp_input";
 const char kInternalBacklightPath[] = "/sys/class/backlight";

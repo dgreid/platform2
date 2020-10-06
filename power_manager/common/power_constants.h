@@ -222,13 +222,6 @@ extern const char kTpmStatusIntervalSecPref[];
 // suspend by writing mem to /sys/power/state.
 extern const char kSuspendToIdlePref[];
 
-// Prefix for powerd prefs that define the dependencies of a freezer cgroup.
-// Cgroup A will be in the Deps for cgroup B if cgroup B may not be able to
-// freeze if cgroup A is already frozen. Hence, cgroup B needs to freeze first.
-// These dependencies tell powerd the order to freeze cgroups in during suspend.
-// The pref for cgroup A will be "|kSuspendFreezerDepsPrefix|A".
-extern const char kSuspendFreezerDepsPrefix[];
-
 // If true, update wifi transmit power when in tablet vs. clamshell mode.
 extern const char kSetWifiTransmitPowerForTabletModePref[];
 
