@@ -4,6 +4,7 @@
 
 #include <stdlib.h>
 
+#include <algorithm>
 #include <memory>
 #include <utility>
 
@@ -16,6 +17,7 @@
 
 #include "vm_tools/garcon/desktop_file.h"
 #include "vm_tools/garcon/ini_parse_util.h"
+#include "vm_tools/garcon/xdg_util.h"
 
 namespace {
 // Ridiculously large size for a desktop file.
@@ -51,9 +53,6 @@ constexpr char kDesktopEntryTypeApplication[] = "Application";
 // Valid values for the "Type" entry.
 const char* const kValidDesktopEntryTypes[] = {kDesktopEntryTypeApplication,
                                                "Link", "Directory"};
-constexpr char kXdgDataDirsEnvVar[] = "XDG_DATA_DIRS";
-// Default path to to use if the XDG_DATA_DIRS env var is not set.
-constexpr char kDefaultDesktopFilesPath[] = "/usr/share";
 constexpr char kSettingsCategory[] = "Settings";
 constexpr char kPathEnvVar[] = "PATH";
 // For the purpose of determining apps relevant to our desktop env, pretend we
@@ -77,19 +76,12 @@ std::unique_ptr<DesktopFile> DesktopFile::ParseDesktopFile(
 
 // static
 std::vector<base::FilePath> DesktopFile::GetPathsForDesktopFiles() {
-  const char* xdg_data_dirs = getenv(kXdgDataDirsEnvVar);
-  if (!xdg_data_dirs || strlen(xdg_data_dirs) == 0) {
-    xdg_data_dirs = kDefaultDesktopFilesPath;
-  }
-  // Now break it up into the paths that we should search.
-  std::vector<base::StringPiece> search_dirs = base::SplitStringPiece(
-      xdg_data_dirs, ":", base::TRIM_WHITESPACE, base::SPLIT_WANT_NONEMPTY);
-  std::vector<base::FilePath> retval;
-  for (const auto& curr_dir : search_dirs) {
-    base::FilePath curr_path(curr_dir);
-    retval.emplace_back(curr_path.Append(kDesktopPathStartDelimiter));
-  }
-  return retval;
+  std::vector<base::FilePath> data_dirs = xdg::GetDataDirectories();
+  std::transform(data_dirs.begin(), data_dirs.end(), data_dirs.begin(),
+                 [](const base::FilePath& path) {
+                   return path.Append(kDesktopPathStartDelimiter);
+                 });
+  return data_dirs;
 }
 
 // static

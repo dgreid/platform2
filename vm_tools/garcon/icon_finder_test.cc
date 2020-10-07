@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <algorithm>
 #include <string>
 #include <vector>
 
@@ -48,13 +49,6 @@ class IconFinderTest : public ::testing::Test {
   const base::FilePath& icon_theme_dir() { return icon_theme_dir_; }
   const base::FilePath& icon_dir() { return icon_dir_; }
   const base::FilePath& data_dir() { return data_dir_; }
-  void ValidateIconIndexDirsWithXDGDataDir(
-      const std::string& xdg_data_dirs_value,
-      const std::vector<base::FilePath>& expected_dirs) {
-    std::unique_ptr<base::Environment> env = base::Environment::Create();
-    env->SetVar("XDG_DATA_DIRS", xdg_data_dirs_value);
-    EXPECT_TRUE(expected_dirs == GetPathsForIconIndexDirs());
-  }
 
  private:
   base::ScopedTempDir temp_dir_;
@@ -71,18 +65,29 @@ class IconFinderTest : public ::testing::Test {
 // This test verifies that icon_finder uses environment variable XDG_DATA_DIRS
 // to search for app icons when it's set.
 TEST_F(IconFinderTest, UseXdgDataDirsEnv) {
-  ValidateIconIndexDirsWithXDGDataDir(
-      "/a:/b",
-      {base::FilePath("/a/icons/gnome"), base::FilePath("/b/icons/gnome"),
-       base::FilePath("/a/icons/hicolor"), base::FilePath("/b/icons/hicolor")});
+  std::unique_ptr<base::Environment> env = base::Environment::Create();
+  env->SetVar("XDG_DATA_DIRS", "/a:/b");
+  env->SetVar("XDG_DATA_HOME", "/c");
+  std::vector<base::FilePath> expected_dirs = {
+      base::FilePath("/a/icons/gnome"),   base::FilePath("/b/icons/gnome"),
+      base::FilePath("/c/icons/gnome"),   base::FilePath("/a/icons/hicolor"),
+      base::FilePath("/b/icons/hicolor"), base::FilePath("/c/icons/hicolor")};
+  EXPECT_EQ(GetPathsForIconIndexDirs(), expected_dirs);
 }
 
 // This test verifies that default XDG data directories are used when
 // environment variable XDG_DATA_DIRS is not set.
 TEST_F(IconFinderTest, DefaultDirs) {
-  ValidateIconIndexDirsWithXDGDataDir(
-      "", {base::FilePath("/usr/share/icons/gnome"),
-           base::FilePath("/usr/share/icons/hicolor")});
+  std::unique_ptr<base::Environment> env = base::Environment::Create();
+  env->SetVar("XDG_DATA_DIRS", "");
+  env->SetVar("XDG_DATA_HOME", "");
+  std::vector<base::FilePath> icon_dirs = GetPathsForIconIndexDirs();
+  EXPECT_NE(std::find(icon_dirs.begin(), icon_dirs.end(),
+                      base::FilePath("/usr/share/icons/gnome")),
+            icon_dirs.end());
+  EXPECT_NE(std::find(icon_dirs.begin(), icon_dirs.end(),
+                      base::FilePath("/usr/local/share/icons/hicolor")),
+            icon_dirs.end());
 }
 
 // This test verifies that we get a default list of dirs when the index.theme
@@ -90,12 +95,13 @@ TEST_F(IconFinderTest, DefaultDirs) {
 TEST_F(IconFinderTest, NoIndexThemeNoDir) {
   std::vector<base::FilePath> expected_dirs = {
       icon_theme_dir().Append("48x48").Append("apps"),
+      icon_theme_dir().Append("256x256").Append("apps"),
       icon_theme_dir().Append("128x128").Append("apps"),
       icon_theme_dir().Append("96x96").Append("apps"),
       icon_theme_dir().Append("64x64").Append("apps"),
       icon_theme_dir().Append("32x32").Append("apps"),
   };
-  EXPECT_TRUE(GetPathsForIcons(icon_theme_dir(), 48, 1) == expected_dirs);
+  EXPECT_EQ(GetPathsForIcons(icon_theme_dir(), 48, 1), expected_dirs);
 }
 
 // This test verifies that the correct icon dirs are returned.

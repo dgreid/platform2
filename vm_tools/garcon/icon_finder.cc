@@ -14,34 +14,28 @@
 #include <base/strings/string_split.h>
 #include "vm_tools/garcon/desktop_file.h"
 #include "vm_tools/garcon/icon_index_file.h"
+#include "vm_tools/garcon/xdg_util.h"
 
 namespace vm_tools {
 namespace garcon {
 namespace {
 
-constexpr char kXdgDataDirsEnvVar[] = "XDG_DATA_DIRS";
-constexpr char kXdgDataDirsDefault[] = "/usr/share/";
 constexpr char kDefaultPixmapsDir[] = "/usr/share/pixmaps/";
 const char* const kThemeDirs[] = {"gnome", "hicolor"};
-const int kDefaultIconSizeDirs[] = {128, 96, 64, 48, 32};
+const int kDefaultIconSizeDirs[] = {256, 128, 96, 64, 48, 32};
 constexpr char kDefaultIconSubdir[] = "apps";
 
 // Returns a vector of directory paths under which an index.theme file is
 // located.
 std::vector<base::FilePath> GetPathsForIconIndexDirs() {
   std::vector<base::FilePath> retval;
-  const char* xdg_data_dirs = getenv(kXdgDataDirsEnvVar);
-  if (!xdg_data_dirs || strlen(xdg_data_dirs) == 0) {
-    xdg_data_dirs = kXdgDataDirsDefault;
-  }
-  std::vector<base::StringPiece> dirs = base::SplitStringPiece(
-      xdg_data_dirs, ":", base::TRIM_WHITESPACE, base::SPLIT_WANT_NONEMPTY);
+  // Icons are stored in the same place as applications, so just use that list.
+  std::vector<base::FilePath> dirs = xdg::GetDataDirectories();
   for (const char* theme_dir : kThemeDirs) {
-    std::transform(
-        dirs.begin(), dirs.end(), std::back_inserter(retval),
-        [&theme_dir](const base::StringPiece& dir) {
-          return base::FilePath(dir).Append("icons").Append(theme_dir);
-        });
+    std::transform(dirs.begin(), dirs.end(), std::back_inserter(retval),
+                   [&theme_dir](const base::FilePath& dir) {
+                     return dir.Append("icons").Append(theme_dir);
+                   });
   }
   return retval;
 }

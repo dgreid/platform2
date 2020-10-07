@@ -76,6 +76,7 @@ static_library("libgarcon") {
     "../garcon/mime_types_parser.cc",
     "../garcon/package_kit_proxy.cc",
     "../garcon/service_impl.cc",
+    "../garcon/xdg_util.cc",
   ]
   configs += [ ":target_defaults" ]
   pkg_deps = [
