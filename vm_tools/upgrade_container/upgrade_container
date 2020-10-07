@@ -16,10 +16,11 @@ rm -f /etc/apt/sources.list.d/cros-gpu.list \
            /etc/apt/preferences.d/cros-gpu.pref
 
 # Make sure apt-keys are up to date. We don't use keyring.debian.org because it
-# only serves debian-specific keys and that's not enough when we want the Google
-# package signing key.
+# only serves debian-specific keys and that's not enough when we want the
+# Google package signing key. however most people don't need this so ignore
+# failures.
 apt-key adv --refresh-keys --keyserver keyserver.ubuntu.com \
-    EB4C1BFD4F042F6DDDCCEC917721F63BD38B4796
+    EB4C1BFD4F042F6DDDCCEC917721F63BD38B4796 || true
 
 # The actual flip to buster.
 sed -i 's/stretch/buster/g' /etc/apt/sources.list \
