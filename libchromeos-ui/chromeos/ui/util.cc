@@ -4,7 +4,9 @@
 
 #include "chromeos/ui/util.h"
 
+#include <fcntl.h>
 #include <stdarg.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
 
@@ -35,14 +37,21 @@ bool SetPermissions(const base::FilePath& path,
                     uid_t uid,
                     gid_t gid,
                     mode_t mode) {
+  base::ScopedFD fd(
+      open(path.value().c_str(), O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC));
+  if (!fd.is_valid()) {
+    PLOG(ERROR) << "Couldn't open " << path.value();
+    return false;
+  }
+
   if (getuid() == 0) {
-    if (chown(path.value().c_str(), uid, gid) != 0) {
+    if (fchown(fd.get(), uid, gid) != 0) {
       PLOG(ERROR) << "Couldn't chown " << path.value() << " to " << uid << ":"
                   << gid;
       return false;
     }
   }
-  if (chmod(path.value().c_str(), mode) != 0) {
+  if (fchmod(fd.get(), mode) != 0) {
     PLOG(ERROR) << "Unable to chmod " << path.value() << " to " << std::oct
                 << mode;
     return false;
