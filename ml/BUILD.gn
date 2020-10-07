@@ -120,6 +120,7 @@ static_library("ml_common") {
   defines = [
     "USE_ONDEVICE_HANDWRITING=${use.ondevice_handwriting}",
     "USE_ONDEVICE_HANDWRITING_DLC=${use.ondevice_handwriting_dlc}",
+    "TC3_VOCAB_ANNOTATOR_DUMMY",
   ]
 }
 

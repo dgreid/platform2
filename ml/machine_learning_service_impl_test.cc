@@ -182,7 +182,7 @@ constexpr float kHandwritingTestPoints[23][2] = {
 };
 
 constexpr char kTextClassifierTestInput[] =
-    "user.name@gmail.com. 123 George Street. unknownword. 12pm. 350°F";
+    "user.name@gmail.com. 123 George Street. unfathomable. 12pm. 350°F";
 
 using ::chromeos::machine_learning::mojom::BuiltinModelId;
 using ::chromeos::machine_learning::mojom::BuiltinModelSpec;
@@ -899,19 +899,19 @@ TEST(TextClassifierAnnotateTest, ComplexString) {
             EXPECT_EQ(annotations[1]->entities[0]->data->get_string_value(),
                       "123 George Street");
             EXPECT_EQ(annotations[2]->start_offset, 40);
-            EXPECT_EQ(annotations[2]->end_offset, 51);
+            EXPECT_EQ(annotations[2]->end_offset, 52);
             ASSERT_GE(annotations[2]->entities.size(), 1);
             EXPECT_EQ(annotations[2]->entities[0]->name, "dictionary");
             EXPECT_EQ(annotations[2]->entities[0]->data->get_string_value(),
-                      "unknownword");
-            EXPECT_EQ(annotations[3]->start_offset, 53);
-            EXPECT_EQ(annotations[3]->end_offset, 58);
+                      "unfathomable");
+            EXPECT_EQ(annotations[3]->start_offset, 54);
+            EXPECT_EQ(annotations[3]->end_offset, 59);
             ASSERT_GE(annotations[3]->entities.size(), 1);
             EXPECT_EQ(annotations[3]->entities[0]->name, "datetime");
             EXPECT_EQ(annotations[3]->entities[0]->data->get_string_value(),
                       "12pm.");
-            EXPECT_EQ(annotations[4]->start_offset, 59);
-            EXPECT_EQ(annotations[4]->end_offset, 64);
+            EXPECT_EQ(annotations[4]->start_offset, 60);
+            EXPECT_EQ(annotations[4]->end_offset, 65);
             ASSERT_GE(annotations[4]->entities.size(), 1);
             EXPECT_EQ(annotations[4]->entities[0]->name, "unit");
             EXPECT_EQ(annotations[4]->entities[0]->data->get_string_value(),
