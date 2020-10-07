@@ -38,6 +38,9 @@ using chromeos::cros_healthd::mojom::CpuArchitectureEnum;
 using chromeos::network_config::mojom::NetworkType;
 using chromeos::network_health::mojom::NetworkState;
 
+// Value printed for optional fields when they aren't populated.
+constexpr char kNotApplicableString[] = "N/A";
+
 constexpr std::pair<const char*,
                     chromeos::cros_healthd::mojom::ProbeCategoryEnum>
     kCategorySwitches[] = {
@@ -199,11 +202,12 @@ void DisplayBatteryInfo(
                "current_now,technology,status"
             << std::endl;
 
-  std::string manufacture_date_smart = battery->manufacture_date.value_or("NA");
+  std::string manufacture_date_smart =
+      battery->manufacture_date.value_or(kNotApplicableString);
   std::string temperature_smart =
       !battery->temperature.is_null()
           ? std::to_string(battery->temperature->value)
-          : "NA";
+          : kNotApplicableString;
 
   std::cout << battery->charge_full << "," << battery->charge_full_design << ","
             << battery->cycle_count << "," << battery->serial_number << ","
@@ -233,7 +237,7 @@ void DisplayBlockDeviceInfo(
         !device->discard_time_seconds_since_last_boot.is_null()
             ? std::to_string(
                   device->discard_time_seconds_since_last_boot->value)
-            : "NA";
+            : kNotApplicableString;
     std::cout << device->path << "," << device->size << "," << device->type
               << "," << device->manufacturer_id << "," << device->name << ","
               << device->serial << "," << device->bytes_read_since_last_boot
@@ -304,8 +308,8 @@ void DisplayCpuInfo(
     std::cout << "\tmodel_name" << std::endl;
     // Remove commas from the model name before printing CSVs.
     std::string csv_model_name;
-    base::RemoveChars(physical_cpu->model_name.value_or("N/A"), ",",
-                      &csv_model_name);
+    base::RemoveChars(physical_cpu->model_name.value_or(kNotApplicableString),
+                      ",", &csv_model_name);
     std::cout << "\t" << csv_model_name << std::endl;
 
     for (const auto& logical_cpu : physical_cpu->logical_cpus) {
@@ -354,12 +358,14 @@ void DisplayNetworkInfo(
   for (const auto& network : network_health->networks) {
     auto signal_strength = network->signal_strength
                                ? std::to_string(network->signal_strength->value)
-                               : "N/A";
+                               : kNotApplicableString;
     std::cout << NetworkTypeToString(network->type) << ","
               << NetworkStateToString(network->state) << ","
-              << network->guid.value_or("N/A") << ","
-              << network->name.value_or("N/A") << "," << signal_strength << ","
-              << network->mac_address.value_or("N/A") << std::endl;
+              << network->guid.value_or(kNotApplicableString) << ","
+              << network->name.value_or(kNotApplicableString) << ","
+              << signal_strength << ","
+              << network->mac_address.value_or(kNotApplicableString)
+              << std::endl;
   }
 }
 
@@ -438,7 +444,7 @@ void DisplaySystemInfo(
   std::string chassis_type =
       !system_info->chassis_type.is_null()
           ? std::to_string(system_info->chassis_type->value)
-          : "NA";
+          : kNotApplicableString;
   std::string os_version =
       base::JoinString({system_info->os_version->release_milestone,
                         system_info->os_version->build_number,
@@ -452,13 +458,17 @@ void DisplaySystemInfo(
   std::string marketing_name = system_info->marketing_name;
   base::ReplaceSubstringsAfterOffset(&marketing_name, 0, ", ", "/");
 
-  std::cout << system_info->first_power_date.value_or("NA") << ","
-            << system_info->manufacture_date.value_or("NA") << ","
-            << system_info->product_sku_number.value_or("NA") << ","
-            << marketing_name << "," << system_info->bios_version.value_or("NA")
-            << "," << system_info->board_name.value_or("NA") << ","
-            << system_info->board_version.value_or("NA") << "," << chassis_type
-            << "," << system_info->product_name.value_or("NA") << ","
+  std::cout << system_info->first_power_date.value_or(kNotApplicableString)
+            << ","
+            << system_info->manufacture_date.value_or(kNotApplicableString)
+            << ","
+            << system_info->product_sku_number.value_or(kNotApplicableString)
+            << "," << marketing_name << ","
+            << system_info->bios_version.value_or(kNotApplicableString) << ","
+            << system_info->board_name.value_or(kNotApplicableString) << ","
+            << system_info->board_version.value_or(kNotApplicableString) << ","
+            << chassis_type << ","
+            << system_info->product_name.value_or(kNotApplicableString) << ","
             << os_version << ',' << system_info->os_version->release_channel
             << std::endl;
 }
