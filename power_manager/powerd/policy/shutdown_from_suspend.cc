@@ -82,6 +82,10 @@ ShutdownFromSuspend::Action ShutdownFromSuspend::PrepareForSuspendAttempt() {
     LOG(INFO) << "Not shutting down from resume as line power is connected.";
   }
 
+  if (!alarm_timer_) {
+    LOG(WARNING) << "System doesn't support CLOCK_REALTIME_ALARM";
+    return ShutdownFromSuspend::Action::SUSPEND;
+  }
   if (!alarm_timer_->IsRunning()) {
     alarm_timer_->Start(
         FROM_HERE, shutdown_delay_,
@@ -97,7 +101,10 @@ void ShutdownFromSuspend::HandleDarkResume() {
 
 void ShutdownFromSuspend::HandleFullResume() {
   in_dark_resume_ = false;
-  alarm_timer_->Stop();
+  if (alarm_timer_)
+    alarm_timer_->Stop();
+  else
+    LOG(WARNING) << "System doesn't support CLOCK_REALTIME_ALARM.";
   timer_fired_ = false;
 }
 
