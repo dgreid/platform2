@@ -674,6 +674,21 @@ bool Service::Initialize() {
     g_unix_signal_add(sig, ShutdownService, this);
   }
 
+  base::Thread::Options options;
+#if BASE_VER < 780000
+  options.message_loop_type = base::MessagePumpType::IO;
+#else
+  options.message_pump_type = base::MessagePumpType::IO;
+#endif
+  mount_thread_.StartWithOptions(options);
+
+  // Add task observer, message_loop is only available after the thread start.
+  // We can only add observer inside the thread.
+  AddTaskObserverToThread(&mount_thread_, &mount_thread_observer_);
+
+  // Clean up any unreferenced mountpoints at startup.
+  CleanUpStaleMounts(false);
+
   // This ownership taken signal registration should be done before any
   // Tpm::IsOwned() call so that Tpm can cache and update the ownership state
   // correctly without keeping requesting for the TPM status.
@@ -683,9 +698,6 @@ bool Service::Initialize() {
   // this function to be called again. However, it shouldn't
   // be called across multiple threads in parallel.
   InitializeInstallAttributes();
-
-  // Clean up any unreferenced mountpoints at startup.
-  CleanUpStaleMounts(false);
 
   AttestationInitialize();
 
@@ -733,17 +745,6 @@ bool Service::Initialize() {
         G_TYPE_UINT64, G_TYPE_UINT64);
   }
 
-  base::Thread::Options options;
-#if BASE_VER < 780000
-  options.message_loop_type = base::MessagePumpType::IO;
-#else
-  options.message_pump_type = base::MessagePumpType::IO;
-#endif
-  mount_thread_.StartWithOptions(options);
-
-  // Add task observer, message_loop is only availible after the thread start.
-  // We can only add observer inside the thread.
-  AddTaskObserverToThread(&mount_thread_, &mount_thread_observer_);
 
   // TODO(wad) Determine if this should only be called if
   //           tpm->IsEnabled() is true.
