@@ -51,12 +51,20 @@ gfx_events="
 power_events="
     power:cpu_idle
     power:cpu_frequency
+    power:cpu_frequency_limits
+    power:clock_enable
+    power:clock_disable
+    power:clock_set_rate
+    interconnect:icc_set_bw_end
     mali:mali_dvfs_set_clock
     mali:mali_dvfs_set_voltage
     cpufreq_interactive:cpufreq_interactive_boost
     cpufreq_interactive:cpufreq_interactive_unboost
     exynos_busfreq:exynos_busfreq_target_int
     exynos_busfreq:exynos_busfreq_target_mif
+    regulator:regulator_enable_complete
+    regulator:regulator_disable_complete
+    regulator:regulator_set_voltage_complete
 "
 
 input_events="
