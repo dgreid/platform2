@@ -66,7 +66,9 @@ class SmbfsHelperTest : public ::testing::Test {
 
 TEST_F(SmbfsHelperTest, CreateMounter) {
   auto mounter = helper_.CreateMounter(kWorkingDir, kSomeSource, kMountDir, {});
-  std::string opts = mounter->mount_options().ToString();
+  const FUSEMounterLegacy* legacy =
+      static_cast<FUSEMounterLegacy*>(mounter.get());
+  std::string opts = legacy->mount_options().ToString();
   EXPECT_THAT(opts, HasSubstr("mojo_id=foobarbaz"));
   EXPECT_THAT(opts, HasSubstr("uid=700"));
   EXPECT_THAT(opts, HasSubstr("gid=1501"));

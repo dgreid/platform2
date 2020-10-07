@@ -26,6 +26,8 @@ class Uri;
 
 // Base class to simplify calling of individual mounters based on
 // specific conventions for a particular userspace FUSE implementation.
+// TODO(dats): Remove this class. This should be in the corresponding
+// instance of FUSEMounter.
 class FUSEHelper {
  public:
   // OS user that will access files provided by this module.

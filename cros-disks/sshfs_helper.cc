@@ -59,7 +59,7 @@ const Base64FileMapping kWrittenFiles[] = {
     {kOptionUserKnownHostsBase64, kOptionUserKnownHostsFile, "known_hosts"},
 };
 
-class SshfsMounter : public FUSEMounter {
+class SshfsMounter : public FUSEMounterLegacy {
  public:
   SshfsMounter(std::string filesystem_type,
                MountOptions mount_options,
@@ -69,26 +69,28 @@ class SshfsMounter : public FUSEMounter {
                std::string mount_user,
                std::string seccomp_policy,
                BindPaths bind_paths)
-      : FUSEMounter({.bind_paths = std::move(bind_paths),
-                     .filesystem_type = std::move(filesystem_type),
-                     .mount_options = std::move(mount_options),
-                     .mount_program = std::move(mount_program),
-                     .mount_user = std::move(mount_user),
-                     .network_access = true,
-                     .platform = platform,
-                     .process_reaper = process_reaper,
-                     .seccomp_policy = std::move(seccomp_policy)}) {}
+      : FUSEMounterLegacy({.bind_paths = std::move(bind_paths),
+                           .filesystem_type = std::move(filesystem_type),
+                           .mount_options = std::move(mount_options),
+                           .mount_program = std::move(mount_program),
+                           .mount_user = std::move(mount_user),
+                           .network_access = true,
+                           .platform = platform,
+                           .process_reaper = process_reaper,
+                           .seccomp_policy = std::move(seccomp_policy)}) {}
 
-  // FUSEMounter overrides:
-  std::unique_ptr<MountPoint> Mount(const std::string& source_path,
-                                    const base::FilePath& target_path,
-                                    std::vector<std::string> options,
-                                    MountErrorType* error) const override {
+  // FUSEMounterLegacy overrides:
+  pid_t StartDaemon(const base::File& fuse_file,
+                    const std::string& source,
+                    const base::FilePath& target_path,
+                    std::vector<std::string> params,
+                    MountErrorType* error) const override {
     // This mounter will be created and invoked by FUSEMountManager, which
     // expects the source to be a URI.
-    Uri uri = Uri::Parse(source_path);
+    Uri uri = Uri::Parse(source);
     CHECK(uri.valid());
-    return FUSEMounter::Mount(uri.path(), target_path, options, error);
+    return FUSEMounterLegacy::StartDaemon(fuse_file, uri.path(), target_path,
+                                          params, error);
   }
 };
 
@@ -149,7 +151,7 @@ std::unique_ptr<FUSEMounter> SshfsHelper::CreateMounter(
 
   return std::make_unique<SshfsMounter>(
       type(), mount_options, platform(), process_reaper(),
-      program_path().value(), user(), "", FUSEMounter::BindPaths());
+      program_path().value(), user(), "", FUSEMounterLegacy::BindPaths());
 }
 
 bool SshfsHelper::PrepareWorkingDirectory(

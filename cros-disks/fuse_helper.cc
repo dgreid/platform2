@@ -56,12 +56,12 @@ std::unique_ptr<FUSEMounter> FUSEHelper::CreateMounter(
   MountOptions mount_options;
   mount_options.Initialize(options, false, "", "");
   return base::WrapUnique(
-      new FUSEMounter({.filesystem_type = type(),
-                       .mount_options = std::move(mount_options),
-                       .mount_program = program_path().value(),
-                       .mount_user = user(),
-                       .platform = platform(),
-                       .process_reaper = process_reaper()}));
+      new FUSEMounterLegacy({.filesystem_type = type(),
+                             .mount_options = std::move(mount_options),
+                             .mount_program = program_path().value(),
+                             .mount_user = user(),
+                             .platform = platform(),
+                             .process_reaper = process_reaper()}));
 }
 
 }  // namespace cros_disks

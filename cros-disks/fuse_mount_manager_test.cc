@@ -46,6 +46,14 @@ class MockPlatform : public Platform {
   MockPlatform() = default;
 
   MOCK_METHOD(MountErrorType,
+              Mount,
+              (const std::string& source,
+               const std::string& target,
+               const std::string& filesystem_type,
+               uint64_t flags,
+               const std::string& options),
+              (const, override));
+  MOCK_METHOD(MountErrorType,
               Unmount,
               (const std::string&, int),
               (const, override));
@@ -84,18 +92,19 @@ class MockHelper : public FUSEHelper {
               (const, override));
 };
 
-class MockMounter : public FUSEMounter {
+class MockMounter : public FUSEMounterLegacy {
  public:
   MockMounter(const Platform* platform, brillo::ProcessReaper* process_reaper)
-      : FUSEMounter({.filesystem_type = "fuse",
-                     .mount_program = "/bin/sh",
-                     .mount_user = "root",
-                     .platform = platform,
-                     .process_reaper = process_reaper}) {}
+      : FUSEMounterLegacy({.filesystem_type = "fuse",
+                           .mount_program = "/bin/sh",
+                           .mount_user = "root",
+                           .platform = platform,
+                           .process_reaper = process_reaper}) {}
 
-  MOCK_METHOD(std::unique_ptr<MountPoint>,
-              Mount,
-              (const std::string&,
+  MOCK_METHOD(pid_t,
+              StartDaemon,
+              (const base::File& fuse_file,
+               const std::string&,
                const base::FilePath&,
                std::vector<std::string>,
                MountErrorType*),
@@ -219,16 +228,15 @@ TEST_F(FUSEMountManagerTest, DoMount_BySource) {
   EXPECT_CALL(*bar_, CanMount(_)).WillRepeatedly(Return(true));
   EXPECT_CALL(*baz_, CanMount(_)).Times(0);
   EXPECT_CALL(*foo_, CreateMounter(_, _, _, _)).Times(0);
+  EXPECT_CALL(platform_, Mount(_, kSomeMountpoint, _, _, _))
+      .WillOnce(Return(MOUNT_ERROR_NONE));
   EXPECT_CALL(platform_, CreateTemporaryDirInDir(kWorkingDirRoot, _, _))
       .WillOnce(DoAll(SetArgPointee<2>("/blah"), Return(true)));
   EXPECT_CALL(platform_, SetPermissions("/blah", 0755)).WillOnce(Return(true));
   MockMounter* mounter = new MockMounter(&platform_, &process_reaper_);
-  EXPECT_CALL(*mounter,
-              Mount(kSomeSource.value(), base::FilePath(kSomeMountpoint), _, _))
-      .WillOnce(WithArg<3>([](MountErrorType* error) {
-        *error = MOUNT_ERROR_NONE;
-        return MountPoint::CreateLeaking(base::FilePath(kSomeMountpoint));
-      }));
+  EXPECT_CALL(*mounter, StartDaemon(_, kSomeSource.value(),
+                                    base::FilePath(kSomeMountpoint), _, _))
+      .WillOnce(DoAll(SetArgPointee<4>(MOUNT_ERROR_NONE), Return(123)));
   std::unique_ptr<FUSEMounter> ptr(mounter);
   EXPECT_CALL(*bar_, CreateMounter(base::FilePath("/blah"), kSomeSource,
                                    base::FilePath(kSomeMountpoint), _))

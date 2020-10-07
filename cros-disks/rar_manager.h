@@ -63,11 +63,11 @@ class RarManager : public ArchiveManager {
   static IndexRange ParseDigits(base::StringPiece path);
 
   // Adds bind paths using old naming scheme.
-  void AddPathsWithOldNamingScheme(FUSEMounter::BindPaths* bind_paths,
+  void AddPathsWithOldNamingScheme(FUSEMounterLegacy::BindPaths* bind_paths,
                                    base::StringPiece original_path) const;
 
   // Adds bind paths using new naming scheme.
-  void AddPathsWithNewNamingScheme(FUSEMounter::BindPaths* bind_paths,
+  void AddPathsWithNewNamingScheme(FUSEMounterLegacy::BindPaths* bind_paths,
                                    base::StringPiece original_path,
                                    const IndexRange& digits) const;
 
@@ -111,7 +111,8 @@ class RarManager : public ArchiveManager {
   // ...
   // basename999.rar
   // etc.
-  FUSEMounter::BindPaths GetBindPaths(base::StringPiece original_path) const;
+  FUSEMounterLegacy::BindPaths GetBindPaths(
+      base::StringPiece original_path) const;
 
   FRIEND_TEST(RarManagerTest, CanMount);
   FRIEND_TEST(RarManagerTest, SuggestMountPath);

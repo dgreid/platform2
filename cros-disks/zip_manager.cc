@@ -43,7 +43,7 @@ std::unique_ptr<MountPoint> ZipManager::DoMount(
 
   metrics()->RecordArchiveType("zip");
 
-  FUSEMounter::Params params{
+  FUSEMounterLegacy::Params params{
       .bind_paths = {{source_path}},
       .filesystem_type = "zipfs",
       .metrics = metrics(),
@@ -69,7 +69,7 @@ std::unique_ptr<MountPoint> ZipManager::DoMount(
   *applied_options = params.mount_options;
 
   // Run fuse-zip.
-  const FUSEMounter mounter(std::move(params));
+  const FUSEMounterLegacy mounter(std::move(params));
   return mounter.Mount(source_path, mount_path, options, error);
 }
 

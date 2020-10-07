@@ -106,7 +106,9 @@ class SshfsHelperTest : public ::testing::Test {
 // Verifies that CreateMounter creates mounter in a simple case.
 TEST_F(SshfsHelperTest, CreateMounter_SimpleOptions) {
   auto mounter = helper_.CreateMounter(kWorkingDir, kSomeSource, kMountDir, {});
-  std::string opts = mounter->mount_options().ToString();
+  const FUSEMounterLegacy* legacy =
+      static_cast<FUSEMounterLegacy*>(mounter.get());
+  std::string opts = legacy->mount_options().ToString();
   EXPECT_THAT(opts, HasSubstr("BatchMode=yes"));
   EXPECT_THAT(opts, HasSubstr("PasswordAuthentication=no"));
   EXPECT_THAT(opts, HasSubstr("KbdInteractiveAuthentication=no"));
@@ -138,7 +140,9 @@ TEST_F(SshfsHelperTest, CreateMounter_WriteFiles) {
       {"IdentityBase64=c29tZSBrZXk=", "UserKnownHostsBase64=c29tZSBob3N0",
        "IdentityFile=/foo/bar", "UserKnownHostsFile=/foo/baz",
        "HostName=localhost", "Port=2222"});
-  std::string opts = mounter->mount_options().ToString();
+  const FUSEMounterLegacy* legacy =
+      static_cast<FUSEMounterLegacy*>(mounter.get());
+  std::string opts = legacy->mount_options().ToString();
   EXPECT_THAT(opts, HasSubstr("IdentityFile=/wkdir/id"));
   EXPECT_THAT(opts, HasSubstr("UserKnownHostsFile=/wkdir/known_hosts"));
   EXPECT_THAT(opts, HasSubstr("HostName=localhost"));

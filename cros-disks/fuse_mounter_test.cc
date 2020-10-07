@@ -25,10 +25,13 @@ namespace cros_disks {
 namespace {
 
 using testing::_;
+using testing::DoAll;
 using testing::ElementsAre;
+using testing::EndsWith;
 using testing::Invoke;
 using testing::IsEmpty;
 using testing::Return;
+using testing::SetArgPointee;
 using testing::StartsWith;
 
 const uid_t kMountUID = 200;
@@ -140,12 +143,180 @@ class FUSEMounterForTesting : public FUSEMounter {
  public:
   FUSEMounterForTesting(const Platform* platform,
                         brillo::ProcessReaper* process_reaper)
-      : FUSEMounter({.filesystem_type = kFUSEType,
-                     .mount_program = kMountProgram,
-                     .mount_user = kMountUser,
-                     .password_needed_codes = {kPasswordNeededCode},
-                     .platform = platform,
-                     .process_reaper = process_reaper}) {}
+      : FUSEMounter(
+            platform, process_reaper, kFUSEType, true /* nosymfollow */) {}
+
+  MOCK_METHOD(pid_t,
+              StartDaemon,
+              (const base::File& fuse_file,
+               const std::string& source,
+               const base::FilePath& target_path,
+               std::vector<std::string> params,
+               MountErrorType* error),
+              (const override));
+
+  bool CanMount(const std::string& source,
+                const std::vector<std::string>& params,
+                base::FilePath* suggested_dir_name) const override {
+    *suggested_dir_name = base::FilePath("disk");
+    return true;
+  }
+};
+
+}  // namespace
+
+class FUSEMounterTest : public ::testing::Test {
+ public:
+  FUSEMounterTest() : mounter_(&platform_, &process_reaper_) {}
+
+ protected:
+  MockFUSEPlatform platform_;
+  brillo::ProcessReaper process_reaper_;
+  FUSEMounterForTesting mounter_;
+};
+
+TEST_F(FUSEMounterTest, MountingUnprivileged) {
+  EXPECT_CALL(platform_,
+              Mount("fuse.fuse:source", kMountDir, "fuse.fuse",
+                    MountOptions::kMountFlags | MS_DIRSYNC | MS_NOSYMFOLLOW,
+                    EndsWith(",user_id=1000,group_id=1000,allow_other,default_"
+                             "permissions,rootmode=40000")))
+      .WillOnce(Return(MOUNT_ERROR_NONE));
+  EXPECT_CALL(mounter_, StartDaemon(_, "source", base::FilePath(kMountDir),
+                                    ElementsAre("arg1", "arg2", "arg3"), _))
+      .WillOnce(Return(123));
+  // The MountPoint returned by Mount() will unmount when it is destructed.
+  EXPECT_CALL(platform_, Unmount(kMountDir, 0))
+      .WillOnce(Return(MOUNT_ERROR_NONE));
+
+  MountErrorType error = MOUNT_ERROR_UNKNOWN;
+  auto mount_point = mounter_.Mount("source", base::FilePath(kMountDir),
+                                    {"arg1", "arg2", "arg3"}, &error);
+  EXPECT_TRUE(mount_point);
+  EXPECT_EQ(MOUNT_ERROR_NONE, error);
+}
+
+TEST_F(FUSEMounterTest, MountingUnprivileged_ReadOnly) {
+  EXPECT_CALL(platform_, Mount(_, kMountDir, _,
+                               MountOptions::kMountFlags | MS_DIRSYNC |
+                                   MS_NOSYMFOLLOW | MS_RDONLY,
+                               _))
+      .WillOnce(Return(MOUNT_ERROR_NONE));
+  EXPECT_CALL(mounter_, StartDaemon(_, kSomeSource, base::FilePath(kMountDir),
+                                    ElementsAre("arg1", "arg2", "ro"), _))
+      .WillOnce(Return(123));
+  // The MountPoint returned by Mount() will unmount when it is destructed.
+  EXPECT_CALL(platform_, Unmount(kMountDir, 0))
+      .WillOnce(Return(MOUNT_ERROR_NONE));
+
+  MountErrorType error = MOUNT_ERROR_UNKNOWN;
+  auto mount_point = mounter_.Mount(kSomeSource, base::FilePath(kMountDir),
+                                    {"arg1", "arg2", "ro"}, &error);
+  EXPECT_TRUE(mount_point);
+  EXPECT_EQ(MOUNT_ERROR_NONE, error);
+}
+
+TEST_F(FUSEMounterTest, MountingUnprivileged_MountFailed) {
+  EXPECT_CALL(platform_, Mount(_, kMountDir, _, _, _))
+      .WillOnce(Return(MOUNT_ERROR_UNKNOWN_FILESYSTEM));
+  EXPECT_CALL(mounter_, StartDaemon).Times(0);
+  EXPECT_CALL(platform_, Unmount(kMountDir, _)).Times(0);
+
+  MountErrorType error = MOUNT_ERROR_UNKNOWN;
+  auto mount_point =
+      mounter_.Mount(kSomeSource, base::FilePath(kMountDir), {}, &error);
+  EXPECT_FALSE(mount_point);
+  EXPECT_EQ(MOUNT_ERROR_UNKNOWN_FILESYSTEM, error);
+}
+
+TEST_F(FUSEMounterTest, MountingUnprivileged_AppFailed) {
+  EXPECT_CALL(platform_, Mount(_, kMountDir, _, _, _))
+      .WillOnce(Return(MOUNT_ERROR_NONE));
+  EXPECT_CALL(mounter_,
+              StartDaemon(_, kSomeSource, base::FilePath(kMountDir), _, _))
+      .WillOnce(DoAll(SetArgPointee<4>(MOUNT_ERROR_MOUNT_PROGRAM_FAILED),
+                      Return(123)));
+  EXPECT_CALL(platform_, Unmount(kMountDir, MNT_FORCE | MNT_DETACH))
+      .WillOnce(Return(MOUNT_ERROR_NONE));
+
+  MountErrorType error = MOUNT_ERROR_UNKNOWN;
+  auto mount_point =
+      mounter_.Mount(kSomeSource, base::FilePath(kMountDir), {}, &error);
+  EXPECT_FALSE(mount_point);
+  EXPECT_EQ(MOUNT_ERROR_MOUNT_PROGRAM_FAILED, error);
+}
+
+TEST_F(FUSEMounterTest, MountPoint_UnmountTwice) {
+  EXPECT_CALL(platform_, Mount(_, kMountDir, _, _, _))
+      .WillOnce(Return(MOUNT_ERROR_NONE));
+  EXPECT_CALL(mounter_, StartDaemon(_, _, base::FilePath(kMountDir), _, _))
+      .WillOnce(Return(123));
+  // Even though Unmount() is called twice, the underlying unmount should only
+  // be done once.
+  EXPECT_CALL(platform_, Unmount(kMountDir, 0))
+      .WillOnce(Return(MOUNT_ERROR_NONE));
+
+  MountErrorType error = MOUNT_ERROR_UNKNOWN;
+  auto mount_point =
+      mounter_.Mount(kSomeSource, base::FilePath(kMountDir), {}, &error);
+  EXPECT_TRUE(mount_point);
+  EXPECT_EQ(MOUNT_ERROR_NONE, error);
+
+  EXPECT_EQ(MOUNT_ERROR_NONE, mount_point->Unmount());
+  EXPECT_EQ(MOUNT_ERROR_PATH_NOT_MOUNTED, mount_point->Unmount());
+}
+
+TEST_F(FUSEMounterTest, MountPoint_UnmountFailure) {
+  EXPECT_CALL(platform_, Mount(_, kMountDir, _, _, _))
+      .WillOnce(Return(MOUNT_ERROR_NONE));
+  EXPECT_CALL(mounter_, StartDaemon(_, _, base::FilePath(kMountDir), _, _))
+      .WillOnce(Return(123));
+  // If an Unmount fails, we should be able to retry.
+  EXPECT_CALL(platform_, Unmount(kMountDir, 0))
+      .WillOnce(Return(MOUNT_ERROR_UNKNOWN))
+      .WillOnce(Return(MOUNT_ERROR_NONE));
+
+  MountErrorType error = MOUNT_ERROR_UNKNOWN;
+  auto mount_point =
+      mounter_.Mount(kSomeSource, base::FilePath(kMountDir), {}, &error);
+  EXPECT_TRUE(mount_point);
+  EXPECT_EQ(MOUNT_ERROR_NONE, error);
+
+  EXPECT_EQ(MOUNT_ERROR_UNKNOWN, mount_point->Unmount());
+  EXPECT_EQ(MOUNT_ERROR_NONE, mount_point->Unmount());
+}
+
+TEST_F(FUSEMounterTest, MountPoint_UnmountBusy) {
+  EXPECT_CALL(platform_, Mount(_, kMountDir, _, _, _))
+      .WillOnce(Return(MOUNT_ERROR_NONE));
+  EXPECT_CALL(mounter_, StartDaemon(_, _, base::FilePath(kMountDir), _, _))
+      .WillOnce(Return(123));
+  EXPECT_CALL(platform_, Unmount(kMountDir, 0))
+      .WillOnce(Return(MOUNT_ERROR_PATH_ALREADY_MOUNTED));
+  EXPECT_CALL(platform_, Unmount(kMountDir, MNT_FORCE | MNT_DETACH))
+      .WillOnce(Return(MOUNT_ERROR_NONE));
+
+  MountErrorType error = MOUNT_ERROR_UNKNOWN;
+  auto mount_point =
+      mounter_.Mount(kSomeSource, base::FilePath(kMountDir), {}, &error);
+  EXPECT_TRUE(mount_point);
+  EXPECT_EQ(MOUNT_ERROR_NONE, error);
+
+  EXPECT_EQ(MOUNT_ERROR_NONE, mount_point->Unmount());
+}
+
+namespace {
+
+class FUSEMounterLegacyForTesting : public FUSEMounterLegacy {
+ public:
+  FUSEMounterLegacyForTesting(const Platform* platform,
+                              brillo::ProcessReaper* process_reaper)
+      : FUSEMounterLegacy({.filesystem_type = kFUSEType,
+                           .mount_program = kMountProgram,
+                           .mount_user = kMountUser,
+                           .password_needed_codes = {kPasswordNeededCode},
+                           .platform = platform,
+                           .process_reaper = process_reaper}) {}
 
   MOCK_METHOD(int, OnInput, (const std::string&), (const));
   MOCK_METHOD(int, InvokeMountTool, (const std::vector<std::string>&), (const));
@@ -171,9 +342,9 @@ class FUSEMounterForTesting : public FUSEMounter {
 
 }  // namespace
 
-class FUSEMounterTest : public ::testing::Test {
+class FUSEMounterLegacyTest : public ::testing::Test {
  public:
-  FUSEMounterTest() : mounter_(&platform_, &process_reaper_) {
+  FUSEMounterLegacyTest() : mounter_(&platform_, &process_reaper_) {
     ON_CALL(platform_, Mount(kSomeSource, kMountDir, _, _, _))
         .WillByDefault(Return(MOUNT_ERROR_NONE));
   }
@@ -197,84 +368,10 @@ class FUSEMounterTest : public ::testing::Test {
 
   MockFUSEPlatform platform_;
   brillo::ProcessReaper process_reaper_;
-  FUSEMounterForTesting mounter_;
+  FUSEMounterLegacyForTesting mounter_;
 };
 
-TEST_F(FUSEMounterTest, Sandboxing_Unprivileged) {
-  SetupMountExpectations();
-  // The MountPoint returned by Mount() will unmount when it is destructed.
-  EXPECT_CALL(platform_, Unmount(kMountDir, 0))
-      .WillOnce(Return(MOUNT_ERROR_NONE));
-
-  MountErrorType error = MOUNT_ERROR_UNKNOWN;
-  auto mount_point =
-      mounter_.Mount(kSomeSource, base::FilePath(kMountDir), {}, &error);
-  EXPECT_TRUE(mount_point);
-  EXPECT_EQ(MOUNT_ERROR_NONE, error);
-}
-
-TEST_F(FUSEMounterTest, MountPoint_UnmountTwice) {
-  SetupMountExpectations();
-  // Even though Unmount() is called twice, the underlying unmount should only
-  // be done once.
-  EXPECT_CALL(platform_, Unmount(kMountDir, 0))
-      .WillOnce(Return(MOUNT_ERROR_NONE));
-
-  MountErrorType error = MOUNT_ERROR_UNKNOWN;
-  auto mount_point =
-      mounter_.Mount(kSomeSource, base::FilePath(kMountDir), {}, &error);
-  EXPECT_TRUE(mount_point);
-  EXPECT_EQ(MOUNT_ERROR_NONE, error);
-
-  EXPECT_EQ(MOUNT_ERROR_NONE, mount_point->Unmount());
-  EXPECT_EQ(MOUNT_ERROR_PATH_NOT_MOUNTED, mount_point->Unmount());
-}
-
-TEST_F(FUSEMounterTest, MountPoint_UnmountFailure) {
-  SetupMountExpectations();
-  // If an Unmount fails, we should be able to retry.
-  EXPECT_CALL(platform_, Unmount(kMountDir, 0))
-      .WillOnce(Return(MOUNT_ERROR_UNKNOWN))
-      .WillOnce(Return(MOUNT_ERROR_NONE));
-
-  MountErrorType error = MOUNT_ERROR_UNKNOWN;
-  auto mount_point =
-      mounter_.Mount(kSomeSource, base::FilePath(kMountDir), {}, &error);
-  EXPECT_TRUE(mount_point);
-  EXPECT_EQ(MOUNT_ERROR_NONE, error);
-
-  EXPECT_EQ(MOUNT_ERROR_UNKNOWN, mount_point->Unmount());
-  EXPECT_EQ(MOUNT_ERROR_NONE, mount_point->Unmount());
-}
-
-TEST_F(FUSEMounterTest, MountPoint_UnmountBusy) {
-  SetupMountExpectations();
-  EXPECT_CALL(platform_, Unmount(kMountDir, 0))
-      .WillOnce(Return(MOUNT_ERROR_PATH_ALREADY_MOUNTED));
-  EXPECT_CALL(platform_, Unmount(kMountDir, MNT_FORCE | MNT_DETACH))
-      .WillOnce(Return(MOUNT_ERROR_NONE));
-
-  MountErrorType error = MOUNT_ERROR_UNKNOWN;
-  auto mount_point =
-      mounter_.Mount(kSomeSource, base::FilePath(kMountDir), {}, &error);
-  EXPECT_TRUE(mount_point);
-  EXPECT_EQ(MOUNT_ERROR_NONE, error);
-
-  EXPECT_EQ(MOUNT_ERROR_NONE, mount_point->Unmount());
-}
-
-TEST_F(FUSEMounterTest, AppFailed) {
-  EXPECT_CALL(platform_, Unmount(_, _)).WillOnce(Return(MOUNT_ERROR_NONE));
-  EXPECT_CALL(mounter_, InvokeMountTool(_)).WillOnce(Return(1));
-
-  MountErrorType error = MOUNT_ERROR_UNKNOWN;
-  auto mount_point =
-      mounter_.Mount(kSomeSource, base::FilePath(kMountDir), {}, &error);
-  EXPECT_FALSE(mount_point);
-  EXPECT_EQ(MOUNT_ERROR_MOUNT_PROGRAM_FAILED, error);
-}
-
-TEST_F(FUSEMounterTest, AppNeedsPassword) {
+TEST_F(FUSEMounterLegacyTest, AppNeedsPassword) {
   EXPECT_CALL(platform_, Unmount(_, _)).WillOnce(Return(MOUNT_ERROR_NONE));
   EXPECT_CALL(mounter_, InvokeMountTool(_))
       .WillOnce(Return(kPasswordNeededCode));
@@ -286,7 +383,7 @@ TEST_F(FUSEMounterTest, AppNeedsPassword) {
   EXPECT_EQ(MOUNT_ERROR_NEED_PASSWORD, error);
 }
 
-TEST_F(FUSEMounterTest, WithPassword) {
+TEST_F(FUSEMounterLegacyTest, WithPassword) {
   const std::string password = "My Password";
 
   SetupMountExpectations();
@@ -303,7 +400,8 @@ TEST_F(FUSEMounterTest, WithPassword) {
 }
 
 TEST(FUSEMounterPasswordTest, NoPassword) {
-  const FUSEMounter mounter({.password_needed_codes = {kPasswordNeededCode}});
+  const FUSEMounterLegacy mounter(
+      {.password_needed_codes = {kPasswordNeededCode}});
   SandboxedProcess process;
   mounter.CopyPassword(
       {
@@ -317,7 +415,8 @@ TEST(FUSEMounterPasswordTest, NoPassword) {
 }
 
 TEST(FUSEMounterPasswordTest, CopiesPassword) {
-  const FUSEMounter mounter({.password_needed_codes = {kPasswordNeededCode}});
+  const FUSEMounterLegacy mounter(
+      {.password_needed_codes = {kPasswordNeededCode}});
   for (const std::string password : {
            "",
            " ",
@@ -332,7 +431,8 @@ TEST(FUSEMounterPasswordTest, CopiesPassword) {
 }
 
 TEST(FUSEMounterPasswordTest, FirstPassword) {
-  const FUSEMounter mounter({.password_needed_codes = {kPasswordNeededCode}});
+  const FUSEMounterLegacy mounter(
+      {.password_needed_codes = {kPasswordNeededCode}});
   SandboxedProcess process;
   mounter.CopyPassword({"other1=value1", "password=1", "password=2",
                         "other2=value2", "password=3"},
@@ -341,7 +441,7 @@ TEST(FUSEMounterPasswordTest, FirstPassword) {
 }
 
 TEST(FUSEMounterPasswordTest, IgnoredIfNotNeeded) {
-  const FUSEMounter mounter({});
+  const FUSEMounterLegacy mounter({});
   SandboxedProcess process;
   mounter.CopyPassword({"password=dummy"}, &process);
   EXPECT_EQ(process.input(), "");

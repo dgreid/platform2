@@ -46,6 +46,11 @@ const mode_t kSourcePathPermissions = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP;
 
 const char kFuseDeviceFile[] = "/dev/fuse";
 
+// UID and GID of the chronos user running UI and user apps.
+// I wish there was a centralized place for such constants.
+const uid_t kChronosUID = 1000;
+const gid_t kChronosGID = 1000;
+
 class FUSEMountPoint : public MountPoint {
  public:
   FUSEMountPoint(const base::FilePath& path, const Platform* platform)
@@ -55,6 +60,33 @@ class FUSEMountPoint : public MountPoint {
 
   base::WeakPtr<FUSEMountPoint> GetWeakPtr() {
     return weak_factory_.GetWeakPtr();
+  }
+
+  static void CleanUpCallback(const base::FilePath& mount_path,
+                              base::WeakPtr<FUSEMountPoint> ptr,
+                              const siginfo_t& info) {
+    CHECK_EQ(SIGCHLD, info.si_signo);
+    if (info.si_code != CLD_EXITED) {
+      LOG(WARNING) << "FUSE daemon for " << quote(mount_path)
+                   << " crashed with code " << info.si_code << " and status "
+                   << info.si_status;
+    } else if (info.si_status != 0) {
+      LOG(WARNING) << "FUSE daemon for " << quote(mount_path)
+                   << " exited with status " << info.si_status;
+    } else {
+      LOG(INFO) << "FUSE daemon for " << quote(mount_path)
+                << " exited normally";
+    }
+    if (!ptr) {
+      // If the MountPoint instance has been deleted, it was
+      // already unmounted and cleaned up due to a
+      // request from the browser (or logout). In this
+      // case, there's nothing to do.
+      // TODO(dats): Consolidate this logic into centralized place (likely
+      //  MountPoint base class).
+      return;
+    }
+    ptr->CleanUp();
   }
 
  private:
@@ -86,26 +118,24 @@ class FUSEMountPoint : public MountPoint {
     return platform_->Unmount(path().value(), MNT_FORCE | MNT_DETACH);
   }
 
+  void CleanUp() {
+    MountErrorType unmount_error = Unmount();
+    LOG_IF(ERROR, unmount_error != MOUNT_ERROR_NONE)
+        << "Cannot unmount FUSE mount point " << quote(path())
+        << " after process exit: " << unmount_error;
+
+    if (!platform_->RemoveEmptyDirectory(path().value())) {
+      PLOG(ERROR) << "Cannot remove FUSE mount point " << quote(path().value())
+                  << " after process exit";
+    }
+  }
+
   const Platform* platform_;
 
   base::WeakPtrFactory<FUSEMountPoint> weak_factory_{this};
 
   DISALLOW_IMPLICIT_CONSTRUCTORS(FUSEMountPoint);
 };
-
-void CleanUpCallback(base::OnceClosure cleanup,
-                     const base::FilePath& mount_path,
-                     const siginfo_t& info) {
-  CHECK_EQ(SIGCHLD, info.si_signo);
-  if (info.si_code != CLD_EXITED || info.si_status != 0) {
-    LOG(WARNING) << "FUSE daemon for " << quote(mount_path)
-                 << " exited with code " << info.si_code << " and status "
-                 << info.si_status;
-  } else {
-    LOG(INFO) << "FUSE daemon for " << quote(mount_path) << " exited normally";
-  }
-  std::move(cleanup).Run();
-}
 
 MountErrorType ConfigureCommonSandbox(SandboxedProcess* sandbox,
                                       const Platform* platform,
@@ -198,14 +228,38 @@ bool GetPhysicalBlockSize(const std::string& source, int* size) {
   return true;
 }
 
-MountErrorType MountFuseDevice(const Platform* platform,
-                               const std::string& source,
-                               const std::string& filesystem_type,
-                               const base::FilePath& target,
-                               const base::File& fuse_file,
-                               uid_t mount_user_id,
-                               gid_t mount_group_id,
-                               const MountOptions& options) {
+}  // namespace
+
+FUSEMounter::FUSEMounter(const Platform* platform,
+                         brillo::ProcessReaper* process_reaper,
+                         std::string filesystem_type,
+                         bool nosymfollow)
+    : platform_(platform),
+      process_reaper_(process_reaper),
+      filesystem_type_(std::move(filesystem_type)),
+      nosymfollow_(nosymfollow) {}
+
+FUSEMounter::~FUSEMounter() = default;
+
+std::unique_ptr<MountPoint> FUSEMounter::Mount(
+    const std::string& source,
+    const base::FilePath& target_path,
+    std::vector<std::string> params,
+    MountErrorType* error) const {
+  // Read-only is the only parameter that has any effect at this layer.
+  const bool read_only = base::Contains(params, MountOptions::kOptionReadOnly);
+
+  const base::File fuse_file = base::File(
+      base::FilePath(kFuseDeviceFile),
+      base::File::FLAG_OPEN | base::File::FLAG_READ | base::File::FLAG_WRITE);
+  if (!fuse_file.IsValid()) {
+    LOG(ERROR) << "Unable to open FUSE device file. Error: "
+               << fuse_file.error_details() << " "
+               << base::File::ErrorToString(fuse_file.error_details());
+    *error = MOUNT_ERROR_INTERNAL;
+    return nullptr;
+  }
+
   // Mount options for FUSE:
   // fd - File descriptor for /dev/fuse.
   // user_id/group_id - user/group for file access control. Essentially
@@ -219,9 +273,10 @@ MountErrorType MountFuseDevice(const Platform* platform,
   std::string fuse_mount_options = base::StringPrintf(
       "fd=%d,user_id=%u,group_id=%u,allow_other,default_permissions,"
       "rootmode=%o",
-      fuse_file.GetPlatformFile(), mount_user_id, mount_group_id, S_IFDIR);
+      fuse_file.GetPlatformFile(), kChronosUID, kChronosGID, S_IFDIR);
 
   std::string fuse_type = "fuse";
+  std::string source_descr = source;
   struct stat statbuf = {0};
   if (stat(source.c_str(), &statbuf) == 0 && S_ISBLK(statbuf.st_mode)) {
     int blksize = 0;
@@ -239,27 +294,61 @@ MountErrorType MountFuseDevice(const Platform* platform,
               << " is a block device with block size " << blksize;
 
     fuse_type = "fuseblk";
+  } else {
+    source_descr = fuse_type + "." + filesystem_type_ + ":" + source;
   }
 
-  if (!filesystem_type.empty()) {
+  if (!filesystem_type_.empty()) {
     fuse_type += ".";
-    fuse_type += filesystem_type;
+    fuse_type += filesystem_type_;
   }
 
-  const MountOptions::Flags flags = options.ToMountFlagsAndData().first;
+  *error = platform_->Mount(source_descr, target_path.value(), fuse_type,
+                            MountOptions::kMountFlags | MS_DIRSYNC |
+                                (read_only ? MS_RDONLY : 0) |
+                                (nosymfollow_ ? MS_NOSYMFOLLOW : 0),
+                            fuse_mount_options);
 
-  return platform->Mount(source.empty() ? filesystem_type : source,
-                         target.value(), fuse_type,
-                         flags | MountOptions::kMountFlags, fuse_mount_options);
+  if (*error != MOUNT_ERROR_NONE) {
+    LOG(ERROR) << "Cannot perform unprivileged FUSE mount: " << *error;
+    return nullptr;
+  }
+
+  pid_t pid =
+      StartDaemon(fuse_file, source, target_path, std::move(params), error);
+  if (*error != MOUNT_ERROR_NONE || pid == Process::kInvalidProcessId) {
+    LOG(ERROR) << "FUSE daemon start failure: " << *error;
+    LOG(INFO) << "FUSE cleanup on start failure for " << quote(target_path);
+    MountErrorType unmount_error =
+        platform_->Unmount(target_path.value(), MNT_FORCE | MNT_DETACH);
+    LOG_IF(ERROR, unmount_error != MOUNT_ERROR_NONE)
+        << "Cannot unmount FUSE mount point " << quote(target_path)
+        << " after launch failure: " << unmount_error;
+    return nullptr;
+  }
+
+  // At this point, the FUSE daemon has successfully started.
+  std::unique_ptr<FUSEMountPoint> mount_point =
+      std::make_unique<FUSEMountPoint>(target_path, platform_);
+
+  // Add a watcher that cleans up the FUSE mount when the process exits.
+  // This is defined as in-jail "init" process, denoted by pid(),
+  // terminates, which happens only when the last process in the jailed PID
+  // namespace terminates.
+  process_reaper_->WatchForChild(
+      FROM_HERE, pid,
+      base::BindOnce(&FUSEMountPoint::CleanUpCallback, target_path,
+                     mount_point->GetWeakPtr()));
+
+  *error = MOUNT_ERROR_NONE;
+  return std::move(mount_point);
 }
 
-}  // namespace
-
-FUSEMounter::FUSEMounter(Params params)
-    : MounterCompat(std::move(params.mount_options)),
-      filesystem_type_(std::move(params.filesystem_type)),
-      platform_(params.platform),
-      process_reaper_(params.process_reaper),
+FUSEMounterLegacy::FUSEMounterLegacy(Params params)
+    : FUSEMounter(params.platform,
+                  params.process_reaper,
+                  std::move(params.filesystem_type),
+                  params.nosymfollow),
       metrics_(params.metrics),
       metrics_name_(std::move(params.metrics_name)),
       mount_program_(std::move(params.mount_program)),
@@ -270,10 +359,11 @@ FUSEMounter::FUSEMounter(Params params)
       network_access_(params.network_access),
       mount_namespace_(std::move(params.mount_namespace)),
       supplementary_groups_(std::move(params.supplementary_groups)),
-      password_needed_codes_(std::move(params.password_needed_codes)) {}
+      password_needed_codes_(std::move(params.password_needed_codes)),
+      mount_options_(std::move(params.mount_options)) {}
 
-void FUSEMounter::CopyPassword(const std::vector<std::string>& options,
-                               Process* const process) const {
+void FUSEMounterLegacy::CopyPassword(const std::vector<std::string>& options,
+                                     Process* const process) const {
   DCHECK(process);
 
   // Is the process "password-aware"?
@@ -292,89 +382,57 @@ void FUSEMounter::CopyPassword(const std::vector<std::string>& options,
   process->SetStdIn(it->substr(prefix.size()));
 }
 
-std::unique_ptr<MountPoint> FUSEMounter::Mount(
-    const std::string& source,
-    const base::FilePath& target_path,
-    std::vector<std::string> options,
-    MountErrorType* error) const {
+pid_t FUSEMounterLegacy::StartDaemon(const base::File& fuse_file,
+                                     const std::string& source,
+                                     const base::FilePath&,
+                                     std::vector<std::string> params,
+                                     MountErrorType* error) const {
   auto mount_process = CreateSandboxedProcess();
-  *error = ConfigureCommonSandbox(mount_process.get(), platform_,
+  *error = ConfigureCommonSandbox(mount_process.get(), platform(),
                                   network_access_, seccomp_policy_);
   if (*error != MOUNT_ERROR_NONE) {
-    return nullptr;
+    return Process::kInvalidProcessId;
   }
 
   uid_t mount_user_id;
   gid_t mount_group_id;
-  if (!platform_->GetUserAndGroupId(mount_user_, &mount_user_id,
-                                    &mount_group_id)) {
+  if (!platform()->GetUserAndGroupId(mount_user_, &mount_user_id,
+                                     &mount_group_id)) {
     LOG(ERROR) << "Cannot resolve user " << quote(mount_user_);
     *error = MOUNT_ERROR_INTERNAL;
-    return nullptr;
+    return Process::kInvalidProcessId;
   }
   if (!mount_group_.empty() &&
-      !platform_->GetGroupId(mount_group_, &mount_group_id)) {
+      !platform()->GetGroupId(mount_group_, &mount_group_id)) {
     *error = MOUNT_ERROR_INTERNAL;
-    return nullptr;
+    return Process::kInvalidProcessId;
   }
 
   mount_process->SetUserId(mount_user_id);
   mount_process->SetGroupId(mount_group_id);
   mount_process->SetSupplementaryGroupIds(supplementary_groups_);
 
-  if (!platform_->PathExists(mount_program_)) {
+  if (!platform()->PathExists(mount_program_)) {
     LOG(ERROR) << "Cannot find mount program " << quote(mount_program_);
     *error = MOUNT_ERROR_MOUNT_PROGRAM_NOT_FOUND;
-    return nullptr;
+    return Process::kInvalidProcessId;
   }
   mount_process->AddArgument(mount_program_);
-
-  const base::File fuse_file = base::File(
-      base::FilePath(kFuseDeviceFile),
-      base::File::FLAG_OPEN | base::File::FLAG_READ | base::File::FLAG_WRITE);
-  if (!fuse_file.IsValid()) {
-    LOG(ERROR) << "Unable to open FUSE device file. Error: "
-               << fuse_file.error_details() << " "
-               << base::File::ErrorToString(fuse_file.error_details());
-    *error = MOUNT_ERROR_INTERNAL;
-    return nullptr;
-  }
-
-  *error = MountFuseDevice(platform_, source, filesystem_type_, target_path,
-                           fuse_file, mount_user_id, mount_group_id,
-                           mount_options());
-  if (*error != MOUNT_ERROR_NONE) {
-    LOG(ERROR) << "Cannot perform unprivileged FUSE mount: " << *error;
-    return nullptr;
-  }
-
-  // The |fuse_failure_unmounter| closure runner is used to unmount the FUSE
-  // filesystem if any part of starting the FUSE helper process fails.
-  base::ScopedClosureRunner fuse_cleanup_runner(base::BindOnce(
-      [](const Platform* platform, const std::string& target_path) {
-        LOG(INFO) << "FUSE cleanup on start failure for " << quote(target_path);
-
-        MountErrorType unmount_error = platform->Unmount(target_path, 0);
-        LOG_IF(ERROR, unmount_error != MOUNT_ERROR_NONE)
-            << "Cannot unmount FUSE mount point " << quote(target_path)
-            << " after launch failure: " << unmount_error;
-      },
-      platform_, target_path.value()));
 
   // If a block device is being mounted, bind mount it into the sandbox.
   if (base::StartsWith(source, "/dev/", base::CompareCase::SENSITIVE)) {
     // Re-own source.
-    if (!platform_->SetOwnership(source, getuid(), mount_group_id) ||
-        !platform_->SetPermissions(source, kSourcePathPermissions)) {
+    if (!platform()->SetOwnership(source, getuid(), mount_group_id) ||
+        !platform()->SetPermissions(source, kSourcePathPermissions)) {
       LOG(ERROR) << "Can't set up permissions on " << quote(source);
       *error = MOUNT_ERROR_INSUFFICIENT_PERMISSIONS;
-      return nullptr;
+      return Process::kInvalidProcessId;
     }
 
     if (!mount_process->BindMount(source, source, true, false)) {
       LOG(ERROR) << "Cannot bind mount device " << quote(source);
       *error = MOUNT_ERROR_INVALID_ARGUMENT;
-      return nullptr;
+      return Process::kInvalidProcessId;
     }
   }
 
@@ -388,12 +446,13 @@ std::unique_ptr<MountPoint> FUSEMounter::Mount(
                                   bind_path.writable, bind_path.recursive)) {
       LOG(ERROR) << "Cannot bind-mount " << quote(bind_path.path);
       *error = MOUNT_ERROR_INVALID_ARGUMENT;
-      return nullptr;
+      return Process::kInvalidProcessId;
     }
   }
 
   {
-    std::string options_string = mount_options().ToFuseMounterOptions();
+    // TODO(dats): This it leaking legacy options implementation. Remove it.
+    std::string options_string = mount_options_.ToFuseMounterOptions();
     DCHECK(!options_string.empty());
     mount_process->AddArgument("-o");
     mount_process->AddArgument(std::move(options_string));
@@ -406,7 +465,7 @@ std::unique_ptr<MountPoint> FUSEMounter::Mount(
   mount_process->AddArgument(
       base::StringPrintf("/dev/fd/%d", fuse_file.GetPlatformFile()));
 
-  CopyPassword(options, mount_process.get());
+  CopyPassword(params, mount_process.get());
 
   std::vector<std::string> output;
   const int return_code = mount_process->Run(&output);
@@ -427,56 +486,21 @@ std::unique_ptr<MountPoint> FUSEMounter::Mount(
     *error = base::Contains(password_needed_codes_, return_code)
                  ? MOUNT_ERROR_NEED_PASSWORD
                  : MOUNT_ERROR_MOUNT_PROGRAM_FAILED;
-    return nullptr;
+    return Process::kInvalidProcessId;
   }
 
-  // At this point, the FUSE daemon has successfully started. Release the
-  // cleanup closure which is only intended to cleanup on failure.
-  ignore_result(fuse_cleanup_runner.Release());
-
-  std::unique_ptr<FUSEMountPoint> mount_point =
-      std::make_unique<FUSEMountPoint>(target_path, platform_);
-
-  // Add a watcher that cleans up the FUSE mount when the process exits.
-  // This is defined as in-jail "init" process, denoted by pid(),
-  // terminates, which happens only when the last process in the jailed PID
-  // namespace terminates.
-  process_reaper_->WatchForChild(
-      FROM_HERE, mount_process->pid(),
-      base::BindOnce(CleanUpCallback,
-                     base::BindOnce(
-                         [](base::WeakPtr<FUSEMountPoint> mount_point,
-                            const Platform* platform) {
-                           if (!mount_point) {
-                             // If |mount_point| has been deleted, it was
-                             // already unmounted and cleaned up due to a
-                             // request from the browser (or logout). In this
-                             // case, there's nothing to do.
-                             return;
-                           }
-
-                           MountErrorType unmount_error =
-                               mount_point->Unmount();
-                           LOG_IF(ERROR, unmount_error != MOUNT_ERROR_NONE)
-                               << "Cannot unmount FUSE mount point "
-                               << quote(mount_point->path())
-                               << " after process exit: " << unmount_error;
-
-                           if (!platform->RemoveEmptyDirectory(
-                                   mount_point->path().value())) {
-                             PLOG(ERROR) << "Cannot remove FUSE mount point "
-                                         << quote(mount_point->path().value())
-                                         << " after process exit";
-                           }
-                         },
-                         mount_point->GetWeakPtr(), platform_),
-                     target_path));
-
-  *error = MOUNT_ERROR_NONE;
-  return std::move(mount_point);
+  return mount_process->pid();
 }
 
-std::unique_ptr<SandboxedProcess> FUSEMounter::CreateSandboxedProcess() const {
+bool FUSEMounterLegacy::CanMount(const std::string& source,
+                                 const std::vector<std::string>& params,
+                                 base::FilePath* suggested_name) const {
+  NOTREACHED();
+  return true;
+}
+
+std::unique_ptr<SandboxedProcess> FUSEMounterLegacy::CreateSandboxedProcess()
+    const {
   return std::make_unique<SandboxedProcess>();
 }
 

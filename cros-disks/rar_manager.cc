@@ -52,7 +52,7 @@ std::unique_ptr<MountPoint> RarManager::DoMount(
 
   MountNamespace mount_namespace = GetMountNamespaceFor(source_path);
 
-  FUSEMounter::Params params{
+  FUSEMounterLegacy::Params params{
       .bind_paths = GetBindPaths(source_path),
       .filesystem_type = "rarfs",
       .metrics = metrics(),
@@ -81,7 +81,7 @@ std::unique_ptr<MountPoint> RarManager::DoMount(
   *applied_options = params.mount_options;
 
   // Run rar2fs.
-  const FUSEMounter mounter(std::move(params));
+  const FUSEMounterLegacy mounter(std::move(params));
   return mounter.Mount(source_path, mount_path, options, error);
 }
 
@@ -128,7 +128,7 @@ RarManager::IndexRange RarManager::ParseDigits(base::StringPiece path) {
 }
 
 void RarManager::AddPathsWithOldNamingScheme(
-    FUSEMounter::BindPaths* const bind_paths,
+    FUSEMounterLegacy::BindPaths* const bind_paths,
     const base::StringPiece original_path) const {
   DCHECK(bind_paths);
 
@@ -160,7 +160,7 @@ void RarManager::AddPathsWithOldNamingScheme(
 }
 
 void RarManager::AddPathsWithNewNamingScheme(
-    FUSEMounter::BindPaths* const bind_paths,
+    FUSEMounterLegacy::BindPaths* const bind_paths,
     const base::StringPiece original_path,
     const IndexRange& digits) const {
   DCHECK(bind_paths);
@@ -184,9 +184,9 @@ void RarManager::AddPathsWithNewNamingScheme(
   }
 }
 
-FUSEMounter::BindPaths RarManager::GetBindPaths(
+FUSEMounterLegacy::BindPaths RarManager::GetBindPaths(
     const base::StringPiece original_path) const {
-  FUSEMounter::BindPaths bind_paths = {{std::string(original_path)}};
+  FUSEMounterLegacy::BindPaths bind_paths = {{std::string(original_path)}};
 
   // Delimit the digit range assuming original_path uses the new naming scheme.
   const IndexRange digits = ParseDigits(original_path);

@@ -154,7 +154,7 @@ void DiskManager::RegisterFilesystem(
   filesystems_.emplace(filesystem.type, filesystem);
 }
 
-std::unique_ptr<MounterCompat> DiskManager::CreateMounter(
+std::unique_ptr<Mounter> DiskManager::CreateMounter(
     const Disk& disk,
     const Filesystem& filesystem,
     const std::string& target_path,
@@ -211,28 +211,27 @@ std::unique_ptr<MounterCompat> DiskManager::CreateMounter(
   }
 
   if (filesystem.type == kMounterTypeExFAT)
-    return std::make_unique<FUSEMounter>(
-        FUSEMounter::Params({.filesystem_type = filesystem.type,
-                             .mount_options = std::move(mount_options),
-                             .mount_program = "/usr/sbin/mount.exfat-fuse",
-                             .mount_user = "fuse-exfat",
-                             .platform = platform(),
-                             .process_reaper = process_reaper()}));
+    return std::make_unique<FUSEMounterLegacy>(FUSEMounterLegacy::Params(
+        {.filesystem_type = filesystem.type,
+         .mount_options = std::move(mount_options),
+         .mount_program = "/usr/sbin/mount.exfat-fuse",
+         .mount_user = "fuse-exfat",
+         .platform = platform(),
+         .process_reaper = process_reaper()}));
 
   if (filesystem.type == kMounterTypeNTFS)
-    return std::make_unique<FUSEMounter>(
-        FUSEMounter::Params({.filesystem_type = filesystem.type,
-                             .mount_options = std::move(mount_options),
-                             .mount_program = "/usr/bin/ntfs-3g",
-                             .mount_user = "ntfs-3g",
-                             .platform = platform(),
-                             .process_reaper = process_reaper()}));
+    return std::make_unique<FUSEMounterLegacy>(
+        FUSEMounterLegacy::Params({.filesystem_type = filesystem.type,
+                                   .mount_options = std::move(mount_options),
+                                   .mount_program = "/usr/bin/ntfs-3g",
+                                   .mount_user = "ntfs-3g",
+                                   .platform = platform(),
+                                   .process_reaper = process_reaper()}));
 
   // Otherwise use syscall-based mounting.
-  return std::make_unique<MounterCompat>(
-      MountOptions(), std::make_unique<SystemMounter>(
-                          platform(), filesystem.type, mount_read_only,
-                          std::move(extended_options)));
+  return std::make_unique<SystemMounter>(platform(), filesystem.type,
+                                         mount_read_only,
+                                         std::move(extended_options));
 }
 
 bool DiskManager::CanMount(const std::string& source_path) const {
@@ -295,24 +294,21 @@ std::unique_ptr<MountPoint> DiskManager::DoMount(
     return nullptr;
   }
 
-  std::unique_ptr<MounterCompat> mounter(
-      CreateMounter(disk, *filesystem, mount_path.value(), options));
+  const auto mounter =
+      CreateMounter(disk, *filesystem, mount_path.value(), options);
   CHECK(mounter) << "Failed to create a mounter";
 
-  std::unique_ptr<MountPoint> mount_point = mounter->Mount(
-      disk.device_file, mount_path, mounter->mount_options().options(), error);
+  std::unique_ptr<MountPoint> mount_point =
+      mounter->Mount(disk.device_file, mount_path, options, error);
   if (*error != MOUNT_ERROR_NONE) {
     DCHECK(!mount_point);
     // Try to mount the filesystem read-only if mounting it read-write failed.
-    if (!mounter->mount_options().IsReadOnlyOptionSet()) {
+    if (!base::Contains(options, MountOptions::kOptionReadOnly)) {
       LOG(INFO) << "Trying to mount " << quote(source_path) << " read-only";
       std::vector<std::string> ro_options = options;
       ro_options.push_back("ro");
-      mounter =
-          CreateMounter(disk, *filesystem, mount_path.value(), ro_options);
-      CHECK(mounter) << "Failed to create a 'ro' mounter";
-      mount_point = mounter->Mount(disk.device_file, mount_path,
-                                   mounter->mount_options().options(), error);
+      mount_point =
+          mounter->Mount(disk.device_file, mount_path, ro_options, error);
     }
   }
 
@@ -321,7 +317,6 @@ std::unique_ptr<MountPoint> DiskManager::DoMount(
     return nullptr;
   }
 
-  *applied_options = mounter->mount_options();
   return MaybeWrapMountPointForEject(std::move(mount_point), disk);
 }
 

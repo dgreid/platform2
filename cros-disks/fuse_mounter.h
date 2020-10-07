@@ -28,8 +28,47 @@ class Platform;
 class Process;
 class SandboxedProcess;
 
-// A class for mounting a device file using a FUSE mount program.
-class FUSEMounter : public MounterCompat {
+// Uprivileged mounting of any FUSE filesystem. Filesystem-specific set up
+// and sandboxing is to be done in a subclass.
+class FUSEMounter : public Mounter {
+ public:
+  FUSEMounter(const Platform* platform,
+              brillo::ProcessReaper* process_reaper,
+              std::string filesystem_type,
+              bool nosymfollow);
+  ~FUSEMounter() override;
+
+  const Platform* platform() const { return platform_; }
+  brillo::ProcessReaper* process_reaper() const { return process_reaper_; }
+
+  // Mounter overrides:
+  std::unique_ptr<MountPoint> Mount(const std::string& source,
+                                    const base::FilePath& target_path,
+                                    std::vector<std::string> params,
+                                    MountErrorType* error) const final;
+
+ protected:
+  // Performs necessary set up and launches FUSE daemon that communicates to
+  // FUSE kernel layer via the |fuse_file|. Returns PID of the daemon process.
+  virtual pid_t StartDaemon(const base::File& fuse_file,
+                            const std::string& source,
+                            const base::FilePath& target_path,
+                            std::vector<std::string> params,
+                            MountErrorType* error) const = 0;
+
+ private:
+  const Platform* const platform_;
+  brillo::ProcessReaper* const process_reaper_;
+  const std::string filesystem_type_;
+  const bool nosymfollow_;
+
+  DISALLOW_COPY_AND_ASSIGN(FUSEMounter);
+};
+
+// A class for mounting something using a FUSE mount program.
+// TODO(dats): It contains too much logic used only in some cases but
+// not others. Tear it apart.
+class FUSEMounterLegacy : public FUSEMounter {
  public:
   struct BindPath {
     std::string path;
@@ -74,6 +113,9 @@ class FUSEMounter : public MounterCompat {
     // Whether the FUSE mount program needs to access the network.
     bool network_access = false;
 
+    // By default it's mounted with symlinks following disabled.
+    bool nosymfollow = true;
+
     // Possible codes returned by the FUSE mount program to ask for a password.
     std::vector<int> password_needed_codes;
 
@@ -90,13 +132,7 @@ class FUSEMounter : public MounterCompat {
     std::vector<gid_t> supplementary_groups;
   };
 
-  explicit FUSEMounter(Params params);
-
-  // MounterCompat overrides.
-  std::unique_ptr<MountPoint> Mount(const std::string& source,
-                                    const base::FilePath& target_path,
-                                    std::vector<std::string> options,
-                                    MountErrorType* error) const override;
+  explicit FUSEMounterLegacy(Params params);
 
   // If necessary, extracts the password from the given options and sets the
   // standard input of the given process. Does nothing if password_needed_codes
@@ -106,18 +142,22 @@ class FUSEMounter : public MounterCompat {
   void CopyPassword(const std::vector<std::string>& options,
                     Process* process) const;
 
+  const MountOptions& mount_options() const { return mount_options_; }
+
  protected:
+  // FUSEMounter overrides:
+  bool CanMount(const std::string& source,
+                const std::vector<std::string>& params,
+                base::FilePath* suggested_name) const override;
+
+  pid_t StartDaemon(const base::File& fuse_file,
+                    const std::string& source,
+                    const base::FilePath& target_path,
+                    std::vector<std::string> params,
+                    MountErrorType* error) const override;
+
   // Protected for mocking out in testing.
   virtual std::unique_ptr<SandboxedProcess> CreateSandboxedProcess() const;
-
-  // Filesystem type to register the mount point.
-  const std::string filesystem_type_;
-
-  // An object that provides platform service.
-  const Platform* const platform_;
-
-  // An object to monitor FUSE daemons.
-  brillo::ProcessReaper* const process_reaper_;
 
   // An object that collects UMA metrics.
   Metrics* const metrics_;
@@ -154,8 +194,10 @@ class FUSEMounter : public MounterCompat {
   // Possible codes returned by the FUSE mount program to ask for a password.
   std::vector<int> password_needed_codes_;
 
+  const MountOptions mount_options_;
+
  private:
-  DISALLOW_COPY_AND_ASSIGN(FUSEMounter);
+  DISALLOW_COPY_AND_ASSIGN(FUSEMounterLegacy);
 };
 
 }  // namespace cros_disks

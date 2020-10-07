@@ -22,6 +22,7 @@
 #include "cros-disks/device_ejector.h"
 #include "cros-disks/disk.h"
 #include "cros-disks/disk_monitor.h"
+#include "cros-disks/fuse_mounter.h"
 #include "cros-disks/metrics.h"
 #include "cros-disks/mount_point.h"
 #include "cros-disks/mounter.h"
@@ -108,7 +109,9 @@ TEST_F(DiskManagerTest, CreateExFATMounter) {
 
   auto mounter = manager_.CreateMounter(disk, filesystem, target_path, options);
   EXPECT_NE(nullptr, mounter.get());
-  EXPECT_EQ("rw,nodev,noexec,nosuid", mounter->mount_options().ToString());
+  const FUSEMounterLegacy* legacy =
+      static_cast<FUSEMounterLegacy*>(mounter.get());
+  EXPECT_EQ("rw,nodev,noexec,nosuid", legacy->mount_options().ToString());
 }
 
 TEST_F(DiskManagerTest, CreateNTFSMounter) {
@@ -122,7 +125,9 @@ TEST_F(DiskManagerTest, CreateNTFSMounter) {
 
   auto mounter = manager_.CreateMounter(disk, filesystem, target_path, options);
   EXPECT_NE(nullptr, mounter.get());
-  EXPECT_EQ("rw,nodev,noexec,nosuid", mounter->mount_options().ToString());
+  const FUSEMounterLegacy* legacy =
+      static_cast<FUSEMounterLegacy*>(mounter.get());
+  EXPECT_EQ("rw,nodev,noexec,nosuid", legacy->mount_options().ToString());
 }
 
 TEST_F(DiskManagerTest, CreateVFATSystemMounter) {
@@ -144,7 +149,7 @@ TEST_F(DiskManagerTest, CreateVFATSystemMounter) {
   auto mounter = manager_.CreateMounter(disk, filesystem, target_path, options);
   ASSERT_NE(nullptr, mounter.get());
   const SystemMounter* sysmounter =
-      static_cast<const SystemMounter*>(mounter->mounter());
+      static_cast<const SystemMounter*>(mounter.get());
   EXPECT_FALSE(sysmounter->read_only());
   EXPECT_THAT(sysmounter->options(), Contains(StrEq("time_offset=480")));
 }
@@ -162,7 +167,7 @@ TEST_F(DiskManagerTest, CreateExt4SystemMounter) {
   auto mounter = manager_.CreateMounter(disk, filesystem, target_path, options);
   ASSERT_NE(nullptr, mounter.get());
   const SystemMounter* sysmounter =
-      static_cast<const SystemMounter*>(mounter->mounter());
+      static_cast<const SystemMounter*>(mounter.get());
   EXPECT_FALSE(sysmounter->read_only());
 }
 

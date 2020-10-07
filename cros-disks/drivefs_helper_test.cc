@@ -193,7 +193,9 @@ TEST_F(DrivefsHelperTest, CreateMounter) {
       {"rw", "datadir=/foo//bar/./", "datadir=/ignored/second/datadir/value"});
   ASSERT_TRUE(mounter);
 
-  auto options_string = mounter->mount_options().ToString();
+  const FUSEMounterLegacy* legacy =
+      static_cast<FUSEMounterLegacy*>(mounter.get());
+  auto options_string = legacy->mount_options().ToString();
   EXPECT_THAT(options_string,
               HasSubstr("datadir=" + platform_.datadir().value()));
   EXPECT_THAT(options_string, HasSubstr("identity=id"));
@@ -216,7 +218,9 @@ TEST_F(DrivefsHelperTest, CreateMounterWithMyFiles) {
        "myfiles=/baz/.//qux/", "myfiles=/ignored/second/"});
   ASSERT_TRUE(mounter);
 
-  auto options_string = mounter->mount_options().ToString();
+  const FUSEMounterLegacy* legacy =
+      static_cast<FUSEMounterLegacy*>(mounter.get());
+  auto options_string = legacy->mount_options().ToString();
   EXPECT_THAT(options_string,
               HasSubstr("datadir=" + platform_.datadir().value()));
   EXPECT_THAT(options_string, HasSubstr("myfiles=/baz/qux"));
@@ -241,7 +245,9 @@ TEST_F(DrivefsHelperTest, CreateMounter_CreateDataDir) {
       {"rw", "datadir=/foo//bar/", "datadir=/ignored/second/datadir/value"});
   ASSERT_TRUE(mounter);
 
-  auto options_string = mounter->mount_options().ToString();
+  const FUSEMounterLegacy* legacy =
+      static_cast<FUSEMounterLegacy*>(mounter.get());
+  auto options_string = legacy->mount_options().ToString();
   EXPECT_THAT(options_string,
               HasSubstr("datadir=" + platform_.datadir().value()));
   EXPECT_THAT(options_string, HasSubstr("identity=id"));

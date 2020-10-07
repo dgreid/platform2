@@ -33,7 +33,7 @@ const char kSeccompPolicyFile[] =
 const char kType[] = "drivefs";
 const char kDbusSocketPath[] = "/run/dbus";
 
-class DrivefsMounter : public FUSEMounter {
+class DrivefsMounter : public FUSEMounterLegacy {
  public:
   DrivefsMounter(std::string filesystem_type,
                  MountOptions mount_options,
@@ -43,22 +43,24 @@ class DrivefsMounter : public FUSEMounter {
                  std::string mount_user,
                  std::string seccomp_policy,
                  BindPaths bind_paths)
-      : FUSEMounter({.bind_paths = std::move(bind_paths),
-                     .filesystem_type = std::move(filesystem_type),
-                     .mount_options = std::move(mount_options),
-                     .mount_program = std::move(mount_program),
-                     .mount_user = std::move(mount_user),
-                     .network_access = true,
-                     .platform = platform,
-                     .process_reaper = process_reaper,
-                     .seccomp_policy = seccomp_policy}) {}
+      : FUSEMounterLegacy({.bind_paths = std::move(bind_paths),
+                           .filesystem_type = std::move(filesystem_type),
+                           .mount_options = std::move(mount_options),
+                           .mount_program = std::move(mount_program),
+                           .mount_user = std::move(mount_user),
+                           .network_access = true,
+                           .platform = platform,
+                           .process_reaper = process_reaper,
+                           .seccomp_policy = seccomp_policy}) {}
 
-  // FUSEMounter overrides:
-  std::unique_ptr<MountPoint> Mount(const std::string& source,
-                                    const base::FilePath& target_path,
-                                    std::vector<std::string> options,
-                                    MountErrorType* error) const override {
-    return FUSEMounter::Mount("", target_path, options, error);
+  // FUSEMounterLegacy overrides:
+  pid_t StartDaemon(const base::File& fuse_file,
+                    const std::string& source,
+                    const base::FilePath& target_path,
+                    std::vector<std::string> params,
+                    MountErrorType* error) const override {
+    return FUSEMounterLegacy::StartDaemon(fuse_file, "", target_path, params,
+                                          error);
   }
 };
 
@@ -120,8 +122,9 @@ std::unique_ptr<FUSEMounter> DrivefsHelper::CreateMounter(
       platform()->PathExists(kSeccompPolicyFile) ? kSeccompPolicyFile : "";
 
   // Bind datadir and DBus communication socket into the sandbox.
-  FUSEMounter::BindPaths paths = {{.path = data_dir.value(), .writable = true},
-                                  {.path = kDbusSocketPath, .writable = true}};
+  FUSEMounterLegacy::BindPaths paths = {
+      {.path = data_dir.value(), .writable = true},
+      {.path = kDbusSocketPath, .writable = true}};
   if (!my_files_path.empty()) {
     paths.push_back(
         {.path = my_files_path.value(), .writable = true, .recursive = true});

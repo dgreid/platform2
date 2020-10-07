@@ -24,7 +24,7 @@ namespace cros_disks {
 
 class DeviceEjector;
 class DiskMonitor;
-class MounterCompat;
+class Mounter;
 class Platform;
 
 // The DiskManager is responsible for mounting removable media.
@@ -97,7 +97,7 @@ class DiskManager : public MountManager {
   };
 
   // Creates an appropriate mounter object for a given filesystem.
-  std::unique_ptr<MounterCompat> CreateMounter(
+  std::unique_ptr<Mounter> CreateMounter(
       const Disk& disk,
       const Filesystem& filesystem,
       const std::string& target_path,
