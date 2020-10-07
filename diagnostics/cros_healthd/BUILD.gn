@@ -30,7 +30,7 @@ source_set("libcros_healthd") {
     "cros_healthd.cc",
     "cros_healthd_mojo_service.cc",
     "cros_healthd_routine_factory_impl.cc",
-    "cros_healthd_routine_service_impl.cc",
+    "cros_healthd_routine_service.cc",
     "fetch_aggregator.cc",
   ]
 }
@@ -66,8 +66,7 @@ if (use.test) {
       "//diagnostics/common:mojo_testrunner",
     ]
     sources = [
-      "cros_healthd_mojo_service_test.cc",
-      "cros_healthd_routine_service_impl_test.cc",
+      "cros_healthd_routine_service_test.cc",
       "fake_cros_healthd_routine_factory.cc",
     ]
   }

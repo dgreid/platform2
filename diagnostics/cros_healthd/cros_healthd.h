@@ -16,7 +16,6 @@
 
 #include "diagnostics/cros_healthd/cros_healthd_mojo_service.h"
 #include "diagnostics/cros_healthd/cros_healthd_routine_factory.h"
-#include "diagnostics/cros_healthd/cros_healthd_routine_service.h"
 #include "diagnostics/cros_healthd/events/bluetooth_events.h"
 #include "diagnostics/cros_healthd/events/lid_events.h"
 #include "diagnostics/cros_healthd/events/power_events.h"
@@ -94,7 +93,8 @@ class CrosHealthd final
   // |routine_service_| delegates routine creation to |routine_factory_|.
   std::unique_ptr<CrosHealthdRoutineFactory> routine_factory_;
   // Creates new diagnostic routines and controls existing diagnostic routines.
-  std::unique_ptr<CrosHealthdRoutineService> routine_service_;
+  std::unique_ptr<chromeos::cros_healthd::mojom::CrosHealthdDiagnosticsService>
+      routine_service_;
   // Maintains the Mojo connection with cros_healthd clients.
   std::unique_ptr<CrosHealthdMojoService> mojo_service_;
   // Binding set that connects this instance (which is an implementation of
@@ -103,7 +103,11 @@ class CrosHealthd final
   // is added whenever the BootstrapMojoConnection D-Bus method is called.
   mojo::BindingSet<chromeos::cros_healthd::mojom::CrosHealthdServiceFactory,
                    bool>
-      binding_set_;
+      service_factory_binding_set_;
+  // Mojo binding set that connects |routine_service_| with message pipes,
+  // allowing the remote ends to call our methods.
+  mojo::BindingSet<chromeos::cros_healthd::mojom::CrosHealthdDiagnosticsService>
+      diagnostics_binding_set_;
   // Whether binding of the Mojo service was attempted. This flag is needed for
   // detecting repeated Mojo bootstrapping attempts.
   bool mojo_service_bind_attempted_ = false;

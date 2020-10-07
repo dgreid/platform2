@@ -18,8 +18,9 @@
 #include <mojo/public/cpp/bindings/interface_request.h>
 #include <mojo/public/cpp/platform/platform_channel_endpoint.h>
 #include <mojo/public/cpp/system/invitation.h>
+
 #include "diagnostics/cros_healthd/cros_healthd_routine_factory_impl.h"
-#include "diagnostics/cros_healthd/cros_healthd_routine_service_impl.h"
+#include "diagnostics/cros_healthd/cros_healthd_routine_service.h"
 #include "diagnostics/cros_healthd/events/bluetooth_events_impl.h"
 #include "diagnostics/cros_healthd/events/lid_events_impl.h"
 #include "diagnostics/cros_healthd/events/power_events_impl.h"
@@ -48,14 +49,14 @@ CrosHealthd::CrosHealthd(Context* context)
 
   routine_factory_ = std::make_unique<CrosHealthdRoutineFactoryImpl>(context_);
 
-  routine_service_ = std::make_unique<CrosHealthdRoutineServiceImpl>(
+  routine_service_ = std::make_unique<CrosHealthdRoutineService>(
       context_, routine_factory_.get());
 
   mojo_service_ = std::make_unique<CrosHealthdMojoService>(
       fetch_aggregator_.get(), bluetooth_events_.get(), lid_events_.get(),
-      power_events_.get(), routine_service_.get());
+      power_events_.get());
 
-  binding_set_.set_connection_error_handler(
+  service_factory_binding_set_.set_connection_error_handler(
       base::Bind(&CrosHealthd::OnDisconnect, base::Unretained(this)));
 }
 
@@ -153,7 +154,8 @@ std::string CrosHealthd::BootstrapMojoConnection(const base::ScopedFD& mojo_fd,
         chromeos::cros_healthd::mojom::CrosHealthdServiceFactory>(
         std::move(pipe));
   }
-  binding_set_.AddBinding(this /* impl */, std::move(request), is_chrome);
+  service_factory_binding_set_.AddBinding(this /* impl */, std::move(request),
+                                          is_chrome);
 
   VLOG(1) << "Successfully bootstrapped Mojo connection";
   return token;
@@ -167,7 +169,8 @@ void CrosHealthd::GetProbeService(
 void CrosHealthd::GetDiagnosticsService(
     chromeos::cros_healthd::mojom::CrosHealthdDiagnosticsServiceRequest
         service) {
-  mojo_service_->AddDiagnosticsBinding(std::move(service));
+  diagnostics_binding_set_.AddBinding(routine_service_.get(),
+                                      std::move(service));
 }
 
 void CrosHealthd::GetEventService(
@@ -202,7 +205,7 @@ void CrosHealthd::ShutDownDueToMojoError(const std::string& debug_reason) {
 void CrosHealthd::OnDisconnect() {
   // Only respond to disconnects caused by the browser. All others are
   // recoverable.
-  if (binding_set_.dispatch_context())
+  if (service_factory_binding_set_.dispatch_context())
     ShutDownDueToMojoError("Lost mojo connection to browser.");
 }
 
