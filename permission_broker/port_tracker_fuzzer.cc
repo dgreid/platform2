@@ -25,13 +25,10 @@ class FakePortTracker : public PortTracker {
   }
   int AddLifelineFd(int dbus_fd) override { return next_fd_++; }
   bool DeleteLifelineFd(int fd) override { return true; }
-  void CheckLifelineFds(bool reschedule_check) override {}
-  void ScheduleLifelineCheck() override {}
-  bool InitializeEpollOnce() override { return true; }
 
  private:
-  DISALLOW_COPY_AND_ASSIGN(FakePortTracker);
   int next_fd_;
+  DISALLOW_COPY_AND_ASSIGN(FakePortTracker);
 };
 
 // Helper struct for keeping track of randomly generated request.
