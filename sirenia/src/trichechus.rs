@@ -10,8 +10,8 @@ use std::io::{BufRead, BufReader};
 use std::os::unix::io::AsRawFd;
 use std::path::Path;
 use std::string::String;
-use std::thread::spawn;
 
+use sirenia::build_info::BUILD_TIMESTAMP;
 use sirenia::cli::initialize_common_arguments;
 use sirenia::communication::{self, get_app_path, read_message, write_message, Request, Response};
 use sirenia::sandbox::{self, Sandbox};
@@ -81,7 +81,7 @@ fn main() -> Result<()> {
         return Err(Error::InitSyslog(e));
     }
 
-    info!("Starting trichechus");
+    info!("Starting trichechus: {}", BUILD_TIMESTAMP);
     let args: Vec<String> = env::args().collect();
     let config = initialize_common_arguments(&args[1..]).unwrap();
 

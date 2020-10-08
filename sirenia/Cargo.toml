@@ -18,6 +18,7 @@ panic = "abort"
 overflow-checks = true
 
 [build-dependencies]
+chrono = "0.4"
 chromeos_dbus_bindings = { path = "../chromeos-dbus-bindings"} # provided by ebuild
 
 [dependencies]

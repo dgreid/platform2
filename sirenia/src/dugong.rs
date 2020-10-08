@@ -9,6 +9,7 @@ use std::io::{copy, stdin, stdout};
 use std::thread::spawn;
 use sys_util::{error, info, syslog};
 
+use sirenia::build_info::BUILD_TIMESTAMP;
 use sirenia::cli::initialize_common_arguments;
 use sirenia::communication::{read_message, write_message, AppInfo, Request, Response};
 use sirenia::transport::{
@@ -27,8 +28,12 @@ fn main() -> Result<(), sys_util::syslog::Error> {
         return Err(e);
     }
 
+    info!("Starting dugong: {}", BUILD_TIMESTAMP);
+
     if let Ok(Transport(r, w)) = transport.connect() {
         start_rpc(transport_type, r, w);
+    } else {
+        error!("transport connect failed");
     }
 
     Ok(())
