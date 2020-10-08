@@ -17,6 +17,46 @@ typeDefs:
     type: string
     description: Build target that will be considered dirty when building/testing
       locally.
+  proximity-sensor-items: &proximity_sensor_items
+    type: object
+    properties:
+      channel:
+        description: Proximity sensor channel.
+        type: string
+        pattern: "^[a-zA-Z0-9_]+$"
+      hardwaregain:
+        description: Proximity sensor hardware gain.
+        type: string
+        pattern: "^[0-9.]+$"
+      sampling-frequency:
+        description: Proximity sensor sampling frequency.
+        type: string
+        pattern: "^[0-9.]+$"
+      thresh-rising:
+        description: Proximity sensor rising threshold.
+        type: string
+        pattern: "^[0-9.]+$"
+      thresh-falling:
+        description: Proximity sensor falling threshold.
+        type: string
+        pattern: "^[0-9.]+$"
+      thresh-falling-period:
+        description: Proximity sensor falling threshold period (debounce).
+        type: string
+        pattern: "^[0-9.]+$"
+      thresh-rising-period:
+        description: Proximity sensor rising threshold period (debounce).
+        type: string
+        pattern: "^[0-9.]+$"
+      thresh-falling-hysteresis:
+        description: Proximity sensor falling hysteresis.
+        type: string
+        pattern: "^[0-9.]+$"
+      thresh-rising-hysteresis:
+        description: Proximity sensor rising hysteresis.
+        type: string
+        pattern: "^[0-9.]+$"
+    additionalProperties: false
   # TODO(shapiroc): Migrate to use system-file-v2 instead
   system-file: &system_file
     type: object
@@ -659,6 +699,14 @@ properties:
                   description: Enable (1) or disable (0) wake from touchpad. If not set, default to enable. When set to enable, on many devices, firmware is in charge of controlling whether to wake from touchpad. This flag is reserved for older devices without firmware support (Nami and Coral) and please do not set for new devices.
                   type: string
                   pattern: "^[01]$"
+              additionalProperties: false
+            proximity-sensor:
+              description: Defines the proximity sensor settings for devices such as /dev/proximity-wifi and /dev/proximity-wifi-lte typically used for SAR.
+              type: object
+              properties:
+                lte: *proximity_sensor_items
+                wifi: *proximity_sensor_items
+                wifi-lte: *proximity_sensor_items
               additionalProperties: false
             test-label:
               description: Test alias (model) label that will be applied in Autotest and

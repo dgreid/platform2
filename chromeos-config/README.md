@@ -340,6 +340,7 @@ In the tables below,
 | nnpalm | [nnpalm](#nnpalm) |  | False |  | False |  |
 | oem-id | string | ```[0-9]+``` | False |  | False | Some projects store SKU ID, OEM ID and Board Revision in an EEPROM and only SKU ID can be updated in the factory and RMA flow but others should be pre-flashed in the chip level. In this case, we would like to validate whether oem-id here from the updated SKU ID matches the one in the EEPROM so we can prevent this device from being updated to another OEM's devices.  |
 | power | [power](#power) |  | False |  | False | Defines settings that control power management functions. This mostly defines power_manager preferences, but there are a few other power related settings included. For details about each power_manager preference, see - src/platform2/power_manager/common/power_constants.h/cc For examples on setting these properties (including multiline examples), see the power config example in libcros_config/test.yaml |
+| proximity-sensor | [proximity-sensor](#proximity_sensor) |  | False |  | False | Defines the proximity sensor settings for devices such as /dev/proximity-wifi and /dev/proximity-wifi-lte typically used for SAR. |
 | regulatory-label | string |  | False |  | False | Base name of the directory containing the regulatory label files to show on this device. |
 | test-label | string |  | False |  | False | Test alias (model) label that will be applied in Autotest and reported for test results. |
 | thermal | [thermal](#thermal) |  | False |  | False |  |
@@ -665,6 +666,52 @@ In the tables below,
 | --------- | ------ | --------- | -------- | ----------- | ---------- | ----------- |
 | build-path | string |  | True |  | True | Source of the file relative to the build system. |
 | system-path | string |  | True |  | False | Installation path for the file on the system image. |
+
+### proximity-sensor
+| Attribute | Type   | RegEx     | Required | Oneof Group | Build-only | Description |
+| --------- | ------ | --------- | -------- | ----------- | ---------- | ----------- |
+| lte | [lte](#lte) |  | False |  | False |  |
+| wifi | [wifi](#wifi) |  | False |  | False |  |
+| wifi-lte | [wifi-lte](#wifi_lte) |  | False |  | False |  |
+
+### lte
+| Attribute | Type   | RegEx     | Required | Oneof Group | Build-only | Description |
+| --------- | ------ | --------- | -------- | ----------- | ---------- | ----------- |
+| channel | string | ```^[a-zA-Z0-9_]+$``` | False |  | False | Proximity sensor channel. |
+| hardwaregain | string | ```^[0-9.]+$``` | False |  | False | Proximity sensor hardware gain. |
+| sampling-frequency | string | ```^[0-9.]+$``` | False |  | False | Proximity sensor sampling frequency. |
+| thresh-falling | string | ```^[0-9.]+$``` | False |  | False | Proximity sensor falling threshold. |
+| thresh-falling-hysteresis | string | ```^[0-9.]+$``` | False |  | False | Proximity sensor falling hysteresis. |
+| thresh-falling-period | string | ```^[0-9.]+$``` | False |  | False | Proximity sensor falling threshold period (debounce). |
+| thresh-rising | string | ```^[0-9.]+$``` | False |  | False | Proximity sensor rising threshold. |
+| thresh-rising-hysteresis | string | ```^[0-9.]+$``` | False |  | False | Proximity sensor rising hysteresis. |
+| thresh-rising-period | string | ```^[0-9.]+$``` | False |  | False | Proximity sensor rising threshold period (debounce). |
+
+### wifi
+| Attribute | Type   | RegEx     | Required | Oneof Group | Build-only | Description |
+| --------- | ------ | --------- | -------- | ----------- | ---------- | ----------- |
+| channel | string | ```^[a-zA-Z0-9_]+$``` | False |  | False | Proximity sensor channel. |
+| hardwaregain | string | ```^[0-9.]+$``` | False |  | False | Proximity sensor hardware gain. |
+| sampling-frequency | string | ```^[0-9.]+$``` | False |  | False | Proximity sensor sampling frequency. |
+| thresh-falling | string | ```^[0-9.]+$``` | False |  | False | Proximity sensor falling threshold. |
+| thresh-falling-hysteresis | string | ```^[0-9.]+$``` | False |  | False | Proximity sensor falling hysteresis. |
+| thresh-falling-period | string | ```^[0-9.]+$``` | False |  | False | Proximity sensor falling threshold period (debounce). |
+| thresh-rising | string | ```^[0-9.]+$``` | False |  | False | Proximity sensor rising threshold. |
+| thresh-rising-hysteresis | string | ```^[0-9.]+$``` | False |  | False | Proximity sensor rising hysteresis. |
+| thresh-rising-period | string | ```^[0-9.]+$``` | False |  | False | Proximity sensor rising threshold period (debounce). |
+
+### wifi-lte
+| Attribute | Type   | RegEx     | Required | Oneof Group | Build-only | Description |
+| --------- | ------ | --------- | -------- | ----------- | ---------- | ----------- |
+| channel | string | ```^[a-zA-Z0-9_]+$``` | False |  | False | Proximity sensor channel. |
+| hardwaregain | string | ```^[0-9.]+$``` | False |  | False | Proximity sensor hardware gain. |
+| sampling-frequency | string | ```^[0-9.]+$``` | False |  | False | Proximity sensor sampling frequency. |
+| thresh-falling | string | ```^[0-9.]+$``` | False |  | False | Proximity sensor falling threshold. |
+| thresh-falling-hysteresis | string | ```^[0-9.]+$``` | False |  | False | Proximity sensor falling hysteresis. |
+| thresh-falling-period | string | ```^[0-9.]+$``` | False |  | False | Proximity sensor falling threshold period (debounce). |
+| thresh-rising | string | ```^[0-9.]+$``` | False |  | False | Proximity sensor rising threshold. |
+| thresh-rising-hysteresis | string | ```^[0-9.]+$``` | False |  | False | Proximity sensor rising hysteresis. |
+| thresh-rising-period | string | ```^[0-9.]+$``` | False |  | False | Proximity sensor rising threshold period (debounce). |
 
 ### thermal
 | Attribute | Type   | RegEx     | Required | Oneof Group | Build-only | Description |
