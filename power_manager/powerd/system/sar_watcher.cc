@@ -22,6 +22,8 @@
 #include <base/files/file_path.h>
 #include <base/logging.h>
 
+#include <cros_config/cros_config.h>
+
 #include "power_manager/common/power_constants.h"
 #include "power_manager/common/prefs.h"
 #include "power_manager/powerd/system/udev.h"
@@ -192,6 +194,132 @@ uint32_t SarWatcher::GetUsableSensorRoles(const std::string& path) {
   return responsibility;
 }
 
+bool SarWatcher::SetIioRisingFallingValue(const std::string& syspath,
+                                          brillo::CrosConfigInterface* config,
+                                          const std::string& config_path,
+                                          const std::string& config_name,
+                                          const std::string& path_prefix,
+                                          const std::string& postfix) {
+  std::string rising_value, falling_value;
+  std::string rising_config = "thresh-rising" + config_name;
+  std::string falling_config = "thresh-falling" + config_name;
+  bool set_rising =
+      config->GetString(config_path, rising_config, &rising_value);
+  bool set_falling =
+      config->GetString(config_path, falling_config, &falling_value);
+
+  if (!set_rising && !set_falling)
+    return true;
+
+  std::string prefix = path_prefix + "thresh_";
+  std::string falling_path = prefix + "falling" + postfix;
+  std::string rising_path = prefix + "rising" + postfix;
+  std::string either_path = prefix + "either" + postfix;
+  bool try_either = falling_value == rising_value;
+
+  if (!try_either || !udev_->SetSysattr(syspath, either_path, rising_value)) {
+    if (set_rising && !udev_->SetSysattr(syspath, rising_path, rising_value)) {
+      LOG(ERROR) << "Could not set proximity sensor " << rising_path << " to "
+                 << rising_value;
+      return false;
+    }
+    if (set_falling &&
+        !udev_->SetSysattr(syspath, falling_path, falling_value)) {
+      LOG(ERROR) << "Could not set proximity sensor " << falling_path << " to "
+                 << falling_value;
+      return false;
+    }
+  } else if (!try_either) {
+    LOG(ERROR) << "Could not set proximity sensor " << either_path << " to "
+               << rising_value;
+    return false;
+  }
+
+  return true;
+}
+
+bool SarWatcher::ConfigureSensor(const std::string& syspath, uint32_t role) {
+  auto config = std::make_unique<brillo::CrosConfig>();
+  if (!config->Init()) {
+    /* Ignore on non-unibuild boards */
+    LOG(INFO)
+        << "cros config not found. Skipping proximity sensor configuration";
+    return true;
+  }
+
+  std::string config_path = "/proximity-sensor/";
+  if (role == UserProximityObserver::SensorRole::SENSOR_ROLE_WIFI) {
+    config_path += "wifi";
+  } else if (role == UserProximityObserver::SensorRole::SENSOR_ROLE_LTE) {
+    config_path += "lte";
+  } else if (role == (UserProximityObserver::SensorRole::SENSOR_ROLE_WIFI |
+                      UserProximityObserver::SensorRole::SENSOR_ROLE_LTE)) {
+    config_path += "wifi-lte";
+  } else {
+    LOG(ERROR) << "Unknown sensor role for configuration";
+    return false;
+  }
+
+  std::string channel;
+
+  if (!config->GetString(config_path, "channel", &channel)) {
+    LOG(INFO)
+        << "Could not get proximity sensor channel from cros_config. Ignoring";
+    return true;
+  }
+
+  std::string sampling_frequency;
+  if (config->GetString(config_path, "sampling-frequency",
+                        &sampling_frequency)) {
+    if (!udev_->SetSysattr(syspath, "sampling_frequency", sampling_frequency)) {
+      LOG(ERROR) << "Could not set proximity sensor sampling frequency";
+      return false;
+    }
+  }
+
+  std::string gain;
+  if (config->GetString(config_path, "hardwaregain", &gain)) {
+    std::string gain_path = "in_proximity" + channel + "_hardwaregain";
+    if (!udev_->SetSysattr(syspath, gain_path, gain)) {
+      LOG(ERROR) << "Could not set proximity sensor hardware gain";
+      return false;
+    }
+  }
+
+  if (!SetIioRisingFallingValue(syspath, config.get(), config_path, "",
+                                "events/in_proximity" + channel + "_",
+                                "_value")) {
+    return false;
+  }
+
+  if (!SetIioRisingFallingValue(
+          syspath, config.get(), config_path, "-hysteresis",
+          "events/in_proximity" + channel + "_", "_hysteresis")) {
+    return false;
+  }
+
+  if (!SetIioRisingFallingValue(syspath, config.get(), config_path, "-period",
+                                "events/", "_period")) {
+    return false;
+  }
+
+  std::string enable_falling_path =
+      "events/in_proximity" + channel + "_thresh_falling_en";
+  std::string enable_rising_path =
+      "events/in_proximity" + channel + "_thresh_rising_en";
+  std::string enable_path =
+      "events/in_proximity" + channel + "_thresh_either_en";
+
+  if (!udev_->SetSysattr(syspath, enable_path, "1") &&
+      (!udev_->SetSysattr(syspath, enable_rising_path, "1") ||
+       !udev_->SetSysattr(syspath, enable_falling_path, "1"))) {
+    LOG(ERROR) << "Could not enable proximity sensor";
+    return false;
+  }
+
+  return true;
+}
+
 bool SarWatcher::OnSensorDetected(const std::string& syspath,
                                   const std::string& devlink) {
   uint32_t role = GetUsableSensorRoles(devlink);
@@ -199,6 +327,11 @@ bool SarWatcher::OnSensorDetected(const std::string& syspath,
   if (role == UserProximityObserver::SensorRole::SENSOR_ROLE_NONE) {
     LOG(INFO) << "Sensor at " << devlink << " not usable for any subsystem";
     return true;
+  }
+
+  if (!ConfigureSensor(syspath, role)) {
+    LOG(WARNING) << "Unable to configure sensor at " << devlink;
+    return false;
   }
 
   int event_fd = open_iio_events_func_.Run(base::FilePath(devlink));

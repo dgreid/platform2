@@ -14,6 +14,8 @@
 #include <base/files/file_path.h>
 #include <base/observer_list.h>
 
+#include <cros_config/cros_config.h>
+
 #include "power_manager/common/power_constants.h"
 #include "power_manager/powerd/system/udev_subsystem_observer.h"
 #include "power_manager/powerd/system/user_proximity_watcher_interface.h"
@@ -81,6 +83,18 @@ class SarWatcher : public UserProximityWatcherInterface,
   // to read proximity events from this device.
   bool IsIioProximitySensor(const UdevDeviceInfo& dev,
                             std::string* devlink_out);
+
+  // Sets proximity IIO attributes for rising, falling, or either direction
+  bool SetIioRisingFallingValue(const std::string& syspath,
+                                brillo::CrosConfigInterface* config,
+                                const std::string& config_path,
+                                const std::string& config_name,
+                                const std::string& path_prefix,
+                                const std::string& postfix);
+
+  // Configures the proximity sensor for usage based on values read from
+  // cros_config
+  bool ConfigureSensor(const std::string& syspath, uint32_t role);
 
   // Opens a file descriptor suitable for listening to proximity events for
   // the sensor at |devlink|, and notifies registered observers that a new

@@ -11,3 +11,12 @@ ACTION!="remove", SUBSYSTEM=="leds", DEVPATH=="*:kbd_backlight", RUN+="/lib/udev
 # The cros_ec-access group is also required by cros_healthd (the associated user
 # that is part of the cros_ec-access group is "healthd_ec").
 SUBSYSTEM=="chromeos|misc", KERNEL=="cros_ec" OWNER="root", GROUP="cros_ec-access" MODE="0660"
+
+# Allow powerd to change proximity sensor attributes
+ACTION=="add", SUBSYSTEM=="iio", ATTR{name}=="sx9310|sx9311", \
+  RUN+="/bin/chown -R power:power $sys/$devpath/events", \
+  RUN+="/bin/chown power:power $sys/$devpath/in_proximity0_hardwaregain \
+                               $sys/$devpath/in_proximity1_hardwaregain \
+                               $sys/$devpath/in_proximity2_hardwaregain \
+                               $sys/$devpath/in_proximity3_comb_hardwaregain \
+                               $sys/$devpath/sampling_frequency"
