@@ -6,6 +6,7 @@
 
 #include <string>
 
+#include <base/files/file_util.h>
 #include <base/files/scoped_temp_dir.h>
 #include <base/guid.h>
 #include <brillo/key_value_store.h>
@@ -25,6 +26,16 @@ bool CreateClientIdFile() {
   return test_util::CreateFile(
       paths::GetAt(paths::kCrashSenderStateDirectory, paths::kClientId),
       kFakeClientId);
+}
+
+// Set the file flag which indicates we are mocking crash sending, either
+// successfully or as a a failure. This also creates the directory where
+// uploads.log is written to since Chrome would normally be doing that.
+bool SetMockCrashSending(bool success) {
+  return test_util::CreateFile(paths::GetAt(paths::kSystemRunStateDirectory,
+                                            paths::kMockCrashSending),
+                               success ? "" : "0") &&
+         base::CreateDirectory(paths::Get(paths::kChromeCrashLog).DirName());
 }
 
 class CrashSenderBaseTest : public testing::Test {
@@ -181,6 +192,28 @@ TEST_F(CrashSenderBaseTest, GetSleepTime) {
   // GetSleepTime().
   EXPECT_LE(kMaxHoldOffTime * 0.9, sleep_time);
   EXPECT_GE(base::TimeDelta::FromSeconds(60), sleep_time);
+}
+
+TEST_F(CrashSenderBaseTest, IsMock) {
+  EXPECT_FALSE(IsMock());
+  ASSERT_TRUE(SetMockCrashSending(false));
+  EXPECT_TRUE(IsMock());
+  EXPECT_FALSE(IsMockSuccessful());
+  ASSERT_TRUE(SetMockCrashSending(true));
+  EXPECT_TRUE(IsMock());
+  EXPECT_TRUE(IsMockSuccessful());
+}
+
+TEST_F(CrashSenderBaseTest, GetImageType) {
+  EXPECT_EQ("", GetImageType());
+  ASSERT_TRUE(SetMockCrashSending(false));
+  EXPECT_EQ("mock-fail", GetImageType());
+  ASSERT_TRUE(test_util::CreateFile(paths::Get(paths::kLeaveCoreFile), ""));
+  EXPECT_EQ("dev", GetImageType());
+  ASSERT_TRUE(test_util::CreateFile(
+      paths::GetAt(paths::kEtcDirectory, paths::kLsbRelease),
+      "CHROMEOS_RELEASE_TRACK=testimage-channel"));
+  EXPECT_EQ("test", GetImageType());
 }
 
 }  // namespace

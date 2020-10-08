@@ -6,6 +6,7 @@
 
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <base/callback.h>
@@ -21,6 +22,8 @@ namespace util {
 
 // Maximum time to wait for ensuring a meta file is complete.
 constexpr base::TimeDelta kMaxHoldOffTime = base::TimeDelta::FromSeconds(30);
+constexpr char kUndefined[] = "undefined";
+constexpr char kChromeOsProduct[] = "ChromeOS";
 
 // Crash information obtained in ChooseAction().
 struct CrashInfo {
@@ -31,9 +34,56 @@ struct CrashInfo {
   base::Time last_modified;
 };
 
+// Details of a crash report. Contains more information than CrashInfo, as
+// additional information is extracted at a stage later stage.
+struct CrashDetails {
+  base::FilePath meta_file;
+  base::FilePath payload_file;
+  std::string payload_kind;
+  std::string client_id;
+  const brillo::KeyValueStore& metadata;
+};
+
+// Struct representing a fully-read-in meta file. Contains all fields that will
+// be sent in crash report, with upload_file_ files and the payload left as
+// FilePaths.
+struct FullCrash {
+  // Name of exec that crashed.
+  std::string exec_name;
+  // Board (e.g. "eve") of device
+  std::string board;
+  // Hardware class
+  std::string hwclass;
+  // product -- named this way to match name crash server expects
+  std::string prod;
+  // version -- named this way to match name crash server expects
+  std::string ver;
+  // Signature -- named this way to match name crash server expects
+  std::string sig;
+  // image type e.g. ("dev", "test", "")
+  std::string image_type;
+  // boot mode (e.g. "dev" or "")
+  std::string boot_mode;
+  // Error type (arbitrary, specified by client)
+  std::string error_type;
+  // client ID of machine
+  std::string guid;
+  // Payload of the crash. If this cannot be added, report should fail.
+  std::pair<std::string, base::FilePath> payload;
+  // Arbitrary human-readable key-value pairs.
+  std::vector<std::pair<std::string, std::string>> key_vals;
+  // Non-payload files to upload (possibly non-human-readable contents). If
+  // attaching a non-payload file fails, log an error but continue.
+  std::vector<std::pair<std::string, base::FilePath>> files;
+};
+
 // Testing hook. Set to true to force IsMock() to always return true. Easier
 // than creating the mock file in internal tests (such as fuzz tests).
 extern bool g_force_is_mock;
+
+// Testing hook. Set to true to force IsMockSuccessful() to always return true.
+// Easier than creating the mock file in internal tests (such as fuzz tests).
+extern bool g_force_is_mock_successful;
 
 // Gets the base name of the path pointed by |key| in the given metadata.
 // Returns an empty path if the key is not found.
@@ -58,6 +108,13 @@ void RecordCrashDone();
 
 // Returns true if mock is enabled.
 bool IsMock();
+
+// Returns true if mock is enabled and we should succeed.
+bool IsMockSuccessful();
+
+// Returns the string that describes the type of image. Returns an empty string
+// if we shouldn't specify the image type.
+std::string GetImageType();
 
 // Computes a sleep time needed before attempting to send a new crash report.
 // On success, returns true and stores the result in |sleep_time|. On error,
@@ -158,12 +215,6 @@ class SenderBase {
   }
 
  protected:
-  // Looks through |keys| in the os-release data using brillo::OsReleaseReader.
-  // Keys are searched in order until a value is found. Returns the value in
-  // the Optional if found, otherwise the Optional is empty.
-  base::Optional<std::string> GetOsReleaseValue(
-      const std::vector<std::string>& keys);
-
   // Do a minimal evaluation of the given meta file, only performing basic
   // validation (e.g. that it's fully written, that the payload field is valid,
   // etc).
@@ -194,6 +245,9 @@ class SenderBase {
   // Makes sure we have the DBus object initialized and connected.
   void EnsureDBusIsReady();
 
+  // Read the meta file and return a struct representing its contents.
+  FullCrash ReadMetaFile(const CrashDetails& details);
+
   // These are accessed by child classes.
   base::Callback<void(base::TimeDelta)> sleep_function_;
   scoped_refptr<dbus::Bus> bus_;
@@ -201,6 +255,12 @@ class SenderBase {
   const base::TimeDelta hold_off_time_;
 
  private:
+  // Looks through |keys| in the os-release data using brillo::OsReleaseReader.
+  // Keys are searched in order until a value is found. Returns the value in
+  // the Optional if found, otherwise the Optional is empty.
+  base::Optional<std::string> GetOsReleaseValue(
+      const std::vector<std::string>& keys);
+
   std::unique_ptr<base::Clock> clock_;
   std::unique_ptr<org::chromium::SessionManagerInterfaceProxyInterface>
       session_manager_proxy_;

@@ -635,33 +635,11 @@ TEST_F(CrashSenderUtilTest, ParseCommandLine_UploadOldReports) {
   EXPECT_TRUE(flags.upload_old_reports);
 }
 
-TEST_F(CrashSenderUtilTest, IsMock) {
-  EXPECT_FALSE(IsMock());
-  ASSERT_TRUE(SetMockCrashSending(false));
-  EXPECT_TRUE(IsMock());
-  EXPECT_FALSE(IsMockSuccessful());
-  ASSERT_TRUE(SetMockCrashSending(true));
-  EXPECT_TRUE(IsMock());
-  EXPECT_TRUE(IsMockSuccessful());
-}
-
 TEST_F(CrashSenderUtilTest, DoesPauseFileExist) {
   EXPECT_FALSE(DoesPauseFileExist());
 
   ASSERT_TRUE(test_util::CreateFile(paths::Get(paths::kPauseCrashSending), ""));
   EXPECT_TRUE(DoesPauseFileExist());
-}
-
-TEST_F(CrashSenderUtilTest, GetImageType) {
-  EXPECT_EQ("", GetImageType());
-  ASSERT_TRUE(SetMockCrashSending(false));
-  EXPECT_EQ("mock-fail", GetImageType());
-  ASSERT_TRUE(test_util::CreateFile(paths::Get(paths::kLeaveCoreFile), ""));
-  EXPECT_EQ("dev", GetImageType());
-  ASSERT_TRUE(test_util::CreateFile(
-      paths::GetAt(paths::kEtcDirectory, paths::kLsbRelease),
-      "CHROMEOS_RELEASE_TRACK=testimage-channel"));
-  EXPECT_EQ("test", GetImageType());
 }
 
 TEST_F(CrashSenderUtilTest, GetBasePartOfCrashFile) {
@@ -1460,6 +1438,16 @@ TEST_P(CreateCrashFormDataTest, TestCreateCrashFormData) {
        "Content-Transfer-Encoding: binary\r\n"
        "\r\n"
        "foobar_payload\r\n",
+       missing_file_ == kTextFile
+           ? ""
+           : "--boundary\r\n"
+             "Content-Disposition: form-data; name=\"footext\"\r\n"
+             "\r\n"
+             "upload_text_contents\r\n",
+       "--boundary\r\n"
+       "Content-Disposition: form-data; name=\"foovar\"\r\n"
+       "\r\n"
+       "bar\r\n",
        missing_file_ == kBinFile
            ? ""
            : "--boundary\r\n"
@@ -1476,16 +1464,6 @@ TEST_P(CreateCrashFormDataTest, TestCreateCrashFormData) {
              "Content-Transfer-Encoding: binary\r\n"
              "\r\n"
              "foobar_log\r\n",
-       missing_file_ == kTextFile
-           ? ""
-           : "--boundary\r\n"
-             "Content-Disposition: form-data; name=\"footext\"\r\n"
-             "\r\n"
-             "upload_text_contents\r\n",
-       "--boundary\r\n"
-       "Content-Disposition: form-data; name=\"foovar\"\r\n"
-       "\r\n"
-       "bar\r\n"
        "--boundary\r\n"
        "Content-Disposition: form-data; name=\"boot_mode\"\r\n"
        "\r\n"

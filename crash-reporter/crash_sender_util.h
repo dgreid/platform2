@@ -52,22 +52,8 @@ struct CommandLineFlags {
   bool upload_old_reports = false;
 };
 
-// Details of a crash report. Contains more information than CrashInfo, as
-// additional information is extracted at a stage later stage.
-struct CrashDetails {
-  base::FilePath meta_file;
-  base::FilePath payload_file;
-  std::string payload_kind;
-  std::string client_id;
-  const brillo::KeyValueStore& metadata;
-};
-
 // Represents a metadata file name, and its parsed metadata.
 typedef std::pair<base::FilePath, CrashInfo> MetaFile;
-
-// Testing hook. Set to true to force IsMockSuccessful() to always return true.
-// Easier than creating the mock file in internal tests (such as fuzz tests).
-extern bool g_force_is_mock_successful;
 
 // Parses the command line, and handles the command line flags.
 //
@@ -77,16 +63,9 @@ void ParseCommandLine(int argc,
                       const char* const* argv,
                       CommandLineFlags* flags);
 
-// Returns true if mock is enabled and we should succeed.
-bool IsMockSuccessful();
-
 // Returns true if the marker file exists indicating we should pause sending.
 // This can be overridden with a command line flag to the program.
 bool DoesPauseFileExist();
-
-// Returns the string that describes the type of image. Returns an empty string
-// if we shouldn't specify the image type.
-std::string GetImageType();
 
 // Gets the base part of a crash report file, such as name.01234.5678.9012 from
 // name.01234.5678.9012.meta or name.01234.5678.9012.log.tar.xz.  We make sure

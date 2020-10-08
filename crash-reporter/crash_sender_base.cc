@@ -20,6 +20,9 @@
 #include "crash-reporter/util.h"
 
 namespace {
+constexpr char kUploadVarPrefix[] = "upload_var_";
+constexpr char kUploadTextPrefix[] = "upload_text_";
+constexpr char kUploadFilePrefix[] = "upload_file_";
 constexpr char kOsTimestamp[] = "os_millis";
 constexpr char kProcessingExt[] = ".processing";
 
@@ -62,6 +65,20 @@ void MetadataToCrashInfo(const brillo::KeyValueStore& metadata,
 }  // namespace
 
 namespace util {
+
+bool g_force_is_mock = false;
+bool g_force_is_mock_successful = false;
+
+std::string GetImageType() {
+  if (util::IsTestImage())
+    return "test";
+  else if (util::IsDeveloperImage())
+    return "dev";
+  else if (IsMock() && !IsMockSuccessful())
+    return "mock-fail";
+  else
+    return "";
+}
 
 base::FilePath GetBaseNameFromMetadata(const brillo::KeyValueStore& metadata,
                                        const std::string& key) {
@@ -129,6 +146,17 @@ bool IsMock() {
   }
   return base::PathExists(
       paths::GetAt(paths::kSystemRunStateDirectory, paths::kMockCrashSending));
+}
+
+bool IsMockSuccessful() {
+  if (g_force_is_mock_successful) {
+    return true;
+  }
+  int64_t file_size;
+  return base::GetFileSize(paths::GetAt(paths::kSystemRunStateDirectory,
+                                        paths::kMockCrashSending),
+                           &file_size) &&
+         !file_size;
 }
 
 bool GetSleepTime(const base::FilePath& meta_file,
@@ -401,6 +429,98 @@ void SenderBase::EnsureDBusIsReady() {
     bus_ = new dbus::Bus(options);
     CHECK(bus_->Connect());
   }
+}
+
+FullCrash SenderBase::ReadMetaFile(const CrashDetails& details) {
+  FullCrash crash;
+
+  if (!details.metadata.GetString("exec_name", &crash.exec_name)) {
+    crash.exec_name = kUndefined;
+  }
+
+  if (!details.metadata.GetString("board", &crash.board) &&
+      !GetCachedKeyValueDefault(base::FilePath(paths::kLsbRelease),
+                                "CHROMEOS_RELEASE_BOARD", &crash.board)) {
+    crash.board = kUndefined;
+  }
+
+  crash.hwclass = util::GetHardwareClass();
+
+  // When uploading Chrome reports we need to report the right product and
+  // version. If the meta file does not specify it we try to examine os-release
+  // content. If not available there product gets assigned default product name
+  // and version is derived from CHROMEOS_RELEASE_VERSION in /etc/lsb-release.
+  if (!details.metadata.GetString("upload_var_prod", &crash.prod)) {
+    crash.prod =
+        GetOsReleaseValue({"GOOGLE_CRASH_ID", "ID"}).value_or(kChromeOsProduct);
+  }
+
+  if (!details.metadata.GetString("upload_var_ver", &crash.ver)) {
+    if (!details.metadata.GetString("ver", &crash.ver)) {
+      crash.ver = GetOsReleaseValue(
+                      {"GOOGLE_CRASH_VERSION_ID", "BUILD_ID", "VERSION_ID"})
+                      .value_or(kUndefined);
+    }
+  }
+
+  // Ignore failures here; it's ok if this is missing.
+  details.metadata.GetString("sig", &crash.sig);
+
+  base::FilePath payload_file = details.payload_file;
+  if (!payload_file.IsAbsolute()) {
+    payload_file = details.meta_file.DirName().Append(payload_file);
+  }
+  crash.payload =
+      std::make_pair("upload_file_" + details.payload_kind, payload_file);
+
+  crash.image_type = GetImageType();
+  crash.boot_mode = util::GetBootModeString();
+
+  // Ignore failures here; it's ok if this is missing.
+  details.metadata.GetString("error_type", &crash.error_type);
+
+  crash.guid = details.client_id;
+
+  for (const auto& key : details.metadata.GetKeys()) {
+    if (!base::StartsWith(key, "upload_", base::CompareCase::SENSITIVE) ||
+        key == "upload_var_prod" || key == "upload_var_ver" ||
+        key == "upload_var_guid") {
+      continue;
+    }
+    std::string value;
+    details.metadata.GetString(key, &value);
+    bool is_upload_var =
+        base::StartsWith(key, kUploadVarPrefix, base::CompareCase::SENSITIVE);
+    bool is_upload_text =
+        base::StartsWith(key, kUploadTextPrefix, base::CompareCase::SENSITIVE);
+    bool is_upload_file =
+        base::StartsWith(key, kUploadFilePrefix, base::CompareCase::SENSITIVE);
+    if (is_upload_var) {
+      crash.key_vals.emplace_back(key.substr(sizeof(kUploadVarPrefix) - 1),
+                                  value);
+    } else if (is_upload_text || is_upload_file) {
+      base::FilePath value_file(value);
+      // Relative paths are relative to the meta data file.
+      if (!value_file.IsAbsolute()) {
+        value_file = details.meta_file.DirName().Append(value_file);
+      }
+      if (is_upload_text) {
+        std::string value_content;
+        if (base::ReadFileToString(value_file, &value_content)) {
+          crash.key_vals.emplace_back(key.substr(sizeof(kUploadTextPrefix) - 1),
+                                      value_content);
+        } else {
+          LOG(ERROR) << "Failed attaching file contents from "
+                     << value_file.value();
+        }
+      } else {  // not is_upload_text so must be is_upload_file
+        crash.files.emplace_back(key.substr(sizeof(kUploadFilePrefix) - 1),
+                                 value_file);
+      }
+    }
+  }
+
+  return crash;
 }
 
 base::Optional<std::string> SenderBase::GetOsReleaseValue(

@@ -38,9 +38,6 @@
 
 namespace util {
 
-bool g_force_is_mock = false;
-bool g_force_is_mock_successful = false;
-
 namespace {
 
 // URL to send official build crash reports to.
@@ -48,11 +45,6 @@ constexpr char kReportUploadProdUrl[] = "https://clients2.google.com/cr/report";
 // URL to send test/dev build crash reports to.
 constexpr char kReportUploadStagingUrl[] =
     "https://clients2.google.com/cr/staging_report";
-constexpr char kUndefined[] = "undefined";
-constexpr char kChromeOsProduct[] = "ChromeOS";
-constexpr char kUploadVarPrefix[] = "upload_var_";
-constexpr char kUploadTextPrefix[] = "upload_text_";
-constexpr char kUploadFilePrefix[] = "upload_file_";
 constexpr char kAlreadyUploadedExt[] = ".alreadyuploaded";
 
 // Keys used in uploads.log file. (All timestamps are measured in seconds.)
@@ -133,30 +125,8 @@ void ParseCommandLine(int argc,
   }
 }
 
-bool IsMockSuccessful() {
-  if (g_force_is_mock_successful) {
-    return true;
-  }
-  int64_t file_size;
-  return base::GetFileSize(paths::GetAt(paths::kSystemRunStateDirectory,
-                                        paths::kMockCrashSending),
-                           &file_size) &&
-         !file_size;
-}
-
 bool DoesPauseFileExist() {
   return base::PathExists(paths::Get(paths::kPauseCrashSending));
-}
-
-std::string GetImageType() {
-  if (util::IsTestImage())
-    return "test";
-  else if (util::IsDeveloperImage())
-    return "dev";
-  else if (IsMock() && !IsMockSuccessful())
-    return "mock-fail";
-  else
-    return "";
 }
 
 base::FilePath GetBasePartOfCrashFile(const base::FilePath& file_name) {
@@ -562,143 +532,82 @@ std::unique_ptr<brillo::http::FormData> Sender::CreateCrashFormData(
   std::unique_ptr<brillo::http::FormData> form_data =
       std::make_unique<brillo::http::FormData>(form_data_boundary_);
 
-  std::string exec_name;
-  if (!details.metadata.GetString("exec_name", &exec_name))
-    exec_name = kUndefined;
-  form_data->AddTextField("exec_name", exec_name);
+  FullCrash crash = ReadMetaFile(details);
 
-  std::string board;
-  if (!details.metadata.GetString("board", &board) &&
-      !GetCachedKeyValueDefault(base::FilePath(paths::kLsbRelease),
-                                "CHROMEOS_RELEASE_BOARD", &board)) {
-    board = kUndefined;
-  }
-  form_data->AddTextField("board", board);
+  form_data->AddTextField("exec_name", crash.exec_name);
+  form_data->AddTextField("board", crash.board);
+  form_data->AddTextField("hwclass", crash.hwclass);
+  form_data->AddTextField("prod", crash.prod);
+  form_data->AddTextField("ver", crash.ver);
 
-  std::string hwclass = util::GetHardwareClass();
-  form_data->AddTextField("hwclass", hwclass);
+  if (!crash.sig.empty()) {
+    form_data->AddTextField("sig", crash.sig);
+    form_data->AddTextField("sig2", crash.sig);
+  }
 
-  // When uploading Chrome reports we need to report the right product and
-  // version. If the meta file does not specify it we try to examine os-release
-  // content. If not available there product gets assigned default product name
-  // and version is derived from CHROMEOS_RELEASE_VERSION in /etc/lsb-release.
-  std::string product;
-  if (!details.metadata.GetString("upload_var_prod", &product)) {
-    product =
-        GetOsReleaseValue({"GOOGLE_CRASH_ID", "ID"}).value_or(kChromeOsProduct);
-  }
-  form_data->AddTextField("prod", product);
-
-  std::string version;
-  if (!details.metadata.GetString("upload_var_ver", &version)) {
-    if (!details.metadata.GetString("ver", &version)) {
-      version = GetOsReleaseValue(
-                    {"GOOGLE_CRASH_VERSION_ID", "BUILD_ID", "VERSION_ID"})
-                    .value_or(kUndefined);
-    }
-  }
-  form_data->AddTextField("ver", version);
-
-  std::string sig;
-  if (details.metadata.GetString("sig", &sig)) {
-    form_data->AddTextField("sig", sig);
-    form_data->AddTextField("sig2", sig);
-  }
-  base::FilePath payload_file = details.payload_file;
-  if (!payload_file.IsAbsolute()) {
-    payload_file = details.meta_file.DirName().Append(payload_file);
-  }
+  const std::string& payload_name = crash.payload.first;
+  const base::FilePath& payload_path = crash.payload.second;
   brillo::ErrorPtr file_error;
-  if (!form_data->AddFileField("upload_file_" + details.payload_kind,
-                               payload_file, {}, &file_error)) {
-    LOG(ERROR) << "Failed adding payload file as attachment: "
-               << file_error->GetMessage();
+  if (!form_data->AddFileField(payload_name, payload_path, {}, &file_error)) {
+    LOG(ERROR) << "Failed adding payload file (name: " << payload_name
+               << ", path: " << payload_path.value()
+               << ") as attachment: " << file_error->GetMessage();
     return nullptr;
   }
 
-  for (const auto& key : details.metadata.GetKeys()) {
-    if (!base::StartsWith(key, "upload_", base::CompareCase::SENSITIVE) ||
-        key == "upload_var_prod" || key == "upload_var_ver" ||
-        key == "upload_var_guid") {
-      continue;
-    }
-    std::string value;
-    details.metadata.GetString(key, &value);
-    bool is_upload_var =
-        base::StartsWith(key, kUploadVarPrefix, base::CompareCase::SENSITIVE);
-    bool is_upload_text =
-        base::StartsWith(key, kUploadTextPrefix, base::CompareCase::SENSITIVE);
-    bool is_upload_file =
-        base::StartsWith(key, kUploadFilePrefix, base::CompareCase::SENSITIVE);
-    if (is_upload_var) {
-      form_data->AddTextField(key.substr(sizeof(kUploadVarPrefix) - 1), value);
-    } else if (is_upload_text || is_upload_file) {
-      base::FilePath value_file(value);
-      // Relative paths are relative to the meta data file.
-      if (!value_file.IsAbsolute()) {
-        value_file = details.meta_file.DirName().Append(value_file);
-      }
-      if (is_upload_text) {
-        std::string value_content;
-        if (base::ReadFileToString(value_file, &value_content)) {
-          form_data->AddTextField(key.substr(sizeof(kUploadTextPrefix) - 1),
-                                  value_content);
-        } else {
-          LOG(ERROR) << "Failed attaching file contents from "
-                     << value_file.value();
-        }
-      } else {  // not is_upload_text so must be is_upload_file
-        brillo::ErrorPtr error;
-        if (base::PathExists(value_file) &&
-            !form_data->AddFileField(key.substr(sizeof(kUploadFilePrefix) - 1),
-                                     value_file, {}, &error)) {
-          LOG(ERROR) << "Failed attaching file " << value_file.value()
-                     << " of: " << error->GetMessage();
-        }
-      }
+  for (const auto& pair : crash.key_vals) {
+    form_data->AddTextField(pair.first, pair.second);
+  }
+
+  for (const auto& pair : crash.files) {
+    const std::string& name = pair.first;
+    const base::FilePath& path = pair.second;
+    brillo::ErrorPtr file_error;
+    if (base::PathExists(path) &&
+        !form_data->AddFileField(name, path, {}, &file_error)) {
+      LOG(ERROR) << "Failed adding file (name: " << name
+                 << ", path: " << path.value()
+                 << ") as attachment: " << file_error->GetMessage();
     }
   }
 
-  std::string image_type = GetImageType();
-  if (!image_type.empty())
-    form_data->AddTextField("image_type", image_type);
+  if (!crash.image_type.empty())
+    form_data->AddTextField("image_type", crash.image_type);
 
-  std::string boot_mode = util::GetBootModeString();
-  if (!boot_mode.empty())
-    form_data->AddTextField("boot_mode", boot_mode);
+  if (!crash.boot_mode.empty())
+    form_data->AddTextField("boot_mode", crash.boot_mode);
 
-  std::string error_type;
-  if (details.metadata.GetString("error_type", &error_type))
-    form_data->AddTextField("error_type", error_type);
+  if (!crash.error_type.empty())
+    form_data->AddTextField("error_type", crash.error_type);
 
   LOG(INFO) << "Sending crash:";
-  if (product != kChromeOsProduct)
-    LOG(INFO) << "  Sending crash report on behalf of " << product;
+  if (crash.prod != kChromeOsProduct)
+    LOG(INFO) << "  Sending crash report on behalf of " << crash.prod;
   LOG(INFO) << "  Metadata: " << details.meta_file.value() << " ("
             << details.payload_kind << ")";
   LOG(INFO) << "  Payload: " << details.payload_file.value();
-  LOG(INFO) << "  Version: " << version;
-  if (!image_type.empty())
-    LOG(INFO) << "  Image type: " << image_type;
-  if (!boot_mode.empty())
-    LOG(INFO) << "  Boot mode: " << boot_mode;
+  LOG(INFO) << "  Version: " << crash.ver;
+  if (!crash.image_type.empty())
+    LOG(INFO) << "  Image type: " << crash.image_type;
+  if (!crash.boot_mode.empty())
+    LOG(INFO) << "  Boot mode: " << crash.boot_mode;
   if (IsMock()) {
-    LOG(INFO) << "  Product: " << product;
+    LOG(INFO) << "  Product: " << crash.prod;
     LOG(INFO) << "  URL: " << kReportUploadProdUrl;
-    LOG(INFO) << "  Board: " << board;
-    LOG(INFO) << "  HWClass: " << hwclass;
-    if (!sig.empty())
-      LOG(INFO) << "  sig: " << sig;
+    LOG(INFO) << "  Board: " << crash.board;
+    LOG(INFO) << "  HWClass: " << crash.hwclass;
+    if (!crash.sig.empty())
+      LOG(INFO) << "  sig: " << crash.sig;
   }
 
-  LOG(INFO) << "  Exec name: " << exec_name;
-  if (!error_type.empty())
-    LOG(INFO) << "  Error type: " << error_type;
+  LOG(INFO) << "  Exec name: " << crash.exec_name;
+  if (!crash.error_type.empty())
+    LOG(INFO) << "  Error type: " << crash.error_type;
 
-  form_data->AddTextField("guid", details.client_id);
+  form_data->AddTextField("guid", crash.guid);
 
   if (product_name_out)
-    *product_name_out = product;
+    *product_name_out = crash.prod;
 
   return form_data;
 }
