@@ -635,7 +635,7 @@ properties:
                 which describes your behavior and use that instead.
             power:
               description: Defines settings that control power management functions.
-                This mostly defines power_manager preferences, but but there are a few
+                This mostly defines power_manager preferences, but there are a few
                 other power related settings included.
                 For details about each power_manager preference, see -
                 src/platform2/power_manager/common/power_constants.h/cc
