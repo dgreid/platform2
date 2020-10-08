@@ -14,25 +14,30 @@ const HELP: &str = r#"Usage: arc
   [ ping [ NETWORK ] [ <ip address> | <hostname> ] |
     http [ NETWORK ] <url> |
     dns [ NETWORK ] <domain> |
-    proxy <url>
+    proxy <url> |
+    list [ networks ] |
+    stats [ sockets | traffic ]
   ]
   where NETWORK := [ wifi | eth | ethernet | cell | cellular | vpn ]
 
-ping:     check the reachability of a host or IP address.
-http:     do a GET request to an URL and print the response header.
-dns:      perform a DNS lookup of a domain name.
-proxy:    resolve the current proxy configuration for a given URL.
+ping:           check the reachability of a host or IP address.
+http:           do a GET request to an URL and print the response header.
+dns:            perform a DNS lookup of a domain name.
+proxy:          resolve the current proxy configuration for a given URL.
+list networks:  show properties of all networks connected in Android.
+stats sockets:  show TCP connect and DNS statistics by Android Apps.
+stats traffic:  show traffic packet statistics by Android Apps.
 
 If NETWORK is not specified, the default network is used.
 "#;
 
-type CommandRunner = dyn Fn(&Vec<&str>) -> Result<(), dispatcher::Error>;
+type CommandRunner = dyn Fn(&[&str]) -> Result<(), dispatcher::Error>;
 
 // We use adb shell for executing networking tools through dumpsys wifi.
 // It is not possible to use android-sh because it has a different selinux context.
 const ADB: &str = "/usr/bin/adb";
 
-fn run_adb_command(args: &Vec<&str>) -> Result<(), dispatcher::Error> {
+fn run_adb_command(args: &[&str]) -> Result<(), dispatcher::Error> {
     process::Command::new(ADB).args(args).spawn().map_or(
         Err(dispatcher::Error::CommandReturnedError),
         wait_for_result,
@@ -96,6 +101,16 @@ fn execute_arc_command(
         ["proxy"] => invalid_argument("missing url to resolve"),
         ["proxy", url, ..] => run_arc_networking_tool(adb_command_runner, "proxy", url, None),
 
+        // Prints Android properties of all networks currently connected in ARC. This output
+        // contains potential PIIs (IP addresses) and should not be stored or collected without
+        // additional scrubbing.
+        ["list", "networks"] => adb_command_runner(&["shell", "dumpsys", "wifi", "networks"]),
+        // Prints the number of TCP connect() calls and DNS queries initiated by Android Apps.
+        // This output does not contain any PII.
+        ["stats", "sockets"] => adb_command_runner(&["shell", "dumpsys", "wifi", "sockets"]),
+        // Prints tx and rx packets and bytes counter statistics for traffic initiated by Android
+        // Apps. This output does not contain any PII.
+        ["stats", "traffic"] => adb_command_runner(&["shell", "dumpsys", "wifi", "traffic"]),
         [other, ..] => invalid_argument(other),
     }
 }
@@ -126,7 +141,7 @@ fn invalid_argument(msg: &str) -> Result<(), dispatcher::Error> {
 mod tests {
     use super::*;
 
-    fn fake_adb_command(args: &Vec<&str>) -> Result<(), dispatcher::Error> {
+    fn fake_adb_command(_args: &[&str]) -> Result<(), dispatcher::Error> {
         Ok(())
     }
 
@@ -220,6 +235,9 @@ mod tests {
                 "proxy http://google.com",
                 "shell dumpsys wifi tools proxy http://google.com",
             ),
+            ("list networks", "shell dumpsys wifi networks"),
+            ("stats sockets", "shell dumpsys wifi sockets"),
+            ("stats traffic", "shell dumpsys wifi traffic"),
         ];
 
         for (arc_command, adb_command) in &commands {
