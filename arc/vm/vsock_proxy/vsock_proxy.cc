@@ -494,13 +494,14 @@ bool VSockProxy::ConvertDataToVSockMessage(
       PLOG(ERROR) << "Failed to fstat";
       return false;
     }
+    int flags = fcntl(fd.get(), F_GETFL, 0);
+    if (flags < 0) {
+      PLOG(ERROR) << "Failed to find file status flags";
+      return false;
+    }
+    transferred_fd->set_flags(flags);
 
     if (S_ISFIFO(st.st_mode)) {
-      int flags = fcntl(fd.get(), F_GETFL, 0);
-      if (flags < 0) {
-        PLOG(ERROR) << "Failed to find file status flags";
-        return false;
-      }
       switch (flags & O_ACCMODE) {
         case O_RDONLY:
           transferred_fd->set_type(arc_proxy::FileDescriptor::FIFO_READ);

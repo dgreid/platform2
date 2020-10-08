@@ -66,6 +66,8 @@ message FileDescriptor {
 
   reserved 3;  // uint64 file_size = 3 [deprecated=true];
   reserved 4;  // uint32 drm_virtgpu_res_handle = 4; [deprecated=true];
+
+  int32 flags = 5;
 }
 
 // Notify the data is available on a stream (pipe or socket) corresponding to
