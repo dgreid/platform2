@@ -6,6 +6,7 @@
 //! Trichechus and Dugong daemons.
 
 use std::fmt::{self, Display};
+use std::process::exit;
 
 use getopts::{self, Options};
 
@@ -64,7 +65,16 @@ pub fn initialize_common_arguments(args: &[String]) -> Result<CommonConfig> {
         "URL to the server",
         LOOPBACK_DEFAULT,
     );
-    let matches = opts.parse(&args[..]).map_err(Error::CLIParse)?;
+    opts.optflag("h", "help", "Show this help string.");
+    let matches = opts.parse(&args[..]).map_err(|e| {
+        println!("{}", opts.usage(""));
+        Error::CLIParse(e)
+    })?;
+
+    if matches.opt_present("h") {
+        println!("{}", opts.usage(""));
+        exit(0);
+    }
 
     if let Some(value) = matches.opt_str(url_name) {
         config.connection_type = value
