@@ -537,6 +537,7 @@ constexpr char kServiceDataProperty[] = "ServiceData";
 constexpr char kSolicitUUIDsProperty[] = "SolicitUUIDs";
 constexpr char kTypeProperty[] = "Type";
 constexpr char kIncludeTxPowerProperty[] = "IncludeTxPower";
+constexpr char kScanResponseDataProperty[] = "ScanResponseData";
 
 // Possible values for the "Type" property.
 constexpr char kTypeBroadcast[] = "broadcast";
