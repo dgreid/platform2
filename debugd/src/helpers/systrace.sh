@@ -46,6 +46,11 @@ gfx_events="
     exynos:exynos_flip_request
     exynos:exynos_flip_complete
     exynos:exynos_page_flip_state
+    drm_msm_gpu:msm_gpu_freq_change
+    drm_msm_gpu:msm_gpu_submit_flush
+    drm_msm_gpu:msm_gpu_submit_retired
+    drm_msm_atomic:msm_atomic_commit_tail_start
+    drm_msm_atomic:msm_atomic_commit_tail_finish
     drm:drm_vblank_event
 "
 power_events="
