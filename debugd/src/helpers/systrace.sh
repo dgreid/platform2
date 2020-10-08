@@ -121,10 +121,11 @@ parse_event_or_category()
     sched)  echo "${sched_events}";;
     workq)  echo "${workq_events}";;
 
-    all)    echo "${sched_events}
-                  ${workq_events}
+    all)    echo "${gfx_events}
+                  ${input_events}
                   ${power_events}
-                  ${gfx_events}";;
+                  ${sched_events}
+                  ${workq_events}";;
     *)
       if ! echo "$1" | grep -E "^[a-z0-9_-]+:[a-zA-Z0-9_-]+$"; then
         echo "Unknown event/category '$1'" >&2
