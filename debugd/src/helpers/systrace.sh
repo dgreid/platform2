@@ -52,6 +52,13 @@ gfx_events="
     drm_msm_atomic:msm_atomic_commit_tail_start
     drm_msm_atomic:msm_atomic_commit_tail_finish
     drm:drm_vblank_event
+    dma_fence:dma_fence_init
+    dma_fence:dma_fence_emit
+    dma_fence:dma_fence_destroy
+    dma_fence:dma_fence_enable_signal
+    dma_fence:dma_fence_signaled
+    dma_fence:dma_fence_wait_start
+    dma_fence:dma_fence_wait_end
 "
 power_events="
     power:cpu_idle
@@ -171,6 +178,7 @@ start)
     # splitting here:
     # shellcheck disable=SC2086
     tracing_enable_events ${events}
+    tracing_write "record-tgid" trace_options
     tracing_write "${buffer_size_running}" buffer_size_kb
     tracing_enable                              # start kernel tracing
     ;;
