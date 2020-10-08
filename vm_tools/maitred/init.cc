@@ -1073,13 +1073,16 @@ void Init::Worker::OnSignalReadable() {
       grpc::ClientContext ctx;
       vm_tools::EmptyMessage empty;
       vm_tools::cicerone::FailureReport failure_report;
-      failure_report.set_failed_process(info.argv.front());
+      // Cicerone expects bare service names (no path).
+      failure_report.set_failed_process(
+          base::FilePath(info.argv.front()).BaseName().value());
       grpc::Status status =
           crash_listener_.SendFailureReport(&ctx, failure_report, &empty);
       if (!status.ok()) {
         LOG(ERROR) << "Failed to report failure of service \""
-                   << info.argv.front() << "\": " << status.error_message()
-                   << ", error code " << status.error_code();
+                   << failure_report.failed_process()
+                   << "\": " << status.error_message() << ", error code "
+                   << status.error_code();
       }
     }
 

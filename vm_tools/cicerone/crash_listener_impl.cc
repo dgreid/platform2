@@ -149,11 +149,17 @@ grpc::Status CrashListenerImpl::SendCrashReport(grpc::ServerContext* ctx,
 
 base::Optional<pid_t> CrashListenerImpl::GetPidFromPeerAddress(
     grpc::ServerContext* ctx) {
+  VirtualMachine* vm = GetVirtualMachineForContext(ctx);
+  return vm ? base::Optional<pid_t>(vm->pid()) : base::nullopt;
+}
+
+VirtualMachine* CrashListenerImpl::GetVirtualMachineForContext(
+    grpc::ServerContext* ctx) {
   uint32_t cid = 0;
   std::string peer_address = ctx->peer();
   if (sscanf(peer_address.c_str(), "vsock:%u", &cid) != 1) {
     LOG(WARNING) << "Failed to parse peer address " << peer_address;
-    return base::nullopt;
+    return nullptr;
   }
 
   base::WaitableEvent event(base::WaitableEvent::ResetPolicy::AUTOMATIC,
@@ -172,10 +178,10 @@ base::Optional<pid_t> CrashListenerImpl::GetPidFromPeerAddress(
   event.Wait();
   if (!result) {
     LOG(ERROR) << "Failed to get VM for peer address " << peer_address;
-    return base::nullopt;
+    return nullptr;
   }
 
-  return vm->pid();
+  return vm;
 }
 
 void CrashListenerImpl::GetVirtualMachineForCidOrToken(
@@ -194,7 +200,12 @@ grpc::Status CrashListenerImpl::SendFailureReport(
     grpc::ServerContext* ctx,
     const FailureReport* failure_report,
     EmptyMessage* response) {
-  const std::string histogram = "Crostini.Stability";
+  VirtualMachine* vm = GetVirtualMachineForContext(ctx);
+  const std::string histogram =
+      vm && vm->GetType() ==
+                  VirtualMachine::VmType::ApplicationList_VmType_BOREALIS
+          ? "Borealis.Stability"
+          : "Crostini.Stability";
   const std::string service = failure_report->failed_process();
   FailureClasses sample;
 

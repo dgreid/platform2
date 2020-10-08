@@ -44,6 +44,7 @@ class CrashListenerImpl final : public CrashListener::Service {
 
  private:
   base::Optional<pid_t> GetPidFromPeerAddress(grpc::ServerContext* ctx);
+  VirtualMachine* GetVirtualMachineForContext(grpc::ServerContext* ctx);
 
   void GetVirtualMachineForCidOrToken(const uint32_t cid,
                                       VirtualMachine** vm_out,
