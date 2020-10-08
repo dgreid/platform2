@@ -84,7 +84,8 @@ status_t Rk3aCore::init(const char* xmlFilePath)
     LOG1("@%s", __FUNCTION__);
 
     bool ret = mAiq.init(xmlFilePath);
-    CheckError(ret == false, UNKNOWN_ERROR, "@%s, Error in IA AIQ init", __FUNCTION__);
+    CheckAndLogError(ret == false, UNKNOWN_ERROR, "@%s, Error in IA AIQ init",
+                     __FUNCTION__);
 
     LOG1("@%s: AIQ version: %s.", __FUNCTION__, mAiq.getVersion());
 

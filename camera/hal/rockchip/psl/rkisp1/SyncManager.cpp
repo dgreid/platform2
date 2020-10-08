@@ -455,8 +455,9 @@ status_t SyncManager::applyParameters(std::shared_ptr<CaptureUnitSettings> &sett
     }
 
     status = mSensorOp->setTestPattern(mode);
-    CheckError((status != NO_ERROR), status, "@%s, Fail to set test pattern mode = %d [%d]!",
-               __FUNCTION__, settings->testPatternMode, status);
+    CheckAndLogError((status != NO_ERROR), status,
+                     "@%s, Fail to set test pattern mode = %d [%d]!",
+                     __FUNCTION__, settings->testPatternMode, status);
 
     /**
      * Mark the exposure id where this settings should be in effect.

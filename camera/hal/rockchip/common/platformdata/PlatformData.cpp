@@ -1135,8 +1135,9 @@ status_t CameraHWInfo::getAvailableSensorModes(const std::string &sensorName,
 void CameraHWInfo::getMediaCtlElementNames(std::vector<std::string> &elementNames) const
 {
     int fd = open(mMediaControllerPathName.c_str(), O_RDONLY);
-    CheckError(fd == -1, VOID_VALUE, "@%s, Could not open media controller device: %s",
-           __FUNCTION__, strerror(errno));
+    CheckAndLogError(fd == -1, VOID_VALUE,
+                     "@%s, Could not open media controller device: %s",
+                     __FUNCTION__, strerror(errno));
 
     struct media_entity_desc entity;
     CLEAR(entity);
@@ -1148,8 +1149,9 @@ void CameraHWInfo::getMediaCtlElementNames(std::vector<std::string> &elementName
         entity.id |= MEDIA_ENT_ID_FLAG_NEXT;
     }
 
-    CheckError(close(fd) > 0, VOID_VALUE, "@%s, Error in closing media controller: %s",
-           __FUNCTION__, strerror(errno));
+    CheckAndLogError(close(fd) > 0, VOID_VALUE,
+                     "@%s, Error in closing media controller: %s", __FUNCTION__,
+                     strerror(errno));
 }
 
 std::string CameraHWInfo::getFullMediaCtlElementName(const std::vector<std::string> elementNames,

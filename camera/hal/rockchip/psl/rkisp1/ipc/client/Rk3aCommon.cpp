@@ -38,15 +38,18 @@ Rk3aCommon::~Rk3aCommon()
 bool Rk3aCommon::allocShmMem(std::string& name, int size, ShmMemInfo* shm)
 {
     LOG1("@%s", __FUNCTION__);
-    CheckError(mClient == nullptr, false, "@%s, mClient is nullptr", __FUNCTION__);
+    CheckAndLogError(mClient == nullptr, false, "@%s, mClient is nullptr",
+                     __FUNCTION__);
 
     shm->mName = name;
     shm->mSize = size;
     int ret = mClient->allocateShmMem(shm->mName, shm->mSize, &shm->mFd, &shm->mAddr);
-    CheckError((ret != OK), false, "@%s, call allocateShmMem fail", __FUNCTION__);
+    CheckAndLogError((ret != OK), false, "@%s, call allocateShmMem fail",
+                     __FUNCTION__);
 
     shm->mHandle = mClient->registerBuffer(shm->mFd);
-    CheckError((shm->mHandle < 0), false, "@%s, call mBridge->RegisterBuffer fail", __FUNCTION__);
+    CheckAndLogError((shm->mHandle < 0), false,
+                     "@%s, call mBridge->RegisterBuffer fail", __FUNCTION__);
 
     return true;
 }
@@ -54,7 +57,8 @@ bool Rk3aCommon::allocShmMem(std::string& name, int size, ShmMemInfo* shm)
 bool Rk3aCommon::requestSync(IPC_CMD cmd, int32_t handle)
 {
     LOG1("@%s", __FUNCTION__);
-    CheckError(mClient == nullptr, false, "@%s, mClient is nullptr", __FUNCTION__);
+    CheckAndLogError(mClient == nullptr, false, "@%s, mClient is nullptr",
+                     __FUNCTION__);
 
     return mClient->requestSync(cmd, handle) == OK ? true : false;
 }
@@ -62,7 +66,8 @@ bool Rk3aCommon::requestSync(IPC_CMD cmd, int32_t handle)
 bool Rk3aCommon::requestSync(IPC_CMD cmd)
 {
     LOG1("@%s", __FUNCTION__);
-    CheckError(mClient == nullptr, false, "@%s, mClient is nullptr", __FUNCTION__);
+    CheckAndLogError(mClient == nullptr, false, "@%s, mClient is nullptr",
+                     __FUNCTION__);
 
     return mClient->requestSync(cmd) == OK ? true : false;
 }
@@ -71,7 +76,8 @@ void Rk3aCommon::freeShmMem(ShmMemInfo& shm)
 {
     LOG1("@%s, mHandle:%d, mFd:%d, mName:%s, mSize:%d, mAddr:%p",
         __FUNCTION__, shm.mHandle, shm.mFd, shm.mName.c_str(), shm.mSize, shm.mAddr);
-    CheckError(mClient == nullptr, VOID_VALUE, "@%s, mClient is nullptr", __FUNCTION__);
+    CheckAndLogError(mClient == nullptr, VOID_VALUE, "@%s, mClient is nullptr",
+                     __FUNCTION__);
     if (shm.mHandle < 0 || shm.mFd < 0) {
         LOGE("@%s, mHandle:%d, mFd:%d, one of them < 0", __FUNCTION__, shm.mHandle, shm.mFd);
         return;

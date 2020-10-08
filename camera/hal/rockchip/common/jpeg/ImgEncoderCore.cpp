@@ -323,8 +323,9 @@ int ImgEncoderCore::doSwEncode(std::shared_ptr<CameraBuffer> srcBuf,
     LOG1("%s: encoding ret:%d, %dx%d need %" PRId64 "ms, jpeg size %u, quality %d)",
          __FUNCTION__, ret, destBuf->width(), destBuf->height(),
          (systemTime() - startTime) / 1000000, outSize, quality);
-    CheckError(ret == false, 0, "@%s, mJpegCompressor->CompressImage() fails",
-               __FUNCTION__);
+    CheckAndLogError(ret == false, 0,
+                     "@%s, mJpegCompressor->CompressImage() fails",
+                     __FUNCTION__);
 
     srcBuf->unlock();
     return outSize;

@@ -1898,7 +1898,8 @@ status_t GraphConfig::parseSensorNodeInfo(Node* sensorNode,
 
 status_t GraphConfig::getMediaCtlData(MediaCtlConfig *mediaCtlConfig)
 {
-    CheckError((!mediaCtlConfig), BAD_VALUE, "@%s null ptr\n", __FUNCTION__);
+    CheckAndLogError((!mediaCtlConfig), BAD_VALUE, "@%s null ptr\n",
+                     __FUNCTION__);
 
     ConfigProperties cameraProps;      // camera properties
     css_err_t ret = css_err_none;
@@ -2207,8 +2208,9 @@ status_t GraphConfig::getImguMediaCtlData(int32_t cameraId,
                                           MediaCtlConfig *mediaCtlConfigVideo,
                                           MediaCtlConfig *mediaCtlConfigStill)
 {
-    CheckError((!mediaCtlConfig || !mediaCtlConfigVideo || !mediaCtlConfigStill), \
-               BAD_VALUE, "@%s null ptr\n", __FUNCTION__);
+    CheckAndLogError(
+        (!mediaCtlConfig || !mediaCtlConfigVideo || !mediaCtlConfigStill),
+        BAD_VALUE, "@%s null ptr\n", __FUNCTION__);
 
     int ret;
 
@@ -2306,7 +2308,9 @@ status_t GraphConfig::getImguMediaCtlData(int32_t cameraId,
             /* Use BGGR as bayer format when specific sensor receives test pattern request */
             if (testPatternMode != ANDROID_SENSOR_TEST_PATTERN_MODE_OFF) {
                 const RKISP1CameraCapInfo* capInfo = getRKISP1CameraCapInfo(cameraId);
-                CheckError(capInfo == nullptr, UNKNOWN_ERROR, "@%s: failed to get cameraCapInfo", __FUNCTION__);
+                CheckAndLogError(capInfo == nullptr, UNKNOWN_ERROR,
+                                 "@%s: failed to get cameraCapInfo",
+                                 __FUNCTION__);
                 if (name.compare(MEDIACTL_INPUTNAME) == 0 &&
                         !capInfo->getTestPatternBayerFormat().empty()) {
                     format = gcu::getV4L2Format(capInfo->getTestPatternBayerFormat());
@@ -2473,7 +2477,7 @@ status_t GraphConfig::addControls(const Node *sensorNode,
 void GraphConfig::addVideoNodes(const Node* csiBESocOutput,
                                 MediaCtlConfig* config)
 {
-    CheckError((!config), VOID_VALUE, "@%s null ptr\n", __FUNCTION__);
+    CheckAndLogError((!config), VOID_VALUE, "@%s null ptr\n", __FUNCTION__);
 
     MediaCtlElement mediaCtlElement;
 
@@ -2485,8 +2489,9 @@ void GraphConfig::addVideoNodes(const Node* csiBESocOutput,
 
 void GraphConfig::addImguVideoNode(int nodeType, const string& nodeName, MediaCtlConfig *config)
 {
-    CheckError((!config), VOID_VALUE, "@%s null ptr\n", __FUNCTION__);
-    CheckError((nodeType == IMGU_NODE_NULL), VOID_VALUE, "@%s null ipu node name\n", __FUNCTION__);
+    CheckAndLogError((!config), VOID_VALUE, "@%s null ptr\n", __FUNCTION__);
+    CheckAndLogError((nodeType == IMGU_NODE_NULL), VOID_VALUE,
+                     "@%s null ipu node name\n", __FUNCTION__);
 
     MediaCtlElement mediaCtlElement;
     mediaCtlElement.name = nodeName;

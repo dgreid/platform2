@@ -149,8 +149,8 @@ status_t OutputFrameWorker::configure(std::shared_ptr<GraphConfig> &/*config*/)
 
     ret = mProcessor.configure(mStream, mFormat.width(),
                                mFormat.height(), mFormat.pixelformat());
-    CheckError((ret != OK), ret, "@%s mProcessor.configure failed %d",
-               __FUNCTION__, ret);
+    CheckAndLogError((ret != OK), ret, "@%s mProcessor.configure failed %d",
+                     __FUNCTION__, ret);
     mNeedPostProcess = mProcessor.needPostProcess();
 
     mIndex = 0;
@@ -161,18 +161,19 @@ status_t OutputFrameWorker::configure(std::shared_ptr<GraphConfig> &/*config*/)
     // Allocate extra slots for the dummy buffer.
     ret = setWorkerDeviceBuffers(
         mNeedPostProcess ? V4L2_MEMORY_MMAP : getDefaultMemoryType(mNodeName), mPipelineDepth);
-    CheckError((ret != OK), ret, "@%s set worker device buffers failed.",
-               __FUNCTION__);
+    CheckAndLogError((ret != OK), ret, "@%s set worker device buffers failed.",
+                     __FUNCTION__);
 
     ret = allocDummyBuffer();
-    CheckError((ret != OK), ret, "@%s failed to allocate dummy buffer.",
-               __FUNCTION__);
+    CheckAndLogError((ret != OK), ret, "@%s failed to allocate dummy buffer.",
+                     __FUNCTION__);
 
     // Allocate internal buffer.
     if (mNeedPostProcess) {
         ret = allocateWorkerBuffers();
-        CheckError((ret != OK), ret, "@%s failed to allocate internal buffer.",
-                   __FUNCTION__);
+        CheckAndLogError((ret != OK), ret,
+                         "@%s failed to allocate internal buffer.",
+                         __FUNCTION__);
     }
 
     mStreamToSWProcessMap.clear();
@@ -270,8 +271,8 @@ status_t OutputFrameWorker::prepareRun(std::shared_ptr<DeviceMessage> msg)
         // Use stream buffer for zero-copy
         if (buffer.get() == nullptr) {
             buffer = getOutputBufferForListener();
-            CheckError((buffer.get() == nullptr), UNKNOWN_ERROR,
-                       "failed to allocate listener buffer");
+            CheckAndLogError((buffer.get() == nullptr), UNKNOWN_ERROR,
+                             "failed to allocate listener buffer");
         }
         switch (mNode->getMemoryType()) {
         case V4L2_MEMORY_DMABUF:
@@ -500,7 +501,7 @@ void OutputFrameWorker::returnBuffers(bool returnListenerBuffers)
 status_t
 OutputFrameWorker::prepareBuffer(std::shared_ptr<CameraBuffer>& buffer)
 {
-    CheckError((buffer.get() == nullptr), UNKNOWN_ERROR, "null buffer!");
+    CheckAndLogError((buffer.get() == nullptr), UNKNOWN_ERROR, "null buffer!");
 
     status_t status = NO_ERROR;
     if (!buffer->isLocked() && isHalUsingRequestBuffer()) {
@@ -521,8 +522,8 @@ std::shared_ptr<CameraBuffer>
 OutputFrameWorker::findBuffer(Camera3Request* request,
                               camera3_stream_t* stream)
 {
-    CheckError((request == nullptr || stream == nullptr), nullptr,
-                "null request/stream!");
+    CheckAndLogError((request == nullptr || stream == nullptr), nullptr,
+                     "null request/stream!");
 
     CameraStream *s = nullptr;
     std::shared_ptr<CameraBuffer> buffer = nullptr;
@@ -602,8 +603,8 @@ OutputFrameWorker::getOutputBufferForListener()
             LOGE("bad type for stream buffer %d", mNode->getMemoryType());
             return nullptr;
         }
-        CheckError((mOutputForListener.get() == nullptr), nullptr,
-                   "Can't allocate buffer for listeners!");
+        CheckAndLogError((mOutputForListener.get() == nullptr), nullptr,
+                         "Can't allocate buffer for listeners!");
     }
 
     if (!mOutputForListener->isLocked()) {
@@ -638,10 +639,10 @@ status_t OutputFrameWorker::SWPostProcessor::configure(
         return OK;
     }
     // Only support NV12 and NV12M
-    CheckError((inputFmt != V4L2_PIX_FMT_NV12 &&
-                (inputFmt != V4L2_PIX_FMT_NV12M)),
-               BAD_VALUE, "Don't support format 0x%x, %s",
-               inputFmt, v4l2Fmt2Str(inputFmt));
+    CheckAndLogError(
+        (inputFmt != V4L2_PIX_FMT_NV12 && (inputFmt != V4L2_PIX_FMT_NV12M)),
+        BAD_VALUE, "Don't support format 0x%x, %s", inputFmt,
+        v4l2Fmt2Str(inputFmt));
 
     int type = PROCESS_NONE;
     if (getRotationDegrees(outStream) > 0) {
@@ -710,8 +711,8 @@ status_t OutputFrameWorker::SWPostProcessor::processFrame(
                          input->v4l2Fmt(),
                          mCameraId,
                          PAGE_ALIGN(input->size()));
-                CheckError((buf.get() == nullptr), NO_MEMORY,
-                           "@%s, No memory for rotate", __FUNCTION__);
+                CheckAndLogError((buf.get() == nullptr), NO_MEMORY,
+                                 "@%s, No memory for rotate", __FUNCTION__);
                 mPostProcessBufs.push_back(buf);
             }
             // Rotate to internal post-processing buffer
@@ -722,8 +723,9 @@ status_t OutputFrameWorker::SWPostProcessor::processFrame(
             status = ImageScalerCore::cropRotateScaleFrame(
                     input, output, angle, mRotateBuffer, mScaleBuffer);
         }
-        CheckError((status != OK), status, "@%s, Scale frame failed! [%d]!",
-                   __FUNCTION__, status);
+        CheckAndLogError((status != OK), status,
+                         "@%s, Scale frame failed! [%d]!", __FUNCTION__,
+                         status);
     } else {
         if (!mPostProcessBufs.empty())
             mPostProcessBufs.erase(mPostProcessBufs.begin());
@@ -747,8 +749,8 @@ status_t OutputFrameWorker::SWPostProcessor::processFrame(
                          mPostProcessBufs.back()->v4l2Fmt(),
                          mCameraId,
                          PAGE_ALIGN(mStream->width * mStream->height * 3 / 2));
-                CheckError((buf.get() == nullptr), NO_MEMORY,
-                           "@%s, No memory for scale", __FUNCTION__);
+                CheckAndLogError((buf.get() == nullptr), NO_MEMORY,
+                                 "@%s, No memory for scale", __FUNCTION__);
                 mPostProcessBufs.push_back(buf);
             }
             // Scale to internal post-processing buffer
@@ -757,8 +759,9 @@ status_t OutputFrameWorker::SWPostProcessor::processFrame(
             // Scale to output dst buffer
             status = ImageScalerCore::scaleFrame(mPostProcessBufs[0], output);
         }
-        CheckError((status != OK), status, "@%s, Scale frame failed! [%d]!",
-                   __FUNCTION__, status);
+        CheckAndLogError((status != OK), status,
+                         "@%s, Scale frame failed! [%d]!", __FUNCTION__,
+                         status);
     }
 
     // Jpeg input buffer is always mPostProcessBufs.back()
@@ -767,11 +770,13 @@ status_t OutputFrameWorker::SWPostProcessor::processFrame(
                                            "before_jpeg_converion_nv12");
         // JPEG encoding
         status = mJpegTask->handleMessageSettings(*(settings.get()));
-        CheckError((status != OK), status, "@%s, set settings failed! [%d]!",
-                   __FUNCTION__, status);
+        CheckAndLogError((status != OK), status,
+                         "@%s, set settings failed! [%d]!", __FUNCTION__,
+                         status);
         status = convertJpeg(mPostProcessBufs.back(), output, request);
-        CheckError((status != OK), status, "@%s, JPEG conversion failed! [%d]!",
-                   __FUNCTION__, status);
+        CheckAndLogError((status != OK), status,
+                         "@%s, JPEG conversion failed! [%d]!", __FUNCTION__,
+                         status);
     }
 
     return status;
@@ -780,7 +785,8 @@ status_t OutputFrameWorker::SWPostProcessor::processFrame(
 int OutputFrameWorker::SWPostProcessor::getRotationDegrees(
                                   camera3_stream_t* stream) const
 {
-    CheckError((stream == nullptr), 0, "%s, stream is nullptr", __FUNCTION__);
+    CheckAndLogError((stream == nullptr), 0, "%s, stream is nullptr",
+                     __FUNCTION__);
 
     if (stream->stream_type != CAMERA3_STREAM_OUTPUT) {
         LOG1("%s, no need rotation for stream type %d", __FUNCTION__,

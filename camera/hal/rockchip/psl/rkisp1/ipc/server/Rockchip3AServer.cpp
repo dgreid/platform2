@@ -64,7 +64,8 @@ int32_t Rockchip3AServer::initialize(const camera_algorithm_callback_ops_t* call
 {
     LOG1("@%s, callback_ops:%p", __FUNCTION__, callback_ops);
 
-    CheckError((!callback_ops), -EINVAL, "@%s, the callback_ops is nullptr", __FUNCTION__);
+    CheckAndLogError((!callback_ops), -EINVAL,
+                     "@%s, the callback_ops is nullptr", __FUNCTION__);
 
     mCallback = callback_ops;
 
@@ -74,15 +75,17 @@ int32_t Rockchip3AServer::initialize(const camera_algorithm_callback_ops_t* call
 int32_t Rockchip3AServer::registerBuffer(int buffer_fd)
 {
     LOG1("@%s, buffer_fd:%d", __FUNCTION__, buffer_fd);
-    CheckError((mHandles.find(buffer_fd) != mHandles.end()),
-                -EINVAL, "@%s, Buffer already registered", __FUNCTION__);
+    CheckAndLogError((mHandles.find(buffer_fd) != mHandles.end()), -EINVAL,
+                     "@%s, Buffer already registered", __FUNCTION__);
 
     struct stat sb;
     int ret = fstat(buffer_fd, &sb);
-    CheckError((ret == -1), -EBADFD, "@%s, Failed to get buffer status", __FUNCTION__);
+    CheckAndLogError((ret == -1), -EBADFD, "@%s, Failed to get buffer status",
+                     __FUNCTION__);
 
     void* addr = mmap(0, sb.st_size, PROT_WRITE, MAP_SHARED, buffer_fd, 0);
-    CheckError((!addr), -EBADFD, "@%s, Failed to map buffer", __FUNCTION__);
+    CheckAndLogError((!addr), -EBADFD, "@%s, Failed to map buffer",
+                     __FUNCTION__);
 
     int32_t handle = mHandleSeed++;
     mHandles[buffer_fd] = handle;
@@ -115,7 +118,8 @@ uint32_t Rockchip3AServer::handleRequest(uint8_t cmd, int reqeustSize, void* add
     LOG1("@%s, cmd:%d:%s, reqeustSize:%d, addr:%p",
         __FUNCTION__, cmd, Rockchip3AIpcCmdToString((IPC_CMD)cmd), reqeustSize, addr);
 
-    CheckError((addr == nullptr), 1, "@%s, addr is nullptr", __FUNCTION__);
+    CheckAndLogError((addr == nullptr), 1, "@%s, addr is nullptr",
+                     __FUNCTION__);
 
     status_t status = OK;
     switch (cmd) {
@@ -160,14 +164,16 @@ void Rockchip3AServer::request(
 
     uint8_t cmd = -1;
     int ret = parseReqHeader(req_header, size, &cmd);
-    CheckError((ret != 0), VOID_VALUE, "@%s, call parseReqHeader fail", __FUNCTION__);
+    CheckAndLogError((ret != 0), VOID_VALUE, "@%s, call parseReqHeader fail",
+                     __FUNCTION__);
 
     LOG2("@%s, buffer_handle:%d", __FUNCTION__, buffer_handle);
     if (buffer_handle == -1) {
         status = handleRequest(cmd, 0, nullptr);
     } else {
-        CheckError((mShmInfoMap.find(buffer_handle) == mShmInfoMap.end()),
-                    VOID_VALUE, "@%s, Invalid buffer handle", __FUNCTION__);
+        CheckAndLogError((mShmInfoMap.find(buffer_handle) == mShmInfoMap.end()),
+                         VOID_VALUE, "@%s, Invalid buffer handle",
+                         __FUNCTION__);
         ShmInfo info = mShmInfoMap[buffer_handle];
 
         LOG2("@%s, info.fd:%d, info.size:%zu", __FUNCTION__, info.fd, info.size);

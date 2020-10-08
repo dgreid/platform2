@@ -60,18 +60,22 @@ Rk3aAiq::~Rk3aAiq()
 
 bool Rk3aAiq::init(const char* xmlFilePath)
 {
-    CheckError(xmlFilePath == nullptr, false, "@%s, xmlFilePath is nullptr", __FUNCTION__);
+    CheckAndLogError(xmlFilePath == nullptr, false,
+                     "@%s, xmlFilePath is nullptr", __FUNCTION__);
     LOG1("@%s, xmlFilePath:%s", __FUNCTION__, xmlFilePath);
 
-    CheckError(mInitialized == false, false, "@%s, mInitialized is false", __FUNCTION__);
+    CheckAndLogError(mInitialized == false, false, "@%s, mInitialized is false",
+                     __FUNCTION__);
 
     aiq_init_params* params = static_cast<aiq_init_params*>(mMemInit.mAddr);
 
     int ret = mIpc.clientFlattenInit(xmlFilePath, params);
-    CheckError(ret == false, false, "@%s, clientFlattenInit fails", __FUNCTION__);
+    CheckAndLogError(ret == false, false, "@%s, clientFlattenInit fails",
+                     __FUNCTION__);
 
     ret = mCommon.requestSync(IPC_3A_AIQ_INIT, mMemInit.mHandle);
-    CheckError(ret == false, false, "@%s, requestSync fails", __FUNCTION__);
+    CheckAndLogError(ret == false, false, "@%s, requestSync fails",
+                     __FUNCTION__);
 
     mAiq = params->results;
     LOG2("@%s, success, aiq:%p\n", __FUNCTION__, reinterpret_cast<rk_aiq*>(mAiq));
@@ -82,14 +86,17 @@ bool Rk3aAiq::init(const char* xmlFilePath)
 void Rk3aAiq::deinit()
 {
     LOG1("@%s", __FUNCTION__);
-    CheckError(mInitialized == false, VOID_VALUE, "@%s, mInitialized is false", __FUNCTION__);
-    CheckError(reinterpret_cast<rk_aiq*>(mAiq) == nullptr, VOID_VALUE, "@%s, mAiq is nullptr", __FUNCTION__);
+    CheckAndLogError(mInitialized == false, VOID_VALUE,
+                     "@%s, mInitialized is false", __FUNCTION__);
+    CheckAndLogError(reinterpret_cast<rk_aiq*>(mAiq) == nullptr, VOID_VALUE,
+                     "@%s, mAiq is nullptr", __FUNCTION__);
 
     aiq_deinit_params* params = static_cast<aiq_deinit_params*>(mMemDeinit.mAddr);
     params->aiq_handle = mAiq;
 
     int ret = mCommon.requestSync(IPC_3A_AIQ_DEINIT, mMemDeinit.mHandle);
-    CheckError(ret == false, VOID_VALUE, "@%s, requestSync fails", __FUNCTION__);
+    CheckAndLogError(ret == false, VOID_VALUE, "@%s, requestSync fails",
+                     __FUNCTION__);
 
     mAiq = reinterpret_cast<uintptr_t>(nullptr);
 }
@@ -98,22 +105,29 @@ status_t Rk3aAiq::aeRun(const rk_aiq_ae_input_params* ae_input_params,
                         rk_aiq_ae_results** ae_results)
 {
     LOG1("@%s, ae_input_params:%p, ae_results:%p", __FUNCTION__, ae_input_params, ae_results);
-    CheckError(mInitialized == false, UNKNOWN_ERROR, "@%s, mInitialized is false", __FUNCTION__);
-    CheckError(reinterpret_cast<rk_aiq*>(mAiq) == nullptr, UNKNOWN_ERROR, "@%s, mAiq is nullptr", __FUNCTION__);
+    CheckAndLogError(mInitialized == false, UNKNOWN_ERROR,
+                     "@%s, mInitialized is false", __FUNCTION__);
+    CheckAndLogError(reinterpret_cast<rk_aiq*>(mAiq) == nullptr, UNKNOWN_ERROR,
+                     "@%s, mAiq is nullptr", __FUNCTION__);
 
-    CheckError((ae_input_params == nullptr), BAD_VALUE, "@%s, ae_input_params is nullptr", __FUNCTION__);
-    CheckError((ae_results == nullptr), BAD_VALUE, "@%s, ae_results is nullptr", __FUNCTION__);
+    CheckAndLogError((ae_input_params == nullptr), BAD_VALUE,
+                     "@%s, ae_input_params is nullptr", __FUNCTION__);
+    CheckAndLogError((ae_results == nullptr), BAD_VALUE,
+                     "@%s, ae_results is nullptr", __FUNCTION__);
 
     ae_run_params* params = static_cast<ae_run_params*>(mMemAe.mAddr);
 
     bool ret = mIpc.clientFlattenAe(mAiq, *ae_input_params, params);
-    CheckError(ret == false, UNKNOWN_ERROR, "@%s, clientFlattenAe fails", __FUNCTION__);
+    CheckAndLogError(ret == false, UNKNOWN_ERROR, "@%s, clientFlattenAe fails",
+                     __FUNCTION__);
 
     ret = mCommon.requestSync(IPC_3A_AIQ_AE_RUN, mMemAe.mHandle);
-    CheckError(ret == false, UNKNOWN_ERROR, "@%s, requestSync fails", __FUNCTION__);
+    CheckAndLogError(ret == false, UNKNOWN_ERROR, "@%s, requestSync fails",
+                     __FUNCTION__);
 
     ret = mIpc.clientUnflattenAe(*params, ae_results);
-    CheckError(ret == false, UNKNOWN_ERROR, "@%s, clientUnflattenAe fails", __FUNCTION__);
+    CheckAndLogError(ret == false, UNKNOWN_ERROR,
+                     "@%s, clientUnflattenAe fails", __FUNCTION__);
 
     return NO_ERROR;
 }
@@ -122,22 +136,29 @@ status_t Rk3aAiq::awbRun(const rk_aiq_awb_input_params* awb_input_params,
                          rk_aiq_awb_results** awb_results)
 {
     LOG1("@%s, awb_input_params:%p, awb_results:%p", __FUNCTION__, awb_input_params, awb_results);
-    CheckError(mInitialized == false, UNKNOWN_ERROR, "@%s, mInitialized is false", __FUNCTION__);
-    CheckError(reinterpret_cast<rk_aiq*>(mAiq) == nullptr, UNKNOWN_ERROR, "@%s, mAiq is nullptr", __FUNCTION__);
+    CheckAndLogError(mInitialized == false, UNKNOWN_ERROR,
+                     "@%s, mInitialized is false", __FUNCTION__);
+    CheckAndLogError(reinterpret_cast<rk_aiq*>(mAiq) == nullptr, UNKNOWN_ERROR,
+                     "@%s, mAiq is nullptr", __FUNCTION__);
 
-    CheckError((awb_input_params == nullptr), BAD_VALUE, "@%s, awb_input_params is nullptr", __FUNCTION__);
-    CheckError((awb_results == nullptr), BAD_VALUE, "@%s, awb_results is nullptr", __FUNCTION__);
+    CheckAndLogError((awb_input_params == nullptr), BAD_VALUE,
+                     "@%s, awb_input_params is nullptr", __FUNCTION__);
+    CheckAndLogError((awb_results == nullptr), BAD_VALUE,
+                     "@%s, awb_results is nullptr", __FUNCTION__);
 
     awb_run_params* params = static_cast<awb_run_params*>(mMemAwb.mAddr);
 
     bool ret = mIpc.clientFlattenAwb(mAiq, *awb_input_params, params);
-    CheckError(ret == false, UNKNOWN_ERROR, "@%s, clientFlattenAwb fails", __FUNCTION__);
+    CheckAndLogError(ret == false, UNKNOWN_ERROR, "@%s, clientFlattenAwb fails",
+                     __FUNCTION__);
 
     ret = mCommon.requestSync(IPC_3A_AIQ_AWB_RUN, mMemAwb.mHandle);
-    CheckError(ret == false, UNKNOWN_ERROR, "@%s, requestSync fails", __FUNCTION__);
+    CheckAndLogError(ret == false, UNKNOWN_ERROR, "@%s, requestSync fails",
+                     __FUNCTION__);
 
     ret = mIpc.clientUnflattenAwb(*params, awb_results);
-    CheckError(ret == false, UNKNOWN_ERROR, "@%s, clientUnflattenAwb fails", __FUNCTION__);
+    CheckAndLogError(ret == false, UNKNOWN_ERROR,
+                     "@%s, clientUnflattenAwb fails", __FUNCTION__);
 
     return NO_ERROR;
 }
@@ -146,22 +167,29 @@ status_t Rk3aAiq::miscRun(const rk_aiq_misc_isp_input_params* misc_input_params,
                           rk_aiq_misc_isp_results** misc_results)
 {
     LOG1("@%s, misc_input_params:%p, misc_results:%p", __FUNCTION__, misc_input_params, misc_results);
-    CheckError(mInitialized == false, UNKNOWN_ERROR, "@%s, mInitialized is false", __FUNCTION__);
-    CheckError(reinterpret_cast<rk_aiq*>(mAiq) == nullptr, UNKNOWN_ERROR, "@%s, mAiq is nullptr", __FUNCTION__);
+    CheckAndLogError(mInitialized == false, UNKNOWN_ERROR,
+                     "@%s, mInitialized is false", __FUNCTION__);
+    CheckAndLogError(reinterpret_cast<rk_aiq*>(mAiq) == nullptr, UNKNOWN_ERROR,
+                     "@%s, mAiq is nullptr", __FUNCTION__);
 
-    CheckError((misc_input_params == nullptr), BAD_VALUE, "@%s, misc_input_params is nullptr", __FUNCTION__);
-    CheckError((misc_results == nullptr), BAD_VALUE, "@%s, misc_results is nullptr", __FUNCTION__);
+    CheckAndLogError((misc_input_params == nullptr), BAD_VALUE,
+                     "@%s, misc_input_params is nullptr", __FUNCTION__);
+    CheckAndLogError((misc_results == nullptr), BAD_VALUE,
+                     "@%s, misc_results is nullptr", __FUNCTION__);
 
     misc_isp_run_params* params = static_cast<misc_isp_run_params*>(mMemMisc.mAddr);
 
     bool ret = mIpc.clientFlattenMisc(mAiq, *misc_input_params, params);
-    CheckError(ret == false, UNKNOWN_ERROR, "@%s, clientFlattenMisc fails", __FUNCTION__);
+    CheckAndLogError(ret == false, UNKNOWN_ERROR,
+                     "@%s, clientFlattenMisc fails", __FUNCTION__);
 
     ret = mCommon.requestSync(IPC_3A_AIQ_MISC_ISP_RUN, mMemMisc.mHandle);
-    CheckError(ret == false, UNKNOWN_ERROR, "@%s, requestSync fails", __FUNCTION__);
+    CheckAndLogError(ret == false, UNKNOWN_ERROR, "@%s, requestSync fails",
+                     __FUNCTION__);
 
     ret = mIpc.clientUnflattenMisc(*params, misc_results);
-    CheckError(ret == false, UNKNOWN_ERROR, "@%s, clientUnflattenMisc fails", __FUNCTION__);
+    CheckAndLogError(ret == false, UNKNOWN_ERROR,
+                     "@%s, clientUnflattenMisc fails", __FUNCTION__);
 
     return NO_ERROR;
 }
@@ -170,10 +198,13 @@ status_t Rk3aAiq::statisticsSet(const rk_aiq_statistics_input_params* input_para
                                 const rk_aiq_exposure_sensor_descriptor* sensor_desc)
 {
     LOG1("@%s, input_params:%p", __FUNCTION__, input_params);
-    CheckError(mInitialized == false, UNKNOWN_ERROR, "@%s, mInitialized is false", __FUNCTION__);
-    CheckError(reinterpret_cast<rk_aiq*>(mAiq) == nullptr, UNKNOWN_ERROR, "@%s, mAiq is nullptr", __FUNCTION__);
+    CheckAndLogError(mInitialized == false, UNKNOWN_ERROR,
+                     "@%s, mInitialized is false", __FUNCTION__);
+    CheckAndLogError(reinterpret_cast<rk_aiq*>(mAiq) == nullptr, UNKNOWN_ERROR,
+                     "@%s, mAiq is nullptr", __FUNCTION__);
     /*TODO: we allow null now.*/
-    //CheckError((input_params == nullptr), BAD_VALUE, "@%s, input_params is nullptr", __FUNCTION__);
+    // CheckAndLogError((input_params == nullptr), BAD_VALUE, "@%s, input_params
+    // is nullptr", __FUNCTION__);
 
     set_statistics_params* params = static_cast<set_statistics_params*>(mMemStat.mAddr);
     set_statistics_params_data stat_input_params;
@@ -181,10 +212,12 @@ status_t Rk3aAiq::statisticsSet(const rk_aiq_statistics_input_params* input_para
     stat_input_params.sensor_desc = const_cast<rk_aiq_exposure_sensor_descriptor*>(sensor_desc);
 
     bool ret = mIpc.clientFlattenStat(mAiq, stat_input_params, params);
-    CheckError(ret == false, UNKNOWN_ERROR, "@%s, clientFlattenStat fails", __FUNCTION__);
+    CheckAndLogError(ret == false, UNKNOWN_ERROR,
+                     "@%s, clientFlattenStat fails", __FUNCTION__);
 
     ret = mCommon.requestSync(IPC_3A_AIQ_STATISTICS_SET, mMemStat.mHandle);
-    CheckError(ret == false, UNKNOWN_ERROR, "@%s, requestSync fails", __FUNCTION__);
+    CheckAndLogError(ret == false, UNKNOWN_ERROR, "@%s, requestSync fails",
+                     __FUNCTION__);
 
     return NO_ERROR;
 }
@@ -192,10 +225,12 @@ status_t Rk3aAiq::statisticsSet(const rk_aiq_statistics_input_params* input_para
 const char* Rk3aAiq::getVersion(void)
 {
     LOG1("@%s", __FUNCTION__);
-    CheckError(mInitialized == false, "null", "@%s, mInitialized is false", __FUNCTION__);
+    CheckAndLogError(mInitialized == false, "null",
+                     "@%s, mInitialized is false", __FUNCTION__);
 
     int ret = mCommon.requestSync(IPC_3A_AIQ_GET_VERSION, mMemVersion.mHandle);
-    CheckError(ret == false, "null", "@%s, requestSync fails", __FUNCTION__);
+    CheckAndLogError(ret == false, "null", "@%s, requestSync fails",
+                     __FUNCTION__);
 
     rk_aiq_version_params* params = static_cast<rk_aiq_version_params*>(mMemVersion.mAddr);
     return params->data;

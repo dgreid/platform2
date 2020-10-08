@@ -48,31 +48,31 @@ V4L2Buffer::V4L2Buffer(const struct v4l2_buffer &buf)
 
 void V4L2Buffer::setType(uint32_t type)
 {
-    CheckError(!V4L2_TYPE_IS_VALID(type), VOID_VALUE, \
-               "@%s: invalid buffer type: %d.", __FUNCTION__, type);
+    CheckAndLogError(!V4L2_TYPE_IS_VALID(type), VOID_VALUE,
+                     "@%s: invalid buffer type: %d.", __FUNCTION__, type);
     vbuf.type = type;
 }
 
 uint32_t V4L2Buffer::offset(int plane)
 {
-    CheckError(!V4L2_TYPE_IS_VALID(vbuf.type), BAD_VALUE, \
-               "@%s: invalid buffer type: %d.", __FUNCTION__, vbuf.type);
+    CheckAndLogError(!V4L2_TYPE_IS_VALID(vbuf.type), BAD_VALUE,
+                     "@%s: invalid buffer type: %d.", __FUNCTION__, vbuf.type);
 
     bool mp = V4L2_TYPE_IS_MULTIPLANAR(vbuf.type);
-    CheckError(((!mp && plane) || (mp && plane >= planes.size())), 0,
-               "@%s: invalid plane %d", __FUNCTION__, plane);
+    CheckAndLogError(((!mp && plane) || (mp && plane >= planes.size())), 0,
+                     "@%s: invalid plane %d", __FUNCTION__, plane);
 
     return mp ? vbuf.m.planes[plane].m.mem_offset : vbuf.m.offset;
 }
 
 void V4L2Buffer::setOffset(uint32_t offset, int plane)
 {
-    CheckError(!V4L2_TYPE_IS_VALID(vbuf.type), VOID_VALUE, \
-               "@%s: invalid buffer type: %d.", __FUNCTION__, vbuf.type);
+    CheckAndLogError(!V4L2_TYPE_IS_VALID(vbuf.type), VOID_VALUE,
+                     "@%s: invalid buffer type: %d.", __FUNCTION__, vbuf.type);
 
     bool mp = V4L2_TYPE_IS_MULTIPLANAR(vbuf.type);
-    CheckError(((!mp && plane) || (mp && plane >= planes.size())), VOID_VALUE,
-               "@%s: invalid plane %d", __FUNCTION__, plane);
+    CheckAndLogError(((!mp && plane) || (mp && plane >= planes.size())),
+                     VOID_VALUE, "@%s: invalid plane %d", __FUNCTION__, plane);
 
     if (mp)
         vbuf.m.planes[plane].m.mem_offset = offset;
@@ -82,23 +82,23 @@ void V4L2Buffer::setOffset(uint32_t offset, int plane)
 
 unsigned long V4L2Buffer::userptr(int plane)
 {
-    CheckError(!V4L2_TYPE_IS_VALID(vbuf.type), BAD_VALUE, \
-               "@%s: invalid buffer type: %d.", __FUNCTION__, vbuf.type);
+    CheckAndLogError(!V4L2_TYPE_IS_VALID(vbuf.type), BAD_VALUE,
+                     "@%s: invalid buffer type: %d.", __FUNCTION__, vbuf.type);
 
     bool mp = V4L2_TYPE_IS_MULTIPLANAR(vbuf.type);
-    CheckError(((!mp && plane) || (mp && plane >= planes.size())), 0,
-               "@%s: invalid plane %d", __FUNCTION__, plane);
+    CheckAndLogError(((!mp && plane) || (mp && plane >= planes.size())), 0,
+                     "@%s: invalid plane %d", __FUNCTION__, plane);
 
     return mp ? vbuf.m.planes[plane].m.userptr : vbuf.m.userptr;
 }
 
 void V4L2Buffer::setUserptr(unsigned long userptr, int plane)
 {
-    CheckError(!V4L2_TYPE_IS_VALID(vbuf.type), VOID_VALUE, \
-               "@%s: invalid buffer type: %d.", __FUNCTION__, vbuf.type);
+    CheckAndLogError(!V4L2_TYPE_IS_VALID(vbuf.type), VOID_VALUE,
+                     "@%s: invalid buffer type: %d.", __FUNCTION__, vbuf.type);
     bool mp = V4L2_TYPE_IS_MULTIPLANAR(vbuf.type);
-    CheckError(((!mp && plane) || (mp && plane >= planes.size())), VOID_VALUE,
-               "@%s: invalid plane %d", __FUNCTION__, plane);
+    CheckAndLogError(((!mp && plane) || (mp && plane >= planes.size())),
+                     VOID_VALUE, "@%s: invalid plane %d", __FUNCTION__, plane);
 
     if (mp)
         vbuf.m.planes[plane].m.userptr = userptr;
@@ -108,23 +108,23 @@ void V4L2Buffer::setUserptr(unsigned long userptr, int plane)
 
 int V4L2Buffer::fd(int plane)
 {
-    CheckError(!V4L2_TYPE_IS_VALID(vbuf.type), BAD_VALUE, \
-               "@%s: invalid buffer type: %d.", __FUNCTION__, vbuf.type);
+    CheckAndLogError(!V4L2_TYPE_IS_VALID(vbuf.type), BAD_VALUE,
+                     "@%s: invalid buffer type: %d.", __FUNCTION__, vbuf.type);
 
     bool mp = V4L2_TYPE_IS_MULTIPLANAR(vbuf.type);
-    CheckError(((!mp && plane) || (mp && plane >= planes.size())), -1,
-               "@%s: invalid plane %d", __FUNCTION__, plane);
+    CheckAndLogError(((!mp && plane) || (mp && plane >= planes.size())), -1,
+                     "@%s: invalid plane %d", __FUNCTION__, plane);
 
     return mp ? vbuf.m.planes[plane].m.fd : vbuf.m.fd;
 }
 
 void V4L2Buffer::setFd(int fd, int plane)
 {
-    CheckError(!V4L2_TYPE_IS_VALID(vbuf.type), VOID_VALUE, \
-               "@%s: invalid buffer type: %d.", __FUNCTION__, vbuf.type);
+    CheckAndLogError(!V4L2_TYPE_IS_VALID(vbuf.type), VOID_VALUE,
+                     "@%s: invalid buffer type: %d.", __FUNCTION__, vbuf.type);
     bool mp = V4L2_TYPE_IS_MULTIPLANAR(vbuf.type);
-    CheckError(((!mp && plane) || (mp && plane >= planes.size())), VOID_VALUE,
-               "@%s: invalid plane %d", __FUNCTION__, plane);
+    CheckAndLogError(((!mp && plane) || (mp && plane >= planes.size())),
+                     VOID_VALUE, "@%s: invalid plane %d", __FUNCTION__, plane);
 
     if (mp)
         vbuf.m.planes[plane].m.fd = fd;
@@ -134,23 +134,23 @@ void V4L2Buffer::setFd(int fd, int plane)
 
 uint32_t V4L2Buffer::bytesused(int plane)
 {
-    CheckError(!V4L2_TYPE_IS_VALID(vbuf.type), BAD_VALUE, \
-               "@%s: invalid buffer type: %d.", __FUNCTION__, vbuf.type);
+    CheckAndLogError(!V4L2_TYPE_IS_VALID(vbuf.type), BAD_VALUE,
+                     "@%s: invalid buffer type: %d.", __FUNCTION__, vbuf.type);
 
     bool mp = V4L2_TYPE_IS_MULTIPLANAR(vbuf.type);
-    CheckError(((!mp && plane) || (mp && plane >= planes.size())), 0,
-               "@%s: invalid plane %d", __FUNCTION__, plane);
+    CheckAndLogError(((!mp && plane) || (mp && plane >= planes.size())), 0,
+                     "@%s: invalid plane %d", __FUNCTION__, plane);
 
     return mp ? vbuf.m.planes[plane].bytesused : vbuf.bytesused;
 }
 
 void V4L2Buffer::setBytesused(uint32_t bytesused, int plane)
 {
-    CheckError(!V4L2_TYPE_IS_VALID(vbuf.type), VOID_VALUE, \
-               "@%s: invalid buffer type: %d.", __FUNCTION__, vbuf.type);
+    CheckAndLogError(!V4L2_TYPE_IS_VALID(vbuf.type), VOID_VALUE,
+                     "@%s: invalid buffer type: %d.", __FUNCTION__, vbuf.type);
     bool mp = V4L2_TYPE_IS_MULTIPLANAR(vbuf.type);
-    CheckError(((!mp && plane) || (mp && plane >= planes.size())), VOID_VALUE,
-               "@%s: invalid plane %d", __FUNCTION__, plane);
+    CheckAndLogError(((!mp && plane) || (mp && plane >= planes.size())),
+                     VOID_VALUE, "@%s: invalid plane %d", __FUNCTION__, plane);
 
     if (mp)
         vbuf.m.planes[plane].bytesused = bytesused;
@@ -160,23 +160,23 @@ void V4L2Buffer::setBytesused(uint32_t bytesused, int plane)
 
 uint32_t V4L2Buffer::length(int plane)
 {
-    CheckError(!V4L2_TYPE_IS_VALID(vbuf.type), BAD_VALUE, \
-               "@%s: invalid buffer type: %d.", __FUNCTION__, vbuf.type);
+    CheckAndLogError(!V4L2_TYPE_IS_VALID(vbuf.type), BAD_VALUE,
+                     "@%s: invalid buffer type: %d.", __FUNCTION__, vbuf.type);
 
     bool mp = V4L2_TYPE_IS_MULTIPLANAR(vbuf.type);
-    CheckError(((!mp && plane) || (mp && plane >= planes.size())), 0,
-               "@%s: invalid plane %d", __FUNCTION__, plane);
+    CheckAndLogError(((!mp && plane) || (mp && plane >= planes.size())), 0,
+                     "@%s: invalid plane %d", __FUNCTION__, plane);
 
     return mp ? vbuf.m.planes[plane].length : vbuf.length;
 }
 
 void V4L2Buffer::setLength(uint32_t length, int plane)
 {
-    CheckError(!V4L2_TYPE_IS_VALID(vbuf.type), VOID_VALUE, \
-               "@%s: invalid buffer type: %d.", __FUNCTION__, vbuf.type);
+    CheckAndLogError(!V4L2_TYPE_IS_VALID(vbuf.type), VOID_VALUE,
+                     "@%s: invalid buffer type: %d.", __FUNCTION__, vbuf.type);
     bool mp = V4L2_TYPE_IS_MULTIPLANAR(vbuf.type);
-    CheckError(((!mp && plane) || (mp && plane >= planes.size())), VOID_VALUE,
-               "@%s: invalid plane %d", __FUNCTION__, plane);
+    CheckAndLogError(((!mp && plane) || (mp && plane >= planes.size())),
+                     VOID_VALUE, "@%s: invalid plane %d", __FUNCTION__, plane);
 
     if (mp)
         vbuf.m.planes[plane].length = length;
@@ -186,8 +186,8 @@ void V4L2Buffer::setLength(uint32_t length, int plane)
 
 uint32_t V4L2Buffer::getNumPlanes()
 {
-    CheckError(!V4L2_TYPE_IS_VALID(vbuf.type), BAD_VALUE, \
-               "@%s: invalid buffer type: %d.", __FUNCTION__, vbuf.type);
+    CheckAndLogError(!V4L2_TYPE_IS_VALID(vbuf.type), BAD_VALUE,
+                     "@%s: invalid buffer type: %d.", __FUNCTION__, vbuf.type);
 
     if (V4L2_TYPE_IS_MULTIPLANAR(vbuf.type))
         return planes.size();
@@ -197,11 +197,13 @@ uint32_t V4L2Buffer::getNumPlanes()
 
 void V4L2Buffer::setNumPlanes(int numPlanes)
 {
-    CheckError(!V4L2_TYPE_IS_VALID(vbuf.type), VOID_VALUE, \
-               "@%s: invalid buffer type: %d.", __FUNCTION__, vbuf.type);
+    CheckAndLogError(!V4L2_TYPE_IS_VALID(vbuf.type), VOID_VALUE,
+                     "@%s: invalid buffer type: %d.", __FUNCTION__, vbuf.type);
 
-    CheckError(!V4L2_TYPE_IS_MULTIPLANAR(vbuf.type), VOID_VALUE,
-               "@%s: setting plane number for single plane buffer is not allowed", __FUNCTION__);
+    CheckAndLogError(
+        !V4L2_TYPE_IS_MULTIPLANAR(vbuf.type), VOID_VALUE,
+        "@%s: setting plane number for single plane buffer is not allowed",
+        __FUNCTION__);
 
     if (numPlanes != planes.size()) {
         planes.clear();
@@ -227,16 +229,16 @@ const V4L2Buffer &V4L2Buffer::operator=(const V4L2Buffer &buf)
 
 void V4L2Format::setType(uint32_t type)
 {
-    CheckError(!V4L2_TYPE_IS_VALID(type), VOID_VALUE, \
-               "@%s: invalid buffer type: %d.", __FUNCTION__, type);
+    CheckAndLogError(!V4L2_TYPE_IS_VALID(type), VOID_VALUE,
+                     "@%s: invalid buffer type: %d.", __FUNCTION__, type);
 
     vfmt.type = type;
 }
 
 uint32_t V4L2Format::numPlanes()
 {
-    CheckError(!V4L2_TYPE_IS_VALID(vfmt.type), BAD_VALUE, \
-               "@%s: invalid buffer type: %d.", __FUNCTION__, vfmt.type);
+    CheckAndLogError(!V4L2_TYPE_IS_VALID(vfmt.type), BAD_VALUE,
+                     "@%s: invalid buffer type: %d.", __FUNCTION__, vfmt.type);
 
     if (!V4L2_TYPE_IS_MULTIPLANAR(vfmt.type)) {
         LOGE("@%s: reading number of planes non multi-plane format is not allowed.", __FUNCTION__);
@@ -248,8 +250,8 @@ uint32_t V4L2Format::numPlanes()
 
 void V4L2Format::setNumPlanes(int numPlanes)
 {
-    CheckError(!V4L2_TYPE_IS_VALID(vfmt.type), VOID_VALUE, \
-               "@%s: invalid buffer type: %d.", __FUNCTION__, vfmt.type);
+    CheckAndLogError(!V4L2_TYPE_IS_VALID(vfmt.type), VOID_VALUE,
+                     "@%s: invalid buffer type: %d.", __FUNCTION__, vfmt.type);
 
     if (!V4L2_TYPE_IS_MULTIPLANAR(vfmt.type)) {
         LOGE("@%s: setting number of planes for non multi-plane format is not allowed.", __FUNCTION__);
@@ -261,8 +263,8 @@ void V4L2Format::setNumPlanes(int numPlanes)
 
 uint32_t V4L2Format::width()
 {
-    CheckError(!V4L2_TYPE_IS_VALID(vfmt.type), BAD_VALUE, \
-               "@%s: invalid buffer type: %d.", __FUNCTION__, vfmt.type);
+    CheckAndLogError(!V4L2_TYPE_IS_VALID(vfmt.type), BAD_VALUE,
+                     "@%s: invalid buffer type: %d.", __FUNCTION__, vfmt.type);
 
     if (V4L2_TYPE_IS_META(vfmt.type))
         return vfmt.fmt.meta.buffersize;
@@ -272,8 +274,8 @@ uint32_t V4L2Format::width()
 
 void V4L2Format::setWidth(uint32_t width)
 {
-    CheckError(!V4L2_TYPE_IS_VALID(vfmt.type), VOID_VALUE, \
-               "@%s: invalid buffer type: %d.", __FUNCTION__, vfmt.type);
+    CheckAndLogError(!V4L2_TYPE_IS_VALID(vfmt.type), VOID_VALUE,
+                     "@%s: invalid buffer type: %d.", __FUNCTION__, vfmt.type);
 
     if (V4L2_TYPE_IS_META(vfmt.type))
         LOGE("@%s: setting width for meta format is not allowed.", __FUNCTION__);
@@ -285,8 +287,8 @@ void V4L2Format::setWidth(uint32_t width)
 
 uint32_t V4L2Format::height()
 {
-    CheckError(!V4L2_TYPE_IS_VALID(vfmt.type), BAD_VALUE, \
-               "@%s: invalid buffer type: %d.", __FUNCTION__, vfmt.type);
+    CheckAndLogError(!V4L2_TYPE_IS_VALID(vfmt.type), BAD_VALUE,
+                     "@%s: invalid buffer type: %d.", __FUNCTION__, vfmt.type);
 
     if (V4L2_TYPE_IS_META(vfmt.type))
         return 1;
@@ -296,8 +298,8 @@ uint32_t V4L2Format::height()
 
 void V4L2Format::setHeight(uint32_t height)
 {
-    CheckError(!V4L2_TYPE_IS_VALID(vfmt.type), VOID_VALUE, \
-               "@%s: invalid buffer type: %d.", __FUNCTION__, vfmt.type);
+    CheckAndLogError(!V4L2_TYPE_IS_VALID(vfmt.type), VOID_VALUE,
+                     "@%s: invalid buffer type: %d.", __FUNCTION__, vfmt.type);
 
     if (V4L2_TYPE_IS_META(vfmt.type))
         LOGE("@%s: setting height for meta format is not allowed.", __FUNCTION__);
@@ -309,8 +311,8 @@ void V4L2Format::setHeight(uint32_t height)
 
 uint32_t V4L2Format::pixelformat()
 {
-    CheckError(!V4L2_TYPE_IS_VALID(vfmt.type), BAD_VALUE, \
-               "@%s: invalid buffer type: %d.", __FUNCTION__, vfmt.type);
+    CheckAndLogError(!V4L2_TYPE_IS_VALID(vfmt.type), BAD_VALUE,
+                     "@%s: invalid buffer type: %d.", __FUNCTION__, vfmt.type);
 
     if (V4L2_TYPE_IS_META(vfmt.type))
         return vfmt.fmt.meta.dataformat;
@@ -321,8 +323,8 @@ uint32_t V4L2Format::pixelformat()
 
 void V4L2Format::setPixelformat(uint32_t format)
 {
-    CheckError(!V4L2_TYPE_IS_VALID(vfmt.type), VOID_VALUE, \
-               "@%s: invalid buffer type: %d.", __FUNCTION__, vfmt.type);
+    CheckAndLogError(!V4L2_TYPE_IS_VALID(vfmt.type), VOID_VALUE,
+                     "@%s: invalid buffer type: %d.", __FUNCTION__, vfmt.type);
 
     if (V4L2_TYPE_IS_META(vfmt.type))
         vfmt.fmt.meta.dataformat = format;
@@ -334,8 +336,8 @@ void V4L2Format::setPixelformat(uint32_t format)
 
 uint32_t V4L2Format::field()
 {
-    CheckError(!V4L2_TYPE_IS_VALID(vfmt.type), BAD_VALUE, \
-               "@%s: invalid buffer type: %d.", __FUNCTION__, vfmt.type);
+    CheckAndLogError(!V4L2_TYPE_IS_VALID(vfmt.type), BAD_VALUE,
+                     "@%s: invalid buffer type: %d.", __FUNCTION__, vfmt.type);
 
     if (V4L2_TYPE_IS_META(vfmt.type))
         return V4L2_FIELD_NONE;
@@ -345,8 +347,8 @@ uint32_t V4L2Format::field()
 
 void V4L2Format::setField(uint32_t field)
 {
-    CheckError(!V4L2_TYPE_IS_VALID(vfmt.type), VOID_VALUE, \
-               "@%s: invalid buffer type: %d.", __FUNCTION__, vfmt.type);
+    CheckAndLogError(!V4L2_TYPE_IS_VALID(vfmt.type), VOID_VALUE,
+                     "@%s: invalid buffer type: %d.", __FUNCTION__, vfmt.type);
 
     if (V4L2_TYPE_IS_META(vfmt.type))
         LOGE("@%s: setting field for meta format is not allowed.", __FUNCTION__);
@@ -358,8 +360,8 @@ void V4L2Format::setField(uint32_t field)
 
 uint32_t V4L2Format::bytesperline(int plane)
 {
-    CheckError(!V4L2_TYPE_IS_VALID(vfmt.type), BAD_VALUE, \
-               "@%s: invalid buffer type: %d.", __FUNCTION__, vfmt.type);
+    CheckAndLogError(!V4L2_TYPE_IS_VALID(vfmt.type), BAD_VALUE,
+                     "@%s: invalid buffer type: %d.", __FUNCTION__, vfmt.type);
 
     if (V4L2_TYPE_IS_META(vfmt.type))
         return vfmt.fmt.meta.buffersize;
@@ -377,8 +379,8 @@ uint32_t V4L2Format::bytesperline(int plane)
 
 void V4L2Format::setBytesperline(uint32_t bytesperline, int plane)
 {
-    CheckError(!V4L2_TYPE_IS_VALID(vfmt.type), VOID_VALUE, \
-               "@%s: invalid buffer type: %d.", __FUNCTION__, vfmt.type);
+    CheckAndLogError(!V4L2_TYPE_IS_VALID(vfmt.type), VOID_VALUE,
+                     "@%s: invalid buffer type: %d.", __FUNCTION__, vfmt.type);
 
     if (V4L2_TYPE_IS_META(vfmt.type))
         LOGE("@%s: setting bytesperline for meta format is not allowed.", __FUNCTION__);
@@ -390,8 +392,8 @@ void V4L2Format::setBytesperline(uint32_t bytesperline, int plane)
 
 uint32_t V4L2Format::sizeimage(int plane)
 {
-    CheckError(!V4L2_TYPE_IS_VALID(vfmt.type), BAD_VALUE, \
-               "@%s: invalid buffer type: %d.", __FUNCTION__, vfmt.type);
+    CheckAndLogError(!V4L2_TYPE_IS_VALID(vfmt.type), BAD_VALUE,
+                     "@%s: invalid buffer type: %d.", __FUNCTION__, vfmt.type);
 
     if (V4L2_TYPE_IS_META(vfmt.type))
         return vfmt.fmt.meta.buffersize;
@@ -409,8 +411,8 @@ uint32_t V4L2Format::sizeimage(int plane)
 
 void V4L2Format::setSizeimage(uint32_t size, int plane)
 {
-    CheckError(!V4L2_TYPE_IS_VALID(vfmt.type), VOID_VALUE, \
-               "@%s: invalid buffer type: %d.", __FUNCTION__, vfmt.type);
+    CheckAndLogError(!V4L2_TYPE_IS_VALID(vfmt.type), VOID_VALUE,
+                     "@%s: invalid buffer type: %d.", __FUNCTION__, vfmt.type);
 
     if (V4L2_TYPE_IS_META(vfmt.type))
         vfmt.fmt.meta.buffersize = size;
@@ -466,10 +468,12 @@ status_t V4L2VideoNode::open()
     status_t status(NO_ERROR);
 
     status = V4L2DeviceBase::open();
-    CheckError((status != NO_ERROR), status, "@%s: failed to open video device node", __FUNCTION__);
+    CheckAndLogError((status != NO_ERROR), status,
+                     "@%s: failed to open video device node", __FUNCTION__);
     mState = DEVICE_OPEN;
     status = queryCap(&cap);
-    CheckError((status != NO_ERROR), status, "@%s: query device caps failed", __FUNCTION__);
+    CheckAndLogError((status != NO_ERROR), status,
+                     "@%s: query device caps failed", __FUNCTION__);
     if (cap.capabilities & V4L2_CAP_VIDEO_CAPTURE)
         mBufType = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     else if (cap.capabilities & V4L2_CAP_VIDEO_CAPTURE_MPLANE)
@@ -781,7 +785,8 @@ status_t V4L2VideoNode::setFormat(FrameInfo &aConfig)
         LOG2("@%s, set meta format: %d", __FUNCTION__, v4l2_fmt.pixelformat());
 
         ret = setMetaFormat(v4l2_fmt);
-        CheckError(ret != NO_ERROR, ret, "@%s set meta format failed", __FUNCTION__);
+        CheckAndLogError(ret != NO_ERROR, ret, "@%s set meta format failed",
+                         __FUNCTION__);
         // update config info
         aConfig.size = mConfig.size;
     } else {
@@ -796,7 +801,8 @@ status_t V4L2VideoNode::setFormat(FrameInfo &aConfig)
 
         // Update current configuration with the new one
         ret = setPixFormat(v4l2_fmt);
-        CheckError(ret != NO_ERROR, ret, "@%s set pixel format failed", __FUNCTION__);
+        CheckAndLogError(ret != NO_ERROR, ret, "@%s set pixel format failed",
+                         __FUNCTION__);
         // update config info
         aConfig.stride = mConfig.stride;
         aConfig.width = mConfig.width;
@@ -956,10 +962,12 @@ int V4L2VideoNode::grabFrame(V4L2BufferInfo *buf)
     int ret(0);
 
     LOG2("@%s %s enter", __FUNCTION__, mName.c_str());
-    CheckError((mState != DEVICE_STARTED), -1, "@%s %s invalid device state %d",
-        __FUNCTION__, mName.c_str(), mState);
-    CheckError((buf == nullptr), -1, "@%s %s invalid parameter buf is nullptr",
-        __FUNCTION__, mName.c_str());
+    CheckAndLogError((mState != DEVICE_STARTED), -1,
+                     "@%s %s invalid device state %d", __FUNCTION__,
+                     mName.c_str(), mState);
+    CheckAndLogError((buf == nullptr), -1,
+                     "@%s %s invalid parameter buf is nullptr", __FUNCTION__,
+                     mName.c_str());
 
     ret = dqbuf(buf);
 
@@ -982,8 +990,9 @@ status_t V4L2VideoNode::putFrame(const V4L2Buffer &buf)
 {
     unsigned int index = buf.index();
 
-    CheckError((index >= mBufferPool.size()), BAD_INDEX, "@%s %s Invalid index %d pool size %zu",
-        __FUNCTION__, mName.c_str(), index, mBufferPool.size());
+    CheckAndLogError((index >= mBufferPool.size()), BAD_INDEX,
+                     "@%s %s Invalid index %d pool size %zu", __FUNCTION__,
+                     mName.c_str(), index, mBufferPool.size());
 
     mBufferPool.at(index).vbuffer = buf;
     if (putFrame(index) < 0)
@@ -1001,8 +1010,9 @@ int V4L2VideoNode::putFrame(unsigned int index)
     int ret(0);
 
     LOG2("@%s %s enter", __FUNCTION__, mName.c_str());
-    CheckError((index >= mBufferPool.size()), BAD_INDEX, "@%s %s Invalid index %d pool size %zu",
-        __FUNCTION__, mName.c_str(), index, mBufferPool.size());
+    CheckAndLogError((index >= mBufferPool.size()), BAD_INDEX,
+                     "@%s %s Invalid index %d pool size %zu", __FUNCTION__,
+                     mName.c_str(), index, mBufferPool.size());
     V4L2BufferInfo vbuf = mBufferPool.at(index);
     ret = qbuf(&vbuf);
     printBufferInfo(__FUNCTION__, vbuf.vbuffer);

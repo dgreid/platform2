@@ -81,12 +81,11 @@ status_t ImageScalerCore::cropRotateScaleFrame(std::shared_ptr<CameraBuffer> inp
     HAL_TRACE_CALL(CAMERA_DEBUG_LOG_LEVEL2);
 
     // Check the output buffer resolution with device config resolution
-    CheckError(
-        (output->width() != input->width()
-         || output->height() != input->height()),
+    CheckAndLogError(
+        (output->width() != input->width() ||
+         output->height() != input->height()),
         UNKNOWN_ERROR, "output resolution mis-match [%d x %d] -> [%d x %d]",
-        input->width(), input->height(),
-        output->width(), output->height());
+        input->width(), input->height(), output->width(), output->height());
 
     if (input->v4l2Fmt() != V4L2_PIX_FMT_NV12 &&
         input->v4l2Fmt() != V4L2_PIX_FMT_NV12M &&

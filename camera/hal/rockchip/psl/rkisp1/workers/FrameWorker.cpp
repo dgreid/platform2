@@ -66,9 +66,11 @@ status_t FrameWorker::setWorkerDeviceFormat(FrameInfo &frame)
     HAL_TRACE_CALL(CAMERA_DEBUG_LOG_LEVEL1);
 
     status_t ret = mNode->setFormat(frame);
-    CheckError(ret != NO_ERROR, ret, "@%s set worker format failed", __FUNCTION__);
+    CheckAndLogError(ret != NO_ERROR, ret, "@%s set worker format failed",
+                     __FUNCTION__);
     ret = mNode->getFormat(mFormat);
-    CheckError(ret != NO_ERROR, ret, "@%s get worker format failed", __FUNCTION__);
+    CheckAndLogError(ret != NO_ERROR, ret, "@%s get worker format failed",
+                     __FUNCTION__);
 
     return OK;
 }

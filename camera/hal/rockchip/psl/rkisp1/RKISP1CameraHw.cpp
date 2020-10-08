@@ -363,7 +363,8 @@ RKISP1CameraHw::processRequest(Camera3Request* request, int inFlightCount)
     UseCase newUseCase = checkUseCase(request);
     int32_t testPatternMode = ANDROID_SENSOR_TEST_PATTERN_MODE_OFF;
     status = getTestPatternMode(request, &testPatternMode);
-    CheckError(status != NO_ERROR, status, "@%s: failed to get test pattern mode", __FUNCTION__);
+    CheckAndLogError(status != NO_ERROR, status,
+                     "@%s: failed to get test pattern mode", __FUNCTION__);
 
     if (newUseCase != mUseCase || testPatternMode != mTestPatternMode) {
         LOG1("%s: request %d need reconfigure, infilght %d, usecase %d -> %d", __FUNCTION__,
@@ -399,7 +400,8 @@ RKISP1CameraHw::UseCase RKISP1CameraHw::checkUseCase(Camera3Request* request) co
 status_t RKISP1CameraHw::getTestPatternMode(Camera3Request* request, int32_t* testPatternMode)
 {
     const CameraMetadata *reqSetting = request->getSettings();
-    CheckError(reqSetting == nullptr, UNKNOWN_ERROR, "no settings in request - BUG");
+    CheckAndLogError(reqSetting == nullptr, UNKNOWN_ERROR,
+                     "no settings in request - BUG");
 
     const camera_metadata_t *meta = PlatformData::getStaticMetadata(mCameraId);
     camera_metadata_ro_entry entry, availableTestPatternModes;
@@ -409,8 +411,9 @@ status_t RKISP1CameraHw::getTestPatternMode(Camera3Request* request, int32_t* te
 
     entry = reqSetting->find(ANDROID_SENSOR_TEST_PATTERN_MODE);
     MetadataHelper::getSetting(availableTestPatternModes, entry, testPatternMode);
-    CheckError(*testPatternMode < 0, BAD_VALUE, "@%s: invalid test pattern mode: %d",
-        __FUNCTION__, *testPatternMode);
+    CheckAndLogError(*testPatternMode < 0, BAD_VALUE,
+                     "@%s: invalid test pattern mode: %d", __FUNCTION__,
+                     *testPatternMode);
 
     LOG2("@%s: current test pattern mode: %d", __FUNCTION__, *testPatternMode);
     return NO_ERROR;

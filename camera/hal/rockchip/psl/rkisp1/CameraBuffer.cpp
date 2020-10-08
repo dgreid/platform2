@@ -614,7 +614,7 @@ void CameraBuffer::dumpImage(const char *name)
 {
 #ifdef DUMP_IMAGE
     status_t status = lock();
-    CheckError((status != OK), VOID_VALUE, "failed to lock dump buffer");
+    CheckAndLogError((status != OK), VOID_VALUE, "failed to lock dump buffer");
 
     if (!nonContiguousYandUV()) {
         dumpImage(mDataPtr, nullptr, mSize, 0, mWidth, mHeight, name);
@@ -673,7 +673,8 @@ void CameraBuffer::dumpImage(const void *data, const void* dataUV,
     // read the "dump_xxx" files name into vector
     std::vector<std::string> fileNames;
     DIR* dir = opendir(gDumpPath);
-    CheckError(dir == nullptr, VOID_VALUE, "@%s, call opendir() fail", __FUNCTION__);
+    CheckAndLogError(dir == nullptr, VOID_VALUE, "@%s, call opendir() fail",
+                     __FUNCTION__);
     struct dirent* dp = nullptr;
     while ((dp = readdir(dir)) != nullptr) {
         char* ret = strstr(dp->d_name, dumpPrefix.c_str());
