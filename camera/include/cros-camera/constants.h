@@ -46,6 +46,9 @@ const char kCrosMaxPrivateHeight[] = "max_private_height";
 // Restrict max resolutions for native ratio.
 const char kCrosMaxNativeWidth[] = "max_native_width";
 const char kCrosMaxNativeHeight[] = "max_native_height";
+// Filtered out resolutions. The format is a list string of resolutions. e.g.
+// ["w1xh1", "w2xh2"]
+const char kCrosFilteredOutResolutions[] = "filtered_out_resolutions";
 // ------End configuration for |kCrosCameraConfigPathString|-------
 
 }  // namespace constants

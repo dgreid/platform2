@@ -8,6 +8,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "cros-camera/constants.h"
 
@@ -52,6 +53,12 @@ class CameraConfig {
   // test config or any error occurred, return default_value instead.
   virtual std::string GetString(const std::string& path,
                                 const std::string& default_value) const = 0;
+
+  // Return value of |path| in config file. In case that path is not present in
+  // test config or any error occurred, return default_value instead.
+  virtual std::vector<std::string> GetStrings(
+      const std::string& path,
+      const std::vector<std::string>& default_value) const = 0;
 };
 
 }  // namespace cros

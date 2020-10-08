@@ -525,7 +525,7 @@ static int camera_device_open(const hw_module_t* module,
   // Make sure hal adapter loads the correct symbol.
   if (module != &HAL_MODULE_INFO_SYM.common) {
     LOGF(ERROR) << std::hex << "Invalid module 0x" << module << " expected 0x"
-                << &HAL_MODULE_INFO_SYM.common;
+                << &HAL_MODULE_INFO_SYM.common << std::dec;
     return -EINVAL;
   }
 

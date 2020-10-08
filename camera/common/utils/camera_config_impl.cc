@@ -79,4 +79,20 @@ std::string CameraConfigImpl::GetString(
   return (result != nullptr) ? *result : default_value;
 }
 
+std::vector<std::string> CameraConfigImpl::GetStrings(
+    const std::string& path,
+    const std::vector<std::string>& default_value) const {
+  const base::Value* values = config_.FindListPath(path);
+  if (values == nullptr)
+    return default_value;
+
+  std::vector<std::string> result;
+  for (const auto& s : values->GetList()) {
+    CHECK(s.is_string());
+    result.push_back(s.GetString());
+  }
+
+  return result;
+}
+
 }  // namespace cros

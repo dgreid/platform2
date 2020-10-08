@@ -22,8 +22,10 @@
 #include <base/strings/stringprintf.h>
 #include <base/timer/elapsed_timer.h>
 #include <camera/camera_metadata.h>
+#include <re2/re2.h>
 
 #include "cros-camera/common.h"
+#include "cros-camera/utils/camera_config.h"
 #include "hal/usb/camera_characteristics.h"
 #include "hal/usb/quirks.h"
 
@@ -297,7 +299,8 @@ int V4L2CameraDevice::StreamOn(uint32_t width,
   }
   VLOGF(1) << "Actual width: " << fmt.fmt.pix.width
            << ", height: " << fmt.fmt.pix.height
-           << ", pixelformat: " << std::hex << fmt.fmt.pix.pixelformat;
+           << ", pixelformat: " << std::hex << fmt.fmt.pix.pixelformat
+           << std::dec;
 
   if (width != fmt.fmt.pix.width || height != fmt.fmt.pix.height ||
       pixel_format != fmt.fmt.pix.pixelformat) {
@@ -674,6 +677,20 @@ const SupportedFormats V4L2CameraDevice::GetDeviceSupportedFormats(
     return {};
   }
 
+  std::vector<std::string> filter_out_resolution_strings =
+      CameraConfig::Create(constants::kCrosCameraConfigPathString)
+          ->GetStrings(constants::kCrosFilteredOutResolutions,
+                       std::vector<std::string>());
+
+  std::vector<Size> filter_out_resolutions;
+  for (const auto& filter_out_resolution_string :
+       filter_out_resolution_strings) {
+    int width, height;
+    CHECK(RE2::FullMatch(filter_out_resolution_string, R"((\d+)x(\d+))", &width,
+                         &height));
+    filter_out_resolutions.emplace_back(width, height);
+  }
+
   SupportedFormats formats;
   v4l2_fmtdesc v4l2_format = {};
   v4l2_format.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
@@ -696,6 +713,14 @@ const SupportedFormats V4L2CameraDevice::GetDeviceSupportedFormats(
         // TODO(henryhsu): see http://crbug.com/249953, support these devices.
         LOGF(ERROR) << "Stepwise and continuous frame size are unsupported";
         return formats;
+      }
+      bool is_filtered_out =
+          base::Contains(filter_out_resolutions,
+                         Size(supported_format.width, supported_format.height));
+      if (is_filtered_out) {
+        LOGF(INFO) << "Filter " << supported_format.width << "x"
+                   << supported_format.height;
+        continue;
       }
 
       supported_format.frame_rates = GetFrameRateList(

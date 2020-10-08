@@ -140,7 +140,7 @@ int CameraClient::ConfigureStreams(
                     << " degrees="
                     << stream_config->streams[i]->crop_rotate_scale_degrees
                     << " format=0x" << std::hex
-                    << stream_config->streams[i]->format;
+                    << stream_config->streams[i]->format << std::dec;
 
     if (!IsFormatSupported(qualified_formats_, *(stream_config->streams[i]))) {
       LOGF(ERROR) << "Unsupported stream parameters. Width: "
@@ -808,7 +808,8 @@ int CameraClient::RequestHandler::StreamOnImpl(Size stream_on_resolution,
     }
     VLOGFID(1, device_id_) << "Buffer " << i << ", fd: " << frame->GetFd()
                            << " address: " << std::hex
-                           << reinterpret_cast<uintptr_t>(frame->GetData());
+                           << reinterpret_cast<uintptr_t>(frame->GetData())
+                           << std::dec;
     input_buffers_.push_back(std::move(frame));
   }
 

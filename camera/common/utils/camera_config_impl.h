@@ -8,6 +8,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include <base/values.h>
 #include <base/memory/ptr_util.h>
@@ -30,6 +31,10 @@ class CameraConfigImpl final : public CameraConfig {
 
   std::string GetString(const std::string& path,
                         const std::string& default_value) const final;
+
+  std::vector<std::string> GetStrings(
+      const std::string& path,
+      const std::vector<std::string>& default_value) const final;
 
  private:
   explicit CameraConfigImpl(base::Value config);
