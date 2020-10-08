@@ -64,6 +64,7 @@ class MockTpm : public Tpm {
   MOCK_METHOD(void, SetIsEnabled, (bool), (override));
   MOCK_METHOD(bool, IsOwned, (), (override));
   MOCK_METHOD(void, SetIsOwned, (bool), (override));
+  MOCK_METHOD(bool, HasResetLockPermissions, (), (override));
   MOCK_METHOD(bool, PerformEnabledOwnedCheck, (bool*, bool*), (override));
   MOCK_METHOD(bool, IsInitialized, (), (override));
   MOCK_METHOD(void, SetIsInitialized, (bool), (override));

@@ -296,6 +296,9 @@ class Tpm {
   virtual bool IsOwned() = 0;
   virtual void SetIsOwned(bool owned) = 0;
 
+  // Returns whether or not the TPM has the permission to reset lock.
+  virtual bool HasResetLockPermissions() = 0;
+
   // Returns whether or not the TPM is enabled and owned using a call to
   // Tspi_TPM_GetCapability.
   //

@@ -69,6 +69,7 @@ class TpmImpl : public Tpm {
     return is_owned_ && !is_being_owned_;
   }
   void SetIsOwned(bool owned) override { is_owned_ = owned; }
+  bool HasResetLockPermissions() override { return false; }
   bool PerformEnabledOwnedCheck(bool* enabled, bool* owned) override;
   bool IsInitialized() override { return initialized_; }
   void SetIsInitialized(bool done) override { initialized_ = done; }

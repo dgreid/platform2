@@ -309,6 +309,25 @@ bool Tpm2Impl::IsOwned() {
   return is_owned_;
 }
 
+bool Tpm2Impl::HasResetLockPermissions() {
+  if (!UpdateTpmStatus(RefreshType::REFRESH_IF_NEEDED)) {
+    LOG(ERROR) << __func__ << ": Failed to call |UpdateTpmStatus|.";
+    return false;
+  }
+  bool has_reset_lock_permissions = true;
+  if (last_tpm_manager_data_.owner_password().empty()) {
+    if (last_tpm_manager_data_.lockout_password().empty() &&
+        !last_tpm_manager_data_.has_owner_delegate()) {
+      has_reset_lock_permissions = false;
+    } else if (last_tpm_manager_data_.has_owner_delegate() &&
+               !last_tpm_manager_data_.owner_delegate()
+                    .has_reset_lock_permissions()) {
+      has_reset_lock_permissions = false;
+    }
+  }
+  return has_reset_lock_permissions;
+}
+
 void Tpm2Impl::SetIsOwned(bool /* owned */) {
   LOG(ERROR) << __func__ << ": Not implemented.";
 }

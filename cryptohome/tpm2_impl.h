@@ -92,6 +92,7 @@ class Tpm2Impl : public Tpm {
   void SetIsEnabled(bool enabled) override;
   bool IsOwned() override;
   void SetIsOwned(bool owned) override;
+  bool HasResetLockPermissions() override;
   bool PerformEnabledOwnedCheck(bool* enabled, bool* owned) override;
   bool IsInitialized() override;
   void SetIsInitialized(bool done) override;

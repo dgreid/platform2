@@ -36,6 +36,7 @@ class TpmNewImpl : public TpmImpl {
   void SetIsEnabled(bool enabled) override;
   bool IsOwned() override;
   void SetIsOwned(bool owned) override;
+  bool HasResetLockPermissions() override;
   bool TakeOwnership(int max_timeout_tries,
                      const brillo::SecureBlob& owner_password) override;
   bool GetDelegate(brillo::Blob* blob,

@@ -3569,6 +3569,9 @@ void Service::DoGetTpmStatus(const brillo::SecureBlob& request,
     // already been destroyed.
     extension->set_initialized(extension->owned());
   }
+
+  extension->set_has_reset_lock_permissions(tpm_->HasResetLockPermissions());
+
   int counter;
   int threshold;
   bool lockout;

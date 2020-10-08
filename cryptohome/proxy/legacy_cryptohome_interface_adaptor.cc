@@ -2297,6 +2297,20 @@ void LegacyCryptohomeInterfaceAdaptor::GetTpmStatusOnStageOwnershipStatusDone(
     extension->set_initialized(extension->owned());
   }
 
+  bool has_reset_lock_permissions = true;
+  if (status_reply.local_data().owner_password().empty()) {
+    if (status_reply.local_data().lockout_password().empty() &&
+        !status_reply.local_data().has_owner_delegate()) {
+      has_reset_lock_permissions = false;
+    } else if (status_reply.local_data().has_owner_delegate() &&
+               !status_reply.local_data()
+                    .owner_delegate()
+                    .has_reset_lock_permissions()) {
+      has_reset_lock_permissions = false;
+    }
+  }
+  extension->set_has_reset_lock_permissions(has_reset_lock_permissions);
+
   tpm_manager::GetDictionaryAttackInfoRequest request;
   tpm_ownership_proxy_->GetDictionaryAttackInfoAsync(
       request,
