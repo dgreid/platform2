@@ -129,9 +129,10 @@ std::string CreateSharedDataParam(const base::FilePath& data_dir,
                                   bool ascii_casefold) {
   return base::StringPrintf(
       "%s:%s:type=fs:cache=%s:uidmap=%s:gidmap=%s:timeout=3600:rewrite-"
-      "security-xattrs=true:ascii_casefold=%s",
+      "security-xattrs=true:ascii_casefold=%s:writeback=%s",
       data_dir.value().c_str(), tag.c_str(), enable_caches ? "always" : "never",
-      kAndroidUidMap, kAndroidGidMap, ascii_casefold ? "true" : "false");
+      kAndroidUidMap, kAndroidGidMap, ascii_casefold ? "true" : "false",
+      enable_caches ? "true" : "false");
 }
 
 }  // namespace
