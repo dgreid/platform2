@@ -29,6 +29,7 @@
 #include "lorgnette/enums.h"
 #include "lorgnette/sane_client_fake.h"
 #include "lorgnette/sane_client_impl.h"
+#include "lorgnette/test_util.h"
 
 using brillo::dbus_utils::MockDBusMethodResponse;
 using ::testing::ElementsAre;
@@ -73,23 +74,6 @@ BuildMockDBusResponse(T* response) {
       },
       base::Unretained(response)));
   return dbus_response;
-}
-
-DocumentSource CreateDocumentSource(const std::string& name,
-                                    SourceType type,
-                                    const ScannableArea& area) {
-  DocumentSource source;
-  source.set_name(name);
-  source.set_type(type);
-  *source.mutable_area() = area;
-  return source;
-}
-
-ScannableArea CreateScannableArea(double width, double height) {
-  ScannableArea area;
-  area.set_width(width);
-  area.set_height(height);
-  return area;
 }
 
 }  // namespace
@@ -225,12 +209,10 @@ TEST_F(ManagerTest, GetScannerCapabilitiesSuccess) {
   ValidOptionValues opts;
   opts.resolutions = {100, 200, 300, 600};
   opts.sources = {
-      CreateDocumentSource("FB", SOURCE_PLATEN,
-                           CreateScannableArea(355.2, 417.9)),
-      CreateDocumentSource("Negative", SOURCE_UNSPECIFIED,
-                           CreateScannableArea(355.2, 204.0)),
+      CreateDocumentSource("FB", SOURCE_PLATEN, 355.2, 417.9),
+      CreateDocumentSource("Negative", SOURCE_UNSPECIFIED, 355.2, 204.0),
       CreateDocumentSource("Automatic Document Feeder", SOURCE_ADF_SIMPLEX,
-                           CreateScannableArea(212.9, 212.2))};
+                           212.9, 212.2)};
   opts.color_modes = {kScanPropertyModeColor};
   device->SetValidOptionValues(opts);
   sane_client_->SetDeviceForName("TestDevice", std::move(device));
@@ -244,16 +226,12 @@ TEST_F(ManagerTest, GetScannerCapabilitiesSuccess) {
 
   EXPECT_THAT(caps.resolutions(), ElementsAre(100, 200, 300, 600));
 
-  ASSERT_EQ(caps.sources().size(), 2);
-  EXPECT_EQ(caps.sources()[0].type(), SOURCE_PLATEN);
-  EXPECT_EQ(caps.sources()[0].name(), "FB");
-  EXPECT_EQ(caps.sources()[0].area().width(), 355.2);
-  EXPECT_EQ(caps.sources()[0].area().height(), 417.9);
-
-  EXPECT_EQ(caps.sources()[1].type(), SOURCE_ADF_SIMPLEX);
-  EXPECT_EQ(caps.sources()[1].name(), "Automatic Document Feeder");
-  EXPECT_EQ(caps.sources()[1].area().width(), 212.9);
-  EXPECT_EQ(caps.sources()[1].area().height(), 212.2);
+  EXPECT_THAT(caps.sources(),
+              ElementsAre(EqualsDocumentSource(CreateDocumentSource(
+                              "FB", SOURCE_PLATEN, 355.2, 417.9)),
+                          EqualsDocumentSource(CreateDocumentSource(
+                              "Automatic Document Feeder", SOURCE_ADF_SIMPLEX,
+                              212.9, 212.2))));
 
   EXPECT_THAT(caps.color_modes(), ElementsAre(MODE_COLOR));
 }
