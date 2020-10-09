@@ -20,23 +20,6 @@ message CrOSBenchmarkConfig {
   string driver_config = 4;
 }
 
-// Benchmark-specific configurations
-message SodaBenchmarkConfig {
-  // Path to the SoDA configuration file, for speech recognition
-  // this is usually dictation.config
-  string soda_config_file_path = 1;
-  // Whether to test with
-  // - Realtime audio, which tests the latency of the audio
-  // - Non-realtime audio, which tests the Real time factor (RTF)
-  bool realtime_audio = 2;
-  // number of times to test each input file
-  int32 num_runs = 3;
-  // Input files to test
-  repeated string input_filename = 4;
-  // The path to load the benchmarking library
-  string soda_driver_path = 5;
-}
-
 enum BenchmarkReturnStatus {
   OK = 0;
   INCORRECT_CONFIGURATION = 1;

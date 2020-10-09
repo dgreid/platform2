@@ -21,7 +21,6 @@
 using chrome::ml_benchmark::AccelerationMode;
 using chrome::ml_benchmark::BenchmarkResults;
 using chrome::ml_benchmark::CrOSBenchmarkConfig;
-using chrome::ml_benchmark::SodaBenchmarkConfig;
 using ml_benchmark::SharedLibraryBenchmark;
 using ml_benchmark::SharedLibraryBenchmarkFunctions;
 
