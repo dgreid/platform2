@@ -83,6 +83,11 @@ class MockNetworkDiagnosticsRoutines final
                    HttpFirewallCallback),
               (override));
   MOCK_METHOD(void,
+              HttpsFirewall,
+              (network_diagnostics_ipc::NetworkDiagnosticsRoutines::
+                   HttpsFirewallCallback),
+              (override));
+  MOCK_METHOD(void,
               HttpsLatency,
               (network_diagnostics_ipc::NetworkDiagnosticsRoutines::
                    HttpsLatencyCallback),
