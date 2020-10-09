@@ -9,6 +9,7 @@
 
 #include <array>
 #include <set>
+#include <utility>
 
 #include <base/bind.h>
 #include <base/files/file_path.h>
@@ -693,9 +694,9 @@ void SetUpPowerButtonPositionFlag(ChromiumCommandBuilder* builder,
     return;
   }
 
-  base::DictionaryValue position_info;
-  position_info.SetString(kPowerButtonEdgeField, edge_as_string);
-  position_info.SetDouble(kPowerButtonPositionField, position_as_double);
+  base::Value position_info(base::Value::Type::DICTIONARY);
+  position_info.SetStringKey(kPowerButtonEdgeField, std::move(edge_as_string));
+  position_info.SetDoubleKey(kPowerButtonPositionField, position_as_double);
 
   std::string json_position_info;
   base::JSONWriter::Write(position_info, &json_position_info);
@@ -714,9 +715,10 @@ void SetUpSideVolumeButtonPositionFlag(
     return;
   }
 
-  base::DictionaryValue position_info;
-  position_info.SetString(kSideVolumeButtonRegion, region_as_string);
-  position_info.SetString(kSideVolumeButtonSide, side_as_string);
+  base::Value position_info(base::Value::Type::DICTIONARY);
+  position_info.SetStringKey(kSideVolumeButtonRegion,
+                             std::move(region_as_string));
+  position_info.SetStringKey(kSideVolumeButtonSide, std::move(side_as_string));
 
   std::string json_position_info;
   if (!base::JSONWriter::Write(position_info, &json_position_info)) {
@@ -729,13 +731,13 @@ void SetUpSideVolumeButtonPositionFlag(
 
 void SetUpOzoneNNPalmPropertiesFlag(ChromiumCommandBuilder* builder,
                                     brillo::CrosConfigInterface* cros_config) {
-  base::DictionaryValue info;
+  base::Value info(base::Value::Type::DICTIONARY);
   if (cros_config) {
     std::string value;
     for (const char* property : kOzoneNNPalmOptionalProperties) {
       if (cros_config->GetString(kOzoneNNPalmPropertiesPath, property,
                                  &value)) {
-        info.SetString(property, value);
+        info.SetStringKey(property, std::move(value));
         continue;
       }
     }
@@ -752,19 +754,19 @@ void SetUpOzoneNNPalmPropertiesFlag(ChromiumCommandBuilder* builder,
 
 void SetUpArcBuildPropertiesFlag(ChromiumCommandBuilder* builder,
                                  brillo::CrosConfigInterface* cros_config) {
-  base::DictionaryValue info;
+  base::Value info(base::Value::Type::DICTIONARY);
   if (cros_config) {
     std::string value;
     for (const char* property : kArcBuildProperties) {
       if (cros_config->GetString(kArcBuildPropertiesPath, property, &value)) {
-        info.SetString(property, value);
+        info.SetStringKey(property, std::move(value));
         continue;
       }
       LOG(ERROR) << property << " is not found in cros config";
     }
     for (const char* property : kArcOptionalBuildProperties) {
       if (cros_config->GetString(kArcBuildPropertiesPath, property, &value))
-        info.SetString(property, value);
+        info.SetStringKey(property, std::move(value));
     }
   }
 

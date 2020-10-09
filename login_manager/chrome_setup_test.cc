@@ -5,6 +5,7 @@
 #include "login_manager/chrome_setup.h"
 
 #include <set>
+#include <utility>
 
 #include <base/bind.h>
 #include <base/files/file.h>
@@ -207,13 +208,13 @@ TEST_F(ChromeSetupTest, TestPowerButtonPosition) {
   login_manager::SetUpPowerButtonPositionFlag(&builder_, &cros_config_);
   argv = builder_.arguments();
   ASSERT_EQ(1, argv.size());
-  base::DictionaryValue position_info;
-  position_info.SetString(login_manager::kPowerButtonEdgeField,
-                          kPowerButtonEdge);
+  base::Value position_info(base::Value::Type::DICTIONARY);
+  position_info.SetStringKey(login_manager::kPowerButtonEdgeField,
+                             std::move(kPowerButtonEdge));
   double position_as_double = 0;
   base::StringToDouble(kPowerButtonPosition, &position_as_double);
-  position_info.SetDouble(login_manager::kPowerButtonPositionField,
-                          position_as_double);
+  position_info.SetDoubleKey(login_manager::kPowerButtonPositionField,
+                             position_as_double);
   std::string json_position_info;
   base::JSONWriter::Write(position_info, &json_position_info);
   EXPECT_EQ(json_position_info, GetFlag(argv, "--ash-power-button-position"));

@@ -139,41 +139,45 @@ bool CumulativeUseTimeMetric::AccumulatedActiveTime::ReadMetricsFile() {
     return false;
   }
 
-  auto data_value = base::JSONReader::Read(data_json, base::JSON_PARSE_RFC);
-  if (!data_value) {
+  auto data = base::JSONReader::Read(data_json, base::JSON_PARSE_RFC);
+  if (!data) {
     LOG(ERROR) << "Contents of " << metrics_file_.value() << " invalid JSON";
     return false;
   }
 
-  const base::DictionaryValue* data = nullptr;
-  if (!data_value->GetAsDictionary(&data)) {
+  if (!data->is_dict()) {
     LOG(ERROR) << "Content of " << metrics_file_.value() << " not a dictionary";
     return false;
   }
 
-  if (!data->GetInteger(kOsVersionHashKey, &os_version_hash_)) {
+  auto os_version_hash = data->FindIntKey(kOsVersionHashKey);
+  if (!os_version_hash) {
     LOG(ERROR) << "OS version hash missing in " << metrics_file_.value();
     return false;
   }
 
-  if (!data->GetInteger(kStartDayKey, &start_day_)) {
+  auto start_day = data->FindIntKey(kStartDayKey);
+  if (!start_day) {
     LOG(ERROR) << "Start day missing in " << metrics_file_.value();
     return false;
   }
 
-  int elapsed_milliseconds = 0;
-  if (!data->GetInteger(kElapsedMillisecondsKey, &elapsed_milliseconds)) {
+  auto elapsed_milliseconds = data->FindIntKey(kElapsedMillisecondsKey);
+  if (!elapsed_milliseconds) {
     LOG(ERROR) << "Elapsed milliseconds missing in " << metrics_file_.value();
     return false;
   }
-  accumulated_time_ = base::TimeDelta::FromMilliseconds(elapsed_milliseconds);
+
+  os_version_hash_ = *os_version_hash;
+  start_day_ = *start_day;
+  accumulated_time_ = base::TimeDelta::FromMilliseconds(*elapsed_milliseconds);
   return true;
 }
 
 bool CumulativeUseTimeMetric::AccumulatedActiveTime::WriteMetricsFile() {
-  base::DictionaryValue data;
-  data.SetInteger(kOsVersionHashKey, os_version_hash_);
-  data.SetInteger(kStartDayKey, start_day_);
+  base::Value data(base::Value::Type::DICTIONARY);
+  data.SetIntKey(kOsVersionHashKey, os_version_hash_);
+  data.SetIntKey(kStartDayKey, start_day_);
   int64_t elapsed_milliseconds = accumulated_time_.InMilliseconds();
   if (elapsed_milliseconds < 0 ||
       elapsed_milliseconds > std::numeric_limits<int>::max()) {
@@ -183,8 +187,8 @@ bool CumulativeUseTimeMetric::AccumulatedActiveTime::WriteMetricsFile() {
     accumulated_time_ = base::TimeDelta();
     elapsed_milliseconds = 0;
   }
-  data.SetInteger(kElapsedMillisecondsKey,
-                  static_cast<int>(elapsed_milliseconds));
+  data.SetIntKey(kElapsedMillisecondsKey,
+                 static_cast<int>(elapsed_milliseconds));
 
   std::string data_json;
   if (!base::JSONWriter::Write(data, &data_json)) {
