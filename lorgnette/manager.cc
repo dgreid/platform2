@@ -235,6 +235,20 @@ std::string GenerateUUID() {
 
 }  // namespace
 
+namespace impl {
+
+ColorMode ColorModeFromSaneString(const std::string& mode) {
+  if (mode == kScanPropertyModeLineart)
+    return MODE_LINEART;
+  else if (mode == kScanPropertyModeGray)
+    return MODE_GRAYSCALE;
+  else if (mode == kScanPropertyModeColor)
+    return MODE_COLOR;
+  return MODE_UNSPECIFIED;
+}
+
+}  // namespace impl
+
 const char Manager::kMetricScanRequested[] = "DocumentScan.ScanRequested";
 const char Manager::kMetricScanSucceeded[] = "DocumentScan.ScanSucceeded";
 const char Manager::kMetricScanFailed[] = "DocumentScan.ScanFailed";
@@ -377,12 +391,9 @@ bool Manager::GetScannerCapabilities(brillo::ErrorPtr* error,
   }
 
   for (const std::string& mode : options.color_modes) {
-    if (mode == kScanPropertyModeLineart)
-      capabilities.add_color_modes(MODE_LINEART);
-    else if (mode == kScanPropertyModeGray)
-      capabilities.add_color_modes(MODE_GRAYSCALE);
-    else if (mode == kScanPropertyModeColor)
-      capabilities.add_color_modes(MODE_COLOR);
+    const ColorMode color_mode = impl::ColorModeFromSaneString(mode);
+    if (color_mode != MODE_UNSPECIFIED)
+      capabilities.add_color_modes(color_mode);
   }
 
   std::vector<uint8_t> serialized;

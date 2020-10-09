@@ -51,6 +51,10 @@ std::vector<uint8_t> SerializeProto(const T& proto) {
   return serialized;
 }
 
+// Attempts to parse a ColorMode from the mode names used by SANE. If |mode|
+// is not recognized, returns MODE_UNSPECIFIED.
+ColorMode ColorModeFromSaneString(const std::string& mode);
+
 }  // namespace impl
 
 using StatusSignalSender =
