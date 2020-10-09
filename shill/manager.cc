@@ -326,6 +326,7 @@ void Manager::Start() {
   for (const auto& provider_mapping : providers_) {
     provider_mapping.second->Start();
   }
+  InitializePatchpanelClient();
 
   // Start task for checking connection status.
   dispatcher_->PostDelayedTask(FROM_HERE, device_status_check_task_.callback(),
@@ -372,6 +373,7 @@ void Manager::Stop() {
   }
   power_manager_->Stop();
   power_manager_.reset();
+  patchpanel_client_.reset();
 }
 
 void Manager::InitializeProfiles() {
@@ -2672,6 +2674,21 @@ void Manager::ComputeUserTrafficUids() {
     else
       user_traffic_uids_.push_back(static_cast<uint32_t>(uid));
   }
+}
+
+void Manager::InitializePatchpanelClient() {
+  if (patchpanel_client_) {
+    return;
+  }
+  patchpanel_client_ = patchpanel::Client::New();
+  if (!patchpanel_client_) {
+    LOG(ERROR) << "Failed to connect to patchpanel client";
+  }
+}
+
+patchpanel::Client* Manager::patchpanel_client() {
+  InitializePatchpanelClient();
+  return patchpanel_client_.get();
 }
 
 string Manager::GetAlwaysOnVpnPackage(Error* /*error*/) {

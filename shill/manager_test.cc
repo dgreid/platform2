@@ -16,6 +16,7 @@
 #include <base/stl_util.h>
 #include <base/strings/stringprintf.h>
 #include <chromeos/dbus/service_constants.h>
+#include <chromeos/patchpanel/dbus/fake_client.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -151,6 +152,10 @@ class ManagerTest : public PropertyStoreTest {
         new NiceMock<MockDevice>(manager(), "null2", "addr2", 2));
     mock_devices_.push_back(
         new NiceMock<MockDevice>(manager(), "null3", "addr3", 3));
+
+    auto client = std::make_unique<patchpanel::FakeClient>();
+    patchpanel_client_ = client.get();
+    manager()->patchpanel_client_ = std::move(client);
   }
 
   void TearDown() override { mock_devices_.clear(); }
@@ -468,6 +473,7 @@ class ManagerTest : public PropertyStoreTest {
 #endif  // DISABLE_WIFI
   MockThrottler* throttler_;
   MockUpstart* upstart_;
+  patchpanel::FakeClient* patchpanel_client_;
 };
 
 const char ManagerTest::TerminationActionTest::kActionName[] = "action";

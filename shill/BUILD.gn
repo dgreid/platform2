@@ -105,10 +105,21 @@ pkg_config("target_defaults") {
     "dbus-1",
     "libbrillo",
     "libchrome-${libbase_ver}",
+    "libpatchpanel-client",
     "libshill-net",
     "libtirpc",
     "re2",
+
+    # system_api depends on protobuf (or protobuf-lite). It must appear
+    # before protobuf here or the linker flags won't be in the right
+    # order.
+    "system_api",
   ]
+  if (use.fuzzer) {
+    pkg_deps += [ "protobuf" ]
+  } else {
+    pkg_deps += [ "protobuf-lite" ]
+  }
 }
 
 proto_library("mobile_operator_db-protos") {
@@ -169,7 +180,6 @@ pkg_config("libshill_config") {
   pkg_deps = [
     "libcares",
     "libshill-client",
-    "system_api",
   ]
 }
 
@@ -180,11 +190,6 @@ pkg_config("libshill_all_dependent_config") {
     "libpasswordprovider",
     "libpower_manager-client",
   ]
-  if (use.fuzzer) {
-    pkg_deps += [ "protobuf" ]
-  } else {
-    pkg_deps += [ "protobuf-lite" ]
-  }
 }
 
 if (use.cellular) {

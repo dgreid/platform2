@@ -17,6 +17,7 @@
 #include <base/memory/weak_ptr.h>
 #include <base/observer_list.h>
 #include <chromeos/dbus/service_constants.h>
+#include <chromeos/patchpanel/dbus/client.h>
 #include <gtest/gtest_prod.h>  // for FRIEND_TEST
 
 #include "shill/default_service_observer.h"
@@ -519,6 +520,7 @@ class Manager {
     return supplicant_manager_.get();
   }
 #endif  // !DISABLE_WIFI || !DISABLE_WIRED_8021X
+  patchpanel::Client* patchpanel_client();
 
  private:
   friend class ArcVpnDriverTest;
@@ -725,6 +727,9 @@ class Manager {
 
   void ComputeUserTrafficUids();
 
+  // Initializes patchpanel_client_ if it has not already been initialized.
+  void InitializePatchpanelClient();
+
   // Returns the names of all of the devices that have been claimed by the
   // current DeviceClaimer.  Returns an empty vector if no DeviceClaimer is set.
   std::vector<std::string> ClaimedDevices(Error* error);
@@ -754,6 +759,8 @@ class Manager {
 #if !defined(DISABLE_WIFI) || !defined(DISABLE_WIRED_8021X)
   std::unique_ptr<SupplicantManager> supplicant_manager_;
 #endif  // !DISABLE_WIFI || !DISABLE_WIRED_8021X
+  // For communication with patchpanel.
+  std::unique_ptr<patchpanel::Client> patchpanel_client_;
 
   // Entity that calls kernel commands ('tc') to throttle network bandwidth.
   std::unique_ptr<Throttler> throttler_;
