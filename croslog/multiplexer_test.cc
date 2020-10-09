@@ -29,25 +29,25 @@ TEST_F(MultiplexerTest, Forward) {
   {
     MaybeLogEntry e = Multiplexer.Forward();
     EXPECT_TRUE(e.has_value());
-    EXPECT_EQ('3', e->entire_line()[46]);
+    EXPECT_EQ(5963, e->pid());
   }
 
   {
     MaybeLogEntry e = Multiplexer.Forward();
     EXPECT_TRUE(e.has_value());
-    EXPECT_EQ('4', e->entire_line()[46]);
+    EXPECT_EQ(5964, e->pid());
   }
 
   {
     MaybeLogEntry e = Multiplexer.Forward();
     EXPECT_TRUE(e.has_value());
-    EXPECT_EQ('5', e->entire_line()[46]);
+    EXPECT_EQ(5965, e->pid());
   }
 
   {
     MaybeLogEntry e = Multiplexer.Forward();
     EXPECT_TRUE(e.has_value());
-    EXPECT_EQ('6', e->entire_line()[46]);
+    EXPECT_EQ(5966, e->pid());
   }
 
   EXPECT_FALSE(Multiplexer.Forward().has_value());
@@ -64,25 +64,25 @@ TEST_F(MultiplexerTest, BackwardFromLast) {
   {
     MaybeLogEntry e = Multiplexer.Backward();
     EXPECT_TRUE(e.has_value());
-    EXPECT_EQ('6', e->entire_line()[46]);
+    EXPECT_EQ(5966, e->pid());
   }
 
   {
     MaybeLogEntry e = Multiplexer.Backward();
     EXPECT_TRUE(e.has_value());
-    EXPECT_EQ('5', e->entire_line()[46]);
+    EXPECT_EQ(5965, e->pid());
   }
 
   {
     MaybeLogEntry e = Multiplexer.Backward();
     EXPECT_TRUE(e.has_value());
-    EXPECT_EQ('4', e->entire_line()[46]);
+    EXPECT_EQ(5964, e->pid());
   }
 
   {
     MaybeLogEntry e = Multiplexer.Backward();
     EXPECT_TRUE(e.has_value());
-    EXPECT_EQ('3', e->entire_line()[46]);
+    EXPECT_EQ(5963, e->pid());
   }
 
   EXPECT_FALSE(Multiplexer.Backward().has_value());
@@ -98,25 +98,25 @@ TEST_F(MultiplexerTest, InterleaveForwardAndBackward1) {
   {
     MaybeLogEntry e = Multiplexer.Forward();
     EXPECT_TRUE(e.has_value());
-    EXPECT_EQ('3', e->entire_line()[46]);
+    EXPECT_EQ(5963, e->pid());
   }
 
   {
     MaybeLogEntry e = Multiplexer.Backward();
     EXPECT_TRUE(e.has_value());
-    EXPECT_EQ('3', e->entire_line()[46]);
+    EXPECT_EQ(5963, e->pid());
   }
 
   {
     MaybeLogEntry e = Multiplexer.Forward();
     EXPECT_TRUE(e.has_value());
-    EXPECT_EQ('3', e->entire_line()[46]);
+    EXPECT_EQ(5963, e->pid());
   }
 
   {
     MaybeLogEntry e = Multiplexer.Backward();
     EXPECT_TRUE(e.has_value());
-    EXPECT_EQ('3', e->entire_line()[46]);
+    EXPECT_EQ(5963, e->pid());
   }
 }
 
@@ -131,25 +131,25 @@ TEST_F(MultiplexerTest, InterleaveForwardAndBackward2) {
   {
     MaybeLogEntry e = Multiplexer.Backward();
     EXPECT_TRUE(e.has_value());
-    EXPECT_EQ('6', e->entire_line()[46]);
+    EXPECT_EQ(5966, e->pid());
   }
 
   {
     MaybeLogEntry e = Multiplexer.Forward();
     EXPECT_TRUE(e.has_value());
-    EXPECT_EQ('6', e->entire_line()[46]);
+    EXPECT_EQ(5966, e->pid());
   }
 
   {
     MaybeLogEntry e = Multiplexer.Backward();
     EXPECT_TRUE(e.has_value());
-    EXPECT_EQ('6', e->entire_line()[46]);
+    EXPECT_EQ(5966, e->pid());
   }
 
   {
     MaybeLogEntry e = Multiplexer.Forward();
     EXPECT_TRUE(e.has_value());
-    EXPECT_EQ('6', e->entire_line()[46]);
+    EXPECT_EQ(5966, e->pid());
   }
 }
 

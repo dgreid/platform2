@@ -12,7 +12,36 @@
 
 namespace {
 // The length of time string like "2020-05-25T00:00:00.000000+00:00".
-constexpr size_t kTimeStringLength = 32;
+constexpr size_t kTimeStringLengthWithTimeZone = 32;
+// The length of time string like "2020-05-25T00:00:00.000000Z".
+constexpr size_t kTimeStringLengthUTC = 27;
+
+int ParseTime(const std::string& entire_line, base::Time* time) {
+  DCHECK_NE(nullptr, time);
+
+  if (entire_line[26] == 'Z') {
+    // Case of UTC time format like "2020-05-25T00:00:00.000000Z".
+    std::string log_time = entire_line.substr(0, kTimeStringLengthUTC);
+
+    bool result = base::Time::FromString(log_time.c_str(), time);
+    if (!result)
+      return -1;
+
+    return kTimeStringLengthUTC;
+  } else if (entire_line[26] == '+' || entire_line[26] == '-') {
+    // Case of format with time-zone like "2020-05-25T00:00:00.000000+00:00".
+    std::string log_time = entire_line.substr(0, kTimeStringLengthWithTimeZone);
+
+    bool result = base::Time::FromString(log_time.c_str(), time);
+    if (!result)
+      return -1;
+
+    return kTimeStringLengthWithTimeZone;
+  }
+
+  return -1;
+}
+
 }  // namespace
 
 namespace croslog {
@@ -25,22 +54,19 @@ MaybeLogEntry LogParserSyslog::Parse(std::string&& entire_line) {
     return base::nullopt;
   }
 
-  if (entire_line.size() < kTimeStringLength) {
-    LOG(WARNING) << "The line is too short: looks non-RFC5424 format?";
+  if (entire_line.size() < kTimeStringLengthUTC) {
+    LOG(WARNING) << "The line is too short: looks invalid format?";
     return base::nullopt;
   }
 
-  // Extract 32 chars from the beginning.
-  std::string log_time = entire_line.substr(0, kTimeStringLength);
-
   base::Time time;
-  bool result = base::Time::FromString(log_time.c_str(), &time);
-  if (!result) {
+  int message_start_pos = ParseTime(entire_line, &time);
+  if (message_start_pos < 0) {
     LOG(WARNING) << "The line has incorrect time format.";
     return base::nullopt;
   }
 
-  int pos = kTimeStringLength;
+  int pos = message_start_pos;
 
   std::string severity_str;
   DCHECK_EQ(' ', entire_line[pos]);
