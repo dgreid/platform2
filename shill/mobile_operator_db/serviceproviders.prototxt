@@ -826,6 +826,7 @@ mno {
       }
       dns : "211.29.132.12"
       dns : "198.142.0.51"
+      is_attach_apn : true
     }
     mobile_apn {
       apn : "connectcap"
@@ -948,6 +949,7 @@ mno {
       }
       dns : "10.4.85.138"
       dns : "10.4.176.234"
+      is_attach_apn : true
     }
     mobile_apn {
       apn : "telstra.pcpack"
@@ -2918,6 +2920,7 @@ mno {
       apn : "internet"
       dns : "217.77.161.130"
       dns : "217.77.161.131"
+      is_attach_apn : true
     }
   }
 }
@@ -3190,6 +3193,7 @@ mno {
       apn : "web.vodafone.de"
       dns : "139.7.30.125"
       dns : "139.7.30.126"
+      is_attach_apn : true
     }
     mobile_apn {
       apn : "event.vodafone.de"
@@ -3221,6 +3225,7 @@ mno {
         localized_name {
           name : "Mobile Broadband"
         }
+        is_attach_apn : true
       }
       mobile_apn {
         apn : "mail.partner.de"
@@ -3257,6 +3262,7 @@ mno {
         }
         dns : "139.7.30.125"
         dns : "139.7.30.126"
+        is_attach_apn : true
       }
       mobile_apn {
         apn : "event.vodafone.de"
@@ -4023,6 +4029,7 @@ mno {
       password : "vodafone"
       dns : "212.73.32.96"
       dns : "212.73.32.67"
+      is_attach_apn : true
     }
     mobile_apn {
       apn : "airtelnet.es"
@@ -5971,6 +5978,7 @@ mno {
       username : "vodafone"
       password : "vodafone"
       dns : "10.24.59.100"
+      is_attach_apn : true
     }
   }
 }
@@ -7266,6 +7274,7 @@ mno {
         name : "SPモード"
       }
       authentication : CHAP
+      is_attach_apn : true
     }
     mobile_apn {
       apn : "mopera.net"
@@ -7340,6 +7349,7 @@ mno {
       username : "ym"
       password : "ym"
       authentication : CHAP
+      is_attach_apn : true
     }
     mobile_apn {
       apn : "cmn.mgx"
@@ -7368,6 +7378,7 @@ mno {
         }
         username : "plus"
         password : "4g"
+	is_attach_apn : true
       }
     }
   }
@@ -7409,6 +7420,7 @@ mno {
       username : "user@au.au-net.ne.jp"
       password : "au"
       authentication : CHAP
+      is_attach_apn : true
     }
     mobile_apn {
       apn : "uno.au-net.ne.jp"
@@ -7448,6 +7460,7 @@ mno {
     mccmnc : "44011"
     mobile_apn {
       apn : "rakuten.jp"
+      is_attach_apn : true
     }
   }
 }
@@ -7807,6 +7820,7 @@ mno {
     mccmnc : "45006"
     mobile_apn {
       apn : "internet.lguplus.co.kr"
+      is_attach_apn : true
     }
   }
 }
@@ -9624,6 +9638,7 @@ mno {
       }
       username : "vodafone"
       password : "vodafone"
+      is_attach_apn : true
     }
     mobile_apn {
       apn : "m2m.global.vodafone.nl"
@@ -12785,6 +12800,7 @@ mno {
     mccmnc : "46692"
     mobile_apn {
       apn : "internet"
+      is_attach_apn : true
     }
     mobile_apn {
       apn : "emome"
@@ -13303,6 +13319,7 @@ mno {
       localized_name {
         name : "LaptopConnect (data cards)"
       }
+      is_attach_apn : true
     }
     mobile_apn {
       apn : "wap.cingular"
