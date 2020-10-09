@@ -89,6 +89,23 @@ bool WaitForSocketsClose(const IppusbBridgeSocketPaths& socket_paths,
   return true;
 }
 
+bool WaitForIppusbBridgeStartup(const IppusbBridgeSocketPaths& socket_paths,
+                                base::TimeDelta timeout) {
+  auto bridge_socket =
+      ClientSocketManager::Create(socket_paths.main_socket.value().c_str());
+  if (!bridge_socket)
+    return false;
+
+  base::ElapsedTimer timer;
+  while (!bridge_socket->OpenConnection()) {
+    if (timer.Elapsed() > timeout)
+      return false;
+    usleep(100000);  // 100ms
+  }
+  bridge_socket->CloseSocket();
+  return true;
+}
+
 // Attempts to ping the keep alive socket at the given |keep_alive_path| and
 // receive an acknowledgement from ippusb_bridge. Returns true if this was
 // successful.
@@ -259,6 +276,14 @@ int ippusb_manager_main(int argc, char* argv[]) {
     return 1;
   }
 
+  LOG(INFO) << "Waiting until ippusb_bridge has started.";
+  if (!WaitForIppusbBridgeStartup(socket_paths,
+                                  base::TimeDelta::FromSeconds(5))) {
+    LOG(ERROR) << "Failed to wait for ippusb_bridge startup.";
+    return 1;
+  }
+
+  LOG(INFO) << "Sending socket path to client.";
   // Sends the basename of the ippusb_bridge socket to the listener.
   std::string main_socket_basename =
       socket_paths.main_socket.BaseName().value();
@@ -266,6 +291,7 @@ int ippusb_manager_main(int argc, char* argv[]) {
   ippusb_socket->CloseConnection();
   ippusb_socket->CloseSocket();
 
+  LOG(INFO) << "Shutting down.";
   return 0;
 }
 
