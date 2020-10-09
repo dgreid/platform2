@@ -17,8 +17,13 @@
 #include "imageloader/component.h"
 #include "imageloader/imageloader_impl.h"
 #include "imageloader/ipc.pb.h"
+#include "imageloader/verity_mounter.h"
 
 namespace imageloader {
+
+namespace {
+constexpr int kPollingTimeoutSeconds = 10;
+}  // namespace
 
 void HelperProcessProxy::Start(int argc,
                                char* argv[],
@@ -150,7 +155,8 @@ std::unique_ptr<CommandResponse> HelperProcessProxy::WaitForResponse() {
   pfd.fd = control_fd_.get();
   pfd.events = POLLIN;
 
-  int rc = poll(&pfd, 1, 2000 /* timeout (ms) */);
+  CHECK_LE(kDMSetupTimeoutSeconds, kPollingTimeoutSeconds);
+  int rc = poll(&pfd, 1, kPollingTimeoutSeconds * 1000 /* (ms) */);
   PCHECK(rc >= 0 || errno == EINTR);
 
   std::unique_ptr<CommandResponse> response =
