@@ -55,7 +55,7 @@ void BiodStorage::SetRootPathForTesting(const base::FilePath& root_path) {
 }
 
 bool BiodStorage::WriteRecord(const BiometricsManager::Record& record,
-                              std::unique_ptr<base::Value> data) {
+                              base::Value data) {
   if (!allow_access_) {
     LOG(ERROR) << "Access to the storage mounts not allowed.";
     return false;
@@ -67,20 +67,20 @@ bool BiodStorage::WriteRecord(const BiometricsManager::Record& record,
   }
 
   const std::string& record_id(record.GetId());
-  base::DictionaryValue record_value;
-  record_value.SetString(kLabel, record.GetLabel());
-  record_value.SetString(kRecordId, record_id);
+  base::Value record_value(base::Value::Type::DICTIONARY);
+  record_value.SetStringKey(kLabel, record.GetLabel());
+  record_value.SetStringKey(kRecordId, record_id);
 
   if (record.SupportsPositiveMatchSecret()) {
-    record_value.SetString(kValidationVal, record.GetValidationValBase64());
-    record_value.SetInteger(kVersionMember, kRecordFormatVersion);
+    record_value.SetStringKey(kValidationVal, record.GetValidationValBase64());
+    record_value.SetIntKey(kVersionMember, kRecordFormatVersion);
   } else {
-    record_value.SetInteger(kVersionMember,
-                            kRecordFormatVersionNoValidationValue);
+    record_value.SetIntKey(kVersionMember,
+                           kRecordFormatVersionNoValidationValue);
   }
 
-  record_value.Set(kData, std::move(data));
-  record_value.SetString(kBioManagerMember, biometrics_manager_name_);
+  record_value.SetKey(kData, std::move(data));
+  record_value.SetStringKey(kBioManagerMember, biometrics_manager_name_);
 
   std::string json_string;
   JSONStringValueSerializer json_serializer(&json_string);
@@ -130,17 +130,19 @@ bool BiodStorage::WriteRecord(const BiometricsManager::Record& record,
 }
 
 std::unique_ptr<std::vector<uint8_t>>
-BiodStorage::ReadValidationValueFromRecord(
-    int record_format_version,
-    base::DictionaryValue* record_dictionary,
-    const FilePath& record_path) {
+BiodStorage::ReadValidationValueFromRecord(int record_format_version,
+                                           const base::Value& record_dictionary,
+                                           const FilePath& record_path) {
   std::string validation_val_str;
   if (record_format_version == kRecordFormatVersion) {
-    if (!record_dictionary->GetString(kValidationVal, &validation_val_str)) {
+    const std::string* validation_val_str_ptr =
+        record_dictionary.FindStringKey(kValidationVal);
+    if (!validation_val_str_ptr) {
       LOG(ERROR) << "Cannot read validation value from " << record_path.value()
                  << ".";
       return nullptr;
     }
+    validation_val_str = *validation_val_str_ptr;
     base::Base64Decode(validation_val_str, &validation_val_str);
   } else if (record_format_version == kRecordFormatVersionNoValidationValue) {
     // If the record has format version 1, it should have no validation value
@@ -186,51 +188,45 @@ bool BiodStorage::ReadRecordsForSingleUser(const std::string& user_id) {
       continue;
     }
 
-    JSONStringValueDeserializer json_deserializer(
+    auto record_value = base::JSONReader::ReadAndReturnValueWithError(
         json_string, base::JSON_ALLOW_TRAILING_COMMAS);
-    int error_code;
-    std::string error_message;
-    std::unique_ptr<base::Value> record_value(
-        json_deserializer.Deserialize(&error_code, &error_message));
 
-    if (!record_value) {
-      LOG_IF(ERROR, error_code)
+    if (!record_value.value) {
+      LOG_IF(ERROR, record_value.error_code)
           << "Error in deserializing JSON from path " << record_path.value()
-          << " with code " << error_code << ".";
-      LOG_IF(ERROR, !error_message.empty())
-          << "JSON error message: " << error_message << ".";
+          << " with code " << record_value.error_code << ".";
+      LOG_IF(ERROR, !record_value.error_message.empty())
+          << "JSON error message: " << record_value.error_message << ".";
       read_all_records_successfully = false;
       continue;
     }
 
-    base::DictionaryValue* record_dictionary;
-
-    if (!record_value->GetAsDictionary(&record_dictionary)) {
-      LOG(ERROR) << "Cannot cast " << record_path.value()
-                 << " to a dictionary value.";
+    if (!record_value.value->is_dict()) {
+      LOG(ERROR) << "Value " << record_path.value() << " is not a dictionary.";
       read_all_records_successfully = false;
       continue;
     }
+    base::Value record_dictionary = std::move(*record_value.value);
 
-    std::string label;
+    const std::string* label = record_dictionary.FindStringKey(kLabel);
 
-    if (!record_dictionary->GetString(kLabel, &label)) {
+    if (!label) {
       LOG(ERROR) << "Cannot read label from " << record_path.value() << ".";
       read_all_records_successfully = false;
       continue;
     }
 
-    std::string record_id;
+    const std::string* record_id = record_dictionary.FindStringKey(kRecordId);
 
-    if (!(record_dictionary->GetString(kRecordId, &record_id))) {
+    if (!record_id) {
       LOG(ERROR) << "Cannot read record id from " << record_path.value() << ".";
       read_all_records_successfully = false;
       continue;
     }
 
-    int record_format_version;
-    if (!record_dictionary->GetInteger(kVersionMember,
-                                       &record_format_version)) {
+    base::Optional<int> record_format_version =
+        record_dictionary.FindIntKey(kVersionMember);
+    if (!record_format_version.has_value()) {
       LOG(ERROR) << "Cannot read record format version from "
                  << record_path.value() << ".";
       read_all_records_successfully = false;
@@ -238,23 +234,23 @@ bool BiodStorage::ReadRecordsForSingleUser(const std::string& user_id) {
     }
 
     std::unique_ptr<std::vector<uint8_t>> validation_value =
-        ReadValidationValueFromRecord(record_format_version, record_dictionary,
+        ReadValidationValueFromRecord(*record_format_version, record_dictionary,
                                       record_path);
     if (!validation_value) {
       read_all_records_successfully = false;
       continue;
     }
 
-    base::Value* data = nullptr;
+    const base::Value* data = record_dictionary.FindKey(kData);
 
-    if (!(record_dictionary->Get(kData, &data))) {
+    if (!data) {
       LOG(ERROR) << "Cannot read data from " << record_path.value() << ".";
       read_all_records_successfully = false;
       continue;
     }
 
-    if (!load_record_.Run(record_format_version, user_id, label, record_id,
-                          *validation_value, *data)) {
+    if (!load_record_.Run(record_format_version.value(), user_id, *label,
+                          *record_id, *validation_value, *data)) {
       LOG(ERROR) << "Cannot load record from " << record_path.value() << ".";
       read_all_records_successfully = false;
       continue;

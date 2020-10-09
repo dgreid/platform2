@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 #include <base/bind.h>
@@ -118,13 +119,14 @@ class BiodStorageBaseTest : public ::testing::Test {
     EXPECT_TRUE(base::DeleteFile(temp_dir_.GetPath(), true));
   }
 
-  base::DictionaryValue CreateRecordDictionary(
+  base::Value CreateRecordDictionary(
       const std::vector<uint8_t>& validation_val) {
-    base::DictionaryValue record_dictionary;
+    base::Value record_dictionary(base::Value::Type::DICTIONARY);
     std::string validation_value_str(validation_val.begin(),
                                      validation_val.end());
     base::Base64Encode(validation_value_str, &validation_value_str);
-    record_dictionary.SetString("match_validation_value", validation_value_str);
+    record_dictionary.SetStringKey("match_validation_value",
+                                   validation_value_str);
     return record_dictionary;
   }
 
@@ -178,8 +180,8 @@ TEST_P(BiodStorageTest, WriteAndReadRecords) {
 
   // Write the record.
   for (auto const& record : kRecords) {
-    EXPECT_TRUE(biod_storage_->WriteRecord(
-        record, std::make_unique<base::Value>(record.GetData())));
+    EXPECT_TRUE(
+        biod_storage_->WriteRecord(record, base::Value(record.GetData())));
   }
 
   // Read the record.
@@ -193,8 +195,8 @@ TEST_F(BiodStorageBaseTest, WriteRecord_InvalidAbsolutePath) {
   auto record =
       TestRecord(kRecordId1, "/absolutepath", kLabel1, kValidationVal1, kData1);
 
-  EXPECT_FALSE(biod_storage_->WriteRecord(
-      record, std::make_unique<base::Value>(record.GetData())));
+  EXPECT_FALSE(
+      biod_storage_->WriteRecord(record, base::Value(record.GetData())));
 }
 
 TEST_F(BiodStorageBaseTest, WriteRecord_RecordIdNotUTF8) {
@@ -204,8 +206,8 @@ TEST_F(BiodStorageBaseTest, WriteRecord_RecordIdNotUTF8) {
       TestRecord(kInvalidUTF8, kUserId1, kLabel1, kValidationVal1, kData1);
 
   EXPECT_FALSE(record.IsValidUTF8());
-  EXPECT_FALSE(biod_storage_->WriteRecord(
-      record, std::make_unique<base::Value>(record.GetData())));
+  EXPECT_FALSE(
+      biod_storage_->WriteRecord(record, base::Value(record.GetData())));
 }
 
 TEST_F(BiodStorageBaseTest, WriteRecord_UserIdNotUTF8) {
@@ -215,8 +217,8 @@ TEST_F(BiodStorageBaseTest, WriteRecord_UserIdNotUTF8) {
       TestRecord(kRecordId1, kInvalidUTF8, kLabel1, kValidationVal1, kData1);
 
   EXPECT_FALSE(record.IsValidUTF8());
-  EXPECT_FALSE(biod_storage_->WriteRecord(
-      record, std::make_unique<base::Value>(record.GetData())));
+  EXPECT_FALSE(
+      biod_storage_->WriteRecord(record, base::Value(record.GetData())));
 }
 
 TEST_F(BiodStorageBaseTest, WriteRecord_LabelNotUTF8) {
@@ -226,8 +228,8 @@ TEST_F(BiodStorageBaseTest, WriteRecord_LabelNotUTF8) {
       TestRecord(kRecordId1, kUserId1, kInvalidUTF8, kValidationVal1, kData1);
 
   EXPECT_FALSE(record.IsValidUTF8());
-  EXPECT_FALSE(biod_storage_->WriteRecord(
-      record, std::make_unique<base::Value>(record.GetData())));
+  EXPECT_FALSE(
+      biod_storage_->WriteRecord(record, base::Value(record.GetData())));
 }
 
 TEST_F(BiodStorageBaseTest, WriteRecord_CheckUmask) {
@@ -243,8 +245,8 @@ TEST_F(BiodStorageBaseTest, WriteRecord_CheckUmask) {
   ASSERT_FALSE(base::PathExists(kRecordStorageFilename));
   ASSERT_FALSE(base::PathExists(kRecordStorageFilename.DirName()));
 
-  EXPECT_TRUE(biod_storage_->WriteRecord(
-      record, std::make_unique<base::Value>(record.GetData())));
+  EXPECT_TRUE(
+      biod_storage_->WriteRecord(record, base::Value(record.GetData())));
 
   // Check permissions of directory
   int actual_permissions;
@@ -268,8 +270,8 @@ TEST_P(BiodStorageTest, DeleteRecord) {
   // Delete a non-existent record.
   EXPECT_TRUE(biod_storage_->DeleteRecord(kUserId1, kRecordId1));
 
-  EXPECT_TRUE(biod_storage_->WriteRecord(
-      kRecord, std::make_unique<base::Value>(kRecord.GetData())));
+  EXPECT_TRUE(
+      biod_storage_->WriteRecord(kRecord, base::Value(kRecord.GetData())));
 
   // Check this record is properly written.
   std::unordered_set<std::string> user_ids({kUserId1});
@@ -305,7 +307,7 @@ TEST_F(BiodStorageBaseTest, TestEqualOperator) {
 TEST_F(BiodStorageBaseTest, TestReadValidationValueFromRecord) {
   auto record_dictionary = CreateRecordDictionary(kValidationVal1);
   auto ret = biod_storage_->ReadValidationValueFromRecord(
-      kRecordFormatVersion, &record_dictionary, kFilePath);
+      kRecordFormatVersion, record_dictionary, kFilePath);
   EXPECT_TRUE(ret != nullptr);
   EXPECT_EQ(*ret, kValidationVal1);
 }
@@ -314,7 +316,7 @@ TEST_F(BiodStorageBaseTest, TestReadValidationValueFromRecordOldVersion) {
   auto record_dictionary = CreateRecordDictionary(kValidationVal1);
   std::vector<uint8_t> empty;
   auto ret = biod_storage_->ReadValidationValueFromRecord(
-      kRecordFormatVersionNoValidationValue, &record_dictionary, kFilePath);
+      kRecordFormatVersionNoValidationValue, record_dictionary, kFilePath);
   EXPECT_TRUE(ret != nullptr);
   EXPECT_EQ(*ret, empty);
 }
@@ -323,7 +325,7 @@ TEST_F(BiodStorageBaseTest, TestReadValidationValueFromRecordInvalidVersion) {
   auto record_dictionary = CreateRecordDictionary(kValidationVal1);
   std::vector<uint8_t> empty;
   auto ret = biod_storage_->ReadValidationValueFromRecord(
-      kInvalidRecordFormatVersion, &record_dictionary, kFilePath);
+      kInvalidRecordFormatVersion, record_dictionary, kFilePath);
   EXPECT_EQ(ret, nullptr);
 }
 

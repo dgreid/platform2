@@ -47,13 +47,12 @@ class BiodStorage {
 
   // Write one record to file in per user stateful. This is called whenever
   // we enroll a new record.
-  bool WriteRecord(const BiometricsManager::Record& record,
-                   std::unique_ptr<base::Value> data);
+  bool WriteRecord(const BiometricsManager::Record& record, base::Value data);
 
   // Read validation value from |record_dictionary| and store in |output|.
   static std::unique_ptr<std::vector<uint8_t>> ReadValidationValueFromRecord(
       int record_format_version,
-      base::DictionaryValue* record_dictionary,
+      const base::Value& record_dictionary,
       const base::FilePath& record_path);
 
   // Read all records from file for all users in the set. Called whenever biod

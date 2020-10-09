@@ -867,8 +867,7 @@ bool CrosFpBiometricsManager::WriteRecord(
   std::string tmpl_base64;
   base::Base64Encode(tmpl_sp, &tmpl_base64);
 
-  return biod_storage_.WriteRecord(record,
-                                   std::make_unique<base::Value>(tmpl_base64));
+  return biod_storage_.WriteRecord(record, base::Value(std::move(tmpl_base64)));
 }
 
 void CrosFpBiometricsManager::OnMaintenanceTimerFired() {
