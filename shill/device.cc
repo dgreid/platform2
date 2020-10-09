@@ -1388,9 +1388,14 @@ bool Device::RequestPortalDetection() {
     return false;
   }
 
-  if (!selected_service_->IsPortalled()) {
-    SLOG(this, 2) << link_name() << ": Service is not in portal state.  "
-                  << "No need to start check.";
+  SLOG(this, 1) << __func__ << " for: " << selected_service_->log_name();
+
+  // Do not run portal detection unless in a connected state (i.e. connected,
+  // online, or portalled).
+  if (!selected_service_->IsConnected()) {
+    SLOG(this, 3)
+        << link_name()
+        << ": Service is not in a connected state. No need to start check.";
     return false;
   }
 
@@ -1408,8 +1413,14 @@ bool Device::RequestPortalDetection() {
   return StartPortalDetection();
 }
 
+// Start portal detection for |selected_service_| if enabled.
+// Note: This method used to also check for a proxy configuration, however a
+// proxy may or may not return a portal response depending on how it is
+// configured. We run additional portal detection in Chrome if a proxy is
+// configured, but still run Shill portal detection first.
 bool Device::StartPortalDetection() {
   DCHECK(selected_service_);
+  SLOG(this, 1) << __func__ << " for: " << selected_service_->log_name();
   if (selected_service_->IsPortalDetectionDisabled()) {
     SLOG(this, 2) << "Service " << selected_service_->log_name()
                   << ": Portal detection is disabled; "
@@ -1425,16 +1436,6 @@ bool Device::StartPortalDetection() {
     SLOG(this, 2) << "Device " << link_name()
                   << ": Portal detection is disabled; "
                   << "marking service online.";
-    SetServiceConnectedState(Service::kStateOnline);
-    return false;
-  }
-
-  if (selected_service_->HasProxyConfig()) {
-    // Services with HTTP proxy configurations should not be checked by the
-    // connection manager, since we don't have the ability to evaluate
-    // arbitrary proxy configs and their possible credentials.
-    SLOG(this, 2) << "Device " << link_name()
-                  << ": Service has proxy config; marking it online.";
     SetServiceConnectedState(Service::kStateOnline);
     return false;
   }
@@ -1739,6 +1740,10 @@ void Device::SetServiceConnectedState(Service::ConnectState state) {
     return;
   }
 
+  SLOG(this, 2) << __func__ << " Service: "
+                << GetSelectedServiceRpcIdentifier(nullptr).value()
+                << " State: " << static_cast<int>(state);
+
   if (Service::IsPortalledState(state) && connection_->IsDefault() &&
       portal_check_interval_seconds_ != 0) {
     CHECK(portal_detector_.get());
@@ -1781,7 +1786,9 @@ bool Device::StartPortalDetectionTrial(PortalDetector* portal_detector,
 void Device::PortalDetectorCallback(
     const PortalDetector::Result& http_result,
     const PortalDetector::Result& https_result) {
-  SLOG(this, 2) << "Device " << link_name() << ": Received status: "
+  SLOG(this, 2) << __func__ << " Device: " << link_name() << " Service: "
+                << GetSelectedServiceRpcIdentifier(nullptr).value()
+                << " Received status: "
                 << PortalDetector::StatusToString(http_result.status);
 
   SetLooseRouting(false);

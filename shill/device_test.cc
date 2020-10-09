@@ -1812,6 +1812,15 @@ class DevicePortalDetectionTest : public DeviceTest {
   void SetServiceConnectedState(Service::ConnectState state) {
     device_->SetServiceConnectedState(state);
   }
+  void ExpectPortalEnabled() {
+    EXPECT_CALL(*service_, IsPortalDetectionDisabled())
+        .WillRepeatedly(Return(false));
+    EXPECT_CALL(*service_, IsConnected(nullptr)).WillRepeatedly(Return(true));
+    EXPECT_CALL(*service_, IsPortalDetectionAuto())
+        .WillRepeatedly(Return(true));
+    EXPECT_CALL(manager_, IsPortalDetectionEnabled(device_->technology()))
+        .WillRepeatedly(Return(true));
+  }
   void ExpectPortalDetectorReset() {
     EXPECT_EQ(nullptr, device_->portal_detector_);
   }
@@ -1854,24 +1863,8 @@ TEST_F(DevicePortalDetectionTest, TechnologyPortalDetectionDisabled) {
   EXPECT_FALSE(StartPortalDetection());
 }
 
-TEST_F(DevicePortalDetectionTest, PortalDetectionProxyConfig) {
-  EXPECT_CALL(*service_, IsPortalDetectionDisabled()).WillOnce(Return(false));
-  EXPECT_CALL(*service_, IsConnected(nullptr)).WillRepeatedly(Return(true));
-  EXPECT_CALL(*service_, HasProxyConfig()).WillOnce(Return(true));
-  EXPECT_CALL(*service_, IsPortalDetectionAuto()).WillOnce(Return(true));
-  EXPECT_CALL(manager_, IsPortalDetectionEnabled(device_->technology()))
-      .WillOnce(Return(true));
-  EXPECT_CALL(*service_, SetState(Service::kStateOnline));
-  EXPECT_FALSE(StartPortalDetection());
-}
-
 TEST_F(DevicePortalDetectionTest, PortalDetectionBadUrl) {
-  EXPECT_CALL(*service_, IsPortalDetectionDisabled()).WillOnce(Return(false));
-  EXPECT_CALL(*service_, IsConnected(nullptr)).WillRepeatedly(Return(true));
-  EXPECT_CALL(*service_, HasProxyConfig()).WillOnce(Return(false));
-  EXPECT_CALL(*service_, IsPortalDetectionAuto()).WillOnce(Return(true));
-  EXPECT_CALL(manager_, IsPortalDetectionEnabled(device_->technology()))
-      .WillOnce(Return(true));
+  ExpectPortalEnabled();
   const string http_portal_url, https_portal_url;
   const vector<string> fallback_urls;
   EXPECT_CALL(manager_, GetPortalCheckHttpUrl())
@@ -1885,12 +1878,7 @@ TEST_F(DevicePortalDetectionTest, PortalDetectionBadUrl) {
 }
 
 TEST_F(DevicePortalDetectionTest, PortalDetectionStart) {
-  EXPECT_CALL(*service_, IsPortalDetectionDisabled()).WillOnce(Return(false));
-  EXPECT_CALL(*service_, IsConnected(nullptr)).WillRepeatedly(Return(true));
-  EXPECT_CALL(*service_, HasProxyConfig()).WillOnce(Return(false));
-  EXPECT_CALL(*service_, IsPortalDetectionAuto()).WillOnce(Return(true));
-  EXPECT_CALL(manager_, IsPortalDetectionEnabled(device_->technology()))
-      .WillOnce(Return(true));
+  ExpectPortalEnabled();
   const string http_portal_url(PortalDetector::kDefaultHttpUrl);
   const string https_portal_url(PortalDetector::kDefaultHttpsUrl);
   const vector<string> fallback_urls(PortalDetector::kDefaultFallbackHttpUrls);
@@ -1916,12 +1904,7 @@ TEST_F(DevicePortalDetectionTest, PortalDetectionStart) {
 }
 
 TEST_F(DevicePortalDetectionTest, PortalDetectionStartIPv6) {
-  EXPECT_CALL(*service_, IsPortalDetectionDisabled()).WillOnce(Return(false));
-  EXPECT_CALL(*service_, IsConnected(nullptr)).WillRepeatedly(Return(true));
-  EXPECT_CALL(*service_, HasProxyConfig()).WillOnce(Return(false));
-  EXPECT_CALL(*service_, IsPortalDetectionAuto()).WillOnce(Return(true));
-  EXPECT_CALL(manager_, IsPortalDetectionEnabled(device_->technology()))
-      .WillOnce(Return(true));
+  ExpectPortalEnabled();
   const string http_portal_url(PortalDetector::kDefaultHttpUrl);
   const string https_portal_url(PortalDetector::kDefaultHttpsUrl);
   const vector<string> fallback_urls(PortalDetector::kDefaultFallbackHttpUrls);
@@ -2044,19 +2027,23 @@ TEST_F(DevicePortalDetectionTest, PortalDetectionSuccessAfterFailure) {
 }
 
 TEST_F(DevicePortalDetectionTest, RequestPortalDetection) {
-  EXPECT_CALL(*service_, state())
-      .WillOnce(Return(Service::kStateOnline))
-      .WillRepeatedly(Return(Service::kStateNoConnectivity));
+  // Non connected or portal state returns false.
+  EXPECT_CALL(*service_, IsConnected(_)).WillOnce(Return(false));
   EXPECT_FALSE(RequestPortalDetection());
 
-  EXPECT_CALL(*connection_, IsDefault())
-      .WillOnce(Return(false))
-      .WillRepeatedly(Return(true));
+  // Non default network returns false.
+  EXPECT_CALL(*service_, IsConnected(_)).WillOnce(Return(true));
+  EXPECT_CALL(*connection_, IsDefault()).WillOnce(Return(false));
   EXPECT_FALSE(RequestPortalDetection());
 
-  EXPECT_CALL(*portal_detector_, IsInProgress()).WillOnce(Return(true));
+  // Remaining tests expect the default network to be in a portal state.
+  ExpectPortalEnabled();
+  EXPECT_CALL(*connection_, IsDefault()).WillRepeatedly(Return(true));
+
   // Portal detection already running.
+  EXPECT_CALL(*portal_detector_, IsInProgress()).WillOnce(Return(true));
   EXPECT_TRUE(RequestPortalDetection());
+  EXPECT_CALL(*portal_detector_, IsInProgress()).WillRepeatedly(Return(false));
 
   // Make sure our running mock portal detector was not replaced.
   ExpectPortalDetectorIsMock();
@@ -2064,12 +2051,7 @@ TEST_F(DevicePortalDetectionTest, RequestPortalDetection) {
   // Throw away our pre-fabricated portal detector, and have the device create
   // a new one.
   StopPortalDetection();
-  EXPECT_CALL(*service_, IsPortalDetectionDisabled())
-      .WillRepeatedly(Return(false));
-  EXPECT_CALL(*service_, IsPortalDetectionAuto()).WillRepeatedly(Return(true));
-  EXPECT_CALL(manager_, IsPortalDetectionEnabled(device_->technology()))
-      .WillRepeatedly(Return(true));
-  EXPECT_CALL(*service_, HasProxyConfig()).WillRepeatedly(Return(false));
+
   const string kPortalCheckHttpUrl("http://portal");
   const string kPortalCheckHttpsUrl("https://portal");
   const vector<string> kPortalCheckFallbackHttpUrls(
@@ -2394,12 +2376,8 @@ TEST_F(DevicePortalDetectionTest, FallbackDNSResultCallback) {
 
   // Fallback DNS test succeed with auto fallback enabled.
   EXPECT_CALL(*service_, is_dns_auto_fallback_allowed()).WillOnce(Return(true));
-  EXPECT_CALL(*service_, IsPortalDetectionDisabled())
-      .WillRepeatedly(Return(false));
-  EXPECT_CALL(*service_, IsPortalDetectionAuto()).WillRepeatedly(Return(true));
-  EXPECT_CALL(manager_, IsPortalDetectionEnabled(device_->technology()))
-      .WillRepeatedly(Return(true));
-  EXPECT_CALL(*service_, HasProxyConfig()).WillRepeatedly(Return(false));
+
+  ExpectPortalEnabled();
   const string kPortalCheckHttpUrl("http://portal");
   const string kPortalCheckHttpsUrl("https://portal");
   const vector<string> kPortalCheckFallbackHttpUrls(
@@ -2445,12 +2423,7 @@ TEST_F(DevicePortalDetectionTest, ConfigDNSResultCallback) {
   Mock::VerifyAndClearExpectations(ipconfig.get());
 
   // DNS test succeed for configured DNS servers.
-  EXPECT_CALL(*service_, IsPortalDetectionDisabled())
-      .WillRepeatedly(Return(false));
-  EXPECT_CALL(*service_, IsPortalDetectionAuto()).WillRepeatedly(Return(true));
-  EXPECT_CALL(manager_, IsPortalDetectionEnabled(device_->technology()))
-      .WillRepeatedly(Return(true));
-  EXPECT_CALL(*service_, HasProxyConfig()).WillRepeatedly(Return(false));
+  ExpectPortalEnabled();
   const string kPortalCheckHttpUrl("http://portal");
   const string kPortalCheckHttpsUrl("https://portal");
   const vector<string> kPortalCheckFallbackHttpUrls(
@@ -2485,12 +2458,7 @@ TEST_F(DevicePortalDetectionTest, DestroyConnection) {
 
   SetConnection(connection);
 
-  EXPECT_CALL(*service_, IsPortalDetectionDisabled()).WillOnce(Return(false));
-  EXPECT_CALL(*service_, IsConnected(nullptr)).WillRepeatedly(Return(true));
-  EXPECT_CALL(*service_, HasProxyConfig()).WillOnce(Return(false));
-  EXPECT_CALL(*service_, IsPortalDetectionAuto()).WillOnce(Return(true));
-  EXPECT_CALL(manager_, IsPortalDetectionEnabled(device_->technology()))
-      .WillOnce(Return(true));
+  ExpectPortalEnabled();
   const string http_portal_url(PortalDetector::kDefaultHttpUrl);
   const string https_portal_url(PortalDetector::kDefaultHttpsUrl);
   const vector<string> fallback_urls(PortalDetector::kDefaultFallbackHttpUrls);

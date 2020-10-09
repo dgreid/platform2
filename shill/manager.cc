@@ -1789,14 +1789,18 @@ void Manager::SortServicesTask() {
     }
   }
 
-  if (old_logical && old_logical != new_logical)
+  if (old_logical && old_logical != new_logical) {
     old_logical->connection()->SetPriority(old_logical_priority,
                                            old_logical == new_physical);
+  }
   if (new_logical) {
+    bool is_primary_physical = new_logical == new_physical;
     new_logical->connection()->SetPriority(Connection::kDefaultPriority,
-                                           new_logical == new_physical);
+                                           is_primary_physical);
     auto device = FindDeviceFromService(new_logical);
-    if (device && device->technology().IsPrimaryConnectivityTechnology()) {
+    if (device && device->technology().IsPrimaryConnectivityTechnology() &&
+        new_logical->IsPortalled()) {
+      SLOG(this, 2) << "RequestPortalDetection for new primary device.";
       device->RequestPortalDetection();
     }
   }
@@ -2521,6 +2525,7 @@ void Manager::OnDeviceGeolocationInfoUpdated(const DeviceRefPtr& device) {
 }
 
 void Manager::RecheckPortal(Error* /*error*/) {
+  SLOG(this, 2) << __func__;
   for (const auto& device : devices_) {
     if (device->RequestPortalDetection()) {
       // Only start Portal Detection on the device with the default connection.
