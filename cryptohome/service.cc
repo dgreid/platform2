@@ -3785,39 +3785,39 @@ gboolean Service::RemoveFirmwareManagementParameters(
 }
 
 gboolean Service::GetStatusString(gchar** OUT_status, GError** error) {
-  base::DictionaryValue dv;
-  auto mounts = std::make_unique<base::ListValue>();
+  base::Value mounts(base::Value::Type::LIST);
   {
     base::AutoLock _lock(sessions_lock_);
     for (const auto& session_pair : sessions_) {
-      mounts->Append(session_pair.second->GetStatus());
+      mounts.Append(session_pair.second->GetStatus());
     }
   }
   auto attrs = install_attrs_->GetStatus();
 
   Tpm::TpmStatusInfo tpm_status_info;
   tpm_->GetStatus(tpm_init_->GetCryptohomeKey(), &tpm_status_info);
-  auto tpm = std::make_unique<base::DictionaryValue>();
-  tpm->SetBoolean("can_connect", tpm_status_info.can_connect);
-  tpm->SetBoolean("can_load_srk", tpm_status_info.can_load_srk);
-  tpm->SetBoolean("can_load_srk_pubkey",
-                  tpm_status_info.can_load_srk_public_key);
-  tpm->SetBoolean("srk_vulnerable_roca", tpm_status_info.srk_vulnerable_roca);
-  tpm->SetBoolean("has_cryptohome_key", tpm_status_info.has_cryptohome_key);
-  tpm->SetBoolean("can_encrypt", tpm_status_info.can_encrypt);
-  tpm->SetBoolean("can_decrypt", tpm_status_info.can_decrypt);
-  tpm->SetBoolean("has_context", tpm_status_info.this_instance_has_context);
-  tpm->SetBoolean("has_key_handle",
-                  tpm_status_info.this_instance_has_key_handle);
-  tpm->SetInteger("last_error", tpm_status_info.last_tpm_error);
+  base::Value tpm(base::Value::Type::DICTIONARY);
+  tpm.SetBoolKey("can_connect", tpm_status_info.can_connect);
+  tpm.SetBoolKey("can_load_srk", tpm_status_info.can_load_srk);
+  tpm.SetBoolKey("can_load_srk_pubkey",
+                 tpm_status_info.can_load_srk_public_key);
+  tpm.SetBoolKey("srk_vulnerable_roca", tpm_status_info.srk_vulnerable_roca);
+  tpm.SetBoolKey("has_cryptohome_key", tpm_status_info.has_cryptohome_key);
+  tpm.SetBoolKey("can_encrypt", tpm_status_info.can_encrypt);
+  tpm.SetBoolKey("can_decrypt", tpm_status_info.can_decrypt);
+  tpm.SetBoolKey("has_context", tpm_status_info.this_instance_has_context);
+  tpm.SetBoolKey("has_key_handle",
+                 tpm_status_info.this_instance_has_key_handle);
+  tpm.SetIntKey("last_error", tpm_status_info.last_tpm_error);
 
-  tpm->SetBoolean("enabled", tpm_->IsEnabled());
-  tpm->SetBoolean("owned", tpm_->IsOwned());
-  tpm->SetBoolean("being_owned", tpm_->IsBeingOwned());
+  tpm.SetBoolKey("enabled", tpm_->IsEnabled());
+  tpm.SetBoolKey("owned", tpm_->IsOwned());
+  tpm.SetBoolKey("being_owned", tpm_->IsBeingOwned());
 
-  dv.Set("mounts", std::move(mounts));
-  dv.Set("installattrs", std::move(attrs));
-  dv.Set("tpm", std::move(tpm));
+  base::Value dv(base::Value::Type::DICTIONARY);
+  dv.SetKey("mounts", std::move(mounts));
+  dv.SetKey("installattrs", std::move(attrs));
+  dv.SetKey("tpm", std::move(tpm));
   std::string json;
   base::JSONWriter::WriteWithOptions(dv, base::JSONWriter::OPTIONS_PRETTY_PRINT,
                                      &json);

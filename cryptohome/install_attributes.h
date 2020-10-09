@@ -136,9 +136,9 @@ class InstallAttributes {
 
   // Returns a description of the system's install attributes as a Value.
   //
-  // The Value is a DictionaryValue, with keys "initialized", "version",
+  // The Value is of type Dictionary, with keys "initialized", "version",
   // "lockbox_index", "secure", "invalid", "first_install" and "size".
-  virtual std::unique_ptr<base::Value> GetStatus();
+  virtual base::Value GetStatus();
 
   void AddObserver(Observer* obs) { observer_list_.AddObserver(obs); }
 

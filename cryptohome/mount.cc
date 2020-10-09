@@ -1134,48 +1134,48 @@ void Mount::RemovePkcs11Token() {
       IsolateCredentialManager::GetDefaultIsolateCredential(), token_dir);
 }
 
-std::unique_ptr<base::Value> Mount::GetStatus(int active_key_index) {
+base::Value Mount::GetStatus(int active_key_index) {
   VaultKeyset keyset;
   keyset.Initialize(platform_, crypto_);
-  auto dv = std::make_unique<base::DictionaryValue>();
+  base::Value dv(base::Value::Type::DICTIONARY);
   std::string user = SanitizeUserNameWithSalt(username_, system_salt_);
-  auto keysets = std::make_unique<base::ListValue>();
+  base::Value keysets(base::Value::Type::LIST);
   std::vector<int> key_indices;
   if (user.length() && homedirs_->GetVaultKeysets(user, &key_indices)) {
     for (auto key_index : key_indices) {
-      auto keyset_dict = std::make_unique<base::DictionaryValue>();
+      base::Value keyset_dict(base::Value::Type::DICTIONARY);
       if (homedirs_->LoadVaultKeysetForUser(user, key_index, &keyset)) {
         bool tpm =
             keyset.serialized().flags() & SerializedVaultKeyset::TPM_WRAPPED;
         bool scrypt =
             keyset.serialized().flags() & SerializedVaultKeyset::SCRYPT_WRAPPED;
-        keyset_dict->SetBoolean("tpm", tpm);
-        keyset_dict->SetBoolean("scrypt", scrypt);
-        keyset_dict->SetBoolean("ok", true);
-        keyset_dict->SetInteger("last_activity",
-                                keyset.serialized().last_activity_timestamp());
+        keyset_dict.SetBoolKey("tpm", tpm);
+        keyset_dict.SetBoolKey("scrypt", scrypt);
+        keyset_dict.SetBoolKey("ok", true);
+        keyset_dict.SetIntKey("last_activity",
+                              keyset.serialized().last_activity_timestamp());
         if (keyset.serialized().has_key_data()) {
           // TODO(wad) Add additional KeyData
-          keyset_dict->SetString("label",
-                                 keyset.serialized().key_data().label());
+          keyset_dict.SetStringKey("label",
+                                   keyset.serialized().key_data().label());
         }
       } else {
-        keyset_dict->SetBoolean("ok", false);
+        keyset_dict.SetBoolKey("ok", false);
       }
       // TODO(wad) Replace key_index use with key_label() use once
       //           legacy keydata is populated.
       if (mount_type_ != MountType::EPHEMERAL && key_index == active_key_index)
-        keyset_dict->SetBoolean("current", true);
-      keyset_dict->SetInteger("index", key_index);
-      keysets->Append(std::move(keyset_dict));
+        keyset_dict.SetBoolKey("current", true);
+      keyset_dict.SetIntKey("index", key_index);
+      keysets.Append(std::move(keyset_dict));
     }
   }
-  dv->Set("keysets", std::move(keysets));
-  dv->SetBoolean("mounted", IsMounted());
+  dv.SetKey("keysets", std::move(keysets));
+  dv.SetBoolKey("mounted", IsMounted());
   std::string obfuscated_owner;
   homedirs_->GetOwner(&obfuscated_owner);
-  dv->SetString("owner", obfuscated_owner);
-  dv->SetBoolean("enterprise", enterprise_owned_);
+  dv.SetStringKey("owner", obfuscated_owner);
+  dv.SetBoolKey("enterprise", enterprise_owned_);
 
   std::string mount_type_string;
   switch (mount_type_) {
@@ -1192,9 +1192,9 @@ std::unique_ptr<base::Value> Mount::GetStatus(int active_key_index) {
       mount_type_string = "ephemeral";
       break;
   }
-  dv->SetString("type", mount_type_string);
+  dv.SetStringKey("type", mount_type_string);
 
-  return std::move(dv);
+  return dv;
 }
 
 bool Mount::MigrateToDircrypto(

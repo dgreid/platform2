@@ -58,7 +58,7 @@ bool UserSession::UpdateActivityTimestamp(int time_shift_sec) {
   return mount_->UpdateCurrentUserActivityTimestamp(time_shift_sec, key_index_);
 }
 
-std::unique_ptr<base::Value> UserSession::GetStatus() const {
+base::Value UserSession::GetStatus() const {
   return mount_->GetStatus(key_index_);
 }
 

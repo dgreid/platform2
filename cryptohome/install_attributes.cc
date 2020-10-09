@@ -320,30 +320,30 @@ bool InstallAttributes::ClearData() {
   return true;
 }
 
-std::unique_ptr<base::Value> InstallAttributes::GetStatus() {
-  auto dv = std::make_unique<base::DictionaryValue>();
-  dv->SetBoolean("initialized",
-                 status_ == Status::kFirstInstall || status_ == Status::kValid);
-  dv->SetInteger("version", version());
-  dv->SetInteger("lockbox_index", lockbox()->nvram_index());
-  dv->SetInteger("lockbox_nvram_version",
-                 GetNvramVersionNumber(lockbox()->nvram_version()));
-  dv->SetBoolean("secure", is_secure());
-  dv->SetBoolean("invalid", status_ == Status::kInvalid);
-  dv->SetBoolean("first_install", status_ == Status::kFirstInstall);
-  dv->SetInteger("size", Count());
+base::Value InstallAttributes::GetStatus() {
+  base::Value dv(base::Value::Type::DICTIONARY);
+  dv.SetBoolKey("initialized",
+                status_ == Status::kFirstInstall || status_ == Status::kValid);
+  dv.SetIntKey("version", version());
+  dv.SetIntKey("lockbox_index", lockbox()->nvram_index());
+  dv.SetIntKey("lockbox_nvram_version",
+               GetNvramVersionNumber(lockbox()->nvram_version()));
+  dv.SetBoolKey("secure", is_secure());
+  dv.SetBoolKey("invalid", status_ == Status::kInvalid);
+  dv.SetBoolKey("first_install", status_ == Status::kFirstInstall);
+  dv.SetIntKey("size", Count());
   if (Count()) {
-    auto attrs = std::make_unique<base::DictionaryValue>();
+    base::Value attrs(base::Value::Type::DICTIONARY);
     std::string key;
     brillo::Blob value;
     for (int i = 0; i < Count(); i++) {
       GetByIndex(i, &key, &value);
       std::string value_str(reinterpret_cast<const char*>(value.data()));
-      attrs->SetString(key, value_str);
+      attrs.SetStringKey(key, value_str);
     }
-    dv->Set("attrs", std::move(attrs));
+    dv.SetKey("attrs", std::move(attrs));
   }
-  return std::move(dv);
+  return dv;
 }
 
 }  // namespace cryptohome

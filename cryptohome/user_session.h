@@ -55,7 +55,7 @@ class UserSession : public base::RefCountedThreadSafe<UserSession> {
   bool UpdateActivityTimestamp(int time_shift_sec);
 
   // Returns status string of the proxied Mount objest.
-  std::unique_ptr<base::Value> GetStatus() const;
+  base::Value GetStatus() const;
 
   // Sets credentials current session can be re-authenticated with and the
   // index of the keyset those credentials belong to. Returns false in case

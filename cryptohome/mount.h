@@ -206,7 +206,7 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   //
   // The returned object is a dictionary whose keys describe the mount. Current
   // keys are: "keysets", "mounted", "owner", "enterprise", and "type".
-  virtual std::unique_ptr<base::Value> GetStatus(int active_key_index);
+  virtual base::Value GetStatus(int active_key_index);
 
   // Inserts the current user's PKCS #11 token.
   virtual bool InsertPkcs11Token();
