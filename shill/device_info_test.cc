@@ -523,16 +523,35 @@ TEST_F(DeviceInfoTest, CreateDeviceWiFi) {
 }
 #endif  // DISABLE_WIFI
 
-TEST_F(DeviceInfoTest, CreateDeviceTunnelAccepted) {
+class MockLinkReadyListener {
+ public:
+  MOCK_METHOD(void, LinkReadyCallback, (const std::string&, int), ());
+
+  DeviceInfo::LinkReadyCallback GetOnceCallback() {
+    return base::BindOnce(&MockLinkReadyListener::LinkReadyCallback,
+                          weak_factory_.GetWeakPtr());
+  }
+
+ private:
+  base::WeakPtrFactory<MockLinkReadyListener> weak_factory_{this};
+};
+
+TEST_F(DeviceInfoTest, CreateDeviceTunnel) {
   IPAddress address = CreateInterfaceAddress();
 
-  // A VPN device should be offered to VPNProvider.
-  MockVPNProvider* vpn_provider = new StrictMock<MockVPNProvider>;
-  SetVPNProvider(vpn_provider);
-  EXPECT_CALL(*vpn_provider,
-              OnDeviceInfoAvailable(kTestDeviceName, kTestDeviceIndex,
-                                    Technology(Technology::kTunnel)))
-      .WillOnce(Return(true));
+  EXPECT_CALL(routing_table_, FlushRoutes(kTestDeviceIndex)).Times(1);
+  EXPECT_CALL(rtnl_handler_,
+              RemoveInterfaceAddress(kTestDeviceIndex, IsIPAddress(address)));
+  // Since the device was not expected, DeviceInfo will remove the interface.
+  EXPECT_CALL(rtnl_handler_, RemoveInterface(kTestDeviceIndex)).Times(1);
+  EXPECT_FALSE(CreateDevice(kTestDeviceName, "address", kTestDeviceIndex,
+                            Technology::kTunnel));
+
+  MockLinkReadyListener listener;
+  device_info_.pending_links_.emplace(kTestDeviceName,
+                                      listener.GetOnceCallback());
+  EXPECT_CALL(listener, LinkReadyCallback(kTestDeviceName, kTestDeviceIndex))
+      .Times(1);
   EXPECT_CALL(routing_table_, FlushRoutes(kTestDeviceIndex)).Times(1);
   EXPECT_CALL(rtnl_handler_,
               RemoveInterfaceAddress(kTestDeviceIndex, IsIPAddress(address)));
@@ -541,36 +560,9 @@ TEST_F(DeviceInfoTest, CreateDeviceTunnelAccepted) {
                             Technology::kTunnel));
 }
 
-TEST_F(DeviceInfoTest, CreateDeviceTunnelRejected) {
-  IPAddress address = CreateInterfaceAddress();
-
-  // A VPN device should be offered to VPNProvider.
-  MockVPNProvider* vpn_provider = new StrictMock<MockVPNProvider>;
-  SetVPNProvider(vpn_provider);
-  EXPECT_CALL(*vpn_provider,
-              OnDeviceInfoAvailable(kTestDeviceName, kTestDeviceIndex,
-                                    Technology(Technology::kTunnel)))
-      .WillOnce(Return(false));
-  EXPECT_CALL(routing_table_, FlushRoutes(kTestDeviceIndex)).Times(1);
-  EXPECT_CALL(rtnl_handler_,
-              RemoveInterfaceAddress(kTestDeviceIndex, IsIPAddress(address)));
-  // Since the device was rejected by the VPNProvider, DeviceInfo will
-  // remove the interface.
-  EXPECT_CALL(rtnl_handler_, RemoveInterface(kTestDeviceIndex)).Times(1);
-  EXPECT_FALSE(CreateDevice(kTestDeviceName, "address", kTestDeviceIndex,
-                            Technology::kTunnel));
-}
-
 TEST_F(DeviceInfoTest, CreateDevicePPP) {
   IPAddress address = CreateInterfaceAddress();
 
-  // A VPN device should be offered to VPNProvider.
-  MockVPNProvider* vpn_provider = new StrictMock<MockVPNProvider>;
-  SetVPNProvider(vpn_provider);
-  EXPECT_CALL(*vpn_provider,
-              OnDeviceInfoAvailable(kTestDeviceName, kTestDeviceIndex,
-                                    Technology(Technology::kPPP)))
-      .WillOnce(Return(false));
   EXPECT_CALL(routing_table_, FlushRoutes(kTestDeviceIndex)).Times(1);
   EXPECT_CALL(rtnl_handler_,
               RemoveInterfaceAddress(kTestDeviceIndex, IsIPAddress(address)));

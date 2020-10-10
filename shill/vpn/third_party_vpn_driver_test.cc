@@ -87,12 +87,10 @@ TEST_F(ThirdPartyVpnDriverTest, ConnectAndDisconnect) {
   int fd = 1;
 
   EXPECT_CALL(*service_, SetState(Service::kStateConfiguring)).Times(1);
-  EXPECT_CALL(device_info_, CreateTunnelInterface(_))
-      .WillOnce(DoAll(SetArgPointee<0>(interface), Return(true)));
+  EXPECT_CALL(device_info_, CreateTunnelInterface(_)).WillOnce(Return(true));
   Error error;
   driver_->Connect(service_, &error);
   EXPECT_TRUE(error.IsSuccess());
-  EXPECT_EQ(kInterfaceName, driver_->tunnel_interface_);
   EXPECT_TRUE(driver_->IsConnectTimeoutStarted());
 
   EXPECT_CALL(device_info_, OpenTunnelInterface(interface))
@@ -101,8 +99,9 @@ TEST_F(ThirdPartyVpnDriverTest, ConnectAndDisconnect) {
       .WillOnce(Return(io_handler));
   EXPECT_CALL(*adaptor_interface_, EmitPlatformMessage(static_cast<uint32_t>(
                                        ThirdPartyVpnDriver::kConnected)));
-  EXPECT_FALSE(driver_->ClaimInterface("eth1", kInterfaceIndex));
-  EXPECT_TRUE(driver_->ClaimInterface(interface, kInterfaceIndex));
+
+  driver_->ClaimInterface(interface, kInterfaceIndex);
+  EXPECT_EQ(kInterfaceName, driver_->tunnel_interface_);
   EXPECT_EQ(driver_->active_client_, driver_);
   EXPECT_TRUE(driver_->parameters_expected_);
   EXPECT_EQ(driver_->io_handler_.get(), io_handler);
@@ -122,8 +121,7 @@ TEST_F(ThirdPartyVpnDriverTest, ReconnectionEvents) {
   IOHandler* io_handler = new IOHandler();  // Owned by |driver_|
   int fd = 1;
 
-  EXPECT_CALL(device_info_, CreateTunnelInterface(_))
-      .WillOnce(DoAll(SetArgPointee<0>(interface), Return(true)));
+  EXPECT_CALL(device_info_, CreateTunnelInterface(_)).WillOnce(Return(true));
   Error error;
   driver_->Connect(service_, &error);
   EXPECT_TRUE(error.IsSuccess());
@@ -132,7 +130,7 @@ TEST_F(ThirdPartyVpnDriverTest, ReconnectionEvents) {
       .WillOnce(Return(fd));
   EXPECT_CALL(io_handler_factory_, CreateIOInputHandler(fd, _, _))
       .WillOnce(Return(io_handler));
-  EXPECT_TRUE(driver_->ClaimInterface(interface, kInterfaceIndex));
+  driver_->ClaimInterface(interface, kInterfaceIndex);
 
   driver_->reconnect_supported_ = true;
 
@@ -181,8 +179,7 @@ TEST_F(ThirdPartyVpnDriverTest, PowerEvents) {
   IOHandler* io_handler = new IOHandler();  // Owned by |driver_|
   int fd = 1;
 
-  EXPECT_CALL(device_info_, CreateTunnelInterface(_))
-      .WillOnce(DoAll(SetArgPointee<0>(interface), Return(true)));
+  EXPECT_CALL(device_info_, CreateTunnelInterface(_)).WillOnce(Return(true));
   Error error;
   driver_->Connect(service_, &error);
   EXPECT_TRUE(error.IsSuccess());
@@ -191,7 +188,7 @@ TEST_F(ThirdPartyVpnDriverTest, PowerEvents) {
       .WillOnce(Return(fd));
   EXPECT_CALL(io_handler_factory_, CreateIOInputHandler(fd, _, _))
       .WillOnce(Return(io_handler));
-  EXPECT_TRUE(driver_->ClaimInterface(interface, kInterfaceIndex));
+  driver_->ClaimInterface(interface, kInterfaceIndex);
 
   driver_->reconnect_supported_ = true;
 

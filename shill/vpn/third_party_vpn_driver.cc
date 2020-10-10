@@ -509,7 +509,8 @@ void ThirdPartyVpnDriver::Connect(const VPNServiceRefPtr& service,
   ip_properties_set_ = false;
   set_service(service);
   service->SetState(Service::kStateConfiguring);
-  if (!manager()->device_info()->CreateTunnelInterface(&tunnel_interface_)) {
+  if (!manager()->device_info()->CreateTunnelInterface(base::BindOnce(
+          &ThirdPartyVpnDriver::ClaimInterface, weak_factory_.GetWeakPtr()))) {
     Error::PopulateAndLog(FROM_HERE, error, Error::kInternalError,
                           "Could not create tunnel interface.");
     Cleanup(Service::kStateFailure, Service::kFailureInternal,
@@ -518,14 +519,12 @@ void ThirdPartyVpnDriver::Connect(const VPNServiceRefPtr& service,
   // Wait for the ClaimInterface callback to continue the connection process.
 }
 
-bool ThirdPartyVpnDriver::ClaimInterface(const std::string& link_name,
+void ThirdPartyVpnDriver::ClaimInterface(const std::string& link_name,
                                          int interface_index) {
-  if (link_name != tunnel_interface_) {
-    return false;
-  }
   CHECK(!active_client_);
 
   SLOG(this, 2) << "Claiming " << link_name << " for third party VPN tunnel";
+  tunnel_interface_ = link_name;
 
   CHECK(!device_);
   device_ = new VirtualDevice(manager(), link_name, interface_index,
@@ -548,7 +547,6 @@ bool ThirdPartyVpnDriver::ClaimInterface(const std::string& link_name,
         static_cast<uint32_t>(PlatformMessage::kConnected));
     manager()->AddDefaultServiceObserver(this);
   }
-  return true;
 }
 
 void ThirdPartyVpnDriver::Disconnect() {

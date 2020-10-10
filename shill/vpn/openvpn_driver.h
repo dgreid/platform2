@@ -100,11 +100,11 @@ class OpenVPNDriver : public VPNDriver,
   // configuration settings are passed back from the external process through
   // the |Notify| RPC service method.
   void Connect(const VPNServiceRefPtr& service, Error* error) override;
-  bool ClaimInterface(const std::string& link_name,
-                      int interface_index) override;
   void Disconnect() override;
   std::string GetProviderType() const override;
   void OnConnectTimeout() override;
+
+  void ClaimInterface(const std::string& link_name, int interface_index);
 
  private:
   friend class OpenVPNDriverTest;
@@ -262,6 +262,8 @@ class OpenVPNDriver : public VPNDriver,
   // client simply reconnects), and a network->link_down->network transition
   // (where the client should disconnect, wait for link up, then reconnect).
   bool link_down_;
+
+  base::WeakPtrFactory<OpenVPNDriver> weak_factory_{this};
 
   DISALLOW_COPY_AND_ASSIGN(OpenVPNDriver);
 };

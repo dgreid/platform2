@@ -316,12 +316,10 @@ void OpenVPNDriverTest::SetupLSBRelease() {
 TEST_F(OpenVPNDriverTest, Connect) {
   EXPECT_CALL(*service_, SetState(Service::kStateConfiguring));
   const string interface = kInterfaceName;
-  EXPECT_CALL(device_info_, CreateTunnelInterface(_))
-      .WillOnce(DoAll(SetArgPointee<0>(interface), Return(true)));
+  EXPECT_CALL(device_info_, CreateTunnelInterface(_)).WillOnce(Return(true));
   Error error;
   driver_->Connect(service_, &error);
   EXPECT_TRUE(error.IsSuccess());
-  EXPECT_EQ(kInterfaceName, driver_->tunnel_interface_);
   EXPECT_TRUE(driver_->IsConnectTimeoutStarted());
 }
 
@@ -1102,10 +1100,6 @@ TEST_F(OpenVPNDriverTest, AppendFlag) {
 
 TEST_F(OpenVPNDriverTest, ClaimInterface) {
   driver_->tunnel_interface_ = kInterfaceName;
-  EXPECT_FALSE(
-      driver_->ClaimInterface(string(kInterfaceName) + "XXX", kInterfaceIndex));
-  EXPECT_FALSE(driver_->device_);
-
   static const char kHost[] = "192.168.2.254";
   SetArg(kProviderHostProperty, kHost);
   EXPECT_CALL(*management_server_, Start(_, _)).WillOnce(Return(true));
@@ -1113,7 +1107,8 @@ TEST_F(OpenVPNDriverTest, ClaimInterface) {
   EXPECT_CALL(process_manager_,
               StartProcessInMinijail(_, _, _, _, _, _, _, _, true, _))
       .WillOnce(Return(10101));
-  EXPECT_TRUE(driver_->ClaimInterface(kInterfaceName, kInterfaceIndex));
+
+  driver_->ClaimInterface(kInterfaceName, kInterfaceIndex);
   ASSERT_NE(nullptr, driver_->device_);
   EXPECT_TRUE(IsObservingDefaultServiceChanges());
   EXPECT_EQ(kInterfaceIndex, driver_->device_->interface_index());

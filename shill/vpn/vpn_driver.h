@@ -34,8 +34,6 @@ class VPNDriver {
  public:
   virtual ~VPNDriver();
 
-  virtual bool ClaimInterface(const std::string& link_name,
-                              int interface_index) = 0;
   virtual void Connect(const VPNServiceRefPtr& service, Error* error) = 0;
   virtual void Disconnect() = 0;
   virtual std::string GetProviderType() const = 0;

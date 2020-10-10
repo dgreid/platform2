@@ -149,11 +149,6 @@ const RpcIdentifier& L2TPIPSecDriver::GetServiceRpcIdentifier() const {
   return service()->GetRpcIdentifier();
 }
 
-bool L2TPIPSecDriver::ClaimInterface(const string& link_name,
-                                     int interface_index) {
-  return false;
-}
-
 void L2TPIPSecDriver::Connect(const VPNServiceRefPtr& service, Error* error) {
   StartConnectTimeout(kConnectTimeoutSeconds);
   set_service(service);

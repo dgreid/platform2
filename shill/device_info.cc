@@ -597,22 +597,30 @@ DeviceRefPtr DeviceInfo::CreateDevice(const string& link_name,
     case Technology::kArcBridge:
       // Shill doesn't touch the IP configuration for the ARC bridge.
       flush = false;
-      FALLTHROUGH;
+      // Notify VPNProvider of the interface's presence.
+      // TODO(crbug/1026648): After cleanup of VirtualDevice ownership
+      // vpn_provider()->OnDeviceInfoAvailable should no longer be needed.
+      manager_->vpn_provider()->OnDeviceInfoAvailable(
+          link_name, interface_index, technology);
+      break;
     case Technology::kPPP:
     case Technology::kTunnel:
       // Tunnel and PPP devices are managed by the VPN code (PPP for
-      // l2tpipsec).  Notify the VPN Provider of the interface's presence.
+      // l2tpipsec). Notify the corresponding VPNService of the interface's
+      // presence through the pre-registered callback.
       // Since CreateDevice is only called once in the lifetime of an
       // interface index, this notification will only occur the first
       // time the device is seen.
-      SLOG(this, 2) << "Tunnel / PPP link " << link_name << " at index "
-                    << interface_index << " -- notifying VPNProvider.";
-      if (!manager_->vpn_provider()->OnDeviceInfoAvailable(
-              link_name, interface_index, technology) &&
-          technology == Technology::kTunnel) {
-        // If VPN does not know anything about this tunnel, it is probably
+      if (pending_links_.find(link_name) != pending_links_.end()) {
+        SLOG(this, 2) << "Tunnel / PPP link " << link_name << " at index "
+                      << interface_index << " -- triggering callback.";
+        std::move(pending_links_[link_name]).Run(link_name, interface_index);
+        pending_links_.erase(link_name);
+      } else if (technology == Technology::kTunnel) {
+        // If no one claims this tunnel, it is probably
         // left over from a previous instance and should not exist.
-        SLOG(this, 2) << "Tunnel link is unused.  Deleting.";
+        SLOG(this, 2) << "Tunnel link " << link_name << " at index "
+                      << interface_index << " is unused. Deleting.";
         DeleteInterface(interface_index);
       }
       break;
@@ -1053,7 +1061,7 @@ bool DeviceInfo::GetByteCounts(int interface_index,
   return true;
 }
 
-bool DeviceInfo::CreateTunnelInterface(string* interface_name) const {
+bool DeviceInfo::CreateTunnelInterface(LinkReadyCallback callback) {
   int fd = HANDLE_EINTR(open(kTunDeviceName, O_RDWR | O_CLOEXEC));
   if (fd < 0) {
     PLOG(ERROR) << "failed to open " << kTunDeviceName;
@@ -1074,8 +1082,14 @@ bool DeviceInfo::CreateTunnelInterface(string* interface_name) const {
     return false;
   }
 
-  *interface_name = string(ifr.ifr_name);
-
+  if (callback) {
+    std::string ifname(ifr.ifr_name);
+    if (pending_links_.erase(ifname) > 0) {
+      PLOG(WARNING) << "Callback for RTNL link ready event of " << ifname
+                    << " already existed, overwritten";
+    }
+    pending_links_.emplace(ifname, std::move(callback));
+  }
   return true;
 }
 

@@ -35,9 +35,6 @@ class L2TPIPSecDriver : public VPNDriver, public RpcTaskDelegate {
   const RpcIdentifier& GetServiceRpcIdentifier() const;
 
  protected:
-  // Inherited from VPNDriver.
-  bool ClaimInterface(const std::string& link_name,
-                      int interface_index) override;
   void Connect(const VPNServiceRefPtr& service, Error* error) override;
   void Disconnect() override;
   std::string GetProviderType() const override;

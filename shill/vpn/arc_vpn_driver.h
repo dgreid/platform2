@@ -25,9 +25,6 @@ class ArcVpnDriver : public VPNDriver {
   ArcVpnDriver(Manager* manager, ProcessManager* process_manager);
   ~ArcVpnDriver() override;
 
-  // Implementation of VPNDriver
-  bool ClaimInterface(const std::string& link_name,
-                      int interface_index) override;
   void Connect(const VPNServiceRefPtr& service, Error* error) override;
   std::string GetProviderType() const override;
   void Disconnect() override;

@@ -210,20 +210,13 @@ bool VPNProvider::OnDeviceInfoAvailable(const string& link_name,
                                         int interface_index,
                                         Technology technology) {
   if (technology == Technology::kArcBridge) {
-    arc_device_ = new VirtualDevice(manager_, link_name, interface_index,
-                                    Technology::kArcBridge);
+    arc_device_ = base::MakeRefCounted<VirtualDevice>(
+        manager_, link_name, interface_index, Technology::kArcBridge);
     arc_device_->SetFixedIpParams(true);
     // Forward ARC->internet traffic over third-party VPN services.
     allowed_iifs_.push_back(link_name);
     return true;
   }
-
-  for (const auto& service : services_) {
-    if (service->driver()->ClaimInterface(link_name, interface_index)) {
-      return true;
-    }
-  }
-
   return false;
 }
 

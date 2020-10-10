@@ -170,35 +170,6 @@ TEST_F(VPNProviderTest, GetService) {
   }
 }
 
-TEST_F(VPNProviderTest, OnDeviceInfoAvailable) {
-  const string kInterfaceName("tun0");
-  const int kInterfaceIndex = 1;
-
-  auto bad_driver = std::make_unique<MockVPNDriver>();
-  EXPECT_CALL(*bad_driver, ClaimInterface(_, _))
-      .Times(2)
-      .WillRepeatedly(Return(false));
-  provider_.services_.push_back(
-      new VPNService(&manager_, std::move(bad_driver)));
-
-  EXPECT_FALSE(provider_.OnDeviceInfoAvailable(kInterfaceName, kInterfaceIndex,
-                                               Technology::kTunnel));
-
-  auto good_driver = std::make_unique<MockVPNDriver>();
-  EXPECT_CALL(*good_driver, ClaimInterface(_, _)).WillOnce(Return(true));
-  provider_.services_.push_back(
-      new VPNService(&manager_, std::move(good_driver)));
-
-  auto dup_driver = std::make_unique<MockVPNDriver>();
-  EXPECT_CALL(*dup_driver, ClaimInterface(_, _)).Times(0);
-  provider_.services_.push_back(
-      new VPNService(&manager_, std::move(dup_driver)));
-
-  EXPECT_TRUE(provider_.OnDeviceInfoAvailable(kInterfaceName, kInterfaceIndex,
-                                              Technology::kTunnel));
-  provider_.services_.clear();
-}
-
 TEST_F(VPNProviderTest, ArcDeviceFound) {
   const string kInterfaceName("arcbr0");
   const int kInterfaceIndex = 1;

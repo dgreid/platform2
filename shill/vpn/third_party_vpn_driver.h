@@ -64,8 +64,6 @@ class ThirdPartyVpnDriver : public VPNDriver, public DefaultServiceObserver {
 
   // Implementation of VPNDriver
   void InitPropertyStore(PropertyStore* store) override;
-  bool ClaimInterface(const std::string& link_name,
-                      int interface_index) override;
   void Connect(const VPNServiceRefPtr& service, Error* error) override;
   std::string GetProviderType() const override;
   void Disconnect() override;
@@ -75,6 +73,8 @@ class ThirdPartyVpnDriver : public VPNDriver, public DefaultServiceObserver {
                                bool logical_service_changed,
                                const ServiceRefPtr& physical_service,
                                bool physical_service_changed) override;
+
+  void ClaimInterface(const std::string& link_name, int interface_index);
 
   void OnDefaultServiceStateChanged(const ServiceRefPtr& service) override;
   bool Load(const StoreInterface* storage,
@@ -262,6 +262,8 @@ class ThirdPartyVpnDriver : public VPNDriver, public DefaultServiceObserver {
   // client simply reconnects), and a network->link_down->network transition
   // (where the client should disconnect, wait for link up, then reconnect).
   bool link_down_;
+
+  base::WeakPtrFactory<ThirdPartyVpnDriver> weak_factory_{this};
 
   DISALLOW_COPY_AND_ASSIGN(ThirdPartyVpnDriver);
 };

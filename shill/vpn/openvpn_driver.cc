@@ -346,14 +346,10 @@ void OpenVPNDriver::OnOpenVPNDied(int exit_status) {
   // TODO(petkov): Figure if we need to restart the connection.
 }
 
-bool OpenVPNDriver::ClaimInterface(const string& link_name,
+void OpenVPNDriver::ClaimInterface(const string& link_name,
                                    int interface_index) {
-  if (link_name != tunnel_interface_) {
-    return false;
-  }
-
   SLOG(this, 2) << "Claiming " << link_name << " for OpenVPN tunnel";
-
+  tunnel_interface_ = link_name;
   CHECK(!device_);
   device_ = new VirtualDevice(manager(), link_name, interface_index,
                               Technology::kVPN);
@@ -365,7 +361,6 @@ bool OpenVPNDriver::ClaimInterface(const string& link_name,
   } else {
     FailService(Service::kFailureInternal, Service::kErrorDetailsNone);
   }
-  return true;
 }
 
 void OpenVPNDriver::GetLogin(string* /*user*/, string* /*password*/) {
@@ -636,7 +631,8 @@ void OpenVPNDriver::Connect(const VPNServiceRefPtr& service, Error* error) {
   StartConnectTimeout(kConnectTimeoutSeconds);
   set_service(service);
   service->SetState(Service::kStateConfiguring);
-  if (!manager()->device_info()->CreateTunnelInterface(&tunnel_interface_)) {
+  if (!manager()->device_info()->CreateTunnelInterface(base::BindOnce(
+          &OpenVPNDriver::ClaimInterface, weak_factory_.GetWeakPtr()))) {
     Error::PopulateAndLog(FROM_HERE, error, Error::kInternalError,
                           "Could not create tunnel interface.");
     FailService(Service::kFailureInternal, Service::kErrorDetailsNone);

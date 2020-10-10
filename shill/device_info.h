@@ -43,6 +43,10 @@ class Nl80211Message;
 
 class DeviceInfo {
  public:
+  // Type of callback function triggered when an RTNL link add event occurs.
+  // First parameter is link name and second parameter interface index.
+  using LinkReadyCallback = base::OnceCallback<void(const std::string&, int)>;
+
   explicit DeviceInfo(Manager* manager);
   virtual ~DeviceInfo();
 
@@ -101,7 +105,7 @@ class DeviceInfo {
                                          std::vector<IPAddress>* address_list,
                                          uint32_t* life_time_seconds);
 
-  virtual bool CreateTunnelInterface(std::string* interface_name) const;
+  virtual bool CreateTunnelInterface(LinkReadyCallback callback);
   virtual int OpenTunnelInterface(const std::string& interface_name) const;
   virtual bool DeleteInterface(int interface_index) const;
 
@@ -130,6 +134,7 @@ class DeviceInfo {
   FRIEND_TEST(DeviceInfoTest, IPv6DnsServerAddressesChanged);  // For infos_.
   FRIEND_TEST(DeviceInfoMockedGetUserId,
               AddRemoveAllowedInterface);  // For rtnl_handler_, routing_table_.
+  FRIEND_TEST(DeviceInfoTest, CreateDeviceTunnel);  // For pending_links_.
 
   struct AddressData {
     AddressData() : address(IPAddress::kFamilyUnknown), flags(0), scope(0) {}
@@ -262,6 +267,13 @@ class DeviceInfo {
 
   // Maintain a callback for the periodic link statistics poll task.
   base::CancelableClosure request_link_statistics_callback_;
+
+  // Maintain the list of callbacks awaiting link ready event.
+  // Used by VPNServices for tunnel (through calling CreateTunnel with
+  // callback) and ppp (through direct registering callback).
+  // Callback are one-time and will be removed once triggered.
+  // Keys of the map are names of the link concerned.
+  std::map<std::string, LinkReadyCallback> pending_links_;
 
   // Cache copy of singleton pointers.
   RoutingTable* routing_table_;

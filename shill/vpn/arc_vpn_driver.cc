@@ -128,13 +128,6 @@ void ArcVpnDriver::Connect(const VPNServiceRefPtr& service, Error* error) {
                            Metrics::kMetricVpnDriverMax);
 }
 
-bool ArcVpnDriver::ClaimInterface(const std::string& link_name,
-                                  int interface_index) {
-  // This never happens to our interface, because it exists before
-  // shill starts up.
-  return false;
-}
-
 void ArcVpnDriver::Disconnect() {
   SLOG(this, 2) << __func__;
   Cleanup();
