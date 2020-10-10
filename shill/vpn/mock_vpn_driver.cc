@@ -6,8 +6,16 @@
 
 namespace shill {
 
-MockVPNDriver::MockVPNDriver() : VPNDriver(nullptr, nullptr, nullptr, 0) {}
+MockVPNDriver::MockVPNDriver()
+    : VPNDriver(nullptr, nullptr, nullptr, 0), if_type_(kDriverManaged) {}
 
 MockVPNDriver::~MockVPNDriver() = default;
+
+VPNDriver::IfType MockVPNDriver::GetIfType() const {
+  return if_type_;
+}
+void MockVPNDriver::SetIfType(IfType type) {
+  if_type_ = type;
+}
 
 }  // namespace shill

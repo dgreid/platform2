@@ -38,6 +38,7 @@ class L2TPIPSecDriver : public VPNDriver, public RpcTaskDelegate {
   void Connect(const VPNServiceRefPtr& service, Error* error) override;
   void Disconnect() override;
   std::string GetProviderType() const override;
+  IfType GetIfType() const override;
   void OnConnectTimeout() override;
 
  private:

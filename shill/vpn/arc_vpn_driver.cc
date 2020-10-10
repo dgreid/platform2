@@ -137,4 +137,8 @@ std::string ArcVpnDriver::GetProviderType() const {
   return std::string(kProviderArcVpn);
 }
 
+VPNDriver::IfType ArcVpnDriver::GetIfType() const {
+  return kDriverManaged;
+}
+
 }  // namespace shill

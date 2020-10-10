@@ -1026,6 +1026,10 @@ string OpenVPNDriver::GetProviderType() const {
   return kProviderOpenVpn;
 }
 
+VPNDriver::IfType OpenVPNDriver::GetIfType() const {
+  return kDriverManaged;
+}
+
 KeyValueStore OpenVPNDriver::GetProvider(Error* error) {
   SLOG(this, 2) << __func__;
   KeyValueStore props = VPNDriver::GetProvider(error);

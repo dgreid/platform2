@@ -172,6 +172,10 @@ string L2TPIPSecDriver::GetProviderType() const {
   return kProviderL2tpIpsec;
 }
 
+VPNDriver::IfType L2TPIPSecDriver::GetIfType() const {
+  return kDriverManaged;
+}
+
 void L2TPIPSecDriver::IdleService() {
   Cleanup(Service::kStateIdle, Service::kFailureNone);
 }

@@ -32,11 +32,29 @@ class StoreInterface;
 
 class VPNDriver {
  public:
+  // Indicating how virtual interface is managed for this type of driver
+  enum IfType {
+    // Driver keeps track of interface and maintain the state machine.
+    // TODO(taoyl): As per b/170478571 those ownership should be moved
+    // to service, and one of the three following values should be used
+    // instead. This value is only used during the period of migration.
+    kDriverManaged = 0,
+    // VPNService calls DeviceInfo to create a tun interface, and pass
+    // the ifname to driver before ConnectAsync().
+    kTunnel = 1,
+    // A ppp interface will be created by external pppd process after
+    // ConnectAsync() and VPNService will capture it.
+    kPPP = 2,
+    // Uses the always-present arc bridge interface
+    kArcBridge = 3,
+  };
+
   virtual ~VPNDriver();
 
   virtual void Connect(const VPNServiceRefPtr& service, Error* error) = 0;
   virtual void Disconnect() = 0;
   virtual std::string GetProviderType() const = 0;
+  virtual IfType GetIfType() const = 0;
 
   virtual void InitPropertyStore(PropertyStore* store);
 
