@@ -7,8 +7,5 @@
 set -e
 
 OUT=$1
-shift
-for v; do
-  sed -e "s/@BSLOT@/${v}/g" libmetrics.pc.in > "${OUT}/lib/libmetrics-${v}.pc"
-  sed -e "s/@BSLOT@/${v}/g" libmetrics.pc.in > "${OUT}/lib/libmetrics.pc"
-done
+v=$2
+sed -e "s/@BSLOT@/${v}/g" libmetrics.pc.in > "${OUT}/lib/libmetrics.pc"
