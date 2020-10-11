@@ -799,13 +799,6 @@ bool Mount::AreValid(const Credentials& credentials) {
   return false;
 }
 
-bool Mount::LoadVaultKeyset(const Credentials& credentials,
-                            int index,
-                            SerializedVaultKeyset* serialized) const {
-  return LoadVaultKeysetForUser(credentials.GetObfuscatedUsername(system_salt_),
-                                index, serialized);
-}
-
 bool Mount::LoadVaultKeysetForUser(const std::string& obfuscated_username,
                                    int index,
                                    SerializedVaultKeyset* serialized) const {

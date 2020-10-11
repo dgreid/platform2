@@ -313,10 +313,6 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   //     should be created.
   virtual bool CreateCryptohome(const Credentials& credentials) const;
 
-  virtual bool LoadVaultKeyset(const Credentials& credentials,
-                               int index,
-                               SerializedVaultKeyset* encrypted_keyset) const;
-
   virtual bool AddEcryptfsAuthToken(const VaultKeyset& vault_keyset,
                                     std::string* key_signature,
                                     std::string* filename_key_signature) const;
