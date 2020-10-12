@@ -239,7 +239,8 @@ class ContextTestPeer {
       ::keymaster::AuthorizationSet* hw_enforced,
       ::keymaster::AuthorizationSet* sw_enforced) {
     return context.DeserializeKeyDataBlob(key_blob, hidden, key_material,
-                                          hw_enforced, sw_enforced);
+                                          hw_enforced, sw_enforced,
+                                          /*key=*/nullptr);
   }
 
   static ContextAdaptor& context_adaptor(ArcKeymasterContext* context) {

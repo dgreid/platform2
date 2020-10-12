@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <string>
+#include <utility>
 
 #include <base/logging.h>
 #include <base/stl_util.h>
@@ -31,6 +32,15 @@ bool DeserializeKeyMaterialToBlob(const std::string& key_material,
                            output->writable_data());
   CHECK_EQ(end - output->key_material, output->key_material_size);
   return true;
+}
+
+bool DeserializeKeyDataToBlob(const KeyData& key_data,
+                              ::keymaster::KeymasterKeyBlob* output) {
+  if (!output->Reset(key_data.ByteSizeLong()))
+    return false;
+  uint8_t* end =
+      key_data.SerializeWithCachedSizesToArray(output->writable_data());
+  return end - output->key_material == output->key_material_size;
 }
 
 void SerializeAuthorizationSet(const ::keymaster::AuthorizationSet& auth_set,
@@ -102,13 +112,15 @@ bool UnpackFromArcKeyData(const KeyData& key_data,
                           ::keymaster::KeymasterKeyBlob* key_material,
                           ::keymaster::AuthorizationSet* hw_enforced,
                           ::keymaster::AuthorizationSet* sw_enforced) {
-  // Currently only known key data source is ARC.
-  if (key_data.data_case() != KeyData::DataCase::kArcKey)
-    return false;
-
-  // Deserialize key material.
-  if (!DeserializeKeyMaterialToBlob(key_data.arc_key().key_material(),
+  // For ARC keys, deserialize the actual key material into |key_material|.
+  if (key_data.data_case() == KeyData::DataCase::kArcKey &&
+      !DeserializeKeyMaterialToBlob(key_data.arc_key().key_material(),
                                     key_material)) {
+    return false;
+  }
+  // For any other key type, store the full |key_data| into |key_material|.
+  if (key_data.data_case() != KeyData::DataCase::kArcKey &&
+      !DeserializeKeyDataToBlob(key_data, key_material)) {
     return false;
   }
 
@@ -120,9 +132,20 @@ bool UnpackFromArcKeyData(const KeyData& key_data,
   return DeserializeAuthorizationSet(key_data.sw_enforced_tags(), sw_enforced);
 }
 
+base::Optional<keymaster_algorithm_t> FindAlgorithmTag(
+    const ::keymaster::AuthorizationSet& hw_enforced,
+    const ::keymaster::AuthorizationSet& sw_enforced) {
+  keymaster_algorithm_t algorithm;
+  if (!hw_enforced.GetTagValue(::keymaster::TAG_ALGORITHM, &algorithm) &&
+      !sw_enforced.GetTagValue(::keymaster::TAG_ALGORITHM, &algorithm))
+    return base::nullopt;
+  return algorithm;
+}
+
 }  // anonymous namespace
 
-ArcKeymasterContext::ArcKeymasterContext() = default;
+ArcKeymasterContext::ArcKeymasterContext()
+    : rsa_key_factory_(context_adaptor_.GetWeakPtr(), KM_ALGORITHM_RSA) {}
 
 ArcKeymasterContext::~ArcKeymasterContext() = default;
 
@@ -168,16 +191,18 @@ keymaster_error_t ArcKeymasterContext::ParseKeyBlob(
     return error;
 
   error = DeserializeBlob(key_blob, hidden, &key_material, &hw_enforced,
-                          &sw_enforced);
+                          &sw_enforced, key);
   if (error != KM_ERROR_OK)
     return error;
+  if (*key)
+    return KM_ERROR_OK;
 
-  keymaster_algorithm_t algorithm;
-  if (!hw_enforced.GetTagValue(::keymaster::TAG_ALGORITHM, &algorithm) &&
-      !sw_enforced.GetTagValue(::keymaster::TAG_ALGORITHM, &algorithm)) {
+  base::Optional<keymaster_algorithm_t> algorithm =
+      FindAlgorithmTag(hw_enforced, sw_enforced);
+  if (!algorithm.has_value())
     return KM_ERROR_INVALID_ARGUMENT;
-  }
-  auto factory = GetKeyFactory(algorithm);
+
+  ::keymaster::KeyFactory* factory = GetKeyFactory(algorithm.value());
   return factory->LoadKey(move(key_material), additional_params,
                           move(hw_enforced), move(sw_enforced), key);
 }
@@ -197,7 +222,7 @@ keymaster_error_t ArcKeymasterContext::UpgradeKeyBlob(
   ::keymaster::AuthorizationSet sw_enforced;
   ::keymaster::KeymasterKeyBlob key_material;
   error = DeserializeBlob(key_blob, hidden, &key_material, &hw_enforced,
-                          &sw_enforced);
+                          &sw_enforced, /*key=*/nullptr);
   if (error != KM_ERROR_OK)
     return error;
 
@@ -225,11 +250,12 @@ keymaster_error_t ArcKeymasterContext::DeserializeBlob(
     const ::keymaster::AuthorizationSet& hidden,
     ::keymaster::KeymasterKeyBlob* key_material,
     ::keymaster::AuthorizationSet* hw_enforced,
-    ::keymaster::AuthorizationSet* sw_enforced) const {
+    ::keymaster::AuthorizationSet* sw_enforced,
+    ::keymaster::UniquePtr<::keymaster::Key>* key) const {
   keymaster_error_t error;
 
   error = DeserializeKeyDataBlob(key_blob, hidden, key_material, hw_enforced,
-                                 sw_enforced);
+                                 sw_enforced, key);
   if (error == KM_ERROR_OK)
     return error;
 
@@ -264,7 +290,8 @@ keymaster_error_t ArcKeymasterContext::DeserializeKeyDataBlob(
     const ::keymaster::AuthorizationSet& hidden,
     ::keymaster::KeymasterKeyBlob* key_material,
     ::keymaster::AuthorizationSet* hw_enforced,
-    ::keymaster::AuthorizationSet* sw_enforced) const {
+    ::keymaster::AuthorizationSet* sw_enforced,
+    ::keymaster::UniquePtr<::keymaster::Key>* key) const {
   if (!key_material || !hw_enforced || !sw_enforced)
     return KM_ERROR_OUTPUT_PARAMETER_NULL;
 
@@ -282,7 +309,36 @@ keymaster_error_t ArcKeymasterContext::DeserializeKeyDataBlob(
     return KM_ERROR_INVALID_KEY_BLOB;
   }
 
+  // Load it here if this is not an ARC key (it is a Chrome OS key).
+  if (!key_data->has_arc_key() && key) {
+    return LoadKey(std::move(key_data.value()), std::move(*hw_enforced),
+                   std::move(*sw_enforced), key);
+  }
+
+  // Otherwise, return success and let Keymaster load ARC keys itself.
   return KM_ERROR_OK;
+}
+
+keymaster_error_t ArcKeymasterContext::LoadKey(
+    KeyData&& key_data,
+    ::keymaster::AuthorizationSet&& hw_enforced,
+    ::keymaster::AuthorizationSet&& sw_enforced,
+    ::keymaster::UniquePtr<::keymaster::Key>* key) const {
+  base::Optional<keymaster_algorithm_t> algorithm =
+      FindAlgorithmTag(hw_enforced, sw_enforced);
+  if (!algorithm.has_value())
+    return KM_ERROR_INVALID_ARGUMENT;
+
+  keymaster_error_t error;
+  switch (algorithm.value()) {
+    case KM_ALGORITHM_RSA:
+      error =
+          rsa_key_factory_.LoadKey(std::move(key_data), std::move(hw_enforced),
+                                   std::move(sw_enforced), key);
+      return error;
+    default:
+      return KM_ERROR_UNSUPPORTED_ALGORITHM;
+  }
 }
 
 bool ArcKeymasterContext::SerializeKeyData(

@@ -71,6 +71,8 @@ shared_library("libarckeymaster_context") {
     "context/arc_keymaster_context.cc",
     "context/chaps_client.cc",
     "context/context_adaptor.cc",
+    "context/cros_key.cc",
+    "context/crypto_operation.cc",
     "context/openssl_utils.cc",
     "keymaster_logger.cc",
   ]
@@ -179,6 +181,8 @@ if (use.test) {
     sources = [
       "context/arc_keymaster_context_test.cc",
       "context/chaps_client_test.cc",
+      "context/cros_key_test.cc",
+      "context/crypto_operation_test.cc",
       "context/openssl_utils_test.cc",
       "conversion.cc",
       "conversion_test.cc",

@@ -17,6 +17,7 @@
 #include <keymaster/UniquePtr.h>
 
 #include "arc/keymaster/context/context_adaptor.h"
+#include "arc/keymaster/context/cros_key.h"
 #include "arc/keymaster/key_data.pb.h"
 
 namespace arc {
@@ -50,13 +51,17 @@ class ArcKeymasterContext : public ::keymaster::PureSoftKeymasterContext {
       ::keymaster::KeymasterKeyBlob* upgraded_key) const override;
 
  private:
-  // Deserialize the given |key_blob| into |key_material| and auth sets.
+  // If |key_blob| contains an ARC owned key, deserialize it into |key_material|
+  // and auth sets. Otherwise it is a CrOS owned key, deserialized into |key|.
+  //
+  // Can also deserialize insecure blobs.
   keymaster_error_t DeserializeBlob(
       const ::keymaster::KeymasterKeyBlob& key_blob,
       const ::keymaster::AuthorizationSet& hidden,
       ::keymaster::KeymasterKeyBlob* key_material,
       ::keymaster::AuthorizationSet* hw_enforced,
-      ::keymaster::AuthorizationSet* sw_enforced) const;
+      ::keymaster::AuthorizationSet* sw_enforced,
+      ::keymaster::UniquePtr<::keymaster::Key>* key) const;
 
   // Serialize the given key data info the output |key_blob|.
   keymaster_error_t SerializeKeyDataBlob(
@@ -66,13 +71,24 @@ class ArcKeymasterContext : public ::keymaster::PureSoftKeymasterContext {
       const ::keymaster::AuthorizationSet& sw_enforced,
       ::keymaster::KeymasterKeyBlob* key_blob) const;
 
-  // Deserialize the given |key_blob| into |key_material| and auth sets.
+  // If |key_blob| contains an ARC owned key, deserialize it into |key_material|
+  // and auth sets. Otherwise it is a CrOS owned key, deserialized into |key|.
+  //
+  // Only handles key blobs serialized by |SerializeKeyDataBlob|.
   keymaster_error_t DeserializeKeyDataBlob(
       const ::keymaster::KeymasterKeyBlob& key_blob,
       const ::keymaster::AuthorizationSet& hidden,
       ::keymaster::KeymasterKeyBlob* key_material,
       ::keymaster::AuthorizationSet* hw_enforced,
-      ::keymaster::AuthorizationSet* sw_enforced) const;
+      ::keymaster::AuthorizationSet* sw_enforced,
+      ::keymaster::UniquePtr<::keymaster::Key>* key) const;
+
+  // Constructs a new Chrome OS |key|.
+  keymaster_error_t LoadKey(
+      KeyData&& key_data,
+      ::keymaster::AuthorizationSet&& hw_enforced,
+      ::keymaster::AuthorizationSet&& sw_enforced,
+      ::keymaster::UniquePtr<::keymaster::Key>* key) const;
 
   // Serializes |key_data| into |key_blob|.
   bool SerializeKeyData(const KeyData& key_data,
@@ -85,6 +101,8 @@ class ArcKeymasterContext : public ::keymaster::PureSoftKeymasterContext {
       const ::keymaster::AuthorizationSet& hidden) const;
 
   mutable ContextAdaptor context_adaptor_;
+
+  mutable CrosKeyFactory rsa_key_factory_;
 
   // Friend class for testing.
   friend class ContextTestPeer;
