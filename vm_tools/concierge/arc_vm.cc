@@ -270,6 +270,7 @@ bool ArcVm::Start(base::FilePath kernel,
     { "--shared-dir",     std::move(shared_data_media) },
     { "--shared-dir",     std::move(shared_media) },
     { "--shared-dir",     std::move(shared_testharness) },
+    { "--no-smt",         "" },
     { "--params",         base::JoinString(params, " ") },
   };
   // clang-format on

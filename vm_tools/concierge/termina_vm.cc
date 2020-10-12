@@ -248,6 +248,7 @@ bool TerminaVm::Start(base::FilePath kernel,
       "--serial",       GetCrosVmSerial("serial", "earlycon"),
       "--serial",       GetCrosVmSerial("virtio-console", "console"),
       "--syslog-tag",   base::StringPrintf("VM(%u)", vsock_cid_),
+      "--no-smt",
       "--params",      "snd_intel8x0.inside_vm=1 snd_intel8x0.ac97_clock=48000",
   };
   // clang-format on
