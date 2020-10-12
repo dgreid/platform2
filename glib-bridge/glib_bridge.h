@@ -18,9 +18,11 @@
 #include <base/cancelable_callback.h>
 #include <base/files/file_descriptor_watcher_posix.h>
 
+#include "glib-bridge/glib_bridge_export.h"
+
 namespace glib_bridge {
 
-struct GlibBridge {
+struct GLIB_BRIDGE_EXPORT GlibBridge {
  public:
   GlibBridge();
   virtual ~GlibBridge();

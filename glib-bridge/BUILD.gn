@@ -5,24 +5,46 @@
 import("//common-mk/pkg_config.gni")
 
 group("all") {
-  deps = [ ":libglib_bridge" ]
+  deps = [
+    ":glib_bridge",
+    ":glib_bridge-static",
+    ":libglib_bridge",
+  ]
   if (use.test) {
     deps += [ ":glib_bridge_test_runner" ]
   }
 }
 
-static_library("libglib_bridge") {
-  sources = [
-    "glib_bridge.cc",
-    "glib_logger.cc",
-  ]
+pkg_config("target_defaults") {
+  # NOSORT
   pkg_deps = [
     "glib-2.0",
     "gthread-2.0",
     "libchrome-${libbase_ver}",
   ]
-  configs += [ "//common-mk:nouse_thin_archive" ]
-  configs -= [ "//common-mk:use_thin_archive" ]
+}
+
+static_library("glib_bridge-static") {
+  configs += [ ":target_defaults" ]
+  sources = [
+    "glib_bridge.cc",
+    "glib_logger.cc",
+  ]
+}
+
+shared_library("glib_bridge") {
+  configs += [ ":target_defaults" ]
+  sources = [
+    "glib_bridge.cc",
+    "glib_logger.cc",
+  ]
+}
+
+generate_pkg_config("libglib_bridge") {
+  version = getenv("PV")
+  description = "glib-bridge shared library"
+  cflags = [ "-I/usr/include/glib-bridge" ]
+  libs = [ "-lglib_bridge" ]
 }
 
 if (use.test) {
@@ -31,6 +53,7 @@ if (use.test) {
       # //common-mk:test should be at the top. crbug.com/887845
       # TODO(crbug.com/887845): Remove this note after library order issue is resolved.
       "//common-mk:test",
+      ":target_defaults",
     ]
     sources = [
       "glib_bridge_test.cc",
@@ -38,15 +61,12 @@ if (use.test) {
       "glib_unstructured_logger_test.cc",
     ]
     deps = [
-      ":libglib_bridge",
+      ":glib_bridge-static",
       "//common-mk/testrunner",
     ]
     pkg_deps = [
       "gio-2.0",
       "gio-unix-2.0",
-      "glib-2.0",
-      "gthread-2.0",
-      "libchrome-${libbase_ver}",
     ]
   }
 }

@@ -10,9 +10,11 @@
 
 #include <string>
 
+#include "glib-bridge/glib_bridge_export.h"
+
 namespace glib_bridge {
 
-void ForwardLogs();
+GLIB_BRIDGE_EXPORT void ForwardLogs();
 
 }  // namespace glib_bridge
 
