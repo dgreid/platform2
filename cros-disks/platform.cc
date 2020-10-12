@@ -238,10 +238,10 @@ MountErrorType Platform::Mount(const std::string& source_path,
   // upreved to a kernel that supports MS_NOSYMFOLLOW (currently 5.4+).
   std::string mount_options = options;
   if ((flags & MS_NOSYMFOLLOW) == MS_NOSYMFOLLOW) {
-    if (!options.empty()) {
+    if (!mount_options.empty()) {
       mount_options += ",";
     }
-    mount_options = "nosymfollow";
+    mount_options += "nosymfollow";
   }
 
   error_t error = 0;
