@@ -37,7 +37,6 @@ class SmdpInterface {
                           const std::vector<uint8_t>& bound_profile_package)>;
   using ErrorCallback =
       base::Callback<void(const std::vector<uint8_t>& error_data)>;
-  using DictionaryPtr = std::unique_ptr<base::DictionaryValue>;
 
   virtual ~SmdpInterface() = default;
 
