@@ -58,8 +58,6 @@ class CrosHealthdRoutineService final
       uint32_t maximum_discharge_percent_allowed,
       RunBatteryDischargeRoutineCallback callback) override;
   void RunBatteryHealthRoutine(
-      uint32_t maximum_cycle_count,
-      uint32_t percent_battery_wear_allowed,
       RunBatteryHealthRoutineCallback callback) override;
   void RunCpuCacheRoutine(uint32_t length_seconds,
                           RunCpuCacheRoutineCallback callback) override;

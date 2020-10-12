@@ -51,8 +51,7 @@ class DiagActions final {
   bool ActionRunBatteryDischargeRoutine(
       base::TimeDelta exec_duration,
       uint32_t maximum_discharge_percent_allowed);
-  bool ActionRunBatteryHealthRoutine(uint32_t maximum_cycle_count,
-                                     uint32_t percent_battery_wear_allowed);
+  bool ActionRunBatteryHealthRoutine();
   bool ActionRunCpuCacheRoutine(base::TimeDelta exec_duration);
   bool ActionRunDiskReadRoutine(
       chromeos::cros_healthd::mojom::DiskReadRoutineTypeEnum type,

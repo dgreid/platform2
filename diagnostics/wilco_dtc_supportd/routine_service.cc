@@ -278,8 +278,6 @@ void RoutineService::RunRoutine(const grpc_api::RunRoutineRequest& request,
       DCHECK_EQ(request.parameters_case(),
                 grpc_api::RunRoutineRequest::kBatterySysfsParams);
       service_ptr_->RunBatteryHealthRoutine(
-          request.battery_sysfs_params().maximum_cycle_count(),
-          request.battery_sysfs_params().percent_battery_wear_allowed(),
           base::Bind(&RoutineService::ForwardRunRoutineResponse,
                      weak_ptr_factory_.GetWeakPtr(), callback_key));
       break;

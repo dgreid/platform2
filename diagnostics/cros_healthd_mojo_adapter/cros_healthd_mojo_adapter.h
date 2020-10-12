@@ -51,8 +51,7 @@ class CrosHealthdMojoAdapter {
 
   // Runs the battery health routine.
   virtual chromeos::cros_healthd::mojom::RunRoutineResponsePtr
-  RunBatteryHealthRoutine(uint32_t maximum_cycle_count,
-                          uint32_t percent_battery_wear_allowed) = 0;
+  RunBatteryHealthRoutine() = 0;
 
   // Runs the smartctl-check routine.
   virtual chromeos::cros_healthd::mojom::RunRoutineResponsePtr

@@ -167,10 +167,8 @@ bool DiagActions::ActionRunBatteryDischargeRoutine(
   return PollRoutineAndProcessResult();
 }
 
-bool DiagActions::ActionRunBatteryHealthRoutine(
-    uint32_t maximum_cycle_count, uint32_t percent_battery_wear_allowed) {
-  auto response = adapter_->RunBatteryHealthRoutine(
-      maximum_cycle_count, percent_battery_wear_allowed);
+bool DiagActions::ActionRunBatteryHealthRoutine() {
+  auto response = adapter_->RunBatteryHealthRoutine();
   CHECK(response) << "No RunRoutineResponse received.";
   id_ = response->id;
   return PollRoutineAndProcessResult();

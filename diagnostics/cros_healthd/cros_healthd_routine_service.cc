@@ -140,8 +140,6 @@ void CrosHealthdRoutineService::RunBatteryDischargeRoutine(
 }
 
 void CrosHealthdRoutineService::RunBatteryHealthRoutine(
-    uint32_t maximum_cycle_count,
-    uint32_t percent_battery_wear_allowed,
     RunBatteryHealthRoutineCallback callback) {
   RunRoutine(routine_factory_->MakeBatteryHealthRoutine(),
              mojo_ipc::DiagnosticRoutineEnum::kBatteryHealth,

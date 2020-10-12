@@ -78,12 +78,6 @@ int diag_main(int argc, char** argv) {
   DEFINE_uint32(low_mah, 1000, "Lower bound for the battery routine, in mAh.");
   DEFINE_uint32(high_mah, 10000,
                 "Upper bound for the battery routine, in mAh.");
-  DEFINE_uint32(
-      maximum_cycle_count, 0,
-      "Maximum cycle count allowed for the battery_sysfs routine to pass.");
-  DEFINE_uint32(percent_battery_wear_allowed, 100,
-                "Maximum percent battery wear allowed for the battery_sysfs "
-                "routine to pass.");
   DEFINE_uint32(length_seconds, 10,
                 "Number of seconds to run the routine for.");
   DEFINE_bool(ac_power_is_connected, true,
@@ -156,8 +150,7 @@ int diag_main(int argc, char** argv) {
             FLAGS_low_mah, FLAGS_high_mah);
         break;
       case mojo_ipc::DiagnosticRoutineEnum::kBatteryHealth:
-        routine_result = actions.ActionRunBatteryHealthRoutine(
-            FLAGS_maximum_cycle_count, FLAGS_percent_battery_wear_allowed);
+        routine_result = actions.ActionRunBatteryHealthRoutine();
         break;
       case mojo_ipc::DiagnosticRoutineEnum::kUrandom:
         routine_result = actions.ActionRunUrandomRoutine(FLAGS_length_seconds);

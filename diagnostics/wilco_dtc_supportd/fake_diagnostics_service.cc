@@ -61,8 +61,6 @@ void FakeDiagnosticsService::RunBatteryCapacityRoutine(
 }
 
 void FakeDiagnosticsService::RunBatteryHealthRoutine(
-    uint32_t maximum_cycle_count,
-    uint32_t percent_battery_wear_allowed,
     RunBatteryHealthRoutineCallback callback) {
   std::move(callback).Run(run_routine_response_.Clone());
 }

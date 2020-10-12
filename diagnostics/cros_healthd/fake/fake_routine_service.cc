@@ -43,8 +43,6 @@ void FakeRoutineService::RunBatteryCapacityRoutine(
 }
 
 void FakeRoutineService::RunBatteryHealthRoutine(
-    uint32_t maximum_cycle_count,
-    uint32_t percent_battery_wear_allowed,
     RunBatteryHealthRoutineCallback callback) {
   NOTIMPLEMENTED();
 }

@@ -33,6 +33,27 @@ Available routine: floating_point_accuracy
 Available routine: prime_search
 ```
 
+## Routine Configuration
+
+Some routines use configuration data read from cros_config instead of exposing
+parameters in the Mojo API. Configuration data is device-specific. If a board
+runs a configurable routine whose configuration data is not set in cros_config,
+the routine will fall back to fleet-wide defaults. Configuration data will be
+listed in the description of routines which support it. In all cases, the data
+should be set the cros_config path cros-healthd/routines/specific-routine. For a
+concrete example, the battery health configuration data would look like the
+following:
+
+```yaml
+some-config: &some_config
+  <<: *base_config
+  cros-healthd:
+    routines:
+      battery-health:
+        maximum-cycle-count: "5"
+        percent-battery-wear-allowed: "15"
+```
+
 ## Battery and Power Routines
 
 ### ac_power
@@ -176,23 +197,22 @@ Status message: Battery discharge routine passed.
 Provides some basic information on the status of the battery, and determines if
 the battery's cycle count and wear percentage are greater than the given limits.
 
-Parameters:
--   `--maximum_cycle_count` - Upper bound for the battery's cycle count. Type:
-    `uint32_t`. Default: `0`.
--   `--percent_battery_wear_allowed` - Upper bound for the battery's wear
-    percentage. Type: `uint32_t`. Default: `100`.
+Configuration Data:
+-   `maximum-cycle-count` - Upper bound for the battery's cycle count. Type:
+    `uint32_t`. Default: `1000`.
+-   `percent-battery-wear-allowed` - Upper bound for the battery's wear
+    percentage. Type: `uint32_t`. Default: `50`.
 
-To ensure the device's battery has a cycle count less than 5 and wear percentage
-less than 15:
+To run the battery health routine:
 
 From crosh:
 ```bash
-crosh> diag battery_health --maximum_cycle_count=5 --percent_battery_wear_allowed=15
+crosh> diag battery_health
 ```
 
 From cros-health-tool:
 ```bash
-$ cros-health-tool diag --action=run_routine --routine=battery_health --maximum_cycle_count=5 --percent_battery_wear_allowed=15
+$ cros-health-tool diag --action=run_routine --routine=battery_health
 ```
 
 Sample output:

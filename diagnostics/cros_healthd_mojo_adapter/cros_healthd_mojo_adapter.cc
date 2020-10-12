@@ -56,9 +56,8 @@ class CrosHealthdMojoAdapterImpl final : public CrosHealthdMojoAdapter {
   RunBatteryCapacityRoutine(uint32_t low_mah, uint32_t high_mah) override;
 
   // Runs the battery health routine.
-  chromeos::cros_healthd::mojom::RunRoutineResponsePtr RunBatteryHealthRoutine(
-      uint32_t maximum_cycle_count,
-      uint32_t percent_battery_wear_allowed) override;
+  chromeos::cros_healthd::mojom::RunRoutineResponsePtr RunBatteryHealthRoutine()
+      override;
 
   // Runs the smartctl-check routine.
   chromeos::cros_healthd::mojom::RunRoutineResponsePtr RunSmartctlCheckRoutine()
@@ -283,15 +282,13 @@ CrosHealthdMojoAdapterImpl::RunBatteryCapacityRoutine(uint32_t low_mah,
 }
 
 chromeos::cros_healthd::mojom::RunRoutineResponsePtr
-CrosHealthdMojoAdapterImpl::RunBatteryHealthRoutine(
-    uint32_t maximum_cycle_count, uint32_t percent_battery_wear_allowed) {
+CrosHealthdMojoAdapterImpl::RunBatteryHealthRoutine() {
   if (!cros_healthd_service_factory_.is_bound())
     Connect();
 
   chromeos::cros_healthd::mojom::RunRoutineResponsePtr response;
   base::RunLoop run_loop;
   cros_healthd_diagnostics_service_->RunBatteryHealthRoutine(
-      maximum_cycle_count, percent_battery_wear_allowed,
       base::Bind(&OnMojoResponseReceived<
                      chromeos::cros_healthd::mojom::RunRoutineResponsePtr>,
                  &response, run_loop.QuitClosure()));

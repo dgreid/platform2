@@ -298,14 +298,11 @@ TEST_F(CrosHealthdRoutineServiceTest, RunBatteryHealthRoutine) {
 
   mojo_ipc::RunRoutineResponsePtr response;
   base::RunLoop run_loop;
-  service()->RunBatteryHealthRoutine(
-      /*maximum_cycle_count=*/2,
-      /*percent_battery_wear_allowed=*/30,
-      base::BindLambdaForTesting(
-          [&](mojo_ipc::RunRoutineResponsePtr received_response) {
-            response = std::move(received_response);
-            run_loop.Quit();
-          }));
+  service()->RunBatteryHealthRoutine(base::BindLambdaForTesting(
+      [&](mojo_ipc::RunRoutineResponsePtr received_response) {
+        response = std::move(received_response);
+        run_loop.Quit();
+      }));
   run_loop.Run();
 
   EXPECT_EQ(response->id, 1);
