@@ -20,6 +20,9 @@ class VPNDriver;
 
 class VPNService : public Service {
  public:
+  enum DriverEvent { kEventConnectionSuccess = 0 };
+  using DriverEventCallback = base::RepeatingCallback<void(DriverEvent)>;
+
   VPNService(Manager* manager, std::unique_ptr<VPNDriver> driver);
   ~VPNService() override;
 
@@ -57,12 +60,15 @@ class VPNService : public Service {
   bool IsAutoConnectable(const char** reason) const override;
   std::string GetTethering(Error* error) const override;
 
+  virtual void OnDriverEvent(DriverEvent event);
+
  private:
   friend class VPNServiceTest;
   FRIEND_TEST(VPNServiceTest, GetDeviceRpcId);
   FRIEND_TEST(VPNServiceTest, GetPhysicalTechnologyPropertyFailsIfNoCarrier);
   FRIEND_TEST(VPNServiceTest, GetPhysicalTechnologyPropertyOverWifi);
   FRIEND_TEST(VPNServiceTest, GetTethering);
+  FRIEND_TEST(VPNServiceTest, ConfigureDeviceAndDisconnect);
 
   static const char kAutoConnNeverConnected[];
   static const char kAutoConnVPNAlreadyActive[];
@@ -71,8 +77,13 @@ class VPNService : public Service {
 
   ConnectionConstRefPtr GetUnderlyingConnection() const;
 
+  void ConfigureDevice();
+
   std::string storage_id_;
   std::unique_ptr<VPNDriver> driver_;
+  VirtualDeviceRefPtr device_;
+
+  base::WeakPtrFactory<VPNService> weak_factory_{this};
 
   DISALLOW_COPY_AND_ASSIGN(VPNService);
 };

@@ -21,8 +21,15 @@ class MockVPNService : public VPNService {
   MOCK_METHOD(void, SetState, (ConnectState), (override));
   MOCK_METHOD(void, SetFailure, (ConnectFailure), (override));
   MOCK_METHOD(void, InitDriverPropertyStore, (), (override));
+  MOCK_METHOD(void, OnDriverEvent, (DriverEvent), (override));
+
+  VPNService::DriverEventCallback GetCallback() {
+    return base::BindRepeating(&MockVPNService::OnDriverEvent,
+                               weak_factory_.GetWeakPtr());
+  }
 
  private:
+  base::WeakPtrFactory<MockVPNService> weak_factory_{this};
   DISALLOW_COPY_AND_ASSIGN(MockVPNService);
 };
 

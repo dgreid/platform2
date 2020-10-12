@@ -20,6 +20,7 @@
 #include "shill/mock_metrics.h"
 #include "shill/mock_profile.h"
 #include "shill/mock_service.h"
+#include "shill/mock_virtual_device.h"
 #include "shill/service_property_change_test.h"
 #include "shill/vpn/mock_vpn_driver.h"
 #include "shill/vpn/mock_vpn_provider.h"
@@ -32,6 +33,13 @@ using testing::NiceMock;
 using testing::Return;
 using testing::ReturnRef;
 using testing::ReturnRefOfCopy;
+
+namespace {
+
+const char kInterfaceName[] = "tun0";
+const int kInterfaceIndex = 123;
+
+}  // namespace
 
 namespace shill {
 
@@ -57,6 +65,7 @@ class VPNServiceTest : public testing::Test {
         .WillByDefault(ReturnRef(interface_name_));
     ON_CALL(*connection_, ipconfig_rpc_identifier())
         .WillByDefault(ReturnRef(ipconfig_rpc_identifier_));
+    manager_.user_traffic_uids_.push_back(1000);
   }
 
   void TearDown() override { EXPECT_CALL(device_info_, FlushAddresses(0)); }
@@ -450,6 +459,36 @@ TEST_F(VPNServiceTest, AddRemoveVMInterface) {
               RemoveInputInterfaceFromRoutingTable(kTestVMTapInterfaceName));
   provider->RemoveAllowedInterface(kTestVMTapInterfaceName);
   EXPECT_EQ(0, provider->allowed_iifs().size());
+}
+
+MATCHER(BaseIPConfig, "") {
+  IPConfig::Properties ip_properties = arg;
+  return ip_properties.blackhole_ipv6 == true &&
+         ip_properties.default_route == false &&
+         !ip_properties.allowed_uids.empty();
+}
+
+TEST_F(VPNServiceTest, ConfigureDeviceAndDisconnect) {
+  // TODO(taoyl): This SetIfType will no longer be needed after finishing
+  // refactor of all VPNDrivers.
+  driver_->SetIfType(VPNDriver::kArcBridge);
+  scoped_refptr<MockVirtualDevice> device = new MockVirtualDevice(
+      &manager_, kInterfaceName, kInterfaceIndex, Technology::kVPN);
+  service_->device_ = device;
+
+  EXPECT_CALL(*device, SetEnabled(true));
+  EXPECT_CALL(*driver_, GetIPProperties())
+      .WillOnce(Return(IPConfig::Properties()));
+  EXPECT_CALL(*device, UpdateIPConfig(BaseIPConfig()));
+  service_->ConfigureDevice();
+
+  EXPECT_CALL(*device, SetEnabled(false));
+  EXPECT_CALL(*device, DropConnection());
+  Error error;
+  service_->Disconnect(&error, "in test");
+  EXPECT_EQ(Service::kStateIdle, service_->state());
+
+  driver_->SetIfType(VPNDriver::kDriverManaged);
 }
 
 }  // namespace shill

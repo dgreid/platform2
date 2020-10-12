@@ -56,11 +56,74 @@ void VPNService::OnConnect(Error* error) {
   // VirtualDevice (VPNProvider::arc_device), so Disconnect()ing an ARC
   // VPNService after completing the connection for a new ARC VPNService will
   // cause the arc_device to be disabled at the end of this call.
-  driver_->Connect(this, error);
+
+  if (driver_->GetIfType() == VPNDriver::kDriverManaged) {
+    driver_->Connect(this, error);
+    return;
+  }
+
+  SetState(ConnectState::kStateAssociating);
+
+  if (driver_->GetIfType() == VPNDriver::kArcBridge) {
+    device_ = manager()->vpn_provider()->arc_device();
+    if (!device_) {
+      Error::PopulateAndLog(FROM_HERE, error, Error::kNotFound,
+                            "arc_device is not found");
+      return;
+    }
+    driver_->ConnectAsync(base::BindRepeating(&VPNService::OnDriverEvent,
+                                              weak_factory_.GetWeakPtr()));
+  }
 }
 
 void VPNService::OnDisconnect(Error* error, const char* reason) {
+  if (driver_->GetIfType() == VPNDriver::kDriverManaged) {
+    driver_->Disconnect();
+    return;
+  }
+
+  SetState(ConnectState::kStateDisconnecting);
   driver_->Disconnect();
+  if (device_) {
+    device_->DropConnection();
+    device_->SetEnabled(false);
+    device_ = nullptr;
+  }
+
+  SetState(ConnectState::kStateIdle);
+}
+
+void VPNService::OnDriverEvent(DriverEvent event) {
+  DCHECK(event == kEventConnectionSuccess);
+  ConfigureDevice();
+}
+
+void VPNService::ConfigureDevice() {
+  SetState(ConnectState::kStateConfiguring);
+  DCHECK(device_);
+
+  IPConfig::Properties ip_properties = driver_->GetIPProperties();
+
+  ip_properties.default_route = false;
+  // IPv6 is not currently supported.  If the VPN is enabled, block all
+  // IPv6 traffic so there is no "leak" past the VPN.
+  ip_properties.blackhole_ipv6 = true;
+  // TODO(taoyl): Remove routing policy from IPProperties.
+  manager()->vpn_provider()->SetDefaultRoutingPolicy(&ip_properties);
+  // Remove vpn virtual device from allow_iifs list to avoid route loop.
+  // This is mainly for ARC bridge on ARC VPN (note ARC bridge needs to
+  // be in allow_iifs for non-ARC VPNs). PPP and tunnel interface should
+  // never be in allow_iifs.
+  // TODO(taoyl): Remove this as part of routing policy migration.
+  base::Erase(ip_properties.allowed_iifs, device_->link_name());
+
+  device_->SetEnabled(true);
+  device_->SelectService(this);
+  device_->UpdateIPConfig(ip_properties);
+  device_->SetLooseRouting(true);
+
+  SetState(ConnectState::kStateConnected);
+  SetState(ConnectState::kStateOnline);
 }
 
 string VPNService::GetStorageIdentifier() const {

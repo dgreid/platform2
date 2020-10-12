@@ -23,22 +23,23 @@ namespace shill {
 class ArcVpnDriver : public VPNDriver {
  public:
   ArcVpnDriver(Manager* manager, ProcessManager* process_manager);
-  ~ArcVpnDriver() override;
+  ~ArcVpnDriver() override = default;
 
+  // TODO(taoyl): Not used (replaced by ConnectAsync()) and to be removed after
+  // finish refactoring for all drivers
   void Connect(const VPNServiceRefPtr& service, Error* error) override;
+
   std::string GetProviderType() const override;
   IfType GetIfType() const override;
+
+  void ConnectAsync(const VPNService::DriverEventCallback& callback) override;
   void Disconnect() override;
+  IPConfig::Properties GetIPProperties() const override;
 
  private:
   friend class ArcVpnDriverTest;
 
-  // Tear down the connection.
-  void Cleanup();
-
   static const Property kProperties[];
-
-  VirtualDeviceRefPtr device_;
 
   DISALLOW_COPY_AND_ASSIGN(ArcVpnDriver);
 };

@@ -56,6 +56,15 @@ class VPNDriver {
   virtual std::string GetProviderType() const = 0;
   virtual IfType GetIfType() const = 0;
 
+  // TODO(taoyl): Implement these in all drivers and change them to abstract.
+  virtual void ConnectAsync(const VPNService::DriverEventCallback& callback) {
+    LOG(DFATAL) << "Not implemented";
+  }
+  virtual IPConfig::Properties GetIPProperties() const {
+    LOG(DFATAL) << "Not implemented";
+    return IPConfig::Properties();
+  }
+
   virtual void InitPropertyStore(PropertyStore* store);
 
   virtual bool Load(const StoreInterface* storage,

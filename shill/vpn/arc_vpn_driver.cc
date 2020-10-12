@@ -23,15 +23,6 @@
 
 namespace shill {
 
-namespace {
-
-const char* const kDnsAndRoutingProperties[] = {
-    kDomainNameProperty,     kNameServersProperty,    kSearchDomainsProperty,
-    kIncludedRoutesProperty, kExcludedRoutesProperty,
-};
-
-}  // namespace
-
 namespace Logging {
 static auto kModuleLogScope = ScopeLogger::kVPN;
 static std::string ObjectID(const ArcVpnDriver* v) {
@@ -48,89 +39,32 @@ ArcVpnDriver::ArcVpnDriver(Manager* manager, ProcessManager* process_manager)
     : VPNDriver(
           manager, process_manager, kProperties, base::size(kProperties)) {}
 
-ArcVpnDriver::~ArcVpnDriver() {
-  Cleanup();
-}
-
-void ArcVpnDriver::Cleanup() {
-  if (device_) {
-    device_->DropConnection();
-    device_->SetEnabled(false);
-    device_ = nullptr;
-  }
-
-  if (service()) {
-    service()->SetState(Service::kStateIdle);
-    set_service(nullptr);
-  }
-}
-
 void ArcVpnDriver::Connect(const VPNServiceRefPtr& service, Error* error) {
   SLOG(this, 2) << __func__;
+  LOG(DFATAL) << "Not implemented";
+}
 
-  device_ = manager()->vpn_provider()->arc_device();
-  if (!device_) {
-    Error::PopulateAndLog(FROM_HERE, error, Error::kNotFound,
-                          "arc_device is not found");
-    return;
-  }
-
-  set_service(service);
-  // This sets the has_ever_connected flag.
-  service->SetState(Service::kStateConnected);
-
-  IPConfig::Properties ip_properties;
-  if (args()->Lookup<std::string>(kArcVpnTunnelChromeProperty, "false") !=
-      "true") {
-    // If Chrome tunneling is disabled, traffic will not be passed through
-    // this interface, but users will still be able to see VPN status
-    // and disconnect the VPN through the UI.  In this case the IP address
-    // and gateway should still be reflected in the properties, but the
-    // DNS and routing information should be zapped so that Chrome
-    // traffic falls through to the next highest service.
-    Error error;
-    std::string prefix(StaticIPParameters::kConfigKeyPrefix);
-    for (const auto& property : kDnsAndRoutingProperties) {
-      service->mutable_store()->ClearProperty(prefix + property, &error);
-    }
-    if (!error.IsSuccess()) {
-      LOG(ERROR) << "Unable to clear VPN IP properties: " << error.message();
-    }
-  } else {
-    // IPv6 is not currently supported.  If the VPN is enabled, block all
-    // IPv6 traffic so there is no "leak" past the VPN.
-    ip_properties.blackhole_ipv6 = true;
-  }
-
-  // This will always create the per-device routing table, but it might
-  // not have any routes if |ip_properties.routes| is empty.
-  manager()->vpn_provider()->SetDefaultRoutingPolicy(&ip_properties);
-  // VPNProvider includes the arc device in the list of allowed iifs. This
-  // would create a routing loop for ARC N traffic when an ARC VPN is used.
-  //
-  // TODO - This should be removed after ARC N is deprecated OR after we have
-  // explicit linking between virtual interfaces and the "lower" interface that
-  // will carry its traffic.
-  base::Erase(ip_properties.allowed_iifs, device_->link_name());
-
-  ip_properties.default_route = false;
-
-  device_->SetEnabled(true);
-  device_->SelectService(service);
-
-  // Device::OnIPConfigUpdated() will apply the StaticIPConfig properties.
-  device_->UpdateIPConfig(ip_properties);
-  device_->SetLooseRouting(true);
-
-  service->SetState(Service::kStateOnline);
-
+void ArcVpnDriver::ConnectAsync(
+    const VPNService::DriverEventCallback& callback) {
+  SLOG(this, 2) << __func__;
+  // Nothing to do here since ARC already finish connecting to VPN
+  // before Chrome calls Service::OnConnect. Just return success.
   metrics()->SendEnumToUMA(Metrics::kMetricVpnDriver, Metrics::kVpnDriverArc,
                            Metrics::kMetricVpnDriverMax);
+  dispatcher()->PostTask(
+      FROM_HERE,
+      base::Bind(std::move(callback), VPNService::kEventConnectionSuccess));
 }
 
 void ArcVpnDriver::Disconnect() {
   SLOG(this, 2) << __func__;
-  Cleanup();
+}
+
+IPConfig::Properties ArcVpnDriver::GetIPProperties() const {
+  SLOG(this, 2) << __func__;
+  // Currently L3 settings for ARC VPN are set from Chrome as
+  // StaticIPProperty before connecting, so this will be mostly empty.
+  return IPConfig::Properties();
 }
 
 std::string ArcVpnDriver::GetProviderType() const {
@@ -138,7 +72,7 @@ std::string ArcVpnDriver::GetProviderType() const {
 }
 
 VPNDriver::IfType ArcVpnDriver::GetIfType() const {
-  return kDriverManaged;
+  return kArcBridge;
 }
 
 }  // namespace shill

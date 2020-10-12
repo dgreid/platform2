@@ -33,6 +33,12 @@ class MockVPNDriver : public VPNDriver {
   MOCK_METHOD(std::string, GetProviderType, (), (const, override));
   MOCK_METHOD(std::string, GetHost, (), (const, override));
 
+  MOCK_METHOD(void,
+              ConnectAsync,
+              (const VPNService::DriverEventCallback& callback),
+              (override));
+  MOCK_METHOD(IPConfig::Properties, GetIPProperties, (), (const, override));
+
   IfType GetIfType() const override;
   void SetIfType(IfType type);
 

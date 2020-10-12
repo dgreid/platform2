@@ -31,18 +31,6 @@ const char kInterfaceName[] = "arcbr0";
 const int kInterfaceIndex = 123;
 const char kStorageId[] = "dummystorage";
 
-MATCHER(ChromeEnabledIPConfig, "") {
-  IPConfig::Properties ip_properties = arg;
-  return ip_properties.blackhole_ipv6 == true &&
-         ip_properties.default_route == false &&
-         !ip_properties.allowed_uids.empty();
-}
-
-MATCHER(ChromeDisabledIPConfig, "") {
-  IPConfig::Properties ip_properties = arg;
-  return ip_properties.blackhole_ipv6 == false;
-}
-
 }  // namespace
 
 class ArcVpnDriverTest : public testing::Test {
@@ -69,7 +57,6 @@ class ArcVpnDriverTest : public testing::Test {
   void TearDown() override {
     manager_.vpn_provider_->arc_device_ = nullptr;
     manager_.vpn_provider_.reset();
-    driver_->device_ = nullptr;
     driver_->set_service(nullptr);
     device_ = nullptr;
   }
@@ -97,37 +84,12 @@ class ArcVpnDriverTest : public testing::Test {
   scoped_refptr<MockVPNService> service_;
 };
 
-TEST_F(ArcVpnDriverTest, ConnectAndDisconnect) {
+TEST_F(ArcVpnDriverTest, ConnectAsync) {
   LoadPropertiesFromStore(true);
-
-  EXPECT_CALL(*service_, SetState(Service::kStateConnected)).Times(1);
-  EXPECT_CALL(*service_, SetState(Service::kStateOnline)).Times(1);
-
-  EXPECT_CALL(*device_, SetEnabled(true));
-  EXPECT_CALL(*device_, UpdateIPConfig(ChromeEnabledIPConfig()));
-
-  Error error;
-  driver_->Connect(service_, &error);
-  EXPECT_TRUE(error.IsSuccess());
-
-  EXPECT_CALL(*device_, SetEnabled(false));
-  EXPECT_CALL(*device_, DropConnection());
-  EXPECT_CALL(*service_, SetState(Service::kStateIdle));
-  driver_->Disconnect();
-}
-
-TEST_F(ArcVpnDriverTest, ChromeTrafficDisabled) {
-  LoadPropertiesFromStore(false);
-
-  EXPECT_CALL(*service_, SetState(Service::kStateConnected)).Times(1);
-  EXPECT_CALL(*service_, SetState(Service::kStateOnline)).Times(1);
-
-  EXPECT_CALL(*device_, SetEnabled(true));
-  EXPECT_CALL(*device_, UpdateIPConfig(ChromeDisabledIPConfig()));
-
-  Error error;
-  driver_->Connect(service_, &error);
-  EXPECT_TRUE(error.IsSuccess());
+  EXPECT_CALL(*service_, OnDriverEvent(VPNService::kEventConnectionSuccess))
+      .Times(1);
+  driver_->ConnectAsync(service_->GetCallback());
+  dispatcher_.task_environment().RunUntilIdle();
 }
 
 }  // namespace shill
