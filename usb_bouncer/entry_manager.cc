@@ -31,8 +31,10 @@ constexpr char kDevpathRoot[] = "sys/devices";
 
 }  // namespace
 
-EntryManager* EntryManager::GetInstance() {
-  static EntryManager instance;
+EntryManager* EntryManager::GetInstance(
+    DevpathToRuleCallback rule_from_devpath) {
+  static EntryManager instance("/", GetUserDBDir(), IsLockscreenShown(),
+                               IsGuestSession(), rule_from_devpath);
   if (!instance.global_db_.Valid()) {
     LOG(ERROR) << "Failed to open global DB.";
     return nullptr;

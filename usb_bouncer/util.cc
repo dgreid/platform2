@@ -619,48 +619,38 @@ size_t RemoveEntriesOlderThan(base::TimeDelta cutoff, EntryMap* map) {
   return num_removed;
 }
 
-pid_t DoubleFork() {
-  if (fork() != 0) {
+void Daemonize() {
+  pid_t result = fork();
+  if (result < 0) {
+    PLOG(FATAL) << "First fork failed";
+  }
+  if (result != 0) {
     exit(0);
   }
 
   setsid();
 
-  return fork();
-}
-
-bool ForkAndWaitIfNotReady(const base::RepeatingCallback<bool()> ready,
-                           const std::string message,
-                           const base::TimeDelta& timeout,
-                           base::Callback<pid_t()> fork_func) {
-  if (ready.Run()) {
-    return true;
+  result = fork();
+  if (result < 0) {
+    PLOG(FATAL) << "Second fork failed";
   }
-
-  // Exit success for the parent to allow udev to continue but fork so the event
-  // can be handled once logging is available.
-  if (fork_func.Run() != 0) {
+  if (result != 0) {
     exit(0);
   }
 
-  if (ready.Run()) {
-    LOG(INFO) << "Forked because " << message;
-    return true;
+  // Since we're demonizing we don't expect to ever read or write from the
+  // standard file descriptors. Also, udev waits for the hangup before
+  // continuing to execute on the same event, so this is necessary to unblock
+  // udev.
+  if (freopen("/dev/null", "a+", stdout) == nullptr) {
+    LOG(FATAL) << "Failed to replace stdout.";
   }
-
-  const base::Time deadline = base::Time::Now() + timeout;
-  const base::TimeDelta check_interval = base::TimeDelta::FromMilliseconds(250);
-
-  while (base::Time::Now() < deadline) {
-    base::PlatformThread::Sleep(check_interval);
-    if (ready.Run()) {
-      LOG(INFO) << "Forked because " << message;
-      return true;
-    }
+  if (freopen("/dev/null", "a+", stderr) == nullptr) {
+    LOG(FATAL) << "Failed to replace stdout.";
   }
-
-  LOG(ERROR) << "Timed out after forking because " << message;
-  return false;
+  if (fclose(stdin) != 0) {
+    LOG(FATAL) << "Failed to close stdin.";
+  }
 }
 
 #define TO_STRING_HELPER(x)  \

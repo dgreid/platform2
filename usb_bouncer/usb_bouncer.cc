@@ -7,7 +7,6 @@
 #include <cstdio>
 #include <cstdlib>
 
-#include <base/bind.h>
 #include <base/command_line.h>
 #include <brillo/syslog_logging.h>
 #include <brillo/flag_helper.h>
@@ -17,8 +16,10 @@
 #include "usb_bouncer/entry_manager.h"
 #include "usb_bouncer/util.h"
 
+using usb_bouncer::Daemonize;
+using usb_bouncer::DevpathToRuleCallback;
 using usb_bouncer::EntryManager;
-using usb_bouncer::ForkAndWaitIfNotReady;
+using usb_bouncer::GetRuleFromDevPath;
 using usb_bouncer::kDBusPath;
 
 namespace {
@@ -35,16 +36,27 @@ enum class SeccompEnforcement {
   kDisabled,
 };
 
+enum class ForkConfig {
+  kDoubleFork,
+  kDisabled,
+};
+
+class Configuration {
+ public:
+  const SeccompEnforcement seccomp;
+  const ForkConfig fork_config;
+};
+
 static constexpr char kLogPath[] = "/dev/log";
 static constexpr char kUMAEventsPath[] = "/var/lib/metrics/uma-events";
 
-void DropPrivileges(SeccompEnforcement seccomp) {
+void DropPrivileges(const Configuration& config) {
   ScopedMinijail j(minijail_new());
   minijail_change_user(j.get(), usb_bouncer::kUsbBouncerUser);
   minijail_change_group(j.get(), usb_bouncer::kUsbBouncerGroup);
   minijail_inherit_usergroups(j.get());
   minijail_no_new_privs(j.get());
-  if (seccomp == SeccompEnforcement::kEnabled) {
+  if (config.seccomp == SeccompEnforcement::kEnabled) {
     minijail_use_seccomp_filter(j.get());
     minijail_parse_seccomp_filters(
         j.get(), "/usr/share/policy/usb_bouncer-seccomp.policy");
@@ -52,7 +64,13 @@ void DropPrivileges(SeccompEnforcement seccomp) {
 
   minijail_namespace_ipc(j.get());
   minijail_namespace_net(j.get());
-  minijail_namespace_pids(j.get());
+  // If minijail were to run as init, then it would be tracked by udev and
+  // defeat the purpose of daemonizing. If minijail doesn't run as init, the
+  // descendant processes will die when daemonizing because there won't be an
+  // init to keep the pid namespace from closing.
+  if (config.fork_config == ForkConfig::kDisabled) {
+    minijail_namespace_pids(j.get());
+  }
   minijail_namespace_uts(j.get());
   minijail_namespace_vfs(j.get());
   if (minijail_enter_pivot_root(j.get(), "/mnt/empty") != 0) {
@@ -122,19 +140,19 @@ void DropPrivileges(SeccompEnforcement seccomp) {
   umask(0077);
 }
 
-EntryManager* GetEntryManagerOrDie(SeccompEnforcement seccomp) {
+EntryManager* GetEntryManagerOrDie(const Configuration& config) {
   if (!EntryManager::CreateDefaultGlobalDB()) {
     LOG(FATAL) << "Unable to create default global DB!";
   }
-  DropPrivileges(seccomp);
-  EntryManager* entry_manager = EntryManager::GetInstance();
+  DropPrivileges(config);
+  EntryManager* entry_manager = EntryManager::GetInstance(GetRuleFromDevPath);
   if (!entry_manager) {
     LOG(FATAL) << "EntryManager::GetInstance() failed!";
   }
   return entry_manager;
 }
 
-int HandleAuthorizeAll(SeccompEnforcement seccomp,
+int HandleAuthorizeAll(const Configuration& config,
                        const std::vector<std::string>& argv) {
   if (!argv.empty()) {
     LOG(ERROR) << "Invalid options!";
@@ -148,14 +166,14 @@ int HandleAuthorizeAll(SeccompEnforcement seccomp,
   return EXIT_SUCCESS;
 }
 
-int HandleCleanup(SeccompEnforcement seccomp,
+int HandleCleanup(const Configuration& config,
                   const std::vector<std::string>& argv) {
   if (!argv.empty()) {
     LOG(ERROR) << "Invalid options!";
     return EXIT_FAILURE;
   }
 
-  EntryManager* entry_manager = GetEntryManagerOrDie(seccomp);
+  EntryManager* entry_manager = GetEntryManagerOrDie(config);
   if (!entry_manager->GarbageCollect()) {
     LOG(ERROR) << "cleanup failed!";
     return EXIT_FAILURE;
@@ -163,14 +181,14 @@ int HandleCleanup(SeccompEnforcement seccomp,
   return EXIT_SUCCESS;
 }
 
-int HandleGenRules(SeccompEnforcement seccomp,
+int HandleGenRules(const Configuration& config,
                    const std::vector<std::string>& argv) {
   if (!argv.empty()) {
     LOG(ERROR) << "Invalid options!";
     return EXIT_FAILURE;
   }
 
-  EntryManager* entry_manager = GetEntryManagerOrDie(seccomp);
+  EntryManager* entry_manager = GetEntryManagerOrDie(config);
   std::string rules = entry_manager->GenerateRules();
   if (rules.empty()) {
     LOG(ERROR) << "genrules failed!";
@@ -181,7 +199,7 @@ int HandleGenRules(SeccompEnforcement seccomp,
   return EXIT_SUCCESS;
 }
 
-int HandleUdev(SeccompEnforcement seccomp,
+int HandleUdev(const Configuration& config,
                const std::vector<std::string>& argv) {
   if (argv.size() != 2) {
     LOG(ERROR) << "Invalid options!";
@@ -198,30 +216,61 @@ int HandleUdev(SeccompEnforcement seccomp,
     return EXIT_FAILURE;
   }
 
-  // The return code isn't checked because LOG statements are already present in
-  // the function. The return value allows tests to validate the behavior.
-  ForkAndWaitIfNotReady(base::BindRepeating([]() -> bool {
-                          return base::PathExists(base::FilePath(kLogPath)) &&
-                                 base::PathExists(base::FilePath(kDBusPath));
-                        }),
-                        "logging or D-Bus isn't ready");
+  // We need to drop privileges prior to reading from sysfs so instead of
+  // calling GetEntryManagerOrDie split it up so the privileges can be dropped
+  // earlier.
+  if (!EntryManager::CreateDefaultGlobalDB()) {
+    LOG(FATAL) << "Unable to create default global DB!";
+  }
+  DropPrivileges(config);
 
-  EntryManager* entry_manager = GetEntryManagerOrDie(seccomp);
-  if (!entry_manager->HandleUdev(action, argv[1])) {
+  // Perform sysfs reads before daemonizing to avoid races.
+  const std::string& devpath = argv[1];
+  std::string rule;
+  if (action == EntryManager::UdevAction::kAdd) {
+    rule = GetRuleFromDevPath(devpath);
+    if (rule.empty()) {
+      LOG(ERROR) << "Unable convert devpath to USBGuard allow-list rule.";
+      exit(0);
+    }
+  }
+
+  // All the information needed from udev and sysfs should be obtained prior to
+  // this point. Daemonizing here allows usb_bouncer to wait on other system
+  // services without blocking udev.
+  if (config.fork_config == ForkConfig::kDoubleFork) {
+    Daemonize();
+  }
+
+  // The DevpathToRuleCallback here to forwards the result of the sysfs read
+  // performed before daemonizing.
+  EntryManager* entry_manager = EntryManager::GetInstance(
+      [rule, devpath](const std::string& devpath_) -> const std::string {
+        if (devpath != devpath_) {
+          LOG(ERROR) << "Got devpath: '" << devpath_ << "' expected '"
+                     << devpath;
+          return "";
+        }
+        return rule;
+      });
+  if (!entry_manager) {
+    LOG(FATAL) << "EntryManager::GetInstance() failed!";
+  }
+  if (!entry_manager->HandleUdev(action, devpath)) {
     LOG(ERROR) << "udev failed!";
     return EXIT_FAILURE;
   }
   return EXIT_SUCCESS;
 }
 
-int HandleUserLogin(SeccompEnforcement seccomp,
+int HandleUserLogin(const Configuration& config,
                     const std::vector<std::string>& argv) {
   if (!argv.empty()) {
     LOG(ERROR) << "Invalid options!";
     return EXIT_FAILURE;
   }
 
-  EntryManager* entry_manager = GetEntryManagerOrDie(seccomp);
+  EntryManager* entry_manager = GetEntryManagerOrDie(config);
   if (!entry_manager->HandleUserLogin()) {
     LOG(ERROR) << "userlogin failed!";
     return EXIT_FAILURE;
@@ -237,6 +286,8 @@ int main(int argc, char** argv) {
       DCHECK_IS_ON()
           ? "Enable or disable seccomp filtering."
           : "Flag is ignored in production, but reported as a crash if false.");
+  DEFINE_bool(fork, false,
+              "Daemonizes udev commands with a double fork if enabled.");
   brillo::FlagHelper::Init(argc, argv, kUsageMessage);
   base::CommandLine::Init(argc, argv);
 
@@ -289,10 +340,12 @@ int main(int argc, char** argv) {
   } else {
     seccomp = SeccompEnforcement::kEnabled;
   }
+  ForkConfig fork_config =
+      FLAGS_fork ? ForkConfig::kDoubleFork : ForkConfig::kDisabled;
 
   const struct {
     const std::string command;
-    int (*handler)(SeccompEnforcement seccomp,
+    int (*handler)(const Configuration& config,
                    const std::vector<std::string>& argv);
   } command_handlers[] = {
       // clang-format off
@@ -307,7 +360,8 @@ int main(int argc, char** argv) {
   for (const auto& command_handler : command_handlers) {
     if (command_handler.command == command) {
       return command_handler.handler(
-          seccomp, std::vector<std::string>(command_args_start, args.end()));
+          {seccomp, fork_config},
+          std::vector<std::string>(command_args_start, args.end()));
     }
   }
 

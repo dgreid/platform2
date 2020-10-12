@@ -39,12 +39,15 @@ rt_sigreturn: 1
 
 # These were not included by security.USBBouncer.
 clock_gettime: 1
+clone: 1
 creat: 1
+dup3: 1
 fchown: 1
 newfstatat: 1
 futex: 1
 getpid: 1
 gettimeofday: 1
+ioctl: arg1 == TCGETS
 lstat: 1
 mmap: arg2 in ~PROT_EXEC || arg2 in ~PROT_WRITE
 mprotect: arg2 in ~PROT_EXEC || arg2 in ~PROT_WRITE
@@ -53,5 +56,6 @@ rt_sigaction: 1
 rt_sigprocmask: 1
 set_robust_list: 1
 set_tid_address: 1
+setsid: 1
 tgkill: 1
 unlinkat: 1

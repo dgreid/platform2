@@ -1,3 +1,3 @@
 # Keep track of USB devices that should be allow-listed at the lock screen.
-ACTION=="add", DRIVER=="usb", RUN+="/usr/sbin/usb_bouncer udev add '%E{DEVPATH}'"
-ACTION=="remove", ENV{DEVTYPE}=="usb_device", RUN+="/usr/sbin/usb_bouncer udev remove '%E{DEVPATH}'"
+ACTION=="add", DRIVER=="usb", RUN+="/usr/sbin/usb_bouncer --fork udev add '%E{DEVPATH}'"
+ACTION=="remove", ENV{DEVTYPE}=="usb_device", RUN+="/usr/sbin/usb_bouncer --fork udev remove '%E{DEVPATH}'"
