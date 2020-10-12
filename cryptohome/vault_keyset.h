@@ -61,6 +61,7 @@ class VaultKeyset {
   virtual bool Save(const base::FilePath& filename);
   virtual bool Encrypt(const brillo::SecureBlob& key,
                        const std::string& obfuscated_username);
+  virtual std::string label() const;
   virtual const SerializedVaultKeyset& serialized() const {
     return serialized_;
   }

@@ -51,6 +51,7 @@ class MockVaultKeyset : public VaultKeyset {
               Encrypt,
               (const brillo::SecureBlob&, const std::string&),
               (override));
+  MOCK_METHOD(std::string, label, (), (const, override));
   MOCK_METHOD(const SerializedVaultKeyset&, serialized, (), (const, override));
   MOCK_METHOD(SerializedVaultKeyset*, mutable_serialized, (), (override));
   MOCK_METHOD(const base::FilePath&, source_file, (), (const, override));

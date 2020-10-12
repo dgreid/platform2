@@ -57,23 +57,6 @@ const char kEcryptfsVaultDir[] = "vault";
 // Name of the mount directory.
 const char kMountDir[] = "mount";
 
-namespace {
-
-// Returns label of the given serialized vault keyset. The label is normally
-// specified in the keyset itself, but for a legacy keyset it has to be
-// automatically generated.
-std::string GetSerializedKeysetLabel(const SerializedVaultKeyset& serialized,
-                                     int key_index) {
-  if (!serialized.has_key_data()) {
-    // Fallback for legacy keys, for which the label has to be inferred from the
-    // index number.
-    return base::StringPrintf("%s%d", kKeyLegacyPrefix, key_index);
-  }
-  return serialized.key_data().label();
-}
-
-}  // namespace
-
 HomeDirs::HomeDirs()
     : default_platform_(new Platform()),
       platform_(default_platform_.get()),
@@ -179,8 +162,7 @@ bool HomeDirs::GetValidKeyset(const Credentials& creds,
     // Skip decrypt attempts if the label doesn't match.
     // Treat an empty creds label as a wildcard.
     if (!creds.key_data().label().empty() &&
-        creds.key_data().label() !=
-            GetSerializedKeysetLabel(vk->serialized(), index))
+        creds.key_data().label() != vk->label())
       continue;
     // Skip LE Credentials if not explicitly identified by a label, since we
     // don't want unnecessary wrong attempts.
@@ -296,7 +278,7 @@ VaultKeyset* HomeDirs::GetVaultKeyset(const std::string& obfuscated_username,
     if (!LoadVaultKeysetForUser(obfuscated_username, index, vk.get())) {
       continue;
     }
-    if (GetSerializedKeysetLabel(vk->serialized(), index) == key_label) {
+    if (vk->label() == key_label) {
       return vk.release();
     }
   }
@@ -367,7 +349,7 @@ bool HomeDirs::GetVaultKeysetLabels(const std::string& obfuscated_username,
     if (!LoadVaultKeysetForUser(obfuscated_username, index, vk.get())) {
       continue;
     }
-    labels->push_back(GetSerializedKeysetLabel(vk->serialized(), index));
+    labels->push_back(vk->label());
   }
 
   return (labels->size() > 0);

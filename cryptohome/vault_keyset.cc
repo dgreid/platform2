@@ -19,6 +19,7 @@ using brillo::SecureBlob;
 
 namespace {
 const mode_t kVaultFilePermissions = 0600;
+const char kKeyLegacyPrefix[] = "legacy-";
 }
 
 namespace cryptohome {
@@ -334,6 +335,15 @@ bool VaultKeyset::Save(const FilePath& filename) {
   bool ok = platform_->WriteFileAtomicDurable(filename, contents,
                                               kVaultFilePermissions);
   return ok;
+}
+
+std::string VaultKeyset::label() const {
+  if (serialized_.has_key_data()) {
+    return serialized_.key_data().label();
+  }
+  // Fallback for legacy keys, for which the label has to be inferred from the
+  // index number.
+  return base::StringPrintf("%s%d", kKeyLegacyPrefix, legacy_index_);
 }
 
 bool VaultKeyset::IsLECredential() const {

@@ -735,6 +735,7 @@ class KeysetManagementTest : public HomeDirsTest {
           .WillRepeatedly(Return(true));
       EXPECT_CALL(*active_vks_[i], set_legacy_index(_))
           .Times(testing::AnyNumber());
+      EXPECT_CALL(*active_vks_[i], label()).WillRepeatedly(Return("legacy-0"));
     }
     active_vk_ = active_vks_[0];
 
@@ -824,6 +825,7 @@ TEST_P(KeysetManagementTest, AddKeysetClobber) {
       .WillOnce(Return(reinterpret_cast<FILE*>(0xbeefbeef)));
   EXPECT_CALL(*active_vk_, Encrypt(newkey, _)).WillOnce(Return(true));
   EXPECT_CALL(*active_vks_[1], set_legacy_index(_));
+  EXPECT_CALL(*active_vks_[1], label()).WillOnce(Return(key_data.label()));
   EXPECT_CALL(*active_vks_[1], legacy_index()).WillOnce(Return(0));
   EXPECT_CALL(*active_vks_[1], source_file()).WillOnce(ReturnRef(vk_path));
   EXPECT_CALL(*active_vk_, Save(vk_path)).WillOnce(Return(true));
@@ -856,6 +858,7 @@ TEST_P(KeysetManagementTest, AddKeysetNoClobber) {
       platform_,
       OpenFile(Property(&FilePath::value, EndsWith("master.1")), StrEq("wx")))
       .WillOnce(Return(reinterpret_cast<FILE*>(0xbeefbeef)));
+  EXPECT_CALL(*active_vks_[1], label()).WillOnce(Return(key_data.label()));
 
   EXPECT_EQ(
       CRYPTOHOME_ERROR_KEY_LABEL_EXISTS,
@@ -1165,6 +1168,7 @@ TEST_P(KeysetManagementTest, RemoveKeysetSuccess) {
 
   // Expect the 0 slot since it'll match all the fake keys.
   EXPECT_CALL(*active_vks_[0], set_legacy_index(0));
+  EXPECT_CALL(*active_vks_[0], label()).WillRepeatedly(Return("remove me"));
   // Return a different slot to make sure the code is using the right object.
   EXPECT_CALL(*active_vks_[0], legacy_index()).WillOnce(Return(1));
   // The VaultKeyset which will be removed will get index 2.
@@ -1195,6 +1199,7 @@ TEST_P(KeysetManagementTest, GetVaultKeysetLabelsOneLabeled) {
 
   serialized_.mutable_key_data()->set_label("a labeled key");
   std::vector<std::string> labels;
+  EXPECT_CALL(*active_vks_[0], label()).WillRepeatedly(Return("a labeled key"));
   EXPECT_TRUE(homedirs_.GetVaultKeysetLabels(
       credentials_->GetObfuscatedUsername(system_salt_), &labels));
   ASSERT_NE(0, labels.size());
