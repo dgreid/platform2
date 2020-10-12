@@ -13,7 +13,8 @@
 #include <base/strings/string_piece.h>
 #include <base/strings/string_split.h>
 #include <base/strings/string_util.h>
-#include <base/json/json_string_value_serializer.h>
+#include <base/json/json_reader.h>
+#include <base/values.h>
 
 #include <chromeos/dbus/service_constants.h>
 #include <libpasswordprovider/password.h>
@@ -503,40 +504,39 @@ base::Optional<string> EapCredentials::TranslateSubjectAlternativeNameMatch(
   vector<string> entries;
   for (const auto& subject_alternative_name_match :
        subject_alternative_name_match_list) {
-    JSONStringValueDeserializer deserializer(subject_alternative_name_match);
-    int error_code;
-    string error_message;
-    std::unique_ptr<base::Value> deserialized_value =
-        deserializer.Deserialize(&error_code, &error_message);
+    auto json_value = base::JSONReader::ReadAndReturnValueWithError(
+        subject_alternative_name_match, base::JSON_PARSE_RFC);
 
-    base::DictionaryValue* dict = nullptr;
-    if (!deserialized_value || !deserialized_value->GetAsDictionary(&dict)) {
+    if (!json_value.value || !json_value.value->is_dict()) {
       LOG(ERROR)
           << "Could not deserialize a subject alternative name match. Error "
-          << error_code << ": " << error_message;
+          << json_value.error_code << ": " << json_value.error_message;
       return base::nullopt;
     }
-    string type;
-    if (!dict->GetString(kEapSubjectAlternativeNameMatchTypeProperty, &type)) {
+    base::Value deserialized_value = std::move(*json_value.value);
+
+    const std::string* type = deserialized_value.FindStringKey(
+        kEapSubjectAlternativeNameMatchTypeProperty);
+    if (!type) {
       LOG(ERROR) << "Could not find "
                  << kEapSubjectAlternativeNameMatchTypeProperty
                  << " of a subject alternative name match.";
       return base::nullopt;
     }
-    if (!ValidSubjectAlternativeNameMatchType(type)) {
-      LOG(ERROR) << "Subject alternative name match type: \"" << type
+    if (!ValidSubjectAlternativeNameMatchType(*type)) {
+      LOG(ERROR) << "Subject alternative name match type: \"" << *type
                  << "\" is not supported.";
       return base::nullopt;
     }
-    string value;
-    if (!dict->GetString(kEapSubjectAlternativeNameMatchValueProperty,
-                         &value)) {
+    const std::string* value = deserialized_value.FindStringKey(
+        kEapSubjectAlternativeNameMatchValueProperty);
+    if (!value) {
       LOG(ERROR) << "Could not find "
                  << kEapSubjectAlternativeNameMatchValueProperty
                  << " of a subject alternative name match.";
       return base::nullopt;
     }
-    string translated_entry = type + ":" + value;
+    string translated_entry = *type + ":" + *value;
     entries.push_back(translated_entry);
   }
   return base::JoinString(entries, ";");
