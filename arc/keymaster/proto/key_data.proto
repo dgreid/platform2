@@ -12,6 +12,14 @@ message ArcKeyData {
   bytes key_material = 1;
 }
 
+// Metadata holder for keys owned by chaps.
+message ChapsKeyData {
+  // PKCS#11 ID (CKA_ID).
+  bytes id = 1;
+  // PKCS#11 label (CKA_LABEL).
+  string label = 2;
+}
+
 // Extensible structure for key data from diverse sources.
 message KeyData {
   // Sets of Keymaster tags.
@@ -22,5 +30,7 @@ message KeyData {
   oneof data {
     // Data for ARC++ KeyStore keys.
     ArcKeyData arc_key = 3;
+    // Data for chaps owned keys.
+    ChapsKeyData chaps_key = 4;
   }
 }

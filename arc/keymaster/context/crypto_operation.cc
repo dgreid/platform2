@@ -37,10 +37,6 @@ CryptoOperation::CryptoOperation() = default;
 
 CryptoOperation::~CryptoOperation() = default;
 
-bool CryptoOperation::IsSupported() {
-  return SupportedOperations().count(description()) > 0;
-}
-
 std::ostream& operator<<(std::ostream& os,
                          MechanismDescription const& description) {
   os << "{type=";

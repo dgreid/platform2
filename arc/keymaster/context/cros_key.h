@@ -125,6 +125,40 @@ class CrosKey : public ::keymaster::Key {
   KeyData key_data_;
 };
 
+class ChapsKey : public CrosKey {
+ public:
+  ChapsKey(::keymaster::AuthorizationSet&& hw_enforced,
+           ::keymaster::AuthorizationSet&& sw_enforced,
+           const CrosKeyFactory* key_factory,
+           KeyData&& key_data);
+  ChapsKey(ChapsKey&& chaps_key);
+  ~ChapsKey() override;
+  ChapsKey& operator=(ChapsKey&&);
+  // Not copyable nor assignable.
+  ChapsKey(const ChapsKey&) = delete;
+  ChapsKey& operator=(const ChapsKey&) = delete;
+
+  // Exports the public/private key in the given format.
+  //
+  // The only supported format is |KM_KEY_FORMAT_X509| for public keys
+  // (SubjectPublicKeyInfo).
+  //
+  // Keymaster does not own private keys so those can't be exported and an error
+  // will be returned.
+  keymaster_error_t formatted_key_material(
+      keymaster_key_format_t format,
+      ::keymaster::UniquePtr<uint8_t[]>* out_material,
+      size_t* out_size) const override;
+
+  // Returns key label, corresponding to PKCS#11 CKA_LABEL.
+  const std::string& label() const { return key_data().chaps_key().label(); }
+  // Returns key ID, corresponding to PKCS#11 CKA_ID.
+  brillo::Blob id() const {
+    return brillo::Blob(key_data().chaps_key().id().begin(),
+                        key_data().chaps_key().id().end());
+  }
+};
+
 class CrosOperationFactory : public ::keymaster::OperationFactory {
  public:
   CrosOperationFactory(keymaster_algorithm_t algorithm,
@@ -150,7 +184,7 @@ class CrosOperationFactory : public ::keymaster::OperationFactory {
 
 class CrosOperation : public ::keymaster::Operation {
  public:
-  CrosOperation(keymaster_purpose_t purpose, CrosKey&& key);
+  CrosOperation(keymaster_purpose_t purpose, ChapsKey&& key);
   ~CrosOperation() override;
   // Not copyable nor assignable.
   CrosOperation(const CrosOperation&) = delete;

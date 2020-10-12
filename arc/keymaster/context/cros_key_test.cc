@@ -16,6 +16,9 @@ namespace context {
 
 namespace {
 
+constexpr char kId[] = "some_id";
+constexpr char kLabel[] = "some_label";
+
 // Concrete implementation of |CrosKey| for tests.
 class TestKey : public CrosKey {
  public:
@@ -60,6 +63,21 @@ TEST(CrosKey, SimpleInteraction) {
   ASSERT_EQ(key.cros_key_factory(), &factory);
 }
 
+TEST(ChapsKey, SimpleInteraction) {
+  CrosKeyFactory factory(/*context_adaptor=*/nullptr, KM_ALGORITHM_RSA);
+  ::keymaster::AuthorizationSet hw_enforced, sw_enforced;
+  KeyData data;
+  data.mutable_chaps_key()->set_id(kId);
+  data.mutable_chaps_key()->set_label(kLabel);
+  brillo::Blob id_blob(kId, kId + strlen(kId));
+
+  ChapsKey key(std::move(hw_enforced), std::move(sw_enforced), &factory,
+               std::move(data));
+  EXPECT_EQ(key.cros_key_factory(), &factory);
+  EXPECT_EQ(key.id(), id_blob);
+  EXPECT_EQ(key.label(), kLabel);
+}
+
 TEST(CrosOperationFactory, SimpleInteraction) {
   CrosOperationFactory factory(KM_ALGORITHM_RSA, KM_PURPOSE_SIGN);
   ::keymaster::OperationFactory::KeyType type = factory.registry_key();
@@ -71,8 +89,10 @@ TEST(CrosOperation, SimpleInteraction) {
   CrosKeyFactory keyFactory(/*context_adaptor=*/nullptr, KM_ALGORITHM_RSA);
   ::keymaster::AuthorizationSet hw_enforced, sw_enforced, begin_params;
   KeyData data;
-  TestKey key(std::move(hw_enforced), std::move(sw_enforced), &keyFactory,
-              std::move(data));
+  data.mutable_chaps_key()->set_label(kLabel);
+  data.mutable_chaps_key()->set_id(kId);
+  ChapsKey key(std::move(hw_enforced), std::move(sw_enforced), &keyFactory,
+               std::move(data));
 
   CrosOperation operation(KM_PURPOSE_SIGN, std::move(key));
   ASSERT_EQ(operation.purpose(), KM_PURPOSE_SIGN);

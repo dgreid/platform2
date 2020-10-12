@@ -35,6 +35,29 @@ class ChapsClient {
   ChapsClient& operator=(const ChapsClient&) = delete;
   ~ChapsClient();
 
+  // Returns a handle to the chaps object with given |label| and |id|.
+  base::Optional<CK_OBJECT_HANDLE> FindObject(CK_OBJECT_CLASS object_class,
+                                              const std::string& label,
+                                              const brillo::Blob& id);
+
+  // Returns the SPKI of a certificate identified by the given |label| and |id|.
+  base::Optional<brillo::Blob> ExportSubjectPublicKeyInfo(
+      const std::string& label, const brillo::Blob& id);
+
+  // Initializes a new signature operation.
+  //
+  // Mechanism types known to work are (though others may work too):
+  // * CKM_RSA_PKCS
+  // * CKM_SHA256_RSA_PKCS
+  bool InitializeSignature(CK_MECHANISM_TYPE mechanism_type,
+                           CK_OBJECT_HANDLE key_handle);
+
+  // Updates an ongoing signature operation with |input|.
+  bool UpdateSignature(const brillo::Blob& input);
+
+  // Finishes an ongoing signature operation, returning the final signature.
+  base::Optional<brillo::Blob> FinalizeSignature();
+
   // Returns the ARC Keymaster AES-256 encryption key material. If the key does
   // not exist yet it will be generated. Returns base::nullopt if there's an
   // error in the PKCS #11 operation.

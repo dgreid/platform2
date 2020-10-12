@@ -8,7 +8,6 @@
 #include <memory>
 #include <string>
 
-#include <base/containers/flat_set.h>
 #include <base/optional.h>
 #include <brillo/secure_blob.h>
 
@@ -122,12 +121,8 @@ class CryptoOperation {
   // Returns |true| if the operation was aborted successfully.
   virtual bool Abort() = 0;
 
-  // The set of operations supported by the implementation.
-  virtual const base::flat_set<MechanismDescription>& SupportedOperations() = 0;
-
-  // Returns true if this operation is supported by the implementation. Must be
-  // called after |set_description|.
-  bool IsSupported();
+  // Returns true if this |description| is supported by the implementation.
+  virtual bool IsSupportedMechanism(MechanismDescription description) const = 0;
 
   // Returns the description for this operation. Must be called after
   // |set_description|.

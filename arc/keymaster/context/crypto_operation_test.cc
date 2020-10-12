@@ -4,7 +4,6 @@
 
 #include "arc/keymaster/context/crypto_operation.h"
 
-#include <base/containers/flat_set.h>
 #include <gtest/gtest.h>
 #include "base/optional.h"
 
@@ -32,9 +31,6 @@ const auto kMechanismC = MechanismDescription(OperationType::kSign,
                                               Padding::kPkcs7,
                                               BlockMode::kNone);
 
-const base::flat_set<MechanismDescription> kTestOperations = {kMechanismA,
-                                                              kMechanismB};
-
 // Concrete implementation of |CryptoOperation| for tests.
 class TestOperation : public CryptoOperation {
  public:
@@ -56,23 +52,20 @@ class TestOperation : public CryptoOperation {
 
   bool Abort() { return false; }
 
-  const base::flat_set<MechanismDescription>& SupportedOperations() {
-    return kTestOperations;
+  bool IsSupportedMechanism(MechanismDescription description) const {
+    return kMechanismA == description || kMechanismB == description;
   }
 };
 
 }  // anonymous namespace
 
-TEST(CryptoOperation, IsSupported) {
+TEST(CryptoOperation, IsSupportedMechanism) {
   TestOperation operation;
-  operation.set_description(kMechanismA);
-  EXPECT_TRUE(operation.IsSupported());
+  EXPECT_TRUE(operation.IsSupportedMechanism(kMechanismA));
 
-  operation.set_description(kMechanismB);
-  EXPECT_TRUE(operation.IsSupported());
+  EXPECT_TRUE(operation.IsSupportedMechanism(kMechanismB));
 
-  operation.set_description(kMechanismC);
-  EXPECT_FALSE(operation.IsSupported());
+  EXPECT_FALSE(operation.IsSupportedMechanism(kMechanismC));
 }
 
 TEST(MechanismDescription, EqualsOperator) {

@@ -4,8 +4,13 @@
 
 #include "arc/keymaster/context/chaps_client.h"
 
+#include <iterator>
+
 #include <base/logging.h>
 #include <base/stl_util.h>
+#include <chaps/pkcs11/pkcs11t.h>
+#include <crypto/scoped_openssl_types.h>
+#include <openssl/x509.h>
 
 #include "arc/keymaster/context/context_adaptor.h"
 
@@ -19,8 +24,9 @@ constexpr char kApplicationID[] =
     "CrOS_d5bbc079d2497110feadfc97c40d718ae46f4658";
 constexpr char kEncryptKeyLabel[] = "arc-keymasterd_AES_key";
 
-// Only attribute retrieved is an AES key of size 32.
-constexpr size_t kMaxAttributeSize = 32;
+// Largest attribute retrieved is a certificate X509. Consider anything larger
+// than 1KB an error.
+constexpr size_t kMaxAttributeSize = 1024;
 // Arbitrary number of object handles to retrieve on a search.
 constexpr CK_ULONG kMaxHandles = 100;
 // Max retries for invalid session handle errors.
@@ -29,6 +35,8 @@ constexpr CK_ULONG kMaxHandles = 100;
 // invalidated, and should be retried with a new session. This may happen e.g.
 // when cryptohome or attestation install a new key.
 constexpr size_t kMaxAttemps = 10;
+// The maximum length in bytes expected for signatures.
+constexpr size_t kMaxSignatureSize = 512;
 
 }  // anonymous namespace
 
@@ -132,6 +140,58 @@ base::Optional<CK_SESSION_HANDLE> ChapsClient::session_handle() {
   return session_ ? session_->handle() : base::nullopt;
 }
 
+bool ChapsClient::InitializeSignature(CK_MECHANISM_TYPE mechanism_type,
+                                      CK_OBJECT_HANDLE key_handle) {
+  if (!session_handle().has_value())
+    return false;
+
+  CK_MECHANISM mechanism = {mechanism_type, /*pParameter=*/NULL_PTR,
+                            /*ulParameterLen=*/0};
+
+  CK_RV rv = C_SignInit(*session_handle(), &mechanism, key_handle);
+  if (CKR_OK != rv) {
+    LOG(ERROR) << "Failed to initialize signature: " << rv;
+    return false;
+  }
+
+  return true;
+}
+
+bool ChapsClient::UpdateSignature(const brillo::Blob& input) {
+  if (!session_handle().has_value())
+    return false;
+
+  // Nothing to do if input is empty.
+  if (input.empty())
+    return false;
+
+  CK_RV rv = C_SignUpdate(*session_handle(), const_cast<uint8_t*>(input.data()),
+                          input.size());
+  if (CKR_OK != rv) {
+    LOG(ERROR) << "Failed to update signature: " << rv;
+    return false;
+  }
+
+  return true;
+}
+
+base::Optional<brillo::Blob> ChapsClient::FinalizeSignature() {
+  if (!session_handle().has_value())
+    return base::nullopt;
+
+  brillo::Blob output(kMaxSignatureSize);
+  CK_ULONG output_len = output.size();
+
+  CK_RV rv = C_SignFinal(*session_handle(), output.data(), &output_len);
+  if (CKR_OK != rv) {
+    LOG(ERROR) << "Failed to finalize signature: " << rv;
+    return base::nullopt;
+  }
+
+  output.resize(output_len);
+  return output;
+}
+
 base::Optional<CK_OBJECT_HANDLE> ChapsClient::FindKey(
     const std::string& label) {
   if (!session_handle().has_value())
@@ -211,6 +271,107 @@ CK_RV ChapsClient::ExportKey(CK_OBJECT_HANDLE key_handle,
 
   exported_key->assign(material.begin(), material.end());
   return CKR_OK;
+}
+
+base::Optional<CK_OBJECT_HANDLE> ChapsClient::FindObject(
+    CK_OBJECT_CLASS object_class,
+    const std::string& label,
+    const brillo::Blob& id) {
+  if (!session_handle().has_value())
+    return base::nullopt;
+
+  // Assemble a search template.
+  std::string mutable_label(label);
+  CK_ATTRIBUTE attributes[] = {
+      {CKA_CLASS, &object_class, sizeof(object_class)},
+      {CKA_LABEL, std::data(mutable_label), mutable_label.size()},
+      {CKA_ID, const_cast<uint8_t*>(id.data()), id.size()},
+  };
+  constexpr CK_ULONG kMaxHandles = 100;  // Arbitrary.
+  CK_OBJECT_HANDLE handles[kMaxHandles];
+  CK_ULONG count = 0;
+
+  for (size_t attempts = 0; attempts < kMaxAttemps; ++attempts) {
+    CK_RV rv = C_FindObjectsInit(*session_handle(), attributes,
+                                 base::size(attributes));
+    if (CKR_SESSION_HANDLE_INVALID == rv) {
+      session_.reset();
+      continue;
+    }
+    if (CKR_OK != rv) {
+      LOG(ERROR) << "Failed to initialize find object call: " << rv;
+      return base::nullopt;
+    }
+
+    count = 0;
+    rv = C_FindObjects(*session_handle(), handles, kMaxHandles, &count);
+    if (CKR_SESSION_HANDLE_INVALID == rv) {
+      session_.reset();
+      continue;
+    }
+    if (CKR_OK != rv) {
+      LOG(ERROR) << "Find objects call failed: " << rv;
+      return base::nullopt;
+    }
+
+    break;
+  }
+
+  if (count == 0) {
+    LOG(INFO) << "No objects found for label=" << label;
+    return base::nullopt;
+  } else if (count > 1) {
+    LOG(WARNING) << count << " objects found with label=" << label
+                 << ", returning the first one.";
+  }
+
+  return handles[0];
+}
+
+base::Optional<brillo::Blob> ChapsClient::ExportSubjectPublicKeyInfo(
+    const std::string& label, const brillo::Blob& id) {
+  brillo::SecureBlob cert_x509_der_encoded;
+  for (size_t attempts = 0; attempts < kMaxAttemps; ++attempts) {
+    // Get a handle to the certificate object.
+    base::Optional<CK_OBJECT_HANDLE> cert_handle =
+        FindObject(CKO_CERTIFICATE, label, id);
+    if (!cert_handle.has_value())
+      return base::nullopt;
+
+    // Fetch the DER encoded certificate in x509 format.
+    CK_RV rv = GetBytesAttribute(cert_handle.value(), CKA_VALUE,
+                                 &cert_x509_der_encoded);
+    if (CKR_SESSION_HANDLE_INVALID == rv) {
+      session_.reset();
+      continue;
+    }
+    if (CKR_OK != rv) {
+      LOG(ERROR) << "Failed to export certificate x509 from chaps: " << rv;
+      return base::nullopt;
+    }
+
+    break;
+  }
+
+  // Parse the x509.
+  const uint8_t* cert_der = cert_x509_der_encoded.data();
+  crypto::ScopedOpenSSL<X509, X509_free> cert_x509(
+      d2i_X509(/*px=*/nullptr, &cert_der, cert_x509_der_encoded.size()));
+  if (!cert_x509) {
+    LOG(ERROR) << "Failed to parse certificate x509.";
+    return base::nullopt;
+  }
+
+  // Export the SubjectPublicKeyInfo from the x509.
+  uint8_t* spki = nullptr;
+  int length = i2d_X509_PUBKEY(X509_get_X509_PUBKEY(cert_x509.get()), &spki);
+  if (length < 0) {
+    LOG(ERROR) << "Failed to parse SubjectPublicKeyInfo from x509.";
+    return base::nullopt;
+  }
+  crypto::ScopedOpenSSLBytes scoped_pubkey_buffer(spki);
+
+  return brillo::Blob(spki, spki + length);
 }
 
 base::Optional<CK_OBJECT_HANDLE> ChapsClient::GenerateEncryptionKey() {

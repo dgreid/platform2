@@ -11,6 +11,8 @@
 #include <base/optional.h>
 #include <keymaster/keymaster_tags.h>
 
+#include "arc/keymaster/context/chaps_crypto_operation.h"
+
 namespace arc {
 namespace keymaster {
 namespace context {
@@ -134,6 +136,10 @@ keymaster_error_t CrosKeyFactory::LoadKey(
     ::keymaster::AuthorizationSet&& sw_enforced,
     ::keymaster::UniquePtr<::keymaster::Key>* key) const {
   switch (key_data.data_case()) {
+    case KeyData::DataCase::kChapsKey:
+      key->reset(new ChapsKey(std::move(hw_enforced), std::move(sw_enforced),
+                              this, std::move(key_data)));
+      return KM_ERROR_OK;
     case KeyData::kArcKey:
       NOTREACHED() << "CrosKeyFactory cannot load ARC keys.";
       return KM_ERROR_UNIMPLEMENTED;
@@ -212,6 +218,55 @@ CrosKey::CrosKey(::keymaster::AuthorizationSet&& hw_enforced,
 
 CrosKey::~CrosKey() = default;
 
+ChapsKey::ChapsKey(::keymaster::AuthorizationSet&& hw_enforced,
+                   ::keymaster::AuthorizationSet&& sw_enforced,
+                   const CrosKeyFactory* key_factory,
+                   KeyData&& key_data)
+    : CrosKey(std::move(hw_enforced),
+              std::move(sw_enforced),
+              key_factory,
+              std::move(key_data)) {}
+
+ChapsKey::ChapsKey(ChapsKey&& chaps_key)
+    : ChapsKey(chaps_key.hw_enforced_move(),
+               chaps_key.sw_enforced_move(),
+               chaps_key.cros_key_factory(),
+               std::move(chaps_key.key_data_)) {}
+
+ChapsKey::~ChapsKey() = default;
+
+ChapsKey& ChapsKey::operator=(ChapsKey&& other) {
+  hw_enforced_ = other.hw_enforced_move();
+  sw_enforced_ = other.sw_enforced_move();
+  key_factory_ = other.cros_key_factory();
+  key_data_ = std::move(other.key_data_);
+  return *this;
+}
+
+keymaster_error_t ChapsKey::formatted_key_material(
+    keymaster_key_format_t format,
+    ::keymaster::UniquePtr<uint8_t[]>* out_material,
+    size_t* out_size) const {
+  // KM_KEY_FORMAT_X509 refers to the SubjectPublicKeyInfo, and that's the only
+  // format we support.
+  if (format != KM_KEY_FORMAT_X509)
+    return KM_ERROR_UNSUPPORTED_KEY_FORMAT;
+
+  if (out_material == nullptr || out_size == nullptr)
+    return KM_ERROR_OUTPUT_PARAMETER_NULL;
+
+  ChapsClient chaps_client(cros_key_factory()->context_adaptor());
+  base::Optional<brillo::Blob> spki =
+      chaps_client.ExportSubjectPublicKeyInfo(label(), id());
+  if (!spki.has_value())
+    return KM_ERROR_UNKNOWN_ERROR;
+
+  out_material->reset(new uint8_t[spki->size()]);
+  std::copy(spki->begin(), spki->end(), out_material->get());
+  *out_size = spki->size();
+  return KM_ERROR_OK;
+}
+
 CrosOperationFactory::CrosOperationFactory(keymaster_algorithm_t algorithm,
                                            keymaster_purpose_t purpose)
     : algorithm_(algorithm), purpose_(purpose) {}
@@ -227,14 +282,25 @@ CrosOperationFactory::~CrosOperationFactory() = default;
     ::keymaster::Key&& key,
     const ::keymaster::AuthorizationSet& begin_params,
     keymaster_error_t* error) {
-  NOTREACHED() << "No CrosOperation implementation for this key.";
-  *error = KM_ERROR_UNIMPLEMENTED;
-  return nullptr;
+  ChapsKey* chaps_key = dynamic_cast<ChapsKey*>(&key);
+
+  if (!chaps_key) {
+    NOTREACHED() << __func__ << " should not be called with non CrOS key.";
+    *error = KM_ERROR_UNKNOWN_ERROR;
+    return nullptr;
+  }
+
+  ::keymaster::UniquePtr<::keymaster::Operation> operation(
+      new CrosOperation(purpose_, std::move(*chaps_key)));
+  *error = KM_ERROR_OK;
+  return operation;
 }
 
-CrosOperation::CrosOperation(keymaster_purpose_t purpose, CrosKey&& key)
+CrosOperation::CrosOperation(keymaster_purpose_t purpose, ChapsKey&& key)
     : ::keymaster::Operation(
-          purpose, key.hw_enforced_move(), key.sw_enforced_move()) {}
+          purpose, key.hw_enforced_move(), key.sw_enforced_move()),
+      operation_(std::make_unique<ChapsCryptoOperation>(
+          key.cros_key_factory()->context_adaptor(), key.label(), key.id())) {}
 
 CrosOperation::~CrosOperation() = default;
 
