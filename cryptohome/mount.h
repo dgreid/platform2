@@ -301,19 +301,10 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
                                     std::string* key_signature,
                                     std::string* filename_key_signature) const;
 
-  virtual bool LoadVaultKeysetForUser(
-      const std::string& obfuscated_username,
-      int index,
-      SerializedVaultKeyset* encrypted_keyset) const;
-
   virtual bool StoreVaultKeysetForUser(
       const std::string& obfuscated_username,
       int index,
       SerializedVaultKeyset* encrypted_keyset) const;
-
-  virtual bool LoadTimestampForUser(const std::string& obfuscated_username,
-                                    int index,
-                                    Timestamp* timestamp) const;
 
   virtual bool StoreTimestampForUser(const std::string& obfuscated_username,
                                      int index,

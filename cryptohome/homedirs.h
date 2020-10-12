@@ -177,6 +177,12 @@ class HomeDirs {
                               int* key_index,
                               MountError* error);
 
+  // Loads the vault keyset for the supplied obfuscated username and index.
+  // Returns true for success, false for failure.
+  bool LoadVaultKeysetForUser(const std::string& obfuscated_user,
+                              int index,
+                              VaultKeyset* keyset) const;
+
   // Returns the vault keyset path for the supplied obfuscated username.
   virtual base::FilePath GetVaultKeysetPath(const std::string& obfuscated,
                                             int index) const;
@@ -325,11 +331,6 @@ class HomeDirs {
   // Deletes all directories under the supplied directory whose basename is not
   // the same as the obfuscated owner name.
   void RemoveNonOwnerDirectories(const base::FilePath& prefix);
-  // Loads the serialized vault keyset for the supplied obfuscated username.
-  // Returns true for success, false for failure.
-  bool LoadVaultKeysetForUser(const std::string& obfuscated_user,
-                              int index,
-                              VaultKeyset* keyset) const;
 
   // Helper function to check if the directory contains subdirectory that looks
   // like encrypted android-data (see definition of looks-like-android-data in

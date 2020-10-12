@@ -50,6 +50,8 @@ class VaultKeyset {
   virtual const brillo::SecureBlob& fnek_sig() const;
   virtual const brillo::SecureBlob& fnek_salt() const;
 
+  // Do not call Load directly, use Homedirs::LoadVaultKeysetForUser.
+  // TODO(dlunev): Extract Homedirs::LoadVaultKeysetForUser from Homedirs.
   virtual bool Load(const base::FilePath& filename);
   // Load must be called first. |crypto_error| may be null.
   virtual bool Decrypt(const brillo::SecureBlob& key,
@@ -99,6 +101,10 @@ class VaultKeyset {
   bool loaded_;
   bool encrypted_;
   base::FilePath source_file_;
+  // legacy_index_ is the index of the keyset for the user. It is called legacy
+  // due to previous plans to fully switch to label-based addressing, which,
+  // unfortunately, wasn't followed through.
+  // TODO(dlunev): rename it not to say legacy.
   int legacy_index_;
 
   DISALLOW_COPY_AND_ASSIGN(VaultKeyset);

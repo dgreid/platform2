@@ -175,7 +175,7 @@ bool HomeDirs::GetValidKeyset(const Credentials& creds,
   bool any_keyset_exists = false;
   CryptoError last_crypto_error = CryptoError::CE_NONE;
   for (int index : key_indices) {
-    if (!vk->Load(GetVaultKeysetPath(obfuscated, index)))
+    if (!LoadVaultKeysetForUser(obfuscated, index, vk))
       continue;
     any_keyset_exists = true;
     // Skip decrypt attempts if the label doesn't match.
@@ -717,8 +717,7 @@ bool HomeDirs::ForceRemoveKeyset(const std::string& obfuscated, int index) {
 
   std::unique_ptr<VaultKeyset> vk(
       vault_keyset_factory()->New(platform_, crypto_));
-  FilePath path = GetVaultKeysetPath(obfuscated, index);
-  if (!vk->Load(path)) {
+  if (!LoadVaultKeysetForUser(obfuscated, index, vk.get())) {
     LOG(WARNING) << "ForceRemoveKeyset: keyset " << index << " for "
                  << obfuscated << " does not exist";
     // Since it doesn't exist, then we're done.
@@ -736,6 +735,7 @@ bool HomeDirs::ForceRemoveKeyset(const std::string& obfuscated, int index) {
     }
   }
 
+  FilePath path = GetVaultKeysetPath(obfuscated, index);
   if (platform_->DeleteFileSecurely(path))
     return true;
 
@@ -1293,7 +1293,7 @@ void HomeDirs::ResetLECredentials(const Credentials& creds) {
   std::unique_ptr<VaultKeyset> vk_reset(
       vault_keyset_factory()->New(platform_, crypto_));
   for (int index : key_indices) {
-    if (!vk_reset->Load(GetVaultKeysetPath(obfuscated, index)))
+    if (!LoadVaultKeysetForUser(obfuscated, index, vk_reset.get()))
       continue;
     // Skip non-LE Credentials.
     if (!vk_reset->IsLECredential())
@@ -1338,12 +1338,14 @@ void HomeDirs::RemoveLECredentials(const std::string& obfuscated_username) {
   std::unique_ptr<VaultKeyset> vk_remove(
       vault_keyset_factory()->New(platform_, crypto_));
   for (int index : key_indices) {
-    base::FilePath vk_path = GetVaultKeysetPath(obfuscated_username, index);
-    if (!vk_remove->Load(vk_path))
+    if (!LoadVaultKeysetForUser(obfuscated_username, index, vk_remove.get())) {
       continue;
+    }
+
     // Skip non-LE Credentials.
-    if (!vk_remove->IsLECredential())
+    if (!vk_remove->IsLECredential()) {
       continue;
+    }
 
     uint64_t label = vk_remove->serialized().le_label();
     if (!crypto_->RemoveLECredential(label)) {
@@ -1352,6 +1354,7 @@ void HomeDirs::RemoveLECredentials(const std::string& obfuscated_username) {
     }
 
     // Remove the cryptohome VaultKeyset data.
+    base::FilePath vk_path = GetVaultKeysetPath(obfuscated_username, index);
     platform_->DeleteFile(vk_path, true);
   }
 }
