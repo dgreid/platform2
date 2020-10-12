@@ -1306,8 +1306,7 @@ JpegNodeImp::onProcessFrame(
             params.pSrc->getImageBufferHeap()->getBufferHandle(),
             params.pDst->getImageBufferHeap()->getBufferHandle(),
             params.pSrc->getImgSize().w, params.pSrc->getImgSize().h,
-            params.quality, nullptr, 0, &outSize,
-            cros::JpegCompressor::Mode::kSwOnly);
+            params.quality, nullptr, 0, &outSize);
       }
       if (ret != true) {
         MY_LOGE("encode main jpeg fail!");
