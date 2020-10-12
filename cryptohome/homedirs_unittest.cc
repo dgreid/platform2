@@ -733,6 +733,8 @@ class KeysetManagementTest : public HomeDirsTest {
       // which isn't used in a test.
       EXPECT_CALL(*active_vks_[i], Load(keyset_paths_[0]))
           .WillRepeatedly(Return(true));
+      EXPECT_CALL(*active_vks_[i], set_legacy_index(_))
+          .Times(testing::AnyNumber());
     }
     active_vk_ = active_vks_[0];
 

@@ -301,7 +301,6 @@ VaultKeyset* HomeDirs::GetVaultKeyset(const std::string& obfuscated_username,
       continue;
     }
     if (GetSerializedKeysetLabel(vk->serialized(), index) == key_label) {
-      vk->set_legacy_index(index);
       return vk.release();
     }
   }
@@ -971,6 +970,7 @@ bool HomeDirs::LoadVaultKeysetForUser(const std::string& obfuscated_user,
     LOG(ERROR) << "Failed to load keyset file for user " << obfuscated_user;
     return false;
   }
+  keyset->set_legacy_index(index);
   return true;
 }
 
