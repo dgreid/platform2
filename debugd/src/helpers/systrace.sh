@@ -167,6 +167,9 @@ start)
 
     logger -t systrace "start tracing"
     tracing_write "mono" trace_clock          # monotonic clock for timestamps
+    # NOTE lack of double quotes is intentional, we want ${events} word
+    # splitting here:
+    # shellcheck disable=SC2086
     tracing_enable_events ${events}
     tracing_write "${buffer_size_running}" buffer_size_kb
     tracing_enable                              # start kernel tracing
