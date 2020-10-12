@@ -6,6 +6,7 @@
 
 #include <fcntl.h>
 #include <linux/iio/events.h>
+#include <linux/iio/types.h>
 #include <linux/input.h>
 #include <sys/ioctl.h>
 #include <sys/stat.h>
@@ -125,23 +126,22 @@ void SarWatcher::OnFileCanReadWithoutBlocking(int fd) {
     return;
   }
 
-  // TODO(egranata): abstract IIO event functionality
-  static constexpr size_t iio_event_size = 16;
-  uint8_t iio_event_buf[iio_event_size] = {0};
-  if (read(fd, &iio_event_buf[0], iio_event_size) == -1) {
+  struct iio_event_data iio_event_buf = {0};
+  if (read(fd, &iio_event_buf, sizeof(iio_event_buf)) == -1) {
     PLOG(ERROR) << "Failed to read from FD " << fd;
   }
 
   UserProximity proximity = UserProximity::UNKNOWN;
-  switch (iio_event_buf[6]) {
-    case 1:
+  auto dir = IIO_EVENT_CODE_EXTRACT_DIR(iio_event_buf.id);
+  switch (dir) {
+    case IIO_EV_DIR_RISING:
       proximity = UserProximity::FAR;
       break;
-    case 2:
+    case IIO_EV_DIR_FALLING:
       proximity = UserProximity::NEAR;
       break;
     default:
-      LOG(ERROR) << "Unknown proximity value " << iio_event_buf[6];
+      LOG(ERROR) << "Unknown proximity value " << dir;
       return;
   }
 
