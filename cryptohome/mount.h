@@ -301,25 +301,21 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
                                     std::string* key_signature,
                                     std::string* filename_key_signature) const;
 
-  virtual bool StoreVaultKeysetForUser(
-      const std::string& obfuscated_username,
-      int index,
-      SerializedVaultKeyset* encrypted_keyset) const;
+  virtual bool StoreVaultKeysetForUser(const std::string& obfuscated_username,
+                                       int index,
+                                       VaultKeyset* vault_keyset) const;
 
   virtual bool StoreTimestampForUser(const std::string& obfuscated_username,
                                      int index,
-                                     SerializedVaultKeyset* serialized) const;
+                                     VaultKeyset* vault_keyset) const;
 
   // Encrypts and adds the VaultKeyset to the serialized store
   //
   // Parameters
   //   credentials - The Credentials for the user
   //   vault_keyset (IN/OUT) - The VaultKeyset to save
-  //   serialized (IN/OUT) - The SerializedVaultKeyset to add the encrypted
-  //                         VaultKeyset to
   bool AddVaultKeyset(const Credentials& credentials,
-                      VaultKeyset* vault_keyset,
-                      SerializedVaultKeyset* serialized) const;
+                      VaultKeyset* vault_keyset) const;
 
   // Resaves the vault keyset, restoring on failure.  The vault_keyset supplied
   // is encrypted and stored in the wrapped_keyset parameter of serialized,
@@ -328,11 +324,9 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   // Parameters
   //   credentials - The Credentials for the user
   //   vault_keyset (IN/OUT) - The VaultKeyset to save
-  //   serialized (IN/OUT) - The serialized container to be saved
   bool ReEncryptVaultKeyset(const Credentials& credentials,
                             int index,
-                            VaultKeyset* vault_keyset,
-                            SerializedVaultKeyset* serialized) const;
+                            VaultKeyset* vault_keyset) const;
 
   // Check if the vault keyset needs re-encryption.
   //
@@ -347,12 +341,10 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   // Parameters
   //   credentials - The user credentials to use
   //   vault_keyset (OUT) - The unencrypted vault keyset on success
-  //   serialized (OUT) - The keyset container as deserialized from disk
   //   index (OUT) - The keyset index from disk
   //   error (OUT) - The specific error when decrypting
   bool DecryptVaultKeyset(const Credentials& credentials,
                           VaultKeyset* vault_keyset,
-                          SerializedVaultKeyset* serialized,
                           int* index,
                           MountError* error) const;
 

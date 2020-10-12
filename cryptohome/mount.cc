@@ -355,10 +355,9 @@ bool Mount::MountCryptohome(const Credentials& credentials,
   // Attempt to decrypt the vault keyset with the specified credentials.
   VaultKeyset vault_keyset;
   vault_keyset.Initialize(platform_, crypto_);
-  SerializedVaultKeyset serialized;
   MountError local_mount_error = MOUNT_ERROR_NONE;
   int index = -1;
-  if (!DecryptVaultKeyset(credentials, &vault_keyset, &serialized, &index,
+  if (!DecryptVaultKeyset(credentials, &vault_keyset, &index,
                           &local_mount_error)) {
     *mount_error = local_mount_error;
     if (recreate_on_decrypt_fatal && local_mount_error == MOUNT_ERROR_FATAL) {
@@ -386,9 +385,9 @@ bool Mount::MountCryptohome(const Credentials& credentials,
     return false;
   }
 
-  if (!serialized.has_wrapped_chaps_key()) {
+  if (!vault_keyset.serialized().has_wrapped_chaps_key()) {
     vault_keyset.CreateRandomChapsKey();
-    ReEncryptVaultKeyset(credentials, index, &vault_keyset, &serialized);
+    ReEncryptVaultKeyset(credentials, index, &vault_keyset);
   }
 
   SecureBlob local_chaps_key(vault_keyset.chaps_key().begin(),
@@ -677,8 +676,7 @@ bool Mount::CreateCryptohome(const Credentials& credentials) const {
   VaultKeyset vault_keyset;
   vault_keyset.Initialize(platform_, crypto_);
   vault_keyset.CreateRandom();
-  SerializedVaultKeyset serialized;
-  if (!AddVaultKeyset(credentials, &vault_keyset, &serialized)) {
+  if (!AddVaultKeyset(credentials, &vault_keyset)) {
     LOG(ERROR) << "Failed to add vault keyset to new user";
     return false;
   }
@@ -686,17 +684,18 @@ bool Mount::CreateCryptohome(const Credentials& credentials) const {
   // the existence test. (All new-format calls must populate the
   // label on creation.)
   if (!credentials.key_data().label().empty()) {
-    *serialized.mutable_key_data() = credentials.key_data();
+    *vault_keyset.mutable_serialized()->mutable_key_data() =
+        credentials.key_data();
   }
   if (credentials.key_data().type() == KeyData::KEY_TYPE_CHALLENGE_RESPONSE) {
-    *serialized.mutable_signature_challenge_info() =
+    *vault_keyset.mutable_serialized()->mutable_signature_challenge_info() =
         credentials.challenge_credentials_keyset_info();
   }
 
   // TODO(wad) move to storage by label-derivative and not number.
   if (!StoreVaultKeysetForUser(obfuscated_username,
                                0,  // first key
-                               &serialized)) {
+                               &vault_keyset)) {
     LOG(ERROR) << "Failed to store vault keyset for new user";
     return false;
   }
@@ -736,7 +735,7 @@ bool Mount::UpdateCurrentUserActivityTimestamp(int time_shift_sec,
     keyset.mutable_serialized()->set_last_activity_timestamp(
         timestamp.ToInternalValue());
     if (!StoreTimestampForUser(obfuscated_username, active_key_index,
-                               keyset.mutable_serialized())) {
+                               &keyset)) {
       return false;
     }
     if (user_timestamp_cache_->initialized()) {
@@ -749,7 +748,7 @@ bool Mount::UpdateCurrentUserActivityTimestamp(int time_shift_sec,
 
 bool Mount::StoreVaultKeysetForUser(const std::string& obfuscated_username,
                                     int index,
-                                    SerializedVaultKeyset* serialized) const {
+                                    VaultKeyset* vault_keyset) const {
   if (index < 0 || index > kKeyFileMax) {
     LOG(ERROR) << "Attempted to store an invalid key index: " << index;
     return false;
@@ -759,22 +758,23 @@ bool Mount::StoreVaultKeysetForUser(const std::string& obfuscated_username,
     VaultKeyset keyset;
     keyset.Initialize(platform_, crypto_);
     homedirs_->LoadVaultKeysetForUser(obfuscated_username, index, &keyset);
-    if (serialized->has_last_activity_timestamp()) {
+    if (vault_keyset->serialized().has_last_activity_timestamp()) {
       keyset.mutable_serialized()->set_last_activity_timestamp(
-          serialized->last_activity_timestamp());
-      if (MessageDifferencer::Equals(*serialized, keyset.serialized())) {
+          vault_keyset->serialized().last_activity_timestamp());
+      if (MessageDifferencer::Equals(vault_keyset->serialized(),
+                                     keyset.serialized())) {
         LOG(INFO) << "Only the timestamp has changed, should not store keyset.";
-        return StoreTimestampForUser(obfuscated_username, index, serialized);
+        return StoreTimestampForUser(obfuscated_username, index, vault_keyset);
       }
     }
   }
-  if (serialized->has_last_activity_timestamp()) {
-    if (!StoreTimestampForUser(obfuscated_username, index, serialized)) {
+  if (vault_keyset->serialized().has_last_activity_timestamp()) {
+    if (!StoreTimestampForUser(obfuscated_username, index, vault_keyset)) {
       return false;
     }
   }
-  brillo::Blob final_blob(serialized->ByteSizeLong());
-  serialized->SerializeWithCachedSizesToArray(
+  brillo::Blob final_blob(vault_keyset->serialized().ByteSizeLong());
+  vault_keyset->serialized().SerializeWithCachedSizesToArray(
       static_cast<google::protobuf::uint8*>(final_blob.data()));
   return platform_->WriteFileAtomicDurable(
       GetUserLegacyKeyFileForUser(obfuscated_username, index), final_blob,
@@ -783,9 +783,9 @@ bool Mount::StoreVaultKeysetForUser(const std::string& obfuscated_username,
 
 bool Mount::StoreTimestampForUser(const std::string& obfuscated_username,
                                   int index,
-                                  SerializedVaultKeyset* serialized) const {
+                                  VaultKeyset* vault_keyset) const {
   Timestamp timestamp;
-  timestamp.set_timestamp(serialized->last_activity_timestamp());
+  timestamp.set_timestamp(vault_keyset->serialized().last_activity_timestamp());
   std::string timestamp_str;
   if (!timestamp.SerializeToString(&timestamp_str)) {
     return false;
@@ -796,14 +796,14 @@ bool Mount::StoreTimestampForUser(const std::string& obfuscated_username,
     LOG(ERROR) << "Failed writing to timestamp file";
     return false;
   }
-  if (!serialized->timestamp_file_exists()) {
+  if (!vault_keyset->serialized().timestamp_file_exists()) {
     // The first time we write to a timestamp file we need to update the
     // vault_keyset to indicate that the timestamp is stored separately.
     // The initial 0 timestamp is also written to the vault_keyset which
     // means a timestamp will exist and can be read in case of a rollback.
-    serialized->set_timestamp_file_exists(true);
-    brillo::Blob blob(serialized->ByteSizeLong());
-    serialized->SerializeWithCachedSizesToArray(
+    vault_keyset->mutable_serialized()->set_timestamp_file_exists(true);
+    brillo::Blob blob(vault_keyset->serialized().ByteSizeLong());
+    vault_keyset->serialized().SerializeWithCachedSizesToArray(
         static_cast<google::protobuf::uint8*>(blob.data()));
     return platform_->WriteFileAtomicDurable(
         GetUserLegacyKeyFileForUser(obfuscated_username, index), blob,
@@ -888,14 +888,12 @@ bool Mount::ShouldReSaveKeyset(VaultKeyset* vault_keyset) const {
 
 bool Mount::DecryptVaultKeyset(const Credentials& credentials,
                                VaultKeyset* vault_keyset,
-                               SerializedVaultKeyset* serialized,
                                int* index,
                                MountError* error) const {
   *error = MOUNT_ERROR_NONE;
 
   if (!homedirs_->GetValidKeyset(credentials, vault_keyset, index, error))
     return false;
-  *serialized = vault_keyset->serialized();
 
   // Calling EnsureTpm here handles the case where a user logged in while
   // cryptohome was taking TPM ownership.  In that case, their vault keyset
@@ -912,21 +910,15 @@ bool Mount::DecryptVaultKeyset(const Credentials& credentials,
     return true;
   }
 
-  SerializedVaultKeyset new_serialized;
-  new_serialized.CopyFrom(*serialized);
   // This is not considered a fatal error.  Re-saving with the desired
   // protection is ideal, but not required.
-  if (ReEncryptVaultKeyset(credentials, *index, vault_keyset,
-                           &new_serialized)) {
-    serialized->CopyFrom(new_serialized);
-  }
+  ReEncryptVaultKeyset(credentials, *index, vault_keyset);
 
   return true;
 }
 
 bool Mount::AddVaultKeyset(const Credentials& credentials,
-                           VaultKeyset* vault_keyset,
-                           SerializedVaultKeyset* serialized) const {
+                           VaultKeyset* vault_keyset) const {
   // We don't do passkey to wrapper conversion because it is salted during save
   const SecureBlob passkey = credentials.passkey();
 
@@ -943,7 +935,8 @@ bool Mount::AddVaultKeyset(const Credentials& credentials,
   const auto salt =
       CryptoLib::CreateSecureRandomBlob(CRYPTOHOME_DEFAULT_KEY_SALT_SIZE);
   if (!crypto_->EncryptVaultKeyset(*vault_keyset, passkey, salt,
-                                   obfuscated_username, serialized)) {
+                                   obfuscated_username,
+                                   vault_keyset->mutable_serialized())) {
     LOG(ERROR) << "Encrypting vault keyset failed";
     return false;
   }
@@ -953,17 +946,23 @@ bool Mount::AddVaultKeyset(const Credentials& credentials,
 
 bool Mount::ReEncryptVaultKeyset(const Credentials& credentials,
                                  int key_index,
-                                 VaultKeyset* vault_keyset,
-                                 SerializedVaultKeyset* serialized) const {
+                                 VaultKeyset* vault_keyset) const {
+  // Save the initial serialized proto so we can roll-back any changes if we
+  // failed to re-save.
+  SerializedVaultKeyset old_serialized;
+  old_serialized.CopyFrom(vault_keyset->serialized());
+
   std::string obfuscated_username =
       credentials.GetObfuscatedUsername(system_salt_);
-  uint64_t label = serialized->le_label();
-  if (!AddVaultKeyset(credentials, vault_keyset, serialized)) {
+  uint64_t label = vault_keyset->serialized().le_label();
+  if (!AddVaultKeyset(credentials, vault_keyset)) {
     LOG(ERROR) << "Couldn't add keyset.";
+    vault_keyset->mutable_serialized()->CopyFrom(old_serialized);
     return false;
   }
 
-  if ((serialized->flags() & SerializedVaultKeyset::LE_CREDENTIAL) != 0) {
+  if ((vault_keyset->serialized().flags() &
+       SerializedVaultKeyset::LE_CREDENTIAL) != 0) {
     if (!crypto_->RemoveLECredential(label)) {
       // This is non-fatal error.
       LOG(ERROR) << "Failed to remove label = " << label;
@@ -976,8 +975,9 @@ bool Mount::ReEncryptVaultKeyset(const Credentials& credentials,
   // label uniqueness.  This means that we will still be able to use the
   // lack of KeyData in the future as input to migration.
   if (!StoreVaultKeysetForUser(credentials.GetObfuscatedUsername(system_salt_),
-                               key_index, serialized)) {
+                               key_index, vault_keyset)) {
     LOG(ERROR) << "Write to master key failed";
+    vault_keyset->mutable_serialized()->CopyFrom(old_serialized);
     return false;
   }
 
