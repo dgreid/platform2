@@ -107,7 +107,7 @@ bool ReadCycleCount(const base::FilePath& root_dir, uint32_t* cycle_count) {
 }
 
 bool TestWearPercentage(const base::FilePath& root_dir,
-                        uint32_t percent_battery_wear_allowed,
+                        uint8_t percent_battery_wear_allowed,
                         mojo_ipc::DiagnosticRoutineStatusEnum* status,
                         std::string* status_message,
                         std::string* output) {
@@ -167,7 +167,7 @@ bool TestCycleCount(const base::FilePath& root_dir,
 
 void RunBatteryHealthRoutine(Context* const context,
                              uint32_t maximum_cycle_count,
-                             uint32_t percent_battery_wear_allowed,
+                             uint8_t percent_battery_wear_allowed,
                              mojo_ipc::DiagnosticRoutineStatusEnum* status,
                              std::string* status_message,
                              std::string* output) {
@@ -218,13 +218,18 @@ const char kBatteryHealthExcessiveCycleCountMessage[] =
     "Battery cycle count is too high.";
 const char kBatteryHealthRoutinePassedMessage[] = "Routine passed.";
 
+const uint32_t kBatteryHealthDefaultMaximumCycleCount = 1000;
+const uint8_t kBatteryHealthDefaultPercentBatteryWearAllowed = 50;
+
 std::unique_ptr<DiagnosticRoutine> CreateBatteryHealthRoutine(
     Context* const context,
-    uint32_t maximum_cycle_count,
-    uint32_t percent_battery_wear_allowed) {
-  return std::make_unique<SimpleRoutine>(
-      base::BindOnce(&RunBatteryHealthRoutine, context, maximum_cycle_count,
-                     percent_battery_wear_allowed));
+    const base::Optional<uint32_t>& maximum_cycle_count,
+    const base::Optional<uint8_t>& percent_battery_wear_allowed) {
+  return std::make_unique<SimpleRoutine>(base::BindOnce(
+      &RunBatteryHealthRoutine, context,
+      maximum_cycle_count.value_or(kBatteryHealthDefaultMaximumCycleCount),
+      percent_battery_wear_allowed.value_or(
+          kBatteryHealthDefaultPercentBatteryWearAllowed)));
 }
 
 }  // namespace diagnostics

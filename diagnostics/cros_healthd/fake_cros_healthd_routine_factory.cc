@@ -208,8 +208,7 @@ FakeCrosHealthdRoutineFactory::MakeBatteryCapacityRoutine(uint32_t low_mah,
 }
 
 std::unique_ptr<DiagnosticRoutine>
-FakeCrosHealthdRoutineFactory::MakeBatteryHealthRoutine(
-    uint32_t maximum_cycle_count, uint32_t percent_battery_wear_allowed) {
+FakeCrosHealthdRoutineFactory::MakeBatteryHealthRoutine() {
   return std::move(next_routine_);
 }
 

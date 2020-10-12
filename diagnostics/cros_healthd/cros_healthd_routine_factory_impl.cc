@@ -4,7 +4,10 @@
 
 #include "diagnostics/cros_healthd/cros_healthd_routine_factory_impl.h"
 
+#include <cstdint>
+
 #include <base/logging.h>
+#include <base/optional.h>
 
 #include "diagnostics/cros_healthd/routines/ac_power/ac_power.h"
 #include "diagnostics/cros_healthd/routines/battery_capacity/battery_capacity.h"
@@ -31,6 +34,9 @@ namespace diagnostics {
 CrosHealthdRoutineFactoryImpl::CrosHealthdRoutineFactoryImpl(Context* context)
     : context_(context) {
   DCHECK(context_);
+
+  parameter_fetcher_ =
+      std::make_unique<RoutineParameterFetcher>(context_->cros_config());
 }
 
 CrosHealthdRoutineFactoryImpl::~CrosHealthdRoutineFactoryImpl() = default;
@@ -47,8 +53,11 @@ CrosHealthdRoutineFactoryImpl::MakeBatteryCapacityRoutine(uint32_t low_mah,
 }
 
 std::unique_ptr<DiagnosticRoutine>
-CrosHealthdRoutineFactoryImpl::MakeBatteryHealthRoutine(
-    uint32_t maximum_cycle_count, uint32_t percent_battery_wear_allowed) {
+CrosHealthdRoutineFactoryImpl::MakeBatteryHealthRoutine() {
+  base::Optional<uint32_t> maximum_cycle_count;
+  base::Optional<uint8_t> percent_battery_wear_allowed;
+  parameter_fetcher_->GetBatteryHealthParameters(&maximum_cycle_count,
+                                                 &percent_battery_wear_allowed);
   return CreateBatteryHealthRoutine(context_, maximum_cycle_count,
                                     percent_battery_wear_allowed);
 }

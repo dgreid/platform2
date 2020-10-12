@@ -143,8 +143,7 @@ void CrosHealthdRoutineService::RunBatteryHealthRoutine(
     uint32_t maximum_cycle_count,
     uint32_t percent_battery_wear_allowed,
     RunBatteryHealthRoutineCallback callback) {
-  RunRoutine(routine_factory_->MakeBatteryHealthRoutine(
-                 maximum_cycle_count, percent_battery_wear_allowed),
+  RunRoutine(routine_factory_->MakeBatteryHealthRoutine(),
              mojo_ipc::DiagnosticRoutineEnum::kBatteryHealth,
              std::move(callback));
 }

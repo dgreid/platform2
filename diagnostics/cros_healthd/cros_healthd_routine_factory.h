@@ -33,8 +33,7 @@ class CrosHealthdRoutineFactory {
       uint32_t low_mah, uint32_t high_mah) = 0;
   // Constructs a new instance of the battery health routine. See
   // diagnostics/routines/battery_sysfs for details on the routine itself.
-  virtual std::unique_ptr<DiagnosticRoutine> MakeBatteryHealthRoutine(
-      uint32_t maximum_cycle_count, uint32_t percent_battery_wear_allowed) = 0;
+  virtual std::unique_ptr<DiagnosticRoutine> MakeBatteryHealthRoutine() = 0;
   // Constructs a new instance of the smartctl check routine. See
   // diagnostics/routines/smartctl_check for details on the routine itself.
   virtual std::unique_ptr<DiagnosticRoutine> MakeSmartctlCheckRoutine() = 0;

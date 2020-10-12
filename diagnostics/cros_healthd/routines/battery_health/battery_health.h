@@ -9,6 +9,7 @@
 #include <memory>
 
 #include <base/files/file_path.h>
+#include <base/optional.h>
 
 #include "diagnostics/cros_healthd/routines/diag_routine.h"
 #include "diagnostics/cros_healthd/system/context.h"
@@ -23,12 +24,20 @@ extern const char kBatteryHealthFailedReadingCycleCountMessage[];
 extern const char kBatteryHealthExcessiveCycleCountMessage[];
 extern const char kBatteryHealthRoutinePassedMessage[];
 
+// Fleet-wide default values for the battery health routine's parameters. These
+// values were suggested by the Chrome OS power team.
+extern const uint32_t kBatteryHealthDefaultMaximumCycleCount;
+extern const uint8_t kBatteryHealthDefaultPercentBatteryWearAllowed;
+
 // The battery health routine checks whether or not the battery's design
-// capacity is within the given limits.
+// capacity is within the given limits. If |maximum_cycle_count| and/or
+// |percent_battery_wear_allowed| aren't specified, the routine will default to
+// kBatteryHealthDefaultMaximumCycleCount and/or
+// kBatteryHealthDefaultPercentBatteryWearAllowed.
 std::unique_ptr<DiagnosticRoutine> CreateBatteryHealthRoutine(
     Context* const context,
-    uint32_t maximum_cycle_count,
-    uint32_t percent_battery_wear_allowed);
+    const base::Optional<uint32_t>& maximum_cycle_count,
+    const base::Optional<uint8_t>& percent_battery_wear_allowed);
 
 }  // namespace diagnostics
 

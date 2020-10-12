@@ -12,6 +12,7 @@
 #include <base/optional.h>
 
 #include "diagnostics/cros_healthd/cros_healthd_routine_factory.h"
+#include "diagnostics/cros_healthd/routine_parameter_fetcher.h"
 #include "diagnostics/cros_healthd/system/context.h"
 
 namespace diagnostics {
@@ -30,9 +31,7 @@ class CrosHealthdRoutineFactoryImpl final : public CrosHealthdRoutineFactory {
       uint32_t length_seconds) override;
   std::unique_ptr<DiagnosticRoutine> MakeBatteryCapacityRoutine(
       uint32_t low_mah, uint32_t high_mah) override;
-  std::unique_ptr<DiagnosticRoutine> MakeBatteryHealthRoutine(
-      uint32_t maximum_cycle_count,
-      uint32_t percent_battery_wear_allowed) override;
+  std::unique_ptr<DiagnosticRoutine> MakeBatteryHealthRoutine() override;
   std::unique_ptr<DiagnosticRoutine> MakeSmartctlCheckRoutine() override;
   std::unique_ptr<DiagnosticRoutine> MakeAcPowerRoutine(
       chromeos::cros_healthd::mojom::AcPowerStatusEnum expected_status,
@@ -71,6 +70,9 @@ class CrosHealthdRoutineFactoryImpl final : public CrosHealthdRoutineFactory {
  private:
   // Unowned pointer that should outlive this instance.
   Context* const context_ = nullptr;
+
+  // Used to fetch default parameters for routines.
+  std::unique_ptr<RoutineParameterFetcher> parameter_fetcher_;
 };
 
 }  // namespace diagnostics
