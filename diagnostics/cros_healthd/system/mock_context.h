@@ -8,6 +8,7 @@
 #include <base/files/scoped_temp_dir.h>
 #include <base/memory/scoped_refptr.h>
 #include <base/test/simple_test_tick_clock.h>
+#include <chromeos/chromeos-config/libcros_config/fake_cros_config.h>
 #include <dbus/mock_bus.h>
 #include <dbus/mock_object_proxy.h>
 #include <dbus/object_path.h>
@@ -43,6 +44,7 @@ class MockContext final : public Context {
 
   // Accessors to the fake and mock objects held by MockContext:
   FakeBluetoothClient* fake_bluetooth_client() const;
+  brillo::FakeCrosConfig* fake_cros_config() const;
   org::chromium::debugdProxyMock* mock_debugd_proxy() const;
   MockDebugdAdapter* mock_debugd_adapter() const;
   dbus::MockObjectProxy* mock_power_manager_proxy() const;

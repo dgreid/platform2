@@ -79,6 +79,10 @@ BluetoothClient* Context::bluetooth_client() const {
   return bluetooth_client_.get();
 }
 
+brillo::CrosConfigInterface* Context::cros_config() const {
+  return cros_config_.get();
+}
+
 org::chromium::debugdProxyInterface* Context::debugd_proxy() const {
   return debugd_proxy_.get();
 }

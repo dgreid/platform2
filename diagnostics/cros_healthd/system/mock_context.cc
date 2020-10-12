@@ -25,6 +25,7 @@ bool MockContext::Initialize() {
       dbus::ObjectPath(power_manager::kPowerManagerServicePath));
 
   bluetooth_client_ = std::make_unique<FakeBluetoothClient>();
+  cros_config_ = std::make_unique<brillo::FakeCrosConfig>();
   debugd_proxy_ =
       std::make_unique<testing::StrictMock<org::chromium::debugdProxyMock>>();
   debugd_adapter_ = std::make_unique<testing::StrictMock<MockDebugdAdapter>>();
@@ -47,6 +48,10 @@ bool MockContext::Initialize() {
 
 FakeBluetoothClient* MockContext::fake_bluetooth_client() const {
   return static_cast<FakeBluetoothClient*>(bluetooth_client_.get());
+}
+
+brillo::FakeCrosConfig* MockContext::fake_cros_config() const {
+  return static_cast<brillo::FakeCrosConfig*>(cros_config_.get());
 }
 
 org::chromium::debugdProxyMock* MockContext::mock_debugd_proxy() const {

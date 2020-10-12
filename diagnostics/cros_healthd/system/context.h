@@ -57,6 +57,9 @@ class Context {
   // Use the object returned by bluetooth_client() to subscribe to notifications
   // for D-Bus objects representing Bluetooth adapters and devices.
   BluetoothClient* bluetooth_client() const;
+  // Use the object returned by cros_config() to query the device's
+  // configuration file.
+  brillo::CrosConfigInterface* cros_config() const;
   // Use the object returned by debugd_proxy() to make calls to debugd. Example:
   // cros_healthd calls out to debugd when it needs to collect smart battery
   // metrics like manufacture_date_smart and temperature_smart.
