@@ -49,8 +49,8 @@ class SodaRecognizerImpl
   void MarkDone() override;
 
   // Used to send the event to the client. For the initial version, only accepts
-  // a string.
-  void OnSodaEvent(const std::string& event_string);
+  // a string, which is in an unspecified format.
+  void OnSodaEvent(const std::string& soda_response);
 
  private:
   // Creates a SodaRecognizer and Binds to `receiver` inside so that

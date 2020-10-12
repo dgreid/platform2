@@ -10,6 +10,7 @@
 #include "chrome/knowledge/soda/extended_soda_api.pb.h"
 #include "ml/request_metrics.h"
 #include "ml/soda.h"
+#include "ml/soda_proto_mojom_conversion.h"
 
 namespace ml {
 namespace {
@@ -22,6 +23,7 @@ using ::chromeos::machine_learning::mojom::SodaConfigPtr;
 using ::chromeos::machine_learning::mojom::SodaRecognizer;
 using ::chromeos::machine_learning::mojom::SpeechRecognizerEvent;
 using ::chromeos::machine_learning::mojom::SpeechRecognizerEventPtr;
+using ::speech::soda::chrome::SodaResponse;
 
 constexpr char kSodaDefaultConfigFilePath[] =
     "/opt/google/chrome/ml_models/soda/models/en_us/dictation.ascii_proto";
@@ -29,8 +31,7 @@ constexpr char kSodaDefaultConfigFilePath[] =
 void SodaCallback(const char* soda_response_str,
                   int size,
                   void* soda_recognizer_impl) {
-  // TODO(robsc): Parse this callback appropriately.
-  speech::soda::chrome::SodaResponse response;
+  SodaResponse response;
   if (!response.ParseFromArray(soda_response_str, size)) {
     LOG(ERROR) << "Parse SODA response failed." << std::endl;
     return;
@@ -39,7 +40,7 @@ void SodaCallback(const char* soda_response_str,
   if (response.has_recognition_result() &&
       !response.recognition_result().hypothesis().empty()) {
     reinterpret_cast<SodaRecognizerImpl*>(soda_recognizer_impl)
-        ->OnSodaEvent(response.recognition_result().hypothesis()[0]);
+        ->OnSodaEvent(response.SerializeAsString());
   }
 }
 
@@ -85,14 +86,19 @@ void SodaRecognizerImpl::MarkDone() {
   soda_library->ExtendedSodaMarkDone(recognizer_);
 }
 
-void SodaRecognizerImpl::OnSodaEvent(const std::string& event_string) {
-  // TODO(robsc): actually implement appropriate behavior here.
-  SpeechRecognizerEventPtr event = SpeechRecognizerEvent::New();
-  FinalResultPtr final_result = FinalResult::New();
-  final_result->final_hypotheses.push_back(event_string);
-  final_result->endpoint_reason = EndpointReason::ENDPOINT_UNKNOWN;
-  event->set_final_result(std::move(final_result));
-  client_remote_->OnSpeechRecognizerEvent(std::move(event));
+void SodaRecognizerImpl::OnSodaEvent(const std::string& response_str) {
+  SodaResponse response;
+  response.ParseFromString(response_str);
+  if (IsStartSodaResponse(response)) {
+    client_remote_->OnStart();
+  } else if (IsStopSodaResponse(response)) {
+    client_remote_->OnStop();
+  } else if (IsShutdownSodaResponse(response)) {
+    // Shutdowns are ignored for now.
+  } else {
+    client_remote_->OnSpeechRecognizerEvent(
+        SpeechRecognizerEventFromProto(response));
+  }
 }
 
 SodaRecognizerImpl::SodaRecognizerImpl(

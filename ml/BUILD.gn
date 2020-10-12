@@ -111,6 +111,7 @@ static_library("ml_common") {
   if (use.ondevice_speech) {
     sources += [
       "soda.cc",
+      "soda_proto_mojom_conversion.cc",
       "soda_recognizer_impl.cc",
     ]
     deps += [ ":ml_soda_proto" ]
@@ -166,7 +167,10 @@ if (use.test) {
     ]
     if (use.ondevice_speech && !use.asan) {
       defines += [ "USE_ONDEVICE_SPEECH" ]
-      sources += [ "soda_test.cc" ]
+      sources += [
+        "soda_proto_mojom_conversion_test.cc",
+        "soda_test.cc",
+      ]
     }
   }
   executable("ml_cmdline_test") {
