@@ -814,6 +814,9 @@ class Manager {
   // Task for periodically checking various device status.
   base::CancelableClosure device_status_check_task_;
 
+  // Task for initializing patchpanel connection.
+  base::CancelableClosure init_patchpanel_client_task_;
+
   // Actions to take when shill is terminating.
   HookTable termination_actions_;
 

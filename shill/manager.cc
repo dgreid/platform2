@@ -105,6 +105,10 @@ constexpr int kTerminationActionsTimeoutMilliseconds = 19500;
 constexpr int kDeviceStatusCheckIntervalMilliseconds =
     180000;  // every 3 minutes
 
+// Interval for attempting to initialize patchpanel connection.
+constexpr base::TimeDelta kInitPatchpanelClientInterval =
+    base::TimeDelta::FromMinutes(1);
+
 // Technologies to probe for.
 const char* const kProbeTechnologies[] = {
     kTypeEthernet,
@@ -368,6 +372,7 @@ void Manager::Stop() {
   device_info_.Stop();
   device_status_check_task_.Cancel();
   sort_services_task_.Cancel();
+  init_patchpanel_client_task_.Cancel();
   if (metrics_) {
     RemoveDefaultServiceObserver(metrics_);
   }
@@ -2680,10 +2685,19 @@ void Manager::InitializePatchpanelClient() {
   if (patchpanel_client_) {
     return;
   }
+  init_patchpanel_client_task_.Cancel();
   patchpanel_client_ = patchpanel::Client::New();
   if (!patchpanel_client_) {
     LOG(ERROR) << "Failed to connect to patchpanel client";
+    init_patchpanel_client_task_.Reset(
+        Bind(&Manager::InitializePatchpanelClient, weak_factory_.GetWeakPtr()));
+    dispatcher_->PostDelayedTask(
+        FROM_HERE, init_patchpanel_client_task_.callback(),
+        kInitPatchpanelClientInterval.InMilliseconds());
+    return;
   }
+
+  // Kick off any patchpanel related communication below.
 }
 
 patchpanel::Client* Manager::patchpanel_client() {
