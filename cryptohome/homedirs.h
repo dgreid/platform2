@@ -167,14 +167,13 @@ class HomeDirs {
       const std::string& obfuscated_username) const;
 
   // Returns true if a valid keyset can be decrypted with |creds|.  If true,
-  // |vk| will contain the decrypted value, and |key_index|, if non-null, will
-  // contain the key index. If false, |vk| will contain the last failed keyset
-  // attempt, and |error|, if non-null, will contain the error details.
+  // |vk| will contain the decrypted value, and if false, |vk| will contain
+  // the last failed keyset attempt, and |error|, if non-null, will contain
+  // the error details.
   // NOTE: The LE Credential Keysets are only considered when the key label
   // provided via |creds| is non-empty.
   virtual bool GetValidKeyset(const Credentials& creds,
                               VaultKeyset* vk,
-                              int* key_index,
                               MountError* error);
 
   // Loads the vault keyset for the supplied obfuscated username and index.

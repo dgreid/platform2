@@ -37,7 +37,7 @@ class MockHomeDirs : public HomeDirs {
   MOCK_METHOD(bool, AreCredentialsValid, (const Credentials&), (override));
   MOCK_METHOD(bool,
               GetValidKeyset,
-              (const Credentials&, VaultKeyset*, int*, MountError*),
+              (const Credentials&, VaultKeyset*, MountError*),
               (override));
   MOCK_METHOD(bool, Remove, (const std::string&), (override));
   MOCK_METHOD(bool,

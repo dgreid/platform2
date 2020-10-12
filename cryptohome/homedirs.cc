@@ -138,13 +138,11 @@ bool HomeDirs::AreEphemeralUsersEnabled() {
 bool HomeDirs::AreCredentialsValid(const Credentials& creds) {
   std::unique_ptr<VaultKeyset> vk(
       vault_keyset_factory()->New(platform_, crypto_));
-  return GetValidKeyset(creds, vk.get(), nullptr /* key_index */,
-                        nullptr /* error */);
+  return GetValidKeyset(creds, vk.get(), nullptr /* error */);
 }
 
 bool HomeDirs::GetValidKeyset(const Credentials& creds,
                               VaultKeyset* vk,
-                              int* key_index,
                               MountError* error) {
   if (error)
     *error = MOUNT_ERROR_NONE;
@@ -193,8 +191,6 @@ bool HomeDirs::GetValidKeyset(const Credentials& creds,
         platform_->FileExists(base::FilePath(kLockedToSingleUserFile));
     if (vk->Decrypt(creds.passkey(), locked_to_single_user,
                     &last_crypto_error)) {
-      if (key_index)
-        *key_index = index;
       return true;
     }
   }
@@ -469,8 +465,7 @@ CryptohomeErrorCode HomeDirs::UpdateKeyset(
       credentials.GetObfuscatedUsername(system_salt_);
   std::unique_ptr<VaultKeyset> vk(
       vault_keyset_factory()->New(platform_, crypto_));
-  if (!GetValidKeyset(credentials, vk.get(), nullptr /* key_index */,
-                      nullptr /* error */)) {
+  if (!GetValidKeyset(credentials, vk.get(), nullptr /* error */)) {
     // Differentiate between failure and non-existent.
     if (!credentials.key_data().label().empty()) {
       vk.reset(
@@ -562,8 +557,7 @@ CryptohomeErrorCode HomeDirs::AddKeyset(const Credentials& existing_credentials,
 
   std::unique_ptr<VaultKeyset> vk(
       vault_keyset_factory()->New(platform_, crypto_));
-  if (!GetValidKeyset(existing_credentials, vk.get(), nullptr /* key_index */,
-                      nullptr /* error */)) {
+  if (!GetValidKeyset(existing_credentials, vk.get(), nullptr /* error */)) {
     // Differentiate between failure and non-existent.
     if (!existing_credentials.key_data().label().empty()) {
       vk.reset(
@@ -680,8 +674,7 @@ CryptohomeErrorCode HomeDirs::RemoveKeyset(const Credentials& credentials,
 
   std::unique_ptr<VaultKeyset> vk(
       vault_keyset_factory()->New(platform_, crypto_));
-  if (!GetValidKeyset(credentials, vk.get(), nullptr /* key_index */,
-                      nullptr /* error */)) {
+  if (!GetValidKeyset(credentials, vk.get(), nullptr /* error */)) {
     // Differentiate between failure and non-existent.
     if (!credentials.key_data().label().empty()) {
       vk.reset(GetVaultKeyset(obfuscated, credentials.key_data().label()));
@@ -1177,11 +1170,12 @@ bool HomeDirs::Migrate(const Credentials& newcreds,
   std::unique_ptr<VaultKeyset> vk(
       vault_keyset_factory()->New(platform_, crypto_));
   int key_index = -1;
-  if (!GetValidKeyset(oldcreds, vk.get(), &key_index, nullptr /* error */)) {
+  if (!GetValidKeyset(oldcreds, vk.get(), nullptr /* error */)) {
     LOG(ERROR) << "Can not retrieve keyset for the user: "
                << newcreds.username();
     return false;
   }
+  key_index = vk->legacy_index();
   if (key_index == -1) {
     LOG(ERROR) << "Attempted migration of key-less mount.";
     return false;
@@ -1304,8 +1298,7 @@ void HomeDirs::ResetLECredentials(const Credentials& creds) {
     if (!credentials_checked) {
       // Make sure the credential can actually be used for sign-in.
       // It is also the easiest way to get a valid keyset.
-      if (!GetValidKeyset(creds, vk.get(), nullptr /* key_index */,
-                          nullptr /* error */)) {
+      if (!GetValidKeyset(creds, vk.get(), nullptr /* error */)) {
         LOG(WARNING) << "The provided credentials are incorrect or invalid"
                         " for LE credential reset, reset skipped.";
         return;

@@ -1231,7 +1231,6 @@ TEST_P(MountTest, GoodReDecryptTest) {
       .WillOnce(DoAll(SaveArg<1>(&migrated_keyset), Return(true)));
   EXPECT_CALL(platform_, FileExists(base::FilePath(kLockedToSingleUserFile)))
       .WillRepeatedly(Return(false));
-  int key_index = 0;
 
   user->InjectKeyset(&platform_, true);
 
@@ -1239,8 +1238,7 @@ TEST_P(MountTest, GoodReDecryptTest) {
   // lead to a call to DeclareTpmFirmwareStable().
   EXPECT_CALL(tpm_, DeclareTpmFirmwareStable());
   vault_keyset.mutable_serialized()->CopyFrom(serialized);
-  EXPECT_TRUE(mount_->DecryptVaultKeyset(credentials, &vault_keyset, &key_index,
-                                         &error));
+  EXPECT_TRUE(mount_->DecryptVaultKeyset(credentials, &vault_keyset, &error));
   ASSERT_EQ(error, MOUNT_ERROR_NONE);
   ASSERT_NE(migrated_keyset.size(), 0);
 
@@ -1335,13 +1333,11 @@ TEST_P(MountTest, TpmWrappedToPcrBoundMigrationTest) {
       .WillOnce(DoAll(SaveArg<1>(&migrated_keyset), Return(true)));
   EXPECT_CALL(platform_, FileExists(base::FilePath(kLockedToSingleUserFile)))
       .WillRepeatedly(Return(false));
-  int key_index = 0;
 
   user->InjectKeyset(&platform_, true);
 
   vault_keyset.mutable_serialized()->CopyFrom(serialized);
-  EXPECT_TRUE(mount_->DecryptVaultKeyset(credentials, &vault_keyset, &key_index,
-                                         &error));
+  EXPECT_TRUE(mount_->DecryptVaultKeyset(credentials, &vault_keyset, &error));
   ASSERT_EQ(error, MOUNT_ERROR_NONE);
   ASSERT_NE(migrated_keyset.size(), 0);
 
@@ -1403,12 +1399,10 @@ TEST_P(MountTest, MountCryptohomeChapsKey) {
   VaultKeyset vault_keyset;
   vault_keyset.Initialize(&platform_, mount_->crypto());
   MountError error;
-  int key_index = -1;
 
   // First we decrypt the vault to load the chaps key.
-  ASSERT_TRUE(mount_->DecryptVaultKeyset(credentials, &vault_keyset, &key_index,
-                                         &error));
-  EXPECT_EQ(key_index, 0);
+  ASSERT_TRUE(mount_->DecryptVaultKeyset(credentials, &vault_keyset, &error));
+  EXPECT_EQ(vault_keyset.legacy_index(), 0);
   EXPECT_EQ(vault_keyset.serialized().has_wrapped_chaps_key(), true);
 
   SecureBlob local_chaps(vault_keyset.chaps_key().begin(),
@@ -1424,8 +1418,7 @@ TEST_P(MountTest, MountCryptohomeChapsKey) {
 
   user->InjectKeyset(&platform_, true);
 
-  ASSERT_TRUE(mount_->DecryptVaultKeyset(credentials, &vault_keyset, &key_index,
-                                         &error));
+  ASSERT_TRUE(mount_->DecryptVaultKeyset(credentials, &vault_keyset, &error));
 
   // Compare the pre mount chaps key to the post mount key.
   ASSERT_EQ(local_chaps.size(), vault_keyset.chaps_key().size());
@@ -1451,24 +1444,20 @@ TEST_P(MountTest, MountCryptohomeNoChapsKey) {
   VaultKeyset vault_keyset;
   vault_keyset.Initialize(&platform_, mount_->crypto());
   MountError error;
-  int key_index = -1;
   EXPECT_CALL(platform_, ReadFile(user->keyset_path, _))
       .Times(2)
       .WillRepeatedly(DoAll(SetArgPointee<1>(user->credentials), Return(true)));
 
-  ASSERT_TRUE(mount_->DecryptVaultKeyset(credentials, &vault_keyset, &key_index,
-                                         &error));
+  ASSERT_TRUE(mount_->DecryptVaultKeyset(credentials, &vault_keyset, &error));
 
   vault_keyset.clear_chaps_key();
   EXPECT_CALL(platform_, WriteFileAtomicDurable(user->keyset_path, _, _))
       .WillRepeatedly(DoAll(SaveArg<1>(&(user->credentials)), Return(true)));
-  ASSERT_TRUE(
-      mount_->ReEncryptVaultKeyset(credentials, key_index, &vault_keyset));
+  ASSERT_TRUE(mount_->ReEncryptVaultKeyset(credentials, &vault_keyset));
   user->InjectKeyset(&platform_, true);
-  ASSERT_TRUE(mount_->DecryptVaultKeyset(credentials, &vault_keyset, &key_index,
-                                         &error));
+  ASSERT_TRUE(mount_->DecryptVaultKeyset(credentials, &vault_keyset, &error));
 
-  EXPECT_EQ(key_index, 0);
+  EXPECT_EQ(vault_keyset.legacy_index(), 0);
   EXPECT_EQ(vault_keyset.serialized().has_wrapped_chaps_key(), false);
 
   user->InjectUserPaths(&platform_, chronos_uid_, chronos_gid_, shared_gid_,
@@ -1482,8 +1471,7 @@ TEST_P(MountTest, MountCryptohomeNoChapsKey) {
   EXPECT_CALL(platform_, ReadFile(user->keyset_path, _))
       .WillRepeatedly(DoAll(SetArgPointee<1>(user->credentials), Return(true)));
   user->InjectKeyset(&platform_, true);
-  ASSERT_TRUE(mount_->DecryptVaultKeyset(credentials, &vault_keyset, &key_index,
-                                         &error));
+  ASSERT_TRUE(mount_->DecryptVaultKeyset(credentials, &vault_keyset, &error));
   EXPECT_EQ(vault_keyset.serialized().has_wrapped_chaps_key(), true);
   EXPECT_EQ(vault_keyset.chaps_key().size(), CRYPTOHOME_CHAPS_KEY_LENGTH);
 }
@@ -1500,9 +1488,8 @@ TEST_P(MountTest, MountCryptohomeLECredentials) {
   pin_vault_keyset.Initialize(&platform_, mount_->crypto());
 
   MountError error;
-  int key_index = -1;
-  ASSERT_TRUE(mount_->DecryptVaultKeyset(*pin_credentials_, &pin_vault_keyset,
-                                         &key_index, &error));
+  ASSERT_TRUE(
+      mount_->DecryptVaultKeyset(*pin_credentials_, &pin_vault_keyset, &error));
 }
 
 TEST_P(MountTest, MountCryptohomeLECredentialsMigrate) {
@@ -1532,9 +1519,8 @@ TEST_P(MountTest, MountCryptohomeLECredentialsMigrate) {
 
   SerializedVaultKeyset serialized;
   MountError error;
-  int key_index = -1;
-  ASSERT_TRUE(mount_->DecryptVaultKeyset(*pin_credentials_, &pin_vault_keyset,
-                                         &key_index, &error));
+  ASSERT_TRUE(
+      mount_->DecryptVaultKeyset(*pin_credentials_, &pin_vault_keyset, &error));
 
   // Check the inserted data from migration.
   ASSERT_TRUE(LoadSerializedKeyset(creds, &serialized));
@@ -1564,9 +1550,8 @@ TEST_P(MountTest, MountCryptohomeLECredentialsMigrationFails) {
   pin_vault_keyset.Initialize(&platform_, mount_->crypto());
 
   MountError error;
-  int key_index = -1;
-  ASSERT_TRUE(mount_->DecryptVaultKeyset(*pin_credentials_, &pin_vault_keyset,
-                                         &key_index, &error));
+  ASSERT_TRUE(
+      mount_->DecryptVaultKeyset(*pin_credentials_, &pin_vault_keyset, &error));
 
   // Check the returned data.
   ASSERT_TRUE(pin_vault_keyset.serialized().flags() &
@@ -1590,11 +1575,9 @@ TEST_P(MountTest, MountCryptohomeNoChange) {
   vault_keyset.Initialize(&platform_, mount_->crypto());
   SerializedVaultKeyset serialized;
   MountError error;
-  int key_index = -1;
 
-  ASSERT_TRUE(mount_->DecryptVaultKeyset(credentials, &vault_keyset, &key_index,
-                                         &error));
-  EXPECT_EQ(key_index, 0);
+  ASSERT_TRUE(mount_->DecryptVaultKeyset(credentials, &vault_keyset, &error));
+  EXPECT_EQ(vault_keyset.legacy_index(), 0);
   serialized.CopyFrom(vault_keyset.serialized());
 
   user->InjectUserPaths(&platform_, chronos_uid_, chronos_gid_, shared_gid_,
@@ -1609,8 +1592,7 @@ TEST_P(MountTest, MountCryptohomeNoChange) {
   user->InjectKeyset(&platform_, true);
 
   SerializedVaultKeyset new_serialized;
-  ASSERT_TRUE(mount_->DecryptVaultKeyset(credentials, &vault_keyset, &key_index,
-                                         &error));
+  ASSERT_TRUE(mount_->DecryptVaultKeyset(credentials, &vault_keyset, &error));
   new_serialized.CopyFrom(vault_keyset.serialized());
 
   SecureBlob lhs;
@@ -1806,8 +1788,6 @@ TEST_P(MountTest, TwoWayKeysetMigrationTest) {
       .WillRepeatedly(Return(true));
   EXPECT_TRUE(DoMountInit());
 
-  int key_index = 0;
-
   EXPECT_CALL(platform_, FileExists(base::FilePath(kLockedToSingleUserFile)))
       .WillRepeatedly(Return(false));
 
@@ -1824,8 +1804,7 @@ TEST_P(MountTest, TwoWayKeysetMigrationTest) {
 
   // Migrate to TPM-wrapped from the original Scrypt-wrapped
   error = MOUNT_ERROR_NONE;
-  EXPECT_TRUE(mount_->DecryptVaultKeyset(credentials, &vault_keyset, &key_index,
-                                         &error));
+  EXPECT_TRUE(mount_->DecryptVaultKeyset(credentials, &vault_keyset, &error));
   ASSERT_EQ(error, MOUNT_ERROR_NONE);
   ASSERT_NE(migrated_keyset.size(), 0);
 
@@ -1837,8 +1816,7 @@ TEST_P(MountTest, TwoWayKeysetMigrationTest) {
   error = MOUNT_ERROR_NONE;
   user->InjectKeyset(&platform_, true);
 
-  EXPECT_TRUE(mount_->DecryptVaultKeyset(credentials, &vault_keyset, &key_index,
-                                         &error));
+  EXPECT_TRUE(mount_->DecryptVaultKeyset(credentials, &vault_keyset, &error));
 
   unsigned int flags = vault_keyset.serialized().flags();
   EXPECT_EQ((flags & SerializedVaultKeyset::TPM_WRAPPED),
@@ -1850,7 +1828,7 @@ TEST_P(MountTest, TwoWayKeysetMigrationTest) {
         .WillOnce(DoAll(SetArgPointee<1>(migrated_keyset), Return(true)));
     vault_keyset.mutable_serialized()->set_flags(
         flags & ~SerializedVaultKeyset::SCRYPT_WRAPPED);
-    EXPECT_TRUE(mount_->ReEncryptVaultKeyset(credentials, 0, &vault_keyset));
+    EXPECT_TRUE(mount_->ReEncryptVaultKeyset(credentials, &vault_keyset));
   }
   // Now we have the TPM-wrapped keyset with correct flags
 
@@ -1861,8 +1839,7 @@ TEST_P(MountTest, TwoWayKeysetMigrationTest) {
   error = MOUNT_ERROR_NONE;
   user->InjectKeyset(&platform_, true);
 
-  EXPECT_TRUE(mount_->DecryptVaultKeyset(credentials, &vault_keyset, &key_index,
-                                         &error));
+  EXPECT_TRUE(mount_->DecryptVaultKeyset(credentials, &vault_keyset, &error));
   ASSERT_EQ(error, MOUNT_ERROR_NONE);
   ASSERT_NE(migrated_keyset.size(), 0);
 
@@ -1875,8 +1852,7 @@ TEST_P(MountTest, TwoWayKeysetMigrationTest) {
   error = MOUNT_ERROR_NONE;
   user->InjectKeyset(&platform_, true);
 
-  ASSERT_TRUE(mount_->DecryptVaultKeyset(credentials, &vault_keyset, &key_index,
-                                         &error));
+  ASSERT_TRUE(mount_->DecryptVaultKeyset(credentials, &vault_keyset, &error));
   ASSERT_EQ(error, MOUNT_ERROR_NONE);
 }
 
@@ -1918,8 +1894,6 @@ TEST_P(MountTest, BothFlagsMigrationTest) {
       .WillRepeatedly(Return(true));
   EXPECT_TRUE(DoMountInit());
 
-  int key_index = 0;
-
   EXPECT_CALL(platform_, FileExists(base::FilePath(kLockedToSingleUserFile)))
       .WillRepeatedly(Return(false));
 
@@ -1935,8 +1909,7 @@ TEST_P(MountTest, BothFlagsMigrationTest) {
   MountError error;
 
   error = MOUNT_ERROR_NONE;
-  EXPECT_TRUE(mount_->DecryptVaultKeyset(credentials, &vault_keyset, &key_index,
-                                         &error));
+  EXPECT_TRUE(mount_->DecryptVaultKeyset(credentials, &vault_keyset, &error));
   ASSERT_EQ(error, MOUNT_ERROR_NONE);
   ASSERT_NE(migrated_keyset.size(), 0);
 
@@ -1949,7 +1922,7 @@ TEST_P(MountTest, BothFlagsMigrationTest) {
   vault_keyset.mutable_serialized()->set_flags(
       flags | SerializedVaultKeyset::TPM_WRAPPED |
       SerializedVaultKeyset::SCRYPT_WRAPPED);
-  EXPECT_TRUE(mount_->StoreVaultKeysetForUser(user->obfuscated_username, 0,
+  EXPECT_TRUE(mount_->StoreVaultKeysetForUser(user->obfuscated_username,
                                               &vault_keyset));
 
   // When we call DecryptVaultKeyset, it should re-encrypt
@@ -1957,8 +1930,7 @@ TEST_P(MountTest, BothFlagsMigrationTest) {
   error = MOUNT_ERROR_NONE;
   user->InjectKeyset(&platform_, true);
 
-  EXPECT_TRUE(mount_->DecryptVaultKeyset(credentials, &vault_keyset, &key_index,
-                                         &error));
+  EXPECT_TRUE(mount_->DecryptVaultKeyset(credentials, &vault_keyset, &error));
   ASSERT_EQ(error, MOUNT_ERROR_NONE);
   ASSERT_NE(migrated_keyset.size(), 0);
 

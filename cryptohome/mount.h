@@ -302,11 +302,9 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
                                     std::string* filename_key_signature) const;
 
   virtual bool StoreVaultKeysetForUser(const std::string& obfuscated_username,
-                                       int index,
                                        VaultKeyset* vault_keyset) const;
 
   virtual bool StoreTimestampForUser(const std::string& obfuscated_username,
-                                     int index,
                                      VaultKeyset* vault_keyset) const;
 
   // Encrypts and adds the VaultKeyset to the serialized store
@@ -325,7 +323,6 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   //   credentials - The Credentials for the user
   //   vault_keyset (IN/OUT) - The VaultKeyset to save
   bool ReEncryptVaultKeyset(const Credentials& credentials,
-                            int index,
                             VaultKeyset* vault_keyset) const;
 
   // Check if the vault keyset needs re-encryption.
@@ -341,11 +338,9 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   // Parameters
   //   credentials - The user credentials to use
   //   vault_keyset (OUT) - The unencrypted vault keyset on success
-  //   index (OUT) - The keyset index from disk
   //   error (OUT) - The specific error when decrypting
   bool DecryptVaultKeyset(const Credentials& credentials,
                           VaultKeyset* vault_keyset,
-                          int* index,
                           MountError* error) const;
 
   base::FilePath GetUserTimestampFileForUser(
