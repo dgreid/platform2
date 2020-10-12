@@ -344,7 +344,7 @@ std::unique_ptr<MountPoint> FUSEMounter::Mount(
                            fuse_file, mount_user_id, mount_group_id,
                            mount_options());
   if (*error != MOUNT_ERROR_NONE) {
-    LOG(ERROR) << "Can't perform unprivileged FUSE mount: " << error;
+    LOG(ERROR) << "Cannot perform unprivileged FUSE mount: " << *error;
     return nullptr;
   }
 
