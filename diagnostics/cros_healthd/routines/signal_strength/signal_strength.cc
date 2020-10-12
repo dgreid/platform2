@@ -28,6 +28,9 @@ void ParseSignalStrengthResult(
     network_diagnostics_ipc::RoutineVerdict verdict,
     const std::vector<network_diagnostics_ipc::SignalStrengthProblem>&
         problems) {
+  DCHECK(status);
+  DCHECK(status_message);
+
   switch (verdict) {
     case network_diagnostics_ipc::RoutineVerdict::kNoProblem:
       *status = mojo_ipc::DiagnosticRoutineStatusEnum::kPassed;
@@ -61,7 +64,6 @@ void RunSignalStrengthRoutine(
     std::string* output) {
   DCHECK(network_diagnostics_adapter);
   DCHECK(status);
-  DCHECK(status_message);
 
   *status = mojo_ipc::DiagnosticRoutineStatusEnum::kRunning;
 

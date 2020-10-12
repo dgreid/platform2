@@ -36,6 +36,11 @@ class MockNetworkDiagnosticsAdapter final : public NetworkDiagnosticsAdapter {
               (chromeos::network_diagnostics::mojom::
                    NetworkDiagnosticsRoutines::SignalStrengthCallback),
               (override));
+  MOCK_METHOD(void,
+              RunGatewayCanBePingedRoutine,
+              (chromeos::network_diagnostics::mojom::
+                   NetworkDiagnosticsRoutines::GatewayCanBePingedCallback),
+              (override));
 };
 
 }  // namespace diagnostics

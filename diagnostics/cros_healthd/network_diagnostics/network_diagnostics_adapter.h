@@ -32,6 +32,11 @@ class NetworkDiagnosticsAdapter {
   virtual void RunSignalStrengthRoutine(
       chromeos::network_diagnostics::mojom::NetworkDiagnosticsRoutines::
           SignalStrengthCallback) = 0;
+
+  // Requests the browser to invoke the GatewayCanBePinged routine.
+  virtual void RunGatewayCanBePingedRoutine(
+      chromeos::network_diagnostics::mojom::NetworkDiagnosticsRoutines::
+          GatewayCanBePingedCallback) = 0;
 };
 
 }  // namespace diagnostics

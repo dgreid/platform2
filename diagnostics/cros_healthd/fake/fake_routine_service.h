@@ -84,6 +84,8 @@ class FakeRoutineService final
       RunLanConnectivityRoutineCallback callback) override;
   void RunSignalStrengthRoutine(
       RunSignalStrengthRoutineCallback callback) override;
+  void RunGatewayCanBePingedRoutine(
+      RunGatewayCanBePingedRoutineCallback callback) override;
 };
 
 }  // namespace diagnostics

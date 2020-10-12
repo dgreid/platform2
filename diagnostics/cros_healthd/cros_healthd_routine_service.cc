@@ -182,6 +182,13 @@ void CrosHealthdRoutineService::RunFloatingPointAccuracyRoutine(
              std::move(callback));
 }
 
+void CrosHealthdRoutineService::RunGatewayCanBePingedRoutine(
+    RunGatewayCanBePingedRoutineCallback callback) {
+  RunRoutine(routine_factory_->MakeGatewayCanBePingedRoutine(),
+             mojo_ipc::DiagnosticRoutineEnum::kGatewayCanBePinged,
+             std::move(callback));
+}
+
 void CrosHealthdRoutineService::RunLanConnectivityRoutine(
     RunLanConnectivityRoutineCallback callback) {
   RunRoutine(routine_factory_->MakeLanConnectivityRoutine(),
@@ -280,7 +287,8 @@ void CrosHealthdRoutineService::PopulateAvailableRoutines() {
       mojo_ipc::DiagnosticRoutineEnum::kPrimeSearch,
       mojo_ipc::DiagnosticRoutineEnum::kMemory,
       mojo_ipc::DiagnosticRoutineEnum::kLanConnectivity,
-      mojo_ipc::DiagnosticRoutineEnum::kSignalStrength};
+      mojo_ipc::DiagnosticRoutineEnum::kSignalStrength,
+      mojo_ipc::DiagnosticRoutineEnum::kGatewayCanBePinged};
 
   if (context_->system_config()->HasBattery()) {
     available_routines_.insert(

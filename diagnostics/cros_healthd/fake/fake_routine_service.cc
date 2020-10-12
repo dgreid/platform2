@@ -130,4 +130,9 @@ void FakeRoutineService::RunSignalStrengthRoutine(
   NOTIMPLEMENTED();
 }
 
+void FakeRoutineService::RunGatewayCanBePingedRoutine(
+    RunGatewayCanBePingedRoutineCallback callback) {
+  NOTIMPLEMENTED();
+}
+
 }  // namespace diagnostics

@@ -73,6 +73,8 @@ class CrosHealthdRoutineService final
   void RunFloatingPointAccuracyRoutine(
       uint32_t length_seconds,
       RunFloatingPointAccuracyRoutineCallback callback) override;
+  void RunGatewayCanBePingedRoutine(
+      RunGatewayCanBePingedRoutineCallback callback) override;
   void RunLanConnectivityRoutine(
       RunLanConnectivityRoutineCallback callback) override;
   void RunMemoryRoutine(RunMemoryRoutineCallback callback) override;

@@ -87,6 +87,8 @@ class FakeDiagnosticsService final
   void RunMemoryRoutine(RunMemoryRoutineCallback callback) override;
   void RunLanConnectivityRoutine(RunLanConnectivityRoutineCallback) override;
   void RunSignalStrengthRoutine(RunSignalStrengthRoutineCallback) override;
+  void RunGatewayCanBePingedRoutine(
+      RunGatewayCanBePingedRoutineCallback) override;
 
   // Overrides the default behavior of GetCrosHealthdDiagnosticsService to test
   // situations where mojo methods were called prior to wilco_dtc_supportd's

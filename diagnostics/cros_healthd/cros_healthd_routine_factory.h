@@ -94,6 +94,11 @@ class CrosHealthdRoutineFactory {
   // Constructs a new instance of the signal strength routine. See
   // diagnostics/routines/signal_strength for details on the routine itself.
   virtual std::unique_ptr<DiagnosticRoutine> MakeSignalStrengthRoutine() = 0;
+  // Constructs a new instance of the gateway can be pinged routine. See
+  // diagnostics/routines/gateway_can_be_pinged for details on the routine
+  // itself.
+  virtual std::unique_ptr<DiagnosticRoutine>
+  MakeGatewayCanBePingedRoutine() = 0;
 };
 
 }  // namespace diagnostics

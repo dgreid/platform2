@@ -576,3 +576,28 @@ Progress: 100
 Status: Passed
 Status message: Signal Strength routine passed with no problems.
 ```
+
+### gateway_can_be_pinged
+
+Checks whether the gateway of connected networks is pingable.
+
+The gateway_can_be_pinged routine has no parameters.
+
+To check whether the gateway of connected networks is pingable:
+
+From crosh:
+```bash
+crosh> diag gateway_can_be_pinged
+```
+
+From cros-health-tool:
+```bash
+$ cros-health-tool diag --action=run_routine --routine=gateway_can_be_pinged
+```
+
+Sample output:
+```bash
+Progress: 100
+Status: Passed
+Status message: Gateway Can Be Pinged routine passed with no problems.
+```

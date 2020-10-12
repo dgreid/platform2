@@ -173,6 +173,36 @@ TEST_F(NetworkDiagnosticsAdapterImplTest, RunSignalStrengthRoutine) {
   run_loop.Run();
 }
 
+// Test that the GatewayCanBePinged routine can be run.
+TEST_F(NetworkDiagnosticsAdapterImplTest, RunGatewayCanBePingedRoutine) {
+  MockNetworkDiagnosticsRoutines network_diagnostics_routines;
+  network_diagnostics_adapter()->SetNetworkDiagnosticsRoutines(
+      network_diagnostics_routines.pending_remote());
+
+  base::RunLoop run_loop;
+  EXPECT_CALL(network_diagnostics_routines, GatewayCanBePinged(testing::_))
+      .WillOnce(testing::Invoke(
+          [&](network_diagnostics_ipc::NetworkDiagnosticsRoutines::
+                  GatewayCanBePingedCallback callback) {
+            std::move(callback).Run(
+                network_diagnostics_ipc::RoutineVerdict::kNoProblem, {});
+          }));
+
+  network_diagnostics_adapter()->RunGatewayCanBePingedRoutine(
+      base::BindLambdaForTesting(
+          [&](network_diagnostics_ipc::RoutineVerdict response,
+              const std::vector<
+                  network_diagnostics_ipc::GatewayCanBePingedProblem>&
+                  problems) {
+            EXPECT_EQ(response,
+                      network_diagnostics_ipc::RoutineVerdict::kNoProblem);
+            EXPECT_EQ(problems.size(), 0);
+            run_loop.Quit();
+          }));
+
+  run_loop.Run();
+}
+
 // Test that RoutineVerdict::kNotRun is returned if a valid
 // NetworkDiagnosticsRoutines remote was never sent.
 TEST_F(NetworkDiagnosticsAdapterImplTest,
@@ -198,6 +228,26 @@ TEST_F(NetworkDiagnosticsAdapterImplTest,
       base::BindLambdaForTesting(
           [&](network_diagnostics_ipc::RoutineVerdict response,
               const std::vector<network_diagnostics_ipc::SignalStrengthProblem>&
+                  problems) {
+            EXPECT_EQ(response,
+                      network_diagnostics_ipc::RoutineVerdict::kNotRun);
+            EXPECT_EQ(problems.size(), 0);
+            run_loop.Quit();
+          }));
+
+  run_loop.Run();
+}
+
+// Test that RoutineVerdict::kNotRun is returned if a valid
+// NetworkDiagnosticsRoutines remote was never sent.
+TEST_F(NetworkDiagnosticsAdapterImplTest,
+       RunGatewayCanBePingedRoutineWithNoRemote) {
+  base::RunLoop run_loop;
+  network_diagnostics_adapter()->RunGatewayCanBePingedRoutine(
+      base::BindLambdaForTesting(
+          [&](network_diagnostics_ipc::RoutineVerdict response,
+              const std::vector<
+                  network_diagnostics_ipc::GatewayCanBePingedProblem>&
                   problems) {
             EXPECT_EQ(response,
                       network_diagnostics_ipc::RoutineVerdict::kNotRun);

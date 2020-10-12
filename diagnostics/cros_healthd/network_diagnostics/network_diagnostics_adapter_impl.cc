@@ -45,4 +45,16 @@ void NetworkDiagnosticsAdapterImpl::RunSignalStrengthRoutine(
   network_diagnostics_routines_->SignalStrength(std::move(callback));
 }
 
+void NetworkDiagnosticsAdapterImpl::RunGatewayCanBePingedRoutine(
+    network_diagnostics_ipc::NetworkDiagnosticsRoutines::
+        GatewayCanBePingedCallback callback) {
+  if (!network_diagnostics_routines_.is_bound()) {
+    std::move(callback).Run(
+        chromeos::network_diagnostics::mojom::RoutineVerdict::kNotRun,
+        /*problems=*/{});
+    return;
+  }
+  network_diagnostics_routines_->GatewayCanBePinged(std::move(callback));
+}
+
 }  // namespace diagnostics

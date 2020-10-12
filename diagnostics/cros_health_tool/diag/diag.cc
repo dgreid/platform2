@@ -54,7 +54,9 @@ const struct {
     {"battery_charge", mojo_ipc::DiagnosticRoutineEnum::kBatteryCharge},
     {"memory", mojo_ipc::DiagnosticRoutineEnum::kMemory},
     {"lan_connectivity", mojo_ipc::DiagnosticRoutineEnum::kLanConnectivity},
-    {"signal_strength", mojo_ipc::DiagnosticRoutineEnum::kSignalStrength}};
+    {"signal_strength", mojo_ipc::DiagnosticRoutineEnum::kSignalStrength},
+    {"gateway_can_be_pinged",
+     mojo_ipc::DiagnosticRoutineEnum::kGatewayCanBePinged}};
 
 }  // namespace
 

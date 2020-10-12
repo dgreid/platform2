@@ -31,6 +31,9 @@ class NetworkDiagnosticsAdapterImpl final : public NetworkDiagnosticsAdapter {
   void RunSignalStrengthRoutine(
       chromeos::network_diagnostics::mojom::NetworkDiagnosticsRoutines::
           SignalStrengthCallback) override;
+  void RunGatewayCanBePingedRoutine(
+      chromeos::network_diagnostics::mojom::NetworkDiagnosticsRoutines::
+          GatewayCanBePingedCallback) override;
 
  private:
   // NetworkDiagnosticsRoutines remote used to run network diagnostics.
