@@ -32,6 +32,8 @@ source_set("libcros_healthd") {
     "cros_healthd_routine_factory_impl.cc",
     "cros_healthd_routine_service.cc",
     "fetch_aggregator.cc",
+    "routine_parameter_fetcher.cc",
+    "routine_parameter_fetcher_constants.cc",
   ]
 }
 
@@ -68,6 +70,7 @@ if (use.test) {
     sources = [
       "cros_healthd_routine_service_test.cc",
       "fake_cros_healthd_routine_factory.cc",
+      "routine_parameter_fetcher_test.cc",
     ]
   }
 }
