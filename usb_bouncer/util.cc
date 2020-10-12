@@ -619,6 +619,16 @@ size_t RemoveEntriesOlderThan(base::TimeDelta cutoff, EntryMap* map) {
   return num_removed;
 }
 
+pid_t DoubleFork() {
+  if (fork() != 0) {
+    exit(0);
+  }
+
+  setsid();
+
+  return fork();
+}
+
 bool ForkAndWaitIfNotReady(const base::RepeatingCallback<bool()> ready,
                            const std::string message,
                            const base::TimeDelta& timeout,

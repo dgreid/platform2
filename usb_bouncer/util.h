@@ -119,6 +119,9 @@ brillo::SafeFD OpenStateFile(const base::FilePath& base_path,
                              const std::string& state_file_name,
                              bool lock);
 
+// This implements a double fork with setsid for use with ForkAndWaitIfNotReady.
+pid_t DoubleFork();
+
 // Returns true if |ready| returns true. If it returns true immediately, no
 // further action is taken. Otherwise, the process is forked and the parent
 // exits immediately. The child will wait until |ready| returns true or the
@@ -132,7 +135,7 @@ bool ForkAndWaitIfNotReady(
     const base::RepeatingCallback<bool()> ready,
     const std::string message,
     const base::TimeDelta& timeout = base::TimeDelta::FromSeconds(5),
-    base::Callback<pid_t()> fork_func = base::Bind(&fork));
+    base::Callback<pid_t()> fork_func = base::Bind(&DoubleFork));
 
 void UpdateTimestamp(Timestamp* timestamp);
 size_t RemoveEntriesOlderThan(base::TimeDelta cutoff, EntryMap* map);
