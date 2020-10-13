@@ -94,8 +94,20 @@ dump_stats_and_exit() {
 
   if [ "${check_s0ix_errors}" = 1 ]; then
     echo "s0ix errors: ${s0ix_errors}"
+  elif
+    [ "${check_s2idle_errors}" = 1 ]; then
+    echo "s2idle errors: ${s2idle_errors}"
   fi
   exit 0
+}
+
+has_s2idle() {
+  if ls /sys/devices/system/cpu/cpu[0-9]*/cpuidle/state[0-9]/s2idle \
+	> /dev/null 2>&1; then
+    return 0
+  else
+    return 1
+  fi
 }
 
 # Returns the S0ix residency counter as returned by the kernel.
@@ -107,6 +119,16 @@ get_s0ix_count() {
   elif [ -e /sys/kernel/debug/telemetry/s0ix_residency_usec ]; then
     # Apollolake Systems.
     cat /sys/kernel/debug/telemetry/s0ix_residency_usec
+  else
+    echo 0
+  fi
+}
+
+# Returns the sum of s2idle residency counters as returned by the kernel.
+get_s2idle_count() {
+  if has_s2idle; then
+    cat /sys/devices/system/cpu/cpu[0-9]*/cpuidle/state[0-9]/s2idle/time \
+      | paste -sd+ | bc
   else
     echo 0
   fi
@@ -146,12 +168,15 @@ if [ -n "${FLAGS_record_dmesg_dir}" ]; then
 fi
 
 check_s0ix_errors=0
+check_s2idle_errors=0
 if check_powerd_config --suspend_to_idle; then
   if [ -e /sys/kernel/debug/pmc_core/slp_s0_residency_usec ] || \
      [ -e /sys/kernel/debug/telemetry/s0ix_residency_usec ]; then
     check_s0ix_errors=1
+  elif has_s2idle; then
+    check_s2idle_errors=1
   else
-    echo "Warning! platform uses s0ix, but we have no way to verify s0ix"
+    echo "Warning! platform uses s0ix/s2idle, but we have no way to verify s0ix/s2idle"
   fi
 fi
 
@@ -189,6 +214,7 @@ cur=0
 wakealarm_errors=0
 firmware_errors=0
 s0ix_errors=0
+s2idle_errors=0
 last_successes=${initial_successes}
 exit_loop=0
 cur_ignore_count=0
@@ -208,6 +234,7 @@ while true; do
   sus_time=$(( ( $(random) % suspend_interval ) + FLAGS_suspend_min ))
   printf "sleep for %2d seconds..." "${sus_time}"
   last_s0ix_count=$(get_s0ix_count)
+  last_s2idle_count=$(get_s2idle_count)
   last_ignore_count=$(get_wakeup_source_event_count \
                       ${FLAGS_ignore_wakeup_source})
   wakeup_count=$(cat /sys/power/wakeup_count)
@@ -271,6 +298,7 @@ while true; do
   cur_ignore_count=$(get_wakeup_source_event_count \
                      ${FLAGS_ignore_wakeup_source})
   cur_s0ix_count=$(get_s0ix_count)
+  cur_s2idle_count=$(get_s2idle_count)
   if [ ${cur_successes} -eq ${last_successes} -a \
        ${cur_ignore_count} -eq ${last_ignore_count} ]; then
     if [ ${FLAGS_errors_fatal} -eq ${FLAGS_TRUE} ]; then
@@ -286,6 +314,15 @@ while true; do
        [ "${cur_s0ix_count}" = "${last_s0ix_count}" ]; then
     echo "Suspend failed, s0ix count did not increment from ${last_s0ix_count}"
     : $(( s0ix_errors += 1 ))
+    if [ ${FLAGS_errors_fatal} -eq ${FLAGS_TRUE} ]; then
+      exit_loop=1
+    elif [ -n "${FLAGS_record_dmesg_dir}" ]; then
+      record_dmesg_for_iteration ${cur}
+    fi
+  elif [ "${check_s2idle_errors}" = 1 ] && \
+       [ "${cur_s2idle_count}" = "${last_s2idle_count}" ]; then
+    echo "Suspend failed, s2idle count did not increment from ${last_s2idle_count}"
+    : $(( s2idle_errors += 1 ))
     if [ ${FLAGS_errors_fatal} -eq ${FLAGS_TRUE} ]; then
       exit_loop=1
     elif [ -n "${FLAGS_record_dmesg_dir}" ]; then
