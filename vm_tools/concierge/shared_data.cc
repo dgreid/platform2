@@ -96,6 +96,7 @@ Future<bool> KillCrosvmProcess(std::weak_ptr<SigchldHandler> weak_handler,
           [](std::weak_ptr<SigchldHandler> weak_handler, uint32_t pid,
              uint32_t cid, bool exited) {
             if (exited) {
+              LOG(INFO) << "VM " << cid << " stopped via crosvm socket";
               return Reject<Future<bool>>();
             }
 

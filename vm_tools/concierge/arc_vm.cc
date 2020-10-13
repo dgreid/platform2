@@ -155,9 +155,8 @@ ArcVm::ArcVm(int32_t vsock_cid,
 }
 
 ArcVm::~ArcVm() {
-  if (!already_shut_down_) {
-    Shutdown().Get();
-  }
+  // |Shutdown| should be called before the destructor
+  CHECK(already_shut_down_);
 }
 
 std::shared_ptr<ArcVm> ArcVm::Create(
