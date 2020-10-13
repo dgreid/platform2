@@ -57,6 +57,35 @@ class Camera3CaptureRequest : public camera3_capture_request_t {
   std::vector<camera3_stream_buffer_t> output_stream_buffers_;
 };
 
+// It is a watchdog-like monitor. It detects the kick event. If there is no
+// kick event between 2 timeout it outputs log to indicate it. We can use it to
+// detect if there is any continuous event stopped. e.g. capture request.
+class CameraMonitor : public base::OneShotTimer {
+ public:
+  explicit CameraMonitor(const std::string& name);
+
+  ~CameraMonitor() override = default;
+
+  void Attach();
+  void Detach();
+  void StartMonitor();
+  void Kick();
+
+ private:
+  void SetTaskRunnerOnThread(base::Callback<void()> callback);
+  void StartMonitorOnThread();
+  void MonitorTimeout();
+
+  std::string name_;
+  // A thread that handles timeouts of request/response monitors.
+  base::Thread thread_;
+
+  base::Lock lock_;
+  bool is_kicked_ GUARDED_BY(lock_);
+
+  DISALLOW_COPY_AND_ASSIGN(CameraMonitor);
+};
+
 class CameraDeviceAdapter : public camera3_callback_ops_t {
  public:
   explicit CameraDeviceAdapter(camera3_device_t* camera_device,
@@ -188,8 +217,6 @@ class CameraDeviceAdapter : public camera3_callback_ops_t {
   void ResetDeviceOpsDelegateOnThread();
   void ResetCallbackOpsDelegateOnThread();
 
-  void MonitorTimeout(const std::string& name);
-
   // The thread that all the camera3 device ops operate on.
   base::Thread camera_device_ops_thread_;
 
@@ -206,9 +233,6 @@ class CameraDeviceAdapter : public camera3_callback_ops_t {
 
   // A thread to notify errors in added requests.
   base::Thread notify_error_thread_;
-
-  // A thread that handles timeouts of request/response monitors.
-  base::Thread monitor_thread_;
 
   // The delegate that handles the Camera3DeviceOps mojo IPC.
   std::unique_ptr<Camera3DeviceOpsDelegate> device_ops_delegate_;
@@ -304,8 +328,8 @@ class CameraDeviceAdapter : public camera3_callback_ops_t {
   // Monitors for capture requests and capture results. If there is no capture
   // requests/responses for a while the monitors will output a log to indicate
   // this situation.
-  base::OneShotTimer capture_request_monitor_;
-  base::OneShotTimer capture_result_monitor_;
+  CameraMonitor capture_request_monitor_;
+  CameraMonitor capture_result_monitor_;
 
   DISALLOW_IMPLICIT_CONSTRUCTORS(CameraDeviceAdapter);
 };

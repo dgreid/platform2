@@ -48,6 +48,66 @@ Camera3CaptureRequest::Camera3CaptureRequest(
   Camera3CaptureRequest::output_buffers = output_stream_buffers_.data();
 }
 
+CameraMonitor::CameraMonitor(const std::string& name)
+    : name_(name), thread_(name + "Monitor"), is_kicked_(false) {}
+
+void CameraMonitor::StartMonitor() {
+  thread_.task_runner()->PostTask(
+      FROM_HERE, base::BindOnce(&CameraMonitor::StartMonitorOnThread,
+                                base::Unretained(this)));
+}
+
+void CameraMonitor::Kick() {
+  base::AutoLock l(lock_);
+  is_kicked_ = true;
+}
+
+void CameraMonitor::Attach() {
+  if (!thread_.Start()) {
+    LOGF(ERROR) << "Monitor thread failed to start";
+    return;
+  }
+  auto future = cros::Future<void>::Create(nullptr);
+  thread_.task_runner()->PostTask(
+      FROM_HERE,
+      base::BindOnce(&CameraMonitor::SetTaskRunnerOnThread,
+                     base::Unretained(this), cros::GetFutureCallback(future)));
+  future->Wait();
+}
+
+void CameraMonitor::Detach() {
+  thread_.Stop();
+  base::OneShotTimer::Stop();
+}
+
+void CameraMonitor::SetTaskRunnerOnThread(base::Callback<void()> callback) {
+  DCHECK(thread_.task_runner()->BelongsToCurrentThread());
+  base::OneShotTimer::SetTaskRunner(thread_.task_runner());
+  callback.Run();
+}
+
+void CameraMonitor::StartMonitorOnThread() {
+  DCHECK(thread_.task_runner()->BelongsToCurrentThread());
+  DCHECK(!base::OneShotTimer::IsRunning());
+  base::OneShotTimer::Start(
+      FROM_HERE, kMonitorTimeDelta,
+      base::Bind(&CameraMonitor::MonitorTimeout, base::Unretained(this)));
+  LOG(INFO) << "Start " << name_ << " monitor";
+}
+
+void CameraMonitor::MonitorTimeout() {
+  DCHECK(thread_.task_runner()->BelongsToCurrentThread());
+  base::AutoLock l(lock_);
+  if (is_kicked_) {
+    base::OneShotTimer::Start(
+        FROM_HERE, kMonitorTimeDelta,
+        base::Bind(&CameraMonitor::MonitorTimeout, base::Unretained(this)));
+  } else {
+    LOGF(WARNING) << "No " << name_ << " for more than " << kMonitorTimeDelta;
+  }
+  is_kicked_ = false;
+}
+
 CameraDeviceAdapter::CameraDeviceAdapter(camera3_device_t* camera_device,
                                          const camera_metadata_t* static_info,
                                          base::Callback<void()> close_callback)
@@ -56,13 +116,14 @@ CameraDeviceAdapter::CameraDeviceAdapter(camera3_device_t* camera_device,
       fence_sync_thread_("FenceSyncThread"),
       reprocess_effect_thread_("ReprocessEffectThread"),
       notify_error_thread_("NotifyErrorThread"),
-      monitor_thread_("CameraMonitor"),
       close_callback_(close_callback),
       device_closed_(false),
       camera_device_(camera_device),
       static_info_(static_info),
       zsl_helper_(static_info, &frame_number_mapper_),
-      camera_metrics_(CameraMetrics::New()) {
+      camera_metrics_(CameraMetrics::New()),
+      capture_request_monitor_("CaptureRequest"),
+      capture_result_monitor_("CaptureResult") {
   VLOGF_ENTER() << ":" << camera_device_;
   camera3_callback_ops_t::process_capture_result = ProcessCaptureResult;
   camera3_callback_ops_t::notify = Notify;
@@ -136,10 +197,8 @@ int32_t CameraDeviceAdapter::Initialize(
     LOGF(ERROR) << "Notify error thread failed to start";
     return -ENODEV;
   }
-  if (!monitor_thread_.Start()) {
-    LOGF(ERROR) << "Monitor thread failed to start";
-    return -ENODEV;
-  }
+  capture_request_monitor_.Attach();
+  capture_result_monitor_.Attach();
   base::AutoLock l(callback_ops_delegate_lock_);
   // Unlike the camera module, only one peer is allowed to access a camera
   // device at any time.
@@ -150,8 +209,6 @@ int32_t CameraDeviceAdapter::Initialize(
       callback_ops.PassInterface(),
       base::Bind(&CameraDeviceAdapter::ResetCallbackOpsDelegateOnThread,
                  base::Unretained(this)));
-  capture_request_monitor_.SetTaskRunner(monitor_thread_.task_runner());
-  capture_result_monitor_.SetTaskRunner(monitor_thread_.task_runner());
   return camera_device_->ops->initialize(camera_device_, this);
 }
 
@@ -238,6 +295,8 @@ int32_t CameraDeviceAdapter::ConfigureStreams(
               s.second->crop_rotate_scale_degrees));
       (*updated_config)->streams.push_back(std::move(ptr));
     }
+    capture_request_monitor_.StartMonitor();
+    capture_result_monitor_.StartMonitor();
   }
 
   camera_metrics_->SendConfigureStreamsLatency(timer.Elapsed());
@@ -277,16 +336,7 @@ int32_t CameraDeviceAdapter::ProcessCaptureRequest(
   internal::ScopedCameraMetadata settings =
       internal::DeserializeCameraMetadata(request->settings);
 
-  if (capture_request_monitor_.IsRunning()) {
-    capture_request_monitor_.Reset();
-  } else {
-    capture_request_monitor_.Start(
-        FROM_HERE, kMonitorTimeDelta,
-        base::BindOnce(&CameraDeviceAdapter::MonitorTimeout,
-                       base::Unretained(this), "CaptureRequest"));
-    LOG(INFO) << "Start monitor timer for capture request, frame number:"
-              << req.frame_number;
-  }
+  capture_request_monitor_.Kick();
 
   // Deserialize input buffer.
   buffer_handle_t input_buffer_handle;
@@ -467,9 +517,8 @@ int32_t CameraDeviceAdapter::Close() {
   device_closed_ = true;
   DCHECK_EQ(ret, 0);
   fence_sync_thread_.Stop();
-  capture_request_monitor_.Stop();
-  capture_result_monitor_.Stop();
-  monitor_thread_.Stop();
+  capture_request_monitor_.Detach();
+  capture_result_monitor_.Detach();
 
   FreeAllocatedStreamBuffers();
 
@@ -505,16 +554,8 @@ void CameraDeviceAdapter::ProcessCaptureResult(
   VLOGF_ENTER();
   CameraDeviceAdapter* self = const_cast<CameraDeviceAdapter*>(
       static_cast<const CameraDeviceAdapter*>(ops));
-  if (self->capture_result_monitor_.IsRunning()) {
-    self->capture_result_monitor_.Reset();
-  } else {
-    self->capture_result_monitor_.Start(
-        FROM_HERE, kMonitorTimeDelta,
-        base::BindOnce(&CameraDeviceAdapter::MonitorTimeout,
-                       base::Unretained(self), "CaptureResult"));
-    LOG(INFO) << "Start monitor timer for capture result frame number:"
-              << result->frame_number;
-  }
+
+  self->capture_result_monitor_.Kick();
 
   camera3_capture_result_t res = *result;
   camera3_stream_buffer_t in_buf = {};
@@ -1117,11 +1158,6 @@ void CameraDeviceAdapter::ResetCallbackOpsDelegateOnThread() {
   DCHECK(camera_callback_ops_thread_.task_runner()->BelongsToCurrentThread());
   base::AutoLock l(callback_ops_delegate_lock_);
   callback_ops_delegate_.reset();
-}
-
-void CameraDeviceAdapter::MonitorTimeout(const std::string& name) {
-  DCHECK(monitor_thread_.task_runner()->BelongsToCurrentThread());
-  LOGF(WARNING) << kMonitorTimeDelta << " passed without " << name;
 }
 
 }  // namespace cros
