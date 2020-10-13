@@ -28,3 +28,6 @@ set_tid_address: 1
 socket: arg0 == AF_UNIX && arg1 == SOCK_DGRAM|SOCK_CLOEXEC && arg2 == 0 || arg0 == AF_UNIX && arg1 == SOCK_STREAM|SOCK_CLOEXEC && arg2 == 0
 stat: 1
 write: 1
+
+# For brillo::kLogToStderrIfTty. isatty(0) calls ioctl(0, TCGETS, *).
+ioctl: arg0 == 0 && arg1 == TCGETS

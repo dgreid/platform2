@@ -8,7 +8,6 @@ group("all") {
   deps = [
     ":libruntime_probe",
     ":runtime_probe",
-    ":runtime_probe_helper",
   ]
   if (use.test) {
     deps += [ ":unittest_runner" ]
@@ -80,12 +79,6 @@ static_library("libruntime_probe") {
 executable("runtime_probe") {
   configs += [ ":target_defaults" ]
   sources = [ "runtime_probe.cc" ]
-  deps = [ ":libruntime_probe" ]
-}
-
-executable("runtime_probe_helper") {
-  configs += [ ":target_defaults" ]
-  sources = [ "runtime_probe_helper.cc" ]
   deps = [ ":libruntime_probe" ]
 }
 

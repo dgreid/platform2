@@ -13,7 +13,8 @@ fstat: 1
 getdents: 1
 gettid: 1
 # ioctl: arg1 == VIDIOC_QUERYCAP
-ioctl: arg1 == 0x80685600
+# For brillo::kLogToStderrIfTty. isatty(0) calls ioctl(0, TCGETS, *).
+ioctl: arg1 == 0x80685600 || arg0 == 0 && arg1 == TCGETS
 lseek: 1
 lstat: 1
 mmap: arg2 in ~PROT_EXEC || arg2 in ~PROT_WRITE

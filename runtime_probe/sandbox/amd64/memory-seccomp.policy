@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+brk: 1
 close: 1
 connect: 1
 exit_group: 1
@@ -15,3 +16,6 @@ sendto: 1
 socket: arg0 == AF_UNIX
 stat: 1
 write: 1
+
+# For brillo::kLogToStderrIfTty. isatty(0) calls ioctl(0, TCGETS, *).
+ioctl: arg0 == 0 && arg1 == TCGETS

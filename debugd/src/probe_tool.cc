@@ -6,6 +6,7 @@
 
 #include <fcntl.h>
 
+#include <array>
 #include <memory>
 #include <string>
 #include <utility>
@@ -37,7 +38,8 @@ namespace debugd {
 namespace {
 constexpr char kErrorPath[] = "org.chromium.debugd.RunProbeFunctionError";
 constexpr char kSandboxInfoDir[] = "/etc/runtime_probe/sandbox";
-constexpr char kBinary[] = "/usr/bin/runtime_probe_helper";
+constexpr std::array<const char*, 3> kBinaryAndArgs{"/usr/bin/runtime_probe",
+                                                    "--helper", "--"};
 constexpr char kRunAs[] = "runtime_probe";
 
 bool CreateNonblockingPipe(base::ScopedFD* read_fd, base::ScopedFD* write_fd) {
@@ -145,7 +147,9 @@ bool ProbeTool::EvaluateProbeFunction(
     return false;
   }
 
-  process->AddArg(kBinary);
+  for (auto arg : kBinaryAndArgs) {
+    process->AddArg(arg);
+  }
   process->AddArg(probe_statement);
   process->BindFd(write_fd.get(), STDOUT_FILENO);
   process->Start();

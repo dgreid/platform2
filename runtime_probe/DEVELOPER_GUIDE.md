@@ -42,7 +42,9 @@ minijail0 \
     -d \
     ${ARGS} \
     -- \
-    /usr/bin/runtime_probe_helper \
+    /usr/bin/runtime_probe \
+    --helper \
+    -- \
     '{"generic_battery": {}}'
 ```
 
@@ -53,6 +55,6 @@ violation (the blocked system call will be printed to syslog).
 Checkout [Sandboxing Chrome OS system services](https://chromium.googlesource.com/chromiumos/docs/+/master/sandboxing.md)
 to learn more about minijail options.
 
-`/usr/bin/runtime_probe_helper` starts in the created sandbox, and the
+The helper process starts in the created sandbox, and the
 `GenericBattery::EvalInHelper()` will be called, which should be the real
 implementation of the probe function.
