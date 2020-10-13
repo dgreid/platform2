@@ -120,4 +120,24 @@ TEST_F(BootRecordsTest, LoadFromFile) {
   EXPECT_EQ(TimeFromExploded(2020, 7, 3, 7, 23, 24), entries[2].boot_time());
 }
 
+TEST_F(BootRecordsTest, LoadFromInvalidFile) {
+  base::FilePath file_path("./testdata/TEST_BOOT_ID_LOG_INVALID");
+
+  BootRecords boot_records(file_path);
+  const auto& entries = boot_records.boot_ranges();
+
+  EXPECT_EQ(3, entries.size());
+
+  EXPECT_EQ("46640bbceeb149a696171d1ea34516ad", entries[0].boot_id());
+  EXPECT_EQ(TimeFromExploded(2020, 7, 1, 16, 1, 17), entries[0].boot_time());
+
+  EXPECT_EQ("9fa644cb05dc4e3ebe3be322ac8d1e86", entries[1].boot_id());
+  EXPECT_EQ(TimeFromExploded(2020, 7, 3, 2, 35, 0), entries[1].boot_time());
+
+  // The invalid entry should be skipped.
+
+  EXPECT_EQ("59f7d9025ea044568318171a9b4d375e", entries[2].boot_id());
+  EXPECT_EQ(TimeFromExploded(2020, 7, 3, 7, 23, 24), entries[2].boot_time());
+}
+
 }  // namespace croslog

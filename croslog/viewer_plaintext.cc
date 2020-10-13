@@ -252,7 +252,7 @@ std::string ViewerPlaintext::GetBootIdAt(base::Time time) {
   }
 
   // Otherwise, searches the boot id sequentially from the boot log.
-  for (int i = 0; i < boot_ranges.size(); i++) {
+  for (int i = boot_ranges.size() - 1; i >= 0; i--) {
     const auto& boot_range = boot_ranges[i];
     if (boot_range.Contains(time)) {
       cache_boot_range_index_ = i;

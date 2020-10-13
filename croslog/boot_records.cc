@@ -35,12 +35,17 @@ std::vector<BootRecords::BootEntry> ReadBootLogs(base::FilePath file_path) {
       // EOF: finishes the read.
       break;
     }
+
     MaybeLogEntry e = parser.Parse(std::move(*log));
     if (!e.has_value()) {
       // Parse error: continuing the next line.
       continue;
     }
-    DCHECK(BootRecords::IsValidBootId(e->message()));
+
+    if (!BootRecords::IsValidBootId(e->message())) {
+      continue;
+    }
+
     boot_log_entries.emplace_back(e->time(), e->message());
   }
   return boot_log_entries;
@@ -57,7 +62,14 @@ std::vector<BootRecords::BootRange> ConvertBootEntriesToRanges(
                                     : base::Time::Max();
 
     // Boot times should be in an increasing order.
-    DCHECK_LT(boot_entry.boot_time(), next_boot_time);
+    if (boot_entry.boot_time() >= next_boot_time) {
+      LOG(WARNING) << "Boot entries must be in an incremental order, but not: "
+                   << boot_entry.boot_time() << " -> " << next_boot_time
+                   << ". This "
+                   << "entry is ignored.";
+      continue;
+    }
+
     boot_log_ranges.emplace_back(boot_entry.boot_time(), next_boot_time,
                                  boot_entry.boot_id());
   }
