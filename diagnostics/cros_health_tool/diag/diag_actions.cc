@@ -214,6 +214,13 @@ bool DiagActions::ActionRunGatewayCanBePingedRoutine() {
   return PollRoutineAndProcessResult();
 }
 
+bool DiagActions::ActionRunHasSecureWiFiConnectionRoutine() {
+  auto response = adapter_->RunHasSecureWiFiConnectionRoutine();
+  CHECK(response) << "No RunRoutineResponse received.";
+  id_ = response->id;
+  return PollRoutineAndProcessResult();
+}
+
 bool DiagActions::ActionRunLanConnectivityRoutine() {
   auto response = adapter_->RunLanConnectivityRoutine();
   CHECK(response) << "No RunRoutineResponse received.";

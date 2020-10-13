@@ -235,6 +235,9 @@ int diag_main(int argc, char** argv) {
       case mojo_ipc::DiagnosticRoutineEnum::kGatewayCanBePinged:
         routine_result = actions.ActionRunGatewayCanBePingedRoutine();
         break;
+      case mojo_ipc::DiagnosticRoutineEnum::kHasSecureWiFiConnection:
+        routine_result = actions.ActionRunHasSecureWiFiConnectionRoutine();
+        break;
       default:
         std::cout << "Unsupported routine: " << FLAGS_routine << std::endl;
         return EXIT_FAILURE;

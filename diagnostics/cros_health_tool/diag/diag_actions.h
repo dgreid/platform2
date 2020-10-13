@@ -61,6 +61,7 @@ class DiagActions final {
   bool ActionRunCpuStressRoutine(base::TimeDelta exec_duration);
   bool ActionRunFloatingPointAccuracyRoutine(base::TimeDelta exec_duration);
   bool ActionRunGatewayCanBePingedRoutine();
+  bool ActionRunHasSecureWiFiConnectionRoutine();
   bool ActionRunLanConnectivityRoutine();
   bool ActionRunMemoryRoutine();
   bool ActionRunNvmeSelfTestRoutine(
