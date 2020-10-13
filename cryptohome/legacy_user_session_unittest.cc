@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// Unit tests for UserSession.
+// Unit tests for LegacyUserSession.
 
-#include "cryptohome/user_session.h"
+#include "cryptohome/legacy_user_session.h"
 
 #include <brillo/secure_blob.h>
 #include <gtest/gtest.h>
@@ -18,10 +18,10 @@ using brillo::SecureBlob;
 
 namespace cryptohome {
 
-class UserSessionTest : public ::testing::Test {
+class LegacyUserSessionTest : public ::testing::Test {
  public:
-  UserSessionTest() : salt() {}
-  virtual ~UserSessionTest() {}
+  LegacyUserSessionTest() : salt() {}
+  virtual ~LegacyUserSessionTest() {}
 
   void SetUp() {
     salt.resize(16);
@@ -32,28 +32,28 @@ class UserSessionTest : public ::testing::Test {
   SecureBlob salt;
 
  private:
-  DISALLOW_COPY_AND_ASSIGN(UserSessionTest);
+  DISALLOW_COPY_AND_ASSIGN(LegacyUserSessionTest);
 };
 
-TEST_F(UserSessionTest, InitTest) {
+TEST_F(LegacyUserSessionTest, InitTest) {
   Credentials credentials("username", SecureBlob("password"));
-  UserSession session;
+  LegacyUserSession session;
   session.Init(salt);
   EXPECT_TRUE(session.SetUser(credentials));
 }
 
-TEST_F(UserSessionTest, CheckUserTest) {
+TEST_F(LegacyUserSessionTest, CheckUserTest) {
   Credentials credentials("username", SecureBlob("password"));
-  UserSession session;
+  LegacyUserSession session;
   session.Init(salt);
   EXPECT_TRUE(session.SetUser(credentials));
   EXPECT_TRUE(session.CheckUser(credentials.GetObfuscatedUsername(salt)));
 }
 
-TEST_F(UserSessionTest, ReInitTest) {
+TEST_F(LegacyUserSessionTest, ReInitTest) {
   Credentials credentials("username", SecureBlob("password"));
   Credentials credentials_new("username2", SecureBlob("password2"));
-  UserSession session;
+  LegacyUserSession session;
   session.Init(salt);
   EXPECT_TRUE(session.SetUser(credentials));
   EXPECT_TRUE(session.SetUser(credentials_new));
@@ -61,18 +61,18 @@ TEST_F(UserSessionTest, ReInitTest) {
   EXPECT_TRUE(session.CheckUser(credentials_new.GetObfuscatedUsername(salt)));
 }
 
-TEST_F(UserSessionTest, ResetTest) {
+TEST_F(LegacyUserSessionTest, ResetTest) {
   Credentials credentials("username", SecureBlob("password"));
-  UserSession session;
+  LegacyUserSession session;
   session.Init(salt);
   EXPECT_TRUE(session.SetUser(credentials));
   session.Reset();
   EXPECT_FALSE(session.CheckUser(credentials.GetObfuscatedUsername(salt)));
 }
 
-TEST_F(UserSessionTest, VerifyTest) {
+TEST_F(LegacyUserSessionTest, VerifyTest) {
   Credentials credentials("username", SecureBlob("password"));
-  UserSession session;
+  LegacyUserSession session;
   session.Init(salt);
   EXPECT_TRUE(session.SetUser(credentials));
   EXPECT_TRUE(session.Verify(credentials));

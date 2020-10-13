@@ -24,7 +24,10 @@ class MockMount : public Mount {
               (Platform*, Crypto*, UserOldestActivityTimestampCache*),
               (override));
   MOCK_METHOD(bool, AreSameUser, (const std::string&), (override));
-  MOCK_METHOD(const UserSession*, GetCurrentUserSession, (), (const, override));
+  MOCK_METHOD(const LegacyUserSession*,
+              GetCurrentLegacyUserSession,
+              (),
+              (const, override));
   MOCK_METHOD(bool, AreValid, (const Credentials&), (override));
   MOCK_METHOD(bool,
               MountCryptohome,

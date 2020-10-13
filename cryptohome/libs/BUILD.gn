@@ -290,6 +290,7 @@ static_library("libcryptohome") {
     "../interface.cc",
     "../key_challenge_service_factory_impl.cc",
     "../key_challenge_service_impl.cc",
+    "../legacy_user_session.cc",
     "../lockbox-cache.cc",
     "../mount.cc",
     "../mount_constants.cc",
@@ -305,7 +306,6 @@ static_library("libcryptohome") {
     "../service_userdataauth.cc",
     "../stateful_recovery.cc",
     "../user_oldest_activity_timestamp_cache.cc",
-    "../user_session.cc",
     "../userdataauth.cc",
     "../vault_keyset_factory.cc",
   ]

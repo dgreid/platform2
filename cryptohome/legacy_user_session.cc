@@ -4,7 +4,7 @@
 
 // Contains the implementation of class Mount
 
-#include "cryptohome/user_session.h"
+#include "cryptohome/legacy_user_session.h"
 
 #include <string>
 
@@ -18,24 +18,24 @@ using brillo::SecureBlob;
 
 namespace cryptohome {
 
-const int kUserSessionIdLength = 128;
+const int kLegacyUserSessionIdLength = 128;
 
-UserSession::UserSession() {}
+LegacyUserSession::LegacyUserSession() {}
 
-UserSession::~UserSession() {}
+LegacyUserSession::~LegacyUserSession() {}
 
-void UserSession::Init(const SecureBlob& salt) {
+void LegacyUserSession::Init(const SecureBlob& salt) {
   username_salt_.assign(salt.begin(), salt.end());
 }
 
-bool UserSession::SetUser(const Credentials& credentials) {
+bool LegacyUserSession::SetUser(const Credentials& credentials) {
   obfuscated_username_ = credentials.GetObfuscatedUsername(username_salt_);
   username_ = credentials.username();
   key_data_ = credentials.key_data();
   key_index_ = -1;  // Invalid key index.
   key_salt_ = CryptoLib::CreateSecureRandomBlob(PKCS5_SALT_LEN);
   const auto plaintext =
-      CryptoLib::CreateSecureRandomBlob(kUserSessionIdLength);
+      CryptoLib::CreateSecureRandomBlob(kLegacyUserSessionIdLength);
 
   SecureBlob aes_key;
   SecureBlob aes_iv;
@@ -48,7 +48,7 @@ bool UserSession::SetUser(const Credentials& credentials) {
   return CryptoLib::AesEncryptDeprecated(plaintext, aes_key, aes_iv, &cipher_);
 }
 
-void UserSession::Reset() {
+void LegacyUserSession::Reset() {
   username_ = "";
   obfuscated_username_ = "";
   key_salt_.resize(0);
@@ -57,11 +57,12 @@ void UserSession::Reset() {
   key_data_.Clear();
 }
 
-bool UserSession::CheckUser(const std::string& obfuscated_username) const {
+bool LegacyUserSession::CheckUser(
+    const std::string& obfuscated_username) const {
   return obfuscated_username_ == obfuscated_username;
 }
 
-bool UserSession::Verify(const Credentials& credentials) const {
+bool LegacyUserSession::Verify(const Credentials& credentials) const {
   ReportTimerStart(kSessionUnlockTimer);
 
   if (!CheckUser(credentials.GetObfuscatedUsername(username_salt_))) {
@@ -90,11 +91,11 @@ bool UserSession::Verify(const Credentials& credentials) const {
   return status;
 }
 
-void UserSession::GetObfuscatedUsername(std::string* username) const {
+void LegacyUserSession::GetObfuscatedUsername(std::string* username) const {
   username->assign(obfuscated_username_);
 }
 
-int UserSession::key_index() const {
+int LegacyUserSession::key_index() const {
   LOG_IF(WARNING, key_index_ < 0)
       << "Attempt to access an uninitialized key_index."
       << "Guest mount? Ephemeral mount?";

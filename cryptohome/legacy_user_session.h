@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// UserSession - the UserSession class is used in re-authenticating the
-// currently logged-in user.  It allows offline credentials verification
+// LegacyUserSession - the LegacyUserSession class is used in re-authenticating
+// the currently logged-in user.  It allows offline credentials verification
 // post-login without the expense of a TPM crypto operation (when the TPM is
 // used for added security).  User session works by generating a random blob and
 // encrypting it using the user's credentials at login.  When an offline
-// credentials check occurs for this user, UserSession attempts to decrypt the
-// encrypted representation of that blob.  A successful decryption means that
-// the supplied credentials are correct.
+// credentials check occurs for this user, LegacyUserSession attempts to decrypt
+// the encrypted representation of that blob.  A successful decryption means
+// that the supplied credentials are correct.
 
-#ifndef CRYPTOHOME_USER_SESSION_H_
-#define CRYPTOHOME_USER_SESSION_H_
+#ifndef CRYPTOHOME_LEGACY_USER_SESSION_H_
+#define CRYPTOHOME_LEGACY_USER_SESSION_H_
 
 #include <string>
 
@@ -23,27 +23,27 @@
 
 namespace cryptohome {
 
-class UserSession {
+class LegacyUserSession {
  public:
-  UserSession();
-  virtual ~UserSession();
+  LegacyUserSession();
+  virtual ~LegacyUserSession();
 
-  // Initializes the UserSession object.
+  // Initializes the LegacyUserSession object.
   //
   // Parameters
   //   crypto - The crypto context to use for this session
   //   salt - The salt to use for the username
   virtual void Init(const brillo::SecureBlob& salt);
 
-  // Assigns a user to the UserSession object.  The random blob is created and
-  // encrypted with the supplied credentials.
+  // Assigns a user to the LegacyUserSession object.  The random blob is created
+  // and encrypted with the supplied credentials.
   //
   // Parameters
   //   username - The user credentials to initialize this session with
   virtual bool SetUser(const Credentials& username);
 
-  // Resets the UserSession, clearing the current user and cipher text used for
-  // verification.
+  // Resets the LegacyUserSession, clearing the current user and cipher text
+  // used for verification.
   virtual void Reset();
 
   // Checks that the user supplied is the user associated with this session
@@ -68,8 +68,8 @@ class UserSession {
 
   std::string username() const { return username_; }
 
-  // Assigns a key to the UserSession object.  This indicates which key on disk
-  // is associated to the UserSession.
+  // Assigns a key to the LegacyUserSession object.  This indicates which key on
+  // disk is associated to the LegacyUserSession.
   //
   // Parameters
   //   index - index of the vault keyset
@@ -95,9 +95,9 @@ class UserSession {
   int key_index_ = -1;
   KeyData key_data_;
 
-  DISALLOW_COPY_AND_ASSIGN(UserSession);
+  DISALLOW_COPY_AND_ASSIGN(LegacyUserSession);
 };
 
 }  // namespace cryptohome
 
-#endif  // CRYPTOHOME_USER_SESSION_H_
+#endif  // CRYPTOHOME_LEGACY_USER_SESSION_H_

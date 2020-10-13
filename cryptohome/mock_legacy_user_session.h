@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef CRYPTOHOME_MOCK_USER_SESSION_H_
-#define CRYPTOHOME_MOCK_USER_SESSION_H_
+#ifndef CRYPTOHOME_MOCK_LEGACY_USER_SESSION_H_
+#define CRYPTOHOME_MOCK_LEGACY_USER_SESSION_H_
 
-#include "cryptohome/user_session.h"
+#include "cryptohome/legacy_user_session.h"
 
 #include <string>
 
@@ -16,10 +16,10 @@
 
 namespace cryptohome {
 
-class MockUserSession : public UserSession {
+class MockLegacyUserSession : public LegacyUserSession {
  public:
-  MockUserSession();
-  ~MockUserSession();
+  MockLegacyUserSession();
+  ~MockLegacyUserSession();
   MOCK_METHOD(void, Init, (const brillo::SecureBlob&), (override));
   MOCK_METHOD(bool, SetUser, (const Credentials&), (override));
   MOCK_METHOD(void, Reset, (), (override));
@@ -28,8 +28,8 @@ class MockUserSession : public UserSession {
   MOCK_METHOD(void, set_key_index, (int), (override));
 
  private:
-  UserSession user_session_;
+  LegacyUserSession user_session_;
 };
 }  // namespace cryptohome
 
-#endif  // CRYPTOHOME_MOCK_USER_SESSION_H_
+#endif  // CRYPTOHOME_MOCK_LEGACY_USER_SESSION_H_

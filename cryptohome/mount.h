@@ -34,6 +34,7 @@
 #include "cryptohome/crypto.h"
 #include "cryptohome/dircrypto_data_migrator/migration_helper.h"
 #include "cryptohome/homedirs.h"
+#include "cryptohome/legacy_user_session.h"
 #include "cryptohome/migration_type.h"
 #include "cryptohome/mount_constants.h"
 #include "cryptohome/mount_helper.h"
@@ -41,7 +42,6 @@
 #include "cryptohome/platform.h"
 #include "cryptohome/timestamp.pb.h"
 #include "cryptohome/user_oldest_activity_timestamp_cache.h"
-#include "cryptohome/user_session.h"
 #include "cryptohome/vault_keyset.h"
 #include "cryptohome/vault_keyset.pb.h"
 
@@ -162,7 +162,7 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   virtual bool AreSameUser(const std::string& obfuscated_username);
 
   // Returns the session that this mount is for. Can be null.
-  virtual const UserSession* GetCurrentUserSession() const;
+  virtual const LegacyUserSession* GetCurrentLegacyUserSession() const;
 
   // Tests if the given credentials would decrypt the user's cryptohome key
   //
@@ -206,7 +206,7 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   void set_use_tpm(bool value) { use_tpm_ = value; }
 
   // Manually set the logged in user
-  void set_current_user(UserSession* value) { current_user_ = value; }
+  void set_current_user(LegacyUserSession* value) { current_user_ = value; }
 
   // Set/get a flag, that this machine is enterprise owned.
   void set_enterprise_owned(bool value) {
@@ -547,8 +547,8 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   bool use_tpm_;
 
   // Used to keep track of the current logged-in user
-  std::unique_ptr<UserSession> default_current_user_;
-  UserSession* current_user_;
+  std::unique_ptr<LegacyUserSession> default_current_user_;
+  LegacyUserSession* current_user_;
 
   // Cache of last access timestamp for existing users.
   UserOldestActivityTimestampCache* user_timestamp_cache_;

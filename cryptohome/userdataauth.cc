@@ -123,7 +123,7 @@ bool IsOsTestImage() {
 // Whether the key can be used for lightweight challenge-response authentication
 // check against the given user session.
 bool KeyMatchesForLightweightChallengeResponseCheck(
-    const KeyData& key_data, const UserSession& session) {
+    const KeyData& key_data, const LegacyUserSession& session) {
   DCHECK_EQ(key_data.type(), KeyData::KEY_TYPE_CHALLENGE_RESPONSE);
   DCHECK_EQ(key_data.challenge_response_key_size(), 1);
   if (session.key_data().type() != KeyData::KEY_TYPE_CHALLENGE_RESPONSE ||
@@ -2121,10 +2121,11 @@ void UserDataAuth::TryLightweightChallengeResponseCheckKey(
   for (const auto& mount_pair : mounts_) {
     const scoped_refptr<cryptohome::Mount>& mount = mount_pair.second;
     if (mount->AreSameUser(obfuscated_username) &&
-        mount->GetCurrentUserSession() &&
+        mount->GetCurrentLegacyUserSession() &&
         KeyMatchesForLightweightChallengeResponseCheck(
-            authorization.key().data(), *mount->GetCurrentUserSession())) {
-      found_session_key_data = mount->GetCurrentUserSession()->key_data();
+            authorization.key().data(),
+            *mount->GetCurrentLegacyUserSession())) {
+      found_session_key_data = mount->GetCurrentLegacyUserSession()->key_data();
       break;
     }
   }

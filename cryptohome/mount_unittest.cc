@@ -43,10 +43,10 @@
 #include "cryptohome/mock_crypto.h"
 #include "cryptohome/mock_homedirs.h"
 #include "cryptohome/mock_le_credential_manager.h"
+#include "cryptohome/mock_legacy_user_session.h"
 #include "cryptohome/mock_platform.h"
 #include "cryptohome/mock_tpm.h"
 #include "cryptohome/mock_tpm_init.h"
-#include "cryptohome/mock_user_session.h"
 #include "cryptohome/mock_vault_keyset.h"
 #include "cryptohome/mount_helper.h"
 #include "cryptohome/timestamp.pb.h"
@@ -642,7 +642,7 @@ TEST_P(MountTest, CurrentCredentialsTest) {
 
   EXPECT_TRUE(DoMountInit());
 
-  NiceMock<MockUserSession> user_session;
+  NiceMock<MockLegacyUserSession> user_session;
   user_session.Init(SecureBlob());
   user_session.SetUser(credentials);
   mount_->set_current_user(&user_session);
@@ -667,7 +667,7 @@ TEST_P(MountTest, PropagateCredentialsToUser) {
 
   const int key_index = 2;
 
-  NiceMock<MockUserSession> user_session;
+  NiceMock<MockLegacyUserSession> user_session;
   mount_->set_current_user(&user_session);
 
   EXPECT_CALL(user_session, SetUser(CredentialsEqual(testing::ByRef(up))))

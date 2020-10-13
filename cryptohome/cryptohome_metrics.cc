@@ -114,8 +114,8 @@ const TimerHistogramParams kTimerHistogramParams[] = {
     // The out-of-process cleanup operation includes a call to waitpid(2) with
     // a 1-second timeout, so make the max sample a bit higher than that.
     {"Cryptohome.TimeToPerformOOPMountCleanup", 0, 1100, 50},
-    // Latency of the UserSession::Verify operation that gets invoked on session
-    // unlock.
+    // Latency of the LegacyUserSession::Verify operation that gets invoked on
+    // session unlock.
     {"Cryptohome.TimeSessionUnlock", 0, 4000, 50},
     {"Cryptohome.TimeToMountGuestEx", 0, 4000, 50},
     // This is only being reported from the out-of-process helper so it's

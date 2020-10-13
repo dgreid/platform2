@@ -51,12 +51,12 @@
 #include "cryptohome/mock_install_attributes.h"
 #include "cryptohome/mock_key_challenge_service.h"
 #include "cryptohome/mock_key_challenge_service_factory.h"
+#include "cryptohome/mock_legacy_user_session.h"
 #include "cryptohome/mock_mount.h"
 #include "cryptohome/mock_mount_factory.h"
 #include "cryptohome/mock_platform.h"
 #include "cryptohome/mock_tpm.h"
 #include "cryptohome/mock_tpm_init.h"
-#include "cryptohome/mock_user_session.h"
 #include "cryptohome/mock_vault_keyset.h"
 #include "cryptohome/protobuf_test_utils.h"
 #include "cryptohome/user_oldest_activity_timestamp_cache.h"
@@ -1396,7 +1396,7 @@ class ChallengeResponseServiceExTest : public ServiceExTest {
             []() { return std::make_unique<MockKeyChallengeService>(); }));
   }
 
-  void SetUpActiveUserSession() {
+  void SetUpActiveLegacyUserSession() {
     EXPECT_CALL(homedirs_, Exists(_)).WillRepeatedly(Return(true));
     EXPECT_CALL(homedirs_, GetVaultKeyset(_, kKeyLabel))
         .WillRepeatedly(Invoke(this, &ServiceExTest::GetNiceMockVaultKeyset));
@@ -1404,20 +1404,20 @@ class ChallengeResponseServiceExTest : public ServiceExTest {
     SetupMount(kUser);
     EXPECT_CALL(*mount_, AreSameUser(_)).WillRepeatedly(Return(true));
     user_session_.set_key_data(key_data_);
-    EXPECT_CALL(*mount_, GetCurrentUserSession())
+    EXPECT_CALL(*mount_, GetCurrentLegacyUserSession())
         .WillRepeatedly(Return(&user_session_));
   }
 
  protected:
   KeyData key_data_;
-  NiceMock<MockUserSession> user_session_;
+  NiceMock<MockLegacyUserSession> user_session_;
 };
 
 // Tests the CheckKeyEx lightweight check scenario for challenge-response
 // credentials, where the credentials are verified without going through full
 // decryption.
 TEST_F(ChallengeResponseServiceExTest, LightweightCheckKey) {
-  SetUpActiveUserSession();
+  SetUpActiveLegacyUserSession();
 
   // Simulate a successful key verification.
   EXPECT_CALL(challenge_credentials_helper_,
@@ -1437,7 +1437,7 @@ TEST_F(ChallengeResponseServiceExTest, LightweightCheckKey) {
 // Tests the CheckKeyEx full check scenario for challenge-response credentials,
 // with falling back from the failed lightweight check.
 TEST_F(ChallengeResponseServiceExTest, FallbackLightweightCheckKey) {
-  SetUpActiveUserSession();
+  SetUpActiveLegacyUserSession();
 
   // Simulate a failure in the lightweight check and a successful decryption.
   EXPECT_CALL(challenge_credentials_helper_,

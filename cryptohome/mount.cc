@@ -109,7 +109,7 @@ Mount::Mount()
       default_homedirs_(new HomeDirs()),
       homedirs_(default_homedirs_.get()),
       use_tpm_(true),
-      default_current_user_(new UserSession()),
+      default_current_user_(new LegacyUserSession()),
       current_user_(default_current_user_.get()),
       user_timestamp_cache_(NULL),
       enterprise_owned_(false),
@@ -784,14 +784,14 @@ bool Mount::AreSameUser(const std::string& obfuscated_username) {
   return current_user_->CheckUser(obfuscated_username);
 }
 
-const UserSession* Mount::GetCurrentUserSession() const {
+const LegacyUserSession* Mount::GetCurrentLegacyUserSession() const {
   return current_user_;
 }
 
 bool Mount::AreValid(const Credentials& credentials) {
-  // If the current logged in user matches, use the UserSession to verify the
-  // credentials.  This is less costly than a trip to the TPM, and only verifies
-  // a user during their logged in session.
+  // If the current logged in user matches, use the LegacyUserSession to verify
+  // the credentials.  This is less costly than a trip to the TPM, and only
+  // verifies a user during their logged in session.
   if (current_user_->CheckUser(
           credentials.GetObfuscatedUsername(system_salt_))) {
     return current_user_->Verify(credentials);
