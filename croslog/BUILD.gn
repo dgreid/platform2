@@ -27,6 +27,7 @@ static_library("libcroslog_static") {
     "log_entry.h",
     "log_line_reader.cc",
     "log_line_reader.h",
+    "log_parser.cc",
     "log_parser.h",
     "log_parser_audit.cc",
     "log_parser_audit.h",

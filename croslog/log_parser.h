@@ -18,7 +18,11 @@ using MaybeLogEntry = base::Optional<LogEntry>;
 class LogParser {
  public:
   virtual ~LogParser() {}
-  virtual MaybeLogEntry Parse(std::string&& entire_line) = 0;
+
+  MaybeLogEntry Parse(std::string&& entire_line);
+
+ protected:
+  virtual MaybeLogEntry ParseInternal(std::string&& entire_line) = 0;
 };
 
 }  // namespace croslog

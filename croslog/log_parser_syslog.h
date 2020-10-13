@@ -15,9 +15,9 @@ class LogParserSyslog : public LogParser {
  public:
   LogParserSyslog();
 
-  MaybeLogEntry Parse(std::string&& entire_line) override;
-
  private:
+  MaybeLogEntry ParseInternal(std::string&& entire_line) override;
+
   DISALLOW_COPY_AND_ASSIGN(LogParserSyslog);
 };
 

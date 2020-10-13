@@ -48,7 +48,7 @@ namespace croslog {
 
 LogParserSyslog::LogParserSyslog() = default;
 
-MaybeLogEntry LogParserSyslog::Parse(std::string&& entire_line) {
+MaybeLogEntry LogParserSyslog::ParseInternal(std::string&& entire_line) {
   if (entire_line.empty()) {
     // Returns an invalid value if the line is invalid or empty.
     return base::nullopt;
