@@ -660,9 +660,11 @@ bool Mount::OwnsMountPoint(const FilePath& path) const {
 
 bool Mount::CreateCryptohome(const Credentials& credentials) const {
   brillo::ScopedUmask scoped_umask(kDefaultUmask);
+  std::string obfuscated_username =
+      credentials.GetObfuscatedUsername(system_salt_);
 
   // Create the user's entry in the shadow root
-  FilePath user_dir(GetUserDirectory(credentials));
+  FilePath user_dir(GetUserDirectoryForUser(obfuscated_username));
   platform_->CreateDirectory(user_dir);
 
   // Generate a new master key
@@ -693,7 +695,7 @@ bool Mount::CreateCryptohome(const Credentials& credentials) const {
   }
 
   // TODO(wad) move to storage by label-derivative and not number.
-  if (!StoreVaultKeysetForUser(credentials.GetObfuscatedUsername(system_salt_),
+  if (!StoreVaultKeysetForUser(obfuscated_username,
                                0,  // first key
                                &serialized)) {
     LOG(ERROR) << "Failed to store vault keyset for new user";
@@ -702,8 +704,8 @@ bool Mount::CreateCryptohome(const Credentials& credentials) const {
 
   if (mount_type_ == MountType::ECRYPTFS) {
     // Create the user's vault.
-    FilePath vault_path = homedirs_->GetEcryptfsUserVaultPath(
-        credentials.GetObfuscatedUsername(system_salt_));
+    FilePath vault_path =
+        homedirs_->GetEcryptfsUserVaultPath(obfuscated_username);
     if (!platform_->CreateDirectory(vault_path)) {
       LOG(ERROR) << "Couldn't create vault path: " << vault_path.value();
       return false;
@@ -1045,11 +1047,6 @@ bool Mount::MountGuestCryptohome() {
 
   return MountEphemeralCryptohomeInternal(kGuestUserName, ephemeral_mounter,
                                           std::move(cleanup));
-}
-
-FilePath Mount::GetUserDirectory(const Credentials& credentials) const {
-  return GetUserDirectoryForUser(
-      credentials.GetObfuscatedUsername(system_salt_));
 }
 
 FilePath Mount::GetUserDirectoryForUser(

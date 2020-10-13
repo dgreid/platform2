@@ -380,13 +380,6 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   // are stored.
   //
   // Parameters
-  //   credentials - The Credentials representing the user
-  base::FilePath GetUserDirectory(const Credentials& credentials) const;
-
-  // Gets the directory in the shadow root where the user's salt, key, and vault
-  // are stored.
-  //
-  // Parameters
   //   obfuscated_username - Obfuscated username field of the Credentials
   base::FilePath GetUserDirectoryForUser(
       const std::string& obfuscated_username) const;
