@@ -367,13 +367,15 @@ void NDProxy::ReadAndProcessOneFrame(int fd) {
 
 const nd_opt_prefix_info* NDProxy::GetPrefixInfoOption(const uint8_t* in_frame,
                                                        ssize_t frame_len) {
-  for (const uint8_t* ptr =
-           in_frame + ETH_HLEN + sizeof(ip6_hdr) + sizeof(nd_router_advert);
-       ptr + offsetof(nd_opt_hdr, nd_opt_len) < in_frame + frame_len &&
-       (reinterpret_cast<const nd_opt_hdr*>(ptr))->nd_opt_len > 0;
-       ptr += (reinterpret_cast<const nd_opt_hdr*>(ptr))->nd_opt_len
-              << 3) /* nd_opt_len is in 8 bytes */ {
+  const uint8_t* ptr =
+      in_frame + ETH_HLEN + sizeof(ip6_hdr) + sizeof(nd_router_advert);
+  while (ptr + offsetof(nd_opt_hdr, nd_opt_len) < in_frame + frame_len) {
     const nd_opt_hdr* opt = reinterpret_cast<const nd_opt_hdr*>(ptr);
+    if (opt->nd_opt_len == 0)
+      return nullptr;
+    ptr += opt->nd_opt_len << 3;  // nd_opt_len is in 8 bytes
+    if (ptr > in_frame + frame_len)
+      return nullptr;
     if (opt->nd_opt_type == ND_OPT_PREFIX_INFORMATION &&
         opt->nd_opt_len << 3 == sizeof(nd_opt_prefix_info)) {
       return reinterpret_cast<const nd_opt_prefix_info*>(opt);

@@ -19,6 +19,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   NDProxy ndproxy;
   ndproxy.Init();
   ndproxy.TranslateNDFrame(data, size, guest_if_mac, out_buffer);
+
+  memcpy(out_buffer, data, size);
   const nd_opt_prefix_info* prefix_info =
       NDProxy::GetPrefixInfoOption(out_buffer, size);
   // Just to consume GetPrefixInfoOption() output
