@@ -140,4 +140,9 @@ void FakeRoutineService::RunHasSecureWiFiConnectionRoutine(
   NOTIMPLEMENTED();
 }
 
+void FakeRoutineService::RunDnsResolverPresentRoutine(
+    RunDnsResolverPresentRoutineCallback callback) {
+  NOTIMPLEMENTED();
+}
+
 }  // namespace diagnostics

@@ -88,6 +88,8 @@ class FakeRoutineService final
       RunGatewayCanBePingedRoutineCallback callback) override;
   void RunHasSecureWiFiConnectionRoutine(
       RunHasSecureWiFiConnectionRoutineCallback callback) override;
+  void RunDnsResolverPresentRoutine(
+      RunDnsResolverPresentRoutineCallback callback) override;
 };
 
 }  // namespace diagnostics

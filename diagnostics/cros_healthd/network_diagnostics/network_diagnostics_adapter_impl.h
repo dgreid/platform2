@@ -37,6 +37,9 @@ class NetworkDiagnosticsAdapterImpl final : public NetworkDiagnosticsAdapter {
   void RunHasSecureWiFiConnectionRoutine(
       chromeos::network_diagnostics::mojom::NetworkDiagnosticsRoutines::
           HasSecureWiFiConnectionCallback) override;
+  void RunDnsResolverPresentRoutine(
+      chromeos::network_diagnostics::mojom::NetworkDiagnosticsRoutines::
+          DnsResolverPresentCallback) override;
 
  private:
   // NetworkDiagnosticsRoutines remote used to run network diagnostics.

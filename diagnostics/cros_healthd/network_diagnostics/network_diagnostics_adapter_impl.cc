@@ -69,4 +69,16 @@ void NetworkDiagnosticsAdapterImpl::RunHasSecureWiFiConnectionRoutine(
   network_diagnostics_routines_->HasSecureWiFiConnection(std::move(callback));
 }
 
+void NetworkDiagnosticsAdapterImpl::RunDnsResolverPresentRoutine(
+    network_diagnostics_ipc::NetworkDiagnosticsRoutines::
+        DnsResolverPresentCallback callback) {
+  if (!network_diagnostics_routines_.is_bound()) {
+    std::move(callback).Run(
+        chromeos::network_diagnostics::mojom::RoutineVerdict::kNotRun,
+        /*problems=*/{});
+    return;
+  }
+  network_diagnostics_routines_->DnsResolverPresent(std::move(callback));
+}
+
 }  // namespace diagnostics

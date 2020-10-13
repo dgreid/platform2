@@ -46,6 +46,11 @@ class MockNetworkDiagnosticsAdapter final : public NetworkDiagnosticsAdapter {
               (chromeos::network_diagnostics::mojom::
                    NetworkDiagnosticsRoutines::HasSecureWiFiConnectionCallback),
               (override));
+  MOCK_METHOD(void,
+              RunDnsResolverPresentRoutine,
+              (chromeos::network_diagnostics::mojom::
+                   NetworkDiagnosticsRoutines::DnsResolverPresentCallback),
+              (override));
 };
 
 }  // namespace diagnostics

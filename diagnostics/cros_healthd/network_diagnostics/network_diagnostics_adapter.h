@@ -42,6 +42,11 @@ class NetworkDiagnosticsAdapter {
   virtual void RunHasSecureWiFiConnectionRoutine(
       chromeos::network_diagnostics::mojom::NetworkDiagnosticsRoutines::
           HasSecureWiFiConnectionCallback) = 0;
+
+  // Requests the browser to invoke the DnsResolverPresent routine.
+  virtual void RunDnsResolverPresentRoutine(
+      chromeos::network_diagnostics::mojom::NetworkDiagnosticsRoutines::
+          DnsResolverPresentCallback) = 0;
 };
 
 }  // namespace diagnostics

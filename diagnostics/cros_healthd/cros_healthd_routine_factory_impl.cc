@@ -17,6 +17,7 @@
 #include "diagnostics/cros_healthd/routines/cpu_cache/cpu_cache.h"
 #include "diagnostics/cros_healthd/routines/cpu_stress/cpu_stress.h"
 #include "diagnostics/cros_healthd/routines/disk_read/disk_read.h"
+#include "diagnostics/cros_healthd/routines/dns_resolver_present/dns_resolver_present.h"
 #include "diagnostics/cros_healthd/routines/floating_point/floating_point_accuracy.h"
 #include "diagnostics/cros_healthd/routines/gateway_can_be_pinged/gateway_can_be_pinged.h"
 #include "diagnostics/cros_healthd/routines/has_secure_wifi_connection/has_secure_wifi_connection.h"
@@ -167,6 +168,12 @@ CrosHealthdRoutineFactoryImpl::MakeGatewayCanBePingedRoutine() {
 std::unique_ptr<DiagnosticRoutine>
 CrosHealthdRoutineFactoryImpl::MakeHasSecureWiFiConnectionRoutine() {
   return CreateHasSecureWiFiConnectionRoutine(
+      context_->network_diagnostics_adapter());
+}
+
+std::unique_ptr<DiagnosticRoutine>
+CrosHealthdRoutineFactoryImpl::MakeDnsResolverPresentRoutine() {
+  return CreateDnsResolverPresentRoutine(
       context_->network_diagnostics_adapter());
 }
 

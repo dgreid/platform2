@@ -62,7 +62,8 @@ std::set<mojo_ipc::DiagnosticRoutineEnum> GetAllAvailableRoutines() {
       mojo_ipc::DiagnosticRoutineEnum::kLanConnectivity,
       mojo_ipc::DiagnosticRoutineEnum::kSignalStrength,
       mojo_ipc::DiagnosticRoutineEnum::kGatewayCanBePinged,
-      mojo_ipc::DiagnosticRoutineEnum::kHasSecureWiFiConnection};
+      mojo_ipc::DiagnosticRoutineEnum::kHasSecureWiFiConnection,
+      mojo_ipc::DiagnosticRoutineEnum::kDnsResolverPresent};
 }
 
 std::set<mojo_ipc::DiagnosticRoutineEnum> GetBatteryRoutines() {
@@ -686,6 +687,27 @@ TEST_F(CrosHealthdRoutineServiceTest, RunHasSecureWiFiConnectionRoutine) {
   mojo_ipc::RunRoutineResponsePtr response;
   base::RunLoop run_loop;
   service()->RunHasSecureWiFiConnectionRoutine(base::BindLambdaForTesting(
+      [&](mojo_ipc::RunRoutineResponsePtr received_response) {
+        response = std::move(received_response);
+        run_loop.Quit();
+      }));
+  run_loop.Run();
+
+  EXPECT_EQ(response->id, 1);
+  EXPECT_EQ(response->status, kExpectedStatus);
+}
+
+// Test that the DNS resolver present routine can be run.
+TEST_F(CrosHealthdRoutineServiceTest, RunDnsResolverPresentRoutine) {
+  constexpr mojo_ipc::DiagnosticRoutineStatusEnum kExpectedStatus =
+      mojo_ipc::DiagnosticRoutineStatusEnum::kRunning;
+  routine_factory()->SetNonInteractiveStatus(
+      kExpectedStatus, /*status_message=*/"", /*progress_percent=*/50,
+      /*output=*/"");
+
+  mojo_ipc::RunRoutineResponsePtr response;
+  base::RunLoop run_loop;
+  service()->RunDnsResolverPresentRoutine(base::BindLambdaForTesting(
       [&](mojo_ipc::RunRoutineResponsePtr received_response) {
         response = std::move(received_response);
         run_loop.Quit();

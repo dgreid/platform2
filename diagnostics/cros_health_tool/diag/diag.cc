@@ -58,7 +58,9 @@ const struct {
     {"gateway_can_be_pinged",
      mojo_ipc::DiagnosticRoutineEnum::kGatewayCanBePinged},
     {"has_secure_wifi_connection",
-     mojo_ipc::DiagnosticRoutineEnum::kHasSecureWiFiConnection}};
+     mojo_ipc::DiagnosticRoutineEnum::kHasSecureWiFiConnection},
+    {"dns_resolver_present",
+     mojo_ipc::DiagnosticRoutineEnum::kDnsResolverPresent}};
 
 }  // namespace
 

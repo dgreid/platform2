@@ -103,6 +103,11 @@ class CrosHealthdRoutineFactory {
   // itself.
   virtual std::unique_ptr<DiagnosticRoutine>
   MakeHasSecureWiFiConnectionRoutine() = 0;
+  // Constructs a new instance of the DNS resolver present routine. See
+  // diagnostics/routines/dns_resolver_present for details on the routine
+  // itself.
+  virtual std::unique_ptr<DiagnosticRoutine>
+  MakeDnsResolverPresentRoutine() = 0;
 };
 
 }  // namespace diagnostics

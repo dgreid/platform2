@@ -173,6 +173,13 @@ void CrosHealthdRoutineService::RunDiskReadRoutine(
       mojo_ipc::DiagnosticRoutineEnum::kDiskRead, std::move(callback));
 }
 
+void CrosHealthdRoutineService::RunDnsResolverPresentRoutine(
+    RunDnsResolverPresentRoutineCallback callback) {
+  RunRoutine(routine_factory_->MakeDnsResolverPresentRoutine(),
+             mojo_ipc::DiagnosticRoutineEnum::kDnsResolverPresent,
+             std::move(callback));
+}
+
 void CrosHealthdRoutineService::RunFloatingPointAccuracyRoutine(
     uint32_t length_seconds, RunFloatingPointAccuracyRoutineCallback callback) {
   RunRoutine(routine_factory_->MakeFloatingPointAccuracyRoutine(
@@ -295,7 +302,8 @@ void CrosHealthdRoutineService::PopulateAvailableRoutines() {
       mojo_ipc::DiagnosticRoutineEnum::kLanConnectivity,
       mojo_ipc::DiagnosticRoutineEnum::kSignalStrength,
       mojo_ipc::DiagnosticRoutineEnum::kGatewayCanBePinged,
-      mojo_ipc::DiagnosticRoutineEnum::kHasSecureWiFiConnection};
+      mojo_ipc::DiagnosticRoutineEnum::kHasSecureWiFiConnection,
+      mojo_ipc::DiagnosticRoutineEnum::kDnsResolverPresent};
 
   if (context_->system_config()->HasBattery()) {
     available_routines_.insert(
