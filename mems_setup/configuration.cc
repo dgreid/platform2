@@ -542,8 +542,9 @@ bool Configuration::SetupPermissions() {
       LOG(ERROR) << "Missing path: " << dev_path.value();
       return false;
     }
-    // Setup files_to_set_read_own.
+
     files_to_set_read_own.push_back(dev_path);
+    files_to_set_write_own.push_back(dev_path);
   }
 
   // /sys/bus/iio/devices/iio:deviceX

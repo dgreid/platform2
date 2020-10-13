@@ -33,6 +33,8 @@ static gid_t kPowerGroupId = 999;
 
 constexpr int kDeviceId = 1;
 constexpr char kTriggerString[] = "trigger";
+constexpr char kHwfifoTimeoutString[] = "buffer/hwfifo_timeout";
+constexpr char kFlushString[] = "flush";
 
 constexpr char kDevString[] = "/dev/";
 
@@ -44,12 +46,27 @@ class AccelerometerTest : public SensorTestBase {
     mock_delegate_->AddGroup(Configuration::GetGroupNameForSysfs(),
                              kIioserviceGroupId);
 
-    // Create the file to set the trigger in |AddSysfsTrigger|.
     std::string dev_name = libmems::IioDeviceImpl::GetStringFromId(kDeviceId);
     // /sys/bus/iio/devices/iio:device1
     base::FilePath sys_dev_path =
         base::FilePath(libmems::kSysDevString).Append(dev_name.c_str());
+
+    // Create the file to set the trigger in |AddSysfsTrigger|.
     mock_delegate_->CreateFile(sys_dev_path.Append(kTriggerString));
+
+    // Create the files to set permissions and ownership for test.
+    mock_delegate_->CreateFile(sys_dev_path.Append(kHwfifoTimeoutString));
+    mock_delegate_->CreateFile(sys_dev_path.Append(kFlushString));
+  }
+
+  void CheckPermissionsAndOwnershipForFile(const base::FilePath& path,
+                                           int permission) {
+    uid_t user;
+    gid_t group;
+
+    EXPECT_TRUE(mock_delegate_->GetOwnership(path, &user, &group));
+    EXPECT_EQ(group, kIioserviceGroupId);
+    EXPECT_EQ(permission, mock_delegate_->GetPermissions(path));
   }
 };
 
@@ -61,18 +78,24 @@ TEST_F(AccelerometerTest, CheckPermissionsAndOwnership) {
 
   std::string dev_name = libmems::IioDeviceImpl::GetStringFromId(kDeviceId);
 
-  uid_t user;
-  gid_t group;
+  // /sys/bus/iio/devices/iio:device1
+  base::FilePath sys_dev_path =
+      base::FilePath(libmems::kSysDevString).Append(dev_name.c_str());
+
+  CheckPermissionsAndOwnershipForFile(sys_dev_path.Append(kHwfifoTimeoutString),
+                                      base::FILE_PERMISSION_WRITE_BY_GROUP |
+                                          base::FILE_PERMISSION_READ_BY_GROUP);
+  CheckPermissionsAndOwnershipForFile(sys_dev_path.Append(kFlushString),
+                                      base::FILE_PERMISSION_WRITE_BY_GROUP);
 
   if (USE_IIOSERVICE) {
     // /dev/iio:deviceX
     base::FilePath dev_path =
         base::FilePath(kDevString).Append(dev_name.c_str());
 
-    EXPECT_TRUE(mock_delegate_->GetOwnership(dev_path, &user, &group));
-    EXPECT_EQ(group, kIioserviceGroupId);
-    EXPECT_EQ(base::FILE_PERMISSION_READ_BY_GROUP,
-              mock_delegate_->GetPermissions(dev_path));
+    CheckPermissionsAndOwnershipForFile(
+        dev_path, base::FILE_PERMISSION_WRITE_BY_GROUP |
+                      base::FILE_PERMISSION_READ_BY_GROUP);
   }
 }
 
