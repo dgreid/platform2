@@ -45,7 +45,14 @@ constexpr char kPhysicalIdKey[] = "physical id";
 constexpr char kProcessorIdKey[] = "processor";
 
 // Regex used to parse /proc/stat.
-constexpr char kRelativeStatFileRegex[] = R"(cpu(\d+)\s+\d+ \d+ \d+ (\d+))";
+constexpr char kRelativeStatFileRegex[] = R"(cpu(\d+)\s+(\d+) \d+ (\d+) (\d+))";
+
+// Contains the values parsed from /proc/stat for a single logical CPU.
+struct ParsedStatContents {
+  uint64_t user_time_user_hz;
+  uint64_t system_time_user_hz;
+  uint32_t idle_time_user_hz;
+};
 
 // Gets the time spent in each C-state for the logical processor whose ID is
 // |logical_id|. Returns base::nullopt if a required sysfs node was not found.
@@ -108,9 +115,10 @@ base::Optional<mojo_ipc::ProbeErrorPtr> GetNumTotalThreads(
   return base::nullopt;
 }
 
-// Parses the contents of /proc/stat into a map of logical IDs to idle times.
-// Returns base::nullopt if an error was encountered while parsing.
-base::Optional<std::map<std::string, uint32_t>> ParseStatContents(
+// Parses the contents of /proc/stat into a map of logical IDs to
+// ParsedStatContents. Returns base::nullopt if an error was encountered while
+// parsing.
+base::Optional<std::map<std::string, ParsedStatContents>> ParseStatContents(
     const std::string& stat_contents) {
   std::stringstream stat_sstream(stat_contents);
 
@@ -119,22 +127,27 @@ base::Optional<std::map<std::string, uint32_t>> ParseStatContents(
   std::string line;
   std::getline(stat_sstream, line);
 
-  // Parse lines of the format "cpu%d %d %d %d %d ...", where the last integer
-  // is the idle time of that logical CPU.
-  std::map<std::string, uint32_t> idle_times;
+  // Parse lines of the format "cpu%d %d %d %d %d ...", where each line
+  // corresponds to a separate logical CPU.
+  std::map<std::string, ParsedStatContents> parsed_contents;
   std::string logical_cpu_id;
+  std::string user_time_str;
+  std::string system_time_str;
   std::string idle_time_str;
   while (std::getline(stat_sstream, line) &&
          RE2::PartialMatch(line, kRelativeStatFileRegex, &logical_cpu_id,
-                           &idle_time_str)) {
-    uint32_t idle_time;
-    if (!base::StringToUint(idle_time_str, &idle_time))
+                           &user_time_str, &system_time_str, &idle_time_str)) {
+    ParsedStatContents contents;
+    if (!base::StringToUint64(user_time_str, &contents.user_time_user_hz) ||
+        !base::StringToUint64(system_time_str, &contents.system_time_user_hz) ||
+        !base::StringToUint(idle_time_str, &contents.idle_time_user_hz)) {
       return base::nullopt;
-    DCHECK_EQ(idle_times.count(logical_cpu_id), 0);
-    idle_times[logical_cpu_id] = idle_time;
+    }
+    DCHECK_EQ(parsed_contents.count(logical_cpu_id), 0);
+    parsed_contents[logical_cpu_id] = std::move(contents);
   }
 
-  return idle_times;
+  return parsed_contents;
 }
 
 // Parses |block| to determine if the block parsed from /proc/cpuinfo is a
@@ -177,12 +190,13 @@ bool ParseProcessor(const std::string& processor,
   return (!processor_id->empty() && !physical_id->empty());
 }
 
-// Aggregates data from |processor_info| and |logical_ids_to_idle_times| to form
-// the final CpuResultPtr. It's assumed that all CPUs on the device share the
-// same |architecture|.
+// Aggregates data from |processor_info| and |logical_ids_to_stat_contents| to
+// form the final CpuResultPtr. It's assumed that all CPUs on the device share
+// the same |architecture|.
 mojo_ipc::CpuResultPtr GetCpuInfoFromProcessorInfo(
     const std::vector<std::string>& processor_info,
-    const std::map<std::string, uint32_t> logical_ids_to_idle_times,
+    const std::map<std::string, ParsedStatContents>&
+        logical_ids_to_stat_contents,
     const base::FilePath& root_dir,
     mojo_ipc::CpuArchitectureEnum architecture) {
   std::map<std::string, mojo_ipc::PhysicalCpuInfoPtr> physical_cpus;
@@ -214,13 +228,17 @@ mojo_ipc::CpuResultPtr GetCpuInfoFromProcessorInfo(
 
     // Populate the logical CPU info values.
     mojo_ipc::LogicalCpuInfo logical_cpu;
-    auto idle_time_itr = logical_ids_to_idle_times.find(processor_id);
-    if (idle_time_itr == logical_ids_to_idle_times.end()) {
+    const auto parsed_stat_itr =
+        logical_ids_to_stat_contents.find(processor_id);
+    if (parsed_stat_itr == logical_ids_to_stat_contents.end()) {
       return mojo_ipc::CpuResult::NewError(CreateAndLogProbeError(
           mojo_ipc::ErrorType::kParseError,
-          "No idle_time for logical ID: " + processor_id));
+          "No parsed stat contents for logical ID: " + processor_id));
     }
-    logical_cpu.idle_time_user_hz = idle_time_itr->second;
+    logical_cpu.user_time_user_hz = parsed_stat_itr->second.user_time_user_hz;
+    logical_cpu.system_time_user_hz =
+        parsed_stat_itr->second.system_time_user_hz;
+    logical_cpu.idle_time_user_hz = parsed_stat_itr->second.idle_time_user_hz;
 
     auto c_states = GetCStates(root_dir, processor_id);
     if (c_states == base::nullopt) {
@@ -295,8 +313,8 @@ mojo_ipc::CpuResultPtr CpuFetcher::FetchCpuInfo(
         "Unable to read stat file: " + stat_file.value()));
   }
 
-  auto idle_times = ParseStatContents(stat_contents);
-  if (idle_times == base::nullopt) {
+  const auto parsed_stat_contents = ParseStatContents(stat_contents);
+  if (!parsed_stat_contents.has_value()) {
     return mojo_ipc::CpuResult::NewError(CreateAndLogProbeError(
         mojo_ipc::ErrorType::kParseError,
         "Unable to parse stat contents: " + stat_contents));
@@ -313,8 +331,9 @@ mojo_ipc::CpuResultPtr CpuFetcher::FetchCpuInfo(
   std::vector<std::string> processor_info = base::SplitStringUsingSubstr(
       cpu_info_contents, "\n\n", base::KEEP_WHITESPACE,
       base::SPLIT_WANT_NONEMPTY);
-  return GetCpuInfoFromProcessorInfo(processor_info, idle_times.value(),
-                                     root_dir, GetArchitecture());
+  return GetCpuInfoFromProcessorInfo(processor_info,
+                                     parsed_stat_contents.value(), root_dir,
+                                     GetArchitecture());
 }
 
 mojo_ipc::CpuArchitectureEnum CpuFetcher::GetArchitecture() {

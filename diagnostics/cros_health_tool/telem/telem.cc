@@ -281,16 +281,16 @@ void DisplayCpuInfo(
   //     model_name
   //     some_string
   //     Logical CPU:
-  //         max_clock_speed_khz,scaling_max_frequency_khz,... (four keys total)
-  //         some_uint32,some_uint32,some_uint32,some_uint32
+  //         max_clock_speed_khz,scaling_max_frequency_khz,... (six keys total)
+  //         some_uint32,... (six values total)
   //         C-states:
   //             name,time_in_state_since_last_boot_us
   //             some_string,some_uint_64
   //             ... (repeated per C-state)
   //             some_string,some_uint_64
   //     Logical CPU:
-  //         max_clock_speed_khz,scaling_max_frequency_khz,... (four keys total)
-  //         some_uint32,some_uint32,some_uint32,some_uint32
+  //         max_clock_speed_khz,scaling_max_frequency_khz,... (six keys total)
+  //         some_uint32,... (six values total)
   //         C-states:
   //             name,time_in_state_since_last_boot_us
   //             some_string,some_uint_64
@@ -315,11 +315,14 @@ void DisplayCpuInfo(
     for (const auto& logical_cpu : physical_cpu->logical_cpus) {
       std::cout << "\tLogical CPU:" << std::endl;
       std::cout << "\t\tmax_clock_speed_khz,scaling_max_frequency_khz,scaling_"
-                   "current_frequency_khz,idle_time_user_hz"
+                   "current_frequency_khz,user_time_user_hz,system_time_user_"
+                   "hz,idle_time_user_hz"
                 << std::endl;
       std::cout << "\t\t" << logical_cpu->max_clock_speed_khz << ","
                 << logical_cpu->scaling_max_frequency_khz << ","
                 << logical_cpu->scaling_current_frequency_khz << ","
+                << logical_cpu->user_time_user_hz << ","
+                << logical_cpu->system_time_user_hz << ","
                 << logical_cpu->idle_time_user_hz << std::endl;
 
       std::cout << "\t\tC-states:" << std::endl;

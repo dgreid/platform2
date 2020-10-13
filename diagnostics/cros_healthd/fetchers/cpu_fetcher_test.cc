@@ -101,8 +101,14 @@ constexpr char kFakeStatContents[] =
     "cpu0  69234 98 0 2349\n"
     "cpu1  989 0 4536824 123\n"
     "cpu12 0 64823 293802 871239\n";
+constexpr uint64_t kFirstFakeUserTime = 69234;
+constexpr uint64_t kFirstFakeSystemTime = 0;
 constexpr uint32_t kFirstFakeIdleTime = 2349;
+constexpr uint64_t kSecondFakeUserTime = 989;
+constexpr uint64_t kSecondFakeSystemTime = 4536824;
 constexpr uint32_t kSecondFakeIdleTime = 123;
+constexpr uint64_t kThirdFakeUserTime = 0;
+constexpr uint64_t kThirdFakeSystemTime = 293802;
 constexpr uint32_t kThirdFakeIdleTime = 871239;
 
 // Workaround for UnorderedElementsAreArray not accepting move-only types - this
@@ -120,6 +126,8 @@ void VerifyLogicalCpu(
     uint32_t expected_max_clock_speed_khz,
     uint32_t expected_scaling_max_frequency_khz,
     uint32_t expected_scaling_current_frequency_khz,
+    uint32_t expected_user_time_user_hz,
+    uint32_t expected_system_time_user_hz,
     uint32_t expected_idle_time_user_hz,
     const std::vector<std::pair<std::string, uint64_t>>& expected_c_states,
     const mojo_ipc::LogicalCpuInfoPtr& actual_data) {
@@ -129,6 +137,8 @@ void VerifyLogicalCpu(
             expected_scaling_max_frequency_khz);
   EXPECT_EQ(actual_data->scaling_current_frequency_khz,
             expected_scaling_current_frequency_khz);
+  EXPECT_EQ(actual_data->user_time_user_hz, expected_user_time_user_hz);
+  EXPECT_EQ(actual_data->system_time_user_hz, expected_system_time_user_hz);
   EXPECT_EQ(actual_data->idle_time_user_hz, expected_idle_time_user_hz);
 
   const auto& c_states = actual_data->c_states;
@@ -317,10 +327,12 @@ TEST_F(CpuFetcherTest, TestFetchCpuInfo) {
   const auto& first_logical_cpus = first_physical_cpu->logical_cpus;
   ASSERT_EQ(first_logical_cpus.size(), 2);
   VerifyLogicalCpu(kFirstFakeMaxClockSpeed, kFirstFakeScalingMaxFrequency,
-                   kFirstFakeScalingCurrentFrequency, kFirstFakeIdleTime,
+                   kFirstFakeScalingCurrentFrequency, kFirstFakeUserTime,
+                   kFirstFakeSystemTime, kFirstFakeIdleTime,
                    GetCStateVector(kFirstLogicalId), first_logical_cpus[0]);
   VerifyLogicalCpu(kSecondFakeMaxClockSpeed, kSecondFakeScalingMaxFrequency,
-                   kSecondFakeScalingCurrentFrequency, kSecondFakeIdleTime,
+                   kSecondFakeScalingCurrentFrequency, kSecondFakeUserTime,
+                   kSecondFakeSystemTime, kSecondFakeIdleTime,
                    GetCStateVector(kSecondLogicalId), first_logical_cpus[1]);
   const auto& second_physical_cpu = physical_cpus[1];
   ASSERT_FALSE(second_physical_cpu.is_null());
@@ -328,7 +340,8 @@ TEST_F(CpuFetcherTest, TestFetchCpuInfo) {
   const auto& second_logical_cpus = second_physical_cpu->logical_cpus;
   ASSERT_EQ(second_logical_cpus.size(), 1);
   VerifyLogicalCpu(kThirdFakeMaxClockSpeed, kThirdFakeScalingMaxFrequency,
-                   kThirdFakeScalingCurrentFrequency, kThirdFakeIdleTime,
+                   kThirdFakeScalingCurrentFrequency, kThirdFakeUserTime,
+                   kThirdFakeSystemTime, kThirdFakeIdleTime,
                    GetCStateVector(kThirdLogicalId), second_logical_cpus[0]);
 }
 
@@ -351,21 +364,24 @@ TEST_F(CpuFetcherTest, NoPhysicalIdCpuinfoFile) {
   const auto& first_logical_cpus = first_physical_cpu->logical_cpus;
   ASSERT_EQ(first_logical_cpus.size(), 1);
   VerifyLogicalCpu(kFirstFakeMaxClockSpeed, kFirstFakeScalingMaxFrequency,
-                   kFirstFakeScalingCurrentFrequency, kFirstFakeIdleTime,
+                   kFirstFakeScalingCurrentFrequency, kFirstFakeUserTime,
+                   kFirstFakeSystemTime, kFirstFakeIdleTime,
                    GetCStateVector(kFirstLogicalId), first_logical_cpus[0]);
   const auto& second_physical_cpu = physical_cpus[1];
   ASSERT_FALSE(second_physical_cpu.is_null());
   const auto& second_logical_cpu = second_physical_cpu->logical_cpus;
   ASSERT_EQ(second_logical_cpu.size(), 1);
   VerifyLogicalCpu(kSecondFakeMaxClockSpeed, kSecondFakeScalingMaxFrequency,
-                   kSecondFakeScalingCurrentFrequency, kSecondFakeIdleTime,
+                   kSecondFakeScalingCurrentFrequency, kSecondFakeUserTime,
+                   kSecondFakeSystemTime, kSecondFakeIdleTime,
                    GetCStateVector(kSecondLogicalId), second_logical_cpu[0]);
   const auto& third_physical_cpu = physical_cpus[2];
   ASSERT_FALSE(third_physical_cpu.is_null());
   const auto& third_logical_cpu = third_physical_cpu->logical_cpus;
   ASSERT_EQ(third_logical_cpu.size(), 1);
   VerifyLogicalCpu(kThirdFakeMaxClockSpeed, kThirdFakeScalingMaxFrequency,
-                   kThirdFakeScalingCurrentFrequency, kThirdFakeIdleTime,
+                   kThirdFakeScalingCurrentFrequency, kThirdFakeUserTime,
+                   kThirdFakeSystemTime, kThirdFakeIdleTime,
                    GetCStateVector(kThirdLogicalId), third_logical_cpu[0]);
 }
 
@@ -400,10 +416,12 @@ TEST_F(CpuFetcherTest, HardwareDescriptionCpuinfoFile) {
   const auto& first_logical_cpus = first_physical_cpu->logical_cpus;
   ASSERT_EQ(first_logical_cpus.size(), 2);
   VerifyLogicalCpu(kFirstFakeMaxClockSpeed, kFirstFakeScalingMaxFrequency,
-                   kFirstFakeScalingCurrentFrequency, kFirstFakeIdleTime,
+                   kFirstFakeScalingCurrentFrequency, kFirstFakeUserTime,
+                   kFirstFakeSystemTime, kFirstFakeIdleTime,
                    GetCStateVector(kFirstLogicalId), first_logical_cpus[0]);
   VerifyLogicalCpu(kSecondFakeMaxClockSpeed, kSecondFakeScalingMaxFrequency,
-                   kSecondFakeScalingCurrentFrequency, kSecondFakeIdleTime,
+                   kSecondFakeScalingCurrentFrequency, kSecondFakeUserTime,
+                   kSecondFakeSystemTime, kSecondFakeIdleTime,
                    GetCStateVector(kSecondLogicalId), first_logical_cpus[1]);
   const auto& second_physical_cpu = physical_cpus[1];
   ASSERT_FALSE(second_physical_cpu.is_null());
@@ -411,7 +429,8 @@ TEST_F(CpuFetcherTest, HardwareDescriptionCpuinfoFile) {
   const auto& second_logical_cpus = second_physical_cpu->logical_cpus;
   ASSERT_EQ(second_logical_cpus.size(), 1);
   VerifyLogicalCpu(kThirdFakeMaxClockSpeed, kThirdFakeScalingMaxFrequency,
-                   kThirdFakeScalingCurrentFrequency, kThirdFakeIdleTime,
+                   kThirdFakeScalingCurrentFrequency, kThirdFakeUserTime,
+                   kThirdFakeSystemTime, kThirdFakeIdleTime,
                    GetCStateVector(kThirdLogicalId), second_logical_cpus[0]);
 }
 
