@@ -1008,12 +1008,13 @@ std::unique_ptr<dbus::Response> Service::UnsharePath(
   base::FilePath dst = server_root.Append(path);
   base::FilePath my_files = server_root.Append("MyFiles");
   base::FilePath my_files_downloads = my_files.Append("Downloads");
-  // Ensure path exists. TODO(crbug.com/1132707) fix race condition.
+  // There is a race when unmounting a volume with shares (crbug.com/1132707)
+  // and |dst| may not exist. It is also expected (crbug.com/1133621) that |dst|
+  // will not exist when removing a share from settings when the volume is not
+  // mounted. We will log such cases, but continue and remove any mounts and
+  // clean up empty mount points.
   if (!base::PathExists(dst)) {
-    LOG(ERROR) << "Unshare path does not exist";
-    response.set_failure_reason("Unshare path does not exist");
-    writer.AppendProtoAsArrayOfBytes(response);
-    return dbus_response;
+    LOG(WARNING) << "Unshare path does not exist";
   }
 
   // After unmounting, clean up empty directories.  Assume at first that we can
