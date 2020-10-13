@@ -601,3 +601,30 @@ Progress: 100
 Status: Passed
 Status message: Gateway Can Be Pinged routine passed with no problems.
 ```
+
+### has_secure_wifi_connection
+
+Checks whether the WiFi connection is secure. Note that if WiFi is not
+connected, the routine will not run.
+
+The has_secure_wifi_connection routine has no parameters.
+
+To check whether the WiFi connection is secure:
+
+From crosh:
+```bash
+crosh> diag has_secure_wifi_connection
+```
+
+From cros-health-tool:
+```bash
+$ cros-health-tool diag --action=run_routine
+--routine=has_secure_wifi_connection
+```
+
+Sample output:
+```bash
+Progress: 100
+Status: Passed
+Status message: Has Secure WiFi Connection routine passed with no problems.
+```

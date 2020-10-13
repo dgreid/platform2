@@ -34,6 +34,9 @@ class NetworkDiagnosticsAdapterImpl final : public NetworkDiagnosticsAdapter {
   void RunGatewayCanBePingedRoutine(
       chromeos::network_diagnostics::mojom::NetworkDiagnosticsRoutines::
           GatewayCanBePingedCallback) override;
+  void RunHasSecureWiFiConnectionRoutine(
+      chromeos::network_diagnostics::mojom::NetworkDiagnosticsRoutines::
+          HasSecureWiFiConnectionCallback) override;
 
  private:
   // NetworkDiagnosticsRoutines remote used to run network diagnostics.

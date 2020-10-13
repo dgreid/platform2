@@ -37,6 +37,11 @@ class NetworkDiagnosticsAdapter {
   virtual void RunGatewayCanBePingedRoutine(
       chromeos::network_diagnostics::mojom::NetworkDiagnosticsRoutines::
           GatewayCanBePingedCallback) = 0;
+
+  // Requests the browser to invoke the HasSecureWiFiConnection routine.
+  virtual void RunHasSecureWiFiConnectionRoutine(
+      chromeos::network_diagnostics::mojom::NetworkDiagnosticsRoutines::
+          HasSecureWiFiConnectionCallback) = 0;
 };
 
 }  // namespace diagnostics

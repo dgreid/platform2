@@ -65,6 +65,8 @@ class CrosHealthdRoutineFactoryImpl final : public CrosHealthdRoutineFactory {
   std::unique_ptr<DiagnosticRoutine> MakeLanConnectivityRoutine() override;
   std::unique_ptr<DiagnosticRoutine> MakeSignalStrengthRoutine() override;
   std::unique_ptr<DiagnosticRoutine> MakeGatewayCanBePingedRoutine() override;
+  std::unique_ptr<DiagnosticRoutine> MakeHasSecureWiFiConnectionRoutine()
+      override;
 
  private:
   // Unowned pointer that should outlive this instance.

@@ -87,6 +87,8 @@ class FakeCrosHealthdRoutineFactory final : public CrosHealthdRoutineFactory {
   std::unique_ptr<DiagnosticRoutine> MakeLanConnectivityRoutine() override;
   std::unique_ptr<DiagnosticRoutine> MakeSignalStrengthRoutine() override;
   std::unique_ptr<DiagnosticRoutine> MakeGatewayCanBePingedRoutine() override;
+  std::unique_ptr<DiagnosticRoutine> MakeHasSecureWiFiConnectionRoutine()
+      override;
 
  private:
   // The routine that will be returned by any calls to MakeSomeRoutine.

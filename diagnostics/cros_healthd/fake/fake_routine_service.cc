@@ -135,4 +135,9 @@ void FakeRoutineService::RunGatewayCanBePingedRoutine(
   NOTIMPLEMENTED();
 }
 
+void FakeRoutineService::RunHasSecureWiFiConnectionRoutine(
+    RunHasSecureWiFiConnectionRoutineCallback callback) {
+  NOTIMPLEMENTED();
+}
+
 }  // namespace diagnostics

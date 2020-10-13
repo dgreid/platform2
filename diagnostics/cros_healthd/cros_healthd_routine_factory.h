@@ -99,6 +99,11 @@ class CrosHealthdRoutineFactory {
   // itself.
   virtual std::unique_ptr<DiagnosticRoutine>
   MakeGatewayCanBePingedRoutine() = 0;
+  // Constructs a new instance of the has secure wifi connection routine. See
+  // diagnostics/routines/has_secure_wifi_connection for details on the routine
+  // itself.
+  virtual std::unique_ptr<DiagnosticRoutine>
+  MakeHasSecureWiFiConnectionRoutine() = 0;
 };
 
 }  // namespace diagnostics

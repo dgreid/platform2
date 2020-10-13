@@ -56,7 +56,9 @@ const struct {
     {"lan_connectivity", mojo_ipc::DiagnosticRoutineEnum::kLanConnectivity},
     {"signal_strength", mojo_ipc::DiagnosticRoutineEnum::kSignalStrength},
     {"gateway_can_be_pinged",
-     mojo_ipc::DiagnosticRoutineEnum::kGatewayCanBePinged}};
+     mojo_ipc::DiagnosticRoutineEnum::kGatewayCanBePinged},
+    {"has_secure_wifi_connection",
+     mojo_ipc::DiagnosticRoutineEnum::kHasSecureWiFiConnection}};
 
 }  // namespace
 

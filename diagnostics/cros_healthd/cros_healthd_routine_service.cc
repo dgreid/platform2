@@ -189,6 +189,13 @@ void CrosHealthdRoutineService::RunGatewayCanBePingedRoutine(
              std::move(callback));
 }
 
+void CrosHealthdRoutineService::RunHasSecureWiFiConnectionRoutine(
+    RunHasSecureWiFiConnectionRoutineCallback callback) {
+  RunRoutine(routine_factory_->MakeHasSecureWiFiConnectionRoutine(),
+             mojo_ipc::DiagnosticRoutineEnum::kHasSecureWiFiConnection,
+             std::move(callback));
+}
+
 void CrosHealthdRoutineService::RunLanConnectivityRoutine(
     RunLanConnectivityRoutineCallback callback) {
   RunRoutine(routine_factory_->MakeLanConnectivityRoutine(),
@@ -288,7 +295,8 @@ void CrosHealthdRoutineService::PopulateAvailableRoutines() {
       mojo_ipc::DiagnosticRoutineEnum::kMemory,
       mojo_ipc::DiagnosticRoutineEnum::kLanConnectivity,
       mojo_ipc::DiagnosticRoutineEnum::kSignalStrength,
-      mojo_ipc::DiagnosticRoutineEnum::kGatewayCanBePinged};
+      mojo_ipc::DiagnosticRoutineEnum::kGatewayCanBePinged,
+      mojo_ipc::DiagnosticRoutineEnum::kHasSecureWiFiConnection};
 
   if (context_->system_config()->HasBattery()) {
     available_routines_.insert(

@@ -75,6 +75,8 @@ class CrosHealthdRoutineService final
       RunFloatingPointAccuracyRoutineCallback callback) override;
   void RunGatewayCanBePingedRoutine(
       RunGatewayCanBePingedRoutineCallback callback) override;
+  void RunHasSecureWiFiConnectionRoutine(
+      RunHasSecureWiFiConnectionRoutineCallback callback) override;
   void RunLanConnectivityRoutine(
       RunLanConnectivityRoutineCallback callback) override;
   void RunMemoryRoutine(RunMemoryRoutineCallback callback) override;

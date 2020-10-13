@@ -89,6 +89,8 @@ class FakeDiagnosticsService final
   void RunSignalStrengthRoutine(RunSignalStrengthRoutineCallback) override;
   void RunGatewayCanBePingedRoutine(
       RunGatewayCanBePingedRoutineCallback) override;
+  void RunHasSecureWiFiConnectionRoutine(
+      RunHasSecureWiFiConnectionRoutineCallback) override;
 
   // Overrides the default behavior of GetCrosHealthdDiagnosticsService to test
   // situations where mojo methods were called prior to wilco_dtc_supportd's

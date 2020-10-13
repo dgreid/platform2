@@ -61,7 +61,8 @@ std::set<mojo_ipc::DiagnosticRoutineEnum> GetAllAvailableRoutines() {
       mojo_ipc::DiagnosticRoutineEnum::kMemory,
       mojo_ipc::DiagnosticRoutineEnum::kLanConnectivity,
       mojo_ipc::DiagnosticRoutineEnum::kSignalStrength,
-      mojo_ipc::DiagnosticRoutineEnum::kGatewayCanBePinged};
+      mojo_ipc::DiagnosticRoutineEnum::kGatewayCanBePinged,
+      mojo_ipc::DiagnosticRoutineEnum::kHasSecureWiFiConnection};
 }
 
 std::set<mojo_ipc::DiagnosticRoutineEnum> GetBatteryRoutines() {
@@ -664,6 +665,27 @@ TEST_F(CrosHealthdRoutineServiceTest, RunGatewayCanBePingedRoutine) {
   mojo_ipc::RunRoutineResponsePtr response;
   base::RunLoop run_loop;
   service()->RunGatewayCanBePingedRoutine(base::BindLambdaForTesting(
+      [&](mojo_ipc::RunRoutineResponsePtr received_response) {
+        response = std::move(received_response);
+        run_loop.Quit();
+      }));
+  run_loop.Run();
+
+  EXPECT_EQ(response->id, 1);
+  EXPECT_EQ(response->status, kExpectedStatus);
+}
+
+// Test that the has secure WiFi connection routine can be run.
+TEST_F(CrosHealthdRoutineServiceTest, RunHasSecureWiFiConnectionRoutine) {
+  constexpr mojo_ipc::DiagnosticRoutineStatusEnum kExpectedStatus =
+      mojo_ipc::DiagnosticRoutineStatusEnum::kRunning;
+  routine_factory()->SetNonInteractiveStatus(
+      kExpectedStatus, /*status_message=*/"", /*progress_percent=*/50,
+      /*output=*/"");
+
+  mojo_ipc::RunRoutineResponsePtr response;
+  base::RunLoop run_loop;
+  service()->RunHasSecureWiFiConnectionRoutine(base::BindLambdaForTesting(
       [&](mojo_ipc::RunRoutineResponsePtr received_response) {
         response = std::move(received_response);
         run_loop.Quit();
