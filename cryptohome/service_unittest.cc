@@ -1488,37 +1488,6 @@ TEST_F(ServiceExTest, MigrateKeyTest) {
   Mock::VerifyAndClearExpectations(mount_.get());
 }
 
-TEST_F(ServiceExTest, MigrateKeyTestNotMounted) {
-  constexpr char kUser[] = "chromeos-user";
-  constexpr char kOldKey[] = "274146c6e8886a843ddfea373e2dc71b";
-  constexpr char kNewKey[] = "274146c6e8886a843ddfea373e2dc71c";
-
-  PrepareArguments();
-
-  MockMountFactory mount_factory;
-  MockMount* mount = new MockMount();
-  EXPECT_CALL(mount_factory, New()).WillOnce(Return(mount));
-  EXPECT_CALL(lockbox_, FinalizeBoot());
-  EXPECT_CALL(*mount, Init(_, _, _)).WillOnce(Return(true));
-  service_.set_mount_factory(&mount_factory);
-
-  id_->set_account_id(kUser);
-  auth_->mutable_key()->set_secret(kOldKey);
-  migrate_req_->set_secret(kNewKey);
-
-  Credentials credentials(kUser, SecureBlob(kNewKey));
-
-  EXPECT_CALL(homedirs_, Migrate(CredentialsEqual(testing::ByRef(credentials)),
-                                 SecureBlob(kOldKey), _))
-      .WillRepeatedly(Return(true));
-  service_.DoMigrateKeyEx(id_.get(), auth_.get(), migrate_req_.get(), nullptr);
-
-  // Expect an empty reply as success.
-  DispatchEvents();
-  EXPECT_TRUE(ReplyIsEmpty());
-  Mock::VerifyAndClearExpectations(mount_.get());
-}
-
 TEST_F(ServiceExTest, CheckKeyHomedirsTest) {
   constexpr char kUser[] = "chromeos-user";
   constexpr char kKey[] = "274146c6e8886a843ddfea373e2dc71b";

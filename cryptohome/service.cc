@@ -1617,24 +1617,18 @@ void Service::DoMigrateKeyEx(AccountIdentifier* account,
   Credentials credentials(account->account_id(),
                           SecureBlob(migrate_request->secret()));
 
-  scoped_refptr<cryptohome::Mount> mount =
-      GetMountForUser(GetAccountId(*account));
-  if (!mount) {
-    // Create a mount which is not referenced by mounts_ and is cleaned up
-    // after Migration is over.
-    mount = CreateUntrackedMountForUser(GetAccountId(*account));
-  }
   int key_index = -1;
-  if (!mount) {
-    LOG(ERROR) << "Failed to obtain Mount for Migrate";
-    reply.set_error(CRYPTOHOME_ERROR_MIGRATE_KEY_FAILED);
-  } else if (!homedirs_->Migrate(credentials,
-                                 SecureBlob(auth_request->key().secret()),
-                                 &key_index)) {
+  if (!homedirs_->Migrate(credentials, SecureBlob(auth_request->key().secret()),
+                          &key_index)) {
     reply.set_error(CRYPTOHOME_ERROR_MIGRATE_KEY_FAILED);
   } else {
-    if (!mount->SetUserCreds(credentials, key_index))
-      LOG(WARNING) << "Failed to set new creds";
+    scoped_refptr<cryptohome::Mount> mount =
+        GetMountForUser(GetAccountId(*account));
+    if (mount.get()) {
+      if (!mount->SetUserCreds(credentials, key_index)) {
+        LOG(WARNING) << "Failed to set new creds";
+      }
+    }
     reply.clear_error();
   }
 

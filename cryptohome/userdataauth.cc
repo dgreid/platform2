@@ -2504,16 +2504,6 @@ user_data_auth::CryptohomeErrorCode UserDataAuth::MigrateKey(
 
   Credentials credentials(account_id, SecureBlob(request.secret()));
 
-  scoped_refptr<cryptohome::Mount> mount = GetMountForUser(account_id);
-  if (!mount) {
-    // Create a mount which is not referenced by mounts_ and is cleaned up
-    // after Migration is over.
-    mount = CreateUntrackedMountForUser(account_id);
-  }
-  if (!mount) {
-    LOG(ERROR) << "Failed to obtain Mount for Migrate";
-    return user_data_auth::CRYPTOHOME_ERROR_MIGRATE_KEY_FAILED;
-  }
   int key_index = -1;
   if (!homedirs_->Migrate(
           credentials,
@@ -2521,8 +2511,11 @@ user_data_auth::CryptohomeErrorCode UserDataAuth::MigrateKey(
           &key_index)) {
     return user_data_auth::CRYPTOHOME_ERROR_MIGRATE_KEY_FAILED;
   }
-  if (!mount->SetUserCreds(credentials, key_index))
-    LOG(WARNING) << "Failed to set new creds";
+  scoped_refptr<cryptohome::Mount> mount = GetMountForUser(account_id);
+  if (mount.get()) {
+    if (!mount->SetUserCreds(credentials, key_index))
+      LOG(WARNING) << "Failed to set new creds";
+  }
 
   return user_data_auth::CRYPTOHOME_ERROR_NOT_SET;
 }
