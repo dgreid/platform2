@@ -60,6 +60,7 @@
 #include "cryptohome/mock_vault_keyset.h"
 #include "cryptohome/protobuf_test_utils.h"
 #include "cryptohome/user_oldest_activity_timestamp_cache.h"
+#include "cryptohome/user_session.h"
 
 using base::FilePath;
 using base::PlatformThread;
@@ -239,7 +240,8 @@ class ServiceTestNotInitialized : public ::testing::Test {
 
   void SetupMount(const std::string& username) {
     mount_ = new NiceMock<MockMount>();
-    service_.set_mount_for_user(username, mount_.get());
+    session_ = new UserSession(mount_);
+    service_.set_session_for_user(username, session_.get());
   }
 
   void TearDown() override { test_helper_.TearDownSystemSalt(); }
@@ -275,6 +277,7 @@ class ServiceTestNotInitialized : public ::testing::Test {
   NiceMock<MockKeyChallengeServiceFactory> key_challenge_service_factory_;
   FakeEventSourceSink event_sink_;
   scoped_refptr<MockMount> mount_;
+  scoped_refptr<UserSession> session_;
   base::FilePath kShadowRoot = base::FilePath("/home/.shadow");
   // Declare service_ last so it gets destroyed before all the mocks. This is
   // important because otherwise the background thread may call into mocks that

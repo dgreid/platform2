@@ -43,6 +43,7 @@
 #include "cryptohome/pkcs11_init.h"
 #include "cryptohome/rpc.pb.h"
 #include "cryptohome/tpm_init.h"
+#include "cryptohome/user_session.h"
 
 namespace chaps {
 class TokenManagerClient;
@@ -59,28 +60,6 @@ class BootLockbox;
 class Credentials;
 // Wrapper for all timers used by the cryptohome daemon.
 class TimerCollection;
-
-// Bridges between the MountTaskObserver callback model and the
-// CryptohomeEventSource callback model. This class forwards MountTaskObserver
-// events to a CryptohomeEventSource. An instance of this class is single-use
-// (i.e., will be freed after it has observed one event).
-class MountTaskObserverBridge : public MountTaskObserver {
- public:
-  explicit MountTaskObserverBridge(cryptohome::Mount* mount,
-                                   CryptohomeEventSource* source)
-      : mount_(mount), source_(source) {}
-  virtual ~MountTaskObserverBridge() {}
-  virtual bool MountTaskObserve(const MountTaskResult& result) {
-    auto r = std::make_unique<MountTaskResult>(result);
-    r->set_mount(mount_);
-    source_->AddEvent(std::move(r));
-    return true;
-  }
-
- protected:
-  scoped_refptr<cryptohome::Mount> mount_;
-  CryptohomeEventSource* source_;
-};
 
 // MountThreadObserver
 class MountThreadObserver : public base::TaskObserver {
@@ -122,8 +101,8 @@ class Service : public brillo::dbus::AbstractDbusService,
   virtual bool Initialize();
   virtual bool SeedUrandom();
   virtual void InitializeInstallAttributes();
-  virtual void InitializePkcs11(cryptohome::Mount* mount);
-  virtual void DoInitializePkcs11(cryptohome::Mount* mount);
+  virtual void InitializePkcs11(UserSession* session);
+  virtual void DoInitializePkcs11(UserSession* session);
   virtual bool Reset();
 
   // Used internally during registration to set the
@@ -138,9 +117,9 @@ class Service : public brillo::dbus::AbstractDbusService,
   virtual void set_install_attrs(InstallAttributes* install_attrs) {
     install_attrs_ = install_attrs;
   }
-  virtual void set_mount_for_user(const std::string& username,
-                                  cryptohome::Mount* m) {
-    mounts_[username] = m;
+  virtual void set_session_for_user(const std::string& username,
+                                    UserSession* s) {
+    sessions_[username] = s;
   }
   virtual void set_crypto(Crypto* crypto) { crypto_ = crypto; }
   virtual void set_mount_factory(cryptohome::MountFactory* mf) {
@@ -193,7 +172,7 @@ class Service : public brillo::dbus::AbstractDbusService,
   virtual void NotifyEvent(CryptohomeEventBase* event);
 
   // Performs the work of resetting the TPM context.
-  virtual void DoResetTPMContext(Mount* mount);
+  virtual void DoResetTPMContext(UserSession* session);
 
   // TpmInit::OwnershipCallback
   virtual void OwnershipCallback(bool status, bool took_ownership);
@@ -342,8 +321,8 @@ class Service : public brillo::dbus::AbstractDbusService,
                                     GError** error);
   virtual gboolean IsMounted(gboolean* OUT_is_mounted, GError** error);
 
-  void DoUpdateTimestamp(scoped_refptr<Mount> mount);
-  void DoMount(scoped_refptr<cryptohome::Mount> mount,
+  void DoUpdateTimestamp(scoped_refptr<UserSession> session);
+  void DoMount(scoped_refptr<UserSession> session,
                const Credentials& credentials,
                const Mount::MountArgs& mount_args,
                base::WaitableEvent* event,
@@ -370,7 +349,7 @@ class Service : public brillo::dbus::AbstractDbusService,
                            const GArray* authorization_request,
                            const GArray* mount_request,
                            DBusGMethodInvocation* response);
-  virtual void DoMountGuestEx(scoped_refptr<cryptohome::Mount> guest_mount,
+  virtual void DoMountGuestEx(scoped_refptr<UserSession> guest_session,
                               std::unique_ptr<MountGuestRequest> request_pb,
                               DBusGMethodInvocation* context);
   virtual gboolean MountGuestEx(GArray* request,
@@ -850,18 +829,30 @@ class Service : public brillo::dbus::AbstractDbusService,
   // Checks if the machine is enterprise owned and report to mount_ then.
   virtual void DetectEnterpriseOwnership();
 
-  virtual scoped_refptr<cryptohome::Mount> GetMountForUser(
+  // Creates and initialized MountObject for user
+  scoped_refptr<cryptohome::Mount> CreateMount(const std::string& username);
+
+  // Returns session associated with mount.
+  // TODO(dlunev): This function is required for single place and I am pretty
+  // certain that code path is dead. However, the leads to the place are
+  // extremely hard to track because they are intertwined with seamingly
+  // alive code. Thus just have this function for now and let it die with the
+  // Service itself.
+  scoped_refptr<UserSession> GetUserSessionForMount(cryptohome::Mount* mount);
+
+  // Returns the UserSession object associated with the given username
+  scoped_refptr<UserSession> GetUserSession(const std::string& username);
+
+  // Returns either and existing or a newly created UserSession, if not present.
+  scoped_refptr<UserSession> GetOrCreateUserSession(
       const std::string& username);
 
-  // Ensures only one Mount is ever created per username.
-  virtual scoped_refptr<cryptohome::Mount> GetOrCreateMountForUser(
-      const std::string& username);
-
-  // Safely removes the MountMap reference for the given Mount.
-  virtual bool RemoveMountForUser(const std::string& username);
-
-  // Safelt removes the given Mount from MountMap.
-  virtual void RemoveMount(cryptohome::Mount* mount);
+  // Safely removes the reference to the UserSession from. This method returns
+  // true if as a result of the operation there is no reference to a session of
+  // the given user (including if it was absent in the first place).
+  bool RemoveUserSession(const std::string& username);
+  // Removes session by the pointer.
+  bool RemoveUserSession(UserSession* session);
 
   // Safely empties the MountMap and may request unmounting. If |unmount| is
   // true, the return value will reflect if all mounts unmounted cleanly or not.
@@ -1054,20 +1045,16 @@ class Service : public brillo::dbus::AbstractDbusService,
   // function must log any error itself, no logging will be done by the caller.
   bool StatefulRecoveryUnmount();
 
-  // Creates and initialized mount for the user
-  scoped_refptr<cryptohome::Mount> CreateUntrackedMountForUser(
-      const std::string& username);
-
   // Ensures BootLockbox is finalized;
   void EnsureBootLockboxFinalized();
 
   brillo::DBusConnection system_dbus_connection_;
 
-  // Tracks Mount objects for each user by username.
-  typedef std::map<const std::string, scoped_refptr<cryptohome::Mount>>
-      MountMap;
-  MountMap mounts_;
-  base::Lock mounts_lock_;  // Protects against parallel insertions only.
+  // Tracks UserSession objects for each user by username.
+  typedef std::map<const std::string, scoped_refptr<UserSession>>
+      UserSessionMap;
+  UserSessionMap sessions_;
+  base::Lock sessions_lock_;  // Protects against parallel insertions only.
   std::unique_ptr<UserOldestActivityTimestampCache> user_timestamp_cache_;
   std::unique_ptr<cryptohome::MountFactory> default_mount_factory_;
   cryptohome::MountFactory* mount_factory_;
