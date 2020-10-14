@@ -72,8 +72,15 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 
   FuzzedDataProvider provider(data, size);
   const int kArbitraryMaxNameLength = 4096;
-  std::string exe_name =
-      provider.ConsumeRandomLengthString(kArbitraryMaxNameLength);
+  // Exactly one of exe_name and non_exe_error_key can be set or we CHECK fail.
+  std::string exe_name;
+  std::string non_exe_error_key;
+  if (provider.ConsumeBool()) {
+    exe_name = provider.ConsumeRandomLengthString(kArbitraryMaxNameLength);
+  } else {
+    non_exe_error_key =
+        provider.ConsumeRandomLengthString(kArbitraryMaxNameLength);
+  }
   pid_t pid = provider.ConsumeIntegral<pid_t>();
   uid_t uid = provider.ConsumeIntegral<uid_t>();
   if (exe_name.empty() || pid < (pid_t)0 || uid < (uid_t)0) {
@@ -107,6 +114,6 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
                                       std::move(user_hash));
   collector.Initialize(&IsFeedbackAllowed, false);
   collector.HandleCrashThroughMemfd(test_input.TakePlatformFile(), pid, uid,
-                                    exe_name, kEmptyDumpDir);
+                                    exe_name, non_exe_error_key, kEmptyDumpDir);
   return 0;
 }

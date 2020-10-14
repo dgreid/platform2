@@ -2,6 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-:
-upload_file_minidump"; filename="minidump":
-upload_file_js_stack"; filename="stack":
+# We use colons for field separators
+colon=":"
+
+# Indicates the start of a minidump, which is handled specially.
+minidump="upload_file_minidump\"; filename=\"minidump\":"
+
+# Indicates the start of a JavaScript stack.
+jsstack="upload_file_js_stack\"; filename=\"stack\":"

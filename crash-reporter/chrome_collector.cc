@@ -7,6 +7,7 @@
 #include <pcrecpp.h>
 #include <stdint.h>
 
+#include <limits>
 #include <map>
 #include <string>
 
@@ -223,6 +224,13 @@ bool ChromeCollector::ParseCrashLog(const std::string& data,
     size_t size;
     if (!base::StringToSizeT(size_string, &size)) {
       LOG(ERROR) << "String not convertible to integer: " << size_string;
+      break;
+    }
+
+    // Avoid overflow errors that would allow size to be very large but still
+    // pass the at + size > data.size() check below.
+    if (size >= std::numeric_limits<size_t>::max() - at) {
+      LOG(ERROR) << "Bad size " << size << "; too large";
       break;
     }
 
