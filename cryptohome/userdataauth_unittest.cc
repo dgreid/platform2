@@ -34,7 +34,6 @@
 #include "cryptohome/mock_key_challenge_service.h"
 #include "cryptohome/mock_key_challenge_service_factory.h"
 #include "cryptohome/mock_le_credential_backend.h"
-#include "cryptohome/mock_legacy_user_session.h"
 #include "cryptohome/mock_mount.h"
 #include "cryptohome/mock_mount_factory.h"
 #include "cryptohome/mock_pkcs11_init.h"
@@ -148,8 +147,10 @@ class UserDataAuthTestNotInitialized : public ::testing::Test {
   // This is a utility function for tests to setup a mount for a particular
   // user. After calling this function, |mount_| is available for use.
   void SetupMount(const std::string& username) {
+    brillo::SecureBlob salt;
+    AssignSalt(CRYPTOHOME_DEFAULT_SALT_LENGTH, &salt);
     mount_ = new NiceMock<MockMount>();
-    session_ = new UserSession(mount_);
+    session_ = new UserSession(salt, mount_);
     userdataauth_->set_session_for_user(username, session_.get());
   }
 
@@ -683,9 +684,12 @@ TEST_F(UserDataAuthTest, Pkcs11IsTpmTokenReady) {
   constexpr char kUsername1[] = "foo@gmail.com";
   constexpr char kUsername2[] = "bar@gmail.com";
 
+  brillo::SecureBlob salt;
+  AssignSalt(CRYPTOHOME_DEFAULT_SALT_LENGTH, &salt);
+
   // Check when there's 1 mount, and it's initialized.
   scoped_refptr<NiceMock<MockMount>> mount1 = new NiceMock<MockMount>();
-  scoped_refptr<UserSession> session1 = new UserSession(mount1);
+  scoped_refptr<UserSession> session1 = new UserSession(salt, mount1);
   userdataauth_->set_session_for_user(kUsername1, session1.get());
   EXPECT_CALL(*mount1, pkcs11_state())
       .WillOnce(Return(cryptohome::Mount::kIsInitialized));
@@ -714,7 +718,7 @@ TEST_F(UserDataAuthTest, Pkcs11IsTpmTokenReady) {
 
   // Check when there's another mount.
   scoped_refptr<NiceMock<MockMount>> mount2 = new NiceMock<MockMount>();
-  scoped_refptr<UserSession> session2 = new UserSession(mount2);
+  scoped_refptr<UserSession> session2 = new UserSession(salt, mount2);
   userdataauth_->set_session_for_user(kUsername2, session2.get());
 
   // Both is initialized.
@@ -1239,7 +1243,7 @@ TEST_F(UserDataAuthTest, UpdateCurrentUserActivityTimestampSuccess) {
 
   // Test case for single mount
   SetupMount("foo@gmail.com");
-  EXPECT_CALL(*mount_, UpdateCurrentUserActivityTimestamp(kTimeshift))
+  EXPECT_CALL(*mount_, UpdateCurrentUserActivityTimestamp(kTimeshift, _))
       .WillOnce(Return(true));
 
   EXPECT_TRUE(userdataauth_->UpdateCurrentUserActivityTimestamp(kTimeshift));
@@ -1248,9 +1252,9 @@ TEST_F(UserDataAuthTest, UpdateCurrentUserActivityTimestampSuccess) {
   scoped_refptr<MockMount> prev_mount = mount_;
   SetupMount("bar@gmail.com");
 
-  EXPECT_CALL(*mount_, UpdateCurrentUserActivityTimestamp(kTimeshift))
+  EXPECT_CALL(*mount_, UpdateCurrentUserActivityTimestamp(kTimeshift, _))
       .WillOnce(Return(true));
-  EXPECT_CALL(*prev_mount, UpdateCurrentUserActivityTimestamp(kTimeshift))
+  EXPECT_CALL(*prev_mount, UpdateCurrentUserActivityTimestamp(kTimeshift, _))
       .WillOnce(Return(true));
 
   EXPECT_TRUE(userdataauth_->UpdateCurrentUserActivityTimestamp(kTimeshift));
@@ -1261,7 +1265,7 @@ TEST_F(UserDataAuthTest, UpdateCurrentUserActivityTimestampFailure) {
 
   // Test case for single mount
   SetupMount("foo@gmail.com");
-  EXPECT_CALL(*mount_, UpdateCurrentUserActivityTimestamp(kTimeshift))
+  EXPECT_CALL(*mount_, UpdateCurrentUserActivityTimestamp(kTimeshift, _))
       .WillOnce(Return(false));
 
   EXPECT_FALSE(userdataauth_->UpdateCurrentUserActivityTimestamp(kTimeshift));
@@ -1563,7 +1567,7 @@ TEST_F(UserDataAuthTest, CleanUpStale_FilledMap_NoOpenFiles_ShadowOnly) {
   EXPECT_CALL(lockbox_, FinalizeBoot());
   EXPECT_CALL(*mount, Init(&platform_, &crypto_, _)).WillOnce(Return(true));
   EXPECT_CALL(*mount, MountCryptohome(_, _, _, _)).WillOnce(Return(true));
-  EXPECT_CALL(*mount, UpdateCurrentUserActivityTimestamp(_))
+  EXPECT_CALL(*mount, UpdateCurrentUserActivityTimestamp(_, _))
       .WillOnce(Return(true));
   EXPECT_CALL(platform_, GetMountsBySourcePrefix(_, _)).WillOnce(Return(false));
   EXPECT_CALL(platform_, GetAttachedLoopDevices())
@@ -2203,7 +2207,8 @@ TEST_F(UserDataAuthExTest, CheckKeyHomedirsCheckSuccess) {
   check_req_->mutable_account_id()->set_account_id(kUser);
   check_req_->mutable_authorization_request()->mutable_key()->set_secret(kKey);
 
-  EXPECT_CALL(*mount_, AreSameUser(_)).WillOnce(Return(false));
+  Credentials credentials("another", brillo::SecureBlob(kKey));
+  session_->SetCredentials(credentials, 0);
   EXPECT_CALL(homedirs_, Exists(_)).WillOnce(Return(true));
   EXPECT_CALL(homedirs_, AreCredentialsValid(_)).WillOnce(Return(true));
 
@@ -2218,7 +2223,8 @@ TEST_F(UserDataAuthExTest, CheckKeyHomedirsCheckFail) {
   check_req_->mutable_authorization_request()->mutable_key()->set_secret(kKey);
 
   // Ensure failure
-  EXPECT_CALL(*mount_, AreSameUser(_)).WillRepeatedly(Return(false));
+  Credentials credentials("another", brillo::SecureBlob(kKey));
+  session_->SetCredentials(credentials, 0);
   EXPECT_CALL(homedirs_, Exists(_)).WillRepeatedly(Return(true));
   EXPECT_CALL(homedirs_, AreCredentialsValid(_)).WillOnce(Return(false));
 
@@ -2233,8 +2239,8 @@ TEST_F(UserDataAuthExTest, CheckKeyMountCheckSuccess) {
   check_req_->mutable_account_id()->set_account_id(kUser);
   check_req_->mutable_authorization_request()->mutable_key()->set_secret(kKey);
 
-  EXPECT_CALL(*mount_, AreSameUser(_)).WillOnce(Return(true));
-  EXPECT_CALL(*mount_, AreValid(_)).WillOnce(Return(true));
+  Credentials credentials(kUser, brillo::SecureBlob(kKey));
+  session_->SetCredentials(credentials, 0);
 
   CallCheckKeyAndVerify(user_data_auth::CRYPTOHOME_ERROR_NOT_SET);
 }
@@ -2246,8 +2252,9 @@ TEST_F(UserDataAuthExTest, CheckKeyMountCheckFail) {
   check_req_->mutable_account_id()->set_account_id(kUser);
   check_req_->mutable_authorization_request()->mutable_key()->set_secret(kKey);
 
-  EXPECT_CALL(*mount_, AreSameUser(_)).WillOnce(Return(true));
-  EXPECT_CALL(*mount_, AreValid(_)).WillOnce(Return(false));
+  Credentials credentials(kUser, brillo::SecureBlob("wrong"));
+  session_->SetCredentials(credentials, 0);
+
   EXPECT_CALL(homedirs_, Exists(_)).WillRepeatedly(Return(true));
   EXPECT_CALL(homedirs_, AreCredentialsValid(_)).WillOnce(Return(false));
 
@@ -2930,29 +2937,27 @@ class ChallengeResponseUserDataAuthExTest : public UserDataAuthExTest {
             []() { return std::make_unique<MockKeyChallengeService>(); }));
   }
 
-  void SetUpActiveLegacyUserSession() {
+  void SetUpActiveUserSession() {
     EXPECT_CALL(homedirs_, Exists(_)).WillRepeatedly(Return(true));
     EXPECT_CALL(homedirs_, GetVaultKeyset(_, kKeyLabel))
         .WillRepeatedly(
             Invoke(this, &UserDataAuthExTest::GetNiceMockVaultKeyset));
 
     SetupMount(kUser);
-    EXPECT_CALL(*mount_, AreSameUser(_)).WillRepeatedly(Return(true));
-    user_session_.set_key_data(key_data_);
-    EXPECT_CALL(*mount_, GetCurrentLegacyUserSession())
-        .WillRepeatedly(Return(&user_session_));
+    Credentials credentials(kUser, brillo::SecureBlob(kKey));
+    credentials.set_key_data(key_data_);
+    session_->SetCredentials(credentials, 0);
   }
 
  protected:
   KeyData key_data_;
-  NiceMock<MockLegacyUserSession> user_session_;
 };
 
 // Tests the CheckKey lightweight check scenario for challenge-response
 // credentials, where the credentials are verified without going through full
 // decryption.
 TEST_F(ChallengeResponseUserDataAuthExTest, LightweightCheckKey) {
-  SetUpActiveLegacyUserSession();
+  SetUpActiveUserSession();
 
   // Simulate a successful key verification.
   EXPECT_CALL(challenge_credentials_helper_,
@@ -2965,7 +2970,7 @@ TEST_F(ChallengeResponseUserDataAuthExTest, LightweightCheckKey) {
 // Tests the CheckKey full check scenario for challenge-response credentials,
 // with falling back from the failed lightweight check.
 TEST_F(ChallengeResponseUserDataAuthExTest, FallbackLightweightCheckKey) {
-  SetUpActiveLegacyUserSession();
+  SetUpActiveUserSession();
 
   // Simulate a failure in the lightweight check and a successful decryption.
   EXPECT_CALL(challenge_credentials_helper_,
@@ -3079,16 +3084,17 @@ TEST_F(UserDataAuthTestThreaded,
       }));
 
   // Count the number of times updateCurrentUserActivityTimestamp happens.
-  EXPECT_CALL(*mount_, UpdateCurrentUserActivityTimestamp(0))
+  EXPECT_CALL(*mount_, UpdateCurrentUserActivityTimestamp(0, _))
       .Times(AtLeast(kTimesUpdateUserActivityCalled))
-      .WillRepeatedly(Invoke([&lock, &update_user_activity_called, &done](int) {
-        base::AutoLock scoped_lock(lock);
-        update_user_activity_called++;
-        if (update_user_activity_called == kTimesUpdateUserActivityCalled) {
-          done.Signal();
-        }
-        return true;
-      }));
+      .WillRepeatedly(
+          Invoke([&lock, &update_user_activity_called, &done](int, int) {
+            base::AutoLock scoped_lock(lock);
+            update_user_activity_called++;
+            if (update_user_activity_called == kTimesUpdateUserActivityCalled) {
+              done.Signal();
+            }
+            return true;
+          }));
 
   const int period_ms = 1;
 

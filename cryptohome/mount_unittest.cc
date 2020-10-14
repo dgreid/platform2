@@ -43,7 +43,6 @@
 #include "cryptohome/mock_crypto.h"
 #include "cryptohome/mock_homedirs.h"
 #include "cryptohome/mock_le_credential_manager.h"
-#include "cryptohome/mock_legacy_user_session.h"
 #include "cryptohome/mock_platform.h"
 #include "cryptohome/mock_tpm.h"
 #include "cryptohome/mock_tpm_init.h"
@@ -615,7 +614,6 @@ TEST_P(MountTest, BadInitTest) {
   EXPECT_CALL(platform_, GetGroupId("chronos-access", _))
       .WillOnce(DoAll(SetArgPointee<1>(1002), Return(true)));
   EXPECT_FALSE(mount_->Init(&platform_, &crypto_, user_timestamp_cache_.get()));
-  ASSERT_FALSE(mount_->AreValid(credentials));
 }
 
 TEST_P(MountTest, NamespaceCreationPass) {
@@ -632,59 +630,10 @@ TEST_P(MountTest, NamespaceCreationFail) {
   EXPECT_FALSE(mount_->Init(&platform_, &crypto_, user_timestamp_cache_.get()));
 }
 
-TEST_P(MountTest, CurrentCredentialsTest) {
-  // Create a Mount instance that points to a good shadow root, test that it
-  // properly authenticates against the first key.
-  SecureBlob passkey;
-  cryptohome::Crypto::PasswordToPasskey(kDefaultUsers[3].password,
-                                        helper_.system_salt, &passkey);
-  Credentials credentials(kDefaultUsers[3].username, passkey);
-
-  EXPECT_TRUE(DoMountInit());
-
-  NiceMock<MockLegacyUserSession> user_session;
-  user_session.Init(SecureBlob());
-  user_session.SetUser(credentials);
-  mount_->set_current_user(&user_session);
-
-  EXPECT_CALL(user_session, CheckUser(_)).WillOnce(Return(true));
-  EXPECT_CALL(user_session, Verify(_)).WillOnce(Return(true));
-
-  ASSERT_TRUE(mount_->AreValid(credentials));
-}
-
 MATCHER_P(CredentialsEqual, credentials, "") {
   const Credentials& expected_creds = credentials;
   return expected_creds.username() == arg.username() &&
          expected_creds.passkey() == arg.passkey();
-}
-
-TEST_P(MountTest, PropagateCredentialsToUser) {
-  SecureBlob passkey;
-  cryptohome::Crypto::PasswordToPasskey(kDefaultUsers[3].password,
-                                        helper_.system_salt, &passkey);
-  Credentials up(kDefaultUsers[3].username, passkey);
-
-  const int key_index = 2;
-
-  NiceMock<MockLegacyUserSession> user_session;
-  mount_->set_current_user(&user_session);
-
-  EXPECT_CALL(user_session, SetUser(CredentialsEqual(testing::ByRef(up))))
-      .WillOnce(Return(true));
-  EXPECT_CALL(user_session, set_key_index(key_index));
-  ASSERT_TRUE(mount_->SetUserCreds(up, key_index));
-}
-
-TEST_P(MountTest, BadDecryptTest) {
-  // Create a Mount instance that points to a good shadow root, test that it
-  // properly denies access with a bad passkey.
-  SecureBlob passkey;
-  cryptohome::Crypto::PasswordToPasskey("bogus", helper_.system_salt, &passkey);
-  Credentials credentials(kDefaultUsers[4].username, passkey);
-
-  EXPECT_TRUE(DoMountInit());
-  ASSERT_FALSE(mount_->AreValid(credentials));
 }
 
 TEST_P(MountTest, MountCryptohomeNoPrivileges) {
@@ -1244,7 +1193,6 @@ TEST_P(MountTest, CreateCryptohomeTest) {
       mount_->EnsureCryptohome(credentials, GetDefaultMountArgs(), &created));
   ASSERT_TRUE(created);
   ASSERT_NE(creds.size(), 0);
-  ASSERT_FALSE(mount_->AreValid(credentials));
   {
     InSequence s;
     MockFileEnumerator* files = new MockFileEnumerator();
@@ -1821,7 +1769,7 @@ TEST_P(MountTest, UserActivityTimestampUpdated) {
       .WillRepeatedly(DoAll(SaveArg<1>(&timestamp_str), Return(true)));
   EXPECT_CALL(platform_, GetCurrentTime())
       .WillOnce(Return(base::Time::FromInternalValue(kMagicTimestamp)));
-  mount_->UpdateCurrentUserActivityTimestamp(0);
+  mount_->UpdateCurrentUserActivityTimestamp(0, 0);
 
   // Check that last activity timestamp is updated.
   ASSERT_TRUE(platform_.FileExists(user->timestamp_path));

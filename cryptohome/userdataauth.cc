@@ -1158,7 +1158,7 @@ scoped_refptr<UserSession> UserDataAuth::GetOrCreateUserSession(
     if (!m) {
       return nullptr;
     }
-    sessions_[username] = new UserSession(m);
+    sessions_[username] = new UserSession(system_salt_, m);
   }
   return sessions_[username];
 }
@@ -1732,9 +1732,7 @@ void UserDataAuth::ContinueMountWithCredentials(
   // the TPM.
   if (user_session->GetMount()->IsMounted()) {
     // Attempt a short-circuited credential test.
-    if (user_session->GetMount()->AreSameUser(
-            credentials->GetObfuscatedUsername(system_salt_)) &&
-        user_session->GetMount()->AreValid(*credentials)) {
+    if (user_session->VerifyCredentials(*credentials)) {
       std::move(on_done).Run(reply);
       homedirs_->ResetLECredentials(*credentials);
       return;
@@ -1742,7 +1740,7 @@ void UserDataAuth::ContinueMountWithCredentials(
     // If the Mount has invalid credentials (repopulated from system state)
     // this will ensure a user can still sign-in with the right ones.
     // TODO(wad) Should we unmount on a failed re-mount attempt?
-    if (!user_session->GetMount()->AreValid(*credentials) &&
+    if (!user_session->VerifyCredentials(*credentials) &&
         !homedirs_->AreCredentialsValid(*credentials)) {
       LOG(ERROR) << "Credentials are invalid";
       reply.set_error(
@@ -2010,9 +2008,8 @@ void UserDataAuth::CheckKey(
 
   bool found_valid_credentials = false;
   for (const auto& session_pair : sessions_) {
-    if (session_pair.second->GetMount()->AreSameUser(obfuscated_username)) {
-      found_valid_credentials =
-          session_pair.second->GetMount()->AreValid(credentials);
+    if (session_pair.second->VerifyCredentials(credentials)) {
+      found_valid_credentials = true;
       break;
     }
   }
@@ -2119,7 +2116,7 @@ void UserDataAuth::TryLightweightChallengeResponseCheckKey(
   base::Optional<KeyData> found_session_key_data;
   for (const auto& session_pair : sessions_) {
     const scoped_refptr<UserSession>& session = session_pair.second;
-    if (session->GetMount()->AreSameUser(obfuscated_username) &&
+    if (session->VerifyUser(obfuscated_username) &&
         KeyMatchesForLightweightChallengeResponseCheck(
             authorization.key().data(), *session)) {
       found_session_key_data = session->key_data();

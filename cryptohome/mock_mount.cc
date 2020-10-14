@@ -5,6 +5,7 @@
 #include "cryptohome/mock_mount.h"
 
 using ::testing::Invoke;
+using ::testing::Return;
 
 namespace cryptohome {
 

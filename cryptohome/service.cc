@@ -1237,9 +1237,8 @@ void Service::DoCheckKeyEx(std::unique_ptr<AccountIdentifier> identifier,
   {
     base::AutoLock _lock(sessions_lock_);
     for (const auto& session_pair : sessions_) {
-      if (session_pair.second->GetMount()->AreSameUser(obfuscated_username)) {
-        found_valid_credentials =
-            session_pair.second->GetMount()->AreValid(credentials);
+      if (session_pair.second->VerifyCredentials(credentials)) {
+        found_valid_credentials = true;
         break;
       }
     }
@@ -2199,9 +2198,7 @@ gboolean Service::Mount(const gchar* userid,
     // TODO(wad) This tests against the stored credentials, not the TPM.
     // If mounts are "repopulated", then a trip through the TPM would be needed.
     LOG(INFO) << "Mount exists. Rechecking credentials.";
-    if (!user_session->GetMount()->AreSameUser(
-            credentials.GetObfuscatedUsername(system_salt_)) ||
-        !user_session->GetMount()->AreValid(credentials)) {
+    if (!user_session->VerifyCredentials(credentials)) {
       // Need to take a trip through the TPM.
       if (!homedirs_->AreCredentialsValid(credentials)) {
         LOG(ERROR) << "Failed to reauthenticate against the existing mount!";
@@ -2533,7 +2530,7 @@ void Service::TryLightweightChallengeResponseCheckKeyEx(
     base::AutoLock lock(sessions_lock_);
     for (const auto& session_pair : sessions_) {
       const scoped_refptr<UserSession>& session = session_pair.second;
-      if (session->GetMount()->AreSameUser(obfuscated_username) &&
+      if (session->VerifyUser(obfuscated_username) &&
           KeyMatchesForLightweightChallengeResponseCheck(
               authorization->key().data(), *session)) {
         found_session_key_data = session->key_data();
@@ -2857,9 +2854,7 @@ void Service::ContinueMountExWithCredentials(
 
   if (user_session->GetMount()->IsMounted()) {
     // Attempt a short-circuited credential test.
-    if (user_session->GetMount()->AreSameUser(
-            credentials->GetObfuscatedUsername(system_salt_)) &&
-        user_session->GetMount()->AreValid(*credentials)) {
+    if (user_session->VerifyCredentials(*credentials)) {
       SendReply(context, reply);
       homedirs_->ResetLECredentials(*credentials);
       return;
@@ -2867,7 +2862,7 @@ void Service::ContinueMountExWithCredentials(
     // If the Mount has invalid credentials (repopulated from system state)
     // this will ensure a user can still sign-in with the right ones.
     // TODO(wad) Should we unmount on a failed re-mount attempt?
-    if (!user_session->GetMount()->AreValid(*credentials) &&
+    if (!user_session->VerifyCredentials(*credentials) &&
         !homedirs_->AreCredentialsValid(*credentials)) {
       LOG(ERROR) << "Credentials are invalid";
       reply.set_error(CRYPTOHOME_ERROR_AUTHORIZATION_KEY_FAILED);
@@ -4003,7 +3998,7 @@ scoped_refptr<UserSession> Service::GetOrCreateUserSession(
     if (!m) {
       return nullptr;
     }
-    sessions_[username] = new UserSession(m);
+    sessions_[username] = new UserSession(system_salt_, m);
   }
   return sessions_[username];
 }

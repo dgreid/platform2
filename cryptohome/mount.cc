@@ -59,6 +59,7 @@ using brillo::cryptohome::home::GetUserPath;
 using brillo::cryptohome::home::IsSanitizedUserName;
 using brillo::cryptohome::home::kGuestUserName;
 using brillo::cryptohome::home::SanitizeUserName;
+using brillo::cryptohome::home::SanitizeUserNameWithSalt;
 using chaps::IsolateCredentialManager;
 using google::protobuf::util::MessageDifferencer;
 
@@ -109,10 +110,9 @@ Mount::Mount()
       default_homedirs_(new HomeDirs()),
       homedirs_(default_homedirs_.get()),
       use_tpm_(true),
-      default_current_user_(new LegacyUserSession()),
-      current_user_(default_current_user_.get()),
       user_timestamp_cache_(NULL),
       enterprise_owned_(false),
+      mount_key_index_(-1),
       pkcs11_state_(kUninitialized),
       dircrypto_key_reference_(),
       legacy_mount_(true),
@@ -187,8 +187,6 @@ bool Mount::Init(Platform* platform,
       result = false;
     }
   }
-
-  current_user_->Init(system_salt_);
 
   mounter_.reset(new MountHelper(
       default_user_, default_group_, default_access_group_, shadow_root_,
@@ -311,10 +309,9 @@ bool Mount::AddEcryptfsAuthToken(const VaultKeyset& vault_keyset,
 }
 
 MountError Mount::MountEphemeralCryptohome(const Credentials& credentials) {
-  current_user_->Reset();
-  const std::string username = credentials.username();
+  username_ = credentials.username();
 
-  if (homedirs_->IsOrWillBeOwner(username)) {
+  if (homedirs_->IsOrWillBeOwner(username_)) {
     return MOUNT_ERROR_EPHEMERAL_MOUNT_BY_OWNER;
   }
 
@@ -325,14 +322,12 @@ MountError Mount::MountEphemeralCryptohome(const Credentials& credentials) {
       base::Bind(&Mount::TearDownEphemeralMount, base::Unretained(this));
 
   // Ephemeral cryptohomes for regular users are mounted in-process.
-  if (!MountEphemeralCryptohomeInternal(username, mounter_.get(),
+  if (!MountEphemeralCryptohomeInternal(username_, mounter_.get(),
                                         std::move(cleanup))) {
-    homedirs_->Remove(username);
+    homedirs_->Remove(username_);
     return MOUNT_ERROR_FATAL;
   }
 
-  // Ephemeral and guest users will not have a key index.
-  current_user_->SetUser(credentials);
   return MOUNT_ERROR_NONE;
 }
 
@@ -340,11 +335,10 @@ bool Mount::MountCryptohome(const Credentials& credentials,
                             const Mount::MountArgs& mount_args,
                             bool recreate_on_decrypt_fatal,
                             MountError* mount_error) {
-  current_user_->Reset();
-  std::string username = credentials.username();
+  username_ = credentials.username();
   const std::string obfuscated_username =
       credentials.GetObfuscatedUsername(system_salt_);
-  const bool is_owner = homedirs_->IsOrWillBeOwner(username);
+  const bool is_owner = homedirs_->IsOrWillBeOwner(username_);
 
   if (!mount_args.create_if_missing &&
       !homedirs_->CryptohomeExists(obfuscated_username)) {
@@ -547,14 +541,7 @@ bool Mount::MountCryptohome(const Credentials& credentials,
     }
   }
 
-  // Set the current user here so we can rely on it in the helpers.
-  // On failure, they will linger, but should be reset on a new MountCryptohome
-  // request.
-  current_user_->SetUser(credentials);
-  current_user_->set_key_index(index);
-  if (serialized.has_key_data()) {
-    current_user_->set_key_data(serialized.key_data());
-  }
+  mount_key_index_ = index;
 
   MountHelper::Options mount_opts = {
       mount_type_, mount_args.to_migrate_from_ecryptfs, mount_args.shadow_only};
@@ -672,7 +659,6 @@ bool Mount::UnmountCryptohome() {
     homedirs_->RemoveNonOwnerCryptohomes();
 
   RemovePkcs11Token();
-  current_user_->Reset();
   mount_type_ = MountType::NONE;
 
   platform_->ClearUserKeyring();
@@ -755,18 +741,18 @@ bool Mount::CreateTrackedSubdirectories(const Credentials& credentials) const {
       credentials.GetObfuscatedUsername(system_salt_), mount_type_);
 }
 
-bool Mount::UpdateCurrentUserActivityTimestamp(int time_shift_sec) {
-  std::string obfuscated_username;
-  current_user_->GetObfuscatedUsername(&obfuscated_username);
+bool Mount::UpdateCurrentUserActivityTimestamp(int time_shift_sec,
+                                               int active_key_index) {
+  std::string obfuscated_username =
+      SanitizeUserNameWithSalt(username_, system_salt_);
   if (!obfuscated_username.empty() && mount_type_ != MountType::EPHEMERAL) {
     SerializedVaultKeyset serialized;
-    LoadVaultKeysetForUser(obfuscated_username, current_user_->key_index(),
-                           &serialized);
+    LoadVaultKeysetForUser(obfuscated_username, active_key_index, &serialized);
     base::Time timestamp = platform_->GetCurrentTime();
     if (time_shift_sec > 0)
       timestamp -= base::TimeDelta::FromSeconds(time_shift_sec);
     serialized.set_last_activity_timestamp(timestamp.ToInternalValue());
-    if (!StoreTimestampForUser(obfuscated_username, current_user_->key_index(),
+    if (!StoreTimestampForUser(obfuscated_username, active_key_index,
                                &serialized)) {
       return false;
     }
@@ -774,25 +760,6 @@ bool Mount::UpdateCurrentUserActivityTimestamp(int time_shift_sec) {
       user_timestamp_cache_->UpdateExistingUser(obfuscated_username, timestamp);
     }
     return true;
-  }
-  return false;
-}
-
-bool Mount::AreSameUser(const std::string& obfuscated_username) {
-  return current_user_->CheckUser(obfuscated_username);
-}
-
-const LegacyUserSession* Mount::GetCurrentLegacyUserSession() const {
-  return current_user_;
-}
-
-bool Mount::AreValid(const Credentials& credentials) {
-  // If the current logged in user matches, use the LegacyUserSession to verify
-  // the credentials.  This is less costly than a trip to the TPM, and only
-  // verifies a user during their logged in session.
-  if (current_user_->CheckUser(
-          credentials.GetObfuscatedUsername(system_salt_))) {
-    return current_user_->Verify(credentials);
   }
   return false;
 }
@@ -1078,8 +1045,7 @@ bool Mount::ReEncryptVaultKeyset(const Credentials& credentials,
 }
 
 bool Mount::MountGuestCryptohome() {
-  current_user_->Reset();
-
+  username_ = "";
   MountHelperInterface* ephemeral_mounter = nullptr;
   base::Closure cleanup;
 
@@ -1193,16 +1159,15 @@ bool Mount::CheckChapsDirectory(const FilePath& dir,
 }
 
 bool Mount::InsertPkcs11Token() {
-  std::string username = current_user_->username();
-  FilePath token_dir = homedirs_->GetChapsTokenDir(username);
-  FilePath legacy_token_dir = homedirs_->GetLegacyChapsTokenDir(username);
+  FilePath token_dir = homedirs_->GetChapsTokenDir(username_);
+  FilePath legacy_token_dir = homedirs_->GetLegacyChapsTokenDir(username_);
   if (!CheckChapsDirectory(token_dir, legacy_token_dir))
     return false;
   // We may create a salt file and, if so, we want to restrict access to it.
   brillo::ScopedUmask scoped_umask(kDefaultUmask);
 
   // Derive authorization data for the token from the passkey.
-  FilePath salt_file = homedirs_->GetChapsTokenSaltPath(username);
+  FilePath salt_file = homedirs_->GetChapsTokenSaltPath(username_);
 
   std::unique_ptr<chaps::TokenManagerClient> chaps_client(
       chaps_client_factory_->New());
@@ -1212,8 +1177,7 @@ bool Mount::InsertPkcs11Token() {
   if (!chaps_client->LoadToken(
           IsolateCredentialManager::GetDefaultIsolateCredential(), token_dir,
           pkcs11_token_auth_data_,
-          pkcs11init.GetTpmTokenLabelForUser(current_user_->username()),
-          &slot_id)) {
+          pkcs11init.GetTpmTokenLabelForUser(username_), &slot_id)) {
     LOG(ERROR) << "Failed to load PKCS #11 token.";
     ReportCryptohomeError(kLoadPkcs11TokenFailed);
   }
@@ -1223,19 +1187,17 @@ bool Mount::InsertPkcs11Token() {
 }
 
 void Mount::RemovePkcs11Token() {
-  std::string username = current_user_->username();
-  FilePath token_dir = homedirs_->GetChapsTokenDir(username);
+  FilePath token_dir = homedirs_->GetChapsTokenDir(username_);
   std::unique_ptr<chaps::TokenManagerClient> chaps_client(
       chaps_client_factory_->New());
   chaps_client->UnloadToken(
       IsolateCredentialManager::GetDefaultIsolateCredential(), token_dir);
 }
 
-std::unique_ptr<base::Value> Mount::GetStatus() {
-  std::string user;
+std::unique_ptr<base::Value> Mount::GetStatus(int active_key_index) {
   SerializedVaultKeyset keyset;
   auto dv = std::make_unique<base::DictionaryValue>();
-  current_user_->GetObfuscatedUsername(&user);
+  std::string user = SanitizeUserNameWithSalt(username_, system_salt_);
   auto keysets = std::make_unique<base::ListValue>();
   std::vector<int> key_indices;
   if (user.length() && homedirs_->GetVaultKeysets(user, &key_indices)) {
@@ -1258,8 +1220,7 @@ std::unique_ptr<base::Value> Mount::GetStatus() {
       }
       // TODO(wad) Replace key_index use with key_label() use once
       //           legacy keydata is populated.
-      if (mount_type_ != MountType::EPHEMERAL &&
-          key_index == current_user_->key_index())
+      if (mount_type_ != MountType::EPHEMERAL && key_index == active_key_index)
         keyset_dict->SetBoolean("current", true);
       keyset_dict->SetInteger("index", key_index);
       keysets->Append(std::move(keyset_dict));
@@ -1292,18 +1253,11 @@ std::unique_ptr<base::Value> Mount::GetStatus() {
   return std::move(dv);
 }
 
-bool Mount::SetUserCreds(const Credentials& credentials, int key_index) {
-  if (!current_user_->SetUser(credentials))
-    return false;
-  current_user_->set_key_index(key_index);
-  return true;
-}
-
 bool Mount::MigrateToDircrypto(
     const dircrypto_data_migrator::MigrationHelper::ProgressCallback& callback,
     MigrationType migration_type) {
-  std::string obfuscated_username;
-  current_user_->GetObfuscatedUsername(&obfuscated_username);
+  std::string obfuscated_username =
+      SanitizeUserNameWithSalt(username_, system_salt_);
   FilePath temporary_mount =
       GetUserTemporaryMountDirectory(obfuscated_username);
   if (!IsMounted() || mount_type_ != MountType::DIR_CRYPTO ||

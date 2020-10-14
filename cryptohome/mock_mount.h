@@ -23,12 +23,6 @@ class MockMount : public Mount {
               Init,
               (Platform*, Crypto*, UserOldestActivityTimestampCache*),
               (override));
-  MOCK_METHOD(bool, AreSameUser, (const std::string&), (override));
-  MOCK_METHOD(const LegacyUserSession*,
-              GetCurrentLegacyUserSession,
-              (),
-              (const, override));
-  MOCK_METHOD(bool, AreValid, (const Credentials&), (override));
   MOCK_METHOD(bool,
               MountCryptohome,
               (const Credentials&, const Mount::MountArgs&, bool, MountError*),
@@ -43,7 +37,7 @@ class MockMount : public Mount {
   MOCK_METHOD(bool, MountGuestCryptohome, (), (override));
   MOCK_METHOD(bool,
               UpdateCurrentUserActivityTimestamp,
-              (int),
+              (int, int),
               (override));  // NOLINT
   MOCK_METHOD(const base::FilePath&, mount_point, (), (const, override));
   MOCK_METHOD(bool, OwnsMountPoint, (const base::FilePath&), (const, override));

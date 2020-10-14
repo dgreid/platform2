@@ -34,7 +34,6 @@
 #include "cryptohome/crypto.h"
 #include "cryptohome/dircrypto_data_migrator/migration_helper.h"
 #include "cryptohome/homedirs.h"
-#include "cryptohome/legacy_user_session.h"
 #include "cryptohome/migration_type.h"
 #include "cryptohome/mount_constants.h"
 #include "cryptohome/mount_helper.h"
@@ -153,29 +152,9 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   // Parameters
   //   time_shift_sec - normally must be 0. Shifts the updated time backwards
   //                    by specified number of seconds. Used in manual tests.
-  virtual bool UpdateCurrentUserActivityTimestamp(int time_shift_sec);
-
-  // Returns whether this Mount is for the same user.
-  //
-  // Parameters
-  //   obfuscated_username - Obfuscated username field of the Credentials
-  virtual bool AreSameUser(const std::string& obfuscated_username);
-
-  // Returns the session that this mount is for. Can be null.
-  virtual const LegacyUserSession* GetCurrentLegacyUserSession() const;
-
-  // Tests if the given credentials would decrypt the user's cryptohome key
-  //
-  // Parameters
-  //   credentials - The Credentials to attempt to decrypt the key with
-  virtual bool AreValid(const Credentials& credentials);
-
-  //
-  // virtual int AddKey(const Credentials& existing, const Credentials& new);
-  // virtual bool RemoveKey(const Credentials& existing, int index);
-
-  // Returns the current key index.  If there is no active key, -1 is returned.
-  virtual int CurrentKey(void) const { return current_user_->key_index(); }
+  //   active_key_index - index of the active keyset
+  virtual bool UpdateCurrentUserActivityTimestamp(int time_shift_sec,
+                                                  int active_key_index);
 
   // Used to override the default shadow root
   void set_shadow_root(const base::FilePath& value) { shadow_root_ = value; }
@@ -205,9 +184,6 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   // Override whether to use the TPM for added security
   void set_use_tpm(bool value) { use_tpm_ = value; }
 
-  // Manually set the logged in user
-  void set_current_user(LegacyUserSession* value) { current_user_ = value; }
-
   // Set/get a flag, that this machine is enterprise owned.
   void set_enterprise_owned(bool value) {
     enterprise_owned_ = value;
@@ -232,7 +208,7 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   //
   // The returned object is a dictionary whose keys describe the mount. Current
   // keys are: "keysets", "mounted", "owner", "enterprise", and "type".
-  virtual std::unique_ptr<base::Value> GetStatus();
+  virtual std::unique_ptr<base::Value> GetStatus(int active_key_index);
 
   // Inserts the current user's PKCS #11 token.
   virtual bool InsertPkcs11Token();
@@ -276,6 +252,14 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   void set_chaps_client_factory(ChapsClientFactory* factory) {
     chaps_client_factory_ = factory;
   }
+
+  // Index of the keyset used for the mount.
+  // TODO(dlunev): user session is supposed to track it, but the unwrapping
+  // of keyset happens inside mount, thus only mount knows what was the index
+  // of the keyset initial credentials belonged to.This field is used to
+  // preserve the index from the mount time and supply it to the user session.
+  // Blast it with fire when we get the unwrapping out.
+  int mount_key_index() const { return mount_key_index_; }
 
  protected:
   // Only used in tests.
@@ -546,10 +530,6 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   // Whether to use the TPM for added security
   bool use_tpm_;
 
-  // Used to keep track of the current logged-in user
-  std::unique_ptr<LegacyUserSession> default_current_user_;
-  LegacyUserSession* current_user_;
-
   // Cache of last access timestamp for existing users.
   UserOldestActivityTimestampCache* user_timestamp_cache_;
 
@@ -559,6 +539,17 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   // True if the machine is enterprise owned, false if not or we have
   // not discovered it in this session.
   bool enterprise_owned_;
+
+  // Name of the user the mount belongs to.
+  std::string username_;
+
+  // Index of the keyset used for the mount.
+  // TODO(dlunev): user session is supposed to track it, but the unwrapping
+  // of keyset happens inside mount, thus only mount knows what was the index
+  // of the keyset initial credentials belonged to.This field is used to
+  // preserve the index from the mount time and supply it to the user session.
+  // Blast it with fire when we get the unwrapping out.
+  int mount_key_index_;
 
   Pkcs11State pkcs11_state_;
 

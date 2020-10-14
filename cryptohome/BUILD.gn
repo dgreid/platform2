@@ -429,7 +429,6 @@ if (use.test) {
       "homedirs_unittest.cc",
       "install_attributes_unittest.cc",
       "le_credential_manager_impl_unittest.cc",
-      "legacy_user_session_unittest.cc",
       "lockbox-cache-unittest.cc",
       "lockbox_unittest.cc",
       "make_tests.cc",
@@ -441,7 +440,6 @@ if (use.test) {
       "mock_install_attributes.cc",
       "mock_key_challenge_service.cc",
       "mock_keystore.cc",
-      "mock_legacy_user_session.cc",
       "mock_lockbox.cc",
       "mock_mount.cc",
       "mock_pkcs11_init.cc",
@@ -466,6 +464,7 @@ if (use.test) {
       "tpm_init_unittest.cc",
       "tpm_persistent_state_unittest.cc",
       "user_oldest_activity_timestamp_cache_unittest.cc",
+      "user_session_unittest.cc",
       "userdataauth_unittest.cc",
       "vault_keyset_unittest.cc",
     ]

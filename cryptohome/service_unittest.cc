@@ -51,7 +51,6 @@
 #include "cryptohome/mock_install_attributes.h"
 #include "cryptohome/mock_key_challenge_service.h"
 #include "cryptohome/mock_key_challenge_service_factory.h"
-#include "cryptohome/mock_legacy_user_session.h"
 #include "cryptohome/mock_mount.h"
 #include "cryptohome/mock_mount_factory.h"
 #include "cryptohome/mock_platform.h"
@@ -239,8 +238,10 @@ class ServiceTestNotInitialized : public ::testing::Test {
   }
 
   void SetupMount(const std::string& username) {
+    brillo::SecureBlob salt;
+    AssignSalt(CRYPTOHOME_DEFAULT_SALT_LENGTH, &salt);
     mount_ = new NiceMock<MockMount>();
-    session_ = new UserSession(mount_);
+    session_ = new UserSession(salt, mount_);
     service_.set_session_for_user(username, session_.get());
   }
 
@@ -393,7 +394,8 @@ TEST_F(ServiceTestNotInitialized, CheckAutoCleanupCallback) {
   SetupMount("some-user-to-clean-up");
 
   // Check that UpdateCurrentUserActivityTimestamp happens daily.
-  EXPECT_CALL(*mount_, UpdateCurrentUserActivityTimestamp(0)).Times(AtLeast(1));
+  EXPECT_CALL(*mount_, UpdateCurrentUserActivityTimestamp(0, _))
+      .Times(AtLeast(1));
 
   // These are shared between Mount and Platform threads, guarded by the lock.
   int free_disk_space_count = 0;
@@ -873,7 +875,7 @@ TEST_F(ServiceTestNotInitialized,
   EXPECT_CALL(*mount, Init(&platform_, service_.crypto(), _))
       .WillOnce(Return(true));
   EXPECT_CALL(*mount, MountCryptohome(_, _, _, _)).WillOnce(Return(true));
-  EXPECT_CALL(*mount, UpdateCurrentUserActivityTimestamp(_))
+  EXPECT_CALL(*mount, UpdateCurrentUserActivityTimestamp(_, _))
       .WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, GetMountsBySourcePrefix(_, _)).WillOnce(Return(false));
   EXPECT_CALL(platform_, GetAttachedLoopDevices())
@@ -1291,7 +1293,9 @@ TEST_F(ServiceExTest, CheckKeySuccessTest) {
   auth_->mutable_key()->set_secret(kKey);
   CheckKeyRequest req;
 
-  EXPECT_CALL(*mount_, AreSameUser(_)).WillOnce(Return(false));
+  Credentials credentials("another", brillo::SecureBlob(kKey));
+  session_->SetCredentials(credentials, 0);
+
   EXPECT_CALL(homedirs_, Exists(_)).WillOnce(Return(true));
   EXPECT_CALL(homedirs_, AreCredentialsValid(_)).WillOnce(Return(true));
   service_.DoCheckKeyEx(std::move(id_), std::move(auth_), std::move(check_req_),
@@ -1312,8 +1316,9 @@ TEST_F(ServiceExTest, CheckKeyMountTest) {
   id_->set_account_id(kUser);
   auth_->mutable_key()->set_secret(kKey);
 
-  EXPECT_CALL(*mount_, AreSameUser(_)).WillOnce(Return(true));
-  EXPECT_CALL(*mount_, AreValid(_)).WillOnce(Return(true));
+  Credentials credentials(kUser, brillo::SecureBlob(kKey));
+  session_->SetCredentials(credentials, 0);
+
   service_.DoCheckKeyEx(std::make_unique<AccountIdentifier>(*id_),
                         std::make_unique<AuthorizationRequest>(*auth_),
                         std::make_unique<CheckKeyRequest>(*check_req_),
@@ -1324,10 +1329,11 @@ TEST_F(ServiceExTest, CheckKeyMountTest) {
   EXPECT_TRUE(ReplyIsEmpty());
   Mock::VerifyAndClearExpectations(mount_.get());
 
+  Credentials credentials2(kUser, brillo::SecureBlob("another"));
+  session_->SetCredentials(credentials2, 0);
+
   // Rinse and repeat but fail.
   ClearReplies();
-  EXPECT_CALL(*mount_, AreSameUser(_)).WillOnce(Return(true));
-  EXPECT_CALL(*mount_, AreValid(_)).WillOnce(Return(false));
   EXPECT_CALL(homedirs_, Exists(_)).WillRepeatedly(Return(true));
   EXPECT_CALL(homedirs_, AreCredentialsValid(_)).WillOnce(Return(false));
   service_.DoCheckKeyEx(std::make_unique<AccountIdentifier>(*id_),
@@ -1399,28 +1405,27 @@ class ChallengeResponseServiceExTest : public ServiceExTest {
             []() { return std::make_unique<MockKeyChallengeService>(); }));
   }
 
-  void SetUpActiveLegacyUserSession() {
+  void SetUpActiveUserSession() {
     EXPECT_CALL(homedirs_, Exists(_)).WillRepeatedly(Return(true));
     EXPECT_CALL(homedirs_, GetVaultKeyset(_, kKeyLabel))
         .WillRepeatedly(Invoke(this, &ServiceExTest::GetNiceMockVaultKeyset));
 
     SetupMount(kUser);
-    EXPECT_CALL(*mount_, AreSameUser(_)).WillRepeatedly(Return(true));
-    user_session_.set_key_data(key_data_);
-    EXPECT_CALL(*mount_, GetCurrentLegacyUserSession())
-        .WillRepeatedly(Return(&user_session_));
+
+    Credentials credentials(kUser, brillo::SecureBlob(kPasskey));
+    credentials.set_key_data(key_data_);
+    session_->SetCredentials(credentials, 0);
   }
 
  protected:
   KeyData key_data_;
-  NiceMock<MockLegacyUserSession> user_session_;
 };
 
 // Tests the CheckKeyEx lightweight check scenario for challenge-response
 // credentials, where the credentials are verified without going through full
 // decryption.
 TEST_F(ChallengeResponseServiceExTest, LightweightCheckKey) {
-  SetUpActiveLegacyUserSession();
+  SetUpActiveUserSession();
 
   // Simulate a successful key verification.
   EXPECT_CALL(challenge_credentials_helper_,
@@ -1440,7 +1445,7 @@ TEST_F(ChallengeResponseServiceExTest, LightweightCheckKey) {
 // Tests the CheckKeyEx full check scenario for challenge-response credentials,
 // with falling back from the failed lightweight check.
 TEST_F(ChallengeResponseServiceExTest, FallbackLightweightCheckKey) {
-  SetUpActiveLegacyUserSession();
+  SetUpActiveUserSession();
 
   // Simulate a failure in the lightweight check and a successful decryption.
   EXPECT_CALL(challenge_credentials_helper_,
@@ -1501,7 +1506,9 @@ TEST_F(ServiceExTest, CheckKeyHomedirsTest) {
   id_->set_account_id(kUser);
   auth_->mutable_key()->set_secret(kKey);
 
-  EXPECT_CALL(*mount_, AreSameUser(_)).WillRepeatedly(Return(false));
+  Credentials credentials("another", brillo::SecureBlob(kKey));
+  session_->SetCredentials(credentials, 0);
+
   EXPECT_CALL(homedirs_, Exists(_)).WillRepeatedly(Return(true));
   EXPECT_CALL(homedirs_, AreCredentialsValid(_)).WillOnce(Return(true));
   service_.DoCheckKeyEx(std::make_unique<AccountIdentifier>(*id_),
