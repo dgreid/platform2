@@ -780,29 +780,6 @@ TEST(DownloadableModelInferenceTest, SmartDim20200206) {
   ASSERT_TRUE(infer_callback_done);
 }
 
-// Test when text classifier can not find the model file.
-TEST(LoadTextClassifierTest, BadModelFilename) {
-  mojo::Remote<MachineLearningService> ml_service;
-  MachineLearningServiceImplForTesting ml_service_impl(
-      ml_service.BindNewPipeAndPassReceiver().PassPipe());
-
-  ml_service_impl.SetTextClassifierModelFilenameForTesting(
-      "bad_model_filename");
-
-  mojo::Remote<TextClassifier> text_classifier;
-  bool model_callback_done = false;
-  ml_service->LoadTextClassifier(
-      text_classifier.BindNewPipeAndPassReceiver(),
-      base::Bind(
-          [](bool* model_callback_done, const LoadModelResult result) {
-            EXPECT_EQ(result, LoadModelResult::LOAD_MODEL_ERROR);
-            *model_callback_done = true;
-          },
-          &model_callback_done));
-  base::RunLoop().RunUntilIdle();
-  ASSERT_TRUE(model_callback_done);
-}
-
 // Tests loading text classifier only.
 TEST(LoadTextClassifierTest, NoInference) {
   mojo::Remote<MachineLearningService> ml_service;

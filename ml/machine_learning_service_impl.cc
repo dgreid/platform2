@@ -50,12 +50,6 @@ constexpr char kSystemModelDir[] = "/opt/google/chrome/ml_models/";
 // `LoadFlatBufferModel`, `LoadTextClassifier` or LoadHandwritingModel).
 constexpr char kMetricsRequestName[] = "LoadModelResult";
 
-constexpr char kTextClassifierModelFile[] =
-    "mlservice-model-text_classifier_en-v711.fb";
-
-constexpr char kLanguageIdentificationModelFile[] =
-    "mlservice-model-language_identification-20190924.smfb";
-
 constexpr char kIcuDataFilePath[] = "/opt/google/chrome/icudtl.dat";
 
 }  // namespace
@@ -65,7 +59,6 @@ MachineLearningServiceImpl::MachineLearningServiceImpl(
     base::Closure disconnect_handler,
     const std::string& model_dir)
     : icu_data_(nullptr),
-      text_classifier_model_filename_(kTextClassifierModelFile),
       builtin_model_metadata_(GetBuiltinModelMetadata()),
       model_dir_(model_dir),
       receiver_(this,
@@ -84,11 +77,6 @@ MachineLearningServiceImpl::MachineLearningServiceImpl(
   if (bus) {
     dlcservice_client_ = std::make_unique<DlcserviceClient>(bus);
   }
-}
-
-void MachineLearningServiceImpl::SetTextClassifierModelFilenameForTesting(
-    const std::string& filename) {
-  text_classifier_model_filename_ = filename;
 }
 
 void MachineLearningServiceImpl::Clone(
@@ -182,22 +170,8 @@ void MachineLearningServiceImpl::LoadTextClassifier(
   RequestMetrics request_metrics("TextClassifier", kMetricsRequestName);
   request_metrics.StartRecordingPerformanceMetrics();
 
-  // Attempt to load model.
-  std::string model_path = model_dir_ + text_classifier_model_filename_;
-  auto scoped_mmap =
-      std::make_unique<libtextclassifier3::ScopedMmap>(model_path);
-  if (!scoped_mmap->handle().ok()) {
-    LOG(ERROR) << "Failed to load the text classifier model file '"
-               << model_path << "'.";
-    std::move(callback).Run(LoadModelResult::LOAD_MODEL_ERROR);
-    request_metrics.RecordRequestEvent(LoadModelResult::LOAD_MODEL_ERROR);
-    return;
-  }
-
   // Create the TextClassifier.
-  if (!TextClassifierImpl::Create(&scoped_mmap,
-                                  model_dir_ + kLanguageIdentificationModelFile,
-                                  std::move(receiver))) {
+  if (!TextClassifierImpl::Create(std::move(receiver))) {
     LOG(ERROR) << "Failed to create TextClassifierImpl object.";
     std::move(callback).Run(LoadModelResult::LOAD_MODEL_ERROR);
     request_metrics.RecordRequestEvent(LoadModelResult::LOAD_MODEL_ERROR);

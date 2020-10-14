@@ -32,8 +32,6 @@ class TextClassifierImpl
   // Will return false if it fails to create the annotator object, otherwise
   // return true.
   static bool Create(
-      std::unique_ptr<libtextclassifier3::ScopedMmap>* mmap,
-      const std::string& langid_model_path,
       mojo::PendingReceiver<chromeos::machine_learning::mojom::TextClassifier>
           receiver);
 

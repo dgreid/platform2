@@ -30,6 +30,13 @@ using ::chromeos::machine_learning::mojom::TextLanguage;
 using ::chromeos::machine_learning::mojom::TextLanguagePtr;
 using ::chromeos::machine_learning::mojom::TextSuggestSelectionRequestPtr;
 
+constexpr char kTextClassifierModelFilePath[] =
+    "/opt/google/chrome/ml_models/mlservice-model-text_classifier_en-v711.fb";
+
+constexpr char kLanguageIdentificationModelFilePath[] =
+    "/opt/google/chrome/ml_models/"
+    "mlservice-model-language_identification-20190924.smfb";
+
 // To avoid passing a lambda as a base::Closure.
 void DeleteTextClassifierImpl(
     const TextClassifierImpl* const text_classifier_impl) {
@@ -39,11 +46,18 @@ void DeleteTextClassifierImpl(
 }  // namespace
 
 bool TextClassifierImpl::Create(
-    std::unique_ptr<libtextclassifier3::ScopedMmap>* annotator_model_mmap,
-    const std::string& langid_model_path,
     mojo::PendingReceiver<TextClassifier> receiver) {
+  // Attempt to load model.
+  auto annotator_model_mmap = std::make_unique<libtextclassifier3::ScopedMmap>(
+      kTextClassifierModelFilePath);
+  if (!annotator_model_mmap->handle().ok()) {
+    LOG(ERROR) << "Failed to load the text classifier model file.";
+    return false;
+  }
+
   auto text_classifier_impl = new TextClassifierImpl(
-      annotator_model_mmap, langid_model_path, std::move(receiver));
+      &annotator_model_mmap, kLanguageIdentificationModelFilePath,
+      std::move(receiver));
   if (text_classifier_impl->annotator_ == nullptr ||
       text_classifier_impl->language_identifier_ == nullptr) {
     // Fails to create annotator, return nullptr.
