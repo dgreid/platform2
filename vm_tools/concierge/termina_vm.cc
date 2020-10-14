@@ -46,7 +46,6 @@ namespace {
 // Features to enable.
 constexpr StartTerminaRequest_Feature kEnabledTerminaFeatures[] = {
     StartTerminaRequest_Feature_START_LXD,
-    StartTerminaRequest_Feature_RESET_LXD_ON_LAUNCH,
 };
 
 // Name of the control socket used for controlling crosvm.
