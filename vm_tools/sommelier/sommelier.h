@@ -112,6 +112,7 @@ struct sl_context {
   struct wl_event_source* display_event_source;
   struct wl_event_source* display_ready_event_source;
   struct wl_event_source* sigchld_event_source;
+  struct wl_event_source* sigusr1_event_source;
   struct wl_array dpi;
   int shm_driver;
   int data_driver;
@@ -176,6 +177,7 @@ struct sl_context {
   } atoms[ATOM_LAST + 1];
   xcb_visualid_t visual_ids[256];
   xcb_colormap_t colormaps[256];
+  const char* trace_filename;
 };
 
 struct sl_compositor {

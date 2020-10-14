@@ -20,6 +20,9 @@ if peer_cmd_prefix == ''
   endif
 endif
 
+includes = []
+cpp_args = []
+
 #===============#
 # Wayland Stuff #
 #===============#
@@ -65,6 +68,24 @@ foreach p : wl_protocols
   endforeach
 endforeach
 
+#==========#
+# Perfetto #
+#==========#
+
+tracing_sources = []
+tracing_dependencies = []
+
+if get_option('tracing')
+  tracing_sources = [
+    'perfetto/sdk/perfetto.cc',
+  ]
+  tracing_dependencies = [
+    dependency('threads'),
+  ]
+  cpp_args += '-DPERFETTO_TRACING'
+  includes += include_directories('perfetto/sdk')
+endif
+
 #===========#
 # Sommelier #
 #===========#
@@ -85,12 +106,13 @@ executable('sommelier',
     'sommelier-shm.cc',
     'sommelier-subcompositor.cc',
     'sommelier-text-input.cc',
+    'sommelier-tracing.cc',
     'sommelier-viewporter.cc',
     'sommelier-xdg-shell.cc',
     'sommelier.cc',
-  ] + wl_outs,
+  ] + wl_outs + tracing_sources,
   dependencies: [
-    meson.get_compiler('c').find_library('m'),
+    meson.get_compiler('cpp').find_library('m'),
     dependency('gbm'),
     dependency('libdrm'),
     dependency('pixman-1'),
@@ -100,8 +122,8 @@ executable('sommelier',
     dependency('xcb-composite'),
     dependency('xcb-xfixes'),
     dependency('xkbcommon'),
-  ],
-  cpp_args: [
+  ] + tracing_dependencies,
+  cpp_args: cpp_args + [
     '-D_GNU_SOURCE',
     '-DWL_HIDE_DEPRECATED',
     '-DXWAYLAND_PATH="' + get_option('xwayland_path') + '"',
@@ -113,4 +135,5 @@ executable('sommelier',
     '-DFRAME_COLOR="' + get_option('frame_color') + '"',
     '-DDARK_FRAME_COLOR="' + get_option('dark_frame_color') + '"',
   ],
+  include_directories: includes,
 )

@@ -96,6 +96,7 @@ executable("sommelier") {
     "sommelier-shm.cc",
     "sommelier-subcompositor.cc",
     "sommelier-text-input.cc",
+    "sommelier-tracing.cc",
     "sommelier-viewporter.cc",
     "sommelier-xdg-shell.cc",
     "sommelier.cc",

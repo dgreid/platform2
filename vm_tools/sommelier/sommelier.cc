@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "sommelier.h"  // NOLINT(build/include_directory)
+#include "sommelier.h"          // NOLINT(build/include_directory)
+#include "sommelier-tracing.h"  // NOLINT(build/include_directory)
 
 #include <assert.h>
 #include <errno.h>
@@ -3283,6 +3284,13 @@ static int sl_handle_sigchld(int signal_number, void* data) {
   return 1;
 }
 
+static int sl_handle_sigusr1(int signal_number, void* data) {
+  struct sl_context* ctx = (struct sl_context*)data;
+  fprintf(stderr, "dumping trace %s\n", ctx->trace_filename);
+  dump_trace(ctx->trace_filename);
+  return 1;
+}
+
 static void sl_execvp(const char* file,
                       char* const argv[],
                       int wayland_socked_fd) {
@@ -3603,6 +3611,9 @@ static void sl_print_usage() {
       "  --virtwl-device=DEVICE\tVirtWL device to use\n"
       "  --drm-device=DEVICE\t\tDRM device to use\n"
       "  --glamor\t\t\tUse glamor to accelerate X11 clients\n"
+#ifdef PERFETTO_TRACING
+      "  --trace-filename=PATH\t\tPath to Perfetto trace filename\n"
+#endif
       "  --fullscreen-mode=MODE\tDefault fullscreen behavior (immersive,"
       " plain)\n");
 }
@@ -3636,6 +3647,7 @@ int main(int argc, char** argv) {
   ctx.display_event_source = NULL;
   ctx.display_ready_event_source = NULL;
   ctx.sigchld_event_source = NULL;
+  ctx.sigusr1_event_source = NULL;
   ctx.shm_driver = SHM_DRIVER_NOOP;
   ctx.data_driver = DATA_DRIVER_NOOP;
   ctx.wm_fd = -1;
@@ -3716,6 +3728,7 @@ int main(int argc, char** argv) {
   ctx.atoms[ATOM_INCR] = {"INCR"};
   ctx.atoms[ATOM_WL_SELECTION] = {"_WL_SELECTION"};
   ctx.atoms[ATOM_GTK_THEME_VARIANT] = {"_GTK_THEME_VARIANT"};
+  ctx.trace_filename = NULL;
   const char* display = getenv("SOMMELIER_DISPLAY");
   const char* scale = getenv("SOMMELIER_SCALE");
   const char* dpi = getenv("SOMMELIER_DPI");
@@ -3749,6 +3762,9 @@ int main(int argc, char** argv) {
   int client_fd = -1;
   int rv;
   int i;
+
+  // Ignore SIGUSR1 (used for trace dumping) in all child processes.
+  signal(SIGUSR1, SIG_IGN);
 
   for (i = 1; i < argc; ++i) {
     const char* arg = argv[i];
@@ -3819,6 +3835,10 @@ int main(int argc, char** argv) {
       xauth_path = sl_arg_value(arg);
     } else if (strstr(arg, "--x-font-path") == arg) {
       xfont_path = sl_arg_value(arg);
+#ifdef PERFETTO_TRACING
+    } else if (strstr(arg, "--trace-filename") == arg) {
+      ctx.trace_filename = sl_arg_value(arg);
+#endif
     } else if (arg[0] == '-') {
       if (strcmp(arg, "--") == 0) {
         ctx.runprog = &argv[i + 1];
@@ -4389,6 +4409,15 @@ int main(int argc, char** argv) {
       ctx.child_pid = pid;
     }
     close(sv[1]);
+  }
+
+  // Attempt to enable tracing.  This could be called earlier but would rather
+  // spawn all children first.
+  if (ctx.trace_filename) {
+    initialize_tracing();
+    enable_tracing();
+    ctx.sigusr1_event_source =
+        wl_event_loop_add_signal(event_loop, SIGUSR1, sl_handle_sigusr1, &ctx);
   }
 
   wl_client_add_destroy_listener(ctx.client, &client_destroy_listener);

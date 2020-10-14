@@ -49,3 +49,9 @@ option('peer_cmd_prefix',
   value: '',
   description: 'command-line needed to spwan non-master sommeliers'
 )
+
+option('tracing',
+  type: 'boolean',
+  value: false,
+  description: 'enable tracing via perfetto'
+)
