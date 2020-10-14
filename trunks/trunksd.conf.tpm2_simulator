@@ -15,3 +15,8 @@ pre-start script
 end script
 
 exec trunksd --simulator
+
+# init_tpm would lock down the platform hierarchy. This is normally
+# done by firmware. Without init_tpm, some services(chaps) would
+# consider the TPM is uninitialized.
+post-start exec trunks_client --init_tpm
