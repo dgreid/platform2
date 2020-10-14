@@ -461,7 +461,13 @@ bool Mount::MountCryptohome(const Credentials& credentials,
   }
   if (should_mount_dircrypto) {
     dircrypto_key_reference_.policy_version =
-        serialized.fscrypt_policy_version();
+        dircrypto::GetDirectoryPolicyVersion(
+            homedirs_->GetUserMountDirectory(obfuscated_username));
+    if (dircrypto_key_reference_.policy_version < 0) {
+      dircrypto_key_reference_.policy_version =
+          dircrypto::CheckFscryptKeyIoctlSupport() ? FSCRYPT_POLICY_V2
+                                                   : FSCRYPT_POLICY_V1;
+    }
     dircrypto_key_reference_.reference = vault_keyset.fek_sig();
     if (!platform_->AddDirCryptoKeyToKeyring(vault_keyset.fek(),
                                              &dircrypto_key_reference_)) {
@@ -685,13 +691,6 @@ bool Mount::CreateCryptohome(const Credentials& credentials) const {
   if (credentials.key_data().type() == KeyData::KEY_TYPE_CHALLENGE_RESPONSE) {
     *serialized.mutable_signature_challenge_info() =
         credentials.challenge_credentials_keyset_info();
-  }
-
-  // Set the fscrypt policy version, depending on whether the fscrypt key ioctls
-  // are supported.
-  if (mount_type_ == MountType::DIR_CRYPTO &&
-      dircrypto::CheckFscryptKeyIoctlSupport()) {
-    serialized.set_fscrypt_policy_version(FSCRYPT_POLICY_V2);
   }
 
   // TODO(wad) move to storage by label-derivative and not number.
