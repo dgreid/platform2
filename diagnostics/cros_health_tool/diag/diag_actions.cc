@@ -54,7 +54,8 @@ const struct {
     {"has_secure_wifi_connection",
      mojo_ipc::DiagnosticRoutineEnum::kHasSecureWiFiConnection},
     {"dns_resolver_present",
-     mojo_ipc::DiagnosticRoutineEnum::kDnsResolverPresent}};
+     mojo_ipc::DiagnosticRoutineEnum::kDnsResolverPresent},
+    {"dns_latency", mojo_ipc::DiagnosticRoutineEnum::kDnsLatency}};
 
 const struct {
   const char* readable_status;

@@ -47,6 +47,11 @@ class NetworkDiagnosticsAdapter {
   virtual void RunDnsResolverPresentRoutine(
       chromeos::network_diagnostics::mojom::NetworkDiagnosticsRoutines::
           DnsResolverPresentCallback) = 0;
+
+  // Requests the browser to invoke the DnsLatency routine.
+  virtual void RunDnsLatencyRoutine(
+      chromeos::network_diagnostics::mojom::NetworkDiagnosticsRoutines::
+          DnsLatencyCallback) = 0;
 };
 
 }  // namespace diagnostics

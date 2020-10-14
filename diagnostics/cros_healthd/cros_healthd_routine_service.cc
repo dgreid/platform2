@@ -176,6 +176,12 @@ void CrosHealthdRoutineService::RunDnsResolverPresentRoutine(
              std::move(callback));
 }
 
+void CrosHealthdRoutineService::RunDnsLatencyRoutine(
+    RunDnsLatencyRoutineCallback callback) {
+  RunRoutine(routine_factory_->MakeDnsLatencyRoutine(),
+             mojo_ipc::DiagnosticRoutineEnum::kDnsLatency, std::move(callback));
+}
+
 void CrosHealthdRoutineService::RunFloatingPointAccuracyRoutine(
     uint32_t length_seconds, RunFloatingPointAccuracyRoutineCallback callback) {
   RunRoutine(routine_factory_->MakeFloatingPointAccuracyRoutine(
@@ -299,7 +305,8 @@ void CrosHealthdRoutineService::PopulateAvailableRoutines() {
       mojo_ipc::DiagnosticRoutineEnum::kSignalStrength,
       mojo_ipc::DiagnosticRoutineEnum::kGatewayCanBePinged,
       mojo_ipc::DiagnosticRoutineEnum::kHasSecureWiFiConnection,
-      mojo_ipc::DiagnosticRoutineEnum::kDnsResolverPresent};
+      mojo_ipc::DiagnosticRoutineEnum::kDnsResolverPresent,
+      mojo_ipc::DiagnosticRoutineEnum::kDnsLatency};
 
   if (context_->system_config()->HasBattery()) {
     available_routines_.insert(

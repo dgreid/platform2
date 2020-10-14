@@ -107,6 +107,9 @@ class CrosHealthdRoutineFactory {
   // itself.
   virtual std::unique_ptr<DiagnosticRoutine>
   MakeDnsResolverPresentRoutine() = 0;
+  // Constructs a new instance of the DNS latency routine. See
+  // diagnostics/routines/dns_latency for details on the routine itself.
+  virtual std::unique_ptr<DiagnosticRoutine> MakeDnsLatencyRoutine() = 0;
 };
 
 }  // namespace diagnostics

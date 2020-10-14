@@ -40,6 +40,9 @@ class NetworkDiagnosticsAdapterImpl final : public NetworkDiagnosticsAdapter {
   void RunDnsResolverPresentRoutine(
       chromeos::network_diagnostics::mojom::NetworkDiagnosticsRoutines::
           DnsResolverPresentCallback) override;
+  void RunDnsLatencyRoutine(
+      chromeos::network_diagnostics::mojom::NetworkDiagnosticsRoutines::
+          DnsLatencyCallback) override;
 
  private:
   // NetworkDiagnosticsRoutines remote used to run network diagnostics.
