@@ -201,6 +201,13 @@ bool DiagActions::ActionRunDiskReadRoutine(
   return PollRoutineAndProcessResult();
 }
 
+bool DiagActions::ActionRunDnsResolverPresentRoutine() {
+  auto response = adapter_->RunDnsResolverPresentRoutine();
+  CHECK(response) << "No RunRoutineResponse received.";
+  id_ = response->id;
+  return PollRoutineAndProcessResult();
+}
+
 bool DiagActions::ActionRunFloatingPointAccuracyRoutine(
     base::TimeDelta exec_duration) {
   auto response = adapter_->RunFloatingPointAccuracyRoutine(exec_duration);

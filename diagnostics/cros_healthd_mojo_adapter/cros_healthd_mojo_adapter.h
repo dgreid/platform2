@@ -122,6 +122,10 @@ class CrosHealthdMojoAdapter {
   virtual chromeos::cros_healthd::mojom::RunRoutineResponsePtr
   RunHasSecureWiFiConnectionRoutine() = 0;
 
+  // Runs the DNS resolver present routine.
+  virtual chromeos::cros_healthd::mojom::RunRoutineResponsePtr
+  RunDnsResolverPresentRoutine() = 0;
+
   // Returns which routines are available on the platform.
   virtual std::vector<chromeos::cros_healthd::mojom::DiagnosticRoutineEnum>
   GetAvailableRoutines() = 0;

@@ -240,6 +240,9 @@ int diag_main(int argc, char** argv) {
       case mojo_ipc::DiagnosticRoutineEnum::kHasSecureWiFiConnection:
         routine_result = actions.ActionRunHasSecureWiFiConnectionRoutine();
         break;
+      case mojo_ipc::DiagnosticRoutineEnum::kDnsResolverPresent:
+        routine_result = actions.ActionRunDnsResolverPresentRoutine();
+        break;
       default:
         std::cout << "Unsupported routine: " << FLAGS_routine << std::endl;
         return EXIT_FAILURE;
