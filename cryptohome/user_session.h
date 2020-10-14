@@ -40,6 +40,8 @@ class UserSession : public base::RefCountedThreadSafe<UserSession> {
 
   bool SetCredentials(const Credentials& credentials, int key_index);
 
+  const KeyData& key_data() const;
+
  private:
   scoped_refptr<cryptohome::Mount> mount_;
 };

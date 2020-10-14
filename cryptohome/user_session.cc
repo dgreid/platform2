@@ -58,4 +58,8 @@ bool UserSession::SetCredentials(const Credentials& credentials,
   return mount_->SetUserCreds(credentials, key_index);
 }
 
+const KeyData& UserSession::key_data() const {
+  return mount_->GetCurrentLegacyUserSession()->key_data();
+}
+
 }  // namespace cryptohome
