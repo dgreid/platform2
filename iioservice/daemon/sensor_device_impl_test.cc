@@ -25,7 +25,8 @@ namespace iioservice {
 namespace {
 
 constexpr char kDeviceAttrName[] = "FakeDeviceAttr";
-constexpr char kDeviceAttrValue[] = "FakeDeviceAttrValue";
+constexpr char kDeviceAttrValue[] = "FakeDeviceAttrValue\0\n\0";
+constexpr char kParsedDeviceAttrValue[] = "FakeDeviceAttrValue";
 
 constexpr char kChnAttrName[] = "FakeChnAttr";
 constexpr char kChnAttrValue[] = "FakeChnValue";
@@ -54,7 +55,7 @@ class SensorDeviceImplTest : public ::testing::Test {
         kDeviceAttrName,
         base::BindOnce([](const base::Optional<std::string>& value) {
           EXPECT_TRUE(value.has_value());
-          EXPECT_EQ(value.value().compare(kDeviceAttrValue), 0);
+          EXPECT_EQ(value.value().compare(kParsedDeviceAttrValue), 0);
         }));
   }
 

@@ -9,6 +9,7 @@
 #include <vector>
 
 #include <base/logging.h>
+#include <base/strings/string_util.h>
 
 #include <libmems/common_types.h>
 #include <libmems/iio_channel.h>
@@ -86,6 +87,12 @@ void SensorDeviceImpl::GetAttribute(const std::string& attr_name,
 
   mojo::ReceiverId id = receiver_set_.current_receiver();
   auto value_opt = clients_[id].iio_device->ReadStringAttribute(attr_name);
+  if (value_opt.has_value()) {
+    value_opt =
+        base::TrimString(value_opt.value(), base::StringPiece("\0\n", 2),
+                         base::TRIM_TRAILING)
+            .as_string();
+  }
 
   std::move(callback).Run(std::move(value_opt));
 }
