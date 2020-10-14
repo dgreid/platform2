@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "sommelier.h"
+#include "sommelier.h"  // NOLINT(build/include_directory)
 
 #include <assert.h>
 #include <errno.h>
@@ -121,7 +121,7 @@ static int sl_handle_data_transfer_write(int fd, uint32_t mask, void* data) {
     // On a write error, end the transfer.
     sl_data_transfer_destroy(transfer);
   } else {
-    assert(rv <= transfer->bytes_left);
+    assert(rv <= static_cast<int>(transfer->bytes_left));
     transfer->bytes_left -= rv;
     transfer->offset += rv;
   }
@@ -139,7 +139,6 @@ static int sl_handle_data_transfer_write(int fd, uint32_t mask, void* data) {
 static void sl_data_transfer_create(struct wl_event_loop* event_loop,
                                     int read_fd,
                                     int write_fd) {
-  struct sl_data_transfer* transfer;
   int flags;
   int rv;
 
@@ -149,7 +148,8 @@ static void sl_data_transfer_create(struct wl_event_loop* event_loop,
   UNUSED(rv);
 
   // Start out the transfer in the reading state.
-  transfer = malloc(sizeof(*transfer));
+  struct sl_data_transfer* transfer =
+      static_cast<sl_data_transfer*>(malloc(sizeof(*transfer)));
   assert(transfer);
   transfer->read_fd = read_fd;
   transfer->write_fd = write_fd;
@@ -166,7 +166,8 @@ static void sl_data_offer_accept(struct wl_client* client,
                                  struct wl_resource* resource,
                                  uint32_t serial,
                                  const char* mime_type) {
-  struct sl_host_data_offer* host = wl_resource_get_user_data(resource);
+  struct sl_host_data_offer* host =
+      static_cast<sl_host_data_offer*>(wl_resource_get_user_data(resource));
 
   wl_data_offer_accept(host->proxy, serial, mime_type);
 }
@@ -175,16 +176,16 @@ static void sl_data_offer_receive(struct wl_client* client,
                                   struct wl_resource* resource,
                                   const char* mime_type,
                                   int32_t fd) {
-  struct sl_host_data_offer* host = wl_resource_get_user_data(resource);
+  struct sl_host_data_offer* host =
+      static_cast<sl_host_data_offer*>(wl_resource_get_user_data(resource));
 
   switch (host->ctx->data_driver) {
     case DATA_DRIVER_VIRTWL: {
-      struct virtwl_ioctl_new new_pipe = {
-          .type = VIRTWL_IOCTL_NEW_PIPE_READ,
-          .fd = -1,
-          .flags = 0,
-          .size = 0,
-      };
+      struct virtwl_ioctl_new new_pipe = {};
+      new_pipe.type = VIRTWL_IOCTL_NEW_PIPE_READ;
+      new_pipe.fd = -1;
+      new_pipe.flags = 0;
+      new_pipe.size = 0;
       int rv;
 
       rv = ioctl(host->ctx->virtwl_fd, VIRTWL_IOCTL_NEW, &new_pipe);
@@ -214,7 +215,8 @@ static void sl_data_offer_destroy(struct wl_client* client,
 
 static void sl_data_offer_finish(struct wl_client* client,
                                  struct wl_resource* resource) {
-  struct sl_host_data_offer* host = wl_resource_get_user_data(resource);
+  struct sl_host_data_offer* host =
+      static_cast<sl_host_data_offer*>(wl_resource_get_user_data(resource));
 
   wl_data_offer_finish(host->proxy);
 }
@@ -223,7 +225,8 @@ static void sl_data_offer_set_actions(struct wl_client* client,
                                       struct wl_resource* resource,
                                       uint32_t dnd_actions,
                                       uint32_t preferred_action) {
-  struct sl_host_data_offer* host = wl_resource_get_user_data(resource);
+  struct sl_host_data_offer* host =
+      static_cast<sl_host_data_offer*>(wl_resource_get_user_data(resource));
 
   wl_data_offer_set_actions(host->proxy, dnd_actions, preferred_action);
 }
@@ -235,7 +238,8 @@ static const struct wl_data_offer_interface sl_data_offer_implementation = {
 static void sl_data_offer_offer(void* data,
                                 struct wl_data_offer* data_offer,
                                 const char* mime_type) {
-  struct sl_host_data_offer* host = wl_data_offer_get_user_data(data_offer);
+  struct sl_host_data_offer* host =
+      static_cast<sl_host_data_offer*>(wl_data_offer_get_user_data(data_offer));
 
   wl_data_offer_send_offer(host->resource, mime_type);
 }
@@ -243,7 +247,8 @@ static void sl_data_offer_offer(void* data,
 static void sl_data_offer_source_actions(void* data,
                                          struct wl_data_offer* data_offer,
                                          uint32_t source_actions) {
-  struct sl_host_data_offer* host = wl_data_offer_get_user_data(data_offer);
+  struct sl_host_data_offer* host =
+      static_cast<sl_host_data_offer*>(wl_data_offer_get_user_data(data_offer));
 
   wl_data_offer_send_source_actions(host->resource, source_actions);
 }
@@ -251,7 +256,8 @@ static void sl_data_offer_source_actions(void* data,
 static void sl_data_offer_action(void* data,
                                  struct wl_data_offer* data_offer,
                                  uint32_t dnd_action) {
-  struct sl_host_data_offer* host = wl_data_offer_get_user_data(data_offer);
+  struct sl_host_data_offer* host =
+      static_cast<sl_host_data_offer*>(wl_data_offer_get_user_data(data_offer));
 
   wl_data_offer_send_action(host->resource, dnd_action);
 }
@@ -260,7 +266,8 @@ static const struct wl_data_offer_listener sl_data_offer_listener = {
     sl_data_offer_offer, sl_data_offer_source_actions, sl_data_offer_action};
 
 static void sl_destroy_host_data_offer(struct wl_resource* resource) {
-  struct sl_host_data_offer* host = wl_resource_get_user_data(resource);
+  struct sl_host_data_offer* host =
+      static_cast<sl_host_data_offer*>(wl_resource_get_user_data(resource));
 
   wl_data_offer_destroy(host->proxy);
   wl_resource_set_user_data(resource, NULL);
@@ -270,7 +277,8 @@ static void sl_destroy_host_data_offer(struct wl_resource* resource) {
 static void sl_data_source_offer(struct wl_client* client,
                                  struct wl_resource* resource,
                                  const char* mime_type) {
-  struct sl_host_data_source* host = wl_resource_get_user_data(resource);
+  struct sl_host_data_source* host =
+      static_cast<sl_host_data_source*>(wl_resource_get_user_data(resource));
 
   wl_data_source_offer(host->proxy, mime_type);
 }
@@ -283,7 +291,8 @@ static void sl_data_source_destroy(struct wl_client* client,
 static void sl_data_source_set_actions(struct wl_client* client,
                                        struct wl_resource* resource,
                                        uint32_t dnd_actions) {
-  struct sl_host_data_source* host = wl_resource_get_user_data(resource);
+  struct sl_host_data_source* host =
+      static_cast<sl_host_data_source*>(wl_resource_get_user_data(resource));
 
   wl_data_source_set_actions(host->proxy, dnd_actions);
 }
@@ -294,7 +303,8 @@ static const struct wl_data_source_interface sl_data_source_implementation = {
 static void sl_data_source_target(void* data,
                                   struct wl_data_source* data_source,
                                   const char* mime_type) {
-  struct sl_host_data_source* host = wl_data_source_get_user_data(data_source);
+  struct sl_host_data_source* host = static_cast<sl_host_data_source*>(
+      wl_data_source_get_user_data(data_source));
 
   wl_data_source_send_target(host->resource, mime_type);
 }
@@ -303,7 +313,8 @@ static void sl_data_source_send(void* data,
                                 struct wl_data_source* data_source,
                                 const char* mime_type,
                                 int32_t fd) {
-  struct sl_host_data_source* host = wl_data_source_get_user_data(data_source);
+  struct sl_host_data_source* host = static_cast<sl_host_data_source*>(
+      wl_data_source_get_user_data(data_source));
 
   wl_data_source_send_send(host->resource, mime_type, fd);
   close(fd);
@@ -311,21 +322,24 @@ static void sl_data_source_send(void* data,
 
 static void sl_data_source_cancelled(void* data,
                                      struct wl_data_source* data_source) {
-  struct sl_host_data_source* host = wl_data_source_get_user_data(data_source);
+  struct sl_host_data_source* host = static_cast<sl_host_data_source*>(
+      wl_data_source_get_user_data(data_source));
 
   wl_data_source_send_cancelled(host->resource);
 }
 
 void sl_data_source_dnd_drop_performed(void* data,
                                        struct wl_data_source* data_source) {
-  struct sl_host_data_source* host = wl_data_source_get_user_data(data_source);
+  struct sl_host_data_source* host = static_cast<sl_host_data_source*>(
+      wl_data_source_get_user_data(data_source));
 
   wl_data_source_send_dnd_drop_performed(host->resource);
 }
 
 void sl_data_source_dnd_finished(void* data,
                                  struct wl_data_source* data_source) {
-  struct sl_host_data_source* host = wl_data_source_get_user_data(data_source);
+  struct sl_host_data_source* host = static_cast<sl_host_data_source*>(
+      wl_data_source_get_user_data(data_source));
 
   wl_data_source_send_dnd_finished(host->resource);
 }
@@ -333,7 +347,8 @@ void sl_data_source_dnd_finished(void* data,
 void sl_data_source_actions(void* data,
                             struct wl_data_source* data_source,
                             uint32_t dnd_action) {
-  struct sl_host_data_source* host = wl_data_source_get_user_data(data_source);
+  struct sl_host_data_source* host = static_cast<sl_host_data_source*>(
+      wl_data_source_get_user_data(data_source));
 
   wl_data_source_send_action(host->resource, dnd_action);
 }
@@ -344,7 +359,8 @@ static const struct wl_data_source_listener sl_data_source_listener = {
     sl_data_source_dnd_finished, sl_data_source_actions};
 
 static void sl_destroy_host_data_source(struct wl_resource* resource) {
-  struct sl_host_data_source* host = wl_resource_get_user_data(resource);
+  struct sl_host_data_source* host =
+      static_cast<sl_host_data_source*>(wl_resource_get_user_data(resource));
 
   wl_data_source_destroy(host->proxy);
   wl_resource_set_user_data(resource, NULL);
@@ -357,32 +373,42 @@ static void sl_data_device_start_drag(struct wl_client* client,
                                       struct wl_resource* origin_resource,
                                       struct wl_resource* icon_resource,
                                       uint32_t serial) {
-  struct sl_host_data_device* host = wl_resource_get_user_data(resource);
+  struct sl_host_data_device* host =
+      static_cast<sl_host_data_device*>(wl_resource_get_user_data(resource));
   struct sl_host_data_source* host_source =
-      source_resource ? wl_resource_get_user_data(source_resource) : NULL;
+      source_resource ? static_cast<sl_host_data_source*>(
+                            wl_resource_get_user_data(source_resource))
+                      : NULL;
   struct sl_host_surface* host_origin =
-      origin_resource ? wl_resource_get_user_data(origin_resource) : NULL;
+      origin_resource ? static_cast<sl_host_surface*>(
+                            wl_resource_get_user_data(origin_resource))
+                      : NULL;
   struct sl_host_surface* host_icon =
-      icon_resource ? wl_resource_get_user_data(icon_resource) : NULL;
+      icon_resource ? static_cast<sl_host_surface*>(
+                          wl_resource_get_user_data(icon_resource))
+                    : NULL;
   host_icon->has_role = 1;
 
   wl_data_device_start_drag(host->proxy,
                             host_source ? host_source->proxy : NULL,
                             host_origin ? host_origin->proxy : NULL,
                             host_icon ? host_icon->proxy : NULL, serial);
-}
+}  // NOLINT(whitespace/indent)
 
 static void sl_data_device_set_selection(struct wl_client* client,
                                          struct wl_resource* resource,
                                          struct wl_resource* source_resource,
                                          uint32_t serial) {
-  struct sl_host_data_device* host = wl_resource_get_user_data(resource);
+  struct sl_host_data_device* host =
+      static_cast<sl_host_data_device*>(wl_resource_get_user_data(resource));
   struct sl_host_data_source* host_source =
-      source_resource ? wl_resource_get_user_data(source_resource) : NULL;
+      source_resource ? static_cast<sl_host_data_source*>(
+                            wl_resource_get_user_data(source_resource))
+                      : NULL;
 
   wl_data_device_set_selection(host->proxy,
                                host_source ? host_source->proxy : NULL, serial);
-}
+}  // NOLINT(whitespace/indent)
 
 static void sl_data_device_release(struct wl_client* client,
                                    struct wl_resource* resource) {
@@ -396,10 +422,10 @@ static const struct wl_data_device_interface sl_data_device_implementation = {
 static void sl_data_device_data_offer(void* data,
                                       struct wl_data_device* data_device,
                                       struct wl_data_offer* data_offer) {
-  struct sl_host_data_device* host = wl_data_device_get_user_data(data_device);
-  struct sl_host_data_offer* host_data_offer;
-
-  host_data_offer = malloc(sizeof(*host_data_offer));
+  struct sl_host_data_device* host = static_cast<sl_host_data_device*>(
+      wl_data_device_get_user_data(data_device));
+  struct sl_host_data_offer* host_data_offer =
+      static_cast<sl_host_data_offer*>(malloc(sizeof(*host_data_offer)));
   assert(host_data_offer);
 
   host_data_offer->ctx = host->ctx;
@@ -424,21 +450,24 @@ static void sl_data_device_enter(void* data,
                                  wl_fixed_t x,
                                  wl_fixed_t y,
                                  struct wl_data_offer* data_offer) {
-  struct sl_host_data_device* host = wl_data_device_get_user_data(data_device);
-  struct sl_host_surface* host_surface = wl_surface_get_user_data(surface);
+  struct sl_host_data_device* host = static_cast<sl_host_data_device*>(
+      wl_data_device_get_user_data(data_device));
+  struct sl_host_surface* host_surface =
+      static_cast<sl_host_surface*>(wl_surface_get_user_data(surface));
   struct sl_host_data_offer* host_data_offer =
-      wl_data_offer_get_user_data(data_offer);
+      static_cast<sl_host_data_offer*>(wl_data_offer_get_user_data(data_offer));
   double scale = host->ctx->scale;
 
   wl_data_device_send_enter(host->resource, serial, host_surface->resource,
                             wl_fixed_from_double(wl_fixed_to_double(x) * scale),
                             wl_fixed_from_double(wl_fixed_to_double(y) * scale),
                             host_data_offer->resource);
-}
+}  // NOLINT(whitespace/indent)
 
 static void sl_data_device_leave(void* data,
                                  struct wl_data_device* data_device) {
-  struct sl_host_data_device* host = wl_data_device_get_user_data(data_device);
+  struct sl_host_data_device* host = static_cast<sl_host_data_device*>(
+      wl_data_device_get_user_data(data_device));
 
   wl_data_device_send_leave(host->resource);
 }
@@ -448,7 +477,8 @@ static void sl_data_device_motion(void* data,
                                   uint32_t time,
                                   wl_fixed_t x,
                                   wl_fixed_t y) {
-  struct sl_host_data_device* host = wl_data_device_get_user_data(data_device);
+  struct sl_host_data_device* host = static_cast<sl_host_data_device*>(
+      wl_data_device_get_user_data(data_device));
   double scale = host->ctx->scale;
 
   wl_data_device_send_motion(
@@ -458,7 +488,8 @@ static void sl_data_device_motion(void* data,
 
 static void sl_data_device_drop(void* data,
                                 struct wl_data_device* data_device) {
-  struct sl_host_data_device* host = wl_data_device_get_user_data(data_device);
+  struct sl_host_data_device* host = static_cast<sl_host_data_device*>(
+      wl_data_device_get_user_data(data_device));
 
   wl_data_device_send_drop(host->resource);
 }
@@ -466,9 +497,10 @@ static void sl_data_device_drop(void* data,
 static void sl_data_device_selection(void* data,
                                      struct wl_data_device* data_device,
                                      struct wl_data_offer* data_offer) {
-  struct sl_host_data_device* host = wl_data_device_get_user_data(data_device);
+  struct sl_host_data_device* host = static_cast<sl_host_data_device*>(
+      wl_data_device_get_user_data(data_device));
   struct sl_host_data_offer* host_data_offer =
-      wl_data_offer_get_user_data(data_offer);
+      static_cast<sl_host_data_offer*>(wl_data_offer_get_user_data(data_offer));
 
   wl_data_device_send_selection(host->resource, host_data_offer->resource);
 }
@@ -478,7 +510,8 @@ static const struct wl_data_device_listener sl_data_device_listener = {
     sl_data_device_motion,     sl_data_device_drop,  sl_data_device_selection};
 
 static void sl_destroy_host_data_device(struct wl_resource* resource) {
-  struct sl_host_data_device* host = wl_resource_get_user_data(resource);
+  struct sl_host_data_device* host =
+      static_cast<sl_host_data_device*>(wl_resource_get_user_data(resource));
 
   if (wl_data_device_get_version(host->proxy) >=
       WL_DATA_DEVICE_RELEASE_SINCE_VERSION) {
@@ -493,10 +526,10 @@ static void sl_destroy_host_data_device(struct wl_resource* resource) {
 static void sl_data_device_manager_create_data_source(
     struct wl_client* client, struct wl_resource* resource, uint32_t id) {
   struct sl_host_data_device_manager* host =
-      wl_resource_get_user_data(resource);
-  struct sl_host_data_source* host_data_source;
-
-  host_data_source = malloc(sizeof(*host_data_source));
+      static_cast<sl_host_data_device_manager*>(
+          wl_resource_get_user_data(resource));
+  struct sl_host_data_source* host_data_source =
+      static_cast<sl_host_data_source*>(malloc(sizeof(*host_data_source)));
   assert(host_data_source);
 
   host_data_source->resource = wl_resource_create(
@@ -517,11 +550,12 @@ static void sl_data_device_manager_get_data_device(
     uint32_t id,
     struct wl_resource* seat_resource) {
   struct sl_host_data_device_manager* host =
-      wl_resource_get_user_data(resource);
-  struct sl_host_seat* host_seat = wl_resource_get_user_data(seat_resource);
-  struct sl_host_data_device* host_data_device;
-
-  host_data_device = malloc(sizeof(*host_data_device));
+      static_cast<sl_host_data_device_manager*>(
+          wl_resource_get_user_data(resource));
+  struct sl_host_seat* host_seat =
+      static_cast<sl_host_seat*>(wl_resource_get_user_data(seat_resource));
+  struct sl_host_data_device* host_data_device =
+      static_cast<sl_host_data_device*>(malloc(sizeof(*host_data_device)));
   assert(host_data_device);
 
   host_data_device->ctx = host->ctx;
@@ -535,7 +569,7 @@ static void sl_data_device_manager_get_data_device(
   wl_data_device_set_user_data(host_data_device->proxy, host_data_device);
   wl_data_device_add_listener(host_data_device->proxy, &sl_data_device_listener,
                               host_data_device);
-}
+}  // NOLINT(whitespace/indent)
 
 static const struct wl_data_device_manager_interface
     sl_data_device_manager_implementation = {
@@ -544,7 +578,8 @@ static const struct wl_data_device_manager_interface
 
 static void sl_destroy_host_data_device_manager(struct wl_resource* resource) {
   struct sl_host_data_device_manager* host =
-      wl_resource_get_user_data(resource);
+      static_cast<sl_host_data_device_manager*>(
+          wl_resource_get_user_data(resource));
 
   wl_data_device_manager_destroy(host->proxy);
   wl_resource_set_user_data(resource, NULL);
@@ -556,9 +591,8 @@ static void sl_bind_host_data_device_manager(struct wl_client* client,
                                              uint32_t version,
                                              uint32_t id) {
   struct sl_context* ctx = (struct sl_context*)data;
-  struct sl_host_data_device_manager* host;
-
-  host = malloc(sizeof(*host));
+  struct sl_host_data_device_manager* host =
+      static_cast<sl_host_data_device_manager*>(malloc(sizeof(*host)));
   assert(host);
   host->ctx = ctx;
   host->resource =
@@ -567,9 +601,9 @@ static void sl_bind_host_data_device_manager(struct wl_client* client,
   wl_resource_set_implementation(host->resource,
                                  &sl_data_device_manager_implementation, host,
                                  sl_destroy_host_data_device_manager);
-  host->proxy = wl_registry_bind(
+  host->proxy = static_cast<wl_data_device_manager*>(wl_registry_bind(
       wl_display_get_registry(ctx->display), ctx->data_device_manager->id,
-      &wl_data_device_manager_interface, ctx->data_device_manager->version);
+      &wl_data_device_manager_interface, ctx->data_device_manager->version));
   wl_data_device_manager_set_user_data(host->proxy, host);
 }
 

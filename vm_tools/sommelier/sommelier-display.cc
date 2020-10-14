@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "sommelier.h"
+#include "sommelier.h"  // NOLINT(build/include_directory)
 
 #include <assert.h>
 #include <stdlib.h>
@@ -15,7 +15,8 @@ static void sl_registry_bind(struct wl_client* client,
                              const char* interface,
                              uint32_t version,
                              uint32_t id) {
-  struct sl_host_registry* host = wl_resource_get_user_data(resource);
+  struct sl_host_registry* host =
+      static_cast<sl_host_registry*>(wl_resource_get_user_data(resource));
   struct sl_global* global;
 
   wl_list_for_each(global, &host->ctx->globals, link) {
@@ -36,7 +37,8 @@ static const struct wl_registry_interface sl_registry_implementation = {
 static void sl_sync_callback_done(void* data,
                                   struct wl_callback* callback,
                                   uint32_t serial) {
-  struct sl_host_callback* host = wl_callback_get_user_data(callback);
+  struct sl_host_callback* host =
+      static_cast<sl_host_callback*>(wl_callback_get_user_data(callback));
 
   wl_callback_send_done(host->resource, serial);
   wl_resource_destroy(host->resource);
@@ -46,7 +48,8 @@ static const struct wl_callback_listener sl_sync_callback_listener = {
     sl_sync_callback_done};
 
 static void sl_host_callback_destroy(struct wl_resource* resource) {
-  struct sl_host_callback* host = wl_resource_get_user_data(resource);
+  struct sl_host_callback* host =
+      static_cast<sl_host_callback*>(wl_resource_get_user_data(resource));
 
   wl_callback_destroy(host->proxy);
   wl_resource_set_user_data(resource, NULL);
@@ -56,10 +59,10 @@ static void sl_host_callback_destroy(struct wl_resource* resource) {
 static void sl_display_sync(struct wl_client* client,
                             struct wl_resource* resource,
                             uint32_t id) {
-  struct sl_context* ctx = wl_resource_get_user_data(resource);
-  struct sl_host_callback* host_callback;
-
-  host_callback = malloc(sizeof(*host_callback));
+  struct sl_context* ctx =
+      static_cast<sl_context*>(wl_resource_get_user_data(resource));
+  struct sl_host_callback* host_callback =
+      static_cast<sl_host_callback*>(malloc(sizeof(*host_callback)));
   assert(host_callback);
 
   host_callback->resource =
@@ -73,7 +76,8 @@ static void sl_display_sync(struct wl_client* client,
 }
 
 static void sl_destroy_host_registry(struct wl_resource* resource) {
-  struct sl_host_registry* host = wl_resource_get_user_data(resource);
+  struct sl_host_registry* host =
+      static_cast<sl_host_registry*>(wl_resource_get_user_data(resource));
 
   wl_list_remove(&host->link);
   free(host);
@@ -82,11 +86,12 @@ static void sl_destroy_host_registry(struct wl_resource* resource) {
 static void sl_display_get_registry(struct wl_client* client,
                                     struct wl_resource* resource,
                                     uint32_t id) {
-  struct sl_context* ctx = wl_resource_get_user_data(resource);
-  struct sl_host_registry* host_registry;
+  struct sl_context* ctx =
+      static_cast<sl_context*>(wl_resource_get_user_data(resource));
   struct sl_global* global;
 
-  host_registry = malloc(sizeof(*host_registry));
+  struct sl_host_registry* host_registry =
+      static_cast<sl_host_registry*>(malloc(sizeof(*host_registry)));
   assert(host_registry);
 
   host_registry->ctx = ctx;

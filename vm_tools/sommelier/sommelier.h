@@ -567,4 +567,9 @@ int sl_process_pending_configure_acks(struct sl_window* window,
 
 void sl_window_update(struct sl_window* window);
 
+#define sl_array_for_each(pos, array)                                   \
+  for (pos = static_cast<typeof(pos)>((array)->data);                   \
+       (const char*)pos < ((const char*)(array)->data + (array)->size); \
+       (pos)++)
+
 #endif  // VM_TOOLS_SOMMELIER_SOMMELIER_H_

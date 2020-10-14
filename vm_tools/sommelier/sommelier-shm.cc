@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "sommelier.h"
+#include "sommelier.h"  // NOLINT(build/include_directory)
 
 #include <assert.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <wayland-client.h>
 
-#include "drm-server-protocol.h"
-#include "linux-dmabuf-unstable-v1-client-protocol.h"
+#include "drm-server-protocol.h"  // NOLINT(build/include_directory)
+#include "linux-dmabuf-unstable-v1-client-protocol.h"  // NOLINT(build/include_directory)
 
 struct sl_host_shm_pool {
   struct sl_shm* shm;
@@ -129,7 +129,8 @@ static void sl_host_shm_pool_create_host_buffer(struct wl_client* client,
                                                 int32_t height,
                                                 int32_t stride,
                                                 uint32_t format) {
-  struct sl_host_shm_pool* host = wl_resource_get_user_data(resource);
+  struct sl_host_shm_pool* host =
+      static_cast<sl_host_shm_pool*>(wl_resource_get_user_data(resource));
 
   if (host->shm->ctx->shm_driver == SHM_DRIVER_NOOP) {
     assert(host->proxy);
@@ -168,7 +169,8 @@ static void sl_host_shm_pool_destroy(struct wl_client* client,
 static void sl_host_shm_pool_resize(struct wl_client* client,
                                     struct wl_resource* resource,
                                     int32_t size) {
-  struct sl_host_shm_pool* host = wl_resource_get_user_data(resource);
+  struct sl_host_shm_pool* host =
+      static_cast<sl_host_shm_pool*>(wl_resource_get_user_data(resource));
 
   if (host->proxy)
     wl_shm_pool_resize(host->proxy, size);
@@ -179,7 +181,8 @@ static const struct wl_shm_pool_interface sl_shm_pool_implementation = {
     sl_host_shm_pool_resize};
 
 static void sl_destroy_host_shm_pool(struct wl_resource* resource) {
-  struct sl_host_shm_pool* host = wl_resource_get_user_data(resource);
+  struct sl_host_shm_pool* host =
+      static_cast<sl_host_shm_pool*>(wl_resource_get_user_data(resource));
 
   if (host->fd >= 0)
     close(host->fd);
@@ -194,10 +197,10 @@ static void sl_shm_create_host_pool(struct wl_client* client,
                                     uint32_t id,
                                     int fd,
                                     int32_t size) {
-  struct sl_host_shm* host = wl_resource_get_user_data(resource);
-  struct sl_host_shm_pool* host_shm_pool;
-
-  host_shm_pool = malloc(sizeof(*host_shm_pool));
+  struct sl_host_shm* host =
+      static_cast<sl_host_shm*>(wl_resource_get_user_data(resource));
+  struct sl_host_shm_pool* host_shm_pool =
+      static_cast<sl_host_shm_pool*>(malloc(sizeof(*host_shm_pool)));
   assert(host_shm_pool);
 
   host_shm_pool->shm = host->shm;
@@ -227,7 +230,8 @@ static const struct wl_shm_interface sl_shm_implementation = {
     sl_shm_create_host_pool};
 
 static void sl_shm_format(void* data, struct wl_shm* shm, uint32_t format) {
-  struct sl_host_shm* host = wl_shm_get_user_data(shm);
+  struct sl_host_shm* host =
+      static_cast<sl_host_shm*>(wl_shm_get_user_data(shm));
 
   switch (format) {
     case WL_SHM_FORMAT_RGB565:
@@ -247,7 +251,8 @@ static const struct wl_shm_listener sl_shm_listener = {sl_shm_format};
 static void sl_drm_format(void* data,
                           struct zwp_linux_dmabuf_v1* linux_dmabuf,
                           uint32_t format) {
-  struct sl_host_shm* host = zwp_linux_dmabuf_v1_get_user_data(linux_dmabuf);
+  struct sl_host_shm* host = static_cast<sl_host_shm*>(
+      zwp_linux_dmabuf_v1_get_user_data(linux_dmabuf));
 
   // Forward SHM versions of supported formats.
   switch (format) {
@@ -282,7 +287,8 @@ static const struct zwp_linux_dmabuf_v1_listener sl_linux_dmabuf_listener = {
     sl_drm_format, sl_drm_modifier};
 
 static void sl_destroy_host_shm(struct wl_resource* resource) {
-  struct sl_host_shm* host = wl_resource_get_user_data(resource);
+  struct sl_host_shm* host =
+      static_cast<sl_host_shm*>(wl_resource_get_user_data(resource));
 
   if (host->shm_proxy)
     wl_shm_destroy(host->shm_proxy);
@@ -297,9 +303,7 @@ static void sl_bind_host_shm(struct wl_client* client,
                              uint32_t version,
                              uint32_t id) {
   struct sl_context* ctx = (struct sl_context*)data;
-  struct sl_host_shm* host;
-
-  host = malloc(sizeof(*host));
+  struct sl_host_shm* host = static_cast<sl_host_shm*>(malloc(sizeof(*host)));
   assert(host);
   host->shm = ctx->shm;
   host->shm_proxy = NULL;
@@ -311,19 +315,20 @@ static void sl_bind_host_shm(struct wl_client* client,
   switch (ctx->shm_driver) {
     case SHM_DRIVER_NOOP:
     case SHM_DRIVER_VIRTWL:
-      host->shm_proxy = wl_registry_bind(
+      host->shm_proxy = static_cast<wl_shm*>(wl_registry_bind(
           wl_display_get_registry(ctx->display), ctx->shm->id,
-          &wl_shm_interface, wl_resource_get_version(host->resource));
+          &wl_shm_interface, wl_resource_get_version(host->resource)));
       wl_shm_set_user_data(host->shm_proxy, host);
       wl_shm_add_listener(host->shm_proxy, &sl_shm_listener, host);
       break;
     case SHM_DRIVER_VIRTWL_DMABUF:
     case SHM_DRIVER_DMABUF:
       assert(ctx->linux_dmabuf);
-      host->linux_dmabuf_proxy = wl_registry_bind(
-          wl_display_get_registry(ctx->display), ctx->linux_dmabuf->id,
-          &zwp_linux_dmabuf_v1_interface,
-          wl_resource_get_version(host->resource));
+      host->linux_dmabuf_proxy =
+          static_cast<zwp_linux_dmabuf_v1*>(wl_registry_bind(
+              wl_display_get_registry(ctx->display), ctx->linux_dmabuf->id,
+              &zwp_linux_dmabuf_v1_interface,
+              wl_resource_get_version(host->resource)));
       zwp_linux_dmabuf_v1_set_user_data(host->linux_dmabuf_proxy, host);
       zwp_linux_dmabuf_v1_add_listener(host->linux_dmabuf_proxy,
                                        &sl_linux_dmabuf_listener, host);

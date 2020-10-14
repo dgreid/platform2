@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "sommelier.h"
+#include "sommelier.h"  // NOLINT(build/include_directory)
 
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 #include <wayland-client.h>
 
-#include "aura-shell-client-protocol.h"
+#include "aura-shell-client-protocol.h"  // NOLINT(build/include_directory)
 
 #define MAX_OUTPUT_SCALE 2
 
@@ -114,14 +114,14 @@ void sl_output_get_host_output_state(struct sl_host_output* host,
   }
 
   if (host->ctx->dpi.size) {
-    int adjusted_dpi = *((int*)host->ctx->dpi.data);
-    int* p;
+    int adjusted_dpi = *(reinterpret_cast<int*>(host->ctx->dpi.data));
 
     // Choose the DPI bucket which is closest to the target DPI which we
     // calculated above.
-    wl_array_for_each(p, &host->ctx->dpi) {
-      if (abs(*p - target_dpi) < abs(adjusted_dpi - target_dpi))
-        adjusted_dpi = *p;
+    int* dpi;
+    sl_array_for_each(dpi, &host->ctx->dpi) {
+      if (abs(*dpi - target_dpi) < abs(adjusted_dpi - target_dpi))
+        adjusted_dpi = *dpi;
     }
 
     *physical_width = dpi_to_physical_mm(adjusted_dpi, *width);
@@ -186,7 +186,8 @@ static void sl_output_geometry(void* data,
                                const char* make,
                                const char* model,
                                int transform) {
-  struct sl_host_output* host = wl_output_get_user_data(output);
+  struct sl_host_output* host =
+      static_cast<sl_host_output*>(wl_output_get_user_data(output));
 
   host->x = x;
   host->y = y;
@@ -206,7 +207,8 @@ static void sl_output_mode(void* data,
                            int width,
                            int height,
                            int refresh) {
-  struct sl_host_output* host = wl_output_get_user_data(output);
+  struct sl_host_output* host =
+      static_cast<sl_host_output*>(wl_output_get_user_data(output));
 
   host->flags = flags;
   host->width = width;
@@ -215,7 +217,8 @@ static void sl_output_mode(void* data,
 }
 
 static void sl_output_done(void* data, struct wl_output* output) {
-  struct sl_host_output* host = wl_output_get_user_data(output);
+  struct sl_host_output* host =
+      static_cast<sl_host_output*>(wl_output_get_user_data(output));
 
   // Early out if scale is expected but not yet know.
   if (host->expecting_scale)
@@ -231,7 +234,8 @@ static void sl_output_done(void* data, struct wl_output* output) {
 static void sl_output_scale(void* data,
                             struct wl_output* output,
                             int32_t scale_factor) {
-  struct sl_host_output* host = wl_output_get_user_data(output);
+  struct sl_host_output* host =
+      static_cast<sl_host_output*>(wl_output_get_user_data(output));
 
   host->scale_factor = scale_factor;
 }
@@ -243,7 +247,8 @@ static void sl_aura_output_scale(void* data,
                                  struct zaura_output* output,
                                  uint32_t flags,
                                  uint32_t scale) {
-  struct sl_host_output* host = zaura_output_get_user_data(output);
+  struct sl_host_output* host =
+      static_cast<sl_host_output*>(zaura_output_get_user_data(output));
 
   if (flags & ZAURA_OUTPUT_SCALE_PROPERTY_CURRENT)
     host->current_scale = scale;
@@ -256,7 +261,8 @@ static void sl_aura_output_scale(void* data,
 static void sl_aura_output_connection(void* data,
                                       struct zaura_output* output,
                                       uint32_t connection) {
-  struct sl_host_output* host = zaura_output_get_user_data(output);
+  struct sl_host_output* host =
+      static_cast<sl_host_output*>(zaura_output_get_user_data(output));
 
   host->internal = connection == ZAURA_OUTPUT_CONNECTION_TYPE_INTERNAL;
 }
@@ -264,7 +270,8 @@ static void sl_aura_output_connection(void* data,
 static void sl_aura_output_device_scale_factor(void* data,
                                                struct zaura_output* output,
                                                uint32_t device_scale_factor) {
-  struct sl_host_output* host = zaura_output_get_user_data(output);
+  struct sl_host_output* host =
+      static_cast<sl_host_output*>(zaura_output_get_user_data(output));
 
   host->device_scale_factor = device_scale_factor;
 }
@@ -274,7 +281,8 @@ static const struct zaura_output_listener sl_aura_output_listener = {
     sl_aura_output_device_scale_factor};
 
 static void sl_destroy_host_output(struct wl_resource* resource) {
-  struct sl_host_output* host = wl_resource_get_user_data(resource);
+  struct sl_host_output* host =
+      static_cast<sl_host_output*>(wl_resource_get_user_data(resource));
 
   if (host->aura_output)
     zaura_output_destroy(host->aura_output);
@@ -296,18 +304,17 @@ static void sl_bind_host_output(struct wl_client* client,
                                 uint32_t id) {
   struct sl_output* output = (struct sl_output*)data;
   struct sl_context* ctx = output->ctx;
-  struct sl_host_output* host;
-
-  host = malloc(sizeof(*host));
+  struct sl_host_output* host =
+      static_cast<sl_host_output*>(malloc(sizeof(*host)));
   assert(host);
   host->ctx = ctx;
   host->resource = wl_resource_create(client, &wl_output_interface,
                                       MIN(version, output->version), id);
   wl_resource_set_implementation(host->resource, NULL, host,
                                  sl_destroy_host_output);
-  host->proxy = wl_registry_bind(wl_display_get_registry(ctx->display),
-                                 output->id, &wl_output_interface,
-                                 wl_resource_get_version(host->resource));
+  host->proxy = static_cast<wl_output*>(wl_registry_bind(
+      wl_display_get_registry(ctx->display), output->id, &wl_output_interface,
+      wl_resource_get_version(host->resource)));
   wl_output_set_user_data(host->proxy, host);
   wl_output_add_listener(host->proxy, &sl_output_listener, host);
   host->aura_output = NULL;

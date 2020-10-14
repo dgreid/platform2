@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "sommelier.h"
+#include "sommelier.h"  // NOLINT(build/include_directory)
 
 #include <assert.h>
 #include <math.h>
@@ -13,7 +13,7 @@
 #include <wayland-client.h>
 #include <wayland-util.h>
 
-#include "keyboard-extension-unstable-v1-client-protocol.h"
+#include "keyboard-extension-unstable-v1-client-protocol.h"  // NOLINT(build/include_directory)
 
 struct sl_host_keyboard {
   struct sl_seat* seat;
@@ -46,12 +46,14 @@ static void sl_host_pointer_set_cursor(struct wl_client* client,
                                        struct wl_resource* surface_resource,
                                        int32_t hotspot_x,
                                        int32_t hotspot_y) {
-  struct sl_host_pointer* host = wl_resource_get_user_data(resource);
+  struct sl_host_pointer* host =
+      static_cast<sl_host_pointer*>(wl_resource_get_user_data(resource));
   struct sl_host_surface* host_surface = NULL;
   double scale = host->seat->ctx->scale;
 
   if (surface_resource) {
-    host_surface = wl_resource_get_user_data(surface_resource);
+    host_surface = static_cast<sl_host_surface*>(
+        wl_resource_get_user_data(surface_resource));
     host_surface->has_role = 1;
     if (host_surface->contents_width && host_surface->contents_height)
       wl_surface_commit(host_surface->proxy);
@@ -60,7 +62,7 @@ static void sl_host_pointer_set_cursor(struct wl_client* client,
   wl_pointer_set_cursor(host->proxy, serial,
                         host_surface ? host_surface->proxy : NULL,
                         hotspot_x / scale, hotspot_y / scale);
-}
+}  // NOLINT(whitespace/indent)
 
 static void sl_host_pointer_release(struct wl_client* client,
                                     struct wl_resource* resource) {
@@ -72,8 +74,8 @@ static const struct wl_pointer_interface sl_pointer_implementation = {
 
 static void sl_set_last_event_serial(struct wl_resource* surface_resource,
                                      uint32_t serial) {
-  struct sl_host_surface* host_surface =
-      wl_resource_get_user_data(surface_resource);
+  struct sl_host_surface* host_surface = static_cast<sl_host_surface*>(
+      wl_resource_get_user_data(surface_resource));
 
   host_surface->last_event_serial = serial;
 }
@@ -120,9 +122,11 @@ static void sl_pointer_enter(void* data,
                              struct wl_surface* surface,
                              wl_fixed_t x,
                              wl_fixed_t y) {
-  struct sl_host_pointer* host = wl_pointer_get_user_data(pointer);
+  struct sl_host_pointer* host =
+      static_cast<sl_host_pointer*>(wl_pointer_get_user_data(pointer));
   struct sl_host_surface* host_surface =
-      surface ? wl_surface_get_user_data(surface) : NULL;
+      surface ? static_cast<sl_host_surface*>(wl_surface_get_user_data(surface))
+              : NULL;
 
   if (!host_surface)
     return;
@@ -132,13 +136,14 @@ static void sl_pointer_enter(void* data,
   if (host->focus_resource)
     sl_set_last_event_serial(host->focus_resource, serial);
   host->seat->last_serial = serial;
-}
+}  // NOLINT(whitespace/indent)
 
 static void sl_pointer_leave(void* data,
                              struct wl_pointer* pointer,
                              uint32_t serial,
                              struct wl_surface* surface) {
-  struct sl_host_pointer* host = wl_pointer_get_user_data(pointer);
+  struct sl_host_pointer* host =
+      static_cast<sl_host_pointer*>(wl_pointer_get_user_data(pointer));
 
   sl_pointer_set_focus(host, serial, NULL, 0, 0);
 }
@@ -148,7 +153,8 @@ static void sl_pointer_motion(void* data,
                               uint32_t time,
                               wl_fixed_t x,
                               wl_fixed_t y) {
-  struct sl_host_pointer* host = wl_pointer_get_user_data(pointer);
+  struct sl_host_pointer* host =
+      static_cast<sl_host_pointer*>(wl_pointer_get_user_data(pointer));
   double scale = host->seat->ctx->scale;
 
   wl_pointer_send_motion(host->resource, time, x * scale, y * scale);
@@ -160,7 +166,8 @@ static void sl_pointer_button(void* data,
                               uint32_t time,
                               uint32_t button,
                               uint32_t state) {
-  struct sl_host_pointer* host = wl_pointer_get_user_data(pointer);
+  struct sl_host_pointer* host =
+      static_cast<sl_host_pointer*>(wl_pointer_get_user_data(pointer));
 
   wl_pointer_send_button(host->resource, serial, time, button, state);
 
@@ -174,7 +181,8 @@ static void sl_pointer_axis(void* data,
                             uint32_t time,
                             uint32_t axis,
                             wl_fixed_t value) {
-  struct sl_host_pointer* host = wl_pointer_get_user_data(pointer);
+  struct sl_host_pointer* host =
+      static_cast<sl_host_pointer*>(wl_pointer_get_user_data(pointer));
   double scale = host->seat->ctx->scale;
 
   host->time = time;
@@ -182,7 +190,8 @@ static void sl_pointer_axis(void* data,
 }
 
 static void sl_pointer_frame(void* data, struct wl_pointer* pointer) {
-  struct sl_host_pointer* host = wl_pointer_get_user_data(pointer);
+  struct sl_host_pointer* host =
+      static_cast<sl_host_pointer*>(wl_pointer_get_user_data(pointer));
 
   // Many X apps (e.g. VS Code, Firefox, Chromium) only allow scrolls to happen
   // in multiples of 5 units. This value comes from the smooth scrolling
@@ -222,7 +231,8 @@ static void sl_pointer_frame(void* data, struct wl_pointer* pointer) {
 void sl_pointer_axis_source(void* data,
                             struct wl_pointer* pointer,
                             uint32_t axis_source) {
-  struct sl_host_pointer* host = wl_pointer_get_user_data(pointer);
+  struct sl_host_pointer* host =
+      static_cast<sl_host_pointer*>(wl_pointer_get_user_data(pointer));
 
   wl_pointer_send_axis_source(host->resource, axis_source);
 }
@@ -231,7 +241,8 @@ static void sl_pointer_axis_stop(void* data,
                                  struct wl_pointer* pointer,
                                  uint32_t time,
                                  uint32_t axis) {
-  struct sl_host_pointer* host = wl_pointer_get_user_data(pointer);
+  struct sl_host_pointer* host =
+      static_cast<sl_host_pointer*>(wl_pointer_get_user_data(pointer));
 
   wl_pointer_send_axis_stop(host->resource, time, axis);
 }
@@ -240,7 +251,8 @@ static void sl_pointer_axis_discrete(void* data,
                                      struct wl_pointer* pointer,
                                      uint32_t axis,
                                      int32_t discrete) {
-  struct sl_host_pointer* host = wl_pointer_get_user_data(pointer);
+  struct sl_host_pointer* host =
+      static_cast<sl_host_pointer*>(wl_pointer_get_user_data(pointer));
 
   host->axis_discrete[axis] += discrete;
 }
@@ -263,7 +275,8 @@ static void sl_keyboard_keymap(void* data,
                                uint32_t format,
                                int32_t fd,
                                uint32_t size) {
-  struct sl_host_keyboard* host = wl_keyboard_get_user_data(keyboard);
+  struct sl_host_keyboard* host =
+      static_cast<sl_host_keyboard*>(wl_keyboard_get_user_data(keyboard));
 
   wl_keyboard_send_keymap(host->resource, format, fd, size);
 
@@ -276,7 +289,9 @@ static void sl_keyboard_keymap(void* data,
       xkb_keymap_unref(host->keymap);
 
     host->keymap = xkb_keymap_new_from_string(
-        host->seat->ctx->xkb_context, data, XKB_KEYMAP_FORMAT_TEXT_V1, 0);
+        host->seat->ctx->xkb_context, static_cast<char*>(data),
+        XKB_KEYMAP_FORMAT_TEXT_V1,
+        static_cast<xkb_keymap_compile_flags>(XKB_KEYMAP_COMPILE_NO_FLAGS));
     assert(host->keymap);
 
     munmap(data, size);
@@ -326,9 +341,11 @@ static void sl_keyboard_enter(void* data,
                               uint32_t serial,
                               struct wl_surface* surface,
                               struct wl_array* keys) {
-  struct sl_host_keyboard* host = wl_keyboard_get_user_data(keyboard);
+  struct sl_host_keyboard* host =
+      static_cast<sl_host_keyboard*>(wl_keyboard_get_user_data(keyboard));
   struct sl_host_surface* host_surface =
-      surface ? wl_surface_get_user_data(surface) : NULL;
+      surface ? static_cast<sl_host_surface*>(wl_surface_get_user_data(surface))
+              : NULL;
 
   if (!host_surface)
     return;
@@ -337,13 +354,14 @@ static void sl_keyboard_enter(void* data,
   sl_keyboard_set_focus(host, serial, host_surface, keys);
 
   host->seat->last_serial = serial;
-}
+}  // NOLINT(whitespace/indent)
 
 static void sl_keyboard_leave(void* data,
                               struct wl_keyboard* keyboard,
                               uint32_t serial,
                               struct wl_surface* surface) {
-  struct sl_host_keyboard* host = wl_keyboard_get_user_data(keyboard);
+  struct sl_host_keyboard* host =
+      static_cast<sl_host_keyboard*>(wl_keyboard_get_user_data(keyboard));
   struct wl_array array;
 
   wl_array_init(&array);
@@ -353,11 +371,11 @@ static void sl_keyboard_leave(void* data,
 static int sl_array_set_add(struct wl_array* array, uint32_t key) {
   uint32_t* k;
 
-  wl_array_for_each(k, array) {
+  sl_array_for_each(k, array) {
     if (*k == key)
       return 0;
   }
-  k = wl_array_add(array, sizeof(key));
+  k = static_cast<uint32_t*>(wl_array_add(array, sizeof(key)));
   assert(k);
   *k = key;
   return 1;
@@ -366,9 +384,10 @@ static int sl_array_set_add(struct wl_array* array, uint32_t key) {
 static int sl_array_set_remove(struct wl_array* array, uint32_t key) {
   uint32_t* k;
 
-  wl_array_for_each(k, array) {
+  sl_array_for_each(k, array) {
     if (*k == key) {
-      uint32_t* end = (uint32_t*)((char*)array->data + array->size);
+      uint32_t* end = reinterpret_cast<uint32_t*>(
+          reinterpret_cast<char*>(array->data) + array->size);
 
       *k = *(end - 1);
       array->size -= sizeof(*k);
@@ -384,7 +403,8 @@ static void sl_keyboard_key(void* data,
                             uint32_t time,
                             uint32_t key,
                             uint32_t state) {
-  struct sl_host_keyboard* host = wl_keyboard_get_user_data(keyboard);
+  struct sl_host_keyboard* host =
+      static_cast<sl_host_keyboard*>(wl_keyboard_get_user_data(keyboard));
   int handled = 1;
 
   if (state == WL_KEYBOARD_KEY_STATE_PRESSED) {
@@ -442,7 +462,8 @@ static void sl_keyboard_modifiers(void* data,
                                   uint32_t mods_latched,
                                   uint32_t mods_locked,
                                   uint32_t group) {
-  struct sl_host_keyboard* host = wl_keyboard_get_user_data(keyboard);
+  struct sl_host_keyboard* host =
+      static_cast<sl_host_keyboard*>(wl_keyboard_get_user_data(keyboard));
   xkb_mod_mask_t mask;
 
   wl_keyboard_send_modifiers(host->resource, serial, mods_depressed,
@@ -458,7 +479,8 @@ static void sl_keyboard_modifiers(void* data,
   xkb_state_update_mask(host->state, mods_depressed, mods_latched, mods_locked,
                         0, 0, group);
   mask = xkb_state_serialize_mods(
-      host->state, XKB_STATE_MODS_DEPRESSED | XKB_STATE_MODS_LATCHED);
+      host->state, static_cast<xkb_state_component>(XKB_STATE_MODS_DEPRESSED |
+                                                    XKB_STATE_MODS_LATCHED));
   host->modifiers = 0;
   if (mask & host->control_mask)
     host->modifiers |= CONTROL_MASK;
@@ -472,7 +494,8 @@ static void sl_keyboard_repeat_info(void* data,
                                     struct wl_keyboard* keyboard,
                                     int32_t rate,
                                     int32_t delay) {
-  struct sl_host_keyboard* host = wl_keyboard_get_user_data(keyboard);
+  struct sl_host_keyboard* host =
+      static_cast<sl_host_keyboard*>(wl_keyboard_get_user_data(keyboard));
 
   wl_keyboard_send_repeat_info(host->resource, rate, delay);
 }
@@ -497,9 +520,11 @@ static void sl_host_touch_down(void* data,
                                int32_t id,
                                wl_fixed_t x,
                                wl_fixed_t y) {
-  struct sl_host_touch* host = wl_touch_get_user_data(touch);
+  struct sl_host_touch* host =
+      static_cast<sl_host_touch*>(wl_touch_get_user_data(touch));
   struct sl_host_surface* host_surface =
-      surface ? wl_surface_get_user_data(surface) : NULL;
+      surface ? static_cast<sl_host_surface*>(wl_surface_get_user_data(surface))
+              : NULL;
   double scale = host->seat->ctx->scale;
 
   if (!host_surface)
@@ -526,14 +551,15 @@ static void sl_host_touch_down(void* data,
   if (host->focus_resource)
     sl_set_last_event_serial(host->focus_resource, serial);
   host->seat->last_serial = serial;
-}
+}  // NOLINT(whitespace/indent)
 
 static void sl_host_touch_up(void* data,
                              struct wl_touch* touch,
                              uint32_t serial,
                              uint32_t time,
                              int32_t id) {
-  struct sl_host_touch* host = wl_touch_get_user_data(touch);
+  struct sl_host_touch* host =
+      static_cast<sl_host_touch*>(wl_touch_get_user_data(touch));
 
   wl_list_remove(&host->focus_resource_listener.link);
   wl_list_init(&host->focus_resource_listener.link);
@@ -552,20 +578,23 @@ static void sl_host_touch_motion(void* data,
                                  int32_t id,
                                  wl_fixed_t x,
                                  wl_fixed_t y) {
-  struct sl_host_touch* host = wl_touch_get_user_data(touch);
+  struct sl_host_touch* host =
+      static_cast<sl_host_touch*>(wl_touch_get_user_data(touch));
   double scale = host->seat->ctx->scale;
 
   wl_touch_send_motion(host->resource, time, id, x * scale, y * scale);
 }
 
 static void sl_host_touch_frame(void* data, struct wl_touch* touch) {
-  struct sl_host_touch* host = wl_touch_get_user_data(touch);
+  struct sl_host_touch* host =
+      static_cast<sl_host_touch*>(wl_touch_get_user_data(touch));
 
   wl_touch_send_frame(host->resource);
 }
 
 static void sl_host_touch_cancel(void* data, struct wl_touch* touch) {
-  struct sl_host_touch* host = wl_touch_get_user_data(touch);
+  struct sl_host_touch* host =
+      static_cast<sl_host_touch*>(wl_touch_get_user_data(touch));
 
   wl_touch_send_cancel(host->resource);
 }
@@ -575,7 +604,8 @@ static const struct wl_touch_listener sl_touch_listener = {
     sl_host_touch_frame, sl_host_touch_cancel};
 
 static void sl_destroy_host_pointer(struct wl_resource* resource) {
-  struct sl_host_pointer* host = wl_resource_get_user_data(resource);
+  struct sl_host_pointer* host =
+      static_cast<sl_host_pointer*>(wl_resource_get_user_data(resource));
 
   if (wl_pointer_get_version(host->proxy) >= WL_POINTER_RELEASE_SINCE_VERSION) {
     wl_pointer_release(host->proxy);
@@ -598,10 +628,10 @@ static void sl_pointer_focus_resource_destroyed(struct wl_listener* listener,
 static void sl_host_seat_get_host_pointer(struct wl_client* client,
                                           struct wl_resource* resource,
                                           uint32_t id) {
-  struct sl_host_seat* host = wl_resource_get_user_data(resource);
-  struct sl_host_pointer* host_pointer;
-
-  host_pointer = malloc(sizeof(*host_pointer));
+  struct sl_host_seat* host =
+      static_cast<sl_host_seat*>(wl_resource_get_user_data(resource));
+  struct sl_host_pointer* host_pointer =
+      static_cast<sl_host_pointer*>(malloc(sizeof(*host_pointer)));
   assert(host_pointer);
 
   host_pointer->seat = host->seat;
@@ -627,7 +657,8 @@ static void sl_host_seat_get_host_pointer(struct wl_client* client,
 }
 
 static void sl_destroy_host_keyboard(struct wl_resource* resource) {
-  struct sl_host_keyboard* host = wl_resource_get_user_data(resource);
+  struct sl_host_keyboard* host =
+      static_cast<sl_host_keyboard*>(wl_resource_get_user_data(resource));
 
   if (host->extended_keyboard_proxy)
     zcr_extended_keyboard_v1_destroy(host->extended_keyboard_proxy);
@@ -663,10 +694,10 @@ static void sl_keyboard_focus_resource_destroyed(struct wl_listener* listener,
 static void sl_host_seat_get_host_keyboard(struct wl_client* client,
                                            struct wl_resource* resource,
                                            uint32_t id) {
-  struct sl_host_seat* host = wl_resource_get_user_data(resource);
-  struct sl_host_keyboard* host_keyboard;
-
-  host_keyboard = malloc(sizeof(*host_keyboard));
+  struct sl_host_seat* host =
+      static_cast<sl_host_seat*>(wl_resource_get_user_data(resource));
+  struct sl_host_keyboard* host_keyboard =
+      static_cast<sl_host_keyboard*>(malloc(sizeof(*host_keyboard)));
   assert(host_keyboard);
 
   host_keyboard->seat = host->seat;
@@ -703,7 +734,8 @@ static void sl_host_seat_get_host_keyboard(struct wl_client* client,
 }
 
 static void sl_destroy_host_touch(struct wl_resource* resource) {
-  struct sl_host_touch* host = wl_resource_get_user_data(resource);
+  struct sl_host_touch* host =
+      static_cast<sl_host_touch*>(wl_resource_get_user_data(resource));
 
   if (wl_touch_get_version(host->proxy) >= WL_TOUCH_RELEASE_SINCE_VERSION) {
     wl_touch_release(host->proxy);
@@ -727,10 +759,10 @@ static void sl_touch_focus_resource_destroyed(struct wl_listener* listener,
 static void sl_host_seat_get_host_touch(struct wl_client* client,
                                         struct wl_resource* resource,
                                         uint32_t id) {
-  struct sl_host_seat* host = wl_resource_get_user_data(resource);
-  struct sl_host_touch* host_touch;
-
-  host_touch = malloc(sizeof(*host_touch));
+  struct sl_host_seat* host =
+      static_cast<sl_host_seat*>(wl_resource_get_user_data(resource));
+  struct sl_host_touch* host_touch =
+      static_cast<sl_host_touch*>(malloc(sizeof(*host_touch)));
   assert(host_touch);
 
   host_touch->seat = host->seat;
@@ -749,7 +781,8 @@ static void sl_host_seat_get_host_touch(struct wl_client* client,
 
 static void sl_host_seat_release(struct wl_client* client,
                                  struct wl_resource* resource) {
-  struct sl_host_seat* host = wl_resource_get_user_data(resource);
+  struct sl_host_seat* host =
+      static_cast<sl_host_seat*>(wl_resource_get_user_data(resource));
 
   wl_seat_release(host->proxy);
 }
@@ -761,13 +794,15 @@ static const struct wl_seat_interface sl_seat_implementation = {
 static void sl_seat_capabilities(void* data,
                                  struct wl_seat* seat,
                                  uint32_t capabilities) {
-  struct sl_host_seat* host = wl_seat_get_user_data(seat);
+  struct sl_host_seat* host =
+      static_cast<sl_host_seat*>(wl_seat_get_user_data(seat));
 
   wl_seat_send_capabilities(host->resource, capabilities);
 }
 
 static void sl_seat_name(void* data, struct wl_seat* seat, const char* name) {
-  struct sl_host_seat* host = wl_seat_get_user_data(seat);
+  struct sl_host_seat* host =
+      static_cast<sl_host_seat*>(wl_seat_get_user_data(seat));
 
   if (wl_resource_get_version(host->resource) >= WL_SEAT_NAME_SINCE_VERSION)
     wl_seat_send_name(host->resource, name);
@@ -777,7 +812,8 @@ static const struct wl_seat_listener sl_seat_listener = {sl_seat_capabilities,
                                                          sl_seat_name};
 
 static void sl_destroy_host_seat(struct wl_resource* resource) {
-  struct sl_host_seat* host = wl_resource_get_user_data(resource);
+  struct sl_host_seat* host =
+      static_cast<sl_host_seat*>(wl_resource_get_user_data(resource));
 
   sl_host_seat_removed(host);
 
@@ -794,18 +830,16 @@ static void sl_bind_host_seat(struct wl_client* client,
                               uint32_t version,
                               uint32_t id) {
   struct sl_seat* seat = (struct sl_seat*)data;
-  struct sl_host_seat* host;
-
-  host = malloc(sizeof(*host));
+  struct sl_host_seat* host = static_cast<sl_host_seat*>(malloc(sizeof(*host)));
   assert(host);
   host->seat = seat;
   host->resource = wl_resource_create(client, &wl_seat_interface,
                                       MIN(version, seat->version), id);
   wl_resource_set_implementation(host->resource, &sl_seat_implementation, host,
                                  sl_destroy_host_seat);
-  host->proxy = wl_registry_bind(wl_display_get_registry(seat->ctx->display),
-                                 seat->id, &wl_seat_interface,
-                                 wl_resource_get_version(host->resource));
+  host->proxy = static_cast<wl_seat*>(wl_registry_bind(
+      wl_display_get_registry(seat->ctx->display), seat->id, &wl_seat_interface,
+      wl_resource_get_version(host->resource)));
   wl_seat_set_user_data(host->proxy, host);
   wl_seat_add_listener(host->proxy, &sl_seat_listener, host);
 

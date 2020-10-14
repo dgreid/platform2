@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "sommelier.h"
+#include "sommelier.h"  // NOLINT(build/include_directory)
 
 #include <assert.h>
 #include <errno.h>
@@ -18,9 +18,9 @@
 #include <wayland-client.h>
 #include <wayland-util.h>
 
-#include "drm-server-protocol.h"
-#include "linux-dmabuf-unstable-v1-client-protocol.h"
-#include "viewporter-client-protocol.h"
+#include "drm-server-protocol.h"  // NOLINT(build/include_directory)
+#include "linux-dmabuf-unstable-v1-client-protocol.h"  // NOLINT(build/include_directory)
+#include "viewporter-client-protocol.h"  // NOLINT(build/include_directory)
 
 #define MIN_SIZE (INT_MIN / 10)
 #define MAX_SIZE (INT_MAX / 10)
@@ -138,7 +138,8 @@ static void sl_output_buffer_destroy(struct sl_output_buffer* buffer) {
 }
 
 static void sl_output_buffer_release(void* data, struct wl_buffer* buffer) {
-  struct sl_output_buffer* output_buffer = wl_buffer_get_user_data(buffer);
+  struct sl_output_buffer* output_buffer =
+      static_cast<sl_output_buffer*>(wl_buffer_get_user_data(buffer));
   struct sl_host_surface* host_surface = output_buffer->surface;
 
   wl_list_remove(&output_buffer->link);
@@ -158,9 +159,12 @@ static void sl_host_surface_attach(struct wl_client* client,
                                    struct wl_resource* buffer_resource,
                                    int32_t x,
                                    int32_t y) {
-  struct sl_host_surface* host = wl_resource_get_user_data(resource);
+  struct sl_host_surface* host =
+      static_cast<sl_host_surface*>(wl_resource_get_user_data(resource));
   struct sl_host_buffer* host_buffer =
-      buffer_resource ? wl_resource_get_user_data(buffer_resource) : NULL;
+      buffer_resource ? static_cast<sl_host_buffer*>(
+                            wl_resource_get_user_data(buffer_resource))
+                      : NULL;
   struct wl_buffer* buffer_proxy = NULL;
   struct sl_window* window;
   double scale = host->ctx->scale;
@@ -202,7 +206,8 @@ static void sl_host_surface_attach(struct wl_client* client,
       size_t bpp = sl_shm_bpp_for_shm_format(shm_format);
       size_t num_planes = sl_shm_num_planes_for_shm_format(shm_format);
 
-      host->current_buffer = malloc(sizeof(struct sl_output_buffer));
+      host->current_buffer = static_cast<sl_output_buffer*>(
+          malloc(sizeof(struct sl_output_buffer)));
       assert(host->current_buffer);
       wl_list_insert(&host->released_buffers, &host->current_buffer->link);
       host->current_buffer->width = width;
@@ -245,10 +250,11 @@ static void sl_host_surface_attach(struct wl_client* client,
         } break;
         case SHM_DRIVER_VIRTWL: {
           size_t size = host_buffer->shm_mmap->size;
-          struct virtwl_ioctl_new ioctl_new = {.type = VIRTWL_IOCTL_NEW_ALLOC,
-                                               .fd = -1,
-                                               .flags = 0,
-                                               .size = size};
+          struct virtwl_ioctl_new ioctl_new = {};
+          ioctl_new.type = VIRTWL_IOCTL_NEW_ALLOC;
+          ioctl_new.fd = -1;
+          ioctl_new.flags = 0;
+          ioctl_new.size = static_cast<__u32>(size);
           struct wl_shm_pool* pool;
           int rv;
 
@@ -273,12 +279,13 @@ static void sl_host_surface_attach(struct wl_client* client,
         } break;
         case SHM_DRIVER_VIRTWL_DMABUF: {
           uint32_t drm_format = sl_drm_format_for_shm_format(shm_format);
-          struct virtwl_ioctl_new ioctl_new = {
-              .type = VIRTWL_IOCTL_NEW_DMABUF,
-              .fd = -1,
-              .flags = 0,
-              .dmabuf = {
-                  .width = width, .height = height, .format = drm_format}};
+          struct virtwl_ioctl_new ioctl_new = {};
+          ioctl_new.type = VIRTWL_IOCTL_NEW_DMABUF;
+          ioctl_new.fd = -1;
+          ioctl_new.flags = 0;
+          ioctl_new.dmabuf.width = static_cast<__u32>(width);
+          ioctl_new.dmabuf.height = static_cast<__u32>(height);
+          ioctl_new.dmabuf.format = drm_format;
           struct zwp_linux_buffer_params_v1* buffer_params;
           size_t size;
           int rv;
@@ -353,7 +360,7 @@ static void sl_host_surface_attach(struct wl_client* client,
       break;
     }
   }
-}
+}  // NOLINT(whitespace/indent)
 
 static void sl_host_surface_damage(struct wl_client* client,
                                    struct wl_resource* resource,
@@ -361,7 +368,8 @@ static void sl_host_surface_damage(struct wl_client* client,
                                    int32_t y,
                                    int32_t width,
                                    int32_t height) {
-  struct sl_host_surface* host = wl_resource_get_user_data(resource);
+  struct sl_host_surface* host =
+      static_cast<sl_host_surface*>(wl_resource_get_user_data(resource));
   double scale = host->ctx->scale;
   struct sl_output_buffer* buffer;
   int64_t x1, y1, x2, y2;
@@ -393,7 +401,8 @@ static void sl_host_surface_damage(struct wl_client* client,
 static void sl_frame_callback_done(void* data,
                                    struct wl_callback* callback,
                                    uint32_t time) {
-  struct sl_host_callback* host = wl_callback_get_user_data(callback);
+  struct sl_host_callback* host =
+      static_cast<sl_host_callback*>(wl_callback_get_user_data(callback));
 
   wl_callback_send_done(host->resource, time);
   wl_resource_destroy(host->resource);
@@ -403,7 +412,8 @@ static const struct wl_callback_listener sl_frame_callback_listener = {
     sl_frame_callback_done};
 
 static void sl_host_callback_destroy(struct wl_resource* resource) {
-  struct sl_host_callback* host = wl_resource_get_user_data(resource);
+  struct sl_host_callback* host =
+      static_cast<sl_host_callback*>(wl_resource_get_user_data(resource));
 
   wl_callback_destroy(host->proxy);
   wl_resource_set_user_data(resource, NULL);
@@ -413,10 +423,10 @@ static void sl_host_callback_destroy(struct wl_resource* resource) {
 static void sl_host_surface_frame(struct wl_client* client,
                                   struct wl_resource* resource,
                                   uint32_t callback) {
-  struct sl_host_surface* host = wl_resource_get_user_data(resource);
-  struct sl_host_callback* host_callback;
-
-  host_callback = malloc(sizeof(*host_callback));
+  struct sl_host_surface* host =
+      static_cast<sl_host_surface*>(wl_resource_get_user_data(resource));
+  struct sl_host_callback* host_callback =
+      static_cast<sl_host_callback*>(malloc(sizeof(*host_callback)));
   assert(host_callback);
 
   host_callback->resource =
@@ -433,29 +443,36 @@ static void sl_host_surface_set_opaque_region(
     struct wl_client* client,
     struct wl_resource* resource,
     struct wl_resource* region_resource) {
-  struct sl_host_surface* host = wl_resource_get_user_data(resource);
+  struct sl_host_surface* host =
+      static_cast<sl_host_surface*>(wl_resource_get_user_data(resource));
   struct sl_host_region* host_region =
-      region_resource ? wl_resource_get_user_data(region_resource) : NULL;
+      region_resource ? static_cast<sl_host_region*>(
+                            wl_resource_get_user_data(region_resource))
+                      : NULL;
 
   wl_surface_set_opaque_region(host->proxy,
                                host_region ? host_region->proxy : NULL);
-}
+}  // NOLINT(whitespace/indent)
 
 static void sl_host_surface_set_input_region(
     struct wl_client* client,
     struct wl_resource* resource,
     struct wl_resource* region_resource) {
-  struct sl_host_surface* host = wl_resource_get_user_data(resource);
+  struct sl_host_surface* host =
+      static_cast<sl_host_surface*>(wl_resource_get_user_data(resource));
   struct sl_host_region* host_region =
-      region_resource ? wl_resource_get_user_data(region_resource) : NULL;
+      region_resource ? static_cast<sl_host_region*>(
+                            wl_resource_get_user_data(region_resource))
+                      : NULL;
 
   wl_surface_set_input_region(host->proxy,
                               host_region ? host_region->proxy : NULL);
-}
+}  // NOLINT(whitespace/indent)
 
 static void sl_host_surface_commit(struct wl_client* client,
                                    struct wl_resource* resource) {
-  struct sl_host_surface* host = wl_resource_get_user_data(resource);
+  struct sl_host_surface* host =
+      static_cast<sl_host_surface*>(wl_resource_get_user_data(resource));
   struct sl_viewport* viewport = NULL;
   struct sl_window* window;
 
@@ -463,8 +480,8 @@ static void sl_host_surface_commit(struct wl_client* client,
     viewport = wl_container_of(host->contents_viewport.next, viewport, link);
 
   if (host->contents_shm_mmap) {
-    uint8_t* src_addr = host->contents_shm_mmap->addr;
-    uint8_t* dst_addr = host->current_buffer->mmap->addr;
+    uint8_t* src_addr = static_cast<uint8_t*>(host->contents_shm_mmap->addr);
+    uint8_t* dst_addr = static_cast<uint8_t*>(host->current_buffer->mmap->addr);
     size_t* src_offset = host->contents_shm_mmap->offset;
     size_t* dst_offset = host->current_buffer->mmap->offset;
     size_t* src_stride = host->contents_shm_mmap->stride;
@@ -520,8 +537,8 @@ static void sl_host_surface_commit(struct wl_client* client,
 
       x1 = MAX(0, x1);
       y1 = MAX(0, y1);
-      x2 = MIN(host->contents_width, x2);
-      y2 = MIN(host->contents_height, y2);
+      x2 = MIN(static_cast<int32_t>(host->contents_width), x2);
+      y2 = MIN(static_cast<int32_t>(host->contents_height), y2);
 
       if (x1 < x2 && y1 < y2) {
         size_t i;
@@ -638,7 +655,8 @@ static void sl_host_surface_commit(struct wl_client* client,
 static void sl_host_surface_set_buffer_transform(struct wl_client* client,
                                                  struct wl_resource* resource,
                                                  int32_t transform) {
-  struct sl_host_surface* host = wl_resource_get_user_data(resource);
+  struct sl_host_surface* host =
+      static_cast<sl_host_surface*>(wl_resource_get_user_data(resource));
 
   wl_surface_set_buffer_transform(host->proxy, transform);
 }
@@ -646,7 +664,8 @@ static void sl_host_surface_set_buffer_transform(struct wl_client* client,
 static void sl_host_surface_set_buffer_scale(struct wl_client* client,
                                              struct wl_resource* resource,
                                              int32_t scale) {
-  struct sl_host_surface* host = wl_resource_get_user_data(resource);
+  struct sl_host_surface* host =
+      static_cast<sl_host_surface*>(wl_resource_get_user_data(resource));
 
   host->contents_scale = scale;
 }
@@ -673,7 +692,8 @@ static const struct wl_surface_interface sl_surface_implementation = {
     sl_host_surface_damage_buffer};
 
 static void sl_destroy_host_surface(struct wl_resource* resource) {
-  struct sl_host_surface* host = wl_resource_get_user_data(resource);
+  struct sl_host_surface* host =
+      static_cast<sl_host_surface*>(wl_resource_get_user_data(resource));
   struct sl_window *window, *surface_window = NULL;
   struct sl_output_buffer* buffer;
 
@@ -713,8 +733,10 @@ static void sl_destroy_host_surface(struct wl_resource* resource) {
 static void sl_surface_enter(void* data,
                              struct wl_surface* surface,
                              struct wl_output* output) {
-  struct sl_host_surface* host = wl_surface_get_user_data(surface);
-  struct sl_host_output* host_output = wl_output_get_user_data(output);
+  struct sl_host_surface* host =
+      static_cast<sl_host_surface*>(wl_surface_get_user_data(surface));
+  struct sl_host_output* host_output =
+      static_cast<sl_host_output*>(wl_output_get_user_data(output));
 
   wl_surface_send_enter(host->resource, host_output->resource);
   host->has_output = 1;
@@ -723,8 +745,10 @@ static void sl_surface_enter(void* data,
 static void sl_surface_leave(void* data,
                              struct wl_surface* surface,
                              struct wl_output* output) {
-  struct sl_host_surface* host = wl_surface_get_user_data(surface);
-  struct sl_host_output* host_output = wl_output_get_user_data(output);
+  struct sl_host_surface* host =
+      static_cast<sl_host_surface*>(wl_surface_get_user_data(surface));
+  struct sl_host_output* host_output =
+      static_cast<sl_host_output*>(wl_output_get_user_data(output));
 
   wl_surface_send_leave(host->resource, host_output->resource);
 }
@@ -743,7 +767,8 @@ static void sl_region_add(struct wl_client* client,
                           int32_t y,
                           int32_t width,
                           int32_t height) {
-  struct sl_host_region* host = wl_resource_get_user_data(resource);
+  struct sl_host_region* host =
+      static_cast<sl_host_region*>(wl_resource_get_user_data(resource));
   double scale = host->ctx->scale;
   int32_t x1, y1, x2, y2;
 
@@ -761,7 +786,8 @@ static void sl_region_subtract(struct wl_client* client,
                                int32_t y,
                                int32_t width,
                                int32_t height) {
-  struct sl_host_region* host = wl_resource_get_user_data(resource);
+  struct sl_host_region* host =
+      static_cast<sl_host_region*>(wl_resource_get_user_data(resource));
   double scale = host->ctx->scale;
   int32_t x1, y1, x2, y2;
 
@@ -777,7 +803,8 @@ static const struct wl_region_interface sl_region_implementation = {
     sl_region_destroy, sl_region_add, sl_region_subtract};
 
 static void sl_destroy_host_region(struct wl_resource* resource) {
-  struct sl_host_region* host = wl_resource_get_user_data(resource);
+  struct sl_host_region* host =
+      static_cast<sl_host_region*>(wl_resource_get_user_data(resource));
 
   wl_region_destroy(host->proxy);
   wl_resource_set_user_data(resource, NULL);
@@ -787,11 +814,11 @@ static void sl_destroy_host_region(struct wl_resource* resource) {
 static void sl_compositor_create_host_surface(struct wl_client* client,
                                               struct wl_resource* resource,
                                               uint32_t id) {
-  struct sl_host_compositor* host = wl_resource_get_user_data(resource);
-  struct sl_host_surface* host_surface;
+  struct sl_host_compositor* host =
+      static_cast<sl_host_compositor*>(wl_resource_get_user_data(resource));
   struct sl_window *window, *unpaired_window = NULL;
-
-  host_surface = malloc(sizeof(*host_surface));
+  struct sl_host_surface* host_surface =
+      static_cast<sl_host_surface*>(malloc(sizeof(*host_surface)));
   assert(host_surface);
 
   host_surface->ctx = host->compositor->ctx;
@@ -835,10 +862,10 @@ static void sl_compositor_create_host_surface(struct wl_client* client,
 static void sl_compositor_create_host_region(struct wl_client* client,
                                              struct wl_resource* resource,
                                              uint32_t id) {
-  struct sl_host_compositor* host = wl_resource_get_user_data(resource);
-  struct sl_host_region* host_region;
-
-  host_region = malloc(sizeof(*host_region));
+  struct sl_host_compositor* host =
+      static_cast<sl_host_compositor*>(wl_resource_get_user_data(resource));
+  struct sl_host_region* host_region =
+      static_cast<sl_host_region*>(malloc(sizeof(*host_region)));
   assert(host_region);
 
   host_region->ctx = host->compositor->ctx;
@@ -855,7 +882,8 @@ static const struct wl_compositor_interface sl_compositor_implementation = {
     sl_compositor_create_host_surface, sl_compositor_create_host_region};
 
 static void sl_destroy_host_compositor(struct wl_resource* resource) {
-  struct sl_host_compositor* host = wl_resource_get_user_data(resource);
+  struct sl_host_compositor* host =
+      static_cast<sl_host_compositor*>(wl_resource_get_user_data(resource));
 
   wl_compositor_destroy(host->proxy);
   wl_resource_set_user_data(resource, NULL);
@@ -867,9 +895,8 @@ static void sl_bind_host_compositor(struct wl_client* client,
                                     uint32_t version,
                                     uint32_t id) {
   struct sl_context* ctx = (struct sl_context*)data;
-  struct sl_host_compositor* host;
-
-  host = malloc(sizeof(*host));
+  struct sl_host_compositor* host =
+      static_cast<sl_host_compositor*>(malloc(sizeof(*host)));
   assert(host);
   host->compositor = ctx->compositor;
   host->resource =
@@ -877,9 +904,9 @@ static void sl_bind_host_compositor(struct wl_client* client,
                          MIN(version, ctx->compositor->version), id);
   wl_resource_set_implementation(host->resource, &sl_compositor_implementation,
                                  host, sl_destroy_host_compositor);
-  host->proxy = wl_registry_bind(wl_display_get_registry(ctx->display),
-                                 ctx->compositor->id, &wl_compositor_interface,
-                                 ctx->compositor->version);
+  host->proxy = static_cast<wl_compositor*>(wl_registry_bind(
+      wl_display_get_registry(ctx->display), ctx->compositor->id,
+      &wl_compositor_interface, ctx->compositor->version));
   wl_compositor_set_user_data(host->proxy, host);
 }
 

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "sommelier.h"
+#include "sommelier.h"  // NOLINT(build/include_directory)
 
 #include <assert.h>
 #include <math.h>
@@ -14,8 +14,8 @@
 #include <wayland-server-core.h>
 #include <wayland-util.h>
 
-#include "relative-pointer-unstable-v1-server-protocol.h"
-#include "relative-pointer-unstable-v1-client-protocol.h"
+#include "relative-pointer-unstable-v1-client-protocol.h"  // NOLINT(build/include_directory)
+#include "relative-pointer-unstable-v1-server-protocol.h"  // NOLINT(build/include_directory)
 
 struct sl_host_relative_pointer_manager {
   struct sl_context* ctx;
@@ -47,7 +47,8 @@ static void sl_relative_pointer_relative_motion(
     wl_fixed_t dx_unaccel,
     wl_fixed_t dy_unaccel) {
   struct sl_host_relative_pointer* host =
-      zwp_relative_pointer_v1_get_user_data(relative_pointer);
+      static_cast<sl_host_relative_pointer*>(
+          zwp_relative_pointer_v1_get_user_data(relative_pointer));
 
   // Unfortunately, many x11 toolkits truncate RawMotion events. We force them
   // to interpret cursor movement by rounding to the next greater-magnitude
@@ -62,7 +63,9 @@ static void sl_relative_pointer_relative_motion(
 }
 
 static void sl_destroy_host_relative_pointer(struct wl_resource* resource) {
-  struct sl_host_relative_pointer* host = wl_resource_get_user_data(resource);
+  struct sl_host_relative_pointer* host =
+      static_cast<sl_host_relative_pointer*>(
+          wl_resource_get_user_data(resource));
 
   zwp_relative_pointer_v1_destroy(host->proxy);
   wl_resource_set_user_data(resource, NULL);
@@ -86,7 +89,8 @@ static struct zwp_relative_pointer_v1_interface
 static void sl_destroy_host_relative_pointer_manager(
     struct wl_resource* resource) {
   struct sl_host_relative_pointer_manager* host =
-      wl_resource_get_user_data(resource);
+      static_cast<sl_host_relative_pointer_manager*>(
+          wl_resource_get_user_data(resource));
 
   zwp_relative_pointer_manager_v1_destroy(host->proxy);
   wl_resource_set_user_data(resource, NULL);
@@ -104,13 +108,15 @@ static void sl_relative_pointer_manager_get_relative_pointer(
     uint32_t id,
     struct wl_resource* pointer) {
   struct sl_host_relative_pointer_manager* host =
-      wl_resource_get_user_data(resource);
-  struct sl_host_pointer* host_pointer = wl_resource_get_user_data(pointer);
+      static_cast<sl_host_relative_pointer_manager*>(
+          wl_resource_get_user_data(resource));
+  struct sl_host_pointer* host_pointer =
+      static_cast<sl_host_pointer*>(wl_resource_get_user_data(pointer));
   struct wl_resource* relative_pointer_resource =
       wl_resource_create(client, &zwp_relative_pointer_v1_interface, 1, id);
-  struct sl_host_relative_pointer* relative_pointer_host;
-
-  relative_pointer_host = malloc(sizeof(*relative_pointer_host));
+  struct sl_host_relative_pointer* relative_pointer_host =
+      static_cast<sl_host_relative_pointer*>(
+          malloc(sizeof(*relative_pointer_host)));
   assert(relative_pointer_host);
   relative_pointer_host->resource = relative_pointer_resource;
   relative_pointer_host->ctx = host->ctx;
@@ -125,7 +131,7 @@ static void sl_relative_pointer_manager_get_relative_pointer(
   zwp_relative_pointer_v1_add_listener(relative_pointer_host->proxy,
                                        &sl_relative_pointer_listener,
                                        relative_pointer_host);
-}
+}  // NOLINT(whitespace/indent)
 
 static struct zwp_relative_pointer_manager_v1_interface
     sl_relative_pointer_manager_implementation = {
@@ -140,9 +146,8 @@ static void sl_bind_host_relative_pointer_manager(struct wl_client* client,
   struct sl_context* ctx = (struct sl_context*)data;
   struct sl_relative_pointer_manager* relative_pointer_manager =
       ctx->relative_pointer_manager;
-  struct sl_host_relative_pointer_manager* host;
-
-  host = malloc(sizeof(*host));
+  struct sl_host_relative_pointer_manager* host =
+      static_cast<sl_host_relative_pointer_manager*>(malloc(sizeof(*host)));
   assert(host);
   host->ctx = ctx;
   host->resource = wl_resource_create(
@@ -150,10 +155,10 @@ static void sl_bind_host_relative_pointer_manager(struct wl_client* client,
   wl_resource_set_implementation(
       host->resource, &sl_relative_pointer_manager_implementation, host,
       sl_destroy_host_relative_pointer_manager);
-  host->proxy = wl_registry_bind(wl_display_get_registry(ctx->display),
-                                 relative_pointer_manager->id,
-                                 &zwp_relative_pointer_manager_v1_interface,
-                                 wl_resource_get_version(host->resource));
+  host->proxy = static_cast<zwp_relative_pointer_manager_v1*>(wl_registry_bind(
+      wl_display_get_registry(ctx->display), relative_pointer_manager->id,
+      &zwp_relative_pointer_manager_v1_interface,
+      wl_resource_get_version(host->resource)));
   zwp_relative_pointer_manager_v1_set_user_data(host->proxy, host);
 }
 

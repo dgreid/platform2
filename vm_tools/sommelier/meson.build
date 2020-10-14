@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-project('sommelier', 'c')
+project('sommelier', 'c', 'cpp')
 
 #===============#
 # Configuration #
@@ -72,22 +72,22 @@ endforeach
 executable('sommelier',
   install: true,
   sources: [
-    'sommelier-compositor.c',
-    'sommelier-data-device-manager.c',
-    'sommelier-display.c',
-    'sommelier-drm.c',
-    'sommelier-gtk-shell.c',
-    'sommelier-output.c',
-    'sommelier-pointer-constraints.c',
-    'sommelier-relative-pointer-manager.c',
-    'sommelier-seat.c',
-    'sommelier-shell.c',
-    'sommelier-shm.c',
-    'sommelier-subcompositor.c',
-    'sommelier-text-input.c',
-    'sommelier-viewporter.c',
-    'sommelier-xdg-shell.c',
-    'sommelier.c',
+    'sommelier-compositor.cc',
+    'sommelier-data-device-manager.cc',
+    'sommelier-display.cc',
+    'sommelier-drm.cc',
+    'sommelier-gtk-shell.cc',
+    'sommelier-output.cc',
+    'sommelier-pointer-constraints.cc',
+    'sommelier-relative-pointer-manager.cc',
+    'sommelier-seat.cc',
+    'sommelier-shell.cc',
+    'sommelier-shm.cc',
+    'sommelier-subcompositor.cc',
+    'sommelier-text-input.cc',
+    'sommelier-viewporter.cc',
+    'sommelier-xdg-shell.cc',
+    'sommelier.cc',
   ] + wl_outs,
   dependencies: [
     meson.get_compiler('c').find_library('m'),
@@ -101,7 +101,7 @@ executable('sommelier',
     dependency('xcb-xfixes'),
     dependency('xkbcommon'),
   ],
-  c_args: [
+  cpp_args: [
     '-D_GNU_SOURCE',
     '-DWL_HIDE_DEPRECATED',
     '-DXWAYLAND_PATH="' + get_option('xwayland_path') + '"',
