@@ -34,6 +34,7 @@
 #include "cryptohome/mount_factory.h"
 #include "cryptohome/pkcs11_init.h"
 #include "cryptohome/platform.h"
+#include "cryptohome/user_session.h"
 #include "cryptohome/UserDataAuth.pb.h"
 
 namespace cryptohome {
@@ -260,7 +261,7 @@ class UserDataAuth {
   // This initializes the PKCS#11 for a particular mount. Note that this is
   // used mostly internally, by Mount related functions to bring up the PKCS#11
   // functionalities after mounting.
-  void InitializePkcs11(cryptohome::Mount* mount);
+  void InitializePkcs11(UserSession* mount);
 
   // Returns true if and only if PKCS#11 tokens are ready for all mounts.
   bool Pkcs11IsTpmTokenReady();
@@ -525,18 +526,18 @@ class UserDataAuth {
     boot_lockbox_ = boot_lockbox;
   }
 
-  // Retrieve the mount associated with a given user, for testing purpose only.
-  cryptohome::Mount* get_mount_for_user(const std::string& username) {
-    if (mounts_.count(username) == 0)
+  // Retrieve the session associated with the given user, for testing purpose
+  // only.
+  UserSession* get_session_for_user(const std::string& username) {
+    if (sessions_.count(username) == 0)
       return nullptr;
-    return mounts_[username].get();
+    return sessions_[username].get();
   }
 
-  // Associate a particular mount object |mount| with the username |username|
-  // for testing purpose
-  void set_mount_for_user(const std::string& username,
-                          cryptohome::Mount* mount) {
-    mounts_[username] = mount;
+  // Associate a particular session object |session| with the username
+  // |username| for testing purpose
+  void set_session_for_user(const std::string& username, UserSession* session) {
+    sessions_[username] = session;
   }
 
   // Override the time between each LowDiskCallback() for testing. This is so
@@ -567,8 +568,8 @@ class UserDataAuth {
   // The same is true for initialize_tpm_ variable, it is assumed to be true.
 
   // =============== Mount Related Utilities ===============
-  // Returns the mount object associated with the given username
-  scoped_refptr<cryptohome::Mount> GetMountForUser(const std::string& username);
+  // Returns the UserSession object associated with the given username
+  scoped_refptr<UserSession> GetUserSession(const std::string& username);
 
   // Filters out active mounts from |mounts|, populating |active_mounts| set.
   // If |include_busy_mount| is false, then stale mounts with open files and
@@ -623,9 +624,8 @@ class UserDataAuth {
       bool* is_ephemeral,
       user_data_auth::CryptohomeErrorCode* error) const;
 
-  // Does what its name suggests. The use of this method is to ensure that only
-  // one Mount is ever created per username.
-  scoped_refptr<cryptohome::Mount> GetOrCreateMountForUser(
+  // Returns either and existing or a newly created UserSession, if not present.
+  scoped_refptr<UserSession> GetOrCreateUserSession(
       const std::string& username);
 
   // Called during mount requests to ensure old hidden mounts are unmounted.
@@ -641,11 +641,10 @@ class UserDataAuth {
       const std::string& obfuscated_username,
       std::vector<std::map<uint32_t, brillo::Blob>>* pcr_restrictions);
 
-  // Safely removes the MountMap reference for the Mount belonging to given
-  // user. This method returns true if the mount belonging to the user is
-  // successfully removed, including the case when there is no mounts associated
-  // with the given username.
-  bool RemoveMountForUser(const std::string& username);
+  // Safely removes the reference to the UserSession from. This method returns
+  // true if as a result of the operation there is no reference to a session of
+  // the given user (including if it was absent in the first place).
+  bool RemoveUserSession(const std::string& username);
 
   // Calling this method will mount the home directory for guest users.
   // This is usually called by DoMount(). Note that this method is asynchronous,
@@ -811,9 +810,8 @@ class UserDataAuth {
   // and false otherwise.
   bool StatefulRecoveryIsOwner(const std::string& username);
 
-  // Creates and initialized mount for the user
-  scoped_refptr<cryptohome::Mount> CreateUntrackedMountForUser(
-      const std::string& username);
+  // Creates and initialized MountObject for user
+  scoped_refptr<Mount> CreateMount(const std::string& username);
 
   // Ensures BootLockbox is finalized;
   void EnsureBootLockboxFinalized();
@@ -951,14 +949,14 @@ class UserDataAuth {
   // =============== Mount Related Variables ===============
 
   // Defines a type for tracking Mount objects for each user by username.
-  typedef std::map<const std::string, scoped_refptr<cryptohome::Mount>>
-      MountMap;
+  typedef std::map<const std::string, scoped_refptr<UserSession>>
+      UserSessionMap;
 
-  // Records the Mount objects associated with each username.
+  // Records the UserSession objects associated with each username.
   // This and its content should only be accessed from the mount thread.
   // TODO(b/126022424): Verify that this access paradigm doesn't cause
   // measurable performance impact.
-  MountMap mounts_;
+  UserSessionMap sessions_;
 
   // Note: In Service class (the class that this class is refactored from),
   // there is a mounts_lock_ lock for inserting/removal of mounts_ map. However,

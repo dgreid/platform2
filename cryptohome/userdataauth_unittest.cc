@@ -149,7 +149,8 @@ class UserDataAuthTestNotInitialized : public ::testing::Test {
   // user. After calling this function, |mount_| is available for use.
   void SetupMount(const std::string& username) {
     mount_ = new NiceMock<MockMount>();
-    userdataauth_->set_mount_for_user(username, mount_.get());
+    session_ = new UserSession(mount_);
+    userdataauth_->set_session_for_user(username, session_.get());
   }
 
   // This is a helper function that compute the obfuscated username with the
@@ -234,6 +235,9 @@ class UserDataAuthTestNotInitialized : public ::testing::Test {
 
   // Mock DBus object, will be passed to UserDataAuth for its internal use.
   scoped_refptr<NiceMock<dbus::MockBus>> bus_;
+
+  // Session object
+  scoped_refptr<UserSession> session_;
 
   // This is used to hold the mount object when we create a mock mount with
   // SetupMount().
@@ -606,7 +610,7 @@ TEST_F(UserDataAuthTest, InitializePkcs11Success) {
   // |mount_| should get a request to insert PKCS#11 token.
   EXPECT_CALL(*mount_, InsertPkcs11Token()).WillOnce(Return(true));
 
-  userdataauth_->InitializePkcs11(mount_.get());
+  userdataauth_->InitializePkcs11(session_.get());
 
   EXPECT_EQ(mount_->pkcs11_state(), cryptohome::Mount::kIsInitialized);
 }
@@ -627,7 +631,7 @@ TEST_F(UserDataAuthTest, InitializePkcs11TpmNotOwned) {
   ON_CALL(tpm_, IsEnabled()).WillByDefault(Return(true));
   EXPECT_CALL(tpm_, IsOwned()).Times(AtLeast(1)).WillRepeatedly(Return(false));
 
-  userdataauth_->InitializePkcs11(mount_.get());
+  userdataauth_->InitializePkcs11(session_.get());
 
   EXPECT_EQ(mount_->pkcs11_state(), cryptohome::Mount::kIsWaitingOnTPM);
 
@@ -649,7 +653,7 @@ TEST_F(UserDataAuthTest, InitializePkcs11TpmNotOwned) {
   ON_CALL(tpm_, IsEnabled()).WillByDefault(Return(true));
   EXPECT_CALL(tpm_, IsOwned()).Times(AtLeast(1)).WillRepeatedly(Return(true));
 
-  userdataauth_->InitializePkcs11(mount_.get());
+  userdataauth_->InitializePkcs11(session_.get());
 
   EXPECT_EQ(mount_->pkcs11_state(), cryptohome::Mount::kIsInitialized);
 }
@@ -667,7 +671,7 @@ TEST_F(UserDataAuthTest, InitializePkcs11Unmounted) {
   // |mount_| should not get a request to insert PKCS#11 token.
   EXPECT_CALL(*mount_, InsertPkcs11Token()).Times(0);
 
-  userdataauth_->InitializePkcs11(mount_.get());
+  userdataauth_->InitializePkcs11(session_.get());
 
   EXPECT_EQ(mount_->pkcs11_state(), cryptohome::Mount::kUninitialized);
 }
@@ -681,7 +685,8 @@ TEST_F(UserDataAuthTest, Pkcs11IsTpmTokenReady) {
 
   // Check when there's 1 mount, and it's initialized.
   scoped_refptr<NiceMock<MockMount>> mount1 = new NiceMock<MockMount>();
-  userdataauth_->set_mount_for_user(kUsername1, mount1.get());
+  scoped_refptr<UserSession> session1 = new UserSession(mount1);
+  userdataauth_->set_session_for_user(kUsername1, session1.get());
   EXPECT_CALL(*mount1, pkcs11_state())
       .WillOnce(Return(cryptohome::Mount::kIsInitialized));
   EXPECT_TRUE(userdataauth_->Pkcs11IsTpmTokenReady());
@@ -709,7 +714,8 @@ TEST_F(UserDataAuthTest, Pkcs11IsTpmTokenReady) {
 
   // Check when there's another mount.
   scoped_refptr<NiceMock<MockMount>> mount2 = new NiceMock<MockMount>();
-  userdataauth_->set_mount_for_user(kUsername2, mount2.get());
+  scoped_refptr<UserSession> session2 = new UserSession(mount2);
+  userdataauth_->set_session_for_user(kUsername2, session2.get());
 
   // Both is initialized.
   EXPECT_CALL(*mount1, pkcs11_state())
@@ -1889,7 +1895,7 @@ TEST_F(UserDataAuthExTest, MountGuestSanity) {
 
   EXPECT_TRUE(called);
 
-  EXPECT_NE(userdataauth_->get_mount_for_user(
+  EXPECT_NE(userdataauth_->get_session_for_user(
                 brillo::cryptohome::home::kGuestUserName),
             nullptr);
 }
@@ -1919,7 +1925,7 @@ TEST_F(UserDataAuthExTest, MountGuestMountPointBusy) {
 
   EXPECT_TRUE(called);
 
-  EXPECT_EQ(userdataauth_->get_mount_for_user(
+  EXPECT_EQ(userdataauth_->get_session_for_user(
                 brillo::cryptohome::home::kGuestUserName),
             nullptr);
 }

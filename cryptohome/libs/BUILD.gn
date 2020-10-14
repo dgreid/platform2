@@ -306,6 +306,7 @@ static_library("libcryptohome") {
     "../service_userdataauth.cc",
     "../stateful_recovery.cc",
     "../user_oldest_activity_timestamp_cache.cc",
+    "../user_session.cc",
     "../userdataauth.cc",
     "../vault_keyset_factory.cc",
   ]

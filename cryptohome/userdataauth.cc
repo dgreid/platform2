@@ -34,6 +34,7 @@
 #include "cryptohome/stateful_recovery.h"
 #include "cryptohome/tpm.h"
 #include "cryptohome/user_oldest_activity_timestamp_cache.h"
+#include "cryptohome/user_session.h"
 #include "cryptohome/userdataauth.h"
 
 using base::FilePath;
@@ -146,17 +147,18 @@ bool KeyMatchesForLightweightChallengeResponseCheck(
 // Performs a single attempt to Mount a non-annonimous user.
 MountError AttemptUserMount(const Credentials& credentials,
                             const Mount::MountArgs& mount_args,
-                            scoped_refptr<cryptohome::Mount> user_mount) {
-  if (user_mount->IsMounted()) {
+                            scoped_refptr<UserSession> user_session) {
+  if (user_session->GetMount()->IsMounted()) {
     return MOUNT_ERROR_MOUNT_POINT_BUSY;
   }
 
   if (mount_args.is_ephemeral) {
-    return user_mount->MountEphemeralCryptohome(credentials);
+    return user_session->GetMount()->MountEphemeralCryptohome(credentials);
   }
 
   MountError code = MOUNT_ERROR_NONE;
-  if (user_mount->MountCryptohome(credentials, mount_args, true, &code)) {
+  if (user_session->GetMount()->MountCryptohome(credentials, mount_args, true,
+                                                &code)) {
     return code;
   }
   // In the weird case where MountCryptohome returns false with ERROR_NONE code
@@ -365,11 +367,11 @@ bool UserDataAuth::StatefulRecoveryMount(const std::string& username,
         *mount_reply_ptr = reply;
         // After the mount is successful, we need to obtain the user
         // mount.
-        scoped_refptr<cryptohome::Mount> mount = uda->GetMountForUser(username);
-        if (!mount.get() || !mount->IsMounted()) {
+        scoped_refptr<UserSession> user_session = uda->GetUserSession(username);
+        if (!user_session || !user_session->GetMount()->IsMounted()) {
           LOG(ERROR) << "Failed to get mount in stateful recovery.";
         }
-        *out_home_path = mount->mount_point();
+        *out_home_path = user_session->GetMount()->mount_point();
         *mount_path_retrieved = true;
         done_event_ptr->Signal();
       },
@@ -510,19 +512,21 @@ bool UserDataAuth::IsMounted(const std::string& username,
   if (username.empty()) {
     // No username is specified, so we consider "the cryptohome" to be mounted
     // if any existing cryptohome is mounted.
-    for (const auto& mount_pair : mounts_) {
-      if (mount_pair.second->IsMounted()) {
+    for (const auto& session_pair : sessions_) {
+      if (session_pair.second->GetMount()->IsMounted()) {
         is_mounted = true;
-        is_ephemeral |= !mount_pair.second->IsNonEphemeralMounted();
+        is_ephemeral |=
+            !session_pair.second->GetMount()->IsNonEphemeralMounted();
       }
     }
   } else {
     // A username is specified, check the associated mount object.
-    scoped_refptr<cryptohome::Mount> mount = GetMountForUser(username);
+    scoped_refptr<UserSession> session = GetUserSession(username);
 
-    if (mount.get()) {
-      is_mounted = mount->IsMounted();
-      is_ephemeral = is_mounted && !mount->IsNonEphemeralMounted();
+    if (session.get()) {
+      is_mounted = session->GetMount()->IsMounted();
+      is_ephemeral =
+          is_mounted && !session->GetMount()->IsNonEphemeralMounted();
     }
   }
 
@@ -533,34 +537,36 @@ bool UserDataAuth::IsMounted(const std::string& username,
   return is_mounted;
 }
 
-scoped_refptr<cryptohome::Mount> UserDataAuth::GetMountForUser(
+scoped_refptr<UserSession> UserDataAuth::GetUserSession(
     const std::string& username) {
   // Note: This can only run in mount_thread_
   AssertOnMountThread();
 
-  scoped_refptr<cryptohome::Mount> mount = nullptr;
-  if (mounts_.count(username) == 1) {
-    mount = mounts_[username];
+  scoped_refptr<UserSession> session = nullptr;
+  if (sessions_.count(username) == 1) {
+    session = sessions_[username];
   }
-  return mount;
+  return session;
 }
 
 bool UserDataAuth::RemoveAllMounts(bool unmount) {
   AssertOnMountThread();
 
   bool success = true;
-  for (auto it = mounts_.begin(); it != mounts_.end();) {
-    scoped_refptr<cryptohome::Mount> mount = it->second;
-    if (unmount && mount->IsMounted()) {
-      if (mount->pkcs11_state() == cryptohome::Mount::kIsBeingInitialized) {
+  for (auto it = sessions_.begin(); it != sessions_.end();) {
+    scoped_refptr<UserSession> session = it->second;
+    if (unmount && session->GetMount()->IsMounted()) {
+      if (session->GetMount()->pkcs11_state() ==
+          cryptohome::Mount::kIsBeingInitialized) {
         // Reset the state.
-        mount->set_pkcs11_state(cryptohome::Mount::kUninitialized);
+        session->GetMount()->set_pkcs11_state(
+            cryptohome::Mount::kUninitialized);
         // And also reset the global failure reported state.
         reported_pkcs11_init_fail_ = false;
       }
-      success = success && mount->UnmountCryptohome();
+      success = success && session->GetMount()->UnmountCryptohome();
     }
-    mounts_.erase(it++);
+    sessions_.erase(it++);
   }
   return success;
 }
@@ -595,8 +601,8 @@ bool UserDataAuth::FilterActiveMounts(
     // Walk each set of sources as one group since multimaps are key ordered.
     for (; match != mounts->end() && match->first == curr->first; ++match) {
       // Ignore known mounts.
-      for (const auto& mount_pair : mounts_) {
-        if (mount_pair.second->OwnsMountPoint(match->second)) {
+      for (const auto& session_pair : sessions_) {
+        if (session_pair.second->GetMount()->OwnsMountPoint(match->second)) {
           keep = true;
           // If !include_busy_mount, other mount points not owned scanned after
           // should be preserved as well.
@@ -852,9 +858,9 @@ bool UserDataAuth::Unmount() {
   return unmount_ok;
 }
 
-void UserDataAuth::InitializePkcs11(cryptohome::Mount* mount) {
+void UserDataAuth::InitializePkcs11(UserSession* session) {
   // We should not pass nullptr to this method.
-  DCHECK(mount);
+  DCHECK(session);
 
   if (!IsOnMountThread()) {
     // We are not on mount thread, but to be safe, we'll only access Mount
@@ -862,7 +868,7 @@ void UserDataAuth::InitializePkcs11(cryptohome::Mount* mount) {
     PostTaskToMountThread(
         FROM_HERE,
         base::BindOnce(&UserDataAuth::InitializePkcs11, base::Unretained(this),
-                       base::Unretained(mount)));
+                       base::Unretained(session)));
     return;
   }
 
@@ -872,7 +878,7 @@ void UserDataAuth::InitializePkcs11(cryptohome::Mount* mount) {
   if (tpm_ && tpm_->IsEnabled() && !tpm_->IsOwned()) {
     LOG(WARNING) << "TPM was not owned. TPM initialization call back will"
                  << " handle PKCS#11 initialization.";
-    mount->set_pkcs11_state(cryptohome::Mount::kIsWaitingOnTPM);
+    session->GetMount()->set_pkcs11_state(cryptohome::Mount::kIsWaitingOnTPM);
     return;
   }
 
@@ -882,8 +888,9 @@ void UserDataAuth::InitializePkcs11(cryptohome::Mount* mount) {
   // there's no point in initializing PKCS#11 for it. The reason for this check
   // is because it might be possible for Unmount() to be called after mounting
   // and before getting here.
-  for (const auto& mount_pair : mounts_) {
-    if (mount_pair.second.get() == mount && mount->IsMounted()) {
+  for (const auto& session_pair : sessions_) {
+    if (session_pair.second.get() == session &&
+        session->GetMount()->IsMounted()) {
       still_mounted = true;
       break;
     }
@@ -895,16 +902,16 @@ void UserDataAuth::InitializePkcs11(cryptohome::Mount* mount) {
     return;
   }
 
-  mount->set_pkcs11_state(cryptohome::Mount::kIsBeingInitialized);
+  session->GetMount()->set_pkcs11_state(cryptohome::Mount::kIsBeingInitialized);
 
   // Note that the timer stops in the Mount class' method.
   ReportTimerStart(kPkcs11InitTimer);
 
-  mount->InsertPkcs11Token();
+  session->GetMount()->InsertPkcs11Token();
 
   LOG(INFO) << "PKCS#11 initialization succeeded.";
 
-  mount->set_pkcs11_state(cryptohome::Mount::kIsInitialized);
+  session->GetMount()->set_pkcs11_state(cryptohome::Mount::kIsInitialized);
 }
 
 void UserDataAuth::ResumeAllPkcs11Initialization() {
@@ -917,10 +924,10 @@ void UserDataAuth::ResumeAllPkcs11Initialization() {
     return;
   }
 
-  for (const auto& mount_pair : mounts_) {
-    cryptohome::Mount* mount = mount_pair.second.get();
-    if (mount->pkcs11_state() == cryptohome::Mount::kIsWaitingOnTPM) {
-      InitializePkcs11(mount);
+  for (auto& session_pair : sessions_) {
+    scoped_refptr<UserSession> session = session_pair.second;
+    if (session->GetMount()->pkcs11_state() == Mount::kIsWaitingOnTPM) {
+      InitializePkcs11(session.get());
     }
   }
 }
@@ -935,9 +942,9 @@ void UserDataAuth::ResetAllTPMContext() {
     return;
   }
 
-  for (const auto& mount_pair : mounts_) {
-    if (mount_pair.second) {
-      Crypto* crypto = mount_pair.second->crypto();
+  for (auto& session_pair : sessions_) {
+    if (session_pair.second) {
+      Crypto* crypto = session_pair.second->GetMount()->crypto();
       if (crypto) {
         crypto->EnsureTpm(true);
       }
@@ -1013,8 +1020,8 @@ void UserDataAuth::SetEnterpriseOwned(bool enterprise_owned) {
   AssertOnMountThread();
 
   enterprise_owned_ = enterprise_owned;
-  for (const auto& mount_pair : mounts_) {
-    mount_pair.second->set_enterprise_owned(enterprise_owned);
+  for (auto& session_pair : sessions_) {
+    session_pair.second->GetMount()->set_enterprise_owned(enterprise_owned);
   }
   homedirs_->set_enterprise_owned(enterprise_owned);
 }
@@ -1056,8 +1063,9 @@ void UserDataAuth::FinalizeInstallAttributesIfMounted() {
   bool is_mounted = IsMounted();
   if (is_mounted &&
       install_attrs_->status() == InstallAttributes::Status::kFirstInstall) {
-    scoped_refptr<cryptohome::Mount> guest_mount = GetMountForUser(guest_user_);
-    bool guest_mounted = guest_mount.get() && guest_mount->IsMounted();
+    scoped_refptr<UserSession> guest_session = GetUserSession(guest_user_);
+    bool guest_mounted =
+        guest_session.get() && guest_session->GetMount()->IsMounted();
     if (!guest_mounted) {
       PostTaskToOriginThread(FROM_HERE,
                              base::BindOnce(
@@ -1114,9 +1122,8 @@ bool UserDataAuth::GetShouldMountAsEphemeral(
   return true;
 }
 
-scoped_refptr<cryptohome::Mount> UserDataAuth::CreateUntrackedMountForUser(
-    const std::string& username) {
-  scoped_refptr<cryptohome::Mount> m;
+scoped_refptr<Mount> UserDataAuth::CreateMount(const std::string& username) {
+  scoped_refptr<Mount> m;
   // TODO(dlunev): Decide if finalization should be moved to MountFactory.
   EnsureBootLockboxFinalized();
   m = mount_factory_->New();
@@ -1147,31 +1154,32 @@ void UserDataAuth::EnsureBootLockboxFinalized() {
 #endif  // USE_TMP2
 }
 
-scoped_refptr<cryptohome::Mount> UserDataAuth::GetOrCreateMountForUser(
+scoped_refptr<UserSession> UserDataAuth::GetOrCreateUserSession(
     const std::string& username) {
-  // This method touches the |mounts_| object so it needs to run on
+  // This method touches the |sessions_| object so it needs to run on
   // |mount_thread_|
   AssertOnMountThread();
-  if (mounts_.count(username) == 0U) {
+  if (sessions_.count(username) == 0U) {
     // We don't have a mount associated with |username|, let's create one.
-    scoped_refptr<cryptohome::Mount> m = CreateUntrackedMountForUser(username);
+    scoped_refptr<cryptohome::Mount> m = CreateMount(username);
     if (!m) {
       return nullptr;
     }
-    mounts_[username] = m;
+    sessions_[username] = new UserSession(m);
   }
-  return mounts_[username];
+  return sessions_[username];
 }
 
 bool UserDataAuth::CleanUpHiddenMounts() {
   AssertOnMountThread();
 
   bool ok = true;
-  for (auto it = mounts_.begin(); it != mounts_.end();) {
-    scoped_refptr<cryptohome::Mount> mount = it->second;
-    if (mount->IsMounted() && mount->IsShadowOnly()) {
-      ok = ok && mount->UnmountCryptohome();
-      it = mounts_.erase(it);
+  for (auto it = sessions_.begin(); it != sessions_.end();) {
+    scoped_refptr<UserSession> session = it->second;
+    if (session->GetMount()->IsMounted() &&
+        session->GetMount()->IsShadowOnly()) {
+      ok = ok && session->GetMount()->UnmountCryptohome();
+      it = sessions_.erase(it);
     } else {
       ++it;
     }
@@ -1201,11 +1209,11 @@ void UserDataAuth::GetChallengeCredentialsPcrRestrictions(
   }
 }
 
-bool UserDataAuth::RemoveMountForUser(const std::string& username) {
+bool UserDataAuth::RemoveUserSession(const std::string& username) {
   AssertOnMountThread();
 
-  if (mounts_.count(username) != 0) {
-    return (1U == mounts_.erase(username));
+  if (sessions_.count(username) != 0) {
+    return (1U == sessions_.erase(username));
   }
   return true;
 }
@@ -1214,8 +1222,8 @@ void UserDataAuth::MountGuest(
     base::OnceCallback<void(const user_data_auth::MountReply&)> on_done) {
   AssertOnMountThread();
 
-  if (mounts_.size() != 0) {
-    LOG(WARNING) << "Guest mount requested with other mounts active.";
+  if (sessions_.size() != 0) {
+    LOG(WARNING) << "Guest mount requested with other sessions active.";
   }
   // Rather than make it safe to check the size, then clean up, just always
   // clean up.
@@ -1231,10 +1239,10 @@ void UserDataAuth::MountGuest(
   ReportTimerStart(kMountGuestExTimer);
 
   // Create a ref-counted guest mount for async use and then throw it away.
-  scoped_refptr<cryptohome::Mount> guest_mount =
-      GetOrCreateMountForUser(guest_user_);
-  if (!guest_mount || !guest_mount->MountGuestCryptohome()) {
-    LOG(ERROR) << "Could not initialize guest mount.";
+  scoped_refptr<UserSession> guest_session =
+      GetOrCreateUserSession(guest_user_);
+  if (!guest_session || !guest_session->GetMount()->MountGuestCryptohome()) {
+    LOG(ERROR) << "Could not initialize guest session.";
     reply.set_error(
         user_data_auth::CryptohomeErrorCode::CRYPTOHOME_ERROR_MOUNT_FATAL);
   }
@@ -1634,9 +1642,9 @@ void UserDataAuth::ContinueMountWithCredentials(
   //
   // As we introduce multiple mounts, we can consider API changes to
   // make it clearer what the UI expectations are (AddMount, etc).
-  bool other_mounts_active = true;
-  if (mounts_.size() == 0) {
-    other_mounts_active = CleanUpStaleMounts(false);
+  bool other_sessions_active = true;
+  if (sessions_.size() == 0) {
+    other_sessions_active = CleanUpStaleMounts(false);
     // This could run on every interaction to catch any unused mounts.
   }
 
@@ -1663,29 +1671,29 @@ void UserDataAuth::ContinueMountWithCredentials(
   // See Mount::MountCryptohome for privilege checking.
 
   // Check if the guest user is mounted, if it is, we can't proceed.
-  scoped_refptr<cryptohome::Mount> guest_mount = GetMountForUser(guest_user_);
-  bool guest_mounted = guest_mount.get() && guest_mount->IsMounted();
+  scoped_refptr<UserSession> guest_session = GetUserSession(guest_user_);
+  bool guest_mounted =
+      guest_session.get() && guest_session->GetMount()->IsMounted();
   // TODO(wad,ellyjones) Change this behavior to return failure even
   // on a succesful unmount to tell chrome MOUNT_ERROR_NEEDS_RESTART.
-  if (guest_mounted && !guest_mount->UnmountCryptohome()) {
+  if (guest_mounted && !guest_session->GetMount()->UnmountCryptohome()) {
     LOG(ERROR) << "Could not unmount cryptohome from Guest session";
     reply.set_error(user_data_auth::CRYPTOHOME_ERROR_MOUNT_MOUNT_POINT_BUSY);
     std::move(on_done).Run(reply);
     return;
   }
 
-  scoped_refptr<cryptohome::Mount> user_mount =
-      GetOrCreateMountForUser(account_id);
+  scoped_refptr<UserSession> user_session = GetOrCreateUserSession(account_id);
 
-  if (!user_mount) {
-    LOG(ERROR) << "Could not initialize user mount.";
+  if (!user_session) {
+    LOG(ERROR) << "Could not initialize user session.";
     reply.set_error(
         user_data_auth::CryptohomeErrorCode::CRYPTOHOME_ERROR_MOUNT_FATAL);
     std::move(on_done).Run(reply);
     return;
   }
 
-  if (request.hidden_mount() && user_mount->IsMounted()) {
+  if (request.hidden_mount() && user_session->GetMount()->IsMounted()) {
     LOG(ERROR) << "Hidden mount requested, but mount already exists.";
     reply.set_error(user_data_auth::CRYPTOHOME_ERROR_MOUNT_MOUNT_POINT_BUSY);
     std::move(on_done).Run(reply);
@@ -1696,20 +1704,21 @@ void UserDataAuth::ContinueMountWithCredentials(
   // mount. Exceptionally, it is normal and ok to have a failed previous mount
   // attempt for the same user.
   const bool only_self_unmounted_attempt =
-      mounts_.size() == 1 && !user_mount->IsMounted();
-  if (request.public_mount() && other_mounts_active &&
+      sessions_.size() == 1 && !user_session->GetMount()->IsMounted();
+  if (request.public_mount() && other_sessions_active &&
       !only_self_unmounted_attempt) {
-    LOG(ERROR) << "Public mount requested with other mounts active.";
+    LOG(ERROR) << "Public mount requested with other sessions active.";
     reply.set_error(user_data_auth::CRYPTOHOME_ERROR_MOUNT_MOUNT_POINT_BUSY);
     std::move(on_done).Run(reply);
     return;
   }
 
   // Don't overlay an ephemeral mount over a file-backed one.
-  if (mount_args.is_ephemeral && user_mount->IsNonEphemeralMounted()) {
+  if (mount_args.is_ephemeral &&
+      user_session->GetMount()->IsNonEphemeralMounted()) {
     // TODO(wad,ellyjones) Change this behavior to return failure even
     // on a succesful unmount to tell chrome MOUNT_ERROR_NEEDS_RESTART.
-    if (!user_mount->UnmountCryptohome()) {
+    if (!user_session->GetMount()->UnmountCryptohome()) {
       LOG(ERROR) << "Could not unmount vault before an ephemeral mount.";
       reply.set_error(user_data_auth::CRYPTOHOME_ERROR_MOUNT_MOUNT_POINT_BUSY);
       std::move(on_done).Run(reply);
@@ -1728,11 +1737,11 @@ void UserDataAuth::ContinueMountWithCredentials(
   // If a user's home directory is already mounted, then we'll just recheck its
   // credential with what's cached in memory. This is much faster than going to
   // the TPM.
-  if (user_mount->IsMounted()) {
+  if (user_session->GetMount()->IsMounted()) {
     // Attempt a short-circuited credential test.
-    if (user_mount->AreSameUser(
+    if (user_session->GetMount()->AreSameUser(
             credentials->GetObfuscatedUsername(system_salt_)) &&
-        user_mount->AreValid(*credentials)) {
+        user_session->GetMount()->AreValid(*credentials)) {
       std::move(on_done).Run(reply);
       homedirs_->ResetLECredentials(*credentials);
       return;
@@ -1740,7 +1749,7 @@ void UserDataAuth::ContinueMountWithCredentials(
     // If the Mount has invalid credentials (repopulated from system state)
     // this will ensure a user can still sign-in with the right ones.
     // TODO(wad) Should we unmount on a failed re-mount attempt?
-    if (!user_mount->AreValid(*credentials) &&
+    if (!user_session->GetMount()->AreValid(*credentials) &&
         !homedirs_->AreCredentialsValid(*credentials)) {
       LOG(ERROR) << "Credentials are invalid";
       reply.set_error(
@@ -1774,14 +1783,14 @@ void UserDataAuth::ContinueMountWithCredentials(
     homedirs_->RemoveNonOwnerCryptohomes();
 
   // Does actual mounting here.
-  MountError code = AttemptUserMount(*credentials, mount_args, user_mount);
+  MountError code = AttemptUserMount(*credentials, mount_args, user_session);
   if (code == MOUNT_ERROR_TPM_COMM_ERROR) {
     LOG(WARNING) << "TPM communication error. Retrying.";
-    code = AttemptUserMount(*credentials, mount_args, user_mount);
+    code = AttemptUserMount(*credentials, mount_args, user_session);
   }
 
   // PKCS#11 always starts out uninitialized right after a fresh mount.
-  user_mount->set_pkcs11_state(cryptohome::Mount::kUninitialized);
+  user_session->GetMount()->set_pkcs11_state(cryptohome::Mount::kUninitialized);
 
   // Mark the timer as done.
   ReportTimerStop(kMountExTimer);
@@ -1808,11 +1817,11 @@ void UserDataAuth::ContinueMountWithCredentials(
     // Update user activity timestamp to be able to detect old users.
     // This action is not mandatory, so we perform it after
     // CryptohomeMount() returns, in background.
-    user_mount->UpdateCurrentUserActivityTimestamp(0);
+    user_session->GetMount()->UpdateCurrentUserActivityTimestamp(0);
     // Time to push the task for PKCS#11 initialization.
     // TODO(wad) This call will PostTask back to the same thread. It is safe,
     //           but it seems pointless.
-    InitializePkcs11(user_mount.get());
+    InitializePkcs11(user_session.get());
   }
 }
 
@@ -2011,9 +2020,10 @@ void UserDataAuth::CheckKey(
       credentials.GetObfuscatedUsername(system_salt_);
 
   bool found_valid_credentials = false;
-  for (const auto& mount_pair : mounts_) {
-    if (mount_pair.second->AreSameUser(obfuscated_username)) {
-      found_valid_credentials = mount_pair.second->AreValid(credentials);
+  for (const auto& session_pair : sessions_) {
+    if (session_pair.second->GetMount()->AreSameUser(obfuscated_username)) {
+      found_valid_credentials =
+          session_pair.second->GetMount()->AreValid(credentials);
       break;
     }
   }
@@ -2118,14 +2128,15 @@ void UserDataAuth::TryLightweightChallengeResponseCheckKey(
       SanitizeUserNameWithSalt(account_id, system_salt_);
 
   base::Optional<KeyData> found_session_key_data;
-  for (const auto& mount_pair : mounts_) {
-    const scoped_refptr<cryptohome::Mount>& mount = mount_pair.second;
-    if (mount->AreSameUser(obfuscated_username) &&
-        mount->GetCurrentLegacyUserSession() &&
+  for (const auto& session_pair : sessions_) {
+    const scoped_refptr<UserSession>& session = session_pair.second;
+    if (session->GetMount()->AreSameUser(obfuscated_username) &&
+        session->GetMount()->GetCurrentLegacyUserSession() &&
         KeyMatchesForLightweightChallengeResponseCheck(
             authorization.key().data(),
-            *mount->GetCurrentLegacyUserSession())) {
-      found_session_key_data = mount->GetCurrentLegacyUserSession()->key_data();
+            *session->GetMount()->GetCurrentLegacyUserSession())) {
+      found_session_key_data =
+          session->GetMount()->GetCurrentLegacyUserSession()->key_data();
       break;
     }
   }
@@ -2512,10 +2523,11 @@ user_data_auth::CryptohomeErrorCode UserDataAuth::MigrateKey(
           &key_index)) {
     return user_data_auth::CRYPTOHOME_ERROR_MIGRATE_KEY_FAILED;
   }
-  scoped_refptr<cryptohome::Mount> mount = GetMountForUser(account_id);
-  if (mount.get()) {
-    if (!mount->SetUserCreds(credentials, key_index))
+  scoped_refptr<UserSession> session = GetUserSession(account_id);
+  if (session.get()) {
+    if (!session->GetMount()->SetUserCreds(credentials, key_index)) {
       LOG(WARNING) << "Failed to set new creds";
+    }
   }
 
   return user_data_auth::CRYPTOHOME_ERROR_NOT_SET;
@@ -2554,8 +2566,8 @@ user_data_auth::CryptohomeErrorCode UserDataAuth::Rename(
   std::string username_from = GetAccountId(request.id_from());
   std::string username_to = GetAccountId(request.id_to());
 
-  scoped_refptr<cryptohome::Mount> mount = GetMountForUser(username_from);
-  const bool is_mounted = mount.get() && mount->IsMounted();
+  scoped_refptr<UserSession> session = GetUserSession(username_from);
+  const bool is_mounted = session.get() && session->GetMount()->IsMounted();
 
   if (is_mounted) {
     LOG(ERROR) << "RenameCryptohome('" << username_from << "','" << username_to
@@ -2588,16 +2600,17 @@ void UserDataAuth::StartMigrateToDircrypto(
   // MigrationHelper::ProgressCallback for more details.
   user_data_auth::DircryptoMigrationProgress progress;
 
-  scoped_refptr<cryptohome::Mount> mount =
-      GetMountForUser(GetAccountId(request.account_id()));
-  if (!mount.get()) {
-    LOG(ERROR) << "StartMigrateToDircrypto: Failed to get mount.";
+  scoped_refptr<UserSession> session =
+      GetUserSession(GetAccountId(request.account_id()));
+  if (!session.get()) {
+    LOG(ERROR) << "StartMigrateToDircrypto: Failed to get session.";
     progress.set_status(user_data_auth::DIRCRYPTO_MIGRATION_FAILED);
     progress_callback.Run(progress);
     return;
   }
   LOG(INFO) << "StartMigrateToDircrypto: Migrating to dircrypto.";
-  if (!mount->MigrateToDircrypto(progress_callback, migration_type)) {
+  if (!session->GetMount()->MigrateToDircrypto(progress_callback,
+                                               migration_type)) {
     LOG(ERROR) << "StartMigrateToDircrypto: Failed to migrate.";
     progress.set_status(user_data_auth::DIRCRYPTO_MIGRATION_FAILED);
     progress_callback.Run(progress);
@@ -2648,12 +2661,13 @@ int64_t UserDataAuth::GetCurrentSpaceForArcGid(uid_t android_gid) {
 
 bool UserDataAuth::Pkcs11IsTpmTokenReady() {
   AssertOnMountThread();
-  // We touched the mounts_ object, so we need to be on mount thread.
+  // We touched the sessions_ object, so we need to be on mount thread.
 
   bool ready = true;
-  for (const auto& mount_pair : mounts_) {
-    cryptohome::Mount* mount = mount_pair.second.get();
-    bool ok = (mount->pkcs11_state() == cryptohome::Mount::kIsInitialized);
+  for (const auto& session_pair : sessions_) {
+    UserSession* session = session_pair.second.get();
+    bool ok = (session->GetMount()->pkcs11_state() ==
+               cryptohome::Mount::kIsInitialized);
 
     ready = ready && ok;
   }
@@ -2697,10 +2711,10 @@ user_data_auth::TpmTokenInfo UserDataAuth::Pkcs11GetTpmTokenInfo(
 
 void UserDataAuth::Pkcs11Terminate() {
   AssertOnMountThread();
-  // We are touching the |mounts_| object so we need to be on mount thread.
+  // We are touching the |sessions_| object so we need to be on mount thread.
 
-  for (const auto& mount_pair : mounts_) {
-    mount_pair.second->RemovePkcs11Token();
+  for (const auto& session_pair : sessions_) {
+    session_pair.second->GetMount()->RemovePkcs11Token();
   }
 }
 
@@ -2875,12 +2889,13 @@ const brillo::SecureBlob& UserDataAuth::GetSystemSalt() {
 
 bool UserDataAuth::UpdateCurrentUserActivityTimestamp(int time_shift_sec) {
   AssertOnMountThread();
-  // We are touching the mount object, so we'll need to be on mount thread.
+  // We are touching the sessions object, so we'll need to be on mount thread.
 
   bool success = true;
-  for (const auto& mount_pair : mounts_) {
+  for (const auto& session_pair : sessions_) {
     success &=
-        mount_pair.second->UpdateCurrentUserActivityTimestamp(time_shift_sec);
+        session_pair.second->GetMount()->UpdateCurrentUserActivityTimestamp(
+            time_shift_sec);
   }
 
   return success;
@@ -2937,8 +2952,8 @@ std::string UserDataAuth::GetStatusString() {
 
   base::DictionaryValue dv;
   auto mounts = std::make_unique<base::ListValue>();
-  for (const auto& mount_pair : mounts_) {
-    mounts->Append(mount_pair.second->GetStatus());
+  for (const auto& session_pair : sessions_) {
+    mounts->Append(session_pair.second->GetMount()->GetStatus());
   }
   auto attrs = install_attrs_->GetStatus();
 
