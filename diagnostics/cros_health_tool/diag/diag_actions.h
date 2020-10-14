@@ -57,6 +57,7 @@ class DiagActions final {
       chromeos::cros_healthd::mojom::DiskReadRoutineTypeEnum type,
       base::TimeDelta exec_duration,
       uint32_t file_size_mb);
+  bool ActionRunDnsLatencyRoutine();
   bool ActionRunDnsResolverPresentRoutine();
   bool ActionRunCpuStressRoutine(base::TimeDelta exec_duration);
   bool ActionRunFloatingPointAccuracyRoutine(base::TimeDelta exec_duration);

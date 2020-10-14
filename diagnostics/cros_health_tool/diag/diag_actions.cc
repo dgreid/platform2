@@ -206,6 +206,13 @@ bool DiagActions::ActionRunDnsResolverPresentRoutine() {
   return PollRoutineAndProcessResult();
 }
 
+bool DiagActions::ActionRunDnsLatencyRoutine() {
+  auto response = adapter_->RunDnsLatencyRoutine();
+  CHECK(response) << "No RunRoutineResponse received.";
+  id_ = response->id;
+  return PollRoutineAndProcessResult();
+}
+
 bool DiagActions::ActionRunFloatingPointAccuracyRoutine(
     base::TimeDelta exec_duration) {
   auto response = adapter_->RunFloatingPointAccuracyRoutine(exec_duration);
