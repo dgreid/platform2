@@ -699,7 +699,10 @@ grpc::Status ServiceImpl::StartTermina(grpc::ServerContext* ctx,
   if (!init_->Spawn({"/sbin/crash_reporter", "--init"}, {} /*env*/,
                     false /*respawn*/, true /*use_console*/,
                     true /*wait_for_exit*/, &launch_info)) {
-    return grpc::Status(grpc::INTERNAL, "failed to register crash_reporter");
+    LOG(ERROR) << "Failed to spawn crash_reporter registration";
+  } else if (launch_info.status != Init::ProcessStatus::EXITED ||
+             launch_info.code != 0) {
+    LOG(ERROR) << "Failed to register crash_reporter";
   }
 
   // Resize the stateful filesystem to fill the block device in case
