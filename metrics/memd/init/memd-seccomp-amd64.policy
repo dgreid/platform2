@@ -24,6 +24,7 @@ getresgid: 1
 getresuid: 1
 getrlimit: 1
 getsockname: 1
+gettid: 1
 # TCGETS gets tty settings, FIOCLEX is close on exec.
 ioctl: arg1 == TCGETS || arg1 == FIOCLEX
 lseek: 1

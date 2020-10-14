@@ -22,6 +22,7 @@ getpid: 1
 getresgid32: 1
 getresuid32: 1
 getsockname: 1
+gettid: 1
 gettimeofday: 1
 getuid32: 1
 ioctl: arg1 == TCGETS || arg1 == FIOCLEX
