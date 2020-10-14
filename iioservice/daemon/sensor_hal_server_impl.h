@@ -31,8 +31,7 @@ class SensorHalServerImpl : public cros::mojom::SensorHalServer {
       mojo::PendingReceiver<cros::mojom::SensorHalServer> server_receiver,
       MojoOnFailureCallback mojo_on_failure_callback);
 
-  // Implementation of cros::mojom::SensorHalServer. Called by sensor HAL
-  // dispatcher to connect a client with the SensorService interface.
+  // cros::mojom::SensorHalServer overrides:
   void CreateChannel(mojo::PendingReceiver<cros::mojom::SensorService>
                          sensor_service_request) override;
 

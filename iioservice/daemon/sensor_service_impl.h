@@ -35,15 +35,10 @@ class SensorServiceImpl : public cros::mojom::SensorService {
   virtual void AddReceiver(
       mojo::PendingReceiver<cros::mojom::SensorService> request);
 
-  // using GetDeviceIdsCallback = base::OnceCallback<void(const
-  // std::vector<int32_t>&)>;
+  // cros::mojom::SensorService overrides:
   void GetDeviceIds(cros::mojom::DeviceType type,
                     GetDeviceIdsCallback callback) override;
-
-  // using GetAllDeviceIdsCallback = base::OnceCallback<void(const
-  // base::flat_map<int32_t, std::vector<DeviceType>>&)>;
   void GetAllDeviceIds(GetAllDeviceIdsCallback callback) override;
-
   void GetDevice(
       int32_t iio_device_id,
       mojo::PendingReceiver<cros::mojom::SensorDevice> device_request) override;

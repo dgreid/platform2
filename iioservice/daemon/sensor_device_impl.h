@@ -42,39 +42,21 @@ class SensorDeviceImpl final : public cros::mojom::SensorDevice {
   void AddReceiver(int32_t iio_device_id,
                    mojo::PendingReceiver<cros::mojom::SensorDevice> request);
 
+  // cros::mojom::SensorDevice overrides:
   void SetTimeout(uint32_t timeout) override;
-
-  // using GetAttributeCallback = base::OnceCallback<void(const
-  // base::Optional<std::string>&);
   void GetAttribute(const std::string& attr_name,
                     GetAttributeCallback callback) override;
-
-  // using SetFrequencyCallback = base::OnceCallback<void(double)>;
   void SetFrequency(double frequency, SetFrequencyCallback callback) override;
-
   void StartReadingSamples(
       mojo::PendingRemote<cros::mojom::SensorDeviceSamplesObserver> observer)
       override;
-
   void StopReadingSamples() override;
-
-  // using GetAllChannelIdsCallback =
-  //     base::OnceCallback<void(const std::vector<std::string>&)>;
   void GetAllChannelIds(GetAllChannelIdsCallback callback) override;
-
-  // using SetChannelsEnabledCallback = base::OnceCallback<void(const
-  // std::vector<int32_t>&)>;
   void SetChannelsEnabled(const std::vector<int32_t>& iio_chn_indices,
                           bool en,
                           SetChannelsEnabledCallback callback) override;
-
-  // using GetChannelsEnabledCallback = base::OnceCallback<void(const
-  // std::vector<bool>&)>;
   void GetChannelsEnabled(const std::vector<int32_t>& iio_chn_indices,
                           GetChannelsEnabledCallback callback) override;
-
-  // using GetChannelsAttributesCallback = base::OnceCallback<void(const
-  // std::vector<base::Optional<std::string>>&)>;
   void GetChannelsAttributes(const std::vector<int32_t>& iio_chn_indices,
                              const std::string& attr_name,
                              GetChannelsAttributesCallback callback) override;

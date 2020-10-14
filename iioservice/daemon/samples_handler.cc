@@ -31,7 +31,8 @@ namespace {
 
 constexpr char kNoBatchChannels[][10] = {"timestamp", "count"};
 constexpr char kHWFifoFlushPath[] = "buffer/hwfifo_flush";
-}
+
+}  // namespace
 
 // static
 void SamplesHandler::SamplesHandlerDeleter(SamplesHandler* handler) {

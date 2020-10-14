@@ -83,8 +83,8 @@ class FakeSamplesObserver : public cros::mojom::SensorDeviceSamplesObserver {
       double dev_frequency2,
       int pause_index = kPauseIndex);
 
+  // cros::mojom::SensorDeviceSamplesObserver overrides:
   void OnSampleUpdated(const base::flat_map<int32_t, int64_t>& sample) override;
-
   void OnErrorOccurred(cros::mojom::ObserverErrorType type) override;
 
   mojo::PendingRemote<cros::mojom::SensorDeviceSamplesObserver> GetRemote();
