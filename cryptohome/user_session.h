@@ -5,8 +5,11 @@
 #ifndef CRYPTOHOME_USER_SESSION_H_
 #define CRYPTOHOME_USER_SESSION_H_
 
+#include <memory>
+
 #include <base/memory/ref_counted.h>
 
+#include "cryptohome/credentials.h"
 #include "cryptohome/mount.h"
 
 namespace cryptohome {
@@ -25,6 +28,17 @@ class UserSession : public base::RefCountedThreadSafe<UserSession> {
 
   scoped_refptr<Mount> GetMount() { return mount_; }
   const scoped_refptr<Mount> GetMount() const { return mount_; }
+
+  MountError MountVault(const Credentials& credentials,
+                        const Mount::MountArgs& mount_args);
+  MountError MountEphemeral(const Credentials& credentials);
+  MountError MountGuest();
+  bool Unmount();
+
+  bool UpdateActivityTimestamp(int time_shift_sec);
+  std::unique_ptr<base::Value> GetStatus() const;
+
+  bool SetCredentials(const Credentials& credentials, int key_index);
 
  private:
   scoped_refptr<cryptohome::Mount> mount_;

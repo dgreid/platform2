@@ -184,17 +184,10 @@ MountError AttemptUserMount(const Credentials& credentials,
   }
 
   if (mount_args.is_ephemeral) {
-    return user_session->GetMount()->MountEphemeralCryptohome(credentials);
+    return user_session->MountEphemeral(credentials);
   }
 
-  MountError code = MOUNT_ERROR_NONE;
-  if (user_session->GetMount()->MountCryptohome(credentials, mount_args, true,
-                                                &code)) {
-    return code;
-  }
-  // In the weird case where MountCryptohome returns false with ERROR_NONE code
-  // report it as FATAL.
-  return code == MOUNT_ERROR_NONE ? MOUNT_ERROR_FATAL : code;
+  return user_session->MountVault(credentials, mount_args);
 }
 
 }  // anonymous namespace
@@ -643,7 +636,7 @@ bool Service::CleanUpHiddenMounts() {
     scoped_refptr<UserSession> session = it->second;
     if (session->GetMount()->IsMounted() &&
         session->GetMount()->IsShadowOnly()) {
-      ok = ok && session->GetMount()->UnmountCryptohome();
+      ok = ok && session->Unmount();
       it = sessions_.erase(it);
     } else {
       ++it;
@@ -1632,7 +1625,7 @@ void Service::DoMigrateKeyEx(AccountIdentifier* account,
   } else {
     scoped_refptr<UserSession> session = GetUserSession(GetAccountId(*account));
     if (session.get()) {
-      if (!session->GetMount()->SetUserCreds(credentials, key_index)) {
+      if (!session->SetCredentials(credentials, key_index)) {
         LOG(WARNING) << "Failed to set new creds";
       }
     }
@@ -2082,7 +2075,7 @@ gboolean Service::IsMountedForUser(gchar* userid,
 }
 
 void Service::DoUpdateTimestamp(scoped_refptr<UserSession> session) {
-  session->GetMount()->UpdateCurrentUserActivityTimestamp(0);
+  session->UpdateActivityTimestamp(0);
 }
 
 void Service::DoMount(scoped_refptr<UserSession> session,
@@ -2141,7 +2134,7 @@ gboolean Service::Mount(const gchar* userid,
   scoped_refptr<UserSession> guest_session = GetUserSession(guest_user_);
   bool guest_mounted =
       guest_session.get() && guest_session->GetMount()->IsMounted();
-  if (guest_mounted && !guest_session->GetMount()->UnmountCryptohome()) {
+  if (guest_mounted && !guest_session->Unmount()) {
     LOG(ERROR) << "Could not unmount cryptohome from Guest session";
     *OUT_error_code = MOUNT_ERROR_MOUNT_POINT_BUSY;
     *OUT_result = FALSE;
@@ -2173,7 +2166,7 @@ gboolean Service::Mount(const gchar* userid,
   if (is_ephemeral && user_session->GetMount()->IsNonEphemeralMounted()) {
     // TODO(wad,ellyjones) Change this behavior to return failure even
     // on a succesful unmount to tell chrome MOUNT_ERROR_NEEDS_RESTART.
-    if (!user_session->GetMount()->UnmountCryptohome()) {
+    if (!user_session->Unmount()) {
       // The MountMap entry is kept since the Unmount failed.
       LOG(ERROR) << "Could not unmount vault before an ephemeral mount.";
       *OUT_error_code = MOUNT_ERROR_MOUNT_POINT_BUSY;
@@ -2808,7 +2801,7 @@ void Service::ContinueMountExWithCredentials(
       guest_session.get() && guest_session->GetMount()->IsMounted();
   // TODO(wad,ellyjones) Change this behavior to return failure even
   // on a succesful unmount to tell chrome MOUNT_ERROR_NEEDS_RESTART.
-  if (guest_mounted && !guest_session->GetMount()->UnmountCryptohome()) {
+  if (guest_mounted && !guest_session->Unmount()) {
     LOG(ERROR) << "Could not unmount cryptohome from Guest session";
     reply.set_error(CRYPTOHOME_ERROR_MOUNT_MOUNT_POINT_BUSY);
     SendReply(context, reply);
@@ -2849,7 +2842,7 @@ void Service::ContinueMountExWithCredentials(
       user_session->GetMount()->IsNonEphemeralMounted()) {
     // TODO(wad,ellyjones) Change this behavior to return failure even
     // on a succesful unmount to tell chrome MOUNT_ERROR_NEEDS_RESTART.
-    if (!user_session->GetMount()->UnmountCryptohome()) {
+    if (!user_session->Unmount()) {
       LOG(ERROR) << "Could not unmount vault before an ephemeral mount.";
       reply.set_error(CRYPTOHOME_ERROR_MOUNT_MOUNT_POINT_BUSY);
       SendReply(context, reply);
@@ -2934,10 +2927,6 @@ void Service::ContinueMountExWithCredentials(
   SendReply(context, reply);
 
   if (!request->hidden_mount()) {
-    // Update user activity timestamp to be able to detect old users.
-    // This action is not mandatory, so we perform it after
-    // CryptohomeMount() returns, in background.
-    user_session->GetMount()->UpdateCurrentUserActivityTimestamp(0);
     // Time to push the task for PKCS#11 initialization.
     // TODO(wad) This call will PostTask back to the same thread. It is safe,
     //           but it seems pointless.
@@ -3015,11 +3004,11 @@ void Service::DoMountGuestEx(scoped_refptr<UserSession> guest_session,
   // As per the other timers, this really only tracks time spent in
   // MountGuestCryptohome() not in the other areas prior.
   ReportTimerStart(kMountGuestExTimer);
-  bool success = guest_session->GetMount()->MountGuestCryptohome();
+  MountError code = guest_session->MountGuest();
   // Mark the timer as done.
   ReportTimerStop(kMountGuestExTimer);
 
-  if (!success)
+  if (code != MOUNT_ERROR_NONE)
     reply.set_error(CRYPTOHOME_ERROR_MOUNT_FATAL);
   else
     reply.clear_error();
@@ -3115,8 +3104,7 @@ gboolean Service::UpdateCurrentUserActivityTimestamp(gint time_shift_sec,
                                                      GError** error) {
   base::AutoLock _lock(sessions_lock_);
   for (const auto& session_pair : sessions_) {
-    session_pair.second->GetMount()->UpdateCurrentUserActivityTimestamp(
-        time_shift_sec);
+    session_pair.second->UpdateActivityTimestamp(time_shift_sec);
   }
   return TRUE;
 }
@@ -3826,7 +3814,7 @@ gboolean Service::GetStatusString(gchar** OUT_status, GError** error) {
   {
     base::AutoLock _lock(sessions_lock_);
     for (const auto& session_pair : sessions_) {
-      mounts->Append(session_pair.second->GetMount()->GetStatus());
+      mounts->Append(session_pair.second->GetStatus());
     }
   }
   auto attrs = install_attrs_->GetStatus();
@@ -3869,7 +3857,7 @@ void Service::DoAutoCleanup() {
 void Service::UpdateCurrentUserActivityTimestamp() {
   base::AutoLock _lock(sessions_lock_);
   for (const auto& session_pair : sessions_) {
-    session_pair.second->GetMount()->UpdateCurrentUserActivityTimestamp(0);
+    session_pair.second->UpdateActivityTimestamp(0);
   }
 }
 
@@ -4091,7 +4079,7 @@ bool Service::RemoveAllMounts(bool unmount) {
         // multiple mounts.
         reported_pkcs11_init_fail_ = false;
       }
-      ok = ok && session->GetMount()->UnmountCryptohome();
+      ok = ok && session->Unmount();
     }
     sessions_.erase(it++);
   }

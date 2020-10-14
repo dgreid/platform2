@@ -760,12 +760,6 @@ TEST_P(MountTest, MountCryptohomeHasPrivileges) {
                                       &error));
 
   EXPECT_CALL(platform_, Unmount(_, _, _)).WillRepeatedly(Return(true));
-
-  // Unmount here to avoid the scoped Mount doing it implicitly.
-  EXPECT_CALL(platform_, GetCurrentTime()).WillOnce(Return(base::Time::Now()));
-  EXPECT_CALL(platform_,
-              WriteStringToFileAtomicDurable(user->timestamp_path, _, _))
-      .WillOnce(Return(true));
   EXPECT_CALL(platform_, ClearUserKeyring()).WillOnce(Return(true));
   EXPECT_TRUE(mount_->UnmountCryptohome());
 }
@@ -1834,23 +1828,6 @@ TEST_P(MountTest, UserActivityTimestampUpdated) {
   Timestamp tstamp;
   tstamp.ParseFromString(timestamp_str);
   EXPECT_EQ(kMagicTimestamp, tstamp.timestamp());
-
-  // Unmount the user. This must update user's activity timestamps.
-  static const int kMagicTimestamp2 = 234;
-  EXPECT_CALL(platform_, GetCurrentTime())
-      .WillOnce(Return(base::Time::FromInternalValue(kMagicTimestamp2)));
-  EXPECT_CALL(platform_, Unmount(_, _, _)).WillRepeatedly(Return(true));
-  mount_->UnmountCryptohome();
-  Timestamp tstamp2;
-  tstamp2.ParseFromString(timestamp_str);
-  EXPECT_EQ(kMagicTimestamp2, tstamp2.timestamp());
-
-  // Update timestamp again, after user is unmounted. User's activity
-  // timestamp must not change this.
-  mount_->UpdateCurrentUserActivityTimestamp(0);
-  Timestamp tstamp3;
-  tstamp3.ParseFromString(timestamp_str);
-  EXPECT_EQ(tstamp3.timestamp(), tstamp2.timestamp());
 }
 
 TEST_P(MountTest, RememberMountOrderingTest) {

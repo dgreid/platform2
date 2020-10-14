@@ -874,7 +874,7 @@ TEST_F(ServiceTestNotInitialized,
       .WillOnce(Return(true));
   EXPECT_CALL(*mount, MountCryptohome(_, _, _, _)).WillOnce(Return(true));
   EXPECT_CALL(*mount, UpdateCurrentUserActivityTimestamp(_))
-      .WillOnce(Return(true));
+      .WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, GetMountsBySourcePrefix(_, _)).WillOnce(Return(false));
   EXPECT_CALL(platform_, GetAttachedLoopDevices())
       .WillRepeatedly(Return(std::vector<Platform::LoopDevice>()));

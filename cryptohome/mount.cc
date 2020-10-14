@@ -670,8 +670,6 @@ bool Mount::UnmountCryptohome() {
 
   if (homedirs_->AreEphemeralUsersEnabled())
     homedirs_->RemoveNonOwnerCryptohomes();
-  else
-    UpdateCurrentUserActivityTimestamp(0);
 
   RemovePkcs11Token();
   current_user_->Reset();

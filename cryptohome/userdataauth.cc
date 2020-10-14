@@ -153,17 +153,10 @@ MountError AttemptUserMount(const Credentials& credentials,
   }
 
   if (mount_args.is_ephemeral) {
-    return user_session->GetMount()->MountEphemeralCryptohome(credentials);
+    return user_session->MountEphemeral(credentials);
   }
 
-  MountError code = MOUNT_ERROR_NONE;
-  if (user_session->GetMount()->MountCryptohome(credentials, mount_args, true,
-                                                &code)) {
-    return code;
-  }
-  // In the weird case where MountCryptohome returns false with ERROR_NONE code
-  // report it as FATAL.
-  return code == MOUNT_ERROR_NONE ? MOUNT_ERROR_FATAL : code;
+  return user_session->MountVault(credentials, mount_args);
 }
 
 }  // namespace
@@ -564,7 +557,7 @@ bool UserDataAuth::RemoveAllMounts(bool unmount) {
         // And also reset the global failure reported state.
         reported_pkcs11_init_fail_ = false;
       }
-      success = success && session->GetMount()->UnmountCryptohome();
+      success = success && session->Unmount();
     }
     sessions_.erase(it++);
   }
@@ -1178,7 +1171,7 @@ bool UserDataAuth::CleanUpHiddenMounts() {
     scoped_refptr<UserSession> session = it->second;
     if (session->GetMount()->IsMounted() &&
         session->GetMount()->IsShadowOnly()) {
-      ok = ok && session->GetMount()->UnmountCryptohome();
+      ok = ok && session->Unmount();
       it = sessions_.erase(it);
     } else {
       ++it;
@@ -1241,7 +1234,7 @@ void UserDataAuth::MountGuest(
   // Create a ref-counted guest mount for async use and then throw it away.
   scoped_refptr<UserSession> guest_session =
       GetOrCreateUserSession(guest_user_);
-  if (!guest_session || !guest_session->GetMount()->MountGuestCryptohome()) {
+  if (!guest_session || guest_session->MountGuest() != MOUNT_ERROR_NONE) {
     LOG(ERROR) << "Could not initialize guest session.";
     reply.set_error(
         user_data_auth::CryptohomeErrorCode::CRYPTOHOME_ERROR_MOUNT_FATAL);
@@ -1676,7 +1669,7 @@ void UserDataAuth::ContinueMountWithCredentials(
       guest_session.get() && guest_session->GetMount()->IsMounted();
   // TODO(wad,ellyjones) Change this behavior to return failure even
   // on a succesful unmount to tell chrome MOUNT_ERROR_NEEDS_RESTART.
-  if (guest_mounted && !guest_session->GetMount()->UnmountCryptohome()) {
+  if (guest_mounted && !guest_session->Unmount()) {
     LOG(ERROR) << "Could not unmount cryptohome from Guest session";
     reply.set_error(user_data_auth::CRYPTOHOME_ERROR_MOUNT_MOUNT_POINT_BUSY);
     std::move(on_done).Run(reply);
@@ -1718,7 +1711,7 @@ void UserDataAuth::ContinueMountWithCredentials(
       user_session->GetMount()->IsNonEphemeralMounted()) {
     // TODO(wad,ellyjones) Change this behavior to return failure even
     // on a succesful unmount to tell chrome MOUNT_ERROR_NEEDS_RESTART.
-    if (!user_session->GetMount()->UnmountCryptohome()) {
+    if (!user_session->Unmount()) {
       LOG(ERROR) << "Could not unmount vault before an ephemeral mount.";
       reply.set_error(user_data_auth::CRYPTOHOME_ERROR_MOUNT_MOUNT_POINT_BUSY);
       std::move(on_done).Run(reply);
@@ -1814,10 +1807,6 @@ void UserDataAuth::ContinueMountWithCredentials(
   // Update user timestamp and kick off PKCS#11 initialization for non-hidden
   // mount.
   if (!request.hidden_mount()) {
-    // Update user activity timestamp to be able to detect old users.
-    // This action is not mandatory, so we perform it after
-    // CryptohomeMount() returns, in background.
-    user_session->GetMount()->UpdateCurrentUserActivityTimestamp(0);
     // Time to push the task for PKCS#11 initialization.
     // TODO(wad) This call will PostTask back to the same thread. It is safe,
     //           but it seems pointless.
@@ -2525,7 +2514,7 @@ user_data_auth::CryptohomeErrorCode UserDataAuth::MigrateKey(
   }
   scoped_refptr<UserSession> session = GetUserSession(account_id);
   if (session.get()) {
-    if (!session->GetMount()->SetUserCreds(credentials, key_index)) {
+    if (!session->SetCredentials(credentials, key_index)) {
       LOG(WARNING) << "Failed to set new creds";
     }
   }
@@ -2893,9 +2882,7 @@ bool UserDataAuth::UpdateCurrentUserActivityTimestamp(int time_shift_sec) {
 
   bool success = true;
   for (const auto& session_pair : sessions_) {
-    success &=
-        session_pair.second->GetMount()->UpdateCurrentUserActivityTimestamp(
-            time_shift_sec);
+    success &= session_pair.second->UpdateActivityTimestamp(time_shift_sec);
   }
 
   return success;
@@ -2953,7 +2940,7 @@ std::string UserDataAuth::GetStatusString() {
   base::DictionaryValue dv;
   auto mounts = std::make_unique<base::ListValue>();
   for (const auto& session_pair : sessions_) {
-    mounts->Append(session_pair.second->GetMount()->GetStatus());
+    mounts->Append(session_pair.second->GetStatus());
   }
   auto attrs = install_attrs_->GetStatus();
 
