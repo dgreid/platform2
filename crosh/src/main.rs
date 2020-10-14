@@ -292,6 +292,9 @@ fn input_loop(dispatcher: Dispatcher) {
             Err(ReadlineError::Interrupted) => {
                 buffer.clear();
             }
+            Err(ReadlineError::Io(ioe)) if ioe.kind() == std::io::ErrorKind::Interrupted => {
+                buffer.clear();
+            }
             Err(ReadlineError::Eof) => {
                 break;
             }
