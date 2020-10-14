@@ -7,12 +7,11 @@
 
 #include <memory>
 #include <set>
-#include <string>
 #include <utility>
 
 #include <base/callback.h>
+#include <base/sequence_checker.h>
 #include <base/single_thread_task_runner.h>
-#include <base/threading/thread.h>
 #include <mojo/public/cpp/bindings/receiver.h>
 
 #include <libmems/iio_device.h>
@@ -68,13 +67,7 @@ class FakeSamplesHandler : public SamplesHandler {
 
 class FakeSamplesObserver : public cros::mojom::SensorDeviceSamplesObserver {
  public:
-  static void ObserverDeleter(FakeSamplesObserver* observer);
-  using ScopedFakeSamplesObserver =
-      std::unique_ptr<FakeSamplesObserver, decltype(&ObserverDeleter)>;
-
-  static ScopedFakeSamplesObserver Create(
-      scoped_refptr<base::SingleThreadTaskRunner> ipc_task_runner,
-      base::Closure quit_closure,
+  static std::unique_ptr<FakeSamplesObserver> Create(
       libmems::IioDevice* device,
       std::multiset<std::pair<int, cros::mojom::ObserverErrorType>> failures,
       double frequency,
@@ -82,17 +75,23 @@ class FakeSamplesObserver : public cros::mojom::SensorDeviceSamplesObserver {
       double dev_frequency,
       double dev_frequency2,
       int pause_index = kPauseIndex);
+
+  ~FakeSamplesObserver() override;
 
   // cros::mojom::SensorDeviceSamplesObserver overrides:
   void OnSampleUpdated(const base::flat_map<int32_t, int64_t>& sample) override;
   void OnErrorOccurred(cros::mojom::ObserverErrorType type) override;
 
   mojo::PendingRemote<cros::mojom::SensorDeviceSamplesObserver> GetRemote();
+  bool is_bound() const;
+
+  void OnObserverDisconnect();
+
+  bool FinishedObserving() const;
+  bool NoRemainingFailures() const;
 
  private:
   FakeSamplesObserver(
-      scoped_refptr<base::SingleThreadTaskRunner> ipc_task_runner,
-      base::Closure quit_closure,
       libmems::IioDevice* device,
       std::multiset<std::pair<int, cros::mojom::ObserverErrorType>> failures,
       double frequency,
@@ -101,11 +100,7 @@ class FakeSamplesObserver : public cros::mojom::SensorDeviceSamplesObserver {
       double dev_frequency2,
       int pause_index = kPauseIndex);
 
-  int GetStep();
-
-  scoped_refptr<base::SingleThreadTaskRunner> ipc_task_runner_;
-
-  base::Closure quit_closure_;
+  int GetStep() const;
 
   libmems::IioDevice* device_;
 
@@ -120,6 +115,8 @@ class FakeSamplesObserver : public cros::mojom::SensorDeviceSamplesObserver {
   int sample_index_ = 0;
 
   mojo::Receiver<cros::mojom::SensorDeviceSamplesObserver> receiver_;
+
+  SEQUENCE_CHECKER(sequence_checker_);
 
   base::WeakPtrFactory<FakeSamplesObserver> weak_factory_{this};
 };

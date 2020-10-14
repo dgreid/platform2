@@ -12,10 +12,8 @@
 
 #include <base/bind.h>
 #include <base/sequenced_task_runner.h>
-#include <base/single_thread_task_runner.h>
-#include <mojo/public/cpp/bindings/receiver_set.h>
-
 #include <libmems/iio_context.h>
+#include <mojo/public/cpp/bindings/receiver_set.h>
 
 #include "iioservice/daemon/sensor_device_impl.h"
 #include "mojo/sensor.mojom.h"

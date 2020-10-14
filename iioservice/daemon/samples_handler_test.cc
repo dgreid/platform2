@@ -5,8 +5,7 @@
 #include <gtest/gtest.h>
 
 #include <algorithm>
-#include <limits>
-#include <queue>
+#include <set>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -14,13 +13,10 @@
 
 #include <base/rand_util.h>
 #include <base/run_loop.h>
-#include <base/task/single_thread_task_executor.h>
-#include <base/threading/thread.h>
-#include <mojo/core/embedder/scoped_ipc_support.h>
-#include <mojo/public/cpp/bindings/receiver_set.h>
-
+#include <base/test/task_environment.h>
 #include <libmems/common_types.h>
 #include <libmems/test_fakes.h>
+#include <mojo/public/cpp/bindings/receiver_set.h>
 
 #include "iioservice/daemon/samples_handler.h"
 #include "iioservice/daemon/test_fakes.h"
@@ -34,7 +30,6 @@ namespace {
 constexpr double kMinFrequency = 1.25;
 constexpr double kMaxFrequency = 40.0;
 
-constexpr int kFakeTimeoutInMilliseconds = 10;
 constexpr double kFooFrequency = 20.0;
 constexpr int kNumFailures = 10;
 
@@ -101,14 +96,16 @@ class SamplesHandlerTestBase {
  protected:
   void OnSampleUpdatedCallback(mojo::ReceiverId id,
                                libmems::IioDevice::IioSample sample) {
-    CHECK(ipc_thread_->task_runner()->BelongsToCurrentThread());
+    CHECK(
+        task_environment_.GetMainThreadTaskRunner()->BelongsToCurrentThread());
     CHECK_LT(id, observers_.size());
 
     observers_[id]->OnSampleUpdated(std::move(sample));
   }
   void OnErrorOccurredCallback(mojo::ReceiverId id,
                                cros::mojom::ObserverErrorType type) {
-    CHECK(ipc_thread_->task_runner()->BelongsToCurrentThread());
+    CHECK(
+        task_environment_.GetMainThreadTaskRunner()->BelongsToCurrentThread());
     if (id >= observers_.size()) {
       CHECK_EQ(type, cros::mojom::ObserverErrorType::FREQUENCY_INVALID);
       return;
@@ -131,17 +128,9 @@ class SamplesHandlerTestBase {
     EXPECT_TRUE(
         device_->WriteDoubleAttribute(libmems::kSamplingFrequencyAttr, 0.0));
 
-    ipc_thread_ = std::make_unique<base::Thread>("IPCThread");
-    EXPECT_TRUE(ipc_thread_->StartWithOptions(
-        base::Thread::Options(base::MessagePumpType::IO, 0)));
-
-    sample_thread_ = std::make_unique<base::Thread>("SampleThread");
-    EXPECT_TRUE(sample_thread_->StartWithOptions(
-        base::Thread::Options(base::MessagePumpType::IO, 0)));
-
     handler_ = fakes::FakeSamplesHandler::CreateWithFifo(
-        ipc_thread_->task_runner(), sample_thread_->task_runner(),
-        device_.get(),
+        task_environment_.GetMainThreadTaskRunner(),
+        task_environment_.GetMainThreadTaskRunner(), device_.get(),
         base::BindRepeating(&SamplesHandlerTestBase::OnSampleUpdatedCallback,
                             base::Unretained(this)),
         base::BindRepeating(&SamplesHandlerTestBase::OnErrorOccurredCallback,
@@ -151,25 +140,25 @@ class SamplesHandlerTestBase {
 
   void TearDownBase() {
     handler_.reset();
-    sample_thread_->Stop();
+    observers_.clear();
+
+    base::RunLoop().RunUntilIdle();
 
     EXPECT_EQ(device_->ReadDoubleAttribute(libmems::kSamplingFrequencyAttr)
                   .value_or(-1),
               0.0);
-
-    observers_.clear();
-    ipc_thread_->Stop();
   }
 
-  std::unique_ptr<libmems::fakes::FakeIioDevice> device_;
+  base::test::SingleThreadTaskEnvironment task_environment_{
+      base::test::TaskEnvironment::TimeSource::MOCK_TIME,
+      base::test::TaskEnvironment::MainThreadType::IO};
 
-  std::unique_ptr<base::Thread> ipc_thread_;
-  std::unique_ptr<base::Thread> sample_thread_;
+  std::unique_ptr<libmems::fakes::FakeIioDevice> device_;
 
   fakes::FakeSamplesHandler::ScopedFakeSamplesHandler handler_ = {
       nullptr, SamplesHandler::SamplesHandlerDeleter};
   std::vector<ClientData> clients_data_;
-  std::vector<fakes::FakeSamplesObserver::ScopedFakeSamplesObserver> observers_;
+  std::vector<std::unique_ptr<fakes::FakeSamplesObserver>> observers_;
 };
 
 class SamplesHandlerTest : public ::testing::Test,
@@ -194,6 +183,7 @@ TEST_F(SamplesHandlerTest, UpdateChannelsEnabled) {
 
     client_data.id = i;
     client_data.iio_device = device_.get();
+    // At least one channel enabled
     client_data.enabled_chn_indices.emplace(3);  // timestamp
     client_data.timeout = 0;
     client_data.frequency = freqs[i];
@@ -231,17 +221,10 @@ TEST_F(SamplesHandlerTest, UpdateChannelsEnabled) {
 }
 
 TEST_F(SamplesHandlerTest, BadDeviceWithNoSamples) {
-  base::SingleThreadTaskExecutor task_executor(base::MessagePumpType::IO);
-
   device_->DisableFd();
 
   std::vector<double> freqs = {5.0, 0.0, 10.0, 100.0};
   clients_data_.resize(freqs.size());
-  std::vector<std::unique_ptr<base::RunLoop>> loops;
-
-  std::multiset<std::pair<int, cros::mojom::ObserverErrorType>> rt_failures;
-  rt_failures.insert(
-      std::make_pair(0, cros::mojom::ObserverErrorType::READ_TIMEOUT));
 
   size_t fd_failed_cnt = 0;
   for (size_t i = 0; i < freqs.size(); ++i) {
@@ -251,15 +234,15 @@ TEST_F(SamplesHandlerTest, BadDeviceWithNoSamples) {
 
   for (size_t i = 0; i < freqs.size(); ++i) {
     ClientData& client_data = clients_data_[i];
-    std::unique_ptr<base::RunLoop> run_loop = std::make_unique<base::RunLoop>();
 
     client_data.id = i;
     client_data.iio_device = device_.get();
+    // At least one channel enabled
     client_data.enabled_chn_indices.emplace(3);  // timestamp
     client_data.frequency = freqs[i];
-    client_data.timeout = kFakeTimeoutInMilliseconds;
+    client_data.timeout = 0;
 
-    auto failures = rt_failures;
+    std::multiset<std::pair<int, cros::mojom::ObserverErrorType>> failures;
     if (freqs[i] == 0.0) {
       failures.insert(
           std::make_pair(0, cros::mojom::ObserverErrorType::FREQUENCY_INVALID));
@@ -273,19 +256,19 @@ TEST_F(SamplesHandlerTest, BadDeviceWithNoSamples) {
 
     // Don't care about frequencies as there would be no samples.
     auto fake_observer = fakes::FakeSamplesObserver::Create(
-        ipc_thread_->task_runner(), run_loop->QuitClosure(), device_.get(),
-        std::move(failures), kFooFrequency, kFooFrequency, kFooFrequency,
+        device_.get(), std::move(failures), freqs[i], freqs[i], kFooFrequency,
         kFooFrequency);
 
     handler_->AddClient(&client_data);
 
-    loops.emplace_back(std::move(run_loop));
     observers_.emplace_back(std::move(fake_observer));
   }
 
-  // Wait until all observers receive the READ_TIMEOUT error
-  for (auto& run_loop : loops)
-    run_loop->Run();
+  // Wait until all observers receive all samples
+  base::RunLoop().RunUntilIdle();
+
+  for (const auto& observer : observers_)
+    EXPECT_TRUE(observer->NoRemainingFailures());
 
   // Remove clients
   for (auto& client_data : clients_data_)
@@ -329,8 +312,6 @@ TEST_P(SamplesHandlerTestWithParam, UpdateFrequency) {
     handler_->CheckRequestedFrequency(*frequencies.rbegin());
   }
 
-  base::SingleThreadTaskExecutor task_executor(base::MessagePumpType::IO);
-
   // Update clients' frequencies
   for (size_t i = 0; i < GetParam().size(); ++i) {
     ClientData& client_data = clients_data_[i];
@@ -373,14 +354,9 @@ TEST_P(SamplesHandlerTestWithParam, UpdateFrequency) {
 // channel, and read the rest samples. All samples are checked when received by
 // observers.
 TEST_P(SamplesHandlerTestWithParam, ReadSamplesWithFrequency) {
-  base::SingleThreadTaskExecutor task_executor(base::MessagePumpType::IO);
-
-  base::RunLoop pause_loop;
   // Set the pause in the beginning to prevent reading samples before all
   // clients added.
-  device_->SetPauseCallbackAtKthSamples(
-      0, base::BindOnce([](base::Closure quit_closure) { quit_closure.Run(); },
-                        pause_loop.QuitClosure()));
+  device_->SetPauseCallbackAtKthSamples(0, base::BindOnce([]() {}));
 
   std::multiset<std::pair<int, cros::mojom::ObserverErrorType>> rf_failures;
   for (int i = 0; i < kNumFailures; ++i) {
@@ -392,7 +368,6 @@ TEST_P(SamplesHandlerTestWithParam, ReadSamplesWithFrequency) {
   }
 
   clients_data_.resize(GetParam().size());
-  std::vector<std::unique_ptr<base::RunLoop>> loops;
 
   double max_freq = -1, max_freq2 = -1;
   for (size_t i = 0; i < GetParam().size(); ++i) {
@@ -405,17 +380,19 @@ TEST_P(SamplesHandlerTestWithParam, ReadSamplesWithFrequency) {
 
   for (size_t i = 0; i < GetParam().size(); ++i) {
     ClientData& client_data = clients_data_[i];
-    std::unique_ptr<base::RunLoop> run_loop = std::make_unique<base::RunLoop>();
 
     client_data.id = i;
     client_data.iio_device = device_.get();
     client_data.enabled_chn_indices.emplace(0);  // accel_x
-    client_data.enabled_chn_indices.emplace(2);  // accel_y
+    client_data.enabled_chn_indices.emplace(2);  // accel_z
     client_data.enabled_chn_indices.emplace(3);  // timestamp
     client_data.frequency = GetParam()[i].first;
 
     auto failures = rf_failures;
     if (GetParam()[i].first == 0.0) {
+      while (!failures.empty() && failures.begin()->first < fakes::kPauseIndex)
+        failures.erase(failures.begin());
+
       failures.insert(
           std::make_pair(0, cros::mojom::ObserverErrorType::FREQUENCY_INVALID));
     }
@@ -423,16 +400,15 @@ TEST_P(SamplesHandlerTestWithParam, ReadSamplesWithFrequency) {
     // The fake observer needs |max_freq| and |max_freq2| to calculate the
     // correct values of samples
     auto fake_observer = fakes::FakeSamplesObserver::Create(
-        ipc_thread_->task_runner(), run_loop->QuitClosure(), device_.get(),
-        std::move(failures), FixFrequency(GetParam()[i].first),
+        device_.get(), std::move(failures), FixFrequency(GetParam()[i].first),
         FixFrequency(GetParam()[i].second), max_freq, max_freq2);
 
     handler_->AddClient(&client_data);
 
-    loops.emplace_back(std::move(run_loop));
     observers_.emplace_back(std::move(fake_observer));
   }
-  pause_loop.Run();
+
+  base::RunLoop().RunUntilIdle();
 
   device_->SetPauseCallbackAtKthSamples(
       fakes::kPauseIndex,
@@ -468,8 +444,10 @@ TEST_P(SamplesHandlerTestWithParam, ReadSamplesWithFrequency) {
   handler_->ResumeReading();  // Start reading |kPauseIndex| samples
 
   // Wait until all observers receive all samples
-  for (auto& run_loop : loops)
-    run_loop->Run();
+  base::RunLoop().RunUntilIdle();
+
+  for (const auto& observer : observers_)
+    EXPECT_TRUE(observer->FinishedObserving());
 
   // Remove clients
   for (auto& client_data : clients_data_)

@@ -13,12 +13,9 @@
 
 #include <base/files/file_descriptor_watcher_posix.h>
 #include <base/memory/weak_ptr.h>
-#include <base/sequenced_task_runner.h>
-#include <base/single_thread_task_runner.h>
-#include <mojo/public/cpp/bindings/receiver_set.h>
-
 #include <libmems/iio_context.h>
 #include <libmems/iio_device.h>
+#include <mojo/public/cpp/bindings/receiver_set.h>
 
 #include "iioservice/daemon/common_types.h"
 #include "mojo/sensor.mojom.h"

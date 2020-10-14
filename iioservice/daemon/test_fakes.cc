@@ -5,13 +5,7 @@
 #include "iioservice/daemon/test_fakes.h"
 
 #include <algorithm>
-#include <limits>
-#include <memory>
-#include <string>
-#include <utility>
 #include <vector>
-
-#include <base/logging.h>
 
 #include <libmems/common_types.h>
 #include <libmems/test_fakes.h>
@@ -99,24 +93,7 @@ void FakeSamplesHandler::CheckRequestedFrequencyOnThread(double max_freq) {
 }
 
 // static
-void FakeSamplesObserver::ObserverDeleter(FakeSamplesObserver* observer) {
-  if (observer == nullptr)
-    return;
-
-  if (!observer->ipc_task_runner_->BelongsToCurrentThread()) {
-    observer->ipc_task_runner_->PostTask(
-        FROM_HERE,
-        base::BindOnce(&FakeSamplesObserver::ObserverDeleter, observer));
-    return;
-  }
-
-  delete observer;
-}
-
-// static
-FakeSamplesObserver::ScopedFakeSamplesObserver FakeSamplesObserver::Create(
-    scoped_refptr<base::SingleThreadTaskRunner> ipc_task_runner,
-    base::Closure quit_closure,
+std::unique_ptr<FakeSamplesObserver> FakeSamplesObserver::Create(
     libmems::IioDevice* device,
     std::multiset<std::pair<int, cros::mojom::ObserverErrorType>> failures,
     double frequency,
@@ -124,19 +101,20 @@ FakeSamplesObserver::ScopedFakeSamplesObserver FakeSamplesObserver::Create(
     double dev_frequency,
     double dev_frequency2,
     int pause_index) {
-  ScopedFakeSamplesObserver handler(
-      new FakeSamplesObserver(std::move(ipc_task_runner),
-                              std::move(quit_closure), device,
-                              std::move(failures), frequency, frequency2,
-                              dev_frequency, dev_frequency2, pause_index),
-      ObserverDeleter);
+  std::unique_ptr<FakeSamplesObserver> handler(new FakeSamplesObserver(
+      device, std::move(failures), frequency, frequency2, dev_frequency,
+      dev_frequency2, pause_index));
 
   return handler;
 }
 
+FakeSamplesObserver::~FakeSamplesObserver() {
+  DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
+}
+
 void FakeSamplesObserver::OnSampleUpdated(
     const base::flat_map<int32_t, int64_t>& sample) {
-  CHECK(ipc_task_runner_->BelongsToCurrentThread());
+  DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
   CHECK(failures_.empty() || failures_.begin()->first > sample_index_);
 
   int step = GetStep();
@@ -196,60 +174,61 @@ void FakeSamplesObserver::OnSampleUpdated(
   }
 
   sample_index_ += step;
-
-  if ((frequency2_ == 0.0 && sample_index_ + step - 1 >= pause_index_) ||
-      sample_index_ + step - 1 >= base::size(libmems::fakes::kFakeAccelSamples))
-    quit_closure_.Run();
 }
 
 void FakeSamplesObserver::OnErrorOccurred(cros::mojom::ObserverErrorType type) {
-  CHECK(ipc_task_runner_->BelongsToCurrentThread());
-
+  DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
   CHECK(!failures_.empty());
-  CHECK_LE(failures_.begin()->first, sample_index_ + GetStep());
   CHECK_EQ(failures_.begin()->second, type);
 
+  if (type != cros::mojom::ObserverErrorType::FREQUENCY_INVALID)
+    CHECK_LE(failures_.begin()->first, sample_index_ + GetStep());
+  else
+    CHECK_EQ(frequency_, 0.0);
+
   failures_.erase(failures_.begin());
-
-  if (type == cros::mojom::ObserverErrorType::FREQUENCY_INVALID) {
-    CHECK_EQ(sample_index_, 0);
-    if (frequency2_ == 0.0) {
-      sample_index_ = base::size(libmems::fakes::kFakeAccelSamples);
-      quit_closure_.Run();
-
-      return;
-    }
-
-    while (!failures_.empty() && failures_.begin()->first < pause_index_) {
-      if (failures_.begin()->second ==
-          cros::mojom::ObserverErrorType::READ_TIMEOUT)
-        quit_closure_.Run();
-
-      failures_.erase(failures_.begin());
-    }
-
-    sample_index_ = pause_index_;
-
-    return;
-  }
-
-  if (type == cros::mojom::ObserverErrorType::READ_TIMEOUT)
-    quit_closure_.Run();
 }
 
 mojo::PendingRemote<cros::mojom::SensorDeviceSamplesObserver>
 FakeSamplesObserver::GetRemote() {
+  DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
   CHECK(!receiver_.is_bound());
-  auto remote = receiver_.BindNewPipeAndPassRemote(ipc_task_runner_);
-  CHECK(remote);
-  CHECK(receiver_.is_bound());
 
+  auto remote = receiver_.BindNewPipeAndPassRemote();
+  receiver_.set_disconnect_handler(base::BindOnce(
+      &FakeSamplesObserver::OnObserverDisconnect, weak_factory_.GetWeakPtr()));
   return remote;
 }
 
+bool FakeSamplesObserver::is_bound() const {
+  DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
+
+  return receiver_.is_bound();
+}
+
+void FakeSamplesObserver::OnObserverDisconnect() {
+  DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
+
+  receiver_.reset();
+}
+
+bool FakeSamplesObserver::FinishedObserving() const {
+  DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
+
+  int step = GetStep();
+
+  return (frequency2_ == 0.0 && sample_index_ + step - 1 >= pause_index_) ||
+         sample_index_ + step - 1 >=
+             base::size(libmems::fakes::kFakeAccelSamples);
+}
+
+bool FakeSamplesObserver::NoRemainingFailures() const {
+  DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
+
+  return failures_.empty();
+}
+
 FakeSamplesObserver::FakeSamplesObserver(
-    scoped_refptr<base::SingleThreadTaskRunner> ipc_task_runner,
-    base::Closure quit_closure,
     libmems::IioDevice* device,
     std::multiset<std::pair<int, cros::mojom::ObserverErrorType>> failures,
     double frequency,
@@ -257,9 +236,7 @@ FakeSamplesObserver::FakeSamplesObserver(
     double dev_frequency,
     double dev_frequency2,
     int pause_index)
-    : ipc_task_runner_(ipc_task_runner),
-      quit_closure_(quit_closure),
-      device_(device),
+    : device_(device),
       failures_(std::move(failures)),
       frequency_(frequency),
       frequency2_(frequency2),
@@ -267,13 +244,22 @@ FakeSamplesObserver::FakeSamplesObserver(
       dev_frequency2_(dev_frequency2),
       pause_index_(pause_index),
       receiver_(this) {
+  DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
   CHECK_GE(frequency_, 0.0);
   CHECK_GE(frequency2_, 0.0);
   CHECK_GE(dev_frequency_, kFrequencyEpsilon);
   CHECK_GE(dev_frequency2_, kFrequencyEpsilon);
+
+  if (frequency_ == 0.0) {
+    if (frequency2_ == 0.0)
+      sample_index_ = base::size(libmems::fakes::kFakeAccelSamples);
+    else
+      sample_index_ = pause_index_;
+  }
 }
 
-int FakeSamplesObserver::GetStep() {
+int FakeSamplesObserver::GetStep() const {
+  DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
   CHECK_GE(dev_frequency_, kFrequencyEpsilon);
 
   int step = base::size(libmems::fakes::kFakeAccelSamples);

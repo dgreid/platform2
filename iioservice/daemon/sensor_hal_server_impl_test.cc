@@ -2,29 +2,27 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include <memory>
 #include <utility>
 
 #include <base/run_loop.h>
-#include <base/task/single_thread_task_executor.h>
+#include <base/test/task_environment.h>
 #include <libmems/test_fakes.h>
 #include <mojo/core/embedder/scoped_ipc_support.h>
+#include <mojo/public/cpp/bindings/receiver.h>
 
 #include "iioservice/daemon/sensor_hal_server_impl.h"
 #include "mojo/cros_sensor_service.mojom.h"
-
-using ::testing::_;
 
 namespace iioservice {
 
 namespace {
 
-class MockSensorServiceImpl final : public SensorServiceImpl {
+class FakeSensorServiceImpl final : public SensorServiceImpl {
  public:
-  MockSensorServiceImpl(
+  FakeSensorServiceImpl(
       scoped_refptr<base::SequencedTaskRunner> ipc_task_runner,
       std::unique_ptr<libmems::IioContext> context)
       : SensorServiceImpl(
@@ -33,12 +31,21 @@ class MockSensorServiceImpl final : public SensorServiceImpl {
             SensorDeviceImpl::ScopedSensorDeviceImpl(
                 nullptr, SensorDeviceImpl::SensorDeviceImplDeleter)) {}
 
+  ~FakeSensorServiceImpl() {
+    // Expect |AddReceiver| is called exactly once.
+    EXPECT_TRUE(receiver_.is_bound());
+  }
+
+  // SensorServiceImpl overrides:
   void AddReceiver(
       mojo::PendingReceiver<cros::mojom::SensorService> request) override {
-    DoAddReceiver(std::move(request));
+    CHECK(!receiver_.is_bound());
+
+    receiver_.Bind(std::move(request));
   }
-  MOCK_METHOD1(DoAddReceiver,
-               void(mojo::PendingReceiver<cros::mojom::SensorService> request));
+
+ private:
+  mojo::Receiver<cros::mojom::SensorService> receiver_{this};
 };
 
 class FakeSensorHalServerImpl final : public SensorHalServerImpl {
@@ -63,14 +70,14 @@ class FakeSensorHalServerImpl final : public SensorHalServerImpl {
   }
 
  protected:
+  // SensorHalServerImpl overrides:
   void SetSensorService() override {
-    std::unique_ptr<MockSensorServiceImpl,
+    std::unique_ptr<FakeSensorServiceImpl,
                     decltype(&SensorServiceImpl::SensorServiceImplDeleter)>
-        sensor_service(new MockSensorServiceImpl(
+        sensor_service(new FakeSensorServiceImpl(
                            ipc_task_runner_,
                            std::make_unique<libmems::fakes::FakeIioContext>()),
                        SensorServiceImpl::SensorServiceImplDeleter);
-    EXPECT_CALL(*sensor_service.get(), DoAddReceiver(_)).Times(1);
     sensor_service_ = std::move(sensor_service);
   }
 
@@ -85,68 +92,38 @@ class FakeSensorHalServerImpl final : public SensorHalServerImpl {
 };
 
 class SensorHalServerImplTest : public ::testing::Test {
- public:
-  SensorHalServerImplTest()
-      : ipc_thread_(std::make_unique<base::Thread>("IPCThread")) {}
-
  protected:
   void SetUp() override {
-    task_executor_ = std::make_unique<base::SingleThreadTaskExecutor>(
-        base::MessagePumpType::IO);
-
-    EXPECT_TRUE(ipc_thread_->Start());
     ipc_support_ = std::make_unique<mojo::core::ScopedIPCSupport>(
-        ipc_thread_->task_runner(),
+        task_environment_.GetMainThreadTaskRunner(),
         mojo::core::ScopedIPCSupport::ShutdownPolicy::CLEAN);
   }
 
-  MOCK_METHOD(void, DoMojoOnFailureCallback, ());
-  void SetupServer() {
-    base::RunLoop run_loop;
+  base::test::SingleThreadTaskEnvironment task_environment_{
+      base::test::TaskEnvironment::TimeSource::MOCK_TIME};
 
-    ipc_thread_->task_runner()->PostTask(
-        FROM_HERE,
-        base::BindOnce(&SensorHalServerImplTest::CreateServerOnThread,
-                       base::Unretained(this), run_loop.QuitClosure()));
-
-    run_loop.Run();
-  }
-  void CreateServerOnThread(base::RepeatingClosure closure) {
-    CHECK(ipc_thread_->task_runner()->BelongsToCurrentThread());
-
-    server_ = FakeSensorHalServerImpl::Create(
-        ipc_thread_->task_runner(), remote_.BindNewPipeAndPassReceiver(),
-        base::BindOnce(&SensorHalServerImplTest::DoMojoOnFailureCallback,
-                       base::Unretained(this)));
-
-    closure.Run();
-  }
-
-  void TearDown() override {
-    server_.reset();
-
-    ipc_support_.reset();
-    ipc_thread_->Stop();
-    task_executor_.reset();
-  }
-
-  std::unique_ptr<base::Thread> ipc_thread_;
   std::unique_ptr<mojo::core::ScopedIPCSupport> ipc_support_;
-  mojo::Remote<cros::mojom::SensorHalServer> remote_;
-
-  std::unique_ptr<base::SingleThreadTaskExecutor> task_executor_;
 
   FakeSensorHalServerImpl::ScopedFakeSensorHalServerImpl server_ = {
       nullptr, SensorHalServerImpl::SensorHalServerImplDeleter};
 };
 
 TEST_F(SensorHalServerImplTest, CreateChannelAndDisconnect) {
-  SetupServer();
-  mojo::Remote<cros::mojom::SensorService> receiver;
-  remote_->CreateChannel(receiver.BindNewPipeAndPassReceiver());
+  base::RunLoop loop;
 
-  EXPECT_CALL(*this, DoMojoOnFailureCallback).Times(1);
-  remote_.reset();
+  mojo::Remote<cros::mojom::SensorHalServer> remote;
+  server_ = FakeSensorHalServerImpl::Create(
+      task_environment_.GetMainThreadTaskRunner(),
+      remote.BindNewPipeAndPassReceiver(),
+      base::BindOnce([](base::Closure closure) { closure.Run(); },
+                     loop.QuitClosure()));
+
+  mojo::Remote<cros::mojom::SensorService> sensor_service_remote;
+  remote->CreateChannel(sensor_service_remote.BindNewPipeAndPassReceiver());
+  remote.reset();
+
+  // Run until the remote is disconnected;
+  loop.Run();
 }
 
 }  // namespace

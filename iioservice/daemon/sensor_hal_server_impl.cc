@@ -7,6 +7,7 @@
 #include <memory>
 #include <utility>
 
+#include <base/bind.h>
 #include <libmems/iio_channel_impl.h>
 #include <libmems/iio_context_impl.h>
 #include <libmems/iio_device_impl.h>

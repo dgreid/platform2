@@ -10,10 +10,10 @@
 #include <vector>
 
 #include <base/containers/flat_map.h>
-#include <mojo/core/embedder/embedder.h>
-#include <mojo/core/embedder/scoped_ipc_support.h>
 #include <libmems/iio_device.h>
 #include <libmems/iio_channel.h>
+#include <mojo/core/embedder/embedder.h>
+#include <mojo/core/embedder/scoped_ipc_support.h>
 
 #include "iioservice/include/common.h"
 #include "iioservice/include/constants.h"

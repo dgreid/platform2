@@ -4,13 +4,10 @@
 
 #include "iioservice/daemon/sensor_device_impl.h"
 
-#include <string>
 #include <utility>
-#include <vector>
 
-#include <base/logging.h>
+#include <base/bind.h>
 #include <base/strings/string_util.h>
-
 #include <libmems/common_types.h>
 #include <libmems/iio_channel.h>
 
@@ -44,7 +41,7 @@ SensorDeviceImpl::ScopedSensorDeviceImpl SensorDeviceImpl::Create(
   std::unique_ptr<base::Thread> thread(new base::Thread("SensorDeviceImpl"));
   if (!thread->StartWithOptions(
           base::Thread::Options(base::MessagePumpType::IO, 0))) {
-    LOG(ERROR) << "Failed to start thread with TYPE_IO";
+    LOGF(ERROR) << "Failed to start thread with TYPE_IO";
     device.reset();
     return device;
   }
@@ -352,6 +349,7 @@ void SensorDeviceImpl::OnSampleUpdatedCallback(
 
   it->second.observer->OnSampleUpdated(std::move(sample));
 }
+
 void SensorDeviceImpl::OnErrorOccurredCallback(
     mojo::ReceiverId id, cros::mojom::ObserverErrorType type) {
   DCHECK(ipc_task_runner_->RunsTasksInCurrentSequence());

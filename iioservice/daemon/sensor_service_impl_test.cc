@@ -4,10 +4,12 @@
 
 #include <gtest/gtest.h>
 
+#include <memory>
 #include <string>
 #include <utility>
 #include <vector>
 
+#include <base/test/task_environment.h>
 #include <libmems/test_fakes.h>
 
 #include "iioservice/daemon/sensor_service_impl.h"
@@ -25,43 +27,9 @@ constexpr int kFakeGyroId = 2;
 constexpr char kFakeGyroChnName[] = "anglvel_a";
 
 class SensorServiceImplTest : public ::testing::Test {
- public:
-  void GetDeviceIdsOnThread() {
-    CHECK(ipc_thread_->task_runner()->BelongsToCurrentThread());
-
-    sensor_service_->GetDeviceIds(
-        cros::mojom::DeviceType::ACCEL,
-        base::BindOnce([](const std::vector<int32_t>& iio_device_ids) {
-          EXPECT_EQ(iio_device_ids.size(), 1);
-          EXPECT_EQ(iio_device_ids[0], kFakeAccelId);
-          LOG(INFO) << "done";
-        }));
-  }
-
-  void GetAllDeviceIdsOnThread() {
-    CHECK(ipc_thread_->task_runner()->BelongsToCurrentThread());
-
-    sensor_service_->GetAllDeviceIds(base::BindOnce(
-        [](const base::flat_map<int32_t, std::vector<cros::mojom::DeviceType>>&
-               iio_device_ids_types) {
-          EXPECT_EQ(iio_device_ids_types.size(), 2);
-          auto it_accel = iio_device_ids_types.find(kFakeAccelId);
-          EXPECT_TRUE(it_accel != iio_device_ids_types.end());
-          EXPECT_EQ(it_accel->second.size(), 1);
-          EXPECT_EQ(it_accel->second[0], cros::mojom::DeviceType::ACCEL);
-
-          auto it_gyro = iio_device_ids_types.find(kFakeGyroId);
-          EXPECT_TRUE(it_gyro != iio_device_ids_types.end());
-          EXPECT_EQ(it_gyro->second.size(), 1);
-          EXPECT_EQ(it_gyro->second[0], cros::mojom::DeviceType::ANGLVEL);
-          LOG(INFO) << "done";
-        }));
-  }
-
  protected:
   void SetUp() override {
-    std::unique_ptr<libmems::fakes::FakeIioContext> context =
-        std::make_unique<libmems::fakes::FakeIioContext>();
+    auto context = std::make_unique<libmems::fakes::FakeIioContext>();
 
     auto accel = std::make_unique<libmems::fakes::FakeIioDevice>(
         nullptr, kFakeAccelName, kFakeAccelId);
@@ -76,75 +44,63 @@ class SensorServiceImplTest : public ::testing::Test {
     context->AddDevice(std::move(accel));
     context->AddDevice(std::move(gyro));
 
-    ipc_thread_ = std::make_unique<base::Thread>("IPCThread");
-    EXPECT_TRUE(ipc_thread_->StartWithOptions(
-        base::Thread::Options(base::MessagePumpType::IO, 0)));
-
-    ipc_thread_->task_runner()->PostTask(
-        FROM_HERE, base::BindOnce(&SensorServiceImplTest::CreateServiceOnThread,
-                                  base::Unretained(this), std::move(context)));
-  }
-
-  void TearDown() override {
-    ipc_thread_->task_runner()->PostTask(
-        FROM_HERE, base::BindOnce(&SensorServiceImplTest::ResetServiceOnThread,
-                                  base::Unretained(this)));
-    ipc_thread_->Stop();
-  }
-
-  void CreateServiceOnThread(
-      std::unique_ptr<libmems::fakes::FakeIioContext> context) {
-    CHECK(ipc_thread_->task_runner()->BelongsToCurrentThread());
-
-    sensor_service_ = SensorServiceImpl::Create(ipc_thread_->task_runner(),
-                                                std::move(context));
+    sensor_service_ = SensorServiceImpl::Create(
+        task_environment_.GetMainThreadTaskRunner(), std::move(context));
     EXPECT_TRUE(sensor_service_);
   }
 
-  void ResetServiceOnThread() {
-    CHECK(ipc_thread_->task_runner()->BelongsToCurrentThread());
-
-    sensor_service_.reset();
-  }
-
-  std::unique_ptr<base::Thread> ipc_thread_;
+  base::test::SingleThreadTaskEnvironment task_environment_{
+      base::test::TaskEnvironment::TimeSource::MOCK_TIME};
 
   SensorServiceImpl::ScopedSensorServiceImpl sensor_service_ = {
       nullptr, SensorServiceImpl::SensorServiceImplDeleter};
 };
 
 TEST_F(SensorServiceImplTest, GetDeviceIds) {
-  ipc_thread_->task_runner()->PostTask(
-      FROM_HERE, base::BindOnce(&SensorServiceImplTest::GetDeviceIdsOnThread,
-                                base::Unretained(this)));
+  base::RunLoop loop;
+  sensor_service_->GetDeviceIds(
+      cros::mojom::DeviceType::ACCEL,
+      base::BindOnce(
+          [](base::Closure closure,
+             const std::vector<int32_t>& iio_device_ids) {
+            EXPECT_EQ(iio_device_ids.size(), 1);
+            EXPECT_EQ(iio_device_ids[0], kFakeAccelId);
+
+            closure.Run();
+          },
+          loop.QuitClosure()));
+  // Wait until the callback is done.
+  loop.Run();
 }
 
 TEST_F(SensorServiceImplTest, GetAllDeviceIds) {
-  ipc_thread_->task_runner()->PostTask(
-      FROM_HERE, base::BindOnce(&SensorServiceImplTest::GetAllDeviceIdsOnThread,
-                                base::Unretained(this)));
+  base::RunLoop loop;
+  sensor_service_->GetAllDeviceIds(base::BindOnce(
+      [](base::Closure closure,
+         const base::flat_map<int32_t, std::vector<cros::mojom::DeviceType>>&
+             iio_device_ids_types) {
+        EXPECT_EQ(iio_device_ids_types.size(), 2);
+        auto it_accel = iio_device_ids_types.find(kFakeAccelId);
+        EXPECT_TRUE(it_accel != iio_device_ids_types.end());
+        EXPECT_EQ(it_accel->second.size(), 1);
+        EXPECT_EQ(it_accel->second[0], cros::mojom::DeviceType::ACCEL);
+
+        auto it_gyro = iio_device_ids_types.find(kFakeGyroId);
+        EXPECT_TRUE(it_gyro != iio_device_ids_types.end());
+        EXPECT_EQ(it_gyro->second.size(), 1);
+        EXPECT_EQ(it_gyro->second[0], cros::mojom::DeviceType::ANGLVEL);
+
+        closure.Run();
+      },
+      loop.QuitClosure()));
+  // Wait until the callback is done.
+  loop.Run();
 }
 
 class SensorServiceImplTestDeviceTypesWithParam
     : public ::testing::TestWithParam<
           std::pair<std::vector<std::string>,
                     std::vector<cros::mojom::DeviceType>>> {
- public:
-  void GetAllDeviceIdsOnThread() {
-    CHECK(ipc_thread_->task_runner()->BelongsToCurrentThread());
-
-    sensor_service_->GetAllDeviceIds(base::BindOnce(
-        [](const base::flat_map<int32_t, std::vector<cros::mojom::DeviceType>>&
-               iio_device_ids_types) {
-          EXPECT_EQ(iio_device_ids_types.size(), 1);
-          auto it = iio_device_ids_types.find(kFakeAccelId);
-          EXPECT_TRUE(it != iio_device_ids_types.end());
-          EXPECT_EQ(it->second.size(), GetParam().second.size());
-          for (size_t i = 0; i < it->second.size(); ++i)
-            EXPECT_EQ(it->second[i], GetParam().second[i]);
-        }));
-  }
-
  protected:
   void SetUp() override {
     std::unique_ptr<libmems::fakes::FakeIioContext> context =
@@ -160,54 +116,36 @@ class SensorServiceImplTestDeviceTypesWithParam
 
     context->AddDevice(std::move(device));
 
-    ipc_thread_ = std::make_unique<base::Thread>("IPCThread");
-    EXPECT_TRUE(ipc_thread_->StartWithOptions(
-        base::Thread::Options(base::MessagePumpType::IO, 0)));
-
-    ipc_thread_->task_runner()->PostTask(
-        FROM_HERE,
-        base::BindOnce(
-            &SensorServiceImplTestDeviceTypesWithParam::CreateServiceOnThread,
-            base::Unretained(this), std::move(context)));
+    sensor_service_ = SensorServiceImpl::Create(
+        task_environment_.GetMainThreadTaskRunner(), std::move(context));
+    EXPECT_TRUE(sensor_service_.get());
   }
 
-  void TearDown() override {
-    ipc_thread_->task_runner()->PostTask(
-        FROM_HERE,
-        base::BindOnce(
-            &SensorServiceImplTestDeviceTypesWithParam::ResetServiceOnThread,
-            base::Unretained(this)));
-
-    ipc_thread_->Stop();
-  }
-
-  void CreateServiceOnThread(
-      std::unique_ptr<libmems::fakes::FakeIioContext> context) {
-    CHECK(ipc_thread_->task_runner()->BelongsToCurrentThread());
-
-    sensor_service_ = SensorServiceImpl::Create(ipc_thread_->task_runner(),
-                                                std::move(context));
-    EXPECT_TRUE(sensor_service_);
-  }
-
-  void ResetServiceOnThread() {
-    CHECK(ipc_thread_->task_runner()->BelongsToCurrentThread());
-
-    sensor_service_.reset();
-  }
-
-  std::unique_ptr<base::Thread> ipc_thread_;
+  base::test::SingleThreadTaskEnvironment task_environment_{
+      base::test::TaskEnvironment::TimeSource::MOCK_TIME};
 
   SensorServiceImpl::ScopedSensorServiceImpl sensor_service_ = {
       nullptr, SensorServiceImpl::SensorServiceImplDeleter};
 };
 
 TEST_P(SensorServiceImplTestDeviceTypesWithParam, DeviceTypes) {
-  ipc_thread_->task_runner()->PostTask(
-      FROM_HERE,
-      base::BindOnce(
-          &SensorServiceImplTestDeviceTypesWithParam::GetAllDeviceIdsOnThread,
-          base::Unretained(this)));
+  base::RunLoop loop;
+  sensor_service_->GetAllDeviceIds(base::BindOnce(
+      [](base::Closure closure,
+         const base::flat_map<int32_t, std::vector<cros::mojom::DeviceType>>&
+             iio_device_ids_types) {
+        EXPECT_EQ(iio_device_ids_types.size(), 1);
+        auto it = iio_device_ids_types.find(kFakeAccelId);
+        EXPECT_TRUE(it != iio_device_ids_types.end());
+        EXPECT_EQ(it->second.size(), GetParam().second.size());
+        for (size_t i = 0; i < it->second.size(); ++i)
+          EXPECT_EQ(it->second[i], GetParam().second[i]);
+
+        closure.Run();
+      },
+      loop.QuitClosure()));
+  // Wait until the callback is done.
+  loop.Run();
 }
 
 INSTANTIATE_TEST_SUITE_P(
