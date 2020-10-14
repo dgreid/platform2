@@ -160,6 +160,7 @@ IppResponse MojoHandler::ProxyRequestSync(const MHDHttpRequest& request) {
                                 std::move(headers), body, std::move(callback)));
   event.Wait();
 
+  DVLOG(2) << "response code = " << response.http_status_code;
   DVLOG(2) << "response headers = " << ShowHeaders(response.headers);
   DVLOG(2) << "response body = " << ShowBody(response.body);
 
