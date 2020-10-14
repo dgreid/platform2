@@ -23,12 +23,12 @@ const TIMEOUT_MILLIS: u64 = 25000;
 
 #[sorted]
 enum Error {
-    CommunicationError,
-    DBusError,
+    Communication,
+    DBus,
     InvalidTime,
     NetworkTimeSet,
     UnexpectedResponse(Option<u32>),
-    WrappedError(String),
+    Wrapped(String),
 }
 
 impl Display for Error {
@@ -38,8 +38,8 @@ impl Display for Error {
 
         #[sorted]
         match self {
-            CommunicationError => write!(f, "Time not set. There was a communication error."),
-            DBusError => write!(
+            Communication => write!(f, "Time not set. There was a Communication error."),
+            DBus => write!(
                 f,
                 "Time not set. Unable to communicate with the time service."
             ),
@@ -52,14 +52,14 @@ impl Display for Error {
                     write!(f, "An unexpected response was received.")
                 }
             }
-            WrappedError(err) => write!(f, "{}", err),
+            Wrapped(err) => write!(f, "{}", err),
         }
     }
 }
 
 impl<T: error::Error> From<T> for Error {
     fn from(err: T) -> Self {
-        Error::WrappedError(format!("{:?}", err).to_string())
+        Error::Wrapped(format!("{:?}", err))
     }
 }
 
@@ -86,9 +86,9 @@ E.g., set_time 10 February 2012 11:21am
         return Err(dispatcher::Error::CommandReturnedError);
     }
 
-    let timestamp = parse_date_string(&args.get_args().join(" ")).or_else(|err| {
+    let timestamp = parse_date_string(&args.get_args().join(" ")).map_err(|err| {
         eprintln!("Unable to understand the specified time: {}", err);
-        Err(dispatcher::Error::CommandReturnedError)
+        dispatcher::Error::CommandReturnedError
     })?;
 
     match set_time(timestamp) {
@@ -104,17 +104,17 @@ E.g., set_time 10 February 2012 11:21am
 }
 
 fn set_time(timestamp: i64) -> Result<(), Error> {
-    let connection = Connection::new_system().or(Err(Error::DBusError))?;
+    let connection = Connection::new_system().or(Err(Error::DBus))?;
     let conn_path = connection.with_proxy(
         "org.torproject.tlsdate",
         "/org/torproject/tlsdate",
         Duration::from_millis(TIMEOUT_MILLIS),
     );
-    match conn_path.set_time(timestamp).or(Err(Error::DBusError))? {
+    match conn_path.set_time(timestamp).or(Err(Error::DBus))? {
         0 => Ok(()),
         1 => Err(Error::InvalidTime),
         2 => Err(Error::NetworkTimeSet),
-        3 => Err(Error::CommunicationError),
+        3 => Err(Error::Communication),
         code => Err(Error::UnexpectedResponse(Some(code))),
     }
 }

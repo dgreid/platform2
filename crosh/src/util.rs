@@ -49,7 +49,7 @@ impl Display for Error {
 
 impl<T: error::Error> From<T> for Error {
     fn from(err: T) -> Self {
-        Error::WrappedError(format!("{:?}", err).to_string())
+        Error::WrappedError(format!("{:?}", err))
     }
 }
 
@@ -80,9 +80,8 @@ pub fn get_user_id_hash() -> Result<String, ()> {
 pub fn is_chrome_feature_enabled(method_name: &str) -> Result<bool, ()> {
     let user_id_hash = get_user_id_hash()?;
 
-    let connection = Connection::new_system().or_else(|err| {
+    let connection = Connection::new_system().map_err(|err| {
         error!("ERROR: Failed to get D-Bus connection: {}", err);
-        Err(())
     })?;
 
     let proxy = connection.with_proxy(
@@ -97,9 +96,8 @@ pub fn is_chrome_feature_enabled(method_name: &str) -> Result<bool, ()> {
             method_name,
             (user_id_hash,),
         )
-        .or_else(|err| {
+        .map_err(|err| {
             error!("ERROR: D-Bus method call failed: {}", err);
-            Err(())
         })?;
 
     Ok(reply)

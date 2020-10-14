@@ -57,7 +57,7 @@ pub fn register(dispatcher: &mut Dispatcher) {
 }
 
 fn arc_help(_cmd: &Command, w: &mut dyn Write, _level: usize) {
-    w.write(HELP.as_bytes()).unwrap();
+    w.write_all(HELP.as_bytes()).unwrap();
     w.flush().unwrap();
 }
 
@@ -69,10 +69,10 @@ fn arc_command_callback(_cmd: &Command, _args: &Arguments) -> Result<(), dispatc
 }
 
 fn execute_arc_command(
-    args: &Vec<&str>,
+    args: &[&str],
     adb_command_runner: &CommandRunner,
 ) -> Result<(), dispatcher::Error> {
-    match args.as_slice() {
+    match args {
         [] => invalid_argument("no command"),
 
         // dumpsys wifi tools reach [NETWORK] [<ip addr> | <hosname>]
@@ -172,7 +172,7 @@ mod tests {
         ];
 
         for &command in &invalid_commands {
-            let args = command.split(" ").collect();
+            let args: Vec<&str> = command.split(" ").collect();
             let r = execute_arc_command(&args, &fake_adb_command);
             assert!(r.is_err(), "\"{}\" should not be a valid command", command);
         }
@@ -192,7 +192,7 @@ mod tests {
         ];
 
         for &command in &valid_commands {
-            let args = command.split(" ").collect();
+            let args: Vec<&str> = command.split(" ").collect();
             let r = execute_arc_command(&args, &fake_adb_command);
             assert!(
                 r.is_ok(),
@@ -241,7 +241,7 @@ mod tests {
         ];
 
         for (arc_command, adb_command) in &commands {
-            let args = arc_command.split(" ").collect();
+            let args: Vec<&str> = arc_command.split(" ").collect();
             let fake_command_runner = expect_adb_command(&adb_command);
             let r = execute_arc_command(&args, &fake_command_runner);
             assert!(

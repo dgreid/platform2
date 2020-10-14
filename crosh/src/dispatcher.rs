@@ -5,7 +5,6 @@
 // Provides support for registering and handling commands as well as displaying the command line
 // help.
 
-use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::fmt::{self, Display};
 use std::io::Write;
@@ -22,7 +21,7 @@ pub enum Error {
     CommandNotImplemented(String),
     CommandReturnedError,
     DuplicateCommand(Vec<String>),
-    FlagFilterError,
+    FlagFilter,
 }
 
 impl Display for Error {
@@ -37,7 +36,7 @@ impl Display for Error {
             CommandNotImplemented(command) => write!(f, "command not implemented: {}", command),
             CommandReturnedError => write!(f, "command failed"),
             DuplicateCommand(dups) => write!(f, "duplicate commands: {}", dups.join(", ")),
-            FlagFilterError => write!(f, "error filtering flags"),
+            FlagFilter => write!(f, "error filtering flags"),
         }
     }
 }
@@ -149,15 +148,7 @@ impl Dispatcher {
 
     pub fn validate(&mut self) -> Result<(), Error> {
         self.registered_commands
-            .sort_unstable_by(|a: &Command, b: &Command| {
-                if a.name < b.name {
-                    Ordering::Less
-                } else if a.name > b.name {
-                    Ordering::Greater
-                } else {
-                    Ordering::Equal
-                }
-            });
+            .sort_unstable_by(|a: &Command, b: &Command| a.name.cmp(&b.name));
 
         let mut duplicates: Vec<String> = Vec::new();
         for i in 1..self.registered_commands.len() {
@@ -549,7 +540,7 @@ mod tests {
     }
 
     fn false_flag_callback(_cmd: &Command, _args: &Arguments) -> Result<(), Error> {
-        Err(Error::FlagFilterError)
+        Err(Error::FlagFilter)
     }
 
     fn panic_flag_callback(_cmd: &Command, _args: &Arguments) -> Result<(), Error> {
