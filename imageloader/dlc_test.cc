@@ -29,7 +29,7 @@ TEST(DlcTest, MountDlc) {
           SendMountCommand(testing::_, testing::_, testing::_, testing::_))
       .WillByDefault(testing::Return(true));
 
-  Dlc dlc("dummy-id", "dummy-package", base::FilePath());
+  Dlc dlc("id", "package", base::FilePath());
   EXPECT_TRUE(dlc.Mount(proxy.get(), image_path, manifest_path, table_path,
                         base::FilePath()));
 }
