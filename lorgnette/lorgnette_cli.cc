@@ -355,6 +355,10 @@ base::Optional<std::vector<std::string>> ReadAirscanOutput(
     if (equals != std::string::npos && suffix != std::string::npos) {
       std::string name = line.substr(0, equals);
       base::TrimWhitespaceASCII(name, base::TrimPositions::TRIM_ALL, &name);
+      // Replace ':' with '_' because sane-airscan uses ':' to delimit the
+      // fields of the device_string (i.e."airscan:escl:MyPrinter:[url]) passed
+      // to it.
+      base::ReplaceChars(name, ":", "_", &name);
 
       std::string url = line.substr(equals + 1, suffix - (equals + 1));
       base::TrimWhitespaceASCII(url, base::TrimPositions::TRIM_ALL, &url);
