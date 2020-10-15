@@ -55,8 +55,10 @@ void DBusRequestHandler::HandleRequest(Request* request,
                                        const std::string& src) {
   std::vector<std::tuple<std::string, std::string>> headers;
   for (const auto& pair : request->GetHeaders()) {
-    if (CompleteRequestIfInvalid(request, pair.second))
+    if (CompleteRequestIfInvalid(request, pair.first) ||
+        CompleteRequestIfInvalid(request, pair.second)) {
       return;
+    }
     headers.emplace_back(pair.first, pair.second);
   }
   headers.emplace_back("Source-Host", src);
@@ -66,21 +68,39 @@ void DBusRequestHandler::HandleRequest(Request* request,
       files;
   int32_t index = 0;
   for (const auto& file : request->GetFileInfo()) {
+    if (CompleteRequestIfInvalid(request, file->field_name) ||
+        CompleteRequestIfInvalid(request, file->file_name) ||
+        CompleteRequestIfInvalid(request, file->content_type) ||
+        CompleteRequestIfInvalid(request, file->transfer_encoding)) {
+      return;
+    }
     files.emplace_back(index++, file->field_name, file->file_name,
                        file->content_type, file->transfer_encoding);
   }
 
   std::vector<std::tuple<bool, std::string, std::string>> params;
   for (const auto& pair : request->GetDataGet()) {
-    if (CompleteRequestIfInvalid(request, pair.second))
+    if (CompleteRequestIfInvalid(request, pair.first) ||
+        CompleteRequestIfInvalid(request, pair.second)) {
       return;
+    }
     params.emplace_back(false, pair.first, pair.second);
   }
 
   for (const auto& pair : request->GetDataPost()) {
-    if (CompleteRequestIfInvalid(request, pair.second))
+    if (CompleteRequestIfInvalid(request, pair.first) ||
+        CompleteRequestIfInvalid(request, pair.second)) {
       return;
+    }
     params.emplace_back(true, pair.first, pair.second);
+  }
+
+  if (CompleteRequestIfInvalid(request, request->GetProtocolHandlerID()) ||
+      CompleteRequestIfInvalid(request, request->GetRequestHandlerID()) ||
+      CompleteRequestIfInvalid(request, request->GetID()) ||
+      CompleteRequestIfInvalid(request, request->GetURL()) ||
+      CompleteRequestIfInvalid(request, request->GetMethod())) {
+    return;
   }
 
   auto error_callback = base::Bind(&OnError, base::Unretained(request),
