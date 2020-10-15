@@ -19,9 +19,9 @@ namespace {
 
 class MockEcCommandInterface : public EcCommandInterface {
  public:
-  MOCK_METHOD(bool, Run, (int fd));
-  MOCK_METHOD(uint32_t, Version, (), (const));
-  MOCK_METHOD(uint32_t, Command, (), (const));
+  MOCK_METHOD(bool, Run, (int fd), (override));
+  MOCK_METHOD(uint32_t, Version, (), (const, override));
+  MOCK_METHOD(uint32_t, Command, (), (const, override));
 };
 
 class CrosFpDevice_ResetContext : public testing::Test {
@@ -32,8 +32,8 @@ class CrosFpDevice_ResetContext : public testing::Test {
         BiodMetricsInterface* biod_metrics,
         std::unique_ptr<EcCommandFactoryInterface> ec_command_factory)
         : CrosFpDevice(biod_metrics, std::move(ec_command_factory)) {}
-    MOCK_METHOD(bool, GetFpMode, (FpMode * mode));
-    MOCK_METHOD(bool, SetContext, (std::string user_id));
+    MOCK_METHOD(bool, GetFpMode, (FpMode * mode), (override));
+    MOCK_METHOD(bool, SetContext, (std::string user_id), (override));
   };
   class MockFpContextFactory : public MockEcCommandFactory {
    public:
@@ -96,7 +96,7 @@ class CrosFpDevice_SetContext : public testing::Test {
         BiodMetricsInterface* biod_metrics,
         std::unique_ptr<EcCommandFactoryInterface> ec_command_factory)
         : CrosFpDevice(biod_metrics, std::move(ec_command_factory)) {}
-    MOCK_METHOD(bool, GetFpMode, (FpMode * mode));
+    MOCK_METHOD(bool, GetFpMode, (FpMode * mode), (override));
     MOCK_METHOD(bool, SetFpMode, (const FpMode& mode), (override));
   };
   class MockFpContextFactory : public MockEcCommandFactory {

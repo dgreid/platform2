@@ -24,7 +24,7 @@ class MockEcCommandAsync : public EcCommandAsync<O, I> {
   ~MockEcCommandAsync() override = default;
 
   using Data = typename EcCommandAsync<O, I>::Data;
-  MOCK_METHOD(int, ioctl, (int fd, uint32_t request, Data* data));
+  MOCK_METHOD(int, ioctl, (int fd, uint32_t request, Data* data), (override));
 };
 
 class MockAddEntropyCommand
