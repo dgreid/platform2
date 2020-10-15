@@ -139,22 +139,22 @@ bool LoadOobeConfigRollback::AssembleConfig(const RollbackData& rollback_data,
   // Possible values are defined in
   // chrome/browser/resources/chromeos/login/oobe_types.js.
   // TODO(zentaro): Export these strings as constants.
-  base::DictionaryValue dictionary;
+  base::Value dictionary(base::Value::Type::DICTIONARY);
   // Always skip next screen.
-  dictionary.SetBoolean("welcomeNext", true);
+  dictionary.SetBoolKey("welcomeNext", true);
   // Always skip network selection screen if possible.
-  dictionary.SetBoolean("networkUseConnected", true);
+  dictionary.SetBoolKey("networkUseConnected", true);
   // We don't want updates after rolling back.
-  dictionary.SetBoolean("updateSkipNonCritical", true);
+  dictionary.SetBoolKey("updateSkipNonCritical", true);
   // Set whether metrics should be enabled if it exists in |rollback_data|.
-  dictionary.SetBoolean("eulaSendStatistics",
+  dictionary.SetBoolKey("eulaSendStatistics",
                         rollback_data.eula_send_statistics());
   // Set whether the EULA as already accepted and can be skipped if the field is
   // present in |rollback_data|.
-  dictionary.SetBoolean("eulaAutoAccept", rollback_data.eula_auto_accept());
+  dictionary.SetBoolKey("eulaAutoAccept", rollback_data.eula_auto_accept());
   // Tell Chrome that it still has to create some robot accounts that were
   // destroyed during rollback.
-  dictionary.SetBoolean("enrollmentRestoreAfterRollback", true);
+  dictionary.SetBoolKey("enrollmentRestoreAfterRollback", true);
 
   return base::JSONWriter::Write(dictionary, config);
 }
