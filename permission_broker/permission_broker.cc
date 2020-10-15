@@ -113,16 +113,6 @@ bool PermissionBroker::OpenPath(brillo::ErrorPtr* error,
                       out_fd);
 }
 
-bool PermissionBroker::OpenPathWithDroppedPrivileges(
-    brillo::ErrorPtr* error,
-    const std::string& in_path,
-    uint32_t drop_privileges_mask,
-    brillo::dbus_utils::FileDescriptor* out_fd) {
-  VLOG(1) << "Received OpenPathWithDroppedPrivileges request";
-  return OpenPathImpl(error, in_path, drop_privileges_mask, kInvalidLifelineFD,
-                      out_fd);
-}
-
 bool PermissionBroker::ClaimDevicePath(
     brillo::ErrorPtr* error,
     const std::string& in_path,

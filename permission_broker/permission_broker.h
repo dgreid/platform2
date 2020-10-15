@@ -46,11 +46,6 @@ class PermissionBroker : public org::chromium::PermissionBrokerAdaptor,
   bool OpenPath(brillo::ErrorPtr* error,
                 const std::string& in_path,
                 brillo::dbus_utils::FileDescriptor* out_fd) override;
-  bool OpenPathWithDroppedPrivileges(
-      brillo::ErrorPtr* error,
-      const std::string& in_path,
-      uint32_t drop_privileges_mask,
-      brillo::dbus_utils::FileDescriptor* out_fd) override;
   bool ClaimDevicePath(brillo::ErrorPtr* error,
                        const std::string& in_path,
                        uint32_t drop_privileges_mask,
