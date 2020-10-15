@@ -632,12 +632,9 @@ grpc::Status ServiceImpl::ConfigureContainerGuest(
   }
 
   // Run garcon.
-  if (!init_->Spawn(
-          {"start-stop-daemon", "--start", "--quiet", "--chuid", "chronos",
-           "--exec", "/opt/google/cros-containers/bin/garcon", "--", "--server",
-           "--allow_any_user"},
-          {}, true /*respawn*/, false /*use_console*/, false /*wait_for_exit*/,
-          &launch_info)) {
+  if (!init_->Spawn({"/etc/init.d/cros-garcon", "daemon"}, {}, true /*respawn*/,
+                    false /*use_console*/, false /*wait_for_exit*/,
+                    &launch_info)) {
     return grpc::Status(grpc::INTERNAL, "failed to launch garcon");
   }
   return grpc::Status::OK;
