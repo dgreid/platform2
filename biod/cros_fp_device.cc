@@ -20,11 +20,9 @@
 #include "biod/ec_command.h"
 #include "biod/ec_command_async.h"
 #include "biod/fp_context_command_factory.h"
+#include "biod/fp_frame_command.h"
 
 namespace {
-
-// Upper bound of the host command packet transfer size.
-constexpr int kMaxPacketSize = 544;
 
 std::string FourCC(const uint32_t a) {
   return base::StringPrintf(

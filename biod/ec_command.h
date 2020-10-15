@@ -130,7 +130,7 @@ class EcCommand : public EcCommandInterface {
   uint32_t RespSize() const { return data_.cmd.insize; }
   O* Req() { return &data_.req; }
   const O* Req() const { return &data_.req; }
-  uint32_t Result() const { return data_.cmd.result; }
+  virtual uint32_t Result() const { return data_.cmd.result; }
 
   uint32_t Version() const override { return data_.cmd.version; }
   uint32_t Command() const override { return data_.cmd.command; }
