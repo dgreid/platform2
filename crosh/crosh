@@ -12,7 +12,7 @@
 # '/build/$BOARD/bin/dash crosh --dash' before checking them in.
 
 # Disable path expansion at the command line.  None of our builtins need or want
-# it, and it's safer/saner to disallow it in the first place.
+# it, and it's safer to disallow it in the first place.
 set -f
 
 # Don't allow SIGHUP to terminate crosh. This guarantees that even if the user
@@ -159,7 +159,7 @@ shell_history_init() {
 
   # For security sake, let's clean up the file before we let the shell get a
   # chance to read it.  Clean out any non-printable ASCII chars (sorry UTF8
-  # users) as it's the easiest way to be sure.  We limit to 4k to be sane.
+  # users) as it's the easiest way to be sure.  We limit to 4k to be rational.
   # We need a tempfile on the same device to avoid races w/multiple crosh
   # tabs opening at the same time.
   local tmpfile

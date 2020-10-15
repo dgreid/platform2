@@ -54,7 +54,7 @@ earlier ones.
 * [`dev.d/`](./dev.d/): Modules only loaded when the device is in dev mode.
 
 Only modules using the name format `##-<name>.sh` will be loaded.  The leading
-numbers are used to control ordering and the `.sh` suffix is a sanity check.
+numbers are used to control ordering and the `.sh` suffix is a validity check.
 
 As an example, `crosh` stores its dev mode module at
 `/usr/share/crosh/dev.d/50-crosh.sh` and its removable drive module at
@@ -86,7 +86,7 @@ HELP_foo='
 EXEC_foo='/full/path/to/program'
 cmd_foo() (
   # Implementation for the foo command.
-  # You should sanity check $# and "$@" and process them first.
+  # You should validate $# and "$@" and process them first.
   # For invalid args, call the help function with an error message
   # before returning non-zero.
   ...foo code goes here!...
@@ -177,7 +177,7 @@ Similarly, if you want to load removable device modules, you can use
 ### Unittests
 
 The [`./run_tests.sh`](./run_tests.sh) unittest runner performs a bunch of
-basic style and sanity checks.  Run it against your code!
+basic style and soundness checks.  Run it against your code!
 
 ## Command Design
 

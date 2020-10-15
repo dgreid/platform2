@@ -65,7 +65,7 @@ HELP_shell='
   Open a command line shell.
 '
 cmd_shell() (
-  # Verify we have sanity with the dev mode password db.
+  # Verify the permissions of the dev mode password db.
   local passwd="/mnt/stateful_partition/etc/devmode.passwd"
   if [ -e "${passwd}" ]; then
     local perms="$(stat -c %a "${passwd}")"
