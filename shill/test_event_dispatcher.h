@@ -13,17 +13,18 @@
 
 namespace shill {
 
-// Event dispatcher with message loop for testing.
+// Event dispatcher with base::test::TaskEnvironment for testing.
 class EventDispatcherForTest : public EventDispatcher {
  public:
-  EventDispatcherForTest() { chromeos_message_loop_.SetAsCurrent(); }
+  EventDispatcherForTest() = default;
   ~EventDispatcherForTest() override = default;
 
+  base::test::TaskEnvironment& task_environment() { return task_environment_; }
+
  private:
-  // Message loop for testing.
-  base::SingleThreadTaskExecutor task_executor_{base::MessagePumpType::IO};
-  // The chromeos wrapper for the main message loop.
-  brillo::BaseMessageLoop chromeos_message_loop_{task_executor_.task_runner()};
+  base::test::TaskEnvironment task_environment_{
+      base::test::TaskEnvironment::TimeSource::MOCK_TIME,
+      base::test::TaskEnvironment::MainThreadType::IO};
 
   DISALLOW_COPY_AND_ASSIGN(EventDispatcherForTest);
 };

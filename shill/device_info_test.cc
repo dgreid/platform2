@@ -67,14 +67,6 @@ using testing::Test;
 
 namespace shill {
 
-class TestEventDispatcherForDeviceInfo : public EventDispatcherForTest {
- public:
-  MOCK_METHOD(void,
-              PostDelayedTask,
-              (const base::Location&, const base::Closure&, int64_t),
-              (override));
-};
-
 class DeviceInfoTest : public Test {
  public:
   DeviceInfoTest()
@@ -169,7 +161,7 @@ class DeviceInfoTest : public Test {
   MockMetrics metrics_;
   StrictMock<MockManager> manager_;
   DeviceInfo device_info_;
-  TestEventDispatcherForDeviceInfo dispatcher_;
+  EventDispatcherForTest dispatcher_;
   MockRoutingTable routing_table_;
 #if !defined(DISABLE_WIFI)
   MockNetlinkManager netlink_manager_;
@@ -257,18 +249,28 @@ MATCHER_P(IsIPAddress, address, "") {
 }
 
 TEST_F(DeviceInfoTest, StartStop) {
+  auto& task_environment = dispatcher_.task_environment();
   EXPECT_EQ(nullptr, device_info_.link_listener_);
   EXPECT_EQ(nullptr, device_info_.address_listener_);
   EXPECT_TRUE(device_info_.infos_.empty());
 
   EXPECT_CALL(rtnl_handler_, RequestDump(RTNLHandler::kRequestLink |
                                          RTNLHandler::kRequestAddr));
-  EXPECT_CALL(dispatcher_, PostDelayedTask(_, _, _));
   device_info_.Start();
   EXPECT_NE(nullptr, device_info_.link_listener_);
   EXPECT_NE(nullptr, device_info_.address_listener_);
   EXPECT_TRUE(device_info_.infos_.empty());
   Mock::VerifyAndClearExpectations(&rtnl_handler_);
+
+  // Start() should set up a periodic task to request link statistics.
+  EXPECT_EQ(1, task_environment.GetPendingMainThreadTaskCount());
+  EXPECT_CALL(rtnl_handler_, RequestDump(RTNLHandler::kRequestLink));
+  task_environment.FastForwardBy(
+      task_environment.NextMainThreadPendingTaskDelay());
+  EXPECT_EQ(1, task_environment.GetPendingMainThreadTaskCount());
+  EXPECT_CALL(rtnl_handler_, RequestDump(RTNLHandler::kRequestLink));
+  task_environment.FastForwardBy(
+      task_environment.NextMainThreadPendingTaskDelay());
 
   CreateInterfaceAddress();
   EXPECT_FALSE(device_info_.infos_.empty());
@@ -285,12 +287,6 @@ TEST_F(DeviceInfoTest, RegisterDevice) {
 
   EXPECT_CALL(*device0, Initialize());
   device_info_.RegisterDevice(device0);
-}
-
-TEST_F(DeviceInfoTest, RequestLinkStatistics) {
-  EXPECT_CALL(rtnl_handler_, RequestDump(RTNLHandler::kRequestLink));
-  EXPECT_CALL(dispatcher_, PostDelayedTask(_, _, _));
-  device_info_.RequestLinkStatistics();
 }
 
 TEST_F(DeviceInfoTest, DeviceEnumeration) {
@@ -590,13 +586,13 @@ TEST_F(DeviceInfoTest, CreateDeviceCDCEthernet) {
 #endif  // DISABLE_CELLULAR
   EXPECT_CALL(routing_table_, FlushRoutes(_)).Times(0);
   EXPECT_CALL(rtnl_handler_, RemoveInterfaceAddress(_, _)).Times(0);
-  EXPECT_CALL(dispatcher_, PostDelayedTask(_, _, _));
   EXPECT_TRUE(GetDelayedDevices().empty());
   EXPECT_FALSE(CreateDevice(kTestDeviceName, "address", kTestDeviceIndex,
                             Technology::kCDCEthernet));
   EXPECT_FALSE(GetDelayedDevices().empty());
   EXPECT_EQ(1, GetDelayedDevices().size());
   EXPECT_EQ(kTestDeviceIndex, *GetDelayedDevices().begin());
+  EXPECT_EQ(1, dispatcher_.task_environment().GetPendingMainThreadTaskCount());
 }
 
 TEST_F(DeviceInfoTest, CreateDeviceUnknown) {

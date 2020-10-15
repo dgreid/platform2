@@ -129,7 +129,6 @@ class DeviceInfo {
   FRIEND_TEST(DeviceInfoTest, GetUninitializedTechnologies);
   FRIEND_TEST(DeviceInfoTest, HasSubdir);           // For HasSubdir.
   FRIEND_TEST(DeviceInfoTest, IPv6AddressChanged);  // For infos_.
-  FRIEND_TEST(DeviceInfoTest, RequestLinkStatistics);
   FRIEND_TEST(DeviceInfoTest, StartStop);
   FRIEND_TEST(DeviceInfoTest, IPv6DnsServerAddressesChanged);  // For infos_.
   FRIEND_TEST(DeviceInfoMockedGetUserId,
