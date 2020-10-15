@@ -71,7 +71,7 @@ int main(int argc, char** argv) {
   cryptohome::Platform platform;
 
   base::CommandLine* cl = base::CommandLine::ForCurrentProcess();
-  // Sanity check of attestation mode. Historically we had monolithic and
+  // Validity check of attestation mode. Historically we had monolithic and
   // distributed mode, and now the monolithic mode has been obsoleted, so we
   // expect either the switch is missing or explicitly set to distributed mode.
   if (cl->HasSwitch(switches::kAttestationMode) &&

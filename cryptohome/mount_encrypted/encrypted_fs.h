@@ -76,7 +76,7 @@ class EncryptedFs {
   // Teardown - stepwise unmounts the | ext4 | dmcrypt | loopback | tower
   // on top of the sparse file.
   result_code Teardown(void);
-  // CheckStates - Checks sanity for the stateful mount before mounting.
+  // CheckStates - Checks validity for the stateful mount before mounting.
   result_code CheckStates(void);
   // ReportInfo - Reports the paths and bind mounts.
   result_code ReportInfo(void) const;

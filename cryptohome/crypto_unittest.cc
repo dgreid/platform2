@@ -740,7 +740,7 @@ TEST_F(CryptoTest, EncryptAndDecryptWithTpmWithRandomlyFailingTpm) {
   // Matching calls of encrypt/decrypt should give me back the same data.
   EXPECT_TRUE(crypto.EncryptWithTpm(data_blob, &encrypted_data));
 
-  // Tpm be crazy and failing to unseal a valid key.
+  // Tpm failing to unseal a valid key.
   EXPECT_CALL(tpm, Unseal(sealed_key, _)).WillOnce(Return(false));
   EXPECT_FALSE(crypto.DecryptWithTpm(encrypted_data, &output_blob));
 }

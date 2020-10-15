@@ -1794,7 +1794,7 @@ bool TpmImpl::GetEndorsementCredential(SecureBlob* credential) {
     return false;
   }
 
-  // Sanity check the contents of the data and extract the X.509 certificate.
+  // Validity check the contents of the data and extract the X.509 certificate.
   // We are expecting data in the form of a TCG_PCCLIENT_STORED_CERT with an
   // embedded TCG_FULL_CERT. Details can be found in the TCG PC Specific
   // Implementation Specification v1.21 section 7.4.

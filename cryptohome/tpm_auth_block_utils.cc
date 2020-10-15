@@ -116,7 +116,7 @@ bool TpmAuthBlockUtils::CheckTPMReadiness(
     return false;
   }
 
-  // This is a sanity check that the keys still match.
+  // This is a validity check that the keys still match.
   if (serialized.has_tpm_public_key_hash()) {
     if (!IsTPMPubkeyHash(serialized.tpm_public_key_hash(), error)) {
       LOG(ERROR) << "TPM public key hash mismatch.";

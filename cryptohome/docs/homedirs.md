@@ -42,7 +42,7 @@ Cryptohome manages directories as follows:
     `/home/.shadow/<s_h_o_u>/mount/user`, for backward compatibility.
 
 Offline login and screen unlock is processed through cryptohome using a test
-decryption of the user's master key using the passkey provided. If the user
+decryption of the user's keyset using the passkey provided. If the user
 currently has their cryptohome mounted, then the credentials may be verified
 against their session object instead, which provides quick credentials
 verification without access to the key material. This latter method uses the

@@ -1949,7 +1949,7 @@ TEST_P(MountTest, MountCryptohomePreviousMigrationIncomplete) {
       .WillRepeatedly(Return(true));
   EXPECT_TRUE(DoMountInit());
 
-  // Prepare a dummy user and a key.
+  // Prepare a placeholder user and a key.
   InsertTestUsers(&kDefaultUsers[10], 1);
   TestUser* user = &helper_.users[0];
   user->InjectKeyset(&platform_, true);
@@ -2074,7 +2074,7 @@ TEST_P(MountTest, MountCryptohomeForceDircrypto) {
       .WillRepeatedly(Return(false));
   EXPECT_TRUE(DoMountInit());
 
-  // Prepare a dummy user and a key.
+  // Prepare a placeholder user and a key.
   InsertTestUsers(&kDefaultUsers[10], 1);
   TestUser* user = &helper_.users[0];
   user->InjectKeyset(&platform_, true);

@@ -991,7 +991,7 @@ class Service : public brillo::dbus::AbstractDbusService,
 
   // Called on Mount thread. This method completes the MountEx request, given
   // the built Credentials object. It assumes that the input parameters went
-  // through format sanity checks.
+  // through format validity checks.
   void ContinueMountExWithCredentials(
       std::unique_ptr<AccountIdentifier> identifier,
       std::unique_ptr<AuthorizationRequest> authorization,

@@ -40,7 +40,7 @@ class PlatformTest : public ::testing::Test {
   Platform platform_;
 };
 
-TEST_F(PlatformTest, DataSyncFileHasSaneReturnCodes) {
+TEST_F(PlatformTest, DataSyncFileHasValidReturnCodes) {
   const FilePath filename(GetTempName());
   const FilePath dirname(GetTempName());
   platform_.CreateDirectory(dirname);
@@ -52,7 +52,7 @@ TEST_F(PlatformTest, DataSyncFileHasSaneReturnCodes) {
   platform_.DeleteFile(dirname, true /* recursive */);
 }
 
-TEST_F(PlatformTest, SyncFileHasSaneReturnCodes) {
+TEST_F(PlatformTest, SyncFileHasValidReturnCodes) {
   const FilePath filename(GetTempName());
   const FilePath dirname(GetTempName());
   platform_.CreateDirectory(dirname);
@@ -64,7 +64,7 @@ TEST_F(PlatformTest, SyncFileHasSaneReturnCodes) {
   platform_.DeleteFile(dirname, true /* recursive */);
 }
 
-TEST_F(PlatformTest, SyncDirectoryHasSaneReturnCodes) {
+TEST_F(PlatformTest, SyncDirectoryHasValidReturnCodes) {
   const FilePath filename(GetTempName());
   const FilePath dirname(GetTempName());
   platform_.WriteStringToFile(filename, "bla");

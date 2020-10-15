@@ -114,7 +114,7 @@ bool Pkcs11Init::IsUserTokenOK() {
     return false;
   }
 
-  // Check if at least one sane user token exists.
+  // Check if at least one valid user token exists.
   for (CK_ULONG i = 0; i < num_slots; ++i) {
     if (CheckTokenInSlot(slot_list[i], kDefaultUserLabelPrefix)) {
       LOG(INFO) << "User PKCS #11 token looks ok.";
@@ -122,7 +122,7 @@ bool Pkcs11Init::IsUserTokenOK() {
     }
   }
 
-  LOG(WARNING) << "Cannot find sane user token.";
+  LOG(WARNING) << "Cannot find valid user token.";
   return false;
 }
 

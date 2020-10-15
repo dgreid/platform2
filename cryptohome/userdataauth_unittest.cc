@@ -561,7 +561,7 @@ TEST_F(UserDataAuthTest, IsMounted) {
 }
 
 TEST_F(UserDataAuthTest, Unmount) {
-  // Unmount sanity test.
+  // Unmount validity test.
   // The tests on whether stale mount are cleaned up is in another set of tests
   // called CleanUpStale_*
 
@@ -971,7 +971,7 @@ TEST_F(UserDataAuthTestNotInitialized, SeedUrandomInitialize) {
   EXPECT_TRUE(userdataauth_->Initialize());
 }
 
-TEST_F(UserDataAuthTest, LockToSingleUserMountUntilRebootSanity20) {
+TEST_F(UserDataAuthTest, LockToSingleUserMountUntilRebootValidity20) {
   constexpr char kUsername1[] = "foo@gmail.com";
   cryptohome::AccountIdentifier account_id;
   account_id.set_account_id(kUsername1);
@@ -993,7 +993,7 @@ TEST_F(UserDataAuthTest, LockToSingleUserMountUntilRebootSanity20) {
             user_data_auth::CRYPTOHOME_ERROR_NOT_SET);
 }
 
-TEST_F(UserDataAuthTest, LockToSingleUserMountUntilRebootSanity12) {
+TEST_F(UserDataAuthTest, LockToSingleUserMountUntilRebootValidity12) {
   constexpr char kUsername1[] = "foo@gmail.com";
   cryptohome::AccountIdentifier account_id;
   account_id.set_account_id(kUsername1);
@@ -1207,7 +1207,7 @@ TEST_F(UserDataAuthTestNotInitializedDeathTest, GetSystemSaltUninitialized) {
                      "Cannot call GetSystemSalt before initialization");
 }
 
-TEST_F(UserDataAuthTest, OwnershipCallbackSanity) {
+TEST_F(UserDataAuthTest, OwnershipCallbackValidity) {
   SetupMount("foo@gmail.com");
 
   // Called by OwnershipCallback().
@@ -1641,7 +1641,7 @@ TEST_F(UserDataAuthTest, CleanUpStale_FilledMap_NoOpenFiles_ShadowOnly) {
   EXPECT_TRUE(userdataauth_->CleanUpStaleMounts(false));
 }
 
-TEST_F(UserDataAuthTest, StartMigrateToDircryptoSanity) {
+TEST_F(UserDataAuthTest, StartMigrateToDircryptoValidity) {
   constexpr char kUsername1[] = "foo@gmail.com";
 
   user_data_auth::StartMigrateToDircryptoRequest request;
@@ -1870,7 +1870,7 @@ class UserDataAuthExTest : public UserDataAuthTest {
 constexpr char UserDataAuthExTest::kUser[];
 constexpr char UserDataAuthExTest::kKey[];
 
-TEST_F(UserDataAuthExTest, MountGuestSanity) {
+TEST_F(UserDataAuthExTest, MountGuestValidity) {
   PrepareArguments();
 
   mount_req_->set_guest_mount(true);
@@ -2106,7 +2106,7 @@ TEST_F(UserDataAuthExTest, AddKeyInvalidArgs) {
             user_data_auth::CRYPTOHOME_ERROR_INVALID_ARGUMENT);
 }
 
-TEST_F(UserDataAuthExTest, AddKeySanity) {
+TEST_F(UserDataAuthExTest, AddKeyValidity) {
   PrepareArguments();
 
   add_req_->mutable_account_id()->set_account_id("foo@gmail.com");
@@ -2442,7 +2442,7 @@ TEST_F(UserDataAuthExTest, CheckKeyInvalidArgs) {
   CallCheckKeyAndVerify(user_data_auth::CRYPTOHOME_ERROR_INVALID_ARGUMENT);
 }
 
-TEST_F(UserDataAuthExTest, RemoveKeySanity) {
+TEST_F(UserDataAuthExTest, RemoveKeyValidity) {
   PrepareArguments();
 
   constexpr char kUsername1[] = "foo@gmail.com";
@@ -2575,10 +2575,10 @@ TEST_F(UserDataAuthExTest, MassRemoveKeysForceSuccess) {
             user_data_auth::CRYPTOHOME_ERROR_NOT_SET);
 }
 
-constexpr char ListKeysSanityTest_label1[] = "Label 1";
-constexpr char ListKeysSanityTest_label2[] = "Yet another label";
+constexpr char ListKeysValidityTest_label1[] = "Label 1";
+constexpr char ListKeysValidityTest_label2[] = "Yet another label";
 
-TEST_F(UserDataAuthExTest, ListKeysSanity) {
+TEST_F(UserDataAuthExTest, ListKeysValidity) {
   PrepareArguments();
 
   list_keys_req_->mutable_account_id()->set_account_id("foo@gmail.com");
@@ -2591,8 +2591,8 @@ TEST_F(UserDataAuthExTest, ListKeysSanity) {
       .WillOnce(Invoke(
           [](const std::string& ignored, std::vector<std::string>* output) {
             output->clear();
-            output->push_back(ListKeysSanityTest_label1);
-            output->push_back(ListKeysSanityTest_label2);
+            output->push_back(ListKeysValidityTest_label1);
+            output->push_back(ListKeysValidityTest_label2);
             return true;
           }));
 
@@ -2600,8 +2600,8 @@ TEST_F(UserDataAuthExTest, ListKeysSanity) {
   EXPECT_EQ(userdataauth_->ListKeys(*list_keys_req_, &labels),
             user_data_auth::CRYPTOHOME_ERROR_NOT_SET);
 
-  EXPECT_THAT(labels, ElementsAre(ListKeysSanityTest_label1,
-                                  ListKeysSanityTest_label2));
+  EXPECT_THAT(labels, ElementsAre(ListKeysValidityTest_label1,
+                                  ListKeysValidityTest_label2));
 
   // Test for account not found case.
   EXPECT_CALL(homedirs_, Exists(_)).WillOnce(Return(false));
@@ -2688,7 +2688,7 @@ TEST_F(UserDataAuthExTest, GetKeyDataInvalidArgs) {
   EXPECT_FALSE(found);
 }
 
-TEST_F(UserDataAuthExTest, UpdateKeySanity) {
+TEST_F(UserDataAuthExTest, UpdateKeyValidity) {
   PrepareArguments();
 
   constexpr char kUsername1[] = "foo@gmail.com";
@@ -2758,7 +2758,7 @@ TEST_F(UserDataAuthExTest, UpdateKeyError) {
             user_data_auth::CRYPTOHOME_ERROR_AUTHORIZATION_KEY_FAILED);
 }
 
-TEST_F(UserDataAuthExTest, MigrateKeySanity) {
+TEST_F(UserDataAuthExTest, MigrateKeyValidity) {
   PrepareArguments();
 
   constexpr char kUsername1[] = "foo@gmail.com";
@@ -2797,7 +2797,7 @@ TEST_F(UserDataAuthExTest, MigrateKeyInvalidArguments) {
             user_data_auth::CRYPTOHOME_ERROR_INVALID_ARGUMENT);
 }
 
-TEST_F(UserDataAuthExTest, RemoveSanity) {
+TEST_F(UserDataAuthExTest, RemoveValidity) {
   PrepareArguments();
 
   constexpr char kUsername1[] = "foo@gmail.com";
@@ -2828,7 +2828,7 @@ TEST_F(UserDataAuthExTest, RemoveInvalidArguments) {
             user_data_auth::CRYPTOHOME_ERROR_INVALID_ARGUMENT);
 }
 
-TEST_F(UserDataAuthExTest, RenameSanity) {
+TEST_F(UserDataAuthExTest, RenameValidity) {
   PrepareArguments();
 
   constexpr char kUsername1[] = "foo@gmail.com";

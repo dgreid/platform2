@@ -107,7 +107,7 @@ class LegacyCryptohomeInterfaceAdaptorTest : public ::testing::Test {
   // The adaptor that we'll be testing.
   std::unique_ptr<LegacyCryptohomeInterfaceAdaptorForTesting> adaptor_;
 
-  // Default account identifier and authentication request set up with sane
+  // Default account identifier and authentication request set up with valid
   // value to avoid repeating the same pattern in many test.
   cryptohome::AccountIdentifier account_;
   cryptohome::AuthorizationRequest auth_;
@@ -876,12 +876,12 @@ TEST_F(LegacyCryptohomeInterfaceAdaptorTest, MigrateToDircryptoSuccess) {
 }
 
 TEST_F(LegacyCryptohomeInterfaceAdaptorTest,
-       DircryptoMigrationProgressSignalSanity) {
+       DircryptoMigrationProgressSignalValidity) {
   constexpr uint64_t kCurrentBytes = 1234567890123ULL;
   constexpr uint64_t kTotalBytes = 9876543210987ULL;
   static_assert(kTotalBytes > kCurrentBytes,
                 "Incorrect constant test values in "
-                "DircryptoMigrationProgressSignalSanity");
+                "DircryptoMigrationProgressSignalValidity");
 
   user_data_auth::DircryptoMigrationProgress progress;
   progress.set_status(user_data_auth::DIRCRYPTO_MIGRATION_SUCCESS);
@@ -897,7 +897,7 @@ TEST_F(LegacyCryptohomeInterfaceAdaptorTest,
 }
 
 // -------------------- LowDiskSpace Signal Related Tests --------------------
-TEST_F(LegacyCryptohomeInterfaceAdaptorTest, LowDiskSpaceSignalSanity) {
+TEST_F(LegacyCryptohomeInterfaceAdaptorTest, LowDiskSpaceSignalValidity) {
   constexpr uint64_t kFreeDiskSpace = 998877665544ULL;
 
   user_data_auth::LowDiskSpace payload;
@@ -1137,7 +1137,7 @@ constexpr int LegacyCryptohomeInterfaceAdaptorTestForGetTpmStatus::kACA1;
 constexpr int LegacyCryptohomeInterfaceAdaptorTestForGetTpmStatus::kACA2;
 
 TEST_F(LegacyCryptohomeInterfaceAdaptorTestForGetTpmStatus,
-       GetTpmStatusSanity) {
+       GetTpmStatusValidity) {
   // Setup GetTpmStatus in tpm_manager to successfully return |status_reply_|
   ExpectGetTpmStatus(status_reply_);
   // Setup GetDictionaryAttackInfo in tpm_manager to successfully return

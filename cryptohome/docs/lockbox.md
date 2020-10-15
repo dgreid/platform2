@@ -34,7 +34,7 @@ struct {
 ```
 
 The data size is the expected size of the "locked" data. This provides a simple
-sanity check and ensures collision attacks against the stored data are
+validity check and ensures collision attacks against the stored data are
 size-limited.
 
 Flags is reserved for future use, primarily in anticipation of future digest

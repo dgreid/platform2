@@ -683,7 +683,7 @@ bool Mount::CreateCryptohome(const Credentials& credentials,
   FilePath user_dir(GetUserDirectoryForUser(obfuscated_username));
   platform_->CreateDirectory(user_dir);
 
-  // Generate a new master key
+  // Generate a new keyset
   VaultKeyset vault_keyset;
   vault_keyset.Initialize(platform_, crypto_);
   vault_keyset.CreateRandom();
@@ -981,7 +981,7 @@ bool Mount::ReEncryptVaultKeyset(const Credentials& credentials,
   // lack of KeyData in the future as input to migration.
   if (!StoreVaultKeysetForUser(credentials.GetObfuscatedUsername(system_salt_),
                                vault_keyset)) {
-    LOG(ERROR) << "Write to master key failed";
+    LOG(ERROR) << "Write to keyset failed";
     vault_keyset->mutable_serialized()->CopyFrom(old_serialized);
     return false;
   }

@@ -598,7 +598,7 @@ bool MountHelper::MountDaemonStoreDirectories(
 
     // Assuming that |run_daemon_store_path| is a shared mount and the daemon
     // runs in a file system namespace with |run_daemon_store_path| mounted as
-    // slave, this mount event propagates into the daemon.
+    // secondary, this mount event propagates into the daemon.
     if (!BindAndPush(mount_source, mount_target))
       return false;
   }

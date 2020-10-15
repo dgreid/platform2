@@ -626,7 +626,7 @@ bool MigrationHelper::MigrateDir(const base::FilePath& child,
     }
   }
   enumerator.reset();
-  // Decrement the dummy child count.
+  // Decrement the placeholder child count.
   return DecrementChildCountAndDeleteIfNecessary(child);
 }
 

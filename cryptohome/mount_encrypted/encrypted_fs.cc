@@ -583,7 +583,7 @@ result_code EncryptedFs::CheckStates(void) {
     }
   }
 
-  LOG(INFO) << "VFS mount state sanity check ok.";
+  LOG(INFO) << "VFS mount state validity check ok.";
   return RESULT_SUCCESS;
 }
 

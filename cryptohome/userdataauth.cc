@@ -1257,7 +1257,7 @@ void UserDataAuth::DoMount(
   // and challenge response login. For guest mount, a special process
   // (MountGuest()) is used. Meanwhile, for normal plaintext password login and
   // challenge response login, both will flow through this method. This method
-  // generally does some parameter sanity checking, then pass the request onto
+  // generally does some parameter validity checking, then pass the request onto
   // ContinueMountWithCredentials() for plaintext password login and
   // DoChallengeResponseMount() for challenge response login.
   // DoChallengeResponseMount() will contact a dbus service and transmit the
@@ -1329,7 +1329,7 @@ void UserDataAuth::DoMount(
       *auth_key = request.authorization().key();
     }
 
-    // Sanity check for |request.create.keys|.
+    // Validity check for |request.create.keys|.
     int keys_size = request.create().keys_size();
     if (keys_size == 0) {
       LOG(ERROR) << "CreateRequest supplied with no keys";

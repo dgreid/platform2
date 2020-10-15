@@ -53,9 +53,9 @@ class Pkcs11Init {
   static constexpr char kDefaultUserLabelPrefix[] = "User TPM Token ";
 
  private:
-  // Returns true if a token in the given |slot_id| passes basic sanity checks.
-  // This includes checking if the |expected_label_prefix| matches the actual
-  // token label.
+  // Returns true if a token in the given |slot_id| passes basic validity
+  // checks. This includes checking if the |expected_label_prefix| matches the
+  // actual token label.
   bool CheckTokenInSlot(CK_SLOT_ID slot_id,
                         const std::string& expected_label_prefix);
 

@@ -1027,7 +1027,7 @@ bool UnsealingSessionTpm1Impl::Unseal(const Blob& signed_challenge_value,
     LOG(ERROR) << "Failed to load the migration destination key";
     return false;
   }
-  // Sanity check the received signature blob.
+  // Validity check the received signature blob.
   if (signed_challenge_value.size() != protection_key_size_bits / 8) {
     LOG(ERROR) << "Wrong size of challenge signature blob";
     return false;

@@ -295,7 +295,7 @@ result_code Tpm1SystemKeyLoader::Persist() {
 
   rc = tpm_->SetSystemKeyInitializedFlag();
   if (rc != RESULT_SUCCESS) {
-    LOG(ERROR) << "Failed to create dummy delegation entry.";
+    LOG(ERROR) << "Failed to create placeholder delegation entry.";
     return rc;
   }
 

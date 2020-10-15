@@ -235,12 +235,12 @@ class EncryptionKeyTest : public testing::Test {
         base::File::FLAG_CREATE_ALWAYS | base::File::FLAG_WRITE);
     ASSERT_TRUE(update_request_file.IsValid());
 
-    // Create a dummy firmware update image file.
+    // Create a placeholder firmware update image file.
     base::FilePath firmware_update_image_path;
     if (available) {
       firmware_update_image_path = tmpdir_.GetPath()
                                        .AppendASCII(paths::kFirmwareDir)
-                                       .AppendASCII("dummy_fw.bin");
+                                       .AppendASCII("placeholder_fw.bin");
       ASSERT_TRUE(base::CreateDirectory(firmware_update_image_path.DirName()));
       base::File firmware_update_image_file(
           firmware_update_image_path,

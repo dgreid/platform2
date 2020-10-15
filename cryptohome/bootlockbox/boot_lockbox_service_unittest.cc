@@ -48,9 +48,10 @@ class MockDBusBus : public dbus::Bus {
 class ResponseCapturer {
  public:
   ResponseCapturer()
-      : call_("org.chromium.BootLockboxInterfaceInterface", "DummyDbusMethod"),
+      : call_("org.chromium.BootLockboxInterfaceInterface",
+              "PlaceholderDbusMethod"),
         weak_ptr_factory_(this) {
-    call_.SetSerial(1);  // Dummy serial is needed.
+    call_.SetSerial(1);  // Placeholder serial is needed.
   }
 
   ~ResponseCapturer() = default;

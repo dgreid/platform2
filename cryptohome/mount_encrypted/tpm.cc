@@ -33,7 +33,7 @@ namespace {
 // flag that persists until the next TPM clear, at which point it gets cleared
 // automatically. This is by the system key handling logic to determine whether
 // a fresh system key has been generated after the last TPM clear.
-uint8_t kSystemKeyInitializedDummyDelegationFamilyLabel = 0xff;
+uint8_t kSystemKeyInitializedFakeDelegationFamilyLabel = 0xff;
 
 // Maximum TPM delegation table size.
 const uint32_t kDelegationTableSize = 8;
@@ -544,9 +544,9 @@ result_code Tpm::SetSystemKeyInitializedFlag() {
   }
 
   uint32_t result = TlclCreateDelegationFamily(
-      kSystemKeyInitializedDummyDelegationFamilyLabel);
+      kSystemKeyInitializedFakeDelegationFamilyLabel);
   if (result != TPM_SUCCESS) {
-    LOG(ERROR) << "Failed to create dummy delegation family: " << result;
+    LOG(ERROR) << "Failed to create fake delegation family: " << result;
     return RESULT_FAIL_FATAL;
   }
 
@@ -566,8 +566,8 @@ result_code Tpm::HasSystemKeyInitializedFlag(bool* flag_value) {
     return RESULT_SUCCESS;
   }
 
-  // The dummy delegation family is only relevant for unowned TPMs. Pretend the
-  // flag is present if the TPM is owned.
+  // The fake delegation family is only relevant for unowned TPMs.
+  // Pretend the flag is present if the TPM is owned.
   bool owned = false;
   result_code rc = IsOwned(&owned);
   if (rc != RESULT_SUCCESS) {
@@ -591,7 +591,7 @@ result_code Tpm::HasSystemKeyInitializedFlag(bool* flag_value) {
 
   for (uint32_t i = 0; i < table_size; ++i) {
     if (table[i].familyLabel ==
-        kSystemKeyInitializedDummyDelegationFamilyLabel) {
+        kSystemKeyInitializedFakeDelegationFamilyLabel) {
       initialized_flag_ = true;
       break;
     }

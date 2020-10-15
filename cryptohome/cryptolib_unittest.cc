@@ -146,7 +146,7 @@ TEST(CryptoLibTest, AesGcmTestSimple) {
 
   EXPECT_TRUE(CryptoLib::AesGcmEncrypt(plaintext, key, &iv, &tag, &ciphertext));
 
-  // Sanity check that the encryption actually did something.
+  // Validity check that the encryption actually did something.
   EXPECT_NE(ciphertext, plaintext);
   EXPECT_EQ(ciphertext.size(), plaintext.size());
 
@@ -171,7 +171,7 @@ TEST(CryptoLibTest, AesGcmTestWrongKey) {
 
   EXPECT_TRUE(CryptoLib::AesGcmEncrypt(plaintext, key, &iv, &tag, &ciphertext));
 
-  // Sanity check that the encryption actually did something.
+  // Validity check that the encryption actually did something.
   EXPECT_NE(ciphertext, plaintext);
   EXPECT_EQ(ciphertext.size(), plaintext.size());
 
@@ -198,7 +198,7 @@ TEST(CryptoLibTest, AesGcmTestWrongIV) {
 
   EXPECT_TRUE(CryptoLib::AesGcmEncrypt(plaintext, key, &iv, &tag, &ciphertext));
 
-  // Sanity check that the encryption actually did something.
+  // Validity check that the encryption actually did something.
   EXPECT_NE(ciphertext, plaintext);
   EXPECT_EQ(ciphertext.size(), plaintext.size());
 
@@ -225,7 +225,7 @@ TEST(CryptoLibTest, AesGcmTestWrongTag) {
 
   EXPECT_TRUE(CryptoLib::AesGcmEncrypt(plaintext, key, &iv, &tag, &ciphertext));
 
-  // Sanity check that the encryption actually did something.
+  // Validity check that the encryption actually did something.
   EXPECT_NE(ciphertext, plaintext);
   EXPECT_EQ(ciphertext.size(), plaintext.size());
 
@@ -272,7 +272,7 @@ TEST(CryptoLibTest, AesGcmTestUniqueIVs) {
 // DeprecatedDecryptScryptBlob continue to perform the same function, and
 // interoperate correctly, as they are re-written and re-factored. These do not
 // prove cryptographic properties of the functions, or formal verification. They
-// are sanity checks for compatibility.
+// are validity checks for compatibility.
 TEST(CryptoLibTest, EncryptScryptTest1) {
   const std::string blob_str = "nOaVD3qRNqWhqQTDgyGb";
   brillo::SecureBlob blob(blob_str.begin(), blob_str.end());
@@ -302,7 +302,7 @@ TEST(CryptoLibTest, EncryptScryptTest1) {
   CheckBlob(blob, key_source, fixed_bytes_blob, blob_str);
 }
 
-// This is a sanity check that AES-CTR-256 encryption encrypts and returns the
+// This is a validity check that AES-CTR-256 encryption encrypts and returns the
 // same message.
 TEST(CryptoLibTest, SimpleAesCtrEncryption) {
   std::string message = "ENCRYPT ME";
