@@ -78,34 +78,31 @@ bool DecodeConnectionType(const std::string& value,
   return false;
 }
 
-// Parses the |json| string to a base::DictionaryValue. Returns nullptr on error
-// and sets the |error| string.
-std::unique_ptr<base::DictionaryValue> JsonToDictionary(const std::string& json,
-                                                        std::string* error) {
+// Parses the |json| string to a dictionary type base::Value. Returns nullopt on
+// error and sets the |error| string.
+base::Optional<base::Value> JsonToDictionary(const std::string& json,
+                                             std::string* error) {
   DCHECK(error);
   auto root = base::JSONReader::ReadAndReturnValueWithError(
       json, base::JSON_ALLOW_TRAILING_COMMAS);
-  if (root.error_code != base::JSONReader::JSON_NO_ERROR) {
+  if (!root.value) {
     *error = root.error_message;
-    return nullptr;
+    return base::nullopt;
   }
 
-  std::unique_ptr<base::DictionaryValue> dict_value =
-      base::DictionaryValue::From(
-          std::make_unique<base::Value>(std::move(*root.value)));
-  if (!dict_value)
+  if (!root.value->is_dict()) {
     *error = "JSON is not a dictionary: '" + json + "'";
-  return dict_value;
+    return base::nullopt;
+  }
+  return std::move(root.value);
 }
 
-#define CONVERT_DAY_OF_WEEK(day_of_week)    \
-  if (str == #day_of_week) {                \
-    *wd = em::WeeklyTimeProto::day_of_week; \
-    return true;                            \
-  }
+#define CONVERT_DAY_OF_WEEK(day_of_week) \
+  if (str == #day_of_week)               \
+    return base::make_optional(em::WeeklyTimeProto::day_of_week);
 
-bool StringToDayOfWeek(const std::string& str,
-                       em::WeeklyTimeProto::DayOfWeek* wd) {
+base::Optional<em::WeeklyTimeProto::DayOfWeek> StringToDayOfWeek(
+    const std::string& str) {
   CONVERT_DAY_OF_WEEK(MONDAY);
   CONVERT_DAY_OF_WEEK(TUESDAY);
   CONVERT_DAY_OF_WEEK(WEDNESDAY);
@@ -113,41 +110,43 @@ bool StringToDayOfWeek(const std::string& str,
   CONVERT_DAY_OF_WEEK(FRIDAY);
   CONVERT_DAY_OF_WEEK(SATURDAY);
   CONVERT_DAY_OF_WEEK(SUNDAY);
-  return false;
+  return base::nullopt;
 }
 
 #undef CONVERT_WEEKDAY
 
 // Converts a dictionary |value| to a WeeklyTimeProto |proto|.
-bool EncodeWeeklyTimeProto(const base::DictionaryValue& value,
+bool EncodeWeeklyTimeProto(const base::Value& value,
                            em::WeeklyTimeProto* proto) {
-  std::string day_of_week_str;
-  em::WeeklyTimeProto::DayOfWeek day_of_week = em::WeeklyTimeProto::MONDAY;
-  int time = 0;
-  if (!value.GetString("day_of_week", &day_of_week_str) ||
-      !StringToDayOfWeek(day_of_week_str, &day_of_week) ||
-      !value.GetInteger("time", &time)) {
+  if (!value.is_dict())
     return false;
-  }
 
-  proto->set_day_of_week(day_of_week);
-  proto->set_time(time);
+  const std::string* day_of_week_str = value.FindStringKey("day_of_week");
+  if (!day_of_week_str)
+    return false;
+
+  auto day_of_week = StringToDayOfWeek(*day_of_week_str);
+  auto time = value.FindIntKey("time");
+  if (!day_of_week.has_value() || !time.has_value())
+    return false;
+
+  proto->set_day_of_week(*day_of_week);
+  proto->set_time(*time);
   return true;
 }
 
 // Converts the dictionary |value| to a WeeklyTimeIntervalProto |proto|.
 bool EncodeWeeklyTimeIntervalProto(const base::Value& value,
                                    em::WeeklyTimeIntervalProto* proto) {
-  const base::DictionaryValue* dict = nullptr;
-  if (!value.GetAsDictionary(&dict))
+  if (!value.is_dict())
     return false;
 
-  const base::DictionaryValue* start = nullptr;
-  if (!dict->GetDictionary("start", &start))
+  const base::Value* start = value.FindDictKey("start");
+  if (!start)
     return false;
 
-  const base::DictionaryValue* end = nullptr;
-  if (!dict->GetDictionary("end", &end))
+  const base::Value* end = value.FindDictKey("end");
+  if (!end)
     return false;
 
   DCHECK(start && end);
@@ -319,10 +318,10 @@ void DevicePolicyEncoder::EncodeLoginPolicies(
   if (base::Optional<std::string> value =
           EncodeString(key::kSystemProxySettings)) {
     std::string error;
-    std::unique_ptr<base::DictionaryValue> dict_value =
+    base::Optional<base::Value> dict_value =
         JsonToDictionary(value.value(), &error);
     if (!dict_value) {
-      LOG(ERROR) << "Invalid JSON string '"
+      LOG(ERROR) << "Failed to parse string as dictionary: '"
                  << (!error.empty() ? error : value.value()) << "' for policy '"
                  << key::kSystemProxySettings << "', ignoring.";
     } else {
@@ -702,11 +701,17 @@ void DevicePolicyEncoder::EncodeGenericPolicies(
     }
     for (const std::string& value : values.value()) {
       std::string error;
-      std::unique_ptr<base::DictionaryValue> dict_value =
-          JsonToDictionary(value, &error);
-      int vid, pid;
-      if (!dict_value || !dict_value->GetInteger("vendor_id", &vid) ||
-          !dict_value->GetInteger("product_id", &pid)) {
+      base::Optional<base::Value> dict_value = JsonToDictionary(value, &error);
+      if (!dict_value) {
+        LOG(ERROR) << "Failed to parse string as dictionary: '"
+                   << (!error.empty() ? error : value) << "' for policy '"
+                   << key::kUsbDetachableWhitelist << "', ignoring.";
+        continue;
+      }
+
+      base::Optional<int> vid = dict_value->FindIntKey("vendor_id");
+      base::Optional<int> pid = dict_value->FindIntKey("product_id");
+      if (!vid.has_value() || !pid.has_value()) {
         LOG(ERROR) << "Invalid JSON string '"
                    << (!error.empty() ? error : value) << "' for policy '"
                    << key::kUsbDetachableWhitelist << "', ignoring. Expected: "
@@ -715,13 +720,13 @@ void DevicePolicyEncoder::EncodeGenericPolicies(
       }
 
       em::UsbDeviceIdProto* whitelist_entry = whitelist->add_id();
-      whitelist_entry->set_vendor_id(vid);
-      whitelist_entry->set_product_id(pid);
+      whitelist_entry->set_vendor_id(*vid);
+      whitelist_entry->set_product_id(*pid);
 
       if (!usb_detachable_allowlist_values) {
         em::UsbDeviceIdInclusiveProto* allowlist_entry = allowlist->add_id();
-        allowlist_entry->set_vendor_id(vid);
-        allowlist_entry->set_product_id(pid);
+        allowlist_entry->set_vendor_id(*vid);
+        allowlist_entry->set_product_id(*pid);
       }
     }
   }
@@ -731,11 +736,16 @@ void DevicePolicyEncoder::EncodeGenericPolicies(
     DCHECK(!list->id_size());
     for (const std::string& value : usb_detachable_allowlist_values.value()) {
       std::string error;
-      std::unique_ptr<base::DictionaryValue> dict_value =
-          JsonToDictionary(value, &error);
-      int vid, pid;
-      if (!dict_value || !dict_value->GetInteger("vendor_id", &vid) ||
-          !dict_value->GetInteger("product_id", &pid)) {
+      base::Optional<base::Value> dict_value = JsonToDictionary(value, &error);
+      if (!dict_value) {
+        LOG(ERROR) << "Failed to parse string as dictionary: '"
+                   << (!error.empty() ? error : value) << "' for policy '"
+                   << key::kUsbDetachableAllowlist << "', ignoring.";
+        continue;
+      }
+      base::Optional<int> vid = dict_value->FindIntKey("vendor_id");
+      base::Optional<int> pid = dict_value->FindIntKey("product_id");
+      if (!vid.has_value() || !pid.has_value()) {
         LOG(ERROR) << "Invalid JSON string '"
                    << (!error.empty() ? error : value) << "' for policy '"
                    << key::kUsbDetachableAllowlist << "', ignoring. Expected: "
@@ -744,8 +754,8 @@ void DevicePolicyEncoder::EncodeGenericPolicies(
       }
 
       em::UsbDeviceIdInclusiveProto* entry = list->add_id();
-      entry->set_vendor_id(vid);
-      entry->set_product_id(pid);
+      entry->set_vendor_id(*vid);
+      entry->set_product_id(*pid);
     }
   }
 
@@ -763,29 +773,33 @@ void DevicePolicyEncoder::EncodeGenericPolicies(
 
   if (base::Optional<std::string> value = EncodeString(key::kDeviceOffHours)) {
     std::string error;
-    std::unique_ptr<base::DictionaryValue> dict_value =
+    base::Optional<base::Value> dict_value =
         JsonToDictionary(value.value(), &error);
-    const base::ListValue* intervals = nullptr;
-    const base::ListValue* ignored_policy_proto_tags = nullptr;
-    std::string timezone;
-    bool is_error = !dict_value ||
-                    !dict_value->GetList("intervals", &intervals) ||
-                    !dict_value->GetList("ignored_policy_proto_tags",
-                                         &ignored_policy_proto_tags) ||
-                    !dict_value->GetString("timezone", &timezone);
+    bool is_error = !dict_value;
     auto proto = std::make_unique<em::DeviceOffHoursProto>();
     if (!is_error) {
-      proto->set_timezone(timezone);
+      const base::Value* intervals = dict_value->FindListKey("intervals");
+      const base::Value* ignored_policy_proto_tags =
+          dict_value->FindListKey("ignored_policy_proto_tags");
+      const std::string* timezone = dict_value->FindStringKey("timezone");
+      is_error = !intervals || !ignored_policy_proto_tags || !timezone;
 
-      for (const base::Value& entry : *intervals) {
-        is_error |=
-            !EncodeWeeklyTimeIntervalProto(entry, proto->add_intervals());
-      }
+      if (!is_error) {
+        proto->set_timezone(*timezone);
 
-      for (const base::Value& entry : *ignored_policy_proto_tags) {
-        int tag = 0;
-        is_error |= !entry.GetAsInteger(&tag);
-        proto->add_ignored_policy_proto_tags(tag);
+        for (const base::Value& entry : intervals->GetList()) {
+          is_error |=
+              !EncodeWeeklyTimeIntervalProto(entry, proto->add_intervals());
+        }
+
+        for (const base::Value& entry : ignored_policy_proto_tags->GetList()) {
+          int tag = 0;
+          if (entry.is_int())
+            tag = entry.GetInt();
+          else
+            is_error = true;
+          proto->add_ignored_policy_proto_tags(tag);
+        }
       }
     }
 
@@ -894,27 +908,27 @@ void DevicePolicyEncoder::EncodeGenericPolicies(
   if (base::Optional<std::string> value =
           EncodeString(key::kTPMFirmwareUpdateSettings)) {
     std::string error;
-    std::unique_ptr<base::DictionaryValue> dict_value =
+    base::Optional<base::Value> dict_value =
         JsonToDictionary(value.value(), &error);
     if (!dict_value) {
-      LOG(ERROR) << "Invalid JSON string '"
+      LOG(ERROR) << "Failed to parse string as dictionary: '"
                  << (!error.empty() ? error : value.value()) << "' for policy '"
                  << key::kTPMFirmwareUpdateSettings << "', ignoring.";
     } else {
       em::TPMFirmwareUpdateSettingsProto* settings =
           policy->mutable_tpm_firmware_update_settings();
-      for (base::DictionaryValue::Iterator iter(*dict_value); !iter.IsAtEnd();
-           iter.Advance()) {
-        bool flag;
-        if (iter.key() == "allow-user-initiated-powerwash" &&
-            iter.value().GetAsBoolean(&flag)) {
-          settings->set_allow_user_initiated_powerwash(flag);
-        } else if (iter.key() == "allow-user-initiated-preserve-device-state" &&
-                   iter.value().GetAsBoolean(&flag)) {
-          settings->set_allow_user_initiated_preserve_device_state(flag);
-        } else {
-          LOG(WARNING) << "Unknown JSON key or invalid value: " << iter.key();
+      for (const auto& item : dict_value->DictItems()) {
+        if (!item.second.is_bool()) {
+          LOG(WARNING) << "Invalid value at: " << item.first;
+          continue;
         }
+        bool flag = item.second.GetBool();
+        if (item.first == "allow-user-initiated-powerwash")
+          settings->set_allow_user_initiated_powerwash(flag);
+        else if (item.first == "allow-user-initiated-preserve-device-state")
+          settings->set_allow_user_initiated_preserve_device_state(flag);
+        else
+          LOG(WARNING) << "Unknown JSON key: " << item.first;
       }
     }
   }
