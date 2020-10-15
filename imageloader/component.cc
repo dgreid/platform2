@@ -334,7 +334,7 @@ bool Component::CopyFingerprintFile(const base::FilePath& src,
 
 // The client inserts manifest.fingerprint into components after unpacking the
 // CRX. The file is used for delta updates. Since Chrome OS doesn't rely on it
-// for security of the disk image, we are fine with sanity checking the contents
+// for security of the disk image, we are fine with validating the contents
 // and then preserving the unsigned file.
 bool Component::IsValidFingerprintFile(const std::string& contents) {
   return contents.size() <= 256 &&

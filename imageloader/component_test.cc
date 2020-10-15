@@ -131,7 +131,7 @@ TEST_F(ComponentTest, InitComponentAndCheckManifest) {
 
   EXPECT_EQ(1, component->manifest().manifest_version());
   EXPECT_EQ(kTestDataVersion, component->manifest().version());
-  // Don't hardcode the sha256 hashes, but run some sanity checks.
+  // Don't hardcode the sha256 hashes, but run some validity checks.
   EXPECT_EQ(crypto::kSHA256Length, component->manifest().image_sha256().size());
   EXPECT_EQ(crypto::kSHA256Length, component->manifest().table_sha256().size());
   EXPECT_NE(component->manifest().image_sha256(),

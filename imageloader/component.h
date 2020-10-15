@@ -79,7 +79,7 @@ class Component {
   // Copies the fingerprint file that Chrome users for delta updates.
   bool CopyFingerprintFile(const base::FilePath& src,
                            const base::FilePath& dest);
-  // Sanity check the fingerprint file.
+  // Validate the fingerprint file.
   static bool IsValidFingerprintFile(const std::string& contents);
 
   FRIEND_TEST_ALL_PREFIXES(ComponentTest, IsValidFingerprintFile);
