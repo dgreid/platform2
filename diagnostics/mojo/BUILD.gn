@@ -16,6 +16,7 @@ generate_mojom_bindings("cros_healthd_mojo_bindings") {
     "cros_healthd_diagnostics.mojom",
     "cros_healthd_events.mojom",
     "cros_healthd_probe.mojom",
+    "nullable_primitives.mojom",
   ]
 }
 

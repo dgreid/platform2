@@ -139,7 +139,7 @@ Status StorageDeviceInfo::PopulateDeviceInfo(
   auto discard_time = iostat_.GetDiscardTime();
   if (discard_time.has_value()) {
     output_info->discard_time_seconds_since_last_boot =
-        mojo_ipc::UInt64Value::New(
+        mojo_ipc::NullableUint64::New(
             static_cast<uint64_t>(discard_time.value().InSeconds()));
   }
 

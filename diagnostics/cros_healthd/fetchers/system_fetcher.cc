@@ -70,7 +70,7 @@ base::Optional<mojo_ipc::ProbeErrorPtr> FetchDmiInfo(
                         &chassis_type_str)) {
     uint64_t chassis_type;
     if (base::StringToUint64(chassis_type_str, &chassis_type)) {
-      output_info->chassis_type = mojo_ipc::UInt64Value::New(chassis_type);
+      output_info->chassis_type = mojo_ipc::NullableUint64::New(chassis_type);
     } else {
       return CreateAndLogProbeError(
           mojo_ipc::ErrorType::kParseError,

@@ -162,7 +162,7 @@ BatteryFetcher::PopulateSmartBatteryInfo(mojo_ipc::BatteryInfo* info) {
   if (error.has_value()) {
     return error;
   }
-  info->temperature = mojo_ipc::UInt64Value::New(temperature);
+  info->temperature = mojo_ipc::NullableUint64::New(temperature);
 
   return base::nullopt;
 }
