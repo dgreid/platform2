@@ -158,7 +158,10 @@ void AdbProxy::OnGuestMessage(const GuestMessage& msg) {
 
   // On ARC up, start accepting connections.
   if (msg.event() == GuestMessage::START) {
-    src_ = std::make_unique<Socket>(AF_INET, SOCK_STREAM | SOCK_NONBLOCK);
+    // Listen on IPv4 and IPv6. Listening on AF_INET explicitly is not needed
+    // because net.ipv6.bindv6only sysctl is defaulted to 0 and is not
+    // explicitly turned on in the codebase.
+    src_ = std::make_unique<Socket>(AF_INET6, SOCK_STREAM | SOCK_NONBLOCK);
     // Need to set this to reuse the port.
     int on = 1;
     if (setsockopt(src_->fd(), SOL_SOCKET, SO_REUSEADDR, &on, sizeof(int)) <
@@ -166,10 +169,10 @@ void AdbProxy::OnGuestMessage(const GuestMessage& msg) {
       PLOG(ERROR) << "setsockopt(SO_REUSEADDR) failed";
       return;
     }
-    struct sockaddr_in addr = {0};
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons(kAdbProxyTcpListenPort);
-    addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    struct sockaddr_in6 addr = {0};
+    addr.sin6_family = AF_INET6;
+    addr.sin6_port = htons(kAdbProxyTcpListenPort);
+    addr.sin6_addr = in6addr_any;
     if (!src_->Bind((const struct sockaddr*)&addr, sizeof(addr))) {
       LOG(ERROR) << "Cannot bind source socket to " << addr;
       return;
