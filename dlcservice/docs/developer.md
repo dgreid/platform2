@@ -108,7 +108,7 @@ installed using the special path prefix set by `$(dlc_add_path )`. This means,
 that before installing any DLC files, you have to add the dlc prefix path to
 `into, insinto` and `exeinto` using `$(dlc_add_path your_path)`.
 
-See an example of a DLC ebuild: [dummy-dlc]
+See an example of a DLC ebuild: [sample-dlc]
 
 ## Write platform code to request DLC
 
@@ -178,5 +178,5 @@ A DLC is updated at the same time the device itself is updated.
 [imageloader_impl.cc]: https://chromium.googlesource.com/chromiumos/platform2/+/HEAD/imageloader/imageloader_impl.cc
 [tast]: go/tast
 [tast-deps]: go/tast-deps
-[dummy-dlc]: https://chromium.googlesource.com/chromiumos/overlays/chromiumos-overlay/+/HEAD/chromeos-base/dummy-dlc/dummy-dlc-1.0.0.ebuild
+[sample-dlc]: https://chromium.googlesource.com/chromiumos/overlays/chromiumos-overlay/+/HEAD/chromeos-base/sample-dlc/sample-dlc-1.0.0.ebuild
 [overlay-eve make.defaults]: https://chromium.googlesource.com/chromiumos/overlays/board-overlays/+/HEAD/overlay-eve/profiles/base/make.defaults
