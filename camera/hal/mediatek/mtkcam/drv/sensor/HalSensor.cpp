@@ -713,7 +713,7 @@ MBOOL HalSensor::configure(MUINT const uCountOfParam,
                         sizeof(pImgsensorInfo->sensor_agc_param_map[0]);
   m_SensorAgcParam = pImgsensorInfo->sensor_agc_param_map;
   if (!m_SensorAgcParam) {
-    CAM_LOGW("sensorIdx (%d), m_SensorAgcParam is NULL\n", sensorIdx);
+    CAM_LOGW("sensorIdx (%d), m_SensorAgcParam is NULL", sensorIdx);
   }
 
   aFormat.pad = 0;
@@ -853,7 +853,7 @@ MINT HalSensor::sendCommand(MUINT indexDual,
           control.value = m_SensorAgcParam[u32temp2].col_code;
           ret = ioctl(sensor_fd, VIDIOC_S_CTRL, &control);
           if (ret < 0) {
-            CAM_LOGE("[%s] set SENSOR A-GAIN fail %d\n", __FUNCTION__,
+            CAM_LOGE("[%s] set SENSOR A-GAIN fail %d", __FUNCTION__,
                      control.value);
           }
 
@@ -861,17 +861,17 @@ MINT HalSensor::sendCommand(MUINT indexDual,
             u32temp1 = u32temp1 * mDgainRatio /
                        (m_SensorAgcParam[u32temp2].auto_pregain);
           } else {
-            CAM_LOGE("AGC index (%d), auto_pregain is NULL\n", u32temp2);
+            CAM_LOGE("AGC index (%d), auto_pregain is NULL", u32temp2);
             return MFALSE;
           }
 
-          CAM_LOGD("Mapped AGC PARAM pregain(%d)\n",
+          CAM_LOGD("Mapped AGC PARAM pregain(%d)",
                    m_SensorAgcParam[u32temp2].auto_pregain);
           control.id = V4L2_CID_DIGITAL_GAIN;
           control.value = u32temp1;
           ret = ioctl(sensor_fd, VIDIOC_S_CTRL, &control);
           if (ret < 0) {
-            CAM_LOGE("[%s] set SENSOR D-GAIN fail %d\n", __FUNCTION__,
+            CAM_LOGE("[%s] set SENSOR D-GAIN fail %d", __FUNCTION__,
                      control.value);
           }
         } else {
@@ -880,12 +880,12 @@ MINT HalSensor::sendCommand(MUINT indexDual,
           control.value = u32temp >> m_SensorGainFactor;
           ret = ioctl(sensor_fd, VIDIOC_S_CTRL, &control);
           if (ret < 0) {
-            CAM_LOGE("[%s] set SENSOR A-GAIN fail %d\n", __FUNCTION__,
+            CAM_LOGE("[%s] set SENSOR A-GAIN fail %d", __FUNCTION__,
                      control.value);
           }
         }
       } else {
-        CAM_LOGE("%s(0x%x) wrong input params\n", __FUNCTION__, cmd);
+        CAM_LOGE("%s(0x%x) wrong input params", __FUNCTION__, cmd);
         ret = MFALSE;
       }
       break;
@@ -909,19 +909,23 @@ MINT HalSensor::sendCommand(MUINT indexDual,
         u32temp = (u32temp > (m_maxFramelength - m_margin))
                       ? (m_maxFramelength - m_margin)
                       : u32temp;
-        u32temp1 = u32temp & ~3;
-        if (u32temp1 > 0) {
-          mDgainRatio = BASEGAIN * u32temp / u32temp1;
-        } else {
-          CAM_LOGW("[%s] too small exp-lines, using SensorGainBase\n",
-                   __FUNCTION__);
-        }
         control.id = V4L2_CID_EXPOSURE;
-        control.value = u32temp1;
+        control.value = u32temp;
         ret = ioctl(sensor_fd, VIDIOC_S_CTRL, &control);
         if (ret < 0) {
           CAM_LOGE("[%s] set SENSOR EXPOSURE fail %d", __FUNCTION__,
                    control.value);
+        }
+        ret = ioctl(sensor_fd, VIDIOC_G_CTRL, &control);
+        if (ret < 0) {
+          CAM_LOGE("[%s] get SENSOR EXPOSURE fail", __FUNCTION__);
+        }
+        u32temp1 = control.value;
+        if (u32temp1 > 0) {
+          mDgainRatio = BASEGAIN * u32temp / u32temp1;
+        } else {
+          CAM_LOGW("[%s] too small exp-lines, using SensorGainBase",
+                   __FUNCTION__);
         }
       } else {
         CAM_LOGE("%s(0x%x) wrong input params", __FUNCTION__, cmd);
