@@ -47,8 +47,7 @@ const int BaseMessageLoop::kUninitializedMinor = -2;
 BaseMessageLoop::BaseMessageLoop() {
   CHECK(!base::ThreadTaskRunnerHandle::IsSet())
       << "You can't create a base::SingleThreadTaskExecutor when another "
-         "base::MessageLoop or base::SingleThreadTaskExecutor is already "
-         "created for this thread.";
+         "base::SingleThreadTaskExecutor is already created for this thread.";
   owned_task_executor_.reset(
       new base::SingleThreadTaskExecutor(base::MessagePumpType::IO));
   task_runner_ = owned_task_executor_->task_runner();
@@ -59,9 +58,6 @@ BaseMessageLoop::BaseMessageLoop(
     scoped_refptr<base::SingleThreadTaskRunner> task_runner)
     : task_runner_(task_runner),
       watcher_(std::make_unique<base::FileDescriptorWatcher>(task_runner)) {}
-
-BaseMessageLoop::BaseMessageLoop(base::MessageLoopForIO* base_loop)
-    : BaseMessageLoop(base_loop->task_runner()) {}
 
 BaseMessageLoop::~BaseMessageLoop() {
   // Note all pending canceled delayed tasks when destroying the message loop.
@@ -118,7 +114,8 @@ bool BaseMessageLoop::CancelTask(TaskId task_id) {
       << "Removing task_id " << task_id << " scheduled from this location.";
   // We reset to closure to a null OnceClosure to release all the resources
   // used by this closure at this point, but we don't remove the task_id from
-  // delayed_tasks_ since we can't tell base::MessageLoopForIO to not run it.
+  // delayed_tasks_ since we can't tell base::SingleThreadTaskExecutor to not
+  // run it.
   delayed_task_it->second.closure.Reset();
 
   return true;
@@ -126,7 +123,8 @@ bool BaseMessageLoop::CancelTask(TaskId task_id) {
 
 bool BaseMessageLoop::RunOnce(bool may_block) {
   run_once_ = true;
-  base::RunLoop run_loop;  // Uses the base::MessageLoopForIO implicitly.
+  // Uses the base::SingleThreadTaskExecutor implicitly.
+  base::RunLoop run_loop;
   base_run_loop_ = &run_loop;
   if (!may_block)
     run_loop.RunUntilIdle();
@@ -142,7 +140,8 @@ bool BaseMessageLoop::RunOnce(bool may_block) {
 }
 
 void BaseMessageLoop::Run() {
-  base::RunLoop run_loop;  // Uses the base::MessageLoopForIO implicitly.
+  // Uses the base::SingleThreadTaskExecutor implicitly.
+  base::RunLoop run_loop;
   base_run_loop_ = &run_loop;
   run_loop.Run();
   base_run_loop_ = nullptr;

@@ -21,7 +21,6 @@
 #include <base/location.h>
 #include <base/run_loop.h>
 #include <base/memory/weak_ptr.h>
-#include <base/message_loop/message_loop.h>
 #include <base/task/single_thread_task_executor.h>
 #include <base/time/time.h>
 #include <gtest/gtest_prod.h>
@@ -37,11 +36,6 @@ class BRILLO_EXPORT BaseMessageLoop : public MessageLoop {
   // the default message loop for this thread.
   BaseMessageLoop();
 
-  // Construct a brillo::BaseMessageLoop using the passed base::MessageLoopForIO
-  // instance.
-  // Deprecated Use
-  // BaseMessageLoop(scoped_refptr<base::SingleThreadTaskRunner>) instead.
-  explicit BaseMessageLoop(base::MessageLoopForIO* base_loop);
   // Construct a brillo::BaseMessageLoop using the passed
   // base::SingleThreadTaskRunner instance.
   explicit BaseMessageLoop(
@@ -73,7 +67,7 @@ class BRILLO_EXPORT BaseMessageLoop : public MessageLoop {
   // found, returns kInvalidMinor.
   static int ParseBinderMinor(const std::string& file_contents);
 
-  // Called by base::MessageLoopForIO when is time to call the callback
+  // Called by base::SingleThreadTaskExecutor when is time to call the callback
   // scheduled with Post*Task() of id |task_id|, even if it was canceled.
   void OnRanPostedTask(MessageLoop::TaskId task_id);
 
