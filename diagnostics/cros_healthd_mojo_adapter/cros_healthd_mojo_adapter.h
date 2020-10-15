@@ -13,6 +13,7 @@
 #include <vector>
 
 #include <base/optional.h>
+#include <base/time/time.h>
 
 #include "mojo/cros_healthd.mojom.h"
 #include "mojo/cros_healthd_diagnostics.mojom.h"
@@ -43,7 +44,7 @@ class CrosHealthdMojoAdapter {
 
   // Runs the urandom routine.
   virtual chromeos::cros_healthd::mojom::RunRoutineResponsePtr
-  RunUrandomRoutine(uint32_t length_seconds) = 0;
+  RunUrandomRoutine(const base::Optional<base::TimeDelta>& length_seconds) = 0;
 
   // Runs the battery capacity routine.
   virtual chromeos::cros_healthd::mojom::RunRoutineResponsePtr

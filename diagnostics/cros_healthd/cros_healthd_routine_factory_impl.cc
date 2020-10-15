@@ -33,6 +33,7 @@
 #include "diagnostics/cros_healthd/routines/signal_strength/signal_strength.h"
 #include "diagnostics/cros_healthd/routines/smartctl_check/smartctl_check.h"
 #include "diagnostics/cros_healthd/routines/urandom/urandom.h"
+#include "mojo/nullable_primitives.mojom.h"
 
 namespace diagnostics {
 
@@ -47,8 +48,13 @@ CrosHealthdRoutineFactoryImpl::CrosHealthdRoutineFactoryImpl(Context* context)
 CrosHealthdRoutineFactoryImpl::~CrosHealthdRoutineFactoryImpl() = default;
 
 std::unique_ptr<DiagnosticRoutine>
-CrosHealthdRoutineFactoryImpl::MakeUrandomRoutine(uint32_t length_seconds) {
-  return CreateUrandomRoutine(length_seconds);
+CrosHealthdRoutineFactoryImpl::MakeUrandomRoutine(
+    chromeos::cros_healthd::mojom::NullableUint32Ptr length_seconds) {
+  return CreateUrandomRoutine(
+      length_seconds.is_null()
+          ? base::nullopt
+          : base::Optional<base::TimeDelta>(
+                base::TimeDelta::FromSeconds(length_seconds->value)));
 }
 
 std::unique_ptr<DiagnosticRoutine>

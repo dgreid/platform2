@@ -16,6 +16,7 @@ source_set("libdiag") {
   configs += [ ":libdiag_pkg_deps" ]
   deps = [
     "//diagnostics/common:libcommon",
+    "//diagnostics/cros_healthd/routines:libdiag_routine",
     "//diagnostics/cros_healthd_mojo_adapter:libcros_healthd_mojo_adapter",
     "//diagnostics/mojo:cros_healthd_mojo_bindings",
   ]

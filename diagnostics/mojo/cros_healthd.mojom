@@ -15,6 +15,7 @@ import "mojo/cros_healthd_events.mojom";
 import "mojo/cros_healthd_probe.mojom";
 import "mojo/network_diagnostics.mojom";
 import "mojo/network_health.mojom";
+import "mojo/nullable_primitives.mojom";
 
 // Factory interface which allows remote ends to request implementations of the
 // probe, diagnostics, or event services. Additionally, the browser can send
@@ -71,12 +72,13 @@ interface CrosHealthdDiagnosticsService {
   // * |length_seconds| - length of time, in seconds, to run the urandom routine
   //                      for. If all reads from /dev/urandom for this length of
   //                      time are successful, then the test  will pass. This
-  //                      parameter needs to be strictly greater than zero.
+  //                      parameter needs to be strictly greater than zero. If
+  //                      not specified, the routine will default to 10 seconds.
   //
   // The response:
   // * |response| - contains a unique identifier and status for the created
   //                routine.
-  RunUrandomRoutine(uint32 length_seconds)
+  RunUrandomRoutine(NullableUint32? length_seconds)
       => (RunRoutineResponse response);
 
   // Requests that the BatteryCapacity routine is created and started on the

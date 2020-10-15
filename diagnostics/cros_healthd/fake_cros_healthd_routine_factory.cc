@@ -12,6 +12,7 @@
 #include <gtest/gtest.h>
 
 #include "diagnostics/common/mojo_utils.h"
+#include "mojo/nullable_primitives.mojom.h"
 
 namespace diagnostics {
 namespace mojo_ipc = ::chromeos::cros_healthd::mojom;
@@ -197,7 +198,8 @@ void FakeCrosHealthdRoutineFactory::SetNonInteractiveStatus(
 }
 
 std::unique_ptr<DiagnosticRoutine>
-FakeCrosHealthdRoutineFactory::MakeUrandomRoutine(uint32_t length_seconds) {
+FakeCrosHealthdRoutineFactory::MakeUrandomRoutine(
+    chromeos::cros_healthd::mojom::NullableUint32Ptr length_seconds) {
   return std::move(next_routine_);
 }
 

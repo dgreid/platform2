@@ -12,6 +12,7 @@
 #include "diagnostics/common/mojo_utils.h"
 #include "mojo/cros_healthd.mojom.h"
 #include "mojo/cros_healthd_diagnostics.mojom.h"
+#include "mojo/nullable_primitives.mojom.h"
 
 namespace diagnostics {
 namespace mojo_ipc = ::chromeos::cros_healthd::mojom;
@@ -274,7 +275,8 @@ void RoutineService::RunRoutine(const grpc_api::RunRoutineRequest& request,
       DCHECK_EQ(request.parameters_case(),
                 grpc_api::RunRoutineRequest::kUrandomParams);
       service_ptr_->RunUrandomRoutine(
-          request.urandom_params().length_seconds(),
+          chromeos::cros_healthd::mojom::NullableUint32::New(
+              request.urandom_params().length_seconds()),
           base::Bind(&RoutineService::ForwardRunRoutineResponse,
                      weak_ptr_factory_.GetWeakPtr(), callback_key));
       break;

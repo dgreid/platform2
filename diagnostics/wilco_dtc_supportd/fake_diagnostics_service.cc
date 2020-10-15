@@ -7,6 +7,7 @@
 #include <utility>
 
 #include "diagnostics/common/mojo_utils.h"
+#include "mojo/nullable_primitives.mojom.h"
 
 namespace diagnostics {
 namespace mojo_ipc = ::chromeos::cros_healthd::mojom;
@@ -49,7 +50,8 @@ void FakeDiagnosticsService::GetRoutineUpdate(
 }
 
 void FakeDiagnosticsService::RunUrandomRoutine(
-    uint32_t length_seconds, RunUrandomRoutineCallback callback) {
+    chromeos::cros_healthd::mojom::NullableUint32Ptr length_seconds,
+    RunUrandomRoutineCallback callback) {
   std::move(callback).Run(run_routine_response_.Clone());
 }
 

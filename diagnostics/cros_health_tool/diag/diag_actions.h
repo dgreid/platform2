@@ -75,7 +75,8 @@ class DiagActions final {
                                    uint64_t max_num);
   bool ActionRunSignalStrengthRoutine();
   bool ActionRunSmartctlCheckRoutine();
-  bool ActionRunUrandomRoutine(uint32_t length_seconds);
+  bool ActionRunUrandomRoutine(
+      const base::Optional<base::TimeDelta>& length_seconds);
 
   // Cancels the next routine run, when that routine reports a progress percent
   // greater than or equal to |percent|. Should be called before running the

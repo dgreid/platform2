@@ -39,8 +39,9 @@ class FakeDiagnosticsService final
       chromeos::cros_healthd::mojom::DiagnosticRoutineCommandEnum command,
       bool include_output,
       GetRoutineUpdateCallback callback) override;
-  void RunUrandomRoutine(uint32_t length_seconds,
-                         RunUrandomRoutineCallback callback) override;
+  void RunUrandomRoutine(
+      chromeos::cros_healthd::mojom::NullableUint32Ptr length_seconds,
+      RunUrandomRoutineCallback callback) override;
   void RunBatteryCapacityRoutine(
       RunBatteryCapacityRoutineCallback callback) override;
   void RunBatteryHealthRoutine(

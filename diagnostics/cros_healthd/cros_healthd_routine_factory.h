@@ -26,7 +26,7 @@ class CrosHealthdRoutineFactory {
   // Constructs a new instance of the urandom routine. See
   // diagnostics/routines/urandom for details on the routine itself.
   virtual std::unique_ptr<DiagnosticRoutine> MakeUrandomRoutine(
-      uint32_t length_seconds) = 0;
+      chromeos::cros_healthd::mojom::NullableUint32Ptr length_seconds) = 0;
   // Constructs a new instance of the battery capacity routine. See
   // diagnostics/routines/battery for details on the routine itself.
   virtual std::unique_ptr<DiagnosticRoutine> MakeBatteryCapacityRoutine() = 0;

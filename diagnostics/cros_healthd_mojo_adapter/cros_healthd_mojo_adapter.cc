@@ -49,7 +49,7 @@ class CrosHealthdMojoAdapterImpl final : public CrosHealthdMojoAdapter {
 
   // Runs the urandom routine.
   chromeos::cros_healthd::mojom::RunRoutineResponsePtr RunUrandomRoutine(
-      uint32_t length_seconds) override;
+      const base::Optional<base::TimeDelta>& length_seconds) override;
 
   // Runs the battery capacity routine.
   chromeos::cros_healthd::mojom::RunRoutineResponsePtr
@@ -263,14 +263,21 @@ CrosHealthdMojoAdapterImpl::GetProcessInfo(pid_t pid) {
 }
 
 chromeos::cros_healthd::mojom::RunRoutineResponsePtr
-CrosHealthdMojoAdapterImpl::RunUrandomRoutine(uint32_t length_seconds) {
+CrosHealthdMojoAdapterImpl::RunUrandomRoutine(
+    const base::Optional<base::TimeDelta>& length_seconds) {
   if (!cros_healthd_service_factory_.is_bound())
     Connect();
 
   chromeos::cros_healthd::mojom::RunRoutineResponsePtr response;
   base::RunLoop run_loop;
+  chromeos::cros_healthd::mojom::NullableUint32Ptr length_seconds_parameter;
+  if (length_seconds.has_value()) {
+    length_seconds_parameter =
+        chromeos::cros_healthd::mojom::NullableUint32::New(
+            length_seconds.value().InSeconds());
+  }
   cros_healthd_diagnostics_service_->RunUrandomRoutine(
-      length_seconds,
+      std::move(length_seconds_parameter),
       base::Bind(&OnMojoResponseReceived<
                      chromeos::cros_healthd::mojom::RunRoutineResponsePtr>,
                  &response, run_loop.QuitClosure()));

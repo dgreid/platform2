@@ -395,19 +395,19 @@ Status message: Routine passed.
 Stresses the CPU by reading from /dev/urandom for the specified length of time.
 
 Parameters:
--   `--length_seconds` - Length of time to run the routine for, in seconds.
-    Type: `uint32_t`. Default: `10`.
+-   `--urandom_length_seconds` - Length of time to run the routine for, in
+    seconds. Type: `uint32_t`. Default: `10`.
 
 To stress the CPU for 120 seconds:
 
 From crosh:
 ```bash
-crosh> diag urandom --length_seconds=120
+crosh> diag urandom --urandom_length_seconds=120
 ```
 
 From cros-health-tool:
 ```bash
-$ cros-health-tool diag --action=run_routine --routine=urandom --length_seconds=120
+$ cros-health-tool diag --action=run_routine --routine=urandom --urandom_length_seconds=120
 ```
 
 Sample output:

@@ -5,6 +5,8 @@
 #include "diagnostics/cros_health_tool/diag/diag.h"
 
 #include <stdlib.h>
+
+#include <cstdint>
 #include <iostream>
 #include <iterator>
 #include <limits>
@@ -18,6 +20,7 @@
 #include <brillo/flag_helper.h>
 
 #include "diagnostics/cros_health_tool/diag/diag_actions.h"
+#include "diagnostics/cros_healthd/routines/urandom/urandom.h"
 #include "mojo/cros_healthd_diagnostics.mojom.h"
 
 namespace mojo_ipc = ::chromeos::cros_healthd::mojom;
@@ -79,6 +82,12 @@ int diag_main(int argc, char** argv) {
   DEFINE_uint32(force_cancel_at_percent, std::numeric_limits<uint32_t>::max(),
                 "If specified, will attempt to cancel the routine when its "
                 "progress exceeds the flag's value.\nValid range: [0, 100]");
+
+  // Flags for the urandom routine:
+  DEFINE_uint32(urandom_length_seconds,
+                kUrandomDefaultLengthSeconds.InSeconds(),
+                "Number of seconds to run the urandom routine for.");
+
   DEFINE_uint32(length_seconds, 10,
                 "Number of seconds to run the routine for.");
   DEFINE_bool(ac_power_is_connected, true,
@@ -153,7 +162,8 @@ int diag_main(int argc, char** argv) {
         routine_result = actions.ActionRunBatteryHealthRoutine();
         break;
       case mojo_ipc::DiagnosticRoutineEnum::kUrandom:
-        routine_result = actions.ActionRunUrandomRoutine(FLAGS_length_seconds);
+        routine_result = actions.ActionRunUrandomRoutine(
+            base::TimeDelta::FromSeconds(FLAGS_urandom_length_seconds));
         break;
       case mojo_ipc::DiagnosticRoutineEnum::kSmartctlCheck:
         routine_result = actions.ActionRunSmartctlCheckRoutine();

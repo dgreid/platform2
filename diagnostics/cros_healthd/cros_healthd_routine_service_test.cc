@@ -21,6 +21,7 @@
 #include "diagnostics/cros_healthd/system/fake_system_config.h"
 #include "diagnostics/cros_healthd/system/mock_context.h"
 #include "mojo/cros_healthd_diagnostics.mojom.h"
+#include "mojo/nullable_primitives.mojom.h"
 
 using testing::StrictMock;
 
@@ -323,7 +324,7 @@ TEST_F(CrosHealthdRoutineServiceTest, RunUrandomRoutine) {
   mojo_ipc::RunRoutineResponsePtr response;
   base::RunLoop run_loop;
   service()->RunUrandomRoutine(
-      /*length_seconds=*/120,
+      /*length_seconds=*/mojo_ipc::NullableUint32::New(120),
       base::BindLambdaForTesting(
           [&](mojo_ipc::RunRoutineResponsePtr received_response) {
             response = std::move(received_response);

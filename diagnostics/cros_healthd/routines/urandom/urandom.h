@@ -5,20 +5,22 @@
 #ifndef DIAGNOSTICS_CROS_HEALTHD_ROUTINES_URANDOM_URANDOM_H_
 #define DIAGNOSTICS_CROS_HEALTHD_ROUTINES_URANDOM_URANDOM_H_
 
-#include <cstdint>
 #include <memory>
-#include <string>
 
-#include <base/macros.h>
-#include <base/process/process.h>
+#include <base/time/time.h>
+#include <base/optional.h>
 
-#include "diagnostics/cros_healthd/routines/diag_process_adapter.h"
 #include "diagnostics/cros_healthd/routines/diag_routine.h"
 
 namespace diagnostics {
 
+// Fleet-wide default value for the urandom routine's parameter.
+// TODO(crbug/1131609): get a better default value with some rationale behind
+// it.
+extern const base::TimeDelta kUrandomDefaultLengthSeconds;
+
 std::unique_ptr<DiagnosticRoutine> CreateUrandomRoutine(
-    uint32_t length_seconds);
+    const base::Optional<base::TimeDelta>& length_seconds);
 
 }  // namespace diagnostics
 

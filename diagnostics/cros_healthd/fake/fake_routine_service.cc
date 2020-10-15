@@ -6,6 +6,8 @@
 
 #include <base/logging.h>
 
+#include "mojo/nullable_primitives.mojom.h"
+
 namespace diagnostics {
 
 namespace {
@@ -30,8 +32,9 @@ void FakeRoutineService::GetRoutineUpdate(
   NOTIMPLEMENTED();
 }
 
-void FakeRoutineService::RunUrandomRoutine(uint32_t length_seconds,
-                                           RunUrandomRoutineCallback callback) {
+void FakeRoutineService::RunUrandomRoutine(
+    mojo_ipc::NullableUint32Ptr length_seconds,
+    RunUrandomRoutineCallback callback) {
   NOTIMPLEMENTED();
 }
 

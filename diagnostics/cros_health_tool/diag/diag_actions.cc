@@ -310,7 +310,8 @@ bool DiagActions::ActionRunSmartctlCheckRoutine() {
   return PollRoutineAndProcessResult();
 }
 
-bool DiagActions::ActionRunUrandomRoutine(uint32_t length_seconds) {
+bool DiagActions::ActionRunUrandomRoutine(
+    const base::Optional<base::TimeDelta>& length_seconds) {
   auto response = adapter_->RunUrandomRoutine(length_seconds);
   CHECK(response) << "No RunRoutineResponse received.";
   id_ = response->id;
