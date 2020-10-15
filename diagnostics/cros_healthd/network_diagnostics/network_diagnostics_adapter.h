@@ -57,6 +57,11 @@ class NetworkDiagnosticsAdapter {
   virtual void RunDnsResolutionRoutine(
       chromeos::network_diagnostics::mojom::NetworkDiagnosticsRoutines::
           DnsResolutionCallback) = 0;
+
+  // Requests the browser to invoke the CaptivePortal routine.
+  virtual void RunCaptivePortalRoutine(
+      chromeos::network_diagnostics::mojom::NetworkDiagnosticsRoutines::
+          CaptivePortalCallback) = 0;
 };
 
 }  // namespace diagnostics

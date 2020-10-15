@@ -144,6 +144,13 @@ void CrosHealthdRoutineService::RunBatteryHealthRoutine(
              std::move(callback));
 }
 
+void CrosHealthdRoutineService::RunCaptivePortalRoutine(
+    RunCaptivePortalRoutineCallback callback) {
+  RunRoutine(routine_factory_->MakeCaptivePortalRoutine(),
+             mojo_ipc::DiagnosticRoutineEnum::kCaptivePortal,
+             std::move(callback));
+}
+
 void CrosHealthdRoutineService::RunCpuCacheRoutine(
     uint32_t length_seconds, RunCpuCacheRoutineCallback callback) {
   RunRoutine(routine_factory_->MakeCpuCacheRoutine(
@@ -314,7 +321,8 @@ void CrosHealthdRoutineService::PopulateAvailableRoutines() {
       mojo_ipc::DiagnosticRoutineEnum::kHasSecureWiFiConnection,
       mojo_ipc::DiagnosticRoutineEnum::kDnsResolverPresent,
       mojo_ipc::DiagnosticRoutineEnum::kDnsLatency,
-      mojo_ipc::DiagnosticRoutineEnum::kDnsResolution};
+      mojo_ipc::DiagnosticRoutineEnum::kDnsResolution,
+      mojo_ipc::DiagnosticRoutineEnum::kCaptivePortal};
 
   if (context_->system_config()->HasBattery()) {
     available_routines_.insert(

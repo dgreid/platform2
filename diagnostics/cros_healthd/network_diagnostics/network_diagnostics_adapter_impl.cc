@@ -105,4 +105,16 @@ void NetworkDiagnosticsAdapterImpl::RunDnsResolutionRoutine(
   network_diagnostics_routines_->DnsResolution(std::move(callback));
 }
 
+void NetworkDiagnosticsAdapterImpl::RunCaptivePortalRoutine(
+    network_diagnostics_ipc::NetworkDiagnosticsRoutines::CaptivePortalCallback
+        callback) {
+  if (!network_diagnostics_routines_.is_bound()) {
+    std::move(callback).Run(
+        chromeos::network_diagnostics::mojom::RoutineVerdict::kNotRun,
+        /*problems=*/{});
+    return;
+  }
+  network_diagnostics_routines_->CaptivePortal(std::move(callback));
+}
+
 }  // namespace diagnostics

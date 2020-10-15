@@ -56,7 +56,8 @@ const struct {
     {"dns_resolver_present",
      mojo_ipc::DiagnosticRoutineEnum::kDnsResolverPresent},
     {"dns_latency", mojo_ipc::DiagnosticRoutineEnum::kDnsLatency},
-    {"dns_resolution", mojo_ipc::DiagnosticRoutineEnum::kDnsResolution}};
+    {"dns_resolution", mojo_ipc::DiagnosticRoutineEnum::kDnsResolution},
+    {"captive_portal", mojo_ipc::DiagnosticRoutineEnum::kCaptivePortal}};
 
 const struct {
   const char* readable_status;

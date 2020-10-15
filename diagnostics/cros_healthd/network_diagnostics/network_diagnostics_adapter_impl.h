@@ -46,6 +46,9 @@ class NetworkDiagnosticsAdapterImpl final : public NetworkDiagnosticsAdapter {
   void RunDnsResolutionRoutine(
       chromeos::network_diagnostics::mojom::NetworkDiagnosticsRoutines::
           DnsResolutionCallback) override;
+  void RunCaptivePortalRoutine(
+      chromeos::network_diagnostics::mojom::NetworkDiagnosticsRoutines::
+          CaptivePortalCallback) override;
 
  private:
   // NetworkDiagnosticsRoutines remote used to run network diagnostics.

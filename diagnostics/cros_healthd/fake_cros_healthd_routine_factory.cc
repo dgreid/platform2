@@ -322,4 +322,9 @@ FakeCrosHealthdRoutineFactory::MakeDnsResolutionRoutine() {
   return std::move(next_routine_);
 }
 
+std::unique_ptr<DiagnosticRoutine>
+FakeCrosHealthdRoutineFactory::MakeCaptivePortalRoutine() {
+  return std::move(next_routine_);
+}
+
 }  // namespace diagnostics

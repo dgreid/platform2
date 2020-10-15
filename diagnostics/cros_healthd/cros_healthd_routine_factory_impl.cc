@@ -14,6 +14,7 @@
 #include "diagnostics/cros_healthd/routines/battery_charge/battery_charge.h"
 #include "diagnostics/cros_healthd/routines/battery_discharge/battery_discharge.h"
 #include "diagnostics/cros_healthd/routines/battery_health/battery_health.h"
+#include "diagnostics/cros_healthd/routines/captive_portal/captive_portal.h"
 #include "diagnostics/cros_healthd/routines/cpu_cache/cpu_cache.h"
 #include "diagnostics/cros_healthd/routines/cpu_stress/cpu_stress.h"
 #include "diagnostics/cros_healthd/routines/disk_read/disk_read.h"
@@ -189,6 +190,11 @@ CrosHealthdRoutineFactoryImpl::MakeDnsLatencyRoutine() {
 std::unique_ptr<DiagnosticRoutine>
 CrosHealthdRoutineFactoryImpl::MakeDnsResolutionRoutine() {
   return CreateDnsResolutionRoutine(context_->network_diagnostics_adapter());
+}
+
+std::unique_ptr<DiagnosticRoutine>
+CrosHealthdRoutineFactoryImpl::MakeCaptivePortalRoutine() {
+  return CreateCaptivePortalRoutine(context_->network_diagnostics_adapter());
 }
 
 }  // namespace diagnostics

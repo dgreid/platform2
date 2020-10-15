@@ -61,6 +61,11 @@ class MockNetworkDiagnosticsAdapter final : public NetworkDiagnosticsAdapter {
               (chromeos::network_diagnostics::mojom::
                    NetworkDiagnosticsRoutines::DnsResolutionCallback),
               (override));
+  MOCK_METHOD(void,
+              RunCaptivePortalRoutine,
+              (chromeos::network_diagnostics::mojom::
+                   NetworkDiagnosticsRoutines::CaptivePortalCallback),
+              (override));
 };
 
 }  // namespace diagnostics

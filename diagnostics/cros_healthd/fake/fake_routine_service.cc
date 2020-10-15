@@ -151,4 +151,9 @@ void FakeRoutineService::RunDnsResolutionRoutine(
   NOTIMPLEMENTED();
 }
 
+void FakeRoutineService::RunCaptivePortalRoutine(
+    RunCaptivePortalRoutineCallback callback) {
+  NOTIMPLEMENTED();
+}
+
 }  // namespace diagnostics

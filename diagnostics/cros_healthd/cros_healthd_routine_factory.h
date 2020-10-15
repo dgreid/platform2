@@ -113,6 +113,9 @@ class CrosHealthdRoutineFactory {
   // Constructs a new instance of the DNS resolution routine. See
   // diagnostics/routines/dns_resolution for details on the routine itself.
   virtual std::unique_ptr<DiagnosticRoutine> MakeDnsResolutionRoutine() = 0;
+  // Constructs a new instance of the captive portal routine. See
+  // diagnostics/routines/captive_portal for details on the routine itself.
+  virtual std::unique_ptr<DiagnosticRoutine> MakeCaptivePortalRoutine() = 0;
 };
 
 }  // namespace diagnostics
