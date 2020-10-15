@@ -17,6 +17,7 @@
 #include <base/files/scoped_file.h>
 #include <base/files/scoped_temp_dir.h>
 #include <base/json/json_reader.h>
+#include <base/json/json_writer.h>
 #include <base/logging.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/stringprintf.h>
@@ -46,12 +47,95 @@ bool CreateNonblockingPipe(base::ScopedFD* read_fd, base::ScopedFD* write_fd) {
   int pipe_fd[2];
   int ret = pipe2(pipe_fd, O_CLOEXEC | O_NONBLOCK);
   if (ret != 0) {
-    PLOG(ERROR) << "Cannot create a pipe.";
+    PLOG(ERROR) << "Cannot create a pipe";
     return false;
   }
   read_fd->reset(pipe_fd[0]);
   write_fd->reset(pipe_fd[1]);
   return true;
+}
+
+std::string GetStringFromValue(const base::Value& value) {
+  std::string json;
+  base::JSONWriter::WriteWithOptions(
+      value, base::JSONWriter::OPTIONS_PRETTY_PRINT, &json);
+  return json;
+}
+
+std::unique_ptr<brillo::Process> CreateSandboxedProcess(
+    brillo::ErrorPtr* error,
+    const std::string& sandbox_info,
+    const std::string& probe_statement) {
+  auto sandboxed_process = std::make_unique<SandboxedProcess>();
+
+  const auto seccomp_path = base::FilePath{kSandboxInfoDir}.Append(
+      base::StringPrintf("%s-seccomp.policy", sandbox_info.c_str()));
+  const auto minijail_args_path = base::FilePath{kSandboxInfoDir}.Append(
+      base::StringPrintf("%s.args", sandbox_info.c_str()));
+
+  if (!base::PathExists(seccomp_path)) {
+    DEBUGD_ADD_ERROR_FMT(error, kErrorPath,
+                         "Seccomp policy file of \"%s\" is not found at: %s",
+                         sandbox_info.c_str(), seccomp_path.value().c_str());
+    return nullptr;
+  }
+
+  // Read and parse the arguments, use JSON to avoid quote escaping.
+  std::string minijail_args_str;
+  if (!base::ReadFileToString(base::FilePath(minijail_args_path),
+                              &minijail_args_str)) {
+    DEBUGD_ADD_ERROR_FMT(error, kErrorPath,
+                         "Failed to read minijail arguments from: %s",
+                         minijail_args_path.value().c_str());
+    return nullptr;
+  }
+
+  DVLOG(1) << "minijail arguments: " << minijail_args_str;
+
+  // Parse the JSON-formatted minijail arguments.
+  auto minijail_args = base::JSONReader::Read(minijail_args_str);
+
+  if (!minijail_args) {
+    DEBUGD_ADD_ERROR(error, kErrorPath, "minijail args are not stored in list");
+    return nullptr;
+  }
+  // The following is the general minijail set up for runtime_probe in debugd
+  // /dev/log needs to be bind mounted before any possible tmpfs mount on run
+  // See:
+  //   minijail0 manpage (`man 1 minijail0` in cros\_sdk)
+  //   https://chromium.googlesource.com/chromiumos/docs/+/master/sandboxing.md
+  std::vector<std::string> parsed_args{
+      "-G",                // Inherit all the supplementary groups
+      "-P", "/mnt/empty",  // Set /mnt/empty as the root fs using pivot_root
+      "-b", "/",           // Bind mount rootfs
+      "-b", "/proc",       // Bind mount /proc
+      "-b", "/dev/log",    // Enable logging
+      "-t",                // Mount a tmpfs on /tmp
+      "-r",                // Remount /proc readonly
+      "-d"                 // Mount /dev with a minimal set of nodes.
+  };
+
+  for (const auto& arg : minijail_args->GetList()) {
+    if (!arg.is_string()) {
+      auto arg_str = GetStringFromValue(arg);
+      DEBUGD_ADD_ERROR_FMT(
+          error, kErrorPath,
+          "Failed to parse minijail arguments. Expected string but got: %s",
+          arg_str.c_str());
+      return nullptr;
+    }
+    parsed_args.push_back(arg.GetString());
+  }
+
+  sandboxed_process->SandboxAs(kRunAs, kRunAs);
+  sandboxed_process->SetSeccompFilterPolicyFile(seccomp_path.MaybeAsASCII());
+  DVLOG(1) << "Sandbox for " << sandbox_info << " is ready";
+  if (!sandboxed_process->Init(parsed_args)) {
+    DEBUGD_ADD_ERROR(error, kErrorPath,
+                     "Sandboxed process initialization failure");
+    return nullptr;
+  }
+  return sandboxed_process;
 }
 
 }  // namespace
@@ -61,89 +145,15 @@ bool ProbeTool::EvaluateProbeFunction(
     const std::string& sandbox_info,
     const std::string& probe_statement,
     brillo::dbus_utils::FileDescriptor* outfd) {
-  std::unique_ptr<brillo::Process> process;
-
   // Details of sandboxing for probing should be centralized in a single
   // directory. Sandboxing is mandatory when we don't allow debug features.
-  if (VbGetSystemPropertyInt("cros_debug") != 1) {
-    std::unique_ptr<SandboxedProcess> sandboxed_process{new SandboxedProcess()};
+  auto process = CreateSandboxedProcess(error, sandbox_info, probe_statement);
+  if (process == nullptr)
+    return false;
 
-    const auto seccomp_path = base::FilePath{kSandboxInfoDir}.Append(
-        base::StringPrintf("%s-seccomp.policy", sandbox_info.c_str()));
-    const auto minijail_args_path = base::FilePath{kSandboxInfoDir}.Append(
-        base::StringPrintf("%s.args", sandbox_info.c_str()));
-
-    if (!base::PathExists(seccomp_path) ||
-        !base::PathExists(minijail_args_path)) {
-      DEBUGD_ADD_ERROR(error, kErrorPath,
-                       "Sandbox info is missing for this architecture");
-      return false;
-    }
-
-    // Read and parse the arguments, use JSON to avoid quote escaping.
-    std::string minijail_args_str;
-    if (!base::ReadFileToString(base::FilePath(minijail_args_path),
-                                &minijail_args_str)) {
-      DEBUGD_ADD_ERROR(error, kErrorPath, "Failed to load minijail arguments");
-      return false;
-    }
-
-    DLOG(INFO) << "minijail arguments : " << minijail_args_str;
-
-    // Parse the JSON formatted minijail arguments.
-    auto minijail_args = base::JSONReader::Read(minijail_args_str);
-
-    if (!minijail_args) {
-      DEBUGD_ADD_ERROR(error, kErrorPath,
-                       "minijail args are not stored in list");
-      return false;
-    }
-    std::vector<std::string> parsed_args;
-
-    // The following is the general minijail set up for runtime_probe in debugd
-    // /dev/log needs to be bind mounted before any possible tmpfs mount on run
-    parsed_args.push_back("-G");  // Inherit all the supplementary groups
-
-    // Run the process inside the new VFS namespace. The root of VFS is mounted
-    // on /var/empty/
-    parsed_args.push_back("-P");
-    parsed_args.push_back("/mnt/empty");
-
-    parsed_args.push_back("-b");        // Bind mount rootfs
-    parsed_args.push_back("/");         // Bind mount rootfs
-    parsed_args.push_back("-b");        // Bind mount /proc
-    parsed_args.push_back("/proc");     // Bind mount /proc
-    parsed_args.push_back("-b");        // Enable logging in minijail
-    parsed_args.push_back("/dev/log");  // Enable logging in minijail
-    parsed_args.push_back("-t");        // Bind mount /tmp
-    parsed_args.push_back("-r");        // Remount /proc read-only
-    parsed_args.push_back("-d");        // Mount a new /dev with minimum nodes
-
-    for (const auto& arg : minijail_args->GetList()) {
-      if (!arg.is_string()) {
-        DEBUGD_ADD_ERROR(error, kErrorPath,
-                         "Failed to parse minijail arguments");
-        return false;
-      }
-      parsed_args.push_back(arg.GetString());
-    }
-
-    sandboxed_process->SandboxAs(kRunAs, kRunAs);
-    sandboxed_process->SetSeccompFilterPolicyFile(seccomp_path.MaybeAsASCII());
-    DLOG(INFO) << "Sandbox for " << sandbox_info << " is ready";
-    if (!sandboxed_process->Init(parsed_args)) {
-      DEBUGD_ADD_ERROR(error, kErrorPath, "Process initialization failure.");
-      return false;
-    }
-    process = std::move(sandboxed_process);
-  } else {
-    process = std::make_unique<brillo::ProcessImpl>();
-    // Explicitly running it without sandboxing.
-    LOG(ERROR) << "Running " << sandbox_info << " without sandbox";
-  }
   base::ScopedFD read_fd, write_fd;
   if (!CreateNonblockingPipe(&read_fd, &write_fd)) {
-    DEBUGD_ADD_ERROR(error, kErrorPath, "Cannot create a pipe.");
+    DEBUGD_ADD_ERROR(error, kErrorPath, "Cannot create a pipe");
     return false;
   }
 
