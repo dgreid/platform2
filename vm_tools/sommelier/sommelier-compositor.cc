@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "sommelier.h"  // NOLINT(build/include_directory)
+#include "sommelier.h"          // NOLINT(build/include_directory)
+#include "sommelier-tracing.h"  // NOLINT(build/include_directory)
 
 #include <assert.h>
 #include <errno.h>
@@ -138,6 +139,7 @@ static void sl_output_buffer_destroy(struct sl_output_buffer* buffer) {
 }
 
 static void sl_output_buffer_release(void* data, struct wl_buffer* buffer) {
+  TRACE_EVENT("surface", "sl_output_buffer_release");
   struct sl_output_buffer* output_buffer =
       static_cast<sl_output_buffer*>(wl_buffer_get_user_data(buffer));
   struct sl_host_surface* host_surface = output_buffer->surface;
@@ -476,6 +478,8 @@ static void sl_host_surface_commit(struct wl_client* client,
   struct sl_viewport* viewport = NULL;
   struct sl_window* window;
 
+  TRACE_EVENT("surface", "sl_host_surface_commit");
+
   if (!wl_list_empty(&host->contents_viewport))
     viewport = wl_container_of(host->contents_viewport.next, viewport, link);
 
@@ -645,8 +649,10 @@ static void sl_host_surface_commit(struct wl_client* client,
   }
 
   if (host->contents_shm_mmap) {
-    if (host->contents_shm_mmap->buffer_resource)
+    if (host->contents_shm_mmap->buffer_resource) {
+      TRACE_EVENT("surface", "sl_host_surface_commit wl_buffer_send_release");
       wl_buffer_send_release(host->contents_shm_mmap->buffer_resource);
+    }
     sl_mmap_unref(host->contents_shm_mmap);
     host->contents_shm_mmap = NULL;
   }

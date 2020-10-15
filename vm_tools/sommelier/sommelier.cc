@@ -844,6 +844,8 @@ static const struct wl_buffer_interface sl_buffer_implementation = {
     sl_host_buffer_destroy};
 
 static void sl_buffer_release(void* data, struct wl_buffer* buffer) {
+  TRACE_EVENT("surface", "sl_buffer_release");
+
   struct sl_host_buffer* host =
       static_cast<sl_host_buffer*>(wl_buffer_get_user_data(buffer));
 
