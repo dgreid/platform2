@@ -58,6 +58,7 @@ class DiagActions final {
       base::TimeDelta exec_duration,
       uint32_t file_size_mb);
   bool ActionRunDnsLatencyRoutine();
+  bool ActionRunDnsResolutionRoutine();
   bool ActionRunDnsResolverPresentRoutine();
   bool ActionRunCpuStressRoutine(base::TimeDelta exec_duration);
   bool ActionRunFloatingPointAccuracyRoutine(base::TimeDelta exec_duration);

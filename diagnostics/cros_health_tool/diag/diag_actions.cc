@@ -200,15 +200,22 @@ bool DiagActions::ActionRunDiskReadRoutine(
   return PollRoutineAndProcessResult();
 }
 
-bool DiagActions::ActionRunDnsResolverPresentRoutine() {
-  auto response = adapter_->RunDnsResolverPresentRoutine();
+bool DiagActions::ActionRunDnsLatencyRoutine() {
+  auto response = adapter_->RunDnsLatencyRoutine();
   CHECK(response) << "No RunRoutineResponse received.";
   id_ = response->id;
   return PollRoutineAndProcessResult();
 }
 
-bool DiagActions::ActionRunDnsLatencyRoutine() {
-  auto response = adapter_->RunDnsLatencyRoutine();
+bool DiagActions::ActionRunDnsResolutionRoutine() {
+  auto response = adapter_->RunDnsResolutionRoutine();
+  CHECK(response) << "No RunRoutineResponse received.";
+  id_ = response->id;
+  return PollRoutineAndProcessResult();
+}
+
+bool DiagActions::ActionRunDnsResolverPresentRoutine() {
+  auto response = adapter_->RunDnsResolverPresentRoutine();
   CHECK(response) << "No RunRoutineResponse received.";
   id_ = response->id;
   return PollRoutineAndProcessResult();

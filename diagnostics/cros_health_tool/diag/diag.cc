@@ -237,6 +237,9 @@ int diag_main(int argc, char** argv) {
       case mojo_ipc::DiagnosticRoutineEnum::kDnsLatency:
         routine_result = actions.ActionRunDnsLatencyRoutine();
         break;
+      case mojo_ipc::DiagnosticRoutineEnum::kDnsResolution:
+        routine_result = actions.ActionRunDnsResolutionRoutine();
+        break;
       default:
         std::cout << "Unsupported routine: " << FLAGS_routine << std::endl;
         return EXIT_FAILURE;

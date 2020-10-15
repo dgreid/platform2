@@ -129,6 +129,10 @@ class CrosHealthdMojoAdapter {
   virtual chromeos::cros_healthd::mojom::RunRoutineResponsePtr
   RunDnsLatencyRoutine() = 0;
 
+  // Runs the DNS resolution routine.
+  virtual chromeos::cros_healthd::mojom::RunRoutineResponsePtr
+  RunDnsResolutionRoutine() = 0;
+
   // Returns which routines are available on the platform.
   virtual std::vector<chromeos::cros_healthd::mojom::DiagnosticRoutineEnum>
   GetAvailableRoutines() = 0;
