@@ -66,9 +66,11 @@ class CrosHealthdRoutineService final
       uint32_t length_seconds,
       uint32_t file_size_mb,
       RunDiskReadRoutineCallback callback) override;
+  void RunDnsLatencyRoutine(RunDnsLatencyRoutineCallback callback) override;
+  void RunDnsResolutionRoutine(
+      RunDnsResolutionRoutineCallback callback) override;
   void RunDnsResolverPresentRoutine(
       RunDnsResolverPresentRoutineCallback callback) override;
-  void RunDnsLatencyRoutine(RunDnsLatencyRoutineCallback callback) override;
   void RunFloatingPointAccuracyRoutine(
       uint32_t length_seconds,
       RunFloatingPointAccuracyRoutineCallback callback) override;

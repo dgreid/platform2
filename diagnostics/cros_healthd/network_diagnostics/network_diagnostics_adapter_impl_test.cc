@@ -292,6 +292,35 @@ TEST_F(NetworkDiagnosticsAdapterImplTest, RunDnsLatencyRoutine) {
   run_loop.Run();
 }
 
+// Test that the DnsResolution routine can be run.
+TEST_F(NetworkDiagnosticsAdapterImplTest, RunDnsResolutionRoutine) {
+  MockNetworkDiagnosticsRoutines network_diagnostics_routines;
+  network_diagnostics_adapter()->SetNetworkDiagnosticsRoutines(
+      network_diagnostics_routines.pending_remote());
+
+  base::RunLoop run_loop;
+  EXPECT_CALL(network_diagnostics_routines, DnsResolution(testing::_))
+      .WillOnce(testing::Invoke(
+          [&](network_diagnostics_ipc::NetworkDiagnosticsRoutines::
+                  DnsResolutionCallback callback) {
+            std::move(callback).Run(
+                network_diagnostics_ipc::RoutineVerdict::kNoProblem, {});
+          }));
+
+  network_diagnostics_adapter()->RunDnsResolutionRoutine(
+      base::BindLambdaForTesting(
+          [&](network_diagnostics_ipc::RoutineVerdict response,
+              const std::vector<network_diagnostics_ipc::DnsResolutionProblem>&
+                  problems) {
+            EXPECT_EQ(response,
+                      network_diagnostics_ipc::RoutineVerdict::kNoProblem);
+            EXPECT_EQ(problems.size(), 0);
+            run_loop.Quit();
+          }));
+
+  run_loop.Run();
+}
+
 // Test that the LanConnectivity routine returns RoutineVerdict::kNotRun if a
 // valid NetworkDiagnosticsRoutines remote was never sent.
 TEST_F(NetworkDiagnosticsAdapterImplTest,
@@ -395,6 +424,24 @@ TEST_F(NetworkDiagnosticsAdapterImplTest, RunDnsLatencyRoutineWithNoRemote) {
       base::BindLambdaForTesting(
           [&](network_diagnostics_ipc::RoutineVerdict response,
               const std::vector<network_diagnostics_ipc::DnsLatencyProblem>&
+                  problems) {
+            EXPECT_EQ(response,
+                      network_diagnostics_ipc::RoutineVerdict::kNotRun);
+            EXPECT_EQ(problems.size(), 0);
+            run_loop.Quit();
+          }));
+
+  run_loop.Run();
+}
+
+// Test that the DnsResolution routine returns RoutineVerdict::kNotRun if a
+// valid NetworkDiagnosticsRoutines remote was never sent.
+TEST_F(NetworkDiagnosticsAdapterImplTest, RunDnsResolutionRoutineWithNoRemote) {
+  base::RunLoop run_loop;
+  network_diagnostics_adapter()->RunDnsResolutionRoutine(
+      base::BindLambdaForTesting(
+          [&](network_diagnostics_ipc::RoutineVerdict response,
+              const std::vector<network_diagnostics_ipc::DnsResolutionProblem>&
                   problems) {
             EXPECT_EQ(response,
                       network_diagnostics_ipc::RoutineVerdict::kNotRun);

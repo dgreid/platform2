@@ -93,4 +93,16 @@ void NetworkDiagnosticsAdapterImpl::RunDnsLatencyRoutine(
   network_diagnostics_routines_->DnsLatency(std::move(callback));
 }
 
+void NetworkDiagnosticsAdapterImpl::RunDnsResolutionRoutine(
+    network_diagnostics_ipc::NetworkDiagnosticsRoutines::DnsResolutionCallback
+        callback) {
+  if (!network_diagnostics_routines_.is_bound()) {
+    std::move(callback).Run(
+        chromeos::network_diagnostics::mojom::RoutineVerdict::kNotRun,
+        /*problems=*/{});
+    return;
+  }
+  network_diagnostics_routines_->DnsResolution(std::move(callback));
+}
+
 }  // namespace diagnostics

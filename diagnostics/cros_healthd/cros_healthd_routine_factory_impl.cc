@@ -18,6 +18,7 @@
 #include "diagnostics/cros_healthd/routines/cpu_stress/cpu_stress.h"
 #include "diagnostics/cros_healthd/routines/disk_read/disk_read.h"
 #include "diagnostics/cros_healthd/routines/dns_latency/dns_latency.h"
+#include "diagnostics/cros_healthd/routines/dns_resolution/dns_resolution.h"
 #include "diagnostics/cros_healthd/routines/dns_resolver_present/dns_resolver_present.h"
 #include "diagnostics/cros_healthd/routines/floating_point/floating_point_accuracy.h"
 #include "diagnostics/cros_healthd/routines/gateway_can_be_pinged/gateway_can_be_pinged.h"
@@ -183,6 +184,11 @@ CrosHealthdRoutineFactoryImpl::MakeDnsResolverPresentRoutine() {
 std::unique_ptr<DiagnosticRoutine>
 CrosHealthdRoutineFactoryImpl::MakeDnsLatencyRoutine() {
   return CreateDnsLatencyRoutine(context_->network_diagnostics_adapter());
+}
+
+std::unique_ptr<DiagnosticRoutine>
+CrosHealthdRoutineFactoryImpl::MakeDnsResolutionRoutine() {
+  return CreateDnsResolutionRoutine(context_->network_diagnostics_adapter());
 }
 
 }  // namespace diagnostics

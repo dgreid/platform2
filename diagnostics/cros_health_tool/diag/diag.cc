@@ -61,7 +61,8 @@ const struct {
      mojo_ipc::DiagnosticRoutineEnum::kHasSecureWiFiConnection},
     {"dns_resolver_present",
      mojo_ipc::DiagnosticRoutineEnum::kDnsResolverPresent},
-    {"dns_latency", mojo_ipc::DiagnosticRoutineEnum::kDnsLatency}};
+    {"dns_latency", mojo_ipc::DiagnosticRoutineEnum::kDnsLatency},
+    {"dns_resolution", mojo_ipc::DiagnosticRoutineEnum::kDnsResolution}};
 
 }  // namespace
 

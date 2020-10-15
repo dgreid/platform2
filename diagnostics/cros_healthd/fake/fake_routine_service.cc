@@ -146,4 +146,9 @@ void FakeRoutineService::RunDnsLatencyRoutine(
   NOTIMPLEMENTED();
 }
 
+void FakeRoutineService::RunDnsResolutionRoutine(
+    RunDnsResolutionRoutineCallback callback) {
+  NOTIMPLEMENTED();
+}
+
 }  // namespace diagnostics

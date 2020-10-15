@@ -88,6 +88,7 @@ class FakeCrosHealthdRoutineFactory final : public CrosHealthdRoutineFactory {
       override;
   std::unique_ptr<DiagnosticRoutine> MakeDnsResolverPresentRoutine() override;
   std::unique_ptr<DiagnosticRoutine> MakeDnsLatencyRoutine() override;
+  std::unique_ptr<DiagnosticRoutine> MakeDnsResolutionRoutine() override;
 
  private:
   // The routine that will be returned by any calls to MakeSomeRoutine.

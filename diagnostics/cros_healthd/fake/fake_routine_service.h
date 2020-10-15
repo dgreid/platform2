@@ -87,6 +87,8 @@ class FakeRoutineService final
   void RunDnsResolverPresentRoutine(
       RunDnsResolverPresentRoutineCallback callback) override;
   void RunDnsLatencyRoutine(RunDnsLatencyRoutineCallback callback) override;
+  void RunDnsResolutionRoutine(
+      RunDnsResolutionRoutineCallback callback) override;
 };
 
 }  // namespace diagnostics
