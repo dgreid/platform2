@@ -14,7 +14,6 @@
 
 #include <base/files/file_descriptor_watcher_posix.h>
 #include <base/macros.h>
-#include <base/message_loop/message_loop.h>
 #include <base/sequenced_task_runner.h>
 #include <patchpanel/proto_bindings/patchpanel_service.pb.h>
 

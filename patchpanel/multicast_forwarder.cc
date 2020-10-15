@@ -16,7 +16,6 @@
 
 #include <base/bind.h>
 #include <base/logging.h>
-#include <base/message_loop/message_loop.h>
 
 #include "patchpanel/dns/dns_protocol.h"
 #include "patchpanel/dns/dns_response.h"

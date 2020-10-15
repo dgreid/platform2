@@ -5,9 +5,9 @@
 #include <utility>
 #include <vector>
 
-#include <base/message_loop/message_loop.h>
 #include <base/run_loop.h>
 #include <base/test/bind_test_util.h>
+#include <base/test/task_environment.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <mojo/public/cpp/bindings/pending_remote.h>
@@ -117,7 +117,7 @@ class NetworkDiagnosticsAdapterImplTest : public testing::Test {
   }
 
  private:
-  base::MessageLoop message_loop_;
+  base::test::SingleThreadTaskEnvironment task_environment_;
   NetworkDiagnosticsAdapterImpl network_diagnostics_adapter_;
 };
 

@@ -13,7 +13,7 @@
 #include <base/files/file_util.h>
 #include <base/macros.h>
 #include <base/run_loop.h>
-#include <base/message_loop/message_loop.h>
+#include <base/task/single_thread_task_executor.h>
 #include <brillo/message_loops/base_message_loop.h>
 #include <fuzzer/FuzzedDataProvider.h>
 #include <mojo/public/cpp/bindings/binding.h>
@@ -167,8 +167,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   base::AtExitManager at_exit_manager;
 
   // Mock main task runner
-  base::MessageLoopForIO message_loop;
-  brillo::BaseMessageLoop brillo_loop(&message_loop);
+  base::SingleThreadTaskExecutor task_executor(base::MessagePumpType::IO);
+  brillo::BaseMessageLoop brillo_loop(task_executor.task_runner());
   brillo_loop.SetAsCurrent();
 
   ml::MLServiceFuzzer fuzzer;

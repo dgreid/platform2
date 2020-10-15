@@ -71,7 +71,7 @@ MojoConnector::MojoConnector() : ipc_thread_("IpcThread") {
   mojo::core::Init();
   LOG(INFO) << "Starting IPC thread.";
   if (!ipc_thread_.StartWithOptions(
-          base::Thread::Options(base::MessageLoop::TYPE_IO, 0))) {
+          base::Thread::Options(base::MessagePumpType::IO, 0))) {
     LOG(ERROR) << "Failed to start IPC Thread";
   }
   ipc_support_ = std::make_unique<mojo::core::ScopedIPCSupport>(

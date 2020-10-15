@@ -146,11 +146,7 @@ int main(int argc, char** argv) {
   virtual_file_provider::ServiceThread service_thread(fuse_mount_path,
                                                       &size_map);
   base::Thread::Options options;
-#if BASE_VER < 780000
-  options.message_loop_type = base::MessageLoop::TYPE_IO;
-#else
   options.message_pump_type = base::MessagePumpType::IO;
-#endif
   service_thread.StartWithOptions(options);
 
   // Enter the FUSE main loop.

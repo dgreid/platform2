@@ -11,7 +11,7 @@
 #include <vector>
 
 #include <base/macros.h>
-#include <base/message_loop/message_loop.h>
+#include <base/memory/weak_ptr.h>
 
 namespace permission_broker {
 

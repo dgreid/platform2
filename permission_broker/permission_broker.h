@@ -12,7 +12,6 @@
 #include <vector>
 
 #include <base/macros.h>
-#include <base/message_loop/message_loop.h>
 #include <base/sequenced_task_runner.h>
 #include <base/time/time.h>
 #include <dbus/bus.h>
