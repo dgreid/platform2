@@ -241,6 +241,9 @@ int diag_main(int argc, char** argv) {
       case mojo_ipc::DiagnosticRoutineEnum::kDnsResolution:
         routine_result = actions.ActionRunDnsResolutionRoutine();
         break;
+      case mojo_ipc::DiagnosticRoutineEnum::kCaptivePortal:
+        routine_result = actions.ActionRunCaptivePortalRoutine();
+        break;
       default:
         std::cout << "Unsupported routine: " << FLAGS_routine << std::endl;
         return EXIT_FAILURE;

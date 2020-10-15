@@ -176,6 +176,13 @@ bool DiagActions::ActionRunBatteryHealthRoutine() {
   return PollRoutineAndProcessResult();
 }
 
+bool DiagActions::ActionRunCaptivePortalRoutine() {
+  auto response = adapter_->RunCaptivePortalRoutine();
+  CHECK(response) << "No RunRoutineResponse received.";
+  id_ = response->id;
+  return PollRoutineAndProcessResult();
+}
+
 bool DiagActions::ActionRunCpuCacheRoutine(base::TimeDelta exec_duration) {
   auto response = adapter_->RunCpuCacheRoutine(exec_duration);
   CHECK(response) << "No RunRoutineResponse received.";

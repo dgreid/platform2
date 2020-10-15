@@ -138,6 +138,10 @@ class CrosHealthdMojoAdapterImpl final : public CrosHealthdMojoAdapter {
   chromeos::cros_healthd::mojom::RunRoutineResponsePtr RunDnsResolutionRoutine()
       override;
 
+  // Runs the captive portal routine.
+  chromeos::cros_healthd::mojom::RunRoutineResponsePtr RunCaptivePortalRoutine()
+      override;
+
   // Returns which routines are available on the platform.
   std::vector<chromeos::cros_healthd::mojom::DiagnosticRoutineEnum>
   GetAvailableRoutines() override;
@@ -620,6 +624,22 @@ CrosHealthdMojoAdapterImpl::RunDnsResolutionRoutine() {
   chromeos::cros_healthd::mojom::RunRoutineResponsePtr response;
   base::RunLoop run_loop;
   cros_healthd_diagnostics_service_->RunDnsResolutionRoutine(
+      base::Bind(&OnMojoResponseReceived<
+                     chromeos::cros_healthd::mojom::RunRoutineResponsePtr>,
+                 &response, run_loop.QuitClosure()));
+  run_loop.Run();
+
+  return response;
+}
+
+chromeos::cros_healthd::mojom::RunRoutineResponsePtr
+CrosHealthdMojoAdapterImpl::RunCaptivePortalRoutine() {
+  if (!cros_healthd_service_factory_.is_bound())
+    Connect();
+
+  chromeos::cros_healthd::mojom::RunRoutineResponsePtr response;
+  base::RunLoop run_loop;
+  cros_healthd_diagnostics_service_->RunCaptivePortalRoutine(
       base::Bind(&OnMojoResponseReceived<
                      chromeos::cros_healthd::mojom::RunRoutineResponsePtr>,
                  &response, run_loop.QuitClosure()));
