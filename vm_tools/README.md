@@ -115,12 +115,9 @@ started by maitred and provides a socket at `/dev/log` for applications to send
 it log records.  `vm_syslog` aggregates the log records and then forwards them
 outside the VM to the logging service running on the host.  The logging service
 tags the records it receives with the unique identifier for the VM from which
-the logs originated and then forwards them on to the host syslog service.  This
-ensures that the VM logs are captured in any feedback reports that are uploaded
-to Google's servers.
-
-Additionally, `vm_syslog` reads kernel logs from `/dev/kmsg` (inside the VM)
-and forwards those to the logging service running on the host.
+the logs originated and then either forwards them on to the host syslog service
+or writes them to a file in the user cryptohome. This ensures that the VM logs
+are captured in any feedback reports that are uploaded to Google's servers.
 
 See [docs/logging.md](docs/logging.md) for more details on log handling.
 

@@ -10,12 +10,15 @@ flow of logs from the VM to the host system.
 
 When maitred starts a VM, it also launches the VM log forwarding service
 (`vmlog_forwarder`).  This service listens on a well known port number on the
-host system for kernel and userspace logs from VMs. Log entries are represented
-with the `LogRecord` protobuf message, which is defined in
+host system for kernel and userspace logs from VMs. Additionally it listens to
+VmStartingUpSignal D-Bus signal from vm_concierge, and starts listening on
+a Unix domain socket for logs from crosvm. From each source, log entries are
+represented with the `LogRecord` protobuf message, which is defined in
 [vm_host.proto](../proto/vm_host.proto).
 
 `vmlog_forwarder` converts `LogRecord` messages into an
-[RFC3164](https://tools.ietf.org/html/rfc3164) syslog message and forwards it to
+[RFC3164](https://tools.ietf.org/html/rfc3164) syslog message and forwards it
+either to a VM-specific file in the user cryptohome, or to
 the host system's syslog daemon (`rsyslogd` on Chrome OS).  Additionally,
 `vmlog_forwarder` scrubs the contents of each `LogRecord` to ensure that the
 message contents contain only valid UTF-8 code points.  Control and
@@ -27,9 +30,7 @@ character (U+fffd).
 
 `vm_syslog` is a program that runs inside every VM and acts as the syslog daemon
 for that VM, accepting [RFC3164](https://tools.ietf.org/html/rfc3164) compliant
-messages from system processes running inside the VM as well as collecting VM
-kernel log records from the `/dev/kmsg`
-[interface](https://www.kernel.org/doc/Documentation/ABI/testing/dev-kmsg).
+messages from system processes running inside the VM.
 
 `vm_syslog` converts all log entries (both kernel and userspace) into
 `LogRecord` messages before sending them out to the `vmlog_forwarder` service
