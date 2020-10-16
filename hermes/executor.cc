@@ -24,4 +24,10 @@ void Executor::Execute(std::function<void()> f) {
       base::BindOnce([](std::function<void()> f) { f(); }, std::move(f)));
 }
 
+void Executor::PostDelayedTask(const base::Location& from_here,
+                               base::OnceClosure task,
+                               base::TimeDelta delay) {
+  task_runner_->PostDelayedTask(from_here, std::move(task), delay);
+}
+
 }  // namespace hermes

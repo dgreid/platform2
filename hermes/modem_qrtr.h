@@ -46,6 +46,9 @@ class ModemQrtr : public lpa::card::EuiccCard {
   virtual ~ModemQrtr();
 
   void Initialize(EuiccManagerInterface* euicc_manager);
+  // Set the active slot to a euicc so that a channel can be established and
+  // profiles can be installed.
+  void SetActiveSlot(const uint32_t physical_slot);
 
   // lpa::card::EuiccCard overrides.
   void SendApdus(std::vector<lpa::card::Apdu> apdus,
@@ -74,6 +77,8 @@ class ModemQrtr : public lpa::card::EuiccCard {
   // the proper TransmitQmi* method to perform QMI encoding prior to sending
   // data to the socket. Will remove elements from the tx queue as needed.
   void TransmitFromQueue();
+  // Creates and sends a SWITCH_SLOT QMI request
+  void TransmitQmiSwitchSlot(TxElement* tx_element);
   // Creates and sends OPEN_LOGICAL_CHANNEL QMI request.
   void TransmitQmiOpenLogicalChannel(TxElement* tx_element);
   // Creates and sends SEND_APDU QMI request.
@@ -90,6 +95,8 @@ class ModemQrtr : public lpa::card::EuiccCard {
   void ProcessQrtrPacket(uint32_t node, uint32_t port, int size);
   // Dispatches to proper ReceiveQmi* method based on QMI type.
   void ProcessQmiPacket(const qrtr_packet& packet);
+  // Performs decoding for SWITCH_SLOT QMI response.
+  void ReceiveQmiSwitchSlot(const qrtr_packet& packet);
   // Performs decoding for GET_SLOTS QMI response.
   void ReceiveQmiGetSlots(const qrtr_packet& packet);
   // Performs decoding for OPEN_LOGICAL_CHANNEL QMI response.
@@ -97,6 +104,8 @@ class ModemQrtr : public lpa::card::EuiccCard {
   // Performs decoding for SEND_APDU response and calls |on_recv_| with
   // appropriate parameters.
   void ReceiveQmiSendApdu(const qrtr_packet& packet);
+  void DisableQmi(base::TimeDelta duration);
+  void EnableQmi();
 
   void OnDataAvailable(SocketInterface* socket);
 
@@ -173,6 +182,7 @@ class ModemQrtr : public lpa::card::EuiccCard {
   };
 
   State current_state_;
+  bool qmi_disabled_;
 
   // Indicates that a qmi message has been sent and that a response is expected
   // Set for all known message types except QMI_RESET
@@ -187,7 +197,7 @@ class ModemQrtr : public lpa::card::EuiccCard {
   uint8_t channel_;
   // The slot that the logical channel to the eSIM will be made. Initialized in
   // constructor, hardware specific.
-  uint8_t slot_;
+  uint8_t logical_slot_;
 
   std::unique_ptr<SocketInterface> socket_;
   SocketQrtr::PacketMetadata metadata_;

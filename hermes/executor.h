@@ -17,6 +17,9 @@ class Executor : public lpa::util::Executor {
  public:
   explicit Executor(scoped_refptr<base::SingleThreadTaskRunner> task_runner);
   void Execute(std::function<void()> f) override;
+  virtual void PostDelayedTask(const base::Location& from_here,
+                               base::OnceClosure task,
+                               base::TimeDelta delay);
 
  private:
   scoped_refptr<base::SingleThreadTaskRunner> task_runner_;

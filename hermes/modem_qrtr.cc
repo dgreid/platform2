@@ -23,10 +23,15 @@ namespace {
 
 // As per QMI UIM spec section 2.2
 constexpr uint8_t kQmiUimService = 0xB;
-// TODO(jruthe): this is currently the slot on Cheza, but Esim should be able to
-// support different slots in the future.
-constexpr uint8_t kEsimSlot = 0x01;
+// This represents the logical slot that we want our eSIM to be assigned. For
+// dual sim - single standby modems, this will always work.
+// TODO(pholla) : For other multi-sim modems, get the first active slot and
+// store it as a ModemQrtr field.
+constexpr uint8_t kEsimLogicalSlot = 0x01;
 constexpr uint8_t kInvalidChannel = -1;
+
+// Delay between SwitchSlot and the next QMI message
+constexpr auto kSwitchSlotDelay = base::TimeDelta::FromSeconds(1);
 
 constexpr auto kInitRetryDelay = base::TimeDelta::FromSeconds(10);
 
@@ -52,6 +57,14 @@ struct ApduTxInfo : public ModemQrtr::TxInfo {
   ModemQrtr::ResponseCallback callback_;
 };
 
+struct SwitchSlotTxInfo : public ModemQrtr::TxInfo {
+  explicit SwitchSlotTxInfo(const uint32_t physical_slot,
+                            const uint8_t logical_slot)
+      : physical_slot_(physical_slot), logical_slot_(logical_slot) {}
+  const uint32_t physical_slot_;
+  const uint8_t logical_slot_;
+};
+
 std::unique_ptr<ModemQrtr> ModemQrtr::Create(
     std::unique_ptr<SocketInterface> socket,
     Logger* logger,
@@ -69,10 +82,11 @@ std::unique_ptr<ModemQrtr> ModemQrtr::Create(
 ModemQrtr::ModemQrtr(std::unique_ptr<SocketInterface> socket,
                      Logger* logger,
                      Executor* executor)
-    : extended_apdu_supported_(false),
+    : qmi_disabled_(false),
+      extended_apdu_supported_(false),
       current_transaction_id_(static_cast<uint16_t>(-1)),
       channel_(kInvalidChannel),
-      slot_(kEsimSlot),
+      logical_slot_(kEsimLogicalSlot),
       socket_(std::move(socket)),
       buffer_(4096),
       euicc_manager_(nullptr),
@@ -93,6 +107,12 @@ ModemQrtr::ModemQrtr(std::unique_ptr<SocketInterface> socket,
 ModemQrtr::~ModemQrtr() {
   Shutdown();
   socket_->Close();
+}
+
+void ModemQrtr::SetActiveSlot(const uint32_t physical_slot) {
+  tx_queue_.push_back(
+      {std::make_unique<SwitchSlotTxInfo>(physical_slot, kEsimLogicalSlot),
+       AllocateId(), QmiUimCommand::kSwitchSlot});
 }
 
 void ModemQrtr::SendApdus(std::vector<lpa::card::Apdu> apdus,
@@ -215,7 +235,7 @@ uint16_t ModemQrtr::AllocateId() {
 /////////////////////////////////////
 
 void ModemQrtr::TransmitFromQueue() {
-  if (tx_queue_.empty() || pending_response_type) {
+  if (tx_queue_.empty() || pending_response_type || qmi_disabled_) {
     return;
   }
 
@@ -225,6 +245,9 @@ void ModemQrtr::TransmitFromQueue() {
       uim_reset_req reset_request;
       SendCommand(QmiUimCommand::kReset, tx_queue_[0].id_, &reset_request,
                   uim_reset_req_ei);
+      break;
+    case QmiUimCommand::kSwitchSlot:
+      TransmitQmiSwitchSlot(&tx_queue_[0]);
       break;
     case QmiUimCommand::kGetSlots:
       uim_get_slots_req slots_request;
@@ -249,12 +272,22 @@ void ModemQrtr::TransmitFromQueue() {
   }
 }
 
+void ModemQrtr::TransmitQmiSwitchSlot(TxElement* tx_element) {
+  uim_switch_slot_req switch_slot_request;
+  auto switch_slot_tx_info =
+      dynamic_cast<SwitchSlotTxInfo*>(tx_queue_[0].info_.get());
+  switch_slot_request.physical_slot = switch_slot_tx_info->physical_slot_;
+  switch_slot_request.logical_slot = switch_slot_tx_info->logical_slot_;
+  SendCommand(QmiUimCommand::kSwitchSlot, tx_queue_[0].id_,
+              &switch_slot_request, uim_switch_slot_req_ei);
+}
+
 void ModemQrtr::TransmitQmiOpenLogicalChannel(TxElement* tx_element) {
   DCHECK(tx_element &&
          tx_element->uim_type_ == QmiUimCommand::kOpenLogicalChannel);
 
   uim_open_logical_channel_req request;
-  request.slot = slot_;
+  request.slot = logical_slot_;
   request.aid_valid = true;
   request.aid_len = kAidIsdr.size();
   std::copy(kAidIsdr.begin(), kAidIsdr.end(), request.aid);
@@ -267,7 +300,7 @@ void ModemQrtr::TransmitQmiSendApdu(TxElement* tx_element) {
   DCHECK(tx_element && tx_element->uim_type_ == QmiUimCommand::kSendApdu);
 
   uim_send_apdu_req request;
-  request.slot = slot_;
+  request.slot = logical_slot_;
   request.channel_id_valid = true;
   request.channel_id = channel_;
 
@@ -398,6 +431,9 @@ void ModemQrtr::ProcessQmiPacket(const qrtr_packet& packet) {
     case QmiUimCommand::kReset:
       VLOG(1) << "Ignoring received RESET packet";
       break;
+    case QmiUimCommand::kSwitchSlot:
+      ReceiveQmiSwitchSlot(packet);
+      break;
     case QmiUimCommand::kGetSlots:
       ReceiveQmiGetSlots(packet);
       break;
@@ -464,6 +500,33 @@ void ModemQrtr::ReceiveQmiGetSlots(const qrtr_packet& packet) {
           i, EuiccSlotInfo(resp.status[i].logical_slot));
     }
   }
+}
+
+void ModemQrtr::ReceiveQmiSwitchSlot(const qrtr_packet& packet) {
+  QmiUimCommand cmd(QmiUimCommand::kSwitchSlot);
+  uim_switch_slot_resp resp;
+  unsigned int id;
+
+  if (qmi_decode_message(&resp, &id, &packet, QMI_RESPONSE, cmd,
+                         uim_switch_slot_resp_ei) < 0) {
+    LOG(ERROR) << "Failed to decode QMI UIM response: " << cmd.ToString();
+    return;
+  }
+
+  if (!CheckMessageSuccess(cmd, resp.result)) {
+    return;
+  }
+
+  // Sending QMI messages immediately after switch slot leads to QMI errors
+  // since slot switching takes time. If channel reacquisition fails despite
+  // this delay, we retry after kInitRetryDelay.
+  DisableQmi(kSwitchSlotDelay);
+
+  LOG(INFO) << "Reacquiring Channel";
+  current_state_.Transition(State::kUimStarted);
+  channel_ = kInvalidChannel;
+  tx_queue_.push_front({std::unique_ptr<TxInfo>(), AllocateId(),
+                        QmiUimCommand::kOpenLogicalChannel});
 }
 
 void ModemQrtr::ReceiveQmiOpenLogicalChannel(const qrtr_packet& packet) {
@@ -613,6 +676,19 @@ bool ModemQrtr::State::Transition(ModemQrtr::State::Value value) {
                << State(value);
   }
   return valid_transition;
+}
+
+void ModemQrtr::DisableQmi(base::TimeDelta duration) {
+  qmi_disabled_ = true;
+  VLOG(1) << "Blocking QMI messages for " << duration << "seconds";
+  executor_->PostDelayedTask(
+      FROM_HERE, base::BindOnce(&ModemQrtr::EnableQmi, base::Unretained(this)),
+      duration);
+}
+
+void ModemQrtr::EnableQmi() {
+  qmi_disabled_ = false;
+  TransmitFromQueue();
 }
 
 }  // namespace hermes
