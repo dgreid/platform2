@@ -271,11 +271,6 @@ bool FindFingerprintAndSdkVersion(std::string* out_fingerprint,
 // Returns the user and group ids for a user.
 bool GetUserId(const std::string& user, uid_t* user_id, gid_t* group_id);
 
-// Make a copy of file |src_path| to |dest_path|.
-// Use SafeFD to validate there is no symlink in the path.
-bool SafeCopyFile(const base::FilePath& src_path,
-                  const base::FilePath& dest_path);
-
 }  // namespace arc
 
 #endif  // ARC_SETUP_ARC_SETUP_UTIL_H_

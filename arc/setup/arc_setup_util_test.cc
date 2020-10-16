@@ -930,21 +930,4 @@ TEST(ArcSetupUtil, TestGetUserId) {
   }
 }
 
-TEST(ArcSetupUtil, SafeCopyFile) {
-  base::ScopedTempDir temp_dir;
-  ASSERT_TRUE(temp_dir.CreateUniqueTempDir());
-  const base::FilePath src_file = temp_dir.GetPath().Append("srcfile");
-
-  // Create a new source file and write it.
-  ASSERT_TRUE(WriteToFile(src_file, 0755, "testabc"));
-
-  const base::FilePath dest_file =
-      temp_dir.GetPath().Append("dest").Append("destfile");
-  ASSERT_TRUE(SafeCopyFile(src_file, dest_file));
-
-  const base::FilePath symlink = temp_dir.GetPath().Append("symlink");
-  ASSERT_TRUE(base::CreateSymbolicLink(dest_file, symlink));
-  ASSERT_FALSE(SafeCopyFile(src_file, symlink));
-}
-
 }  // namespace arc
