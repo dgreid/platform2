@@ -109,7 +109,7 @@ void ModemQrtr::SendApdus(std::vector<lpa::card::Apdu> apdus,
          AllocateId(), QmiUimCommand::kSendApdu});
   }
   // Begin transmitting if we are not already processing a transaction.
-  if (current_state_.CanSend()) {
+  if (!pending_response_type) {
     TransmitFromQueue();
   }
 }
@@ -156,7 +156,7 @@ void ModemQrtr::Initialize(EuiccManagerInterface* euicc_manager) {
 }
 
 void ModemQrtr::ReacquireChannel() {
-  if (current_state_ != State::kReady) {
+  if (current_state_ != State::kSendApduReady) {
     return;
   }
 
@@ -187,7 +187,7 @@ void ModemQrtr::FinalizeInitialization() {
     return;
   }
   LOG(INFO) << "ModemQrtr initialization successful. eSIM found.";
-  current_state_.Transition(State::kReady);
+  current_state_.Transition(State::kSendApduReady);
   // TODO(crbug.com/1117582) Set this based on whether or not Extended Length
   // APDU is supported.
   extended_apdu_supported_ = false;
@@ -215,7 +215,7 @@ uint16_t ModemQrtr::AllocateId() {
 /////////////////////////////////////
 
 void ModemQrtr::TransmitFromQueue() {
-  if (tx_queue_.empty()) {
+  if (tx_queue_.empty() || pending_response_type) {
     return;
   }
 
@@ -285,18 +285,27 @@ bool ModemQrtr::SendCommand(QmiUimCommand type,
                             uint16_t id,
                             void* c_struct,
                             qmi_elem_info* ei) {
-  if (current_state_ == State::kWaitingForResponse) {
-    LOG(ERROR) << "ModemQrtr: attempt to send raw buffer when waiting for a "
-               << "response";
-    return false;
-  } else if (!current_state_.CanSend()) {
-    LOG(ERROR) << "QRTR tried to send buffer in a non-sending state: "
-               << current_state_;
-    return false;
-  } else if (!socket_->IsValid()) {
+  if (!socket_->IsValid()) {
     LOG(ERROR) << "ModemQrtr socket is invalid!";
     return false;
   }
+  if (pending_response_type) {
+    LOG(ERROR) << "QRTR tried to send buffer while awaiting a qmi response";
+    return false;
+  }
+  if (!current_state_.CanSend()) {
+    LOG(ERROR) << "QRTR tried to send buffer in a non-sending state: "
+               << current_state_;
+    return false;
+  }
+  if (type == QmiUimCommand::kSendApdu &&
+      current_state_ != State::kSendApduReady) {
+    LOG(ERROR) << "QRTR tried to send apdu in state: " << current_state_;
+    return false;
+  }
+
+  // All hermes initiated qmi messages expect a response
+  pending_response_type = type;
 
   std::vector<uint8_t> encoded_buffer(kBufferDataSize * 2, 0);
   qrtr_packet packet;
@@ -311,21 +320,15 @@ bool ModemQrtr::SendCommand(QmiUimCommand type,
     return false;
   }
 
-  VLOG(1) << "ModemQrtr sending transaction type "
-          << static_cast<uint16_t>(type)
-          << " with data (size : " << packet.data_len
-          << ") : " << base::HexEncode(packet.data, packet.data_len);
+  LOG(INFO) << "ModemQrtr sending transaction type "
+            << static_cast<uint16_t>(type)
+            << " with data (size : " << packet.data_len
+            << ") : " << base::HexEncode(packet.data, packet.data_len);
   int success = socket_->Send(packet.data, packet.data_len,
                               reinterpret_cast<void*>(&metadata_));
   if (success < 0) {
     LOG(ERROR) << "qrtr_sendto failed";
     return false;
-  }
-  // If we are sending a command as per the initialization sequence
-  // (e.g. sending an OPEN_LOGICAL_CHANNEL request), we do not want to jump
-  // straight to kWaitingForResponse afterwards.
-  if (current_state_ == State::kReady) {
-    current_state_.Transition(State::kWaitingForResponse);
   }
   return true;
 }
@@ -357,9 +360,6 @@ void ModemQrtr::ProcessQrtrPacket(uint32_t node, uint32_t port, int size) {
       }
       break;
     case QRTR_TYPE_DATA:
-      if (current_state_ == State::kWaitingForResponse) {
-        current_state_.Transition(State::kReady);
-      }
       VLOG(1) << "Received data QRTR packet";
       ProcessQmiPacket(pkt);
       break;
@@ -381,7 +381,7 @@ void ModemQrtr::ProcessQrtrPacket(uint32_t node, uint32_t port, int size) {
   // If we cannot yet send another request, it is because we are waiting for a
   // response. After the response is received and processed, the next request
   // will be sent.
-  if (current_state_.CanSend()) {
+  if (!pending_response_type) {
     TransmitFromQueue();
   }
 }
@@ -393,6 +393,7 @@ void ModemQrtr::ProcessQmiPacket(const qrtr_packet& packet) {
     return;
   }
 
+  VLOG(1) << "Received QMI message of type: " << qmi_type;
   switch (qmi_type) {
     case QmiUimCommand::kReset:
       VLOG(1) << "Ignoring received RESET packet";
@@ -411,7 +412,18 @@ void ModemQrtr::ProcessQmiPacket(const qrtr_packet& packet) {
       break;
     default:
       LOG(WARNING) << "Received QMI packet of unknown type: " << qmi_type;
+      return;
   }
+
+  if (!pending_response_type) {
+    LOG(ERROR) << "Received unexpected QMI response. No pending response.";
+    return;
+  }
+
+  if (pending_response_type != qmi_type)
+    LOG(ERROR) << "Received unexpected QMI response. Expected: "
+               << pending_response_type->ToString();
+  pending_response_type.reset();
 }
 
 void ModemQrtr::ReceiveQmiGetSlots(const qrtr_packet& packet) {
@@ -569,8 +581,8 @@ void ModemQrtr::OnDataAvailable(SocketInterface* socket) {
     LOG(ERROR) << "Socket recv failed";
     return;
   }
-  VLOG(2) << "ModemQrtr recevied raw data (" << bytes_received
-          << " bytes): " << base::HexEncode(buffer_.data(), bytes_received);
+  LOG(INFO) << "ModemQrtr recevied raw data (" << bytes_received
+            << " bytes): " << base::HexEncode(buffer_.data(), bytes_received);
   ProcessQrtrPacket(data.node, data.port, bytes_received);
 }
 
@@ -585,12 +597,9 @@ bool ModemQrtr::State::Transition(ModemQrtr::State::Value value) {
       valid_transition = true;
       break;
     case kUimStarted:
-      // we reacquire the channel from kReady after profile (en/dis)able
-      valid_transition = (value_ == kReady || value_ == kInitializeStarted);
-      break;
-    case kReady:
+      // we reacquire the channel from kSendApduReady after profile (en/dis)able
       valid_transition =
-          (value_ == kLogicalChannelOpened || value_ == kWaitingForResponse);
+          (value_ == kSendApduReady || value_ == kInitializeStarted);
       break;
     default:
       // Most states can only transition from the previous state.

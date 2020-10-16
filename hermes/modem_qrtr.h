@@ -133,17 +133,9 @@ class ModemQrtr : public lpa::card::EuiccCard {
   //             +------------------------------------------------------+
   //             |     (FinalizeInitialization() called w/success)
   //             V
-  //         +-------+
-  //         | Ready | <--------------------+
-  //         +-------+                      |
-  //             +                          |
-  //             | (Request sent)           | (Response received)
-  //             |                          |
-  //             V                          |
-  //   +--------------------+               |
-  //   | WaitingForResponse | +-------------+
-  //   +--------------------+
-  //
+  //         +---------------+
+  //         | SendApduReady |
+  //         +---------------+
   class State {
    public:
     enum Value : uint8_t {
@@ -152,8 +144,7 @@ class ModemQrtr : public lpa::card::EuiccCard {
       kUimStarted,
       kLogicalChannelPending,
       kLogicalChannelOpened,
-      kReady,
-      kWaitingForResponse,
+      kSendApduReady,
     };
 
     State() : value_(kUninitialized) {}
@@ -161,12 +152,12 @@ class ModemQrtr : public lpa::card::EuiccCard {
     // was successful.
     bool Transition(Value value);
 
-    bool IsInitialized() const {
-      return value_ == kReady || value_ == kWaitingForResponse;
-    }
+    bool IsInitialized() const { return value_ == kSendApduReady; }
     // Returns whether or not some QMI packet can be sent out in the state. Note
-    // that APDUs in particular may only be sent in the kReady state.
-    bool CanSend() const { return value_ == kUimStarted || value_ == kReady; }
+    // that APDUs in particular may only be sent in the kSendApduReady state.
+    bool CanSend() const {
+      return value_ == kUimStarted || value_ == kSendApduReady;
+    }
 
     bool operator==(Value value) const { return value_ == value; }
     bool operator!=(Value value) const { return value_ != value; }
@@ -182,6 +173,10 @@ class ModemQrtr : public lpa::card::EuiccCard {
   };
 
   State current_state_;
+
+  // Indicates that a qmi message has been sent and that a response is expected
+  // Set for all known message types except QMI_RESET
+  base::Optional<QmiUimCommand> pending_response_type;
 
   bool extended_apdu_supported_;
   uint16_t current_transaction_id_;
