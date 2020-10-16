@@ -30,18 +30,49 @@ constexpr char kVmpluginImageDir[] = "/run/pvm-images";
 constexpr base::TimeDelta kVmShutdownTimeout = base::TimeDelta::FromMinutes(2);
 constexpr base::TimeDelta kVmSuspendTimeout = base::TimeDelta::FromSeconds(20);
 
-VmOpResult ConvertDispatcherResult(plugin_dispatcher::VmErrorCode result) {
+// Native Parallels error codes.
+constexpr int PRL_ERR_SUCCESS = 0;
+constexpr int PRL_ERR_DISP_SHUTDOWN_IN_PROCESS = 0x80000404;
+constexpr int PRL_ERR_LICENSE_NOT_VALID = 0x80011000;
+constexpr int PRL_ERR_LICENSE_EXPIRED = 0x80011001;
+constexpr int PRL_ERR_LICENSE_WRONG_VERSION = 0x80011002;
+constexpr int PRL_ERR_LICENSE_WRONG_PLATFORM = 0x80011004;
+constexpr int PRL_ERR_LICENSE_BETA_KEY_RELEASE_PRODUCT = 0x80011011;
+constexpr int PRL_ERR_LICENSE_RELEASE_KEY_BETA_PRODUCT = 0x80011013;
+constexpr int PRL_ERR_LICENSE_SUBSCR_EXPIRED = 0x80011074;
+constexpr int PRL_ERR_JLIC_WRONG_HWID = 0x80057005;
+constexpr int PRL_ERR_JLIC_LICENSE_DISABLED = 0x80057010;
+constexpr int PRL_ERR_JLIC_WEB_PORTAL_ACCESS_REQUIRED = 0x80057012;
+
+VmOpResult ConvertNativeResult(int result) {
+  switch (result) {
+    case PRL_ERR_SUCCESS:
+      return VmOpResult::SUCCESS;
+    case PRL_ERR_DISP_SHUTDOWN_IN_PROCESS:
+      return VmOpResult::DISPATCHER_SHUTTING_DOWN;
+    case PRL_ERR_LICENSE_NOT_VALID:
+    case PRL_ERR_LICENSE_EXPIRED:
+    case PRL_ERR_LICENSE_WRONG_VERSION:
+    case PRL_ERR_LICENSE_WRONG_PLATFORM:
+    case PRL_ERR_LICENSE_BETA_KEY_RELEASE_PRODUCT:
+    case PRL_ERR_LICENSE_RELEASE_KEY_BETA_PRODUCT:
+    case PRL_ERR_LICENSE_SUBSCR_EXPIRED:
+    case PRL_ERR_JLIC_WRONG_HWID:
+    case PRL_ERR_JLIC_LICENSE_DISABLED:
+    case PRL_ERR_JLIC_WEB_PORTAL_ACCESS_REQUIRED:
+      return VmOpResult::DISPATCHER_LICENSE_ERROR;
+    default:
+      return VmOpResult::DISPATCHER_GENERIC_ERROR;
+  }
+}
+
+VmOpResult ConvertDispatcherResult(plugin_dispatcher::VmErrorCode result,
+                                   int native_result) {
   switch (result) {
     case plugin_dispatcher::VM_SUCCESS:
       return VmOpResult::SUCCESS;
-    case plugin_dispatcher::VM_ERR_LIC_NOT_VALID:
-    case plugin_dispatcher::VM_ERR_LIC_EXPIRED:
-    case plugin_dispatcher::VM_ERR_LIC_WEB_PORTAL_UNAVAILABLE:
-      return VmOpResult::DISPATCHER_LICENSE_ERROR;
-    case plugin_dispatcher::VM_ERR_SRV_SHUTDOWN_IN_PROGRESS:
-      return VmOpResult::DISPATCHER_SHUTTING_DOWN;
-    case plugin_dispatcher::VM_ERR_UNKNOWN:
-      return VmOpResult::DISPATCHER_GENERIC_ERROR;
+    case plugin_dispatcher::VM_ERR_NATIVE_RESULT_CODE:
+      return ConvertNativeResult(native_result);
     default:
       return VmOpResult::INTERNAL_ERROR;
   }
@@ -80,7 +111,8 @@ bool GetVmInfo(dbus::ObjectProxy* proxy,
   }
 
   if (response.error() != vm_tools::plugin_dispatcher::VM_SUCCESS) {
-    LOG(ERROR) << "Failed to get VM info: " << response.error();
+    LOG(ERROR) << "Failed to get VM info: " << std::hex << std::showbase
+               << response.error() << " (" << response.result_code() << ")";
     return false;
   }
 
@@ -147,7 +179,8 @@ bool RegisterVm(dbus::ObjectProxy* proxy,
   }
 
   if (response.error() != vm_tools::plugin_dispatcher::VM_SUCCESS) {
-    LOG(ERROR) << "Failed to register VM: " << response.error();
+    LOG(ERROR) << "Failed to register VM: " << std::hex << std::showbase
+               << response.error() << " (" << response.result_code() << ")";
     return false;
   }
 
@@ -187,7 +220,8 @@ bool UnregisterVm(dbus::ObjectProxy* proxy, const VmId& vm_id) {
   }
 
   if (response.error() != vm_tools::plugin_dispatcher::VM_SUCCESS) {
-    LOG(ERROR) << "Failed to unregister VM: " << response.error();
+    LOG(ERROR) << "Failed to unregister VM: " << std::hex << std::showbase
+               << response.error() << " (" << response.result_code() << ")";
     return false;
   }
 
@@ -265,7 +299,7 @@ VmOpResult ShutdownVm(dbus::ObjectProxy* proxy, const VmId& vm_id) {
     return VmOpResult::INTERNAL_ERROR;
   }
 
-  return ConvertDispatcherResult(response.error());
+  return ConvertDispatcherResult(response.error(), response.result_code());
 }
 
 VmOpResult SuspendVm(dbus::ObjectProxy* proxy, const VmId& vm_id) {
@@ -310,7 +344,7 @@ VmOpResult SuspendVm(dbus::ObjectProxy* proxy, const VmId& vm_id) {
     return VmOpResult::INTERNAL_ERROR;
   }
 
-  return ConvertDispatcherResult(response.error());
+  return ConvertDispatcherResult(response.error(), response.result_code());
 }
 
 void RegisterVmToolsChangedCallbacks(
