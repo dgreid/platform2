@@ -53,6 +53,7 @@ config("compiler_defaults") {
   cflags = [
     "-Wall",
     "-Wunused",
+    "-Wbool-operation",
 
     # We use C99 array designators in C++ code.  Our compilers support this
     # extension since C++ has no equivalent yet (as of C++20).
