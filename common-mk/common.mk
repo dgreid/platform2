@@ -324,7 +324,8 @@ COMMON_CFLAGS-gcc := -fvisibility=internal -ggdb3 -Wa,--noexecstack
 COMMON_CFLAGS-clang := -fvisibility=hidden -ggdb -Wimplicit-fallthrough
 COMMON_CFLAGS := -Wall -Wunused -Wno-unused-parameter -Wunreachable-code \
   -Wbool-operation -Wstring-compare -Wstring-plus-int  -Wxor-used-as-pow \
-  -Werror -Wformat=2 -fno-strict-aliasing $(SSP_CFLAGS) -O1
+  -Wint-in-bool-context -Werror -Wformat=2 -fno-strict-aliasing \
+  $(SSP_CFLAGS) -O1
 CXXFLAGS += $(COMMON_CFLAGS) $(COMMON_CFLAGS-$(CXXDRIVER)) -std=gnu++14
 CFLAGS += $(COMMON_CFLAGS) $(COMMON_CFLAGS-$(CDRIVER)) -std=gnu11
 # We undefine _FORTIFY_SOURCE because some distros enable it by default in
