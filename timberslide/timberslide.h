@@ -23,7 +23,8 @@ class TimberSlide : public brillo::Daemon {
               base::File uptime_file,
               const base::FilePath& log_dir);
 
-  std::string ProcessLogBuffer(const char* buffer, const base::Time& now);
+  std::string ProcessLogBuffer(const std::string& buffer,
+                               const base::Time& now);
 
  protected:
   // For testing

@@ -167,7 +167,7 @@ bool TimberSlide::GetEcUptime(int64_t* ec_uptime_ms) {
   return (*ec_uptime_ms > 0);
 }
 
-std::string TimberSlide::ProcessLogBuffer(const char* buffer,
+std::string TimberSlide::ProcessLogBuffer(const std::string& buffer,
                                           const base::Time& now) {
   int64_t ec_current_uptime_ms = 0;
   std::istringstream iss(buffer);
@@ -200,8 +200,6 @@ void TimberSlide::OnEventReadable() {
   char buffer[4096];
   int ret;
 
-  memset(buffer, 0, sizeof(buffer));
-
   ret = TEMP_FAILURE_RETRY(
       device_file_.ReadAtCurrentPosNoBestEffort(buffer, sizeof(buffer)));
   if (ret == 0)
@@ -213,7 +211,8 @@ void TimberSlide::OnEventReadable() {
     return;
   }
 
-  std::string str = ProcessLogBuffer(buffer, base::Time::Now());
+  std::string str =
+      ProcessLogBuffer(std::string(buffer, ret), base::Time::Now());
   ret = str.size();
 
   if (!base::AppendToFile(current_log_, str.c_str(), ret)) {
