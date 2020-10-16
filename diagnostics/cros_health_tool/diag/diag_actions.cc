@@ -252,6 +252,13 @@ bool DiagActions::ActionRunHasSecureWiFiConnectionRoutine() {
   return PollRoutineAndProcessResult();
 }
 
+bool DiagActions::ActionRunHttpFirewallRoutine() {
+  auto response = adapter_->RunHttpFirewallRoutine();
+  CHECK(response) << "No RunRoutineResponse received.";
+  id_ = response->id;
+  return PollRoutineAndProcessResult();
+}
+
 bool DiagActions::ActionRunLanConnectivityRoutine() {
   auto response = adapter_->RunLanConnectivityRoutine();
   CHECK(response) << "No RunRoutineResponse received.";

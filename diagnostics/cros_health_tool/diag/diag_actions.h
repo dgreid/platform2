@@ -65,6 +65,7 @@ class DiagActions final {
   bool ActionRunFloatingPointAccuracyRoutine(base::TimeDelta exec_duration);
   bool ActionRunGatewayCanBePingedRoutine();
   bool ActionRunHasSecureWiFiConnectionRoutine();
+  bool ActionRunHttpFirewallRoutine();
   bool ActionRunLanConnectivityRoutine();
   bool ActionRunMemoryRoutine();
   bool ActionRunNvmeSelfTestRoutine(

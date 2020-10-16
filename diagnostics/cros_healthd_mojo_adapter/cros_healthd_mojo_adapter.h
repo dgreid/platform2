@@ -137,6 +137,10 @@ class CrosHealthdMojoAdapter {
   virtual chromeos::cros_healthd::mojom::RunRoutineResponsePtr
   RunCaptivePortalRoutine() = 0;
 
+  // Runs the HTTP firewall routine.
+  virtual chromeos::cros_healthd::mojom::RunRoutineResponsePtr
+  RunHttpFirewallRoutine() = 0;
+
   // Returns which routines are available on the platform.
   virtual std::vector<chromeos::cros_healthd::mojom::DiagnosticRoutineEnum>
   GetAvailableRoutines() = 0;
