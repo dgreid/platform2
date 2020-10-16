@@ -28,11 +28,7 @@ TEST_F(FakeCrosConfigTest, CheckGetString) {
 int main(int argc, char** argv) {
   logging::LoggingSettings settings;
   settings.logging_dest = logging::LOG_TO_FILE;
-#if BASE_VER < 780000
-  settings.log_file = "log.test";
-#else
   settings.log_file_path = "log.test";
-#endif
   settings.lock_log = logging::DONT_LOCK_LOG_FILE;
   settings.delete_old = logging::APPEND_TO_OLD_LOG_FILE;
   logging::InitLogging(settings);

@@ -41,11 +41,7 @@ class ServiceBlocker {
     // Start the dbus thread. Note that this will need to be an I/O thread
     // because ListenForServiceOwnerChange() needs it.
     base::Thread::Options options;
-#if BASE_VER < 780000
-    options.message_loop_type = base::MessagePumpType::IO;
-#else
     options.message_pump_type = base::MessagePumpType::IO;
-#endif
     dbus_thread_.StartWithOptions(options);
 
     dbus_thread_.task_runner()->PostTask(

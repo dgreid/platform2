@@ -266,11 +266,7 @@ bool UserDataAuth::Initialize() {
 
   if (!disable_threading_) {
     base::Thread::Options options;
-#if BASE_VER < 780000
-    options.message_loop_type = base::MessagePumpType::IO;
-#else
     options.message_pump_type = base::MessagePumpType::IO;
-#endif
     mount_thread_.StartWithOptions(options);
   }
 

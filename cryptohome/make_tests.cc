@@ -293,11 +293,7 @@ void TestUser::InjectUserPaths(MockPlatform* platform,
                                gid_t daemon_gid,
                                bool is_ecryptfs) {
   scoped_refptr<Mount> temp_mount = new Mount();
-#if BASE_VER < 780000
-  struct stat root_dir;
-#else
   base::stat_wrapper_t root_dir;
-#endif
   memset(&root_dir, 0, sizeof(root_dir));
   root_dir.st_mode = S_IFDIR | S_ISVTX;
   EXPECT_CALL(*platform,
@@ -306,11 +302,7 @@ void TestUser::InjectUserPaths(MockPlatform* platform,
                    _))
       .WillRepeatedly(DoAll(SetArgPointee<1>(root_dir), Return(true)));
   // Avoid triggering vault migration.  (Is there another test for that?)
-#if BASE_VER < 780000
-  struct stat root_vault_dir;
-#else
   base::stat_wrapper_t root_vault_dir;
-#endif
   memset(&root_vault_dir, 0, sizeof(root_vault_dir));
   root_vault_dir.st_mode = S_IFDIR | S_ISVTX;
   root_vault_dir.st_uid = 0;
@@ -318,11 +310,7 @@ void TestUser::InjectUserPaths(MockPlatform* platform,
   EXPECT_CALL(*platform,
               Stat(is_ecryptfs ? root_vault_path : root_vault_mount_path, _))
       .WillRepeatedly(DoAll(SetArgPointee<1>(root_vault_dir), Return(true)));
-#if BASE_VER < 780000
-  struct stat user_dir;
-#else
   base::stat_wrapper_t user_dir;
-#endif
   memset(&user_dir, 0, sizeof(user_dir));
   user_dir.st_mode = S_IFDIR;
   user_dir.st_uid = chronos_uid;
@@ -338,11 +326,7 @@ void TestUser::InjectUserPaths(MockPlatform* platform,
                      _))
         .WillRepeatedly(DoAll(SetArgPointee<1>(user_dir), Return(true)));
   }
-#if BASE_VER < 780000
-  struct stat chronos_dir;
-#else
   base::stat_wrapper_t chronos_dir;
-#endif
   memset(&chronos_dir, 0, sizeof(chronos_dir));
   chronos_dir.st_mode = S_IFDIR;
   chronos_dir.st_uid = chronos_uid;

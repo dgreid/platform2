@@ -75,11 +75,7 @@ class CameraDevice : public mojom::IpCameraFrameListener {
   int width_;
   int height_;
   RequestQueue request_queue_;
-#if BASE_VER < 780000
-  scoped_refptr<base::TaskRunner> ipc_task_runner_;
-#else
   scoped_refptr<base::SingleThreadTaskRunner> ipc_task_runner_;
-#endif
   mojo::Binding<IpCameraFrameListener> binding_;
   CameraBufferManager* buffer_manager_;
   android::CameraMetadata static_metadata_;

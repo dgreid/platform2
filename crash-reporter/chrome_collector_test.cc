@@ -384,12 +384,7 @@ TEST_F(ChromeCollectorTest, HandleCrash) {
   FilePath log_file;
   {
     base::ScopedFILE output(
-#if BASE_VER < 780000
-        base::CreateAndOpenTemporaryFileInDir
-#else
-        base::CreateAndOpenTemporaryStreamInDir
-#endif
-        (dir, &log_file));
+        base::CreateAndOpenTemporaryStreamInDir(dir, &log_file));
     ASSERT_TRUE(output.get());
     base::AutoReset<FILE*> auto_reset_file_ptr(&collector_.output_file_ptr_,
                                                output.get());
@@ -442,12 +437,7 @@ TEST_F(ChromeCollectorTest, HandleCrashWithEmbeddedNuls) {
   FilePath log_file;
   {
     base::ScopedFILE output(
-#if BASE_VER < 780000
-        base::CreateAndOpenTemporaryFileInDir
-#else
-        base::CreateAndOpenTemporaryStreamInDir
-#endif
-        (dir, &log_file));
+        base::CreateAndOpenTemporaryStreamInDir(dir, &log_file));
     ASSERT_TRUE(output.get());
     base::AutoReset<FILE*> auto_reset_file_ptr(&collector_.output_file_ptr_,
                                                output.get());
@@ -502,12 +492,7 @@ TEST_F(ChromeCollectorTest, HandleCrashWithWeirdFilename) {
   FilePath log_file;
   {
     base::ScopedFILE output(
-#if BASE_VER < 780000
-        base::CreateAndOpenTemporaryFileInDir
-#else
-        base::CreateAndOpenTemporaryStreamInDir
-#endif
-        (dir, &log_file));
+        base::CreateAndOpenTemporaryStreamInDir(dir, &log_file));
     ASSERT_TRUE(output.get());
     base::AutoReset<FILE*> auto_reset_file_ptr(&collector_.output_file_ptr_,
                                                output.get());

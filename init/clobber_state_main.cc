@@ -41,11 +41,7 @@ base::File OpenTerminal() {
 int main(int argc, char* argv[]) {
   logging::LoggingSettings settings;
   settings.logging_dest = logging::LOG_TO_FILE;
-#if BASE_VER < 780000
-  settings.log_file = "/tmp/clobber-state.log";
-#else
   settings.log_file_path = "/tmp/clobber-state.log";
-#endif
   // All logging happens in the main thread, so there is no need to lock the log
   // file.
   settings.lock_log = logging::DONT_LOCK_LOG_FILE;

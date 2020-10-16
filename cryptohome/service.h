@@ -68,12 +68,8 @@ class MountThreadObserver : public base::TaskObserver {
   void PostTask();
 
   // This method is called before processing a task.
-#if BASE_VER > 780000
   void WillProcessTask(const base::PendingTask& pending_task,
                        bool was_blocked_or_low_priority) override;
-#else
-  void WillProcessTask(const base::PendingTask& pending_task) override;
-#endif
 
   // This method is called after processing a task.
   void DidProcessTask(const base::PendingTask& pending_task) override;

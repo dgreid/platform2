@@ -100,11 +100,7 @@ class ScopedPath {
   FilePath dir_;
 };
 
-#if BASE_VER < 780000
-bool IsDirectory(const struct stat& file_info) {
-#else
 bool IsDirectory(const base::stat_wrapper_t& file_info) {
-#endif
   return !!S_ISDIR(file_info.st_mode);
 }
 
@@ -592,11 +588,7 @@ int Platform::Access(const FilePath& path, uint32_t flag) {
 }
 
 bool Platform::DirectoryExists(const FilePath& path) {
-#if BASE_VER < 780000
-  struct stat buf = {};
-#else
   base::stat_wrapper_t buf = {};
-#endif
   return Stat(path, &buf) && S_ISDIR(buf.st_mode);
 }
 
@@ -609,11 +601,7 @@ int64_t Platform::ComputeDirectoryDiskUsage(const FilePath& path) {
 }
 
 FILE* Platform::CreateAndOpenTemporaryFile(FilePath* path) {
-#if BASE_VER < 780000
-  return base::CreateAndOpenTemporaryFile(path);
-#else
   return base::CreateAndOpenTemporaryStream(path).release();
-#endif
 }
 
 FILE* Platform::OpenFile(const FilePath& path, const char* mode) {
@@ -786,15 +774,9 @@ base::Time Platform::GetCurrentTime() const {
   return base::Time::Now();
 }
 
-#if BASE_VER < 780000
-bool Platform::Stat(const FilePath& path, struct stat* buf) {
-  return lstat(path.value().c_str(), buf) == 0;
-}
-#else
 bool Platform::Stat(const FilePath& path, base::stat_wrapper_t* buf) {
   return base::File::Lstat(path.value().c_str(), buf) == 0;
 }
-#endif
 
 bool Platform::HasExtendedFileAttribute(const FilePath& path,
                                         const std::string& name) {
@@ -935,11 +917,7 @@ bool Platform::Copy(const FilePath& from, const FilePath& to) {
 bool Platform::CopyPermissionsCallback(const FilePath& old_base,
                                        const FilePath& new_base,
                                        const FilePath& file_path,
-#if BASE_VER < 780000
-                                       const struct stat& file_info
-#else
                                        const base::stat_wrapper_t& file_info
-#endif
 ) {
   // Find the new path that corresponds with the old path given by file_info.
   FilePath old_path = file_path;
@@ -996,11 +974,7 @@ bool Platform::ApplyPermissionsCallback(
     const Permissions& default_dir_info,
     const std::map<FilePath, Permissions>& special_cases,
     const FilePath& file_path,
-#if BASE_VER < 780000
-    const struct stat& file_info
-#else
     const base::stat_wrapper_t& file_info
-#endif
 ) {
   Permissions expected;
   std::map<FilePath, Permissions>::const_iterator it =
@@ -1465,11 +1439,7 @@ FileEnumerator* Platform::GetFileEnumerator(const FilePath& root_path,
 
 bool Platform::WalkPath(const FilePath& path,
                         const FileEnumeratorCallback& callback) {
-#if BASE_VER < 780000
-  struct stat base_entry_info;
-#else
   base::stat_wrapper_t base_entry_info;
-#endif
   if (!Stat(path, &base_entry_info)) {
     PLOG(ERROR) << "Failed to stat " << path.value();
     return false;
@@ -1590,11 +1560,7 @@ FileEnumerator::FileInfo::FileInfo(
 }
 
 FileEnumerator::FileInfo::FileInfo(const FilePath& name,
-#if BASE_VER < 780000
-                                   const struct stat& stat
-#else
                                    const base::stat_wrapper_t& stat
-#endif
                                    )
     : name_(name), stat_(stat) {
 }
@@ -1651,11 +1617,7 @@ base::Time FileEnumerator::FileInfo::GetLastModifiedTime() const {
   return base::Time::FromTimeT(stat_.st_mtime);
 }
 
-#if BASE_VER < 780000
-const struct stat& FileEnumerator::FileInfo::stat() const {
-#else
 const base::stat_wrapper_t& FileEnumerator::FileInfo::stat() const {
-#endif
   if (info_.get())
     return info_->stat();
   return stat_;

@@ -59,11 +59,7 @@ FeedbackReport::~FeedbackReport() {}
 void FeedbackReport::DeleteReportOnDisk() {
   reports_task_runner_->PostTask(
       FROM_HERE,
-#if BASE_VER < 780000
-      base::Bind(base::IgnoreResult(&base::DeleteFile), file_, false)
-#else
       base::BindOnce(base::GetDeleteFileCallback(), file_)
-#endif
   );  // NOLINT(whitespace/parens)
 }
 

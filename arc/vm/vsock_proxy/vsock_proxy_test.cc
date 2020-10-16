@@ -225,14 +225,8 @@ TEST_F(VSockProxyTest, FileWriteError) {
   auto server_fd = std::move(server_socket_pair->second);
 
   // Register a read only FD to the client. This will cause a write error.
-#if BASE_VER < 679961
-  int fds[2];
-  ASSERT_EQ(pipe(fds), 0);
-  base::ScopedFD client_fd_read(fds[0]), client_fd_write(fds[1]);
-#else
   base::ScopedFD client_fd_read, client_fd_write;
   base::CreatePipe(&client_fd_read, &client_fd_write, true);
-#endif
   ASSERT_TRUE(client_fd_read.is_valid());
   client()->RegisterFileDescriptor(
       std::move(client_fd_read), arc_proxy::FileDescriptor::FIFO_READ, handle);
