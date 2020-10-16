@@ -20,6 +20,7 @@
 #include <base/files/scoped_file.h>
 #include <base/logging.h>
 #include <base/posix/eintr_wrapper.h>
+#include <base/strings/string_util.h>
 #include <base/strings/string_number_conversions.h>
 #include <brillo/userdb_utils.h>
 
@@ -58,17 +59,6 @@ std::string PrefixIfname(const std::string& prefix, const std::string& ifname) {
   n.resize(IFNAMSIZ - 1);
   n[n.length() - 1] = c;
   return n;
-}
-
-bool IsValidIpFamily(IpFamily family) {
-  switch (family) {
-    case IPv4:
-    case IPv6:
-    case Dual:
-      return true;
-    default:
-      return false;
-  }
 }
 
 }  // namespace
@@ -838,12 +828,6 @@ bool Datapath::ModifyConnmarkSet(IpFamily family,
     return false;
   }
 
-  if (!IsValidIpFamily(family)) {
-    LOG(ERROR) << "Cannot change " << chain << " CONNMARK set-mark for " << oif
-               << ": incorrect IP family " << family;
-    return false;
-  }
-
   std::vector<std::string> args = {op, chain};
   if (!oif.empty()) {
     args.push_back("-o");
@@ -855,12 +839,7 @@ bool Datapath::ModifyConnmarkSet(IpFamily family,
   args.push_back(mark.ToString() + "/" + mask.ToString());
   args.push_back("-w");
 
-  bool success = true;
-  if (family & IPv4)
-    success &= process_runner_->iptables("mangle", args) == 0;
-  if (family & IPv6)
-    success &= process_runner_->ip6tables("mangle", args) == 0;
-  return false;
+  return ModifyIptables(family, "mangle", args);
 }
 
 bool Datapath::ModifyConnmarkRestore(IpFamily family,
@@ -872,12 +851,6 @@ bool Datapath::ModifyConnmarkRestore(IpFamily family,
     return false;
   }
 
-  if (!IsValidIpFamily(family)) {
-    LOG(ERROR) << "Cannot change " << chain << " -j CONNMARK restore-mark"
-               << " for " << iif << ": incorrect IP family " << family;
-    return false;
-  }
-
   std::vector<std::string> args = {op, chain};
   if (!iif.empty()) {
     args.push_back("-i");
@@ -886,12 +859,7 @@ bool Datapath::ModifyConnmarkRestore(IpFamily family,
   args.insert(args.end(), {"-j", "CONNMARK", "--restore-mark", "--mask",
                            kFwmarkRoutingMask.ToString(), "-w"});
 
-  bool success = true;
-  if (family & IPv4)
-    success &= process_runner_->iptables("mangle", args) == 0;
-  if (family & IPv6)
-    success &= process_runner_->ip6tables("mangle", args) == 0;
-  return success;
+  return ModifyIptables(family, "mangle", args);
 }
 
 bool Datapath::ModifyFwmarkRoutingTag(const std::string& op,
@@ -955,12 +923,6 @@ bool Datapath::ModifyFwmark(IpFamily family,
                             Fwmark mark,
                             Fwmark mask,
                             bool log_failures) {
-  if (!IsValidIpFamily(family)) {
-    LOG(ERROR) << "Cannot change " << chain << " set-fwmark for " << iif
-               << ": incorrect IP family " << family;
-    return false;
-  }
-
   std::vector<std::string> args = {op, chain};
   if (!iif.empty()) {
     args.push_back("-i");
@@ -978,12 +940,7 @@ bool Datapath::ModifyFwmark(IpFamily family,
   args.push_back(mark.ToString() + "/" + mask.ToString());
   args.push_back("-w");
 
-  bool success = true;
-  if (family & IPv4)
-    success &= process_runner_->iptables("mangle", args, log_failures) == 0;
-  if (family & IPv6)
-    success &= process_runner_->ip6tables("mangle", args, log_failures) == 0;
-  return success;
+  return ModifyIptables(family, "mangle", args, log_failures);
 }
 
 bool Datapath::ModifyIpForwarding(IpFamily family,
@@ -994,12 +951,6 @@ bool Datapath::ModifyIpForwarding(IpFamily family,
   if (iif.empty() && oif.empty()) {
     LOG(ERROR) << "Cannot change IP forwarding with no input or output "
                   "interface specified";
-    return false;
-  }
-
-  if (!IsValidIpFamily(family)) {
-    LOG(ERROR) << "Cannot change IP forwarding from \"" << iif << "\" to \""
-               << oif << "\": incorrect IP family " << family;
     return false;
   }
 
@@ -1016,12 +967,7 @@ bool Datapath::ModifyIpForwarding(IpFamily family,
   args.push_back("ACCEPT");
   args.push_back("-w");
 
-  bool success = true;
-  if (family & IpFamily::IPv4)
-    success &= process_runner_->iptables("filter", args, log_failures) == 0;
-  if (family & IpFamily::IPv6)
-    success &= process_runner_->ip6tables("filter", args, log_failures) == 0;
-  return success;
+  return ModifyIptables(family, "filter", args, log_failures);
 }
 
 bool Datapath::ModifyFwmarkVpnJumpRule(const std::string& chain,
@@ -1047,23 +993,32 @@ bool Datapath::ModifyFwmarkVpnJumpRule(const std::string& chain,
 bool Datapath::ModifyChain(IpFamily family,
                            const std::string& table,
                            const std::string& op,
-                           const std::string& chain) {
-  return ModifyIptables(family, table, {op, chain, "-w"});
+                           const std::string& chain,
+                           bool log_failures) {
+  return ModifyIptables(family, table, {op, chain, "-w"}, log_failures);
 }
 
 bool Datapath::ModifyIptables(IpFamily family,
                               const std::string& table,
-                              const std::vector<std::string>& argv) {
-  if (!IsValidIpFamily(family)) {
-    LOG(ERROR) << "Incorrect IP family " << family;
-    return false;
+                              const std::vector<std::string>& argv,
+                              bool log_failures) {
+  switch (family) {
+    case IPv4:
+    case IPv6:
+    case Dual:
+      break;
+    default:
+      LOG(ERROR) << "Could not execute iptables command " << table
+                 << base::JoinString(argv, " ") << ": incorrect IP family "
+                 << family;
+      return false;
   }
 
   bool success = true;
   if (family & IpFamily::IPv4)
-    success &= process_runner_->iptables(table, argv) == 0;
+    success &= process_runner_->iptables(table, argv, log_failures) == 0;
   if (family & IpFamily::IPv6)
-    success &= process_runner_->ip6tables(table, argv) == 0;
+    success &= process_runner_->ip6tables(table, argv, log_failures) == 0;
   return success;
 }
 

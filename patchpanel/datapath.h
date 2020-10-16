@@ -309,10 +309,12 @@ class Datapath {
   bool ModifyChain(IpFamily family,
                    const std::string& table,
                    const std::string& op,
-                   const std::string& chain);
+                   const std::string& chain,
+                   bool log_failures = true);
   bool ModifyIptables(IpFamily family,
                       const std::string& table,
-                      const std::vector<std::string>& argv);
+                      const std::vector<std::string>& argv,
+                      bool log_failures = true);
   bool ModifyRtentry(ioctl_req_t op, struct rtentry* route);
   int FindIfIndex(const std::string& ifname);
 
