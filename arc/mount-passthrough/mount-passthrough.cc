@@ -433,6 +433,8 @@ int main(int argc, char** argv) {
       "direct_io",
       "-o",
       fuse_umask_opt.c_str(),
+      "-o",
+      "noexec",
   };
   int fuse_argc = sizeof(fuse_argv) / sizeof(fuse_argv[0]);
 
