@@ -66,6 +66,10 @@ void SuspendConfigurator::PrepareForSuspend(
 
   // Do this at the end so that system spends close to |suspend_duration| in
   // suspend.
+  if (!alarm_) {
+    LOG(ERROR) << "System doesn't support CLOCK_REALTIME_ALARM.";
+    return;
+  }
   if (suspend_duration != base::TimeDelta()) {
     alarm_->Start(FROM_HERE, suspend_duration, base::DoNothing());
   }
