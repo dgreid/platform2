@@ -327,4 +327,9 @@ FakeCrosHealthdRoutineFactory::MakeCaptivePortalRoutine() {
   return std::move(next_routine_);
 }
 
+std::unique_ptr<DiagnosticRoutine>
+FakeCrosHealthdRoutineFactory::MakeHttpFirewallRoutine() {
+  return std::move(next_routine_);
+}
+
 }  // namespace diagnostics

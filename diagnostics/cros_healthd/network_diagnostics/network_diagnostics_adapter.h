@@ -62,6 +62,11 @@ class NetworkDiagnosticsAdapter {
   virtual void RunCaptivePortalRoutine(
       chromeos::network_diagnostics::mojom::NetworkDiagnosticsRoutines::
           CaptivePortalCallback) = 0;
+
+  // Requests the browser to invoke the HttpFirewall routine.
+  virtual void RunHttpFirewallRoutine(
+      chromeos::network_diagnostics::mojom::NetworkDiagnosticsRoutines::
+          HttpFirewallCallback) = 0;
 };
 
 }  // namespace diagnostics

@@ -24,6 +24,7 @@
 #include "diagnostics/cros_healthd/routines/floating_point/floating_point_accuracy.h"
 #include "diagnostics/cros_healthd/routines/gateway_can_be_pinged/gateway_can_be_pinged.h"
 #include "diagnostics/cros_healthd/routines/has_secure_wifi_connection/has_secure_wifi_connection.h"
+#include "diagnostics/cros_healthd/routines/http_firewall/http_firewall.h"
 #include "diagnostics/cros_healthd/routines/lan_connectivity/lan_connectivity.h"
 #include "diagnostics/cros_healthd/routines/memory/memory.h"
 #include "diagnostics/cros_healthd/routines/nvme_self_test/nvme_self_test.h"
@@ -195,6 +196,11 @@ CrosHealthdRoutineFactoryImpl::MakeDnsResolutionRoutine() {
 std::unique_ptr<DiagnosticRoutine>
 CrosHealthdRoutineFactoryImpl::MakeCaptivePortalRoutine() {
   return CreateCaptivePortalRoutine(context_->network_diagnostics_adapter());
+}
+
+std::unique_ptr<DiagnosticRoutine>
+CrosHealthdRoutineFactoryImpl::MakeHttpFirewallRoutine() {
+  return CreateHttpFirewallRoutine(context_->network_diagnostics_adapter());
 }
 
 }  // namespace diagnostics

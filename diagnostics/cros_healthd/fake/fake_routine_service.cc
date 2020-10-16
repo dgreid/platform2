@@ -156,4 +156,9 @@ void FakeRoutineService::RunCaptivePortalRoutine(
   NOTIMPLEMENTED();
 }
 
+void FakeRoutineService::RunHttpFirewallRoutine(
+    RunHttpFirewallRoutineCallback callback) {
+  NOTIMPLEMENTED();
+}
+
 }  // namespace diagnostics

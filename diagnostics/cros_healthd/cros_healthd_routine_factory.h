@@ -116,6 +116,9 @@ class CrosHealthdRoutineFactory {
   // Constructs a new instance of the captive portal routine. See
   // diagnostics/routines/captive_portal for details on the routine itself.
   virtual std::unique_ptr<DiagnosticRoutine> MakeCaptivePortalRoutine() = 0;
+  // Constructs a new instance of the HTTP firewall routine. See
+  // diagnostics/routines/http_firewall for details on the routine itself.
+  virtual std::unique_ptr<DiagnosticRoutine> MakeHttpFirewallRoutine() = 0;
 };
 
 }  // namespace diagnostics

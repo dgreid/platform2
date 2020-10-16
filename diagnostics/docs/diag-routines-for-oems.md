@@ -700,3 +700,131 @@ Progress: 100
 Status: Passed
 Status message: Has Secure WiFi Connection routine passed with no problems.
 ```
+
+### DNS Resolver Present
+
+Checks whether a DNS resolver is available to the browser.
+
+The DNS resolver present routine has no parameters.
+
+To run the DNS resolver present routine:
+
+From crosh:
+```bash
+crosh> diag dns_resolver_present
+```
+
+From cros-health-tool:
+```bash
+$ cros-health-tool diag --action=run_routine --routine=dns_resolver_present
+```
+
+Sample output:
+```bash
+Progress: 100
+Status: Passed
+Status message: DNS resolver present routine passed with no problems.
+```
+
+### DNS Latency
+
+Checks whether the DNS latency is below an acceptable threshold.
+
+The DNS latency routine has no parameters.
+
+To run the DNS latency routine:
+
+From crosh:
+```bash
+crosh> diag dns_latency
+```
+
+From cros-health-tool:
+```bash
+$ cros-health-tool diag --action=run_routine --routine=dns_latency
+```
+
+Sample output:
+```bash
+Progress: 100
+Status: Passed
+Status message: DNS latency routine passed with no problems.
+```
+
+### DNS Resolution
+
+Checks whether a DNS resolution can be completed successfully.
+
+The DNS resolution routine has no parameters.
+
+To run the DNS resolution routine:
+
+From crosh:
+```bash
+crosh> diag dns_resolution
+```
+
+From cros-health-tool:
+```bash
+$ cros-health-tool diag --action=run_routine
+--routine=dns_resolution
+```
+
+Sample output:
+```bash
+Progress: 100
+Status: Passed
+Status message: DNS resolution routine passed with no problems.
+```
+
+### Captive Portal
+
+Checks whether the internet connection is behind a captive portal.
+
+The captive portal routine has no parameters.
+
+To run the captive portal routine:
+
+From crosh:
+```bash
+crosh> diag captive_portal
+```
+
+From cros-health-tool:
+```bash
+$ cros-health-tool diag --action=run_routine
+--routine=captive_portal
+```
+
+Sample output:
+```bash
+Progress: 100
+Status: Passed
+Status message: Captive portal routine passed with no problems.
+```
+
+### HTTP Firewall
+
+Checks whether a firewall is blocking HTTP port 80.
+
+The HTTP firewall routine has no parameters.
+
+To run the HTTP firewall routine:
+
+From crosh:
+```bash
+crosh> diag http_firewall
+```
+
+From cros-health-tool:
+```bash
+$ cros-health-tool diag --action=run_routine
+--routine=http_firewall
+```
+
+Sample output:
+```bash
+Progress: 100
+Status: Passed
+Status message: HTTP firewall routine passed with no problems.
+```

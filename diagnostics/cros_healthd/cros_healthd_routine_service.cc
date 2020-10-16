@@ -218,6 +218,13 @@ void CrosHealthdRoutineService::RunHasSecureWiFiConnectionRoutine(
              std::move(callback));
 }
 
+void CrosHealthdRoutineService::RunHttpFirewallRoutine(
+    RunHttpFirewallRoutineCallback callback) {
+  RunRoutine(routine_factory_->MakeHttpFirewallRoutine(),
+             mojo_ipc::DiagnosticRoutineEnum::kHttpFirewall,
+             std::move(callback));
+}
+
 void CrosHealthdRoutineService::RunLanConnectivityRoutine(
     RunLanConnectivityRoutineCallback callback) {
   RunRoutine(routine_factory_->MakeLanConnectivityRoutine(),
@@ -322,7 +329,8 @@ void CrosHealthdRoutineService::PopulateAvailableRoutines() {
       mojo_ipc::DiagnosticRoutineEnum::kDnsResolverPresent,
       mojo_ipc::DiagnosticRoutineEnum::kDnsLatency,
       mojo_ipc::DiagnosticRoutineEnum::kDnsResolution,
-      mojo_ipc::DiagnosticRoutineEnum::kCaptivePortal};
+      mojo_ipc::DiagnosticRoutineEnum::kCaptivePortal,
+      mojo_ipc::DiagnosticRoutineEnum::kHttpFirewall};
 
   if (context_->system_config()->HasBattery()) {
     available_routines_.insert(

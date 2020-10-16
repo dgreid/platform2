@@ -80,6 +80,7 @@ class CrosHealthdRoutineService final
       RunGatewayCanBePingedRoutineCallback callback) override;
   void RunHasSecureWiFiConnectionRoutine(
       RunHasSecureWiFiConnectionRoutineCallback callback) override;
+  void RunHttpFirewallRoutine(RunHttpFirewallRoutineCallback callback) override;
   void RunLanConnectivityRoutine(
       RunLanConnectivityRoutineCallback callback) override;
   void RunMemoryRoutine(RunMemoryRoutineCallback callback) override;
