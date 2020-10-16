@@ -77,3 +77,13 @@ response get_slots_resp {
   optional physical_slot_status status(u8 : 10) = 0x10;
   optional physical_slot_info info(u8 : 10) = 0x11;
 } = 0x47;
+
+
+request switch_slot_req {
+  required u8 logical_slot = 0x01;
+  required u32 physical_slot = 0x02;
+} = 0x46;
+
+response switch_slot_resp {
+  required qmi_result result = 0x2;
+} = 0x46;

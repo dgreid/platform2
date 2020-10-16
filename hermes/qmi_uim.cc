@@ -348,3 +348,31 @@ struct qmi_elem_info uim_get_slots_resp_ei[] = {
         .ei_array = uim_physical_slot_info_ei,
     },
     {}};
+
+struct qmi_elem_info uim_switch_slot_req_ei[] = {
+    {
+        .data_type = QMI_UNSIGNED_1_BYTE,
+        .elem_len = 1,
+        .elem_size = sizeof(uint8_t),
+        .tlv_type = 0x01,
+        .offset = offsetof(struct uim_switch_slot_req, logical_slot),
+    },
+    {
+        .data_type = QMI_UNSIGNED_4_BYTE,
+        .elem_len = 1,
+        .elem_size = sizeof(uint32_t),
+        .tlv_type = 0x02,
+        .offset = offsetof(struct uim_switch_slot_req, physical_slot),
+    },
+    {}};
+
+struct qmi_elem_info uim_switch_slot_resp_ei[] = {
+    {
+        .data_type = QMI_STRUCT,
+        .elem_len = 1,
+        .elem_size = sizeof(uim_qmi_result),
+        .tlv_type = 0x2,
+        .offset = offsetof(struct uim_switch_slot_resp, result),
+        .ei_array = uim_qmi_result_ei,
+    },
+    {}};

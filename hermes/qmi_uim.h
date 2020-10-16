@@ -18,6 +18,7 @@ class QmiUimCommand {
     kReset = 0x00,
     kSendApdu = 0x3B,
     kOpenLogicalChannel = 0x42,
+    kSwitchSlot = 0x46,
     kGetSlots = 0x47,
   };
 
@@ -32,6 +33,8 @@ class QmiUimCommand {
         return "SendApdu";
       case kOpenLogicalChannel:
         return "OpenLogicalChannel";
+      case kSwitchSlot:
+        return "SwitchSlot";
       case kGetSlots:
         return "GetSlots";
       default:
@@ -132,6 +135,15 @@ struct uim_get_slots_resp {
   uim_physical_slot_info info[10];
 };
 
+struct uim_switch_slot_req {
+  uint8_t logical_slot;
+  uint32_t physical_slot;
+};
+
+struct uim_switch_slot_resp {
+  uim_qmi_result result;
+};
+
 extern struct qmi_elem_info uim_open_logical_channel_req_ei[];
 extern struct qmi_elem_info uim_open_logical_channel_resp_ei[];
 extern struct qmi_elem_info uim_reset_req_ei[];
@@ -140,5 +152,7 @@ extern struct qmi_elem_info uim_send_apdu_req_ei[];
 extern struct qmi_elem_info uim_send_apdu_resp_ei[];
 extern struct qmi_elem_info uim_get_slots_req_ei[];
 extern struct qmi_elem_info uim_get_slots_resp_ei[];
+extern struct qmi_elem_info uim_switch_slot_req_ei[];
+extern struct qmi_elem_info uim_switch_slot_resp_ei[];
 
 #endif  // HERMES_QMI_UIM_H_
