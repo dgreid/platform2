@@ -56,6 +56,7 @@ config("compiler_defaults") {
     "-Wbool-operation",
     "-Wstring-compare",
     "-Wstring-plus-int",
+    "-Wxor-used-as-pow",
 
     # We use C99 array designators in C++ code.  Our compilers support this
     # extension since C++ has no equivalent yet (as of C++20).
