@@ -334,4 +334,9 @@ FakeCrosHealthdRoutineFactory::MakeHttpFirewallRoutine() {
   return std::move(next_routine_);
 }
 
+std::unique_ptr<DiagnosticRoutine>
+FakeCrosHealthdRoutineFactory::MakeHttpsFirewallRoutine() {
+  return std::move(next_routine_);
+}
+
 }  // namespace diagnostics

@@ -71,6 +71,11 @@ class MockNetworkDiagnosticsAdapter final : public NetworkDiagnosticsAdapter {
               (chromeos::network_diagnostics::mojom::
                    NetworkDiagnosticsRoutines::HttpFirewallCallback),
               (override));
+  MOCK_METHOD(void,
+              RunHttpsFirewallRoutine,
+              (chromeos::network_diagnostics::mojom::
+                   NetworkDiagnosticsRoutines::HttpsFirewallCallback),
+              (override));
 };
 
 }  // namespace diagnostics

@@ -166,4 +166,9 @@ void FakeRoutineService::RunHttpFirewallRoutine(
   NOTIMPLEMENTED();
 }
 
+void FakeRoutineService::RunHttpsFirewallRoutine(
+    RunHttpsFirewallRoutineCallback callback) {
+  NOTIMPLEMENTED();
+}
+
 }  // namespace diagnostics

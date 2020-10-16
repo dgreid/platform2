@@ -68,7 +68,8 @@ const struct {
     {"dns_latency", mojo_ipc::DiagnosticRoutineEnum::kDnsLatency},
     {"dns_resolution", mojo_ipc::DiagnosticRoutineEnum::kDnsResolution},
     {"captive_portal", mojo_ipc::DiagnosticRoutineEnum::kCaptivePortal},
-    {"http_firewall", mojo_ipc::DiagnosticRoutineEnum::kHttpFirewall}};
+    {"http_firewall", mojo_ipc::DiagnosticRoutineEnum::kHttpFirewall},
+    {"https_firewall", mojo_ipc::DiagnosticRoutineEnum::kHttpsFirewall}};
 
 }  // namespace
 

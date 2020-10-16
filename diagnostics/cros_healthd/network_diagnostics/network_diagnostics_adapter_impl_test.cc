@@ -379,6 +379,35 @@ TEST_F(NetworkDiagnosticsAdapterImplTest, RunHttpFirewallRoutine) {
   run_loop.Run();
 }
 
+// Test that the HttpsFirewall routine can be run.
+TEST_F(NetworkDiagnosticsAdapterImplTest, RunHttpsFirewallRoutine) {
+  MockNetworkDiagnosticsRoutines network_diagnostics_routines;
+  network_diagnostics_adapter()->SetNetworkDiagnosticsRoutines(
+      network_diagnostics_routines.pending_remote());
+
+  base::RunLoop run_loop;
+  EXPECT_CALL(network_diagnostics_routines, HttpsFirewall(testing::_))
+      .WillOnce(testing::Invoke(
+          [&](network_diagnostics_ipc::NetworkDiagnosticsRoutines::
+                  HttpsFirewallCallback callback) {
+            std::move(callback).Run(
+                network_diagnostics_ipc::RoutineVerdict::kNoProblem, {});
+          }));
+
+  network_diagnostics_adapter()->RunHttpsFirewallRoutine(
+      base::BindLambdaForTesting(
+          [&](network_diagnostics_ipc::RoutineVerdict response,
+              const std::vector<network_diagnostics_ipc::HttpsFirewallProblem>&
+                  problems) {
+            EXPECT_EQ(response,
+                      network_diagnostics_ipc::RoutineVerdict::kNoProblem);
+            EXPECT_EQ(problems.size(), 0);
+            run_loop.Quit();
+          }));
+
+  run_loop.Run();
+}
+
 // Test that the LanConnectivity routine returns RoutineVerdict::kNotRun if a
 // valid NetworkDiagnosticsRoutines remote was never sent.
 TEST_F(NetworkDiagnosticsAdapterImplTest,
@@ -536,6 +565,24 @@ TEST_F(NetworkDiagnosticsAdapterImplTest, RunHttpFirewallRoutineWithNoRemote) {
       base::BindLambdaForTesting(
           [&](network_diagnostics_ipc::RoutineVerdict response,
               const std::vector<network_diagnostics_ipc::HttpFirewallProblem>&
+                  problems) {
+            EXPECT_EQ(response,
+                      network_diagnostics_ipc::RoutineVerdict::kNotRun);
+            EXPECT_EQ(problems.size(), 0);
+            run_loop.Quit();
+          }));
+
+  run_loop.Run();
+}
+
+// Test that the HttpsFirewall routine returns RoutineVerdict::kNotRun if a
+// valid NetworkDiagnosticsRoutines remote was never sent.
+TEST_F(NetworkDiagnosticsAdapterImplTest, RunHttpsFirewallRoutineWithNoRemote) {
+  base::RunLoop run_loop;
+  network_diagnostics_adapter()->RunHttpsFirewallRoutine(
+      base::BindLambdaForTesting(
+          [&](network_diagnostics_ipc::RoutineVerdict response,
+              const std::vector<network_diagnostics_ipc::HttpsFirewallProblem>&
                   problems) {
             EXPECT_EQ(response,
                       network_diagnostics_ipc::RoutineVerdict::kNotRun);

@@ -95,6 +95,8 @@ class FakeRoutineService final
   void RunCaptivePortalRoutine(
       RunCaptivePortalRoutineCallback callback) override;
   void RunHttpFirewallRoutine(RunHttpFirewallRoutineCallback callback) override;
+  void RunHttpsFirewallRoutine(
+      RunHttpsFirewallRoutineCallback callback) override;
 };
 
 }  // namespace diagnostics

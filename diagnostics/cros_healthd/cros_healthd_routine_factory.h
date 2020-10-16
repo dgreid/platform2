@@ -119,6 +119,9 @@ class CrosHealthdRoutineFactory {
   // Constructs a new instance of the HTTP firewall routine. See
   // diagnostics/routines/http_firewall for details on the routine itself.
   virtual std::unique_ptr<DiagnosticRoutine> MakeHttpFirewallRoutine() = 0;
+  // Constructs a new instance of the HTTPS firewall routine. See
+  // diagnostics/routines/https_firewall for details on the routine itself.
+  virtual std::unique_ptr<DiagnosticRoutine> MakeHttpsFirewallRoutine() = 0;
 };
 
 }  // namespace diagnostics

@@ -828,3 +828,28 @@ Progress: 100
 Status: Passed
 Status message: HTTP firewall routine passed with no problems.
 ```
+
+### HTTPS Firewall
+
+Checks whether a firewall is blocking HTTPS port 443.
+
+The HTTPS firewall routine has no parameters.
+
+To run the HTTPS firewall routine:
+
+From crosh:
+```bash
+crosh> diag https_firewall
+```
+
+From cros-health-tool:
+```bash
+$ cros-health-tool diag --action=run_routine --routine=https_firewall
+```
+
+Sample output:
+```bash
+Progress: 100
+Status: Passed
+Status message: HTTPS firewall routine passed with no problems.
+```
