@@ -158,7 +158,6 @@ void TestUser::FromInfo(const struct TestUserInfo* info,
   shadow_root = image_dir;
   skel_dir = image_dir.Append("skel");
   base_path = image_dir.Append(obfuscated_username);
-  image_path = base_path.Append("image");
   vault_path = base_path.Append("vault");
   vault_mount_path = base_path.Append("mount");
   ephemeral_mount_path = FilePath(kEphemeralCryptohomeDir)
@@ -235,8 +234,6 @@ void TestUser::GenerateCredentials(bool force_ecryptfs) {
   // NOTE! if the credentials generation and checking code break together.
   // TODO(wad,ellyjones) Add golden credential tests too.
 
-  // "Old" image path
-  EXPECT_CALL(platform, FileExists(image_path)).WillRepeatedly(Return(false));
   // Use 'stat' failures to trigger default-allow the creation of the paths.
   EXPECT_CALL(
       platform,
@@ -296,7 +293,6 @@ void TestUser::InjectUserPaths(MockPlatform* platform,
                                gid_t daemon_gid,
                                bool is_ecryptfs) {
   scoped_refptr<Mount> temp_mount = new Mount();
-  EXPECT_CALL(*platform, FileExists(image_path)).WillRepeatedly(Return(false));
 #if BASE_VER < 780000
   struct stat root_dir;
 #else

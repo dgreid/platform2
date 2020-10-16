@@ -222,11 +222,6 @@ bool Mount::Init(Platform* platform,
 bool Mount::EnsureCryptohome(const Credentials& credentials,
                              const MountArgs& mount_args,
                              bool* created) {
-  // If the user has an old-style cryptohome, delete it.
-  FilePath old_image_path = GetUserDirectory(credentials).Append("image");
-  if (platform_->FileExists(old_image_path)) {
-    platform_->DeleteFile(GetUserDirectory(credentials), true);
-  }
   if (!mount_args.shadow_only) {
     if (!mounter_->EnsureUserMountPoints(credentials.username())) {
       return false;

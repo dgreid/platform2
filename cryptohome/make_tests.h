@@ -88,7 +88,6 @@ class TestUser {
   base::FilePath shadow_root;
   base::FilePath skel_dir;
   base::FilePath base_path;
-  base::FilePath image_path;
   base::FilePath vault_path;
   base::FilePath vault_mount_path;
   base::FilePath ephemeral_mount_path;

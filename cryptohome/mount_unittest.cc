@@ -1160,7 +1160,6 @@ TEST_P(MountTest, CreateCryptohomeTest) {
       homedirs.Init(&platform_, mount_->crypto(), user_timestamp_cache_.get()));
 
   // TODO(wad) Make this into a UserDoesntExist() helper.
-  EXPECT_CALL(platform_, FileExists(user->image_path)).WillOnce(Return(false));
   EXPECT_CALL(platform_, FileExists(user->keyset_path)).WillOnce(Return(false));
   EXPECT_CALL(platform_, CreateDirectory(AnyOf(
                              user->mount_prefix, user->user_mount_prefix,
@@ -1695,9 +1694,6 @@ TEST_P(MountTest, MountCryptohomeNoCreate) {
       .Times(4)
       .WillRepeatedly(Return(false));
 
-  // Not legacy
-  EXPECT_CALL(platform_, FileExists(user->image_path))
-      .WillRepeatedly(Return(false));
   EXPECT_CALL(platform_, FileExists(base::FilePath(kLockedToSingleUserFile)))
       .WillRepeatedly(Return(false));
 
@@ -2076,9 +2072,6 @@ TEST_P(MountTest, MountCryptohomePreviousMigrationIncomplete) {
   user->InjectKeyset(&platform_, true);
   Credentials credentials(user->username, user->passkey);
 
-  // Not legacy
-  EXPECT_CALL(platform_, FileExists(user->image_path))
-      .WillRepeatedly(Return(false));
   EXPECT_CALL(platform_, CreateDirectory(_)).WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, FileExists(base::FilePath(kLockedToSingleUserFile)))
       .WillRepeatedly(Return(false));
@@ -2488,8 +2481,6 @@ TEST_P(EphemeralNoUserSystemTest, OwnerUnknownMountCreateTest) {
   Credentials credentials(user->username, user->passkey);
 
   EXPECT_CALL(platform_, FileExists(_)).WillRepeatedly(Return(true));
-  EXPECT_CALL(platform_, FileExists(user->image_path))
-      .WillRepeatedly(Return(false));
   EXPECT_CALL(platform_, DirectoryExists(user->vault_path))
       .WillRepeatedly(Return(false));
   EXPECT_CALL(platform_, DirectoryExists(user->vault_mount_path))
@@ -2554,8 +2545,6 @@ TEST_P(EphemeralNoUserSystemTest, MountSetUserTypeFailTest) {
   Credentials credentials(user->username, user->passkey);
 
   EXPECT_CALL(platform_, FileExists(_)).WillRepeatedly(Return(true));
-  EXPECT_CALL(platform_, FileExists(user->image_path))
-      .WillRepeatedly(Return(false));
   EXPECT_CALL(platform_, DirectoryExists(_)).WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, DirectoryExists(user->vault_path))
       .WillRepeatedly(Return(false));
