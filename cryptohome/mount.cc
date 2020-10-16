@@ -383,11 +383,6 @@ bool Mount::MountCryptohome(const Credentials& credentials,
     return false;
   }
 
-  // It's safe to generate a reset_seed here.
-  if (!serialized.has_wrapped_reset_seed()) {
-    vault_keyset.CreateRandomResetSeed();
-  }
-
   if (!serialized.has_wrapped_chaps_key()) {
     vault_keyset.CreateRandomChapsKey();
     ReEncryptVaultKeyset(credentials, index, &vault_keyset, &serialized);
