@@ -80,8 +80,6 @@ constexpr char kGpuCacheSizeString[] = "50M";
 // operations.
 constexpr int kInvalidDiskIndex = -1;
 
-constexpr char kAlreadyDestroyed[] = "TerminaVm has already been destroyed";
-
 std::unique_ptr<patchpanel::Subnet> MakeSubnet(
     const patchpanel::IPv4Subnet& subnet) {
   return std::make_unique<patchpanel::Subnet>(
@@ -700,25 +698,19 @@ bool TerminaVm::SetResolvConfig(const std::vector<string>& nameservers,
 void TerminaVm::HostNetworkChanged() {
   LOG(INFO) << "Sending OnHostNetworkChanged for VM " << vsock_cid_;
 
-  CallRpcFuture(client_.get(),
-                &vm_tools::Maitred::Stub::AsyncOnHostNetworkChanged,
-                base::TimeDelta::FromSeconds(kDefaultTimeoutSeconds),
-                vm_tools::EmptyMessage())
-      .ThenNoReject(base::BindOnce(
-          [](std::weak_ptr<TerminaVm> weak_vm, grpc::Status status,
-             std::unique_ptr<vm_tools::EmptyMessage> response) {
-            std::shared_ptr<TerminaVm> vm = weak_vm.lock();
-            if (!vm) {
-              LOG(ERROR) << kAlreadyDestroyed;
-              return;
-            }
-            if (!status.ok()) {
-              LOG(WARNING) << "Failed to send OnHostNetworkChanged for VM "
-                           << vm->vsock_cid_ << ": " << status.error_message();
-            }
-          },
-          weak_from_this()))
-      .Get();
+  vm_tools::EmptyMessage request;
+  vm_tools::EmptyMessage response;
+
+  grpc::ClientContext ctx;
+  ctx.set_deadline(gpr_time_add(
+      gpr_now(GPR_CLOCK_MONOTONIC),
+      gpr_time_from_seconds(kDefaultTimeoutSeconds, GPR_TIMESPAN)));
+
+  grpc::Status status = stub_->OnHostNetworkChanged(&ctx, request, &response);
+  if (!status.ok()) {
+    LOG(WARNING) << "Failed to send OnHostNetworkChanged for VM " << vsock_cid_
+                 << ": " << status.error_message();
+  }
 }
 
 bool TerminaVm::SetTime(string* failure_reason) {
