@@ -124,6 +124,10 @@ esim() {
       poll_for_dbus_service "${HERMES}"
       esim_set_test_mode "$@"
       ;;
+    refresh_profiles)
+      poll_for_dbus_service "${HERMES}"
+      esim_refresh_profiles "${euicc}" "$@"
+      ;;
     status)
       poll_for_dbus_service "${HERMES}"
       esim_status "$@"
@@ -146,7 +150,8 @@ esim() {
       ;;
     *)
       error_exit "Expected one of "\
-        "{set_test_mode|status|install|uninstall|enable|disable}"
+        "{set_test_mode|refresh_profiles|status|install|uninstall|Enable"\
+        "|disable}"
       ;;
   esac
 }
@@ -214,6 +219,13 @@ esim_status() {
     done
     echo ""
   done
+}
+
+esim_refresh_profiles() {
+  local euicc="$1"
+
+  dbus_call "${HERMES}" "${euicc}" \
+           "${HERMES_EUICC_IFACE}.RequestInstalledProfiles"
 }
 
 esim_install() {
