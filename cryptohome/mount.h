@@ -611,6 +611,7 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   FRIEND_TEST(MountTest, CheckChapsDirectoryMigration);
   FRIEND_TEST(MountTest, TwoWayKeysetMigrationTest);
   FRIEND_TEST(MountTest, BothFlagsMigrationTest);
+  FRIEND_TEST(MountTest, CreateCryptohomeTest);
   FRIEND_TEST(MountTest, CreateTrackedSubdirectories);
   FRIEND_TEST(MountTest, CreateTrackedSubdirectoriesReplaceExistingDir);
   FRIEND_TEST(EphemeralNoUserSystemTest, CreateMyFilesDownloads);

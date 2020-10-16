@@ -1188,6 +1188,7 @@ TEST_P(MountTest, CreateCryptohomeTest) {
       .WillOnce(DoAll(SaveArg<1>(&creds), Return(true)));
 
   bool created;
+  ASSERT_TRUE(mount_->mounter_->EnsureUserMountPoints(credentials.username()));
   ASSERT_TRUE(
       mount_->EnsureCryptohome(credentials, GetDefaultMountArgs(), &created));
   ASSERT_TRUE(created);

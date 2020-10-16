@@ -222,11 +222,6 @@ bool Mount::Init(Platform* platform,
 bool Mount::EnsureCryptohome(const Credentials& credentials,
                              const MountArgs& mount_args,
                              bool* created) {
-  if (!mount_args.shadow_only) {
-    if (!mounter_->EnsureUserMountPoints(credentials.username())) {
-      return false;
-    }
-  }
   const std::string obfuscated_username =
       credentials.GetObfuscatedUsername(system_salt_);
   // Now check for the presence of a cryptohome.
@@ -340,6 +335,14 @@ bool Mount::MountCryptohome(const Credentials& credentials,
     LOG(ERROR) << "Asked to mount nonexistent user";
     *mount_error = MOUNT_ERROR_USER_DOES_NOT_EXIST;
     return false;
+  }
+
+  if (!mount_args.shadow_only) {
+    if (!mounter_->EnsureUserMountPoints(credentials.username())) {
+      LOG(ERROR) << "Error creating mountpoint.";
+      *mount_error = MOUNT_ERROR_CREATE_CRYPTOHOME_FAILED;
+      return false;
+    }
   }
 
   bool created = false;
