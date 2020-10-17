@@ -69,6 +69,7 @@ class DiagActions final {
   bool ActionRunGatewayCanBePingedRoutine();
   bool ActionRunHasSecureWiFiConnectionRoutine();
   bool ActionRunHttpFirewallRoutine();
+  bool ActionRunHttpsFirewallRoutine();
   bool ActionRunLanConnectivityRoutine();
   bool ActionRunMemoryRoutine();
   bool ActionRunNvmeSelfTestRoutine(

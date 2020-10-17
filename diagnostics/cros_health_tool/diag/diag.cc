@@ -263,6 +263,9 @@ int diag_main(int argc, char** argv) {
       case mojo_ipc::DiagnosticRoutineEnum::kHttpFirewall:
         routine_result = actions.ActionRunHttpFirewallRoutine();
         break;
+      case mojo_ipc::DiagnosticRoutineEnum::kHttpsFirewall:
+        routine_result = actions.ActionRunHttpsFirewallRoutine();
+        break;
       default:
         std::cout << "Unsupported routine: " << FLAGS_routine << std::endl;
         return EXIT_FAILURE;
