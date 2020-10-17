@@ -70,6 +70,7 @@ class DiagActions final {
   bool ActionRunHasSecureWiFiConnectionRoutine();
   bool ActionRunHttpFirewallRoutine();
   bool ActionRunHttpsFirewallRoutine();
+  bool ActionRunHttpsLatencyRoutine();
   bool ActionRunLanConnectivityRoutine();
   bool ActionRunMemoryRoutine();
   bool ActionRunNvmeSelfTestRoutine(

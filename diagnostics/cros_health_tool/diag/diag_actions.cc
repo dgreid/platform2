@@ -271,6 +271,13 @@ bool DiagActions::ActionRunHttpsFirewallRoutine() {
   return PollRoutineAndProcessResult();
 }
 
+bool DiagActions::ActionRunHttpsLatencyRoutine() {
+  auto response = adapter_->RunHttpsLatencyRoutine();
+  CHECK(response) << "No RunRoutineResponse received.";
+  id_ = response->id;
+  return PollRoutineAndProcessResult();
+}
+
 bool DiagActions::ActionRunLanConnectivityRoutine() {
   auto response = adapter_->RunLanConnectivityRoutine();
   CHECK(response) << "No RunRoutineResponse received.";

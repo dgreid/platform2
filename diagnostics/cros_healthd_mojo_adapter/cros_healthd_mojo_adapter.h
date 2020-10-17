@@ -152,6 +152,10 @@ class CrosHealthdMojoAdapter {
   virtual chromeos::cros_healthd::mojom::RunRoutineResponsePtr
   RunHttpsFirewallRoutine() = 0;
 
+  // Runs the HTTPS latency routine.
+  virtual chromeos::cros_healthd::mojom::RunRoutineResponsePtr
+  RunHttpsLatencyRoutine() = 0;
+
   // Returns which routines are available on the platform.
   virtual std::vector<chromeos::cros_healthd::mojom::DiagnosticRoutineEnum>
   GetAvailableRoutines() = 0;
