@@ -34,7 +34,10 @@ class CrosFpDeviceInterface {
   virtual void SetMkbpEventCallback(MkbpCallback callback) = 0;
 
   virtual bool SetFpMode(const FpMode& mode) = 0;
-  virtual bool GetFpMode(FpMode* mode) = 0;
+  /**
+   * @return mode on success, FpMode(FpMode::Mode::kModeInvalid) on failure
+   */
+  virtual FpMode GetFpMode() = 0;
   virtual bool GetFpStats(int* capture_ms,
                           int* matcher_ms,
                           int* overall_ms) = 0;

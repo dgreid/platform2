@@ -32,7 +32,7 @@ class CrosFpDevice_ResetContext : public testing::Test {
         BiodMetricsInterface* biod_metrics,
         std::unique_ptr<EcCommandFactoryInterface> ec_command_factory)
         : CrosFpDevice(biod_metrics, std::move(ec_command_factory)) {}
-    MOCK_METHOD(bool, GetFpMode, (FpMode * mode), (override));
+    MOCK_METHOD(FpMode, GetFpMode, (), (override));
     MOCK_METHOD(bool, SetContext, (std::string user_id), (override));
   };
   class MockFpContextFactory : public MockEcCommandFactory {
@@ -50,12 +50,9 @@ class CrosFpDevice_ResetContext : public testing::Test {
 };
 
 TEST_F(CrosFpDevice_ResetContext, Success) {
-  EXPECT_CALL(mock_cros_fp_device, GetFpMode)
-      .Times(1)
-      .WillOnce([](FpMode* mode) {
-        *mode = FpMode(FpMode::Mode::kNone);
-        return true;
-      });
+  EXPECT_CALL(mock_cros_fp_device, GetFpMode).Times(1).WillOnce([]() {
+    return FpMode(FpMode::Mode::kNone);
+  });
   EXPECT_CALL(mock_cros_fp_device, SetContext(std::string())).Times(1);
   EXPECT_CALL(mock_biod_metrics,
               SendResetContextMode(FpMode(FpMode::Mode::kNone)));
@@ -64,12 +61,9 @@ TEST_F(CrosFpDevice_ResetContext, Success) {
 }
 
 TEST_F(CrosFpDevice_ResetContext, WrongMode) {
-  EXPECT_CALL(mock_cros_fp_device, GetFpMode)
-      .Times(1)
-      .WillOnce([](FpMode* mode) {
-        *mode = FpMode(FpMode::Mode::kMatch);
-        return true;
-      });
+  EXPECT_CALL(mock_cros_fp_device, GetFpMode).Times(1).WillOnce([]() {
+    return FpMode(FpMode::Mode::kMatch);
+  });
   EXPECT_CALL(mock_cros_fp_device, SetContext(std::string())).Times(1);
   EXPECT_CALL(mock_biod_metrics,
               SendResetContextMode(FpMode(FpMode::Mode::kMatch)));
@@ -78,9 +72,9 @@ TEST_F(CrosFpDevice_ResetContext, WrongMode) {
 }
 
 TEST_F(CrosFpDevice_ResetContext, Failure) {
-  EXPECT_CALL(mock_cros_fp_device, GetFpMode)
-      .Times(1)
-      .WillOnce([](FpMode* mode) { return false; });
+  EXPECT_CALL(mock_cros_fp_device, GetFpMode).Times(1).WillOnce([]() {
+    return FpMode(FpMode::Mode::kModeInvalid);
+  });
   EXPECT_CALL(mock_cros_fp_device, SetContext(std::string())).Times(1);
   EXPECT_CALL(mock_biod_metrics,
               SendResetContextMode(FpMode(FpMode::Mode::kModeInvalid)));
@@ -96,7 +90,7 @@ class CrosFpDevice_SetContext : public testing::Test {
         BiodMetricsInterface* biod_metrics,
         std::unique_ptr<EcCommandFactoryInterface> ec_command_factory)
         : CrosFpDevice(biod_metrics, std::move(ec_command_factory)) {}
-    MOCK_METHOD(bool, GetFpMode, (FpMode * mode), (override));
+    MOCK_METHOD(FpMode, GetFpMode, (), (override));
     MOCK_METHOD(bool, SetFpMode, (const FpMode& mode), (override));
   };
   class MockFpContextFactory : public MockEcCommandFactory {
@@ -119,9 +113,8 @@ class CrosFpDevice_SetContext : public testing::Test {
 TEST_F(CrosFpDevice_SetContext, MatchMode) {
   {
     testing::InSequence s;
-    EXPECT_CALL(mock_cros_fp_device, GetFpMode).WillOnce([](FpMode* mode) {
-      *mode = FpMode(FpMode::Mode::kMatch);
-      return true;
+    EXPECT_CALL(mock_cros_fp_device, GetFpMode).WillOnce([]() {
+      return FpMode(FpMode::Mode::kMatch);
     });
     EXPECT_CALL(mock_cros_fp_device, SetFpMode(FpMode(FpMode::Mode::kNone)))
         .WillOnce(Return(true));
@@ -138,7 +131,8 @@ TEST_F(CrosFpDevice_SetContext, MatchMode) {
 // Test that failure to get FPMCU mode in setting context will cause the
 // failure to be sent to UMA.
 TEST_F(CrosFpDevice_SetContext, SendMetricsOnFailingToGetMode) {
-  EXPECT_CALL(mock_cros_fp_device, GetFpMode).WillOnce(Return(false));
+  EXPECT_CALL(mock_cros_fp_device, GetFpMode)
+      .WillOnce(Return(FpMode(FpMode::Mode::kModeInvalid)));
   EXPECT_CALL(mock_biod_metrics, SendSetContextSuccess(false));
 
   mock_cros_fp_device.SetContext("beef");
@@ -147,9 +141,8 @@ TEST_F(CrosFpDevice_SetContext, SendMetricsOnFailingToGetMode) {
 // Test that failure to set FPMCU mode in setting context will cause the
 // failure to be sent to UMA.
 TEST_F(CrosFpDevice_SetContext, SendMetricsOnFailingToSetMode) {
-  EXPECT_CALL(mock_cros_fp_device, GetFpMode).WillOnce([](FpMode* mode) {
-    *mode = FpMode(FpMode::Mode::kMatch);
-    return true;
+  EXPECT_CALL(mock_cros_fp_device, GetFpMode).WillOnce([]() {
+    return FpMode(FpMode::Mode::kMatch);
   });
   EXPECT_CALL(mock_cros_fp_device, SetFpMode).WillRepeatedly(Return(false));
   EXPECT_CALL(mock_biod_metrics, SendSetContextSuccess(false));

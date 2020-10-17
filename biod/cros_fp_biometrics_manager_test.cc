@@ -43,7 +43,7 @@ class FakeCrosFpDevice : public CrosFpDeviceInterface {
   void SetMkbpEventCallback(MkbpCallback callback) override {}
 
   bool SetFpMode(const FpMode& mode) override { return false; }
-  bool GetFpMode(FpMode* mode) override { return false; }
+  FpMode GetFpMode() override { return FpMode(FpMode::Mode::kModeInvalid); }
   bool GetFpStats(int* capture_ms, int* matcher_ms, int* overall_ms) override {
     return false;
   }

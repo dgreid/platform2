@@ -147,8 +147,8 @@ bool CrosFpDevice::SetFpMode(const FpMode& mode) {
   // before the EC can ACK it. When the AP wakes up, it considers the
   // EC command to have timed out. Since this seems to happen during mode
   // setting, check the mode in case of a failure.
-  FpMode cur_mode;
-  if (!GetFpMode(&cur_mode)) {
+  FpMode cur_mode = GetFpMode();
+  if (cur_mode == FpMode(FpMode::Mode::kModeInvalid)) {
     LOG(ERROR) << "Failed to get FP mode to verify mode was set in the MCU.";
     return false;
   }
@@ -163,17 +163,16 @@ bool CrosFpDevice::SetFpMode(const FpMode& mode) {
   return false;
 }
 
-bool CrosFpDevice::GetFpMode(FpMode* mode) {
+FpMode CrosFpDevice::GetFpMode() {
   EcCommand<struct ec_params_fp_mode, struct ec_response_fp_mode> cmd(
       EC_CMD_FP_MODE, kVersionZero,
       {.mode = static_cast<uint32_t>(FP_MODE_DONT_CHANGE)});
   if (!cmd.Run(cros_fd_.get())) {
     LOG(ERROR) << "Failed to get FP mode from MCU.";
-    return false;
+    return FpMode(FpMode::Mode::kModeInvalid);
   }
 
-  *mode = FpMode(cmd.Resp()->mode);
-  return true;
+  return FpMode(cmd.Resp()->mode);
 }
 
 bool CrosFpDevice::FpFrame(int index, std::vector<uint8_t>* frame) {
@@ -642,8 +641,8 @@ bool CrosFpDevice::SetContext(std::string user_hex) {
   }
 
   bool success = true;
-  FpMode original_mode;
-  if (!GetFpMode(&original_mode)) {
+  FpMode original_mode = GetFpMode();
+  if (original_mode == FpMode(FpMode::Mode::kModeInvalid)) {
     LOG(ERROR) << "Unable to get FP Mode.";
     success = false;
   }
@@ -682,8 +681,8 @@ bool CrosFpDevice::SetContext(std::string user_hex) {
 }
 
 bool CrosFpDevice::ResetContext() {
-  FpMode cur_mode;
-  if (!GetFpMode(&cur_mode)) {
+  FpMode cur_mode = GetFpMode();
+  if (cur_mode == FpMode(FpMode::Mode::kModeInvalid)) {
     LOG(ERROR) << "Unable to get FP Mode.";
   }
 

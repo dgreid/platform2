@@ -286,8 +286,8 @@ bool CrosFpBiometricsManager::ResetSensor() {
   int retries = 50;
   bool reset_complete = false;
   while (retries--) {
-    FpMode cur_mode;
-    if (!cros_dev_->GetFpMode(&cur_mode)) {
+    FpMode cur_mode = cros_dev_->GetFpMode();
+    if (cur_mode == FpMode(Mode::kModeInvalid)) {
       LOG(ERROR) << "Failed to query sensor state during reset.";
       return false;
     }

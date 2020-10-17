@@ -53,7 +53,7 @@ class CrosFpDevice : public CrosFpDeviceInterface {
   ~CrosFpDevice() override;
 
   bool SetFpMode(const FpMode& mode) override;
-  bool GetFpMode(FpMode* mode) override;
+  FpMode GetFpMode() override;
   bool GetFpStats(int* capture_ms, int* matcher_ms, int* overall_ms) override;
   bool GetDirtyMap(std::bitset<32>* bitmap) override;
   bool SupportsPositiveMatchSecret() override;
