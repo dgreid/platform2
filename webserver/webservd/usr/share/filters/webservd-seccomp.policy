@@ -69,6 +69,7 @@ rename: 1
 rt_sigaction: 1
 rt_sigprocmask: 1
 # arm
+_llseek: 1
 _newselect: 1
 send: 1
 sendmsg: 1
