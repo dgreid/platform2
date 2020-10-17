@@ -167,7 +167,6 @@ TEST_F(ChromiumCommandBuilderTest, BasicEnvironment) {
   EXPECT_EQ("chronos", ReadEnvVar("LOGNAME"));
   EXPECT_EQ("/bin/sh", ReadEnvVar("SHELL"));
   EXPECT_FALSE(ReadEnvVar("PATH").empty());
-  EXPECT_EQ("en_US.utf8", ReadEnvVar("LC_ALL"));
   base::FilePath data_dir(util::GetReparentedPath("/home/chronos", base_path_));
   EXPECT_EQ(data_dir.value(), ReadEnvVar("DATA_DIR"));
   EXPECT_TRUE(base::DirectoryExists(data_dir));
@@ -373,14 +372,6 @@ TEST_F(ChromiumCommandBuilderTest, UserConfigEnableFeatures) {
 }
 
 TEST_F(ChromiumCommandBuilderTest, PepperPlugins) {
-  const char kFlash[] =
-      "# Here's a comment.\n"
-      "FILE_NAME=/opt/google/chrome/pepper/flash.so\n"
-      "PLUGIN_NAME=\"Shockwave Flash\"\n"
-      "VERSION=1.2.3.4\n";
-  ASSERT_EQ(strlen(kFlash), base::WriteFile(pepper_dir_.Append("flash.info"),
-                                            kFlash, strlen(kFlash)));
-
   const char kNetflix[] =
       "FILE_NAME=/opt/google/chrome/pepper/netflix.so\n"
       "PLUGIN_NAME=\"Netflix\"\n"
@@ -406,11 +397,6 @@ TEST_F(ChromiumCommandBuilderTest, PepperPlugins) {
 
   ASSERT_TRUE(Init());
   ASSERT_TRUE(builder_.SetUpChromium());
-
-  EXPECT_EQ("--ppapi-flash-path=/opt/google/chrome/pepper/flash.so",
-            GetFirstArgWithPrefix("--ppapi-flash-path"));
-  EXPECT_EQ("--ppapi-flash-version=1.2.3.4",
-            GetFirstArgWithPrefix("--ppapi-flash-version"));
 
   // Plugins are ordered alphabetically by registration info.
   const char kExpected[] =

@@ -169,7 +169,6 @@ bool ChromiumCommandBuilder::SetUpChromium() {
   AddEnvVar("LOGNAME", kUser);
   AddEnvVar("SHELL", "/bin/sh");
   AddEnvVar("PATH", "/bin:/usr/bin");
-  AddEnvVar("LC_ALL", "en_US.utf8");
   AddEnvVar("XDG_RUNTIME_DIR", "/run/chrome");
 
   const base::FilePath data_dir(GetPath("/home").Append(kUser));
@@ -479,33 +478,21 @@ void ChromiumCommandBuilder::SetUpPepperPlugins() {
       continue;
     }
 
-    if (plugin_name == "Shockwave Flash") {
-      AddArg("--ppapi-flash-path=" + file_name);
-      AddArg("--ppapi-flash-version=" + version);
-      std::vector<std::string> flash_args;
-      if (UseFlagIsSet("disable_flash_hw_video_decode")) {
-        flash_args.push_back("enable_hw_video_decode=0");
-        flash_args.push_back("enable_hw_video_decode_ave=0");
-      }
-      if (!flash_args.empty())
-        AddArg("--ppapi-flash-args=" + base::JoinString(flash_args, ","));
-    } else {
-      const std::string description = LookUpInStringPairs(pairs, "DESCRIPTION");
-      const std::string mime_types = LookUpInStringPairs(pairs, "MIME_TYPES");
+    const std::string description = LookUpInStringPairs(pairs, "DESCRIPTION");
+    const std::string mime_types = LookUpInStringPairs(pairs, "MIME_TYPES");
 
-      std::string plugin_string = file_name;
-      if (!plugin_name.empty()) {
-        plugin_string += "#" + plugin_name;
-        if (!description.empty()) {
-          plugin_string += "#" + description;
-          if (!version.empty()) {
-            plugin_string += "#" + version;
-          }
+    std::string plugin_string = file_name;
+    if (!plugin_name.empty()) {
+      plugin_string += "#" + plugin_name;
+      if (!description.empty()) {
+        plugin_string += "#" + description;
+        if (!version.empty()) {
+          plugin_string += "#" + version;
         }
       }
-      plugin_string += ";" + mime_types;
-      register_plugins.push_back(plugin_string);
     }
+    plugin_string += ";" + mime_types;
+    register_plugins.push_back(plugin_string);
   }
 
   if (!register_plugins.empty()) {
