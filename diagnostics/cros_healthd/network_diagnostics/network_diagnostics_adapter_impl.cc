@@ -141,4 +141,16 @@ void NetworkDiagnosticsAdapterImpl::RunHttpsFirewallRoutine(
   network_diagnostics_routines_->HttpsFirewall(std::move(callback));
 }
 
+void NetworkDiagnosticsAdapterImpl::RunHttpsLatencyRoutine(
+    network_diagnostics_ipc::NetworkDiagnosticsRoutines::HttpsLatencyCallback
+        callback) {
+  if (!network_diagnostics_routines_.is_bound()) {
+    std::move(callback).Run(
+        chromeos::network_diagnostics::mojom::RoutineVerdict::kNotRun,
+        /*problems=*/{});
+    return;
+  }
+  network_diagnostics_routines_->HttpsLatency(std::move(callback));
+}
+
 }  // namespace diagnostics

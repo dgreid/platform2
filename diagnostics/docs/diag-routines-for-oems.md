@@ -853,3 +853,30 @@ Progress: 100
 Status: Passed
 Status message: HTTPS firewall routine passed with no problems.
 ```
+
+### HTTPS Latency
+
+Checks whether the HTTPS latency is within established tolerance levels for the
+system.
+
+The HTTPS latency routine has no parameters.
+
+To run the HTTPS latency routine:
+
+From crosh:
+```bash
+crosh> diag https_latency
+```
+
+From cros-health-tool:
+```bash
+$ cros-health-tool diag --action=run_routine
+--routine=https_latency
+```
+
+Sample output:
+```bash
+Progress: 100
+Status: Passed
+Status message: HTTPS latency routine passed with no problems.
+```

@@ -85,6 +85,7 @@ class CrosHealthdRoutineService final
   void RunHttpFirewallRoutine(RunHttpFirewallRoutineCallback callback) override;
   void RunHttpsFirewallRoutine(
       RunHttpsFirewallRoutineCallback callback) override;
+  void RunHttpsLatencyRoutine(RunHttpsLatencyRoutineCallback callback) override;
   void RunLanConnectivityRoutine(
       RunLanConnectivityRoutineCallback callback) override;
   void RunMemoryRoutine(RunMemoryRoutineCallback callback) override;

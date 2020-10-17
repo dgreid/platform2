@@ -55,6 +55,9 @@ class NetworkDiagnosticsAdapterImpl final : public NetworkDiagnosticsAdapter {
   void RunHttpsFirewallRoutine(
       chromeos::network_diagnostics::mojom::NetworkDiagnosticsRoutines::
           HttpsFirewallCallback) override;
+  void RunHttpsLatencyRoutine(
+      chromeos::network_diagnostics::mojom::NetworkDiagnosticsRoutines::
+          HttpsLatencyCallback) override;
 
  private:
   // NetworkDiagnosticsRoutines remote used to run network diagnostics.

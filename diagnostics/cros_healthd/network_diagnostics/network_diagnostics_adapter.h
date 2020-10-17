@@ -72,6 +72,11 @@ class NetworkDiagnosticsAdapter {
   virtual void RunHttpsFirewallRoutine(
       chromeos::network_diagnostics::mojom::NetworkDiagnosticsRoutines::
           HttpsFirewallCallback) = 0;
+
+  // Requests the browser to invoke the HttpsLatency routine.
+  virtual void RunHttpsLatencyRoutine(
+      chromeos::network_diagnostics::mojom::NetworkDiagnosticsRoutines::
+          HttpsLatencyCallback) = 0;
 };
 
 }  // namespace diagnostics

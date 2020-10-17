@@ -100,6 +100,7 @@ class FakeDiagnosticsService final
   void RunCaptivePortalRoutine(RunCaptivePortalRoutineCallback) override;
   void RunHttpFirewallRoutine(RunHttpFirewallRoutineCallback) override;
   void RunHttpsFirewallRoutine(RunHttpsFirewallRoutineCallback) override;
+  void RunHttpsLatencyRoutine(RunHttpsLatencyRoutineCallback) override;
 
   // Overrides the default behavior of GetCrosHealthdDiagnosticsService to test
   // situations where mojo methods were called prior to wilco_dtc_supportd's

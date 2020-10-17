@@ -171,4 +171,9 @@ void FakeRoutineService::RunHttpsFirewallRoutine(
   NOTIMPLEMENTED();
 }
 
+void FakeRoutineService::RunHttpsLatencyRoutine(
+    RunHttpsLatencyRoutineCallback callback) {
+  NOTIMPLEMENTED();
+}
+
 }  // namespace diagnostics

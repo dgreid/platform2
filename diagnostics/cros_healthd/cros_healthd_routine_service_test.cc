@@ -69,7 +69,8 @@ std::set<mojo_ipc::DiagnosticRoutineEnum> GetAllAvailableRoutines() {
       mojo_ipc::DiagnosticRoutineEnum::kDnsResolution,
       mojo_ipc::DiagnosticRoutineEnum::kCaptivePortal,
       mojo_ipc::DiagnosticRoutineEnum::kHttpFirewall,
-      mojo_ipc::DiagnosticRoutineEnum::kHttpsFirewall};
+      mojo_ipc::DiagnosticRoutineEnum::kHttpsFirewall,
+      mojo_ipc::DiagnosticRoutineEnum::kHttpsLatency};
 }
 
 std::set<mojo_ipc::DiagnosticRoutineEnum> GetBatteryRoutines() {
@@ -814,6 +815,27 @@ TEST_F(CrosHealthdRoutineServiceTest, RunHttpsFirewallRoutine) {
   mojo_ipc::RunRoutineResponsePtr response;
   base::RunLoop run_loop;
   service()->RunHttpsFirewallRoutine(base::BindLambdaForTesting(
+      [&](mojo_ipc::RunRoutineResponsePtr received_response) {
+        response = std::move(received_response);
+        run_loop.Quit();
+      }));
+  run_loop.Run();
+
+  EXPECT_EQ(response->id, 1);
+  EXPECT_EQ(response->status, kExpectedStatus);
+}
+
+// Test that the HTTPS latency routine can be run.
+TEST_F(CrosHealthdRoutineServiceTest, RunHttpsLatencyRoutine) {
+  constexpr mojo_ipc::DiagnosticRoutineStatusEnum kExpectedStatus =
+      mojo_ipc::DiagnosticRoutineStatusEnum::kRunning;
+  routine_factory()->SetNonInteractiveStatus(
+      kExpectedStatus, /*status_message=*/"", /*progress_percent=*/50,
+      /*output=*/"");
+
+  mojo_ipc::RunRoutineResponsePtr response;
+  base::RunLoop run_loop;
+  service()->RunHttpsLatencyRoutine(base::BindLambdaForTesting(
       [&](mojo_ipc::RunRoutineResponsePtr received_response) {
         response = std::move(received_response);
         run_loop.Quit();
