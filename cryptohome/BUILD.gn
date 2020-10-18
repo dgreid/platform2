@@ -454,6 +454,7 @@ if (use.test) {
       "mount_task_unittest.cc",
       "mount_unittest.cc",
       "out_of_process_mount_helper_test.cc",
+      "password_verifier_unittest.cc",
       "persistent_lookup_table_unittest.cc",
       "pkcs11_keystore_unittest.cc",
       "platform_unittest.cc",

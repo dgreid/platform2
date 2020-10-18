@@ -271,6 +271,7 @@ static_library("libcryptohome") {
     ":target_defaults",
   ]
   sources = [
+    "../aes_deprecated_password_verifier.cc",
     "../arc_disk_quota.cc",
     "../bootlockbox/boot_attributes.cc",
     "../challenge_credentials/challenge_credentials_constants.cc",

@@ -21,9 +21,11 @@ per-file mount*=jorgelo@chromium.org
 per-file mount*=gwendal@chromium.org
 per-file mount*=hashimoto@chromium.org
 per-file out_of_process*=jorgelo@chromium.org
+per-file user_session*=dlunev@chromium.org
 
 # Owners of core crypto/authentication code.
 per-file crypto.*=kerrnel@chromium.org
 per-file cryptolib*=kerrnel@chromium.org
 per-file crypto_error.*=kerrnel@chromium.org
 per-file *auth_block*=kerrnel@chromium.org
+per-file *password_verifier*=kerrnel@chromium.org

@@ -9,9 +9,11 @@
 #include <string>
 
 #include <base/memory/ref_counted.h>
+#include <brillo/secure_blob.h>
 
 #include "cryptohome/credentials.h"
 #include "cryptohome/mount.h"
+#include "cryptohome/password_verifier.h"
 
 namespace cryptohome {
 
@@ -78,8 +80,7 @@ class UserSession : public base::RefCountedThreadSafe<UserSession> {
   std::string obfuscated_username_;
   std::string username_;
   brillo::SecureBlob system_salt_;
-  brillo::SecureBlob key_salt_;
-  brillo::SecureBlob cipher_;
+  std::unique_ptr<PasswordVerifier> password_verifier_;
   int key_index_ = -1;
   KeyData key_data_;
 

@@ -9,12 +9,11 @@
 
 #include <base/memory/ref_counted.h>
 
+#include <cryptohome/aes_deprecated_password_verifier.h>
 #include "cryptohome/credentials.h"
 #include "cryptohome/mount.h"
 
 namespace cryptohome {
-
-const int kUserSessionIdLength = 128;
 
 UserSession::UserSession() {}
 UserSession::~UserSession() {}
@@ -69,19 +68,9 @@ bool UserSession::SetCredentials(const Credentials& credentials,
   username_ = credentials.username();
   key_data_ = credentials.key_data();
   key_index_ = key_index;
-  key_salt_ = CryptoLib::CreateSecureRandomBlob(PKCS5_SALT_LEN);
-  const auto plaintext =
-      CryptoLib::CreateSecureRandomBlob(kUserSessionIdLength);
 
-  brillo::SecureBlob aes_key;
-  brillo::SecureBlob aes_iv;
-  if (!CryptoLib::PasskeyToAesKey(credentials.passkey(), key_salt_,
-                                  cryptohome::kDefaultPasswordRounds, &aes_key,
-                                  &aes_iv)) {
-    return false;
-  }
-
-  return CryptoLib::AesEncryptDeprecated(plaintext, aes_key, aes_iv, &cipher_);
+  password_verifier_.reset(new AesDeprecatedPasswordVerifier());
+  return password_verifier_->Set(credentials.passkey());
 }
 
 bool UserSession::VerifyUser(const std::string& obfuscated_username) const {
@@ -91,6 +80,10 @@ bool UserSession::VerifyUser(const std::string& obfuscated_username) const {
 bool UserSession::VerifyCredentials(const Credentials& credentials) const {
   ReportTimerStart(kSessionUnlockTimer);
 
+  if (!password_verifier_) {
+    LOG(ERROR) << "Attempt to verify credentials with no verifier set";
+    return false;
+  }
   if (!VerifyUser(credentials.GetObfuscatedUsername(system_salt_))) {
     return false;
   }
@@ -102,18 +95,10 @@ bool UserSession::VerifyCredentials(const Credentials& credentials) const {
     return false;
   }
 
-  brillo::SecureBlob aes_key;
-  brillo::SecureBlob aes_iv;
-  if (!CryptoLib::PasskeyToAesKey(credentials.passkey(), key_salt_,
-                                  cryptohome::kDefaultPasswordRounds, &aes_key,
-                                  &aes_iv)) {
-    return false;
-  }
+  bool status = password_verifier_->Verify(credentials.passkey());
 
-  brillo::SecureBlob plaintext;
-  bool status =
-      CryptoLib::AesDecryptDeprecated(cipher_, aes_key, aes_iv, &plaintext);
   ReportTimerStop(kSessionUnlockTimer);
+
   return status;
 }
 
