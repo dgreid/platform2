@@ -6,9 +6,13 @@
 
 #define FUSE_USE_VERSION 26
 
+#include <base/command_line.h>
+#include <base/files/file_path.h>
 #include <base/logging.h>
 #include <base/strings/string_split.h>
 #include <base/strings/stringprintf.h>
+#include <brillo/flag_helper.h>
+#include <brillo/syslog_logging.h>
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -16,7 +20,6 @@
 #include <fuse/fuse_common.h>
 #include <linux/limits.h>
 #include <stdint.h>
-#include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -31,16 +34,20 @@
 #define USER_NS_SHIFT 655360
 #define CHRONOS_UID 1000
 #define CHRONOS_GID 1000
+// Android's media_rw UID and GID shifted by USER_NS_SHIFT.
+#define AID_MEDIA_RW_UID 656383
+#define AID_MEDIA_RW_GID 656383
 
 #define WRAP_FS_CALL(res) ((res) < 0 ? -errno : 0)
 
 namespace {
 
-const uid_t kAndroidAppUidStart = 10000 + USER_NS_SHIFT;
-const gid_t kAndroidAppUidEnd = 19999 + USER_NS_SHIFT;
+constexpr uid_t kAndroidAppUidStart = 10000 + USER_NS_SHIFT;
+constexpr gid_t kAndroidAppUidEnd = 19999 + USER_NS_SHIFT;
 
 struct FusePrivateData {
   std::string android_app_access_type;
+  bool force_group_permission = false;
 };
 
 // Given android_app_access_type, figure out the source of /storage mount in
@@ -176,6 +183,14 @@ int passthrough_mkdir(const char* path, mode_t mode) {
   if (check_allowed_result < 0) {
     return check_allowed_result;
   }
+
+  // When |force_group_permission| is true, forcefully grant full group access
+  // permission so that Android's MediaProvider can access the new directory.
+  if (static_cast<FusePrivateData*>(fuse_get_context()->private_data)
+          ->force_group_permission) {
+    mode |= S_IRWXG;
+  }
+
   return WRAP_FS_CALL(mkdir(path, mode));
 }
 
@@ -371,39 +386,94 @@ void setup_passthrough_ops(struct fuse_operations* passthrough_ops) {
 }  // namespace
 
 int main(int argc, char** argv) {
-  if (argc != 7) {
-    fprintf(stderr,
-            "usage: %s <source> <destination> <umask> <uid> <gid> "
-            "<android_app_access_type>\n",
-            argv[0]);
+  DEFINE_string(source, "", "Source path of FUSE mount (required)");
+  DEFINE_string(dest, "", "Target path of FUSE mount (required)");
+  DEFINE_string(fuse_umask, "",
+                "Umask to set filesystem permissions in FUSE (required)");
+  DEFINE_int32(fuse_uid, -1, "UID set as file owner in FUSE (required)");
+  DEFINE_int32(fuse_gid, -1, "GID set as file group in FUSE (required)");
+  DEFINE_string(
+      android_app_access_type, "",
+      "What type of permission checks should be done for Android apps."
+      " Must be either full, read, or write (required)");
+
+  // TODO(b/123669632): Remove the argument |force_group_permission| and related
+  // logic once we start to run the daemon as MediaProvider UID and GID from
+  // mount-passthrough-jailed-play.
+  DEFINE_bool(force_group_permission, false,
+              "Forcefully grant full group access permission for newly created"
+              " directories (optional)");
+
+  // Use "arc-" prefix so that the log is recorded in /var/log/arc.log.
+  brillo::OpenLog("arc-mount-passthrough", true /*log_pid*/);
+  brillo::InitLog(brillo::kLogToSyslog | brillo::kLogHeader |
+                  brillo::kLogToStderrIfTty);
+
+  brillo::FlagHelper::Init(argc, argv, "mount-passthrough");
+
+  if (FLAGS_source.empty()) {
+    LOG(ERROR) << "--source must be specified.";
+    return 1;
+  }
+  if (FLAGS_dest.empty()) {
+    LOG(ERROR) << "--dest must be specified.";
+    return 1;
+  }
+  if (FLAGS_fuse_umask.empty()) {
+    LOG(ERROR) << "--fuse_umask must be specified.";
+    return 1;
+  }
+  if (FLAGS_fuse_uid < 0) {
+    LOG(ERROR) << "--fuse_uid must be specified as a non-negative integer.";
+    return 1;
+  }
+  if (FLAGS_fuse_gid < 0) {
+    LOG(ERROR) << "--fuse_gid must be specified as a non-negative integer.";
+    return 1;
+  }
+  if (FLAGS_android_app_access_type.empty()) {
+    LOG(ERROR) << "--android_app_access_type must be specified.";
+    return 1;
+  }
+  if (FLAGS_android_app_access_type != "full" &&
+      FLAGS_android_app_access_type != "read" &&
+      FLAGS_android_app_access_type != "write") {
+    LOG(ERROR) << "Invalid android_app_access_type: "
+               << FLAGS_android_app_access_type
+               << ". It must be either full, read, or write.";
     return 1;
   }
 
-  if (getuid() != CHRONOS_UID) {
-    fprintf(stderr, "This daemon must run as chronos user.\n");
+  const uid_t daemon_uid = getuid();
+  if (daemon_uid != CHRONOS_UID && daemon_uid != AID_MEDIA_RW_UID) {
+    LOG(ERROR) << "This daemon must run as chronos or Android's media_rw user.";
     return 1;
   }
-  if (getgid() != CHRONOS_GID) {
-    fprintf(stderr, "This daemon must run as chronos group.\n");
+
+  const gid_t daemon_gid = getgid();
+  if (daemon_gid != CHRONOS_GID && daemon_gid != AID_MEDIA_RW_GID) {
+    LOG(ERROR) << "This daemon must run as chronos or Android's media_rw"
+               << " group.";
     return 1;
   }
 
   struct fuse_operations passthrough_ops;
   setup_passthrough_ops(&passthrough_ops);
 
-  uid_t uid = std::stoi(argv[4]) + USER_NS_SHIFT;
-  gid_t gid = std::stoi(argv[5]) + USER_NS_SHIFT;
-  std::string fuse_subdir_opt(std::string("subdir=") + argv[1]);
-  std::string fuse_uid_opt(std::string("uid=") + std::to_string(uid));
-  std::string fuse_gid_opt(std::string("gid=") + std::to_string(gid));
-  std::string fuse_umask_opt(std::string("umask=") + argv[3]);
-  fprintf(stderr, "subdir_opt(%s) uid_opt(%s) gid_opt(%s) umask_opt(%s)",
-          fuse_subdir_opt.c_str(), fuse_uid_opt.c_str(), fuse_gid_opt.c_str(),
-          fuse_umask_opt.c_str());
+  const std::string fuse_subdir_opt("subdir=" + FLAGS_source);
+  const std::string fuse_uid_opt(
+      "uid=" + std::to_string(FLAGS_fuse_uid + USER_NS_SHIFT));
+  const std::string fuse_gid_opt(
+      "gid=" + std::to_string(FLAGS_fuse_gid + USER_NS_SHIFT));
+  const std::string fuse_umask_opt("umask=" + FLAGS_fuse_umask);
+  LOG(INFO) << "subdir_opt(" << fuse_subdir_opt << ") "
+            << "uid_opt(" << fuse_uid_opt << ") "
+            << "gid_opt(" << fuse_gid_opt << ") "
+            << "umask_opt(" << fuse_umask_opt << ")";
 
   const char* fuse_argv[] = {
       argv[0],
-      argv[2],
+      FLAGS_dest.c_str(),
       "-f",
       "-o",
       "allow_other",
@@ -438,9 +508,12 @@ int main(int argc, char** argv) {
   };
   int fuse_argc = sizeof(fuse_argv) / sizeof(fuse_argv[0]);
 
-  umask(0022);
+  const mode_t daemon_umask = FLAGS_force_group_permission ? 0002 : 0022;
+  umask(daemon_umask);
+
   FusePrivateData private_data;
-  private_data.android_app_access_type = argv[6];
+  private_data.android_app_access_type = FLAGS_android_app_access_type;
+  private_data.force_group_permission = FLAGS_force_group_permission;
   return fuse_main(fuse_argc, const_cast<char**>(fuse_argv), &passthrough_ops,
                    &private_data);
 }

@@ -1,91 +1,23 @@
-#!/bin/sh
+#!/bin/bash
 # Copyright 2016 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# Run mount-passthrough with minijail0.
+# Runs mount-passthrough with minijail0 as chronos.
 
 set -e
 
-SOURCE_IN_CONTAINER=/mnt/source
-DEST_IN_CONTAINER=/mnt/dest
+if [ $# -ne 6 ]; then
+  echo "Usage: $0 source dest fuse_umask fuse_uid fuse_gid"\
+    "android_app_access_type"
+  exit 1
+fi
 
-main() {
-  if [ $# -ne 6 ]; then
-    echo "Usage: $0 source dest umask uid gid android_app_access_type"
-    exit 1
-  fi
+. /usr/share/arc/mount-passthrough-jailed-utils.sh
 
-  local source="$1"
-  local dest="$2"
-  local umask="$3"
-  local uid="$4"
-  local gid="$5"
-  local android_app_access_type="$6"
-
-  # Set large enough open file limit since this process handles many open files.
-  ulimit -n 8192
-
-  # Start constructing minijail0 args...
-  set --
-
-  # Use minimalistic-mountns profile.
-  set -- "$@" --profile=minimalistic-mountns
-
-  # Enter a new UTS namespace.
-  set -- "$@" --uts
-
-  # Enter a new VFS namespace and remount /proc read-only.
-  set -- "$@" -v -r
-
-  # Enter a new network namespace.
-  set -- "$@" -e
-
-  # Enter a new IPC namespace.
-  set -- "$@" -l
-
-  # Forbid all caps except for CAP_SYS_ADMIN needed to mount fuse filesystem.
-  set -- "$@" -c 0x200000
-
-  # Run as chronos/chronos.
-  set -- "$@" -u chronos -g chronos -G
-
-  # Allow sharing mounts between CrOS and Android.
-  # WARNING: BE CAREFUL not to unexpectedly expose shared mounts in following
-  # bind mounts! Always remount them with MS_REC|MS_PRIVATE unless you want to
-  # share those mounts explicitly.
-  set -- "$@" -K
-
-  # Mount tmpfs on /mnt.
-  set -- "$@" -k "tmpfs,/mnt,tmpfs,MS_NOSUID|MS_NODEV|MS_NOEXEC"
-
-  # Bind /dev/fuse to mount FUSE file systems.
-  set -- "$@" -b /dev/fuse
-
-  # Mark PRIVATE recursively under (pivot) root, in order not to expose shared
-  # mount points accidentally.
-  set -- "$@" -k "none,/,none,0x44000"  # private,rec
-
-  # Mount source/dest directories.
-  # Note that those directories might be shared mountpoints and we allow them.
-  # 0x5000 = bind,rec
-  set -- "$@" -k "${source},${SOURCE_IN_CONTAINER},none,0x5000"
-  # 0x84000 = slave,rec
-  set -- "$@" -k "${source},${SOURCE_IN_CONTAINER},none,0x84000"
-  # 0x102e = bind,remount,noexec,nodev,nosuid
-  set -- "$@" -k "${source},${SOURCE_IN_CONTAINER},none,0x102e"
-
-  # 0x1000 = bind
-  set -- "$@" -k "${dest},${DEST_IN_CONTAINER},none,0x1000"
-  # 0x102e = bind,remount,noexec,nodev,nosuid
-  set -- "$@" -k "${dest},${DEST_IN_CONTAINER},none,0x102e"
-
-  # Finally, specify command line arguments.
-  set -- "$@" -- /usr/bin/mount-passthrough
-  set -- "$@" "${SOURCE_IN_CONTAINER}" "${DEST_IN_CONTAINER}" "${umask}" \
-      "${uid}" "${gid}" "${android_app_access_type}"
-
-  exec minijail0 "$@"
-}
-
-main "$@"
+# Run mount-passthrough with minijail0 as chronos, inherit supplementary groups,
+# and do not grant CAP_DAC_OVERRIDE, nor force group access permission.
+# TODO(b/123669632): Remove the argument |force_group_permission| and related
+# logic once we start to run the daemon as MediaProvider UID and GID from
+# mount-passthrough-jailed-play.
+run_mount_passthrough_with_minijail0 "$@" chronos chronos "true" "false" "false"

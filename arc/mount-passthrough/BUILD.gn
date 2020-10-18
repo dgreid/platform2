@@ -11,6 +11,7 @@ group("all") {
 pkg_config("mount-passthrough_config") {
   pkg_deps = [
     "fuse",
+    "libbrillo",
     "libcap",
     "libchrome",
   ]

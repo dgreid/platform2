@@ -1,0 +1,32 @@
+#!/bin/bash
+# Copyright 2021 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Runs mount-passthrough with minijail0 as Android's media_rw, with
+# CAP_DAC_OVERRIDE additionally granted. It enables us to use mount-passthrough
+# for setting up "Play files" by allowing chronos to access Android files. Note
+# that the ordinary usage of mount-passthrough (via mount-passthrough-jailed) is
+# to allow Android to access files owned by chronos.
+
+set -e
+
+# Android's media_rw UID and GID shifted by 655360.
+AID_MEDIA_RW_UID=656383
+AID_MEDIA_RW_GID=656383
+
+if [ $# -ne 5 ]; then
+  echo "Usage: $0 source dest fuse_umask fuse_uid fuse_gid"
+  exit 1
+fi
+
+. /usr/share/arc/mount-passthrough-jailed-utils.sh
+
+# Run mount-passthrough with minijail0 as Android's media_rw without interiting
+# supplementary groups, and additionally grant CAP_DAC_OVERRIDE. Forcefully
+# grant full group access permission so that Android's MediaProvide can access
+# new directories created by the Files app.
+# TODO(b/123669632): Remove the argument |force_group_permission| and related
+# logic once we start to run the daemon as MediaProvider UID and GID.
+run_mount_passthrough_with_minijail0 "$@" "full" \
+  "${AID_MEDIA_RW_UID}" "${AID_MEDIA_RW_GID}" "false" "true" "true"
