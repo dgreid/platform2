@@ -1084,11 +1084,8 @@ TEST_P(MountTest, CreateCryptohomeTest) {
   EXPECT_CALL(platform_, WriteFileAtomicDurable(user->keyset_path, _, _))
       .WillOnce(DoAll(SaveArg<1>(&creds), Return(true)));
 
-  bool created;
   ASSERT_TRUE(mount_->mounter_->EnsureUserMountPoints(credentials.username()));
-  ASSERT_TRUE(
-      mount_->EnsureCryptohome(credentials, GetDefaultMountArgs(), &created));
-  ASSERT_TRUE(created);
+  ASSERT_TRUE(mount_->CreateCryptohome(credentials, ShouldTestEcryptfs()));
   ASSERT_NE(creds.size(), 0);
   {
     InSequence s;
@@ -1577,8 +1574,11 @@ TEST_P(MountTest, MountCryptohomeNoCreate) {
   EXPECT_CALL(platform_,
               DirectoryExists(AnyOf(user->vault_path, user->vault_mount_path,
                                     user->user_vault_path)))
-      .Times(4)
-      .WillRepeatedly(Return(false));
+      .WillOnce(Return(false))
+      .WillOnce(Return(false))
+      .WillOnce(Return(ShouldTestEcryptfs()))
+      .WillOnce(Return(false))
+      .WillOnce(Return(false));
 
   EXPECT_CALL(platform_, FileExists(base::FilePath(kLockedToSingleUserFile)))
       .WillRepeatedly(Return(false));
@@ -2371,6 +2371,8 @@ TEST_P(EphemeralNoUserSystemTest, OwnerUnknownMountCreateTest) {
 
   EXPECT_CALL(platform_, FileExists(_)).WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, DirectoryExists(user->vault_path))
+      .WillOnce(Return(false))
+      .WillOnce(Return(ShouldTestEcryptfs()))
       .WillRepeatedly(Return(false));
   EXPECT_CALL(platform_, DirectoryExists(user->vault_mount_path))
       .WillRepeatedly(Return(false));
@@ -2436,6 +2438,8 @@ TEST_P(EphemeralNoUserSystemTest, MountSetUserTypeFailTest) {
   EXPECT_CALL(platform_, FileExists(_)).WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, DirectoryExists(_)).WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, DirectoryExists(user->vault_path))
+      .WillOnce(Return(false))
+      .WillOnce(Return(ShouldTestEcryptfs()))
       .WillRepeatedly(Return(false));
   EXPECT_CALL(platform_, DirectoryExists(user->vault_mount_path))
       .WillRepeatedly(Return(false));

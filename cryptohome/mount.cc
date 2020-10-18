@@ -219,56 +219,41 @@ bool Mount::Init(Platform* platform,
   return result;
 }
 
-bool Mount::EnsureCryptohome(const Credentials& credentials,
-                             const MountArgs& mount_args,
-                             bool* created) {
-  const std::string obfuscated_username =
-      credentials.GetObfuscatedUsername(system_salt_);
-  // Now check for the presence of a cryptohome.
-  if (homedirs_->CryptohomeExists(obfuscated_username)) {
-    // Now check for the presence of a vault directory.
-    FilePath vault_path =
-        homedirs_->GetEcryptfsUserVaultPath(obfuscated_username);
-    if (platform_->DirectoryExists(vault_path)) {
-      if (mount_args.to_migrate_from_ecryptfs) {
-        // When migrating, set the mount_type_ to dircrypto even if there is an
-        // eCryptfs vault.
-        mount_type_ = MountType::DIR_CRYPTO;
-      } else {
-        mount_type_ = MountType::ECRYPTFS;
-      }
-    } else {
-      if (mount_args.to_migrate_from_ecryptfs) {
-        LOG(ERROR) << "No eCryptfs vault to migrate.";
-        return false;
-      } else {
-        mount_type_ = MountType::DIR_CRYPTO;
-      }
-    }
-    *created = false;
-    return true;
-  }
-  // Create the cryptohome from scratch.
-  // If the kernel supports it, steer toward ext4 crypto.
-  if (mount_args.create_as_ecryptfs) {
-    mount_type_ = MountType::ECRYPTFS;
+MountType Mount::DeriveVaultMountType(const std::string& obfuscated_username,
+                                      bool shall_migrate) const {
+  FilePath ecryptfs_vault_path =
+      homedirs_->GetEcryptfsUserVaultPath(obfuscated_username);
+  bool ecryptfs_vault_exists = platform_->DirectoryExists(ecryptfs_vault_path);
+
+  if (ecryptfs_vault_exists) {
+    // Keep legacy ecryptfs of migrate to dir_crypto.
+    return shall_migrate ? MountType::DIR_CRYPTO : MountType::ECRYPTFS;
   } else {
-    dircrypto::KeyState state = platform_->GetDirCryptoKeyState(shadow_root_);
-    switch (state) {
-      case dircrypto::KeyState::UNKNOWN:
-      case dircrypto::KeyState::ENCRYPTED:
-        LOG(ERROR) << "Unexpected state " << static_cast<int>(state);
-        return false;
-      case dircrypto::KeyState::NOT_SUPPORTED:
-        mount_type_ = MountType::ECRYPTFS;
-        break;
-      case dircrypto::KeyState::NO_KEY:
-        mount_type_ = MountType::DIR_CRYPTO;
-        break;
+    // no ecrypfs vault means we have dir_crypto setup.
+    if (shall_migrate) {
+      LOG(ERROR) << "No eCryptfs vault to migrate.";
+      return MountType::NONE;
     }
+    return MountType::DIR_CRYPTO;
   }
-  *created = CreateCryptohome(credentials);
-  return *created;
+}
+
+MountType Mount::ChooseVaultMountType(bool force_ecryptfs) const {
+  if (force_ecryptfs) {
+    return MountType::ECRYPTFS;
+  }
+
+  dircrypto::KeyState state = platform_->GetDirCryptoKeyState(shadow_root_);
+  switch (state) {
+    case dircrypto::KeyState::NOT_SUPPORTED:
+      return MountType::ECRYPTFS;
+    case dircrypto::KeyState::NO_KEY:
+      return MountType::DIR_CRYPTO;
+    case dircrypto::KeyState::UNKNOWN:
+    case dircrypto::KeyState::ENCRYPTED:
+      LOG(ERROR) << "Unexpected state " << static_cast<int>(state);
+      return MountType::NONE;
+  }
 }
 
 bool Mount::AddEcryptfsAuthToken(const VaultKeyset& vault_keyset,
@@ -346,8 +331,21 @@ bool Mount::MountCryptohome(const Credentials& credentials,
   }
 
   bool created = false;
-  if (!EnsureCryptohome(credentials, mount_args, &created)) {
-    LOG(ERROR) << "Error creating cryptohome.";
+  if (!homedirs_->CryptohomeExists(obfuscated_username)) {
+    if (!CreateCryptohome(credentials, mount_args.create_as_ecryptfs)) {
+      LOG(ERROR) << "Error creating cryptohome.";
+      *mount_error = MOUNT_ERROR_CREATE_CRYPTOHOME_FAILED;
+      return false;
+    }
+    created = true;
+  }
+
+  mount_type_ = DeriveVaultMountType(obfuscated_username,
+                                     mount_args.to_migrate_from_ecryptfs);
+  if (mount_type_ == MountType::NONE) {
+    // TODO(dlunev): there should be a more proper error code set. CREATE_FAILED
+    // is a temporary returned error to keep the behaviour unchanged while
+    // refactoring.
     *mount_error = MOUNT_ERROR_CREATE_CRYPTOHOME_FAILED;
     return false;
   }
@@ -670,10 +668,16 @@ bool Mount::OwnsMountPoint(const FilePath& path) const {
           out_of_process_mounter_->IsPathMounted(path));
 }
 
-bool Mount::CreateCryptohome(const Credentials& credentials) const {
+bool Mount::CreateCryptohome(const Credentials& credentials,
+                             bool force_ecryptfs) const {
   brillo::ScopedUmask scoped_umask(kDefaultUmask);
   std::string obfuscated_username =
       credentials.GetObfuscatedUsername(system_salt_);
+
+  MountType mount_type = ChooseVaultMountType(force_ecryptfs);
+  if (mount_type == MountType::NONE) {
+    return false;
+  }
 
   // Create the user's entry in the shadow root
   FilePath user_dir(GetUserDirectoryForUser(obfuscated_username));
@@ -705,7 +709,7 @@ bool Mount::CreateCryptohome(const Credentials& credentials) const {
     return false;
   }
 
-  if (mount_type_ == MountType::ECRYPTFS) {
+  if (mount_type == MountType::ECRYPTFS) {
     // Create the user's vault.
     FilePath vault_path =
         homedirs_->GetEcryptfsUserVaultPath(obfuscated_username);

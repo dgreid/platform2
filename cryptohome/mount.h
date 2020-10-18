@@ -130,17 +130,15 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   //
   virtual bool IsNonEphemeralMounted() const;
 
-  // Checks if the cryptohome vault exists for the given credentials and creates
-  // it if not (calls CreateCryptohome and sets mount_type_).
+  // Creates the cryptohome salt, key, (and vault if necessary) for the
+  // specified credentials.
   //
   // Parameters
   //   credentials - The Credentials representing the user whose cryptohome
-  //     should be ensured.
-  //   mount_args - The options for the call to mount.
-  //   created (OUT) - Whether the cryptohome was created
-  virtual bool EnsureCryptohome(const Credentials& credentials,
-                                const MountArgs& mount_args,
-                                bool* created);
+  //     should be created.
+  //   force_ecryptfs - use ecryptfs encryption.
+  virtual bool CreateCryptohome(const Credentials& credentials,
+                                bool force_ecryptfs) const;
 
   // Updates current user activity timestamp. This is called daily.
   // So we may not consider current user as old (and delete it soon after they
@@ -289,13 +287,12 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   virtual bool CreateTrackedSubdirectories(
       const Credentials& credentials) const;
 
-  // Creates the cryptohome salt, key, (and vault if necessary) for the
-  // specified credentials.
-  //
-  // Parameters
-  //   credentials - The Credentials representing the user whose cryptohome
-  //     should be created.
-  virtual bool CreateCryptohome(const Credentials& credentials) const;
+  // Determine the mount type of the existing vault.
+  MountType DeriveVaultMountType(const std::string& obfuscated_username,
+                                 bool shall_migrate) const;
+
+  // Choose the mount type for the new vault.
+  MountType ChooseVaultMountType(bool force_ecryptfs) const;
 
   virtual bool AddEcryptfsAuthToken(const VaultKeyset& vault_keyset,
                                     std::string* key_signature,

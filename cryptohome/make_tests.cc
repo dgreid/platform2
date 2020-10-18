@@ -229,7 +229,6 @@ void TestUser::GenerateCredentials(bool force_ecryptfs) {
       key_data.set_label("PIN");
     local_credentials.set_key_data(key_data);
   }
-  bool created;
   // NOTE! This code gives us generated credentials for credentials tests NOT
   // NOTE! golden credentials to test against.  This means we won't see problems
   // NOTE! if the credentials generation and checking code break together.
@@ -253,17 +252,12 @@ void TestUser::GenerateCredentials(bool force_ecryptfs) {
                           MountHelper::GetNewUserPath(username).value())),
            _))
       .WillRepeatedly(Return(false));
-  EXPECT_CALL(platform, DirectoryExists(vault_path)).WillOnce(Return(false));
-  EXPECT_CALL(platform, DirectoryExists(vault_mount_path))
-      .WillOnce(Return(false));
   EXPECT_CALL(platform, CreateDirectory(_)).WillRepeatedly(Return(true));
   // Grab the generated credential
   EXPECT_CALL(platform, WriteFileAtomicDurable(keyset_path, _, _))
       .WillOnce(DoAll(SaveArg<1>(&credentials), Return(true)));
-  Mount::MountArgs mount_args;
-  mount_args.create_as_ecryptfs = force_ecryptfs;
-  mount->EnsureCryptohome(local_credentials, mount_args, &created);
-  DCHECK(created && credentials.size());
+  EXPECT_TRUE(mount->CreateCryptohome(local_credentials, force_ecryptfs));
+  DCHECK(credentials.size());
 
   // Unmount succeeds. This is called when |mount| is destroyed.
   ON_CALL(platform, Unmount(_, _, _)).WillByDefault(Return(true));
