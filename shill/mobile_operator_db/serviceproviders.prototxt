@@ -7327,6 +7327,15 @@ mno {
       username : "ym"
       password : "ym"
     }
+    mobile_apn {
+      apn : "cmn.mgx"
+      localized_name {
+        name : "SoftBank(Closed Networks)"
+      }
+      username : "cmn@mgx"
+      password : "mgx"
+      authentication : PAP
+    }
   }
   mvno {
     mvno_filter {
@@ -7336,10 +7345,13 @@ mno {
     data {
       uuid : "81f75c0a-0365-43eb-83e7-4fb43256434d"
       localized_name {
-        name : "SoftBank(ai+ 4G LTE)"
+        name : "SoftBank"
       }
       mobile_apn {
         apn : "plus.4g"
+        localized_name {
+          name : "SoftBank(ai+ 4G LTE)"
+        }
         username : "plus"
         password : "4g"
       }
