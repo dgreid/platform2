@@ -1100,9 +1100,10 @@ bool CryptoLib::Scrypt(const brillo::SecureBlob& input,
 }
 
 // static
-bool CryptoLib::EncryptScryptBlob(const brillo::SecureBlob& blob,
-                                  const brillo::SecureBlob& key_source,
-                                  brillo::SecureBlob* wrapped_blob) {
+bool CryptoLib::DeprecatedEncryptScryptBlob(
+    const brillo::SecureBlob& blob,
+    const brillo::SecureBlob& key_source,
+    brillo::SecureBlob* wrapped_blob) {
   wrapped_blob->resize(blob.size() + kScryptMetadataSize);
 
   brillo::SecureBlob salt =
@@ -1124,10 +1125,11 @@ bool CryptoLib::EncryptScryptBlob(const brillo::SecureBlob& blob,
 }
 
 // static
-bool CryptoLib::DecryptScryptBlob(const brillo::SecureBlob& wrapped_blob,
-                                  const brillo::SecureBlob& key,
-                                  brillo::SecureBlob* blob,
-                                  CryptoError* error) {
+bool CryptoLib::DeprecatedDecryptScryptBlob(
+    const brillo::SecureBlob& wrapped_blob,
+    const brillo::SecureBlob& key,
+    brillo::SecureBlob* blob,
+    CryptoError* error) {
   DCHECK(blob->size() >= wrapped_blob.size());
 
   ScryptParameters params;

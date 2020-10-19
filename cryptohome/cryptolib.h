@@ -300,20 +300,21 @@ class CryptoLib {
   // - wrapped_blob: Pointer to blob where encrypted data is stored.
   //
   // Returns true on success, and false on failure.
-  static bool EncryptScryptBlob(const brillo::SecureBlob& blob,
-                                const brillo::SecureBlob& key_source,
-                                brillo::SecureBlob* wrapped_blob);
+  static bool DeprecatedEncryptScryptBlob(const brillo::SecureBlob& blob,
+                                          const brillo::SecureBlob& key_source,
+                                          brillo::SecureBlob* wrapped_blob);
 
-  // Companion decryption function for EncryptScryptBlob().
+  // Companion decryption function for DeprecatedEncryptScryptBlob().
   // This decrypts the data blobs which were encrypted using
-  // EncryptScryptBlob().
+  // DeprecatedEncryptScryptBlob().
   //
   // Returns true on success. On failure, false is returned, and
   // |error| is set with the appropriate error code.
-  static bool DecryptScryptBlob(const brillo::SecureBlob& wrapped_blob,
-                                const brillo::SecureBlob& key,
-                                brillo::SecureBlob* blob,
-                                CryptoError* error);
+  static bool DeprecatedDecryptScryptBlob(
+      const brillo::SecureBlob& wrapped_blob,
+      const brillo::SecureBlob& key,
+      brillo::SecureBlob* blob,
+      CryptoError* error);
 
   // This verifies that the default scrypt params are used in production.
   static void AssertProductionScryptParams();

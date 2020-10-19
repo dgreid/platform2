@@ -23,8 +23,8 @@ void CheckBlob(const brillo::SecureBlob& original_blob,
                const std::string& original_str) {
   brillo::SecureBlob decrypted_blob(wrapped_blob.size());
   CryptoError error;
-  EXPECT_TRUE(
-      CryptoLib::DecryptScryptBlob(wrapped_blob, key, &decrypted_blob, &error));
+  EXPECT_TRUE(CryptoLib::DeprecatedDecryptScryptBlob(wrapped_blob, key,
+                                                     &decrypted_blob, &error));
 
   const std::string decrypted_str(decrypted_blob.begin(), decrypted_blob.end());
   EXPECT_EQ(original_str, decrypted_str);
@@ -268,10 +268,11 @@ TEST(CryptoLibTest, AesGcmTestUniqueIVs) {
   EXPECT_NE(iv, iv3);
 }
 
-// These tests check that EncryptScryptBlob and DecryptScryptBlob continue to
-// perform the same function, and interoperate correctly, as they are re-written
-// and re-factored. These do not prove cryptographic properties of the
-// functions, or formal verification. They are sanity checks for compatibility.
+// These tests check that DeprecatedEncryptScryptBlob and
+// DeprecatedDecryptScryptBlob continue to perform the same function, and
+// interoperate correctly, as they are re-written and re-factored. These do not
+// prove cryptographic properties of the functions, or formal verification. They
+// are sanity checks for compatibility.
 TEST(CryptoLibTest, EncryptScryptTest1) {
   const std::string blob_str = "nOaVD3qRNqWhqQTDgyGb";
   brillo::SecureBlob blob(blob_str.begin(), blob_str.end());
@@ -279,7 +280,8 @@ TEST(CryptoLibTest, EncryptScryptTest1) {
   brillo::SecureBlob key_source(key_source_str.begin(), key_source_str.end());
 
   brillo::SecureBlob wrapped_blob;
-  EXPECT_TRUE(CryptoLib::EncryptScryptBlob(blob, key_source, &wrapped_blob));
+  EXPECT_TRUE(
+      CryptoLib::DeprecatedEncryptScryptBlob(blob, key_source, &wrapped_blob));
 
   CheckBlob(blob, key_source, wrapped_blob, blob_str);
 

@@ -379,7 +379,7 @@ bool Crypto::DecryptScrypt(const SerializedVaultKeyset& serialized,
                            VaultKeyset* keyset) const {
   SecureBlob blob = SecureBlob(serialized.wrapped_keyset());
   SecureBlob decrypted(blob.size());
-  if (!CryptoLib::DecryptScryptBlob(blob, key, &decrypted, error)) {
+  if (!CryptoLib::DeprecatedDecryptScryptBlob(blob, key, &decrypted, error)) {
     LOG(ERROR) << "Wrapped keyset Scrypt decrypt failed.";
     return false;
   }
@@ -390,8 +390,8 @@ bool Crypto::DecryptScrypt(const SerializedVaultKeyset& serialized,
     SecureBlob wrapped_chaps_key = SecureBlob(serialized.wrapped_chaps_key());
     chaps_key.resize(wrapped_chaps_key.size());
     // Perform a Scrypt operation on wrapped chaps key.
-    if (!CryptoLib::DecryptScryptBlob(wrapped_chaps_key, key, &chaps_key,
-                                      error)) {
+    if (!CryptoLib::DeprecatedDecryptScryptBlob(wrapped_chaps_key, key,
+                                                &chaps_key, error)) {
       LOG(ERROR) << "Chaps key scrypt decrypt failed.";
       return false;
     }
@@ -403,8 +403,8 @@ bool Crypto::DecryptScrypt(const SerializedVaultKeyset& serialized,
     SecureBlob wrapped_reset_seed = SecureBlob(serialized.wrapped_reset_seed());
     reset_seed.resize(wrapped_reset_seed.size());
     // Perform a Scrypt operation on wrapped reset seed.
-    if (!CryptoLib::DecryptScryptBlob(wrapped_reset_seed, key, &reset_seed,
-                                      error)) {
+    if (!CryptoLib::DeprecatedDecryptScryptBlob(wrapped_reset_seed, key,
+                                                &reset_seed, error)) {
       LOG(ERROR) << "Reset seed scrypt decrypt failed.";
       return false;
     }
@@ -743,14 +743,14 @@ bool Crypto::EncryptScrypt(const VaultKeyset& vault_keyset,
   SecureBlob local_blob = SecureBlob::Combine(blob, hash);
   SecureBlob cipher_text;
 
-  if (!CryptoLib::EncryptScryptBlob(local_blob, key, &cipher_text)) {
+  if (!CryptoLib::DeprecatedEncryptScryptBlob(local_blob, key, &cipher_text)) {
     LOG(ERROR) << "Scrypt encrypt of keyset blob failed.";
     return false;
   }
 
   SecureBlob wrapped_chaps_key;
-  if (!CryptoLib::EncryptScryptBlob(vault_keyset.chaps_key(), key,
-                                    &wrapped_chaps_key)) {
+  if (!CryptoLib::DeprecatedEncryptScryptBlob(vault_keyset.chaps_key(), key,
+                                              &wrapped_chaps_key)) {
     LOG(ERROR) << "Scrypt encrypt of chaps key failed.";
     return false;
   }
@@ -768,8 +768,8 @@ bool Crypto::EncryptScrypt(const VaultKeyset& vault_keyset,
   // If there is a reset seed, encrypt and store it.
   if (vault_keyset.reset_seed().size() != 0) {
     SecureBlob wrapped_reset_seed;
-    if (!CryptoLib::EncryptScryptBlob(vault_keyset.reset_seed(), key,
-                                      &wrapped_reset_seed)) {
+    if (!CryptoLib::DeprecatedEncryptScryptBlob(vault_keyset.reset_seed(), key,
+                                                &wrapped_reset_seed)) {
       LOG(ERROR) << "Scrypt encrypt of reset seed failed.";
       return false;
     }
