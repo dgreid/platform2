@@ -77,11 +77,18 @@ For more context, see the [Chromium OS Developer Guide].
 
 ## Unit Tests
 
-The unit tests can be run with with the following command:
+The unit tests can be run with the following command:
 
 ```bash
 (chroot)$ FEATURES=test emerge-<board> biod
 ```
+
+## Manual Testing
+
+You can add and remove fingerprints from the UI by navigating to
+`chrome://os-settings` in Chrome and searching for "fingerprint" in the search
+bar. Selecting the "Fingerprint settings" option will load the page for adding
+and removing fingerprints.
 
 ## Storage
 
