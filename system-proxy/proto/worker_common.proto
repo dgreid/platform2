@@ -20,6 +20,9 @@ message Credentials {
   optional string username = 1;
   optional string password = 2;
   optional ProtectionSpace protection_space = 3;
+  // Authentication schemes for which policy set credentials can be
+  // automatically applied. Valid values are 'basic', 'digest' and 'ntlm'.
+  repeated string policy_credentials_auth_schemes = 4;
 }
 
 message SocketAddress {

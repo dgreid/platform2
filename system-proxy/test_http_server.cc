@@ -32,7 +32,7 @@ const std::string_view kProxyAuthenticationRequiredNegotiate =
     "\r\n";
 
 const std::string_view kHttpBadGateway =
-    "HTTP/1.1 502 Bad Gateway\r\n\r\nBag gateway message from the server";
+    "HTTP/1.1 502 Bad Gateway\r\n\r\nBad gateway message from the server";
 
 }  // namespace
 namespace system_proxy {
@@ -62,7 +62,6 @@ void HttpTestServer::Run() {
       std::string_view server_reply =
           GetConnectReplyString(expected_responses_.front());
       expected_responses_.pop();
-      LOG(ERROR) << server_reply;
       client_conn->SendTo(server_reply.data(), server_reply.size());
     }
   }

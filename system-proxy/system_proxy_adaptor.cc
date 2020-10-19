@@ -120,10 +120,12 @@ void SystemProxyAdaptor::SetAuthenticationDetails(
     }
 
     if (auth_details.has_credentials()) {
-      if (auth_details.credentials().has_username() &&
-          auth_details.credentials().has_password()) {
-        credentials.set_username(auth_details.credentials().username());
-        credentials.set_password(auth_details.credentials().password());
+      system_proxy::Credentials dbus_cred = auth_details.credentials();
+      if (dbus_cred.has_username() && dbus_cred.has_password()) {
+        credentials.set_username(dbus_cred.username());
+        credentials.set_password(dbus_cred.password());
+        credentials.mutable_policy_credentials_auth_schemes()->Swap(
+            dbus_cred.mutable_policy_credentials_auth_schemes());
       }
     }
 

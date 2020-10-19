@@ -126,6 +126,10 @@ class ServerProxy {
   // proxy it's connecting to or the challenge response.
   std::string system_credentials_;
 
+  // Curl compatible bit-mask list of proxy authenticated schemes that can be
+  // used with the policy set credentials.
+  int64_t system_credentials_auth_schemes_ = 0;
+
   std::unique_ptr<patchpanel::Socket> listening_fd_;
 
   // List of SocketForwarders that corresponds to the TCP tunnel between the

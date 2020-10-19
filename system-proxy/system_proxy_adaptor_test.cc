@@ -221,6 +221,9 @@ TEST_F(SystemProxyAdaptorTest, SetAuthenticationDetails) {
   Credentials credentials;
   credentials.set_username(kUser);
   credentials.set_password(kPassword);
+  credentials.add_policy_credentials_auth_schemes("basic");
+  credentials.add_policy_credentials_auth_schemes("digest");
+
   *request.mutable_credentials() = credentials;
   request.set_traffic_type(TrafficOrigin::ALL);
 
@@ -264,6 +267,9 @@ TEST_F(SystemProxyAdaptorTest, SetAuthenticationDetails) {
   EXPECT_TRUE(config_user.has_credentials());
   EXPECT_EQ(config_user.credentials().username(), kUser);
   EXPECT_EQ(config_user.credentials().password(), kPassword);
+  EXPECT_GT(credentials.policy_credentials_auth_schemes().size(), 0);
+  EXPECT_EQ(credentials.policy_credentials_auth_schemes().Get(0), "basic");
+  EXPECT_EQ(credentials.policy_credentials_auth_schemes().Get(1), "digest");
 }
 
 // Verifies if System-proxy only starts the worker which tunnels system traffic.

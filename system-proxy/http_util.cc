@@ -7,9 +7,12 @@
 #include <array>
 #include <string_view>
 
+#include <curl/curl.h>
+
 #include <base/strings/stringprintf.h>
 #include <base/strings/string_split.h>
 #include <base/strings/string_tokenizer.h>
+#include <base/strings/string_util.h>
 
 namespace {
 // The elements in this array are used to identify the end of a HTTP header
@@ -108,5 +111,4 @@ SchemeRealmPairList ParseAuthChallenge(const base::StringPiece& http_request) {
 
   return scheme_realm_pairs;
 }
-
 }  // namespace system_proxy

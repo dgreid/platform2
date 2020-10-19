@@ -109,13 +109,30 @@ static size_t WriteCallback(char* contents,
   return size * nmemb;
 }
 
+// This callback receives debug information from curl, as specified in the
+// `type` argument (e.g. incoming or outgoing HTTP headers, SSL data).
+static size_t WriteDebugInfoCallback(CURL* handle,
+                                     curl_infotype type,
+                                     char* contents,
+                                     size_t size,
+                                     void* userdata) {
+  // We're only interested in outgoing headers for testing.
+  if (type != CURLINFO_HEADER_OUT)
+    return 0;
+  std::string* headers = (std::string*)userdata;
+  *headers = std::string(contents, size);
+  return 0;
+}
+
 ProxyConnectJob::ProxyConnectJob(
     std::unique_ptr<patchpanel::Socket> socket,
     const std::string& credentials,
+    int64_t curl_auth_schemes,
     ResolveProxyCallback resolve_proxy_callback,
     AuthenticationRequiredCallback auth_required_callback,
     OnConnectionSetupFinishedCallback setup_finished_callback)
     : credentials_(credentials),
+      curl_auth_schemes_(curl_auth_schemes),
       resolve_proxy_callback_(std::move(resolve_proxy_callback)),
       auth_required_callback_(std::move(auth_required_callback)),
       setup_finished_callback_(std::move(setup_finished_callback)),
@@ -145,6 +162,13 @@ bool ProxyConnectJob::Start() {
       client_socket_->fd(), base::Bind(&ProxyConnectJob::OnClientReadReady,
                                        weak_ptr_factory_.GetWeakPtr()));
   return true;
+}
+
+void ProxyConnectJob::StoreRequestHeadersForTesting() {
+  store_headers_for_testing_ = true;
+}
+std::string ProxyConnectJob::GetRequestHeadersForTesting() {
+  return request_headers_for_testing_;
 }
 
 void ProxyConnectJob::OnClientReadReady() {
@@ -242,6 +266,9 @@ void ProxyConnectJob::OnAuthCredentialsProvided(
     return;
   }
   credentials_ = credentials;
+  // Covers the case for which `curl_auth_schemes_` was initialized with policy
+  // set schemes which are not supported by the remote remote server.
+  curl_auth_schemes_ = CURLAUTH_ANY;
   VLOG(1) << "Connecting to the remote server with provided credentials";
   DoCurlServerConnection();
 }
@@ -287,7 +314,7 @@ void ProxyConnectJob::DoCurlServerConnection() {
     curl_easy_setopt(easyhandle, CURLOPT_CONNECT_ONLY, 1);
     // Allow libcurl to pick authentication method. Curl will use the most
     // secure one the remote site claims to support.
-    curl_easy_setopt(easyhandle, CURLOPT_PROXYAUTH, CURLAUTH_ANY);
+    curl_easy_setopt(easyhandle, CURLOPT_PROXYAUTH, curl_auth_schemes_);
     curl_easy_setopt(easyhandle, CURLOPT_PROXYUSERPWD, credentials_.c_str());
   }
   curl_easy_setopt(easyhandle, CURLOPT_CONNECTTIMEOUT_MS,
@@ -296,7 +323,13 @@ void ProxyConnectJob::DoCurlServerConnection() {
   curl_easy_setopt(easyhandle, CURLOPT_HEADERDATA, &http_response_headers);
   curl_easy_setopt(easyhandle, CURLOPT_WRITEFUNCTION, WriteCallback);
   curl_easy_setopt(easyhandle, CURLOPT_WRITEDATA, &http_response_body);
-
+  if (store_headers_for_testing_) {
+    curl_easy_setopt(easyhandle, CURLOPT_DEBUGFUNCTION, WriteDebugInfoCallback);
+    curl_easy_setopt(easyhandle, CURLOPT_DEBUGDATA,
+                     &request_headers_for_testing_);
+    // The DEBUGFUNCTION has no effect until we enable VERBOSE.
+    curl_easy_setopt(easyhandle, CURLOPT_VERBOSE, 1L);
+  }
   res = curl_easy_perform(easyhandle);
   curl_easy_getinfo(easyhandle, CURLINFO_HTTP_CONNECTCODE,
                     &http_response_code_);

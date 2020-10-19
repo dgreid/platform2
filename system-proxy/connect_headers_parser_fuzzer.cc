@@ -8,6 +8,8 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 
+#include <curl/curl.h>
+
 #include <base/bind.h>
 #include <base/files/file_util.h>
 #include <base/logging.h>
@@ -72,6 +74,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 
   auto connect_job = std::make_unique<system_proxy::ProxyConnectJob>(
       std::make_unique<patchpanel::Socket>(base::ScopedFD(fds[0])), "",
+      CURLAUTH_ANY,
       base::BindOnce(&ResolveProxyCallback, run_loop.QuitClosure()),
       base::BindRepeating(&NullAuthenticationRequiredCallback),
       base::BindOnce(&OnConnectionSetupFinished, run_loop.QuitClosure()));

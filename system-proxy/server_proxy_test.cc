@@ -8,6 +8,8 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 
+#include <curl/curl.h>
+
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <utility>
@@ -62,6 +64,7 @@ class MockProxyConnectJob : public ProxyConnectJob {
                       OnConnectionSetupFinishedCallback setup_finished_callback)
       : ProxyConnectJob(std::move(socket),
                         credentials,
+                        CURLAUTH_ANY,
                         std::move(resolve_proxy_callback),
                         std::move(auth_required_callback),
                         std::move(setup_finished_callback)) {}
@@ -117,6 +120,9 @@ TEST_F(ServerProxyTest, FetchCredentials) {
   worker::Credentials credentials;
   credentials.set_username(kUsername);
   credentials.set_password(kPassword);
+  credentials.add_policy_credentials_auth_schemes("basic");
+  credentials.add_policy_credentials_auth_schemes("digest");
+
   worker::WorkerConfigs configs;
   *configs.mutable_credentials() = credentials;
   RedirectStdPipes();
@@ -128,6 +134,8 @@ TEST_F(ServerProxyTest, FetchCredentials) {
   std::string expected_credentials =
       base::JoinString({kUsernameEncoded, kPasswordEncoded}, ":");
   EXPECT_EQ(server_proxy_->system_credentials_, expected_credentials);
+  EXPECT_EQ(server_proxy_->system_credentials_auth_schemes_,
+            CURLAUTH_BASIC | CURLAUTH_DIGEST | CURLAUTH_NEGOTIATE);
 }
 
 TEST_F(ServerProxyTest, FetchListeningAddress) {

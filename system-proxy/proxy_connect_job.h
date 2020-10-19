@@ -71,6 +71,7 @@ class ProxyConnectJob {
 
   ProxyConnectJob(std::unique_ptr<patchpanel::Socket> socket,
                   const std::string& credentials,
+                  int64_t curl_auth_schemes,
                   ResolveProxyCallback resolve_proxy_callback,
                   AuthenticationRequiredCallback auth_required_callback,
                   OnConnectionSetupFinishedCallback setup_finished_callback);
@@ -82,6 +83,12 @@ class ProxyConnectJob {
   // |OnClientReadReady| when the socket is read ready.
   virtual bool Start();
   void OnProxyResolution(const std::list<std::string>& proxy_servers);
+
+  // Enables storing curl debug information for test.
+  void StoreRequestHeadersForTesting();
+  // Returns the HTTP headers sent by the curl client. Tests must call
+  // `StoreRequestHeadersForTesting` before calling this method.
+  std::string GetRequestHeadersForTesting();
 
   friend std::ostream& operator<<(std::ostream& stream,
                                   const ProxyConnectJob& job);
@@ -104,6 +111,8 @@ class ProxyConnectJob {
   FRIEND_TEST(HttpServerProxyConnectJobTest, MultipleReadConnectRequest);
   FRIEND_TEST(HttpServerProxyConnectJobTest, BufferedClientData);
   FRIEND_TEST(HttpServerProxyConnectJobTest, BufferedClientDataAltEnding);
+  FRIEND_TEST(HttpServerProxyConnectJobTest, PolicyAuthSchemeOk);
+  FRIEND_TEST(HttpServerProxyConnectJobTest, PolicyAuthBadScheme);
 
   // Called when the client socket is ready for reading.
   void OnClientReadReady();
@@ -150,6 +159,9 @@ class ProxyConnectJob {
   bool authentication_timer_started_ = false;
 
   std::string credentials_;
+  // Bitmask to tell curl which authentication methods are allowed to be used
+  // with `credentials_`. This value is set with the `CURLOPT_PROXYAUTH` option.
+  int64_t curl_auth_schemes_;
   // CONNECT request and playload data read from the client socket. The client
   // may send the HTTP CONNECT request across multiple socket writes.
   // |connect_data_| will cache the partial messages until we receive the end of
@@ -168,6 +180,9 @@ class ProxyConnectJob {
   // proxy server sends any HTTP code other than 407 (proxy authentication
   // required).
   base::CancelableClosure credentials_request_timeout_callback_;
+
+  bool store_headers_for_testing_ = false;
+  std::string request_headers_for_testing_;
 
   std::unique_ptr<patchpanel::Socket> client_socket_;
   std::unique_ptr<base::FileDescriptorWatcher::Controller> read_watcher_;

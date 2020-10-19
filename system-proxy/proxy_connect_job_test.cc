@@ -12,14 +12,18 @@
 #include <gtest/gtest.h>
 #include <utility>
 
+#include <curl/curl.h>
+
 #include <base/bind.h>
 #include <base/bind_helpers.h>
 #include <base/callback_helpers.h>
 #include <base/files/file_util.h>
 #include <base/files/scoped_file.h>
+#include <base/strings/stringprintf.h>
 #include <base/task/single_thread_task_executor.h>
 #include <base/test/test_mock_time_task_runner.h>
 #include <brillo/message_loops/base_message_loop.h>
+#include <chromeos/patchpanel/net_util.h>
 #include <chromeos/patchpanel/socket.h>
 #include <chromeos/patchpanel/socket_forwarder.h>
 
@@ -32,6 +36,7 @@ namespace {
 constexpr char kCredentials[] = "username:pwd";
 constexpr char kValidConnectRequest[] =
     "CONNECT www.example.server.com:443 HTTP/1.1\r\n\r\n";
+constexpr char kProxyAuthorizationHeaderToken[] = "Proxy-Authorization:";
 }  // namespace
 
 namespace system_proxy {
@@ -70,6 +75,7 @@ class ProxyConnectJobTest : public ::testing::Test {
 
     connect_job_ = std::make_unique<ProxyConnectJob>(
         std::make_unique<patchpanel::Socket>(base::ScopedFD(fds[0])), "",
+        CURLAUTH_ANY,
         base::BindOnce(&ProxyConnectJobTest::ResolveProxy,
                        base::Unretained(this)),
         base::BindRepeating(&ProxyConnectJobTest::OnAuthCredentialsRequired,
@@ -200,6 +206,7 @@ TEST_F(ProxyConnectJobTest, ClientConnectTimeoutJobCanceled) {
 
     auto connect_job = std::make_unique<ProxyConnectJob>(
         std::make_unique<patchpanel::Socket>(base::ScopedFD(fds[0])), "",
+        CURLAUTH_ANY,
         base::BindOnce(&ProxyConnectJobTest::ResolveProxy,
                        base::Unretained(this)),
         base::BindRepeating(&ProxyConnectJobTest::OnAuthCredentialsRequired,
@@ -515,4 +522,46 @@ TEST_F(HttpServerProxyConnectJobTest, BufferedClientDataAltEnding) {
   const std::string actual(connect_job_->connect_data_.data(),
                            connect_job_->connect_data_.size());
 }
+
+// Test that the policy auth scheme is respected by curl.
+TEST_F(HttpServerProxyConnectJobTest, PolicyAuthSchemeOk) {
+  AddServerReply(HttpTestServer::HttpConnectReply::kAuthRequiredBasic);
+  http_test_server_.Start();
+  connect_job_->credentials_ = "a:b";
+  connect_job_->curl_auth_schemes_ = CURLAUTH_BASIC;
+  connect_job_->StoreRequestHeadersForTesting();
+  connect_job_->Start();
+
+  cros_client_socket_->SendTo(kValidConnectRequest,
+                              std::strlen(kValidConnectRequest));
+  brillo_loop_->RunOnce(false);
+
+  std::size_t pos = connect_job_->GetRequestHeadersForTesting().find(
+      kProxyAuthorizationHeaderToken);
+  // Expect to find the proxy auth headers since CURLAUTH_BASIC is an allowed
+  // auth scheme.
+  EXPECT_NE(pos, std::string::npos);
+}
+
+// Test that proxy auth headers with credentials are not sent by curl if the
+// auth scheme used by the server is not allowed.
+TEST_F(HttpServerProxyConnectJobTest, PolicyAuthBadScheme) {
+  AddServerReply(HttpTestServer::HttpConnectReply::kAuthRequiredBasic);
+  http_test_server_.Start();
+  connect_job_->credentials_ = "a:b";
+  connect_job_->curl_auth_schemes_ = CURLAUTH_DIGEST;
+  connect_job_->StoreRequestHeadersForTesting();
+  connect_job_->Start();
+
+  cros_client_socket_->SendTo(kValidConnectRequest,
+                              std::strlen(kValidConnectRequest));
+  brillo_loop_->RunOnce(false);
+
+  std::size_t pos = connect_job_->GetRequestHeadersForTesting().find(
+      kProxyAuthorizationHeaderToken);
+  // Expect not to find the proxy auth headers since CURLAUTH_BASIC is not an
+  // allowed auth scheme.
+  EXPECT_EQ(pos, std::string::npos);
+}
+
 }  // namespace system_proxy

@@ -45,7 +45,6 @@ std::string GetUriAuthorityFromHttpHeader(
 // Parses the HTTP server reply and extracts the supported authentication scheme
 // and realm.
 SchemeRealmPairList ParseAuthChallenge(const base::StringPiece& http_request);
-
 }  // namespace system_proxy
 
 #endif  // SYSTEM_PROXY_HTTP_UTIL_H_

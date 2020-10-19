@@ -9,11 +9,14 @@
 #include <utility>
 #include <vector>
 
+#include <curl/curl.h>
+
 #include <base/bind.h>
 #include <base/bind_helpers.h>
 #include <base/callback_helpers.h>
 #include <base/posix/eintr_wrapper.h>
 #include <base/files/file_util.h>
+#include <base/strings/string_split.h>
 #include <base/strings/string_util.h>
 #include <base/threading/thread.h>
 #include <base/threading/thread_task_runner_handle.h>
@@ -23,6 +26,7 @@
 #include <chromeos/patchpanel/socket_forwarder.h>
 
 #include "bindings/worker_common.pb.h"
+#include "system-proxy/http_util.h"
 #include "system-proxy/protobuf_util.h"
 #include "system-proxy/proxy_connect_job.h"
 
@@ -48,6 +52,27 @@ std::string UrlEncode(const std::string& text) {
                                           /* encodeSpaceAsPlus= */ false);
 }
 
+// Converts the list of proxy authentication schemes in string format to the
+// curl bit-mask format.
+int64_t GetAuthSchemes(
+    const google::protobuf::RepeatedPtrField<std::string>& auth_schemes) {
+  if (auth_schemes.empty())
+    return CURLAUTH_ANY;
+  // Convert auth schemes to curl format.
+  int64_t curl_scheme = CURLAUTH_NEGOTIATE;
+  // Auth scheme is case insensitive, see
+  // https://tools.ietf.org/html/rfc7235#section-2.1
+  for (auto const& scheme : auth_schemes) {
+    const std::string lower_scheme = base::ToLowerASCII(scheme);
+    if (lower_scheme == "basic")
+      curl_scheme |= CURLAUTH_BASIC;
+    if (lower_scheme == "digest")
+      curl_scheme |= CURLAUTH_DIGEST;
+    if (lower_scheme == "ntlm")
+      curl_scheme |= CURLAUTH_NTLM;
+  }
+  return curl_scheme;
+}
 }  // namespace
 
 ServerProxy::ServerProxy(base::OnceClosure quit_closure)
@@ -167,6 +192,8 @@ void ServerProxy::HandleStdinReadable() {
         AuthCredentialsProvided(auth_key, std::string());
       }
     } else {
+      system_credentials_auth_schemes_ = GetAuthSchemes(
+          config.credentials().policy_credentials_auth_schemes());
       system_credentials_ = credentials;
     }
   }
@@ -256,6 +283,7 @@ void ServerProxy::OnConnectionAccept() {
           listening_fd_->Accept((struct sockaddr*)&client_src, &sockaddr_len)) {
     auto connect_job = std::make_unique<ProxyConnectJob>(
         std::move(client_conn), system_credentials_,
+        system_credentials_auth_schemes_,
         base::BindOnce(&ServerProxy::ResolveProxy, base::Unretained(this)),
         base::BindRepeating(&ServerProxy::AuthenticationRequired,
                             base::Unretained(this)),
