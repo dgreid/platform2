@@ -43,9 +43,23 @@ TEST(EcCommand, Run_Success) {
   EXPECT_TRUE(mock.Run(kDummyFd));
 }
 
-TEST(EcCommand, Run_Failure) {
+TEST(EcCommand, Run_IoctlFailure) {
   MockFpModeCommand mock;
   EXPECT_CALL(mock, ioctl).WillOnce(Return(kIoctlFailureRetVal));
+  EXPECT_FALSE(mock.Run(kDummyFd));
+}
+
+TEST(EcCommand, Run_CommandFailure) {
+  MockFpModeCommand mock;
+  EXPECT_CALL(mock, ioctl)
+      .WillOnce([](int, uint32_t, MockFpModeCommand::Data* data) {
+        // Test the case where the ioctl itself succeeds, the but the EC
+        // command did not. In this case, "result" will be set, but the
+        // response size will not match the command's response size.
+        data->cmd.result = EC_RES_ACCESS_DENIED;
+        return 0;
+      });
+
   EXPECT_FALSE(mock.Run(kDummyFd));
 }
 
