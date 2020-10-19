@@ -173,41 +173,6 @@ FpMode CrosFpDevice::GetFpMode() {
   return FpMode(cmd.Resp()->mode);
 }
 
-bool CrosFpDevice::FpFrame(int index, VendorTemplate* frame) {
-  EcCommand<struct ec_params_fp_frame, uint8_t[kMaxPacketSize]> cmd(
-      EC_CMD_FP_FRAME);
-
-  uint32_t offset = index << FP_FRAME_INDEX_SHIFT;
-  uint8_t* payload = cmd.Resp()[0];
-  auto pos = frame->begin();
-  while (pos < frame->end()) {
-    uint32_t len = std::min(max_read_size_, frame->end() - pos);
-    cmd.SetReq({.offset = offset, .size = len});
-    cmd.SetRespSize(len);
-    int retries = 0;
-    const int max_retries = 50, delay_ms = 100;
-    while (!cmd.Run(cros_fd_.get())) {
-      if (!(offset & FP_FRAME_OFFSET_MASK)) {
-        // On the first request, the EC might still be rate-limiting. Retry in
-        // that case.
-        if (cmd.Result() == EC_RES_BUSY && retries < max_retries) {
-          retries++;
-          LOG(INFO) << "Retrying FP_FRAME, attempt " << retries;
-          base::PlatformThread::Sleep(
-              base::TimeDelta::FromMilliseconds(delay_ms));
-          continue;
-        }
-      }
-      LOG(ERROR) << "FP_FRAME command failed @ 0x" << std::hex << offset;
-      return false;
-    }
-    std::copy(payload, payload + len, pos);
-    offset += len;
-    pos += len;
-  }
-  return true;
-}
-
 EcCmdVersionSupportStatus CrosFpDevice::EcCmdVersionSupported(uint16_t cmd_code,
                                                               uint32_t ver) {
   EcCommand<struct ec_params_get_cmd_versions_v1,
@@ -569,11 +534,20 @@ bool CrosFpDevice::GetTemplate(int index, VendorTemplate* out) {
     if (index >= dirty.size() || !dirty.test(index))
       return false;
   }
-  out->resize(static_cast<size_t>(info_->template_info()->size));
+
   // In the EC_CMD_FP_FRAME host command, the templates are indexed starting
   // from 1 (aka FP_FRAME_INDEX_TEMPLATE), as 0 (aka FP_FRAME_INDEX_RAW_IMAGE)
   // is used for the finger image.
-  return FpFrame(index + FP_FRAME_INDEX_TEMPLATE, out);
+  auto fp_frame_cmd = ec_command_factory_->FpFrameCommand(
+      index + FP_FRAME_INDEX_TEMPLATE, info_->template_info()->size,
+      max_read_size_);
+  if (!fp_frame_cmd->Run(cros_fd_.get())) {
+    LOG(ERROR) << "Failed to get frame, result: " << fp_frame_cmd->Result();
+    return false;
+  }
+  *out = VendorTemplate(fp_frame_cmd->frame().begin(),
+                        fp_frame_cmd->frame().end());
+  return true;
 }
 
 bool CrosFpDevice::UploadTemplate(const VendorTemplate& tmpl) {
