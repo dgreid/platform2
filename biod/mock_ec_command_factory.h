@@ -35,6 +35,10 @@ class MockEcCommandFactory : public EcCommandFactoryInterface {
               FpSeedCommand,
               (const brillo::SecureVector& seed, uint16_t seed_version),
               (override));
+  MOCK_METHOD(std::unique_ptr<biod::FpFrameCommand>,
+              FpFrameCommand,
+              (int index, uint32_t frame_size, ssize_t max_read_size),
+              (override));
 };
 
 }  // namespace biod
