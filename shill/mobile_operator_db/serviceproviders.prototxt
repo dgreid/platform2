@@ -4258,7 +4258,7 @@ mno {
     uuid : "02d6a374-d53d-4f2f-b93a-fd1ed18338ce"
     country : "fi"
     localized_name {
-      name : "Sonera"
+      name : "Telia FI"
     }
     mccmnc : "24491"
     mobile_apn {
