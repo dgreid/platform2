@@ -53,7 +53,7 @@ class CrosHealthdMojoAdapterImpl final : public CrosHealthdMojoAdapter {
 
   // Runs the battery capacity routine.
   chromeos::cros_healthd::mojom::RunRoutineResponsePtr
-  RunBatteryCapacityRoutine(uint32_t low_mah, uint32_t high_mah) override;
+  RunBatteryCapacityRoutine() override;
 
   // Runs the battery health routine.
   chromeos::cros_healthd::mojom::RunRoutineResponsePtr RunBatteryHealthRoutine()
@@ -264,15 +264,13 @@ CrosHealthdMojoAdapterImpl::RunUrandomRoutine(uint32_t length_seconds) {
 }
 
 chromeos::cros_healthd::mojom::RunRoutineResponsePtr
-CrosHealthdMojoAdapterImpl::RunBatteryCapacityRoutine(uint32_t low_mah,
-                                                      uint32_t high_mah) {
+CrosHealthdMojoAdapterImpl::RunBatteryCapacityRoutine() {
   if (!cros_healthd_service_factory_.is_bound())
     Connect();
 
   chromeos::cros_healthd::mojom::RunRoutineResponsePtr response;
   base::RunLoop run_loop;
   cros_healthd_diagnostics_service_->RunBatteryCapacityRoutine(
-      low_mah, high_mah,
       base::Bind(&OnMojoResponseReceived<
                      chromeos::cros_healthd::mojom::RunRoutineResponsePtr>,
                  &response, run_loop.QuitClosure()));

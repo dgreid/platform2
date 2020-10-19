@@ -18,11 +18,6 @@ namespace mojo_ipc = ::chromeos::cros_healthd::mojom;
 
 namespace {
 
-// When the battery routine's low_mah and high_mah parameters are not set, we
-// default to low_mah = 1000mAh and high_mah = 10000mAh.
-constexpr int kRoutineBatteryDefaultLowmAh = 1000;
-constexpr int kRoutineBatteryDefaultHighmAh = 10000;
-
 // Converts from mojo's DiagnosticRoutineStatusEnum to gRPC's
 // DiagnosticRoutineStatus.
 bool GetGrpcStatusFromMojoStatus(
@@ -265,12 +260,6 @@ void RoutineService::RunRoutine(const grpc_api::RunRoutineRequest& request,
       DCHECK_EQ(request.parameters_case(),
                 grpc_api::RunRoutineRequest::kBatteryParams);
       service_ptr_->RunBatteryCapacityRoutine(
-          request.battery_params().low_mah()
-              ? request.battery_params().low_mah()
-              : kRoutineBatteryDefaultLowmAh,
-          request.battery_params().high_mah()
-              ? request.battery_params().high_mah()
-              : kRoutineBatteryDefaultHighmAh,
           base::Bind(&RoutineService::ForwardRunRoutineResponse,
                      weak_ptr_factory_.GetWeakPtr(), callback_key));
       break;

@@ -92,16 +92,16 @@ Status message: AC Power routine passed.
 
 ### battery_capacity
 
-Confirms that the device's battery design capacity lies within the given limits.
+Confirms that the device's battery design capacity lies within the configured
+limits.
 
-Parameters:
--   `--low_mah` - Lower bound for the allowable design capacity of the battery,
-    in mAh. Type: `uint32_t`. Default: `1000`.
--   `--high_mah` - Upper bound for the allowable design capacity of the battery,
+Configuration Data::
+-   `low-mah` - Lower bound for the allowable design capacity of the battery, in
+    mAh. Type: `uint32_t`. Default: `1000`.
+-   `high-mah` - Upper bound for the allowable design capacity of the battery,
     in mAh. Type: `uint32_t`. Default: `10000`.
 
-To ensure the device's battery capacity lies within the default range of
-(1000, 10000) mAh:
+To check the device's battery capacity:
 
 From crosh:
 ```bash

@@ -36,8 +36,6 @@ void FakeRoutineService::RunUrandomRoutine(uint32_t length_seconds,
 }
 
 void FakeRoutineService::RunBatteryCapacityRoutine(
-    uint32_t low_mah,
-    uint32_t high_mah,
     RunBatteryCapacityRoutineCallback callback) {
   NOTIMPLEMENTED();
 }

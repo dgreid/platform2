@@ -42,8 +42,6 @@ class FakeDiagnosticsService final
   void RunUrandomRoutine(uint32_t length_seconds,
                          RunUrandomRoutineCallback callback) override;
   void RunBatteryCapacityRoutine(
-      uint32_t low_mah,
-      uint32_t high_mah,
       RunBatteryCapacityRoutineCallback callback) override;
   void RunBatteryHealthRoutine(
       RunBatteryHealthRoutineCallback callback) override;

@@ -109,8 +109,6 @@ void CrosHealthdRoutineService::RunAcPowerRoutine(
 }
 
 void CrosHealthdRoutineService::RunBatteryCapacityRoutine(
-    uint32_t low_mah,
-    uint32_t high_mah,
     RunBatteryCapacityRoutineCallback callback) {
   RunRoutine(routine_factory_->MakeBatteryCapacityRoutine(),
              mojo_ipc::DiagnosticRoutineEnum::kBatteryCapacity,

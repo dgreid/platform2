@@ -54,8 +54,6 @@ void FakeDiagnosticsService::RunUrandomRoutine(
 }
 
 void FakeDiagnosticsService::RunBatteryCapacityRoutine(
-    uint32_t low_mah,
-    uint32_t high_mah,
     RunBatteryCapacityRoutineCallback callback) {
   std::move(callback).Run(run_routine_response_.Clone());
 }

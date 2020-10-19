@@ -276,7 +276,6 @@ TEST_F(CrosHealthdRoutineServiceTest, RunBatteryCapacityRoutine) {
   mojo_ipc::RunRoutineResponsePtr response;
   base::RunLoop run_loop;
   service()->RunBatteryCapacityRoutine(
-      /*low_mah=*/10, /*high_mah=*/20,
       base::BindLambdaForTesting(
           [&](mojo_ipc::RunRoutineResponsePtr received_response) {
             response = std::move(received_response);

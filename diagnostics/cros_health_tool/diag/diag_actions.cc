@@ -141,9 +141,8 @@ bool DiagActions::ActionRunAcPowerRoutine(
   return PollRoutineAndProcessResult();
 }
 
-bool DiagActions::ActionRunBatteryCapacityRoutine(uint32_t low_mah,
-                                                  uint32_t high_mah) {
-  auto response = adapter_->RunBatteryCapacityRoutine(low_mah, high_mah);
+bool DiagActions::ActionRunBatteryCapacityRoutine() {
+  auto response = adapter_->RunBatteryCapacityRoutine();
   CHECK(response) << "No RunRoutineResponse received.";
   id_ = response->id;
   return PollRoutineAndProcessResult();

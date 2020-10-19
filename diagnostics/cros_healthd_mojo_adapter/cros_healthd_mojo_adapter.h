@@ -47,7 +47,7 @@ class CrosHealthdMojoAdapter {
 
   // Runs the battery capacity routine.
   virtual chromeos::cros_healthd::mojom::RunRoutineResponsePtr
-  RunBatteryCapacityRoutine(uint32_t low_mah, uint32_t high_mah) = 0;
+  RunBatteryCapacityRoutine() = 0;
 
   // Runs the battery health routine.
   virtual chromeos::cros_healthd::mojom::RunRoutineResponsePtr

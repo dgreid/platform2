@@ -75,9 +75,6 @@ int diag_main(int argc, char** argv) {
   DEFINE_uint32(force_cancel_at_percent, std::numeric_limits<uint32_t>::max(),
                 "If specified, will attempt to cancel the routine when its "
                 "progress exceeds the flag's value.\nValid range: [0, 100]");
-  DEFINE_uint32(low_mah, 1000, "Lower bound for the battery routine, in mAh.");
-  DEFINE_uint32(high_mah, 10000,
-                "Upper bound for the battery routine, in mAh.");
   DEFINE_uint32(length_seconds, 10,
                 "Number of seconds to run the routine for.");
   DEFINE_bool(ac_power_is_connected, true,
@@ -146,8 +143,7 @@ int diag_main(int argc, char** argv) {
     bool routine_result;
     switch (itr->second) {
       case mojo_ipc::DiagnosticRoutineEnum::kBatteryCapacity:
-        routine_result = actions.ActionRunBatteryCapacityRoutine(
-            FLAGS_low_mah, FLAGS_high_mah);
+        routine_result = actions.ActionRunBatteryCapacityRoutine();
         break;
       case mojo_ipc::DiagnosticRoutineEnum::kBatteryHealth:
         routine_result = actions.ActionRunBatteryHealthRoutine();

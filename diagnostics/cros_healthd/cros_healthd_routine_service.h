@@ -46,8 +46,6 @@ class CrosHealthdRoutineService final
       const base::Optional<std::string>& expected_power_type,
       RunAcPowerRoutineCallback callback) override;
   void RunBatteryCapacityRoutine(
-      uint32_t low_mah,
-      uint32_t high_mah,
       RunBatteryCapacityRoutineCallback callback) override;
   void RunBatteryChargeRoutine(
       uint32_t length_seconds,
