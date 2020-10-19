@@ -22,17 +22,9 @@
 #include "iioservice/daemon/sensor_hal_server_impl.h"
 #include "iioservice/include/common.h"
 
-namespace {
-
-constexpr int kDelayBootstrapInMilliseconds = 1000;
-
-}
-
 namespace iioservice {
 
-Daemon::Daemon() : weak_ptr_factory_(this) {}
-
-Daemon::~Daemon() {}
+Daemon::~Daemon() = default;
 
 int Daemon::OnInit() {
   int exit_code = DBusDaemon::OnInit();
@@ -43,90 +35,24 @@ int Daemon::OnInit() {
   ipc_support_ = std::make_unique<mojo::core::ScopedIPCSupport>(
       base::ThreadTaskRunnerHandle::Get(),
       mojo::core::ScopedIPCSupport::ShutdownPolicy::CLEAN);
-  ServerBootstrapMojoConnection();
+
+  SetBus(bus_.get());
+  BootstrapMojoConnection();
 
   return 0;
 }
 
-void Daemon::ServerBootstrapMojoConnection() {
-  // Get or create the ExportedObject for the IIO service.
-  dbus::ObjectProxy* proxy = bus_->GetObjectProxy(
-      ::mojo_connection_service::kMojoConnectionServiceServiceName,
-      dbus::ObjectPath(
-          ::mojo_connection_service::kMojoConnectionServiceServicePath));
-
-  dbus::MethodCall method_call(
-      ::mojo_connection_service::kMojoConnectionServiceInterface,
-      ::mojo_connection_service::kBootstrapMojoConnectionForIioServiceMethod);
-  dbus::MessageWriter writer(&method_call);
-  proxy->CallMethod(&method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT,
-                    base::BindOnce(&Daemon::OnBootstrapResponse,
-                                   weak_ptr_factory_.GetWeakPtr()));
-}
-
-void Daemon::ReconnectWithDelay() {
-  base::ThreadTaskRunnerHandle::Get()->PostDelayedTask(
-      FROM_HERE,
-      base::BindOnce(&Daemon::ServerBootstrapMojoConnection,
-                     weak_ptr_factory_.GetWeakPtr()),
-      base::TimeDelta::FromMilliseconds(kDelayBootstrapInMilliseconds));
-}
-
-void Daemon::OnBootstrapResponse(dbus::Response* response) {
-  DCHECK(!sensor_hal_server_.get());
-
-  if (!response) {
-    LOG(ERROR) << ::mojo_connection_service::kMojoConnectionServiceServiceName
-               << " D-Bus call to "
-               << ::mojo_connection_service::
-                      kBootstrapMojoConnectionForIioServiceMethod
-               << " failed";
-    ReconnectWithDelay();
-    return;
-  }
-
-  base::ScopedFD file_handle;
-  dbus::MessageReader reader(response);
-
-  if (!reader.PopFileDescriptor(&file_handle)) {
-    LOG(ERROR) << "Couldn't extract file descriptor from D-Bus call";
-    ReconnectWithDelay();
-    return;
-  }
-
-  if (!file_handle.is_valid()) {
-    LOG(ERROR) << "ScopedFD extracted from D-Bus call was invalid (i.e. empty)";
-    ReconnectWithDelay();
-    return;
-  }
-
-  if (!base::SetCloseOnExec(file_handle.get())) {
-    PLOG(ERROR) << "Failed setting FD_CLOEXEC on file descriptor";
-    ReconnectWithDelay();
-    return;
-  }
-
-  // Connect to mojo in the requesting process.
-  mojo::IncomingInvitation invitation =
-      mojo::IncomingInvitation::Accept(mojo::PlatformChannelEndpoint(
-          mojo::PlatformHandle(std::move(file_handle))));
-
-  LOGF(INFO) << "Broker connected";
-
-  // Bind primordial message pipe to a SensorHalServer implementation.
+void Daemon::OnServerReceived(
+    mojo::PendingReceiver<cros::mojom::SensorHalServer> server) {
   sensor_hal_server_ = SensorHalServerImpl::Create(
-      base::ThreadTaskRunnerHandle::Get(),
-      mojo::PendingReceiver<cros::mojom::SensorHalServer>(
-          invitation.ExtractMessagePipe(
-              ::mojo_connection_service::
-                  kBootstrapMojoConnectionForIioServiceChannelToken)),
-      base::Bind(&Daemon::OnMojoDisconnection, weak_ptr_factory_.GetWeakPtr()));
+      base::ThreadTaskRunnerHandle::Get(), std::move(server),
+      base::Bind(&Daemon::OnMojoDisconnect, weak_factory_.GetWeakPtr()));
 }
 
-void Daemon::OnMojoDisconnection() {
-  LOGF(WARNING) << "Chromium crashes. Try to establish a new DBus connection.";
+void Daemon::OnMojoDisconnect() {
+  LOGF(WARNING) << "Chromium crashed. Try to establish a new Mojo connection.";
   sensor_hal_server_.reset();
-  ReconnectWithDelay();
+  ReconnectMojoWithDelay();
 }
 
 }  // namespace iioservice

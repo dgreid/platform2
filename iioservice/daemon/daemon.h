@@ -13,12 +13,12 @@
 #include <mojo/core/embedder/scoped_ipc_support.h>
 
 #include "iioservice/daemon/sensor_hal_server_impl.h"
+#include "iioservice/libiioservice_ipc/sensor_server_dbus.h"
 
 namespace iioservice {
 
-class Daemon : public brillo::DBusDaemon {
+class Daemon : public brillo::DBusDaemon, public SensorServerDbus {
  public:
-  Daemon();
   ~Daemon() override;
 
  protected:
@@ -26,12 +26,11 @@ class Daemon : public brillo::DBusDaemon {
   int OnInit() override;
 
  private:
-  void ServerBootstrapMojoConnection();
-  void ReconnectWithDelay();
+  // SensorServerDbus overrides:
+  void OnServerReceived(
+      mojo::PendingReceiver<cros::mojom::SensorHalServer> server) override;
 
-  void OnBootstrapResponse(dbus::Response* response);
-
-  void OnMojoDisconnection();
+  void OnMojoDisconnect();
 
   // IPC Support
   std::unique_ptr<mojo::core::ScopedIPCSupport> ipc_support_;
@@ -44,7 +43,7 @@ class Daemon : public brillo::DBusDaemon {
   // Metrics metrics_;
 
   // Must be last class member.
-  base::WeakPtrFactory<Daemon> weak_ptr_factory_;
+  base::WeakPtrFactory<Daemon> weak_factory_{this};
 };
 
 }  // namespace iioservice
