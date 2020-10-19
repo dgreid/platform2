@@ -106,15 +106,14 @@ record id and label.
 
 ## Firmware Updates
 
-The [`bio_fw_updater`] tool is responsible for updating the [FPMCU firmware]
-[automatically on boot]. The updater checks to see if the firmware binary in
-`/opt/google/biod/fw` matches the firmware that is flashed on the FPMCU and
-performs an update if the two do not match. Note that it does not consider
-whether the version of the firmware is semantically "newer"; it's strictly
-checking for an exact version match.
+The [`bio_fw_updater`] tool is responsible for updating the
+[FPMCU firmware][automatically on boot]. The updater checks to see if the
+firmware binary in `/opt/google/biod/fw` matches the firmware that is flashed on
+the FPMCU and performs an update if the two do not match. Note that it does not
+consider whether the version of the firmware is semantically "newer"; it's
+strictly checking for an exact version match.
 
-To disable the automatic update, you can create the
-`.disable_fp_updater` file:
+To disable the automatic update, you can create the `.disable_fp_updater` file:
 
 ```bash
 (dut) $ touch /opt/google/biod/fw/.disable_fp_updater
@@ -139,24 +138,23 @@ You can learn more about write protection and how to enable/disable in the
 *   `/var/log/biod/bio_fw_updater.<TIMESTAMP>`
 *   `/var/log/bio_fw_updater.out`
 
-
 ## Hardware
 
 ### CrosFpBiometric
 
 CrosFpBiometric (fingerprint MCU) runs the firmware for image capture, matching
-and enrollment. Biod (`cros_fp_biometrics_manager.cc`) interacts with the MCU
-by doing system calls on `/dev/cros_fp`.
+and enrollment. Biod (`cros_fp_biometrics_manager.cc`) interacts with the MCU by
+doing system calls on `/dev/cros_fp`.
 
 #### Authentication
 
 On receiving an Authentication request, biod makes a ioctl call to put the MCU
-in FP_MODE_MATCH. It then listens for MBKP events from the MCU. On receiving
-the event, based on the result, biod either reports success or failure to the
-D-bus client (typically Chrome).
+in FP_MODE_MATCH. It then listens for MBKP events from the MCU. On receiving the
+event, based on the result, biod either reports success or failure to the D-bus
+client (typically Chrome).
 
-Things get little complicated on devices with fingerprint overlapped on
-power button. On these devices, we need to be careful not to interpret user's
+Things get little complicated on devices with fingerprint overlapped on power
+button. On these devices, we need to be careful not to interpret user's
 interaction with power button as an intent to authenticate via fingerprint. To
 avoid such scenarios, we ignore fingerprint matches if we have seen a power
 button event in last few milliseconds. To achieve this, biod keeps track of
