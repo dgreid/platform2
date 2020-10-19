@@ -398,22 +398,6 @@ bool Mount::MountCryptohome(const Credentials& credentials,
     LOG(ERROR) << "Failed to clear user keyring";
   }
 
-  // Before we use the matching keyset, make sure it isn't being misused.
-  // Note, privileges don't protect against information leakage, they are
-  // just software/DAC policy enforcement mechanisms.
-  //
-  // In the future we may provide some assurance by wrapping privileges
-  // with the wrapped_key, but that is still of limited benefit.
-  if (serialized.has_key_data() &&  // legacy keys are full privs
-      !serialized.key_data().privileges().mount()) {
-    // TODO(wad): Convert to CRYPTOHOME_ERROR_AUTHORIZATION_KEY_DENIED
-    // TODO(wad): Expose the safe-printable label rather than the Chrome
-    //            supplied one for log output.
-    LOG(ERROR) << "Mount attempt with unprivileged key.";
-    *mount_error = MOUNT_ERROR_UNPRIVILEGED_KEY;
-    return false;
-  }
-
   // Checks whether migration from ecryptfs to dircrypto is needed, and returns
   // an error when necessary. Do this after the check by DecryptVaultKeyset,
   // because a correct credential is required before switching to migration UI.

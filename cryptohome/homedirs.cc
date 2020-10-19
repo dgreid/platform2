@@ -1192,8 +1192,7 @@ bool HomeDirs::Migrate(const Credentials& newcreds,
     key_data = &(vk->serialized().key_data());
     // legacy keys are full privs
     if (!vk->serialized().key_data().privileges().add() ||
-        !vk->serialized().key_data().privileges().remove() ||
-        !vk->serialized().key_data().privileges().mount()) {
+        !vk->serialized().key_data().privileges().remove()) {
       LOG(ERROR) << "Migrate: key lacks sufficient privileges()";
       return false;
     }

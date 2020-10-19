@@ -1331,15 +1331,6 @@ void UserDataAuth::DoMount(
     if (request.create().copy_authorization_key()) {
       Key* auth_key = request.mutable_create()->add_keys();
       *auth_key = request.authorization().key();
-      // Don't allow a key creation and mount if the key lacks
-      // the privileges.
-      if (!auth_key->data().privileges().mount()) {
-        LOG(ERROR) << "Auth key denied";
-        reply.set_error(user_data_auth::CryptohomeErrorCode::
-                            CRYPTOHOME_ERROR_AUTHORIZATION_KEY_DENIED);
-        std::move(on_done).Run(reply);
-        return;
-      }
     }
 
     // Sanity check for |request.create.keys|.

@@ -636,47 +636,6 @@ MATCHER_P(CredentialsEqual, credentials, "") {
          expected_creds.passkey() == arg.passkey();
 }
 
-TEST_P(MountTest, MountCryptohomeNoPrivileges) {
-  // Check that Mount only works if the mount permission is given.
-  InsertTestUsers(&kDefaultUsers[10], 1);
-  EXPECT_CALL(platform_, DirectoryExists(kImageDir))
-      .WillRepeatedly(Return(true));
-  EXPECT_TRUE(DoMountInit());
-
-  TestUser* user = &helper_.users[0];
-  user->key_data.set_label("my key!");
-  user->use_key_data = true;
-  user->key_data.mutable_privileges()->set_mount(false);
-  // Regenerate the serialized vault keyset.
-  user->GenerateCredentials(ShouldTestEcryptfs());
-  Credentials credentials(user->username, user->passkey);
-  // Let the legacy key iteration work here.
-
-  user->InjectUserPaths(&platform_, chronos_uid_, chronos_gid_, shared_gid_,
-                        kDaemonGid, ShouldTestEcryptfs());
-  user->InjectKeyset(&platform_, true);
-
-  if (ShouldTestEcryptfs()) {
-    EXPECT_CALL(platform_, ClearUserKeyring()).WillOnce(Return(true));
-  }
-
-  EXPECT_CALL(platform_, CreateDirectory(user->vault_mount_path))
-      .WillRepeatedly(Return(true));
-
-  EXPECT_CALL(platform_,
-              CreateDirectory(MountHelper::GetNewUserPath(user->username)))
-      .WillRepeatedly(Return(true));
-  EXPECT_CALL(platform_, FileExists(base::FilePath(kLockedToSingleUserFile)))
-      .WillRepeatedly(Return(false));
-
-  EXPECT_CALL(platform_, RestoreSELinuxContexts(_, _)).Times(0);
-
-  MountError error = MOUNT_ERROR_NONE;
-  EXPECT_FALSE(mount_->MountCryptohome(credentials, GetDefaultMountArgs(), true,
-                                       &error));
-  EXPECT_EQ(MOUNT_ERROR_UNPRIVILEGED_KEY, error);
-}
-
 TEST_P(MountTest, MountCryptohomeHasPrivileges) {
   // Check that Mount only works if the mount permission is given.
   InsertTestUsers(&kDefaultUsers[10], 1);
@@ -687,7 +646,6 @@ TEST_P(MountTest, MountCryptohomeHasPrivileges) {
   TestUser* user = &helper_.users[0];
   user->key_data.set_label("my key!");
   user->use_key_data = true;
-  user->key_data.mutable_privileges()->set_mount(true);
   // Regenerate the serialized vault keyset.
   user->GenerateCredentials(ShouldTestEcryptfs());
   Credentials credentials(user->username, user->passkey);

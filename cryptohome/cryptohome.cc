@@ -1289,7 +1289,6 @@ int main(int argc, char** argv) {
 
       LOG(INFO) << "Adding restricted key";
       cryptohome::KeyPrivileges* privs = data->mutable_privileges();
-      privs->set_mount(true);
       privs->set_authorized_update(true);
       privs->set_update(false);
       privs->set_add(false);

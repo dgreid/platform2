@@ -2321,14 +2321,6 @@ void Service::DoMountEx(std::unique_ptr<AccountIdentifier> identifier,
     if (request->create().copy_authorization_key()) {
       Key* auth_key = request->mutable_create()->add_keys();
       *auth_key = authorization->key();
-      // Don't allow a key creation and mount if the key lacks
-      // the privileges.
-      if (!auth_key->data().privileges().mount()) {
-        LOG(ERROR) << "Auth key denied";
-        reply.set_error(CRYPTOHOME_ERROR_AUTHORIZATION_KEY_DENIED);
-        SendReply(context, reply);
-        return;
-      }
     }
     int keys_size = request->create().keys_size();
     if (keys_size == 0) {
