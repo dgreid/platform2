@@ -10,6 +10,8 @@ module(load="imuxsock"
 # Allow messages from upstart, which logs through /dev/klog.
 module(load="imklog"
        PermitNonKernelFacility="on")
+# Socket to collect stdout/stderr from processes via syslog-cat command.
+module(load="imstdoutsock" path="/run/rsyslogd/stdout")
 
 $PrivDropToUser syslog
 $PrivDropToGroup syslog

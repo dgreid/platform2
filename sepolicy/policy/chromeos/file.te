@@ -117,6 +117,7 @@ type cros_session_manager_exec, exec_type, file_type, cros_file_type, cros_syste
 type cros_shill_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_sshd_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_sslh_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
+type cros_syslogd_cat_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_systemd_cat_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_tcsd_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_timberslide_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
@@ -276,6 +277,7 @@ type cros_run_systemd, file_type, cros_file_type, cros_run_file_type;
 type cros_run_tcsd, file_type, cros_file_type, cros_run_file_type;
 type cros_run_udev, file_type, cros_file_type, cros_run_file_type;
 type cros_run_arcvm, file_type, cros_file_type, cros_run_file_type;
+type cros_run_rsyslogd, file_type, cros_file_type, cros_run_file_type;
 
 type cros_avahi_socket, file_type, cros_file_type, cros_run_file_type;
 

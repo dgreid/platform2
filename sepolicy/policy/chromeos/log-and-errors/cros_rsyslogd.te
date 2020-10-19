@@ -9,6 +9,13 @@ pid_file(cros_rsyslogd, {tmpfs cros_minijail_minijail_tmp_file}, "rsyslogd.pid.t
 filetrans_pattern(cros_rsyslogd, cros_run_journal, logger_device, sock_file, "syslog");
 allow cros_rsyslogd logger_device:sock_file create_file_perms;
 
+filetrans_pattern(cros_rsyslogd, cros_run_rsyslogd, logger_device, sock_file, "stdout");
+allow cros_rsyslogd logger_device:sock_file create_file_perms;
+
+allow cros_rsyslogd cros_run_rsyslogd:file create_file_perms;
+allow cros_rsyslogd cros_run_rsyslogd:dir create_dir_perms;
+allow cros_rsyslogd cros_run_rsyslogd:sock_file create_file_perms;
+
 allow cros_rsyslogd cros_log_type:file rw_file_perms;
 
 allow cros_rsyslogd cros_passwd_file:file r_file_perms;

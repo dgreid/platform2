@@ -43,6 +43,7 @@ auditallow cros_init cros_init_shell_scripts:file execute;
 
 allow cros_init cros_chrt_exec:file rx_file_perms;
 
+allow {cros_init cros_init_scripts} cros_syslogd_cat_exec:file rx_file_perms;
 allow {cros_init cros_init_scripts} cros_systemd_cat_exec:file rx_file_perms;
 
 # init/metrics_library.conf
@@ -76,6 +77,7 @@ filetrans_pattern_no_target_perm(cros_init_scripts, cros_run, cros_run_shill, di
 # init/journald.conf
 filetrans_pattern_no_target_perm(cros_init_scripts, cros_run, cros_run_systemd, dir, "systemd");
 filetrans_pattern_no_target_perm(cros_init_scripts, cros_run, cros_run_journal, dir, "log");
+filetrans_pattern_no_target_perm(cros_init_scripts, cros_run, cros_run_rsyslogd, dir, "rsyslogd");
 filetrans_pattern(cros_init_scripts, cros_run_systemd, cros_run_journal, dir, "journal");
 filetrans_pattern_no_target_perm(cros_init_scripts, device, logger_device, lnk_file, "log");
 
