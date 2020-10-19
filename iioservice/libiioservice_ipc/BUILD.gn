@@ -19,7 +19,11 @@ generate_mojom_bindings("libiioservice_ipc_mojom") {
 }
 
 shared_library("libiioservice_ipc") {
-  sources = [ "//iioservice/libiioservice_ipc/sensor_client.cc" ]
+  sources = [
+    "//iioservice/libiioservice_ipc/sensor_client_dbus.cc",
+    "//iioservice/libiioservice_ipc/sensor_dbus.cc",
+    "//iioservice/libiioservice_ipc/sensor_server_dbus.cc",
+  ]
   output_name = "libiioservice_ipc"
   include_dirs = [
     "//iioservice",

@@ -1,13 +1,15 @@
 # Chrome OS Iio Service
 
-The repository hosts the core Chrome OS platform iioservice components, including:
+The repository hosts the core Chrome OS platform iioservice components,
+including:
 
 - Mojo IPC library for clients to connect to iioservice
 
 ## Mojo IPC library
 
-This library provides mojo interfaces to connect to sensor_dispatcher and
-iioservice, and C++ utility functions and classes to establish mojo channels.
+This library provides mojo interfaces and SensorServerDbus and SensorClientDbus
+to help iioservice and sensor clients bootstrap Mojo connection and connect to
+SensorHalDispatcher in Chromium.
 
 ## Daemon iioservice
 
