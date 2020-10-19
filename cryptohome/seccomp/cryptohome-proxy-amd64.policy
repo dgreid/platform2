@@ -54,3 +54,5 @@ lseek: 1
 exit_group: 1
 restart_syscall: 1
 rt_sigreturn: 1
+gettimeofday: 1
+clock_gettime: 1
