@@ -165,6 +165,7 @@ dev_update_stateful_partition() { true; }
 dev_gather_logs() { true; }
 dev_mount_packages() { true; }
 dev_is_debug_build() { false; }
+dev_pop_paths_to_preserve() { true; }
 
 # do_* are wrapper functions that may be redefined in developer mode or test
 # images. Find more implementation in {dev,test,factory}_utils.sh.
@@ -692,6 +693,7 @@ fi
 
 # Mount dev packages.
 dev_mount_packages
+dev_pop_paths_to_preserve
 
 if [ "${DISABLE_STATEFUL_SECURITY_HARDENING}" = "false" ]; then
   # Unmount securityfs so that further modifications to inode security policies

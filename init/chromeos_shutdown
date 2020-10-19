@@ -30,6 +30,7 @@ crossystem "cros_debug?1"
 CROS_DEBUG="$((! $?))"
 
 dev_unmount_packages() { true; }
+dev_push_paths_to_preserve() { true; }
 
 collect_shutdown_umount_failure_logs() {
   (
@@ -79,7 +80,8 @@ if [ "${CROS_DEBUG}" -eq 1 ]; then
   . /usr/share/cros/dev_utils.sh
 fi
 
-STATEFUL_UPDATE="/mnt/stateful_partition/.update_available"
+STATEFUL_PARTITION="/mnt/stateful_partition"
+STATEFUL_UPDATE="${STATEFUL_PARTITION}/.update_available"
 
 # target_version should only be created for test lab DUTs.
 TARGET_VERSION="/run/update_target_version"
@@ -92,12 +94,12 @@ if [ "${CROS_DEBUG}" = "1" ] && [ -f "${STATEFUL_UPDATE}" ]; then
   if [ -r "${TARGET_VERSION}" ] && [ ! -L "${TARGET_VERSION}" ]; then
     # Used later to clear Quota parameters from stateful.
     UPDATE_TARGET="$(cut -d '.' -f 1 "${TARGET_VERSION}")"
-    STATE_DEV="$(findmnt -n -o SOURCE -M /mnt/stateful_partition)"
+    STATE_DEV="$(findmnt -n -o SOURCE -M ${STATEFUL_PARTITION})"
     rm -f "${TARGET_VERSION}"
   fi
 
   if [ "${STATEFUL_UPDATE_ARGS}" = "clobber" ]; then
-    PRESERVE_DIR="/mnt/stateful_partition/unencrypted/preserve"
+    PRESERVE_DIR="${STATEFUL_PARTITION}/unencrypted/preserve"
 
     # Measure shutdown time up to this point.
     bootstat before_preserve
@@ -106,6 +108,7 @@ if [ "${CROS_DEBUG}" = "1" ] && [ -f "${STATEFUL_UPDATE}" ]; then
     rm -rf "${PRESERVE_DIR}/log"
     mkdir -p -m 0755 "${PRESERVE_DIR}"
     cp -a "${MNTS}/var/log" "${PRESERVE_DIR}"
+    dev_push_paths_to_preserve
 
     # We are about to put this into a directory that will shortly be wiped
     # out. Keep a timestamp where it will be preserved as well.
@@ -162,7 +165,7 @@ fi
 
 # Unmount /mnt/stateful_partition only if the previous unmounts succeeded.
 if [ "${rc}" -eq 0 ]; then
-  umount -n /mnt/stateful_partition
+  umount -n "${STATEFUL_PARTITION}"
 fi
 exit "$(( rc | $? ))"
 ) >/run/mount_encrypted/umount-encrypted.log 2>&1
@@ -175,8 +178,8 @@ if [ "$?" -ne 0 ]; then
     --mount_device="stateful"
   crash_reporter --early --log_to_stderr --preserve_across_clobber \
     --ephemeral_collect
-  mv /run/mount_encrypted/umount-encrypted.log /mnt/stateful_partition/
-  mv /run/shutdown_umount_failure.log /mnt/stateful_partition/
+  mv /run/mount_encrypted/umount-encrypted.log "${STATEFUL_PARTITION}/"
+  mv /run/shutdown_umount_failure.log "${STATEFUL_PARTITION}/"
 else
   if [ -n "${UPDATE_TARGET}" ] && [ -n "${STATE_DEV}" ]; then
     # 10756.0.0 is the first build to turn on ext4 quota.

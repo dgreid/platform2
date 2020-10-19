@@ -7,6 +7,14 @@
 
 STATEFUL_PARTITION="/mnt/stateful_partition"
 
+PRESERVE_DIR="${STATEFUL_PARTITION}/unencrypted/preserve"
+
+# These paths will be preserved through clobbering.
+PATHS_TO_PRESERVE=""
+PATHS_TO_PRESERVE="${PATHS_TO_PRESERVE} /var/lib/servod"
+PATHS_TO_PRESERVE="${PATHS_TO_PRESERVE} /usr/local/servod"
+PATHS_TO_PRESERVE="${PATHS_TO_PRESERVE} /var/lib/device_health_profile"
+
 # Returns if we are running on a debug build.
 dev_is_debug_build() {
   crossystem 'debug_build?1'
@@ -93,7 +101,6 @@ dev_update_stateful_partition() {
 
   # Check for clobber.
   if [ "${stateful_update_args}" = "clobber" ]; then
-    local preserve_dir="${STATEFUL_PARTITION}/unencrypted/preserve"
 
     # Find everything in stateful and delete it, except for protected paths, and
     # non-empty directories. The non-empty directories contain protected content
@@ -103,13 +110,13 @@ dev_update_stateful_partition() {
         -not -path "${STATEFUL_PARTITION}/.labmachine" \
         -not -path "${developer_target}/*" \
         -not -path "${var_target}/*" \
-        -not -path "${preserve_dir}/*" \
+        -not -path "${PRESERVE_DIR}/*" \
         -not -type d -print0 | xargs -0 -r rm -f
 
     find "${STATEFUL_PARTITION}" -depth -mindepth 1 \
         -not -path "${developer_target}/*" \
         -not -path "${var_target}/*" \
-        -not -path "${preserve_dir}/*" \
+        -not -path "${PRESERVE_DIR}/*" \
         -type d -print0 | xargs -0 -r rmdir --ignore-fail-on-non-empty
 
     # Let's really be done before coming back.
@@ -225,6 +232,34 @@ dev_unmount_packages() {
 
   # unmount /usr/local to match dev_mount_package.
   umount -n /usr/local
+}
+
+# Copy contents in src path to dst path if it exists.
+copy_path() {
+  local src_path="$1"
+  local dst_path="$2"
+  if [ -d "${src_path}" ]; then
+    mkdir -p "${dst_path}"
+    cp -a "${src_path}/"* "${dst_path}"
+  fi
+}
+
+# Pushes the array of paths to preserve to protected path.
+dev_push_paths_to_preserve() {
+  local path
+  for path in ${PATHS_TO_PRESERVE}; do
+    copy_path "${path}" "${PRESERVE_DIR}/${path}"
+  done
+}
+
+# Pops the array of paths to preserve from protected path.
+dev_pop_paths_to_preserve() {
+  local path
+  for path in ${PATHS_TO_PRESERVE}; do
+    local src_path="${PRESERVE_DIR}/${path}"
+    copy_path "${src_path}" "${path}"
+    rm -rf "${src_path}"
+  done
 }
 
 # Load more utilities on test image.
