@@ -29,16 +29,14 @@ constexpr auto kDebugdMmcDefaultTimeout = 10 * 1000;  // in ms
 
 constexpr auto kMmcFWVersionByteCount = 8;
 
-const std::vector<std::string> kMmcFields{"name", "oemid", "manfid", "serial"};
+const std::vector<std::string> kMmcFields{"name", "oemid", "manfid"};
 // Attributes in optional fields:
 // prv: SD and MMCv4 only
 // hwrev: SD and MMCv1 only
-const std::vector<std::string> kMmcOptionalFields{"prv", "hwrev"};
+const std::vector<std::string> kMmcOptionalFields{"hwrev", "prv", "serial"};
 
-// Note that to be backward portable with old protocol buffer we use empty
-// prefix for Mmc field.
 constexpr auto kMmcType = "MMC";
-constexpr auto kMmcPrefix = "";
+constexpr auto kMmcPrefix = "mmc_";
 
 // Check if the string represented by |input_string| is printable.
 bool IsPrintable(const std::string& input_string) {

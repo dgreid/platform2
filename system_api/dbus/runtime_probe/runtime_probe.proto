@@ -142,19 +142,22 @@ message Storage {
 
     // Below are based on JEDEC Standard No. 84-B51, and kernel MMC driver
     // exposed in sysfs:
+    //   https://chromium.googlesource.com/chromiumos/third_party/kernel/+/v3.18/drivers/mmc/core/mmc.c#71
     //   https://chromium.googlesource.com/chromiumos/third_party/kernel/+/v3.18/include/linux/mmc/card.h#17
     //   https://chromium.googlesource.com/chromiumos/third_party/kernel/+/v3.18/Documentation/mmc/mmc-dev-attrs.txt
 
     // MID: Manufacturer ID, 8 bits.
-    uint32 manfid = 5;
+    uint32 mmc_manfid = 5;
     // PNM: Product name, ASCII characters for 6 bytes.
-    string name = 6;
-    // PRV: Product revision, 8 bits
-    uint32 prv = 7;
-    // PSN: Product serial number, 32 bits
-    uint32 serial = 8;
-    // OID: OEM/Application ID, 8 bits
-    uint32 oemid = 9;
+    string mmc_name = 6;
+    // Hardware/Product Revision, 4 bits. (SD and MMCv1 only)
+    uint32 mmc_hwrev = 15;
+    // PRV: Product revision, 8 bits. (SD and MMCv4 only)
+    uint32 mmc_prv = 7;
+    // PSN: Product serial number, 32 bits.
+    uint32 mmc_serial = 8;
+    // OID: OEM/Application ID, 8 bits.
+    uint32 mmc_oemid = 9;
 
     // The following are fields for NVMe. Every field name comes with
     // prefix "pci_" as NVMe is a PCI device.
