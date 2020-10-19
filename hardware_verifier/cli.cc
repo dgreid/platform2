@@ -75,6 +75,18 @@ CLIVerificationResult CLI::Run(const std::string& probe_result_file,
                                const std::string& hw_verification_spec_file,
                                const CLIOutputFormat output_format,
                                bool pii) {
+  LOG(INFO) << "Get the verification payload.";
+  base::Optional<HwVerificationSpec> hw_verification_spec;
+  if (hw_verification_spec_file.empty()) {
+    hw_verification_spec = vp_getter_->GetDefault();
+  } else {
+    hw_verification_spec =
+        vp_getter_->GetFromFile(base::FilePath(hw_verification_spec_file));
+  }
+  if (!hw_verification_spec) {
+    return CLIVerificationResult::kInvalidHwVerificationSpecFile;
+  }
+
   LOG(INFO) << "Get the probe result.";
   base::Optional<runtime_probe::ProbeResult> probe_result;
   auto observer = Observer::GetInstance();
@@ -92,18 +104,6 @@ CLIVerificationResult CLI::Run(const std::string& probe_result_file,
     if (!probe_result) {
       return CLIVerificationResult::kInvalidProbeResultFile;
     }
-  }
-
-  LOG(INFO) << "Get the verification payload.";
-  base::Optional<HwVerificationSpec> hw_verification_spec;
-  if (hw_verification_spec_file.empty()) {
-    hw_verification_spec = vp_getter_->GetDefault();
-  } else {
-    hw_verification_spec =
-        vp_getter_->GetFromFile(base::FilePath(hw_verification_spec_file));
-  }
-  if (!hw_verification_spec) {
-    return CLIVerificationResult::kInvalidHwVerificationSpecFile;
   }
 
   LOG(INFO) << "Verify the probe result by the verification payload.";

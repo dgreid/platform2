@@ -24,9 +24,10 @@ namespace hardware_verifier {
 
 namespace {
 
-const char kTextFmtExt[] = ".prototxt";
-const char kDefaultHwVerificationSpecRelPath[] =
+constexpr char kTextFmtExt[] = ".prototxt";
+constexpr char kDefaultHwVerificationSpecRelPath[] =
     "etc/hardware_verifier/hw_verification_spec.prototxt";
+constexpr char kUsrLocal[] = "usr/local";
 
 std::string GetSHA1HashHexString(const std::string& content) {
   const auto& sha1_hash = base::SHA1HashString(content);
@@ -77,6 +78,12 @@ HwVerificationSpecGetterImpl::HwVerificationSpecGetterImpl(
 
 base::Optional<HwVerificationSpec> HwVerificationSpecGetterImpl::GetDefault()
     const {
+  if (vb_system_property_getter_->GetCrosDebug() == 1) {
+    auto spec = ReadOutHwVerificationSpecFromFile(
+        root_.Append(kUsrLocal).Append(kDefaultHwVerificationSpecRelPath));
+    if (spec)
+      return spec;
+  }
   return ReadOutHwVerificationSpecFromFile(
       root_.Append(kDefaultHwVerificationSpecRelPath));
 }
