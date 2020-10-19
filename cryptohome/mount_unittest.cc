@@ -975,14 +975,18 @@ class ChapsDirectoryTest : public ::testing::Test {
 #if BASE_VER < 780000
   void InitStat(struct stat* s, mode_t mode, uid_t uid, gid_t gid) {
     memset(s, 0, sizeof(struct stat));
-#else
-  void InitStat(base::stat_wrapper_t* s, mode_t mode, uid_t uid, gid_t gid) {
-    memset(s, 0, sizeof(base::stat_wrapper_t));
-#endif
     s->st_mode = mode;
     s->st_uid = uid;
     s->st_gid = gid;
   }
+#else
+  void InitStat(base::stat_wrapper_t* s, mode_t mode, uid_t uid, gid_t gid) {
+    memset(s, 0, sizeof(base::stat_wrapper_t));
+    s->st_mode = mode;
+    s->st_uid = uid;
+    s->st_gid = gid;
+  }
+#endif
 
   DISALLOW_COPY_AND_ASSIGN(ChapsDirectoryTest);
 };
