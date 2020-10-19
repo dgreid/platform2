@@ -14,6 +14,7 @@
 #include <base/callback.h>
 #include <base/callback_helpers.h>
 #include <base/containers/flat_map.h>
+#include <base/containers/flat_set.h>
 #include <base/files/scoped_file.h>
 #include <base/memory/weak_ptr.h>
 #include <base/optional.h>
@@ -94,6 +95,11 @@ class Manager : public org::chromium::lorgnette::ManagerAdaptor,
   // Register the callback to call when we send a ScanStatusChanged signal for
   // tests.
   void SetScanStatusChangedSignalSenderForTest(StatusSignalSender sender);
+
+  void RemoveDuplicateScanners(std::vector<ScannerInfo>* scanners,
+                               base::flat_set<std::string> seen_vidpid,
+                               base::flat_set<std::string> seen_busdev,
+                               const std::vector<ScannerInfo>& sane_scanners);
 
  private:
   friend class ManagerTest;

@@ -376,4 +376,78 @@ TEST_F(ManagerTest, GetNextImageBadFd) {
   EXPECT_EQ(signals_.size(), 0);
 }
 
+TEST_F(ManagerTest, RemoveDupNoRepeats) {
+  std::vector<ScannerInfo> scanners_empty, scanners_present, sane_scanners,
+      expected_present;
+  base::flat_set<std::string> seen_vidpid, seen_busdev;
+
+  ScannerInfo pixma, epson, fujitsu;
+  pixma.set_name("pixma:1a492785_265798");
+  epson.set_name("epson2:libusb:004:007");
+  fujitsu.set_name("fujitsu:ScanSnap iX500:1603948");
+  sane_scanners.push_back(pixma);
+  sane_scanners.push_back(epson);
+  sane_scanners.push_back(fujitsu);
+  // first make sure it doesn't crash with no seen scanners
+  manager_.RemoveDuplicateScanners(&scanners_empty, seen_vidpid, seen_busdev,
+                                   sane_scanners);
+  EXPECT_EQ(scanners_empty.size(), sane_scanners.size());
+  for (int s = 0; s < scanners_empty.size(); s++) {
+    EXPECT_EQ(scanners_empty[s].name(), sane_scanners[s].name());
+  }
+  // now make sure it works with seen scanners and no match
+  ScannerInfo ippusb1, ippusb2;
+  ippusb1.set_name("ippusb:escl:EPSON XP-7100 Series:05a8_1134/eSCL/");
+  ippusb2.set_name("ippusb:escl:Brother HL-L2539DW series:05d9_0023/eSCL/");
+  scanners_present.push_back(ippusb1);
+  expected_present.push_back(ippusb1);
+  scanners_present.push_back(ippusb2);
+  expected_present.push_back(ippusb2);
+  seen_vidpid.insert("05a8:1134");
+  seen_vidpid.insert("05d9:0023");
+  seen_busdev.insert("006:006");
+  seen_busdev.insert("001:003");
+  manager_.RemoveDuplicateScanners(&scanners_present, seen_vidpid, seen_busdev,
+                                   sane_scanners);
+  expected_present.push_back(pixma);
+  expected_present.push_back(epson);
+  expected_present.push_back(fujitsu);
+  EXPECT_EQ(scanners_present.size(), expected_present.size());
+  for (int s = 0; s < scanners_present.size(); s++) {
+    EXPECT_EQ(scanners_present[s].name(), expected_present[s].name());
+  }
+}
+
+TEST_F(ManagerTest, RemoveDupWithRepeats) {
+  std::vector<ScannerInfo> scanners_present, sane_scanners, expected_present;
+  base::flat_set<std::string> seen_vidpid, seen_busdev;
+  ScannerInfo ipp_pixma, sane_pixma, ipp_epson, sane_epson, sane_fujitsu;
+
+  ipp_pixma.set_name("ippusb:escl:Canon TR8500 series:05d9_0023/eSCL/");
+  seen_vidpid.insert("05d9:0023");
+  seen_busdev.insert("001:005");
+  scanners_present.push_back(ipp_pixma);
+  expected_present.push_back(ipp_pixma);
+  ipp_epson.set_name("ippusb:escl:EPSON XP-7100 Series:05a8_1134/eSCL/");
+  seen_vidpid.insert("05a8:1134");
+  seen_busdev.insert("004:007");
+  scanners_present.push_back(ipp_epson);
+  expected_present.push_back(ipp_epson);
+
+  sane_pixma.set_name("pixma:05d90023_265798");
+  sane_epson.set_name("epson2:libusb:004:007");
+  sane_fujitsu.set_name("fujitsu:ScanSnap iX500:1603948");
+  sane_scanners.push_back(sane_pixma);
+  sane_scanners.push_back(sane_epson);
+  sane_scanners.push_back(sane_fujitsu);
+  manager_.RemoveDuplicateScanners(&scanners_present, seen_vidpid, seen_busdev,
+                                   sane_scanners);
+  expected_present.push_back(sane_fujitsu);
+
+  EXPECT_EQ(scanners_present.size(), expected_present.size());
+  for (int s = 0; s < scanners_present.size(); s++) {
+    EXPECT_EQ(scanners_present[s].name(), expected_present[s].name());
+  }
+}
+
 }  // namespace lorgnette

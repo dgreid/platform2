@@ -12,8 +12,13 @@
 #include <base/bits.h>
 #include <base/files/file.h>
 #include <base/logging.h>
+#include <base/strings/string_number_conversions.h>
+#include <base/strings/stringprintf.h>
+#include <base/strings/string_util.h>
 #include <chromeos/dbus/service_constants.h>
+#include <libusb.h>
 #include <png.h>
+#include <re2/re2.h>
 #include <uuid/uuid.h>
 
 #include "lorgnette/daemon.h"
@@ -301,10 +306,72 @@ bool Manager::ListScanners(brillo::ErrorPtr* error,
       base::BindOnce([](FirewallManager* fm) { fm->ReleaseAllPortsAccess(); },
                      firewall_manager_.get()));
 
-  std::vector<ScannerInfo> scanners;
-  if (!sane_client_->ListDevices(error, &scanners)) {
+  libusb_context* context;
+  if (libusb_init(&context) != 0) {
+    LOG(ERROR) << "Error initializing libusb";
     return false;
   }
+  base::ScopedClosureRunner release_libusb(
+      base::BindOnce([](libusb_context* ctxt) { libusb_exit(ctxt); }, context));
+
+  std::vector<ScannerInfo> scanners;
+  base::flat_set<std::string> seen_vidpid;
+  base::flat_set<std::string> seen_busdev;
+
+  std::vector<ScannerInfo> ippusb_devices = FindIppUsbDevices();
+  activity_callback_.Run();
+  for (const ScannerInfo& scanner : ippusb_devices) {
+    std::unique_ptr<SaneDevice> device =
+        sane_client_->ConnectToDevice(nullptr, scanner.name());
+    activity_callback_.Run();
+
+    if (!device) {
+      LOG(INFO) << "IPP-USB device doesn't support eSCL: " << scanner.name();
+      continue;
+    }
+    scanners.push_back(scanner);
+    std::string vid_str, pid_str;
+    int vid = 0, pid = 0;
+    if (!RE2::FullMatch(
+            scanner.name(),
+            "ippusb:[^:]+:[^:]+:([0-9a-fA-F]{4})_([0-9a-fA-F]{4})/.*", &vid_str,
+            &pid_str)) {
+      LOG(ERROR) << "Problem matching ippusb name for " << scanner.name();
+      return false;
+    }
+    if (!(base::HexStringToInt(vid_str, &vid) &&
+          base::HexStringToInt(pid_str, &pid))) {
+      LOG(ERROR) << "Problems converting" << vid_str + ":" + pid_str
+                 << "information into readable format";
+      return false;
+    }
+    seen_vidpid.insert(vid_str + ":" + pid_str);
+
+    // Next open the device to get the bus and dev info.
+    // libusb_open_device_with_vid_pid() is the straightforward way to
+    // access and open a device given its ScannerInfo
+    // It returns the first device matching the vid:pid
+    // but doesn't handle multiple devices with same vid:pid but dif bus:dev
+    libusb_device_handle* dev_handle =
+        libusb_open_device_with_vid_pid(context, vid, pid);
+    if (dev_handle) {
+      libusb_device* open_dev = libusb_get_device(dev_handle);
+      uint8_t bus = libusb_get_bus_number(open_dev);
+      uint8_t dev = libusb_get_device_address(open_dev);
+      seen_busdev.insert(base::StringPrintf("%03d:%03d", bus, dev));
+      libusb_close(dev_handle);
+    } else {
+      LOG(ERROR) << "Dev handle returned nullptr";
+    }
+  }
+
+  std::vector<ScannerInfo> sane_scanners;
+  if (!sane_client_->ListDevices(error, &sane_scanners)) {
+    return false;
+  }
+  // Only add sane scanners that don't have ippusb connection
+  RemoveDuplicateScanners(&scanners, seen_vidpid, seen_busdev, sane_scanners);
+
   activity_callback_.Run();
 
   std::vector<ScannerInfo> probed_scanners =
@@ -320,20 +387,6 @@ bool Manager::ListScanners(brillo::ErrorPtr* error,
     } else {
       LOG(INFO) << "Got reponse from Epson scanner " << scanner.name()
                 << " that isn't usable for scanning.";
-    }
-  }
-
-  std::vector<ScannerInfo> ippusb_devices = FindIppUsbDevices();
-  activity_callback_.Run();
-  for (const ScannerInfo& scanner : ippusb_devices) {
-    brillo::ErrorPtr error;
-    std::unique_ptr<SaneDevice> device =
-        sane_client_->ConnectToDevice(&error, scanner.name());
-    activity_callback_.Run();
-    if (device) {
-      scanners.push_back(scanner);
-    } else {
-      LOG(INFO) << "IPP-USB device doesn't support eSCL: " << scanner.name();
     }
   }
 
@@ -538,6 +591,35 @@ void Manager::SetProgressSignalInterval(base::TimeDelta interval) {
 void Manager::SetScanStatusChangedSignalSenderForTest(
     StatusSignalSender sender) {
   status_signal_sender_ = sender;
+}
+
+void Manager::RemoveDuplicateScanners(
+    std::vector<ScannerInfo>* scanners,
+    base::flat_set<std::string> seen_vidpid,
+    base::flat_set<std::string> seen_busdev,
+    const std::vector<ScannerInfo>& sane_scanners) {
+  for (const ScannerInfo& scanner : sane_scanners) {
+    std::string scanner_name = scanner.name();
+    std::string s_vid, s_pid, s_bus, s_dev;
+    // Currently pixma only uses 'pixma' as scanner name
+    // while epson has multiple formats (i.e. epsonds and epson2)
+    if (RE2::FullMatch(scanner_name,
+                       "pixma:([0-9a-fA-F]{4})([0-9a-fA-F]{4})_[0-9a-fA-F]*",
+                       &s_vid, &s_pid)) {
+      s_vid = base::ToLowerASCII(s_vid);
+      s_pid = base::ToLowerASCII(s_pid);
+      if (seen_vidpid.contains(s_vid + ":" + s_pid)) {
+        continue;
+      }
+    } else if (RE2::FullMatch(scanner_name,
+                              "epson(?:2|ds)?:libusb:([0-9]{3}):([0-9]{3})",
+                              &s_bus, &s_dev)) {
+      if (seen_busdev.contains(s_bus + ":" + s_dev)) {
+        continue;
+      }
+    }
+    scanners->push_back(scanner);
+  }
 }
 
 bool Manager::StartScanInternal(brillo::ErrorPtr* error,
