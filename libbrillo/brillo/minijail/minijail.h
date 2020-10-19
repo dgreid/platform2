@@ -19,6 +19,10 @@ extern "C" {
 
 namespace brillo {
 
+// DEPRECATED. Use libminijail.h instead.
+// TODO(crbug.com/992135): Deprecate |Minijail| with attribute and completely
+// remove all use cases.
+//
 // A Minijail abstraction allowing Minijail mocking in tests.
 class BRILLO_EXPORT Minijail {
  public:
