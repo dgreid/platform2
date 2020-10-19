@@ -25,8 +25,8 @@ base::Optional<ProbeConfigData> ParseProbeConfig(
 // Determine if allowed to load probe config assigned from CLI.
 // Return true on success (allowed / load default instead), false for error.
 // |probe_config_path| will be the allowed path if success.
-bool GetProbeConfigPath(std::string* probe_config_path,
-                        const std::string& probe_config_path_from_cli);
+bool GetProbeConfigPath(const std::string& probe_config_path_from_cli,
+                        std::string* probe_config_path);
 
 }  // namespace runtime_probe
 

@@ -63,8 +63,8 @@ int main(int argc, char* argv[]) {
   // Invoke as a command line tool. Device can load arbitrary probe config
   // iff cros_debug == 1
   std::string probe_config_path;
-  if (!runtime_probe::GetProbeConfigPath(&probe_config_path,
-                                         FLAGS_config_file_path))
+  if (!runtime_probe::GetProbeConfigPath(FLAGS_config_file_path,
+                                         &probe_config_path))
     return ExitStatus::kNoPermissionForArbitraryProbeConfig;
 
   const auto probe_config_data =

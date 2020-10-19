@@ -121,7 +121,7 @@ void Daemon::ProbeCategories(
   DumpProtocolBuffer(request, "ProbeRequest");
 
   std::string probe_config_path;
-  if (!runtime_probe::GetProbeConfigPath(&probe_config_path, "")) {
+  if (!runtime_probe::GetProbeConfigPath("", &probe_config_path)) {
     reply.set_error(RUNTIME_PROBE_ERROR_DEFAULT_PROBE_CONFIG_NOT_FOUND);
     return SendProbeResult(reply, method_call, std::move(response_sender));
   }

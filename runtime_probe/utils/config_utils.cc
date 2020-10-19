@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <utility>
+#include <vector>
 
 #include <base/files/file_path.h>
 #include <base/files/file_util.h>
@@ -17,10 +18,11 @@
 
 namespace {
 
-const char kCrosConfigModelNamePath[] = "/";
-const char kCrosConfigModelNameKey[] = "name";
-const char kRuntimeProbeConfigDir[] = "/etc/runtime_probe";
-const char kRuntimeProbeConfigName[] = "probe_config.json";
+constexpr char kCrosConfigModelNamePath[] = "/";
+constexpr char kCrosConfigModelNameKey[] = "name";
+constexpr char kUsrLocal[] = "usr/local";
+constexpr char kRuntimeProbeConfigDir[] = "etc/runtime_probe";
+constexpr char kRuntimeProbeConfigName[] = "probe_config.json";
 
 void GetModelName(std::string* model_name) {
   auto cros_config = std::make_unique<brillo::CrosConfig>();
@@ -34,28 +36,36 @@ void GetModelName(std::string* model_name) {
   *model_name = base::SysInfo::GetLsbReleaseBoard();
 }
 
-std::string GetPathOfRootfsProbeConfig() {
+bool GetProbeConfigPathByBase(const base::FilePath& root_path,
+                              std::string* probe_config_path) {
+  probe_config_path->clear();
   std::string model_name;
-  const auto default_config =
-      base::FilePath{kRuntimeProbeConfigDir}.Append(kRuntimeProbeConfigName);
-
   GetModelName(&model_name);
-  auto config_path = base::FilePath{kRuntimeProbeConfigDir}
-                         .Append(model_name)
-                         .Append(kRuntimeProbeConfigName);
-  if (base::PathExists(config_path))
-    return config_path.value();
+  std::vector<base::FilePath> config_paths{
+      root_path.Append(kRuntimeProbeConfigDir)
+          .Append(model_name)
+          .Append(kRuntimeProbeConfigName),
+      root_path.Append(kRuntimeProbeConfigDir).Append(kRuntimeProbeConfigName)};
 
-  VLOG(1) << "Model specific probe config " << config_path.value()
-          << " doesn't exist";
+  for (const auto& config_path : config_paths) {
+    if (base::PathExists(config_path)) {
+      *probe_config_path = config_path.value();
+      break;
+    }
+  }
 
-  return default_config.value();
+  return !probe_config_path->empty();
 }
 
 std::string GetProbeConfigSHA1Hash(const std::string& content) {
   const auto& hash_val = base::SHA1HashString(content);
   return base::HexEncode(hash_val.data(), hash_val.size());
 }
+
+bool IsCrosDebugOn() {
+  return VbGetSystemPropertyInt("cros_debug") == 1;
+}
+
 }  // namespace
 
 namespace runtime_probe {
@@ -83,24 +93,27 @@ base::Optional<ProbeConfigData> ParseProbeConfig(
                          .sha1_hash = std::move(probe_config_sha1_hash)};
 }
 
-bool GetProbeConfigPath(std::string* probe_config_path,
-                        const std::string& probe_config_path_from_cli) {
-  // Caller not assigned. Using default one in rootfs.
-  if (probe_config_path_from_cli.empty()) {
+bool GetProbeConfigPath(const std::string& probe_config_path_from_cli,
+                        std::string* probe_config_path) {
+  probe_config_path->clear();
+  if (!probe_config_path_from_cli.empty()) {
+    if (IsCrosDebugOn()) {
+      LOG(ERROR) << "Arbitrary ProbeConfig is only allowed with cros_debug=1";
+      return false;
+    }
+    *probe_config_path = probe_config_path_from_cli;
+  } else {
     VLOG(1) << "No config_file_path specified, picking default config.";
-    *probe_config_path = GetPathOfRootfsProbeConfig();
-    VLOG(1) << "Selected config file: " << *probe_config_path;
-    return true;
+    base::FilePath root{"/"};
+    if (IsCrosDebugOn())
+      GetProbeConfigPathByBase(root.Append(kUsrLocal), probe_config_path);
+    if (probe_config_path->empty())
+      GetProbeConfigPathByBase(root, probe_config_path);
   }
 
-  // Caller assigned, check permission.
-  if (VbGetSystemPropertyInt("cros_debug") != 1) {
-    LOG(ERROR) << "Arbitrary ProbeConfig is only allowed with cros_debug=1";
-    return false;
-  }
+  VLOG(1) << "Selected config file: " << *probe_config_path;
 
-  *probe_config_path = probe_config_path_from_cli;
-  return true;
+  return !probe_config_path->empty();
 }
 
 }  // namespace runtime_probe
