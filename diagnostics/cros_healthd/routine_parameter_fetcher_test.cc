@@ -18,6 +18,14 @@ namespace diagnostics {
 
 namespace {
 
+// POD struct for GetBatteryCapacityParametersTest.
+struct GetBatteryCapacityParametersTestParams {
+  base::Optional<std::string> low_mah_in;
+  base::Optional<std::string> high_mah_in;
+  base::Optional<uint32_t> expected_low_mah_out;
+  base::Optional<uint32_t> expected_high_mah_out;
+};
+
 // POD struct for GetBatteryHealthParametersTest.
 struct GetBatteryHealthParametersTestParams {
   base::Optional<std::string> maximum_cycle_count_in;
@@ -56,11 +64,98 @@ class RoutineParameterFetcherTest : public testing::Test {
   std::unique_ptr<RoutineParameterFetcher> parameter_fetcher_;
 };
 
+// Tests for the GetBatteryCapacityParameters() method of
+// RoutineParameterFetcher with different values present in cros_config.
+//
+// This is a parameterized test with the following parameters (accessed
+// through the GetBatteryCapacityParametersTestParams POD struct):
+// * |low_mah_in| - If specified, will be written to cros_config's low_mah
+// property.
+// * |high_mah_in| - If specified, will be written to cros_config's high_mah
+// property.
+// * |expected_low_mah_out| - Expected value of |low_mah_out| after
+// GetBatteryCapacityParameters() returns.
+// * |expected_high_mah_out| - Expected value of |high_mah_out| after
+// GetBatteryCapacityParameters() returns.
+class GetBatteryCapacityParametersTest
+    : public RoutineParameterFetcherTest,
+      public testing::WithParamInterface<
+          GetBatteryCapacityParametersTestParams> {
+ protected:
+  // Accessors to the test parameters returned by gtest's GetParam():
+  GetBatteryCapacityParametersTestParams params() const { return GetParam(); }
+};
+
+// Test that GetBatteryCapacityParameters() returns correct values.
+TEST_P(GetBatteryCapacityParametersTest, ReturnsCorrectValues) {
+  MaybeWriteCrosConfigData(params().low_mah_in, kLowMahProperty,
+                           kBatteryCapacityPropertiesPath);
+  MaybeWriteCrosConfigData(params().high_mah_in, kHighMahProperty,
+                           kBatteryCapacityPropertiesPath);
+
+  base::Optional<uint32_t> actual_low_mah_out;
+  base::Optional<uint32_t> actual_high_mah_out;
+  parameter_fetcher()->GetBatteryCapacityParameters(&actual_low_mah_out,
+                                                    &actual_high_mah_out);
+
+  EXPECT_EQ(actual_low_mah_out, params().expected_low_mah_out);
+  EXPECT_EQ(actual_high_mah_out, params().expected_high_mah_out);
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    ,
+    GetBatteryCapacityParametersTest,
+    testing::Values(GetBatteryCapacityParametersTestParams{
+                        /*low_mah_in=*/base::nullopt,
+                        /*high_mah_in=*/base::nullopt,
+                        /*expected_low_mah_out=*/base::nullopt,
+                        /*expected_high_mah_out=*/base::nullopt},
+                    GetBatteryCapacityParametersTestParams{
+                        /*low_mah_in=*/"not_int_value",
+                        /*high_mah_in=*/base::nullopt,
+                        /*expected_low_mah_out=*/base::nullopt,
+                        /*expected_high_mah_out=*/base::nullopt},
+                    GetBatteryCapacityParametersTestParams{
+                        /*low_mah_in=*/"1000",
+                        /*high_mah_in=*/base::nullopt,
+                        /*expected_low_mah_out=*/1000,
+                        /*expected_high_mah_out=*/base::nullopt},
+                    GetBatteryCapacityParametersTestParams{
+                        /*low_mah_in=*/base::nullopt,
+                        /*high_mah_in=*/"not_int_value",
+                        /*expected_low_mah_out=*/base::nullopt,
+                        /*expected_high_mah_out=*/base::nullopt},
+                    GetBatteryCapacityParametersTestParams{
+                        /*low_mah_in=*/"not_int_value",
+                        /*high_mah_in=*/"not_int_value",
+                        /*expected_low_mah_out=*/base::nullopt,
+                        /*expected_high_mah_out=*/base::nullopt},
+                    GetBatteryCapacityParametersTestParams{
+                        /*low_mah_in=*/"1000",
+                        /*high_mah_in=*/"not_int_value",
+                        /*expected_low_mah_out=*/1000,
+                        /*expected_high_mah_out=*/base::nullopt},
+                    GetBatteryCapacityParametersTestParams{
+                        /*low_mah_in=*/base::nullopt,
+                        /*high_mah_in=*/"10000",
+                        /*expected_low_mah_out=*/base::nullopt,
+                        /*expected_high_mah_out=*/10000},
+                    GetBatteryCapacityParametersTestParams{
+                        /*low_mah_in=*/"not_int_value",
+                        /*high_mah_in=*/"10000",
+                        /*expected_low_mah_out=*/base::nullopt,
+                        /*expected_high_mah_out=*/10000},
+                    GetBatteryCapacityParametersTestParams{
+                        /*low_mah_in=*/"1000",
+                        /*high_mah_in=*/"10000",
+                        /*expected_low_mah_out=*/1000,
+                        /*expected_high_mah_out=*/10000}));
+
 // Tests for the GetBatteryHealthParameters() method of RoutineParameterFetcher
 // with different values present in cros_config.
 //
 // This is a parameterized test with the following parameters (accessed
-// through the POD GetBatteryHealthParametersTestParams POD struct):
+// through the GetBatteryHealthParametersTestParams POD struct):
 // * |maximum_cycle_count_in| - If specified, will be written to cros_config's
 // maximum_cycle_count property.
 // * |percent_battery_wear_allowed_in| - If specified, will be written to

@@ -202,8 +202,7 @@ FakeCrosHealthdRoutineFactory::MakeUrandomRoutine(uint32_t length_seconds) {
 }
 
 std::unique_ptr<DiagnosticRoutine>
-FakeCrosHealthdRoutineFactory::MakeBatteryCapacityRoutine(uint32_t low_mah,
-                                                          uint32_t high_mah) {
+FakeCrosHealthdRoutineFactory::MakeBatteryCapacityRoutine() {
   return std::move(next_routine_);
 }
 

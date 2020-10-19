@@ -48,8 +48,10 @@ CrosHealthdRoutineFactoryImpl::MakeUrandomRoutine(uint32_t length_seconds) {
 }
 
 std::unique_ptr<DiagnosticRoutine>
-CrosHealthdRoutineFactoryImpl::MakeBatteryCapacityRoutine(uint32_t low_mah,
-                                                          uint32_t high_mah) {
+CrosHealthdRoutineFactoryImpl::MakeBatteryCapacityRoutine() {
+  base::Optional<uint32_t> low_mah;
+  base::Optional<uint32_t> high_mah;
+  parameter_fetcher_->GetBatteryCapacityParameters(&low_mah, &high_mah);
   return CreateBatteryCapacityRoutine(context_, low_mah, high_mah);
 }
 

@@ -26,6 +26,11 @@ class RoutineParameterFetcher {
   RoutineParameterFetcher& operator=(const RoutineParameterFetcher&) = delete;
   ~RoutineParameterFetcher();
 
+  // Fetches the parameters for the battery capacity routine.
+  void GetBatteryCapacityParameters(
+      base::Optional<uint32_t>* low_mah_out,
+      base::Optional<uint32_t>* high_mah_out) const;
+
   // Fetches the parameters for the battery health routine.
   void GetBatteryHealthParameters(
       base::Optional<uint32_t>* maximum_cycle_count_out,

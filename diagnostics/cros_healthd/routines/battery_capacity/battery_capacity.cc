@@ -96,10 +96,17 @@ const char kBatteryCapacityRoutineSucceededMessage[] =
 const char kBatteryCapacityRoutineFailedMessage[] =
     "Battery design capacity not within given limits.";
 
+const uint32_t kBatteryCapacityDefaultLowMah = 1000;
+const uint32_t kBatteryCapacityDefaultHighMah = 10000;
+
 std::unique_ptr<DiagnosticRoutine> CreateBatteryCapacityRoutine(
-    Context* const context, uint32_t low_mah, uint32_t high_mah) {
+    Context* const context,
+    const base::Optional<uint32_t>& low_mah,
+    const base::Optional<uint32_t>& high_mah) {
   return std::make_unique<SimpleRoutine>(
-      base::BindOnce(&RunBatteryCapacityRoutine, context, low_mah, high_mah));
+      base::BindOnce(&RunBatteryCapacityRoutine, context,
+                     low_mah.value_or(kBatteryCapacityDefaultLowMah),
+                     high_mah.value_or(kBatteryCapacityDefaultHighMah)));
 }
 
 }  // namespace diagnostics

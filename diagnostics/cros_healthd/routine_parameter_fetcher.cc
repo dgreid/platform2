@@ -22,6 +22,15 @@ RoutineParameterFetcher::RoutineParameterFetcher(
 
 RoutineParameterFetcher::~RoutineParameterFetcher() = default;
 
+void RoutineParameterFetcher::GetBatteryCapacityParameters(
+    base::Optional<uint32_t>* low_mah_out,
+    base::Optional<uint32_t>* high_mah_out) const {
+  FetchUint32Parameter(kBatteryCapacityPropertiesPath, kLowMahProperty,
+                       low_mah_out);
+  FetchUint32Parameter(kBatteryCapacityPropertiesPath, kHighMahProperty,
+                       high_mah_out);
+}
+
 void RoutineParameterFetcher::GetBatteryHealthParameters(
     base::Optional<uint32_t>* maximum_cycle_count_out,
     base::Optional<uint8_t>* percent_battery_wear_allowed_out) const {
