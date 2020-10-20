@@ -37,8 +37,7 @@ struct ArcVmFeatures {
 };
 
 // Represents a single instance of a running termina VM.
-class ArcVm final : public VmBaseImpl,
-                    public std::enable_shared_from_this<ArcVm> {
+class ArcVm final : public VmBaseImpl {
  public:
   // Describes a disk image to be mounted inside the VM.
   struct Disk {
@@ -87,9 +86,6 @@ class ArcVm final : public VmBaseImpl,
   uint32_t IPv4Address() const;
 
   // VmInterface overrides.
-
-  // This must be called before the class is destructed. Calling this in the
-  // destructor is not an option as shared_from_this is used.
   Future<bool> Shutdown() override;
   VmInterface::Info GetInfo() override;
   // Currently only implemented for termina, returns "Not implemented".
@@ -160,7 +156,7 @@ class ArcVm final : public VmBaseImpl,
   // Register to the main thread's signal handler for async sigchld waiting
   std::weak_ptr<SigchldHandler> weak_async_sigchld_handler_;
 
-  // To make sure |Shutdown| is called before the destructor
+  // Prevent calling Shutdown twice (shutdown command and destructor)
   bool already_shut_down_ = false;
 
   DISALLOW_COPY_AND_ASSIGN(ArcVm);

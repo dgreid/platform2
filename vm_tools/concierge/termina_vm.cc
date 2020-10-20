@@ -86,6 +86,16 @@ std::unique_ptr<patchpanel::Subnet> MakeSubnet(
       subnet.base_addr(), subnet.prefix_len(), base::DoNothing());
 }
 
+void DestroyAsyncClientImpl(
+    std::unique_ptr<brillo::AsyncGrpcClient<vm_tools::Maitred>> client) {
+  if (!client)
+    return;
+  base::RunLoop loop(base::RunLoop::Type::kNestableTasksAllowed);
+  client->ShutDown(loop.QuitClosure());
+  loop.Run();
+  client.reset();
+}
+
 }  // namespace
 
 TerminaVm::TerminaVm(
@@ -154,8 +164,11 @@ TerminaVm::TerminaVm(
 }
 
 TerminaVm::~TerminaVm() {
-  // |Shutdown| should be called before the destructor
-  CHECK(already_shut_down_);
+  if (!already_shut_down_) {  // Call shutdown only once
+    LOG(WARNING) << "Performing blocking shutdown for termina vm (vsock cid "
+                 << vsock_cid_ << ")";
+    Shutdown().Get();
+  }
 }
 
 std::shared_ptr<TerminaVm> TerminaVm::Create(
@@ -370,45 +383,56 @@ Future<bool> TerminaVm::Shutdown() {
                     base::TimeDelta::FromSeconds((kShutdownTimeoutSeconds)),
                     vm_tools::EmptyMessage())
           .ThenNoReject(base::BindOnce(
-              [](std::shared_ptr<TerminaVm> vm, uint32_t pid,
-                 Future<bool> sigchld_future, grpc::Status status,
+              [](std::unique_ptr<brillo::AsyncGrpcClient<vm_tools::Maitred>>
+                     client,
+                 std::string vm_socket_path,
+                 std::weak_ptr<SigchldHandler> weak_async_sigchld_handler,
+                 uint32_t pid, uint32_t cid, Future<bool> sigchld_future,
+                 grpc::Status status,
                  std::unique_ptr<vm_tools::EmptyMessage> response) {
                 if (!status.ok()) {
                   // This sets sigchld_future to false
-                  CancelWatchSigchld(vm->weak_async_sigchld_handler_, pid);
+                  CancelWatchSigchld(weak_async_sigchld_handler, pid);
                 }
 
                 // DestroyAsyncClient must be called before the class is
                 // destroyed, otherwise the code will crash. This is the place
                 // as |client_| is no longer needed.
-                vm->DestroyAsyncClient();
+                DestroyAsyncClientImpl(std::move(client));
 
                 return sigchld_future
                     .Then(base::BindOnce(
-                        [](std::shared_ptr<TerminaVm> vm, uint32_t pid,
-                           grpc::Status status, bool exited) {
+                        [](std::string vm_socket_path,
+                           std::weak_ptr<SigchldHandler>
+                               weak_async_sigchld_handler,
+                           uint32_t pid, uint32_t cid, grpc::Status status,
+                           bool exited) {
                           if (exited) {
                             return Reject<Future<bool>>();
                           }
 
-                          LOG(WARNING) << "Shutdown RPC failed for VM "
-                                       << vm->cid() << " with error "
-                                       << "code " << status.error_code() << ": "
-                                       << status.error_message();
+                          LOG(WARNING)
+                              << "Shutdown RPC failed for VM " << cid
+                              << " with error code " << status.error_code()
+                              << ": " << status.error_message();
 
                           // Try to shut it down via the crosvm socket.
-                          vm->RunCrosvmCommand("stop");
+                          vm_tools::concierge::RunCrosvmCommand("stop",
+                                                                vm_socket_path);
 
                           // We can't actually trust the exit codes that crosvm
                           // gives us so just see if it exited.
                           return Resolve(
-                              WatchSigchld(vm->weak_async_sigchld_handler_, pid,
+                              WatchSigchld(weak_async_sigchld_handler, pid,
                                            kChildExitTimeout));
                         },
-                        std::move(vm), pid, std::move(status)))
+                        std::move(vm_socket_path), weak_async_sigchld_handler,
+                        pid, cid, std::move(status)))
                     .Flatten();
               },
-              shared_from_this(), pid, std::move(sigchld_future)))
+              std::move(client_), GetVmSocketPath(),
+              weak_async_sigchld_handler_, pid, cid(),
+              std::move(sigchld_future)))
           .Flatten();
 
   return KillCrosvmProcess(weak_async_sigchld_handler_, pid, cid(),
@@ -992,12 +1016,7 @@ VmInterface::Info TerminaVm::GetInfo() {
 }
 
 void TerminaVm::DestroyAsyncClient() {
-  if (!client_)
-    return;
-  base::RunLoop loop(base::RunLoop::Type::kNestableTasksAllowed);
-  client_->ShutDown(loop.QuitClosure());
-  loop.Run();
-  client_.reset();
+  DestroyAsyncClientImpl(std::move(client_));
 }
 
 void TerminaVm::set_kernel_version_for_testing(std::string kernel_version) {

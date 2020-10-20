@@ -48,8 +48,7 @@ struct VmFeatures {
 };
 
 // Represents a single instance of a running termina VM.
-class TerminaVm final : public VmBaseImpl,
-                        public std::enable_shared_from_this<TerminaVm> {
+class TerminaVm final : public VmBaseImpl {
  public:
   // Type of a disk image.
   enum class DiskImageType {
@@ -198,9 +197,6 @@ class TerminaVm final : public VmBaseImpl,
   // SIGTERM to the hypervisor.  Finally, if nothing works forcibly stops the VM
   // by sending it a SIGKILL.  Returns true if the VM was shut down and false
   // otherwise.
-  //
-  // This must be called before the class is destructed. Calling this in the
-  // destructor is not an option as shared_from_this is used
   Future<bool> Shutdown() override;
   VmInterface::Info GetInfo() override;
   bool AttachUsbDevice(uint8_t bus,
@@ -302,9 +298,6 @@ class TerminaVm final : public VmBaseImpl,
       std::unique_ptr<brillo::AsyncGrpcClient<vm_tools::Maitred>> client,
       std::unique_ptr<vm_tools::Maitred::Stub> stub);
 
-  // Remove when C++17 is available
-  std::weak_ptr<TerminaVm> weak_from_this() { return shared_from_this(); }
-
   // The /30 subnet assigned to the VM.
   std::unique_ptr<patchpanel::Subnet> subnet_;
 
@@ -367,7 +360,7 @@ class TerminaVm final : public VmBaseImpl,
   // Register to the main thread's signal handler for async sigchld waiting
   std::weak_ptr<SigchldHandler> weak_async_sigchld_handler_;
 
-  // To make sure |Shutdown| is called before the destructor
+  // Prevent calling Shutdown twice (shutdown command and destructor)
   bool already_shut_down_ = false;
 
   DISALLOW_COPY_AND_ASSIGN(TerminaVm);
