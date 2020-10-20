@@ -52,6 +52,7 @@ void Euicc::InstallProfileFromActivationCode(
   options.enable_profile = false;
   options.allow_policy_rules = false;
   options.confirmation_code = confirmation_code;
+  context_->modem_control()->StoreAndSetActiveSlot(physical_slot_);
   context_->lpa()->DownloadProfile(activation_code, std::move(options),
                                    context_->executor(), std::move(profile_cb));
 }
@@ -72,6 +73,7 @@ void Euicc::UninstallProfile(const dbus::ObjectPath& profile_path,
     return;
   }
 
+  context_->modem_control()->StoreAndSetActiveSlot(physical_slot_);
   context_->lpa()->DeleteProfile(
       matching_profile->GetIccid(), context_->executor(),
       [result_callback{std::move(result_callback)}, profile_path,
@@ -133,6 +135,7 @@ void Euicc::OnProfileUninstalled(const dbus::ObjectPath& profile_path,
 }
 
 void Euicc::RequestInstalledProfiles(ResultCallback<> result_callback) {
+  context_->modem_control()->StoreAndSetActiveSlot(physical_slot_);
   context_->lpa()->GetInstalledProfiles(
       context_->executor(),
       [result_callback{std::move(result_callback)}, this](

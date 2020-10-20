@@ -13,18 +13,21 @@ Context* Context::context_ = nullptr;
 void Context::Initialize(const scoped_refptr<dbus::Bus>& bus,
                          lpa::core::Lpa* lpa,
                          Executor* executor,
-                         AdaptorFactoryInterface* adaptor_factory) {
+                         AdaptorFactoryInterface* adaptor_factory,
+                         ModemControlInterface* modem_control) {
   CHECK(!context_);
-  context_ = new Context(bus, lpa, executor, adaptor_factory);
+  context_ = new Context(bus, lpa, executor, adaptor_factory, modem_control);
 }
 
 Context::Context(const scoped_refptr<dbus::Bus>& bus,
                  lpa::core::Lpa* lpa,
                  Executor* executor,
-                 AdaptorFactoryInterface* adaptor_factory)
+                 AdaptorFactoryInterface* adaptor_factory,
+                 ModemControlInterface* modem_control)
     : bus_(bus),
       lpa_(lpa),
       executor_(executor),
-      adaptor_factory_(adaptor_factory) {}
+      adaptor_factory_(adaptor_factory),
+      modem_control_(modem_control) {}
 
 }  // namespace hermes

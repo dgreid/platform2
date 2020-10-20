@@ -9,6 +9,7 @@
 #include <google-lpa/lpa/core/lpa.h>
 
 #include "hermes/adaptor_factory_interface.h"
+#include "hermes/modem_control_interface.h"
 
 namespace hermes {
 
@@ -25,7 +26,8 @@ class Context {
   static void Initialize(const scoped_refptr<dbus::Bus>& bus,
                          lpa::core::Lpa* lpa,
                          Executor* executor,
-                         AdaptorFactoryInterface* adaptor_factory);
+                         AdaptorFactoryInterface* adaptor_factory,
+                         ModemControlInterface* modem_control);
   // Returns initialized Context singleton. Initialize() must have been invoked
   // prior to calls to this.
   static Context* Get() {
@@ -37,12 +39,14 @@ class Context {
   lpa::core::Lpa* lpa() { return lpa_; }
   Executor* executor() { return executor_; }
   AdaptorFactoryInterface* adaptor_factory() { return adaptor_factory_; }
+  ModemControlInterface* modem_control() { return modem_control_; }
 
  private:
   Context(const scoped_refptr<dbus::Bus>& bus,
           lpa::core::Lpa* lpa,
           Executor* executor,
-          AdaptorFactoryInterface* adaptor_factory);
+          AdaptorFactoryInterface* adaptor_factory,
+          ModemControlInterface* modem_control);
 
   static Context* context_;
 
@@ -50,6 +54,7 @@ class Context {
   lpa::core::Lpa* lpa_;
   Executor* executor_;
   AdaptorFactoryInterface* adaptor_factory_;
+  ModemControlInterface* modem_control_;
 
   DISALLOW_COPY_AND_ASSIGN(Context);
 };

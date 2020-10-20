@@ -107,6 +107,7 @@ void Profile::Enable(std::unique_ptr<DBusResponse<>> response) {
   }
 
   LOG(INFO) << "Enabling profile: " << object_path_.value();
+  context_->modem_control()->StoreAndSetActiveSlot(physical_slot_);
   context_->lpa()->EnableProfile(
       GetIccid(), context_->executor(),
       [response{std::shared_ptr<DBusResponse<>>(std::move(response))},
@@ -126,6 +127,7 @@ void Profile::Disable(std::unique_ptr<DBusResponse<>> response) {
   }
 
   LOG(INFO) << "Disabling profile: " << object_path_.value();
+  context_->modem_control()->StoreAndSetActiveSlot(physical_slot_);
   context_->lpa()->DisableProfile(
       GetIccid(), context_->executor(),
       [response{std::shared_ptr<DBusResponse<>>(std::move(response))},
@@ -164,13 +166,15 @@ void Profile::OnDisabled(int error, std::shared_ptr<DBusResponse<>> response) {
 
 bool Profile::ValidateNickname(brillo::ErrorPtr* /*error*/,
                                const std::string& value) {
+  context_->modem_control()->StoreAndSetActiveSlot(physical_slot_);
   context_->lpa()->SetProfileNickname(
-      GetIccid(), value, context_->executor(), [](int error) {
+      GetIccid(), value, context_->executor(), [this](int error) {
         auto decoded_error = LpaErrorToBrillo(FROM_HERE, error);
         if (decoded_error) {
           LOG(ERROR) << "Failed to set profile nickname: "
                      << decoded_error->GetMessage();
         }
+        context_->modem_control()->RestoreActiveSlot();
       });
   return true;
 }

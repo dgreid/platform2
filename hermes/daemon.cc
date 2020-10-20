@@ -34,7 +34,8 @@ void Daemon::RegisterDBusObjectsAsync(
       .SetLogger(&logger_);
   lpa_ = b.Build();
 
-  Context::Initialize(bus_, lpa_.get(), &executor_, &adaptor_factory_);
+  Context::Initialize(bus_, lpa_.get(), &executor_, &adaptor_factory_,
+                      dynamic_cast<ModemControlInterface*>(modem_.get()));
   manager_ = std::make_unique<Manager>();
   // TODO(crbug.com/1085825) Once a Channel class is created to abstract out the
   // logical channel logic in ModemQrtr, a Channel (subclass?) can be used as an
