@@ -35,6 +35,9 @@ message MakeCredentialRequest {
   // MakeCredential should fail if any excluded credential belongs to this
   // device.
   repeated bytes excluded_credential_id = 5;
+  // Id used to idenfity the window that initiated the request.
+  uint64 request_id = 6;
+  // Next ID: 7
 }
 
 message MakeCredentialResponse {
@@ -75,6 +78,9 @@ message GetAssertionRequest {
   bytes client_data_hash = 3;
   // Currently must not be empty; resident credentials not implemented yet.
   repeated bytes allowed_credential_id = 4;
+  // Id used to identify the window that initiated the request.
+  uint64 request_id = 5;
+  // Next ID: 6
 }
 
 message Assertion {
