@@ -60,6 +60,7 @@
 #include <base/threading/thread.h>
 #include <base/time/time.h>
 #include <brillo/file_utils.h>
+#include <brillo/files/safe_fd.h>
 #include <brillo/process/process.h>
 #include <brillo/secure_blob.h>
 #include <openssl/rand.h>
@@ -738,6 +739,19 @@ bool Platform::ReadFileToSecureBlob(const FilePath& path,
 
 bool Platform::CreateDirectory(const FilePath& path) {
   return base::CreateDirectory(path);
+}
+
+bool Platform::SafeCreateDirAndSetOwnership(const base::FilePath& path,
+                                            uid_t user_id,
+                                            gid_t group_id) {
+  auto root_fd_result = brillo::SafeFD::Root();
+  if (root_fd_result.second != brillo::SafeFD::Error::kNoError) {
+    return false;
+  }
+
+  auto path_result = root_fd_result.first.MakeDir(
+      path, brillo::SafeFD::kDefaultDirPermissions, user_id, group_id);
+  return path_result.second == brillo::SafeFD::Error::kNoError;
 }
 
 bool Platform::DeleteFile(const FilePath& path, bool is_recursive) {

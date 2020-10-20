@@ -874,6 +874,12 @@ class Platform {
   // string in case of error.
   virtual std::string GetRandomSuffix();
 
+  // This safely creates a directory and sets the permissions, looking for
+  // symlinks and race conditions underneath.
+  virtual bool SafeCreateDirAndSetOwnership(const base::FilePath& path,
+                                            uid_t user_id,
+                                            gid_t gid);
+
  private:
   // Returns the process and open file information for the specified process id
   // with files open on the given path

@@ -389,9 +389,8 @@ void MountHelper::RecursiveCopy(const FilePath& source,
     FilePath dir_name = FilePath(next_path).BaseName();
     FilePath destination_dir = destination.Append(dir_name);
     VLOG(1) << "RecursiveCopy: " << destination_dir.value();
-    if (!platform_->CreateDirectory(destination_dir) ||
-        !platform_->SetOwnership(destination_dir, default_uid_, default_gid_,
-                                 true)) {
+    if (!platform_->SafeCreateDirAndSetOwnership(destination_dir, default_uid_,
+                                                 default_gid_)) {
       LOG(ERROR) << "Couldn't change owner (" << default_uid_ << ":"
                  << default_gid_
                  << ") of destination path: " << destination_dir.value();
