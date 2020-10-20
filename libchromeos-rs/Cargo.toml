@@ -5,6 +5,7 @@ authors = ["The Chromium OS Authors"]
 edition = "2018"
 
 [dependencies]
+data_model = { path = "../../platform/crosvm/data_model" } # provided by ebuild
 getopts = "0.2"
 libc = "0.2"
 log = "0.4"

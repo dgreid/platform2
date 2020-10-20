@@ -2,9 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+mod read_dir;
 pub mod sync;
 pub mod syslog;
 pub mod vsock;
+
+pub use read_dir::*;
 
 #[macro_export]
 macro_rules! syscall {
