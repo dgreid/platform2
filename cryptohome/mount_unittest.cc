@@ -1395,8 +1395,7 @@ TEST_P(MountTest, MountCryptohomeNoChapsKey) {
       .WillRepeatedly(DoAll(SaveArg<1>(&(user->credentials)), Return(true)));
   ASSERT_TRUE(mount_->ReEncryptVaultKeyset(credentials, &vault_keyset));
   user->InjectKeyset(&platform_, true);
-  ASSERT_TRUE(mount_->DecryptVaultKeyset(credentials, &vault_keyset, &error));
-
+  ASSERT_TRUE(homedirs_.GetValidKeyset(credentials, &vault_keyset, &error));
   EXPECT_EQ(vault_keyset.legacy_index(), 0);
   EXPECT_EQ(vault_keyset.serialized().has_wrapped_chaps_key(), false);
 

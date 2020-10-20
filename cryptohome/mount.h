@@ -33,6 +33,7 @@
 #include "cryptohome/credentials.h"
 #include "cryptohome/crypto.h"
 #include "cryptohome/dircrypto_data_migrator/migration_helper.h"
+#include "cryptohome/file_system_keys.h"
 #include "cryptohome/homedirs.h"
 #include "cryptohome/migration_type.h"
 #include "cryptohome/mount_constants.h"
@@ -294,7 +295,7 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   // Choose the mount type for the new vault.
   MountType ChooseVaultMountType(bool force_ecryptfs) const;
 
-  virtual bool AddEcryptfsAuthToken(const VaultKeyset& vault_keyset,
+  virtual bool AddEcryptfsAuthToken(const FileSystemKeys& file_system_keys,
                                     std::string* key_signature,
                                     std::string* filename_key_signature) const;
 
@@ -338,7 +339,7 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   //   error (OUT) - The specific error when decrypting
   bool DecryptVaultKeyset(const Credentials& credentials,
                           VaultKeyset* vault_keyset,
-                          MountError* error) const;
+                          MountError* error);
 
   base::FilePath GetUserTimestampFileForUser(
       const std::string& obfuscated_username, int index) const;

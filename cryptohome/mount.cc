@@ -256,15 +256,15 @@ MountType Mount::ChooseVaultMountType(bool force_ecryptfs) const {
   }
 }
 
-bool Mount::AddEcryptfsAuthToken(const VaultKeyset& vault_keyset,
+bool Mount::AddEcryptfsAuthToken(const FileSystemKeys& file_system_keys,
                                  std::string* key_signature,
                                  std::string* filename_key_signature) const {
   // Add the File Encryption key (FEK) from the vault keyset.  This is the key
   // that is used to encrypt the file contents when the file is persisted to the
   // lower filesystem by eCryptfs.
-  *key_signature = CryptoLib::SecureBlobToHex(vault_keyset.fek_sig());
-  if (!platform_->AddEcryptfsAuthToken(vault_keyset.fek(), *key_signature,
-                                       vault_keyset.fek_salt())) {
+  *key_signature = CryptoLib::SecureBlobToHex(file_system_keys.fek_sig());
+  if (!platform_->AddEcryptfsAuthToken(file_system_keys.fek(), *key_signature,
+                                       file_system_keys.fek_salt())) {
     LOG(ERROR) << "Couldn't add eCryptfs file encryption key to keyring.";
     return false;
   }
@@ -272,10 +272,11 @@ bool Mount::AddEcryptfsAuthToken(const VaultKeyset& vault_keyset,
   // Add the File Name Encryption Key (FNEK) from the vault keyset.  This is the
   // key that is used to encrypt the file name when the file is persisted to the
   // lower filesystem by eCryptfs.
-  *filename_key_signature = CryptoLib::SecureBlobToHex(vault_keyset.fnek_sig());
-  if (!platform_->AddEcryptfsAuthToken(vault_keyset.fnek(),
+  *filename_key_signature =
+      CryptoLib::SecureBlobToHex(file_system_keys.fnek_sig());
+  if (!platform_->AddEcryptfsAuthToken(file_system_keys.fnek(),
                                        *filename_key_signature,
-                                       vault_keyset.fnek_salt())) {
+                                       file_system_keys.fnek_salt())) {
     LOG(ERROR) << "Couldn't add eCryptfs filename encryption key to keyring.";
     return false;
   }
@@ -390,14 +391,8 @@ bool Mount::MountCryptohome(const Credentials& credentials,
     return false;
   }
 
-  if (!vault_keyset.serialized().has_wrapped_chaps_key()) {
-    vault_keyset.CreateRandomChapsKey();
-    ReEncryptVaultKeyset(credentials, &vault_keyset);
-  }
-
-  SecureBlob local_chaps_key(vault_keyset.chaps_key().begin(),
-                             vault_keyset.chaps_key().end());
-  pkcs11_token_auth_data_.swap(local_chaps_key);
+  FileSystemKeys file_system_keys(credentials.username(), vault_keyset);
+  pkcs11_token_auth_data_ = file_system_keys.chaps_key();
   if (!platform_->ClearUserKeyring()) {
     LOG(ERROR) << "Failed to clear user keyring";
   }
@@ -457,7 +452,8 @@ bool Mount::MountCryptohome(const Credentials& credentials,
   std::string key_signature, fnek_signature;
   if (should_mount_ecryptfs) {
     // Add the decrypted key to the keyring so that ecryptfs can use it.
-    if (!AddEcryptfsAuthToken(vault_keyset, &key_signature, &fnek_signature)) {
+    if (!AddEcryptfsAuthToken(file_system_keys, &key_signature,
+                              &fnek_signature)) {
       LOG(ERROR) << "Error adding eCryptfs keys.";
       *mount_error = MOUNT_ERROR_KEYRING_FAILED;
       return false;
@@ -472,8 +468,8 @@ bool Mount::MountCryptohome(const Credentials& credentials,
           dircrypto::CheckFscryptKeyIoctlSupport() ? FSCRYPT_POLICY_V2
                                                    : FSCRYPT_POLICY_V1;
     }
-    dircrypto_key_reference_.reference = vault_keyset.fek_sig();
-    if (!platform_->AddDirCryptoKeyToKeyring(vault_keyset.fek(),
+    dircrypto_key_reference_.reference = file_system_keys.fek_sig();
+    if (!platform_->AddDirCryptoKeyToKeyring(file_system_keys.fek(),
                                              &dircrypto_key_reference_)) {
       LOG(ERROR) << "Error adding dircrypto key.";
       *mount_error = MOUNT_ERROR_KEYRING_FAILED;
@@ -896,7 +892,7 @@ bool Mount::ShouldReSaveKeyset(VaultKeyset* vault_keyset) const {
 
 bool Mount::DecryptVaultKeyset(const Credentials& credentials,
                                VaultKeyset* vault_keyset,
-                               MountError* error) const {
+                               MountError* error) {
   *error = MOUNT_ERROR_NONE;
 
   if (!homedirs_->GetValidKeyset(credentials, vault_keyset, error))
@@ -912,13 +908,15 @@ bool Mount::DecryptVaultKeyset(const Credentials& credentials,
     crypto_->EnsureTpm(false);
   }
 
-  if (!ShouldReSaveKeyset(vault_keyset)) {
-    return true;
+  bool force_resave = false;
+  if (!vault_keyset->serialized().has_wrapped_chaps_key()) {
+    vault_keyset->CreateRandomChapsKey();
+    force_resave = true;
   }
 
-  // This is not considered a fatal error.  Re-saving with the desired
-  // protection is ideal, but not required.
-  ReEncryptVaultKeyset(credentials, vault_keyset);
+  if (force_resave || ShouldReSaveKeyset(vault_keyset)) {
+    ReEncryptVaultKeyset(credentials, vault_keyset);
+  }
 
   return true;
 }
