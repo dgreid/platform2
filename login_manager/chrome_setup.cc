@@ -21,6 +21,7 @@
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_split.h>
 #include <base/strings/stringprintf.h>
+#include <base/system/sys_info.h>
 #include <base/values.h>
 #include <brillo/userdb_utils.h>
 #include <chromeos-config/libcros_config/cros_config_interface.h>
@@ -244,6 +245,15 @@ void AddPluginVmFlags(ChromiumCommandBuilder* builder) {
 void AddBorealisFlags(ChromiumCommandBuilder* builder) {
   if (builder->UseFlagIsSet("borealis_host")) {
     builder->AddFeatureEnableOverride("Borealis");
+    // TODO(b/161952658): Remove the feature override for the exo-pointer lock
+    // when it is completed. This is only meant to be a temporary work-around.
+    std::string channel_string;
+    if (base::SysInfo::GetLsbReleaseValue("CHROMEOS_RELEASE_TRACK",
+                                          &channel_string) &&
+        channel_string != "beta-channel" &&
+        channel_string != "stable-channel") {
+      builder->AddFeatureEnableOverride("ExoPointerLock");
+    }
   }
 }
 
