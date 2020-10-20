@@ -4,7 +4,7 @@
 
 use std::collections::HashMap;
 use std::fmt;
-use std::io::{self, BufRead, BufReader, BufWriter, Read, Write};
+use std::io::{self, BufRead, BufReader, BufWriter, Cursor, Read, Write};
 use std::num::ParseIntError;
 use std::str::FromStr;
 
@@ -14,6 +14,11 @@ use tiny_http::{Header, Method};
 use crate::io_adapters::{ChunkedWriter, CompleteReader, LoggingReader};
 use crate::usb_connector::UsbConnection;
 use crate::util::read_until_delimiter;
+
+// Minimum Request body size, in bytes, before we switch to forwarding requests
+// using a chunked Transfer-Encoding.
+const CHUNKED_THRESHOLD: usize = 1 << 15;
+const VERSION: Option<&'static str> = option_env!("CARGO_PKG_VERSION");
 
 #[derive(Debug)]
 pub enum Error {
@@ -259,6 +264,7 @@ struct Request {
     url: String,
     headers: Headers,
     body_length: BodyLength,
+    forwarded_body_length: BodyLength,
 }
 
 // Converts a tiny_http::Request into our internal Request format.
@@ -287,7 +293,18 @@ fn rewrite_request(request: &tiny_http::Request) -> Request {
         BodyLength::Exactly(0)
     };
 
-    if body_length != BodyLength::Exactly(0) {
+    headers.delete_header("User-Agent");
+    let user_agent = format!("ippusb_bridge/{}", VERSION.unwrap_or("unknown"));
+    headers.add_header("User-Agent", &user_agent);
+
+    // If the request body is relatively small, don't use a chunked encoding for
+    // the proxied request.
+    let forwarded_body_length = match body_length {
+        BodyLength::Exactly(length) if length < CHUNKED_THRESHOLD => body_length,
+        _ => BodyLength::Chunked,
+    };
+
+    if forwarded_body_length == BodyLength::Chunked {
         // Content-Length and chunked encoding are mutually exclusive.
         // We don't need to delete any existing Transfer-Encoding since it's a
         // Hop-by-hop header and is already filtered out above.
@@ -302,6 +319,7 @@ fn rewrite_request(request: &tiny_http::Request) -> Request {
         url: request.url().to_string(),
         headers,
         body_length,
+        forwarded_body_length,
     }
 }
 
@@ -328,8 +346,21 @@ pub fn handle_request(usb: UsbConnection, mut request: tiny_http::Request) -> Re
     // Filter out headers that should not be forwarded, and update Content-Length and
     // Transfer-Encoding headers based on how the body (if any) will be transferred.
     let new_request = rewrite_request(&request);
-    let mut usb_writer = BufWriter::new(&usb);
 
+    let mut logging_reader = LoggingReader::new(request.as_reader(), "client".to_string());
+    let mut request_body: Box<dyn Read> = match new_request.forwarded_body_length {
+        BodyLength::Exactly(length) => {
+            // If we're not using chunked, we must have the entire request body before beginning to
+            // forward the request. If we didn't and the client were to drop in the middle of
+            // forwarding a request, we would have no way of cleanly terminating the connection.
+            let mut buf = Vec::with_capacity(length);
+            io::copy(&mut logging_reader, &mut buf).map_err(Error::ForwardRequestBody)?;
+            Box::new(Cursor::new(buf))
+        }
+        _ => Box::new(logging_reader),
+    };
+
+    let mut usb_writer = BufWriter::new(&usb);
     // Write the modified request header to the printer.
     serialize_request_header(&new_request, &mut usb_writer).map_err(Error::WriteRequestHeader)?;
 
@@ -342,11 +373,14 @@ pub fn handle_request(usb: UsbConnection, mut request: tiny_http::Request) -> Re
 
     if new_request.body_length != BodyLength::Exactly(0) {
         debug!("* Forwarding client request body");
-        let mut logging_reader = LoggingReader::new(request.as_reader(), "client".to_string());
-        let mut writer = Box::new(ChunkedWriter::new(usb_writer));
-        io::copy(&mut logging_reader, &mut writer).map_err(Error::ForwardRequestBody)?;
+        let mut writer: Box<dyn Write> = match new_request.forwarded_body_length {
+            BodyLength::Chunked => Box::new(ChunkedWriter::new(usb_writer)),
+            _ => Box::new(usb_writer),
+        };
+        io::copy(&mut request_body, &mut writer).map_err(Error::ForwardRequestBody)?;
         writer.flush().map_err(Error::ForwardRequestBody)?;
     }
+    drop(request_body);
 
     debug!("* Reading printer response header");
     let (status, headers) = response_reader.read_header()?;
