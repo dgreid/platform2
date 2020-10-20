@@ -43,6 +43,8 @@ const size_t kMaxPasswordLength = 32;
 const uint32_t kMaxNVSpaceIndex = (1 << 24) - 1;
 // Cr50 Vendor ID ("CROS").
 const uint32_t kVendorIdCr50 = 0x43524f53;
+// Simulator Vendor ID ("SIMU").
+const uint32_t kVendorIdSimulator = 0x53494d55;
 // Command code for Cr50 vendor-specific commands,
 const uint32_t kCr50VendorCC = 0x20000000 | 0; /* Vendor Bit Set + 0 */
 // Vendor-specific subcommand codes.
@@ -2651,6 +2653,10 @@ uint32_t TpmUtilityImpl::VendorId() {
 
 bool TpmUtilityImpl::IsCr50() {
   return VendorId() == kVendorIdCr50;
+}
+
+bool TpmUtilityImpl::IsSimulator() {
+  return VendorId() == kVendorIdSimulator;
 }
 
 std::string TpmUtilityImpl::SendCommandAndWait(const std::string& command) {

@@ -382,7 +382,7 @@ class TRUNKS_EXPORT TpmUtilityImpl : public TpmUtility {
   TPM_RC TpmBasicInit(std::unique_ptr<TpmState>* tpm_state);
 
   // Return true if the TPM supports padding-only scheme for Sign.
-  bool SupportsPaddingOnlySigningScheme() { return IsCr50(); }
+  bool SupportsPaddingOnlySigningScheme() { return IsCr50() || IsSimulator(); }
 
   // Returns Vendor ID as reported in TPM_PT_MANUFACTURER property, or 0
   // in case of error reading the property.
@@ -391,6 +391,9 @@ class TRUNKS_EXPORT TpmUtilityImpl : public TpmUtility {
 
   // Returns true for TPMs running Cr50.
   bool IsCr50();
+
+  // Returns true for TPMs running on simulator.
+  bool IsSimulator();
 
   // Send an arbitrary command to the TPM and wait for the response.
   // Returns the response packet.
