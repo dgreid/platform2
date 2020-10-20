@@ -19,7 +19,8 @@ rm -f /etc/apt/sources.list.d/cros-gpu.list \
 # only serves debian-specific keys and that's not enough when we want the
 # Google package signing key. however most people don't need this so ignore
 # failures.
-apt-key adv --refresh-keys --keyserver keyserver.ubuntu.com \
+APT_KEY_DONT_WARN_ON_DANGEROUS_USAGE=1 apt-key adv --batch \
+    --refresh-keys --keyserver keyserver.ubuntu.com \
     EB4C1BFD4F042F6DDDCCEC917721F63BD38B4796 || true
 
 # The actual flip to buster.
