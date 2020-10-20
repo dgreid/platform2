@@ -11,6 +11,7 @@
 #include <linux/videodev2.h>
 #include <sys/mman.h>
 
+#include <base/no_destructor.h>
 #include <drm_fourcc.h>
 #include <hardware/gralloc.h>
 #include <system/graphics.h>
@@ -63,12 +64,12 @@ uint32_t GetGbmUseFlags(uint32_t hal_format, uint32_t usage) {
 
 // static
 CameraBufferManager* CameraBufferManager::GetInstance() {
-  static CameraBufferManagerImpl instance;
-  if (!instance.gbm_device_) {
+  static base::NoDestructor<CameraBufferManagerImpl> instance;
+  if (!instance->gbm_device_) {
     LOGF(ERROR) << "Failed to create GBM device for CameraBufferManager";
     return nullptr;
   }
-  return &instance;
+  return instance.get();
 }
 
 // static
