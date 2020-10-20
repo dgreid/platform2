@@ -230,7 +230,8 @@ void FillMessageMwifiex(struct nl_msg* msg, bool tablet) {
                      MWIFIEX_VENDOR_CMD_SET_TX_POWER_LIMIT))
       << "Failed to put NL80211_ATTR_VENDOR_SUBCMD";
 
-  struct nlattr* limits = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA);
+  struct nlattr* limits =
+      nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA | NLA_F_NESTED);
   CHECK(limits) << "Failed in nla_nest_start";
 
   CHECK(!nla_put_u8(msg, MWIFIEX_VENDOR_CMD_ATTR_TXP_LIMIT_24, tablet))
