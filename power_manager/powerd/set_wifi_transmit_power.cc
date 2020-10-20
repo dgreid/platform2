@@ -71,7 +71,14 @@
 namespace {
 
 int ErrorHandler(struct sockaddr_nl* nla, struct nlmsgerr* err, void* arg) {
-  *static_cast<int*>(arg) = err->error;
+  if (err->error > 0) {
+    // TODO(b/171528835): replace with "CHECK_LE(err->error, 0);" once the
+    // driver has been fixed.
+    LOG(ERROR) << "Invalid error code (b/171528835), using workaround.";
+    *static_cast<int*>(arg) = -ENOENT;
+  } else {
+    *static_cast<int*>(arg) = err->error;
+  }
   return NL_STOP;
 }
 
@@ -382,13 +389,19 @@ class PowerSetter {
         NOTREACHED() << "No driver found";
     }
 
-    CHECK_GE(nl_send_auto(nl_sock_, msg), 0)
-        << "nl_send_auto failed: " << nl_geterror(err_);
-    while (err_ != 0)
+    PCHECK(nl_send_auto(nl_sock_, msg) > 0) << "nl_send_auto failed";
+
+    err_ = 1;
+    while (err_ > 0)
       nl_recvmsgs(nl_sock_, cb_);
 
+    // TODO(b/171528835): some drivers may hit this a lot. Consider making this
+    // even louder (CHECK()?) when known driver issues are fixed.
+    if (err_ != 0)
+      LOG(ERROR) << "netlink command failed: " << strerror(-err_);
+
     nlmsg_free(msg);
-    return true;
+    return err_ == 0;
   }
 
   // Sets power mode according to tablet mode state. Returns true on success and
