@@ -127,12 +127,14 @@ std::string CreateSharedDataParam(const base::FilePath& data_dir,
                                   const std::string& tag,
                                   bool enable_caches,
                                   bool ascii_casefold) {
+  // TODO(b/169446394): Go back to using "never" when caching is disabled once
+  // we can switch /data/media to use 9p.
   return base::StringPrintf(
-      "%s:%s:type=fs:cache=%s:uidmap=%s:gidmap=%s:timeout=3600:rewrite-"
+      "%s:%s:type=fs:cache=%s:uidmap=%s:gidmap=%s:timeout=%d:rewrite-"
       "security-xattrs=true:ascii_casefold=%s:writeback=%s",
-      data_dir.value().c_str(), tag.c_str(), enable_caches ? "always" : "never",
-      kAndroidUidMap, kAndroidGidMap, ascii_casefold ? "true" : "false",
-      enable_caches ? "true" : "false");
+      data_dir.value().c_str(), tag.c_str(), enable_caches ? "always" : "auto",
+      kAndroidUidMap, kAndroidGidMap, enable_caches ? 3600 : 1,
+      ascii_casefold ? "true" : "false", enable_caches ? "true" : "false");
 }
 
 }  // namespace
