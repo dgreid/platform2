@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use std::collections::HashMap;
 use std::fmt;
 use std::io::{self, BufRead, BufReader, BufWriter, Read, Write};
 use std::num::ParseIntError;
@@ -52,10 +53,10 @@ impl fmt::Display for Error {
 
 type Result<T> = std::result::Result<T, Error>;
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq)]
 enum BodyLength {
     Chunked,
-    Exactly(u64),
+    Exactly(usize),
 }
 
 struct ResponseReader<R: BufRead + Sized> {
@@ -120,7 +121,7 @@ where
         // Determine the size of the body content.
         for header in headers.iter() {
             if header.field.equiv("Content-Length") {
-                let length = u64::from_str(header.value.as_str()).map_err(|e| {
+                let length = usize::from_str(header.value.as_str()).map_err(|e| {
                     Error::MalformedContentLength(header.value.as_str().to_string(), e)
                 })?;
                 self.body_length = BodyLength::Exactly(length);
@@ -144,7 +145,7 @@ where
         self.created_body_reader = true;
         match self.body_length {
             BodyLength::Exactly(length) => {
-                let reader = (&mut self.reader).take(length);
+                let reader = (&mut self.reader).take(length as u64);
                 Ok(Box::new(CompleteReader::new(reader)))
             }
             BodyLength::Chunked => {
@@ -195,32 +196,125 @@ fn supports_request_body(method: &Method) -> bool {
     }
 }
 
-fn serialize_request_header(request: &tiny_http::Request, chunked: bool) -> String {
-    let mut serialized_header = format!("{} {} HTTP/1.1\r\n", request.method(), request.url());
-    let mut have_content_length = false;
-    for header in request.headers().iter().filter(|&h| is_end_to_end(h)) {
-        if header.field.as_str() == "Content-Length" {
-            have_content_length = true;
-            // Do not add the content_length header if we're going to be using
-            // a chunked encoding.
-            if chunked {
-                continue;
-            }
+#[derive(Eq)]
+struct HeaderField {
+    value: String,
+}
+
+impl HeaderField {
+    fn new(value: &str) -> Self {
+        Self {
+            value: value.to_string(),
         }
+    }
+}
 
-        let formatted = format!("{}: {}\r\n", header.field, header.value);
-        serialized_header += &formatted;
+impl std::cmp::PartialEq for HeaderField {
+    fn eq(&self, other: &Self) -> bool {
+        self.value.eq_ignore_ascii_case(&other.value)
+    }
+}
+
+impl std::hash::Hash for HeaderField {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.value.to_ascii_lowercase().hash(state);
+    }
+}
+
+impl fmt::Display for HeaderField {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.value)
+    }
+}
+
+struct Headers {
+    values: HashMap<HeaderField, Vec<String>>,
+}
+
+impl Headers {
+    pub fn new() -> Self {
+        Headers {
+            values: HashMap::new(),
+        }
     }
 
-    if chunked {
-        serialized_header += "Transfer-Encoding: chunked\r\n";
-    } else if !have_content_length {
-        serialized_header += "Content-Length: 0\r\n";
+    pub fn delete_header(&mut self, k: &str) -> Option<Vec<String>> {
+        self.values.remove(&HeaderField::new(k))
     }
 
-    serialized_header += "\r\n";
+    pub fn add_header(&mut self, k: &str, v: &str) {
+        self.values
+            .entry(HeaderField::new(k))
+            .or_default()
+            .push(v.to_string());
+    }
 
-    serialized_header
+    pub fn has_header(&self, k: &str) -> bool {
+        self.values.contains_key(&HeaderField::new(k))
+    }
+}
+
+struct Request {
+    method: String,
+    url: String,
+    headers: Headers,
+    body_length: BodyLength,
+}
+
+// Converts a tiny_http::Request into our internal Request format.
+// Filter out Hop-by-hop headers and add Content-Length or Transfer-Encoding
+// headers as needed.
+fn rewrite_request(request: &tiny_http::Request) -> Request {
+    let mut headers = Headers::new();
+    // If the incoming request specifies a Transfer-Encoding, it must be chunked.
+    let request_is_chunked = request
+        .headers()
+        .iter()
+        .any(|h| h.field.equiv("Transfer-Encoding"));
+
+    for header in request.headers().iter().filter(|&h| is_end_to_end(h)) {
+        // Call as_str() twice for conversion from header name to &AsciiStr to &str.
+        headers.add_header(header.field.as_str().as_str(), header.value.as_str());
+    }
+
+    let body_length = if !supports_request_body(request.method()) {
+        BodyLength::Exactly(0)
+    } else if request_is_chunked {
+        BodyLength::Chunked
+    } else if let Some(length) = request.body_length() {
+        BodyLength::Exactly(length)
+    } else {
+        BodyLength::Exactly(0)
+    };
+
+    if body_length != BodyLength::Exactly(0) {
+        // Content-Length and chunked encoding are mutually exclusive.
+        // We don't need to delete any existing Transfer-Encoding since it's a
+        // Hop-by-hop header and is already filtered out above.
+        headers.delete_header("Content-Length");
+        headers.add_header("Transfer-Encoding", "chunked");
+    } else if !headers.has_header("Content-Length") {
+        headers.add_header("Content-Length", "0");
+    }
+
+    Request {
+        method: request.method().to_string(),
+        url: request.url().to_string(),
+        headers,
+        body_length,
+    }
+}
+
+fn serialize_request_header(request: &Request, writer: &mut dyn Write) -> io::Result<()> {
+    write!(writer, "{} {} HTTP/1.1\r\n", request.method, request.url)?;
+    for (field, values) in request.headers.values.iter() {
+        for value in values.iter() {
+            write!(writer, "{}: {}\r\n", field, value)?;
+        }
+    }
+
+    write!(writer, "\r\n")?;
+    writer.flush()
 }
 
 pub fn handle_request(usb: UsbConnection, mut request: tiny_http::Request) -> Result<()> {
@@ -231,18 +325,13 @@ pub fn handle_request(usb: UsbConnection, mut request: tiny_http::Request) -> Re
         request.http_version().1
     );
 
-    // If we aren't explicitly given a Content-Length: 0 header, and the method
-    // permits a request body, there could be body content, so we should switch
-    // to a chunked transfer.
-    let has_body = supports_request_body(request.method()) && request.body_length() != Some(0);
+    // Filter out headers that should not be forwarded, and update Content-Length and
+    // Transfer-Encoding headers based on how the body (if any) will be transferred.
+    let new_request = rewrite_request(&request);
+    let mut usb_writer = BufWriter::new(&usb);
 
     // Write the modified request header to the printer.
-    let header = serialize_request_header(&request, has_body);
-    let mut usb_writer = BufWriter::new(&usb);
-    usb_writer
-        .write(header.as_bytes())
-        .map_err(Error::WriteRequestHeader)?;
-    usb_writer.flush().map_err(Error::WriteRequestHeader)?;
+    serialize_request_header(&new_request, &mut usb_writer).map_err(Error::WriteRequestHeader)?;
 
     // Now that we have written data to the printer, we must ensure that we read
     // a complete HTTP response from the printer. Otherwise, that data may
@@ -251,12 +340,12 @@ pub fn handle_request(usb: UsbConnection, mut request: tiny_http::Request) -> Re
     let usb_reader = BufReader::new(&usb);
     let mut response_reader = ResponseReader::new(usb_reader);
 
-    if has_body {
+    if new_request.body_length != BodyLength::Exactly(0) {
         debug!("* Forwarding client request body");
         let mut logging_reader = LoggingReader::new(request.as_reader(), "client".to_string());
-        let mut chunked_writer = ChunkedWriter::new(usb_writer);
-        io::copy(&mut logging_reader, &mut chunked_writer).map_err(Error::ForwardRequestBody)?;
-        chunked_writer.flush().map_err(Error::ForwardRequestBody)?;
+        let mut writer = Box::new(ChunkedWriter::new(usb_writer));
+        io::copy(&mut logging_reader, &mut writer).map_err(Error::ForwardRequestBody)?;
+        writer.flush().map_err(Error::ForwardRequestBody)?;
     }
 
     debug!("* Reading printer response header");
