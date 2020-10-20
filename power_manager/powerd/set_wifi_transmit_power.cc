@@ -304,10 +304,12 @@ void FillMessageRtw(struct nl_msg* msg,
                      REALTEK_NL80211_VNDCMD_SET_SAR))
       << "Failed to put NL80211_ATTR_VENDOR_SUBCMD";
 
-  struct nlattr* vendor_cmd = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA);
-  struct nlattr* rules = nla_nest_start(msg, REALTEK_VNDCMD_ATTR_SAR_RULES);
+  struct nlattr* vendor_cmd =
+      nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA | NLA_F_NESTED);
+  struct nlattr* rules =
+      nla_nest_start(msg, REALTEK_VNDCMD_ATTR_SAR_RULES | NLA_F_NESTED);
   for (const auto& limit : GetRtwChromeosConfigPowerTable(tablet, domain)) {
-    struct nlattr* rule = nla_nest_start(msg, 1);
+    struct nlattr* rule = nla_nest_start(msg, 1 | NLA_F_NESTED);
     CHECK(rule) << "Failed in nla_nest_start";
     CHECK(!nla_put_u32(msg, REALTEK_VNDCMD_ATTR_SAR_BAND, limit.first))
         << "Failed to put REALTEK_VNDCMD_ATTR_SAR_BAND";
