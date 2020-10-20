@@ -184,7 +184,8 @@ vda_set_output_buffer_count(void* ctx, size_t num_output_buffers);
 // Provides an output buffer |fd| for decoded frames in decode session context
 // |ctx| where |format| is a valid output pixel format listed in
 // get_vda_capabilities, and |planes| is a pointer to an array of |num_planes|
-// objects. |planes| ownership is retained by the caller.
+// objects. |planes| ownership is retained by the caller. This function takes
+// ownership of |fd|.
 vda_result_t LIBVDA_EXPORT vda_use_output_buffer(void* ctx,
                                                  int32_t picture_buffer_id,
                                                  vda_pixel_format_t format,

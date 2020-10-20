@@ -130,6 +130,8 @@ impl<'a> Session<'a> {
     ///
     /// The caller is responsible for passing in a unique value for `output_buffer_id`
     /// which can be referenced when the event is received.
+    ///
+    /// This function takes ownership of `fd`.
     pub fn use_output_buffer(
         &self,
         output_buffer_id: VeaOutputBufferId,

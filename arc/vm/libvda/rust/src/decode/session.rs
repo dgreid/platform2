@@ -111,6 +111,8 @@ impl<'a> Session<'a> {
     ///
     /// This function is also used to notify that they consumed decoded frames
     /// in the output buffer.
+    ///
+    /// This function takes ownership of `output_buffer`.
     pub fn use_output_buffer(
         &self,
         picture_buffer_id: i32,

@@ -201,6 +201,8 @@ int LIBVDA_EXPORT vea_encode(void* ctx,
 // |output_buffer_id| which it can reference when handling
 // PROCESSED_OUTPUT_BUFFER events.
 //
+// This function takes ownership of |fd|.
+//
 // When the output buffer has been filled, a vea_event_t struct with
 // type PROCESSED_OUTPUT_BUFFER and processed_output_buffer_id set to
 // |output_buffer_id| can be received from the event pipe.
