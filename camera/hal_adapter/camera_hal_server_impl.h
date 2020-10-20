@@ -60,6 +60,10 @@ class CameraHalServerImpl final {
 
     void SetTracingEnabled(bool enabled) final;
 
+    void NotifyCameraActivityChange(int32_t camera_id,
+                                    bool opened,
+                                    mojom::CameraClientType type);
+
     // Gets a weak pointer of the IPCBridge. This method can be called on
     // non-IPC thread.
     base::WeakPtr<IPCBridge> GetWeakPtr();
@@ -96,6 +100,10 @@ class CameraHalServerImpl final {
   void LoadCameraHal();
 
   void ExitOnMainThread(int exit_status);
+
+  void OnCameraActivityChange(int32_t camera_id,
+                              bool opened,
+                              mojom::CameraClientType type);
 
   std::unique_ptr<CameraMojoChannelManager> mojo_manager_;
 

@@ -124,6 +124,15 @@ void CameraHalServerImpl::IPCBridge::SetTracingEnabled(bool enabled) {
   TRACE_CAMERA_ENABLE(enabled);
 }
 
+void CameraHalServerImpl::IPCBridge::NotifyCameraActivityChange(
+    int32_t camera_id, bool opened, mojom::CameraClientType type) {
+  VLOGF_ENTER();
+  DCHECK(ipc_task_runner_->BelongsToCurrentThread());
+  DCHECK(callbacks_.is_bound());
+
+  callbacks_->CameraDeviceActivityChange(camera_id, opened, type);
+}
+
 base::WeakPtr<CameraHalServerImpl::IPCBridge>
 CameraHalServerImpl::IPCBridge::GetWeakPtr() {
   return weak_ptr_factory_.GetWeakPtr();
@@ -194,13 +203,15 @@ void CameraHalServerImpl::LoadCameraHal() {
     camera_modules.push_back(module);
   }
 
+  auto active_callback = base::Bind(
+      &CameraHalServerImpl::OnCameraActivityChange, base::Unretained(this));
   if (enable_front && enable_back && enable_external) {
-    camera_hal_adapter_.reset(
-        new CameraHalAdapter(camera_modules, mojo_manager_.get()));
+    camera_hal_adapter_.reset(new CameraHalAdapter(
+        camera_modules, mojo_manager_.get(), active_callback));
   } else {
-    camera_hal_adapter_.reset(
-        new CameraHalTestAdapter(camera_modules, mojo_manager_.get(),
-                                 enable_front, enable_back, enable_external));
+    camera_hal_adapter_.reset(new CameraHalTestAdapter(
+        camera_modules, mojo_manager_.get(), active_callback, enable_front,
+        enable_back, enable_external));
   }
 
   LOGF(INFO) << "Running camera HAL adapter on " << getpid();
@@ -229,6 +240,16 @@ void CameraHalServerImpl::ExitOnMainThread(int exit_status) {
   future->Wait(-1);
 
   exit(exit_status);
+}
+
+void CameraHalServerImpl::OnCameraActivityChange(int32_t camera_id,
+                                                 bool opened,
+                                                 mojom::CameraClientType type) {
+  mojo_manager_->GetIpcTaskRunner()->PostTask(
+      FROM_HERE,
+      base::BindOnce(
+          &CameraHalServerImpl::IPCBridge::NotifyCameraActivityChange,
+          ipc_bridge_->GetWeakPtr(), camera_id, opened, type));
 }
 
 }  // namespace cros

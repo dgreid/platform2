@@ -43,7 +43,8 @@ const uint32_t kIdAll = 0xFFFFFFFF;
 }  // namespace
 
 CameraHalAdapter::CameraHalAdapter(std::vector<camera_module_t*> camera_modules,
-                                   CameraMojoChannelManager* mojo_manager)
+                                   CameraMojoChannelManager* mojo_manager,
+                                   CameraActivityCallback activity_callback)
     : camera_modules_(camera_modules),
       camera_module_thread_("CameraModuleThread"),
       camera_module_callbacks_thread_("CameraModuleCallbacksThread"),
@@ -51,7 +52,8 @@ CameraHalAdapter::CameraHalAdapter(std::vector<camera_module_t*> camera_modules,
       callbacks_id_(0),
       vendor_tag_ops_id_(0),
       camera_metrics_(CameraMetrics::New()),
-      mojo_manager_(mojo_manager) {
+      mojo_manager_(mojo_manager),
+      activity_callback_(activity_callback) {
   VLOGF_ENTER();
 }
 
@@ -152,6 +154,7 @@ int32_t CameraHalAdapter::OpenDevice(
     return ret;
   }
   LOG(INFO) << "Camera opened for " << camera_client_type;
+  activity_callback_.Run(camera_id, /*opened=*/true, camera_client_type);
 
   camera_info_t info;
   ret = camera_module->get_camera_info(internal_camera_id, &info);
@@ -672,6 +675,8 @@ void CameraHalAdapter::CloseDevice(int32_t camera_id,
   device_adapters_.erase(camera_id);
 
   LOGF(INFO) << "Camera closed for " << camera_client_type;
+  activity_callback_.Run(camera_id, /*opened=*/false, camera_client_type);
+
   camera_metrics_->SendSessionDuration(session_timer_map_[camera_id].Elapsed());
   session_timer_map_.erase(camera_id);
 }

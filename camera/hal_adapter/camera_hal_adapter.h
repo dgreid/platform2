@@ -20,6 +20,7 @@
 #include <base/threading/thread.h>
 #include <base/timer/elapsed_timer.h>
 
+#include "common/utils/common_types.h"
 #include "common/vendor_tag_manager.h"
 #include "cros-camera/camera_metrics.h"
 #include "cros-camera/camera_mojo_channel_manager.h"
@@ -49,8 +50,12 @@ struct CameraModuleCallbacksAux : camera_module_callbacks_t {
 
 class CameraHalAdapter {
  public:
+  using CameraActivityCallback = base::RepeatingCallback<void(
+      int32_t, bool, cros::mojom::CameraClientType)>;
+
   CameraHalAdapter(std::vector<camera_module_t*> camera_modules,
-                   CameraMojoChannelManager* mojo_manager);
+                   CameraMojoChannelManager* mojo_manager,
+                   CameraActivityCallback activity_callback);
 
   virtual ~CameraHalAdapter();
 
@@ -244,6 +249,8 @@ class CameraHalAdapter {
 
   // Mojo manager which is used for Mojo communication.
   CameraMojoChannelManager* mojo_manager_;
+
+  CameraActivityCallback activity_callback_;
 
   DISALLOW_IMPLICIT_CONSTRUCTORS(CameraHalAdapter);
 };
