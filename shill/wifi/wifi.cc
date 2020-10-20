@@ -409,7 +409,7 @@ void WiFi::ConnectTo(WiFiService* service, Error* error) {
   }
 
   if (pending_service_ && pending_service_ != service) {
-    LOG(INFO) << "Connecting to: " << service->log_name()
+    LOG(INFO) << "Connecting to: " << service->log_name() << ", "
               << "mode: " << service->mode() << ", "
               << "key management: " << service->key_management() << ", "
               << "physical mode: " << service->physical_mode() << ", "
