@@ -59,7 +59,7 @@ const int kDefaultBatteryStabilizedAfterResumeDelayMs = 5000;
 bool ReadAndTrimString(const base::FilePath& directory,
                        const std::string& filename,
                        std::string* out) {
-  return util::ReadStringFile(directory.Append(filename), out);
+  return util::MaybeReadStringFile(directory.Append(filename), out);
 }
 
 // Reads a 64-bit integer value from a file and returns true on success.

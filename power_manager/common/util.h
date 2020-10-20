@@ -32,6 +32,10 @@ bool WriteInt64File(const base::FilePath& path, int64_t value);
 // Logs an error and returns false on failure.
 bool ReadStringFile(const base::FilePath& path, std::string* value_out);
 
+// Reads a string value from |path| to |value|, ignoring trailing whitespace.
+// Returns false on failure without error logging.
+bool MaybeReadStringFile(const base::FilePath& path, std::string* value_out);
+
 // Reads a base-10 int64 value from |path| to |value|, ignoring trailing
 // whitespace. Logs an error and returns false on failure.
 bool ReadInt64File(const base::FilePath& path, int64_t* value_out);

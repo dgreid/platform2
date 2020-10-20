@@ -26,7 +26,7 @@ std::string FilePrefsStore::GetDescription() const {
 bool FilePrefsStore::ReadPrefString(const std::string& name,
                                     std::string* value_out) {
   base::FilePath path = pref_path_.Append(name);
-  return util::ReadStringFile(path, value_out);
+  return util::MaybeReadStringFile(path, value_out);
 }
 
 bool FilePrefsStore::WritePrefString(const std::string& name,
