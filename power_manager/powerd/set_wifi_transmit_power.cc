@@ -108,6 +108,7 @@ WirelessDriver GetWirelessDriverType(const std::string& device_name) {
       {"mwifiex_pcie", WirelessDriver::MWIFIEX},
       {"mwifiex_sdio", WirelessDriver::MWIFIEX},
       {"rtw_pci", WirelessDriver::RTW},
+      {"rtw_8822ce", WirelessDriver::RTW},
   };
 
   // .../device/driver symlink should point at the driver's module.
