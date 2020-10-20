@@ -5,3 +5,15 @@
 pub mod sync;
 pub mod syslog;
 pub mod vsock;
+
+#[macro_export]
+macro_rules! syscall {
+    ($e:expr) => {{
+        let res = $e;
+        if res < 0 {
+            Err(::std::io::Error::last_os_error())
+        } else {
+            Ok(res)
+        }
+    }};
+}
