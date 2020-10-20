@@ -105,13 +105,6 @@ bool BurnerImpl::ValidateTargetPath(const char* path, ErrorCode* error) {
     return false;
   }
 
-  // Check if the path is a block device.
-  if (!path_getter_->IsBlockDevice(path)) {
-    *error = IMAGEBURN_ERROR_INVALID_TARGET_PATH;
-    LOG(ERROR) << "Target path is not a block device.";
-    return false;
-  }
-
   std::string root_path;
   // This will return roots file path, so we can compare target path, which
   // should also be devices file path, to it.

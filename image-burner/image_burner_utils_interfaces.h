@@ -33,7 +33,6 @@ class PathGetter {
   virtual ~PathGetter() {}
   virtual bool GetRealPath(const char* path, std::string* real_path) = 0;
   virtual bool GetRootPath(std::string* path) = 0;
-  virtual bool IsBlockDevice(const char* path) = 0;
 };
 
 class SignalSender {

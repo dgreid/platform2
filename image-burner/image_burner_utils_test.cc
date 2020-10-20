@@ -4,8 +4,12 @@
 
 #include "image-burner/image_burner_utils.h"
 
+#include <sys/sysmacros.h>
+
 #include <string>
 
+#include <base/bind.h>
+#include <base/files/file.h>
 #include <base/files/file_util.h>
 #include <base/files/scoped_temp_dir.h>
 #include <gtest/gtest.h>
@@ -54,6 +58,20 @@ class BurnWriterTest : public ::testing::Test {
     ASSERT_TRUE(test_dir_.CreateUniqueTempDir());
     ASSERT_TRUE(
         base::CreateTemporaryFileInDir(test_dir_.GetPath(), &test_file_path_));
+  }
+
+  int FakeBlockDeviceFstat(int fd, base::stat_wrapper_t* st) {
+    if (!file_writer_.file().IsValid())
+      return -1;
+    EXPECT_EQ(file_writer_.file().GetPlatformFile(), fd);
+    st->st_rdev = makedev(14, 7);
+    st->st_mode = S_IFBLK;
+    return 0;
+  }
+
+  int FailingFstat(int fd, base::stat_wrapper_t* st) {
+    EXPECT_EQ(file_writer_.file().GetPlatformFile(), fd);
+    return -1;
   }
 
  protected:
@@ -145,8 +163,22 @@ TEST_F(BurnReaderTest, HandlingNonExistingFile) {
   EXPECT_FALSE(file_reader_.Close());
 }
 
+TEST_F(BurnWriterTest, WriteToNonBlockDevice) {
+  EXPECT_FALSE(file_writer_.Open(test_file_path_.value().c_str()));
+  EXPECT_FALSE(file_writer_.Close());
+}
+
+TEST_F(BurnWriterTest, FstatFailure) {
+  file_writer_.set_fstat_for_test(base::BindRepeating(
+      &BurnWriterTest::FailingFstat, base::Unretained(this)));
+  EXPECT_FALSE(file_writer_.Open(test_file_path_.value().c_str()));
+  EXPECT_FALSE(file_writer_.Close());
+}
+
 TEST_F(BurnWriterTest, WriteFile) {
   const std::string kTestFileContent = "test file content";
+  file_writer_.set_fstat_for_test(base::BindRepeating(
+      &BurnWriterTest::FakeBlockDeviceFstat, base::Unretained(this)));
   ASSERT_TRUE(file_writer_.Open(test_file_path_.value().c_str()));
 
   const size_t kFirstWriteSize = kTestFileContent.size() / 2;
@@ -169,6 +201,8 @@ TEST_F(BurnWriterTest, WriteFile) {
 }
 
 TEST_F(BurnWriterTest, ReopeningFile) {
+  file_writer_.set_fstat_for_test(base::BindRepeating(
+      &BurnWriterTest::FakeBlockDeviceFstat, base::Unretained(this)));
   ASSERT_TRUE(file_writer_.Open(test_file_path_.value().c_str()));
   EXPECT_FALSE(file_writer_.Open(test_file_path_.value().c_str()));
   ASSERT_TRUE(file_writer_.Close());
@@ -177,6 +211,8 @@ TEST_F(BurnWriterTest, ReopeningFile) {
 TEST_F(BurnWriterTest, ReusingClosedReader) {
   const std::string kTestFileContent = "test file content";
 
+  file_writer_.set_fstat_for_test(base::BindRepeating(
+      &BurnWriterTest::FakeBlockDeviceFstat, base::Unretained(this)));
   ASSERT_TRUE(file_writer_.Open(test_file_path_.value().c_str()));
 
   const size_t kFirstWriteSize = kTestFileContent.size() / 2;
@@ -204,6 +240,8 @@ TEST_F(BurnWriterTest, HandlingNonExistingFile) {
   base::FilePath non_existent_file = test_dir_.GetPath().Append("non-existent");
   ASSERT_FALSE(base::PathExists(non_existent_file));
 
+  file_writer_.set_fstat_for_test(base::BindRepeating(
+      &BurnWriterTest::FakeBlockDeviceFstat, base::Unretained(this)));
   EXPECT_FALSE(file_writer_.Open(non_existent_file.value().c_str()));
   EXPECT_FALSE(file_writer_.Close());
 }

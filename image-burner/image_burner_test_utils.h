@@ -47,7 +47,6 @@ class MockPathGetter : public PathGetter {
  public:
   MOCK_METHOD(bool, GetRealPath, (const char*, std::string*), (override));
   MOCK_METHOD(bool, GetRootPath, (std::string*), (override));
-  MOCK_METHOD(bool, IsBlockDevice, (const char*));
 };
 
 }  // namespace imageburn
