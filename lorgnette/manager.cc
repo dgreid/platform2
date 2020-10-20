@@ -377,9 +377,13 @@ bool Manager::GetScannerCapabilities(brillo::ErrorPtr* error,
   if (!device->GetValidOptionValues(error, &options))
     return false;
 
+  const std::vector<uint32_t> supported_resolutions = {75,  100, 150,
+                                                       200, 300, 600};
+
   ScannerCapabilities capabilities;
   for (const uint32_t resolution : options.resolutions) {
-    capabilities.add_resolutions(resolution);
+    if (base::Contains(supported_resolutions, resolution))
+      capabilities.add_resolutions(resolution);
   }
 
   for (const DocumentSource& source : options.sources) {

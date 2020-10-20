@@ -206,7 +206,7 @@ TEST_F(ManagerTest, GetScannerCapabilitiesInvalidIppUsbFailure) {
 TEST_F(ManagerTest, GetScannerCapabilitiesSuccess) {
   std::unique_ptr<SaneDeviceFake> device = std::make_unique<SaneDeviceFake>();
   ValidOptionValues opts;
-  opts.resolutions = {100, 200, 300, 600};
+  opts.resolutions = {50, 100, 200, 300, 500, 600};
   opts.sources = {
       CreateDocumentSource("FB", SOURCE_PLATEN, 355.2, 417.9),
       CreateDocumentSource("Negative", SOURCE_UNSPECIFIED, 355.2, 204.0),
