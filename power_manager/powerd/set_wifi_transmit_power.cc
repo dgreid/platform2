@@ -270,14 +270,15 @@ void FillMessageIwl(struct nl_msg* msg, bool tablet) {
                              : IWL_MVM_VENDOR_CMD_SET_NIC_TXPOWER_LIMIT))
       << "Failed to put NL80211_ATTR_VENDOR_SUBCMD";
 
-  struct nlattr* limits = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA);
+  struct nlattr* limits =
+      nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA | NLA_F_NESTED);
   CHECK(limits) << "Failed in nla_nest_start";
 
   if (use_vpd) {
     int index = tablet ? IWL_TABLET_PROFILE_INDEX : IWL_CLAMSHELL_PROFILE_INDEX;
-    CHECK(!nla_put_u32(msg, IWL_MVM_VENDOR_ATTR_SAR_CHAIN_A_PROFILE, index))
+    CHECK(!nla_put_u8(msg, IWL_MVM_VENDOR_ATTR_SAR_CHAIN_A_PROFILE, index))
         << "Failed to put IWL_MVM_VENDOR_ATTR_SAR_CHAIN_A_PROFILE";
-    CHECK(!nla_put_u32(msg, IWL_MVM_VENDOR_ATTR_SAR_CHAIN_B_PROFILE, index))
+    CHECK(!nla_put_u8(msg, IWL_MVM_VENDOR_ATTR_SAR_CHAIN_B_PROFILE, index))
         << "Failed to put IWL_MVM_VENDOR_ATTR_SAR_CHAIN_B_PROFILE";
   } else {
     DCHECK_EQ(table.size(), 3);
