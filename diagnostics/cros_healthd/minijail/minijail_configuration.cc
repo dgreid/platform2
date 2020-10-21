@@ -86,6 +86,12 @@ void ConfigureAndEnterMinijail() {
       jail.get(),
       base::FilePath("/sys/class/chromeos"));  // Files related to Chrome OS
                                                // hardware devices.
+
+  BindMountIfPathExists(
+      jail.get(),
+      base::FilePath("/sys/class/hwmon"));  // Files related to Chrome OS
+                                            // hardware monitors.
+
   BindMountIfPathExists(
       jail.get(),
       base::FilePath("/sys/class/power_supply"));  // Files related to the

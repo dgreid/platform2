@@ -296,6 +296,10 @@ void DisplayCpuInfo(
   //             some_string,some_uint_64
   //             ... (repeated per C-state)
   //             some_string,some_uint_64
+  // Temperature Channels:
+  // label, temperature_celsius
+  // some_label, some_int32_t
+  // some_other_label, some_other_int32_t
   //
   // Any additional physical CPUs would repeat, similarly to the two logical
   // CPUs in the example.
@@ -332,6 +336,12 @@ void DisplayCpuInfo(
                   << c_state->time_in_state_since_last_boot_us << std::endl;
       }
     }
+  }
+  std::cout << "Temperature Channels:" << std::endl;
+  std::cout << "label,temperature_celsius" << std::endl;
+  for (const auto& channel : cpu_info->temperature_channels) {
+    std::cout << channel->label.value_or(kNotApplicableString) << ","
+              << channel->temperature_celsius << std::endl;
   }
 }
 

@@ -111,6 +111,21 @@ constexpr uint64_t kThirdFakeUserTime = 0;
 constexpr uint64_t kThirdFakeSystemTime = 293802;
 constexpr uint32_t kThirdFakeIdleTime = 871239;
 
+constexpr char kFirstFakeCpuTemperatureDir[] = "sys/class/hwmon/hwmon1/device";
+constexpr char kFirstFakeCpuTemperatureInputFile[] = "temp9_input";
+constexpr char kFirstFakeCpuTemperatureLabelFile[] = "name";
+constexpr int32_t kFirstFakeCpuTemperature = -186;
+constexpr int32_t kFirstFakeCpuTemperatureMilliDegrees =
+    kFirstFakeCpuTemperature * 1000;
+constexpr char kFirstFakeCpuTemperatureLabel[] = "First Temperature Label";
+constexpr char kSecondFakeCpuTemperatureDir[] = "sys/class/hwmon/hwmon2";
+constexpr char kSecondFakeCpuTemperatureInputFile[] = "temp1_input";
+constexpr char kSecondFakeCpuTemperatureLabelFile[] = "temp1_label";
+constexpr int32_t kSecondFakeCpuTemperature = 99;
+constexpr int32_t kSecondFakeCpuTemperatureMilliDegrees =
+    kSecondFakeCpuTemperature * 1000;
+constexpr char kSecondFakeCpuTemperatureLabel[] = "Second Temperature Label";
+
 // Workaround for UnorderedElementsAreArray not accepting move-only types - this
 // simple matcher expects a std::cref(mojo_ipc::CStateInfoPtr) and checks
 // each of the fields for equality.
@@ -168,6 +183,23 @@ void VerifyLogicalCpu(
   }
 }
 
+// Verifies that the two received CPU temperature channels have the correct
+// values.
+void VerifyCpuTemps(
+    const std::vector<mojo_ipc::CpuTemperatureChannelPtr>& cpu_temps) {
+  ASSERT_EQ(cpu_temps.size(), 2);
+  const auto& first_temp = cpu_temps[0];
+  ASSERT_FALSE(first_temp.is_null());
+  ASSERT_TRUE(first_temp->label.has_value());
+  EXPECT_EQ(first_temp->label.value(), kFirstFakeCpuTemperatureLabel);
+  EXPECT_EQ(first_temp->temperature_celsius, kFirstFakeCpuTemperature);
+  const auto& second_temp = cpu_temps[1];
+  ASSERT_FALSE(second_temp.is_null());
+  ASSERT_TRUE(second_temp->label.has_value());
+  EXPECT_EQ(second_temp->label.value(), kSecondFakeCpuTemperatureLabel);
+  EXPECT_EQ(second_temp->temperature_celsius, kSecondFakeCpuTemperature);
+}
+
 }  // namespace
 
 class CpuFetcherTest : public testing::Test {
@@ -215,6 +247,24 @@ class CpuFetcherTest : public testing::Test {
     // Write C-state data for the third logical CPU.
     WriteCStateData(kThirdCStates, kThirdLogicalId);
 
+    // Write CPU temperature data.
+    base::FilePath first_temp_dir =
+        temp_dir_path().AppendASCII(kFirstFakeCpuTemperatureDir);
+    ASSERT_TRUE(WriteFileAndCreateParentDirs(
+        first_temp_dir.AppendASCII(kFirstFakeCpuTemperatureInputFile),
+        std::to_string(kFirstFakeCpuTemperatureMilliDegrees)));
+    ASSERT_TRUE(WriteFileAndCreateParentDirs(
+        first_temp_dir.AppendASCII(kFirstFakeCpuTemperatureLabelFile),
+        kFirstFakeCpuTemperatureLabel));
+    base::FilePath second_temp_dir =
+        temp_dir_path().AppendASCII(kSecondFakeCpuTemperatureDir);
+    ASSERT_TRUE(WriteFileAndCreateParentDirs(
+        second_temp_dir.AppendASCII(kSecondFakeCpuTemperatureInputFile),
+        std::to_string(kSecondFakeCpuTemperatureMilliDegrees)));
+    ASSERT_TRUE(WriteFileAndCreateParentDirs(
+        second_temp_dir.AppendASCII(kSecondFakeCpuTemperatureLabelFile),
+        kSecondFakeCpuTemperatureLabel));
+
     // Set the fake uname response.
     fake_system_utils()->SetUnameResponse(/*ret_code=*/0, kUnameMachineX86_64);
   }
@@ -241,6 +291,35 @@ class CpuFetcherTest : public testing::Test {
 
     NOTREACHED();
     return kFirstCStates;
+  }
+
+  // Verifies that the received PhysicalCpuInfoPtrs matched the expected default
+  // value.
+  void VerifyPhysicalCpus(
+      const std::vector<mojo_ipc::PhysicalCpuInfoPtr>& physical_cpus) {
+    ASSERT_EQ(physical_cpus.size(), 2);
+    const auto& first_physical_cpu = physical_cpus[0];
+    ASSERT_FALSE(first_physical_cpu.is_null());
+    EXPECT_EQ(first_physical_cpu->model_name, kFirstFakeModelName);
+    const auto& first_logical_cpus = first_physical_cpu->logical_cpus;
+    ASSERT_EQ(first_logical_cpus.size(), 2);
+    VerifyLogicalCpu(kFirstFakeMaxClockSpeed, kFirstFakeScalingMaxFrequency,
+                     kFirstFakeScalingCurrentFrequency, kFirstFakeUserTime,
+                     kFirstFakeSystemTime, kFirstFakeIdleTime,
+                     GetCStateVector(kFirstLogicalId), first_logical_cpus[0]);
+    VerifyLogicalCpu(kSecondFakeMaxClockSpeed, kSecondFakeScalingMaxFrequency,
+                     kSecondFakeScalingCurrentFrequency, kSecondFakeUserTime,
+                     kSecondFakeSystemTime, kSecondFakeIdleTime,
+                     GetCStateVector(kSecondLogicalId), first_logical_cpus[1]);
+    const auto& second_physical_cpu = physical_cpus[1];
+    ASSERT_FALSE(second_physical_cpu.is_null());
+    EXPECT_EQ(second_physical_cpu->model_name, kSecondFakeModelName);
+    const auto& second_logical_cpus = second_physical_cpu->logical_cpus;
+    ASSERT_EQ(second_logical_cpus.size(), 1);
+    VerifyLogicalCpu(kThirdFakeMaxClockSpeed, kThirdFakeScalingMaxFrequency,
+                     kThirdFakeScalingCurrentFrequency, kThirdFakeUserTime,
+                     kThirdFakeSystemTime, kThirdFakeIdleTime,
+                     GetCStateVector(kThirdLogicalId), second_logical_cpus[0]);
   }
 
  private:
@@ -319,30 +398,8 @@ TEST_F(CpuFetcherTest, TestFetchCpuInfo) {
   const auto& cpu_info = cpu_result->get_cpu_info();
   EXPECT_EQ(cpu_info->num_total_threads, kExpectedNumTotalThreads);
   EXPECT_EQ(cpu_info->architecture, mojo_ipc::CpuArchitectureEnum::kX86_64);
-  const auto& physical_cpus = cpu_info->physical_cpus;
-  ASSERT_EQ(physical_cpus.size(), 2);
-  const auto& first_physical_cpu = physical_cpus[0];
-  ASSERT_FALSE(first_physical_cpu.is_null());
-  EXPECT_EQ(first_physical_cpu->model_name, kFirstFakeModelName);
-  const auto& first_logical_cpus = first_physical_cpu->logical_cpus;
-  ASSERT_EQ(first_logical_cpus.size(), 2);
-  VerifyLogicalCpu(kFirstFakeMaxClockSpeed, kFirstFakeScalingMaxFrequency,
-                   kFirstFakeScalingCurrentFrequency, kFirstFakeUserTime,
-                   kFirstFakeSystemTime, kFirstFakeIdleTime,
-                   GetCStateVector(kFirstLogicalId), first_logical_cpus[0]);
-  VerifyLogicalCpu(kSecondFakeMaxClockSpeed, kSecondFakeScalingMaxFrequency,
-                   kSecondFakeScalingCurrentFrequency, kSecondFakeUserTime,
-                   kSecondFakeSystemTime, kSecondFakeIdleTime,
-                   GetCStateVector(kSecondLogicalId), first_logical_cpus[1]);
-  const auto& second_physical_cpu = physical_cpus[1];
-  ASSERT_FALSE(second_physical_cpu.is_null());
-  EXPECT_EQ(second_physical_cpu->model_name, kSecondFakeModelName);
-  const auto& second_logical_cpus = second_physical_cpu->logical_cpus;
-  ASSERT_EQ(second_logical_cpus.size(), 1);
-  VerifyLogicalCpu(kThirdFakeMaxClockSpeed, kThirdFakeScalingMaxFrequency,
-                   kThirdFakeScalingCurrentFrequency, kThirdFakeUserTime,
-                   kThirdFakeSystemTime, kThirdFakeIdleTime,
-                   GetCStateVector(kThirdLogicalId), second_logical_cpus[0]);
+  VerifyPhysicalCpus(cpu_info->physical_cpus);
+  VerifyCpuTemps(cpu_info->temperature_channels);
 }
 
 // Test that we handle a cpuinfo file for processors without physical_ids.
@@ -383,6 +440,7 @@ TEST_F(CpuFetcherTest, NoPhysicalIdCpuinfoFile) {
                    kThirdFakeScalingCurrentFrequency, kThirdFakeUserTime,
                    kThirdFakeSystemTime, kThirdFakeIdleTime,
                    GetCStateVector(kThirdLogicalId), third_logical_cpu[0]);
+  VerifyCpuTemps(cpu_info->temperature_channels);
 }
 
 // Test that we handle a missing cpuinfo file.
@@ -408,30 +466,8 @@ TEST_F(CpuFetcherTest, HardwareDescriptionCpuinfoFile) {
   const auto& cpu_info = cpu_result->get_cpu_info();
   EXPECT_EQ(cpu_info->num_total_threads, kExpectedNumTotalThreads);
   EXPECT_EQ(cpu_info->architecture, mojo_ipc::CpuArchitectureEnum::kX86_64);
-  const auto& physical_cpus = cpu_info->physical_cpus;
-  ASSERT_EQ(physical_cpus.size(), 2);
-  const auto& first_physical_cpu = physical_cpus[0];
-  ASSERT_FALSE(first_physical_cpu.is_null());
-  EXPECT_EQ(first_physical_cpu->model_name, kFirstFakeModelName);
-  const auto& first_logical_cpus = first_physical_cpu->logical_cpus;
-  ASSERT_EQ(first_logical_cpus.size(), 2);
-  VerifyLogicalCpu(kFirstFakeMaxClockSpeed, kFirstFakeScalingMaxFrequency,
-                   kFirstFakeScalingCurrentFrequency, kFirstFakeUserTime,
-                   kFirstFakeSystemTime, kFirstFakeIdleTime,
-                   GetCStateVector(kFirstLogicalId), first_logical_cpus[0]);
-  VerifyLogicalCpu(kSecondFakeMaxClockSpeed, kSecondFakeScalingMaxFrequency,
-                   kSecondFakeScalingCurrentFrequency, kSecondFakeUserTime,
-                   kSecondFakeSystemTime, kSecondFakeIdleTime,
-                   GetCStateVector(kSecondLogicalId), first_logical_cpus[1]);
-  const auto& second_physical_cpu = physical_cpus[1];
-  ASSERT_FALSE(second_physical_cpu.is_null());
-  EXPECT_EQ(second_physical_cpu->model_name, kSecondFakeModelName);
-  const auto& second_logical_cpus = second_physical_cpu->logical_cpus;
-  ASSERT_EQ(second_logical_cpus.size(), 1);
-  VerifyLogicalCpu(kThirdFakeMaxClockSpeed, kThirdFakeScalingMaxFrequency,
-                   kThirdFakeScalingCurrentFrequency, kThirdFakeUserTime,
-                   kThirdFakeSystemTime, kThirdFakeIdleTime,
-                   GetCStateVector(kThirdLogicalId), second_logical_cpus[0]);
+  VerifyPhysicalCpus(cpu_info->physical_cpus);
+  VerifyCpuTemps(cpu_info->temperature_channels);
 }
 
 // Test that we handle a cpuinfo file without a model name.
@@ -621,6 +657,62 @@ TEST_F(CpuFetcherTest, IncorrectlyFormattedCStateTimeFile) {
 
   ASSERT_TRUE(cpu_result->is_error());
   EXPECT_EQ(cpu_result->get_error()->type, mojo_ipc::ErrorType::kFileReadError);
+}
+
+// Test that we handle CPU temperatures without labels.
+TEST_F(CpuFetcherTest, CpuTemperatureWithoutLabel) {
+  ASSERT_TRUE(
+      base::DeleteFile(temp_dir_path()
+                           .AppendASCII(kFirstFakeCpuTemperatureDir)
+                           .AppendASCII(kFirstFakeCpuTemperatureLabelFile),
+                       false));
+
+  auto cpu_result = FetchCpuInfo();
+
+  ASSERT_TRUE(cpu_result->is_cpu_info());
+  const auto& cpu_info = cpu_result->get_cpu_info();
+  EXPECT_EQ(cpu_info->num_total_threads, kExpectedNumTotalThreads);
+  EXPECT_EQ(cpu_info->architecture, mojo_ipc::CpuArchitectureEnum::kX86_64);
+  VerifyPhysicalCpus(cpu_info->physical_cpus);
+
+  const auto& cpu_temps = cpu_info->temperature_channels;
+  ASSERT_EQ(cpu_temps.size(), 2);
+  const auto& first_temp = cpu_temps[0];
+  ASSERT_FALSE(first_temp.is_null());
+  EXPECT_FALSE(first_temp->label.has_value());
+  EXPECT_EQ(first_temp->temperature_celsius, kFirstFakeCpuTemperature);
+  const auto& second_temp = cpu_temps[1];
+  ASSERT_FALSE(second_temp.is_null());
+  ASSERT_TRUE(second_temp->label.has_value());
+  EXPECT_EQ(second_temp->label.value(), kSecondFakeCpuTemperatureLabel);
+  EXPECT_EQ(second_temp->temperature_celsius, kSecondFakeCpuTemperature);
+}
+
+// Test that we handle incorrectly-formatted CPU temperature files.
+TEST_F(CpuFetcherTest, IncorrectlyFormattedTemperature) {
+  ASSERT_TRUE(WriteFileAndCreateParentDirs(
+      temp_dir_path()
+          .AppendASCII(kFirstFakeCpuTemperatureDir)
+          .AppendASCII(kFirstFakeCpuTemperatureInputFile),
+      kNonIntegralFileContents));
+
+  auto cpu_result = FetchCpuInfo();
+
+  ASSERT_TRUE(cpu_result->is_cpu_info());
+  const auto& cpu_info = cpu_result->get_cpu_info();
+  EXPECT_EQ(cpu_info->num_total_threads, kExpectedNumTotalThreads);
+  EXPECT_EQ(cpu_info->architecture, mojo_ipc::CpuArchitectureEnum::kX86_64);
+  VerifyPhysicalCpus(cpu_info->physical_cpus);
+
+  // We shouldn't have data corresponding to the first fake temperature values,
+  // because it was formatted incorrectly.
+  const auto& cpu_temps = cpu_info->temperature_channels;
+  ASSERT_EQ(cpu_temps.size(), 1);
+  const auto& second_temp = cpu_temps[0];
+  ASSERT_FALSE(second_temp.is_null());
+  ASSERT_TRUE(second_temp->label.has_value());
+  EXPECT_EQ(second_temp->label.value(), kSecondFakeCpuTemperatureLabel);
+  EXPECT_EQ(second_temp->temperature_celsius, kSecondFakeCpuTemperature);
 }
 
 // Test that we handle uname failing.

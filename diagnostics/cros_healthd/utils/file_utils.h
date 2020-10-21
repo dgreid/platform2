@@ -22,6 +22,22 @@ bool ReadAndTrimString(const base::FilePath& directory,
 // to the file to be read.
 bool ReadAndTrimString(const base::FilePath& file_path, std::string* out);
 
+// Like ReadInteger() above, but expects |file_path| to be the full path to the
+// file to be read.
+template <typename T>
+bool ReadInteger(const base::FilePath& file_path,
+                 bool (*StringToInteger)(base::StringPiece, T*),
+                 T* out) {
+  DCHECK(StringToInteger);
+  DCHECK(out);
+
+  std::string buffer;
+  if (!ReadAndTrimString(file_path, &buffer))
+    return false;
+
+  return StringToInteger(buffer, out);
+}
+
 // Reads an integer value from a file and converts it using the provided
 // function. Returns true on success.
 template <typename T>
@@ -29,11 +45,7 @@ bool ReadInteger(const base::FilePath& directory,
                  const std::string& filename,
                  bool (*StringToInteger)(base::StringPiece, T*),
                  T* out) {
-  std::string buffer;
-  if (!ReadAndTrimString(directory, filename, &buffer))
-    return false;
-
-  return StringToInteger(buffer, out);
+  return ReadInteger(directory.AppendASCII(filename), StringToInteger, out);
 }
 
 }  // namespace diagnostics

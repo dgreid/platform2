@@ -14,6 +14,7 @@
 #include <vector>
 
 #include <base/files/file_enumerator.h>
+#include <base/files/file_path.h>
 #include <base/files/file_util.h>
 #include <base/optional.h>
 #include <base/strings/string_number_conversions.h>
@@ -47,12 +48,95 @@ constexpr char kProcessorIdKey[] = "processor";
 // Regex used to parse /proc/stat.
 constexpr char kRelativeStatFileRegex[] = R"(cpu(\d+)\s+(\d+) \d+ (\d+) (\d+))";
 
+// Directory containing all CPU temperature subdirectories.
+const char kHwmonDir[] = "sys/class/hwmon/";
+// Subdirectory of sys/class/hwmon/hwmon*/ which sometimes contains the CPU
+// temperature files.
+const char kDeviceDir[] = "device";
+// Matches all CPU temperature subdirectories of |kHwmonDir|.
+const char kHwmonDirectoryPattern[] = "hwmon*";
+// Matches all files containing CPU temperatures.
+const char kCPUTempFilePattern[] = "temp*_input";
+
 // Contains the values parsed from /proc/stat for a single logical CPU.
 struct ParsedStatContents {
   uint64_t user_time_user_hz;
   uint64_t system_time_user_hz;
   uint32_t idle_time_user_hz;
 };
+
+// Read system temperature sensor data and appends it to |out_contents|. Returns
+// |true| iff there was at least one sensor value in given |sensor_dir|.
+bool ReadTemperatureSensorInfo(
+    const base::FilePath& sensor_dir,
+    std::vector<mojo_ipc::CpuTemperatureChannelPtr>* out_contents) {
+  bool has_data = false;
+
+  base::FileEnumerator enumerator(
+      sensor_dir, false, base::FileEnumerator::FILES, kCPUTempFilePattern);
+  for (base::FilePath temperature_path = enumerator.Next();
+       !temperature_path.empty(); temperature_path = enumerator.Next()) {
+    // Get appropriate temp*_label file.
+    std::string label_path = temperature_path.MaybeAsASCII();
+    if (label_path.empty()) {
+      LOG(WARNING) << "Unable to parse a path to temp*_input file as ASCII";
+      continue;
+    }
+    base::ReplaceSubstringsAfterOffset(&label_path, 0, "input", "label");
+    base::FilePath name_path = sensor_dir.Append("name");
+
+    // Get the label describing this temperature. Use temp*_label
+    // if present, fall back on name file.
+    std::string label;
+    if (base::PathExists(base::FilePath(label_path))) {
+      ReadAndTrimString(base::FilePath(label_path), &label);
+    } else if (base::PathExists(base::FilePath(name_path))) {
+      ReadAndTrimString(name_path, &label);
+    }
+
+    // Read temperature in millidegree Celsius.
+    int32_t temperature = 0;
+    if (ReadInteger(temperature_path, base::StringToInt, &temperature)) {
+      has_data = true;
+      // Convert from millidegree Celsius to Celsius.
+      temperature /= 1000;
+
+      mojo_ipc::CpuTemperatureChannel channel;
+      if (!label.empty())
+        channel.label = label;
+      channel.temperature_celsius = temperature;
+      out_contents->push_back(channel.Clone());
+    } else {
+      LOG(WARNING) << "Unable to read CPU temp from "
+                   << temperature_path.MaybeAsASCII();
+    }
+  }
+  return has_data;
+}
+
+// Fetches and returns information about the device's CPU temperature channels.
+std::vector<mojo_ipc::CpuTemperatureChannelPtr> GetCpuTemperatures(
+    const base::FilePath& root_dir) {
+  std::vector<mojo_ipc::CpuTemperatureChannelPtr> temps;
+  // Get directories /sys/class/hwmon/hwmon*
+  base::FileEnumerator hwmon_enumerator(root_dir.AppendASCII(kHwmonDir), false,
+                                        base::FileEnumerator::DIRECTORIES,
+                                        kHwmonDirectoryPattern);
+  for (base::FilePath hwmon_path = hwmon_enumerator.Next(); !hwmon_path.empty();
+       hwmon_path = hwmon_enumerator.Next()) {
+    // Get temp*_input files in hwmon*/ and hwmon*/device/
+    base::FilePath device_path = hwmon_path.Append(kDeviceDir);
+    if (base::PathExists(device_path)) {
+      // We might have hwmon*/device/, but sensor values are still in hwmon*/
+      if (!ReadTemperatureSensorInfo(device_path, &temps)) {
+        ReadTemperatureSensorInfo(hwmon_path, &temps);
+      }
+    } else {
+      ReadTemperatureSensorInfo(hwmon_path, &temps);
+    }
+  }
+  return temps;
+}
 
 // Gets the time spent in each C-state for the logical processor whose ID is
 // |logical_id|. Returns base::nullopt if a required sysfs node was not found.
@@ -278,15 +362,18 @@ mojo_ipc::CpuResultPtr GetCpuInfoFromProcessorInfo(
 
   // Populate the final CpuInfo struct.
   mojo_ipc::CpuInfo cpu_info;
-  cpu_info.architecture = architecture;
   auto thread_error = GetNumTotalThreads(root_dir, &cpu_info.num_total_threads);
   if (thread_error != base::nullopt) {
     return mojo_ipc::CpuResult::NewError(std::move(thread_error.value()));
   }
 
+  cpu_info.architecture = architecture;
+
+  for (const auto& temperature : GetCpuTemperatures(root_dir))
+    cpu_info.temperature_channels.push_back(temperature.Clone());
+
   for (const auto& key_value : physical_cpus) {
-    // Since we can't push_back mojo::StructPtrs, we need to construct a new
-    // object with the old object's members.
+    // TODO(crbug/1143763): Change this to Clone() |key_value|.
     cpu_info.physical_cpus.push_back(mojo_ipc::PhysicalCpuInfo::New(
         std::move(key_value.second->model_name),
         std::move(key_value.second->logical_cpus)));
