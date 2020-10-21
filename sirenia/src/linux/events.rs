@@ -202,16 +202,15 @@ impl AsRawFd for RemoveFdMutator {
 mod tests {
     use super::*;
 
+    use std::cell::RefCell;
     use std::fs::File;
     use std::rc::Rc;
-    use std::sync::Mutex;
 
     use std::io::{Read, Write};
-    use std::ops::{AddAssign, Deref};
     use sys_util::{pipe, EventFd};
 
     struct EventMultiplexerTestHandler {
-        val: Rc<Mutex<u8>>,
+        val: Rc<RefCell<u8>>,
         evt: File,
     }
 
@@ -225,7 +224,7 @@ mod tests {
         fn on_event(&mut self) -> std::result::Result<Option<Box<dyn Mutator>>, String> {
             let mut buf: [u8; 1] = [0; 1];
             self.evt.read_exact(&mut buf).unwrap();
-            self.val.lock().unwrap().add_assign(1);
+            *self.val.borrow_mut() += 1;
             Ok(None)
         }
     }
@@ -234,7 +233,7 @@ mod tests {
     fn event_multiplexer_test() {
         let mut l = EventMultiplexer::new().unwrap();
         let (r, mut w) = pipe(false /*close_on_exec*/).unwrap();
-        let counter: Rc<Mutex<u8>> = Rc::new(Mutex::new(0));
+        let counter: Rc<RefCell<u8>> = Rc::new(RefCell::new(0));
         let h = EventMultiplexerTestHandler {
             val: Rc::clone(&counter),
             evt: r,
@@ -245,7 +244,7 @@ mod tests {
         let buf: [u8; 1] = [1; 1];
         w.write_all(&buf).unwrap();
         l.run_once().unwrap();
-        assert_eq!(*counter.lock().unwrap().deref(), 1);
+        assert_eq!(*counter.borrow(), 1);
 
         // Check hangup.
         drop(w);
