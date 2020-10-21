@@ -57,6 +57,7 @@ config("target_defaults") {
     "${libcutils_src}/include",
     "${liblog_src}/include",
     "${libutils_src}/include",
+    "${libfmq_src}/base",
   ]
   defines = [
     "__ANDROID_API__=30",  # Android R
@@ -219,7 +220,7 @@ if (use.test) {
       ":libhidl",
       "//common-mk/testrunner:testrunner",
     ]
-    sources = [ "${libfmq_src}/tests/fmq_unit_tests.cpp" ]
+    sources = [ "libfmq/tests/fmq_unit_tests.cpp" ]
   }
 }
 
