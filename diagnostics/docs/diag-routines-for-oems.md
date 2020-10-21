@@ -56,7 +56,7 @@ some-config: &some_config
 
 ## Battery and Power Routines
 
-### ac_power
+### AC Power
 
 Confirms that the AC power adapter is being recognized properly by the system.
 
@@ -90,7 +90,7 @@ Status: Passed
 Status message: AC Power routine passed.
 ```
 
-### battery_capacity
+### Battery Capacity
 
 Confirms that the device's battery design capacity lies within the configured
 limits.
@@ -120,7 +120,7 @@ Status: Passed
 Status message: Battery design capacity within given limits.
 ```
 
-### battery_charge
+### Battery Charge
 
 Checks to see if the battery charges appropriately during a period of time.
 
@@ -156,7 +156,7 @@ Status: Passed
 Status message: Battery discharge routine passed.
 ```
 
-### battery_discharge
+### Battery Discharge
 
 Checks to see if the battery discharges excessively during a period of time.
 
@@ -192,7 +192,7 @@ Status: Passed
 Status message: Battery discharge routine passed.
 ```
 
-### battery_health
+### Battery Health
 
 Provides some basic information on the status of the battery, and determines if
 the battery's cycle count and wear percentage are greater than the given limits.
@@ -235,7 +235,7 @@ Status message: Battery cycle count is too high.
 
 ## CPU Routines
 
-### cpu_cache
+### CPU Cache
 
 Performs cache coherency testing via stressapptest --cc_test.
 
@@ -262,7 +262,7 @@ Status: Passed
 Status message: Routine passed.
 ```
 
-### cpu_stress
+### CPU stress
 
 Performs CPU stress-testing via stressapptest -W, which mimics a realistic
 high-load situation.
@@ -290,7 +290,7 @@ Status: Passed
 Status message: Routine passed.
 ```
 
-### floating_point_accuracy
+### Floating Point Accuracy
 
 Repeatedly checks the accuracy of millions of floating-point operations against
 known good values for the duration of the routine.
@@ -318,7 +318,7 @@ Status: Passed
 Status message: Routine passed.
 ```
 
-### prime_search
+### Prime Search
 
 Repeatedly checks the CPU's brute-force calculations of prime numbers from 2 to
 the given maximum number for the duration of the routine.
@@ -348,7 +348,7 @@ Status: Passed
 Status message: Routine passed.
 ```
 
-### urandom
+### Urandom
 
 Stresses the CPU by reading from /dev/urandom for the specified length of time.
 
@@ -377,7 +377,7 @@ Status message: Routine passed.
 
 ## Memory Routines
 
-### memory
+### Memory
 
 Uses the memtester utility to run various subtests on the device's memory.
 
@@ -429,7 +429,7 @@ Status message: Memory routine passed.
 
 ## Storage Routines
 
-### disk_read
+### Disk Read
 
 Uses the fio utility to write a temporary file with random data, then repeatedly
 read the file either randomly or linearly for the duration of the routine.
@@ -462,7 +462,7 @@ Status: Passed
 Status message: Routine passed.
 ```
 
-### nvme_self_test
+### NVMe Self Test
 
 Conducts either a short or a long self-test of the device's NVMe storage.
 
@@ -490,7 +490,7 @@ Status: Passed
 Status message: SelfTest status: Test PASS
 ```
 
-### nvme_wear_level
+### NVMe Wear Level
 
 Compares the device's NVMe storage's wear level against the input threshold.
 
@@ -518,12 +518,12 @@ Status: Passed
 Status message: Wear-level status: PASS.
 ```
 
-### smartctl_check
+### Smartctl Check
 
 Checks to see if the drive's remaining spare capacity is high enough to protect
 against asynchronous event completion.
 
-The smartctl_check routine has no parameters.
+The smartctl check routine has no parameters.
 
 To check that the device's spare capacity is sufficient:
 
@@ -546,11 +546,11 @@ Status message: Routine passed
 
 ## Network Routines
 
-### lan_connectivity
+### LAN Connectivity
 
 Checks to see whether the device is connected to a LAN.
 
-The lan_connectivity routine has no parameters.
+The LAN connectivity routine has no parameters.
 
 To check whether a device is connected to a LAN:
 
@@ -571,12 +571,12 @@ Status: Passed
 Status message: Lan Connectivity routine passed with no problems.
 ```
 
-### signal_strength
+### Signal Strength
 
 Checks to see whether there is an acceptable signal strength on wireless
 networks.
 
-The signal_strength routine has no parameters.
+The signal strength routine has no parameters.
 
 To check whether there is an acceptable signal strength on wireless networks:
 
@@ -597,11 +597,11 @@ Status: Passed
 Status message: Signal Strength routine passed with no problems.
 ```
 
-### gateway_can_be_pinged
+### Gateway can be Pinged
 
 Checks whether the gateway of connected networks is pingable.
 
-The gateway_can_be_pinged routine has no parameters.
+The gateway can be pinged routine has no parameters.
 
 To check whether the gateway of connected networks is pingable:
 
@@ -622,12 +622,12 @@ Status: Passed
 Status message: Gateway Can Be Pinged routine passed with no problems.
 ```
 
-### has_secure_wifi_connection
+### Has Secure WiFi Connection
 
 Checks whether the WiFi connection is secure. Note that if WiFi is not
 connected, the routine will not run.
 
-The has_secure_wifi_connection routine has no parameters.
+The has secure WiFi connection routine has no parameters.
 
 To check whether the WiFi connection is secure:
 
