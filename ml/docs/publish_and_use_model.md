@@ -89,7 +89,8 @@ An example of filename is:
 `mlservice-model-tab_discarder_quantized-20180507-v2.tflite`.
 
 After you upload the file, make it publicly visible by selecting Edit
-Permissions and adding a 'Reader' permission for a Group named 'allUsers'.
+Permissions and adding a 'Reader' access permission for a 'Public' entity named
+'allUsers'.
 
 Files in the ChromeOS file mirror should never be deleted. You simply add newer
 models as you need them, but leave the previous ones in the mirror, even if you
