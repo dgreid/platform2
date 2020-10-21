@@ -43,8 +43,12 @@ constexpr int64_t kTpmSeedSize = FP_CONTEXT_TPM_BYTES;
 // File where the TPM seed is stored, that we have to read from.
 constexpr char kBioTpmSeedTmpFile[] = "/run/bio_crypto_init/seed";
 
+}  // namespace
+
+namespace biod {
+
 // Helper function to ensure data of a file is removed.
-bool NukeFile(const base::FilePath& filepath) {
+bool BioCryptoInit::NukeFile(const base::FilePath& filepath) {
   // Write all zeros to the FD.
   bool ret = true;
   std::vector<uint8_t> zero_vec(kTpmSeedSize, 0);
@@ -62,16 +66,15 @@ bool NukeFile(const base::FilePath& filepath) {
   return ret;
 }
 
-bool WriteSeedToCrosFp(const brillo::SecureVector& seed) {
+bool BioCryptoInit::WriteSeedToCrosFp(const brillo::SecureVector& seed) {
   bool ret = true;
-  auto fd =
-      base::ScopedFD(open(biod::CrosFpDevice::kCrosFpPath, O_RDWR | O_CLOEXEC));
+  auto fd = OpenCrosFpDevice();
   if (!fd.is_valid()) {
     PLOG(ERROR) << "Couldn't open FP device for ioctl.";
     return false;
   }
 
-  if (!biod::CrosFpDevice::WaitOnEcBoot(fd, EC_IMAGE_RW)) {
+  if (!WaitOnEcBoot(fd, EC_IMAGE_RW)) {
     LOG(ERROR) << "FP device did not boot to RW.";
     return false;
   }
@@ -118,7 +121,7 @@ bool WriteSeedToCrosFp(const brillo::SecureVector& seed) {
   return ret;
 }
 
-bool DoProgramSeed(const brillo::SecureVector& tpm_seed) {
+bool BioCryptoInit::DoProgramSeed(const brillo::SecureVector& tpm_seed) {
   bool ret = true;
 
   if (!WriteSeedToCrosFp(tpm_seed)) {
@@ -129,7 +132,17 @@ bool DoProgramSeed(const brillo::SecureVector& tpm_seed) {
   return ret;
 }
 
-}  // namespace
+base::ScopedFD BioCryptoInit::OpenCrosFpDevice() {
+  return base::ScopedFD(
+      open(biod::CrosFpDevice::kCrosFpPath, O_RDWR | O_CLOEXEC));
+}
+
+bool BioCryptoInit::WaitOnEcBoot(const base::ScopedFD& cros_fp_fd,
+                                 ec_image expected_image) {
+  return biod::CrosFpDevice::WaitOnEcBoot(cros_fp_fd, expected_image);
+}
+
+}  // namespace biod
 
 int main(int argc, char* argv[]) {
   // Set up logging settings.
@@ -162,12 +175,14 @@ int main(int argc, char* argv[]) {
 
   biod::LogVersion();
 
+  biod::BioCryptoInit bio_crypto_init;
+
   // We fork the process so that can we program the seed in the child, and
   // terminate it if it hangs.
   pid_t pid = fork();
   if (pid == -1) {
     PLOG(ERROR) << "Failed to fork child process for bio_wash.";
-    NukeFile(base::FilePath(kBioTpmSeedTmpFile));
+    bio_crypto_init.NukeFile(base::FilePath(kBioTpmSeedTmpFile));
     return -1;
   }
 
@@ -177,13 +192,13 @@ int main(int argc, char* argv[]) {
     int bytes_read = base::ReadFile(base::FilePath(kBioTpmSeedTmpFile),
                                     reinterpret_cast<char*>(tpm_seed.data()),
                                     tpm_seed.size());
-    NukeFile(base::FilePath(kBioTpmSeedTmpFile));
+    bio_crypto_init.NukeFile(base::FilePath(kBioTpmSeedTmpFile));
 
     if (bytes_read != kTpmSeedSize) {
       LOG(ERROR) << "Failed to read TPM seed from tmpfile: " << bytes_read;
       return -1;
     }
-    return DoProgramSeed(tpm_seed) ? 0 : -1;
+    return bio_crypto_init.DoProgramSeed(tpm_seed) ? 0 : -1;
   }
 
   auto process = base::Process::Open(pid);
