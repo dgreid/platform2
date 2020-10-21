@@ -58,7 +58,9 @@ impl Syslog {
 impl Drop for Syslog {
     fn drop(&mut self) {
         if let Err(e) = remove_file(SYSLOG_PATH) {
-            eprintln!("Failed to cleanup syslog: {:?}", e);
+            if e.kind() != std::io::ErrorKind::NotFound {
+                eprintln!("Failed to cleanup syslog: {:?}", e);
+            }
         }
     }
 }

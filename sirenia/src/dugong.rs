@@ -16,13 +16,14 @@ use dbus::blocking::LocalConnection;
 use dbus::tree::{self, Interface, MTFn};
 use sys_util::{error, info, syslog};
 
+use libchromeos::vsock::VMADDR_PORT_ANY;
 use sirenia::build_info::BUILD_TIMESTAMP;
 use sirenia::cli::initialize_common_arguments;
 use sirenia::communication::{read_message, write_message, AppInfo, Request, Response};
 use sirenia::server::{org_chromium_mana_teeinterface_server, OrgChromiumManaTEEInterface};
 use sirenia::transport::{
     self, ClientTransport, IPClientTransport, Transport, TransportRead, TransportType,
-    TransportWrite, VsockClientTransport,
+    TransportWrite, VsockClientTransport, DEFAULT_CLIENT_PORT,
 };
 
 #[derive(Debug)]
@@ -99,7 +100,7 @@ fn request_start_tee_app(device: &DugongDevice, app_id: &str) -> Result<(OwnedFd
         Ok(()) => (),
         Err(e) => error!("Error writing: {}", e),
     }
-    let mut transport = open_connection(&device.transport_type);
+    let mut transport = open_connection(&device.transport_type, None);
     match transport.connect() {
         Ok(Transport { r, w, id: _ }) => unsafe {
             // This is safe because into_raw_fd transfers the ownership to OwnedFd.
@@ -157,7 +158,7 @@ fn main() -> Result<()> {
 
     info!("Starting dugong: {}", BUILD_TIMESTAMP);
     info!("Opening connection to trichechus");
-    let mut transport = open_connection(&transport_type);
+    let mut transport = open_connection(&transport_type, Some(DEFAULT_CLIENT_PORT));
 
     if let Ok(Transport { r, w, id: _ }) = transport.connect() {
         info!("Starting rpc");
@@ -170,10 +171,14 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn open_connection(connection_type: &TransportType) -> Box<dyn ClientTransport> {
+fn open_connection(connection_type: &TransportType, port: Option<u32>) -> Box<dyn ClientTransport> {
     match connection_type {
-        TransportType::IpConnection(url) => Box::new(IPClientTransport::new(&url).unwrap()),
-        TransportType::VsockConnection(url) => Box::new(VsockClientTransport::new(&url).unwrap()),
+        TransportType::IpConnection(url) => {
+            Box::new(IPClientTransport::new(&url, port.unwrap_or(0) as u16).unwrap())
+        }
+        TransportType::VsockConnection(url) => {
+            Box::new(VsockClientTransport::new(&url, port.unwrap_or(VMADDR_PORT_ANY)).unwrap())
+        }
         _ => panic!("unexpected connection type"),
     }
 }

@@ -4,27 +4,30 @@
 
 //! A TEE application life-cycle manager.
 
+use std::cell::RefCell;
+use std::collections::{HashMap, VecDeque};
 use std::env;
 use std::fmt::{self, Debug, Display};
-use std::io::{BufRead, BufReader};
-use std::os::unix::io::AsRawFd;
+use std::os::unix::io::{AsRawFd, RawFd};
 use std::path::Path;
+use std::rc::Rc;
 use std::result::Result as StdResult;
 use std::string::String;
-use std::thread::spawn;
 
 use sirenia::build_info::BUILD_TIMESTAMP;
 use sirenia::cli::initialize_common_arguments;
-use sirenia::communication::{self, get_app_path, read_message, write_message, Request, Response};
-use sirenia::linux::events::EventMultiplexer;
+use sirenia::communication::{self, get_app_path, read_message, Request};
+use sirenia::linux::events::{
+    AddEventSourceMutator, EventMultiplexer, EventSource, Mutator, RemoveFdMutator,
+};
 use sirenia::linux::syslog::Syslog;
 use sirenia::sandbox::{self, Sandbox};
 use sirenia::to_sys_util;
 use sirenia::transport::{
-    IPServerTransport, ServerTransport, Transport, TransportRead, TransportType, TransportWrite,
-    VsockServerTransport,
+    IPServerTransport, ServerTransport, Transport, TransportType, VsockServerTransport,
+    DEFAULT_CLIENT_PORT,
 };
-use sys_util::{self, error, info, pipe, syslog};
+use sys_util::{self, error, info, syslog};
 
 #[derive(Debug)]
 pub enum Error {
@@ -32,10 +35,16 @@ pub enum Error {
     InitSyslog(sys_util::syslog::Error),
     /// Error opening a pipe.
     OpenPipe(sys_util::Error),
+    /// Error creating the transport.
+    NewTransport(sirenia::transport::Error),
+    /// Got an unexpected connection type
+    UnexpectedConnectionType(TransportType),
     /// Error Creating a new sandbox.
     NewSandbox(sandbox::Error),
     /// Error starting up a sandbox.
     RunSandbox(sandbox::Error),
+    /// Got a request type that wasn't expected by the handler.
+    UnexpectedRequest,
     /// Error getting the path for an app id.
     AppIdPathError(communication::Error),
 }
@@ -47,8 +56,11 @@ impl Display for Error {
         match self {
             InitSyslog(e) => write!(f, "failed to initialize the syslog: {}", e),
             OpenPipe(e) => write!(f, "failed to open pipe: {}", e),
+            NewTransport(e) => write!(f, "failed create transport: {}", e),
+            UnexpectedConnectionType(t) => write!(f, "got unexpected transport type: {:?}", t),
             NewSandbox(e) => write!(f, "failed to create new sandbox: {}", e),
             RunSandbox(e) => write!(f, "failed to start up sandbox: {}", e),
+            UnexpectedRequest => write!(f, "received unexpected request type"),
             AppIdPathError(e) => write!(f, "failed to get path for the app id: {}", e),
         }
     }
@@ -57,62 +69,242 @@ impl Display for Error {
 /// The result of an operation in this crate.
 pub type Result<T> = StdResult<T, Error>;
 
-// TODO: Should these be macros? What is the advantage of macros?
-fn log_error(w: &mut Box<dyn TransportWrite>, s: String) {
-    error!("{}", &s);
-    let err = write_message(w, Response::LogError(format!("Trichechus error: {}", s)));
-
-    if let Err(e) = err {
-        error!("{}", e)
+fn get_port_from_transport(t: &TransportType) -> Result<u32> {
+    match t {
+        TransportType::IpConnection(addr) => Ok(addr.port() as u32),
+        TransportType::VsockConnection(addr) => Ok(addr.port),
+        _ => Err(Error::UnexpectedConnectionType(t.to_owned())),
     }
 }
 
-fn log_info(w: &mut Box<dyn TransportWrite>, s: String) {
-    info!("{}", &s);
-    let err = write_message(w, Response::LogInfo(format!("Trichechus info: {}", s)));
+struct TrichechusState {
+    pending_apps: HashMap<TransportType, String>,
+    // TODO figure out if we actually need to hold onto the running apps or not. We already reap the
+    // processes, but this might be useful for killing apps that get into a bad state. As is, this
+    // is never cleaned up so it has a memory leak.
+    running_apps: HashMap<TransportType, Sandbox>,
+    log_queue: VecDeque<String>,
+}
 
-    if let Err(e) = err {
-        error!("{}", e)
+impl TrichechusState {
+    fn new() -> Self {
+        TrichechusState {
+            pending_apps: HashMap::new(),
+            running_apps: HashMap::new(),
+            log_queue: VecDeque::new(),
+        }
     }
+}
+
+struct ControlConnection {
+    transport: Transport,
+    state: Rc<RefCell<TrichechusState>>,
+}
+
+impl ControlConnection {
+    fn port_to_transport_type(&self, port: u32) -> TransportType {
+        let mut result = self.transport.id.clone();
+        match &mut result {
+            TransportType::IpConnection(addr) => addr.set_port(port as u16),
+            TransportType::VsockConnection(addr) => {
+                addr.port = port;
+            }
+            _ => panic!("unexpected connection type"),
+        }
+        result
+    }
+
+    /// Handles an incoming message from dugong.
+    fn handle_message(&mut self, message: Request) -> Result<()> {
+        match message {
+            Request::StartSession(app_info) => {
+                info!(
+                    "Received start session message with app_id: {}",
+                    app_info.app_id
+                );
+                // The TEE app isn't started until its socket connection is accepted.
+                self.state.borrow_mut().pending_apps.insert(
+                    self.port_to_transport_type(app_info.port_number),
+                    app_info.app_id,
+                );
+                Ok(())
+            }
+            _ => Err(Error::UnexpectedRequest),
+        }
+    }
+}
+
+impl AsRawFd for ControlConnection {
+    fn as_raw_fd(&self) -> RawFd {
+        self.transport.as_raw_fd()
+    }
+}
+
+impl EventSource for ControlConnection {
+    fn on_event(&mut self) -> StdResult<Option<Box<dyn Mutator>>, String> {
+        //TODO: Fix this. It is a DoS risk because it is a blocking read on an epoll.
+        Ok(match read_message(&mut self.transport.r) {
+            Ok(Option::<Request>::Some(r)) => match self.handle_message(r) {
+                Ok(()) => None,
+                Err(_) => Some(()),
+            },
+            Ok(Option::<Request>::None) => {
+                error!("control connection got empty message");
+                None
+            }
+            Err(communication::Error::Read(e)) => {
+                error!("control connection error: {:?}", e);
+                panic!(e)
+            }
+            Err(e) => {
+                error!("control connection error: {:?}", e);
+                //log_error(&mut w, e.to_string()),
+                Some(())
+            }
+        }
+        // Some errors result in a transport that is no longer valid and should be removed. Rather
+        // than created the removal mutator in each case map () to the removal mutator.
+        .map(|()| -> Box<dyn Mutator> { Box::new(RemoveFdMutator(self.transport.as_raw_fd())) }))
+    }
+}
+
+struct EventsFromDugong {
+    transport: Box<dyn ServerTransport>,
+    state: Rc<RefCell<TrichechusState>>,
+}
+
+impl EventsFromDugong {
+    fn new(bind_addr: &TransportType) -> Result<Self> {
+        Ok(EventsFromDugong {
+            transport: match bind_addr {
+                TransportType::IpConnection(url) => {
+                    Box::new(IPServerTransport::new(&url).map_err(Error::NewTransport)?)
+                }
+                TransportType::VsockConnection(url) => {
+                    Box::new(VsockServerTransport::new(&url).map_err(Error::NewTransport)?)
+                }
+                _ => return Err(Error::UnexpectedConnectionType(bind_addr.to_owned())),
+            },
+            state: Rc::new(RefCell::new(TrichechusState::new())),
+        })
+    }
+
+    fn connect_tee_app(&mut self, app_id: &str, connection: Transport) {
+        let id = connection.id.clone();
+        match spawn_tee_app(app_id, connection) {
+            Ok(s) => {
+                self.state.borrow_mut().running_apps.insert(id, s).unwrap();
+            }
+            Err(e) => {
+                error!("failed to start tee app: {}", e);
+            }
+        }
+    }
+
+    fn handle_incoming_connection(&mut self, connection: Transport) -> Option<Box<dyn Mutator>> {
+        // Check if the incoming connection is expected and associated with a TEE
+        // application.
+        let reservation = self.state.borrow_mut().pending_apps.remove(&connection.id);
+        match reservation {
+            Some(app_id) => {
+                self.connect_tee_app(&app_id, connection);
+                // TODO return a AddEventSourceMutator that cleans up the sandboxed app when
+                // dropped.
+                None
+            }
+            None => {
+                // Check if it is a control connection.
+                if matches!(
+                    get_port_from_transport(&connection.id),
+                    Ok(DEFAULT_CLIENT_PORT)
+                ) {
+                    Some(Box::new(AddEventSourceMutator(Some(Box::new(
+                        ControlConnection {
+                            transport: connection,
+                            state: self.state.clone(),
+                        },
+                    )))))
+                } else {
+                    None
+                }
+            }
+        }
+    }
+}
+
+impl AsRawFd for EventsFromDugong {
+    fn as_raw_fd(&self) -> RawFd {
+        self.transport.as_raw_fd()
+    }
+}
+
+/// Creates a EventSource that adds any accept connections and returns a Mutator that will add the
+/// client connection to the EventMultiplexer when applied.
+impl EventSource for EventsFromDugong {
+    fn on_event(&mut self) -> StdResult<Option<Box<dyn Mutator>>, String> {
+        Ok(match self.transport.accept() {
+            Ok(t) => self.handle_incoming_connection(t),
+            Err(e) => {
+                error!("transport source error: {:?}", e);
+                Some(Box::new(RemoveFdMutator(self.transport.as_raw_fd())))
+            }
+        })
+    }
+}
+
+fn spawn_tee_app(app_id: &str, transport: Transport) -> Result<Sandbox> {
+    let mut sandbox = Sandbox::new(None).map_err(Error::NewSandbox)?;
+    let process_path = get_app_path(app_id).map_err(Error::AppIdPathError)?;
+
+    sandbox
+        .run(
+            Path::new(process_path),
+            &[process_path],
+            transport.r.as_raw_fd(),
+            transport.w.as_raw_fd(),
+            transport.w.as_raw_fd(),
+        )
+        .map_err(Error::RunSandbox)?;
+
+    Ok(sandbox)
 }
 
 // TODO: Figure out how to clean up TEEs that are no longer in use
 // TODO: Figure out rate limiting and prevention against DOS attacks
 // TODO: What happens if dugong crashes? How do we want to handle
 fn main() -> Result<()> {
-    if !Syslog::is_syslog_present() {
-        eprintln!("creating syslog");
-        let listener = Syslog::new().unwrap();
-        spawn(move || {
-            let mut ctx = EventMultiplexer::new().unwrap();
-            ctx.add_event(Box::new(listener)).unwrap();
-            while !ctx.is_empty() {
-                if let Err(e) = ctx.run_once() {
-                    eprintln!("{}", e);
-                };
-            }
-        });
-    } else {
-        eprintln!("syslog exists");
-    }
-
-    if let Err(e) = syslog::init() {
-        eprintln!("failed to initialize syslog: {}", e);
-        return Err(Error::InitSyslog(e));
-    }
-
-    info!("Starting trichechus: {}", BUILD_TIMESTAMP);
+    // Handle the arguments first since "-h" shouldn't have any side effects on the system such as
+    // creating /dev/log.
     let args: Vec<String> = env::args().collect();
     let config = initialize_common_arguments(&args[1..]).unwrap();
 
+    // Create /dev/log if it doesn't already exist since trichechus is the first thing to run after
+    // the kernel on the hypervisor.
+    let syslog: Option<Syslog> = if !Syslog::is_syslog_present() {
+        eprintln!("Creating syslog.");
+        Some(Syslog::new().unwrap())
+    } else {
+        eprintln!("Syslog exists.");
+        None
+    };
+
+    // Before logging is initialized eprintln(...) and println(...) should be used. Afterward,
+    // info!(...), and error!(...) should be used instead.
+    if let Err(e) = syslog::init() {
+        eprintln!("Failed to initialize syslog: {}", e);
+        return Err(Error::InitSyslog(e));
+    }
+    info!("starting trichechus: {}", BUILD_TIMESTAMP);
+
     to_sys_util::block_all_signals();
-    // This is safe because no additional file descriptors have been opened.
+    // This is safe because no additional file descriptors have been opened (except syslog which
+    // cannot be dropped until we are ready to clean up /dev/log).
     let ret = unsafe { to_sys_util::fork() }.unwrap();
     if ret != 0 {
         // The parent process collects the return codes from the child processes, so they do not
         // remain zombies.
         while to_sys_util::wait_for_child() {}
-        println!("Reaper done!");
+        info!("reaper done!");
         return Ok(());
     }
 
@@ -120,114 +312,23 @@ fn main() -> Result<()> {
     // again here for each child to avoid them blocking each other.
     to_sys_util::unblock_all_signals();
 
-    let mut transport: Box<dyn ServerTransport> = match config.connection_type {
-        TransportType::IpConnection(url) => Box::new(IPServerTransport::new(&url).unwrap()),
-        TransportType::VsockConnection(url) => Box::new(VsockServerTransport::new(&url).unwrap()),
-        _ => panic!("unexpected connection type"),
-    };
+    let mut ctx = EventMultiplexer::new().unwrap();
+    if let Some(event_source) = syslog {
+        ctx.add_event(Box::new(event_source)).unwrap();
+    }
+
+    ctx.add_event(Box::new(
+        EventsFromDugong::new(&config.connection_type).unwrap(),
+    ))
+    .unwrap();
 
     // Handle parent dugong connection.
-    info!("Waiting for connection");
-    if let Ok(Transport {
-        mut r,
-        mut w,
-        id: _,
-    }) = transport.accept()
-    {
-        log_info(&mut w, "Accepted connection".to_string());
-        loop {
-            match read_message(&mut r) {
-                Ok(message) => handle_message(&mut w, message, &mut transport),
-                Err(communication::Error::Read(e)) => {
-                    log_error(&mut w, e.to_string());
-                    panic!(e)
-                }
-                Err(e) => log_error(&mut w, e.to_string()),
-            }
-        }
+    info!("waiting for connection");
+    while !ctx.is_empty() {
+        if let Err(e) = ctx.run_once() {
+            error!("{}", e);
+        };
     }
-
-    Ok(())
-}
-
-// Handles an incoming message from dugong. TODO: Is it fine that this takes
-// in a Request, while read_message only guarantees returning something that
-// implements the Deserialize trait
-fn handle_message(
-    mut w: &mut Box<dyn TransportWrite>,
-    message: Request,
-    mut transport: &mut Box<dyn ServerTransport>,
-) {
-    if let Request::StartSession(app_info) = message {
-        log_info(
-            &mut w,
-            format!(
-                "Received start session message with app_id: {}",
-                app_info.app_id
-            ),
-        );
-        start_tee_app(&mut w, &app_info.app_id, &mut transport);
-    }
-}
-
-// Starts up the TEE application that was requested from Dugong and sends a
-// message back to dugong to connect a new socket to communcate with the TEE.
-fn start_tee_app(
-    mut w: &mut Box<dyn TransportWrite>,
-    process: &str,
-    transport: &mut Box<dyn ServerTransport>,
-) {
-    // TODO: Timeout and retry accept and check port number
-    let mut tee = transport.accept().unwrap();
-    // TODO: Eventually will need to spawn this in a separate process, but the
-    // output of the tee will have to be written somewhere else first, otherwise
-    // the main trichechus process and the tee process will both have mutable
-    // borrows of the write end of the tee process.
-    match start_tee_app_spawn(&mut w, &process, &mut tee.r, &mut tee.w) {
-        Ok(_) => (),
-        Err(e) => log_error(w, e.to_string()),
-    }
-}
-
-fn start_tee_app_spawn(
-    mut w: &mut Box<dyn TransportWrite>,
-    process: &str,
-    tee_r: &mut Box<dyn TransportRead>,
-    tee_w: &mut Box<dyn TransportWrite>,
-) -> Result<()> {
-    let (pipe_r, pipe_w) = pipe(false).map_err(Error::OpenPipe)?;
-    let mut sandbox = Sandbox::new(None).map_err(Error::NewSandbox)?;
-    let process_path = get_app_path(process).map_err(Error::AppIdPathError)?;
-
-    sandbox
-        .run(
-            Path::new(process_path),
-            &[process_path],
-            tee_r.as_raw_fd(),
-            tee_w.as_raw_fd(),
-            pipe_w.as_raw_fd(),
-        )
-        .map_err(Error::RunSandbox)?;
-
-    let mut reader = BufReader::new(pipe_r);
-    log_info(&mut w, "Started shell\n".to_string());
-
-    loop {
-        let mut s = String::new();
-        let bytes_read = reader.read_line(&mut s).unwrap();
-        if bytes_read == 0 {
-            break;
-        }
-        log_info(&mut w, s);
-    }
-
-    let result = sandbox.wait_for_completion();
-
-    if result.is_err() {
-        log_error(w, format!("Got error code: {:?}", result));
-    }
-
-    result.unwrap();
 
     Ok(())
 }

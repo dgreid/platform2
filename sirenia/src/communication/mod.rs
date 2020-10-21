@@ -69,7 +69,7 @@ pub enum Response {
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct AppInfo {
     pub app_id: String,
-    pub port_number: u16,
+    pub port_number: u32,
 }
 
 pub fn get_app_path(id: &str) -> Result<&str> {

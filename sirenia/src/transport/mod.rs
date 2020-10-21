@@ -24,11 +24,12 @@ use core::mem::replace;
 use libchromeos::net::{InetVersion, TcpSocket};
 use libchromeos::vsock::{
     AddrParseError, SocketAddr as VSocketAddr, ToSocketAddr, VsockCid, VsockListener, VsockSocket,
-    VsockStream, VMADDR_PORT_ANY,
+    VsockStream,
 };
 use sys_util::{handle_eintr, pipe};
 
-pub const DEFAULT_PORT: u32 = 5552;
+pub const DEFAULT_SERVER_PORT: u32 = 5552;
+pub const DEFAULT_CLIENT_PORT: u32 = 5553;
 
 #[derive(Debug)]
 pub enum Error {
@@ -108,8 +109,8 @@ impl<T: Write + Debug + Send + AsRawFd + IntoRawFd> TransportWrite for T {
     }
 }
 
-/// Transport options that can be selected.
-#[derive(Clone, Debug, Eq, PartialEq)]
+/// Transport options that can be selected or uniquely represent a transport instance.
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum TransportType {
     VsockConnection(VSocketAddr),
     IpConnection(SocketAddr),
@@ -206,6 +207,13 @@ impl From<Transport>
     }
 }
 
+/// Returns a RawFd for the read file descriptor for use with EventMultiplexer.
+impl AsRawFd for Transport {
+    fn as_raw_fd(&self) -> RawFd {
+        self.r.as_raw_fd()
+    }
+}
+
 // A Transport struct encapsulates types that already have the Send trait so it
 // is safe to send them across thread boundaries.
 unsafe impl Send for Transport {}
@@ -229,7 +237,7 @@ fn vsockstream_to_transport(stream: VsockStream, id: VSocketAddr) -> Result<Tran
 }
 
 /// Abstracts transport methods that accept incoming connections.
-pub trait ServerTransport {
+pub trait ServerTransport: AsRawFd {
     fn accept(&mut self) -> Result<Transport>;
 }
 
@@ -256,6 +264,12 @@ impl IPServerTransport {
     }
 }
 
+impl AsRawFd for IPServerTransport {
+    fn as_raw_fd(&self) -> RawFd {
+        self.0.as_raw_fd()
+    }
+}
+
 impl ServerTransport for IPServerTransport {
     fn accept(&mut self) -> Result<Transport> {
         let (stream, addr) = handle_eintr!(self.0.accept()).map_err(Error::Accept)?;
@@ -267,17 +281,22 @@ impl ServerTransport for IPServerTransport {
 pub struct IPClientTransport {
     addr: SocketAddr,
     sock: Option<TcpSocket>,
+    bind_port: u16,
 }
 
 impl IPClientTransport {
-    pub fn new<T: ToSocketAddrs>(to_addrs: T) -> Result<Self> {
+    pub fn new<T: ToSocketAddrs>(to_addrs: T, bind_port: u16) -> Result<Self> {
         let addr = to_addrs
             .to_socket_addrs()
             .map_err(|e| Error::SocketAddrParse(Some(e)))?
             .next()
             .ok_or(Error::SocketAddrParse(None))?;
 
-        Ok(IPClientTransport { addr, sock: None })
+        Ok(IPClientTransport {
+            addr,
+            sock: None,
+            bind_port,
+        })
     }
 }
 
@@ -286,8 +305,10 @@ impl ClientTransport for IPClientTransport {
         let ver = InetVersion::from_sockaddr(&self.addr);
         let mut sock = TcpSocket::new(ver).map_err(Error::Socket)?;
         let bind_addr: SocketAddr = match &self.addr {
-            SocketAddr::V4(_) => SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, 0).into(),
-            SocketAddr::V6(_) => SocketAddrV6::new(Ipv6Addr::UNSPECIFIED, 0, 0, 0).into(),
+            SocketAddr::V4(_) => SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, self.bind_port).into(),
+            SocketAddr::V6(_) => {
+                SocketAddrV6::new(Ipv6Addr::UNSPECIFIED, self.bind_port, 0, 0).into()
+            }
         };
         sock.bind(bind_addr).map_err(Error::Bind)?;
 
@@ -325,6 +346,12 @@ impl VsockServerTransport {
     }
 }
 
+impl AsRawFd for VsockServerTransport {
+    fn as_raw_fd(&self) -> RawFd {
+        self.0.as_raw_fd()
+    }
+}
+
 impl ServerTransport for VsockServerTransport {
     fn accept(&mut self) -> Result<Transport> {
         let (stream, addr) = handle_eintr!(self.0.accept()).map_err(Error::Accept)?;
@@ -336,12 +363,17 @@ impl ServerTransport for VsockServerTransport {
 pub struct VsockClientTransport {
     addr: VSocketAddr,
     sock: Option<VsockSocket>,
+    bind_port: u32,
 }
 
 impl VsockClientTransport {
-    pub fn new<T: ToSocketAddr>(to_addr: T) -> Result<Self> {
+    pub fn new<T: ToSocketAddr>(to_addr: T, bind_port: u32) -> Result<Self> {
         let addr: VSocketAddr = to_addr.to_socket_addr().map_err(Error::VSocketAddrParse)?;
-        Ok(VsockClientTransport { addr, sock: None })
+        Ok(VsockClientTransport {
+            addr,
+            sock: None,
+            bind_port,
+        })
     }
 }
 
@@ -350,7 +382,7 @@ impl ClientTransport for VsockClientTransport {
         let mut sock = VsockSocket::new().map_err(Error::Socket)?;
         let bind_addr = VSocketAddr {
             cid: VsockCid::Any,
-            port: VMADDR_PORT_ANY,
+            port: self.bind_port,
         };
         sock.bind(bind_addr).map_err(Error::Bind)?;
 
@@ -455,6 +487,15 @@ impl PipeTransport {
     }
 }
 
+impl AsRawFd for PipeTransport {
+    fn as_raw_fd(&self) -> RawFd {
+        match &self.id {
+            Some(id) => id.0,
+            None => Result::<RawFd>::Err(Error::InvalidState).unwrap(),
+        }
+    }
+}
+
 impl ServerTransport for PipeTransport {
     fn accept(&mut self) -> Result<Transport> {
         match replace(&mut self.state, PipeTransportState::UnBound) {
@@ -508,7 +549,7 @@ impl ClientTransport for PipeTransport {
 pub(crate) mod tests {
     use super::*;
 
-    use libchromeos::vsock::VsockCid;
+    use libchromeos::vsock::{VsockCid, VMADDR_PORT_ANY};
     use std::net::{IpAddr, Ipv4Addr};
     use std::os::raw::c_uint;
     use std::thread::spawn;
@@ -521,7 +562,8 @@ pub(crate) mod tests {
     fn get_ip_transport() -> Result<(IPServerTransport, IPClientTransport)> {
         const BIND_ADDRESS: &str = "127.0.0.1:0";
         let server = IPServerTransport::new(BIND_ADDRESS)?;
-        let client = IPClientTransport::new(&server.local_addr()?)?;
+        // Bind to an ephemeral port (denoted by port 0).
+        let client = IPClientTransport::new(&server.local_addr()?, 0)?;
         Ok((server, client))
     }
 
@@ -574,8 +616,10 @@ pub(crate) mod tests {
     // TODO modify this to be work with concurrent vsock usage.
     #[test]
     fn vsocktransport() {
-        let server = VsockServerTransport::new((VsockCid::Any, DEFAULT_PORT)).unwrap();
-        let mut client = VsockClientTransport::new((VsockCid::Local, DEFAULT_PORT)).unwrap();
+        let server = VsockServerTransport::new((VsockCid::Any, DEFAULT_SERVER_PORT)).unwrap();
+        let mut client =
+            VsockClientTransport::new((VsockCid::Local, DEFAULT_SERVER_PORT), VMADDR_PORT_ANY)
+                .unwrap();
         client.bind().unwrap();
         test_transport(server, client);
     }

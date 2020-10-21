@@ -53,7 +53,7 @@ impl fmt::Display for AddrParseError {
 }
 
 /// The vsock equivalent of an IP address.
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, Hash, Eq, PartialEq)]
 pub enum VsockCid {
     /// Vsock equivalent of INADDR_ANY. Indicates the context id of the current endpoint.
     Any,
@@ -113,7 +113,7 @@ impl Into<c_uint> for VsockCid {
 }
 
 /// An address associated with a virtual socket.
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[derive(Debug, Copy, Clone, Hash, Eq, PartialEq)]
 pub struct SocketAddr {
     pub cid: VsockCid,
     pub port: c_uint,

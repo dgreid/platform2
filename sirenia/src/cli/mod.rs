@@ -13,7 +13,7 @@ use getopts::{self, Options};
 use libchromeos::vsock::{SocketAddr as VSocketAddr, VsockCid};
 
 use super::build_info::BUILD_TIMESTAMP;
-use super::transport::{TransportType, DEFAULT_PORT, LOOPBACK_DEFAULT};
+use super::transport::{TransportType, DEFAULT_SERVER_PORT, LOOPBACK_DEFAULT};
 
 #[derive(Debug)]
 pub enum Error {
@@ -68,7 +68,7 @@ pub fn initialize_common_arguments(args: &[String]) -> Result<CommonConfig> {
     // all.
     let default_connection = TransportType::VsockConnection(VSocketAddr {
         cid: VsockCid::Any,
-        port: DEFAULT_PORT,
+        port: DEFAULT_SERVER_PORT,
     });
     let mut config = CommonConfig {
         connection_type: default_connection,
@@ -147,7 +147,7 @@ mod tests {
     fn initialize_common_arguments_no_args() {
         let default_connection = TransportType::VsockConnection(VSocketAddr {
             cid: VsockCid::Any,
-            port: DEFAULT_PORT,
+            port: DEFAULT_SERVER_PORT,
         });
         let exp_result = CommonConfig {
             connection_type: default_connection,
