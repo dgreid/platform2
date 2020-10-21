@@ -207,8 +207,10 @@ static void sl_pointer_frame(void* data, struct wl_pointer* pointer) {
         host->axis_delta[axis] = wl_fixed_from_double(axis_delta);
       }
     }
-    wl_pointer_send_axis(host->resource, host->time, axis,
-                         host->axis_delta[axis]);
+    if (host->axis_delta[axis] != 0) {
+      wl_pointer_send_axis(host->resource, host->time, axis,
+                           host->axis_delta[axis]);
+    }
 
     host->axis_delta[axis] = wl_fixed_from_int(0);
     host->axis_discrete[axis] = 0;
