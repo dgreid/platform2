@@ -8,8 +8,9 @@
 #include <brillo/process/process_mock.h>
 #include <gmock/gmock.h>
 
-#include "brillo/blkdev_utils/lvm_device.h"
+#include "brillo/blkdev_utils/lvm.h"
 
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -33,6 +34,53 @@ class MockLvmCommandRunner : public LvmCommandRunner {
   MOCK_METHOD(bool,
               RunProcess,
               (const std::vector<std::string>&, std::string*),
+              (override));
+};
+
+class MockLogicalVolumeManager : public LogicalVolumeManager {
+ public:
+  MockLogicalVolumeManager()
+      : LogicalVolumeManager(std::make_shared<MockLvmCommandRunner>()) {}
+  virtual ~MockLogicalVolumeManager() {}
+
+  MOCK_METHOD(base::Optional<PhysicalVolume>,
+              GetPhysicalVolume,
+              (const base::FilePath&),
+              (override));
+  MOCK_METHOD(base::Optional<VolumeGroup>,
+              GetVolumeGroup,
+              (const PhysicalVolume&),
+              (override));
+  MOCK_METHOD(base::Optional<Thinpool>,
+              GetThinpool,
+              (const VolumeGroup&, const std::string&),
+              (override));
+  MOCK_METHOD(base::Optional<LogicalVolume>,
+              GetLogicalVolume,
+              (const VolumeGroup&, const std::string&),
+              (override));
+  MOCK_METHOD(std::vector<LogicalVolume>,
+              ListLogicalVolumes,
+              (const VolumeGroup&),
+              (override));
+
+  MOCK_METHOD(base::Optional<PhysicalVolume>,
+              CreatePhysicalVolume,
+              (const base::FilePath&),
+              (override));
+  MOCK_METHOD(base::Optional<VolumeGroup>,
+              CreateVolumeGroup,
+              (const PhysicalVolume&, const std::string&),
+              (override));
+  MOCK_METHOD(base::Optional<Thinpool>,
+              CreateThinpool,
+              (const VolumeGroup&, const base::DictionaryValue&),
+              (override));
+  MOCK_METHOD(base::Optional<LogicalVolume>,
+              CreateLogicalVolume,
+              (const VolumeGroup&,
+               const Thinpool&,
+               const base::DictionaryValue&),
               (override));
 };
 
