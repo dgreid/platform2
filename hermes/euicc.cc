@@ -98,7 +98,7 @@ void Euicc::OnProfileInstalled(
     return;
   }
 
-  auto profile = Profile::Create(profile_info);
+  auto profile = Profile::Create(profile_info, physical_slot_);
   if (!profile) {
     result_callback.Error(brillo::Error::Create(
         FROM_HERE, brillo::errors::dbus::kDomain, kErrorInternalLpaFailure,
@@ -156,7 +156,7 @@ void Euicc::OnInstalledProfilesReceived(
   installed_profiles_.clear();
   UpdateInstalledProfilesProperty();
   for (const auto& info : profile_infos) {
-    auto profile = Profile::Create(info);
+    auto profile = Profile::Create(info, physical_slot_);
     if (profile) {
       installed_profiles_.push_back(std::move(profile));
     }

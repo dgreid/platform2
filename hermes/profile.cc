@@ -52,10 +52,10 @@ base::Optional<profile::ProfileClass> LpaProfileClassToHermes(
 
 // static
 std::unique_ptr<Profile> Profile::Create(
-    const lpa::proto::ProfileInfo& profile_info) {
+    const lpa::proto::ProfileInfo& profile_info, const uint32_t physical_slot) {
   CHECK(profile_info.has_iccid());
-  auto profile = std::unique_ptr<Profile>(
-      new Profile(dbus::ObjectPath(kBasePath + profile_info.iccid())));
+  auto profile = std::unique_ptr<Profile>(new Profile(
+      dbus::ObjectPath(kBasePath + profile_info.iccid()), physical_slot));
 
   // Initialize properties.
   profile->SetIccid(profile_info.iccid());
@@ -85,15 +85,17 @@ std::unique_ptr<Profile> Profile::Create(
   profile->RegisterWithDBusObject(&profile->dbus_object_);
   profile->dbus_object_.RegisterAndBlock();
 
-  LOG(INFO) << "Created Profile: " << profile->object_path_.value();
+  LOG(INFO) << "Created Profile: " << profile->object_path_.value()
+            << " on slot: " << profile->physical_slot_;
   return profile;
 }
 
-Profile::Profile(dbus::ObjectPath object_path)
+Profile::Profile(dbus::ObjectPath object_path, const uint32_t physical_slot)
     : org::chromium::Hermes::ProfileAdaptor(this),
       context_(Context::Get()),
       object_path_(std::move(object_path)),
       dbus_object_(nullptr, context_->bus(), object_path_),
+      physical_slot_(physical_slot),
       weak_factory_(this) {}
 
 void Profile::Enable(std::unique_ptr<DBusResponse<>> response) {

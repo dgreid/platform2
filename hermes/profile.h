@@ -22,8 +22,8 @@ class Profile : public org::chromium::Hermes::ProfileInterface,
   template <typename... T>
   using DBusResponse = brillo::dbus_utils::DBusMethodResponse<T...>;
 
-  static std::unique_ptr<Profile> Create(
-      const lpa::proto::ProfileInfo& profile);
+  static std::unique_ptr<Profile> Create(const lpa::proto::ProfileInfo& profile,
+                                         const uint32_t physical_slot);
 
   // org::chromium::Hermes::ProfileInterface overrides.
   void Enable(std::unique_ptr<DBusResponse<>> resp) override;
@@ -33,7 +33,7 @@ class Profile : public org::chromium::Hermes::ProfileInterface,
   ~Profile() override;
 
  private:
-  explicit Profile(dbus::ObjectPath object_path);
+  explicit Profile(dbus::ObjectPath object_path, const uint32_t physical_slot);
 
   void OnEnabled(int error, std::shared_ptr<DBusResponse<>> response);
   void OnDisabled(int error, std::shared_ptr<DBusResponse<>> response);
@@ -45,6 +45,7 @@ class Profile : public org::chromium::Hermes::ProfileInterface,
   Context* context_;
   dbus::ObjectPath object_path_;
   brillo::dbus_utils::DBusObject dbus_object_;
+  const uint32_t physical_slot_;
 
   base::WeakPtrFactory<Profile> weak_factory_;
 };
