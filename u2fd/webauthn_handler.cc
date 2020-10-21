@@ -161,6 +161,7 @@ void WebAuthnHandler::MakeCredential(
     dbus::MessageWriter writer(&call);
     writer.AppendString(request.rp_id());
     writer.AppendInt32(request.verification_type());
+    writer.AppendUint64(request.request_id());
 
     auth_dialog_dbus_proxy_->CallMethod(
         &call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT,
@@ -491,6 +492,7 @@ void WebAuthnHandler::GetAssertion(
     dbus::MessageWriter writer(&call);
     writer.AppendString(request.rp_id());
     writer.AppendInt32(request.verification_type());
+    writer.AppendUint64(request.request_id());
 
     auth_dialog_dbus_proxy_->CallMethod(
         &call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT,
