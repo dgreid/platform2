@@ -102,7 +102,7 @@ bool WriteSeedToCrosFp(const brillo::SecureVector& seed) {
   // compatible, so use the format version of the firmware.
   req->struct_version =
       static_cast<uint16_t>(firmware_fp_template_format_version);
-  std::copy(seed.cbegin(), seed.cend() + sizeof(req->seed), req->seed);
+  std::copy(seed.cbegin(), seed.cbegin() + sizeof(req->seed), req->seed);
 
   if (!cmd_seed.Run(fd.get())) {
     LOG(ERROR) << "Failed to set TPM seed.";
