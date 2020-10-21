@@ -15,7 +15,7 @@
 #include "base/memory/ref_counted.h"
 #include "base/pickle.h"
 
-namespace net {
+namespace patchpanel {
 
 // IOBuffers are reference counted data buffers used for easier asynchronous
 // IO handling.
@@ -253,6 +253,6 @@ class NET_EXPORT WrappedIOBuffer : public IOBuffer {
   ~WrappedIOBuffer() override;
 };
 
-}  // namespace net
+}  // namespace patchpanel
 
 #endif  // PATCHPANEL_DNS_IO_BUFFER_H_

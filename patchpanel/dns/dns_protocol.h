@@ -9,12 +9,25 @@
 
 #include "patchpanel/dns/net_export.h"
 
-namespace net {
+namespace patchpanel {
 
+// General constants and structs defined by the DNS and MDNS protocols.
+//
+// Direct interaction with DNS and MDNS, as well as parsing DNS and MDNS
+// messages, should generally only be done within network stack code.
+// Network-stack-external code should interact indirectly through network
+// service APIs, e.g. NetworkContext::ResolveHost(). But these constants may
+// still be useful for other minor purposes.
 namespace dns_protocol {
 
 static const uint16_t kDefaultPort = 53;
+// RFC 5353.
 static const uint16_t kDefaultPortMulticast = 5353;
+
+// https://www.iana.org/assignments/multicast-addresses/multicast-addresses.xhtml#multicast-addresses-1
+static const char kMdnsMulticastGroupIPv4[] = "224.0.0.251";
+// https://www.iana.org/assignments/ipv6-multicast-addresses/ipv6-multicast-addresses.xhtml#link-local
+static const char kMdnsMulticastGroupIPv6[] = "FF02::FB";
 
 // DNS packet consists of a header followed by questions and/or answers.
 // For the meaning of specific fields, please see RFC 1035 and 2535
@@ -76,12 +89,12 @@ static const uint16_t kDefaultPortMulticast = 5353;
 
 // On-the-wire header. All uint16_t are in network order.
 struct NET_EXPORT Header {
-  uint16_t id;
-  uint16_t flags;
-  uint16_t qdcount;
-  uint16_t ancount;
-  uint16_t nscount;
-  uint16_t arcount;
+  uint16_t id = 0;
+  uint16_t flags = 0;
+  uint16_t qdcount = 0;
+  uint16_t ancount = 0;
+  uint16_t nscount = 0;
+  uint16_t arcount = 0;
 };
 
 #pragma pack(pop)
@@ -109,21 +122,42 @@ static const int kMaxUDPSize = 512;
 // medium's MTU, and must be under 9000 bytes
 static const int kMaxMulticastSize = 9000;
 
+// RFC 1035, Section 4.1.3.
+// TYPE (2 bytes) + CLASS (2 bytes) + TTL (4 bytes) + RDLENGTH (2 bytes)
+static const int kResourceRecordSizeInBytesWithoutNameAndRData = 10;
+
 // DNS class types.
 //
 // https://www.iana.org/assignments/dns-parameters/dns-parameters.xhtml#dns-parameters-2
 static const uint16_t kClassIN = 1;
+// RFC 6762, Section 10.2.
+//
+// For resource records sent through mDNS, the top bit of the class field in a
+// resource record is repurposed to the cache-flush bit. This bit should only be
+// used in mDNS transactions.
+static const uint16_t kFlagCacheFlush = 0x8000;
 
 // DNS resource record types.
 //
 // https://www.iana.org/assignments/dns-parameters/dns-parameters.xhtml#dns-parameters-4
 static const uint16_t kTypeA = 1;
 static const uint16_t kTypeCNAME = 5;
+static const uint16_t kTypeSOA = 6;
 static const uint16_t kTypePTR = 12;
 static const uint16_t kTypeTXT = 16;
 static const uint16_t kTypeAAAA = 28;
 static const uint16_t kTypeSRV = 33;
+static const uint16_t kTypeOPT = 41;
 static const uint16_t kTypeNSEC = 47;
+static const uint16_t kTypeHttps = 65;
+static const uint16_t kTypeANY = 255;
+
+// Experimental DNS record types pending IANA assignment.
+//
+// The INTEGRITY RR type exists purely for measuring how the DNS ecosystem
+// handles new RR types.
+// https://docs.google.com/document/d/14eCqVyT_3MSj7ydqNFl1Yl0yg1fs6g24qmYUUdi5V-k/edit?usp=sharing
+static const uint16_t kExperimentalTypeIntegrity = 65521;
 
 // DNS reply codes (RCODEs).
 //
@@ -135,15 +169,21 @@ static const uint8_t kRcodeNXDOMAIN = 3;
 static const uint8_t kRcodeNOTIMP = 4;
 static const uint8_t kRcodeREFUSED = 5;
 
+// DNS EDNS(0) option codes (OPT)
+//
+// https://www.iana.org/assignments/dns-parameters/dns-parameters.xhtml#dns-parameters-11
+static const uint16_t kEdnsPadding = 12;
+
 // DNS header flags.
 //
 // https://www.iana.org/assignments/dns-parameters/dns-parameters.xhtml#dns-parameters-12
 static const uint16_t kFlagResponse = 0x8000;
+static const uint16_t kFlagAA = 0x400;  // Authoritative Answer - response flag.
 static const uint16_t kFlagRD = 0x100;  // Recursion Desired - query flag.
 static const uint16_t kFlagTC = 0x200;  // Truncated - server flag.
 
 }  // namespace dns_protocol
 
-}  // namespace net
+}  // namespace patchpanel
 
 #endif  // PATCHPANEL_DNS_DNS_PROTOCOL_H_

@@ -7,7 +7,7 @@
 #include "base/logging.h"
 #include "base/numerics/safe_math.h"
 
-namespace net {
+namespace patchpanel {
 
 namespace {
 
@@ -168,4 +168,4 @@ WrappedIOBuffer::~WrappedIOBuffer() {
   data_ = nullptr;
 }
 
-}  // namespace net
+}  // namespace patchpanel

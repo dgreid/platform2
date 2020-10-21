@@ -476,29 +476,29 @@ void MulticastForwarder::TranslateMdnsIp(const struct in_addr& lan_ip,
 
   // Make sure this is a valid, successful DNS response from the Android
   // host.
-  if (len > net::dns_protocol::kMaxUDPSize || len <= 0) {
+  if (len > dns_protocol::kMaxUDPSize || len <= 0) {
     return;
   }
 
-  net::DnsResponse resp;
+  DnsResponse resp;
   memcpy(resp.io_buffer()->data(), data, len);
   if (!resp.InitParseWithoutQuery(len) ||
-      !(resp.flags() & net::dns_protocol::kFlagResponse) ||
-      resp.rcode() != net::dns_protocol::kRcodeNOERROR) {
+      !(resp.flags() & dns_protocol::kFlagResponse) ||
+      resp.rcode() != dns_protocol::kRcodeNOERROR) {
     return;
   }
 
   // Check all A records for the internal IP, and replace it with |lan_ip|
   // if it is found.
-  net::DnsRecordParser parser = resp.Parser();
+  DnsRecordParser parser = resp.Parser();
   while (!parser.AtEnd()) {
     const size_t ipv4_addr_len = sizeof(lan_ip.s_addr);
 
-    net::DnsResourceRecord record;
+    DnsResourceRecord record;
     if (!parser.ReadRecord(&record)) {
       break;
     }
-    if (record.type == net::dns_protocol::kTypeA &&
+    if (record.type == dns_protocol::kTypeA &&
         record.rdata.size() == ipv4_addr_len) {
       struct in_addr rr_ip;
       memcpy(&rr_ip, record.rdata.data(), ipv4_addr_len);
