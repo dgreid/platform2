@@ -1152,7 +1152,7 @@ class HandwritingRecognizerTest : public testing::Test {
                         HandwritingRecognizerResult::Status::OK);
               ASSERT_EQ(result->candidates.size(), 1);
               EXPECT_EQ(result->candidates.at(0)->text, text);
-              EXPECT_FLOAT_EQ(result->candidates.at(0)->score, score);
+              EXPECT_NEAR(result->candidates.at(0)->score, score, 1e-4);
               *infer_callback_done = true;
             },
             &infer_callback_done, text, score));
@@ -1184,7 +1184,7 @@ TEST_F(HandwritingRecognizerTest, GetExpectedScores) {
     request_.mutable_ink()->mutable_strokes(0)->mutable_points(i)->set_t(i * i *
                                                                          100);
   }
-  ExpectRecognizeResult("a", 0.51218414f);
+  ExpectRecognizeResult("a", 0.5121f);
 }
 
 // Tests that the LoadHandwritingModel also perform as expected.
