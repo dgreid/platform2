@@ -77,6 +77,7 @@ _IUSE = [
     'jetstream_routing',
     'kvm_guest',
     'kvm_host',
+    'lvm_stateful_partition',
     'metrics_uploader',
     'ml_benchmark_drivers',
     'mojo',
