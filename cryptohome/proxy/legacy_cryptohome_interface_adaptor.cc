@@ -18,6 +18,7 @@
 namespace {
 constexpr base::TimeDelta kAttestationProxyTimeout =
     base::TimeDelta::FromMinutes(1);
+constexpr base::TimeDelta kMountTimeout = base::TimeDelta::FromMinutes(1);
 }
 
 namespace cryptohome {
@@ -443,7 +444,8 @@ void LegacyCryptohomeInterfaceAdaptor::MountEx(
                  base::Unretained(this), response_shared),
       base::Bind(&LegacyCryptohomeInterfaceAdaptor::ForwardError<
                      cryptohome::BaseReply>,
-                 base::Unretained(this), response_shared));
+                 base::Unretained(this), response_shared),
+      kMountTimeout.InMilliseconds());
 }
 
 void LegacyCryptohomeInterfaceAdaptor::MountExOnSuccess(
@@ -486,7 +488,8 @@ void LegacyCryptohomeInterfaceAdaptor::MountGuestEx(
                  response_shared),
       base::Bind(&LegacyCryptohomeInterfaceAdaptor::ForwardError<
                      cryptohome::BaseReply>,
-                 base::Unretained(this), response_shared));
+                 base::Unretained(this), response_shared),
+      kMountTimeout.InMilliseconds());
 }
 
 void LegacyCryptohomeInterfaceAdaptor::RenameCryptohome(
