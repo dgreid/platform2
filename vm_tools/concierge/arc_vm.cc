@@ -253,7 +253,6 @@ bool ArcVm::Start(base::FilePath kernel,
     { "--cid",             std::to_string(vsock_cid_) },
     { "--socket",          GetVmSocketPath() },
     { "--gpu",             "" },
-    { "--video-decoder",   ""},
     { "--wayland-sock",    kWaylandSocket },
     { "--wayland-sock",    "/run/arcvm/mojo/mojo-proxy.sock,name=mojo" },
     { "--syslog-tag",      base::StringPrintf("ARCVM(%u)", vsock_cid_) },
@@ -275,6 +274,9 @@ bool ArcVm::Start(base::FilePath kernel,
 
   if (USE_CROSVM_WL_DMABUF)
     args.emplace_back("--wayland-dmabuf", "");
+
+  if (USE_CROSVM_VIRTIO_VIDEO)
+    args.emplace_back("--video-decoder", "");
 
   for (const auto& fd : tap_fds) {
     args.emplace_back("--tap-fd", std::to_string(fd.get()));

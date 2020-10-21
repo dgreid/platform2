@@ -51,6 +51,7 @@ _IUSE = [
     'cros_arm64',
     'cros_host',
     'cros_i686',
+    'crosvm_virtio_video',
     'crosvm_wl_dmabuf',
     'crypto',
     'cryptohome_userdataauth_interface',
