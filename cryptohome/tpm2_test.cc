@@ -292,9 +292,11 @@ TEST_F(Tpm2Test, SignalCache) {
   ON_CALL(mock_tpm_manager_utility_, GetOwnershipTakenSignalStatus(_, _, _))
       .WillByDefault(
           DoAll(SetArgPointee<0>(true), SetArgPointee<1>(false), Return(true)));
-  EXPECT_CALL(mock_tpm_manager_utility_, GetTpmStatus(_, _, _)).Times(0);
+  EXPECT_CALL(mock_tpm_manager_utility_, GetTpmStatus(_, _, _)).Times(1);
   EXPECT_CALL(mock_tpm_manager_utility_, GetOwnershipTakenSignalStatus(_, _, _))
-      .Times(2);
+      .Times(4);
+  EXPECT_FALSE(tpm_->IsOwned());
+  EXPECT_FALSE(tpm_->GetOwnerPassword(&result_owner_password));
   EXPECT_FALSE(tpm_->IsOwned());
   EXPECT_FALSE(tpm_->GetOwnerPassword(&result_owner_password));
 

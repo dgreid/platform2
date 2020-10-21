@@ -289,7 +289,7 @@ class Tpm2Impl : public Tpm {
 
   // This flag indicates |CacheTpmManagerStatus| shall be called when the
   // ownership taken signal is confirmed to be connected.
-  bool shall_cache_tpm_manager_status_ = false;
+  bool shall_cache_tpm_manager_status_ = true;
 
   // Records |LocalData| from tpm_manager last time we query, either by
   // explicitly requesting the update or from dbus signal.
