@@ -28,6 +28,41 @@ enum BenchmarkReturnStatus {
   RUNTIME_ERROR = 4;
 }
 
+message Metric {
+  enum Direction {
+    SMALLER_IS_BETTER = 0;
+    BIGGER_IS_BETTER = 1;
+  }
+
+  // https://crbug.com/1047454#c7
+  // Same units as in |tast/common/perf/perf.go|.
+  enum Units {
+    UNITLESS = 0;
+    BYTES = 1;
+    JOULES = 2;
+    WATTS = 3;
+    COUNT = 4;
+    MS = 5;
+    NPERCENT = 6;
+    SIGMA = 7;
+    TS_MS = 8;
+  }
+
+  // Adds a check that there's only a single value in |values|
+  // if |cardinality| == |SINGLE|.
+  enum Cardinality {
+    SINGLE = 0;
+    MULTIPLE = 1;
+  }
+
+  // |name| is prefixed by the scenario name and passed to the Crosbolt.
+  string name = 1;
+  Units units = 2;
+  Direction direction = 3;
+  Cardinality cardinality = 4;
+  repeated double values = 5 [packed = true];
+}
+
 message BenchmarkResults {
   BenchmarkReturnStatus status = 1;
   string results_message = 2;
@@ -39,4 +74,6 @@ message BenchmarkResults {
   // For new code, use this instead, which allows us to output 50th and 90th
   // Percentile latencies
   map<int32, int64> percentile_latencies_in_us = 5;
+
+  repeated Metric metrics = 6;
 }

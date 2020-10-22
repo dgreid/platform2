@@ -32,16 +32,16 @@ bool SharedLibraryBenchmark::ExecuteBenchmark(
       functions_->BenchmarkFunction(config_bytes.c_str(), config_bytes.size(),
                                     &results_buffer, &results_size);
 
-  if (ret != chrome::ml_benchmark::OK) {
-    LOG(ERROR) << "Benchmark did not successfully execute";
-    return false;
-  }
-
   auto deleter = [this](void* memory) {
     functions_->FreeBenchmarkResults(memory);
   };
   std::unique_ptr<void, decltype(deleter)> managed_results(results_buffer,
                                                            deleter);
+
+  if (ret != chrome::ml_benchmark::OK) {
+    LOG(ERROR) << "Benchmark did not successfully execute";
+    return false;
+  }
 
   if (results_buffer == nullptr || results_size == 0) {
     LOG(ERROR) << "Cannot parse the results from the test driver: "

@@ -5,57 +5,24 @@
 #include <string>
 
 #include <base/files/file.h>
-#include <base/files/file_path.h>
 #include <base/files/file_util.h>
 #include <base/json/json_writer.h>
 #include <base/logging.h>
 #include <base/values.h>
-#include <brillo/file_utils.h>
 #include <brillo/flag_helper.h>
-#include <brillo/proto_file_io.h>
 
+#include "ml_benchmark/json_serializer.h"
 #include "ml_benchmark/shared_library_benchmark.h"
 #include "ml_benchmark/shared_library_benchmark_functions.h"
-#include "proto/benchmark_config.pb.h"
 
 using chrome::ml_benchmark::AccelerationMode;
 using chrome::ml_benchmark::BenchmarkResults;
 using chrome::ml_benchmark::CrOSBenchmarkConfig;
+using chrome::ml_benchmark::Metric;
 using ml_benchmark::SharedLibraryBenchmark;
 using ml_benchmark::SharedLibraryBenchmarkFunctions;
 
 namespace {
-
-void write_results_to_path(const BenchmarkResults& results,
-                           const base::FilePath& output_path) {
-  base::Value doc(base::Value::Type::DICTIONARY);
-  doc.SetKey("status", base::Value(results.status()));
-  doc.SetKey("results_message", base::Value(results.results_message()));
-  doc.SetKey("total_accuracy",
-             base::Value(static_cast<double>(results.total_accuracy())));
-
-  base::Value percentiles(base::Value::Type::DICTIONARY);
-  for (const auto& latencies : results.percentile_latencies_in_us()) {
-    std::string percentile = std::to_string(latencies.first);
-    LOG(INFO) << percentile
-              << "th percentile latency: " << latencies.second / 1000000.0
-              << " seconds";
-    percentiles.SetKey(percentile,
-                       base::Value(static_cast<int>(latencies.second)));
-  }
-  doc.SetKey("percentile_latencies_in_us", std::move(percentiles));
-
-  std::string results_string;
-  if (!base::JSONWriter::Write(doc, &results_string)) {
-    LOG(ERROR) << "Unable to serialize benchmarking results.";
-    return;
-  }
-  constexpr mode_t kFileRWMode = 0644;
-  if (!brillo::WriteToFileAtomic(output_path, results_string.c_str(),
-                                 results_string.size(), kFileRWMode)) {
-    LOG(ERROR) << "Unable to write out the benchmarking results";
-  }
-}
 
 void benchmark_and_report_results(
     const std::string& driver_name,
@@ -89,7 +56,7 @@ void benchmark_and_report_results(
     }
 
     if (output_path) {
-      write_results_to_path(results, *output_path);
+      ml_benchmark::WriteResultsToPath(results, *output_path);
     }
   } else {
     LOG(ERROR) << driver_name << " Encountered an error";
