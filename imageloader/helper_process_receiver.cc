@@ -17,6 +17,7 @@
 
 #include <base/bind.h>
 #include <base/files/file_path.h>
+#include <base/files/file_util.h>
 #include <base/logging.h>
 #include <base/posix/eintr_wrapper.h>
 #include <base/time/time.h>
@@ -73,7 +74,7 @@ void HelperProcessReceiver::OnCommandReady() {
   msg.msg_control = c_buffer;
   msg.msg_controllen = sizeof(c_buffer);
 
-  ssize_t bytes = recvmsg(control_fd_.get(), &msg, 0);
+  ssize_t bytes = HANDLE_EINTR(recvmsg(control_fd_.get(), &msg, 0));
   if (bytes < 0)
     PLOG(FATAL) << "recvmsg failed";
   // Per recvmsg(2), the return value will be 0 when the peer has performed an
@@ -150,12 +151,9 @@ void HelperProcessReceiver::SendResponse(const CommandResponse& response) {
   std::string response_str;
   if (!response.SerializeToString(&response_str))
     LOG(FATAL) << "failed to serialize protobuf";
-
-  if (HANDLE_EINTR(
-          write(control_fd_.get(), response_str.data(), response_str.size())) !=
-      static_cast<ssize_t>(response_str.size())) {
+  if (!base::WriteFileDescriptor(control_fd_.get(), response_str.data(),
+                                 response_str.size()))
     PLOG(FATAL) << "short write on protobuf";
-  }
 }
 
 }  // namespace imageloader
