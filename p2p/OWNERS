@@ -1,1 +1,1 @@
-include aosp/platform/system/update_engine:/OWNERS
+include chromiumos/chromite:/OWNERS.au
