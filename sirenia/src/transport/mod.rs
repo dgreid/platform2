@@ -266,26 +266,12 @@ impl PartialEq for PipeTransportState {
     fn eq(&self, other: &Self) -> bool {
         match &self {
             PipeTransportState::ServerReady(_) => {
-                if let PipeTransportState::ServerReady(_) = other {
-                    true
-                } else {
-                    false
-                }
+                matches!(other, PipeTransportState::ServerReady(_))
             }
             PipeTransportState::ClientReady(_) => {
-                if let PipeTransportState::ClientReady(_) = other {
-                    true
-                } else {
-                    false
-                }
+                matches!(other, PipeTransportState::ClientReady(_))
             }
-            PipeTransportState::Either => {
-                if let PipeTransportState::Either = other {
-                    true
-                } else {
-                    false
-                }
-            }
+            PipeTransportState::Either => matches!(other, PipeTransportState::Either),
         }
     }
 }
