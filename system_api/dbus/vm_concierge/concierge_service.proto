@@ -162,6 +162,9 @@ message StartVmRequest {
   // CPUs on the device and cannot be 0.
   uint32 cpus = 12;
 
+  // Make the rootfs writable.
+  bool writable_rootfs = 15;
+
   // If true, a file descriptor must be passed along with the message and that
   // file descriptor will be used for kernel.
   // Ignored unless |start_termina| is true.

@@ -1323,7 +1323,8 @@ std::unique_ptr<dbus::Response> Service::StartVm(
   vm_builder.SetKernel(std::move(image_spec.kernel))
       .SetInitrd(std::move(image_spec.initrd))
       .SetRootfs({.device = std::move(rootfs_device),
-                  .path = std::move(image_spec.rootfs)})
+                  .path = std::move(image_spec.rootfs),
+                  .writable = request.writable_rootfs()})
       .SetCpus(cpus)
       .AppendDisks(std::move(disks))
       .EnableSmt(false /* enable */);

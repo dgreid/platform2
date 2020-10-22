@@ -241,7 +241,8 @@ int StartVm(dbus::ObjectProxy* proxy,
             string initrd,
             string rootfs,
             string extra_disks,
-            bool untrusted) {
+            bool untrusted,
+            bool writable_rootfs) {
   if (name.empty()) {
     LOG(ERROR) << "--name is required";
     return -1;
@@ -304,6 +305,7 @@ int StartVm(dbus::ObjectProxy* proxy,
   }
 
   request.set_run_as_untrusted(untrusted);
+  request.set_writable_rootfs(writable_rootfs);
 
   if (!writer.AppendProtoAsArrayOfBytes(request)) {
     LOG(ERROR) << "Failed to encode StartVmRequest protobuf";
@@ -1591,6 +1593,7 @@ int main(int argc, char** argv) {
   DEFINE_string(android_fstab, "", "Path to the Android fstab");
   DEFINE_bool(untrusted, false,
               "Allow untrusted VM. Only respected in developer mode");
+  DEFINE_bool(writable_rootfs, true, "Make the rootfs writable");
 
   // create_disk parameters.
   DEFINE_string(cryptohome_id, "", "User cryptohome id");
@@ -1672,7 +1675,7 @@ int main(int argc, char** argv) {
     return StartVm(proxy, std::move(FLAGS_cryptohome_id), std::move(FLAGS_name),
                    std::move(FLAGS_kernel), std::move(FLAGS_initrd),
                    std::move(FLAGS_rootfs), std::move(FLAGS_extra_disks),
-                   FLAGS_untrusted);
+                   FLAGS_untrusted, FLAGS_writable_rootfs);
   } else if (FLAGS_stop) {
     return StopVm(proxy, std::move(FLAGS_cryptohome_id), std::move(FLAGS_name));
   } else if (FLAGS_stop_all) {

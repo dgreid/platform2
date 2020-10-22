@@ -173,12 +173,20 @@ base::StringPairs VmBuilder::BuildVmArgs() const {
   if (rootfs_.has_value()) {
     const auto& rootfs = rootfs_.value();
     if (rootfs.device.find("pmem") != std::string::npos) {
-      args.emplace_back("--pmem-device", rootfs.path.value());
+      if (rootfs.writable) {
+        args.emplace_back("--rw-pmem-device", rootfs.path.value());
+      } else {
+        args.emplace_back("--pmem-device", rootfs.path.value());
+      }
       // TODO(davidriley): Re-add rootflags=dax once guest kernel has fix for
       // b/169339326.
       args.emplace_back("--params", "root=/dev/pmem0 ro");
     } else {
-      args.emplace_back("--root", rootfs.path.value());
+      if (rootfs.writable) {
+        args.emplace_back("--rwroot", rootfs.path.value());
+      } else {
+        args.emplace_back("--root", rootfs.path.value());
+      }
     }
   }
 

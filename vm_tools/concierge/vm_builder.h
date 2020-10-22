@@ -25,6 +25,7 @@ class VmBuilder {
   struct Rootfs {
     std::string device;
     base::FilePath path;
+    bool writable;
   };
 
   VmBuilder();
