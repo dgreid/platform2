@@ -6,6 +6,12 @@
 -->
 <node>
   <interface name="org.chromium.Hermes.Euicc">
+    <method name="RequestInstalledProfiles">
+      <tp:docstring>
+        Reload the profiles installed on a eUICC.
+      </tp:docstring>
+      <annotation name="org.chromium.DBus.Method.Kind" value="async" />
+    </method>
     <method name="InstallProfileFromActivationCode">
       <tp:docstring>
         Install a profile onto the eUICC using an activation code.

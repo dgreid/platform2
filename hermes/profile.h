@@ -30,6 +30,7 @@ class Profile : public org::chromium::Hermes::ProfileInterface,
   void Disable(std::unique_ptr<DBusResponse<>> resp) override;
 
   const dbus::ObjectPath& object_path() const { return object_path_; }
+  ~Profile() override;
 
  private:
   explicit Profile(dbus::ObjectPath object_path);

@@ -30,18 +30,8 @@ Euicc::Euicc(uint8_t physical_slot, EuiccSlotInfo slot_info)
 }
 
 void Euicc::UpdateSlotInfo(EuiccSlotInfo slot_info) {
-  bool was_active = slot_info_.IsActive();
-  bool is_active = slot_info.IsActive();
-
   slot_info_ = std::move(slot_info);
-  if (was_active == is_active) {
-    return;
-  }
-
-  dbus_adaptor_->SetIsActive(is_active);
-  if (is_active) {
-    RequestInstalledProfiles();
-  }
+  dbus_adaptor_->SetIsActive(slot_info_.IsActive());
 }
 
 void Euicc::InstallProfileFromActivationCode(
@@ -49,7 +39,7 @@ void Euicc::InstallProfileFromActivationCode(
     const std::string& confirmation_code,
     ResultCallback<dbus::ObjectPath> result_callback) {
   auto profile_cb = [result_callback{std::move(result_callback)}, this](
-                        lpa::proto::ProfileInfo& info, int error) {
+                        lpa::proto::ProfileInfo& info, int error) mutable {
     OnProfileInstalled(info, error, std::move(result_callback));
   };
   if (activation_code.empty()) {
@@ -85,7 +75,7 @@ void Euicc::UninstallProfile(const dbus::ObjectPath& profile_path,
   context_->lpa()->DeleteProfile(
       matching_profile->GetIccid(), context_->executor(),
       [result_callback{std::move(result_callback)}, profile_path,
-       this](int error) {
+       this](int error) mutable {
         OnProfileUninstalled(profile_path, error, std::move(result_callback));
       });
 }
@@ -142,22 +132,29 @@ void Euicc::OnProfileUninstalled(const dbus::ObjectPath& profile_path,
   result_callback.Success();
 }
 
-void Euicc::RequestInstalledProfiles() {
+void Euicc::RequestInstalledProfiles(ResultCallback<> result_callback) {
   context_->lpa()->GetInstalledProfiles(
       context_->executor(),
-      [this](std::vector<lpa::proto::ProfileInfo>& profile_infos, int error) {
-        OnInstalledProfilesReceived(profile_infos, error);
+      [result_callback{std::move(result_callback)}, this](
+          std::vector<lpa::proto::ProfileInfo>& profile_infos,
+          int error) mutable {
+        OnInstalledProfilesReceived(profile_infos, error,
+                                    std::move(result_callback));
       });
 }
 
 void Euicc::OnInstalledProfilesReceived(
-    const std::vector<lpa::proto::ProfileInfo>& profile_infos, int error) {
+    const std::vector<lpa::proto::ProfileInfo>& profile_infos,
+    int error,
+    ResultCallback<> result_callback) {
   auto decoded_error = LpaErrorToBrillo(FROM_HERE, error);
   if (decoded_error) {
     LOG(ERROR) << "Failed to retrieve installed profiles";
+    result_callback.Error(decoded_error);
     return;
   }
-
+  installed_profiles_.clear();
+  UpdateInstalledProfilesProperty();
   for (const auto& info : profile_infos) {
     auto profile = Profile::Create(info);
     if (profile) {
@@ -165,6 +162,7 @@ void Euicc::OnInstalledProfilesReceived(
     }
   }
   UpdateInstalledProfilesProperty();
+  result_callback.Success();
 }
 
 }  // namespace hermes

@@ -36,6 +36,8 @@ class EuiccDBusAdaptor : public EuiccAdaptorInterface,
                         const dbus::ObjectPath& in_profile) override;
   // Update the PendingProfiles property.
   void RequestPendingEvents(std::unique_ptr<DBusResponse<>> response) override;
+  void RequestInstalledProfiles(
+      std::unique_ptr<DBusResponse<>> response) override;
 
   // EuiccAdaptorInterface override.
   dbus::ObjectPath object_path() const override { return object_path_; }

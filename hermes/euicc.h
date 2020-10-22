@@ -34,6 +34,8 @@ class Euicc {
       ResultCallback<dbus::ObjectPath> result_callback);
   void UninstallProfile(const dbus::ObjectPath& profile_path,
                         ResultCallback<> result_callback);
+  // Request the eUICC to provide all installed profiles.
+  void RequestInstalledProfiles(ResultCallback<> result_callback);
 
   uint8_t physical_slot() const { return physical_slot_; }
   dbus::ObjectPath object_path() const { return dbus_adaptor_->object_path(); }
@@ -48,11 +50,11 @@ class Euicc {
 
   void UpdateInstalledProfilesProperty();
 
-  // Request the eUICC to provide all installed profiles.
-  void RequestInstalledProfiles();
   // Update |profiles_| with all profiles installed on the eUICC.
   void OnInstalledProfilesReceived(
-      const std::vector<lpa::proto::ProfileInfo>& profile_infos, int error);
+      const std::vector<lpa::proto::ProfileInfo>& profile_infos,
+      int error,
+      ResultCallback<> result_callback);
 
   const uint8_t physical_slot_;
   EuiccSlotInfo slot_info_;

@@ -173,4 +173,8 @@ bool Profile::ValidateNickname(brillo::ErrorPtr* /*error*/,
   return true;
 }
 
+Profile::~Profile() {
+  dbus_object_.UnregisterAsync();
+}
+
 }  // namespace hermes

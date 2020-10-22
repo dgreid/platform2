@@ -69,4 +69,9 @@ void EuiccDBusAdaptor::RequestPendingEvents(
   response->Return();
 }
 
+void EuiccDBusAdaptor::RequestInstalledProfiles(
+    std::unique_ptr<DBusResponse<>> response) {
+  ResultCallback<> result_callback(std::move(response));
+  euicc_->RequestInstalledProfiles(std::move(result_callback));
+}
 }  // namespace hermes
