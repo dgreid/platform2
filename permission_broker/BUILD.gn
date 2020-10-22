@@ -19,7 +19,7 @@ pkg_config("target_defaults_deps") {
   pkg_deps = [
     "dbus-1",
     "libbrillo",
-    "libchrome-${libbase_ver}",
+    "libchrome",
     "libpatchpanel-client",
     "libudev",
     "libusb-1.0",
@@ -83,7 +83,7 @@ if (use.test) {
   pkg_config("permission_broker_test_config") {
     pkg_deps = [
       "libbrillo-test",
-      "libchrome-test-${libbase_ver}",
+      "libchrome-test",
     ]
   }
   executable("permission_broker_test") {
@@ -118,7 +118,7 @@ if (use.test) {
 # Fuzzer target.
 if (use.fuzzer) {
   pkg_config("permission_broker_fuzzer_config") {
-    pkg_deps = [ "libchrome-test-${libbase_ver}" ]
+    pkg_deps = [ "libchrome-test" ]
   }
   executable("port_tracker_fuzzer") {
     configs += [

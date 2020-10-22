@@ -5,7 +5,7 @@
 import("//common-mk/pkg_config.gni")
 
 pkg_config("cros_camera_common_pkg_config") {
-  pkg_deps = [ "libchrome-${libbase_ver}" ]
+  pkg_deps = [ "libchrome" ]
 }
 
 config("cros_camera_common") {

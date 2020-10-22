@@ -13,7 +13,7 @@ group("all") {
 
 pkg_config("target_defaults") {
   pkg_deps = [
-    "libchrome-${libbase_ver}",
+    "libchrome",
     "libudev",
   ]
   configs = [ "//camera/build:cros_camera_common" ]

@@ -25,8 +25,8 @@ group("all") {
 pkg_config("target_defaults") {
   pkg_deps = [
     "dbus-1",
-    "libchrome-${libbase_ver}",
-    "libmojo-${libbase_ver}",
+    "libchrome",
+    "libmojo",
     "system_api",
   ]
 }
@@ -35,8 +35,8 @@ generate_mojom_bindings("video_mojo_bindings") {
   mojo_root = "${platform2_root}"
   use_pic = true
   pkg_deps = [
-    "libchrome-${libbase_ver}",
-    "libmojo-${libbase_ver}",
+    "libchrome",
+    "libmojo",
   ]
   sources = [
     "gpu/mojom/gfx.mojom",
@@ -82,8 +82,8 @@ generate_pkg_config("libvda_pc") {
   version = "0.1"
   libs = [ "-lvda" ]
   requires_private = [
-    "libchrome-${libbase_ver}",
-    "libmojo-${libbase_ver}",
+    "libchrome",
+    "libmojo",
   ]
 }
 
@@ -99,7 +99,7 @@ if (use.test) {
     configs += [ "//common-mk:test" ]
     pkg_deps = [
       "gbm",
-      "libchrome-test-${libbase_ver}",
+      "libchrome-test",
     ]
     deps = [
       ":libvda_source_set",
@@ -124,7 +124,7 @@ executable("libvda_gpu_unittest") {
   libs = [ "pthread" ]
   pkg_deps = [
     "gbm",
-    "libchrome-test-${libbase_ver}",
+    "libchrome-test",
   ]
   deps = [ ":libvda_source_set" ]
 }

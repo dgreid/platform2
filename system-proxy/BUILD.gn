@@ -44,7 +44,7 @@ pkg_config("target_defaults") {
   pkg_deps = [
     "dbus-1",
     "libbrillo",
-    "libchrome-${libbase_ver}",
+    "libchrome",
     "libminijail",
     "libpatchpanel-client",
     "libpatchpanel-util",
@@ -112,8 +112,8 @@ executable("system_proxy") {
 if (use.test) {
   pkg_config("system-proxy_test_config") {
     pkg_deps = [
-      "libchrome-${libbase_ver}",
-      "libchrome-test-${libbase_ver}",
+      "libchrome",
+      "libchrome-test",
     ]
   }
   executable("system-proxy_test") {

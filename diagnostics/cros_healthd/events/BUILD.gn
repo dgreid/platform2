@@ -8,8 +8,8 @@ import("//common-mk/pkg_config.gni")
 pkg_config("libcros_healthd_events_pkg_deps") {
   pkg_deps = [
     "libbrillo",
-    "libchrome-${libbase_ver}",
-    "libmojo-${libbase_ver}",
+    "libchrome",
+    "libmojo",
     "protobuf",
     "system_api",
   ]
@@ -32,9 +32,9 @@ source_set("libcros_healthd_events") {
 if (use.test) {
   pkg_config("libcros_healthd_events_test_pkg_deps") {
     pkg_deps = [
-      "libchrome-${libbase_ver}",
-      "libchrome-test-${libbase_ver}",
-      "libmojo-${libbase_ver}",
+      "libchrome",
+      "libchrome-test",
+      "libmojo",
     ]
   }
 

@@ -14,7 +14,7 @@ group("all") {
 pkg_config("target_defaults") {
   pkg_deps = [
     "libbrillo",
-    "libchrome-${libbase_ver}",
+    "libchrome",
     "vboot_host",
   ]
 }
@@ -32,7 +32,7 @@ executable("dev_install") {
 
 if (use.test) {
   pkg_config("test_config") {
-    pkg_deps = [ "libchrome-test-${libbase_ver}" ]
+    pkg_deps = [ "libchrome-test" ]
   }
 
   executable("dev_install_test") {

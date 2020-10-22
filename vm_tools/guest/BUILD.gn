@@ -46,7 +46,7 @@ group("guest") {
 }
 
 pkg_config("target_defaults") {
-  pkg_deps = [ "libchrome-${libbase_ver}" ]
+  pkg_deps = [ "libchrome" ]
 }
 
 static_library("libmaitred") {
@@ -187,7 +187,7 @@ if (!use.fuzzer) {
   executable("wayland_demo") {
     pkg_deps = [
       "libbrillo",
-      "libchrome-${libbase_ver}",
+      "libchrome",
       "wayland-client",
     ]
     libs = [ "wayland-client" ]
@@ -197,7 +197,7 @@ if (!use.fuzzer) {
   executable("x11_demo") {
     pkg_deps = [
       "libbrillo",
-      "libchrome-${libbase_ver}",
+      "libchrome",
     ]
     libs = [ "X11" ]
     sources = [ "../demos/x11_demo.cc" ]
@@ -299,7 +299,7 @@ if (use.test) {
     pkg_deps = [
       "dbus-1",
       "libbrillo",
-      "libchrome-test-${libbase_ver}",
+      "libchrome-test",
     ]
     deps = [
       ":libnotificationd",
@@ -315,7 +315,7 @@ if (use.fuzzer) {
 
     configs += [ "//common-mk/common_fuzzer:common_fuzzer" ]
 
-    pkg_deps = [ "libchrome-test-${libbase_ver}" ]
+    pkg_deps = [ "libchrome-test" ]
 
     deps = [ "//vm_tools/guest:libgarcon" ]
   }
@@ -325,7 +325,7 @@ if (use.fuzzer) {
 
     configs += [ "//common-mk/common_fuzzer:common_fuzzer" ]
 
-    pkg_deps = [ "libchrome-test-${libbase_ver}" ]
+    pkg_deps = [ "libchrome-test" ]
 
     deps = [ "//vm_tools/guest:libgarcon" ]
   }
@@ -335,7 +335,7 @@ if (use.fuzzer) {
 
     configs += [ "//common-mk/common_fuzzer:common_fuzzer" ]
 
-    pkg_deps = [ "libchrome-test-${libbase_ver}" ]
+    pkg_deps = [ "libchrome-test" ]
 
     deps = [ "//vm_tools/guest:libgarcon" ]
   }
@@ -345,7 +345,7 @@ if (use.fuzzer) {
 
     configs += [ "//common-mk/common_fuzzer:common_fuzzer" ]
 
-    pkg_deps = [ "libchrome-test-${libbase_ver}" ]
+    pkg_deps = [ "libchrome-test" ]
 
     deps = [ "//vm_tools/guest:libgarcon" ]
   }

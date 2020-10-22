@@ -15,7 +15,7 @@ group("all") {
 }
 
 pkg_config("target_defaults") {
-  pkg_deps = [ "libchrome-${libbase_ver}" ]
+  pkg_deps = [ "libchrome" ]
   include_dirs = [ "include" ]
 }
 

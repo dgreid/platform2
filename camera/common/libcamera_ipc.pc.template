@@ -4,7 +4,7 @@ lib_dir=@LIB_DIR@
 Name: libcamera_ipc
 Description: IPC util for Chrome OS Camera HAL
 Version: 0
-Requires.private: libchrome-@LIBCHROME_VERS@
-Requires: libmojo-@LIBCHROME_VERS@
+Requires.private: libchrome
+Requires: libmojo
 Cflags: -I${include_dir}
 Libs: -L${lib_dir} -lcamera_ipc -lcamera_ipc_mojom

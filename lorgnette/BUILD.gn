@@ -19,7 +19,7 @@ group("all") {
 pkg_config("target_defaults_deps") {
   pkg_deps = [
     "libbrillo",
-    "libchrome-${libbase_ver}",
+    "libchrome",
     "libmetrics",
     "libpng",
     "libusb-1.0",

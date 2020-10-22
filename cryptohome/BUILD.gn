@@ -78,7 +78,7 @@ executable("cryptohome") {
     "glib-2.0",
     "libbrillo",
     "libbrillo-glib",
-    "libchrome-${libbase_ver}",
+    "libchrome",
     "libecryptfs",
     "libmetrics",
     "openssl",
@@ -100,7 +100,7 @@ executable("cryptohome-path") {
   ]
   pkg_deps = [
     "libbrillo",
-    "libchrome-${libbase_ver}",
+    "libchrome",
   ]
 }
 
@@ -126,7 +126,7 @@ executable("cryptohomed") {
     "libbootlockbox-client",
     "libbrillo",
     "libbrillo-glib",
-    "libchrome-${libbase_ver}",
+    "libchrome",
     "libecryptfs",
     "libmetrics",
     "openssl",
@@ -152,7 +152,7 @@ executable("cryptohome-namespace-mounter") {
   # NOSORT
   pkg_deps = [
     "libbrillo",
-    "libchrome-${libbase_ver}",
+    "libchrome",
 
     # system_api depends on protobuf (or protobuf-lite). It must appear
     # before protobuf here or the linker flags won't be in the right
@@ -184,7 +184,7 @@ executable("cryptohome-proxy") {
     "dbus-1",
     "libattestation-client",
     "libbrillo",
-    "libchrome-${libbase_ver}",
+    "libchrome",
     "libmetrics",
     "libtpm_manager-client",
 
@@ -215,7 +215,7 @@ executable("lockbox-cache") {
   ]
   pkg_deps = [
     "libbrillo",
-    "libchrome-${libbase_ver}",
+    "libchrome",
     "libecryptfs",
     "libmetrics",
     "openssl",
@@ -238,7 +238,7 @@ static_library("mount_encrypted_lib") {
   pkg_deps = [
     "glib-2.0",
     "libbrillo",
-    "libchrome-${libbase_ver}",
+    "libchrome",
     "openssl",
     "vboot_host",
   ]
@@ -261,7 +261,7 @@ executable("encrypted-reboot-vault") {
   deps = [ "libs:libcrostpm" ]
   pkg_deps = [
     "libbrillo",
-    "libchrome-${libbase_ver}",
+    "libchrome",
   ]
 }
 
@@ -274,7 +274,7 @@ executable("mount-encrypted") {
   pkg_deps = [
     "glib-2.0",
     "libbrillo",
-    "libchrome-${libbase_ver}",
+    "libchrome",
     "openssl",
     "vboot_host",
   ]
@@ -290,7 +290,7 @@ executable("tpm-manager") {
     "glib-2.0",
     "libbrillo",
     "libbrillo-glib",
-    "libchrome-${libbase_ver}",
+    "libchrome",
     "libecryptfs",
     "libmetrics",
     "openssl",
@@ -326,7 +326,7 @@ executable("homedirs_initializer") {
   # NOSORT
   pkg_deps = [
     "libbrillo",
-    "libchrome-${libbase_ver}",
+    "libchrome",
     "openssl",
 
     # system_api depends on protobuf (or protobuf-lite). It must appear
@@ -379,7 +379,7 @@ if (use.cert_provision) {
       "dbus-glib-1",
       "libbrillo",
       "libbrillo-glib",
-      "libchrome-${libbase_ver}",
+      "libchrome",
       "openssl",
       "protobuf",
     ]
@@ -396,7 +396,7 @@ if (use.cert_provision) {
     deps = [ ":cert_provision" ]
     pkg_deps = [
       "libbrillo",
-      "libchrome-${libbase_ver}",
+      "libchrome",
     ]
   }
 }
@@ -495,8 +495,8 @@ if (use.test) {
       "libbrillo",
       "libbrillo-glib",
       "libbrillo-test",
-      "libchrome-${libbase_ver}",
-      "libchrome-test-${libbase_ver}",
+      "libchrome",
+      "libchrome-test",
       "libecryptfs",
       "libmetrics",
       "libtpm_manager-client",
@@ -563,8 +563,8 @@ if (use.test) {
       "glib-2.0",
       "libbrillo",
       "libbrillo-test",
-      "libchrome-${libbase_ver}",
-      "libchrome-test-${libbase_ver}",
+      "libchrome",
+      "libchrome-test",
     ]
 
     if (use.tpm2) {
@@ -584,8 +584,8 @@ if (use.test) {
       "glib-2.0",
       "libbrillo",
       "libbrillo-test",
-      "libchrome-${libbase_ver}",
-      "libchrome-test-${libbase_ver}",
+      "libchrome",
+      "libchrome-test",
       "openssl",
 
       # system_api depends on protobuf (or protobuf-lite). It must appear
@@ -628,7 +628,7 @@ if (use.tpm2) {
     pkg_deps = [
       "libbootlockbox-client",
       "libbrillo",
-      "libchrome-${libbase_ver}",
+      "libchrome",
       "protobuf",
     ]
   }
@@ -655,7 +655,7 @@ if (use.tpm2) {
     # NOSORT
     pkg_deps = [
       "libbrillo",
-      "libchrome-${libbase_ver}",
+      "libchrome",
       "libmetrics",
       "libecryptfs",
       "openssl",
@@ -680,8 +680,8 @@ if (use.fuzzer) {
     deps = [ "libs:libcrosplatform" ]
     pkg_deps = [
       "libbrillo",
-      "libchrome-${libbase_ver}",
-      "libchrome-test-${libbase_ver}",
+      "libchrome",
+      "libchrome-test",
       "openssl",
     ]
   }
@@ -698,8 +698,8 @@ if (use.fuzzer) {
     ]
     pkg_deps = [
       "libbrillo",
-      "libchrome-${libbase_ver}",
-      "libchrome-test-${libbase_ver}",
+      "libchrome",
+      "libchrome-test",
       "openssl",
       "system_api",
     ]

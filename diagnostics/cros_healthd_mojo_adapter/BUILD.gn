@@ -7,8 +7,8 @@ import("//common-mk/pkg_config.gni")
 pkg_config("libcros_healthd_mojo_adapter_pkg_deps") {
   pkg_deps = [
     "libbrillo",
-    "libchrome-${libbase_ver}",
-    "libmojo-${libbase_ver}",
+    "libchrome",
+    "libmojo",
   ]
 }
 

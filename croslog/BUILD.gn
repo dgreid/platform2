@@ -48,7 +48,7 @@ static_library("libcroslog_static") {
 pkg_config("target_defaults") {
   pkg_deps = [
     "libbrillo",
-    "libchrome-${libbase_ver}",
+    "libchrome",
     "re2",
   ]
 }
@@ -63,7 +63,7 @@ executable("croslog") {
 
 if (use.test) {
   pkg_config("croslog_testrunner_config") {
-    pkg_deps = [ "libchrome-test-${libbase_ver}" ]
+    pkg_deps = [ "libchrome-test" ]
   }
 
   executable("croslog_testrunner") {

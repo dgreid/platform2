@@ -7,7 +7,7 @@ OUT ?= $(PWD)/build-opt-local
 
 include common.mk
 
-PC_DEPS = libchrome-$(BASE_VER) libbrillo-$(BASE_VER) openssl
+PC_DEPS = libchrome libbrillo openssl
 PC_CFLAGS := $(shell $(PKG_CONFIG) --cflags $(PC_DEPS))
 PC_LIBS := $(shell $(PKG_CONFIG) --libs $(PC_DEPS))
 

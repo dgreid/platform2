@@ -127,7 +127,7 @@ generate_dbus_proxies("cryptohome-key-delegate-proxies") {
 pkg_config("libcrosplatform_dependent_config") {
   pkg_deps = [
     "libbrillo",
-    "libchrome-${libbase_ver}",
+    "libchrome",
     "libecryptfs",
     "libmetrics",
     "openssl",
@@ -161,7 +161,7 @@ pkg_config("libcrostpm_dependent_config") {
   pkg_deps = [
     "glib-2.0",
     "libbrillo",
-    "libchrome-${libbase_ver}",
+    "libchrome",
     "openssl",
   ]
 }
@@ -258,7 +258,7 @@ pkg_config("libcryptohome_dependent_config") {
     "glib-2.0",
     "libbrillo",
     "libbrillo-glib",
-    "libchrome-${libbase_ver}",
+    "libchrome",
   ]
   if (use.tpm2) {
     pkg_deps += [ "libbootlockbox-client" ]
@@ -355,7 +355,7 @@ if (use.tpm2) {
     pkg_deps = [
       "libbootlockbox-client",
       "libbrillo",
-      "libchrome-${libbase_ver}",
+      "libchrome",
     ]
   }
 
@@ -386,7 +386,7 @@ proto_library("namespace-mounter-ipc-proto") {
 pkg_config("libfido_config") {
   pkg_deps = [
     "libbrillo",
-    "libchrome-${libbase_ver}",
+    "libchrome",
     "openssl",
   ]
 }

@@ -25,7 +25,7 @@ pkg_config("target_defaults") {
   # NOSORT
   pkg_deps = [
     "libbrillo",
-    "libchrome-${libbase_ver}",
+    "libchrome",
     "libcros_config",
     "libpcrecpp",
     "libshill-client",
@@ -119,12 +119,12 @@ if (use.fuzzer) {
     configs += [ "//common-mk/common_fuzzer" ]
     sources = [ "runtime_probe_resultchecker_fuzzer.cc" ]
     deps = [ ":libruntime_probe" ]
-    pkg_deps = [ "libchrome-test-${libbase_ver}" ]
+    pkg_deps = [ "libchrome-test" ]
   }
   executable("runtime_probe_probestatement_fuzzer") {
     configs += [ "//common-mk/common_fuzzer" ]
     sources = [ "runtime_probe_probestatement_fuzzer.cc" ]
     deps = [ ":libruntime_probe" ]
-    pkg_deps = [ "libchrome-test-${libbase_ver}" ]
+    pkg_deps = [ "libchrome-test" ]
   }
 }

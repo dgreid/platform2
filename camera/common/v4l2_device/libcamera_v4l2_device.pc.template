@@ -4,6 +4,6 @@ lib_dir=@LIB_DIR@
 Name: libcamera_v4l2_device
 Description: V4L2 device util for ARC++ camera HAL
 Version: 0
-Requires.private: libchrome-@LIBCHROME_VERS@
+Requires.private: libchrome
 Cflags: -I${include_dir}
 Libs: -L${lib_dir} -lcamera_v4l2_device

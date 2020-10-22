@@ -22,7 +22,7 @@ static_library("libcamera_metrics") {
   pkg_deps = [
     "cros-camera-android-headers",
     "libcamera_metadata",
-    "libchrome-${libbase_ver}",
+    "libchrome",
   ]
 }
 

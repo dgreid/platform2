@@ -30,7 +30,7 @@ pkg_config("target_defaults") {
     "-Werror",
     "-Wno-unused-parameter",
   ]
-  pkg_deps = [ "libchrome-${libbase_ver}" ]
+  pkg_deps = [ "libchrome" ]
 }
 
 write_deps("libshill-net_deps") {
@@ -83,7 +83,7 @@ shared_library("libshill-net") {
 
 if (use.fuzzer) {
   pkg_config("fuzzed_data_config") {
-    pkg_deps = [ "libchrome-test-${libbase_ver}" ]
+    pkg_deps = [ "libchrome-test" ]
   }
   executable("arp_client_fuzzer") {
     configs += [
@@ -115,7 +115,7 @@ if (use.fuzzer) {
 
 if (use.test) {
   pkg_config("shill_net_test_config") {
-    pkg_deps = [ "libchrome-test-${libbase_ver}" ]
+    pkg_deps = [ "libchrome-test" ]
   }
 
   executable("shill_net_test") {

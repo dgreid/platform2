@@ -9,10 +9,10 @@ pkg_config("libcros_healthd_fetchers_pkg_deps") {
   pkg_deps = [
     "dbus-1",
     "libbrillo",
-    "libchrome-${libbase_ver}",
+    "libchrome",
     "libcros_config",
     "libdebugd-client",
-    "libmojo-${libbase_ver}",
+    "libmojo",
     "libudev",
     "protobuf",
     "re2",
@@ -48,8 +48,8 @@ source_set("libcros_healthd_fetchers") {
 if (use.test) {
   pkg_config("libcros_healthd_fetchers_test_pkg_deps") {
     pkg_deps = [
-      "libchrome-${libbase_ver}",
-      "libchrome-test-${libbase_ver}",
+      "libchrome",
+      "libchrome-test",
       "libcros_config",
       "libdebugd-client",
       "libdebugd-client-test",
@@ -88,7 +88,7 @@ if (use.test) {
 
 if (use.fuzzer) {
   pkg_config("fetch_block_device_fuzzer_pkg_deps") {
-    pkg_deps = [ "libchrome-${libbase_ver}" ]
+    pkg_deps = [ "libchrome" ]
   }
 
   executable("fetch_block_device_fuzzer") {
@@ -102,7 +102,7 @@ if (use.fuzzer) {
 
   pkg_config("fetch_system_info_fuzzer_pkg_deps") {
     pkg_deps = [
-      "libchrome-${libbase_ver}",
+      "libchrome",
       "libcros_config",
     ]
   }

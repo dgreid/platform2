@@ -18,7 +18,7 @@ pkg_config("target_defaults") {
   pkg_deps = [
     "easy-unlock-crypto",
     "libbrillo",
-    "libchrome-${libbase_ver}",
+    "libchrome",
   ]
 }
 
@@ -46,7 +46,7 @@ executable("easy_unlock") {
 
 if (use.test) {
   pkg_config("test_config") {
-    pkg_deps = [ "libchrome-test-${libbase_ver}" ]
+    pkg_deps = [ "libchrome-test" ]
   }
 
   executable("easy_unlock_test_runner") {

@@ -6,9 +6,9 @@ import("//common-mk/pkg_config.gni")
 
 pkg_config("libnetwork_health_pkg_deps") {
   pkg_deps = [
-    "libchrome-${libbase_ver}",
-    "libchrome-test-${libbase_ver}",
-    "libmojo-${libbase_ver}",
+    "libchrome",
+    "libchrome-test",
+    "libmojo",
   ]
 }
 

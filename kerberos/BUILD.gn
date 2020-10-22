@@ -50,7 +50,7 @@ pkg_config("libkerberos_config") {
   pkg_deps = [
     "dbus-1",
     "libbrillo",
-    "libchrome-${libbase_ver}",
+    "libchrome",
     "libminijail",
     "libpasswordprovider",
     "libsession_manager-client",
@@ -87,7 +87,7 @@ pkg_config("kerberosd_config") {
   # NOSORT
   pkg_deps = [
     "libbrillo",
-    "libchrome-${libbase_ver}",
+    "libchrome",
     "libmetrics",
     "libminijail",
 
@@ -119,8 +119,8 @@ if (use.test) {
     # NOSORT
     pkg_deps = [
       "libbrillo",
-      "libchrome-${libbase_ver}",
-      "libchrome-test-${libbase_ver}",
+      "libchrome",
+      "libchrome-test",
       "libmetrics",
       "libminijail",
 
@@ -165,7 +165,7 @@ if (use.fuzzer) {
     # NOSORT
     pkg_deps = [
       "libbrillo",
-      "libchrome-${libbase_ver}",
+      "libchrome",
       "libmetrics",
       "libminijail",
 
@@ -178,7 +178,7 @@ if (use.fuzzer) {
   }
 
   #pkg_config("libchrome_test_config") {
-  #  pkg_deps = [ "libchrome-test-${libbase_ver}" ]
+  #  pkg_deps = [ "libchrome-test" ]
   #}
   executable("config_parser_fuzzer") {
     configs += [

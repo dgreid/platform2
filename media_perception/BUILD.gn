@@ -79,8 +79,8 @@ generate_mojom_bindings("media_perception_mojo_bindings") {
 static_library("media_perception_service_lib") {
   all_dependent_pkg_deps = [
     "libbrillo",
-    "libchrome-${libbase_ver}",
-    "libmojo-${libbase_ver}",
+    "libchrome",
+    "libmojo",
   ]
   configs += [ ":target_defaults" ]
   deps = [

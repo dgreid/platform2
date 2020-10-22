@@ -84,7 +84,7 @@ pkg_config("libauthpolicy_config") {
   pkg_deps = [
     "dbus-1",
     "libbrillo",
-    "libchrome-${libbase_ver}",
+    "libchrome",
     "libpcrecpp",
     "libsession_manager-client",
   ]
@@ -141,7 +141,7 @@ pkg_config("authpolicy_parser_config") {
   pkg_deps = [
     "libbrillo",
     "libcap",
-    "libchrome-${libbase_ver}",
+    "libchrome",
     "libmetrics",
     "libminijail",
     "libpcrecpp",
@@ -189,8 +189,8 @@ if (use.test) {
     pkg_deps = [
       "libbrillo",
       "libcap",
-      "libchrome-${libbase_ver}",
-      "libchrome-test-${libbase_ver}",
+      "libchrome",
+      "libchrome-test",
       "libmetrics",
       "libminijail",
       "libpcrecpp",
@@ -243,7 +243,7 @@ if (use.test) {
   }
 
   pkg_config("stub_common_config") {
-    pkg_deps = [ "libchrome-${libbase_ver}" ]
+    pkg_deps = [ "libchrome" ]
   }
 
   static_library("stub_common") {
@@ -257,7 +257,7 @@ if (use.test) {
   pkg_config("stub_net_config") {
     pkg_deps = [
       "libcap",
-      "libchrome-${libbase_ver}",
+      "libchrome",
       "libpcrecpp",
     ]
   }
@@ -288,7 +288,7 @@ if (use.test) {
 
   pkg_config("stub_klist_config") {
     pkg_deps = [
-      "libchrome-${libbase_ver}",
+      "libchrome",
       "libpcrecpp",
     ]
   }
@@ -335,8 +335,8 @@ if (use.fuzzer) {
   pkg_config("preg_parser_fuzzer_config") {
     pkg_deps = [
       "libbrillo",
-      "libchrome-${libbase_ver}",
-      "libchrome-test-${libbase_ver}",
+      "libchrome",
+      "libchrome-test",
     ]
   }
 

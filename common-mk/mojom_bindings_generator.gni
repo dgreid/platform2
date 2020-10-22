@@ -308,8 +308,8 @@ template("generate_mojom_bindings") {
   target_pkg_deps_name = target_name + "_pkg_deps"
   pkg_config(target_pkg_deps_name) {
     pkg_deps = [
-      "libchrome-${libbase_ver}",
-      "libmojo-${libbase_ver}",
+      "libchrome",
+      "libmojo",
     ]
   }
 

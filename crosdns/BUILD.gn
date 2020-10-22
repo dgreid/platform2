@@ -23,7 +23,7 @@ group("all") {
 pkg_config("target_defaults") {
   pkg_deps = [
     "libbrillo",
-    "libchrome-${libbase_ver}",
+    "libchrome",
   ]
 }
 
@@ -79,7 +79,7 @@ if (use.test) {
 # Fuzzer target.
 if (use.fuzzer) {
   pkg_config("hosts_modifier_fuzzer_config") {
-    pkg_deps = [ "libchrome-test-${libbase_ver}" ]
+    pkg_deps = [ "libchrome-test" ]
   }
 
   executable("hosts_modifier_fuzzer") {

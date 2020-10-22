@@ -17,7 +17,7 @@ group("all") {
 pkg_config("target_defaults") {
   pkg_deps = [
     "libbrillo",
-    "libchrome-${libbase_ver}",
+    "libchrome",
   ]
 }
 
@@ -62,8 +62,8 @@ if (use.test) {
 if (use.fuzzer) {
   pkg_config("libchrome_test_config") {
     pkg_deps = [
-      "libchrome-${libbase_ver}",
-      "libchrome-test-${libbase_ver}",
+      "libchrome",
+      "libchrome-test",
     ]
   }
   executable("foomatic_shell_fuzzer") {

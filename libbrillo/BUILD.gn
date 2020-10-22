@@ -31,7 +31,7 @@ group("all") {
   }
 }
 
-default_pkg_deps = [ "libchrome-${libbase_ver}" ]
+default_pkg_deps = [ "libchrome" ]
 pkg_config("target_defaults_pkg_deps") {
   pkg_deps = default_pkg_deps
 }
@@ -461,7 +461,7 @@ if (use.test) {
       ":libbrillo_static",
       ":libbrillo_tests_proto",
     ]
-    pkg_deps = [ "libchrome-test-${libbase_ver}" ]
+    pkg_deps = [ "libchrome-test" ]
     cflags = [ "-Wno-format-zero-length" ]
 
     if (is_debug) {
@@ -599,7 +599,7 @@ if (use.fuzzer) {
 
     configs += [ "//common-mk/common_fuzzer:common_fuzzer" ]
 
-    pkg_deps = [ "libchrome-${libbase_ver}" ]
+    pkg_deps = [ "libchrome" ]
 
     include_dirs = [ "../libbrillo" ]
 
@@ -611,7 +611,7 @@ if (use.fuzzer) {
 
     configs += [ "//common-mk/common_fuzzer:common_fuzzer" ]
 
-    pkg_deps = [ "libchrome-${libbase_ver}" ]
+    pkg_deps = [ "libchrome" ]
 
     include_dirs = [ "../libbrillo" ]
 
@@ -623,7 +623,7 @@ if (use.fuzzer) {
 
     configs += [ "//common-mk/common_fuzzer:common_fuzzer" ]
 
-    pkg_deps = [ "libchrome-${libbase_ver}" ]
+    pkg_deps = [ "libchrome" ]
 
     include_dirs = [ "../libbrillo" ]
 

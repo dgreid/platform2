@@ -23,8 +23,8 @@ pkg_config("midis_common_pkg_deps") {
   pkg_deps = [
     "alsa",
     "libbrillo",
-    "libchrome-${libbase_ver}",
-    "libmojo-${libbase_ver}",
+    "libchrome",
+    "libmojo",
   ]
 }
 

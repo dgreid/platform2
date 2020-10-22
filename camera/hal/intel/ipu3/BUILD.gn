@@ -140,7 +140,7 @@ shared_library("libcamera_hal") {
     "libcamera_metadata",
     "libcamera_v4l2_device",
     "libcbm",
-    "libmojo-${libbase_ver}",
+    "libmojo",
     "libsync",
     "libyuv",
   ]
@@ -202,7 +202,7 @@ shared_library("libcam_algo") {
   pkg_deps = [
     "cros-camera-android-headers",
     "libcab",
-    "libmojo-${libbase_ver}",
+    "libmojo",
   ]
   deps = [ "//camera/common/libcamera_ipc:libcamera_ipc_mojom" ]
 }

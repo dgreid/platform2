@@ -5,7 +5,7 @@
 import("//common-mk/pkg_config.gni")
 
 pkg_config("libtelemetry_pkg_deps") {
-  pkg_deps = [ "libchrome-${libbase_ver}" ]
+  pkg_deps = [ "libchrome" ]
 }
 
 source_set("libtelemetry") {

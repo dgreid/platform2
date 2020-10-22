@@ -23,7 +23,7 @@ pkg_config("target_defaults") {
   pkg_deps = [
     "libbrillo",
     "libcap",
-    "libchrome-${libbase_ver}",
+    "libchrome",
     "libminijail",
   ]
 }
@@ -53,7 +53,7 @@ executable("run_oci") {
 
 if (use.test) {
   pkg_config("test_config") {
-    pkg_deps = [ "libchrome-test-${libbase_ver}" ]
+    pkg_deps = [ "libchrome-test" ]
   }
 
   executable("container_config_parser_test") {

@@ -64,7 +64,7 @@ pkg_config("target_defaults") {
   # NOSORT
   pkg_deps = [
     "libbrillo",
-    "libchrome-${libbase_ver}",
+    "libchrome",
     "libcros_config",
     "libudev",
     "re2",
@@ -92,7 +92,7 @@ pkg_config("target_defaults") {
 }
 
 pkg_config("libchrome_test_config") {
-  pkg_deps = [ "libchrome-test-${libbase_ver}" ]
+  pkg_deps = [ "libchrome-test" ]
 }
 
 pkg_config("libutil_dependent_config") {
@@ -394,7 +394,7 @@ if (use.test) {
 
   pkg_config("power_manager_system_test_config") {
     # For base::MockTimer.
-    pkg_deps = [ "libchrome-test-${libbase_ver}" ]
+    pkg_deps = [ "libchrome-test" ]
   }
 
   executable("power_manager_system_test") {
@@ -542,7 +542,7 @@ if (use.fuzzer) {
   pkg_config("fuzzer_config") {
     pkg_deps = [
       "libbrillo-test",
-      "libchrome-test-${libbase_ver}",
+      "libchrome-test",
     ]
   }
   executable("powerd_als_fuzzer") {

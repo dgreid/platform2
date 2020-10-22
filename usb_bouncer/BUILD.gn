@@ -18,7 +18,7 @@ group("all") {
 pkg_config("target_defaults") {
   pkg_deps = [
     "libbrillo",
-    "libchrome-${libbase_ver}",
+    "libchrome",
     "libcrypto",
     "libmetrics",
     "libminijail",

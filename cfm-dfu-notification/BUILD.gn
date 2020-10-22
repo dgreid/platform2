@@ -12,7 +12,7 @@ group("all") {
 }
 
 pkg_config("cfm_dfu_notification_pkg_deps") {
-  pkg_deps = [ "libchrome-${libbase_ver}" ]
+  pkg_deps = [ "libchrome" ]
 }
 
 shared_library("cfm_dfu_notification") {
@@ -25,7 +25,7 @@ shared_library("cfm_dfu_notification") {
 
 if (use.test) {
   pkg_config("test_config") {
-    pkg_deps = [ "libchrome-test-${libbase_ver}" ]
+    pkg_deps = [ "libchrome-test" ]
   }
 
   executable("cfm_dfu_notification_test") {

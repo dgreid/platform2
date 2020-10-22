@@ -18,8 +18,8 @@ static_library("libjda") {
   pkg_deps = [
     "cros-camera-android-headers",
     "libcamera_common",
-    "libchrome-${libbase_ver}",
-    "libmojo-${libbase_ver}",
+    "libchrome",
+    "libmojo",
   ]
   deps = [
     "//camera/common:libcamera_metrics",

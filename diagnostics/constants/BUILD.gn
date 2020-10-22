@@ -4,5 +4,5 @@
 
 static_library("libconstants") {
   sources = [ "grpc_constants.cc" ]
-  pkg_deps = [ "libchrome-${libbase_ver}" ]
+  pkg_deps = [ "libchrome" ]
 }

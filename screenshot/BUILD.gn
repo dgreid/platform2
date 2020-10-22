@@ -13,7 +13,7 @@ pkg_config("target_defaults") {
     "egl",
     "gbm",
     "glesv2",
-    "libchrome-${libbase_ver}",
+    "libchrome",
     "libdrm",
     "libpng",
   ]

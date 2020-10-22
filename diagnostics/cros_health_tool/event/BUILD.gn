@@ -8,8 +8,8 @@ import("//common-mk/pkg_config.gni")
 pkg_config("libevent_pkg_deps") {
   pkg_deps = [
     "libbrillo",
-    "libchrome-${libbase_ver}",
-    "libmojo-${libbase_ver}",
+    "libchrome",
+    "libmojo",
   ]
 }
 

@@ -14,7 +14,7 @@ group("all") {
 pkg_config("target_defaults") {
   pkg_deps = [
     "libbrillo",
-    "libchrome-${libbase_ver}",
+    "libchrome",
     "libmetrics",
     "re2",
   ]
@@ -36,7 +36,7 @@ executable("timberslide") {
 
 if (use.test) {
   pkg_config("timberslide_test_config") {
-    pkg_deps = [ "libchrome-test-${libbase_ver}" ]
+    pkg_deps = [ "libchrome-test" ]
   }
   executable("timberslide_test_runner") {
     configs += [

@@ -7,8 +7,8 @@ import("//common-mk/pkg_config.gni")
 # Library that provides cros_healthd's network diagnostics adapter functionality.
 pkg_config("libnetwork_diagnostics_pkg_deps") {
   pkg_deps = [
-    "libchrome-${libbase_ver}",
-    "libmojo-${libbase_ver}",
+    "libchrome",
+    "libmojo",
   ]
 }
 
@@ -20,7 +20,7 @@ source_set("libnetwork_diagnostics_adapter") {
 
 if (use.test) {
   pkg_config("network_diagnostics_test_pkg_deps") {
-    pkg_deps = [ "libchrome-test-${libbase_ver}" ]
+    pkg_deps = [ "libchrome-test" ]
   }
 
   executable("network_diagnostics_test") {
@@ -38,7 +38,7 @@ if (use.test) {
 
 if (use.test || use.fuzzer) {
   pkg_config("libnetwork_diagnostics_adapter_test_utils_pkg_deps") {
-    pkg_deps = [ "libchrome-test-${libbase_ver}" ]
+    pkg_deps = [ "libchrome-test" ]
   }
 
   source_set("libnetwork_diagnostics_adapter_test_utils") {

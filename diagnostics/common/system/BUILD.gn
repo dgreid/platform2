@@ -7,7 +7,7 @@ import("//common-mk/pkg_config.gni")
 pkg_config("libsystem_common_pkg_deps") {
   pkg_deps = [
     "libbrillo",
-    "libchrome-${libbase_ver}",
+    "libchrome",
     "libdebugd-client",
     "protobuf",
     "system_api",

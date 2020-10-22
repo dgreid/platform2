@@ -8,7 +8,7 @@ import("//common-mk/pkg_config.gni")
 pkg_config("libdiag_pkg_deps") {
   pkg_deps = [
     "libbrillo",
-    "libchrome-${libbase_ver}",
+    "libchrome",
   ]
 }
 

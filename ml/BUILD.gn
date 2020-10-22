@@ -57,9 +57,9 @@ source_set("ml_mojo_bindings_lib") {
 pkg_config("ml_common_pkg_deps") {
   pkg_deps = [
     "libbrillo",
-    "libchrome-${libbase_ver}",
+    "libchrome",
     "libmetrics",
-    "libmojo-${libbase_ver}",
+    "libmojo",
     "system_api",
     "zlib",
   ]

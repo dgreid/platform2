@@ -34,7 +34,7 @@ pkg_config("target_defaults") {
   # NOSORT
   pkg_deps = [
     "libbrillo",
-    "libchrome-${libbase_ver}",
+    "libchrome",
     "libcros_config",
     "libmetrics",
     "libpower_manager-client",
@@ -115,7 +115,7 @@ executable("bio_fw_updater") {
 
 if (use.test) {
   pkg_config("libchrome_test_config") {
-    pkg_deps = [ "libchrome-test-${libbase_ver}" ]
+    pkg_deps = [ "libchrome-test" ]
   }
   executable("biod_test_runner") {
     sources = [
@@ -153,7 +153,7 @@ if (use.test) {
 
 if (use.fuzzer) {
   pkg_config("libchrome_test_config") {
-    pkg_deps = [ "libchrome-test-${libbase_ver}" ]
+    pkg_deps = [ "libchrome-test" ]
   }
   executable("biod_storage_fuzzer") {
     sources = [ "biod_storage_fuzzer.cc" ]

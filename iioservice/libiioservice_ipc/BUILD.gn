@@ -31,8 +31,8 @@ shared_library("libiioservice_ipc") {
     "//iioservice/libiioservice_ipc",
   ]
   pkg_deps = [
-    "libchrome-${libbase_ver}",
-    "libmojo-${libbase_ver}",
+    "libchrome",
+    "libmojo",
   ]
   deps = [ ":libiioservice_ipc_mojom" ]
 }

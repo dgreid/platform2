@@ -20,7 +20,7 @@ pkg_config("target_defaults") {
   pkg_deps = [
     "glib-2.0",
     "gthread-2.0",
-    "libchrome-${libbase_ver}",
+    "libchrome",
   ]
 }
 

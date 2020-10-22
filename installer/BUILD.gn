@@ -21,7 +21,7 @@ group("all") {
 pkg_config("target_defaults") {
   pkg_deps = [
     "libbrillo",
-    "libchrome-${libbase_ver}",
+    "libchrome",
     "vboot_host",
   ]
   include_dirs = [ "${sysroot}/usr/include/verity" ]
@@ -48,7 +48,7 @@ static_library("libcros_installer") {
 }
 
 pkg_config("cros_installer_config") {
-  pkg_deps = [ "libchrome-${libbase_ver}" ]
+  pkg_deps = [ "libchrome" ]
 }
 
 executable("cros_installer") {
@@ -79,7 +79,7 @@ executable("cros_oobe_crypto") {
 
 if (use.mtd) {
   pkg_config("nand_partition_config") {
-    pkg_deps = [ "libchrome-${libbase_ver}" ]
+    pkg_deps = [ "libchrome" ]
   }
   executable("nand_partition") {
     configs += [
@@ -97,8 +97,8 @@ if (use.mtd) {
 if (use.test) {
   pkg_config("cros_installer_test_config") {
     pkg_deps = [
-      "libchrome-${libbase_ver}",
-      "libchrome-test-${libbase_ver}",
+      "libchrome",
+      "libchrome-test",
     ]
   }
   executable("cros_installer_test") {

@@ -35,7 +35,7 @@ group("all") {
 
 pkg_config("libcrash_config") {
   pkg_deps = [
-    "libchrome-${libbase_ver}",
+    "libchrome",
     "libsession_manager-client",
     "re2",
     "vboot_host",
@@ -60,7 +60,7 @@ static_library("libcrash") {
 pkg_config("libcrash_reporter_config") {
   pkg_deps = [
     "libbrillo",
-    "libchrome-${libbase_ver}",
+    "libchrome",
     "libdebugd-client",
     "libpcrecpp",
     "libsession_manager-client",
@@ -137,7 +137,7 @@ executable("crash_reporter") {
 pkg_config("libcrash_sender_config") {
   pkg_deps = [
     "libbrillo",
-    "libchrome-${libbase_ver}",
+    "libchrome",
     "libmetrics",
     "libminijail",
     "libsession_manager-client",
@@ -178,7 +178,7 @@ pkg_config("anomaly_detector_config") {
   # NOSORT
   pkg_deps = [
     "libbrillo",
-    "libchrome-${libbase_ver}",
+    "libchrome",
     "libmetrics",
     "re2",
 
@@ -246,7 +246,7 @@ if (use.cheets) {
 if (use.test || use.fuzzer) {
   pkg_config("crash_reporter_test_config") {
     pkg_deps = [
-      "libchrome-test-${libbase_ver}",
+      "libchrome-test",
       "libdebugd-client-test",
       "libmetrics",
       "libsession_manager-client-test",
@@ -277,8 +277,8 @@ if (use.test) {
   pkg_config("test_helper_config") {
     pkg_deps = [
       "libbrillo",
-      "libchrome-${libbase_ver}",
-      "libchrome-test-${libbase_ver}",
+      "libchrome",
+      "libchrome-test",
     ]
   }
 

@@ -41,7 +41,7 @@ pkg_config("target_defaults") {
   pkg_deps = [
     "dbus-1",
     "libbrillo",
-    "libchrome-${libbase_ver}",
+    "libchrome",
     "libcryptohome-client",
     "liblzma",
     "libminijail",
@@ -231,7 +231,7 @@ executable("scheduler_configuration_helper") {
 if (use.test) {
   pkg_config("debugd_testrunner_config") {
     pkg_deps = [
-      "libchrome-test-${libbase_ver}",
+      "libchrome-test",
       "protobuf",
     ]
   }

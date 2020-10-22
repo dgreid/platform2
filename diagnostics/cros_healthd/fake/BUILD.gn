@@ -8,7 +8,7 @@ import("//common-mk/pkg_config.gni")
 pkg_config("libfake_cros_healthd_pkg_deps") {
   pkg_deps = [
     "libbrillo",
-    "libchrome-${libbase_ver}",
+    "libchrome",
   ]
 }
 

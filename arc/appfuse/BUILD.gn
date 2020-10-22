@@ -23,7 +23,7 @@ pkg_config("target_defaults") {
   pkg_deps = [
     "fuse",
     "libbrillo",
-    "libchrome-${libbase_ver}",
+    "libchrome",
   ]
   defines = [ "FUSE_USE_VERSION=26" ]
 }

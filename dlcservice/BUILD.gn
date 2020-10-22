@@ -29,7 +29,7 @@ group("all") {
 pkg_config("target_defaults") {
   # NOSORT
   pkg_deps = [
-    "libchrome-${libbase_ver}",
+    "libchrome",
     "libbrillo",
     "libimageloader-client",
     "libmetrics",
@@ -126,7 +126,7 @@ if (use.test) {
   pkg_config("dlcservice_tests_config") {
     pkg_deps = [
       "libbrillo-test",
-      "libchrome-test-${libbase_ver}",
+      "libchrome-test",
       "libimageloader-client-test",
       "libsession_manager-client-test",
       "libupdate_engine-client-test",
@@ -165,7 +165,7 @@ if (use.test) {
 # For fuzzer
 if (use.fuzzer) {
   pkg_config("dlcservice_fuzzer_config") {
-    pkg_deps = [ "libchrome-test-${libbase_ver}" ]
+    pkg_deps = [ "libchrome-test" ]
   }
   executable("dlcservice_boot_slot_fuzzer") {
     configs += [

@@ -35,7 +35,7 @@ group("host") {
 pkg_config("host_target_defaults_pkgs") {
   pkg_deps = [
     "libbrillo",
-    "libchrome-${libbase_ver}",
+    "libchrome",
     "libpatchpanel-client",
     "libpatchpanel-util",
   ]
@@ -260,7 +260,7 @@ if (use.test || use.fuzzer) {
       "../cicerone/service_testing_helper.h",
     ]
     configs += [ ":host_target_defaults" ]
-    all_dependent_pkg_deps = [ "libchrome-test-${libbase_ver}" ]
+    all_dependent_pkg_deps = [ "libchrome-test" ]
     deps = [ ":libcicerone" ]
   }
 }
@@ -315,7 +315,7 @@ if (use.test) {
       ":host_target_defaults",
     ]
     pkg_deps = [
-      "libchrome-test-${libbase_ver}",
+      "libchrome-test",
       "libdlcservice-client-test",
     ]
     deps = [
@@ -345,7 +345,7 @@ if (use.fuzzer) {
     ]
     pkg_deps = [
       "grpc++",
-      "libchrome-test-${libbase_ver}",  # For FuzzedDataProvider
+      "libchrome-test",  # For FuzzedDataProvider
     ]
     deps = [
       ":libcicerone",

@@ -44,7 +44,7 @@ pkg_config("target_defaults") {
 
   pkg_deps = [
     "libbrillo",
-    "libchrome-${libbase_ver}",
+    "libchrome",
   ]
 }
 
@@ -163,7 +163,7 @@ if (use.test) {
   pkg_config("libp2p-testutil_dependent_config") {
     pkg_deps = [
       "gobject-2.0",
-      "libchrome-test-${libbase_ver}",
+      "libchrome-test",
     ]
   }
 
@@ -262,7 +262,7 @@ if (use.test) {
 # Fuzzer only.
 if (use.fuzzer) {
   pkg_config("p2p_http_server_fuzzer_config") {
-    pkg_deps = [ "libchrome-test-${libbase_ver}" ]
+    pkg_deps = [ "libchrome-test" ]
   }
 
   # p2p-http-server fuzzer

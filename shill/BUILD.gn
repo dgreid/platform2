@@ -104,7 +104,7 @@ pkg_config("target_defaults") {
   pkg_deps = [
     "dbus-1",
     "libbrillo",
-    "libchrome-${libbase_ver}",
+    "libchrome",
     "libpatchpanel-client",
     "libshill-net",
     "libtirpc",
@@ -520,7 +520,7 @@ if (use.cellular || use.vpn || use.pppoe) {
 
 if (use.fuzzer) {
   pkg_config("fuzzed_data_config") {
-    pkg_deps = [ "libchrome-test-${libbase_ver}" ]
+    pkg_deps = [ "libchrome-test" ]
   }
   executable("cellular_pco_fuzzer") {
     configs += [
@@ -553,7 +553,7 @@ if (use.fuzzer) {
 if (use.test) {
   pkg_config("shill_unittest_config") {
     pkg_deps = [
-      "libchrome-test-${libbase_ver}",
+      "libchrome-test",
       "libminijail",
       "libnetfilter_queue",
       "libnfnetlink",

@@ -29,7 +29,7 @@ pkg_config("target_defaults") {
   pkg_deps = [
     "dbus-1",
     "libbrillo",
-    "libchrome-${libbase_ver}",
+    "libchrome",
     "libchromeos-ui-${libbase_ver}",
     "libcontainer",
     "libcros_config",
@@ -156,7 +156,7 @@ if (use.test) {
   pkg_config("test_config") {
     pkg_deps = [
       "libbrillo-test",
-      "libchrome-test-${libbase_ver}",
+      "libchrome-test",
       "libcros_config",
     ]
   }

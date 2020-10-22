@@ -9,10 +9,10 @@ pkg_config("libcros_healthd_system_pkg_deps") {
   pkg_deps = [
     "dbus-1",
     "libbrillo",
-    "libchrome-${libbase_ver}",
+    "libchrome",
     "libcros_config",
     "libdebugd-client",
-    "libmojo-${libbase_ver}",
+    "libmojo",
     "system_api",
   ]
 }
@@ -39,8 +39,8 @@ if (use.test || use.fuzzer) {
   pkg_config("libcros_healthd_system_test_utils_pkg_deps") {
     pkg_deps = [
       "dbus-1",
-      "libchrome-${libbase_ver}",
-      "libchrome-test-${libbase_ver}",
+      "libchrome",
+      "libchrome-test",
       "libcros_config",
       "libdebugd-client",
       "libdebugd-client-test",
@@ -71,8 +71,8 @@ if (use.test || use.fuzzer) {
 if (use.test) {
   pkg_config("system_config_test_pkg_deps") {
     pkg_deps = [
-      "libchrome-${libbase_ver}",
-      "libchrome-test-${libbase_ver}",
+      "libchrome",
+      "libchrome-test",
       "libcros_config",
     ]
   }

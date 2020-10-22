@@ -68,7 +68,7 @@ config("target_defaults") {
 pkg_config("bootlockbox_dependent_config") {
   pkg_deps = [
     "libbrillo",
-    "libchrome-${libbase_ver}",
+    "libchrome",
   ]
 }
 

@@ -16,9 +16,9 @@ group("all") {
 pkg_config("federated_common_pkg_deps") {
   pkg_deps = [
     "libbrillo",
-    "libchrome-${libbase_ver}",
+    "libchrome",
     "libmetrics",
-    "libmojo-${libbase_ver}",
+    "libmojo",
   ]
 }
 

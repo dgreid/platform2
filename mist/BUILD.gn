@@ -15,7 +15,7 @@ group("all") {
 pkg_config("target_defaults") {
   pkg_deps = [
     "libbrillo",
-    "libchrome-${libbase_ver}",
+    "libchrome",
     "libmetrics",
     "libusb-1.0",
     "protobuf",
@@ -67,7 +67,7 @@ executable("mist") {
 
 if (use.test) {
   pkg_config("mist_testrunner_config") {
-    pkg_deps = [ "libchrome-test-${libbase_ver}" ]
+    pkg_deps = [ "libchrome-test" ]
   }
   executable("mist_testrunner") {
     configs += [

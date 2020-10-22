@@ -23,7 +23,7 @@ group("all") {
 pkg_config("target_defaults") {
   # NOSORT
   pkg_deps = [
-    "libchrome-${libbase_ver}",
+    "libchrome",
     "libbrillo",
     "libcros_config",
     "libshill-client",
@@ -104,7 +104,7 @@ if (use.test) {
       ":target_defaults",
       "//common-mk:test",
     ]
-    pkg_deps = [ "libchrome-test-${libbase_ver}" ]
+    pkg_deps = [ "libchrome-test" ]
     deps = [
       ":libmodemfw",
       "//common-mk/testrunner:testrunner",

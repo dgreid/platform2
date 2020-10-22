@@ -22,7 +22,7 @@ pkg_config("target_defaults") {
     "libcamera_metadata",
     "libcbm",
     "libdrm",
-    "libmojo-${libbase_ver}",
+    "libmojo",
     "libsync",
     "libyuv",
     "re2",

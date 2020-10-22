@@ -21,14 +21,14 @@ config("target_defaults") {
 pkg_config("cli_defaults") {
   pkg_deps = [
     "libbrillo",
-    "libchrome-${libbase_ver}",
+    "libchrome",
   ]
 }
 
 pkg_config("test_defaults") {
   pkg_deps = [
     "libbrillo-test",
-    "libchrome-test-${libbase_ver}",
+    "libchrome-test",
   ]
 }
 
@@ -36,7 +36,7 @@ pkg_config("sealed_storage_dependent_config") {
   # NOSORT
   pkg_deps = [
     "libbrillo",
-    "libchrome-${libbase_ver}",
+    "libchrome",
     "openssl",
 
     # per tpm_manager/BUILD.gn, system_api should go before protobuf

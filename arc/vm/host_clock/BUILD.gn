@@ -10,6 +10,6 @@ executable("arc-host-clock-service") {
   sources = [ "arc_host_clock_service.cc" ]
   pkg_deps = [
     "libbrillo",
-    "libchrome-${libbase_ver}",
+    "libchrome",
   ]
 }

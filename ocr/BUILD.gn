@@ -30,8 +30,8 @@ pkg_config("target_defaults") {
   cflags_cc = [ "-Woverloaded-virtual" ]
   pkg_deps = [
     "libbrillo",
-    "libchrome-${libbase_ver}",
-    "libmojo-${libbase_ver}",
+    "libchrome",
+    "libmojo",
     "system_api",
     "tesseract",
   ]

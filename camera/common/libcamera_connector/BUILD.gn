@@ -29,7 +29,7 @@ shared_library("libcamera_connector") {
     "libcamera_common",
     "libcamera_metadata",
     "libdrm",
-    "libmojo-${libbase_ver}",
+    "libmojo",
     "libsync",
   ]
 }

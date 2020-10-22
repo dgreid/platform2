@@ -21,8 +21,8 @@ pkg_config("target_defaults") {
   # NOSORT
   pkg_deps = [
     "libbrillo",
-    "libchrome-${libbase_ver}",
-    "libmojo-${libbase_ver}",
+    "libchrome",
+    "libmojo",
     "libpasswordprovider",
     "fuse",
     "smbclient",
@@ -117,7 +117,7 @@ executable("smbfs") {
 
 if (use.test) {
   pkg_config("smbfs_test_config") {
-    pkg_deps = [ "libchrome-test-${libbase_ver}" ]
+    pkg_deps = [ "libchrome-test" ]
   }
   executable("smbfs_test") {
     configs += [

@@ -21,8 +21,8 @@ static_library("libjea") {
     "cros-camera-android-headers",
     "libbrillo",
     "libcamera_common",
-    "libchrome-${libbase_ver}",
-    "libmojo-${libbase_ver}",
+    "libchrome",
+    "libmojo",
   ]
   deps = [ "//camera/common/libcamera_ipc" ]
 }

@@ -54,7 +54,7 @@ pkg_config("target_defaults") {
     "system_api",
     "openssl",
     "libbrillo",
-    "libchrome-${libbase_ver}",
+    "libchrome",
   ]
 
   if (use.fuzzer) {
@@ -181,7 +181,7 @@ executable("p11_replay") {
 
 if (use.test) {
   pkg_config("libchaps_test_dependent_config") {
-    pkg_deps = [ "libchrome-test-${libbase_ver}" ]
+    pkg_deps = [ "libchrome-test" ]
   }
 
   static_library("libchaps_test") {
@@ -482,7 +482,7 @@ if (use.fuzzer) {
     configs += [ "//common-mk/common_fuzzer:common_fuzzer" ]
 
     pkg_deps = [
-      "libchrome-test-${libbase_ver}",
+      "libchrome-test",
       "libprotobuf-mutator",
       "protobuf",
     ]
@@ -508,7 +508,7 @@ if (use.fuzzer) {
 
     defines = [ "NO_METRICS" ]
 
-    pkg_deps = [ "libchrome-test-${libbase_ver}" ]
+    pkg_deps = [ "libchrome-test" ]
 
     deps = [ ":libchaps_static" ]
   }

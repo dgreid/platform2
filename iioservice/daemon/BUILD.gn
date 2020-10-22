@@ -15,8 +15,8 @@ group("all") {
 pkg_config("target_defaults_pkg_deps") {
   pkg_deps = [
     "libbrillo",
-    "libchrome-${libbase_ver}",
-    "libmojo-${libbase_ver}",
+    "libchrome",
+    "libmojo",
   ]
 }
 
@@ -49,7 +49,7 @@ if (use.test) {
   pkg_config("iioservice_testrunner_pkg_deps") {
     pkg_deps = [
       "libbrillo-test",
-      "libchrome-test-${libbase_ver}",
+      "libchrome-test",
       "libiio",
     ]
   }

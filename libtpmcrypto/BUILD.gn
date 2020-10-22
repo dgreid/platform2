@@ -16,7 +16,7 @@ pkg_config("target_defaults") {
   defines = [ "USE_TPM2=${use.tpm2}" ]
   pkg_deps = [
     "libbrillo",
-    "libchrome-${libbase_ver}",
+    "libchrome",
     "openssl",
     "protobuf-lite",
   ]
@@ -51,7 +51,7 @@ shared_library("libtpmcrypto") {
 
 if (use.test) {
   pkg_config("test_config") {
-    pkg_deps = [ "libchrome-test-${libbase_ver}" ]
+    pkg_deps = [ "libchrome-test" ]
   }
 
   executable("tpmcrypto_test") {

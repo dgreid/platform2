@@ -7,8 +7,8 @@ import("//common-mk/pkg_config.gni")
 # Library with utilities common to both cros_healthd and wilco_dtc_supportd.
 pkg_config("libcommon_pkg_deps") {
   pkg_deps = [
-    "libchrome-${libbase_ver}",
-    "libmojo-${libbase_ver}",
+    "libchrome",
+    "libmojo",
   ]
 }
 
