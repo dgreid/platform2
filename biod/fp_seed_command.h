@@ -42,14 +42,14 @@ class FpSeedCommand : public EcCommand<struct ec_params_fp_seed, EmptyParam> {
   /**
    * @warning Only intended to be used for testing.
    */
-  const brillo::SecureVector seed() {
+  const brillo::SecureVector seed() const {
     return brillo::SecureVector(Req()->seed, Req()->seed + sizeof(Req()->seed));
   }
 
   /**
    * @warning Only intended to be used for testing.
    */
-  const uint16_t seed_version() { return Req()->struct_version; }
+  const uint16_t seed_version() const { return Req()->struct_version; }
 
  protected:
   virtual bool EcCommandRun(int fd);
