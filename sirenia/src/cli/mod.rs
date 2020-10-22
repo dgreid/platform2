@@ -5,13 +5,15 @@
 //! Encapsulates functionality to support the command line interface with the
 //! Trichechus and Dugong daemons.
 
+use std::env::current_exe;
 use std::fmt::{self, Display};
 use std::process::exit;
 
 use getopts::{self, Options};
-
-use super::transport::{TransportType, DEFAULT_PORT, LOOPBACK_DEFAULT};
 use libchromeos::vsock::{SocketAddr as VSocketAddr, VsockCid};
+
+use super::build_info::BUILD_TIMESTAMP;
+use super::transport::{TransportType, DEFAULT_PORT, LOOPBACK_DEFAULT};
 
 #[derive(Debug)]
 pub enum Error {
@@ -41,6 +43,22 @@ pub struct CommonConfig {
     pub connection_type: TransportType,
 }
 
+pub fn get_name_and_version_string() -> String {
+    let program_name = match current_exe() {
+        Ok(exe_path) => exe_path
+            .file_name()
+            .map(|f| f.to_str().map(|f| f.to_string()))
+            .flatten(),
+        _ => None,
+    };
+
+    if let Some(program_name) = program_name {
+        format!("{}: {}", program_name, BUILD_TIMESTAMP)
+    } else {
+        BUILD_TIMESTAMP.to_string()
+    }
+}
+
 /// Sets up command line argument parsing and generates a CommonConfig based on
 /// the command line entry.
 pub fn initialize_common_arguments(args: &[String]) -> Result<CommonConfig> {
@@ -67,12 +85,12 @@ pub fn initialize_common_arguments(args: &[String]) -> Result<CommonConfig> {
     );
     opts.optflag("h", "help", "Show this help string.");
     let matches = opts.parse(&args[..]).map_err(|e| {
-        println!("{}", opts.usage(""));
+        println!("{}", opts.usage(&get_name_and_version_string()));
         Error::CLIParse(e)
     })?;
 
     if matches.opt_present("h") {
-        println!("{}", opts.usage(""));
+        println!("{}", opts.usage(&get_name_and_version_string()));
         exit(0);
     }
 
