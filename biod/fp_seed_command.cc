@@ -4,23 +4,29 @@
 
 #include "biod/fp_seed_command.h"
 
-#include <algorithm>
-#include <memory>
-
 namespace biod {
 
-std::unique_ptr<FpSeedCommand> FpSeedCommand::Create(
-    const brillo::SecureVector& seed, uint16_t seed_version) {
-  if (seed.size() != kTpmSeedSize) {
-    return nullptr;
-  }
+FpSeedCommand::~FpSeedCommand() {
+  ClearSeedBuffer();
+}
 
-  // Using new to access non-public constructor. See https://abseil.io/tips/134.
-  auto seed_cmd = base::WrapUnique(new FpSeedCommand());
-  auto* req = seed_cmd->Req();
-  req->struct_version = seed_version;
-  std::copy(seed.cbegin(), seed.cbegin() + sizeof(req->seed), req->seed);
-  return seed_cmd;
+bool FpSeedCommand::Run(int fd) {
+  bool ret = EcCommandRun(fd);
+
+  // Clear intermediate buffers throughout the stack. We expect running the
+  // command to fail since the SBP will reject the new seed.
+  ClearSeedBuffer();
+  EcCommandRun(fd);
+
+  return ret;
+}
+
+void FpSeedCommand::ClearSeedBuffer() {
+  brillo::SecureMemset(Req()->seed, 0, sizeof(Req()->seed));
+}
+
+bool FpSeedCommand::EcCommandRun(int fd) {
+  return EcCommand::Run(fd);
 }
 
 }  // namespace biod
