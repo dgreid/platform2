@@ -43,7 +43,6 @@ bool BioCryptoInit::NukeFile(const base::FilePath& filepath) {
 }
 
 bool BioCryptoInit::WriteSeedToCrosFp(const brillo::SecureVector& seed) {
-  bool ret = true;
   auto fd = OpenCrosFpDevice();
   if (!fd.is_valid()) {
     PLOG(ERROR) << "Couldn't open FP device for ioctl.";
@@ -73,27 +72,17 @@ bool BioCryptoInit::WriteSeedToCrosFp(const brillo::SecureVector& seed) {
     return false;
   }
 
-  biod::EcCommand<struct ec_params_fp_seed, biod::EmptyParam> cmd_seed(
-      EC_CMD_FP_SEED);
-  struct ec_params_fp_seed* req = cmd_seed.Req();
-  // We have ensured that the format versions of the firmware and biod are
-  // compatible, so use the format version of the firmware.
-  req->struct_version =
-      static_cast<uint16_t>(firmware_fp_template_format_version);
-  std::copy(seed.cbegin(), seed.cbegin() + sizeof(req->seed), req->seed);
+  auto fp_seed_cmd = ec_command_factory_->FpSeedCommand(
+      seed, firmware_fp_template_format_version);
 
-  if (!cmd_seed.Run(fd.get())) {
+  if (!fp_seed_cmd->Run(fd.get())) {
     LOG(ERROR) << "Failed to set TPM seed.";
-    ret = false;
-  } else {
-    LOG(INFO) << "Successfully set FP seed.";
+    return false;
   }
-  std::fill(req->seed, req->seed + sizeof(req->seed), 0);
-  // Clear intermediate buffers. We expect the command to fail since the SBP
-  // will reject the new seed.
-  cmd_seed.Run(fd.get());
 
-  return ret;
+  LOG(INFO) << "Successfully set FP seed.";
+
+  return true;
 }
 
 bool BioCryptoInit::DoProgramSeed(const brillo::SecureVector& tpm_seed) {
