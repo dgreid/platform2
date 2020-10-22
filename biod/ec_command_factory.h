@@ -12,6 +12,7 @@
 #include "biod/fp_context_command_factory.h"
 #include "biod/fp_flashprotect_command.h"
 #include "biod/fp_info_command.h"
+#include "biod/fp_seed_command.h"
 
 namespace biod {
 
@@ -34,6 +35,12 @@ class EcCommandFactoryInterface {
                 "All commands created by this class should derive from "
                 "EcCommandInterface");
 
+  virtual std::unique_ptr<biod::FpSeedCommand> FpSeedCommand(
+      const brillo::SecureVector& seed, uint16_t seed_version) = 0;
+  static_assert(std::is_base_of<EcCommandInterface, biod::FpSeedCommand>::value,
+                "All commands created by this class should derive from "
+                "EcCommandInterface");
+
   // TODO(b/144956297): Add factory methods for all of the EC
   // commands we use so that we can easily mock them for testing.
 };
@@ -53,6 +60,9 @@ class EcCommandFactory : public EcCommandFactoryInterface {
       const uint32_t flags, const uint32_t mask) override;
 
   std::unique_ptr<biod::FpInfoCommand> FpInfoCommand() override;
+
+  std::unique_ptr<biod::FpSeedCommand> FpSeedCommand(
+      const brillo::SecureVector& seed, uint16_t seed_version) override;
 };
 
 }  // namespace biod

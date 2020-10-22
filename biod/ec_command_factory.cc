@@ -22,4 +22,9 @@ std::unique_ptr<FpInfoCommand> EcCommandFactory::FpInfoCommand() {
   return std::make_unique<biod::FpInfoCommand>();
 }
 
+std::unique_ptr<biod::FpSeedCommand> EcCommandFactory::FpSeedCommand(
+    const brillo::SecureVector& seed, uint16_t seed_version) {
+  return FpSeedCommand::Create(seed, seed_version);
+}
+
 }  // namespace biod
