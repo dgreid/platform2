@@ -45,6 +45,17 @@ void SamplesHandler::SamplesHandlerDeleter(SamplesHandler* handler) {
 }
 
 // static
+bool SamplesHandler::DisableBufferAndEnableChannels(
+    libmems::IioDevice* iio_device) {
+  if (iio_device->IsBufferEnabled() && !iio_device->DisableBuffer())
+    return false;
+
+  iio_device->EnableAllChannels();
+
+  return true;
+}
+
+// static
 SamplesHandler::ScopedSamplesHandler SamplesHandler::CreateWithFifo(
     scoped_refptr<base::SequencedTaskRunner> ipc_task_runner,
     scoped_refptr<base::SingleThreadTaskRunner> sample_task_runner,
@@ -52,6 +63,9 @@ SamplesHandler::ScopedSamplesHandler SamplesHandler::CreateWithFifo(
     OnSampleUpdatedCallback on_sample_updated_callback,
     OnErrorOccurredCallback on_error_occurred_callback) {
   ScopedSamplesHandler handler(nullptr, SamplesHandlerDeleter);
+
+  if (!DisableBufferAndEnableChannels(iio_device))
+    return handler;
 
   double min_freq, max_freq;
   if (!iio_device->GetMinMaxFrequency(&min_freq, &max_freq))
@@ -73,6 +87,9 @@ SamplesHandler::ScopedSamplesHandler SamplesHandler::CreateWithoutFifo(
     OnSampleUpdatedCallback on_sample_updated_callback,
     OnErrorOccurredCallback on_error_occurred_callback) {
   ScopedSamplesHandler handler(nullptr, SamplesHandlerDeleter);
+
+  if (!DisableBufferAndEnableChannels(iio_device))
+    return handler;
 
   double min_freq, max_freq;
   if (!iio_device->GetMinMaxFrequency(&min_freq, &max_freq))

@@ -40,6 +40,7 @@ class SamplesHandler {
   using OnErrorOccurredCallback = base::RepeatingCallback<void(
       mojo::ReceiverId, cros::mojom::ObserverErrorType)>;
 
+  static bool DisableBufferAndEnableChannels(libmems::IioDevice* iio_device);
   // use fifo
   static ScopedSamplesHandler CreateWithFifo(
       scoped_refptr<base::SequencedTaskRunner> ipc_task_runner,
