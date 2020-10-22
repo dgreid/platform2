@@ -18,6 +18,7 @@
 #define CAMERA3_HAL_UTILS_H
 
 #include <cros-camera/camera_thread.h>
+#include <queue>
 #include <string>
 #include <utils/Errors.h>
 #include <vector>
