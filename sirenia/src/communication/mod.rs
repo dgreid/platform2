@@ -6,7 +6,7 @@
 //! Dugong and Trichechus
 
 use std::fmt::{self, Debug, Display};
-use std::io::{self, BufReader, BufWriter, Read, Write};
+use std::io::{self, BufWriter, Read, Write};
 
 use flexbuffers::FlexbufferSerializer;
 use serde::de::DeserializeOwned;
@@ -86,11 +86,10 @@ pub fn get_app_path(id: &str) -> Result<&str> {
 // deserializes it.
 pub fn read_message<R: Read, D: DeserializeOwned>(r: &mut R) -> Result<D> {
     info!("Reading message");
-    let mut reader = BufReader::new(r);
 
     // Read the length of the serialized message first
     let mut buf = [0; LENGTH_BYTE_SIZE];
-    reader.read_exact(&mut buf).map_err(Error::Read)?;
+    r.read_exact(&mut buf).map_err(Error::Read)?;
 
     let message_size: u32 = u32::from_be_bytes(buf);
 
@@ -100,7 +99,7 @@ pub fn read_message<R: Read, D: DeserializeOwned>(r: &mut R) -> Result<D> {
 
     // Read the actual serialized message
     let mut ser_message = vec![0; message_size as usize];
-    reader.read_exact(&mut ser_message).map_err(Error::Read)?;
+    r.read_exact(&mut ser_message).map_err(Error::Read)?;
     let ser_reader = flexbuffers::Reader::get_root(&ser_message).map_err(Error::GetRoot)?;
 
     Ok(D::deserialize(ser_reader).map_err(Error::Deserialize)?)
