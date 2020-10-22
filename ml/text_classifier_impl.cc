@@ -31,7 +31,8 @@ using ::chromeos::machine_learning::mojom::TextLanguagePtr;
 using ::chromeos::machine_learning::mojom::TextSuggestSelectionRequestPtr;
 
 constexpr char kTextClassifierModelFilePath[] =
-    "/opt/google/chrome/ml_models/mlservice-model-text_classifier_en-v711.fb";
+    "/opt/google/chrome/ml_models/"
+    "mlservice-model-text_classifier_en-v711_vocab-v1.fb";
 
 constexpr char kLanguageIdentificationModelFilePath[] =
     "/opt/google/chrome/ml_models/"

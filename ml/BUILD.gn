@@ -91,11 +91,13 @@ static_library("ml_common") {
     "${sysroot}/usr/include/icu-chrome/common",
     "${sysroot}/usr/include/icu-chrome/i18n",
     "${sysroot}/usr/include/libtextclassifier",
+    "${sysroot}/usr/include/marisa-aosp",
     "${sysroot}/usr/include/tensorflow",
   ]
   libs = [
     "icui18n-chrome",
     "icuuc-chrome",
+    "marisa-aosp",
     "tensorflowlite",
     "textclassifier",
     "utf",
@@ -138,7 +140,7 @@ static_library("ml_common") {
     "USE_ONDEVICE_GRAMMAR=${use.ondevice_grammar}",
     "USE_ONDEVICE_HANDWRITING=${use.ondevice_handwriting}",
     "USE_ONDEVICE_HANDWRITING_DLC=${use.ondevice_handwriting_dlc}",
-    "TC3_VOCAB_ANNOTATOR_DUMMY",
+    "TC3_VOCAB_ANNOTATOR_IMPL",
   ]
 }
 
