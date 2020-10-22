@@ -7,7 +7,7 @@ use std::fmt;
 use std::io;
 use std::mem::{self, size_of};
 use std::num::ParseIntError;
-use std::os::raw::{c_int, c_uchar, c_uint, c_ushort};
+use std::os::raw::{c_uchar, c_uint, c_ushort};
 use std::os::unix::io::{AsRawFd, IntoRawFd, RawFd};
 use std::result;
 use std::str::FromStr;
@@ -194,24 +194,59 @@ unsafe fn set_nonblocking(fd: RawFd, nonblocking: bool) -> io::Result<()> {
     Ok(())
 }
 
-/// A virtual stream socket.
+/// A virtual socket.
+///
+/// Do not use this class unless you need to change socket options or query the
+/// state of the socket prior to calling listen or connect. Instead use either VsockStream or
+/// VsockListener.
 #[derive(Debug)]
-pub struct VsockStream {
+pub struct VsockSocket {
     fd: RawFd,
 }
 
-impl VsockStream {
-    pub fn connect<A: ToSocketAddr>(addr: A) -> io::Result<VsockStream> {
+impl VsockSocket {
+    pub fn new() -> io::Result<Self> {
+        let fd = unsafe { libc::socket(libc::AF_VSOCK, libc::SOCK_STREAM | libc::SOCK_CLOEXEC, 0) };
+        if fd < 0 {
+            Err(io::Error::last_os_error())
+        } else {
+            Ok(VsockSocket { fd })
+        }
+    }
+
+    pub fn bind<A: ToSocketAddr>(&mut self, addr: A) -> io::Result<()> {
         let sockaddr = addr
             .to_socket_addr()
             .map_err(|_| io::Error::from_raw_os_error(libc::EINVAL))?;
 
-        // Safe because this just creates a vsock socket, and the return value is checked.
-        let sockfd =
-            unsafe { libc::socket(libc::AF_VSOCK, libc::SOCK_STREAM | libc::SOCK_CLOEXEC, 0) };
-        if sockfd < 0 {
-            return Err(io::Error::last_os_error());
+        // The compiler should optimize this out since these are both compile-time constants.
+        assert_eq!(size_of::<sockaddr_vm>(), size_of::<sockaddr>());
+
+        let mut svm: sockaddr_vm = Default::default();
+        svm.svm_family = AF_VSOCK;
+        svm.svm_cid = sockaddr.cid.into();
+        svm.svm_port = sockaddr.port;
+
+        // Safe because this doesn't modify any memory and we check the return value.
+        let ret = unsafe {
+            libc::bind(
+                self.fd,
+                &svm as *const sockaddr_vm as *const sockaddr,
+                size_of::<sockaddr_vm>() as socklen_t,
+            )
+        };
+        if ret < 0 {
+            let bind_err = io::Error::last_os_error();
+            Err(bind_err)
+        } else {
+            Ok(())
         }
+    }
+
+    pub fn connect<A: ToSocketAddr>(self, addr: A) -> io::Result<VsockStream> {
+        let sockaddr = addr
+            .to_socket_addr()
+            .map_err(|_| io::Error::from_raw_os_error(libc::EINVAL))?;
 
         let mut svm: sockaddr_vm = Default::default();
         svm.svm_family = AF_VSOCK;
@@ -221,30 +256,62 @@ impl VsockStream {
         // Safe because this just connects a vsock socket, and the return value is checked.
         let ret = unsafe {
             libc::connect(
-                sockfd,
+                self.fd,
                 &svm as *const sockaddr_vm as *const sockaddr,
                 size_of::<sockaddr_vm>() as socklen_t,
             )
         };
         if ret < 0 {
             let connect_err = io::Error::last_os_error();
-            // Safe because this doesn't modify any memory and we are the only
-            // owner of the file descriptor.
-            unsafe { libc::close(sockfd) };
-            return Err(connect_err);
+            Err(connect_err)
+        } else {
+            Ok(VsockStream { sock: self })
         }
-
-        Ok(VsockStream { fd: sockfd })
     }
 
-    pub fn try_clone(&self) -> io::Result<VsockStream> {
+    pub fn listen(self) -> io::Result<VsockListener> {
+        // Safe because this doesn't modify any memory and we check the return value.
+        let ret = unsafe { libc::listen(self.fd, 1) };
+        if ret < 0 {
+            let listen_err = io::Error::last_os_error();
+            return Err(listen_err);
+        }
+        Ok(VsockListener { sock: self })
+    }
+
+    /// Returns the port that this socket is bound to. This can only succeed after bind is called.
+    pub fn local_port(&self) -> io::Result<u32> {
+        let mut svm: sockaddr_vm = Default::default();
+
+        // Safe because we give a valid pointer for addrlen and check the length.
+        let mut addrlen = size_of::<sockaddr_vm>() as socklen_t;
+        let ret = unsafe {
+            // Get the socket address that was actually bound.
+            libc::getsockname(
+                self.fd,
+                &mut svm as *mut sockaddr_vm as *mut sockaddr,
+                &mut addrlen as *mut socklen_t,
+            )
+        };
+        if ret < 0 {
+            let getsockname_err = io::Error::last_os_error();
+            Err(getsockname_err)
+        } else {
+            // If this doesn't match, it's not safe to get the port out of the sockaddr.
+            assert_eq!(addrlen as usize, size_of::<sockaddr_vm>());
+
+            Ok(svm.svm_port)
+        }
+    }
+
+    pub fn try_clone(&self) -> io::Result<Self> {
         // Safe because this doesn't modify any memory and we check the return value.
         let dup_fd = unsafe { libc::fcntl(self.fd, libc::F_DUPFD_CLOEXEC, 0) };
         if dup_fd < 0 {
-            return Err(io::Error::last_os_error());
+            Err(io::Error::last_os_error())
+        } else {
+            Ok(Self { fd: dup_fd })
         }
-
-        Ok(VsockStream { fd: dup_fd })
     }
 
     pub fn set_nonblocking(&mut self, nonblocking: bool) -> io::Result<()> {
@@ -253,12 +320,60 @@ impl VsockStream {
     }
 }
 
+impl IntoRawFd for VsockSocket {
+    fn into_raw_fd(self) -> RawFd {
+        let fd = self.fd;
+        mem::forget(self);
+        fd
+    }
+}
+
+impl AsRawFd for VsockSocket {
+    fn as_raw_fd(&self) -> RawFd {
+        self.fd
+    }
+}
+
+impl Drop for VsockSocket {
+    fn drop(&mut self) {
+        // Safe because this doesn't modify any memory and we are the only
+        // owner of the file descriptor.
+        unsafe { libc::close(self.fd) };
+    }
+}
+
+/// A virtual stream socket.
+#[derive(Debug)]
+pub struct VsockStream {
+    sock: VsockSocket,
+}
+
+impl VsockStream {
+    pub fn connect<A: ToSocketAddr>(addr: A) -> io::Result<VsockStream> {
+        let sock = VsockSocket::new()?;
+        sock.connect(addr)
+    }
+
+    /// Returns the port that this stream is bound to.
+    pub fn local_port(&self) -> io::Result<u32> {
+        self.sock.local_port()
+    }
+
+    pub fn try_clone(&self) -> io::Result<VsockStream> {
+        self.sock.try_clone().map(|f| VsockStream { sock: f })
+    }
+
+    pub fn set_nonblocking(&mut self, nonblocking: bool) -> io::Result<()> {
+        self.sock.set_nonblocking(nonblocking)
+    }
+}
+
 impl io::Read for VsockStream {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         // Safe because this will only modify the contents of |buf| and we check the return value.
         let ret = unsafe {
             libc::read(
-                self.fd,
+                self.sock.as_raw_fd(),
                 buf as *mut [u8] as *mut c_void,
                 buf.len() as size_t,
             )
@@ -276,7 +391,7 @@ impl io::Write for VsockStream {
         // Safe because this doesn't modify any memory and we check the return value.
         let ret = unsafe {
             libc::write(
-                self.fd,
+                self.sock.as_raw_fd(),
                 buf as *const [u8] as *const c_void,
                 buf.len() as size_t,
             )
@@ -296,111 +411,34 @@ impl io::Write for VsockStream {
 
 impl AsRawFd for VsockStream {
     fn as_raw_fd(&self) -> RawFd {
-        self.fd
+        self.sock.as_raw_fd()
     }
 }
 
 impl IntoRawFd for VsockStream {
     fn into_raw_fd(self) -> RawFd {
-        let fd = self.fd;
-        mem::forget(self);
-        fd
-    }
-}
-
-impl Drop for VsockStream {
-    fn drop(&mut self) {
-        // Safe because this doesn't modify any memory and we are the only
-        // owner of the file descriptor.
-        unsafe { libc::close(self.fd) };
+        self.sock.into_raw_fd()
     }
 }
 
 /// Represents a virtual socket server.
 #[derive(Debug)]
 pub struct VsockListener {
-    fd: RawFd,
+    sock: VsockSocket,
 }
 
 impl VsockListener {
     /// Creates a new `VsockListener` bound to the specified port on the current virtual socket
     /// endpoint.
     pub fn bind<A: ToSocketAddr>(addr: A) -> io::Result<VsockListener> {
-        let sockaddr = addr
-            .to_socket_addr()
-            .map_err(|_| io::Error::from_raw_os_error(libc::EINVAL))?;
-
-        // The compiler should optimize this out since these are both compile-time constants.
-        assert_eq!(size_of::<sockaddr_vm>(), size_of::<sockaddr>());
-
-        // Safe because this doesn't modify any memory and we check the return value.
-        let fd: RawFd = unsafe {
-            libc::socket(
-                c_int::from(AF_VSOCK),
-                libc::SOCK_STREAM | libc::SOCK_CLOEXEC,
-                0,
-            )
-        };
-        if fd < 0 {
-            return Err(io::Error::last_os_error());
-        }
-
-        let mut svm: sockaddr_vm = Default::default();
-        svm.svm_family = AF_VSOCK;
-        svm.svm_cid = sockaddr.cid.into();
-        svm.svm_port = sockaddr.port;
-
-        // Safe because this doesn't modify any memory and we check the return value.
-        let ret = unsafe {
-            libc::bind(
-                fd,
-                &svm as *const sockaddr_vm as *const sockaddr,
-                size_of::<sockaddr_vm>() as socklen_t,
-            )
-        };
-        if ret < 0 {
-            let bind_err = io::Error::last_os_error();
-            // Safe because this doesn't modify any memory and we are the only
-            // owner of the file descriptor.
-            unsafe { libc::close(fd) };
-            return Err(bind_err);
-        }
-
-        // Safe because this doesn't modify any memory and we check the return value.
-        let ret = unsafe { libc::listen(fd, 1) };
-        if ret < 0 {
-            let listen_err = io::Error::last_os_error();
-            // Safe because this doesn't modify any memory and we are the only
-            // owner of the file descriptor.
-            unsafe { libc::close(fd) };
-            return Err(listen_err);
-        }
-
-        Ok(VsockListener { fd })
+        let mut sock = VsockSocket::new()?;
+        sock.bind(addr)?;
+        sock.listen()
     }
 
     /// Returns the port that this listener is bound to.
     pub fn local_port(&self) -> io::Result<u32> {
-        let mut svm: sockaddr_vm = Default::default();
-
-        // Safe because we give a valid pointer for addrlen and check the length.
-        let mut addrlen = size_of::<sockaddr_vm>() as socklen_t;
-        let ret = unsafe {
-            // Get the socket address that was actually bound.
-            libc::getsockname(
-                self.fd,
-                &mut svm as *mut sockaddr_vm as *mut sockaddr,
-                &mut addrlen as *mut socklen_t,
-            )
-        };
-        if ret < 0 {
-            let getsockname_err = io::Error::last_os_error();
-            return Err(getsockname_err);
-        }
-        // If this doesn't match, it's not safe to get the port out of the sockaddr.
-        assert_eq!(addrlen as usize, size_of::<sockaddr_vm>());
-
-        Ok(svm.svm_port)
+        self.sock.local_port()
     }
 
     /// Accepts a new incoming connection on this listener.  Blocks the calling thread until a
@@ -413,7 +451,7 @@ impl VsockListener {
         let mut socklen: socklen_t = size_of::<sockaddr_vm>() as socklen_t;
         let fd = unsafe {
             libc::accept4(
-                self.fd,
+                self.sock.as_raw_fd(),
                 &mut svm as *mut sockaddr_vm as *mut sockaddr,
                 &mut socklen as *mut socklen_t,
                 libc::SOCK_CLOEXEC,
@@ -431,7 +469,9 @@ impl VsockListener {
         }
 
         Ok((
-            VsockStream { fd },
+            VsockStream {
+                sock: VsockSocket { fd },
+            },
             SocketAddr {
                 cid: svm.svm_cid.into(),
                 port: svm.svm_port,
@@ -440,21 +480,12 @@ impl VsockListener {
     }
 
     pub fn set_nonblocking(&mut self, nonblocking: bool) -> io::Result<()> {
-        // Safe because the fd is valid and owned by this stream.
-        unsafe { set_nonblocking(self.fd, nonblocking) }
+        self.sock.set_nonblocking(nonblocking)
     }
 }
 
 impl AsRawFd for VsockListener {
     fn as_raw_fd(&self) -> RawFd {
-        self.fd
-    }
-}
-
-impl Drop for VsockListener {
-    fn drop(&mut self) {
-        // Safe because this doesn't modify any memory and we are the only
-        // owner of the file descriptor.
-        unsafe { libc::close(self.fd) };
+        self.sock.as_raw_fd()
     }
 }
