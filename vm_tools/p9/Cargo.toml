@@ -6,6 +6,7 @@ edition = "2018"
 
 [dependencies]
 libc = "*"
+libchromeos = { path = "../../libchromeos-rs" } # provided by ebuild
 wire_format_derive = { path = "wire_format_derive", version = "*" }
 
 [features]

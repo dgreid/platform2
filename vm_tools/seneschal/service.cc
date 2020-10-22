@@ -12,6 +12,7 @@
 #include <signal.h>
 #include <stdint.h>
 #include <sys/mount.h>
+#include <sys/resource.h>
 #include <sys/signalfd.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
@@ -79,6 +80,9 @@ constexpr char kSeccompPolicyPath[] = "/usr/share/policy/9s-seccomp.policy";
 
 // Static prefix of SmbFs mount names.
 constexpr char kSmbFsMountNamePrefix[] = "smbfs-";
+
+// Max number of open files allowed per server.
+constexpr rlim_t kMaxOpenFiles = 64 * 1024;
 
 // `mkdir -p`, essentially.  Reimplement all of base::CreateDirectory because
 // we want mode 0755 instead of mode 0700.
@@ -612,6 +616,16 @@ std::unique_ptr<dbus::Response> Service::StartServer(
   minijail_log_seccomp_filter_failures(jail.get());
   minijail_parse_seccomp_filters(jail.get(), kSeccompPolicyPath);
   minijail_use_seccomp_filter(jail.get());
+
+  // The server tends to open more fds than a regular program.
+  ret =
+      minijail_rlimit(jail.get(), RLIMIT_NOFILE, kMaxOpenFiles, kMaxOpenFiles);
+  if (ret < 0) {
+    LOG(ERROR) << "Unable to configure rlimit: " << strerror(-ret);
+    response.set_failure_reason("Unable to configure minijail");
+    writer.AppendProtoAsArrayOfBytes(response);
+    return dbus_response;
+  }
 
   // Reset the signal mask since we block SIGCHLD and SIGTERM in this process
   // for signalfd.

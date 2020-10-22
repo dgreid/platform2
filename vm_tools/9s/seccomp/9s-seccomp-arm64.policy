@@ -4,7 +4,6 @@
 
 read: 1
 write: 1
-statfs: 1
 statx: 1
 openat: 1
 close: 1
@@ -49,7 +48,7 @@ set_tid_address: 1
 listen: 1
 # Disallow clone's other than new threads.
 clone: arg0 & 0x00010000
-statfs: 1
+fstatfs: 1
 linkat: 1
 unlinkat: 1
 fsync: 1

@@ -4,19 +4,22 @@
 
 use std::cmp::min;
 use std::collections::{btree_map, BTreeMap};
-use std::ffi::CString;
-use std::fs;
+use std::ffi::{CStr, CString};
+use std::fs::File;
 use std::io::{self, Cursor, Read, Write};
-use std::mem;
-use std::os::linux::fs::MetadataExt;
-use std::os::unix::fs::{DirBuilderExt, FileExt, OpenOptionsExt};
-use std::os::unix::io::AsRawFd;
-use std::path::{Component, Path, PathBuf};
+use std::mem::{self, MaybeUninit};
+use std::ops::Deref;
+use std::os::unix::ffi::OsStrExt;
+use std::os::unix::fs::FileExt;
+use std::os::unix::io::{AsRawFd, FromRawFd, RawFd};
+use std::path::Path;
+
+use libchromeos::{read_dir, syscall};
 
 use crate::protocol::*;
 
 // Tlopen and Tlcreate flags.  Taken from "include/net/9p/9p.h" in the linux tree.
-const _P9_RDONLY: u32 = 0o00000000;
+const P9_RDONLY: u32 = 0o00000000;
 const P9_WRONLY: u32 = 0o00000001;
 const P9_RDWR: u32 = 0o00000002;
 const P9_NOACCESS: u32 = 0o00000003;
@@ -37,7 +40,9 @@ const _P9_CLOEXEC: u32 = 0o02000000;
 const P9_SYNC: u32 = 0o04000000;
 
 // Mapping from 9P flags to libc flags.
-const MAPPED_FLAGS: [(u32, i32); 14] = [
+const MAPPED_FLAGS: [(u32, i32); 16] = [
+    (P9_WRONLY, libc::O_WRONLY),
+    (P9_RDWR, libc::O_RDWR),
     (P9_CREATE, libc::O_CREAT),
     (P9_EXCL, libc::O_EXCL),
     (P9_NOCTTY, libc::O_NOCTTY),
@@ -61,7 +66,7 @@ const _P9_QTEXCL: u8 = 0x20;
 const _P9_QTMOUNT: u8 = 0x10;
 const _P9_QTAUTH: u8 = 0x08;
 const _P9_QTTMP: u8 = 0x04;
-const _P9_QTSYMLINK: u8 = 0x02;
+const P9_QTSYMLINK: u8 = 0x02;
 const _P9_QTLINK: u8 = 0x01;
 const P9_QTFILE: u8 = 0x00;
 
@@ -100,35 +105,82 @@ const P9_SETATTR_MTIME_SET: u32 = 0x00000100;
 const MIN_MESSAGE_SIZE: u32 = 256;
 const MAX_MESSAGE_SIZE: u32 = ::std::u16::MAX as u32;
 
+#[derive(PartialEq, Eq)]
+enum FileType {
+    Regular,
+    Directory,
+    Other,
+}
+
+impl From<libc::mode_t> for FileType {
+    fn from(mode: libc::mode_t) -> Self {
+        match mode & libc::S_IFMT {
+            libc::S_IFREG => FileType::Regular,
+            libc::S_IFDIR => FileType::Directory,
+            _ => FileType::Other,
+        }
+    }
+}
+
 // Represents state that the server is holding on behalf of a client. Fids are somewhat like file
 // descriptors but are not restricted to open files and directories. Fids are identified by a unique
 // 32-bit number chosen by the client. Most messages sent by clients include a fid on which to
 // operate. The fid in a Tattach message represents the root of the file system tree that the client
 // is allowed to access. A client can create more fids by walking the directory tree from that fid.
-#[derive(Debug)]
 struct Fid {
-    path: Box<Path>,
-    metadata: fs::Metadata,
-    file: Option<fs::File>,
-    dirents: Option<Vec<Dirent>>,
+    path: File,
+    file: Option<File>,
+    filetype: FileType,
 }
 
-fn metadata_to_qid(metadata: &fs::Metadata) -> Qid {
-    let ty = if metadata.is_dir() {
-        P9_QTDIR
-    } else if metadata.is_file() {
-        P9_QTFILE
-    } else {
-        // Unknown file type...
-        0
-    };
+impl From<libc::stat64> for Qid {
+    fn from(st: libc::stat64) -> Qid {
+        let ty = match st.st_mode & libc::S_IFMT {
+            libc::S_IFDIR => P9_QTDIR,
+            libc::S_IFREG => P9_QTFILE,
+            libc::S_IFLNK => P9_QTSYMLINK,
+            _ => 0,
+        };
 
-    Qid {
-        ty,
-        // TODO: deal with the 2038 problem before 2038
-        version: metadata.st_mtime() as u32,
-        path: metadata.st_ino(),
+        Qid {
+            ty,
+            // TODO: deal with the 2038 problem before 2038
+            version: st.st_mtime as u32,
+            path: st.st_ino,
+        }
     }
+}
+
+fn statat(d: &File, name: &CStr, flags: libc::c_int) -> io::Result<libc::stat64> {
+    let mut st = MaybeUninit::<libc::stat64>::zeroed();
+
+    // Safe because the kernel will only write data in `st` and we check the return
+    // value.
+    let res = unsafe {
+        libc::fstatat64(
+            d.as_raw_fd(),
+            name.as_ptr(),
+            st.as_mut_ptr(),
+            flags | libc::AT_SYMLINK_NOFOLLOW,
+        )
+    };
+    if res >= 0 {
+        // Safe because the kernel guarantees that the struct is now fully initialized.
+        Ok(unsafe { st.assume_init() })
+    } else {
+        Err(io::Error::last_os_error())
+    }
+}
+
+fn stat(f: &File) -> io::Result<libc::stat64> {
+    // Safe because this is a constant value and a valid C string.
+    let pathname = unsafe { CStr::from_bytes_with_nul_unchecked(b"\0") };
+
+    statat(f, pathname, libc::AT_EMPTY_PATH)
+}
+
+fn string_to_cstring(s: String) -> io::Result<CString> {
+    CString::new(s).map_err(|_| io::Error::from_raw_os_error(libc::EINVAL))
 }
 
 fn error_to_rmessage(err: io::Error) -> Rmessage {
@@ -164,45 +216,25 @@ fn error_to_rmessage(err: io::Error) -> Rmessage {
     })
 }
 
-// Joins `path` to `buf`.  If `path` is '..', removes the last component from `buf`
-// only if `buf` != `root` but does nothing if `buf` == `root`.  Pushes `path` onto
-// `buf` if it is a normal path component.
-//
-// Returns an error if `path` is absolute, has more than one component, or contains
-// a '.' component.
-fn join_path<P: AsRef<Path>, R: AsRef<Path>>(
-    mut buf: PathBuf,
-    path: P,
-    root: R,
-) -> io::Result<PathBuf> {
-    let path = path.as_ref();
-    let root = root.as_ref();
-    debug_assert!(buf.starts_with(root));
+// Sigh.. Cow requires the underlying type to implement Clone.
+enum MaybeOwned<'b, T> {
+    Borrowed(&'b T),
+    Owned(T),
+}
 
-    if path.components().count() > 1 {
-        return Err(io::Error::from_raw_os_error(libc::EINVAL));
-    }
-
-    for component in path.components() {
-        match component {
-            // Prefix should only appear on windows systems.
-            Component::Prefix(_) => return Err(io::Error::from_raw_os_error(libc::EINVAL)),
-            // Absolute paths are not allowed.
-            Component::RootDir => return Err(io::Error::from_raw_os_error(libc::EINVAL)),
-            // '.' elements are not allowed.
-            Component::CurDir => return Err(io::Error::from_raw_os_error(libc::EINVAL)),
-            Component::ParentDir => {
-                // We only remove the parent path if we are not already at the root of the
-                // file system.
-                if buf != root {
-                    buf.pop();
-                }
-            }
-            Component::Normal(element) => buf.push(element),
+impl<'a, T> Deref for MaybeOwned<'a, T> {
+    type Target = T;
+    fn deref(&self) -> &Self::Target {
+        use MaybeOwned::*;
+        match *self {
+            Borrowed(borrowed) => borrowed,
+            Owned(ref owned) => owned,
         }
     }
+}
 
-    Ok(buf)
+fn ebadf() -> io::Error {
+    io::Error::from_raw_os_error(libc::EBADF)
 }
 
 pub type ServerIdMap<T> = BTreeMap<T, T>;
@@ -213,10 +245,54 @@ fn map_id_from_host<T: Clone + Ord>(map: &ServerIdMap<T>, id: T) -> T {
     map.get(&id).map_or(id.clone(), |v| v.clone())
 }
 
+fn lookup(parent: &File, name: &CStr) -> io::Result<File> {
+    // Safe because this doesn't modify any memory and we check the return value.
+    let fd = syscall!(unsafe {
+        libc::openat(
+            parent.as_raw_fd(),
+            name.as_ptr(),
+            libc::O_PATH | libc::O_NOFOLLOW | libc::O_CLOEXEC,
+        )
+    })?;
+
+    // Safe because we just opened this fd.
+    Ok(unsafe { File::from_raw_fd(fd) })
+}
+
+fn open_fid(proc: &File, fid: &Fid, p9_flags: u32) -> io::Result<File> {
+    let pathname = string_to_cstring(format!("self/fd/{}", fid.path.as_raw_fd()))?;
+
+    // We always open files with O_CLOEXEC.
+    let mut flags: i32 = libc::O_CLOEXEC;
+    for &(p9f, of) in &MAPPED_FLAGS {
+        if (p9_flags & p9f) != 0 {
+            flags |= of;
+        }
+    }
+
+    if p9_flags & P9_NOACCESS == P9_RDONLY {
+        flags |= libc::O_RDONLY;
+    }
+
+    // Safe because this doesn't modify any memory and we check the return value. We need to
+    // clear the O_NOFOLLOW flag because we want to follow the proc symlink.
+    let fd = syscall!(unsafe {
+        libc::openat(
+            proc.as_raw_fd(),
+            pathname.as_ptr(),
+            flags & !libc::O_NOFOLLOW,
+        )
+    })?;
+
+    // Safe because we just opened this fd and we know it is valid.
+    Ok(unsafe { File::from_raw_fd(fd) })
+}
+
 pub struct Server {
     root: Box<Path>,
     msize: u32,
     fids: BTreeMap<u32, Fid>,
+    proc: File,
     uid_map: ServerUidMap,
     gid_map: ServerGidMap,
 }
@@ -226,14 +302,33 @@ impl Server {
         root: P,
         uid_map: ServerUidMap,
         gid_map: ServerGidMap,
-    ) -> Server {
-        Server {
+    ) -> io::Result<Server> {
+        // Safe because this is a valid c-string.
+        let proc_cstr = unsafe { CStr::from_bytes_with_nul_unchecked(b"/proc\0") };
+
+        // Safe because this doesn't modify any memory and we check the return value.
+        let fd = syscall!(unsafe {
+            libc::openat(
+                libc::AT_FDCWD,
+                proc_cstr.as_ptr(),
+                libc::O_PATH | libc::O_NOFOLLOW | libc::O_CLOEXEC,
+            )
+        })?;
+
+        // Safe because we just opened this fd and we know it is valid.
+        let proc = unsafe { File::from_raw_fd(fd) };
+        Ok(Server {
             root: root.into(),
             msize: MAX_MESSAGE_SIZE,
             fids: BTreeMap::new(),
+            proc,
             uid_map,
             gid_map,
-        }
+        })
+    }
+
+    pub fn keep_fds(&self) -> Vec<RawFd> {
+        vec![self.proc.as_raw_fd()]
     }
 
     pub fn handle_message<R: Read, W: Write>(
@@ -241,16 +336,12 @@ impl Server {
         reader: &mut R,
         writer: &mut W,
     ) -> io::Result<()> {
-        let request: Tframe = WireFormat::decode(&mut reader.take(self.msize as u64))?;
+        let Tframe { tag, msg } = WireFormat::decode(&mut reader.take(self.msize as u64))?;
 
-        if cfg!(feature = "trace") {
-            println!("{:?}", &request);
-        }
-
-        let rmsg = match request.msg {
+        let rmsg = match msg {
             Tmessage::Version(ref version) => self.version(version).map(Rmessage::Version),
             Tmessage::Flush(ref flush) => self.flush(flush).and(Ok(Rmessage::Flush)),
-            Tmessage::Walk(ref walk) => self.walk(walk).map(Rmessage::Walk),
+            Tmessage::Walk(walk) => self.walk(walk).map(Rmessage::Walk),
             Tmessage::Read(ref read) => self.read(read).map(Rmessage::Read),
             Tmessage::Write(ref write) => self.write(write).map(Rmessage::Write),
             Tmessage::Clunk(ref clunk) => self.clunk(clunk).and(Ok(Rmessage::Clunk)),
@@ -259,7 +350,7 @@ impl Server {
             Tmessage::Auth(ref auth) => self.auth(auth).map(Rmessage::Auth),
             Tmessage::Statfs(ref statfs) => self.statfs(statfs).map(Rmessage::Statfs),
             Tmessage::Lopen(ref lopen) => self.lopen(lopen).map(Rmessage::Lopen),
-            Tmessage::Lcreate(ref lcreate) => self.lcreate(lcreate).map(Rmessage::Lcreate),
+            Tmessage::Lcreate(lcreate) => self.lcreate(lcreate).map(Rmessage::Lcreate),
             Tmessage::Symlink(ref symlink) => self.symlink(symlink).map(Rmessage::Symlink),
             Tmessage::Mknod(ref mknod) => self.mknod(mknod).map(Rmessage::Mknod),
             Tmessage::Rename(ref rename) => self.rename(rename).and(Ok(Rmessage::Rename)),
@@ -276,25 +367,17 @@ impl Server {
             Tmessage::Fsync(ref fsync) => self.fsync(fsync).and(Ok(Rmessage::Fsync)),
             Tmessage::Lock(ref lock) => self.lock(lock).map(Rmessage::Lock),
             Tmessage::GetLock(ref get_lock) => self.get_lock(get_lock).map(Rmessage::GetLock),
-            Tmessage::Link(ref link) => self.link(link).and(Ok(Rmessage::Link)),
-            Tmessage::Mkdir(ref mkdir) => self.mkdir(mkdir).map(Rmessage::Mkdir),
-            Tmessage::RenameAt(ref rename_at) => {
-                self.rename_at(rename_at).and(Ok(Rmessage::RenameAt))
-            }
-            Tmessage::UnlinkAt(ref unlink_at) => {
-                self.unlink_at(unlink_at).and(Ok(Rmessage::UnlinkAt))
-            }
+            Tmessage::Link(link) => self.link(link).and(Ok(Rmessage::Link)),
+            Tmessage::Mkdir(mkdir) => self.mkdir(mkdir).map(Rmessage::Mkdir),
+            Tmessage::RenameAt(rename_at) => self.rename_at(rename_at).and(Ok(Rmessage::RenameAt)),
+            Tmessage::UnlinkAt(unlink_at) => self.unlink_at(unlink_at).and(Ok(Rmessage::UnlinkAt)),
         };
 
         // Errors while handling requests are never fatal.
         let response = Rframe {
-            tag: request.tag,
+            tag,
             msg: rmsg.unwrap_or_else(error_to_rmessage),
         };
-
-        if cfg!(feature = "trace") {
-            println!("{:?}", &response);
-        }
 
         response.encode(writer)?;
         writer.flush()
@@ -310,15 +393,28 @@ impl Server {
         // TODO: Check attach parameters
         match self.fids.entry(attach.fid) {
             btree_map::Entry::Vacant(entry) => {
+                let root = CString::new(self.root.as_os_str().as_bytes())
+                    .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+
+                // Safe because this doesn't modify any memory and we check the return value.
+                let fd = syscall!(unsafe {
+                    libc::openat(
+                        libc::AT_FDCWD,
+                        root.as_ptr(),
+                        libc::O_PATH | libc::O_NOFOLLOW | libc::O_CLOEXEC,
+                    )
+                })?;
+
+                let root_path = unsafe { File::from_raw_fd(fd) };
+                let st = stat(&root_path)?;
+
                 let fid = Fid {
-                    path: self.root.to_path_buf().into_boxed_path(),
-                    metadata: fs::metadata(&self.root)?,
+                    // Safe because we just opened this fd.
+                    path: root_path,
                     file: None,
-                    dirents: None,
+                    filetype: st.st_mode.into(),
                 };
-                let response = Rattach {
-                    qid: metadata_to_qid(&fid.metadata),
-                };
+                let response = Rattach { qid: st.into() };
                 entry.insert(fid);
                 Ok(response)
             }
@@ -352,52 +448,48 @@ impl Server {
 
     fn do_walk(
         &self,
-        wnames: &[String],
-        mut buf: PathBuf,
-        mds: &mut Vec<fs::Metadata>,
-    ) -> io::Result<PathBuf> {
+        wnames: Vec<String>,
+        start: File,
+        mds: &mut Vec<libc::stat64>,
+    ) -> io::Result<File> {
+        let mut current = start;
+
         for wname in wnames {
-            let name = Path::new(wname);
-            buf = join_path(buf, name, &*self.root)?;
-            mds.push(fs::metadata(&buf)?);
+            let name = string_to_cstring(wname)?;
+            current = lookup(&current, &name)?;
+            mds.push(stat(&current)?);
         }
 
-        Ok(buf)
+        Ok(current)
     }
 
-    fn walk(&mut self, walk: &Twalk) -> io::Result<Rwalk> {
+    fn walk(&mut self, walk: Twalk) -> io::Result<Rwalk> {
         // `newfid` must not currently be in use unless it is the same as `fid`.
         if walk.fid != walk.newfid && self.fids.contains_key(&walk.newfid) {
             return Err(io::Error::from_raw_os_error(libc::EBADF));
         }
 
         // We need to walk the tree.  First get the starting path.
-        let (buf, oldmd) = self
+        let start = self
             .fids
             .get(&walk.fid)
-            .ok_or_else(|| io::Error::from_raw_os_error(libc::EBADF))
-            .map(|fid| (fid.path.to_path_buf(), fid.metadata.clone()))?;
+            .ok_or_else(ebadf)
+            .and_then(|fid| fid.path.try_clone())?;
 
         // Now walk the tree and break on the first error, if any.
-        let mut mds = Vec::with_capacity(walk.wnames.len());
-        match self.do_walk(&walk.wnames, buf, &mut mds) {
-            Ok(buf) => {
+        let expected_len = walk.wnames.len();
+        let mut mds = Vec::with_capacity(expected_len);
+        match self.do_walk(walk.wnames, start, &mut mds) {
+            Ok(end) => {
                 // Store the new fid if the full walk succeeded.
-                if mds.len() == walk.wnames.len() {
-                    // This could just be a duplication operation.
-                    let md = if let Some(md) = mds.last() {
-                        md.clone()
-                    } else {
-                        oldmd
-                    };
-
+                if mds.len() == expected_len {
+                    let st = mds.last().copied().map(Ok).unwrap_or_else(|| stat(&end))?;
                     self.fids.insert(
                         walk.newfid,
                         Fid {
-                            path: buf.into_boxed_path(),
-                            metadata: md,
+                            path: end,
                             file: None,
-                            dirents: None,
+                            filetype: st.st_mode.into(),
                         },
                     );
                 }
@@ -411,7 +503,7 @@ impl Server {
         }
 
         Ok(Rwalk {
-            wqids: mds.iter().map(metadata_to_qid).collect(),
+            wqids: mds.into_iter().map(Qid::from).collect(),
         })
     }
 
@@ -421,7 +513,7 @@ impl Server {
             .fids
             .get_mut(&read.fid)
             .and_then(|fid| fid.file.as_mut())
-            .ok_or_else(|| io::Error::from_raw_os_error(libc::EBADF))?;
+            .ok_or_else(ebadf)?;
 
         // Use an empty Rread struct to figure out the overhead of the header.
         let header_size = Rframe {
@@ -433,11 +525,10 @@ impl Server {
         .byte_size();
 
         let capacity = min(self.msize - header_size, read.count);
-        let mut buf = Data(Vec::with_capacity(capacity as usize));
-        buf.resize(capacity as usize, 0);
+        let mut buf = Data(vec![0u8; capacity as usize]);
 
         let count = file.read_at(&mut buf, read.offset)?;
-        buf.resize(count, 0);
+        buf.truncate(count);
 
         Ok(Rread { data: buf })
     }
@@ -447,7 +538,7 @@ impl Server {
             .fids
             .get_mut(&write.fid)
             .and_then(|fid| fid.file.as_mut())
-            .ok_or_else(|| io::Error::from_raw_os_error(libc::EBADF))?;
+            .ok_or_else(ebadf)?;
 
         let count = file.write_at(&write.data, write.offset)?;
         Ok(Rwrite {
@@ -465,44 +556,22 @@ impl Server {
         }
     }
 
-    fn remove(&mut self, remove: &Tremove) -> io::Result<()> {
-        match self.fids.entry(remove.fid) {
-            btree_map::Entry::Vacant(_) => Err(io::Error::from_raw_os_error(libc::EBADF)),
-            btree_map::Entry::Occupied(o) => {
-                let (_, fid) = o.remove_entry();
-
-                if fid.metadata.is_dir() {
-                    fs::remove_dir(&fid.path)?;
-                } else {
-                    fs::remove_file(&fid.path)?;
-                }
-
-                Ok(())
-            }
-        }
+    fn remove(&mut self, _remove: &Tremove) -> io::Result<()> {
+        // Since a file could be linked into multiple locations, there is no way to know exactly
+        // which path we are supposed to unlink. Linux uses unlink_at anyway, so we can just return
+        // an error here.
+        Err(io::Error::from_raw_os_error(libc::EOPNOTSUPP))
     }
 
     fn statfs(&mut self, statfs: &Tstatfs) -> io::Result<Rstatfs> {
-        let fid = self
-            .fids
-            .get(&statfs.fid)
-            .ok_or_else(|| io::Error::from_raw_os_error(libc::EBADF))?;
-        let path = fid
-            .path
-            .to_str()
-            .and_then(|path| CString::new(path).ok())
-            .ok_or_else(|| io::Error::from_raw_os_error(libc::EINVAL))?;
+        let fid = self.fids.get(&statfs.fid).ok_or_else(ebadf)?;
+        let mut buf = MaybeUninit::zeroed();
 
-        // Safe because we are zero-initializing a C struct with only primitive
-        // data members.
-        let mut out: libc::statfs64 = unsafe { mem::zeroed() };
+        // Safe because this will only modify `out` and we check the return value.
+        syscall!(unsafe { libc::fstatfs64(fid.path.as_raw_fd(), buf.as_mut_ptr()) })?;
 
-        // Safe because we know that `path` is valid and we have already initialized `out`.
-        let ret = unsafe { libc::statfs64(path.as_ptr(), &mut out) };
-        if ret != 0 {
-            return Err(io::Error::last_os_error());
-        }
-
+        // Safe because this only has integer types and any value is valid.
+        let out = unsafe { buf.assume_init() };
         Ok(Rstatfs {
             ty: out.f_type as u32,
             bsize: out.f_bsize as u32,
@@ -511,77 +580,65 @@ impl Server {
             bavail: out.f_bavail,
             files: out.f_files,
             ffree: out.f_ffree,
-            fsid: 0, // No way to get the fields of a libc::fsid_t
+            // Safe because the fsid has only integer fields and the compiler will verify that is
+            // the same width as the `fsid` field in Rstatfs.
+            fsid: unsafe { mem::transmute(out.f_fsid) },
             namelen: out.f_namelen as u32,
         })
     }
 
     fn lopen(&mut self, lopen: &Tlopen) -> io::Result<Rlopen> {
-        let fid = self
-            .fids
-            .get_mut(&lopen.fid)
-            .ok_or_else(|| io::Error::from_raw_os_error(libc::EBADF))?;
+        let fid = self.fids.get_mut(&lopen.fid).ok_or_else(ebadf)?;
 
-        // We always open files with O_CLOEXEC.
-        let mut custom_flags: i32 = libc::O_CLOEXEC;
-        for &(p9f, of) in &MAPPED_FLAGS {
-            if (lopen.flags & p9f) != 0 {
-                custom_flags |= of;
-            }
-        }
+        let file = open_fid(&self.proc, &fid, lopen.flags)?;
+        let st = stat(&file)?;
 
-        // MAPPED_FLAGS will handle append, create[_new], and truncate.
-        let file = fs::OpenOptions::new()
-            .read((lopen.flags & P9_NOACCESS) == 0 || (lopen.flags & P9_RDWR) != 0)
-            .write((lopen.flags & P9_WRONLY) != 0 || (lopen.flags & P9_RDWR) != 0)
-            .custom_flags(custom_flags)
-            .open(&fid.path)?;
-
-        fid.metadata = file.metadata()?;
         fid.file = Some(file);
-
+        let iounit = st.st_blksize as u32;
         Ok(Rlopen {
-            qid: metadata_to_qid(&fid.metadata),
-            iounit: 0,
+            qid: st.into(),
+            iounit,
         })
     }
 
-    fn lcreate(&mut self, lcreate: &Tlcreate) -> io::Result<Rlcreate> {
-        let fid = self
-            .fids
-            .get_mut(&lcreate.fid)
-            .ok_or_else(|| io::Error::from_raw_os_error(libc::EBADF))?;
+    fn lcreate(&mut self, lcreate: Tlcreate) -> io::Result<Rlcreate> {
+        let fid = self.fids.get_mut(&lcreate.fid).ok_or_else(ebadf)?;
 
-        if !fid.metadata.is_dir() {
+        if fid.filetype != FileType::Directory {
             return Err(io::Error::from_raw_os_error(libc::ENOTDIR));
         }
 
-        let name = Path::new(&lcreate.name);
-        let path = join_path(fid.path.to_path_buf(), name, &*self.root)?;
-
-        let mut custom_flags: i32 = libc::O_CLOEXEC;
+        let mut flags: i32 = libc::O_CLOEXEC | libc::O_CREAT | libc::O_EXCL;
         for &(p9f, of) in &MAPPED_FLAGS {
             if (lcreate.flags & p9f) != 0 {
-                custom_flags |= of;
+                flags |= of;
             }
         }
+        if lcreate.flags & P9_NOACCESS == P9_RDONLY {
+            flags |= libc::O_RDONLY;
+        }
 
-        // Set O_CREAT|O_EXCL, MAPPED_FLAGS will handle append and truncate.
-        custom_flags |= libc::O_CREAT | libc::O_EXCL;
-        let file = fs::OpenOptions::new()
-            .read((lcreate.flags & P9_NOACCESS) == 0 || (lcreate.flags & P9_RDWR) != 0)
-            .write((lcreate.flags & P9_WRONLY) != 0 || (lcreate.flags & P9_RDWR) != 0)
-            .custom_flags(custom_flags)
-            .mode(lcreate.mode & 0o755)
-            .open(&path)?;
+        let name = string_to_cstring(lcreate.name)?;
 
-        fid.metadata = file.metadata()?;
+        // Safe because this doesn't modify any memory and we check the return value.
+        let fd = syscall!(unsafe {
+            libc::openat(fid.path.as_raw_fd(), name.as_ptr(), flags, lcreate.mode)
+        })?;
+
+        // Safe because we just opened this fd and we know it is valid.
+        let file = unsafe { File::from_raw_fd(fd) };
+        let st = stat(&file)?;
+        let iounit = st.st_blksize as u32;
+
         fid.file = Some(file);
-        fid.path = path.into_boxed_path();
+
+        // This fid now refers to the newly created file so we need to update the O_PATH fd for it
+        // as well.
+        fid.path = lookup(&fid.path, &name)?;
 
         Ok(Rlcreate {
-            qid: metadata_to_qid(&fid.metadata),
-            iounit: 0,
+            qid: st.into(),
+            iounit,
         })
     }
 
@@ -595,26 +652,11 @@ impl Server {
         Err(io::Error::from_raw_os_error(libc::EACCES))
     }
 
-    fn rename(&mut self, rename: &Trename) -> io::Result<()> {
-        let newname = Path::new(&rename.name);
-        let buf = self
-            .fids
-            .get(&rename.dfid)
-            .ok_or_else(|| io::Error::from_raw_os_error(libc::EBADF))
-            .map(|dfid| dfid.path.to_path_buf())?;
-        let newpath = join_path(buf, newname, &*self.root)?;
-
-        let fid = self
-            .fids
-            .get_mut(&rename.fid)
-            .ok_or_else(|| io::Error::from_raw_os_error(libc::EINVAL))?;
-
-        fs::rename(&fid.path, &newpath)?;
-
-        // TODO: figure out if the client expects |fid.path| to point to
-        // the renamed path.
-        fid.path = newpath.into_boxed_path();
-        Ok(())
+    fn rename(&mut self, _rename: &Trename) -> io::Result<()> {
+        // We cannot support this as an inode may be linked into multiple directories but we don't
+        // know which one the client wants us to rename. Linux uses rename_at anyway, so we don't
+        // need to worry about this.
+        Err(io::Error::from_raw_os_error(libc::EOPNOTSUPP))
     }
 
     fn readlink(&mut self, _readlink: &Treadlink) -> io::Result<Rreadlink> {
@@ -623,31 +665,27 @@ impl Server {
     }
 
     fn get_attr(&mut self, get_attr: &Tgetattr) -> io::Result<Rgetattr> {
-        let fid = self
-            .fids
-            .get_mut(&get_attr.fid)
-            .ok_or_else(|| io::Error::from_raw_os_error(libc::EBADF))?;
+        let fid = self.fids.get_mut(&get_attr.fid).ok_or_else(ebadf)?;
 
-        // Refresh the metadata since we were explicitly asked for it.
-        fid.metadata = fs::metadata(&fid.path)?;
+        let st = stat(&fid.path)?;
 
         Ok(Rgetattr {
             valid: P9_GETATTR_BASIC,
-            qid: metadata_to_qid(&fid.metadata),
-            mode: fid.metadata.st_mode(),
-            uid: map_id_from_host(&self.uid_map, fid.metadata.st_uid()),
-            gid: map_id_from_host(&self.gid_map, fid.metadata.st_gid()),
-            nlink: fid.metadata.st_nlink(),
-            rdev: fid.metadata.st_rdev(),
-            size: fid.metadata.st_size(),
-            blksize: fid.metadata.st_blksize(),
-            blocks: fid.metadata.st_blocks(),
-            atime_sec: fid.metadata.st_atime() as u64,
-            atime_nsec: fid.metadata.st_atime_nsec() as u64,
-            mtime_sec: fid.metadata.st_mtime() as u64,
-            mtime_nsec: fid.metadata.st_mtime_nsec() as u64,
-            ctime_sec: fid.metadata.st_ctime() as u64,
-            ctime_nsec: fid.metadata.st_ctime_nsec() as u64,
+            qid: st.into(),
+            mode: st.st_mode,
+            uid: map_id_from_host(&self.uid_map, st.st_uid),
+            gid: map_id_from_host(&self.gid_map, st.st_gid),
+            nlink: st.st_nlink as u64,
+            rdev: st.st_rdev,
+            size: st.st_size as u64,
+            blksize: st.st_blksize as u64,
+            blocks: st.st_blocks as u64,
+            atime_sec: st.st_atime as u64,
+            atime_nsec: st.st_atime_nsec as u64,
+            mtime_sec: st.st_mtime as u64,
+            mtime_nsec: st.st_mtime_nsec as u64,
+            ctime_sec: st.st_ctime as u64,
+            ctime_nsec: st.st_ctime_nsec as u64,
             btime_sec: 0,
             btime_nsec: 0,
             gen: 0,
@@ -661,12 +699,13 @@ impl Server {
             return Err(io::Error::from_raw_os_error(libc::EPERM));
         }
 
-        let fid = self
-            .fids
-            .get_mut(&set_attr.fid)
-            .ok_or_else(|| io::Error::from_raw_os_error(libc::EBADF))?;
+        let fid = self.fids.get(&set_attr.fid).ok_or_else(ebadf)?;
 
-        let file = fs::OpenOptions::new().write(true).open(&fid.path)?;
+        let file = if let Some(ref file) = fid.file {
+            MaybeOwned::Borrowed(file)
+        } else {
+            MaybeOwned::Owned(open_fid(&self.proc, &fid, P9_NONBLOCK | P9_RDWR)?)
+        };
 
         if set_attr.valid & P9_SETATTR_SIZE != 0 {
             file.set_len(set_attr.size)?;
@@ -732,70 +771,11 @@ impl Server {
     }
 
     fn readdir(&mut self, readdir: &Treaddir) -> io::Result<Rreaddir> {
-        let fid = self
-            .fids
-            .get_mut(&readdir.fid)
-            .ok_or_else(|| io::Error::from_raw_os_error(libc::EBADF))?;
+        let fid = self.fids.get_mut(&readdir.fid).ok_or_else(ebadf)?;
 
-        if !fid.metadata.is_dir() {
+        if fid.filetype != FileType::Directory {
             return Err(io::Error::from_raw_os_error(libc::ENOTDIR));
         }
-
-        // The p9 client implementation in the kernel doesn't fully read all the contents
-        // of the directory.  This means that if some application performs a getdents()
-        // call, followed by removing some files, followed by another getdents() call,
-        // the offset that we get from the kernel is completely meaningless.  Instead
-        // we fully read the contents of the directory here and only re-read the directory
-        // if the offset we get from the client is 0.  Any other offset is served from the
-        // directory entries in memory.  This ensures consistency even if the directory
-        // changes in between Treaddir messages.
-        if readdir.offset == 0 {
-            let mut offset = 0;
-            let iter = fs::read_dir(&fid.path)?;
-            let dirents = iter.map(|item| -> io::Result<Dirent> {
-                let entry = item?;
-
-                let md = entry.metadata()?;
-                let qid = metadata_to_qid(&md);
-
-                let ty = if md.is_dir() {
-                    libc::DT_DIR
-                } else if md.is_file() {
-                    libc::DT_REG
-                } else {
-                    libc::DT_UNKNOWN
-                };
-
-                let name = entry
-                    .file_name()
-                    .into_string()
-                    .map_err(|_| io::Error::from_raw_os_error(libc::EINVAL))?;
-
-                let mut out = Dirent {
-                    qid,
-                    offset: 0, // set below
-                    ty,
-                    name,
-                };
-
-                offset += out.byte_size() as u64;
-                out.offset = offset;
-
-                Ok(out)
-            });
-
-            // This is taking advantage of the fact that we can turn a Iterator of Result<T, E>
-            // into a Result<FromIterator<T>, E> since Result implements FromIterator<Result<T, E>>.
-            fid.dirents = Some(dirents.collect::<io::Result<Vec<Dirent>>>()?);
-        }
-
-        let mut entries = fid
-            .dirents
-            .as_ref()
-            .ok_or_else(|| io::Error::from_raw_os_error(libc::EBADF))?
-            .iter()
-            .skip_while(|entry| entry.offset <= readdir.offset)
-            .peekable();
 
         // Use an empty Rreaddir struct to figure out the maximum number of bytes that
         // can be returned.
@@ -809,7 +789,24 @@ impl Server {
         let count = min(self.msize - header_size, readdir.count);
         let mut cursor = Cursor::new(Vec::with_capacity(count as usize));
 
-        while let Some(entry) = entries.peek() {
+        let dir = fid.file.as_mut().ok_or_else(ebadf)?;
+        let mut dirents = read_dir(dir, readdir.offset as libc::off64_t)?;
+        while let Some(dirent) = dirents.next().transpose()? {
+            let st = statat(&fid.path, &dirent.name, 0)?;
+
+            let name = dirent
+                .name
+                .to_str()
+                .map(String::from)
+                .map_err(|err| io::Error::new(io::ErrorKind::InvalidData, err))?;
+
+            let entry = Dirent {
+                qid: st.into(),
+                offset: dirent.offset,
+                ty: dirent.type_,
+                name,
+            };
+
             let byte_size = entry.byte_size() as usize;
 
             if cursor.get_ref().capacity() - cursor.get_ref().len() < byte_size {
@@ -817,8 +814,7 @@ impl Server {
                 break;
             }
 
-            // Safe because we just checked that the iterator contains at least one more item.
-            entries.next().unwrap().encode(&mut cursor)?;
+            entry.encode(&mut cursor)?;
         }
 
         Ok(Rreaddir {
@@ -831,7 +827,7 @@ impl Server {
             .fids
             .get(&fsync.fid)
             .and_then(|fid| fid.file.as_ref())
-            .ok_or_else(|| io::Error::from_raw_os_error(libc::EBADF))?;
+            .ok_or_else(ebadf)?;
 
         if fsync.datasync == 0 {
             file.sync_all()?;
@@ -850,84 +846,68 @@ impl Server {
         Err(io::Error::from_raw_os_error(libc::EOPNOTSUPP))
     }
 
-    fn link(&mut self, link: &Tlink) -> io::Result<()> {
-        let newname = Path::new(&link.name);
-        let buf = self
-            .fids
-            .get(&link.dfid)
-            .map(|dfid| dfid.path.to_path_buf())
-            .ok_or_else(|| io::Error::from_raw_os_error(libc::EBADF))?;
-        let newpath = join_path(buf, newname, &*self.root)?;
+    fn link(&mut self, link: Tlink) -> io::Result<()> {
+        let target = self.fids.get(&link.fid).ok_or_else(ebadf)?;
+        let path = string_to_cstring(format!("self/fd/{}", target.path.as_raw_fd()))?;
 
-        let path = self
-            .fids
-            .get(&link.fid)
-            .map(|fid| &fid.path)
-            .ok_or_else(|| io::Error::from_raw_os_error(libc::EBADF))?;
+        let dir = self.fids.get(&link.dfid).ok_or_else(ebadf)?;
+        let name = string_to_cstring(link.name)?;
 
-        fs::hard_link(path, &newpath)?;
+        // Safe because this doesn't modify any memory and we check the return value.
+        syscall!(unsafe {
+            libc::linkat(
+                self.proc.as_raw_fd(),
+                path.as_ptr(),
+                dir.path.as_raw_fd(),
+                name.as_ptr(),
+                libc::AT_SYMLINK_FOLLOW,
+            )
+        })?;
         Ok(())
     }
 
-    fn mkdir(&mut self, mkdir: &Tmkdir) -> io::Result<Rmkdir> {
-        let fid = self
-            .fids
-            .get(&mkdir.dfid)
-            .ok_or_else(|| io::Error::from_raw_os_error(libc::EBADF))?;
+    fn mkdir(&mut self, mkdir: Tmkdir) -> io::Result<Rmkdir> {
+        let fid = self.fids.get(&mkdir.dfid).ok_or_else(ebadf)?;
+        let name = string_to_cstring(mkdir.name)?;
 
-        let name = Path::new(&mkdir.name);
-        let newpath = join_path(fid.path.to_path_buf(), name, &*self.root)?;
-
-        fs::DirBuilder::new()
-            .recursive(false)
-            .mode(mkdir.mode & 0o755)
-            .create(&newpath)?;
-
+        // Safe because this doesn't modify any memory and we check the return value.
+        syscall!(unsafe { libc::mkdirat(fid.path.as_raw_fd(), name.as_ptr(), mkdir.mode) })?;
         Ok(Rmkdir {
-            qid: metadata_to_qid(&fs::metadata(&newpath)?),
+            qid: statat(&fid.path, &name, 0).map(Qid::from)?,
         })
     }
 
-    fn rename_at(&mut self, rename_at: &Trenameat) -> io::Result<()> {
-        let oldname = Path::new(&rename_at.oldname);
-        let oldbuf = self
-            .fids
-            .get(&rename_at.olddirfid)
-            .map(|dfid| dfid.path.to_path_buf())
-            .ok_or_else(|| io::Error::from_raw_os_error(libc::EBADF))?;
-        let oldpath = join_path(oldbuf, oldname, &*self.root)?;
+    fn rename_at(&mut self, rename_at: Trenameat) -> io::Result<()> {
+        let olddir = self.fids.get(&rename_at.olddirfid).ok_or_else(ebadf)?;
+        let oldname = string_to_cstring(rename_at.oldname)?;
 
-        let newname = Path::new(&rename_at.newname);
-        let newbuf = self
-            .fids
-            .get(&rename_at.newdirfid)
-            .map(|dfid| dfid.path.to_path_buf())
-            .ok_or_else(|| io::Error::from_raw_os_error(libc::EBADF))?;
-        let newpath = join_path(newbuf, newname, &*self.root)?;
+        let newdir = self.fids.get(&rename_at.newdirfid).ok_or_else(ebadf)?;
+        let newname = string_to_cstring(rename_at.newname)?;
 
-        fs::rename(&oldpath, &newpath)?;
+        // Safe because this doesn't modify any memory and we check the return value.
+        syscall!(unsafe {
+            libc::renameat(
+                olddir.path.as_raw_fd(),
+                oldname.as_ptr(),
+                newdir.path.as_raw_fd(),
+                newname.as_ptr(),
+            )
+        })?;
+
         Ok(())
     }
 
-    fn unlink_at(&mut self, unlink_at: &Tunlinkat) -> io::Result<()> {
-        let name = Path::new(&unlink_at.name);
-        let buf = self
-            .fids
-            .get(&unlink_at.dirfd)
-            .map(|fid| fid.path.to_path_buf())
-            .ok_or_else(|| io::Error::from_raw_os_error(libc::EBADF))?;
-        let path = join_path(buf, name, &*self.root)?;
+    fn unlink_at(&mut self, unlink_at: Tunlinkat) -> io::Result<()> {
+        let dir = self.fids.get(&unlink_at.dirfd).ok_or_else(ebadf)?;
+        let name = string_to_cstring(unlink_at.name)?;
 
-        let md = fs::metadata(&path)?;
-        if md.is_dir() && (unlink_at.flags & (libc::AT_REMOVEDIR as u32)) == 0 {
-            return Err(io::Error::from_raw_os_error(libc::EISDIR));
-        }
-
-        if md.is_dir() {
-            fs::remove_dir(&path)?;
-        } else {
-            fs::remove_file(&path)?;
-        }
+        syscall!(unsafe {
+            libc::unlinkat(
+                dir.path.as_raw_fd(),
+                name.as_ptr(),
+                unlink_at.flags as libc::c_int,
+            )
+        })?;
 
         Ok(())
     }

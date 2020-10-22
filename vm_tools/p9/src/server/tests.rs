@@ -8,13 +8,13 @@ use std::borrow::Cow;
 use std::collections::{HashSet, VecDeque};
 use std::env;
 use std::ffi::{CString, OsString};
-use std::fs::File;
+use std::fs::{self, File};
 use std::io::{self, Cursor};
 use std::mem;
 use std::ops::Deref;
-use std::os::linux::fs::MetadataExt;
 use std::os::unix::ffi::OsStringExt;
-use std::path::{Path, PathBuf};
+use std::os::unix::fs::MetadataExt;
+use std::path::{Component, Path, PathBuf};
 use std::u32;
 
 // Used to indicate that there is no fid associated with this message.
@@ -25,6 +25,47 @@ const ROOT_FID: u32 = 1;
 
 // How big we want the default buffer to be when running tests.
 const DEFAULT_BUFFER_SIZE: u32 = 4096;
+
+// Joins `path` to `buf`.  If `path` is '..', removes the last component from `buf`
+// only if `buf` != `root` but does nothing if `buf` == `root`.  Pushes `path` onto
+// `buf` if it is a normal path component.
+//
+// Returns an error if `path` is absolute, has more than one component, or contains
+// a '.' component.
+fn join_path<P: AsRef<Path>, R: AsRef<Path>>(
+    mut buf: PathBuf,
+    path: P,
+    root: R,
+) -> io::Result<PathBuf> {
+    let path = path.as_ref();
+    let root = root.as_ref();
+    debug_assert!(buf.starts_with(root));
+
+    if path.components().count() > 1 {
+        return Err(io::Error::from_raw_os_error(libc::EINVAL));
+    }
+
+    for component in path.components() {
+        match component {
+            // Prefix should only appear on windows systems.
+            Component::Prefix(_) => return Err(io::Error::from_raw_os_error(libc::EINVAL)),
+            // Absolute paths are not allowed.
+            Component::RootDir => return Err(io::Error::from_raw_os_error(libc::EINVAL)),
+            // '.' elements are not allowed.
+            Component::CurDir => return Err(io::Error::from_raw_os_error(libc::EINVAL)),
+            Component::ParentDir => {
+                // We only remove the parent path if we are not already at the root of the
+                // file system.
+                if buf != root {
+                    buf.pop();
+                }
+            }
+            Component::Normal(element) => buf.push(element),
+        }
+    }
+
+    Ok(buf)
+}
 
 // Automatically deletes the path it contains when it goes out of scope.
 struct ScopedPath<P: AsRef<Path>>(P);
@@ -107,13 +148,13 @@ fn check_qid(qid: &Qid, md: &fs::Metadata) {
     } else if md.is_file() {
         P9_QTFILE
     } else if md.file_type().is_symlink() {
-        _P9_QTSYMLINK
+        P9_QTSYMLINK
     } else {
         panic!("unknown file type: {:?}", md.file_type());
     };
     assert_eq!(qid.ty, ty);
-    assert_eq!(qid.version, md.st_mtime() as u32);
-    assert_eq!(qid.path, md.st_ino());
+    assert_eq!(qid.version, md.mtime() as u32);
+    assert_eq!(qid.path, md.ino());
 }
 
 fn check_attr(server: &mut Server, fid: u32, md: &fs::Metadata) {
@@ -129,26 +170,26 @@ fn check_attr(server: &mut Server, fid: u32, md: &fs::Metadata) {
     } else if md.is_file() {
         P9_QTFILE
     } else if md.file_type().is_symlink() {
-        _P9_QTSYMLINK
+        P9_QTSYMLINK
     } else {
         panic!("unknown file type: {:?}", md.file_type());
     };
     assert_eq!(rgetattr.valid, P9_GETATTR_BASIC);
     assert_eq!(rgetattr.qid.ty, ty);
-    assert_eq!(rgetattr.qid.version, md.st_mtime() as u32);
-    assert_eq!(rgetattr.qid.path, md.st_ino());
-    assert_eq!(rgetattr.mode, md.st_mode());
-    assert_eq!(rgetattr.uid, md.st_uid());
-    assert_eq!(rgetattr.gid, md.st_gid());
-    assert_eq!(rgetattr.nlink, md.st_nlink());
-    assert_eq!(rgetattr.rdev, md.st_rdev());
-    assert_eq!(rgetattr.size, md.st_size());
-    assert_eq!(rgetattr.atime_sec, md.st_atime() as u64);
-    assert_eq!(rgetattr.atime_nsec, md.st_atime_nsec() as u64);
-    assert_eq!(rgetattr.mtime_sec, md.st_mtime() as u64);
-    assert_eq!(rgetattr.mtime_nsec, md.st_mtime_nsec() as u64);
-    assert_eq!(rgetattr.ctime_sec, md.st_ctime() as u64);
-    assert_eq!(rgetattr.ctime_nsec, md.st_ctime_nsec() as u64);
+    assert_eq!(rgetattr.qid.version, md.mtime() as u32);
+    assert_eq!(rgetattr.qid.path, md.ino());
+    assert_eq!(rgetattr.mode, md.mode());
+    assert_eq!(rgetattr.uid, md.uid());
+    assert_eq!(rgetattr.gid, md.gid());
+    assert_eq!(rgetattr.nlink, md.nlink());
+    assert_eq!(rgetattr.rdev, md.rdev());
+    assert_eq!(rgetattr.size, md.size());
+    assert_eq!(rgetattr.atime_sec, md.atime() as u64);
+    assert_eq!(rgetattr.atime_nsec, md.atime_nsec() as u64);
+    assert_eq!(rgetattr.mtime_sec, md.mtime() as u64);
+    assert_eq!(rgetattr.mtime_nsec, md.mtime_nsec() as u64);
+    assert_eq!(rgetattr.ctime_sec, md.ctime() as u64);
+    assert_eq!(rgetattr.ctime_nsec, md.ctime_nsec() as u64);
     assert_eq!(rgetattr.btime_sec, 0);
     assert_eq!(rgetattr.btime_nsec, 0);
     assert_eq!(rgetattr.gen, 0);
@@ -191,7 +232,7 @@ fn walk<P: Into<PathBuf>>(
         wnames: names,
     };
 
-    let rwalk = server.walk(&twalk).expect("failed to walk directoy");
+    let rwalk = server.walk(twalk).expect("failed to walk directoy");
     assert_eq!(mds.len(), rwalk.wqids.len());
     for (md, qid) in mds.iter().zip(rwalk.wqids.iter()) {
         check_qid(qid, md);
@@ -206,7 +247,12 @@ fn open<P: Into<PathBuf>>(
     fid: u32,
     flags: u32,
 ) -> io::Result<Rlopen> {
-    walk(server, dir, dir_fid, fid, vec![String::from(name)]);
+    let wnames = if name.is_empty() {
+        vec![]
+    } else {
+        vec![String::from(name)]
+    };
+    walk(server, dir, dir_fid, fid, wnames);
 
     let tlopen = Tlopen { fid, flags };
 
@@ -270,7 +316,7 @@ fn create<P: Into<PathBuf>>(
         gid: 0,
     };
 
-    server.lcreate(&tlcreate)
+    server.lcreate(tlcreate)
 }
 
 struct Readdir<'a> {
@@ -389,7 +435,8 @@ fn setup<P: AsRef<Path>>(name: P) -> (ScopedPath<OsString>, Server) {
         .symlink_metadata()
         .expect("failed to get metadata for root dir");
 
-    let mut server = Server::new(&*test_dir, Default::default(), Default::default());
+    let mut server = Server::new(&*test_dir, Default::default(), Default::default())
+        .expect("Failed to create server");
 
     let tversion = Tversion {
         msize: DEFAULT_BUFFER_SIZE,
@@ -478,7 +525,7 @@ fn tree_walk() {
     dirs.push_back(test_dir.to_path_buf());
 
     while let Some(dir) = dirs.pop_front() {
-        let fid = next_fid;
+        let dfid = next_fid;
         next_fid += 1;
 
         let wnames: Vec<String> = dir
@@ -487,13 +534,20 @@ fn tree_walk() {
             .components()
             .map(|c| Path::new(&c).to_string_lossy().to_string())
             .collect();
-        walk(&mut server, &*test_dir, ROOT_FID, fid, wnames);
+        walk(&mut server, &*test_dir, ROOT_FID, dfid, wnames);
 
         let md = dir.symlink_metadata().expect("failed to get metadata");
 
-        check_attr(&mut server, fid, &md);
+        check_attr(&mut server, dfid, &md);
 
+        let fid = next_fid;
+        next_fid += 1;
+        open(&mut server, &dir, dfid, "", fid, P9_DIRECTORY).expect("Failed to open directory");
         for dirent in readdir(&mut server, fid) {
+            if dirent.name == "." || dirent.name == ".." {
+                continue;
+            }
+
             let entry_path = dir.join(&dirent.name);
             assert!(
                 entry_path.exists(),
@@ -588,7 +642,7 @@ fn set_len() {
     })
     .expect("failed to run set length of file");
 
-    assert_eq!(md.st_size(), len);
+    assert_eq!(md.size(), len);
 }
 
 #[test]
@@ -637,8 +691,8 @@ fn set_mtime() {
     })
     .expect("failed to set mtime");
 
-    assert_eq!(md.st_mtime() as u64, secs);
-    assert_eq!(md.st_mtime_nsec() as u64, nanos);
+    assert_eq!(md.mtime() as u64, secs);
+    assert_eq!(md.mtime_nsec() as u64, nanos);
 }
 
 #[test]
@@ -651,8 +705,8 @@ fn set_atime() {
     })
     .expect("failed to set atime");
 
-    assert_eq!(md.st_atime() as u64, secs);
-    assert_eq!(md.st_atime_nsec() as u64, nanos);
+    assert_eq!(md.atime() as u64, secs);
+    assert_eq!(md.atime_nsec() as u64, nanos);
 }
 
 #[test]
@@ -663,12 +717,12 @@ fn huge_directory() {
     let newdir = test_dir.join(name);
     fs::create_dir(&newdir).expect("failed to create directory");
 
-    let fid = ROOT_FID + 1;
+    let dfid = ROOT_FID + 1;
     walk(
         &mut server,
         &*test_dir,
         ROOT_FID,
-        fid,
+        dfid,
         vec![String::from(name)],
     );
 
@@ -680,14 +734,20 @@ fn huge_directory() {
         assert!(filenames.insert(name));
     }
 
+    let fid = dfid + 1;
+    open(&mut server, &newdir, dfid, "", fid, P9_DIRECTORY).expect("Failed to open directory");
     for f in readdir(&mut server, fid) {
         let path = newdir.join(&f.name);
 
         let md = fs::symlink_metadata(path).expect("failed to get metadata for path");
         check_qid(&f.qid, &md);
 
-        assert_eq!(f.ty, libc::DT_REG);
-        assert!(filenames.remove(&f.name));
+        if f.name == "." || f.name == ".." {
+            assert_eq!(f.ty, libc::DT_DIR);
+        } else {
+            assert_eq!(f.ty, libc::DT_REG);
+            assert!(filenames.remove(&f.name));
+        }
     }
 
     assert!(filenames.is_empty());
@@ -705,57 +765,12 @@ fn mkdir() {
         gid: 0,
     };
 
-    let rmkdir = server.mkdir(&tmkdir).expect("failed to create directory");
+    let rmkdir = server.mkdir(tmkdir).expect("failed to create directory");
     let md =
         fs::symlink_metadata(test_dir.join(name)).expect("failed to get metadata for directory");
 
     assert!(md.is_dir());
     check_qid(&rmkdir.qid, &md);
-}
-
-#[test]
-fn remove_all() {
-    let (test_dir, mut server) = setup("readdir");
-
-    let mut next_fid = ROOT_FID + 1;
-
-    let mut dirs = VecDeque::new();
-    dirs.push_back(test_dir.to_path_buf());
-
-    // First iterate over the whole directory.
-    let mut fids = VecDeque::new();
-    while let Some(dir) = dirs.pop_front() {
-        for entry in fs::read_dir(dir).expect("failed to read directory") {
-            let entry = entry.expect("unable to iterate over directory");
-            let fid = next_fid;
-            next_fid += 1;
-
-            let wnames: Vec<String> = entry
-                .path()
-                .strip_prefix(&test_dir)
-                .expect("test directory is not prefix of subdir")
-                .components()
-                .map(|c| Path::new(&c).to_string_lossy().to_string())
-                .collect();
-            walk(&mut server, &*test_dir, ROOT_FID, fid, wnames);
-
-            let ft = entry
-                .file_type()
-                .expect("failed to get file type for entry");
-            if ft.is_dir() {
-                dirs.push_back(entry.path());
-            }
-
-            fids.push_back(fid);
-        }
-    }
-
-    // Now remove everything in reverse order.
-    while let Some(fid) = fids.pop_back() {
-        let tremove = Tremove { fid };
-
-        server.remove(&tremove).expect("failed to remove entry");
-    }
 }
 
 #[test]
@@ -816,46 +831,9 @@ fn unlink_all() {
                 flags,
             };
 
-            server.unlink_at(&tunlinkat).expect("failed to unlink path");
+            server.unlink_at(tunlinkat).expect("failed to unlink path");
         }
     }
-}
-
-#[test]
-fn rename() {
-    let (test_dir, mut server) = setup("rename");
-
-    let name = "oldfile";
-    let content = create_local_file(&test_dir, name);
-
-    // First walk to the file to be renamed.
-    let fid = ROOT_FID + 1;
-    walk(
-        &mut server,
-        &*test_dir,
-        ROOT_FID,
-        fid,
-        vec![String::from(name)],
-    );
-
-    let newname = "newfile";
-    let trename = Trename {
-        fid,
-        dfid: ROOT_FID,
-        name: String::from(newname),
-    };
-
-    server.rename(&trename).expect("failed to rename file");
-
-    assert!(!test_dir.join(name).exists());
-
-    let mut newcontent = Vec::with_capacity(content.len());
-    let size = File::open(test_dir.join(newname))
-        .expect("failed to open file")
-        .read_to_end(&mut newcontent)
-        .expect("failed to read new file content");
-    assert_eq!(size, content.len());
-    assert_eq!(newcontent, content);
 }
 
 #[test]
@@ -873,7 +851,7 @@ fn rename_at() {
         newname: String::from(newname),
     };
 
-    server.rename_at(&trename).expect("failed to rename file");
+    server.rename_at(trename).expect("failed to rename file");
 
     assert!(!test_dir.join(name).exists());
 
@@ -902,7 +880,7 @@ macro_rules! open_test {
             let md =
                 fs::symlink_metadata(test_dir.join(name)).expect("failed to get metadata for file");
             check_qid(&rlopen.qid, &md);
-            assert_eq!(rlopen.iounit, 0);
+            assert_eq!(rlopen.iounit, md.blksize() as u32);
 
             check_attr(&mut server, fid, &md);
 
@@ -940,25 +918,25 @@ macro_rules! open_test {
     };
 }
 
-open_test!(read_only_file_open, _P9_RDONLY);
+open_test!(read_only_file_open, P9_RDONLY);
 open_test!(read_write_file_open, P9_RDWR);
 open_test!(write_only_file_open, P9_WRONLY);
 
-open_test!(create_read_only_file_open, P9_CREATE | _P9_RDONLY);
+open_test!(create_read_only_file_open, P9_CREATE | P9_RDONLY);
 open_test!(create_read_write_file_open, P9_CREATE | P9_RDWR);
 open_test!(create_write_only_file_open, P9_CREATE | P9_WRONLY);
 
-open_test!(append_read_only_file_open, P9_APPEND | _P9_RDONLY);
+open_test!(append_read_only_file_open, P9_APPEND | P9_RDONLY);
 open_test!(append_read_write_file_open, P9_APPEND | P9_RDWR);
 open_test!(append_write_only_file_open, P9_APPEND | P9_WRONLY);
 
-open_test!(trunc_read_only_file_open, P9_TRUNC | _P9_RDONLY);
+open_test!(trunc_read_only_file_open, P9_TRUNC | P9_RDONLY);
 open_test!(trunc_read_write_file_open, P9_TRUNC | P9_RDWR);
 open_test!(trunc_write_only_file_open, P9_TRUNC | P9_WRONLY);
 
 open_test!(
     create_append_read_only_file_open,
-    P9_CREATE | P9_APPEND | _P9_RDONLY
+    P9_CREATE | P9_APPEND | P9_RDONLY
 );
 open_test!(
     create_append_read_write_file_open,
@@ -971,7 +949,7 @@ open_test!(
 
 open_test!(
     create_trunc_read_only_file_open,
-    P9_CREATE | P9_TRUNC | _P9_RDONLY
+    P9_CREATE | P9_TRUNC | P9_RDONLY
 );
 open_test!(
     create_trunc_read_write_file_open,
@@ -984,7 +962,7 @@ open_test!(
 
 open_test!(
     append_trunc_read_only_file_open,
-    P9_APPEND | P9_TRUNC | _P9_RDONLY
+    P9_APPEND | P9_TRUNC | P9_RDONLY
 );
 open_test!(
     append_trunc_read_write_file_open,
@@ -997,7 +975,7 @@ open_test!(
 
 open_test!(
     create_append_trunc_read_only_file_open,
-    P9_CREATE | P9_APPEND | P9_TRUNC | _P9_RDONLY
+    P9_CREATE | P9_APPEND | P9_TRUNC | P9_RDONLY
 );
 open_test!(
     create_append_trunc_read_write_file_open,
@@ -1010,7 +988,7 @@ open_test!(
 
 open_test!(
     create_excl_read_only_file_open,
-    P9_CREATE | P9_EXCL | _P9_RDONLY,
+    P9_CREATE | P9_EXCL | P9_RDONLY,
     io::ErrorKind::AlreadyExists
 );
 open_test!(
@@ -1037,7 +1015,7 @@ macro_rules! create_test {
 
             let md =
                 fs::symlink_metadata(test_dir.join(name)).expect("failed to get metadata for file");
-            assert_eq!(rlcreate.iounit, 0);
+            assert_eq!(rlcreate.iounit, md.blksize() as u32);
             check_qid(&rlcreate.qid, &md);
             check_attr(&mut server, fid, &md);
 
@@ -1068,13 +1046,13 @@ macro_rules! create_test {
     };
 }
 
-create_test!(read_only_file_create, _P9_RDONLY, 0o600u32);
+create_test!(read_only_file_create, P9_RDONLY, 0o600u32);
 create_test!(read_write_file_create, P9_RDWR, 0o600u32);
 create_test!(write_only_file_create, P9_WRONLY, 0o600u32);
 
 create_test!(
     append_read_only_file_create,
-    P9_APPEND | _P9_RDONLY,
+    P9_APPEND | P9_RDONLY,
     0o600u32
 );
 create_test!(append_read_write_file_create, P9_APPEND | P9_RDWR, 0o600u32);

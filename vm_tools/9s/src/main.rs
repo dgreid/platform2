@@ -187,7 +187,7 @@ fn handle_client<R: io::Read, W: io::Write>(
     mut writer: W,
 ) -> io::Result<()> {
     let params: ServerParams = (*server_params).clone();
-    let mut server = p9::Server::new(PathBuf::from(&params.root), params.uid_map, params.gid_map);
+    let mut server = p9::Server::new(PathBuf::from(&params.root), params.uid_map, params.gid_map)?;
 
     loop {
         server.handle_message(&mut reader, &mut writer)?;

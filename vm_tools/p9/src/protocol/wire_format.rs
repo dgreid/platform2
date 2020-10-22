@@ -223,17 +223,14 @@ mod test {
             0xef as u8,
             WireFormat::decode(&mut Cursor::new(&buf)).unwrap()
         );
-        assert_eq!(
-            0xbeef as u16,
-            WireFormat::decode(&mut Cursor::new(&buf)).unwrap()
-        );
+        assert_eq!(0xbeef as u16, u16::decode(&mut Cursor::new(&buf)).unwrap());
         assert_eq!(
             0xdeadbeef as u32,
-            WireFormat::decode(&mut Cursor::new(&buf)).unwrap()
+            u32::decode(&mut Cursor::new(&buf)).unwrap()
         );
         assert_eq!(
             0x8badf00d_deadbeef as u64,
-            WireFormat::decode(&mut Cursor::new(&buf)).unwrap()
+            u64::decode(&mut Cursor::new(&buf)).unwrap()
         );
     }
 
