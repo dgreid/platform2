@@ -159,14 +159,10 @@ class MountTest
     helper_.SetUpSystemSalt();
     helper_.InjectSystemSalt(&platform_, kImageSaltFile);
 
-    // Set up default uid/gid values
-    chronos_uid_ = 1000;
-    chronos_gid_ = 1000;
-    shared_gid_ = 1001;
-    chaps_uid_ = 223;
-
     crypto_.set_tpm(&tpm_);
     crypto_.set_use_tpm(false);
+
+    platform_.GetFake()->SetStandardUsersAndGroups();
 
     user_timestamp_cache_.reset(new UserOldestActivityTimestampCache());
     mount_ = new Mount();
@@ -196,14 +192,6 @@ class MountTest
   }
 
   bool DoMountInit() {
-    EXPECT_CALL(platform_, GetUserId("chronos", _, _))
-        .WillOnce(DoAll(SetArgPointee<1>(chronos_uid_),
-                        SetArgPointee<2>(chronos_gid_), Return(true)));
-    EXPECT_CALL(platform_, GetUserId("chaps", _, _))
-        .WillOnce(DoAll(SetArgPointee<1>(chaps_uid_),
-                        SetArgPointee<2>(shared_gid_), Return(true)));
-    EXPECT_CALL(platform_, GetGroupId("chronos-access", _))
-        .WillOnce(DoAll(SetArgPointee<1>(shared_gid_), Return(true)));
     return mount_->Init(&platform_, &crypto_, user_timestamp_cache_.get());
   }
 
@@ -557,10 +545,6 @@ class MountTest
  protected:
   // Protected for trivial access.
   MakeTests helper_;
-  uid_t chronos_uid_;
-  gid_t chronos_gid_;
-  uid_t chaps_uid_;
-  gid_t shared_gid_;
   NiceMock<MockPlatform> platform_;
   NiceMock<MockTpm> tpm_;
   NiceMock<MockTpmInit> tpm_init_;
@@ -601,14 +585,6 @@ TEST_P(MountTest, BadInitTest) {
   EXPECT_CALL(platform_, WriteSecureBlobToFileAtomicDurable(
                              FilePath("/dev/null/salt"), _, _))
       .WillRepeatedly(Return(false));
-  EXPECT_CALL(platform_, GetUserId("chronos", _, _))
-      .WillOnce(
-          DoAll(SetArgPointee<1>(1000), SetArgPointee<2>(1000), Return(true)));
-  EXPECT_CALL(platform_, GetUserId("chaps", _, _))
-      .WillOnce(
-          DoAll(SetArgPointee<1>(1001), SetArgPointee<2>(1001), Return(true)));
-  EXPECT_CALL(platform_, GetGroupId("chronos-access", _))
-      .WillOnce(DoAll(SetArgPointee<1>(1002), Return(true)));
   EXPECT_FALSE(mount_->Init(&platform_, &crypto_, user_timestamp_cache_.get()));
 }
 
@@ -647,7 +623,8 @@ TEST_P(MountTest, MountCryptohomeHasPrivileges) {
   Credentials credentials(user->username, user->passkey);
   // Let the legacy key iteration work here.
 
-  user->InjectUserPaths(&platform_, chronos_uid_, chronos_gid_, shared_gid_,
+  user->InjectUserPaths(&platform_, fake_platform::kChronosUID,
+                        fake_platform::kChronosGID, fake_platform::kSharedGID,
                         kDaemonGid, ShouldTestEcryptfs());
   user->InjectKeyset(&platform_, true);
 
@@ -685,8 +662,9 @@ TEST_P(MountTest, BindMyFilesDownloadsSuccess) {
   EXPECT_CALL(platform_, Bind(downloads_path, downloads_in_myfiles))
       .WillOnce(Return(true));
 
-  MountHelper mnt_helper(chronos_uid_, chronos_gid_, shared_gid_, kImageDir,
-                         kSkelDir, helper_.system_salt, true /*legacy_mount*/,
+  MountHelper mnt_helper(fake_platform::kChronosUID, fake_platform::kChronosGID,
+                         fake_platform::kSharedGID, kImageDir, kSkelDir,
+                         helper_.system_salt, true /*legacy_mount*/,
                          &platform_);
 
   EXPECT_TRUE(mnt_helper.BindMyFilesDownloads(dest_dir));
@@ -698,8 +676,9 @@ TEST_P(MountTest, BindMyFilesDownloadsMissingUserHome) {
   // When dest_dir doesn't exists BindMyFilesDownloads returns false.
   EXPECT_CALL(platform_, DirectoryExists(dest_dir)).WillOnce(Return(false));
 
-  MountHelper mnt_helper(chronos_uid_, chronos_gid_, shared_gid_, kImageDir,
-                         kSkelDir, helper_.system_salt, true /*legacy_mount*/,
+  MountHelper mnt_helper(fake_platform::kChronosUID, fake_platform::kChronosGID,
+                         fake_platform::kSharedGID, kImageDir, kSkelDir,
+                         helper_.system_salt, true /*legacy_mount*/,
                          &platform_);
 
   EXPECT_FALSE(mnt_helper.BindMyFilesDownloads(dest_dir));
@@ -714,8 +693,9 @@ TEST_P(MountTest, BindMyFilesDownloadsMissingDownloads) {
   EXPECT_CALL(platform_, DirectoryExists(downloads_path))
       .WillOnce(Return(false));
 
-  MountHelper mnt_helper(chronos_uid_, chronos_gid_, shared_gid_, kImageDir,
-                         kSkelDir, helper_.system_salt, true /*legacy_mount*/,
+  MountHelper mnt_helper(fake_platform::kChronosUID, fake_platform::kChronosGID,
+                         fake_platform::kSharedGID, kImageDir, kSkelDir,
+                         helper_.system_salt, true /*legacy_mount*/,
                          &platform_);
 
   EXPECT_FALSE(mnt_helper.BindMyFilesDownloads(dest_dir));
@@ -733,8 +713,9 @@ TEST_P(MountTest, BindMyFilesDownloadsMissingMyFilesDownloads) {
   EXPECT_CALL(platform_, DirectoryExists(downloads_in_myfiles))
       .WillOnce(Return(false));
 
-  MountHelper mnt_helper(chronos_uid_, chronos_gid_, shared_gid_, kImageDir,
-                         kSkelDir, helper_.system_salt, true /*legacy_mount*/,
+  MountHelper mnt_helper(fake_platform::kChronosUID, fake_platform::kChronosGID,
+                         fake_platform::kSharedGID, kImageDir, kSkelDir,
+                         helper_.system_salt, true /*legacy_mount*/,
                          &platform_);
 
   EXPECT_FALSE(mnt_helper.BindMyFilesDownloads(dest_dir));
@@ -779,8 +760,9 @@ TEST_P(MountTest, BindMyFilesDownloadsRemoveExistingFiles) {
   EXPECT_CALL(platform_, Bind(downloads_path, downloads_in_myfiles))
       .WillOnce(Return(true));
 
-  MountHelper mnt_helper(chronos_uid_, chronos_gid_, shared_gid_, kImageDir,
-                         kSkelDir, helper_.system_salt, true /*legacy_mount*/,
+  MountHelper mnt_helper(fake_platform::kChronosUID, fake_platform::kChronosGID,
+                         fake_platform::kSharedGID, kImageDir, kSkelDir,
+                         helper_.system_salt, true /*legacy_mount*/,
                          &platform_);
 
   EXPECT_TRUE(mnt_helper.BindMyFilesDownloads(dest_dir));
@@ -825,8 +807,9 @@ TEST_P(MountTest, BindMyFilesDownloadsMoveForgottenFiles) {
   EXPECT_CALL(platform_, Bind(downloads_path, downloads_in_myfiles))
       .WillOnce(Return(true));
 
-  MountHelper mnt_helper(chronos_uid_, chronos_gid_, shared_gid_, kImageDir,
-                         kSkelDir, helper_.system_salt, true /*legacy_mount*/,
+  MountHelper mnt_helper(fake_platform::kChronosUID, fake_platform::kChronosGID,
+                         fake_platform::kSharedGID, kImageDir, kSkelDir,
+                         helper_.system_salt, true /*legacy_mount*/,
                          &platform_);
 
   EXPECT_TRUE(mnt_helper.BindMyFilesDownloads(dest_dir));
@@ -841,21 +824,22 @@ class ChapsDirectoryTest : public ::testing::Test {
         kDatabaseDir("/base_chaps_dir/database"),
         kDatabaseFile("/base_chaps_dir/database/file"),
         kLegacyDir("/legacy"),
-        kRootUID(0),
-        kRootGID(0),
-        kChapsUID(1),
-        kSharedGID(2),
         mount_(new Mount()),
         user_timestamp_cache_(new UserOldestActivityTimestampCache()) {
     crypto_.set_platform(&platform_);
+    platform_.GetFake()->SetStandardUsersAndGroups();
     mount_->Init(&platform_, &crypto_, user_timestamp_cache_.get());
-    mount_->chaps_user_ = kChapsUID;
-    mount_->default_access_group_ = kSharedGID;
+    mount_->chaps_user_ = fake_platform::kChapsUID;
+    mount_->default_access_group_ = fake_platform::kSharedGID;
     // By default, set stats to the expected values.
-    InitStat(&base_stat_, 040750, kChapsUID, kSharedGID);
-    InitStat(&salt_stat_, 0600, kRootUID, kRootGID);
-    InitStat(&database_dir_stat_, 040750, kChapsUID, kSharedGID);
-    InitStat(&database_file_stat_, 0640, kChapsUID, kSharedGID);
+    InitStat(&base_stat_, 040750, fake_platform::kChapsUID,
+             fake_platform::kSharedGID);
+    InitStat(&salt_stat_, 0600, fake_platform::kRootUID,
+             fake_platform::kRootGID);
+    InitStat(&database_dir_stat_, 040750, fake_platform::kChapsUID,
+             fake_platform::kSharedGID);
+    InitStat(&database_file_stat_, 0640, fake_platform::kChapsUID,
+             fake_platform::kSharedGID);
   }
 
   virtual ~ChapsDirectoryTest() {}
@@ -887,10 +871,6 @@ class ChapsDirectoryTest : public ::testing::Test {
   const FilePath kDatabaseDir;
   const FilePath kDatabaseFile;
   const FilePath kLegacyDir;
-  const uid_t kRootUID;
-  const gid_t kRootGID;
-  const uid_t kChapsUID;
-  const gid_t kSharedGID;
 
   base::stat_wrapper_t base_stat_;
   base::stat_wrapper_t salt_stat_;
@@ -929,7 +909,8 @@ TEST_F(ChapsDirectoryTest, DirectoryDoesNotExist) {
       .WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, SetPermissions(kBaseDir, 0750))
       .WillRepeatedly(Return(true));
-  EXPECT_CALL(platform_, SetOwnership(kBaseDir, kChapsUID, kSharedGID, true))
+  EXPECT_CALL(platform_, SetOwnership(kBaseDir, fake_platform::kChapsUID,
+                                      fake_platform::kSharedGID, true))
       .WillRepeatedly(Return(true));
   ASSERT_TRUE(RunCheck());
 }
@@ -967,21 +948,23 @@ TEST_F(ChapsDirectoryTest, FixBadPerms) {
 
 TEST_F(ChapsDirectoryTest, FixBadOwnership) {
   // Specify bad ownership.
-  base_stat_.st_uid = kRootUID;
-  salt_stat_.st_gid = kChapsUID;
-  database_dir_stat_.st_gid = kChapsUID;
-  database_file_stat_.st_uid = kSharedGID;
+  base_stat_.st_uid = fake_platform::kRootUID;
+  salt_stat_.st_gid = fake_platform::kChapsUID;
+  database_dir_stat_.st_gid = fake_platform::kChapsUID;
+  database_file_stat_.st_uid = fake_platform::kSharedGID;
   SetupFakeChapsDirectory();
   // Expect corrections.
-  EXPECT_CALL(platform_, SetOwnership(kBaseDir, kChapsUID, kSharedGID, true))
+  EXPECT_CALL(platform_, SetOwnership(kBaseDir, fake_platform::kChapsUID,
+                                      fake_platform::kSharedGID, true))
       .WillRepeatedly(Return(true));
-  EXPECT_CALL(platform_, SetOwnership(kSaltFile, kRootUID, kRootGID, true))
+  EXPECT_CALL(platform_, SetOwnership(kSaltFile, fake_platform::kRootUID,
+                                      fake_platform::kRootGID, true))
       .WillRepeatedly(Return(true));
-  EXPECT_CALL(platform_,
-              SetOwnership(kDatabaseDir, kChapsUID, kSharedGID, true))
+  EXPECT_CALL(platform_, SetOwnership(kDatabaseDir, fake_platform::kChapsUID,
+                                      fake_platform::kSharedGID, true))
       .WillRepeatedly(Return(true));
-  EXPECT_CALL(platform_,
-              SetOwnership(kDatabaseFile, kChapsUID, kSharedGID, true))
+  EXPECT_CALL(platform_, SetOwnership(kDatabaseFile, fake_platform::kChapsUID,
+                                      fake_platform::kSharedGID, true))
       .WillRepeatedly(Return(true));
   ASSERT_TRUE(RunCheck());
 }
@@ -997,7 +980,7 @@ TEST_F(ChapsDirectoryTest, FixBadPermsFailure) {
 
 TEST_F(ChapsDirectoryTest, FixBadOwnershipFailure) {
   // Specify bad ownership.
-  base_stat_.st_uid = kRootUID;
+  base_stat_.st_uid = fake_platform::kRootUID;
   SetupFakeChapsDirectory();
   // Expect corrections but fail to apply.
   EXPECT_CALL(platform_, SetOwnership(_, _, _, _))
@@ -1318,7 +1301,8 @@ TEST_P(MountTest, MountCryptohome) {
   TestUser* user = &helper_.users[0];
   Credentials credentials(user->username, user->passkey);
 
-  user->InjectUserPaths(&platform_, chronos_uid_, chronos_gid_, shared_gid_,
+  user->InjectUserPaths(&platform_, fake_platform::kChronosUID,
+                        fake_platform::kChronosGID, fake_platform::kSharedGID,
                         kDaemonGid, ShouldTestEcryptfs());
   user->InjectKeyset(&platform_, true);
 
@@ -1359,7 +1343,8 @@ TEST_P(MountTest, MountCryptohomeChapsKey) {
 
   SecureBlob local_chaps(vault_keyset.chaps_key().begin(),
                          vault_keyset.chaps_key().end());
-  user->InjectUserPaths(&platform_, chronos_uid_, chronos_gid_, shared_gid_,
+  user->InjectUserPaths(&platform_, fake_platform::kChronosUID,
+                        fake_platform::kChronosGID, fake_platform::kSharedGID,
                         kDaemonGid, ShouldTestEcryptfs());
   user->InjectKeyset(&platform_, true);
 
@@ -1412,7 +1397,8 @@ TEST_P(MountTest, MountCryptohomeNoChapsKey) {
   EXPECT_EQ(vault_keyset.legacy_index(), 0);
   EXPECT_EQ(vault_keyset.serialized().has_wrapped_chaps_key(), false);
 
-  user->InjectUserPaths(&platform_, chronos_uid_, chronos_gid_, shared_gid_,
+  user->InjectUserPaths(&platform_, fake_platform::kChronosUID,
+                        fake_platform::kChronosGID, fake_platform::kSharedGID,
                         kDaemonGid, ShouldTestEcryptfs());
   user->InjectKeyset(&platform_, true);
 
@@ -1532,7 +1518,8 @@ TEST_P(MountTest, MountCryptohomeNoChange) {
   EXPECT_EQ(vault_keyset.legacy_index(), 0);
   serialized.CopyFrom(vault_keyset.serialized());
 
-  user->InjectUserPaths(&platform_, chronos_uid_, chronos_gid_, shared_gid_,
+  user->InjectUserPaths(&platform_, fake_platform::kChronosUID,
+                        fake_platform::kChronosGID, fake_platform::kSharedGID,
                         kDaemonGid, ShouldTestEcryptfs());
   user->InjectKeyset(&platform_, true);
 
@@ -1645,7 +1632,8 @@ TEST_P(MountTest, UserActivityTimestampUpdated) {
       .WillRepeatedly(Return(true));
 
   user->InjectKeyset(&platform_, true);
-  user->InjectUserPaths(&platform_, chronos_uid_, chronos_gid_, shared_gid_,
+  user->InjectUserPaths(&platform_, fake_platform::kChronosUID,
+                        fake_platform::kChronosGID, fake_platform::kSharedGID,
                         kDaemonGid, ShouldTestEcryptfs());
 
   // Mount()
@@ -1676,8 +1664,9 @@ TEST_P(MountTest, UserActivityTimestampUpdated) {
 TEST_P(MountTest, RememberMountOrderingTest) {
   // Checks that mounts made with MountAndPush/BindAndPush are undone in the
   // right order.
-  MountHelper mnt_helper(chronos_uid_, chronos_gid_, shared_gid_, kImageDir,
-                         kSkelDir, helper_.system_salt, true /*legacy_mount*/,
+  MountHelper mnt_helper(fake_platform::kChronosUID, fake_platform::kChronosGID,
+                         fake_platform::kSharedGID, kImageDir, kSkelDir,
+                         helper_.system_salt, true /*legacy_mount*/,
                          &platform_);
 
   FilePath src("/src");
@@ -1928,8 +1917,9 @@ TEST_P(MountTest, CreateTrackedSubdirectoriesReplaceExistingDir) {
           .WillOnce(Return(false));
       EXPECT_CALL(platform_, CreateDirectory(tracked_dir_path))
           .WillOnce(Return(true));
-      EXPECT_CALL(platform_, SetOwnership(tracked_dir_path, chronos_uid_,
-                                          chronos_gid_, true))
+      EXPECT_CALL(platform_,
+                  SetOwnership(tracked_dir_path, fake_platform::kChronosUID,
+                               fake_platform::kChronosGID, true))
           .WillOnce(Return(true));
     } else {
       // For dircrypto, just skip the directory creation.
@@ -1994,12 +1984,14 @@ TEST_P(MountTest, MountCryptohomeToMigrateFromEcryptfs) {
   user->InjectKeyset(&platform_, ShouldTestEcryptfs());
 
   // Inject dircrypto user paths.
-  user->InjectUserPaths(&platform_, chronos_uid_, chronos_gid_, shared_gid_,
+  user->InjectUserPaths(&platform_, fake_platform::kChronosUID,
+                        fake_platform::kChronosGID, fake_platform::kSharedGID,
                         kDaemonGid, false /* is_ecryptfs */);
 
   if (ShouldTestEcryptfs()) {
     // Inject user ecryptfs paths too.
-    user->InjectUserPaths(&platform_, chronos_uid_, chronos_gid_, shared_gid_,
+    user->InjectUserPaths(&platform_, fake_platform::kChronosUID,
+                          fake_platform::kChronosGID, fake_platform::kSharedGID,
                           kDaemonGid, true /* is_ecryptfs */);
 
     // When an ecryptfs vault exists, mount it to a temporary location.
@@ -2057,7 +2049,8 @@ TEST_P(MountTest, MountCryptohomeShadowOnly) {
   user->InjectKeyset(&platform_, true);
 
   // Inject dircrypto user paths.
-  user->InjectUserPaths(&platform_, chronos_uid_, chronos_gid_, shared_gid_,
+  user->InjectUserPaths(&platform_, fake_platform::kChronosUID,
+                        fake_platform::kChronosGID, fake_platform::kSharedGID,
                         kDaemonGid, ShouldTestEcryptfs());
 
   ExpectCryptohomeMountShadowOnly(*user);
@@ -2080,7 +2073,8 @@ TEST_P(MountTest, MountCryptohomeForceDircrypto) {
   InsertTestUsers(&kDefaultUsers[10], 1);
   TestUser* user = &helper_.users[0];
   user->InjectKeyset(&platform_, true);
-  user->InjectUserPaths(&platform_, chronos_uid_, chronos_gid_, shared_gid_,
+  user->InjectUserPaths(&platform_, fake_platform::kChronosUID,
+                        fake_platform::kChronosGID, fake_platform::kSharedGID,
                         kDaemonGid, ShouldTestEcryptfs());
 
   EXPECT_CALL(platform_, CreateDirectory(_)).WillRepeatedly(Return(true));
@@ -2269,15 +2263,16 @@ TEST_P(EphemeralNoUserSystemTest, CreateMyFilesDownloads) {
   EXPECT_CALL(platform_, CreateDirectory(downloads_path))
       .WillOnce(Return(true));
   EXPECT_CALL(platform_,
-              SetOwnership(downloads_path, chronos_uid_, chronos_gid_, _))
+              SetOwnership(downloads_path, fake_platform::kChronosUID,
+                           fake_platform::kChronosGID, _))
       .WillOnce(Return(true));
   // Expecting MyFiles to not exist and then be created.
   EXPECT_CALL(platform_, DirectoryExists(myfiles_path))
       .WillOnce(Return(false))
       .WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, CreateDirectory(myfiles_path)).WillOnce(Return(true));
-  EXPECT_CALL(platform_,
-              SetOwnership(myfiles_path, chronos_uid_, chronos_gid_, _))
+  EXPECT_CALL(platform_, SetOwnership(myfiles_path, fake_platform::kChronosUID,
+                                      fake_platform::kChronosGID, _))
       .WillOnce(Return(true));
   // Expecting MyFiles/Downloads to not exist and then be created, with right
   // user and group.
@@ -2286,8 +2281,9 @@ TEST_P(EphemeralNoUserSystemTest, CreateMyFilesDownloads) {
       .WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, CreateDirectory(myfiles_downloads_path))
       .WillOnce(Return(true));
-  EXPECT_CALL(platform_, SetOwnership(myfiles_downloads_path, chronos_uid_,
-                                      chronos_gid_, _))
+  EXPECT_CALL(platform_,
+              SetOwnership(myfiles_downloads_path, fake_platform::kChronosUID,
+                           fake_platform::kChronosGID, _))
       .WillOnce(Return(true));
 
   // Expect GCache and Gcache/v2 to be created with the right user and group.
@@ -2295,8 +2291,8 @@ TEST_P(EphemeralNoUserSystemTest, CreateMyFilesDownloads) {
       .WillOnce(Return(false))
       .WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, CreateDirectory(gcache_path)).WillOnce(Return(true));
-  EXPECT_CALL(platform_,
-              SetOwnership(gcache_path, chronos_uid_, chronos_gid_, _))
+  EXPECT_CALL(platform_, SetOwnership(gcache_path, fake_platform::kChronosUID,
+                                      fake_platform::kChronosGID, _))
       .WillOnce(Return(true));
   EXPECT_CALL(platform_, DirectoryExists(gcache_v2_path))
       .WillOnce(Return(false))
@@ -2304,10 +2300,12 @@ TEST_P(EphemeralNoUserSystemTest, CreateMyFilesDownloads) {
   EXPECT_CALL(platform_, CreateDirectory(gcache_v2_path))
       .WillOnce(Return(true));
   EXPECT_CALL(platform_,
-              SetOwnership(gcache_v2_path, chronos_uid_, chronos_gid_, _))
+              SetOwnership(gcache_v2_path, fake_platform::kChronosUID,
+                           fake_platform::kChronosGID, _))
       .WillOnce(Return(true));
 
-  EXPECT_CALL(platform_, SetOwnership(base_path, chronos_uid_, shared_gid_, _))
+  EXPECT_CALL(platform_, SetOwnership(base_path, fake_platform::kChronosUID,
+                                      fake_platform::kSharedGID, _))
       .WillOnce(Return(true));
 
   // Expectaction for Mount::SetupGroupAccess
@@ -2318,11 +2316,12 @@ TEST_P(EphemeralNoUserSystemTest, CreateMyFilesDownloads) {
               SetGroupAccessible(AnyOf(base_path, myfiles_path, downloads_path,
                                        myfiles_downloads_path, gcache_path,
                                        gcache_v1_path, gcache_v2_path),
-                                 shared_gid_, _))
+                                 fake_platform::kSharedGID, _))
       .WillRepeatedly(Return(true));
 
-  MountHelper mnt_helper(chronos_uid_, chronos_gid_, shared_gid_, kImageDir,
-                         kSkelDir, helper_.system_salt, true /*legacy_mount*/,
+  MountHelper mnt_helper(fake_platform::kChronosUID, fake_platform::kChronosGID,
+                         fake_platform::kSharedGID, kImageDir, kSkelDir,
+                         helper_.system_salt, true /*legacy_mount*/,
                          &platform_);
 
   ASSERT_TRUE(mnt_helper.SetUpEphemeralCryptohome(base_path));
@@ -2338,7 +2337,8 @@ TEST_P(EphemeralNoUserSystemTest, CreateMyFilesDownloadsAlreadyExists) {
   const auto gcache_dirs = Property(
       &FilePath::value, StartsWith(base_path.Append("GCache").value()));
 
-  EXPECT_CALL(platform_, SetOwnership(base_path, chronos_uid_, shared_gid_, _))
+  EXPECT_CALL(platform_, SetOwnership(base_path, fake_platform::kChronosUID,
+                                      fake_platform::kSharedGID, _))
       .WillOnce(Return(true));
 
   // Expecting Downloads and MyFiles/Downloads to exist thus CreateDirectory
@@ -2350,11 +2350,12 @@ TEST_P(EphemeralNoUserSystemTest, CreateMyFilesDownloadsAlreadyExists) {
   EXPECT_CALL(platform_,
               SetGroupAccessible(AnyOf(base_path, myfiles_path, downloads_path,
                                        myfiles_downloads_path, gcache_dirs),
-                                 shared_gid_, _))
+                                 fake_platform::kSharedGID, _))
       .WillRepeatedly(Return(true));
 
-  MountHelper mnt_helper(chronos_uid_, chronos_gid_, shared_gid_, kImageDir,
-                         kSkelDir, helper_.system_salt, true /*legacy_mount*/,
+  MountHelper mnt_helper(fake_platform::kChronosUID, fake_platform::kChronosGID,
+                         fake_platform::kSharedGID, kImageDir, kSkelDir,
+                         helper_.system_salt, true /*legacy_mount*/,
                          &platform_);
 
   ASSERT_TRUE(mnt_helper.SetUpEphemeralCryptohome(base_path));
@@ -2901,7 +2902,8 @@ TEST_P(EphemeralExistingUserSystemTest, OwnerUnknownMountNoRemoveTest) {
   // No c-homes will be removed.  The rest of the mocking just gets us to
   // Mount().
   for (auto& user : helper_.users)
-    user.InjectUserPaths(&platform_, chronos_uid_, chronos_gid_, shared_gid_,
+    user.InjectUserPaths(&platform_, fake_platform::kChronosUID,
+                         fake_platform::kChronosGID, fake_platform::kSharedGID,
                          kDaemonGid, ShouldTestEcryptfs());
 
   std::vector<FilePath> empty;
@@ -3005,7 +3007,8 @@ TEST_P(EphemeralExistingUserSystemTest, EnterpriseMountRemoveTest) {
       .WillRepeatedly(Return(false));
   helper_.InjectEphemeralSkeleton(&platform_,
                                   FilePath(user->user_ephemeral_mount_path));
-  user->InjectUserPaths(&platform_, chronos_uid_, chronos_gid_, shared_gid_,
+  user->InjectUserPaths(&platform_, fake_platform::kChronosUID,
+                        fake_platform::kChronosGID, fake_platform::kSharedGID,
                         kDaemonGid, ShouldTestEcryptfs());
   // Only expect the mounted user to "exist".
   EXPECT_CALL(platform_,
@@ -3111,7 +3114,8 @@ TEST_P(EphemeralExistingUserSystemTest, MountRemoveTest) {
       .WillRepeatedly(Return(false));
   helper_.InjectEphemeralSkeleton(&platform_,
                                   FilePath(user->user_ephemeral_mount_path));
-  user->InjectUserPaths(&platform_, chronos_uid_, chronos_gid_, shared_gid_,
+  user->InjectUserPaths(&platform_, fake_platform::kChronosUID,
+                        fake_platform::kChronosGID, fake_platform::kSharedGID,
                         kDaemonGid, ShouldTestEcryptfs());
   // Only expect the mounted user to "exist".
   EXPECT_CALL(platform_,
@@ -3408,8 +3412,8 @@ TEST_P(EphemeralNoUserSystemTest, MountGuestUserDir) {
               Stat(Property(&FilePath::value, StartsWith("/home/user/")), _))
       .WillOnce(Return(false));
   base::stat_wrapper_t fake_user_st;
-  fake_user_st.st_uid = chronos_uid_;
-  fake_user_st.st_gid = chronos_gid_;
+  fake_user_st.st_uid = fake_platform::kChronosUID;
+  fake_user_st.st_gid = fake_platform::kChronosGID;
   fake_user_st.st_mode = S_IFDIR | S_IRWXU;
   EXPECT_CALL(platform_, Stat(FilePath("/home/chronos"), _))
       .WillOnce(DoAll(SetArgPointee<1>(fake_user_st), Return(true)));
@@ -3523,8 +3527,8 @@ TEST_P(EphemeralNoUserSystemTest, MountGuestUserFailSetUserType) {
               Stat(Property(&FilePath::value, StartsWith("/home/user/")), _))
       .WillOnce(Return(false));
   base::stat_wrapper_t fake_user_st;
-  fake_user_st.st_uid = chronos_uid_;
-  fake_user_st.st_gid = chronos_gid_;
+  fake_user_st.st_uid = fake_platform::kChronosUID;
+  fake_user_st.st_gid = fake_platform::kChronosGID;
   fake_user_st.st_mode = S_IFDIR | S_IRWXU;
   EXPECT_CALL(platform_, Stat(FilePath("/home/chronos"), _))
       .WillOnce(DoAll(SetArgPointee<1>(fake_user_st), Return(true)));

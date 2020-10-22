@@ -4,6 +4,8 @@
 
 #include "cryptohome/mock_platform.h"
 
+#include "cryptohome/fake_platform.h"
+
 using testing::_;
 using testing::Invoke;
 using testing::NiceMock;
@@ -13,7 +15,13 @@ namespace cryptohome {
 
 MockPlatform::MockPlatform()
     : mock_enumerator_(new NiceMock<MockFileEnumerator>()),
-      mock_process_(new NiceMock<brillo::ProcessMock>()) {
+      mock_process_(new NiceMock<brillo::ProcessMock>()),
+      fake_platform_(new FakePlatform()) {
+  ON_CALL(*this, GetUserId(_, _, _))
+      .WillByDefault(Invoke(fake_platform_.get(), &FakePlatform::GetUserId));
+  ON_CALL(*this, GetGroupId(_, _))
+      .WillByDefault(Invoke(fake_platform_.get(), &FakePlatform::GetGroupId));
+
   ON_CALL(*this, GetOwnership(_, _, _, _))
       .WillByDefault(Invoke(this, &MockPlatform::MockGetOwnership));
   ON_CALL(*this, SetOwnership(_, _, _, _)).WillByDefault(Return(true));
@@ -21,10 +29,6 @@ MockPlatform::MockPlatform()
       .WillByDefault(Invoke(this, &MockPlatform::MockGetPermissions));
   ON_CALL(*this, SetPermissions(_, _)).WillByDefault(Return(true));
   ON_CALL(*this, SetGroupAccessible(_, _, _)).WillByDefault(Return(true));
-  ON_CALL(*this, GetUserId(_, _, _))
-      .WillByDefault(Invoke(this, &MockPlatform::MockGetUserId));
-  ON_CALL(*this, GetGroupId(_, _))
-      .WillByDefault(Invoke(this, &MockPlatform::MockGetGroupId));
   ON_CALL(*this, GetFileEnumerator(_, _, _))
       .WillByDefault(Invoke(this, &MockPlatform::MockGetFileEnumerator));
   ON_CALL(*this, GetCurrentTime())

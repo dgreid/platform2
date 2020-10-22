@@ -939,7 +939,7 @@ TEST_F(ServiceTestNotInitialized,
 
 class ServiceExTest : public ServiceTest {
  public:
-  ServiceExTest() = default;
+  ServiceExTest() { platform_.GetFake()->SetStandardUsersAndGroups(); }
   ~ServiceExTest() override = default;
 
   VaultKeyset* GetNiceMockVaultKeyset(const std::string& obfuscated_username,

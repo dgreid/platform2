@@ -1786,7 +1786,7 @@ TEST_F(UserDataAuthTest, GetAccountDiskUsage) {
 // functionalities.
 class UserDataAuthExTest : public UserDataAuthTest {
  public:
-  UserDataAuthExTest() = default;
+  UserDataAuthExTest() { platform_.GetFake()->SetStandardUsersAndGroups(); }
   ~UserDataAuthExTest() override = default;
 
   VaultKeyset* GetNiceMockVaultKeyset(const std::string& obfuscated_username,

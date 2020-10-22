@@ -18,6 +18,7 @@
 #include <brillo/process/process_mock.h>
 #include <gmock/gmock.h>
 
+#include "cryptohome/fake_platform.h"
 #include "cryptohome/platform.h"
 
 namespace cryptohome {
@@ -413,6 +414,8 @@ class MockPlatform : public Platform {
   MockFileEnumerator* mock_enumerator() { return mock_enumerator_.get(); }
   brillo::ProcessMock* mock_process() { return mock_process_.get(); }
 
+  FakePlatform* GetFake() { return fake_platform_.get(); }
+
  private:
   std::unique_ptr<brillo::Process> MockCreateProcessInstance() {
     auto res = std::move(mock_process_);
@@ -435,17 +438,6 @@ class MockPlatform : public Platform {
     return true;
   }
 
-  bool MockGetUserId(const std::string& user, uid_t* user_id, gid_t* group_id) {
-    *user_id = getuid();
-    *group_id = getgid();
-    return true;
-  }
-
-  bool MockGetGroupId(const std::string& group, gid_t* group_id) {
-    *group_id = getgid();
-    return true;
-  }
-
   FileEnumerator* MockGetFileEnumerator(const base::FilePath& root_path,
                                         bool recursive,
                                         int file_type) {
@@ -457,6 +449,7 @@ class MockPlatform : public Platform {
 
   std::unique_ptr<MockFileEnumerator> mock_enumerator_;
   std::unique_ptr<brillo::ProcessMock> mock_process_;
+  std::unique_ptr<FakePlatform> fake_platform_;
 };
 
 }  // namespace cryptohome

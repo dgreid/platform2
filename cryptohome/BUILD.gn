@@ -424,6 +424,7 @@ if (use.test) {
       "disk_cleanup_routines_unittest.cc",
       "disk_cleanup_unittest.cc",
       "fake_le_credential_backend.cc",
+      "fake_platform.cc",
       "fido/make_credential_response_test.cc",
       "fingerprint_manager_unittest.cc",
       "firmware_management_parameters_unittest.cc",
@@ -546,6 +547,7 @@ if (use.test) {
       "libs:target_defaults",
     ]
     sources = [
+      "fake_platform.cc",
       "mock_platform.cc",
       "mount_encrypted/encrypted_fs_unittest.cc",
       "mount_encrypted/encryption_key_unittest.cc",

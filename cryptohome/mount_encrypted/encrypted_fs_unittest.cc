@@ -38,6 +38,8 @@ class EncryptedFsTest : public ::testing::Test {
 
     CHECK(base::CreateDirectory(tmpdir_.GetPath().AppendASCII("home/chronos")));
 
+    platform_.GetFake()->SetStandardUsersAndGroups();
+
     // Setup EncryptedFs with temp directory.
     encrypted_fs_ = std::make_unique<EncryptedFs>(
         tmpdir_.GetPath(), &platform_, &loopdev_manager_, &device_mapper_);
