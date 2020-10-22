@@ -278,7 +278,7 @@ int ippusb_manager_main(int argc, char* argv[]) {
 
   LOG(INFO) << "Waiting until ippusb_bridge has started.";
   if (!WaitForIppusbBridgeStartup(socket_paths,
-                                  base::TimeDelta::FromSeconds(5))) {
+                                  base::TimeDelta::FromSeconds(10))) {
     LOG(ERROR) << "Failed to wait for ippusb_bridge startup.";
     return 1;
   }
