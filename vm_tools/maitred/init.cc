@@ -121,10 +121,15 @@ constexpr struct {
         .failure_is_fatal = true,
     },
     {
+        // For borealis mount as exec because some apps require it.
         .source = "tmp",
         .target = "/tmp",
         .fstype = "tmpfs",
-        .flags = MS_NOSUID | MS_NODEV | MS_NOEXEC,
+        .flags = MS_NOSUID |
+#if !USE_VM_BOREALIS
+                 MS_NOEXEC |
+#endif
+                 MS_NODEV,
         .data = nullptr,
         .failure_is_fatal = true,
     },
