@@ -49,6 +49,16 @@ TEST(EcCommand, Run_Failure) {
   EXPECT_FALSE(mock.Run(kDummyFd));
 }
 
+TEST(EcCommand, ConstReq) {
+  const MockFpModeCommand mock;
+  EXPECT_TRUE(mock.Req());
+}
+
+TEST(EcCommand, ConstResp) {
+  const MockFpModeCommand mock;
+  EXPECT_TRUE(mock.Resp());
+}
+
 TEST(EcCommand, Run_CheckResult_Success) {
   constexpr int kExpectedResult = 42;
   MockFpModeCommand mock;
