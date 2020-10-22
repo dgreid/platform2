@@ -5,6 +5,7 @@
 # found in the LICENSE file.
 
 . /usr/share/misc/chromeos-common.sh
+. /usr/share/misc/lvm-utils.sh
 
 # UNDO_MOUNTS stores the mounts that have currently been mounted. In case the
 # startup operations fail (from unrecoverable state on disk), the mounts
@@ -18,6 +19,10 @@ ENCRYPTED_STATEFUL_MNT="/mnt/stateful_partition/encrypted"
 # USE_ENCRYPTED_REBOOT_VAULT determines whether the encrypted reboot vault
 # should be created/mounted.
 USE_ENCRYPTED_REBOOT_VAULT=1
+
+# USE_LVM_STATEFUL_PARTITION determines whether the device should attempt
+# to use the new LVM stateful partition format.
+USE_LVM_STATEFUL_PARTITION=0
 
 # Unmounts the incomplete mount setup during the failure path. Failure to
 # set up mounts in this script result in the entire stateful partition getting
@@ -272,6 +277,15 @@ if [ "$ROOTDEV_RET_CODE" = "0" ] && [ "$ROOTDEV_TYPE" != "/dev/ram" ]; then
       DIRTY_EXPIRE_CENTISECS="$(sysctl -n vm.dirty_expire_centisecs)"
       COMMIT_INTERVAL="$(( DIRTY_EXPIRE_CENTISECS / 100 ))"
       STATE_FLAGS="${STATE_FLAGS},commit=${COMMIT_INTERVAL}"
+    fi
+  fi
+
+  if [ "${USE_LVM_STATEFUL_PARTITION}" -eq "1" ]; then
+    # Attempt to get a valid volume group name.
+    vg_name="$(get_volume_group "${STATE_DEV}")"
+    if [ -n "${vg_name}" ]; then
+      vgchange -ay "${vg_name}"
+      STATE_DEV="/dev/${vg_name}/unencrypted"
     fi
   fi
 
