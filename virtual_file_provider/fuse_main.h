@@ -5,6 +5,8 @@
 #ifndef VIRTUAL_FILE_PROVIDER_FUSE_MAIN_H_
 #define VIRTUAL_FILE_PROVIDER_FUSE_MAIN_H_
 
+#include <sys/types.h>
+
 #include <string>
 
 #include <base/callback.h>
@@ -35,7 +37,10 @@ class FuseMainDelegate {
 // This doesn't exit until the FUSE main loop exits (e.g. the file system is
 // unmounted, or this process is terminated).
 // Returns the value returned by libfuse's fuse_main().
-int FuseMain(const base::FilePath& mount_path, FuseMainDelegate* delegate);
+int FuseMain(const base::FilePath& mount_path,
+             FuseMainDelegate* delegate,
+             base::Optional<uid_t> userId,
+             base::Optional<gid_t> groupId);
 
 }  // namespace virtual_file_provider
 

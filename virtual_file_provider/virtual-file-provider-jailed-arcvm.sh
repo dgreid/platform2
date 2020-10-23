@@ -16,7 +16,8 @@ MOUNT_PATH="/run/arcvm/media/virtual_files"
 nsenter --mount=/run/namespaces/mnt_concierge --no-fork \
   -- mkdir -p "${MOUNT_PATH}"
 
-MOUNT_FLAGS="MS_NOSUID|MS_NODEV|MS_NOEXEC"
+UID=655360 # android-root
+GID=656437 # external_storage
 
 # Start virtual-file-provider with MOUNT_PATH as FUSE mount point
 # in the concierge namespace.
@@ -32,4 +33,5 @@ exec minijail0 \
   -l \
   -c 0x200100 \
   -u virtual-file-provider -g virtual-file-provider -G \
-  -- /usr/bin/virtual-file-provider "${MOUNT_PATH}"
+  -- /usr/bin/virtual-file-provider --path="${MOUNT_PATH}" --uid="${UID}" \
+    --gid="${GID}"

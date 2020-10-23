@@ -11,8 +11,10 @@
 #include <fuse/fuse.h>
 
 #include <base/files/scoped_file.h>
+#include <base/optional.h>
 #include <base/posix/eintr_wrapper.h>
 #include <base/stl_util.h>
+#include <base/strings/stringprintf.h>
 
 #include "virtual_file_provider/operation_throttle.h"
 #include "virtual_file_provider/util.h"
@@ -44,7 +46,7 @@ OperationThrottle* GetOperationThrottle() {
 int GetAttr(const char* path, struct stat* stat) {
   // Everything except the root is a file.
   if (path == std::string("/")) {
-    stat->st_mode = S_IFDIR;
+    stat->st_mode = S_IFDIR | S_IXGRP;
     stat->st_nlink = 2;
   } else {
     DCHECK_EQ('/', path[0]);
@@ -56,7 +58,7 @@ int GetAttr(const char* path, struct stat* stat) {
       LOG(ERROR) << "Invalid ID " << id;
       return -ENOENT;
     }
-    stat->st_mode = S_IFREG;
+    stat->st_mode = S_IFREG | S_IRGRP;
     stat->st_nlink = 1;
     stat->st_size = size;
   }
@@ -155,11 +157,27 @@ void* Init(struct fuse_conn_info* conn) {
 
 }  // namespace
 
-int FuseMain(const base::FilePath& mount_path, FuseMainDelegate* delegate) {
-  const std::string path_str = mount_path.value();
+int FuseMain(const base::FilePath& mount_path,
+             FuseMainDelegate* delegate,
+             base::Optional<uid_t> userId,
+             base::Optional<gid_t> groupId) {
+  std::string mount_options = "noexec";  // disallow code execution
+  if (userId || groupId) {
+    // allow others to access files
+    mount_options.append(",allow_other");
+    if (userId) {
+      mount_options.append(base::StringPrintf(",uid=%u", userId.value()));
+    }
+    if (groupId) {
+      mount_options.append(base::StringPrintf(",gid=%u", groupId.value()));
+    }
+  }
   const char* fuse_argv[] = {
-      kFileSystemName, path_str.c_str(),
+      kFileSystemName,
+      mount_path.value().c_str(),
       "-f",  // "-f" for foreground.
+      "-o",
+      mount_options.c_str(),
   };
   constexpr struct fuse_operations operations = {
       .getattr = GetAttr,

@@ -33,4 +33,4 @@ exec minijail0 \
      -k "tmpfs,/run,tmpfs,${MOUNT_FLAGS}" \
      -b /run/dbus \
      -b /dev/fuse \
-     -- /usr/bin/virtual-file-provider /mnt
+     -- /usr/bin/virtual-file-provider --path=/mnt

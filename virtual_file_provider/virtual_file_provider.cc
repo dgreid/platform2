@@ -11,9 +11,11 @@
 #include <base/location.h>
 #include <base/logging.h>
 #include <base/message_loop/message_pump_type.h>
+#include <base/optional.h>
 #include <base/posix/eintr_wrapper.h>
 #include <base/threading/platform_thread.h>
 #include <base/threading/thread.h>
+#include <brillo/flag_helper.h>
 #include <brillo/syslog_logging.h>
 
 #include "virtual_file_provider/fuse_main.h"
@@ -131,16 +133,20 @@ void FuseMainDelegateImpl::NotifyIdReleased(const std::string& id) {
 
 }  // namespace virtual_file_provider
 
+constexpr char kUsage[] =
+    "virtual-file-provider daemon\n"
+    "Usage: virtual-file-provider [flags]";
+
 int main(int argc, char** argv) {
-  if (argc != 2) {
-    fprintf(stderr, "usage: %s <FUSE mount path>\n", argv[0]);
-    return 1;
-  }
-  base::FilePath fuse_mount_path(argv[1]);
+  DEFINE_string(path, "/mnt", "Set up a FUSE mount at this path");
+  DEFINE_int32(uid, -1, "All FUSE files/dirs will be owned by this user id");
+  DEFINE_int32(gid, -1, "All FUSE files/dirs will be owned by this group id");
+  brillo::FlagHelper::Init(argc, argv, kUsage);
 
   brillo::InitLog(brillo::kLogToSyslog | brillo::kLogToStderr);
   base::AtExitManager at_exit_manager;
 
+  base::FilePath fuse_mount_path(FLAGS_path);
   virtual_file_provider::SizeMap size_map;
 
   // Run D-Bus service on the service thread.
@@ -153,5 +159,10 @@ int main(int argc, char** argv) {
   // Enter the FUSE main loop.
   virtual_file_provider::FuseMainDelegateImpl delegate(&service_thread,
                                                        &size_map);
-  return virtual_file_provider::FuseMain(fuse_mount_path, &delegate);
+  base::Optional<uid_t> userId =
+      FLAGS_uid >= 0 ? base::make_optional(FLAGS_uid) : base::nullopt;
+  base::Optional<gid_t> groupId =
+      FLAGS_gid >= 0 ? base::make_optional(FLAGS_gid) : base::nullopt;
+  return virtual_file_provider::FuseMain(fuse_mount_path, &delegate, userId,
+                                         groupId);
 }
