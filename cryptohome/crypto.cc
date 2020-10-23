@@ -820,13 +820,22 @@ bool Crypto::EncryptVaultKeyset(const VaultKeyset& vault_keyset,
                                   vkk_data.auth_iv.value())) {
       return false;
     }
-  } else if (vault_keyset.IsSignatureChallengeProtected()) {
+
+    serialized->set_salt(vault_key_salt.data(), vault_key_salt.size());
+    return true;
+  }
+
+  if (vault_keyset.IsSignatureChallengeProtected()) {
     if (!EncryptChallengeCredential(vault_keyset, vault_key,
                                     obfuscated_username, serialized)) {
       // TODO(crbug.com/842791): add ReportCryptohomeError
       return false;
     }
-  } else {
+    serialized->set_salt(vault_key_salt.data(), vault_key_salt.size());
+    return true;
+  }
+
+  if (use_tpm_ && tpm_ && tpm_->IsOwned()) {
     bool encrypt_tpm_success = false;
     KeyBlobs blobs;
     if (CanUnsealWithUserAuth()) {
@@ -838,24 +847,27 @@ bool Crypto::EncryptVaultKeyset(const VaultKeyset& vault_keyset,
     }
     if (!encrypt_tpm_success) {
       LOG_IF(ERROR, !disable_logging_for_tests_) << "Encrypt using TPM failed";
-      if (use_tpm_ && tpm_ && tpm_->IsOwned()) {
-        ReportCryptohomeError(kEncryptWithTpmFailed);
-      }
-      if (!EncryptScrypt(vault_keyset, vault_key, serialized)) {
-        return false;
-      }
-    } else {
-      if (!GenerateAndWrapKeys(vault_keyset, vault_key, vault_key_salt, blobs,
-                               /*store_reset_seed=*/true, serialized)) {
-        LOG(ERROR) << "Failed to generate unwrapped keys";
-        return false;
-      }
-
-      if (!EncryptAuthorizationData(serialized, blobs.vkk_key.value(),
-                                    blobs.auth_iv.value())) {
-        return false;
-      }
+      ReportCryptohomeError(kEncryptWithTpmFailed);
+      return false;
     }
+
+    if (!GenerateAndWrapKeys(vault_keyset, vault_key, vault_key_salt, blobs,
+                             /*store_reset_seed=*/true, serialized)) {
+      LOG(ERROR) << "Failed to generate unwrapped keys";
+      return false;
+    }
+
+    if (!EncryptAuthorizationData(serialized, blobs.vkk_key.value(),
+                                  blobs.auth_iv.value())) {
+      return false;
+    }
+
+    serialized->set_salt(vault_key_salt.data(), vault_key_salt.size());
+    return true;
+  }
+
+  if (!EncryptScrypt(vault_keyset, vault_key, serialized)) {
+    return false;
   }
 
   serialized->set_salt(vault_key_salt.data(), vault_key_salt.size());
