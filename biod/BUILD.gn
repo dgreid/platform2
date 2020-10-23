@@ -73,6 +73,7 @@ static_library("libbiod") {
     "fp_seed_command.cc",
     "power_button_filter.cc",
     "power_manager_client.cc",
+    "tools/bio_crypto_init.cc",
     "uinput_device.cc",
     "updater/cros_fp_updater.cc",
     "updater/update_utils.cc",
@@ -92,7 +93,10 @@ executable("biod") {
 }
 
 executable("bio_crypto_init") {
-  sources = [ "tools/bio_crypto_init.cc" ]
+  sources = [
+    "tools/bio_crypto_init.cc",
+    "tools/bio_crypto_init_main.cc",
+  ]
   configs += [ ":target_defaults" ]
   deps = [ ":libbiod" ]
 }

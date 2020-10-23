@@ -9,22 +9,24 @@
 namespace biod {
 
 TEST(BioCryptoInitTest, CheckTemplateVersionCompatible) {
-  EXPECT_TRUE(CrosFpTemplateVersionCompatible(3, 3));
-  EXPECT_TRUE(CrosFpTemplateVersionCompatible(4, 4));
+  BioCryptoInit bio_crypto_init;
+  EXPECT_TRUE(bio_crypto_init.CrosFpTemplateVersionCompatible(3, 3));
+  EXPECT_TRUE(bio_crypto_init.CrosFpTemplateVersionCompatible(4, 4));
   // Format version 2 should not be in the field.
-  EXPECT_FALSE(CrosFpTemplateVersionCompatible(2, 2));
+  EXPECT_FALSE(bio_crypto_init.CrosFpTemplateVersionCompatible(2, 2));
 
   // This should change when we deprecate firmware with template format v3
-  EXPECT_TRUE(CrosFpTemplateVersionCompatible(3, 4));
+  EXPECT_TRUE(bio_crypto_init.CrosFpTemplateVersionCompatible(3, 4));
 
   // These are false because of the current rule and should change when we
   // launch format version 5.
-  EXPECT_FALSE(CrosFpTemplateVersionCompatible(4, 5));
-  EXPECT_FALSE(CrosFpTemplateVersionCompatible(5, 5));
+  EXPECT_FALSE(bio_crypto_init.CrosFpTemplateVersionCompatible(4, 5));
+  EXPECT_FALSE(bio_crypto_init.CrosFpTemplateVersionCompatible(5, 5));
 
   // This should break and be fixed when we uprev format version to 5 so that
   // we are guarding against unplanned uprev.
-  EXPECT_TRUE(CrosFpTemplateVersionCompatible(4, FP_TEMPLATE_FORMAT_VERSION));
+  EXPECT_TRUE(bio_crypto_init.CrosFpTemplateVersionCompatible(
+      4, FP_TEMPLATE_FORMAT_VERSION));
 }
 
 }  // namespace biod
