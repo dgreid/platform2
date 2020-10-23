@@ -90,6 +90,9 @@ class ThermalDevice : public ThermalDeviceInterface {
   // Number of attempts to find and open the sysfs file made so far.
   int num_init_attempts_;
 
+  // Number of read errors sysfs file so far.
+  int num_read_errors_;
+
   // Type of thermal device.
   ThermalDeviceType type_;
 

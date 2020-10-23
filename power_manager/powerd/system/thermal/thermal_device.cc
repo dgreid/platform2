@@ -22,7 +22,7 @@ namespace {
 
 // Default interval for polling the thermal device.
 const int kDefaultPollIntervalMs = 5000;
-const int kNumInitAttemptsBeforeGivingUp = 5;
+const int kNumErrorBeforeGivingUp = 5;
 
 }  // namespace
 
@@ -31,6 +31,7 @@ ThermalDevice::ThermalDevice() : ThermalDevice(base::FilePath()) {}
 ThermalDevice::ThermalDevice(base::FilePath device_path)
     : device_path_(device_path),
       num_init_attempts_(0),
+      num_read_errors_(0),
       type_(ThermalDeviceType::kUnknown),
       poll_interval_ms_(kDefaultPollIntervalMs),
       current_state_(DeviceThermalState::kUnknown) {}
@@ -66,7 +67,7 @@ void ThermalDevice::StartTimer() {
 
 void ThermalDevice::ReadDeviceState() {
   if (!polling_file_.HasOpenedFile() && !InitSysfsFile()) {
-    if (num_init_attempts_++ >= kNumInitAttemptsBeforeGivingUp) {
+    if (num_init_attempts_++ >= kNumErrorBeforeGivingUp) {
       LOG(ERROR) << "Giving up on thermal device: " << device_path_;
       poll_timer_.Stop();
     }
@@ -92,12 +93,17 @@ void ThermalDevice::ReadCallback(const std::string& data) {
                << trimmed_data << "]";
   }
   UpdateThermalState(new_state);
+  num_read_errors_ = 0;
   StartTimer();
 }
 
 void ThermalDevice::ErrorCallback() {
   LOG(ERROR) << "Error reading file: " << polling_path_;
   UpdateThermalState(DeviceThermalState::kUnknown);
+  if (num_read_errors_++ >= kNumErrorBeforeGivingUp) {
+    LOG(ERROR) << "Give up reading file: " << polling_path_;
+    return;
+  }
   StartTimer();
 }
 
