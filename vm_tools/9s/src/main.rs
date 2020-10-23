@@ -38,15 +38,15 @@ use libchromeos::vsock::*;
 const DEFAULT_BUFFER_SIZE: usize = 8192;
 
 // Address family identifiers.
-const VSOCK: &'static str = "vsock:";
-const UNIX: &'static str = "unix:";
-const UNIX_FD: &'static str = "unix-fd:";
+const VSOCK: &str = "vsock:";
+const UNIX: &str = "unix:";
+const UNIX_FD: &str = "unix-fd:";
 
 // Usage for this program.
-const USAGE: &'static str = "9s [options] {vsock:<port>|unix:<path>|unix-fd:<fd>|<ip>:<port>}";
+const USAGE: &str = "9s [options] {vsock:<port>|unix:<path>|unix-fd:<fd>|<ip>:<port>}";
 
 // Program name.
-const IDENT: &'static [u8] = b"9s\0";
+const IDENT: &[u8] = b"9s\0";
 
 enum ListenAddress {
     Net(net::SocketAddr),
@@ -69,13 +69,13 @@ enum ParseAddressError {
 impl fmt::Display for ParseAddressError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            &ParseAddressError::MissingUnixPath => write!(f, "missing unix path"),
-            &ParseAddressError::MissingUnixFd => write!(f, "missing unix file descriptor"),
-            &ParseAddressError::MissingVsockPort => write!(f, "missing vsock port number"),
-            &ParseAddressError::Net(ref e) => e.fmt(f),
-            &ParseAddressError::Unix(ref e) => write!(f, "invalid unix path: {}", e),
-            &ParseAddressError::UnixFd(ref e) => write!(f, "invalid file descriptor: {}", e),
-            &ParseAddressError::Vsock(ref e) => write!(f, "invalid vsock port number: {}", e),
+            ParseAddressError::MissingUnixPath => write!(f, "missing unix path"),
+            ParseAddressError::MissingUnixFd => write!(f, "missing unix file descriptor"),
+            ParseAddressError::MissingVsockPort => write!(f, "missing vsock port number"),
+            ParseAddressError::Net(ref e) => e.fmt(f),
+            ParseAddressError::Unix(ref e) => write!(f, "invalid unix path: {}", e),
+            ParseAddressError::UnixFd(ref e) => write!(f, "invalid file descriptor: {}", e),
+            ParseAddressError::Vsock(ref e) => write!(f, "invalid vsock port number: {}", e),
         }
     }
 }
@@ -137,28 +137,26 @@ enum Error {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            &Error::Address(ref e) => e.fmt(f),
-            &Error::Argument(ref e) => e.fmt(f),
-            &Error::Cid(ref e) => write!(f, "invalid cid value: {}", e),
-            &Error::IdMapConvertClient(ref s) => {
+            Error::Address(ref e) => e.fmt(f),
+            Error::Argument(ref e) => e.fmt(f),
+            Error::Cid(ref e) => write!(f, "invalid cid value: {}", e),
+            Error::IdMapConvertClient(ref s) => {
                 write!(f, "malformed client portion of id map ({})", s)
             }
-            &Error::IdMapConvertHost(ref s) => {
-                write!(f, "malformed host portion of id map ({})", s)
-            }
-            &Error::IdMapDuplicate(ref s) => write!(f, "duplicate mapping for host id {}", s),
-            &Error::IdMapParse(ref s) => write!(
+            Error::IdMapConvertHost(ref s) => write!(f, "malformed host portion of id map ({})", s),
+            Error::IdMapDuplicate(ref s) => write!(f, "duplicate mapping for host id {}", s),
+            Error::IdMapParse(ref s) => write!(
                 f,
                 "id map must have exactly 2 components: <host_id>:<client_id> ({})",
                 s
             ),
-            &Error::IO(ref e) => e.fmt(f),
-            &Error::MissingAcceptCid => write!(f, "`accept_cid` is required for vsock servers"),
-            &Error::SocketGid(ref e) => write!(f, "invalid gid value: {}", e),
-            &Error::SocketPathNotAbsolute(ref p) => {
+            Error::IO(ref e) => e.fmt(f),
+            Error::MissingAcceptCid => write!(f, "`accept_cid` is required for vsock servers"),
+            Error::SocketGid(ref e) => write!(f, "invalid gid value: {}", e),
+            Error::SocketPathNotAbsolute(ref p) => {
                 write!(f, "unix socket path must be absolute: {:?}", p)
             }
-            &Error::Syslog(ref e) => write!(f, "failed to initialize syslog: {}", e),
+            Error::Syslog(ref e) => write!(f, "failed to initialize syslog: {}", e),
         }
     }
 }
@@ -317,7 +315,7 @@ fn run_unix_server_with_fd(server_params: Arc<ServerParams>, fd: RawFd) -> io::R
 }
 
 fn add_id_mapping<T: Clone + FromStr + Ord>(s: &str, map: &mut p9::ServerIdMap<T>) -> Result<()> {
-    let components: Vec<&str> = s.split(":").collect();
+    let components: Vec<&str> = s.split(':').collect();
     if components.len() != 2 {
         return Err(Error::IdMapParse(s.to_owned()));
     }
@@ -374,7 +372,7 @@ fn main() -> Result<()> {
         .parse(std::env::args_os().skip(1))
         .map_err(Error::Argument)?;
 
-    if matches.opt_present("h") || matches.free.len() == 0 {
+    if matches.opt_present("h") || matches.free.is_empty() {
         print!("{}", opts.usage(USAGE));
         return Ok(());
     }
@@ -393,8 +391,8 @@ fn main() -> Result<()> {
 
     let server_params = Arc::from(ServerParams {
         root: matches.opt_str("r").unwrap_or_else(|| "/".into()),
-        uid_map: uid_map,
-        gid_map: gid_map,
+        uid_map,
+        gid_map,
     });
 
     // Safe because this string is defined above in this file and it contains exactly
