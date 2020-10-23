@@ -28,6 +28,9 @@ constexpr char kParsedDeviceAttrValue[] = "FakeDeviceAttrValue";
 constexpr char kChnAttrName[] = "FakeChnAttr";
 constexpr char kChnAttrValue[] = "FakeChnValue";
 
+constexpr char kDummyChnAttrName1[] = "DummyChnAttr1";
+constexpr char kDummyChnAttrName2[] = "DummyChnAttr2";
+
 class SensorDeviceImplTest : public ::testing::Test {
  protected:
   void SetUp() override {
@@ -84,14 +87,19 @@ TEST_F(SensorDeviceImplTest, SetTimeout) {
   remote_->SetTimeout(0);
 }
 
-TEST_F(SensorDeviceImplTest, GetAttribute) {
+TEST_F(SensorDeviceImplTest, GetAttributes) {
   base::RunLoop loop;
-  remote_->GetAttribute(
-      kDeviceAttrName,
+  remote_->GetAttributes(
+      std::vector<std::string>{kDummyChnAttrName1, kDeviceAttrName,
+                               kDummyChnAttrName2},
       base::BindOnce(
-          [](base::Closure closure, const base::Optional<std::string>& value) {
-            EXPECT_TRUE(value.has_value());
-            EXPECT_EQ(value.value().compare(kParsedDeviceAttrValue), 0);
+          [](base::Closure closure,
+             const std::vector<base::Optional<std::string>>& values) {
+            EXPECT_EQ(values.size(), 3u);
+            EXPECT_FALSE(values.front().has_value());
+            EXPECT_FALSE(values.back().has_value());
+            EXPECT_TRUE(values[1].has_value());
+            EXPECT_EQ(values[1].value().compare(kParsedDeviceAttrValue), 0);
             closure.Run();
           },
           loop.QuitClosure()));

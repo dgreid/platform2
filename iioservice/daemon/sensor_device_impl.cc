@@ -78,20 +78,26 @@ void SensorDeviceImpl::SetTimeout(uint32_t timeout) {
   clients_[id].timeout = timeout;
 }
 
-void SensorDeviceImpl::GetAttribute(const std::string& attr_name,
-                                    GetAttributeCallback callback) {
+void SensorDeviceImpl::GetAttributes(const std::vector<std::string>& attr_names,
+                                     GetAttributesCallback callback) {
   DCHECK(ipc_task_runner_->RunsTasksInCurrentSequence());
 
   mojo::ReceiverId id = receiver_set_.current_receiver();
-  auto value_opt = clients_[id].iio_device->ReadStringAttribute(attr_name);
-  if (value_opt.has_value()) {
-    value_opt =
-        base::TrimString(value_opt.value(), base::StringPiece("\0\n", 2),
-                         base::TRIM_TRAILING)
-            .as_string();
+  std::vector<base::Optional<std::string>> values;
+  values.reserve(attr_names.size());
+  for (const auto& attr_name : attr_names) {
+    auto value_opt = clients_[id].iio_device->ReadStringAttribute(attr_name);
+    if (value_opt.has_value()) {
+      value_opt =
+          base::TrimString(value_opt.value(), base::StringPiece("\0\n", 2),
+                           base::TRIM_TRAILING)
+              .as_string();
+    }
+
+    values.push_back(std::move(value_opt));
   }
 
-  std::move(callback).Run(std::move(value_opt));
+  std::move(callback).Run(std::move(values));
 }
 
 void SensorDeviceImpl::SetFrequency(double frequency,

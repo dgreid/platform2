@@ -43,8 +43,8 @@ class SensorDeviceImpl final : public cros::mojom::SensorDevice {
 
   // cros::mojom::SensorDevice overrides:
   void SetTimeout(uint32_t timeout) override;
-  void GetAttribute(const std::string& attr_name,
-                    GetAttributeCallback callback) override;
+  void GetAttributes(const std::vector<std::string>& attr_names,
+                     GetAttributesCallback callback) override;
   void SetFrequency(double frequency, SetFrequencyCallback callback) override;
   void StartReadingSamples(
       mojo::PendingRemote<cros::mojom::SensorDeviceSamplesObserver> observer)
