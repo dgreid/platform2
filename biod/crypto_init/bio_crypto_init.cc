@@ -20,19 +20,16 @@
 #include "biod/cros_fp_device.h"
 #include "biod/ec_command.h"
 
-namespace {
-constexpr int64_t kTpmSeedSize = FP_CONTEXT_TPM_BYTES;
-}  // namespace
-
 namespace biod {
 
 // Helper function to ensure data of a file is removed.
 bool BioCryptoInit::NukeFile(const base::FilePath& filepath) {
   // Write all zeros to the FD.
   bool ret = true;
-  std::vector<uint8_t> zero_vec(kTpmSeedSize, 0);
+  std::vector<uint8_t> zero_vec(FpSeedCommand::kTpmSeedSize, 0);
   if (base::WriteFile(filepath, reinterpret_cast<const char*>(zero_vec.data()),
-                      kTpmSeedSize) != kTpmSeedSize) {
+                      FpSeedCommand::kTpmSeedSize) !=
+      FpSeedCommand::kTpmSeedSize) {
     PLOG(ERROR) << "Failed to write all-zero to tmpfs file.";
     ret = false;
   }

@@ -31,10 +31,10 @@
 
 #include "biod/biod_version.h"
 #include "biod/ec_command.h"
+#include "biod/fp_seed_command.h"
 
 namespace {
 constexpr int64_t kTimeoutSeconds = 30;
-constexpr int64_t kTpmSeedSize = FP_CONTEXT_TPM_BYTES;
 // File where the TPM seed is stored, that we have to read from.
 constexpr char kBioTpmSeedTmpFile[] = "/run/bio_crypto_init/seed";
 }  // namespace
@@ -83,13 +83,13 @@ int main(int argc, char* argv[]) {
 
   if (pid == 0) {
     // The first thing we do is read the buffer, and delete the file.
-    brillo::SecureVector tpm_seed(kTpmSeedSize);
+    brillo::SecureVector tpm_seed(biod::FpSeedCommand::kTpmSeedSize);
     int bytes_read = base::ReadFile(base::FilePath(kBioTpmSeedTmpFile),
                                     reinterpret_cast<char*>(tpm_seed.data()),
                                     tpm_seed.size());
     bio_crypto_init.NukeFile(base::FilePath(kBioTpmSeedTmpFile));
 
-    if (bytes_read != kTpmSeedSize) {
+    if (bytes_read != biod::FpSeedCommand::kTpmSeedSize) {
       LOG(ERROR) << "Failed to read TPM seed from tmpfile: " << bytes_read;
       return -1;
     }
