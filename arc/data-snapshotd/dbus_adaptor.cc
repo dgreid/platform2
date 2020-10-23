@@ -107,10 +107,6 @@ bool DBusAdaptor::GenerateKeyPair() {
     LOG(ERROR) << "Failed to store a public key in BootLockbox.";
     return false;
   }
-  if (!boot_lockbox_client_->Finalize()) {
-    LOG(ERROR) << "Failed to finalize a BootLockbox.";
-    return false;
-  }
   // Save private key for later usage.
   private_key_ = std::move(generated_private_key);
   return true;
