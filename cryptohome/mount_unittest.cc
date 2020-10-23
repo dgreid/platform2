@@ -77,7 +77,7 @@ using ::testing::WithArgs;
 
 namespace {
 
-const FilePath kImageDir("test_image_dir");
+const FilePath kImageDir("/home/.shadow");
 const FilePath kImageSaltFile = kImageDir.Append("salt");
 const FilePath kSkelDir = kImageDir.Append("skel");
 const FilePath kLoopDevice("/dev/loop7");

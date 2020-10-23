@@ -78,7 +78,7 @@ ACTION_P(SetCleanUpStrategy, clean_up_strategy) {
 }
 
 namespace {
-const FilePath kTestRoot("alt_test_home_dir");
+const FilePath kTestRoot("/home/.shadow");
 
 struct homedir {
   const char* name;
@@ -242,9 +242,15 @@ TEST_P(HomeDirsTest, RemoveNonOwnerCryptohomes) {
 }
 
 TEST_P(HomeDirsTest, RenameCryptohome) {
-  ASSERT_TRUE(base::CreateDirectory(FilePath(test_helper_.users[0].base_path)));
-  ASSERT_TRUE(base::CreateDirectory(FilePath(test_helper_.users[1].base_path)));
-  ASSERT_TRUE(base::CreateDirectory(FilePath(test_helper_.users[2].base_path)));
+  ASSERT_TRUE(platform_.CreateDirectory(
+      FilePath("/home/.shadow")
+          .Append(test_helper_.users[0].obfuscated_username)));
+  ASSERT_TRUE(platform_.CreateDirectory(
+      FilePath("/home/.shadow")
+          .Append(test_helper_.users[1].obfuscated_username)));
+  ASSERT_TRUE(platform_.CreateDirectory(
+      FilePath("/home/.shadow")
+          .Append(test_helper_.users[2].obfuscated_username)));
 
   const char kNewUserId[] = "some_new_user";
   EXPECT_TRUE(homedirs_.Rename(kDefaultUsers[0].username, kNewUserId));

@@ -22,6 +22,65 @@ MockPlatform::MockPlatform()
   ON_CALL(*this, GetGroupId(_, _))
       .WillByDefault(Invoke(fake_platform_.get(), &FakePlatform::GetGroupId));
 
+  ON_CALL(*this, Rename(_, _))
+      .WillByDefault(Invoke(fake_platform_.get(), &FakePlatform::Rename));
+  ON_CALL(*this, Move(_, _))
+      .WillByDefault(Invoke(fake_platform_.get(), &FakePlatform::Move));
+  ON_CALL(*this, Copy(_, _))
+      .WillByDefault(Invoke(fake_platform_.get(), &FakePlatform::Copy));
+  ON_CALL(*this, DeleteFile(_, _))
+      .WillByDefault(Invoke(fake_platform_.get(), &FakePlatform::DeleteFile));
+  ON_CALL(*this, DeleteFileDurable(_, _))
+      .WillByDefault(
+          Invoke(fake_platform_.get(), &FakePlatform::DeleteFileDurable));
+  ON_CALL(*this, EnumerateDirectoryEntries(_, _, _))
+      .WillByDefault(Invoke(fake_platform_.get(),
+                            &FakePlatform::EnumerateDirectoryEntries));
+  ON_CALL(*this, FileExists(_))
+      .WillByDefault(Invoke(fake_platform_.get(), &FakePlatform::FileExists));
+  ON_CALL(*this, DirectoryExists(_))
+      .WillByDefault(
+          Invoke(fake_platform_.get(), &FakePlatform::DirectoryExists));
+  ON_CALL(*this, CreateDirectory(_))
+      .WillByDefault(
+          Invoke(fake_platform_.get(), &FakePlatform::CreateDirectory));
+
+  ON_CALL(*this, ReadFile(_, _))
+      .WillByDefault(Invoke(fake_platform_.get(), &FakePlatform::ReadFile));
+  ON_CALL(*this, ReadFileToString(_, _))
+      .WillByDefault(
+          Invoke(fake_platform_.get(), &FakePlatform::ReadFileToString));
+  ON_CALL(*this, ReadFileToSecureBlob(_, _))
+      .WillByDefault(
+          Invoke(fake_platform_.get(), &FakePlatform::ReadFileToSecureBlob));
+
+  ON_CALL(*this, WriteFile(_, _))
+      .WillByDefault(Invoke(fake_platform_.get(), &FakePlatform::WriteFile));
+  ON_CALL(*this, WriteSecureBlobToFile(_, _))
+      .WillByDefault(
+          Invoke(fake_platform_.get(), &FakePlatform::WriteSecureBlobToFile));
+  ON_CALL(*this, WriteFileAtomic(_, _, _))
+      .WillByDefault(
+          Invoke(fake_platform_.get(), &FakePlatform::WriteFileAtomic));
+  ON_CALL(*this, WriteSecureBlobToFileAtomic(_, _, _))
+      .WillByDefault(Invoke(fake_platform_.get(),
+                            &FakePlatform::WriteSecureBlobToFileAtomic));
+  ON_CALL(*this, WriteFileAtomicDurable(_, _, _))
+      .WillByDefault(
+          Invoke(fake_platform_.get(), &FakePlatform::WriteFileAtomicDurable));
+  ON_CALL(*this, WriteSecureBlobToFileAtomicDurable(_, _, _))
+      .WillByDefault(Invoke(fake_platform_.get(),
+                            &FakePlatform::WriteSecureBlobToFileAtomicDurable));
+  ON_CALL(*this, WriteStringToFile(_, _))
+      .WillByDefault(
+          Invoke(fake_platform_.get(), &FakePlatform::WriteStringToFile));
+  ON_CALL(*this, WriteStringToFileAtomicDurable(_, _, _))
+      .WillByDefault(Invoke(fake_platform_.get(),
+                            &FakePlatform::WriteStringToFileAtomicDurable));
+  ON_CALL(*this, WriteArrayToFile(_, _, _))
+      .WillByDefault(
+          Invoke(fake_platform_.get(), &FakePlatform::WriteArrayToFile));
+
   ON_CALL(*this, GetOwnership(_, _, _, _))
       .WillByDefault(Invoke(this, &MockPlatform::MockGetOwnership));
   ON_CALL(*this, SetOwnership(_, _, _, _)).WillByDefault(Return(true));
@@ -33,24 +92,11 @@ MockPlatform::MockPlatform()
       .WillByDefault(Invoke(this, &MockPlatform::MockGetFileEnumerator));
   ON_CALL(*this, GetCurrentTime())
       .WillByDefault(Return(base::Time::NowFromSystemTime()));
-  ON_CALL(*this, Copy(_, _)).WillByDefault(CallCopy());
   ON_CALL(*this, StatVFS(_, _)).WillByDefault(CallStatVFS());
   ON_CALL(*this, ReportFilesystemDetails(_, _))
       .WillByDefault(CallReportFilesystemDetails());
   ON_CALL(*this, FindFilesystemDevice(_, _))
       .WillByDefault(CallFindFilesystemDevice());
-  ON_CALL(*this, DeleteFile(_, _)).WillByDefault(CallDeleteFile());
-  ON_CALL(*this, Move(_, _)).WillByDefault(CallMove());
-  ON_CALL(*this, EnumerateDirectoryEntries(_, _, _))
-      .WillByDefault(CallEnumerateDirectoryEntries());
-  ON_CALL(*this, DirectoryExists(_)).WillByDefault(CallDirectoryExists());
-  ON_CALL(*this, FileExists(_)).WillByDefault(CallPathExists());
-  ON_CALL(*this, CreateDirectory(_)).WillByDefault(CallCreateDirectory());
-  ON_CALL(*this, ReadFile(_, _)).WillByDefault(CallReadFile());
-  ON_CALL(*this, ReadFileToString(_, _)).WillByDefault(CallReadFileToString());
-  ON_CALL(*this, ReadFileToSecureBlob(_, _))
-      .WillByDefault(CallReadFileToSecureBlob());
-  ON_CALL(*this, Rename(_, _)).WillByDefault(CallRename());
   ON_CALL(*this, ComputeDirectoryDiskUsage(_))
       .WillByDefault(CallComputeDirectoryDiskUsage());
   ON_CALL(*this, SetupProcessKeyring()).WillByDefault(Return(true));

@@ -870,6 +870,10 @@ class Platform {
   virtual bool RestoreSELinuxContexts(const base::FilePath& path,
                                       bool recursive);
 
+  // Creates a random string suitable to append to a filename.  Returns empty
+  // string in case of error.
+  virtual std::string GetRandomSuffix();
+
  private:
   // Returns the process and open file information for the specified process id
   // with files open on the given path
@@ -896,10 +900,6 @@ class Platform {
   //   parent - The parent directory
   //   child - The child directory/file
   bool IsPathChild(const base::FilePath& parent, const base::FilePath& child);
-
-  // Creates a random string suitable to append to a filename.  Returns empty
-  // string in case of error.
-  virtual std::string GetRandomSuffix();
 
   // Calls fdatasync() on file if data_sync is true or fsync() on directory or
   // file when data_sync is false.  Returns true on success.

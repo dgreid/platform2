@@ -1028,23 +1028,25 @@ bool HomeDirs::Rename(const std::string& account_id_from,
   LOG(INFO) << "HomeDirs::Rename(from='" << account_id_from << "', to='"
             << account_id_to << "'):"
             << " renaming '" << user_dir_from.value() << "' "
-            << "(exists=" << base::PathExists(user_dir_from) << ") "
+            << "(exists=" << platform_->DirectoryExists(user_dir_from) << ") "
             << "=> '" << user_dir_to.value() << "' "
-            << "(exists=" << base::PathExists(user_dir_to) << "); "
+            << "(exists=" << platform_->DirectoryExists(user_dir_to) << "); "
             << "renaming '" << user_path_from.value() << "' "
-            << "(exists=" << base::PathExists(user_path_from) << ") "
+            << "(exists=" << platform_->DirectoryExists(user_path_from) << ") "
             << "=> '" << user_path_to.value() << "' "
-            << "(exists=" << base::PathExists(user_path_to) << "); "
+            << "(exists=" << platform_->DirectoryExists(user_path_to) << "); "
             << "renaming '" << root_path_from.value() << "' "
-            << "(exists=" << base::PathExists(root_path_from) << ") "
+            << "(exists=" << platform_->DirectoryExists(root_path_from) << ") "
             << "=> '" << root_path_to.value() << "' "
-            << "(exists=" << base::PathExists(root_path_to) << "); "
+            << "(exists=" << platform_->DirectoryExists(root_path_to) << "); "
             << "renaming '" << new_user_path_from.value() << "' "
-            << "(exists=" << base::PathExists(new_user_path_from) << ") "
+            << "(exists=" << platform_->DirectoryExists(new_user_path_from)
+            << ") "
             << "=> '" << new_user_path_to.value() << "' "
-            << "(exists=" << base::PathExists(new_user_path_to) << ")";
+            << "(exists=" << platform_->DirectoryExists(new_user_path_to)
+            << ")";
 
-  const bool already_renamed = !base::PathExists(user_dir_from);
+  const bool already_renamed = !platform_->DirectoryExists(user_dir_from);
 
   if (already_renamed) {
     LOG(INFO) << "HomeDirs::Rename(from='" << account_id_from << "', to='"
@@ -1053,21 +1055,23 @@ bool HomeDirs::Rename(const std::string& account_id_from,
     return true;
   }
 
-  const bool can_rename = !base::PathExists(user_dir_to);
+  const bool can_rename = !platform_->DirectoryExists(user_dir_to);
 
   if (!can_rename) {
     LOG(ERROR) << "HomeDirs::Rename(from='" << account_id_from << "', to='"
                << account_id_to << "'): Destination already exists! "
                << " '" << user_dir_from.value() << "' "
-               << "(exists=" << base::PathExists(user_dir_from) << ") "
+               << "(exists=" << platform_->DirectoryExists(user_dir_from)
+               << ") "
                << "=> '" << user_dir_to.value() << "' "
-               << "(exists=" << base::PathExists(user_dir_to) << "); ";
+               << "(exists=" << platform_->DirectoryExists(user_dir_to)
+               << "); ";
     return false;
   }
 
   // |user_dir_renamed| is return value, because three other directories are
   // empty and will be created as needed.
-  const bool user_dir_renamed = !base::PathExists(user_dir_from) ||
+  const bool user_dir_renamed = !platform_->DirectoryExists(user_dir_from) ||
                                 platform_->Rename(user_dir_from, user_dir_to);
 
   if (user_dir_renamed) {

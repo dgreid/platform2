@@ -6,8 +6,14 @@
 #define CRYPTOHOME_FAKE_PLATFORM_H_
 
 #include <string>
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <unordered_map>
+#include <vector>
+
+#include <base/files/file_path.h>
+#include <base/files/file_util.h>
+#include <brillo/secure_blob.h>
 
 #include "cryptohome/platform.h"
 
@@ -31,8 +37,8 @@ constexpr gid_t kSharedGID = 46;
 
 class FakePlatform final : public Platform {
  public:
-  FakePlatform() = default;
-  ~FakePlatform() override = default;
+  FakePlatform();
+  ~FakePlatform() override;
 
   // Prohibit copy/move/assignment.
   FakePlatform(const FakePlatform&) = delete;
@@ -45,8 +51,53 @@ class FakePlatform final : public Platform {
   bool GetUserId(const std::string& user,
                  uid_t* user_id,
                  gid_t* group_id) const override;
-
   bool GetGroupId(const std::string& group, gid_t* group_id) const override;
+
+  FileEnumerator* GetFileEnumerator(const base::FilePath& path,
+                                    bool recursive,
+                                    int file_type) override;
+  bool EnumerateDirectoryEntries(
+      const base::FilePath& path,
+      bool recursive,
+      std::vector<base::FilePath>* ent_list) override;
+
+  bool Rename(const base::FilePath& from, const base::FilePath& to) override;
+  bool Move(const base::FilePath& from, const base::FilePath& to) override;
+  bool Copy(const base::FilePath& from, const base::FilePath& to) override;
+  bool DeleteFile(const base::FilePath& path, bool recursive) override;
+  bool DeleteFileDurable(const base::FilePath& path, bool recursive) override;
+  bool FileExists(const base::FilePath& path) override;
+  bool DirectoryExists(const base::FilePath& path) override;
+  bool CreateDirectory(const base::FilePath& path) override;
+
+  bool ReadFile(const base::FilePath& path, brillo::Blob* blob) override;
+  bool ReadFileToString(const base::FilePath& path, std::string* str) override;
+  bool ReadFileToSecureBlob(const base::FilePath& path,
+                            brillo::SecureBlob* sblob) override;
+
+  bool WriteFile(const base::FilePath& path, const brillo::Blob& blob) override;
+  bool WriteSecureBlobToFile(const base::FilePath& path,
+                             const brillo::SecureBlob& sblob) override;
+  bool WriteFileAtomic(const base::FilePath& path,
+                       const brillo::Blob& blob,
+                       mode_t mode) override;
+  bool WriteSecureBlobToFileAtomic(const base::FilePath& path,
+                                   const brillo::SecureBlob& sblob,
+                                   mode_t mode) override;
+  bool WriteFileAtomicDurable(const base::FilePath& path,
+                              const brillo::Blob& blob,
+                              mode_t mode) override;
+  bool WriteSecureBlobToFileAtomicDurable(const base::FilePath& path,
+                                          const brillo::SecureBlob& sblob,
+                                          mode_t mode) override;
+  bool WriteStringToFile(const base::FilePath& path,
+                         const std::string& str) override;
+  bool WriteStringToFileAtomicDurable(const base::FilePath& path,
+                                      const std::string& str,
+                                      mode_t mode) override;
+  bool WriteArrayToFile(const base::FilePath& path,
+                        const char* data,
+                        size_t size) override;
 
   // Test API
 
@@ -55,9 +106,14 @@ class FakePlatform final : public Platform {
  private:
   std::unordered_map<std::string, uid_t> uids_;
   std::unordered_map<std::string, gid_t> gids_;
+  base::FilePath tmpfs_rootfs_;
 
   void SetUserId(const std::string& user, uid_t user_id);
   void SetGroupId(const std::string& group, gid_t group_id);
+
+  base::FilePath TestFilePath(const base::FilePath& path) const;
+
+  Platform real_platform_;
 };
 
 }  // namespace cryptohome

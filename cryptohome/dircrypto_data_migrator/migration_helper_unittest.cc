@@ -76,6 +76,8 @@ void PassThroughPlatformMethods(MockPlatform* mock_platform,
       .WillByDefault(Invoke(real_platform, &Platform::GetPermissions));
   ON_CALL(*mock_platform, FileExists(_))
       .WillByDefault(Invoke(real_platform, &Platform::FileExists));
+  ON_CALL(*mock_platform, DirectoryExists(_))
+      .WillByDefault(Invoke(real_platform, &Platform::DirectoryExists));
   ON_CALL(*mock_platform, CreateDirectory(_))
       .WillByDefault(Invoke(real_platform, &Platform::CreateDirectory));
   ON_CALL(*mock_platform, HasExtendedFileAttribute(_, _))
