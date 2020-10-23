@@ -101,7 +101,7 @@ class PortalDetector {
     // Probe URL used to reach redirect URL if status is kRedirect.
     std::string probe_url_string;
 
-    // The http response status code.
+    // The HTTP response status code from the http probe.
     int status_code = 0;
   };
 

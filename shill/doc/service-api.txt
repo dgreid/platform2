@@ -1293,8 +1293,8 @@ Properties	string ArcVpn.TunnelChrome [writeonly]
 
 		string PortalDetectionFailedStatusCode [readonly]
 
-			Provides the HTTP response status code from the portal
-			detection probe if it failed.
+			Provides the HTTP response status code from the last
+			failed http portal detection probe.
 
 		string PreviousError [readonly]
 
