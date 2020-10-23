@@ -111,7 +111,7 @@ Mount::Mount(Platform* platform, HomeDirs* homedirs)
       chaps_client_factory_(default_chaps_client_factory_.get()),
       dircrypto_migration_stopped_condition_(&active_dircrypto_migrator_lock_),
       mount_guest_session_out_of_process_(true),
-      mount_non_ephemeral_session_out_of_process_(MountUserSessionOOP()),
+      mount_non_ephemeral_session_out_of_process_(true),
       mount_guest_session_non_root_namespace_(true) {}
 
 Mount::Mount() : Mount(nullptr, nullptr) {}

@@ -153,6 +153,7 @@ class MountTest
     mount_->set_chaps_client_factory(&chaps_client_factory_);
     // Perform mounts in-process.
     mount_->set_mount_guest_session_out_of_process(false);
+    mount_->set_mount_non_ephemeral_session_out_of_process(false);
     mount_->set_mount_guest_session_non_root_namespace(false);
     set_policy(false, "", false);
   }
