@@ -200,7 +200,8 @@ const std::vector<Log> kCommandLogs {
   {kCommand, "font_info", "/usr/share/userfeedback/scripts/font_info"},
   {kCommand, "framebuffer", "cat /sys/kernel/debug/dri/?/framebuffer",
     SandboxedProcess::kDefaultUser, kDebugfsGroup},
-  {kFile, "fwupd_state", "/var/lib/fwupd/state.json"},
+  {kCommand, "fwupd_state", "/sbin/initctl emit fwupdtool-getdevices;"
+    "cat /var/lib/fwupd/state.json", kRoot, kRoot},
   {kCommand, "sensor_info", "/usr/share/userfeedback/scripts/sensor_info"},
   {kFile, "hammerd", "/var/log/hammerd.log"},
   {kCommand, "hardware_class", "/usr/bin/crossystem hwid"},
