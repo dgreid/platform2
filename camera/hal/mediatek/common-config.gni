@@ -8,12 +8,13 @@ include_dirs = [
   "//camera/include",
 ]
 ldflags = [ "-Wl,--no-undefined" ]
-libs = [ "base" ]
+libs = []
 pkg_deps = [
   "cros-camera-android-headers",
   "libcamera_common",
   "libcamera_metadata",
   "libcbm",
+  "libchrome",
   "libdrm",
   "libyuv",
 ]
