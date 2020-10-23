@@ -207,7 +207,6 @@ void TestUser::GenerateCredentials(bool force_ecryptfs) {
       std::unique_ptr<NiceMock<policy::MockDevicePolicy>>(device_policy)));
   FilePath keyset_path =
       shadow_root.Append(obfuscated_username).Append("master.0");
-  EXPECT_CALL(platform, FileExists(keyset_path)).WillOnce(Return(false));
   FilePath salt_path = shadow_root.Append("salt");
   int64_t salt_size = salt.size();
   EXPECT_CALL(platform, FileExists(salt_path)).WillRepeatedly(Return(true));
@@ -256,7 +255,9 @@ void TestUser::GenerateCredentials(bool force_ecryptfs) {
   // Grab the generated credential
   EXPECT_CALL(platform, WriteFileAtomicDurable(keyset_path, _, _))
       .WillOnce(DoAll(SaveArg<1>(&credentials), Return(true)));
-  EXPECT_TRUE(mount->CreateCryptohome(local_credentials, force_ecryptfs));
+  ASSERT_TRUE(mount->homedirs()->Create(local_credentials.username()));
+  ASSERT_TRUE(mount->PrepareCryptohome(obfuscated_username, force_ecryptfs));
+  ASSERT_TRUE(mount->homedirs()->AddInitialKeyset(local_credentials));
   DCHECK(credentials.size());
 
   // Unmount succeeds. This is called when |mount| is destroyed.

@@ -266,6 +266,13 @@ TEST_P(HomeDirsTest, RenameCryptohome) {
   EXPECT_TRUE(homedirs_.Rename(kNewUserId, kDefaultUsers[0].username));
 }
 
+TEST_P(HomeDirsTest, CreateCryptohome) {
+  platform_.DeleteFile(FilePath(test_helper_.users[0].base_path), true);
+
+  EXPECT_TRUE(homedirs_.Create(kDefaultUsers[0].username));
+  EXPECT_TRUE(base::DirectoryExists(FilePath(test_helper_.users[0].base_path)));
+}
+
 TEST_P(HomeDirsTest, ComputeDiskUsageDircrypto) {
   FilePath base_path(test_helper_.users[0].base_path);
   // /home/.shadow in production code.
@@ -776,6 +783,34 @@ INSTANTIATE_TEST_SUITE_P(WithEcryptfs,
 INSTANTIATE_TEST_SUITE_P(WithDircrypto,
                          KeysetManagementTest,
                          ::testing::Values(false));
+
+TEST_P(KeysetManagementTest, AddInitialKeyset) {
+  KeysetSetUp();
+
+  Credentials credentials(test_helper_.users[0].username,
+                          brillo::SecureBlob("passkey"));
+  KeyData key_data;
+  key_data.set_label("current label");
+  credentials.set_key_data(key_data);
+  SerializedVaultKeyset serialized;
+
+  // Caller of the mock factory will assume ownership.
+  auto vk = new MockVaultKeyset();
+  EXPECT_CALL(vault_keyset_factory_, New(_, _)).WillOnce(Return(vk));
+  homedirs_.set_vault_keyset_factory(&vault_keyset_factory_);
+
+  EXPECT_CALL(*vk, serialized()).WillRepeatedly(ReturnRef(serialized));
+  EXPECT_CALL(*vk, mutable_serialized()).WillRepeatedly(Return(&serialized));
+
+  EXPECT_CALL(*vk, CreateRandom()).Times(1);
+  EXPECT_CALL(*vk, set_legacy_index(0)).Times(1);
+
+  EXPECT_CALL(*vk, Encrypt(_, _)).WillRepeatedly(Return(true));
+  EXPECT_CALL(*vk, Save(_)).WillRepeatedly(Return(true));
+
+  EXPECT_TRUE(homedirs_.AddInitialKeyset(credentials));
+  EXPECT_EQ(key_data.label(), serialized.key_data().label());
+}
 
 TEST_P(KeysetManagementTest, AddKeysetSuccess) {
   KeysetSetUp();

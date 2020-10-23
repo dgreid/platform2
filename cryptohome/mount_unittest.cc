@@ -1075,7 +1075,6 @@ TEST_P(MountTest, CreateCryptohomeTest) {
       homedirs.Init(&platform_, mount_->crypto(), user_timestamp_cache_.get()));
 
   // TODO(wad) Make this into a UserDoesntExist() helper.
-  EXPECT_CALL(platform_, FileExists(user->keyset_path)).WillOnce(Return(false));
   EXPECT_CALL(platform_, CreateDirectory(AnyOf(
                              user->mount_prefix, user->user_mount_prefix,
                              user->user_mount_path, user->root_mount_prefix,
@@ -1102,8 +1101,11 @@ TEST_P(MountTest, CreateCryptohomeTest) {
   EXPECT_CALL(platform_, WriteFileAtomicDurable(user->keyset_path, _, _))
       .WillOnce(DoAll(SaveArg<1>(&creds), Return(true)));
 
-  ASSERT_TRUE(mount_->mounter_->EnsureUserMountPoints(credentials.username()));
-  ASSERT_TRUE(mount_->CreateCryptohome(credentials, ShouldTestEcryptfs()));
+  ASSERT_TRUE(mount_->mounter_->EnsureUserMountPoints(user->username));
+  ASSERT_TRUE(homedirs.Create(user->username));
+  ASSERT_TRUE(mount_->PrepareCryptohome(user->obfuscated_username,
+                                        ShouldTestEcryptfs()));
+  ASSERT_TRUE(homedirs.AddInitialKeyset(credentials));
   ASSERT_NE(creds.size(), 0);
   {
     InSequence s;

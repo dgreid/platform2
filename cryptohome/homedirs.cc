@@ -19,6 +19,7 @@
 #include <base/strings/stringprintf.h>
 #include <base/timer/elapsed_timer.h>
 #include <brillo/cryptohome.h>
+#include <brillo/scoped_umask.h>
 #include <brillo/secure_blob.h>
 #include <chromeos/constants/cryptohome.h>
 
@@ -42,6 +43,10 @@ using brillo::SecureBlob;
 using brillo::cryptohome::home::SanitizeUserNameWithSalt;
 
 namespace cryptohome {
+
+namespace {
+constexpr int kInitialKeysetIndex = 0;
+}  // namespace
 
 const char* kShadowRoot = "/home/.shadow";
 const char* kEmptyOwner = "";
@@ -527,6 +532,40 @@ CryptohomeErrorCode HomeDirs::UpdateKeyset(
   return CRYPTOHOME_ERROR_NOT_SET;
 }
 
+bool HomeDirs::AddInitialKeyset(const Credentials& credentials) {
+  const brillo::SecureBlob passkey = credentials.passkey();
+  std::string obfuscated_username =
+      credentials.GetObfuscatedUsername(system_salt_);
+
+  std::unique_ptr<VaultKeyset> vk(
+      vault_keyset_factory()->New(platform_, crypto_));
+  vk->Initialize(platform_, crypto_);
+  vk->CreateRandom();
+  vk->set_legacy_index(kInitialKeysetIndex);
+
+  if (credentials.key_data().type() == KeyData::KEY_TYPE_CHALLENGE_RESPONSE) {
+    vk->mutable_serialized()->set_flags(
+        vk->serialized().flags() |
+        SerializedVaultKeyset::SIGNATURE_CHALLENGE_PROTECTED);
+    *vk->mutable_serialized()->mutable_signature_challenge_info() =
+        credentials.challenge_credentials_keyset_info();
+  }
+  // Merge in the key data from credentials using the label() as
+  // the existence test. (All new-format calls must populate the
+  // label on creation.)
+  if (!credentials.key_data().label().empty()) {
+    *vk->mutable_serialized()->mutable_key_data() = credentials.key_data();
+  }
+
+  if (!vk->Encrypt(passkey, obfuscated_username) ||
+      !vk->Save(GetVaultKeysetPath(obfuscated_username, kInitialKeysetIndex))) {
+    LOG(ERROR) << "Failed to encrypt and write keyset for the new user.";
+    return false;
+  }
+
+  return true;
+}
+
 CryptohomeErrorCode HomeDirs::AddKeyset(const Credentials& existing_credentials,
                                         const SecureBlob& new_passkey,
                                         const KeyData* new_data,  // NULLable
@@ -983,6 +1022,20 @@ bool HomeDirs::GetSystemSalt(SecureBlob* blob) {
   }
   if (blob)
     *blob = system_salt_;
+  return true;
+}
+
+bool HomeDirs::Create(const std::string& username) {
+  brillo::ScopedUmask scoped_umask(kDefaultUmask);
+  std::string obfuscated_username =
+      SanitizeUserNameWithSalt(username, system_salt_);
+
+  // Create the user's entry in the shadow root
+  FilePath user_dir = shadow_root_.Append(obfuscated_username);
+  if (!platform_->CreateDirectory(user_dir)) {
+    return false;
+  }
+
   return true;
 }
 

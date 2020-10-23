@@ -39,6 +39,7 @@ class MockHomeDirs : public HomeDirs {
               GetValidKeyset,
               (const Credentials&, VaultKeyset*, MountError*),
               (override));
+  MOCK_METHOD(bool, Create, (const std::string&), (override));
   MOCK_METHOD(bool, Remove, (const std::string&), (override));
   MOCK_METHOD(bool,
               Rename,
@@ -62,6 +63,7 @@ class MockHomeDirs : public HomeDirs {
               GetVaultKeysetLabels,
               (const std::string&, std::vector<std::string>*),
               (const, override));
+  MOCK_METHOD(bool, AddInitialKeyset, (const Credentials&), (override));
   MOCK_METHOD(CryptohomeErrorCode,
               AddKeyset,
               (const Credentials&,

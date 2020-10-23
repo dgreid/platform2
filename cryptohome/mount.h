@@ -91,6 +91,14 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
                     Crypto* crypto,
                     UserOldestActivityTimestampCache* cache);
 
+  // Makes mount type-specific preparation.
+  //
+  // Parameters
+  //   obfuscated_username - salted hash of the username
+  //   force_ecryptfs - force ECRYPTFS
+  virtual bool PrepareCryptohome(const std::string& obfuscated_username,
+                                 bool force_ecryptfs);
+
   // Attempts to mount the cryptohome for the given credentials
   //
   // Parameters
@@ -130,16 +138,6 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   // current user that is not ephemeral.
   //
   virtual bool IsNonEphemeralMounted() const;
-
-  // Creates the cryptohome salt, key, (and vault if necessary) for the
-  // specified credentials.
-  //
-  // Parameters
-  //   credentials - The Credentials representing the user whose cryptohome
-  //     should be created.
-  //   force_ecryptfs - use ecryptfs encryption.
-  virtual bool CreateCryptohome(const Credentials& credentials,
-                                bool force_ecryptfs) const;
 
   // Updates current user activity timestamp. This is called daily.
   // So we may not consider current user as old (and delete it soon after they
@@ -304,14 +302,6 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
 
   virtual bool StoreTimestampForUser(const std::string& obfuscated_username,
                                      VaultKeyset* vault_keyset) const;
-
-  // Encrypts and adds the VaultKeyset to the serialized store
-  //
-  // Parameters
-  //   credentials - The Credentials for the user
-  //   vault_keyset (IN/OUT) - The VaultKeyset to save
-  bool AddVaultKeyset(const Credentials& credentials,
-                      VaultKeyset* vault_keyset) const;
 
   // Resaves the vault keyset, restoring on failure.  The vault_keyset supplied
   // is encrypted and stored in the wrapped_keyset parameter of serialized,

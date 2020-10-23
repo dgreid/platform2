@@ -307,6 +307,21 @@ MountError Mount::MountEphemeralCryptohome(const Credentials& credentials) {
   return MOUNT_ERROR_NONE;
 }
 
+bool Mount::PrepareCryptohome(const std::string& obfuscated_username,
+                              bool force_ecryptfs) {
+  MountType mount_type = ChooseVaultMountType(force_ecryptfs);
+  if (mount_type == MountType::ECRYPTFS) {
+    // Create the user's vault.
+    FilePath vault_path =
+        homedirs_->GetEcryptfsUserVaultPath(obfuscated_username);
+    if (!platform_->CreateDirectory(vault_path)) {
+      LOG(ERROR) << "Couldn't create vault path: " << vault_path.value();
+      return false;
+    }
+  }
+  return true;
+}
+
 bool Mount::MountCryptohome(const Credentials& credentials,
                             const Mount::MountArgs& mount_args,
                             bool recreate_on_decrypt_fatal,
@@ -316,11 +331,23 @@ bool Mount::MountCryptohome(const Credentials& credentials,
       credentials.GetObfuscatedUsername(system_salt_);
   const bool is_owner = homedirs_->IsOrWillBeOwner(username_);
 
-  if (!mount_args.create_if_missing &&
-      !homedirs_->CryptohomeExists(obfuscated_username)) {
-    LOG(ERROR) << "Asked to mount nonexistent user";
-    *mount_error = MOUNT_ERROR_USER_DOES_NOT_EXIST;
-    return false;
+  bool created = false;
+  if (!homedirs_->CryptohomeExists(obfuscated_username)) {
+    if (!mount_args.create_if_missing) {
+      LOG(ERROR) << "Asked to mount nonexistent user";
+      *mount_error = MOUNT_ERROR_USER_DOES_NOT_EXIST;
+      return false;
+    }
+
+    if (!homedirs_->Create(credentials.username()) ||
+        !PrepareCryptohome(obfuscated_username,
+                           mount_args.create_as_ecryptfs) ||
+        !homedirs_->AddInitialKeyset(credentials)) {
+      LOG(ERROR) << "Error creating cryptohome.";
+      *mount_error = MOUNT_ERROR_CREATE_CRYPTOHOME_FAILED;
+      return false;
+    }
+    created = true;
   }
 
   if (!mount_args.shadow_only) {
@@ -329,16 +356,6 @@ bool Mount::MountCryptohome(const Credentials& credentials,
       *mount_error = MOUNT_ERROR_CREATE_CRYPTOHOME_FAILED;
       return false;
     }
-  }
-
-  bool created = false;
-  if (!homedirs_->CryptohomeExists(obfuscated_username)) {
-    if (!CreateCryptohome(credentials, mount_args.create_as_ecryptfs)) {
-      LOG(ERROR) << "Error creating cryptohome.";
-      *mount_error = MOUNT_ERROR_CREATE_CRYPTOHOME_FAILED;
-      return false;
-    }
-    created = true;
   }
 
   mount_type_ = DeriveVaultMountType(obfuscated_username,
@@ -664,60 +681,6 @@ bool Mount::OwnsMountPoint(const FilePath& path) const {
           out_of_process_mounter_->IsPathMounted(path));
 }
 
-bool Mount::CreateCryptohome(const Credentials& credentials,
-                             bool force_ecryptfs) const {
-  brillo::ScopedUmask scoped_umask(kDefaultUmask);
-  std::string obfuscated_username =
-      credentials.GetObfuscatedUsername(system_salt_);
-
-  MountType mount_type = ChooseVaultMountType(force_ecryptfs);
-  if (mount_type == MountType::NONE) {
-    return false;
-  }
-
-  // Create the user's entry in the shadow root
-  FilePath user_dir(GetUserDirectoryForUser(obfuscated_username));
-  platform_->CreateDirectory(user_dir);
-
-  // Generate a new keyset
-  VaultKeyset vault_keyset;
-  vault_keyset.Initialize(platform_, crypto_);
-  vault_keyset.CreateRandom();
-  if (!AddVaultKeyset(credentials, &vault_keyset)) {
-    LOG(ERROR) << "Failed to add vault keyset to new user";
-    return false;
-  }
-  // Merge in the key data from credentials using the label() as
-  // the existence test. (All new-format calls must populate the
-  // label on creation.)
-  if (!credentials.key_data().label().empty()) {
-    *vault_keyset.mutable_serialized()->mutable_key_data() =
-        credentials.key_data();
-  }
-  if (credentials.key_data().type() == KeyData::KEY_TYPE_CHALLENGE_RESPONSE) {
-    *vault_keyset.mutable_serialized()->mutable_signature_challenge_info() =
-        credentials.challenge_credentials_keyset_info();
-  }
-
-  vault_keyset.set_legacy_index(0);  // first key
-  if (!StoreVaultKeysetForUser(obfuscated_username, &vault_keyset)) {
-    LOG(ERROR) << "Failed to store vault keyset for new user";
-    return false;
-  }
-
-  if (mount_type == MountType::ECRYPTFS) {
-    // Create the user's vault.
-    FilePath vault_path =
-        homedirs_->GetEcryptfsUserVaultPath(obfuscated_username);
-    if (!platform_->CreateDirectory(vault_path)) {
-      LOG(ERROR) << "Couldn't create vault path: " << vault_path.value();
-      return false;
-    }
-  }
-
-  return true;
-}
-
 bool Mount::CreateTrackedSubdirectories(const Credentials& credentials) const {
   return mounter_->CreateTrackedSubdirectories(
       credentials.GetObfuscatedUsername(system_salt_), mount_type_);
@@ -921,33 +884,6 @@ bool Mount::DecryptVaultKeyset(const Credentials& credentials,
   return true;
 }
 
-bool Mount::AddVaultKeyset(const Credentials& credentials,
-                           VaultKeyset* vault_keyset) const {
-  // We don't do passkey to wrapper conversion because it is salted during save
-  const SecureBlob passkey = credentials.passkey();
-
-  std::string obfuscated_username =
-      credentials.GetObfuscatedUsername(system_salt_);
-
-  if (credentials.key_data().type() == KeyData::KEY_TYPE_CHALLENGE_RESPONSE) {
-    vault_keyset->mutable_serialized()->set_flags(
-        vault_keyset->serialized().flags() |
-        SerializedVaultKeyset::SIGNATURE_CHALLENGE_PROTECTED);
-  }
-
-  // Encrypt the vault keyset
-  const auto salt =
-      CryptoLib::CreateSecureRandomBlob(CRYPTOHOME_DEFAULT_KEY_SALT_SIZE);
-  if (!crypto_->EncryptVaultKeyset(*vault_keyset, passkey, salt,
-                                   obfuscated_username,
-                                   vault_keyset->mutable_serialized())) {
-    LOG(ERROR) << "Encrypting vault keyset failed";
-    return false;
-  }
-
-  return true;
-}
-
 bool Mount::ReEncryptVaultKeyset(const Credentials& credentials,
                                  VaultKeyset* vault_keyset) const {
   // Save the initial serialized proto so we can roll-back any changes if we
@@ -958,8 +894,8 @@ bool Mount::ReEncryptVaultKeyset(const Credentials& credentials,
   std::string obfuscated_username =
       credentials.GetObfuscatedUsername(system_salt_);
   uint64_t label = vault_keyset->serialized().le_label();
-  if (!AddVaultKeyset(credentials, vault_keyset)) {
-    LOG(ERROR) << "Couldn't add keyset.";
+  if (!vault_keyset->Encrypt(credentials.passkey(), obfuscated_username)) {
+    LOG(ERROR) << "Couldn't encrypt keyset.";
     vault_keyset->mutable_serialized()->CopyFrom(old_serialized);
     return false;
   }

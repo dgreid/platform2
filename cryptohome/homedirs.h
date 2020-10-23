@@ -121,6 +121,9 @@ class HomeDirs {
   virtual VaultKeyset* GetVaultKeyset(const std::string& obfuscated_username,
                                       const std::string& key_label) const;
 
+  // Creates the cryptohome for the named user.
+  virtual bool Create(const std::string& username);
+
   // Removes the cryptohome for the named user.
   virtual bool Remove(const std::string& username);
 
@@ -185,6 +188,9 @@ class HomeDirs {
   // Returns the vault keyset path for the supplied obfuscated username.
   virtual base::FilePath GetVaultKeysetPath(const std::string& obfuscated,
                                             int index) const;
+
+  // Adds initial keyset for the credentials.
+  virtual bool AddInitialKeyset(const Credentials& credentials);
 
   // Adds a new vault keyset for the user using the |existing_credentials| to
   // unwrap the homedir key and the |new_credentials| to rewrap and persist to
