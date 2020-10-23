@@ -20,6 +20,10 @@ namespace {
 class MockEcCommandInterface : public EcCommandInterface {
  public:
   MOCK_METHOD(bool, Run, (int fd), (override));
+  MOCK_METHOD(bool,
+              RunWithMultipleAttempts,
+              (int fd, int num_attempts),
+              (override));
   MOCK_METHOD(uint32_t, Version, (), (const, override));
   MOCK_METHOD(uint32_t, Command, (), (const, override));
 };

@@ -42,6 +42,7 @@ class EcCommandInterface {
  public:
   virtual ~EcCommandInterface() = default;
   virtual bool Run(int fd) = 0;
+  virtual bool RunWithMultipleAttempts(int fd, int num_attempts) = 0;
   virtual uint32_t Version() const = 0;
   virtual uint32_t Command() const = 0;
 };
@@ -93,7 +94,7 @@ class EcCommand : public EcCommandInterface {
     return (static_cast<uint32_t>(ret) == data_.cmd.insize);
   }
 
-  bool RunWithMultipleAttempts(int fd, int num_attempts) {
+  bool RunWithMultipleAttempts(int fd, int num_attempts) override {
     for (int retry = 0; retry < num_attempts; retry++) {
       bool ret = Run(fd);
 
