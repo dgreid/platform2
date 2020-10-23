@@ -13,13 +13,18 @@ use std::fmt::{self, Debug, Display};
 use std::io::{self, Read, Write};
 use std::iter::Iterator;
 use std::marker::Send;
-use std::net::{SocketAddr, TcpListener, TcpStream, ToSocketAddrs};
-use std::os::unix::io::AsRawFd;
+use std::net::{
+    Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6, TcpListener, TcpStream,
+    ToSocketAddrs,
+};
+use std::os::unix::io::{AsRawFd, RawFd};
 use std::str::FromStr;
 
 use core::mem::replace;
+use libchromeos::net::{InetVersion, TcpSocket};
 use libchromeos::vsock::{
-    AddrParseError, SocketAddr as VSocketAddr, ToSocketAddr, VsockListener, VsockStream,
+    AddrParseError, SocketAddr as VSocketAddr, ToSocketAddr, VsockCid, VsockListener, VsockSocket,
+    VsockStream, VMADDR_PORT_ANY,
 };
 use sys_util::{handle_eintr, pipe};
 
@@ -37,6 +42,8 @@ pub enum Error {
     URIParse,
     /// Failed to clone a fd.
     Clone(io::Error),
+    /// Error creating a socket.
+    Socket(io::Error),
     /// Failed to bind a socket.
     Bind(io::Error),
     /// Failed to get the socket address.
@@ -45,10 +52,11 @@ pub enum Error {
     Accept(io::Error),
     /// Failed to connect to the socket address.
     Connect(io::Error),
+    /// Failed to obtain the local port.
+    LocalAddr(io::Error),
     /// Failed to construct the pipe.
     Pipe(sys_util::Error),
-    /// The pipe transport was in the wrong state to complete the requested
-    /// operation.
+    /// The pipe transport was in the wrong state to complete the requested operation.
     InvalidState,
 }
 
@@ -65,10 +73,12 @@ impl Display for Error {
             UnknownTransportType => write!(f, "got an unrecognized transport type"),
             URIParse => write!(f, "failed to parse the URI"),
             Clone(e) => write!(f, "failed to clone fd: {}", e),
+            Socket(e) => write!(f, "failed to create socket: {}", e),
             Bind(e) => write!(f, "failed to bind: {}", e),
             GetAddress(e) => write!(f, "failed to get the socket address: {}", e),
             Accept(e) => write!(f, "failed to accept connection: {}", e),
             Connect(e) => write!(f, "failed to connect: {}", e),
+            LocalAddr(e) => write!(f, "failed to get port: {}", e),
             Pipe(e) => write!(f, "failed to construct the pipe: {}", e),
             InvalidState => write!(f, "pipe transport was in the wrong state"),
         }
@@ -79,17 +89,36 @@ impl Display for Error {
 pub type Result<T> = std::result::Result<T, Error>;
 
 /// An abstraction wrapper to support the receiving side of a transport method.
-pub trait ReadDebugSend: Read + Debug + Send + AsRawFd {}
-impl<T: Read + Debug + Send + AsRawFd> ReadDebugSend for T {}
+pub trait TransportRead: Read + Debug + Send + AsRawFd {}
+impl<T: Read + Debug + Send + AsRawFd> TransportRead for T {}
 /// An abstraction wrapper to support the sending side of a transport method.
-pub trait WriteDebugSend: Write + Debug + Send + AsRawFd {}
-impl<T: Write + Debug + Send + AsRawFd> WriteDebugSend for T {}
+pub trait TransportWrite: Write + Debug + Send + AsRawFd {}
+impl<T: Write + Debug + Send + AsRawFd> TransportWrite for T {}
 
-/// Transport options that can be selected.
-#[derive(Debug, PartialEq)]
+/// A transport identifier.
+#[derive(Debug, Eq, PartialEq)]
 pub enum TransportType {
     VsockConnection(VSocketAddr),
     IpConnection(SocketAddr),
+    Pipe(RawFd, RawFd),
+}
+
+impl From<VSocketAddr> for TransportType {
+    fn from(a: VSocketAddr) -> Self {
+        TransportType::VsockConnection(a)
+    }
+}
+
+impl From<SocketAddr> for TransportType {
+    fn from(a: SocketAddr) -> Self {
+        TransportType::IpConnection(a)
+    }
+}
+
+impl From<(RawFd, RawFd)> for TransportType {
+    fn from(a: (RawFd, RawFd)) -> Self {
+        TransportType::Pipe(a.0, a.1)
+    }
 }
 
 fn parse_ip_connection(value: &str) -> Result<TransportType> {
@@ -130,17 +159,37 @@ impl FromStr for TransportType {
 
 /// Wraps a complete transport method, both sending and receiving.
 #[derive(Debug)]
-pub struct Transport(pub Box<dyn ReadDebugSend>, pub Box<dyn WriteDebugSend>);
+pub struct Transport {
+    pub r: Box<dyn TransportRead>,
+    pub w: Box<dyn TransportWrite>,
+    pub id: TransportType,
+}
 
-impl Into<Transport> for (Box<dyn ReadDebugSend>, Box<dyn WriteDebugSend>) {
+impl Into<Transport>
+    for (
+        Box<dyn TransportRead>,
+        Box<dyn TransportWrite>,
+        TransportType,
+    )
+{
     fn into(self) -> Transport {
-        Transport(self.0, self.1)
+        Transport {
+            r: self.0,
+            w: self.1,
+            id: self.2,
+        }
     }
 }
 
-impl From<Transport> for (Box<dyn ReadDebugSend>, Box<dyn WriteDebugSend>) {
+impl From<Transport>
+    for (
+        Box<dyn TransportRead>,
+        Box<dyn TransportWrite>,
+        TransportType,
+    )
+{
     fn from(t: Transport) -> Self {
-        (t.0, t.1)
+        (t.r, t.w, t.id)
     }
 }
 
@@ -148,14 +197,22 @@ impl From<Transport> for (Box<dyn ReadDebugSend>, Box<dyn WriteDebugSend>) {
 // is safe to send them across thread boundaries.
 unsafe impl Send for Transport {}
 
-fn tcpstream_to_transport(stream: TcpStream) -> Result<Transport> {
+fn tcpstream_to_transport(stream: TcpStream, id: SocketAddr) -> Result<Transport> {
     let write = stream.try_clone().map_err(Error::Clone)?;
-    Ok(Transport(Box::new(stream), Box::new(write)))
+    Ok(Transport {
+        r: Box::new(stream),
+        w: Box::new(write),
+        id: TransportType::from(id),
+    })
 }
 
-fn vsockstream_to_transport(stream: VsockStream) -> Result<Transport> {
+fn vsockstream_to_transport(stream: VsockStream, id: VSocketAddr) -> Result<Transport> {
     let write = stream.try_clone().map_err(Error::Clone)?;
-    Ok(Transport(Box::new(stream), Box::new(write)))
+    Ok(Transport {
+        r: Box::new(stream),
+        w: Box::new(write),
+        id: TransportType::from(id),
+    })
 }
 
 /// Abstracts transport methods that accept incoming connections.
@@ -165,6 +222,7 @@ pub trait ServerTransport {
 
 /// Abstracts transport methods that initiate incoming connections.
 pub trait ClientTransport {
+    fn bind(&mut self) -> Result<TransportType>;
     fn connect(&mut self) -> Result<Transport>;
 }
 
@@ -187,30 +245,59 @@ impl IPServerTransport {
 
 impl ServerTransport for IPServerTransport {
     fn accept(&mut self) -> Result<Transport> {
-        let (stream, _) = handle_eintr!(self.0.accept()).map_err(Error::Accept)?;
-        tcpstream_to_transport(stream)
+        let (stream, addr) = handle_eintr!(self.0.accept()).map_err(Error::Accept)?;
+        tcpstream_to_transport(stream, addr)
     }
 }
 
 /// A transport method that connects over IP.
-pub struct IPClientTransport(SocketAddr);
+pub struct IPClientTransport {
+    addr: SocketAddr,
+    sock: Option<TcpSocket>,
+}
 
 impl IPClientTransport {
-    pub fn new<T: ToSocketAddrs>(addr: T) -> Result<Self> {
-        let mut iter = addr
+    pub fn new<T: ToSocketAddrs>(to_addrs: T) -> Result<Self> {
+        let addr = to_addrs
             .to_socket_addrs()
-            .map_err(|e| Error::SocketAddrParse(Some(e)))?;
-        match iter.next() {
-            Some(a) => Ok(IPClientTransport(a)),
-            None => Err(Error::SocketAddrParse(None)),
-        }
+            .map_err(|e| Error::SocketAddrParse(Some(e)))?
+            .next()
+            .ok_or(Error::SocketAddrParse(None))?;
+
+        Ok(IPClientTransport { addr, sock: None })
     }
 }
 
 impl ClientTransport for IPClientTransport {
+    fn bind(&mut self) -> Result<TransportType> {
+        let ver = InetVersion::from_sockaddr(&self.addr);
+        let mut sock = TcpSocket::new(ver).map_err(Error::Socket)?;
+        let bind_addr: SocketAddr = match &self.addr {
+            SocketAddr::V4(_) => SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, 0).into(),
+            SocketAddr::V6(_) => SocketAddrV6::new(Ipv6Addr::UNSPECIFIED, 0, 0, 0).into(),
+        };
+        sock.bind(bind_addr).map_err(Error::Bind)?;
+
+        let port = sock.local_port().map_err(Error::LocalAddr)?;
+        self.sock = Some(sock);
+        Ok(match self.addr {
+            SocketAddr::V4(_) => SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, port)),
+            SocketAddr::V6(_) => {
+                SocketAddr::V6(SocketAddrV6::new(Ipv6Addr::UNSPECIFIED, port, 0, 0))
+            }
+        }
+        .into())
+    }
+
     fn connect(&mut self) -> Result<Transport> {
-        let stream = handle_eintr!(TcpStream::connect(&self.0)).map_err(Error::Connect)?;
-        tcpstream_to_transport(stream)
+        if self.sock.is_none() {
+            self.bind()?;
+        }
+        let sock = replace(&mut self.sock, None).unwrap();
+        // TODO TcpSocket::connect and VsockSocket::connect need to handle EINTR.
+        let stream = sock.connect(self.addr).map_err(Error::Connect)?;
+        let addr = stream.local_addr().map_err(Error::LocalAddr)?;
+        tcpstream_to_transport(stream, addr)
     }
 }
 
@@ -227,51 +314,82 @@ impl VsockServerTransport {
 
 impl ServerTransport for VsockServerTransport {
     fn accept(&mut self) -> Result<Transport> {
-        let (stream, _) = handle_eintr!(self.0.accept()).map_err(Error::Accept)?;
-        vsockstream_to_transport(stream)
+        let (stream, addr) = handle_eintr!(self.0.accept()).map_err(Error::Accept)?;
+        vsockstream_to_transport(stream, addr)
     }
 }
 
 /// A transport method that connects over vsock.
-pub struct VsockClientTransport(VSocketAddr);
+pub struct VsockClientTransport {
+    addr: VSocketAddr,
+    sock: Option<VsockSocket>,
+}
 
 impl VsockClientTransport {
-    pub fn new<T: ToSocketAddr>(addr: T) -> Result<Self> {
-        let address: VSocketAddr = addr.to_socket_addr().map_err(Error::VSocketAddrParse)?;
-        Ok(VsockClientTransport(address))
+    pub fn new<T: ToSocketAddr>(to_addr: T) -> Result<Self> {
+        let addr: VSocketAddr = to_addr.to_socket_addr().map_err(Error::VSocketAddrParse)?;
+        Ok(VsockClientTransport { addr, sock: None })
     }
 }
 
 impl ClientTransport for VsockClientTransport {
+    fn bind(&mut self) -> Result<TransportType> {
+        let mut sock = VsockSocket::new().map_err(Error::Socket)?;
+        let bind_addr = VSocketAddr {
+            cid: VsockCid::Any,
+            port: VMADDR_PORT_ANY,
+        };
+        sock.bind(bind_addr).map_err(Error::Bind)?;
+
+        let port = sock.local_port().map_err(Error::LocalAddr)?;
+        self.sock = Some(sock);
+        Ok(VSocketAddr {
+            cid: VsockCid::Any,
+            port,
+        }
+        .into())
+    }
+
     fn connect(&mut self) -> Result<Transport> {
-        let stream = handle_eintr!(VsockStream::connect(&self.0)).map_err(Error::Connect)?;
-        vsockstream_to_transport(stream)
+        if self.sock.is_none() {
+            self.bind()?;
+        }
+        let sock = replace(&mut self.sock, None).unwrap();
+        // TODO TcpSocket::connect and VsockSocket::connect need to handle EINTR.
+        let stream = sock.connect(&self.addr).map_err(Error::Connect)?;
+        let addr = VSocketAddr {
+            cid: VsockCid::Any,
+            port: stream.local_port().map_err(Error::LocalAddr)?,
+        };
+        vsockstream_to_transport(stream, addr)
     }
 }
 
 #[derive(Debug)]
 enum PipeTransportState {
+    Bound(Transport, Transport),
     ServerReady(Transport),
     ClientReady(Transport),
-    Either,
+    UnBound,
 }
 
 impl Default for PipeTransportState {
     fn default() -> Self {
-        PipeTransportState::Either
+        PipeTransportState::UnBound
     }
 }
 
 impl PartialEq for PipeTransportState {
     fn eq(&self, other: &Self) -> bool {
         match &self {
+            PipeTransportState::Bound(_, _) => matches!(other, PipeTransportState::Bound(_, _)),
             PipeTransportState::ServerReady(_) => {
                 matches!(other, PipeTransportState::ServerReady(_))
             }
             PipeTransportState::ClientReady(_) => {
                 matches!(other, PipeTransportState::ClientReady(_))
             }
-            PipeTransportState::Either => matches!(other, PipeTransportState::Either),
+            PipeTransportState::UnBound => matches!(other, PipeTransportState::UnBound),
         }
     }
 }
@@ -279,10 +397,20 @@ impl PartialEq for PipeTransportState {
 // Returns two `Transport` structs connected to each other.
 fn create_transport_from_pipes() -> Result<(Transport, Transport)> {
     let (r1, w1) = pipe(true).map_err(Error::Pipe)?;
+    let id1 = (r1.as_raw_fd(), w1.as_raw_fd());
     let (r2, w2) = pipe(true).map_err(Error::Pipe)?;
+    let id2 = (r2.as_raw_fd(), w2.as_raw_fd());
     Ok((
-        Transport(Box::new(r1), Box::new(w2)),
-        Transport(Box::new(r2), Box::new(w1)),
+        Transport {
+            r: Box::new(r1),
+            w: Box::new(w2),
+            id: TransportType::from(id1),
+        },
+        Transport {
+            r: Box::new(r2),
+            w: Box::new(w1),
+            id: TransportType::from(id2),
+        },
     ))
 }
 
@@ -297,29 +425,36 @@ fn create_transport_from_pipes() -> Result<(Transport, Transport)> {
 #[derive(Debug, Default)]
 pub struct PipeTransport {
     state: PipeTransportState,
+    id: Option<(RawFd, RawFd)>,
 }
 
 impl PipeTransport {
     pub fn new() -> Self {
         PipeTransport {
-            state: PipeTransportState::Either,
+            state: PipeTransportState::UnBound,
+            id: None,
         }
     }
 
     pub fn close(&mut self) {
-        self.state = PipeTransportState::Either;
+        self.state = PipeTransportState::UnBound;
+        self.id = None;
     }
 }
 
 impl ServerTransport for PipeTransport {
     fn accept(&mut self) -> Result<Transport> {
-        match replace(&mut self.state, PipeTransportState::Either) {
+        match replace(&mut self.state, PipeTransportState::UnBound) {
+            PipeTransportState::Bound(t1, t2) => {
+                self.state = PipeTransportState::ClientReady(t1);
+                Ok(t2)
+            }
             PipeTransportState::ServerReady(t) => Ok(t),
             PipeTransportState::ClientReady(t) => {
                 self.state = PipeTransportState::ClientReady(t);
                 Err(Error::InvalidState)
             }
-            PipeTransportState::Either => {
+            PipeTransportState::UnBound => {
                 let (t1, t2) = create_transport_from_pipes()?;
                 self.state = PipeTransportState::ClientReady(t1);
                 Ok(t2)
@@ -329,17 +464,28 @@ impl ServerTransport for PipeTransport {
 }
 
 impl ClientTransport for PipeTransport {
+    fn bind(&mut self) -> Result<TransportType> {
+        let (t1, t2) = create_transport_from_pipes()?;
+        let id = (t1.r.as_raw_fd(), t2.r.as_raw_fd());
+        self.state = PipeTransportState::Bound(t1, t2);
+        self.id = Some(id);
+        Ok(TransportType::from(id))
+    }
+
     fn connect(&mut self) -> Result<Transport> {
-        match replace(&mut self.state, PipeTransportState::Either) {
+        match replace(&mut self.state, PipeTransportState::UnBound) {
+            PipeTransportState::Bound(t1, t2) => {
+                self.state = PipeTransportState::ServerReady(t2);
+                Ok(t1)
+            }
             PipeTransportState::ServerReady(t) => {
                 self.state = PipeTransportState::ServerReady(t);
                 Err(Error::InvalidState)
             }
             PipeTransportState::ClientReady(t) => Ok(t),
-            PipeTransportState::Either => {
-                let (t1, t2) = create_transport_from_pipes()?;
-                self.state = PipeTransportState::ServerReady(t1);
-                Ok(t2)
+            PipeTransportState::UnBound => {
+                self.bind()?;
+                self.connect()
             }
         }
     }
@@ -371,7 +517,7 @@ pub(crate) mod tests {
         mut client: C,
     ) {
         spawn(move || {
-            let (mut r, mut w) = client.connect().unwrap().into();
+            let (mut r, mut w, _) = client.connect().unwrap().into();
             assert_eq!(w.write(&CLIENT_SEND).unwrap(), CLIENT_SEND.len());
 
             let mut buf: [u8; SERVER_SEND.len()] = [0; SERVER_SEND.len()];
@@ -379,7 +525,7 @@ pub(crate) mod tests {
             assert_eq!(buf, SERVER_SEND);
         });
 
-        let (mut r, mut w) = server.accept().unwrap().into();
+        let (mut r, mut w, _) = server.accept().unwrap().into();
         assert_eq!(w.write(&SERVER_SEND).unwrap(), SERVER_SEND.len());
 
         let mut buf: [u8; CLIENT_SEND.len()] = [0; CLIENT_SEND.len()];
@@ -407,7 +553,8 @@ pub(crate) mod tests {
 
     #[test]
     fn iptransport() {
-        let (server, client) = get_ip_transport().unwrap().into();
+        let (server, mut client) = get_ip_transport().unwrap().into();
+        client.bind().unwrap();
         test_transport(server, client);
     }
 
@@ -415,31 +562,41 @@ pub(crate) mod tests {
     #[test]
     fn vsocktransport() {
         let server = VsockServerTransport::new((VsockCid::Any, DEFAULT_PORT)).unwrap();
-        let client = VsockClientTransport::new((VsockCid::Local, DEFAULT_PORT)).unwrap();
+        let mut client = VsockClientTransport::new((VsockCid::Local, DEFAULT_PORT)).unwrap();
+        client.bind().unwrap();
         test_transport(server, client);
     }
 
     #[test]
     fn pipetransport_new() {
         let p = PipeTransport::new();
-        assert_eq!(p.state, PipeTransportState::Either);
+        assert_eq!(p.state, PipeTransportState::UnBound);
+    }
+
+    #[test]
+    fn pipetransport_bind() {
+        let mut p = PipeTransport::new();
+        p.bind().unwrap();
+        assert!(matches!(p.state, PipeTransportState::Bound(_, _)));
     }
 
     #[test]
     fn pipetransport_close() {
         let (t1, t2) = create_transport_from_pipes().unwrap();
+        let id = Some((t1.r.as_raw_fd(), t2.r.as_raw_fd()));
         for a in [
-            PipeTransportState::Either,
+            PipeTransportState::UnBound,
             PipeTransportState::ClientReady(t1),
             PipeTransportState::ServerReady(t2),
         ]
         .iter_mut()
         {
             let mut p = PipeTransport {
-                state: replace(a, PipeTransportState::Either),
+                state: replace(a, PipeTransportState::UnBound),
+                id,
             };
             p.close();
-            assert_eq!(p.state, PipeTransportState::Either);
+            assert_eq!(p.state, PipeTransportState::UnBound);
         }
     }
 
@@ -449,7 +606,7 @@ pub(crate) mod tests {
 
         let client = p.connect().unwrap();
         spawn(move || {
-            let (mut r, mut w) = client.into();
+            let (mut r, mut w, _) = client.into();
             assert_eq!(w.write(&CLIENT_SEND).unwrap(), CLIENT_SEND.len());
 
             let mut buf: [u8; SERVER_SEND.len()] = [0; SERVER_SEND.len()];
@@ -457,7 +614,7 @@ pub(crate) mod tests {
             assert_eq!(buf, SERVER_SEND);
         });
 
-        let (mut r, mut w) = p.accept().unwrap().into();
+        let (mut r, mut w, _) = p.accept().unwrap().into();
         assert_eq!(w.write(&SERVER_SEND).unwrap(), SERVER_SEND.len());
 
         let mut buf: [u8; CLIENT_SEND.len()] = [0; CLIENT_SEND.len()];

@@ -13,8 +13,8 @@ use sirenia::build_info::BUILD_TIMESTAMP;
 use sirenia::cli::initialize_common_arguments;
 use sirenia::communication::{read_message, write_message, AppInfo, Request, Response};
 use sirenia::transport::{
-    ClientTransport, IPClientTransport, ReadDebugSend, Transport, TransportType,
-    VsockClientTransport, WriteDebugSend,
+    ClientTransport, IPClientTransport, Transport, TransportRead, TransportType, TransportWrite,
+    VsockClientTransport,
 };
 
 fn main() -> Result<(), sys_util::syslog::Error> {
@@ -30,7 +30,7 @@ fn main() -> Result<(), sys_util::syslog::Error> {
 
     info!("Starting dugong: {}", BUILD_TIMESTAMP);
 
-    if let Ok(Transport(r, w)) = transport.connect() {
+    if let Ok(Transport { r, w, id: _ }) = transport.connect() {
         start_rpc(transport_type, r, w);
     } else {
         error!("transport connect failed");
@@ -43,10 +43,11 @@ fn open_connection(connection_type: &TransportType) -> Box<dyn ClientTransport> 
     match connection_type {
         TransportType::IpConnection(url) => Box::new(IPClientTransport::new(&url).unwrap()),
         TransportType::VsockConnection(url) => Box::new(VsockClientTransport::new(&url).unwrap()),
+        _ => panic!("unexpected connection type"),
     }
 }
 
-fn start_rpc(transport_type: TransportType, r: Box<dyn ReadDebugSend>, w: Box<dyn WriteDebugSend>) {
+fn start_rpc(transport_type: TransportType, r: Box<dyn TransportRead>, w: Box<dyn TransportWrite>) {
     info!("Opening connection to trichechus");
     // Right now just send the message to start up the shell and print and log
     // responses from trichechus
@@ -62,7 +63,7 @@ fn start_rpc(transport_type: TransportType, r: Box<dyn ReadDebugSend>, w: Box<dy
     child.join().unwrap();
 }
 
-fn request_start_tee_app(mut w: Box<dyn WriteDebugSend>, app_id: &str) {
+fn request_start_tee_app(mut w: Box<dyn TransportWrite>, app_id: &str) {
     // TODO: Need to bind to the new port to prevent other processes from using
     // it, but need to add the option to bind to an ephemeral port in vsock
     let app_info = AppInfo {
@@ -80,7 +81,7 @@ fn request_start_tee_app(mut w: Box<dyn WriteDebugSend>, app_id: &str) {
     // write messages to dugong using serialization.
 }
 
-fn start_logger(mut r: Box<dyn ReadDebugSend>, transport_type: TransportType) {
+fn start_logger(mut r: Box<dyn TransportRead>, transport_type: TransportType) {
     loop {
         let message = read_message(&mut r).unwrap();
         match message {
@@ -102,7 +103,12 @@ fn start_logger(mut r: Box<dyn ReadDebugSend>, transport_type: TransportType) {
 
 fn setup_shell_stdin(transport_type: &TransportType) {
     let mut transport = open_connection(transport_type);
-    if let Ok(Transport(mut r, mut w)) = transport.connect() {
+    if let Ok(Transport {
+        mut r,
+        mut w,
+        id: _,
+    }) = transport.connect()
+    {
         let child1 = spawn(move || {
             copy(&mut stdin(), &mut w).unwrap_or(0);
         });

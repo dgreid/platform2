@@ -113,7 +113,7 @@ impl Into<c_uint> for VsockCid {
 }
 
 /// An address associated with a virtual socket.
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct SocketAddr {
     pub cid: VsockCid,
     pub port: c_uint,

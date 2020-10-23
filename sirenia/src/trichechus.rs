@@ -21,8 +21,8 @@ use sirenia::linux::syslog::Syslog;
 use sirenia::sandbox::{self, Sandbox};
 use sirenia::to_sys_util;
 use sirenia::transport::{
-    IPServerTransport, ReadDebugSend, ServerTransport, Transport, TransportType,
-    VsockServerTransport, WriteDebugSend,
+    IPServerTransport, ServerTransport, Transport, TransportRead, TransportType, TransportWrite,
+    VsockServerTransport,
 };
 use sys_util::{self, error, info, pipe, syslog};
 
@@ -58,7 +58,7 @@ impl Display for Error {
 pub type Result<T> = StdResult<T, Error>;
 
 // TODO: Should these be macros? What is the advantage of macros?
-fn log_error(w: &mut Box<dyn WriteDebugSend>, s: String) {
+fn log_error(w: &mut Box<dyn TransportWrite>, s: String) {
     error!("{}", &s);
     let err = write_message(w, Response::LogError(format!("Trichechus error: {}", s)));
 
@@ -67,7 +67,7 @@ fn log_error(w: &mut Box<dyn WriteDebugSend>, s: String) {
     }
 }
 
-fn log_info(w: &mut Box<dyn WriteDebugSend>, s: String) {
+fn log_info(w: &mut Box<dyn TransportWrite>, s: String) {
     info!("{}", &s);
     let err = write_message(w, Response::LogInfo(format!("Trichechus info: {}", s)));
 
@@ -123,11 +123,17 @@ fn main() -> Result<()> {
     let mut transport: Box<dyn ServerTransport> = match config.connection_type {
         TransportType::IpConnection(url) => Box::new(IPServerTransport::new(&url).unwrap()),
         TransportType::VsockConnection(url) => Box::new(VsockServerTransport::new(&url).unwrap()),
+        _ => panic!("unexpected connection type"),
     };
 
     // Handle parent dugong connection.
     info!("Waiting for connection");
-    if let Ok(Transport(mut r, mut w)) = transport.accept() {
+    if let Ok(Transport {
+        mut r,
+        mut w,
+        id: _,
+    }) = transport.accept()
+    {
         log_info(&mut w, "Accepted connection".to_string());
         loop {
             match read_message(&mut r) {
@@ -144,7 +150,7 @@ fn main() -> Result<()> {
 // in a Request, while read_message only guarantees returning something that
 // implements the Deserialize trait
 fn handle_message(
-    mut w: &mut Box<dyn WriteDebugSend>,
+    mut w: &mut Box<dyn TransportWrite>,
     message: Request,
     mut transport: &mut Box<dyn ServerTransport>,
 ) {
@@ -163,7 +169,7 @@ fn handle_message(
 // Starts up the TEE application that was requested from Dugong and sends a
 // message back to dugong to connect a new socket to communcate with the TEE.
 fn start_tee_app(
-    mut w: &mut Box<dyn WriteDebugSend>,
+    mut w: &mut Box<dyn TransportWrite>,
     process: &str,
     transport: &mut Box<dyn ServerTransport>,
 ) {
@@ -173,22 +179,22 @@ fn start_tee_app(
     }
 
     // TODO: Timeout and retry accept and check port number
-    let Transport(mut tee_r, mut tee_w) = transport.accept().unwrap();
+    let mut tee = transport.accept().unwrap();
     // TODO: Eventually will need to spawn this in a separate process, but the
     // output of the tee will have to be written somewhere else first, otherwise
     // the main trichechus process and the tee process will both have mutable
     // borrows of the write end of the tee process.
-    match start_tee_app_spawn(&mut w, &process, &mut tee_r, &mut tee_w) {
+    match start_tee_app_spawn(&mut w, &process, &mut tee.r, &mut tee.w) {
         Ok(_) => (),
         Err(e) => log_error(w, e.to_string()),
     }
 }
 
 fn start_tee_app_spawn(
-    mut w: &mut Box<dyn WriteDebugSend>,
+    mut w: &mut Box<dyn TransportWrite>,
     process: &str,
-    tee_r: &mut Box<dyn ReadDebugSend>,
-    tee_w: &mut Box<dyn WriteDebugSend>,
+    tee_r: &mut Box<dyn TransportRead>,
+    tee_w: &mut Box<dyn TransportWrite>,
 ) -> Result<()> {
     let (pipe_r, pipe_w) = pipe(false).map_err(Error::OpenPipe)?;
     let mut sandbox = Sandbox::new(None).map_err(Error::NewSandbox)?;
