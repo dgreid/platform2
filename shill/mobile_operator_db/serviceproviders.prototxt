@@ -7326,6 +7326,7 @@ mno {
       }
       username : "ym"
       password : "ym"
+      authentication : CHAP
     }
     mobile_apn {
       apn : "cmn.mgx"
