@@ -324,7 +324,6 @@ bool Mount::PrepareCryptohome(const std::string& obfuscated_username,
 
 bool Mount::MountCryptohome(const Credentials& credentials,
                             const Mount::MountArgs& mount_args,
-                            bool recreate_on_decrypt_fatal,
                             MountError* mount_error) {
   username_ = credentials.username();
   const std::string obfuscated_username =
@@ -371,40 +370,8 @@ bool Mount::MountCryptohome(const Credentials& credentials,
   // Attempt to decrypt the vault keyset with the specified credentials.
   VaultKeyset vault_keyset;
   vault_keyset.Initialize(platform_, crypto_);
-  MountError local_mount_error = MOUNT_ERROR_NONE;
-  if (!DecryptVaultKeyset(credentials, &vault_keyset, &local_mount_error)) {
-    *mount_error = local_mount_error;
-    if (recreate_on_decrypt_fatal &&
-        local_mount_error == MOUNT_ERROR_VAULT_UNRECOVERABLE) {
-      LOG(ERROR) << "cryptohome must be re-created because of fatal error.";
-      if (!homedirs_->Remove(credentials.username())) {
-        LOG(ERROR) << "Fatal decryption error, but unable to remove "
-                   << "cryptohome.";
-        *mount_error = MOUNT_ERROR_REMOVE_INVALID_USER_FAILED;
-        return false;
-      }
-      // Allow one recursion into MountCryptohome by blocking re-create on
-      // fatal.
-      bool local_result =
-          MountCryptohome(credentials, mount_args,
-                          /*recreate_on_decrypt_fatal=*/false, mount_error);
-      // If the mount was successful, set the status to indicate that the
-      // cryptohome was recreated.
-      if (local_result) {
-        *mount_error = MOUNT_ERROR_RECREATED;
-      }
-      return local_result;
-    }
-
-    // Return VAULT_UNRECOVERABLE as FATAL for the higher level code doesn't
-    // know such an error.
-    // TODO(chromium:1140868, dlunev): extract the recreation behaviour to the
-    // higher layer and then return VAULT_UNRECOVERABLE directly.
-    if (*mount_error == MOUNT_ERROR_VAULT_UNRECOVERABLE) {
-      *mount_error = MOUNT_ERROR_FATAL;
-    }
-
-    LOG(ERROR) << "Failed to decrypt VK, error = " << local_mount_error;
+  if (!DecryptVaultKeyset(credentials, &vault_keyset, mount_error)) {
+    LOG(ERROR) << "Failed to decrypt VK, error = " << *mount_error;
     return false;
   }
 

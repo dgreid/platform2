@@ -1566,7 +1566,7 @@ TEST_F(UserDataAuthTest, CleanUpStale_FilledMap_NoOpenFiles_ShadowOnly) {
 
   EXPECT_CALL(lockbox_, FinalizeBoot());
   EXPECT_CALL(*mount, Init(&platform_, &crypto_, _)).WillOnce(Return(true));
-  EXPECT_CALL(*mount, MountCryptohome(_, _, _, _)).WillOnce(Return(true));
+  EXPECT_CALL(*mount, MountCryptohome(_, _, _)).WillOnce(Return(true));
   EXPECT_CALL(*mount, UpdateCurrentUserActivityTimestamp(_, _))
       .WillOnce(Return(true));
   EXPECT_CALL(platform_, GetMountsBySourcePrefix(_, _)).WillOnce(Return(false));
@@ -2055,10 +2055,9 @@ TEST_F(UserDataAuthExTest, MountPublicUsesPublicMountPasskey) {
   mount_req_->set_public_mount(true);
   EXPECT_CALL(homedirs_, Exists(_)).WillOnce(testing::InvokeWithoutArgs([&]() {
     SetupMount(kUser);
-    EXPECT_CALL(*mount_, MountCryptohome(_, _, _, _))
+    EXPECT_CALL(*mount_, MountCryptohome(_, _, _))
         .WillOnce(testing::Invoke([](const Credentials& credentials,
                                      const Mount::MountArgs& mount_args,
-                                     bool recreate_on_decrypt_fatal,
                                      MountError* error) {
           // Tests that the passkey is filled when public_mount is set.
           EXPECT_FALSE(credentials.passkey().empty());

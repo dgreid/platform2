@@ -2091,6 +2091,26 @@ void Service::DoMount(scoped_refptr<UserSession> session,
     LOG(WARNING) << "TPM communication error. Retrying.";
     code = AttemptUserMount(credentials, mount_args, session);
   }
+
+  // TODO(chromium:1140868, dlunev): extract the recreation behaviour to the
+  // higher layer and then return VAULT_UNRECOVERABLE directly.
+  if (code == MOUNT_ERROR_VAULT_UNRECOVERABLE) {
+    LOG(ERROR) << "Unrecoverable vault, removing.";
+    if (!homedirs_->Remove(credentials.username())) {
+      LOG(ERROR) << "Failed to remove unrecoverable vault.";
+      code = MOUNT_ERROR_REMOVE_INVALID_USER_FAILED;
+    } else {
+      code = AttemptUserMount(credentials, mount_args, session);
+      if (code == MOUNT_ERROR_NONE) {
+        code = MOUNT_ERROR_RECREATED;
+      }
+      // Return VAULT_UNRECOVERABLE as FATAL for the higher level code doesn't
+      // know such an error.
+      if (code == MOUNT_ERROR_VAULT_UNRECOVERABLE) {
+        code = MOUNT_ERROR_FATAL;
+      }
+    }
+  }
   *return_code = code;
   *return_status = (code == MOUNT_ERROR_NONE || code == MOUNT_ERROR_RECREATED);
 
@@ -2881,6 +2901,26 @@ void Service::ContinueMountExWithCredentials(
   if (code == MOUNT_ERROR_TPM_COMM_ERROR) {
     LOG(WARNING) << "TPM communication error. Retrying.";
     code = AttemptUserMount(*credentials, mount_args, user_session);
+  }
+
+  // TODO(chromium:1140868, dlunev): extract the recreation behaviour to the
+  // higher layer and then return VAULT_UNRECOVERABLE directly.
+  if (code == MOUNT_ERROR_VAULT_UNRECOVERABLE) {
+    LOG(ERROR) << "Unrecoverable vault, removing";
+    if (!homedirs_->Remove(credentials->username())) {
+      LOG(ERROR) << "Failed to remove unrecoverable vault";
+      code = MOUNT_ERROR_REMOVE_INVALID_USER_FAILED;
+    } else {
+      code = AttemptUserMount(*credentials, mount_args, user_session);
+      if (code == MOUNT_ERROR_NONE) {
+        code = MOUNT_ERROR_RECREATED;
+      }
+      // Return VAULT_UNRECOVERABLE as FATAL for the higher level code doesn't
+      // know such an error.
+      if (code == MOUNT_ERROR_VAULT_UNRECOVERABLE) {
+        code = MOUNT_ERROR_FATAL;
+      }
+    }
   }
 
   // PKCS#11 always starts out uninitialized right after a fresh mount.

@@ -106,13 +106,9 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   //   mount_args - The options for the call to mount:
   //                * Whether to create the cryptohome if it doesn't exist.
   //                * Whether to ensure that the mount is ephemeral.
-  //   recreate_on_decrypt_fatal - Attempt to recreate the cryptohome directory
-  //                               on a fatal error (for example, TPM was
-  //                               cleared)
   //   error - The specific error condition on failure
   virtual bool MountCryptohome(const Credentials& credentials,
                                const MountArgs& mount_args,
-                               bool recreate_on_decrypt_fatal,
                                MountError* error);
 
   // Attempts to mount an ephemeral cryptohome for the given credentials.

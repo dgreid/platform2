@@ -24,7 +24,7 @@ UserSession::UserSession(const brillo::SecureBlob& salt,
 MountError UserSession::MountVault(const Credentials& credentials,
                                    const Mount::MountArgs& mount_args) {
   MountError code = MOUNT_ERROR_NONE;
-  if (!mount_->MountCryptohome(credentials, mount_args, true, &code)) {
+  if (!mount_->MountCryptohome(credentials, mount_args, &code)) {
     // In the weird case where MountCryptohome returns false with ERROR_NONE
     // code report it as FATAL.
     return code == MOUNT_ERROR_NONE ? MOUNT_ERROR_FATAL : code;
