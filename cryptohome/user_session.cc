@@ -17,14 +17,37 @@ namespace cryptohome {
 
 UserSession::UserSession() {}
 UserSession::~UserSession() {}
-UserSession::UserSession(const brillo::SecureBlob& salt,
+UserSession::UserSession(HomeDirs* homedirs,
+                         const brillo::SecureBlob& salt,
                          const scoped_refptr<Mount> mount)
-    : system_salt_(salt), mount_(mount) {}
+    : homedirs_(homedirs), system_salt_(salt), mount_(mount) {}
 
 MountError UserSession::MountVault(const Credentials& credentials,
                                    const Mount::MountArgs& mount_args) {
+  const std::string obfuscated_username =
+      credentials.GetObfuscatedUsername(system_salt_);
+  bool created = false;
+
+  // TODO(chromium:1140868, dlunev): once re-recreation logic is removed, this
+  // can be moved to the service level.
+  if (!homedirs_->CryptohomeExists(obfuscated_username)) {
+    if (!mount_args.create_if_missing) {
+      LOG(ERROR) << "Asked to mount nonexistent user";
+      return MOUNT_ERROR_USER_DOES_NOT_EXIST;
+    }
+
+    if (!homedirs_->Create(credentials.username()) ||
+        !mount_->PrepareCryptohome(obfuscated_username,
+                                   mount_args.create_as_ecryptfs) ||
+        !homedirs_->AddInitialKeyset(credentials)) {
+      LOG(ERROR) << "Error creating cryptohome.";
+      return MOUNT_ERROR_CREATE_CRYPTOHOME_FAILED;
+    }
+    created = true;
+  }
+
   MountError code = MOUNT_ERROR_NONE;
-  if (!mount_->MountCryptohome(credentials, mount_args, &code)) {
+  if (!mount_->MountCryptohome(credentials, mount_args, created, &code)) {
     // In the weird case where MountCryptohome returns false with ERROR_NONE
     // code report it as FATAL.
     return code == MOUNT_ERROR_NONE ? MOUNT_ERROR_FATAL : code;

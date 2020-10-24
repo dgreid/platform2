@@ -51,6 +51,7 @@ class MockHomeDirs : public HomeDirs {
               (const Credentials&, const brillo::SecureBlob&, int*),
               (override));
   MOCK_METHOD(bool, Exists, (const std::string&), (const, override));
+  MOCK_METHOD(bool, CryptohomeExists, (const std::string&), (const, override));
   MOCK_METHOD(VaultKeyset*,
               GetVaultKeyset,
               (const std::string&, const std::string&),

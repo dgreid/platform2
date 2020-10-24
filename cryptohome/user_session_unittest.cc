@@ -37,7 +37,7 @@ class UserSessionTest : public ::testing::Test {
 
 TEST_F(UserSessionTest, VerifyUser) {
   Credentials credentials("username", SecureBlob("password"));
-  scoped_refptr<UserSession> session = new UserSession(salt, nullptr);
+  scoped_refptr<UserSession> session = new UserSession(nullptr, salt, nullptr);
   EXPECT_TRUE(session->SetCredentials(credentials, 0));
 
   EXPECT_TRUE(session->VerifyUser(credentials.GetObfuscatedUsername(salt)));
@@ -49,7 +49,7 @@ TEST_F(UserSessionTest, VerifyCredentials) {
   Credentials credentials_2("username", SecureBlob("password2"));
   Credentials credentials_3("username2", SecureBlob("password2"));
 
-  scoped_refptr<UserSession> session = new UserSession(salt, nullptr);
+  scoped_refptr<UserSession> session = new UserSession(nullptr, salt, nullptr);
   EXPECT_TRUE(session->SetCredentials(credentials_1, 0));
   EXPECT_TRUE(session->VerifyCredentials(credentials_1));
   EXPECT_FALSE(session->VerifyCredentials(credentials_2));

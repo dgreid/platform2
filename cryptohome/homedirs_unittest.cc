@@ -270,7 +270,8 @@ TEST_P(HomeDirsTest, CreateCryptohome) {
   platform_.DeleteFile(FilePath(test_helper_.users[0].base_path), true);
 
   EXPECT_TRUE(homedirs_.Create(kDefaultUsers[0].username));
-  EXPECT_TRUE(base::DirectoryExists(FilePath(test_helper_.users[0].base_path)));
+  EXPECT_TRUE(
+      platform_.DirectoryExists(FilePath(test_helper_.users[0].base_path)));
 }
 
 TEST_P(HomeDirsTest, ComputeDiskUsageDircrypto) {

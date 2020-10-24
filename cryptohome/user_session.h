@@ -12,6 +12,7 @@
 #include <brillo/secure_blob.h>
 
 #include "cryptohome/credentials.h"
+#include "cryptohome/homedirs.h"
 #include "cryptohome/mount.h"
 #include "cryptohome/password_verifier.h"
 
@@ -20,7 +21,9 @@ namespace cryptohome {
 class UserSession : public base::RefCountedThreadSafe<UserSession> {
  public:
   UserSession();
-  UserSession(const brillo::SecureBlob& salt, const scoped_refptr<Mount> mount);
+  UserSession(HomeDirs* homedirs,
+              const brillo::SecureBlob& salt,
+              const scoped_refptr<Mount> mount);
   virtual ~UserSession();
 
   // Disallow Copy/Move/Assign
@@ -77,6 +80,8 @@ class UserSession : public base::RefCountedThreadSafe<UserSession> {
   int key_index() const { return key_index_; }
 
  private:
+  HomeDirs* homedirs_;
+
   std::string obfuscated_username_;
   std::string username_;
   brillo::SecureBlob system_salt_;

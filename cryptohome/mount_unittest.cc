@@ -642,8 +642,8 @@ TEST_P(MountTest, MountCryptohomeHasPrivileges) {
   // user exists, so there'll be no skel copy after.
 
   MountError error = MOUNT_ERROR_NONE;
-  ASSERT_TRUE(
-      mount_->MountCryptohome(credentials, GetDefaultMountArgs(), &error));
+  ASSERT_TRUE(mount_->MountCryptohome(credentials, GetDefaultMountArgs(),
+                                      /* is_pristine */ false, &error));
 
   EXPECT_CALL(platform_, Unmount(_, _, _)).WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, ClearUserKeyring()).WillOnce(Return(true));
@@ -1331,8 +1331,8 @@ TEST_P(MountTest, MountCryptohome) {
   // user exists, so there'll be no skel copy after.
 
   MountError error = MOUNT_ERROR_NONE;
-  EXPECT_TRUE(
-      mount_->MountCryptohome(credentials, GetDefaultMountArgs(), &error));
+  EXPECT_TRUE(mount_->MountCryptohome(credentials, GetDefaultMountArgs(),
+                                      /* is_pristine */ false, &error));
 }
 
 TEST_P(MountTest, MountCryptohomeChapsKey) {
@@ -1367,8 +1367,8 @@ TEST_P(MountTest, MountCryptohomeChapsKey) {
 
   ExpectCryptohomeMount(*user);
 
-  ASSERT_TRUE(
-      mount_->MountCryptohome(credentials, GetDefaultMountArgs(), &error));
+  ASSERT_TRUE(mount_->MountCryptohome(credentials, GetDefaultMountArgs(),
+                                      /* is_pristine */ false, &error));
 
   user->InjectKeyset(&platform_, true);
 
@@ -1420,8 +1420,8 @@ TEST_P(MountTest, MountCryptohomeNoChapsKey) {
 
   ExpectCryptohomeMount(*user);
 
-  ASSERT_TRUE(
-      mount_->MountCryptohome(credentials, GetDefaultMountArgs(), &error));
+  ASSERT_TRUE(mount_->MountCryptohome(credentials, GetDefaultMountArgs(),
+                                      /* is_pristine */ false, &error));
   EXPECT_CALL(platform_, ReadFile(user->keyset_path, _))
       .WillRepeatedly(DoAll(SetArgPointee<1>(user->credentials), Return(true)));
   user->InjectKeyset(&platform_, true);
@@ -1541,8 +1541,8 @@ TEST_P(MountTest, MountCryptohomeNoChange) {
 
   ExpectCryptohomeMount(*user);
 
-  ASSERT_TRUE(
-      mount_->MountCryptohome(credentials, GetDefaultMountArgs(), &error));
+  ASSERT_TRUE(mount_->MountCryptohome(credentials, GetDefaultMountArgs(),
+                                      /* is_pristine */ false, &error));
 
   user->InjectKeyset(&platform_, true);
 
@@ -1558,43 +1558,20 @@ TEST_P(MountTest, MountCryptohomeNoChange) {
   ASSERT_EQ(0, brillo::SecureMemcmp(lhs.data(), rhs.data(), lhs.size()));
 }
 
-TEST_P(MountTest, MountCryptohomeNoCreate) {
-  // Checks that doesn't create the cryptohome for the user on Mount without
-  // being told to do so.
-  EXPECT_CALL(platform_, DirectoryExists(kImageDir))
-      .WillRepeatedly(Return(true));
-  EXPECT_CALL(platform_, FileExists(base::FilePath(kLockedToSingleUserFile)))
-      .WillRepeatedly(Return(false));
+TEST_P(MountTest, MountPristineCryptohome) {
+  // TODO(wad) Drop NiceMock and replace with InSequence EXPECT_CALL()s.
+  // It will complain about creating tracked subdirs, but that is non-fatal.
   EXPECT_TRUE(DoMountInit());
-
   // Test user at index 12 hasn't been created.
   InsertTestUsers(&kDefaultUsers[12], 1);
   TestUser* user = &helper_.users[0];
   Credentials credentials(user->username, user->passkey);
 
-  // Doesn't exist.
-  EXPECT_CALL(platform_, DirectoryExists(user->vault_path))
-      .WillOnce(Return(false));
-  EXPECT_CALL(platform_, DirectoryExists(user->vault_mount_path))
-      .WillOnce(Return(false));
-
-  Mount::MountArgs mount_args = GetDefaultMountArgs();
-  mount_args.create_if_missing = false;
-  MountError error = MOUNT_ERROR_NONE;
-  ASSERT_FALSE(mount_->MountCryptohome(credentials, mount_args, &error));
-  ASSERT_EQ(MOUNT_ERROR_USER_DOES_NOT_EXIST, error);
-
-  // Now let it create the vault.
-  // TODO(wad) Drop NiceMock and replace with InSequence EXPECT_CALL()s.
-  // It will complain about creating tracked subdirs, but that is non-fatal.
-  Mock::VerifyAndClearExpectations(&platform_);
   user->InjectKeyset(&platform_, true);
 
   EXPECT_CALL(platform_,
               DirectoryExists(AnyOf(user->vault_path, user->vault_mount_path,
                                     user->user_vault_path)))
-      .WillOnce(Return(false))
-      .WillOnce(Return(false))
       .WillOnce(Return(ShouldTestEcryptfs()))
       .WillOnce(Return(false))
       .WillOnce(Return(false));
@@ -1607,10 +1584,6 @@ TEST_P(MountTest, MountCryptohomeNoCreate) {
       .WillOnce(Return(new NiceMock<MockFileEnumerator>()));
 
   EXPECT_CALL(platform_, CreateDirectory(_)).WillRepeatedly(Return(true));
-  brillo::Blob creds;
-  EXPECT_CALL(platform_, WriteFileAtomicDurable(user->keyset_path, _, _))
-      .WillOnce(DoAll(SaveArg<1>(&creds), Return(true)))
-      .WillRepeatedly(Return(true));
 
   EXPECT_CALL(platform_, SetOwnership(_, _, _, _)).WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, SetPermissions(_, _)).WillRepeatedly(Return(true));
@@ -1627,9 +1600,10 @@ TEST_P(MountTest, MountCryptohomeNoCreate) {
                              StartsWith(user->user_vault_mount_path.value()))))
       .WillRepeatedly(Return(true));
 
-  mount_args.create_if_missing = true;
-  error = MOUNT_ERROR_NONE;
-  ASSERT_TRUE(mount_->MountCryptohome(credentials, mount_args, &error));
+  Mount::MountArgs mount_args = GetDefaultMountArgs();
+  MountError error = MOUNT_ERROR_NONE;
+  ASSERT_TRUE(mount_->MountCryptohome(credentials, mount_args,
+                                      /* is_pristine */ true, &error));
   ASSERT_EQ(MOUNT_ERROR_NONE, error);
 }
 
@@ -1658,8 +1632,8 @@ TEST_P(MountTest, UserActivityTimestampUpdated) {
   // Mount()
   MountError error;
   ExpectCryptohomeMount(*user);
-  ASSERT_TRUE(
-      mount_->MountCryptohome(credentials, GetDefaultMountArgs(), &error));
+  ASSERT_TRUE(mount_->MountCryptohome(credentials, GetDefaultMountArgs(),
+                                      /* is_pristine */ false, &error));
 
   // Update the timestamp. Normally it is called in MountTask::Run() in
   // background but here in the test we must call it manually.
@@ -1982,8 +1956,8 @@ TEST_P(MountTest, MountCryptohomePreviousMigrationIncomplete) {
       .WillRepeatedly(Return(dircrypto::KeyState::ENCRYPTED));
 
   MountError error = MOUNT_ERROR_NONE;
-  ASSERT_FALSE(
-      mount_->MountCryptohome(credentials, GetDefaultMountArgs(), &error));
+  ASSERT_FALSE(mount_->MountCryptohome(credentials, GetDefaultMountArgs(),
+                                       /* is_pristine */ false, &error));
   ASSERT_EQ(MOUNT_ERROR_PREVIOUS_MIGRATION_INCOMPLETE, error);
 }
 
@@ -2045,10 +2019,12 @@ TEST_P(MountTest, MountCryptohomeToMigrateFromEcryptfs) {
   Mount::MountArgs mount_args = GetDefaultMountArgs();
   mount_args.to_migrate_from_ecryptfs = true;
   if (ShouldTestEcryptfs()) {
-    EXPECT_TRUE(mount_->MountCryptohome(credentials, mount_args, &error));
+    EXPECT_TRUE(mount_->MountCryptohome(credentials, mount_args,
+                                        /* is_pristine */ false, &error));
   } else {
     // Fail if the existing vault is not ecryptfs.
-    EXPECT_FALSE(mount_->MountCryptohome(credentials, mount_args, &error));
+    EXPECT_FALSE(mount_->MountCryptohome(credentials, mount_args,
+                                         /* is_pristine */ false, &error));
   }
 }
 
@@ -2076,7 +2052,8 @@ TEST_P(MountTest, MountCryptohomeShadowOnly) {
   MountError error = MOUNT_ERROR_NONE;
   Mount::MountArgs mount_args = GetDefaultMountArgs();
   mount_args.shadow_only = true;
-  EXPECT_TRUE(mount_->MountCryptohome(credentials, mount_args, &error));
+  EXPECT_TRUE(mount_->MountCryptohome(credentials, mount_args,
+                                      /* is_pristine */ false, &error));
 }
 
 TEST_P(MountTest, MountCryptohomeForceDircrypto) {
@@ -2132,11 +2109,13 @@ TEST_P(MountTest, MountCryptohomeForceDircrypto) {
 
   if (ShouldTestEcryptfs()) {
     // Should reject mounting ecryptfs vault.
-    EXPECT_FALSE(mount_->MountCryptohome(credentials, mount_args, &error));
+    EXPECT_FALSE(mount_->MountCryptohome(credentials, mount_args,
+                                         /* is_pristine */ false, &error));
     EXPECT_EQ(MOUNT_ERROR_OLD_ENCRYPTION, error);
   } else {
     // Should succeed in mounting in dircrypto.
-    EXPECT_TRUE(mount_->MountCryptohome(credentials, mount_args, &error));
+    EXPECT_TRUE(mount_->MountCryptohome(credentials, mount_args,
+                                        /* is_pristine */ false, &error));
     EXPECT_EQ(MOUNT_ERROR_NONE, error);
   }
 }
@@ -2388,7 +2367,6 @@ TEST_P(EphemeralNoUserSystemTest, OwnerUnknownMountCreateTest) {
 
   EXPECT_CALL(platform_, FileExists(_)).WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, DirectoryExists(user->vault_path))
-      .WillOnce(Return(false))
       .WillOnce(Return(ShouldTestEcryptfs()))
       .WillRepeatedly(Return(false));
   EXPECT_CALL(platform_, DirectoryExists(user->vault_mount_path))
@@ -2431,7 +2409,8 @@ TEST_P(EphemeralNoUserSystemTest, OwnerUnknownMountCreateTest) {
   Mount::MountArgs mount_args = GetDefaultMountArgs();
   mount_args.create_if_missing = true;
   MountError error;
-  ASSERT_TRUE(mount_->MountCryptohome(credentials, mount_args, &error));
+  ASSERT_TRUE(mount_->MountCryptohome(credentials, mount_args,
+                                      /* is_pristine */ true, &error));
 
   // Unmount succeeds.
   ON_CALL(platform_, Unmount(_, _, _)).WillByDefault(Return(true));
@@ -2455,7 +2434,6 @@ TEST_P(EphemeralNoUserSystemTest, MountSetUserTypeFailTest) {
   EXPECT_CALL(platform_, FileExists(_)).WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, DirectoryExists(_)).WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, DirectoryExists(user->vault_path))
-      .WillOnce(Return(false))
       .WillOnce(Return(ShouldTestEcryptfs()))
       .WillRepeatedly(Return(false));
   EXPECT_CALL(platform_, DirectoryExists(user->vault_mount_path))
@@ -2515,7 +2493,8 @@ TEST_P(EphemeralNoUserSystemTest, MountSetUserTypeFailTest) {
   Mount::MountArgs mount_args = GetDefaultMountArgs();
   mount_args.create_if_missing = true;
   MountError error;
-  ASSERT_FALSE(mount_->MountCryptohome(credentials, mount_args, &error));
+  ASSERT_FALSE(mount_->MountCryptohome(credentials, mount_args,
+                                       /* is_pristine */ true, &error));
   ASSERT_EQ(MOUNT_ERROR_TPM_COMM_ERROR, error);
 }
 
@@ -2954,7 +2933,8 @@ TEST_P(EphemeralExistingUserSystemTest, OwnerUnknownMountNoRemoveTest) {
   MountError error;
   user->InjectKeyset(&platform_, true);
   Credentials credentials(user->username, user->passkey);
-  ASSERT_TRUE(mount_->MountCryptohome(credentials, mount_args, &error));
+  ASSERT_TRUE(mount_->MountCryptohome(credentials, mount_args,
+                                      /* is_pristine */ false, &error));
 
   EXPECT_CALL(platform_, Unmount(_, _, _)).WillRepeatedly(Return(true));
   if (ShouldTestEcryptfs()) {

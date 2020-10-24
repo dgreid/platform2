@@ -324,30 +324,12 @@ bool Mount::PrepareCryptohome(const std::string& obfuscated_username,
 
 bool Mount::MountCryptohome(const Credentials& credentials,
                             const Mount::MountArgs& mount_args,
+                            bool is_pristine,
                             MountError* mount_error) {
   username_ = credentials.username();
   const std::string obfuscated_username =
       credentials.GetObfuscatedUsername(system_salt_);
   const bool is_owner = homedirs_->IsOrWillBeOwner(username_);
-
-  bool created = false;
-  if (!homedirs_->CryptohomeExists(obfuscated_username)) {
-    if (!mount_args.create_if_missing) {
-      LOG(ERROR) << "Asked to mount nonexistent user";
-      *mount_error = MOUNT_ERROR_USER_DOES_NOT_EXIST;
-      return false;
-    }
-
-    if (!homedirs_->Create(credentials.username()) ||
-        !PrepareCryptohome(obfuscated_username,
-                           mount_args.create_as_ecryptfs) ||
-        !homedirs_->AddInitialKeyset(credentials)) {
-      LOG(ERROR) << "Error creating cryptohome.";
-      *mount_error = MOUNT_ERROR_CREATE_CRYPTOHOME_FAILED;
-      return false;
-    }
-    created = true;
-  }
 
   if (!mount_args.shadow_only) {
     if (!mounter_->EnsureUserMountPoints(credentials.username())) {
@@ -515,7 +497,7 @@ bool Mount::MountCryptohome(const Credentials& credentials,
 
   cryptohome::ReportTimerStart(cryptohome::kPerformMountTimer);
   if (!helper->PerformMount(mount_opts, credentials.username(), key_signature,
-                            fnek_signature, created, mount_error)) {
+                            fnek_signature, is_pristine, mount_error)) {
     LOG(ERROR) << "MountHelper::PerformMount failed, error = " << *mount_error;
     return false;
   }

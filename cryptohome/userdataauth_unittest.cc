@@ -150,7 +150,7 @@ class UserDataAuthTestNotInitialized : public ::testing::Test {
     brillo::SecureBlob salt;
     AssignSalt(CRYPTOHOME_DEFAULT_SALT_LENGTH, &salt);
     mount_ = new NiceMock<MockMount>();
-    session_ = new UserSession(salt, mount_);
+    session_ = new UserSession(&homedirs_, salt, mount_);
     userdataauth_->set_session_for_user(username, session_.get());
   }
 
@@ -689,7 +689,8 @@ TEST_F(UserDataAuthTest, Pkcs11IsTpmTokenReady) {
 
   // Check when there's 1 mount, and it's initialized.
   scoped_refptr<NiceMock<MockMount>> mount1 = new NiceMock<MockMount>();
-  scoped_refptr<UserSession> session1 = new UserSession(salt, mount1);
+  scoped_refptr<UserSession> session1 =
+      new UserSession(&homedirs_, salt, mount1);
   userdataauth_->set_session_for_user(kUsername1, session1.get());
   EXPECT_CALL(*mount1, pkcs11_state())
       .WillOnce(Return(cryptohome::Mount::kIsInitialized));
@@ -718,7 +719,8 @@ TEST_F(UserDataAuthTest, Pkcs11IsTpmTokenReady) {
 
   // Check when there's another mount.
   scoped_refptr<NiceMock<MockMount>> mount2 = new NiceMock<MockMount>();
-  scoped_refptr<UserSession> session2 = new UserSession(salt, mount2);
+  scoped_refptr<UserSession> session2 =
+      new UserSession(&homedirs_, salt, mount2);
   userdataauth_->set_session_for_user(kUsername2, session2.get());
 
   // Both is initialized.
@@ -1566,7 +1568,8 @@ TEST_F(UserDataAuthTest, CleanUpStale_FilledMap_NoOpenFiles_ShadowOnly) {
 
   EXPECT_CALL(lockbox_, FinalizeBoot());
   EXPECT_CALL(*mount, Init(&platform_, &crypto_, _)).WillOnce(Return(true));
-  EXPECT_CALL(*mount, MountCryptohome(_, _, _)).WillOnce(Return(true));
+  EXPECT_CALL(homedirs_, CryptohomeExists(_)).WillOnce(Return(true));
+  EXPECT_CALL(*mount, MountCryptohome(_, _, _, _)).WillOnce(Return(true));
   EXPECT_CALL(*mount, UpdateCurrentUserActivityTimestamp(_, _))
       .WillOnce(Return(true));
   EXPECT_CALL(platform_, GetMountsBySourcePrefix(_, _)).WillOnce(Return(false));
@@ -2055,10 +2058,11 @@ TEST_F(UserDataAuthExTest, MountPublicUsesPublicMountPasskey) {
   mount_req_->set_public_mount(true);
   EXPECT_CALL(homedirs_, Exists(_)).WillOnce(testing::InvokeWithoutArgs([&]() {
     SetupMount(kUser);
-    EXPECT_CALL(*mount_, MountCryptohome(_, _, _))
+    EXPECT_CALL(homedirs_, CryptohomeExists(_)).WillOnce(Return(true));
+    EXPECT_CALL(*mount_, MountCryptohome(_, _, _, _))
         .WillOnce(testing::Invoke([](const Credentials& credentials,
                                      const Mount::MountArgs& mount_args,
-                                     MountError* error) {
+                                     bool is_pristine, MountError* error) {
           // Tests that the passkey is filled when public_mount is set.
           EXPECT_FALSE(credentials.passkey().empty());
           return true;

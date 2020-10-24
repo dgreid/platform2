@@ -4022,7 +4022,7 @@ scoped_refptr<UserSession> Service::GetOrCreateUserSession(
     if (!m) {
       return nullptr;
     }
-    sessions_[username] = new UserSession(system_salt_, m);
+    sessions_[username] = new UserSession(homedirs_, system_salt_, m);
   }
   return sessions_[username];
 }

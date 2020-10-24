@@ -106,9 +106,11 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   //   mount_args - The options for the call to mount:
   //                * Whether to create the cryptohome if it doesn't exist.
   //                * Whether to ensure that the mount is ephemeral.
+  //   is_pristine - Whether it is the first mount of the vault.
   //   error - The specific error condition on failure
   virtual bool MountCryptohome(const Credentials& credentials,
                                const MountArgs& mount_args,
+                               bool is_pristine,
                                MountError* error);
 
   // Attempts to mount an ephemeral cryptohome for the given credentials.
