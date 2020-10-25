@@ -86,10 +86,17 @@ class ArcVpnDriverTest : public testing::Test {
 
 TEST_F(ArcVpnDriverTest, ConnectAsync) {
   LoadPropertiesFromStore(true);
-  EXPECT_CALL(*service_, OnDriverEvent(VPNService::kEventConnectionSuccess))
+  EXPECT_CALL(*service_,
+              OnDriverEvent(VPNService::kEventConnectionSuccess, _, _))
       .Times(1);
   driver_->ConnectAsync(service_->GetCallback());
   dispatcher_.task_environment().RunUntilIdle();
+}
+
+TEST_F(ArcVpnDriverTest, GetIPProperties) {
+  auto ip_properties = driver_->GetIPProperties();
+  EXPECT_TRUE(ip_properties.blackhole_ipv6);
+  EXPECT_FALSE(ip_properties.default_route);
 }
 
 }  // namespace shill

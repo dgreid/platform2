@@ -65,10 +65,20 @@ class VPNServiceTest : public testing::Test {
         .WillByDefault(ReturnRef(interface_name_));
     ON_CALL(*connection_, ipconfig_rpc_identifier())
         .WillByDefault(ReturnRef(ipconfig_rpc_identifier_));
+    manager_.set_mock_device_info(&device_info_);
+    manager_.vpn_provider_ = std::make_unique<MockVPNProvider>();
+    manager_.vpn_provider_->manager_ = &manager_;
+    manager_.vpn_provider_->arc_device_ = new MockVirtualDevice(
+        &manager_, kInterfaceName, kInterfaceIndex, Technology::kVPN);
     manager_.user_traffic_uids_.push_back(1000);
+    manager_.UpdateProviderMapping();
   }
 
-  void TearDown() override { EXPECT_CALL(device_info_, FlushAddresses(0)); }
+  void TearDown() override {
+    manager_.vpn_provider_->arc_device_ = nullptr;
+    manager_.vpn_provider_.reset();
+    EXPECT_CALL(device_info_, FlushAddresses(0));
+  }
 
   void SetServiceState(Service::ConnectState state) {
     service_->state_ = state;
@@ -463,15 +473,10 @@ TEST_F(VPNServiceTest, AddRemoveVMInterface) {
 
 MATCHER(BaseIPConfig, "") {
   IPConfig::Properties ip_properties = arg;
-  return ip_properties.blackhole_ipv6 == true &&
-         ip_properties.default_route == false &&
-         !ip_properties.allowed_uids.empty();
+  return !ip_properties.allowed_uids.empty();
 }
 
-TEST_F(VPNServiceTest, ConfigureDeviceAndDisconnect) {
-  // TODO(taoyl): This SetIfType will no longer be needed after finishing
-  // refactor of all VPNDrivers.
-  driver_->SetIfType(VPNDriver::kArcBridge);
+TEST_F(VPNServiceTest, ConfigureDeviceAndCleanupDevice) {
   scoped_refptr<MockVirtualDevice> device = new MockVirtualDevice(
       &manager_, kInterfaceName, kInterfaceIndex, Technology::kVPN);
   service_->device_ = device;
@@ -484,9 +489,78 @@ TEST_F(VPNServiceTest, ConfigureDeviceAndDisconnect) {
 
   EXPECT_CALL(*device, SetEnabled(false));
   EXPECT_CALL(*device, DropConnection());
+  service_->CleanupDevice();
+  EXPECT_FALSE(service_->device_);
+}
+
+TEST_F(VPNServiceTest, ArcConnectFlow) {
+  driver_->SetIfType(VPNDriver::kArcBridge);
   Error error;
+
+  EXPECT_CALL(*driver_, ConnectAsync(_));
+  service_->Connect(&error, "in test");
+  EXPECT_TRUE(service_->device_);
+  EXPECT_EQ(Service::kStateAssociating, service_->state());
+
+  EXPECT_CALL(*driver_, GetIPProperties())
+      .WillOnce(Return(IPConfig::Properties()));
+  service_->OnDriverEvent(VPNService::kEventConnectionSuccess,
+                          Service::kFailureNone, Service::kErrorDetailsNone);
+  EXPECT_EQ(Service::kStateOnline, service_->state());
+
+  EXPECT_CALL(*driver_, Disconnect());
+  EXPECT_CALL(device_info_, DeleteInterface(_)).Times(0);
   service_->Disconnect(&error, "in test");
   EXPECT_EQ(Service::kStateIdle, service_->state());
+
+  driver_->SetIfType(VPNDriver::kDriverManaged);
+}
+
+TEST_F(VPNServiceTest, TunnelConnectFlow) {
+  driver_->SetIfType(VPNDriver::kTunnel);
+  Error error;
+
+  // Connection
+  EXPECT_CALL(device_info_, CreateTunnelInterface(_)).WillOnce(Return(true));
+  service_->Connect(&error, "in test");
+  EXPECT_TRUE(error.IsSuccess());
+  EXPECT_EQ(Service::kStateAssociating, service_->state());
+  EXPECT_CALL(*driver_, ConnectAsync(_));
+  service_->OnLinkReady(kInterfaceName, kInterfaceIndex);
+  EXPECT_EQ(kInterfaceName, driver_->interface_name());
+  EXPECT_TRUE(service_->device_);
+
+  EXPECT_CALL(*driver_, GetIPProperties())
+      .WillOnce(Return(IPConfig::Properties()));
+  service_->OnDriverEvent(VPNService::kEventConnectionSuccess,
+                          Service::kFailureNone, Service::kErrorDetailsNone);
+  EXPECT_EQ(Service::kStateOnline, service_->state());
+
+  // Driver-originated reconnection
+  EXPECT_CALL(*driver_, Disconnect()).Times(0);
+  service_->OnDriverEvent(VPNService::kEventDriverReconnecting,
+                          Service::kFailureNone, Service::kErrorDetailsNone);
+  EXPECT_EQ(Service::kStateAssociating, service_->state());
+  EXPECT_TRUE(service_->device_);
+
+  // Driver-originated failure
+  EXPECT_CALL(*driver_, Disconnect()).Times(0);
+  EXPECT_CALL(device_info_, DeleteInterface(kInterfaceIndex)).Times(1);
+  service_->OnDriverEvent(VPNService::kEventDriverFailure,
+                          Service::kFailureUnknown, Service::kErrorDetailsNone);
+  EXPECT_EQ(Service::kStateFailure, service_->state());
+  EXPECT_FALSE(service_->device_);
+
+  // Connect again and disconnection
+  EXPECT_CALL(device_info_, CreateTunnelInterface(_)).WillOnce(Return(true));
+  service_->Connect(&error, "in test");
+  EXPECT_TRUE(error.IsSuccess());
+  EXPECT_EQ(Service::kStateAssociating, service_->state());
+  EXPECT_CALL(*driver_, Disconnect());
+  EXPECT_CALL(device_info_, DeleteInterface(_)).Times(0);
+  service_->Disconnect(&error, "in test");
+  EXPECT_EQ(Service::kStateIdle, service_->state());
+  EXPECT_TRUE(error.IsSuccess());
 
   driver_->SetIfType(VPNDriver::kDriverManaged);
 }

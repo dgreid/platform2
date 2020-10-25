@@ -41,8 +41,8 @@ namespace shill {
 
 namespace Logging {
 static auto kModuleLogScope = ScopeLogger::kVPN;
-static string ObjectID(const OpenVPNDriver* o) {
-  return o->GetServiceRpcIdentifier().value();
+static string ObjectID(const OpenVPNDriver*) {
+  return "(openvpn_driver)";
 }
 }  // namespace Logging
 
@@ -165,24 +165,21 @@ OpenVPNDriver::OpenVPNDriver(Manager* manager, ProcessManager* process_manager)
       link_down_(false) {}
 
 OpenVPNDriver::~OpenVPNDriver() {
-  IdleService();
-}
-
-void OpenVPNDriver::IdleService() {
-  Cleanup(Service::kStateIdle, Service::kFailureNone,
-          Service::kErrorDetailsNone);
+  Cleanup();
 }
 
 void OpenVPNDriver::FailService(Service::ConnectFailure failure,
                                 const string& error_details) {
-  Cleanup(Service::kStateFailure, failure, error_details);
+  SLOG(this, 2) << __func__ << "(" << error_details << ")";
+  Cleanup();
+  if (service_callback_) {
+    service_callback_.Run(VPNService::kEventDriverFailure, failure,
+                          error_details);
+    service_callback_.Reset();
+  }
 }
 
-void OpenVPNDriver::Cleanup(Service::ConnectState state,
-                            Service::ConnectFailure failure,
-                            const string& error_details) {
-  SLOG(this, 2) << __func__ << "(" << Service::ConnectStateToString(state)
-                << ", " << error_details << ")";
+void OpenVPNDriver::Cleanup() {
   StopConnectTimeout();
   // Disconnecting the management interface will terminate the openvpn
   // process. Ensure this is handled robustly by first unregistering
@@ -203,31 +200,12 @@ void OpenVPNDriver::Cleanup(Service::ConnectState state,
   }
   manager()->RemoveDefaultServiceObserver(this);
   rpc_task_.reset();
-  int interface_index = -1;
-  if (device_) {
-    interface_index = device_->interface_index();
-    device_->DropConnection();
-    device_->SetEnabled(false);
-    device_ = nullptr;
-  }
+  ip_properties_ = IPConfig::Properties();
   if (pid_) {
     process_manager()->StopProcessAndBlock(pid_);
     pid_ = 0;
   }
-  if (interface_index >= 0) {
-    manager()->device_info()->DeleteInterface(interface_index);
-  }
-  tunnel_interface_.clear();
-  if (service()) {
-    if (state == Service::kStateFailure) {
-      service()->SetErrorDetails(error_details);
-      service()->SetFailure(failure);
-    } else {
-      service()->SetState(state);
-    }
-    set_service(nullptr);
-  }
-  ip_properties_ = IPConfig::Properties();
+  interface_name_.clear();
 }
 
 // static
@@ -294,7 +272,7 @@ bool OpenVPNDriver::WriteConfigFile(const vector<vector<string>>& options,
 }
 
 bool OpenVPNDriver::SpawnOpenVPN() {
-  SLOG(this, 2) << __func__ << "(" << tunnel_interface_ << ")";
+  SLOG(this, 2) << __func__ << "(" << interface_name_ << ")";
 
   vector<vector<string>> options;
   Error error;
@@ -346,23 +324,6 @@ void OpenVPNDriver::OnOpenVPNDied(int exit_status) {
   // TODO(petkov): Figure if we need to restart the connection.
 }
 
-void OpenVPNDriver::ClaimInterface(const string& link_name,
-                                   int interface_index) {
-  SLOG(this, 2) << "Claiming " << link_name << " for OpenVPN tunnel";
-  tunnel_interface_ = link_name;
-  CHECK(!device_);
-  device_ = new VirtualDevice(manager(), link_name, interface_index,
-                              Technology::kVPN);
-  device_->SetEnabled(true);
-
-  rpc_task_.reset(new RpcTask(control_interface(), this));
-  if (SpawnOpenVPN()) {
-    manager()->AddDefaultServiceObserver(this);
-  } else {
-    FailService(Service::kFailureInternal, Service::kErrorDetailsNone);
-  }
-}
-
 void OpenVPNDriver::GetLogin(string* /*user*/, string* /*password*/) {
   NOTREACHED();
 }
@@ -370,16 +331,27 @@ void OpenVPNDriver::GetLogin(string* /*user*/, string* /*password*/) {
 void OpenVPNDriver::Notify(const string& reason,
                            const map<string, string>& dict) {
   LOG(INFO) << "IP configuration received: " << reason;
+  // We only registered "--up" script so this should be the only
+  // reason we get notified here. Note that "--up-restart" is set
+  // so we will get notification also upon reconnection.
   if (reason != "up") {
-    device_->DropConnection();
+    LOG(DFATAL) << "Unexpected notification reason";
     return;
   }
   // On restart/reconnect, update the existing IP configuration.
   ParseIPConfiguration(dict, &ip_properties_);
-  device_->SelectService(service());
-  device_->UpdateIPConfig(ip_properties_);
   ReportConnectionMetrics();
   StopConnectTimeout();
+  if (service_callback_) {
+    service_callback_.Run(VPNService::kEventConnectionSuccess,
+                          Service::kFailureNone, Service::kErrorDetailsNone);
+  } else {
+    LOG(DFATAL) << "Missing service callback";
+  }
+}
+
+IPConfig::Properties OpenVPNDriver::GetIPProperties() const {
+  return ip_properties_;
 }
 
 void OpenVPNDriver::ParseIPConfiguration(
@@ -457,8 +429,6 @@ void OpenVPNDriver::ParseIPConfiguration(
     }
   }
   ParseForeignOptions(foreign_options, properties);
-
-  manager()->vpn_provider()->SetDefaultRoutingPolicy(properties);
 
   // Since we use persist-tun, we expect that a reconnection will use the same
   // routes *and* that OpenVPN will not re-provide us with all the needed
@@ -627,17 +597,21 @@ bool OpenVPNDriver::SplitPortFromHost(const string& host,
   return true;
 }
 
-void OpenVPNDriver::Connect(const VPNServiceRefPtr& service, Error* error) {
+void OpenVPNDriver::ConnectAsync(
+    const VPNService::DriverEventCallback& callback) {
+  service_callback_ = callback;
+  if (interface_name_.empty()) {
+    LOG(DFATAL) << "Tunnel interface name needs to be set before connecting.";
+    FailService(Service::kFailureInternal, "Invalid tunnel interface");
+    return;
+  }
   StartConnectTimeout(kConnectTimeoutSeconds);
-  set_service(service);
-  service->SetState(Service::kStateConfiguring);
-  if (!manager()->device_info()->CreateTunnelInterface(base::BindOnce(
-          &OpenVPNDriver::ClaimInterface, weak_factory_.GetWeakPtr()))) {
-    Error::PopulateAndLog(FROM_HERE, error, Error::kInternalError,
-                          "Could not create tunnel interface.");
+  rpc_task_.reset(new RpcTask(control_interface(), this));
+  if (SpawnOpenVPN()) {
+    manager()->AddDefaultServiceObserver(this);
+  } else {
     FailService(Service::kFailureInternal, Service::kErrorDetailsNone);
   }
-  // Wait for the ClaimInterface callback to continue the connection process.
 }
 
 void OpenVPNDriver::InitOptions(vector<vector<string>>* options, Error* error) {
@@ -662,8 +636,13 @@ void OpenVPNDriver::InitOptions(vector<vector<string>>* options, Error* error) {
   AppendOption("persist-key", options);
   AppendOption("persist-tun", options);
 
-  CHECK(!tunnel_interface_.empty());
-  AppendOption("dev", tunnel_interface_, options);
+  if (interface_name_.empty()) {
+    LOG(DFATAL) << "Tunnel interface name needs to be set before connecting.";
+    Error::PopulateAndLog(FROM_HERE, error, Error::kInternalError,
+                          "Invalid tunnel interface");
+    return;
+  }
+  AppendOption("dev", interface_name_, options);
   AppendOption("dev-type", "tun", options);
 
   InitLoggingOptions(options);
@@ -967,16 +946,10 @@ bool OpenVPNDriver::AppendFlag(const string& property,
   return false;
 }
 
-const RpcIdentifier& OpenVPNDriver::GetServiceRpcIdentifier() const {
-  static RpcIdentifier null_identifier("(openvpn_driver)");
-  if (service() == nullptr)
-    return null_identifier;
-  return service()->GetRpcIdentifier();
-}
-
 void OpenVPNDriver::Disconnect() {
   SLOG(this, 2) << __func__;
-  IdleService();
+  Cleanup();
+  service_callback_.Reset();
 }
 
 void OpenVPNDriver::OnConnectTimeout() {
@@ -1003,9 +976,9 @@ void OpenVPNDriver::OnReconnecting(ReconnectReason reason) {
   // successfully. The hold will be released by OnDefaultServiceChanged when a
   // new default service connects. This ensures that the client will use a fully
   // functional underlying connection to reconnect.
-  if (device_) {
-    device_->SetServiceState(Service::kStateConfiguring);
-    device_->ResetConnection();
+  if (service_callback_) {
+    service_callback_.Run(VPNService::kEventDriverReconnecting,
+                          Service::kFailureNone, Service::kErrorDetailsNone);
   }
 }
 
@@ -1027,7 +1000,7 @@ string OpenVPNDriver::GetProviderType() const {
 }
 
 VPNDriver::IfType OpenVPNDriver::GetIfType() const {
-  return kDriverManaged;
+  return kTunnel;
 }
 
 KeyValueStore OpenVPNDriver::GetProvider(Error* error) {
@@ -1085,12 +1058,12 @@ void OpenVPNDriver::OnDefaultServiceChanged(
                 << (physical_service ? physical_service->log_name() : "-")
                 << ")";
 
-  if (!device_)
+  if (!service_callback_)
     return;
 
   // Inform the user that the VPN is reconnecting.
-  device_->SetServiceState(Service::kStateConfiguring);
-  device_->ResetConnection();
+  service_callback_.Run(VPNService::kEventDriverReconnecting,
+                        Service::kFailureNone, Service::kErrorDetailsNone);
   StopConnectTimeout();
 
   if (physical_service && physical_service->state() == Service::kStateOnline) {

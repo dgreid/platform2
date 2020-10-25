@@ -83,6 +83,7 @@ class VPNProvider : public ProviderInterface {
   friend class L2TPIPSecDriverTest;
   friend class OpenVPNDriverTest;
   friend class VPNProviderTest;
+  friend class VPNServiceTest;
   FRIEND_TEST(ThirdPartyVpnDriverTest, SetParameters);
   FRIEND_TEST(VPNProviderTest, ArcDeviceFound);
   FRIEND_TEST(VPNProviderTest, CreateService);

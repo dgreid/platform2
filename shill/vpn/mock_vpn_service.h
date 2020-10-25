@@ -6,6 +6,7 @@
 #define SHILL_VPN_MOCK_VPN_SERVICE_H_
 
 #include <memory>
+#include <string>
 
 #include <gmock/gmock.h>
 
@@ -21,7 +22,10 @@ class MockVPNService : public VPNService {
   MOCK_METHOD(void, SetState, (ConnectState), (override));
   MOCK_METHOD(void, SetFailure, (ConnectFailure), (override));
   MOCK_METHOD(void, InitDriverPropertyStore, (), (override));
-  MOCK_METHOD(void, OnDriverEvent, (DriverEvent), (override));
+  MOCK_METHOD(void,
+              OnDriverEvent,
+              (DriverEvent, ConnectFailure, const std::string&),
+              (override));
 
   VPNService::DriverEventCallback GetCallback() {
     return base::BindRepeating(&MockVPNService::OnDriverEvent,

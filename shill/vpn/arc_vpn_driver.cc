@@ -53,7 +53,8 @@ void ArcVpnDriver::ConnectAsync(
                            Metrics::kMetricVpnDriverMax);
   dispatcher()->PostTask(
       FROM_HERE,
-      base::Bind(std::move(callback), VPNService::kEventConnectionSuccess));
+      base::Bind(std::move(callback), VPNService::kEventConnectionSuccess,
+                 Service::kFailureNone, Service::kErrorDetailsNone));
 }
 
 void ArcVpnDriver::Disconnect() {
@@ -64,7 +65,12 @@ IPConfig::Properties ArcVpnDriver::GetIPProperties() const {
   SLOG(this, 2) << __func__;
   // Currently L3 settings for ARC VPN are set from Chrome as
   // StaticIPProperty before connecting, so this will be mostly empty.
-  return IPConfig::Properties();
+  IPConfig::Properties ip_properties;
+  ip_properties.default_route = false;
+  // IPv6 is not currently supported.  If the VPN is enabled, block all
+  // IPv6 traffic so there is no "leak" past the VPN.
+  ip_properties.blackhole_ipv6 = true;
+  return ip_properties;
 }
 
 std::string ArcVpnDriver::GetProviderType() const {

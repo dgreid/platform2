@@ -63,16 +63,35 @@ void VPNService::OnConnect(Error* error) {
   }
 
   SetState(ConnectState::kStateAssociating);
-
-  if (driver_->GetIfType() == VPNDriver::kArcBridge) {
-    device_ = manager()->vpn_provider()->arc_device();
-    if (!device_) {
-      Error::PopulateAndLog(FROM_HERE, error, Error::kNotFound,
-                            "arc_device is not found");
-      return;
-    }
-    driver_->ConnectAsync(base::BindRepeating(&VPNService::OnDriverEvent,
-                                              weak_factory_.GetWeakPtr()));
+  switch (driver_->GetIfType()) {
+    case VPNDriver::kTunnel:
+      if (!manager()->device_info()->CreateTunnelInterface(base::BindOnce(
+              &VPNService::OnLinkReady, weak_factory_.GetWeakPtr()))) {
+        Error::PopulateAndLog(FROM_HERE, error, Error::kInternalError,
+                              "Could not create tunnel interface.");
+        SetFailure(Service::kFailureInternal);
+        SetErrorDetails(Service::kErrorDetailsNone);
+        return;
+      }
+      // Flow continues in OnLinkReady().
+      break;
+    case VPNDriver::kArcBridge:
+      device_ = manager()->vpn_provider()->arc_device();
+      if (!device_) {
+        Error::PopulateAndLog(FROM_HERE, error, Error::kNotFound,
+                              "arc_device is not found");
+        SetFailure(Service::kFailureInternal);
+        SetErrorDetails(Service::kErrorDetailsNone);
+        return;
+      }
+      FALLTHROUGH;
+    case VPNDriver::kPPP:
+      driver_->ConnectAsync(base::BindRepeating(&VPNService::OnDriverEvent,
+                                                weak_factory_.GetWeakPtr()));
+      // Flow continues in OnDriverEvent(kEventConnectionSuccess).
+      break;
+    default:
+      NOTREACHED();
   }
 }
 
@@ -84,30 +103,75 @@ void VPNService::OnDisconnect(Error* error, const char* reason) {
 
   SetState(ConnectState::kStateDisconnecting);
   driver_->Disconnect();
-  if (device_) {
-    device_->DropConnection();
-    device_->SetEnabled(false);
-    device_ = nullptr;
-  }
+  CleanupDevice();
 
   SetState(ConnectState::kStateIdle);
 }
 
-void VPNService::OnDriverEvent(DriverEvent event) {
-  DCHECK(event == kEventConnectionSuccess);
-  ConfigureDevice();
+void VPNService::OnLinkReady(const string& link_name, int interface_index) {
+  switch (driver_->GetIfType()) {
+    case VPNDriver::kTunnel:
+      CHECK(!device_);
+      device_ = new VirtualDevice(manager(), link_name, interface_index,
+                                  Technology::kVPN);
+      driver_->set_interface_name(link_name);
+      driver_->ConnectAsync(base::BindRepeating(&VPNService::OnDriverEvent,
+                                                weak_factory_.GetWeakPtr()));
+      // Flow continues in OnDriverEvent(kEventConnectionSuccess).
+      break;
+    case VPNDriver::kPPP:
+      // TODO(taoyl): Migrate L2TP/IPSec driver.
+      FALLTHROUGH;
+    default:
+      NOTREACHED();
+  }
+}
+
+void VPNService::OnDriverEvent(DriverEvent event,
+                               ConnectFailure failure,
+                               const std::string& error_details) {
+  switch (event) {
+    case kEventConnectionSuccess:
+      SetState(ConnectState::kStateConfiguring);
+      ConfigureDevice();
+      SetState(ConnectState::kStateConnected);
+      SetState(ConnectState::kStateOnline);
+      break;
+    case kEventDriverFailure:
+      CleanupDevice();
+      SetErrorDetails(error_details);
+      SetFailure(failure);
+      break;
+    case kEventDriverReconnecting:
+      if (device_) {
+        SetState(Service::kStateAssociating);
+        device_->ResetConnection();
+      }
+      // Await further OnDriverEvent(kEventConnectionSuccess).
+      break;
+  }
+}
+
+void VPNService::CleanupDevice() {
+  if (!device_)
+    return;
+  int interface_index = device_->interface_index();
+  device_->DropConnection();
+  device_->SetEnabled(false);
+  device_ = nullptr;
+  if (driver_->GetIfType() == VPNDriver::kTunnel) {
+    manager()->device_info()->DeleteInterface(interface_index);
+  }
 }
 
 void VPNService::ConfigureDevice() {
-  SetState(ConnectState::kStateConfiguring);
-  DCHECK(device_);
+  if (!device_) {
+    LOG(DFATAL) << "Device not created yet.";
+    return;
+  }
 
   IPConfig::Properties ip_properties = driver_->GetIPProperties();
 
-  ip_properties.default_route = false;
-  // IPv6 is not currently supported.  If the VPN is enabled, block all
-  // IPv6 traffic so there is no "leak" past the VPN.
-  ip_properties.blackhole_ipv6 = true;
   // TODO(taoyl): Remove routing policy from IPProperties.
   manager()->vpn_provider()->SetDefaultRoutingPolicy(&ip_properties);
   // Remove vpn virtual device from allow_iifs list to avoid route loop.
@@ -121,9 +185,6 @@ void VPNService::ConfigureDevice() {
   device_->SelectService(this);
   device_->UpdateIPConfig(ip_properties);
   device_->SetLooseRouting(true);
-
-  SetState(ConnectState::kStateConnected);
-  SetState(ConnectState::kStateOnline);
 }
 
 string VPNService::GetStorageIdentifier() const {

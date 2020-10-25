@@ -44,14 +44,10 @@ class OpenVPNDriver : public VPNDriver,
   virtual void OnReconnecting(ReconnectReason reason);
 
   // Resets the VPN state and deallocates all resources. If there's a service
-  // associated through Connect, sets its state to Service::kStateIdle and
-  // disassociates from the service.
-  virtual void IdleService();
-
-  // Resets the VPN state and deallocates all resources. If there's a service
-  // associated through Connect, sets its state to Service::kStateFailure, sets
-  // the failure reason to |failure|, sets its ErrorDetails property to
-  // |error_details|, and disassociates from the service.
+  // associated through Connect, notifies it to sets its state to
+  // Service::kStateFailure, sets the failure reason to |failure|, sets its
+  // ErrorDetails property to |error_details|, and disassociates from the
+  // service.
   virtual void FailService(Service::ConnectFailure failure,
                            const std::string& error_details);
 
@@ -90,28 +86,29 @@ class OpenVPNDriver : public VPNDriver,
                   const std::string& option,
                   std::vector<std::vector<std::string>>* options);
 
-  const RpcIdentifier& GetServiceRpcIdentifier() const;
-
  protected:
-  // Inherited from VPNDriver. |Connect| initiates the VPN connection by
-  // creating a tunnel device. When the device index becomes available, this
-  // instance is notified through |ClaimInterface| and resumes the connection
-  // process by setting up and spawning an external 'openvpn' process. IP
-  // configuration settings are passed back from the external process through
-  // the |Notify| RPC service method.
-  void Connect(const VPNServiceRefPtr& service, Error* error) override;
+  // TODO(taoyl): Not used (replaced by ConnectAsync()) and to be removed after
+  // finishing refactor for all drivers
+  void Connect(const VPNServiceRefPtr& service, Error* error) override {
+    NOTREACHED();
+  }
+
+  // Inherited from VPNDriver. VPNService is responsible for creating a tunnel
+  // device and set_interface_name() before calling |ConnectAsync|. This driver
+  // then sets up and spawns an external 'openvpn' process. IP configuration
+  // settings are passed back from the external process through the |Notify| RPC
+  // service method.
+  void ConnectAsync(const VPNService::DriverEventCallback& callback) override;
   void Disconnect() override;
+  IPConfig::Properties GetIPProperties() const override;
   std::string GetProviderType() const override;
   IfType GetIfType() const override;
   void OnConnectTimeout() override;
 
-  void ClaimInterface(const std::string& link_name, int interface_index);
-
  private:
   friend class OpenVPNDriverTest;
-  FRIEND_TEST(OpenVPNDriverTest, ClaimInterface);
   FRIEND_TEST(OpenVPNDriverTest, Cleanup);
-  FRIEND_TEST(OpenVPNDriverTest, Connect);
+  FRIEND_TEST(OpenVPNDriverTest, ConnectAsync);
   FRIEND_TEST(OpenVPNDriverTest, ConnectTunnelFailure);
   FRIEND_TEST(OpenVPNDriverTest, Disconnect);
   FRIEND_TEST(OpenVPNDriverTest, GetCommandLineArgs);
@@ -130,6 +127,8 @@ class OpenVPNDriver : public VPNDriver,
   FRIEND_TEST(OpenVPNDriverTest, Notify);
   FRIEND_TEST(OpenVPNDriverTest, NotifyUMA);
   FRIEND_TEST(OpenVPNDriverTest, NotifyFail);
+  FRIEND_TEST(OpenVPNDriverTest, OnConnectTimeout);
+  FRIEND_TEST(OpenVPNDriverTest, OnConnectTimeoutResolve);
   FRIEND_TEST(OpenVPNDriverTest, OnDefaultServiceChanged);
   FRIEND_TEST(OpenVPNDriverTest, OnOpenVPNDied);
   FRIEND_TEST(OpenVPNDriverTest, ParseForeignOption);
@@ -201,14 +200,9 @@ class OpenVPNDriver : public VPNDriver,
 
   bool SpawnOpenVPN();
 
-  // Implements the public IdleService and FailService methods. Resets the VPN
-  // state and deallocates all resources. If there's a service associated
-  // through Connect, sets its state |state|; if |state| is
-  // Service::kStateFailure, sets the failure reason to |failure| and its
-  // ErrorDetails property to |error_details|; disassociates from the service.
-  void Cleanup(Service::ConnectState state,
-               Service::ConnectFailure failure,
-               const std::string& error_details);
+  // Called by public Disconnect and FailService methods. Resets the VPN
+  // state and deallocates all resources.
+  void Cleanup();
 
   static int GetReconnectTimeoutSeconds(ReconnectReason reason);
 
@@ -248,8 +242,6 @@ class OpenVPNDriver : public VPNDriver,
   base::FilePath lsb_release_file_;
 
   std::unique_ptr<RpcTask> rpc_task_;
-  std::string tunnel_interface_;
-  VirtualDeviceRefPtr device_;
   base::FilePath tls_auth_file_;
   base::FilePath openvpn_config_directory_;
   base::FilePath openvpn_config_file_;
@@ -263,6 +255,8 @@ class OpenVPNDriver : public VPNDriver,
   // client simply reconnects), and a network->link_down->network transition
   // (where the client should disconnect, wait for link up, then reconnect).
   bool link_down_;
+
+  VPNService::DriverEventCallback service_callback_;
 
   base::WeakPtrFactory<OpenVPNDriver> weak_factory_{this};
 

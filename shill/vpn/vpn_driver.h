@@ -83,6 +83,11 @@ class VPNDriver {
 
   mockable std::string GetHost() const;
 
+  std::string interface_name() const { return interface_name_; }
+  void set_interface_name(const std::string& interface_name) {
+    interface_name_ = interface_name;
+  }
+
   KeyValueStore* args() { return &args_; }
   const KeyValueStore* const_args() const { return &args_; }
 
@@ -130,6 +135,8 @@ class VPNDriver {
 
   VPNServiceRefPtr service() const { return service_; }
   void set_service(const VPNServiceRefPtr& service) { service_ = service; }
+
+  std::string interface_name_;
 
  private:
   friend class VPNDriverTest;

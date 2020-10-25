@@ -20,8 +20,15 @@ class VPNDriver;
 
 class VPNService : public Service {
  public:
-  enum DriverEvent { kEventConnectionSuccess = 0 };
-  using DriverEventCallback = base::RepeatingCallback<void(DriverEvent)>;
+  enum DriverEvent {
+    kEventConnectionSuccess = 0,
+    kEventDriverFailure,
+    kEventDriverReconnecting
+  };
+  using DriverEventCallback =
+      base::RepeatingCallback<void(DriverEvent /*event*/,
+                                   ConnectFailure /*failure*/,
+                                   const std::string& /*error_details*/)>;
 
   VPNService(Manager* manager, std::unique_ptr<VPNDriver> driver);
   ~VPNService() override;
@@ -60,7 +67,10 @@ class VPNService : public Service {
   bool IsAutoConnectable(const char** reason) const override;
   std::string GetTethering(Error* error) const override;
 
-  virtual void OnDriverEvent(DriverEvent event);
+  virtual void OnDriverEvent(DriverEvent event,
+                             ConnectFailure failure,
+                             const std::string& error_details);
+  virtual void OnLinkReady(const std::string& link_name, int interface_index);
 
  private:
   friend class VPNServiceTest;
@@ -68,7 +78,9 @@ class VPNService : public Service {
   FRIEND_TEST(VPNServiceTest, GetPhysicalTechnologyPropertyFailsIfNoCarrier);
   FRIEND_TEST(VPNServiceTest, GetPhysicalTechnologyPropertyOverWifi);
   FRIEND_TEST(VPNServiceTest, GetTethering);
-  FRIEND_TEST(VPNServiceTest, ConfigureDeviceAndDisconnect);
+  FRIEND_TEST(VPNServiceTest, ConfigureDeviceAndCleanupDevice);
+  FRIEND_TEST(VPNServiceTest, ArcConnectFlow);
+  FRIEND_TEST(VPNServiceTest, TunnelConnectFlow);
 
   static const char kAutoConnNeverConnected[];
   static const char kAutoConnVPNAlreadyActive[];
@@ -78,6 +90,7 @@ class VPNService : public Service {
   ConnectionConstRefPtr GetUnderlyingConnection() const;
 
   void ConfigureDevice();
+  void CleanupDevice();
 
   std::string storage_id_;
   std::unique_ptr<VPNDriver> driver_;
