@@ -288,13 +288,30 @@ fn open_fid(proc: &File, fid: &Fid, p9_flags: u32) -> io::Result<File> {
     Ok(unsafe { File::from_raw_fd(fd) })
 }
 
+#[derive(Clone)]
+pub struct Config {
+    pub root: Box<Path>,
+    pub msize: u32,
+
+    pub uid_map: ServerUidMap,
+    pub gid_map: ServerGidMap,
+}
+
+impl Default for Config {
+    fn default() -> Config {
+        Config {
+            root: Path::new("/").into(),
+            msize: MAX_MESSAGE_SIZE,
+            uid_map: Default::default(),
+            gid_map: Default::default(),
+            ascii_casefold: false,
+        }
+    }
+}
 pub struct Server {
-    root: Box<Path>,
-    msize: u32,
     fids: BTreeMap<u32, Fid>,
     proc: File,
-    uid_map: ServerUidMap,
-    gid_map: ServerGidMap,
+    cfg: Config,
 }
 
 impl Server {
@@ -303,6 +320,15 @@ impl Server {
         uid_map: ServerUidMap,
         gid_map: ServerGidMap,
     ) -> io::Result<Server> {
+        Server::with_config(Config {
+            root: root.into(),
+            msize: MAX_MESSAGE_SIZE,
+            uid_map,
+            gid_map,
+        })
+    }
+
+    pub fn with_config(cfg: Config) -> io::Result<Server> {
         // Safe because this is a valid c-string.
         let proc_cstr = unsafe { CStr::from_bytes_with_nul_unchecked(b"/proc\0") };
 
@@ -318,12 +344,9 @@ impl Server {
         // Safe because we just opened this fd and we know it is valid.
         let proc = unsafe { File::from_raw_fd(fd) };
         Ok(Server {
-            root: root.into(),
-            msize: MAX_MESSAGE_SIZE,
             fids: BTreeMap::new(),
             proc,
-            uid_map,
-            gid_map,
+            cfg,
         })
     }
 
@@ -336,7 +359,7 @@ impl Server {
         reader: &mut R,
         writer: &mut W,
     ) -> io::Result<()> {
-        let Tframe { tag, msg } = WireFormat::decode(&mut reader.take(self.msize as u64))?;
+        let Tframe { tag, msg } = WireFormat::decode(&mut reader.take(self.cfg.msize as u64))?;
 
         let rmsg = match msg {
             Tmessage::Version(ref version) => self.version(version).map(Rmessage::Version),
@@ -393,7 +416,7 @@ impl Server {
         // TODO: Check attach parameters
         match self.fids.entry(attach.fid) {
             btree_map::Entry::Vacant(entry) => {
-                let root = CString::new(self.root.as_os_str().as_bytes())
+                let root = CString::new(self.cfg.root.as_os_str().as_bytes())
                     .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
 
                 // Safe because this doesn't modify any memory and we check the return value.
@@ -429,10 +452,10 @@ impl Server {
 
         // A Tversion request clunks all open fids and terminates any pending I/O.
         self.fids.clear();
-        self.msize = min(MAX_MESSAGE_SIZE, version.msize);
+        self.cfg.msize = min(self.cfg.msize, version.msize);
 
         Ok(Rversion {
-            msize: self.msize,
+            msize: self.cfg.msize,
             version: if version.version == "9P2000.L" {
                 String::from("9P2000.L")
             } else {
@@ -524,7 +547,7 @@ impl Server {
         }
         .byte_size();
 
-        let capacity = min(self.msize - header_size, read.count);
+        let capacity = min(self.cfg.msize - header_size, read.count);
         let mut buf = Data(vec![0u8; capacity as usize]);
 
         let count = file.read_at(&mut buf, read.offset)?;
@@ -673,8 +696,8 @@ impl Server {
             valid: P9_GETATTR_BASIC,
             qid: st.into(),
             mode: st.st_mode,
-            uid: map_id_from_host(&self.uid_map, st.st_uid),
-            gid: map_id_from_host(&self.gid_map, st.st_gid),
+            uid: map_id_from_host(&self.cfg.uid_map, st.st_uid),
+            gid: map_id_from_host(&self.cfg.gid_map, st.st_gid),
             nlink: st.st_nlink as u64,
             rdev: st.st_rdev,
             size: st.st_size as u64,
@@ -786,7 +809,7 @@ impl Server {
             }),
         }
         .byte_size();
-        let count = min(self.msize - header_size, readdir.count);
+        let count = min(self.cfg.msize - header_size, readdir.count);
         let mut cursor = Cursor::new(Vec::with_capacity(count as usize));
 
         let dir = fid.file.as_mut().ok_or_else(ebadf)?;
