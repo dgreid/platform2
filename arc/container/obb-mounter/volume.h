@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ARC_OBB_MOUNTER_VOLUME_H_
-#define ARC_OBB_MOUNTER_VOLUME_H_
+#ifndef ARC_CONTAINER_OBB_MOUNTER_VOLUME_H_
+#define ARC_CONTAINER_OBB_MOUNTER_VOLUME_H_
 
 #include <linux/msdos_fs.h>
 
@@ -132,4 +132,4 @@ class Volume {
 
 }  // namespace fat
 
-#endif  // ARC_OBB_MOUNTER_VOLUME_H_
+#endif  // ARC_CONTAINER_OBB_MOUNTER_VOLUME_H_

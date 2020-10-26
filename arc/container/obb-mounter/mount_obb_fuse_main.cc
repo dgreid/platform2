@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "arc/obb-mounter/mount_obb_fuse_main.h"
+#include "arc/container/obb-mounter/mount_obb_fuse_main.h"
 
 #include <fuse/fuse.h>
 #include <time.h>
@@ -21,7 +21,7 @@
 #include <base/synchronization/lock.h>
 #include <brillo/syslog_logging.h>
 
-#include "arc/obb-mounter/volume.h"
+#include "arc/container/obb-mounter/volume.h"
 
 namespace {
 

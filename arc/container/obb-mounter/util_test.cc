@@ -8,7 +8,7 @@
 #include <base/strings/utf_string_conversions.h>
 #include <gtest/gtest.h>
 
-#include "arc/obb-mounter/util.h"
+#include "arc/container/obb-mounter/util.h"
 
 namespace fat {
 

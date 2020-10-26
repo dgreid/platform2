@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ARC_OBB_MOUNTER_MOUNT_H_
-#define ARC_OBB_MOUNTER_MOUNT_H_
+#ifndef ARC_CONTAINER_OBB_MOUNTER_MOUNT_H_
+#define ARC_CONTAINER_OBB_MOUNTER_MOUNT_H_
 
 #include <sys/types.h>
 
@@ -23,4 +23,4 @@ bool UnmountObb(const std::string& mount_path);
 }  // namespace obb_mounter
 }  // namespace arc
 
-#endif  // ARC_OBB_MOUNTER_MOUNT_H_
+#endif  // ARC_CONTAINER_OBB_MOUNTER_MOUNT_H_

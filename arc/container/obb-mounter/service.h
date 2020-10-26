@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ARC_OBB_MOUNTER_SERVICE_H_
-#define ARC_OBB_MOUNTER_SERVICE_H_
+#ifndef ARC_CONTAINER_OBB_MOUNTER_SERVICE_H_
+#define ARC_CONTAINER_OBB_MOUNTER_SERVICE_H_
 
 #include <base/macros.h>
 #include <base/memory/weak_ptr.h>
@@ -45,4 +45,4 @@ class Service {
 }  // namespace obb_mounter
 }  // namespace arc
 
-#endif  // ARC_OBB_MOUNTER_SERVICE_H_
+#endif  // ARC_CONTAINER_OBB_MOUNTER_SERVICE_H_

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "arc/obb-mounter/mount_obb_fuse_main.h"
+#include "arc/container/obb-mounter/mount_obb_fuse_main.h"
 
 #include <base/command_line.h>
 #include <base/files/file_path.h>

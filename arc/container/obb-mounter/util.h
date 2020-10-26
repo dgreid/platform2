@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ARC_OBB_MOUNTER_UTIL_H_
-#define ARC_OBB_MOUNTER_UTIL_H_
+#ifndef ARC_CONTAINER_OBB_MOUNTER_UTIL_H_
+#define ARC_CONTAINER_OBB_MOUNTER_UTIL_H_
 
 #include <linux/msdos_fs.h>
 #include <stdint.h>
@@ -12,7 +12,7 @@
 
 #include <base/strings/string16.h>
 
-#include "arc/obb-mounter/volume.h"
+#include "arc/container/obb-mounter/volume.h"
 
 namespace base {
 class File;
@@ -38,4 +38,4 @@ int64_t ReadFileAllocationTable(base::File* file,
 
 }  // namespace fat
 
-#endif  // ARC_OBB_MOUNTER_UTIL_H_
+#endif  // ARC_CONTAINER_OBB_MOUNTER_UTIL_H_

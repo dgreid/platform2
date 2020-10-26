@@ -18,7 +18,7 @@
 #include <brillo/syslog_logging.h>
 #include <dbus/bus.h>
 
-#include "arc/obb-mounter/service.h"
+#include "arc/container/obb-mounter/service.h"
 
 namespace {
 

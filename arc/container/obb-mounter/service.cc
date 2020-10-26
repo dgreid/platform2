@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "arc/obb-mounter/service.h"
+#include "arc/container/obb-mounter/service.h"
 
 #include <string>
 #include <utility>
@@ -13,7 +13,7 @@
 #include <dbus/bus.h>
 #include <dbus/message.h>
 
-#include "arc/obb-mounter/mount.h"
+#include "arc/container/obb-mounter/mount.h"
 
 namespace arc {
 namespace obb_mounter {

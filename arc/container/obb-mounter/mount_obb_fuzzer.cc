@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "arc/obb-mounter/mount_obb_fuse_main.h"
+#include "arc/container/obb-mounter/mount_obb_fuse_main.h"
 
 #include <cstddef>
 #include <cstdint>
@@ -14,7 +14,7 @@
 #include <base/files/scoped_temp_dir.h>
 #include <fuzzer/FuzzedDataProvider.h>
 
-#include "arc/obb-mounter/volume.h"
+#include "arc/container/obb-mounter/volume.h"
 
 namespace {
 
