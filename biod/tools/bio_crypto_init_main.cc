@@ -70,7 +70,8 @@ int main(int argc, char* argv[]) {
 
   biod::LogVersion();
 
-  biod::BioCryptoInit bio_crypto_init;
+  biod::BioCryptoInit bio_crypto_init(
+      std::make_unique<biod::EcCommandFactory>());
 
   // We fork the process so that can we program the seed in the child, and
   // terminate it if it hangs.

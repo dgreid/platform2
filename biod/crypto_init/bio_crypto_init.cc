@@ -55,9 +55,8 @@ bool BioCryptoInit::WriteSeedToCrosFp(const brillo::SecureVector& seed) {
     return false;
   }
 
-  biod::EcCommand<biod::EmptyParam, struct ec_response_fp_info> cmd_fp_info(
-      EC_CMD_FP_INFO, biod::kVersionOne);
-  if (!cmd_fp_info.RunWithMultipleAttempts(
+  auto fp_info_cmd = ec_command_factory_->FpInfoCommand();
+  if (!fp_info_cmd->RunWithMultipleAttempts(
           fd.get(), biod::CrosFpDevice::kMaxIoAttempts)) {
     LOG(ERROR) << "Checking template format compatibility: failed to get FP "
                   "information.";
@@ -65,7 +64,7 @@ bool BioCryptoInit::WriteSeedToCrosFp(const brillo::SecureVector& seed) {
   }
 
   const uint32_t firmware_fp_template_format_version =
-      cmd_fp_info.Resp()->template_version;
+      fp_info_cmd->template_info()->version;
   if (!CrosFpTemplateVersionCompatible(firmware_fp_template_format_version,
                                        FP_TEMPLATE_FORMAT_VERSION)) {
     LOG(ERROR) << "Incompatible template version between FPMCU ("

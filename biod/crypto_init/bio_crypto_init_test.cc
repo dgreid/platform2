@@ -4,12 +4,14 @@
 
 #include "biod/crypto_init/bio_crypto_init.h"
 
+#include <memory>
+
 #include <testing/gtest/include/gtest/gtest.h>
 
 namespace biod {
 
 TEST(BioCryptoInitTest, CheckTemplateVersionCompatible) {
-  BioCryptoInit bio_crypto_init;
+  BioCryptoInit bio_crypto_init(std::make_unique<EcCommandFactory>());
   EXPECT_TRUE(bio_crypto_init.CrosFpTemplateVersionCompatible(3, 3));
   EXPECT_TRUE(bio_crypto_init.CrosFpTemplateVersionCompatible(4, 4));
   // Format version 2 should not be in the field.
