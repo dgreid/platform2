@@ -55,7 +55,7 @@
 #define IWL_TABLET_PROFILE_INDEX 1
 #define IWL_CLAMSHELL_PROFILE_INDEX 2
 
-// Legacy vendor subcommand used for devices without limits in VPD.
+// Legacy vendor subcommand used for devices without limits in ACPI.
 #define IWL_MVM_VENDOR_CMD_SET_NIC_TXPOWER_LIMIT 13
 
 #define IWL_MVM_VENDOR_ATTR_TXP_LIMIT_24 13
@@ -249,10 +249,10 @@ void FillMessageMwifiex(struct nl_msg* msg, bool tablet) {
 }
 
 // Returns a vector of three IWL transmit power limits for mode |tablet| if the
-// board doesn't contain limits in VPD, or an empty vector if VPD should be
-// used. VPD limits are expected; this is just a hack for devices (currently
-// only cave) that lack limits in VPD. See b:70549692 for details.
-std::vector<uint32_t> GetNonVpdIwlPowerTable(bool tablet) {
+// board doesn't contain limits in ACPI, or an empty vector if ACPI should be
+// used. ACPI limits are expected; this is just a hack for devices (currently
+// only cave) that lack limits in ACPI. See b:70549692 for details.
+std::vector<uint32_t> GetNonAcpiIwlPowerTable(bool tablet) {
   // Get the board name minus an e.g. "-signed-mpkeys" suffix.
   std::string board = base::SysInfo::GetLsbReleaseBoard();
   const size_t index = board.find("-signed-");
@@ -271,19 +271,19 @@ void FillMessageIwl(struct nl_msg* msg, bool tablet) {
   CHECK(!nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, INTEL_OUI))
       << "Failed to put NL80211_ATTR_VENDOR_ID";
 
-  const std::vector<uint32_t> table = GetNonVpdIwlPowerTable(tablet);
-  const bool use_vpd = table.empty();
+  const std::vector<uint32_t> table = GetNonAcpiIwlPowerTable(tablet);
+  const bool use_acpi = table.empty();
 
   CHECK(!nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
-                     use_vpd ? IWL_MVM_VENDOR_CMD_SET_SAR_PROFILE
-                             : IWL_MVM_VENDOR_CMD_SET_NIC_TXPOWER_LIMIT))
+                     use_acpi ? IWL_MVM_VENDOR_CMD_SET_SAR_PROFILE
+                              : IWL_MVM_VENDOR_CMD_SET_NIC_TXPOWER_LIMIT))
       << "Failed to put NL80211_ATTR_VENDOR_SUBCMD";
 
   struct nlattr* limits =
       nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA | NLA_F_NESTED);
   CHECK(limits) << "Failed in nla_nest_start";
 
-  if (use_vpd) {
+  if (use_acpi) {
     int index = tablet ? IWL_TABLET_PROFILE_INDEX : IWL_CLAMSHELL_PROFILE_INDEX;
     CHECK(!nla_put_u8(msg, IWL_MVM_VENDOR_ATTR_SAR_CHAIN_A_PROFILE, index))
         << "Failed to put IWL_MVM_VENDOR_ATTR_SAR_CHAIN_A_PROFILE";
