@@ -9,6 +9,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include <base/files/file_path.h>
@@ -99,13 +100,59 @@ class FakePlatform final : public Platform {
                         const char* data,
                         size_t size) override;
 
+  FILE* OpenFile(const base::FilePath& path, const char* mode) override;
+  bool CloseFile(FILE* file) override;
+
+  bool GetFileSize(const base::FilePath& path, int64_t* size) override;
+
+  bool HasExtendedFileAttribute(const base::FilePath& path,
+                                const std::string& name) override;
+  bool ListExtendedFileAttributes(const base::FilePath& path,
+                                  std::vector<std::string>* attr_list) override;
+  bool GetExtendedFileAttributeAsString(const base::FilePath& path,
+                                        const std::string& name,
+                                        std::string* value) override;
+  bool GetExtendedFileAttribute(const base::FilePath& path,
+                                const std::string& name,
+                                char* value,
+                                ssize_t size) override;
+  bool SetExtendedFileAttribute(const base::FilePath& path,
+                                const std::string& name,
+                                const char* value,
+                                size_t size) override;
+  bool RemoveExtendedFileAttribute(const base::FilePath& path,
+                                   const std::string& name) override;
+
+  // TODO(chromium:1141301, dlunev): consider running under root to make the
+  // following operate on FS, not on on fake state.
+  bool GetOwnership(const base::FilePath& path,
+                    uid_t* user_id,
+                    gid_t* group_id,
+                    bool follow_links) const override;
+  bool SetOwnership(const base::FilePath& path,
+                    uid_t user_id,
+                    gid_t group_id,
+                    bool follow_links) const override;
+  bool GetPermissions(const base::FilePath& path, mode_t* mode) const override;
+  bool SetPermissions(const base::FilePath& path, mode_t mode) const override;
+
   // Test API
 
   void SetStandardUsersAndGroups();
 
+  // TODO(chromium:1141301, dlunev): this is a workaround of the fact that
+  // libbrillo reads and caches system salt on it own and we are unable to
+  // inject the tmpfs path to it.
+  void SetSystemSaltForLibbrillo(const brillo::SecureBlob& salt);
+  void RemoveSystemSaltForLibbrillo();
+
  private:
   std::unordered_map<std::string, uid_t> uids_;
   std::unordered_map<std::string, gid_t> gids_;
+  // owners and perms are mutable due to const interface we need to abide.
+  mutable std::unordered_map<base::FilePath, std::pair<uid_t, gid_t>>
+      file_owners_;
+  mutable std::unordered_map<base::FilePath, mode_t> file_mode_;
   base::FilePath tmpfs_rootfs_;
 
   void SetUserId(const std::string& user, uid_t user_id);

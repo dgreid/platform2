@@ -6,15 +6,47 @@
 
 #include "cryptohome/fake_platform.h"
 
+#include <memory>
 #include <string>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <vector>
 
 #include <base/files/file_path.h>
+#include <brillo/cryptohome.h>
 #include <brillo/secure_blob.h>
 
 namespace cryptohome {
+
+namespace {
+
+class ProxyFileEnumerator : public FileEnumerator {
+ public:
+  ProxyFileEnumerator(const base::FilePath& tmpfs_rootfs,
+                      FileEnumerator* real_enumerator)
+      : tmpfs_rootfs_(tmpfs_rootfs), real_enumerator_(real_enumerator) {}
+
+  // Removed tmpfs prefix from the returned path.
+  base::FilePath Next() override {
+    base::FilePath next = real_enumerator_->Next();
+    if (!tmpfs_rootfs_.IsParent(next)) {
+      return next;
+    }
+    base::FilePath assumed_path("/");
+    CHECK(tmpfs_rootfs_.AppendRelativePath(next, &assumed_path));
+    return assumed_path;
+  }
+
+  FileEnumerator::FileInfo GetInfo() override {
+    return real_enumerator_->GetInfo();
+  }
+
+ private:
+  base::FilePath tmpfs_rootfs_;
+  std::unique_ptr<FileEnumerator> real_enumerator_;
+};
+
+}  // namespace
 
 // Constructor/destructor
 
@@ -153,16 +185,109 @@ bool FakePlatform::WriteArrayToFile(const base::FilePath& path,
   return real_platform_.WriteArrayToFile(TestFilePath(path), data, size);
 }
 
+FILE* FakePlatform::OpenFile(const base::FilePath& path, const char* mode) {
+  return real_platform_.OpenFile(TestFilePath(path), mode);
+}
+
+bool FakePlatform::CloseFile(FILE* file) {
+  return real_platform_.CloseFile(file);
+}
+
 FileEnumerator* FakePlatform::GetFileEnumerator(const base::FilePath& path,
                                                 bool recursive,
                                                 int file_type) {
-  return real_platform_.GetFileEnumerator(TestFilePath(path), recursive,
-                                          file_type);
+  return new ProxyFileEnumerator(
+      tmpfs_rootfs_, real_platform_.GetFileEnumerator(TestFilePath(path),
+                                                      recursive, file_type));
 }
 
-bool FakePlatform::GetUserId(const std::string& user,
-                             uid_t* user_id,
-                             gid_t* group_id) const {
+bool FakePlatform::GetFileSize(const base::FilePath& path, int64_t* size) {
+  return real_platform_.GetFileSize(TestFilePath(path), size);
+}
+
+bool FakePlatform::HasExtendedFileAttribute(const base::FilePath& path,
+                                            const std::string& name) {
+  return real_platform_.HasExtendedFileAttribute(TestFilePath(path), name);
+}
+
+bool FakePlatform::ListExtendedFileAttributes(
+    const base::FilePath& path, std::vector<std::string>* attr_list) {
+  return real_platform_.ListExtendedFileAttributes(TestFilePath(path),
+                                                   attr_list);
+}
+
+bool FakePlatform::GetExtendedFileAttributeAsString(const base::FilePath& path,
+                                                    const std::string& name,
+                                                    std::string* value) {
+  return real_platform_.GetExtendedFileAttributeAsString(TestFilePath(path),
+                                                         name, value);
+}
+
+bool FakePlatform::GetExtendedFileAttribute(const base::FilePath& path,
+                                            const std::string& name,
+                                            char* value,
+                                            ssize_t size) {
+  return real_platform_.GetExtendedFileAttribute(TestFilePath(path), name,
+                                                 value, size);
+}
+
+bool FakePlatform::SetExtendedFileAttribute(const base::FilePath& path,
+                                            const std::string& name,
+                                            const char* value,
+                                            size_t size) {
+  return real_platform_.SetExtendedFileAttribute(TestFilePath(path), name,
+                                                 value, size);
+}
+
+bool FakePlatform::RemoveExtendedFileAttribute(const base::FilePath& path,
+                                               const std::string& name) {
+  return real_platform_.RemoveExtendedFileAttribute(TestFilePath(path), name);
+}
+
+bool FakePlatform::GetOwnership(const base::FilePath& path,
+                                uid_t* user_id,
+                                gid_t* group_id,
+                                bool follow_links) const {
+  // TODO(chromium:1141301, dlunev): here and further check for file existence.
+  // Can not do it at present due to weird test dependencies.
+  if (file_owners_.find(path) == file_owners_.end()) {
+    *user_id = fake_platform::kChronosUID;
+    *group_id = fake_platform::kChronosGID;
+    return true;
+  }
+
+  *user_id = file_owners_.at(path).first;
+  *group_id = file_owners_.at(path).second;
+  return true;
+}
+
+bool FakePlatform::SetOwnership(const base::FilePath& path,
+                                uid_t user_id,
+                                gid_t group_id,
+                                bool follow_links) const {
+  file_owners_[path] = {user_id, group_id};
+  return true;
+}
+
+bool FakePlatform::GetPermissions(const base::FilePath& path,
+                                  mode_t* mode) const {
+  if (file_mode_.find(path) == file_mode_.end()) {
+    *mode = S_IRWXU | S_IRGRP | S_IXGRP;
+    return true;
+  }
+  *mode = file_mode_.at(path);
+  return true;
+}
+
+bool FakePlatform::SetPermissions(const base::FilePath& path,
+                                  mode_t mode) const {
+  file_mode_[path] = mode;
+  return true;
+}
+
+bool FakePlatform::FakePlatform::GetUserId(const std::string& user,
+                                           uid_t* user_id,
+                                           gid_t* group_id) const {
   CHECK(user_id);
   CHECK(group_id);
 
@@ -210,6 +335,19 @@ void FakePlatform::SetStandardUsersAndGroups() {
   SetUserId(fake_platform::kChronosUser, fake_platform::kChronosUID);
   SetGroupId(fake_platform::kChronosUser, fake_platform::kChronosGID);
   SetGroupId(fake_platform::kSharedGroup, fake_platform::kSharedGID);
+}
+
+void FakePlatform::SetSystemSaltForLibbrillo(const brillo::SecureBlob& salt) {
+  std::string* brillo_salt = new std::string();
+  brillo_salt->resize(salt.size());
+  brillo_salt->assign(reinterpret_cast<const char*>(salt.data()), salt.size());
+  brillo::cryptohome::home::SetSystemSalt(brillo_salt);
+}
+
+void FakePlatform::RemoveSystemSaltForLibbrillo() {
+  std::string* salt = brillo::cryptohome::home::GetSystemSalt();
+  brillo::cryptohome::home::SetSystemSalt(NULL);
+  delete salt;
 }
 
 }  // namespace cryptohome

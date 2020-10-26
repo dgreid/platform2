@@ -159,6 +159,55 @@ class MockPlatform : public Platform {
               WriteArrayToFile,
               (const base::FilePath& path, const char* data, size_t size),
               (override));
+  MOCK_METHOD(FILE*,
+              OpenFile,
+              (const base::FilePath&, const char*),
+              (override));
+  MOCK_METHOD(bool,
+              CloseFile,
+              (FILE*),
+              (override));  // NOLINT(readability/function)
+  MOCK_METHOD(bool, GetFileSize, (const base::FilePath&, int64_t*), (override));
+  MOCK_METHOD(bool,
+              HasExtendedFileAttribute,
+              (const base::FilePath&, const std::string&),
+              (override));
+  MOCK_METHOD(bool,
+              ListExtendedFileAttributes,
+              (const base::FilePath&, std::vector<std::string>*),
+              (override));
+  MOCK_METHOD(bool,
+              GetExtendedFileAttributeAsString,
+              (const base::FilePath&, const std::string&, std::string*),
+              (override));
+  MOCK_METHOD(bool,
+              GetExtendedFileAttribute,
+              (const base::FilePath&, const std::string&, char*, ssize_t),
+              (override));
+  MOCK_METHOD(bool,
+              SetExtendedFileAttribute,
+              (const base::FilePath&, const std::string&, const char*, size_t),
+              (override));
+  MOCK_METHOD(bool,
+              RemoveExtendedFileAttribute,
+              (const base::FilePath&, const std::string&),
+              (override));
+  MOCK_METHOD(bool,
+              GetPermissions,
+              (const base::FilePath&, mode_t*),
+              (const, override));
+  MOCK_METHOD(bool,
+              SetPermissions,
+              (const base::FilePath&, mode_t),
+              (const, override));
+  MOCK_METHOD(bool,
+              GetOwnership,
+              (const base::FilePath&, uid_t*, gid_t*, bool),
+              (const, override));
+  MOCK_METHOD(bool,
+              SetOwnership,
+              (const base::FilePath&, uid_t, gid_t, bool),
+              (const, override));
 
   MOCK_METHOD(bool,
               Mount,
@@ -197,22 +246,6 @@ class MockPlatform : public Platform {
               (const base::FilePath&, std::vector<ProcessInformation>*),
               (override));
   MOCK_METHOD(bool,
-              GetOwnership,
-              (const base::FilePath&, uid_t*, gid_t*, bool),
-              (const, override));
-  MOCK_METHOD(bool,
-              SetOwnership,
-              (const base::FilePath&, uid_t, gid_t, bool),
-              (const, override));
-  MOCK_METHOD(bool,
-              GetPermissions,
-              (const base::FilePath&, mode_t*),
-              (const, override));
-  MOCK_METHOD(bool,
-              SetPermissions,
-              (const base::FilePath&, mode_t),
-              (const, override));
-  MOCK_METHOD(bool,
               SetGroupAccessible,
               (const base::FilePath&, gid_t group_id, mode_t group_mode),
               (const, override));
@@ -229,52 +262,19 @@ class MockPlatform : public Platform {
               (const base::FilePath&, gid_t),
               (const, override));
   MOCK_METHOD(int, Access, (const base::FilePath&, uint32_t), (override));
-  MOCK_METHOD(bool, GetFileSize, (const base::FilePath&, int64_t*), (override));
   MOCK_METHOD(int64_t,
               ComputeDirectoryDiskUsage,
               (const base::FilePath&),
-              (override));
-  MOCK_METHOD(FILE*,
-              OpenFile,
-              (const base::FilePath&, const char*),
               (override));
   MOCK_METHOD(void,
               InitializeFile,
               (base::File*, const base::FilePath&, uint32_t),
               (override));
   MOCK_METHOD(bool, LockFile, (int), (override));
-  MOCK_METHOD(bool,
-              CloseFile,
-              (FILE*),
-              (override));  // NOLINT(readability/function)
   MOCK_METHOD(FILE*, CreateAndOpenTemporaryFile, (base::FilePath*), (override));
   MOCK_METHOD(bool,
               Stat,
               (const base::FilePath&, base::stat_wrapper_t*),
-              (override));
-  MOCK_METHOD(bool,
-              HasExtendedFileAttribute,
-              (const base::FilePath&, const std::string&),
-              (override));
-  MOCK_METHOD(bool,
-              ListExtendedFileAttributes,
-              (const base::FilePath&, std::vector<std::string>*),
-              (override));
-  MOCK_METHOD(bool,
-              GetExtendedFileAttributeAsString,
-              (const base::FilePath&, const std::string&, std::string*),
-              (override));
-  MOCK_METHOD(bool,
-              GetExtendedFileAttribute,
-              (const base::FilePath&, const std::string&, char*, ssize_t),
-              (override));
-  MOCK_METHOD(bool,
-              SetExtendedFileAttribute,
-              (const base::FilePath&, const std::string&, const char*, size_t),
-              (override));
-  MOCK_METHOD(bool,
-              RemoveExtendedFileAttribute,
-              (const base::FilePath&, const std::string&),
               (override));
   MOCK_METHOD(bool,
               GetExtFileAttributes,
@@ -380,7 +380,6 @@ class MockPlatform : public Platform {
               (const base::FilePath&, const std::string&),
               (override));
 
-  MockFileEnumerator* mock_enumerator() { return mock_enumerator_.get(); }
   brillo::ProcessMock* mock_process() { return mock_process_.get(); }
 
   FakePlatform* GetFake() { return fake_platform_.get(); }
@@ -393,30 +392,11 @@ class MockPlatform : public Platform {
     return res;
   }
 
-  bool MockGetOwnership(const base::FilePath& path,
-                        uid_t* user_id,
-                        gid_t* group_id,
-                        bool dereference_links) const {
-    *user_id = getuid();
-    *group_id = getgid();
-    return true;
-  }
-
   bool MockGetPermissions(const base::FilePath& path, mode_t* mode) const {
     *mode = S_IRWXU | S_IRGRP | S_IXGRP;
     return true;
   }
 
-  FileEnumerator* MockGetFileEnumerator(const base::FilePath& root_path,
-                                        bool recursive,
-                                        int file_type) {
-    MockFileEnumerator* e = mock_enumerator_.release();
-    mock_enumerator_.reset(new ::testing::NiceMock<MockFileEnumerator>());
-    mock_enumerator_->entries_.assign(e->entries_.begin(), e->entries_.end());
-    return e;
-  }
-
-  std::unique_ptr<MockFileEnumerator> mock_enumerator_;
   std::unique_ptr<brillo::ProcessMock> mock_process_;
   std::unique_ptr<FakePlatform> fake_platform_;
 };

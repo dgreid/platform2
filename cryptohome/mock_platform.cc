@@ -14,8 +14,7 @@ using testing::Return;
 namespace cryptohome {
 
 MockPlatform::MockPlatform()
-    : mock_enumerator_(new NiceMock<MockFileEnumerator>()),
-      mock_process_(new NiceMock<brillo::ProcessMock>()),
+    : mock_process_(new NiceMock<brillo::ProcessMock>()),
       fake_platform_(new FakePlatform()) {
   ON_CALL(*this, GetUserId(_, _, _))
       .WillByDefault(Invoke(fake_platform_.get(), &FakePlatform::GetUserId));
@@ -36,6 +35,9 @@ MockPlatform::MockPlatform()
   ON_CALL(*this, EnumerateDirectoryEntries(_, _, _))
       .WillByDefault(Invoke(fake_platform_.get(),
                             &FakePlatform::EnumerateDirectoryEntries));
+  ON_CALL(*this, GetFileEnumerator(_, _, _))
+      .WillByDefault(
+          Invoke(fake_platform_.get(), &FakePlatform::GetFileEnumerator));
   ON_CALL(*this, FileExists(_))
       .WillByDefault(Invoke(fake_platform_.get(), &FakePlatform::FileExists));
   ON_CALL(*this, DirectoryExists(_))
@@ -81,15 +83,45 @@ MockPlatform::MockPlatform()
       .WillByDefault(
           Invoke(fake_platform_.get(), &FakePlatform::WriteArrayToFile));
 
+  ON_CALL(*this, OpenFile(_, _))
+      .WillByDefault(Invoke(fake_platform_.get(), &FakePlatform::OpenFile));
+  ON_CALL(*this, CloseFile(_))
+      .WillByDefault(Invoke(fake_platform_.get(), &FakePlatform::CloseFile));
+
+  ON_CALL(*this, GetFileSize(_, _))
+      .WillByDefault(Invoke(fake_platform_.get(), &FakePlatform::GetFileSize));
+
+  ON_CALL(*this, HasExtendedFileAttribute(_, _))
+      .WillByDefault(Invoke(fake_platform_.get(),
+                            &FakePlatform::HasExtendedFileAttribute));
+  ON_CALL(*this, ListExtendedFileAttributes(_, _))
+      .WillByDefault(Invoke(fake_platform_.get(),
+                            &FakePlatform::ListExtendedFileAttributes));
+  ON_CALL(*this, GetExtendedFileAttributeAsString(_, _, _))
+      .WillByDefault(Invoke(fake_platform_.get(),
+                            &FakePlatform::GetExtendedFileAttributeAsString));
+  ON_CALL(*this, GetExtendedFileAttribute(_, _, _, _))
+      .WillByDefault(Invoke(fake_platform_.get(),
+                            &FakePlatform::GetExtendedFileAttribute));
+  ON_CALL(*this, SetExtendedFileAttribute(_, _, _, _))
+      .WillByDefault(Invoke(fake_platform_.get(),
+                            &FakePlatform::SetExtendedFileAttribute));
+  ON_CALL(*this, RemoveExtendedFileAttribute(_, _))
+      .WillByDefault(Invoke(fake_platform_.get(),
+                            &FakePlatform::RemoveExtendedFileAttribute));
+
   ON_CALL(*this, GetOwnership(_, _, _, _))
-      .WillByDefault(Invoke(this, &MockPlatform::MockGetOwnership));
-  ON_CALL(*this, SetOwnership(_, _, _, _)).WillByDefault(Return(true));
+      .WillByDefault(Invoke(fake_platform_.get(), &FakePlatform::GetOwnership));
+  ON_CALL(*this, SetOwnership(_, _, _, _))
+      .WillByDefault(Invoke(fake_platform_.get(), &FakePlatform::SetOwnership));
   ON_CALL(*this, GetPermissions(_, _))
-      .WillByDefault(Invoke(this, &MockPlatform::MockGetPermissions));
-  ON_CALL(*this, SetPermissions(_, _)).WillByDefault(Return(true));
+      .WillByDefault(
+          Invoke(fake_platform_.get(), &FakePlatform::GetPermissions));
+  ON_CALL(*this, SetPermissions(_, _))
+      .WillByDefault(
+          Invoke(fake_platform_.get(), &FakePlatform::SetPermissions));
+
   ON_CALL(*this, SetGroupAccessible(_, _, _)).WillByDefault(Return(true));
-  ON_CALL(*this, GetFileEnumerator(_, _, _))
-      .WillByDefault(Invoke(this, &MockPlatform::MockGetFileEnumerator));
   ON_CALL(*this, GetCurrentTime())
       .WillByDefault(Return(base::Time::NowFromSystemTime()));
   ON_CALL(*this, StatVFS(_, _)).WillByDefault(CallStatVFS());

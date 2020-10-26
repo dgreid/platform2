@@ -645,6 +645,7 @@ class KeysetManagementTest : public HomeDirsTest {
     last_vk_ = -1;
     active_vk_ = NULL;
     memset(active_vks_, 0, sizeof(active_vks_));
+    ON_CALL(platform_, CloseFile(_)).WillByDefault(Return(true));
   }
 
   void TearDown() {

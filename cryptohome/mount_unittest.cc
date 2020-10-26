@@ -858,7 +858,9 @@ class ChapsDirectoryTest : public ::testing::Test {
         .WillRepeatedly(DoAll(SetArgPointee<1>(base_stat_), Return(true)));
 
     // Configure a fake enumerator.
-    MockFileEnumerator* enumerator = platform_.mock_enumerator();
+    MockFileEnumerator* enumerator = new MockFileEnumerator();
+    EXPECT_CALL(platform_, GetFileEnumerator(_, _, _))
+        .WillOnce(Return(enumerator));
     enumerator->entries_.push_back(
         FileEnumerator::FileInfo(kBaseDir, base_stat_));
     enumerator->entries_.push_back(
@@ -867,6 +869,14 @@ class ChapsDirectoryTest : public ::testing::Test {
         FileEnumerator::FileInfo(kDatabaseDir, database_dir_stat_));
     enumerator->entries_.push_back(
         FileEnumerator::FileInfo(kDatabaseFile, database_file_stat_));
+  }
+
+  void SetupFakeChapsDirectoryNoEnumerator() {
+    // Configure the base directory.
+    EXPECT_CALL(platform_, DirectoryExists(kBaseDir))
+        .WillRepeatedly(Return(true));
+    EXPECT_CALL(platform_, Stat(kBaseDir, _))
+        .WillRepeatedly(DoAll(SetArgPointee<1>(base_stat_), Return(true)));
   }
 
   bool RunCheck() { return mount_->CheckChapsDirectory(kBaseDir, kLegacyDir); }
@@ -978,7 +988,7 @@ TEST_F(ChapsDirectoryTest, FixBadOwnership) {
 TEST_F(ChapsDirectoryTest, FixBadPermsFailure) {
   // Specify some bad perms.
   base_stat_.st_mode = 040700;
-  SetupFakeChapsDirectory();
+  SetupFakeChapsDirectoryNoEnumerator();
   // Expect corrections but fail to apply.
   EXPECT_CALL(platform_, SetPermissions(_, _)).WillRepeatedly(Return(false));
   ASSERT_FALSE(RunCheck());
@@ -987,7 +997,7 @@ TEST_F(ChapsDirectoryTest, FixBadPermsFailure) {
 TEST_F(ChapsDirectoryTest, FixBadOwnershipFailure) {
   // Specify bad ownership.
   base_stat_.st_uid = fake_platform::kRootUID;
-  SetupFakeChapsDirectory();
+  SetupFakeChapsDirectoryNoEnumerator();
   // Expect corrections but fail to apply.
   EXPECT_CALL(platform_, SetOwnership(_, _, _, _))
       .WillRepeatedly(Return(false));
@@ -1017,7 +1027,9 @@ TEST_P(MountTest, CheckChapsDirectoryMigration) {
       .WillRepeatedly(DoAll(SetArgPointee<1>(base_stat), Return(true)));
 
   // Configure a fake enumerator.
-  MockFileEnumerator* enumerator = platform_.mock_enumerator();
+  MockFileEnumerator* enumerator = new MockFileEnumerator();
+  EXPECT_CALL(platform_, GetFileEnumerator(_, _, _))
+      .WillOnce(Return(enumerator));
   base::stat_wrapper_t file_info1 = {0};
   file_info1.st_mode = 0555;
   file_info1.st_uid = 3;
