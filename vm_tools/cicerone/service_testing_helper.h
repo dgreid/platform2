@@ -12,7 +12,7 @@
 
 #include <base/files/scoped_temp_dir.h>
 #include <base/memory/ref_counted.h>
-#include <base/test/task_environment.h>
+#include <base/task/single_thread_task_executor.h>
 #include <base/threading/thread.h>
 #include <base/threading/thread_task_runner_handle.h>
 #include <dbus/mock_bus.h>
@@ -272,7 +272,7 @@ class ServiceTestingHelper {
   scoped_refptr<base::SingleThreadTaskRunner> dbus_task_runner_;
 
   // This needs to exist for Service to start up & shut down right.
-  base::test::TaskEnvironment task_environment_;
+  base::SingleThreadTaskExecutor task_executor_;
 
   // Mocks
   scoped_refptr<dbus::MockBus> mock_bus_;
