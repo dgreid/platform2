@@ -43,39 +43,28 @@ bool BioCryptoInit::NukeFile(const base::FilePath& filepath) {
 }
 
 bool BioCryptoInit::WriteSeedToCrosFp(const brillo::SecureVector& seed) {
-  auto fd = OpenCrosFpDevice();
-  if (!fd.is_valid()) {
-    PLOG(ERROR) << "Couldn't open FP device for ioctl.";
+  if (!InitCrosFp()) {
     return false;
   }
 
-  if (!WaitOnEcBoot(fd, EC_IMAGE_RW)) {
-    LOG(ERROR) << "FP device did not boot to RW.";
+  base::Optional<uint32_t> firmware_fp_template_format_version =
+      GetFirmwareTemplateVersion();
+  if (!firmware_fp_template_format_version.has_value()) {
     return false;
   }
 
-  auto fp_info_cmd = ec_command_factory_->FpInfoCommand();
-  if (!fp_info_cmd->RunWithMultipleAttempts(
-          fd.get(), biod::CrosFpDevice::kMaxIoAttempts)) {
-    LOG(ERROR) << "Checking template format compatibility: failed to get FP "
-                  "information.";
-    return false;
-  }
-
-  const uint32_t firmware_fp_template_format_version =
-      fp_info_cmd->template_info()->version;
-  if (!CrosFpTemplateVersionCompatible(firmware_fp_template_format_version,
+  if (!CrosFpTemplateVersionCompatible(*firmware_fp_template_format_version,
                                        FP_TEMPLATE_FORMAT_VERSION)) {
     LOG(ERROR) << "Incompatible template version between FPMCU ("
-               << firmware_fp_template_format_version << ") and biod ("
+               << *firmware_fp_template_format_version << ") and biod ("
                << FP_TEMPLATE_FORMAT_VERSION << ").";
     return false;
   }
 
   auto fp_seed_cmd = ec_command_factory_->FpSeedCommand(
-      seed, firmware_fp_template_format_version);
+      seed, *firmware_fp_template_format_version);
 
-  if (!fp_seed_cmd->Run(fd.get())) {
+  if (!fp_seed_cmd->Run(cros_fp_fd_.get())) {
     LOG(ERROR) << "Failed to set TPM seed.";
     return false;
   }
@@ -130,6 +119,33 @@ bool BioCryptoInit::CrosFpTemplateVersionCompatible(
       biod_fp_template_format_version == 4)
     return true;
   return firmware_fp_template_format_version == biod_fp_template_format_version;
+}
+
+bool BioCryptoInit::InitCrosFp() {
+  cros_fp_fd_ = OpenCrosFpDevice();
+  if (!cros_fp_fd_.is_valid()) {
+    PLOG(ERROR) << "Couldn't open FP device for ioctl.";
+    return false;
+  }
+
+  if (!WaitOnEcBoot(cros_fp_fd_, EC_IMAGE_RW)) {
+    LOG(ERROR) << "FP device did not boot to RW.";
+    return false;
+  }
+
+  return true;
+}
+
+base::Optional<uint32_t> BioCryptoInit::GetFirmwareTemplateVersion() {
+  auto fp_info_cmd = ec_command_factory_->FpInfoCommand();
+  if (!fp_info_cmd->RunWithMultipleAttempts(
+          cros_fp_fd_.get(), biod::CrosFpDevice::kMaxIoAttempts)) {
+    LOG(ERROR) << "Checking template format compatibility: failed to get FP "
+                  "information.";
+    return base::nullopt;
+  }
+
+  return fp_info_cmd->template_info()->version;
 }
 
 }  // namespace biod

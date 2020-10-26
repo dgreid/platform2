@@ -31,6 +31,8 @@ class BioCryptoInit {
       const uint32_t biod_fp_template_format_version);
 
  protected:
+  virtual bool InitCrosFp();
+  virtual base::Optional<uint32_t> GetFirmwareTemplateVersion();
   virtual bool WriteSeedToCrosFp(const brillo::SecureVector& seed);
   virtual base::ScopedFD OpenCrosFpDevice();
   virtual bool WaitOnEcBoot(const base::ScopedFD& cros_fp_fd,
@@ -38,6 +40,7 @@ class BioCryptoInit {
 
  private:
   std::unique_ptr<EcCommandFactoryInterface> ec_command_factory_;
+  base::ScopedFD cros_fp_fd_;
 };
 
 }  // namespace biod

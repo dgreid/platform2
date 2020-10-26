@@ -6,11 +6,16 @@
 
 #include <memory>
 
-#include <testing/gtest/include/gtest/gtest.h>
+#include "biod/crypto_init/mock_bio_crypto_init.h"
+#include "biod/mock_ec_command_factory.h"
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
 namespace biod {
 
-TEST(BioCryptoInitTest, CheckTemplateVersionCompatible) {
+using ::testing::Return;
+
+TEST(BioCryptoInit, CheckTemplateVersionCompatible) {
   BioCryptoInit bio_crypto_init(std::make_unique<EcCommandFactory>());
   EXPECT_TRUE(bio_crypto_init.CrosFpTemplateVersionCompatible(3, 3));
   EXPECT_TRUE(bio_crypto_init.CrosFpTemplateVersionCompatible(4, 4));
@@ -31,4 +36,44 @@ TEST(BioCryptoInitTest, CheckTemplateVersionCompatible) {
       4, FP_TEMPLATE_FORMAT_VERSION));
 }
 
+class BioCryptoInitTest : public testing::Test {
+ public:
+  class MockFpSeedCommand : public FpSeedCommand {
+   public:
+    MOCK_METHOD(bool, Run, (int fd), (override));
+  };
+
+  BioCryptoInitTest() {
+    auto mock_command_factory = std::make_unique<MockEcCommandFactory>();
+    mock_ec_command_factory_ = mock_command_factory.get();
+    mock_bio_crypto_init_ =
+        std::make_unique<MockBioCryptoInit>(std::move(mock_command_factory));
+  }
+
+ protected:
+  MockEcCommandFactory* mock_ec_command_factory_ = nullptr;
+  std::unique_ptr<MockBioCryptoInit> mock_bio_crypto_init_;
+};
+
+TEST_F(BioCryptoInitTest, WriteSeedToCrosFp) {
+  EXPECT_CALL(*mock_bio_crypto_init_, InitCrosFp).WillOnce(Return(true));
+  EXPECT_CALL(*mock_bio_crypto_init_, GetFirmwareTemplateVersion)
+      .WillOnce(Return(3));
+
+  const brillo::SecureVector kSeed(FpSeedCommand::kTpmSeedSize, 0xFF);
+
+  // Verify that the seed passed to WriteSeedToCrosFp matches and that the
+  // command to set the seed is run.
+  EXPECT_CALL(*mock_ec_command_factory_, FpSeedCommand)
+      .WillOnce(
+          [&kSeed](const brillo::SecureVector& seed, uint16_t seed_version) {
+            EXPECT_EQ(seed, kSeed);
+            auto mock_cmd =
+                FpSeedCommand::Create<MockFpSeedCommand>(seed, seed_version);
+            EXPECT_CALL(*mock_cmd, Run).WillOnce(Return(true));
+            return mock_cmd;
+          });
+
+  mock_bio_crypto_init_->WriteSeedToCrosFpDelegate(kSeed);
+}
 }  // namespace biod
