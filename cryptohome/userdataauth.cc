@@ -286,9 +286,6 @@ bool UserDataAuth::Initialize() {
   // We expect |tpm_| and |tpm_init_| to be available by this point.
   DCHECK(tpm_ && tpm_init_);
 
-  tpm_init_->Init(
-      base::Bind(&UserDataAuth::OwnershipCallback, base::Unretained(this)));
-
   // Seed /dev/urandom
   SeedUrandom();
 
