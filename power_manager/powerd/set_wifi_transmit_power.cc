@@ -292,11 +292,11 @@ void FillMessageIwl(struct nl_msg* msg, bool tablet) {
   } else {
     DCHECK_EQ(table.size(), 3);
     CHECK(!nla_put_u32(msg, IWL_MVM_VENDOR_ATTR_TXP_LIMIT_24, table[0] * 8))
-        << "Failed to put MWIFIEX_VENDOR_CMD_ATTR_TXP_LIMIT_24";
+        << "Failed to put IWL_MVM_VENDOR_ATTR_TXP_LIMIT_24";
     CHECK(!nla_put_u32(msg, IWL_MVM_VENDOR_ATTR_TXP_LIMIT_52L, table[1] * 8))
-        << "Failed to put MWIFIEX_VENDOR_CMD_ATTR_TXP_LIMIT_52L";
+        << "Failed to put IWL_MVM_VENDOR_ATTR_TXP_LIMIT_52L";
     CHECK(!nla_put_u32(msg, IWL_MVM_VENDOR_ATTR_TXP_LIMIT_52H, table[2] * 8))
-        << "Failed to put MWIFIEX_VENDOR_CMD_ATTR_TXP_LIMIT_52H";
+        << "Failed to put IWL_MVM_VENDOR_ATTR_TXP_LIMIT_52H";
   }
 
   CHECK(!nla_nest_end(msg, limits)) << "Failed in nla_nest_end";
