@@ -7,6 +7,8 @@
 #include <string>
 #include <utility>
 
+#include <unistd.h>
+
 #include <base/files/file_path.h>
 #include <base/files/scoped_temp_dir.h>
 #include <gtest/gtest.h>
@@ -154,6 +156,123 @@ TEST_F(OobeConfigTest, UnencryptedSaveAndRestoreTest) {
 
 TEST_F(OobeConfigTest, EncryptedSaveAndRestoreTest) {
   CheckSaveAndRestore(true /* encrypted */);
+}
+
+TEST_F(OobeConfigTest, ReadNonexistentFile) {
+  base::FilePath bogus_path("/DoesNotExist");
+  std::string result = "result";
+  EXPECT_FALSE(oobe_config_->ReadFile(bogus_path, &result));
+  EXPECT_TRUE(result.empty());
+}
+
+TEST_F(OobeConfigTest, WriteFileDisallowed) {
+  base::FilePath file_path("/test_file");
+  std::string content = "content";
+  EXPECT_TRUE(oobe_config_->WriteFile(file_path, content));
+  // Make the file unwriteable.
+  EXPECT_EQ(chmod(fake_root_dir_.GetPath()
+                      .Append(file_path.value().substr(1))
+                      .value()
+                      .c_str(),
+                  0400),
+            0);
+  EXPECT_FALSE(oobe_config_->WriteFile(file_path, content));
+}
+
+TEST_F(OobeConfigTest, ReadFileDisallowed) {
+  base::FilePath file_path("/test_file");
+  std::string content = "content";
+  EXPECT_TRUE(oobe_config_->WriteFile(file_path, content));
+  // Make the file unreadable.
+  EXPECT_EQ(chmod(fake_root_dir_.GetPath()
+                      .Append(file_path.value().substr(1))
+                      .value()
+                      .c_str(),
+                  0000),
+            0);
+  EXPECT_FALSE(oobe_config_->ReadFile(file_path, &content));
+  EXPECT_TRUE(content.empty());
+}
+
+TEST_F(OobeConfigTest, WriteAndReadFile) {
+  base::FilePath file_path("/test_file");
+  std::string content = "content";
+  std::string result;
+  EXPECT_TRUE(oobe_config_->WriteFile(file_path, content));
+  EXPECT_TRUE(oobe_config_->ReadFile(file_path, &result));
+  EXPECT_EQ(result, content);
+}
+
+TEST_F(OobeConfigTest, FileExistsYes) {
+  base::FilePath file_path("/test_file");
+  std::string content = "content";
+  EXPECT_TRUE(oobe_config_->WriteFile(file_path, content));
+  EXPECT_TRUE(oobe_config_->FileExists(file_path));
+}
+
+TEST_F(OobeConfigTest, FileExistsNo) {
+  base::FilePath file_path("/test_file");
+  EXPECT_FALSE(oobe_config_->FileExists(file_path));
+}
+
+TEST_F(OobeConfigTest, NoStagePending) {
+  EXPECT_FALSE(oobe_config_->CheckFirstStage());
+  EXPECT_FALSE(oobe_config_->CheckSecondStage());
+  EXPECT_FALSE(oobe_config_->CheckThirdStage());
+}
+
+TEST_F(OobeConfigTest, FirstStagePending) {
+  std::string content;
+  EXPECT_TRUE(
+      oobe_config_->WriteFile(kUnencryptedStatefulRollbackDataPath, content));
+  EXPECT_TRUE(oobe_config_->CheckFirstStage());
+  EXPECT_FALSE(oobe_config_->CheckSecondStage());
+  EXPECT_FALSE(oobe_config_->CheckThirdStage());
+}
+
+TEST_F(OobeConfigTest, SecondStagePending) {
+  std::string content;
+  EXPECT_TRUE(
+      oobe_config_->WriteFile(kUnencryptedStatefulRollbackDataPath, content));
+  EXPECT_TRUE(
+      oobe_config_->WriteFile(kEncryptedStatefulRollbackDataPath, content));
+  EXPECT_TRUE(oobe_config_->WriteFile(kFirstStageCompletedFile, content));
+  EXPECT_FALSE(oobe_config_->CheckFirstStage());
+  EXPECT_TRUE(oobe_config_->CheckSecondStage());
+  EXPECT_FALSE(oobe_config_->CheckThirdStage());
+}
+
+TEST_F(OobeConfigTest, ThirdStagePending) {
+  std::string content;
+  EXPECT_TRUE(
+      oobe_config_->WriteFile(kEncryptedStatefulRollbackDataPath, content));
+  EXPECT_TRUE(oobe_config_->WriteFile(kFirstStageCompletedFile, content));
+  EXPECT_TRUE(oobe_config_->WriteFile(kSecondStageCompletedFile, content));
+  EXPECT_FALSE(oobe_config_->CheckFirstStage());
+  EXPECT_FALSE(oobe_config_->CheckSecondStage());
+  EXPECT_TRUE(oobe_config_->CheckThirdStage());
+}
+
+TEST_F(OobeConfigTest, ShouldSaveRollbackData) {
+  std::string content;
+  EXPECT_TRUE(oobe_config_->WriteFile(kRollbackSaveMarkerFile, content));
+  EXPECT_TRUE(oobe_config_->ShouldSaveRollbackData());
+}
+
+TEST_F(OobeConfigTest, ShouldNotSaveRollbackData) {
+  EXPECT_FALSE(oobe_config_->ShouldSaveRollbackData());
+}
+
+TEST_F(OobeConfigTest, DeleteRollbackSaveFlagFile) {
+  std::string content;
+  EXPECT_TRUE(oobe_config_->WriteFile(kRollbackSaveMarkerFile, content));
+  EXPECT_TRUE(oobe_config_->DeleteRollbackSaveFlagFile());
+  EXPECT_FALSE(oobe_config_->FileExists(kRollbackSaveMarkerFile));
+}
+
+TEST_F(OobeConfigTest, DeleteNonexistentRollbackSaveFlagFile) {
+  // It is considered successful to delete a file that does not exist.
+  EXPECT_TRUE(oobe_config_->DeleteRollbackSaveFlagFile());
 }
 
 }  // namespace oobe_config
