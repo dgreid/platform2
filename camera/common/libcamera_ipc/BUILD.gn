@@ -19,6 +19,7 @@ generate_mojom_bindings("libcamera_ipc_mojom") {
     "//camera/mojo/gpu/dmabuf.mojom",
     "//camera/mojo/gpu/jpeg_encode_accelerator.mojom",
     "//camera/mojo/gpu/mjpeg_decode_accelerator.mojom",
+    "//camera/mojo/unguessable_token.mojom",
   ]
   mojo_root = "//camera"
   use_pic = true

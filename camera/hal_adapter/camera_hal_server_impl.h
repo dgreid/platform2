@@ -55,7 +55,8 @@ class CameraHalServerImpl final {
 
     // CameraHalServer Mojo interface implementation.
 
-    void CreateChannel(mojom::CameraModuleRequest camera_module_request) final;
+    void CreateChannel(mojom::CameraModuleRequest camera_module_request,
+                       mojom::CameraClientType camera_client_type) final;
 
     void SetTracingEnabled(bool enabled) final;
 

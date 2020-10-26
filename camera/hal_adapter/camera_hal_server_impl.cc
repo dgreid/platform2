@@ -107,7 +107,8 @@ void CameraHalServerImpl::IPCBridge::Start(
 }
 
 void CameraHalServerImpl::IPCBridge::CreateChannel(
-    mojom::CameraModuleRequest camera_module_request) {
+    mojom::CameraModuleRequest camera_module_request,
+    mojom::CameraClientType camera_client_type) {
   VLOGF_ENTER();
   DCHECK(ipc_task_runner_->BelongsToCurrentThread());
 
