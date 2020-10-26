@@ -28,6 +28,7 @@
 #include "lorgnette/guess_source.h"
 #include "lorgnette/ippusb_device.h"
 
+static const char* kDbusDomain = brillo::errors::dbus::kDomain;
 using std::string;
 
 namespace lorgnette {
@@ -56,29 +57,27 @@ std::string SerializeError(const brillo::ErrorPtr& error_ptr) {
 // and PNG conversion logic.
 bool ValidateParams(brillo::ErrorPtr* error, const ScanParameters& params) {
   if (params.depth != 1 && params.depth != 8 && params.depth != 16) {
-    brillo::Error::AddToPrintf(error, FROM_HERE, brillo::errors::dbus::kDomain,
+    brillo::Error::AddToPrintf(error, FROM_HERE, kDbusDomain,
                                kManagerServiceError,
                                "Invalid scan bit depth %d", params.depth);
     return false;
   }
 
   if (params.depth == 1 && params.format != kGrayscale) {
-    brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
-                         kManagerServiceError,
+    brillo::Error::AddTo(error, FROM_HERE, kDbusDomain, kManagerServiceError,
                          "Cannot have bit depth of 1 with non-grayscale scan");
     return false;
   }
 
   if (params.lines < 0) {
     brillo::Error::AddTo(
-        error, FROM_HERE, brillo::errors::dbus::kDomain, kManagerServiceError,
+        error, FROM_HERE, kDbusDomain, kManagerServiceError,
         "Cannot handle scanning of files with unknown lengths");
     return false;
   }
 
   if (params.lines == 0) {
-    brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
-                         kManagerServiceError,
+    brillo::Error::AddTo(error, FROM_HERE, kDbusDomain, kManagerServiceError,
                          "Cannot scan an image with 0 lines");
     return false;
   }
@@ -98,8 +97,8 @@ int LibpngErrorWrap(brillo::ErrorPtr* error,
                     Args... args) {
   jmp_buf* buf = png_set_longjmp_fn(png, longjmp, sizeof(jmp_buf));
   if (!buf) {
-    brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
-                         kManagerServiceError, "Failed to initialize jmp_buf");
+    brillo::Error::AddTo(error, FROM_HERE, kDbusDomain, kManagerServiceError,
+                         "Failed to initialize jmp_buf");
     return -1;
   }
   int result = setjmp(*buf);
@@ -130,16 +129,14 @@ bool SetupPngHeader(brillo::ErrorPtr* error,
   png_struct* png =
       png_create_write_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
   if (!png) {
-    brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
-                         kManagerServiceError,
+    brillo::Error::AddTo(error, FROM_HERE, kDbusDomain, kManagerServiceError,
                          "Could not initialize PNG write struct");
     return false;
   }
 
   png_info* info = png_create_info_struct(png);
   if (!info) {
-    brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
-                         kManagerServiceError,
+    brillo::Error::AddTo(error, FROM_HERE, kDbusDomain, kManagerServiceError,
                          "Could not initialize PNG info struct");
     png_destroy_write_struct(&png, nullptr);
     return false;
@@ -163,7 +160,7 @@ bool SetupPngHeader(brillo::ErrorPtr* error,
   png_init_io(png, out_file.get());
   int ret = LibpngErrorWrap(error, png_write_info, png, info);
   if (ret != 0) {
-    brillo::Error::AddToPrintf(error, FROM_HERE, brillo::errors::dbus::kDomain,
+    brillo::Error::AddToPrintf(error, FROM_HERE, kDbusDomain,
                                kManagerServiceError,
                                "Writing PNG info failed with result %d", ret);
     png_destroy_write_struct(&png, &info);
@@ -197,15 +194,15 @@ base::ScopedFILE SetupOutputFile(brillo::ErrorPtr* error,
   // Dup fd since fdclose() on file will also close the contained fd.
   base::ScopedFD fd_copy(dup(fd.get()));
   if (fd_copy.get() < 0) {
-    brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
-                         kManagerServiceError, "Could not duplicate output FD");
+    brillo::Error::AddTo(error, FROM_HERE, kDbusDomain, kManagerServiceError,
+                         "Could not duplicate output FD");
     return file;
   }
 
   file = base::ScopedFILE(fdopen(fd_copy.get(), "w"));
   if (!file) {
-    brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
-                         kManagerServiceError, "Failed to open outfd");
+    brillo::Error::AddTo(error, FROM_HERE, kDbusDomain, kManagerServiceError,
+                         "Failed to open outfd");
     return file;
   }
   // Release |fd_copy| since it is owned by |file| now.
@@ -305,8 +302,8 @@ void Manager::RegisterAsync(
 bool Manager::ListScanners(brillo::ErrorPtr* error,
                            std::vector<uint8_t>* scanner_list_out) {
   if (!sane_client_) {
-    brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
-                         kManagerServiceError, "No connection to SANE");
+    brillo::Error::AddTo(error, FROM_HERE, kDbusDomain, kManagerServiceError,
+                         "No connection to SANE");
     return false;
   }
 
@@ -416,15 +413,14 @@ bool Manager::GetScannerCapabilities(brillo::ErrorPtr* error,
                                      const std::string& device_name,
                                      std::vector<uint8_t>* capabilities_out) {
   if (!capabilities_out) {
-    brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
-                         kManagerServiceError,
+    brillo::Error::AddTo(error, FROM_HERE, kDbusDomain, kManagerServiceError,
                          "'capabilities_out' must be non-null");
     return false;
   }
 
   if (!sane_client_) {
-    brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
-                         kManagerServiceError, "No connection to SANE");
+    brillo::Error::AddTo(error, FROM_HERE, kDbusDomain, kManagerServiceError,
+                         "No connection to SANE");
     return false;
   }
 
@@ -635,21 +631,20 @@ bool Manager::StartScanInternal(brillo::ErrorPtr* error,
                                 const StartScanRequest& request,
                                 std::unique_ptr<SaneDevice>* device_out) {
   if (!device_out) {
-    brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
-                         kManagerServiceError, "device_out cannot be null");
+    brillo::Error::AddTo(error, FROM_HERE, kDbusDomain, kManagerServiceError,
+                         "device_out cannot be null");
     return false;
   }
 
   if (request.device_name() == "") {
-    brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
-                         kManagerServiceError,
+    brillo::Error::AddTo(error, FROM_HERE, kDbusDomain, kManagerServiceError,
                          "A device name must be provided");
     return false;
   }
 
   if (!sane_client_) {
-    brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
-                         kManagerServiceError, "No connection to SANE");
+    brillo::Error::AddTo(error, FROM_HERE, kDbusDomain, kManagerServiceError,
+                         "No connection to SANE");
     return false;
   }
 
@@ -709,7 +704,7 @@ bool Manager::StartScanInternal(brillo::ErrorPtr* error,
 
   SANE_Status status = device->StartScan(error);
   if (status != SANE_STATUS_GOOD) {
-    brillo::Error::AddToPrintf(error, FROM_HERE, brillo::errors::dbus::kDomain,
+    brillo::Error::AddToPrintf(error, FROM_HERE, kDbusDomain,
                                kManagerServiceError, "Failed to start scan: %s",
                                sane_strstatus(status));
     ReportScanFailed(request.device_name());
@@ -773,7 +768,7 @@ void Manager::GetNextImageInternal(const std::string& uuid,
 
   if (status != SANE_STATUS_GOOD) {
     // The scan failed.
-    brillo::Error::AddToPrintf(&error, FROM_HERE, brillo::errors::dbus::kDomain,
+    brillo::Error::AddToPrintf(&error, FROM_HERE, kDbusDomain,
                                kManagerServiceError, "Failed to start scan: %s",
                                sane_strstatus(status));
     ReportScanFailed(scan_state->device_name);
@@ -829,7 +824,7 @@ bool Manager::RunScanLoop(brillo::ErrorPtr* error,
   // png_write_row than we have available.
   if (png_get_rowbytes(png, info) > params.bytes_per_line) {
     brillo::Error::AddToPrintf(
-        error, FROM_HERE, brillo::errors::dbus::kDomain, kManagerServiceError,
+        error, FROM_HERE, kDbusDomain, kManagerServiceError,
         "PNG image row requires %zu bytes, but SANE is only providing %d bytes",
         png_get_rowbytes(png, info), params.bytes_per_line);
     return false;
@@ -856,8 +851,8 @@ bool Manager::RunScanLoop(brillo::ErrorPtr* error,
         device->ReadScanData(error, image_buffer.data() + buffer_offset,
                              image_buffer.size() - buffer_offset, &read);
     if (!result) {
-      brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
-                           kManagerServiceError, "Reading scan data failed.");
+      brillo::Error::AddTo(error, FROM_HERE, kDbusDomain, kManagerServiceError,
+                           "Reading scan data failed.");
       return false;
     }
 
@@ -874,8 +869,8 @@ bool Manager::RunScanLoop(brillo::ErrorPtr* error,
                                 image_buffer.data() + bytes_converted);
       if (ret != 0) {
         brillo::Error::AddToPrintf(
-            error, FROM_HERE, brillo::errors::dbus::kDomain,
-            kManagerServiceError, "Writing PNG row failed with result %d", ret);
+            error, FROM_HERE, kDbusDomain, kManagerServiceError,
+            "Writing PNG row failed with result %d", ret);
         return false;
       }
       bytes_converted += params.bytes_per_line;
@@ -900,7 +895,7 @@ bool Manager::RunScanLoop(brillo::ErrorPtr* error,
 
   if (buffer_offset != 0) {
     brillo::Error::AddToPrintf(
-        error, FROM_HERE, brillo::errors::dbus::kDomain, kManagerServiceError,
+        error, FROM_HERE, kDbusDomain, kManagerServiceError,
         "Received incomplete scan data, %zu unused bytes remaining",
         buffer_offset);
     return false;
@@ -909,7 +904,7 @@ bool Manager::RunScanLoop(brillo::ErrorPtr* error,
   int ret = LibpngErrorWrap(error, png_write_end, png, info);
   if (ret != 0) {
     brillo::Error::AddToPrintf(
-        error, FROM_HERE, brillo::errors::dbus::kDomain, kManagerServiceError,
+        error, FROM_HERE, kDbusDomain, kManagerServiceError,
         "Finalizing PNG write failed with result %d", ret);
     return false;
   }

@@ -12,6 +12,8 @@
 
 #include "lorgnette/dbus_adaptors/org.chromium.lorgnette.Manager.h"
 
+static const char* kDbusDomain = brillo::errors::dbus::kDomain;
+
 namespace lorgnette {
 
 // static
@@ -32,8 +34,8 @@ std::unique_ptr<SaneDevice> SaneClientFake::ConnectToDeviceInternal(
     return ptr;
   }
 
-  brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
-                       kManagerServiceError, "No device");
+  brillo::Error::AddTo(error, FROM_HERE, kDbusDomain, kManagerServiceError,
+                       "No device");
   return nullptr;
 }
 
@@ -77,8 +79,8 @@ SaneDeviceFake::~SaneDeviceFake() {}
 bool SaneDeviceFake::GetValidOptionValues(brillo::ErrorPtr* error,
                                           ValidOptionValues* values) {
   if (!values || !values_.has_value()) {
-    brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
-                         kManagerServiceError, "No option values");
+    brillo::Error::AddTo(error, FROM_HERE, kDbusDomain, kManagerServiceError,
+                         "No option values");
     return false;
   }
 
@@ -124,8 +126,8 @@ bool SaneDeviceFake::SetScanRegion(brillo::ErrorPtr* error, const ScanRegion&) {
 
 SANE_Status SaneDeviceFake::StartScan(brillo::ErrorPtr* error) {
   if (scan_running_) {
-    brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
-                         kManagerServiceError, "Scan is already running");
+    brillo::Error::AddTo(error, FROM_HERE, kDbusDomain, kManagerServiceError,
+                         "Scan is already running");
     return SANE_STATUS_DEVICE_BUSY;
   }
 
@@ -140,8 +142,8 @@ SANE_Status SaneDeviceFake::StartScan(brillo::ErrorPtr* error) {
 bool SaneDeviceFake::GetScanParameters(brillo::ErrorPtr* error,
                                        ScanParameters* parameters) {
   if (!parameters || !params_.has_value()) {
-    brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
-                         kManagerServiceError, "No parameters");
+    brillo::Error::AddTo(error, FROM_HERE, kDbusDomain, kManagerServiceError,
+                         "No parameters");
     return false;
   }
 
@@ -154,14 +156,14 @@ bool SaneDeviceFake::ReadScanData(brillo::ErrorPtr* error,
                                   size_t count,
                                   size_t* read_out) {
   if (!scan_running_) {
-    brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
-                         kManagerServiceError, "Scan not running");
+    brillo::Error::AddTo(error, FROM_HERE, kDbusDomain, kManagerServiceError,
+                         "Scan not running");
     return false;
   }
 
   if (!read_scan_data_result_) {
-    brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
-                         kManagerServiceError, "Reading data failed");
+    brillo::Error::AddTo(error, FROM_HERE, kDbusDomain, kManagerServiceError,
+                         "Reading data failed");
     return false;
   }
 
