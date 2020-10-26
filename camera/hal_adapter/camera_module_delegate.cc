@@ -15,9 +15,11 @@ namespace cros {
 
 CameraModuleDelegate::CameraModuleDelegate(
     CameraHalAdapter* camera_hal_adapter,
-    scoped_refptr<base::SingleThreadTaskRunner> task_runner)
+    scoped_refptr<base::SingleThreadTaskRunner> task_runner,
+    mojom::CameraClientType camera_client_type)
     : internal::MojoBinding<mojom::CameraModule>(task_runner),
-      camera_hal_adapter_(camera_hal_adapter) {}
+      camera_hal_adapter_(camera_hal_adapter),
+      camera_client_type_(camera_client_type) {}
 
 CameraModuleDelegate::~CameraModuleDelegate() {}
 
@@ -29,7 +31,7 @@ void CameraModuleDelegate::OpenDevice(
   DCHECK(task_runner_->BelongsToCurrentThread());
   mojom::Camera3DeviceOpsPtr device_ops;
   std::move(callback).Run(camera_hal_adapter_->OpenDevice(
-      camera_id, std::move(device_ops_request)));
+      camera_id, std::move(device_ops_request), camera_client_type_));
 }
 
 void CameraModuleDelegate::GetNumberOfCameras(

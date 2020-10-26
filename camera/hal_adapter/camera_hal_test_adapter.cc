@@ -29,7 +29,9 @@ CameraHalTestAdapter::CameraHalTestAdapter(
 }
 
 int32_t CameraHalTestAdapter::OpenDevice(
-    int32_t camera_id, mojom::Camera3DeviceOpsRequest device_ops_request) {
+    int32_t camera_id,
+    mojom::Camera3DeviceOpsRequest device_ops_request,
+    cros::mojom::CameraClientType camera_client_type) {
   VLOGF_ENTER();
 
   base::Optional<int> unremapped_id = GetUnRemappedCameraId(camera_id);
@@ -38,8 +40,8 @@ int32_t CameraHalTestAdapter::OpenDevice(
   }
   LOGF(INFO) << "From remap camera id " << camera_id << " to "
              << *unremapped_id;
-  return CameraHalAdapter::OpenDevice(*unremapped_id,
-                                      std::move(device_ops_request));
+  return CameraHalAdapter::OpenDevice(
+      *unremapped_id, std::move(device_ops_request), camera_client_type);
 }
 
 int32_t CameraHalTestAdapter::GetNumberOfCameras() {

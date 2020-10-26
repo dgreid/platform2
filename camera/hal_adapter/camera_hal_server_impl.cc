@@ -112,7 +112,8 @@ void CameraHalServerImpl::IPCBridge::CreateChannel(
   VLOGF_ENTER();
   DCHECK(ipc_task_runner_->BelongsToCurrentThread());
 
-  camera_hal_adapter_->OpenCameraHal(std::move(camera_module_request));
+  camera_hal_adapter_->OpenCameraHal(std::move(camera_module_request),
+                                     camera_client_type);
 }
 
 void CameraHalServerImpl::IPCBridge::SetTracingEnabled(bool enabled) {

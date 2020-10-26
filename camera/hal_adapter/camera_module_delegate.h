@@ -10,6 +10,7 @@
 #include "common/utils/cros_camera_mojo_utils.h"
 #include "mojo/camera3.mojom.h"
 #include "mojo/camera_common.mojom.h"
+#include "mojo/cros_camera_service.mojom.h"
 
 namespace cros {
 
@@ -19,7 +20,8 @@ class CameraModuleDelegate final
     : public internal::MojoBinding<mojom::CameraModule> {
  public:
   CameraModuleDelegate(CameraHalAdapter* camera_hal_adapter,
-                       scoped_refptr<base::SingleThreadTaskRunner> task_runner);
+                       scoped_refptr<base::SingleThreadTaskRunner> task_runner,
+                       mojom::CameraClientType camera_client_type);
 
   ~CameraModuleDelegate();
 
@@ -49,6 +51,7 @@ class CameraModuleDelegate final
       SetCallbacksAssociatedCallback callback) final;
 
   CameraHalAdapter* camera_hal_adapter_;
+  mojom::CameraClientType camera_client_type_;
 
   DISALLOW_IMPLICIT_CONSTRUCTORS(CameraModuleDelegate);
 };

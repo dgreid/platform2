@@ -28,9 +28,9 @@ class CameraHalTestAdapter : public CameraHalAdapter {
 
   ~CameraHalTestAdapter() override {}
 
-  int32_t OpenDevice(
-      int32_t camera_id,
-      mojom::Camera3DeviceOpsRequest device_ops_request) override;
+  int32_t OpenDevice(int32_t camera_id,
+                     mojom::Camera3DeviceOpsRequest device_ops_request,
+                     mojom::CameraClientType camera_client_type) override;
 
   int32_t GetNumberOfCameras() override;
 

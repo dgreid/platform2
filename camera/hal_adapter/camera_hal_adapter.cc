@@ -94,11 +94,12 @@ bool CameraHalAdapter::Start() {
 }
 
 void CameraHalAdapter::OpenCameraHal(
-    mojom::CameraModuleRequest camera_module_request) {
+    mojom::CameraModuleRequest camera_module_request,
+    mojom::CameraClientType camera_client_type) {
   VLOGF_ENTER();
   TRACE_CAMERA_SCOPED();
   auto module_delegate = std::make_unique<CameraModuleDelegate>(
-      this, camera_module_thread_.task_runner());
+      this, camera_module_thread_.task_runner(), camera_client_type);
   uint32_t module_id = module_id_++;
   module_delegate->Bind(
       camera_module_request.PassMessagePipe(),
@@ -112,7 +113,9 @@ void CameraHalAdapter::OpenCameraHal(
 // Callback interface for camera_module_t APIs.
 
 int32_t CameraHalAdapter::OpenDevice(
-    int32_t camera_id, mojom::Camera3DeviceOpsRequest device_ops_request) {
+    int32_t camera_id,
+    mojom::Camera3DeviceOpsRequest device_ops_request,
+    mojom::CameraClientType camera_client_type) {
   VLOGF_ENTER();
   DCHECK(camera_module_thread_.task_runner()->BelongsToCurrentThread());
   TRACE_CAMERA_SCOPED("camera_id", camera_id);
@@ -148,6 +151,7 @@ int32_t CameraHalAdapter::OpenDevice(
     LOGF(ERROR) << "Failed to open camera device " << camera_id;
     return ret;
   }
+  LOG(INFO) << "Camera opened for " << camera_client_type;
 
   camera_info_t info;
   ret = camera_module->get_camera_info(internal_camera_id, &info);
@@ -160,9 +164,9 @@ int32_t CameraHalAdapter::OpenDevice(
   // The CameraHalAdapter (and hence |camera_module_delegate_|) must out-live
   // the CameraDeviceAdapters, so it's safe to keep a reference to the task
   // runner of the current thread in the callback functor.
-  base::Callback<void()> close_callback =
-      base::Bind(&CameraHalAdapter::CloseDeviceCallback, base::Unretained(this),
-                 base::ThreadTaskRunnerHandle::Get(), camera_id);
+  base::Callback<void()> close_callback = base::Bind(
+      &CameraHalAdapter::CloseDeviceCallback, base::Unretained(this),
+      base::ThreadTaskRunnerHandle::Get(), camera_id, camera_client_type);
   device_adapters_[camera_id] = std::make_unique<CameraDeviceAdapter>(
       camera_device, info.static_camera_characteristics, close_callback);
 
@@ -334,10 +338,11 @@ void CameraHalAdapter::GetVendorTagOps(
 
 void CameraHalAdapter::CloseDeviceCallback(
     scoped_refptr<base::SingleThreadTaskRunner> task_runner,
-    int32_t camera_id) {
-  task_runner->PostTask(FROM_HERE,
-                        base::Bind(&CameraHalAdapter::CloseDevice,
-                                   base::Unretained(this), camera_id));
+    int32_t camera_id,
+    mojom::CameraClientType camera_client_type) {
+  task_runner->PostTask(FROM_HERE, base::Bind(&CameraHalAdapter::CloseDevice,
+                                              base::Unretained(this), camera_id,
+                                              camera_client_type));
 }
 
 // static
@@ -653,7 +658,8 @@ int CameraHalAdapter::GetExternalId(int module_id, int camera_id) {
   return it != id_map.end() ? it->second : -1;
 }
 
-void CameraHalAdapter::CloseDevice(int32_t camera_id) {
+void CameraHalAdapter::CloseDevice(int32_t camera_id,
+                                   mojom::CameraClientType camera_client_type) {
   VLOGF_ENTER();
   DCHECK(camera_module_thread_.task_runner()->BelongsToCurrentThread());
   TRACE_CAMERA_SCOPED("camera_id", camera_id);
@@ -665,6 +671,7 @@ void CameraHalAdapter::CloseDevice(int32_t camera_id) {
   }
   device_adapters_.erase(camera_id);
 
+  LOGF(INFO) << "Camera closed for " << camera_client_type;
   camera_metrics_->SendSessionDuration(session_timer_map_[camera_id].Elapsed());
   session_timer_map_.erase(camera_id);
 }

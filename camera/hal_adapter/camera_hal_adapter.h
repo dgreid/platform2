@@ -59,13 +59,15 @@ class CameraHalAdapter {
   bool Start();
 
   // Creates the CameraModule Mojo connection from |camera_module_request|.
-  void OpenCameraHal(mojom::CameraModuleRequest camera_module_request);
+  void OpenCameraHal(mojom::CameraModuleRequest camera_module_request,
+                     mojom::CameraClientType camera_client_type);
 
   // Callback interface for CameraModuleDelegate.
   // These methods are callbacks for |module_delegate_| and are executed on
   // the mojo IPC handler thread in |module_delegate_|.
   virtual int32_t OpenDevice(int32_t camera_id,
-                             mojom::Camera3DeviceOpsRequest device_ops_request);
+                             mojom::Camera3DeviceOpsRequest device_ops_request,
+                             mojom::CameraClientType camera_client_type);
 
   virtual int32_t GetNumberOfCameras();
 
@@ -86,7 +88,8 @@ class CameraHalAdapter {
   // CloseDevice() on the same thread that OpenDevice() runs on.
   void CloseDeviceCallback(
       scoped_refptr<base::SingleThreadTaskRunner> task_runner,
-      int32_t camera_id);
+      int32_t camera_id,
+      mojom::CameraClientType camera_client_type);
 
   // A fork of SetCallbacks() that uses associated interfaces. This ensures that
   // CameraModuleCallbacks runs with the same message pipe as CameraModule which
@@ -152,7 +155,8 @@ class CameraHalAdapter {
   int GetExternalId(int module_id, int camera_id);
 
   // Clean up the camera device specified by |camera_id| in |device_adapters_|.
-  void CloseDevice(int32_t camera_id);
+  void CloseDevice(int32_t camera_id,
+                   mojom::CameraClientType camera_client_type);
 
   void ResetModuleDelegateOnThread(uint32_t module_id);
   void ResetCallbacksDelegateOnThread(uint32_t callbacks_id);
