@@ -623,6 +623,20 @@ void InstallAttributesAdaptor::InstallAttributesGet(
     std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
         user_data_auth::InstallAttributesGetReply>> response,
     const user_data_auth::InstallAttributesGetRequest& in_request) {
+  service_->PostTaskToMountThread(
+      FROM_HERE,
+      base::BindOnce(&InstallAttributesAdaptor::DoInstallAttributesGet,
+                     base::Unretained(this),
+                     ThreadSafeDBusMethodResponse<
+                         user_data_auth::InstallAttributesGetReply>::
+                         MakeThreadSafe(std::move(response)),
+                     in_request));
+}
+
+void InstallAttributesAdaptor::DoInstallAttributesGet(
+    std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
+        user_data_auth::InstallAttributesGetReply>> response,
+    const user_data_auth::InstallAttributesGetRequest& in_request) {
   user_data_auth::InstallAttributesGetReply reply;
   std::vector<uint8_t> data;
   bool result = service_->InstallAttributesGet(in_request.name(), &data);
@@ -636,6 +650,20 @@ void InstallAttributesAdaptor::InstallAttributesGet(
 }
 
 void InstallAttributesAdaptor::InstallAttributesSet(
+    std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
+        user_data_auth::InstallAttributesSetReply>> response,
+    const user_data_auth::InstallAttributesSetRequest& in_request) {
+  service_->PostTaskToMountThread(
+      FROM_HERE,
+      base::BindOnce(&InstallAttributesAdaptor::DoInstallAttributesSet,
+                     base::Unretained(this),
+                     ThreadSafeDBusMethodResponse<
+                         user_data_auth::InstallAttributesSetReply>::
+                         MakeThreadSafe(std::move(response)),
+                     in_request));
+}
+
+void InstallAttributesAdaptor::DoInstallAttributesSet(
     std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
         user_data_auth::InstallAttributesSetReply>> response,
     const user_data_auth::InstallAttributesSetRequest& in_request) {
@@ -654,6 +682,20 @@ void InstallAttributesAdaptor::InstallAttributesFinalize(
     std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
         user_data_auth::InstallAttributesFinalizeReply>> response,
     const user_data_auth::InstallAttributesFinalizeRequest& in_request) {
+  service_->PostTaskToMountThread(
+      FROM_HERE,
+      base::BindOnce(&InstallAttributesAdaptor::DoInstallAttributesFinalize,
+                     base::Unretained(this),
+                     ThreadSafeDBusMethodResponse<
+                         user_data_auth::InstallAttributesFinalizeReply>::
+                         MakeThreadSafe(std::move(response)),
+                     in_request));
+}
+
+void InstallAttributesAdaptor::DoInstallAttributesFinalize(
+    std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
+        user_data_auth::InstallAttributesFinalizeReply>> response,
+    const user_data_auth::InstallAttributesFinalizeRequest& in_request) {
   user_data_auth::InstallAttributesFinalizeReply reply;
   if (!service_->InstallAttributesFinalize()) {
     reply.set_error(
@@ -663,6 +705,20 @@ void InstallAttributesAdaptor::InstallAttributesFinalize(
 }
 
 void InstallAttributesAdaptor::InstallAttributesGetStatus(
+    std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
+        user_data_auth::InstallAttributesGetStatusReply>> response,
+    const user_data_auth::InstallAttributesGetStatusRequest& in_request) {
+  service_->PostTaskToMountThread(
+      FROM_HERE,
+      base::BindOnce(&InstallAttributesAdaptor::DoInstallAttributesGetStatus,
+                     base::Unretained(this),
+                     ThreadSafeDBusMethodResponse<
+                         user_data_auth::InstallAttributesGetStatusReply>::
+                         MakeThreadSafe(std::move(response)),
+                     in_request));
+}
+
+void InstallAttributesAdaptor::DoInstallAttributesGetStatus(
     std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
         user_data_auth::InstallAttributesGetStatusReply>> response,
     const user_data_auth::InstallAttributesGetStatusRequest& in_request) {

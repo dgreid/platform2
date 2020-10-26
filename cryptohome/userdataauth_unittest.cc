@@ -807,6 +807,8 @@ TEST_F(UserDataAuthTestNotInitialized, InstallAttributesEnterpriseOwned) {
   EXPECT_CALL(attrs_, Get("enterprise.owned", _))
       .WillOnce(DoAll(SetArgPointee<1>(blob_true), Return(true)));
   userdataauth_->Initialize();
+  userdataauth_->set_dbus(bus_);
+  userdataauth_->PostDBusInitialize();
 
   EXPECT_TRUE(userdataauth_->IsEnterpriseOwned());
 }
@@ -821,6 +823,8 @@ TEST_F(UserDataAuthTestNotInitialized, InstallAttributesNotEnterpriseOwned) {
   EXPECT_CALL(attrs_, Get("enterprise.owned", _))
       .WillOnce(DoAll(SetArgPointee<1>(blob_true), Return(true)));
   userdataauth_->Initialize();
+  userdataauth_->set_dbus(bus_);
+  userdataauth_->PostDBusInitialize();
 
   EXPECT_FALSE(userdataauth_->IsEnterpriseOwned());
 }
@@ -3046,6 +3050,12 @@ class UserDataAuthTestThreaded : public UserDataAuthTestNotInitialized {
     PostToOriginAndBlock(base::BindOnce(
         [](UserDataAuth* userdataauth) {
           ASSERT_TRUE(userdataauth->Initialize());
+        },
+        base::Unretained(userdataauth_.get())));
+    userdataauth_->set_dbus(bus_);
+    PostToOriginAndBlock(base::BindOnce(
+        [](UserDataAuth* userdataauth) {
+          ASSERT_TRUE(userdataauth->PostDBusInitialize());
         },
         base::Unretained(userdataauth_.get())));
   }

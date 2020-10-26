@@ -44,7 +44,7 @@ using brillo::cryptohome::home::SanitizeUserNameWithSalt;
 
 namespace cryptohome {
 
-const char kMountThreadName[] = "MountThread";
+constexpr char kMountThreadName[] = "MountThread";
 
 namespace {
 // Some utility functions used by UserDataAuth.
@@ -270,11 +270,6 @@ bool UserDataAuth::Initialize() {
     mount_thread_.StartWithOptions(options);
   }
 
-  // If the TPM is unowned or doesn't exist, it's safe for
-  // this function to be called again. However, it shouldn't
-  // be called across multiple threads in parallel.
-  InitializeInstallAttributes();
-
   // Clean up any unreferenced mountpoints at startup.
   PostTaskToMountThread(FROM_HERE,
                         base::BindOnce(
@@ -434,6 +429,15 @@ bool UserDataAuth::PostDBusInitialize() {
   } else {
     LOG(ERROR) << __func__ << ": Failed to get TpmManagerUtility singleton!";
   }
+
+  // If the TPM is unowned or doesn't exist, it's safe for
+  // this function to be called again. However, it shouldn't
+  // be called across multiple threads in parallel.
+
+  PostTaskToMountThread(FROM_HERE,
+                        base::Bind(&UserDataAuth::InitializeInstallAttributes,
+                                   base::Unretained(this)));
+
   PostTaskToMountThread(FROM_HERE,
                         base::Bind(&UserDataAuth::CreateFingerprintManager,
                                    base::Unretained(this)));
@@ -442,15 +446,15 @@ bool UserDataAuth::PostDBusInitialize() {
 }
 
 void UserDataAuth::CreateFingerprintManager() {
-  if (!default_fingerprint_manager_) {
-    default_fingerprint_manager_ = FingerprintManager::Create(
-        mount_thread_bus_,
-        dbus::ObjectPath(std::string(biod::kBiodServicePath)
-                             .append(kCrosFpBiometricsManagerRelativePath)));
-  }
-
-  if (!fingerprint_manager_)
+  if (!fingerprint_manager_) {
+    if (!default_fingerprint_manager_) {
+      default_fingerprint_manager_ = FingerprintManager::Create(
+          mount_thread_bus_,
+          dbus::ObjectPath(std::string(biod::kBiodServicePath)
+                               .append(kCrosFpBiometricsManagerRelativePath)));
+    }
     fingerprint_manager_ = default_fingerprint_manager_.get();
+  }
 }
 
 void UserDataAuth::OnOwnershipTakenSignal() {
@@ -988,7 +992,7 @@ void UserDataAuth::OwnershipCallback(bool status, bool took_ownership) {
 
     // Initialize the install-time locked attributes since we can't do it prior
     // to ownership.
-    PostTaskToOriginThread(
+    PostTaskToMountThread(
         FROM_HERE, base::BindOnce(&UserDataAuth::InitializeInstallAttributes,
                                   base::Unretained(this)));
 
@@ -1013,7 +1017,7 @@ void UserDataAuth::SetEnterpriseOwned(bool enterprise_owned) {
 }
 
 void UserDataAuth::DetectEnterpriseOwnership() {
-  AssertOnOriginThread();
+  AssertOnMountThread();
 
   static const std::string true_str = "true";
   brillo::Blob true_value(true_str.begin(), true_str.end());
@@ -1022,9 +1026,7 @@ void UserDataAuth::DetectEnterpriseOwnership() {
   brillo::Blob value;
   if (install_attrs_->Get("enterprise.owned", &value) && value == true_value) {
     // Update any active mounts with the state, have to be done on mount thread.
-    PostTaskToMountThread(FROM_HERE,
-                          base::BindOnce(&UserDataAuth::SetEnterpriseOwned,
-                                         base::Unretained(this), true));
+    SetEnterpriseOwned(true);
   }
   // Note: Right now there's no way to convert an enterprise owned machine to a
   // non-enterprise owned machine without clearing the TPM, so we don't try
@@ -1032,7 +1034,7 @@ void UserDataAuth::DetectEnterpriseOwnership() {
 }
 
 void UserDataAuth::InitializeInstallAttributes() {
-  AssertOnOriginThread();
+  AssertOnMountThread();
 
   // Don't reinitialize when install attributes are valid.
   if (install_attrs_->status() == InstallAttributes::Status::kValid) {
@@ -2712,27 +2714,33 @@ void UserDataAuth::Pkcs11Terminate() {
 
 bool UserDataAuth::InstallAttributesGet(const std::string& name,
                                         std::vector<uint8_t>* data_out) {
+  AssertOnMountThread();
   return install_attrs_->Get(name, data_out);
 }
 
 bool UserDataAuth::InstallAttributesSet(const std::string& name,
                                         const std::vector<uint8_t>& data) {
+  AssertOnMountThread();
   return install_attrs_->Set(name, data);
 }
 
 bool UserDataAuth::InstallAttributesFinalize() {
+  AssertOnMountThread();
   return install_attrs_->Finalize();
 }
 
 int UserDataAuth::InstallAttributesCount() {
+  AssertOnMountThread();
   return install_attrs_->Count();
 }
 
 bool UserDataAuth::InstallAttributesIsSecure() {
+  AssertOnMountThread();
   return install_attrs_->is_secure();
 }
 
 InstallAttributes::Status UserDataAuth::InstallAttributesGetStatus() {
+  AssertOnMountThread();
   return install_attrs_->status();
 }
 

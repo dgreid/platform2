@@ -334,20 +334,36 @@ class InstallAttributesAdaptor
       std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
           user_data_auth::InstallAttributesGetReply>> response,
       const user_data_auth::InstallAttributesGetRequest& in_request) override;
+  void DoInstallAttributesGet(
+      std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
+          user_data_auth::InstallAttributesGetReply>> response,
+      const user_data_auth::InstallAttributesGetRequest& in_request);
   void InstallAttributesSet(
       std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
           user_data_auth::InstallAttributesSetReply>> response,
       const user_data_auth::InstallAttributesSetRequest& in_request) override;
+  void DoInstallAttributesSet(
+      std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
+          user_data_auth::InstallAttributesSetReply>> response,
+      const user_data_auth::InstallAttributesSetRequest& in_request);
   void InstallAttributesFinalize(
       std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
           user_data_auth::InstallAttributesFinalizeReply>> response,
       const user_data_auth::InstallAttributesFinalizeRequest& in_request)
       override;
+  void DoInstallAttributesFinalize(
+      std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
+          user_data_auth::InstallAttributesFinalizeReply>> response,
+      const user_data_auth::InstallAttributesFinalizeRequest& in_request);
   void InstallAttributesGetStatus(
       std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
           user_data_auth::InstallAttributesGetStatusReply>> response,
       const user_data_auth::InstallAttributesGetStatusRequest& in_request)
       override;
+  void DoInstallAttributesGetStatus(
+      std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
+          user_data_auth::InstallAttributesGetStatusReply>> response,
+      const user_data_auth::InstallAttributesGetStatusRequest& in_request);
   void GetFirmwareManagementParameters(
       std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
           user_data_auth::GetFirmwareManagementParametersReply>> response,
