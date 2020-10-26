@@ -851,6 +851,11 @@ bool Service::IsOwner(const std::string& userid) {
 }
 
 void Service::InitializeInstallAttributes() {
+  // Don't reinitialize when install attributes are valid.
+  if (install_attrs_->status() == InstallAttributes::Status::kValid) {
+    return;
+  }
+
   // The TPM owning instance may have changed since initialization.
   // InstallAttributes can handle a NULL or !IsEnabled Tpm object.
   install_attrs_->SetTpm(tpm_);
