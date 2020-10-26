@@ -63,6 +63,7 @@ static_library("libbiod") {
     "cros_fp_biometrics_manager.cc",
     "cros_fp_device.cc",
     "cros_fp_firmware.cc",
+    "crypto_init/bio_crypto_init.cc",
     "ec_command_factory.cc",
     "fp_context_command.cc",
     "fp_context_command_factory.cc",
@@ -73,7 +74,6 @@ static_library("libbiod") {
     "fp_seed_command.cc",
     "power_button_filter.cc",
     "power_manager_client.cc",
-    "tools/bio_crypto_init.cc",
     "uinput_device.cc",
     "updater/cros_fp_updater.cc",
     "updater/update_utils.cc",
@@ -94,7 +94,7 @@ executable("biod") {
 
 executable("bio_crypto_init") {
   sources = [
-    "tools/bio_crypto_init.cc",
+    "crypto_init/bio_crypto_init.cc",
     "tools/bio_crypto_init_main.cc",
   ]
   configs += [ ":target_defaults" ]
@@ -131,6 +131,7 @@ if (use.test) {
       "cros_fp_biometrics_manager_test.cc",
       "cros_fp_device_test.cc",
       "cros_fp_firmware_test.cc",
+      "crypto_init/bio_crypto_init_test.cc",
       "ec_command_async_test.cc",
       "ec_command_test.cc",
       "fp_context_command_factory_test.cc",
@@ -142,7 +143,6 @@ if (use.test) {
       "fp_seed_command_test.cc",
       "power_button_filter_test.cc",
       "power_manager_client_test.cc",
-      "tools/bio_crypto_init_test.cc",
       "updater/cros_fp_updater_test.cc",
       "updater/update_utils_test.cc",
     ]

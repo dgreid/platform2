@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef BIOD_TOOLS_MOCK_BIO_CRYPTO_INIT_H_
-#define BIOD_TOOLS_MOCK_BIO_CRYPTO_INIT_H_
+#ifndef BIOD_CRYPTO_INIT_MOCK_BIO_CRYPTO_INIT_H_
+#define BIOD_CRYPTO_INIT_MOCK_BIO_CRYPTO_INIT_H_
 
 #include <gmock/gmock.h>
 
-#include "biod/tools/bio_crypto_init.h"
+#include "biod/crypto_init/bio_crypto_init.h"
 
 namespace biod {
 
@@ -37,4 +37,4 @@ class MockBioCryptoInit : public BioCryptoInit {
 
 }  // namespace biod
 
-#endif  // BIOD_TOOLS_MOCK_BIO_CRYPTO_INIT_H_
+#endif  // BIOD_CRYPTO_INIT_MOCK_BIO_CRYPTO_INIT_H_

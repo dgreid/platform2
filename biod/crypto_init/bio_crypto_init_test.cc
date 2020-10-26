@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "biod/tools/bio_crypto_init.h"
+#include "biod/crypto_init/bio_crypto_init.h"
 
 #include <testing/gtest/include/gtest/gtest.h>
 

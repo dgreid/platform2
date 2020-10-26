@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef BIOD_TOOLS_BIO_CRYPTO_INIT_H_
-#define BIOD_TOOLS_BIO_CRYPTO_INIT_H_
+#ifndef BIOD_CRYPTO_INIT_BIO_CRYPTO_INIT_H_
+#define BIOD_CRYPTO_INIT_BIO_CRYPTO_INIT_H_
 
 #include <base/files/file_path.h>
 #include <base/files/scoped_file.h>
@@ -32,4 +32,4 @@ class BioCryptoInit {
 
 }  // namespace biod
 
-#endif  // BIOD_TOOLS_BIO_CRYPTO_INIT_H_
+#endif  // BIOD_CRYPTO_INIT_BIO_CRYPTO_INIT_H_

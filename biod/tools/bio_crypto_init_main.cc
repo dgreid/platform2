@@ -13,7 +13,7 @@
 // mount-encrypted. Consequently, closing the FD should be enough to delete
 // the file.
 
-#include "biod/tools/bio_crypto_init.h"
+#include "biod/crypto_init/bio_crypto_init.h"
 
 #include <sys/types.h>
 
