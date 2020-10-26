@@ -245,6 +245,20 @@ fn map_id_from_host<T: Clone + Ord>(map: &ServerIdMap<T>, id: T) -> T {
     map.get(&id).map_or(id.clone(), |v| v.clone())
 }
 
+// Performs an ascii case insensitive lookup and returns an O_PATH fd for the entry, if found.
+fn ascii_casefold_lookup(proc: &File, parent: &File, name: &[u8]) -> io::Result<File> {
+    let mut dir = open_fid(proc, &parent, P9_DIRECTORY)?;
+    let mut dirents = read_dir(&mut dir, 0)?;
+
+    while let Some(entry) = dirents.next().transpose()? {
+        if name.eq_ignore_ascii_case(entry.name.to_bytes()) {
+            return lookup(parent, entry.name);
+        }
+    }
+
+    Err(io::Error::from_raw_os_error(libc::ENOENT))
+}
+
 fn lookup(parent: &File, name: &CStr) -> io::Result<File> {
     // Safe because this doesn't modify any memory and we check the return value.
     let fd = syscall!(unsafe {
@@ -259,8 +273,34 @@ fn lookup(parent: &File, name: &CStr) -> io::Result<File> {
     Ok(unsafe { File::from_raw_fd(fd) })
 }
 
-fn open_fid(proc: &File, fid: &Fid, p9_flags: u32) -> io::Result<File> {
-    let pathname = string_to_cstring(format!("self/fd/{}", fid.path.as_raw_fd()))?;
+fn do_walk(
+    proc: &File,
+    wnames: Vec<String>,
+    start: File,
+    ascii_casefold: bool,
+    mds: &mut Vec<libc::stat64>,
+) -> io::Result<File> {
+    let mut current = start;
+
+    for wname in wnames {
+        let name = string_to_cstring(wname)?;
+        current = lookup(&current, &name).or_else(|e| {
+            if ascii_casefold {
+                if let Some(libc::ENOENT) = e.raw_os_error() {
+                    return ascii_casefold_lookup(proc, &current, name.to_bytes());
+                }
+            }
+
+            Err(e)
+        })?;
+        mds.push(stat(&current)?);
+    }
+
+    Ok(current)
+}
+
+fn open_fid(proc: &File, path: &File, p9_flags: u32) -> io::Result<File> {
+    let pathname = string_to_cstring(format!("self/fd/{}", path.as_raw_fd()))?;
 
     // We always open files with O_CLOEXEC.
     let mut flags: i32 = libc::O_CLOEXEC;
@@ -295,6 +335,8 @@ pub struct Config {
 
     pub uid_map: ServerUidMap,
     pub gid_map: ServerGidMap,
+
+    pub ascii_casefold: bool,
 }
 
 impl Default for Config {
@@ -325,6 +367,7 @@ impl Server {
             msize: MAX_MESSAGE_SIZE,
             uid_map,
             gid_map,
+            ascii_casefold: false,
         })
     }
 
@@ -469,23 +512,6 @@ impl Server {
         Ok(())
     }
 
-    fn do_walk(
-        &self,
-        wnames: Vec<String>,
-        start: File,
-        mds: &mut Vec<libc::stat64>,
-    ) -> io::Result<File> {
-        let mut current = start;
-
-        for wname in wnames {
-            let name = string_to_cstring(wname)?;
-            current = lookup(&current, &name)?;
-            mds.push(stat(&current)?);
-        }
-
-        Ok(current)
-    }
-
     fn walk(&mut self, walk: Twalk) -> io::Result<Rwalk> {
         // `newfid` must not currently be in use unless it is the same as `fid`.
         if walk.fid != walk.newfid && self.fids.contains_key(&walk.newfid) {
@@ -502,7 +528,13 @@ impl Server {
         // Now walk the tree and break on the first error, if any.
         let expected_len = walk.wnames.len();
         let mut mds = Vec::with_capacity(expected_len);
-        match self.do_walk(walk.wnames, start, &mut mds) {
+        match do_walk(
+            &self.proc,
+            walk.wnames,
+            start,
+            self.cfg.ascii_casefold,
+            &mut mds,
+        ) {
             Ok(end) => {
                 // Store the new fid if the full walk succeeded.
                 if mds.len() == expected_len {
@@ -613,7 +645,7 @@ impl Server {
     fn lopen(&mut self, lopen: &Tlopen) -> io::Result<Rlopen> {
         let fid = self.fids.get_mut(&lopen.fid).ok_or_else(ebadf)?;
 
-        let file = open_fid(&self.proc, &fid, lopen.flags)?;
+        let file = open_fid(&self.proc, &fid.path, lopen.flags)?;
         let st = stat(&file)?;
 
         fid.file = Some(file);
@@ -727,7 +759,7 @@ impl Server {
         let file = if let Some(ref file) = fid.file {
             MaybeOwned::Borrowed(file)
         } else {
-            MaybeOwned::Owned(open_fid(&self.proc, &fid, P9_NONBLOCK | P9_RDWR)?)
+            MaybeOwned::Owned(open_fid(&self.proc, &fid.path, P9_NONBLOCK | P9_RDWR)?)
         };
 
         if set_attr.valid & P9_SETATTR_SIZE != 0 {
