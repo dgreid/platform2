@@ -31,6 +31,7 @@ class MachineLearningServiceImpl
   MachineLearningServiceImpl(mojo::ScopedMessagePipeHandle pipe,
                              base::Closure disconnect_handler,
                              dbus::Bus* bus = nullptr);
+
  protected:
   // Testing constructor that allows overriding of the model dir. Should not be
   // used outside of tests.
@@ -72,6 +73,10 @@ class MachineLearningServiceImpl
       mojo::PendingReceiver<chromeos::machine_learning::mojom::SodaRecognizer>
           soda_recognizer,
       LoadSpeechRecognizerCallback callback) override;
+  void LoadGrammarChecker(
+      mojo::PendingReceiver<chromeos::machine_learning::mojom::GrammarChecker>
+          receiver,
+      LoadGrammarCheckerCallback callback) override;
 
   // Metadata required to load builtin models. Initialized at construction.
   const std::map<chromeos::machine_learning::mojom::BuiltinModelId,

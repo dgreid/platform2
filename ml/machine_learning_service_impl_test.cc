@@ -17,9 +17,12 @@
 #include <gtest/gtest.h>
 #include <mojo/public/cpp/bindings/remote.h>
 
+#include "ml/grammar_library.h"
+#include "ml/grammar_proto_mojom_conversion.h"
 #include "ml/handwriting.h"
 #include "ml/handwriting_proto_mojom_conversion.h"
 #include "ml/machine_learning_service_impl.h"
+#include "ml/mojom/grammar_checker.mojom.h"
 #include "ml/mojom/graph_executor.mojom.h"
 #include "ml/mojom/handwriting_recognizer.mojom.h"
 #include "ml/mojom/machine_learning_service.mojom.h"
@@ -193,6 +196,9 @@ using ::chromeos::machine_learning::mojom::CreateGraphExecutorResult;
 using ::chromeos::machine_learning::mojom::ExecuteResult;
 using ::chromeos::machine_learning::mojom::FlatBufferModelSpec;
 using ::chromeos::machine_learning::mojom::FlatBufferModelSpecPtr;
+using ::chromeos::machine_learning::mojom::GrammarChecker;
+using ::chromeos::machine_learning::mojom::GrammarCheckerResult;
+using ::chromeos::machine_learning::mojom::GrammarCheckerResultPtr;
 using ::chromeos::machine_learning::mojom::GraphExecutor;
 using ::chromeos::machine_learning::mojom::HandwritingRecognitionQuery;
 using ::chromeos::machine_learning::mojom::HandwritingRecognitionQueryPtr;
@@ -1309,6 +1315,50 @@ TEST(SODARecognizerTest, DummyImplMojoCallback) {
   soda_recognizer->Stop();
   base::RunLoop().RunUntilIdle();
 #endif
+}
+
+TEST(GrammarCheckerTest, LoadModelAndInference) {
+  if (ml::GrammarLibrary::GetInstance()->GetStatus() ==
+      ml::GrammarLibrary::Status::kNotSupported) {
+    return;
+  }
+
+  mojo::Remote<MachineLearningService> ml_service;
+  const MachineLearningServiceImplForTesting ml_service_impl(
+      ml_service.BindNewPipeAndPassReceiver().PassPipe());
+
+  // Load GrammarChecker.
+  mojo::Remote<GrammarChecker> checker;
+  bool model_callback_done = false;
+  ml_service->LoadGrammarChecker(
+      checker.BindNewPipeAndPassReceiver(),
+      base::Bind(
+          [](bool* model_callback_done, const LoadModelResult result) {
+            ASSERT_EQ(result, LoadModelResult::OK);
+            *model_callback_done = true;
+          },
+          &model_callback_done));
+
+  base::RunLoop().RunUntilIdle();
+  ASSERT_TRUE(model_callback_done);
+  ASSERT_TRUE(checker.is_bound());
+
+  chrome_knowledge::GrammarCheckerRequest request;
+  request.set_text("They are student.");
+  request.set_language("en-US");
+
+  bool infer_callback_done = false;
+  checker->Check(
+      GrammarCheckerQueryFromProtoForTesting(request),
+      base::Bind(
+          [](bool* infer_callback_done, const GrammarCheckerResultPtr result) {
+            EXPECT_EQ(result->status, GrammarCheckerResult::Status::OK);
+            EXPECT_EQ(result->candidates.at(0)->text, "They are students.");
+            *infer_callback_done = true;
+          },
+          &infer_callback_done));
+  base::RunLoop().RunUntilIdle();
+  ASSERT_TRUE(infer_callback_done);
 }
 
 }  // namespace

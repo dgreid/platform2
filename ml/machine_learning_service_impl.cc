@@ -18,6 +18,8 @@
 #include <unicode/udata.h>
 #include <utils/memory/mmap.h>
 
+#include "ml/grammar_checker_impl.h"
+#include "ml/grammar_library.h"
 #include "ml/handwriting.h"
 #include "ml/handwriting_recognizer_impl.h"
 #include "ml/model_impl.h"
@@ -363,6 +365,49 @@ void MachineLearningServiceImpl::LoadSpeechRecognizer(
     // TODO(robsc): it may be better that SODA has its specific enum values to
     // return, similar to handwriting. So before we finalize the impl of SODA
     // Mojo API, we may revisit this return value.
+    std::move(callback).Run(LoadModelResult::LOAD_MODEL_ERROR);
+    request_metrics.RecordRequestEvent(LoadModelResult::LOAD_MODEL_ERROR);
+    return;
+  }
+
+  std::move(callback).Run(LoadModelResult::OK);
+
+  request_metrics.FinishRecordingPerformanceMetrics();
+  request_metrics.RecordRequestEvent(LoadModelResult::OK);
+}
+
+void MachineLearningServiceImpl::LoadGrammarChecker(
+    mojo::PendingReceiver<chromeos::machine_learning::mojom::GrammarChecker>
+        receiver,
+    LoadGrammarCheckerCallback callback) {
+  RequestMetrics request_metrics("GrammarChecker", kMetricsRequestName);
+  request_metrics.StartRecordingPerformanceMetrics();
+
+  // Load GrammarLibrary.
+  auto* const grammar_library = ml::GrammarLibrary::GetInstance();
+
+  if (grammar_library->GetStatus() ==
+      ml::GrammarLibrary::Status::kNotSupported) {
+    LOG(ERROR) << "Initialize ml::GrammarLibrary with error "
+               << static_cast<int>(grammar_library->GetStatus());
+
+    std::move(callback).Run(LoadModelResult::FEATURE_NOT_SUPPORTED_ERROR);
+    request_metrics.RecordRequestEvent(
+        LoadModelResult::FEATURE_NOT_SUPPORTED_ERROR);
+    return;
+  }
+
+  if (grammar_library->GetStatus() != ml::GrammarLibrary::Status::kOk) {
+    LOG(ERROR) << "Initialize ml::GrammarLibrary with error "
+               << static_cast<int>(grammar_library->GetStatus());
+
+    std::move(callback).Run(LoadModelResult::LOAD_MODEL_ERROR);
+    request_metrics.RecordRequestEvent(LoadModelResult::LOAD_MODEL_ERROR);
+    return;
+  }
+
+  // Create GrammarChecker.
+  if (!GrammarCheckerImpl::Create(std::move(receiver))) {
     std::move(callback).Run(LoadModelResult::LOAD_MODEL_ERROR);
     request_metrics.RecordRequestEvent(LoadModelResult::LOAD_MODEL_ERROR);
     return;

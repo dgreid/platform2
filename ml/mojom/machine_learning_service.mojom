@@ -18,6 +18,7 @@ module chromeos.machine_learning.mojom;
 
 // NOTE: The base directory for 'import' statements is expected to differ
 //       between Chromium and Chrome OS versions of this file.
+import "ml/mojom/grammar_checker.mojom";
 import "ml/mojom/handwriting_recognizer.mojom";
 import "ml/mojom/model.mojom";
 import "ml/mojom/soda.mojom";
@@ -34,7 +35,7 @@ enum LoadModelResult {
 };
 
 // Top-level interface between Chromium and the ML Service daemon.
-// Next ordinal: 7
+// Next ordinal: 8
 interface MachineLearningService {
   // Binds another pipe to this instance.
   Clone@5(pending_receiver<MachineLearningService> receiver);
@@ -65,5 +66,8 @@ interface MachineLearningService {
   LoadSpeechRecognizer@6(SodaConfig config,
       pending_remote<SodaClient> soda_client,
       pending_receiver<SodaRecognizer> soda_recognizer)
+      => (LoadModelResult result);
+  // Create and initialize a grammar checker.
+  LoadGrammarChecker@7(pending_receiver<GrammarChecker> receiver)
       => (LoadModelResult result);
 };

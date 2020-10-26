@@ -34,6 +34,7 @@ generate_mojom_bindings("ml_mojo_bindings") {
     use_pic = true
   }
   sources = [
+    "mojom/grammar_checker.mojom",
     "mojom/graph_executor.mojom",
     "mojom/handwriting_recognizer.mojom",
     "mojom/machine_learning_service.mojom",
@@ -112,7 +113,9 @@ static_library("ml_common") {
   sources = [
     "daemon.cc",
     "dlcservice_client.cc",
+    "grammar_checker_impl.cc",
     "grammar_library.cc",
+    "grammar_proto_mojom_conversion.cc",
     "graph_executor_impl.cc",
     "handwriting.cc",
     "handwriting_proto_mojom_conversion.cc",
@@ -208,6 +211,7 @@ if (use.test) {
     sources = [
       "dlcservice_client_test.cc",
       "grammar_library_test.cc",
+      "grammar_proto_mojom_conversion_test.cc",
       "graph_executor_impl_test.cc",
       "handwriting_proto_mojom_conversion_test.cc",
       "handwriting_test.cc",
