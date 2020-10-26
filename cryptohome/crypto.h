@@ -34,6 +34,7 @@ namespace cryptohome {
 
 struct KeyBlobs;
 class VaultKeyset;
+class AuthBlock;
 
 extern const char kSystemSaltFile[];
 
@@ -274,6 +275,12 @@ class Crypto {
   bool EncryptAuthorizationData(SerializedVaultKeyset* serialized,
                                 const brillo::SecureBlob& vkk_key,
                                 const brillo::SecureBlob& vkk_iv) const;
+
+  // This function serves as a factory method to return the authblock used in
+  // authentication.
+  // |serialized_key_flags| is the flag data stores in the vault keyset which
+  // helps determine the type of AuthBlock.
+  std::unique_ptr<AuthBlock> DeriveAuthBlock(int serialized_key_flags);
 
   // If set, the TPM will be used during the encryption of the vault keyset
   bool use_tpm_;

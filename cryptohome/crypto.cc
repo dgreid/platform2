@@ -441,90 +441,28 @@ bool Crypto::DecryptVaultKeyset(const SerializedVaultKeyset& serialized,
   PopulateError(error, CryptoError::CE_NONE);
 
   unsigned int flags = serialized.flags();
+  std::unique_ptr<AuthBlock> auth_block = DeriveAuthBlock(flags);
+  if (!auth_block) {
+    LOG(ERROR) << "Keyset wrapped with unknown method.";
+    return false;
+  }
+
+  AuthInput auth_input = {vault_key, locked_to_single_user};
+  AuthBlockState auth_state = {serialized};
+  KeyBlobs vkk_data;
+  if (!auth_block->Derive(auth_input, auth_state, &vkk_data, error)) {
+    return false;
+  }
 
   if (flags & SerializedVaultKeyset::LE_CREDENTIAL) {
-    PinWeaverAuthBlock pin_weaver_auth(le_manager_.get(), tpm_init_);
-
-    AuthInput auth_input = {vault_key};
-    AuthBlockState auth_state = {serialized};
-    KeyBlobs vkk_data;
-    if (!pin_weaver_auth.Derive(auth_input, auth_state, &vkk_data, error)) {
-      return false;
-    }
-
     // This is possible to be empty if an old version of CR50 is running.
     if (vkk_data.reset_secret.has_value() &&
         !vkk_data.reset_secret.value().empty()) {
       vault_keyset->set_reset_secret(vkk_data.reset_secret.value());
     }
-
-    return UnwrapVaultKeyset(serialized, vkk_data, vault_keyset, error);
   }
 
-  if (flags & SerializedVaultKeyset::SIGNATURE_CHALLENGE_PROTECTED) {
-    AuthInput user_input = {vault_key};
-    AuthBlockState auth_state = {serialized};
-    KeyBlobs vkk_data;
-    ChallengeCredentialAuthBlock auth_block;
-    if (!auth_block.Derive(user_input, auth_state, &vkk_data, error)) {
-      return false;
-    }
-    return UnwrapVaultKeyset(serialized, vkk_data, vault_keyset, error);
-  }
-
-  if (flags & SerializedVaultKeyset::SCRYPT_WRAPPED &&
-      flags & SerializedVaultKeyset::TPM_WRAPPED) {
-    LOG(ERROR) << "Keyset wrapped with both TPM and Scrypt?";
-    ReportCryptohomeError(cryptohome::kBothTpmAndScryptWrappedKeyset);
-
-    AuthInput auth_input = {vault_key};
-    AuthBlockState auth_state = {serialized};
-    KeyBlobs vkk_data;
-    DoubleWrappedCompatAuthBlock auth_block(tpm_, tpm_init_);
-    if (!auth_block.Derive(auth_input, auth_state, &vkk_data, error)) {
-      return false;
-    }
-    return UnwrapVaultKeyset(serialized, vkk_data, vault_keyset, error);
-  }
-
-  if (flags & SerializedVaultKeyset::TPM_WRAPPED) {
-    std::unique_ptr<AuthBlock> tpm_auth;
-    if (flags & SerializedVaultKeyset::PCR_BOUND) {
-      tpm_auth = std::make_unique<TpmBoundToPcrAuthBlock>(tpm_, tpm_init_);
-    } else {
-      tpm_auth = std::make_unique<TpmNotBoundToPcrAuthBlock>(tpm_, tpm_init_);
-    }
-
-    KeyBlobs vkk_data;
-    AuthInput auth_input;
-    auth_input.user_input = vault_key;
-    auth_input.locked_to_single_user = locked_to_single_user;
-
-    AuthBlockState auth_state = {serialized};
-    if (!tpm_auth->Derive(auth_input, auth_state, &vkk_data, error)) {
-      return false;
-    }
-
-    return UnwrapVaultKeyset(serialized, vkk_data, vault_keyset, error);
-  }
-
-  if (flags & SerializedVaultKeyset::SCRYPT_WRAPPED) {
-    KeyBlobs vkk_data;
-    AuthInput auth_input;
-    auth_input.user_input = vault_key;
-    auth_input.locked_to_single_user = locked_to_single_user;
-
-    AuthBlockState auth_state = {serialized};
-    LibScryptCompatAuthBlock auth_block;
-    if (!auth_block.Derive(auth_input, auth_state, &vkk_data, error)) {
-      return false;
-    }
-
-    return UnwrapVaultKeyset(serialized, vkk_data, vault_keyset, error);
-  }
-
-  LOG(ERROR) << "Keyset wrapped with unknown method.";
-  return false;
+  return UnwrapVaultKeyset(serialized, vkk_data, vault_keyset, error);
 }
 
 bool Crypto::GenerateEncryptedRawKeyset(const VaultKeyset& vault_keyset,
@@ -1123,6 +1061,27 @@ bool Crypto::CanUnsealWithUserAuth() const {
 #else
   return true;
 #endif
+}
+
+std::unique_ptr<AuthBlock> Crypto::DeriveAuthBlock(int serialized_key_flags) {
+  if (serialized_key_flags & SerializedVaultKeyset::LE_CREDENTIAL) {
+    return std::make_unique<PinWeaverAuthBlock>(le_manager_.get(), tpm_init_);
+  } else if (serialized_key_flags &
+             SerializedVaultKeyset::SIGNATURE_CHALLENGE_PROTECTED) {
+    return std::make_unique<ChallengeCredentialAuthBlock>();
+  } else if (serialized_key_flags & SerializedVaultKeyset::SCRYPT_WRAPPED &&
+             serialized_key_flags & SerializedVaultKeyset::TPM_WRAPPED) {
+    return std::make_unique<DoubleWrappedCompatAuthBlock>(tpm_, tpm_init_);
+  } else if (serialized_key_flags & SerializedVaultKeyset::TPM_WRAPPED) {
+    if (serialized_key_flags & SerializedVaultKeyset::PCR_BOUND) {
+      return std::make_unique<TpmBoundToPcrAuthBlock>(tpm_, tpm_init_);
+    } else {
+      return std::make_unique<TpmNotBoundToPcrAuthBlock>(tpm_, tpm_init_);
+    }
+  } else if (serialized_key_flags & SerializedVaultKeyset::SCRYPT_WRAPPED) {
+    return std::make_unique<LibScryptCompatAuthBlock>();
+  }
+  return nullptr;
 }
 
 }  // namespace cryptohome
