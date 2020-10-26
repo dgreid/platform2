@@ -24,23 +24,27 @@ void Response::ReplyWithText(int status_code,
         mime_type);
 }
 
-void Response::ReplyWithJson(int status_code, const base::Value* json) {
+void Response::ReplyWithJson(int status_code, const base::Value& json) {
   std::string text;
   base::JSONWriter::WriteWithOptions(
-      *json, base::JSONWriter::OPTIONS_PRETTY_PRINT, &text);
+      json, base::JSONWriter::OPTIONS_PRETTY_PRINT, &text);
   std::string mime_type = brillo::mime::AppendParameter(
       brillo::mime::application::kJson, brillo::mime::parameters::kCharset,
       "utf-8");
   ReplyWithText(status_code, text, mime_type);
 }
 
+void Response::ReplyWithJson(int status_code, const base::Value* json) {
+  ReplyWithJson(status_code, *json);
+}
+
 void Response::ReplyWithJson(int status_code,
                              const std::map<std::string, std::string>& json) {
-  base::DictionaryValue json_value;
+  base::Value json_value(base::Value::Type::DICTIONARY);
   for (const auto& pair : json) {
-    json_value.SetString(pair.first, pair.second);
+    json_value.SetStringPath(pair.first, pair.second);
   }
-  ReplyWithJson(status_code, &json_value);
+  ReplyWithJson(status_code, json_value);
 }
 
 void Response::Redirect(int status_code, const std::string& redirect_url) {

@@ -34,6 +34,7 @@ class MockResponse : public Response {
   MOCK_METHOD3(ReplyWithText,
                void(int, const std::string&, const std::string&));
   MOCK_METHOD2(ReplyWithJson, void(int, const base::Value*));
+  MOCK_METHOD2(ReplyWithJson, void(int, const base::Value&));
   MOCK_METHOD2(ReplyWithJson,
                void(int, const std::map<std::string, std::string>&));
   MOCK_METHOD2(Redirect, void(int, const std::string&));

@@ -9,6 +9,7 @@
 #include <base/files/file_util.h>
 #include <base/json/json_reader.h>
 #include <base/logging.h>
+#include <base/optional.h>
 #include <base/values.h>
 #include <brillo/errors/error_codes.h>
 
@@ -43,32 +44,33 @@ const char kDefaultConfig[] = R"({
   ]
 })";
 
-bool LoadHandlerConfig(const base::DictionaryValue* handler_value,
+bool LoadHandlerConfig(const base::Value& handler_value,
                        Config::ProtocolHandler* handler_config,
                        brillo::ErrorPtr* error) {
-  int port = 0;
-  if (!handler_value->GetInteger(kPortKey, &port)) {
+  base::Optional<int> port = handler_value.FindIntKey(kPortKey);
+  if (!port.has_value()) {
     brillo::Error::AddTo(error, FROM_HERE, webservd::errors::kDomain,
                          webservd::errors::kInvalidConfig, "Port is missing");
     return false;
   }
-  if (port < 1 || port > 0xFFFF) {
+  if (*port < 1 || *port > 0xFFFF) {
     brillo::Error::AddToPrintf(error, FROM_HERE, webservd::errors::kDomain,
                                webservd::errors::kInvalidConfig,
-                               "Invalid port value: %d", port);
+                               "Invalid port value: %d", *port);
     return false;
   }
-  handler_config->port = port;
+  handler_config->port = *port;
 
   // Allow "use_tls" to be omitted, so not returning an error here.
-  bool use_tls = false;
-  if (handler_value->GetBoolean(kUseTLSKey, &use_tls))
-    handler_config->use_tls = use_tls;
+  base::Optional<bool> use_tls = handler_value.FindBoolKey(kUseTLSKey);
+  if (use_tls.has_value())
+    handler_config->use_tls = *use_tls;
 
   // "interface" is also optional.
-  std::string interface_name;
-  if (handler_value->GetString(kInterfaceKey, &interface_name))
-    handler_config->interface_name = interface_name;
+  const std::string* interface_name =
+      handler_value.FindStringKey(kInterfaceKey);
+  if (interface_name != nullptr)
+    handler_config->interface_name = *interface_name;
 
   return true;
 }
@@ -122,8 +124,7 @@ bool LoadConfigFromString(const std::string& config_json,
       result.value->FindListKey(kProtocolHandlersKey);
   if (protocol_handlers) {
     for (const base::Value& handler_value : protocol_handlers->GetList()) {
-      const base::DictionaryValue* handler_dict = nullptr;
-      if (!handler_value.GetAsDictionary(&handler_dict)) {
+      if (!handler_value.is_dict()) {
         brillo::Error::AddTo(
             error, FROM_HERE, brillo::errors::json::kDomain,
             brillo::errors::json::kObjectExpected,
@@ -131,8 +132,8 @@ bool LoadConfigFromString(const std::string& config_json,
         return false;
       }
 
-      std::string name;
-      if (!handler_dict->GetString(kNameKey, &name)) {
+      const std::string* name = handler_value.FindStringKey(kNameKey);
+      if (name == nullptr) {
         brillo::Error::AddTo(
             error, FROM_HERE, errors::kDomain, errors::kInvalidConfig,
             "Protocol handler definition must include its name");
@@ -140,11 +141,11 @@ bool LoadConfigFromString(const std::string& config_json,
       }
 
       Config::ProtocolHandler handler_config;
-      handler_config.name = name;
-      if (!LoadHandlerConfig(handler_dict, &handler_config, error)) {
+      handler_config.name = *name;
+      if (!LoadHandlerConfig(handler_value, &handler_config, error)) {
         brillo::Error::AddToPrintf(
             error, FROM_HERE, errors::kDomain, errors::kInvalidConfig,
-            "Unable to parse config for protocol handler '%s'", name.c_str());
+            "Unable to parse config for protocol handler '%s'", name->c_str());
         return false;
       }
       config->protocol_handlers.push_back(std::move(handler_config));

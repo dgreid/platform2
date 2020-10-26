@@ -12,6 +12,7 @@
 #include <vector>
 
 #include <base/macros.h>
+#include <base/values.h>
 #include <brillo/streams/stream.h>
 #include <libwebserv/export.h>
 
@@ -48,6 +49,8 @@ class LIBWEBSERV_EXPORT Response {
                              const std::string& mime_type);
 
   // Reply with JSON object. The content type will be "application/json".
+  virtual void ReplyWithJson(int status_code, const base::Value& json);
+  // TODO(crbug.com/1099111): remove after all usages are migrated to above
   virtual void ReplyWithJson(int status_code, const base::Value* json);
 
   // Special form for JSON response for simple objects that have a flat
