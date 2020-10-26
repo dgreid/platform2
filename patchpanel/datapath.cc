@@ -15,7 +15,7 @@
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 
-#include <vector>
+#include <algorithm>
 
 #include <base/files/scoped_file.h>
 #include <base/logging.h>
@@ -47,6 +47,11 @@ constexpr std::array<const char*, 6> kPhysicalIfnamePrefixes{
 
 constexpr char kApplyLocalSourceMarkChain[] = "apply_local_source_mark";
 constexpr char kApplyVpnMarkChain[] = "apply_vpn_mark";
+
+// Constant fwmark mask for matching local socket traffic that should be routed
+// through a VPN connection. The traffic must not be part of an existing
+// connection and must match exactly the VPN routing intent policy bit.
+const Fwmark kFwmarkVpnMatchingMask = kFwmarkRoutingMask | kFwmarkVpnMask;
 
 std::string PrefixIfname(const std::string& prefix, const std::string& ifname) {
   std::string n = prefix + ifname;
@@ -130,6 +135,11 @@ void Datapath::Start() {
     LOG(ERROR) << "Failed to set up NAT for TAP devices."
                << " Guest connectivity may be broken.";
 
+  // Applies the routing tag saved in conntrack for any established connection
+  // for sockets created in the host network namespace.
+  if (!ModifyConnmarkRestore(IpFamily::Dual, "OUTPUT", "-A", "" /*iif*/))
+    LOG(ERROR) << "Failed to add OUTPUT CONNMARK restore rule";
+
   // Set up a mangle chain used in OUTPUT for applying the fwmark TrafficSource
   // tag and tagging the local traffic that should be routed through a VPN.
   if (!ModifyChain(IpFamily::Dual, "mangle", "-N", kApplyLocalSourceMarkChain))
@@ -174,8 +184,6 @@ void Datapath::Start() {
            "0x0/" + kFwmarkRoutingMask.ToString(), "-j", "ACCEPT", "-w"}))
     LOG(ERROR) << "Failed to add ACCEPT rule to VPN tagging chain for marked "
                   "connections";
-  // TODO(b/161507671) Dynamically add fwmark routing tagging rules based on
-  // the VPN tunnel interface.
 }
 
 void Datapath::Stop() {
@@ -212,6 +220,11 @@ void Datapath::Stop() {
                       {"-D", "OUTPUT", "-j", kApplyLocalSourceMarkChain, "-w"}))
     LOG(ERROR) << "Failed to detach " << kApplyLocalSourceMarkChain
                << " from mangle OUTPUT";
+
+  // Stops applying routing tags saved in conntrack for sockets created in the
+  // host network namespace.
+  if (!ModifyConnmarkRestore(IpFamily::Dual, "OUTPUT", "-D", "" /*iif*/))
+    LOG(ERROR) << "Failed to remove OUTPUT CONNMARK restore rule";
 
   // Delete the mangle chains
   for (const auto* chain : {kApplyLocalSourceMarkChain, kApplyVpnMarkChain}) {
@@ -615,10 +628,14 @@ void Datapath::StartRoutingDevice(const std::string& ext_ifname,
     LOG(ERROR) << "Failed to enable IP forwarding for " << ext_ifname << "<-"
                << int_ifname;
 
+  if (!ModifyFwmarkSourceTag("-A", int_ifname, source))
+    LOG(ERROR) << "Failed to add PREROUTING fwmark tagging rule for source "
+               << source << " for " << int_ifname;
+
   if (!ext_ifname.empty()) {
     // If |ext_ifname| is not null, mark egress traffic with the
     // fwmark routing tag corresponding to |ext_ifname|.
-    if (!ModifyFwmarkRoutingTag("-A", ext_ifname, int_ifname))
+    if (!ModifyFwmarkRoutingTag("PREROUTING", "-A", ext_ifname, int_ifname))
       LOG(ERROR) << "Failed to add PREROUTING fwmark routing tag for "
                  << ext_ifname << "<-" << int_ifname;
   } else {
@@ -635,10 +652,6 @@ void Datapath::StartRoutingDevice(const std::string& ext_ifname,
     if (!ModifyFwmarkVpnJumpRule("PREROUTING", "-A", int_ifname, {}, {}))
       LOG(ERROR) << "Failed to add jump rule to VPN chain for " << int_ifname;
   }
-
-  if (!ModifyFwmarkSourceTag("-A", int_ifname, source))
-    LOG(ERROR) << "Failed to add PREROUTING fwmark tagging rule for source "
-               << source << " for " << int_ifname;
 }
 
 void Datapath::StopRoutingDevice(const std::string& ext_ifname,
@@ -651,7 +664,7 @@ void Datapath::StopRoutingDevice(const std::string& ext_ifname,
   StopIpForwarding(IpFamily::IPv4, int_ifname, ext_ifname);
   ModifyFwmarkSourceTag("-D", int_ifname, source);
   if (!ext_ifname.empty()) {
-    ModifyFwmarkRoutingTag("-D", ext_ifname, int_ifname);
+    ModifyFwmarkRoutingTag("PREROUTING", "-D", ext_ifname, int_ifname);
   } else {
     ModifyConnmarkRestore(IpFamily::Dual, "PREROUTING", "-D", int_ifname);
     ModifyFwmarkVpnJumpRule("PREROUTING", "-D", int_ifname, {}, {});
@@ -804,6 +817,18 @@ void Datapath::StopConnectionPinning(const std::string& ext_ifname) {
     LOG(ERROR) << "Could not stop connection pinning on " << ext_ifname;
 }
 
+void Datapath::StartVpnRouting(const std::string& vpn_ifname) {
+  StartConnectionPinning(vpn_ifname);
+  if (!ModifyFwmarkRoutingTag(kApplyVpnMarkChain, "-A", vpn_ifname, ""))
+    LOG(ERROR) << "Failed to set up VPN set-mark rule for " << vpn_ifname;
+}
+
+void Datapath::StopVpnRouting(const std::string& vpn_ifname) {
+  if (!ModifyFwmarkRoutingTag(kApplyVpnMarkChain, "-D", vpn_ifname, ""))
+    LOG(ERROR) << "Failed to remove VPN set-mark rule for " << vpn_ifname;
+  StopConnectionPinning(vpn_ifname);
+}
+
 bool Datapath::ModifyConnmarkSetPostrouting(IpFamily family,
                                             const std::string& op,
                                             const std::string& oif) {
@@ -862,7 +887,8 @@ bool Datapath::ModifyConnmarkRestore(IpFamily family,
   return ModifyIptables(family, "mangle", args);
 }
 
-bool Datapath::ModifyFwmarkRoutingTag(const std::string& op,
+bool Datapath::ModifyFwmarkRoutingTag(const std::string& chain,
+                                      const std::string& op,
                                       const std::string& ext_ifname,
                                       const std::string& int_ifname) {
   int ifindex = FindIfIndex(ext_ifname);
@@ -871,9 +897,8 @@ bool Datapath::ModifyFwmarkRoutingTag(const std::string& op,
     return false;
   }
 
-  return ModifyFwmark(IpFamily::Dual, "PREROUTING", op, int_ifname,
-                      "" /*uid_name*/, Fwmark::FromIfIndex(ifindex),
-                      kFwmarkRoutingMask);
+  return ModifyFwmark(IpFamily::Dual, chain, op, int_ifname, "" /*uid_name*/,
+                      Fwmark::FromIfIndex(ifindex), kFwmarkRoutingMask);
 }
 
 bool Datapath::ModifyFwmarkSourceTag(const std::string& op,

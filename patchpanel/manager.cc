@@ -221,6 +221,8 @@ void Manager::InitialSetup() {
   //  - the iptables rules for fwmark based routing.
   if (!USE_JETSTREAM_ROUTING) {
     datapath_->Start();
+    shill_client_->RegisterDefaultDeviceChangedHandler(base::BindRepeating(
+        &Manager::OnDefaultDeviceChanged, weak_factory_.GetWeakPtr()));
     shill_client_->RegisterDevicesChangedHandler(base::BindRepeating(
         &Manager::OnDevicesChanged, weak_factory_.GetWeakPtr()));
   }
@@ -297,6 +299,20 @@ void Manager::RestartSubprocess(HelperProcess* subproc) {
                    subproc->pid())))
         << "Failed to watch child process " << subproc->pid();
   }
+}
+
+void Manager::OnDefaultDeviceChanged(const ShillClient::Device& new_device,
+                                     const ShillClient::Device& prev_device) {
+  // Only take into account interface switches and ignore layer 3 property
+  // changes.
+  if (prev_device.ifname == new_device.ifname)
+    return;
+
+  if (prev_device.type == ShillClient::Device::Type::kVPN)
+    datapath_->StopVpnRouting(prev_device.ifname);
+
+  if (new_device.type == ShillClient::Device::Type::kVPN)
+    datapath_->StartVpnRouting(new_device.ifname);
 }
 
 void Manager::OnDevicesChanged(const std::set<std::string>& added,

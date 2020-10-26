@@ -183,6 +183,17 @@ TEST(DatapathTest, Start) {
                        ElementsAre("-A", "PREROUTING", "-i", "vmtap+", "-j",
                                    "MARK", "--set-mark", "1/1", "-w"),
                        true, nullptr));
+  // Asserts for OUTPUT CONNMARK restore rule
+  EXPECT_CALL(runner, iptables(StrEq("mangle"),
+                               ElementsAre("-A", "OUTPUT", "-j", "CONNMARK",
+                                           "--restore-mark", "--mask",
+                                           "0xffff0000", "-w"),
+                               true, nullptr));
+  EXPECT_CALL(runner, ip6tables(StrEq("mangle"),
+                                ElementsAre("-A", "OUTPUT", "-j", "CONNMARK",
+                                            "--restore-mark", "--mask",
+                                            "0xffff0000", "-w"),
+                                true, nullptr));
   // Asserts for apply_local_source_mark chain
   EXPECT_CALL(runner,
               iptables(StrEq("mangle"),
@@ -444,6 +455,17 @@ TEST(DatapathTest, Stop) {
                                ElementsAre("-D", "OUTPUT", "-j",
                                            "apply_local_source_mark", "-w"),
                                true, nullptr));
+  // Asserts for OUTPUT CONNMARK restore rule
+  EXPECT_CALL(runner, iptables(StrEq("mangle"),
+                               ElementsAre("-D", "OUTPUT", "-j", "CONNMARK",
+                                           "--restore-mark", "--mask",
+                                           "0xffff0000", "-w"),
+                               true, nullptr));
+  EXPECT_CALL(runner, ip6tables(StrEq("mangle"),
+                                ElementsAre("-D", "OUTPUT", "-j", "CONNMARK",
+                                            "--restore-mark", "--mask",
+                                            "0xffff0000", "-w"),
+                                true, nullptr));
   EXPECT_CALL(runner,
               iptables(StrEq("mangle"),
                        ElementsAre("-F", "apply_local_source_mark", "-w"), true,
@@ -1089,6 +1111,59 @@ TEST(DatapathTest, StartStopConnectionPinning) {
   datapath.SetIfnameIndex("eth0", 3);
   datapath.StartConnectionPinning("eth0");
   datapath.StopConnectionPinning("eth0");
+}
+
+TEST(DatapathTest, StartStopVpnRouting_NoVirtualDevices) {
+  MockProcessRunner runner;
+  MockFirewall firewall;
+
+  // Setup
+  EXPECT_CALL(runner, iptables(StrEq("mangle"),
+                               ElementsAre("-A", "POSTROUTING", "-o", "arcbr0",
+                                           "-j", "CONNMARK", "--set-mark",
+                                           "0x03ed0000/0xffff0000", "-w"),
+                               true, nullptr));
+  EXPECT_CALL(runner,
+              iptables(StrEq("mangle"),
+                       ElementsAre("-A", "apply_vpn_mark", "-j", "MARK",
+                                   "--set-mark", "0x03ed0000/0xffff0000", "-w"),
+                       true, nullptr));
+  EXPECT_CALL(runner, ip6tables(StrEq("mangle"),
+                                ElementsAre("-A", "POSTROUTING", "-o", "arcbr0",
+                                            "-j", "CONNMARK", "--set-mark",
+                                            "0x03ed0000/0xffff0000", "-w"),
+                                true, nullptr));
+  EXPECT_CALL(runner, ip6tables(StrEq("mangle"),
+                                ElementsAre("-A", "apply_vpn_mark", "-j",
+                                            "MARK", "--set-mark",
+                                            "0x03ed0000/0xffff0000", "-w"),
+                                true, nullptr));
+  // Teardown
+  EXPECT_CALL(runner, iptables(StrEq("mangle"),
+                               ElementsAre("-D", "POSTROUTING", "-o", "arcbr0",
+                                           "-j", "CONNMARK", "--set-mark",
+                                           "0x03ed0000/0xffff0000", "-w"),
+                               true, nullptr));
+  EXPECT_CALL(runner,
+              iptables(StrEq("mangle"),
+                       ElementsAre("-D", "apply_vpn_mark", "-j", "MARK",
+                                   "--set-mark", "0x03ed0000/0xffff0000", "-w"),
+                       true, nullptr));
+  EXPECT_CALL(runner, ip6tables(StrEq("mangle"),
+                                ElementsAre("-D", "POSTROUTING", "-o", "arcbr0",
+                                            "-j", "CONNMARK", "--set-mark",
+                                            "0x03ed0000/0xffff0000", "-w"),
+                                true, nullptr));
+  EXPECT_CALL(runner, ip6tables(StrEq("mangle"),
+                                ElementsAre("-D", "apply_vpn_mark", "-j",
+                                            "MARK", "--set-mark",
+                                            "0x03ed0000/0xffff0000", "-w"),
+                                true, nullptr));
+
+  Datapath datapath(&runner, &firewall);
+  datapath.SetIfnameIndex("arcbr0", 5);
+  datapath.StartVpnRouting("arcbr0");
+  datapath.StopVpnRouting("arcbr0");
 }
 
 TEST(DatapathTest, AddInboundIPv4DNAT) {

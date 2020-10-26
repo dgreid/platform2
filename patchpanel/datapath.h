@@ -8,7 +8,9 @@
 #include <net/route.h>
 #include <sys/types.h>
 
+#include <set>
 #include <string>
+#include <vector>
 
 #include <base/macros.h>
 #include <gtest/gtest_prod.h>  // for FRIEND_TEST
@@ -166,6 +168,13 @@ class Datapath {
   // to that deviced if conntrack fwmark restore is set for the source.
   virtual void StartConnectionPinning(const std::string& ext_ifname);
   virtual void StopConnectionPinning(const std::string& ext_ifname);
+  // Starts or stops VPN routing for:
+  //  - Local sockets of binaries running under uids eligible to be routed
+  //    through VPN connections. These uids are defined by |kLocalSourceTypes|
+  //    in routing_service.h
+  //  - Forwarded virtual devices tracking the default network.
+  virtual void StartVpnRouting(const std::string& vpn_ifname);
+  virtual void StopVpnRouting(const std::string& vpn_ifname);
 
   // Methods supporting IPv6 configuration for ARC.
   virtual bool MaskInterfaceFlags(const std::string& ifname,
@@ -278,7 +287,8 @@ class Datapath {
                              const std::string& chain,
                              const std::string& op,
                              const std::string& iif);
-  bool ModifyFwmarkRoutingTag(const std::string& op,
+  bool ModifyFwmarkRoutingTag(const std::string& chain,
+                              const std::string& op,
                               const std::string& ext_ifname,
                               const std::string& int_ifname);
   bool ModifyFwmarkSourceTag(const std::string& op,
