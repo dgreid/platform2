@@ -54,6 +54,7 @@ class SaneOption {
   bool SetDouble(double d);
   bool SetInt(int i);
   bool SetString(const std::string& s);
+  base::Optional<int> GetInt() const;
   base::Optional<std::string> GetString() const;
 
   // This returns a pointer to the internal storage. Care must be taken that the
@@ -94,6 +95,7 @@ class SaneDeviceImpl : public SaneDevice {
   bool GetValidOptionValues(brillo::ErrorPtr* error,
                             ValidOptionValues* values) override;
 
+  bool GetScanResolution(brillo::ErrorPtr* error, int* resolution_out) override;
   bool SetScanResolution(brillo::ErrorPtr* error, int resolution) override;
   bool GetDocumentSource(brillo::ErrorPtr* error,
                          std::string* source_name_out) override;

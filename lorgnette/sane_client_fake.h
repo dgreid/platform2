@@ -53,6 +53,7 @@ class SaneDeviceFake : public SaneDevice {
   bool GetValidOptionValues(brillo::ErrorPtr* error,
                             ValidOptionValues* values) override;
 
+  bool GetScanResolution(brillo::ErrorPtr* error, int* resolution_out) override;
   bool SetScanResolution(brillo::ErrorPtr* error, int resolution) override;
   bool GetDocumentSource(brillo::ErrorPtr* error,
                          std::string* source_name_out) override;
@@ -76,6 +77,7 @@ class SaneDeviceFake : public SaneDevice {
   void SetScanData(const std::vector<uint8_t>& scan_data);
 
  private:
+  int resolution_;
   std::string source_name_;
   base::Optional<ValidOptionValues> values_;
   SANE_Status start_scan_result_;

@@ -305,7 +305,7 @@ TEST(SaneOptionIntTest, SetDoubleSucceeds) {
       CreateDescriptor("Test Name", SANE_TYPE_INT, sizeof(SANE_Word)), 7);
   // Should round towards 0.
   EXPECT_TRUE(option.SetDouble(295.7));
-  EXPECT_EQ(*static_cast<SANE_Int*>(option.GetPointer()), 295);
+  EXPECT_EQ(option.GetInt().value(), 295);
 }
 
 TEST(SaneOptionIntTest, SetStringFails) {
@@ -313,7 +313,7 @@ TEST(SaneOptionIntTest, SetStringFails) {
       CreateDescriptor("Test Name", SANE_TYPE_INT, sizeof(SANE_Word)), 7);
   EXPECT_TRUE(option.SetInt(17));
   EXPECT_FALSE(option.SetString("test"));
-  EXPECT_EQ(*static_cast<SANE_Int*>(option.GetPointer()), 17);
+  EXPECT_EQ(option.GetInt().value(), 17);
 }
 
 TEST(SaneOptionIntTest, GetIndex) {

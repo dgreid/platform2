@@ -116,8 +116,10 @@ int LibpngErrorWrap(brillo::ErrorPtr* error,
 
 // Initializes libpng, sets up |png_out| and |info_out| to be used for writing
 // PNG image data to |out_file|, and writes the PNG header to |out_file|.
+// Resolution should be provided with units of pixels per inch.
 bool SetupPngHeader(brillo::ErrorPtr* error,
                     const ScanParameters& params,
+                    base::Optional<int> resolution,
                     png_struct** png_out,
                     png_info** info_out,
                     const base::ScopedFILE& out_file) {
@@ -150,6 +152,13 @@ bool SetupPngHeader(brillo::ErrorPtr* error,
   png_set_IHDR(png, info, width, height, params.depth, color_type,
                PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_BASE,
                PNG_FILTER_TYPE_BASE);
+
+  if (resolution.has_value()) {
+    constexpr double inches_per_meter = 39.3701;
+    uint32_t png_resolution = resolution.value() * inches_per_meter;
+    png_set_pHYs(png, info, png_resolution, png_resolution,
+                 PNG_RESOLUTION_METER);
+  }
 
   png_init_io(png, out_file.get());
   int ret = LibpngErrorWrap(error, png_write_info, png, info);
@@ -663,6 +672,12 @@ bool Manager::StartScanInternal(brillo::ErrorPtr* error,
     if (!device->SetScanResolution(error, settings.resolution())) {
       return false;
     }
+
+    int resolution = 0;
+    if (!device->GetScanResolution(error, &resolution)) {
+      return false;
+    }
+    LOG(INFO) << "Device is using resolution: " << resolution;
   }
 
   if (!settings.source_name().empty()) {
@@ -788,9 +803,20 @@ bool Manager::RunScanLoop(brillo::ErrorPtr* error,
     return false;
   }
 
+  // Get resolution value so that we can record it in the PNG.
+  base::Optional<int> resolution = 0;  // DPI.
+  brillo::ErrorPtr resolution_error;
+  int sane_resolution;
+  if (device->GetScanResolution(&resolution_error, &sane_resolution)) {
+    resolution = sane_resolution;
+  } else {
+    LOG(WARNING) << "Failed to get scan resolution: "
+                 << SerializeError(resolution_error);
+  }
+
   png_struct* png;
   png_info* info;
-  if (!SetupPngHeader(error, params, &png, &info, out_file)) {
+  if (!SetupPngHeader(error, params, resolution, &png, &info, out_file)) {
     return false;
   }
   base::ScopedClosureRunner cleanup_png(base::BindOnce(

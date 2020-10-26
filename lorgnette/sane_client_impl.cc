@@ -262,6 +262,34 @@ bool SaneDeviceImpl::GetValidOptionValues(brillo::ErrorPtr* error,
   return true;
 }
 
+bool SaneDeviceImpl::GetScanResolution(brillo::ErrorPtr* error,
+                                       int* resolution_out) {
+  if (!resolution_out) {
+    brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
+                         kManagerServiceError,
+                         "resolution_out argument cannot be null");
+    return false;
+  }
+
+  if (options_.count(kResolution) == 0) {
+    brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
+                         kManagerServiceError, "No resolution option found");
+    return false;
+  }
+
+  SaneOption& option = options_.at(kResolution);
+  base::Optional<int> resolution = option.GetInt();
+  if (!resolution.has_value()) {
+    brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
+                         kManagerServiceError,
+                         "Resolution is not an int option");
+    return false;
+  }
+
+  *resolution_out = resolution.value();
+  return true;
+}
+
 bool SaneDeviceImpl::SetScanResolution(brillo::ErrorPtr* error,
                                        int resolution) {
   if (options_.count(kResolution) == 0) {
@@ -640,6 +668,17 @@ bool SaneOption::SetString(const std::string& s) {
   return true;
 }
 
+base::Optional<int> SaneOption::GetInt() const {
+  switch (type_) {
+    case SANE_TYPE_INT:
+      return int_data_.i;
+    case SANE_TYPE_FIXED:
+      return static_cast<int>(SANE_UNFIX(int_data_.f));
+    default:
+      return base::nullopt;
+  }
+}
+
 base::Optional<std::string> SaneOption::GetString() const {
   if (type_ != SANE_TYPE_STRING)
     return base::nullopt;
@@ -788,7 +827,10 @@ bool SaneDeviceImpl::UpdateDeviceOption(brillo::ErrorPtr* error,
     return false;
   }
 
-  if (result_flags & SANE_INFO_RELOAD_OPTIONS) {
+  // We also reload if we get SANE_INFO_INEXACT because we want to know
+  // what value the printer changed our requested value to.
+  // As an optimization, we could only reload this particular option.
+  if (result_flags & (SANE_INFO_RELOAD_OPTIONS | SANE_INFO_INEXACT)) {
     return LoadOptions(error);
   }
 

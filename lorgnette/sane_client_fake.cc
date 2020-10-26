@@ -67,7 +67,8 @@ void SaneClientFake::SetDeviceForName(const std::string& device_name,
 }
 
 SaneDeviceFake::SaneDeviceFake()
-    : start_scan_result_(SANE_STATUS_GOOD),
+    : resolution_(100),
+      start_scan_result_(SANE_STATUS_GOOD),
       read_scan_data_result_(true),
       scan_running_(false) {}
 
@@ -85,7 +86,16 @@ bool SaneDeviceFake::GetValidOptionValues(brillo::ErrorPtr* error,
   return true;
 }
 
-bool SaneDeviceFake::SetScanResolution(brillo::ErrorPtr*, int) {
+bool SaneDeviceFake::GetScanResolution(brillo::ErrorPtr*, int* resolution_out) {
+  if (!resolution_out)
+    return false;
+
+  *resolution_out = resolution_;
+  return true;
+}
+
+bool SaneDeviceFake::SetScanResolution(brillo::ErrorPtr*, int resolution) {
+  resolution_ = resolution;
   return true;
 }
 
