@@ -8,6 +8,7 @@
 #include <array>
 #include <vector>
 
+#include <brillo/secure_blob.h>
 #include "biod/ec_command.h"
 
 namespace biod {
@@ -28,7 +29,7 @@ class FpFrameCommand
 
   bool Run(int fd) override;
 
-  const std::vector<uint8_t>& frame() const;
+  const brillo::SecureVector& frame() const;
 
  protected:
   virtual bool EcCommandRun(int fd);
@@ -39,7 +40,7 @@ class FpFrameCommand
 
   int frame_index_ = 0;
   ssize_t max_read_size_ = 0;
-  std::vector<uint8_t> frame_data_;
+  brillo::SecureVector frame_data_;
 };
 
 static_assert(!std::is_copy_constructible<FpFrameCommand>::value,

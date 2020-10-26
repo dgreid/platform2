@@ -545,8 +545,8 @@ bool CrosFpDevice::GetTemplate(int index, VendorTemplate* out) {
     LOG(ERROR) << "Failed to get frame, result: " << fp_frame_cmd->Result();
     return false;
   }
-  *out = VendorTemplate(fp_frame_cmd->frame().begin(),
-                        fp_frame_cmd->frame().end());
+  *out = fp_frame_cmd->frame();
+
   return true;
 }
 

@@ -42,7 +42,7 @@ bool FpFrameCommand::Run(int fd) {
   return true;
 }
 
-const std::vector<uint8_t>& FpFrameCommand::frame() const {
+const brillo::SecureVector& FpFrameCommand::frame() const {
   return frame_data_;
 }
 
