@@ -346,7 +346,8 @@ bool Tpm2Impl::PerformEnabledOwnedCheck(bool* enabled, bool* owned) {
 }
 
 bool Tpm2Impl::IsInitialized() {
-  return UpdateTpmStatus(RefreshType::REFRESH_IF_NEEDED);
+  // For 2.0, TPM is always initialized.
+  return true;
 }
 
 void Tpm2Impl::SetIsInitialized(bool done) {
