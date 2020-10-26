@@ -45,6 +45,7 @@ using brillo::cryptohome::home::SanitizeUserNameWithSalt;
 namespace cryptohome {
 
 constexpr char kMountThreadName[] = "MountThread";
+constexpr char kNotFirstBootFilePath[] = "/run/cryptohome/not_first_boot";
 
 namespace {
 // Some utility functions used by UserDataAuth.
@@ -270,13 +271,17 @@ bool UserDataAuth::Initialize() {
     mount_thread_.StartWithOptions(options);
   }
 
-  // Clean up any unreferenced mountpoints at startup.
-  PostTaskToMountThread(FROM_HERE,
-                        base::BindOnce(
-                            [](UserDataAuth* userdataauth) {
-                              userdataauth->CleanUpStaleMounts(false);
-                            },
-                            base::Unretained(this)));
+  if (platform_->FileExists(base::FilePath(kNotFirstBootFilePath))) {
+    // Clean up any unreferenced mountpoints at startup.
+    PostTaskToMountThread(FROM_HERE,
+                          base::BindOnce(
+                              [](UserDataAuth* userdataauth) {
+                                userdataauth->CleanUpStaleMounts(false);
+                              },
+                              base::Unretained(this)));
+  } else {
+    platform_->TouchFileDurable(base::FilePath(kNotFirstBootFilePath));
+  }
 
   // We expect |tpm_| and |tpm_init_| to be available by this point.
   DCHECK(tpm_ && tpm_init_);

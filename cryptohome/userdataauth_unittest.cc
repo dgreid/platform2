@@ -1564,10 +1564,105 @@ TEST_F(UserDataAuthTest, CleanUpStale_FilledMap_NoOpenFiles_ShadowOnly) {
   MockMount* mount = new MockMount();
   EXPECT_CALL(mount_factory, New()).WillOnce(Return(mount));
   userdataauth_->set_mount_factory(&mount_factory);
+  EXPECT_CALL(platform_, FileExists(_)).WillOnce(Return(true));
   EXPECT_CALL(platform_, GetMountsBySourcePrefix(_, _)).WillOnce(Return(false));
   EXPECT_CALL(platform_, GetAttachedLoopDevices())
       .WillRepeatedly(Return(std::vector<Platform::LoopDevice>()));
   EXPECT_CALL(platform_, GetLoopDeviceMounts(_)).WillOnce(Return(false));
+  ASSERT_TRUE(userdataauth_->Initialize());
+
+  EXPECT_CALL(lockbox_, FinalizeBoot());
+  EXPECT_CALL(*mount, Init(&platform_, &crypto_, _)).WillOnce(Return(true));
+  EXPECT_CALL(homedirs_, CryptohomeExists(_)).WillOnce(Return(true));
+  EXPECT_CALL(*mount, MountCryptohome(_, _, _, _)).WillOnce(Return(true));
+  EXPECT_CALL(*mount, UpdateCurrentUserActivityTimestamp(_, _))
+      .WillOnce(Return(true));
+  EXPECT_CALL(platform_, GetMountsBySourcePrefix(_, _)).WillOnce(Return(false));
+  EXPECT_CALL(platform_, GetAttachedLoopDevices())
+      .WillRepeatedly(Return(std::vector<Platform::LoopDevice>()));
+  EXPECT_CALL(platform_, GetLoopDeviceMounts(_)).WillOnce(Return(false));
+
+  user_data_auth::MountRequest mount_req;
+  mount_req.mutable_account()->set_account_id("foo@bar.net");
+  mount_req.mutable_authorization()->mutable_key()->set_secret("key");
+  mount_req.mutable_authorization()->mutable_key()->mutable_data()->set_label(
+      "password");
+  mount_req.mutable_create()->set_copy_authorization_key(true);
+  bool mount_done = false;
+  userdataauth_->DoMount(
+      mount_req,
+      base::Bind(
+          [](bool* mount_done_ptr, const user_data_auth::MountReply& reply) {
+            EXPECT_EQ(user_data_auth::CRYPTOHOME_ERROR_NOT_SET, reply.error());
+            *mount_done_ptr = true;
+          },
+          base::Unretained(&mount_done)));
+  ASSERT_EQ(TRUE, mount_done);
+
+  EXPECT_CALL(platform_, GetMountsBySourcePrefix(_, _))
+      .Times(4)
+      .WillRepeatedly(Invoke(StaleShadowMounts));
+  EXPECT_CALL(platform_, GetAttachedLoopDevices())
+      .WillRepeatedly(Return(std::vector<Platform::LoopDevice>()));
+  EXPECT_CALL(platform_, GetLoopDeviceMounts(_)).WillOnce(Return(false));
+  EXPECT_CALL(
+      platform_,
+      EnumerateDirectoryEntries(
+          FilePath(kEphemeralCryptohomeDir).Append(kSparseFileDir), _, _))
+      .WillOnce(Return(false));
+  // Only 5 look ups: user/1 and root/1 are owned, children of these
+  // directories are excluded.
+  EXPECT_CALL(platform_, GetProcessesWithOpenFiles(_, _)).Times(5);
+
+  EXPECT_CALL(*mount, OwnsMountPoint(_)).WillRepeatedly(Return(false));
+  EXPECT_CALL(*mount, OwnsMountPoint(FilePath("/home/user/1")))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*mount, OwnsMountPoint(FilePath("/home/root/1")))
+      .WillOnce(Return(true));
+
+  EXPECT_CALL(platform_,
+              Unmount(Property(&FilePath::value, EndsWith("/0")), true, _))
+      .Times(2)
+      .WillRepeatedly(Return(true));
+  EXPECT_CALL(platform_, Unmount(FilePath("/home/chronos/user"), true, _))
+      .WillOnce(Return(true));
+  EXPECT_CALL(platform_, Unmount(Property(&FilePath::value,
+                                          EndsWith("user/MyFiles/Downloads")),
+                                 true, _))
+      .WillOnce(Return(true));
+  EXPECT_CALL(platform_, Unmount(FilePath("/daemon-store/server/a"), true, _))
+      .WillOnce(Return(true));
+
+  std::vector<std::string> fake_token_list;
+  fake_token_list.push_back("/home/chronos/user/token");
+  fake_token_list.push_back("/home/user/1/token");
+  fake_token_list.push_back("/home/root/1/token");
+  EXPECT_CALL(chaps_client_, GetTokenList(_, _))
+      .WillRepeatedly(DoAll(SetArgPointee<1>(fake_token_list), Return(true)));
+
+  EXPECT_CALL(chaps_client_,
+              UnloadToken(_, FilePath("/home/chronos/user/token")))
+      .Times(1);
+
+  // Expect that CleanUpStaleMounts() tells us it skipped mounts since 1 is
+  // still logged in.
+  EXPECT_TRUE(userdataauth_->CleanUpStaleMounts(false));
+}
+
+TEST_F(UserDataAuthTest,
+       CleanUpStale_FilledMap_NoOpenFiles_ShadowOnly_FirstBoot) {
+  // Checks that when we have a bunch of stale shadow mounts, some active
+  // mounts, and no open filehandles, all inactive mounts are unmounted.
+
+  // ownership handed off to the Service MountMap
+  MockMountFactory mount_factory;
+  MockMount* mount = new MockMount();
+  EXPECT_CALL(mount_factory, New()).WillOnce(Return(mount));
+  userdataauth_->set_mount_factory(&mount_factory);
+  EXPECT_CALL(platform_, FileExists(_)).WillOnce(Return(false));
+  EXPECT_CALL(platform_, GetMountsBySourcePrefix(_, _)).Times(0);
+  EXPECT_CALL(platform_, GetAttachedLoopDevices()).Times(0);
+  EXPECT_CALL(platform_, GetLoopDeviceMounts(_)).Times(0);
   ASSERT_TRUE(userdataauth_->Initialize());
 
   EXPECT_CALL(lockbox_, FinalizeBoot());
