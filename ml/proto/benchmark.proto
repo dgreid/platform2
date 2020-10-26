@@ -20,9 +20,17 @@ message TfliteBenchmarkConfig {
 message FlatBufferModelSpecProto {
   // The content of the flatbuffer of the model.
   bytes model_string = 1;
+
+  // tflite node specification need to reconstruct the tensor.
+  message NodeSpec {
+    // The index of this node in the tflite interpreter.
+    int32 index = 1;
+    // The dims for re-constructing the tensor shape.
+    repeated int32 dims = 2;
+  }
   // As accepted by the constructor of ModelImpl.
-  map<string, int32> required_inputs = 2;
-  map<string, int32> required_outputs = 3;
+  map<string, NodeSpec> required_inputs = 2;
+  map<string, NodeSpec> required_outputs = 3;
 }
 
 // ExpectedInputOutput contains input and expected_output for benchmarking.

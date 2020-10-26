@@ -41,10 +41,13 @@ using ::chromeos::machine_learning::mojom::GraphExecutor;
 using ::chromeos::machine_learning::mojom::LoadModelResult;
 using ::chromeos::machine_learning::mojom::Model;
 using ::chromeos::machine_learning::mojom::TensorPtr;
+using ::chromeos::machine_learning::mojom::ValueList;
+using ::google::protobuf::Map;
 using ::google::protobuf::TextFormat;
 
 using Example = ml::ExpectedInputOutput::Example;
 using Feature = ml::ExpectedInputOutput::Example::Feature;
+using NodeSpec = ml::FlatBufferModelSpecProto::NodeSpec;
 
 namespace ml {
 namespace {
@@ -62,6 +65,8 @@ struct AccumulativeResult {
   float total_error = 0.0;
   // Time of each run.
   std::vector<int64_t> times_in_us;
+  // Error message.
+  std::string error_message;
 };
 
 // Serialize `results` into results_data and returns results.status().
@@ -108,13 +113,17 @@ bool ConstructModel(const FlatBufferModelSpecProto& model_proto,
   }
 
   // Step 2 constructs the ModelImpl.
-  ModelImpl::Create(
-      std::map<std::string, int>(model_proto.required_inputs().begin(),
-                                 model_proto.required_inputs().end()),
-      std::map<std::string, int>(model_proto.required_outputs().begin(),
-                                 model_proto.required_outputs().end()),
-      std::move(flat_buffer_model), std::move(model_string_impl),
-      model->BindNewPipeAndPassReceiver(), kMlBenchmarkMetricsName);
+  std::map<std::string, int> required_inputs, required_outputs;
+  for (const auto& pair : model_proto.required_inputs()) {
+    required_inputs[pair.first] = pair.second.index();
+  }
+  for (const auto& pair : model_proto.required_outputs()) {
+    required_outputs[pair.first] = pair.second.index();
+  }
+  ModelImpl::Create(required_inputs, required_outputs,
+                    std::move(flat_buffer_model), std::move(model_string_impl),
+                    model->BindNewPipeAndPassReceiver(),
+                    kMlBenchmarkMetricsName);
 
   return true;
 }
@@ -136,34 +145,27 @@ bool ConstructGraphExecutor(const mojo::Remote<Model>& model,
 }
 
 // Converts ExpectedInputOutput::Example into tensor map.
-base::flat_map<std::string, TensorPtr> TensorMapFromInput(
-    const Example& input) {
+base::flat_map<std::string, TensorPtr> TensorMapFromExample(
+    const Example& input, const Map<std::string, NodeSpec>& node_spec_map) {
   base::flat_map<std::string, TensorPtr> input_map;
 
   // Loop over each feature.
   for (const auto& pair : input.features().feature()) {
+    const NodeSpec& node_spec = node_spec_map.at(pair.first);
+    std::vector<int64_t> dims(node_spec.dims().begin(), node_spec.dims().end());
     switch (pair.second.kind_case()) {
       case Feature::kFloatList: {
         // For FloatList, make a (1, n) tensor with the value.
         const auto& float_values = pair.second.float_list().value();
-        if (float_values.size() == 1) {
-          input_map[pair.first] = NewTensor<double>({1}, {float_values.at(0)});
-        } else {
-          input_map[pair.first] = NewTensor<double>(
-              {1, float_values.size()},
-              std::vector<double>(float_values.begin(), float_values.end()));
-        }
+        input_map[pair.first] = NewTensor<double>(
+            dims,
+            std::vector<double>(float_values.begin(), float_values.end()));
       } break;
       case Feature::kInt64List: {
         // For Int64List, make a (1, n) tensor with the value.
         const auto& int_values = pair.second.int64_list().value();
-        if (int_values.size() == 1) {
-          input_map[pair.first] = NewTensor<int64_t>({1}, {int_values.at(0)});
-        } else {
-          input_map[pair.first] = NewTensor<int64_t>(
-              {1, int_values.size()},
-              std::vector<int64_t>(int_values.begin(), int_values.end()));
-        }
+        input_map[pair.first] = NewTensor<int64_t>(
+            dims, std::vector<int64_t>(int_values.begin(), int_values.end()));
       } break;
       default:
         LOG(ERROR) << "InputType not supported.";
@@ -196,6 +198,59 @@ BenchmarkResults ToBenchmarkResults(AccumulativeResult* accumulative_result) {
   }
 
   return benchmark_result;
+}
+
+// Check two tensors have the same shape and size; then calculate the L1
+// Distance between them, and add it to `accumulative result`.
+template <class T>
+void AccumulateDistance(const TensorPtr& tensor1,
+                        const TensorPtr& tensor2,
+                        AccumulativeResult* const accumulative_result) {
+  if (tensor1->data->which() != tensor2->data->which()) {
+    accumulative_result->error_message = "Tensor has different data type.";
+    accumulative_result->has_failure = true;
+    return;
+  }
+  const TensorView<T> tensor_view1(tensor1);
+  const TensorView<T> tensor_view2(tensor2);
+  if (!tensor_view1.IsValidType() || !tensor_view1.IsValidFormat() ||
+      !tensor_view2.IsValidType() || !tensor_view2.IsValidFormat()) {
+    accumulative_result->error_message = "Tensor type or format is invalid.";
+    accumulative_result->has_failure = true;
+    return;
+  }
+  if (tensor_view1.GetShape() != tensor_view2.GetShape() ||
+      tensor_view1.GetValues().size() != tensor_view2.GetValues().size()) {
+    accumulative_result->error_message = "Tensor has different shape or size.";
+    accumulative_result->has_failure = true;
+    return;
+  }
+  for (int j = 0; j < tensor_view1.GetValues().size(); ++j) {
+    // accumulates the diff between elements.
+    accumulative_result->total_error +=
+        std::abs(tensor_view1.GetValues()[j] - tensor_view2.GetValues()[j]);
+  }
+}
+
+// Calls Typed AccumulateDistance function above.
+void AccumulateDistance(const TensorPtr& tensor1,
+                        const TensorPtr& tensor2,
+                        AccumulativeResult* const accumulative_result) {
+  switch (tensor1->data->which()) {
+    case ValueList::Tag::INT64_LIST:
+      AccumulateDistance<int64_t>(tensor1, tensor2, accumulative_result);
+      return;
+    case ValueList::Tag::FLOAT_LIST:
+      AccumulateDistance<double>(tensor1, tensor2, accumulative_result);
+      return;
+    default:
+      accumulative_result->error_message = "Tensor type is not supported.";
+      accumulative_result->has_failure = true;
+      LOG(ERROR)
+          << "Not supported tensor type for calculating AccumulateDistance.";
+      NOTREACHED();
+      return;
+  }
 }
 
 BenchmarkResults InferenceForTfliteModel(
@@ -232,55 +287,51 @@ BenchmarkResults InferenceForTfliteModel(
   }
 
   AccumulativeResult accumulative_result;
+  const base::flat_map<std::string, TensorPtr> expected_output =
+      TensorMapFromExample(input_output.expected_output(),
+                           model_proto.required_outputs());
+
   for (int i = 0; i < tflite_config.num_runs(); ++i) {
     // Starts the timer.
     const std::clock_t start_time = std::clock();
     // Run infernce.
     graph_executor->Execute(
-        TensorMapFromInput(input_output.input()), output_name,
+        TensorMapFromExample(input_output.input(),
+                             model_proto.required_inputs()),
+        output_name,
         base::Bind(
             [](AccumulativeResult* accumulative_result,
                const std::vector<std::string>* const output_name,
-               const Example* const example, ExecuteResult result,
+               const base::flat_map<std::string, TensorPtr>* const
+                   expected_output,
+               ExecuteResult result,
                base::Optional<std::vector<TensorPtr>> outputs) {
               // Check that the inference run successfully.
-              if (result != ExecuteResult::OK || !outputs.has_value() ||
-                  outputs->size() != 1) {
+              if (result != ExecuteResult::OK || !outputs.has_value()) {
+                accumulative_result->error_message = "Inference not OK";
                 accumulative_result->has_failure = true;
                 return;
               }
 
-              // Check that the output tensor has the right type and format.
+              // Compare the output tensor with the expected tensor; add their
+              // distance to the accumulative_result if two tensors have the
+              // same type and shape.
               for (int i = 0; i < output_name->size(); ++i) {
-                const auto& expected_values = example->features()
-                                                  .feature()
-                                                  .at(output_name->at(i))
-                                                  .float_list()
-                                                  .value();
-                const TensorView<double> out_tensor((*outputs)[i]);
-                if (!out_tensor.IsValidType() || !out_tensor.IsValidFormat() ||
-                    (out_tensor.GetShape() !=
-                         std::vector<int64_t>({1, expected_values.size()}) &&
-                     out_tensor.GetShape() !=
-                         std::vector<int64_t>({expected_values.size()}))) {
-                  accumulative_result->has_failure = true;
+                AccumulateDistance(outputs->at(i),
+                                   expected_output->at(output_name->at(i)),
+                                   accumulative_result);
+                if (accumulative_result->has_failure) {
                   return;
-                }
-                for (int j = 0; j < expected_values.size(); ++j) {
-                  // Only record metrics when the inference run successfully.
-                  accumulative_result->total_error += std::abs(
-                      out_tensor.GetValues()[j] - expected_values.at(j));
                 }
               }
             },
-            &accumulative_result, &output_name,
-            &input_output.expected_output()));
+            &accumulative_result, &output_name, &expected_output));
     base::RunLoop().RunUntilIdle();
 
     // Inference should always succeed; return error otherwise.
     if (accumulative_result.has_failure) {
       benchmark_result.set_status(BenchmarkReturnStatus::RUNTIME_ERROR);
-      benchmark_result.set_results_message("Inference error.");
+      benchmark_result.set_results_message(accumulative_result.error_message);
       return benchmark_result;
     }
 

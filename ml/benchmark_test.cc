@@ -33,15 +33,24 @@ constexpr char kSmartDim20181115ModelFile[] =
 constexpr char kModelProtoText[] = R"(
   required_inputs: {
     key: "x"
-    value: 1
+    value: {
+      index: 1
+      dims: [1]
+    }
   }
   required_inputs: {
     key: "y"
-    value: 2
+    value: {
+      index: 2
+      dims: [1]
+    }
   }
   required_outputs: {
     key: "z"
-    value: 0
+    value: {
+      index: 0
+      dims: [1]
+    }
   }
 )";
 constexpr char kInputOutputText[] = R"(
@@ -80,11 +89,10 @@ class MlBenchmarkTest : public ::testing::Test {
     CHECK(temp_dir_.CreateUniqueTempDir());
     const base::FilePath tflite_model_filepath =
         temp_dir_.GetPath().Append("model.pb");
-    const base::FilePath input_output_filepath =
-        temp_dir_.GetPath().Append("input_output.pb");
+    input_output_filepath_ = temp_dir_.GetPath().Append("input_output.pb");
     TfliteBenchmarkConfig tflite_config;
     tflite_config.set_tflite_model_filepath(tflite_model_filepath.value());
-    tflite_config.set_input_output_filepath(input_output_filepath.value());
+    tflite_config.set_input_output_filepath(input_output_filepath_.value());
     tflite_config.set_num_runs(100);
     TextFormat::PrintToString(tflite_config,
                               benchmark_config_.mutable_driver_config());
@@ -99,24 +107,33 @@ class MlBenchmarkTest : public ::testing::Test {
                     model_content.size());
 
     // Set ExpectedInputOutput.
+    SetExpectedValue(0.75f);
+  }
+  // Write the output with given expected value.
+  void SetExpectedValue(const float val) {
     ExpectedInputOutput input_output;
     CHECK(TextFormat::ParseFromString(kInputOutputText, &input_output));
+    (*(*input_output.mutable_expected_output()
+            ->mutable_features()
+            ->mutable_feature())["z"]
+          .mutable_float_list()
+          ->mutable_value())[0] = val;
     const std::string input_content = input_output.SerializeAsString();
-    base::WriteFile(input_output_filepath, input_content.data(),
+    base::WriteFile(input_output_filepath_, input_content.data(),
                     input_content.size());
   }
 
  protected:
   // Temporary directory containing a file used for the file mechanism.
   base::ScopedTempDir temp_dir_;
-
+  base::FilePath input_output_filepath_;
   CrOSBenchmarkConfig benchmark_config_;
 
  private:
   DISALLOW_COPY_AND_ASSIGN(MlBenchmarkTest);
 };
 
-TEST_F(MlBenchmarkTest, TfliteModelTest) {
+TEST_F(MlBenchmarkTest, TfliteModelMatchedValueTest) {
   // Step 1 run benchmark_start.
   const std::string config = benchmark_config_.SerializeAsString();
   void* results_data = nullptr;
@@ -131,6 +148,24 @@ TEST_F(MlBenchmarkTest, TfliteModelTest) {
   free_benchmark_results(results_data);
   EXPECT_EQ(results.status(), BenchmarkReturnStatus::OK);
   EXPECT_LT(results.total_accuracy(), 1e-5);
+}
+
+TEST_F(MlBenchmarkTest, TfliteModelUnmachedValueTest) {
+  SetExpectedValue(0.76f);
+  // Step 1 run benchmark_start.
+  const std::string config = benchmark_config_.SerializeAsString();
+  void* results_data = nullptr;
+  int results_size = 0;
+  EXPECT_EQ(benchmark_start(config.c_str(), config.size(), &results_data,
+                            &results_size),
+            BenchmarkReturnStatus::OK);
+
+  // Step 2 check results.
+  BenchmarkResults results;
+  CHECK(results.ParseFromArray(results_data, results_size));
+  free_benchmark_results(results_data);
+  EXPECT_EQ(results.status(), BenchmarkReturnStatus::OK);
+  EXPECT_LT(results.total_accuracy() - 0.01f, 1e-5);
 }
 
 }  // namespace ml
