@@ -605,7 +605,7 @@ base::Optional<OptionRange> SaneDeviceImpl::GetOptionRange(
       return option_range;
     case SANE_TYPE_FIXED:
       option_range.start = SANE_UNFIX(range->min);
-      option_range.size = SANE_UNFIX(range->max) - SANE_UNFIX(range->min);
+      option_range.size = SANE_UNFIX(range->max - range->min);
       return option_range;
     default:
       brillo::Error::AddToPrintf(
