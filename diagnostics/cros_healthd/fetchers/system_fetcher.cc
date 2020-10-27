@@ -125,14 +125,10 @@ base::Optional<mojo_ipc::ProbeErrorPtr> SystemFetcher::FetchCachedVpdInfo(
   }
 
   std::string product_serial_number;
-  if (!ReadAndTrimString(relative_vpd_ro_dir, kProductSerialNumberFileName,
-                         &product_serial_number)) {
-    return CreateAndLogProbeError(
-        mojo_ipc::ErrorType::kFileReadError,
-        "Unable to read VPD file " + std::string(kProductSerialNumberFileName) +
-            " at path " + relative_vpd_ro_dir.value().c_str());
+  if (ReadAndTrimString(relative_vpd_ro_dir, kProductSerialNumberFileName,
+                        &product_serial_number)) {
+    output_info->product_serial_number = product_serial_number;
   }
-  output_info->product_serial_number = product_serial_number;
 
   return base::nullopt;
 }

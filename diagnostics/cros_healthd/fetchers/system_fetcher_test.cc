@@ -125,7 +125,9 @@ class SystemUtilsTest : public ::testing::Test {
     EXPECT_EQ(system_info->manufacture_date.value(), kFakeManufactureDate);
     ASSERT_TRUE(system_info->product_sku_number.has_value());
     EXPECT_EQ(system_info->product_sku_number.value(), kFakeSkuNumber);
-    EXPECT_EQ(system_info->product_serial_number, kFakeProductSerialNumber);
+    ASSERT_TRUE(system_info->product_serial_number.has_value());
+    EXPECT_EQ(system_info->product_serial_number.value(),
+              kFakeProductSerialNumber);
   }
 
   void ValidateCrosConfigInfo(
@@ -200,7 +202,9 @@ TEST_F(SystemUtilsTest, TestNoFirstPowerDate) {
   EXPECT_EQ(system_info->manufacture_date.value(), kFakeManufactureDate);
   ASSERT_TRUE(system_info->product_sku_number.has_value());
   EXPECT_EQ(system_info->product_sku_number.value(), kFakeSkuNumber);
-  EXPECT_EQ(system_info->product_serial_number, kFakeProductSerialNumber);
+  ASSERT_TRUE(system_info->product_serial_number.has_value());
+  EXPECT_EQ(system_info->product_serial_number.value(),
+            kFakeProductSerialNumber);
 
   ValidateCrosConfigInfo(system_info);
   ValidateDmiInfo(system_info);
@@ -223,7 +227,9 @@ TEST_F(SystemUtilsTest, TestNoManufactureDate) {
   EXPECT_FALSE(system_info->manufacture_date.has_value());
   ASSERT_TRUE(system_info->product_sku_number.has_value());
   EXPECT_EQ(system_info->product_sku_number.value(), kFakeSkuNumber);
-  EXPECT_EQ(system_info->product_serial_number, kFakeProductSerialNumber);
+  ASSERT_TRUE(system_info->product_serial_number.has_value());
+  EXPECT_EQ(system_info->product_serial_number.value(),
+            kFakeProductSerialNumber);
 
   ValidateCrosConfigInfo(system_info);
   ValidateDmiInfo(system_info);
@@ -262,7 +268,9 @@ TEST_F(SystemUtilsTest, TestNoSkuNumber) {
   ASSERT_TRUE(system_info->manufacture_date.has_value());
   EXPECT_EQ(system_info->manufacture_date.value(), kFakeManufactureDate);
   EXPECT_FALSE(system_info->product_sku_number.has_value());
-  EXPECT_EQ(system_info->product_serial_number, kFakeProductSerialNumber);
+  ASSERT_TRUE(system_info->product_serial_number.has_value());
+  EXPECT_EQ(system_info->product_serial_number.value(),
+            kFakeProductSerialNumber);
 
   ValidateCrosConfigInfo(system_info);
   ValidateDmiInfo(system_info);
@@ -277,7 +285,20 @@ TEST_F(SystemUtilsTest, TestNoProductSerialNumber) {
       relative_vpd_ro_dir().Append(kProductSerialNumberFileName), false));
 
   auto system_result = FetchSystemInfo(GetTempDirPath());
-  ASSERT_TRUE(system_result->is_error());
+  ASSERT_TRUE(system_result->is_system_info());
+  const auto& system_info = system_result->get_system_info();
+  // Confirm that correct cached VPD values except serial number are obtained.
+  ASSERT_TRUE(system_info->first_power_date.has_value());
+  EXPECT_EQ(system_info->first_power_date.value(), kFakeFirstPowerDate);
+  ASSERT_TRUE(system_info->manufacture_date.has_value());
+  EXPECT_EQ(system_info->manufacture_date.value(), kFakeManufactureDate);
+  ASSERT_TRUE(system_info->product_sku_number.has_value());
+  EXPECT_EQ(system_info->product_sku_number.value(), kFakeSkuNumber);
+  EXPECT_FALSE(system_info->product_serial_number.has_value());
+
+  ValidateCrosConfigInfo(system_info);
+  ValidateDmiInfo(system_info);
+  ValidateOsVersion(system_info);
 }
 
 // Test that no DMI fields are populated when |kRelativeDmiInfoPath| doesn't
