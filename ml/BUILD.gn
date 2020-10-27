@@ -156,9 +156,9 @@ shared_library("libml_for_benchmark") {
   libs = [ "tensorflowlite" ]
   pkg_deps = [
     "libbrillo",
-    "libchrome-${libbase_ver}",
+    "libchrome",
     "libmetrics",
-    "libmojo-${libbase_ver}",
+    "libmojo",
     "protobuf",
   ]
   public_deps = [
