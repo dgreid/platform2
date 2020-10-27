@@ -27,6 +27,7 @@ constexpr char kRelativeVpdRwPath[] = "sys/firmware/vpd/rw/";
 constexpr char kFirstPowerDateFileName[] = "ActivateDate";
 constexpr char kManufactureDateFileName[] = "mfg_date";
 constexpr char kSkuNumberFileName[] = "sku_number";
+constexpr char kProductSerialNumberFileName[] = "serial_number";
 constexpr char kBiosVersionFileName[] = "bios_version";
 constexpr char kBoardNameFileName[] = "board_name";
 constexpr char kBoardVersionFileName[] = "board_version";
@@ -122,6 +123,16 @@ base::Optional<mojo_ipc::ProbeErrorPtr> SystemFetcher::FetchCachedVpdInfo(
     }
     output_info->product_sku_number = sku_number;
   }
+
+  std::string product_serial_number;
+  if (!ReadAndTrimString(relative_vpd_ro_dir, kProductSerialNumberFileName,
+                         &product_serial_number)) {
+    return CreateAndLogProbeError(
+        mojo_ipc::ErrorType::kFileReadError,
+        "Unable to read VPD file " + std::string(kProductSerialNumberFileName) +
+            " at path " + relative_vpd_ro_dir.value().c_str());
+  }
+  output_info->product_serial_number = product_serial_number;
 
   return base::nullopt;
 }

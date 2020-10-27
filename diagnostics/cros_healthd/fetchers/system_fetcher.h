@@ -31,6 +31,7 @@ extern const char kRelativeVpdRwPath[];
 extern const char kFirstPowerDateFileName[];
 extern const char kManufactureDateFileName[];
 extern const char kSkuNumberFileName[];
+extern const char kProductSerialNumberFileName[];
 
 class SystemFetcher final {
  public:

@@ -452,8 +452,9 @@ void DisplaySystemInfo(
 
   const auto& system_info = system_result->get_system_info();
   std::cout << "first_power_date,manufacture_date,product_sku_number,"
-            << "marketing_name,bios_version,board_name,board_version,"
-            << "chassis_type,product_name,os_version,os_channel" << std::endl;
+            << "product_serial_number,marketing_name,bios_version,board_name,"
+            << "board_version,chassis_type,product_name,os_version,os_channel"
+            << std::endl;
   std::string chassis_type =
       !system_info->chassis_type.is_null()
           ? std::to_string(system_info->chassis_type->value)
@@ -476,7 +477,8 @@ void DisplaySystemInfo(
             << system_info->manufacture_date.value_or(kNotApplicableString)
             << ","
             << system_info->product_sku_number.value_or(kNotApplicableString)
-            << "," << marketing_name << ","
+            << "," << system_info->product_serial_number << ","
+            << marketing_name << ","
             << system_info->bios_version.value_or(kNotApplicableString) << ","
             << system_info->board_name.value_or(kNotApplicableString) << ","
             << system_info->board_version.value_or(kNotApplicableString) << ","

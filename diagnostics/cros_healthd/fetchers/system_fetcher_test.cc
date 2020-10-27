@@ -28,6 +28,7 @@ const char kFakeReleaseChannel[] = "stable-channel";
 const char kFakeFirstPowerDate[] = "2020-40";
 const char kFakeManufactureDate[] = "2019-01-01";
 const char kFakeSkuNumber[] = "ABCD&^A";
+const char kFakeProductSerialNumber[] = "8607G03EDF";
 // Fake CrosConfig value used for testing.
 constexpr char kFakeMarketingName[] = "Latitude 1234 Chromebook Enterprise";
 // Fake DMI values used for testing.
@@ -62,6 +63,9 @@ class SystemUtilsTest : public ::testing::Test {
         kFakeManufactureDate));
     ASSERT_TRUE(WriteFileAndCreateParentDirs(
         relative_vpd_ro_dir_.Append(kSkuNumberFileName), kFakeSkuNumber));
+    ASSERT_TRUE(WriteFileAndCreateParentDirs(
+        relative_vpd_ro_dir_.Append(kProductSerialNumberFileName),
+        kFakeProductSerialNumber));
     // Populate fake DMI values.
     relative_dmi_info_path_ = root_dir.Append(kRelativeDmiInfoPath);
     ASSERT_TRUE(WriteFileAndCreateParentDirs(
@@ -121,6 +125,7 @@ class SystemUtilsTest : public ::testing::Test {
     EXPECT_EQ(system_info->manufacture_date.value(), kFakeManufactureDate);
     ASSERT_TRUE(system_info->product_sku_number.has_value());
     EXPECT_EQ(system_info->product_sku_number.value(), kFakeSkuNumber);
+    EXPECT_EQ(system_info->product_serial_number, kFakeProductSerialNumber);
   }
 
   void ValidateCrosConfigInfo(
@@ -195,6 +200,7 @@ TEST_F(SystemUtilsTest, TestNoFirstPowerDate) {
   EXPECT_EQ(system_info->manufacture_date.value(), kFakeManufactureDate);
   ASSERT_TRUE(system_info->product_sku_number.has_value());
   EXPECT_EQ(system_info->product_sku_number.value(), kFakeSkuNumber);
+  EXPECT_EQ(system_info->product_serial_number, kFakeProductSerialNumber);
 
   ValidateCrosConfigInfo(system_info);
   ValidateDmiInfo(system_info);
@@ -217,6 +223,7 @@ TEST_F(SystemUtilsTest, TestNoManufactureDate) {
   EXPECT_FALSE(system_info->manufacture_date.has_value());
   ASSERT_TRUE(system_info->product_sku_number.has_value());
   EXPECT_EQ(system_info->product_sku_number.value(), kFakeSkuNumber);
+  EXPECT_EQ(system_info->product_serial_number, kFakeProductSerialNumber);
 
   ValidateCrosConfigInfo(system_info);
   ValidateDmiInfo(system_info);
@@ -255,10 +262,22 @@ TEST_F(SystemUtilsTest, TestNoSkuNumber) {
   ASSERT_TRUE(system_info->manufacture_date.has_value());
   EXPECT_EQ(system_info->manufacture_date.value(), kFakeManufactureDate);
   EXPECT_FALSE(system_info->product_sku_number.has_value());
+  EXPECT_EQ(system_info->product_serial_number, kFakeProductSerialNumber);
 
   ValidateCrosConfigInfo(system_info);
   ValidateDmiInfo(system_info);
   ValidateOsVersion(system_info);
+}
+
+// Test that no product_serial_number is returned when the device does not have
+// |kProductSerialNumberFileName|.
+TEST_F(SystemUtilsTest, TestNoProductSerialNumber) {
+  // Delete the file containing serial number.
+  ASSERT_TRUE(base::DeleteFile(
+      relative_vpd_ro_dir().Append(kProductSerialNumberFileName), false));
+
+  auto system_result = FetchSystemInfo(GetTempDirPath());
+  ASSERT_TRUE(system_result->is_error());
 }
 
 // Test that no DMI fields are populated when |kRelativeDmiInfoPath| doesn't
