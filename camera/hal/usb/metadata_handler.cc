@@ -995,6 +995,11 @@ int MetadataHandler::FillMetadataFromDeviceInfo(
                       range.minimum * 100 * 1000 /* ns */,
                       range.maximum * 100 * 1000 /* ns */
                   });
+    // CtsCameraTestCases needs it. This control is only effective if
+    // android.control.aeMode is set to OFF.
+    update_request(
+        ANDROID_SENSOR_EXPOSURE_TIME,
+        static_cast<int64_t>(range.default_value) * 100 * 1000 /* ns */);
     available_characteristics_keys.push_back(
         ANDROID_SENSOR_INFO_EXPOSURE_TIME_RANGE);
     available_request_keys.push_back(ANDROID_SENSOR_EXPOSURE_TIME);
