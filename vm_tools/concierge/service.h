@@ -216,6 +216,8 @@ class Service final {
                               const vm_tools::concierge::VmInfo& vm_info);
   void NotifyVmStopping(const VmId& vm_id, int64_t cid);
   void NotifyVmStopped(const VmId& vm_id, int64_t cid);
+  void SendVmIdChangedSignal(const VmId& id, const VmId& prev_id, int64_t cid);
+
   std::string GetContainerToken(const VmId& vm_id,
                                 const std::string& container_name);
 

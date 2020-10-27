@@ -3024,10 +3024,13 @@ std::unique_ptr<dbus::Response> Service::SetVmId(
   }
 
   auto vm = std::move(iter->second);
+  auto cid = vm->GetInfo().cid;
+  auto old_id = iter->first;
   vms_.erase(iter);
   VmId new_id(request.dest_owner_id(), request.name());
   vms_[new_id] = std::move(vm);
-  // TODO(wvk): redirect logging to new cryptohome.
+
+  SendVmIdChangedSignal(new_id, old_id, cid);
 
   response.set_success(true);
   writer.AppendProtoAsArrayOfBytes(response);
@@ -3160,6 +3163,19 @@ void Service::NotifyVmStopped(const VmId& vm_id, int64_t cid) {
   proto.set_owner_id(vm_id.owner_id());
   proto.set_name(vm_id.name());
   proto.set_cid(cid);
+  dbus::MessageWriter(&signal).AppendProtoAsArrayOfBytes(proto);
+  exported_object_->SendSignal(&signal);
+}
+
+void Service::SendVmIdChangedSignal(const VmId& id,
+                                    const VmId& prev_id,
+                                    int64_t cid) {
+  dbus::Signal signal(kVmConciergeInterface, kVmIdChangedSignal);
+  vm_tools::concierge::VmIdChangedSignal proto;
+  proto.set_owner_id(id.owner_id());
+  proto.set_name(id.name());
+  proto.set_cid(cid);
+  proto.set_prev_owner_id(prev_id.owner_id());
   dbus::MessageWriter(&signal).AppendProtoAsArrayOfBytes(proto);
   exported_object_->SendSignal(&signal);
 }
