@@ -275,8 +275,10 @@ bool ArcVm::Start(base::FilePath kernel,
   if (USE_CROSVM_WL_DMABUF)
     args.emplace_back("--wayland-dmabuf", "");
 
-  if (USE_CROSVM_VIRTIO_VIDEO)
+  if (USE_CROSVM_VIRTIO_VIDEO) {
     args.emplace_back("--video-decoder", "");
+    args.emplace_back("--video-encoder", "");
+  }
 
   for (const auto& fd : tap_fds) {
     args.emplace_back("--tap-fd", std::to_string(fd.get()));
