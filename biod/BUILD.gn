@@ -78,6 +78,7 @@ static_library("libbiod") {
     "uinput_device.cc",
     "updater/cros_fp_updater.cc",
     "updater/update_utils.cc",
+    "versions_command.cc",
   ]
   configs += [ ":target_defaults" ]
   pkg_deps = [ "vboot_host" ]
@@ -148,6 +149,7 @@ if (use.test) {
       "power_manager_client_test.cc",
       "updater/cros_fp_updater_test.cc",
       "updater/update_utils_test.cc",
+      "versions_command_test.cc",
     ]
     configs += [
       "//common-mk:test",
