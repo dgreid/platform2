@@ -9,9 +9,15 @@
 #include <vector>
 
 #include <base/macros.h>
+#include <base/memory/weak_ptr.h>
+#include <dbus/exported_object.h>
 
 #include "power_manager/common/power_constants.h"
 #include "power_manager/powerd/system/thermal/thermal_device_observer.h"
+
+namespace dbus {
+class MethodCall;
+}
 
 namespace power_manager {
 
@@ -42,6 +48,10 @@ class ThermalEventHandler : public system::ThermalDeviceObserver {
   // power source is battery.
   void OnThermalChanged(system::ThermalDeviceInterface* device) override;
 
+  void OnGetThermalStateMethodCall(
+      dbus::MethodCall* method_call,
+      dbus::ExportedObject::ResponseSender response_sender);
+
   // Should be called when the power source changes.
   void HandlePowerSourceChange(PowerSource source);
 
@@ -56,6 +66,8 @@ class ThermalEventHandler : public system::ThermalDeviceObserver {
   system::DeviceThermalState last_state_;
 
   PowerSource power_source_;
+
+  base::WeakPtrFactory<ThermalEventHandler> weak_ptr_factory_;
 
   DISALLOW_COPY_AND_ASSIGN(ThermalEventHandler);
 };

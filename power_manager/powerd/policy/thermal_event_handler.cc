@@ -6,10 +6,12 @@
 
 #include <algorithm>
 #include <memory>
+#include <utility>
 #include <vector>
 
 #include <base/logging.h>
 #include <chromeos/dbus/service_constants.h>
+#include <dbus/message.h>
 
 #include "power_manager/common/clock.h"
 #include "power_manager/common/power_constants.h"
@@ -38,7 +40,8 @@ ThermalEventHandler::ThermalEventHandler(
       thermal_devices_(thermal_devices),
       clock_(std::make_unique<Clock>()),
       last_state_(system::DeviceThermalState::kUnknown),
-      power_source_(PowerSource::AC) {
+      power_source_(PowerSource::AC),
+      weak_ptr_factory_(this) {
   for (auto& device : thermal_devices) {
     DCHECK(device);
     device->AddObserver(this);
@@ -54,7 +57,24 @@ ThermalEventHandler::~ThermalEventHandler() {
 bool ThermalEventHandler::Init() {
   // Send current state to Chrome on Init.
   OnThermalChanged(nullptr);
+  dbus_wrapper_->ExportMethod(
+      kGetThermalStateMethod,
+      base::Bind(&ThermalEventHandler::OnGetThermalStateMethodCall,
+                 weak_ptr_factory_.GetWeakPtr()));
   return true;
+}
+
+void ThermalEventHandler::OnGetThermalStateMethodCall(
+    dbus::MethodCall* method_call,
+    dbus::ExportedObject::ResponseSender response_sender) {
+  ThermalEvent protobuf;
+  protobuf.set_thermal_state(DeviceThermalStateToProto(last_state_));
+  protobuf.set_timestamp(clock_->GetCurrentTime().ToInternalValue());
+  std::unique_ptr<dbus::Response> response =
+      dbus::Response::FromMethodCall(method_call);
+  dbus::MessageWriter writer(response.get());
+  writer.AppendProtoAsArrayOfBytes(protobuf);
+  std::move(response_sender).Run(std::move(response));
 }
 
 void ThermalEventHandler::OnThermalChanged(

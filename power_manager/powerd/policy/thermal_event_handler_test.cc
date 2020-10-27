@@ -198,5 +198,36 @@ TEST_F(ThermalEventHandlerTest, IgnoreChargerWhenOnBattery) {
   dbus_wrapper_.ClearSentSignals();
 }
 
+TEST_F(ThermalEventHandlerTest, GetThermalState) {
+  ThermalEvent proto;
+  system::DeviceThermalState states[] = {
+      system::DeviceThermalState::kNominal,
+      system::DeviceThermalState::kSerious,
+      system::DeviceThermalState::kUnknown,
+      system::DeviceThermalState::kCritical,
+      system::DeviceThermalState::kFair,
+  };
+
+  thermal_devices_[0].set_thermal_state(system::DeviceThermalState::kUnknown);
+
+  for (const auto& state : states) {
+    AdvanceTime(base::TimeDelta::FromSeconds(1));
+    thermal_devices_[1].set_thermal_state(state);
+    thermal_devices_[1].NotifyObservers();
+    dbus::MethodCall method_call(kPowerManagerInterface,
+                                 kGetThermalStateMethod);
+    std::unique_ptr<dbus::Response> response =
+        dbus_wrapper_.CallExportedMethodSync(&method_call);
+    ASSERT_TRUE(response);
+    proto.Clear();
+    ASSERT_TRUE(
+        dbus::MessageReader(response.get()).PopArrayOfBytesAsProto(&proto));
+    EXPECT_EQ(DeviceThermalStateToProto(state), proto.thermal_state());
+    EXPECT_EQ(Now().ToInternalValue(), proto.timestamp());
+    dbus_wrapper_.ClearSentSignals();
+    proto.Clear();
+  }
+}
+
 }  // namespace policy
 }  // namespace power_manager

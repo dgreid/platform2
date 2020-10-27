@@ -453,6 +453,15 @@ void Daemon::Init() {
   if (!factory_mode_ && BoolPrefIsTrue(kUseLidPref))
     RunSetuidHelper("set_force_lid_open", "--noforce_lid_open", false);
 
+  thermal_devices_ = delegate_->CreateThermalDevices();
+  std::vector<system::ThermalDeviceInterface*> weak_thermal_device;
+  for (const auto& thermal_device : thermal_devices_) {
+    weak_thermal_device.push_back(thermal_device.get());
+  }
+  thermal_event_handler_ = std::make_unique<policy::ThermalEventHandler>(
+      weak_thermal_device, dbus_wrapper_.get());
+  thermal_event_handler_->Init();
+
   // This needs to happen *after* all D-Bus methods are exported:
   // https://crbug.com/331431
   CHECK(dbus_wrapper_->PublishService()) << "Failed to publish D-Bus service";
@@ -473,15 +482,6 @@ void Daemon::Init() {
   prefs_->GetInt64(kCutoffPowerUaPref, &cutoff_ua);
   prefs_->GetInt64(kHibernatePowerUaPref, &hibernate_ua);
   system::ConfigureSmartDischarge(to_zero_hr, cutoff_ua, hibernate_ua);
-
-  thermal_devices_ = delegate_->CreateThermalDevices();
-  std::vector<system::ThermalDeviceInterface*> weak_thermal_device;
-  for (const auto& thermal_device : thermal_devices_) {
-    weak_thermal_device.push_back(thermal_device.get());
-  }
-  thermal_event_handler_ = std::make_unique<policy::ThermalEventHandler>(
-      weak_thermal_device, dbus_wrapper_.get());
-  thermal_event_handler_->Init();
 
   // Call this last to ensure that all of our members are already initialized.
   OnPowerStatusUpdate();

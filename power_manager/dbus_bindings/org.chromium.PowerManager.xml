@@ -166,6 +166,14 @@
       <arg name="has_device" direction="out" type="b" />
     </method>
 
+    <method name="GetThermalState">
+      <tp:docstring>
+        The |serialized_proto| arg is a serialized
+        power_manager::ThermalEvent protobuf.
+      </tp:docstring>
+      <arg name="serialized_proto" direction="out" type="ay" />
+    </method>
+
     <!-- Signals -->
     <signal name="ScreenBrightnessChanged">
       <tp:docstring>
