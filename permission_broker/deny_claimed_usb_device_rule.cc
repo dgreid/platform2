@@ -112,6 +112,37 @@ bool DenyClaimedUsbDeviceRule::IsInterfaceAdb(udev_device* device) {
          intf_protocol == kAdbProtocol;
 }
 
+bool IsInterfaceUsbSerial(udev_device* iface) {
+  // Search all children of the interface in the 'usb-serial' subsystem
+  // this includes all the USB-serial converter and most micro-controllers
+  // USB bulk endpoints presenting a serial-like interface but not CDC-ACM
+  // devices (e.g. modems or boards pretending to be one)
+  udev* udev = udev_device_get_udev(iface);
+  ScopedUdevEnumeratePtr enum_serial(udev_enumerate_new(udev));
+  udev_enumerate_add_match_subsystem(enum_serial.get(), "usb-serial");
+  udev_enumerate_add_match_parent(enum_serial.get(), iface);
+  udev_enumerate_scan_devices(enum_serial.get());
+
+  struct udev_list_entry* entry = nullptr;
+  udev_list_entry_foreach(entry,
+                          udev_enumerate_get_list_entry(enum_serial.get())) {
+    // a usb-serial driver is connected to this interface
+    LOG(INFO) << "Found usb-serial interface.";
+    return true;
+  }
+  return false;
+}
+
+bool IsInterfaceSafeToDetach(udev_device* iface) {
+  // Normally the permission_broker prevents users from interfering with the
+  // system usage of a USB device.
+  // But in particular cases, a USB interface is deemed 'safe to detach' from
+  // its kernel driver if the purpose of the driver is only exposing it to apps.
+  // e.g. below the usb serial interfaces are only used by the chrome.serial
+  // and WebSerial external API rather than in any intrinsic system use.
+  return IsInterfaceUsbSerial(iface);
+}
+
 bool IsDeviceAllowedSerial(udev_device* device) {
   // These vendor IDs are derived from https://raw.githubusercontent.com
   // /arduino/ArduinoCore-avr/master/boards.txt
@@ -167,6 +198,7 @@ Rule::Result DenyClaimedUsbDeviceRule::ProcessUsbDevice(udev_device* device) {
   bool found_claimed_interface = false;
   bool found_unclaimed_interface = false;
   bool found_adb_interface = false;
+  bool found_only_safe_interfaces = true;
   struct udev_list_entry* entry = nullptr;
   udev_list_entry_foreach(entry,
                           udev_enumerate_get_list_entry(enumerate.get())) {
@@ -196,6 +228,8 @@ Rule::Result DenyClaimedUsbDeviceRule::ProcessUsbDevice(udev_device* device) {
     if (driver) {
       LOG(INFO) << "Found claimed interface with driver: " << driver;
       found_claimed_interface = true;
+      found_only_safe_interfaces =
+          found_only_safe_interfaces && IsInterfaceSafeToDetach(child.get());
     } else {
       found_unclaimed_interface = true;
     }
@@ -213,8 +247,11 @@ Rule::Result DenyClaimedUsbDeviceRule::ProcessUsbDevice(udev_device* device) {
       return DENY;
     }
 
+    if (found_only_safe_interfaces)
+      LOG(INFO) << "Found only detachable interface(s), safe to claim.";
+
     if (IsDeviceDetachableByPolicy(device) || IsDeviceAllowedSerial(device) ||
-        found_adb_interface)
+        found_adb_interface || found_only_safe_interfaces)
       return ALLOW_WITH_DETACH;
     else
       return found_unclaimed_interface ? ALLOW_WITH_LOCKDOWN : DENY;
