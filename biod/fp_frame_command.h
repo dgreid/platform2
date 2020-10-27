@@ -6,6 +6,7 @@
 #define BIOD_FP_FRAME_COMMAND_H_
 
 #include <array>
+#include <memory>
 #include <vector>
 
 #include <brillo/secure_blob.h>
@@ -20,11 +21,23 @@ using FpFramePacket = std::array<uint8_t, kMaxPacketSize>;
 class FpFrameCommand
     : public EcCommand<struct ec_params_fp_frame, FpFramePacket> {
  public:
-  FpFrameCommand(int index, uint32_t frame_size, uint16_t max_read_size)
-      : EcCommand(EC_CMD_FP_FRAME),
-        frame_index_(index),
-        max_read_size_(max_read_size),
-        frame_data_(frame_size) {}
+  template <typename T = FpFrameCommand>
+  static std::unique_ptr<T> Create(int index,
+                                   uint32_t frame_size,
+                                   uint16_t max_read_size) {
+    static_assert(std::is_base_of<FpFrameCommand, T>::value,
+                  "Only classes derived from FpFrameCommand can use Create");
+
+    if (frame_size == 0 || max_read_size == 0 ||
+        max_read_size > kMaxPacketSize) {
+      return nullptr;
+    }
+
+    // Using new to access non-public constructor. See
+    // https://abseil.io/tips/134.
+    return base::WrapUnique(new T(index, frame_size, max_read_size));
+  }
+
   ~FpFrameCommand() override = default;
 
   bool Run(int fd) override;
@@ -32,6 +45,11 @@ class FpFrameCommand
   const brillo::SecureVector& frame() const;
 
  protected:
+  FpFrameCommand(int index, uint32_t frame_size, uint16_t max_read_size)
+      : EcCommand(EC_CMD_FP_FRAME),
+        frame_index_(index),
+        max_read_size_(max_read_size),
+        frame_data_(frame_size) {}
   virtual bool EcCommandRun(int fd);
 
  private:

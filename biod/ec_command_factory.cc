@@ -21,10 +21,10 @@ std::unique_ptr<FpFlashProtectCommand> EcCommandFactory::FpFlashProtectCommand(
 std::unique_ptr<FpInfoCommand> EcCommandFactory::FpInfoCommand() {
   return std::make_unique<biod::FpInfoCommand>();
 }
+
 std::unique_ptr<biod::FpFrameCommand> EcCommandFactory::FpFrameCommand(
     int index, uint32_t frame_size, uint16_t max_read_size) {
-  return std::make_unique<biod::FpFrameCommand>(index, frame_size,
-                                                max_read_size);
+  return biod::FpFrameCommand::Create(index, frame_size, max_read_size);
 }
 
 std::unique_ptr<biod::FpSeedCommand> EcCommandFactory::FpSeedCommand(

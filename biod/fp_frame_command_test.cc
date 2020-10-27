@@ -16,11 +16,40 @@ namespace {
 
 using ::testing::Return;
 
+constexpr int kValidMaxReadSize = 128;
+constexpr int kValidFrameSize = 4096;
+constexpr int kValidIndex = 0;
+
 TEST(FpFrameCommand, FpFrameCommand) {
-  auto cmd = std::make_unique<FpFrameCommand>(0, 4096, 128);
+  auto cmd =
+      FpFrameCommand::Create(kValidIndex, kValidFrameSize, kValidMaxReadSize);
   EXPECT_TRUE(cmd);
   EXPECT_EQ(cmd->Version(), 0);
   EXPECT_EQ(cmd->Command(), EC_CMD_FP_FRAME);
+}
+
+TEST(FpFrameCommand, InvalidReadSize) {
+  constexpr int kInvalidMaxReadSize = kMaxPacketSize + 1;
+  EXPECT_FALSE(FpFrameCommand::Create(kValidIndex, kValidFrameSize,
+                                      kInvalidMaxReadSize));
+}
+
+TEST(FpFrameCommand, InvalidReadSizeZero) {
+  constexpr int kInvalidMaxReadSize = 0;
+  EXPECT_FALSE(FpFrameCommand::Create(kValidIndex, kValidFrameSize,
+                                      kInvalidMaxReadSize));
+}
+
+TEST(FpFrameCommand, MaxReadSizeEqualsMaxPacketSize) {
+  constexpr int kValidReadSize = kMaxPacketSize;
+  EXPECT_TRUE(
+      FpFrameCommand::Create(kValidIndex, kValidFrameSize, kValidReadSize));
+}
+
+TEST(FpFrameCommand, ZeroFrameSize) {
+  constexpr int kInvalidFrameSize = 0;
+  EXPECT_FALSE(FpFrameCommand::Create(kValidIndex, kInvalidFrameSize,
+                                      kValidMaxReadSize));
 }
 
 // Mock the underlying EcCommand to test
@@ -57,13 +86,15 @@ TEST_F(FpFrameCommandTest, Success) {
   // Create a frame that has two full packets worth of data and one partial
   // packet.
   constexpr int kFrameSize = kMaxReadSize + kMaxReadSize + 10;
-  MockFpFrameCommand mock_fp_frame_command{0, kFrameSize, kMaxReadSize};
+  auto mock_fp_frame_command =
+      FpFrameCommand::Create<MockFpFrameCommand>(0, kFrameSize, kMaxReadSize);
 
-  EXPECT_CALL(mock_fp_frame_command, Resp).WillOnce(Return(&packet));
+  EXPECT_CALL(*mock_fp_frame_command, Resp).WillOnce(Return(&packet));
 
-  EXPECT_CALL(mock_fp_frame_command, EcCommandRun).WillRepeatedly(Return(true));
-  EXPECT_TRUE(mock_fp_frame_command.Run(-1));
-  const auto& frame = mock_fp_frame_command.frame();
+  EXPECT_CALL(*mock_fp_frame_command, EcCommandRun)
+      .WillRepeatedly(Return(true));
+  EXPECT_TRUE(mock_fp_frame_command->Run(-1));
+  const auto& frame = mock_fp_frame_command->frame();
 
   // First chunk
   std::vector<uint8_t> packet_vec(packet.begin(),
@@ -88,36 +119,42 @@ TEST_F(FpFrameCommandTest, Success) {
 }
 
 TEST_F(FpFrameCommandTest, RetriesWhenBusy) {
-  MockFpFrameCommand mock_fp_frame_command_{0, 4096, 128};
-  EXPECT_CALL(mock_fp_frame_command_, Result).WillOnce(Return(EC_RES_BUSY));
-  EXPECT_CALL(mock_fp_frame_command_, EcCommandRun)
+  auto mock_fp_frame_command =
+      FpFrameCommand::Create<MockFpFrameCommand>(0, 4096, 128);
+  EXPECT_TRUE(mock_fp_frame_command);
+  EXPECT_CALL(*mock_fp_frame_command, Result).WillOnce(Return(EC_RES_BUSY));
+  EXPECT_CALL(*mock_fp_frame_command, EcCommandRun)
       .WillOnce(Return(false))
       .WillRepeatedly(Return(true));
 
-  EXPECT_TRUE(mock_fp_frame_command_.Run(-1));
+  EXPECT_TRUE(mock_fp_frame_command->Run(-1));
 }
 
 TEST_F(FpFrameCommandTest, FailsIfBusyAfterFirstRequest) {
-  MockFpFrameCommand mock_fp_frame_command_{0, 4096, 128};
-  EXPECT_CALL(mock_fp_frame_command_, Result).WillOnce(Return(EC_RES_BUSY));
-  EXPECT_CALL(mock_fp_frame_command_, EcCommandRun)
+  auto mock_fp_frame_command =
+      FpFrameCommand::Create<MockFpFrameCommand>(0, 4096, 128);
+  EXPECT_TRUE(mock_fp_frame_command);
+  EXPECT_CALL(*mock_fp_frame_command, Result).WillOnce(Return(EC_RES_BUSY));
+  EXPECT_CALL(*mock_fp_frame_command, EcCommandRun)
       .WillOnce(Return(false))   // Failure on first request; triggers retry.
       .WillOnce(Return(true))    // Retry succeeds.
       .WillOnce(Return(false));  // Next request fails. Since it wasn't first
                                  // request, no more retries.
 
-  EXPECT_FALSE(mock_fp_frame_command_.Run(-1));
+  EXPECT_FALSE(mock_fp_frame_command->Run(-1));
 }
 
 TEST_F(FpFrameCommandTest, StopsBusyRetriesAfterMaxAttempts) {
-  MockFpFrameCommand mock_fp_frame_command_{0, 4096, 128};
-  EXPECT_CALL(mock_fp_frame_command_, EcCommandRun)
+  auto mock_fp_frame_command =
+      FpFrameCommand::Create<MockFpFrameCommand>(0, 4096, 128);
+  EXPECT_TRUE(mock_fp_frame_command);
+  EXPECT_CALL(*mock_fp_frame_command, EcCommandRun)
       .Times(51)
       .WillRepeatedly(Return(false));
-  EXPECT_CALL(mock_fp_frame_command_, Result)
+  EXPECT_CALL(*mock_fp_frame_command, Result)
       .Times(51)
       .WillRepeatedly(Return(EC_RES_BUSY));
-  EXPECT_FALSE(mock_fp_frame_command_.Run(-1));
+  EXPECT_FALSE(mock_fp_frame_command->Run(-1));
 }
 
 }  // namespace
