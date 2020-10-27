@@ -60,18 +60,6 @@ class Port {
   // returns true.
   bool IsPartnerDiscoveryComplete();
 
-  // Send the necessary messages to the Chrome EC to initiate an entry into USB4
-  // mode.
-  void EnterUSB4();
-
-  // Send the necessary messages to the Chrome EC to initiate an entry into
-  // Thunderbolt Compatibility mode.
-  void EnterTBTCompatibilityMode();
-
-  // Send the necessary messages to the Chrome EC to initiate an entry into DP
-  // AltMode
-  void EnterDPAltMode();
-
  private:
   friend class PortTest;
   FRIEND_TEST(PortTest, TestBasicAdd);

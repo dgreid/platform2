@@ -82,6 +82,16 @@ void PortManager::OnCableAddedOrRemoved(const base::FilePath& path,
 }
 
 void PortManager::RunModeEntry(int port_num) {
+  if (!ec_util_) {
+    LOG(ERROR) << "No EC Util implementation registered, mode entry aborted.";
+    return;
+  }
+
+  if (!ec_util_->ModeEntrySupported()) {
+    LOG(INFO) << "Mode entry not supported on this device.";
+    return;
+  }
+
   auto it = ports_.find(port_num);
   if (it == ports_.end()) {
     LOG(WARNING) << "Mode entry attempted for non-existent port " << port_num;
@@ -106,17 +116,20 @@ void PortManager::RunModeEntry(int port_num) {
 
   // If the host supports USB4 and we can enter USB4 in this partner, do so.
   if (port->CanEnterUSB4()) {
-    port->EnterUSB4();
+    if (!ec_util_->EnterMode(port_num, TYPEC_MODE_USB4))
+      LOG(ERROR) << "Attempt to call Enter USB4 failed for port " << port_num;
     return;
   }
 
   if (port->CanEnterTBTCompatibilityMode()) {
-    port->EnterTBTCompatibilityMode();
+    if (!ec_util_->EnterMode(port_num, TYPEC_MODE_TBT))
+      LOG(ERROR) << "Attempt to call Enter TBT failed for port " << port_num;
     return;
   }
 
   if (port->CanEnterDPAltMode()) {
-    port->EnterDPAltMode();
+    if (!ec_util_->EnterMode(port_num, TYPEC_MODE_DP))
+      LOG(ERROR) << "Attempt to call Enter DP failed for port " << port_num;
     return;
   }
 }

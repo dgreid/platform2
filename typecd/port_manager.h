@@ -11,6 +11,7 @@
 
 #include <gtest/gtest_prod.h>
 
+#include "typecd/ec_util.h"
 #include "typecd/port.h"
 #include "typecd/udev_monitor.h"
 
@@ -26,7 +27,12 @@ class PortManager : public UdevMonitor::Observer {
   PortManager(const PortManager&) = delete;
   PortManager& operator=(const PortManager&) = delete;
 
+  void SetECUtil(ECUtil* ec_util) { ec_util_ = ec_util; }
+
  private:
+  friend class PortManagerTest;
+  FRIEND_TEST(PortManagerTest, ModeEntryNotSupported);
+
   // UdevMonitor::Observer overrides.
   void OnPortAddedOrRemoved(const base::FilePath& path,
                             int port_num,
@@ -48,6 +54,7 @@ class PortManager : public UdevMonitor::Observer {
   void RunModeEntry(int port_num);
 
   std::map<int, std::unique_ptr<Port>> ports_;
+  ECUtil* ec_util_;
 };
 
 }  // namespace typecd

@@ -188,19 +188,4 @@ bool Port::IsPartnerDiscoveryComplete() {
   return true;
 }
 
-void Port::EnterDPAltMode() {
-  // TODO(b/152251292) needs to be implemented.
-  NOTIMPLEMENTED();
-}
-
-void Port::EnterTBTCompatibilityMode() {
-  // TODO(b/152251292) needs to be implemented.
-  NOTIMPLEMENTED();
-}
-
-void Port::EnterUSB4() {
-  // TODO(b/152251292) needs to be implemented.
-  NOTIMPLEMENTED();
-}
-
 }  // namespace typecd

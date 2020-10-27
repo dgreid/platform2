@@ -67,6 +67,7 @@ if (use.test) {
     sources = [
       "cable_test.cc",
       "partner_test.cc",
+      "port_manager_test.cc",
       "port_test.cc",
       "test_utils.cc",
       "udev_monitor_test.cc",
