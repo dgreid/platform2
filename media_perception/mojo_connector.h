@@ -13,6 +13,7 @@
 #include <base/bind.h>
 #include <base/single_thread_task_runner.h>
 #include <base/threading/thread.h>
+#include <mojo/public/cpp/bindings/remote.h>
 #include <mojo/core/embedder/scoped_ipc_support.h>
 #include <mojo/public/cpp/bindings/binding.h>
 
@@ -158,7 +159,7 @@ class MojoConnector {
 
   struct VideoSourceAndPushSubscription {
     video_capture::mojom::VideoSourcePtr video_source;
-    video_capture::mojom::PushVideoStreamSubscriptionPtr
+    mojo::Remote<video_capture::mojom::PushVideoStreamSubscription>
         push_video_stream_subscription;
   };
 

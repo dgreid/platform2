@@ -37,7 +37,7 @@ interface DeviceFactory {
   // Note: This design avoids the issue of it not being clear how soon after a
   // |device_receiver| has been (asynchronously) discarded a subsequent call to
   // CreateDevice() would succeed if it were to deny access while still in use.
-  CreateDevice(string device_id, Device& device_request)
+  CreateDevice(string device_id, pending_receiver<Device> device_receiver)
       => (DeviceAccessResultCode result_code);
 
   // Creates a new virtual capture device, which will be exposed by the device
@@ -53,22 +53,22 @@ interface DeviceFactory {
   // |virtual_device| or the given |producer| is closed.
   AddSharedMemoryVirtualDevice(
       media.mojom.VideoCaptureDeviceInfo device_info,
-      Producer producer,
+      pending_remote<Producer> producer,
       bool send_buffer_handles_to_producer_as_raw_file_descriptors,
-      SharedMemoryVirtualDevice& virtual_device);
+      pending_receiver<SharedMemoryVirtualDevice> virtual_device_receiver);
 
   // Similar to AddSharedMemoryVirtualDevice() but for virtual devices that
   // are fed with textures (via MailboxHolders) allocated by the caller instead
   // of shared memory buffers provided by the service on demand.
   AddTextureVirtualDevice(
       media.mojom.VideoCaptureDeviceInfo device_info,
-      TextureVirtualDevice& virtual_device);
+      pending_receiver<TextureVirtualDevice> virtual_device_receiver);
 
   // Registered observers will get notified whenever a virtual device is added
   // or removed. Note: Changes to non-virtual devices are currently being
   // monitored outside the video capture service, and therefore the service
   // does not offer such monitoring.
   RegisterVirtualDevicesChangedObserver(
-      DevicesChangedObserver observer,
+      pending_remote<DevicesChangedObserver> observer,
       bool raise_event_if_virtual_devices_already_present);
 };

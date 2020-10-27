@@ -5,9 +5,9 @@
 module media.mojom;
 
 import "mojom/mailbox_holder.mojom";
+import "mojom/media_types.mojom";
 import "mojom/shared_memory.mojom";
 import "mojom/time.mojom";
-import "mojom/values.mojom";
 import "mojom/geometry.mojom";
 import "mojom/buffer_types.mojom";
 import "mojom/color_space.mojom";
@@ -279,7 +279,7 @@ struct PlaneStrides {
 
 struct VideoFrameInfo{
   mojo_base.mojom.TimeDelta timestamp;
-  mojo_base.mojom.DictionaryValue metadata;
+  VideoFrameMetadata metadata;
   VideoCapturePixelFormat pixel_format;
   gfx.mojom.Size coded_size;
   gfx.mojom.Rect visible_rect;
@@ -293,15 +293,22 @@ struct VideoFrameInfo{
   PlaneStrides? strides;
 };
 
+// Represents information about a capture device.
+// |device_id| represents a unique id of a physical device. Since the same
+// physical device may be accessible through different APIs |capture_api|
+// disambiguates the API.
 struct VideoCaptureDeviceDescriptor {
   string display_name;
   string device_id;
   string model_id;
   VideoFacingMode facing_mode;
   VideoCaptureApi capture_api;
+  bool pan_tilt_zoom_supported;
   VideoCaptureTransportType transport_type;
 };
 
+// Bundles a VideoCaptureDeviceDescriptor with corresponding supported
+// video formats.
 struct VideoCaptureDeviceInfo {
   VideoCaptureDeviceDescriptor descriptor;
   array<VideoCaptureFormat> supported_formats;

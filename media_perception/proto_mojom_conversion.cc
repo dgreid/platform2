@@ -321,7 +321,9 @@ SuccessStatus ToProto(
   if (status_ptr.is_null())
     return status;
   status.set_success(status_ptr->success);
-  status.set_failure_reason(*status_ptr->failure_reason);
+  if (status_ptr->failure_reason.has_value()) {
+    status.set_failure_reason(*status_ptr->failure_reason);
+  }
   return status;
 }
 
@@ -356,8 +358,12 @@ VideoDevice ToProto(
   if (device_ptr.is_null())
     return device;
   device.set_id(device_ptr->id);
-  device.set_display_name(*device_ptr->display_name);
-  device.set_model_id(*device_ptr->model_id);
+  if (device_ptr->display_name.has_value()) {
+    device.set_display_name(*device_ptr->display_name);
+  }
+  if (device_ptr->model_id.has_value()) {
+    device.set_model_id(*device_ptr->model_id);
+  }
   for (int i = 0; i < device_ptr->supported_configurations.size(); i++) {
     mri::VideoStreamParams* params = device.add_supported_configurations();
     *params = ToProto(device_ptr->supported_configurations[i]);
@@ -415,7 +421,9 @@ AudioDevice ToProto(
     return device;
 
   device.set_id(device_ptr->id);
-  device.set_display_name(*device_ptr->display_name);
+  if (device_ptr->display_name.has_value()) {
+    device.set_display_name(*device_ptr->display_name);
+  }
   for (int i = 0; i < device_ptr->supported_configurations.size(); i++) {
     mri::AudioStreamParams* params = device.add_supported_configurations();
     *params = ToProto(device_ptr->supported_configurations[i]);
@@ -566,7 +574,9 @@ Entity ToProto(const chromeos::media_perception::mojom::EntityPtr& entity_ptr) {
     return entity;
 
   entity.set_type(ToProto(entity_ptr->type));
-  entity.set_label(*entity_ptr->label);
+  if (entity_ptr->label.has_value()) {
+    entity.set_label(*entity_ptr->label);
+  }
   *entity.mutable_bounding_box() = ToProto(entity_ptr->bounding_box);
   entity.set_confidence(entity_ptr->confidence);
   *entity.mutable_depth() = ToProto(entity_ptr->depth);
@@ -632,8 +642,12 @@ PipelineError ToProto(
   if (error_ptr.is_null())
     return error;
   error.set_error_type(ToProto(error_ptr->error_type));
-  error.set_error_source(*error_ptr->error_source);
-  error.set_error_string(*error_ptr->error_string);
+  if (error_ptr->error_source.has_value()) {
+    error.set_error_source(*error_ptr->error_source);
+  }
+  if (error_ptr->error_string.has_value()) {
+    error.set_error_string(*error_ptr->error_string);
+  }
   return error;
 }
 
@@ -645,7 +659,9 @@ PipelineState ToProto(
   state.set_status(ToProto(state_ptr->status));
 
   *state.mutable_error() = ToProto(state_ptr->error);
-  state.set_configuration_name(*state_ptr->configuration_name);
+  if (state_ptr->configuration_name.has_value()) {
+    state.set_configuration_name(*state_ptr->configuration_name);
+  }
   return state;
 }
 

@@ -6,6 +6,9 @@
 #define MEDIA_PERCEPTION_VIDEO_FRAME_HANDLER_IMPL_H_
 
 #include <map>
+#include <mojo/public/cpp/bindings/binding.h>
+#include <mojo/public/cpp/bindings/pending_remote.h>
+#include <mojo/public/cpp/bindings/receiver.h>
 #include <string>
 
 #include <base/memory/unsafe_shared_memory_region.h>
@@ -20,7 +23,7 @@ namespace mri {
 
 class VideoFrameHandlerImpl : public video_capture::mojom::VideoFrameHandler {
  public:
-  VideoFrameHandlerImpl() : frame_handler_id_counter_(0), binding_(this) {}
+  VideoFrameHandlerImpl() : frame_handler_id_counter_(0), receiver_(this) {}
 
   bool HasValidCaptureFormat();
 
@@ -31,8 +34,9 @@ class VideoFrameHandlerImpl : public video_capture::mojom::VideoFrameHandler {
   // Checks if the frame dimensions match the current dimensions.
   bool CaptureFormatsMatch(const VideoStreamParams& params);
 
-  // Creates a local proxy of the VideoFrameHandlerPtr interface.
-  video_capture::mojom::VideoFrameHandlerPtr CreateInterfacePtr();
+  // Creates a local proxy of the VideoFrameHandler interface.
+  mojo::PendingRemote<video_capture::mojom::VideoFrameHandler>
+  CreateInterfacePendingRemote();
 
   // Returns the count of active frame handlers on this handler.
   int GetFrameHandlerCount();
@@ -51,7 +55,8 @@ class VideoFrameHandlerImpl : public video_capture::mojom::VideoFrameHandler {
   void OnFrameReadyInBuffer(
       int32_t buffer_id,
       int32_t frame_feedback_id,
-      video_capture::mojom::ScopedAccessPermissionPtr permission,
+      mojo::PendingRemote<video_capture::mojom::ScopedAccessPermission>
+          permission,
       media::mojom::VideoFrameInfoPtr frame_info) override;
   void OnFrameDropped(
       ::media::mojom::VideoCaptureFrameDropReason reason) override;
@@ -70,7 +75,7 @@ class VideoFrameHandlerImpl : public video_capture::mojom::VideoFrameHandler {
   std::map<int, VideoCaptureServiceClient::FrameHandler> frame_handler_map_;
 
   // Binding of the Recevier interface to message pipe.
-  mojo::Binding<video_capture::mojom::VideoFrameHandler> binding_;
+  mojo::Receiver<video_capture::mojom::VideoFrameHandler> receiver_;
 
   // Stores the capture format requested from the open device.
   VideoStreamParams capture_format_;

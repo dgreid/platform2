@@ -17,7 +17,7 @@ import "mojom/video_frame_handler.mojom";
 // completed and no further events are going to be sent to |handler|.
 interface Device {
   Start(media.mojom.VideoCaptureParams requested_settings,
-        VideoFrameHandler handler);
+        pending_remote<VideoFrameHandler> handler);
   MaybeSuspend();
   Resume();
   GetPhotoState()

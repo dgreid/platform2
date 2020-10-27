@@ -291,9 +291,10 @@ void MojoConnector::OpenDeviceOnIpcThread(
       media::mojom::VideoCaptureBufferType::kSharedMemoryViaRawFileDescriptor;
 
   device_it->second.video_source->CreatePushSubscription(
-      video_frame_handler_impl->CreateInterfacePtr(),
+      video_frame_handler_impl->CreateInterfacePendingRemote(),
       std::move(requested_settings), force_reopen_with_settings,
-      mojo::MakeRequest(&device_it->second.push_video_stream_subscription),
+      device_it->second.push_video_stream_subscription
+          .BindNewPipeAndPassReceiver(),
       base::Bind(&MojoConnector::OnCreatePushSubscriptionCallback,
                  base::Unretained(this), device_id, callback));
 }

@@ -58,11 +58,11 @@ bool VideoFrameHandlerImpl::RemoveFrameHandler(int frame_handler_id) {
   return true;
 }
 
-video_capture::mojom::VideoFrameHandlerPtr
-VideoFrameHandlerImpl::CreateInterfacePtr() {
-  video_capture::mojom::VideoFrameHandlerPtr server_ptr;
-  binding_.Bind(mojo::MakeRequest(&server_ptr));
-  return server_ptr;
+mojo::PendingRemote<video_capture::mojom::VideoFrameHandler>
+VideoFrameHandlerImpl::CreateInterfacePendingRemote() {
+  mojo::PendingRemote<video_capture::mojom::VideoFrameHandler> handler;
+  receiver_.Bind(handler.InitWithNewPipeAndPassReceiver());
+  return handler;
 }
 
 void VideoFrameHandlerImpl::OnNewBuffer(
@@ -102,7 +102,8 @@ void VideoFrameHandlerImpl::OnNewBuffer(
 void VideoFrameHandlerImpl::OnFrameReadyInBuffer(
     int32_t buffer_id,
     int32_t frame_feedback_id,
-    video_capture::mojom::ScopedAccessPermissionPtr permission,
+    mojo::PendingRemote<video_capture::mojom::ScopedAccessPermission>
+        permission,
     media::mojom::VideoFrameInfoPtr frame_info) {
   base::WritableSharedMemoryMapping* incoming_buffer =
       &incoming_buffer_id_to_buffer_map_.at(buffer_id);
