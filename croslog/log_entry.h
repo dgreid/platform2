@@ -5,6 +5,7 @@
 #ifndef CROSLOG_LOG_ENTRY_H_
 #define CROSLOG_LOG_ENTRY_H_
 
+#include <list>
 #include <string>
 #include <utility>
 
@@ -34,12 +35,16 @@ class LogEntry {
   const int pid() const { return pid_; }
   const std::string& message() const { return message_; }
 
+  // Appends lines to the message. This is usually for appending second and
+  // after lines when parsing multiple-line logs.
+  void AppendLinesToMessage(const std::list<std::string>& lines);
+
  private:
   const base::Time time_;
   const Severity severity_;
   const std::string tag_;
   const int pid_;
-  const std::string message_;
+  std::string message_;
   const std::string entire_line_;
 };
 

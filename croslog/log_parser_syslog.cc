@@ -55,21 +55,24 @@ MaybeLogEntry LogParserSyslog::ParseInternal(std::string&& entire_line) {
   }
 
   if (entire_line.size() < kTimeStringLengthUTC) {
-    LOG(WARNING) << "The line is too short: looks invalid format?";
+    // Parse failed. Maybe this line doesn't contains a header.
     return base::nullopt;
   }
 
   base::Time time;
   int message_start_pos = ParseTime(entire_line, &time);
   if (message_start_pos < 0) {
-    LOG(WARNING) << "The line has incorrect time format.";
+    // Parse failed. Maybe this line doesn't contains a header.
     return base::nullopt;
   }
 
   int pos = message_start_pos;
+  if (entire_line[pos] != ' ') {
+    // Parse failed. Maybe this line doesn't contains a header.
+    return base::nullopt;
+  }
 
   std::string severity_str;
-  DCHECK_EQ(' ', entire_line[pos]);
   if (entire_line[pos] == ' ') {
     for (int i = pos + 1; i < entire_line.size(); i++) {
       if (entire_line[i] == ' ') {
@@ -112,12 +115,19 @@ MaybeLogEntry LogParserSyslog::ParseInternal(std::string&& entire_line) {
     pos++;
   }
 
-  if (entire_line[pos] == ':')
+  if (entire_line.size() > pos && entire_line[pos] == ':')
     pos++;
-  DCHECK_EQ(' ', entire_line[pos]);
-  pos++;
 
-  std::string message = entire_line.substr(pos, entire_line.size() - pos);
+  std::string message;
+  if (entire_line.size() > pos) {
+    if (entire_line[pos] != ' ') {
+      // Parse failed. Maybe this line doesn't contains a header.
+      return base::nullopt;
+    }
+
+    pos++;
+    message = entire_line.substr(pos, entire_line.size() - pos);
+  }
 
   return LogEntry{time, severity,           std::move(tag),
                   pid,  std::move(message), std::move(entire_line)};

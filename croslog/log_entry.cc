@@ -19,4 +19,11 @@ LogEntry::LogEntry(base::Time time,
       message_(std::move(message)),
       entire_line_(std::move(entire_line)) {}
 
+void LogEntry::AppendLinesToMessage(const std::list<std::string>& lines) {
+  for (const auto& line : lines) {
+    message_ += "\n";
+    message_ += line;
+  }
+}
+
 }  // namespace croslog

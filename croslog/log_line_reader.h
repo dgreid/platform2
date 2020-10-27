@@ -21,6 +21,11 @@
 
 namespace croslog {
 
+/*
+ * This class is responsible for
+ * - Reading logs line by line from the file
+ * - Automatically switching the file when the file is rotated.
+ */
 class LogLineReader : public FileChangeWatcher::Observer {
  public:
   class Observer : public base::CheckedObserver {
@@ -62,6 +67,9 @@ class LogLineReader : public FileChangeWatcher::Observer {
 
   // Retrieve the current position in bytes.
   off_t position() const { return pos_; }
+
+  // Returns the file path of the target.
+  const base::FilePath& file_path() const { return file_path_; }
 
  private:
   void ReloadRotatedFile();

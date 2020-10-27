@@ -14,7 +14,7 @@
 #include "base/observer_list_types.h"
 
 #include "croslog/log_entry.h"
-#include "croslog/log_line_reader.h"
+#include "croslog/log_entry_reader.h"
 #include "croslog/log_parser.h"
 
 namespace croslog {
@@ -56,11 +56,10 @@ class Multiplexer : public LogLineReader::Observer {
     LogSource(base::FilePath log_file,
               std::unique_ptr<LogParser> parser_in,
               bool install_change_watcher);
-    base::FilePath file_path;
-    LogLineReader reader;
+
+    LogEntryReader reader;
     MaybeLogEntry cache_next_forward;
     MaybeLogEntry cache_next_backward;
-    std::unique_ptr<LogParser> parser;
   };
 
   void OnFileChanged(LogLineReader* reader) override;
