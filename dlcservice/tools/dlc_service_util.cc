@@ -31,9 +31,7 @@
 #include "dlcservice/dbus-proxies.h"
 #include "dlcservice/utils.h"
 
-using base::DictionaryValue;
 using base::FilePath;
-using base::ListValue;
 using base::Value;
 using dlcservice::DlcState;
 using org::chromium::DlcServiceInterfaceProxy;
@@ -267,12 +265,12 @@ class DlcServiceUtil : public brillo::Daemon {
 
   // Prints the DLC state.
   void PrintDlcState(const string& dump, const DlcState& state) {
-    DictionaryValue dict;
-    dict.SetKey("id", Value(state.id()));
-    dict.SetKey("last_error_code", Value(state.last_error_code()));
-    dict.SetKey("progress", Value(state.progress()));
-    dict.SetKey("root_path", Value(state.root_path()));
-    dict.SetKey("state", Value(state.state()));
+    Value dict(Value::Type::DICTIONARY);
+    dict.SetStringKey("id", state.id());
+    dict.SetStringKey("last_error_code", state.last_error_code());
+    dict.SetDoubleKey("progress", state.progress());
+    dict.SetStringKey("root_path", state.root_path());
+    dict.SetIntKey("state", state.state());
     PrintToFileOrStdout(dump, dict);
   }
 
@@ -313,7 +311,7 @@ class DlcServiceUtil : public brillo::Daemon {
   }
 
   // Helper to print to file, or stdout if |path| is empty.
-  void PrintToFileOrStdout(const string& path, const DictionaryValue& dict) {
+  void PrintToFileOrStdout(const string& path, const Value& dict) {
     string json;
     if (!base::JSONWriter::WriteWithOptions(
             dict, base::JSONWriter::OPTIONS_PRETTY_PRINT, &json)) {
@@ -329,44 +327,44 @@ class DlcServiceUtil : public brillo::Daemon {
   }
 
   void PrintInstalled(const string& dump, const vector<DlcState>& dlcs) {
-    DictionaryValue dict;
+    Value dict(Value::Type::DICTIONARY);
     for (const auto& dlc_state : dlcs) {
       const auto& id = dlc_state.id();
       const auto& packages = GetPackages(id);
       if (packages.empty())
         continue;
-      auto dlc_info_list = std::make_unique<ListValue>();
+      Value dlc_info_list(Value::Type::LIST);
       for (const auto& package : packages) {
         imageloader::Manifest manifest;
         if (!GetManifest(id, package, &manifest))
           return;
-        auto dlc_info = std::make_unique<DictionaryValue>();
-        dlc_info->SetKey("name", Value(manifest.name()));
-        dlc_info->SetKey("id", Value(manifest.id()));
-        dlc_info->SetKey("package", Value(manifest.package()));
-        dlc_info->SetKey("version", Value(manifest.version()));
-        dlc_info->SetKey(
+        Value dlc_info(Value::Type::DICTIONARY);
+        dlc_info.SetStringKey("name", manifest.name());
+        dlc_info.SetStringKey("id", manifest.id());
+        dlc_info.SetStringKey("package", manifest.package());
+        dlc_info.SetStringKey("version", manifest.version());
+        dlc_info.SetStringKey(
             "preallocated_size",
-            Value(base::NumberToString(manifest.preallocated_size())));
-        dlc_info->SetKey("size", Value(base::NumberToString(manifest.size())));
-        dlc_info->SetKey("image_type", Value(manifest.image_type()));
+            base::NumberToString(manifest.preallocated_size()));
+        dlc_info.SetStringKey("size", base::NumberToString(manifest.size()));
+        dlc_info.SetStringKey("image_type", manifest.image_type());
         switch (manifest.fs_type()) {
           case imageloader::FileSystem::kExt4:
-            dlc_info->SetKey("fs-type", Value("ext4"));
+            dlc_info.SetStringKey("fs-type", "ext4");
             break;
           case imageloader::FileSystem::kSquashFS:
-            dlc_info->SetKey("fs-type", Value("squashfs"));
+            dlc_info.SetStringKey("fs-type", "squashfs");
             break;
         }
-        dlc_info->SetKey("manifest",
-                         Value(dlcservice::JoinPaths(
-                                   FilePath(imageloader::kDlcManifestRootpath),
-                                   id, package, dlcservice::kManifestName)
-                                   .value()));
-        dlc_info->SetKey("root_mount", Value(dlc_state.root_path()));
-        dlc_info_list->Append(std::move(dlc_info));
+        dlc_info.SetStringKey(
+            "manifest",
+            dlcservice::JoinPaths(FilePath(imageloader::kDlcManifestRootpath),
+                                  id, package, dlcservice::kManifestName)
+                .value());
+        dlc_info.SetStringKey("root_mount", dlc_state.root_path());
+        dlc_info_list.Append(std::move(dlc_info));
       }
-      dict.Set(id, std::move(dlc_info_list));
+      dict.SetKey(id, std::move(dlc_info_list));
     }
 
     PrintToFileOrStdout(dump, dict);
