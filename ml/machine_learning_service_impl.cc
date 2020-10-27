@@ -12,6 +12,7 @@
 #include <base/bind_helpers.h>
 #include <base/files/file.h>
 #include <base/files/file_util.h>
+#include <base/files/memory_mapped_file.h>
 #include <tensorflow/lite/model.h>
 #include <unicode/putil.h>
 #include <unicode/udata.h>
@@ -52,14 +53,38 @@ constexpr char kMetricsRequestName[] = "LoadModelResult";
 
 constexpr char kIcuDataFilePath[] = "/opt/google/chrome/icudtl.dat";
 
+// Used to hold the mmap object of the icu data file. Each process should only
+// have one instance of it. Intentionally never close it.
+// We can not make it as a member of `MachineLearningServiceImpl` because it
+// will crash the unit test (because in that case, when the
+// `MachineLearningServiceImpl` object is destructed, the file will be
+// unmapped but the icu data can not be reset in the testing process).
+base::MemoryMappedFile* g_icu_data_mmap_file = nullptr;
+
+void InitIcuIfNeeded() {
+  if (!g_icu_data_mmap_file) {
+    g_icu_data_mmap_file = new base::MemoryMappedFile();
+    CHECK(g_icu_data_mmap_file->Initialize(
+        base::FilePath(kIcuDataFilePath),
+        base::MemoryMappedFile::Access::READ_ONLY));
+    // Init the Icu library.
+    UErrorCode err = U_ZERO_ERROR;
+    udata_setCommonData(const_cast<uint8_t*>(g_icu_data_mmap_file->data()),
+                        &err);
+    DCHECK(err == U_ZERO_ERROR);
+    // Never try to load Icu data from files.
+    udata_setFileAccess(UDATA_ONLY_PACKAGES, &err);
+    DCHECK(err == U_ZERO_ERROR);
+  }
+}
+
 }  // namespace
 
 MachineLearningServiceImpl::MachineLearningServiceImpl(
     mojo::ScopedMessagePipeHandle pipe,
     base::Closure disconnect_handler,
     const std::string& model_dir)
-    : icu_data_(nullptr),
-      builtin_model_metadata_(GetBuiltinModelMetadata()),
+    : builtin_model_metadata_(GetBuiltinModelMetadata()),
       model_dir_(model_dir),
       receiver_(this,
                 mojo::InterfaceRequest<
@@ -347,24 +372,6 @@ void MachineLearningServiceImpl::LoadSpeechRecognizer(
 
   request_metrics.FinishRecordingPerformanceMetrics();
   request_metrics.RecordRequestEvent(LoadModelResult::OK);
-}
-
-void MachineLearningServiceImpl::InitIcuIfNeeded() {
-  if (icu_data_ == nullptr) {
-    // Need to load the data file again.
-    int64_t file_size;
-    const base::FilePath icu_data_file_path(kIcuDataFilePath);
-    CHECK(base::GetFileSize(icu_data_file_path, &file_size));
-    icu_data_ = new char[file_size];
-    CHECK(base::ReadFile(icu_data_file_path, icu_data_,
-                         static_cast<int>(file_size)) == file_size);
-    // Init the Icu library.
-    UErrorCode err = U_ZERO_ERROR;
-    udata_setCommonData(reinterpret_cast<void*>(icu_data_), &err);
-    DCHECK(err == U_ZERO_ERROR);
-    // Never try to load Icu data from files.
-    udata_setFileAccess(UDATA_ONLY_PACKAGES, &err);
-  }
 }
 
 }  // namespace ml

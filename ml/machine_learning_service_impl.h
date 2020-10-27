@@ -73,12 +73,6 @@ class MachineLearningServiceImpl
           soda_recognizer,
       LoadSpeechRecognizerCallback callback) override;
 
-  // Init the icu data if it is not initialized yet.
-  void InitIcuIfNeeded();
-
-  // Used to hold the icu data read from file.
-  char* icu_data_;
-
   // Metadata required to load builtin models. Initialized at construction.
   const std::map<chromeos::machine_learning::mojom::BuiltinModelId,
                  BuiltinModelMetadata>
