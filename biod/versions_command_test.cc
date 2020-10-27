@@ -25,6 +25,7 @@ class VersionsCommandTest : public testing::Test {
   class MockVersionsCommand : public VersionsCommand {
    public:
     using VersionsCommand::VersionsCommand;
+    MOCK_METHOD(bool, Run, (int fd), (override));
     MOCK_METHOD(struct ec_response_get_cmd_versions*, Resp, (), (override));
     MOCK_METHOD(uint32_t, Result, (), (const, override));
   };
@@ -68,6 +69,19 @@ TEST_F(VersionsCommandTest, CommandSupported) {
 
   EXPECT_EQ(mock_command.IsVersionSupported(kVersionOne),
             EcCmdVersionSupportStatus::SUPPORTED);
+}
+
+TEST_F(VersionsCommandTest, InvalidParamShouldNotBeRetried) {
+  MockVersionsCommand mock_command(EC_CMD_FP_CONTEXT);
+
+  // We should only run the command once even though we specify retries,
+  // since this type of failure cannot be retried.
+  EXPECT_CALL(mock_command, Run).WillOnce(Return(false));
+  EXPECT_CALL(mock_command, Result).WillOnce(Return(EC_RES_INVALID_PARAM));
+
+  constexpr int kTestFd = -1;
+  constexpr int kNumAttempts = 2;
+  EXPECT_FALSE(mock_command.RunWithMultipleAttempts(kTestFd, kNumAttempts));
 }
 
 }  // namespace
