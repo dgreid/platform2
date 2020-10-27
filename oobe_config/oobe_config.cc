@@ -158,6 +158,12 @@ bool OobeConfig::UnencryptedRollbackSave() const {
 
   if (!WriteFile(kUnencryptedStatefulRollbackDataPath,
                  serialized_rollback_data)) {
+    LOG(ERROR) << "Failed to write unencrypted rollback data file.";
+    return false;
+  }
+
+  if (!WriteFile(kDataSavedFile, std::string())) {
+    LOG(ERROR) << "Failed to write data saved flag.";
     return false;
   }
 
@@ -175,12 +181,18 @@ bool OobeConfig::EncryptedRollbackSave() const {
   std::string encrypted;
   brillo::SecureBlob blob(serialized_rollback_data);
   if (!crypto_->Encrypt(blob, &encrypted)) {
-    LOG(ERROR) << "Failed to encrypt rollback data";
+    LOG(ERROR) << "Failed to encrypt rollback data.";
     return false;
   }
 
-  LOG(INFO) << "Writing encrypted rollback data";
+  LOG(INFO) << "Writing encrypted rollback data.";
   if (!WriteFile(kUnencryptedStatefulRollbackDataPath, encrypted)) {
+    LOG(ERROR) << "Failed to write encrypted rollback data file.";
+    return false;
+  }
+
+  if (!WriteFile(kDataSavedFile, std::string())) {
+    LOG(ERROR) << "Failed to write data saved flag.";
     return false;
   }
 

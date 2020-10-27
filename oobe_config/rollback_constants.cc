@@ -57,4 +57,7 @@ const char kOobeConfigSaveUsername[] = "oobe_config_save";
 const char kRootUsername[] = "root";
 const char kPreserveGroupName[] = "preserve";
 
+const base::FilePath kDataSavedFile =
+    base::FilePath("/var/lib/oobe_config_save/.data_saved");
+
 }  // namespace oobe_config

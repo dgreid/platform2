@@ -73,6 +73,7 @@ class OobeConfigTest : public ::testing::Test {
     } else {
       ASSERT_TRUE(oobe_config_->UnencryptedRollbackSave());
     }
+    ASSERT_TRUE(oobe_config_->FileExists(kDataSavedFile));
 
     std::string rollback_data_str;
     ASSERT_TRUE(oobe_config_->ReadFile(kUnencryptedStatefulRollbackDataPath,

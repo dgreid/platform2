@@ -56,6 +56,9 @@ extern const char kOobeConfigSaveUsername[];
 extern const char kRootUsername[];
 extern const char kPreserveGroupName[];
 
+// Path to the file indicating the data save was successful.
+extern const base::FilePath kDataSavedFile;
+
 }  // namespace oobe_config
 
 #endif  // OOBE_CONFIG_ROLLBACK_CONSTANTS_H_
