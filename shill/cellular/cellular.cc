@@ -1620,7 +1620,12 @@ void Cellular::UpdateServingOperator(
 
   // Set friendly name of service.
   string service_name;
-  if (!operator_info->operator_name().empty()) {
+  if (service()->roaming_state() == kRoamingStateHome && home_provider_info &&
+      !home_provider_info->operator_name().empty()) {
+    // Home and serving operators are the same. Use the name of the home
+    // operator as that comes from the subscriber module.
+    service_name = home_provider_info->operator_name();
+  } else if (!operator_info->operator_name().empty()) {
     // If roaming, try to show "<home-provider> | <serving-operator>", per 3GPP
     // rules (TS 31.102 and annex A of 122.101).
     if (service()->roaming_state() == kRoamingStateRoaming &&

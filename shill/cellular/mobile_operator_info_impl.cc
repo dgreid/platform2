@@ -183,11 +183,6 @@ const string& MobileOperatorInfoImpl::uuid() const {
 }
 
 const string& MobileOperatorInfoImpl::operator_name() const {
-  // TODO(pprabhu) I'm not very sure yet what is the right thing to do here.
-  // It is possible that we obtain a name OTA, and then using some other
-  // information (say the iccid range), determine that this is an MVNO. In
-  // that case, we may want to *override* |user_operator_name_| by the name
-  // obtained from the DB for the MVNO.
   return operator_name_;
 }
 
@@ -881,23 +876,26 @@ void MobileOperatorInfoImpl::HandleMCCMNCUpdate() {
 
 void MobileOperatorInfoImpl::HandleOperatorNameUpdate() {
   if (!user_operator_name_.empty()) {
-    bool append_user_operator_name = true;
-    for (const auto& localized_name : operator_name_list_) {
-      append_user_operator_name &= (user_operator_name_ != localized_name.name);
+    std::vector<MobileOperatorInfo::LocalizedName> localized_names;
+    MobileOperatorInfo::LocalizedName localized_name{user_operator_name_, ""};
+    localized_names.emplace_back(localized_name);
+    for (auto it = operator_name_list_.begin();
+         it != operator_name_list_.end();) {
+      if (it->name == user_operator_name_) {
+        localized_name = {user_operator_name_, it->language};
+        localized_names.push_back(localized_name);
+        operator_name_list_.erase(it);
+      } else {
+        it++;
+      }
     }
-    if (append_user_operator_name) {
-      MobileOperatorInfo::LocalizedName localized_name{user_operator_name_, ""};
-      operator_name_list_.push_back(localized_name);
-    }
+
+    operator_name_list_.insert(operator_name_list_.begin(),
+                               localized_names.begin(), localized_names.end());
   }
 
-  if (!operator_name_list_.empty()) {
-    operator_name_ = operator_name_list_[0].name;
-  } else if (!user_operator_name_.empty()) {
-    operator_name_ = user_operator_name_;
-  } else {
-    operator_name_.clear();
-  }
+  operator_name_ =
+      operator_name_list_.empty() ? "" : operator_name_list_[0].name;
 }
 
 void MobileOperatorInfoImpl::HandleSIDUpdate() {
