@@ -70,7 +70,7 @@ void SensorDeviceImpl::AddReceiver(
     mojo::PendingReceiver<cros::mojom::SensorDevice> request) {
   ipc_task_runner_->PostTask(
       FROM_HERE, base::BindOnce(&SensorDeviceImpl::AddReceiverOnThread,
-                                base::Unretained(this), iio_device_id,
+                                weak_factory_.GetWeakPtr(), iio_device_id,
                                 std::move(request)));
 }
 
@@ -292,7 +292,7 @@ void SensorDeviceImpl::ConnectionErrorCallback() {
   StopReadingSamples();
   sample_thread_->task_runner()->PostTask(
       FROM_HERE, base::BindOnce(&SensorDeviceImpl::RemoveClient,
-                                base::Unretained(this), id));
+                                weak_factory_.GetWeakPtr(), id));
 }
 void SensorDeviceImpl::RemoveClient(mojo::ReceiverId id) {
   DCHECK(sample_thread_->task_runner()->RunsTasksInCurrentSequence());
@@ -338,22 +338,36 @@ bool SensorDeviceImpl::AddSamplesHandlerIfNotSet(
 void SensorDeviceImpl::OnSampleUpdatedCallback(
     mojo::ReceiverId id, libmems::IioDevice::IioSample sample) {
   DCHECK(ipc_task_runner_->RunsTasksInCurrentSequence());
-  if (clients_.find(id) == clients_.end()) {
+  auto it = clients_.find(id);
+  if (it == clients_.end()) {
     LOGF(WARNING) << "Sample not sent, as the client doesn't exist: " << id;
     return;
   }
 
-  clients_[id].observer->OnSampleUpdated(std::move(sample));
+  if (!it->second.observer.is_bound()) {
+    LOGF(WARNING) << "Sample not sent, as the client has stopped reading: "
+                  << id;
+    return;
+  }
+
+  it->second.observer->OnSampleUpdated(std::move(sample));
 }
 void SensorDeviceImpl::OnErrorOccurredCallback(
     mojo::ReceiverId id, cros::mojom::ObserverErrorType type) {
   DCHECK(ipc_task_runner_->RunsTasksInCurrentSequence());
-  if (clients_.find(id) == clients_.end()) {
+  auto it = clients_.find(id);
+  if (it == clients_.end()) {
     LOGF(WARNING) << "Error not sent, as the client doesn't exist: " << id;
     return;
   }
 
-  clients_[id].observer->OnErrorOccurred(type);
+  if (!it->second.observer.is_bound()) {
+    LOGF(WARNING) << "Sample not sent, as the client has stopped reading: "
+                  << id;
+    return;
+  }
+
+  it->second.observer->OnErrorOccurred(type);
 }
 
 }  // namespace iioservice

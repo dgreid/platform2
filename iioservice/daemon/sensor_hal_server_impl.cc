@@ -72,8 +72,9 @@ SensorHalServerImpl::SensorHalServerImpl(
 
   receiver_.Bind(std::move(server_receiver));
 
-  receiver_.set_disconnect_handler(base::BindOnce(
-      &SensorHalServerImpl::OnSensorHalServerError, base::Unretained(this)));
+  receiver_.set_disconnect_handler(
+      base::BindOnce(&SensorHalServerImpl::OnSensorHalServerError,
+                     weak_factory_.GetWeakPtr()));
 }
 
 void SensorHalServerImpl::SetSensorService() {

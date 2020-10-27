@@ -8,6 +8,7 @@
 #include <memory>
 
 #include <base/bind.h>
+#include <base/memory/weak_ptr.h>
 #include <base/threading/thread.h>
 #include <mojo/public/cpp/bindings/receiver.h>
 
@@ -51,6 +52,8 @@ class SensorHalServerImpl : public cros::mojom::SensorHalServer {
 
   SensorServiceImpl::ScopedSensorServiceImpl sensor_service_ = {
       nullptr, SensorServiceImpl::SensorServiceImplDeleter};
+
+  base::WeakPtrFactory<SensorHalServerImpl> weak_factory_{this};
 };
 
 }  // namespace iioservice
