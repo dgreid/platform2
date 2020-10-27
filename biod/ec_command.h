@@ -111,8 +111,8 @@ class EcCommand : public EcCommandInterface {
 
       // If we just want to check the supported version of a command, and the
       // command does not exist, do not emit error in the log and do not retry.
-      if (data_.cmd.command == EC_CMD_GET_CMD_VERSIONS &&
-          data_.cmd.result == EC_RES_INVALID_PARAM)
+      if (Command() == EC_CMD_GET_CMD_VERSIONS &&
+          Result() == EC_RES_INVALID_PARAM)
         return false;
 
       if (errno != ETIMEDOUT) {
