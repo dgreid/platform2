@@ -10,6 +10,8 @@
 #include <base/files/file_path.h>
 
 #include "cryptohome/platform.h"
+#include "cryptohome/storage/encrypted_container/backing_device_factory.h"
+#include "cryptohome/storage/encrypted_container/dmcrypt_container.h"
 #include "cryptohome/storage/encrypted_container/ecryptfs_container.h"
 #include "cryptohome/storage/encrypted_container/encrypted_container.h"
 #include "cryptohome/storage/encrypted_container/filesystem_key.h"
@@ -18,19 +20,31 @@
 namespace cryptohome {
 
 EncryptedContainerFactory::EncryptedContainerFactory(Platform* platform)
-    : platform_(platform) {}
+    : EncryptedContainerFactory(
+          platform, std::make_unique<BackingDeviceFactory>(platform)) {}
+
+EncryptedContainerFactory::EncryptedContainerFactory(
+    Platform* platform,
+    std::unique_ptr<BackingDeviceFactory> backing_device_factory)
+    : platform_(platform),
+      backing_device_factory_(std::move(backing_device_factory)) {}
 
 std::unique_ptr<EncryptedContainer> EncryptedContainerFactory::Generate(
-    EncryptedContainerType type,
-    const base::FilePath& backing_dir,
+    const EncryptedContainerConfig& config,
     const FileSystemKeyReference& key_reference) {
-  switch (type) {
+  switch (config.type) {
     case EncryptedContainerType::kFscrypt:
-      return std::make_unique<FscryptContainer>(backing_dir, key_reference,
-                                                platform_);
+      return std::make_unique<FscryptContainer>(config.backing_dir,
+                                                key_reference, platform_);
     case EncryptedContainerType::kEcryptfs:
-      return std::make_unique<EcryptfsContainer>(backing_dir, key_reference,
-                                                 platform_);
+      return std::make_unique<EcryptfsContainer>(config.backing_dir,
+                                                 key_reference, platform_);
+    case EncryptedContainerType::kDmcrypt:
+      return std::make_unique<DmcryptContainer>(
+          config.dmcrypt_config,
+          backing_device_factory_->Generate(
+              config.dmcrypt_config.backing_device_config),
+          key_reference, platform_);
     default:
       return nullptr;
   }

@@ -12,6 +12,7 @@
 #include <base/files/file_path.h>
 
 #include "cryptohome/platform.h"
+#include "cryptohome/storage/encrypted_container/backing_device_factory.h"
 
 namespace cryptohome {
 
@@ -19,15 +20,18 @@ namespace cryptohome {
 class EncryptedContainerFactory {
  public:
   explicit EncryptedContainerFactory(Platform* platform);
+  EncryptedContainerFactory(
+      Platform* platform,
+      std::unique_ptr<BackingDeviceFactory> backing_device_factory);
   virtual ~EncryptedContainerFactory() {}
 
   virtual std::unique_ptr<EncryptedContainer> Generate(
-      EncryptedContainerType type,
-      const base::FilePath& backing_dir,
+      const EncryptedContainerConfig& config,
       const FileSystemKeyReference& key_reference);
 
  private:
   Platform* platform_;
+  std::unique_ptr<BackingDeviceFactory> backing_device_factory_;
 };
 
 }  // namespace cryptohome
