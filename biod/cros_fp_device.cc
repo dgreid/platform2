@@ -21,6 +21,7 @@
 #include "biod/ec_command_async.h"
 #include "biod/fp_context_command_factory.h"
 #include "biod/fp_frame_command.h"
+#include "biod/versions_command.h"
 
 namespace {
 
@@ -175,24 +176,9 @@ FpMode CrosFpDevice::GetFpMode() {
 
 EcCmdVersionSupportStatus CrosFpDevice::EcCmdVersionSupported(uint16_t cmd_code,
                                                               uint32_t ver) {
-  EcCommand<struct ec_params_get_cmd_versions_v1,
-            struct ec_response_get_cmd_versions>
-      cmd(EC_CMD_GET_CMD_VERSIONS, 1, {.cmd = cmd_code});
-
-  if (!cmd.RunWithMultipleAttempts(cros_fd_.get(), kMaxIoAttempts) &&
-      cmd.Result() == kEcCommandUninitializedResult)
-    // Running EC_CMD_GET_CMD_VERSIONS itself failed (e.g. due to timeout).
-    return EcCmdVersionSupportStatus::UNKNOWN;
-
-  if (cmd.Result() != EC_RES_SUCCESS)
-    // Command not found on EC.
-    return EcCmdVersionSupportStatus::UNSUPPORTED;
-
-  if ((cmd.Resp()->version_mask & EC_VER_MASK(ver)) == 0)
-    // Command found but version not supported.
-    return EcCmdVersionSupportStatus::UNSUPPORTED;
-
-  return EcCmdVersionSupportStatus::SUPPORTED;
+  VersionsCommand versions_cmd(cmd_code);
+  versions_cmd.RunWithMultipleAttempts(cros_fd_.get(), kMaxIoAttempts);
+  return versions_cmd.IsVersionSupported(ver);
 }
 
 bool CrosFpDevice::SupportsPositiveMatchSecret() {
