@@ -8,6 +8,7 @@
 
 #include <gtest/gtest.h>
 
+#include <libmems/common_types.h>
 #include <libmems/iio_context.h>
 #include <libmems/iio_device.h>
 #include <libmems/test_fakes.h>
@@ -32,6 +33,20 @@ class LightTest : public SensorTestBase {
                              kIioserviceGroupId);
   }
 };
+
+#if USE_IIOSERVICE
+TEST_F(LightTest, FrequencyReset) {
+  SetSingleSensor(kBaseSensorLocation);
+  ConfigureVpd({{"als_cal_intercept", "100"}});
+
+  EXPECT_TRUE(GetConfiguration()->Configure());
+
+  auto frequency_opt =
+      mock_device_->ReadDoubleAttribute(libmems::kSamplingFrequencyAttr);
+  EXPECT_TRUE(frequency_opt.has_value());
+  EXPECT_EQ(frequency_opt.value(), 0.0);
+}
+#endif  // USE_IIOSERVICE
 
 TEST_F(LightTest, PartialVpd) {
   SetSingleSensor(kBaseSensorLocation);

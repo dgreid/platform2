@@ -8,6 +8,7 @@
 
 #include <gtest/gtest.h>
 
+#include <libmems/common_types.h>
 #include <libmems/iio_context.h>
 #include <libmems/iio_device.h>
 #include <libmems/test_fakes.h>
@@ -17,10 +18,6 @@
 #include "mems_setup/test_fakes.h"
 #include "mems_setup/test_helper.h"
 
-using libmems::fakes::FakeIioChannel;
-using libmems::fakes::FakeIioContext;
-using libmems::fakes::FakeIioDevice;
-using mems_setup::fakes::FakeDelegate;
 using mems_setup::testing::SensorTestBase;
 
 namespace mems_setup {
@@ -36,6 +33,20 @@ class GyroscopeTest : public SensorTestBase {
                              kIioserviceGroupId);
   }
 };
+
+#if USE_IIOSERVICE
+TEST_F(GyroscopeTest, FrequencyReset) {
+  SetSingleSensor(kBaseSensorLocation);
+  ConfigureVpd({{"in_anglvel_x_base_calibbias", "100"}});
+
+  EXPECT_TRUE(GetConfiguration()->Configure());
+
+  auto frequency_opt =
+      mock_device_->ReadDoubleAttribute(libmems::kSamplingFrequencyAttr);
+  EXPECT_TRUE(frequency_opt.has_value());
+  EXPECT_EQ(frequency_opt.value(), 0.0);
+}
+#endif  // USE_IIOSERVICE
 
 TEST_F(GyroscopeTest, MissingVpd) {
   SetSingleSensor(kBaseSensorLocation);

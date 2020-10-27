@@ -18,9 +18,7 @@
 #include "mems_setup/test_helper.h"
 
 using libmems::fakes::FakeIioChannel;
-using libmems::fakes::FakeIioContext;
 using libmems::fakes::FakeIioDevice;
-using mems_setup::fakes::FakeDelegate;
 using mems_setup::testing::SensorTestBase;
 
 namespace mems_setup {
@@ -36,7 +34,9 @@ constexpr char kTriggerString[] = "trigger";
 constexpr char kHwfifoTimeoutString[] = "buffer/hwfifo_timeout";
 constexpr char kFlushString[] = "flush";
 
+#if USE_IIOSERVICE
 constexpr char kDevString[] = "/dev/";
+#endif  // USE_IIOSERVICE
 
 class AccelerometerTest : public SensorTestBase {
  public:
@@ -86,16 +86,29 @@ TEST_F(AccelerometerTest, CheckPermissionsAndOwnership) {
   CheckPermissionsAndOwnershipForFile(sys_dev_path.Append(kFlushString),
                                       base::FILE_PERMISSION_WRITE_BY_GROUP);
 
-  if (USE_IIOSERVICE) {
-    // /dev/iio:deviceX
-    base::FilePath dev_path =
-        base::FilePath(kDevString).Append(dev_name.c_str());
+#if USE_IIOSERVICE
+  // /dev/iio:deviceX
+  base::FilePath dev_path = base::FilePath(kDevString).Append(dev_name.c_str());
 
-    CheckPermissionsAndOwnershipForFile(
-        dev_path, base::FILE_PERMISSION_WRITE_BY_GROUP |
-                      base::FILE_PERMISSION_READ_BY_GROUP);
-  }
+  CheckPermissionsAndOwnershipForFile(dev_path,
+                                      base::FILE_PERMISSION_WRITE_BY_GROUP |
+                                          base::FILE_PERMISSION_READ_BY_GROUP);
+#endif  // USE_IIOSERVICE
 }
+
+#if USE_IIOSERVICE
+TEST_F(AccelerometerTest, FrequencyReset) {
+  SetSingleSensor(kBaseSensorLocation);
+  ConfigureVpd({{"in_accel_x_base_calibbias", "100"}});
+
+  EXPECT_TRUE(GetConfiguration()->Configure());
+
+  auto frequency_opt =
+      mock_device_->ReadDoubleAttribute(libmems::kSamplingFrequencyAttr);
+  EXPECT_TRUE(frequency_opt.has_value());
+  EXPECT_EQ(frequency_opt.value(), 0.0);
+}
+#endif  // USE_IIOSERVICE
 
 TEST_F(AccelerometerTest, MissingVpd) {
   SetSingleSensor(kBaseSensorLocation);
@@ -289,7 +302,8 @@ TEST_F(AccelerometerTest, SingleSensorEnableChannels) {
   for (auto channel : mock_device_->GetAllChannels()) {
     if (strcmp(channel->GetId(), "calibration") == 0)
       continue;
-    EXPECT_EQ(channel->IsEnabled(), 0 != strcmp(channel->GetId(), "timestamp"));
+    EXPECT_EQ(static_cast<FakeIioChannel*>(channel)->IsScanElementsEnabled(),
+              0 != strcmp(channel->GetId(), "timestamp"));
   }
 }
 
@@ -300,7 +314,8 @@ TEST_F(AccelerometerTest, MultipleSensorEnableChannels) {
   for (auto channel : mock_device_->GetAllChannels()) {
     if (strcmp(channel->GetId(), "calibration") == 0)
       continue;
-    EXPECT_EQ(channel->IsEnabled(), 0 != strcmp(channel->GetId(), "timestamp"));
+    EXPECT_EQ(static_cast<FakeIioChannel*>(channel)->IsScanElementsEnabled(),
+              0 != strcmp(channel->GetId(), "timestamp"));
   }
 }
 

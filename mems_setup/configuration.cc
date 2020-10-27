@@ -49,8 +49,11 @@ struct LightColorCalibrationEntry {
   base::Optional<double> value;
 };
 
+#if USE_IIOSERVICE
 constexpr char kIioServiceGroupName[] = "iioservice";
+#else
 constexpr char kArcSensorGroupName[] = "arc-sensor";
+#endif  // USE_IIOSERVICE
 
 constexpr char kCalibrationBias[] = "bias";
 constexpr char kCalibrationScale[] = "scale";
@@ -70,7 +73,9 @@ constexpr std::initializer_list<const char*> kAccelAxes = {
 
 constexpr char kTriggerString[] = "trigger";
 
+#if USE_IIOSERVICE
 constexpr char kDevString[] = "/dev/";
+#endif  // USE_IIOSERVICE
 
 constexpr char kFilesToSetReadAndOwnership[][24] = {
     "buffer/hwfifo_timeout", "buffer/enable", "buffer/length",
@@ -91,10 +96,11 @@ constexpr char kChnEnableFormatString[] = "in_%s_en";
 
 // static
 const char* Configuration::GetGroupNameForSysfs() {
-  if (USE_IIOSERVICE)
-    return kIioServiceGroupName;
-
+#if USE_IIOSERVICE
+  return kIioServiceGroupName;
+#else
   return kArcSensorGroupName;
+#endif  // USE_IIOSERVICE
 }
 
 Configuration::Configuration(libmems::IioContext* context,
@@ -106,6 +112,14 @@ Configuration::Configuration(libmems::IioContext* context,
 bool Configuration::Configure() {
   if (!SetupPermissions())
     return false;
+
+#if USE_IIOSERVICE
+  // If the buffer is enabled, which means mems_setup has already been used on
+  // this sensor and iioservice is reading the samples from it, skip setting the
+  // frequency.
+  if (!sensor_->IsBufferEnabled())
+    sensor_->WriteDoubleAttribute(libmems::kSamplingFrequencyAttr, 0.0);
+#endif  // USE_IIOSERVICE
 
   switch (kind_) {
     case SensorKind::ACCELEROMETER:
@@ -383,7 +397,7 @@ bool Configuration::EnableAccelScanElements() {
     LOG(ERROR) << "cannot find timestamp channel";
     return false;
   }
-  if (!timestamp->SetEnabledAndCheck(false)) {
+  if (!timestamp->SetScanElementsEnabled(false)) {
     LOG(ERROR) << "failed to disable timestamp channel";
     return false;
   }
@@ -409,7 +423,7 @@ bool Configuration::EnableAccelScanElements() {
       LOG(ERROR) << "cannot find channel " << chan_name;
       return false;
     }
-    if (!channel->SetEnabledAndCheck(true)) {
+    if (!channel->SetScanElementsEnabled(true)) {
       LOG(ERROR) << "failed to enable channel " << chan_name;
       return false;
     }
@@ -431,7 +445,7 @@ bool Configuration::EnableCalibration(bool enable) {
     LOG(ERROR) << "cannot find calibration channel";
     return false;
   }
-  return calibration->SetEnabled(enable);
+  return calibration->SetScanElementsEnabled(enable);
 }
 
 bool Configuration::EnableKeyboardAngle() {
@@ -533,18 +547,17 @@ bool Configuration::SetupPermissions() {
 
   std::string dev_name =
       libmems::IioDeviceImpl::GetStringFromId(sensor_->GetId());
-  if (USE_IIOSERVICE) {
-    // /dev/iio:deviceX
-    base::FilePath dev_path =
-        base::FilePath(kDevString).Append(dev_name.c_str());
-    if (!delegate_->Exists(dev_path)) {
-      LOG(ERROR) << "Missing path: " << dev_path.value();
-      return false;
-    }
-
-    files_to_set_read_own.push_back(dev_path);
-    files_to_set_write_own.push_back(dev_path);
+#if USE_IIOSERVICE
+  // /dev/iio:deviceX
+  base::FilePath dev_path = base::FilePath(kDevString).Append(dev_name.c_str());
+  if (!delegate_->Exists(dev_path)) {
+    LOG(ERROR) << "Missing path: " << dev_path.value();
+    return false;
   }
+
+  files_to_set_read_own.push_back(dev_path);
+  files_to_set_write_own.push_back(dev_path);
+#endif  // USE_IIOSERVICE
 
   // /sys/bus/iio/devices/iio:deviceX
   base::FilePath sys_dev_path = sensor_->GetPath();
