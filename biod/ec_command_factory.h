@@ -43,7 +43,7 @@ class EcCommandFactoryInterface {
                 "EcCommandInterface");
 
   virtual std::unique_ptr<biod::FpFrameCommand> FpFrameCommand(
-      int index, uint32_t frame_size, ssize_t max_read_size) = 0;
+      int index, uint32_t frame_size, uint16_t max_read_size) = 0;
   static_assert(
       std::is_base_of<EcCommandInterface, biod::FpFrameCommand>::value,
       "All commands created by this class should derive from "
@@ -73,7 +73,7 @@ class EcCommandFactory : public EcCommandFactoryInterface {
       const brillo::SecureVector& seed, uint16_t seed_version) override;
 
   std::unique_ptr<biod::FpFrameCommand> FpFrameCommand(
-      int index, uint32_t frame_size, ssize_t max_read_size) override;
+      int index, uint32_t frame_size, uint16_t max_read_size) override;
 };
 
 }  // namespace biod

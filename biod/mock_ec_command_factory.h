@@ -37,7 +37,7 @@ class MockEcCommandFactory : public EcCommandFactoryInterface {
               (override));
   MOCK_METHOD(std::unique_ptr<biod::FpFrameCommand>,
               FpFrameCommand,
-              (int index, uint32_t frame_size, ssize_t max_read_size),
+              (int index, uint32_t frame_size, uint16_t max_read_size),
               (override));
 };
 

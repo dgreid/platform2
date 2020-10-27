@@ -96,7 +96,7 @@ class CrosFpDevice : public CrosFpDeviceInterface {
  private:
   bool EcDevInit();
   ssize_t ReadVersion(char* buffer, size_t size);
-  bool EcProtoInfo(ssize_t* max_read, ssize_t* max_write);
+  bool EcProtoInfo(uint16_t* max_read, uint16_t* max_write);
   bool EcReboot(ec_current_image to_image);
   // Run the EC command to generate new entropy in the underlying MCU.
   // |reset| specifies whether we want to merely add entropy (false), or
@@ -116,8 +116,8 @@ class CrosFpDevice : public CrosFpDeviceInterface {
 
   base::ScopedFD cros_fd_;
   std::unique_ptr<base::FileDescriptorWatcher::Controller> watcher_;
-  ssize_t max_read_size_ = 0;
-  ssize_t max_write_size_ = 0;
+  uint16_t max_read_size_ = 0;
+  uint16_t max_write_size_ = 0;
   std::unique_ptr<FpInfoCommand> info_;
 
   std::unique_ptr<EcCommandFactoryInterface> ec_command_factory_;

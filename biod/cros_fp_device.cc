@@ -42,7 +42,7 @@ CrosFpDevice::~CrosFpDevice() {
     ResetContext();
 }
 
-bool CrosFpDevice::EcProtoInfo(ssize_t* max_read, ssize_t* max_write) {
+bool CrosFpDevice::EcProtoInfo(uint16_t* max_read, uint16_t* max_write) {
   /* read max request / response size from the MCU for protocol v3+ */
   EcCommand<EmptyParam, struct ec_response_get_protocol_info> cmd(
       EC_CMD_GET_PROTOCOL_INFO);

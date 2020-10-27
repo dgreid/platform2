@@ -16,7 +16,7 @@ bool FpFrameCommand::Run(int fd) {
   FpFramePacket payload = *Resp();
   auto pos = frame_data_.begin();
   while (pos < frame_data_.end()) {
-    uint32_t len = std::min(max_read_size_, frame_data_.end() - pos);
+    uint16_t len = std::min<uint16_t>(max_read_size_, frame_data_.end() - pos);
     SetReq({.offset = offset, .size = len});
     SetRespSize(len);
     int retries = 0;

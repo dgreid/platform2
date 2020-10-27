@@ -20,7 +20,7 @@ using FpFramePacket = std::array<uint8_t, kMaxPacketSize>;
 class FpFrameCommand
     : public EcCommand<struct ec_params_fp_frame, FpFramePacket> {
  public:
-  FpFrameCommand(int index, uint32_t frame_size, ssize_t max_read_size)
+  FpFrameCommand(int index, uint32_t frame_size, uint16_t max_read_size)
       : EcCommand(EC_CMD_FP_FRAME),
         frame_index_(index),
         max_read_size_(max_read_size),
@@ -39,7 +39,7 @@ class FpFrameCommand
   constexpr static int kRetryDelayMs = 100;
 
   int frame_index_ = 0;
-  ssize_t max_read_size_ = 0;
+  uint16_t max_read_size_ = 0;
   brillo::SecureVector frame_data_;
 };
 
