@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "arc/appfuse/data_filter.h"
+#include "arc/container/appfuse/data_filter.h"
 
 #include <linux/fuse.h>
 #include <sys/socket.h>

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ARC_APPFUSE_APPFUSE_MOUNT_H_
-#define ARC_APPFUSE_APPFUSE_MOUNT_H_
+#ifndef ARC_CONTAINER_APPFUSE_APPFUSE_MOUNT_H_
+#define ARC_CONTAINER_APPFUSE_APPFUSE_MOUNT_H_
 
 #include <stdint.h>
 #include <sys/types.h>
@@ -12,7 +12,7 @@
 #include <base/files/scoped_file.h>
 #include <base/memory/weak_ptr.h>
 
-#include "arc/appfuse/data_filter.h"
+#include "arc/container/appfuse/data_filter.h"
 
 namespace arc {
 namespace appfuse {
@@ -66,4 +66,4 @@ class AppfuseMount {
 }  // namespace appfuse
 }  // namespace arc
 
-#endif  // ARC_APPFUSE_APPFUSE_MOUNT_H_
+#endif  // ARC_CONTAINER_APPFUSE_APPFUSE_MOUNT_H_

@@ -19,7 +19,7 @@
 #include <dbus/bus.h>
 
 #include "appfuse/dbus_adaptors/org.chromium.ArcAppfuseProvider.h"
-#include "arc/appfuse/appfuse_mount.h"
+#include "arc/container/appfuse/appfuse_mount.h"
 
 namespace {
 

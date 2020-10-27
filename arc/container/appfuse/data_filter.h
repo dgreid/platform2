@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ARC_APPFUSE_DATA_FILTER_H_
-#define ARC_APPFUSE_DATA_FILTER_H_
+#ifndef ARC_CONTAINER_APPFUSE_DATA_FILTER_H_
+#define ARC_CONTAINER_APPFUSE_DATA_FILTER_H_
 
 #include <stdint.h>
 
@@ -95,4 +95,4 @@ class DataFilter {
 }  // namespace appfuse
 }  // namespace arc
 
-#endif  // ARC_APPFUSE_DATA_FILTER_H_
+#endif  // ARC_CONTAINER_APPFUSE_DATA_FILTER_H_
