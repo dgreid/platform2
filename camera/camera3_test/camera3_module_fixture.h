@@ -37,7 +37,7 @@ enum {
 
 // Returns true if the |actual_level| is equal to or beyond the
 // |required_level|.
-bool isHardwareLevelSupported(int actual_level, int required_level);
+bool isHardwareLevelSupported(uint8_t actual_level, uint8_t required_level);
 
 // Get recording parameter list of camera id, width, height and frame rate
 std::vector<std::tuple<int, int32_t, int32_t, float, bool>>

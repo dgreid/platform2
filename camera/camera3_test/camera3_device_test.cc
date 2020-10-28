@@ -167,7 +167,7 @@ uint8_t Camera3Device::StaticInfo::GetHardwareLevel() const {
   return entry.data.u8[0];
 }
 
-bool Camera3Device::StaticInfo::IsHardwareLevelAtLeast(int32_t level) const {
+bool Camera3Device::StaticInfo::IsHardwareLevelAtLeast(uint8_t level) const {
   return isHardwareLevelSupported(GetHardwareLevel(), level);
 }
 

@@ -265,7 +265,7 @@ class Camera3Device::StaticInfo {
   uint8_t GetHardwareLevel() const;
 
  private:
-  bool IsHardwareLevelAtLeast(int32_t level) const;
+  bool IsHardwareLevelAtLeast(uint8_t level) const;
 
   std::set<uint8_t> GetAvailableModes(int32_t key,
                                       int32_t min_value,

@@ -30,7 +30,7 @@
 
 namespace camera3_test {
 
-#define IGNORE_HARDWARE_LEVEL INT32_MAX
+#define IGNORE_HARDWARE_LEVEL UINT8_MAX
 
 static camera_module_t* g_cam_module = NULL;
 
@@ -39,7 +39,7 @@ static cros::CameraThread& GetModuleThread() {
   return *t;
 }
 
-bool isHardwareLevelSupported(int32_t actual_level, int32_t required_level) {
+bool isHardwareLevelSupported(uint8_t actual_level, uint8_t required_level) {
   constexpr int32_t kSortedLevels[] = {
       ANDROID_INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY,
       ANDROID_INFO_SUPPORTED_HARDWARE_LEVEL_EXTERNAL,
@@ -48,7 +48,7 @@ bool isHardwareLevelSupported(int32_t actual_level, int32_t required_level) {
       ANDROID_INFO_SUPPORTED_HARDWARE_LEVEL_3,
   };
 
-  for (int32_t level : kSortedLevels) {
+  for (uint8_t level : kSortedLevels) {
     if (level == required_level) {
       return true;
     } else if (level == actual_level) {
@@ -804,18 +804,18 @@ TEST_F(Camera3ModuleFixture, RequiredFormats) {
 
 static bool AreAllCapabilitiesSupported(
     camera_metadata_t* characteristics,
-    const std::vector<int32_t>& capabilities) {
-  std::set<int32_t> supported_capabilities;
+    const std::vector<uint8_t>& capabilities) {
+  std::set<uint8_t> supported_capabilities;
   camera_metadata_ro_entry_t entry;
   if (find_camera_metadata_ro_entry(characteristics,
                                     ANDROID_REQUEST_AVAILABLE_CAPABILITIES,
                                     &entry) == 0) {
     for (size_t i = 0; i < entry.count; i++) {
-      if ((entry.data.i32[i] >=
+      if ((entry.data.u8[i] >=
            ANDROID_REQUEST_AVAILABLE_CAPABILITIES_BACKWARD_COMPATIBLE) &&
-          (entry.data.i32[i] <=
+          (entry.data.u8[i] <=
            ANDROID_REQUEST_AVAILABLE_CAPABILITIES_CONSTRAINED_HIGH_SPEED_VIDEO)) {  // NOLINT(whitespace/line_length)
-        supported_capabilities.insert(entry.data.i32[i]);
+        supported_capabilities.insert(entry.data.u8[i]);
       }
     }
   }
@@ -830,14 +830,14 @@ static bool AreAllCapabilitiesSupported(
 
 static void ExpectKeyAvailable(camera_metadata_t* characteristics,
                                int32_t key,
-                               int32_t hw_level,
-                               const std::vector<int32_t>& capabilities) {
+                               uint8_t hw_level,
+                               const std::vector<uint8_t>& capabilities) {
   camera_metadata_ro_entry_t entry;
   ASSERT_EQ(0,
             find_camera_metadata_ro_entry(
                 characteristics, ANDROID_INFO_SUPPORTED_HARDWARE_LEVEL, &entry))
       << "Cannot find the metadata ANDROID_INFO_SUPPORTED_HARDWARE_LEVEL";
-  int32_t actual_hw_level = entry.data.i32[0];
+  uint8_t actual_hw_level = entry.data.u8[0];
 
   // For LIMITED-level targeted keys, rely on capability check, not level
   if (isHardwareLevelSupported(actual_hw_level, hw_level) &&
@@ -911,9 +911,9 @@ static void ExpectKeyAvailable(camera_metadata_t* characteristics,
 
 static void ExpectKeyAvailable(camera_metadata_t* c,
                                int32_t key,
-                               int32_t hw_level,
-                               int32_t capability) {
-  return ExpectKeyAvailable(c, key, hw_level, std::vector<int>({capability}));
+                               uint8_t hw_level,
+                               uint8_t capability) {
+  return ExpectKeyAvailable(c, key, hw_level, std::vector<uint8_t>{capability});
 }
 
 TEST_F(Camera3ModuleFixture, StaticKeysTest) {
@@ -1031,9 +1031,9 @@ TEST_F(Camera3ModuleFixture, StaticKeysTest) {
         ANDROID_REQUEST_AVAILABLE_CAPABILITIES_BACKWARD_COMPATIBLE);
     ExpectKeyAvailable(
         c, ANDROID_REQUEST_MAX_NUM_INPUT_STREAMS, IGNORE_HARDWARE_LEVEL,
-        std::vector<int32_t>(
-            {ANDROID_REQUEST_AVAILABLE_CAPABILITIES_YUV_REPROCESSING,
-             ANDROID_REQUEST_AVAILABLE_CAPABILITIES_PRIVATE_REPROCESSING}));
+        std::vector<uint8_t>{
+            ANDROID_REQUEST_AVAILABLE_CAPABILITIES_YUV_REPROCESSING,
+            ANDROID_REQUEST_AVAILABLE_CAPABILITIES_PRIVATE_REPROCESSING});
     ExpectKeyAvailable(
         c, ANDROID_REQUEST_PARTIAL_RESULT_COUNT, IGNORE_HARDWARE_LEVEL,
         ANDROID_REQUEST_AVAILABLE_CAPABILITIES_BACKWARD_COMPATIBLE);
@@ -1049,12 +1049,11 @@ TEST_F(Camera3ModuleFixture, StaticKeysTest) {
     ExpectKeyAvailable(
         c, ANDROID_SENSOR_AVAILABLE_TEST_PATTERN_MODES, IGNORE_HARDWARE_LEVEL,
         ANDROID_REQUEST_AVAILABLE_CAPABILITIES_BACKWARD_COMPATIBLE);
-    ExpectKeyAvailable(
-        c, ANDROID_SENSOR_BLACK_LEVEL_PATTERN,
-        ANDROID_INFO_SUPPORTED_HARDWARE_LEVEL_FULL,
-        std::vector<int32_t>(
-            {ANDROID_REQUEST_AVAILABLE_CAPABILITIES_MANUAL_SENSOR,
-             ANDROID_REQUEST_AVAILABLE_CAPABILITIES_RAW}));
+    ExpectKeyAvailable(c, ANDROID_SENSOR_BLACK_LEVEL_PATTERN,
+                       ANDROID_INFO_SUPPORTED_HARDWARE_LEVEL_FULL,
+                       std::vector<uint8_t>{
+                           ANDROID_REQUEST_AVAILABLE_CAPABILITIES_MANUAL_SENSOR,
+                           ANDROID_REQUEST_AVAILABLE_CAPABILITIES_RAW});
     ExpectKeyAvailable(c, ANDROID_SENSOR_CALIBRATION_TRANSFORM1,
                        IGNORE_HARDWARE_LEVEL,
                        ANDROID_REQUEST_AVAILABLE_CAPABILITIES_RAW);
@@ -1065,9 +1064,9 @@ TEST_F(Camera3ModuleFixture, StaticKeysTest) {
                        ANDROID_REQUEST_AVAILABLE_CAPABILITIES_RAW);
     ExpectKeyAvailable(
         c, ANDROID_SENSOR_INFO_ACTIVE_ARRAY_SIZE, IGNORE_HARDWARE_LEVEL,
-        std::vector<int32_t>(
-            {ANDROID_REQUEST_AVAILABLE_CAPABILITIES_BACKWARD_COMPATIBLE,
-             ANDROID_REQUEST_AVAILABLE_CAPABILITIES_RAW}));
+        std::vector<uint8_t>{
+            ANDROID_REQUEST_AVAILABLE_CAPABILITIES_BACKWARD_COMPATIBLE,
+            ANDROID_REQUEST_AVAILABLE_CAPABILITIES_RAW});
     ExpectKeyAvailable(c, ANDROID_SENSOR_INFO_COLOR_FILTER_ARRANGEMENT,
                        ANDROID_INFO_SUPPORTED_HARDWARE_LEVEL_FULL,
                        ANDROID_REQUEST_AVAILABLE_CAPABILITIES_RAW);
@@ -1104,9 +1103,9 @@ TEST_F(Camera3ModuleFixture, StaticKeysTest) {
     ExpectKeyAvailable(
         c, ANDROID_SHADING_AVAILABLE_MODES,
         ANDROID_INFO_SUPPORTED_HARDWARE_LEVEL_LIMITED,
-        std::vector<int32_t>(
-            {ANDROID_REQUEST_AVAILABLE_CAPABILITIES_MANUAL_POST_PROCESSING,
-             ANDROID_REQUEST_AVAILABLE_CAPABILITIES_RAW}));
+        std::vector<uint8_t>{
+            ANDROID_REQUEST_AVAILABLE_CAPABILITIES_MANUAL_POST_PROCESSING,
+            ANDROID_REQUEST_AVAILABLE_CAPABILITIES_RAW});
     ExpectKeyAvailable(
         c, ANDROID_STATISTICS_INFO_AVAILABLE_FACE_DETECT_MODES,
         IGNORE_HARDWARE_LEVEL,
@@ -1195,8 +1194,8 @@ TEST_F(Camera3ModuleFixture, StreamConfigurationMapTest) {
         if (AreAllCapabilitiesSupported(
                 const_cast<camera_metadata_t*>(
                     info.static_camera_characteristics),
-                std::vector<int32_t>(
-                    {ANDROID_REQUEST_AVAILABLE_CAPABILITIES_MANUAL_SENSOR}))) {
+                std::vector<uint8_t>{
+                    ANDROID_REQUEST_AVAILABLE_CAPABILITIES_MANUAL_SENSOR})) {
           EXPECT_LT(0, min_duration)
               << "MANUAL_SENSOR capability, need positive min frame duration "
                  "for format "
