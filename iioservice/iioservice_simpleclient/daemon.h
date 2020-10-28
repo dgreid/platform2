@@ -24,7 +24,8 @@ class TestDaemon : public brillo::DBusDaemon, public SensorClientDbus {
              cros::mojom::DeviceType device_type,
              std::vector<std::string> channel_ids,
              double frequency,
-             int timeout);
+             int timeout,
+             int samples);
   ~TestDaemon() override;
 
  protected:
@@ -44,6 +45,7 @@ class TestDaemon : public brillo::DBusDaemon, public SensorClientDbus {
   std::vector<std::string> channel_ids_;
   double frequency_;
   int timeout_;
+  int samples_;
 
   ObserverImpl::ScopedObserverImpl observer_ = {
       nullptr, ObserverImpl::ObserverImplDeleter};

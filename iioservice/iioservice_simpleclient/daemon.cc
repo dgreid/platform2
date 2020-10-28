@@ -21,12 +21,14 @@ TestDaemon::TestDaemon(int device_id,
                        cros::mojom::DeviceType device_type,
                        std::vector<std::string> channel_ids,
                        double frequency,
-                       int timeout)
+                       int timeout,
+                       int samples)
     : device_id_(device_id),
       device_type_(device_type),
       channel_ids_(std::move(channel_ids)),
       frequency_(frequency),
       timeout_(timeout),
+      samples_(samples),
       weak_ptr_factory_(this) {}
 
 TestDaemon::~TestDaemon() {}
@@ -46,7 +48,7 @@ int TestDaemon::OnInit() {
 
   observer_ = iioservice::ObserverImpl::Create(
       base::ThreadTaskRunnerHandle::Get(), device_id_, device_type_,
-      std::move(channel_ids_), frequency_, timeout_,
+      std::move(channel_ids_), frequency_, timeout_, samples_,
       base::BindOnce(&TestDaemon::OnMojoDisconnect,
                      weak_ptr_factory_.GetWeakPtr()));
 
@@ -59,7 +61,7 @@ void TestDaemon::OnClientReceived(
 }
 
 void TestDaemon::OnMojoDisconnect() {
-  LOGF(ERROR) << "Quiting this process.";
+  LOGF(INFO) << "Quiting this process.";
   Quit();
 }
 

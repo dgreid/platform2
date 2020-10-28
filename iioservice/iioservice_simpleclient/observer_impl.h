@@ -36,6 +36,7 @@ class ObserverImpl final : public cros::mojom::SensorHalClient,
       std::vector<std::string> channel_ids,
       double frequency,
       int timeout,
+      int samples,
       QuitCallback quit_callback);
 
   void BindClient(mojo::PendingReceiver<cros::mojom::SensorHalClient> client);
@@ -49,14 +50,13 @@ class ObserverImpl final : public cros::mojom::SensorHalClient,
   void OnErrorOccurred(cros::mojom::ObserverErrorType type) override;
 
  private:
-  static const int kNumSuccessReads = 100;
-
   ObserverImpl(scoped_refptr<base::SequencedTaskRunner> ipc_task_runner,
                int device_id,
                cros::mojom::DeviceType device_type,
                std::vector<std::string> channel_ids,
                double frequency,
                int timeout,
+               int samples,
                QuitCallback quit_callback);
 
   void SetUpChannelTimeout();
@@ -86,6 +86,7 @@ class ObserverImpl final : public cros::mojom::SensorHalClient,
   double frequency_;
   double result_freq_ = 0.0;
   int timeout_;
+  int samples_;
   QuitCallback quit_callback_;
 
   std::vector<int32_t> channel_indices_;
