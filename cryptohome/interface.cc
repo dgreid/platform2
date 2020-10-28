@@ -767,6 +767,14 @@ gboolean cryptohome_get_current_space_for_gid(Cryptohome* self,
   CRYPTOHOME_WRAP_METHOD(GetCurrentSpaceForGid, gid, OUT_cur_space);
 }
 
+gboolean cryptohome_get_current_space_for_project_id(Cryptohome* self,
+                                                     guint32 project_id,
+                                                     gint64* OUT_cur_space,
+                                                     GError** error) {
+  CRYPTOHOME_WRAP_METHOD(GetCurrentSpaceForProjectId, project_id,
+                         OUT_cur_space);
+}
+
 gboolean cryptohome_lock_to_single_user_mount_until_reboot(
     Cryptohome* self, GArray* request, DBusGMethodInvocation* error) {
   CRYPTOHOME_WRAP_METHOD(LockToSingleUserMountUntilReboot, request);

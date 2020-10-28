@@ -5,6 +5,7 @@
 #include "cryptohome/arc_disk_quota.h"
 #include "cryptohome/mock_homedirs.h"
 #include "cryptohome/mock_platform.h"
+#include "cryptohome/projectid_config.h"
 
 #include <memory>
 #include <string>
@@ -49,6 +50,8 @@ class ArcDiskQuotaTest : public ::testing::Test {
   static const gid_t kAndroidGidEnd = ArcDiskQuota::kAndroidGidEnd;
   static const uid_t kValidAndroidUid = (kAndroidUidStart + kAndroidUidEnd) / 2;
   static const gid_t kValidAndroidGid = (kAndroidGidStart + kAndroidGidEnd) / 2;
+  static const int kValidAndroidProjectId =
+      (kProjectIdForAndroidFilesStart + kProjectIdForAndroidFilesEnd) / 2;
 };
 
 TEST_F(ArcDiskQuotaTest, QuotaIsSupported) {
@@ -254,6 +257,89 @@ TEST_F(ArcDiskQuotaTest, GetCurrentSpaceForGid_QuotactlFails) {
 
   arc_disk_quota_.Initialize();
   EXPECT_EQ(-1, arc_disk_quota_.GetCurrentSpaceForGid(kValidAndroidGid));
+}
+
+TEST_F(ArcDiskQuotaTest, GetCurrentSpaceForProjectId_Succeeds) {
+  EXPECT_CALL(platform_, FindFilesystemDevice(base::FilePath(kArcDiskHome), _))
+      .WillOnce(DoAll(SetArgPointee<1>(kDev), Return(true)));
+
+  EXPECT_CALL(platform_, GetQuotaCurrentSpaceForUid(base::FilePath(kDev), 0))
+      .WillOnce(Return(0));
+
+  EXPECT_CALL(platform_, GetQuotaCurrentSpaceForProjectId(
+                             base::FilePath(kDev), kValidAndroidProjectId))
+      .WillOnce(Return(5));
+
+  arc_disk_quota_.Initialize();
+  EXPECT_EQ(
+      5, arc_disk_quota_.GetCurrentSpaceForProjectId(kValidAndroidProjectId));
+}
+
+TEST_F(ArcDiskQuotaTest, GetCurrentSpaceForProjectId_IdTooSmall) {
+  EXPECT_CALL(platform_, FindFilesystemDevice(base::FilePath(kArcDiskHome), _))
+      .WillOnce(DoAll(SetArgPointee<1>(kDev), Return(true)));
+
+  EXPECT_CALL(platform_, GetQuotaCurrentSpaceForUid(base::FilePath(kDev), 0))
+      .WillOnce(Return(0));
+
+  arc_disk_quota_.Initialize();
+  EXPECT_EQ(-1, arc_disk_quota_.GetCurrentSpaceForProjectId(
+                    kProjectIdForAndroidFilesStart - 1));
+}
+
+TEST_F(ArcDiskQuotaTest, GetCurrentSpaceForProjectId_IdTooLarge) {
+  EXPECT_CALL(platform_, FindFilesystemDevice(base::FilePath(kArcDiskHome), _))
+      .WillOnce(DoAll(SetArgPointee<1>(kDev), Return(true)));
+
+  EXPECT_CALL(platform_, GetQuotaCurrentSpaceForUid(base::FilePath(kDev), 0))
+      .WillOnce(Return(0));
+
+  arc_disk_quota_.Initialize();
+  EXPECT_EQ(-1, arc_disk_quota_.GetCurrentSpaceForProjectId(
+                    kProjectIdForAndroidFilesEnd + 1));
+}
+
+TEST_F(ArcDiskQuotaTest, GetCurrentSpaceForProjectId_NoDevice) {
+  EXPECT_CALL(platform_, FindFilesystemDevice(base::FilePath(kArcDiskHome), _))
+      .WillOnce(DoAll(SetArgPointee<1>(""), Return(false)));
+
+  EXPECT_CALL(platform_, GetQuotaCurrentSpaceForProjectId(_, _)).Times(0);
+
+  arc_disk_quota_.Initialize();
+  EXPECT_EQ(
+      -1, arc_disk_quota_.GetCurrentSpaceForProjectId(kValidAndroidProjectId));
+}
+
+TEST_F(ArcDiskQuotaTest, GetCurrentSpaceForProjectId_NoQuotaMountedDevice) {
+  EXPECT_CALL(platform_, FindFilesystemDevice(base::FilePath(kArcDiskHome), _))
+      .WillOnce(DoAll(SetArgPointee<1>(kDev), Return(true)));
+
+  EXPECT_CALL(platform_, GetQuotaCurrentSpaceForUid(base::FilePath(kDev), 0))
+      .WillOnce(Return(-1));
+
+  EXPECT_CALL(platform_,
+              GetQuotaCurrentSpaceForUid(Ne(base::FilePath(kDev)), Ne(0)))
+      .Times(0);
+
+  arc_disk_quota_.Initialize();
+  EXPECT_EQ(
+      -1, arc_disk_quota_.GetCurrentSpaceForProjectId(kValidAndroidProjectId));
+}
+
+TEST_F(ArcDiskQuotaTest, GetCurrentSpaceForProjectId_QuotactlFails) {
+  EXPECT_CALL(platform_, FindFilesystemDevice(base::FilePath(kArcDiskHome), _))
+      .WillOnce(DoAll(SetArgPointee<1>(kDev), Return(true)));
+
+  EXPECT_CALL(platform_, GetQuotaCurrentSpaceForUid(base::FilePath(kDev), 0))
+      .WillOnce(Return(0));
+
+  EXPECT_CALL(platform_, GetQuotaCurrentSpaceForProjectId(
+                             base::FilePath(kDev), kValidAndroidProjectId))
+      .WillOnce(Return(-1));
+
+  arc_disk_quota_.Initialize();
+  EXPECT_EQ(
+      -1, arc_disk_quota_.GetCurrentSpaceForProjectId(kValidAndroidProjectId));
 }
 
 }  // namespace cryptohome

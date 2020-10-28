@@ -21,6 +21,7 @@ class MockArcDiskQuota : public ArcDiskQuota {
   MOCK_METHOD(bool, IsQuotaSupported, (), (const, override));
   MOCK_METHOD(int64_t, GetCurrentSpaceForUid, (uid_t), (const, override));
   MOCK_METHOD(int64_t, GetCurrentSpaceForGid, (gid_t), (const, override));
+  MOCK_METHOD(int64_t, GetCurrentSpaceForProjectId, (int), (const, override));
 };
 
 }  // namespace cryptohome

@@ -4349,6 +4349,13 @@ gboolean Service::GetCurrentSpaceForGid(guint32 gid,
   return TRUE;
 }
 
+gboolean Service::GetCurrentSpaceForProjectId(guint32 project_id,
+                                              gint64* OUT_cur_space,
+                                              GError** error) {
+  *OUT_cur_space = arc_disk_quota_->GetCurrentSpaceForProjectId(project_id);
+  return TRUE;
+}
+
 gboolean Service::LockToSingleUserMountUntilReboot(
     const GArray* request, DBusGMethodInvocation* context) {
   LockToSingleUserMountUntilRebootRequest request_pb;

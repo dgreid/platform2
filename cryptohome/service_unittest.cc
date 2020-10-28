@@ -2119,6 +2119,15 @@ TEST_F(ServiceTestNotInitialized, GetCurrentSpaceForGid) {
   EXPECT_EQ(20, cur_space);
 }
 
+TEST_F(ServiceTestNotInitialized, GetCurrentSpaceForProjectId) {
+  EXPECT_CALL(arc_disk_quota_, GetCurrentSpaceForProjectId(10))
+      .WillOnce(Return(20));
+  GError* res_err;
+  gint64 cur_space;
+  EXPECT_TRUE(service_.GetCurrentSpaceForProjectId(10, &cur_space, &res_err));
+  EXPECT_EQ(20, cur_space);
+}
+
 TEST_F(ServiceTest, PostTaskToEventLoop) {
   // In this test, we take the IsQuotaSupported() function to test
   // if PostTaskToEventLoop() actually causes the posted OnceClosure

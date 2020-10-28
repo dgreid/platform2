@@ -89,6 +89,10 @@ class ArcDiskQuota {
   // Returns -1 if quotactl fails.
   virtual int64_t GetCurrentSpaceForGid(gid_t android_gid) const;
 
+  // Get the current disk space usage for a project ID.
+  // Returns -1 if quotactl fails.
+  virtual int64_t GetCurrentSpaceForProjectId(int project_id) const;
+
   // The constants below describes the ranges of valid ID to query (based on
   // what is tracked by installd).These numbers are from
   // system/core/libcutils/include/private/android_filesystem_config.h in

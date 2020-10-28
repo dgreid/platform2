@@ -338,6 +338,15 @@ class Platform {
   virtual int64_t GetQuotaCurrentSpaceForGid(const base::FilePath& device,
                                              gid_t group_id) const;
 
+  // Returns the current space for the given project ID from quotactl syscall,
+  // or -1 if the syscall fails.
+  //
+  // Parameters
+  //   device - The pathname to the block special device
+  //   project_id - The project ID to query for
+  virtual int64_t GetQuotaCurrentSpaceForProjectId(const base::FilePath& device,
+                                                   int project_id) const;
+
   // Returns true if the specified file exists.
   //
   // Parameters

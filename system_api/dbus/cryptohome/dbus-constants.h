@@ -153,6 +153,8 @@ const char kCryptohomeGetSupportedKeyPolicies[] = "GetSupportedKeyPolicies";
 const char kCryptohomeIsQuotaSupported[] = "IsQuotaSupported";
 const char kCryptohomeGetCurrentSpaceForUid[] = "GetCurrentSpaceForUid";
 const char kCryptohomeGetCurrentSpaceForGid[] = "GetCurrentSpaceForGid";
+const char kCryptohomeGetCurrentSpaceForProjectId[] =
+    "GetCurrentSpaceForProjectId";
 const char kCryptohomeLockToSingleUserMountUntilReboot[] =
     "LockToSingleUserMountUntilReboot";
 const char kCryptohomeGetRsuDeviceId[] = "GetRsuDeviceId";

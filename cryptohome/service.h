@@ -742,6 +742,11 @@ class Service : public brillo::dbus::AbstractDbusService,
                                          gint64* OUT_cur_space,
                                          GError** error);
 
+  // Get the current disk space usage for the given project ID.
+  virtual gboolean GetCurrentSpaceForProjectId(guint project_id,
+                                               gint64* OUT_cur_space,
+                                               GError** error);
+
   virtual gboolean LockToSingleUserMountUntilReboot(
       const GArray* request, DBusGMethodInvocation* context);
 

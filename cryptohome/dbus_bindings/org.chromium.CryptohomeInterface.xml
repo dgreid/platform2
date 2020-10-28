@@ -1063,6 +1063,14 @@
       <arg type="u" name="gid" direction="in" />
       <arg type="x" name="cur_space" direction="out" />
     </method>
+    <!-- Get the current disk space usage for the given project id.
+    -->
+    <method name="GetCurrentSpaceForProjectId">
+      <annotation name="org.chromium.DBus.Method.Kind"
+                  value="async"/>
+      <arg type="u" name="project_id" direction="in" />
+      <arg type="x" name="cur_space" direction="out" />
+    </method>
 
     <method name="LockToSingleUserMountUntilReboot">
       <annotation name="org.chromium.DBus.Method.Kind"

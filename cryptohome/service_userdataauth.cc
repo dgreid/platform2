@@ -584,6 +584,16 @@ void ArcQuotaAdaptor::GetCurrentSpaceForArcGid(
   response->Return(reply);
 }
 
+void ArcQuotaAdaptor::GetCurrentSpaceForArcProjectId(
+    std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
+        user_data_auth::GetCurrentSpaceForArcProjectIdReply>> response,
+    const user_data_auth::GetCurrentSpaceForArcProjectIdRequest& in_request) {
+  user_data_auth::GetCurrentSpaceForArcProjectIdReply reply;
+  reply.set_cur_space(
+      service_->GetCurrentSpaceForArcProjectId(in_request.project_id()));
+  response->Return(reply);
+}
+
 void Pkcs11Adaptor::Pkcs11IsTpmTokenReady(
     std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
         user_data_auth::Pkcs11IsTpmTokenReadyReply>> response,

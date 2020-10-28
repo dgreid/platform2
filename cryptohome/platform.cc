@@ -581,6 +581,16 @@ int64_t Platform::GetQuotaCurrentSpaceForGid(const base::FilePath& device,
   return dq.dqb_curspace;
 }
 
+int64_t Platform::GetQuotaCurrentSpaceForProjectId(const base::FilePath& device,
+                                                   int project_id) const {
+  struct dqblk dq = {};
+  if (quotactl(QCMD(Q_GETQUOTA, PRJQUOTA), device.value().c_str(), project_id,
+               reinterpret_cast<char*>(&dq)) != 0) {
+    return -1;
+  }
+  return dq.dqb_curspace;
+}
+
 bool Platform::FileExists(const FilePath& path) {
   return base::PathExists(path);
 }

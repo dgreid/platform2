@@ -2645,6 +2645,10 @@ int64_t UserDataAuth::GetCurrentSpaceForArcGid(uid_t android_gid) {
   return arc_disk_quota_->GetCurrentSpaceForGid(android_gid);
 }
 
+int64_t UserDataAuth::GetCurrentSpaceForArcProjectId(int project_id) {
+  return arc_disk_quota_->GetCurrentSpaceForProjectId(project_id);
+}
+
 bool UserDataAuth::Pkcs11IsTpmTokenReady() {
   AssertOnMountThread();
   // We touched the sessions_ object, so we need to be on mount thread.

@@ -2867,6 +2867,29 @@ void LegacyCryptohomeInterfaceAdaptor::GetCurrentSpaceForGidOnSuccess(
   response->Return(reply.cur_space());
 }
 
+void LegacyCryptohomeInterfaceAdaptor::GetCurrentSpaceForProjectId(
+    std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<int64_t>> response,
+    uint32_t in_project_id) {
+  auto response_shared =
+      std::make_shared<SharedDBusMethodResponse<int64_t>>(std::move(response));
+
+  user_data_auth::GetCurrentSpaceForArcProjectIdRequest request;
+  request.set_project_id(in_project_id);
+  arc_quota_proxy_->GetCurrentSpaceForArcProjectIdAsync(
+      request,
+      base::Bind(&LegacyCryptohomeInterfaceAdaptor::
+                     GetCurrentSpaceForProjectIdOnSuccess,
+                 base::Unretained(this), response_shared),
+      base::Bind(&LegacyCryptohomeInterfaceAdaptor::ForwardError<int64_t>,
+                 base::Unretained(this), response_shared));
+}
+
+void LegacyCryptohomeInterfaceAdaptor::GetCurrentSpaceForProjectIdOnSuccess(
+    std::shared_ptr<SharedDBusMethodResponse<int64_t>> response,
+    const user_data_auth::GetCurrentSpaceForArcProjectIdReply& reply) {
+  response->Return(reply.cur_space());
+}
+
 void LegacyCryptohomeInterfaceAdaptor::LockToSingleUserMountUntilReboot(
     std::unique_ptr<
         brillo::dbus_utils::DBusMethodResponse<cryptohome::BaseReply>> response,

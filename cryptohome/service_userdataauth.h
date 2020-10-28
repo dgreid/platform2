@@ -255,6 +255,11 @@ class ArcQuotaAdaptor : public org::chromium::ArcQuotaInterface,
           user_data_auth::GetCurrentSpaceForArcGidReply>> response,
       const user_data_auth::GetCurrentSpaceForArcGidRequest& in_request)
       override;
+  void GetCurrentSpaceForArcProjectId(
+      std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
+          user_data_auth::GetCurrentSpaceForArcProjectIdReply>> response,
+      const user_data_auth::GetCurrentSpaceForArcProjectIdRequest& in_request)
+      override;
 
  private:
   brillo::dbus_utils::DBusObject* dbus_object_;

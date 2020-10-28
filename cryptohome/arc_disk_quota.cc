@@ -9,6 +9,8 @@
 #include <base/files/file_util.h>
 #include <base/logging.h>
 
+#include "cryptohome/projectid_config.h"
+
 namespace cryptohome {
 
 ArcDiskQuota::ArcDiskQuota(HomeDirs* homedirs,
@@ -76,6 +78,28 @@ int64_t ArcDiskQuota::GetCurrentSpaceForGid(gid_t android_gid) const {
       platform_->GetQuotaCurrentSpaceForGid(device_, real_gid);
   if (current_space == -1) {
     PLOG(ERROR) << "Failed to get disk stats for gid: " << real_gid;
+    return -1;
+  }
+  return current_space;
+}
+
+int64_t ArcDiskQuota::GetCurrentSpaceForProjectId(int project_id) const {
+  if ((project_id < kProjectIdForAndroidFilesStart ||
+       project_id > kProjectIdForAndroidFilesEnd) &&
+      (project_id < kProjectIdForAndroidAppsStart ||
+       project_id > kProjectIdForAndroidAppsEnd)) {
+    LOG(ERROR) << "Project id " << project_id
+               << " is outside the allowed query range";
+    return -1;
+  }
+  if (device_.empty()) {
+    LOG(ERROR) << "No quota mount is found";
+    return -1;
+  }
+  int64_t current_space =
+      platform_->GetQuotaCurrentSpaceForProjectId(device_, project_id);
+  if (current_space == -1) {
+    PLOG(ERROR) << "Failed to get disk stats for project id: " << project_id;
     return -1;
   }
   return current_space;

@@ -261,6 +261,10 @@ class MockPlatform : public Platform {
               GetQuotaCurrentSpaceForGid,
               (const base::FilePath&, gid_t),
               (const, override));
+  MOCK_METHOD(int64_t,
+              GetQuotaCurrentSpaceForProjectId,
+              (const base::FilePath&, int),
+              (const, override));
   MOCK_METHOD(int, Access, (const base::FilePath&, uint32_t), (override));
   MOCK_METHOD(int64_t,
               ComputeDirectoryDiskUsage,

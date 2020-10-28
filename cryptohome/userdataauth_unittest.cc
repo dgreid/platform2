@@ -975,6 +975,16 @@ TEST_F(UserDataAuthTestNotInitialized, GetCurrentSpaceForArcGid) {
   EXPECT_EQ(kSpaceUsage, userdataauth_->GetCurrentSpaceForArcGid(kGID));
 }
 
+TEST_F(UserDataAuthTestNotInitialized, GetCurrentSpaceForArcProjectId) {
+  constexpr int kProjectId = 1001;  // Yet another answer.
+  constexpr int64_t kSpaceUsage = 87654321987654;
+
+  EXPECT_CALL(arc_disk_quota_, GetCurrentSpaceForProjectId(kProjectId))
+      .WillOnce(Return(kSpaceUsage));
+  EXPECT_EQ(kSpaceUsage,
+            userdataauth_->GetCurrentSpaceForArcProjectId(kProjectId));
+}
+
 TEST_F(UserDataAuthTestNotInitialized, SeedUrandomInitialize) {
   // Should Get Random from TPM
   EXPECT_CALL(tpm_, GetRandomDataBlob(kDefaultRandomSeedLength, _))
