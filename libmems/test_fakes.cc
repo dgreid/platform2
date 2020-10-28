@@ -201,6 +201,10 @@ base::Optional<IioDevice::IioSample> FakeIioDevice::ReadSample() {
   return sample;
 }
 
+base::TimeDelta FakeIioDevice::GetPeriodForObsoleteSamplesInMilliseconds() {
+  return base::TimeDelta::FromMilliseconds(0.0);
+}
+
 void FakeIioDevice::DisableFd() {
   disabled_fd_ = true;
   if (readable_fd_)

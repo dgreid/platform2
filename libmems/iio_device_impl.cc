@@ -24,12 +24,17 @@ namespace {
 
 constexpr int kNumSamples = 1;
 
+constexpr base::TimeDelta kDefaultPeriodForObsoleteSamples =
+    base::TimeDelta::FromMilliseconds(10.0);
+
 };  // namespace
 
+// static
 base::Optional<int> IioDeviceImpl::GetIdFromString(const char* id_str) {
   return IioDevice::GetIdAfterPrefix(id_str, kDeviceIdPrefix);
 }
 
+// static
 std::string IioDeviceImpl::GetStringFromId(int id) {
   return base::StringPrintf("%s%d", kDeviceIdPrefix, id);
 }
@@ -294,6 +299,14 @@ base::Optional<IioDevice::IioSample> IioDeviceImpl::ReadSample() {
   uint8_t* start = reinterpret_cast<uint8_t*>(iio_buffer_start(buffer_.get()));
 
   return DeserializeSample(start);
+}
+
+base::TimeDelta IioDeviceImpl::GetPeriodForObsoleteSamplesInMilliseconds() {
+  double min_freq, max_freq;
+  if (!GetMinMaxFrequency(&min_freq, &max_freq) || max_freq <= 0.0)
+    return kDefaultPeriodForObsoleteSamples;
+
+  return base::TimeDelta::FromMilliseconds(1.0 / max_freq);
 }
 
 // static

@@ -80,6 +80,51 @@ TEST_F(IioDeviceTest, GetChannelByName) {
   EXPECT_EQ(GetChannel(kFakeChannelName2), channel2_);
 }
 
+class IioDeviceTestOnMinMaxFrequencyWithParam
+    : public ::testing::TestWithParam<
+          std::tuple<std::string, bool, double, double>> {
+ protected:
+  void SetUp() override {
+    device_ = std::make_unique<libmems::fakes::FakeIioDevice>(
+        nullptr, kFakeDeviceName, kFakeDeviceId);
+
+    EXPECT_TRUE(device_->WriteStringAttribute(kSamplingFrequencyAvailable,
+                                              std::get<0>(GetParam())));
+
+    result_ = device_->GetMinMaxFrequency(&min_freq_, &max_freq_);
+  }
+
+  std::unique_ptr<libmems::fakes::FakeIioDevice> device_;
+  bool result_;
+  double min_freq_ = -1;
+  double max_freq_ = -1;
+};
+
+TEST_P(IioDeviceTestOnMinMaxFrequencyWithParam, ParseMinMaxFrequency) {
+  EXPECT_EQ(result_, std::get<1>(GetParam()));
+  if (!result_)
+    return;
+
+  EXPECT_EQ(min_freq_, std::get<2>(GetParam()));
+  EXPECT_EQ(max_freq_, std::get<3>(GetParam()));
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    IioDeviceTestOnMinMaxFrequencyWithParamRun,
+    IioDeviceTestOnMinMaxFrequencyWithParam,
+    ::testing::Values(
+        std::make_tuple("  ", false, 0.0, 0.0),
+        std::make_tuple("  0abc  ", false, 0.0, 0.0),
+        std::make_tuple(" 0.0001 ", false, 0.0, 0.0),
+        std::make_tuple("0.5  ", true, 0.5, 0.5),
+        std::make_tuple("  1000  ", true, 1000.0, 1000.0),
+        std::make_tuple("1.0 100.0 ", true, 1.0, 100.0),
+        std::make_tuple("1.0 10.0 100.0 ", true, 1.0, 100.0),
+        std::make_tuple("1.0 a b c 100.0 ", true, 1.0, 100.0),
+        std::make_tuple("0.0 a b c 100.0 ", false, 0.0, 0.0),
+        std::make_tuple("0.0 1.0 100.0 ", true, 1.0, 100.0),
+        std::make_tuple("0.0 2.0 a b c 100.0 ", true, 2.0, 100.0)));
+
 }  // namespace
 
 }  // namespace libmems

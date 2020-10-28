@@ -19,6 +19,9 @@ constexpr char kTriggerIdPrefix[] = "trigger";
 constexpr char kFrequencyAttr[] = "frequency";
 constexpr char kSamplingFrequencyAttr[] = "sampling_frequency";
 constexpr char kHWFifoTimeoutAttr[] = "buffer/hwfifo_timeout";
+constexpr char kSamplingFrequencyAvailable[] = "sampling_frequency_available";
+
+constexpr double kFrequencyEpsilon = 0.001;  // Hz
 
 constexpr char kRawAttr[] = "raw";
 constexpr char kTimestampAttr[] = "timestamp";

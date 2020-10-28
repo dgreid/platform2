@@ -15,6 +15,7 @@
 #include <base/files/file_path.h>
 #include <base/macros.h>
 #include <base/optional.h>
+#include <base/time/time.h>
 
 #include "libmems/export.h"
 
@@ -142,6 +143,11 @@ class LIBMEMS_EXPORT IioDevice {
   // when the IioDevice along with the IioContext gets destroyed. It should not
   // be used along with EnableBuffer.
   virtual base::Optional<IioSample> ReadSample() = 0;
+
+  bool GetMinMaxFrequency(double* min_freq, double* max_freq);
+
+  // Gets the period of time to ignore obsolete samples in the kernel.
+  virtual base::TimeDelta GetPeriodForObsoleteSamplesInMilliseconds() = 0;
 
  protected:
   struct ChannelData {

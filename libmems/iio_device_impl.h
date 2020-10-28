@@ -65,6 +65,8 @@ class LIBMEMS_EXPORT IioDeviceImpl : public IioDevice {
   base::Optional<int32_t> GetBufferFd() override;
   base::Optional<IioSample> ReadSample() override;
 
+  base::TimeDelta GetPeriodForObsoleteSamplesInMilliseconds() override;
+
  private:
   static void IioBufferDeleter(iio_buffer* buffer);
 

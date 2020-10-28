@@ -7,7 +7,9 @@
 #include <stdlib.h>
 
 #include <base/strings/string_number_conversions.h>
+#include <base/strings/string_split.h>
 
+#include "libmems/common_types.h"
 #include "libmems/iio_channel.h"
 
 namespace libmems {
@@ -57,6 +59,68 @@ IioChannel* IioDevice::GetChannel(const std::string& name) {
   }
 
   return nullptr;
+}
+
+bool IioDevice::GetMinMaxFrequency(double* min_freq, double* max_freq) {
+  auto available_opt = ReadStringAttribute(kSamplingFrequencyAvailable);
+  if (!available_opt.has_value()) {
+    LOG(ERROR) << "Failed to read attribute: " << kSamplingFrequencyAvailable;
+    return false;
+  }
+
+  std::string sampling_frequency_available = available_opt.value();
+  // Remove trailing '\0' for parsing
+  auto pos = available_opt->find_first_of('\0');
+  if (pos != std::string::npos)
+    sampling_frequency_available = available_opt->substr(0, pos);
+
+  std::vector<std::string> sampling_frequencies =
+      base::SplitString(sampling_frequency_available, " ",
+                        base::TRIM_WHITESPACE, base::SPLIT_WANT_NONEMPTY);
+
+  switch (sampling_frequencies.size()) {
+    case 0:
+      LOG(ERROR) << "Invalid format of " << kSamplingFrequencyAvailable << ": "
+                 << sampling_frequency_available;
+      return false;
+
+    case 1:
+      if (!base::StringToDouble(sampling_frequencies.front(), min_freq) ||
+          *min_freq < 0.0 || *min_freq < kFrequencyEpsilon) {
+        LOG(ERROR) << "Failed to parse min max sampling_frequency: "
+                   << sampling_frequency_available;
+        return false;
+      }
+
+      *max_freq = *min_freq;
+      return true;
+
+    default:
+      if (!base::StringToDouble(sampling_frequencies.back(), max_freq) ||
+          *max_freq < kFrequencyEpsilon) {
+        LOG(ERROR) << "Failed to parse max sampling_frequency: "
+                   << sampling_frequency_available;
+        return false;
+      }
+
+      if (!base::StringToDouble(sampling_frequencies.front(), min_freq) ||
+          *min_freq < 0.0) {
+        LOG(ERROR) << "Failed to parse the first sampling_frequency: "
+                   << sampling_frequency_available;
+        return false;
+      }
+
+      if (*min_freq == 0.0) {
+        if (!base::StringToDouble(sampling_frequencies[1], min_freq) ||
+            *min_freq < 0.0 || *max_freq < *min_freq) {
+          LOG(ERROR) << "Failed to parse min sampling_frequency: "
+                     << sampling_frequency_available;
+          return false;
+        }
+      }
+
+      return true;
+  }
 }
 
 }  // namespace libmems

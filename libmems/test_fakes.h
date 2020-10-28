@@ -216,6 +216,8 @@ class LIBMEMS_EXPORT FakeIioDevice : public IioDevice {
   base::Optional<int32_t> GetBufferFd() override;
   base::Optional<IioSample> ReadSample() override;
 
+  base::TimeDelta GetPeriodForObsoleteSamplesInMilliseconds() override;
+
   // Simulates a bad device: not readable fd and fails all reads.
   void DisableFd();
   // Simulates some failures when reading the kth sample. Can be called multiple
