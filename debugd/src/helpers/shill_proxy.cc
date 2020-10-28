@@ -19,11 +19,10 @@ std::unique_ptr<ShillProxy> ShillProxy::Create() {
 ShillProxy::ShillProxy(scoped_refptr<dbus::Bus> bus)
     : SystemServiceProxy(bus, shill::kFlimflamServiceName) {}
 
-std::unique_ptr<base::DictionaryValue> ShillProxy::GetProperties(
+base::Optional<base::Value> ShillProxy::GetProperties(
     const std::string& interface_name, const dbus::ObjectPath& object_path) {
   dbus::MethodCall method_call(interface_name, shill::kGetPropertiesFunction);
-  return base::DictionaryValue::From(
-      CallMethodAndGetResponse(object_path, &method_call));
+  return CallMethodAndGetResponse(object_path, &method_call);
 }
 
 }  // namespace debugd

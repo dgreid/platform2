@@ -29,8 +29,8 @@ class ShillProxy : public SystemServiceProxy {
   // Gets the properties associated with the interface named |interface_name|
   // of a D-Bus object identified by |object_path| through the GetProperties()
   // D-Bus method exposed by shill. The properties are expected to be a
-  // dictionary. Returns nullptr on error.
-  std::unique_ptr<base::DictionaryValue> GetProperties(
+  // dictionary. Returns base::nullopt on error.
+  base::Optional<base::Value> GetProperties(
       const std::string& interface_name,
       const dbus::ObjectPath& object_path) override;
 

@@ -70,8 +70,6 @@
 
 #include "debugd/src/helpers/shill_proxy.h"
 
-using base::DictionaryValue;
-using base::ListValue;
 using base::Value;
 
 std::string getmac(int fd, const char* ifname) {
@@ -127,14 +125,12 @@ struct ifflag {
     {IFF_ECHO, "echo"},
 };
 
-std::unique_ptr<ListValue> flags2list(unsigned int flags) {
-  auto lv = std::make_unique<ListValue>();
+Value flags2list(unsigned int flags) {
+  Value lv(Value::Type::LIST);
   for (unsigned int i = 0; i < base::size(ifflags); ++i) {
     if (flags & ifflags[i].bit)
-      lv->Append(std::make_unique<Value>(ifflags[i].name));
+      lv.Append(ifflags[i].name);
   }
-  if (lv->empty())
-    return nullptr;
   return lv;
 }
 
@@ -146,18 +142,18 @@ class NetInterface {
   bool Init();
   void AddAddress(struct ifaddrs* ifa);
   void AddSignalStrength(const std::string& name, int strength);
-  std::unique_ptr<Value> ToValue() const;
+  Value ToValue() const;
 
  private:
   int fd_;
   const char* name_;
-  std::unique_ptr<DictionaryValue> ipv4_;
-  std::unique_ptr<DictionaryValue> ipv6_;
-  std::unique_ptr<ListValue> flags_;
+  Value ipv4_{Value::Type::DICTIONARY};
+  Value ipv6_{Value::Type::DICTIONARY};
+  Value flags_{Value::Type::LIST};
   std::string mac_;
-  std::unique_ptr<DictionaryValue> signal_strengths_;
+  Value signal_strengths_{Value::Type::DICTIONARY};
 
-  void AddAddressTo(DictionaryValue* dv, struct sockaddr* sa);
+  void AddAddressTo(Value* dv, struct sockaddr* sa);
 };
 
 NetInterface::NetInterface(int fd, const char* name) : fd_(fd), name_(name) {}
@@ -168,58 +164,49 @@ bool NetInterface::Init() {
 }
 
 void NetInterface::AddSignalStrength(const std::string& name, int strength) {
-  if (!signal_strengths_)
-    signal_strengths_ = std::make_unique<DictionaryValue>();
   // Use base::Value::SetKey, because |name| may contain ".".
-  signal_strengths_->SetKey(name, base::Value(strength));
+  signal_strengths_.SetIntKey(name, strength);
 }
 
-void NetInterface::AddAddressTo(DictionaryValue* dv, struct sockaddr* sa) {
-  if (!dv->HasKey("addrs"))
-    dv->Set("addrs", std::make_unique<ListValue>());
-  ListValue* lv;
-  dv->Get("addrs", reinterpret_cast<Value**>(&lv));
-  lv->Append(std::make_unique<Value>(sockaddr2str(sa)));
+void NetInterface::AddAddressTo(Value* dv, struct sockaddr* sa) {
+  Value* lv = dv->FindListKey("addrs");
+  if (lv == nullptr)
+    lv = dv->SetKey("addrs", Value(Value::Type::LIST));
+  lv->Append(sockaddr2str(sa));
 }
 
 void NetInterface::AddAddress(struct ifaddrs* ifa) {
-  if (!flags_)
+  if (flags_.GetList().empty())
     flags_ = flags2list(ifa->ifa_flags);
   if (!ifa->ifa_addr)
     return;
   if (ifa->ifa_addr->sa_family == AF_INET) {
     // An IPv4 address.
-    if (!ipv4_)
-      ipv4_ = std::make_unique<DictionaryValue>();
-    AddAddressTo(ipv4_.get(), ifa->ifa_addr);
-    if (!ipv4_->HasKey("mask")) {
-      ipv4_->Set("mask",
-                 std::make_unique<Value>(sockaddr2str(ifa->ifa_netmask)));
+    AddAddressTo(&ipv4_, ifa->ifa_addr);
+    if (!ipv4_.FindKey("mask")) {
+      ipv4_.SetStringKey("mask", sockaddr2str(ifa->ifa_netmask));
     }
-    if (!ipv4_->HasKey("destination")) {
-      ipv4_->Set("destination",
-                 std::make_unique<Value>(sockaddr2str(ifa->ifa_broadaddr)));
+    if (!ipv4_.FindKey("destination")) {
+      ipv4_.SetStringKey("destination", sockaddr2str(ifa->ifa_broadaddr));
     }
   } else if (ifa->ifa_addr->sa_family == AF_INET6) {
     // An IPv6 address.
-    if (!ipv6_)
-      ipv6_ = std::make_unique<DictionaryValue>();
-    AddAddressTo(ipv6_.get(), ifa->ifa_addr);
+    AddAddressTo(&ipv6_, ifa->ifa_addr);
   }
 }
 
-std::unique_ptr<Value> NetInterface::ToValue() const {
-  auto dv = std::make_unique<DictionaryValue>();
-  if (ipv4_)
-    dv->Set("ipv4", ipv4_->CreateDeepCopy());
-  if (ipv6_)
-    dv->Set("ipv6", ipv6_->CreateDeepCopy());
-  if (flags_)
-    dv->Set("flags", flags_->CreateDeepCopy());
-  if (signal_strengths_)
-    dv->Set("signal-strengths", signal_strengths_->CreateDeepCopy());
-  dv->Set("mac", std::make_unique<Value>(mac_));
-  return std::move(dv);
+Value NetInterface::ToValue() const {
+  Value dv(Value::Type::DICTIONARY);
+  if (!ipv4_.DictEmpty())
+    dv.SetKey("ipv4", ipv4_.Clone());
+  if (!ipv6_.DictEmpty())
+    dv.SetKey("ipv6", ipv6_.Clone());
+  if (flags_.GetList().size())
+    dv.SetKey("flags", flags_.Clone());
+  if (!signal_strengths_.DictEmpty())
+    dv.SetKey("signal-strengths", signal_strengths_.Clone());
+  dv.SetStringKey("mac", mac_);
+  return dv;
 }
 
 std::string DevicePathToName(const std::string& path) {
@@ -246,17 +233,15 @@ void AddSignalStrengths(
   for (const auto& service_path : service_paths) {
     auto service_properties =
         proxy->GetProperties(shill::kFlimflamServiceInterface, service_path);
-    int strength;
-    std::string name;
-    std::string device;
-    if (!service_properties->GetInteger("Strength", &strength) ||
-        !service_properties->GetString("Name", &name) ||
-        !service_properties->GetString("Device", &device)) {
+    base::Optional<int> strength = service_properties->FindIntKey("Strength");
+    const std::string* name = service_properties->FindStringKey("Name");
+    const std::string* device = service_properties->FindStringKey("Device");
+    if (!strength.has_value() || name == nullptr || device == nullptr) {
       continue;
     }
-    std::string devname = DevicePathToName(device);
+    std::string devname = DevicePathToName(*device);
     if (interfaces->count(devname)) {
-      interfaces->find(devname)->second->AddSignalStrength(name, strength);
+      interfaces->find(devname)->second->AddSignalStrength(*name, *strength);
     }
   }
 }
@@ -264,7 +249,7 @@ void AddSignalStrengths(
 int main() {
   struct ifaddrs* ifaddrs;
   int fd;
-  DictionaryValue result;
+  Value result(Value::Type::DICTIONARY);
   std::map<std::string, std::unique_ptr<NetInterface>> interfaces;
 
   if (getifaddrs(&ifaddrs) == -1) {
@@ -290,7 +275,7 @@ int main() {
   AddSignalStrengths(&interfaces);
 
   for (const auto& interface : interfaces)
-    result.Set(interface.first, interface.second->ToValue());
+    result.SetKey(interface.first, interface.second->ToValue());
 
   std::string json;
   base::JSONWriter::WriteWithOptions(

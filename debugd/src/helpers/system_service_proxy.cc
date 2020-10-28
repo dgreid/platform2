@@ -42,51 +42,49 @@ scoped_refptr<dbus::Bus> SystemServiceProxy::ConnectToSystemBus() {
   return bus;
 }
 
-std::unique_ptr<base::Value> SystemServiceProxy::CallMethodAndGetResponse(
+base::Optional<base::Value> SystemServiceProxy::CallMethodAndGetResponse(
     const dbus::ObjectPath& object_path, dbus::MethodCall* method_call) {
   dbus::ObjectProxy* object_proxy =
       bus_->GetObjectProxy(service_name_, object_path);
   std::unique_ptr<dbus::Response> response = object_proxy->CallMethodAndBlock(
       method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
   if (!response)
-    return nullptr;
+    return base::nullopt;
 
   dbus::MessageReader reader(response.get());
-  return dbus::PopDataAsValue(&reader);
+  return base::Optional<base::Value>(
+      base::Value::FromUniquePtrValue(dbus::PopDataAsValue(&reader)));
 }
 
-std::unique_ptr<base::DictionaryValue> SystemServiceProxy::GetProperties(
+base::Optional<base::Value> SystemServiceProxy::GetProperties(
     const std::string& interface_name, const dbus::ObjectPath& object_path) {
   dbus::MethodCall method_call(kDBusPropertiesInterface,
                                kDBusPropertiesGetAllMethod);
   dbus::MessageWriter writer(&method_call);
   writer.AppendString(interface_name);
-  return base::DictionaryValue::From(
-      CallMethodAndGetResponse(object_path, &method_call));
+  return CallMethodAndGetResponse(object_path, &method_call);
 }
 
-std::unique_ptr<base::DictionaryValue>
-SystemServiceProxy::BuildObjectPropertiesMap(
+base::Value SystemServiceProxy::BuildObjectPropertiesMap(
     const std::string& interface_name,
     const std::vector<dbus::ObjectPath>& object_paths) {
-  auto result = std::make_unique<base::DictionaryValue>();
+  base::Value result(base::Value::Type::DICTIONARY);
   for (const auto& object_path : object_paths) {
-    result->SetWithoutPathExpansion(object_path.value(),
-                                    GetProperties(interface_name, object_path));
+    result.SetKey(object_path.value(),
+                  *GetProperties(interface_name, object_path));
   }
   return result;
 }
 
 // static
 std::vector<dbus::ObjectPath> SystemServiceProxy::GetObjectPaths(
-    const base::DictionaryValue& properties, const std::string& property_name) {
+    const base::Value& properties, const std::string& property_name) {
   std::vector<dbus::ObjectPath> object_paths;
-  const base::ListValue* paths = nullptr;
-  if (properties.GetList(property_name, &paths)) {
-    for (size_t i = 0; i < paths->GetSize(); ++i) {
-      std::string path;
-      if (paths->GetString(i, &path)) {
-        object_paths.emplace_back(path);
+  const base::Value* paths = properties.FindListPath(property_name);
+  if (paths != nullptr) {
+    for (const auto& path : paths->GetList()) {
+      if (path.is_string()) {
+        object_paths.emplace_back(path.GetString());
       }
     }
   }

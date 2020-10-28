@@ -409,15 +409,15 @@ const std::vector<Log> kFeedbackLogs {
 
 // Fills |dictionary| with the contents of the logs in |logs|.
 void GetLogsInDictionary(const std::vector<Log>& logs,
-                         base::DictionaryValue* dictionary) {
+                         base::Value* dictionary) {
   for (const Log& log : logs) {
-    dictionary->SetKey(log.GetName(), base::Value(log.GetLogData()));
+    dictionary->SetStringKey(log.GetName(), log.GetLogData());
   }
 }
 
 // Serializes the |dictionary| into the file with the given |fd| in a JSON
 // format.
-void SerializeLogsAsJSON(const base::DictionaryValue& dictionary,
+void SerializeLogsAsJSON(const base::Value& dictionary,
                          const base::ScopedFD& fd) {
   string logs_json;
   base::JSONWriter::WriteWithOptions(
@@ -471,9 +471,9 @@ void GetOsReleaseInfo(LogTool::LogMap* map) {
 }
 
 void PopulateDictionaryValue(const LogTool::LogMap& map,
-                             base::DictionaryValue* dictionary) {
+                             base::Value* dictionary) {
   for (const auto& kv : map) {
-    dictionary->SetString(kv.first, kv.second);
+    dictionary->SetStringKey(kv.first, kv.second);
   }
 }
 
@@ -765,15 +765,14 @@ void LogTool::GetBigFeedbackLogs(const base::ScopedFD& fd,
   CreateConnectivityReport(true);
   LogMap map;
   GetPerfData(&map);
-  base::DictionaryValue dictionary;
+  base::Value dictionary(base::Value::Type::DICTIONARY);
   GetLogsInDictionary(kCommandLogs, &dictionary);
   GetLogsInDictionary(kFeedbackLogs, &dictionary);
   bool is_backup;
   std::string arc_bug_report = GetArcBugReport(username, &is_backup);
-  dictionary.SetKey(kArcBugReportBackupKey,
-                    base::Value(is_backup ? "true" : "false"));
-  dictionary.SetKey(arc_bug_report_log_->GetName(),
-                    base::Value(arc_bug_report));
+  dictionary.SetStringKey(kArcBugReportBackupKey,
+                          (is_backup ? "true" : "false"));
+  dictionary.SetStringKey(arc_bug_report_log_->GetName(), arc_bug_report);
   GetLsbReleaseInfo(&map);
   GetOsReleaseInfo(&map);
   PopulateDictionaryValue(map, &dictionary);

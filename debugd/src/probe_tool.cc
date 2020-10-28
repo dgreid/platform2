@@ -32,8 +32,6 @@
 #include "debugd/src/error_utils.h"
 #include "debugd/src/sandboxed_process.h"
 
-using base::ListValue;
-
 namespace debugd {
 
 namespace {
