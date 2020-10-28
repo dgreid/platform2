@@ -10,6 +10,7 @@
 #include <utility>
 
 #include <base/bits.h>
+#include <base/compiler_specific.h>
 #include <base/files/file.h>
 #include <base/logging.h>
 #include <base/strings/string_number_conversions.h>
@@ -714,14 +715,29 @@ void Manager::GetNextImageInternal(const std::string& uuid,
                                    ScanJobState* scan_state,
                                    base::ScopedFILE out_file) {
   brillo::ErrorPtr error;
-  if (!RunScanLoop(&error, scan_state, std::move(out_file), uuid)) {
-    ReportScanFailed(scan_state->device_name);
-    SendFailureSignal(uuid, SerializeError(error));
-    {
-      base::AutoLock auto_lock(active_scans_lock_);
-      active_scans_.erase(uuid);
-    }
-    return;
+  ScanState result = RunScanLoop(&error, scan_state, std::move(out_file), uuid);
+  switch (result) {
+    case SCAN_STATE_PAGE_COMPLETED:
+      // Do nothing.
+      break;
+    case SCAN_STATE_CANCELLED:
+      SendCancelledSignal(uuid);
+      {
+        base::AutoLock auto_lock(active_scans_lock_);
+        active_scans_.erase(uuid);
+      }
+      return;
+    default:
+      LOG(ERROR) << "Unexpected scan state: " << ScanState_Name(result);
+      FALLTHROUGH;
+    case SCAN_STATE_FAILED:
+      ReportScanFailed(scan_state->device_name);
+      SendFailureSignal(uuid, SerializeError(error));
+      {
+        base::AutoLock auto_lock(active_scans_lock_);
+        active_scans_.erase(uuid);
+      }
+      return;
   }
 
   bool scanned_all_pages =
@@ -759,7 +775,14 @@ void Manager::GetNextImageInternal(const std::string& uuid,
     return;
   }
 
-  if (status != SANE_STATUS_GOOD) {
+  if (status == SANE_STATUS_CANCELLED) {
+    SendCancelledSignal(uuid);
+    {
+      base::AutoLock auto_lock(active_scans_lock_);
+      active_scans_.erase(uuid);
+    }
+    return;
+  } else if (status != SANE_STATUS_GOOD) {
     // The scan failed.
     brillo::Error::AddToPrintf(&error, FROM_HERE, kDbusDomain,
                                kManagerServiceError, "Failed to start scan: %s",
@@ -778,18 +801,18 @@ void Manager::GetNextImageInternal(const std::string& uuid,
     activity_callback_.Run();
 }
 
-bool Manager::RunScanLoop(brillo::ErrorPtr* error,
-                          ScanJobState* scan_state,
-                          base::ScopedFILE out_file,
-                          base::Optional<std::string> scan_uuid) {
+ScanState Manager::RunScanLoop(brillo::ErrorPtr* error,
+                               ScanJobState* scan_state,
+                               base::ScopedFILE out_file,
+                               base::Optional<std::string> scan_uuid) {
   SaneDevice* device = scan_state->device.get();
   ScanParameters params;
   if (!device->GetScanParameters(error, &params)) {
-    return false;
+    return SCAN_STATE_FAILED;
   }
 
   if (!ValidateParams(error, params)) {
-    return false;
+    return SCAN_STATE_FAILED;
   }
 
   // Get resolution value so that we can record it in the PNG.
@@ -806,7 +829,7 @@ bool Manager::RunScanLoop(brillo::ErrorPtr* error,
   png_struct* png;
   png_info* info;
   if (!SetupPngHeader(error, params, resolution, &png, &info, out_file)) {
-    return false;
+    return SCAN_STATE_FAILED;
   }
   base::ScopedClosureRunner cleanup_png(base::BindOnce(
       [](png_struct** png, png_info** info) {
@@ -821,7 +844,7 @@ bool Manager::RunScanLoop(brillo::ErrorPtr* error,
         error, FROM_HERE, kDbusDomain, kManagerServiceError,
         "PNG image row requires %zu bytes, but SANE is only providing %d bytes",
         png_get_rowbytes(png, info), params.bytes_per_line);
-    return false;
+    return SCAN_STATE_FAILED;
   }
 
   base::TimeTicks last_progress_sent_time = base::TimeTicks::Now();
@@ -844,11 +867,19 @@ bool Manager::RunScanLoop(brillo::ErrorPtr* error,
     SANE_Status result =
         device->ReadScanData(error, image_buffer.data() + buffer_offset,
                              image_buffer.size() - buffer_offset, &read);
-    if (result != SANE_STATUS_GOOD && result != SANE_STATUS_EOF) {
-      brillo::Error::AddToPrintf(
-          error, FROM_HERE, kDbusDomain, kManagerServiceError,
-          "Reading scan data failed: %s", sane_strstatus(result));
-      return false;
+    switch (result) {
+      case SANE_STATUS_GOOD:
+      case SANE_STATUS_EOF:
+        // Do nothing.
+        break;
+      case SANE_STATUS_CANCELLED:
+        LOG(INFO) << "Scan job has been cancelled.";
+        return SCAN_STATE_CANCELLED;
+      default:
+        brillo::Error::AddToPrintf(
+            error, FROM_HERE, kDbusDomain, kManagerServiceError,
+            "Reading scan data failed: %s", sane_strstatus(result));
+        return SCAN_STATE_FAILED;
     }
 
     if (read == 0) {
@@ -866,7 +897,7 @@ bool Manager::RunScanLoop(brillo::ErrorPtr* error,
         brillo::Error::AddToPrintf(
             error, FROM_HERE, kDbusDomain, kManagerServiceError,
             "Writing PNG row failed with result %d", ret);
-        return false;
+        return SCAN_STATE_FAILED;
       }
       bytes_converted += params.bytes_per_line;
       rows_written++;
@@ -893,7 +924,7 @@ bool Manager::RunScanLoop(brillo::ErrorPtr* error,
         error, FROM_HERE, kDbusDomain, kManagerServiceError,
         "Received incomplete scan data, %zu unused bytes remaining",
         buffer_offset);
-    return false;
+    return SCAN_STATE_FAILED;
   }
 
   int ret = LibpngErrorWrap(error, png_write_end, png, info);
@@ -901,10 +932,10 @@ bool Manager::RunScanLoop(brillo::ErrorPtr* error,
     brillo::Error::AddToPrintf(
         error, FROM_HERE, kDbusDomain, kManagerServiceError,
         "Finalizing PNG write failed with result %d", ret);
-    return false;
+    return SCAN_STATE_FAILED;
   }
 
-  return true;
+  return SCAN_STATE_PAGE_COMPLETED;
 }
 
 void Manager::ReportScanRequested(const std::string& device_name) {
@@ -936,6 +967,13 @@ void Manager::SendStatusSignal(std::string uuid,
   signal.set_page(page);
   signal.set_progress(progress);
   signal.set_more_pages(more_pages);
+  status_signal_sender_.Run(signal);
+}
+
+void Manager::SendCancelledSignal(std::string uuid) {
+  ScanStatusChangedSignal signal;
+  signal.set_scan_uuid(uuid);
+  signal.set_state(SCAN_STATE_CANCELLED);
   status_signal_sender_.Run(signal);
 }
 

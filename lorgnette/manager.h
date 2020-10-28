@@ -24,8 +24,6 @@
 #include <lorgnette/proto_bindings/lorgnette_service.pb.h>
 #include <metrics/metrics_library.h>
 
-#include <sane/sane.h>
-
 #include "lorgnette/dbus_adaptors/org.chromium.lorgnette.Manager.h"
 #include "lorgnette/sane_client.h"
 
@@ -124,10 +122,10 @@ class Manager : public org::chromium::lorgnette::ManagerAdaptor,
                             ScanJobState* scan_state,
                             base::ScopedFILE out_file);
 
-  bool RunScanLoop(brillo::ErrorPtr* error,
-                   ScanJobState* scan_state,
-                   base::ScopedFILE out_file,
-                   base::Optional<std::string> scan_uuid);
+  ScanState RunScanLoop(brillo::ErrorPtr* error,
+                        ScanJobState* scan_state,
+                        base::ScopedFILE out_file,
+                        base::Optional<std::string> scan_uuid);
 
   void ReportScanRequested(const std::string& device_name);
   void ReportScanSucceeded(const std::string& device_name);
@@ -138,6 +136,7 @@ class Manager : public org::chromium::lorgnette::ManagerAdaptor,
                         int page,
                         int progress,
                         bool more_pages);
+  void SendCancelledSignal(std::string uuid);
   void SendFailureSignal(std::string uuid, std::string failure_reason);
 
   std::unique_ptr<brillo::dbus_utils::DBusObject> dbus_object_;

@@ -124,6 +124,9 @@ enum ScanState {
 
   // Scanning of the current page completed successfully.
   SCAN_STATE_PAGE_COMPLETED = 4;
+
+  // The scan job was cancelled via a call to CancelScan.
+  SCAN_STATE_CANCELLED = 5;
 }
 
 // Information passed to a StartScan D-Bus request.
