@@ -109,6 +109,8 @@ class SamplesHandler {
                  OnErrorOccurredCallback on_error_occurred_callback);
 
   void SetSampleWatcherOnThread();
+  void StartAcceptingSamples(
+      base::FileDescriptorWatcher::Controller* ignored_watcher);
   void StopSampleWatcherOnThread();
 
   double FixFrequency(double frequency);
@@ -183,6 +185,7 @@ class SamplesHandler {
 
   std::set<int32_t> no_batch_chn_indices;
 
+  base::FileDescriptorWatcher::Controller* ignored_watcher_ = nullptr;
   std::unique_ptr<base::FileDescriptorWatcher::Controller> watcher_;
 
  private:

@@ -239,6 +239,20 @@ void SamplesHandler::SetSampleWatcherOnThread() {
       fd.value(),
       base::BindRepeating(&SamplesHandler::OnSampleAvailableWithoutBlocking,
                           weak_factory_.GetWeakPtr()));
+
+  sample_task_runner_->PostDelayedTask(
+      FROM_HERE,
+      base::BindOnce(&SamplesHandler::StartAcceptingSamples,
+                     weak_factory_.GetWeakPtr(), watcher_.get()),
+      iio_device_->GetPeriodForObsoleteSamplesInMilliseconds());
+}
+
+void SamplesHandler::StartAcceptingSamples(
+    base::FileDescriptorWatcher::Controller* ignored_watcher) {
+  DCHECK(sample_task_runner_->BelongsToCurrentThread());
+
+  if (ignored_watcher_ == ignored_watcher)
+    ignored_watcher_ = nullptr;
 }
 
 void SamplesHandler::StopSampleWatcherOnThread() {
@@ -593,6 +607,11 @@ void SamplesHandler::OnSampleAvailableWithoutBlocking() {
                          cros::mojom::ObserverErrorType::READ_FAILED));
     }
 
+    return;
+  }
+
+  if (ignored_watcher_ == watcher_.get()) {
+    // Ignore this sample as it's still in the period of obsolete samples.
     return;
   }
 
