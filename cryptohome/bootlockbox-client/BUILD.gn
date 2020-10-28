@@ -33,18 +33,6 @@ pkg_config("proto_config") {
   pkg_deps = [ "protobuf" ]
 }
 
-proto_library("bootlockbox-generated-proto") {
-  proto_in_dir = "${target_gen_dir}/bootlockbox"
-  proto_out_dir = "include/cryptohome/bootlockbox"
-
-  # shared_library.
-  use_pic = true
-  sources = [ "${target_gen_dir}/bootlockbox/boot_lockbox_rpc.proto" ]
-  all_dependent_configs = [ ":proto_config" ]
-  deps = [ ":bootlockbox-proto-external" ]
-  standalone = true
-}
-
 proto_library("bootlockbox-proto") {
   proto_in_dir = "../bootlockbox"
   proto_lib_dirs = [ target_gen_dir ]
@@ -54,7 +42,6 @@ proto_library("bootlockbox-proto") {
   use_pic = true
   sources = [ "${proto_in_dir}/key_value_map.proto" ]
   all_dependent_configs = [ ":proto_config" ]
-  deps = [ ":bootlockbox-generated-proto" ]
   standalone = true
 }
 
@@ -87,7 +74,6 @@ shared_library("libbootlockbox-client") {
 
 group("all") {
   deps = [
-    ":bootlockbox-generated-proto",
     ":bootlockbox-proto",
     ":bootlockbox-proxies",
     ":libbootlockbox-client",

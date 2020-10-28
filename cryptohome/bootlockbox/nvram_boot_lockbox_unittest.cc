@@ -13,7 +13,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "cryptohome/bootlockbox/boot_lockbox_rpc.pb.h"
+#include "bootlockbox/proto_bindings/boot_lockbox_rpc.pb.h"
 
 namespace {
 const char kTestFilePath[] = "test_file_path.pb";

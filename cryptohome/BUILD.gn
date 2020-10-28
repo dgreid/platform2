@@ -98,9 +98,17 @@ executable("cryptohome-path") {
     "libs:libcrostpm",
     "libs:libcryptohome",
   ]
+
+  # NOSORT
   pkg_deps = [
     "libbrillo",
     "libchrome",
+
+    # system_api depends on protobuf (or protobuf-lite). It must appear
+    # before protobuf here or the linker flags won't be in the right
+    # order.
+    "system_api",
+    "protobuf",
   ]
 }
 
@@ -625,10 +633,17 @@ if (use.tpm2) {
     defines = [ "USE_TPM2=${use.tpm2}" ]
     deps = [ "libs:libnvram-boot-lockbox" ]
     sources = [ "bootlockbox/boot_lockbox_tool.cc" ]
+
+    # NOSORT
     pkg_deps = [
       "libbootlockbox-client",
       "libbrillo",
       "libchrome",
+
+      # system_api depends on protobuf (or protobuf-lite). It must appear
+      # before protobuf here or the linker flags won't be in the right
+      # order.
+      "system_api",
       "protobuf",
     ]
   }

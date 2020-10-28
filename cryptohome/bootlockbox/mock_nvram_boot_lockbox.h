@@ -7,7 +7,7 @@
 
 #include <string>
 
-#include "cryptohome/bootlockbox/boot_lockbox_rpc.pb.h"
+#include "bootlockbox/proto_bindings/boot_lockbox_rpc.pb.h"
 #include "cryptohome/bootlockbox/nvram_boot_lockbox.h"
 #include "cryptohome/bootlockbox/tpm_nvspace_interface.h"
 

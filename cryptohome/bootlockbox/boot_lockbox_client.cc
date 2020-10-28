@@ -16,7 +16,7 @@
 // Note that boot_lockbox_rpc.pb.h have to be included before
 // dbus_adaptors/org.chromium.BootLockboxInterface.h because it is used in
 // there.
-#include "cryptohome/bootlockbox/boot_lockbox_rpc.pb.h"
+#include "bootlockbox/proto_bindings/boot_lockbox_rpc.pb.h"
 
 #include "bootlockbox/dbus-proxies.h"
 

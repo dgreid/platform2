@@ -15,14 +15,20 @@ group("all") {
 
 pkg_config("common_pkg_deps") {
   defines = [ "USE_SELINUX=${use.selinux}" ]
+
+  # NOSORT
   pkg_deps = [
     "libbootlockbox-client",
     "libbrillo",
     "libchrome",
     "libselinux",
     "openssl",
-    "protobuf",
+
+    # system_api depends on protobuf (or protobuf-lite). It must appear
+    # before protobuf here or the linker flags won't be in the right
+    # order.
     "system_api",
+    "protobuf",
   ]
   if (use.selinux) {
     pkg_deps += [ "libselinux" ]
@@ -66,11 +72,18 @@ executable("arc-data-snapshotd") {
 
 if (use.test) {
   pkg_config("test_pkg_deps") {
+    # NOSORT
     pkg_deps = [
       "libbootlockbox-client",
       "libbrillo",
       "libchrome",
       "libchrome-test",
+
+      # system_api depends on protobuf (or protobuf-lite). It must appear
+      # before protobuf here or the linker flags won't be in the right
+      # order.
+      "system_api",
+      "protobuf",
     ]
   }
   executable("arc-data-snapshotd_test") {
