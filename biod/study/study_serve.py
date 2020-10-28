@@ -11,6 +11,8 @@ from __future__ import print_function
 import argparse
 from datetime import datetime
 import json
+import logging
+import logging.handlers
 import os
 import re
 import subprocess
@@ -243,6 +245,9 @@ def main(argv: list):
                         help='Directory for the fingerprint captures')
     parser.add_argument('-l', '--log_dir',
                         help='Log files directory')
+    parser.add_argument('-s', '--syslog', action='store_true',
+                        help='Log to syslog')
+
     args = parser.parse_args(argv)
     # Configure cherrypy server
     cherrypy.config.update({'server.socket_port': args.port})
@@ -252,6 +257,20 @@ def main(argv: list):
             'log.access_file': os.path.join(args.log_dir, 'access.log'),
             'log.error_file': os.path.join(args.log_dir, log_name),
             'log.screen': False})
+    if args.syslog:
+        h = logging.handlers.SysLogHandler(
+            address='/dev/log',
+            facility=logging.handlers.SysLogHandler.LOG_LOCAL1)
+        h.setLevel(logging.DEBUG)
+        h.setFormatter(cherrypy._cplogging.logfmt)
+        logger = logging.getLogger('cherrypy.access')
+        logger.setLevel(logging.DEBUG)
+        logger.addHandler(h)
+        logger = logging.getLogger('cherrypy.error')
+        logger.setLevel(logging.DEBUG)
+        logger.addHandler(h)
+        cherrypy.config.update({'log.screen': False})
+
     WebSocketPlugin(cherrypy.engine).subscribe()
     cherrypy.tools.websocket = WebSocketTool()
 
