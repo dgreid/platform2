@@ -155,6 +155,9 @@ constexpr char kTPMFirmwareUpdateModeCleanup[] = "cleanup";
 
 // Policy storage constants.
 constexpr char kSigEncodeFailMessage[] = "Failed to retrieve policy data.";
+constexpr char kParseDescriptorFailMessage[] =
+    "Failed to parse policy descriptor.";
+constexpr char kGetPolicyServiceFailMessage[] = "Failed to get policy service.";
 
 // Default path of symlink to log file where stdout and stderr from
 // session_manager and Chrome are redirected.
@@ -808,17 +811,27 @@ bool SessionManagerImpl::RetrievePolicyEx(
     brillo::ErrorPtr* error,
     const std::vector<uint8_t>& in_descriptor_blob,
     std::vector<uint8_t>* out_policy_blob) {
+  // TODO(igorcov): crbug.com/836388 Remove the info logs when we get enough
+  // information from reports.
+  LOG(INFO) << "RetrievePolicyEx DBus call received.";
   PolicyDescriptor descriptor;
   if (!ParseAndValidatePolicyDescriptor(in_descriptor_blob,
                                         PolicyDescriptorUsage::kRetrieve,
                                         &descriptor, error)) {
+    LOG(ERROR) << kParseDescriptorFailMessage;
+    *error =
+        CreateError(dbus_error::kSigEncodeFail, kParseDescriptorFailMessage);
     return false;
   }
 
   std::unique_ptr<PolicyService> storage;
   PolicyService* policy_service = GetPolicyService(descriptor, &storage, error);
-  if (!policy_service)
+  if (!policy_service) {
+    LOG(ERROR) << kGetPolicyServiceFailMessage;
+    *error =
+        CreateError(dbus_error::kSigEncodeFail, kGetPolicyServiceFailMessage);
     return false;
+  }
 
   PolicyNamespace ns(descriptor.domain(), descriptor.component_id());
 
@@ -827,6 +840,7 @@ bool SessionManagerImpl::RetrievePolicyEx(
     *error = CreateError(dbus_error::kSigEncodeFail, kSigEncodeFailMessage);
     return false;
   }
+  LOG(INFO) << "RetrievePolicyEx success.";
   return true;
 }
 

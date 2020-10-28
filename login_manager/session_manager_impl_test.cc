@@ -1618,7 +1618,7 @@ TEST_F(SessionManagerImplTest, RetrieveUserPolicyEx_NoSession) {
   EXPECT_FALSE(impl_->RetrievePolicyEx(
       &error, MakePolicyDescriptor(ACCOUNT_TYPE_USER, kSaneEmail), &out_blob));
   ASSERT_TRUE(error.get());
-  EXPECT_EQ(dbus_error::kGetServiceFail, error->GetCode());
+  EXPECT_EQ(dbus_error::kSigEncodeFail, error->GetCode());
 }
 
 TEST_F(SessionManagerImplTest, RetrieveUserPolicyEx_SessionStarted) {
@@ -1664,7 +1664,7 @@ TEST_F(SessionManagerImplTest, RetrieveUserPolicyEx_SecondSession) {
     EXPECT_FALSE(impl_->RetrievePolicyEx(
         &error, MakePolicyDescriptor(ACCOUNT_TYPE_USER, kEmail2), &out_blob));
     ASSERT_TRUE(error.get());
-    EXPECT_EQ(dbus_error::kGetServiceFail, error->GetCode());
+    EXPECT_EQ(dbus_error::kSigEncodeFail, error->GetCode());
   }
 
   // Now start another session for the 2nd user.
@@ -1761,7 +1761,7 @@ TEST_F(SessionManagerImplTest, RetrieveDeviceLocalAccountPolicyNoAccount) {
       MakePolicyDescriptor(ACCOUNT_TYPE_DEVICE_LOCAL_ACCOUNT, kSaneEmail),
       &out_blob));
   ASSERT_TRUE(error.get());
-  EXPECT_EQ(dbus_error::kGetServiceFail, error->GetCode());
+  EXPECT_EQ(dbus_error::kSigEncodeFail, error->GetCode());
 }
 
 TEST_F(SessionManagerImplTest, RetrieveDeviceLocalAccountPolicySuccess) {
