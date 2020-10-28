@@ -42,20 +42,6 @@ ns-v0">
         </tp:docstring>
       <arg name="start_scan_response" type="ay" direction="out"/>
     </method>
-    <method name="StartScanMultiPage">
-      <annotation name="org.chromium.DBus.Method.Kind" value="simple"/>
-      <tp:docstring>
-        Sets up a multi-page scan job.
-        Initiates a connection to the scanner, and prepares for scanning. Once
-        called, the client can call GetNextPage to fetch image data.
-      </tp:docstring>
-      <arg name="start_scan_request" type="ay" direction="in"/>
-        <tp:docstring>
-          Serialized StartScanRequest proto specifying the scanner to use and
-          the settings for the scan.
-        </tp:docstring>
-      <arg name="start_scan_response" type="ay" direction="out"/>
-    </method>
     <method name="GetNextImage">
       <annotation name="org.chromium.DBus.Method.Kind" value="async"/>
       <tp:docstring>

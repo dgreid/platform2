@@ -83,8 +83,6 @@ class Manager : public org::chromium::lorgnette::ManagerAdaptor,
                               std::vector<uint8_t>* capabilities) override;
   std::vector<uint8_t> StartScan(
       const std::vector<uint8_t>& start_scan_request) override;
-  std::vector<uint8_t> StartScanMultiPage(
-      const std::vector<uint8_t>& start_scan_request) override;
   void GetNextImage(
       std::unique_ptr<DBusMethodResponse<std::vector<uint8_t>>> response,
       const std::vector<uint8_t>& get_next_image_request,

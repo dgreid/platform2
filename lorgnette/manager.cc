@@ -520,11 +520,6 @@ std::vector<uint8_t> Manager::StartScan(
   return impl::SerializeProto(response);
 }
 
-std::vector<uint8_t> Manager::StartScanMultiPage(
-    const std::vector<uint8_t>& start_scan_request) {
-  return StartScan(start_scan_request);
-}
-
 void Manager::GetNextImage(
     std::unique_ptr<DBusMethodResponse<std::vector<uint8_t>>> method_response,
     const std::vector<uint8_t>& get_next_image_request,
