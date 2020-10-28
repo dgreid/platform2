@@ -122,7 +122,7 @@ inline void initData(uint8_t* data, size_t count) {
 /*
  * This thread will attempt to read and block. When wait returns
  * it checks if the kFmqNotEmpty bit is actually set.
- * If the read is succesful, it signals Wake to kFmqNotFull.
+ * If the read is successful, it signals Wake to kFmqNotFull.
  */
 void ReaderThreadBlocking(android::hardware::MessageQueue<
                               uint8_t,
@@ -584,7 +584,7 @@ TEST_F(UnsynchronizedWrite, ReadWhenEmpty) {
 }
 
 /*
- * Write the queue when full. Verify that a subsequent writes is succesful.
+ * Write the queue when full. Verify that a subsequent writes is successful.
  * Verify that availableToWrite() returns 0 as expected.
  */
 TEST_F(UnsynchronizedWrite, WriteWhenFull1) {
@@ -602,7 +602,7 @@ TEST_F(UnsynchronizedWrite, WriteWhenFull1) {
 
 /*
  * Write the queue when full. Verify that a subsequent writes
- * using beginRead()/commitRead() is succesful.
+ * using beginRead()/commitRead() is successful.
  * Verify that the next read fails as expected for unsynchronized flavor.
  */
 TEST_F(UnsynchronizedWrite, WriteWhenFull2) {
@@ -657,7 +657,7 @@ TEST_F(UnsynchronizedWrite, LargeInputTest2) {
 
 /*
  * After the queue is full, try to write more data. Verify that
- * the attempt is succesful. Verify that the read fails
+ * the attempt is successful. Verify that the read fails
  * as expected.
  */
 TEST_F(UnsynchronizedWrite, LargeInputTest3) {
