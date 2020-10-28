@@ -76,6 +76,7 @@ class Port {
   friend class PortTest;
   FRIEND_TEST(PortTest, TestBasicAdd);
   FRIEND_TEST(PortTest, TestDPAltModeEntryCheckTrue);
+  FRIEND_TEST(PortTest, TestDPAltModeEntryCheckFalseWithDPSID);
   FRIEND_TEST(PortTest, TestDPAltModeEntryCheckFalse);
   FRIEND_TEST(PortTest, TestTBTCompatibilityModeEntryCheckTrue);
 

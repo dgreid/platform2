@@ -15,6 +15,10 @@ constexpr char kDataRoleDRPRegex[] = R"(.*\[(\w+)\].*)";
 constexpr uint16_t kDPAltModeSID = 0xff01;
 constexpr uint16_t kTBTAltModeVID = 0x8087;
 
+// DP altmode VDO capabilities.
+// NOTE: We only include the bit fields we are interested in.
+constexpr uint32_t kDPModeSnk = 0x1;
+
 constexpr uint32_t kIDHeaderVDOModalOperationBitField = (1 << 26);
 
 }  // namespace
@@ -113,12 +117,18 @@ end:
 }
 
 bool Port::CanEnterDPAltMode() {
-  if (!IsPartnerAltModePresent(kDPAltModeSID)) {
-    LOG(INFO) << "DP alt mode not supported by partner.";
-    return false;
+  for (int i = 0; i < partner_->GetNumAltModes(); i++) {
+    auto alt_mode = partner_->GetAltMode(i);
+    // Only enter DP if:
+    // - The DP SID is found.
+    // - The DP altmode VDO says it is DFP_D capable.
+    if (!alt_mode || alt_mode->GetSVID() != kDPAltModeSID)
+      continue;
+    if (alt_mode->GetVDO() & kDPModeSnk)
+      return true;
   }
 
-  return true;
+  return false;
 }
 
 // Mode entry check for TBT compatibility mode.

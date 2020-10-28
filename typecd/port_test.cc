@@ -72,8 +72,34 @@ TEST_F(PortTest, TestGetDataRole) {
   EXPECT_EQ("", port->GetDataRole());
 }
 
-// Check that DP Alt Mode Entry checks work as expected for true cases.
+// Check that DP Alt Mode Entry checks work as expected for a true case:
 TEST_F(PortTest, TestDPAltModeEntryCheckTrue) {
+  auto port = std::make_unique<Port>(base::FilePath(kFakePort0SysPath), 0);
+
+  port->AddPartner(base::FilePath(kFakePort0PartnerSysPath));
+
+  // Set up fake sysfs paths for 1 alt mode.
+  base::FilePath temp_dir;
+  ASSERT_TRUE(base::CreateNewTempDirectory("", &temp_dir));
+
+  // Set the number of alt modes supported.
+  port->partner_->SetNumAltModes(1);
+
+  // Add the DP alt mode.
+  std::string mode0_dirname =
+      base::StringPrintf("port%d-partner.%d", 0, kDPAltModeIndex);
+  auto mode0_path = temp_dir.Append(mode0_dirname);
+  ASSERT_TRUE(CreateFakeAltMode(mode0_path, kDPSVID, kDPVDO_WD19TB,
+                                kDPVDOIndex_WD19TB));
+  port->AddRemovePartnerAltMode(mode0_path, true);
+
+  EXPECT_TRUE(port->CanEnterDPAltMode());
+}
+
+// Check that DP Alt Mode Entry checks work as expected for a specific false
+// case: The Startech dock DP VDO doesn't advertise DFP_D, so we *shouldn't*
+// enter DP alternate mode, despite it supporting the DP SID.
+TEST_F(PortTest, TestDPAltModeEntryCheckFalseWithDPSID) {
   auto port = std::make_unique<Port>(base::FilePath(kFakePort0SysPath), 0);
 
   port->AddPartner(base::FilePath(kFakePort0PartnerSysPath));
@@ -99,7 +125,7 @@ TEST_F(PortTest, TestDPAltModeEntryCheckTrue) {
   ASSERT_TRUE(CreateFakeAltMode(mode1_path, kTBTSVID, kTBTVDO, kTBTVDOIndex));
   port->AddRemovePartnerAltMode(mode1_path, true);
 
-  EXPECT_TRUE(port->CanEnterDPAltMode());
+  EXPECT_FALSE(port->CanEnterDPAltMode());
 }
 
 // Check that DP Alt Mode Entry checks work as expected for false cases.
