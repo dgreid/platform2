@@ -311,6 +311,7 @@ void JpegEncodeAcceleratorImpl::IPCBridge::Encode(
 
   if (!jea_ptr_.is_bound()) {
     callback.Run(0, TRY_START_AGAIN);
+    return;
   }
 
   // Create SharedMemory for Exif buffer and copy data into it.
