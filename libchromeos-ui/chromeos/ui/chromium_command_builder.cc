@@ -518,11 +518,8 @@ void ChromiumCommandBuilder::AddUiFlags() {
   if (UseFlagIsSet("native_gpu_memory_buffers"))
     AddArg("--enable-native-gpu-memory-buffers");
 
-  if (UseFlagIsSet("disable_cros_video_decoder")) {
+  if (UseFlagIsSet("disable_cros_video_decoder"))
     AddArg("--platform-disallows-chromeos-direct-video-decoder");
-    // TODO(b/159825227): remove when Chrome has picked up the new flag name.
-    AddArg("--force-disable-new-accelerated-video-decoder");
-  }
 
   if (UseFlagIsSet("arc_uses_cros_video_decoder"))
     AddFeatureEnableOverride("ArcVideoDecoder");
