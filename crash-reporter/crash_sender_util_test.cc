@@ -54,6 +54,10 @@ using ::testing::IsEmpty;
 using ::testing::Return;
 using ::testing::UnorderedElementsAre;
 
+using test_util::CreateClientIdFile;
+using test_util::FakeSleep;
+using test_util::kFakeClientId;
+
 namespace util {
 namespace {
 
@@ -61,8 +65,6 @@ namespace {
 enum BuildType { kOfficialBuild, kUnofficialBuild };
 enum SessionType { kSignInMode, kGuestMode };
 enum MetricsFlag { kMetricsEnabled, kMetricsDisabled };
-
-constexpr char kFakeClientId[] = "00112233445566778899aabbccddeeff";
 
 // This is what the kConnectionState property will get set to for mocked calls
 // into shill flimflam manager.
@@ -121,13 +123,6 @@ bool CreateDeviceCoredumpUploadAllowedFile() {
       "");
 }
 
-// Creates the client ID file and stores the fake client ID in it.
-bool CreateClientIdFile() {
-  return test_util::CreateFile(
-      paths::GetAt(paths::kCrashSenderStateDirectory, paths::kClientId),
-      kFakeClientId);
-}
-
 // Returns file names found in |directory|.
 std::vector<base::FilePath> GetFileNamesIn(const base::FilePath& directory) {
   std::vector<base::FilePath> files;
@@ -136,12 +131,6 @@ std::vector<base::FilePath> GetFileNamesIn(const base::FilePath& directory) {
   for (base::FilePath file = iter.Next(); !file.empty(); file = iter.Next())
     files.push_back(file);
   return files;
-}
-
-// Fake sleep function that records the requested sleep time.
-void FakeSleep(std::vector<base::TimeDelta>* sleep_times,
-               base::TimeDelta duration) {
-  sleep_times->push_back(duration);
 }
 
 // Set the file flag which indicates we are mocking crash sending, either

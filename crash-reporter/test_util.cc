@@ -8,6 +8,9 @@
 #include <base/files/file_util.h>
 #include <gtest/gtest.h>
 
+#include "crash-reporter/crash_sender_paths.h"
+#include "crash-reporter/paths.h"
+
 using testing::_;
 using testing::Invoke;
 
@@ -40,6 +43,19 @@ AdvancingClock::AdvancingClock(base::TimeDelta advance_amount)
 base::Time AdvancingClock::Now() const {
   time_ += advance_amount_;
   return time_;
+}
+
+// Fake sleep function that records the requested sleep time.
+void FakeSleep(std::vector<base::TimeDelta>* sleep_times,
+               base::TimeDelta duration) {
+  sleep_times->push_back(duration);
+}
+
+// Creates the client ID file and stores the fake client ID in it.
+bool CreateClientIdFile() {
+  return test_util::CreateFile(
+      paths::GetAt(paths::kCrashSenderStateDirectory, paths::kClientId),
+      kFakeClientId);
 }
 
 base::Time GetDefaultTime() {

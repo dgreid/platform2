@@ -6,8 +6,11 @@
 #include <utility>
 #include <vector>
 
+#include <stdlib.h>
+
 #include <base/files/file.h>
 #include <base/time/default_clock.h>
+#include <brillo/flag_helper.h>
 #include <brillo/syslog_logging.h>
 
 #include "crash-reporter/crash_sender_base.h"
@@ -16,17 +19,37 @@
 #include "crash-reporter/crash_serializer.h"
 #include "crash-reporter/paths.h"
 
+// Default max size of protos in output.
+// Defaults to 1MiB per
+// https://developers.google.com/protocol-buffers/docs/techniques#large-data
+// which says, "As a general rule of thumb, if you are dealing in messages
+// larger than a megabyte each, it may be time to consider an alternate
+// strategy."
+constexpr int64_t kDefaultChunkSizeBytes = 1 << 20;
+// Maximum allowable size of a proto in output (arbitrarily chosen).
+constexpr int64_t kMaxChunkSizeBytes = 1 << 30;
+
 int main(int argc, char* argv[]) {
   // Log to both stderr and syslog so that automated SSH connections can see
   // error output.
   brillo::OpenLog("crash_serializer", true);
   brillo::InitLog(brillo::kLogToSyslog | brillo::kLogToStderr);
 
+  DEFINE_bool(fetch_coredumps, false,
+              "If set, include coredumps in the serialized output");
+  DEFINE_int64(chunk_size, kDefaultChunkSizeBytes,
+               "Approximate maximum size of an individual proto message to "
+               "write to stdout.");
+  brillo::FlagHelper::Init(argc, argv, "Chromium OS Crash Sender");
+  if (FLAGS_chunk_size < 0 || FLAGS_chunk_size > kMaxChunkSizeBytes) {
+    LOG(ERROR) << "Invalid value for max chunk size: " << FLAGS_chunk_size;
+    return EXIT_FAILURE;
+  }
+
   crash_serializer::Serializer::Options options;
   auto clock = std::make_unique<base::DefaultClock>();
-  // TODO(mutexlox): Add a command-line flag to determine whether to fetch
-  // cores.
-  options.fetch_coredumps = false;
+  options.fetch_coredumps = FLAGS_fetch_coredumps;
+  options.max_proto_bytes = FLAGS_chunk_size;
 
   crash_serializer::Serializer serializer(std::move(clock), options);
 

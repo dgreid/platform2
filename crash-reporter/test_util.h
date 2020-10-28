@@ -7,6 +7,7 @@
 
 #include <map>
 #include <string>
+#include <vector>
 
 #include <base/files/file_path.h>
 #include <base/strings/string_piece.h>
@@ -16,6 +17,8 @@
 #include <session_manager/dbus-proxy-mocks.h>
 
 namespace test_util {
+
+constexpr char kFakeClientId[] = "00112233445566778899aabbccddeeff";
 
 // A Clock that advances 10 seconds (by default) on each call, used in tests and
 // fuzzers. Unlike a MockClock, it will not fail the test regardless of how many
@@ -37,6 +40,11 @@ class AdvancingClock : public base::Clock {
   mutable base::Time time_;
   const base::TimeDelta advance_amount_;
 };
+
+void FakeSleep(std::vector<base::TimeDelta>* sleep_times,
+               base::TimeDelta duration);
+
+bool CreateClientIdFile();
 
 // Get an assumed "now" for things that mocks out the current time. Always
 // returns 2018-04-20 13:53.
