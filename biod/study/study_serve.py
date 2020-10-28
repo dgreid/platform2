@@ -94,7 +94,7 @@ class FingerWebSocket(WebSocket):
         self.available_req.notify()
         self.available_req.release()
         self.worker.join(10.0)
-        if self.worker.isAlive():
+        if self.worker.is_alive():
             cherrypy.log('Failed to stop worker thread.')
         else:
             cherrypy.log('Successfully stopped worker thread.')
@@ -238,10 +238,11 @@ def main(argv: list):
     parser.add_argument('-v', '--verification_count', type=int, default=15,
                         help='Number of verification images per finger')
     parser.add_argument('-p', '--port', type=int, default=9000,
-                        help='port for the webserver socket')
+                        help='The port for the webserver')
     parser.add_argument('-d', '--picture_dir', default='./fingers',
+                        help='Directory for the fingerprint captures')
+    parser.add_argument('-l', '--log_dir',
                         help='Log files directory')
-    parser.add_argument('-l', '--log_dir')
     args = parser.parse_args(argv)
     # Configure cherrypy server
     cherrypy.config.update({'server.socket_port': args.port})
