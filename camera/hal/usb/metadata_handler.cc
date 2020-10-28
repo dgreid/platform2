@@ -524,13 +524,16 @@ int MetadataHandler::FillMetadataFromSupportedFormats(
     }
   } else {
     for (auto fps : supported_fps) {
-      if (IsFpsRangeSupported(supported_formats, kMinFps, fps)) {
+      // The IsFpsRangeSupported() filter should only apply on built-in
+      // cameras, otherwise some webcams with fps combinations that cannot be
+      // represented in HALv3 API would stop working (b/171845790).
+      if (is_external || IsFpsRangeSupported(supported_formats, kMinFps, fps)) {
         available_fps_ranges.push_back(kMinFps);
         available_fps_ranges.push_back(fps);
       }
 
       if (support_constant_framerate &&
-          IsFpsRangeSupported(supported_formats, fps, fps)) {
+          (is_external || IsFpsRangeSupported(supported_formats, fps, fps))) {
         available_fps_ranges.push_back(fps);
         available_fps_ranges.push_back(fps);
       }
