@@ -61,3 +61,4 @@ FEATURES=test emerge-<board> chromeos-base/hardware_verifier
 - [High Level Design](http://go/cros-hw-verification-design)
 - [Design Doc](http://go/cros-hw-verifier)
 - [Root Issue Tracker (chromium:926825)](http://crbug.com/926825)
+- [Consolidated summary for all supported component types and fields](http://go/cros-runtime-probe-fields)

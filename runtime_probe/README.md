@@ -319,6 +319,12 @@ platform.CrosRuntimeProbeBattery  [ PASS ]
 --------------------------------------------------------------------------------
 Results saved to /tmp/tast/results/20200220-172233
 ```
+# Documents
+
+* Design doc: [go/cros-probe](http://go/cros-probe)
+* Consolidated summary for all supported component types and probing fields:
+  [go/cros-runtime-probe-fields](http://go/cros-runtime-probe-fields)
+
 # Useful Reference
 
 * minijail0 manpage (`man 1 minijail0` in cros\_sdk)
