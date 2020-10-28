@@ -27,6 +27,7 @@ group("all") {
       ":libbrillo_data_encoding_fuzzer",
       ":libbrillo_dbus_data_serialization_fuzzer",
       ":libbrillo_http_form_data_fuzzer",
+      ":libbrillo_url_utils_fuzzer",
     ]
   }
 }
@@ -631,6 +632,18 @@ if (use.fuzzer) {
       ":libbrillo-http",
       ":libbrillo-streams",
     ]
+  }
+
+  executable("libbrillo_url_utils_fuzzer") {
+    sources = [ "brillo/url_utils_fuzzer.cc" ]
+
+    configs += [ "//common-mk/common_fuzzer:common_fuzzer" ]
+
+    pkg_deps = [ "libchrome" ]
+
+    include_dirs = [ "../libbrillo" ]
+
+    deps = [ ":libbrillo-core" ]
   }
 }
 
