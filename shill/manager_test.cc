@@ -657,6 +657,8 @@ TEST_F(ManagerTest, ServiceRegistration) {
   EXPECT_TRUE(HasService(manager, service2_rpcid.value()));
 
   manager.set_power_manager(power_manager_.release());
+  manager.DeregisterService(mock_service);
+  manager.DeregisterService(mock_service2);
   manager.Stop();
 }
 
@@ -677,6 +679,7 @@ TEST_F(ManagerTest, RegisterKnownService) {
   EXPECT_EQ(service2->profile(), profile);
 
   manager.set_power_manager(power_manager_.release());
+  manager.DeregisterService(service2);
   manager.Stop();
 }
 
@@ -698,6 +701,7 @@ TEST_F(ManagerTest, RegisterUnknownService) {
   EXPECT_NE(mock_service2->profile(), profile);
 
   manager.set_power_manager(power_manager_.release());
+  manager.DeregisterService(mock_service2);
   manager.Stop();
 }
 
@@ -2514,16 +2518,13 @@ TEST_F(ManagerTest, Stop) {
   manager()->RegisterDevice(mock_devices_[0]);
 
   // Register inactive Service.
-  {
-    MockServiceRefPtr service(new NiceMock<MockService>(manager()));
-    manager()->RegisterService(service);
-  }
+  MockServiceRefPtr service1(new NiceMock<MockService>(manager()));
+  manager()->RegisterService(service1);
+
   // Register active Service.
-  {
-    MockServiceRefPtr service(new NiceMock<MockService>(manager()));
-    service->SetState(Service::kStateAssociating);
-    manager()->RegisterService(service);
-  }
+  MockServiceRefPtr service2(new NiceMock<MockService>(manager()));
+  service2->SetState(Service::kStateAssociating);
+  manager()->RegisterService(service2);
 
   SetPowerManager();
   EXPECT_TRUE(manager()->power_manager());
@@ -2536,6 +2537,9 @@ TEST_F(ManagerTest, Stop) {
     EXPECT_FALSE(service->IsActive(nullptr));
   }
 
+  manager()->DeregisterService(service1);
+  manager()->DeregisterService(service2);
+  manager()->DeregisterDevice(mock_devices_[0]);
   manager()->Stop();
   EXPECT_FALSE(manager()->power_manager());
 }

@@ -62,7 +62,7 @@ class TrafficMonitorTest : public Test {
         mock_socket_info_reader_(new MockSocketInfoReader),
         mock_connection_info_reader_(new MockConnectionInfoReader),
         monitor_(
-            device_,
+            device_.get(),
             &dispatcher_,
             Bind(&TrafficMonitorTest::OnNoOutgoingPackets, Unretained(this))),
         local_addr_(IPAddress::kFamilyIPv4),

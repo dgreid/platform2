@@ -36,7 +36,7 @@ const int TrafficMonitor::kMinimumFailedSamplesToTrigger = 2;
 const int64_t TrafficMonitor::kSamplingIntervalMilliseconds = 5000;
 
 TrafficMonitor::TrafficMonitor(
-    const DeviceRefPtr& device,
+    Device* device,
     EventDispatcher* dispatcher,
     NetworkProblemDetectedCallback network_problem_detected_callback)
     : device_(device),
@@ -53,7 +53,7 @@ TrafficMonitor::~TrafficMonitor() {
 }
 
 void TrafficMonitor::Start() {
-  SLOG(device_.get(), 2) << __func__;
+  SLOG(device_, 2) << __func__;
   Stop();
 
   sample_traffic_callback_.Reset(
@@ -63,7 +63,7 @@ void TrafficMonitor::Start() {
 }
 
 void TrafficMonitor::Stop() {
-  SLOG(device_.get(), 2) << __func__;
+  SLOG(device_, 2) << __func__;
   sample_traffic_callback_.Cancel();
   ResetCongestedTxQueuesStats();
   ResetDnsFailingStats();
@@ -74,14 +74,14 @@ void TrafficMonitor::ResetCongestedTxQueuesStats() {
 }
 
 void TrafficMonitor::ResetCongestedTxQueuesStatsWithLogging() {
-  SLOG(device_.get(), 2) << __func__ << ": Tx-queues decongested";
+  SLOG(device_, 2) << __func__ << ": Tx-queues decongested";
   ResetCongestedTxQueuesStats();
 }
 
 TrafficMonitor::IPPortToTxQueueLengthMap
 TrafficMonitor::BuildIPPortToTxQueueLength(
     const vector<SocketInfo>& socket_infos) {
-  SLOG(device_.get(), 3) << __func__;
+  SLOG(device_, 3) << __func__;
 
   IPPortToTxQueueLengthMap tx_queue_lengths;
   string device_ipv4;
@@ -95,10 +95,10 @@ TrafficMonitor::BuildIPPortToTxQueueLength(
 
   for (const auto& info : socket_infos) {
     string socket_ip = info.local_ip_address.ToString();
-    SLOG(device_.get(), 4) << "SocketInfo(IP=" << socket_ip
-                           << ", TX=" << info.transmit_queue_value
-                           << ", State=" << info.connection_state
-                           << ", TimerState=" << info.timer_state;
+    SLOG(device_, 4) << "SocketInfo(IP=" << socket_ip
+                     << ", TX=" << info.transmit_queue_value
+                     << ", State=" << info.connection_state
+                     << ", TimerState=" << info.timer_state;
 
     if ((socket_ip != device_ipv4 && socket_ip != device_ipv6) ||
         info.transmit_queue_value == 0 ||
@@ -106,12 +106,12 @@ TrafficMonitor::BuildIPPortToTxQueueLength(
         (info.timer_state != SocketInfo::kTimerStateRetransmitTimerPending &&
          info.timer_state !=
              SocketInfo::kTimerStateZeroWindowProbeTimerPending)) {
-      SLOG(device_.get(), 4) << "Connection Filtered.";
+      SLOG(device_, 4) << "Connection Filtered.";
       continue;
     }
-    SLOG(device_.get(), 3) << "Monitoring connection: TX="
-                           << info.transmit_queue_value
-                           << " TimerState=" << info.timer_state;
+    SLOG(device_, 3) << "Monitoring connection: TX="
+                     << info.transmit_queue_value
+                     << " TimerState=" << info.timer_state;
 
     string local_ip_port = StringPrintf(
         "%s:%d", info.local_ip_address.ToString().c_str(), info.local_port);
@@ -121,11 +121,11 @@ TrafficMonitor::BuildIPPortToTxQueueLength(
 }
 
 bool TrafficMonitor::IsCongestedTxQueues() {
-  SLOG(device_.get(), 4) << __func__;
+  SLOG(device_, 4) << __func__;
   vector<SocketInfo> socket_infos;
   if (!socket_info_reader_->LoadTcpSocketInfo(&socket_infos) ||
       socket_infos.empty()) {
-    SLOG(device_.get(), 3) << __func__ << ": Empty socket info";
+    SLOG(device_, 3) << __func__ << ": Empty socket info";
     ResetCongestedTxQueuesStatsWithLogging();
     return false;
   }
@@ -133,7 +133,7 @@ bool TrafficMonitor::IsCongestedTxQueues() {
   IPPortToTxQueueLengthMap curr_tx_queue_lengths =
       BuildIPPortToTxQueueLength(socket_infos);
   if (curr_tx_queue_lengths.empty()) {
-    SLOG(device_.get(), 3) << __func__ << ": No interesting socket info";
+    SLOG(device_, 3) << __func__ << ": No interesting socket info";
     ResetCongestedTxQueuesStatsWithLogging();
   } else {
     for (const auto& length_entry : old_tx_queue_lengths_) {
@@ -151,9 +151,8 @@ bool TrafficMonitor::IsCongestedTxQueues() {
     }
     if (congested_tx_queues) {
       ++accummulated_congested_tx_queues_samples_;
-      SLOG(device_.get(), 2)
-          << __func__ << ": Congested tx-queues detected ("
-          << accummulated_congested_tx_queues_samples_ << ")";
+      SLOG(device_, 2) << __func__ << ": Congested tx-queues detected ("
+                       << accummulated_congested_tx_queues_samples_ << ")";
     }
   }
   old_tx_queue_lengths_ = curr_tx_queue_lengths;
@@ -166,16 +165,16 @@ void TrafficMonitor::ResetDnsFailingStats() {
 }
 
 void TrafficMonitor::ResetDnsFailingStatsWithLogging() {
-  SLOG(device_.get(), 2) << __func__ << ": DNS queries restored";
+  SLOG(device_, 2) << __func__ << ": DNS queries restored";
   ResetDnsFailingStats();
 }
 
 bool TrafficMonitor::IsDnsFailing() {
-  SLOG(device_.get(), 4) << __func__;
+  SLOG(device_, 4) << __func__;
   vector<ConnectionInfo> connection_infos;
   if (!connection_info_reader_->LoadConnectionInfo(&connection_infos) ||
       connection_infos.empty()) {
-    SLOG(device_.get(), 3) << __func__ << ": Empty connection info";
+    SLOG(device_, 3) << __func__ << ": Empty connection info";
   } else {
     // The time-to-expire counter is used to determine when a DNS request
     // has timed out.  This counter is the number of seconds remaining until
@@ -211,8 +210,8 @@ bool TrafficMonitor::IsDnsFailing() {
         continue;
 
       ++accummulated_dns_failures_samples_;
-      SLOG(device_.get(), 2) << __func__ << ": DNS failures detected ("
-                             << accummulated_dns_failures_samples_ << ")";
+      SLOG(device_, 2) << __func__ << ": DNS failures detected ("
+                       << accummulated_dns_failures_samples_ << ")";
       return true;
     }
   }
@@ -221,7 +220,7 @@ bool TrafficMonitor::IsDnsFailing() {
 }
 
 void TrafficMonitor::SampleTraffic() {
-  SLOG(device_.get(), 3) << __func__;
+  SLOG(device_, 3) << __func__;
 
   // Schedule the sample callback first, so it is possible for the network
   // problem callback to stop the traffic monitor.

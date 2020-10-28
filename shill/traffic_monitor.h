@@ -37,8 +37,11 @@ class TrafficMonitor {
 
   using NetworkProblemDetectedCallback = base::Callback<void(int)>;
 
+  // |device| and |dispatcher| must outlive |this|.
+  // |network_problem_detected_callback| is invoked if a problem occurs while
+  // sampling traffic.
   TrafficMonitor(
-      const DeviceRefPtr& device,
+      Device* device,
       EventDispatcher* dispatcher,
       NetworkProblemDetectedCallback network_problem_detected_callback);
   virtual ~TrafficMonitor();
@@ -99,8 +102,9 @@ class TrafficMonitor {
   // abnormal scenarios are detected.
   void SampleTraffic();
 
-  // The device on which to perform traffic monitoring.
-  DeviceRefPtr device_;
+  // The device on which to perform traffic monitoring. |this| is owned by
+  // |device_|.
+  Device* device_;
 
   // Dispatcher on which to create delayed tasks.
   EventDispatcher* dispatcher_;

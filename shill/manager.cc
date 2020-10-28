@@ -283,7 +283,28 @@ Manager::Manager(ControlInterface* control_interface,
   SLOG(this, 2) << "Manager initialized.";
 }
 
-Manager::~Manager() = default;
+Manager::~Manager() {
+  // Clear Device references.
+  device_geolocation_info_.clear();
+
+  // Log an error if Service references beyond |services_| still exist.
+  for (ServiceRefPtr& service : services_) {
+    if (!service->HasOneRef()) {
+      LOG(ERROR) << "Service still has multiple references: "
+                 << service->GetRpcIdentifier().value();
+    }
+  }
+  services_.clear();
+
+  // Log an error if Device references beyond |devices_| still exist.
+  for (DeviceRefPtr& device : devices_) {
+    if (!device->HasOneRef()) {
+      LOG(ERROR) << "Device still has multiple references: "
+                 << device->GetRpcIdentifier().value();
+    }
+  }
+  devices_.clear();
+}
 
 void Manager::RegisterAsync(const Callback<void(bool)>& completion_callback) {
   adaptor_->RegisterAsync(completion_callback);
