@@ -7401,7 +7401,7 @@ mno {
     uuid : "b32527a5-45e2-4c4d-8fb5-8b0a9162e9e4"
     country : "jp"
     localized_name {
-      name : "e-mobile"
+      name : "44000"
     }
     mccmnc : "44000"
     mobile_apn {
