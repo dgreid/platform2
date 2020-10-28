@@ -524,6 +524,9 @@ void ChromiumCommandBuilder::AddUiFlags() {
     AddArg("--force-disable-new-accelerated-video-decoder");
   }
 
+  if (UseFlagIsSet("arc_uses_cros_video_decoder"))
+    AddFeatureEnableOverride("ArcVideoDecoder");
+
   // TODO(dcastagna): Get rid of the following code once the proper
   // configuration will be chosen at runtime on DRM atomic boards.
   if (UseFlagIsSet("drm_atomic")) {
