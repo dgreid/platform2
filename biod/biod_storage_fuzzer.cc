@@ -104,7 +104,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   base::FilePath root_path("/tmp/biod_storage_fuzzing_data");
   biod_storage.SetRootPathForTesting(root_path);
   bool status =
-      biod_storage.WriteRecord((const TestRecord)*record, record->GetData());
+      biod_storage.WriteRecord(*record, base::Value(record->GetData()));
   if (status)
     status = biod_storage.ReadRecordsForSingleUser(user_id);
 
