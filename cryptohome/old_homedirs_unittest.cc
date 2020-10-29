@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// TODO(dlunev): remove the file when then new implementation of the tests is
+// ready.
+
 #include "cryptohome/homedirs.h"
 
 #include <memory>
@@ -98,11 +101,11 @@ NiceMock<MockFileEnumerator>* CreateMockFileEnumerator() {
 }
 }  // namespace
 
-class HomeDirsTest
+class OldHomeDirsTest
     : public ::testing::TestWithParam<bool /* should_test_ecryptfs */> {
  public:
-  HomeDirsTest() : crypto_(&platform_) {}
-  virtual ~HomeDirsTest() {}
+  OldHomeDirsTest() : crypto_(&platform_) {}
+  virtual ~OldHomeDirsTest() {}
 
   void SetUp() {
     test_helper_.SetUpSystemSalt();
@@ -210,13 +213,17 @@ class HomeDirsTest
       HomeDirs::kAndroidSystemUid + kArcContainerShiftUid;
 
  private:
-  DISALLOW_COPY_AND_ASSIGN(HomeDirsTest);
+  DISALLOW_COPY_AND_ASSIGN(OldHomeDirsTest);
 };
 
-INSTANTIATE_TEST_SUITE_P(WithEcryptfs, HomeDirsTest, ::testing::Values(true));
-INSTANTIATE_TEST_SUITE_P(WithDircrypto, HomeDirsTest, ::testing::Values(false));
+INSTANTIATE_TEST_SUITE_P(WithEcryptfs,
+                         OldHomeDirsTest,
+                         ::testing::Values(true));
+INSTANTIATE_TEST_SUITE_P(WithDircrypto,
+                         OldHomeDirsTest,
+                         ::testing::Values(false));
 
-TEST_P(HomeDirsTest, RemoveNonOwnerCryptohomes) {
+TEST_P(OldHomeDirsTest, RemoveNonOwnerCryptohomes) {
   // Ensure that RemoveNonOwnerCryptohomes does.
   EXPECT_CALL(platform_, EnumerateDirectoryEntries(kTestRoot, false, _))
       .WillOnce(DoAll(SetArgPointee<2>(homedir_paths_), Return(true)));
@@ -241,7 +248,7 @@ TEST_P(HomeDirsTest, RemoveNonOwnerCryptohomes) {
   homedirs_.RemoveNonOwnerCryptohomes();
 }
 
-TEST_P(HomeDirsTest, RenameCryptohome) {
+TEST_P(OldHomeDirsTest, RenameCryptohome) {
   ASSERT_TRUE(platform_.CreateDirectory(
       FilePath("/home/.shadow")
           .Append(test_helper_.users[0].obfuscated_username)));
@@ -266,7 +273,7 @@ TEST_P(HomeDirsTest, RenameCryptohome) {
   EXPECT_TRUE(homedirs_.Rename(kNewUserId, kDefaultUsers[0].username));
 }
 
-TEST_P(HomeDirsTest, CreateCryptohome) {
+TEST_P(OldHomeDirsTest, CreateCryptohome) {
   platform_.DeleteFile(FilePath(test_helper_.users[0].base_path), true);
 
   EXPECT_TRUE(homedirs_.Create(kDefaultUsers[0].username));
@@ -274,7 +281,7 @@ TEST_P(HomeDirsTest, CreateCryptohome) {
       platform_.DirectoryExists(FilePath(test_helper_.users[0].base_path)));
 }
 
-TEST_P(HomeDirsTest, ComputeDiskUsageDircrypto) {
+TEST_P(OldHomeDirsTest, ComputeDiskUsageDircrypto) {
   FilePath base_path(test_helper_.users[0].base_path);
   // /home/.shadow in production code.
   FilePath shadow_home =
@@ -305,7 +312,7 @@ TEST_P(HomeDirsTest, ComputeDiskUsageDircrypto) {
             homedirs_.ComputeDiskUsage(kDefaultUsers[0].username));
 }
 
-TEST_P(HomeDirsTest, ComputeDiskUsageEcryptfs) {
+TEST_P(OldHomeDirsTest, ComputeDiskUsageEcryptfs) {
   FilePath base_path(test_helper_.users[0].base_path);
   FilePath shadow_home =
       homedirs_.shadow_root().Append(base_path.BaseName().value());
@@ -331,7 +338,7 @@ TEST_P(HomeDirsTest, ComputeDiskUsageEcryptfs) {
             homedirs_.ComputeDiskUsage(kDefaultUsers[0].username));
 }
 
-TEST_P(HomeDirsTest, ComputeDiskUsageEphemeral) {
+TEST_P(OldHomeDirsTest, ComputeDiskUsageEphemeral) {
   FilePath base_path(test_helper_.users[0].base_path);
   FilePath shadow_home =
       homedirs_.shadow_root().Append(base_path.BaseName().value());
@@ -362,14 +369,14 @@ TEST_P(HomeDirsTest, ComputeDiskUsageEphemeral) {
             homedirs_.ComputeDiskUsage(kDefaultUsers[0].username));
 }
 
-TEST_P(HomeDirsTest, ComputeDiskUsageWithNonexistentUser) {
+TEST_P(OldHomeDirsTest, ComputeDiskUsageWithNonexistentUser) {
   // If the specified user doesn't exist, there is no directory for the user, so
   // ComputeDiskUsage should return 0.
   const char kNonExistentUserId[] = "non_existent_user";
   EXPECT_EQ(0, homedirs_.ComputeDiskUsage(kNonExistentUserId));
 }
 
-TEST_P(HomeDirsTest, GetTrackedDirectoryForDirCrypto) {
+TEST_P(OldHomeDirsTest, GetTrackedDirectoryForDirCrypto) {
   Platform real_platform;
   // Use real PathExists.
   EXPECT_CALL(platform_, FileExists(_))
@@ -424,7 +431,7 @@ TEST_P(HomeDirsTest, GetTrackedDirectoryForDirCrypto) {
                                              FilePath("aaa/zzz"), &result));
 }
 
-TEST_P(HomeDirsTest, GetUnmountedAndroidDataCount) {
+TEST_P(OldHomeDirsTest, GetUnmountedAndroidDataCount) {
   EXPECT_CALL(platform_, EnumerateDirectoryEntries(kTestRoot, false, _))
       .WillOnce(DoAll(SetArgPointee<2>(homedir_paths_), Return(true)));
 
@@ -507,7 +514,7 @@ TEST_P(HomeDirsTest, GetUnmountedAndroidDataCount) {
   EXPECT_EQ(1, homedirs_.GetUnmountedAndroidDataCount());
 }
 
-TEST_P(HomeDirsTest, AddUserTimestampToCacheEmpty) {
+TEST_P(OldHomeDirsTest, AddUserTimestampToCacheEmpty) {
   std::string obfuscatedUser = obfuscated_users_[0];
   base::FilePath userPath = homedir_paths_[0];
 
@@ -527,7 +534,7 @@ TEST_P(HomeDirsTest, AddUserTimestampToCacheEmpty) {
   homedirs_.AddUserTimestampToCache(obfuscatedUser);
 }
 
-TEST_P(HomeDirsTest, AddUserTimestampToCache) {
+TEST_P(OldHomeDirsTest, AddUserTimestampToCache) {
   std::string obfuscatedUser = obfuscated_users_[0];
   base::FilePath userPath = homedir_paths_[0];
   base::Time userTime = homedir_times_[0];
@@ -557,7 +564,7 @@ TEST_P(HomeDirsTest, AddUserTimestampToCache) {
   homedirs_.AddUserTimestampToCache(obfuscatedUser);
 }
 
-TEST_P(HomeDirsTest, GetHomedirs) {
+TEST_P(OldHomeDirsTest, GetHomedirs) {
   EXPECT_CALL(platform_, EnumerateDirectoryEntries(kTestRoot, false, _))
       .WillRepeatedly(DoAll(SetArgPointee<2>(homedir_paths_), Return(true)));
 
@@ -592,7 +599,7 @@ TEST_P(HomeDirsTest, GetHomedirs) {
   }
 }
 
-TEST_P(HomeDirsTest, RemoveLECredentials) {
+TEST_P(OldHomeDirsTest, RemoveLECredentials) {
   std::string obfuscatedUser = obfuscated_users_[0];
   base::FilePath userPath = homedir_paths_[0];
 
@@ -602,7 +609,7 @@ TEST_P(HomeDirsTest, RemoveLECredentials) {
   homedirs_.RemoveLECredentials(obfuscatedUser);
 }
 
-TEST_P(HomeDirsTest, GoodDecryptTest) {
+TEST_P(OldHomeDirsTest, GoodDecryptTest) {
   // create a HomeDirs instance that points to a good shadow root, test that it
   // properly authenticates against the first key.
   SecureBlob system_salt;
@@ -623,7 +630,7 @@ TEST_P(HomeDirsTest, GoodDecryptTest) {
   ASSERT_TRUE(homedirs_.AreCredentialsValid(credentials));
 }
 
-TEST_P(HomeDirsTest, BadDecryptTest) {
+TEST_P(OldHomeDirsTest, BadDecryptTest) {
   // create a HomeDirs instance that points to a good shadow root, test that it
   // properly denies access with a bad passkey
   SecureBlob system_salt;
@@ -643,13 +650,13 @@ TEST_P(HomeDirsTest, BadDecryptTest) {
 }
 
 #define MAX_VKS 5
-class KeysetManagementTest : public HomeDirsTest {
+class OldKeysetManagementTest : public OldHomeDirsTest {
  public:
-  KeysetManagementTest() {}
-  virtual ~KeysetManagementTest() {}
+  OldKeysetManagementTest() {}
+  virtual ~OldKeysetManagementTest() {}
 
   void SetUp() {
-    HomeDirsTest::SetUp();
+    OldHomeDirsTest::SetUp();
     last_vk_ = -1;
     active_vk_ = NULL;
     memset(active_vks_, 0, sizeof(active_vks_));
@@ -657,7 +664,7 @@ class KeysetManagementTest : public HomeDirsTest {
   }
 
   void TearDown() {
-    HomeDirsTest::TearDown();
+    OldHomeDirsTest::TearDown();
     last_vk_++;
     for (; last_vk_ < MAX_VKS; ++last_vk_) {
       if (active_vks_[last_vk_])
@@ -698,13 +705,13 @@ class KeysetManagementTest : public HomeDirsTest {
     CHECK(last_vk_ < MAX_VKS);
     active_vk_ = active_vks_[last_vk_];
     EXPECT_CALL(*active_vk_, Decrypt(_, _, _))
-        .WillRepeatedly(Invoke(this, &KeysetManagementTest::VkDecrypt0));
+        .WillRepeatedly(Invoke(this, &OldKeysetManagementTest::VkDecrypt0));
 
     EXPECT_CALL(*active_vk_, serialized())
-        .WillRepeatedly(Invoke(this, &KeysetManagementTest::FakeSerialized));
+        .WillRepeatedly(Invoke(this, &OldKeysetManagementTest::FakeSerialized));
     EXPECT_CALL(*active_vk_, mutable_serialized())
         .WillRepeatedly(
-            Invoke(this, &KeysetManagementTest::FakeMutableSerialized));
+            Invoke(this, &OldKeysetManagementTest::FakeMutableSerialized));
     return active_vk_;
   }
 
@@ -725,7 +732,7 @@ class KeysetManagementTest : public HomeDirsTest {
     EXPECT_CALL(platform_,
                 GetFileEnumerator(test_helper_.users[1].base_path, false, _))
         .WillRepeatedly(InvokeWithoutArgs(
-            this, &KeysetManagementTest::NewKeysetFileEnumerator));
+            this, &OldKeysetManagementTest::NewKeysetFileEnumerator));
 
     homedirs_.set_vault_keyset_factory(&vault_keyset_factory_);
     // Pre-allocate VKs so that each call can advance
@@ -748,7 +755,7 @@ class KeysetManagementTest : public HomeDirsTest {
 
     EXPECT_CALL(vault_keyset_factory_, New(_, _))
         .WillRepeatedly(InvokeWithoutArgs(
-            this, &KeysetManagementTest::NewActiveVaultKeyset));
+            this, &OldKeysetManagementTest::NewActiveVaultKeyset));
     SecureBlob passkey;
     cryptohome::Crypto::PasswordToPasskey(test_helper_.users[1].password,
                                           system_salt_, &passkey);
@@ -779,13 +786,13 @@ class KeysetManagementTest : public HomeDirsTest {
 };
 
 INSTANTIATE_TEST_SUITE_P(WithEcryptfs,
-                         KeysetManagementTest,
+                         OldKeysetManagementTest,
                          ::testing::Values(true));
 INSTANTIATE_TEST_SUITE_P(WithDircrypto,
-                         KeysetManagementTest,
+                         OldKeysetManagementTest,
                          ::testing::Values(false));
 
-TEST_P(KeysetManagementTest, AddInitialKeyset) {
+TEST_P(OldKeysetManagementTest, AddInitialKeyset) {
   KeysetSetUp();
 
   Credentials credentials(test_helper_.users[0].username,
@@ -813,7 +820,7 @@ TEST_P(KeysetManagementTest, AddInitialKeyset) {
   EXPECT_EQ(key_data.label(), serialized.key_data().label());
 }
 
-TEST_P(KeysetManagementTest, AddKeysetSuccess) {
+TEST_P(OldKeysetManagementTest, AddKeysetSuccess) {
   KeysetSetUp();
 
   SecureBlob newkey;
@@ -839,7 +846,7 @@ TEST_P(KeysetManagementTest, AddKeysetSuccess) {
   EXPECT_EQ(index, 1);
 }
 
-TEST_P(KeysetManagementTest, AddKeysetClobber) {
+TEST_P(OldKeysetManagementTest, AddKeysetClobber) {
   KeysetSetUp();
 
   SecureBlob newkey;
@@ -875,7 +882,7 @@ TEST_P(KeysetManagementTest, AddKeysetClobber) {
   EXPECT_EQ(index, 0);
 }
 
-TEST_P(KeysetManagementTest, AddKeysetNoClobber) {
+TEST_P(OldKeysetManagementTest, AddKeysetNoClobber) {
   KeysetSetUp();
 
   SecureBlob newkey;
@@ -901,7 +908,7 @@ TEST_P(KeysetManagementTest, AddKeysetNoClobber) {
   EXPECT_EQ(index, -1);
 }
 
-TEST_P(KeysetManagementTest, UpdateKeysetSuccess) {
+TEST_P(OldKeysetManagementTest, UpdateKeysetSuccess) {
   KeysetSetUp();
 
   // No need to do PasswordToPasskey as that is the
@@ -923,7 +930,7 @@ TEST_P(KeysetManagementTest, UpdateKeysetSuccess) {
   EXPECT_EQ(serialized_.key_data().label(), new_key.data().label());
 }
 
-TEST_P(KeysetManagementTest, UpdateKeysetAuthorizedNoSignature) {
+TEST_P(OldKeysetManagementTest, UpdateKeysetAuthorizedNoSignature) {
   KeysetSetUp();
 
   // No need to do PasswordToPasskey as that is the
@@ -951,7 +958,7 @@ TEST_P(KeysetManagementTest, UpdateKeysetAuthorizedNoSignature) {
   EXPECT_NE(serialized_.key_data().label(), new_key.data().label());
 }
 
-TEST_P(KeysetManagementTest, UpdateKeysetAuthorizedSuccess) {
+TEST_P(OldKeysetManagementTest, UpdateKeysetAuthorizedSuccess) {
   KeysetSetUp();
 
   // No need to do PasswordToPasskey as that is the
@@ -996,7 +1003,7 @@ TEST_P(KeysetManagementTest, UpdateKeysetAuthorizedSuccess) {
 }
 
 // Ensure signing matches the test vectors in Chrome.
-TEST_P(KeysetManagementTest, UpdateKeysetAuthorizedCompatVector) {
+TEST_P(OldKeysetManagementTest, UpdateKeysetAuthorizedCompatVector) {
   KeysetSetUp();
 
   // The salted password passed in from Chrome.
@@ -1052,7 +1059,7 @@ TEST_P(KeysetManagementTest, UpdateKeysetAuthorizedCompatVector) {
   EXPECT_EQ(new_key.data().revision(), serialized_.key_data().revision());
 }
 
-TEST_P(KeysetManagementTest, UpdateKeysetAuthorizedNoEqualReplay) {
+TEST_P(OldKeysetManagementTest, UpdateKeysetAuthorizedNoEqualReplay) {
   KeysetSetUp();
 
   // No need to do PasswordToPasskey as that is the
@@ -1089,7 +1096,7 @@ TEST_P(KeysetManagementTest, UpdateKeysetAuthorizedNoEqualReplay) {
   EXPECT_NE(serialized_.key_data().label(), new_key.data().label());
 }
 
-TEST_P(KeysetManagementTest, UpdateKeysetAuthorizedNoLessReplay) {
+TEST_P(OldKeysetManagementTest, UpdateKeysetAuthorizedNoLessReplay) {
   KeysetSetUp();
 
   // No need to do PasswordToPasskey as that is the
@@ -1127,7 +1134,7 @@ TEST_P(KeysetManagementTest, UpdateKeysetAuthorizedNoLessReplay) {
   EXPECT_NE(serialized_.key_data().label(), new_key.data().label());
 }
 
-TEST_P(KeysetManagementTest, UpdateKeysetAuthorizedBadSignature) {
+TEST_P(OldKeysetManagementTest, UpdateKeysetAuthorizedBadSignature) {
   KeysetSetUp();
 
   // No need to do PasswordToPasskey as that is the
@@ -1164,7 +1171,7 @@ TEST_P(KeysetManagementTest, UpdateKeysetAuthorizedBadSignature) {
   EXPECT_NE(serialized_.key_data().label(), new_key.data().label());
 }
 
-TEST_P(KeysetManagementTest, UpdateKeysetBadSecret) {
+TEST_P(OldKeysetManagementTest, UpdateKeysetBadSecret) {
   KeysetSetUp();
 
   // No need to do PasswordToPasskey as that is the
@@ -1184,7 +1191,7 @@ TEST_P(KeysetManagementTest, UpdateKeysetBadSecret) {
   EXPECT_NE(serialized_.key_data().label(), new_key.data().label());
 }
 
-TEST_P(KeysetManagementTest, UpdateKeysetNotFoundWithLabel) {
+TEST_P(OldKeysetManagementTest, UpdateKeysetNotFoundWithLabel) {
   KeysetSetUp();
 
   KeyData some_label;
@@ -1195,7 +1202,7 @@ TEST_P(KeysetManagementTest, UpdateKeysetNotFoundWithLabel) {
             homedirs_.UpdateKeyset(*credentials_, &new_key, ""));
 }
 
-TEST_P(KeysetManagementTest, RemoveKeysetSuccess) {
+TEST_P(OldKeysetManagementTest, RemoveKeysetSuccess) {
   KeysetSetUp();
 
   Key remove_key;
@@ -1217,7 +1224,7 @@ TEST_P(KeysetManagementTest, RemoveKeysetSuccess) {
             homedirs_.RemoveKeyset(*credentials_, remove_key.data()));
 }
 
-TEST_P(KeysetManagementTest, RemoveKeysetNotFound) {
+TEST_P(OldKeysetManagementTest, RemoveKeysetNotFound) {
   KeysetSetUp();
 
   Key remove_key;
@@ -1229,7 +1236,7 @@ TEST_P(KeysetManagementTest, RemoveKeysetNotFound) {
             homedirs_.RemoveKeyset(*credentials_, remove_key.data()));
 }
 
-TEST_P(KeysetManagementTest, GetVaultKeysetLabelsOneLabeled) {
+TEST_P(OldKeysetManagementTest, GetVaultKeysetLabelsOneLabeled) {
   KeysetSetUp();
 
   serialized_.mutable_key_data()->set_label("a labeled key");
@@ -1241,7 +1248,7 @@ TEST_P(KeysetManagementTest, GetVaultKeysetLabelsOneLabeled) {
   EXPECT_EQ(serialized_.key_data().label(), labels[0]);
 }
 
-TEST_P(KeysetManagementTest, GetVaultKeysetLabelsOneLegacyLabeled) {
+TEST_P(OldKeysetManagementTest, GetVaultKeysetLabelsOneLegacyLabeled) {
   KeysetSetUp();
 
   serialized_.clear_key_data();
@@ -1252,7 +1259,7 @@ TEST_P(KeysetManagementTest, GetVaultKeysetLabelsOneLegacyLabeled) {
   EXPECT_EQ(StringPrintf("%s%d", kKeyLegacyPrefix, 0), labels[0]);
 }
 
-TEST_P(KeysetManagementTest, AddKeysetInvalidCreds) {
+TEST_P(OldKeysetManagementTest, AddKeysetInvalidCreds) {
   KeysetSetUp();
 
   SecureBlob newkey;
@@ -1267,7 +1274,7 @@ TEST_P(KeysetManagementTest, AddKeysetInvalidCreds) {
   EXPECT_EQ(index, -1);
 }
 
-TEST_P(KeysetManagementTest, AddKeysetInvalidPrivileges) {
+TEST_P(OldKeysetManagementTest, AddKeysetInvalidPrivileges) {
   // Check for key use that lacks valid add privileges
   KeysetSetUp();
 
@@ -1283,7 +1290,7 @@ TEST_P(KeysetManagementTest, AddKeysetInvalidPrivileges) {
   EXPECT_EQ(index, -1);
 }
 
-TEST_P(KeysetManagementTest, AddKeyset0Available) {
+TEST_P(OldKeysetManagementTest, AddKeyset0Available) {
   // While this doesn't affect the hole-finding logic, it's good to cover the
   // full logical behavior by changing which key auths too.
   // master.0 -> master.1
@@ -1312,7 +1319,7 @@ TEST_P(KeysetManagementTest, AddKeyset0Available) {
   EXPECT_EQ(index, 0);
 }
 
-TEST_P(KeysetManagementTest, AddKeyset10Available) {
+TEST_P(OldKeysetManagementTest, AddKeyset10Available) {
   KeysetSetUp();
 
   // The injected keyset in the fixture handles the |credentials_| validation.
@@ -1340,7 +1347,7 @@ TEST_P(KeysetManagementTest, AddKeyset10Available) {
   EXPECT_EQ(index, 10);
 }
 
-TEST_P(KeysetManagementTest, AddKeysetNoFreeIndices) {
+TEST_P(OldKeysetManagementTest, AddKeysetNoFreeIndices) {
   KeysetSetUp();
 
   // The injected keyset in the fixture handles the |credentials_| validation.
@@ -1360,7 +1367,7 @@ TEST_P(KeysetManagementTest, AddKeysetNoFreeIndices) {
   EXPECT_EQ(index, -1);
 }
 
-TEST_P(KeysetManagementTest, AddKeysetEncryptFail) {
+TEST_P(OldKeysetManagementTest, AddKeysetEncryptFail) {
   KeysetSetUp();
 
   SecureBlob newkey;
@@ -1383,7 +1390,7 @@ TEST_P(KeysetManagementTest, AddKeysetEncryptFail) {
   EXPECT_EQ(index, -1);
 }
 
-TEST_P(KeysetManagementTest, AddKeysetSaveFail) {
+TEST_P(OldKeysetManagementTest, AddKeysetSaveFail) {
   KeysetSetUp();
 
   SecureBlob newkey;
@@ -1409,7 +1416,7 @@ TEST_P(KeysetManagementTest, AddKeysetSaveFail) {
   EXPECT_EQ(index, -1);
 }
 
-TEST_P(KeysetManagementTest, AddKeysetNoResetSeedSuccess) {
+TEST_P(OldKeysetManagementTest, AddKeysetNoResetSeedSuccess) {
   KeysetSetUp();
   ClearFakeSerializedResetSeed();
 
@@ -1448,7 +1455,7 @@ TEST_P(KeysetManagementTest, AddKeysetNoResetSeedSuccess) {
   EXPECT_EQ(index, 1);
 }
 
-TEST_P(KeysetManagementTest, ForceRemoveKeysetSuccess) {
+TEST_P(OldKeysetManagementTest, ForceRemoveKeysetSuccess) {
   KeysetSetUp();
   EXPECT_CALL(
       platform_,
@@ -1460,7 +1467,7 @@ TEST_P(KeysetManagementTest, ForceRemoveKeysetSuccess) {
   ASSERT_TRUE(homedirs_.ForceRemoveKeyset("a0b0c0", 0));
 }
 
-TEST_P(KeysetManagementTest, ForceRemoveKeysetMissingKeyset) {
+TEST_P(OldKeysetManagementTest, ForceRemoveKeysetMissingKeyset) {
   KeysetSetUp();
   // There is only one call to VaultKeyset, so it gets the MockVaultKeyset
   // with index 0.
@@ -1469,15 +1476,15 @@ TEST_P(KeysetManagementTest, ForceRemoveKeysetMissingKeyset) {
   ASSERT_TRUE(homedirs_.ForceRemoveKeyset("a0b0c0", 0));
 }
 
-TEST_P(KeysetManagementTest, ForceRemoveKeysetNegativeIndex) {
+TEST_P(OldKeysetManagementTest, ForceRemoveKeysetNegativeIndex) {
   ASSERT_FALSE(homedirs_.ForceRemoveKeyset("a0b0c0", -1));
 }
 
-TEST_P(KeysetManagementTest, ForceRemoveKeysetOverMaxIndex) {
+TEST_P(OldKeysetManagementTest, ForceRemoveKeysetOverMaxIndex) {
   ASSERT_FALSE(homedirs_.ForceRemoveKeyset("a0b0c0", kKeyFileMax));
 }
 
-TEST_P(KeysetManagementTest, ForceRemoveKeysetFailedDelete) {
+TEST_P(OldKeysetManagementTest, ForceRemoveKeysetFailedDelete) {
   KeysetSetUp();
   EXPECT_CALL(
       platform_,
@@ -1489,7 +1496,7 @@ TEST_P(KeysetManagementTest, ForceRemoveKeysetFailedDelete) {
   ASSERT_FALSE(homedirs_.ForceRemoveKeyset("a0b0c0", 0));
 }
 
-TEST_P(KeysetManagementTest, MoveKeysetSuccess_0_to_1) {
+TEST_P(OldKeysetManagementTest, MoveKeysetSuccess_0_to_1) {
   const std::string obfuscated = "a0b0c0";
   EXPECT_CALL(platform_,
               FileExists(Property(&FilePath::value, EndsWith("master.0"))))
@@ -1510,7 +1517,7 @@ TEST_P(KeysetManagementTest, MoveKeysetSuccess_0_to_1) {
   ASSERT_TRUE(homedirs_.MoveKeyset(obfuscated, 0, 1));
 }
 
-TEST_P(KeysetManagementTest, MoveKeysetSuccess_1_to_99) {
+TEST_P(OldKeysetManagementTest, MoveKeysetSuccess_1_to_99) {
   const std::string obfuscated = "a0b0c0";
   EXPECT_CALL(platform_,
               FileExists(Property(&FilePath::value, EndsWith("master.1"))))
@@ -1531,27 +1538,27 @@ TEST_P(KeysetManagementTest, MoveKeysetSuccess_1_to_99) {
   ASSERT_TRUE(homedirs_.MoveKeyset(obfuscated, 1, 99));
 }
 
-TEST_P(KeysetManagementTest, MoveKeysetNegativeSource) {
+TEST_P(OldKeysetManagementTest, MoveKeysetNegativeSource) {
   const std::string obfuscated = "a0b0c0";
   ASSERT_FALSE(homedirs_.MoveKeyset(obfuscated, -1, 1));
 }
 
-TEST_P(KeysetManagementTest, MoveKeysetNegativeDestination) {
+TEST_P(OldKeysetManagementTest, MoveKeysetNegativeDestination) {
   const std::string obfuscated = "a0b0c0";
   ASSERT_FALSE(homedirs_.MoveKeyset(obfuscated, 1, -1));
 }
 
-TEST_P(KeysetManagementTest, MoveKeysetTooLargeDestination) {
+TEST_P(OldKeysetManagementTest, MoveKeysetTooLargeDestination) {
   const std::string obfuscated = "a0b0c0";
   ASSERT_FALSE(homedirs_.MoveKeyset(obfuscated, 1, kKeyFileMax));
 }
 
-TEST_P(KeysetManagementTest, MoveKeysetTooLargeSource) {
+TEST_P(OldKeysetManagementTest, MoveKeysetTooLargeSource) {
   const std::string obfuscated = "a0b0c0";
   ASSERT_FALSE(homedirs_.MoveKeyset(obfuscated, kKeyFileMax, 0));
 }
 
-TEST_P(KeysetManagementTest, MoveKeysetMissingSource) {
+TEST_P(OldKeysetManagementTest, MoveKeysetMissingSource) {
   const std::string obfuscated = "a0b0c0";
   EXPECT_CALL(platform_,
               FileExists(Property(&FilePath::value, EndsWith("master.0"))))
@@ -1559,7 +1566,7 @@ TEST_P(KeysetManagementTest, MoveKeysetMissingSource) {
   ASSERT_FALSE(homedirs_.MoveKeyset(obfuscated, 0, 1));
 }
 
-TEST_P(KeysetManagementTest, MoveKeysetDestinationExists) {
+TEST_P(OldKeysetManagementTest, MoveKeysetDestinationExists) {
   const std::string obfuscated = "a0b0c0";
   EXPECT_CALL(platform_,
               FileExists(Property(&FilePath::value, EndsWith("master.0"))))
@@ -1570,7 +1577,7 @@ TEST_P(KeysetManagementTest, MoveKeysetDestinationExists) {
   ASSERT_FALSE(homedirs_.MoveKeyset(obfuscated, 0, 1));
 }
 
-TEST_P(KeysetManagementTest, MoveKeysetExclusiveOpenFailed) {
+TEST_P(OldKeysetManagementTest, MoveKeysetExclusiveOpenFailed) {
   const std::string obfuscated = "a0b0c0";
   EXPECT_CALL(platform_,
               FileExists(Property(&FilePath::value, EndsWith("master.0"))))
@@ -1585,7 +1592,7 @@ TEST_P(KeysetManagementTest, MoveKeysetExclusiveOpenFailed) {
   ASSERT_FALSE(homedirs_.MoveKeyset(obfuscated, 0, 1));
 }
 
-TEST_P(KeysetManagementTest, MoveKeysetRenameFailed) {
+TEST_P(OldKeysetManagementTest, MoveKeysetRenameFailed) {
   const std::string obfuscated = "a0b0c0";
   EXPECT_CALL(platform_,
               FileExists(Property(&FilePath::value, EndsWith("master.0"))))

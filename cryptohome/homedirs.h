@@ -390,8 +390,8 @@ class HomeDirs {
 
   bool use_tpm_;
 
-  friend class HomeDirsTest;
-  FRIEND_TEST(HomeDirsTest, GetTrackedDirectoryForDirCrypto);
+  friend class OldHomeDirsTest;
+  FRIEND_TEST(OldHomeDirsTest, GetTrackedDirectoryForDirCrypto);
 
   DISALLOW_COPY_AND_ASSIGN(HomeDirs);
 };
