@@ -147,7 +147,6 @@ TEST_F(DBusAdaptorTest, ClearSnapshotBasic) {
 TEST_F(DBusAdaptorTest, GenerateKeyPairBasic) {
   EXPECT_CALL(*boot_lockbox_client(), Store(Eq(kLastSnapshotPublicKey), _))
       .WillOnce(Return(true));
-  EXPECT_CALL(*boot_lockbox_client(), Finalize()).WillOnce(Return(true));
   EXPECT_TRUE(dbus_adaptor()->GenerateKeyPair());
 }
 
@@ -186,7 +185,6 @@ TEST_F(DBusAdaptorTest, GenerateKeyPairExisting) {
   EXPECT_CALL(*boot_lockbox_client(),
               Store(Eq(kLastSnapshotPublicKey), nEq("")))
       .WillOnce(Return(true));
-  EXPECT_CALL(*boot_lockbox_client(), Finalize()).WillOnce(Return(true));
 
   EXPECT_TRUE(dbus_adaptor()->GenerateKeyPair());
   {
@@ -210,7 +208,6 @@ TEST_F(DBusAdaptorTest, GenerateKeyPairReadFailure) {
   EXPECT_CALL(*boot_lockbox_client(),
               Store(Eq(kLastSnapshotPublicKey), nEq("")))
       .WillOnce(Return(true));
-  EXPECT_CALL(*boot_lockbox_client(), Finalize()).WillOnce(Return(true));
 
   // Generating key pair should be still successful.
   EXPECT_TRUE(dbus_adaptor()->GenerateKeyPair());
@@ -229,7 +226,6 @@ TEST_F(DBusAdaptorTest, GenerateKeyPairReadEmpty) {
   EXPECT_CALL(*boot_lockbox_client(),
               Store(Eq(kLastSnapshotPublicKey), nEq("")))
       .WillOnce(Return(true));
-  EXPECT_CALL(*boot_lockbox_client(), Finalize()).WillOnce(Return(true));
 
   // Generating key pair should be still successful.
   EXPECT_TRUE(dbus_adaptor()->GenerateKeyPair());
@@ -252,7 +248,6 @@ TEST_F(DBusAdaptorTest, GenerateKeyPairMoveError) {
   EXPECT_CALL(*boot_lockbox_client(),
               Store(Eq(kLastSnapshotPublicKey), nEq("")))
       .WillOnce(Return(true));
-  EXPECT_CALL(*boot_lockbox_client(), Finalize()).WillOnce(Return(true));
 
   // Generating key pair should be still successful, because the last snapshot
   // will be re-generated anyway.
@@ -269,17 +264,6 @@ TEST_F(DBusAdaptorTest, GenerateKeyPairStoreFailure) {
   EXPECT_FALSE(dbus_adaptor()->GenerateKeyPair());
 }
 
-// Test failure flow when finalizing BootLockbox is attempted.
-TEST_F(DBusAdaptorTest, GenerateKeyPairFinalizeFailure) {
-  EXPECT_CALL(*boot_lockbox_client(),
-              Store(Eq(kLastSnapshotPublicKey), nEq("")))
-      .WillOnce(Return(true));
-  // Fail once the finalization of BootLockbox is attempted.
-  EXPECT_CALL(*boot_lockbox_client(), Finalize()).WillOnce(Return(false));
-
-  EXPECT_FALSE(dbus_adaptor()->GenerateKeyPair());
-}
-
 // Test failure flow when the keys were not generated.
 TEST_F(DBusAdaptorTest, TakeSnapshotNoPrivateKeyFailure) {
   EXPECT_FALSE(dbus_adaptor()->TakeSnapshot(kFakeAccountID));
@@ -289,7 +273,6 @@ TEST_F(DBusAdaptorTest, TakeSnapshotNoPrivateKeyFailure) {
 TEST_F(DBusAdaptorTest, TakeSnapshotLastSnapshotExistFailure) {
   EXPECT_CALL(*boot_lockbox_client(), Store(Eq(kLastSnapshotPublicKey), _))
       .WillOnce(Return(true));
-  EXPECT_CALL(*boot_lockbox_client(), Finalize()).WillOnce(Return(true));
   EXPECT_TRUE(dbus_adaptor()->GenerateKeyPair());
 
   CreateDir(last_snapshot_dir());
@@ -301,7 +284,6 @@ TEST_F(DBusAdaptorTest, TakeSnapshotLastSnapshotExistFailure) {
 TEST_F(DBusAdaptorTest, TakeSnapshotAndroidDataDirNotExist) {
   EXPECT_CALL(*boot_lockbox_client(), Store(Eq(kLastSnapshotPublicKey), _))
       .WillOnce(Return(true));
-  EXPECT_CALL(*boot_lockbox_client(), Finalize()).WillOnce(Return(true));
   EXPECT_TRUE(dbus_adaptor()->GenerateKeyPair());
   EXPECT_FALSE(base::DirectoryExists(android_data_dir()));
 
@@ -312,7 +294,6 @@ TEST_F(DBusAdaptorTest, TakeSnapshotAndroidDataDirNotExist) {
 TEST_F(DBusAdaptorTest, TakeSnapshotAndroidDataNotDirFile) {
   EXPECT_CALL(*boot_lockbox_client(), Store(Eq(kLastSnapshotPublicKey), _))
       .WillOnce(Return(true));
-  EXPECT_CALL(*boot_lockbox_client(), Finalize()).WillOnce(Return(true));
   EXPECT_TRUE(dbus_adaptor()->GenerateKeyPair());
   // Create a file instead of android-data directory.
   EXPECT_TRUE(base::WriteFile(android_data_dir(), kContent, strlen(kContent)));
@@ -326,7 +307,6 @@ TEST_F(DBusAdaptorTest, TakeSnapshotAndroidDataNotDirFile) {
 TEST_F(DBusAdaptorTest, TakeSnapshotAndroidDataSymLink) {
   EXPECT_CALL(*boot_lockbox_client(), Store(Eq(kLastSnapshotPublicKey), _))
       .WillOnce(Return(true));
-  EXPECT_CALL(*boot_lockbox_client(), Finalize()).WillOnce(Return(true));
   EXPECT_TRUE(dbus_adaptor()->GenerateKeyPair());
   // Create a symlink.
   CreateDir(random_dir());
@@ -341,7 +321,6 @@ TEST_F(DBusAdaptorTest, TakeSnapshotAndroidDataSymLink) {
 TEST_F(DBusAdaptorTest, TakeSnapshotAndroidDataFiFo) {
   EXPECT_CALL(*boot_lockbox_client(), Store(Eq(kLastSnapshotPublicKey), _))
       .WillOnce(Return(true));
-  EXPECT_CALL(*boot_lockbox_client(), Finalize()).WillOnce(Return(true));
   EXPECT_TRUE(dbus_adaptor()->GenerateKeyPair());
   // Create a fifo android-data.
   mkfifo(android_data_dir().value().c_str(), 0666);
@@ -367,7 +346,6 @@ TEST_F(DBusAdaptorTest, TakeSnapshotSuccess) {
         expected_public_key_digest = digest;
         return true;
       }));
-  EXPECT_CALL(*boot_lockbox_client(), Finalize()).WillOnce(Return(true));
   EXPECT_TRUE(dbus_adaptor()->GenerateKeyPair());
 
   CreateDir(android_data_dir());
@@ -406,7 +384,6 @@ TEST_F(DBusAdaptorTest, TakeSnapshotSuccess) {
 TEST_F(DBusAdaptorTest, TakeSnapshotDouble) {
   EXPECT_CALL(*boot_lockbox_client(), Store(Eq(kLastSnapshotPublicKey), _))
       .WillOnce(Return(true));
-  EXPECT_CALL(*boot_lockbox_client(), Finalize()).WillOnce(Return(true));
   EXPECT_TRUE(dbus_adaptor()->GenerateKeyPair());
 
   CreateDir(android_data_dir());
@@ -510,7 +487,6 @@ TEST_F(DBusAdaptorTest, LoadSnapshotUnknownUser) {
         expected_public_key_digest = digest;
         return true;
       }));
-  EXPECT_CALL(*boot_lockbox_client(), Finalize()).WillOnce(Return(true));
   // Generate key pair.
   EXPECT_TRUE(dbus_adaptor()->GenerateKeyPair());
 
@@ -551,7 +527,6 @@ TEST_F(DBusAdaptorTest, LoadSnapshotSuccess) {
         expected_public_key_digest = digest;
         return true;
       }));
-  EXPECT_CALL(*boot_lockbox_client(), Finalize()).WillOnce(Return(true));
   // Generate key pair.
   EXPECT_TRUE(dbus_adaptor()->GenerateKeyPair());
 
@@ -613,9 +588,6 @@ TEST_F(DBusAdaptorTest, LoadSnapshotPreviousSuccess) {
             }
             return true;
           }));
-  EXPECT_CALL(*boot_lockbox_client(), Finalize())
-      .Times(2)
-      .WillRepeatedly(Return(true));
   // First time snapshot generating flow.
   // Generate a key pair.
   EXPECT_TRUE(dbus_adaptor()->GenerateKeyPair());
