@@ -82,16 +82,9 @@ void ArcvmNativeCollector::AddArcMetadata(
   AddCrashMetaUploadData(arc_util::kCrashTypeField, kArcvmNativeCrashType);
   AddCrashMetaUploadData(arc_util::kChromeOsVersionField,
                          CrashCollector::GetOsVersion());
-
-  AddCrashMetaUploadData(arc_util::kArcVersionField,
-                         build_property.fingerprint);
-  AddCrashMetaUploadData(
-      arc_util::kAndroidVersionField,
-      arc_util::GetVersionFromFingerprint(build_property.fingerprint)
-          .value_or(kUnknownValue));
-  AddCrashMetaUploadData(arc_util::kDeviceField, build_property.device);
-  AddCrashMetaUploadData(arc_util::kBoardField, build_property.board);
-  AddCrashMetaUploadData(arc_util::kCpuAbiField, build_property.cpu_abi);
+  for (auto metadata : arc_util::ListMetadataForBuildProperty(build_property)) {
+    AddCrashMetaUploadData(metadata.first, metadata.second);
+  }
 }
 
 bool ArcvmNativeCollector::DumpFdToFile(base::ScopedFD src_fd,

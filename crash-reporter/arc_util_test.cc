@@ -4,6 +4,8 @@
 
 #include "crash-reporter/arc_util.h"
 
+#include <algorithm>
+
 #include <brillo/syslog_logging.h>
 #include <gtest/gtest.h>
 
@@ -179,6 +181,35 @@ TEST(ArcUtilTest, GetAndroidVersion) {
     EXPECT_EQ(item.first,
               GetVersionFromFingerprint(item.second).value_or(kUnknownValue));
   }
+}
+
+TEST(ArcUtilTest, ListMetadataForBuildProperty) {
+  constexpr char kDevice[] = "rammus_cheets";
+  constexpr char kBoard[] = "shyvana";
+  constexpr char kCpuAbi[] = "x86_64";
+  constexpr char kFingerprint[] =
+      "google/rammus/rammus_cheets:11/R87-13443.0.0/6801612:user/release-keys";
+  constexpr char kAndroidVersionInFingerprint[] = "11";
+  const BuildProperty build_property = {.device = kDevice,
+                                        .board = kBoard,
+                                        .cpu_abi = kCpuAbi,
+                                        .fingerprint = kFingerprint};
+
+  std::vector<std::pair<std::string, std::string>> expected_metadata{
+      // key / value
+      {kArcVersionField, kFingerprint},
+      {kAndroidVersionField, kAndroidVersionInFingerprint},
+      {kDeviceField, kDevice},
+      {kBoardField, kBoard},
+      {kCpuAbiField, kCpuAbi},
+  };
+
+  std::vector<std::pair<std::string, std::string>> metadata =
+      ListMetadataForBuildProperty(build_property);
+
+  std::sort(expected_metadata.begin(), expected_metadata.end());
+  std::sort(metadata.begin(), metadata.end());
+  EXPECT_EQ(metadata, expected_metadata);
 }
 
 }  // namespace arc_util

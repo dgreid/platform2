@@ -83,6 +83,10 @@ std::string GetCrashLogHeader(const CrashLogHeaderMap& map, const char* key);
 // since the current second.
 pid_t CreateRandomPID();
 
+// Lists metadata from |build_property| as a list of pairs of key and value.
+std::vector<std::pair<std::string, std::string>> ListMetadataForBuildProperty(
+    const BuildProperty& build_property);
+
 }  // namespace arc_util
 
 #endif  // CRASH_REPORTER_ARC_UTIL_H_

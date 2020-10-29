@@ -160,6 +160,17 @@ container as those are collected like any other userland crash via the main
 [arc_collector] shares a lot of code with [user_collector] so it can overlay
 [ARC++]-specific processing details.
 
+## arcvm_kernel_collector
+
+Collects crashes of Linux kernel of Android in [ARCVM].
+
+When the ARCVM Linux kernel crashes, it dumps logs to
+`/sys/fs/pstore/dmesg-ramoops-0` in ARCVM.  It's a [pstore] file, so the
+backend exists on Chrome OS as `/home/root/<hash>/crosvm/*.pstore`.
+[arcvm_kernel_collector] receives the content of this file from
+ArcCrashCollector and ARC bridge via Mojo (or possibly, directly reads the
+ring buffer in pstore file) and processes it.
+
 ## arcvm_native_collector
 
 Collects crashes of native binaries in [ARCVM].
@@ -356,6 +367,7 @@ D-Bus signal on /org/chromium/AnomalyEventService.  This is currently used by
 [anomaly_detector]: ../anomaly_detector.cc
 [anomaly-detector.conf]: ../init/anomaly-detector.conf
 [arc_collector]: ../arc_collector.cc
+[arcvm_kernel_collector]: ../arcvm_kernel_collector.cc
 [arcvm_native_collector]: ../arcvm_native_collector.cc
 [bert_collector]: ../bert_collector.cc
 [chrome_collector]: ../chrome_collector.cc

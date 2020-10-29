@@ -24,6 +24,7 @@
 
 #include "crash-reporter/arc_collector.h"
 #include "crash-reporter/arc_util.h"
+#include "crash-reporter/arcvm_kernel_collector.h"
 #include "crash-reporter/arcvm_native_collector.h"
 #include "crash-reporter/bert_collector.h"
 #include "crash-reporter/chrome_collector.h"
@@ -323,6 +324,7 @@ int main(int argc, char* argv[]) {
   DEFINE_int64(arc_native_time, -1,
                "UNIX timestamp of the time when the native crash happened. "
                "Metadata for ARCVM native crashes");
+  DEFINE_bool(arc_kernel, false, "ARC Kernel Crash");
 #endif
 
   OpenStandardFileDescriptors();
@@ -412,6 +414,23 @@ int main(int argc, char* argv[]) {
                   .time = static_cast<time_t>(FLAGS_arc_native_time),
                   .pid = FLAGS_pid,
                   .exec_name = FLAGS_exe}),
+      }},
+  });
+
+  ArcvmKernelCollector arcvm_kernel_collector;
+  collectors.push_back({
+      .collector = &arcvm_kernel_collector,
+      .handlers = {{
+          // This handles kernel crashes of ARCVM.
+          .should_handle = FLAGS_arc_is_arcvm && FLAGS_arc_kernel,
+          .cb = base::BindRepeating(&ArcvmKernelCollector::HandleCrash,
+                                    base::Unretained(&arcvm_kernel_collector),
+                                    arc_util::BuildProperty{
+                                        .device = FLAGS_arc_device,
+                                        .board = FLAGS_arc_board,
+                                        .cpu_abi = FLAGS_arc_cpu_abi,
+                                        .fingerprint = FLAGS_arc_fingerprint,
+                                    }),
       }},
   });
 

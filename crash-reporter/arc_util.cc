@@ -8,6 +8,8 @@ namespace arc_util {
 
 namespace {
 
+constexpr char kUnknownValue[] = "unknown";
+
 bool HasExceptionInfo(const std::string& type) {
   static const std::unordered_set<std::string> kTypes = {
       "data_app_crash", "system_app_crash", "system_app_wtf",
@@ -149,6 +151,19 @@ std::string GetCrashLogHeader(const CrashLogHeaderMap& map, const char* key) {
 pid_t CreateRandomPID() {
   const auto now = base::TimeTicks::Now();
   return (now - ToSeconds(now)).InMicroseconds();
+}
+
+std::vector<std::pair<std::string, std::string>> ListMetadataForBuildProperty(
+    const BuildProperty& build_property) {
+  std::vector<std::pair<std::string, std::string>> metadata;
+  metadata.emplace_back(kArcVersionField, build_property.fingerprint);
+  metadata.emplace_back(kAndroidVersionField,
+                        GetVersionFromFingerprint(build_property.fingerprint)
+                            .value_or(kUnknownValue));
+  metadata.emplace_back(kDeviceField, build_property.device);
+  metadata.emplace_back(kBoardField, build_property.board);
+  metadata.emplace_back(kCpuAbiField, build_property.cpu_abi);
+  return metadata;
 }
 
 }  // namespace arc_util
