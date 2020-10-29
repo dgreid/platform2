@@ -78,7 +78,7 @@ TEST_F(EncryptedFsTest, RebuildStateful) {
       .WillOnce(DoAll(SetArgPointee<1>(40920000), Return(true)));
   EXPECT_CALL(platform_, Mount(dmcrypt_device_, mount_point_, _, _, _))
       .WillOnce(Return(true));
-  EXPECT_CALL(platform_, Bind(_, _)).Times(2).WillRepeatedly(Return(true));
+  EXPECT_CALL(platform_, Bind(_, _, _)).Times(2).WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, Unmount(_, _, _))
       .Times(3)
       .WillRepeatedly(Return(true));
@@ -105,7 +105,7 @@ TEST_F(EncryptedFsTest, OldStateful) {
       .WillOnce(DoAll(SetArgPointee<1>(40920000), Return(true)));
   EXPECT_CALL(platform_, Mount(dmcrypt_device_, mount_point_, _, _, _))
       .WillOnce(Return(true));
-  EXPECT_CALL(platform_, Bind(_, _)).Times(2).WillRepeatedly(Return(true));
+  EXPECT_CALL(platform_, Bind(_, _, _)).Times(2).WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, Unmount(_, _, _))
       .Times(3)
       .WillRepeatedly(Return(true));

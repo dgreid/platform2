@@ -167,7 +167,10 @@ class Platform {
   // Parameters
   //   from - Where to mount from
   //   to - Where to mount to
-  virtual bool Bind(const base::FilePath& from, const base::FilePath& to);
+  //   is_shared - Whether the bind mount should be remounted with MS_SHARED.
+  virtual bool Bind(const base::FilePath& from,
+                    const base::FilePath& to,
+                    bool is_shared = false);
 
   // Calls the platform unmount
   //

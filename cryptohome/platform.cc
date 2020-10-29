@@ -274,14 +274,21 @@ bool Platform::Mount(const FilePath& from,
   return true;
 }
 
-bool Platform::Bind(const FilePath& from, const FilePath& to) {
+bool Platform::Bind(const FilePath& from, const FilePath& to, bool is_shared) {
   // To apply options specific to a bind mount, we have to call mount(2) twice.
   if (mount(from.value().c_str(), to.value().c_str(), nullptr, MS_BIND,
             nullptr))
     return false;
-  if (mount(nullptr, to.value().c_str(), nullptr,
-            MS_REMOUNT | MS_BIND | kDefaultMountFlags, nullptr))
+
+  uint32_t mount_flags = MS_REMOUNT | MS_BIND | kDefaultMountFlags;
+
+  if (mount(nullptr, to.value().c_str(), nullptr, mount_flags, nullptr))
     return false;
+
+  if (is_shared &&
+      mount(nullptr, to.value().c_str(), nullptr, MS_SHARED, nullptr))
+    return false;
+
   return true;
 }
 
