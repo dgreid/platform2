@@ -449,7 +449,7 @@ bool MountHelper::MountLegacyHome(const FilePath& from) {
     return true;
   }
 
-  if (!BindAndPush(from, FilePath(kDefaultHomeDir)))
+  if (!BindAndPush(from, FilePath(kDefaultHomeDir), true /*is_shared*/))
     return false;
 
   return true;
@@ -483,7 +483,7 @@ bool MountHelper::BindMyFilesDownloads(const base::FilePath& user_home) {
    */
   MigrateDirectory(downloads, downloads_in_myfiles);
 
-  if (!BindAndPush(downloads, downloads_in_myfiles))
+  if (!BindAndPush(downloads, downloads_in_myfiles, true /*is_shared*/))
     return false;
 
   return true;
@@ -502,10 +502,13 @@ bool MountHelper::MountAndPush(const base::FilePath& src,
   return true;
 }
 
-bool MountHelper::BindAndPush(const FilePath& src, const FilePath& dest) {
-  if (!platform_->Bind(src, dest)) {
+bool MountHelper::BindAndPush(const FilePath& src,
+                              const FilePath& dest,
+                              bool is_shared) {
+  if (!platform_->Bind(src, dest, is_shared)) {
     PLOG(ERROR) << "Bind mount failed: " << src.value() << " -> "
-                << dest.value();
+                << dest.value() << " is_shared: " << std::boolalpha
+                << is_shared;
     return false;
   }
 
@@ -616,6 +619,12 @@ bool MountHelper::MountHomesAndDaemonStores(
     const std::string& obfuscated_username,
     const FilePath& user_home,
     const FilePath& root_home) {
+  // Bind mount user directory as a shared bind mount.
+  // This allows us to set up user mounts as shared mounts without needing to
+  // replicate that across multiple mount points.
+  if (!BindAndPush(user_home, user_home, true /*is_shared*/))
+    return false;
+
   // Mount /home/chronos/user.
   if (legacy_mount_ && !MountLegacyHome(user_home))
     return false;
@@ -638,23 +647,8 @@ bool MountHelper::MountHomesAndDaemonStores(
   if (bind_mount_downloads_) {
     // Mount Downloads to MyFiles/Downloads in:
     //  - /home/chronos/u-<user_hash>
-    //  - /home/user/<user_hash>
-    if (!(BindMyFilesDownloads(new_user_path) &&
-          BindMyFilesDownloads(user_multi_home))) {
+    if (!BindMyFilesDownloads(user_multi_home)) {
       return false;
-    }
-
-    // Only bind mount /home/chronos/user/Downloads if it isn't mounted yet, in
-    // multi-profile login it skips.
-    if (legacy_mount_) {
-      auto downloads_folder =
-          FilePath(kDefaultHomeDir).Append(kMyFilesDir).Append(kDownloadsDir);
-
-      if (platform_->IsDirectoryMounted(downloads_folder)) {
-        LOG(INFO) << "Skipping binding to: " << downloads_folder.value();
-      } else if (!BindMyFilesDownloads(FilePath(kDefaultHomeDir))) {
-        return false;
-      }
     }
   }
 
@@ -929,7 +923,7 @@ void MountHelper::UnmountAll() {
   while (stack_.Pop(&src, &dest)) {
     ForceUnmount(src, dest);
     // Clean up destination directory for ephemeral loop device mounts.
-    if (ephemeral_mount_path.IsParent(dest))
+    if (ephemeral_mount_path == dest.DirName())
       platform_->DeleteFile(dest, true /* recursive */);
   }
 }

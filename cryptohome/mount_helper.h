@@ -201,7 +201,10 @@ class MountHelper : public MountHelperInterface {
   // Parameters
   //   src - Path to bind from
   //   dest - Path to bind to
-  bool BindAndPush(const FilePath& src, const FilePath& dest);
+  //   is_shared - bind mount as MS_SHARED
+  bool BindAndPush(const FilePath& src,
+                   const FilePath& dest,
+                   bool is_shared = false);
 
   // Bind mounts |user_home|/Downloads to |user_home|/MyFiles/Downloads so Files
   // app can manage MyFiles as user volume instead of just Downloads.

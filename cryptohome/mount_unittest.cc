@@ -282,6 +282,10 @@ class MountTest
     EXPECT_CALL(platform_, IsDirectoryMounted(FilePath("/home/chronos/user")))
         .WillOnce(Return(false));
 
+    EXPECT_CALL(platform_, Bind(user.user_vault_mount_path,
+                                user.user_vault_mount_path, true))
+        .WillOnce(Return(true));
+
     EXPECT_CALL(platform_,
                 Bind(user.user_vault_mount_path, user.user_mount_path, _))
         .WillOnce(Return(true));
@@ -301,54 +305,35 @@ class MountTest
   }
 
   void ExpectDownloadsBindMounts(const TestUser& user) {
-    // Mounting Downloads to MyFiles/Downloads in:
-    //   - /home/chronos/u-<hash>
-    //   - /home/user/<hash>
-    //   - /home/chronos/user
-    FilePath user_dirs[] = {
-        MountHelper::GetNewUserPath(user.username),
-        brillo::cryptohome::home::GetUserPath(user.username),
-        FilePath("/home/chronos/user"),
-    };
+    // Mounting Downloads to MyFiles/Downloads in /home/user/<hash>
+    FilePath user_dir = brillo::cryptohome::home::GetUserPath(user.username);
 
-    EXPECT_CALL(
-        platform_,
-        IsDirectoryMounted(FilePath("/home/chronos/user/MyFiles/Downloads")))
-        .WillOnce(Return(false));
-    for (auto const& home : user_dirs) {
-      auto downloads_path = home.Append("Downloads");
-      auto downloads_in_myfiles = home.Append("MyFiles").Append("Downloads");
+    EXPECT_CALL(platform_, Bind(user_dir.Append("Downloads"),
+                                user_dir.Append("MyFiles/Downloads"), _))
+        .WillOnce(Return(true));
 
-      EXPECT_CALL(platform_, DirectoryExists(home)).WillOnce(Return(true));
-      EXPECT_CALL(platform_, DirectoryExists(downloads_path))
-          .WillOnce(Return(true));
-      EXPECT_CALL(platform_, DirectoryExists(downloads_in_myfiles))
-          .WillOnce(Return(true));
-      EXPECT_CALL(platform_, Bind(downloads_path, downloads_in_myfiles, _))
-          .WillOnce(Return(true));
+    auto downloads_path = user_dir.Append("Downloads");
+    auto downloads_in_myfiles = user_dir.Append("MyFiles").Append("Downloads");
 
-      NiceMock<MockFileEnumerator>* in_myfiles_download_enumerator =
-          new NiceMock<MockFileEnumerator>();
-      EXPECT_CALL(platform_, GetFileEnumerator(downloads_in_myfiles, false, _))
-          .WillOnce(Return(in_myfiles_download_enumerator));
-    }
+    EXPECT_CALL(platform_, DirectoryExists(user_dir)).WillOnce(Return(true));
+    EXPECT_CALL(platform_, DirectoryExists(downloads_path))
+        .WillOnce(Return(true));
+    EXPECT_CALL(platform_, DirectoryExists(downloads_in_myfiles))
+        .WillOnce(Return(true));
+
+    NiceMock<MockFileEnumerator>* in_myfiles_download_enumerator =
+        new NiceMock<MockFileEnumerator>();
+    EXPECT_CALL(platform_, GetFileEnumerator(downloads_in_myfiles, false, _))
+        .WillOnce(Return(in_myfiles_download_enumerator));
   }
 
   void ExpectDownloadsUnmounts(const TestUser& user) {
-    // Mounting Downloads to MyFiles/Downloads in:
-    //   - /home/chronos/u-<hash>
-    //   - /home/user/<hash>
-    //   - /home/chronos/user
-    FilePath user_dirs[] = {
-        MountHelper::GetNewUserPath(user.username),
-        brillo::cryptohome::home::GetUserPath(user.username),
-        FilePath("/home/chronos/user"),
-    };
-    for (auto const& home : user_dirs) {
-      EXPECT_CALL(platform_,
-                  Unmount(home.Append("MyFiles").Append("Downloads"), _, _))
-          .WillOnce(Return(true));
-    }
+    // Mounting Downloads to MyFiles/Downloads in /home/user/<hash>
+    FilePath user_dir = brillo::cryptohome::home::GetUserPath(user.username);
+
+    EXPECT_CALL(platform_,
+                Unmount(user_dir.Append("MyFiles").Append("Downloads"), _, _))
+        .WillOnce(Return(true));
   }
 
   void ExpectEphemeralCryptohomeMount(const TestUser& user) {
@@ -372,12 +357,6 @@ class MountTest
                                            StartsWith(kEphemeralCryptohomeDir)),
                                   cryptohome::kEphemeralCryptohomeRootContext))
         .WillOnce(Return(true));
-    EXPECT_CALL(platform_, IsDirectoryMounted(FilePath("/home/chronos/user")))
-        .WillOnce(Return(false));  // first mount
-    EXPECT_CALL(
-        platform_,
-        IsDirectoryMounted(FilePath("/home/chronos/user/MyFiles/Downloads")))
-        .WillOnce(Return(false));
     EXPECT_CALL(platform_, Bind(_, _, _)).WillRepeatedly(Return(true));
 
     EXPECT_CALL(platform_, GetFileEnumerator(kSkelDir, _, _))
@@ -387,8 +366,6 @@ class MountTest
         platform_,
         GetFileEnumerator(
             Property(&FilePath::value, EndsWith("MyFiles/Downloads")), _, _))
-        .WillOnce(Return(new NiceMock<MockFileEnumerator>()))
-        .WillOnce(Return(new NiceMock<MockFileEnumerator>()))
         .WillOnce(Return(new NiceMock<MockFileEnumerator>()));
     EXPECT_CALL(platform_, DirectoryExists(_)).WillRepeatedly(Return(true));
     EXPECT_CALL(platform_, CreateDirectory(user.vault_path)).Times(0);
@@ -991,7 +968,7 @@ TEST_P(MountTest, RememberMountOrderingTest) {
     EXPECT_CALL(platform_, Unmount(dest0, _, _)).WillOnce(Return(true));
 
     EXPECT_TRUE(mnt_helper.MountAndPush(src, dest0, "", ""));
-    EXPECT_TRUE(mnt_helper.BindAndPush(src, dest1));
+    EXPECT_TRUE(mnt_helper.BindAndPush(src, dest1, true /*is_shared*/));
     EXPECT_TRUE(mnt_helper.MountAndPush(src, dest2, "", ""));
     mnt_helper.UnmountAll();
   }
@@ -1566,8 +1543,12 @@ TEST_P(EphemeralNoUserSystemTest, EnterpriseMountIsEphemeralTest) {
   ASSERT_EQ(MOUNT_ERROR_NONE, mount_->MountEphemeralCryptohome(user->username));
 
   EXPECT_CALL(platform_, DetachLoop(kLoopDevice)).WillOnce(Return(true));
+  EXPECT_CALL(platform_,
+              Unmount(user->ephemeral_mount_path.Append("user"), _, _))
+      .WillOnce(Return(true));
   EXPECT_CALL(platform_, Unmount(user->ephemeral_mount_path, _, _))
       .WillOnce(Return(true));
+
   EXPECT_CALL(
       platform_,
       Unmount(Property(&FilePath::value, StartsWith("/home/chronos/u-")), _, _))
@@ -1782,6 +1763,9 @@ TEST_P(EphemeralOwnerOnlySystemTest, MountNoCreateTest) {
   ASSERT_EQ(MOUNT_ERROR_NONE, mount_->MountEphemeralCryptohome(user->username));
 
   EXPECT_CALL(platform_, Unmount(user->ephemeral_mount_path, _, _))
+      .WillOnce(Return(true));
+  EXPECT_CALL(platform_,
+              Unmount(user->ephemeral_mount_path.Append("user"), _, _))
       .WillOnce(Return(true));
   EXPECT_CALL(
       platform_,
@@ -2433,6 +2417,13 @@ TEST_P(EphemeralNoUserSystemTest, MountGuestUserDir) {
   EXPECT_CALL(
       platform_,
       Bind(Property(&FilePath::value, StartsWith(kEphemeralCryptohomeDir)),
+           Property(&FilePath::value, StartsWith(kEphemeralCryptohomeDir)), _))
+      .Times(1)
+      .WillRepeatedly(Return(true));
+
+  EXPECT_CALL(
+      platform_,
+      Bind(Property(&FilePath::value, StartsWith(kEphemeralCryptohomeDir)),
            Property(&FilePath::value, StartsWith("/home/root/")), _))
       .WillOnce(Return(true));
   EXPECT_CALL(
@@ -2450,19 +2441,6 @@ TEST_P(EphemeralNoUserSystemTest, MountGuestUserDir) {
            Property(&FilePath::value, StartsWith("/home/chronos/u-")), _))
       .WillOnce(Return(true));
   // Binding Downloads to MyFiles/Downloads.
-  EXPECT_CALL(
-      platform_,
-      Bind(Property(&FilePath::value, StartsWith("/home/chronos/u-")),
-           Property(&FilePath::value, StartsWith("/home/chronos/u-")), _))
-      .WillOnce(Return(true));
-  EXPECT_CALL(
-      platform_,
-      Bind(Property(&FilePath::value, StartsWith("/home/chronos/user/")),
-           Property(&FilePath::value, StartsWith("/home/chronos/user/")), _))
-      .WillOnce(Return(true));
-  EXPECT_CALL(platform_, IsDirectoryMounted(
-                             FilePath("/home/chronos/user/MyFiles/Downloads")))
-      .WillOnce(Return(false));  // first mount
   EXPECT_CALL(platform_,
               Bind(Property(&FilePath::value, StartsWith("/home/user/")),
                    Property(&FilePath::value, StartsWith("/home/user/")), _))
