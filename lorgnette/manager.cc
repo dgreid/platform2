@@ -714,9 +714,7 @@ void Manager::GetNextImageInternal(const std::string& uuid,
                                    ScanJobState* scan_state,
                                    base::ScopedFILE out_file) {
   brillo::ErrorPtr error;
-  if (RunScanLoop(&error, scan_state, std::move(out_file), uuid)) {
-    scan_state->pages_scanned++;
-  } else {
+  if (!RunScanLoop(&error, scan_state, std::move(out_file), uuid)) {
     ReportScanFailed(scan_state->device_name);
     SendFailureSignal(uuid, SerializeError(error));
     {
@@ -728,7 +726,7 @@ void Manager::GetNextImageInternal(const std::string& uuid,
 
   bool scanned_all_pages =
       scan_state->total_pages.has_value() &&
-      scan_state->pages_scanned == scan_state->total_pages.value();
+      scan_state->current_page == scan_state->total_pages.value();
 
   bool adf_scan = !scan_state->total_pages.has_value();
 
@@ -744,12 +742,12 @@ void Manager::GetNextImageInternal(const std::string& uuid,
   bool scan_complete =
       scanned_all_pages || (status == SANE_STATUS_NO_DOCS && adf_scan);
 
-  SendStatusSignal(uuid, SCAN_STATE_PAGE_COMPLETED,
-                   scan_state->pages_scanned - 1, 100, !scan_complete);
+  SendStatusSignal(uuid, SCAN_STATE_PAGE_COMPLETED, scan_state->current_page,
+                   100, !scan_complete);
 
   if (scan_complete) {
     ReportScanSucceeded(scan_state->device_name);
-    SendStatusSignal(uuid, SCAN_STATE_COMPLETED, scan_state->pages_scanned, 100,
+    SendStatusSignal(uuid, SCAN_STATE_COMPLETED, scan_state->current_page, 100,
                      false);
     LOG(INFO) << __func__ << ": completed image scan and conversion.";
 
@@ -775,6 +773,7 @@ void Manager::GetNextImageInternal(const std::string& uuid,
     return;
   }
 
+  scan_state->current_page++;
   if (!activity_callback_.is_null())
     activity_callback_.Run();
 }
@@ -876,7 +875,7 @@ bool Manager::RunScanLoop(brillo::ErrorPtr* error,
       if (scan_uuid.has_value() && progress != last_progress_value &&
           now - last_progress_sent_time >= progress_signal_interval_) {
         SendStatusSignal(scan_uuid.value(), SCAN_STATE_IN_PROGRESS,
-                         scan_state->pages_scanned, progress, false);
+                         scan_state->current_page, progress, false);
         last_progress_value = progress;
         last_progress_sent_time = now;
       }

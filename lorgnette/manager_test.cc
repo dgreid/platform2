@@ -44,7 +44,7 @@ void ValidateSignals(const std::vector<ScanStatusChangedSignal>& signals,
   EXPECT_EQ(signals.back().state(), SCAN_STATE_COMPLETED);
 
   int progress = 0;
-  int page = 0;
+  int page = 1;
   for (int i = 0; i < signals.size() - 1; i++) {
     const ScanStatusChangedSignal& signal = signals[i];
     EXPECT_EQ(signal.scan_uuid(), scan_uuid);

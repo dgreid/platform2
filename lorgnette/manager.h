@@ -106,7 +106,7 @@ class Manager : public org::chromium::lorgnette::ManagerAdaptor,
     std::string device_name;
     bool in_use = false;
     std::unique_ptr<SaneDevice> device;
-    int pages_scanned = 0;
+    int current_page = 1;
     // The total number of pages to scan for the scan job. If this is nullopt,
     // keep scanning until we get an error.
     base::Optional<int> total_pages;

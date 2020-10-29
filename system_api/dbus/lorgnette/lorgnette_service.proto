@@ -181,7 +181,7 @@ message ScanStatusChangedSignal {
   // The page field will be set to the page currently being scanned for
   // SCAN_STATE_IN_PROGRESS, or the page that has just been completed for
   // SCAN_STATE_PAGE_COMPLETED.
-  // Pages are 0-indexed.
+  // Pages are 1-indexed.
   uint32 page = 5;
 
   // If state is SCAN_STATE_PAGE_COMPLETED and more_pages is true, the client
