@@ -74,7 +74,7 @@ class SaneDeviceFake : public SaneDevice {
   void SetStartScanResult(SANE_Status status);
   void SetScanParameters(const base::Optional<ScanParameters>& params);
   void SetReadScanDataResult(SANE_Status result);
-  void SetScanData(const std::vector<uint8_t>& scan_data);
+  void SetScanData(const std::vector<std::vector<uint8_t>>& scan_data);
 
  private:
   int resolution_;
@@ -84,7 +84,8 @@ class SaneDeviceFake : public SaneDevice {
   SANE_Status read_scan_data_result_;
   bool scan_running_;
   base::Optional<ScanParameters> params_;
-  std::vector<uint8_t> scan_data_;
+  std::vector<std::vector<uint8_t>> scan_data_;
+  size_t current_page_;
   size_t scan_data_offset_;
 };
 

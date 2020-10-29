@@ -134,22 +134,29 @@ class ManagerTest : public testing::Test {
   }
 
   void SetUpTestDevice(const std::string& name,
-                       const base::FilePath& image_path,
+                       const std::vector<base::FilePath>& image_paths,
                        const ScanParameters& parameters) {
-    std::string contents;
-    ASSERT_TRUE(base::ReadFileToString(image_path, &contents));
-    std::vector<uint8_t> image_data(contents.begin(), contents.end());
+    std::vector<std::vector<uint8_t>> pages;
+    for (const base::FilePath& path : image_paths) {
+      std::string contents;
+      ASSERT_TRUE(base::ReadFileToString(path, &contents));
+      std::vector<uint8_t> image_data(contents.begin(), contents.end());
+      pages.push_back(image_data);
+    }
+
     std::unique_ptr<SaneDeviceFake> device = std::make_unique<SaneDeviceFake>();
-    device->SetScanData(image_data);
+    device->SetScanData(pages);
     device->SetScanParameters(parameters);
     sane_client_->SetDeviceForName(name, std::move(device));
   }
 
   StartScanResponse StartScan(const std::string& device_name,
-                              ColorMode color_mode) {
+                              ColorMode color_mode,
+                              const std::string& source_name) {
     StartScanRequest request;
     request.set_device_name(device_name);
     request.mutable_settings()->set_color_mode(color_mode);
+    request.mutable_settings()->set_source_name(source_name);
 
     std::vector<uint8_t> serialized_response =
         manager_.StartScan(impl::SerializeProto(request));
@@ -173,7 +180,7 @@ class ManagerTest : public testing::Test {
 
   // Run a one-page scan to completion, and verify that it was successful.
   void RunScanSuccess(const std::string& device_name, ColorMode color_mode) {
-    StartScanResponse response = StartScan(device_name, color_mode);
+    StartScanResponse response = StartScan(device_name, color_mode, "Flatbed");
     EXPECT_EQ(response.state(), SCAN_STATE_IN_PROGRESS);
     EXPECT_NE(response.scan_uuid(), "");
 
@@ -242,7 +249,7 @@ TEST_F(ManagerTest, StartScanBlackAndWhiteSuccess) {
   parameters.pixels_per_line = 85;
   parameters.lines = 29;
   parameters.depth = 1;
-  SetUpTestDevice("TestDevice", base::FilePath("./test_images/bw.pnm"),
+  SetUpTestDevice("TestDevice", {base::FilePath("./test_images/bw.pnm")},
                   parameters);
 
   ExpectScanRequest(kOtherBackend);
@@ -258,7 +265,7 @@ TEST_F(ManagerTest, StartScanGrayscaleSuccess) {
   parameters.lines = 32;
   parameters.depth = 8;
   parameters.bytes_per_line = parameters.pixels_per_line * parameters.depth / 8;
-  SetUpTestDevice("TestDevice", base::FilePath("./test_images/gray.pnm"),
+  SetUpTestDevice("TestDevice", {base::FilePath("./test_images/gray.pnm")},
                   parameters);
 
   ExpectScanRequest(kOtherBackend);
@@ -274,7 +281,7 @@ TEST_F(ManagerTest, StartScanColorSuccess) {
   parameters.pixels_per_line = 98;
   parameters.lines = 50;
   parameters.depth = 8;
-  SetUpTestDevice("TestDevice", base::FilePath("./test_images/color.pnm"),
+  SetUpTestDevice("TestDevice", {base::FilePath("./test_images/color.pnm")},
                   parameters);
 
   ExpectScanRequest(kOtherBackend);
@@ -294,7 +301,7 @@ TEST_F(ManagerTest, StartScan16BitColorSuccess) {
   // Note: technically, color16.pnm does not really contain PNM data, since
   // NetPBM assumes big endian 16-bit samples. Since SANE provides
   // endian-native samples, color16.pnm stores the samples as little-endian.
-  SetUpTestDevice("TestDevice", base::FilePath("./test_images/color16.pnm"),
+  SetUpTestDevice("TestDevice", {base::FilePath("./test_images/color16.pnm")},
                   parameters);
 
   ExpectScanRequest(kOtherBackend);
@@ -303,8 +310,43 @@ TEST_F(ManagerTest, StartScan16BitColorSuccess) {
   CompareImages("./test_images/color16.png", output_path_.value());
 }
 
+TEST_F(ManagerTest, StartScanMultiPageColorSuccess) {
+  ScanParameters parameters;
+  parameters.format = kRGB;
+  parameters.bytes_per_line = 98 * 3;
+  parameters.pixels_per_line = 98;
+  parameters.lines = 50;
+  parameters.depth = 8;
+  base::FilePath path("test_images/color.pnm");
+  SetUpTestDevice("TestDevice", {path, path}, parameters);
+
+  ExpectScanRequest(kOtherBackend);
+  ExpectScanSuccess(kOtherBackend);
+
+  StartScanResponse response = StartScan("TestDevice", MODE_COLOR, "ADF");
+  EXPECT_EQ(response.state(), SCAN_STATE_IN_PROGRESS);
+  EXPECT_NE(response.scan_uuid(), "");
+
+  GetNextImageResponse get_next_image_response =
+      GetNextImage(response.scan_uuid(), scan_fd_);
+  EXPECT_TRUE(get_next_image_response.success());
+  CompareImages("./test_images/color.png", output_path_.value());
+
+  base::FilePath second_page = temp_dir_.GetPath().Append("scan_data2.png");
+  base::File scan(second_page,
+                  base::File::FLAG_CREATE | base::File::FLAG_WRITE);
+  ASSERT_TRUE(scan.IsValid());
+  base::ScopedFD second_page_fd(scan.TakePlatformFile());
+
+  get_next_image_response = GetNextImage(response.scan_uuid(), second_page_fd);
+  EXPECT_TRUE(get_next_image_response.success());
+  CompareImages("./test_images/color.png", second_page.value());
+
+  ValidateSignals(signals_, response.scan_uuid());
+}
+
 TEST_F(ManagerTest, StartScanFailNoDevice) {
-  StartScanResponse response = StartScan("TestDevice", MODE_COLOR);
+  StartScanResponse response = StartScan("TestDevice", MODE_COLOR, "Flatbed");
 
   EXPECT_EQ(response.state(), SCAN_STATE_FAILED);
   EXPECT_NE(response.failure_reason(), "");
@@ -317,13 +359,13 @@ TEST_F(ManagerTest, StartScanFailToStart) {
                                      &contents));
   std::vector<uint8_t> image_data(contents.begin(), contents.end());
   std::unique_ptr<SaneDeviceFake> device = std::make_unique<SaneDeviceFake>();
-  device->SetScanData(image_data);
+  device->SetScanData({image_data});
   device->SetStartScanResult(SANE_STATUS_IO_ERROR);
   sane_client_->SetDeviceForName("TestDevice", std::move(device));
 
   ExpectScanRequest(kOtherBackend);
   ExpectScanFailure(kOtherBackend);
-  StartScanResponse response = StartScan("TestDevice", MODE_COLOR);
+  StartScanResponse response = StartScan("TestDevice", MODE_COLOR, "Flatbed");
 
   EXPECT_EQ(response.state(), SCAN_STATE_FAILED);
   EXPECT_NE(response.failure_reason(), "");
@@ -336,13 +378,13 @@ TEST_F(ManagerTest, StartScanFailToRead) {
                                      &contents));
   std::vector<uint8_t> image_data(contents.begin(), contents.end());
   std::unique_ptr<SaneDeviceFake> device = std::make_unique<SaneDeviceFake>();
-  device->SetScanData(image_data);
+  device->SetScanData({image_data});
   device->SetReadScanDataResult(SANE_STATUS_IO_ERROR);
   sane_client_->SetDeviceForName("TestDevice", std::move(device));
 
   ExpectScanRequest(kOtherBackend);
   ExpectScanFailure(kOtherBackend);
-  StartScanResponse response = StartScan("TestDevice", MODE_COLOR);
+  StartScanResponse response = StartScan("TestDevice", MODE_COLOR, "Flatbed");
 
   EXPECT_EQ(response.state(), SCAN_STATE_IN_PROGRESS);
   EXPECT_NE(response.scan_uuid(), "");
@@ -358,11 +400,11 @@ TEST_F(ManagerTest, StartScanFailToRead) {
 }
 
 TEST_F(ManagerTest, GetNextImageBadFd) {
-  SetUpTestDevice("TestDevice", base::FilePath("./test_images/color.pnm"),
+  SetUpTestDevice("TestDevice", {base::FilePath("./test_images/color.pnm")},
                   ScanParameters());
 
   ExpectScanRequest(kOtherBackend);
-  StartScanResponse response = StartScan("TestDevice", MODE_COLOR);
+  StartScanResponse response = StartScan("TestDevice", MODE_COLOR, "Flatbed");
 
   EXPECT_EQ(response.state(), SCAN_STATE_IN_PROGRESS);
   EXPECT_NE(response.scan_uuid(), "");
@@ -374,6 +416,33 @@ TEST_F(ManagerTest, GetNextImageBadFd) {
 
   // Scan should not have failed.
   EXPECT_EQ(signals_.size(), 0);
+}
+
+TEST_F(ManagerTest, GetNextImageScanAlreadyComplete) {
+  ScanParameters parameters;
+  parameters.format = kGrayscale;
+  parameters.pixels_per_line = 32;
+  parameters.lines = 32;
+  parameters.depth = 8;
+  parameters.bytes_per_line = parameters.pixels_per_line * parameters.depth / 8;
+  SetUpTestDevice("TestDevice", {base::FilePath("./test_images/gray.pnm")},
+                  parameters);
+
+  ExpectScanRequest(kOtherBackend);
+  ExpectScanSuccess(kOtherBackend);
+  StartScanResponse response = StartScan("TestDevice", MODE_COLOR, "ADF");
+  EXPECT_EQ(response.state(), SCAN_STATE_IN_PROGRESS);
+  EXPECT_NE(response.scan_uuid(), "");
+
+  GetNextImageResponse get_next_image_response =
+      GetNextImage(response.scan_uuid(), scan_fd_);
+  EXPECT_TRUE(get_next_image_response.success());
+  CompareImages("./test_images/gray.png", output_path_.value());
+
+  get_next_image_response = GetNextImage(response.scan_uuid(), scan_fd_);
+  EXPECT_FALSE(get_next_image_response.success());
+
+  ValidateSignals(signals_, response.scan_uuid());
 }
 
 TEST_F(ManagerTest, RemoveDupNoRepeats) {

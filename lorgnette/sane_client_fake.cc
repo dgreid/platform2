@@ -125,18 +125,32 @@ bool SaneDeviceFake::SetScanRegion(brillo::ErrorPtr* error, const ScanRegion&) {
 }
 
 SANE_Status SaneDeviceFake::StartScan(brillo::ErrorPtr* error) {
-  if (scan_running_) {
+  // Don't allow starting the next page of the scan if we haven't completed the
+  // previous one.
+  if (scan_running_ && current_page_ < scan_data_.size() &&
+      scan_data_offset_ < scan_data_[current_page_].size()) {
     brillo::Error::AddTo(error, FROM_HERE, kDbusDomain, kManagerServiceError,
                          "Scan is already running");
     return SANE_STATUS_DEVICE_BUSY;
   }
 
-  if (start_scan_result_ == SANE_STATUS_GOOD) {
-    scan_running_ = true;
+  if (start_scan_result_ != SANE_STATUS_GOOD) {
+    return start_scan_result_;
   }
 
-  scan_data_offset_ = 0;
-  return start_scan_result_;
+  if (scan_running_ && current_page_ + 1 == scan_data_.size()) {
+    // No more scan data left.
+    return SANE_STATUS_NO_DOCS;
+  } else if (scan_running_) {
+    current_page_++;
+    scan_data_offset_ = 0;
+  } else {
+    scan_running_ = true;
+    current_page_ = 0;
+    scan_data_offset_ = 0;
+  }
+
+  return SANE_STATUS_GOOD;
 }
 
 bool SaneDeviceFake::GetScanParameters(brillo::ErrorPtr* error,
@@ -167,14 +181,19 @@ SANE_Status SaneDeviceFake::ReadScanData(brillo::ErrorPtr* error,
     return read_scan_data_result_;
   }
 
-  if (scan_data_offset_ >= scan_data_.size()) {
+  if (current_page_ >= scan_data_.size()) {
     scan_running_ = false;
+    return SANE_STATUS_NO_DOCS;
+  }
+
+  const std::vector<uint8_t>& page = scan_data_[current_page_];
+  if (scan_data_offset_ >= page.size()) {
     *read_out = 0;
     return SANE_STATUS_EOF;
   }
 
-  size_t to_copy = std::min(count, scan_data_.size() - scan_data_offset_);
-  memcpy(buf, scan_data_.data() + scan_data_offset_, to_copy);
+  size_t to_copy = std::min(count, page.size() - scan_data_offset_);
+  memcpy(buf, page.data() + scan_data_offset_, to_copy);
   *read_out = to_copy;
 
   scan_data_offset_ += to_copy;
@@ -199,7 +218,8 @@ void SaneDeviceFake::SetReadScanDataResult(SANE_Status result) {
   read_scan_data_result_ = result;
 }
 
-void SaneDeviceFake::SetScanData(const std::vector<uint8_t>& scan_data) {
+void SaneDeviceFake::SetScanData(
+    const std::vector<std::vector<uint8_t>>& scan_data) {
   scan_data_ = scan_data;
 }
 
