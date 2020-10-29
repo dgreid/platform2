@@ -452,10 +452,16 @@ const char kApnLocalizedNameProperty[] = "localized_name";
 const char kApnLanguageProperty[] = "language";
 const char kApnAuthenticationProperty[] = "authentication";
 const char kApnAttachProperty[] = "attach";
+const char kApnIpTypeProperty[] = "ip_type";
 
 // APN authentication property values (as expected by ModemManager).
 const char kApnAuthenticationPap[] = "pap";
 const char kApnAuthenticationChap[] = "chap";
+
+// IP type property values.
+const char kApnIpTypeV4[] = "ipv4";
+const char kApnIpTypeV6[] = "ipv6";
+const char kApnIpTypeV4V6[] = "ipv4v6";
 
 // Payment Portal property names.
 const char kPaymentPortalURL[] = "url";

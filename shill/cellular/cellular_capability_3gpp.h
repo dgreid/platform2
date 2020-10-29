@@ -57,6 +57,7 @@ class CellularCapability3gpp : public CellularCapability {
   static const char kConnectPassword[];
   static const char kConnectAllowedAuth[];
   static const char kConnectAllowRoaming[];
+  static const char kConnectIpType[];
 
   CellularCapability3gpp(Cellular* cellular, ModemInfo* modem_info);
   CellularCapability3gpp(const CellularCapability3gpp&) = delete;

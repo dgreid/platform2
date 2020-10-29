@@ -98,6 +98,18 @@ MATCHER_P(HasAllowedAuth, expected_authentication, "") {
                  CellularCapability3gpp::kConnectAllowedAuth);
 }
 
+MATCHER(HasNoIpType, "") {
+  return !arg.template Contains<uint32_t>(
+      CellularCapability3gpp::kConnectIpType);
+}
+
+MATCHER_P(HasIpType, expected_ip_type, "") {
+  return arg.template Contains<uint32_t>(
+             CellularCapability3gpp::kConnectIpType) &&
+         expected_ip_type ==
+             arg.template Get<uint32_t>(CellularCapability3gpp::kConnectIpType);
+}
+
 class CellularCapability3gppTest : public testing::TestWithParam<string> {
  public:
   explicit CellularCapability3gppTest(EventDispatcher* dispatcher)
@@ -1257,6 +1269,7 @@ TEST_F(CellularCapability3gppMainTest, FillConnectPropertyMap) {
   EXPECT_THAT(properties, HasNoUser());
   EXPECT_THAT(properties, HasNoPassword());
   EXPECT_THAT(properties, HasNoAllowedAuth());
+  EXPECT_THAT(properties, HasNoIpType());
 
   apn[kApnUsernameProperty] = kTestUser;
   capability_->apn_try_list_ = {apn};
@@ -1265,6 +1278,7 @@ TEST_F(CellularCapability3gppMainTest, FillConnectPropertyMap) {
   EXPECT_THAT(properties, HasUser(kTestUser));
   EXPECT_THAT(properties, HasNoPassword());
   EXPECT_THAT(properties, HasNoAllowedAuth());
+  EXPECT_THAT(properties, HasNoIpType());
 
   apn[kApnPasswordProperty] = kTestPassword;
   capability_->apn_try_list_ = {apn};
@@ -1273,6 +1287,7 @@ TEST_F(CellularCapability3gppMainTest, FillConnectPropertyMap) {
   EXPECT_THAT(properties, HasUser(kTestUser));
   EXPECT_THAT(properties, HasPassword(kTestPassword));
   EXPECT_THAT(properties, HasNoAllowedAuth());
+  EXPECT_THAT(properties, HasNoIpType());
 
   apn[kApnAuthenticationProperty] = kApnAuthenticationPap;
   capability_->apn_try_list_ = {apn};
@@ -1281,6 +1296,7 @@ TEST_F(CellularCapability3gppMainTest, FillConnectPropertyMap) {
   EXPECT_THAT(properties, HasUser(kTestUser));
   EXPECT_THAT(properties, HasPassword(kTestPassword));
   EXPECT_THAT(properties, HasAllowedAuth(MM_BEARER_ALLOWED_AUTH_PAP));
+  EXPECT_THAT(properties, HasNoIpType());
 
   apn[kApnAuthenticationProperty] = kApnAuthenticationChap;
   capability_->apn_try_list_ = {apn};
@@ -1289,6 +1305,7 @@ TEST_F(CellularCapability3gppMainTest, FillConnectPropertyMap) {
   EXPECT_THAT(properties, HasUser(kTestUser));
   EXPECT_THAT(properties, HasPassword(kTestPassword));
   EXPECT_THAT(properties, HasAllowedAuth(MM_BEARER_ALLOWED_AUTH_CHAP));
+  EXPECT_THAT(properties, HasNoIpType());
 
   apn[kApnAuthenticationProperty] = "something";
   capability_->apn_try_list_ = {apn};
@@ -1297,6 +1314,7 @@ TEST_F(CellularCapability3gppMainTest, FillConnectPropertyMap) {
   EXPECT_THAT(properties, HasUser(kTestUser));
   EXPECT_THAT(properties, HasPassword(kTestPassword));
   EXPECT_THAT(properties, HasNoAllowedAuth());
+  EXPECT_THAT(properties, HasNoIpType());
 
   apn[kApnAuthenticationProperty] = "";
   capability_->apn_try_list_ = {apn};
@@ -1305,6 +1323,44 @@ TEST_F(CellularCapability3gppMainTest, FillConnectPropertyMap) {
   EXPECT_THAT(properties, HasUser(kTestUser));
   EXPECT_THAT(properties, HasPassword(kTestPassword));
   EXPECT_THAT(properties, HasNoAllowedAuth());
+  EXPECT_THAT(properties, HasNoIpType());
+
+  apn[kApnIpTypeProperty] = kApnIpTypeV4;
+  capability_->apn_try_list_ = {apn};
+  capability_->FillConnectPropertyMap(&properties);
+  EXPECT_THAT(properties, HasApn(kTestApn));
+  EXPECT_THAT(properties, HasUser(kTestUser));
+  EXPECT_THAT(properties, HasPassword(kTestPassword));
+  EXPECT_THAT(properties, HasNoAllowedAuth());
+  EXPECT_THAT(properties, HasIpType(MM_BEARER_IP_FAMILY_IPV4));
+
+  apn[kApnIpTypeProperty] = kApnIpTypeV6;
+  capability_->apn_try_list_ = {apn};
+  capability_->FillConnectPropertyMap(&properties);
+  EXPECT_THAT(properties, HasApn(kTestApn));
+  EXPECT_THAT(properties, HasUser(kTestUser));
+  EXPECT_THAT(properties, HasPassword(kTestPassword));
+  EXPECT_THAT(properties, HasNoAllowedAuth());
+  EXPECT_THAT(properties, HasIpType(MM_BEARER_IP_FAMILY_IPV6));
+
+  apn[kApnIpTypeProperty] = kApnIpTypeV4V6;
+  capability_->apn_try_list_ = {apn};
+  capability_->FillConnectPropertyMap(&properties);
+  EXPECT_THAT(properties, HasApn(kTestApn));
+  EXPECT_THAT(properties, HasUser(kTestUser));
+  EXPECT_THAT(properties, HasPassword(kTestPassword));
+  EXPECT_THAT(properties, HasNoAllowedAuth());
+  EXPECT_THAT(properties, HasIpType(MM_BEARER_IP_FAMILY_IPV4V6));
+
+  // IP type defaults to v4 if something unsupported is specified.
+  apn[kApnIpTypeProperty] = "orekid";
+  capability_->apn_try_list_ = {apn};
+  capability_->FillConnectPropertyMap(&properties);
+  EXPECT_THAT(properties, HasApn(kTestApn));
+  EXPECT_THAT(properties, HasUser(kTestUser));
+  EXPECT_THAT(properties, HasPassword(kTestPassword));
+  EXPECT_THAT(properties, HasNoAllowedAuth());
+  EXPECT_THAT(properties, HasIpType(MM_BEARER_IP_FAMILY_IPV4));
 }
 
 // Validates expected behavior of Connect function

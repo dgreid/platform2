@@ -46,6 +46,14 @@ message MobileAPN {
   }
   optional Authentication authentication = 8;
   optional bool is_attach_apn = 9 [default = false];
+
+  enum IpType {
+    UNKNOWN = 0;
+    IPV4 = 1;
+    IPV6 = 2;
+    IPV4V6 = 3;
+  }
+  optional IpType ip_type = 10;
 }
 
 message OnlinePortal {

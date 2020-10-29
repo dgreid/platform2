@@ -106,6 +106,8 @@ class ApnList {
       props->emplace(kApnAuthenticationProperty, mobile_apn->authentication);
     if (mobile_apn->is_attach_apn)
       props->emplace(kApnAttachProperty, kApnAttachProperty);
+    if (!mobile_apn->ip_type.empty())
+      props->emplace(kApnIpTypeProperty, mobile_apn->ip_type);
 
     // Find the first localized and non-localized name, if any.
     if (!mobile_apn->operator_name_list.empty())
@@ -166,9 +168,6 @@ Cellular::Cellular(ModemInfo* modem_info,
       scanning_timeout_milliseconds_(kDefaultScanningTimeoutMilliseconds),
       weak_ptr_factory_(this) {
   RegisterProperties();
-
-  Error error;
-  SetIPv6Disabled(IsIPv6DisabledByDefault(), &error);
 
   // TODO(pprabhu) Split MobileOperatorInfo into a context that stores the
   // costly database, and lighter objects that |Cellular| can own.
@@ -531,20 +530,6 @@ void Cellular::Reset(Error* error, const ResultCallback& callback) {
   if (!capability_)
     callback.Run(Error(Error::Type::kOperationFailed));
   capability_->Reset(error, callback);
-}
-
-bool Cellular::IsIPv6DisabledByDefault() const {
-  // A cellular device is disabled before the system goes into suspend mode.
-  // However, outstanding TCP sockets may not be nuked when the associated
-  // network interface goes down. When the system resumes from suspend, the
-  // cellular device is re-enabled and may reconnect to the network, which
-  // acquire a new IPv6 address on the network interface. However, those
-  // outstanding TCP sockets may initiate traffic with the old IPv6 address.
-  // Some network may not like the fact that two IPv6 addresses originated from
-  // the same modem within a connection session and may drop the connection.
-  // Here we disable IPv6 support on cellular devices to work around the issue.
-  //
-  return true;
 }
 
 void Cellular::DropConnection() {

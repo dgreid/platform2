@@ -74,6 +74,25 @@ string GetApnAuthentication(const MobileAPN& apn) {
   return string();
 }
 
+base::Optional<string> GetIpType(const MobileAPN& apn) {
+  if (!apn.has_ip_type()) {
+    return kApnIpTypeV4;
+  }
+
+  switch (apn.ip_type()) {
+    case mobile_operator_db::MobileAPN_IpType_UNKNOWN:
+      return base::nullopt;
+    case mobile_operator_db::MobileAPN_IpType_IPV4:
+      return kApnIpTypeV4;
+    case mobile_operator_db::MobileAPN_IpType_IPV6:
+      return kApnIpTypeV6;
+    case mobile_operator_db::MobileAPN_IpType_IPV4V6:
+      return kApnIpTypeV4V6;
+    default:
+      return kApnIpTypeV4;
+  }
+}
+
 }  // namespace
 
 MobileOperatorInfoImpl::MobileOperatorInfoImpl(EventDispatcher* dispatcher,
@@ -837,6 +856,13 @@ void MobileOperatorInfoImpl::ReloadData(const Data& data) {
       apn->authentication = GetApnAuthentication(apn_data);
       apn->is_attach_apn =
           apn_data.has_is_attach_apn() ? apn_data.is_attach_apn() : false;
+      base::Optional<string> ip_type = GetIpType(apn_data);
+      if (!ip_type.has_value()) {
+        LOG(INFO) << "Unknown IP type for APN \"" << apn_data.apn() << "\"";
+        continue;
+      }
+      apn->ip_type = ip_type.value();
+
       apn_list_.push_back(std::move(apn));
     }
   }

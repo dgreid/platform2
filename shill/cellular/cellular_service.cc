@@ -47,7 +47,7 @@ const char kStorageAPN[] = "Cellular.APN";
 const char kStorageLastGoodAPN[] = "Cellular.LastGoodAPN";
 
 const char kApnVersionProperty[] = "version";
-const int kCurrentApnCacheVersion = 1;
+const int kCurrentApnCacheVersion = 2;
 
 bool GetNonEmptyField(const Stringmap& stringmap,
                       const string& fieldname,
@@ -575,6 +575,7 @@ void CellularService::LoadApn(const StoreInterface* storage,
   LoadApnField(storage, storage_group, keytag, kApnPasswordProperty, apn_info);
   LoadApnField(storage, storage_group, keytag, kApnAuthenticationProperty,
                apn_info);
+  LoadApnField(storage, storage_group, keytag, kApnIpTypeProperty, apn_info);
 }
 
 bool CellularService::LoadApnField(const StoreInterface* storage,
@@ -600,6 +601,7 @@ void CellularService::SaveApn(StoreInterface* storage,
   SaveApnField(storage, storage_group, apn_info, keytag, kApnPasswordProperty);
   SaveApnField(storage, storage_group, apn_info, keytag,
                kApnAuthenticationProperty);
+  SaveApnField(storage, storage_group, apn_info, keytag, kApnIpTypeProperty);
   SaveApnField(storage, storage_group, apn_info, keytag, kApnVersionProperty);
 }
 

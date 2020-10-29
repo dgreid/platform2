@@ -135,6 +135,8 @@ class MobileOperatorInfo {
     std::string authentication;
     // Specify whether this APN should be requested as part of an LTE Attach.
     bool is_attach_apn = false;
+    // IP type as one of "ipv4", "ipv6", "ipv4v6" (dual-stack)
+    std::string ip_type;
   };
 
   // Encapsulates information about the Online payment portal used by chrome to
