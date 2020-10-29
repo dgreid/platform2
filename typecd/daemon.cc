@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <sysexits.h>
+
 #include "typecd/daemon.h"
 
 namespace typecd {
@@ -14,6 +16,10 @@ Daemon::Daemon()
 Daemon::~Daemon() {}
 
 int Daemon::OnInit() {
+  int exit_code = DBusDaemon::OnInit();
+  if (exit_code != EX_OK)
+    return exit_code;
+
   LOG(INFO) << "Daemon started.";
   if (!udev_monitor_->InitUdev()) {
     LOG(ERROR) << "udev init failed.";

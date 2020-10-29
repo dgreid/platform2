@@ -36,3 +36,15 @@ restart_syscall: 1
 exit: 1
 exit_group: 1
 rt_sigreturn: 1
+poll: 1
+rt_sigprocmask: 1
+signalfd4: 1
+sendmsg: 1
+mmap: arg2 in ~PROT_EXEC || arg2 in ~PROT_WRITE
+fcntl: 1
+mprotect: arg2 in ~PROT_EXEC || arg2 in ~PROT_WRITE
+futex: 1
+clock_getres: 1
+getresuid: 1
+getresgid: 1
+munmap: 1
