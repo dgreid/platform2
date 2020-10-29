@@ -107,10 +107,10 @@ class SaneDeviceImpl : public SaneDevice {
   SANE_Status StartScan(brillo::ErrorPtr* error) override;
   bool GetScanParameters(brillo::ErrorPtr* error,
                          ScanParameters* parameters) override;
-  bool ReadScanData(brillo::ErrorPtr* error,
-                    uint8_t* buf,
-                    size_t count,
-                    size_t* read_out) override;
+  SANE_Status ReadScanData(brillo::ErrorPtr* error,
+                           uint8_t* buf,
+                           size_t count,
+                           size_t* read_out) override;
 
   static base::Optional<std::vector<std::string>> GetValidStringOptionValues(
       brillo::ErrorPtr* error, const SANE_Option_Descriptor& opt);

@@ -337,7 +337,7 @@ TEST_F(ManagerTest, StartScanFailToRead) {
   std::vector<uint8_t> image_data(contents.begin(), contents.end());
   std::unique_ptr<SaneDeviceFake> device = std::make_unique<SaneDeviceFake>();
   device->SetScanData(image_data);
-  device->SetReadScanDataResult(false);
+  device->SetReadScanDataResult(SANE_STATUS_IO_ERROR);
   sane_client_->SetDeviceForName("TestDevice", std::move(device));
 
   ExpectScanRequest(kOtherBackend);

@@ -842,12 +842,13 @@ bool Manager::RunScanLoop(brillo::ErrorPtr* error,
   while (true) {
     // Get next chunk of scan data from the device.
     size_t read = 0;
-    bool result =
+    SANE_Status result =
         device->ReadScanData(error, image_buffer.data() + buffer_offset,
                              image_buffer.size() - buffer_offset, &read);
-    if (!result) {
-      brillo::Error::AddTo(error, FROM_HERE, kDbusDomain, kManagerServiceError,
-                           "Reading scan data failed.");
+    if (result != SANE_STATUS_GOOD && result != SANE_STATUS_EOF) {
+      brillo::Error::AddToPrintf(
+          error, FROM_HERE, kDbusDomain, kManagerServiceError,
+          "Reading scan data failed: %s", sane_strstatus(result));
       return false;
     }
 

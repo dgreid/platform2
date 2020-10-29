@@ -156,7 +156,8 @@ TEST_F(SaneDeviceImplTest, ReadScanDataWhenNotStarted) {
   std::vector<uint8_t> buf(8192);
   size_t read = 0;
 
-  EXPECT_FALSE(device_->ReadScanData(nullptr, buf.data(), buf.size(), &read));
+  EXPECT_EQ(device_->ReadScanData(nullptr, buf.data(), buf.size(), &read),
+            SANE_STATUS_INVAL);
 }
 
 // Check that ReadScanData fails with invalid input pointers.
@@ -165,8 +166,10 @@ TEST_F(SaneDeviceImplTest, ReadScanDataBadPointers) {
   size_t read = 0;
 
   EXPECT_EQ(device_->StartScan(nullptr), SANE_STATUS_GOOD);
-  EXPECT_FALSE(device_->ReadScanData(nullptr, nullptr, buf.size(), &read));
-  EXPECT_FALSE(device_->ReadScanData(nullptr, buf.data(), buf.size(), nullptr));
+  EXPECT_EQ(device_->ReadScanData(nullptr, nullptr, buf.size(), &read),
+            SANE_STATUS_INVAL);
+  EXPECT_EQ(device_->ReadScanData(nullptr, buf.data(), buf.size(), nullptr),
+            SANE_STATUS_INVAL);
 }
 
 // Check that we can successfully run a scan to completion.
@@ -175,9 +178,12 @@ TEST_F(SaneDeviceImplTest, RunScan) {
   size_t read = 0;
 
   EXPECT_EQ(device_->StartScan(nullptr), SANE_STATUS_GOOD);
+  SANE_Status status = SANE_STATUS_GOOD;
   do {
-    EXPECT_TRUE(device_->ReadScanData(nullptr, buf.data(), buf.size(), &read));
-  } while (read != 0);
+    status = device_->ReadScanData(nullptr, buf.data(), buf.size(), &read);
+  } while (status == SANE_STATUS_GOOD && read != 0);
+  EXPECT_EQ(read, 0);
+  EXPECT_EQ(status, SANE_STATUS_EOF);
 }
 
 class SaneClientTest : public testing::Test {

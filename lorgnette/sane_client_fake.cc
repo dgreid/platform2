@@ -71,7 +71,7 @@ void SaneClientFake::SetDeviceForName(const std::string& device_name,
 SaneDeviceFake::SaneDeviceFake()
     : resolution_(100),
       start_scan_result_(SANE_STATUS_GOOD),
-      read_scan_data_result_(true),
+      read_scan_data_result_(SANE_STATUS_GOOD),
       scan_running_(false) {}
 
 SaneDeviceFake::~SaneDeviceFake() {}
@@ -151,26 +151,26 @@ bool SaneDeviceFake::GetScanParameters(brillo::ErrorPtr* error,
   return true;
 }
 
-bool SaneDeviceFake::ReadScanData(brillo::ErrorPtr* error,
-                                  uint8_t* buf,
-                                  size_t count,
-                                  size_t* read_out) {
+SANE_Status SaneDeviceFake::ReadScanData(brillo::ErrorPtr* error,
+                                         uint8_t* buf,
+                                         size_t count,
+                                         size_t* read_out) {
   if (!scan_running_) {
     brillo::Error::AddTo(error, FROM_HERE, kDbusDomain, kManagerServiceError,
                          "Scan not running");
-    return false;
+    return SANE_STATUS_INVAL;
   }
 
-  if (!read_scan_data_result_) {
+  if (read_scan_data_result_ != SANE_STATUS_GOOD) {
     brillo::Error::AddTo(error, FROM_HERE, kDbusDomain, kManagerServiceError,
                          "Reading data failed");
-    return false;
+    return read_scan_data_result_;
   }
 
   if (scan_data_offset_ >= scan_data_.size()) {
     scan_running_ = false;
     *read_out = 0;
-    return true;
+    return SANE_STATUS_EOF;
   }
 
   size_t to_copy = std::min(count, scan_data_.size() - scan_data_offset_);
@@ -178,7 +178,7 @@ bool SaneDeviceFake::ReadScanData(brillo::ErrorPtr* error,
   *read_out = to_copy;
 
   scan_data_offset_ += to_copy;
-  return true;
+  return SANE_STATUS_GOOD;
 }
 
 void SaneDeviceFake::SetValidOptionValues(
@@ -195,7 +195,7 @@ void SaneDeviceFake::SetScanParameters(
   params_ = params;
 }
 
-void SaneDeviceFake::SetReadScanDataResult(bool result) {
+void SaneDeviceFake::SetReadScanDataResult(SANE_Status result) {
   read_scan_data_result_ = result;
 }
 

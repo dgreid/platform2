@@ -494,43 +494,41 @@ bool SaneDeviceImpl::GetScanParameters(brillo::ErrorPtr* error,
   return true;
 }
 
-bool SaneDeviceImpl::ReadScanData(brillo::ErrorPtr* error,
-                                  uint8_t* buf,
-                                  size_t count,
-                                  size_t* read_out) {
+SANE_Status SaneDeviceImpl::ReadScanData(brillo::ErrorPtr* error,
+                                         uint8_t* buf,
+                                         size_t count,
+                                         size_t* read_out) {
   if (!handle_) {
     brillo::Error::AddTo(error, FROM_HERE, kDbusDomain, kManagerServiceError,
                          "No scanner connected");
-    return false;
+    return SANE_STATUS_INVAL;
   }
 
   if (!scan_running_) {
     brillo::Error::AddTo(error, FROM_HERE, kDbusDomain, kManagerServiceError,
                          "No scan in progress");
-    return false;
+    return SANE_STATUS_INVAL;
   }
 
   if (!buf || !read_out) {
     brillo::Error::AddTo(error, FROM_HERE, kDbusDomain, kManagerServiceError,
                          "'buf' and 'read' pointers cannot be null");
-    return false;
+    return SANE_STATUS_INVAL;
   }
   SANE_Int read = 0;
   SANE_Status status = sane_read(handle_, buf, count, &read);
   switch (status) {
     case SANE_STATUS_GOOD:
       *read_out = read;
-      return true;
+      break;
     case SANE_STATUS_EOF:
       *read_out = 0;
       reached_eof_ = true;
-      return true;
+      break;
     default:
-      brillo::Error::AddToPrintf(error, FROM_HERE, kDbusDomain,
-                                 kManagerServiceError, "sane_read() failed: %s",
-                                 sane_strstatus(status));
-      return false;
+      break;
   }
+  return status;
 }
 
 // static

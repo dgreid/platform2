@@ -58,10 +58,10 @@ class SaneDevice {
   virtual SANE_Status StartScan(brillo::ErrorPtr* error) = 0;
   virtual bool GetScanParameters(brillo::ErrorPtr* error,
                                  ScanParameters* parameters) = 0;
-  virtual bool ReadScanData(brillo::ErrorPtr* error,
-                            uint8_t* buf,
-                            size_t count,
-                            size_t* read_out) = 0;
+  virtual SANE_Status ReadScanData(brillo::ErrorPtr* error,
+                                   uint8_t* buf,
+                                   size_t count,
+                                   size_t* read_out) = 0;
 };
 
 // This class represents a connection to the scanner library SANE.  Once
