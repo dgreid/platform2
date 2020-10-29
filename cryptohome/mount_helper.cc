@@ -228,13 +228,12 @@ bool MountHelper::EnsureNewUserDirExists(const std::string& username) const {
   return true;
 }
 
-void MountHelper::MigrateToUserHome(const FilePath& vault_path) const {
-  std::vector<FilePath> ent_list;
+void MountHelper::CreateHomeSubdirectories(const FilePath& vault_path) const {
   FilePath user_path(VaultPathToUserPath(vault_path));
   FilePath root_path(VaultPathToRootPath(vault_path));
   base::stat_wrapper_t st;
 
-  // This check makes the migration idempotent; if we completed a migration,
+  // This check makes the creation idempotent; if we completed creation,
   // root_path will exist and we're done, and if we didn't complete it, we can
   // finish it.
   if (platform_->Stat(root_path, &st) && S_ISDIR(st.st_mode) &&
@@ -253,10 +252,6 @@ void MountHelper::MigrateToUserHome(const FilePath& vault_path) const {
   // as root.
   platform_->DeleteFile(root_path, true);
 
-  // Get the list of entries before we create user_path, since user_path will be
-  // inside dir.
-  platform_->EnumerateDirectoryEntries(vault_path, false, &ent_list);
-
   if (!platform_->CreateDirectory(user_path)) {
     PLOG(ERROR) << "CreateDirectory() failed: " << user_path.value();
     return;
@@ -267,25 +262,6 @@ void MountHelper::MigrateToUserHome(const FilePath& vault_path) const {
     return;
   }
 
-  for (const auto& ent : ent_list) {
-    FilePath basename(ent);
-    FilePath next_path = basename;
-    basename = basename.BaseName();
-    // Don't move the user/ directory itself. We're currently operating on an
-    // _unmounted_ ecryptfs, which means all the filenames are encrypted except
-    // the user and root passthrough directories.
-    if (basename.value() == kUserHomeSuffix) {
-      LOG(WARNING) << "Interrupted migration detected.";
-      continue;
-    }
-    FilePath dest_path(user_path);
-    dest_path = dest_path.Append(basename);
-    if (!platform_->Rename(next_path, dest_path)) {
-      // TODO(ellyjones): UMA event log for this.
-      PLOG(WARNING) << "Migration fault: can't move " << next_path.value()
-                    << " to " << dest_path.value();
-    }
-  }
   // Create root_path at the end as a sentinel for migration.
   if (!platform_->CreateDirectory(root_path)) {
     PLOG(ERROR) << "CreateDirectory() failed: " << root_path.value();
@@ -300,7 +276,7 @@ void MountHelper::MigrateToUserHome(const FilePath& vault_path) const {
     PLOG(ERROR) << "SetPermissions() failed: " << root_path.value();
     return;
   }
-  LOG(INFO) << "Migrated (or created) user directory: " << vault_path.value();
+  LOG(INFO) << "Created user directory: " << vault_path.value();
 }
 
 bool MountHelper::EnsureUserMountPoints(const std::string& username) const {
@@ -764,12 +740,12 @@ bool MountHelper::PerformMount(const Options& mount_opts,
     // Create <vault_path>/user as a passthrough directory, move all the
     // (encrypted) contents of <vault_path> into <vault_path>/user, create
     // <vault_path>/root.
-    MigrateToUserHome(vault_path);
+    CreateHomeSubdirectories(vault_path);
   }
 
   if (mount_opts.type == MountType::DIR_CRYPTO) {
     // Create user & root directories.
-    MigrateToUserHome(mount_point);
+    CreateHomeSubdirectories(mount_point);
   }
 
   // Move the tracked subdirectories from <mount_point_>/user to <vault_path>
@@ -885,7 +861,7 @@ bool MountHelper::PerformEphemeralMount(const std::string& username) {
   }
 
   // Create user & root directories.
-  MigrateToUserHome(mount_point);
+  CreateHomeSubdirectories(mount_point);
   if (!EnsureUserMountPoints(username)) {
     return false;
   }

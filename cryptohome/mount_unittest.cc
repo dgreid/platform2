@@ -1499,11 +1499,6 @@ TEST_P(EphemeralNoUserSystemTest, EnterpriseMountNoCreateTest) {
   homedirs_->set_enterprise_owned(true);
   TestUser* user = &helper_.users[0];
 
-  // Always removes non-owner cryptohomes.
-  std::vector<FilePath> empty;
-  EXPECT_CALL(platform_, EnumerateDirectoryEntries(_, _, _))
-      .WillRepeatedly(DoAll(SetArgPointee<2>(empty), Return(true)));
-
   EXPECT_CALL(platform_, Unmount(_, _, _)).WillRepeatedly(Return(true));
 
   ExpectEphemeralCryptohomeMount(*user);
@@ -1753,9 +1748,6 @@ TEST_P(EphemeralOwnerOnlySystemTest, MountNoCreateTest) {
   std::vector<FilePath> owner_only;
   owner_only.push_back(owner->base_path);
 
-  EXPECT_CALL(platform_, EnumerateDirectoryEntries(_, _, _))
-      .WillRepeatedly(DoAll(SetArgPointee<2>(owner_only), Return(true)));
-
   EXPECT_CALL(platform_, IsDirectoryMounted(_)).WillRepeatedly(Return(false));
 
   ExpectEphemeralCryptohomeMount(*user);
@@ -1863,10 +1855,6 @@ TEST_P(EphemeralExistingUserSystemTest, OwnerUnknownMountNoRemoveTest) {
     user.InjectUserPaths(&platform_, fake_platform::kChronosUID,
                          fake_platform::kChronosGID, fake_platform::kSharedGID,
                          kDaemonGid, ShouldTestEcryptfs());
-
-  std::vector<FilePath> empty;
-  EXPECT_CALL(platform_, EnumerateDirectoryEntries(_, _, _))
-      .WillOnce(DoAll(SetArgPointee<2>(empty), Return(true)));
 
   EXPECT_CALL(platform_, Stat(_, _)).WillRepeatedly(Return(false));
   EXPECT_CALL(platform_, CreateDirectory(user->vault_path)).Times(0);
@@ -1985,9 +1973,6 @@ TEST_P(EphemeralExistingUserSystemTest, EnterpriseMountRemoveTest) {
 
   EXPECT_CALL(platform_, Stat(user->root_ephemeral_mount_path, _))
       .WillOnce(Return(false));
-  EXPECT_CALL(platform_,
-              EnumerateDirectoryEntries(user->ephemeral_mount_path, _, _))
-      .WillOnce(DoAll(SetArgPointee<2>(empty), Return(true)));
   EXPECT_CALL(platform_, DeleteFile(user->root_ephemeral_mount_path, true))
       .WillOnce(Return(true));
 
@@ -2091,9 +2076,6 @@ TEST_P(EphemeralExistingUserSystemTest, MountRemoveTest) {
 
   EXPECT_CALL(platform_, Stat(user->root_ephemeral_mount_path, _))
       .WillOnce(Return(false));
-  EXPECT_CALL(platform_,
-              EnumerateDirectoryEntries(user->ephemeral_mount_path, _, _))
-      .WillOnce(DoAll(SetArgPointee<2>(empty), Return(true)));
   EXPECT_CALL(platform_, DeleteFile(user->root_ephemeral_mount_path, true))
       .WillOnce(Return(true));
 
@@ -2265,9 +2247,6 @@ TEST_P(EphemeralExistingUserSystemTest, NonOwnerMountIsEphemeralTest) {
 
   EXPECT_CALL(platform_, Stat(user->root_ephemeral_mount_path, _))
       .WillOnce(Return(false));
-  EXPECT_CALL(platform_,
-              EnumerateDirectoryEntries(user->ephemeral_mount_path, _, _))
-      .WillOnce(DoAll(SetArgPointee<2>(empty), Return(true)));
 
   EXPECT_CALL(platform_, Unmount(_, _, _)).WillRepeatedly(Return(true));
   ExpectEphemeralCryptohomeMount(*user);
@@ -2334,9 +2313,6 @@ TEST_P(EphemeralExistingUserSystemTest, EnterpriseMountIsEphemeralTest) {
 
   EXPECT_CALL(platform_, Stat(user->root_ephemeral_mount_path, _))
       .WillOnce(Return(false));
-  EXPECT_CALL(platform_,
-              EnumerateDirectoryEntries(user->ephemeral_mount_path, _, _))
-      .WillOnce(DoAll(SetArgPointee<2>(empty), Return(true)));
 
   EXPECT_CALL(platform_, Unmount(_, _, _)).WillRepeatedly(Return(true));
   ExpectEphemeralCryptohomeMount(*user);
@@ -2398,12 +2374,6 @@ TEST_P(EphemeralNoUserSystemTest, MountGuestUserDir) {
       platform_,
       Stat(Property(&FilePath::value, StartsWith(kEphemeralCryptohomeDir)), _))
       .WillOnce(Return(false));
-  std::vector<FilePath> empty;
-  EXPECT_CALL(platform_, EnumerateDirectoryEntries(
-                             Property(&FilePath::value,
-                                      StartsWith(kEphemeralCryptohomeDir)),
-                             _, _))
-      .WillOnce(DoAll(SetArgPointee<2>(empty), Return(true)));
   EXPECT_CALL(platform_, Mount(_, _, _, kDefaultMountFlags, _)).Times(0);
   EXPECT_CALL(platform_, Mount(FilePath("/dev/loop7"), _, kEphemeralMountType,
                                kDefaultMountFlags, _))

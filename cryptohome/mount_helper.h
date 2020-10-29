@@ -248,13 +248,11 @@ class MountHelper : public MountHelperInterface {
   //   dest - Mount point to unmount
   void ForceUnmount(const base::FilePath& src, const base::FilePath& dest);
 
-  // Migrates from the home-in-encfs setup to the home-in-subdir setup. Instead
-  // of storing all the user's files in the root of the encfs, we store them in
-  // a subdirectory of it to make room for a root-owned, user-encrypted volume.
+  // Creates subdirectories for the user's cryptohome.
   //
   // Parameters
-  //   vault_path - directory to migrate
-  void MigrateToUserHome(const FilePath& vault_path) const;
+  //   vault_path - path to create subdirectories under.
+  void CreateHomeSubdirectories(const FilePath& vault_path) const;
 
   // Facilitates migration of files from one directory to another, removing the
   // duplicates.
