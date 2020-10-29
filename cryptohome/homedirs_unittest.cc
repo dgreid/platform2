@@ -251,4 +251,55 @@ TEST_P(HomeDirsTest, CreateCryptohome) {
   EXPECT_TRUE(platform_.DirectoryExists(kNewUserPath));
 }
 
+TEST_P(HomeDirsTest, ComputeDiskUsage) {
+  // /home/.shadow/$hash/mount in production code.
+  base::FilePath mount_dir = users_[0].homedir_path.Append(kMountDir);
+  // /home/.shadow/$hash/vault in production code.
+  base::FilePath vault_dir = users_[0].homedir_path.Append(kEcryptfsVaultDir);
+  // /home/user/$hash in production code and here in unit test.
+  base::FilePath user_dir = users_[0].user_path;
+
+  constexpr int64_t mount_bytes = 123456789012345;
+  constexpr int64_t vault_bytes = 98765432154321;
+
+  EXPECT_CALL(platform_, ComputeDirectoryDiskUsage(mount_dir))
+      .WillRepeatedly(Return(mount_bytes));
+  EXPECT_CALL(platform_, ComputeDirectoryDiskUsage(vault_dir))
+      .WillRepeatedly(Return(vault_bytes));
+  EXPECT_CALL(platform_, ComputeDirectoryDiskUsage(user_dir)).Times(0);
+
+  const int64_t expected_bytes =
+      ShouldTestEcryptfs() ? vault_bytes : mount_bytes;
+  EXPECT_EQ(expected_bytes, homedirs_.ComputeDiskUsage(users_[0].name));
+}
+
+TEST_P(HomeDirsTest, ComputeDiskUsageEphemeral) {
+  // /home/.shadow/$hash/mount in production code.
+  base::FilePath mount_dir = users_[0].homedir_path.Append(kMountDir);
+  // /home/.shadow/$hash/vault in production code.
+  base::FilePath vault_dir = users_[0].homedir_path.Append(kEcryptfsVaultDir);
+  // /home/user/$hash in production code and here in unit test.
+  base::FilePath user_dir = users_[0].user_path;
+
+  // Ephemeral users have no vault.
+  EXPECT_TRUE(platform_.DeleteFile(users_[0].homedir_path, true));
+
+  constexpr int64_t userdir_bytes = 349857223479;
+
+  EXPECT_CALL(platform_, ComputeDirectoryDiskUsage(mount_dir)).Times(0);
+  EXPECT_CALL(platform_, ComputeDirectoryDiskUsage(vault_dir)).Times(0);
+  EXPECT_CALL(platform_, ComputeDirectoryDiskUsage(user_dir))
+      .WillRepeatedly(Return(userdir_bytes));
+
+  int64_t expected_bytes = userdir_bytes;
+  EXPECT_EQ(expected_bytes, homedirs_.ComputeDiskUsage(users_[0].name));
+}
+
+TEST_P(HomeDirsTest, ComputeDiskUsageWithNonexistentUser) {
+  // If the specified user doesn't exist, there is no directory for the user, so
+  // ComputeDiskUsage should return 0.
+  const char kNonExistentUserId[] = "non_existent_user";
+  EXPECT_EQ(0, homedirs_.ComputeDiskUsage(kNonExistentUserId));
+}
+
 }  // namespace cryptohome
