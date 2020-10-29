@@ -96,9 +96,6 @@ const struct homedir kHomedirs[] = {
     {"973b9640e86f6073c6b6e2759ff3cf3084515e61", {2011, 3, 2, 1}},
     {kOwner, {2011, 4, 5, 1}}};
 
-NiceMock<MockFileEnumerator>* CreateMockFileEnumerator() {
-  return new NiceMock<MockFileEnumerator>;
-}
 }  // namespace
 
 class OldHomeDirsTest
@@ -222,101 +219,6 @@ INSTANTIATE_TEST_SUITE_P(WithEcryptfs,
 INSTANTIATE_TEST_SUITE_P(WithDircrypto,
                          OldHomeDirsTest,
                          ::testing::Values(false));
-
-TEST_P(OldHomeDirsTest, AddUserTimestampToCacheEmpty) {
-  std::string obfuscatedUser = obfuscated_users_[0];
-  base::FilePath userPath = homedir_paths_[0];
-
-  // Skip vault keyset loading to cause "Notime".
-  EXPECT_CALL(platform_, FileExists(Property(&FilePath::value,
-                                             StartsWith(userPath.value()))))
-      .WillRepeatedly(Return(true));
-
-  auto vk = new MockVaultKeyset();
-  EXPECT_CALL(vault_keyset_factory_, New(_, _)).WillOnce(Return(vk));
-  EXPECT_CALL(*vk, Load(_)).WillRepeatedly(Return(false));
-  homedirs_.set_vault_keyset_factory(&vault_keyset_factory_);
-
-  // No user is added.
-  EXPECT_CALL(timestamp_cache_, AddExistingUser(_, _)).Times(0);
-
-  homedirs_.AddUserTimestampToCache(obfuscatedUser);
-}
-
-TEST_P(OldHomeDirsTest, AddUserTimestampToCache) {
-  std::string obfuscatedUser = obfuscated_users_[0];
-  base::FilePath userPath = homedir_paths_[0];
-  base::Time userTime = homedir_times_[0];
-
-  auto vk = new MockVaultKeyset();
-  EXPECT_CALL(vault_keyset_factory_, New(_, _)).WillOnce(Return(vk));
-  EXPECT_CALL(*vk, Load(_)).WillRepeatedly(Return(true));
-
-  NiceMock<MockFileEnumerator>* master0;
-  EXPECT_CALL(platform_, GetFileEnumerator(userPath, false, _))
-      .WillOnce(Return(master0 = new NiceMock<MockFileEnumerator>));
-  EXPECT_CALL(*master0, Next())
-      .WillOnce(Return(userPath.Append(kKeyFile).AddExtension("0")))
-      .WillRepeatedly(Return(FilePath()));
-
-  EXPECT_CALL(*vk, Load(_)).WillOnce(Return(true));
-  SerializedVaultKeyset serialized;
-  serialized.set_last_activity_timestamp(userTime.ToInternalValue());
-  EXPECT_CALL(*vk, serialized()).Times(2).WillRepeatedly(ReturnRef(serialized));
-  homedirs_.set_vault_keyset_factory(&vault_keyset_factory_);
-
-  // User is added.
-  EXPECT_CALL(timestamp_cache_, AddExistingUser(_, _)).Times(0);
-  EXPECT_CALL(timestamp_cache_, AddExistingUser(obfuscatedUser, userTime))
-      .WillOnce(Return());
-
-  homedirs_.AddUserTimestampToCache(obfuscatedUser);
-}
-
-TEST_P(OldHomeDirsTest, GetHomedirs) {
-  EXPECT_CALL(platform_, EnumerateDirectoryEntries(kTestRoot, false, _))
-      .WillRepeatedly(DoAll(SetArgPointee<2>(homedir_paths_), Return(true)));
-
-  std::vector<base::FilePath> home_paths(homedir_paths_.size());
-  std::vector<bool> some_mounted(homedir_paths_.size());
-  std::vector<bool> all_mounted(homedir_paths_.size(), true);
-
-  for (int i = 0; i < homedir_paths_.size(); i++) {
-    home_paths[i] =
-        FilePath("/home/user/").Append(homedir_paths_[i].BaseName().value());
-
-    EXPECT_CALL(platform_, DirectoryExists(home_paths[i]))
-        .WillRepeatedly(Return(true));
-
-    some_mounted[i] = i % 2;
-  }
-
-  EXPECT_CALL(platform_, AreDirectoriesMounted(home_paths))
-      .WillOnce(Return(all_mounted));
-  auto dirs = homedirs_.GetHomeDirs();
-  for (int i = 0; i < homedir_paths_.size(); i++) {
-    EXPECT_TRUE(dirs[i].is_mounted);
-    EXPECT_EQ(dirs[i].obfuscated, obfuscated_users_[i]);
-  }
-
-  EXPECT_CALL(platform_, AreDirectoriesMounted(home_paths))
-      .WillOnce(Return(some_mounted));
-  dirs = homedirs_.GetHomeDirs();
-  for (int i = 0; i < homedir_paths_.size(); i++) {
-    EXPECT_EQ(dirs[i].is_mounted, some_mounted[i]);
-    EXPECT_EQ(dirs[i].obfuscated, obfuscated_users_[i]);
-  }
-}
-
-TEST_P(OldHomeDirsTest, RemoveLECredentials) {
-  std::string obfuscatedUser = obfuscated_users_[0];
-  base::FilePath userPath = homedir_paths_[0];
-
-  EXPECT_CALL(platform_, GetFileEnumerator(userPath, false, _))
-      .WillOnce(InvokeWithoutArgs(CreateMockFileEnumerator));
-
-  homedirs_.RemoveLECredentials(obfuscatedUser);
-}
 
 TEST_P(OldHomeDirsTest, GoodDecryptTest) {
   // create a HomeDirs instance that points to a good shadow root, test that it

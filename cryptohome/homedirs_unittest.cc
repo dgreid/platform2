@@ -4,10 +4,12 @@
 
 #include "cryptohome/homedirs.h"
 
+#include <set>
 #include <string>
 #include <vector>
 
 #include <base/files/file_path.h>
+#include <base/time/time.h>
 #include <brillo/cryptohome.h>
 #include <brillo/secure_blob.h>
 #include <gmock/gmock.h>
@@ -20,6 +22,7 @@
 #include "cryptohome/mock_platform.h"
 #include "cryptohome/mock_user_oldest_activity_timestamp_cache.h"
 #include "cryptohome/mount_constants.h"
+#include "cryptohome/timestamp.pb.h"
 
 using ::testing::_;
 using ::testing::NiceMock;
@@ -56,6 +59,12 @@ ACTION_P(SetEphemeralUsersEnabled, ephemeral_users_enabled) {
 }
 
 }  // namespace
+
+// TODO(dlunev): Remove kKeyFile extern declaration once we have it declared
+// in the proper place.
+extern const char kKeyFile[];
+constexpr char kKeyFileIndexSuffix[] = "0";
+constexpr char kKeyFileTimestampSuffix[] = "0.timestamp";
 
 class HomeDirsTest
     : public ::testing::TestWithParam<bool /* should_test_ecryptfs */> {
@@ -400,6 +409,91 @@ TEST_P(HomeDirsTest, GetUnmountedAndroidDataCount) {
 
   // Expect 1 home directory with android-data: homedir_paths_[0].
   EXPECT_EQ(1, homedirs_.GetUnmountedAndroidDataCount());
+}
+
+TEST_P(HomeDirsTest, AddUserTimestampToCacheEmpty) {
+  VaultKeyset vk;
+  vk.Initialize(&platform_, homedirs_.crypto());
+  // Populate and encrypt keyset to satisfy sanity check within |Save|.
+  vk.CreateRandom();
+  ASSERT_TRUE(vk.Encrypt(brillo::SecureBlob("random"), users_[0].obfuscated));
+  ASSERT_TRUE(
+      vk.Save(users_[0].homedir_path.Append(kKeyFile).AddExtension("0")));
+
+  // No user ts is added.
+  EXPECT_CALL(timestamp_cache_, AddExistingUser(users_[0].obfuscated, _))
+      .Times(0);
+  homedirs_.AddUserTimestampToCache(users_[0].obfuscated);
+}
+
+TEST_P(HomeDirsTest, AddUserTimestampToCache) {
+  VaultKeyset vk;
+  vk.Initialize(&platform_, homedirs_.crypto());
+  // Populate and encrypt keyset to satisfy sanity check within |Save|.
+  vk.CreateRandom();
+  constexpr int kTime = 499;
+  const base::Time t = base::Time::FromInternalValue(kTime);
+  Timestamp timestamp;
+  timestamp.set_timestamp(kTime);
+  std::string timestamp_str;
+  ASSERT_TRUE(timestamp.SerializeToString(&timestamp_str));
+  ASSERT_TRUE(platform_.WriteStringToFileAtomicDurable(
+      users_[2].homedir_path.Append(kKeyFile).AddExtension(
+          kKeyFileTimestampSuffix),
+      timestamp_str, 0600));
+  vk.mutable_serialized()->set_timestamp_file_exists(true);
+  ASSERT_TRUE(vk.Encrypt(brillo::SecureBlob("random"), users_[2].obfuscated));
+  ASSERT_TRUE(vk.Save(users_[2].homedir_path.Append(kKeyFile).AddExtension(
+      kKeyFileIndexSuffix)));
+
+  // TS from an external file
+  EXPECT_CALL(timestamp_cache_, AddExistingUser(users_[2].obfuscated, t))
+      .Times(1);
+  homedirs_.AddUserTimestampToCache(users_[2].obfuscated);
+}
+
+TEST_P(HomeDirsTest, GetHomedirsAllMounted) {
+  std::vector<bool> all_mounted(users_.size(), true);
+  std::set<std::string> hashes, got_hashes;
+
+  for (int i = 0; i < users_.size(); i++) {
+    hashes.insert(users_[i].obfuscated);
+  }
+
+  EXPECT_CALL(platform_, AreDirectoriesMounted(_))
+      .WillOnce(Return(all_mounted));
+  auto dirs = homedirs_.GetHomeDirs();
+
+  for (const auto& dir : dirs) {
+    EXPECT_TRUE(dir.is_mounted);
+    got_hashes.insert(dir.obfuscated);
+  }
+  EXPECT_EQ(hashes, got_hashes);
+}
+
+TEST_P(HomeDirsTest, GetHomedirsSomeMounted) {
+  std::vector<bool> some_mounted(users_.size());
+  std::set<std::string> hashes, got_hashes;
+
+  for (int i = 0; i < users_.size(); i++) {
+    hashes.insert(users_[i].obfuscated);
+    some_mounted[i] = i % 2;
+  }
+
+  EXPECT_CALL(platform_, AreDirectoriesMounted(_))
+      .WillOnce(Return(some_mounted));
+  auto dirs = homedirs_.GetHomeDirs();
+  for (int i = 0; i < users_.size(); i++) {
+    EXPECT_EQ(dirs[i].is_mounted, some_mounted[i]);
+    got_hashes.insert(dirs[i].obfuscated);
+  }
+  EXPECT_EQ(hashes, got_hashes);
+}
+
+TEST_P(HomeDirsTest, RemoveLECredentials) {
+  // TODO(dlunev): this tests nothing really, re-write the test to actually do
+  // functionality test.
+  homedirs_.RemoveLECredentials(users_[0].obfuscated);
 }
 
 }  // namespace cryptohome
