@@ -15,6 +15,7 @@ pkg_config("target_defaults") {
   pkg_deps = [
     "libbrillo",
     "libchrome",
+    "libsession_manager-client",
     "libudev",
     "re2",
   ]
@@ -38,6 +39,7 @@ static_library("typecd_common") {
     "peripheral.cc",
     "port.cc",
     "port_manager.cc",
+    "session_manager_proxy.cc",
     "udev_monitor.cc",
     "utils.cc",
   ]

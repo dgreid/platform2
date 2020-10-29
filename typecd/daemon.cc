@@ -26,6 +26,12 @@ int Daemon::OnInit() {
     return -1;
   }
 
+  // Register the session_manager proxy.
+  session_manager_proxy_ = std::make_unique<SessionManagerProxy>(bus_);
+
+  // TODO(b/171839508): Get the initial screen state at boot.
+  // TODO(b/171839508): Register the PortManager with |session_manager_proxy_|.
+
   // Add any observers to |udev_monitor_| here.
   udev_monitor_->AddObserver(port_manager_.get());
 

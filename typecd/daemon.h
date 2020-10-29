@@ -11,6 +11,7 @@
 #include <brillo/daemons/dbus_daemon.h>
 
 #include "typecd/port_manager.h"
+#include "typecd/session_manager_proxy.h"
 #include "typecd/udev_monitor.h"
 
 namespace typecd {
@@ -29,6 +30,7 @@ class Daemon : public brillo::DBusDaemon {
  private:
   std::unique_ptr<UdevMonitor> udev_monitor_;
   std::unique_ptr<PortManager> port_manager_;
+  std::unique_ptr<SessionManagerProxy> session_manager_proxy_;
   base::WeakPtrFactory<Daemon> weak_factory_;
 };
 
