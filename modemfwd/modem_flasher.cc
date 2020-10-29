@@ -164,7 +164,9 @@ base::Closure ModemFlasher::TryFlash(Modem* modem) {
     ELOG(INFO) << "No carrier firmware is currently installed";
   }
 
-  if (!has_carrier_fw || carrier_fw_id != current_carrier ||
+  if (!has_carrier_fw ||
+      !firmware_directory_->IsUsingSameFirmware(device_id, carrier_fw_id,
+                                                current_carrier) ||
       carrier_fw_version != file_info.version) {
     FirmwareFile firmware_file;
     if (!firmware_file.PrepareFrom(file_info))

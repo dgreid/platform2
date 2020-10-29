@@ -30,6 +30,10 @@ class FirmwareDirectoryStub : public FirmwareDirectory {
   // modemfwd::FirmwareDirectory overrides.
   FirmwareDirectory::Files FindFirmware(const std::string& device_id,
                                         std::string* carrier_id) override;
+  // modemfwd::IsUsingSameFirmware overrides.
+  bool IsUsingSameFirmware(const std::string& device_id,
+                           const std::string& carrier_a,
+                           const std::string& carrier_b) override;
 
  private:
   using CarrierFirmwareMap =

@@ -87,6 +87,35 @@ class FirmwareDirectoryImpl : public FirmwareDirectory {
     return result;
   }
 
+  // modemfwd::IsUsingSameFirmware overrides.
+  bool IsUsingSameFirmware(const std::string& device_id,
+                           const std::string& carrier_a,
+                           const std::string& carrier_b) override {
+    // easy case: identical carrier UUID
+    if (carrier_a == carrier_b)
+      return true;
+
+    DeviceType type{device_id, variant_};
+    auto device_it = index_.find(type);
+    // no firmware for this device
+    if (device_it == index_.end())
+      return true;
+
+    const DeviceFirmwareCache& cache = device_it->second;
+    auto main_a = cache.main_firmware.find(carrier_a);
+    auto main_b = cache.main_firmware.find(carrier_b);
+    auto cust_a = cache.carrier_firmware.find(carrier_a);
+    auto cust_b = cache.carrier_firmware.find(carrier_b);
+    // one or several firmwares are missing
+    if (main_a == cache.main_firmware.end() ||
+        main_b == cache.main_firmware.end() ||
+        cust_a == cache.carrier_firmware.end() ||
+        cust_b == cache.carrier_firmware.end())
+      return main_a == main_b && cust_a == cust_b;
+    // same firmware if they are pointing to the 2 same files.
+    return main_a->second == main_b->second && cust_a->second == cust_b->second;
+  }
+
  private:
   bool FindFirmwareForCarrier(
       const DeviceFirmwareCache::CarrierIndex& carrier_index,

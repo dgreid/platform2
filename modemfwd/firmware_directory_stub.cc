@@ -85,4 +85,25 @@ bool FirmwareDirectoryStub::FindCarrierFirmware(const std::string& device_id,
   return false;
 }
 
+bool FirmwareDirectoryStub::IsUsingSameFirmware(const std::string& device_id,
+                                                const std::string& carrier_a,
+                                                const std::string& carrier_b) {
+  // easy case: identical carrier UUID
+  if (carrier_a == carrier_b)
+    return true;
+
+  FirmwareFileInfo info_a;
+  FirmwareFileInfo info_b;
+  bool has_a =
+      GetValue(carrier_fw_info_, std::make_pair(device_id, carrier_a), &info_a);
+  bool has_b =
+      GetValue(carrier_fw_info_, std::make_pair(device_id, carrier_b), &info_b);
+  // one or several firmwares are missing
+  if (!has_a || !has_b)
+    return false;
+
+  // same firmware if they are pointing to the 2 same files.
+  return info_a.firmware_path == info_b.firmware_path;
+}
+
 }  // namespace modemfwd

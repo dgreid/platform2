@@ -34,6 +34,7 @@ constexpr char kMainFirmware2Path[] = "main_fw_2.fls";
 constexpr char kMainFirmware2Version[] = "versionB";
 
 constexpr char kCarrier1[] = "uuid_1";
+constexpr char kCarrier1Mvno[] = "uuid_1_1";
 constexpr char kCarrier1Firmware1Path[] = "carrier_1_fw_1.fls";
 constexpr char kCarrier1Firmware1Version[] = "v1.00";
 constexpr char kCarrier1Firmware2Path[] = "carrier_1_fw_2.fls";
@@ -695,6 +696,25 @@ TEST_F(ModemFlasherTest, InhibitDuringCarrierFirmwareFlash) {
       .WillOnce(Return(true));
   EXPECT_CALL(*modem, SetInhibited(true)).WillOnce(Return(true));
   EXPECT_CALL(*modem, SetInhibited(false)).WillOnce(Return(true));
+  modem_flasher_->TryFlash(modem.get());
+}
+
+TEST_F(ModemFlasherTest, SkipCarrierWithTwoUuidSameFirmware) {
+  base::FilePath current_firmware(kCarrier1Firmware1Path);
+  AddCarrierFirmwareFile(kDeviceId1, kCarrier1, current_firmware,
+                         kCarrier1Firmware2Version);
+  AddCarrierFirmwareFile(kDeviceId1, kCarrier1Mvno, current_firmware,
+                         kCarrier1Firmware2Version);
+
+  auto modem = GetDefaultModem();
+  EXPECT_CALL(*modem, GetDeviceId()).Times(AtLeast(1));
+  EXPECT_CALL(*modem, GetCarrierFirmwareVersion()).Times(AtLeast(1));
+  // The modem will say that the currently flashed firmware has the carrier UUID
+  // KCarrier1Mvno while the current carrier UUID is always returned as
+  // kCarrier1.
+  SetCarrierFirmwareInfo(modem.get(), kCarrier1Mvno, kCarrier1Firmware2Version);
+  EXPECT_CALL(*modem, FlashMainFirmware(_, _)).Times(0);
+  EXPECT_CALL(*modem, FlashCarrierFirmware(_, _)).Times(0);
   modem_flasher_->TryFlash(modem.get());
 }
 

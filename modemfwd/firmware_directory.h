@@ -34,6 +34,13 @@ class FirmwareDirectory {
   // that supports the carrier |carrier_id|, such as a generic one.
   virtual Files FindFirmware(const std::string& device_id,
                              std::string* carrier_id) = 0;
+
+  // Determine whether two potentially different carrier ID |carrier_a| and
+  // |carrier_b| are using the same base and carrier firmwares.
+  // e.g. a carrier and MVNO networks.
+  virtual bool IsUsingSameFirmware(const std::string& device_id,
+                                   const std::string& carrier_a,
+                                   const std::string& carrier_b) = 0;
 };
 
 std::unique_ptr<FirmwareDirectory> CreateFirmwareDirectory(
