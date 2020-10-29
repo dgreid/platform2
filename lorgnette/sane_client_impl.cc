@@ -525,10 +525,23 @@ SANE_Status SaneDeviceImpl::ReadScanData(brillo::ErrorPtr* error,
       *read_out = 0;
       reached_eof_ = true;
       break;
+    case SANE_STATUS_CANCELLED:
+      break;
     default:
       break;
   }
   return status;
+}
+
+bool SaneDeviceImpl::CancelScan(brillo::ErrorPtr* error) {
+  if (!handle_) {
+    brillo::Error::AddTo(error, FROM_HERE, kDbusDomain, kManagerServiceError,
+                         "No scanner connected");
+    return false;
+  }
+
+  sane_cancel(handle_);
+  return true;
 }
 
 // static

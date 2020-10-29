@@ -69,6 +69,7 @@ class SaneDeviceFake : public SaneDevice {
                            uint8_t* buf,
                            size_t count,
                            size_t* read_out) override;
+  bool CancelScan(brillo::ErrorPtr* error) override;
 
   void SetValidOptionValues(const base::Optional<ValidOptionValues>& values);
   void SetStartScanResult(SANE_Status status);
@@ -83,6 +84,7 @@ class SaneDeviceFake : public SaneDevice {
   SANE_Status start_scan_result_;
   SANE_Status read_scan_data_result_;
   bool scan_running_;
+  bool cancelled_;
   base::Optional<ScanParameters> params_;
   std::vector<std::vector<uint8_t>> scan_data_;
   size_t current_page_;

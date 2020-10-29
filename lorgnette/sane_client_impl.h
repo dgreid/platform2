@@ -111,6 +111,7 @@ class SaneDeviceImpl : public SaneDevice {
                            uint8_t* buf,
                            size_t count,
                            size_t* read_out) override;
+  bool CancelScan(brillo::ErrorPtr* error) override;
 
   static base::Optional<std::vector<std::string>> GetValidStringOptionValues(
       brillo::ErrorPtr* error, const SANE_Option_Descriptor& opt);

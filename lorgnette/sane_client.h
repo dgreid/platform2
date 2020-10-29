@@ -62,6 +62,9 @@ class SaneDevice {
                                    uint8_t* buf,
                                    size_t count,
                                    size_t* read_out) = 0;
+
+  // This function is thread-safe.
+  virtual bool CancelScan(brillo::ErrorPtr* error) = 0;
 };
 
 // This class represents a connection to the scanner library SANE.  Once

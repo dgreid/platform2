@@ -72,7 +72,8 @@ SaneDeviceFake::SaneDeviceFake()
     : resolution_(100),
       start_scan_result_(SANE_STATUS_GOOD),
       read_scan_data_result_(SANE_STATUS_GOOD),
-      scan_running_(false) {}
+      scan_running_(false),
+      cancelled_(false) {}
 
 SaneDeviceFake::~SaneDeviceFake() {}
 
@@ -134,6 +135,10 @@ SANE_Status SaneDeviceFake::StartScan(brillo::ErrorPtr* error) {
     return SANE_STATUS_DEVICE_BUSY;
   }
 
+  if (cancelled_) {
+    return SANE_STATUS_CANCELLED;
+  }
+
   if (start_scan_result_ != SANE_STATUS_GOOD) {
     return start_scan_result_;
   }
@@ -147,6 +152,7 @@ SANE_Status SaneDeviceFake::StartScan(brillo::ErrorPtr* error) {
   } else {
     scan_running_ = true;
     current_page_ = 0;
+    cancelled_ = false;
     scan_data_offset_ = 0;
   }
 
@@ -175,6 +181,11 @@ SANE_Status SaneDeviceFake::ReadScanData(brillo::ErrorPtr* error,
     return SANE_STATUS_INVAL;
   }
 
+  if (cancelled_) {
+    scan_running_ = false;
+    return SANE_STATUS_CANCELLED;
+  }
+
   if (read_scan_data_result_ != SANE_STATUS_GOOD) {
     brillo::Error::AddTo(error, FROM_HERE, kDbusDomain, kManagerServiceError,
                          "Reading data failed");
@@ -198,6 +209,17 @@ SANE_Status SaneDeviceFake::ReadScanData(brillo::ErrorPtr* error,
 
   scan_data_offset_ += to_copy;
   return SANE_STATUS_GOOD;
+}
+
+bool SaneDeviceFake::CancelScan(brillo::ErrorPtr* error) {
+  if (!scan_running_) {
+    brillo::Error::AddTo(error, FROM_HERE, kDbusDomain, kManagerServiceError,
+                         "Scan not running");
+    return false;
+  }
+
+  cancelled_ = true;
+  return true;
 }
 
 void SaneDeviceFake::SetValidOptionValues(
