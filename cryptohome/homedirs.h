@@ -392,7 +392,7 @@ class HomeDirs {
 
   friend class HomeDirsTest;
   friend class OldHomeDirsTest;
-  FRIEND_TEST(OldHomeDirsTest, GetTrackedDirectoryForDirCrypto);
+  FRIEND_TEST(HomeDirsTest, GetTrackedDirectoryForDirCrypto);
 
   DISALLOW_COPY_AND_ASSIGN(HomeDirs);
 };

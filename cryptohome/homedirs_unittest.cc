@@ -19,6 +19,7 @@
 #include "cryptohome/cryptolib.h"
 #include "cryptohome/mock_platform.h"
 #include "cryptohome/mock_user_oldest_activity_timestamp_cache.h"
+#include "cryptohome/mount_constants.h"
 
 using ::testing::_;
 using ::testing::NiceMock;
@@ -141,6 +142,9 @@ class HomeDirsTest
 
   // Information about users' homedirs. The order of users is equal to kUsers.
   std::vector<UserInfo> users_;
+
+  static const uid_t kAndroidSystemRealUid =
+      HomeDirs::kAndroidSystemUid + kArcContainerShiftUid;
 
   void PrepareDirectoryStructure() {
     ASSERT_TRUE(platform_.CreateDirectory(homedirs_.shadow_root()));
@@ -300,6 +304,102 @@ TEST_P(HomeDirsTest, ComputeDiskUsageWithNonexistentUser) {
   // ComputeDiskUsage should return 0.
   const char kNonExistentUserId[] = "non_existent_user";
   EXPECT_EQ(0, homedirs_.ComputeDiskUsage(kNonExistentUserId));
+}
+
+TEST_P(HomeDirsTest, GetTrackedDirectoryForDirCrypto) {
+  // /home/.shadow/$hash/mount in production code.
+  base::FilePath mount_dir = users_[0].homedir_path.Append(kMountDir);
+  // /home/.shadow/$hash/vault in production code.
+  base::FilePath vault_dir = users_[0].homedir_path.Append(kEcryptfsVaultDir);
+
+  const char* const kDirectories[] = {
+      "aaa",
+      "bbb",
+      "bbb/ccc",
+      "bbb/ccc/ddd",
+  };
+  // Prepare directories.
+  for (const auto& directory : kDirectories) {
+    const base::FilePath path = mount_dir.Append(base::FilePath(directory));
+    ASSERT_TRUE(platform_.CreateDirectory(path));
+    std::string name = path.BaseName().value();
+    ASSERT_TRUE(platform_.SetExtendedFileAttribute(
+        path, kTrackedDirectoryNameAttribute, name.data(), name.length()));
+  }
+
+  // Use GetTrackedDirectoryForDirCrypto() to get the path.
+  // When dircrypto is being used and we don't have the key, the returned path
+  // will be encrypted, but here we just get the same path.
+  for (const auto& directory : kDirectories) {
+    SCOPED_TRACE(directory);
+    base::FilePath result;
+    EXPECT_TRUE(homedirs_.GetTrackedDirectory(
+        users_[0].homedir_path, base::FilePath(directory), &result));
+    if (ShouldTestEcryptfs()) {
+      EXPECT_EQ(vault_dir.Append(base::FilePath(directory)).value(),
+                result.value());
+    } else {
+      EXPECT_EQ(mount_dir.Append(base::FilePath(directory)).value(),
+                result.value());
+    }
+  }
+
+  // TODO(chromium:1141301, dlunev): GetTrackedDirectory always returns true for
+  // ecryptfs. Figure out what should actually be the behaviour in the case.
+  if (!ShouldTestEcryptfs()) {
+    // Return false for unknown directories.
+    base::FilePath result;
+    EXPECT_FALSE(homedirs_.GetTrackedDirectory(users_[0].homedir_path,
+                                               base::FilePath("zzz"), &result));
+    EXPECT_FALSE(homedirs_.GetTrackedDirectory(
+        users_[0].homedir_path, base::FilePath("aaa/zzz"), &result));
+  }
+}
+
+TEST_P(HomeDirsTest, GetUnmountedAndroidDataCount) {
+  if (ShouldTestEcryptfs()) {
+    // We don't support Ecryptfs.
+    EXPECT_EQ(0, homedirs_.GetUnmountedAndroidDataCount());
+    return;
+  }
+
+  for (const auto& user : users_) {
+    // Set up a root hierarchy for the encrypted version of homedir_path
+    // without android-data (added a suffix _encrypted in the code to mark them
+    // encrypted).
+    // root
+    //     |-session_manager
+    //          |-policy
+    base::FilePath root =
+        user.homedir_path.Append(kMountDir).Append(kRootHomeSuffix);
+    base::FilePath session_manager = root.Append("session_manager_encrypted");
+    ASSERT_TRUE(platform_.CreateDirectory(session_manager));
+    base::FilePath policy = session_manager.Append("policy_encrypted");
+    ASSERT_TRUE(platform_.CreateDirectory(policy));
+  }
+
+  // Add android data for the first user.
+  //     |-android-data
+  //          |-cache
+  //          |-data
+  base::FilePath root =
+      users_[0].homedir_path.Append(kMountDir).Append(kRootHomeSuffix);
+  ASSERT_TRUE(platform_.CreateDirectory(root));
+  std::string name = root.BaseName().value();
+  ASSERT_TRUE(platform_.SetExtendedFileAttribute(
+      root, kTrackedDirectoryNameAttribute, name.data(), name.length()));
+
+  base::FilePath android_data = root.Append("android-data_encrypted");
+  ASSERT_TRUE(platform_.CreateDirectory(android_data));
+  base::FilePath data = android_data.Append("data_encrypted");
+  base::FilePath cache = android_data.Append("cache_encrypted");
+  ASSERT_TRUE(platform_.CreateDirectory(data));
+  ASSERT_TRUE(platform_.CreateDirectory(cache));
+  ASSERT_TRUE(platform_.SetOwnership(cache, kAndroidSystemRealUid,
+                                     kAndroidSystemRealUid, false));
+
+  // Expect 1 home directory with android-data: homedir_paths_[0].
+  EXPECT_EQ(1, homedirs_.GetUnmountedAndroidDataCount());
 }
 
 }  // namespace cryptohome
