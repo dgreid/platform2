@@ -71,6 +71,11 @@ const char kContainerInstallDirectory[] = "/opt/google/containers";
 // session_manager.
 const char kAbortedBrowserPidPath[] = "/run/chrome/aborted_browser_pid";
 
+// The path where the pid of browser process is written if it took too long to
+// shutdown. This is done so that crash reporting tools can detect an abort that
+// originated from session_manager.
+const char kShutdownBrowserPidPath[] = "/run/chrome/shutdown_browser_pid";
+
 // How long to wait before timing out on a StopAllVms message.  Wait up to 2
 // minutes as there may be multiple VMs and they may each take some time to
 // cleanly shut down.
@@ -152,7 +157,8 @@ SessionManagerService::SessionManagerService(
           utils, base::FilePath(kContainerInstallDirectory))),
       enable_browser_abort_on_hang_(enable_browser_abort_on_hang),
       liveness_checking_interval_(hang_detection_interval),
-      aborted_browser_pid_path_(kAbortedBrowserPidPath) {
+      aborted_browser_pid_path_(kAbortedBrowserPidPath),
+      shutdown_browser_pid_path_(kShutdownBrowserPidPath) {
   DCHECK(browser_);
   SetUpHandlers();
 }
@@ -287,11 +293,10 @@ void SessionManagerService::RunBrowser() {
   // call HandleExit().
 }
 
-void SessionManagerService::AbortBrowser(int signal,
-                                         const std::string& message) {
-  WriteAbortedBrowserPidFile();
-  browser_->Kill(signal, message);
-  browser_->WaitAndKillAll(GetKillTimeout());
+void SessionManagerService::AbortBrowserForHang() {
+  LOG(INFO) << "Browser did not respond to DBus liveness check.";
+  WriteBrowserPidFile(aborted_browser_pid_path_);
+  browser_->AbortAndKillAll(GetKillTimeout());
 }
 
 void SessionManagerService::SetBrowserTestArgs(
@@ -346,7 +351,13 @@ bool SessionManagerService::HandleExit(const siginfo_t& status) {
 
   // Clears up the whole job's process group.
   browser_->KillEverything(SIGKILL, "Ensuring browser processes are gone.");
-  browser_->WaitAndKillAll(GetKillTimeout());
+  DLOG(INFO) << "Waiting up to " << GetKillTimeout().InSeconds()
+             << " seconds for "
+             << "browser process group to exit";
+  if (!browser_->WaitForExit(GetKillTimeout())) {
+    LOG(ERROR) << "Browser process still around after SIGKILL and "
+               << GetKillTimeout().InSeconds() << " seconds.";
+  }
   browser_->ClearPid();
 
   // Also ensure all containers are gone.
@@ -538,7 +549,7 @@ void SessionManagerService::SetExitAndScheduleShutdown(ExitCode code) {
 
   child_exit_dispatcher_.reset();
   liveness_checker_->Stop();
-  CleanupChildrenBeforeExit(GetKillTimeout(), code);
+  CleanupChildrenBeforeExit(code);
   impl_->AnnounceSessionStopped();
 
   brillo::MessageLoop::current()->PostTask(
@@ -547,8 +558,7 @@ void SessionManagerService::SetExitAndScheduleShutdown(ExitCode code) {
   LOG(INFO) << "SessionManagerService quitting run loop";
 }
 
-void SessionManagerService::CleanupChildrenBeforeExit(base::TimeDelta timeout,
-                                                      ExitCode code) {
+void SessionManagerService::CleanupChildrenBeforeExit(ExitCode code) {
   const std::string reason = ExitCodeToString(code);
 
   const base::TimeTicks browser_exit_start_time = base::TimeTicks::Now();
@@ -558,15 +568,35 @@ void SessionManagerService::CleanupChildrenBeforeExit(base::TimeDelta timeout,
       code == ExitCode::SUCCESS
           ? ArcContainerStopReason::SESSION_MANAGER_SHUTDOWN
           : ArcContainerStopReason::BROWSER_SHUTDOWN);
-  browser_->WaitAndKillAll(timeout);
+  DLOG(INFO) << "Waiting up to "
+             << SessionManagerImpl::kBrowserTimeout.InSeconds()
+             << " seconds for browser process group to exit";
+
+  // We're going to wait several times for various processes to exit, but we
+  // want those timeouts to be running in parallel. That is, if we end up
+  // waiting 5 seconds for the browser to stop, we should reduce the later
+  // timeouts by that time.
+  const base::TimeTicks timeout_start = base::TimeTicks::Now();
+
+  if (!browser_->WaitForExit(SessionManagerImpl::kBrowserTimeout)) {
+    LOG(WARNING) << "Browser process did not exit "
+                 << SessionManagerImpl::kBrowserTimeout.InSeconds()
+                 << " seconds after SIGTERM.";
+    WriteBrowserPidFile(shutdown_browser_pid_path_);
+    browser_->AbortAndKillAll(GetKillTimeout());
+  }
   if (code == SessionManagerService::SUCCESS) {
     // Only record shutdown time for normal exit.
     login_metrics_->SendBrowserShutdownTime(base::TimeTicks::Now() -
                                             browser_exit_start_time);
   }
 
-  key_gen_.EnsureJobExit(timeout);
-  android_container_->EnsureJobExit(SessionManagerImpl::kContainerTimeout);
+  key_gen_.EnsureJobExit(std::max(
+      base::TimeDelta(), SessionManagerImpl::kKeyGenTimeout -
+                             (base::TimeTicks::Now() - timeout_start)));
+  android_container_->EnsureJobExit(std::max(
+      base::TimeDelta(), SessionManagerImpl::kContainerTimeout -
+                             (base::TimeTicks::Now() - timeout_start)));
 }
 
 bool SessionManagerService::OnTerminationSignal(
@@ -599,12 +629,12 @@ void SessionManagerService::MaybeStopAllVms() {
                                        base::Bind(&HandleStopAllVmsResponse));
 }
 
-void SessionManagerService::WriteAbortedBrowserPidFile() {
+void SessionManagerService::WriteBrowserPidFile(base::FilePath path) {
   // This is safe from symlink attacks because /run/chrome is guaranteed to be a
   // root-owned directory (/run is in the rootfs, /run/chrome is created by
   // session_manager as a directory).
-  if (!base::DeleteFile(aborted_browser_pid_path_, false /* recursive */)) {
-    PLOG(ERROR) << "Failed to delete " << aborted_browser_pid_path_.value();
+  if (!base::DeleteFile(path, false /* recursive */)) {
+    PLOG(ERROR) << "Failed to delete " << path.value();
     return;
   }
 
@@ -612,18 +642,18 @@ void SessionManagerService::WriteAbortedBrowserPidFile() {
   // already exist. This avoids race conditions with malicious chronos processes
   // attempting to recreate e.g. a symlink at the path to redirect our write
   // elsewhere.
-  base::ScopedFD aborted_browser_pid_fd(open(
-      aborted_browser_pid_path_.value().c_str(),
+  base::ScopedFD browser_pid_fd(open(
+      path.value().c_str(),
       O_RDWR | O_CREAT | O_EXCL | O_CLOEXEC | O_NOFOLLOW | O_NONBLOCK, 0644));
-  if (!aborted_browser_pid_fd.is_valid()) {
-    PLOG(ERROR) << "Could not create " << aborted_browser_pid_path_.value();
+  if (!browser_pid_fd.is_valid()) {
+    PLOG(ERROR) << "Could not create " << path.value();
     return;
   }
 
   std::string pid_string = base::NumberToString(browser_->CurrentPid());
-  if (!base::WriteFileDescriptor(aborted_browser_pid_fd.get(),
-                                 pid_string.c_str(), pid_string.size())) {
-    PLOG(ERROR) << "Failed to write " << aborted_browser_pid_path_.value();
+  if (!base::WriteFileDescriptor(browser_pid_fd.get(), pid_string.c_str(),
+                                 pid_string.size())) {
+    PLOG(ERROR) << "Failed to write " << path.value();
     return;
   }
 
@@ -631,14 +661,13 @@ void SessionManagerService::WriteAbortedBrowserPidFile() {
   // directory. crash_reporter, which reads this file, is run by chrome using
   // the chronos user.
   struct stat sbuf;
-  if (stat(aborted_browser_pid_path_.DirName().value().c_str(), &sbuf) != 0) {
-    PLOG(ERROR) << "Could not stat: "
-                << aborted_browser_pid_path_.DirName().value();
+  if (stat(path.DirName().value().c_str(), &sbuf) != 0) {
+    PLOG(ERROR) << "Could not stat: " << path.DirName().value();
     return;
   }
 
-  if (fchown(aborted_browser_pid_fd.get(), sbuf.st_uid, sbuf.st_gid) < 0) {
-    PLOG(ERROR) << "Could not chown: " << aborted_browser_pid_path_.value();
+  if (fchown(browser_pid_fd.get(), sbuf.st_uid, sbuf.st_gid) < 0) {
+    PLOG(ERROR) << "Could not chown: " << path.value();
   }
 }
 

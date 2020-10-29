@@ -265,9 +265,9 @@ inline testing::Matcher<dbus::MethodCall*> StopAllVmsMethod() {
 TEST_F(SessionManagerProcessTest, CleanupBrowser) {
   FakeBrowserJob* job = CreateMockJobAndInitManager(false);
   EXPECT_CALL(*job, Kill(SIGTERM, _)).Times(1);
-  EXPECT_CALL(*job, WaitAndKillAll(_)).Times(1);
+  EXPECT_CALL(*job, AbortAndKillAll(_)).Times(1);
   job->RunInBackground();
-  manager_->test_api().CleanupChildrenBeforeExit(3);
+  manager_->test_api().CleanupChildrenBeforeExit();
 }
 
 // Gracefully shut down while the browser is running.
@@ -279,7 +279,7 @@ TEST_F(SessionManagerProcessTest, BrowserRunningShutdown) {
 
   // Expect the job to be killed.
   EXPECT_CALL(*job, Kill(SIGTERM, _)).Times(1);
-  EXPECT_CALL(*job, WaitAndKillAll(_)).Times(1);
+  EXPECT_CALL(*job, AbortAndKillAll(_)).Times(1);
 
   brillo::MessageLoop::current()->PostTask(
       FROM_HERE,
@@ -408,7 +408,7 @@ TEST_F(SessionManagerProcessTest, TestAbortedBrowserPidWritten) {
   EXPECT_CALL(*job, KillEverything(SIGKILL, _)).Times(AnyNumber());
   ASSERT_TRUE(job->RunInBackground());
 
-  manager_->AbortBrowser(SIGKILL, "");
+  manager_->AbortBrowserForHang();
   ASSERT_TRUE(base::PathExists(aborted_browser_pid_path_));
   std::string read_pid_str;
   ASSERT_TRUE(base::ReadFileToString(aborted_browser_pid_path_, &read_pid_str));

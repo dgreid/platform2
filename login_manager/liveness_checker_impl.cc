@@ -84,8 +84,7 @@ void LivenessCheckerImpl::CheckAndSendLivenessPing(base::TimeDelta interval) {
       // autotest must be updated.
       LOG(WARNING) << "Aborting browser process.";
 
-      manager_->AbortBrowser(SIGABRT,
-                             "Browser did not respond to DBus liveness check.");
+      manager_->AbortBrowserForHang();
       // HandleChildExit() will reap the process and restart if needed.
       Stop();
       return;

@@ -37,6 +37,10 @@ constexpr char kGpuStateFilename[] = "i915_error_state.log.xz";
 // browser hang. Written by session_manager.
 constexpr char kAbortedBrowserPidPath[] = "/run/chrome/aborted_browser_pid";
 
+// Filename for the pid of the browser process if it was aborted due to a
+// slow shutdown. Written by session_manager.
+const char kShutdownBrowserPidPath[] = "/run/chrome/shutdown_browser_pid";
+
 // Whenever we have an executable crash, we use this key for the logging config
 // file. See HandleCrashWithDumpData for explanation.
 constexpr char kExecLogKeyName[] = "chrome";
@@ -153,6 +157,15 @@ bool ChromeCollector::HandleCrashWithDumpData(
     if (pid_data == base::NumberToString(pid)) {
       AddCrashMetaUploadData("browser_hang", "true");
       base::DeleteFile(aborted_path, false);
+    }
+  }
+
+  base::FilePath shutdown_path(kShutdownBrowserPidPath);
+  if (base::ReadFileToString(shutdown_path, &pid_data)) {
+    base::TrimWhitespaceASCII(pid_data, base::TRIM_TRAILING, &pid_data);
+    if (pid_data == base::NumberToString(pid)) {
+      AddCrashMetaUploadData("browser_shutdown_hang", "true");
+      base::DeleteFile(shutdown_path, false);
     }
   }
 

@@ -80,14 +80,14 @@ class LivenessCheckerImplTest : public ::testing::Test {
 
 TEST_F(LivenessCheckerImplTest, CheckAndSendOutstandingPing) {
   ExpectUnAckedLivenessPing();
-  EXPECT_CALL(*manager_.get(), AbortBrowser(SIGABRT, _)).Times(1);
+  EXPECT_CALL(*manager_.get(), AbortBrowserForHang()).Times(1);
   checker_->CheckAndSendLivenessPing(TimeDelta());
   fake_loop_.Run();  // Runs until the message loop is empty.
 }
 
 TEST_F(LivenessCheckerImplTest, CheckAndSendAckedThenOutstandingPing) {
   ExpectLivenessPingResponsePing();
-  EXPECT_CALL(*manager_.get(), AbortBrowser(SIGABRT, _)).Times(1);
+  EXPECT_CALL(*manager_.get(), AbortBrowserForHang()).Times(1);
   checker_->CheckAndSendLivenessPing(TimeDelta());
   fake_loop_.Run();  // Runs until the message loop is empty.
 }

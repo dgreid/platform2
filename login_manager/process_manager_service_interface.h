@@ -25,9 +25,9 @@ class ProcessManagerServiceInterface {
   // Fork, then run the browser in the child process.
   virtual void RunBrowser() = 0;
 
-  // Abort the browser process with |signal|, passing |message| to its
-  // crash dumping machinery.
-  virtual void AbortBrowser(int signal, const std::string& message) = 0;
+  // Abort the browser process and indicate to its crash dumping machinery that
+  // this was for a browser hang.
+  virtual void AbortBrowserForHang() = 0;
 
   // Whenever the browser is restarted, add |args| to its command line in
   // addition to the normal arguments. Effects last until this function is

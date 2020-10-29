@@ -22,7 +22,7 @@ class MockProcessManagerService : public ProcessManagerServiceInterface {
 
   MOCK_METHOD(void, ScheduleShutdown, (), (override));
   MOCK_METHOD(void, RunBrowser, (), (override));
-  MOCK_METHOD(void, AbortBrowser, (int, const std::string&), (override));
+  MOCK_METHOD(void, AbortBrowserForHang, (), (override));
   MOCK_METHOD(void,
               SetBrowserTestArgs,
               (const std::vector<std::string>&),

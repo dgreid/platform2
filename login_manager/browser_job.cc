@@ -239,48 +239,45 @@ void BrowserJob::Kill(int signal, const std::string& message) {
   subprocess_->Kill(signal);
 }
 
-void BrowserJob::WaitAndKillAll(base::TimeDelta timeout) {
+bool BrowserJob::WaitForExit(base::TimeDelta timeout) {
+  const pid_t pid = subprocess_->GetPid();
+  if (pid < 0)
+    return true;
+
+  return system_->ProcessGroupIsGone(pid, timeout);
+}
+
+void BrowserJob::AbortAndKillAll(base::TimeDelta timeout) {
   const pid_t pid = subprocess_->GetPid();
   if (pid < 0)
     return;
 
-  DLOG(INFO) << "Waiting up to " << timeout.InSeconds() << " seconds for "
-             << pid << "'s process group to exit";
-  if (system_->ProcessGroupIsGone(pid, timeout)) {
+  if (system_->ProcessGroupIsGone(pid, base::TimeDelta())) {
     DLOG(INFO) << "Cleaned up browser process " << pid;
     return;
   }
 
-  base::TimeDelta displayed_timeout = timeout;
   if (!system_->ProcessIsGone(pid, base::TimeDelta())) {
-    LOG(WARNING) << "Aborting browser process " << pid << " "
-                 << timeout.InSeconds() << " seconds after sending signal";
-    std::string message = base::StringPrintf("Browser took more than %" PRId64
-                                             " seconds to exit after signal.",
-                                             timeout.InSeconds());
+    LOG(WARNING) << "Aborting browser process " << pid;
+
+    std::string message = "Browser aborted";
     // Send a SIGABRT to the browser process so that it generates a crash
-    // report. We can use the crash report to figure out why the browser process
-    // was taking so long to exit. We don't send SIGABRT to the other processes
-    // because the reports are often corrupt and we aren't getting any value out
-    // of them.
+    // report. We don't send SIGABRT to the other processes because the reports
+    // are often corrupt and we aren't getting any value out of them.
     Kill(SIGABRT, message);
 
-    constexpr base::TimeDelta kTimeoutForAbort =
-        base::TimeDelta::FromSeconds(1);
-    // Wait 1 extra second to let Breakpad or Crashpad collect the crash report.
-    if (system_->ProcessGroupIsGone(pid, kTimeoutForAbort)) {
+    // Wait to allow Breakpad or Crashpad time to collect the crash report.
+    if (system_->ProcessGroupIsGone(pid, timeout)) {
       DLOG(INFO) << "browser group " << pid << " gone after SIGABRT wait";
       return;
     }
-    displayed_timeout += kTimeoutForAbort;
   }
 
   std::string message = base::StringPrintf(
       "Browser group took more than %" PRId64 " seconds to exit after signal.",
-      displayed_timeout.InSeconds());
+      timeout.InSeconds());
   LOG(WARNING) << "Killing browser process " << pid << "'s process group "
-               << displayed_timeout.InSeconds()
-               << " seconds after sending signal";
+               << timeout.InSeconds() << " seconds after sending SIGABRT";
   KillEverything(SIGKILL, message);
 
   constexpr base::TimeDelta kTimeoutForSecondKill =

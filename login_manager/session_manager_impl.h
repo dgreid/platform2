@@ -111,9 +111,14 @@ class SessionManagerImpl
   static const char kScreenLockedImpulse[];
   static const char kScreenUnlockedImpulse[];
 
-  // SystemUtils::EnsureJobExit() DCHECKs if the timeout is zero, so this is the
-  // minimum amount of time we must wait before killing the containers.
+  // How much time we must wait before killing the containers.
   static const base::TimeDelta kContainerTimeout;
+
+  // How much time to wait for the key generator job to stop before killing it.
+  static const base::TimeDelta kKeyGenTimeout;
+
+  // How much time to give the browser to shutdown cleanly before killing it.
+  static const base::TimeDelta kBrowserTimeout;
 
   // Time window before or after suspend/resume in which the session should be
   // ended if Chrome crashes. This is done as a precaution to avoid showing an

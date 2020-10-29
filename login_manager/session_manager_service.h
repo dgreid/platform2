@@ -99,9 +99,8 @@ class SessionManagerService
       session_manager_service_->vm_concierge_available_ = available;
     }
 
-    void CleanupChildrenBeforeExit(int timeout_sec) {
-      session_manager_service_->CleanupChildrenBeforeExit(
-          base::TimeDelta::FromSeconds(timeout_sec), ExitCode::SUCCESS);
+    void CleanupChildrenBeforeExit() {
+      session_manager_service_->CleanupChildrenBeforeExit(ExitCode::SUCCESS);
     }
 
     // Cause handling of faked-out exit of a child process.
@@ -145,7 +144,7 @@ class SessionManagerService
   // ProcessManagerServiceInterface:
   void ScheduleShutdown() override;
   void RunBrowser() override;
-  void AbortBrowser(int signal, const std::string& message) override;
+  void AbortBrowserForHang() override;
   void SetBrowserTestArgs(const std::vector<std::string>& args) override;
   void SetBrowserArgs(const std::vector<std::string>& args) override;
   void SetBrowserAdditionalEnvironmentalVariables(
@@ -207,7 +206,7 @@ class SessionManagerService
   void SetExitAndScheduleShutdown(ExitCode code);
 
   // Terminate all children, with increasing prejudice.
-  void CleanupChildrenBeforeExit(base::TimeDelta timeout, ExitCode code);
+  void CleanupChildrenBeforeExit(ExitCode code);
 
   // Callback when receiving a termination signal.
   bool OnTerminationSignal(const struct signalfd_siginfo& info);
@@ -224,7 +223,7 @@ class SessionManagerService
 
   // Writes the PID of the browser to a file for the crash reporter to read in
   // preparation for the killing the browser.
-  void WriteAbortedBrowserPidFile();
+  void WriteBrowserPidFile(base::FilePath path);
 
   // Invoked to update |use_long_kill_timeout_| after checking
   // 'SessionManagerUseLongKillTimeout' feature.
@@ -265,6 +264,7 @@ class SessionManagerService
   const bool enable_browser_abort_on_hang_;
   const base::TimeDelta liveness_checking_interval_;
   base::FilePath aborted_browser_pid_path_;
+  base::FilePath shutdown_browser_pid_path_;
 
   // Holds pointers to nss_, key_gen_, this. Shares system_, login_metrics_.
   std::unique_ptr<SessionManagerInterface> impl_;
