@@ -403,34 +403,6 @@ INSTANTIATE_TEST_SUITE_P(WithDircrypto,
                          OldKeysetManagementTest,
                          ::testing::Values(false));
 
-TEST_P(OldKeysetManagementTest, AddInitialKeyset) {
-  KeysetSetUp();
-
-  Credentials credentials(test_helper_.users[0].username,
-                          brillo::SecureBlob("passkey"));
-  KeyData key_data;
-  key_data.set_label("current label");
-  credentials.set_key_data(key_data);
-  SerializedVaultKeyset serialized;
-
-  // Caller of the mock factory will assume ownership.
-  auto vk = new MockVaultKeyset();
-  EXPECT_CALL(vault_keyset_factory_, New(_, _)).WillOnce(Return(vk));
-  homedirs_.set_vault_keyset_factory(&vault_keyset_factory_);
-
-  EXPECT_CALL(*vk, serialized()).WillRepeatedly(ReturnRef(serialized));
-  EXPECT_CALL(*vk, mutable_serialized()).WillRepeatedly(Return(&serialized));
-
-  EXPECT_CALL(*vk, CreateRandom()).Times(1);
-  EXPECT_CALL(*vk, set_legacy_index(0)).Times(1);
-
-  EXPECT_CALL(*vk, Encrypt(_, _)).WillRepeatedly(Return(true));
-  EXPECT_CALL(*vk, Save(_)).WillRepeatedly(Return(true));
-
-  EXPECT_TRUE(homedirs_.AddInitialKeyset(credentials));
-  EXPECT_EQ(key_data.label(), serialized.key_data().label());
-}
-
 TEST_P(OldKeysetManagementTest, AddKeysetSuccess) {
   KeysetSetUp();
 
