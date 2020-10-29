@@ -223,64 +223,6 @@ INSTANTIATE_TEST_SUITE_P(WithDircrypto,
                          OldHomeDirsTest,
                          ::testing::Values(false));
 
-TEST_P(OldHomeDirsTest, RemoveNonOwnerCryptohomes) {
-  // Ensure that RemoveNonOwnerCryptohomes does.
-  EXPECT_CALL(platform_, EnumerateDirectoryEntries(kTestRoot, false, _))
-      .WillOnce(DoAll(SetArgPointee<2>(homedir_paths_), Return(true)));
-  FilePath user_prefix = brillo::cryptohome::home::GetUserPathPrefix();
-  FilePath root_prefix = brillo::cryptohome::home::GetRootPathPrefix();
-  EXPECT_CALL(platform_, EnumerateDirectoryEntries(user_prefix, _, _))
-      .WillOnce(Return(true));
-  EXPECT_CALL(platform_, EnumerateDirectoryEntries(root_prefix, _, _))
-      .WillOnce(Return(true));
-  EXPECT_CALL(platform_, DirectoryExists(_)).WillRepeatedly(Return(true));
-  EXPECT_CALL(platform_, DirectoryExists(Property(&FilePath::value,
-                                                  EndsWith(kEcryptfsVaultDir))))
-      .WillRepeatedly(Return(ShouldTestEcryptfs()));
-  EXPECT_CALL(platform_, IsDirectoryMounted(_)).WillRepeatedly(Return(false));
-  EXPECT_CALL(platform_, DeleteFile(homedir_paths_[0], true))
-      .WillOnce(Return(true));
-  EXPECT_CALL(platform_, DeleteFile(homedir_paths_[1], true))
-      .WillOnce(Return(true));
-  EXPECT_CALL(platform_, DeleteFile(homedir_paths_[2], true))
-      .WillOnce(Return(true));
-
-  homedirs_.RemoveNonOwnerCryptohomes();
-}
-
-TEST_P(OldHomeDirsTest, RenameCryptohome) {
-  ASSERT_TRUE(platform_.CreateDirectory(
-      FilePath("/home/.shadow")
-          .Append(test_helper_.users[0].obfuscated_username)));
-  ASSERT_TRUE(platform_.CreateDirectory(
-      FilePath("/home/.shadow")
-          .Append(test_helper_.users[1].obfuscated_username)));
-  ASSERT_TRUE(platform_.CreateDirectory(
-      FilePath("/home/.shadow")
-          .Append(test_helper_.users[2].obfuscated_username)));
-
-  const char kNewUserId[] = "some_new_user";
-  EXPECT_TRUE(homedirs_.Rename(kDefaultUsers[0].username, kNewUserId));
-
-  // If source directory doesn't exist, assume renamed.
-  EXPECT_TRUE(homedirs_.Rename(kDefaultUsers[0].username, kNewUserId));
-
-  // This should fail as target directory already exists.
-  EXPECT_FALSE(
-      homedirs_.Rename(kDefaultUsers[1].username, kDefaultUsers[2].username));
-
-  // Rename back.
-  EXPECT_TRUE(homedirs_.Rename(kNewUserId, kDefaultUsers[0].username));
-}
-
-TEST_P(OldHomeDirsTest, CreateCryptohome) {
-  platform_.DeleteFile(FilePath(test_helper_.users[0].base_path), true);
-
-  EXPECT_TRUE(homedirs_.Create(kDefaultUsers[0].username));
-  EXPECT_TRUE(
-      platform_.DirectoryExists(FilePath(test_helper_.users[0].base_path)));
-}
-
 TEST_P(OldHomeDirsTest, ComputeDiskUsageDircrypto) {
   FilePath base_path(test_helper_.users[0].base_path);
   // /home/.shadow in production code.

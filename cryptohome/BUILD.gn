@@ -436,6 +436,7 @@ if (use.test) {
       "fido/make_credential_response_test.cc",
       "fingerprint_manager_unittest.cc",
       "firmware_management_parameters_unittest.cc",
+      "homedirs_unittest.cc",
       "install_attributes_unittest.cc",
       "le_credential_manager_impl_unittest.cc",
       "lockbox-cache-unittest.cc",
