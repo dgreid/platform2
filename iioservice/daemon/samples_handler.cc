@@ -10,11 +10,7 @@
 #include <utility>
 #include <vector>
 
-#include <base/files/file_util.h>
-#include <base/sequenced_task_runner.h>
-#include <base/single_thread_task_runner.h>
 #include <base/strings/string_number_conversions.h>
-#include <base/strings/string_split.h>
 #include <base/time/time.h>
 #include <libmems/test_fakes.h>
 #include <libmems/common_types.h>
@@ -23,7 +19,6 @@
 #include <libmems/iio_device.h>
 
 #include "iioservice/include/common.h"
-#include "iioservice/include/constants.h"
 
 namespace iioservice {
 
@@ -50,72 +45,6 @@ void SamplesHandler::SamplesHandlerDeleter(SamplesHandler* handler) {
 }
 
 // static
-bool SamplesHandler::GetDevMinMaxFrequency(libmems::IioDevice* iio_device,
-                                           double* min_freq,
-                                           double* max_freq) {
-  auto available_opt =
-      iio_device->ReadStringAttribute(kSamplingFrequencyAvailable);
-  if (!available_opt.has_value()) {
-    LOG(ERROR) << "Failed to read attribute: " << kSamplingFrequencyAvailable;
-    return false;
-  }
-
-  std::string sampling_frequency_available = available_opt.value();
-  // Remove trailing '\0' for parsing
-  auto pos = available_opt->find_first_of('\0');
-  if (pos != std::string::npos)
-    sampling_frequency_available = available_opt->substr(0, pos);
-
-  std::vector<std::string> sampling_frequencies =
-      base::SplitString(sampling_frequency_available, " ",
-                        base::TRIM_WHITESPACE, base::SPLIT_WANT_NONEMPTY);
-
-  switch (sampling_frequencies.size()) {
-    case 0:
-      LOG(ERROR) << "Invalid format of " << kSamplingFrequencyAvailable << ": "
-                 << sampling_frequency_available;
-      return false;
-
-    case 1:
-      if (!base::StringToDouble(sampling_frequencies.front(), min_freq) ||
-          *min_freq < 0.0 || *min_freq < kFrequencyEpsilon) {
-        LOG(ERROR) << "Failed to parse min max sampling_frequency: "
-                   << sampling_frequency_available;
-        return false;
-      }
-
-      *max_freq = *min_freq;
-      return true;
-
-    default:
-      if (!base::StringToDouble(sampling_frequencies.back(), max_freq) ||
-          *max_freq < kFrequencyEpsilon) {
-        LOG(ERROR) << "Failed to parse max sampling_frequency: "
-                   << sampling_frequency_available;
-        return false;
-      }
-
-      if (!base::StringToDouble(sampling_frequencies.front(), min_freq) ||
-          *min_freq < 0.0) {
-        LOG(ERROR) << "Failed to parse the first sampling_frequency: "
-                   << sampling_frequency_available;
-        return false;
-      }
-
-      if (*min_freq == 0.0) {
-        if (!base::StringToDouble(sampling_frequencies[1], min_freq) ||
-            *min_freq < 0.0 || *max_freq < *min_freq) {
-          LOG(ERROR) << "Failed to parse min sampling_frequency: "
-                     << sampling_frequency_available;
-          return false;
-        }
-      }
-
-      return true;
-  }
-}
-
-// static
 SamplesHandler::ScopedSamplesHandler SamplesHandler::CreateWithFifo(
     scoped_refptr<base::SequencedTaskRunner> ipc_task_runner,
     scoped_refptr<base::SingleThreadTaskRunner> sample_task_runner,
@@ -125,7 +54,7 @@ SamplesHandler::ScopedSamplesHandler SamplesHandler::CreateWithFifo(
   ScopedSamplesHandler handler(nullptr, SamplesHandlerDeleter);
 
   double min_freq, max_freq;
-  if (!GetDevMinMaxFrequency(iio_device, &min_freq, &max_freq))
+  if (!iio_device->GetMinMaxFrequency(&min_freq, &max_freq))
     return handler;
 
   handler.reset(new SamplesHandler(
@@ -146,7 +75,7 @@ SamplesHandler::ScopedSamplesHandler SamplesHandler::CreateWithoutFifo(
   ScopedSamplesHandler handler(nullptr, SamplesHandlerDeleter);
 
   double min_freq, max_freq;
-  if (!GetDevMinMaxFrequency(iio_device, &min_freq, &max_freq))
+  if (!iio_device->GetMinMaxFrequency(&min_freq, &max_freq))
     return handler;
 
   auto trigger_device = iio_device->GetTrigger();
@@ -321,7 +250,7 @@ void SamplesHandler::StopSampleWatcherOnThread() {
 void SamplesHandler::AddActiveClientOnThread(ClientData* client_data) {
   DCHECK(sample_task_runner_->BelongsToCurrentThread());
   DCHECK_EQ(client_data->iio_device, iio_device_);
-  DCHECK_GE(client_data->frequency, kFrequencyEpsilon);
+  DCHECK_GE(client_data->frequency, libmems::kFrequencyEpsilon);
   DCHECK(!client_data->enabled_chn_indices.empty());
   DCHECK(inactive_clients_.find(client_data) == inactive_clients_.end());
   DCHECK(clients_map_.find(client_data) == clients_map_.end());
@@ -390,7 +319,7 @@ void SamplesHandler::RemoveActiveClientOnThread(ClientData* client_data,
                                                 double orig_freq) {
   DCHECK(sample_task_runner_->BelongsToCurrentThread());
   DCHECK_EQ(client_data->iio_device, iio_device_);
-  DCHECK_GE(orig_freq, kFrequencyEpsilon);
+  DCHECK_GE(orig_freq, libmems::kFrequencyEpsilon);
   DCHECK(!client_data->enabled_chn_indices.empty());
   DCHECK(clients_map_.find(client_data) != clients_map_.end());
 
@@ -425,7 +354,7 @@ void SamplesHandler::RemoveClientOnThread(ClientData* client_data) {
 }
 
 double SamplesHandler::FixFrequency(double frequency) {
-  if (frequency < kFrequencyEpsilon)
+  if (frequency < libmems::kFrequencyEpsilon)
     return 0.0;
 
   if (frequency < dev_min_frequency_)
@@ -528,7 +457,7 @@ bool SamplesHandler::UpdateRequestedFrequencyOnThread(double frequency) {
   dev_frequency_ = freq_opt.value();
 
   if (use_fifo_) {
-    if (dev_frequency_ < kFrequencyEpsilon)
+    if (dev_frequency_ < libmems::kFrequencyEpsilon)
       return true;
 
     if (!iio_device_->WriteDoubleAttribute(libmems::kHWFifoTimeoutAttr,
@@ -678,7 +607,7 @@ void SamplesHandler::OnSampleAvailableWithoutBlocking() {
   }
 
   for (auto& client : clients_map_) {
-    DCHECK(client.first->frequency >= kFrequencyEpsilon);
+    DCHECK(client.first->frequency >= libmems::kFrequencyEpsilon);
     DCHECK(!client.first->enabled_chn_indices.empty());
 
     int step =

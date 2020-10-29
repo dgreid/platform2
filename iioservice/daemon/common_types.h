@@ -16,8 +16,6 @@
 
 namespace iioservice {
 
-constexpr char kSamplingFrequencyAvailable[] = "sampling_frequency_available";
-
 struct ClientData {
   mojo::ReceiverId id;
   libmems::IioDevice* iio_device;

@@ -13,7 +13,6 @@
 #include <libmems/iio_device_impl.h>
 
 #include "iioservice/include/common.h"
-#include "iioservice/include/constants.h"
 
 namespace iioservice {
 

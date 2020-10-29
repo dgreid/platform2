@@ -16,7 +16,6 @@
 #include <mojo/core/embedder/scoped_ipc_support.h>
 
 #include "iioservice/include/common.h"
-#include "iioservice/include/constants.h"
 
 namespace iioservice {
 

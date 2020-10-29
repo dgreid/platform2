@@ -10,8 +10,6 @@
 #include <libmems/common_types.h>
 #include <libmems/test_fakes.h>
 
-#include "iioservice/include/constants.h"
-
 namespace iioservice {
 
 namespace fakes {
@@ -40,7 +38,7 @@ FakeSamplesHandler::ScopedFakeSamplesHandler FakeSamplesHandler::CreateWithFifo(
     OnErrorOccurredCallback on_error_occurred_callback) {
   ScopedFakeSamplesHandler handler(nullptr, SamplesHandlerDeleter);
   double min_freq, max_freq;
-  if (!GetDevMinMaxFrequency(fake_iio_device, &min_freq, &max_freq))
+  if (!fake_iio_device->GetMinMaxFrequency(&min_freq, &max_freq))
     return handler;
 
   handler.reset(new FakeSamplesHandler(
@@ -247,8 +245,8 @@ FakeSamplesObserver::FakeSamplesObserver(
   DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
   CHECK_GE(frequency_, 0.0);
   CHECK_GE(frequency2_, 0.0);
-  CHECK_GE(dev_frequency_, kFrequencyEpsilon);
-  CHECK_GE(dev_frequency2_, kFrequencyEpsilon);
+  CHECK_GE(dev_frequency_, libmems::kFrequencyEpsilon);
+  CHECK_GE(dev_frequency2_, libmems::kFrequencyEpsilon);
 
   if (frequency_ == 0.0) {
     if (frequency2_ == 0.0)
@@ -260,16 +258,16 @@ FakeSamplesObserver::FakeSamplesObserver(
 
 int FakeSamplesObserver::GetStep() const {
   DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
-  CHECK_GE(dev_frequency_, kFrequencyEpsilon);
+  CHECK_GE(dev_frequency_, libmems::kFrequencyEpsilon);
 
   int step = base::size(libmems::fakes::kFakeAccelSamples);
-  if (frequency_ >= kFrequencyEpsilon)
+  if (frequency_ >= libmems::kFrequencyEpsilon)
     step = dev_frequency_ / frequency_;
 
   if (sample_index_ + step - 1 < pause_index_)
     return step;
 
-  if (frequency2_ < kFrequencyEpsilon)
+  if (frequency2_ < libmems::kFrequencyEpsilon)
     return base::size(libmems::fakes::kFakeAccelSamples);
 
   int step2 = dev_frequency2_ / frequency2_;

@@ -38,8 +38,9 @@ class SensorDeviceImplTest : public ::testing::Test {
 
     auto device = std::make_unique<libmems::fakes::FakeIioDevice>(
         nullptr, fakes::kAccelDeviceName, fakes::kAccelDeviceId);
-    EXPECT_TRUE(device->WriteStringAttribute(
-        kSamplingFrequencyAvailable, fakes::kFakeSamplingFrequencyAvailable));
+    EXPECT_TRUE(
+        device->WriteStringAttribute(libmems::kSamplingFrequencyAvailable,
+                                     fakes::kFakeSamplingFrequencyAvailable));
     EXPECT_TRUE(device->WriteDoubleAttribute(libmems::kHWFifoTimeoutAttr, 0.0));
     EXPECT_TRUE(
         device->WriteStringAttribute(kDeviceAttrName, kDeviceAttrValue));

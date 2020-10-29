@@ -40,10 +40,6 @@ class SamplesHandler {
   using OnErrorOccurredCallback = base::RepeatingCallback<void(
       mojo::ReceiverId, cros::mojom::ObserverErrorType)>;
 
-  static bool GetDevMinMaxFrequency(libmems::IioDevice* iio_device,
-                                    double* min_freq,
-                                    double* max_freq);
-
   // use fifo
   static ScopedSamplesHandler CreateWithFifo(
       scoped_refptr<base::SequencedTaskRunner> ipc_task_runner,
