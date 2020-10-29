@@ -8,7 +8,7 @@
 
 #include <base/run_loop.h>
 #include <base/optional.h>
-#include <base/message_loop/message_loop.h>
+#include <base/test/task_environment.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -67,7 +67,7 @@ class DnsResolutionRoutineTest : public testing::Test {
   }
 
  private:
-  base::MessageLoop message_loop_;
+  base::test::SingleThreadTaskEnvironment task_environment_;
   MockContext mock_context_;
   std::unique_ptr<DiagnosticRoutine> routine_;
 };
