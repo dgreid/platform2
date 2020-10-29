@@ -712,6 +712,50 @@ bool MountHelper::CreateTrackedSubdirectories(
   return result;
 }
 
+// The eCryptfs mount is mounted from vault/ --> mount/ except in case of
+// migration where the mount point is a temporary directory.
+bool MountHelper::SetUpEcryptfsMount(const std::string& obfuscated_username,
+                                     const std::string& fek_signature,
+                                     const std::string& fnek_signature,
+                                     bool should_migrate) {
+  const FilePath vault_path =
+      HomeDirs::GetEcryptfsUserVaultPath(shadow_root_, obfuscated_username);
+  const FilePath mount_point =
+      should_migrate
+          ? GetUserTemporaryMountDirectory(obfuscated_username)
+          : HomeDirs::GetUserMountDirectory(shadow_root_, obfuscated_username);
+
+  // Specify the ecryptfs options for mounting the user's cryptohome.
+  std::string ecryptfs_options = StringPrintf(
+      "ecryptfs_cipher=aes"
+      ",ecryptfs_key_bytes=%d"
+      ",ecryptfs_fnek_sig=%s"
+      ",ecryptfs_sig=%s"
+      ",ecryptfs_unlink_sigs",
+      kDefaultEcryptfsKeySize, fnek_signature.c_str(), fek_signature.c_str());
+
+  // Create <vault_path>/user and <vault_path>/root.
+  CreateHomeSubdirectories(vault_path);
+
+  // Move the tracked subdirectories from <mount_point_>/user to <vault_path>
+  // as passthrough directories.
+  CreateTrackedSubdirectories(obfuscated_username, MountType::ECRYPTFS);
+
+  // b/115997660: Mount eCryptfs after creating the tracked subdirectories.
+  if (!MountAndPush(vault_path, mount_point, "ecryptfs", ecryptfs_options))
+    return false;
+
+  return true;
+}
+
+void MountHelper::SetUpDircryptoMount(const std::string& obfuscated_username) {
+  const FilePath mount_point =
+      HomeDirs::GetUserMountDirectory(shadow_root_, obfuscated_username);
+
+  CreateHomeSubdirectories(mount_point);
+  CreateTrackedSubdirectories(obfuscated_username, MountType::DIR_CRYPTO);
+}
+
 bool MountHelper::PerformMount(const Options& mount_opts,
                                const std::string& username,
                                const std::string& fek_signature,
@@ -719,53 +763,23 @@ bool MountHelper::PerformMount(const Options& mount_opts,
                                bool is_pristine,
                                MountError* error) {
   const std::string obfuscated_username = SanitizeUserName(username);
-  const FilePath vault_path =
-      HomeDirs::GetEcryptfsUserVaultPath(shadow_root_, obfuscated_username);
-  const FilePath mount_point =
-      HomeDirs::GetUserMountDirectory(shadow_root_, obfuscated_username);
 
-  std::string ecryptfs_options;
   bool should_mount_ecryptfs = mount_opts.type == MountType::ECRYPTFS ||
                                mount_opts.to_migrate_from_ecryptfs;
-  if (should_mount_ecryptfs) {
-    // Specify the ecryptfs options for mounting the user's cryptohome.
-    ecryptfs_options = StringPrintf(
-        "ecryptfs_cipher=aes"
-        ",ecryptfs_key_bytes=%d"
-        ",ecryptfs_fnek_sig=%s"
-        ",ecryptfs_sig=%s"
-        ",ecryptfs_unlink_sigs",
-        kDefaultEcryptfsKeySize, fnek_signature.c_str(), fek_signature.c_str());
 
-    // Create <vault_path>/user as a passthrough directory, move all the
-    // (encrypted) contents of <vault_path> into <vault_path>/user, create
-    // <vault_path>/root.
-    CreateHomeSubdirectories(vault_path);
+  if (should_mount_ecryptfs &&
+      !SetUpEcryptfsMount(obfuscated_username, fek_signature, fnek_signature,
+                          mount_opts.to_migrate_from_ecryptfs)) {
+    LOG(ERROR) << "eCryptfs mount failed";
+    *error = MOUNT_ERROR_MOUNT_ECRYPTFS_FAILED;
+    return false;
   }
 
-  if (mount_opts.type == MountType::DIR_CRYPTO) {
-    // Create user & root directories.
-    CreateHomeSubdirectories(mount_point);
-  }
-
-  // Move the tracked subdirectories from <mount_point_>/user to <vault_path>
-  // as passthrough directories.
-  CreateTrackedSubdirectories(obfuscated_username, mount_opts.type);
+  if (mount_opts.type == MountType::DIR_CRYPTO)
+    SetUpDircryptoMount(obfuscated_username);
 
   const FilePath user_home = GetMountedUserHomePath(obfuscated_username);
   const FilePath root_home = GetMountedRootHomePath(obfuscated_username);
-
-  // b/115997660: Mount eCryptfs after creating the tracked subdirectories.
-  if (should_mount_ecryptfs) {
-    FilePath dest = mount_opts.to_migrate_from_ecryptfs
-                        ? GetUserTemporaryMountDirectory(obfuscated_username)
-                        : mount_point;
-    if (!MountAndPush(vault_path, dest, "ecryptfs", ecryptfs_options)) {
-      LOG(ERROR) << "eCryptfs mount failed";
-      *error = MOUNT_ERROR_MOUNT_ECRYPTFS_FAILED;
-      return false;
-    }
-  }
 
   if (is_pristine)
     CopySkeleton(user_home);

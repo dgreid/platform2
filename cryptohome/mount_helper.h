@@ -127,6 +127,15 @@ class MountHelper : public MountHelperInterface {
   bool CreateTrackedSubdirectories(const std::string& obfuscated_username,
                                    const MountType& type) const;
 
+  // Sets up the ecryptfs mount.
+  bool SetUpEcryptfsMount(const std::string& obfuscated_username,
+                          const std::string& fek_signature,
+                          const std::string& fnek_signature,
+                          bool should_migrate);
+
+  // Sets up the dircrypto mount.
+  void SetUpDircryptoMount(const std::string& obfuscated_username);
+
   // Carries out eCryptfs/dircrypto mount(2) operations for a regular
   // cryptohome.
   bool PerformMount(const Options& mount_opts,
