@@ -606,81 +606,6 @@ bool Crypto::GenerateAndWrapKeys(const VaultKeyset& vault_keyset,
                                   blobs.auth_iv.value());
 }
 
-bool Crypto::EncryptScrypt(const VaultKeyset& vault_keyset,
-                           const SecureBlob& key,
-                           SerializedVaultKeyset* serialized) const {
-  SecureBlob blob;
-  if (vault_keyset.IsLECredential()) {
-    LOG(ERROR) << "Low entropy credentials cannot be scrypt-wrapped.";
-    return false;
-  }
-  if (!vault_keyset.ToKeysBlob(&blob)) {
-    LOG(ERROR) << "Failure serializing keyset to buffer";
-    return false;
-  }
-  // Append the SHA1 hash of the keyset blob. This is done solely for
-  // backwards-compatibility purposes, since scrypt already creates a
-  // MAC for the encrypted blob. It is ignored in DecryptScrypt since
-  // it is redundant.
-  SecureBlob hash = CryptoLib::Sha1(blob);
-  SecureBlob local_blob = SecureBlob::Combine(blob, hash);
-  SecureBlob cipher_text;
-
-  if (!CryptoLib::DeprecatedEncryptScryptBlob(local_blob, key, &cipher_text)) {
-    LOG(ERROR) << "Scrypt encrypt of keyset blob failed.";
-    return false;
-  }
-
-  SecureBlob wrapped_chaps_key;
-  if (!CryptoLib::DeprecatedEncryptScryptBlob(vault_keyset.chaps_key(), key,
-                                              &wrapped_chaps_key)) {
-    LOG(ERROR) << "Scrypt encrypt of chaps key failed.";
-    return false;
-  }
-  unsigned int flags = serialized->flags();
-  serialized->set_flags((flags & ~SerializedVaultKeyset::TPM_WRAPPED) |
-                        SerializedVaultKeyset::SCRYPT_WRAPPED);
-  serialized->set_wrapped_keyset(cipher_text.data(), cipher_text.size());
-  if (vault_keyset.chaps_key().size() == CRYPTOHOME_CHAPS_KEY_LENGTH) {
-    serialized->set_wrapped_chaps_key(wrapped_chaps_key.data(),
-                                      wrapped_chaps_key.size());
-  } else {
-    serialized->clear_wrapped_chaps_key();
-  }
-
-  // If there is a reset seed, encrypt and store it.
-  if (vault_keyset.reset_seed().size() != 0) {
-    SecureBlob wrapped_reset_seed;
-    if (!CryptoLib::DeprecatedEncryptScryptBlob(vault_keyset.reset_seed(), key,
-                                                &wrapped_reset_seed)) {
-      LOG(ERROR) << "Scrypt encrypt of reset seed failed.";
-      return false;
-    }
-    serialized->set_wrapped_reset_seed(wrapped_reset_seed.data(),
-                                       wrapped_reset_seed.size());
-  } else {
-    serialized->clear_wrapped_reset_seed();
-  }
-
-  return true;
-}
-
-bool Crypto::EncryptChallengeCredential(
-    const VaultKeyset& vault_keyset,
-    const SecureBlob& key,
-    const std::string& obfuscated_username,
-    SerializedVaultKeyset* serialized) const {
-  serialized->set_flags(serialized->flags() |
-                        SerializedVaultKeyset::SIGNATURE_CHALLENGE_PROTECTED);
-  if (!EncryptScrypt(vault_keyset, key, serialized))
-    return false;
-  DCHECK(!(serialized->flags() & SerializedVaultKeyset::TPM_WRAPPED));
-  DCHECK(serialized->flags() & SerializedVaultKeyset::SCRYPT_WRAPPED);
-  DCHECK(serialized->flags() &
-         SerializedVaultKeyset::SIGNATURE_CHALLENGE_PROTECTED);
-  return true;
-}
-
 bool Crypto::EncryptAuthorizationData(SerializedVaultKeyset* serialized,
                                       const SecureBlob& vkk_key,
                                       const SecureBlob& vkk_iv) const {
@@ -770,11 +695,24 @@ bool Crypto::EncryptVaultKeyset(const VaultKeyset& vault_keyset,
   }
 
   if (vault_keyset.IsSignatureChallengeProtected()) {
-    if (!EncryptChallengeCredential(vault_keyset, vault_key,
-                                    obfuscated_username, serialized)) {
-      // TODO(crbug.com/842791): add ReportCryptohomeError
+    AuthInput user_input;
+    user_input.user_input = vault_key;
+
+    KeyBlobs key_blobs;
+    CryptoError error;
+    ChallengeCredentialAuthBlock auth_block;
+    auto auth_state = auth_block.Create(user_input, &key_blobs, &error);
+    if (auth_state == base::nullopt) {
       return false;
     }
+
+    serialized->set_flags(auth_state->vault_keyset->flags());
+    if (!GenerateAndWrapKeys(vault_keyset, key_blobs,
+                             /*store_reset_seed=*/true, serialized)) {
+      LOG(ERROR) << "GenerateAndWrapKeys failed.";
+      return false;
+    }
+
     serialized->set_salt(vault_key_salt.data(), vault_key_salt.size());
     return true;
   }

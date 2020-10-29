@@ -30,11 +30,7 @@ class AuthBlock {
   // SerializedVaultKeyset, in the optional object, or base::nullopt on failure.
   virtual base::Optional<AuthBlockState> Create(const AuthInput& user_input,
                                                 KeyBlobs* key_blobs,
-                                                CryptoError* error) {
-    // TODO(kerrnel): Once all AuthBlocks have a Create() method, make this pure
-    // virtual.
-    return base::nullopt;
-  }
+                                                CryptoError* error) = 0;
 
   // This is implemented by concrete auth methods to map the user secret
   // input into a key. This method should successfully authenticate the user.

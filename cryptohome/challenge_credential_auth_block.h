@@ -14,6 +14,10 @@ class ChallengeCredentialAuthBlock : public LibScryptCompatAuthBlock {
   ChallengeCredentialAuthBlock() = default;
   ~ChallengeCredentialAuthBlock() = default;
 
+  base::Optional<AuthBlockState> Create(const AuthInput& user_input,
+                                        KeyBlobs* key_blobs,
+                                        CryptoError* error) override;
+
   // This derives a high entropy secret from the input secret provided by the
   // challenge credential.
   bool Derive(const AuthInput& user_input,
