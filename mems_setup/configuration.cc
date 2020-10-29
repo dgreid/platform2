@@ -304,8 +304,7 @@ bool Configuration::AddSysfsTrigger(int sysfs_trigger_id) {
   std::string dev_name =
       libmems::IioDeviceImpl::GetStringFromId(sensor_->GetId());
   // /sys/bus/iio/devices/iio:deviceX
-  base::FilePath sys_dev_path =
-      base::FilePath(libmems::kSysDevString).Append(dev_name.c_str());
+  base::FilePath sys_dev_path = sensor_->GetPath();
 
   if (!delegate_->Exists(sys_dev_path.Append(kTriggerString))) {
     // Uses FIFO and doesn't need a trigger.
@@ -548,8 +547,7 @@ bool Configuration::SetupPermissions() {
   }
 
   // /sys/bus/iio/devices/iio:deviceX
-  base::FilePath sys_dev_path =
-      base::FilePath(libmems::kSysDevString).Append(dev_name.c_str());
+  base::FilePath sys_dev_path = sensor_->GetPath();
 
   // Files under /sys/bus/iio/devices/iio:deviceX/.
   auto files = EnumerateAllFiles(sys_dev_path);

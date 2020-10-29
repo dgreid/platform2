@@ -48,8 +48,7 @@ class AccelerometerTest : public SensorTestBase {
 
     std::string dev_name = libmems::IioDeviceImpl::GetStringFromId(kDeviceId);
     // /sys/bus/iio/devices/iio:device1
-    base::FilePath sys_dev_path =
-        base::FilePath(libmems::kSysDevString).Append(dev_name.c_str());
+    base::FilePath sys_dev_path = mock_device_->GetPath();
 
     // Create the file to set the trigger in |AddSysfsTrigger|.
     mock_delegate_->CreateFile(sys_dev_path.Append(kTriggerString));
@@ -79,8 +78,7 @@ TEST_F(AccelerometerTest, CheckPermissionsAndOwnership) {
   std::string dev_name = libmems::IioDeviceImpl::GetStringFromId(kDeviceId);
 
   // /sys/bus/iio/devices/iio:device1
-  base::FilePath sys_dev_path =
-      base::FilePath(libmems::kSysDevString).Append(dev_name.c_str());
+  base::FilePath sys_dev_path = mock_device_->GetPath();
 
   CheckPermissionsAndOwnershipForFile(sys_dev_path.Append(kHwfifoTimeoutString),
                                       base::FILE_PERMISSION_WRITE_BY_GROUP |
