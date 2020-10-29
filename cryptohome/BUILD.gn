@@ -464,7 +464,6 @@ if (use.test) {
       "mount_stack_unittest.cc",
       "mount_task_unittest.cc",
       "mount_unittest.cc",
-      "old_homedirs_unittest.cc",
       "out_of_process_mount_helper_test.cc",
       "password_verifier_unittest.cc",
       "persistent_lookup_table_unittest.cc",

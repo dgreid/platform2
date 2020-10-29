@@ -9,6 +9,8 @@
 #include <vector>
 
 #include <base/files/file_path.h>
+#include <base/strings/string_number_conversions.h>
+#include <base/strings/stringprintf.h>
 #include <brillo/cryptohome.h>
 #include <brillo/data_encoding.h>
 #include <brillo/secure_blob.h>
@@ -27,11 +29,13 @@
 
 using ::testing::_;
 using ::testing::ElementsAre;
+using ::testing::EndsWith;
 using ::testing::MatchesRegex;
 using ::testing::NiceMock;
 using ::testing::Return;
 using ::testing::ReturnRef;
 using ::testing::StrEq;
+using ::testing::UnorderedElementsAre;
 
 namespace cryptohome {
 
@@ -52,9 +56,11 @@ constexpr int kInitialKeysetIndex = 0;
 
 }  // namespace
 
-// TODO(dlunev): Remove kKeyFile extern declaration once we have it declared
+// TODO(dlunev): Remove kKey* extern declarations once we have it declared
 // in the proper place.
 extern const char kKeyFile[];
+extern const int kKeyFileMax;
+extern const char kKeyLegacyPrefix[];
 
 class KeysetManagementTest : public ::testing::Test {
  public:
@@ -222,6 +228,17 @@ class KeysetManagementTest : public ::testing::Test {
     }
   }
 };
+
+TEST_F(KeysetManagementTest, AreCredentialsValid) {
+  // SETUP
+
+  KeysetSetUpWithoutKeyData();
+  Credentials wrong_credentials(users_[0].name, brillo::SecureBlob("wrong"));
+
+  // TEST
+  ASSERT_TRUE(homedirs_.AreCredentialsValid(users_[0].credentials));
+  ASSERT_FALSE(homedirs_.AreCredentialsValid(wrong_credentials));
+}
 
 // Successfully adds initial keyset
 TEST_F(KeysetManagementTest, AddInitialKeyset) {
@@ -1117,6 +1134,433 @@ TEST_F(KeysetManagementTest, UpdateKeysetBadSecret) {
                                        /* error */ nullptr));
   EXPECT_EQ(vk_old.legacy_index(), kInitialKeysetIndex);
   EXPECT_EQ(vk_old.label(), users_[0].credentials.key_data().label());
+}
+
+// Successfully removes keyset.
+TEST_F(KeysetManagementTest, RemoveKeysetSuccess) {
+  // SETUP
+
+  KeysetSetUpWithKeyData(DefaultKeyData());
+
+  brillo::SecureBlob new_passkey("new path");
+  Credentials new_credentials(users_[0].name, new_passkey);
+
+  int index = -1;
+  EXPECT_EQ(CRYPTOHOME_ERROR_NOT_SET,
+            homedirs_.AddKeyset(users_[0].credentials, new_passkey, nullptr,
+                                false, &index));
+
+  // TEST
+
+  EXPECT_EQ(CRYPTOHOME_ERROR_NOT_SET,
+            homedirs_.RemoveKeyset(users_[0].credentials,
+                                   users_[0].credentials.key_data()));
+
+  // VERIFY
+  // We had one initial keyset and one added one. After deleting the initial
+  // one, only the new one shoulde be available.
+
+  std::vector<int> indicies;
+  EXPECT_TRUE(homedirs_.GetVaultKeysets(users_[0].obfuscated, &indicies));
+  EXPECT_THAT(indicies, ElementsAre(index));
+
+  VaultKeyset vk0;
+  vk0.Initialize(&platform_, homedirs_.crypto());
+  EXPECT_FALSE(homedirs_.GetValidKeyset(users_[0].credentials, &vk0,
+                                        /* error */ nullptr));
+
+  VaultKeyset vk1;
+  vk1.Initialize(&platform_, homedirs_.crypto());
+  EXPECT_TRUE(
+      homedirs_.GetValidKeyset(new_credentials, &vk1, /* error */ nullptr));
+  EXPECT_EQ(vk1.legacy_index(), index);
+}
+
+// Fails to remove due to missing the desired key.
+TEST_F(KeysetManagementTest, RemoveKeysetNotFound) {
+  // SETUP
+
+  KeysetSetUpWithKeyData(DefaultKeyData());
+
+  KeyData key_data = users_[0].credentials.key_data();
+  key_data.set_label("i do not exist");
+
+  // TEST
+
+  EXPECT_EQ(CRYPTOHOME_ERROR_KEY_NOT_FOUND,
+            homedirs_.RemoveKeyset(users_[0].credentials, key_data));
+
+  // VERIFY
+  // Trying to delete keyset with non-existing label. Nothing changes, initial
+  // keyset still available with old credentials.
+
+  std::vector<int> indicies;
+  EXPECT_TRUE(homedirs_.GetVaultKeysets(users_[0].obfuscated, &indicies));
+  EXPECT_THAT(indicies, ElementsAre(kInitialKeysetIndex));
+
+  VaultKeyset vk0;
+  vk0.Initialize(&platform_, homedirs_.crypto());
+  EXPECT_TRUE(homedirs_.GetValidKeyset(users_[0].credentials, &vk0,
+                                       /* error */ nullptr));
+  EXPECT_EQ(vk0.legacy_index(), kInitialKeysetIndex);
+}
+
+// Fails to remove due to not existing label.
+TEST_F(KeysetManagementTest, RemoveKeysetNonExistentLabel) {
+  // SETUP
+
+  KeysetSetUpWithKeyData(DefaultKeyData());
+
+  Credentials not_existing_label_credentials = users_[0].credentials;
+  KeyData key_data = users_[0].credentials.key_data();
+  key_data.set_label("i do not exist");
+  not_existing_label_credentials.set_key_data(key_data);
+
+  // TEST
+
+  EXPECT_EQ(CRYPTOHOME_ERROR_AUTHORIZATION_KEY_NOT_FOUND,
+            homedirs_.RemoveKeyset(not_existing_label_credentials,
+                                   users_[0].credentials.key_data()));
+
+  // VERIFY
+  // Wrong label on authorization credentials. Nothing changes, initial
+  // keyset still available with old credentials.
+
+  std::vector<int> indicies;
+  EXPECT_TRUE(homedirs_.GetVaultKeysets(users_[0].obfuscated, &indicies));
+  EXPECT_THAT(indicies, ElementsAre(kInitialKeysetIndex));
+
+  VaultKeyset vk0;
+  vk0.Initialize(&platform_, homedirs_.crypto());
+  EXPECT_TRUE(homedirs_.GetValidKeyset(users_[0].credentials, &vk0,
+                                       /* error */ nullptr));
+  EXPECT_EQ(vk0.legacy_index(), kInitialKeysetIndex);
+}
+
+// Fails to remove due to invalid credentials.
+TEST_F(KeysetManagementTest, RemoveKeysetInvalidCreds) {
+  // SETUP
+
+  KeysetSetUpWithKeyData(DefaultKeyData());
+
+  brillo::SecureBlob wrong_passkey("wrong");
+  Credentials wrong_credentials(users_[0].name, wrong_passkey);
+
+  // TEST
+
+  EXPECT_EQ(CRYPTOHOME_ERROR_AUTHORIZATION_KEY_FAILED,
+            homedirs_.RemoveKeyset(wrong_credentials,
+                                   users_[0].credentials.key_data()));
+
+  // VERIFY
+  // Wrong credentials. Nothing changes, initial keyset still available
+  // with old credentials.
+
+  std::vector<int> indicies;
+  EXPECT_TRUE(homedirs_.GetVaultKeysets(users_[0].obfuscated, &indicies));
+  EXPECT_THAT(indicies, ElementsAre(kInitialKeysetIndex));
+
+  VaultKeyset vk0;
+  vk0.Initialize(&platform_, homedirs_.crypto());
+  EXPECT_TRUE(homedirs_.GetValidKeyset(users_[0].credentials, &vk0,
+                                       /* error */ nullptr));
+  EXPECT_EQ(vk0.legacy_index(), kInitialKeysetIndex);
+}
+
+// Fails to remove due to lacking privilieges.
+TEST_F(KeysetManagementTest, RemoveKeysetInvalidPrivileges) {
+  // SETUP
+
+  KeyData vk_key_data;
+  vk_key_data.mutable_privileges()->set_remove(false);
+  vk_key_data.set_label(kPasswordLabel);
+
+  KeysetSetUpWithKeyData(vk_key_data);
+
+  // TEST
+
+  EXPECT_EQ(CRYPTOHOME_ERROR_AUTHORIZATION_KEY_DENIED,
+            homedirs_.RemoveKeyset(users_[0].credentials,
+                                   users_[0].credentials.key_data()));
+
+  // VERIFY
+  // Wrong permission on the keyset. Nothing changes, initial keyset still
+  // available with old credentials.
+
+  std::vector<int> indicies;
+  EXPECT_TRUE(homedirs_.GetVaultKeysets(users_[0].obfuscated, &indicies));
+  EXPECT_THAT(indicies, ElementsAre(kInitialKeysetIndex));
+
+  VaultKeyset vk0;
+  vk0.Initialize(&platform_, homedirs_.crypto());
+  EXPECT_TRUE(homedirs_.GetValidKeyset(users_[0].credentials, &vk0,
+                                       /* error */ nullptr));
+  EXPECT_EQ(vk0.legacy_index(), kInitialKeysetIndex);
+}
+
+// List labels.
+TEST_F(KeysetManagementTest, GetVaultKeysetLabels) {
+  // SETUP
+
+  KeysetSetUpWithKeyData(DefaultKeyData());
+
+  brillo::SecureBlob new_passkey("new path");
+  KeyData key_data;
+  key_data.set_label(kAltPasswordLabel);
+
+  int index = -1;
+  EXPECT_EQ(CRYPTOHOME_ERROR_NOT_SET,
+            homedirs_.AddKeyset(users_[0].credentials, new_passkey, &key_data,
+                                false, &index));
+
+  // TEST
+
+  std::vector<std::string> labels;
+  EXPECT_TRUE(homedirs_.GetVaultKeysetLabels(users_[0].obfuscated, &labels));
+
+  // VERIFY
+  // Labels of the initial and newly added keysets are returned.
+
+  ASSERT_EQ(2, labels.size());
+  EXPECT_THAT(labels, UnorderedElementsAre(kPasswordLabel, kAltPasswordLabel));
+}
+
+// List labels for legacy keyset.
+TEST_F(KeysetManagementTest, GetVaultKeysetLabelsOneLegacyLabeled) {
+  // SETUP
+
+  KeysetSetUpWithoutKeyData();
+  std::vector<std::string> labels;
+
+  // TEST
+
+  EXPECT_TRUE(homedirs_.GetVaultKeysetLabels(users_[0].obfuscated, &labels));
+
+  // VERIFY
+  // Initial keyset has no key data thus shall provide "legacy" label.
+
+  ASSERT_EQ(1, labels.size());
+  EXPECT_EQ(base::StringPrintf("%s%d", kKeyLegacyPrefix, kInitialKeysetIndex),
+            labels[0]);
+}
+
+// Successfully force removes keyset.
+TEST_F(KeysetManagementTest, ForceRemoveKeysetSuccess) {
+  // SETUP
+
+  KeysetSetUpWithKeyData(DefaultKeyData());
+
+  brillo::SecureBlob new_passkey("new pass");
+  Credentials new_credentials(users_[0].name, new_passkey);
+  brillo::SecureBlob new_passkey2("new pass2");
+  Credentials new_credentials2(users_[0].name, new_passkey2);
+
+  int index = -1;
+  EXPECT_EQ(CRYPTOHOME_ERROR_NOT_SET,
+            homedirs_.AddKeyset(users_[0].credentials, new_passkey, nullptr,
+                                false, &index));
+  int index2 = -1;
+  EXPECT_EQ(CRYPTOHOME_ERROR_NOT_SET,
+            homedirs_.AddKeyset(users_[0].credentials, new_passkey2, nullptr,
+                                false, &index2));
+
+  // TEST
+
+  EXPECT_TRUE(homedirs_.ForceRemoveKeyset(users_[0].obfuscated, index));
+  // Remove a non-existing keyset is a success.
+  EXPECT_TRUE(homedirs_.ForceRemoveKeyset(users_[0].obfuscated, index));
+
+  // VERIFY
+  // We added two new keysets and force removed on of them. Only initial and the
+  // second added shall remain.
+
+  std::vector<int> indicies;
+  EXPECT_TRUE(homedirs_.GetVaultKeysets(users_[0].obfuscated, &indicies));
+  EXPECT_THAT(indicies, ElementsAre(kInitialKeysetIndex, index2));
+
+  VaultKeyset vk0;
+  vk0.Initialize(&platform_, homedirs_.crypto());
+  EXPECT_TRUE(homedirs_.GetValidKeyset(users_[0].credentials, &vk0,
+                                       /* error */ nullptr));
+  EXPECT_EQ(vk0.legacy_index(), kInitialKeysetIndex);
+
+  VaultKeyset vk1;
+  vk1.Initialize(&platform_, homedirs_.crypto());
+  EXPECT_FALSE(homedirs_.GetValidKeyset(new_credentials, &vk1,
+                                        /* error */ nullptr));
+
+  VaultKeyset vk2;
+  vk2.Initialize(&platform_, homedirs_.crypto());
+  EXPECT_TRUE(
+      homedirs_.GetValidKeyset(new_credentials2, &vk2, /* error */ nullptr));
+  EXPECT_EQ(vk2.legacy_index(), index2);
+}
+
+// Fails to remove keyset due to invalid index.
+TEST_F(KeysetManagementTest, ForceRemoveKeysetInvalidIndex) {
+  // SETUP
+
+  KeysetSetUpWithKeyData(DefaultKeyData());
+
+  // TEST
+
+  ASSERT_FALSE(homedirs_.ForceRemoveKeyset(users_[0].obfuscated, -1));
+  ASSERT_FALSE(homedirs_.ForceRemoveKeyset(users_[0].obfuscated, kKeyFileMax));
+
+  // VERIFY
+  // Trying to delete keyset with out-of-bound index id. Nothing changes,
+  // initial keyset still available with old creds.
+
+  std::vector<int> indicies;
+  EXPECT_TRUE(homedirs_.GetVaultKeysets(users_[0].obfuscated, &indicies));
+  EXPECT_THAT(indicies, ElementsAre(kInitialKeysetIndex));
+
+  VaultKeyset vk0;
+  vk0.Initialize(&platform_, homedirs_.crypto());
+  EXPECT_TRUE(homedirs_.GetValidKeyset(users_[0].credentials, &vk0,
+                                       /* error */ nullptr));
+  EXPECT_EQ(vk0.legacy_index(), kInitialKeysetIndex);
+}
+
+// Fails to remove keyset due to injected error.
+TEST_F(KeysetManagementTest, ForceRemoveKeysetFailedDelete) {
+  // SETUP
+
+  KeysetSetUpWithKeyData(DefaultKeyData());
+  EXPECT_CALL(
+      platform_,
+      DeleteFile(Property(&base::FilePath::value, EndsWith("master.0")), false))
+      .WillOnce(Return(false));
+
+  // TEST
+
+  ASSERT_FALSE(homedirs_.ForceRemoveKeyset(users_[0].obfuscated, 0));
+
+  // VERIFY
+  // Deletion fails, Nothing changes, initial keyset still available with old
+  // creds.
+
+  std::vector<int> indicies;
+  EXPECT_TRUE(homedirs_.GetVaultKeysets(users_[0].obfuscated, &indicies));
+  EXPECT_THAT(indicies, ElementsAre(kInitialKeysetIndex));
+
+  VaultKeyset vk0;
+  vk0.Initialize(&platform_, homedirs_.crypto());
+  EXPECT_TRUE(homedirs_.GetValidKeyset(users_[0].credentials, &vk0,
+                                       /* error */ nullptr));
+  EXPECT_EQ(vk0.legacy_index(), kInitialKeysetIndex);
+}
+
+// Successfully moves keyset.
+TEST_F(KeysetManagementTest, MoveKeysetSuccess) {
+  // SETUP
+
+  constexpr int kFirstMoveIndex = 17;
+  constexpr int kSecondMoveIndex = 22;
+
+  KeysetSetUpWithKeyData(DefaultKeyData());
+
+  // TEST
+
+  // Move twice to test move from the initial position and from a non-initial
+  // position.
+  ASSERT_TRUE(homedirs_.MoveKeyset(users_[0].obfuscated, kInitialKeysetIndex,
+                                   kFirstMoveIndex));
+  ASSERT_TRUE(homedirs_.MoveKeyset(users_[0].obfuscated, kFirstMoveIndex,
+                                   kSecondMoveIndex));
+
+  // VERIFY
+  // Move initial keyset twice, expect it to be accessible with old creds on the
+  // new index slot.
+
+  std::vector<int> indicies;
+  EXPECT_TRUE(homedirs_.GetVaultKeysets(users_[0].obfuscated, &indicies));
+  EXPECT_THAT(indicies, ElementsAre(kSecondMoveIndex));
+
+  VaultKeyset vk;
+  vk.Initialize(&platform_, homedirs_.crypto());
+  EXPECT_TRUE(homedirs_.GetValidKeyset(users_[0].credentials, &vk,
+                                       /* error */ nullptr));
+  EXPECT_EQ(vk.legacy_index(), kSecondMoveIndex);
+}
+
+// Fails to move keyset.
+TEST_F(KeysetManagementTest, MoveKeysetFail) {
+  // SETUP
+
+  KeysetSetUpWithKeyData(DefaultKeyData());
+
+  brillo::SecureBlob new_passkey("new pass");
+  Credentials new_credentials(users_[0].name, new_passkey);
+
+  int index = -1;
+  EXPECT_EQ(CRYPTOHOME_ERROR_NOT_SET,
+            homedirs_.AddKeyset(users_[0].credentials, new_passkey, nullptr,
+                                false, &index));
+
+  const std::string kInitialFile =
+      base::StringPrintf("master.%d", kInitialKeysetIndex);
+  const std::string kIndexPlus2File =
+      base::StringPrintf("master.%d", index + 2);
+  const std::string kIndexPlus3File =
+      base::StringPrintf("master.%d", index + 3);
+
+  // Inject open failure for the slot 2.
+  ON_CALL(platform_,
+          OpenFile(Property(&base::FilePath::value, EndsWith(kIndexPlus2File)),
+                   StrEq("wx")))
+      .WillByDefault(Return(nullptr));
+
+  // Inject rename failure for the slot 3.
+  ON_CALL(platform_,
+          Rename(Property(&base::FilePath::value, EndsWith(kInitialFile)),
+                 Property(&base::FilePath::value, EndsWith(kIndexPlus3File))))
+      .WillByDefault(Return(false));
+
+  // TEST
+
+  // Out of bound indexes
+  ASSERT_FALSE(homedirs_.MoveKeyset(users_[0].obfuscated, -1, index));
+  ASSERT_FALSE(
+      homedirs_.MoveKeyset(users_[0].obfuscated, kInitialKeysetIndex, -1));
+  ASSERT_FALSE(homedirs_.MoveKeyset(users_[0].obfuscated, kKeyFileMax, index));
+  ASSERT_FALSE(homedirs_.MoveKeyset(users_[0].obfuscated, kInitialKeysetIndex,
+                                    kKeyFileMax));
+
+  // Not existing source
+  ASSERT_FALSE(
+      homedirs_.MoveKeyset(users_[0].obfuscated, index + 4, index + 5));
+
+  // Destination exists
+  ASSERT_FALSE(
+      homedirs_.MoveKeyset(users_[0].obfuscated, kInitialKeysetIndex, index));
+
+  // Destination file error-injected.
+  ASSERT_FALSE(homedirs_.MoveKeyset(users_[0].obfuscated, kInitialKeysetIndex,
+                                    index + 2));
+  ASSERT_FALSE(homedirs_.MoveKeyset(users_[0].obfuscated, kInitialKeysetIndex,
+                                    index + 3));
+
+  // VERIFY
+
+  std::vector<int> indicies;
+  EXPECT_TRUE(homedirs_.GetVaultKeysets(users_[0].obfuscated, &indicies));
+  // TODO(chromium:1141301, dlunev): the fact we have keyset index+3 is a bug -
+  // MoveKeyset will not cleanup created file if Rename fails. Not addressing it
+  // now durign test refactor, but will in the coming CLs.
+  EXPECT_THAT(indicies, ElementsAre(kInitialKeysetIndex, index, index + 3));
+
+  VaultKeyset vk0;
+  vk0.Initialize(&platform_, homedirs_.crypto());
+  EXPECT_TRUE(homedirs_.GetValidKeyset(users_[0].credentials, &vk0,
+                                       /* error */ nullptr));
+  EXPECT_EQ(vk0.legacy_index(), kInitialKeysetIndex);
+
+  VaultKeyset vk1;
+  vk1.Initialize(&platform_, homedirs_.crypto());
+  EXPECT_TRUE(
+      homedirs_.GetValidKeyset(new_credentials, &vk1, /* error */ nullptr));
+  EXPECT_EQ(vk1.legacy_index(), index);
 }
 
 }  // namespace cryptohome
