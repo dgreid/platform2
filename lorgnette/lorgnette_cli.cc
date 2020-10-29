@@ -61,6 +61,29 @@ std::string EscapeScannerName(const std::string& scanner_name) {
   return escaped;
 }
 
+base::Optional<lorgnette::CancelScanResponse> CancelScan(
+    ManagerProxy* manager, const std::string& uuid) {
+  lorgnette::CancelScanRequest request;
+  request.set_scan_uuid(uuid);
+  std::vector<uint8_t> request_in(request.ByteSizeLong());
+  request.SerializeToArray(request_in.data(), request_in.size());
+
+  brillo::ErrorPtr error;
+  std::vector<uint8_t> response_out;
+  if (!manager->CancelScan(request_in, &response_out, &error)) {
+    LOG(ERROR) << "Cancelling scan failed: " << error->GetMessage();
+    return base::nullopt;
+  }
+
+  lorgnette::CancelScanResponse response;
+  if (!response.ParseFromArray(response_out.data(), response_out.size())) {
+    LOG(ERROR) << "Failed to parse CancelScanResponse";
+    return base::nullopt;
+  }
+
+  return response;
+}
+
 class ScanHandler {
  public:
   ScanHandler(base::RepeatingClosure quit_closure,
@@ -191,6 +214,9 @@ void ScanHandler::HandleScanStatusChangedSignal(
       RequestNextPage();
   } else if (signal.state() == lorgnette::SCAN_STATE_COMPLETED) {
     std::cout << "Scan completed successfully." << std::endl;
+    quit_closure_.Run();
+  } else if (signal.state() == lorgnette::SCAN_STATE_CANCELLED) {
+    std::cout << "Scan cancelled." << std::endl;
     quit_closure_.Run();
   }
 }
@@ -455,47 +481,11 @@ bool ScanRunner::RunScanner(const std::string& scanner) {
   return true;
 }
 
-}  // namespace
-
-int main(int argc, char** argv) {
-  brillo::InitLog(brillo::kLogToSyslog | brillo::kLogToStderrIfTty |
-                  brillo::kLogHeader);
-
-  DEFINE_uint32(scan_resolution, 100,
-                "The scan resolution to request from the scanner");
-  DEFINE_string(scan_source, "Platen",
-                "The scan source to use for the scanner, (e.g. Platen, ADF "
-                "Simplex, ADF Duplex)");
-  DEFINE_bool(all, false,
-              "Loop through all detected scanners instead of prompting.");
-  DEFINE_double(top_left_x, -1.0,
-                "Top-left X position of the scan region (mm)");
-  DEFINE_double(top_left_y, -1.0,
-                "Top-left Y position of the scan region (mm)");
-  DEFINE_double(bottom_right_x, -1.0,
-                "Bottom-right X position of the scan region (mm)");
-  DEFINE_double(bottom_right_y, -1.0,
-                "Bottom-right Y position of the scan region (mm)");
-
-  brillo::FlagHelper::Init(argc, argv,
-                           "lorgnette_cli, command-line interface to "
-                           "Chromium OS Scanning Daemon");
-
-  if (base::CommandLine::ForCurrentProcess()->GetArgs().size() != 0) {
-    LOG(ERROR) << "Unexpected command-line argument";
-    return 1;
-  }
-
-  base::Optional<lorgnette::SourceType> source_type =
-      GuessSourceType(FLAGS_scan_source);
-
-  if (!source_type.has_value()) {
-    LOG(ERROR) << "Unknown source type: \"" << FLAGS_scan_source
-               << "\". Supported values are \"Platen\",\"ADF\", \"ADF Simplex\""
-                  ", and \"ADF Duplex\"";
-    return 1;
-  }
-
+bool DoScan(std::unique_ptr<ManagerProxy> manager,
+            uint32_t scan_resolution,
+            lorgnette::SourceType source_type,
+            const lorgnette::ScanRegion& region,
+            bool scan_from_all_scanners) {
   // Start the airscan-discover process immediately since it can be slightly
   // long-running. We read the output later after we've gotten a scanner list
   // from lorgnette.
@@ -504,50 +494,30 @@ int main(int argc, char** argv) {
   discover.RedirectUsingPipe(STDOUT_FILENO, false);
   if (!discover.Start()) {
     LOG(ERROR) << "Failed to start airscan-discover process";
-    return 1;
+    return false;
   }
-
-  // Create a task executor for this thread. This will automatically be bound
-  // to the current thread so that it is usable by other code for posting tasks.
-  base::SingleThreadTaskExecutor executor(base::MessagePumpType::IO);
-
-  // Create a FileDescriptorWatcher instance for this thread. The libbase D-Bus
-  // bindings use this internally via thread-local storage, but do not properly
-  // instantiate it.
-  base::FileDescriptorWatcher watcher(executor.task_runner());
-
-  dbus::Bus::Options options;
-  options.bus_type = dbus::Bus::SYSTEM;
-  scoped_refptr<dbus::Bus> bus(new dbus::Bus(options));
-  auto manager =
-      std::make_unique<ManagerProxy>(bus, lorgnette::kManagerServiceName);
 
   std::cout << "Getting scanner list." << std::endl;
   base::Optional<std::vector<std::string>> sane_scanners =
       ListScanners(manager.get());
   if (!sane_scanners.has_value())
-    return 1;
+    return false;
 
   base::Optional<std::vector<std::string>> airscan_scanners =
       ReadAirscanOutput(&discover);
   if (!airscan_scanners.has_value())
-    return 1;
+    return false;
 
   std::vector<std::string> scanners = std::move(sane_scanners.value());
   scanners.insert(scanners.end(), airscan_scanners.value().begin(),
                   airscan_scanners.value().end());
 
   ScanRunner runner(manager.get());
-  runner.SetResolution(FLAGS_scan_resolution);
-  runner.SetSource(source_type.value());
+  runner.SetResolution(scan_resolution);
+  runner.SetSource(source_type);
 
-  if (FLAGS_top_left_x != -1.0 || FLAGS_top_left_y != -1.0 ||
-      FLAGS_bottom_right_x != -1.0 || FLAGS_bottom_right_y != -1.0) {
-    lorgnette::ScanRegion region;
-    region.set_top_left_x(FLAGS_top_left_x);
-    region.set_top_left_y(FLAGS_top_left_y);
-    region.set_bottom_right_x(FLAGS_bottom_right_x);
-    region.set_bottom_right_y(FLAGS_bottom_right_y);
+  if (region.top_left_x() != -1.0 || region.top_left_y() != -1.0 ||
+      region.bottom_right_x() != -1.0 || region.bottom_right_y() != -1.0) {
     runner.SetScanRegion(region);
   }
 
@@ -556,7 +526,7 @@ int main(int argc, char** argv) {
     std::cout << i << ". " << scanners[i] << std::endl;
   }
 
-  if (!FLAGS_all) {
+  if (!scan_from_all_scanners) {
     int index = -1;
     std::cout << "> ";
     std::cin >> index;
@@ -587,5 +557,104 @@ int main(int argc, char** argv) {
     std::cout << "  " << scanner << std::endl;
   }
 
-  return 0;
+  return true;
+}
+
+}  // namespace
+
+int main(int argc, char** argv) {
+  brillo::InitLog(brillo::kLogToSyslog | brillo::kLogToStderrIfTty |
+                  brillo::kLogHeader);
+
+  // Scan options.
+  DEFINE_uint32(scan_resolution, 100,
+                "The scan resolution to request from the scanner");
+  DEFINE_string(scan_source, "Platen",
+                "The scan source to use for the scanner, (e.g. Platen, ADF "
+                "Simplex, ADF Duplex)");
+  DEFINE_bool(all, false,
+              "Loop through all detected scanners instead of prompting.");
+  DEFINE_double(top_left_x, -1.0,
+                "Top-left X position of the scan region (mm)");
+  DEFINE_double(top_left_y, -1.0,
+                "Top-left Y position of the scan region (mm)");
+  DEFINE_double(bottom_right_x, -1.0,
+                "Bottom-right X position of the scan region (mm)");
+  DEFINE_double(bottom_right_y, -1.0,
+                "Bottom-right Y position of the scan region (mm)");
+
+  // Cancel Scan options
+  DEFINE_string(uuid, "", "UUID of the scan job to cancel.");
+
+  brillo::FlagHelper::Init(argc, argv,
+                           "lorgnette_cli, command-line interface to "
+                           "Chromium OS Scanning Daemon");
+
+  const std::vector<std::string>& args =
+      base::CommandLine::ForCurrentProcess()->GetArgs();
+  if (args.size() != 1 || (args[0] != "scan" && args[0] != "cancel_scan")) {
+    std::cerr << "usage: lorgnette_cli [scan|cancel_scan] [FLAGS...]"
+              << std::endl;
+    return 1;
+  }
+  const std::string& command = args[0];
+
+  // Create a task executor for this thread. This will automatically be bound
+  // to the current thread so that it is usable by other code for posting tasks.
+  base::SingleThreadTaskExecutor executor(base::MessagePumpType::IO);
+
+  // Create a FileDescriptorWatcher instance for this thread. The libbase D-Bus
+  // bindings use this internally via thread-local storage, but do not properly
+  // instantiate it.
+  base::FileDescriptorWatcher watcher(executor.task_runner());
+
+  dbus::Bus::Options options;
+  options.bus_type = dbus::Bus::SYSTEM;
+  scoped_refptr<dbus::Bus> bus(new dbus::Bus(options));
+  auto manager =
+      std::make_unique<ManagerProxy>(bus, lorgnette::kManagerServiceName);
+
+  if (command == "scan") {
+    if (!FLAGS_uuid.empty()) {
+      LOG(ERROR) << "--uuid flag is not supported in scan mode.";
+      return 1;
+    }
+
+    base::Optional<lorgnette::SourceType> source_type =
+        GuessSourceType(FLAGS_scan_source);
+
+    if (!source_type.has_value()) {
+      LOG(ERROR)
+          << "Unknown source type: \"" << FLAGS_scan_source
+          << "\". Supported values are \"Platen\",\"ADF\", \"ADF Simplex\""
+             ", and \"ADF Duplex\"";
+      return 1;
+    }
+
+    lorgnette::ScanRegion region;
+    region.set_top_left_x(FLAGS_top_left_x);
+    region.set_top_left_y(FLAGS_top_left_y);
+    region.set_bottom_right_x(FLAGS_bottom_right_x);
+    region.set_bottom_right_y(FLAGS_bottom_right_y);
+
+    bool success = DoScan(std::move(manager), FLAGS_scan_resolution,
+                          source_type.value(), region, FLAGS_all);
+    return success ? 0 : 1;
+  } else if (command == "cancel_scan") {
+    if (FLAGS_uuid.empty()) {
+      LOG(ERROR) << "Must specify scan uuid to cancel using --uuid=[...]";
+      return 1;
+    }
+
+    base::Optional<lorgnette::CancelScanResponse> response =
+        CancelScan(manager.get(), FLAGS_uuid);
+    if (!response.has_value())
+      return 1;
+
+    if (!response->success()) {
+      LOG(ERROR) << "Failed to cancel scan: " << response->failure_reason();
+      return 1;
+    }
+    return 0;
+  }
 }
