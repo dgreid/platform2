@@ -61,6 +61,17 @@ ns-v0">
         </tp:docstring>
       <arg name="get_next_image_response" type="ay" direction="out" />
     </method>
+    <method name="CancelScan">
+      <annotation name="org.chromium.DBus.Method.Kind" value="simple"/>
+      <tp:docstring>
+        Attempts to cancel the scan job specified by the given UUID.
+      </tp:docstring>
+      <arg name="cancel_scan_request" type="ay" direction="in"/>
+        <tp:docstring>
+          Serialized CancelScanRequest proto specifying the scan job to cancel.
+        </tp:docstring>
+      <arg name="cancel_scan_response" type="ay" direction="out" />
+    </method>
     <signal name="ScanStatusChanged">
       <arg name="scan_status_changed_signal" type="ay" direction="out" />
         <tp:docstring>

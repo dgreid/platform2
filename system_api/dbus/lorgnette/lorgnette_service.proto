@@ -167,6 +167,22 @@ message GetNextImageResponse {
   string failure_reason = 2;
 }
 
+// Information passed to a CancelScan D-Bus request.
+// Used by lorgnette to find the scan job to cancel.
+message CancelScanRequest {
+  // A UUID identifying the scan job.
+  string scan_uuid = 1;
+}
+
+// Information returned from a CancelScan D-Bus request;
+message CancelScanResponse {
+  // True if requesting scan cancellation was successful.
+  bool success = 1;
+
+  // The failure reason if success is false.
+  string failure_reason = 2;
+}
+
 // Information sent with ScanStatus D-Bus signal.
 message ScanStatusChangedSignal {
   // A UUID identifying the scan job.

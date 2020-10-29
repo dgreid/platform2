@@ -37,12 +37,9 @@ namespace lorgnette {
 
 namespace {
 
-void ValidateSignals(const std::vector<ScanStatusChangedSignal>& signals,
-                     const std::string& scan_uuid) {
-  EXPECT_GE(signals.size(), 1);
-  EXPECT_EQ(signals.back().scan_uuid(), scan_uuid);
-  EXPECT_EQ(signals.back().state(), SCAN_STATE_COMPLETED);
-
+void ValidateProgressSignals(
+    const std::vector<ScanStatusChangedSignal>& signals,
+    const std::string& scan_uuid) {
   int progress = 0;
   int page = 1;
   for (int i = 0; i < signals.size() - 1; i++) {
@@ -58,6 +55,15 @@ void ValidateSignals(const std::vector<ScanStatusChangedSignal>& signals,
       progress = 0;
     }
   }
+}
+
+void ValidateSignals(const std::vector<ScanStatusChangedSignal>& signals,
+                     const std::string& scan_uuid) {
+  EXPECT_GE(signals.size(), 1);
+  EXPECT_EQ(signals.back().scan_uuid(), scan_uuid);
+  EXPECT_EQ(signals.back().state(), SCAN_STATE_COMPLETED);
+
+  ValidateProgressSignals(signals, scan_uuid);
 }
 
 template <typename T>
@@ -175,6 +181,19 @@ class ManagerTest : public testing::Test {
     GetNextImageResponse response;
     manager_.GetNextImage(BuildMockDBusResponse(&response),
                           impl::SerializeProto(request), output_fd);
+    return response;
+  }
+
+  CancelScanResponse CancelScan(const std::string& scan_uuid) {
+    CancelScanRequest request;
+    request.set_scan_uuid(scan_uuid);
+
+    std::vector<uint8_t> serialized_response =
+        manager_.CancelScan(impl::SerializeProto(request));
+
+    CancelScanResponse response;
+    EXPECT_TRUE(response.ParseFromArray(serialized_response.data(),
+                                        serialized_response.size()));
     return response;
   }
 
@@ -343,6 +362,37 @@ TEST_F(ManagerTest, StartScanMultiPageColorSuccess) {
   CompareImages("./test_images/color.png", second_page.value());
 
   ValidateSignals(signals_, response.scan_uuid());
+}
+
+TEST_F(ManagerTest, StartScanCancelled) {
+  ScanParameters parameters;
+  parameters.format = kRGB;
+  parameters.bytes_per_line = 98 * 3;
+  parameters.pixels_per_line = 98;
+  parameters.lines = 50;
+  parameters.depth = 8;
+  base::FilePath color_path("./test_images/color.pnm");
+  SetUpTestDevice("TestDevice", {color_path, color_path}, parameters);
+
+  ExpectScanRequest(kOtherBackend);
+  // Set the source to "ADF" so that lorgnette knows to expect multiple pages.
+  StartScanResponse response = StartScan("TestDevice", MODE_COLOR, "ADF");
+  std::string uuid = response.scan_uuid();
+  EXPECT_EQ(response.state(), SCAN_STATE_IN_PROGRESS);
+  EXPECT_NE(uuid, "");
+
+  GetNextImageResponse get_next_image_response = GetNextImage(uuid, scan_fd_);
+  EXPECT_TRUE(get_next_image_response.success());
+
+  CancelScanResponse cancel_scan_response = CancelScan(uuid);
+  EXPECT_TRUE(cancel_scan_response.success());
+
+  get_next_image_response = GetNextImage(uuid, scan_fd_);
+  EXPECT_TRUE(get_next_image_response.success());
+
+  EXPECT_EQ(signals_.back().scan_uuid(), uuid);
+  EXPECT_EQ(signals_.back().state(), SCAN_STATE_CANCELLED);
+  ValidateProgressSignals(signals_, uuid);
 }
 
 TEST_F(ManagerTest, StartScanFailNoDevice) {

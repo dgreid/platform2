@@ -85,6 +85,8 @@ class Manager : public org::chromium::lorgnette::ManagerAdaptor,
       std::unique_ptr<DBusMethodResponse<std::vector<uint8_t>>> response,
       const std::vector<uint8_t>& get_next_image_request,
       const base::ScopedFD& out_fd) override;
+  std::vector<uint8_t> CancelScan(
+      const std::vector<uint8_t>& cancel_scan_request) override;
 
   void SetProgressSignalInterval(base::TimeDelta interval);
 

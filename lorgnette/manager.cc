@@ -585,6 +585,43 @@ void Manager::GetNextImage(
   GetNextImageInternal(uuid, scan_state, std::move(out_file));
 }
 
+std::vector<uint8_t> Manager::CancelScan(
+    const std::vector<uint8_t>& cancel_scan_request) {
+  CancelScanResponse response;
+
+  CancelScanRequest request;
+  if (!request.ParseFromArray(cancel_scan_request.data(),
+                              cancel_scan_request.size())) {
+    response.set_success(false);
+    response.set_failure_reason("Failed to parse CancelScanRequest");
+    return impl::SerializeProto(response);
+  }
+  std::string uuid = request.scan_uuid();
+  ScanJobState* scan_state;
+  {
+    base::AutoLock auto_lock(active_scans_lock_);
+    if (!base::Contains(active_scans_, uuid)) {
+      response.set_success(false);
+      response.set_failure_reason("No scan job with UUID " + uuid + " found");
+      return impl::SerializeProto(response);
+    }
+    scan_state = &active_scans_[uuid];
+    // Purposefully, we do not care if scan_state->in_use is set. sane_cancel()
+    // is required to be async safe, so we can call it even if the device is
+    // actively being used.
+    brillo::ErrorPtr error;
+    if (!scan_state->device->CancelScan(&error)) {
+      response.set_success(false);
+      response.set_failure_reason("Failed to cancel scan: " +
+                                  SerializeError(error));
+      return impl::SerializeProto(response);
+    }
+  }
+
+  response.set_success(true);
+  return impl::SerializeProto(response);
+}
+
 void Manager::SetProgressSignalInterval(base::TimeDelta interval) {
   progress_signal_interval_ = interval;
 }
