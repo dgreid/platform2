@@ -73,8 +73,14 @@ class Port {
   FRIEND_TEST(PortTest, TestTBTCompatibilityModeEntryCheckTrueStartech);
   FRIEND_TEST(PortTest, TestTBTCompatibilityModeEntryCheckFalseStartech);
   FRIEND_TEST(PortTest, TestTBTCompatibilityModeEntryCheckTrueWD19TB);
+  FRIEND_TEST(PortTest, TestUSB4EntryTrueGatkexPassiveTBT3Cable);
+  FRIEND_TEST(PortTest, TestUSB4EntryTrueGatkexPassiveNonTBT3Cable);
+  FRIEND_TEST(PortTest, TestUSB4EntryFalseGatkexPassiveNonTBT3Cable);
+  FRIEND_TEST(PortTest, TestUSB4EntryFalseGatkexActiveTBT3Cable);
 
   bool IsPartnerAltModePresent(uint16_t altmode_sid);
+
+  bool IsCableAltModePresent(uint16_t altmode_sid);
 
   // Sysfs path used to access partner PD information.
   base::FilePath syspath_;

@@ -291,4 +291,224 @@ TEST_F(PortTest, TestTBTCompatibilityModeEntryCheckTrueWD19TB) {
   EXPECT_TRUE(port->CanEnterTBTCompatibilityMode());
 }
 
+// Check that USB4 mode checks work as expected for the following
+// working case:
+// - Intel Gatkex Creek USB4 dock.
+// - Belkin TBT3 Passive Cable 40Gbps.
+TEST_F(PortTest, TestUSB4EntryTrueGatkexPassiveTBT3Cable) {
+  auto port = std::make_unique<Port>(base::FilePath(kFakePort0SysPath), 0);
+
+  port->AddPartner(base::FilePath(kFakePort0PartnerSysPath));
+  // PD ID VDOs for the Gatkex creek USB4 dock..
+  port->partner_->SetPDRevision(kPDRevision30);
+  port->partner_->SetIdHeaderVDO(0x4c800000);
+  port->partner_->SetCertStatVDO(0x0);
+  port->partner_->SetProductVDO(0x0);
+  port->partner_->SetProductTypeVDO1(0xd00001b);
+  port->partner_->SetProductTypeVDO2(0x0);
+  port->partner_->SetProductTypeVDO3(0x0);
+
+  port->partner_->SetNumAltModes(2);
+  // Set up fake sysfs paths for partner alt modes.
+
+  // Add the DP alt mode.
+  auto mode_dirname = base::StringPrintf("port%d-partner.%d", 0, 0);
+  auto mode_path = temp_dir_.Append(mode_dirname);
+  ASSERT_TRUE(CreateFakeAltMode(mode_path, kDPSVID, kDPVDO_GatkexCreek,
+                                kDPVDOIndex_GatkexCreek));
+  port->AddRemovePartnerAltMode(mode_path, true);
+
+  // Add the TBT alt mode.
+  mode_dirname = base::StringPrintf("port%d-partner.%d", 0, 1);
+  mode_path = temp_dir_.Append(mode_dirname);
+  ASSERT_TRUE(CreateFakeAltMode(mode_path, kTBTSVID, kTBTVDO_GatkexCreek,
+                                kTBTVDOIndex_GatkexCreek));
+  port->AddRemovePartnerAltMode(mode_path, true);
+
+  // Set up fake sysfs paths and add a cable.
+  port->AddCable(base::FilePath(kFakePort0CableSysPath));
+
+  port->cable_->SetPDRevision(kPDRevision30);
+  port->cable_->SetIdHeaderVDO(0x1c002b1d);
+  port->cable_->SetCertStatVDO(0x0);
+  port->cable_->SetProductVDO(0x150c0001);
+  port->cable_->SetProductTypeVDO1(0x11082042);
+  port->cable_->SetProductTypeVDO2(0x0);
+  port->cable_->SetProductTypeVDO3(0x0);
+
+  port->cable_->SetNumAltModes(1);
+
+  // Set up fake sysfs paths for cable alt modes.
+  mode_dirname = base::StringPrintf("port%d-plug0.%d", 0, 0);
+  mode_path = temp_dir_.Append(mode_dirname);
+  ASSERT_TRUE(CreateFakeAltMode(mode_path, kTBTSVID, 0x30001, 0));
+  port->AddCableAltMode(mode_path);
+
+  EXPECT_TRUE(port->CanEnterUSB4());
+}
+
+// Check that USB4 mode checks work as expected for the following
+// working case:
+// - Intel Gatkex Creek USB4 dock.
+// - Hongju Full USB 3.1 Gen 1 5A passive cable..
+TEST_F(PortTest, TestUSB4EntryTrueGatkexPassiveNonTBT3Cable) {
+  auto port = std::make_unique<Port>(base::FilePath(kFakePort0SysPath), 0);
+
+  port->AddPartner(base::FilePath(kFakePort0PartnerSysPath));
+  // PD ID VDOs for the Gatkex creek USB4 dock..
+  port->partner_->SetPDRevision(kPDRevision30);
+  port->partner_->SetIdHeaderVDO(0x4c800000);
+  port->partner_->SetCertStatVDO(0x0);
+  port->partner_->SetProductVDO(0x0);
+  port->partner_->SetProductTypeVDO1(0xd00001b);
+  port->partner_->SetProductTypeVDO2(0x0);
+  port->partner_->SetProductTypeVDO3(0x0);
+
+  port->partner_->SetNumAltModes(2);
+  // Set up fake sysfs paths for partner alt modes.
+
+  // Add the DP alt mode.
+  auto mode_dirname = base::StringPrintf("port%d-partner.%d", 0, 0);
+  auto mode_path = temp_dir_.Append(mode_dirname);
+  ASSERT_TRUE(CreateFakeAltMode(mode_path, kDPSVID, kDPVDO_GatkexCreek,
+                                kDPVDOIndex_GatkexCreek));
+  port->AddRemovePartnerAltMode(mode_path, true);
+
+  // Add the TBT alt mode.
+  mode_dirname = base::StringPrintf("port%d-partner.%d", 0, 1);
+  mode_path = temp_dir_.Append(mode_dirname);
+  ASSERT_TRUE(CreateFakeAltMode(mode_path, kTBTSVID, kTBTVDO_GatkexCreek,
+                                kTBTVDOIndex_GatkexCreek));
+  port->AddRemovePartnerAltMode(mode_path, true);
+
+  // Set up fake sysfs paths and add a cable.
+  port->AddCable(base::FilePath(kFakePort0CableSysPath));
+
+  port->cable_->SetPDRevision(kPDRevision20);
+  port->cable_->SetIdHeaderVDO(0x18005694);
+  port->cable_->SetCertStatVDO(0x88);
+  port->cable_->SetProductVDO(0xce901a0);
+  port->cable_->SetProductTypeVDO1(0x84051);
+  port->cable_->SetProductTypeVDO2(0x0);
+  port->cable_->SetProductTypeVDO3(0x0);
+
+  port->cable_->SetNumAltModes(0);
+
+  EXPECT_TRUE(port->CanEnterUSB4());
+}
+
+// Check that USB4 mode checks work as expected for the following
+// non-working case:
+// - Intel Gatkex Creek USB4 dock.
+// - Nekteck USB 2.0 5A Passive Cable.
+TEST_F(PortTest, TestUSB4EntryFalseGatkexPassiveNonTBT3Cable) {
+  auto port = std::make_unique<Port>(base::FilePath(kFakePort0SysPath), 0);
+
+  port->AddPartner(base::FilePath(kFakePort0PartnerSysPath));
+  // PD ID VDOs for the Gatkex creek USB4 dock..
+  port->partner_->SetPDRevision(kPDRevision30);
+  port->partner_->SetIdHeaderVDO(0x4c800000);
+  port->partner_->SetCertStatVDO(0x0);
+  port->partner_->SetProductVDO(0x0);
+  port->partner_->SetProductTypeVDO1(0xd00001b);
+  port->partner_->SetProductTypeVDO2(0x0);
+  port->partner_->SetProductTypeVDO3(0x0);
+
+  port->partner_->SetNumAltModes(2);
+  // Set up fake sysfs paths for partner alt modes.
+
+  // Add the DP alt mode.
+  auto mode_dirname = base::StringPrintf("port%d-partner.%d", 0, 0);
+  auto mode_path = temp_dir_.Append(mode_dirname);
+  ASSERT_TRUE(CreateFakeAltMode(mode_path, kDPSVID, kDPVDO_GatkexCreek,
+                                kDPVDOIndex_GatkexCreek));
+  port->AddRemovePartnerAltMode(mode_path, true);
+
+  // Add the TBT alt mode.
+  mode_dirname = base::StringPrintf("port%d-partner.%d", 0, 1);
+  mode_path = temp_dir_.Append(mode_dirname);
+  ASSERT_TRUE(CreateFakeAltMode(mode_path, kTBTSVID, kTBTVDO_GatkexCreek,
+                                kTBTVDOIndex_GatkexCreek));
+  port->AddRemovePartnerAltMode(mode_path, true);
+
+  // Set up fake sysfs paths and add a cable.
+  port->AddCable(base::FilePath(kFakePort0CableSysPath));
+
+  port->cable_->SetPDRevision(kPDRevision30);
+  port->cable_->SetIdHeaderVDO(0x18002e98);
+  port->cable_->SetCertStatVDO(0x1533);
+  port->cable_->SetProductVDO(0x10200);
+  port->cable_->SetProductTypeVDO1(0xc1082040);
+  port->cable_->SetProductTypeVDO2(0x0);
+  port->cable_->SetProductTypeVDO3(0x0);
+
+  port->cable_->SetNumAltModes(0);
+
+  EXPECT_FALSE(port->CanEnterUSB4());
+}
+
+// Check that USB4 mode checks work as expected for the following
+// non-working case:
+// - Intel Gatkex Creek USB4 dock.
+// - Belkin TBT3 Active Cable 40Gbps.
+//
+// NOTE: This case is interesting because the TBT3 cable fails as it doesn't
+// support Rounded Data rates.
+TEST_F(PortTest, TestUSB4EntryFalseGatkexActiveTBT3Cable) {
+  auto port = std::make_unique<Port>(base::FilePath(kFakePort0SysPath), 0);
+
+  port->AddPartner(base::FilePath(kFakePort0PartnerSysPath));
+  // PD ID VDOs for the Gatkex creek USB4 dock..
+  port->partner_->SetPDRevision(kPDRevision30);
+  port->partner_->SetIdHeaderVDO(0x4c800000);
+  port->partner_->SetCertStatVDO(0x0);
+  port->partner_->SetProductVDO(0x0);
+  port->partner_->SetProductTypeVDO1(0xd00001b);
+  port->partner_->SetProductTypeVDO2(0x0);
+  port->partner_->SetProductTypeVDO3(0x0);
+
+  port->partner_->SetNumAltModes(2);
+  // Set up fake sysfs paths for partner alt modes.
+
+  // Add the DP alt mode.
+  auto mode_dirname = base::StringPrintf("port%d-partner.%d", 0, 0);
+  auto mode_path = temp_dir_.Append(mode_dirname);
+  ASSERT_TRUE(CreateFakeAltMode(mode_path, kDPSVID, kDPVDO_GatkexCreek,
+                                kDPVDOIndex_GatkexCreek));
+  port->AddRemovePartnerAltMode(mode_path, true);
+
+  // Add the TBT alt mode.
+  mode_dirname = base::StringPrintf("port%d-partner.%d", 0, 1);
+  mode_path = temp_dir_.Append(mode_dirname);
+  ASSERT_TRUE(CreateFakeAltMode(mode_path, kTBTSVID, kTBTVDO_GatkexCreek,
+                                kTBTVDOIndex_GatkexCreek));
+  port->AddRemovePartnerAltMode(mode_path, true);
+
+  // Set up fake sysfs paths and add a cable.
+  port->AddCable(base::FilePath(kFakePort0CableSysPath));
+
+  port->cable_->SetPDRevision(kPDRevision20);
+  port->cable_->SetIdHeaderVDO(0x240020c2);
+  port->cable_->SetCertStatVDO(0x0);
+  port->cable_->SetProductVDO(0x40010);
+  port->cable_->SetProductTypeVDO1(0x21085858);
+  port->cable_->SetProductTypeVDO2(0x0);
+  port->cable_->SetProductTypeVDO3(0x0);
+
+  port->cable_->SetNumAltModes(2);
+
+  // Set up fake sysfs paths for cable alt modes.
+  mode_dirname = base::StringPrintf("port%d-plug0.%d", 0, 0);
+  mode_path = temp_dir_.Append(mode_dirname);
+  ASSERT_TRUE(CreateFakeAltMode(mode_path, kTBTSVID, 0x430001, 0));
+  port->AddCableAltMode(mode_path);
+
+  mode_dirname = base::StringPrintf("port%d-plug0.%d", 0, 1);
+  mode_path = temp_dir_.Append(mode_dirname);
+  ASSERT_TRUE(CreateFakeAltMode(mode_path, 0x04b4, 0x1, 0));
+  port->AddCableAltMode(mode_path);
+
+  EXPECT_FALSE(port->CanEnterUSB4());
+}
+
 }  // namespace typecd
