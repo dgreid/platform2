@@ -141,6 +141,10 @@ class LoginMetrics {
   virtual void SendArcBugReportBackupTime(
       base::TimeDelta arc_bug_report_backup_time);
 
+  // Submits to UMA the time to execute continue-arc-boot impulse.
+  virtual void SendArcContinueBootImpulseTime(
+      base::TimeDelta arc_continue_boot_impulse_time);
+
   // CrOS events are translated to an enum and reported to the generic
   // "Platform.CrOSEvent" enum histogram. The |event| string must be registered
   // in metrics/metrics_library.cc:kCrosEventNames.

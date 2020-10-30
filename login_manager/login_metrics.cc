@@ -31,6 +31,10 @@ const char kLoginBrowserShutdownTimeMetric[] = "Login.BrowserShutdownTime";
 // A metric to track the time taken to backup ARC bug report.
 const char kArcBugReportBackupTimeMetric[] = "Login.ArcBugReportBackupTime";
 
+// A metric to track the time taken to execute arc-boot-continue impulse.
+const char kArcContinueBootImpulseTimeMetric[] =
+    "Login.ArcContinueBootImpulseTime";
+
 const char kLoginConsumerAllowsNewUsersMetric[] =
     "Login.ConsumerNewUsersAllowed";
 const char kLoginPolicyFilesMetric[] = "Login.PolicyFilesStatePerBoot";
@@ -154,6 +158,17 @@ void LoginMetrics::SendArcBugReportBackupTime(
       static_cast<int>(arc_bug_report_backup_time.InMilliseconds()),
       static_cast<int>(base::TimeDelta::FromMilliseconds(1).InMilliseconds()),
       static_cast<int>(base::TimeDelta::FromSeconds(60).InMilliseconds()), 50);
+}
+
+void LoginMetrics::SendArcContinueBootImpulseTime(
+    base::TimeDelta arc_continue_boot_impulse_time) {
+  // ARC continue-arc-boot impulse time is between 0 - 30s and split it up into
+  // 30 buckets.
+  metrics_lib_.SendToUMA(
+      kArcContinueBootImpulseTimeMetric,
+      static_cast<int>(arc_continue_boot_impulse_time.InMilliseconds()),
+      static_cast<int>(base::TimeDelta::FromMilliseconds(1).InMilliseconds()),
+      static_cast<int>(base::TimeDelta::FromSeconds(30).InMilliseconds()), 30);
 }
 
 void LoginMetrics::ReportCrosEvent(const std::string& event) {

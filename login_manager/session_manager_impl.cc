@@ -1327,9 +1327,13 @@ bool SessionManagerImpl::UpgradeArcContainer(
 
   android_container_->SetStatefulMode(StatefulMode::STATEFUL);
   auto env_vars = CreateUpgradeArcEnvVars(request, account_id, pid);
-  if (!init_controller_->TriggerImpulse(
+  const base::TimeTicks arc_continue_boot_impulse_time = base::TimeTicks::Now();
+  if (init_controller_->TriggerImpulse(
           kContinueArcBootImpulse, env_vars,
           InitDaemonController::TriggerMode::SYNC)) {
+    login_metrics_->SendArcContinueBootImpulseTime(
+        base::TimeTicks::Now() - arc_continue_boot_impulse_time);
+  } else {
     *error = CREATE_ERROR_AND_LOG(dbus_error::kEmitFailed,
                                   "Emitting continue-arc-boot impulse failed.");
 
