@@ -166,7 +166,7 @@ int main(int argc, char** argv) {
 
   imageloader::Keys keys;
   // The order of key addition below is important.
-  // 1. Prod key, used to sign Flash.
+  // 1. Prod key, used to sign components in Omaha.
   keys.push_back(std::vector<uint8_t>(std::begin(kProdPublicKey),
                                       std::end(kProdPublicKey)));
   // 2. Container key.
@@ -194,12 +194,12 @@ int main(int argc, char** argv) {
     // which may not be available at early boot.
     imageloader::ImageLoaderImpl loader(std::move(config));
 
-    std::string flash_version =
+    std::string component_version =
         loader.GetComponentVersion(FLAGS_mount_component);
     // imageloader returns "" if the component doesn't exist. In this case
     // return 0 so our crash reporting doesn't think something actually went
     // wrong.
-    if (flash_version.empty())
+    if (component_version.empty())
       return 0;
 
     if (!loader.LoadComponent(FLAGS_mount_component, FLAGS_mount_point,
