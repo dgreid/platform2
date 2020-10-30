@@ -151,6 +151,11 @@ class SaneDeviceImpl : public SaneDevice {
 
   const char* OptionDisplayName(ScanOption option);
 
+  template <typename T>
+  bool SetOption(brillo::ErrorPtr* error, ScanOption option, T value);
+  template <typename T>
+  bool GetOption(brillo::ErrorPtr* error, ScanOption option, T* value_out);
+
   SANE_Handle handle_;
   std::string name_;
   std::shared_ptr<DeviceSet> open_devices_;

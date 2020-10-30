@@ -261,93 +261,22 @@ bool SaneDeviceImpl::GetValidOptionValues(brillo::ErrorPtr* error,
 
 bool SaneDeviceImpl::GetScanResolution(brillo::ErrorPtr* error,
                                        int* resolution_out) {
-  if (!resolution_out) {
-    brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
-                         kManagerServiceError,
-                         "resolution_out argument cannot be null");
-    return false;
-  }
-
-  if (options_.count(kResolution) == 0) {
-    brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
-                         kManagerServiceError, "No resolution option found");
-    return false;
-  }
-
-  SaneOption& option = options_.at(kResolution);
-  base::Optional<int> resolution = option.Get<int>();
-  if (!resolution.has_value()) {
-    brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
-                         kManagerServiceError,
-                         "Resolution is not an int option");
-    return false;
-  }
-
-  *resolution_out = resolution.value();
-  return true;
+  return GetOption(error, kResolution, resolution_out);
 }
 
 bool SaneDeviceImpl::SetScanResolution(brillo::ErrorPtr* error,
                                        int resolution) {
-  if (options_.count(kResolution) == 0) {
-    brillo::Error::AddTo(error, FROM_HERE, kDbusDomain, kManagerServiceError,
-                         "No resolution option found.");
-    return false;
-  }
-
-  SaneOption& option = options_.at(kResolution);
-  if (!option.Set(resolution)) {
-    brillo::Error::AddTo(error, FROM_HERE, kDbusDomain, kManagerServiceError,
-                         "Failed to set SaneOption");
-    return false;
-  }
-  return UpdateDeviceOption(error, &option);
+  return SetOption(error, kResolution, resolution);
 }
 
 bool SaneDeviceImpl::GetDocumentSource(brillo::ErrorPtr* error,
                                        std::string* source_name_out) {
-  if (!source_name_out) {
-    brillo::Error::AddTo(error, FROM_HERE, kDbusDomain, kManagerServiceError,
-                         "source_out argument cannot be null");
-    return false;
-  }
-
-  if (options_.count(kSource) == 0) {
-    *source_name_out = kUnspecifiedDefaultSourceName;
-    return true;
-  }
-
-  SaneOption& option = options_.at(kSource);
-  base::Optional<std::string> source_name = option.Get<std::string>();
-  if (!source_name.has_value()) {
-    brillo::Error::AddTo(error, FROM_HERE, kDbusDomain, kManagerServiceError,
-                         "Source is not a string option");
-    return false;
-  }
-
-  *source_name_out = source_name.value();
-  return true;
+  return GetOption(error, kSource, source_name_out);
 }
 
 bool SaneDeviceImpl::SetDocumentSource(brillo::ErrorPtr* error,
                                        const std::string& source_name) {
-  if (options_.count(kSource) == 0) {
-    if (source_name == kUnspecifiedDefaultSourceName) {
-      return true;
-    } else {
-      brillo::Error::AddTo(error, FROM_HERE, kDbusDomain, kManagerServiceError,
-                           "No source option found.");
-      return false;
-    }
-  }
-
-  SaneOption& option = options_.at(kSource);
-  if (!option.Set(source_name)) {
-    brillo::Error::AddTo(error, FROM_HERE, kDbusDomain, kManagerServiceError,
-                         "Failed to set SaneOption");
-    return false;
-  }
-  return UpdateDeviceOption(error, &option);
+  return SetOption(error, kSource, source_name);
 }
 
 bool SaneDeviceImpl::SetColorMode(brillo::ErrorPtr* error,
@@ -370,35 +299,11 @@ bool SaneDeviceImpl::SetColorMode(brillo::ErrorPtr* error,
       return false;
   }
 
-  if (options_.count(kScanMode) == 0) {
-    brillo::Error::AddTo(error, FROM_HERE, kDbusDomain, kManagerServiceError,
-                         "No scan mode option found.");
-    return false;
-  }
-
-  SaneOption& option = options_.at(kScanMode);
-  if (!option.Set(mode_string)) {
-    brillo::Error::AddTo(error, FROM_HERE, kDbusDomain, kManagerServiceError,
-                         "Failed to set SaneOption");
-    return false;
-  }
-
-  return UpdateDeviceOption(error, &option);
+  return SetOption(error, kScanMode, mode_string);
 }
 
 bool SaneDeviceImpl::SetScanRegion(brillo::ErrorPtr* error,
                                    const ScanRegion& region) {
-  const std::vector<ScanOption> region_options = {kTopLeftX, kTopLeftY,
-                                                  kBottomRightX, kBottomRightY};
-  for (ScanOption option_name : region_options) {
-    if (options_.count(option_name) == 0) {
-      brillo::Error::AddToPrintf(
-          error, FROM_HERE, kDbusDomain, kManagerServiceError,
-          "Device is missing region option %d", option_name);
-      return false;
-    }
-  }
-
   // Get the offsets for X and Y so that if the device's coordinate system
   // doesn't start at (0, 0), we can translate the requested region into the
   // device's coordinates. We provide the appearance to the user that all
@@ -422,14 +327,7 @@ bool SaneDeviceImpl::SetScanRegion(brillo::ErrorPtr* error,
     ScanOption option_name = kv.first;
     double value = kv.second;
 
-    SaneOption& option = options_.at(option_name);
-    if (!option.Set(value)) {
-      brillo::Error::AddTo(error, FROM_HERE, kDbusDomain, kManagerServiceError,
-                           "Failed to set SaneOption");
-      return false;
-    }
-
-    if (!UpdateDeviceOption(error, &option)) {
+    if (!SetOption(error, option_name, value)) {
       return false;
     }
   }
@@ -892,6 +790,13 @@ base::Optional<ScannableArea> SaneDeviceImpl::CalculateScannableArea(
 // option descriptor for |option| has a range constraint.
 base::Optional<double> SaneDeviceImpl::GetOptionOffset(
     brillo::ErrorPtr* error, SaneDeviceImpl::ScanOption option) {
+  if (options_.count(option) == 0) {
+    brillo::Error::AddToPrintf(
+        error, FROM_HERE, kDbusDomain, kManagerServiceError,
+        "Device is missing option %s", OptionDisplayName(option));
+    return base::nullopt;
+  }
+
   int index = options_.at(option).GetIndex();
   const SANE_Option_Descriptor* descriptor =
       sane_get_option_descriptor(handle_, index);
@@ -931,6 +836,59 @@ const char* SaneDeviceImpl::OptionDisplayName(ScanOption option) {
     case kBottomRightY:
       return SANE_NAME_SCAN_BR_Y;
   }
+}
+
+template <typename T>
+bool SaneDeviceImpl::SetOption(brillo::ErrorPtr* error,
+                               ScanOption option_type,
+                               T value) {
+  if (options_.count(option_type) == 0) {
+    brillo::Error::AddToPrintf(error, FROM_HERE, kDbusDomain,
+                               kManagerServiceError, "No %s option found.",
+                               OptionDisplayName(option_type));
+    return false;
+  }
+
+  SaneOption& option = options_.at(option_type);
+  if (!option.Set(value)) {
+    brillo::Error::AddToPrintf(
+        error, FROM_HERE, kDbusDomain, kManagerServiceError,
+        "Failed to set SaneOption %s", OptionDisplayName(option_type));
+    return false;
+  }
+  return UpdateDeviceOption(error, &option);
+}
+
+template <typename T>
+bool SaneDeviceImpl::GetOption(brillo::ErrorPtr* error,
+                               ScanOption option_type,
+                               T* value_out) {
+  if (!value_out) {
+    brillo::Error::AddToPrintf(
+        error, FROM_HERE, brillo::errors::dbus::kDomain, kManagerServiceError,
+        "getting %s option: output pointer cannot be null",
+        OptionDisplayName(option_type));
+    return false;
+  }
+
+  if (options_.count(option_type) == 0) {
+    brillo::Error::AddToPrintf(error, FROM_HERE, kDbusDomain,
+                               kManagerServiceError, "No %s option found.",
+                               OptionDisplayName(option_type));
+    return false;
+  }
+
+  const SaneOption& option = options_.at(option_type);
+  base::Optional<T> value = option.Get<T>();
+  if (!value.has_value()) {
+    brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
+                         kManagerServiceError,
+                         option.GetName() + " is the wrong type");
+    return false;
+  }
+
+  *value_out = value.value();
+  return true;
 }
 
 }  // namespace lorgnette
