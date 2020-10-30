@@ -68,10 +68,10 @@ class DBusAdaptorTest : public testing::Test {
  public:
   DBusAdaptorTest() : bus_(new dbus::Bus{dbus::Bus::Options{}}) {
     brillo::cryptohome::home::SetSystemSalt(&salt_);
-    EXPECT_TRUE(root_tempdir_.CreateUniqueTempDir());
   }
 
   void SetUp() override {
+    EXPECT_TRUE(root_tempdir_.CreateUniqueTempDir());
     user_directory_ = root_tempdir_.GetPath().Append(hash(kFakeAccountID));
     EXPECT_TRUE(base::CreateDirectory(user_directory_));
     auto boot_lockbox_client =

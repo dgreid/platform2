@@ -136,8 +136,7 @@ bool DBusAdaptor::TakeSnapshot(const std::string& account_id) {
     return false;
   }
 
-  if (!base::CopyDirectory(android_data_dir, last_snapshot_directory_,
-                           true /* recursive */)) {
+  if (!CopySnapshotDirectory(android_data_dir, last_snapshot_directory_)) {
     LOG(ERROR) << "Failed to copy snapshot directory from "
                << android_data_dir.value() << " to "
                << last_snapshot_directory_.value();
@@ -228,8 +227,7 @@ bool DBusAdaptor::TryToLoadSnapshot(const std::string& userhash,
     return false;
   }
 
-  if (!base::CopyDirectory(snapshot_dir, android_data_dir,
-                           true /* recursive */)) {
+  if (!CopySnapshotDirectory(snapshot_dir, android_data_dir)) {
     LOG(ERROR) << "Failed to copy a snapshot directory.";
     return false;
   }

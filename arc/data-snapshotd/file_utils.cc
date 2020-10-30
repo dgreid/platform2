@@ -14,6 +14,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <utime.h>
 
 #include <base/files/file_enumerator.h>
 #include <base/files/file_util.h>
@@ -301,5 +302,73 @@ std::string CalculateEncodedSha256Digest(const std::vector<uint8_t>& value) {
   return brillo::data_encoding::Base64Encode(digest.data(), digest.size());
 }
 
+bool CopySnapshotDirectory(const base::FilePath& from,
+                           const base::FilePath& to) {
+  if (!base::CopyDirectory(from, to, true /* recursive */)) {
+    LOG(ERROR) << "Failed to copy " << from.value() << " to " << to.value();
+    return false;
+  }
+  // Support all file types which are supported by base::CopyDirectory:
+  // directories, files and symlinks.
+  // Note: only relative symlinks might be functional after copying.
+  base::FileEnumerator from_enumerator(
+      from, true /* recursive */,
+      base::FileEnumerator::FileType::DIRECTORIES |
+          base::FileEnumerator::FileType::FILES |
+          base::FileEnumerator::FileType::SHOW_SYM_LINKS);
+  for (auto file = from_enumerator.Next(); !file.empty();
+       file = from_enumerator.Next()) {
+    base::FilePath relative_path;
+    if (!from.IsParent(file) ||
+        !from.AppendRelativePath(file, &relative_path)) {
+      LOG(ERROR) << from.value() << " is not a parent of " << file.value();
+      return false;
+    }
+    base::FilePath to_path = to.Append(relative_path);
+    if (!to.IsParent(to_path)) {
+      LOG(ERROR) << to.value() << " is not a parent of " << to_path.value();
+      return false;
+    }
+#if USE_SELINUX
+    char* con = nullptr;
+    if (lgetfilecon(file.value().c_str(), &con) < 0) {
+      PLOG(ERROR) << "Failed to getfilecon of file " << file.value();
+      return false;
+    }
+    if (lsetfilecon(to_path.value().c_str(), con) < 0) {
+      PLOG(ERROR) << "Failed to set a security context " << to_path.value();
+      return false;
+    }
+    if (con != nullptr) {
+      free(con);
+    }
+#endif  // USE_SELINUX
+
+    struct stat stat_buf;
+    if (lstat(file.value().c_str(), &stat_buf)) {
+      PLOG(ERROR) << "Failed to get stat of file " << file.value();
+      return false;
+    }
+
+    struct utimbuf time_buf;
+    time_buf.actime = stat_buf.st_atime;
+    time_buf.modtime = stat_buf.st_mtime;
+
+    if (utime(to_path.value().c_str(), &time_buf) != 0) {
+      LOG(ERROR) << "Failed to update modification time " << to_path.value();
+      return false;
+    }
+    if (chown(to_path.value().c_str(), stat_buf.st_uid, stat_buf.st_gid) != 0) {
+      LOG(ERROR) << "Failed to set ownership of " << to_path.value();
+      return false;
+    }
+    if (chmod(to_path.value().c_str(),
+              stat_buf.st_mode & (S_IRWXU | S_IRWXG | S_IRWXO)) != 0) {
+      LOG(ERROR) << "Failed to change mode for " << to_path.value();
+      return false;
+    }
+  }
+  return true;
+}
 }  // namespace data_snapshotd
 }  // namespace arc
