@@ -695,22 +695,26 @@ bool HomeDirs::ReSaveKeysetIfNeeded(const Credentials& credentials,
   return true;
 }
 
-bool HomeDirs::LoadUnwrappedKeyset(const Credentials& credentials,
-                                   VaultKeyset* vault_keyset,
-                                   MountError* error) {
+std::unique_ptr<VaultKeyset> HomeDirs::LoadUnwrappedKeyset(
+    const Credentials& credentials, MountError* error) {
   if (error) {
     *error = MOUNT_ERROR_NONE;
   }
 
-  if (!GetValidKeyset(credentials, vault_keyset, error)) {
-    return false;
+  std::unique_ptr<VaultKeyset> vk(
+      vault_keyset_factory()->New(platform_, crypto_));
+
+  if (!GetValidKeyset(credentials, vk.get(), error)) {
+    LOG(INFO) << "Could not find keyset matching credentials for user: "
+              << credentials.username();
+    return nullptr;
   }
 
   // TODO(dlunev): we shall start checking whether re-save succeeded. We are not
   // adding the check during the refactor to preserve behaviour.
-  ReSaveKeysetIfNeeded(credentials, vault_keyset);
+  ReSaveKeysetIfNeeded(credentials, vk.get());
 
-  return true;
+  return vk;
 }
 
 CryptohomeErrorCode HomeDirs::AddKeyset(const Credentials& existing_credentials,

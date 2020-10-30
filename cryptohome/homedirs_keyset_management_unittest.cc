@@ -1585,10 +1585,10 @@ TEST_F(KeysetManagementTest, ReSaveKeysetNoReSave) {
 
   // TEST
 
-  VaultKeyset vk_load;
-  vk_load.Initialize(&platform_, homedirs_.crypto());
-  EXPECT_TRUE(homedirs_.LoadUnwrappedKeyset(users_[0].credentials, &vk_load,
-                                            /* error */ nullptr));
+  MountError code;
+  std::unique_ptr<VaultKeyset> vk_load =
+      homedirs_.LoadUnwrappedKeyset(users_[0].credentials, &code);
+  EXPECT_EQ(MOUNT_ERROR_NONE, code);
 
   // VERIFY
 
@@ -1618,11 +1618,11 @@ TEST_F(KeysetManagementTest, ReSaveKeysetChapsRepopulation) {
 
   // TEST
 
-  VaultKeyset vk_load;
-  vk_load.Initialize(&platform_, homedirs_.crypto());
-  EXPECT_TRUE(homedirs_.LoadUnwrappedKeyset(users_[0].credentials, &vk_load,
-                                            /* error */ nullptr));
-  EXPECT_TRUE(vk_load.serialized().has_wrapped_chaps_key());
+  MountError code;
+  std::unique_ptr<VaultKeyset> vk_load =
+      homedirs_.LoadUnwrappedKeyset(users_[0].credentials, &code);
+  EXPECT_EQ(MOUNT_ERROR_NONE, code);
+  EXPECT_TRUE(vk_load->serialized().has_wrapped_chaps_key());
 
   // VERIFY
 
@@ -1632,9 +1632,9 @@ TEST_F(KeysetManagementTest, ReSaveKeysetChapsRepopulation) {
                                        /* error */ nullptr));
   EXPECT_TRUE(vk0_new.serialized().has_wrapped_chaps_key());
 
-  ASSERT_EQ(vk0_new.chaps_key().size(), vk_load.chaps_key().size());
+  ASSERT_EQ(vk0_new.chaps_key().size(), vk_load->chaps_key().size());
   ASSERT_EQ(0, brillo::SecureMemcmp(vk0_new.chaps_key().data(),
-                                    vk_load.chaps_key().data(),
+                                    vk_load->chaps_key().data(),
                                     vk0_new.chaps_key().size()));
 }
 

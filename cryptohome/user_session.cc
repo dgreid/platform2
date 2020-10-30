@@ -46,19 +46,29 @@ MountError UserSession::MountVault(const Credentials& credentials,
     created = true;
   }
 
+  // Verifies user's credentials and retrieves the user's file system encryption
+  // keys.
   MountError code = MOUNT_ERROR_NONE;
-  if (!mount_->MountCryptohome(credentials, mount_args, created, &code)) {
+  std::unique_ptr<VaultKeyset> vk =
+      homedirs_->LoadUnwrappedKeyset(credentials, &code);
+  if (code != MOUNT_ERROR_NONE) {
+    return code;
+  }
+  FileSystemKeys fs_keys(*vk);
+
+  if (!mount_->MountCryptohome(credentials.username(), fs_keys, mount_args,
+                               created, &code)) {
     // In the weird case where MountCryptohome returns false with ERROR_NONE
     // code report it as FATAL.
     return code == MOUNT_ERROR_NONE ? MOUNT_ERROR_FATAL : code;
   }
-  SetCredentials(credentials, mount_->mount_key_index());
+  SetCredentials(credentials, vk->legacy_index());
   UpdateActivityTimestamp(0);
   return code;
 }
 
 MountError UserSession::MountEphemeral(const Credentials& credentials) {
-  MountError code = mount_->MountEphemeralCryptohome(credentials);
+  MountError code = mount_->MountEphemeralCryptohome(credentials.username());
   if (code == MOUNT_ERROR_NONE) {
     SetCredentials(credentials, -1);
   }

@@ -26,11 +26,15 @@ class MockMount : public Mount {
   MOCK_METHOD(bool, PrepareCryptohome, (const std::string&, bool), (override));
   MOCK_METHOD(bool,
               MountCryptohome,
-              (const Credentials&, const Mount::MountArgs&, bool, MountError*),
+              (const std::string&,
+               const FileSystemKeys&,
+               const Mount::MountArgs&,
+               bool,
+               MountError*),
               (override));
   MOCK_METHOD(MountError,
               MountEphemeralCryptohome,
-              (const Credentials&),
+              (const std::string&),
               (override));
   MOCK_METHOD(bool, UnmountCryptohome, (), (override));
   MOCK_METHOD(bool, IsMounted, (), (const, override));
@@ -45,7 +49,6 @@ class MockMount : public Mount {
   MOCK_METHOD(bool, InsertPkcs11Token, (), (override));
   MOCK_METHOD(void, RemovePkcs11Token, (), (override));
   MOCK_METHOD(Pkcs11State, pkcs11_state, (), (override));
-  MOCK_METHOD(int, mount_key_index, (), (const, override));
 
   Pkcs11State Real_pkcs11_state() { return Mount::pkcs11_state(); }
 

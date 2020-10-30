@@ -7,6 +7,7 @@
 
 #include "cryptohome/homedirs.h"
 
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -52,6 +53,10 @@ class MockHomeDirs : public HomeDirs {
               (override));
   MOCK_METHOD(bool, Exists, (const std::string&), (const, override));
   MOCK_METHOD(bool, CryptohomeExists, (const std::string&), (const, override));
+  MOCK_METHOD(std::unique_ptr<VaultKeyset>,
+              LoadUnwrappedKeyset,
+              (const Credentials&, MountError*),
+              (override));
   MOCK_METHOD(VaultKeyset*,
               GetVaultKeyset,
               (const std::string&, const std::string&),

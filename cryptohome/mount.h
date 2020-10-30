@@ -30,7 +30,6 @@
 #include <policy/device_policy.h>
 #include <policy/libpolicy.h>
 
-#include "cryptohome/credentials.h"
 #include "cryptohome/crypto.h"
 #include "cryptohome/dircrypto_data_migrator/migration_helper.h"
 #include "cryptohome/file_system_keys.h"
@@ -58,8 +57,7 @@ class ChapsClientFactory;
 class UserOldestActivityTimestampCache;
 
 // The Mount class handles mounting/unmounting of the user's cryptohome
-// directory as well as offline verification of the user's credentials against
-// the directory's crypto key.
+// directory.
 class Mount : public base::RefCountedThreadSafe<Mount> {
  public:
   // Called before mount cryptohome.
@@ -99,25 +97,27 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   virtual bool PrepareCryptohome(const std::string& obfuscated_username,
                                  bool force_ecryptfs);
 
-  // Attempts to mount the cryptohome for the given credentials
+  // Attempts to mount the cryptohome for the given username
   //
   // Parameters
-  //   credentials - The Credentials representing the user
+  //   username - name of the user to mount
+  //   file_system_keys - file system encryption keys of the user
   //   mount_args - The options for the call to mount:
   //                * Whether to create the cryptohome if it doesn't exist.
   //                * Whether to ensure that the mount is ephemeral.
   //   is_pristine - Whether it is the first mount of the vault.
   //   error - The specific error condition on failure
-  virtual bool MountCryptohome(const Credentials& credentials,
+  virtual bool MountCryptohome(const std::string& username,
+                               const FileSystemKeys& file_system_keys,
                                const MountArgs& mount_args,
                                bool is_pristine,
                                MountError* error);
 
-  // Attempts to mount an ephemeral cryptohome for the given credentials.
+  // Attempts to mount an ephemeral cryptohome for the given username.
   //
   // Parameters
-  //   credentials - The Credentials representing the user
-  virtual MountError MountEphemeralCryptohome(const Credentials& credentials);
+  //   username - name of the user to mount
+  virtual MountError MountEphemeralCryptohome(const std::string& username);
 
   // Mounts a guest home directory to the cryptohome mount point.
   virtual bool MountGuestCryptohome();
@@ -127,9 +127,6 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
 
   // Checks whether the mount point currently has a cryptohome mounted for the
   // current user.
-  //
-  // Parameters
-  //   credentials - The credentials for which to test the mount point.
   virtual bool IsMounted() const;
 
   // Checks whether the mount point currently has a cryptohome mounted for the
@@ -238,23 +235,12 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
     homedirs_->set_policy_provider(provider);
   }
 
-  // Sets |credentials| and |key_index| on |current_user_|.
-  bool SetUserCreds(const Credentials& credentials, int key_index);
-
   void set_legacy_mount(bool legacy) { legacy_mount_ = legacy; }
 
   // Does not take ownership.
   void set_chaps_client_factory(ChapsClientFactory* factory) {
     chaps_client_factory_ = factory;
   }
-
-  // Index of the keyset used for the mount.
-  // TODO(dlunev): user session is supposed to track it, but the unwrapping
-  // of keyset happens inside mount, thus only mount knows what was the index
-  // of the keyset initial credentials belonged to.This field is used to
-  // preserve the index from the mount time and supply it to the user session.
-  // Blast it with fire when we get the unwrapping out.
-  virtual int mount_key_index() const { return mount_key_index_; }
 
  protected:
   // Only used in tests.
@@ -280,9 +266,8 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   // migrates their contents.
   //
   // Parameters
-  //   credentials - The Credentials representing the user
-  virtual bool CreateTrackedSubdirectories(
-      const Credentials& credentials) const;
+  //   username - name of the user to create directories for
+  virtual bool CreateTrackedSubdirectories(const std::string& username) const;
 
   // Determine the mount type of the existing vault.
   MountType DeriveVaultMountType(const std::string& obfuscated_username,
@@ -471,14 +456,6 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
 
   // Name of the user the mount belongs to.
   std::string username_;
-
-  // Index of the keyset used for the mount.
-  // TODO(dlunev): user session is supposed to track it, but the unwrapping
-  // of keyset happens inside mount, thus only mount knows what was the index
-  // of the keyset initial credentials belonged to.This field is used to
-  // preserve the index from the mount time and supply it to the user session.
-  // Blast it with fire when we get the unwrapping out.
-  int mount_key_index_;
 
   Pkcs11State pkcs11_state_;
 

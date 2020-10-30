@@ -112,7 +112,6 @@ Mount::Mount()
       use_tpm_(true),
       user_timestamp_cache_(NULL),
       enterprise_owned_(false),
-      mount_key_index_(-1),
       pkcs11_state_(kUninitialized),
       dircrypto_key_reference_(),
       legacy_mount_(true),
@@ -284,8 +283,8 @@ bool Mount::AddEcryptfsAuthToken(const FileSystemKeys& file_system_keys,
   return true;
 }
 
-MountError Mount::MountEphemeralCryptohome(const Credentials& credentials) {
-  username_ = credentials.username();
+MountError Mount::MountEphemeralCryptohome(const std::string& username) {
+  username_ = username;
 
   if (homedirs_->IsOrWillBeOwner(username_)) {
     return MOUNT_ERROR_EPHEMERAL_MOUNT_BY_OWNER;
@@ -322,17 +321,18 @@ bool Mount::PrepareCryptohome(const std::string& obfuscated_username,
   return true;
 }
 
-bool Mount::MountCryptohome(const Credentials& credentials,
+bool Mount::MountCryptohome(const std::string& username,
+                            const FileSystemKeys& file_system_keys,
                             const Mount::MountArgs& mount_args,
                             bool is_pristine,
                             MountError* mount_error) {
-  username_ = credentials.username();
-  const std::string obfuscated_username =
-      credentials.GetObfuscatedUsername(system_salt_);
+  username_ = username;
+  std::string obfuscated_username =
+      SanitizeUserNameWithSalt(username_, system_salt_);
   const bool is_owner = homedirs_->IsOrWillBeOwner(username_);
 
   if (!mount_args.shadow_only) {
-    if (!mounter_->EnsureUserMountPoints(credentials.username())) {
+    if (!mounter_->EnsureUserMountPoints(username_)) {
       LOG(ERROR) << "Error creating mountpoint.";
       *mount_error = MOUNT_ERROR_CREATE_CRYPTOHOME_FAILED;
       return false;
@@ -349,24 +349,13 @@ bool Mount::MountCryptohome(const Credentials& credentials,
     return false;
   }
 
-  // Attempt to decrypt the vault keyset with the specified credentials.
-  VaultKeyset vault_keyset;
-  vault_keyset.Initialize(platform_, crypto_);
-  if (!homedirs_->LoadUnwrappedKeyset(credentials, &vault_keyset,
-                                      mount_error)) {
-    LOG(ERROR) << "Failed to decrypt VK, error = " << *mount_error;
-    return false;
-  }
-
-  FileSystemKeys file_system_keys(credentials.username(), vault_keyset);
   pkcs11_token_auth_data_ = file_system_keys.chaps_key();
   if (!platform_->ClearUserKeyring()) {
     LOG(ERROR) << "Failed to clear user keyring";
   }
 
   // Checks whether migration from ecryptfs to dircrypto is needed, and returns
-  // an error when necessary. Do this after the check by DecryptVaultKeyset,
-  // because a correct credential is required before switching to migration UI.
+  // an error when necessary.
   if (homedirs_->EcryptfsCryptohomeExists(obfuscated_username) &&
       homedirs_->DircryptoCryptohomeExists(obfuscated_username) &&
       !mount_args.to_migrate_from_ecryptfs) {
@@ -491,13 +480,11 @@ bool Mount::MountCryptohome(const Credentials& credentials,
     }
   }
 
-  mount_key_index_ = vault_keyset.legacy_index();
-
   MountHelper::Options mount_opts = {
       mount_type_, mount_args.to_migrate_from_ecryptfs, mount_args.shadow_only};
 
   cryptohome::ReportTimerStart(cryptohome::kPerformMountTimer);
-  if (!helper->PerformMount(mount_opts, credentials.username(), key_signature,
+  if (!helper->PerformMount(mount_opts, username_, key_signature,
                             fnek_signature, is_pristine, mount_error)) {
     LOG(ERROR) << "MountHelper::PerformMount failed, error = " << *mount_error;
     return false;
@@ -631,9 +618,11 @@ bool Mount::OwnsMountPoint(const FilePath& path) const {
           out_of_process_mounter_->IsPathMounted(path));
 }
 
-bool Mount::CreateTrackedSubdirectories(const Credentials& credentials) const {
-  return mounter_->CreateTrackedSubdirectories(
-      credentials.GetObfuscatedUsername(system_salt_), mount_type_);
+bool Mount::CreateTrackedSubdirectories(const std::string& username) const {
+  std::string obfuscated_username =
+      SanitizeUserNameWithSalt(username, system_salt_);
+  return mounter_->CreateTrackedSubdirectories(obfuscated_username,
+                                               mount_type_);
 }
 
 bool Mount::UpdateCurrentUserActivityTimestamp(int time_shift_sec,

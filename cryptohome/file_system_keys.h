@@ -18,8 +18,7 @@ namespace cryptohome {
 class FileSystemKeys final {
  public:
   FileSystemKeys();
-  FileSystemKeys(const std::string& username,
-                 const cryptohome::VaultKeyset& vault_keyset);
+  explicit FileSystemKeys(const cryptohome::VaultKeyset& vault_keyset);
   ~FileSystemKeys();
 
   // Getters for the associated key data
@@ -31,13 +30,7 @@ class FileSystemKeys final {
   const brillo::SecureBlob& fnek_sig() const;
   const brillo::SecureBlob& chaps_key() const;
 
-  // Return plaintext username.
-  const std::string& username() const;
-
  private:
-  // Plain text username for identification of user.
-  std::string username_;
-
   // Keys for file encryption. Currently we would need file_encryption_key(fek)
   // file_name_encryption_key (fnek), fek_salt, fnek_salt, fek_sig, fnek_sig.
   // The fnek keys are used only in the older Ecryptfs operations.

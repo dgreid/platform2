@@ -207,9 +207,8 @@ class HomeDirs {
 
   // Looks for a keyset which matches the credentals and returns it decrypted.
   // TODO(dlunev): replace MountError with CryptohomeErrorCode.
-  virtual bool LoadUnwrappedKeyset(const Credentials& credentials,
-                                   VaultKeyset* vault_keyset,
-                                   MountError* error);
+  virtual std::unique_ptr<VaultKeyset> LoadUnwrappedKeyset(
+      const Credentials& credentials, MountError* error);
 
   // Adds a new vault keyset for the user using the |existing_credentials| to
   // unwrap the homedir key and the |new_credentials| to rewrap and persist to

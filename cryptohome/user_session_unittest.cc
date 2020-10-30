@@ -111,12 +111,6 @@ class UserSessionTest : public ::testing::Test {
   }
 };
 
-MATCHER_P(CredentialsEqual, credentials, "") {
-  const Credentials& expected_creds = credentials;
-  return expected_creds.username() == arg.username() &&
-         expected_creds.passkey() == arg.passkey();
-}
-
 MATCHER_P(MountArgsEqual, mount_args, "") {
   return memcmp(&mount_args, &arg, sizeof(mount_args)) == 0;
 }
@@ -134,10 +128,9 @@ TEST_F(UserSessionTest, MountVaultOk) {
   EXPECT_CALL(*mount_, PrepareCryptohome(users_[0].obfuscated, true))
       .WillOnce(Return(true));
   EXPECT_CALL(*mount_,
-              MountCryptohome(CredentialsEqual(ByRef(users_[0].credentials)),
+              MountCryptohome(users_[0].name, _,
                               MountArgsEqual(mount_args_create), true, _))
       .WillOnce(Return(true));
-  EXPECT_CALL(*mount_, mount_key_index()).WillOnce(Return(0));
   EXPECT_CALL(*mount_, UpdateCurrentUserActivityTimestamp(0, 0))
       .WillOnce(Return(true));
 
@@ -164,10 +157,9 @@ TEST_F(UserSessionTest, MountVaultOk) {
   mount_args_no_create.create_if_missing = false;
 
   EXPECT_CALL(*mount_,
-              MountCryptohome(CredentialsEqual(ByRef(users_[0].credentials)),
+              MountCryptohome(users_[0].name, _,
                               MountArgsEqual(mount_args_no_create), false, _))
       .WillOnce(Return(true));
-  EXPECT_CALL(*mount_, mount_key_index()).WillOnce(Return(0));
   EXPECT_CALL(*mount_, UpdateCurrentUserActivityTimestamp(0, 0))
       .WillOnce(Return(true));
 

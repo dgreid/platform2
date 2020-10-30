@@ -14,9 +14,7 @@ namespace cryptohome {
 FileSystemKeys::FileSystemKeys() = default;
 FileSystemKeys::~FileSystemKeys() = default;
 
-FileSystemKeys::FileSystemKeys(const std::string& username,
-                               const cryptohome::VaultKeyset& vault_keyset) {
-  username_ = username;
+FileSystemKeys::FileSystemKeys(const cryptohome::VaultKeyset& vault_keyset) {
   fek_ = vault_keyset.fek();
   fek_sig_ = vault_keyset.fek_sig();
   fek_salt_ = vault_keyset.fek_salt();

@@ -50,6 +50,7 @@ using brillo::cryptohome::home::SanitizeUserNameWithSalt;
 
 using ::testing::_;
 using ::testing::AtLeast;
+using ::testing::ByMove;
 using ::testing::ElementsAre;
 using ::testing::ElementsAreArray;
 using ::testing::EndsWith;
@@ -1580,7 +1581,10 @@ TEST_F(UserDataAuthTest, CleanUpStale_FilledMap_NoOpenFiles_ShadowOnly) {
   EXPECT_CALL(lockbox_, FinalizeBoot());
   EXPECT_CALL(*mount, Init(&platform_, &crypto_, _)).WillOnce(Return(true));
   EXPECT_CALL(homedirs_, CryptohomeExists(_)).WillOnce(Return(true));
-  EXPECT_CALL(*mount, MountCryptohome(_, _, _, _)).WillOnce(Return(true));
+  auto vk = std::make_unique<VaultKeyset>();
+  EXPECT_CALL(homedirs_, LoadUnwrappedKeyset(_, _))
+      .WillOnce(Return(ByMove(std::move(vk))));
+  EXPECT_CALL(*mount, MountCryptohome(_, _, _, _, _)).WillOnce(Return(true));
   EXPECT_CALL(*mount, UpdateCurrentUserActivityTimestamp(_, _))
       .WillOnce(Return(true));
   EXPECT_CALL(platform_, GetMountsBySourcePrefix(_, _)).WillOnce(Return(false));
@@ -1674,7 +1678,10 @@ TEST_F(UserDataAuthTest,
   EXPECT_CALL(lockbox_, FinalizeBoot());
   EXPECT_CALL(*mount, Init(&platform_, &crypto_, _)).WillOnce(Return(true));
   EXPECT_CALL(homedirs_, CryptohomeExists(_)).WillOnce(Return(true));
-  EXPECT_CALL(*mount, MountCryptohome(_, _, _, _)).WillOnce(Return(true));
+  auto vk = std::make_unique<VaultKeyset>();
+  EXPECT_CALL(homedirs_, LoadUnwrappedKeyset(_, _))
+      .WillOnce(Return(ByMove(std::move(vk))));
+  EXPECT_CALL(*mount, MountCryptohome(_, _, _, _, _)).WillOnce(Return(true));
   EXPECT_CALL(*mount, UpdateCurrentUserActivityTimestamp(_, _))
       .WillOnce(Return(true));
   EXPECT_CALL(platform_, GetMountsBySourcePrefix(_, _)).WillOnce(Return(false));
@@ -2164,14 +2171,10 @@ TEST_F(UserDataAuthExTest, MountPublicUsesPublicMountPasskey) {
   EXPECT_CALL(homedirs_, Exists(_)).WillOnce(testing::InvokeWithoutArgs([&]() {
     SetupMount(kUser);
     EXPECT_CALL(homedirs_, CryptohomeExists(_)).WillOnce(Return(true));
-    EXPECT_CALL(*mount_, MountCryptohome(_, _, _, _))
-        .WillOnce(testing::Invoke([](const Credentials& credentials,
-                                     const Mount::MountArgs& mount_args,
-                                     bool is_pristine, MountError* error) {
-          // Tests that the passkey is filled when public_mount is set.
-          EXPECT_FALSE(credentials.passkey().empty());
-          return true;
-        }));
+    auto vk = std::make_unique<VaultKeyset>();
+    EXPECT_CALL(homedirs_, LoadUnwrappedKeyset(_, _))
+        .WillOnce(Return(ByMove(std::move(vk))));
+    EXPECT_CALL(*mount_, MountCryptohome(_, _, _, _, _)).WillOnce(Return(true));
     return true;
   }));
 
