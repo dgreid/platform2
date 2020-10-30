@@ -20,6 +20,7 @@ constexpr const char* kAllowlist[] = {
     "pcieport",  // PCI Core services - AER, Hotplug etc.
     "xhci_hcd",  // XHCI host controller driver.
     "nvme",      // PCI Express NVME host controller driver.
+    "ahci",      // AHCI driver for SATA hard drives and SSDs
 };
 
 }  // namespace.
