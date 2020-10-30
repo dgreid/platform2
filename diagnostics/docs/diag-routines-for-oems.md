@@ -132,28 +132,60 @@ Parameters:
     charged less than this percent, then the routine fails. Type: `uint32_t`.
     Default: `0`.
 
-To ensure the battery discharges less than 10 percent in 600 seconds:
+The battery charge routine will return an error if the sum of
+`--minimum_charge_percent_required` and the charge percentage of the device's
+battery when the routine is started is greater than 100%. For example, if the
+device's battery is at 90% and the following command was run from crosh:
+```bash
+crosh> diag battery_charge --minimum_charge_percent_required=20
+```
+
+Then the output would be:
+```bash
+Progress: 0
+Unplug the AC adapter.
+Press ENTER to continue.
+
+Progress: 0
+Output: {
+    "errorDetails": {
+        "chargePercentRequested": 20,
+        "startingBatteryChargePercent": 90
+    }
+}
+
+Status: Error
+Status message: Invalid minimum required charge percent requested.
+```
+
+Assuming the device's battery is less than 91%, then to ensure the battery
+charges at least than 10 percent in 600 seconds:
 
 From crosh:
 ```bash
-crosh> diag battery_discharge --length_seconds=600 --maximum_discharge_percent_allowed=10
+crosh> diag battery_charge --length_seconds=600 --minimum_charge_percent_required=10
 ```
 
 From cros-health-tool:
 ```bash
-$ cros-health-tool diag --action=run_routine --routine=battery_discharge --length_seconds=600 --maximum_discharge_percent_allowed=10
+$ cros-health-tool diag --action=run_routine --routine=battery_charge --length_seconds=600 --minimum_charge_percent_required=10
 ```
 
-Sample output:
+Sample output, if the battery were to charge 12% during the routine:
 ```bash
 Progress: 0
 Unplug the AC adapter.
 Press ENTER to continue.
 
 Progress: 100
-Output: Battery discharged 7% in 600 seconds.
+Output: {
+    "resultDetails": {
+        "chargePercent": 12
+    }
+}
+
 Status: Passed
-Status message: Battery discharge routine passed.
+Status message: Battery charge routine passed.
 ```
 
 ### Battery Discharge

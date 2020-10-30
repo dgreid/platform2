@@ -7,8 +7,11 @@
 #include <inttypes.h>
 
 #include <cstdint>
+#include <string>
+#include <utility>
 
 #include <base/files/file_path.h>
+#include <base/json/json_writer.h>
 #include <base/logging.h>
 #include <base/optional.h>
 #include <base/strings/string_piece.h>
@@ -97,9 +100,12 @@ void BatteryChargeRoutine::PopulateStatusUpdate(
 
   CalculateProgressPercent();
   response->progress_percent = progress_percent_;
-  if (include_output) {
+  if (include_output && !output_.DictEmpty()) {
+    std::string json;
+    base::JSONWriter::WriteWithOptions(
+        output_, base::JSONWriter::Options::OPTIONS_PRETTY_PRINT, &json);
     response->output =
-        CreateReadOnlySharedMemoryRegionMojoHandle(base::StringPiece(output_));
+        CreateReadOnlySharedMemoryRegionMojoHandle(base::StringPiece(json));
   }
 }
 
@@ -147,9 +153,14 @@ BatteryChargeRoutine::RunBatteryChargeRoutine() {
   uint32_t beginning_charge_percent_value = beginning_charge_percent.value();
   if (beginning_charge_percent_value + minimum_charge_percent_required_ > 100) {
     status_message_ = kBatteryChargeRoutineInvalidParametersMessage;
-    output_ = base::StringPrintf("Battery is at %d%%, and cannot charge %d%%.",
-                                 beginning_charge_percent_value,
-                                 minimum_charge_percent_required_);
+    base::Value error_dict(base::Value::Type::DICTIONARY);
+    error_dict.SetKey(
+        "startingBatteryChargePercent",
+        base::Value(static_cast<int>(beginning_charge_percent_value)));
+    error_dict.SetKey(
+        "chargePercentRequested",
+        base::Value(static_cast<int>(minimum_charge_percent_required_)));
+    output_.SetKey("errorDetails", std::move(error_dict));
     return mojo_ipc::DiagnosticRoutineStatusEnum::kError;
   }
 
@@ -187,10 +198,10 @@ void BatteryChargeRoutine::DetermineRoutineResult(
 
   uint32_t charge_percent =
       ending_charge_percent_value - beginning_charge_percent;
-  output_ = base::StringPrintf(
-      "Battery charged from %d%% to %d%% in %" PRId64 " seconds.",
-      beginning_charge_percent, ending_charge_percent_value,
-      exec_duration_.InSeconds());
+  base::Value result_dict(base::Value::Type::DICTIONARY);
+  result_dict.SetKey("chargePercent",
+                     base::Value(static_cast<int>(charge_percent)));
+  output_.SetKey("resultDetails", std::move(result_dict));
   if (charge_percent < minimum_charge_percent_required_) {
     status_message_ = kBatteryChargeRoutineFailedInsufficientChargeMessage;
     status_ = mojo_ipc::DiagnosticRoutineStatusEnum::kFailed;

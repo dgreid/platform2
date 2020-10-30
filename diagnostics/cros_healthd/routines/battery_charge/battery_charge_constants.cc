@@ -11,11 +11,11 @@ const char kBatteryChargeRoutineSucceededMessage[] =
 const char kBatteryChargeRoutineNotChargingMessage[] =
     "Battery is not charging.";
 const char kBatteryChargeRoutineFailedInsufficientChargeMessage[] =
-    "Battery charge rate less than minimum required charge rate.";
+    "Battery charge percent less than minimum required charge percent.";
 const char kBatteryChargeRoutineFailedReadingBatteryAttributesMessage[] =
     "Failed to read battery attributes from sysfs.";
 const char kBatteryChargeRoutineInvalidParametersMessage[] =
-    "Invalid minimum required charge rate requested.";
+    "Invalid minimum required charge percent requested.";
 const char kBatteryChargeRoutineCancelledMessage[] =
     "Battery charge routine cancelled.";
 const char kBatteryChargeRoutineRunningMessage[] =
