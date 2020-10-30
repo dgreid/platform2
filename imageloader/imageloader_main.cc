@@ -110,7 +110,6 @@ bool CreateComponentsPath() {
 }  // namespace
 
 int main(int argc, char** argv) {
-  DEFINE_bool(init, false, "Executes one-time setup process for imageloader.");
   DEFINE_bool(dry_run, false,
               "Changes unmount_all to print the paths which would be "
               "affected.");
@@ -145,8 +144,8 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  // Executes the one-time setup process.
-  if (FLAGS_init && !Init(FLAGS_loaded_mounts_base)) {
+  // Executes the setup process.
+  if (!Init(FLAGS_loaded_mounts_base)) {
     return 1;
   }
 
