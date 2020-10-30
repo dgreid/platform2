@@ -142,7 +142,7 @@ include(sepolicy/file_contexts/sysfs_contexts)
 /usr/sbin/rsyslogd              u:object_r:cros_rsyslogd_exec:s0
 /usr/sbin/sshd                  u:object_r:cros_sshd_exec:s0
 /usr/sbin/sslh(-fork|-select)?  u:object_r:cros_sslh_exec:s0
-/usr/sbin/syslogd-cat           u:object_r:cros_syslogd_cat_exec:s0
+/usr/sbin/syslog-cat            u:object_r:cros_syslog_cat_exec:s0
 /usr/sbin/tcsd                  u:object_r:cros_tcsd_exec:s0
 /usr/sbin/tpm_managerd          u:object_r:cros_tpm_managerd_exec:s0
 /usr/sbin/trunksd               u:object_r:cros_trunksd_exec:s0

@@ -43,7 +43,7 @@ auditallow cros_init cros_init_shell_scripts:file execute;
 
 allow cros_init cros_chrt_exec:file rx_file_perms;
 
-allow {cros_init cros_init_scripts} cros_syslogd_cat_exec:file rx_file_perms;
+allow {cros_init cros_init_scripts} cros_syslog_cat_exec:file rx_file_perms;
 allow {cros_init cros_init_scripts} cros_systemd_cat_exec:file rx_file_perms;
 
 # init/metrics_library.conf
