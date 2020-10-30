@@ -28,6 +28,7 @@
 #include <chromeos/dbus/service_constants.h>
 #include <dbus/bus.h>
 #include <lorgnette/proto_bindings/lorgnette_service.pb.h>
+#include <re2/re2.h>
 
 #include "lorgnette/dbus-proxies.h"
 #include "lorgnette/guess_source.h"
@@ -375,22 +376,20 @@ base::Optional<std::vector<std::string>> ReadAirscanOutput(
     return base::nullopt;
   }
 
-  const std::string protocol = ", eSCL";
   std::vector<std::string> scanner_names;
   for (const std::string& line : lines.value()) {
-    size_t equals = line.find('=');
-    size_t suffix = line.find(protocol, equals);
-    if (equals != std::string::npos && suffix != std::string::npos) {
-      std::string name = line.substr(0, equals);
-      base::TrimWhitespaceASCII(name, base::TrimPositions::TRIM_ALL, &name);
+    // Line format is something like:
+    // "  Lexmark MB2236adwe = https://192.168.0.15:443/eSCL/, eSCL"
+    // We use '.*\S' to match the device name instead of '\S+' so that we can
+    // properly match internal spaces. Since the regex is greedy by default,
+    // we need to end the match group with '\S' so that it doesn't capture any
+    // trailing white-space.
+    std::string name, url;
+    if (RE2::FullMatch(line, R"(\s*(.*\S)\s+=\s+(.+), eSCL)", &name, &url)) {
       // Replace ':' with '_' because sane-airscan uses ':' to delimit the
       // fields of the device_string (i.e."airscan:escl:MyPrinter:[url]) passed
       // to it.
       base::ReplaceChars(name, ":", "_", &name);
-
-      std::string url = line.substr(equals + 1, suffix - (equals + 1));
-      base::TrimWhitespaceASCII(url, base::TrimPositions::TRIM_ALL, &url);
-
       scanner_names.push_back("airscan:escl:" + name + ":" + url);
     }
   }
