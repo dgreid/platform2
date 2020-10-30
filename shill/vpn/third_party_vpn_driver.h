@@ -64,18 +64,22 @@ class ThirdPartyVpnDriver : public VPNDriver, public DefaultServiceObserver {
 
   // Implementation of VPNDriver
   void InitPropertyStore(PropertyStore* store) override;
-  void Connect(const VPNServiceRefPtr& service, Error* error) override;
+  void ConnectAsync(const VPNService::DriverEventCallback& callback) override;
+  IPConfig::Properties GetIPProperties() const override;
   std::string GetProviderType() const override;
   IfType GetIfType() const override;
   void Disconnect() override;
+  // TODO(taoyl): Not used (replaced by ConnectAsync()) and to be removed after
+  // finishing refactor for all drivers
+  void Connect(const VPNServiceRefPtr& service, Error* error) override {
+    NOTREACHED();
+  }
 
   // Implements DefaultServiceObserver.
   void OnDefaultServiceChanged(const ServiceRefPtr& logical_service,
                                bool logical_service_changed,
                                const ServiceRefPtr& physical_service,
                                bool physical_service_changed) override;
-
-  void ClaimInterface(const std::string& link_name, int interface_index);
 
   void OnDefaultServiceStateChanged(const ServiceRefPtr& service) override;
   bool Load(const StoreInterface* storage,
@@ -101,16 +105,17 @@ class ThirdPartyVpnDriver : public VPNDriver, public DefaultServiceObserver {
   FRIEND_TEST(ThirdPartyVpnDriverTest, UpdateConnectionState);
   FRIEND_TEST(ThirdPartyVpnDriverTest, SendPacket);
 
-  // Implements the public IdleService and FailService methods. Resets the VPN
-  // state and deallocates all resources. If there's a service associated
-  // through Connect, sets its state |state|; if |state| is
-  // Service::kStateFailure, sets the failure reason to |failure| and its
-  // ErrorDetails property to |error_details|; disassociates from the service.
-  // Closes the handle to tun device, IO handler if open and deactivates itself
-  // with the |thirdpartyvpn_adaptor_| if active.
-  void Cleanup(Service::ConnectState state,
-               Service::ConnectFailure failure,
-               const std::string& error_details);
+  // Resets the internal state and deallocates all resources - closes the
+  // handle to tun device, IO handler if open and deactivates itself with the
+  // |thirdpartyvpn_adaptor_| if active.
+  void Cleanup();
+
+  // First do Cleanup(). Then if there's a service associated through
+  // ConnectAsync, notify it to sets its state to Service::kStateFailure, sets
+  // the failure reason to |failure|, sets its ErrorDetails property to
+  // |error_details|, and disassociates from the service.
+  void FailService(Service::ConnectFailure failure,
+                   const std::string& error_details);
 
   // This function first checks if a value is present for a particular |key| in
   // the dictionary |parameters|.
@@ -229,12 +234,6 @@ class ThirdPartyVpnDriver : public VPNDriver, public DefaultServiceObserver {
   // File descriptor for the tun device.
   int tun_fd_;
 
-  // Name of the tunnel interface clone.
-  std::string tunnel_interface_;
-
-  // A pointer to the virtual VPN device created on connect.
-  VirtualDeviceRefPtr device_;
-
   // Configuration properties of the virtual VPN device set by the VPN client.
   IPConfig::Properties ip_properties_;
   bool ip_properties_set_;
@@ -263,6 +262,8 @@ class ThirdPartyVpnDriver : public VPNDriver, public DefaultServiceObserver {
   // client simply reconnects), and a network->link_down->network transition
   // (where the client should disconnect, wait for link up, then reconnect).
   bool link_down_;
+
+  VPNService::DriverEventCallback service_callback_;
 
   base::WeakPtrFactory<ThirdPartyVpnDriver> weak_factory_{this};
 

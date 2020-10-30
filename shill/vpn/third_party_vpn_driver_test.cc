@@ -37,9 +37,7 @@ class ThirdPartyVpnDriverTest : public testing::Test {
         device_info_(&manager_),
         driver_(new ThirdPartyVpnDriver(&manager_, nullptr)),
         adaptor_interface_(new ThirdPartyVpnMockAdaptor()),
-        service_(new MockVPNService(&manager_, base::WrapUnique(driver_))),
-        device_(new MockVirtualDevice(
-            &manager_, kInterfaceName, kInterfaceIndex, Technology::kVPN)) {
+        service_(new MockVPNService(&manager_, base::WrapUnique(driver_))) {
     manager_.set_mock_device_info(&device_info_);
     driver_->io_handler_factory_ = &io_handler_factory_;
   }
@@ -52,7 +50,6 @@ class ThirdPartyVpnDriverTest : public testing::Test {
   }
 
   void TearDown() override {
-    driver_->device_ = nullptr;
     driver_->set_service(nullptr);
     driver_->file_io_ = nullptr;
   }
@@ -86,33 +83,24 @@ TEST_F(ThirdPartyVpnDriverTest, ConnectAndDisconnect) {
   IOHandler* io_handler = new IOHandler();  // Owned by |driver_|
   int fd = 1;
 
-  EXPECT_CALL(*service_, SetState(Service::kStateConfiguring)).Times(1);
-  EXPECT_CALL(device_info_, CreateTunnelInterface(_)).WillOnce(Return(true));
-  Error error;
-  driver_->Connect(service_, &error);
-  EXPECT_TRUE(error.IsSuccess());
-  EXPECT_TRUE(driver_->IsConnectTimeoutStarted());
-
+  driver_->set_interface_name(kInterfaceName);
   EXPECT_CALL(device_info_, OpenTunnelInterface(interface))
       .WillOnce(Return(fd));
   EXPECT_CALL(io_handler_factory_, CreateIOInputHandler(fd, _, _))
       .WillOnce(Return(io_handler));
   EXPECT_CALL(*adaptor_interface_, EmitPlatformMessage(static_cast<uint32_t>(
                                        ThirdPartyVpnDriver::kConnected)));
-
-  driver_->ClaimInterface(interface, kInterfaceIndex);
-  EXPECT_EQ(kInterfaceName, driver_->tunnel_interface_);
+  driver_->ConnectAsync(service_->GetCallback());
+  EXPECT_TRUE(driver_->IsConnectTimeoutStarted());
   EXPECT_EQ(driver_->active_client_, driver_);
   EXPECT_TRUE(driver_->parameters_expected_);
   EXPECT_EQ(driver_->io_handler_.get(), io_handler);
-  ASSERT_NE(nullptr, driver_->device_);
-  EXPECT_EQ(kInterfaceIndex, driver_->device_->interface_index());
 
-  EXPECT_CALL(*service_, SetState(Service::kStateIdle)).Times(1);
   EXPECT_CALL(*adaptor_interface_, EmitPlatformMessage(static_cast<uint32_t>(
                                        ThirdPartyVpnDriver::kDisconnected)));
   EXPECT_CALL(mock_file_io_, Close(fd));
   driver_->Disconnect();
+  EXPECT_FALSE(driver_->service_callback_);
   EXPECT_EQ(nullptr, driver_->io_handler_);
 }
 
@@ -121,16 +109,12 @@ TEST_F(ThirdPartyVpnDriverTest, ReconnectionEvents) {
   IOHandler* io_handler = new IOHandler();  // Owned by |driver_|
   int fd = 1;
 
-  EXPECT_CALL(device_info_, CreateTunnelInterface(_)).WillOnce(Return(true));
-  Error error;
-  driver_->Connect(service_, &error);
-  EXPECT_TRUE(error.IsSuccess());
-
   EXPECT_CALL(device_info_, OpenTunnelInterface(interface))
       .WillOnce(Return(fd));
   EXPECT_CALL(io_handler_factory_, CreateIOInputHandler(fd, _, _))
       .WillOnce(Return(io_handler));
-  driver_->ClaimInterface(interface, kInterfaceIndex);
+  driver_->set_interface_name(kInterfaceName);
+  driver_->ConnectAsync(service_->GetCallback());
 
   driver_->reconnect_supported_ = true;
 
@@ -179,16 +163,12 @@ TEST_F(ThirdPartyVpnDriverTest, PowerEvents) {
   IOHandler* io_handler = new IOHandler();  // Owned by |driver_|
   int fd = 1;
 
-  EXPECT_CALL(device_info_, CreateTunnelInterface(_)).WillOnce(Return(true));
-  Error error;
-  driver_->Connect(service_, &error);
-  EXPECT_TRUE(error.IsSuccess());
-
   EXPECT_CALL(device_info_, OpenTunnelInterface(interface))
       .WillOnce(Return(fd));
   EXPECT_CALL(io_handler_factory_, CreateIOInputHandler(fd, _, _))
       .WillOnce(Return(io_handler));
-  driver_->ClaimInterface(interface, kInterfaceIndex);
+  driver_->set_interface_name(kInterfaceName);
+  driver_->ConnectAsync(service_->GetCallback());
 
   driver_->reconnect_supported_ = true;
 
@@ -254,13 +234,14 @@ TEST_F(ThirdPartyVpnDriverTest, UpdateConnectionState) {
   EXPECT_EQ(error, "Invalid argument");
 
   error.clear();
-  driver_->set_service(service_);
-  EXPECT_CALL(*service_, SetState(_)).Times(0);
+  driver_->service_callback_ = service_->GetCallback();
+  EXPECT_CALL(*service_, OnDriverEvent(_, _, _)).Times(0);
   driver_->UpdateConnectionState(Service::kStateOnline, &error);
   EXPECT_TRUE(error.empty());
   Mock::VerifyAndClearExpectations(service_.get());
 
-  EXPECT_CALL(*service_, SetState(Service::kStateFailure)).Times(1);
+  EXPECT_CALL(*service_, OnDriverEvent(VPNService::kEventDriverFailure, _, _))
+      .Times(1);
   EXPECT_CALL(*adaptor_interface_, EmitPlatformMessage(static_cast<uint32_t>(
                                        ThirdPartyVpnDriver::kDisconnected)))
       .Times(1);
@@ -330,8 +311,6 @@ TEST_F(ThirdPartyVpnDriverTest, SetParameters) {
             "123123 for dns_servers is invalid;"
             "43902374 for dns_servers is invalid;");
 
-  driver_->device_ = new MockVirtualDevice(&manager_, kInterfaceName,
-                                           kInterfaceIndex, Technology::kVPN);
   error.clear();
   warning.clear();
   parameters["exclusion_list"] =
@@ -387,7 +366,6 @@ TEST_F(ThirdPartyVpnDriverTest, SetParameters) {
   EXPECT_TRUE(error.empty());
   EXPECT_TRUE(warning.empty());
   EXPECT_TRUE(driver_->parameters_expected_);
-  driver_->device_ = nullptr;
 }
 
 }  // namespace shill
