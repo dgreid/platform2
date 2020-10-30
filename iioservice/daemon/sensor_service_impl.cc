@@ -34,8 +34,6 @@ constexpr char kChnPrefixes[][12] = {
     "count",        // COUNT
     "magn_",        // MAGN
     "angl",         // ANGL
-    "",             // ACPI_ALS, TODO(gwendal): determine
-                    // how to distinguish this from LIGHT
     "pressure",     // BARO
 };
 
@@ -66,7 +64,6 @@ bool DeviceHasType(libmems::IioDevice* iio_device,
 
       return false;
 
-    case cros::mojom::DeviceType::ACPI_ALS:
     default:
       return false;
   }
