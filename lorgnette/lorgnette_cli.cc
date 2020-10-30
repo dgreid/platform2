@@ -109,7 +109,8 @@ class ScanHandler {
 
   bool StartScan(uint32_t resolution,
                  const lorgnette::DocumentSource& scan_source,
-                 const base::Optional<lorgnette::ScanRegion>& scan_region);
+                 const base::Optional<lorgnette::ScanRegion>& scan_region,
+                 lorgnette::ColorMode color_mode);
 
  private:
   void HandleScanStatusChangedSignal(
@@ -150,12 +151,13 @@ bool ScanHandler::WaitUntilConnected() {
 bool ScanHandler::StartScan(
     uint32_t resolution,
     const lorgnette::DocumentSource& scan_source,
-    const base::Optional<lorgnette::ScanRegion>& scan_region) {
+    const base::Optional<lorgnette::ScanRegion>& scan_region,
+    lorgnette::ColorMode color_mode) {
   lorgnette::StartScanRequest request;
   request.set_device_name(scanner_name_);
   request.mutable_settings()->set_resolution(resolution);
   request.mutable_settings()->set_source_name(scan_source.name());
-  request.mutable_settings()->set_color_mode(lorgnette::MODE_COLOR);
+  request.mutable_settings()->set_color_mode(color_mode);
   if (scan_region.has_value())
     *request.mutable_settings()->mutable_scan_region() = scan_region.value();
 
@@ -403,6 +405,9 @@ class ScanRunner {
   void SetResolution(uint32_t resolution) { resolution_ = resolution; }
   void SetSource(lorgnette::SourceType source) { source_ = source; }
   void SetScanRegion(const lorgnette::ScanRegion& region) { region_ = region; }
+  void SetColorMode(lorgnette::ColorMode color_mode) {
+    color_mode_ = color_mode;
+  }
 
   bool RunScanner(const std::string& scanner);
 
@@ -411,6 +416,7 @@ class ScanRunner {
   uint32_t resolution_;
   lorgnette::SourceType source_;
   base::Optional<lorgnette::ScanRegion> region_;
+  lorgnette::ColorMode color_mode_;
 };
 
 bool ScanRunner::RunScanner(const std::string& scanner) {
@@ -462,6 +468,12 @@ bool ScanRunner::RunScanner(const std::string& scanner) {
       region_->set_bottom_right_y(scan_source->area().height());
   }
 
+  if (!base::Contains(capabilities->color_modes(), color_mode_)) {
+    LOG(ERROR) << "Requested scan source does not support color mode "
+               << ColorMode_Name(color_mode_);
+    return false;
+  }
+
   // Implicitly uses this thread's executor as defined in main.
   base::RunLoop run_loop;
   ScanHandler handler(run_loop.QuitClosure(), manager_, scanner);
@@ -472,7 +484,8 @@ bool ScanRunner::RunScanner(const std::string& scanner) {
 
   std::cout << "Scanning from " << scanner << std::endl;
 
-  if (!handler.StartScan(resolution_, scan_source.value(), region_)) {
+  if (!handler.StartScan(resolution_, scan_source.value(), region_,
+                         color_mode_)) {
     return false;
   }
 
@@ -485,6 +498,7 @@ bool DoScan(std::unique_ptr<ManagerProxy> manager,
             uint32_t scan_resolution,
             lorgnette::SourceType source_type,
             const lorgnette::ScanRegion& region,
+            lorgnette::ColorMode color_mode,
             bool scan_from_all_scanners) {
   // Start the airscan-discover process immediately since it can be slightly
   // long-running. We read the output later after we've gotten a scanner list
@@ -515,6 +529,7 @@ bool DoScan(std::unique_ptr<ManagerProxy> manager,
   ScanRunner runner(manager.get());
   runner.SetResolution(scan_resolution);
   runner.SetSource(source_type);
+  runner.SetColorMode(color_mode);
 
   if (region.top_left_x() != -1.0 || region.top_left_y() != -1.0 ||
       region.bottom_right_x() != -1.0 || region.bottom_right_y() != -1.0) {
@@ -572,6 +587,9 @@ int main(int argc, char** argv) {
   DEFINE_string(scan_source, "Platen",
                 "The scan source to use for the scanner, (e.g. Platen, ADF "
                 "Simplex, ADF Duplex)");
+  DEFINE_string(color_mode, "Color",
+                "The color mode to use for the scanner, (e.g. Color, Grayscale,"
+                "Lineart)");
   DEFINE_bool(all, false,
               "Loop through all detected scanners instead of prompting.");
   DEFINE_double(top_left_x, -1.0,
@@ -637,8 +655,24 @@ int main(int argc, char** argv) {
     region.set_bottom_right_x(FLAGS_bottom_right_x);
     region.set_bottom_right_y(FLAGS_bottom_right_y);
 
+    std::string color_mode_string = base::ToLowerASCII(FLAGS_color_mode);
+    lorgnette::ColorMode color_mode;
+    if (color_mode_string == "color") {
+      color_mode = lorgnette::MODE_COLOR;
+    } else if (color_mode_string == "grayscale" ||
+               color_mode_string == "gray") {
+      color_mode = lorgnette::MODE_GRAYSCALE;
+    } else if (color_mode_string == "lineart" || color_mode_string == "bw") {
+      color_mode = lorgnette::MODE_LINEART;
+    } else {
+      LOG(ERROR) << "Unknown color mode: \"" << color_mode_string
+                 << "\". Supported values are \"Color\", \"Grayscale\", and "
+                    "\"Lineart\"";
+      return 1;
+    }
+
     bool success = DoScan(std::move(manager), FLAGS_scan_resolution,
-                          source_type.value(), region, FLAGS_all);
+                          source_type.value(), region, color_mode, FLAGS_all);
     return success ? 0 : 1;
   } else if (command == "cancel_scan") {
     if (FLAGS_uuid.empty()) {
