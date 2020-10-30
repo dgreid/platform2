@@ -566,6 +566,153 @@ bool HomeDirs::AddInitialKeyset(const Credentials& credentials) {
   return true;
 }
 
+bool HomeDirs::ShouldReSaveKeyset(VaultKeyset* vault_keyset) const {
+  // If the vault keyset's TPM state is not the same as that configured for
+  // the device, re-save the keyset (this will save in the device's default
+  // method).
+  // In the table below: X = true, - = false, * = any value
+  //
+  //                 1   2   3   4   5   6   7   8   9
+  // should_tpm      X   X   X   X   -   -   -   *   X
+  //
+  // pcr_bound       -   X   *   -   -   *   -   *   -
+  //
+  // tpm_wrapped     -   X   X   -   -   X   -   X   *
+  //
+  // scrypt_wrapped  -   -   -   X   -   -   X   X   *
+  //
+  // scrypt_derived  *   X   -   *   *   *   *   *   *
+  //
+  // migrate         Y   N   Y   Y   Y   Y   N   Y   Y
+  //
+  // If the vault keyset is signature-challenge protected, we should not
+  // re-encrypt it at all (that is unnecessary).
+  const unsigned crypt_flags = vault_keyset->serialized().flags();
+  bool pcr_bound = (crypt_flags & SerializedVaultKeyset::PCR_BOUND) != 0;
+  bool tpm_wrapped = (crypt_flags & SerializedVaultKeyset::TPM_WRAPPED) != 0;
+  bool scrypt_wrapped =
+      (crypt_flags & SerializedVaultKeyset::SCRYPT_WRAPPED) != 0;
+  bool scrypt_derived =
+      (crypt_flags & SerializedVaultKeyset::SCRYPT_DERIVED) != 0;
+  bool is_signature_challenge_protected =
+      (crypt_flags & SerializedVaultKeyset::SIGNATURE_CHALLENGE_PROTECTED) != 0;
+  bool should_tpm =
+      (crypto_->has_tpm() && use_tpm_ && crypto_->is_cryptohome_key_loaded() &&
+       !is_signature_challenge_protected);
+  bool can_unseal_with_user_auth = crypto_->CanUnsealWithUserAuth();
+  bool has_tpm_public_key_hash =
+      vault_keyset->serialized().has_tpm_public_key_hash();
+
+  if (is_signature_challenge_protected) {
+    return false;
+  }
+
+  bool is_le_credential =
+      (crypt_flags & SerializedVaultKeyset::LE_CREDENTIAL) != 0;
+  uint64_t le_label = vault_keyset->serialized().le_label();
+  if (is_le_credential && !crypto_->NeedsPcrBinding(le_label)) {
+    return false;
+  }
+
+  // If the keyset was TPM-wrapped, but there was no public key hash,
+  // always re-save.
+  if (tpm_wrapped && !has_tpm_public_key_hash) {
+    LOG(INFO) << "Migrating keyset " << vault_keyset->legacy_index()
+              << " as there is no public hash";
+    return true;
+  }
+
+  // Check the table.
+  if (tpm_wrapped && should_tpm && scrypt_derived && !scrypt_wrapped) {
+    if ((pcr_bound && can_unseal_with_user_auth) ||
+        (!pcr_bound && !can_unseal_with_user_auth)) {
+      return false;  // 2
+    }
+  }
+  if (scrypt_wrapped && !should_tpm && !tpm_wrapped)
+    return false;  // 7
+
+  LOG(INFO) << "Migrating keyset " << vault_keyset->legacy_index()
+            << ": should_tpm=" << should_tpm
+            << ", has_hash=" << has_tpm_public_key_hash
+            << ", flags=" << crypt_flags << ", pcr_bound=" << pcr_bound
+            << ", can_unseal_with_user_auth=" << can_unseal_with_user_auth;
+
+  return true;
+}
+
+bool HomeDirs::ReSaveKeyset(const Credentials& credentials,
+                            VaultKeyset* keyset) const {
+  // Save the initial serialized proto so we can roll-back any changes if we
+  // failed to re-save.
+  SerializedVaultKeyset old_serialized;
+  old_serialized.CopyFrom(keyset->serialized());
+
+  std::string obfuscated_username =
+      credentials.GetObfuscatedUsername(system_salt_);
+
+  uint64_t label = keyset->serialized().le_label();
+  if (!keyset->Encrypt(credentials.passkey(), obfuscated_username) ||
+      !keyset->Save(keyset->source_file())) {
+    LOG(ERROR) << "Failed to encrypt and write the keyset.";
+    keyset->mutable_serialized()->CopyFrom(old_serialized);
+    return false;
+  }
+
+  if ((keyset->serialized().flags() & SerializedVaultKeyset::LE_CREDENTIAL) !=
+      0) {
+    if (!crypto_->RemoveLECredential(label)) {
+      // This is non-fatal error.
+      LOG(ERROR) << "Failed to remove label = " << label;
+    }
+  }
+
+  return true;
+}
+
+bool HomeDirs::ReSaveKeysetIfNeeded(const Credentials& credentials,
+                                    VaultKeyset* keyset) const {
+  // Calling EnsureTpm here handles the case where a user logged in while
+  // cryptohome was taking TPM ownership.  In that case, their vault keyset
+  // would be scrypt-wrapped and the TPM would not be connected.  If we're
+  // configured to use the TPM, calling EnsureTpm will try to connect, and
+  // if successful, the call to has_tpm() below will succeed, allowing
+  // re-wrapping (migration) using the TPM.
+  if (use_tpm_) {
+    crypto_->EnsureTpm(false);
+  }
+
+  bool force_resave = false;
+  if (!keyset->serialized().has_wrapped_chaps_key()) {
+    keyset->CreateRandomChapsKey();
+    force_resave = true;
+  }
+
+  if (force_resave || ShouldReSaveKeyset(keyset)) {
+    return ReSaveKeyset(credentials, keyset);
+  }
+
+  return true;
+}
+
+bool HomeDirs::LoadUnwrappedKeyset(const Credentials& credentials,
+                                   VaultKeyset* vault_keyset,
+                                   MountError* error) {
+  if (error) {
+    *error = MOUNT_ERROR_NONE;
+  }
+
+  if (!GetValidKeyset(credentials, vault_keyset, error)) {
+    return false;
+  }
+
+  // TODO(dlunev): we shall start checking whether re-save succeeded. We are not
+  // adding the check during the refactor to preserve behaviour.
+  ReSaveKeysetIfNeeded(credentials, vault_keyset);
+
+  return true;
+}
+
 CryptohomeErrorCode HomeDirs::AddKeyset(const Credentials& existing_credentials,
                                         const SecureBlob& new_passkey,
                                         const KeyData* new_data,  // NULLable

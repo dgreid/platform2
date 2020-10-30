@@ -192,6 +192,25 @@ class HomeDirs {
   // Adds initial keyset for the credentials.
   virtual bool AddInitialKeyset(const Credentials& credentials);
 
+  // Check if the vault keyset needs re-encryption.
+  virtual bool ShouldReSaveKeyset(VaultKeyset* vault_keyset) const;
+
+  // Resaves the vault keyset, restoring on failure.
+  virtual bool ReSaveKeyset(const Credentials& credentials,
+                            VaultKeyset* keyset) const;
+
+  // Checks whether the keyset is up to date (e.g. has correct encryption
+  // parameters, has all required fields populated etc.) and if not, updates
+  // and resaves the keyset.
+  virtual bool ReSaveKeysetIfNeeded(const Credentials& credentials,
+                                    VaultKeyset* keyset) const;
+
+  // Looks for a keyset which matches the credentals and returns it decrypted.
+  // TODO(dlunev): replace MountError with CryptohomeErrorCode.
+  virtual bool LoadUnwrappedKeyset(const Credentials& credentials,
+                                   VaultKeyset* vault_keyset,
+                                   MountError* error);
+
   // Adds a new vault keyset for the user using the |existing_credentials| to
   // unwrap the homedir key and the |new_credentials| to rewrap and persist to
   // disk.  The key index is return in the |index| pointer if the function

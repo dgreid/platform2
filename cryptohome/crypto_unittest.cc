@@ -13,6 +13,7 @@
 
 #include <base/files/file_path.h>
 #include <base/logging.h>
+#include <base/strings/string_number_conversions.h>
 #include <base/strings/stringprintf.h>
 #include <brillo/secure_blob.h>
 #include <gtest/gtest.h>
@@ -21,6 +22,7 @@
 #include "cryptohome/attestation.pb.h"
 #include "cryptohome/crypto_error.h"
 #include "cryptohome/cryptolib.h"
+#include "cryptohome/mock_le_credential_manager.h"
 #include "cryptohome/mock_platform.h"
 #include "cryptohome/mock_tpm.h"
 #include "cryptohome/mock_tpm_init.h"
@@ -674,6 +676,137 @@ TEST_F(CryptoTest, EncryptAndDecryptWithTpmWithRandomlyFailingTpm) {
   // Tpm failing to unseal a valid key.
   EXPECT_CALL(tpm, Unseal(sealed_key, _)).WillOnce(Return(false));
   EXPECT_FALSE(crypto.DecryptWithTpm(encrypted_data, &output_blob));
+}
+
+namespace {
+constexpr char kHexHeSecret[] =
+    "F3D9D5B126C36676689E18BB8517D95DF4F30947E71D4A840824425760B1D3FA";
+constexpr char kHexResetSecret[] =
+    "B133D2450392335BA8D33AA95AD52488254070C66F5D79AEA1A46AC4A30760D4";
+constexpr char kHexWrappedKeyset[] =
+    "B737B5D73E39BD390A4F361CE2FC166CF1E89EC6AEAA35D4B34456502C48B4F5EFA310077"
+    "324B393E13AF633DF3072FF2EC78BD2B80D919035DB97C30F1AD418737DA3F26A4D35DF6B"
+    "6A9743BD0DF3D37D8A68DE0932A9905452D05ECF92701B9805937F76EE01D10924268F057"
+    "EDD66087774BB86C2CB92B01BD3A3C41C10C52838BD3A3296474598418E5191DEE9E8D831"
+    "3C859C9EDB0D5F2BC1D7FC3C108A0D4ABB2D90E413086BCFFD0902AB68E2BF787817EB10C"
+    "25E2E43011CAB3FB8AA";
+constexpr char kHexSalt[] = "D470B9B108902241";
+constexpr char kHexVaultKey[] =
+    "665A58534E684F2B61516B6D42624B514E6749732B4348427450305453754158377232347"
+    "37A79466C6B383D";
+constexpr char kHexFekIv[] = "EA80F14BF29C6D580D536E7F0CC47F3E";
+constexpr char kHexChapsIv[] = "ED85D928940E5B02ED218F29225AA34F";
+constexpr char kHexWrappedChapsKey[] =
+    "7D7D01EECC8DAE7906CAD56310954BBEB3CC81765210D29902AB92DDE074217771AD284F2"
+    "12C13897C6CBB30CEC4CD75";
+
+std::string HexDecode(const std::string& hex) {
+  std::vector<uint8_t> output;
+  CHECK(base::HexStringToBytes(hex, &output));
+  return std::string(output.begin(), output.end());
+}
+}  // namespace
+
+class LeCredentialsManagerTest : public ::testing::Test {
+ public:
+  LeCredentialsManagerTest() : crypto_(&platform_) {
+    crypto_.set_tpm(&tpm_);
+    crypto_.set_use_tpm(true);
+
+    EXPECT_CALL(tpm_init_, SetupTpm(true))
+        .WillOnce(
+            Return(true));  // because HasCryptohomeKey returned false once.
+
+    EXPECT_CALL(tpm_, IsEnabled()).WillRepeatedly(Return(true));
+    EXPECT_CALL(tpm_, IsOwned()).WillRepeatedly(Return(true));
+
+    // Raw pointer as crypto expects unique_ptr, which we will wrap this
+    // allocation into.
+    le_cred_manager_ = new MockLECredentialManager();
+    EXPECT_CALL(*le_cred_manager_, CheckCredential(_, _, _, _))
+        .WillRepeatedly(DoAll(
+            SetArgPointee<2>(brillo::SecureBlob(HexDecode(kHexHeSecret))),
+            SetArgPointee<3>(brillo::SecureBlob(HexDecode(kHexResetSecret))),
+            Return(LE_CRED_SUCCESS)));
+    crypto_.set_le_manager_for_testing(
+        std::unique_ptr<cryptohome::LECredentialManager>(le_cred_manager_));
+
+    crypto_.Init(&tpm_init_);
+
+    pin_vault_keyset_.Initialize(&platform_, &crypto_);
+  }
+
+  ~LeCredentialsManagerTest() override = default;
+
+  // Not copyable or movable
+  LeCredentialsManagerTest(const LeCredentialsManagerTest&) = delete;
+  LeCredentialsManagerTest& operator=(const LeCredentialsManagerTest&) = delete;
+  LeCredentialsManagerTest(LeCredentialsManagerTest&&) = delete;
+  LeCredentialsManagerTest& operator=(LeCredentialsManagerTest&&) = delete;
+
+ protected:
+  MockPlatform platform_;
+  Crypto crypto_;
+  NiceMock<MockTpm> tpm_;
+  NiceMock<MockTpmInit> tpm_init_;
+  MockLECredentialManager* le_cred_manager_;
+
+  VaultKeyset pin_vault_keyset_;
+};
+
+TEST_F(LeCredentialsManagerTest, Encrypt) {
+  EXPECT_CALL(*le_cred_manager_, InsertCredential(_, _, _, _, _, _))
+      .WillOnce(Return(LE_CRED_SUCCESS));
+
+  pin_vault_keyset_.CreateRandom();
+  pin_vault_keyset_.mutable_serialized()
+      ->mutable_key_data()
+      ->mutable_policy()
+      ->set_low_entropy_credential(true);
+
+  EXPECT_TRUE(crypto_.EncryptVaultKeyset(
+      pin_vault_keyset_, brillo::SecureBlob(HexDecode(kHexVaultKey)),
+      brillo::SecureBlob(HexDecode(kHexSalt)), "unused",
+      pin_vault_keyset_.mutable_serialized()));
+
+  EXPECT_EQ(pin_vault_keyset_.serialized().flags(),
+            SerializedVaultKeyset::LE_CREDENTIAL);
+}
+
+TEST_F(LeCredentialsManagerTest, EncryptFail) {
+  EXPECT_CALL(*le_cred_manager_, InsertCredential(_, _, _, _, _, _))
+      .WillOnce(Return(LE_CRED_ERROR_NO_FREE_LABEL));
+
+  pin_vault_keyset_.CreateRandom();
+  pin_vault_keyset_.mutable_serialized()
+      ->mutable_key_data()
+      ->mutable_policy()
+      ->set_low_entropy_credential(true);
+
+  EXPECT_FALSE(crypto_.EncryptVaultKeyset(
+      pin_vault_keyset_, brillo::SecureBlob(HexDecode(kHexVaultKey)),
+      brillo::SecureBlob(HexDecode(kHexSalt)), "unused",
+      pin_vault_keyset_.mutable_serialized()));
+}
+
+TEST_F(LeCredentialsManagerTest, Decrypt) {
+  pin_vault_keyset_.mutable_serialized()->set_flags(
+      SerializedVaultKeyset::LE_CREDENTIAL);
+  pin_vault_keyset_.mutable_serialized()->set_le_fek_iv(HexDecode(kHexFekIv));
+  pin_vault_keyset_.mutable_serialized()->set_le_chaps_iv(
+      HexDecode(kHexChapsIv));
+  pin_vault_keyset_.mutable_serialized()->set_wrapped_keyset(
+      HexDecode(kHexWrappedKeyset));
+  pin_vault_keyset_.mutable_serialized()->set_wrapped_chaps_key(
+      HexDecode(kHexWrappedChapsKey));
+  pin_vault_keyset_.mutable_serialized()->set_salt(HexDecode(kHexSalt));
+
+  CryptoError crypto_error = CryptoError::CE_NONE;
+  EXPECT_TRUE(crypto_.DecryptVaultKeyset(
+      pin_vault_keyset_.serialized(),
+      brillo::SecureBlob(HexDecode(kHexVaultKey)), false, nullptr,
+      &crypto_error, &pin_vault_keyset_));
+  EXPECT_EQ(CryptoError::CE_NONE, crypto_error);
 }
 
 }  // namespace cryptohome

@@ -301,34 +301,6 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   virtual bool StoreTimestampForUser(const std::string& obfuscated_username,
                                      VaultKeyset* vault_keyset) const;
 
-  // Resaves the vault keyset, restoring on failure.  The vault_keyset supplied
-  // is encrypted and stored in the wrapped_keyset parameter of serialized,
-  // which is then saved to disk.
-  //
-  // Parameters
-  //   credentials - The Credentials for the user
-  //   vault_keyset (IN/OUT) - The VaultKeyset to save
-  bool ReEncryptVaultKeyset(const Credentials& credentials,
-                            VaultKeyset* vault_keyset) const;
-
-  // Check if the vault keyset needs re-encryption.
-  //
-  // Parameters
-  //   vault_keyset (IN) - vault keyset to check
-  bool ShouldReSaveKeyset(VaultKeyset* vault_keyset) const;
-
-  // Attempt to decrypt the keyset for the specified user.  The method both
-  // deserializes the SerializedVaultKeyset from disk and decrypts the
-  // encrypted vault keyset, returning it in vault_keyset.
-  //
-  // Parameters
-  //   credentials - The user credentials to use
-  //   vault_keyset (OUT) - The unencrypted vault keyset on success
-  //   error (OUT) - The specific error when decrypting
-  bool DecryptVaultKeyset(const Credentials& credentials,
-                          VaultKeyset* vault_keyset,
-                          MountError* error);
-
   base::FilePath GetUserTimestampFileForUser(
       const std::string& obfuscated_username, int index) const;
 
@@ -556,18 +528,8 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   FRIEND_TEST(MountTest, NamespaceCreationPass);
   FRIEND_TEST(MountTest, NamespaceCreationFail);
   FRIEND_TEST(MountTest, RememberMountOrderingTest);
-  FRIEND_TEST(MountTest, MountCryptohomeChapsKey);
-  FRIEND_TEST(MountTest, MountCryptohomeNoChapsKey);
-  FRIEND_TEST(MountTest, MountCryptohomeLECredentials);
-  FRIEND_TEST(MountTest, MountCryptohomeLECredentialsMigrate);
-  FRIEND_TEST(MountTest, MountCryptohomeLECredentialsMigrationFails);
   FRIEND_TEST(MountTest, UserActivityTimestampUpdated);
-  FRIEND_TEST(MountTest, GoodReDecryptTest);
-  FRIEND_TEST(MountTest, TpmWrappedToPcrBoundMigrationTest);
-  FRIEND_TEST(MountTest, MountCryptohomeNoChange);
   FRIEND_TEST(MountTest, CheckChapsDirectoryMigration);
-  FRIEND_TEST(MountTest, TwoWayKeysetMigrationTest);
-  FRIEND_TEST(MountTest, BothFlagsMigrationTest);
   FRIEND_TEST(MountTest, CreateCryptohomeTest);
   FRIEND_TEST(MountTest, CreateTrackedSubdirectories);
   FRIEND_TEST(MountTest, CreateTrackedSubdirectoriesReplaceExistingDir);
