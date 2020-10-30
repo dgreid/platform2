@@ -7,6 +7,7 @@
 
 #include <map>
 #include <memory>
+#include <ostream>
 #include <set>
 #include <string>
 #include <vector>
@@ -68,11 +69,12 @@ class ShillClient {
 
     Type type;
     std::string ifname;
+    std::string service_path;
     IPConfig ipconfig;
   };
 
-  using DefaultInterfaceChangeHandler = base::Callback<void(
-      const std::string& new_ifname, const std::string& prev_ifname)>;
+  using DefaultDeviceChangeHandler =
+      base::Callback<void(const Device& new_device, const Device& prev_device)>;
   using DevicesChangeHandler =
       base::Callback<void(const std::set<std::string>& added,
                           const std::set<std::string>& removed)>;
@@ -85,8 +87,12 @@ class ShillClient {
 
   virtual ~ShillClient() = default;
 
-  void RegisterDefaultInterfaceChangedHandler(
-      const DefaultInterfaceChangeHandler& handler);
+  // Registers the provided handler for changes in shill default network
+  // services. The handler will be called once immediately at registration
+  // with the current default network as |new_device| and an empty Device as
+  // |prev_device|.
+  void RegisterDefaultDeviceChangedHandler(
+      const DefaultDeviceChangeHandler& handler);
 
   void RegisterDevicesChangedHandler(const DevicesChangeHandler& handler);
 
@@ -119,29 +125,26 @@ class ShillClient {
                               const std::string& property_name,
                               const brillo::Any& property_value);
 
-  // Returns the name of the default interface for the system, or an empty
-  // string when the system has no default interface.
-  virtual std::string GetDefaultInterface();
+  // Returns the default interface for the system, or an empty Device result
+  // when the system has no default interface.
+  virtual Device GetDefaultDevice();
 
  private:
   void UpdateDevices(const brillo::Any& property_value);
 
   // Sets the internal variable tracking the system default interface and calls
-  // the default interface handler if the default interface changed. When the
-  // default interface is lost and a fallback exists, the fallback is used
-  // instead. Returns the previous default interface.
-  std::string SetDefaultInterface(std::string new_default);
+  // the default interface handler if the default interface changed.
+  void SetDefaultDevice(const Device& new_default);
 
   // Parses the |property_value| as the IPConfigs property of |device|, which
   // should be a list of object paths of IPConfigs.
   IPConfig ParseIPConfigsProperty(const std::string& device,
                                   const brillo::Any& property_value);
 
-  // Tracks the name of the system default interface chosen by shill.
-  std::string default_interface_;
-  // Another network interface on the system to use as a possible fallback if
-  // no system default interface exists.
-  std::string fallback_default_interface_;
+  // Tracks the system default logical network chosen by shill. This corresponds
+  // to the physical or virtual device associated with the default logical
+  // network service.
+  Device default_device_;
   // Tracks all network interfaces managed by shill.
   std::set<std::string> devices_;
   // Stores the map from interface to its object path in shill for all the
@@ -152,7 +155,7 @@ class ShillClient {
   std::map<std::string, dbus::ObjectPath> known_device_paths_;
 
   // Called when the interface used as the default interface changes.
-  std::vector<DefaultInterfaceChangeHandler> default_interface_handlers_;
+  std::vector<DefaultDeviceChangeHandler> default_device_handlers_;
   // Called when the list of network interfaces managed by shill changes.
   std::vector<DevicesChangeHandler> device_handlers_;
   // Called when the IPConfigs of any device changes.
@@ -163,6 +166,8 @@ class ShillClient {
 
   base::WeakPtrFactory<ShillClient> weak_factory_{this};
 };
+
+std::ostream& operator<<(std::ostream& stream, const ShillClient::Device& dev);
 
 }  // namespace patchpanel
 

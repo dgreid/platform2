@@ -10,6 +10,7 @@
 #include <base/bind.h>
 #include <base/logging.h>
 #include <base/strings/string_util.h>
+#include <brillo/variant_dictionary.h>
 #include <chromeos/dbus/service_constants.h>
 
 namespace patchpanel {
@@ -35,6 +36,25 @@ ShillClient::Device::Type ParseDeviceType(const std::string& type_str) {
                               : ShillClient::Device::Type::kUnknown;
 }
 
+const std::string DeviceTypeName(ShillClient::Device::Type type) {
+  static const std::map<ShillClient::Device::Type, std::string> enum2str{
+      {ShillClient::Device::Type::kUnknown, "Unknown"},
+      {ShillClient::Device::Type::kCellular, "Cellular"},
+      {ShillClient::Device::Type::kEthernet, "Ethernet"},
+      {ShillClient::Device::Type::kEthernetEap, "EthernetEap"},
+      {ShillClient::Device::Type::kGuestInterface, "GuestInterface"},
+      {ShillClient::Device::Type::kLoopback, "Loopback"},
+      {ShillClient::Device::Type::kPPP, "PPP"},
+      {ShillClient::Device::Type::kPPPoE, "PPPoE"},
+      {ShillClient::Device::Type::kTunnel, "Tunnel"},
+      {ShillClient::Device::Type::kVPN, "VPN"},
+      {ShillClient::Device::Type::kWifi, "Wifi"},
+  };
+
+  const auto it = enum2str.find(type);
+  return it != enum2str.end() ? it->second : "Unknown";
+}
+
 }  // namespace
 
 ShillClient::ShillClient(const scoped_refptr<dbus::Bus>& bus) : bus_(bus) {
@@ -47,7 +67,7 @@ ShillClient::ShillClient(const scoped_refptr<dbus::Bus>& bus) : bus_(bus) {
 }
 
 const std::string& ShillClient::default_interface() const {
-  return default_interface_;
+  return default_device_.ifname;
 }
 
 const std::set<std::string> ShillClient::get_devices() const {
@@ -72,73 +92,82 @@ void ShillClient::ScanDevices() {
   UpdateDevices(it->second);
 }
 
-std::string ShillClient::GetDefaultInterface() {
+ShillClient::Device ShillClient::GetDefaultDevice() {
   brillo::VariantDictionary manager_props;
 
   if (!manager_proxy_->GetProperties(&manager_props, nullptr)) {
     LOG(ERROR) << "Unable to get manager properties";
-    return "";
+    return {};
   }
 
   auto it = manager_props.find(shill::kDefaultServiceProperty);
   if (it == manager_props.end()) {
-    LOG(WARNING) << "Manager properties is missing default service";
-    return "";
+    LOG(ERROR) << "Manager properties is missing default service";
+    return {};
   }
 
   dbus::ObjectPath service_path = it->second.TryGet<dbus::ObjectPath>();
   if (!service_path.IsValid() || service_path.value() == "/") {
-    return "";
+    LOG(ERROR) << "Invalid DBus path for the default service";
+    return {};
   }
 
   org::chromium::flimflam::ServiceProxy service_proxy(bus_, service_path);
   brillo::VariantDictionary service_props;
   if (!service_proxy.GetProperties(&service_props, nullptr)) {
-    LOG(ERROR) << "Can't retrieve properties for service";
-    return "";
+    LOG(ERROR) << "Can't retrieve properties for default service"
+               << service_path.value();
+    return {};
   }
 
   it = service_props.find(shill::kIsConnectedProperty);
   if (it == service_props.end()) {
-    LOG(WARNING) << "Service properties is missing \"IsConnected\"";
-    return "";
+    LOG(ERROR) << "Service " << service_path.value() << " missing property "
+               << shill::kIsConnectedProperty;
+    return {};
   }
+
   if (!it->second.TryGet<bool>()) {
-    LOG(INFO) << "Ignoring non-connected service";
-    return "";
+    LOG(INFO) << "Ignoring non-connected service " << service_path.value();
+    return {};
   }
 
-  it = service_props.find(shill::kDeviceProperty);
-  if (it == service_props.end()) {
-    LOG(WARNING) << "Service properties is missing device path";
-    return "";
+  std::string service_type = brillo::GetVariantValueOrDefault<std::string>(
+      service_props, shill::kTypeProperty);
+  if (service_type.empty()) {
+    LOG(ERROR) << "Service " << service_path.value() << " missing property "
+               << shill::kTypeProperty;
+    return {};
   }
 
-  dbus::ObjectPath device_path = it->second.TryGet<dbus::ObjectPath>();
+  Device device = {};
+  device.type = ParseDeviceType(service_type);
+
+  dbus::ObjectPath device_path =
+      brillo::GetVariantValueOrDefault<dbus::ObjectPath>(
+          service_props, shill::kDeviceProperty);
   if (!device_path.IsValid()) {
-    LOG(WARNING) << "Invalid device path";
-    return "";
+    LOG(ERROR) << "Service " << service_path.value()
+               << " is missing device path";
+    return {};
   }
 
   org::chromium::flimflam::DeviceProxy device_proxy(bus_, device_path);
   brillo::VariantDictionary device_props;
   if (!device_proxy.GetProperties(&device_props, nullptr)) {
     LOG(ERROR) << "Can't retrieve properties for device";
-    return "";
+    return {};
   }
 
-  it = device_props.find(shill::kInterfaceProperty);
-  if (it == device_props.end()) {
-    LOG(WARNING) << "Device properties is missing interface name";
-    return "";
+  device.ifname = brillo::GetVariantValueOrDefault<std::string>(
+      device_props, shill::kInterfaceProperty);
+  if (device.ifname.empty()) {
+    LOG(ERROR) << "Device interface name is empty";
+    return {};
   }
 
-  std::string interface = it->second.TryGet<std::string>();
-  if (interface.empty()) {
-    LOG(WARNING) << "Device interface name is empty";
-  }
-
-  return interface;
+  device.service_path = service_path.value();
+  return device;
 }
 
 void ShillClient::OnManagerPropertyChangeRegistration(
@@ -153,60 +182,36 @@ void ShillClient::OnManagerPropertyChange(const std::string& property_name,
                                           const brillo::Any& property_value) {
   if (property_name == shill::kDevicesProperty) {
     UpdateDevices(property_value);
-
-    // Choose a fallback interface when any network device exist. Update the
-    // fallback interface if it that device does not exist anymore.
-    if (!devices_.empty() &&
-        devices_.find(fallback_default_interface_) == devices_.end()) {
-      fallback_default_interface_ = *devices_.begin();
-      // When the system appears to have no default interface, use the fallback
-      // interface instead.
-      if (default_interface_.empty() ||
-          default_interface_ != fallback_default_interface_)
-        SetDefaultInterface(fallback_default_interface_);
-    }
-
-    // Remove the fallback interface when no network device is managed by shill.
-    if (!fallback_default_interface_.empty() && devices_.empty()) {
-      fallback_default_interface_ = "";
-      SetDefaultInterface("");
-    }
-
+  } else if (property_name != shill::kDefaultServiceProperty &&
+             property_name != shill::kConnectionStateProperty) {
     return;
   }
 
-  if (property_name != shill::kDefaultServiceProperty &&
-      property_name != shill::kConnectionStateProperty)
-    return;
-
-  SetDefaultInterface(GetDefaultInterface());
+  // All registered DefaultDeviceChangeHandler objects should be called if
+  // the default network has changed or if shill::kDevicesProperty has changed.
+  SetDefaultDevice(GetDefaultDevice());
 }
 
-std::string ShillClient::SetDefaultInterface(std::string new_default) {
-  // When the system default is lost, use the fallback interface instead.
-  if (new_default.empty())
-    new_default = fallback_default_interface_;
+void ShillClient::SetDefaultDevice(const Device& new_default) {
+  if (default_device_.ifname == new_default.ifname)
+    return;
 
-  if (default_interface_ == new_default)
-    return default_interface_;
+  LOG(INFO) << "Default device changed from " << default_device_ << " to "
+            << new_default;
 
-  LOG(INFO) << "Default interface changed from [" << default_interface_
-            << "] to [" << new_default << "]";
-
-  const std::string prev_default = default_interface_;
-  default_interface_ = new_default;
-  for (const auto& h : default_interface_handlers_) {
+  for (const auto& h : default_device_handlers_) {
     if (!h.is_null())
-      h.Run(default_interface_, prev_default);
+      h.Run(new_default, default_device_);
   }
-  return prev_default;
+  default_device_ = new_default;
 }
 
-void ShillClient::RegisterDefaultInterfaceChangedHandler(
-    const DefaultInterfaceChangeHandler& handler) {
-  default_interface_handlers_.emplace_back(handler);
-  const auto prev_default = SetDefaultInterface(GetDefaultInterface());
-  handler.Run(default_interface_, prev_default);
+void ShillClient::RegisterDefaultDeviceChangedHandler(
+    const DefaultDeviceChangeHandler& handler) {
+  default_device_handlers_.emplace_back(handler);
+  // Explicitly trigger the callback once to let it know of the the current
+  // default interface. The previous interface is left empty.
+  handler.Run(default_device_, {});
 }
 
 void ShillClient::RegisterDevicesChangedHandler(
@@ -423,6 +428,12 @@ void ShillClient::OnDevicePropertyChange(const std::string& device,
   // trigger handlers if there is an actual change.
   for (const auto& handler : ipconfigs_handlers_)
     handler.Run(device, ipconfig);
+}
+
+std::ostream& operator<<(std::ostream& stream, const ShillClient::Device& dev) {
+  return stream << "{ifname: " << dev.ifname
+                << ", type: " << DeviceTypeName(dev.type)
+                << ", service: " << dev.service_path << "}";
 }
 
 }  // namespace patchpanel

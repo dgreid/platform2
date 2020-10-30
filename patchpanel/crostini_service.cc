@@ -33,6 +33,11 @@ std::string MakeKey(uint64_t vm_id, bool is_termina) {
                             base::NumberToString(vm_id).c_str());
 }
 
+bool IsEthernetOrWifiDevice(const ShillClient::Device& device) {
+  return device.type == ShillClient::Device::Type::kEthernet ||
+         device.type == ShillClient::Device::Type::kWifi;
+}
+
 }  // namespace
 
 CrostiniService::CrostiniService(ShillClient* shill_client,
@@ -59,8 +64,8 @@ CrostiniService::CrostiniService(ShillClient* shill_client,
     CheckAdbSideloadingStatus();
   }
 
-  shill_client_->RegisterDefaultInterfaceChangedHandler(base::Bind(
-      &CrostiniService::OnDefaultInterfaceChanged, weak_factory_.GetWeakPtr()));
+  shill_client_->RegisterDefaultDeviceChangedHandler(base::Bind(
+      &CrostiniService::OnDefaultDeviceChanged, weak_factory_.GetWeakPtr()));
 }
 
 CrostiniService::~CrostiniService() {
@@ -190,11 +195,22 @@ std::unique_ptr<Device> CrostiniService::AddTAP(bool is_termina,
   return std::make_unique<Device>(tap, tap, "", std::move(config), opts);
 }
 
-void CrostiniService::OnDefaultInterfaceChanged(
-    const std::string& new_ifname, const std::string& prev_ifname) {
-  for (const auto& t : taps_) {
-    StopForwarding(prev_ifname, t.second->host_ifname());
-    StartForwarding(new_ifname, t.second->host_ifname());
+void CrostiniService::OnDefaultDeviceChanged(
+    const ShillClient::Device& new_device,
+    const ShillClient::Device& prev_device) {
+  // Only take into account interface switches and ignore layer 3 property
+  // changes.
+  if (prev_device.ifname == new_device.ifname)
+    return;
+
+  if (IsEthernetOrWifiDevice(prev_device)) {
+    for (const auto& t : taps_)
+      StopForwarding(prev_device.ifname, t.second->host_ifname());
+  }
+
+  if (IsEthernetOrWifiDevice(new_device)) {
+    for (const auto& t : taps_)
+      StartForwarding(new_device.ifname, t.second->host_ifname());
   }
 }
 

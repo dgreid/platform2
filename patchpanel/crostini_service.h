@@ -41,8 +41,8 @@ class CrostiniService {
 
  private:
   std::unique_ptr<Device> AddTAP(bool is_termina, int subnet_index);
-  void OnDefaultInterfaceChanged(const std::string& new_ifname,
-                                 const std::string& prev_ifname);
+  void OnDefaultDeviceChanged(const ShillClient::Device& new_device,
+                              const ShillClient::Device& prev_device);
   void StartForwarding(const std::string& phys_ifname,
                        const std::string& virt_ifname);
   void StopForwarding(const std::string& phys_ifname,
