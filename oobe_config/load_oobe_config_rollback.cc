@@ -68,16 +68,16 @@ bool LoadOobeConfigRollback::GetOobeConfigJson(string* config,
       restore_result = oobe_config_->EncryptedRollbackRestore();
     }
 
-    if (!restore_result) {
+    if (restore_result) {
+      oobe_config_->WriteFile(kFirstStageCompletedFile, "");
+    } else {
       LOG(ERROR) << "Failed to restore rollback data";
       metrics_.RecordRestoreResult(Metrics::OobeRestoreResult::kStage1Failure);
-      return false;
+      oobe_config_->WriteFile(kFirstStageErrorFile, "");
     }
 
-    // We create kFirstStageCompletedFile after this.
-    oobe_config_->WriteFile(kFirstStageCompletedFile, "");
-    // If all succeeded, we reboot.
-    if (base::PathExists(kFirstStageCompletedFile) && power_manager_proxy_) {
+    // Reboot.
+    if (power_manager_proxy_) {
       if (!skip_reboot_for_testing_) {
         LOG(INFO) << "Rebooting device.";
         brillo::ErrorPtr error;

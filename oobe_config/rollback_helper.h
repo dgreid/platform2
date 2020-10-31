@@ -26,7 +26,8 @@ bool PrepareSave(const base::FilePath& root_path,
 // |root_path| specifies a path prefix, used for testing, otherwise empty.
 // |ignore_permissions_for_testing| skips the permission setting steps, use
 // only for testing.
-// Returns true if succeeded.
+// Returns true on success. Not being in the correct stage is considered success
+// as well.
 bool FinishRestore(const base::FilePath& root_path,
                    bool ignore_permissions_for_testing);
 

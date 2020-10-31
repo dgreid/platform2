@@ -23,6 +23,9 @@ const base::FilePath kFirstStageCompletedFile =
 const base::FilePath kSecondStageCompletedFile =
     base::FilePath("/var/lib/oobe_config_restore/second_stage_completed");
 
+const base::FilePath kFirstStageErrorFile =
+    base::FilePath("/var/lib/oobe_config_restore/first_stage_failed");
+
 const base::FilePath kRollbackSaveMarkerFile =
     base::FilePath("/mnt/stateful_partition/.save_rollback_data");
 

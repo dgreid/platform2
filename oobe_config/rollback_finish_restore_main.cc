@@ -20,6 +20,8 @@ void InitLog() {
 
 }  // namespace
 
+// The caller of this function, |chromeos_startup| script, will reset the TPM on
+// non-zero return value.
 int main(int argc, char* argv[]) {
   InitLog();
 
@@ -32,8 +34,14 @@ int main(int argc, char* argv[]) {
     return 0;
   }
 
-  if (oobe_config::FinishRestore(base::FilePath() /* root_path */,
-                                 false /* ignore_permissions_for_testing */))
-    return 0;
-  return 1;
+  // Something went wrong in the first stage of rollback restore. Reset TPM.
+  if (base::PathExists(oobe_config::kFirstStageErrorFile)) {
+    return 1;
+  }
+
+  if (!oobe_config::FinishRestore(base::FilePath() /* root_path */,
+                                  false /* ignore_permissions_for_testing */)) {
+    return 1;
+  }
+  return 0;
 }

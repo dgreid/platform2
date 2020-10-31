@@ -27,6 +27,9 @@ extern const base::FilePath kEncryptedStatefulRollbackDataPath;
 extern const base::FilePath kFirstStageCompletedFile;
 extern const base::FilePath kSecondStageCompletedFile;
 
+// Path to the file indicating the first stage failed.
+extern const base::FilePath kFirstStageErrorFile;
+
 // The name of the marker file used to trigger a save of rollback data
 // during the next shutdown.
 extern const base::FilePath kRollbackSaveMarkerFile;

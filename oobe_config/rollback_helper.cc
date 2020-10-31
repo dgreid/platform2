@@ -164,7 +164,7 @@ bool FinishRestore(const base::FilePath& root_path,
 
   if (!oobe_config.CheckSecondStage()) {
     LOG(INFO) << "Finish restore is not in stage 2.";
-    return false;
+    return true;
   }
 
   LOG(INFO) << "Starting rollback restore stage 2.";
@@ -175,7 +175,9 @@ bool FinishRestore(const base::FilePath& root_path,
           restore_path.Append(kInstallAttributesFileName),
           PrefixAbsolutePath(root_path, kInstallAttributesPath), kRootUsername,
           0644, ignore_permissions_for_testing)) {
-    LOG(WARNING) << "Couldn't restore install attributes.";
+    LOG(ERROR) << "Couldn't restore install attributes.";
+    // Need to reset the TPM if we could not restore install attributes.
+    return false;
   }
 
   // Restore owner.key. /var/lib/whitelist/ should already exist at OOBE
@@ -184,7 +186,9 @@ bool FinishRestore(const base::FilePath& root_path,
           restore_path.Append(kOwnerKeyFileName),
           PrefixAbsolutePath(root_path, kOwnerKeyFilePath), kRootUsername, 0604,
           ignore_permissions_for_testing)) {
-    LOG(WARNING) << "Couldn't restore owner.key.";
+    LOG(ERROR) << "Couldn't restore owner.key.";
+    // Need to reset the TPM if we could not restore the owner key.
+    return false;
   }
 
   // Restore shill default profile. /var/cache/shill/ should already exist at
