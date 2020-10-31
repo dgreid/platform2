@@ -46,6 +46,7 @@ class PortManager : public UdevMonitor::Observer {
   void OnCableAddedOrRemoved(const base::FilePath& path,
                              int port_num,
                              bool added) override;
+  void OnCableAltModeAdded(const base::FilePath& path, int port_num) override;
 
   // The central function which contains the main mode entry logic. This decides
   // which partner mode we select, based on partner/cable characteristics as

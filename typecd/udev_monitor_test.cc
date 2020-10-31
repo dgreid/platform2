@@ -55,14 +55,27 @@ class TestObserver : public UdevMonitor::Observer {
 
   void OnCableAddedOrRemoved(const base::FilePath& path,
                              int port_num,
-                             bool added) override{};
+                             bool added) override {
+    if (added)
+      num_cables_++;
+    else
+      num_cables_--;
+  };
+
+  void OnCableAltModeAdded(const base::FilePath& path, int port_num) override {
+    num_cable_altmodes_++;
+  };
 
   int GetNumPorts() { return num_ports_; }
   int GetNumPartners() { return num_partners_; }
+  int GetNumCables() { return num_cables_; }
+  int GetNumCableAltModes() { return num_cable_altmodes_; }
 
  private:
   int num_partners_;
   int num_ports_;
+  int num_cables_;
+  int num_cable_altmodes_;
 };
 
 }  // namespace
@@ -149,6 +162,12 @@ TEST_F(UdevMonitorTest, TestHotplug) {
       .WillOnce(Return(kFakePort0PartnerSysPath));
   EXPECT_CALL(*device_partner_remove, GetAction()).WillOnce(Return("remove"));
 
+  // Fake the calls for cable add.
+  auto device_cable_add = std::make_unique<brillo::MockUdevDevice>();
+  EXPECT_CALL(*device_cable_add, GetSysPath())
+      .WillOnce(Return(kFakePort0CableSysPath));
+  EXPECT_CALL(*device_cable_add, GetAction()).WillOnce(Return("add"));
+
   // Create the Mock Udev objects and function invocation expectations.
   auto monitor = std::make_unique<brillo::MockUdevMonitor>();
   EXPECT_CALL(*monitor, FilterAddMatchSubsystemDeviceType(
@@ -159,7 +178,8 @@ TEST_F(UdevMonitorTest, TestHotplug) {
   EXPECT_CALL(*monitor, ReceiveDevice())
       .WillOnce(Return(ByMove(std::move(device_port))))
       .WillOnce(Return(ByMove(std::move(device_partner_add))))
-      .WillOnce(Return(ByMove(std::move(device_partner_remove))));
+      .WillOnce(Return(ByMove(std::move(device_partner_remove))))
+      .WillOnce(Return(ByMove(std::move(device_cable_add))));
 
   auto udev = std::make_unique<brillo::MockUdev>();
   EXPECT_CALL(*udev, CreateMonitorFromNetlink(StrEq(kUdevMonitorName)))
@@ -168,6 +188,7 @@ TEST_F(UdevMonitorTest, TestHotplug) {
   monitor_->SetUdev(std::move(udev));
 
   EXPECT_THAT(0, observer_->GetNumPorts());
+  EXPECT_THAT(0, observer_->GetNumCables());
 
   // Skip initial scanning, since we are only interested in testing hotplug.
   ASSERT_TRUE(monitor_->BeginMonitoring());
@@ -183,6 +204,8 @@ TEST_F(UdevMonitorTest, TestHotplug) {
   EXPECT_THAT(1, observer_->GetNumPartners());
   monitor_->HandleUdevEvent();
   EXPECT_THAT(0, observer_->GetNumPartners());
+  monitor_->HandleUdevEvent();
+  EXPECT_THAT(1, observer_->GetNumCables());
 }
 
 // Test that the udev handler correctly handles invalid port sysfs paths.
@@ -218,6 +241,50 @@ TEST_F(UdevMonitorTest, TestInvalidPortSyspath) {
   // the event handler using the FileDescriptorWatcher.
   monitor_->HandleUdevEvent();
   EXPECT_THAT(0, observer_->GetNumPorts());
+}
+
+// Test that the monitor can detect cable creation and SOP' alternate mode
+// addition. Also checks that an SOP'' alternate mode addition is ignored.
+TEST_F(UdevMonitorTest, TestCableAndAltModeAddition) {
+  // Create the Mock Udev objects and function invocation expectations.
+
+  // Unsupported SOP'' alternate mode.
+  auto list_entry3 = std::make_unique<brillo::MockUdevListEntry>();
+  EXPECT_CALL(*list_entry3, GetName())
+      .WillOnce(Return(kFakePort0SOPDoublePrimeAltModeSysPath));
+  EXPECT_CALL(*list_entry3, GetNext())
+      .WillOnce(Return(ByMove(std::move(nullptr))));
+
+  // SOP' alternate mode.
+  auto list_entry2 = std::make_unique<brillo::MockUdevListEntry>();
+  EXPECT_CALL(*list_entry2, GetName())
+      .WillOnce(Return(kFakePort0SOPPrimeAltModeSysPath));
+  EXPECT_CALL(*list_entry2, GetNext())
+      .WillOnce(Return(ByMove(std::move(list_entry3))));
+
+  // Cable.
+  auto list_entry1 = std::make_unique<brillo::MockUdevListEntry>();
+  EXPECT_CALL(*list_entry1, GetName()).WillOnce(Return(kFakePort0CableSysPath));
+  EXPECT_CALL(*list_entry1, GetNext())
+      .WillOnce(Return(ByMove(std::move(list_entry2))));
+
+  auto enumerate = std::make_unique<brillo::MockUdevEnumerate>();
+  EXPECT_CALL(*enumerate, AddMatchSubsystem(StrEq(kTypeCSubsystem)))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*enumerate, ScanDevices()).WillOnce(Return(true));
+  EXPECT_CALL(*enumerate, GetListEntry())
+      .WillOnce(Return(ByMove(std::move(list_entry1))));
+
+  auto udev = std::make_unique<brillo::MockUdev>();
+  EXPECT_CALL(*udev, CreateEnumerate())
+      .WillOnce(Return(ByMove(std::move(enumerate))));
+
+  monitor_->SetUdev(std::move(udev));
+
+  ASSERT_TRUE(monitor_->ScanDevices());
+
+  EXPECT_THAT(1, observer_->GetNumCables());
+  EXPECT_THAT(1, observer_->GetNumCableAltModes());
 }
 
 }  // namespace typecd

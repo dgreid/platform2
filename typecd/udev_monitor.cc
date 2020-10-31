@@ -15,6 +15,8 @@ constexpr char kPartnerAltModeRegex[] = R"(port(\d+)-partner.(\d+))";
 constexpr char kPartnerRegex[] = R"(port(\d+)-partner)";
 constexpr char kCableRegex[] = R"(port(\d+)-cable)";
 constexpr char kPortRegex[] = R"(port(\d+))";
+// TODO(pmalani): Add SOP'' support when the kernel also supports it.
+constexpr char kSOPPrimePlugAltModeRegex[] = R"(port(\d+)-plug0.(\d+))";
 
 }  // namespace
 
@@ -113,6 +115,10 @@ bool UdevMonitor::HandleDeviceAddedRemoved(const base::FilePath& path,
       observer.OnPartnerAltModeAddedOrRemoved(path, port_num, added);
     else if (RE2::FullMatch(name.value(), kCableRegex, &port_num))
       observer.OnCableAddedOrRemoved(path, port_num, added);
+    else if (RE2::FullMatch(name.value(), kSOPPrimePlugAltModeRegex,
+                            &port_num) &&
+             added)
+      observer.OnCableAltModeAdded(path, port_num);
   }
 
   return true;

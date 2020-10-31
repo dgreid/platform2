@@ -81,6 +81,19 @@ void PortManager::OnCableAddedOrRemoved(const base::FilePath& path,
   }
 }
 
+void PortManager::OnCableAltModeAdded(const base::FilePath& path,
+                                      int port_num) {
+  auto it = ports_.find(port_num);
+  if (it == ports_.end()) {
+    LOG(WARNING) << "Cable alt mode add attempted for non-existent port "
+                 << port_num;
+    return;
+  }
+
+  auto port = it->second.get();
+  port->AddCableAltMode(path);
+}
+
 void PortManager::RunModeEntry(int port_num) {
   if (!ec_util_) {
     LOG(ERROR) << "No EC Util implementation registered, mode entry aborted.";

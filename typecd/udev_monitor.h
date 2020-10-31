@@ -85,6 +85,15 @@ class UdevMonitor {
     virtual void OnCableAddedOrRemoved(const base::FilePath& path,
                                        int port_num,
                                        bool added) = 0;
+
+    // Callback that is executed when a cable (SOP') alternate mode is
+    // registered.
+    //
+    // The |path| argument refers to the sysfs device path of the cable (SOP')
+    // alternate mode. The |port_num| argument refers to the port's index
+    // number.
+    virtual void OnCableAltModeAdded(const base::FilePath& path,
+                                     int port_num) = 0;
   };
 
   void AddObserver(Observer* obs);
@@ -95,6 +104,7 @@ class UdevMonitor {
   FRIEND_TEST(UdevMonitorTest, TestBasic);
   FRIEND_TEST(UdevMonitorTest, TestHotplug);
   FRIEND_TEST(UdevMonitorTest, TestInvalidPortSyspath);
+  FRIEND_TEST(UdevMonitorTest, TestCableAndAltModeAddition);
 
   // Set the |udev_| pointer to a MockUdev device. *Only* used by unit tests.
   void SetUdev(std::unique_ptr<brillo::MockUdev> udev) {

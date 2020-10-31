@@ -86,6 +86,18 @@ void Port::AddRemovePartnerAltMode(const base::FilePath& path, bool added) {
   }
 }
 
+void Port::AddCableAltMode(const base::FilePath& path) {
+  if (!cable_) {
+    LOG(WARNING) << "Trying to add alt mode for non-existent cable on port "
+                 << port_num_;
+    return;
+  }
+
+  if (!cable_->AddAltMode(path))
+    LOG(ERROR) << "Failed to add alt mode for port " << port_num_ << " at path "
+               << path;
+}
+
 std::string Port::GetDataRole() {
   std::string data_role;
   std::string sysfs_str;

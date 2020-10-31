@@ -33,6 +33,8 @@ class Port {
   // Add/remove an alternate mode for the partner.
   void AddRemovePartnerAltMode(const base::FilePath& path, bool added);
 
+  void AddCableAltMode(const base::FilePath& path);
+
   // Read and return the current port data role from sysfs.
   // Returns either "host" or "device" on success, empty string on failure.
   std::string GetDataRole();
