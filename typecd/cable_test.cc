@@ -4,9 +4,13 @@
 
 #include "typecd/cable.h"
 
+#include <string>
+
+#include <base/strings/stringprintf.h>
 #include <gtest/gtest.h>
 
 #include "typecd/test_constants.h"
+#include "typecd/test_utils.h"
 
 namespace typecd {
 
@@ -67,6 +71,32 @@ TEST_F(CableTest, TestTBT3PDIdentityCheck) {
   cable->SetProductTypeVDO2(0x0);
   cable->SetProductTypeVDO3(0x0);
   EXPECT_FALSE(cable->TBT3PDIdentityCheck());
+}
+
+// Check that calls of AddAltMode() done explicitly function correctly. Also
+// check that trying to add the same alt mode twice fails.
+TEST_F(CableTest, TestAltModeManualAddition) {
+  Cable cable((base::FilePath(kFakePort0CableSysPath)));
+
+  // Set up fake sysfs paths.
+  base::FilePath temp_dir;
+  ASSERT_TRUE(base::CreateNewTempDirectory("", &temp_dir));
+
+  std::string mode0_dirname =
+      base::StringPrintf("port%d-plug0.%d", 0, kDPAltModeIndex);
+  auto mode0_path = temp_dir.Append(mode0_dirname);
+  ASSERT_TRUE(CreateFakeAltMode(mode0_path, kDPSVID, kDPVDO, kDPVDOIndex));
+
+  EXPECT_TRUE(cable.AddAltMode(mode0_path));
+
+  std::string mode1_dirname =
+      base::StringPrintf("port%d-plug0.%d", 0, kTBTAltModeIndex);
+  auto mode1_path = temp_dir.Append(mode1_dirname);
+  ASSERT_TRUE(CreateFakeAltMode(mode1_path, kTBTSVID, kTBTVDO, kTBTVDOIndex));
+
+  EXPECT_TRUE(cable.AddAltMode(mode1_path));
+  // Trying to add an existing alt mode again should fail.
+  EXPECT_FALSE(cable.AddAltMode(mode1_path));
 }
 
 }  // namespace typecd
