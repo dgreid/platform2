@@ -126,13 +126,22 @@ constexpr int32_t kSecondFakeCpuTemperatureMilliDegrees =
     kSecondFakeCpuTemperature * 1000;
 constexpr char kSecondFakeCpuTemperatureLabel[] = "Second Temperature Label";
 
-// Workaround for UnorderedElementsAreArray not accepting move-only types - this
-// simple matcher expects a std::cref(mojo_ipc::CStateInfoPtr) and checks
-// each of the fields for equality.
+// Workaround matchers for UnorderedElementsAreArray not accepting
+// move-only types.
+
+// This matcher expects a std::cref(mojo_ipc::CStateInfoPtr) and
+// checks each of the fields for equality.
 MATCHER_P(MatchesCStateInfoPtr, ptr, "") {
   return arg->name == ptr.get()->name &&
          arg->time_in_state_since_last_boot_us ==
              ptr.get()->time_in_state_since_last_boot_us;
+}
+
+// This matcher expects a std::cref(mojo_ipc::CpuTemperatureChannelPtr) and
+// checks each of the fields for equality.
+MATCHER_P(MatchesCpuTemperatureChannelPtr, ptr, "") {
+  return arg->label == ptr.get()->label &&
+         arg->temperature_celsius == ptr.get()->temperature_celsius;
 }
 
 // Note that this function only works for Logical CPUs with one or two C-states.
@@ -188,16 +197,18 @@ void VerifyLogicalCpu(
 void VerifyCpuTemps(
     const std::vector<mojo_ipc::CpuTemperatureChannelPtr>& cpu_temps) {
   ASSERT_EQ(cpu_temps.size(), 2);
-  const auto& first_temp = cpu_temps[0];
-  ASSERT_FALSE(first_temp.is_null());
-  ASSERT_TRUE(first_temp->label.has_value());
-  EXPECT_EQ(first_temp->label.value(), kFirstFakeCpuTemperatureLabel);
-  EXPECT_EQ(first_temp->temperature_celsius, kFirstFakeCpuTemperature);
-  const auto& second_temp = cpu_temps[1];
-  ASSERT_FALSE(second_temp.is_null());
-  ASSERT_TRUE(second_temp->label.has_value());
-  EXPECT_EQ(second_temp->label.value(), kSecondFakeCpuTemperatureLabel);
-  EXPECT_EQ(second_temp->temperature_celsius, kSecondFakeCpuTemperature);
+
+  // Since fetching temperatures uses base::FileEnumerator, we're not
+  // guaranteed the order of the two results.
+  auto first_expected_temp = mojo_ipc::CpuTemperatureChannel::New(
+      kFirstFakeCpuTemperatureLabel, kFirstFakeCpuTemperature);
+  auto second_expected_temp = mojo_ipc::CpuTemperatureChannel::New(
+      kSecondFakeCpuTemperatureLabel, kSecondFakeCpuTemperature);
+  EXPECT_THAT(
+      cpu_temps,
+      UnorderedElementsAreArray(
+          {MatchesCpuTemperatureChannelPtr(std::cref(first_expected_temp)),
+           MatchesCpuTemperatureChannelPtr(std::cref(second_expected_temp))}));
 }
 
 }  // namespace
@@ -677,15 +688,18 @@ TEST_F(CpuFetcherTest, CpuTemperatureWithoutLabel) {
 
   const auto& cpu_temps = cpu_info->temperature_channels;
   ASSERT_EQ(cpu_temps.size(), 2);
-  const auto& first_temp = cpu_temps[0];
-  ASSERT_FALSE(first_temp.is_null());
-  EXPECT_FALSE(first_temp->label.has_value());
-  EXPECT_EQ(first_temp->temperature_celsius, kFirstFakeCpuTemperature);
-  const auto& second_temp = cpu_temps[1];
-  ASSERT_FALSE(second_temp.is_null());
-  ASSERT_TRUE(second_temp->label.has_value());
-  EXPECT_EQ(second_temp->label.value(), kSecondFakeCpuTemperatureLabel);
-  EXPECT_EQ(second_temp->temperature_celsius, kSecondFakeCpuTemperature);
+
+  // Since fetching temperatures uses base::FileEnumerator, we're not
+  // guaranteed the order of the two results.
+  auto first_expected_temp = mojo_ipc::CpuTemperatureChannel::New(
+      base::nullopt, kFirstFakeCpuTemperature);
+  auto second_expected_temp = mojo_ipc::CpuTemperatureChannel::New(
+      kSecondFakeCpuTemperatureLabel, kSecondFakeCpuTemperature);
+  EXPECT_THAT(
+      cpu_temps,
+      UnorderedElementsAreArray(
+          {MatchesCpuTemperatureChannelPtr(std::cref(first_expected_temp)),
+           MatchesCpuTemperatureChannelPtr(std::cref(second_expected_temp))}));
 }
 
 // Test that we handle incorrectly-formatted CPU temperature files.
