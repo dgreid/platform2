@@ -161,6 +161,16 @@ class UserDataAuthAdaptor
       const user_data_auth::EndFingerprintAuthSessionRequest& in_request)
       override;
 
+  void GetWebAuthnSecret(
+      std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
+          user_data_auth::GetWebAuthnSecretReply>> response,
+      const user_data_auth::GetWebAuthnSecretRequest& in_request) override;
+
+  void DoGetWebAuthnSecret(
+      std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
+          user_data_auth::GetWebAuthnSecretReply>> response,
+      const user_data_auth::GetWebAuthnSecretRequest& in_request);
+
   void StartMigrateToDircrypto(
       std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
           user_data_auth::StartMigrateToDircryptoReply>> response,

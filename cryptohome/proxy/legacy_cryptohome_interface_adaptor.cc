@@ -2538,7 +2538,35 @@ void LegacyCryptohomeInterfaceAdaptor::GetWebAuthnSecret(
     std::unique_ptr<
         brillo::dbus_utils::DBusMethodResponse<cryptohome::BaseReply>> response,
     const cryptohome::AccountIdentifier& in_account_id,
-    const cryptohome::GetWebAuthnSecretRequest& in_request) {}
+    const cryptohome::GetWebAuthnSecretRequest& in_request) {
+  auto response_shared =
+      std::make_shared<SharedDBusMethodResponse<cryptohome::BaseReply>>(
+          std::move(response));
+
+  user_data_auth::GetWebAuthnSecretRequest request;
+  request.mutable_account_id()->CopyFrom(in_account_id);
+  userdataauth_proxy_->GetWebAuthnSecretAsync(
+      request,
+      base::Bind(&LegacyCryptohomeInterfaceAdaptor::GetWebAuthnSecretOnSuccess,
+                 base::Unretained(this), response_shared),
+      base::Bind(&LegacyCryptohomeInterfaceAdaptor::ForwardError<
+                     cryptohome::BaseReply>,
+                 base::Unretained(this), response_shared));
+}
+
+void LegacyCryptohomeInterfaceAdaptor::GetWebAuthnSecretOnSuccess(
+    std::shared_ptr<SharedDBusMethodResponse<cryptohome::BaseReply>> response,
+    const user_data_auth::GetWebAuthnSecretReply& reply) {
+  cryptohome::BaseReply result;
+  result.set_error(static_cast<cryptohome::CryptohomeErrorCode>(reply.error()));
+  cryptohome::GetWebAuthnSecretReply* result_extension =
+      result.MutableExtension(cryptohome::GetWebAuthnSecretReply::reply);
+  if (result.error() == CRYPTOHOME_ERROR_NOT_SET) {
+    result_extension->set_webauthn_secret(reply.webauthn_secret());
+  }
+  ClearErrorIfNotSet(&result);
+  response->Return(result);
+}
 
 void LegacyCryptohomeInterfaceAdaptor::GetFirmwareManagementParameters(
     std::unique_ptr<

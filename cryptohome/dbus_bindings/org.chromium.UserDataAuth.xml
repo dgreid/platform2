@@ -234,6 +234,19 @@ do.
       </arg>
     </method>
 
+    <method name="GetWebAuthnSecret">
+      <annotation name="org.chromium.DBus.Method.Kind"
+                  value="async"/>
+      <arg name="request" type="ay" direction="in">
+        <annotation name="org.chromium.DBus.Argument.ProtobufClass"
+                    value="user_data_auth::GetWebAuthnSecretRequest" />
+      </arg>
+      <arg name="reply" type="ay" direction="out">
+        <annotation name="org.chromium.DBus.Argument.ProtobufClass"
+                    value="user_data_auth::GetWebAuthnSecretReply" />
+      </arg>
+    </method>
+
     <method name="StartMigrateToDircrypto">
       <annotation name="org.chromium.DBus.Method.Kind"
                   value="async"/>

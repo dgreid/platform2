@@ -443,6 +443,26 @@ void UserDataAuthAdaptor::EndFingerprintAuthSession(
   response->Return(reply);
 }
 
+void UserDataAuthAdaptor::GetWebAuthnSecret(
+    std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
+        user_data_auth::GetWebAuthnSecretReply>> response,
+    const user_data_auth::GetWebAuthnSecretRequest& in_request) {
+  service_->PostTaskToMountThread(
+      FROM_HERE,
+      base::BindOnce(
+          &UserDataAuthAdaptor::DoGetWebAuthnSecret, base::Unretained(this),
+          ThreadSafeDBusMethodResponse<user_data_auth::GetWebAuthnSecretReply>::
+              MakeThreadSafe(std::move(response)),
+          in_request));
+}
+
+void UserDataAuthAdaptor::DoGetWebAuthnSecret(
+    std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
+        user_data_auth::GetWebAuthnSecretReply>> response,
+    const user_data_auth::GetWebAuthnSecretRequest& in_request) {
+  response->Return(service_->GetWebAuthnSecret(in_request));
+}
+
 void UserDataAuthAdaptor::StartMigrateToDircrypto(
     std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
         user_data_auth::StartMigrateToDircryptoReply>> response,

@@ -330,6 +330,9 @@ class UserDataAuth {
   // End the current fingerprint auth session.
   void EndFingerprintAuthSession();
 
+  user_data_auth::GetWebAuthnSecretReply GetWebAuthnSecret(
+      const user_data_auth::GetWebAuthnSecretRequest& request);
+
   // ========= Firmware Management Parameters Related Public Methods =========
 
   // Retrieve the firmware management parameters. Returns
