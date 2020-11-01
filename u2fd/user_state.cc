@@ -88,6 +88,9 @@ void UserState::LoadState() {
   if (sanitized_user_.has_value()) {
     LoadOrCreateUserSecret();
     LoadCounter();
+    if (session_started_callback_ && user_.has_value()) {
+      session_started_callback_.Run(*user_);
+    }
   }
 }
 
@@ -95,9 +98,13 @@ void UserState::OnSessionStateChanged(const std::string& state) {
   if (state == kSessionStateStarted) {
     LoadState();
   } else {
+    user_.reset();
     sanitized_user_.reset();
     user_secret_.reset();
     counter_.reset();
+    if (session_stopped_callback_) {
+      session_stopped_callback_.Run();
+    }
   }
 }
 
@@ -113,8 +120,10 @@ void UserState::UpdatePrimarySessionSanitizedUser() {
       sanitized_user.empty()) {
     LOG(ERROR) << "Failed to retreive current user. This is expected on "
                   "startup if no user is logged in.";
+    user_.reset();
     sanitized_user_.reset();
   } else {
+    user_ = user;
     sanitized_user_ = sanitized_user;
   }
 }
@@ -247,6 +256,16 @@ bool UserState::PersistCounter() {
 
   return WrapUserData(counter_pb, &counter_wrapped) &&
          brillo::WriteBlobToFileAtomic(path, counter_wrapped, 0600);
+}
+
+void UserState::SetSessionStartedCallback(
+    base::RepeatingCallback<void(const std::string&)> callback) {
+  session_started_callback_ = std::move(callback);
+}
+
+void UserState::SetSessionStoppedCallback(
+    base::RepeatingCallback<void()> callback) {
+  session_stopped_callback_ = std::move(callback);
 }
 
 }  // namespace u2f

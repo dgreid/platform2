@@ -58,7 +58,7 @@ const std::string ExpectedUserPresenceU2fGenerateRequestRegex() {
       base::HexEncode(kRpIdHash.data(), kRpIdHash.size()) +  // AppId
       std::string("(EE){32}") +                              // User Secret
       std::string("0B") +       // U2F_UV_ENABLED_KH | U2F_AUTH_ENFORCE
-      std::string("(00){32}");  // Auth time secret hash
+      std::string("(12){32}");  // Auth time secret hash
   return request_regex;
 }
 
@@ -68,7 +68,7 @@ const std::string ExpectedUserVerificationU2fGenerateRequestRegex() {
       base::HexEncode(kRpIdHash.data(), kRpIdHash.size()) +  // AppId
       std::string("(EE){32}") +                              // User Secret
       std::string("08") +       // U2F_UV_ENABLED_KH
-      std::string("(00){32}");  // Auth time secret hash
+      std::string("(12){32}");  // Auth time secret hash
   return request_regex;
 }
 
@@ -235,6 +235,11 @@ class WebAuthnHandlerTest : public ::testing::Test {
                                            include_attested_credential_data);
   }
 
+  // Set up an auth-time secret hash as if a user has logged in.
+  void SetUpAuthTimeSecretHash() {
+    handler_->auth_time_secret_hash_ = std::make_unique<brillo::Blob>(32, 0x12);
+  }
+
   StrictMock<MockTpmVendorCommandProxy> mock_tpm_proxy_;
   StrictMock<MockUserState> mock_user_state_;
 
@@ -289,8 +294,18 @@ TEST_F(WebAuthnHandlerTest, DoU2fGenerateNoSecret) {
       MakeCredentialResponse::INTERNAL_ERROR);
 }
 
+TEST_F(WebAuthnHandlerTest, DoU2fGenerateNoAuthTimeSecretHash) {
+  // Has "user secret" but doesn't have auth-time secret hash.
+  ExpectGetUserSecret();
+  std::vector<uint8_t> cred_id, cred_pubkey;
+  EXPECT_EQ(
+      DoU2fGenerate(PresenceRequirement::kPowerButton, &cred_id, &cred_pubkey),
+      MakeCredentialResponse::INTERNAL_ERROR);
+}
+
 TEST_F(WebAuthnHandlerTest, DoU2fGenerateSuccessUserPresence) {
   ExpectGetUserSecret();
+  SetUpAuthTimeSecretHash();
   EXPECT_CALL(
       mock_tpm_proxy_,
       SendU2fGenerate(
@@ -310,6 +325,7 @@ TEST_F(WebAuthnHandlerTest, DoU2fGenerateSuccessUserPresence) {
 
 TEST_F(WebAuthnHandlerTest, DoU2fGenerateSuccessUserVerification) {
   ExpectGetUserSecret();
+  SetUpAuthTimeSecretHash();
   EXPECT_CALL(
       mock_tpm_proxy_,
       SendU2fGenerate(
@@ -422,12 +438,34 @@ TEST_F(WebAuthnHandlerTest, MakeCredentialNoSecret) {
   ASSERT_TRUE(called);
 }
 
+TEST_F(WebAuthnHandlerTest, MakeCredentialNoAuthTimeSecretHash) {
+  MakeCredentialRequest request;
+  request.set_rp_id(kRpId);
+  request.set_verification_type(VerificationType::VERIFICATION_USER_PRESENCE);
+
+  // Has "user secret" but doesn't have auth-time secret hash.
+  ExpectGetUserSecret();
+  auto mock_method_response =
+      std::make_unique<MockDBusMethodResponse<MakeCredentialResponse>>();
+  bool called = false;
+  mock_method_response->set_return_callback(base::Bind(
+      [](bool* called_ptr, const MakeCredentialResponse& resp) {
+        EXPECT_EQ(resp.status(), MakeCredentialResponse::INTERNAL_ERROR);
+        *called_ptr = true;
+      },
+      &called));
+
+  handler_->MakeCredential(std::move(mock_method_response), request);
+  ASSERT_TRUE(called);
+}
+
 TEST_F(WebAuthnHandlerTest, MakeCredentialSuccess) {
   MakeCredentialRequest request;
   request.set_rp_id(kRpId);
   request.set_verification_type(VerificationType::VERIFICATION_USER_PRESENCE);
 
   ExpectGetUserSecret();
+  SetUpAuthTimeSecretHash();
   EXPECT_CALL(
       mock_tpm_proxy_,
       SendU2fGenerate(

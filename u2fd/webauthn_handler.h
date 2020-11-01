@@ -69,6 +69,10 @@ class WebAuthnHandler {
                   UserState* user_state,
                   std::function<void()> request_presence);
 
+  // Called when session state changed. Loads/clears state for primary user.
+  void OnSessionStarted(const std::string& account_id);
+  void OnSessionStopped();
+
   // Generates a new credential.
   void MakeCredential(
       std::unique_ptr<MakeCredentialMethodResponse> method_response,
@@ -91,8 +95,11 @@ class WebAuthnHandler {
 
   bool Initialized();
 
-  void HandleUVFlowResultMakeCredential(dbus::Response* flow_response);
+  // Fetch auth-time WebAuthn secret and keep the hash of it.
+  void GetWebAuthnSecret(const std::string& account_id);
 
+  // Callbacks invoked when UI completes user verification flow.
+  void HandleUVFlowResultMakeCredential(dbus::Response* flow_response);
   void HandleUVFlowResultGetAssertion(dbus::Response* flow_response);
 
   // Proceeds to cr50 for the current MakeCredential request, and responds to
@@ -189,6 +196,9 @@ class WebAuthnHandler {
   // The GetAssertion session that's waiting on UI. There can only be one
   // such session. UP sessions should not use this since there can be multiple.
   base::Optional<GetAssertionSession> pending_uv_get_assertion_session_;
+
+  // Hash of the per-user auth-time secret for WebAuthn.
+  std::unique_ptr<brillo::Blob> auth_time_secret_hash_;
 };
 
 }  // namespace u2f

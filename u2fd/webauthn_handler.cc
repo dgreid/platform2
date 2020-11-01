@@ -14,6 +14,8 @@
 #include <chromeos/cbor/values.h>
 #include <chromeos/cbor/writer.h>
 #include <chromeos/dbus/service_constants.h>
+#include <cryptohome/proto_bindings/rpc.pb.h>
+#include <cryptohome/proto_bindings/UserDataAuth.pb.h>
 #include <u2f/proto_bindings/u2f_interface.pb.h>
 
 #include "u2fd/util.h"
@@ -22,6 +24,8 @@ namespace u2f {
 
 namespace {
 
+// User a big timeout for cryptohome. See b/172945202.
+constexpr base::TimeDelta kCryptohomeTimeout = base::TimeDelta::FromMinutes(2);
 constexpr int kVerificationTimeoutMs = 10000;
 constexpr int kVerificationRetryDelayUs = 500 * 1000;
 constexpr int kCancelUVFlowTimeoutMs = 5000;
@@ -115,6 +119,10 @@ void WebAuthnHandler::Initialize(dbus::Bus* bus,
                                  std::function<void()> request_presence) {
   tpm_proxy_ = tpm_proxy;
   user_state_ = user_state;
+  user_state_->SetSessionStartedCallback(
+      base::Bind(&WebAuthnHandler::OnSessionStarted, base::Unretained(this)));
+  user_state_->SetSessionStoppedCallback(
+      base::Bind(&WebAuthnHandler::OnSessionStopped, base::Unretained(this)));
   request_presence_ = request_presence;
   bus_ = bus;
   auth_dialog_dbus_proxy_ = bus_->GetObjectProxy(
@@ -125,6 +133,62 @@ void WebAuthnHandler::Initialize(dbus::Bus* bus,
 
 bool WebAuthnHandler::Initialized() {
   return tpm_proxy_ != nullptr && user_state_ != nullptr;
+}
+
+void WebAuthnHandler::OnSessionStarted(const std::string& account_id) {
+  GetWebAuthnSecret(account_id);
+}
+
+void WebAuthnHandler::OnSessionStopped() {
+  auth_time_secret_hash_.reset();
+}
+
+void WebAuthnHandler::GetWebAuthnSecret(const std::string& account_id) {
+  cryptohome::AccountIdentifier id;
+  id.set_account_id(account_id);
+  cryptohome::GetWebAuthnSecretRequest req;
+
+  dbus::MethodCall method_call(cryptohome::kCryptohomeInterface,
+                               cryptohome::kCryptohomeGetWebAuthnSecret);
+  dbus::MessageWriter writer(&method_call);
+  writer.AppendProtoAsArrayOfBytes(id);
+  writer.AppendProtoAsArrayOfBytes(req);
+
+  dbus::ObjectProxy* cryptohome_proxy = bus_->GetObjectProxy(
+      cryptohome::kCryptohomeServiceName,
+      dbus::ObjectPath(cryptohome::kCryptohomeServicePath));
+
+  std::unique_ptr<dbus::Response> response =
+      cryptohome_proxy->CallMethodAndBlock(&method_call,
+                                           kCryptohomeTimeout.InMilliseconds());
+
+  if (!response) {
+    LOG(ERROR) << "Cannot get WebAuthn secret from cryptohome: no response.";
+    return;
+  }
+
+  cryptohome::BaseReply result;
+  dbus::MessageReader reader(response.get());
+  if (!reader.PopArrayOfBytesAsProto(&result)) {
+    LOG(ERROR)
+        << "Cannot parse GetWebAuthnSecret dbus response from cryptohome.";
+    return;
+  }
+
+  if (result.has_error()) {
+    LOG(ERROR) << "GetWebAuthnSecret has error " << result.error();
+    return;
+  }
+
+  if (!result.HasExtension(cryptohome::GetWebAuthnSecretReply::reply)) {
+    LOG(ERROR) << "GetWebAuthnSecret doesn't have the correct extension.";
+    return;
+  }
+
+  brillo::SecureBlob secret(
+      result.GetExtension(cryptohome::GetWebAuthnSecretReply::reply)
+          .webauthn_secret());
+  auth_time_secret_hash_ = std::make_unique<brillo::Blob>(util::Sha256(secret));
 }
 
 void WebAuthnHandler::MakeCredential(
@@ -433,7 +497,13 @@ MakeCredentialResponse::MakeCredentialStatus WebAuthnHandler::DoU2fGenerate(
   util::VectorToObject(*user_secret, generate_req.userSecret);
 
   if (uv_compatible) {
+    if (!auth_time_secret_hash_) {
+      LOG(ERROR) << "No auth-time secret hash to use for u2f_generate.";
+      return MakeCredentialResponse::INTERNAL_ERROR;
+    }
     generate_req.flags |= U2F_UV_ENABLED_KH;
+    memcpy(generate_req.authTimeSecretHash, auth_time_secret_hash_->data(),
+           auth_time_secret_hash_->size());
     struct u2f_generate_versioned_resp generate_resp = {};
 
     if (presence_requirement != PresenceRequirement::kPowerButton) {

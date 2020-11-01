@@ -43,6 +43,11 @@ class UserState {
   // could not be persisted to disk.
   virtual bool IncrementCounter();
 
+  virtual void SetSessionStartedCallback(
+      base::RepeatingCallback<void(const std::string&)> callback);
+  virtual void SetSessionStoppedCallback(
+      base::RepeatingCallback<void()> callback);
+
  protected:
   // Constructor for use by mock objects.
   UserState();
@@ -76,6 +81,9 @@ class UserState {
   // disk.
   bool PersistCounter();
 
+  // Current username, if any.
+  base::Optional<std::string> user_;
+
   // Current sanitized username, if any.
   base::Optional<std::string> sanitized_user_;
 
@@ -84,6 +92,9 @@ class UserState {
 
   org::chromium::SessionManagerInterfaceProxy* sm_proxy_;
   base::WeakPtrFactory<UserState> weak_ptr_factory_;
+
+  base::RepeatingCallback<void(const std::string&)> session_started_callback_;
+  base::RepeatingCallback<void()> session_stopped_callback_;
 
   const uint32_t counter_min_;
 };
