@@ -15,6 +15,7 @@
 
 #include "hermes/executor.h"
 #include "hermes/logger.h"
+#include "hermes/modem_control_interface.h"
 #include "hermes/qmi_uim.h"
 #include "hermes/socket_qrtr.h"
 
@@ -24,7 +25,7 @@ class EuiccManagerInterface;
 
 // Implementation of EuiccCard using QRTR sockets to send QMI UIM
 // messages.
-class ModemQrtr : public lpa::card::EuiccCard {
+class ModemQrtr : public lpa::card::EuiccCard, public ModemControlInterface {
  public:
   // Base class for the tx info specific to a certain type of uim command.
   // Uim command types that need any additional information should define
@@ -46,9 +47,8 @@ class ModemQrtr : public lpa::card::EuiccCard {
   virtual ~ModemQrtr();
 
   void Initialize(EuiccManagerInterface* euicc_manager);
-  // Set the active slot to a euicc so that a channel can be established and
-  // profiles can be installed.
-  void SetActiveSlot(const uint32_t physical_slot);
+  void StoreAndSetActiveSlot(uint32_t physical_slot) override;
+  void RestoreActiveSlot() override;
 
   // lpa::card::EuiccCard overrides.
   void SendApdus(std::vector<lpa::card::Apdu> apdus,
@@ -112,6 +112,10 @@ class ModemQrtr : public lpa::card::EuiccCard {
   // lpa::card::EuiccCard overrides.
   const lpa::proto::EuiccSpecVersion& GetCardVersion() override;
   lpa::util::Executor* executor() override { return executor_; }
+
+  // Set the active slot to a euicc so that a channel can be established and
+  // profiles can be installed.
+  void SetActiveSlot(uint32_t physical_slot);
 
  private:
   friend class ModemQrtrTest;
@@ -198,6 +202,8 @@ class ModemQrtr : public lpa::card::EuiccCard {
   // The slot that the logical channel to the eSIM will be made. Initialized in
   // constructor, hardware specific.
   uint8_t logical_slot_;
+  // Store the previous active slot before a switch slot
+  base::Optional<uint32_t> stored_active_slot_;
 
   std::unique_ptr<SocketInterface> socket_;
   SocketQrtr::PacketMetadata metadata_;

@@ -299,6 +299,7 @@ class ModemQrtrTest : public testing::Test {
     // Receive slot info from GET_SLOTS request.
     ModemReceiveData(kQrtrGetSlotsResp.begin(), kQrtrGetSlotsResp.end());
     EXPECT_EQ(euicc_manager_.valid_slots().size(), 1);
+    EXPECT_EQ(1, modem_->logical_slot_);
     // Receive response to OPEN_LOGICAL_CHANNEL request.
     ModemReceiveData(kQrtrOpenLogicalChannelResp.begin(),
                      kQrtrOpenLogicalChannelResp.end());

@@ -23,11 +23,11 @@ namespace {
 
 // As per QMI UIM spec section 2.2
 constexpr uint8_t kQmiUimService = 0xB;
-// This represents the logical slot that we want our eSIM to be assigned. For
-// dual sim - single standby modems, this will always work.
-// TODO(pholla) : For other multi-sim modems, get the first active slot and
-// store it as a ModemQrtr field.
-constexpr uint8_t kEsimLogicalSlot = 0x01;
+// This represents the default logical slot that we want our eSIM to be
+// assigned. For dual sim - single standby modems, this will always work. For
+// other multi-sim modems, get the first active slot and store it as a ModemQrtr
+// field.
+constexpr uint8_t kDefaultLogicalSlot = 0x01;
 constexpr uint8_t kInvalidChannel = -1;
 
 // Delay between SwitchSlot and the next QMI message
@@ -86,7 +86,7 @@ ModemQrtr::ModemQrtr(std::unique_ptr<SocketInterface> socket,
       extended_apdu_supported_(false),
       current_transaction_id_(static_cast<uint16_t>(-1)),
       channel_(kInvalidChannel),
-      logical_slot_(kEsimLogicalSlot),
+      logical_slot_(kDefaultLogicalSlot),
       socket_(std::move(socket)),
       buffer_(4096),
       euicc_manager_(nullptr),
@@ -111,8 +111,31 @@ ModemQrtr::~ModemQrtr() {
 
 void ModemQrtr::SetActiveSlot(const uint32_t physical_slot) {
   tx_queue_.push_back(
-      {std::make_unique<SwitchSlotTxInfo>(physical_slot, kEsimLogicalSlot),
+      {std::make_unique<SwitchSlotTxInfo>(physical_slot, logical_slot_),
        AllocateId(), QmiUimCommand::kSwitchSlot});
+  current_state_.Transition(State::kUimStarted);
+  channel_ = kInvalidChannel;
+  tx_queue_.push_back(
+      {std::unique_ptr<TxInfo>(), AllocateId(), QmiUimCommand::kReset});
+  tx_queue_.push_back({std::unique_ptr<TxInfo>(), AllocateId(),
+                       QmiUimCommand::kOpenLogicalChannel});
+}
+
+void ModemQrtr::StoreAndSetActiveSlot(const uint32_t physical_slot) {
+  tx_queue_.push_back(
+      {std::make_unique<TxInfo>(), AllocateId(), QmiUimCommand::kGetSlots});
+  SetActiveSlot(physical_slot);
+}
+
+void ModemQrtr::RestoreActiveSlot() {
+  if (stored_active_slot_) {
+    tx_queue_.push_back({std::make_unique<SwitchSlotTxInfo>(
+                             stored_active_slot_.value(), logical_slot_),
+                         AllocateId(), QmiUimCommand::kSwitchSlot});
+    stored_active_slot_.reset();
+  } else {
+    LOG(ERROR) << "Attempted to restore active slot when none was stored";
+  }
 }
 
 void ModemQrtr::SendApdus(std::vector<lpa::card::Apdu> apdus,
@@ -170,7 +193,7 @@ void ModemQrtr::Initialize(EuiccManagerInterface* euicc_manager) {
   // TODO(crbug.com/1085825) Add support for getting indications so that this
   // info can get updated.
   tx_queue_.push_front(
-      {std::unique_ptr<TxInfo>(), AllocateId(), QmiUimCommand::kGetSlots});
+      {std::make_unique<TxInfo>(), AllocateId(), QmiUimCommand::kGetSlots});
   tx_queue_.push_front(
       {std::unique_ptr<TxInfo>(), AllocateId(), QmiUimCommand::kReset});
 }
@@ -247,6 +270,9 @@ void ModemQrtr::TransmitFromQueue() {
                   uim_reset_req_ei);
       break;
     case QmiUimCommand::kSwitchSlot:
+      // Don't pop since we need to update the inactive euicc if SwitchSlot
+      // succeeds
+      should_pop = false;
       TransmitQmiSwitchSlot(&tx_queue_[0]);
       break;
     case QmiUimCommand::kGetSlots:
@@ -273,13 +299,21 @@ void ModemQrtr::TransmitFromQueue() {
 }
 
 void ModemQrtr::TransmitQmiSwitchSlot(TxElement* tx_element) {
-  uim_switch_slot_req switch_slot_request;
   auto switch_slot_tx_info =
       dynamic_cast<SwitchSlotTxInfo*>(tx_queue_[0].info_.get());
-  switch_slot_request.physical_slot = switch_slot_tx_info->physical_slot_;
-  switch_slot_request.logical_slot = switch_slot_tx_info->logical_slot_;
-  SendCommand(QmiUimCommand::kSwitchSlot, tx_queue_[0].id_,
-              &switch_slot_request, uim_switch_slot_req_ei);
+  // Slot switching takes time, thus switch slots only when absolutely necessary
+  if (!stored_active_slot_ ||
+      stored_active_slot_.value() != switch_slot_tx_info->physical_slot_) {
+    uim_switch_slot_req switch_slot_request;
+    switch_slot_request.physical_slot = switch_slot_tx_info->physical_slot_;
+    switch_slot_request.logical_slot = switch_slot_tx_info->logical_slot_;
+    SendCommand(QmiUimCommand::kSwitchSlot, tx_queue_[0].id_,
+                &switch_slot_request, uim_switch_slot_req_ei);
+  } else {
+    LOG(INFO) << "Requested slot is already active";
+    tx_queue_.pop_front();
+    TransmitFromQueue();
+  }
 }
 
 void ModemQrtr::TransmitQmiOpenLogicalChannel(TxElement* tx_element) {
@@ -481,24 +515,30 @@ void ModemQrtr::ReceiveQmiGetSlots(const qrtr_packet& packet) {
   }
 
   CHECK(euicc_manager_);
+  bool logical_slot_found = false;
   uint8_t max_len = std::max(resp.status_len, resp.info_len);
   for (uint8_t i = 0; i < max_len; ++i) {
     bool is_present = (resp.status[i].physical_card_status ==
                        uim_physical_slot_status::kCardPresent);
     bool is_euicc = resp.info[i].is_euicc;
-    if (!is_present || !is_euicc) {
-      euicc_manager_->OnEuiccRemoved(i);
-      continue;
-    }
 
     bool is_active = (resp.status[i].physical_slot_state ==
                       uim_physical_slot_status::kSlotActive);
-    if (!is_active) {
-      euicc_manager_->OnEuiccUpdated(i, EuiccSlotInfo());
-    } else {
-      euicc_manager_->OnEuiccUpdated(
-          i, EuiccSlotInfo(resp.status[i].logical_slot));
+
+    if (is_active) {
+      stored_active_slot_ = i + 1;
+      if (!logical_slot_found) {
+        // This is the logical slot we grab when we perform a switch slot
+        logical_slot_ = resp.status[i].logical_slot;
+        logical_slot_found = true;
+      }
     }
+    if (!is_present || !is_euicc)
+      euicc_manager_->OnEuiccRemoved(i + 1);
+    else
+      euicc_manager_->OnEuiccUpdated(
+          i + 1, is_active ? EuiccSlotInfo(resp.status[i].logical_slot)
+                           : EuiccSlotInfo());
   }
 }
 
@@ -517,16 +557,20 @@ void ModemQrtr::ReceiveQmiSwitchSlot(const qrtr_packet& packet) {
     return;
   }
 
+  auto switch_slot_tx_info =
+      dynamic_cast<SwitchSlotTxInfo*>(tx_queue_.front().info_.get());
+  euicc_manager_->OnEuiccUpdated(
+      switch_slot_tx_info->physical_slot_,
+      EuiccSlotInfo(switch_slot_tx_info->logical_slot_));
+  if (stored_active_slot_)
+    euicc_manager_->OnEuiccUpdated(stored_active_slot_.value(),
+                                   EuiccSlotInfo());
+
+  tx_queue_.pop_front();
   // Sending QMI messages immediately after switch slot leads to QMI errors
   // since slot switching takes time. If channel reacquisition fails despite
   // this delay, we retry after kInitRetryDelay.
   DisableQmi(kSwitchSlotDelay);
-
-  LOG(INFO) << "Reacquiring Channel";
-  current_state_.Transition(State::kUimStarted);
-  channel_ = kInvalidChannel;
-  tx_queue_.push_front({std::unique_ptr<TxInfo>(), AllocateId(),
-                        QmiUimCommand::kOpenLogicalChannel});
 }
 
 void ModemQrtr::ReceiveQmiOpenLogicalChannel(const qrtr_packet& packet) {
