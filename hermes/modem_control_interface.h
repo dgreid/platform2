@@ -16,6 +16,9 @@ class ModemControlInterface {
   // Restore the value stored by StoreAndSetActiveSlot
   virtual void RestoreActiveSlot() = 0;
 
+  virtual void StartProfileOp(uint32_t physical_slot) = 0;
+  virtual void FinishProfileOp() = 0;
+
   virtual ~ModemControlInterface() = default;
 };
 

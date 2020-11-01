@@ -108,8 +108,9 @@ constexpr auto kApduPrefix = brillo::make_array<uint8_t>(
   0x00, 0x06, 0x00, 0x80, 0xE2, 0x91, 0x00, 0x00
 );
 
+// kApduSuffix consists of channel_id and procedure_bytes_tlvs
 constexpr auto kApduSuffix = brillo::make_array<uint8_t>(
-  0x10, 0x01, 0x00, 0x01
+  0x10, 0x01, 0x00, 0x01, 0x11, 0x01, 0x00, 0x00
 );
 
 constexpr auto kGetChallengeApdu = brillo::make_array<uint8_t>(
@@ -137,10 +138,33 @@ hermes::EnableIfIterator_t<Iterator, std::vector<uint8_t>> CreateQrtrFromApdu(
   result.insert(result.end(), kApduPrefix.begin(), kApduPrefix.end());
   result.insert(result.end(), first, last);
   result.insert(result.end(), kApduSuffix.begin(), kApduSuffix.end());
-  result[5] = result.size() - 7;
-  result[12] = result.size() - 18;
-  result[14] = std::distance(first, last) + 5;
-  result[20] = std::distance(first, last);
+  constexpr int kControlBytesSize = 1;
+  constexpr int kTxnIdSize = 2;
+  constexpr int kMsgIdSize = 2;
+  constexpr int kMsgLenSize = 2;
+  constexpr int kMsgLenIndex = kControlBytesSize + kTxnIdSize +
+                               kMsgIdSize;  // Length of the QMI message sans
+                                            // header is stored at this index
+  constexpr int kQmiHeaderSize =
+      kControlBytesSize + kTxnIdSize + kMsgIdSize + kMsgLenSize;
+  result[kMsgLenIndex] = result.size() - kQmiHeaderSize;
+
+  constexpr int kApduLenIndex = 14;   // Length of APDU is stored at this index
+  constexpr int kApduLenSize = 2;     // 2 bytes to store the length of the APDU
+  constexpr int kApduHeaderSize = 5;  // CLA + INS + P1 +P2 + Lc
+  result[kApduLenIndex] =
+      std::distance(first, last) +
+      kApduHeaderSize;  // len(CLA + INS + P1 +P2 + Lc + CMD_DATA)
+  constexpr int kLcIndex = 20;
+  result[kLcIndex] = std::distance(first, last);  // Lc = len(CMD_DATA)
+
+  constexpr int kApduTlvLenIndex =
+      12;  // Length of TLV with tag=0x02 is stored at this index.
+  result[kApduTlvLenIndex] =
+      result[kApduLenIndex] +
+      kApduLenSize;  // length of TLV with tag=0x02 is length(APDU) + (2 bytes
+                     // that store length(APDU))
+
   return result;
 }
 

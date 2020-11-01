@@ -107,12 +107,13 @@ void Profile::Enable(std::unique_ptr<DBusResponse<>> response) {
   }
 
   LOG(INFO) << "Enabling profile: " << object_path_.value();
-  context_->modem_control()->StoreAndSetActiveSlot(physical_slot_);
+  context_->modem_control()->StartProfileOp(physical_slot_);
   context_->lpa()->EnableProfile(
       GetIccid(), context_->executor(),
       [response{std::shared_ptr<DBusResponse<>>(std::move(response))},
-       weak{weak_factory_.GetWeakPtr()}](int error) {
+       weak{weak_factory_.GetWeakPtr()}](int error) mutable {
         if (weak) {
+          weak->context_->modem_control()->FinishProfileOp();
           weak->OnEnabled(error, std::move(response));
         }
       });
@@ -127,12 +128,13 @@ void Profile::Disable(std::unique_ptr<DBusResponse<>> response) {
   }
 
   LOG(INFO) << "Disabling profile: " << object_path_.value();
-  context_->modem_control()->StoreAndSetActiveSlot(physical_slot_);
+  context_->modem_control()->StartProfileOp(physical_slot_);
   context_->lpa()->DisableProfile(
       GetIccid(), context_->executor(),
       [response{std::shared_ptr<DBusResponse<>>(std::move(response))},
-       weak{weak_factory_.GetWeakPtr()}](int error) {
+       weak{weak_factory_.GetWeakPtr()}](int error) mutable {
         if (weak) {
+          weak->context_->modem_control()->FinishProfileOp();
           weak->OnDisabled(error, std::move(response));
         }
       });

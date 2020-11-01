@@ -87,6 +87,7 @@ ModemQrtr::ModemQrtr(std::unique_ptr<SocketInterface> socket,
       current_transaction_id_(static_cast<uint16_t>(-1)),
       channel_(kInvalidChannel),
       logical_slot_(kDefaultLogicalSlot),
+      procedure_bytes_mode_(ProcedureBytesMode::EnableIntermediateBytes),
       socket_(std::move(socket)),
       buffer_(4096),
       euicc_manager_(nullptr),
@@ -337,6 +338,8 @@ void ModemQrtr::TransmitQmiSendApdu(TxElement* tx_element) {
   request.slot = logical_slot_;
   request.channel_id_valid = true;
   request.channel_id = channel_;
+  request.procedure_bytes_valid = true;
+  request.procedure_bytes = static_cast<uint8_t>(procedure_bytes_mode_);
 
   uint8_t* fragment;
   ApduTxInfo* apdu = static_cast<ApduTxInfo*>(tx_element->info_.get());
@@ -697,6 +700,11 @@ const lpa::proto::EuiccSpecVersion& ModemQrtr::GetCardVersion() {
   return spec_version_;
 }
 
+void ModemQrtr::SetProcedureBytes(
+    const ProcedureBytesMode procedure_bytes_mode) {
+  procedure_bytes_mode_ = procedure_bytes_mode;
+}
+
 bool ModemQrtr::State::Transition(ModemQrtr::State::Value value) {
   bool valid_transition = false;
   switch (value) {
@@ -733,6 +741,19 @@ void ModemQrtr::DisableQmi(base::TimeDelta duration) {
 void ModemQrtr::EnableQmi() {
   qmi_disabled_ = false;
   TransmitFromQueue();
+}
+
+void ModemQrtr::StartProfileOp(const uint32_t physical_slot) {
+  StoreAndSetActiveSlot(physical_slot);
+  // The card triggers a refresh after profile enable. This refresh can cause
+  // response apdu's with intermediate bytes to be flushed during a qmi
+  // transaction. Since, we don't use these intermediate bytes, disable
+  // them to avoid qmi errors as per QC's recommendation. b/169954635
+  SetProcedureBytes(ProcedureBytesMode::DisableIntermediateBytes);
+}
+
+void ModemQrtr::FinishProfileOp() {
+  SetProcedureBytes(ProcedureBytesMode::EnableIntermediateBytes);
 }
 
 }  // namespace hermes

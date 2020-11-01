@@ -47,8 +47,12 @@ class ModemQrtr : public lpa::card::EuiccCard, public ModemControlInterface {
   virtual ~ModemQrtr();
 
   void Initialize(EuiccManagerInterface* euicc_manager);
+
+  // ModemControlInterface overrides
   void StoreAndSetActiveSlot(uint32_t physical_slot) override;
   void RestoreActiveSlot() override;
+  void StartProfileOp(uint32_t physical_slot) override;
+  void FinishProfileOp() override;
 
   // lpa::card::EuiccCard overrides.
   void SendApdus(std::vector<lpa::card::Apdu> apdus,
@@ -68,7 +72,6 @@ class ModemQrtr : public lpa::card::EuiccCard, public ModemControlInterface {
             Logger* logger,
             Executor* executor);
   void RetryInitialization();
-  void ReacquireChannel();
   void FinalizeInitialization();
   void Shutdown();
   uint16_t AllocateId();
@@ -117,7 +120,16 @@ class ModemQrtr : public lpa::card::EuiccCard, public ModemControlInterface {
   // profiles can be installed.
   void SetActiveSlot(uint32_t physical_slot);
 
- private:
+  // Request that the Euicc does not send intermediate procedure bytes.
+  // Useful in eliminating race between card refresh and profile enable response
+  // b/169954635
+  enum class ProcedureBytesMode : uint8_t {
+    EnableIntermediateBytes = 0,
+    DisableIntermediateBytes = 1
+  };
+  void SetProcedureBytes(ProcedureBytesMode procedure_bytes_mode);
+  void ReacquireChannel();
+
   friend class ModemQrtrTest;
 
   ///////////////////
@@ -204,6 +216,10 @@ class ModemQrtr : public lpa::card::EuiccCard, public ModemControlInterface {
   uint8_t logical_slot_;
   // Store the previous active slot before a switch slot
   base::Optional<uint32_t> stored_active_slot_;
+
+  // Ask SendApdu commands to send final result and status words only.
+  // If set, intermediate procedure bytes are not sent by the Euicc.
+  ProcedureBytesMode procedure_bytes_mode_;
 
   std::unique_ptr<SocketInterface> socket_;
   SocketQrtr::PacketMetadata metadata_;

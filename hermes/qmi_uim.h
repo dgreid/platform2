@@ -91,6 +91,8 @@ struct uim_send_apdu_req {
   uint8_t apdu[kBufferDataSize];
   bool channel_id_valid;
   uint8_t channel_id;
+  bool procedure_bytes_valid;
+  uint8_t procedure_bytes;
 };
 
 struct uim_send_apdu_resp {

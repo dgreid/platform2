@@ -40,6 +40,7 @@ request send_apdu_req {
   required u8 slot = 0x01;
   required u8 apdu(u16 : kBufferDataSize) = 0x02;
   optional u8 channel_id = 0x10;
+  optional u8 procedure_bytes = 0x11;
 } = 0x3B;
 
 response send_apdu_resp {

@@ -185,6 +185,20 @@ struct qmi_elem_info uim_send_apdu_req_ei[] = {
         .tlv_type = 0x10,
         .offset = offsetof(struct uim_send_apdu_req, channel_id),
     },
+    {
+        .data_type = QMI_OPT_FLAG,
+        .elem_len = 1,
+        .elem_size = sizeof(bool),
+        .tlv_type = 0x11,
+        .offset = offsetof(struct uim_send_apdu_req, procedure_bytes_valid),
+    },
+    {
+        .data_type = QMI_UNSIGNED_1_BYTE,
+        .elem_len = 1,
+        .elem_size = sizeof(uint8_t),
+        .tlv_type = 0x11,
+        .offset = offsetof(struct uim_send_apdu_req, procedure_bytes),
+    },
     {}};
 
 struct qmi_elem_info uim_send_apdu_resp_ei[] = {
