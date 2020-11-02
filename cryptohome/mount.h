@@ -32,7 +32,7 @@
 #include <policy/libpolicy.h>
 
 #include "cryptohome/dircrypto_data_migrator/migration_helper.h"
-#include "cryptohome/file_system_keys.h"
+#include "cryptohome/file_system_keyset.h"
 #include "cryptohome/homedirs.h"
 #include "cryptohome/migration_type.h"
 #include "cryptohome/mount_constants.h"
@@ -99,7 +99,7 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   //   is_pristine - Whether it is the first mount of the vault.
   //   error - The specific error condition on failure
   virtual bool MountCryptohome(const std::string& username,
-                               const FileSystemKeys& file_system_keys,
+                               const FileSystemKeyset& file_system_keys,
                                const MountArgs& mount_args,
                                bool is_pristine,
                                MountError* error);
@@ -224,7 +224,7 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   // Choose the mount type for the new vault.
   MountType ChooseVaultMountType(bool force_ecryptfs) const;
 
-  virtual bool AddEcryptfsAuthToken(const FileSystemKeys& file_system_keys,
+  virtual bool AddEcryptfsAuthToken(const FileSystemKeyset& file_system_keyset,
                                     std::string* key_signature,
                                     std::string* filename_key_signature) const;
 

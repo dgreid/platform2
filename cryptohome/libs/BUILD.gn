@@ -290,7 +290,7 @@ static_library("libcryptohome") {
     "../dircrypto_data_migrator/migration_helper.cc",
     "../disk_cleanup.cc",
     "../disk_cleanup_routines.cc",
-    "../file_system_keys.cc",
+    "../file_system_keyset.cc",
     "../filesystem_layout.cc",
     "../fingerprint_manager.cc",
     "../homedirs.cc",

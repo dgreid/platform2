@@ -500,7 +500,7 @@ TEST_P(MountTest, MountCryptohomeHasPrivileges) {
   // user exists, so there'll be no skel copy after.
 
   MountError error = MOUNT_ERROR_NONE;
-  ASSERT_TRUE(mount_->MountCryptohome(user->username, FileSystemKeys(),
+  ASSERT_TRUE(mount_->MountCryptohome(user->username, FileSystemKeyset(),
                                       GetDefaultMountArgs(),
                                       /* is_pristine */ false, &error));
 
@@ -887,7 +887,7 @@ TEST_P(MountTest, MountCryptohome) {
   // user exists, so there'll be no skel copy after.
 
   MountError error = MOUNT_ERROR_NONE;
-  EXPECT_TRUE(mount_->MountCryptohome(user->username, FileSystemKeys(),
+  EXPECT_TRUE(mount_->MountCryptohome(user->username, FileSystemKeyset(),
                                       GetDefaultMountArgs(),
                                       /* is_pristine */ false, &error));
 }
@@ -933,7 +933,7 @@ TEST_P(MountTest, MountPristineCryptohome) {
 
   Mount::MountArgs mount_args = GetDefaultMountArgs();
   MountError error = MOUNT_ERROR_NONE;
-  ASSERT_TRUE(mount_->MountCryptohome(user->username, FileSystemKeys(),
+  ASSERT_TRUE(mount_->MountCryptohome(user->username, FileSystemKeyset(),
                                       mount_args,
                                       /* is_pristine */ true, &error));
   ASSERT_EQ(MOUNT_ERROR_NONE, error);
@@ -1046,7 +1046,7 @@ TEST_P(MountTest, MountCryptohomePreviousMigrationIncomplete) {
       .WillRepeatedly(Return(dircrypto::KeyState::ENCRYPTED));
 
   MountError error = MOUNT_ERROR_NONE;
-  ASSERT_FALSE(mount_->MountCryptohome(user->username, FileSystemKeys(),
+  ASSERT_FALSE(mount_->MountCryptohome(user->username, FileSystemKeyset(),
                                        GetDefaultMountArgs(),
                                        /* is_pristine */ false, &error));
   ASSERT_EQ(MOUNT_ERROR_PREVIOUS_MIGRATION_INCOMPLETE, error);
@@ -1107,12 +1107,12 @@ TEST_P(MountTest, MountCryptohomeToMigrateFromEcryptfs) {
   Mount::MountArgs mount_args = GetDefaultMountArgs();
   mount_args.to_migrate_from_ecryptfs = true;
   if (ShouldTestEcryptfs()) {
-    EXPECT_TRUE(mount_->MountCryptohome(user->username, FileSystemKeys(),
+    EXPECT_TRUE(mount_->MountCryptohome(user->username, FileSystemKeyset(),
                                         mount_args,
                                         /* is_pristine */ false, &error));
   } else {
     // Fail if the existing vault is not ecryptfs.
-    EXPECT_FALSE(mount_->MountCryptohome(user->username, FileSystemKeys(),
+    EXPECT_FALSE(mount_->MountCryptohome(user->username, FileSystemKeyset(),
                                          mount_args,
                                          /* is_pristine */ false, &error));
   }
@@ -1139,7 +1139,7 @@ TEST_P(MountTest, MountCryptohomeShadowOnly) {
   MountError error = MOUNT_ERROR_NONE;
   Mount::MountArgs mount_args = GetDefaultMountArgs();
   mount_args.shadow_only = true;
-  EXPECT_TRUE(mount_->MountCryptohome(user->username, FileSystemKeys(),
+  EXPECT_TRUE(mount_->MountCryptohome(user->username, FileSystemKeyset(),
                                       mount_args,
                                       /* is_pristine */ false, &error));
 }
@@ -1195,13 +1195,13 @@ TEST_P(MountTest, MountCryptohomeForceDircrypto) {
 
   if (ShouldTestEcryptfs()) {
     // Should reject mounting ecryptfs vault.
-    EXPECT_FALSE(mount_->MountCryptohome(user->username, FileSystemKeys(),
+    EXPECT_FALSE(mount_->MountCryptohome(user->username, FileSystemKeyset(),
                                          mount_args,
                                          /* is_pristine */ false, &error));
     EXPECT_EQ(MOUNT_ERROR_OLD_ENCRYPTION, error);
   } else {
     // Should succeed in mounting in dircrypto.
-    EXPECT_TRUE(mount_->MountCryptohome(user->username, FileSystemKeys(),
+    EXPECT_TRUE(mount_->MountCryptohome(user->username, FileSystemKeyset(),
                                         mount_args,
                                         /* is_pristine */ false, &error));
     EXPECT_EQ(MOUNT_ERROR_NONE, error);
@@ -1476,7 +1476,7 @@ TEST_P(EphemeralNoUserSystemTest, OwnerUnknownMountCreateTest) {
   Mount::MountArgs mount_args = GetDefaultMountArgs();
   mount_args.create_if_missing = true;
   MountError error;
-  ASSERT_TRUE(mount_->MountCryptohome(user->username, FileSystemKeys(),
+  ASSERT_TRUE(mount_->MountCryptohome(user->username, FileSystemKeyset(),
                                       mount_args,
                                       /* is_pristine */ true, &error));
 
@@ -1874,7 +1874,7 @@ TEST_P(EphemeralExistingUserSystemTest, OwnerUnknownMountNoRemoveTest) {
   Mount::MountArgs mount_args = GetDefaultMountArgs();
   mount_args.create_if_missing = true;
   MountError error;
-  ASSERT_TRUE(mount_->MountCryptohome(user->username, FileSystemKeys(),
+  ASSERT_TRUE(mount_->MountCryptohome(user->username, FileSystemKeyset(),
                                       mount_args,
                                       /* is_pristine */ false, &error));
 

@@ -217,15 +217,17 @@ MountType Mount::ChooseVaultMountType(bool force_ecryptfs) const {
   }
 }
 
-bool Mount::AddEcryptfsAuthToken(const FileSystemKeys& file_system_keys,
+bool Mount::AddEcryptfsAuthToken(const FileSystemKeyset& file_system_keyset,
                                  std::string* key_signature,
                                  std::string* filename_key_signature) const {
   // Add the File Encryption key (FEK) from the vault keyset.  This is the key
   // that is used to encrypt the file contents when the file is persisted to the
   // lower filesystem by eCryptfs.
-  *key_signature = CryptoLib::SecureBlobToHex(file_system_keys.fek_sig());
-  if (!platform_->AddEcryptfsAuthToken(file_system_keys.fek(), *key_signature,
-                                       file_system_keys.fek_salt())) {
+  *key_signature =
+      CryptoLib::SecureBlobToHex(file_system_keyset.KeyReference().fek_sig);
+  if (!platform_->AddEcryptfsAuthToken(file_system_keyset.Key().fek,
+                                       *key_signature,
+                                       file_system_keyset.Key().fek_salt)) {
     LOG(ERROR) << "Couldn't add eCryptfs file encryption key to keyring.";
     return false;
   }
@@ -234,10 +236,10 @@ bool Mount::AddEcryptfsAuthToken(const FileSystemKeys& file_system_keys,
   // key that is used to encrypt the file name when the file is persisted to the
   // lower filesystem by eCryptfs.
   *filename_key_signature =
-      CryptoLib::SecureBlobToHex(file_system_keys.fnek_sig());
-  if (!platform_->AddEcryptfsAuthToken(file_system_keys.fnek(),
+      CryptoLib::SecureBlobToHex(file_system_keyset.KeyReference().fnek_sig);
+  if (!platform_->AddEcryptfsAuthToken(file_system_keyset.Key().fnek,
                                        *filename_key_signature,
-                                       file_system_keys.fnek_salt())) {
+                                       file_system_keyset.Key().fnek_salt)) {
     LOG(ERROR) << "Couldn't add eCryptfs filename encryption key to keyring.";
     return false;
   }
@@ -283,7 +285,7 @@ bool Mount::PrepareCryptohome(const std::string& obfuscated_username,
 }
 
 bool Mount::MountCryptohome(const std::string& username,
-                            const FileSystemKeys& file_system_keys,
+                            const FileSystemKeyset& file_system_keyset,
                             const Mount::MountArgs& mount_args,
                             bool is_pristine,
                             MountError* mount_error) {
@@ -309,7 +311,7 @@ bool Mount::MountCryptohome(const std::string& username,
     return false;
   }
 
-  pkcs11_token_auth_data_ = file_system_keys.chaps_key();
+  pkcs11_token_auth_data_ = file_system_keyset.chaps_key();
   if (!platform_->ClearUserKeyring()) {
     LOG(ERROR) << "Failed to clear user keyring";
   }
@@ -368,7 +370,7 @@ bool Mount::MountCryptohome(const std::string& username,
   std::string key_signature, fnek_signature;
   if (should_mount_ecryptfs) {
     // Add the decrypted key to the keyring so that ecryptfs can use it.
-    if (!AddEcryptfsAuthToken(file_system_keys, &key_signature,
+    if (!AddEcryptfsAuthToken(file_system_keyset, &key_signature,
                               &fnek_signature)) {
       LOG(ERROR) << "Error adding eCryptfs keys.";
       *mount_error = MOUNT_ERROR_KEYRING_FAILED;
@@ -384,8 +386,9 @@ bool Mount::MountCryptohome(const std::string& username,
           dircrypto::CheckFscryptKeyIoctlSupport() ? FSCRYPT_POLICY_V2
                                                    : FSCRYPT_POLICY_V1;
     }
-    dircrypto_key_reference_.reference = file_system_keys.fek_sig();
-    if (!platform_->AddDirCryptoKeyToKeyring(file_system_keys.fek(),
+    dircrypto_key_reference_.reference =
+        file_system_keyset.KeyReference().fek_sig;
+    if (!platform_->AddDirCryptoKeyToKeyring(file_system_keyset.Key().fek,
                                              &dircrypto_key_reference_)) {
       LOG(ERROR) << "Error adding dircrypto key.";
       *mount_error = MOUNT_ERROR_KEYRING_FAILED;
@@ -454,8 +457,8 @@ bool Mount::MountCryptohome(const std::string& username,
 
   // TODO(chromium:1147601): Move this into user_session.cc and add unittests
   // when service.cc is gone.
-  PrepareWebAuthnSecret(obfuscated_username, file_system_keys.fek(),
-                        file_system_keys.fnek());
+  PrepareWebAuthnSecret(obfuscated_username, file_system_keyset.Key().fek,
+                        file_system_keyset.Key().fnek);
 
   // At this point we're done mounting so move the clean-up closure to the
   // instance variable.

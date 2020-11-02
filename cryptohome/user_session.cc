@@ -60,9 +60,9 @@ MountError UserSession::MountVault(const Credentials& credentials,
   if (!vk) {
     return MOUNT_ERROR_FATAL;
   }
-  FileSystemKeys fs_keys(*vk);
+  FileSystemKeyset fs_keyset(*vk);
 
-  if (!mount_->MountCryptohome(credentials.username(), fs_keys, mount_args,
+  if (!mount_->MountCryptohome(credentials.username(), fs_keyset, mount_args,
                                created, &code)) {
     // In the weird case where MountCryptohome returns false with ERROR_NONE
     // code report it as FATAL.
