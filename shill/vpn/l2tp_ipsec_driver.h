@@ -31,12 +31,15 @@ class L2TPIPSecDriver : public VPNDriver, public RpcTaskDelegate {
   L2TPIPSecDriver(Manager* manager, ProcessManager* process_manager);
   ~L2TPIPSecDriver() override;
 
-  // Method to return service RPC identifier.
-  const RpcIdentifier& GetServiceRpcIdentifier() const;
-
  protected:
-  void Connect(const VPNServiceRefPtr& service, Error* error) override;
+  // TODO(taoyl): Not used (replaced by ConnectAsync()) and to be removed after
+  // finishing refactor for all drivers
+  void Connect(const VPNServiceRefPtr& service, Error* error) override {
+    NOTREACHED();
+  }
+  void ConnectAsync(const VPNService::DriverEventCallback& callback) override;
   void Disconnect() override;
+  IPConfig::Properties GetIPProperties() const override;
   std::string GetProviderType() const override;
   IfType GetIfType() const override;
   void OnConnectTimeout() override;
@@ -58,6 +61,7 @@ class L2TPIPSecDriver : public VPNDriver, public RpcTaskDelegate {
   FRIEND_TEST(L2TPIPSecDriverTest, Notify);
   FRIEND_TEST(L2TPIPSecDriverTest, NotifyWithExistingDevice);
   FRIEND_TEST(L2TPIPSecDriverTest, NotifyDisconnected);
+  FRIEND_TEST(L2TPIPSecDriverTest, OnConnectTimeout);
   FRIEND_TEST(L2TPIPSecDriverTest, OnL2TPIPSecVPNDied);
   FRIEND_TEST(L2TPIPSecDriverTest, SpawnL2TPIPSecVPN);
 
@@ -72,20 +76,15 @@ class L2TPIPSecDriver : public VPNDriver, public RpcTaskDelegate {
   bool InitXauthOptions(std::vector<std::string>* options, Error* error);
 
   // Resets the VPN state and deallocates all resources. If there's a service
-  // associated through Connect, sets its state to Service::kStateIdle and
-  // disassociates from the service.
-  void IdleService();
-
-  // Resets the VPN state and deallocates all resources. If there's a service
-  // associated through Connect, sets its state to Service::kStateFailure with
-  // failure reason |failure| and disassociates from the service.
+  // associated through Connect, notifies it to sets its state to
+  // Service::kStateFailure, sets the failure reason to |failure|, sets its
+  // ErrorDetails property to |error_details|, and disassociates from the
+  // service.
   void FailService(Service::ConnectFailure failure);
 
-  // Implements the IdleService and FailService methods. Resets the VPN state
-  // and deallocates all resources. If there's a service associated through
-  // Connect, sets its state |state|; if |state| is Service::kStateFailure, sets
-  // the failure reason to |failure|; disassociates from the service.
-  void Cleanup(Service::ConnectState state, Service::ConnectFailure failure);
+  // Called by public Disconnect and FailService methods. Resets the VPN
+  // state and deallocates all resources.
+  void Cleanup();
 
   void DeleteTemporaryFile(base::FilePath* temporary_file);
   void DeleteTemporaryFiles();
@@ -117,13 +116,13 @@ class L2TPIPSecDriver : public VPNDriver, public RpcTaskDelegate {
 
   void ReportConnectionMetrics();
 
-  PPPDeviceFactory* ppp_device_factory_;
-
   std::unique_ptr<ExternalTask> external_task_;
   base::FilePath psk_file_;
   base::FilePath xauth_credentials_file_;
   std::unique_ptr<CertificateFile> certificate_file_;
-  PPPDeviceRefPtr device_;
+  IPConfig::Properties ip_properties_;
+  VPNService::DriverEventCallback service_callback_;
+
   base::WeakPtrFactory<L2TPIPSecDriver> weak_ptr_factory_;
 
   DISALLOW_COPY_AND_ASSIGN(L2TPIPSecDriver);

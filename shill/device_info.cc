@@ -1061,6 +1061,15 @@ bool DeviceInfo::GetByteCounts(int interface_index,
   return true;
 }
 
+void DeviceInfo::AddVirtualInterfaceReadyCallback(
+    const std::string& interface_name, LinkReadyCallback callback) {
+  if (pending_links_.erase(interface_name) > 0) {
+    PLOG(WARNING) << "Callback for RTNL link ready event of " << interface_name
+                  << " already existed, overwritten";
+  }
+  pending_links_.emplace(interface_name, std::move(callback));
+}
+
 bool DeviceInfo::CreateTunnelInterface(LinkReadyCallback callback) {
   int fd = HANDLE_EINTR(open(kTunDeviceName, O_RDWR | O_CLOEXEC));
   if (fd < 0) {
@@ -1084,11 +1093,7 @@ bool DeviceInfo::CreateTunnelInterface(LinkReadyCallback callback) {
 
   if (callback) {
     std::string ifname(ifr.ifr_name);
-    if (pending_links_.erase(ifname) > 0) {
-      PLOG(WARNING) << "Callback for RTNL link ready event of " << ifname
-                    << " already existed, overwritten";
-    }
-    pending_links_.emplace(ifname, std::move(callback));
+    AddVirtualInterfaceReadyCallback(ifname, std::move(callback));
   }
   return true;
 }

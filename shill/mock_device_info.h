@@ -52,6 +52,10 @@ class MockDeviceInfo : public DeviceInfo {
               (int, std::vector<IPAddress>*, uint32_t*),
               (override));
   MOCK_METHOD(bool, CreateTunnelInterface, (LinkReadyCallback), (override));
+  MOCK_METHOD(void,
+              AddVirtualInterfaceReadyCallback,
+              (const std::string&, LinkReadyCallback),
+              (override));
   MOCK_METHOD(int,
               OpenTunnelInterface,
               (const std::string&),

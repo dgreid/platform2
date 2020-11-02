@@ -81,6 +81,7 @@ class VPNService : public Service {
   FRIEND_TEST(VPNServiceTest, ConfigureDeviceAndCleanupDevice);
   FRIEND_TEST(VPNServiceTest, ArcConnectFlow);
   FRIEND_TEST(VPNServiceTest, TunnelConnectFlow);
+  FRIEND_TEST(VPNServiceTest, PPPConnectFlow);
 
   static const char kAutoConnNeverConnected[];
   static const char kAutoConnVPNAlreadyActive[];

@@ -15,6 +15,7 @@
 #include "shill/key_value_store.h"
 #include "shill/logging.h"
 #include "shill/manager.h"
+#include "shill/ppp_device.h"
 #include "shill/profile.h"
 #include "shill/property_accessor.h"
 #include "shill/store_interface.h"
@@ -120,8 +121,15 @@ void VPNService::OnLinkReady(const string& link_name, int interface_index) {
       // Flow continues in OnDriverEvent(kEventConnectionSuccess).
       break;
     case VPNDriver::kPPP:
-      // TODO(taoyl): Migrate L2TP/IPSec driver.
-      FALLTHROUGH;
+      // Only get called when driver notification arrives earlier than RTNL
+      // notification - continues flow from
+      // OnDriverEvent(kEventConnectionSuccess).
+      device_ = new PPPDevice(manager(), link_name, interface_index);
+      SetState(ConnectState::kStateConfiguring);
+      ConfigureDevice();
+      SetState(ConnectState::kStateConnected);
+      SetState(ConnectState::kStateOnline);
+      break;
     default:
       NOTREACHED();
   }
@@ -132,6 +140,20 @@ void VPNService::OnDriverEvent(DriverEvent event,
                                const std::string& error_details) {
   switch (event) {
     case kEventConnectionSuccess:
+      if (driver_->GetIfType() == VPNDriver::kPPP) {
+        string link_name = driver_->interface_name();
+        int interface_index = manager()->device_info()->GetIndex(link_name);
+        if (interface_index < 0) {
+          // To handle the potential race when the RTNL notification about the
+          // new PPP device has not been received yet. Register a callback where
+          // the remaining steps can be continued.
+          manager()->device_info()->AddVirtualInterfaceReadyCallback(
+              link_name, base::BindOnce(&VPNService::OnLinkReady,
+                                        weak_factory_.GetWeakPtr()));
+          return;
+        }
+        device_ = new PPPDevice(manager(), link_name, interface_index);
+      }
       SetState(ConnectState::kStateConfiguring);
       ConfigureDevice();
       SetState(ConnectState::kStateConnected);

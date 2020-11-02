@@ -48,7 +48,7 @@ class PPPDevice : public VirtualDevice {
   // Return an IPConfig::Properties struct parsed from |configuration|,
   // but don't set the IPConfig.  This lets the caller tweak or inspect
   // the Properties first.
-  IPConfig::Properties ParseIPConfiguration(
+  static IPConfig::Properties ParseIPConfiguration(
       const std::map<std::string, std::string>& configuration);
 
   static Service::ConnectFailure ExitStatusToFailure(int exit);

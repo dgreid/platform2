@@ -108,6 +108,8 @@ class DeviceInfo {
   virtual bool CreateTunnelInterface(LinkReadyCallback callback);
   virtual int OpenTunnelInterface(const std::string& interface_name) const;
   virtual bool DeleteInterface(int interface_index) const;
+  virtual void AddVirtualInterfaceReadyCallback(
+      const std::string& interface_name, LinkReadyCallback callback);
 
   // Returns the interface index for |interface_name| or -1 if unknown.
   virtual int GetIndex(const std::string& interface_name) const;

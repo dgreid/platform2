@@ -565,4 +565,55 @@ TEST_F(VPNServiceTest, TunnelConnectFlow) {
   driver_->SetIfType(VPNDriver::kDriverManaged);
 }
 
+TEST_F(VPNServiceTest, PPPConnectFlow) {
+  driver_->SetIfType(VPNDriver::kPPP);
+  driver_->set_interface_name(kInterfaceName);
+  Error error;
+
+  // Connection
+  EXPECT_CALL(*driver_, ConnectAsync(_));
+  service_->Connect(&error, "in test");
+  EXPECT_TRUE(error.IsSuccess());
+  EXPECT_EQ(Service::kStateAssociating, service_->state());
+  EXPECT_CALL(device_info_, GetIndex(kInterfaceName))
+      .WillOnce(Return(kInterfaceIndex));
+  EXPECT_CALL(*driver_, GetIPProperties())
+      .WillOnce(Return(IPConfig::Properties()));
+  service_->OnDriverEvent(VPNService::kEventConnectionSuccess,
+                          Service::kFailureNone, Service::kErrorDetailsNone);
+  EXPECT_TRUE(service_->device_);
+  EXPECT_EQ(Service::kStateOnline, service_->state());
+
+  // Disconnection
+  EXPECT_CALL(*driver_, Disconnect());
+  EXPECT_CALL(device_info_, DeleteInterface(_)).Times(0);
+  service_->Disconnect(&error, "in test");
+  EXPECT_EQ(Service::kStateIdle, service_->state());
+  EXPECT_TRUE(error.IsSuccess());
+
+  // Connection when driver event arrives before RTNL
+  EXPECT_CALL(*driver_, ConnectAsync(_));
+  service_->Connect(&error, "in test");
+  EXPECT_TRUE(error.IsSuccess());
+  EXPECT_EQ(Service::kStateAssociating, service_->state());
+  EXPECT_CALL(device_info_, GetIndex(kInterfaceName)).WillOnce(Return(-1));
+  EXPECT_CALL(*driver_, GetIPProperties()).Times(0);
+  EXPECT_CALL(device_info_,
+              AddVirtualInterfaceReadyCallback(kInterfaceName, _));
+  service_->OnDriverEvent(VPNService::kEventConnectionSuccess,
+                          Service::kFailureNone, Service::kErrorDetailsNone);
+  EXPECT_FALSE(service_->device_);
+  EXPECT_EQ(Service::kStateAssociating, service_->state());
+  EXPECT_CALL(*driver_, GetIPProperties())
+      .WillOnce(Return(IPConfig::Properties()));
+  service_->OnLinkReady(kInterfaceName, kInterfaceIndex);
+  EXPECT_TRUE(service_->device_);
+  EXPECT_EQ(Service::kStateOnline, service_->state());
+
+  EXPECT_CALL(*driver_, Disconnect());
+  service_->Disconnect(&error, "in test");
+  driver_->SetIfType(VPNDriver::kDriverManaged);
+  driver_->set_interface_name("");
+}
+
 }  // namespace shill

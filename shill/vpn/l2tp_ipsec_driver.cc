@@ -41,7 +41,6 @@
 #include "shill/manager.h"
 #include "shill/ppp_daemon.h"
 #include "shill/ppp_device.h"
-#include "shill/ppp_device_factory.h"
 #include "shill/process_manager.h"
 #include "shill/scope_logger.h"
 #include "shill/vpn/vpn_provider.h"
@@ -57,8 +56,8 @@ namespace shill {
 
 namespace Logging {
 static auto kModuleLogScope = ScopeLogger::kVPN;
-static string ObjectID(const L2TPIPSecDriver* l) {
-  return l->GetServiceRpcIdentifier().value();
+static string ObjectID(const L2TPIPSecDriver*) {
+  return "(l2tp_ipsec_driver)";
 }
 }  // namespace Logging
 
@@ -134,33 +133,31 @@ const VPNDriver::Property L2TPIPSecDriver::kProperties[] = {
 L2TPIPSecDriver::L2TPIPSecDriver(Manager* manager,
                                  ProcessManager* process_manager)
     : VPNDriver(manager, process_manager, kProperties, base::size(kProperties)),
-      ppp_device_factory_(PPPDeviceFactory::GetInstance()),
       certificate_file_(new CertificateFile()),
       weak_ptr_factory_(this) {}
 
 L2TPIPSecDriver::~L2TPIPSecDriver() {
-  IdleService();
+  Cleanup();
 }
 
-const RpcIdentifier& L2TPIPSecDriver::GetServiceRpcIdentifier() const {
-  static RpcIdentifier null_identifier("(l2tp_ipsec_driver)");
-  if (service() == nullptr)
-    return null_identifier;
-  return service()->GetRpcIdentifier();
-}
-
-void L2TPIPSecDriver::Connect(const VPNServiceRefPtr& service, Error* error) {
+void L2TPIPSecDriver::ConnectAsync(
+    const VPNService::DriverEventCallback& callback) {
+  service_callback_ = callback;
   StartConnectTimeout(kConnectTimeoutSeconds);
-  set_service(service);
-  service->SetState(Service::kStateConfiguring);
-  if (!SpawnL2TPIPSecVPN(error)) {
+  Error error;
+  if (!SpawnL2TPIPSecVPN(&error)) {
     FailService(Service::kFailureInternal);
   }
 }
 
 void L2TPIPSecDriver::Disconnect() {
   SLOG(this, 2) << __func__;
-  IdleService();
+  Cleanup();
+  service_callback_.Reset();
+}
+
+IPConfig::Properties L2TPIPSecDriver::GetIPProperties() const {
+  return ip_properties_;
 }
 
 void L2TPIPSecDriver::OnConnectTimeout() {
@@ -173,37 +170,25 @@ string L2TPIPSecDriver::GetProviderType() const {
 }
 
 VPNDriver::IfType L2TPIPSecDriver::GetIfType() const {
-  return kDriverManaged;
-}
-
-void L2TPIPSecDriver::IdleService() {
-  Cleanup(Service::kStateIdle, Service::kFailureNone);
+  return kPPP;
 }
 
 void L2TPIPSecDriver::FailService(Service::ConnectFailure failure) {
-  Cleanup(Service::kStateFailure, failure);
+  SLOG(this, 2) << __func__ << "(" << Service::ConnectFailureToString(failure)
+                << ")";
+  Cleanup();
+  if (service_callback_) {
+    service_callback_.Run(VPNService::kEventDriverFailure, failure,
+                          Service::kErrorDetailsNone);
+    service_callback_.Reset();
+  }
 }
 
-void L2TPIPSecDriver::Cleanup(Service::ConnectState state,
-                              Service::ConnectFailure failure) {
-  SLOG(this, 2) << __func__ << "(" << Service::ConnectStateToString(state)
-                << ", " << Service::ConnectFailureToString(failure) << ")";
+void L2TPIPSecDriver::Cleanup() {
   StopConnectTimeout();
   DeleteTemporaryFiles();
   external_task_.reset();
-  if (device_) {
-    device_->DropConnection();
-    device_->SetEnabled(false);
-    device_ = nullptr;
-  }
-  if (service()) {
-    if (state == Service::kStateFailure) {
-      service()->SetFailure(failure);
-    } else {
-      service()->SetState(state);
-    }
-    set_service(nullptr);
-  }
+  interface_name_.clear();
 }
 
 void L2TPIPSecDriver::DeleteTemporaryFile(base::FilePath* temporary_file) {
@@ -433,43 +418,30 @@ void L2TPIPSecDriver::Notify(const string& reason,
 
   DeleteTemporaryFiles();
 
-  string interface_name = PPPDevice::GetInterfaceName(dict);
-  int interface_index = manager()->device_info()->GetIndex(interface_name);
-  if (interface_index < 0) {
-    // TODO(petkov): Consider handling the race when the RTNL notification about
-    // the new PPP device has not been received yet. We can keep the IP
-    // configuration and apply it when ClaimInterface is
-    // invoked. crbug.com/212446.
-    NOTIMPLEMENTED() << ": No device info for " << interface_name << ".";
-    return;
-  }
-
-  if (!device_) {
-    device_ = ppp_device_factory_->CreatePPPDevice(manager(), interface_name,
-                                                   interface_index);
-  }
-  device_->SetEnabled(true);
-  device_->SelectService(service());
-
-  IPConfig::Properties properties = device_->ParseIPConfiguration(dict);
+  interface_name_ = PPPDevice::GetInterfaceName(dict);
+  ip_properties_ = PPPDevice::ParseIPConfiguration(dict);
+  metrics()->SendSparseToUMA(Metrics::kMetricPPPMTUValue, ip_properties_.mtu);
 
   // There is no IPv6 support for L2TP/IPsec VPN at this moment, so create a
   // blackhole route for IPv6 traffic after establishing a IPv4 VPN.
   // TODO(benchan): Generalize this when IPv6 support is added.
-  properties.blackhole_ipv6 = true;
+  ip_properties_.blackhole_ipv6 = true;
 
   // Reduce MTU to the minimum viable for IPv6, since the IPSec layer consumes
   // some variable portion of the payload.  Although this system does not yet
   // support IPv6, it is a reasonable value to start with, since the minimum
   // IPv6 packet size will plausibly be a size any gateway would support, and
   // is also larger than the IPv4 minimum size.
-  properties.mtu = IPConfig::kMinIPv6MTU;
-
-  manager()->vpn_provider()->SetDefaultRoutingPolicy(&properties);
-  device_->UpdateIPConfig(properties);
+  ip_properties_.mtu = IPConfig::kMinIPv6MTU;
 
   ReportConnectionMetrics();
   StopConnectTimeout();
+  if (service_callback_) {
+    service_callback_.Run(VPNService::kEventConnectionSuccess,
+                          Service::kFailureNone, Service::kErrorDetailsNone);
+  } else {
+    LOG(DFATAL) << "Missing service callback";
+  }
 }
 
 bool L2TPIPSecDriver::IsPskRequired() const {

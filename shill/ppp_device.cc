@@ -44,6 +44,7 @@ void PPPDevice::UpdateIPConfigFromPPP(const map<string, string>& configuration,
                                       bool blackhole_ipv6) {
   SLOG(this, 2) << __func__ << " on " << link_name();
   IPConfig::Properties properties = ParseIPConfiguration(configuration);
+  metrics()->SendSparseToUMA(Metrics::kMetricPPPMTUValue, properties.mtu);
   properties.blackhole_ipv6 = blackhole_ipv6;
   properties.use_if_addrs = true;
   UpdateIPConfig(properties);
@@ -63,6 +64,7 @@ string PPPDevice::GetInterfaceName(const map<string, string>& configuration) {
   return string();
 }
 
+// static
 IPConfig::Properties PPPDevice::ParseIPConfiguration(
     const map<string, string>& configuration) {
   IPConfig::Properties properties;
@@ -96,7 +98,6 @@ IPConfig::Properties PPPDevice::ParseIPConfiguration(
         continue;
       }
       properties.mtu = mru;
-      metrics()->SendSparseToUMA(Metrics::kMetricPPPMTUValue, mru);
     } else {
       SLOG(PPP, nullptr, 2) << "Key ignored.";
     }
