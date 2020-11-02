@@ -155,8 +155,11 @@ TerminaVm::TerminaVm(
 }
 
 TerminaVm::~TerminaVm() {
-  // |Shutdown| should be called before the destructor
-  CHECK(already_shut_down_);
+  if (!already_shut_down_) {  // Call shutdown only once
+    LOG(WARNING) << "Performing blocking shutdown for termina vm (vsock cid "
+                 << vsock_cid_ << ")";
+    Shutdown().Get();
+  }
 }
 
 std::shared_ptr<TerminaVm> TerminaVm::Create(
@@ -335,8 +338,6 @@ bool TerminaVm::Start(base::FilePath kernel,
 Future<bool> TerminaVm::Shutdown() {
   DCHECK(!already_shut_down_);
   already_shut_down_ = true;
-
-  LOG(INFO) << "Shutting down TerminaVM (vsock cid " << vsock_cid_ << ")";
 
   // Notify arc-patchpanel that the VM is down.
   // This should run before the process existence check below since we still

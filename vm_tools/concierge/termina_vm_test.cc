@@ -434,7 +434,6 @@ void TerminaVmTest::SetUp() {
 void TerminaVmTest::TearDown() {
   // Do the opposite of SetUp to make sure things get cleaned up in the right
   // order.
-  vm_->Shutdown();
   vm_.reset();  // AsyncGrpcClient is destructed here
 
   server_->Shutdown();

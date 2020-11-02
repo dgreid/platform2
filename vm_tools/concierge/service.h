@@ -114,7 +114,6 @@ class Service final {
   std::unique_ptr<dbus::Response> ResumeVm(dbus::MethodCall* method_call);
 
   // Handles a request to stop all running VMs.
-  Future<void> StopAllVmsHelper();
   void StopAllVms(dbus::MethodCall* method_call,
                   dbus::ExportedObject::ResponseSender response_sender);
 
