@@ -157,11 +157,8 @@ ArcVm::ArcVm(int32_t vsock_cid,
 }
 
 ArcVm::~ArcVm() {
-  if (!already_shut_down_) {  // Call shutdown only once
-    LOG(WARNING) << "Performing blocking shutdown for arcvm (vsock cid "
-                 << vsock_cid_ << ")";
-    Shutdown().Get();
-  }
+  // |Shutdown| should be called before the destructor
+  CHECK(already_shut_down_);
 }
 
 std::shared_ptr<ArcVm> ArcVm::Create(
@@ -386,9 +383,7 @@ Future<bool> ArcVm::Shutdown() {
   future =
       future
           .Then(base::BindOnce(
-              [](std::string vm_socket_path,
-                 std::weak_ptr<SigchldHandler> weak_async_sigchld_handler,
-                 uint32_t pid, bool exited) {
+              [](std::shared_ptr<ArcVm> arcvm, uint32_t pid, bool exited) {
                 if (exited) {
                   LOG(INFO) << "ARCVM is shut down";
                   return Reject<Future<bool>>();
@@ -397,14 +392,14 @@ Future<bool> ArcVm::Shutdown() {
                 LOG(WARNING) << "Failed to shut down ARCVM gracefully. "
                                 "Trying to turn it "
                              << "down via the crosvm socket.";
-                RunCrosvmCommand("stop", vm_socket_path);
+                RunCrosvmCommand("stop", arcvm->GetVmSocketPath());
 
                 // We can't actually trust the exit codes that crosvm gives
                 // us so just see if it exited.
-                return Resolve(WatchSigchld(weak_async_sigchld_handler, pid,
-                                            kChildExitTimeout));
+                return Resolve(WatchSigchld(arcvm->weak_async_sigchld_handler_,
+                                            pid, kChildExitTimeout));
               },
-              GetVmSocketPath(), weak_async_sigchld_handler_, pid))
+              shared_from_this(), pid))
           .Flatten();
 
   return KillCrosvmProcess(weak_async_sigchld_handler_, pid, cid(),

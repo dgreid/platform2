@@ -756,6 +756,9 @@ Service::Service(base::Closure quit_closure)
       weak_ptr_factory_(this) {}
 
 Service::~Service() {
+  // VMs must be stopped before destructed, as shared_from_this is used in the
+  // Shutdown method of ArcVm and TerminaVm
+  StopAllVmsHelper().Get();
   if (grpc_server_vm_) {
     grpc_server_vm_->Shutdown();
   }
@@ -1567,13 +1570,9 @@ Future<StopVmResponse> Service::StopVm(StopVmRequest request) {
       std::move(ctx)));
 }
 
-void Service::StopAllVms(dbus::MethodCall* method_call,
-                         dbus::ExportedObject::ResponseSender response_sender) {
+Future<void> Service::StopAllVmsHelper() {
   DCHECK(sequence_checker_.CalledOnValidSequence());
   LOG(INFO) << "Received StopAllVms request";
-
-  std::unique_ptr<dbus::Response> dbus_response(
-      dbus::Response::FromMethodCall(method_call));
 
   std::vector<Future<bool>> futures;
   for (auto& iter : vms_) {
@@ -1590,10 +1589,9 @@ void Service::StopAllVms(dbus::MethodCall* method_call,
     futures.push_back(iter.second->Shutdown());
   }
 
-  Collect(base::SequencedTaskRunnerHandle::Get(), std::move(futures))
+  return Collect(base::SequencedTaskRunnerHandle::Get(), std::move(futures))
       .ThenNoReject(base::BindOnce(
-          [](base::WeakPtr<Service> service, dbus::MethodCall* method_call,
-             dbus::ExportedObject::ResponseSender response_sender,
+          [](base::WeakPtr<Service> service,
              // vms goes out of scope after all the shutdown methods have
              // returned
              VmMap vms, std::vector<bool> results) {
@@ -1605,12 +1603,20 @@ void Service::StopAllVms(dbus::MethodCall* method_call,
                                          iter.second->GetInfo().cid);
               }
             }
-            std::move(response_sender)
-                .Run(dbus::Response::FromMethodCall(method_call));
             LOG(INFO) << "Stopped all VMs";
           },
-          weak_ptr_factory_.GetWeakPtr(), method_call,
-          std::move(response_sender), std::move(vms_)));
+          weak_ptr_factory_.GetWeakPtr(), std::move(vms_)));
+}
+
+void Service::StopAllVms(dbus::MethodCall* method_call,
+                         dbus::ExportedObject::ResponseSender response_sender) {
+  StopAllVmsHelper().ThenNoReject(base::BindOnce(
+      [](dbus::MethodCall* method_call,
+         dbus::ExportedObject::ResponseSender response_sender) {
+        std::move(response_sender)
+            .Run(dbus::Response::FromMethodCall(method_call));
+      },
+      method_call, std::move(response_sender)));
 }
 
 std::unique_ptr<dbus::Response> Service::SuspendVm(

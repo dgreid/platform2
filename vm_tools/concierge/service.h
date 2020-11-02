@@ -114,6 +114,7 @@ class Service final {
   std::unique_ptr<dbus::Response> ResumeVm(dbus::MethodCall* method_call);
 
   // Handles a request to stop all running VMs.
+  Future<void> StopAllVmsHelper();
   void StopAllVms(dbus::MethodCall* method_call,
                   dbus::ExportedObject::ResponseSender response_sender);
 
@@ -302,10 +303,6 @@ class Service final {
   base::FilePath PrepareVmGpuCachePath(const std::string& owner_id,
                                        const std::string& vm_name);
 
-  // Ensure calls are made on the right thread.
-  // The watcher_ thread uses this, so this has to be destructed after watcher_.
-  base::SequenceChecker sequence_checker_;
-
   // Resource allocators for VMs.
   VsockCidPool vsock_cid_pool_;
 
@@ -315,7 +312,6 @@ class Service final {
 
   // File descriptor for the SIGCHLD events.
   base::ScopedFD signal_fd_;
-  // Destruction of vms_ uses this, so this has to be destructed after vms_.
   std::unique_ptr<base::FileDescriptorWatcher::Controller> watcher_;
   std::shared_ptr<SigchldHandler> sigchld_handler_ =
       std::make_shared<SigchldHandler>();
@@ -355,6 +351,9 @@ class Service final {
   // Closure that's posted to the current thread's TaskRunner when the service
   // receives a SIGTERM.
   base::Closure quit_closure_;
+
+  // Ensure calls are made on the right thread.
+  base::SequenceChecker sequence_checker_;
 
   // Signal must be connected before we can call SetTremplinStarted in a VM.
   bool is_tremplin_started_signal_connected_ = false;
