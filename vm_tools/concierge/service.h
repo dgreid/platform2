@@ -58,17 +58,6 @@ class Service final {
   ~Service();
 
  private:
-  // Describes key components of a VM.
-  struct VMImageSpec {
-    base::FilePath kernel;
-    base::FilePath initrd;
-    base::FilePath rootfs;
-    base::FilePath tools_disk;
-    bool is_trusted_image;
-
-    VMImageSpec() = default;
-  };
-
   explicit Service(base::Closure quit_closure);
 
   // Initializes the service by connecting to the system DBus daemon, exporting
@@ -286,14 +275,6 @@ class Service final {
   // event of a failure.
   base::FilePath GetVmImagePath(const std::string& dlc_id,
                                 std::string* failure_reason);
-
-  // Determines key components of a VM image. Also, decides if it's a trusted
-  // VM. Returns the empty struct and sets |failure_reason| in the event of a
-  // failure.
-  Service::VMImageSpec GetImageSpec(
-      const vm_tools::concierge::VirtualMachineSpec& vm,
-      bool is_termina,
-      std::string* failure_reason);
 
   // Prepares the GPU shader disk cache directory and if necessary erases
   // old caches for all VMs. Returns the prepared path.
