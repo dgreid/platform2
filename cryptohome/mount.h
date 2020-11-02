@@ -254,7 +254,7 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   // of the keyset initial credentials belonged to.This field is used to
   // preserve the index from the mount time and supply it to the user session.
   // Blast it with fire when we get the unwrapping out.
-  int mount_key_index() const { return mount_key_index_; }
+  virtual int mount_key_index() const { return mount_key_index_; }
 
  protected:
   // Only used in tests.

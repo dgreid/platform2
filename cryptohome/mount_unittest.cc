@@ -608,12 +608,6 @@ TEST_P(MountTest, NamespaceCreationFail) {
   EXPECT_FALSE(mount_->Init(&platform_, &crypto_, user_timestamp_cache_.get()));
 }
 
-MATCHER_P(CredentialsEqual, credentials, "") {
-  const Credentials& expected_creds = credentials;
-  return expected_creds.username() == arg.username() &&
-         expected_creds.passkey() == arg.passkey();
-}
-
 TEST_P(MountTest, MountCryptohomeHasPrivileges) {
   // Check that Mount only works if the mount permission is given.
   InsertTestUsers(&kDefaultUsers[10], 1);
@@ -1059,68 +1053,6 @@ TEST_P(MountTest, CheckChapsDirectoryMigration) {
   DoMountInit();
   EXPECT_TRUE(
       mount_->CheckChapsDirectory(FilePath("/fake"), FilePath("/fake_legacy")));
-}
-
-TEST_P(MountTest, CreateCryptohomeTest) {
-  InsertTestUsers(&kDefaultUsers[5], 1);
-  // Creates a cryptohome and tests credentials.
-  HomeDirs homedirs;
-  homedirs.set_shadow_root(kImageDir);
-
-  TestUser* user = &helper_.users[0];
-  Credentials credentials(user->username, user->passkey);
-
-  EXPECT_TRUE(DoMountInit());
-  EXPECT_TRUE(
-      homedirs.Init(&platform_, mount_->crypto(), user_timestamp_cache_.get()));
-
-  // TODO(wad) Make this into a UserDoesntExist() helper.
-  EXPECT_CALL(platform_, CreateDirectory(AnyOf(
-                             user->mount_prefix, user->user_mount_prefix,
-                             user->user_mount_path, user->root_mount_prefix,
-                             user->root_mount_path)))
-      .Times(7)
-      .WillRepeatedly(Return(true));
-  EXPECT_CALL(platform_, CreateDirectory(AnyOf(
-                             FilePath("/home/chronos"),
-                             MountHelper::GetNewUserPath(user->username))))
-      .WillRepeatedly(Return(true));
-  EXPECT_CALL(platform_, DirectoryExists(user->vault_path))
-      .WillRepeatedly(Return(false));
-  EXPECT_CALL(platform_, DirectoryExists(user->vault_mount_path))
-      .WillRepeatedly(Return(false));
-  if (ShouldTestEcryptfs()) {
-    EXPECT_CALL(platform_, CreateDirectory(user->vault_path))
-        .WillOnce(Return(true));
-  }
-  EXPECT_CALL(platform_, CreateDirectory(user->base_path))
-      .WillOnce(Return(true));
-  EXPECT_CALL(platform_, FileExists(base::FilePath(kLockedToSingleUserFile)))
-      .WillRepeatedly(Return(false));
-  brillo::Blob creds;
-  EXPECT_CALL(platform_, WriteFileAtomicDurable(user->keyset_path, _, _))
-      .WillOnce(DoAll(SaveArg<1>(&creds), Return(true)));
-
-  ASSERT_TRUE(mount_->mounter_->EnsureUserMountPoints(user->username));
-  ASSERT_TRUE(homedirs.Create(user->username));
-  ASSERT_TRUE(mount_->PrepareCryptohome(user->obfuscated_username,
-                                        ShouldTestEcryptfs()));
-  ASSERT_TRUE(homedirs.AddInitialKeyset(credentials));
-  ASSERT_NE(creds.size(), 0);
-  {
-    InSequence s;
-    MockFileEnumerator* files = new MockFileEnumerator();
-    EXPECT_CALL(platform_, GetFileEnumerator(user->base_path, false, _))
-        .WillOnce(Return(files));
-    // Single key.
-    EXPECT_CALL(*files, Next()).WillOnce(Return(user->keyset_path));
-    EXPECT_CALL(*files, Next()).WillRepeatedly(Return(FilePath()));
-  }
-
-  EXPECT_CALL(platform_, ReadFile(user->keyset_path, _))
-      .WillOnce(DoAll(SetArgPointee<1>(creds), Return(true)));
-
-  ASSERT_TRUE(homedirs.AreCredentialsValid(credentials));
 }
 
 TEST_P(MountTest, GoodReDecryptTest) {

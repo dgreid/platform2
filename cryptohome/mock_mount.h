@@ -23,6 +23,7 @@ class MockMount : public Mount {
               Init,
               (Platform*, Crypto*, UserOldestActivityTimestampCache*),
               (override));
+  MOCK_METHOD(bool, PrepareCryptohome, (const std::string&, bool), (override));
   MOCK_METHOD(bool,
               MountCryptohome,
               (const Credentials&, const Mount::MountArgs&, bool, MountError*),
@@ -44,6 +45,7 @@ class MockMount : public Mount {
   MOCK_METHOD(bool, InsertPkcs11Token, (), (override));
   MOCK_METHOD(void, RemovePkcs11Token, (), (override));
   MOCK_METHOD(Pkcs11State, pkcs11_state, (), (override));
+  MOCK_METHOD(int, mount_key_index, (), (const, override));
 
   Pkcs11State Real_pkcs11_state() { return Mount::pkcs11_state(); }
 
