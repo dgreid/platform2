@@ -54,6 +54,7 @@ config("compiler_defaults") {
     "-Wall",
     "-Wunused",
     "-Wbool-operation",
+    "-Wfree-nonheap-object",
     "-Wint-in-bool-context",
     "-Wstring-compare",
     "-Wstring-plus-int",
