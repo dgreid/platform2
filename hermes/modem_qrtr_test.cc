@@ -16,6 +16,7 @@
 #include <base/files/scoped_file.h>
 #include <base/logging.h>
 #include <base/strings/string_number_conversions.h>
+#include <base/test/test_mock_time_task_runner.h>
 #include <brillo/array_utils.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -76,17 +77,31 @@ constexpr auto kQrtrGetSlotsReq = brillo::make_array<uint8_t>(
     0x00, 0x00, 0x00, 0x47, 0x00, 0x00, 0x00
 );
 
+// 2 eUICC's present, Slot 2 active
 constexpr auto kQrtrGetSlotsResp = brillo::make_array<uint8_t>(
-    0x02, 0x00, 0x00, 0x47, 0x00, 0x67, 0x00, 0x02, 0x04, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x12, 0x13, 0x00, 0x02, 0x10, 0x89, 0x03, 0x30, 0x23, 0x42,
-    0x51, 0x20, 0x00, 0x00, 0x00, 0x00, 0x09, 0x71, 0x04, 0x28, 0x68, 0x00,
-    0x13, 0x05, 0x00, 0x02, 0x01, 0x00, 0x02, 0x03, 0x11, 0x27, 0x00, 0x02,
-    0x02, 0x00, 0x00, 0x00, 0x00, 0x18, 0x3B, 0x9F, 0x97, 0xC0, 0x0A, 0x3F,
-    0xC6, 0x82, 0x80, 0x31, 0xE0, 0x73, 0xFE, 0x21, 0x1B, 0x65, 0xD0, 0x02,
-    0x33, 0x14, 0xA5, 0x81, 0x0F, 0xE4, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x10, 0x15, 0x00, 0x02, 0x02, 0x00, 0x00, 0x00, 0x01, 0x00,
-    0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x01, 0x00
+  0x02, 0x01, 0x00, 0x47, 0x00, 0x8F, 0x00, 0x02, 0x04, 0x00, 0x00, 0x00, 0x00,
+  0x00, 0x12, 0x23, 0x00, 0x02, 0x10, 0x89, 0x03, 0x30, 0x23, 0x42, 0x51, 0x20,
+  0x00, 0x00, 0x00, 0x00, 0x09, 0x71, 0x04, 0x17, 0x04, 0x10, 0x89, 0x03, 0x30,
+  0x23, 0x42, 0x51, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x11, 0x64, 0x68, 0x11,
+  0x13, 0x05, 0x00, 0x02, 0x01, 0x00, 0x01, 0x00, 0x11, 0x3F, 0x00, 0x02, 0x02,
+  0x00, 0x00, 0x00, 0x00, 0x18, 0x3B, 0x9F, 0x97, 0xC0, 0x0A, 0x3F, 0xC6, 0x82,
+  0x80, 0x31, 0xE0, 0x73, 0xFE, 0x21, 0x1B, 0x65, 0xD0, 0x02, 0x33, 0x14, 0xA5,
+  0x81, 0x0F, 0xE4, 0x01, 0x02, 0x00, 0x00, 0x00, 0x00, 0x18, 0x3B, 0x9F, 0x97,
+  0xC0, 0x0A, 0x3F, 0xC6, 0x82, 0x80, 0x31, 0xE0, 0x73, 0xFE, 0x21, 0x1B, 0x65,
+  0xD0, 0x02, 0x33, 0x14, 0xA5, 0x81, 0x0F, 0xE4, 0x01, 0x10, 0x15, 0x00, 0x02,
+  0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x02, 0x00, 0x00,
+  0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00
+);
+
+// Switch to slot 1
+constexpr auto kQrtrSwitchSlotReq = brillo::make_array<uint8_t>(
+  0x00, 0x07, 0x00, 0x46, 0x00, 0x0B, 0x00, 0x01, 0x01, 0x00, 0x01, 0x02, 0x04,
+  0x00, 0x01, 0x00, 0x00, 0x00
+);
+
+constexpr auto kQrtrSwitchSlotResp = brillo::make_array<uint8_t>(
+  0x02, 0x07, 0x00, 0x46, 0x00, 0x07, 0x00, 0x02, 0x04, 0x00, 0x00, 0x00, 0x00,
+  0x00
 );
 
 constexpr auto kQrtrOpenLogicalChannelReq = brillo::make_array<uint8_t>(
@@ -192,6 +207,16 @@ hermes::EnableIfIterator_t<Iterator, std::vector<uint8_t>> CreateQrtrFromApdu(
 
 namespace hermes {
 
+class MockExecutor : public Executor {
+ public:
+  MockExecutor() : Executor(new base::TestMockTimeTaskRunner()) {}
+  void FastForwardBy(base::TimeDelta duration) {
+    scoped_refptr<base::TestMockTimeTaskRunner> mock_task_runner_(
+        dynamic_cast<base::TestMockTimeTaskRunner*>(task_runner().get()));
+    mock_task_runner_->FastForwardBy(duration);
+  }
+};
+
 // Socket class which mocks the outgoing (host -> modem) socket calls and
 // provides implementations for incoming (modem -> host) socket calls that reads
 // data from kQrtrFilename rather than from an actual QRTR socket.
@@ -259,7 +284,7 @@ class ModemQrtrTest : public testing::Test {
 
     auto socket = std::make_unique<MockSocketQrtr>();
     socket_ = socket.get();
-    modem_ = ModemQrtr::Create(std::move(socket), nullptr, nullptr);
+    modem_ = ModemQrtr::Create(std::move(socket), nullptr, &executor_);
     ASSERT_NE(modem_, nullptr);
 
     receive_ids_.clear();
@@ -272,6 +297,35 @@ class ModemQrtrTest : public testing::Test {
     EXPECT_CALL(*socket_, Close());
     modem_.reset(nullptr);
     fd_.reset();
+  }
+
+  // Set's up expectations for messages that go out when a slot switch happens
+  void InitSlot(uint8_t physical_slot) {
+    {
+      ::testing::InSequence dummy;
+
+      EXPECT_SEND(*socket_, kQrtrGetSlotsReq);
+      // Slot 2 is the active slot after test initialization. If slot 1 is
+      // requested, a SwitchSlot message is expected
+      if (physical_slot == 1)
+        EXPECT_SEND(*socket_, kQrtrSwitchSlotReq);
+      EXPECT_SEND(*socket_, kQrtrResetReq);
+      EXPECT_SEND(*socket_, kQrtrOpenLogicalChannelReq);
+    }
+    modem_->StoreAndSetActiveSlot(physical_slot);
+  }
+
+  void ModemReceiveInitSlot(uint8_t physical_slot) {
+    ModemReceiveData(kQrtrGetSlotsResp.begin(), kQrtrGetSlotsResp.end());
+    if (physical_slot == 1) {
+      ModemReceiveData(kQrtrSwitchSlotResp.begin(), kQrtrSwitchSlotResp.end());
+      EXPECT_EQ(modem_->qmi_disabled_, true);
+      executor_.FastForwardBy(ModemQrtr::kSwitchSlotDelay);
+      EXPECT_EQ(modem_->qmi_disabled_, false);
+    }
+    ModemReceiveData(kQrtrResetResp.begin(), kQrtrResetResp.end());
+    ModemReceiveData(kQrtrOpenLogicalChannelResp.begin(),
+                     kQrtrOpenLogicalChannelResp.end());
   }
 
   // Wrapper for ModemQrtr::SendApdus. Tests should use this rather than
@@ -313,7 +367,6 @@ class ModemQrtrTest : public testing::Test {
       // receiving NEW_SERVER.
       EXPECT_SEND(*socket_, kQrtrResetReq);
       EXPECT_SEND(*socket_, kQrtrGetSlotsReq);
-      EXPECT_SEND(*socket_, kQrtrOpenLogicalChannelReq);
     }
 
     // Receive NEW_SERVER response from sock_new_lookup
@@ -322,11 +375,8 @@ class ModemQrtrTest : public testing::Test {
     ModemReceiveData(kQrtrResetResp.begin(), kQrtrResetResp.end());
     // Receive slot info from GET_SLOTS request.
     ModemReceiveData(kQrtrGetSlotsResp.begin(), kQrtrGetSlotsResp.end());
-    EXPECT_EQ(euicc_manager_.valid_slots().size(), 1);
+    EXPECT_EQ(euicc_manager_.valid_slots().size(), 2);
     EXPECT_EQ(1, modem_->logical_slot_);
-    // Receive response to OPEN_LOGICAL_CHANNEL request.
-    ModemReceiveData(kQrtrOpenLogicalChannelResp.begin(),
-                     kQrtrOpenLogicalChannelResp.end());
   }
 
   base::ScopedFD fd_;
@@ -337,6 +387,7 @@ class ModemQrtrTest : public testing::Test {
   // Likewise for receive ids.
   std::deque<uint16_t> receive_ids_;
   MockSocketQrtr* socket_;
+  MockExecutor executor_;
   std::unique_ptr<ModemQrtr> modem_;
   FakeEuiccManager euicc_manager_;
 };
@@ -345,23 +396,42 @@ class ModemQrtrTest : public testing::Test {
 // TESTS //
 ///////////
 
-TEST_F(ModemQrtrTest, EmptyApdu) {
+// Sends an apdu on slot 2. Since Slot 2 is active by default, the following
+// qmi messages are expected: GetSlots,Reset,OpenLogicalChannel,SendApdu
+TEST_F(ModemQrtrTest, EmptyApduSlot2) {
+  InitSlot(2);
   auto v = std::vector<uint8_t>();
   EXPECT_SEND(*socket_, CreateQrtrFromApdu(v.begin(), v.end()));
   std::vector<lpa::card::Apdu> commands = {lpa::card::Apdu::NewStoreData({})};
   SendApdus(std::move(commands), NullResponseCallback);
+  ModemReceiveInitSlot(2);
+}
+
+// Sends an apdu on slot 1. Since Slot 1 is not active by default, the following
+// qmi messages are expected: GetSlots, SwitchSlot, Reset, OpenLogicalChannel,
+// and SendApdu
+TEST_F(ModemQrtrTest, EmptyApduSlot1) {
+  InitSlot(1);
+  auto v = std::vector<uint8_t>();
+  EXPECT_SEND(*socket_, CreateQrtrFromApdu(v.begin(), v.end()));
+  std::vector<lpa::card::Apdu> commands = {lpa::card::Apdu::NewStoreData({})};
+  SendApdus(std::move(commands), NullResponseCallback);
+  ModemReceiveInitSlot(1);
 }
 
 TEST_F(ModemQrtrTest, RequestGetEid) {
+  InitSlot(2);
   EXPECT_SEND(*socket_, CreateQrtrFromApdu(kGetChallengeApdu.begin(),
                                            kGetChallengeApdu.end()));
   std::vector<lpa::card::Apdu> commands = {
       lpa::card::Apdu::NewStoreData(std::vector<uint8_t>(
           kGetChallengeApdu.begin(), kGetChallengeApdu.end()))};
   SendApdus(std::move(commands), NullResponseCallback);
+  ModemReceiveInitSlot(2);
 }
 
 TEST_F(ModemQrtrTest, SendTwoApdus) {
+  InitSlot(2);
   auto v = std::vector<uint8_t>();
   {
     ::testing::InSequence dummy;
@@ -377,6 +447,7 @@ TEST_F(ModemQrtrTest, SendTwoApdus) {
           kGetChallengeApdu.begin(), kGetChallengeApdu.end())),
       lpa::card::Apdu::NewStoreData({})};
   SendApdus(std::move(commands), NullResponseCallback);
+  ModemReceiveInitSlot(2);
   ModemReceiveData(kGetChallengeResp.begin(), kGetChallengeResp.end());
 }
 

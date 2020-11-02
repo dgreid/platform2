@@ -21,6 +21,12 @@ class Executor : public lpa::util::Executor {
                                base::OnceClosure task,
                                base::TimeDelta delay);
 
+ protected:
+  // Used by MockExecutor to forward time
+  const scoped_refptr<base::SingleThreadTaskRunner>& task_runner() const {
+    return task_runner_;
+  }
+
  private:
   scoped_refptr<base::SingleThreadTaskRunner> task_runner_;
 };

@@ -62,6 +62,9 @@ class ModemQrtr : public lpa::card::EuiccCard, public ModemControlInterface {
   lpa::util::EuiccLog* logger() override { return logger_; }
 
  private:
+  // Delay between SwitchSlot and the next QMI message
+  static constexpr auto kSwitchSlotDelay = base::TimeDelta::FromSeconds(1);
+
   struct TxElement {
     std::unique_ptr<TxInfo> info_;
     uint16_t id_;

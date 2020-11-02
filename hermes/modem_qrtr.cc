@@ -30,8 +30,11 @@ constexpr uint8_t kQmiUimService = 0xB;
 constexpr uint8_t kDefaultLogicalSlot = 0x01;
 constexpr uint8_t kInvalidChannel = -1;
 
-// Delay between SwitchSlot and the next QMI message
-constexpr auto kSwitchSlotDelay = base::TimeDelta::FromSeconds(1);
+// A profile enable/disable results in an automatic refresh.
+// Put Hermes to sleep during this refresh. If the refresh
+// takes any longer, Hermes will retry channel acquisition
+// after kInitRetryDelay
+constexpr auto kSimRefreshDelay = base::TimeDelta::FromSeconds(2);
 
 constexpr auto kInitRetryDelay = base::TimeDelta::FromSeconds(10);
 
@@ -114,12 +117,7 @@ void ModemQrtr::SetActiveSlot(const uint32_t physical_slot) {
   tx_queue_.push_back(
       {std::make_unique<SwitchSlotTxInfo>(physical_slot, logical_slot_),
        AllocateId(), QmiUimCommand::kSwitchSlot});
-  current_state_.Transition(State::kUimStarted);
-  channel_ = kInvalidChannel;
-  tx_queue_.push_back(
-      {std::unique_ptr<TxInfo>(), AllocateId(), QmiUimCommand::kReset});
-  tx_queue_.push_back({std::unique_ptr<TxInfo>(), AllocateId(),
-                       QmiUimCommand::kOpenLogicalChannel});
+  ReacquireChannel();
 }
 
 void ModemQrtr::StoreAndSetActiveSlot(const uint32_t physical_slot) {
@@ -160,20 +158,16 @@ void ModemQrtr::SendApdus(std::vector<lpa::card::Apdu> apdus,
 
 bool ModemQrtr::IsSimValidAfterEnable() {
   // This function is called by the lpa after profile enable.
-  ReacquireChannel();
   return true;
 }
 
 bool ModemQrtr::IsSimValidAfterDisable() {
   // This function is called by the lpa after profile disable.
-  ReacquireChannel();
   return true;
 }
 
 void ModemQrtr::Initialize(EuiccManagerInterface* euicc_manager) {
   CHECK(current_state_ == State::kUninitialized);
-  // Initialization succeeds only if our active sim slot has an esim
-  VLOG(1) << "Trying to initialize channel to eSIM";
   euicc_manager_ = euicc_manager;
 
   // StartService should result in a received QRTR_TYPE_NEW_SERVER
@@ -186,10 +180,6 @@ void ModemQrtr::Initialize(EuiccManagerInterface* euicc_manager) {
 
   current_state_.Transition(State::kInitializeStarted);
 
-  // Note: we use push_front so that SendApdus could be called prior to a
-  // successful initialization.
-  tx_queue_.push_front({std::unique_ptr<TxInfo>(), AllocateId(),
-                        QmiUimCommand::kOpenLogicalChannel});
   // Request initial info about SIM slots.
   // TODO(crbug.com/1085825) Add support for getting indications so that this
   // info can get updated.
@@ -200,17 +190,14 @@ void ModemQrtr::Initialize(EuiccManagerInterface* euicc_manager) {
 }
 
 void ModemQrtr::ReacquireChannel() {
-  if (current_state_ != State::kSendApduReady) {
-    return;
-  }
-
   LOG(INFO) << "Reacquiring Channel";
-  current_state_.Transition(State::kUimStarted);
+  if (current_state_ != State::kUimStarted)
+    current_state_.Transition(State::kUimStarted);
   channel_ = kInvalidChannel;
-  tx_queue_.push_front({std::unique_ptr<TxInfo>(), AllocateId(),
-                        QmiUimCommand::kOpenLogicalChannel});
-  tx_queue_.push_front(
+  tx_queue_.push_back(
       {std::unique_ptr<TxInfo>(), AllocateId(), QmiUimCommand::kReset});
+  tx_queue_.push_back({std::unique_ptr<TxInfo>(), AllocateId(),
+                       QmiUimCommand::kOpenLogicalChannel});
 }
 
 void ModemQrtr::RetryInitialization() {
@@ -466,6 +453,7 @@ void ModemQrtr::ProcessQmiPacket(const qrtr_packet& packet) {
   VLOG(1) << "Received QMI message of type: " << qmi_type;
   switch (qmi_type) {
     case QmiUimCommand::kReset:
+      current_state_.Transition(State::kUimStarted);
       VLOG(1) << "Ignoring received RESET packet";
       break;
     case QmiUimCommand::kSwitchSlot:
@@ -753,7 +741,9 @@ void ModemQrtr::StartProfileOp(const uint32_t physical_slot) {
 }
 
 void ModemQrtr::FinishProfileOp() {
+  DisableQmi(kSimRefreshDelay);
   SetProcedureBytes(ProcedureBytesMode::EnableIntermediateBytes);
+  ReacquireChannel();
 }
 
 }  // namespace hermes
