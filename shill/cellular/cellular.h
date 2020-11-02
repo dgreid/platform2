@@ -321,6 +321,8 @@ class Cellular : public Device,
   // Implements MobileOperatorInfo::Observer:
   void OnOperatorChanged() override;
 
+  CellularCapability* capability_for_testing() { return capability_.get(); }
+
  private:
   friend class CellularTest;
   friend class CellularCapability3gppTest;

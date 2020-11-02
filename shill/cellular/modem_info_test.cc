@@ -12,7 +12,7 @@
 #include <gtest/gtest.h>
 
 #include "shill/cellular/mock_dbus_objectmanager_proxy.h"
-#include "shill/cellular/mock_modem.h"
+#include "shill/cellular/modem.h"
 #include "shill/manager.h"
 #include "shill/mock_control.h"
 #include "shill/mock_manager.h"
@@ -20,8 +20,6 @@
 #include "shill/test_event_dispatcher.h"
 
 using testing::_;
-using testing::ByMove;
-using testing::Return;
 using testing::SaveArg;
 using testing::Test;
 
@@ -72,11 +70,6 @@ class ModemInfoTest : public Test {
         modem_info_(&control_interface_, &dispatcher_, &metrics_, &manager_) {}
 
  protected:
-  std::unique_ptr<StrictModem> CreateModem() {
-    return std::make_unique<StrictModem>(
-        modemmanager::kModemManager1ServiceName, kModemPath, &modem_info_);
-  }
-
   void Connect(const ObjectsWithProperties& expected_objects) {
     ManagedObjectsCallback get_managed_objects_callback;
     EXPECT_CALL(*modem_info_.GetMockProxy(), GetManagedObjects(_, _, _))

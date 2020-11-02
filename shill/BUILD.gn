@@ -712,7 +712,6 @@ if (use.test) {
         "cellular/mock_mm1_modem_simple_proxy.cc",
         "cellular/mock_mm1_sim_proxy.cc",
         "cellular/mock_mobile_operator_info.cc",
-        "cellular/mock_modem.cc",
         "cellular/mock_modem_info.cc",
         "cellular/mock_pending_activation_store.cc",
         "cellular/modem_info_test.cc",

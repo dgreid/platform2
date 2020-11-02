@@ -42,13 +42,10 @@ class Modem {
 
   void set_type(Cellular::Type type) { type_ = type; }
 
- private:
-  friend class ModemTest;
-  FRIEND_TEST(ModemTest, CreateDeviceEarlyFailures);
-  FRIEND_TEST(ModemTest, CreateDevicePPP);
-  FRIEND_TEST(ModemTest, EarlyDeviceProperties);
-  FRIEND_TEST(ModemTest, GetDeviceParams);
-  FRIEND_TEST(ModemTest, PendingDevicePropertiesAndCreate);
+  Cellular* device_for_testing() { return device_.get(); }
+  bool has_pending_device_info_for_testing() {
+    return has_pending_device_info_;
+  }
 
   // Constants associated with fake network devices for PPP dongles.
   // See |fake_dev_serial_|, below, for more info.
@@ -56,13 +53,24 @@ class Modem {
   static const char kFakeDevAddress[];
   static const int kFakeDevInterfaceIndex;
 
-  // These are virtual for mock implementation. TODO(stevenjb): Use a Fake.
-  virtual std::string GetModemInterface() const;
+ protected:
+  // Overridden in tests to provide a MockCellular instance instead of
+  // creating a real instance. TODO(b:172077101): Use a delegate interface
+  // instead once Cellular lifetime is detached from Modem lifetime.
   virtual Cellular* ConstructCellular(const std::string& link_name,
                                       const std::string& device_name,
                                       int interface_index);
-  virtual bool GetLinkName(const KeyValueStore& properties,
-                           std::string* name) const;
+
+  ModemInfo* modem_info_for_testing() { return modem_info_; }
+  void set_rtnl_handler_for_testing(RTNLHandler* rtnl_handler) {
+    rtnl_handler_ = rtnl_handler;
+  }
+
+ private:
+  friend class ModemTest;
+
+  std::string GetModemInterface() const;
+  bool GetLinkName(const KeyValueStore& properties, std::string* name) const;
 
   // Asynchronously initializes support for the modem.
   // If the |properties| are valid and the MAC address is present,
@@ -98,7 +106,7 @@ class Modem {
   ModemInfo* modem_info_;
   std::string link_name_;
   Cellular::Type type_;
-  bool pending_device_info_;
+  bool has_pending_device_info_;
   RTNLHandler* rtnl_handler_;
 
   // Serial number used to uniquify fake device names for Cellular

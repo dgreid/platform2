@@ -46,7 +46,7 @@ Modem::Modem(const string& service,
       path_(path),
       modem_info_(modem_info),
       type_(Cellular::kTypeInvalid),
-      pending_device_info_(false),
+      has_pending_device_info_(false),
       rtnl_handler_(RTNLHandler::GetInstance()) {
   LOG(INFO) << "Modem created: at " << path.value();
 }
@@ -126,11 +126,11 @@ void Modem::CreateDeviceMM1(const InterfaceToProperties& properties) {
 
 void Modem::OnDeviceInfoAvailable(const string& link_name) {
   SLOG(this, 2) << __func__;
-  if (pending_device_info_ && link_name_ == link_name) {
-    // pending_device_info_ is only set if we've already been through
+  if (has_pending_device_info_ && link_name_ == link_name) {
+    // has_pending_device_info_ is only set if we've already been through
     // CreateDeviceFromModemProperties() and saved our initial
     // properties already
-    pending_device_info_ = false;
+    has_pending_device_info_ = false;
     CreateDeviceFromModemProperties(initial_properties_);
   }
 }
@@ -201,7 +201,7 @@ void Modem::CreateDeviceFromModemProperties(
       LOG(WARNING)
           << "No hardware address, device creation pending device info.";
       initial_properties_ = properties;
-      pending_device_info_ = true;
+      has_pending_device_info_ = true;
       return;
     }
     // Got the interface index and MAC address. Fall-through to actually
