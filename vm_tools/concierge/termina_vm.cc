@@ -154,6 +154,7 @@ TerminaVm::~TerminaVm() {
 
 std::unique_ptr<TerminaVm> TerminaVm::Create(
     base::FilePath kernel,
+    base::FilePath initrd,
     base::FilePath rootfs,
     int32_t cpus,
     std::vector<TerminaVm::Disk> disks,
@@ -174,7 +175,7 @@ std::unique_ptr<TerminaVm> TerminaVm::Create(
       std::move(rootfs_device), std::move(stateful_device),
       std::move(stateful_size), features, is_termina));
 
-  if (!vm->Start(std::move(kernel), std::move(rootfs), cpus,
+  if (!vm->Start(std::move(kernel), std::move(initrd), std::move(rootfs), cpus,
                  std::move(disks))) {
     vm.reset();
   }
@@ -197,6 +198,7 @@ std::string TerminaVm::GetCrosVmSerial(std::string hardware,
 }
 
 bool TerminaVm::Start(base::FilePath kernel,
+                      base::FilePath initrd,
                       base::FilePath rootfs,
                       int32_t cpus,
                       std::vector<TerminaVm::Disk> disks) {
@@ -283,6 +285,12 @@ bool TerminaVm::Start(base::FilePath kernel,
 
     args.emplace_back(disk.path.value() +
                       ",sparse=" + (disk.sparse ? "true" : "false"));
+  }
+
+  // Optionally add the path to the initrd.
+  if (!initrd.empty()) {
+    args.emplace_back("-i");
+    args.emplace_back(initrd.value());
   }
 
   // Finally list the path to the kernel.

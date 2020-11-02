@@ -1008,7 +1008,7 @@ std::unique_ptr<dbus::Response> Service::StartVm(
   // 2) The chosen VM is a first-party VM.
   // In practical terms this is true iff we are booting termina.
   bool is_trusted_image = request.start_termina();
-  base::FilePath kernel, rootfs, tools_disk;
+  base::FilePath kernel, initrd, rootfs, tools_disk;
   if (!request.vm().dlc_id().empty() || request.start_termina()) {
     std::string error;
     base::FilePath vm_path = GetVmImagePath(request.vm().dlc_id(), &error);
@@ -1026,12 +1026,20 @@ std::unique_ptr<dbus::Response> Service::StartVm(
     // User-chosen VMs (i.e. with arbitrary paths) can not be trusted.
     DCHECK(!is_trusted_image);
     kernel = base::FilePath(request.vm().kernel());
+    initrd = base::FilePath(request.vm().initrd());
     rootfs = base::FilePath(request.vm().rootfs());
   }
 
   if (!base::PathExists(kernel)) {
     LOG(ERROR) << "Missing VM kernel path: " << kernel.value();
     response.set_failure_reason("Kernel path does not exist");
+    writer.AppendProtoAsArrayOfBytes(response);
+    return dbus_response;
+  }
+
+  if (!initrd.empty() && !base::PathExists(initrd)) {
+    LOG(ERROR) << "Missing VM initrd path: " << initrd.value();
+    response.set_failure_reason("Initrd path does not exist");
     writer.AppendProtoAsArrayOfBytes(response);
     return dbus_response;
   }
@@ -1269,11 +1277,12 @@ std::unique_ptr<dbus::Response> Service::StartVm(
   SendVmStartingUpSignal(vm_id, *vm_info);
 
   auto vm = TerminaVm::Create(
-      std::move(kernel), std::move(rootfs), cpus, std::move(disks), vsock_cid,
-      std::move(network_client), std::move(server_proxy),
-      std::move(runtime_dir), std::move(log_path), std::move(gpu_cache_path),
-      std::move(rootfs_device), std::move(stateful_device),
-      std::move(stateful_size), features, request.start_termina());
+      std::move(kernel), std::move(initrd), std::move(rootfs), cpus,
+      std::move(disks), vsock_cid, std::move(network_client),
+      std::move(server_proxy), std::move(runtime_dir), std::move(log_path),
+      std::move(gpu_cache_path), std::move(rootfs_device),
+      std::move(stateful_device), std::move(stateful_size), features,
+      request.start_termina());
   if (!vm) {
     LOG(ERROR) << "Unable to start VM";
 

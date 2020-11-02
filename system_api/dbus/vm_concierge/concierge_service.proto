@@ -25,6 +25,9 @@ message VirtualMachineSpec {
   // set, the kernel() and rootfs() fields will be ignored when calculating the
   // path to the VM's image files.
   string dlc_id = 3;
+
+  // Optional path to the initrd that should be used for the VM.
+  string initrd = 4;
 }
 
 // The type of disk image.

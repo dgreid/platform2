@@ -75,6 +75,7 @@ class TerminaVm final : public VmBaseImpl {
   // failed to start for any reason.
   static std::unique_ptr<TerminaVm> Create(
       base::FilePath kernel,
+      base::FilePath initrd,
       base::FilePath rootfs,
       int32_t cpus,
       std::vector<Disk> disks,
@@ -267,6 +268,7 @@ class TerminaVm final : public VmBaseImpl {
 
   // Starts the VM with the given kernel and root file system.
   bool Start(base::FilePath kernel,
+             base::FilePath initrd,
              base::FilePath rootfs,
              int32_t cpus,
              std::vector<Disk> disks);
