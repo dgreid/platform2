@@ -213,7 +213,7 @@ void HandleAsyncDbusMethod(
     resp.set_success(false);
     resp.set_failure_reason("unable to parse protobuf");
     dbus::MessageWriter(dbus_response.get()).AppendProtoAsArrayOfBytes(resp);
-    std::move(response_sender).Run(std::move(dbus_response));
+    response_sender.Run(std::move(dbus_response));
     return;
   }
 
@@ -223,7 +223,7 @@ void HandleAsyncDbusMethod(
              std::unique_ptr<dbus::Response> dbus_response, Response response) {
             dbus::MessageWriter(dbus_response.get())
                 .AppendProtoAsArrayOfBytes(response);
-            std::move(response_sender).Run(std::move(dbus_response));
+            response_sender.Run(std::move(dbus_response));
           },
           std::move(response_sender), std::move(dbus_response)));
 }
@@ -1048,7 +1048,7 @@ void Service::StartVm(dbus::MethodCall* method_call,
   auto helper_result = StartVmHelper<StartVmRequest>(
       &reader, &writer, true /* allow_zero_cpus */);
   if (!helper_result) {
-    std::move(response_sender).Run(std::move(dbus_response));
+    response_sender.Run(std::move(dbus_response));
     return;
   }
 
@@ -1064,7 +1064,7 @@ void Service::StartVm(dbus::MethodCall* method_call,
     response.set_failure_reason(std::move(reason));
     dbus::MessageWriter(dbus_response.get())
         .AppendProtoAsArrayOfBytes(response);
-    std::move(response_sender).Run(std::move(dbus_response));
+    response_sender.Run(std::move(dbus_response));
   };
 
   // Make sure we have our signal connected if starting a Termina VM.
@@ -1475,7 +1475,7 @@ void Service::StartVm(dbus::MethodCall* method_call,
   SendVmStartedSignal(vm_id, *vm_info, response.status());
 
   vms_[vm_id] = std::move(vm);
-  std::move(response_sender).Run(std::move(dbus_response));
+  response_sender.Run(std::move(dbus_response));
 }
 
 Future<StopVmResponse> Service::StopVm(StopVmRequest request) {
@@ -1573,8 +1573,7 @@ void Service::StopAllVms(dbus::MethodCall* method_call,
               }
             }
 
-            std::move(response_sender)
-                .Run(dbus::Response::FromMethodCall(method_call));
+            response_sender.Run(dbus::Response::FromMethodCall(method_call));
             LOG(INFO) << "Stopped all VMs";
           },
           weak_ptr_factory_.GetWeakPtr(), method_call,
@@ -2169,7 +2168,7 @@ void Service::DestroyDiskImage(
     response.set_failure_reason("Unable to parse DestroyDiskRequest");
 
     writer.AppendProtoAsArrayOfBytes(response);
-    std::move(response_sender).Run(std::move(dbus_response));
+    response_sender.Run(std::move(dbus_response));
     return;
   }
 
@@ -2186,7 +2185,7 @@ void Service::DestroyDiskImage(
       response.set_failure_reason(std::move(failure_reason));
       dbus::MessageWriter(dbus_response.get())
           .AppendProtoAsArrayOfBytes(response);
-      std::move(response_sender).Run(std::move(dbus_response));
+      response_sender.Run(std::move(dbus_response));
     }
   } ctx;
   ctx.service = weak_ptr_factory_.GetWeakPtr();
