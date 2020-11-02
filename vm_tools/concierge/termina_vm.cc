@@ -71,6 +71,10 @@ constexpr size_t kGuestAddressOffset = 1;
 // The CPU cgroup where all the Termina crosvm processes should belong to.
 constexpr char kTerminaCpuCgroup[] = "/sys/fs/cgroup/cpu/vms/termina";
 
+// The maximum GPU shader cache disk usage, interpreted by Mesa. For details
+// see MESA_GLSL_CACHE_MAX_SIZE at https://docs.mesa3d.org/envvars.html.
+constexpr char kGpuCacheSizeString[] = "50M";
+
 // Special value to represent an invalid disk index for `crosvm disk`
 // operations.
 constexpr int kInvalidDiskIndex = -1;
@@ -89,6 +93,7 @@ TerminaVm::TerminaVm(
     std::unique_ptr<SeneschalServerProxy> seneschal_server_proxy,
     base::FilePath runtime_dir,
     base::FilePath log_path,
+    base::FilePath gpu_cache_path,
     std::string rootfs_device,
     std::string stateful_device,
     uint64_t stateful_size,
@@ -103,6 +108,7 @@ TerminaVm::TerminaVm(
       stateful_size_(stateful_size),
       stateful_resize_type_(DiskResizeType::NONE),
       log_path_(std::move(log_path)),
+      gpu_cache_path_(std::move(gpu_cache_path)),
       is_termina_(is_termina) {
   CHECK(base::DirectoryExists(runtime_dir));
 
@@ -117,6 +123,7 @@ TerminaVm::TerminaVm(
     std::unique_ptr<SeneschalServerProxy> seneschal_server_proxy,
     base::FilePath runtime_dir,
     base::FilePath log_path,
+    base::FilePath gpu_cache_path,
     std::string rootfs_device,
     std::string stateful_device,
     uint64_t stateful_size,
@@ -132,6 +139,7 @@ TerminaVm::TerminaVm(
       stateful_size_(stateful_size),
       stateful_resize_type_(DiskResizeType::NONE),
       log_path_(std::move(log_path)),
+      gpu_cache_path_(std::move(gpu_cache_path)),
       is_termina_(is_termina) {
   CHECK(subnet_);
   CHECK(base::DirectoryExists(runtime_dir));
@@ -154,6 +162,7 @@ std::unique_ptr<TerminaVm> TerminaVm::Create(
     std::unique_ptr<SeneschalServerProxy> seneschal_server_proxy,
     base::FilePath runtime_dir,
     base::FilePath log_path,
+    base::FilePath gpu_cache_path,
     std::string rootfs_device,
     std::string stateful_device,
     uint64_t stateful_size,
@@ -161,9 +170,9 @@ std::unique_ptr<TerminaVm> TerminaVm::Create(
     bool is_termina) {
   auto vm = base::WrapUnique(new TerminaVm(
       vsock_cid, std::move(network_client), std::move(seneschal_server_proxy),
-      std::move(runtime_dir), std::move(log_path), std::move(rootfs_device),
-      std::move(stateful_device), std::move(stateful_size), features,
-      is_termina));
+      std::move(runtime_dir), std::move(log_path), std::move(gpu_cache_path),
+      std::move(rootfs_device), std::move(stateful_device),
+      std::move(stateful_size), features, is_termina));
 
   if (!vm->Start(std::move(kernel), std::move(rootfs), cpus,
                  std::move(disks))) {
@@ -243,8 +252,15 @@ bool TerminaVm::Start(base::FilePath kernel,
   if (USE_CROSVM_WL_DMABUF)
     args.emplace_back("--wayland-dmabuf");
 
-  if (features_.gpu)
-    args.emplace_back("--gpu");
+  if (features_.gpu) {
+    std::string gpu_arg = "--gpu";
+    if (!gpu_cache_path_.empty()) {
+      gpu_arg += "=cache-path=" + gpu_cache_path_.value();
+      gpu_arg += ",cache-size=";
+      gpu_arg += kGpuCacheSizeString;
+    }
+    args.emplace_back(gpu_arg);
+  }
 
   if (features_.software_tpm)
     args.emplace_back("--software-tpm");
@@ -955,6 +971,7 @@ std::unique_ptr<TerminaVm> TerminaVm::CreateForTesting(
     uint32_t vsock_cid,
     base::FilePath runtime_dir,
     base::FilePath log_path,
+    base::FilePath gpu_cache_path,
     std::string rootfs_device,
     std::string stateful_device,
     uint64_t stateful_size,
@@ -968,8 +985,9 @@ std::unique_ptr<TerminaVm> TerminaVm::CreateForTesting(
   };
   auto vm = base::WrapUnique(new TerminaVm(
       std::move(subnet), vsock_cid, nullptr, std::move(runtime_dir),
-      std::move(log_path), std::move(rootfs_device), std::move(stateful_device),
-      std::move(stateful_size), features, is_termina));
+      std::move(log_path), std::move(gpu_cache_path), std::move(rootfs_device),
+      std::move(stateful_device), std::move(stateful_size), features,
+      is_termina));
   vm->set_kernel_version_for_testing(kernel_version);
   vm->set_stub_for_testing(std::move(stub));
 

@@ -403,7 +403,7 @@ void TerminaVmTest::SetUp() {
   // Create the TerminaVm.
   vm_ = TerminaVm::CreateForTesting(
       std::move(subnet), vsock_cid, temp_dir_.GetPath(), base::FilePath(),
-      std::move(rootfs_device), std::move(stateful_device),
+      base::FilePath(), std::move(rootfs_device), std::move(stateful_device),
       std::move(stateful_size), kKernelVersion, std::move(stub),
       /* is_termina= */ true);
   ASSERT_TRUE(vm_);
