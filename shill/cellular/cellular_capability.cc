@@ -11,6 +11,7 @@
 #include "shill/cellular/cellular.h"
 #include "shill/cellular/cellular_capability_3gpp.h"
 #include "shill/cellular/cellular_capability_cdma.h"
+#include "shill/cellular/modem_info.h"
 #include "shill/error.h"
 
 using std::string;
@@ -48,7 +49,9 @@ std::unique_ptr<CellularCapability> CellularCapability::Create(
 
 CellularCapability::CellularCapability(Cellular* cellular,
                                        ModemInfo* modem_info)
-    : cellular_(cellular), modem_info_(modem_info) {}
+    : cellular_(cellular),
+      control_interface_(modem_info->control_interface()),
+      modem_info_(modem_info) {}
 
 CellularCapability::~CellularCapability() = default;
 

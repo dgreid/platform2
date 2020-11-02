@@ -28,6 +28,7 @@
 #include "shill/cellular/cellular_service.h"
 #include "shill/cellular/cellular_service_provider.h"
 #include "shill/cellular/mobile_operator_info.h"
+#include "shill/cellular/modem_info.h"
 #include "shill/connection.h"
 #include "shill/control_interface.h"
 #include "shill/device.h"
@@ -155,7 +156,6 @@ Cellular::Cellular(ModemInfo* modem_info,
       provider_requires_roaming_(false),
       scan_interval_(0),
       sim_present_(false),
-      modem_info_(modem_info),
       capability_(CellularCapability::Create(type, this, modem_info)),
       ppp_device_factory_(PPPDeviceFactory::GetInstance()),
       process_manager_(ProcessManager::GetInstance()),

@@ -17,8 +17,8 @@
 
 namespace shill {
 
-class Cellular;
 class CellularBearer;
+class ControlInterface;
 class Error;
 class ModemInfo;
 
@@ -219,9 +219,7 @@ class CellularCapability {
   // -------------------------------------------------------------------------
 
   Cellular* cellular() const { return cellular_; }
-  ControlInterface* control_interface() const {
-    return modem_info_->control_interface();
-  }
+  ControlInterface* control_interface() const { return control_interface_; }
   ModemInfo* modem_info() const { return modem_info_; }
 
  protected:
@@ -242,6 +240,7 @@ class CellularCapability {
   FRIEND_TEST(CellularTest, Connect);
 
   Cellular* cellular_;
+  ControlInterface* control_interface_;
   ModemInfo* modem_info_;
 
   DISALLOW_COPY_AND_ASSIGN(CellularCapability);

@@ -16,7 +16,6 @@
 #include <gtest/gtest_prod.h>  // for FRIEND_TEST
 
 #include "shill/cellular/mobile_operator_info.h"
-#include "shill/cellular/modem_info.h"
 #include "shill/device.h"
 #include "shill/device_id.h"
 #include "shill/event_dispatcher.h"
@@ -29,6 +28,7 @@ namespace shill {
 class CellularCapability;
 class Error;
 class ExternalTask;
+class ModemInfo;
 class NetlinkSockDiag;
 class PPPDeviceFactory;
 class ProcessManager;
@@ -536,8 +536,6 @@ class Cellular : public Device,
 
   // End of DBus properties.
   // ///////////////////////////////////////////////////////////////////////////
-
-  ModemInfo* modem_info_;
 
   std::unique_ptr<CellularCapability> capability_;
 

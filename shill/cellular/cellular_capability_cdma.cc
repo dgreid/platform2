@@ -10,6 +10,7 @@
 
 #include "shill/cellular/cellular_bearer.h"
 #include "shill/cellular/cellular_service.h"
+#include "shill/cellular/modem_info.h"
 #include "shill/cellular/pending_activation_store.h"
 #include "shill/control_interface.h"
 #include "shill/dbus_properties_proxy_interface.h"
