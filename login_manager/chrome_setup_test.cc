@@ -274,6 +274,20 @@ TEST_F(ChromeSetupTest, TestAllowAmbientEQ) {
   ASSERT_EQ(login_manager::kAllowAmbientEQFeature, GetFlag(argv, kFeatureFlag));
 }
 
+TEST_F(ChromeSetupTest, TestSchedulerFlags) {
+  constexpr char kBoostUrgentVal[] = "99";
+
+  login_manager::SetUpSchedulerFlags(&builder_, &cros_config_);
+  std::vector<std::string> argv = builder_.arguments();
+  ASSERT_EQ(0, argv.size());
+
+  cros_config_.SetString(login_manager::kSchedulerTunePath,
+                         login_manager::kBoostUrgentProperty, kBoostUrgentVal);
+  login_manager::SetUpSchedulerFlags(&builder_, &cros_config_);
+  argv = builder_.arguments();
+  EXPECT_EQ(kBoostUrgentVal, GetFlag(argv, "--scheduler-boost-urgent"));
+}
+
 void InitWithUseFlag(base::Optional<std::string> flag,
                      base::ScopedTempDir* temp_dir,
                      ChromiumCommandBuilder* builder) {

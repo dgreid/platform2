@@ -87,6 +87,9 @@ const char kAllowAmbientEQFeature[] = "AllowAmbientEQ";
 constexpr char kEnableCrashpadFlag[] = "--enable-crashpad";
 constexpr char kEnableBreakpadFlag[] = "--no-enable-crashpad";
 
+const char kSchedulerTunePath[] = "/scheduler-tune";
+const char kBoostUrgentProperty[] = "boost-urgent";
+
 // These hashes are only being used temporarily till we can determine if a
 // device is a Chromebox for Meetings or not from the Install Time attributes.
 // TODO(rkc, pbos): Remove these and related code once crbug.com/706523 is
@@ -420,7 +423,8 @@ void CreateDirectories(ChromiumCommandBuilder* builder) {
 }
 
 // Adds system-related flags to the command line.
-void AddSystemFlags(ChromiumCommandBuilder* builder) {
+void AddSystemFlags(ChromiumCommandBuilder* builder,
+                    brillo::CrosConfigInterface* cros_config) {
   const base::FilePath data_dir = GetDataDir(builder);
 
   // We need to delete these files as Chrome may have left them around from its
@@ -463,6 +467,8 @@ void AddSystemFlags(ChromiumCommandBuilder* builder) {
     builder->AddArg("--ondevice_handwriting=use_rootfs");
   else if (builder->UseFlagIsSet("ondevice_handwriting_dlc"))
     builder->AddArg("--ondevice_handwriting=use_dlc");
+
+  SetUpSchedulerFlags(builder, cros_config);
 }
 
 // Adds UI-related flags to the command line.
@@ -600,6 +606,21 @@ void AddVmodulePatterns(ChromiumCommandBuilder* builder) {
 }
 
 }  // namespace
+
+void SetUpSchedulerFlags(ChromiumCommandBuilder* builder,
+                         brillo::CrosConfigInterface* cros_config) {
+  // A platform can override default scheduler boosting value.
+  std::string boost_urgent_str;
+  int boost_urgent;
+
+  if (cros_config &&
+      cros_config->GetString(kSchedulerTunePath, kBoostUrgentProperty,
+                             &boost_urgent_str) &&
+      base::StringToInt(boost_urgent_str, &boost_urgent)) {
+    builder->AddArg(
+        base::StringPrintf("--scheduler-boost-urgent=%d", boost_urgent));
+  }
+}
 
 void AddSerializedAshFlags(ChromiumCommandBuilder* builder,
                            brillo::CrosConfigInterface* cros_config) {
@@ -855,7 +876,7 @@ void PerformChromeSetup(brillo::CrosConfigInterface* cros_config,
   // ChromiumCommandBuilder class instead.
   CreateDirectories(&builder);
   AddSerializedAshFlags(&builder, cros_config);
-  AddSystemFlags(&builder);
+  AddSystemFlags(&builder, cros_config);
   AddUiFlags(&builder, cros_config);
   AddArcFlags(&builder, &disallowed_prefixes, cros_config);
   AddCrostiniFlags(&builder);

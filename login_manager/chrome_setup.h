@@ -74,6 +74,12 @@ extern const char kOzoneNNPalmCompatibleProperty[];
 // Property for radius polynomial in NNPalm for Ozone.
 extern const char kOzoneNNPalmRadiusProperty[];
 
+// Path to scheduler tune.
+extern const char kSchedulerTunePath[];
+
+// Property for urgent tasks boosting value.
+extern const char kBoostUrgentProperty[];
+
 // Initializes a ChromiumCommandBuilder and performs additional Chrome-specific
 // setup. Returns environment variables that the caller should export for Chrome
 // and arguments that it should pass to the Chrome binary, along with the UID
@@ -91,6 +97,10 @@ void PerformChromeSetup(brillo::CrosConfigInterface* cros_config,
                         std::map<std::string, std::string>* env_vars_out,
                         std::vector<std::string>* args_out,
                         uid_t* uid_out);
+
+// Add flags to override default scheduler tunings
+void SetUpSchedulerFlags(chromeos::ui::ChromiumCommandBuilder* builder,
+                         brillo::CrosConfigInterface* cros_config);
 
 // Add flags pertinent to the Ash window manager generated at
 // build-time by cros_config_schema.  These are stored in
