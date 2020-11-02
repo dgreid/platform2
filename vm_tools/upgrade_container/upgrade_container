@@ -27,7 +27,14 @@ APT_KEY_DONT_WARN_ON_DANGEROUS_USAGE=1 apt-key adv --batch \
 sed -i 's/stretch/buster/g' /etc/apt/sources.list \
     /etc/apt/sources.list.d/cros.list
 
+# When conflicting configuration files exist between the local system and the
+# upstream package, prefer the default option. If there is no default option,
+# default to keeping the local version. This is required along with setting
+# DEBIAN_FRONTEND above for a truly noninteractive upgrade experience.
+APT_OPTIONS="-o Dpkg::Options::=--force-confdef
+ -o Dpkg::Options::=--force-confold"
+
 # Upgrade everything to Buster versions.
-apt-get update -y
-apt-get upgrade -y
-apt-get dist-upgrade -y
+apt-get ${APT_OPTIONS} update -y
+apt-get ${APT_OPTIONS} upgrade -y
+apt-get ${APT_OPTIONS} dist-upgrade -y
