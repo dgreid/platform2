@@ -622,22 +622,6 @@ UntrustedVMCheckResult IsUntrustedVMAllowed(
                                 false /* skip_host_checks  */);
 }
 
-// Clears close-on-exec flag for a file descriptor to pass it to a subprocess
-// such as crosvm. Returns a failure reason on failure.
-string RemoveCloseOnExec(int raw_fd) {
-  int flags = fcntl(raw_fd, F_GETFD);
-  if (flags == -1) {
-    return "Failed to get flags for passed fd";
-  }
-
-  flags &= ~FD_CLOEXEC;
-  if (fcntl(raw_fd, F_SETFD, flags) == -1) {
-    return "Failed to clear close-on-exec flag for fd";
-  }
-
-  return "";
-}
-
 }  // namespace
 
 bool Service::ListVmDisksInLocation(const string& cryptohome_id,
@@ -1083,45 +1067,6 @@ void Service::StartVm(dbus::MethodCall* method_call,
     std::move(response_sender).Run(std::move(dbus_response));
   };
 
-  // Pop all FDs passed via D-Bus in the correct order.
-  base::Optional<base::ScopedFD> kernel_fd;
-  base::Optional<base::ScopedFD> rootfs_fd;
-  base::Optional<base::ScopedFD> storage_fd;
-  if (request.start_termina()) {
-    if (request.use_fd_for_kernel()) {
-      base::ScopedFD fd;
-      if (!reader.PopFileDescriptor(&fd)) {
-        LOG(ERROR) << "failed to get a kernel FD";
-        report_error("failed to get a kernel FD");
-        return;
-      }
-
-      kernel_fd = std::move(fd);
-    }
-
-    if (request.use_fd_for_rootfs()) {
-      base::ScopedFD fd;
-      if (!reader.PopFileDescriptor(&fd)) {
-        LOG(ERROR) << "failed to get a rootfs FD";
-        report_error("failed to get a rootfs FD");
-        return;
-      }
-
-      rootfs_fd = std::move(fd);
-    }
-
-    if (request.use_fd_for_storage()) {
-      base::ScopedFD fd;
-      if (!reader.PopFileDescriptor(&fd)) {
-        LOG(ERROR) << "failed to get an extra storage FD";
-        report_error("failed to get an extra storage FD");
-        return;
-      }
-
-      storage_fd = std::move(fd);
-    }
-  }
-
   // Make sure we have our signal connected if starting a Termina VM.
   if (request.start_termina() && !is_tremplin_started_signal_connected_) {
     LOG(ERROR) << "Can't start Termina VM without TremplinStartedSignal";
@@ -1147,8 +1092,7 @@ void Service::StartVm(dbus::MethodCall* method_call,
 
   string failure_reason;
   VMImageSpec image_spec =
-      GetImageSpec(request.vm(), kernel_fd, rootfs_fd, request.start_termina(),
-                   &failure_reason);
+      GetImageSpec(request.vm(), request.start_termina(), &failure_reason);
   if (!failure_reason.empty()) {
     LOG(ERROR) << "Failed to get image paths: " << failure_reason;
     report_error("Failed to get image paths: " + failure_reason);
@@ -1263,10 +1207,9 @@ void Service::StartVm(dbus::MethodCall* method_call,
     });
   }
 
+  base::ScopedFD storage_fd;
   // Check if an opened storage image was passed over D-BUS.
-  if (storage_fd.has_value()) {
-    DCHECK(request.use_fd_for_storage());
-
+  if (request.use_fd_for_storage()) {
     // We only allow untrusted VMs to mount extra storage.
     if (!is_untrusted_vm) {
       constexpr char err_msg[] = "use_fd_for_storage is set for a trusted VM";
@@ -1275,18 +1218,33 @@ void Service::StartVm(dbus::MethodCall* method_call,
       return;
     }
 
-    int raw_fd = storage_fd.value().get();
-    string failure_reason = RemoveCloseOnExec(raw_fd);
-    if (!failure_reason.empty()) {
-      LOG(ERROR) << "failed to remove close-on-exec flag: " << failure_reason;
-      report_error("failed to get a path for extra storage disk: " +
-                   failure_reason);
+    if (!reader.PopFileDescriptor(&storage_fd)) {
+      constexpr char err_msg[] = "use_fd_for_storage is set but no fd found";
+      LOG(ERROR) << err_msg;
+      report_error(err_msg);
+      return;
+    }
+    // Clear close-on-exec as this FD needs to be passed to crosvm.
+    int raw_fd = storage_fd.get();
+    int flags = fcntl(raw_fd, F_GETFD);
+    if (flags == -1) {
+      constexpr char err_msg[] = "Failed to get flags for passed fd";
+      LOG(ERROR) << err_msg;
+      report_error(err_msg);
+      return;
+    }
+    flags &= ~FD_CLOEXEC;
+    if (fcntl(raw_fd, F_SETFD, flags) == -1) {
+      constexpr char err_msg[] = "Failed to clear close-on-exec flag for fd";
+      LOG(ERROR) << err_msg;
+      report_error(err_msg);
       return;
     }
 
+    base::FilePath fd_path = base::FilePath(kProcFileDescriptorsPath)
+                                 .Append(base::NumberToString(raw_fd));
     disks.push_back(TerminaVm::Disk{
-        .path = base::FilePath(kProcFileDescriptorsPath)
-                    .Append(base::NumberToString(raw_fd)),
+        .path = std::move(fd_path),
         .writable = true,
     });
   }
@@ -1377,6 +1335,7 @@ void Service::StartVm(dbus::MethodCall* method_call,
       std::move(rootfs_device), std::move(stateful_device),
       std::move(stateful_size), features, request.start_termina(),
       sigchld_handler_);
+
   if (!vm) {
     constexpr char err_msg[] = "Unable to start VM";
     LOG(ERROR) << err_msg;
@@ -3438,15 +3397,14 @@ base::FilePath Service::GetVmImagePath(const std::string& dlc_id,
 
 Service::VMImageSpec Service::GetImageSpec(
     const vm_tools::concierge::VirtualMachineSpec& vm,
-    const base::Optional<base::ScopedFD>& kernel_fd,
-    const base::Optional<base::ScopedFD>& rootfs_fd,
     bool is_termina,
     string* failure_reason) {
   DCHECK(failure_reason);
   DCHECK(failure_reason->empty());
 
   // A VM image is trusted when both:
-  // 1) This daemon (or a trusted daemon) chooses the kernel and rootfs path.
+  // 1) This daemon (or a trusted daemon) chooses the kernel and rootfs
+  // path.
   // 2) The chosen VM is a first-party VM.
   // In practical terms this is true iff we are booting termina without
   // specifying kernel and rootfs image.
@@ -3467,37 +3425,9 @@ Service::VMImageSpec Service::GetImageSpec(
   if (vm_path.empty())
     return {};
 
-  base::FilePath kernel;
-  base::FilePath rootfs;
+  base::FilePath kernel = vm_path.Append(kVmKernelName);
+  base::FilePath rootfs = vm_path.Append(kVmRootfsName);
   base::FilePath tools_disk;
-
-  if (kernel_fd.has_value()) {
-    // User-chosen kernel is untrusted.
-    is_trusted_image = false;
-
-    int raw_fd = kernel_fd.value().get();
-    *failure_reason = RemoveCloseOnExec(raw_fd);
-    if (!failure_reason->empty())
-      return {};
-    kernel = base::FilePath(kProcFileDescriptorsPath)
-                 .Append(base::NumberToString(raw_fd));
-  } else {
-    kernel = vm_path.Append(kVmKernelName);
-  }
-
-  if (rootfs_fd.has_value()) {
-    // User-chosen rootfs is untrusted.
-    is_trusted_image = false;
-
-    int raw_fd = rootfs_fd.value().get();
-    *failure_reason = RemoveCloseOnExec(raw_fd);
-    if (!failure_reason->empty())
-      return {};
-    rootfs = base::FilePath(kProcFileDescriptorsPath)
-                 .Append(base::NumberToString(raw_fd));
-  } else {
-    rootfs = vm_path.Append(kVmRootfsName);
-  }
 
   if (is_termina)
     tools_disk = vm_path.Append(kVmToolsDiskName);

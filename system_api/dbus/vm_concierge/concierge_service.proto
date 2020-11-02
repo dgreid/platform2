@@ -136,6 +136,11 @@ message StartVmRequest {
   // If true, concierge should also perform termina-specific setup.
   bool start_termina = 5;
 
+  // If true, a file descriptor must be passed along with the message and that
+  // file descriptor will be used for storage.
+  // Ignored unless |start_termina| is true.
+  bool use_fd_for_storage = 6;
+
   // The owner of the vm.
   string owner_id = 7;
 
@@ -161,25 +166,6 @@ message StartVmRequest {
   // The number of CPUs to give to the VM.  Cannot be larger than the number of
   // CPUs on the device and cannot be 0.
   uint32 cpus = 12;
-
-  // If true, a file descriptor must be passed along with the message and that
-  // file descriptor will be used for kernel.
-  // Ignored unless |start_termina| is true.
-  bool use_fd_for_kernel = 13;
-
-  // If true, a file descriptor must be passed along with the message and that
-  // file descriptor will be used for rootfs.
-  // If |use_fd_for_kernel| is true, the fd for rootfs must be passed after
-  // that for kernel.
-  // Ignored unless |start_termina| is true.
-  bool use_fd_for_rootfs = 14;
-
-  // If true, a file descriptor must be passed along with the message and that
-  // file descriptor will be used for storage.
-  // If |use_fd_for_kernel| or |use_fd_for_rootfs| is true, the fd for storage
-  // must be passed after ones for kernel and rootfs.
-  // Ignored unless |start_termina| is true.
-  bool use_fd_for_storage = 6;
 }
 
 // Information that must be included with every StartPluginVm request.
