@@ -922,6 +922,20 @@ properties:
                       type: boolean
                   additionalProperties: false
               additionalProperties: false
+            scheduler-tune:
+              type: object
+              description: ChromeOS scheduler's tunable values.
+              properties:
+                boost-urgent:
+                  type: integer
+                  description: (Optional) Scheduler's boost value(%) for urgent
+                    tasks. When an urgent thread is created, chrome applies
+                    this value to scheduler attribute. Tasks with higher
+                    boost value are more likely to have higher operating
+                    power point even when the system is low utilized.
+                  minimum: 0
+                  maximum: 100
+              additionalProperties: false
           additionalProperties: false
           required:
           - name

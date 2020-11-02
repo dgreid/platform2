@@ -342,6 +342,7 @@ In the tables below,
 | power | [power](#power) |  | False |  | False | Defines settings that control power management functions. This mostly defines power_manager preferences, but there are a few other power related settings included. For details about each power_manager preference, see - src/platform2/power_manager/common/power_constants.h/cc For examples on setting these properties (including multiline examples), see the power config example in libcros_config/test.yaml |
 | proximity-sensor | [proximity-sensor](#proximity_sensor) |  | False |  | False | Defines the proximity sensor settings for devices such as /dev/proximity-wifi and /dev/proximity-wifi-lte typically used for SAR. |
 | regulatory-label | string |  | False |  | False | Base name of the directory containing the regulatory label files to show on this device. |
+| scheduler-tune | [scheduler-tune](#scheduler_tune) |  | False |  | False | ChromeOS scheduler's tunable values. |
 | test-label | string |  | False |  | False | Test alias (model) label that will be applied in Autotest and reported for test results. |
 | thermal | [thermal](#thermal) |  | False |  | False |  |
 | touch | [touch](#touch) |  | False |  | False |  |
@@ -714,6 +715,11 @@ In the tables below,
 | thresh-rising | string | ```^[0-9.]+$``` | False |  | False | Proximity sensor rising threshold. |
 | thresh-rising-hysteresis | string | ```^[0-9.]+$``` | False |  | False | Proximity sensor rising hysteresis. |
 | thresh-rising-period | string | ```^[0-9.]+$``` | False |  | False | Proximity sensor rising threshold period (debounce). |
+
+### scheduler-tune
+| Attribute | Type   | RegEx     | Required | Oneof Group | Build-only | Description |
+| --------- | ------ | --------- | -------- | ----------- | ---------- | ----------- |
+| boost-urgent | integer |  | False |  | False | (Optional) Scheduler's boost value(%) for urgent tasks. When an urgent thread is created, chrome applies this value to scheduler attribute. Tasks with higher boost value are more likely to have higher operating power point even when the system is low utilized. Minimum value: 0x0. Maximum value: 0x64. |
 
 ### thermal
 | Attribute | Type   | RegEx     | Required | Oneof Group | Build-only | Description |
