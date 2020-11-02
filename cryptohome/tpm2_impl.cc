@@ -1306,7 +1306,20 @@ bool Tpm2Impl::GetTrunksContext(TrunksClientContext** trunks) {
     return true;
   }
   base::PlatformThreadId thread_id = base::PlatformThread::CurrentId();
-  if (trunks_contexts_.count(thread_id) == 0) {
+  std::map<base::PlatformThreadId,
+           std::unique_ptr<Tpm2Impl::TrunksClientContext>>::iterator iter;
+  {
+    base::AutoLock lock(trunks_contexts_lock_);
+    iter = trunks_contexts_.find(thread_id);
+    if (iter == trunks_contexts_.end()) {
+      auto result = trunks_contexts_.emplace(thread_id, nullptr);
+      iter = std::move(result.first);
+    }
+  }
+
+  // Different elements in the same container can be modified concurrently by
+  // different threads, so we don't need to lock this block.
+  if (!iter->second) {
     std::unique_ptr<TrunksClientContext> new_context(new TrunksClientContext);
     new_context->factory_impl = std::make_unique<trunks::TrunksFactoryImpl>();
     if (!new_context->factory_impl->Initialize()) {
@@ -1316,9 +1329,9 @@ bool Tpm2Impl::GetTrunksContext(TrunksClientContext** trunks) {
     new_context->factory = new_context->factory_impl.get();
     new_context->tpm_state = new_context->factory->GetTpmState();
     new_context->tpm_utility = new_context->factory->GetTpmUtility();
-    trunks_contexts_[thread_id] = std::move(new_context);
+    iter->second = std::move(new_context);
   }
-  *trunks = trunks_contexts_[thread_id].get();
+  *trunks = iter->second.get();
   return true;
 }
 

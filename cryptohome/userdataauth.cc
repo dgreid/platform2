@@ -1065,12 +1065,7 @@ void UserDataAuth::FinalizeInstallAttributesIfMounted() {
     bool guest_mounted =
         guest_session.get() && guest_session->GetMount()->IsMounted();
     if (!guest_mounted) {
-      PostTaskToOriginThread(FROM_HERE,
-                             base::BindOnce(
-                                 [](UserDataAuth* userdataauth) {
-                                   userdataauth->install_attrs_->Finalize();
-                                 },
-                                 base::Unretained(this)));
+      install_attrs_->Finalize();
     }
   }
 }

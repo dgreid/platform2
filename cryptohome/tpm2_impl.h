@@ -269,6 +269,10 @@ class Tpm2Impl : public Tpm {
   // Per-thread trunks object management.
   std::map<base::PlatformThreadId, std::unique_ptr<TrunksClientContext>>
       trunks_contexts_;
+
+  // Used to provide thread-safe access to trunks_contexts_.
+  base::Lock trunks_contexts_lock_;
+
   TrunksClientContext external_trunks_context_;
   bool has_external_trunks_context_ = false;
 
