@@ -115,7 +115,8 @@ message NetworkOptions {
 // Information that must be included with every StartVm dbus message.
 message StartVmRequest {
   // The VM that should be started. This is ignored if starting a termina VM,
-  // which will always use the latest component from imageloader.
+  // which will always use the latest component from imageloader. Also ignored
+  // if |allow_untrusted| is set to false.
   VirtualMachineSpec vm = 1;
 
   // Any additional disks that should be mounted inside the VM.
@@ -151,11 +152,8 @@ message StartVmRequest {
   // contain a virtio TPM driver.
   bool software_tpm = 9;
 
-  // This flag is only respected in developer mode and offers two things -
-  // - It can treat a trusted VM as untrusted and run it on insecure host
-  // kernels.
-  // - It can run an untrusted VM on insecure host kernels.
-  bool run_as_untrusted = 10;
+  // Allow untrusted VMs to be started.
+  bool allow_untrusted = 10;
 
   // Enable audio capture in the started Vm.
   bool enable_audio_capture = 11;
