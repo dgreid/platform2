@@ -286,6 +286,8 @@ class Service final {
   // failure.
   Service::VMImageSpec GetImageSpec(
       const vm_tools::concierge::VirtualMachineSpec& vm,
+      const base::Optional<base::ScopedFD>& kernel_fd,
+      const base::Optional<base::ScopedFD>& rootfs_fd,
       bool is_termina,
       std::string* failure_reason);
 
