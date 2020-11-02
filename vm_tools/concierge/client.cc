@@ -238,7 +238,6 @@ int StartVm(dbus::ObjectProxy* proxy,
             string owner_id,
             string name,
             string kernel,
-            string initrd,
             string rootfs,
             string extra_disks,
             bool untrusted) {
@@ -262,13 +261,6 @@ int StartVm(dbus::ObjectProxy* proxy,
     return -1;
   }
 
-  if (!initrd.empty()) {
-    if (!base::PathExists(base::FilePath(initrd))) {
-      LOG(ERROR) << initrd << " does not exist";
-      return -1;
-    }
-  }
-
   if (!base::PathExists(base::FilePath(rootfs))) {
     LOG(ERROR) << rootfs << " does not exist";
     return -1;
@@ -279,13 +271,8 @@ int StartVm(dbus::ObjectProxy* proxy,
     return -1;
   }
 
-  if (initrd.empty()) {
-    LOG(INFO) << "Starting VM " << name << " with kernel " << kernel
-              << " and rootfs " << rootfs;
-  } else {
-    LOG(INFO) << "Starting VM " << name << " with kernel " << kernel
-              << ", initrd " << initrd << " and rootfs " << rootfs;
-  }
+  LOG(INFO) << "Starting VM " << name << " with kernel " << kernel
+            << " and rootfs " << rootfs;
 
   dbus::MethodCall method_call(vm_tools::concierge::kVmConciergeInterface,
                                vm_tools::concierge::kStartVmMethod);
@@ -296,7 +283,6 @@ int StartVm(dbus::ObjectProxy* proxy,
   request.set_name(std::move(name));
 
   request.mutable_vm()->set_kernel(std::move(kernel));
-  request.mutable_vm()->set_initrd(std::move(initrd));
   request.mutable_vm()->set_rootfs(std::move(rootfs));
 
   if (!ParseExtraDisks(&request, extra_disks)) {
@@ -1578,7 +1564,6 @@ int main(int argc, char** argv) {
 
   // Parameters.
   DEFINE_string(kernel, "", "Path to the VM kernel");
-  DEFINE_string(initrd, "", "Path to the VM initrd");
   DEFINE_string(rootfs, "", "Path to the VM rootfs");
   DEFINE_string(name, "", "Name to assign to the VM");
   DEFINE_string(export_name, "", "Name to give the exported disk image");
@@ -1670,9 +1655,8 @@ int main(int argc, char** argv) {
 
   if (FLAGS_start) {
     return StartVm(proxy, std::move(FLAGS_cryptohome_id), std::move(FLAGS_name),
-                   std::move(FLAGS_kernel), std::move(FLAGS_initrd),
-                   std::move(FLAGS_rootfs), std::move(FLAGS_extra_disks),
-                   FLAGS_untrusted);
+                   std::move(FLAGS_kernel), std::move(FLAGS_rootfs),
+                   std::move(FLAGS_extra_disks), FLAGS_untrusted);
   } else if (FLAGS_stop) {
     return StopVm(proxy, std::move(FLAGS_cryptohome_id), std::move(FLAGS_name));
   } else if (FLAGS_stop_all) {
