@@ -49,9 +49,11 @@ class CROS_CAMERA_EXPORT CameraMojoChannelManager {
   // This method is expected to be called on the IPC thread and the
   // |on_construct_callback| and |on_error_callback| will be run on the IPC
   // thread as well.
-  virtual void RegisterServer(mojom::CameraHalServerPtr hal_ptr,
-                              Callback on_construct_callback,
-                              Callback on_error_callback) = 0;
+  virtual void RegisterServer(
+      mojom::CameraHalServerPtr hal_ptr,
+      mojom::CameraHalDispatcher::RegisterServerWithTokenCallback
+          on_construct_callback,
+      Callback on_error_callback) = 0;
 
   // Creates a new MjpegDecodeAccelerator connection by |request|.
   // This method is expected to be called on the IPC thread and the

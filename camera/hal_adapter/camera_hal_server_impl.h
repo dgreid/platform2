@@ -66,7 +66,8 @@ class CameraHalServerImpl final {
 
    private:
     // Triggered when the HAL server is registered.
-    void OnServerRegistered();
+    void OnServerRegistered(int32_t result,
+                            mojom::CameraHalServerCallbacksPtr callbacks);
 
     // Connection error handler for the Mojo connection to CameraHalDispatcher.
     void OnServiceMojoChannelError();
@@ -85,6 +86,8 @@ class CameraHalServerImpl final {
     // The CameraHalServer implementation binding.  All the function calls to
     // |binding_| runs on |ipc_task_runner_|.
     mojo::Binding<mojom::CameraHalServer> binding_;
+
+    mojom::CameraHalServerCallbacksPtr callbacks_;
 
     base::WeakPtrFactory<IPCBridge> weak_ptr_factory_{this};
   };

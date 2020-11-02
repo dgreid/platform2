@@ -80,6 +80,7 @@ CameraHalServerImpl::IPCBridge::~IPCBridge() {
   if (binding_.is_bound()) {
     binding_.Unbind();
   }
+  callbacks_.reset();
 }
 
 void CameraHalServerImpl::IPCBridge::Start(
@@ -128,10 +129,11 @@ CameraHalServerImpl::IPCBridge::GetWeakPtr() {
   return weak_ptr_factory_.GetWeakPtr();
 }
 
-void CameraHalServerImpl::IPCBridge::OnServerRegistered() {
+void CameraHalServerImpl::IPCBridge::OnServerRegistered(
+    int32_t result, mojom::CameraHalServerCallbacksPtr callbacks) {
   VLOGF_ENTER();
   DCHECK(ipc_task_runner_->BelongsToCurrentThread());
-
+  callbacks_.Bind(callbacks.PassInterface());
   LOGF(INFO) << "Registered camera HAL";
 }
 

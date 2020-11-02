@@ -20,6 +20,7 @@
 #include "cros-camera/camera_mojo_channel_manager.h"
 #include "cros-camera/future.h"
 #include "mojo/cros_camera_service.mojom.h"
+#include "mojo/unguessable_token.mojom.h"
 
 namespace cros {
 
@@ -36,9 +37,11 @@ class CameraMojoChannelManagerImpl final : public CameraMojoChannelManager {
 
   scoped_refptr<base::SingleThreadTaskRunner> GetIpcTaskRunner();
 
-  void RegisterServer(mojom::CameraHalServerPtr hal_ptr,
-                      Callback on_construct_callback,
-                      Callback on_error_callback);
+  void RegisterServer(
+      mojom::CameraHalServerPtr hal_ptr,
+      mojom::CameraHalDispatcher::RegisterServerWithTokenCallback
+          on_construct_callback,
+      Callback on_error_callback);
 
   void CreateMjpegDecodeAccelerator(
       mojom::MjpegDecodeAcceleratorRequest request,
@@ -59,12 +62,19 @@ class CameraMojoChannelManagerImpl final : public CameraMojoChannelManager {
   base::Thread ipc_thread_;
 
  private:
-  template <typename T>
+  template <typename T, typename ConstructCallbackType>
   struct PendingMojoRequest {
     T requestOrPtr;
-    Callback on_construct_callback;
+    ConstructCallbackType on_construct_callback;
     Callback on_error_callback;
   };
+
+  using ServerPendingMojoRequest = PendingMojoRequest<
+      mojom::CameraHalServerPtr,
+      mojom::CameraHalDispatcher::RegisterServerWithTokenCallback>;
+
+  template <typename T>
+  using JpegPendingMojoRequest = PendingMojoRequest<T, Callback>;
 
   void OnSocketFileStatusChange(const base::FilePath& socket_path, bool error);
 
@@ -97,10 +107,10 @@ class CameraMojoChannelManagerImpl final : public CameraMojoChannelManager {
 
   // Pending Mojo requests information which should be consumed when the
   // |dispatcher_| is connected.
-  PendingMojoRequest<mojom::CameraHalServerPtr> camera_hal_server_request_;
-  std::vector<PendingMojoRequest<mojom::JpegEncodeAcceleratorRequest>>
+  ServerPendingMojoRequest camera_hal_server_request_;
+  std::vector<JpegPendingMojoRequest<mojom::JpegEncodeAcceleratorRequest>>
       jea_requests_;
-  std::vector<PendingMojoRequest<mojom::MjpegDecodeAcceleratorRequest>>
+  std::vector<JpegPendingMojoRequest<mojom::MjpegDecodeAcceleratorRequest>>
       jda_requests_;
 
   // TODO(b/151270948): Remove this static variable once we implemnet CrOS
