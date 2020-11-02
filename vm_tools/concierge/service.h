@@ -276,11 +276,6 @@ class Service final {
   base::FilePath GetVmImagePath(const std::string& dlc_id,
                                 std::string* failure_reason);
 
-  // Prepares the GPU shader disk cache directory and if necessary erases
-  // old caches for all VMs. Returns the prepared path.
-  base::FilePath PrepareVmGpuCachePath(const std::string& owner_id,
-                                       const std::string& vm_name);
-
   // Resource allocators for VMs.
   VsockCidPool vsock_cid_pool_;
 
@@ -357,10 +352,6 @@ class Service final {
   std::unique_ptr<UntrustedVMUtils> untrusted_vm_utils_;
 
   base::WeakPtrFactory<Service> weak_ptr_factory_;
-
-  // Used to serialize erasing and creating the GPU shader disk cache in the
-  // event that VMs are started simultaneously from multiple threads.
-  base::Lock cache_mutex_;
 
   DISALLOW_COPY_AND_ASSIGN(Service);
 };

@@ -30,7 +30,6 @@
 #include <utility>
 #include <vector>
 
-#include <base/base64url.h>
 #include <base/bind.h>
 #include <base/bind_helpers.h>
 #include <base/callback.h>
@@ -39,7 +38,6 @@
 #include <base/files/file_util.h>
 #include <base/format_macros.h>
 #include <base/guid.h>
-#include <base/hash/md5.h>
 #include <base/location.h>
 #include <base/logging.h>
 #include <base/memory/ref_counted.h>
@@ -108,12 +106,6 @@ constexpr base::TimeDelta kVmStartupTimeout = base::TimeDelta::FromSeconds(30);
 
 // crosvm log directory name.
 constexpr char kCrosvmLogDir[] = "log";
-
-// crosvm gpu cache directory name.
-constexpr char kCrosvmGpuCacheDir[] = "gpucache";
-
-// Path to system boot_id file.
-constexpr char kBootIdFile[] = "/proc/sys/kernel/random/boot_id";
 
 // Extended attribute indicating that user has picked a disk size and it should
 // not be resized.
@@ -529,40 +521,6 @@ base::FilePath GetVmLogPath(const std::string& owner_id,
     }
   }
   return path;
-}
-
-// Returns a hash string that is safe to use as a filename.
-std::string GetMd5HashForFilename(const std::string& str) {
-  std::string result;
-  base::MD5Digest digest;
-  base::MD5Sum(str.data(), str.size(), &digest);
-  base::StringPiece hash_piece(reinterpret_cast<char*>(&digest.a[0]),
-                               sizeof(digest.a));
-  // Note, we can not have '=' symbols in this path or it will break crosvm's
-  // commandline argument parsing, so we use OMIT_PADDING.
-  base::Base64UrlEncode(hash_piece, base::Base64UrlEncodePolicy::OMIT_PADDING,
-                        &result);
-  return result;
-}
-
-base::FilePath GetVmGpuCachePath(const std::string& owner_id,
-                                 const std::string& vm_name) {
-  std::string vm_dir;
-  // Note, we can not have '=' symbols in this path or it will break crosvm's
-  // commandline argument parsing, so we use OMIT_PADDING.
-  base::Base64UrlEncode(vm_name, base::Base64UrlEncodePolicy::OMIT_PADDING,
-                        &vm_dir);
-
-  std::string bootid_dir;
-  CHECK(base::ReadFileToString(base::FilePath(kBootIdFile), &bootid_dir));
-  bootid_dir = GetMd5HashForFilename(bootid_dir);
-
-  return base::FilePath(kCryptohomeRoot)
-      .Append(kCrosvmDir)
-      .Append(owner_id)
-      .Append(kCrosvmGpuCacheDir)
-      .Append(bootid_dir)
-      .Append(vm_dir);
 }
 
 bool IsDevModeEnabled() {
@@ -1269,11 +1227,6 @@ void Service::StartVm(dbus::MethodCall* method_call,
 
   base::FilePath log_path = GetVmLogPath(request.owner_id(), request.name());
 
-  base::FilePath gpu_cache_path;
-  if (request.enable_gpu()) {
-    gpu_cache_path = PrepareVmGpuCachePath(request.owner_id(), request.name());
-  }
-
   // Allocate resources for the VM.
   uint32_t vsock_cid = vsock_cid_pool_.Allocate();
   if (vsock_cid == 0) {
@@ -1339,10 +1292,9 @@ void Service::StartVm(dbus::MethodCall* method_call,
   auto vm = TerminaVm::Create(
       std::move(kernel), std::move(rootfs), cpus, std::move(disks), vsock_cid,
       std::move(network_client), std::move(server_proxy),
-      std::move(runtime_dir), std::move(log_path), std::move(gpu_cache_path),
-      std::move(rootfs_device), std::move(stateful_device),
-      std::move(stateful_size), features, request.start_termina(),
-      sigchld_handler_);
+      std::move(runtime_dir), std::move(log_path), std::move(rootfs_device),
+      std::move(stateful_device), std::move(stateful_size), features,
+      request.start_termina(), sigchld_handler_);
   if (!vm) {
     constexpr char err_msg[] = "Unable to start VM";
     LOG(ERROR) << err_msg;
@@ -2281,13 +2233,6 @@ void Service::DestroyDiskImage(
         ctx.send_response(DISK_STATUS_FAILED, "Unable to remove ISO directory");
         return;
       }
-    }
-
-    // Delete GPU shader disk cache.
-    base::FilePath gpu_cache_path =
-        GetVmGpuCachePath(ctx.request.cryptohome_id(), ctx.request.disk_path());
-    if (!base::DeleteFile(gpu_cache_path, true)) {
-      LOG(ERROR) << "Failed to remove GPU cache for VM: " << gpu_cache_path;
     }
 
     if (!base::DeleteFile(
@@ -3400,43 +3345,6 @@ base::FilePath Service::GetVmImagePath(const std::string& dlc_id,
     return {};
   }
   return base::FilePath(dlc_root.value());
-}
-
-base::FilePath Service::PrepareVmGpuCachePath(const std::string& owner_id,
-                                              const std::string& vm_name) {
-  base::FilePath cache_path = GetVmGpuCachePath(owner_id, vm_name);
-  base::FilePath bootid_path = cache_path.DirName();
-  base::FilePath base_path = bootid_path.DirName();
-
-  base::AutoLock guard(cache_mutex_);
-
-  // In order to always provide an empty GPU shader cache on each boot, we hash
-  // the boot_id and erase the whole GPU cache if a directory matching the
-  // current boot_id is not found.
-  // For example:
-  // VM cache dir: /run/daemon-store/crosvm/<uid>/gpucache/<bootid>/<vmid>/
-  // Boot dir: /run/daemon-store/crosvm/<uid>/gpucache/<bootid>/
-  // Base dir: /run/daemon-store/crosvm/<uid>/gpucache/
-  // If Boot dir exists we know another VM has already created a fresh base
-  // dir during this boot. Otherwise, we erase Base dir to wipe out any
-  // previous Boot dir.
-  if (!base::DirectoryExists(bootid_path)) {
-    if (!base::DeleteFile(base_path, true)) {
-      LOG(ERROR) << "Failed to delete gpu cache directory: " << base_path
-                 << " shader caching will be disabled.";
-      return base::FilePath();
-    }
-  }
-
-  if (!base::DirectoryExists(cache_path)) {
-    base::File::Error dir_error;
-    if (!base::CreateDirectoryAndGetError(cache_path, &dir_error)) {
-      LOG(ERROR) << "Failed to create crosvm gpu cache directory in "
-                 << cache_path << ": " << base::File::ErrorToString(dir_error);
-      return base::FilePath();
-    }
-  }
-  return cache_path;
 }
 
 }  // namespace concierge

@@ -90,7 +90,6 @@ class TerminaVm final : public VmBaseImpl,
       std::unique_ptr<SeneschalServerProxy> seneschal_server_proxy,
       base::FilePath runtime_dir,
       base::FilePath log_path,
-      base::FilePath gpu_cache_path,
       std::string rootfs_device,
       std::string stateful_device,
       uint64_t stateful_size,
@@ -225,7 +224,6 @@ class TerminaVm final : public VmBaseImpl,
       uint32_t vsock_cid,
       base::FilePath runtime_dir,
       base::FilePath log_path,
-      base::FilePath gpu_cache_path,
       std::string rootfs_device,
       std::string stateful_device,
       uint64_t stateful_size,
@@ -241,7 +239,6 @@ class TerminaVm final : public VmBaseImpl,
             std::unique_ptr<SeneschalServerProxy> seneschal_server_proxy,
             base::FilePath runtime_dir,
             base::FilePath log_path,
-            base::FilePath gpu_cache_path,
             std::string rootfs_device,
             std::string stateful_device,
             uint64_t stateful_size,
@@ -255,7 +252,6 @@ class TerminaVm final : public VmBaseImpl,
             std::unique_ptr<SeneschalServerProxy> seneschal_server_proxy,
             base::FilePath runtime_dir,
             base::FilePath log_path,
-            base::FilePath gpu_cache_path,
             std::string rootfs_device,
             std::string stateful_device,
             uint64_t stateful_size,
@@ -350,9 +346,6 @@ class TerminaVm final : public VmBaseImpl,
       DiskImageStatus::DISK_STATUS_RESIZED;
 
   base::FilePath log_path_;
-
-  // GPU shader disk cache path.
-  base::FilePath gpu_cache_path_;
 
   // Confusingly, this class is also used for non-termina VMs that don't fit in
   // other types. This bool indicates if the VM is really a termina VM.
