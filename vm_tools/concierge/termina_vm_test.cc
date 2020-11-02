@@ -8,32 +8,35 @@
 #include <stdint.h>
 #include <sys/mount.h>
 
-#include <algorithm>
 #include <deque>
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include <base/bind_helpers.h>
 #include <base/bind.h>
+#include <base/bind_helpers.h>
 #include <base/callback.h>
+#include <base/files/file_descriptor_watcher_posix.h>
 #include <base/files/scoped_temp_dir.h>
+#include <base/guid.h>
+#include <base/location.h>
 #include <base/logging.h>
 #include <base/macros.h>
 #include <base/run_loop.h>
+#include <base/single_thread_task_runner.h>
 #include <base/strings/stringprintf.h>
 #include <base/test/task_environment.h>
-#include <base/threading/platform_thread.h>
-#include <base/threading/sequenced_task_runner_handle.h>
 #include <base/threading/thread.h>
-#include <chromeos/patchpanel/address_manager.h>
-#include <chromeos/patchpanel/mac_address_generator.h>
-#include <chromeos/patchpanel/subnet.h>
+#include <base/threading/thread_task_runner_handle.h>
 #include <google/protobuf/message.h>
 #include <google/protobuf/repeated_field.h>
 #include <google/protobuf/util/message_differencer.h>
+#include <grpcpp/grpcpp.h>
 #include <gtest/gtest.h>
+#include <chromeos/patchpanel/address_manager.h>
+#include <chromeos/patchpanel/mac_address_generator.h>
+#include <chromeos/patchpanel/subnet.h>
 #include <vm_protos/proto_bindings/vm_guest.grpc.pb.h>
 
 #include "vm_tools/concierge/vsock_cid_pool.h"
@@ -69,7 +72,90 @@ constexpr char kServerSocket[] = "server";
 // Sample Termina kernel version.
 constexpr char kKernelVersion[] = "some kernel version";
 
-class TerminaVmTest;
+// Test fixture for actually testing the TerminaVm functionality.
+class TerminaVmTest : public ::testing::Test {
+ public:
+  TerminaVmTest() = default;
+  ~TerminaVmTest() override = default;
+
+  // Called by FakeMaitredService to indicate a test failure.
+  void TestFailed(string reason);
+
+  // Called by FakeMaitredService for checking the ConfigureNetwork RPC.
+  const string& address() const { return address_; }
+  const string& netmask() const { return netmask_; }
+  const string& gateway() const { return gateway_; }
+
+  // Called by FakeMaitredService the first time it receives a LaunchProcess
+  // RPC.
+  std::deque<vm_tools::LaunchProcessRequest> launch_requests() {
+    return std::move(launch_requests_);
+  }
+
+  // Called by FakeMaitredService the first time it receives a Mount RPC.
+  std::deque<vm_tools::MountRequest> mount_requests() {
+    return std::move(mount_requests_);
+  }
+
+ protected:
+  // ::testing::Test overrides.
+  void SetUp() override;
+  void TearDown() override;
+
+ private:
+  // Posted back to the main thread by the grpc thread after starting the
+  // server.
+  void ServerStartCallback(base::Closure quit,
+                           std::shared_ptr<grpc::Server> server);
+
+  // The message loop for the current thread.  Declared here because it must be
+  // the last thing to be cleaned up.
+  base::test::TaskEnvironment task_environment_;
+  base::FileDescriptorWatcher watcher_{
+      task_environment_.GetMainThreadTaskRunner()};
+
+ protected:
+  // Actual virtual machine being tested.
+  std::unique_ptr<TerminaVm> vm_;
+
+  // Expected LaunchProcessRequests. Tests should fill this with all the
+  // LaunchProcessRequests that it expects the TerminaVm to receive. These
+  // will be moved into the FakeMaitredService the first time it receives a
+  // LaunchProcess RPC.
+  std::deque<vm_tools::LaunchProcessRequest> launch_requests_;
+
+  // Expected MountRequests.  Tests should fill this with all the MountRequests
+  // that they expect a TerminaVm to receive.  These will be moved to the
+  // FakeMaitredService the firest time it receives a Mount RPC.
+  std::deque<vm_tools::MountRequest> mount_requests_;
+
+  // Set when a failure occurs.
+  bool failed_{false};
+  string failure_reason_;
+
+ private:
+  // Temporary directory where we will store our socket.
+  base::ScopedTempDir temp_dir_;
+
+  // Resource allocators for the VM.
+  std::unique_ptr<patchpanel::AddressManager> network_address_manager_;
+  patchpanel::MacAddressGenerator mac_address_generator_;
+  VsockCidPool vsock_cid_pool_;
+
+  // Addresses assigned to the VM.
+  string address_;
+  string netmask_;
+  string gateway_;
+
+  // The thread on which the server will run.
+  base::Thread server_thread_{"gRPC maitre'd thread"};
+
+  // grpc::Server that will handle the requests.
+  std::shared_ptr<grpc::Server> server_;
+
+  base::WeakPtrFactory<TerminaVmTest> weak_factory_{this};
+  DISALLOW_COPY_AND_ASSIGN(TerminaVmTest);
+};
 
 // Test server that verifies the RPCs it receives with the expected RPCs.
 class FakeMaitredService final : public vm_tools::Maitred::Service {
@@ -97,10 +183,6 @@ class FakeMaitredService final : public vm_tools::Maitred::Service {
   grpc::Status SetResolvConfig(grpc::ServerContext* ctx,
                                const vm_tools::SetResolvConfigRequest* request,
                                vm_tools::EmptyMessage* response) override;
-  grpc::Status GetResizeBounds(
-      grpc::ServerContext* ctx,
-      const EmptyMessage* request,
-      vm_tools::GetResizeBoundsResponse* response) override;
 
  private:
   // Populated the first time this class receives a LaunchProcess RPC.
@@ -123,96 +205,6 @@ class FakeMaitredService final : public vm_tools::Maitred::Service {
   TerminaVmTest* vm_test_;
 
   DISALLOW_COPY_AND_ASSIGN(FakeMaitredService);
-};
-
-// Test fixture for actually testing the TerminaVm functionality.
-class TerminaVmTest : public ::testing::Test {
- public:
-  TerminaVmTest() : maitred_(this) {}
-  ~TerminaVmTest() override = default;
-
-  // Called by FakeMaitredService to indicate a test failure.
-  void TestFailed(string reason);
-
-  // Called by FakeMaitredService for checking the ConfigureNetwork RPC.
-  const string& address() const { return address_; }
-  const string& netmask() const { return netmask_; }
-  const string& gateway() const { return gateway_; }
-
-  // Called by FakeMaitredService the first time it receives a LaunchProcess
-  // RPC.
-  std::deque<vm_tools::LaunchProcessRequest> launch_requests() {
-    return std::move(launch_requests_);
-  }
-
-  // Called by FakeMaitredService the first time it receives a Mount RPC.
-  std::deque<vm_tools::MountRequest> mount_requests() {
-    return std::move(mount_requests_);
-  }
-
- protected:
-  // ::testing::Test overrides.
-  void SetUp() override;
-  void TearDown() override;
-
-  base::test::TaskEnvironment task_environment_;
-
-  // Actual virtual machine being tested.
-  std::shared_ptr<TerminaVm> vm_;
-
-  std::shared_ptr<SigchldHandler> sigchld_handler_ =
-      std::make_shared<SigchldHandler>();
-
-  // Expected LaunchProcessRequests. Tests should fill this with all the
-  // LaunchProcessRequests that it expects the TerminaVm to receive. These
-  // will be moved into the FakeMaitredService the first time it receives a
-  // LaunchProcess RPC.
-  std::deque<vm_tools::LaunchProcessRequest> launch_requests_;
-
-  // Expected MountRequests.  Tests should fill this with all the MountRequests
-  // that they expect a TerminaVm to receive.  These will be moved to the
-  // FakeMaitredService the first time it receives a Mount RPC.
-  std::deque<vm_tools::MountRequest> mount_requests_;
-
-  // Set when a failure occurs.
-  bool failed_{false};
-  string failure_reason_;
-
- private:
-  // Posted back to the main thread by the grpc thread after starting the
-  // server.
-  void ServerStartCallback(base::Closure quit,
-                           std::shared_ptr<grpc::Server> server);
-
-  // Temporary directory where we will store our socket.
-  base::ScopedTempDir temp_dir_;
-
-  // Resource allocators for the VM.
-  std::unique_ptr<patchpanel::AddressManager> network_address_manager_;
-  patchpanel::MacAddressGenerator mac_address_generator_;
-  VsockCidPool vsock_cid_pool_;
-
-  // Addresses assigned to the VM.
-  string address_;
-  string netmask_;
-  string gateway_;
-
-  // grpc::Server that will handle the requests.
-  // void StartFakeMaitredService(base::FilePath listen_path);
-  void StartFakeMaitredService(
-      scoped_refptr<base::SequencedTaskRunner> main_task_runner,
-      base::FilePath listen_path,
-      base::Closure closure);
-  FakeMaitredService maitred_;
-
-  // The thread on which the server will run.
-  base::Thread server_thread_{"gRPC maitre'd thread"};
-
-  // grpc::Server that will handle the requests.
-  std::shared_ptr<grpc::Server> server_;
-
-  base::WeakPtrFactory<TerminaVmTest> weak_factory_{this};
-  DISALLOW_COPY_AND_ASSIGN(TerminaVmTest);
 };
 
 FakeMaitredService::FakeMaitredService(TerminaVmTest* vm_test)
@@ -340,39 +332,30 @@ grpc::Status FakeMaitredService::SetResolvConfig(
   return grpc::Status::OK;
 }
 
-grpc::Status FakeMaitredService::GetResizeBounds(
-    grpc::ServerContext* ctx,
-    const EmptyMessage* request,
-    vm_tools::GetResizeBoundsResponse* response) {
-  response->set_minimum_size(32);
-  return grpc::Status::OK;
-}
-
 // Runs on the grpc thread and starts the grpc server.
-void TerminaVmTest::StartFakeMaitredService(
-    scoped_refptr<base::SequencedTaskRunner> main_task_runner,
+void StartFakeMaitredService(
+    TerminaVmTest* vm_test,
+    scoped_refptr<base::SingleThreadTaskRunner> main_task_runner,
     base::FilePath listen_path,
-    base::Closure closure) {
-  FakeMaitredService maitred(this);
+    base::Callback<void(std::shared_ptr<grpc::Server>)> server_cb) {
+  FakeMaitredService maitred(vm_test);
 
   grpc::ServerBuilder builder;
   builder.AddListeningPort("unix:" + listen_path.value(),
                            grpc::InsecureServerCredentials());
   builder.RegisterService(&maitred);
 
-  server_ = std::shared_ptr<grpc::Server>(builder.BuildAndStart().release());
-  main_task_runner->PostTask(
-      FROM_HERE,
-      base::Bind(&TerminaVmTest::ServerStartCallback,
-                 weak_factory_.GetWeakPtr(), std::move(closure), server_));
+  std::shared_ptr<grpc::Server> server(builder.BuildAndStart().release());
+  main_task_runner->PostTask(FROM_HERE, base::Bind(server_cb, server));
 
-  if (server_) {
+  if (server) {
     // This will not race with shutdown because the grpc server code includes a
     // check to see if the server has already been shut down (or is shutting
     // down) when Wait is called.
-    server_->Wait();
+    server->Wait();
   }
 }
+
 void TerminaVmTest::SetUp() {
   // Create the temporary directory.
   ASSERT_TRUE(temp_dir_.CreateUniqueTempDir());
@@ -383,21 +366,15 @@ void TerminaVmTest::SetUp() {
   ASSERT_TRUE(server_thread_.Start());
   server_thread_.task_runner()->PostTask(
       FROM_HERE,
-      base::Bind(&TerminaVmTest::StartFakeMaitredService,
-                 base::Unretained(this), base::SequencedTaskRunnerHandle::Get(),
-                 temp_dir_.GetPath().Append(kServerSocket),
-                 run_loop.QuitClosure()));
+      base::Bind(
+          &StartFakeMaitredService, this, base::ThreadTaskRunnerHandle::Get(),
+          temp_dir_.GetPath().Append(kServerSocket),
+          base::Bind(&TerminaVmTest::ServerStartCallback,
+                     weak_factory_.GetWeakPtr(), run_loop.QuitClosure())));
 
   run_loop.Run();
 
   ASSERT_TRUE(server_);
-
-  // Create the client to the FakeMaitredService.
-  std::unique_ptr<brillo::AsyncGrpcClient<vm_tools::Maitred>> client =
-      std::make_unique<brillo::AsyncGrpcClient<vm_tools::Maitred>>(
-          base::SequencedTaskRunnerHandle::Get(),
-          "unix:" + temp_dir_.GetPath().Append(kServerSocket).value());
-  ASSERT_TRUE(client);
 
   // Create the stub to the FakeMaitredService.
   std::unique_ptr<vm_tools::Maitred::Stub> stub =
@@ -412,6 +389,7 @@ void TerminaVmTest::SetUp() {
   std::unique_ptr<patchpanel::Subnet> subnet =
       network_address_manager_->AllocateIPv4Subnet(
           patchpanel::AddressManager::Guest::VM_TERMINA);
+
   ASSERT_TRUE(subnet);
 
   ASSERT_TRUE(IPv4AddressToString(subnet->AddressAtOffset(1), &address_));
@@ -426,16 +404,15 @@ void TerminaVmTest::SetUp() {
   vm_ = TerminaVm::CreateForTesting(
       std::move(subnet), vsock_cid, temp_dir_.GetPath(), base::FilePath(),
       std::move(rootfs_device), std::move(stateful_device),
-      std::move(stateful_size), kKernelVersion, std::move(client),
-      std::move(stub), /* is_termina= */ true, sigchld_handler_);
+      std::move(stateful_size), kKernelVersion, std::move(stub),
+      /* is_termina= */ true);
   ASSERT_TRUE(vm_);
 }
 
 void TerminaVmTest::TearDown() {
   // Do the opposite of SetUp to make sure things get cleaned up in the right
   // order.
-  vm_.reset();  // AsyncGrpcClient is destructed here
-
+  vm_.reset();
   server_->Shutdown();
   server_.reset();
   server_thread_.Stop();
@@ -454,8 +431,6 @@ void TerminaVmTest::TestFailed(string reason) {
 
 }  // namespace
 
-TEST_F(TerminaVmTest, SetupTest) {}
-
 TEST_F(TerminaVmTest, ConfigureNetwork) {
   ASSERT_TRUE(vm_->ConfigureNetwork({"8.8.8.8"}, {}));
 
@@ -468,10 +443,6 @@ TEST_F(TerminaVmTest, SetTime) {
   EXPECT_TRUE(success) << reason;
 
   EXPECT_FALSE(failed_) << "Failure reason: " << failure_reason_;
-}
-
-TEST_F(TerminaVmTest, GetMinDiskSize) {
-  EXPECT_EQ(vm_->GetMinDiskSize(), 32);
 }
 
 TEST_F(TerminaVmTest, Mount) {

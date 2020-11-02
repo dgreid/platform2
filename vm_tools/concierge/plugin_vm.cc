@@ -110,7 +110,7 @@ void TrySuspendVm(dbus::ObjectProxy* vmplugin_service_proxy, const VmId& id) {
 }  // namespace
 
 // static
-std::shared_ptr<PluginVm> PluginVm::Create(
+std::unique_ptr<PluginVm> PluginVm::Create(
     VmId id,
     uint32_t cpus,
     std::vector<string> params,
@@ -124,7 +124,7 @@ std::shared_ptr<PluginVm> PluginVm::Create(
     std::unique_ptr<SeneschalServerProxy> seneschal_server_proxy,
     dbus::ObjectProxy* vm_permission_service_proxy,
     dbus::ObjectProxy* vmplugin_service_proxy) {
-  auto vm = std::shared_ptr<PluginVm>(new PluginVm(
+  auto vm = base::WrapUnique(new PluginVm(
       std::move(id), std::move(network_client), subnet_index, enable_vnet_hdr,
       std::move(seneschal_server_proxy), vm_permission_service_proxy,
       vmplugin_service_proxy, std::move(iso_dir), std::move(root_dir),
@@ -186,7 +186,7 @@ bool PluginVm::StopVm() {
   return false;
 }
 
-Future<bool> PluginVm::Shutdown() {
+bool PluginVm::Shutdown() {
   // Notify arc-patchpanel that the VM is down.
   // This should run before the process existence check below since we still
   // want to release the network resources on crash.
@@ -195,10 +195,9 @@ Future<bool> PluginVm::Shutdown() {
     LOG(WARNING) << "Unable to notify networking services";
   }
 
-  return ResolvedFuture(
-      !CheckProcessExists(process_.pid()) ||
-      (pvm::dispatcher::ShutdownVm(vmplugin_service_proxy_, id_) ==
-       pvm::dispatcher::VmOpResult::SUCCESS));
+  return !CheckProcessExists(process_.pid()) ||
+         pvm::dispatcher::ShutdownVm(vmplugin_service_proxy_, id_) ==
+             pvm::dispatcher::VmOpResult::SUCCESS;
 }
 
 VmInterface::Info PluginVm::GetInfo() {

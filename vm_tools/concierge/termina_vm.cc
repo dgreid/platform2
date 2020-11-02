@@ -13,27 +13,22 @@
 
 #include <utility>
 
-#include <base/bind_helpers.h>
 #include <base/bind.h>
-#include <base/files/file_util.h>
+#include <base/bind_helpers.h>
 #include <base/files/file.h>
+#include <base/files/file_util.h>
 #include <base/files/scoped_file.h>
 #include <base/guid.h>
 #include <base/logging.h>
 #include <base/memory/ptr_util.h>
-#include <base/run_loop.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/stringprintf.h>
 #include <base/system/sys_info.h>
-#include <base/threading/sequenced_task_runner_handle.h>
 #include <base/time/time.h>
-#include <chromeos/constants/vm_tools.h>
 #include <google/protobuf/repeated_field.h>
 #include <grpcpp/grpcpp.h>
+#include <chromeos/constants/vm_tools.h>
 
-#include "vm_tools/concierge/grpc_future_util.h"
-#include "vm_tools/concierge/shared_data.h"
-#include "vm_tools/concierge/sigchld_handler.h"
 #include "vm_tools/concierge/tap_device_builder.h"
 #include "vm_tools/concierge/vm_util.h"
 
@@ -63,6 +58,9 @@ constexpr int64_t kStartTerminaTimeoutSeconds = 150;
 
 // How long to wait before timing out on regular RPCs.
 constexpr int64_t kDefaultTimeoutSeconds = 10;
+
+// How long to wait before timing out on child process exits.
+constexpr base::TimeDelta kChildExitTimeout = base::TimeDelta::FromSeconds(10);
 
 // Offset in a subnet of the gateway/host.
 constexpr size_t kHostAddressOffset = 0;
@@ -95,8 +93,7 @@ TerminaVm::TerminaVm(
     std::string stateful_device,
     uint64_t stateful_size,
     VmFeatures features,
-    bool is_termina,
-    std::weak_ptr<SigchldHandler> weak_async_sigchld_handler)
+    bool is_termina)
     : VmBaseImpl(std::move(network_client)),
       vsock_cid_(vsock_cid),
       seneschal_server_proxy_(std::move(seneschal_server_proxy)),
@@ -106,8 +103,7 @@ TerminaVm::TerminaVm(
       stateful_size_(stateful_size),
       stateful_resize_type_(DiskResizeType::NONE),
       log_path_(std::move(log_path)),
-      is_termina_(is_termina),
-      weak_async_sigchld_handler_(std::move(weak_async_sigchld_handler)) {
+      is_termina_(is_termina) {
   CHECK(base::DirectoryExists(runtime_dir));
 
   // Take ownership of the runtime directory.
@@ -125,8 +121,7 @@ TerminaVm::TerminaVm(
     std::string stateful_device,
     uint64_t stateful_size,
     VmFeatures features,
-    bool is_termina,
-    std::weak_ptr<SigchldHandler> weak_async_sigchld_handler)
+    bool is_termina)
     : VmBaseImpl(nullptr),
       subnet_(std::move(subnet)),
       vsock_cid_(vsock_cid),
@@ -137,8 +132,7 @@ TerminaVm::TerminaVm(
       stateful_size_(stateful_size),
       stateful_resize_type_(DiskResizeType::NONE),
       log_path_(std::move(log_path)),
-      is_termina_(is_termina),
-      weak_async_sigchld_handler_(std::move(weak_async_sigchld_handler)) {
+      is_termina_(is_termina) {
   CHECK(subnet_);
   CHECK(base::DirectoryExists(runtime_dir));
 
@@ -147,14 +141,10 @@ TerminaVm::TerminaVm(
 }
 
 TerminaVm::~TerminaVm() {
-  if (!already_shut_down_) {  // Call shutdown only once
-    LOG(WARNING) << "Performing blocking shutdown for termina vm (vsock cid "
-                 << vsock_cid_ << ")";
-    Shutdown().Get();
-  }
+  Shutdown();
 }
 
-std::shared_ptr<TerminaVm> TerminaVm::Create(
+std::unique_ptr<TerminaVm> TerminaVm::Create(
     base::FilePath kernel,
     base::FilePath rootfs,
     int32_t cpus,
@@ -168,13 +158,12 @@ std::shared_ptr<TerminaVm> TerminaVm::Create(
     std::string stateful_device,
     uint64_t stateful_size,
     VmFeatures features,
-    bool is_termina,
-    std::weak_ptr<SigchldHandler> weak_async_sigchld_handler) {
+    bool is_termina) {
   auto vm = base::WrapUnique(new TerminaVm(
       vsock_cid, std::move(network_client), std::move(seneschal_server_proxy),
       std::move(runtime_dir), std::move(log_path), std::move(rootfs_device),
       std::move(stateful_device), std::move(stateful_size), features,
-      is_termina, std::move(weak_async_sigchld_handler)));
+      is_termina));
 
   if (!vm->Start(std::move(kernel), std::move(rootfs), cpus,
                  std::move(disks))) {
@@ -300,9 +289,6 @@ bool TerminaVm::Start(base::FilePath kernel,
   }
 
   // Create a stub for talking to the maitre'd instance inside the VM.
-  client_ = std::make_unique<brillo::AsyncGrpcClient<vm_tools::Maitred>>(
-      base::SequencedTaskRunnerHandle::Get(),
-      base::StringPrintf("vsock:%u:%u", vsock_cid_, vm_tools::kMaitredPort));
   stub_ = std::make_unique<vm_tools::Maitred::Stub>(grpc::CreateChannel(
       base::StringPrintf("vsock:%u:%u", vsock_cid_, vm_tools::kMaitredPort),
       grpc::InsecureChannelCredentials()));
@@ -310,10 +296,7 @@ bool TerminaVm::Start(base::FilePath kernel,
   return true;
 }
 
-Future<bool> TerminaVm::Shutdown() {
-  DCHECK(!already_shut_down_);
-  already_shut_down_ = true;
-
+bool TerminaVm::Shutdown() {
   // Notify arc-patchpanel that the VM is down.
   // This should run before the process existence check below since we still
   // want to release the network resources on crash.
@@ -330,66 +313,58 @@ Future<bool> TerminaVm::Shutdown() {
   if (!CheckProcessExists(process_.pid())) {
     // The process is already gone.
     process_.Release();
-    DestroyAsyncClient();
-
-    return ResolvedFuture(true);
+    return true;
   }
 
-  // Release first, such that we don't have to call it in different paths later.
-  const uint32_t pid = process_.Release();
+  grpc::ClientContext ctx;
+  ctx.set_deadline(gpr_time_add(
+      gpr_now(GPR_CLOCK_MONOTONIC),
+      gpr_time_from_seconds(kShutdownTimeoutSeconds, GPR_TIMESPAN)));
 
-  // Need to register the pid first before calling async shutdown
-  Future<bool> sigchld_future =
-      WatchSigchld(weak_async_sigchld_handler_, pid, kChildExitTimeout);
+  vm_tools::EmptyMessage empty;
+  grpc::Status status = stub_->Shutdown(&ctx, empty, &empty);
 
-  Future<bool> future =
-      CallRpcFuture(client_.get(), &vm_tools::Maitred::Stub::AsyncShutdown,
-                    base::TimeDelta::FromSeconds((kShutdownTimeoutSeconds)),
-                    vm_tools::EmptyMessage())
-          .ThenNoReject(base::BindOnce(
-              [](std::shared_ptr<TerminaVm> vm, uint32_t pid,
-                 Future<bool> sigchld_future, grpc::Status status,
-                 std::unique_ptr<vm_tools::EmptyMessage> response) {
-                if (!status.ok()) {
-                  // This sets sigchld_future to false
-                  CancelWatchSigchld(vm->weak_async_sigchld_handler_, pid);
-                }
+  // brillo::ProcessImpl doesn't provide a timed wait function and while the
+  // Shutdown RPC may have been successful we can't really trust crosvm to
+  // actually exit.  This may result in an untimed wait() blocking indefinitely.
+  // Instead, do a timed wait here and only return success if the process
+  // _actually_ exited as reported by the kernel, which is really the only
+  // thing we can trust here.
+  if (status.ok() && WaitForChild(process_.pid(), kChildExitTimeout)) {
+    process_.Release();
+    return true;
+  }
 
-                // DestroyAsyncClient must be called before the class is
-                // destroyed, otherwise the code will crash. This is the place
-                // as |client_| is no longer needed.
-                vm->DestroyAsyncClient();
+  LOG(WARNING) << "Shutdown RPC failed for VM " << vsock_cid_ << " with error "
+               << "code " << status.error_code() << ": "
+               << status.error_message();
 
-                return sigchld_future
-                    .Then(base::BindOnce(
-                        [](std::shared_ptr<TerminaVm> vm, uint32_t pid,
-                           grpc::Status status, bool exited) {
-                          if (exited) {
-                            return Reject<Future<bool>>();
-                          }
+  // Try to shut it down via the crosvm socket.
+  RunCrosvmCommand("stop");
 
-                          LOG(WARNING) << "Shutdown RPC failed for VM "
-                                       << vm->cid() << " with error "
-                                       << "code " << status.error_code() << ": "
-                                       << status.error_message();
+  // We can't actually trust the exit codes that crosvm gives us so just see if
+  // it exited.
+  if (WaitForChild(process_.pid(), kChildExitTimeout)) {
+    process_.Release();
+    return true;
+  }
 
-                          // Try to shut it down via the crosvm socket.
-                          vm->RunCrosvmCommand("stop");
+  LOG(WARNING) << "Failed to stop VM " << vsock_cid_ << " via crosvm socket";
 
-                          // We can't actually trust the exit codes that crosvm
-                          // gives us so just see if it exited.
-                          return Resolve(
-                              WatchSigchld(vm->weak_async_sigchld_handler_, pid,
-                                           kChildExitTimeout));
-                        },
-                        std::move(vm), pid, std::move(status)))
-                    .Flatten();
-              },
-              shared_from_this(), pid, std::move(sigchld_future)))
-          .Flatten();
+  // Kill the process with SIGTERM.
+  if (process_.Kill(SIGTERM, kChildExitTimeout.InSeconds())) {
+    return true;
+  }
 
-  return KillCrosvmProcess(weak_async_sigchld_handler_, pid, cid(),
-                           std::move(future));
+  LOG(WARNING) << "Failed to kill VM " << vsock_cid_ << " with SIGTERM";
+
+  // Kill it with fire.
+  if (process_.Kill(SIGKILL, kChildExitTimeout.InSeconds())) {
+    return true;
+  }
+
+  LOG(ERROR) << "Failed to kill VM " << vsock_cid_ << " with SIGKILL";
+  return false;
 }
 
 bool TerminaVm::ConfigureNetwork(const std::vector<string>& nameservers,
@@ -558,17 +533,15 @@ bool TerminaVm::ListUsbDevice(std::vector<UsbDevice>* device) {
 void TerminaVm::HandleSuspendImminent() {
   LOG(INFO) << "Preparing to suspend";
 
-  grpc::Status status;
-  std::unique_ptr<vm_tools::EmptyMessage> response;
+  vm_tools::EmptyMessage request;
+  vm_tools::EmptyMessage response;
 
-  std::tie(status, response) =
-      CallRpcFuture(client_.get(),
-                    &vm_tools::Maitred::Stub::AsyncPrepareToSuspend,
-                    base::TimeDelta::FromSeconds(kDefaultTimeoutSeconds),
-                    vm_tools::EmptyMessage())
-          .Get()
-          .val;
+  grpc::ClientContext ctx;
+  ctx.set_deadline(gpr_time_add(
+      gpr_now(GPR_CLOCK_MONOTONIC),
+      gpr_time_from_seconds(kDefaultTimeoutSeconds, GPR_TIMESPAN)));
 
+  grpc::Status status = stub_->PrepareToSuspend(&ctx, request, &response);
   if (!status.ok()) {
     LOG(ERROR) << "Failed to prepare for suspending" << status.error_message();
   }
@@ -968,30 +941,16 @@ VmInterface::Info TerminaVm::GetInfo() {
   return info;
 }
 
-void TerminaVm::DestroyAsyncClient() {
-  if (!client_)
-    return;
-  base::RunLoop loop(base::RunLoop::Type::kNestableTasksAllowed);
-  client_->ShutDown(loop.QuitClosure());
-  loop.Run();
-  client_.reset();
-}
-
 void TerminaVm::set_kernel_version_for_testing(std::string kernel_version) {
   kernel_version_ = kernel_version;
 }
 
-void TerminaVm::set_client_for_testing(
-    std::unique_ptr<brillo::AsyncGrpcClient<vm_tools::Maitred>> client,
+void TerminaVm::set_stub_for_testing(
     std::unique_ptr<vm_tools::Maitred::Stub> stub) {
-  // Shutdown the old client
-  DestroyAsyncClient();
-  DCHECK(client);
-  client_ = std::move(client);
   stub_ = std::move(stub);
 }
 
-std::shared_ptr<TerminaVm> TerminaVm::CreateForTesting(
+std::unique_ptr<TerminaVm> TerminaVm::CreateForTesting(
     std::unique_ptr<patchpanel::Subnet> subnet,
     uint32_t vsock_cid,
     base::FilePath runtime_dir,
@@ -1000,23 +959,19 @@ std::shared_ptr<TerminaVm> TerminaVm::CreateForTesting(
     std::string stateful_device,
     uint64_t stateful_size,
     std::string kernel_version,
-    std::unique_ptr<brillo::AsyncGrpcClient<vm_tools::Maitred>> client,
     std::unique_ptr<vm_tools::Maitred::Stub> stub,
-    bool is_termina,
-    std::weak_ptr<SigchldHandler> weak_async_sigchld_handler) {
+    bool is_termina) {
   VmFeatures features{
       .gpu = false,
       .software_tpm = false,
       .audio_capture = false,
   };
-  std::shared_ptr<SigchldHandler> handler = std::make_unique<SigchldHandler>();
-  auto vm = std::shared_ptr<TerminaVm>(new TerminaVm(
+  auto vm = base::WrapUnique(new TerminaVm(
       std::move(subnet), vsock_cid, nullptr, std::move(runtime_dir),
       std::move(log_path), std::move(rootfs_device), std::move(stateful_device),
-      std::move(stateful_size), features, is_termina,
-      std::move(weak_async_sigchld_handler)));
+      std::move(stateful_size), features, is_termina));
   vm->set_kernel_version_for_testing(kernel_version);
-  vm->set_client_for_testing(std::move(client), std::move(stub));
+  vm->set_stub_for_testing(std::move(stub));
 
   return vm;
 }

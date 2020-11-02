@@ -11,7 +11,6 @@
 #include <map>
 #include <memory>
 #include <string>
-#include <tuple>
 #include <vector>
 
 #include <base/files/file_path.h>
@@ -25,16 +24,11 @@
 #include <vm_protos/proto_bindings/vm_guest.grpc.pb.h>
 
 #include "vm_tools/concierge/seneschal_server_proxy.h"
-#include "vm_tools/concierge/sigchld_handler.h"
 #include "vm_tools/concierge/vm_base_impl.h"
 #include "vm_tools/concierge/vsock_cid_pool.h"
 
-#include <brillo/grpc/async_grpc_client.h>
-
 namespace vm_tools {
 namespace concierge {
-
-struct SigchldHelper;
 
 struct VmFeatures {
   // Enable GPU in the started VM.
@@ -48,8 +42,7 @@ struct VmFeatures {
 };
 
 // Represents a single instance of a running termina VM.
-class TerminaVm final : public VmBaseImpl,
-                        public std::enable_shared_from_this<TerminaVm> {
+class TerminaVm final : public VmBaseImpl {
  public:
   // Type of a disk image.
   enum class DiskImageType {
@@ -80,7 +73,7 @@ class TerminaVm final : public VmBaseImpl,
 
   // Starts a new virtual machine.  Returns nullptr if the virtual machine
   // failed to start for any reason.
-  static std::shared_ptr<TerminaVm> Create(
+  static std::unique_ptr<TerminaVm> Create(
       base::FilePath kernel,
       base::FilePath rootfs,
       int32_t cpus,
@@ -94,8 +87,7 @@ class TerminaVm final : public VmBaseImpl,
       std::string stateful_device,
       uint64_t stateful_size,
       VmFeatures features,
-      bool is_termina,
-      std::weak_ptr<SigchldHandler> weak_async_sigchld_handler);
+      bool is_termina);
   ~TerminaVm() override;
 
   // Configures the network interfaces inside the VM.  Returns true iff
@@ -143,6 +135,9 @@ class TerminaVm final : public VmBaseImpl,
 
   // Set the guest time to the current time as given by gettimeofday.
   bool SetTime(std::string* failure_reason) override;
+
+  // The pid of the child process.
+  pid_t pid() { return process_.pid(); }
 
   // The VM's cid.
   uint32_t cid() const { return vsock_cid_; }
@@ -195,7 +190,7 @@ class TerminaVm final : public VmBaseImpl,
   // SIGTERM to the hypervisor.  Finally, if nothing works forcibly stops the VM
   // by sending it a SIGKILL.  Returns true if the VM was shut down and false
   // otherwise.
-  Future<bool> Shutdown() override;
+  bool Shutdown() override;
   VmInterface::Info GetInfo() override;
   bool AttachUsbDevice(uint8_t bus,
                        uint8_t addr,
@@ -219,7 +214,7 @@ class TerminaVm final : public VmBaseImpl,
   // Adjusts the amount of CPU the Termina VM processes are allowed to use.
   static bool SetVmCpuRestriction(CpuRestrictionState cpu_restriction_state);
 
-  static std::shared_ptr<TerminaVm> CreateForTesting(
+  static std::unique_ptr<TerminaVm> CreateForTesting(
       std::unique_ptr<patchpanel::Subnet> subnet,
       uint32_t vsock_cid,
       base::FilePath runtime_dir,
@@ -228,10 +223,8 @@ class TerminaVm final : public VmBaseImpl,
       std::string stateful_device,
       uint64_t stateful_size,
       std::string kernel_version,
-      std::unique_ptr<brillo::AsyncGrpcClient<vm_tools::Maitred>> client,
       std::unique_ptr<vm_tools::Maitred::Stub> stub,
-      bool is_termina,
-      std::weak_ptr<SigchldHandler> weak_async_sigchld_handler);
+      bool is_termina);
 
  private:
   TerminaVm(uint32_t vsock_cid,
@@ -243,8 +236,7 @@ class TerminaVm final : public VmBaseImpl,
             std::string stateful_device,
             uint64_t stateful_size,
             VmFeatures features,
-            bool is_termina,
-            std::weak_ptr<SigchldHandler> weak_async_sigchld_handler);
+            bool is_termina);
 
   // Constructor for testing only.
   TerminaVm(std::unique_ptr<patchpanel::Subnet> subnet,
@@ -256,8 +248,7 @@ class TerminaVm final : public VmBaseImpl,
             std::string stateful_device,
             uint64_t stateful_size,
             VmFeatures features,
-            bool is_termina,
-            std::weak_ptr<SigchldHandler> weak_async_sigchld_handler);
+            bool is_termina);
   void HandleSuspendImminent() override;
   void HandleSuspendDone() override;
   // Returns the path to the VM control socket.
@@ -285,15 +276,8 @@ class TerminaVm final : public VmBaseImpl,
   bool ResizeDiskImage(uint64_t new_size);
   bool ResizeFilesystem(uint64_t new_size);
 
-  void DestroyAsyncClient();
-
   void set_kernel_version_for_testing(std::string kernel_version);
-  void set_client_for_testing(
-      std::unique_ptr<brillo::AsyncGrpcClient<vm_tools::Maitred>> client,
-      std::unique_ptr<vm_tools::Maitred::Stub> stub);
-
-  // Remove when C++17 is available
-  std::weak_ptr<TerminaVm> weak_from_this() { return shared_from_this(); }
+  void set_stub_for_testing(std::unique_ptr<vm_tools::Maitred::Stub> stub);
 
   // The /30 subnet assigned to the VM.
   std::unique_ptr<patchpanel::Subnet> subnet_;
@@ -315,7 +299,6 @@ class TerminaVm final : public VmBaseImpl,
 
   // Stub for making RPC requests to the maitre'd process inside the VM.
   std::unique_ptr<vm_tools::Maitred::Stub> stub_;
-  std::unique_ptr<brillo::AsyncGrpcClient<vm_tools::Maitred>> client_;
 
   // Whether a TremplinStartedSignal has been received for the VM.
   bool is_tremplin_started_ = false;
@@ -350,12 +333,6 @@ class TerminaVm final : public VmBaseImpl,
   // Confusingly, this class is also used for non-termina VMs that don't fit in
   // other types. This bool indicates if the VM is really a termina VM.
   const bool is_termina_;
-
-  // Register to the main thread's signal handler for async sigchld waiting
-  std::weak_ptr<SigchldHandler> weak_async_sigchld_handler_;
-
-  // Prevent calling Shutdown twice (manual shutdown and destructor)
-  bool already_shut_down_ = false;
 
   DISALLOW_COPY_AND_ASSIGN(TerminaVm);
 };

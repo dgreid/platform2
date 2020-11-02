@@ -26,7 +26,6 @@
 #include <vm_concierge/proto_bindings/concierge_service.pb.h>
 
 #include "vm_tools/common/vm_id.h"
-#include "vm_tools/concierge/grpc_future_util.h"
 #include "vm_tools/concierge/plugin_vm_usb.h"
 #include "vm_tools/concierge/seneschal_server_proxy.h"
 #include "vm_tools/concierge/vm_base_impl.h"
@@ -36,7 +35,7 @@ namespace concierge {
 
 class PluginVm final : public VmBaseImpl {
  public:
-  static std::shared_ptr<PluginVm> Create(
+  static std::unique_ptr<PluginVm> Create(
       const VmId id,
       uint32_t cpus,
       std::vector<std::string> params,
@@ -53,7 +52,7 @@ class PluginVm final : public VmBaseImpl {
   ~PluginVm() override;
 
   // VmInterface overrides.
-  Future<bool> Shutdown() override;
+  bool Shutdown() override;
   VmInterface::Info GetInfo() override;
   // Currently only implemented for termina, returns "Not implemented".
   bool GetVmEnterpriseReportingInfo(

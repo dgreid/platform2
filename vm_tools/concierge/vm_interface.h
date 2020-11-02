@@ -11,12 +11,8 @@
 #include <string>
 #include <vector>
 
-#include <base/threading/sequenced_task_runner_handle.h>
-
 #include <vm_concierge/proto_bindings/concierge_service.pb.h>
 
-#include "vm_tools/concierge/future.h"
-#include "vm_tools/concierge/grpc_future_util.h"
 #include "vm_tools/concierge/usb_control.h"
 
 namespace vm_tools {
@@ -78,9 +74,9 @@ class VmInterface {
 
   bool IsSuspended() { return suspended_; }
 
-  // Shuts down the VM asynchronously. Returns true in the callback if the VM
-  // was successfully shut down and false otherwise.
-  virtual Future<bool> Shutdown() = 0;
+  // Shuts down the VM. Returns true if the VM was successfully shut down and
+  // false otherwise.
+  virtual bool Shutdown() = 0;
 
   // Information about the VM.
   virtual Info GetInfo() = 0;

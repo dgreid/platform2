@@ -22,15 +22,12 @@ class Client;
 namespace vm_tools {
 namespace concierge {
 
-// A base class implementing common features that are shared between ArcVm,
+// A base class implementing common features that are shared with ArcVm,
 // PluginVm and TerminaVm
 class VmBaseImpl : public VmInterface {
  public:
   explicit VmBaseImpl(std::unique_ptr<patchpanel::Client> network_client)
       : network_client_(std::move(network_client)) {}
-
-  // The pid of the child process.
-  pid_t pid() { return process_.pid(); }
 
  protected:
   // Adjusts the amount of CPU the VM processes are allowed to use.

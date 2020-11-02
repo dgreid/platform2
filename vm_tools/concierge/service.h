@@ -15,6 +15,7 @@
 #include <utility>
 #include <vector>
 
+#include <base/callback.h>
 #include <base/files/file_descriptor_watcher_posix.h>
 #include <base/files/scoped_file.h>
 #include <base/macros.h>
@@ -33,7 +34,6 @@
 #include "vm_tools/concierge/disk_image.h"
 #include "vm_tools/concierge/power_manager_client.h"
 #include "vm_tools/concierge/shill_client.h"
-#include "vm_tools/concierge/sigchld_handler.h"
 #include "vm_tools/concierge/startup_listener_impl.h"
 #include "vm_tools/concierge/termina_vm.h"
 #include "vm_tools/concierge/untrusted_vm_utils.h"
@@ -73,14 +73,14 @@ class Service final {
   // Helper function that is used by StartVm, StartPluginVm and StartArcVm
   template <class StartXXRequest>
   base::Optional<std::tuple<StartXXRequest, StartVmResponse>> StartVmHelper(
+      dbus::MethodCall* method_call,
       dbus::MessageReader* reader,
       dbus::MessageWriter* writer,
       bool allow_zero_cpus = false);
 
   // Handles a request to start a VM.  |method_call| must have a StartVmRequest
   // protobuf serialized as an array of bytes.
-  void StartVm(dbus::MethodCall* method_call,
-               dbus::ExportedObject::ResponseSender response_sender);
+  std::unique_ptr<dbus::Response> StartVm(dbus::MethodCall* method_call);
 
   // Handles a request to start a plugin-based VM.  |method_call| must have a
   // StartPluginVmRequest protobuf serialized as an array of bytes.
@@ -92,7 +92,7 @@ class Service final {
 
   // Handles a request to stop a VM.  |method_call| must have a StopVmRequest
   // protobuf serialized as an array of bytes.
-  Future<StopVmResponse> StopVm(StopVmRequest reqeust);
+  std::unique_ptr<dbus::Response> StopVm(dbus::MethodCall* method_call);
 
   // Handles a request to suspend a VM.  |method_call| must have a
   // SuspendVmRequest protobuf serialized as an array of bytes.
@@ -103,8 +103,7 @@ class Service final {
   std::unique_ptr<dbus::Response> ResumeVm(dbus::MethodCall* method_call);
 
   // Handles a request to stop all running VMs.
-  void StopAllVms(dbus::MethodCall* method_call,
-                  dbus::ExportedObject::ResponseSender response_sender);
+  std::unique_ptr<dbus::Response> StopAllVms(dbus::MethodCall* method_call);
 
   // Handles a request to get VM info.
   std::unique_ptr<dbus::Response> GetVmInfo(dbus::MethodCall* method_call);
@@ -121,8 +120,8 @@ class Service final {
       dbus::MethodCall* method_call);
 
   // Handles a request to destroy a disk image.
-  void DestroyDiskImage(dbus::MethodCall* method_call,
-                        dbus::ExportedObject::ResponseSender response_sender);
+  std::unique_ptr<dbus::Response> DestroyDiskImage(
+      dbus::MethodCall* method_call);
 
   // Handles a request to resize a disk image.
   std::unique_ptr<dbus::Response> ResizeDiskImage(
@@ -199,7 +198,6 @@ class Service final {
                                  uint32_t vsock_cid,
                                  pid_t pid,
                                  std::string vm_token);
-
   void SendVmStartedSignal(const VmId& vm_id,
                            const vm_tools::concierge::VmInfo& vm_info,
                            vm_tools::concierge::VmStatus status);
@@ -207,10 +205,6 @@ class Service final {
                               const vm_tools::concierge::VmInfo& vm_info);
   void NotifyVmStopping(const VmId& vm_id, int64_t cid);
   void NotifyVmStopped(const VmId& vm_id, int64_t cid);
-  void NotifyVmStoppedCallback(VmId vm_id,
-                               int64_t cid,
-                               dbus::Response* dbus_response);
-
   std::string GetContainerToken(const VmId& vm_id,
                                 const std::string& container_name);
 
@@ -258,7 +252,7 @@ class Service final {
                       const std::string& new_name,
                       std::string* failure_reason);
 
-  using VmMap = std::map<VmId, std::shared_ptr<VmInterface>>;
+  using VmMap = std::map<VmId, std::unique_ptr<VmInterface>>;
 
   // Returns an iterator to vm with key (|owner_id|, |vm_name|). If no such
   // element exists, tries the former with |owner_id| equal to empty string.
@@ -286,8 +280,6 @@ class Service final {
   // File descriptor for the SIGCHLD events.
   base::ScopedFD signal_fd_;
   std::unique_ptr<base::FileDescriptorWatcher::Controller> watcher_;
-  std::shared_ptr<SigchldHandler> sigchld_handler_ =
-      std::make_shared<SigchldHandler>();
 
   // Connection to the system bus.
   scoped_refptr<dbus::Bus> bus_;
