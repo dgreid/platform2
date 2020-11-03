@@ -527,7 +527,12 @@ $ cros-health-tool diag --action=run_routine --routine=nvme_self_test
 Sample output:
 ```bash
 Progress: 100
-Output: AQAAABAAAAA7AAAAAAAAAA==
+Output: {
+    "resultDetails": {
+        "rawData": "AQAAABAAAAA7AAAAAAAAAA=="
+    }
+}
+
 Status: Passed
 Status message: SelfTest status: Test PASS
 ```

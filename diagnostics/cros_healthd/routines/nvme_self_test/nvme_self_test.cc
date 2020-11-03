@@ -11,6 +11,7 @@
 #include <base/base64.h>
 #include <base/bind.h>
 #include <base/files/file_util.h>
+#include <base/json/json_writer.h>
 #include <base/logging.h>
 #include <base/stl_util.h>
 #include <base/strings/string_number_conversions.h>
@@ -118,15 +119,6 @@ void NvmeSelfTestRoutine::Cancel() {
   debugd_adapter_->StopNvmeSelfTest(result_callback);
 }
 
-void NvmeSelfTestRoutine::UpdateStatus(
-    chromeos::cros_healthd::mojom::DiagnosticRoutineStatusEnum status,
-    uint32_t percent,
-    std::string msg) {
-  status_ = status;
-  percent_ = percent;
-  status_message_ = std::move(msg);
-}
-
 void NvmeSelfTestRoutine::PopulateStatusUpdate(
     mojo_ipc::RoutineUpdate* response, bool include_output) {
   // Request progress info if routine is running with the percentage below 100.
@@ -148,13 +140,16 @@ void NvmeSelfTestRoutine::PopulateStatusUpdate(
   response->routine_update_union->set_noninteractive_update(update.Clone());
   response->progress_percent = percent_;
 
-  if (include_output) {
+  if (include_output && !output_dict_.DictEmpty()) {
     // If routine status is not at completed/cancelled then prints the debugd
     // raw data with output.
     if (status_ != mojo_ipc::DiagnosticRoutineStatusEnum::kPassed &&
         status_ != mojo_ipc::DiagnosticRoutineStatusEnum::kCancelled) {
-      response->output = CreateReadOnlySharedMemoryRegionMojoHandle(
-          "Raw debugd data: " + output_);
+      std::string json;
+      base::JSONWriter::WriteWithOptions(
+          output_dict_, base::JSONWriter::Options::OPTIONS_PRETTY_PRINT, &json);
+      response->output =
+          CreateReadOnlySharedMemoryRegionMojoHandle(base::StringPiece(json));
     }
   }
 }
@@ -178,12 +173,12 @@ void NvmeSelfTestRoutine::OnDebugdNvmeSelfTestStartCallback(
   if (CheckDebugdError(error))
     return;
 
-  output_ = result;
+  ResetOutputDictToValue(result);
 
   // Checks whether self-test has already been launched.
-  if (!base::StartsWith(output_, "Device self-test started",
+  if (!base::StartsWith(result, "Device self-test started",
                         base::CompareCase::SENSITIVE)) {
-    LOG(ERROR) << "self-test failed to start: " << output_;
+    LOG(ERROR) << "self-test failed to start: " << result;
     UpdateStatus(mojo_ipc::DiagnosticRoutineStatusEnum::kError,
                  /*percent=*/100, kNvmeSelfTestRoutineStartError);
     return;
@@ -197,12 +192,12 @@ void NvmeSelfTestRoutine::OnDebugdNvmeSelfTestCancelCallback(
   if (CheckDebugdError(error))
     return;
 
-  output_ = result;
+  ResetOutputDictToValue(result);
 
   // Checks abortion if successful
-  if (!base::StartsWith(output_, "Aborting device self-test operation",
+  if (!base::StartsWith(result, "Aborting device self-test operation",
                         base::CompareCase::SENSITIVE)) {
-    LOG(ERROR) << "self-test abortion failed:" << output_;
+    LOG(ERROR) << "self-test abortion failed:" << result;
     UpdateStatus(mojo_ipc::DiagnosticRoutineStatusEnum::kError,
                  /*percent=*/100, kNvmeSelfTestRoutineAbortionError);
     return;
@@ -227,11 +222,11 @@ void NvmeSelfTestRoutine::OnDebugdResultCallback(const std::string& result,
   if (CheckDebugdError(error))
     return;
 
-  output_ = result;
+  ResetOutputDictToValue(result);
   std::string decoded_output;
 
-  if (!base::Base64Decode(output_, &decoded_output)) {
-    LOG(ERROR) << "Base64 decoding failed. Base64 data: " << output_;
+  if (!base::Base64Decode(result, &decoded_output)) {
+    LOG(ERROR) << "Base64 decoding failed. Base64 data: " << result;
     UpdateStatus(mojo_ipc::DiagnosticRoutineStatusEnum::kError,
                  /*percent=*/100, kNvmeSelfTestRoutineGetProgressFailed);
     return;
@@ -265,6 +260,23 @@ void NvmeSelfTestRoutine::OnDebugdResultCallback(const std::string& result,
     UpdateStatus(mojo_ipc::DiagnosticRoutineStatusEnum::kError,
                  /*percent=*/100, kNvmeSelfTestRoutineGetProgressFailed);
   }
+}
+
+void NvmeSelfTestRoutine::ResetOutputDictToValue(const std::string& value) {
+  base::Value result_dict(base::Value::Type::DICTIONARY);
+  result_dict.SetStringKey("rawData", value);
+  // TODO(crbug/1146080): Replace this with DictClear() once it's supported.
+  output_dict_.RemoveKey("resultDetails");
+  output_dict_.SetKey("resultDetails", std::move(result_dict));
+}
+
+void NvmeSelfTestRoutine::UpdateStatus(
+    chromeos::cros_healthd::mojom::DiagnosticRoutineStatusEnum status,
+    uint32_t percent,
+    std::string msg) {
+  status_ = status;
+  percent_ = percent;
+  status_message_ = std::move(msg);
 }
 
 }  // namespace diagnostics

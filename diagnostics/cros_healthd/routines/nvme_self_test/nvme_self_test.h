@@ -9,6 +9,7 @@
 #include <memory>
 #include <string>
 
+#include <base/values.h>
 #include <brillo/errors/error.h>
 
 #include "diagnostics/common/system/debugd_adapter.h"
@@ -78,6 +79,10 @@ class NvmeSelfTestRoutine final : public DiagnosticRoutine {
                                          brillo::Error* error);
   void OnDebugdResultCallback(const std::string& result, brillo::Error* error);
 
+  // Resets |output_dict_| to clear any previous input, then adds a new
+  // dictionary with the key "rawData" and value |value|.
+  void ResetOutputDictToValue(const std::string& value);
+
   // Update percent_, status_message_, status_ at the same moment in case
   // misinformation occurring.
   void UpdateStatus(
@@ -92,7 +97,7 @@ class NvmeSelfTestRoutine final : public DiagnosticRoutine {
   chromeos::cros_healthd::mojom::DiagnosticRoutineStatusEnum status_ =
       chromeos::cros_healthd::mojom::DiagnosticRoutineStatusEnum::kReady;
   uint32_t percent_ = 0;
-  std::string output_;
+  base::Value output_dict_{base::Value::Type::DICTIONARY};
   std::string status_message_;
 
   base::WeakPtrFactory<NvmeSelfTestRoutine> weak_ptr_routine_{this};
