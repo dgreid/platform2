@@ -97,7 +97,7 @@ bool GetProbeConfigPath(const std::string& probe_config_path_from_cli,
                         std::string* probe_config_path) {
   probe_config_path->clear();
   if (!probe_config_path_from_cli.empty()) {
-    if (IsCrosDebugOn()) {
+    if (!IsCrosDebugOn()) {
       LOG(ERROR) << "Arbitrary ProbeConfig is only allowed with cros_debug=1";
       return false;
     }
