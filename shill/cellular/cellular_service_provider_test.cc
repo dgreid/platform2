@@ -34,10 +34,11 @@ const RpcIdentifier kDBusPath("/org/freedesktop/ModemManager1/Modem/0");
 class CellularServiceProviderTest : public testing::Test {
  public:
   CellularServiceProviderTest()
-      : modem_info_(&control_, &dispatcher_, &metrics_, nullptr),
-        device_info_(modem_info_.manager()),
-        profile_(new NiceMock<MockProfile>(modem_info_.manager())),
-        provider_(modem_info_.manager()) {}
+      : manager_(&control_, &dispatcher_, &metrics_),
+        modem_info_(&control_, &dispatcher_, &metrics_, &manager_),
+        device_info_(&manager_),
+        profile_(new NiceMock<MockProfile>(&manager_)),
+        provider_(&manager_) {}
 
   ~CellularServiceProviderTest() override = default;
 
@@ -99,6 +100,7 @@ class CellularServiceProviderTest : public testing::Test {
   EventDispatcherForTest dispatcher_;
   MockControl control_;
   NiceMock<MockMetrics> metrics_;
+  MockManager manager_;
   MockModemInfo modem_info_;
   NiceMock<MockDeviceInfo> device_info_;
   FakeStore storage_;

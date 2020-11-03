@@ -20,9 +20,11 @@
 #include "shill/cellular/cellular_capability.h"
 #include "shill/cellular/mock_cellular.h"
 #include "shill/cellular/mock_modem_info.h"
-#include "shill/manager.h"
+#include "shill/mock_control.h"
 #include "shill/mock_dbus_properties_proxy.h"
 #include "shill/mock_device_info.h"
+#include "shill/mock_manager.h"
+#include "shill/mock_metrics.h"
 #include "shill/net/mock_rtnl_handler.h"
 #include "shill/net/rtnl_handler.h"
 #include "shill/test_event_dispatcher.h"
@@ -77,8 +79,9 @@ class TestModem : public Modem {
 class ModemTest : public Test {
  public:
   ModemTest()
-      : modem_info_(nullptr, &dispatcher_, nullptr, nullptr),
-        device_info_(modem_info_.manager()),
+      : manager_(&control_, &dispatcher_, &metrics_),
+        modem_info_(&control_, &dispatcher_, &metrics_, &manager_),
+        device_info_(&manager_),
         modem_(new TestModem(kService, kPath, &modem_info_, &rtnl_handler_)) {}
 
   void SetUp() {
@@ -87,8 +90,7 @@ class ModemTest : public Test {
     EXPECT_CALL(rtnl_handler_, GetInterfaceIndex(kLinkName))
         .WillRepeatedly(Return(kTestInterfaceIndex));
 
-    EXPECT_CALL(*modem_info_.mock_manager(), device_info())
-        .WillRepeatedly(Return(&device_info_));
+    EXPECT_CALL(manager_, device_info()).WillRepeatedly(Return(&device_info_));
   }
 
   void TearDown() { modem_.reset(); }
@@ -131,6 +133,9 @@ class ModemTest : public Test {
   }
 
   EventDispatcherForTest dispatcher_;
+  NiceMock<MockControl> control_;
+  MockMetrics metrics_;
+  NiceMock<MockManager> manager_;
   MockModemInfo modem_info_;
   MockDeviceInfo device_info_;
   std::unique_ptr<Modem> modem_;
@@ -262,8 +267,7 @@ TEST_F(ModemTest, CreateDeviceMM1) {
       MM_MODEM_3GPP_REGISTRATION_STATE_HOME);
   properties[MM_DBUS_INTERFACE_MODEM_MODEM3GPP] = modem3gpp_properties;
 
-  EXPECT_CALL(*(modem_info_.mock_control_interface()),
-              CreateDBusPropertiesProxy(kPath, kService))
+  EXPECT_CALL(control_, CreateDBusPropertiesProxy(kPath, kService))
       .WillOnce(Return(
           ByMove(std::make_unique<NiceMock<MockDBusPropertiesProxy>>())));
   modem_->CreateDeviceMM1(properties);

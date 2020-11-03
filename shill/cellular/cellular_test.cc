@@ -48,6 +48,8 @@ extern "C" {
 #include "shill/mock_dbus_properties_proxy.h"
 #include "shill/mock_device_info.h"
 #include "shill/mock_external_task.h"
+#include "shill/mock_manager.h"
+#include "shill/mock_metrics.h"
 #include "shill/mock_ppp_device.h"
 #include "shill/mock_ppp_device_factory.h"
 #include "shill/mock_process_manager.h"
@@ -139,8 +141,9 @@ class CellularTest : public testing::TestWithParam<Cellular::Type> {
         kServingOperatorCountry("ca"),
         kServingOperatorName("ServingOperatorName"),
         control_interface_(this),
-        modem_info_(&control_interface_, &dispatcher_, &metrics_, nullptr),
-        device_info_(modem_info_.manager()),
+        manager_(&control_interface_, &dispatcher_, &metrics_),
+        modem_info_(&control_interface_, &dispatcher_, &metrics_, &manager_),
+        device_info_(&manager_),
         dhcp_config_(new MockDHCPConfig(modem_info_.control_interface(),
                                         kTestDeviceName)),
         mock_home_provider_info_(nullptr),
@@ -152,7 +155,7 @@ class CellularTest : public testing::TestWithParam<Cellular::Type> {
                              GetParam(),
                              kDBusService,
                              kDBusPath)),
-        profile_(new NiceMock<MockProfile>(modem_info_.manager())) {
+        profile_(new NiceMock<MockProfile>(&manager_)) {
     cellular_service_provider_.set_profile_for_testing(profile_);
     PopulateProxies();
     metrics_.RegisterDevice(device_->interface_index(), Technology::kCellular);
@@ -162,14 +165,12 @@ class CellularTest : public testing::TestWithParam<Cellular::Type> {
     static_cast<Device*>(device_.get())->rtnl_handler_ = &rtnl_handler_;
     device_->set_dhcp_provider(&dhcp_provider_);
     device_->process_manager_ = &process_manager_;
-    EXPECT_CALL(*modem_info_.mock_manager(), device_info())
-        .WillRepeatedly(Return(&device_info_));
-    EXPECT_CALL(*modem_info_.mock_manager(), DeregisterService(_))
-        .Times(AnyNumber());
+    EXPECT_CALL(manager_, device_info()).WillRepeatedly(Return(&device_info_));
+    EXPECT_CALL(manager_, DeregisterService(_)).Times(AnyNumber());
     EXPECT_CALL(*modem_info_.mock_pending_activation_store(),
                 GetActivationState(_, _))
         .WillRepeatedly(Return(PendingActivationStore::kStateActivated));
-    EXPECT_CALL(*modem_info_.mock_manager(), cellular_service_provider())
+    EXPECT_CALL(manager_, cellular_service_provider())
         .WillRepeatedly(Return(&cellular_service_provider_));
     EXPECT_CALL(*profile_, GetConstStorage())
         .WillRepeatedly(Return(&profile_storage_));
@@ -320,7 +321,7 @@ class CellularTest : public testing::TestWithParam<Cellular::Type> {
     const char kInterfaceName[] = "fake-ppp-device";
     const int kInterfaceIndex = -1;
     auto mock_ppp_device = base::MakeRefCounted<MockPPPDevice>(
-        modem_info_.manager(), kInterfaceName, kInterfaceIndex);
+        &manager_, kInterfaceName, kInterfaceIndex);
     device_->ppp_device_ = mock_ppp_device;
     device_->state_ = Cellular::kStateConnected;
   }
@@ -340,8 +341,7 @@ class CellularTest : public testing::TestWithParam<Cellular::Type> {
     EXPECT_CALL(*dbus_properties_proxy_, GetAll(_))
         .WillRepeatedly(Return(KeyValueStore()));
     EXPECT_CALL(*mm1_proxy_, set_state_changed_callback(_)).Times(AnyNumber());
-    EXPECT_CALL(*modem_info_.mock_manager(), UpdateEnabledTechnologies())
-        .Times(AnyNumber());
+    EXPECT_CALL(manager_, UpdateEnabledTechnologies()).Times(AnyNumber());
     EXPECT_CALL(*static_cast<DeviceMockAdaptor*>(device_->adaptor()),
                 EmitBoolChanged(_, _))
         .Times(AnyNumber());
@@ -465,15 +465,13 @@ class CellularTest : public testing::TestWithParam<Cellular::Type> {
   // Different tests simulate a cellular service being set using a real /mock
   // service.
   CellularService* SetService() {
-    device_->service_ =
-        new CellularService(modem_info_.manager(), device_->imsi(),
-                            device_->iccid(), device_->GetSimCardId());
+    device_->service_ = new CellularService(
+        &manager_, device_->imsi(), device_->iccid(), device_->GetSimCardId());
     device_->service_->SetDevice(device_.get());
     return device_->service_.get();
   }
   MockCellularService* SetMockService() {
-    device_->service_ =
-        new NiceMock<MockCellularService>(modem_info_.manager(), device_);
+    device_->service_ = new NiceMock<MockCellularService>(&manager_, device_);
     return static_cast<MockCellularService*>(device_->service_.get());
   }
 
@@ -488,6 +486,7 @@ class CellularTest : public testing::TestWithParam<Cellular::Type> {
 
   EventDispatcherForTest dispatcher_;
   TestControl control_interface_;
+  NiceMock<MockManager> manager_;
   NiceMock<MockMetrics> metrics_;
   MockModemInfo modem_info_;
   NiceMock<MockDeviceInfo> device_info_;
@@ -507,7 +506,7 @@ class CellularTest : public testing::TestWithParam<Cellular::Type> {
   MockMobileOperatorInfo* mock_home_provider_info_;
   MockMobileOperatorInfo* mock_serving_operator_info_;
   CellularRefPtr device_;
-  CellularServiceProvider cellular_service_provider_{modem_info_.manager()};
+  CellularServiceProvider cellular_service_provider_{&manager_};
   FakeStore profile_storage_;
   scoped_refptr<NiceMock<MockProfile>> profile_;
 };
@@ -650,7 +649,7 @@ TEST_P(CellularTest, StartGsmRegister) {
   EXPECT_CALL(*mock_serving_operator_info_, UpdateMCCMNC(_));
   EXPECT_CALL(*mock_serving_operator_info_, UpdateOperatorName(_));
   EXPECT_CALL(*this, TestCallback(IsSuccess()));
-  EXPECT_CALL(*modem_info_.mock_manager(), RegisterService(_));
+  EXPECT_CALL(manager_, RegisterService(_));
   AllowCreateGsmCardProxyFromFactory();
 
   Error error;
@@ -700,7 +699,7 @@ TEST_P(CellularTest, StartLinked) {
   EXPECT_CALL(dhcp_provider_, CreateIPv4Config(kTestDeviceName, _, _, _))
       .WillOnce(Return(dhcp_config_));
   EXPECT_CALL(*dhcp_config_, RequestIP()).WillOnce(Return(true));
-  EXPECT_CALL(*modem_info_.mock_manager(), UpdateService(_)).Times(3);
+  EXPECT_CALL(manager_, UpdateService(_)).Times(3);
   Error error;
   device_->Start(&error, Bind(&CellularTest::TestCallback, Unretained(this)));
   EXPECT_TRUE(error.IsSuccess());
@@ -1110,7 +1109,7 @@ TEST_P(CellularTest, ConnectFailureNoService) {
   EXPECT_CALL(*mm1_simple_proxy_,
               Connect(_, _, _, CellularCapability::kTimeoutConnect))
       .WillOnce(Invoke(this, &CellularTest::InvokeConnectFailNoService));
-  EXPECT_CALL(*modem_info_.mock_manager(), UpdateService(_));
+  EXPECT_CALL(manager_, UpdateService(_));
   GetCapability3gpp()->modem_simple_proxy_ = std::move(mm1_simple_proxy_);
   Error error;
   device_->Connect(&error);
@@ -1124,7 +1123,7 @@ TEST_P(CellularTest, ConnectSuccessNoService) {
   EXPECT_CALL(*mm1_simple_proxy_,
               Connect(_, _, _, CellularCapability::kTimeoutConnect))
       .WillOnce(Invoke(this, &CellularTest::InvokeConnectSuccessNoService));
-  EXPECT_CALL(*modem_info_.mock_manager(), UpdateService(_));
+  EXPECT_CALL(manager_, UpdateService(_));
   GetCapability3gpp()->modem_simple_proxy_ = std::move(mm1_simple_proxy_);
   Error error;
   device_->Connect(&error);
@@ -1163,7 +1162,7 @@ TEST_P(CellularTest, ModemStateChangeEnable) {
           Invoke(this, &CellularTest::InvokeGetRegistrationStateUnregistered));
   EXPECT_CALL(*cdma_proxy_, GetSignalQuality(nullptr, _, _))
       .WillOnce(Invoke(this, &CellularTest::InvokeGetSignalQuality));
-  EXPECT_CALL(*modem_info_.mock_manager(), UpdateEnabledTechnologies());
+  EXPECT_CALL(manager_, UpdateEnabledTechnologies());
   device_->state_ = Cellular::kStateDisabled;
   device_->set_modem_state(Cellular::kModemStateDisabled);
 
@@ -1186,7 +1185,7 @@ TEST_P(CellularTest, ModemStateChangeDisable) {
       .WillOnce(Invoke(this, &CellularTest::InvokeDisconnect));
   EXPECT_CALL(*proxy_, Enable(false, _, _, CellularCapability::kTimeoutEnable))
       .WillOnce(Invoke(this, &CellularTest::InvokeEnable));
-  EXPECT_CALL(*modem_info_.mock_manager(), UpdateEnabledTechnologies());
+  EXPECT_CALL(manager_, UpdateEnabledTechnologies());
   device_->enabled_ = true;
   device_->enabled_pending_ = true;
   device_->state_ = Cellular::kStateEnabled;
@@ -1289,7 +1288,7 @@ TEST_P(CellularTest, IsRoamingAllowedOrRequired) {
 
 TEST_P(CellularTest, SetAllowRoaming) {
   EXPECT_FALSE(device_->allow_roaming_);
-  EXPECT_CALL(*modem_info_.mock_manager(), UpdateDevice(_));
+  EXPECT_CALL(manager_, UpdateDevice(_));
   Error error;
   device_->SetAllowRoaming(true, &error);
   EXPECT_TRUE(error.IsSuccess());
@@ -1394,8 +1393,7 @@ TEST_P(CellularTest, Notify) {
   const int kInterfaceIndex = 1;
   scoped_refptr<MockPPPDevice> ppp_device;
   map<string, string> ppp_config;
-  ppp_device =
-      new MockPPPDevice(modem_info_.manager(), kInterfaceName, kInterfaceIndex);
+  ppp_device = new MockPPPDevice(&manager_, kInterfaceName, kInterfaceIndex);
   ppp_config[kPPPInterfaceName] = kInterfaceName;
   EXPECT_CALL(device_info_, GetIndex(kInterfaceName))
       .WillOnce(Return(kInterfaceIndex));
@@ -1430,8 +1428,7 @@ TEST_P(CellularTest, Notify) {
   const int kInterfaceIndex2 = 2;
   scoped_refptr<MockPPPDevice> ppp_device2;
   map<string, string> ppp_config2;
-  ppp_device2 = new MockPPPDevice(modem_info_.manager(), kInterfaceName2,
-                                  kInterfaceIndex2);
+  ppp_device2 = new MockPPPDevice(&manager_, kInterfaceName2, kInterfaceIndex2);
   ppp_config2[kPPPInterfaceName] = kInterfaceName2;
   EXPECT_CALL(device_info_, GetIndex(kInterfaceName2))
       .WillOnce(Return(kInterfaceIndex2));
@@ -1607,7 +1604,7 @@ TEST_P(CellularTest, DropConnection) {
 
 TEST_P(CellularTest, DropConnectionPPP) {
   scoped_refptr<MockPPPDevice> ppp_device(
-      new MockPPPDevice(modem_info_.manager(), "fake_ppp0", -1));
+      new MockPPPDevice(&manager_, "fake_ppp0", -1));
   EXPECT_CALL(*ppp_device, DropConnection());
   device_->ppp_device_ = ppp_device;
   device_->DropConnection();
@@ -1631,7 +1628,7 @@ TEST_P(CellularTest, ChangeServiceState) {
 TEST_P(CellularTest, ChangeServiceStatePPP) {
   MockCellularService* service(SetMockService());
   scoped_refptr<MockPPPDevice> ppp_device(
-      new MockPPPDevice(modem_info_.manager(), "fake_ppp0", -1));
+      new MockPPPDevice(&manager_, "fake_ppp0", -1));
   EXPECT_CALL(*ppp_device, SetServiceState(_));
   EXPECT_CALL(*ppp_device, SetServiceFailure(_));
   EXPECT_CALL(*ppp_device, SetServiceFailureSilent(_));
@@ -1711,7 +1708,7 @@ TEST_P(CellularTest, OnAfterResumeDisableInProgressWantDisabled) {
   EXPECT_EQ(Cellular::kStateEnabled, device_->state_);
 
   // Start disable.
-  EXPECT_CALL(*modem_info_.mock_manager(), UpdateDevice(_));
+  EXPECT_CALL(manager_, UpdateDevice(_));
   device_->SetEnabledPersistent(false, &error, ResultCallback());
   EXPECT_FALSE(device_->running());                     // changes immediately
   EXPECT_FALSE(device_->enabled_persistent());          // changes immediately

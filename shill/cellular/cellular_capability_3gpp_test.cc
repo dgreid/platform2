@@ -36,6 +36,8 @@
 #include "shill/mock_control.h"
 #include "shill/mock_dbus_properties_proxy.h"
 #include "shill/mock_event_dispatcher.h"
+#include "shill/mock_manager.h"
+#include "shill/mock_metrics.h"
 #include "shill/mock_profile.h"
 #include "shill/net/mock_rtnl_handler.h"
 #include "shill/test_event_dispatcher.h"
@@ -104,7 +106,8 @@ class CellularCapability3gppTest : public testing::TestWithParam<string> {
   explicit CellularCapability3gppTest(EventDispatcher* dispatcher)
       : dispatcher_(dispatcher),
         control_interface_(this),
-        modem_info_(&control_interface_, dispatcher, nullptr, nullptr),
+        manager_(&control_interface_, dispatcher, &metrics_),
+        modem_info_(&control_interface_, dispatcher, &metrics_, &manager_),
         modem_3gpp_proxy_(new NiceMock<mm1::MockModemModem3gppProxy>()),
         modem_cdma_proxy_(new mm1::MockModemModemCdmaProxy()),
         modem_location_proxy_(new mm1::MockModemLocationProxy()),
@@ -121,11 +124,11 @@ class CellularCapability3gppTest : public testing::TestWithParam<string> {
                                Cellular::kType3gpp,
                                "",
                                RpcIdentifier(""))),
-        service_(new MockCellularService(modem_info_.manager(), cellular_)),
+        service_(new MockCellularService(&manager_, cellular_)),
         mock_home_provider_info_(nullptr),
         mock_serving_operator_info_(nullptr) {
-    modem_info_.metrics()->RegisterDevice(cellular_->interface_index(),
-                                          Technology::kCellular);
+    metrics_.RegisterDevice(cellular_->interface_index(),
+                            Technology::kCellular);
   }
 
   ~CellularCapability3gppTest() override {
@@ -145,7 +148,7 @@ class CellularCapability3gppTest : public testing::TestWithParam<string> {
     ON_CALL(*modem_info_.mock_pending_activation_store(),
             GetActivationState(PendingActivationStore::kIdentifierICCID, _))
         .WillByDefault(Return(PendingActivationStore::kStateUnknown));
-    EXPECT_CALL(*modem_info_.mock_manager(), cellular_service_provider())
+    EXPECT_CALL(manager_, cellular_service_provider())
         .WillRepeatedly(Return(&cellular_service_provider_));
 
     SetMockMobileOperatorInfoObjects();
@@ -160,8 +163,8 @@ class CellularCapability3gppTest : public testing::TestWithParam<string> {
 
     // Simulate all the side-effects of Cellular::CreateService
     auto service =
-        new CellularService(modem_info_.manager(), cellular_->imsi(),
-                            cellular_->iccid(), cellular_->GetSimCardId());
+        new CellularService(&manager_, cellular_->imsi(), cellular_->iccid(),
+                            cellular_->GetSimCardId());
     service->SetFriendlyName(kFriendlyServiceName);
 
     Stringmap serving_operator;
@@ -360,6 +363,8 @@ class CellularCapability3gppTest : public testing::TestWithParam<string> {
 
   EventDispatcher* dispatcher_;
   TestControl control_interface_;
+  NiceMock<MockMetrics> metrics_;
+  NiceMock<MockManager> manager_;
   MockModemInfo modem_info_;
   unique_ptr<NiceMock<mm1::MockModemModem3gppProxy>> modem_3gpp_proxy_;
   unique_ptr<mm1::MockModemModemCdmaProxy> modem_cdma_proxy_;
@@ -372,7 +377,7 @@ class CellularCapability3gppTest : public testing::TestWithParam<string> {
   DeviceMockAdaptor* device_adaptor_;   // Owned by |cellular_|.
   CellularRefPtr cellular_;
   MockCellularService* service_;  // owned by cellular_
-  CellularServiceProvider cellular_service_provider_{modem_info_.manager()};
+  CellularServiceProvider cellular_service_provider_{&manager_};
 
   // saved for testing connect operations.
   RpcIdentifierCallback connect_callback_;
@@ -575,7 +580,7 @@ TEST_F(CellularCapability3gppMainTest, TerminationAction) {
 
   EXPECT_EQ(Cellular::kStateDisabled, cellular_->state());
   EXPECT_EQ(Cellular::kModemStateUnknown, cellular_->modem_state());
-  EXPECT_TRUE(modem_info_.manager()->termination_actions_.IsEmpty());
+  EXPECT_TRUE(manager_.termination_actions_.IsEmpty());
 
   // Here we mimic the modem state change from ModemManager. When the modem is
   // enabled, a termination action should be added.
@@ -583,10 +588,10 @@ TEST_F(CellularCapability3gppMainTest, TerminationAction) {
   dispatcher_.DispatchPendingEvents();
   EXPECT_EQ(Cellular::kStateEnabled, cellular_->state());
   EXPECT_EQ(Cellular::kModemStateEnabled, cellular_->modem_state());
-  EXPECT_FALSE(modem_info_.manager()->termination_actions_.IsEmpty());
+  EXPECT_FALSE(manager_.termination_actions_.IsEmpty());
 
   // Running the termination action should disable the modem.
-  modem_info_.manager()->RunTerminationActions(
+  manager_.RunTerminationActions(
       Bind(&CellularCapability3gppMainTest::TestCallback, Unretained(this)));
   dispatcher_.DispatchPendingEvents();
   // Here we mimic the modem state change from ModemManager. When the modem is
@@ -595,10 +600,10 @@ TEST_F(CellularCapability3gppMainTest, TerminationAction) {
   dispatcher_.DispatchPendingEvents();
   EXPECT_EQ(Cellular::kStateDisabled, cellular_->state());
   EXPECT_EQ(Cellular::kModemStateDisabled, cellular_->modem_state());
-  EXPECT_TRUE(modem_info_.manager()->termination_actions_.IsEmpty());
+  EXPECT_TRUE(manager_.termination_actions_.IsEmpty());
 
   // No termination action should be called here.
-  modem_info_.manager()->RunTerminationActions(
+  manager_.RunTerminationActions(
       Bind(&CellularCapability3gppMainTest::TestCallback, Unretained(this)));
   dispatcher_.DispatchPendingEvents();
 }
@@ -626,7 +631,7 @@ TEST_F(CellularCapability3gppMainTest, TerminationActionRemovedByStopModem) {
 
   EXPECT_EQ(Cellular::kStateDisabled, cellular_->state());
   EXPECT_EQ(Cellular::kModemStateUnknown, cellular_->modem_state());
-  EXPECT_TRUE(modem_info_.manager()->termination_actions_.IsEmpty());
+  EXPECT_TRUE(manager_.termination_actions_.IsEmpty());
 
   // Here we mimic the modem state change from ModemManager. When the modem is
   // enabled, a termination action should be added.
@@ -634,17 +639,17 @@ TEST_F(CellularCapability3gppMainTest, TerminationActionRemovedByStopModem) {
   dispatcher_.DispatchPendingEvents();
   EXPECT_EQ(Cellular::kStateEnabled, cellular_->state());
   EXPECT_EQ(Cellular::kModemStateEnabled, cellular_->modem_state());
-  EXPECT_FALSE(modem_info_.manager()->termination_actions_.IsEmpty());
+  EXPECT_FALSE(manager_.termination_actions_.IsEmpty());
 
   // Verify that the termination action is removed when the modem is disabled
   // not due to a suspend request.
   cellular_->SetEnabled(false);
   dispatcher_.DispatchPendingEvents();
   EXPECT_EQ(Cellular::kStateDisabled, cellular_->state());
-  EXPECT_TRUE(modem_info_.manager()->termination_actions_.IsEmpty());
+  EXPECT_TRUE(manager_.termination_actions_.IsEmpty());
 
   // No termination action should be called here.
-  modem_info_.manager()->RunTerminationActions(
+  manager_.RunTerminationActions(
       Bind(&CellularCapability3gppMainTest::TestCallback, Unretained(this)));
   dispatcher_.DispatchPendingEvents();
 }
@@ -879,10 +884,8 @@ TEST_F(CellularCapability3gppMainTest, UpdateRegistrationState) {
             capability_->registration_state_);
 
   // Home --> Searching --> Home should never see Searching.
-  EXPECT_CALL(*(modem_info_.mock_metrics()),
-              Notify3GPPRegistrationDelayedDropPosted());
-  EXPECT_CALL(*(modem_info_.mock_metrics()),
-              Notify3GPPRegistrationDelayedDropCanceled());
+  EXPECT_CALL(metrics_, Notify3GPPRegistrationDelayedDropPosted());
+  EXPECT_CALL(metrics_, Notify3GPPRegistrationDelayedDropCanceled());
 
   capability_->On3gppRegistrationChanged(MM_MODEM_3GPP_REGISTRATION_STATE_HOME,
                                          home_provider, ota_name);
@@ -899,11 +902,10 @@ TEST_F(CellularCapability3gppMainTest, UpdateRegistrationState) {
   dispatcher_.DispatchPendingEvents();
   EXPECT_EQ(MM_MODEM_3GPP_REGISTRATION_STATE_HOME,
             capability_->registration_state_);
-  Mock::VerifyAndClearExpectations(modem_info_.mock_metrics());
+  Mock::VerifyAndClearExpectations(&metrics_);
 
   // Home --> Searching --> wait till dispatch should see Searching
-  EXPECT_CALL(*(modem_info_.mock_metrics()),
-              Notify3GPPRegistrationDelayedDropPosted());
+  EXPECT_CALL(metrics_, Notify3GPPRegistrationDelayedDropPosted());
   capability_->On3gppRegistrationChanged(MM_MODEM_3GPP_REGISTRATION_STATE_HOME,
                                          home_provider, ota_name);
   EXPECT_EQ(MM_MODEM_3GPP_REGISTRATION_STATE_HOME,
@@ -915,13 +917,12 @@ TEST_F(CellularCapability3gppMainTest, UpdateRegistrationState) {
   dispatcher_.DispatchPendingEvents();
   EXPECT_EQ(MM_MODEM_3GPP_REGISTRATION_STATE_SEARCHING,
             capability_->registration_state_);
-  Mock::VerifyAndClearExpectations(modem_info_.mock_metrics());
+  Mock::VerifyAndClearExpectations(&metrics_);
 
   // Home --> Searching --> Searching --> wait till dispatch should see
   // Searching *and* the first callback should be cancelled.
   EXPECT_CALL(*this, DummyCallback()).Times(0);
-  EXPECT_CALL(*(modem_info_.mock_metrics()),
-              Notify3GPPRegistrationDelayedDropPosted());
+  EXPECT_CALL(metrics_, Notify3GPPRegistrationDelayedDropPosted());
 
   capability_->On3gppRegistrationChanged(MM_MODEM_3GPP_REGISTRATION_STATE_HOME,
                                          home_provider, ota_name);

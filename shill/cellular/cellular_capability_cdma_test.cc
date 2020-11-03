@@ -28,6 +28,7 @@
 #include "shill/mock_adaptors.h"
 #include "shill/mock_control.h"
 #include "shill/mock_dbus_properties_proxy.h"
+#include "shill/mock_event_dispatcher.h"
 #include "shill/mock_manager.h"
 #include "shill/mock_metrics.h"
 #include "shill/test_event_dispatcher.h"
@@ -48,9 +49,10 @@ class CellularCapabilityCdmaTest : public testing::Test {
   explicit CellularCapabilityCdmaTest(EventDispatcher* dispatcher)
       : dispatcher_(dispatcher),
         control_interface_(this),
+        manager_(&control_interface_, dispatcher, &metrics_),
         capability_(nullptr),
         device_adaptor_(nullptr),
-        modem_info_(&control_interface_, dispatcher, nullptr, nullptr),
+        modem_info_(&control_interface_, dispatcher, &metrics_, &manager_),
         modem_3gpp_proxy_(new mm1::MockModemModem3gppProxy()),
         modem_cdma_proxy_(new mm1::MockModemModemCdmaProxy()),
         modem_proxy_(new mm1::MockModemProxy()),
@@ -64,7 +66,7 @@ class CellularCapabilityCdmaTest : public testing::Test {
                                Cellular::kTypeCdma,
                                "",
                                RpcIdentifier(""))),
-        service_(new MockCellularService(modem_info_.manager(), cellular_)),
+        service_(new MockCellularService(&manager_, cellular_)),
         mock_home_provider_info_(nullptr),
         mock_serving_operator_info_(nullptr) {}
 
@@ -84,8 +86,8 @@ class CellularCapabilityCdmaTest : public testing::Test {
 
   void SetService() {
     cellular_->service_ =
-        new CellularService(modem_info_.manager(), cellular_->imsi(),
-                            cellular_->iccid(), cellular_->GetSimCardId());
+        new CellularService(&manager_, cellular_->imsi(), cellular_->iccid(),
+                            cellular_->GetSimCardId());
   }
 
   void SetMockMobileOperatorInfoObjects() {
@@ -152,6 +154,8 @@ class CellularCapabilityCdmaTest : public testing::Test {
 
   EventDispatcher* dispatcher_;
   TestControl control_interface_;
+  MockMetrics metrics_;
+  NiceMock<MockManager> manager_;
   CellularCapabilityCdma* capability_;
   NiceMock<DeviceMockAdaptor>* device_adaptor_;
   MockModemInfo modem_info_;
@@ -179,16 +183,11 @@ const char CellularCapabilityCdmaTest::kMeid[] = "11111111111111";
 
 class CellularCapabilityCdmaMainTest : public CellularCapabilityCdmaTest {
  public:
-  CellularCapabilityCdmaMainTest() : CellularCapabilityCdmaTest(&dispatcher_) {}
+  CellularCapabilityCdmaMainTest()
+      : CellularCapabilityCdmaTest(&event_dispatcher_) {}
 
  private:
-  EventDispatcherForTest dispatcher_;
-};
-
-class CellularCapabilityCdmaDispatcherTest : public CellularCapabilityCdmaTest {
- public:
-  CellularCapabilityCdmaDispatcherTest()
-      : CellularCapabilityCdmaTest(nullptr) {}
+  EventDispatcherForTest event_dispatcher_;
 };
 
 TEST_F(CellularCapabilityCdmaMainTest, PropertiesChanged) {
@@ -511,6 +510,15 @@ TEST_F(CellularCapabilityCdmaMainTest, SetupConnectProperties) {
   EXPECT_TRUE(map.properties().empty());
 }
 
+class CellularCapabilityCdmaDispatcherTest : public CellularCapabilityCdmaTest {
+ public:
+  CellularCapabilityCdmaDispatcherTest()
+      : CellularCapabilityCdmaTest(&mock_dispatcher_) {}
+
+ protected:
+  MockEventDispatcher mock_dispatcher_;
+};
+
 TEST_F(CellularCapabilityCdmaDispatcherTest, UpdatePendingActivationState) {
   capability_->activation_state_ = MM_MODEM_CDMA_ACTIVATION_STATE_ACTIVATED;
   EXPECT_CALL(*modem_info_.mock_pending_activation_store(), RemoveEntry(_, _))
@@ -518,11 +526,10 @@ TEST_F(CellularCapabilityCdmaDispatcherTest, UpdatePendingActivationState) {
   EXPECT_CALL(*modem_info_.mock_pending_activation_store(),
               GetActivationState(_, _))
       .Times(0);
-  EXPECT_CALL(*modem_info_.mock_dispatcher(), PostDelayedTask(_, _, 0))
-      .Times(0);
+  EXPECT_CALL(mock_dispatcher_, PostDelayedTask(_, _, 0)).Times(0);
   capability_->UpdatePendingActivationState();
   Mock::VerifyAndClearExpectations(modem_info_.mock_pending_activation_store());
-  Mock::VerifyAndClearExpectations(modem_info_.mock_dispatcher());
+  Mock::VerifyAndClearExpectations(dispatcher_);
 
   capability_->activation_state_ = MM_MODEM_CDMA_ACTIVATION_STATE_ACTIVATING;
   EXPECT_CALL(*modem_info_.mock_pending_activation_store(), RemoveEntry(_, _))
@@ -531,11 +538,10 @@ TEST_F(CellularCapabilityCdmaDispatcherTest, UpdatePendingActivationState) {
               GetActivationState(_, _))
       .Times(2)
       .WillRepeatedly(Return(PendingActivationStore::kStateUnknown));
-  EXPECT_CALL(*modem_info_.mock_dispatcher(), PostDelayedTask(_, _, 0))
-      .Times(0);
+  EXPECT_CALL(mock_dispatcher_, PostDelayedTask(_, _, 0)).Times(0);
   capability_->UpdatePendingActivationState();
   Mock::VerifyAndClearExpectations(modem_info_.mock_pending_activation_store());
-  Mock::VerifyAndClearExpectations(modem_info_.mock_dispatcher());
+  Mock::VerifyAndClearExpectations(dispatcher_);
 
   capability_->activation_state_ = MM_MODEM_CDMA_ACTIVATION_STATE_NOT_ACTIVATED;
   EXPECT_CALL(*modem_info_.mock_pending_activation_store(), RemoveEntry(_, _))
@@ -544,11 +550,10 @@ TEST_F(CellularCapabilityCdmaDispatcherTest, UpdatePendingActivationState) {
               GetActivationState(_, _))
       .Times(2)
       .WillRepeatedly(Return(PendingActivationStore::kStatePending));
-  EXPECT_CALL(*modem_info_.mock_dispatcher(), PostDelayedTask(_, _, 0))
-      .Times(0);
+  EXPECT_CALL(mock_dispatcher_, PostDelayedTask(_, _, 0)).Times(0);
   capability_->UpdatePendingActivationState();
   Mock::VerifyAndClearExpectations(modem_info_.mock_pending_activation_store());
-  Mock::VerifyAndClearExpectations(modem_info_.mock_dispatcher());
+  Mock::VerifyAndClearExpectations(dispatcher_);
 
   EXPECT_CALL(*modem_info_.mock_pending_activation_store(), RemoveEntry(_, _))
       .Times(0);
@@ -556,11 +561,10 @@ TEST_F(CellularCapabilityCdmaDispatcherTest, UpdatePendingActivationState) {
               GetActivationState(_, _))
       .Times(2)
       .WillRepeatedly(Return(PendingActivationStore::kStateFailureRetry));
-  EXPECT_CALL(*modem_info_.mock_dispatcher(), PostDelayedTask(_, _, 0))
-      .Times(1);
+  EXPECT_CALL(mock_dispatcher_, PostDelayedTask(_, _, 0)).Times(1);
   capability_->UpdatePendingActivationState();
   Mock::VerifyAndClearExpectations(modem_info_.mock_pending_activation_store());
-  Mock::VerifyAndClearExpectations(modem_info_.mock_dispatcher());
+  Mock::VerifyAndClearExpectations(dispatcher_);
 
   EXPECT_CALL(*modem_info_.mock_pending_activation_store(), RemoveEntry(_, _))
       .Times(0);
@@ -571,12 +575,11 @@ TEST_F(CellularCapabilityCdmaDispatcherTest, UpdatePendingActivationState) {
       .WillOnce(Return(PendingActivationStore::kStateActivated))
       .WillOnce(Return(PendingActivationStore::kStateUnknown))
       .WillOnce(Return(PendingActivationStore::kStateUnknown));
-  EXPECT_CALL(*modem_info_.mock_dispatcher(), PostDelayedTask(_, _, 0))
-      .Times(0);
+  EXPECT_CALL(mock_dispatcher_, PostDelayedTask(_, _, 0)).Times(0);
   capability_->UpdatePendingActivationState();
   capability_->UpdatePendingActivationState();
   Mock::VerifyAndClearExpectations(modem_info_.mock_pending_activation_store());
-  Mock::VerifyAndClearExpectations(modem_info_.mock_dispatcher());
+  Mock::VerifyAndClearExpectations(dispatcher_);
 }
 
 }  // namespace shill

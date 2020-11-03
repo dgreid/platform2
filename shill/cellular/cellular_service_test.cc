@@ -13,6 +13,9 @@
 #include "shill/cellular/mock_modem_info.h"
 #include "shill/fake_store.h"
 #include "shill/mock_adaptors.h"
+#include "shill/mock_control.h"
+#include "shill/mock_manager.h"
+#include "shill/mock_metrics.h"
 #include "shill/mock_profile.h"
 #include "shill/service_property_change_test.h"
 
@@ -33,7 +36,8 @@ const char kIccid[] = "1234567890000";
 class CellularServiceTest : public testing::Test {
  public:
   CellularServiceTest()
-      : modem_info_(nullptr, &dispatcher_, nullptr, nullptr),
+      : manager_(&control_, &dispatcher_, &metrics_),
+        modem_info_(&control_, &dispatcher_, &metrics_, &manager_),
         adaptor_(nullptr) {
     Service::SetNextSerialNumberForTesting(0);
   }
@@ -41,15 +45,14 @@ class CellularServiceTest : public testing::Test {
 
   void SetUp() override {
     // Many tests set service properties which call Manager.UpdateService().
-    EXPECT_CALL(*modem_info_.mock_manager(), UpdateService(_))
-        .Times(AnyNumber());
+    EXPECT_CALL(manager_, UpdateService(_)).Times(AnyNumber());
     device_ = new MockCellular(&modem_info_, "usb0", kAddress, 3,
                                Cellular::kTypeCdma, "", RpcIdentifier(""));
     // CellularService expects an IMSI and SIM ID be set in the Device.
     device_->set_imsi(kImsi);
     device_->set_iccid(kIccid);
-    service_ = new CellularService(modem_info_.manager(), kImsi, kIccid,
-                                   device_->GetSimCardId());
+    service_ =
+        new CellularService(&manager_, kImsi, kIccid, device_->GetSimCardId());
     service_->SetDevice(device_.get());
     adaptor_ = static_cast<ServiceMockAdaptor*>(service_->adaptor());
 
@@ -72,6 +75,9 @@ class CellularServiceTest : public testing::Test {
   }
 
   EventDispatcher dispatcher_;
+  MockControl control_;
+  MockMetrics metrics_;
+  NiceMock<MockManager> manager_;
   MockModemInfo modem_info_;
   scoped_refptr<MockCellular> device_;
   CellularServiceRefPtr service_;
@@ -166,7 +172,7 @@ TEST_F(CellularServiceTest, SetUsageURL) {
 TEST_F(CellularServiceTest, SetApn) {
   static const char kApn[] = "TheAPN";
   static const char kUsername[] = "commander.data";
-  ProfileRefPtr profile(new NiceMock<MockProfile>(modem_info_.manager()));
+  ProfileRefPtr profile(new NiceMock<MockProfile>(&manager_));
   service_->set_profile(profile);
   Error error;
   Stringmap testapn;
@@ -188,7 +194,7 @@ TEST_F(CellularServiceTest, SetApn) {
 TEST_F(CellularServiceTest, ClearApn) {
   static const char kApn[] = "TheAPN";
   static const char kUsername[] = "commander.data";
-  ProfileRefPtr profile(new NiceMock<MockProfile>(modem_info_.manager()));
+  ProfileRefPtr profile(new NiceMock<MockProfile>(&manager_));
   service_->set_profile(profile);
   Error error;
   // Set up an APN to make sure that it later gets cleared.
@@ -216,7 +222,7 @@ TEST_F(CellularServiceTest, ClearApn) {
 TEST_F(CellularServiceTest, LastGoodApn) {
   static const char kApn[] = "TheAPN";
   static const char kUsername[] = "commander.data";
-  ProfileRefPtr profile(new NiceMock<MockProfile>(modem_info_.manager()));
+  ProfileRefPtr profile(new NiceMock<MockProfile>(&manager_));
   service_->set_profile(profile);
   Stringmap testapn;
   testapn[kApnProperty] = kApn;
@@ -245,7 +251,7 @@ TEST_F(CellularServiceTest, LastGoodApn) {
 
 TEST_F(CellularServiceTest, IsAutoConnectable) {
   // This test assumes AutoConnect is not disabled by policy.
-  EXPECT_CALL(*modem_info_.mock_manager(), IsTechnologyAutoConnectDisabled(_))
+  EXPECT_CALL(manager_, IsTechnologyAutoConnectDisabled(_))
       .WillRepeatedly(Return(false));
 
   const char* reason = nullptr;
@@ -430,7 +436,7 @@ TEST_F(CellularServiceTest, PropertyChanges) {
 // the new value is the same as the old value.
 TEST_F(CellularServiceTest, CustomSetterNoopChange) {
   // Test that we didn't break any setters provided by the base class.
-  TestCustomSetterNoopChange(service_, modem_info_.mock_manager());
+  TestCustomSetterNoopChange(service_, &manager_);
 
   // Test the new setter we added.
   // First set up our environment...
