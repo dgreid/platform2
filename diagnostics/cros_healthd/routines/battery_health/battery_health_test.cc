@@ -8,7 +8,9 @@
 
 #include <base/files/file_path.h>
 #include <base/files/scoped_temp_dir.h>
+#include <base/json/json_writer.h>
 #include <base/strings/string_split.h>
+#include <base/values.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <mojo/core/embedder/embedder.h>
@@ -44,20 +46,22 @@ constexpr int kFakeChargeNow = 98123;
 
 std::string ConstructOutput() {
   std::string output;
-  int wear_percentage =
-      100 - (kHighChargeFull * 100 / kFakeBatteryChargeFullDesign);
-  output += "Wear Percentage: " + std::to_string(wear_percentage) + "\n";
-  output += "Cycle Count: " + std::to_string(kLowCycleCount) + "\n";
-  output += "Manufacturer: " + std::string(kFakeManufacturer) + "\n";
-  output += "Current Now: " + std::to_string(kFakeCurrentNow) + "\n";
-  output += "Present: " + std::to_string(kFakePresent) + "\n";
-  output += "Status: " + std::string(kFakeStatus) + "\n";
-  output += "Voltage Now: " + std::to_string(kFakeVoltageNow) + "\n";
-  output += "Charge Full: " + std::to_string(kHighChargeFull) + "\n";
-  output +=
-      "Charge Full Design: " + std::to_string(kFakeBatteryChargeFullDesign) +
-      "\n";
-  output += "Charge Now: " + std::to_string(kFakeChargeNow) + "\n";
+  base::Value result_dict(base::Value::Type::DICTIONARY);
+  result_dict.SetIntKey("wearPercentage", 100 - (kHighChargeFull * 100 /
+                                                 kFakeBatteryChargeFullDesign));
+  result_dict.SetIntKey("cycleCount", kLowCycleCount);
+  result_dict.SetStringKey("manufacturer", kFakeManufacturer);
+  result_dict.SetIntKey("currentNow", kFakeCurrentNow);
+  result_dict.SetIntKey("present", kFakePresent);
+  result_dict.SetStringKey("status", kFakeStatus);
+  result_dict.SetIntKey("voltageNow", kFakeVoltageNow);
+  result_dict.SetIntKey("chargeFull", kHighChargeFull);
+  result_dict.SetIntKey("chargeFullDesign", kFakeBatteryChargeFullDesign);
+  result_dict.SetIntKey("chargeNow", kFakeChargeNow);
+  base::Value output_dict(base::Value::Type::DICTIONARY);
+  output_dict.SetKey("resultDetails", std::move(result_dict));
+  base::JSONWriter::WriteWithOptions(
+      output_dict, base::JSONWriter::Options::OPTIONS_PRETTY_PRINT, &output);
   return output;
 }
 
@@ -190,19 +194,12 @@ TEST_F(BatteryHealthRoutineTest, GoodParameters) {
                              mojo_ipc::DiagnosticRoutineStatusEnum::kPassed,
                              kBatteryHealthRoutinePassedMessage);
 
-  base::StringPairs expected_output_pairs;
-  base::StringPairs actual_output_pairs;
-  ASSERT_TRUE(base::SplitStringIntoKeyValuePairs(ConstructOutput(), ':', '\n',
-                                                 &expected_output_pairs));
   auto shm_mapping = diagnostics::GetReadOnlySharedMemoryMappingFromMojoHandle(
       std::move(update()->output));
   ASSERT_TRUE(shm_mapping.IsValid());
-  ASSERT_TRUE(base::SplitStringIntoKeyValuePairs(
-      base::StringPiece(shm_mapping.GetMemoryAs<const char>(),
+  EXPECT_EQ(std::string(shm_mapping.GetMemoryAs<const char>(),
                         shm_mapping.mapped_size()),
-      ':', '\n', &actual_output_pairs));
-  EXPECT_THAT(actual_output_pairs,
-              UnorderedElementsAreArray(expected_output_pairs));
+            ConstructOutput());
 }
 
 // Test that the battery health routine will find energy-reporting batteries.

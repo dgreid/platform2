@@ -250,19 +250,23 @@ $ cros-health-tool diag --action=run_routine --routine=battery_health
 Sample output:
 ```bash
 Progress: 100
-Output: Charge Full: 4759000
-Charge Full Design: 5275000
-Charge Now: 4759000
-Current Now: 0
-Cycle Count: 10
-Manufacturer: 333-22-
-Present: 1
-Status: Charging
-Voltage Now: 13055000
-Wear Percentage: 10
+Output: {
+    "resultDetails": {
+        "chargeFull": 4621000,
+        "chargeFullDesign": 5275000,
+        "chargeNow": 4621000,
+        "currentNow": 0,
+        "cycleCount": 20,
+        "manufacturer": "333-22-",
+        "present": 1,
+        "status": "Charging",
+        "voltageNow": 13023000,
+        "wearPercentage": 13
+    }
+}
 
-Status: Failed
-Status message: Battery cycle count is too high.
+Status: Passed
+Status message: Routine passed.
 ```
 
 ## CPU Routines

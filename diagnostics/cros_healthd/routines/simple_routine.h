@@ -8,6 +8,7 @@
 #include <string>
 
 #include <base/callback.h>
+#include <base/values.h>
 
 #include "diagnostics/cros_healthd/routines/diag_routine.h"
 #include "mojo/cros_healthd_diagnostics.mojom.h"
@@ -31,7 +32,7 @@ namespace diagnostics {
 //   Params params,
 //   chromeos::cros_healthd::mojom::DiagnosticRoutineStatusEnum* status,
 //   std::string* status_message,
-//   std::string* output) {
+//   base::Value* output_dict) {
 //     // Routine-specific logic goes here.
 // }
 //
@@ -44,7 +45,7 @@ class SimpleRoutine final : public DiagnosticRoutine {
   using Task = base::OnceCallback<void(
       chromeos::cros_healthd::mojom::DiagnosticRoutineStatusEnum* status,
       std::string* status_message,
-      std::string* output)>;
+      base::Value* output_dict)>;
 
   explicit SimpleRoutine(Task task);
   SimpleRoutine(const SimpleRoutine&) = delete;
@@ -67,7 +68,7 @@ class SimpleRoutine final : public DiagnosticRoutine {
 
   chromeos::cros_healthd::mojom::DiagnosticRoutineStatusEnum status_;
   std::string status_message_;
-  std::string output_;
+  base::Value output_dict_{base::Value::Type::DICTIONARY};
 };
 
 }  // namespace diagnostics

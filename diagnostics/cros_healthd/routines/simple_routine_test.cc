@@ -7,6 +7,8 @@
 #include <string>
 #include <utility>
 
+#include <base/json/json_writer.h>
+#include <base/values.h>
 #include <gtest/gtest.h>
 
 #include "diagnostics/common/mojo_test_utils.h"
@@ -23,7 +25,6 @@ namespace mojo_ipc = ::chromeos::cros_healthd::mojom;
 // Test data.
 constexpr auto kExpectedStatus = mojo_ipc::DiagnosticRoutineStatusEnum::kPassed;
 constexpr char kExpectedStatusMessage[] = "This is a status message!";
-constexpr char kExpectedOutput[] = "This is output!";
 
 // POD struct for ReportProgressPercentTest.
 struct ReportProgressPercentTestParams {
@@ -31,21 +32,42 @@ struct ReportProgressPercentTestParams {
   uint32_t expected_progress_percent;
 };
 
+// Holds the output from FakeRoutineTask in base::Value form, as well as the
+// expected JSON output SimpleRoutine will generate from the base::Value.
+struct FakeExpectedOutput {
+  base::Value output_dict;
+  std::string json;
+};
+
+// Generates expected output for a simple routine in both string and base::Value
+// formats.
+FakeExpectedOutput GetFakeExpectedOutput() {
+  base::Value output_dict(base::Value::Type::DICTIONARY);
+  output_dict.SetStringKey("testOutput", "testValue");
+  std::string json;
+  base::JSONWriter::WriteWithOptions(
+      output_dict, base::JSONWriter::Options::OPTIONS_PRETTY_PRINT, &json);
+  FakeExpectedOutput fake_output;
+  fake_output.output_dict = std::move(output_dict);
+  fake_output.json = std::move(json);
+  return fake_output;
+}
+
 // Task for a SimpleRoutine to run. Does no work other than setting
 // |status_out|, |status_message_out| and |output_out|.
 void FakeRoutineTask(mojo_ipc::DiagnosticRoutineStatusEnum status_in,
                      const std::string& status_message_in,
-                     const std::string& output_in,
+                     const base::Value& output_dict_in,
                      mojo_ipc::DiagnosticRoutineStatusEnum* status_out,
                      std::string* status_message_out,
-                     std::string* output_out) {
+                     base::Value* output_dict_out) {
   DCHECK(status_out);
   DCHECK(status_message_out);
-  DCHECK(output_out);
+  DCHECK(output_dict_out);
 
   *status_out = status_in;
   *status_message_out = std::move(status_message_in);
-  *output_out = std::move(output_in);
+  output_dict_out->MergeDictionary(&output_dict_in);
 }
 
 }  // namespace
@@ -60,10 +82,10 @@ class SimpleRoutineTest : public testing::Test {
 
   mojo_ipc::RoutineUpdate* update() { return &update_; }
 
-  void CreateRoutine(mojo_ipc::DiagnosticRoutineStatusEnum desired_status =
+  void CreateRoutine(base::Value desired_output,
+                     mojo_ipc::DiagnosticRoutineStatusEnum desired_status =
                          mojo_ipc::DiagnosticRoutineStatusEnum::kFailed,
-                     const std::string& desired_status_message = "",
-                     const std::string& desired_output = "") {
+                     const std::string& desired_status_message = "") {
     routine_ = std::make_unique<SimpleRoutine>(base::BindOnce(
         &FakeRoutineTask, desired_status, std::move(desired_status_message),
         std::move(desired_output)));
@@ -85,21 +107,24 @@ class SimpleRoutineTest : public testing::Test {
 
 // Test that we can run a noninteractive routine and retrieve its status update.
 TEST_F(SimpleRoutineTest, RunAndRetrieveStatusUpdate) {
-  CreateRoutine(kExpectedStatus, kExpectedStatusMessage, kExpectedOutput);
+  auto output = GetFakeExpectedOutput();
+  CreateRoutine(std::move(output.output_dict), kExpectedStatus,
+                kExpectedStatusMessage);
 
   RunRoutineAndCollectUpdate(/*include_output=*/true);
 
   VerifyNonInteractiveUpdate(update()->routine_update_union, kExpectedStatus,
                              kExpectedStatusMessage);
-  EXPECT_EQ(GetStringFromMojoHandle(std::move(update()->output)),
-            kExpectedOutput);
+  EXPECT_EQ(GetStringFromMojoHandle(std::move(update()->output)), output.json);
   EXPECT_EQ(update()->progress_percent, 100);
 }
 
 // Test that retrieving a status update with the include_output flag set to
 // false doesn't return any output.
 TEST_F(SimpleRoutineTest, NoOutputReturned) {
-  CreateRoutine(kExpectedStatus, kExpectedStatusMessage, kExpectedOutput);
+  auto output = GetFakeExpectedOutput();
+  CreateRoutine(std::move(output.output_dict), kExpectedStatus,
+                kExpectedStatusMessage);
 
   RunRoutineAndCollectUpdate(/*include_output=*/false);
 
@@ -111,21 +136,24 @@ TEST_F(SimpleRoutineTest, NoOutputReturned) {
 
 // Test that calling resume doesn't crash.
 TEST_F(SimpleRoutineTest, Resume) {
-  CreateRoutine();
+  auto output = GetFakeExpectedOutput();
+  CreateRoutine(std::move(output.output_dict));
 
   routine()->Resume();
 }
 
 // Test that calling cancel doesn't crash.
 TEST_F(SimpleRoutineTest, Cancel) {
-  CreateRoutine();
+  auto output = GetFakeExpectedOutput();
+  CreateRoutine(std::move(output.output_dict));
 
   routine()->Cancel();
 }
 
 // Test that we can retrieve the status of a simple routine.
 TEST_F(SimpleRoutineTest, GetStatus) {
-  CreateRoutine();
+  auto output = GetFakeExpectedOutput();
+  CreateRoutine(std::move(output.output_dict));
 
   EXPECT_EQ(routine()->GetStatus(),
             mojo_ipc::DiagnosticRoutineStatusEnum::kReady);
@@ -148,14 +176,15 @@ class ReportProgressPercentTest
 
 // Test that we can parse the given uname response for CPU architecture.
 TEST_P(ReportProgressPercentTest, ReportProgressPercent) {
-  CreateRoutine(params().status, kExpectedStatusMessage, kExpectedOutput);
+  auto output = GetFakeExpectedOutput();
+  CreateRoutine(std::move(output.output_dict), params().status,
+                kExpectedStatusMessage);
 
   RunRoutineAndCollectUpdate(/*include_output=*/true);
 
   VerifyNonInteractiveUpdate(update()->routine_update_union, params().status,
                              kExpectedStatusMessage);
-  EXPECT_EQ(GetStringFromMojoHandle(std::move(update()->output)),
-            kExpectedOutput);
+  EXPECT_EQ(GetStringFromMojoHandle(std::move(update()->output)), output.json);
   EXPECT_EQ(update()->progress_percent, params().expected_progress_percent);
 }
 

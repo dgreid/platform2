@@ -9,6 +9,7 @@
 #include <vector>
 
 #include <base/bind.h>
+#include <base/values.h>
 
 #include "diagnostics/cros_healthd/routines/simple_routine.h"
 #include "mojo/cros_healthd_diagnostics.mojom.h"
@@ -43,8 +44,7 @@ void ParseDnsLatencyResult(
       *status = mojo_ipc::DiagnosticRoutineStatusEnum::kFailed;
       DCHECK(!problems.empty());
       switch (problems[0]) {
-        case network_diagnostics_ipc::DnsLatencyProblem::
-            kHostResolutionFailure:
+        case network_diagnostics_ipc::DnsLatencyProblem::kHostResolutionFailure:
           *status_message =
               kDnsLatencyRoutineHostResolutionFailureProblemMessage;
           break;
@@ -63,13 +63,13 @@ void ParseDnsLatencyResult(
   }
 }
 
-// We include |output| here to satisfy SimpleRoutine - the DNS latency routine
-// never includes an output.
+// We include |output_dict| here to satisfy SimpleRoutine - the DNS latency
+// routine never includes an output.
 void RunDnsLatencyRoutine(
     NetworkDiagnosticsAdapter* network_diagnostics_adapter,
     mojo_ipc::DiagnosticRoutineStatusEnum* status,
     std::string* status_message,
-    std::string* output) {
+    base::Value* output_dict) {
   DCHECK(network_diagnostics_adapter);
   DCHECK(status);
 

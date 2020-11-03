@@ -9,6 +9,7 @@
 #include <vector>
 
 #include <base/bind.h>
+#include <base/values.h>
 
 #include "diagnostics/cros_healthd/routines/simple_routine.h"
 #include "mojo/cros_healthd_diagnostics.mojom.h"
@@ -54,13 +55,13 @@ void ParseDnsResolutionResult(
   }
 }
 
-// We include |output| here to satisfy SimpleRoutine - the DNS resolution
+// We include |output_dict| here to satisfy SimpleRoutine - the DNS resolution
 // routine never includes an output.
 void RunDnsResolutionRoutine(
     NetworkDiagnosticsAdapter* network_diagnostics_adapter,
     mojo_ipc::DiagnosticRoutineStatusEnum* status,
     std::string* status_message,
-    std::string* output) {
+    base::Value* output_dict) {
   DCHECK(network_diagnostics_adapter);
   DCHECK(status);
 

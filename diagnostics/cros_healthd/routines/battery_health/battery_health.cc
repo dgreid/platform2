@@ -6,6 +6,7 @@
 
 #include <cstdint>
 #include <string>
+#include <utility>
 
 #include <base/files/file_path.h>
 #include <base/files/file_util.h>
@@ -13,9 +14,11 @@
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_util.h>
 #include <base/strings/stringprintf.h>
+#include <base/values.h>
 
 #include "diagnostics/cros_healthd/routines/simple_routine.h"
 #include "diagnostics/cros_healthd/utils/battery_utils.h"
+#include "diagnostics/cros_healthd/utils/file_utils.h"
 #include "mojo/cros_healthd_diagnostics.mojom.h"
 
 namespace diagnostics {
@@ -27,42 +30,16 @@ namespace mojo_ipc = ::chromeos::cros_healthd::mojom;
 const struct {
   const char* battery_log_key;
   const char* relative_file_path;
+  bool is_int;
 } kBatteryLogKeyPaths[] = {
-    {"Manufacturer", kBatteryManufacturerFileName},
-    {"Current Now", kBatteryCurrentNowFileName},
-    {"Present", kBatteryPresentFileName},
-    {"Status", kBatteryStatusFileName},
-    {"Voltage Now", kBatteryVoltageNowFileName},
-    {"Charge Full", kBatteryChargeFullFileName},
-    {"Charge Full Design", kBatteryChargeFullDesignFileName},
-    {"Charge Now", kBatteryChargeNowFileName}};
-
-bool TryReadFileToString(const base::FilePath& absolute_file_path,
-                         std::string* file_contents) {
-  DCHECK(file_contents);
-
-  if (!base::ReadFileToString(absolute_file_path, file_contents))
-    return false;
-
-  base::TrimWhitespaceASCII(*file_contents, base::TRIM_TRAILING, file_contents);
-
-  return true;
-}
-
-bool TryReadFileToUint(const base::FilePath& absolute_file_path,
-                       uint32_t* output) {
-  DCHECK(output);
-
-  std::string file_contents;
-  if (!base::ReadFileToString(absolute_file_path, &file_contents))
-    return false;
-
-  base::TrimWhitespaceASCII(file_contents, base::TRIM_TRAILING, &file_contents);
-  if (!base::StringToUint(file_contents, output))
-    return false;
-
-  return true;
-}
+    {"manufacturer", kBatteryManufacturerFileName, false},
+    {"currentNow", kBatteryCurrentNowFileName, true},
+    {"present", kBatteryPresentFileName, true},
+    {"status", kBatteryStatusFileName, false},
+    {"voltageNow", kBatteryVoltageNowFileName, true},
+    {"chargeFull", kBatteryChargeFullFileName, true},
+    {"chargeFullDesign", kBatteryChargeFullDesignFileName, true},
+    {"chargeNow", kBatteryChargeNowFileName, true}};
 
 bool ReadBatteryCapacities(const base::FilePath& root_dir,
                            uint32_t* capacity,
@@ -76,8 +53,9 @@ bool ReadBatteryCapacities(const base::FilePath& root_dir,
   base::FilePath absolute_charge_full_design_path(
       root_dir.AppendASCII(kBatteryDirectoryPath)
           .AppendASCII(kBatteryChargeFullDesignFileName));
-  if (!TryReadFileToUint(absolute_charge_full_path, capacity) ||
-      !TryReadFileToUint(absolute_charge_full_design_path, design_capacity)) {
+  if (!ReadInteger(absolute_charge_full_path, &base::StringToUint, capacity) ||
+      !ReadInteger(absolute_charge_full_design_path, &base::StringToUint,
+                   design_capacity)) {
     // No charge values, check for energy-reporting batteries.
     base::FilePath absolute_energy_full_path(
         root_dir.AppendASCII(kBatteryDirectoryPath)
@@ -85,8 +63,10 @@ bool ReadBatteryCapacities(const base::FilePath& root_dir,
     base::FilePath absolute_energy_full_design_path(
         root_dir.AppendASCII(kBatteryDirectoryPath)
             .AppendASCII(kBatteryEnergyFullDesignFileName));
-    if (!TryReadFileToUint(absolute_energy_full_path, capacity) ||
-        !TryReadFileToUint(absolute_energy_full_design_path, design_capacity)) {
+    if (!ReadInteger(absolute_energy_full_path, &base::StringToUint,
+                     capacity) ||
+        !ReadInteger(absolute_energy_full_design_path, &base::StringToUint,
+                     design_capacity)) {
       return false;
     }
   }
@@ -100,7 +80,7 @@ bool ReadCycleCount(const base::FilePath& root_dir, uint32_t* cycle_count) {
   base::FilePath absolute_cycle_count_path(
       root_dir.AppendASCII(kBatteryDirectoryPath)
           .AppendASCII(kBatteryCycleCountFileName));
-  if (!TryReadFileToUint(absolute_cycle_count_path, cycle_count))
+  if (!ReadInteger(absolute_cycle_count_path, &base::StringToUint, cycle_count))
     return false;
 
   return true;
@@ -110,7 +90,12 @@ bool TestWearPercentage(const base::FilePath& root_dir,
                         uint8_t percent_battery_wear_allowed,
                         mojo_ipc::DiagnosticRoutineStatusEnum* status,
                         std::string* status_message,
-                        std::string* output) {
+                        base::Value* result_dict) {
+  DCHECK(status);
+  DCHECK(status_message);
+  DCHECK(result_dict);
+  DCHECK(result_dict->is_dict());
+
   uint32_t capacity;
   uint32_t design_capacity;
 
@@ -133,7 +118,7 @@ bool TestWearPercentage(const base::FilePath& root_dir,
   uint32_t wear_percentage =
       capacity > design_capacity ? 0 : 100 - capacity * 100 / design_capacity;
 
-  *output += "Wear Percentage: " + std::to_string(wear_percentage) + "\n";
+  result_dict->SetIntKey("wearPercentage", static_cast<int>(wear_percentage));
   if (wear_percentage > percent_battery_wear_allowed) {
     *status_message = kBatteryHealthExcessiveWearMessage;
     *status = mojo_ipc::DiagnosticRoutineStatusEnum::kFailed;
@@ -147,7 +132,12 @@ bool TestCycleCount(const base::FilePath& root_dir,
                     uint32_t maximum_cycle_count,
                     mojo_ipc::DiagnosticRoutineStatusEnum* status,
                     std::string* status_message,
-                    std::string* output) {
+                    base::Value* result_dict) {
+  DCHECK(status);
+  DCHECK(status_message);
+  DCHECK(result_dict);
+  DCHECK(result_dict->is_dict());
+
   uint32_t cycle_count;
   if (!ReadCycleCount(root_dir, &cycle_count) || cycle_count < 0) {
     *status_message = kBatteryHealthFailedReadingCycleCountMessage;
@@ -155,7 +145,7 @@ bool TestCycleCount(const base::FilePath& root_dir,
     return false;
   }
 
-  *output += "Cycle Count: " + std::to_string(cycle_count) + "\n";
+  result_dict->SetIntKey("cycleCount", static_cast<int>(cycle_count));
   if (cycle_count > maximum_cycle_count) {
     *status_message = kBatteryHealthExcessiveCycleCountMessage;
     *status = mojo_ipc::DiagnosticRoutineStatusEnum::kFailed;
@@ -170,39 +160,47 @@ void RunBatteryHealthRoutine(Context* const context,
                              uint8_t percent_battery_wear_allowed,
                              mojo_ipc::DiagnosticRoutineStatusEnum* status,
                              std::string* status_message,
-                             std::string* output) {
+                             base::Value* output_dict) {
   DCHECK(context);
   DCHECK(status);
   DCHECK(status_message);
-  DCHECK(output);
+  DCHECK(output_dict);
+  DCHECK(output_dict->is_dict());
 
+  base::Value result_dict(base::Value::Type::DICTIONARY);
   const base::FilePath root_dir = context->root_dir();
   for (const auto& item : kBatteryLogKeyPaths) {
     std::string file_contents;
+    int integer_file_contents;
     base::FilePath absolute_file_path(
         root_dir.AppendASCII(kBatteryDirectoryPath)
             .AppendASCII(item.relative_file_path));
-    if (!TryReadFileToString(absolute_file_path, &file_contents)) {
+    if (item.is_int && ReadInteger(absolute_file_path, &base::StringToInt,
+                                   &integer_file_contents)) {
+      result_dict.SetIntKey(item.battery_log_key, integer_file_contents);
+    } else if (!item.is_int &&
+               ReadAndTrimString(absolute_file_path, &file_contents)) {
+      result_dict.SetStringKey(item.battery_log_key, file_contents);
+    } else {
       // Failing to read and log a file should not cause the routine to fail,
       // but we should record the event.
       PLOG(WARNING) << "Battery attribute unavailable: "
                     << item.battery_log_key;
-      continue;
     }
-
-    *output += base::StringPrintf("%s: %s\n", item.battery_log_key,
-                                  file_contents.c_str());
   }
 
-  if (!TestWearPercentage(root_dir, percent_battery_wear_allowed, status,
-                          status_message, output) ||
-      !TestCycleCount(root_dir, maximum_cycle_count, status, status_message,
-                      output)) {
+  if (TestWearPercentage(root_dir, percent_battery_wear_allowed, status,
+                         status_message, &result_dict) &&
+      TestCycleCount(root_dir, maximum_cycle_count, status, status_message,
+                     &result_dict)) {
+    *status_message = kBatteryHealthRoutinePassedMessage;
+    *status = mojo_ipc::DiagnosticRoutineStatusEnum::kPassed;
+  }
+
+  if (result_dict.DictEmpty())
     return;
-  }
 
-  *status_message = kBatteryHealthRoutinePassedMessage;
-  *status = mojo_ipc::DiagnosticRoutineStatusEnum::kPassed;
+  output_dict->SetKey("resultDetails", std::move(result_dict));
 }
 
 }  // namespace

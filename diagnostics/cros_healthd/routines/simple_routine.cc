@@ -5,9 +5,12 @@
 #include "diagnostics/cros_healthd/routines/simple_routine.h"
 
 #include <cstdint>
+#include <string>
 #include <utility>
 
+#include <base/json/json_writer.h>
 #include <base/logging.h>
+#include <base/strings/string_piece.h>
 #include <base/strings/stringprintf.h>
 
 #include "diagnostics/common/mojo_utils.h"
@@ -40,7 +43,7 @@ SimpleRoutine::~SimpleRoutine() = default;
 
 void SimpleRoutine::Start() {
   DCHECK_EQ(status_, mojo_ipc::DiagnosticRoutineStatusEnum::kReady);
-  std::move(task_).Run(&status_, &status_message_, &output_);
+  std::move(task_).Run(&status_, &status_message_, &output_dict_);
   if (status_ != mojo_ipc::DiagnosticRoutineStatusEnum::kPassed &&
       status_ != mojo_ipc::DiagnosticRoutineStatusEnum::kRunning) {
     LOG(ERROR) << base::StringPrintf(
@@ -64,9 +67,12 @@ void SimpleRoutine::PopulateStatusUpdate(mojo_ipc::RoutineUpdate* response,
   response->routine_update_union->set_noninteractive_update(update.Clone());
   response->progress_percent = CalculateProgressPercent(status_);
 
-  if (include_output) {
+  if (include_output && !output_dict_.DictEmpty()) {
+    std::string json;
+    base::JSONWriter::WriteWithOptions(
+        output_dict_, base::JSONWriter::Options::OPTIONS_PRETTY_PRINT, &json);
     response->output =
-        CreateReadOnlySharedMemoryRegionMojoHandle(base::StringPiece(output_));
+        CreateReadOnlySharedMemoryRegionMojoHandle(base::StringPiece(json));
   }
 }
 

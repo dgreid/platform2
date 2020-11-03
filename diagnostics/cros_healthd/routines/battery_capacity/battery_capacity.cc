@@ -13,6 +13,7 @@
 #include <base/logging.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_util.h>
+#include <base/values.h>
 
 #include "diagnostics/cros_healthd/routines/simple_routine.h"
 #include "diagnostics/cros_healthd/utils/battery_utils.h"
@@ -27,14 +28,14 @@ namespace mojo_ipc = ::chromeos::cros_healthd::mojom;
 // Conversion factor from uAh to mAh.
 constexpr uint32_t kuAhTomAhDivisor = 1000;
 
-// We include |output| here to satisfy SimpleRoutine - the battery capacity
+// We include |output_dict| here to satisfy SimpleRoutine - the battery capacity
 // routine never includes an output.
 void RunBatteryCapacityRoutine(Context* const context,
                                uint32_t low_mah,
                                uint32_t high_mah,
                                mojo_ipc::DiagnosticRoutineStatusEnum* status,
                                std::string* status_message,
-                               std::string* output) {
+                               base::Value* output_dict) {
   DCHECK(context);
   DCHECK(status);
   DCHECK(status_message);
