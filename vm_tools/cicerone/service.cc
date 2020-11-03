@@ -255,6 +255,7 @@ std::string TranslateUrlForHost(const std::string& url,
       {"/mnt/chromeos/PlayFiles", "/run/arc/sdcard/write/emulated/0"},
       {"/mnt/chromeos/removable", "/media/removable"},
       {"/mnt/chromeos/archive", "/media/archive"},
+      {"/mnt/chromeos/SMB/", "/media/fuse/smbfs-"},
   };
 
   for (const auto& replacement : replacements) {
@@ -263,7 +264,7 @@ std::string TranslateUrlForHost(const std::string& url,
     if (replacement.first.length() > 0 &&
         base::StartsWith(url.substr(sizeof(kUrlFileScheme) - 1),
                          replacement.first, base::CompareCase::SENSITIVE) &&
-        (url.length() == back || url[back] == '/')) {
+        (url.length() == back || url[back] == '/' || url[back - 1] == '/')) {
       return url.substr(0, sizeof(kUrlFileScheme) - 1) + replacement.second +
              url.substr(back);
     }
