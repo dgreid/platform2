@@ -117,21 +117,6 @@ void AmbientLightSensor::Init(bool read_immediately) {
   StartTimer();
 }
 
-base::FilePath AmbientLightSensor::GetIlluminancePath() const {
-  if (IsColorSensor()) {
-    for (const ColorChannelInfo& channel : kColorChannelConfig) {
-      if (!channel.is_lux_channel)
-        continue;
-      if (color_als_files_.at(&channel).HasOpenedFile())
-        return color_als_files_.at(&channel).path();
-    }
-  } else {
-    if (als_file_.HasOpenedFile())
-      return als_file_.path();
-  }
-  return base::FilePath();
-}
-
 bool AmbientLightSensor::TriggerPollTimerForTesting() {
   if (!poll_timer_.IsRunning())
     return false;
@@ -329,7 +314,7 @@ bool AmbientLightSensor::InitAlsFile() {
         continue;
       if (enable_color_support_)
         InitColorAlsFiles(check_path);
-      LOG(INFO) << "Using lux file " << GetIlluminancePath().value() << " for "
+      LOG(INFO) << "Using lux file " << als_path.value() << " for "
                 << SensorLocationToString(expected_sensor_location_) << " ALS";
       return true;
     }

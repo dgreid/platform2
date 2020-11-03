@@ -34,10 +34,6 @@ class AmbientLightSensorInterface {
   // Latest color temperature measured if supported. -1 is considered an error
   // value.
   virtual int GetColorTemperature() = 0;
-
-  // Returns the path to the illuminance file being monitored, or an empty path
-  // if a device has not yet been found.
-  virtual base::FilePath GetIlluminancePath() const = 0;
 };
 
 }  // namespace system

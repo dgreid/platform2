@@ -159,8 +159,6 @@ TEST_F(AmbientLightSensorTest, FindSensorAtBase) {
   WriteLux(100);
   ASSERT_TRUE(observer_.RunUntilAmbientLightUpdated());
   EXPECT_EQ(100, sensor_->GetAmbientLightLux());
-
-  EXPECT_EQ(data_file_, sensor_->GetIlluminancePath());
 }
 
 TEST_F(AmbientLightSensorTest, IsColorSensor) {

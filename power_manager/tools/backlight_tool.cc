@@ -15,6 +15,7 @@
 #include <base/format_macros.h>
 #include <base/logging.h>
 #include <base/message_loop/message_pump_type.h>
+#include <base/run_loop.h>
 #include <base/task/single_thread_task_executor.h>
 #include <base/time/time.h>
 #include <brillo/flag_helper.h>
@@ -55,6 +56,11 @@ using power_manager::system::UdevStub;
 using power_manager::util::ClampPercent;
 
 namespace {
+
+// Abort if an ambient light sample hasn't been updated after this many
+// milliseconds.
+constexpr base::TimeDelta kUpdateTimeout =
+    base::TimeDelta::FromMilliseconds(5000);
 
 // Prints |message| to stderr with a trailing newline and exits.
 void Abort(const std::string& message) {
@@ -161,10 +167,58 @@ class Converter {
   DISALLOW_COPY_AND_ASSIGN(Converter);
 };
 
-// Prints the path to the ambient light sensor illuminance file that powerd
-// would monitor and a trailing newline to stdout. Prints an error and aborts
-// with status code 1 if the ALS has been disabled or no path was found.
-void PrintAmbientLightPath(bool keyboard) {
+class ObserverImpl : public power_manager::system::AmbientLightObserver {
+ public:
+  ObserverImpl(const ObserverImpl&) = delete;
+  ObserverImpl& operator=(const ObserverImpl&) = delete;
+
+  ObserverImpl() { ResetRunner(); }
+  ~ObserverImpl() override {}
+
+  bool RunUntilAmbientLightUpdated() {
+    CHECK(runner_.get());
+
+    runner_->Run();
+    ResetRunner();
+    return !timed_out_;
+  }
+
+  // AmbientLightObserver implementation:
+  void OnAmbientLightUpdated(AmbientLightSensorInterface* sensor) override {
+    CHECK(runner_.get());
+
+    timeout_timer_.Stop();
+    closure_.Run();
+  }
+
+ private:
+  void ResetRunner() {
+    runner_.reset(new base::RunLoop());
+    closure_ = runner_->QuitClosure();
+    timed_out_ = false;
+
+    timeout_timer_.Start(FROM_HERE, kUpdateTimeout, this,
+                         &ObserverImpl::OnTimeout);
+  }
+
+  void OnTimeout() {
+    CHECK(runner_.get());
+    timed_out_ = true;
+    closure_.Run();
+  }
+
+  std::unique_ptr<base::RunLoop> runner_;
+  base::RepeatingClosure closure_;
+  bool timed_out_ = false;
+
+  base::OneShotTimer timeout_timer_;
+};
+
+// Gets the lux of ambient light sensor illuminance that powerd would monitor
+// and a trailing newline to stdout. Prints an error and aborts with status code
+// 1 if the ALS has been disabled or no lux value was available before timed
+// out.
+void GetAmbientLightLux(bool keyboard) {
   Prefs prefs;
   CHECK(prefs.Init(Prefs::GetDefaultStore(), Prefs::GetDefaultSources()));
   int64_t num_als = 0;
@@ -183,11 +237,20 @@ void PrintAmbientLightPath(bool keyboard) {
   if (!sensor)
     Abort("Ambient light sensor not found");
 
-  base::FilePath path = sensor->GetIlluminancePath();
-  if (path.empty())
-    Abort("Ambient light sensor illuminance file not found");
+  int lux = sensor->GetAmbientLightLux();
+  if (lux < 0) {
+    // Wait for a sample updated or timeout.
 
-  printf("%s\n", path.value().c_str());
+    ObserverImpl observer;
+    sensor->AddObserver(&observer);
+    if (!observer.RunUntilAmbientLightUpdated())
+      Abort("Timed out before an ambient light sample updated");
+
+    lux = sensor->GetAmbientLightLux();
+  }
+
+  CHECK_GE(lux, 0);
+  printf("%i\n", lux);
 }
 
 }  // namespace
@@ -223,8 +286,7 @@ int main(int argc, char* argv[]) {
                 "linearly-calculated percent in [0.0, 100.0]");
 
   // Other flags.
-  DEFINE_bool(get_ambient_light_path, false,
-              "Print path to ambient light sensor illuminance file");
+  DEFINE_bool(get_ambient_light_lux, false, "Get ambient light sensor reading");
   DEFINE_bool(force_battery, false,
               "Act as if on battery even if currently on AC (for "
               "-get_initial_brightness)");
@@ -242,7 +304,7 @@ int main(int argc, char* argv[]) {
 
   if (FLAGS_get_brightness + FLAGS_get_max_brightness +
           FLAGS_get_initial_brightness + FLAGS_get_brightness_percent +
-          FLAGS_get_ambient_light_path + (FLAGS_nonlinear_to_level >= 0.0) +
+          FLAGS_get_ambient_light_lux + (FLAGS_nonlinear_to_level >= 0.0) +
           (FLAGS_level_to_nonlinear >= 0) + (FLAGS_linear_to_level >= 0.0) +
           (FLAGS_level_to_linear >= 0) + (FLAGS_linear_to_nonlinear >= 0.0) +
           (FLAGS_nonlinear_to_linear >= 0.0) >
@@ -252,8 +314,8 @@ int main(int argc, char* argv[]) {
   if (FLAGS_set_brightness >= 0 && FLAGS_set_brightness_percent >= 0.0)
     Abort("At most one of -set_brightness* may be passed.");
 
-  if (FLAGS_get_ambient_light_path) {
-    PrintAmbientLightPath(FLAGS_keyboard);
+  if (FLAGS_get_ambient_light_lux) {
+    GetAmbientLightLux(FLAGS_keyboard);
     return 0;
   }
 

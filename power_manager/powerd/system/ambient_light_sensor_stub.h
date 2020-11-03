@@ -23,7 +23,6 @@ class AmbientLightSensorStub : public AmbientLightSensorInterface {
   void set_color_temperature(int color_temperature) {
     color_temperature_ = color_temperature;
   }
-  void set_file_path(base::FilePath path) { path_ = path; }
 
   // Notifies |observers_| that the ambient light has changed.
   void NotifyObservers();
@@ -34,7 +33,6 @@ class AmbientLightSensorStub : public AmbientLightSensorInterface {
   bool IsColorSensor() const override;
   int GetAmbientLightLux() override;
   int GetColorTemperature() override;
-  base::FilePath GetIlluminancePath() const override;
 
  private:
   base::ObserverList<AmbientLightObserver> observers_;
@@ -46,9 +44,6 @@ class AmbientLightSensorStub : public AmbientLightSensorInterface {
   // returns -1. Otherwise, IsColorSensor returns true and GetColorTemperature
   // returns this value.
   base::Optional<int> color_temperature_;
-
-  // Value returned by GetIlluminancePath().
-  base::FilePath path_;
 
   DISALLOW_COPY_AND_ASSIGN(AmbientLightSensorStub);
 };
