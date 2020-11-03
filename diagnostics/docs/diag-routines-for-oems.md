@@ -438,32 +438,30 @@ $ cros-health-tool diag --action=run_routine --routine=memory
 Sample output:
 ```bash
 Progress: 100
-Output: memtester version 4.2.2 (64-bit)
-Copyright (C) 2010 Charles Cazabon.
-
-pagesize is 4096
-pagesizemask is 0xfffffffffffff000
-want 100MB (104857600 bytes)
-got  100MB (104857600 bytes), trying mlock ...locked.
-Loop 1/1:
-  Stuck Address       : ok
-  Random Value        : ok
-  Compare XOR         : ok
-  Compare SUB         : ok
-  Compare MUL         : ok
-  Compare DIV         : ok
-  Compare OR          : ok
-  Compare AND         : ok
-  Sequential Increment: ok
-  Solid Bits          : ok
-  Block Sequential    : ok
-  Checkerboard        : ok
-  Bit Spread          : ok
-  Bit Flip            : ok
-  Walking Ones        : ok
-  Walking Zeroes      : ok
-
-Done.
+Output: {
+   "resultDetails": {
+      "bytesTested": 104857600,
+      "memtesterVersion": "4.2.2 (64-bit)",
+      "subtests": {
+         "bitFlip": "ok",
+         "bitSpread": "ok",
+         "blockSequential": "ok",
+         "checkerboard": "ok",
+         "compareAND": "ok",
+         "compareDIV": "ok",
+         "compareMUL": "ok",
+         "compareOR": "ok",
+         "compareSUB": "ok",
+         "compareXOR": "ok",
+         "randomValue": "ok",
+         "sequentialIncrement": "ok",
+         "solidBits": "ok",
+         "stuckAddress": "ok",
+         "walkingOnes": "ok",
+         "walkingZeroes": "ok"
+      }
+   }
+}
 
 Status: Passed
 Status message: Memory routine passed.

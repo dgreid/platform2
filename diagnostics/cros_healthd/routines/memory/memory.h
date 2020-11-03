@@ -12,6 +12,7 @@
 #include <base/time/default_tick_clock.h>
 #include <base/time/tick_clock.h>
 #include <base/time/time.h>
+#include <base/values.h>
 
 #include "diagnostics/cros_healthd/routines/diag_routine.h"
 #include "diagnostics/cros_healthd/system/context.h"
@@ -41,10 +42,13 @@ class MemoryRoutine final : public DiagnosticRoutine {
       override;
 
  private:
-  // Takes the memtester output from |process| and parses it to determine
+  // Takes the memtester result code from |process| and parses it to determine
   // whether or not the routine succeeded.
-  void ParseMemtesterOutput(
+  void DetermineRoutineResult(
       chromeos::cros_healthd_executor::mojom::ProcessResultPtr process);
+
+  // Takes raw output from memtester and parses it into |output_dict_|.
+  void ParseMemtesterOutput(const std::string& raw_output);
 
   // Unowned. Should outlive this instance.
   Context* const context_ = nullptr;
@@ -55,7 +59,7 @@ class MemoryRoutine final : public DiagnosticRoutine {
   std::string status_message_;
   // Details about the routine's execution. Reported in status updates when
   // requested.
-  std::string output_;
+  base::Value output_dict_{base::Value::Type::DICTIONARY};
 
   // Expected duration of the routine, in microseconds.
   double expected_duration_us_;

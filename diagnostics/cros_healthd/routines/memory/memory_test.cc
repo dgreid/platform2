@@ -5,18 +5,22 @@
 #include <cstdint>
 #include <cstdlib>
 #include <memory>
+#include <string>
 #include <utility>
 
 #include <base/bind.h>
 #include <base/files/file_path.h>
 #include <base/files/file_util.h>
+#include <base/json/json_writer.h>
 #include <base/optional.h>
 #include <base/task/post_task.h>
 #include <base/test/task_environment.h>
 #include <base/time/time.h>
+#include <base/values.h>
 #include <gtest/gtest.h>
 #include <mojo/public/cpp/system/handle.h>
 
+#include "diagnostics/common/mojo_utils.h"
 #include "diagnostics/cros_healthd/routines/diag_routine.h"
 #include "diagnostics/cros_healthd/routines/memory/memory.h"
 #include "diagnostics/cros_healthd/routines/memory/memory_constants.h"
@@ -38,6 +42,40 @@ namespace mojo_ipc = chromeos::cros_healthd::mojom;
 
 // Location of files containing test data (fake memtester output).
 constexpr char kTestDataRoot[] = "cros_healthd/routines/memory/testdata";
+
+// Constructs expected output for the memory routine.
+std::string ConstructOutput() {
+  base::Value subtest_dict(base::Value::Type::DICTIONARY);
+  subtest_dict.SetStringKey("bitFlip", "ok");
+  subtest_dict.SetStringKey("bitSpread", "ok");
+  subtest_dict.SetStringKey("blockSequential", "ok");
+  subtest_dict.SetStringKey("checkerboard", "ok");
+  subtest_dict.SetStringKey("compareAND", "ok");
+  subtest_dict.SetStringKey("compareDIV", "ok");
+  subtest_dict.SetStringKey("compareMUL", "ok");
+  subtest_dict.SetStringKey("compareOR", "ok");
+  subtest_dict.SetStringKey("compareSUB", "ok");
+  subtest_dict.SetStringKey("compareXOR", "ok");
+  subtest_dict.SetStringKey("randomValue", "ok");
+  subtest_dict.SetStringKey("sequentialIncrement", "ok");
+  subtest_dict.SetStringKey("solidBits", "ok");
+  subtest_dict.SetStringKey("stuckAddress", "ok");
+  subtest_dict.SetStringKey("walkingOnes", "ok");
+  subtest_dict.SetStringKey("walkingZeroes", "ok");
+
+  base::Value result_dict(base::Value::Type::DICTIONARY);
+  result_dict.SetKey("subtests", std::move(subtest_dict));
+  result_dict.SetIntKey("bytesTested", 104857600);
+  result_dict.SetStringKey("memtesterVersion", "4.2.2 (64-bit)");
+
+  base::Value output_dict(base::Value::Type::DICTIONARY);
+  output_dict.SetKey("resultDetails", std::move(result_dict));
+
+  std::string json;
+  base::JSONWriter::WriteWithOptions(
+      output_dict, base::JSONWriter::Options::OPTIONS_PRETTY_PRINT, &json);
+  return json;
+}
 
 }  // namespace
 
@@ -101,9 +139,7 @@ class MemoryRoutineTest : public testing::Test {
                   base::BindOnce(
                       [](executor_ipc::Executor::RunMemtesterCallback callback,
                          executor_ipc::ProcessResultPtr result) {
-                        LOG(ERROR) << "I am here!";
                         std::move(callback).Run(std::move(result));
-                        LOG(ERROR) << "But not here!";
                       },
                       std::move(callback), result.Clone()),
                   delay.value());
@@ -139,6 +175,12 @@ TEST_F(MemoryRoutineTest, RoutineSuccess) {
   VerifyNonInteractiveUpdate(update()->routine_update_union,
                              mojo_ipc::DiagnosticRoutineStatusEnum::kPassed,
                              kMemoryRoutineSucceededMessage);
+  auto shm_mapping = diagnostics::GetReadOnlySharedMemoryMappingFromMojoHandle(
+      std::move(update()->output));
+  ASSERT_TRUE(shm_mapping.IsValid());
+  EXPECT_EQ(std::string(shm_mapping.GetMemoryAs<const char>(),
+                        shm_mapping.mapped_size()),
+            ConstructOutput());
 }
 
 // Test that the memory routine handles the memtester binary failing to run.
