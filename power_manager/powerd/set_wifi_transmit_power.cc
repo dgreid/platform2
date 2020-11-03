@@ -68,6 +68,21 @@
 #define REALTEK_VNDCMD_ATTR_SAR_BAND 2
 #define REALTEK_VNDCMD_ATTR_SAR_POWER 3
 
+// COMMON SAR API COMMANDS
+// The number for NL80211_CMD_SET_SAR_SPECS and NL80211_ATTR_SAR_SPEC
+// is chosen based on the NL80211_CMD_MAX and NL80211_ATTR_MAX such that
+// there won't be any collision with other commands while backporting to older
+// kernel version. Once the Common SAR API lands in to kernel upstream, the
+// Values can be changed to their actual positions.
+// TODO(b/172350519): Follow up upstream the common SAR APIs
+#define NL80211_CMD_SET_SAR_SPECS 145
+#define NL80211_ATTR_SAR_SPEC 310
+#define NL80211_SAR_ATTR_TYPE 1
+#define NL80211_SAR_TYPE_POWER 0
+#define NL80211_SAR_ATTR_SPECS 2
+#define NL80211_SAR_ATTR_SPECS_POWER 1
+#define NL80211_SAR_ATTR_SPECS_FREQ_RANGE_INDEX 2
+
 namespace {
 
 int ErrorHandler(struct sockaddr_nl* nla, struct nlmsgerr* err, void* arg) {
@@ -104,6 +119,45 @@ enum RealtekVndcmdSARBand {
   REALTEK_VNDCMD_ATTR_SAR_BAND_5g_3 = 3,
   REALTEK_VNDCMD_ATTR_SAR_BAND_5g_4 = 4,
 };
+
+// For ath10k the driver configures index 0 for 2g and index 1 for 5g.
+// This dependency is a bit fragile and can break if the underlying
+// assumption changes. In the upcoming implementation where the the driver
+// capabilities are published, we will use the driver capability to find the
+// index and frequency band mapping and can avoid enums like these.
+enum Ath10kSARBand {
+  kAth10kSarBand2g = 0,
+  kAth10kSarBand5g = 1,
+};
+
+std::map<enum Ath10kSARBand, uint8_t> GetAth10kChromeosConfigPowerTable(
+    bool tablet) {
+  std::map<enum Ath10kSARBand, uint8_t> power_table = {};
+  auto config = std::make_unique<brillo::CrosConfig>();
+  CHECK(config->Init()) << "Could not find config";
+  std::string wifi_power_table_path =
+      tablet ? "/wifi/tablet-mode-power-table-ath10k"
+             : "/wifi/non-tablet-mode-power-table-ath10k";
+
+  std::string value;
+  int power_limit;
+
+  CHECK(config->GetString(wifi_power_table_path, "limit-2g", &value))
+      << "Could not get ChromeosConfig power table.";
+  power_limit = std::stoi(value);
+  CHECK(power_limit <= UINT8_MAX)
+      << "Invalid power limit configs. Limit value cannot exceed 255.";
+  power_table[kAth10kSarBand2g] = power_limit;
+
+  CHECK(config->GetString(wifi_power_table_path, "limit-5g", &value))
+      << "Could not get ChromeosConfig power table.";
+  power_limit = std::stoi(value);
+  CHECK(power_limit <= UINT8_MAX)
+      << "Invalid power limit configs. Limit value cannot exceed 255.";
+  power_table[kAth10kSarBand5g] = power_limit;
+
+  return power_table;
+}
 
 // Returns the type of wireless driver that's present on the system.
 WirelessDriver GetWirelessDriverType(const std::string& device_name) {
@@ -329,6 +383,29 @@ void FillMessageRtw(struct nl_msg* msg,
   CHECK(!nla_nest_end(msg, vendor_cmd)) << "Failed in nla_nest_end";
 }
 
+void FillMessageAth10k(struct nl_msg* msg, bool tablet) {
+  struct nlattr* sar_capa =
+      nla_nest_start(msg, NL80211_ATTR_SAR_SPEC | NLA_F_NESTED);
+  nla_put_u32(msg, NL80211_SAR_ATTR_TYPE, NL80211_SAR_TYPE_POWER);
+  struct nlattr* specs =
+      nla_nest_start(msg, NL80211_SAR_ATTR_SPECS | NLA_F_NESTED);
+  int i = 0;
+
+  for (const auto& limit : GetAth10kChromeosConfigPowerTable(tablet)) {
+    struct nlattr* sub_freq_range = nla_nest_start(msg, ++i | NLA_F_NESTED);
+    CHECK(sub_freq_range) << "Failed to execute nla_nest_start";
+    CHECK(
+        !nla_put_u8(msg, NL80211_SAR_ATTR_SPECS_FREQ_RANGE_INDEX, limit.first))
+        << "Failed to put frequency index";
+    CHECK(!nla_put_u8(msg, NL80211_SAR_ATTR_SPECS_POWER, limit.second))
+        << "Failed to put band power";
+    CHECK(!nla_nest_end(msg, sub_freq_range)) << "Failed in nla_nest_end";
+  }
+
+  CHECK(!nla_nest_end(msg, specs)) << "Failed in nla_nest_end";
+  CHECK(!nla_nest_end(msg, sar_capa)) << "Failed in nla_nest_end";
+}
+
 class PowerSetter {
  public:
   PowerSetter() : nl_sock_(nl_socket_alloc()), cb_(nl_cb_alloc(NL_CB_DEFAULT)) {
@@ -355,7 +432,7 @@ class PowerSetter {
       return false;
     }
     WirelessDriver driver = GetWirelessDriverType(dev_name);
-    if (driver == WirelessDriver::NONE || driver == WirelessDriver::ATH10K) {
+    if (driver == WirelessDriver::NONE) {
       LOG(ERROR) << "No valid wireless driver found for " << dev_name;
       return false;
     }
@@ -365,9 +442,16 @@ class PowerSetter {
     struct nl_msg* msg = nlmsg_alloc();
     CHECK(msg);
 
-    // Set header.
-    genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, nl_family_id_, 0, 0,
-                NL80211_CMD_VENDOR, 0);
+    // The command set for Ath10k and other platform (Rtw, Intel) use different
+    // APIs.
+    // TODO(b/172377638): Use common API for all platforms and fallback to
+    // vendor API if common API is not supported.
+    if (driver == WirelessDriver::ATH10K)
+      genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, nl_family_id_, 0, 0,
+                  NL80211_CMD_SET_SAR_SPECS, 0);
+    else
+      genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, nl_family_id_, 0, 0,
+                  NL80211_CMD_VENDOR, 0);
 
     // Set actual message.
     CHECK(!nla_put_u32(msg, NL80211_ATTR_IFINDEX, index))
@@ -384,7 +468,8 @@ class PowerSetter {
         FillMessageRtw(msg, tablet, domain);
         break;
       case WirelessDriver::ATH10K:
-        // TODO(https://crbug.com/782924): implement for ath10k.
+        FillMessageAth10k(msg, tablet);
+        break;
       case WirelessDriver::NONE:
         NOTREACHED() << "No driver found";
     }
