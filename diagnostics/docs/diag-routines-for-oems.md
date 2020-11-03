@@ -545,7 +545,12 @@ $ cros-health-tool diag --action=run_routine --routine=nvme_wear_level --wear_le
 Sample output:
 ```bash
 Progress: 100
-Output: AAAAAAAAAADxBAAAAAAAAA==
+Output: {
+    "resultDetails": {
+        "rawData": "AAAAAAAAAADxBAAAAAAAAA=="
+    }
+}
+
 Status: Passed
 Status message: Wear-level status: PASS.
 ```

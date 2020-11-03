@@ -9,6 +9,7 @@
 #include <memory>
 #include <string>
 
+#include <base/values.h>
 #include <brillo/errors/error.h>
 
 #include "diagnostics/common/system/debugd_adapter.h"
@@ -60,7 +61,7 @@ class NvmeWearLevelRoutine final : public DiagnosticRoutine {
   chromeos::cros_healthd::mojom::DiagnosticRoutineStatusEnum status_ =
       chromeos::cros_healthd::mojom::DiagnosticRoutineStatusEnum::kReady;
   uint32_t percent_ = 0;
-  std::string output_;
+  base::Value output_dict_{base::Value::Type::DICTIONARY};
   std::string status_message_;
 
   base::WeakPtrFactory<NvmeWearLevelRoutine> weak_ptr_routine_{this};

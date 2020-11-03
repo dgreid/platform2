@@ -8,6 +8,7 @@
 #include <vector>
 
 #include <base/base64.h>
+#include <base/json/json_writer.h>
 #include <base/logging.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_util.h>
@@ -83,13 +84,16 @@ void NvmeWearLevelRoutine::PopulateStatusUpdate(
   response->routine_update_union->set_noninteractive_update(update.Clone());
   response->progress_percent = percent_;
 
-  if (include_output) {
+  if (include_output && !output_dict_.DictEmpty()) {
     // If routine status is not at completed/cancelled then prints the debugd
     // raw data with output.
     if (status_ != mojo_ipc::DiagnosticRoutineStatusEnum::kPassed &&
         status_ != mojo_ipc::DiagnosticRoutineStatusEnum::kCancelled) {
-      response->output = CreateReadOnlySharedMemoryRegionMojoHandle(
-          "Raw debugd data: " + output_);
+      std::string json;
+      base::JSONWriter::WriteWithOptions(
+          output_dict_, base::JSONWriter::Options::OPTIONS_PRETTY_PRINT, &json);
+      response->output =
+          CreateReadOnlySharedMemoryRegionMojoHandle(base::StringPiece(json));
     }
   }
 }
@@ -107,11 +111,13 @@ void NvmeWearLevelRoutine::OnDebugdResultCallback(const std::string& result,
     return;
   }
 
-  output_ = result;
+  base::Value result_dict(base::Value::Type::DICTIONARY);
+  result_dict.SetStringKey("rawData", result);
+  output_dict_.SetKey("resultDetails", std::move(result_dict));
   std::string decoded_output;
 
-  if (!base::Base64Decode(output_, &decoded_output)) {
-    LOG(ERROR) << "Base64 decoding failed. Base64 data: " << output_;
+  if (!base::Base64Decode(result, &decoded_output)) {
+    LOG(ERROR) << "Base64 decoding failed. Base64 data: " << result;
     UpdateStatus(mojo_ipc::DiagnosticRoutineStatusEnum::kError,
                  /*percent=*/100, kNvmeWearLevelRoutineGetInfoError);
     return;
