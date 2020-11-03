@@ -34,11 +34,11 @@ void ParseGatewayCanBePingedResult(
   switch (verdict) {
     case network_diagnostics_ipc::RoutineVerdict::kNoProblem:
       *status = mojo_ipc::DiagnosticRoutineStatusEnum::kPassed;
-      *status_message = kGatewayCanBePingedRoutineNoProblemMessage;
+      *status_message = kPingRoutineNoProblemMessage;
       break;
     case network_diagnostics_ipc::RoutineVerdict::kNotRun:
       *status = mojo_ipc::DiagnosticRoutineStatusEnum::kError;
-      *status_message = kGatewayCanBePingedRoutineNotRunMessage;
+      *status_message = kPingRoutineNotRunMessage;
       break;
     case network_diagnostics_ipc::RoutineVerdict::kProblem:
       *status = mojo_ipc::DiagnosticRoutineStatusEnum::kFailed;
@@ -46,28 +46,23 @@ void ParseGatewayCanBePingedResult(
       switch (problems[0]) {
         case network_diagnostics_ipc::GatewayCanBePingedProblem::
             kUnreachableGateway:
-          *status_message =
-              kGatewayCanBePingedRoutineUnreachableGatewayProblemMessage;
+          *status_message = kPingRoutineUnreachableGatewayProblemMessage;
           break;
         case network_diagnostics_ipc::GatewayCanBePingedProblem::
             kFailedToPingDefaultNetwork:
-          *status_message =
-              kGatewayCanBePingedRoutineFailedToPingDefaultNetworkProblemMessage;
+          *status_message = kPingRoutineFailedPingProblemMessage;
           break;
         case network_diagnostics_ipc::GatewayCanBePingedProblem::
             kDefaultNetworkAboveLatencyThreshold:
-          *status_message =
-              kGatewayCanBePingedRoutineDefaultNetworkAboveLatencyThresholdProblemMessage;
+          *status_message = kPingRoutineHighPingLatencyProblemMessage;
           break;
         case network_diagnostics_ipc::GatewayCanBePingedProblem::
             kUnsuccessfulNonDefaultNetworksPings:
-          *status_message =
-              kGatewayCanBePingedRoutineUnsuccessfulNonDefaultNetworksPingsProblemMessage;
+          *status_message = kPingRoutineFailedNonDefaultPingsProblemMessage;
           break;
         case network_diagnostics_ipc::GatewayCanBePingedProblem::
             kNonDefaultNetworksAboveLatencyThreshold:
-          *status_message =
-              kGatewayCanBePingedRoutineNonDefaultNetworksAboveLatencyThresholdProblemMessage;
+          *status_message = kPingRoutineNonDefaultHighLatencyProblemMessage;
           break;
       }
       break;
@@ -92,24 +87,20 @@ void RunGatewayCanBePingedRoutine(
 
 }  // namespace
 
-const char kGatewayCanBePingedRoutineNoProblemMessage[] =
+const char kPingRoutineNoProblemMessage[] =
     "Gateway can be pinged routine passed with no problems.";
-const char kGatewayCanBePingedRoutineUnreachableGatewayProblemMessage[] =
+const char kPingRoutineUnreachableGatewayProblemMessage[] =
     "All gateways are unreachable, hence cannot be pinged.";
-const char
-    kGatewayCanBePingedRoutineFailedToPingDefaultNetworkProblemMessage[] =
-        "The default network cannot be pinged.";
-const char
-    kGatewayCanBePingedRoutineDefaultNetworkAboveLatencyThresholdProblemMessage
-        [] = "The default network has a latency above the threshold.";
-const char
-    kGatewayCanBePingedRoutineUnsuccessfulNonDefaultNetworksPingsProblemMessage
-        [] = "One or more of the non-default networks has failed pings.";
-const char
-    kGatewayCanBePingedRoutineNonDefaultNetworksAboveLatencyThresholdProblemMessage
-        [] = "One or more of the non-default networks has a latency above the "
-             "threshold.";
-const char kGatewayCanBePingedRoutineNotRunMessage[] =
+const char kPingRoutineFailedPingProblemMessage[] =
+    "The default network cannot be pinged.";
+const char kPingRoutineHighPingLatencyProblemMessage[] =
+    "The default network has a latency above the threshold.";
+const char kPingRoutineFailedNonDefaultPingsProblemMessage[] =
+    "One or more of the non-default networks has failed pings.";
+const char kPingRoutineNonDefaultHighLatencyProblemMessage[] =
+    "One or more of the non-default networks has a latency above the "
+    "threshold.";
+const char kPingRoutineNotRunMessage[] =
     "Gateway can be pinged routine did not run.";
 
 std::unique_ptr<DiagnosticRoutine> CreateGatewayCanBePingedRoutine(

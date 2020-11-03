@@ -13,20 +13,13 @@
 namespace diagnostics {
 
 // Status messages reported by the gateway can be pinged routine.
-extern const char kGatewayCanBePingedRoutineNoProblemMessage[];
-extern const char kGatewayCanBePingedRoutineUnreachableGatewayProblemMessage[];
-extern const char
-    kGatewayCanBePingedRoutineFailedToPingDefaultNetworkProblemMessage[];
-extern const char
-    kGatewayCanBePingedRoutineDefaultNetworkAboveLatencyThresholdProblemMessage
-        [];
-extern const char
-    kGatewayCanBePingedRoutineUnsuccessfulNonDefaultNetworksPingsProblemMessage
-        [];
-extern const char
-    kGatewayCanBePingedRoutineNonDefaultNetworksAboveLatencyThresholdProblemMessage
-        [];
-extern const char kGatewayCanBePingedRoutineNotRunMessage[];
+extern const char kPingRoutineNoProblemMessage[];
+extern const char kPingRoutineUnreachableGatewayProblemMessage[];
+extern const char kPingRoutineFailedPingProblemMessage[];
+extern const char kPingRoutineHighPingLatencyProblemMessage[];
+extern const char kPingRoutineFailedNonDefaultPingsProblemMessage[];
+extern const char kPingRoutineNonDefaultHighLatencyProblemMessage[];
+extern const char kPingRoutineNotRunMessage[];
 
 // Creates the gateway can be pinged routine.
 std::unique_ptr<DiagnosticRoutine> CreateGatewayCanBePingedRoutine(

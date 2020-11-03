@@ -86,7 +86,7 @@ TEST_F(GatewayCanBePingedRoutineTest, RoutineSuccess) {
   mojo_ipc::RoutineUpdatePtr routine_update = RunRoutineAndWaitForExit();
   VerifyNonInteractiveUpdate(routine_update->routine_update_union,
                              mojo_ipc::DiagnosticRoutineStatusEnum::kPassed,
-                             kGatewayCanBePingedRoutineNoProblemMessage);
+                             kPingRoutineNoProblemMessage);
 }
 
 // Test that the GatewayCanBePinged routine returns an error when it is not run.
@@ -102,7 +102,7 @@ TEST_F(GatewayCanBePingedRoutineTest, RoutineError) {
   mojo_ipc::RoutineUpdatePtr routine_update = RunRoutineAndWaitForExit();
   VerifyNonInteractiveUpdate(routine_update->routine_update_union,
                              mojo_ipc::DiagnosticRoutineStatusEnum::kError,
-                             kGatewayCanBePingedRoutineNotRunMessage);
+                             kPingRoutineNotRunMessage);
 }
 
 // Tests that the GatewayCanBePinged routine handles problems.
@@ -143,22 +143,22 @@ INSTANTIATE_TEST_SUITE_P(
         GatewayCanBePingedProblemTestParams{
             network_diagnostics_ipc::GatewayCanBePingedProblem::
                 kUnreachableGateway,
-            kGatewayCanBePingedRoutineUnreachableGatewayProblemMessage},
+            kPingRoutineUnreachableGatewayProblemMessage},
         GatewayCanBePingedProblemTestParams{
             network_diagnostics_ipc::GatewayCanBePingedProblem::
                 kFailedToPingDefaultNetwork,
-            kGatewayCanBePingedRoutineFailedToPingDefaultNetworkProblemMessage},
+            kPingRoutineFailedPingProblemMessage},
         GatewayCanBePingedProblemTestParams{
             network_diagnostics_ipc::GatewayCanBePingedProblem::
                 kDefaultNetworkAboveLatencyThreshold,
-            kGatewayCanBePingedRoutineDefaultNetworkAboveLatencyThresholdProblemMessage},
+            kPingRoutineHighPingLatencyProblemMessage},
         GatewayCanBePingedProblemTestParams{
             network_diagnostics_ipc::GatewayCanBePingedProblem::
                 kUnsuccessfulNonDefaultNetworksPings,
-            kGatewayCanBePingedRoutineUnsuccessfulNonDefaultNetworksPingsProblemMessage},
+            kPingRoutineFailedNonDefaultPingsProblemMessage},
         GatewayCanBePingedProblemTestParams{
             network_diagnostics_ipc::GatewayCanBePingedProblem::
                 kNonDefaultNetworksAboveLatencyThreshold,
-            kGatewayCanBePingedRoutineNonDefaultNetworksAboveLatencyThresholdProblemMessage}));
+            kPingRoutineNonDefaultHighLatencyProblemMessage}));
 
 }  // namespace diagnostics
