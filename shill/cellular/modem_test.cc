@@ -80,7 +80,7 @@ class ModemTest : public Test {
  public:
   ModemTest()
       : manager_(&control_, &dispatcher_, &metrics_),
-        modem_info_(&control_, &dispatcher_, &metrics_, &manager_),
+        modem_info_(&control_, &manager_),
         device_info_(&manager_),
         modem_(new TestModem(kService, kPath, &modem_info_, &rtnl_handler_)) {}
 

@@ -143,10 +143,10 @@ Cellular::Cellular(ModemInfo* modem_info,
              Technology::kCellular),
       state_(kStateDisabled),
       modem_state_(kModemStateUnknown),
-      home_provider_info_(
-          new MobileOperatorInfo(modem_info->dispatcher(), "HomeProvider")),
-      serving_operator_info_(
-          new MobileOperatorInfo(modem_info->dispatcher(), "ServingOperator")),
+      home_provider_info_(new MobileOperatorInfo(
+          modem_info->manager()->dispatcher(), "HomeProvider")),
+      serving_operator_info_(new MobileOperatorInfo(
+          modem_info->manager()->dispatcher(), "ServingOperator")),
       dbus_service_(service),
       dbus_path_(path),
       dbus_path_str_(path.value()),

@@ -52,7 +52,7 @@ class CellularCapabilityCdmaTest : public testing::Test {
         manager_(&control_interface_, dispatcher, &metrics_),
         capability_(nullptr),
         device_adaptor_(nullptr),
-        modem_info_(&control_interface_, dispatcher, &metrics_, &manager_),
+        modem_info_(&control_interface_, &manager_),
         modem_3gpp_proxy_(new mm1::MockModemModem3gppProxy()),
         modem_cdma_proxy_(new mm1::MockModemModemCdmaProxy()),
         modem_proxy_(new mm1::MockModemProxy()),

@@ -433,7 +433,7 @@ TEST_F(DeviceInfoTest, CreateDeviceCellular) {
   IPAddress address = CreateInterfaceAddress();
 
   // A cellular device should be offered to ModemInfo.
-  StrictMock<MockModemInfo> modem_info(nullptr, nullptr, nullptr, nullptr);
+  StrictMock<MockModemInfo> modem_info(nullptr, nullptr);
   EXPECT_CALL(manager_, modem_info()).WillOnce(Return(&modem_info));
   EXPECT_CALL(modem_info, OnDeviceInfoAvailable(kTestDeviceName)).Times(1);
   EXPECT_CALL(routing_table_, FlushRoutes(kTestDeviceIndex)).Times(1);

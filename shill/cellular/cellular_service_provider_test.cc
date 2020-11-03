@@ -35,7 +35,7 @@ class CellularServiceProviderTest : public testing::Test {
  public:
   CellularServiceProviderTest()
       : manager_(&control_, &dispatcher_, &metrics_),
-        modem_info_(&control_, &dispatcher_, &metrics_, &manager_),
+        modem_info_(&control_, &manager_),
         device_info_(&manager_),
         profile_(new NiceMock<MockProfile>(&manager_)),
         provider_(&manager_) {}

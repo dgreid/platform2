@@ -37,7 +37,7 @@ class CellularServiceTest : public testing::Test {
  public:
   CellularServiceTest()
       : manager_(&control_, &dispatcher_, &metrics_),
-        modem_info_(&control_, &dispatcher_, &metrics_, &manager_),
+        modem_info_(&control_, &manager_),
         adaptor_(nullptr) {
     Service::SetNextSerialNumberForTesting(0);
   }

@@ -21,19 +21,14 @@
 namespace shill {
 
 class ControlInterface;
-class EventDispatcher;
 class Manager;
-class Metrics;
 class Modem;
 class PendingActivationStore;
 
 // Handles the modem manager service and creates and destroys modem instances.
 class ModemInfo {
  public:
-  ModemInfo(ControlInterface* control,
-            EventDispatcher* dispatcher,
-            Metrics* metrics,
-            Manager* manager);
+  ModemInfo(ControlInterface* control, Manager* manager);
   virtual ~ModemInfo();
 
   // Starts watching for and handling the DBus modem manager service.
@@ -47,8 +42,6 @@ class ModemInfo {
   virtual void OnDeviceInfoAvailable(const std::string& link_name);
 
   ControlInterface* control_interface() const { return control_interface_; }
-  EventDispatcher* dispatcher() const { return dispatcher_; }
-  Metrics* metrics() const { return metrics_; }
   Manager* manager() const { return manager_; }
   PendingActivationStore* pending_activation_store() const {
     return pending_activation_store_.get();
@@ -93,8 +86,6 @@ class ModemInfo {
       const ObjectsWithProperties& objects_with_properties, const Error& error);
 
   ControlInterface* control_interface_;
-  EventDispatcher* dispatcher_;
-  Metrics* metrics_;
   Manager* manager_;
   std::unique_ptr<DBusObjectManagerProxyInterface> proxy_;
   std::map<RpcIdentifier, std::unique_ptr<Modem>> modems_;

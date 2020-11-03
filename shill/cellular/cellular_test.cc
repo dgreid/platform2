@@ -88,7 +88,7 @@ RpcIdentifier kTestBearerPath("/org/freedesktop/ModemManager1/Bearer/0");
 class CellularPropertyTest : public PropertyStoreTest {
  public:
   CellularPropertyTest()
-      : modem_info_(control_interface(), dispatcher(), metrics(), manager()),
+      : modem_info_(control_interface(), manager()),
         device_(new Cellular(&modem_info_,
                              "usb0",
                              "00:01:02:03:04:05",
@@ -142,7 +142,7 @@ class CellularTest : public testing::TestWithParam<Cellular::Type> {
         kServingOperatorName("ServingOperatorName"),
         control_interface_(this),
         manager_(&control_interface_, &dispatcher_, &metrics_),
-        modem_info_(&control_interface_, &dispatcher_, &metrics_, &manager_),
+        modem_info_(&control_interface_, &manager_),
         device_info_(&manager_),
         dhcp_config_(new MockDHCPConfig(modem_info_.control_interface(),
                                         kTestDeviceName)),

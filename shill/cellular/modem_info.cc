@@ -24,13 +24,8 @@ namespace {
 constexpr int kGetManagedObjectsTimeout = 5000;
 }
 
-ModemInfo::ModemInfo(ControlInterface* control_interface,
-                     EventDispatcher* dispatcher,
-                     Metrics* metrics,
-                     Manager* manager)
+ModemInfo::ModemInfo(ControlInterface* control_interface, Manager* manager)
     : control_interface_(control_interface),
-      dispatcher_(dispatcher),
-      metrics_(metrics),
       manager_(manager),
       weak_ptr_factory_(this) {}
 

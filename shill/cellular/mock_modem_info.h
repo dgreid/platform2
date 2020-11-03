@@ -18,10 +18,7 @@ namespace shill {
 
 class MockModemInfo : public ModemInfo {
  public:
-  MockModemInfo(ControlInterface* control,
-                EventDispatcher* dispatcher,
-                Metrics* metrics,
-                Manager* manager);
+  MockModemInfo(ControlInterface* control, Manager* manager);
 
   ~MockModemInfo() override;
 

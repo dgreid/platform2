@@ -107,7 +107,7 @@ class CellularCapability3gppTest : public testing::TestWithParam<string> {
       : dispatcher_(dispatcher),
         control_interface_(this),
         manager_(&control_interface_, dispatcher, &metrics_),
-        modem_info_(&control_interface_, dispatcher, &metrics_, &manager_),
+        modem_info_(&control_interface_, &manager_),
         modem_3gpp_proxy_(new NiceMock<mm1::MockModemModem3gppProxy>()),
         modem_cdma_proxy_(new mm1::MockModemModemCdmaProxy()),
         modem_location_proxy_(new mm1::MockModemLocationProxy()),

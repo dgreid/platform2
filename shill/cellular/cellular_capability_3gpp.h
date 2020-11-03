@@ -31,6 +31,7 @@
 
 namespace shill {
 
+class Metrics;
 class ModemInfo;
 
 // CellularCapability3gpp handles modems using the
@@ -354,6 +355,9 @@ class CellularCapability3gpp : public CellularCapability {
   void set_active_bearer_for_test(std::unique_ptr<CellularBearer> bearer) {
     active_bearer_ = std::move(bearer);
   }
+
+  // Convenience pointer to modem_info()->manager()->metrics().
+  Metrics* metrics_;
 
   std::unique_ptr<mm1::ModemModem3gppProxyInterface> modem_3gpp_proxy_;
   std::unique_ptr<mm1::ModemProxyInterface> modem_proxy_;

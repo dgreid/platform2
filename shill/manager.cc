@@ -183,7 +183,7 @@ Manager::Manager(ControlInterface* control_interface,
       adaptor_(control_interface->CreateManagerAdaptor(this)),
       device_info_(this),
 #if !defined(DISABLE_CELLULAR)
-      modem_info_(new ModemInfo(control_interface, dispatcher, metrics, this)),
+      modem_info_(new ModemInfo(control_interface, this)),
       cellular_service_provider_(new CellularServiceProvider(this)),
 #endif  // DISABLE_CELLULAR
       ethernet_provider_(new EthernetProvider(this)),

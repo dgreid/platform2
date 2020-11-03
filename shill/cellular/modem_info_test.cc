@@ -32,11 +32,8 @@ const RpcIdentifier kModemPath =
 
 class ModemInfoForTest : public ModemInfo {
  public:
-  ModemInfoForTest(ControlInterface* control,
-                   EventDispatcher* dispatcher,
-                   Metrics* metrics,
-                   Manager* manager)
-      : ModemInfo(control, dispatcher, metrics, manager) {
+  ModemInfoForTest(ControlInterface* control, Manager* manager)
+      : ModemInfo(control, manager) {
     // See note for |mock_proxy_|.
     mock_proxy_ = std::make_unique<MockDBusObjectManagerProxy>();
     mock_proxy_->IgnoreSetCallbacks();
@@ -67,7 +64,7 @@ class ModemInfoTest : public Test {
  public:
   ModemInfoTest()
       : manager_(&control_interface_, &dispatcher_, &metrics_),
-        modem_info_(&control_interface_, &dispatcher_, &metrics_, &manager_) {}
+        modem_info_(&control_interface_, &manager_) {}
 
  protected:
   void Connect(const ObjectsWithProperties& expected_objects) {

@@ -31,6 +31,7 @@
 #include "shill/device_id.h"
 #include "shill/error.h"
 #include "shill/logging.h"
+#include "shill/manager.h"
 #include "shill/property_accessor.h"
 
 using base::Bind;
@@ -158,6 +159,7 @@ bool IsRegisteredState(MMModem3gppRegistrationState state) {
 CellularCapability3gpp::CellularCapability3gpp(Cellular* cellular,
                                                ModemInfo* modem_info)
     : CellularCapability(cellular, modem_info),
+      metrics_(modem_info->manager()->metrics()),
       mobile_operator_info_(
           new MobileOperatorInfo(cellular->dispatcher(), "ParseScanResult")),
       registration_state_(MM_MODEM_3GPP_REGISTRATION_STATE_UNKNOWN),
@@ -242,8 +244,7 @@ void CellularCapability3gpp::EnableModem(bool deferrable,
   SLOG(this, 3) << __func__ << "(deferrable=" << deferrable << ")";
   CHECK(!callback.is_null());
   Error local_error(Error::kOperationInitiated);
-  modem_info()->metrics()->NotifyDeviceEnableStarted(
-      cellular()->interface_index());
+  metrics_->NotifyDeviceEnableStarted(cellular()->interface_index());
   modem_proxy_->Enable(
       true, &local_error,
       Bind(&CellularCapability3gpp::EnableModemCompleted,
@@ -304,10 +305,8 @@ void CellularCapability3gpp::EnableModemCompleted(
   GetProperties();
   // We expect the modem to start scanning after it has been enabled.
   // Change this if this behavior is no longer the case in the future.
-  modem_info()->metrics()->NotifyDeviceEnableFinished(
-      cellular()->interface_index());
-  modem_info()->metrics()->NotifyDeviceScanStarted(
-      cellular()->interface_index());
+  metrics_->NotifyDeviceEnableFinished(cellular()->interface_index());
+  metrics_->NotifyDeviceScanStarted(cellular()->interface_index());
   callback.Run(error);
 }
 
@@ -331,8 +330,7 @@ void CellularCapability3gpp::StopModem(Error* error,
 void CellularCapability3gpp::Stop_Disable(const ResultCallback& callback) {
   SLOG(this, 3) << __func__;
   Error error;
-  modem_info()->metrics()->NotifyDeviceDisableStarted(
-      cellular()->interface_index());
+  metrics_->NotifyDeviceDisableStarted(cellular()->interface_index());
   modem_proxy_->Enable(false, &error,
                        Bind(&CellularCapability3gpp::Stop_DisableCompleted,
                             weak_ptr_factory_.GetWeakPtr(), callback),
@@ -386,8 +384,7 @@ void CellularCapability3gpp::Stop_PowerDownCompleted(
   // Since the disable succeeded, if power down fails, we currently fail
   // silently, i.e. we need to report the disable operation as having
   // succeeded.
-  modem_info()->metrics()->NotifyDeviceDisableFinished(
-      cellular()->interface_index());
+  metrics_->NotifyDeviceDisableFinished(cellular()->interface_index());
   ReleaseProxies();
   callback.Run(Error());
 }
@@ -1524,7 +1521,7 @@ void CellularCapability3gpp::On3gppRegistrationChanged(
     } else {
       // This is not a repeated post. So, count this instance of delayed drop
       // posted.
-      modem_info()->metrics()->Notify3GPPRegistrationDelayedDropPosted();
+      metrics_->Notify3GPPRegistrationDelayedDropPosted();
     }
     SLOG(this, 2) << "Posted deferred registration state update";
     registration_dropped_update_callback_.Reset(Bind(
@@ -1539,7 +1536,7 @@ void CellularCapability3gpp::On3gppRegistrationChanged(
       registration_dropped_update_callback_.Cancel();
       // If we cancelled the callback here, it means we had flaky network for a
       // small duration.
-      modem_info()->metrics()->Notify3GPPRegistrationDelayedDropCanceled();
+      metrics_->Notify3GPPRegistrationDelayedDropCanceled();
     }
     Handle3gppRegistrationChange(state, operator_code, operator_name);
   }
