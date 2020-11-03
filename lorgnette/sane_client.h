@@ -10,6 +10,7 @@
 #include <string>
 #include <vector>
 
+#include <base/optional.h>
 #include <brillo/errors/error.h>
 #include <lorgnette/proto_bindings/lorgnette_service.pb.h>
 #include <sane/sane.h>
@@ -42,22 +43,21 @@ class SaneDevice {
  public:
   virtual ~SaneDevice() {}
 
-  virtual bool GetValidOptionValues(brillo::ErrorPtr* error,
-                                    ValidOptionValues* values) = 0;
+  virtual base::Optional<ValidOptionValues> GetValidOptionValues(
+      brillo::ErrorPtr* error) = 0;
 
-  virtual bool GetScanResolution(brillo::ErrorPtr* error,
-                                 int* resolution_out) = 0;
+  virtual base::Optional<int> GetScanResolution(brillo::ErrorPtr* error) = 0;
   virtual bool SetScanResolution(brillo::ErrorPtr* error, int resolution) = 0;
-  virtual bool GetDocumentSource(brillo::ErrorPtr* error,
-                                 std::string* source_name_out) = 0;
+  virtual base::Optional<std::string> GetDocumentSource(
+      brillo::ErrorPtr* error) = 0;
   virtual bool SetDocumentSource(brillo::ErrorPtr* error,
                                  const std::string& source_name) = 0;
   virtual bool SetColorMode(brillo::ErrorPtr* error, ColorMode color_mode) = 0;
   virtual bool SetScanRegion(brillo::ErrorPtr* error,
                              const ScanRegion& region) = 0;
   virtual SANE_Status StartScan(brillo::ErrorPtr* error) = 0;
-  virtual bool GetScanParameters(brillo::ErrorPtr* error,
-                                 ScanParameters* parameters) = 0;
+  virtual base::Optional<ScanParameters> GetScanParameters(
+      brillo::ErrorPtr* error) = 0;
   virtual SANE_Status ReadScanData(brillo::ErrorPtr* error,
                                    uint8_t* buf,
                                    size_t count,
@@ -76,8 +76,8 @@ class SaneClient {
  public:
   virtual ~SaneClient() {}
 
-  virtual bool ListDevices(brillo::ErrorPtr* error,
-                           std::vector<ScannerInfo>* scanners_out) = 0;
+  virtual base::Optional<std::vector<ScannerInfo>> ListDevices(
+      brillo::ErrorPtr* error) = 0;
   std::unique_ptr<SaneDevice> ConnectToDevice(brillo::ErrorPtr* error,
                                               const std::string& device_name);
 

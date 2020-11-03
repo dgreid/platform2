@@ -36,36 +36,33 @@ class SaneDeviceImplTest : public testing::Test {
   std::unique_ptr<SaneDevice> device_;
 };
 
-// Check that GetValidOptionValues rejects a null input pointer.
-TEST_F(SaneDeviceImplTest, GetValidOptionValuesBadPointer) {
-  EXPECT_FALSE(device_->GetValidOptionValues(nullptr, nullptr));
-}
-
 // Check that GetValidOptionValues returns correct values for the test backend.
 TEST_F(SaneDeviceImplTest, GetValidOptionValuesSuccess) {
-  ValidOptionValues values;
-  EXPECT_TRUE(device_->GetValidOptionValues(nullptr, &values));
-  ASSERT_EQ(values.resolutions.size(), 1200);
+  base::Optional<ValidOptionValues> values =
+      device_->GetValidOptionValues(nullptr);
+  EXPECT_TRUE(values.has_value());
+  ASSERT_EQ(values->resolutions.size(), 1200);
   for (int i = 0; i < 1200; i++)
-    EXPECT_EQ(values.resolutions[i], i + 1);
+    EXPECT_EQ(values->resolutions[i], i + 1);
 
-  EXPECT_THAT(values.sources,
+  EXPECT_THAT(values->sources,
               ElementsAre(EqualsDocumentSource(CreateDocumentSource(
                               "Flatbed", SOURCE_PLATEN, 200.0, 200.0)),
                           EqualsDocumentSource(CreateDocumentSource(
                               "Automatic Document Feeder", SOURCE_ADF_SIMPLEX,
                               200.0, 200.0))));
 
-  EXPECT_THAT(values.color_modes,
+  EXPECT_THAT(values->color_modes,
               ElementsAre(kScanPropertyModeGray, kScanPropertyModeColor));
 }
 
 // Check that SetScanResolution works for all valid values.
 TEST_F(SaneDeviceImplTest, SetResolution) {
-  ValidOptionValues values;
-  EXPECT_TRUE(device_->GetValidOptionValues(nullptr, &values));
+  base::Optional<ValidOptionValues> values =
+      device_->GetValidOptionValues(nullptr);
+  EXPECT_TRUE(values.has_value());
 
-  for (int resolution : values.resolutions)
+  for (int resolution : values->resolutions)
     EXPECT_TRUE(device_->SetScanResolution(nullptr, resolution));
 }
 
@@ -75,23 +72,25 @@ TEST_F(SaneDeviceImplTest, SetResolution) {
 TEST_F(SaneDeviceImplTest, SetSource) {
   EXPECT_FALSE(device_->SetDocumentSource(nullptr, "invalid source"));
 
-  ValidOptionValues values;
-  EXPECT_TRUE(device_->GetValidOptionValues(nullptr, &values));
+  base::Optional<ValidOptionValues> values =
+      device_->GetValidOptionValues(nullptr);
+  EXPECT_TRUE(values.has_value());
 
   // Test both with and without reloading options after setting option, since
   // it can surface different bugs.
   for (bool reload_options : {true, false}) {
     LOG(INFO) << "Testing " << (reload_options ? "with" : "without")
               << " option reloading.";
-    for (const DocumentSource& source : values.sources) {
+    for (const DocumentSource& source : values->sources) {
       EXPECT_TRUE(device_->SetDocumentSource(nullptr, source.name()));
       if (reload_options) {
         ReloadOptions();
       }
 
-      std::string scanner_value;
-      EXPECT_TRUE(device_->GetDocumentSource(nullptr, &scanner_value));
-      EXPECT_EQ(scanner_value, source.name());
+      base::Optional<std::string> scanner_value =
+          device_->GetDocumentSource(nullptr);
+      EXPECT_TRUE(scanner_value.has_value());
+      EXPECT_EQ(scanner_value.value(), source.name());
     }
   }
 }
@@ -100,10 +99,11 @@ TEST_F(SaneDeviceImplTest, SetSource) {
 TEST_F(SaneDeviceImplTest, SetColorMode) {
   EXPECT_FALSE(device_->SetColorMode(nullptr, MODE_UNSPECIFIED));
 
-  ValidOptionValues values;
-  EXPECT_TRUE(device_->GetValidOptionValues(nullptr, &values));
+  base::Optional<ValidOptionValues> values =
+      device_->GetValidOptionValues(nullptr);
+  EXPECT_TRUE(values.has_value());
 
-  for (const std::string& mode_string : values.color_modes) {
+  for (const std::string& mode_string : values->color_modes) {
     ColorMode mode = impl::ColorModeFromSaneString(mode_string);
     EXPECT_NE(mode, MODE_UNSPECIFIED)
         << "Unexpected ColorMode string " << mode_string;
@@ -117,15 +117,9 @@ TEST_F(SaneDeviceImplTest, DuplicateStartScan) {
   EXPECT_EQ(device_->StartScan(nullptr), SANE_STATUS_DEVICE_BUSY);
 }
 
-// Check the GetScanParameters correctly rejects invalid input pointers.
-TEST_F(SaneDeviceImplTest, GetScanParametersFail) {
-  EXPECT_FALSE(device_->GetScanParameters(nullptr, nullptr));
-}
-
 // Check that GetScanParameters returns the correct values corresponding to the
 // input resolution and scan region.
 TEST_F(SaneDeviceImplTest, GetScanParameters) {
-  ScanParameters params;
   const int resolution = 100; /* dpi */
   EXPECT_TRUE(device_->SetScanResolution(nullptr, resolution));
 
@@ -139,16 +133,18 @@ TEST_F(SaneDeviceImplTest, GetScanParameters) {
   region.set_bottom_right_y(height);
   EXPECT_TRUE(device_->SetScanRegion(nullptr, region));
 
-  EXPECT_TRUE(device_->GetScanParameters(nullptr, &params));
-  EXPECT_TRUE(params.format == kGrayscale);
+  base::Optional<ScanParameters> params = device_->GetScanParameters(nullptr);
+  EXPECT_TRUE(params.has_value());
+  EXPECT_TRUE(params->format == kGrayscale);
 
   const double mms_per_inch = 25.4;
-  EXPECT_EQ(params.bytes_per_line,
+  EXPECT_EQ(params->bytes_per_line,
             static_cast<int>(width / mms_per_inch * resolution));
-  EXPECT_EQ(params.pixels_per_line,
+  EXPECT_EQ(params->pixels_per_line,
             static_cast<int>(width / mms_per_inch * resolution));
-  EXPECT_EQ(params.lines, static_cast<int>(height / mms_per_inch * resolution));
-  EXPECT_EQ(params.depth, 8);
+  EXPECT_EQ(params->lines,
+            static_cast<int>(height / mms_per_inch * resolution));
+  EXPECT_EQ(params->depth, 8);
 }
 
 // Check that ReadScanData fails when we haven't started a scan.
@@ -208,80 +204,93 @@ class SaneClientTest : public testing::Test {
   const SANE_Device* empty_devices_[1] = {NULL};
   const SANE_Device* one_device_[2] = {&dev_, NULL};
   const SANE_Device* two_devices_[3] = {&dev_, &dev_two_, NULL};
-
-  std::vector<ScannerInfo> info_;
 };
 
 TEST_F(SaneClientTest, ScannerInfoFromDeviceListInvalidParameters) {
-  EXPECT_FALSE(SaneClientImpl::DeviceListToScannerInfo(NULL, NULL));
-  EXPECT_FALSE(SaneClientImpl::DeviceListToScannerInfo(one_device_, NULL));
-  EXPECT_FALSE(SaneClientImpl::DeviceListToScannerInfo(NULL, &info_));
+  EXPECT_FALSE(SaneClientImpl::DeviceListToScannerInfo(NULL).has_value());
 }
 
 TEST_F(SaneClientTest, ScannerInfoFromDeviceListNoDevices) {
-  EXPECT_TRUE(SaneClientImpl::DeviceListToScannerInfo(empty_devices_, &info_));
-  EXPECT_EQ(info_.size(), 0);
+  base::Optional<std::vector<ScannerInfo>> info =
+      SaneClientImpl::DeviceListToScannerInfo(empty_devices_);
+  EXPECT_TRUE(info.has_value());
+  EXPECT_EQ(info->size(), 0);
 }
 
 TEST_F(SaneClientTest, ScannerInfoFromDeviceListOneDevice) {
-  EXPECT_TRUE(SaneClientImpl::DeviceListToScannerInfo(one_device_, &info_));
-  ASSERT_EQ(info_.size(), 1);
-  EXPECT_EQ(info_[0].name(), dev_.name);
-  EXPECT_EQ(info_[0].manufacturer(), dev_.vendor);
-  EXPECT_EQ(info_[0].model(), dev_.model);
-  EXPECT_EQ(info_[0].type(), dev_.type);
+  base::Optional<std::vector<ScannerInfo>> opt_info =
+      SaneClientImpl::DeviceListToScannerInfo(one_device_);
+  EXPECT_TRUE(opt_info.has_value());
+  std::vector<ScannerInfo> info = opt_info.value();
+  ASSERT_EQ(info.size(), 1);
+  EXPECT_EQ(info[0].name(), dev_.name);
+  EXPECT_EQ(info[0].manufacturer(), dev_.vendor);
+  EXPECT_EQ(info[0].model(), dev_.model);
+  EXPECT_EQ(info[0].type(), dev_.type);
 }
 
 TEST_F(SaneClientTest, ScannerInfoFromDeviceListNullFields) {
   dev_ = CreateTestDevice();
   dev_.name = NULL;
-  EXPECT_TRUE(SaneClientImpl::DeviceListToScannerInfo(one_device_, &info_));
-  EXPECT_EQ(info_.size(), 0);
+  base::Optional<std::vector<ScannerInfo>> opt_info =
+      SaneClientImpl::DeviceListToScannerInfo(one_device_);
+  EXPECT_TRUE(opt_info.has_value());
+  EXPECT_EQ(opt_info->size(), 0);
 
   dev_ = CreateTestDevice();
   dev_.vendor = NULL;
-  EXPECT_TRUE(SaneClientImpl::DeviceListToScannerInfo(one_device_, &info_));
-  ASSERT_EQ(info_.size(), 1);
-  EXPECT_EQ(info_[0].name(), dev_.name);
-  EXPECT_EQ(info_[0].manufacturer(), "");
-  EXPECT_EQ(info_[0].model(), dev_.model);
-  EXPECT_EQ(info_[0].type(), dev_.type);
+  opt_info = SaneClientImpl::DeviceListToScannerInfo(one_device_);
+  EXPECT_TRUE(opt_info.has_value());
+  std::vector<ScannerInfo> info = opt_info.value();
+  ASSERT_EQ(info.size(), 1);
+  EXPECT_EQ(info[0].name(), dev_.name);
+  EXPECT_EQ(info[0].manufacturer(), "");
+  EXPECT_EQ(info[0].model(), dev_.model);
+  EXPECT_EQ(info[0].type(), dev_.type);
 
   dev_ = CreateTestDevice();
   dev_.model = NULL;
-  EXPECT_TRUE(SaneClientImpl::DeviceListToScannerInfo(one_device_, &info_));
-  ASSERT_EQ(info_.size(), 1);
-  EXPECT_EQ(info_[0].name(), dev_.name);
-  EXPECT_EQ(info_[0].manufacturer(), dev_.vendor);
-  EXPECT_EQ(info_[0].model(), "");
-  EXPECT_EQ(info_[0].type(), dev_.type);
+  opt_info = SaneClientImpl::DeviceListToScannerInfo(one_device_);
+  EXPECT_TRUE(opt_info.has_value());
+  info = opt_info.value();
+  ASSERT_EQ(info.size(), 1);
+  EXPECT_EQ(info[0].name(), dev_.name);
+  EXPECT_EQ(info[0].manufacturer(), dev_.vendor);
+  EXPECT_EQ(info[0].model(), "");
+  EXPECT_EQ(info[0].type(), dev_.type);
 
   dev_ = CreateTestDevice();
   dev_.type = NULL;
-  EXPECT_TRUE(SaneClientImpl::DeviceListToScannerInfo(one_device_, &info_));
-  ASSERT_EQ(info_.size(), 1);
-  EXPECT_EQ(info_[0].name(), dev_.name);
-  EXPECT_EQ(info_[0].manufacturer(), dev_.vendor);
-  EXPECT_EQ(info_[0].model(), dev_.model);
-  EXPECT_EQ(info_[0].type(), "");
+  opt_info = SaneClientImpl::DeviceListToScannerInfo(one_device_);
+  EXPECT_TRUE(opt_info.has_value());
+  info = opt_info.value();
+  ASSERT_EQ(info.size(), 1);
+  EXPECT_EQ(info[0].name(), dev_.name);
+  EXPECT_EQ(info[0].manufacturer(), dev_.vendor);
+  EXPECT_EQ(info[0].model(), dev_.model);
+  EXPECT_EQ(info[0].type(), "");
 }
 
 TEST_F(SaneClientTest, ScannerInfoFromDeviceListMultipleDevices) {
-  EXPECT_FALSE(SaneClientImpl::DeviceListToScannerInfo(two_devices_, &info_));
+  base::Optional<std::vector<ScannerInfo>> opt_info =
+      SaneClientImpl::DeviceListToScannerInfo(two_devices_);
+  EXPECT_FALSE(opt_info.has_value());
 
   dev_two_.name = "Test Device 2";
   dev_two_.vendor = "Test Vendor 2";
-  EXPECT_TRUE(SaneClientImpl::DeviceListToScannerInfo(two_devices_, &info_));
-  ASSERT_EQ(info_.size(), 2);
-  EXPECT_EQ(info_[0].name(), dev_.name);
-  EXPECT_EQ(info_[0].manufacturer(), dev_.vendor);
-  EXPECT_EQ(info_[0].model(), dev_.model);
-  EXPECT_EQ(info_[0].type(), dev_.type);
+  opt_info = SaneClientImpl::DeviceListToScannerInfo(two_devices_);
+  EXPECT_TRUE(opt_info.has_value());
+  std::vector<ScannerInfo> info = opt_info.value();
+  ASSERT_EQ(info.size(), 2);
+  EXPECT_EQ(info[0].name(), dev_.name);
+  EXPECT_EQ(info[0].manufacturer(), dev_.vendor);
+  EXPECT_EQ(info[0].model(), dev_.model);
+  EXPECT_EQ(info[0].type(), dev_.type);
 
-  EXPECT_EQ(info_[1].name(), dev_two_.name);
-  EXPECT_EQ(info_[1].manufacturer(), dev_two_.vendor);
-  EXPECT_EQ(info_[1].model(), dev_two_.model);
-  EXPECT_EQ(info_[1].type(), dev_two_.type);
+  EXPECT_EQ(info[1].name(), dev_two_.name);
+  EXPECT_EQ(info[1].manufacturer(), dev_two_.vendor);
+  EXPECT_EQ(info[1].model(), dev_two_.model);
+  EXPECT_EQ(info[1].type(), dev_two_.type);
 }
 
 namespace {

@@ -30,11 +30,11 @@ class SaneClientImpl : public SaneClient {
   static std::unique_ptr<SaneClientImpl> Create();
   ~SaneClientImpl();
 
-  bool ListDevices(brillo::ErrorPtr* error,
-                   std::vector<ScannerInfo>* scanners_out) override;
+  base::Optional<std::vector<ScannerInfo>> ListDevices(
+      brillo::ErrorPtr* error) override;
 
-  static bool DeviceListToScannerInfo(const SANE_Device** device_list,
-                                      std::vector<ScannerInfo>* scanners_out);
+  static base::Optional<std::vector<ScannerInfo>> DeviceListToScannerInfo(
+      const SANE_Device** device_list);
 
  protected:
   std::unique_ptr<SaneDevice> ConnectToDeviceInternal(
@@ -97,21 +97,21 @@ class SaneDeviceImpl : public SaneDevice {
  public:
   ~SaneDeviceImpl();
 
-  bool GetValidOptionValues(brillo::ErrorPtr* error,
-                            ValidOptionValues* values) override;
+  base::Optional<ValidOptionValues> GetValidOptionValues(
+      brillo::ErrorPtr* error) override;
 
-  bool GetScanResolution(brillo::ErrorPtr* error, int* resolution_out) override;
+  base::Optional<int> GetScanResolution(brillo::ErrorPtr* error) override;
   bool SetScanResolution(brillo::ErrorPtr* error, int resolution) override;
-  bool GetDocumentSource(brillo::ErrorPtr* error,
-                         std::string* source_name_out) override;
+  base::Optional<std::string> GetDocumentSource(
+      brillo::ErrorPtr* error) override;
   bool SetDocumentSource(brillo::ErrorPtr* error,
                          const std::string& source_name) override;
   bool SetColorMode(brillo::ErrorPtr* error, ColorMode color_mode) override;
   bool SetScanRegion(brillo::ErrorPtr* error,
                      const ScanRegion& region) override;
   SANE_Status StartScan(brillo::ErrorPtr* error) override;
-  bool GetScanParameters(brillo::ErrorPtr* error,
-                         ScanParameters* parameters) override;
+  base::Optional<ScanParameters> GetScanParameters(
+      brillo::ErrorPtr* error) override;
   SANE_Status ReadScanData(brillo::ErrorPtr* error,
                            uint8_t* buf,
                            size_t count,
@@ -154,7 +154,7 @@ class SaneDeviceImpl : public SaneDevice {
   template <typename T>
   bool SetOption(brillo::ErrorPtr* error, ScanOption option, T value);
   template <typename T>
-  bool GetOption(brillo::ErrorPtr* error, ScanOption option, T* value_out);
+  base::Optional<T> GetOption(brillo::ErrorPtr* error, ScanOption option);
 
   SANE_Handle handle_;
   std::string name_;

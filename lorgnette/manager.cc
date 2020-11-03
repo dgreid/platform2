@@ -372,12 +372,14 @@ bool Manager::ListScanners(brillo::ErrorPtr* error,
     }
   }
 
-  std::vector<ScannerInfo> sane_scanners;
-  if (!sane_client_->ListDevices(error, &sane_scanners)) {
+  base::Optional<std::vector<ScannerInfo>> sane_scanners =
+      sane_client_->ListDevices(error);
+  if (!sane_scanners.has_value()) {
     return false;
   }
   // Only add sane scanners that don't have ippusb connection
-  RemoveDuplicateScanners(&scanners, seen_vidpid, seen_busdev, sane_scanners);
+  RemoveDuplicateScanners(&scanners, seen_vidpid, seen_busdev,
+                          sane_scanners.value());
 
   activity_callback_.Run();
 
@@ -432,20 +434,21 @@ bool Manager::GetScannerCapabilities(brillo::ErrorPtr* error,
   if (!device)
     return false;
 
-  ValidOptionValues options;
-  if (!device->GetValidOptionValues(error, &options))
+  base::Optional<ValidOptionValues> options =
+      device->GetValidOptionValues(error);
+  if (!options.has_value())
     return false;
 
   const std::vector<uint32_t> supported_resolutions = {75,  100, 150,
                                                        200, 300, 600};
 
   ScannerCapabilities capabilities;
-  for (const uint32_t resolution : options.resolutions) {
+  for (const uint32_t resolution : options->resolutions) {
     if (base::Contains(supported_resolutions, resolution))
       capabilities.add_resolutions(resolution);
   }
 
-  for (const DocumentSource& source : options.sources) {
+  for (const DocumentSource& source : options->sources) {
     if (source.type() != SOURCE_UNSPECIFIED) {
       *capabilities.add_sources() = source;
     } else {
@@ -453,7 +456,7 @@ bool Manager::GetScannerCapabilities(brillo::ErrorPtr* error,
     }
   }
 
-  for (const std::string& mode : options.color_modes) {
+  for (const std::string& mode : options->color_modes) {
     const ColorMode color_mode = impl::ColorModeFromSaneString(mode);
     if (color_mode != MODE_UNSPECIFIED)
       capabilities.add_color_modes(color_mode);
@@ -486,13 +489,13 @@ std::vector<uint8_t> Manager::StartScan(
     return impl::SerializeProto(response);
   }
 
-  std::string source_name;
-  if (!device->GetDocumentSource(&error, &source_name)) {
+  base::Optional<std::string> source_name = device->GetDocumentSource(&error);
+  if (!source_name.has_value()) {
     response.set_failure_reason("Failed to get DocumentSource: " +
                                 SerializeError(error));
     return impl::SerializeProto(response);
   }
-  SourceType source_type = GuessSourceType(source_name);
+  SourceType source_type = GuessSourceType(source_name.value());
 
   ScanJobState scan_state;
   scan_state.device_name = request.device_name();
@@ -701,11 +704,11 @@ bool Manager::StartScanInternal(brillo::ErrorPtr* error,
       return false;
     }
 
-    int resolution = 0;
-    if (!device->GetScanResolution(error, &resolution)) {
+    base::Optional<int> resolution = device->GetScanResolution(error);
+    if (!resolution.has_value()) {
       return false;
     }
-    LOG(INFO) << "Device is using resolution: " << resolution;
+    LOG(INFO) << "Device is using resolution: " << resolution.value();
   }
 
   if (!settings.source_name().empty()) {
@@ -843,29 +846,27 @@ ScanState Manager::RunScanLoop(brillo::ErrorPtr* error,
                                base::ScopedFILE out_file,
                                base::Optional<std::string> scan_uuid) {
   SaneDevice* device = scan_state->device.get();
-  ScanParameters params;
-  if (!device->GetScanParameters(error, &params)) {
+  base::Optional<ScanParameters> params = device->GetScanParameters(error);
+  if (!params.has_value()) {
     return SCAN_STATE_FAILED;
   }
 
-  if (!ValidateParams(error, params)) {
+  if (!ValidateParams(error, params.value())) {
     return SCAN_STATE_FAILED;
   }
 
-  // Get resolution value so that we can record it in the PNG.
-  base::Optional<int> resolution = 0;  // DPI.
+  // Get resolution value in DPI so that we can record it in the PNG.
   brillo::ErrorPtr resolution_error;
-  int sane_resolution;
-  if (device->GetScanResolution(&resolution_error, &sane_resolution)) {
-    resolution = sane_resolution;
-  } else {
+  base::Optional<int> resolution = device->GetScanResolution(&resolution_error);
+  if (!resolution.has_value()) {
     LOG(WARNING) << "Failed to get scan resolution: "
                  << SerializeError(resolution_error);
   }
 
   png_struct* png;
   png_info* info;
-  if (!SetupPngHeader(error, params, resolution, &png, &info, out_file)) {
+  if (!SetupPngHeader(error, params.value(), resolution, &png, &info,
+                      out_file)) {
     return SCAN_STATE_FAILED;
   }
   base::ScopedClosureRunner cleanup_png(base::BindOnce(
@@ -876,11 +877,11 @@ ScanState Manager::RunScanLoop(brillo::ErrorPtr* error,
 
   // Sanity check to make sure that we're not consuming more data in
   // png_write_row than we have available.
-  if (png_get_rowbytes(png, info) > params.bytes_per_line) {
+  if (png_get_rowbytes(png, info) > params->bytes_per_line) {
     brillo::Error::AddToPrintf(
         error, FROM_HERE, kDbusDomain, kManagerServiceError,
         "PNG image row requires %zu bytes, but SANE is only providing %d bytes",
-        png_get_rowbytes(png, info), params.bytes_per_line);
+        png_get_rowbytes(png, info), params->bytes_per_line);
     return SCAN_STATE_FAILED;
   }
 
@@ -889,7 +890,7 @@ ScanState Manager::RunScanLoop(brillo::ErrorPtr* error,
   size_t rows_written = 0;
   const size_t kMaxBuffer = 1024 * 1024;
   const size_t buffer_length =
-      std::max(base::bits::Align(params.bytes_per_line, 4 * 1024), kMaxBuffer);
+      std::max(base::bits::Align(params->bytes_per_line, 4 * 1024), kMaxBuffer);
   std::vector<uint8_t> image_buffer(buffer_length, '\0');
   // The offset within image_buffer to read to. This will be used within the
   // loop for when we've read a partial image line and need to track data that
@@ -927,7 +928,7 @@ ScanState Manager::RunScanLoop(brillo::ErrorPtr* error,
     // Indices [buffer_offset, buffer_offset + read) hold the data we just read.
     size_t bytes_available = buffer_offset + read;
     size_t bytes_converted = 0;
-    while (bytes_available - bytes_converted >= params.bytes_per_line) {
+    while (bytes_available - bytes_converted >= params->bytes_per_line) {
       int ret = LibpngErrorWrap(error, png_write_row, png,
                                 image_buffer.data() + bytes_converted);
       if (ret != 0) {
@@ -936,9 +937,9 @@ ScanState Manager::RunScanLoop(brillo::ErrorPtr* error,
             "Writing PNG row failed with result %d", ret);
         return SCAN_STATE_FAILED;
       }
-      bytes_converted += params.bytes_per_line;
+      bytes_converted += params->bytes_per_line;
       rows_written++;
-      uint32_t progress = rows_written * 100 / params.lines;
+      uint32_t progress = rows_written * 100 / params->lines;
       base::TimeTicks now = base::TimeTicks::Now();
       if (scan_uuid.has_value() && progress != last_progress_value &&
           now - last_progress_sent_time >= progress_signal_interval_) {

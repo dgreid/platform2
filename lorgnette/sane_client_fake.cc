@@ -16,16 +16,6 @@ static const char* kDbusDomain = brillo::errors::dbus::kDomain;
 
 namespace lorgnette {
 
-// static
-bool SaneClientFake::ListDevices(brillo::ErrorPtr* error,
-                                 std::vector<ScannerInfo>* scanners_out) {
-  if (!list_devices_result_)
-    return false;
-
-  *scanners_out = scanners_;
-  return true;
-}
-
 std::unique_ptr<SaneDevice> SaneClientFake::ConnectToDeviceInternal(
     brillo::ErrorPtr* error, const std::string& device_name) {
   if (devices_.count(device_name) > 0) {
@@ -77,37 +67,18 @@ SaneDeviceFake::SaneDeviceFake()
 
 SaneDeviceFake::~SaneDeviceFake() {}
 
-bool SaneDeviceFake::GetValidOptionValues(brillo::ErrorPtr* error,
-                                          ValidOptionValues* values) {
-  if (!values || !values_.has_value()) {
+base::Optional<ValidOptionValues> SaneDeviceFake::GetValidOptionValues(
+    brillo::ErrorPtr* error) {
+  if (!values_.has_value()) {
     brillo::Error::AddTo(error, FROM_HERE, kDbusDomain, kManagerServiceError,
                          "No option values");
-    return false;
   }
 
-  *values = values_.value();
-  return true;
-}
-
-bool SaneDeviceFake::GetScanResolution(brillo::ErrorPtr*, int* resolution_out) {
-  if (!resolution_out)
-    return false;
-
-  *resolution_out = resolution_;
-  return true;
+  return values_;
 }
 
 bool SaneDeviceFake::SetScanResolution(brillo::ErrorPtr*, int resolution) {
   resolution_ = resolution;
-  return true;
-}
-
-bool SaneDeviceFake::GetDocumentSource(brillo::ErrorPtr*,
-                                       std::string* source_name_out) {
-  if (!source_name_out)
-    return false;
-
-  *source_name_out = source_name_;
   return true;
 }
 
@@ -159,16 +130,14 @@ SANE_Status SaneDeviceFake::StartScan(brillo::ErrorPtr* error) {
   return SANE_STATUS_GOOD;
 }
 
-bool SaneDeviceFake::GetScanParameters(brillo::ErrorPtr* error,
-                                       ScanParameters* parameters) {
-  if (!parameters || !params_.has_value()) {
+base::Optional<ScanParameters> SaneDeviceFake::GetScanParameters(
+    brillo::ErrorPtr* error) {
+  if (!params_.has_value()) {
     brillo::Error::AddTo(error, FROM_HERE, kDbusDomain, kManagerServiceError,
                          "No parameters");
-    return false;
   }
 
-  *parameters = params_.value();
-  return true;
+  return params_;
 }
 
 SANE_Status SaneDeviceFake::ReadScanData(brillo::ErrorPtr* error,
