@@ -77,7 +77,13 @@ set_robust_list: 1
 # Driver type 0xec = CROS_EC_DEV_IOC_V2
 # (New ioctl format,  used by ChromeOS 4.4 or later as well as upstream 4.0+)
 # Please refer to src/platform/ec/util/cros_ec_dev.h for more info
-ioctl: arg1 == 0xc108ec01 || arg1 == 0xc01c3a00 || arg1 == 0xc014ec00
+#
+# Or
+#
+# For brillo::kLogToStderrIfTty. isatty(0) calls ioctl(0, TCGETS, *).
+ioctl: arg1 == 0xc108ec01 || arg1 == 0xc01c3a00 || arg1 == 0xc014ec00 || arg0 == 0 && arg1 == TCGETS
+
+
 # TODO(b/120826467) Disallow execve when accessing /dev/cros_ec
 # without ectool is possible
 execve: 1
