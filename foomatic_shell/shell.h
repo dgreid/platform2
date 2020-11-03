@@ -17,13 +17,15 @@ constexpr size_t kMaxSourceSize = 16 * 1024;
 // standard input (file descriptor = 0). Error messages are written to standard
 // error stream (file descriptor = 2). |output_fd| must be a valid file
 // descriptor different that 0 and 2. |verbose_mode| is used to control logging
-// level - all logs are dumped to stderr. |recursion_level| is used to control
+// level - all logs are dumped to stderr. |verify_mode| is used to disable
+// execution of the shell script. |recursion_level| is used to control
 // maximum recursion depth and should be set to the default value. The function
 // returns exit code returned by executed script or value 127 in case of an
 // shell error.
 int ExecuteShellScript(const std::string& source,
                        const int output_fd,
                        const bool verbose_mode,
+                       const bool verify_mode,
                        const int recursion_level = 0);
 
 }  // namespace foomatic_shell

@@ -5,6 +5,8 @@
 #include <cstdio>
 #include <string>
 
+#include "base/environment.h"
+
 #include "foomatic_shell/shell.h"
 
 namespace {
@@ -25,6 +27,7 @@ void PrintErrorMessage(const std::string& msg) {
 int main(int argc, char** argv) {
   char* script = nullptr;
   bool verbose = false;
+  bool verify = base::Environment::Create()->HasVar("FOOMATIC_VERIFY_MODE");
 
   // Parse the input parameters.
   for (int i = 1; i < argc; ++i) {
@@ -66,5 +69,6 @@ int main(int argc, char** argv) {
     PrintErrorMessage("The script provided with -c parameter is too large");
     return -1;
   }
-  return (foomatic_shell::ExecuteShellScript(std::string(script), 1, verbose));
+  return (foomatic_shell::ExecuteShellScript(std::string(script), 1, verbose,
+                                             verify));
 }

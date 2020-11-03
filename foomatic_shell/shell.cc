@@ -80,6 +80,7 @@ bool ReadAndCloseFd(int fd, std::string* out) {
 // error, the function returns false and |output| is set to an error message.
 bool ExecuteEmbeddedShellScript(const std::string& source,
                                 const bool verbose_mode,
+                                const bool verify_mode,
                                 const int recursion_level,
                                 std::string* output) {
   DCHECK(output != nullptr);
@@ -101,7 +102,8 @@ bool ExecuteEmbeddedShellScript(const std::string& source,
   }
 
   // Execute the script.
-  if (ExecuteShellScript(source, temp_fd, verbose_mode, recursion_level + 1)) {
+  if (ExecuteShellScript(source, temp_fd, verbose_mode, verify_mode,
+                         recursion_level + 1)) {
     *output = "Error when executing `...` operator";
     return false;
   }
@@ -124,6 +126,7 @@ bool ExecuteEmbeddedShellScript(const std::string& source,
 int ExecuteShellScript(const std::string& source,
                        const int output_fd,
                        const bool verbose_mode,
+                       const bool verify_mode,
                        const int recursion_level) {
   DCHECK_NE(output_fd, 0);
   DCHECK_NE(output_fd, 2);
@@ -147,8 +150,8 @@ int ExecuteShellScript(const std::string& source,
 
     // Execute the script inside `...` (backticks) operator.
     std::string out;
-    if (!ExecuteEmbeddedShellScript(token.value, verbose_mode, recursion_level,
-                                    &out)) {
+    if (!ExecuteEmbeddedShellScript(token.value, verbose_mode, verify_mode,
+                                    recursion_level, &out)) {
       PrintErrorMessage(token.value, token.begin, out);
       return kShellError;
     }
@@ -173,8 +176,11 @@ int ExecuteShellScript(const std::string& source,
   }
 
   // Execute the parsed script and store returned code in |exit_code|.
-  ProcessLauncher launcher(source, verbose_mode);
-  const int exit_code = launcher.RunScript(parsed_script, 0, output_fd);
+  int exit_code = 0;
+  if (!verify_mode) {
+    ProcessLauncher launcher(source, verbose_mode);
+    exit_code = launcher.RunScript(parsed_script, 0, output_fd);
+  }
 
   // Log status and exit!
   if (verbose_mode) {

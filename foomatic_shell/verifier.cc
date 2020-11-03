@@ -147,16 +147,16 @@ bool Verifier::VerifyCommand(Command* command) {
   return false;
 }
 
-// Parameters “-dPARANOIDSAFER” and “-sOutputFile=-” must be present.
+// Parameters “-dSAFER” and “-sOutputFile=-” must be present.
 // No other “-sOutputFile=” parameters are allowed.
 // Parameters “-dNOSAFER” and “-dALLOWPSTRANSPARENCY” are disallowed.
 bool Verifier::VerifyGs(const std::vector<StringAtom>& parameters) {
-  bool paranoid_safer = false;
+  bool safer = false;
   bool output_file = false;
   for (auto& parameter : parameters) {
     const std::string param = Value(parameter);
-    if (param == "-dPARANOIDSAFER") {
-      paranoid_safer = true;
+    if (param == "-dPARANOIDSAFER" || param == "-dSAFER") {
+      safer = true;
       continue;
     }
     if (param == "-sOutputFile=-") {
@@ -169,8 +169,8 @@ bool Verifier::VerifyGs(const std::vector<StringAtom>& parameters) {
       return false;
     }
   }
-  if (!paranoid_safer) {
-    message_ = "gs: the parameter -dPARANOIDSAFER is missing";
+  if (!safer) {
+    message_ = "gs: the parameter -dSAFER is missing";
     return false;
   }
   if (!output_file) {
