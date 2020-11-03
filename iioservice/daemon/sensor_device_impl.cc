@@ -265,6 +265,8 @@ SensorDeviceImpl::SensorDeviceImpl(
       context_(std::move(context)),
       sample_thread_(std::move(thread)),
       use_fifo_(use_fifo) {
+  DCHECK(ipc_task_runner_->RunsTasksInCurrentSequence());
+
   receiver_set_.set_disconnect_handler(base::BindRepeating(
       &SensorDeviceImpl::ConnectionErrorCallback, weak_factory_.GetWeakPtr()));
 }
@@ -295,8 +297,9 @@ void SensorDeviceImpl::ConnectionErrorCallback() {
   StopReadingSamples();
   sample_thread_->task_runner()->PostTask(
       FROM_HERE, base::BindOnce(&SensorDeviceImpl::RemoveClient,
-                                weak_factory_.GetWeakPtr(), id));
+                                base::Unretained(this), id));
 }
+
 void SensorDeviceImpl::RemoveClient(mojo::ReceiverId id) {
   DCHECK(sample_thread_->task_runner()->RunsTasksInCurrentSequence());
 

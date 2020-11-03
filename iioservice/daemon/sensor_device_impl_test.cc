@@ -84,6 +84,11 @@ class SensorDeviceImplTest : public ::testing::Test {
   mojo::Remote<cros::mojom::SensorDevice> remote_;
 };
 
+TEST_F(SensorDeviceImplTest, CheckWeakPtrs) {
+  remote_.reset();
+  base::RunLoop().RunUntilIdle();
+}
+
 TEST_F(SensorDeviceImplTest, SetTimeout) {
   remote_->SetTimeout(0);
 }
