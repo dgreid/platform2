@@ -302,7 +302,7 @@ SANE_Option_Descriptor CreateDescriptor(const char* name,
 TEST(SaneOptionIntTest, SetIntSucceeds) {
   SaneOption option(
       CreateDescriptor("Test Name", SANE_TYPE_INT, sizeof(SANE_Word)), 7);
-  EXPECT_TRUE(option.SetInt(54));
+  EXPECT_TRUE(option.Set(54));
   EXPECT_EQ(*static_cast<SANE_Int*>(option.GetPointer()), 54);
 }
 
@@ -310,16 +310,16 @@ TEST(SaneOptionIntTest, SetDoubleSucceeds) {
   SaneOption option(
       CreateDescriptor("Test Name", SANE_TYPE_INT, sizeof(SANE_Word)), 7);
   // Should round towards 0.
-  EXPECT_TRUE(option.SetDouble(295.7));
-  EXPECT_EQ(option.GetInt().value(), 295);
+  EXPECT_TRUE(option.Set(295.7));
+  EXPECT_EQ(option.Get<int>().value(), 295);
 }
 
 TEST(SaneOptionIntTest, SetStringFails) {
   SaneOption option(
       CreateDescriptor("Test Name", SANE_TYPE_INT, sizeof(SANE_Word)), 7);
-  EXPECT_TRUE(option.SetInt(17));
-  EXPECT_FALSE(option.SetString("test"));
-  EXPECT_EQ(option.GetInt().value(), 17);
+  EXPECT_TRUE(option.Set(17));
+  EXPECT_FALSE(option.Set("test"));
+  EXPECT_EQ(option.Get<int>().value(), 17);
 }
 
 TEST(SaneOptionIntTest, GetIndex) {
@@ -337,18 +337,18 @@ TEST(SaneOptionIntTest, GetName) {
 TEST(SaneOptionIntTest, DisplayValue) {
   SaneOption option(
       CreateDescriptor("Test Name", SANE_TYPE_INT, sizeof(SANE_Word)), 2);
-  EXPECT_TRUE(option.SetInt(247));
+  EXPECT_TRUE(option.Set(247));
   EXPECT_EQ(option.DisplayValue(), "247");
 }
 
 TEST(SaneOptionIntTest, CopiesDoNotAlias) {
   SaneOption option(
       CreateDescriptor("Test Name", SANE_TYPE_INT, sizeof(SANE_Word)), 2);
-  EXPECT_TRUE(option.SetInt(88));
+  EXPECT_TRUE(option.Set(88));
   EXPECT_EQ(option.DisplayValue(), "88");
 
   SaneOption option_two = option;
-  EXPECT_TRUE(option_two.SetInt(9));
+  EXPECT_TRUE(option_two.Set(9));
   EXPECT_EQ(option_two.DisplayValue(), "9");
   EXPECT_EQ(option.DisplayValue(), "88");
 }
@@ -356,7 +356,7 @@ TEST(SaneOptionIntTest, CopiesDoNotAlias) {
 TEST(SaneOptionFixedTest, SetIntSucceeds) {
   SaneOption option(
       CreateDescriptor("Test Name", SANE_TYPE_FIXED, sizeof(SANE_Word)), 7);
-  EXPECT_TRUE(option.SetInt(54));
+  EXPECT_TRUE(option.Set(54));
   SANE_Fixed f = *static_cast<SANE_Fixed*>(option.GetPointer());
   EXPECT_EQ(static_cast<int>(SANE_UNFIX(f)), 54);
 }
@@ -364,7 +364,7 @@ TEST(SaneOptionFixedTest, SetIntSucceeds) {
 TEST(SaneOptionFixedTest, SetDoubleSucceeds) {
   SaneOption option(
       CreateDescriptor("Test Name", SANE_TYPE_FIXED, sizeof(SANE_Word)), 7);
-  EXPECT_TRUE(option.SetDouble(436.2));
+  EXPECT_TRUE(option.Set(436.2));
   SANE_Fixed f = *static_cast<SANE_Fixed*>(option.GetPointer());
   EXPECT_FLOAT_EQ(SANE_UNFIX(f), 436.2);
 }
@@ -372,8 +372,8 @@ TEST(SaneOptionFixedTest, SetDoubleSucceeds) {
 TEST(SaneOptionFixedTest, SetStringFails) {
   SaneOption option(
       CreateDescriptor("Test Name", SANE_TYPE_FIXED, sizeof(SANE_Word)), 7);
-  EXPECT_TRUE(option.SetInt(17));
-  EXPECT_FALSE(option.SetString("test"));
+  EXPECT_TRUE(option.Set(17));
+  EXPECT_FALSE(option.Set("test"));
   SANE_Fixed f = *static_cast<SANE_Fixed*>(option.GetPointer());
   EXPECT_EQ(static_cast<int>(SANE_UNFIX(f)), 17);
 }
@@ -393,48 +393,48 @@ TEST(SaneOptionFixedTest, GetName) {
 TEST(SaneOptionFixedTest, DisplayValue) {
   SaneOption option(
       CreateDescriptor("Test Name", SANE_TYPE_FIXED, sizeof(SANE_Word)), 2);
-  EXPECT_TRUE(option.SetInt(247));
+  EXPECT_TRUE(option.Set(247));
   EXPECT_EQ(option.DisplayValue(), "247");
 }
 
 TEST(SaneOptionFixedTest, CopiesDoNotAlias) {
   SaneOption option(
       CreateDescriptor("Test Name", SANE_TYPE_FIXED, sizeof(SANE_Word)), 2);
-  EXPECT_TRUE(option.SetInt(88));
+  EXPECT_TRUE(option.Set(88));
   EXPECT_EQ(option.DisplayValue(), "88");
 
   SaneOption option_two = option;
-  EXPECT_TRUE(option_two.SetInt(9));
+  EXPECT_TRUE(option_two.Set(9));
   EXPECT_EQ(option_two.DisplayValue(), "9");
   EXPECT_EQ(option.DisplayValue(), "88");
 }
 
 TEST(SaneOptionStringTest, SetStringSucceeds) {
   SaneOption option(CreateDescriptor("Test Name", SANE_TYPE_STRING, 8), 7);
-  EXPECT_TRUE(option.SetString("test"));
+  EXPECT_TRUE(option.Set("test"));
   EXPECT_STREQ(static_cast<char*>(option.GetPointer()), "test");
 
   // Longest string that fits (with null terminator).
-  EXPECT_TRUE(option.SetString("1234567"));
+  EXPECT_TRUE(option.Set("1234567"));
   EXPECT_STREQ(static_cast<char*>(option.GetPointer()), "1234567");
 }
 
 TEST(SaneOptionStringTest, SetStringTooLongFails) {
   SaneOption option(CreateDescriptor("Test Name", SANE_TYPE_STRING, 8), 7);
-  EXPECT_TRUE(option.SetString("test"));
+  EXPECT_TRUE(option.Set("test"));
 
   // String that is exactly one character too long.
-  EXPECT_FALSE(option.SetString("12345678"));
+  EXPECT_FALSE(option.Set("12345678"));
 
   // String that is many characters too long.
-  EXPECT_FALSE(option.SetString("This is a much longer string than can fit."));
+  EXPECT_FALSE(option.Set("This is a much longer string than can fit."));
   EXPECT_STREQ(static_cast<char*>(option.GetPointer()), "test");
 }
 
 TEST(SaneOptionStringTest, SetIntFails) {
   SaneOption option(CreateDescriptor("Test Name", SANE_TYPE_STRING, 32), 7);
-  EXPECT_TRUE(option.SetString("test"));
-  EXPECT_FALSE(option.SetInt(54));
+  EXPECT_TRUE(option.Set("test"));
+  EXPECT_FALSE(option.Set(54));
   EXPECT_STREQ(static_cast<char*>(option.GetPointer()), "test");
 }
 
@@ -450,17 +450,17 @@ TEST(SaneOptionStringTest, GetName) {
 
 TEST(SaneOptionStringTest, DisplayValue) {
   SaneOption option(CreateDescriptor("Test Name", SANE_TYPE_STRING, 32), 2);
-  EXPECT_TRUE(option.SetString("test string"));
+  EXPECT_TRUE(option.Set("test string"));
   EXPECT_EQ(option.DisplayValue(), "test string");
 }
 
 TEST(SaneOptionStringTest, CopiesDoNotAlias) {
   SaneOption option(CreateDescriptor("Test Name", SANE_TYPE_STRING, 32), 2);
-  EXPECT_TRUE(option.SetString("test string"));
+  EXPECT_TRUE(option.Set("test string"));
   EXPECT_EQ(option.DisplayValue(), "test string");
 
   SaneOption option_two = option;
-  EXPECT_TRUE(option_two.SetString("other value"));
+  EXPECT_TRUE(option_two.Set("other value"));
   EXPECT_EQ(option.DisplayValue(), "test string");
   EXPECT_EQ(option_two.DisplayValue(), "other value");
 }

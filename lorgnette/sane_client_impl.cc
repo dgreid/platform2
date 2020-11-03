@@ -275,7 +275,7 @@ bool SaneDeviceImpl::GetScanResolution(brillo::ErrorPtr* error,
   }
 
   SaneOption& option = options_.at(kResolution);
-  base::Optional<int> resolution = option.GetInt();
+  base::Optional<int> resolution = option.Get<int>();
   if (!resolution.has_value()) {
     brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
                          kManagerServiceError,
@@ -296,7 +296,7 @@ bool SaneDeviceImpl::SetScanResolution(brillo::ErrorPtr* error,
   }
 
   SaneOption& option = options_.at(kResolution);
-  if (!option.SetInt(resolution)) {
+  if (!option.Set(resolution)) {
     brillo::Error::AddTo(error, FROM_HERE, kDbusDomain, kManagerServiceError,
                          "Failed to set SaneOption");
     return false;
@@ -318,7 +318,7 @@ bool SaneDeviceImpl::GetDocumentSource(brillo::ErrorPtr* error,
   }
 
   SaneOption& option = options_.at(kSource);
-  base::Optional<std::string> source_name = option.GetString();
+  base::Optional<std::string> source_name = option.Get<std::string>();
   if (!source_name.has_value()) {
     brillo::Error::AddTo(error, FROM_HERE, kDbusDomain, kManagerServiceError,
                          "Source is not a string option");
@@ -342,7 +342,7 @@ bool SaneDeviceImpl::SetDocumentSource(brillo::ErrorPtr* error,
   }
 
   SaneOption& option = options_.at(kSource);
-  if (!option.SetString(source_name)) {
+  if (!option.Set(source_name)) {
     brillo::Error::AddTo(error, FROM_HERE, kDbusDomain, kManagerServiceError,
                          "Failed to set SaneOption");
     return false;
@@ -377,7 +377,7 @@ bool SaneDeviceImpl::SetColorMode(brillo::ErrorPtr* error,
   }
 
   SaneOption& option = options_.at(kScanMode);
-  if (!option.SetString(mode_string)) {
+  if (!option.Set(mode_string)) {
     brillo::Error::AddTo(error, FROM_HERE, kDbusDomain, kManagerServiceError,
                          "Failed to set SaneOption");
     return false;
@@ -423,7 +423,7 @@ bool SaneDeviceImpl::SetScanRegion(brillo::ErrorPtr* error,
     double value = kv.second;
 
     SaneOption& option = options_.at(option_name);
-    if (!option.SetDouble(value)) {
+    if (!option.Set(value)) {
       brillo::Error::AddTo(error, FROM_HERE, kDbusDomain, kManagerServiceError,
                            "Failed to set SaneOption");
       return false;
@@ -630,7 +630,7 @@ SaneOption::SaneOption(const SANE_Option_Descriptor& opt, int index) {
   }
 }
 
-bool SaneOption::SetInt(int i) {
+bool SaneOption::Set(int i) {
   switch (type_) {
     case SANE_TYPE_INT:
       int_data_.i = i;
@@ -643,7 +643,7 @@ bool SaneOption::SetInt(int i) {
   }
 }
 
-bool SaneOption::SetDouble(double d) {
+bool SaneOption::Set(double d) {
   switch (type_) {
     case SANE_TYPE_INT:
       int_data_.i = static_cast<int>(d);
@@ -656,7 +656,7 @@ bool SaneOption::SetDouble(double d) {
   }
 }
 
-bool SaneOption::SetString(const std::string& s) {
+bool SaneOption::Set(const std::string& s) {
   if (type_ != SANE_TYPE_STRING) {
     return false;
   }
@@ -672,7 +672,8 @@ bool SaneOption::SetString(const std::string& s) {
   return true;
 }
 
-base::Optional<int> SaneOption::GetInt() const {
+template <>
+base::Optional<int> SaneOption::Get() const {
   switch (type_) {
     case SANE_TYPE_INT:
       return int_data_.i;
@@ -683,7 +684,8 @@ base::Optional<int> SaneOption::GetInt() const {
   }
 }
 
-base::Optional<std::string> SaneOption::GetString() const {
+template <>
+base::Optional<std::string> SaneOption::Get() const {
   if (type_ != SANE_TYPE_STRING)
     return base::nullopt;
 
@@ -716,7 +718,7 @@ std::string SaneOption::DisplayValue() const {
     case SANE_TYPE_FIXED:
       return std::to_string(static_cast<int>(SANE_UNFIX(int_data_.f)));
     case SANE_TYPE_STRING:
-      return GetString().value();
+      return Get<std::string>().value();
     default:
       return "[invalid]";
   }

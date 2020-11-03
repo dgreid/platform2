@@ -51,11 +51,16 @@ class SaneOption {
  public:
   SaneOption(const SANE_Option_Descriptor& opt, int index);
 
-  bool SetDouble(double d);
-  bool SetInt(int i);
-  bool SetString(const std::string& s);
-  base::Optional<int> GetInt() const;
-  base::Optional<std::string> GetString() const;
+  bool Set(double d);
+  bool Set(int i);
+  bool Set(const std::string& s);
+
+  template <typename T>
+  base::Optional<T> Get() const = delete;
+  template <>
+  base::Optional<int> Get() const;
+  template <>
+  base::Optional<std::string> Get() const;
 
   // This returns a pointer to the internal storage. Care must be taken that the
   // pointer does not outlive the SaneOption.
