@@ -149,6 +149,8 @@ class SaneDeviceImpl : public SaneDevice {
   base::Optional<double> GetOptionOffset(brillo::ErrorPtr* error,
                                          ScanOption option);
 
+  const char* OptionDisplayName(ScanOption option);
+
   SANE_Handle handle_;
   std::string name_;
   std::shared_ptr<DeviceSet> open_devices_;

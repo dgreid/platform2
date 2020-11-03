@@ -804,7 +804,8 @@ bool SaneDeviceImpl::LoadOptions(brillo::ErrorPtr* error) {
       if (status != SANE_STATUS_GOOD) {
         brillo::Error::AddToPrintf(
             error, FROM_HERE, kDbusDomain, kManagerServiceError,
-            "Unable to read option value %d for device", i);
+            "Unable to read value of %s option for device",
+            OptionDisplayName(option_name.value()));
         return false;
       }
       options_.insert({option_name.value(), std::move(sane_option)});
@@ -895,9 +896,10 @@ base::Optional<double> SaneDeviceImpl::GetOptionOffset(
   const SANE_Option_Descriptor* descriptor =
       sane_get_option_descriptor(handle_, index);
   if (!descriptor) {
-    brillo::Error::AddToPrintf(
-        error, FROM_HERE, kDbusDomain, kManagerServiceError,
-        "Unable to get option %d at index %d", option, index);
+    brillo::Error::AddToPrintf(error, FROM_HERE, kDbusDomain,
+                               kManagerServiceError,
+                               "Unable to get option %s at index %d",
+                               OptionDisplayName(option), index);
     return base::nullopt;
   }
 
@@ -910,6 +912,25 @@ base::Optional<double> SaneDeviceImpl::GetOptionOffset(
   }
 
   return range->start;
+}
+
+const char* SaneDeviceImpl::OptionDisplayName(ScanOption option) {
+  switch (option) {
+    case kResolution:
+      return SANE_NAME_SCAN_RESOLUTION;
+    case kScanMode:
+      return SANE_NAME_SCAN_MODE;
+    case kSource:
+      return SANE_NAME_SCAN_SOURCE;
+    case kTopLeftX:
+      return SANE_NAME_SCAN_TL_X;
+    case kTopLeftY:
+      return SANE_NAME_SCAN_TL_Y;
+    case kBottomRightX:
+      return SANE_NAME_SCAN_BR_X;
+    case kBottomRightY:
+      return SANE_NAME_SCAN_BR_Y;
+  }
 }
 
 }  // namespace lorgnette
