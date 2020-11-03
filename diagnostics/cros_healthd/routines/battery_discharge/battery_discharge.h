@@ -16,6 +16,7 @@
 #include <base/time/default_tick_clock.h>
 #include <base/time/tick_clock.h>
 #include <base/time/time.h>
+#include <base/values.h>
 
 #include "diagnostics/cros_healthd/routines/diag_routine.h"
 #include "mojo/cros_healthd_diagnostics.mojom.h"
@@ -63,7 +64,7 @@ class BatteryDischargeRoutine final : public DiagnosticRoutine {
   // Details of the routine's status, reported in noninteractive status updates.
   std::string status_message_;
   // Details about the routine's execution. Reported in all status updates.
-  std::string output_;
+  base::Value output_dict_{base::Value::Type::DICTIONARY};
   // Length of time to run the routine for.
   const base::TimeDelta exec_duration_;
   // Maximum discharge percent allowed for the routine to pass.

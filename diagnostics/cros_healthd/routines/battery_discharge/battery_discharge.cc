@@ -7,8 +7,11 @@
 #include <inttypes.h>
 
 #include <cstdint>
+#include <string>
+#include <utility>
 
 #include <base/files/file_path.h>
+#include <base/json/json_writer.h>
 #include <base/logging.h>
 #include <base/optional.h>
 #include <base/strings/string_piece.h>
@@ -97,9 +100,12 @@ void BatteryDischargeRoutine::PopulateStatusUpdate(
 
   CalculateProgressPercent();
   response->progress_percent = progress_percent_;
-  if (include_output) {
+  if (include_output && !output_dict_.DictEmpty()) {
+    std::string json;
+    base::JSONWriter::WriteWithOptions(
+        output_dict_, base::JSONWriter::Options::OPTIONS_PRETTY_PRINT, &json);
     response->output =
-        CreateReadOnlySharedMemoryRegionMojoHandle(base::StringPiece(output_));
+        CreateReadOnlySharedMemoryRegionMojoHandle(base::StringPiece(json));
   }
 }
 
@@ -182,9 +188,10 @@ void BatteryDischargeRoutine::DetermineRoutineResult(
 
   uint32_t discharge_percent =
       beginning_charge_percent - ending_charge_percent_value;
-  output_ =
-      base::StringPrintf("Battery discharged %d%% in %" PRId64 " seconds.",
-                         discharge_percent, exec_duration_.InSeconds());
+  base::Value result_dict(base::Value::Type::DICTIONARY);
+  result_dict.SetIntKey("dischargePercent",
+                        static_cast<int>(discharge_percent));
+  output_dict_.SetKey("resultDetails", std::move(result_dict));
   if (discharge_percent > maximum_discharge_percent_allowed_) {
     status_message_ = kBatteryDischargeRoutineFailedExcessiveDischargeMessage;
     status_ = mojo_ipc::DiagnosticRoutineStatusEnum::kFailed;

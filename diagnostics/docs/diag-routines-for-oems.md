@@ -212,14 +212,20 @@ From cros-health-tool:
 $ cros-health-tool diag --action=run_routine --routine=battery_discharge --length_seconds=600 --maximum_discharge_percent_allowed=10
 ```
 
-Sample output:
+Sample output, if the battery were to discharge 1% during the routine:
 ```bash
 Progress: 0
 Unplug the AC adapter.
 Press ENTER to continue.
 
 Progress: 100
-Output: Battery discharged 7% in 600 seconds.
+Progress: 100
+Output: {
+    "resultDetails": {
+        "dischargePercent": 1
+    }
+}
+
 Status: Passed
 Status message: Battery discharge routine passed.
 ```
