@@ -704,23 +704,37 @@ if (use.fuzzer) {
     ]
   }
 
-  if (use.tpm) {
-    executable("cryptohome_tpm1_cmk_migration_parser_fuzzer") {
-      configs += [ "//common-mk/common_fuzzer" ]
-      sources = [
-        "fuzzers/blob_mutator.cc",
-        "fuzzers/tpm1_cmk_migration_parser_fuzzer.cc",
+  executable("cryptohome_tpm1_cmk_migration_parser_fuzzer") {
+    configs += [ "//common-mk/common_fuzzer" ]
+    sources = [
+      "fuzzers/blob_mutator.cc",
+      "fuzzers/tpm1_cmk_migration_parser_fuzzer.cc",
+    ]
+    deps = [
+      "libs:libcrosplatform",
+      "libs:libcrostpm",
+    ]
+    pkg_deps = [
+      "libbrillo",
+      "libchrome",
+      "libchrome-test",
+      "openssl",
+      "system_api",
+    ]
+
+    # TODO(crbug/1144974): This is a workaround to let the fuzzer can build on TPM2 devices.
+    if (use.tpm2) {
+      sources += [
+        "signature_sealing_backend_tpm1_impl.cc",
+        "tpm1_static_utils.cc",
+        "tpm_impl.cc",
+        "tpm_metrics.cc",
+        "tpm_new_impl.cc",
       ]
-      deps = [
-        "libs:libcrosplatform",
-        "libs:libcrostpm",
-      ]
-      pkg_deps = [
-        "libbrillo",
-        "libchrome",
-        "libchrome-test",
-        "openssl",
-        "system_api",
+      deps += [ "//libhwsec:overalls_library" ]
+      libs = [
+        "hwsec",
+        "tspi",
       ]
     }
   }
