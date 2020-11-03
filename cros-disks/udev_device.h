@@ -66,6 +66,9 @@ class UdevDevice {
   bool GetVendorAndProductId(std::string* vendor_id,
                              std::string* product_id) const;
 
+  // Gets the bus and device numbers for the device.
+  void GetBusAndDeviceNumber(int* bus_number, int* device_number) const;
+
   // Checks if a device should be auto-mounted. Currently, all external
   // disk devices, which are neither on the boot device nor virtual,
   // are considered auto-mountable.

@@ -230,6 +230,8 @@ bool CrosDisksServer::GetDeviceProperties(
   temp_properties[kProductName] = disk.product_name;
   temp_properties[kDriveModel] = disk.drive_model;
   temp_properties[kDeviceMediaType] = static_cast<uint32_t>(disk.media_type);
+  temp_properties[kBusNumber] = disk.bus_number;
+  temp_properties[kDeviceNumber] = disk.device_number;
   temp_properties[kDeviceSize] = disk.device_capacity;
   temp_properties[kDeviceIsReadOnly] = disk.is_read_only;
   temp_properties[kFileSystemType] = disk.filesystem_type;

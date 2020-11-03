@@ -66,6 +66,8 @@ struct Disk {
   std::string product_name;
   std::string drive_model;
   DeviceMediaType media_type;
+  int bus_number;
+  int device_number;
   uint64_t device_capacity;
   uint64_t bytes_remaining;
 };

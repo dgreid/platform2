@@ -28,6 +28,8 @@ namespace cros_disks {
 namespace {
 
 const char kNullDeviceFile[] = "/dev/null";
+const char kAttributeBusNum[] = "busnum";
+const char kAttributeDevNum[] = "devnum";
 const char kAttributeIdProduct[] = "idProduct";
 const char kAttributeIdVendor[] = "idVendor";
 const char kAttributePartition[] = "partition";
@@ -258,6 +260,27 @@ bool UdevDevice::GetVendorAndProductId(std::string* vendor_id,
       vendor_id, product_id));
 }
 
+void UdevDevice::GetBusAndDeviceNumber(int* bus_number,
+                                       int* device_number) const {
+  *bus_number = 0;
+  *device_number = 0;
+  EnumerateParentDevices(base::BindRepeating(
+      [](int* bus_number, int* device_number,
+         const brillo::UdevDevice& device) {
+        const char* bus_number_attr =
+            device.GetSysAttributeValue(kAttributeBusNum);
+        const char* device_number_attr =
+            device.GetSysAttributeValue(kAttributeDevNum);
+        if (bus_number_attr && device_number_attr) {
+          base::StringToInt(bus_number_attr, bus_number);
+          base::StringToInt(device_number_attr, device_number);
+          return true;
+        }
+        return false;
+      },
+      bus_number, device_number));
+}
+
 bool UdevDevice::IsMediaAvailable() const {
   bool is_media_available = true;
   if (IsAttributeTrue(kAttributeRemovable)) {
@@ -464,6 +487,8 @@ Disk UdevDevice::ToDisk() {
                                  disk.product_id, &disk.vendor_name,
                                  &disk.product_name);
   }
+
+  GetBusAndDeviceNumber(&disk.bus_number, &disk.device_number);
 
   // TODO(benchan): Add a proper unit test when fixing crbug.com/221380.
   std::string uuid_hash = base::SHA1HashString(
