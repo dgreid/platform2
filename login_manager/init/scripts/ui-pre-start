@@ -6,6 +6,32 @@
 
 set -e
 
+JOB=$(basename "$0")
+
+# Read chrome OS configurations
+read_cros_config_int() {
+  local path="$1"
+  local key="$2"
+  local def="$3"
+  local v
+
+  # cros_config exits with non-zero when a key isn't existed,
+  v=$(cros_config "${path}" "${key}" || echo "${def}")
+
+  # config value should be an integer
+  case "${v}" in
+    ''|*[!0-9]*)
+        logger -t "${JOB}" -p warn \
+          "cros_config ${path}/${key} is not an integer! "\
+          "Let me use ${def} instead of ${v}."
+      echo "${def}"
+      ;;
+    *)
+      echo "${v}"
+      ;;
+    esac
+}
+
 # Setup drm log tracing if available. This will allow us to access more verbose
 # logs to debug display connectivity issues when they arise. The traces are
 # accessible via chrome://system and included in feedback/crash reports.
@@ -57,6 +83,16 @@ if [ ! -d "${CHROME_CPU_CGROUP_DIR}" ]; then
   echo "10" > "${CHROME_CPU_CGROUP_DIR}/background/cpu.shares"
   chown -R chronos "${CHROME_CPU_CGROUP_DIR}"
 fi
+
+# apply ui and chrome foreground cgroup's uclamp.min, default 20%,
+v=$(read_cros_config_int "/scheduler-tune" "boost-urgent" "20")
+for knob in "${UI_CPU_CGROUP_DIR}/cpu.uclamp.min" \
+            "${CHROME_CPU_CGROUP_DIR}/cpu.uclamp.min" \
+            "${CHROME_CPU_CGROUP_DIR}/foreground/cpu.uclamp.min"; do
+  if [ -f "${knob}" ]; then
+    echo "${v}" > "${knob}"
+  fi
+done
 
 # Set up a folder on the stateful partition for ephemeral encrypted swap
 # files.
