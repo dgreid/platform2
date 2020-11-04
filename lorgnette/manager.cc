@@ -921,7 +921,7 @@ ScanState Manager::RunScanLoop(brillo::ErrorPtr* error,
   // We maintain the invariant at the start of each loop iteration that indices
   // [0, buffer_offset) hold previously read data.
   size_t buffer_offset = 0;
-  while (true) {
+  while (rows_written < params->lines) {
     // Get next chunk of scan data from the device.
     size_t read = 0;
     SANE_Status result =
@@ -950,7 +950,8 @@ ScanState Manager::RunScanLoop(brillo::ErrorPtr* error,
     // Indices [buffer_offset, buffer_offset + read) hold the data we just read.
     size_t bytes_available = buffer_offset + read;
     size_t bytes_converted = 0;
-    while (bytes_available - bytes_converted >= params->bytes_per_line) {
+    while (bytes_available - bytes_converted >= params->bytes_per_line &&
+           rows_written < params->lines) {
       int ret = LibpngErrorWrap(error, png_write_row, png,
                                 image_buffer.data() + bytes_converted);
       if (ret != 0) {
