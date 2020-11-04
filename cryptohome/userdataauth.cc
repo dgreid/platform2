@@ -102,7 +102,9 @@ user_data_auth::CryptohomeErrorCode MountErrorToCryptohomeError(
           {MOUNT_ERROR_PREVIOUS_MIGRATION_INCOMPLETE,
            user_data_auth::
                CRYPTOHOME_ERROR_MOUNT_PREVIOUS_MIGRATION_INCOMPLETE},
-          {MOUNT_ERROR_RECREATED, user_data_auth::CRYPTOHOME_ERROR_NOT_SET}};
+          {MOUNT_ERROR_RECREATED, user_data_auth::CRYPTOHOME_ERROR_NOT_SET},
+          {MOUNT_ERROR_VAULT_UNRECOVERABLE,
+           user_data_auth::CRYPTOHOME_ERROR_VAULT_UNRECOVERABLE}};
 
   if (error_code_lut.count(code) != 0) {
     return error_code_lut.at(code);
@@ -1788,23 +1790,11 @@ void UserDataAuth::ContinueMountWithCredentials(
     code = AttemptUserMount(*credentials, mount_args, user_session);
   }
 
-  // TODO(chromium:1140868, dlunev): extract the recreation behaviour to the
-  // higher layer and then return VAULT_UNRECOVERABLE directly.
   if (code == MOUNT_ERROR_VAULT_UNRECOVERABLE) {
     LOG(ERROR) << "Unrecoverable vault, removing.";
     if (!homedirs_->Remove(credentials->username())) {
       LOG(ERROR) << "Failed to remove unrecoverable vault.";
       code = MOUNT_ERROR_REMOVE_INVALID_USER_FAILED;
-    } else {
-      code = AttemptUserMount(*credentials, mount_args, user_session);
-      if (code == MOUNT_ERROR_NONE) {
-        code = MOUNT_ERROR_RECREATED;
-      }
-      // Return VAULT_UNRECOVERABLE as FATAL for the higher level code doesn't
-      // know such an error.
-      if (code == MOUNT_ERROR_VAULT_UNRECOVERABLE) {
-        code = MOUNT_ERROR_FATAL;
-      }
     }
   }
 
@@ -1814,11 +1804,7 @@ void UserDataAuth::ContinueMountWithCredentials(
   // Mark the timer as done.
   ReportTimerStop(kMountExTimer);
 
-  if (code == MOUNT_ERROR_RECREATED) {
-    // MOUNT_ERROR_RECREATED is not actually an error, so we'll not reply with
-    // an error. Instead, we'll set the recreated flag to true.
-    reply.set_recreated(true);
-  } else if (code != MOUNT_ERROR_NONE) {
+  if (code != MOUNT_ERROR_NONE) {
     // Mount returned a non-OK status.
     LOG(ERROR) << "Failed to mount cryptohome, error = " << code;
     reply.set_error(MountErrorToCryptohomeError(code));
