@@ -5,6 +5,7 @@
 #include "power_manager/powerd/policy/shutdown_from_suspend.h"
 
 #include <base/bind.h>
+#include <base/strings/stringprintf.h>
 
 #include "power_manager/common/power_constants.h"
 #include "power_manager/common/prefs.h"
@@ -52,20 +53,25 @@ void ShutdownFromSuspend::Init(PrefsInterface* prefs,
 }
 
 bool ShutdownFromSuspend::ShouldShutdown() {
-  bool shutdown = false;
-
   if (timer_fired_) {
-    LOG(INFO) << "Timer expired.";
-    shutdown = true;
+    LOG(INFO) << "Timer expired. Device should shut down.";
+    return true;
   }
 
-  if (power_supply_->GetPowerStatus().battery_charge <=
-      low_battery_shutdown_percent_) {
-    LOG(INFO) << "Battery is low.";
-    shutdown = true;
+  if (power_supply_->RefreshImmediately()) {
+    const double percent = power_supply_->GetPowerStatus().battery_percentage;
+    if (0 <= percent && percent <= low_battery_shutdown_percent_) {
+      LOG(INFO) << "Battery percentage " << base::StringPrintf("%0.2f", percent)
+                << "% <= low_battery_shutdown_percent ("
+                << base::StringPrintf("%0.2f", low_battery_shutdown_percent_)
+                << "%). Device should shut down.";
+      return true;
+    }
+  } else {
+    LOG(ERROR) << "Failed to refresh battery status";
   }
 
-  return shutdown;
+  return false;
 }
 
 ShutdownFromSuspend::Action ShutdownFromSuspend::PrepareForSuspendAttempt() {
