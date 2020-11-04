@@ -31,6 +31,7 @@ using ::chromeos::machine_learning::mojom::GraphExecutor;
 using ::chromeos::machine_learning::mojom::Model;
 using ::chromeos::machine_learning::mojom::TensorPtr;
 using ::testing::ElementsAre;
+using ::testing::Eq;
 
 class ModelImplTest : public testing::Test {
  protected:
@@ -42,6 +43,24 @@ class ModelImplTest : public testing::Test {
   const std::map<std::string, int> model_inputs_ = {{"x", 1}, {"y", 2}};
   const std::map<std::string, int> model_outputs_ = {{"z", 0}};
 };
+
+// Tests that AlignedModelData ensures that short strings have aligned .c_str().
+TEST(AlignedModelData, MaybeUnalignedInput) {
+  // Short strings can have unaligned .c_str() because they are stored directly
+  // inside the string struct rather than on the heap.
+  const std::string test_str = "short string";
+  std::string maybe_unaligned_str = test_str;
+  // Note: Whether `maybe_unaligned_str` *actually* has unaligned .c_str()
+  // depends on the particular impl of std::string. At the time of writing, it
+  // is indeed unaligned on e.g. amd64-generic.
+  const AlignedModelData aligned_model_data(std::move(maybe_unaligned_str));
+  // The .data() should now be aligned.
+  EXPECT_THAT(reinterpret_cast<std::uintptr_t>(aligned_model_data.data()) % 4,
+              Eq(0));
+  // The contents agree.
+  EXPECT_TRUE(
+      std::equal(test_str.begin(), test_str.end(), aligned_model_data.data()));
+}
 
 // Test loading an invalid model.
 TEST_F(ModelImplTest, TestBadModel) {

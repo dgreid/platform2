@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include "ml/model_impl.h"
-#include "ml/request_metrics.h"
 
+#include <algorithm>
 #include <utility>
 
 #include <base/bind.h>
@@ -13,6 +13,9 @@
 #include <tensorflow/lite/delegates/nnapi/nnapi_delegate.h>
 #include <tensorflow/lite/interpreter.h>
 #include <tensorflow/lite/kernels/register.h>
+
+#include "ml/machine_learning_service_impl.h"
+#include "ml/request_metrics.h"
 
 namespace {
 
@@ -34,15 +37,39 @@ using ::chromeos::machine_learning::mojom::Model;
 // Base name for UMA metrics related to CreateGraphExecutor calls
 constexpr char kMetricsRequestName[] = "CreateGraphExecutorResult";
 
+AlignedModelData::AlignedModelData(std::string model_str) {
+  if (reinterpret_cast<std::uintptr_t>(model_str.c_str()) % 4 == 0) {
+    // `model_str` is aligned. Keep it.
+    original_model_str_ = std::make_unique<std::string>(std::move(model_str));
+    aligned_copy_ = nullptr;
+    aligned_copy_size_ = 0;
+  } else {
+    // `model_str` is unaligned. Discard it and make an aligned copy.
+    aligned_copy_.reset(new char[model_str.size()]);
+    std::copy(model_str.begin(), model_str.end(), aligned_copy_.get());
+    aligned_copy_size_ = model_str.size();
+  }
+}
+
+const char* AlignedModelData::data() const {
+  return aligned_copy_ ? aligned_copy_.get() : original_model_str_->c_str();
+}
+
+size_t AlignedModelData::size() const {
+  return aligned_copy_ ? aligned_copy_size_ : original_model_str_->size();
+}
+
+AlignedModelData::~AlignedModelData() = default;
+
 ModelImpl* ModelImpl::Create(std::map<std::string, int> required_inputs,
                              std::map<std::string, int> required_outputs,
                              std::unique_ptr<tflite::FlatBufferModel> model,
-                             std::unique_ptr<std::string> model_string,
+                             std::unique_ptr<AlignedModelData> model_data,
                              mojo::PendingReceiver<Model> receiver,
                              const std::string& metrics_model_name) {
   auto model_impl = new ModelImpl(
       std::move(required_inputs), std::move(required_outputs), std::move(model),
-      std::move(model_string), std::move(receiver), metrics_model_name);
+      std::move(model_data), std::move(receiver), metrics_model_name);
   // Use a disconnection handler to strongly bind `model_impl` to `receiver`.
   model_impl->set_disconnect_handler(
       base::Bind(&DeleteModelImpl, base::Unretained(model_impl)));
@@ -68,12 +95,12 @@ ModelImpl* ModelImpl::Create(std::map<std::string, int> required_inputs,
 ModelImpl::ModelImpl(std::map<std::string, int> required_inputs,
                      std::map<std::string, int> required_outputs,
                      std::unique_ptr<tflite::FlatBufferModel> model,
-                     std::unique_ptr<std::string> model_string,
+                     std::unique_ptr<AlignedModelData> model_data,
                      mojo::PendingReceiver<Model> receiver,
                      const std::string& metrics_model_name)
     : required_inputs_(std::move(required_inputs)),
       required_outputs_(std::move(required_outputs)),
-      model_string_(std::move(model_string)),
+      model_data_(std::move(model_data)),
       model_(std::move(model)),
       receiver_(this, std::move(receiver)),
       metrics_model_name_(metrics_model_name) {}

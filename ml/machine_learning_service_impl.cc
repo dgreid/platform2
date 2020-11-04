@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include "ml/machine_learning_service_impl.h"
-#include "ml/request_metrics.h"
 
 #include <memory>
 #include <utility>
@@ -26,6 +25,7 @@
 #include "ml/mojom/handwriting_recognizer.mojom.h"
 #include "ml/mojom/model.mojom.h"
 #include "ml/mojom/soda.mojom.h"
+#include "ml/request_metrics.h"
 #include "ml/soda_recognizer_impl.h"
 #include "ml/text_classifier_impl.h"
 
@@ -165,12 +165,12 @@ void MachineLearningServiceImpl::LoadFlatBufferModel(
 
   // Take the ownership of the content of `model_string` because `ModelImpl` has
   // to hold the memory.
-  auto model_string_impl =
-      std::make_unique<std::string>(std::move(spec->model_string));
+  auto model_data =
+      std::make_unique<AlignedModelData>(std::move(spec->model_string));
 
   std::unique_ptr<tflite::FlatBufferModel> model =
-      tflite::FlatBufferModel::BuildFromBuffer(model_string_impl->c_str(),
-                                               model_string_impl->length());
+      tflite::FlatBufferModel::VerifyAndBuildFromBuffer(model_data->data(),
+                                                        model_data->size());
   if (model == nullptr) {
     LOG(ERROR) << "Failed to load model string of metric name: "
                << spec->metrics_model_name << "'.";
@@ -182,7 +182,7 @@ void MachineLearningServiceImpl::LoadFlatBufferModel(
   ModelImpl::Create(
       std::map<std::string, int>(spec->inputs.begin(), spec->inputs.end()),
       std::map<std::string, int>(spec->outputs.begin(), spec->outputs.end()),
-      std::move(model), std::move(model_string_impl), std::move(receiver),
+      std::move(model), std::move(model_data), std::move(receiver),
       spec->metrics_model_name);
 
   std::move(callback).Run(LoadModelResult::OK);

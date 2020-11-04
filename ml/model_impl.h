@@ -20,6 +20,31 @@
 
 namespace ml {
 
+// Holds 4-byte aligned char[] data suitable for a flatbuffer model.
+class AlignedModelData {
+ public:
+  // Constructs from a std::string. If its .c_str() is not 4-byte aligned, an
+  // aligned copy is made.
+  explicit AlignedModelData(std::string model_str);
+
+  ~AlignedModelData();
+
+  AlignedModelData(const AlignedModelData&) = delete;
+  AlignedModelData& operator=(const AlignedModelData&) = delete;
+
+  // The start of the model data. The result will be 4-byte aligned.
+  const char* data() const;
+  // The length of the buffer starting at `data()`.
+  size_t size() const;
+
+ private:
+  // Original std::string containing model data. May be empty.
+  std::unique_ptr<std::string> original_model_str_;
+  // Aligned copy of the original std::string. May be empty.
+  std::unique_ptr<char[]> aligned_copy_;
+  size_t aligned_copy_size_;
+};
+
 // Holds a TensorFlow lite graph and produces GraphExecutors that may run the
 // graph.
 //
@@ -33,10 +58,8 @@ class ModelImpl : public chromeos::machine_learning::mojom::Model {
   // The `required_inputs` and `required_outputs` arguments specify a mapping
   // from required input / output tensor names to their indices in the TF lite
   // graph, and must outlive this object.
-  // `model_string` is optional string data that this class can take ownership
-  // of (presumably the backing data for `model`) and that is guaranteed to be
-  // destroyed *after* `model`. This is required by function
-  // `tflite::FlatBufferModel::BuildFromBuffer`.
+  // `model_data` is backing data for `model` which this class will take
+  // ownership of. It will be destroyed *after* `model`.
   //
   // The RAM of the returned model is not owned by the caller. The model object
   // will be deleted when the corresponding mojo connection is closed.
@@ -44,7 +67,7 @@ class ModelImpl : public chromeos::machine_learning::mojom::Model {
       std::map<std::string, int> required_inputs,
       std::map<std::string, int> required_outputs,
       std::unique_ptr<tflite::FlatBufferModel> model,
-      std::unique_ptr<std::string> model_string,
+      std::unique_ptr<AlignedModelData> model_data,
       mojo::PendingReceiver<chromeos::machine_learning::mojom::Model> receiver,
       const std::string& metrics_model_name);
 
@@ -66,7 +89,7 @@ class ModelImpl : public chromeos::machine_learning::mojom::Model {
       std::map<std::string, int> required_inputs,
       std::map<std::string, int> required_outputs,
       std::unique_ptr<tflite::FlatBufferModel> model,
-      std::unique_ptr<std::string> model_string,
+      std::unique_ptr<AlignedModelData> model_data,
       mojo::PendingReceiver<chromeos::machine_learning::mojom::Model> receiver,
       const std::string& metrics_model_name);
 
@@ -90,7 +113,7 @@ class ModelImpl : public chromeos::machine_learning::mojom::Model {
   const std::map<std::string, int> required_outputs_;
 
   // Must be above `model_`.
-  const std::unique_ptr<std::string> model_string_;
+  const std::unique_ptr<AlignedModelData> model_data_;
 
   const std::unique_ptr<tflite::FlatBufferModel> model_;
 

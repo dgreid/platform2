@@ -100,13 +100,13 @@ void InitializeOnce() {
 // is successful.
 bool ConstructModel(const FlatBufferModelSpecProto& model_proto,
                     mojo::Remote<Model>* const model) {
-  auto model_string_impl =
-      std::make_unique<std::string>(model_proto.model_string());
+  auto model_data =
+      std::make_unique<AlignedModelData>(model_proto.model_string());
 
   // Step 1 builds the FlatBufferModel.
   std::unique_ptr<tflite::FlatBufferModel> flat_buffer_model =
-      tflite::FlatBufferModel::BuildFromBuffer(model_string_impl->c_str(),
-                                               model_string_impl->length());
+      tflite::FlatBufferModel::VerifyAndBuildFromBuffer(model_data->data(),
+                                                        model_data->size());
 
   if (flat_buffer_model == nullptr) {
     return false;
@@ -121,7 +121,7 @@ bool ConstructModel(const FlatBufferModelSpecProto& model_proto,
     required_outputs[pair.first] = pair.second.index();
   }
   ModelImpl::Create(required_inputs, required_outputs,
-                    std::move(flat_buffer_model), std::move(model_string_impl),
+                    std::move(flat_buffer_model), std::move(model_data),
                     model->BindNewPipeAndPassReceiver(),
                     kMlBenchmarkMetricsName);
 
