@@ -140,16 +140,16 @@ typeDefs:
     - old
   ath10k-wifi-transmit-power-chain: &ath10k-wifi-transmit-power-chain
     description: "[ath10k] WiFi power chain for use with QCA ath10k drivers. Limits
-      in units of 1 dBm. 5g band power limit applies to all 5g bands."
+      in units of 0.25 dBm. 5g band power limit applies to all 5g bands."
     type: object
     properties:
       limit-2g:
-        description: "2G band power limit (dBm)"
+        description: "2G band power limit (0.25dBm)"
         type: integer
         minimum: 0x0
         maximum: 0xFF
       limit-5g:
-        description: "5G band power limit (dBm)"
+        description: "5G band power limit (0.25dBm)"
         type: integer
         minimum: 0x0
         maximum: 0xFF

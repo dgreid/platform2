@@ -760,8 +760,8 @@ In the tables below,
 ### wifi
 | Attribute | Type   | RegEx     | Required | Oneof Group | Build-only | Description |
 | --------- | ------ | --------- | -------- | ----------- | ---------- | ----------- |
-| non-tablet-mode-power-table-ath10k | [non-tablet-mode-power-table-ath10k](#non_tablet_mode_power_table_ath10k) |  | False | ath10k | False | [ath10k] WiFi power chain for use with QCA ath10k drivers. Limits in units of 1 dBm. 5g band power limit applies to all 5g bands. |
-| tablet-mode-power-table-ath10k | [tablet-mode-power-table-ath10k](#tablet_mode_power_table_ath10k) |  | False | ath10k | False | [ath10k] WiFi power chain for use with QCA ath10k drivers. Limits in units of 1 dBm. 5g band power limit applies to all 5g bands. |
+| non-tablet-mode-power-table-ath10k | [non-tablet-mode-power-table-ath10k](#non_tablet_mode_power_table_ath10k) |  | False | ath10k | False | [ath10k] WiFi power chain for use with QCA ath10k drivers. Limits in units of 0.25 dBm. 5g band power limit applies to all 5g bands. |
+| tablet-mode-power-table-ath10k | [tablet-mode-power-table-ath10k](#tablet_mode_power_table_ath10k) |  | False | ath10k | False | [ath10k] WiFi power chain for use with QCA ath10k drivers. Limits in units of 0.25 dBm. 5g band power limit applies to all 5g bands. |
 | geo-offsets-eu | [geo-offsets-eu](#geo_offsets_eu) |  | False | rtw | False | Offsets which are applied to WiFi power limits depending on the current regulatory domain. Offsets in units of 0.125 dBm. The sum of a geo offset and any power limit to which it applies cannot exceed 255. When the current regulatory domain is unknown or has yet to be determined, the base transmit power limits are used without any geo offsets applied. 'geo-offsets-fcc' is used for regulatory domains which follow FCC guidelines, 'geo-offsets-eu' is used for regulatory domains which follow ETSI guidelines, and 'geo-offsets-rest-of-world' is used for regulatory domains which don't follow FCC or ETSI guidelines. |
 | geo-offsets-fcc | [geo-offsets-fcc](#geo_offsets_fcc) |  | False | rtw | False | Offsets which are applied to WiFi power limits depending on the current regulatory domain. Offsets in units of 0.125 dBm. The sum of a geo offset and any power limit to which it applies cannot exceed 255. When the current regulatory domain is unknown or has yet to be determined, the base transmit power limits are used without any geo offsets applied. 'geo-offsets-fcc' is used for regulatory domains which follow FCC guidelines, 'geo-offsets-eu' is used for regulatory domains which follow ETSI guidelines, and 'geo-offsets-rest-of-world' is used for regulatory domains which don't follow FCC or ETSI guidelines. |
 | geo-offsets-rest-of-world | [geo-offsets-rest-of-world](#geo_offsets_rest_of_world) |  | False | rtw | False | Offsets which are applied to WiFi power limits depending on the current regulatory domain. Offsets in units of 0.125 dBm. The sum of a geo offset and any power limit to which it applies cannot exceed 255. When the current regulatory domain is unknown or has yet to be determined, the base transmit power limits are used without any geo offsets applied. 'geo-offsets-fcc' is used for regulatory domains which follow FCC guidelines, 'geo-offsets-eu' is used for regulatory domains which follow ETSI guidelines, and 'geo-offsets-rest-of-world' is used for regulatory domains which don't follow FCC or ETSI guidelines. |
@@ -772,14 +772,14 @@ In the tables below,
 ### non-tablet-mode-power-table-ath10k
 | Attribute | Type   | RegEx     | Required | Oneof Group | Build-only | Description |
 | --------- | ------ | --------- | -------- | ----------- | ---------- | ----------- |
-| limit-2g | integer |  | False |  | False | 2G band power limit (dBm) Minimum value: 0x0. Maximum value: 0xff. |
-| limit-5g | integer |  | False |  | False | 5G band power limit (dBm) Minimum value: 0x0. Maximum value: 0xff. |
+| limit-2g | integer |  | False |  | False | 2G band power limit (0.25dBm) Minimum value: 0x0. Maximum value: 0xff. |
+| limit-5g | integer |  | False |  | False | 5G band power limit (0.25dBm) Minimum value: 0x0. Maximum value: 0xff. |
 
 ### tablet-mode-power-table-ath10k
 | Attribute | Type   | RegEx     | Required | Oneof Group | Build-only | Description |
 | --------- | ------ | --------- | -------- | ----------- | ---------- | ----------- |
-| limit-2g | integer |  | False |  | False | 2G band power limit (dBm) Minimum value: 0x0. Maximum value: 0xff. |
-| limit-5g | integer |  | False |  | False | 5G band power limit (dBm) Minimum value: 0x0. Maximum value: 0xff. |
+| limit-2g | integer |  | False |  | False | 2G band power limit (0.25dBm) Minimum value: 0x0. Maximum value: 0xff. |
+| limit-5g | integer |  | False |  | False | 5G band power limit (0.25dBm) Minimum value: 0x0. Maximum value: 0xff. |
 
 ### geo-offsets-eu
 | Attribute | Type   | RegEx     | Required | Oneof Group | Build-only | Description |
