@@ -61,6 +61,11 @@ if (($programname == 'charon') or \
     ($programname == 'shill') or \
     ($programname == 'wpa_supplicant')) and $syslogseverity >= '4' then ~
 
+# Keep all bluetooth logs in /var/log/bluetooth.log
+if $programname == 'bluetoothd' then -/var/log/bluetooth.log
+# Log non-debug level Bluetooth logs to /var/log/messages too
+if $programname == 'bluetoothd' and $syslogseverity >= '7' then ~
+
 # Keep Upstart logs in /var/log/upstart.log
 # Since these go through the kernel ring buffer, the $programname is 'kernel'.
 # We can match against messages from init with:
