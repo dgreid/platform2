@@ -40,10 +40,6 @@ UMA. In order to use the library in a module, you need to do the following:
   For more information on the C API, see
   [c_metrics_library.h](./c_metrics_library.h).
 
-- Samples are sent to Chromium only if the `/home/chronos/Consent To Send Stats`
-  file exists or the metrics are declared enabled in the policy file (see the
-  AreMetricsEnabled API method).
-
 - On the target platform, shortly after the sample is sent, it should be visible
   in Chromium through `chrome://histograms`.
 
@@ -53,6 +49,39 @@ UMA. In order to use the library in a module, you need to do the following:
   playing music on each device and each day of use.  Please see the
   CumulativeMetrics section below.
 
+## How metrics are actually sent
+
+libmetrics always writes histogram data to /var/lib/metrics/uma-events using a
+custom format. flock() is used to avoid races.
+
+*** note
+**Warning:** All metrics are written synchronously to disk and may block if
+another process has the uma-events file locked. Unlike UMAs in Chrome, care must
+be taken to not to update UMAs in performance-critical sections.
+***
+
+*** aside
+**Note:** libmetrics does not check consent before writing to
+/var/lib/metrics/uma-events, leaving that to the sender.
+***
+
+On most boards, the uma-events file is processed by Chromium's
+chromeos::ExternalMetrics class. chromeos::ExternalMetrics periodically flock's
+the file, reads all the metrics in it, and truncates the file. The
+chromeos::ExternalMetrics sends the metrics from the file into Chrome's UMA
+histogram collection system, after which they are treated like any other Chrome
+UMA. In particular, Chrome will check consent before uploading the histograms.
+
+However, on the few boards that do not run a Chrome browser, uploading is
+handled by the UploadService inside metrics_daemon. The UploadService
+is only instatiated if --uploader is passed to metric_daemon. Similar to Chrome,
+the UploadService will periodically lock-read-truncate-unlock the uma-events
+file. If we have user permission to upload stats, the UploadService will then
+send the metrics after unlocking the file. Here, user permission is controlled
+by the device policy's metrics_enabled field. (If the metrics_enabled field is
+not set, this falls back to enabling stats if the device is enterprise enrolled;
+if that isn't the case, the existence of the
+"/home/chronos/Consent To Send Stats" file is used.)
 
 # The Metrics Client: metrics_client
 
