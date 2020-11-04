@@ -48,8 +48,6 @@ class CellularServiceTest : public testing::Test {
     EXPECT_CALL(manager_, UpdateService(_)).Times(AnyNumber());
     device_ = new MockCellular(&modem_info_, "usb0", kAddress, 3,
                                Cellular::kTypeCdma, "", RpcIdentifier(""));
-    // We need a capability for testing activation.
-    device_->CreateCapability(&modem_info_);
     // CellularService expects an IMSI and SIM ID be set in the Device.
     device_->set_imsi(kImsi);
     device_->set_iccid(kIccid);
@@ -64,8 +62,6 @@ class CellularServiceTest : public testing::Test {
     storage_.SetString(storage_id_, CellularService::kStorageIccid, kIccid);
     storage_.SetString(storage_id_, CellularService::kStorageImsi, kImsi);
   }
-
-  void TearDown() override { device_->DestroyCapability(); }
 
  protected:
   static const char kAddress[];

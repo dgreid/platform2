@@ -53,26 +53,34 @@ const char kAddressAsString[] = "A0B1C2D3E4F5";
 
 }  // namespace
 
-// Use a lightweight Modem wrapper that overrides ConstructCellular.
-class TestModem : public Modem {
+class TestDeviceInfo : public MockDeviceInfo {
  public:
-  TestModem(const std::string& service,
-            const RpcIdentifier& path,
-            ModemInfo* modem_info,
-            RTNLHandler* rtnl_handler)
-      : Modem(service, path, modem_info) {
-    set_rtnl_handler_for_testing(rtnl_handler);
-  }
-  TestModem(const TestModem&) = delete;
-  TestModem& operator=(const TestModem&) = delete;
+  explicit TestDeviceInfo(Manager* manager) : MockDeviceInfo(manager) {}
+  TestDeviceInfo(const TestDeviceInfo&) = delete;
+  TestDeviceInfo& operator=(const TestDeviceInfo&) = delete;
 
-  // Modem override:
-  Cellular* ConstructCellular(const string& mac_address,
-                              int interface_index) override {
-    return new NiceMock<MockCellular>(modem_info_for_testing(), link_name(),
-                                      mac_address, interface_index,
-                                      Cellular::kType3gpp, kService, kPath);
+  // DeviceInfo override:
+  CellularRefPtr GetCellularDevice(int interface_index,
+                                   const std::string& mac_address,
+                                   Modem* modem) override {
+    CellularRefPtr cellular;
+    if (use_mock_) {
+      cellular = new NiceMock<MockCellular>(
+          manager()->modem_info(), kLinkName, mac_address, interface_index,
+          Cellular::kType3gpp, kService, kPath);
+    } else {
+      cellular = new Cellular(manager()->modem_info(), kLinkName, mac_address,
+                              interface_index, modem->type(), modem->service(),
+                              modem->path());
+      cellular->CreateCapability(manager()->modem_info());
+    }
+    return cellular;
   }
+
+  void set_use_mock(bool use_mock) { use_mock_ = use_mock; }
+
+ private:
+  bool use_mock_ = true;
 };
 
 class ModemTest : public Test {
@@ -81,7 +89,9 @@ class ModemTest : public Test {
       : manager_(&control_, &dispatcher_, &metrics_),
         modem_info_(&control_, &manager_),
         device_info_(&manager_),
-        modem_(new TestModem(kService, kPath, &modem_info_, &rtnl_handler_)) {}
+        modem_(new Modem(kService, kPath, &modem_info_)) {
+    modem_->set_rtnl_handler_for_testing(&rtnl_handler_);
+  }
 
   void SetUp() {
     expected_address_ = ByteString(kAddress, base::size(kAddress));
@@ -90,16 +100,13 @@ class ModemTest : public Test {
         .WillRepeatedly(Return(kTestInterfaceIndex));
 
     EXPECT_CALL(manager_, device_info()).WillRepeatedly(Return(&device_info_));
+    EXPECT_CALL(manager_, modem_info()).WillRepeatedly(Return(&modem_info_));
   }
 
   void TearDown() { modem_.reset(); }
 
  protected:
-  void SetModemWithRealCellular() {
-    modem_.reset();
-    modem_ = std::make_unique<Modem>(kService, kPath, &modem_info_);
-    modem_->set_rtnl_handler_for_testing(&rtnl_handler_);
-  }
+  void SetUseRealCellular() { device_info_.set_use_mock(false); }
 
   void SetDeviceInfoExpectations() {
     EXPECT_CALL(device_info_, IsDeviceBlocked(kLinkName))
@@ -136,7 +143,7 @@ class ModemTest : public Test {
   MockMetrics metrics_;
   NiceMock<MockManager> manager_;
   MockModemInfo modem_info_;
-  MockDeviceInfo device_info_;
+  TestDeviceInfo device_info_;
   std::unique_ptr<Modem> modem_;
   MockRTNLHandler rtnl_handler_;
   ByteString expected_address_;
@@ -215,9 +222,10 @@ TEST_F(ModemTest, CreateDevicePPP) {
   EXPECT_CALL(device_info_, IsDeviceBlocked(_)).WillRepeatedly(Return(false));
   EXPECT_CALL(device_info_, GetByteCounts(_, _, _))
       .WillRepeatedly(Return(true));
-  EXPECT_CALL(device_info_, RegisterDevice(_));
   CreateDeviceFromModemProperties(properties);
   EXPECT_TRUE(modem_->device_for_testing());
+  EXPECT_EQ(modem_->device_for_testing()->interface_index(),
+            Modem::kFakeDevInterfaceIndex);
   EXPECT_EQ(modem_->device_for_testing()->mac_address(),
             Modem::kFakeDevAddress);
 }
@@ -253,7 +261,7 @@ TEST_F(ModemTest, GetDeviceParams) {
 }
 
 TEST_F(ModemTest, CreateDeviceMM1) {
-  SetModemWithRealCellular();
+  SetUseRealCellular();
   SetDeviceInfoExpectations();
   EXPECT_CALL(device_info_, GetMacAddress(kTestInterfaceIndex, _))
       .WillOnce(DoAll(SetArgPointee<1>(expected_address_), Return(true)));

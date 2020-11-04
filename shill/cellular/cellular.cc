@@ -162,6 +162,7 @@ Cellular::Cellular(ModemInfo* modem_info,
       allow_roaming_(false),
       proposed_scan_in_progress_(false),
       explicit_disconnect_(false),
+      started_(false),
       is_ppp_authenticating_(false),
       scanning_timeout_milliseconds_(kDefaultScanningTimeoutMilliseconds),
       weak_ptr_factory_(this) {
@@ -351,9 +352,20 @@ void Cellular::Start(Error* error,
   // is not disabled AND the proxies have been initialized.  We have seen
   // crashes due to NULL proxies and the state being not disabled.
   if (state_ != kStateDisabled && capability_->AreProxiesInitialized()) {
+    LOG(WARNING) << __func__ << ": Skipping Start.";
+    if (error)
+      error->Reset();
     return;
   }
-
+  started_ = true;
+  if (!capability_) {
+    // Assume success, even though a connection will not succeed until a Modem
+    // is instantiated and |cabability_| is created.
+    LOG(WARNING) << __func__ << ": Skipping Start (no capability).";
+    if (error)
+      error->Reset();
+    return;
+  }
   ResultCallback cb = Bind(&Cellular::StartModemCallback,
                            weak_ptr_factory_.GetWeakPtr(), callback);
   capability_->StartModem(error, cb);
@@ -361,10 +373,18 @@ void Cellular::Start(Error* error,
 
 void Cellular::Stop(Error* error, const EnabledStateChangedCallback& callback) {
   SLOG(this, 1) << __func__ << ": " << GetStateString(state_);
+  started_ = false;
   explicit_disconnect_ = true;
   ResultCallback cb = Bind(&Cellular::StopModemCallback,
                            weak_ptr_factory_.GetWeakPtr(), callback);
-  capability_->StopModem(error, cb);
+  if (capability_) {
+    capability_->StopModem(error, cb);
+  } else {
+    // Modem is inhibited. Invoke the callback with no error to persist the
+    // disabled state.
+    callback.Run(Error());
+  }
+
   // Sockets should be destroyed here to ensure we make new connections
   // when we next enable cellular. Since the carrier may assign us a new IP
   // on reconnection and some carriers don't like when packets are sent from
@@ -416,7 +436,8 @@ void Cellular::StartModemCallback(const EnabledStateChangedCallback& callback,
     // modem was not yet marked enabled.
     HandleNewRegistrationState();
   }
-  callback.Run(error);
+  if (callback)
+    callback.Run(error);
 }
 
 void Cellular::StopModemCallback(const EnabledStateChangedCallback& callback,
@@ -437,12 +458,15 @@ void Cellular::StopModemCallback(const EnabledStateChangedCallback& callback,
 }
 
 void Cellular::CompleteActivation(Error* error) {
-  capability_->CompleteActivation(error);
+  if (capability_)
+    capability_->CompleteActivation(error);
 }
 
 void Cellular::RegisterOnNetwork(const string& network_id,
                                  Error* error,
                                  const ResultCallback& callback) {
+  if (!capability_)
+    callback.Run(Error(Error::Type::kOperationFailed));
   capability_->RegisterOnNetwork(network_id, error, callback);
 }
 
@@ -451,6 +475,8 @@ void Cellular::RequirePin(const string& pin,
                           Error* error,
                           const ResultCallback& callback) {
   SLOG(this, 2) << __func__ << "(" << require << ")";
+  if (!capability_)
+    callback.Run(Error(Error::Type::kOperationFailed));
   capability_->RequirePin(pin, require, error, callback);
 }
 
@@ -458,6 +484,8 @@ void Cellular::EnterPin(const string& pin,
                         Error* error,
                         const ResultCallback& callback) {
   SLOG(this, 2) << __func__;
+  if (!capability_)
+    callback.Run(Error(Error::Type::kOperationFailed));
   capability_->EnterPin(pin, error, callback);
 }
 
@@ -466,6 +494,8 @@ void Cellular::UnblockPin(const string& unblock_code,
                           Error* error,
                           const ResultCallback& callback) {
   SLOG(this, 2) << __func__;
+  if (!capability_)
+    callback.Run(Error(Error::Type::kOperationFailed));
   capability_->UnblockPin(unblock_code, pin, error, callback);
 }
 
@@ -474,11 +504,15 @@ void Cellular::ChangePin(const string& old_pin,
                          Error* error,
                          const ResultCallback& callback) {
   SLOG(this, 2) << __func__;
+  if (!capability_)
+    callback.Run(Error(Error::Type::kOperationFailed));
   capability_->ChangePin(old_pin, new_pin, error, callback);
 }
 
 void Cellular::Reset(Error* error, const ResultCallback& callback) {
   SLOG(this, 2) << __func__;
+  if (!capability_)
+    callback.Run(Error(Error::Type::kOperationFailed));
   capability_->Reset(error, callback);
 }
 
@@ -602,6 +636,9 @@ void Cellular::Scan(Error* error, const string& /*reason*/) {
     return;
   }
 
+  if (!capability_)
+    return;
+
   ResultStringmapsCallback cb =
       Bind(&Cellular::OnScanReply, weak_ptr_factory_.GetWeakPtr());
   capability_->Scan(error, cb);
@@ -660,6 +697,8 @@ void Cellular::PollLocationTask() {
 }
 
 void Cellular::PollLocation() {
+  if (!capability_)
+    return;
   StringCallback cb =
       Bind(&Cellular::GetLocationCallback, weak_ptr_factory_.GetWeakPtr());
   capability_->GetLocation(cb);
@@ -667,6 +706,7 @@ void Cellular::PollLocation() {
 
 void Cellular::HandleNewRegistrationState() {
   SLOG(this, 2) << __func__ << ": (new state " << GetStateString(state_) << ")";
+  CHECK(capability_);
   if (!capability_->IsRegistered()) {
     if (!explicit_disconnect_ &&
         (state_ == kStateLinked || state_ == kStateConnected) && service_.get())
@@ -718,6 +758,7 @@ void Cellular::CreateService() {
     return;
   }
 
+  CHECK(capability_);
   DCHECK(manager()->cellular_service_provider());
   service_ =
       manager()->cellular_service_provider()->LoadServicesForDevice(this);
@@ -742,6 +783,13 @@ void Cellular::DestroyService() {
 void Cellular::CreateCapability(ModemInfo* modem_info) {
   CHECK(!capability_);
   capability_ = CellularCapability::Create(type_, this, modem_info);
+  if (!started_)
+    return;
+
+  ResultCallback cb =
+      Bind(&Cellular::StartModemCallback, weak_ptr_factory_.GetWeakPtr(),
+           EnabledStateChangedCallback());
+  capability_->StartModem(/*error=*/nullptr, cb);
 }
 
 void Cellular::DestroyCapability() {
@@ -757,6 +805,12 @@ void Cellular::Connect(Error* error) {
   } else if (state_ != kStateRegistered) {
     Error::PopulateAndLog(FROM_HERE, error, Error::kNotRegistered,
                           "Modem not registered; connection request ignored.");
+    return;
+  }
+
+  if (!capability_) {
+    Error::PopulateAndLog(FROM_HERE, error, Error::kOperationFailed,
+                          "Modem not available.");
     return;
   }
 
@@ -794,10 +848,12 @@ void Cellular::OnConnectReply(const Error& error) {
 }
 
 void Cellular::OnDisabled() {
+  SLOG(this, 1) << __func__;
   SetEnabled(false);
 }
 
 void Cellular::OnEnabled() {
+  SLOG(this, 1) << __func__;
   manager()->AddTerminationAction(
       link_name(),
       Bind(&Cellular::StartTermination, weak_ptr_factory_.GetWeakPtr()));
@@ -838,6 +894,11 @@ void Cellular::Disconnect(Error* error, const char* reason) {
   if (state_ != kStateConnected && state_ != kStateLinked) {
     Error::PopulateAndLog(FROM_HERE, error, Error::kNotConnected,
                           "Not connected; request ignored.");
+    return;
+  }
+  if (!capability_) {
+    Error::PopulateAndLog(FROM_HERE, error, Error::kOperationFailed,
+                          "Modem not available.");
     return;
   }
   StopPPP();
@@ -897,6 +958,7 @@ void Cellular::OnDisconnectFailed() {
 void Cellular::EstablishLink() {
   SLOG(this, 2) << __func__;
   CHECK_EQ(kStateConnected, state_);
+  CHECK(capability_);
 
   CellularBearer* bearer = capability_->GetActiveBearer();
   if (bearer && bearer->ipv4_config_method() == IPConfig::kMethodPPP) {
@@ -932,6 +994,7 @@ void Cellular::LinkEvent(unsigned int flags, unsigned int change) {
     // TODO(benchan): IPv6 support is currently disabled for cellular devices.
     // Check and obtain IPv6 configuration from the bearer when we later enable
     // IPv6 support on cellular devices.
+    CHECK(capability_);
     CellularBearer* bearer = capability_->GetActiveBearer();
     if (bearer && bearer->ipv4_config_method() == IPConfig::kMethodStatic) {
       SLOG(this, 2) << "Assign static IP configuration from bearer.";
@@ -969,6 +1032,7 @@ void Cellular::OnPropertiesChanged(
     const string& interface,
     const KeyValueStore& changed_properties,
     const vector<string>& invalidated_properties) {
+  CHECK(capability_);
   capability_->OnPropertiesChanged(interface, changed_properties,
                                    invalidated_properties);
 }
@@ -985,8 +1049,9 @@ bool Cellular::IsDefaultFriendlyServiceName(const string& service_name) const {
 }
 
 void Cellular::OnModemStateChanged(ModemState new_state) {
+  CHECK(capability_);
   ModemState old_state = modem_state_;
-  SLOG(this, 2) << __func__ << ": " << GetModemStateString(old_state) << " -> "
+  SLOG(this, 1) << __func__ << ": " << GetModemStateString(old_state) << " -> "
                 << GetModemStateString(new_state);
   if (old_state == new_state) {
     SLOG(this, 2) << "The new state matches the old state. Nothing to do.";
@@ -1030,11 +1095,18 @@ bool Cellular::IsRoamingAllowedOrRequired() const {
   return allow_roaming_ || provider_requires_roaming_;
 }
 
-bool Cellular::SetAllowRoaming(const bool& value, Error* /*error*/) {
+bool Cellular::SetAllowRoaming(const bool& value, Error* error) {
   SLOG(this, 2) << __func__ << "(" << allow_roaming_ << "->" << value << ")";
   if (allow_roaming_ == value) {
     return false;
   }
+
+  if (!capability_) {
+    Error::PopulateAndLog(FROM_HERE, error, Error::kOperationFailed,
+                          "Modem not available.");
+    return false;
+  }
+
   allow_roaming_ = value;
   manager()->UpdateDevice(this);
 
@@ -1287,6 +1359,16 @@ void Cellular::RegisterProperties() {
                           &Cellular::SetAllowRoaming);
 }
 
+void Cellular::UpdateModemProperties(const RpcIdentifier& dbus_path,
+                                     const std::string& mac_address) {
+  if (dbus_path_ == dbus_path)
+    return;
+  dbus_path_ = dbus_path;
+  dbus_path_str_ = dbus_path.value();
+  set_modem_state(kModemStateUnknown);
+  set_mac_address(mac_address);
+}
+
 const std::string& Cellular::GetSimCardId() const {
   return sim_card_id_;
 }
@@ -1437,6 +1519,7 @@ void Cellular::set_mm_plugin(const string& mm_plugin) {
 }
 
 void Cellular::StartLocationPolling() {
+  CHECK(capability_);
   if (!capability_->IsLocationUpdateSupported()) {
     SLOG(this, 2) << "Location polling not enabled for " << mm_plugin_
                   << " plugin.";
@@ -1684,6 +1767,7 @@ vector<GeolocationInfo> Cellular::GetGeolocationObjects() const {
 
 void Cellular::OnOperatorChanged() {
   SLOG(this, 3) << __func__;
+  CHECK(capability_);
 
   if (service()) {
     capability_->UpdateServiceOLP();

@@ -1249,7 +1249,7 @@ void Manager::RegisterDevice(const DeviceRefPtr& to_manage) {
 }
 
 void Manager::DeregisterDevice(const DeviceRefPtr& to_forget) {
-  SLOG(this, 2) << __func__ << "(" << to_forget->link_name() << ")";
+  LOG(INFO) << __func__ << "(" << to_forget->link_name() << ")";
   for (auto it = devices_.begin(); it != devices_.end(); ++it) {
     if (to_forget.get() == it->get()) {
       SLOG(this, 2) << "Deregistered device: " << to_forget->link_name();

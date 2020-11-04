@@ -265,6 +265,10 @@ class Cellular : public Device,
   // DBus Properties exposed by the Device interface of shill.
   void RegisterProperties();
 
+  // |dbus_path| and |mac_address| may change if the associated Modem restarts.
+  void UpdateModemProperties(const RpcIdentifier& dbus_path,
+                             const std::string& mac_address);
+
   // getters
   const std::string& dbus_service() const { return dbus_service_; }
   const RpcIdentifier& dbus_path() const { return dbus_path_; }
@@ -291,6 +295,8 @@ class Cellular : public Device,
   bool sim_present() const { return sim_present_; }
   const Stringmaps& apn_list() const { return apn_list_; }
   const std::string& iccid() const { return iccid_; }
+
+  Type type() const { return type_; }
 
   // Returns a unique identifier for a SIM Card. For physical cards this will be
   // the ICCID and there should only be one matching service. For eSIM cards,
@@ -510,9 +516,9 @@ class Cellular : public Device,
   // All DBus Properties exposed by the Cellular device.
   // Properties common to GSM and CDMA modems.
   const std::string dbus_service_;  // org.*.ModemManager*
-  const RpcIdentifier dbus_path_;   // ModemManager.Modem
+  RpcIdentifier dbus_path_;         // ModemManager.Modem
   // Used because we currently expose |dbus_path| as a string property.
-  const std::string dbus_path_str_;
+  std::string dbus_path_str_;
 
   Stringmap home_provider_;
 
@@ -568,6 +574,11 @@ class Cellular : public Device,
 
   // Flag indicating that a disconnect has been explicitly requested.
   bool explicit_disconnect_;
+
+  // Set to true when Start() is called and false when Stop() is called.
+  // Used to determine whether to call StartModem when |capability_| is
+  // created.
+  bool started_;
 
   std::unique_ptr<ExternalTask> ppp_task_;
   PPPDeviceRefPtr ppp_device_;

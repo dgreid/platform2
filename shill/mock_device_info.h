@@ -32,6 +32,12 @@ class MockDeviceInfo : public DeviceInfo {
   MOCK_METHOD(void, BlockDevice, (const std::string&), (override));
   MOCK_METHOD(void, AllowDevice, (const std::string&), (override));
   MOCK_METHOD(DeviceRefPtr, GetDevice, (int), (const, override));
+#if !defined(DISABLE_CELLULAR)
+  MOCK_METHOD(CellularRefPtr,
+              GetCellularDevice,
+              (int, const std::string&, Modem*),
+              (override));
+#endif
   MOCK_METHOD(int, GetIndex, (const std::string&), (const, override));
   MOCK_METHOD(bool, GetMacAddress, (int, ByteString*), (const, override));
   MOCK_METHOD(ByteString, GetMacAddressFromKernel, (int), (const, override));

@@ -551,7 +551,7 @@ void RTNLHandler::StoreRequest(std::unique_ptr<RTNLMessage> request) {
     CHECK(old_request) << "PopStoredRequest returned nullptr but "
                        << "the calculated window size is greater than 0. "
                        << "This is a bug in RTNLHandler.";
-    SLOG(this, 1) << "Removing stored RTNLMessage of sequence "
+    SLOG(this, 2) << "Removing stored RTNLMessage of sequence "
                   << old_request->seq() << " (" << old_request->ToString()
                   << ") without receiving a response for this sequence";
   }

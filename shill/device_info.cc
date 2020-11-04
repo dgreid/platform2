@@ -52,6 +52,7 @@
 #include "shill/vpn/vpn_provider.h"
 
 #if !defined(DISABLE_CELLULAR)
+#include "shill/cellular/modem.h"
 #include "shill/cellular/modem_info.h"
 #endif  // DISABLE_CELLULAR
 
@@ -715,7 +716,7 @@ bool DeviceInfo::IsRenamedBlockedDevice(const RTNLMessage& msg) {
 }
 
 void DeviceInfo::AddLinkMsgHandler(const RTNLMessage& msg) {
-  SLOG(this, 1) << __func__ << " index: " << msg.interface_index();
+  SLOG(this, 2) << __func__ << " index: " << msg.interface_index();
 
   DCHECK(msg.type() == RTNLMessage::kTypeLink &&
          msg.mode() == RTNLMessage::kModeAdd);
@@ -815,6 +816,44 @@ DeviceRefPtr DeviceInfo::GetDevice(int interface_index) const {
   const Info* info = GetInfo(interface_index);
   return info ? info->device : nullptr;
 }
+
+#if !defined(DISABLE_CELLULAR)
+CellularRefPtr DeviceInfo::GetCellularDevice(int interface_index,
+                                             const std::string& mac_address,
+                                             Modem* modem) {
+  LOG(INFO) << __func__ << " Index: " << interface_index
+            << " Address: " << mac_address;
+  DeviceRefPtr device = GetDevice(interface_index);
+  if (device && device->link_name() != modem->link_name()) {
+    SLOG(this, 1) << "Cellular link name changed: " << modem->link_name();
+    DeregisterDevice(interface_index);
+    device = nullptr;
+  }
+  CellularRefPtr cellular;
+  if (device) {
+    cellular = static_cast<Cellular*>(device.get());
+    if (cellular->type() != modem->type() ||
+        cellular->dbus_service() != modem->service()) {
+      SLOG(this, 1) << "Cellular service changed: " << modem->service();
+      DeregisterDevice(interface_index);
+      cellular = nullptr;
+    }
+  }
+  if (!cellular) {
+    cellular = new Cellular(manager_->modem_info(), modem->link_name(),
+                            mac_address, interface_index, modem->type(),
+                            modem->service(), modem->path());
+    cellular->CreateCapability(manager_->modem_info());
+    RegisterDevice(cellular);
+  } else {
+    LOG(INFO) << "Using existing Cellular Device: " << cellular->enabled();
+    // Update the Cellular dbus path and mac address to match the new Modem.
+    cellular->UpdateModemProperties(modem->path(), mac_address);
+    cellular->CreateCapability(manager_->modem_info());
+  }
+  return cellular;
+}
+#endif
 
 int DeviceInfo::GetIndex(const string& interface_name) const {
   map<string, int>::const_iterator it = indices_.find(interface_name);

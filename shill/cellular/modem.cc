@@ -60,6 +60,7 @@ Modem::~Modem() {
   device_->DestroyService();
   device_->StopLocationPolling();
   device_->DestroyCapability();
+
   // Under certain conditions, Cellular::StopModem may not be called before
   // the Cellular device is destroyed. This happens if the dbus modem exported
   // by the modem-manager daemon disappears soon after the modem is disabled,
@@ -75,18 +76,12 @@ Modem::~Modem() {
   device_->home_provider_info()->RemoveObserver(device_.get());
   device_->serving_operator_info()->RemoveObserver(device_.get());
 
-  // Ensure that the Cellular interface is fully destroyed here. If we wait for
-  // an RTNL link delete message to be received by DeviceInfo, there's the
-  // possibility that another Modem instance will come up and attempt to create
-  // a Cellular instance with the same name as this device.
-  //
-  // Note that in the case where this destructor is called before the
-  // corresponding RTNL link delete message is received
-  // (i.e. ModemManager1::OnInterfacesRemovedSignal is called first), this means
-  // that DeviceInfo::DelLinkMsgHandler will be called for a DeviceInfo::Info
-  // that DeviceInfo no longer knows about, which DeviceInfo can handle.
-  modem_info_->manager()->device_info()->DeregisterDevice(
-      device_->interface_index());
+  // Note: The Cellular Device |device_| is owned by DeviceInfo. It will not
+  // be destroyed here, instead it will be kept around until/unless an RTNL
+  // link delete message is received. If/when a new Modem instance is
+  // constructed (e.g. after modemmanager restarts), the call to
+  // DeviceInfo::GetCellularDevice will return the existing device for the
+  // interface.
 }
 
 void Modem::CreateDeviceMM1(const InterfaceToProperties& properties) {
@@ -140,16 +135,6 @@ void Modem::OnDeviceInfoAvailable(const string& link_name) {
 
 string Modem::GetModemInterface() const {
   return string(MM_DBUS_INTERFACE_MODEM);
-}
-
-Cellular* Modem::ConstructCellular(const string& mac_address,
-                                   int interface_index) {
-  SLOG(this, 1) << __func__ << " link_name: " << link_name_
-                << " interface index " << interface_index;
-  auto cellular = new Cellular(modem_info_, link_name_, mac_address,
-                               interface_index, type_, service_, path_);
-  cellular->CreateCapability(modem_info_);
-  return cellular;
 }
 
 bool Modem::GetLinkName(const KeyValueStore& modem_props, string* name) const {
@@ -218,13 +203,15 @@ void Modem::CreateDeviceFromModemProperties(
     interface_index = kFakeDevInterfaceIndex;
   }
 
-  if (modem_info_->manager()->device_info()->IsDeviceBlocked(link_name_)) {
+  DeviceInfo* device_info = modem_info_->manager()->device_info();
+  if (device_info->IsDeviceBlocked(link_name_)) {
     LOG(INFO) << "Not creating cellular device for blocked interface "
               << link_name_ << ".";
     return;
   }
 
-  device_ = ConstructCellular(mac_address, interface_index);
+  device_ = device_info->GetCellularDevice(interface_index, mac_address, this);
+
   // Give the device a chance to extract any capability-specific properties.
   for (properties_it = properties.begin(); properties_it != properties.end();
        ++properties_it) {
@@ -232,7 +219,8 @@ void Modem::CreateDeviceFromModemProperties(
                                  vector<string>());
   }
 
-  modem_info_->manager()->device_info()->RegisterDevice(device_);
+  SLOG(this, 1) << "Cellular device created: " << device_->link_name()
+                << " Enabled: " << device_->enabled();
 }
 
 bool Modem::GetDeviceParams(string* mac_address, int* interface_index) {

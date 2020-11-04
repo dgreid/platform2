@@ -33,7 +33,7 @@ class Modem {
   Modem(const Modem&) = delete;
   Modem& operator=(const Modem&) = delete;
 
-  virtual ~Modem();
+  ~Modem();
 
   // Gathers information and passes it to CreateDeviceFromModemProperties.
   void CreateDeviceMM1(const InterfaceToProperties& properties);
@@ -57,12 +57,6 @@ class Modem {
   static const int kFakeDevInterfaceIndex;
 
  protected:
-  // Overridden in tests to provide a MockCellular instance instead of
-  // creating a real instance. TODO(b:172077101): Use a delegate interface
-  // instead once Cellular lifetime is detached from Modem lifetime.
-  virtual Cellular* ConstructCellular(const std::string& mac_address,
-                                      int interface_index);
-
   ModemInfo* modem_info_for_testing() { return modem_info_; }
   void set_rtnl_handler_for_testing(RTNLHandler* rtnl_handler) {
     rtnl_handler_ = rtnl_handler;

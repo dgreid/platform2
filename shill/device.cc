@@ -1921,7 +1921,7 @@ bool Device::IsUnderlyingDeviceEnabled() const {
 // callback
 void Device::OnEnabledStateChanged(const ResultCallback& callback,
                                    const Error& error) {
-  SLOG(this, 2) << __func__ << " (target: " << enabled_pending_ << ","
+  SLOG(this, 1) << __func__ << " (target: " << enabled_pending_ << ","
                 << " success: " << error.IsSuccess() << ")"
                 << " on " << link_name_;
   if (error.IsSuccess()) {
@@ -1938,7 +1938,7 @@ void Device::OnEnabledStateChanged(const ResultCallback& callback,
 }
 
 void Device::SetEnabled(bool enable) {
-  SLOG(this, 2) << __func__ << "(" << enable << ")";
+  SLOG(this, 1) << __func__ << "(" << enable << ")";
   Error error;
   SetEnabledChecked(enable, false, &error, ResultCallback());
 
@@ -1955,12 +1955,14 @@ void Device::SetEnabled(bool enable) {
 void Device::SetEnabledNonPersistent(bool enable,
                                      Error* error,
                                      const ResultCallback& callback) {
+  SLOG(this, 1) << __func__ << "(" << enable << ")";
   SetEnabledChecked(enable, false, error, callback);
 }
 
 void Device::SetEnabledPersistent(bool enable,
                                   Error* error,
                                   const ResultCallback& callback) {
+  SLOG(this, 1) << __func__ << "(" << enable << ")";
   SetEnabledChecked(enable, true, error, callback);
 }
 
@@ -1969,7 +1971,7 @@ void Device::SetEnabledChecked(bool enable,
                                Error* error,
                                const ResultCallback& callback) {
   DCHECK(error);
-  SLOG(this, 2) << "Device " << link_name_ << " "
+  SLOG(this, 1) << __func__ << ": Device " << link_name_ << " "
                 << (enable ? "starting" : "stopping");
   if (enable && manager_->IsTechnologyProhibited(technology())) {
     error->Populate(Error::kPermissionDenied, "The " + technology().GetName() +
@@ -1987,7 +1989,7 @@ void Device::SetEnabledChecked(bool enable,
                  : "Cannot disable while the device is enabling.");
       return;
     }
-    LOG(INFO) << "Already in desired enable state.";
+    SLOG(this, 1) << "Already in desired enable state.";
     error->Reset();
     return;
   }
@@ -2009,6 +2011,8 @@ void Device::SetEnabledChecked(bool enable,
 void Device::SetEnabledUnchecked(bool enable,
                                  Error* error,
                                  const ResultCallback& on_enable_complete) {
+  SLOG(this, 1) << __func__ << ": link: " << link_name()
+                << " enable: " << enable;
   enabled_pending_ = enable;
   EnabledStateChangedCallback chained_callback =
       Bind(&Device::OnEnabledStateChanged, AsWeakPtr(), on_enable_complete);

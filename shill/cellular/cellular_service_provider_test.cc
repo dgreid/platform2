@@ -57,6 +57,7 @@ class CellularServiceProviderTest : public testing::Test {
     CellularRefPtr cellular = new Cellular(
         &modem_info_, kTestDeviceName, kTestDeviceAddress, kTestInterfaceIndex,
         Cellular::kType3gpp, kDBusService, kDBusPath);
+    cellular->CreateCapability(&modem_info_);
     cellular->set_imsi(imsi);
     cellular->set_iccid(iccid);
     return cellular;
