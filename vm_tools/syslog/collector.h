@@ -34,7 +34,7 @@ class Collector {
   // Override SendUserLogs to deliver logs to listening services.
   virtual bool SendUserLogs() = 0;
 
-  bool BindLogSocket(const char* name);
+  bool BindLogSocket(const base::FilePath& name);
 
   bool StartWatcher(base::TimeDelta flush_period);
 

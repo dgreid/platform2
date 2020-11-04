@@ -49,7 +49,7 @@ std::unique_ptr<HostCollector> HostCollector::Create(
   LOG(INFO) << "Creating HostCollector watching " << logsocket_path;
   auto collector = base::WrapUnique<HostCollector>(
       new HostCollector(bus, cid, vm_type, log_pipe_manager));
-  if (!collector->BindLogSocket(logsocket_path.value().c_str())) {
+  if (!collector->BindLogSocket(logsocket_path)) {
     collector.reset();
     return collector;
   }

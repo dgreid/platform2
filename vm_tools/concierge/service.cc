@@ -149,9 +149,18 @@ constexpr uint64_t kDiskSizeMask = ~4095ll;  // Round to disk block size.
 // vmlog_forwarder relies on creating a socket for crosvm to receive log
 // messages. Socket paths may only be 108 character long. Further, while Linux
 // actually allows for 108 non-null bytes to be used, the rust interface to bind
-// only allows for 107, with the last byte always being null. Currently the path
-// leaves us with just enough space to base64 encode a 21 character VM name.
-constexpr int kMaxVmNameLength = 21;
+// only allows for 107, with the last byte always being null.
+//
+// We can abbreviate the directories in the path by opening the target directory
+// and using /proc/self/fd/ to access it, but this still uses up
+// 21 + (fd digits) characters on the prefix and file extension. This leaves us
+// with 86 - (fd digits) characters for the base64 encoding of the VM
+// name. Base64 always produces encoding that are a multiple of 4 digits long,
+// so we can either allow for 63/84 characters before/after encoding, or
+// 60/80. The first will break if our file descriptor numbers ever go above 99,
+// which seems unlikely but not impossible. We can definitely be sure they won't
+// go above 99,999, however.
+constexpr int kMaxVmNameLength = 60;
 
 constexpr uint64_t kDefaultIoLimit = 1024 * 1024;  // 1 Mib
 

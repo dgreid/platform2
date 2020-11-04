@@ -75,7 +75,7 @@ GuestCollector::~GuestCollector() {
 }
 
 bool GuestCollector::Init() {
-  if (!BindLogSocket(kDevLog)) {
+  if (!BindLogSocket(base::FilePath(kDevLog))) {
     return false;
   }
   if (!StartWatcher(kFlushPeriod)) {

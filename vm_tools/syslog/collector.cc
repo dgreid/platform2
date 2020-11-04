@@ -54,11 +54,13 @@ constexpr size_t kMaxSyslogRecord = 1024;
 // Max number of records we should attempt to read out of the socket at a time.
 constexpr int kMaxRecordCount = 11;
 
+const char kProcPath[] = "/proc/self/fd/%d/%s";
+
 }  // namespace
 
 Collector::~Collector() = default;
 
-bool Collector::BindLogSocket(const char* name) {
+bool Collector::BindLogSocket(const base::FilePath& name) {
   // Start listening on the syslog socket.
   syslog_fd_.reset(socket(AF_UNIX, SOCK_DGRAM | SOCK_CLOEXEC, 0));
 
@@ -67,14 +69,39 @@ bool Collector::BindLogSocket(const char* name) {
     return false;
   }
 
-  // Make sure that any previous socket is cleaned up before attempting to bind
-  // to it again.  We don't really care whether the unlink succeeds or not.
-  HANDLE_EINTR(unlink(name));
-
   struct sockaddr_un sun = {
       .sun_family = AF_UNIX,
   };
-  strncpy(sun.sun_path, name, sizeof(sun.sun_path));
+
+  base::ScopedFD dir_fd;
+  std::string short_name;
+  if (name.value().size() > sizeof(sun.sun_path)) {
+    // If the socket path is too long, we can shorten it by replacing the
+    // directory paths with /proc/self/fd/${dir_fd}/socket_name to try and get
+    // it under the limit.
+    dir_fd.reset(HANDLE_EINTR(open(name.DirName().value().c_str(),
+                                   O_PATH | O_DIRECTORY | O_CLOEXEC)));
+    if (!dir_fd.is_valid()) {
+      PLOG(ERROR) << "Failed to open logging directory";
+      return false;
+    }
+
+    short_name = base::StringPrintf(kProcPath, dir_fd.get(),
+                                    name.BaseName().value().c_str());
+  } else {
+    short_name = name.value();
+  }
+
+  if (short_name.size() > sizeof(sun.sun_path)) {
+    LOG(ERROR) << "Socket path too long even after shortening";
+    return false;
+  }
+
+  // Make sure that any previous socket is cleaned up before attempting to bind
+  // to it again.  We don't really care whether the unlink succeeds or not.
+  HANDLE_EINTR(unlink(short_name.c_str()));
+
+  strncpy(sun.sun_path, short_name.c_str(), sizeof(sun.sun_path));
 
   if (bind(syslog_fd_.get(), reinterpret_cast<struct sockaddr*>(&sun),
            sizeof(sun)) != 0) {
