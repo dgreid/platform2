@@ -47,7 +47,6 @@
 #include "shill/net/rtnl_listener.h"
 #include "shill/net/rtnl_message.h"
 #include "shill/net/shill_time.h"
-#include "shill/net/sockets.h"
 #include "shill/power_manager.h"
 #include "shill/routing_table.h"
 #include "shill/vpn/vpn_provider.h"
@@ -179,6 +178,11 @@ DeviceInfo::DeviceInfo(Manager* manager)
 #endif  // DISABLE_WIFI
       sockets_(new Sockets()),
       time_(Time::GetInstance()) {
+  if (manager) {
+    // |manager| may be null in tests.
+    dispatcher_ = manager->dispatcher();
+    metrics_ = manager->metrics();
+  }
 }
 
 DeviceInfo::~DeviceInfo() = default;
@@ -221,9 +225,9 @@ void DeviceInfo::Start() {
                              RTNLHandler::kRequestAddr);
   request_link_statistics_callback_.Reset(base::Bind(
       &DeviceInfo::RequestLinkStatistics, weak_factory_.GetWeakPtr()));
-  dispatcher()->PostDelayedTask(FROM_HERE,
-                                request_link_statistics_callback_.callback(),
-                                kRequestLinkStatisticsIntervalMilliseconds);
+  dispatcher_->PostDelayedTask(FROM_HERE,
+                               request_link_statistics_callback_.callback(),
+                               kRequestLinkStatisticsIntervalMilliseconds);
 }
 
 void DeviceInfo::Stop() {
@@ -256,17 +260,17 @@ vector<string> DeviceInfo::GetUninitializedTechnologies() const {
 }
 
 void DeviceInfo::RegisterDevice(const DeviceRefPtr& device) {
-  SLOG(this, 2) << __func__ << "(" << device->link_name() << ", "
+  SLOG(this, 1) << __func__ << "(" << device->link_name() << ", "
                 << device->interface_index() << ")";
   device->Initialize();
   delayed_devices_.erase(device->interface_index());
   CHECK(!GetDevice(device->interface_index()).get());
   infos_[device->interface_index()].device = device;
-  if (metrics()->IsDeviceRegistered(device->interface_index(),
-                                    device->technology())) {
-    metrics()->NotifyDeviceInitialized(device->interface_index());
+  if (metrics_->IsDeviceRegistered(device->interface_index(),
+                                   device->technology())) {
+    metrics_->NotifyDeviceInitialized(device->interface_index());
   } else {
-    metrics()->RegisterDevice(device->interface_index(), device->technology());
+    metrics_->RegisterDevice(device->interface_index(), device->technology());
   }
   if (device->technology() != Technology::kBlocked &&
       device->technology() != Technology::kUnknown) {
@@ -550,6 +554,8 @@ DeviceRefPtr DeviceInfo::CreateDevice(const string& link_name,
                                       const string& address,
                                       int interface_index,
                                       Technology technology) {
+  SLOG(this, 1) << __func__ << ": " << link_name << " Address: " << address
+                << " Index: " << interface_index;
   DeviceRefPtr device;
   delayed_devices_.erase(interface_index);
   infos_[interface_index].technology = technology;
@@ -709,6 +715,8 @@ bool DeviceInfo::IsRenamedBlockedDevice(const RTNLMessage& msg) {
 }
 
 void DeviceInfo::AddLinkMsgHandler(const RTNLMessage& msg) {
+  SLOG(this, 1) << __func__ << " index: " << msg.interface_index();
+
   DCHECK(msg.type() == RTNLMessage::kTypeLink &&
          msg.mode() == RTNLMessage::kModeAdd);
   int dev_index = msg.interface_index();
@@ -769,7 +777,7 @@ void DeviceInfo::AddLinkMsgHandler(const RTNLMessage& msg) {
                  << "' does not have IFLA_ADDRESS!";
       return;
     }
-    metrics()->RegisterDevice(dev_index, technology);
+    metrics_->RegisterDevice(dev_index, technology);
     device = CreateDevice(link_name, address, dev_index, technology);
     if (device) {
       RegisterDevice(device);
@@ -1136,11 +1144,11 @@ void DeviceInfo::DeregisterDevice(int interface_index) {
     return;
   }
 
-  SLOG(this, 2) << "Removing info for device index: " << interface_index;
+  SLOG(this, 1) << __func__ << " index: " << interface_index;
   // Deregister the device if not deregistered yet.
   if (iter->second.device.get()) {
     manager_->DeregisterDevice(iter->second.device);
-    metrics()->DeregisterDevice(interface_index);
+    metrics_->DeregisterDevice(interface_index);
     routing_table_->DeregisterDevice(iter->second.device->interface_index(),
                                      iter->second.device->link_name());
   }
@@ -1244,8 +1252,8 @@ void DeviceInfo::DelayDeviceCreation(int interface_index) {
   delayed_devices_.insert(interface_index);
   delayed_devices_callback_.Reset(base::Bind(
       &DeviceInfo::DelayedDeviceCreationTask, weak_factory_.GetWeakPtr()));
-  dispatcher()->PostDelayedTask(FROM_HERE, delayed_devices_callback_.callback(),
-                                kDelayedDeviceCreationSeconds * 1000);
+  dispatcher_->PostDelayedTask(FROM_HERE, delayed_devices_callback_.callback(),
+                               kDelayedDeviceCreationSeconds * 1000);
 }
 
 // Re-evaluate the technology type for each delayed device.
@@ -1329,9 +1337,9 @@ void DeviceInfo::RetrieveLinkStatistics(int interface_index,
 
 void DeviceInfo::RequestLinkStatistics() {
   rtnl_handler_->RequestDump(RTNLHandler::kRequestLink);
-  dispatcher()->PostDelayedTask(FROM_HERE,
-                                request_link_statistics_callback_.callback(),
-                                kRequestLinkStatisticsIntervalMilliseconds);
+  dispatcher_->PostDelayedTask(FROM_HERE,
+                               request_link_statistics_callback_.callback(),
+                               kRequestLinkStatisticsIntervalMilliseconds);
 }
 
 #if !defined(DISABLE_WIFI)
@@ -1390,7 +1398,7 @@ void DeviceInfo::OnWiFiInterfaceInfoReceived(const Nl80211Message& msg) {
             << " at interface index " << interface_index;
   string address = info->mac_address.HexEncode();
   auto wake_on_wifi = std::make_unique<WakeOnWiFi>(
-      netlink_manager_, dispatcher(), metrics(), address,
+      netlink_manager_, dispatcher_, metrics_, address,
       base::Bind(&DeviceInfo::RecordDarkResumeWakeReason,
                  weak_factory_.GetWeakPtr()));
   DeviceRefPtr device = new WiFi(manager_, info->name, address, interface_index,
@@ -1439,18 +1447,6 @@ bool DeviceInfo::IsGuestDevice(const std::string& interface_name) {
 
 bool DeviceInfo::GetUserId(const std::string& user_name, uid_t* uid) {
   return brillo::userdb::GetUserInfo(user_name, uid, nullptr);
-}
-
-void DeviceInfo::set_sockets_for_test(std::unique_ptr<Sockets> sockets) {
-  sockets_ = std::move(sockets);
-}
-
-EventDispatcher* DeviceInfo::dispatcher() const {
-  return manager_->dispatcher();
-}
-
-Metrics* DeviceInfo::metrics() const {
-  return manager_->metrics();
 }
 
 DeviceInfo::Info::Info()

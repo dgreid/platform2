@@ -89,6 +89,7 @@ Modem::~Modem() {
 }
 
 void Modem::CreateDeviceMM1(const InterfaceToProperties& properties) {
+  SLOG(this, 1) << __func__;
   dbus_properties_proxy_ =
       modem_info_->control_interface()->CreateDBusPropertiesProxy(path(),
                                                                   service());
@@ -111,9 +112,9 @@ void Modem::CreateDeviceMM1(const InterfaceToProperties& properties) {
   }
 
   if (capabilities & (MM_MODEM_CAPABILITY_GSM_UMTS | MM_MODEM_CAPABILITY_LTE)) {
-    set_type(Cellular::kType3gpp);
+    type_ = Cellular::kType3gpp;
   } else if (capabilities & MM_MODEM_CAPABILITY_CDMA_EVDO) {
-    set_type(Cellular::kTypeCdma);
+    type_ = Cellular::kTypeCdma;
   } else {
     LOG(ERROR) << "Unsupported capabilities: " << capabilities;
     return;
@@ -125,7 +126,8 @@ void Modem::CreateDeviceMM1(const InterfaceToProperties& properties) {
 }
 
 void Modem::OnDeviceInfoAvailable(const string& link_name) {
-  SLOG(this, 2) << __func__;
+  SLOG(this, 1) << __func__ << ": " << link_name
+                << " pending: " << has_pending_device_info_;
   if (has_pending_device_info_ && link_name_ == link_name) {
     // has_pending_device_info_ is only set if we've already been through
     // CreateDeviceFromModemProperties() and saved our initial
@@ -139,13 +141,12 @@ string Modem::GetModemInterface() const {
   return string(MM_DBUS_INTERFACE_MODEM);
 }
 
-Cellular* Modem::ConstructCellular(const string& link_name,
-                                   const string& address,
+Cellular* Modem::ConstructCellular(const string& mac_address,
                                    int interface_index) {
-  LOG(INFO) << "Creating a cellular device on link " << link_name
-            << " interface index " << interface_index << ".";
-  return new Cellular(modem_info_, link_name, address, interface_index, type_,
-                      service_, path_);
+  SLOG(this, 1) << __func__ << " link_name: " << link_name_
+                << " interface index " << interface_index;
+  return new Cellular(modem_info_, link_name_, mac_address, interface_index,
+                      type_, service_, path_);
 }
 
 bool Modem::GetLinkName(const KeyValueStore& modem_props, string* name) const {
@@ -175,11 +176,10 @@ bool Modem::GetLinkName(const KeyValueStore& modem_props, string* name) const {
 
 void Modem::CreateDeviceFromModemProperties(
     const InterfaceToProperties& properties) {
-  SLOG(this, 2) << __func__;
-
-  if (device_) {
+  if (device_)
     return;
-  }
+
+  SLOG(this, 1) << __func__;
 
   InterfaceToProperties::const_iterator properties_it =
       properties.find(GetModemInterface());
@@ -199,7 +199,8 @@ void Modem::CreateDeviceFromModemProperties(
     if (mac_address.empty()) {
       // Save our properties, wait for OnDeviceInfoAvailable to be called.
       LOG(WARNING)
-          << "No hardware address, device creation pending device info.";
+          << __func__
+          << ": No hardware address, device creation pending device info.";
       initial_properties_ = properties;
       has_pending_device_info_ = true;
       return;
@@ -220,7 +221,7 @@ void Modem::CreateDeviceFromModemProperties(
     return;
   }
 
-  device_ = ConstructCellular(link_name_, mac_address, interface_index);
+  device_ = ConstructCellular(mac_address, interface_index);
   // Give the device a chance to extract any capability-specific properties.
   for (properties_it = properties.begin(); properties_it != properties.end();
        ++properties_it) {

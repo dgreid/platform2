@@ -20,6 +20,13 @@
 
 namespace shill {
 
+namespace Logging {
+static auto kModuleLogScope = ScopeLogger::kModem;
+static std::string ObjectID(const ModemInfo* m) {
+  return "(modem info)";
+}
+}  // namespace Logging
+
 namespace {
 constexpr int kGetManagedObjectsTimeout = 5000;
 }
@@ -72,6 +79,7 @@ std::unique_ptr<DBusObjectManagerProxyInterface> ModemInfo::CreateProxy() {
 
 std::unique_ptr<Modem> ModemInfo::CreateModem(
     const RpcIdentifier& path, const InterfaceToProperties& properties) {
+  SLOG(this, 1) << __func__ << ": " << path.value();
   auto modem = std::make_unique<Modem>(modemmanager::kModemManager1ServiceName,
                                        path, this);
   modem->CreateDeviceMM1(properties);
@@ -104,28 +112,30 @@ void ModemInfo::AddModem(const RpcIdentifier& path,
     LOG(INFO) << "Modem " << path.value() << " already exists.";
     return;
   }
+  SLOG(this, 1) << __func__ << ": " << path.value();
   std::unique_ptr<Modem> modem = CreateModem(path, properties);
   modems_[modem->path()] = std::move(modem);
 }
 
 void ModemInfo::RemoveModem(const RpcIdentifier& path) {
-  LOG(INFO) << "Remove modem: " << path.value();
+  SLOG(this, 1) << __func__ << ": " << path.value();
   CHECK(service_connected_);
   modems_.erase(path);
 }
 
 void ModemInfo::OnAppeared() {
-  LOG(INFO) << "ModemInfo::OnAppeared";
+  SLOG(this, 1) << __func__;
   Connect();
 }
 
 void ModemInfo::OnVanished() {
-  LOG(INFO) << "ModemInfo::OnVanished";
+  SLOG(this, 1) << __func__;
   Disconnect();
 }
 
 void ModemInfo::OnInterfacesAddedSignal(
     const RpcIdentifier& object_path, const InterfaceToProperties& properties) {
+  SLOG(this, 2) << __func__ << ": " << object_path.value();
   if (!base::Contains(properties, MM_DBUS_INTERFACE_MODEM)) {
     LOG(ERROR) << "Interfaces added, but not modem interface.";
     return;
@@ -136,7 +146,7 @@ void ModemInfo::OnInterfacesAddedSignal(
 void ModemInfo::OnInterfacesRemovedSignal(
     const RpcIdentifier& object_path,
     const std::vector<std::string>& interfaces) {
-  LOG(INFO) << "ModemInfo:  Removing interfaces from: " << object_path.value();
+  SLOG(this, 2) << __func__ << ": " << object_path.value();
   if (!base::Contains(interfaces, MM_DBUS_INTERFACE_MODEM)) {
     // In theory, a modem could drop, say, 3GPP, but not CDMA.  In
     // practice, we don't expect this.

@@ -67,11 +67,10 @@ class TestModem : public Modem {
   TestModem& operator=(const TestModem&) = delete;
 
   // Modem override:
-  Cellular* ConstructCellular(const string& link_name,
-                              const string& address,
+  Cellular* ConstructCellular(const string& mac_address,
                               int interface_index) override {
-    return new NiceMock<MockCellular>(modem_info_for_testing(), link_name,
-                                      address, interface_index,
+    return new NiceMock<MockCellular>(modem_info_for_testing(), link_name(),
+                                      mac_address, interface_index,
                                       Cellular::kType3gpp, kService, kPath);
   }
 };

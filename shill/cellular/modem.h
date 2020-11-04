@@ -37,10 +37,10 @@ class Modem {
 
   void OnDeviceInfoAvailable(const std::string& link_name);
 
+  const std::string& link_name() const { return link_name_; }
+  Cellular::Type type() const { return type_; }
   const std::string& service() const { return service_; }
   const RpcIdentifier& path() const { return path_; }
-
-  void set_type(Cellular::Type type) { type_ = type; }
 
   Cellular* device_for_testing() { return device_.get(); }
   bool has_pending_device_info_for_testing() {
@@ -57,8 +57,7 @@ class Modem {
   // Overridden in tests to provide a MockCellular instance instead of
   // creating a real instance. TODO(b:172077101): Use a delegate interface
   // instead once Cellular lifetime is detached from Modem lifetime.
-  virtual Cellular* ConstructCellular(const std::string& link_name,
-                                      const std::string& device_name,
+  virtual Cellular* ConstructCellular(const std::string& mac_address,
                                       int interface_index);
 
   ModemInfo* modem_info_for_testing() { return modem_info_; }

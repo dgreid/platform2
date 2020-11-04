@@ -184,10 +184,12 @@ Cellular::Cellular(ModemInfo* modem_info,
                  << "IPv6 will be unavailable.";
   }
 
-  SLOG(this, 2) << "Cellular device " << this->link_name() << " initialized.";
+  SLOG(this, 1) << "Cellular() " << this->link_name();
 }
 
-Cellular::~Cellular() = default;
+Cellular::~Cellular() {
+  SLOG(this, 1) << "~Cellular() " << this->link_name();
+}
 
 string Cellular::GetEquipmentIdentifier() const {
   // 3GPP devices are uniquely identified by IMEI, which has 15 decimal digits.

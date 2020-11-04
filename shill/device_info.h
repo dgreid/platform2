@@ -22,6 +22,7 @@
 #include "shill/net/byte_string.h"
 #include "shill/net/ip_address.h"
 #include "shill/net/shill_time.h"
+#include "shill/net/sockets.h"
 #include "shill/refptr_types.h"
 #include "shill/technology.h"
 
@@ -61,6 +62,7 @@ class DeviceInfo {
   // Adds |device| to this DeviceInfo instance so that we can handle its link
   // messages, and registers it with the manager.
   virtual void RegisterDevice(const DeviceRefPtr& device);
+
   // Deregister the Device instance (if any) from interested parties like
   // Manager and Metrics, and remove the Info corresponding to this
   // interface. No-op if there is no Info for this interface index.
@@ -246,12 +248,13 @@ class DeviceInfo {
   // Returns whether a device with name |interface_name| is guest.
   bool IsGuestDevice(const std::string& interface_name);
 
-  void set_sockets_for_test(std::unique_ptr<Sockets> sockets);
-
-  EventDispatcher* dispatcher() const;
-  Metrics* metrics() const;
+  void set_sockets_for_test(std::unique_ptr<Sockets> sockets) {
+    sockets_ = std::move(sockets);
+  }
 
   Manager* manager_;
+  EventDispatcher* dispatcher_ = nullptr;
+  Metrics* metrics_ = nullptr;
 
   std::map<int, Info> infos_;           // Maps interface index to Info.
   std::map<std::string, int> indices_;  // Maps interface name to index.
