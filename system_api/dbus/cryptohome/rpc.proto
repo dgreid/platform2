@@ -76,6 +76,7 @@ enum CryptohomeErrorCode {
   CRYPTOHOME_ERROR_FINGERPRINT_RETRY_REQUIRED = 43;
   // Fingerprint match failed and maximum retry count reached.
   CRYPTOHOME_ERROR_FINGERPRINT_DENIED = 44;
+  CRYPTOHOME_ERROR_VAULT_UNRECOVERABLE = 45;
 }
 
 message AccountIdentifier {

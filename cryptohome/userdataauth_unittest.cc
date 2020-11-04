@@ -521,9 +521,15 @@ static_assert(
     "user_data_auth:: and cryptohome::");
 
 static_assert(
-    user_data_auth::CryptohomeErrorCode_MAX == 44,
+    static_cast<int>(user_data_auth::CRYPTOHOME_ERROR_VAULT_UNRECOVERABLE) ==
+        static_cast<int>(cryptohome::CRYPTOHOME_ERROR_VAULT_UNRECOVERABLE),
+    "Enum member CRYPTOHOME_ERROR_VAULT_UNRECOVERABLE differs between "
+    "user_data_auth:: and cryptohome::");
+
+static_assert(
+    user_data_auth::CryptohomeErrorCode_MAX == 45,
     "user_data_auth::CrytpohomeErrorCode's element count is incorrect");
-static_assert(cryptohome::CryptohomeErrorCode_MAX == 44,
+static_assert(cryptohome::CryptohomeErrorCode_MAX == 45,
               "cryptohome::CrytpohomeErrorCode's element count is incorrect");
 }  // namespace CryptohomeErrorCodeEquivalenceTest
 
