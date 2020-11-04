@@ -146,6 +146,13 @@ constexpr char kProcFileDescriptorsPath[] = "/proc/self/fd/";
 constexpr uint64_t kMinimumDiskSize = 1ll * 1024 * 1024 * 1024;  // 1 GiB
 constexpr uint64_t kDiskSizeMask = ~4095ll;  // Round to disk block size.
 
+// vmlog_forwarder relies on creating a socket for crosvm to receive log
+// messages. Socket paths may only be 108 character long. Further, while Linux
+// actually allows for 108 non-null bytes to be used, the rust interface to bind
+// only allows for 107, with the last byte always being null. Currently the path
+// leaves us with just enough space to base64 encode a 21 character VM name.
+constexpr int kMaxVmNameLength = 21;
+
 constexpr uint64_t kDefaultIoLimit = 1024 * 1024;  // 1 Mib
 
 // How often we should broadcast state of a disk operation (import or export).
@@ -468,6 +475,7 @@ KernelVersionAndMajorRevision GetKernelVersion() {
   return std::make_pair(version, major_revision);
 }
 
+// vm_name should always be less then kMaxVmNameLength characters long.
 base::FilePath GetVmLogPath(const std::string& owner_id,
                             const std::string& vm_name,
                             bool log_to_cryptohome = true) {
@@ -1231,6 +1239,13 @@ std::unique_ptr<dbus::Response> Service::StartVm(
     return dbus_response;
   }
 
+  if (request.name().size() > kMaxVmNameLength) {
+    LOG(ERROR) << "VM name is too long";
+
+    response.set_failure_reason("VM name is too long");
+    writer.AppendProtoAsArrayOfBytes(response);
+    return dbus_response;
+  }
   base::FilePath log_path = GetVmLogPath(request.owner_id(), request.name());
 
   base::FilePath gpu_cache_path;
