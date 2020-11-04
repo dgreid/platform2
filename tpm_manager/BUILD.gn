@@ -28,8 +28,12 @@ pkg_config("target_default_deps") {
     "libchrome",
     "libtpmcrypto",
     "openssl",
-    "protobuf-lite",
   ]
+  if (use.fuzzer) {
+    pkg_deps += [ "protobuf" ]
+  } else {
+    pkg_deps += [ "protobuf-lite" ]
+  }
 }
 
 config("target_defaults") {
