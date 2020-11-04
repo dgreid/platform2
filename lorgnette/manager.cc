@@ -866,7 +866,7 @@ void Manager::GetNextImageInternal(const std::string& uuid,
 ScanState Manager::RunScanLoop(brillo::ErrorPtr* error,
                                ScanJobState* scan_state,
                                base::ScopedFILE out_file,
-                               base::Optional<std::string> scan_uuid) {
+                               const std::string& scan_uuid) {
   SaneDevice* device = scan_state->device.get();
   base::Optional<ScanParameters> params = device->GetScanParameters(error);
   if (!params.has_value()) {
@@ -964,9 +964,9 @@ ScanState Manager::RunScanLoop(brillo::ErrorPtr* error,
       rows_written++;
       uint32_t progress = rows_written * 100 / params->lines;
       base::TimeTicks now = base::TimeTicks::Now();
-      if (scan_uuid.has_value() && progress != last_progress_value &&
+      if (progress != last_progress_value &&
           now - last_progress_sent_time >= progress_signal_interval_) {
-        SendStatusSignal(scan_uuid.value(), SCAN_STATE_IN_PROGRESS,
+        SendStatusSignal(scan_uuid, SCAN_STATE_IN_PROGRESS,
                          scan_state->current_page, progress, false);
         last_progress_value = progress;
         last_progress_sent_time = now;

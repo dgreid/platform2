@@ -128,7 +128,7 @@ class Manager : public org::chromium::lorgnette::ManagerAdaptor,
   ScanState RunScanLoop(brillo::ErrorPtr* error,
                         ScanJobState* scan_state,
                         base::ScopedFILE out_file,
-                        base::Optional<std::string> scan_uuid);
+                        const std::string& scan_uuid);
 
   void ReportScanRequested(const std::string& device_name);
   void ReportScanSucceeded(const std::string& device_name);
