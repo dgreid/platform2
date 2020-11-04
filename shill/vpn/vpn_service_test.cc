@@ -138,17 +138,11 @@ TEST_F(VPNServiceTest, LogName) {
   EXPECT_EQ("vpn_l2tpipsec_0", service_->log_name());
 }
 
-TEST_F(VPNServiceTest, Connect) {
-  EXPECT_TRUE(service_->connectable());
-  Error error;
-  EXPECT_CALL(*driver_, Connect(_, &error));
-  service_->Connect(&error, "in test");
-  EXPECT_TRUE(error.IsSuccess());
-}
-
 TEST_F(VPNServiceTest, ConnectAlreadyConnected) {
+  EXPECT_TRUE(service_->connectable());
+
   Error error;
-  EXPECT_CALL(*driver_, Connect(_, _)).Times(0);
+  EXPECT_CALL(*driver_, ConnectAsync(_)).Times(0);
   SetServiceState(Service::kStateOnline);
   service_->Connect(&error, "in test");
   EXPECT_EQ(Error::kAlreadyConnected, error.type());
@@ -513,7 +507,7 @@ TEST_F(VPNServiceTest, ArcConnectFlow) {
   service_->Disconnect(&error, "in test");
   EXPECT_EQ(Service::kStateIdle, service_->state());
 
-  driver_->SetIfType(VPNDriver::kDriverManaged);
+  driver_->SetIfType(VPNDriver::kUnknown);
 }
 
 TEST_F(VPNServiceTest, TunnelConnectFlow) {
@@ -562,7 +556,7 @@ TEST_F(VPNServiceTest, TunnelConnectFlow) {
   EXPECT_EQ(Service::kStateIdle, service_->state());
   EXPECT_TRUE(error.IsSuccess());
 
-  driver_->SetIfType(VPNDriver::kDriverManaged);
+  driver_->SetIfType(VPNDriver::kUnknown);
 }
 
 TEST_F(VPNServiceTest, PPPConnectFlow) {
@@ -612,7 +606,7 @@ TEST_F(VPNServiceTest, PPPConnectFlow) {
 
   EXPECT_CALL(*driver_, Disconnect());
   service_->Disconnect(&error, "in test");
-  driver_->SetIfType(VPNDriver::kDriverManaged);
+  driver_->SetIfType(VPNDriver::kUnknown);
   driver_->set_interface_name("");
 }
 

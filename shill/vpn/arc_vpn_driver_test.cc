@@ -57,7 +57,6 @@ class ArcVpnDriverTest : public testing::Test {
   void TearDown() override {
     manager_.vpn_provider_->arc_device_ = nullptr;
     manager_.vpn_provider_.reset();
-    driver_->set_service(nullptr);
     device_ = nullptr;
   }
 

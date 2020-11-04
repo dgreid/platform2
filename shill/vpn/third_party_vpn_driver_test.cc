@@ -50,7 +50,6 @@ class ThirdPartyVpnDriverTest : public testing::Test {
   }
 
   void TearDown() override {
-    driver_->set_service(nullptr);
     driver_->file_io_ = nullptr;
   }
 
@@ -71,7 +70,6 @@ class ThirdPartyVpnDriverTest : public testing::Test {
   ThirdPartyVpnDriver* driver_;                  // Owned by |service_|
   ThirdPartyVpnMockAdaptor* adaptor_interface_;  // Owned by |driver_|
   scoped_refptr<MockVPNService> service_;
-  scoped_refptr<MockVirtualDevice> device_;
 };
 
 const char ThirdPartyVpnDriverTest::kConfigName[] = "default-1";

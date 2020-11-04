@@ -87,12 +87,6 @@ class OpenVPNDriver : public VPNDriver,
                   std::vector<std::vector<std::string>>* options);
 
  protected:
-  // TODO(taoyl): Not used (replaced by ConnectAsync()) and to be removed after
-  // finishing refactor for all drivers
-  void Connect(const VPNServiceRefPtr& service, Error* error) override {
-    NOTREACHED();
-  }
-
   // Inherited from VPNDriver. VPNService is responsible for creating a tunnel
   // device and set_interface_name() before calling |ConnectAsync|. This driver
   // then sets up and spawns an external 'openvpn' process. IP configuration

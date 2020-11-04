@@ -18,8 +18,12 @@ class MockVPNDriver : public VPNDriver {
   MockVPNDriver();
   ~MockVPNDriver() override;
 
-  MOCK_METHOD(void, Connect, (const VPNServiceRefPtr&, Error*), (override));
+  MOCK_METHOD(void,
+              ConnectAsync,
+              (const VPNService::DriverEventCallback& callback),
+              (override));
   MOCK_METHOD(void, Disconnect, (), (override));
+  MOCK_METHOD(IPConfig::Properties, GetIPProperties, (), (const, override));
   MOCK_METHOD(bool,
               Load,
               (const StoreInterface*, const std::string&),
@@ -32,12 +36,6 @@ class MockVPNDriver : public VPNDriver {
   MOCK_METHOD(void, InitPropertyStore, (PropertyStore*), (override));
   MOCK_METHOD(std::string, GetProviderType, (), (const, override));
   MOCK_METHOD(std::string, GetHost, (), (const, override));
-
-  MOCK_METHOD(void,
-              ConnectAsync,
-              (const VPNService::DriverEventCallback& callback),
-              (override));
-  MOCK_METHOD(IPConfig::Properties, GetIPProperties, (), (const, override));
 
   IfType GetIfType() const override;
   void SetIfType(IfType type);

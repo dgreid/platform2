@@ -25,10 +25,6 @@ class ArcVpnDriver : public VPNDriver {
   ArcVpnDriver(Manager* manager, ProcessManager* process_manager);
   ~ArcVpnDriver() override = default;
 
-  // TODO(taoyl): Not used (replaced by ConnectAsync()) and to be removed after
-  // finish refactoring for all drivers
-  void Connect(const VPNServiceRefPtr& service, Error* error) override;
-
   std::string GetProviderType() const override;
   IfType GetIfType() const override;
 

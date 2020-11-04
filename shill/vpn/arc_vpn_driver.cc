@@ -39,11 +39,6 @@ ArcVpnDriver::ArcVpnDriver(Manager* manager, ProcessManager* process_manager)
     : VPNDriver(
           manager, process_manager, kProperties, base::size(kProperties)) {}
 
-void ArcVpnDriver::Connect(const VPNServiceRefPtr& service, Error* error) {
-  SLOG(this, 2) << __func__;
-  LOG(DFATAL) << "Not implemented";
-}
-
 void ArcVpnDriver::ConnectAsync(
     const VPNService::DriverEventCallback& callback) {
   SLOG(this, 2) << __func__;

@@ -88,8 +88,6 @@ class OpenVPNDriverTest
         device_info_(&manager_),
         driver_(new OpenVPNDriver(&manager_, &process_manager_)),
         service_(new MockVPNService(&manager_, base::WrapUnique(driver_))),
-        device_(new MockVirtualDevice(
-            &manager_, kInterfaceName, kInterfaceIndex, Technology::kVPN)),
         certificate_file_(new MockCertificateFile()),
         extra_certificates_file_(new MockCertificateFile()),
         management_server_(new NiceMock<MockOpenVPNManagementServer>()) {
@@ -231,7 +229,6 @@ class OpenVPNDriverTest
   NiceMock<MockDeviceInfo> device_info_;
   OpenVPNDriver* driver_;  // Owned by |service_|.
   scoped_refptr<MockVPNService> service_;
-  scoped_refptr<MockVirtualDevice> device_;
   MockCertificateFile* certificate_file_;         // Owned by |driver_|.
   MockCertificateFile* extra_certificates_file_;  // Owned by |driver_|.
   base::ScopedTempDir temporary_directory_;

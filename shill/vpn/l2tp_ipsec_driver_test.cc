@@ -23,7 +23,6 @@
 #include "shill/mock_manager.h"
 #include "shill/mock_metrics.h"
 #include "shill/mock_ppp_device.h"
-#include "shill/mock_ppp_device_factory.h"
 #include "shill/mock_process_manager.h"
 #include "shill/test_event_dispatcher.h"
 #include "shill/vpn/mock_vpn_provider.h"
@@ -48,7 +47,6 @@ class L2TPIPSecDriverTest : public testing::Test, public RpcTaskDelegate {
         device_info_(&manager_),
         driver_(new L2TPIPSecDriver(&manager_, &process_manager_)),
         service_(new MockVPNService(&manager_, base::WrapUnique(driver_))),
-        device_(new MockPPPDevice(&manager_, kInterfaceName, kInterfaceIndex)),
         certificate_file_(new MockCertificateFile()),
         weak_ptr_factory_(this) {
     manager_.set_mock_device_info(&device_info_);
@@ -188,7 +186,6 @@ class L2TPIPSecDriverTest : public testing::Test, public RpcTaskDelegate {
   NiceMock<MockDeviceInfo> device_info_;
   L2TPIPSecDriver* driver_;  // Owned by |service_|.
   scoped_refptr<MockVPNService> service_;
-  scoped_refptr<MockPPPDevice> device_;
   MockCertificateFile* certificate_file_;  // Owned by |driver_|.
   base::WeakPtrFactory<L2TPIPSecDriverTest> weak_ptr_factory_;
 };

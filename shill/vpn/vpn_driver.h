@@ -34,11 +34,7 @@ class VPNDriver {
  public:
   // Indicating how virtual interface is managed for this type of driver
   enum IfType {
-    // Driver keeps track of interface and maintain the state machine.
-    // TODO(taoyl): As per b/170478571 those ownership should be moved
-    // to service, and one of the three following values should be used
-    // instead. This value is only used during the period of migration.
-    kDriverManaged = 0,
+    kUnknown = 0,
     // VPNService calls DeviceInfo to create a tun interface, and pass
     // the ifname to driver before ConnectAsync().
     kTunnel = 1,
@@ -51,19 +47,12 @@ class VPNDriver {
 
   virtual ~VPNDriver();
 
-  virtual void Connect(const VPNServiceRefPtr& service, Error* error) = 0;
+  virtual void ConnectAsync(
+      const VPNService::DriverEventCallback& callback) = 0;
   virtual void Disconnect() = 0;
+  virtual IPConfig::Properties GetIPProperties() const = 0;
   virtual std::string GetProviderType() const = 0;
   virtual IfType GetIfType() const = 0;
-
-  // TODO(taoyl): Implement these in all drivers and change them to abstract.
-  virtual void ConnectAsync(const VPNService::DriverEventCallback& callback) {
-    LOG(DFATAL) << "Not implemented";
-  }
-  virtual IPConfig::Properties GetIPProperties() const {
-    LOG(DFATAL) << "Not implemented";
-    return IPConfig::Properties();
-  }
 
   virtual void InitPropertyStore(PropertyStore* store);
 
@@ -133,9 +122,6 @@ class VPNDriver {
 
   int connect_timeout_seconds() const { return connect_timeout_seconds_; }
 
-  VPNServiceRefPtr service() const { return service_; }
-  void set_service(const VPNServiceRefPtr& service) { service_ = service; }
-
   std::string interface_name_;
 
  private:
@@ -157,8 +143,6 @@ class VPNDriver {
 
   Manager* manager_;
   ProcessManager* process_manager_;
-
-  VPNServiceRefPtr service_;
 
   const Property* const properties_;
   const size_t property_count_;

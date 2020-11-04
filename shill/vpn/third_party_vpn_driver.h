@@ -69,11 +69,6 @@ class ThirdPartyVpnDriver : public VPNDriver, public DefaultServiceObserver {
   std::string GetProviderType() const override;
   IfType GetIfType() const override;
   void Disconnect() override;
-  // TODO(taoyl): Not used (replaced by ConnectAsync()) and to be removed after
-  // finishing refactor for all drivers
-  void Connect(const VPNServiceRefPtr& service, Error* error) override {
-    NOTREACHED();
-  }
 
   // Implements DefaultServiceObserver.
   void OnDefaultServiceChanged(const ServiceRefPtr& logical_service,

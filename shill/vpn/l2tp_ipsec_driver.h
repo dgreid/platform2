@@ -32,11 +32,6 @@ class L2TPIPSecDriver : public VPNDriver, public RpcTaskDelegate {
   ~L2TPIPSecDriver() override;
 
  protected:
-  // TODO(taoyl): Not used (replaced by ConnectAsync()) and to be removed after
-  // finishing refactor for all drivers
-  void Connect(const VPNServiceRefPtr& service, Error* error) override {
-    NOTREACHED();
-  }
   void ConnectAsync(const VPNService::DriverEventCallback& callback) override;
   void Disconnect() override;
   IPConfig::Properties GetIPProperties() const override;

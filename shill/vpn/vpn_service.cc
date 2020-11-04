@@ -58,11 +58,6 @@ void VPNService::OnConnect(Error* error) {
   // VPNService after completing the connection for a new ARC VPNService will
   // cause the arc_device to be disabled at the end of this call.
 
-  if (driver_->GetIfType() == VPNDriver::kDriverManaged) {
-    driver_->Connect(this, error);
-    return;
-  }
-
   SetState(ConnectState::kStateAssociating);
   switch (driver_->GetIfType()) {
     case VPNDriver::kTunnel:
@@ -97,11 +92,6 @@ void VPNService::OnConnect(Error* error) {
 }
 
 void VPNService::OnDisconnect(Error* error, const char* reason) {
-  if (driver_->GetIfType() == VPNDriver::kDriverManaged) {
-    driver_->Disconnect();
-    return;
-  }
-
   SetState(ConnectState::kStateDisconnecting);
   driver_->Disconnect();
   CleanupDevice();
