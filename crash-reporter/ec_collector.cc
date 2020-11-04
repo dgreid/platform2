@@ -16,10 +16,13 @@ using base::FilePath;
 using base::StringPiece;
 using base::StringPrintf;
 
+using brillo::ProcessImpl;
+
 namespace {
 
 const char kECDebugFSPath[] = "/sys/kernel/debug/cros_ec/";
 const char kECPanicInfo[] = "panicinfo";
+const char kECPanicInfoParser[] = "/usr/sbin/ec_parse_panicinfo";
 const char kECExecName[] = "embedded-controller";
 
 }  // namespace
@@ -75,6 +78,19 @@ bool ECCollector::Collect() {
       return true;
     }
 
+    ProcessImpl panicinfo_parser;
+    panicinfo_parser.AddArg(kECPanicInfoParser);
+    panicinfo_parser.RedirectInput(panicinfo_path.value());
+
+    std::string output;
+    int err =
+        util::RunAndCaptureOutput(&panicinfo_parser, STDOUT_FILENO, &output);
+    if (err) {
+      PLOG(ERROR) << "Failed to parse EC crash. Error=" << err;
+      return true;
+    }
+    len = output.length();
+
     std::string dump_basename =
         FormatDumpBasename(kECExecName, time(nullptr), 0);
     FilePath ec_crash_path = root_crash_directory.Append(
@@ -83,7 +99,8 @@ bool ECCollector::Collect() {
     // We must use WriteNewFile instead of base::WriteFile as we
     // do not want to write with root access to a symlink that an attacker
     // might have created.
-    if (WriteNewFile(ec_crash_path, data, len) != static_cast<int>(len)) {
+    if (WriteNewFile(ec_crash_path, output.c_str(), len) !=
+        static_cast<int>(len)) {
       PLOG(ERROR) << "Failed to write EC dump to "
                   << ec_crash_path.value().c_str();
       return true;
