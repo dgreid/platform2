@@ -24,17 +24,21 @@
 
 #include "cros-disks/device_ejector.h"
 #include "cros-disks/disk_monitor.h"
-#include "cros-disks/exfat_mounter.h"
 #include "cros-disks/filesystem.h"
+#include "cros-disks/fuse_mounter.h"
 #include "cros-disks/metrics.h"
 #include "cros-disks/mount_options.h"
 #include "cros-disks/mount_point.h"
-#include "cros-disks/ntfs_mounter.h"
 #include "cros-disks/platform.h"
 #include "cros-disks/quote.h"
 #include "cros-disks/system_mounter.h"
 
 namespace cros_disks {
+
+namespace {
+constexpr char kMounterTypeExFAT[] = "exfat";
+constexpr char kMounterTypeNTFS[] = "ntfs";
+}  // namespace
 
 class DiskManager::EjectingMountPoint : public MountPoint {
  public:
@@ -117,13 +121,13 @@ void DiskManager::RegisterDefaultFilesystems() {
   RegisterFilesystem(vfat_fs);
 
   Filesystem exfat_fs("exfat");
-  exfat_fs.mounter_type = ExFATMounter::kMounterType;
+  exfat_fs.mounter_type = kMounterTypeExFAT;
   exfat_fs.accepts_user_and_group_id = true;
   exfat_fs.extra_mount_options = {MountOptions::kOptionDirSync};
   RegisterFilesystem(exfat_fs);
 
   Filesystem ntfs_fs("ntfs");
-  ntfs_fs.mounter_type = NTFSMounter::kMounterType;
+  ntfs_fs.mounter_type = kMounterTypeNTFS;
   ntfs_fs.accepts_user_and_group_id = true;
   ntfs_fs.extra_mount_options = {MountOptions::kOptionDirSync};
   RegisterFilesystem(ntfs_fs);
@@ -219,15 +223,23 @@ std::unique_ptr<MounterCompat> DiskManager::CreateMounter(
                             platform(), filesystem.mount_type, mount_read_only,
                             std::move(extended_options)));
 
-  if (filesystem.mounter_type == ExFATMounter::kMounterType)
-    return std::make_unique<ExFATMounter>(filesystem.mount_type,
-                                          std::move(mount_options), platform(),
-                                          process_reaper());
+  if (filesystem.mounter_type == kMounterTypeExFAT)
+    return std::make_unique<FUSEMounter>(
+        FUSEMounter::Params({.filesystem_type = filesystem.mount_type,
+                             .mount_options = std::move(mount_options),
+                             .mount_program = "/usr/sbin/mount.exfat-fuse",
+                             .mount_user = "fuse-exfat",
+                             .platform = platform(),
+                             .process_reaper = process_reaper()}));
 
-  if (filesystem.mounter_type == NTFSMounter::kMounterType)
-    return std::make_unique<NTFSMounter>(filesystem.mount_type,
-                                         std::move(mount_options), platform(),
-                                         process_reaper());
+  if (filesystem.mounter_type == kMounterTypeNTFS)
+    return std::make_unique<FUSEMounter>(
+        FUSEMounter::Params({.filesystem_type = filesystem.mount_type,
+                             .mount_options = std::move(mount_options),
+                             .mount_program = "/usr/bin/ntfs-3g",
+                             .mount_user = "ntfs-3g",
+                             .platform = platform(),
+                             .process_reaper = process_reaper()}));
 
   LOG(FATAL) << "Invalid mounter type " << quote(filesystem.mounter_type);
   return nullptr;

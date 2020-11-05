@@ -22,12 +22,10 @@
 #include "cros-disks/device_ejector.h"
 #include "cros-disks/disk.h"
 #include "cros-disks/disk_monitor.h"
-#include "cros-disks/exfat_mounter.h"
 #include "cros-disks/filesystem.h"
 #include "cros-disks/metrics.h"
 #include "cros-disks/mount_point.h"
 #include "cros-disks/mounter.h"
-#include "cros-disks/ntfs_mounter.h"
 #include "cros-disks/platform.h"
 #include "cros-disks/system_mounter.h"
 
@@ -105,7 +103,7 @@ TEST_F(DiskManagerTest, CreateExFATMounter) {
   disk.device_file = "/dev/sda1";
 
   Filesystem filesystem("exfat");
-  filesystem.mounter_type = ExFATMounter::kMounterType;
+  filesystem.mounter_type = "exfat";
 
   std::string target_path = "/media/disk";
   std::vector<std::string> options = {"rw", "nodev", "noexec", "nosuid"};
@@ -120,7 +118,7 @@ TEST_F(DiskManagerTest, CreateNTFSMounter) {
   disk.device_file = "/dev/sda1";
 
   Filesystem filesystem("ntfs");
-  filesystem.mounter_type = NTFSMounter::kMounterType;
+  filesystem.mounter_type = "ntfs";
 
   std::string target_path = "/media/disk";
   std::vector<std::string> options = {"rw", "nodev", "noexec", "nosuid"};
