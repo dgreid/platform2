@@ -10,6 +10,7 @@
 
 #include "power_manager/common/power_constants.h"
 #include "power_manager/powerd/system/ambient_light_sensor.h"
+#include "power_manager/powerd/system/ambient_light_sensor_file.h"
 #include "power_manager/powerd/system/ambient_light_sensor_manager_interface.h"
 
 namespace power_manager {
@@ -39,6 +40,9 @@ class AmbientLightSensorManager : public AmbientLightSensorManagerInterface {
   AmbientLightSensorInterface* GetSensorForKeyboardBacklight() override;
 
  private:
+  std::unique_ptr<AmbientLightSensor> CreateSensor(SensorLocation location,
+                                                   bool allow_ambient_eq);
+
   PrefsInterface* prefs_ = nullptr;  // non-owned
 
   // AmbientLightSensorManager object owns AmbientLightSensor object via unique
@@ -47,6 +51,8 @@ class AmbientLightSensorManager : public AmbientLightSensorManagerInterface {
   // Weak pointers into the relevant entries of |sensors_|.
   system::AmbientLightSensor* lid_sensor_ = nullptr;
   system::AmbientLightSensor* base_sensor_ = nullptr;
+
+  std::vector<AmbientLightSensorFile*> als_list_;
 };
 
 }  // namespace system

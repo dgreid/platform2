@@ -20,14 +20,14 @@ AmbientLightSensorManager::~AmbientLightSensorManager() = default;
 
 void AmbientLightSensorManager::set_device_list_path_for_testing(
     const base::FilePath& path) {
-  for (const auto& sensor : sensors_)
-    sensor->set_device_list_path_for_testing(path);
+  for (auto als : als_list_)
+    als->set_device_list_path_for_testing(path);
 }
 
 void AmbientLightSensorManager::set_poll_interval_ms_for_testing(
     int interval_ms) {
-  for (const auto& sensor : sensors_)
-    sensor->set_poll_interval_ms_for_testing(interval_ms);
+  for (auto als : als_list_)
+    als->set_poll_interval_ms_for_testing(interval_ms);
 }
 
 void AmbientLightSensorManager::Init(PrefsInterface* prefs) {
@@ -41,22 +41,20 @@ void AmbientLightSensorManager::Init(PrefsInterface* prefs) {
   // Currently Ambient EQ is the only use case for color ALS. Enable color
   // support on ALS if device is allowed to have Ambient EQ feature.
   if (num_sensors == 1) {
-    sensors_.push_back(
-        std::make_unique<system::AmbientLightSensor>(allow_ambient_eq));
+    sensors_.push_back(CreateSensor(SensorLocation::UNKNOWN, allow_ambient_eq));
     lid_sensor_ = base_sensor_ = sensors_[0].get();
   } else if (num_sensors >= 2) {
-    sensors_.push_back(std::make_unique<system::AmbientLightSensor>(
-        SensorLocation::LID, allow_ambient_eq));
-    sensors_.push_back(
-        std::make_unique<system::AmbientLightSensor>(SensorLocation::BASE));
+    sensors_.push_back(CreateSensor(SensorLocation::LID, allow_ambient_eq));
+    sensors_.push_back(CreateSensor(SensorLocation::BASE, false));
+
     lid_sensor_ = sensors_[0].get();
     base_sensor_ = sensors_[1].get();
   }
 }
 
 void AmbientLightSensorManager::Run(bool read_immediately) {
-  for (const auto& sensor : sensors_)
-    sensor->Init(read_immediately);
+  for (auto als : als_list_)
+    als->Init(read_immediately);
 }
 
 bool AmbientLightSensorManager::HasColorSensor() {
@@ -75,6 +73,18 @@ AmbientLightSensorManager::GetSensorForInternalBacklight() {
 AmbientLightSensorInterface*
 AmbientLightSensorManager::GetSensorForKeyboardBacklight() {
   return base_sensor_;
+}
+
+std::unique_ptr<AmbientLightSensor> AmbientLightSensorManager::CreateSensor(
+    SensorLocation location, bool allow_ambient_eq) {
+  auto sensor = std::make_unique<system::AmbientLightSensor>();
+  auto als = std::make_unique<system::AmbientLightSensorFile>(location,
+                                                              allow_ambient_eq);
+
+  als_list_.push_back(als.get());
+  sensor->SetDelegate(std::move(als));
+
+  return sensor;
 }
 
 }  // namespace system
