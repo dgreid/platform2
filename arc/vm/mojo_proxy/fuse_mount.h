@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ARC_VM_VSOCK_PROXY_FUSE_MOUNT_H_
-#define ARC_VM_VSOCK_PROXY_FUSE_MOUNT_H_
+#ifndef ARC_VM_MOJO_PROXY_FUSE_MOUNT_H_
+#define ARC_VM_MOJO_PROXY_FUSE_MOUNT_H_
 
 #include <memory>
 #include <string>
@@ -50,4 +50,4 @@ class FuseMount {
 
 }  // namespace arc
 
-#endif  // ARC_VM_VSOCK_PROXY_FUSE_MOUNT_H_
+#endif  // ARC_VM_MOJO_PROXY_FUSE_MOUNT_H_

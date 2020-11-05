@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "arc/vm/vsock_proxy/server_proxy.h"
+#include "arc/vm/mojo_proxy/server_proxy.h"
 
 #include <poll.h>
 #include <sys/socket.h>
@@ -25,10 +25,10 @@
 #include <base/threading/thread_task_runner_handle.h>
 #include <brillo/userdb_utils.h>
 
-#include "arc/vm/vsock_proxy/file_descriptor_util.h"
-#include "arc/vm/vsock_proxy/message.pb.h"
-#include "arc/vm/vsock_proxy/proxy_file_system.h"
-#include "arc/vm/vsock_proxy/vsock_proxy.h"
+#include "arc/vm/mojo_proxy/file_descriptor_util.h"
+#include "arc/vm/mojo_proxy/message.pb.h"
+#include "arc/vm/mojo_proxy/mojo_proxy.h"
+#include "arc/vm/mojo_proxy/proxy_file_system.h"
 
 namespace arc {
 namespace {
@@ -132,7 +132,7 @@ bool ServerProxy::Initialize() {
   LOG(INFO) << "Using virtwl to receive messages.";
   message_stream_ = std::make_unique<MessageStream>(std::move(virtwl_context_));
 
-  vsock_proxy_ = std::make_unique<VSockProxy>(this);
+  mojo_proxy_ = std::make_unique<MojoProxy>(this);
   LOG(INFO) << "ServerProxy has started to work.";
   return true;
 }
@@ -143,7 +143,7 @@ base::ScopedFD ServerProxy::CreateProxiedRegularFile(int64_t handle,
   return proxy_file_system_.RegisterHandle(handle, flags);
 }
 
-bool ServerProxy::SendMessage(const arc_proxy::VSockMessage& message,
+bool ServerProxy::SendMessage(const arc_proxy::MojoMessage& message,
                               const std::vector<base::ScopedFD>& fds) {
   if (!fds.empty()) {
     LOG(ERROR) << "It's not allowed to send FDs from host to guest.";
@@ -152,7 +152,7 @@ bool ServerProxy::SendMessage(const arc_proxy::VSockMessage& message,
   return message_stream_->Write(message);
 }
 
-bool ServerProxy::ReceiveMessage(arc_proxy::VSockMessage* message,
+bool ServerProxy::ReceiveMessage(arc_proxy::MojoMessage* message,
                                  std::vector<base::ScopedFD>* fds) {
   return message_stream_->Read(message, fds);
 }
@@ -165,22 +165,22 @@ void ServerProxy::Pread(int64_t handle,
                         uint64_t count,
                         uint64_t offset,
                         PreadCallback callback) {
-  vsock_proxy_->Pread(handle, count, offset, std::move(callback));
+  mojo_proxy_->Pread(handle, count, offset, std::move(callback));
 }
 
 void ServerProxy::Pwrite(int64_t handle,
                          std::string blob,
                          uint64_t offset,
                          PwriteCallback callback) {
-  vsock_proxy_->Pwrite(handle, std::move(blob), offset, std::move(callback));
+  mojo_proxy_->Pwrite(handle, std::move(blob), offset, std::move(callback));
 }
 
 void ServerProxy::Close(int64_t handle) {
-  vsock_proxy_->Close(handle);
+  mojo_proxy_->Close(handle);
 }
 
 void ServerProxy::Fstat(int64_t handle, FstatCallback callback) {
-  vsock_proxy_->Fstat(handle, std::move(callback));
+  mojo_proxy_->Fstat(handle, std::move(callback));
 }
 
 }  // namespace arc

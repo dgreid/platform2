@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "arc/vm/vsock_proxy/vsock_proxy.h"
+#include "arc/vm/mojo_proxy/mojo_proxy.h"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -26,16 +26,16 @@
 #include <base/test/task_environment.h>
 #include <gtest/gtest.h>
 
-#include "arc/vm/vsock_proxy/file_descriptor_util.h"
-#include "arc/vm/vsock_proxy/message.pb.h"
-#include "arc/vm/vsock_proxy/message_stream.h"
+#include "arc/vm/mojo_proxy/file_descriptor_util.h"
+#include "arc/vm/mojo_proxy/message.pb.h"
+#include "arc/vm/mojo_proxy/message_stream.h"
 
 namespace arc {
 namespace {
 
-class TestDelegate : public VSockProxy::Delegate {
+class TestDelegate : public MojoProxy::Delegate {
  public:
-  TestDelegate(VSockProxy::Type type, base::ScopedFD fd)
+  TestDelegate(MojoProxy::Type type, base::ScopedFD fd)
       : type_(type), stream_(std::make_unique<MessageStream>(std::move(fd))) {}
   ~TestDelegate() override = default;
 
@@ -43,48 +43,48 @@ class TestDelegate : public VSockProxy::Delegate {
 
   void ResetStream() { stream_.reset(); }
 
-  VSockProxy::Type GetType() const override { return type_; }
+  MojoProxy::Type GetType() const override { return type_; }
   int GetPollFd() override { return stream_->Get(); }
   base::ScopedFD CreateProxiedRegularFile(int64_t handle,
                                           int32_t flags) override {
     return {};
   }
-  bool SendMessage(const arc_proxy::VSockMessage& message,
+  bool SendMessage(const arc_proxy::MojoMessage& message,
                    const std::vector<base::ScopedFD>& fds) override {
     return stream_->Write(message);
   }
-  bool ReceiveMessage(arc_proxy::VSockMessage* message,
+  bool ReceiveMessage(arc_proxy::MojoMessage* message,
                       std::vector<base::ScopedFD>* fds) override {
     return stream_->Read(message, fds);
   }
   void OnStopped() override { is_stopped_ = true; }
 
  private:
-  const VSockProxy::Type type_;
+  const MojoProxy::Type type_;
   std::unique_ptr<MessageStream> stream_;
   bool is_stopped_ = false;
 };
 
-class VSockProxyTest : public testing::Test {
+class MojoProxyTest : public testing::Test {
  public:
-  VSockProxyTest() = default;
-  VSockProxyTest(const VSockProxyTest&) = delete;
-  VSockProxyTest& operator=(const VSockProxyTest&) = delete;
+  MojoProxyTest() = default;
+  MojoProxyTest(const MojoProxyTest&) = delete;
+  MojoProxyTest& operator=(const MojoProxyTest&) = delete;
 
-  ~VSockProxyTest() override = default;
+  ~MojoProxyTest() override = default;
 
   void SetUp() override {
-    // Use a blocking socket pair instead of VSOCK for testing.
-    auto vsock_pair = CreateSocketPair(SOCK_STREAM);
-    ASSERT_TRUE(vsock_pair.has_value());
+    // Use a blocking socket pair instead of virtio-wl for testing.
+    auto socket_pair = CreateSocketPair(SOCK_STREAM);
+    ASSERT_TRUE(socket_pair.has_value());
 
     server_delegate_ = std::make_unique<TestDelegate>(
-        VSockProxy::Type::SERVER, std::move(vsock_pair->first));
+        MojoProxy::Type::SERVER, std::move(socket_pair->first));
     client_delegate_ = std::make_unique<TestDelegate>(
-        VSockProxy::Type::CLIENT, std::move(vsock_pair->second));
+        MojoProxy::Type::CLIENT, std::move(socket_pair->second));
 
-    server_ = std::make_unique<VSockProxy>(server_delegate_.get());
-    client_ = std::make_unique<VSockProxy>(client_delegate_.get());
+    server_ = std::make_unique<MojoProxy>(server_delegate_.get());
+    client_ = std::make_unique<MojoProxy>(client_delegate_.get());
 
     // Register initial socket pairs.
     auto server_socket_pair = CreateSocketPair(SOCK_STREAM | SOCK_NONBLOCK);
@@ -110,8 +110,8 @@ class VSockProxyTest : public testing::Test {
     ResetServer();
   }
 
-  VSockProxy* server() { return server_.get(); }
-  VSockProxy* client() { return client_.get(); }
+  MojoProxy* server() { return server_.get(); }
+  MojoProxy* client() { return client_.get(); }
 
   TestDelegate& server_delegate() { return *server_delegate_; }
   TestDelegate& client_delegate() { return *client_delegate_; }
@@ -139,8 +139,8 @@ class VSockProxyTest : public testing::Test {
   std::unique_ptr<TestDelegate> server_delegate_;
   std::unique_ptr<TestDelegate> client_delegate_;
 
-  std::unique_ptr<VSockProxy> server_;
-  std::unique_ptr<VSockProxy> client_;
+  std::unique_ptr<MojoProxy> server_;
+  std::unique_ptr<MojoProxy> client_;
 
   base::ScopedFD server_fd_;
   base::ScopedFD client_fd_;
@@ -180,27 +180,27 @@ void ExpectSocketEof(int fd) {
   EXPECT_TRUE(fds.empty());
 }
 
-TEST_F(VSockProxyTest, ServerToClient) {
+TEST_F(MojoProxyTest, ServerToClient) {
   TestDataTransfer(server_fd(), client_fd());
 }
 
-TEST_F(VSockProxyTest, ClientToServer) {
+TEST_F(MojoProxyTest, ClientToServer) {
   TestDataTransfer(client_fd(), server_fd());
 }
 
-TEST_F(VSockProxyTest, CloseServer) {
+TEST_F(MojoProxyTest, CloseServer) {
   ResetServerFD();
   WaitUntilReadable(client_fd());
   ExpectSocketEof(client_fd());
 }
 
-TEST_F(VSockProxyTest, CloseClient) {
+TEST_F(MojoProxyTest, CloseClient) {
   ResetClientFD();
   WaitUntilReadable(server_fd());
   ExpectSocketEof(server_fd());
 }
 
-TEST_F(VSockProxyTest, ResetServer) {
+TEST_F(MojoProxyTest, ResetServer) {
   ResetServer();
   EXPECT_TRUE(server_delegate().is_stopped());
   WaitUntilReadable(client_fd());
@@ -208,7 +208,7 @@ TEST_F(VSockProxyTest, ResetServer) {
   EXPECT_TRUE(client_delegate().is_stopped());
 }
 
-TEST_F(VSockProxyTest, ResetClient) {
+TEST_F(MojoProxyTest, ResetClient) {
   ResetClient();
   EXPECT_TRUE(client_delegate().is_stopped());
   WaitUntilReadable(server_fd());
@@ -216,7 +216,7 @@ TEST_F(VSockProxyTest, ResetClient) {
   EXPECT_TRUE(server_delegate().is_stopped());
 }
 
-TEST_F(VSockProxyTest, FileWriteError) {
+TEST_F(MojoProxyTest, FileWriteError) {
   // Register a socket pair to the server.
   auto server_socket_pair = CreateSocketPair(SOCK_STREAM | SOCK_NONBLOCK);
   ASSERT_TRUE(server_socket_pair.has_value());
@@ -241,7 +241,7 @@ TEST_F(VSockProxyTest, FileWriteError) {
   ExpectSocketEof(server_fd.get());
 }
 
-TEST_F(VSockProxyTest, PassStreamSocketFromServer) {
+TEST_F(MojoProxyTest, PassStreamSocketFromServer) {
   auto sockpair = CreateSocketPair(SOCK_STREAM | SOCK_NONBLOCK);
   ASSERT_TRUE(sockpair.has_value());
   constexpr char kData[] = "testdata";
@@ -267,7 +267,7 @@ TEST_F(VSockProxyTest, PassStreamSocketFromServer) {
   TestDataTransfer(received_fd.get(), sockpair->first.get());
 }
 
-TEST_F(VSockProxyTest, PassStreamSocketSocketFromClient) {
+TEST_F(MojoProxyTest, PassStreamSocketSocketFromClient) {
   auto sockpair = CreateSocketPair(SOCK_STREAM | SOCK_NONBLOCK);
   ASSERT_TRUE(sockpair.has_value());
   constexpr char kData[] = "testdata";
@@ -293,7 +293,7 @@ TEST_F(VSockProxyTest, PassStreamSocketSocketFromClient) {
   TestDataTransfer(received_fd.get(), sockpair->first.get());
 }
 
-TEST_F(VSockProxyTest, PassDgramSocketFromServer) {
+TEST_F(MojoProxyTest, PassDgramSocketFromServer) {
   auto sockpair = CreateSocketPair(SOCK_DGRAM | SOCK_NONBLOCK);
   ASSERT_TRUE(sockpair.has_value());
   constexpr char kData[] = "testdata";
@@ -319,7 +319,7 @@ TEST_F(VSockProxyTest, PassDgramSocketFromServer) {
   TestDataTransfer(received_fd.get(), sockpair->first.get());
 }
 
-TEST_F(VSockProxyTest, PassSeqpacketSocketFromServer) {
+TEST_F(MojoProxyTest, PassSeqpacketSocketFromServer) {
   auto sockpair = CreateSocketPair(SOCK_SEQPACKET | SOCK_NONBLOCK);
   ASSERT_TRUE(sockpair.has_value());
   constexpr char kData[] = "testdata";
@@ -345,7 +345,7 @@ TEST_F(VSockProxyTest, PassSeqpacketSocketFromServer) {
   TestDataTransfer(received_fd.get(), sockpair->first.get());
 }
 
-TEST_F(VSockProxyTest, Connect) {
+TEST_F(MojoProxyTest, Connect) {
   base::ScopedTempDir temp_dir;
   ASSERT_TRUE(temp_dir.CreateUniqueTempDir());
   base::FilePath socket_path = temp_dir.GetPath().Append("test.sock");
@@ -389,7 +389,7 @@ TEST_F(VSockProxyTest, Connect) {
   TestDataTransfer(server_fd.get(), client_fd.get());
 }
 
-TEST_F(VSockProxyTest, Pread) {
+TEST_F(MojoProxyTest, Pread) {
   base::ScopedTempDir temp_dir;
   ASSERT_TRUE(temp_dir.CreateUniqueTempDir());
   const base::FilePath file_path = temp_dir.GetPath().Append("test.txt");
@@ -416,7 +416,7 @@ TEST_F(VSockProxyTest, Pread) {
   run_loop.Run();
 }
 
-TEST_F(VSockProxyTest, Pread_UnknownHandle) {
+TEST_F(MojoProxyTest, Pread_UnknownHandle) {
   constexpr int64_t kUnknownHandle = 100;
   base::RunLoop run_loop;
   server()->Pread(
@@ -430,7 +430,7 @@ TEST_F(VSockProxyTest, Pread_UnknownHandle) {
   run_loop.Run();
 }
 
-TEST_F(VSockProxyTest, Fstat) {
+TEST_F(MojoProxyTest, Fstat) {
   base::ScopedTempDir temp_dir;
   ASSERT_TRUE(temp_dir.CreateUniqueTempDir());
   const base::FilePath file_path = temp_dir.GetPath().Append("test.txt");
@@ -457,7 +457,7 @@ TEST_F(VSockProxyTest, Fstat) {
   run_loop.Run();
 }
 
-TEST_F(VSockProxyTest, Fstat_UnknownHandle) {
+TEST_F(MojoProxyTest, Fstat_UnknownHandle) {
   constexpr int64_t kUnknownHandle = 100;
   base::RunLoop run_loop;
   server()->Fstat(kUnknownHandle, base::BindOnce(

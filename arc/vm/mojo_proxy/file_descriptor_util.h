@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ARC_VM_VSOCK_PROXY_FILE_DESCRIPTOR_UTIL_H_
-#define ARC_VM_VSOCK_PROXY_FILE_DESCRIPTOR_UTIL_H_
+#ifndef ARC_VM_MOJO_PROXY_FILE_DESCRIPTOR_UTIL_H_
+#define ARC_VM_MOJO_PROXY_FILE_DESCRIPTOR_UTIL_H_
 
 #include <string>
 #include <utility>
@@ -59,4 +59,4 @@ ssize_t Recvmsg(int fd,
 
 }  // namespace arc
 
-#endif  // ARC_VM_VSOCK_PROXY_FILE_DESCRIPTOR_UTIL_H_
+#endif  // ARC_VM_MOJO_PROXY_FILE_DESCRIPTOR_UTIL_H_

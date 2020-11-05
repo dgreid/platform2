@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ARC_VM_VSOCK_PROXY_SERVER_PROXY_H_
-#define ARC_VM_VSOCK_PROXY_SERVER_PROXY_H_
+#ifndef ARC_VM_MOJO_PROXY_SERVER_PROXY_H_
+#define ARC_VM_MOJO_PROXY_SERVER_PROXY_H_
 
 #include <memory>
 #include <string>
@@ -12,16 +12,16 @@
 #include <base/macros.h>
 #include <base/memory/ref_counted.h>
 
-#include "arc/vm/vsock_proxy/message_stream.h"
-#include "arc/vm/vsock_proxy/proxy_file_system.h"
-#include "arc/vm/vsock_proxy/vsock_proxy.h"
+#include "arc/vm/mojo_proxy/message_stream.h"
+#include "arc/vm/mojo_proxy/mojo_proxy.h"
+#include "arc/vm/mojo_proxy/proxy_file_system.h"
 
 namespace arc {
 
 class ProxyFileSystem;
 
-// ServerProxy sets up the VSockProxy and handles initial socket negotiation.
-class ServerProxy : public VSockProxy::Delegate,
+// ServerProxy sets up the MojoProxy and handles initial socket negotiation.
+class ServerProxy : public MojoProxy::Delegate,
                     public ProxyFileSystem::Delegate {
  public:
   ServerProxy(scoped_refptr<base::TaskRunner> proxy_file_system_task_runner,
@@ -33,18 +33,17 @@ class ServerProxy : public VSockProxy::Delegate,
   ~ServerProxy() override;
 
   // Sets up the ServerProxy. Specifically, start listening on virtio-wl.
-  // Then, connect to /run/chrome/arc_bridge.sock, when an initial connection
-  // comes to the vsock.
+  // Then, connect to /run/chrome/arc_bridge.sock.
   bool Initialize();
 
-  // VSockProxy::Delegate overrides:
-  VSockProxy::Type GetType() const override { return VSockProxy::Type::SERVER; }
+  // MojoProxy::Delegate overrides:
+  MojoProxy::Type GetType() const override { return MojoProxy::Type::SERVER; }
   int GetPollFd() override { return message_stream_->Get(); }
   base::ScopedFD CreateProxiedRegularFile(int64_t handle,
                                           int32_t flags) override;
-  bool SendMessage(const arc_proxy::VSockMessage& message,
+  bool SendMessage(const arc_proxy::MojoMessage& message,
                    const std::vector<base::ScopedFD>& fds) override;
-  bool ReceiveMessage(arc_proxy::VSockMessage* message,
+  bool ReceiveMessage(arc_proxy::MojoMessage* message,
                       std::vector<base::ScopedFD>* fds) override;
   void OnStopped() override;
 
@@ -67,9 +66,9 @@ class ServerProxy : public VSockProxy::Delegate,
   base::ScopedFD virtwl_socket_;
   base::ScopedFD virtwl_context_;
   std::unique_ptr<MessageStream> message_stream_;
-  std::unique_ptr<VSockProxy> vsock_proxy_;
+  std::unique_ptr<MojoProxy> mojo_proxy_;
 };
 
 }  // namespace arc
 
-#endif  // ARC_VM_VSOCK_PROXY_SERVER_PROXY_H_
+#endif  // ARC_VM_MOJO_PROXY_SERVER_PROXY_H_

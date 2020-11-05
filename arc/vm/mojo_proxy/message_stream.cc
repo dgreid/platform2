@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "arc/vm/vsock_proxy/message_stream.h"
+#include "arc/vm/mojo_proxy/message_stream.h"
 
 #include <string>
 #include <utility>
@@ -10,7 +10,7 @@
 #include <base/files/file_util.h>
 #include <base/logging.h>
 
-#include "arc/vm/vsock_proxy/file_descriptor_util.h"
+#include "arc/vm/mojo_proxy/file_descriptor_util.h"
 
 namespace arc {
 
@@ -45,7 +45,7 @@ MessageStream::MessageStream(base::ScopedFD fd) : fd_(std::move(fd)) {}
 
 MessageStream::~MessageStream() = default;
 
-bool MessageStream::Read(arc_proxy::VSockMessage* message,
+bool MessageStream::Read(arc_proxy::MojoMessage* message,
                          std::vector<base::ScopedFD>* fds) {
   // Receive FDs and the message size.
   uint64_t size = 0;
@@ -69,7 +69,7 @@ bool MessageStream::Read(arc_proxy::VSockMessage* message,
   return true;
 }
 
-bool MessageStream::Write(const arc_proxy::VSockMessage& message) {
+bool MessageStream::Write(const arc_proxy::MojoMessage& message) {
   const uint64_t size = message.ByteSizeLong();
   buf_.resize(sizeof(size) + size);
 

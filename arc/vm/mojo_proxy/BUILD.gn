@@ -8,7 +8,7 @@ import("//common-mk/proto_library.gni")
 group("all") {
   deps = [ ":server_proxy" ]
   if (use.test) {
-    deps += [ ":vsock_proxy_test" ]
+    deps += [ ":mojo_proxy_test" ]
   }
 }
 
@@ -23,19 +23,19 @@ pkg_config("target_defaults") {
 
 proto_library("message") {
   proto_in_dir = "."
-  proto_out_dir = "include/arc/vm/vsock_proxy"
+  proto_out_dir = "include/arc/vm/mojo_proxy"
   sources = [ "${proto_in_dir}/message.proto" ]
 }
 
-static_library("vsock_proxy_lib") {
+static_library("mojo_proxy_lib") {
   sources = [
     "file_descriptor_util.cc",
     "fuse_mount.cc",
     "local_file.cc",
     "message_stream.cc",
+    "mojo_proxy.cc",
     "proxy_file_system.cc",
     "server_proxy.cc",
-    "vsock_proxy.cc",
   ]
   configs += [ ":target_defaults" ]
   pkg_deps = [ "fuse" ]
@@ -45,17 +45,17 @@ static_library("vsock_proxy_lib") {
 executable("server_proxy") {
   sources = [ "server_proxy_main.cc" ]
   configs += [ ":target_defaults" ]
-  deps = [ ":vsock_proxy_lib" ]
+  deps = [ ":mojo_proxy_lib" ]
 }
 
 if (use.test) {
-  executable("vsock_proxy_test") {
+  executable("mojo_proxy_test") {
     sources = [
       "file_descriptor_util_test.cc",
       "local_file_test.cc",
       "message_stream_test.cc",
+      "mojo_proxy_test.cc",
       "proxy_file_system_test.cc",
-      "vsock_proxy_test.cc",
     ]
     configs += [
       "//common-mk:test",
@@ -66,7 +66,7 @@ if (use.test) {
       "libchrome-test",
     ]
     deps = [
-      ":vsock_proxy_lib",
+      ":mojo_proxy_lib",
       "//common-mk/testrunner",
     ]
   }

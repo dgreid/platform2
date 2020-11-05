@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ARC_VM_VSOCK_PROXY_MESSAGE_STREAM_H_
-#define ARC_VM_VSOCK_PROXY_MESSAGE_STREAM_H_
+#ifndef ARC_VM_MOJO_PROXY_MESSAGE_STREAM_H_
+#define ARC_VM_MOJO_PROXY_MESSAGE_STREAM_H_
 
 #include <vector>
 
@@ -11,7 +11,7 @@
 #include <base/macros.h>
 #include <base/optional.h>
 
-#include "arc/vm/vsock_proxy/message.pb.h"
+#include "arc/vm/mojo_proxy/message.pb.h"
 
 namespace arc {
 
@@ -29,11 +29,11 @@ class MessageStream {
 
   // Reads the message from the socket. Returns true and stores the read
   // message and FDs into |message| and |fds| on success. Otherwise false.
-  bool Read(arc_proxy::VSockMessage* message, std::vector<base::ScopedFD>* fds);
+  bool Read(arc_proxy::MojoMessage* message, std::vector<base::ScopedFD>* fds);
 
   // Writes the serialized |message| to the socket.
   // Returns true iff the whole message is written.
-  bool Write(const arc_proxy::VSockMessage& message);
+  bool Write(const arc_proxy::MojoMessage& message);
 
  private:
   base::ScopedFD fd_;
@@ -42,4 +42,4 @@ class MessageStream {
 
 }  // namespace arc
 
-#endif  // ARC_VM_VSOCK_PROXY_MESSAGE_STREAM_H_
+#endif  // ARC_VM_MOJO_PROXY_MESSAGE_STREAM_H_

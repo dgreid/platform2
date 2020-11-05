@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "arc/vm/vsock_proxy/local_file.h"
+#include "arc/vm/mojo_proxy/local_file.h"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -19,7 +19,7 @@
 #include <base/posix/eintr_wrapper.h>
 #include <base/task_runner_util.h>
 
-#include "arc/vm/vsock_proxy/file_descriptor_util.h"
+#include "arc/vm/mojo_proxy/file_descriptor_util.h"
 
 namespace arc {
 

@@ -7,8 +7,8 @@ option optimize_for = LITE_RUNTIME;
 
 package arc_proxy;
 
-// This file defines the protocol to communicate between the host and the guest
-// over VSOCK. Some fields across messages has special convention as follows.
+// This file defines the protocol to communicate between the host and the guest.
+// Some fields across messages has special convention as follows.
 //
 // handle: is an int64 ID corresponding to a file descriptor for each side.
 //   Either side could create a handle, so to avoid conflicting, positive
@@ -26,9 +26,8 @@ package arc_proxy;
 // error_code: is a status code corresponding to "errno" of the operation.
 //   Specifically, '0' means success.
 
-// Single message to communicate between VSockProxy in the host and the guest
-// over VSOCK.
-message VSockMessage {
+// Single message to communicate between MojoProxy in the host and the guest.
+message MojoMessage {
   oneof command {
     Close close = 1;
     Data data = 2;

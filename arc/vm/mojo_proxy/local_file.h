@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ARC_VM_VSOCK_PROXY_LOCAL_FILE_H_
-#define ARC_VM_VSOCK_PROXY_LOCAL_FILE_H_
+#ifndef ARC_VM_MOJO_PROXY_LOCAL_FILE_H_
+#define ARC_VM_MOJO_PROXY_LOCAL_FILE_H_
 
 #include <stdint.h>
 
@@ -19,7 +19,7 @@
 #include <base/memory/ref_counted.h>
 #include <base/memory/weak_ptr.h>
 
-#include "arc/vm/vsock_proxy/message.pb.h"
+#include "arc/vm/mojo_proxy/message.pb.h"
 
 namespace arc {
 
@@ -91,4 +91,4 @@ class LocalFile {
 
 }  // namespace arc
 
-#endif  // ARC_VM_VSOCK_PROXY_LOCAL_FILE_H_
+#endif  // ARC_VM_MOJO_PROXY_LOCAL_FILE_H_

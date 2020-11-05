@@ -11,7 +11,7 @@
 #include <base/task/single_thread_task_executor.h>
 #include <base/threading/thread.h>
 
-#include "arc/vm/vsock_proxy/server_proxy.h"
+#include "arc/vm/mojo_proxy/server_proxy.h"
 
 int main(int argc, char** argv) {
   // Initialize CommandLine for VLOG before InitLog.

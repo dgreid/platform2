@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ARC_VM_VSOCK_PROXY_VSOCK_PROXY_H_
-#define ARC_VM_VSOCK_PROXY_VSOCK_PROXY_H_
+#ifndef ARC_VM_MOJO_PROXY_MOJO_PROXY_H_
+#define ARC_VM_MOJO_PROXY_MOJO_PROXY_H_
 
 #include <stdint.h>
 
@@ -18,7 +18,7 @@
 #include <base/memory/weak_ptr.h>
 #include <base/threading/thread.h>
 
-#include "arc/vm/vsock_proxy/message.pb.h"
+#include "arc/vm/mojo_proxy/message.pb.h"
 
 namespace base {
 class FilePath;
@@ -29,9 +29,9 @@ namespace arc {
 class LocalFile;
 class ProxyFileSystem;
 
-// Proxies between local file descriptors and given VSOCK socket by Message
-// protocol.
-class VSockProxy {
+// MojoProxy proxies data going through file descriptors used for mojo
+// communication between the host and the guest.
+class MojoProxy {
  public:
   // Represents whether this proxy is server (host) side one, or client (guest)
   // side one.
@@ -58,28 +58,27 @@ class VSockProxy {
 
     // Sends the message to the proxy process on the other side and returns true
     // on success.
-    virtual bool SendMessage(const arc_proxy::VSockMessage& message,
+    virtual bool SendMessage(const arc_proxy::MojoMessage& message,
                              const std::vector<base::ScopedFD>& fds) = 0;
 
     // Receives a message from the proxy process on the other side and returns
     // true on success.
-    virtual bool ReceiveMessage(arc_proxy::VSockMessage* message,
+    virtual bool ReceiveMessage(arc_proxy::MojoMessage* message,
                                 std::vector<base::ScopedFD>* fds) = 0;
 
-    // Called when the vsock proxy has stopped.
+    // Called when the mojo proxy has stopped.
     virtual void OnStopped() = 0;
   };
-  explicit VSockProxy(Delegate* delegate);
-  VSockProxy(const VSockProxy&) = delete;
-  VSockProxy& operator=(const VSockProxy&) = delete;
+  explicit MojoProxy(Delegate* delegate);
+  MojoProxy(const MojoProxy&) = delete;
+  MojoProxy& operator=(const MojoProxy&) = delete;
 
-  ~VSockProxy();
+  ~MojoProxy();
 
   // Registers the |fd| whose type is |fd_type| to watch.
-  // Internally, this creates an object to read/write Message protocol buffer.
-  // If |handle| is the value corresponding to the file descriptor on
-  // messages on VSOCK. If 0 is set, this internally generates the handle.
-  // Returns handle or 0 on error.
+  // When |handle| is not 0, associates the specified handle with the given FD.
+  // When |handle| is 0, generates a new handle value for the given FD.
+  // Returns the handle, or 0 on error.
   int64_t RegisterFileDescriptor(base::ScopedFD fd,
                                  arc_proxy::FileDescriptor::Type fd_type,
                                  int64_t handle);
@@ -119,13 +118,11 @@ class VSockProxy {
   void Fstat(int64_t handle, FstatCallback callback);
 
  private:
-  // Callback called when VSOCK gets ready to read.
-  // Reads Message from VSOCK file descriptor, and dispatches it to the
-  // corresponding local file descriptor.
-  void OnVSockReadReady();
+  // Callback called when a new mojo message is available.
+  void OnMojoMessageAvailable();
 
   // Handles a message sent from the other side's proxy.
-  bool HandleMessage(arc_proxy::VSockMessage* message,
+  bool HandleMessage(arc_proxy::MojoMessage* message,
                      std::vector<base::ScopedFD>* received_fds);
 
   // Stops this proxy.
@@ -151,14 +148,14 @@ class VSockProxy {
 
   // Callback called when local file descriptor gets ready to read.
   // Reads Message from the file descriptor corresponding to the |handle|,
-  // and forwards to VSOCK connection.
+  // and forwards it to the proxy process on the other side.
   void OnLocalFileDesciptorReadReady(int64_t handle);
 
-  // Converts the given data to outgoing VSockMessage.
-  bool ConvertDataToVSockMessage(std::string blob,
-                                 std::vector<base::ScopedFD> fds,
-                                 arc_proxy::VSockMessage* message,
-                                 std::vector<base::ScopedFD>* fds_to_send);
+  // Converts the given data to outgoing MojoMessage.
+  bool ConvertDataToMojoMessage(std::string blob,
+                                std::vector<base::ScopedFD> fds,
+                                arc_proxy::MojoMessage* message,
+                                std::vector<base::ScopedFD>* fds_to_send);
 
   // Handles an error on a local file.
   void HandleLocalFileError(int64_t handle);
@@ -200,9 +197,9 @@ class VSockProxy {
   // WeakPtrFactory needs to be declared as the member of the class, so that
   // on destruction, any pending Callbacks bound to WeakPtr are cancelled
   // first.
-  base::WeakPtrFactory<VSockProxy> weak_factory_{this};
+  base::WeakPtrFactory<MojoProxy> weak_factory_{this};
 };
 
 }  // namespace arc
 
-#endif  // ARC_VM_VSOCK_PROXY_VSOCK_PROXY_H_
+#endif  // ARC_VM_MOJO_PROXY_MOJO_PROXY_H_

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "arc/vm/vsock_proxy/proxy_file_system.h"
+#include "arc/vm/mojo_proxy/proxy_file_system.h"
 
 #include <errno.h>
 
@@ -22,7 +22,7 @@
 #include <base/task_runner.h>
 #include <base/threading/thread_task_runner_handle.h>
 
-#include "arc/vm/vsock_proxy/fuse_mount.h"
+#include "arc/vm/mojo_proxy/fuse_mount.h"
 
 namespace arc {
 namespace {

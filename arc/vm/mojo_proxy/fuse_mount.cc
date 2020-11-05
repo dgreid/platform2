@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "arc/vm/vsock_proxy/fuse_mount.h"
+#include "arc/vm/mojo_proxy/fuse_mount.h"
 
 #include <fuse/fuse.h>
 #include <fuse/fuse_lowlevel.h>

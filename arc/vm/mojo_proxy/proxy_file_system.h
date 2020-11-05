@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ARC_VM_VSOCK_PROXY_PROXY_FILE_SYSTEM_H_
-#define ARC_VM_VSOCK_PROXY_PROXY_FILE_SYSTEM_H_
+#ifndef ARC_VM_MOJO_PROXY_PROXY_FILE_SYSTEM_H_
+#define ARC_VM_MOJO_PROXY_PROXY_FILE_SYSTEM_H_
 
 #include <fuse/fuse.h>
 #include <fuse/fuse_lowlevel.h>
@@ -23,7 +23,7 @@
 #include <base/optional.h>
 #include <base/synchronization/lock.h>
 
-#include "arc/vm/vsock_proxy/vsock_proxy.h"
+#include "arc/vm/mojo_proxy/mojo_proxy.h"
 
 namespace base {
 class TaskRunner;
@@ -33,7 +33,7 @@ namespace arc {
 
 class FuseMount;
 
-// FUSE implementation to support regular file descriptor passing over VSOCK.
+// FUSE implementation to support regular file descriptor passing.
 // This is designed to be used only in the host side.
 class ProxyFileSystem {
  public:
@@ -41,9 +41,9 @@ class ProxyFileSystem {
    public:
     virtual ~Delegate() = default;
 
-    using PreadCallback = VSockProxy::PreadCallback;
-    using PwriteCallback = VSockProxy::PwriteCallback;
-    using FstatCallback = VSockProxy::FstatCallback;
+    using PreadCallback = MojoProxy::PreadCallback;
+    using PwriteCallback = MojoProxy::PwriteCallback;
+    using FstatCallback = MojoProxy::FstatCallback;
 
     // Implement these methods to handle file operation requests.
     virtual void Pread(int64_t handle,
@@ -134,4 +134,4 @@ class ProxyFileSystem {
 
 }  // namespace arc
 
-#endif  // ARC_VM_VSOCK_PROXY_PROXY_FILE_SYSTEM_H_
+#endif  // ARC_VM_MOJO_PROXY_PROXY_FILE_SYSTEM_H_
