@@ -115,6 +115,9 @@ void TextClassifierImpl::Annotate(TextAnnotationRequestPtr request,
       static_cast<libtextclassifier3::AnnotationUsecase>(
           request->annotation_usecase);
 
+  // Uses the vocab based model.
+  option.use_vocab_annotator = true;
+
   // Do the annotation.
   const std::vector<libtextclassifier3::AnnotatedSpan> annotated_spans =
       annotator_->Annotate(request->text, option);

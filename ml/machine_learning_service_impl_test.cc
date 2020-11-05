@@ -184,8 +184,11 @@ constexpr float kHandwritingTestPoints[23][2] = {
     {1.98, 1.178},  {1.976, 1.303}, {1.984, 1.415},
 };
 
+// The words "unknownword" and "a.bcd" should not be detected by the new
+// vocabulary based dictionary annotator.
 constexpr char kTextClassifierTestInput[] =
-    "user.name@gmail.com. 123 George Street. unfathomable. 12pm. 350°F";
+    "user.name@gmail.com. 123 George Street. unfathomable. 12pm. 350°F. "
+    "unknownword. a.bcd";
 
 using ::chromeos::machine_learning::mojom::BuiltinModelId;
 using ::chromeos::machine_learning::mojom::BuiltinModelSpec;
