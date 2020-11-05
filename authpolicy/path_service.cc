@@ -58,7 +58,7 @@ const char kSmbClientPath[] = "/usr/bin/smbclient";
 const char kKInitSeccompFilterPath[] = "/usr/share/policy/samba-seccomp.policy";
 const char kKListSeccompFilterPath[] = "/usr/share/policy/klist-seccomp.policy";
 const char kKPasswdSeccompFilterPath[] =
-    "/usr/share/policy/kpasswd-seccomp.policy";
+    "/usr/share/policy/samba-seccomp.policy";
 const char kNetAdsSeccompFilterPath[] =
     "/usr/share/policy/samba-seccomp.policy";
 const char kParserSeccompFilterPath[] =
