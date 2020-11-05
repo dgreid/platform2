@@ -32,7 +32,7 @@ class ServerProxy : public VSockProxy::Delegate,
 
   ~ServerProxy() override;
 
-  // Sets up the ServerProxy. Specifically, start listening VSOCK.
+  // Sets up the ServerProxy. Specifically, start listening on virtio-wl.
   // Then, connect to /run/chrome/arc_bridge.sock, when an initial connection
   // comes to the vsock.
   bool Initialize();
@@ -66,7 +66,6 @@ class ServerProxy : public VSockProxy::Delegate,
   base::OnceClosure quit_closure_;
   base::ScopedFD virtwl_socket_;
   base::ScopedFD virtwl_context_;
-  bool guest_is_using_vsock_ = false;
   std::unique_ptr<MessageStream> message_stream_;
   std::unique_ptr<VSockProxy> vsock_proxy_;
 };
