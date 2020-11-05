@@ -1387,8 +1387,10 @@ int MetadataHandler::FillDefaultPreviewSettings(
                  ANDROID_CONTROL_CAPTURE_INTENT_PREVIEW);
   update_request(ANDROID_CONTROL_AE_TARGET_FPS_RANGE,
                  std::vector<int32_t>{kMinFps, max_supported_fps_});
-
   update_request(ANDROID_CONTROL_MODE, ANDROID_CONTROL_MODE_AUTO);
+
+  // android.jpeg
+  update_request(ANDROID_JPEG_THUMBNAIL_SIZE, std::vector<int32_t>{0, 0});
   return 0;
 }
 

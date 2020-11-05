@@ -488,7 +488,7 @@ int CachedFrame::CompressNV12(const android::CameraMetadata& static_metadata,
     int thumbnail_width = entry.data.i32[0];
     int thumbnail_height = entry.data.i32[1];
     if (thumbnail_width == 0 && thumbnail_height == 0) {
-      LOGF(INFO) << "Thumbnail size = (0, 0), nothing will be generated";
+      VLOGF(1) << "Thumbnail size = (0, 0), nothing will be generated";
     } else if (!ValidateThumbnailSize(static_metadata, thumbnail_width,
                                       thumbnail_height)) {
       LOGF(ERROR) << "Invalid thumbnail size " << thumbnail_width << "x"
