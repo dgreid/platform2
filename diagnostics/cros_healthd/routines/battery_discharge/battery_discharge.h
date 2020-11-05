@@ -56,7 +56,7 @@ class BatteryDischargeRoutine final : public DiagnosticRoutine {
   chromeos::cros_healthd::mojom::DiagnosticRoutineStatusEnum
   RunBatteryDischargeRoutine();
   // Determine success or failure for the routine.
-  void DetermineRoutineResult(uint32_t beginning_discharge_percent);
+  void DetermineRoutineResult(double beginning_discharge_percent);
 
   // Status of the routine, reported by GetStatus() or noninteractive routine
   // updates.

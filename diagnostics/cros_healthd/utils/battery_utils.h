@@ -36,7 +36,7 @@ extern const char kBatteryStatusDischargingValue[];
 // Calculates the charge percent of the battery. Returns true and populates
 // |charge_percent_out| iff the battery charge percent was able to be
 // calculated.
-base::Optional<uint32_t> CalculateBatteryChargePercent(
+base::Optional<double> CalculateBatteryChargePercent(
     const base::FilePath& root_dir);
 
 }  // namespace diagnostics

@@ -171,7 +171,7 @@ From cros-health-tool:
 $ cros-health-tool diag --action=run_routine --routine=battery_charge --length_seconds=600 --minimum_charge_percent_required=10
 ```
 
-Sample output, if the battery were to charge 12% during the routine:
+Sample output, if the battery were to charge 12.123456789012345% during the routine:
 ```bash
 Progress: 0
 Unplug the AC adapter.
@@ -180,7 +180,7 @@ Press ENTER to continue.
 Progress: 100
 Output: {
     "resultDetails": {
-        "chargePercent": 12
+        "chargePercent": 12.123456789012345
     }
 }
 
@@ -212,7 +212,7 @@ From cros-health-tool:
 $ cros-health-tool diag --action=run_routine --routine=battery_discharge --length_seconds=600 --maximum_discharge_percent_allowed=10
 ```
 
-Sample output, if the battery were to discharge 1% during the routine:
+Sample output, if the battery were to discharge 1.123456789012345% during the routine:
 ```bash
 Progress: 0
 Unplug the AC adapter.
@@ -222,7 +222,7 @@ Progress: 100
 Progress: 100
 Output: {
     "resultDetails": {
-        "dischargePercent": 1
+        "dischargePercent": 1.123456789012345
     }
 }
 

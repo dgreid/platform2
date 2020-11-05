@@ -20,7 +20,6 @@ namespace {
 
 constexpr uint32_t kChargeNowFileContents = 4031000;
 constexpr uint32_t kChargeFullFileContents = 5042000;
-constexpr uint32_t kExpectedChargePercent = 80;
 
 }  // namespace
 
@@ -39,11 +38,13 @@ TEST(BatteryUtils, ReturnsCorrectPercent) {
           .AppendASCII(kBatteryChargeFullFileName),
       std::to_string(kChargeFullFileContents)));
 
-  base::Optional<uint32_t> charge_percent =
+  base::Optional<double> charge_percent =
       CalculateBatteryChargePercent(temp_dir_path);
 
   ASSERT_TRUE(charge_percent.has_value());
-  EXPECT_EQ(charge_percent.value(), kExpectedChargePercent);
+  EXPECT_EQ(charge_percent.value(),
+            100.0 * (static_cast<double>(kChargeNowFileContents) /
+                     kChargeFullFileContents));
 }
 
 // Test that CalculateBatteryChargePercent() handles a missing charge now file.

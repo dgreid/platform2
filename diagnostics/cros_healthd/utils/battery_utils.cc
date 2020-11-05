@@ -27,7 +27,7 @@ const char kBatteryVoltageNowFileName[] = "voltage_now";
 const char kBatteryStatusChargingValue[] = "Charging";
 const char kBatteryStatusDischargingValue[] = "Discharging";
 
-base::Optional<uint32_t> CalculateBatteryChargePercent(
+base::Optional<double> CalculateBatteryChargePercent(
     const base::FilePath& root_dir) {
   base::FilePath battery_path = root_dir.Append(kBatteryDirectoryPath);
 
@@ -43,9 +43,8 @@ base::Optional<uint32_t> CalculateBatteryChargePercent(
     return base::nullopt;
   }
 
-  return static_cast<uint32_t>(
-      std::round(100.0 * (static_cast<float>(charge_now) /
-                          static_cast<float>(charge_full))));
+  return 100.0 *
+         (static_cast<double>(charge_now) / static_cast<double>(charge_full));
 }
 
 }  // namespace diagnostics

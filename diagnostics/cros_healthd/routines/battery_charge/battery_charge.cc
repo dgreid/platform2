@@ -142,7 +142,7 @@ BatteryChargeRoutine::RunBatteryChargeRoutine() {
     return mojo_ipc::DiagnosticRoutineStatusEnum::kError;
   }
 
-  base::Optional<uint32_t> beginning_charge_percent =
+  base::Optional<double> beginning_charge_percent =
       CalculateBatteryChargePercent(root_dir_);
   if (!beginning_charge_percent.has_value()) {
     status_message_ =
@@ -150,13 +150,12 @@ BatteryChargeRoutine::RunBatteryChargeRoutine() {
     return mojo_ipc::DiagnosticRoutineStatusEnum::kError;
   }
 
-  uint32_t beginning_charge_percent_value = beginning_charge_percent.value();
+  double beginning_charge_percent_value = beginning_charge_percent.value();
   if (beginning_charge_percent_value + minimum_charge_percent_required_ > 100) {
     status_message_ = kBatteryChargeRoutineInvalidParametersMessage;
     base::Value error_dict(base::Value::Type::DICTIONARY);
-    error_dict.SetKey(
-        "startingBatteryChargePercent",
-        base::Value(static_cast<int>(beginning_charge_percent_value)));
+    error_dict.SetKey("startingBatteryChargePercent",
+                      base::Value(beginning_charge_percent_value));
     error_dict.SetKey(
         "chargePercentRequested",
         base::Value(static_cast<int>(minimum_charge_percent_required_)));
@@ -177,8 +176,8 @@ BatteryChargeRoutine::RunBatteryChargeRoutine() {
 }
 
 void BatteryChargeRoutine::DetermineRoutineResult(
-    uint32_t beginning_charge_percent) {
-  base::Optional<uint32_t> ending_charge_percent =
+    double beginning_charge_percent) {
+  base::Optional<double> ending_charge_percent =
       CalculateBatteryChargePercent(root_dir_);
   if (!ending_charge_percent.has_value()) {
     status_message_ =
@@ -188,7 +187,7 @@ void BatteryChargeRoutine::DetermineRoutineResult(
     return;
   }
 
-  uint32_t ending_charge_percent_value = ending_charge_percent.value();
+  double ending_charge_percent_value = ending_charge_percent.value();
   if (ending_charge_percent_value < beginning_charge_percent) {
     status_message_ = kBatteryChargeRoutineNotChargingMessage;
     status_ = mojo_ipc::DiagnosticRoutineStatusEnum::kError;
@@ -196,11 +195,10 @@ void BatteryChargeRoutine::DetermineRoutineResult(
     return;
   }
 
-  uint32_t charge_percent =
+  double charge_percent =
       ending_charge_percent_value - beginning_charge_percent;
   base::Value result_dict(base::Value::Type::DICTIONARY);
-  result_dict.SetKey("chargePercent",
-                     base::Value(static_cast<int>(charge_percent)));
+  result_dict.SetKey("chargePercent", base::Value(charge_percent));
   output_.SetKey("resultDetails", std::move(result_dict));
   if (charge_percent < minimum_charge_percent_required_) {
     status_message_ = kBatteryChargeRoutineFailedInsufficientChargeMessage;

@@ -146,7 +146,7 @@ BatteryDischargeRoutine::RunBatteryDischargeRoutine() {
     return mojo_ipc::DiagnosticRoutineStatusEnum::kError;
   }
 
-  base::Optional<uint32_t> beginning_charge_percent =
+  base::Optional<double> beginning_charge_percent =
       CalculateBatteryChargePercent(root_dir_);
   if (!beginning_charge_percent.has_value()) {
     status_message_ =
@@ -167,8 +167,8 @@ BatteryDischargeRoutine::RunBatteryDischargeRoutine() {
 }
 
 void BatteryDischargeRoutine::DetermineRoutineResult(
-    uint32_t beginning_charge_percent) {
-  base::Optional<uint32_t> ending_charge_percent =
+    double beginning_charge_percent) {
+  base::Optional<double> ending_charge_percent =
       CalculateBatteryChargePercent(root_dir_);
   if (!ending_charge_percent.has_value()) {
     status_message_ =
@@ -178,7 +178,7 @@ void BatteryDischargeRoutine::DetermineRoutineResult(
     return;
   }
 
-  uint32_t ending_charge_percent_value = ending_charge_percent.value();
+  double ending_charge_percent_value = ending_charge_percent.value();
   if (beginning_charge_percent < ending_charge_percent_value) {
     status_message_ = kBatteryDischargeRoutineNotDischargingMessage;
     status_ = mojo_ipc::DiagnosticRoutineStatusEnum::kError;
@@ -186,11 +186,10 @@ void BatteryDischargeRoutine::DetermineRoutineResult(
     return;
   }
 
-  uint32_t discharge_percent =
+  double discharge_percent =
       beginning_charge_percent - ending_charge_percent_value;
   base::Value result_dict(base::Value::Type::DICTIONARY);
-  result_dict.SetIntKey("dischargePercent",
-                        static_cast<int>(discharge_percent));
+  result_dict.SetDoubleKey("dischargePercent", discharge_percent);
   output_dict_.SetKey("resultDetails", std::move(result_dict));
   if (discharge_percent > maximum_discharge_percent_allowed_) {
     status_message_ = kBatteryDischargeRoutineFailedExcessiveDischargeMessage;
