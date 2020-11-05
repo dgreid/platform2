@@ -7216,7 +7216,6 @@ mno {
       name : "NTT DOCOMO"
     }
     mccmnc : "44001"
-    mccmnc : "44002"
     mccmnc : "44003"
     mccmnc : "44009"
     mccmnc : "44010"
@@ -7307,6 +7306,20 @@ mno {
         username : "bmobile@u300"
         password : "bmobile"
       }
+    }
+  }
+}
+
+mno {
+  data {
+    uuid : "ffaa1dd5-cc45-4c82-9e9f-fad3020fadac"
+    country : "jp"
+    localized_name {
+      name : "Hanshin Cable Engineering Co."
+    }
+    mccmnc : "44002"
+    mobile_apn {
+      apn : "APN9"
     }
   }
 }
