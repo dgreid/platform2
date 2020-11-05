@@ -204,6 +204,7 @@ generate_dbus_proxies("generate_cellular_proxies") {
     "${modemmanager_in_dir}/org.freedesktop.ModemManager1.Modem.Simple.xml",
     "${modemmanager_in_dir}/org.freedesktop.ModemManager1.Modem.xml",
     "${modemmanager_in_dir}/org.freedesktop.ModemManager1.Sim.xml",
+    "${modemmanager_in_dir}/org.freedesktop.ModemManager1.xml",
     "dbus_bindings/dbus-objectmanager.dbus-xml",
     "dbus_bindings/dbus-properties.dbus-xml",
   ]
@@ -371,6 +372,7 @@ static_library("libshill") {
       "dbus/mm1_modem_modemcdma_proxy.cc",
       "dbus/mm1_modem_proxy.cc",
       "dbus/mm1_modem_simple_proxy.cc",
+      "dbus/mm1_proxy.cc",
       "dbus/mm1_sim_proxy.cc",
       "protobuf_lite_streams.cc",
     ]
@@ -706,6 +708,7 @@ if (use.test) {
         "cellular/mock_mm1_modem_modemcdma_proxy.cc",
         "cellular/mock_mm1_modem_proxy.cc",
         "cellular/mock_mm1_modem_simple_proxy.cc",
+        "cellular/mock_mm1_proxy.cc",
         "cellular/mock_mm1_sim_proxy.cc",
         "cellular/mock_mobile_operator_info.cc",
         "cellular/mock_modem_info.cc",
