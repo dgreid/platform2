@@ -5,6 +5,7 @@
 #ifndef SHILL_DEVICE_H_
 #define SHILL_DEVICE_H_
 
+#include <map>
 #include <memory>
 #include <set>
 #include <string>
@@ -349,10 +350,6 @@ class Device : public base::RefCounted<Device> {
   // If the status of browser traffic blackholing changed, this will restart
   // the active connection with the right setting.
   mockable void UpdateBlackholeUserTraffic();
-
-  // Asynchronously get all the traffic counters for this device.
-  void FetchTrafficCounters(
-      patchpanel::Client::GetTrafficCountersCallback callback);
 
  protected:
   friend class base::RefCounted<Device>;
@@ -792,11 +789,24 @@ class Device : public base::RefCounted<Device> {
   bool HasDirectConnectivityTo(const IPAddress& address) const;
 
   // Atomically update the counters of the old service and the snapshot of the
-  // new service.
+  // new service. |GetTrafficCountersPatchpanelCallback| calls
+  // |GetTrafficCountersCallback| using the |get_traffic_counters_callback_|
+  // callback below. This is necessary because the callback that holds a
+  // reference to the ServiceRefPtrs needs to be reset to release the
+  // references. We can't directly cancel the callback we give to patchpanel
+  // client since it expects a OnceCallback.
   void GetTrafficCountersCallback(
       const ServiceRefPtr& old_service,
       const ServiceRefPtr& new_service,
       const std::vector<patchpanel::TrafficCounter>& counters);
+  void GetTrafficCountersPatchpanelCallback(
+      unsigned int id, const std::vector<patchpanel::TrafficCounter>& counters);
+
+  // Asynchronously get all the traffic counters for this device during a
+  // selected_service_ change and update the counters and snapshots for the old
+  // and new selected_service_ respectively.
+  void FetchTrafficCounters(const ServiceRefPtr& old_service,
+                            const ServiceRefPtr& new_service);
 
   // Use for unit test.
   void set_traffic_monitor_for_test(
@@ -894,6 +904,16 @@ class Device : public base::RefCounted<Device> {
   std::set<std::string> written_flags_;
 
   std::unique_ptr<ConnectionDiagnostics> connection_diagnostics_;
+
+  // See GetTrafficCountersCallback.
+  unsigned int traffic_counter_callback_id_;
+
+  // Maps the callback ID, created when FetchTrafficCounters is called, to the
+  // corresponding callback.
+  std::map<
+      unsigned int,
+      base::OnceCallback<void(const std::vector<patchpanel::TrafficCounter>&)>>
+      traffic_counters_callback_map_;
 
   base::WeakPtrFactory<Device> weak_ptr_factory_;
 

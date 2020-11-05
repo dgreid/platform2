@@ -154,6 +154,7 @@ Device::Device(Manager* manager,
       is_loose_routing_(false),
       is_multi_homed_(false),
       fixed_ip_params_(false),
+      traffic_counter_callback_id_(0),
       weak_ptr_factory_(this) {
   store_.RegisterConstString(kAddressProperty, &mac_address_);
 
@@ -526,9 +527,7 @@ void Device::ResetConnection() {
   }
 
   // Refresh traffic counters before deselecting the service.
-  FetchTrafficCounters(BindOnce(&Device::GetTrafficCountersCallback,
-                                AsWeakPtr(), selected_service_,
-                                /*new_service=*/nullptr));
+  FetchTrafficCounters(selected_service_, /*new_service=*/nullptr);
   selected_service_->set_unreliable(false);
   reliable_link_callback_.Cancel();
   selected_service_ = nullptr;
@@ -868,13 +867,20 @@ void Device::UpdateBlackholeUserTraffic() {
   }
 }
 
-void Device::FetchTrafficCounters(
-    patchpanel::Client::GetTrafficCountersCallback callback) {
+void Device::FetchTrafficCounters(const ServiceRefPtr& old_service,
+                                  const ServiceRefPtr& new_service) {
   set<string> devices{link_name_};
   patchpanel::Client* client = manager_->patchpanel_client();
-  if (client) {
-    client->GetTrafficCounters(devices, std::move(callback));
+  if (!client) {
+    return;
   }
+  traffic_counter_callback_id_++;
+  traffic_counters_callback_map_[traffic_counter_callback_id_] =
+      BindOnce(&Device::GetTrafficCountersCallback, AsWeakPtr(), old_service,
+               new_service);
+  client->GetTrafficCounters(
+      devices, BindOnce(&Device::GetTrafficCountersPatchpanelCallback,
+                        AsWeakPtr(), traffic_counter_callback_id_));
 }
 
 void Device::AssignIPConfig(const IPConfig::Properties& properties) {
@@ -1264,9 +1270,6 @@ void Device::GetTrafficCountersCallback(
     const ServiceRefPtr& old_service,
     const ServiceRefPtr& new_service,
     const std::vector<patchpanel::TrafficCounter>& counters) {
-  if (counters.size() == 0) {
-    LOG(WARNING) << "No counters found for " << link_name_;
-  }
   if (old_service) {
     old_service->RefreshTrafficCounters(counters);
   }
@@ -1277,6 +1280,21 @@ void Device::GetTrafficCountersCallback(
     // service.
     new_service->InitializeTrafficCounterSnapshot(counters);
   }
+}
+
+void Device::GetTrafficCountersPatchpanelCallback(
+    unsigned int id, const std::vector<patchpanel::TrafficCounter>& counters) {
+  auto iter = traffic_counters_callback_map_.find(id);
+  if (iter == traffic_counters_callback_map_.end() || iter->second.is_null()) {
+    LOG(ERROR) << "No callback found for ID " << id;
+    return;
+  }
+  if (counters.empty()) {
+    LOG(WARNING) << "No counters found for " << link_name_;
+  }
+  auto callback = std::move(iter->second);
+  traffic_counters_callback_map_.erase(iter);
+  std::move(callback).Run(counters);
 }
 
 void Device::SelectService(const ServiceRefPtr& service) {
@@ -1310,8 +1328,7 @@ void Device::SelectService(const ServiceRefPtr& service) {
   last_link_monitor_failed_time_ = 0;
 
   selected_service_ = service;
-  FetchTrafficCounters(BindOnce(&Device::GetTrafficCountersCallback,
-                                AsWeakPtr(), old_service, selected_service_));
+  FetchTrafficCounters(old_service, selected_service_);
   adaptor_->EmitRpcIdentifierChanged(kSelectedServiceProperty,
                                      GetSelectedServiceRpcIdentifier(nullptr));
 }
