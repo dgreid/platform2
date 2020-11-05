@@ -129,8 +129,7 @@ class AndroidInstaller:
       self.board_specific_setup_test()
 
   def ebuild_src_compile(self) -> None:
-    # TODO(boleynsu): implement this
-    raise NotImplementedError()
+    pass
 
   def ebuild_src_test(self) -> None:
     # TODO(boleynsu): implement this
