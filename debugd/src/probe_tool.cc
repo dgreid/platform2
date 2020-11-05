@@ -39,6 +39,7 @@ namespace debugd {
 namespace {
 constexpr char kErrorPath[] = "org.chromium.debugd.RunProbeFunctionError";
 constexpr char kSandboxInfoDir[] = "/etc/runtime_probe/sandbox";
+constexpr char kSandboxArgs[] = "/etc/runtime_probe/sandbox/args.json";
 constexpr std::array<const char*, 3> kBinaryAndArgs{"/usr/bin/runtime_probe",
                                                     "--helper", "--"};
 constexpr char kRunAs[] = "runtime_probe";
@@ -62,43 +63,53 @@ std::string GetStringFromValue(const base::Value& value) {
   return json;
 }
 
+bool AppendSandboxArgs(brillo::ErrorPtr* error,
+                       const std::string& sandbox_info,
+                       std::vector<std::string>* parsed_args) {
+  std::string minijail_args_str;
+  if (!base::ReadFileToString(base::FilePath(kSandboxArgs),
+                              &minijail_args_str)) {
+    DEBUGD_ADD_ERROR_FMT(error, kErrorPath,
+                         "Failed to read minijail arguments from: %s",
+                         kSandboxArgs);
+    return false;
+  }
+  auto minijail_args_dict = base::JSONReader::Read(minijail_args_str);
+  if (!minijail_args_dict || !minijail_args_dict->is_dict()) {
+    DEBUGD_ADD_ERROR_FMT(error, kErrorPath,
+                         "Minijail arguments are not stored in dict. Expected "
+                         "dict but got: %s",
+                         minijail_args_str.c_str());
+    return false;
+  }
+  const auto* minijail_args = minijail_args_dict->FindListKey(sandbox_info);
+  if (!minijail_args) {
+    DEBUGD_ADD_ERROR_FMT(error, kErrorPath,
+                         "Arguments of \"%s\" is not found in minijail "
+                         "arguments file: %s",
+                         sandbox_info.c_str(), kSandboxArgs);
+    return false;
+  }
+  DVLOG(1) << "Minijail arguments: " << (*minijail_args);
+  for (const auto& arg : minijail_args->GetList()) {
+    if (!arg.is_string()) {
+      auto arg_str = GetStringFromValue(arg);
+      DEBUGD_ADD_ERROR_FMT(
+          error, kErrorPath,
+          "Failed to parse minijail arguments. Expected string but got: %s",
+          arg_str.c_str());
+      return false;
+    }
+    parsed_args->push_back(arg.GetString());
+  }
+  return true;
+}
+
 std::unique_ptr<brillo::Process> CreateSandboxedProcess(
     brillo::ErrorPtr* error,
     const std::string& sandbox_info,
     const std::string& probe_statement) {
   auto sandboxed_process = std::make_unique<SandboxedProcess>();
-
-  const auto seccomp_path = base::FilePath{kSandboxInfoDir}.Append(
-      base::StringPrintf("%s-seccomp.policy", sandbox_info.c_str()));
-  const auto minijail_args_path = base::FilePath{kSandboxInfoDir}.Append(
-      base::StringPrintf("%s.args", sandbox_info.c_str()));
-
-  if (!base::PathExists(seccomp_path)) {
-    DEBUGD_ADD_ERROR_FMT(error, kErrorPath,
-                         "Seccomp policy file of \"%s\" is not found at: %s",
-                         sandbox_info.c_str(), seccomp_path.value().c_str());
-    return nullptr;
-  }
-
-  // Read and parse the arguments, use JSON to avoid quote escaping.
-  std::string minijail_args_str;
-  if (!base::ReadFileToString(base::FilePath(minijail_args_path),
-                              &minijail_args_str)) {
-    DEBUGD_ADD_ERROR_FMT(error, kErrorPath,
-                         "Failed to read minijail arguments from: %s",
-                         minijail_args_path.value().c_str());
-    return nullptr;
-  }
-
-  DVLOG(1) << "minijail arguments: " << minijail_args_str;
-
-  // Parse the JSON-formatted minijail arguments.
-  auto minijail_args = base::JSONReader::Read(minijail_args_str);
-
-  if (!minijail_args) {
-    DEBUGD_ADD_ERROR(error, kErrorPath, "minijail args are not stored in list");
-    return nullptr;
-  }
   // The following is the general minijail set up for runtime_probe in debugd
   // /dev/log needs to be bind mounted before any possible tmpfs mount on run
   // See:
@@ -114,20 +125,18 @@ std::unique_ptr<brillo::Process> CreateSandboxedProcess(
       "-r",                // Remount /proc readonly
       "-d"                 // Mount /dev with a minimal set of nodes.
   };
-
-  for (const auto& arg : minijail_args->GetList()) {
-    if (!arg.is_string()) {
-      auto arg_str = GetStringFromValue(arg);
-      DEBUGD_ADD_ERROR_FMT(
-          error, kErrorPath,
-          "Failed to parse minijail arguments. Expected string but got: %s",
-          arg_str.c_str());
-      return nullptr;
-    }
-    parsed_args.push_back(arg.GetString());
-  }
+  if (!AppendSandboxArgs(error, sandbox_info, &parsed_args))
+    return nullptr;
 
   sandboxed_process->SandboxAs(kRunAs, kRunAs);
+  const auto seccomp_path = base::FilePath{kSandboxInfoDir}.Append(
+      base::StringPrintf("%s-seccomp.policy", sandbox_info.c_str()));
+  if (!base::PathExists(seccomp_path)) {
+    DEBUGD_ADD_ERROR_FMT(error, kErrorPath,
+                         "Seccomp policy file of \"%s\" is not found at: %s",
+                         sandbox_info.c_str(), seccomp_path.value().c_str());
+    return nullptr;
+  }
   sandboxed_process->SetSeccompFilterPolicyFile(seccomp_path.MaybeAsASCII());
   DVLOG(1) << "Sandbox for " << sandbox_info << " is ready";
   if (!sandboxed_process->Init(parsed_args)) {

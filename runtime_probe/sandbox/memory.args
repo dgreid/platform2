@@ -1,3 +1,0 @@
-["-k", "tmpfs,/sys,tmpfs,MS_NODEV|MS_NOEXEC|MS_NOSUID,mode=755,size=10M",
- "-b", "/sys/firmware/dmi/entries",
- "-c", "CAP_DAC_READ_SEARCH+ep", "--ambient"]
