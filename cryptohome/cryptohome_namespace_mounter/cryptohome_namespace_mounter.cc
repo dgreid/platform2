@@ -144,6 +144,15 @@ int main(int argc, char** argv) {
       FilePath(cryptohome::kDefaultSkeletonSource), system_salt,
       request.legacy_home(), &platform);
 
+  cryptohome::MountError error = cryptohome::MOUNT_ERROR_NONE;
+  // Link the user keyring into session keyring to allow request_key() search
+  // for ecryptfs mounts.
+  if (!platform.SetupProcessKeyring()) {
+    LOG(ERROR) << "Failed to set up a process keyring.";
+    error = cryptohome::MOUNT_ERROR_SETUP_PROCESS_KEYRING_FAILED;
+    return EX_OSERR;
+  }
+
   // A failure in PerformMount/PerformEphemeralMount might still require
   // clean-up so set up the clean-up routine before
   // PerformMount/PerformEphemeralMount is started.
@@ -173,7 +182,6 @@ int main(int argc, char** argv) {
     mount_options.to_migrate_from_ecryptfs = request.to_migrate_from_ecryptfs();
     mount_options.shadow_only = request.shadow_only();
 
-    cryptohome::MountError error = cryptohome::MOUNT_ERROR_NONE;
     cryptohome::ReportTimerStart(cryptohome::kPerformMountTimer);
     if (!mounter.PerformMount(mount_options, request.username(),
                               request.fek_signature(), request.fnek_signature(),
