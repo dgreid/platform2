@@ -30,6 +30,7 @@
 #include "cryptohome/vault_keyset.h"
 
 using ::testing::_;
+using ::testing::ContainerEq;
 using ::testing::ElementsAre;
 using ::testing::EndsWith;
 using ::testing::MatchesRegex;
@@ -115,6 +116,8 @@ class KeysetManagementTest : public ::testing::Test {
     base::FilePath homedir_path;
     base::FilePath user_path;
   };
+
+  // SETUPers
 
   // Information about users' homedirs. The order of users is equal to kUsers.
   std::vector<UserInfo> users_;
@@ -237,6 +240,42 @@ class KeysetManagementTest : public ::testing::Test {
           vk.Save(user.homedir_path.Append(kKeyFile).AddExtension("0")));
     }
   }
+
+  // TESTers
+
+  void VerifyKeysetIndicies(const std::vector<int>& expected) {
+    std::vector<int> indicies;
+    ASSERT_TRUE(homedirs_.GetVaultKeysets(users_[0].obfuscated, &indicies));
+    EXPECT_THAT(indicies, ContainerEq(expected));
+  }
+
+  void VerifyKeysetNotPresentWithCreds(const Credentials& creds) {
+    VaultKeyset vk;
+    vk.Initialize(&platform_, homedirs_.crypto());
+    ASSERT_FALSE(homedirs_.GetValidKeyset(creds, &vk, /* error */ nullptr));
+  }
+
+  void VerifyKeysetPresentWithCredsAtIndex(const Credentials& creds,
+                                           int index) {
+    VaultKeyset vk;
+    vk.Initialize(&platform_, homedirs_.crypto());
+    ASSERT_TRUE(homedirs_.GetValidKeyset(creds, &vk, /* error */ nullptr));
+    EXPECT_EQ(vk.legacy_index(), index);
+    EXPECT_TRUE(vk.serialized().has_wrapped_chaps_key());
+    EXPECT_TRUE(vk.serialized().has_wrapped_reset_seed());
+  }
+
+  void VerifyKeysetPresentWithCredsAtIndexAndRevision(const Credentials& creds,
+                                                      int index,
+                                                      int revision) {
+    VaultKeyset vk;
+    vk.Initialize(&platform_, homedirs_.crypto());
+    ASSERT_TRUE(homedirs_.GetValidKeyset(creds, &vk, /* error */ nullptr));
+    EXPECT_EQ(vk.legacy_index(), index);
+    EXPECT_EQ(vk.serialized().key_data().revision(), revision);
+    EXPECT_TRUE(vk.serialized().has_wrapped_chaps_key());
+    EXPECT_TRUE(vk.serialized().has_wrapped_reset_seed());
+  }
 };
 
 TEST_F(KeysetManagementTest, AreCredentialsValid) {
@@ -264,19 +303,8 @@ TEST_F(KeysetManagementTest, AddInitialKeyset) {
   // Initial keyset is added, readable, has "new-er" fields correctly
   // populated and the initial index is "0".
 
-  std::vector<int> indicies;
-  EXPECT_TRUE(homedirs_.GetVaultKeysets(users_[0].obfuscated, &indicies));
-  EXPECT_THAT(indicies, ElementsAre(kInitialKeysetIndex));
-
-  VaultKeyset vk0;
-  vk0.Initialize(&platform_, homedirs_.crypto());
-  EXPECT_TRUE(homedirs_.GetValidKeyset(users_[0].credentials, &vk0,
-                                       /* error */ nullptr));
-  EXPECT_EQ(vk0.legacy_index(), kInitialKeysetIndex);
-  EXPECT_EQ(vk0.label(), users_[0].credentials.key_data().label());
-  // Expect reset seed and chaps_key to be created.
-  EXPECT_TRUE(vk0.serialized().has_wrapped_chaps_key());
-  EXPECT_TRUE(vk0.serialized().has_wrapped_reset_seed());
+  VerifyKeysetPresentWithCredsAtIndex(users_[0].credentials,
+                                      kInitialKeysetIndex);
 }
 
 // Successfully adds new keyset
@@ -299,24 +327,11 @@ TEST_F(KeysetManagementTest, AddKeysetSuccess) {
   // VERIFY
   // After we add an additional keyset, we can list and read both of them.
 
-  std::vector<int> indicies;
-  EXPECT_TRUE(homedirs_.GetVaultKeysets(users_[0].obfuscated, &indicies));
-  EXPECT_THAT(indicies, ElementsAre(kInitialKeysetIndex, index));
+  VerifyKeysetIndicies({kInitialKeysetIndex, index});
 
-  VaultKeyset vk0;
-  vk0.Initialize(&platform_, homedirs_.crypto());
-  EXPECT_TRUE(homedirs_.GetValidKeyset(users_[0].credentials, &vk0,
-                                       /* error */ nullptr));
-  EXPECT_EQ(vk0.legacy_index(), kInitialKeysetIndex);
-  // We don't have reset seed in the initial generation, so make sure it is
-  // populated on the original key when we add a new one.
-  EXPECT_TRUE(vk0.serialized().has_wrapped_reset_seed());
-
-  VaultKeyset vk1;
-  vk1.Initialize(&platform_, homedirs_.crypto());
-  EXPECT_TRUE(
-      homedirs_.GetValidKeyset(new_credentials, &vk1, /* error */ nullptr));
-  EXPECT_EQ(vk1.legacy_index(), index);
+  VerifyKeysetPresentWithCredsAtIndex(users_[0].credentials,
+                                      kInitialKeysetIndex);
+  VerifyKeysetPresentWithCredsAtIndex(new_credentials, index);
 }
 
 // Overrides existing keyset on label collision when "clobber" flag is present.
@@ -345,20 +360,10 @@ TEST_F(KeysetManagementTest, AddKeysetClobberSuccess) {
   // a keyset readable with new_credentials under the index of the old keyset.
   // The old keyset shall be removed.
 
-  std::vector<int> indicies;
-  EXPECT_TRUE(homedirs_.GetVaultKeysets(users_[0].obfuscated, &indicies));
-  EXPECT_THAT(indicies, ElementsAre(kInitialKeysetIndex));
+  VerifyKeysetIndicies({kInitialKeysetIndex});
 
-  VaultKeyset vk_old;
-  vk_old.Initialize(&platform_, homedirs_.crypto());
-  EXPECT_FALSE(homedirs_.GetValidKeyset(users_[0].credentials, &vk_old,
-                                        /* error */ nullptr));
-
-  VaultKeyset vk_new;
-  vk_new.Initialize(&platform_, homedirs_.crypto());
-  EXPECT_TRUE(
-      homedirs_.GetValidKeyset(new_credentials, &vk_new, /* error */ nullptr));
-  EXPECT_EQ(vk_new.legacy_index(), kInitialKeysetIndex);
+  VerifyKeysetNotPresentWithCreds(users_[0].credentials);
+  VerifyKeysetPresentWithCredsAtIndex(new_credentials, kInitialKeysetIndex);
 }
 
 // Return error on label collision when no "clobber".
@@ -386,20 +391,11 @@ TEST_F(KeysetManagementTest, AddKeysetNoClobber) {
   // shall still be readable with old credentials, and the new one shall not
   // exist.
 
-  std::vector<int> indicies;
-  EXPECT_TRUE(homedirs_.GetVaultKeysets(users_[0].obfuscated, &indicies));
-  EXPECT_THAT(indicies, ElementsAre(kInitialKeysetIndex));
+  VerifyKeysetIndicies({kInitialKeysetIndex});
 
-  VaultKeyset vk_old;
-  vk_old.Initialize(&platform_, homedirs_.crypto());
-  EXPECT_TRUE(homedirs_.GetValidKeyset(users_[0].credentials, &vk_old,
-                                       /* error */ nullptr));
-  EXPECT_EQ(vk_old.legacy_index(), kInitialKeysetIndex);
-
-  VaultKeyset vk_new;
-  vk_new.Initialize(&platform_, homedirs_.crypto());
-  EXPECT_FALSE(
-      homedirs_.GetValidKeyset(new_credentials, &vk_new, /* error */ nullptr));
+  VerifyKeysetPresentWithCredsAtIndex(users_[0].credentials,
+                                      kInitialKeysetIndex);
+  VerifyKeysetNotPresentWithCreds(new_credentials);
 }
 
 // Fail to add new keyset due to invalid label.
@@ -428,20 +424,11 @@ TEST_F(KeysetManagementTest, AddKeysetNonExistentLabel) {
   // Invalid label causes an addition error. Old keyset shall still be
   // readable with old credentials, and the new one shall not  exist.
 
-  std::vector<int> indicies;
-  EXPECT_TRUE(homedirs_.GetVaultKeysets(users_[0].obfuscated, &indicies));
-  EXPECT_THAT(indicies, ElementsAre(kInitialKeysetIndex));
+  VerifyKeysetIndicies({kInitialKeysetIndex});
 
-  VaultKeyset vk_old;
-  vk_old.Initialize(&platform_, homedirs_.crypto());
-  EXPECT_TRUE(homedirs_.GetValidKeyset(users_[0].credentials, &vk_old,
-                                       /* error */ nullptr));
-  EXPECT_EQ(vk_old.legacy_index(), kInitialKeysetIndex);
-
-  VaultKeyset vk_new;
-  vk_new.Initialize(&platform_, homedirs_.crypto());
-  EXPECT_FALSE(
-      homedirs_.GetValidKeyset(new_credentials, &vk_new, /* error */ nullptr));
+  VerifyKeysetPresentWithCredsAtIndex(users_[0].credentials,
+                                      kInitialKeysetIndex);
+  VerifyKeysetNotPresentWithCreds(new_credentials);
 }
 
 // Fail to add new keyset due to invalid credentials.
@@ -468,20 +455,11 @@ TEST_F(KeysetManagementTest, AddKeysetInvalidCreds) {
   // Invalid credentials cause an addition error. Old keyset shall still be
   // readable with old credentials, and the new one shall not  exist.
 
-  std::vector<int> indicies;
-  EXPECT_TRUE(homedirs_.GetVaultKeysets(users_[0].obfuscated, &indicies));
-  EXPECT_THAT(indicies, ElementsAre(kInitialKeysetIndex));
+  VerifyKeysetIndicies({kInitialKeysetIndex});
 
-  VaultKeyset vk_old;
-  vk_old.Initialize(&platform_, homedirs_.crypto());
-  EXPECT_TRUE(homedirs_.GetValidKeyset(users_[0].credentials, &vk_old,
-                                       /* error */ nullptr));
-  EXPECT_EQ(vk_old.legacy_index(), kInitialKeysetIndex);
-
-  VaultKeyset vk_new;
-  vk_new.Initialize(&platform_, homedirs_.crypto());
-  EXPECT_FALSE(
-      homedirs_.GetValidKeyset(new_credentials, &vk_new, /* error */ nullptr));
+  VerifyKeysetPresentWithCredsAtIndex(users_[0].credentials,
+                                      kInitialKeysetIndex);
+  VerifyKeysetNotPresentWithCreds(new_credentials);
 }
 
 // Fail to add new keyset due to lacking privilieges.
@@ -508,20 +486,11 @@ TEST_F(KeysetManagementTest, AddKeysetInvalidPrivileges) {
   // Invalid permissions cause an addition error. Old keyset shall still be
   // readable with old credentials, and the new one shall not  exist.
 
-  std::vector<int> indicies;
-  EXPECT_TRUE(homedirs_.GetVaultKeysets(users_[0].obfuscated, &indicies));
-  EXPECT_THAT(indicies, ElementsAre(kInitialKeysetIndex));
+  VerifyKeysetIndicies({kInitialKeysetIndex});
 
-  VaultKeyset vk_old;
-  vk_old.Initialize(&platform_, homedirs_.crypto());
-  EXPECT_TRUE(homedirs_.GetValidKeyset(users_[0].credentials, &vk_old,
-                                       /* error */ nullptr));
-  EXPECT_EQ(vk_old.legacy_index(), kInitialKeysetIndex);
-
-  VaultKeyset vk_new;
-  vk_new.Initialize(&platform_, homedirs_.crypto());
-  EXPECT_FALSE(
-      homedirs_.GetValidKeyset(new_credentials, &vk_new, /* error */ nullptr));
+  VerifyKeysetPresentWithCredsAtIndex(users_[0].credentials,
+                                      kInitialKeysetIndex);
+  VerifyKeysetNotPresentWithCreds(new_credentials);
 }
 
 // Fail to add new keyset due to index pool exhaustion.
@@ -552,20 +521,11 @@ TEST_F(KeysetManagementTest, AddKeysetNoFreeIndices) {
   // free slots. Since we mocked the "slot" check, we should still have only
   // initial keyset index, adn the keyset is readable with the old credentials.
 
-  std::vector<int> indicies;
-  EXPECT_TRUE(homedirs_.GetVaultKeysets(users_[0].obfuscated, &indicies));
-  EXPECT_THAT(indicies, ElementsAre(kInitialKeysetIndex));
+  VerifyKeysetIndicies({kInitialKeysetIndex});
 
-  VaultKeyset vk_old;
-  vk_old.Initialize(&platform_, homedirs_.crypto());
-  EXPECT_TRUE(homedirs_.GetValidKeyset(users_[0].credentials, &vk_old,
-                                       /* error */ nullptr));
-  EXPECT_EQ(vk_old.legacy_index(), kInitialKeysetIndex);
-
-  VaultKeyset vk_new;
-  vk_new.Initialize(&platform_, homedirs_.crypto());
-  EXPECT_FALSE(
-      homedirs_.GetValidKeyset(new_credentials, &vk_new, /* error */ nullptr));
+  VerifyKeysetPresentWithCredsAtIndex(users_[0].credentials,
+                                      kInitialKeysetIndex);
+  VerifyKeysetNotPresentWithCreds(new_credentials);
 }
 
 // Fail to add new keyset due to failed encryption.
@@ -599,20 +559,11 @@ TEST_F(KeysetManagementTest, AddKeysetEncryptFail) {
   // If we failed to save the added keyset due to encryption failure, the old
   // keyset should still exist and be readable with the old credentials.
 
-  std::vector<int> indicies;
-  EXPECT_TRUE(homedirs_.GetVaultKeysets(users_[0].obfuscated, &indicies));
-  EXPECT_THAT(indicies, ElementsAre(kInitialKeysetIndex));
+  VerifyKeysetIndicies({kInitialKeysetIndex});
 
-  VaultKeyset vk_old;
-  vk_old.Initialize(&platform_, homedirs_.crypto());
-  EXPECT_TRUE(homedirs_.GetValidKeyset(users_[0].credentials, &vk_old,
-                                       /* error */ nullptr));
-  EXPECT_EQ(vk_old.legacy_index(), kInitialKeysetIndex);
-
-  VaultKeyset vk_new;
-  vk_new.Initialize(&platform_, homedirs_.crypto());
-  EXPECT_FALSE(
-      homedirs_.GetValidKeyset(new_credentials, &vk_new, /* error */ nullptr));
+  VerifyKeysetPresentWithCredsAtIndex(users_[0].credentials,
+                                      kInitialKeysetIndex);
+  VerifyKeysetNotPresentWithCreds(new_credentials);
 }
 
 // Fail to add new keyset due to failed disk write.
@@ -647,20 +598,11 @@ TEST_F(KeysetManagementTest, AddKeysetSaveFail) {
   // If we failed to save the added keyset due to disk failure, the old
   // keyset should still exist and be readable with the old credentials.
 
-  std::vector<int> indicies;
-  EXPECT_TRUE(homedirs_.GetVaultKeysets(users_[0].obfuscated, &indicies));
-  EXPECT_THAT(indicies, ElementsAre(kInitialKeysetIndex));
+  VerifyKeysetIndicies({kInitialKeysetIndex});
 
-  VaultKeyset vk_old;
-  vk_old.Initialize(&platform_, homedirs_.crypto());
-  EXPECT_TRUE(homedirs_.GetValidKeyset(users_[0].credentials, &vk_old,
-                                       /* error */ nullptr));
-  EXPECT_EQ(vk_old.legacy_index(), kInitialKeysetIndex);
-
-  VaultKeyset vk_new;
-  vk_new.Initialize(&platform_, homedirs_.crypto());
-  EXPECT_FALSE(
-      homedirs_.GetValidKeyset(new_credentials, &vk_new, /* error */ nullptr));
+  VerifyKeysetPresentWithCredsAtIndex(users_[0].credentials,
+                                      kInitialKeysetIndex);
+  VerifyKeysetNotPresentWithCreds(new_credentials);
 }
 
 // Successfully updates the keyset.
@@ -684,21 +626,10 @@ TEST_F(KeysetManagementTest, UpdateKeysetSuccess) {
   // updated without providing one. The keyset now available with the new
   // credentials only.
 
-  std::vector<int> indicies;
-  EXPECT_TRUE(homedirs_.GetVaultKeysets(users_[0].obfuscated, &indicies));
-  EXPECT_THAT(indicies, ElementsAre(kInitialKeysetIndex));
+  VerifyKeysetIndicies({kInitialKeysetIndex});
 
-  VaultKeyset vk_old;
-  vk_old.Initialize(&platform_, homedirs_.crypto());
-  EXPECT_FALSE(homedirs_.GetValidKeyset(users_[0].credentials, &vk_old,
-                                        /* error */ nullptr));
-
-  VaultKeyset vk_new;
-  vk_new.Initialize(&platform_, homedirs_.crypto());
-  EXPECT_TRUE(
-      homedirs_.GetValidKeyset(new_credentials, &vk_new, /* error */ nullptr));
-  EXPECT_EQ(vk_new.legacy_index(), kInitialKeysetIndex);
-  EXPECT_EQ(vk_new.label(), new_credentials.key_data().label());
+  VerifyKeysetNotPresentWithCreds(users_[0].credentials);
+  VerifyKeysetPresentWithCredsAtIndex(new_credentials, kInitialKeysetIndex);
 }
 
 // Fail to update keyset due to failed encryption.
@@ -710,6 +641,11 @@ TEST_F(KeysetManagementTest, UpdateKeysetEncryptFail) {
   brillo::SecureBlob new_passkey("new pass");
   Credentials new_credentials = CredsForUpdate(new_passkey);
   Key new_key = KeyForUpdate(new_credentials, 1);
+
+  // Update doesn't change label for restricted keysets.
+  KeyData key_data = new_credentials.key_data();
+  key_data.set_label(kPasswordLabel);
+  new_credentials.set_key_data(key_data);
 
   // Mock vk to inject encryption failure
   MockVaultKeysetFactory vault_keyset_factory;
@@ -730,24 +666,11 @@ TEST_F(KeysetManagementTest, UpdateKeysetEncryptFail) {
   // Failed encrypting updated keyset. Old keyset shall still be
   // readable with old credentials, and the new one shall not  exist.
 
-  std::vector<int> indicies;
-  EXPECT_TRUE(homedirs_.GetVaultKeysets(users_[0].obfuscated, &indicies));
-  EXPECT_THAT(indicies, ElementsAre(kInitialKeysetIndex));
+  VerifyKeysetIndicies({kInitialKeysetIndex});
 
-  VaultKeyset vk_old;
-  vk_old.Initialize(&platform_, homedirs_.crypto());
-  EXPECT_TRUE(homedirs_.GetValidKeyset(users_[0].credentials, &vk_old,
-                                       /* error */ nullptr));
-  EXPECT_EQ(vk_old.legacy_index(), kInitialKeysetIndex);
-
-  VaultKeyset vk_new;
-  vk_new.Initialize(&platform_, homedirs_.crypto());
-  // Update doesn't change label for restricted keysets.
-  KeyData key_data = new_credentials.key_data();
-  key_data.set_label(kPasswordLabel);
-  new_credentials.set_key_data(key_data);
-  EXPECT_FALSE(
-      homedirs_.GetValidKeyset(new_credentials, &vk_new, /* error */ nullptr));
+  VerifyKeysetPresentWithCredsAtIndex(users_[0].credentials,
+                                      kInitialKeysetIndex);
+  VerifyKeysetNotPresentWithCreds(new_credentials);
 }
 
 // Fail to update keyset due to failed disk write
@@ -759,6 +682,11 @@ TEST_F(KeysetManagementTest, UpdateKeysetSaveFail) {
   brillo::SecureBlob new_passkey("new pass");
   Credentials new_credentials = CredsForUpdate(new_passkey);
   Key new_key = KeyForUpdate(new_credentials, 1);
+
+  // Update doesn't change label for restricted keysets.
+  KeyData key_data = new_credentials.key_data();
+  key_data.set_label(kPasswordLabel);
+  new_credentials.set_key_data(key_data);
 
   // Mock vk to inject encryption failure
   MockVaultKeysetFactory vault_keyset_factory;
@@ -782,24 +710,11 @@ TEST_F(KeysetManagementTest, UpdateKeysetSaveFail) {
   // Failed saving updated keyset. Old keyset shall still be
   // readable with old credentials, and the new one shall not  exist.
 
-  std::vector<int> indicies;
-  EXPECT_TRUE(homedirs_.GetVaultKeysets(users_[0].obfuscated, &indicies));
-  EXPECT_THAT(indicies, ElementsAre(kInitialKeysetIndex));
+  VerifyKeysetIndicies({kInitialKeysetIndex});
 
-  VaultKeyset vk_old;
-  vk_old.Initialize(&platform_, homedirs_.crypto());
-  EXPECT_TRUE(homedirs_.GetValidKeyset(users_[0].credentials, &vk_old,
-                                       /* error */ nullptr));
-  EXPECT_EQ(vk_old.legacy_index(), kInitialKeysetIndex);
-
-  VaultKeyset vk_new;
-  vk_new.Initialize(&platform_, homedirs_.crypto());
-  // Update doesn't change label for restricted keysets.
-  KeyData key_data = new_credentials.key_data();
-  key_data.set_label(kPasswordLabel);
-  new_credentials.set_key_data(key_data);
-  EXPECT_FALSE(
-      homedirs_.GetValidKeyset(new_credentials, &vk_new, /* error */ nullptr));
+  VerifyKeysetPresentWithCredsAtIndex(users_[0].credentials,
+                                      kInitialKeysetIndex);
+  VerifyKeysetNotPresentWithCreds(new_credentials);
 }
 
 // Fail to update keyset due to lacking privilieges.
@@ -816,6 +731,11 @@ TEST_F(KeysetManagementTest, UpdateKeysetInvalidPrivileges) {
   Credentials new_credentials = CredsForUpdate(new_passkey);
   Key new_key = KeyForUpdate(new_credentials, 1);
 
+  // Update doesn't change label for restricted keysets.
+  KeyData key_data = new_credentials.key_data();
+  key_data.set_label(kPasswordLabel);
+  new_credentials.set_key_data(key_data);
+
   // TEST
 
   EXPECT_EQ(CRYPTOHOME_ERROR_AUTHORIZATION_KEY_DENIED,
@@ -826,25 +746,11 @@ TEST_F(KeysetManagementTest, UpdateKeysetInvalidPrivileges) {
   // Invalid permissions cause an update error. Old keyset shall still be
   // readable with old credentials, and the new one shall not  exist.
 
-  std::vector<int> indicies;
-  EXPECT_TRUE(homedirs_.GetVaultKeysets(users_[0].obfuscated, &indicies));
-  EXPECT_THAT(indicies, ElementsAre(kInitialKeysetIndex));
+  VerifyKeysetIndicies({kInitialKeysetIndex});
 
-  VaultKeyset vk_old;
-  vk_old.Initialize(&platform_, homedirs_.crypto());
-  EXPECT_TRUE(homedirs_.GetValidKeyset(users_[0].credentials, &vk_old,
-                                       /* error */ nullptr));
-  EXPECT_EQ(vk_old.legacy_index(), kInitialKeysetIndex);
-  EXPECT_EQ(vk_old.label(), users_[0].credentials.key_data().label());
-
-  VaultKeyset vk_new;
-  vk_new.Initialize(&platform_, homedirs_.crypto());
-  // Update doesn't change label for restricted keysets.
-  KeyData key_data = new_credentials.key_data();
-  key_data.set_label(kPasswordLabel);
-  new_credentials.set_key_data(key_data);
-  EXPECT_FALSE(
-      homedirs_.GetValidKeyset(new_credentials, &vk_new, /* error */ nullptr));
+  VerifyKeysetPresentWithCredsAtIndex(users_[0].credentials,
+                                      kInitialKeysetIndex);
+  VerifyKeysetNotPresentWithCreds(new_credentials);
 }
 
 // Fail to update keyset due to non existent label.
@@ -857,8 +763,13 @@ TEST_F(KeysetManagementTest, UpdateKeysetNonExistentLabel) {
   Credentials new_credentials = CredsForUpdate(new_passkey);
   Key new_key = KeyForUpdate(new_credentials, 1);
 
+  // Update doesn't change label for restricted keysets.
+  KeyData key_data = new_credentials.key_data();
+  key_data.set_label(kPasswordLabel);
+  new_credentials.set_key_data(key_data);
+
   Credentials not_existing_label_credentials = users_[0].credentials;
-  KeyData key_data = users_[0].credentials.key_data();
+  key_data = users_[0].credentials.key_data();
   key_data.set_label("i do not exist");
   not_existing_label_credentials.set_key_data(key_data);
 
@@ -872,25 +783,11 @@ TEST_F(KeysetManagementTest, UpdateKeysetNonExistentLabel) {
   // Invalid label cause an update error. Old keyset shall still be
   // readable with old credentials, and the new one shall not  exist.
 
-  std::vector<int> indicies;
-  EXPECT_TRUE(homedirs_.GetVaultKeysets(users_[0].obfuscated, &indicies));
-  EXPECT_THAT(indicies, ElementsAre(kInitialKeysetIndex));
+  VerifyKeysetIndicies({kInitialKeysetIndex});
 
-  VaultKeyset vk_old;
-  vk_old.Initialize(&platform_, homedirs_.crypto());
-  EXPECT_TRUE(homedirs_.GetValidKeyset(users_[0].credentials, &vk_old,
-                                       /* error */ nullptr));
-  EXPECT_EQ(vk_old.legacy_index(), kInitialKeysetIndex);
-  EXPECT_EQ(vk_old.label(), users_[0].credentials.key_data().label());
-
-  VaultKeyset vk_new;
-  vk_new.Initialize(&platform_, homedirs_.crypto());
-  // Update doesn't change label for restricted keysets.
-  key_data = new_credentials.key_data();
-  key_data.set_label(kPasswordLabel);
-  new_credentials.set_key_data(key_data);
-  EXPECT_FALSE(
-      homedirs_.GetValidKeyset(new_credentials, &vk_new, /* error */ nullptr));
+  VerifyKeysetPresentWithCredsAtIndex(users_[0].credentials,
+                                      kInitialKeysetIndex);
+  VerifyKeysetNotPresentWithCreds(new_credentials);
 }
 
 // Fails to update keyset due to missing signature.
@@ -903,6 +800,11 @@ TEST_F(KeysetManagementTest, UpdateKeysetAuthorizedNoSignature) {
   Credentials new_credentials = CredsForUpdate(new_passkey);
   Key new_key = KeyForUpdate(new_credentials, 1);
 
+  // Update doesn't change label for restricted keysets.
+  KeyData key_data = new_credentials.key_data();
+  key_data.set_label(kPasswordLabel);
+  new_credentials.set_key_data(key_data);
+
   // TEST
 
   EXPECT_EQ(CRYPTOHOME_ERROR_UPDATE_SIGNATURE_INVALID,
@@ -913,25 +815,11 @@ TEST_F(KeysetManagementTest, UpdateKeysetAuthorizedNoSignature) {
   // The keyset update requires the signature and fails when non provided. The
   // keyset is accessible with the old credentials.
 
-  std::vector<int> indicies;
-  EXPECT_TRUE(homedirs_.GetVaultKeysets(users_[0].obfuscated, &indicies));
-  EXPECT_THAT(indicies, ElementsAre(kInitialKeysetIndex));
+  VerifyKeysetIndicies({kInitialKeysetIndex});
 
-  VaultKeyset vk_old;
-  vk_old.Initialize(&platform_, homedirs_.crypto());
-  EXPECT_TRUE(homedirs_.GetValidKeyset(users_[0].credentials, &vk_old,
-                                       /* error */ nullptr));
-  EXPECT_EQ(vk_old.legacy_index(), kInitialKeysetIndex);
-  EXPECT_EQ(vk_old.label(), users_[0].credentials.key_data().label());
-
-  VaultKeyset vk_new;
-  vk_new.Initialize(&platform_, homedirs_.crypto());
-  // Update doesn't change label for restricted keysets.
-  KeyData key_data = new_credentials.key_data();
-  key_data.set_label(kPasswordLabel);
-  new_credentials.set_key_data(key_data);
-  EXPECT_FALSE(
-      homedirs_.GetValidKeyset(new_credentials, &vk_new, /* error */ nullptr));
+  VerifyKeysetPresentWithCredsAtIndex(users_[0].credentials,
+                                      kInitialKeysetIndex);
+  VerifyKeysetNotPresentWithCreds(new_credentials);
 }
 
 // Successfully updates keyset by providing correct signature.
@@ -944,6 +832,10 @@ TEST_F(KeysetManagementTest, UpdateKeysetAuthorizedSuccess) {
   brillo::SecureBlob new_passkey("new pass");
   Credentials new_credentials = CredsForUpdate(new_passkey);
   Key new_key = KeyForUpdate(new_credentials, 1);
+  // Update doesn't change label for restricted keysets.
+  KeyData key_data = new_credentials.key_data();
+  key_data.set_label(kPasswordLabel);
+  new_credentials.set_key_data(key_data);
 
   // TEST
 
@@ -955,26 +847,11 @@ TEST_F(KeysetManagementTest, UpdateKeysetAuthorizedSuccess) {
   // The keyset update requires signature, and succeed with the correct one
   // provided. The keyset now available with the new credentials only.
 
-  std::vector<int> indicies;
-  EXPECT_TRUE(homedirs_.GetVaultKeysets(users_[0].obfuscated, &indicies));
-  EXPECT_THAT(indicies, ElementsAre(kInitialKeysetIndex));
+  VerifyKeysetIndicies({kInitialKeysetIndex});
 
-  VaultKeyset vk_old;
-  vk_old.Initialize(&platform_, homedirs_.crypto());
-  EXPECT_FALSE(homedirs_.GetValidKeyset(users_[0].credentials, &vk_old,
-                                        /* error */ nullptr));
-
-  VaultKeyset vk_new;
-  vk_new.Initialize(&platform_, homedirs_.crypto());
-  // Update doesn't change label for restricted keysets.
-  KeyData key_data = new_credentials.key_data();
-  key_data.set_label(kPasswordLabel);
-  new_credentials.set_key_data(key_data);
-  EXPECT_TRUE(
-      homedirs_.GetValidKeyset(new_credentials, &vk_new, /* error */ nullptr));
-  EXPECT_EQ(vk_new.legacy_index(), kInitialKeysetIndex);
-  EXPECT_EQ(vk_new.label(), users_[0].credentials.key_data().label());
-  EXPECT_EQ(vk_new.serialized().key_data().revision(), 1);
+  VerifyKeysetNotPresentWithCreds(users_[0].credentials);
+  VerifyKeysetPresentWithCredsAtIndexAndRevision(new_credentials,
+                                                 kInitialKeysetIndex, 1);
 }
 
 // Ensure signing matches the test vectors in Chrome.
@@ -1005,6 +882,11 @@ TEST_F(KeysetManagementTest, UpdateKeysetAuthorizedCompatVector) {
   Credentials new_credentials = CredsForUpdate(new_passkey);
   Key new_key = KeyForUpdate(new_credentials, 1);
 
+  // Update doesn't change label for restricted keysets.
+  KeyData key_data = new_credentials.key_data();
+  key_data.set_label(kPasswordLabel);
+  new_credentials.set_key_data(key_data);
+
   std::string signature;
   ASSERT_TRUE(brillo::data_encoding::Base64Decode(kB64Signature, &signature));
 
@@ -1017,26 +899,11 @@ TEST_F(KeysetManagementTest, UpdateKeysetAuthorizedCompatVector) {
   // The keyset update requires signature, and succeed with the correct one
   // provided. The keyset now available with the new credentials only.
 
-  std::vector<int> indicies;
-  EXPECT_TRUE(homedirs_.GetVaultKeysets(users_[0].obfuscated, &indicies));
-  EXPECT_THAT(indicies, ElementsAre(kInitialKeysetIndex));
+  VerifyKeysetIndicies({kInitialKeysetIndex});
 
-  VaultKeyset vk_old;
-  vk_old.Initialize(&platform_, homedirs_.crypto());
-  EXPECT_FALSE(homedirs_.GetValidKeyset(users_[0].credentials, &vk_old,
-                                        /* error */ nullptr));
-
-  VaultKeyset vk_new;
-  vk_new.Initialize(&platform_, homedirs_.crypto());
-  // Update doesn't change label for restricted keysets.
-  KeyData key_data = new_credentials.key_data();
-  key_data.set_label(kPasswordLabel);
-  new_credentials.set_key_data(key_data);
-  EXPECT_TRUE(
-      homedirs_.GetValidKeyset(new_credentials, &vk_new, /* error */ nullptr));
-  EXPECT_EQ(vk_new.legacy_index(), kInitialKeysetIndex);
-  EXPECT_EQ(vk_new.label(), users_[0].credentials.key_data().label());
-  EXPECT_EQ(vk_new.serialized().key_data().revision(), 1);
+  VerifyKeysetNotPresentWithCreds(users_[0].credentials);
+  VerifyKeysetPresentWithCredsAtIndexAndRevision(new_credentials,
+                                                 kInitialKeysetIndex, 1);
 }
 
 // Fails to update keyset due to stale revision.
@@ -1064,17 +931,16 @@ TEST_F(KeysetManagementTest, UpdateKeysetAuthorizedNoLessOrEqualRevision) {
   // fails if that is not the case. The keyset now available with the old
   // credentials only.
 
-  std::vector<int> indicies;
-  EXPECT_TRUE(homedirs_.GetVaultKeysets(users_[0].obfuscated, &indicies));
-  EXPECT_THAT(indicies, ElementsAre(kInitialKeysetIndex));
+  // Update doesn't change label for restricted keysets.
+  KeyData key_data = new_credentials.key_data();
+  key_data.set_label(kPasswordLabel);
+  new_credentials.set_key_data(key_data);
 
-  VaultKeyset vk_old;
-  vk_old.Initialize(&platform_, homedirs_.crypto());
-  EXPECT_TRUE(homedirs_.GetValidKeyset(users_[0].credentials, &vk_old,
-                                       /* error */ nullptr));
-  EXPECT_EQ(vk_old.legacy_index(), kInitialKeysetIndex);
-  EXPECT_EQ(vk_old.label(), users_[0].credentials.key_data().label());
-  EXPECT_EQ(vk_old.serialized().key_data().revision(), 1);
+  VerifyKeysetIndicies({kInitialKeysetIndex});
+
+  VerifyKeysetPresentWithCredsAtIndexAndRevision(users_[0].credentials,
+                                                 kInitialKeysetIndex, 1);
+  VerifyKeysetNotPresentWithCreds(new_credentials);
 }
 
 // Fails to update keyset due to wrong signature.
@@ -1101,17 +967,11 @@ TEST_F(KeysetManagementTest, UpdateKeysetAuthorizedBadSignature) {
   // The keyset update requires the signature and fails when bad provided. The
   // keyset is accessible with the old credentials.
 
-  std::vector<int> indicies;
-  EXPECT_TRUE(homedirs_.GetVaultKeysets(users_[0].obfuscated, &indicies));
-  EXPECT_THAT(indicies, ElementsAre(kInitialKeysetIndex));
+  VerifyKeysetIndicies({kInitialKeysetIndex});
 
-  VaultKeyset vk_old;
-  vk_old.Initialize(&platform_, homedirs_.crypto());
-  EXPECT_TRUE(homedirs_.GetValidKeyset(users_[0].credentials, &vk_old,
-                                       /* error */ nullptr));
-  EXPECT_EQ(vk_old.legacy_index(), kInitialKeysetIndex);
-  EXPECT_EQ(vk_old.label(), users_[0].credentials.key_data().label());
-  EXPECT_EQ(vk_old.serialized().key_data().revision(), 0);
+  VerifyKeysetPresentWithCredsAtIndexAndRevision(users_[0].credentials,
+                                                 kInitialKeysetIndex, 0);
+  VerifyKeysetNotPresentWithCreds(new_credentials);
 }
 
 // Fails to update keyset due to wrong credentials.
@@ -1134,16 +994,10 @@ TEST_F(KeysetManagementTest, UpdateKeysetBadSecret) {
   // The keyset update fails when wrong credentials are provided. The keyset
   // now available with the old credentials only.
 
-  std::vector<int> indicies;
-  EXPECT_TRUE(homedirs_.GetVaultKeysets(users_[0].obfuscated, &indicies));
-  EXPECT_THAT(indicies, ElementsAre(kInitialKeysetIndex));
+  VerifyKeysetIndicies({kInitialKeysetIndex});
 
-  VaultKeyset vk_old;
-  vk_old.Initialize(&platform_, homedirs_.crypto());
-  EXPECT_TRUE(homedirs_.GetValidKeyset(users_[0].credentials, &vk_old,
-                                       /* error */ nullptr));
-  EXPECT_EQ(vk_old.legacy_index(), kInitialKeysetIndex);
-  EXPECT_EQ(vk_old.label(), users_[0].credentials.key_data().label());
+  VerifyKeysetPresentWithCredsAtIndex(users_[0].credentials,
+                                      kInitialKeysetIndex);
 }
 
 // Successfully removes keyset.
@@ -1170,20 +1024,10 @@ TEST_F(KeysetManagementTest, RemoveKeysetSuccess) {
   // We had one initial keyset and one added one. After deleting the initial
   // one, only the new one shoulde be available.
 
-  std::vector<int> indicies;
-  EXPECT_TRUE(homedirs_.GetVaultKeysets(users_[0].obfuscated, &indicies));
-  EXPECT_THAT(indicies, ElementsAre(index));
+  VerifyKeysetIndicies({index});
 
-  VaultKeyset vk0;
-  vk0.Initialize(&platform_, homedirs_.crypto());
-  EXPECT_FALSE(homedirs_.GetValidKeyset(users_[0].credentials, &vk0,
-                                        /* error */ nullptr));
-
-  VaultKeyset vk1;
-  vk1.Initialize(&platform_, homedirs_.crypto());
-  EXPECT_TRUE(
-      homedirs_.GetValidKeyset(new_credentials, &vk1, /* error */ nullptr));
-  EXPECT_EQ(vk1.legacy_index(), index);
+  VerifyKeysetNotPresentWithCreds(users_[0].credentials);
+  VerifyKeysetPresentWithCredsAtIndex(new_credentials, index);
 }
 
 // Fails to remove due to missing the desired key.
@@ -1204,15 +1048,10 @@ TEST_F(KeysetManagementTest, RemoveKeysetNotFound) {
   // Trying to delete keyset with non-existing label. Nothing changes, initial
   // keyset still available with old credentials.
 
-  std::vector<int> indicies;
-  EXPECT_TRUE(homedirs_.GetVaultKeysets(users_[0].obfuscated, &indicies));
-  EXPECT_THAT(indicies, ElementsAre(kInitialKeysetIndex));
+  VerifyKeysetIndicies({kInitialKeysetIndex});
 
-  VaultKeyset vk0;
-  vk0.Initialize(&platform_, homedirs_.crypto());
-  EXPECT_TRUE(homedirs_.GetValidKeyset(users_[0].credentials, &vk0,
-                                       /* error */ nullptr));
-  EXPECT_EQ(vk0.legacy_index(), kInitialKeysetIndex);
+  VerifyKeysetPresentWithCredsAtIndex(users_[0].credentials,
+                                      kInitialKeysetIndex);
 }
 
 // Fails to remove due to not existing label.
@@ -1236,15 +1075,10 @@ TEST_F(KeysetManagementTest, RemoveKeysetNonExistentLabel) {
   // Wrong label on authorization credentials. Nothing changes, initial
   // keyset still available with old credentials.
 
-  std::vector<int> indicies;
-  EXPECT_TRUE(homedirs_.GetVaultKeysets(users_[0].obfuscated, &indicies));
-  EXPECT_THAT(indicies, ElementsAre(kInitialKeysetIndex));
+  VerifyKeysetIndicies({kInitialKeysetIndex});
 
-  VaultKeyset vk0;
-  vk0.Initialize(&platform_, homedirs_.crypto());
-  EXPECT_TRUE(homedirs_.GetValidKeyset(users_[0].credentials, &vk0,
-                                       /* error */ nullptr));
-  EXPECT_EQ(vk0.legacy_index(), kInitialKeysetIndex);
+  VerifyKeysetPresentWithCredsAtIndex(users_[0].credentials,
+                                      kInitialKeysetIndex);
 }
 
 // Fails to remove due to invalid credentials.
@@ -1266,15 +1100,10 @@ TEST_F(KeysetManagementTest, RemoveKeysetInvalidCreds) {
   // Wrong credentials. Nothing changes, initial keyset still available
   // with old credentials.
 
-  std::vector<int> indicies;
-  EXPECT_TRUE(homedirs_.GetVaultKeysets(users_[0].obfuscated, &indicies));
-  EXPECT_THAT(indicies, ElementsAre(kInitialKeysetIndex));
+  VerifyKeysetIndicies({kInitialKeysetIndex});
 
-  VaultKeyset vk0;
-  vk0.Initialize(&platform_, homedirs_.crypto());
-  EXPECT_TRUE(homedirs_.GetValidKeyset(users_[0].credentials, &vk0,
-                                       /* error */ nullptr));
-  EXPECT_EQ(vk0.legacy_index(), kInitialKeysetIndex);
+  VerifyKeysetPresentWithCredsAtIndex(users_[0].credentials,
+                                      kInitialKeysetIndex);
 }
 
 // Fails to remove due to lacking privilieges.
@@ -1297,15 +1126,10 @@ TEST_F(KeysetManagementTest, RemoveKeysetInvalidPrivileges) {
   // Wrong permission on the keyset. Nothing changes, initial keyset still
   // available with old credentials.
 
-  std::vector<int> indicies;
-  EXPECT_TRUE(homedirs_.GetVaultKeysets(users_[0].obfuscated, &indicies));
-  EXPECT_THAT(indicies, ElementsAre(kInitialKeysetIndex));
+  VerifyKeysetIndicies({kInitialKeysetIndex});
 
-  VaultKeyset vk0;
-  vk0.Initialize(&platform_, homedirs_.crypto());
-  EXPECT_TRUE(homedirs_.GetValidKeyset(users_[0].credentials, &vk0,
-                                       /* error */ nullptr));
-  EXPECT_EQ(vk0.legacy_index(), kInitialKeysetIndex);
+  VerifyKeysetPresentWithCredsAtIndex(users_[0].credentials,
+                                      kInitialKeysetIndex);
 }
 
 // List labels.
@@ -1384,26 +1208,12 @@ TEST_F(KeysetManagementTest, ForceRemoveKeysetSuccess) {
   // We added two new keysets and force removed on of them. Only initial and the
   // second added shall remain.
 
-  std::vector<int> indicies;
-  EXPECT_TRUE(homedirs_.GetVaultKeysets(users_[0].obfuscated, &indicies));
-  EXPECT_THAT(indicies, ElementsAre(kInitialKeysetIndex, index2));
+  VerifyKeysetIndicies({kInitialKeysetIndex, index2});
 
-  VaultKeyset vk0;
-  vk0.Initialize(&platform_, homedirs_.crypto());
-  EXPECT_TRUE(homedirs_.GetValidKeyset(users_[0].credentials, &vk0,
-                                       /* error */ nullptr));
-  EXPECT_EQ(vk0.legacy_index(), kInitialKeysetIndex);
-
-  VaultKeyset vk1;
-  vk1.Initialize(&platform_, homedirs_.crypto());
-  EXPECT_FALSE(homedirs_.GetValidKeyset(new_credentials, &vk1,
-                                        /* error */ nullptr));
-
-  VaultKeyset vk2;
-  vk2.Initialize(&platform_, homedirs_.crypto());
-  EXPECT_TRUE(
-      homedirs_.GetValidKeyset(new_credentials2, &vk2, /* error */ nullptr));
-  EXPECT_EQ(vk2.legacy_index(), index2);
+  VerifyKeysetPresentWithCredsAtIndex(users_[0].credentials,
+                                      kInitialKeysetIndex);
+  VerifyKeysetNotPresentWithCreds(new_credentials);
+  VerifyKeysetPresentWithCredsAtIndex(new_credentials2, index2);
 }
 
 // Fails to remove keyset due to invalid index.
@@ -1421,15 +1231,10 @@ TEST_F(KeysetManagementTest, ForceRemoveKeysetInvalidIndex) {
   // Trying to delete keyset with out-of-bound index id. Nothing changes,
   // initial keyset still available with old creds.
 
-  std::vector<int> indicies;
-  EXPECT_TRUE(homedirs_.GetVaultKeysets(users_[0].obfuscated, &indicies));
-  EXPECT_THAT(indicies, ElementsAre(kInitialKeysetIndex));
+  VerifyKeysetIndicies({kInitialKeysetIndex});
 
-  VaultKeyset vk0;
-  vk0.Initialize(&platform_, homedirs_.crypto());
-  EXPECT_TRUE(homedirs_.GetValidKeyset(users_[0].credentials, &vk0,
-                                       /* error */ nullptr));
-  EXPECT_EQ(vk0.legacy_index(), kInitialKeysetIndex);
+  VerifyKeysetPresentWithCredsAtIndex(users_[0].credentials,
+                                      kInitialKeysetIndex);
 }
 
 // Fails to remove keyset due to injected error.
@@ -1450,15 +1255,10 @@ TEST_F(KeysetManagementTest, ForceRemoveKeysetFailedDelete) {
   // Deletion fails, Nothing changes, initial keyset still available with old
   // creds.
 
-  std::vector<int> indicies;
-  EXPECT_TRUE(homedirs_.GetVaultKeysets(users_[0].obfuscated, &indicies));
-  EXPECT_THAT(indicies, ElementsAre(kInitialKeysetIndex));
+  VerifyKeysetIndicies({kInitialKeysetIndex});
 
-  VaultKeyset vk0;
-  vk0.Initialize(&platform_, homedirs_.crypto());
-  EXPECT_TRUE(homedirs_.GetValidKeyset(users_[0].credentials, &vk0,
-                                       /* error */ nullptr));
-  EXPECT_EQ(vk0.legacy_index(), kInitialKeysetIndex);
+  VerifyKeysetPresentWithCredsAtIndex(users_[0].credentials,
+                                      kInitialKeysetIndex);
 }
 
 // Successfully moves keyset.
@@ -1483,15 +1283,9 @@ TEST_F(KeysetManagementTest, MoveKeysetSuccess) {
   // Move initial keyset twice, expect it to be accessible with old creds on the
   // new index slot.
 
-  std::vector<int> indicies;
-  EXPECT_TRUE(homedirs_.GetVaultKeysets(users_[0].obfuscated, &indicies));
-  EXPECT_THAT(indicies, ElementsAre(kSecondMoveIndex));
+  VerifyKeysetIndicies({kSecondMoveIndex});
 
-  VaultKeyset vk;
-  vk.Initialize(&platform_, homedirs_.crypto());
-  EXPECT_TRUE(homedirs_.GetValidKeyset(users_[0].credentials, &vk,
-                                       /* error */ nullptr));
-  EXPECT_EQ(vk.legacy_index(), kSecondMoveIndex);
+  VerifyKeysetPresentWithCredsAtIndex(users_[0].credentials, kSecondMoveIndex);
 }
 
 // Fails to move keyset.
@@ -1553,24 +1347,14 @@ TEST_F(KeysetManagementTest, MoveKeysetFail) {
 
   // VERIFY
 
-  std::vector<int> indicies;
-  EXPECT_TRUE(homedirs_.GetVaultKeysets(users_[0].obfuscated, &indicies));
   // TODO(chromium:1141301, dlunev): the fact we have keyset index+3 is a bug -
   // MoveKeyset will not cleanup created file if Rename fails. Not addressing it
   // now durign test refactor, but will in the coming CLs.
-  EXPECT_THAT(indicies, ElementsAre(kInitialKeysetIndex, index, index + 3));
+  VerifyKeysetIndicies({kInitialKeysetIndex, index, index + 3});
 
-  VaultKeyset vk0;
-  vk0.Initialize(&platform_, homedirs_.crypto());
-  EXPECT_TRUE(homedirs_.GetValidKeyset(users_[0].credentials, &vk0,
-                                       /* error */ nullptr));
-  EXPECT_EQ(vk0.legacy_index(), kInitialKeysetIndex);
-
-  VaultKeyset vk1;
-  vk1.Initialize(&platform_, homedirs_.crypto());
-  EXPECT_TRUE(
-      homedirs_.GetValidKeyset(new_credentials, &vk1, /* error */ nullptr));
-  EXPECT_EQ(vk1.legacy_index(), index);
+  VerifyKeysetPresentWithCredsAtIndex(users_[0].credentials,
+                                      kInitialKeysetIndex);
+  VerifyKeysetPresentWithCredsAtIndex(new_credentials, index);
 }
 
 TEST_F(KeysetManagementTest, ReSaveKeysetNoReSave) {
