@@ -471,6 +471,11 @@ Properties	string Address [readonly]
 			"builtin_adapter_mac", "usb_adapter_mac" and "".
 			Equals to "" only if unset.
 
+		bool Inhibited [readwrite]
+
+			(Cellular only) When set to true, the modem associated
+			with the device will be inhibited from active scanning.
+
 		string Interface [readonly]
 
 			The Device's interface name (for example "eth0").

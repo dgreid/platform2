@@ -99,7 +99,7 @@ class CellularServiceProviderTest : public testing::Test {
 
  private:
   EventDispatcherForTest dispatcher_;
-  MockControl control_;
+  NiceMock<MockControl> control_;
   NiceMock<MockMetrics> metrics_;
   MockManager manager_;
   MockModemInfo modem_info_;

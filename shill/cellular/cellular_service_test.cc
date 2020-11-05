@@ -75,7 +75,7 @@ class CellularServiceTest : public testing::Test {
   }
 
   EventDispatcher dispatcher_;
-  MockControl control_;
+  NiceMock<MockControl> control_;
   MockMetrics metrics_;
   NiceMock<MockManager> manager_;
   MockModemInfo modem_info_;

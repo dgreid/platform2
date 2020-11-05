@@ -24,14 +24,14 @@ class MockMm1Proxy : public Mm1ProxyInterface {
   MockMm1Proxy& operator=(const MockMm1Proxy&) = delete;
 
   // Inherited methods from ModemProxyInterface.
-  MOCK_METHOD(void, ScanDevices, (const ResultCallback&, int), (override));
+  MOCK_METHOD(void, ScanDevices, (const ResultCallback&), (override));
   MOCK_METHOD(void,
               SetLogging,
-              (const std::string&, const ResultCallback&, int),
+              (const std::string&, const ResultCallback&),
               (override));
   MOCK_METHOD(void,
               InhibitDevice,
-              (const std::string&, bool, const ResultCallback&, int),
+              (const std::string&, bool, const ResultCallback&),
               (override));
 };
 

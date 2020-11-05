@@ -15,6 +15,7 @@
 #include <base/memory/weak_ptr.h>
 #include <gtest/gtest_prod.h>  // for FRIEND_TEST
 
+#include "shill/cellular/mm1_proxy_interface.h"
 #include "shill/cellular/mobile_operator_info.h"
 #include "shill/device.h"
 #include "shill/device_id.h"
@@ -302,6 +303,7 @@ class Cellular : public Device,
   const std::string& iccid() const { return iccid_; }
 
   Type type() const { return type_; }
+  bool inhibited() const { return inhibited_; }
 
   // Returns a unique identifier for a SIM Card. For physical cards this will be
   // the ICCID and there should only be one matching service. For eSIM cards,
@@ -346,6 +348,7 @@ class Cellular : public Device,
   void OnOperatorChanged() override;
 
   CellularCapability* capability_for_testing() { return capability_.get(); }
+  mm1::Mm1ProxyInterface* mm1_proxy_for_testing() { return mm1_proxy_.get(); }
 
  private:
   friend class CellularTest;
@@ -400,10 +403,7 @@ class Cellular : public Device,
   FRIEND_TEST(CellularTest, ScanImmediateFailure);
   FRIEND_TEST(CellularTest, ScanSuccess);
   FRIEND_TEST(CellularTest, SetAllowRoaming);
-  FRIEND_TEST(CellularTest, StartModemCallback);
-  FRIEND_TEST(CellularTest, StartModemCallbackFail);
-  FRIEND_TEST(CellularTest, StopModemCallback);
-  FRIEND_TEST(CellularTest, StopModemCallbackFail);
+  FRIEND_TEST(CellularTest, SetInhibited);
   FRIEND_TEST(CellularTest, StopPPPOnDisconnect);
   FRIEND_TEST(CellularTest, StorageIdentifier);
   FRIEND_TEST(CellularTest, StartConnected);
@@ -435,6 +435,8 @@ class Cellular : public Device,
   void StartModem(Error* error, const EnabledStateChangedCallback& callback);
   void StartModemCallback(const EnabledStateChangedCallback& callback,
                           const Error& error);
+  void StartModemGetDeviceCallback(const EnabledStateChangedCallback& callback,
+                                   const brillo::Any& device);
   void StopModem(Error* error, const EnabledStateChangedCallback& callback);
   void StopModemCallback(const EnabledStateChangedCallback& callback,
                          const Error& error);
@@ -470,6 +472,9 @@ class Cellular : public Device,
   // DBus accessors
   bool GetAllowRoaming(Error* /*error*/);
   bool SetAllowRoaming(const bool& value, Error* error);
+  bool GetInhibited(Error* /*error*/);
+  bool SetInhibited(const bool& inhibited, Error* error);
+  void OnInhibitDevice(bool inhibited, const Error& error);
   KeyValueStore GetSimLockStatus(Error* error);
 
   // When shill terminates or ChromeOS suspends, this function is called to
@@ -571,7 +576,11 @@ class Cellular : public Device,
   // ///////////////////////////////////////////////////////////////////////////
 
   Type type_;
+  std::unique_ptr<mm1::Mm1ProxyInterface> mm1_proxy_;
   std::unique_ptr<CellularCapability> capability_;
+
+  // The uid from the org.freedesktop.ModemManager1.Device property.
+  std::string uid_;
 
   PPPDeviceFactory* ppp_device_factory_;
 
@@ -583,6 +592,10 @@ class Cellular : public Device,
 
   // User preference to allow or disallow roaming
   bool allow_roaming_;
+
+  // Reflects the Device property indicating that the modem is inhibted. The
+  // property is not persisted and is reset to false when the modem starts.
+  bool inhibited_;
 
   // Track whether a user initiated scan is in prgoress (initiated via ::Scan)
   bool proposed_scan_in_progress_;

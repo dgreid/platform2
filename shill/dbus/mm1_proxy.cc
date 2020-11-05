@@ -27,19 +27,18 @@ Mm1Proxy::Mm1Proxy(const scoped_refptr<dbus::Bus>& bus, const string& service)
 
 Mm1Proxy::~Mm1Proxy() = default;
 
-void Mm1Proxy::ScanDevices(const ResultCallback& callback, int timeout) {
+void Mm1Proxy::ScanDevices(const ResultCallback& callback) {
   SLOG(&proxy_->GetObjectPath(), 2) << __func__;
   proxy_->ScanDevicesAsync(
       base::Bind(&Mm1Proxy::OnOperationSuccess, weak_factory_.GetWeakPtr(),
                  callback, __func__),
       base::Bind(&Mm1Proxy::OnOperationFailure, weak_factory_.GetWeakPtr(),
                  callback, __func__),
-      timeout);
+      dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
 }
 
 void Mm1Proxy::SetLogging(const std::string& level,
-                          const ResultCallback& callback,
-                          int timeout) {
+                          const ResultCallback& callback) {
   SLOG(&proxy_->GetObjectPath(), 2) << __func__ << ": " << level;
   proxy_->SetLoggingAsync(
       level,
@@ -47,13 +46,12 @@ void Mm1Proxy::SetLogging(const std::string& level,
                  callback, __func__),
       base::Bind(&Mm1Proxy::OnOperationFailure, weak_factory_.GetWeakPtr(),
                  callback, __func__),
-      timeout);
+      dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
 }
 
 void Mm1Proxy::InhibitDevice(const std::string& uid,
                              bool inhibit,
-                             const ResultCallback& callback,
-                             int timeout) {
+                             const ResultCallback& callback) {
   SLOG(&proxy_->GetObjectPath(), 2)
       << __func__ << ": " << uid << " = " << inhibit;
   proxy_->InhibitDeviceAsync(
@@ -62,7 +60,7 @@ void Mm1Proxy::InhibitDevice(const std::string& uid,
                  callback, __func__),
       base::Bind(&Mm1Proxy::OnOperationFailure, weak_factory_.GetWeakPtr(),
                  callback, __func__),
-      timeout);
+      dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
 }
 
 void Mm1Proxy::OnOperationSuccess(const ResultCallback& callback,

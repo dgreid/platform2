@@ -27,14 +27,12 @@ class Mm1Proxy : public Mm1ProxyInterface {
   Mm1Proxy& operator=(const Mm1Proxy&) = delete;
 
   // Inherited methods from Mm1ProxyInterface.
-  void ScanDevices(const ResultCallback& callback, int timeout) override;
+  void ScanDevices(const ResultCallback& callback) override;
   void SetLogging(const std::string& level,
-                  const ResultCallback& callback,
-                  int timeout) override;
+                  const ResultCallback& callback) override;
   void InhibitDevice(const std::string& uid,
                      bool inhibit,
-                     const ResultCallback& callback,
-                     int timeout) override;
+                     const ResultCallback& callback) override;
 
   // Callbacks for various async calls that uses ResultCallback.
   void OnOperationSuccess(const ResultCallback& callback,

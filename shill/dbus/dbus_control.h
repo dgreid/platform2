@@ -89,6 +89,9 @@ class DBusControl : public ControlInterface {
       const base::Closure& service_vanished_callback) override;
 
   // Proxies for ModemManager1 interfaces
+  std::unique_ptr<mm1::Mm1ProxyInterface> CreateMM1Proxy(
+      const std::string& service) override;
+
   std::unique_ptr<mm1::ModemLocationProxyInterface> CreateMM1ModemLocationProxy(
       const RpcIdentifier& path, const std::string& service) override;
 

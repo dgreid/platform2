@@ -37,6 +37,7 @@ extern "C" {
 #include "shill/cellular/mock_mm1_modem_modemcdma_proxy.h"
 #include "shill/cellular/mock_mm1_modem_proxy.h"
 #include "shill/cellular/mock_mm1_modem_simple_proxy.h"
+#include "shill/cellular/mock_mm1_proxy.h"
 #include "shill/cellular/mock_mobile_operator_info.h"
 #include "shill/cellular/mock_modem_info.h"
 #include "shill/dbus/dbus_properties_proxy.h"
@@ -81,9 +82,8 @@ using testing::SetArgPointee;
 namespace shill {
 
 namespace {
-
 RpcIdentifier kTestBearerPath("/org/freedesktop/ModemManager1/Bearer/0");
-
+constexpr char kUid[] = "uid";
 }  // namespace
 
 class CellularPropertyTest : public PropertyStoreTest {
@@ -151,6 +151,7 @@ class CellularTest : public testing::TestWithParam<Cellular::Type> {
         device_info_(&manager_),
         dhcp_config_(new MockDHCPConfig(modem_info_.control_interface(),
                                         kTestDeviceName)),
+        mm1_proxy_(new mm1::MockMm1Proxy()),
         mock_home_provider_info_(nullptr),
         mock_serving_operator_info_(nullptr),
         device_(new Cellular(&modem_info_,
@@ -205,21 +206,29 @@ class CellularTest : public testing::TestWithParam<Cellular::Type> {
     return base::Contains(valid_types, GetParam());
   }
 
-  void PopulateProxies() {
+  void CreatePropertiesProxy() {
     dbus_properties_proxy_ =
         DBusPropertiesProxy::CreateDBusPropertiesProxyForTesting();
+    FakePropertiesProxy* fake_properties =
+        dbus_properties_proxy_->GetFakePropertiesProxyForTesting();
     // Ensure that GetAll calls to MM_DBUS_INTERFACE_MODEM and
     // MM_DBUS_INTERFACE_MODEM_MODEM3GPP succeed and return a valid dictionary.
-    dbus_properties_proxy_->GetFakePropertiesProxyForTesting()
-        ->SetDictionaryForTesting(MM_DBUS_INTERFACE_MODEM,
-                                  brillo::VariantDictionary());
-    dbus_properties_proxy_->GetFakePropertiesProxyForTesting()
-        ->SetDictionaryForTesting(MM_DBUS_INTERFACE_MODEM_MODEM3GPP,
-                                  brillo::VariantDictionary());
+    fake_properties->SetDictionaryForTesting(MM_DBUS_INTERFACE_MODEM,
+                                             brillo::VariantDictionary());
+    fake_properties->SetDictionaryForTesting(MM_DBUS_INTERFACE_MODEM_MODEM3GPP,
+                                             brillo::VariantDictionary());
+    // Set the Device property so that StartModem succeeds.
+    fake_properties->SetForTesting(modemmanager::kModemManager1ModemInterface,
+                                   MM_MODEM_PROPERTY_DEVICE,
+                                   brillo::Any(std::string(kUid)));
+  }
+
+  void PopulateProxies() {
+    CreatePropertiesProxy();
     mm1_modem_location_proxy_.reset(new mm1::MockModemLocationProxy());
     mm1_modem_3gpp_proxy_.reset(new mm1::MockModemModem3gppProxy());
     mm1_modem_cdma_proxy_.reset(new mm1::MockModemModemCdmaProxy());
-    mm1_proxy_.reset(new mm1::MockModemProxy());
+    mm1_modem_proxy_.reset(new mm1::MockModemProxy());
     mm1_simple_proxy_.reset(new mm1::MockModemSimpleProxy());
   }
 
@@ -355,7 +364,8 @@ class CellularTest : public testing::TestWithParam<Cellular::Type> {
   }
 
   void SetCommonOnAfterResumeExpectations() {
-    EXPECT_CALL(*mm1_proxy_, set_state_changed_callback(_)).Times(AnyNumber());
+    EXPECT_CALL(*mm1_modem_proxy_, set_state_changed_callback(_))
+        .Times(AnyNumber());
     EXPECT_CALL(manager_, UpdateEnabledTechnologies()).Times(AnyNumber());
     EXPECT_CALL(*static_cast<DeviceMockAdaptor*>(device_->adaptor()),
                 EmitBoolChanged(_, _))
@@ -364,7 +374,7 @@ class CellularTest : public testing::TestWithParam<Cellular::Type> {
 
   mm1::MockModemProxy* SetupOnAfterResume() {
     SetCommonOnAfterResumeExpectations();
-    return mm1_proxy_.get();  // Before the capability snags it.
+    return mm1_modem_proxy_.get();  // Before the capability snags it.
   }
 
   void VerifyOperatorMap(const Stringmap& operator_map,
@@ -395,6 +405,17 @@ class CellularTest : public testing::TestWithParam<Cellular::Type> {
       ASSERT_NE(endit, it);
       EXPECT_EQ(country, it->second);
     }
+  }
+
+  void CallStartModemCallback(const Error& error) {
+    device_->StartModemCallback(
+        Bind(&CellularTest::TestCallback, Unretained(this)), error);
+    dispatcher_.DispatchPendingEvents();
+  }
+
+  void CallStopModemCallback(const Error& error) {
+    device_->StopModemCallback(
+        Bind(&CellularTest::TestCallback, Unretained(this)), error);
   }
 
   MOCK_METHOD(void, TestCallback, (const Error&));
@@ -428,8 +449,12 @@ class CellularTest : public testing::TestWithParam<Cellular::Type> {
 
     std::unique_ptr<DBusPropertiesProxy> CreateDBusPropertiesProxy(
         const RpcIdentifier& path, const std::string& service) override {
-      CHECK(test_->dbus_properties_proxy_);
-      return std::move(test_->dbus_properties_proxy_);
+      std::unique_ptr<DBusPropertiesProxy> proxy =
+          std::move(test_->dbus_properties_proxy_);
+
+      // Replace properties for subsequent requests.
+      test_->CreatePropertiesProxy();
+      return proxy;
     }
 
     std::unique_ptr<mm1::ModemLocationProxyInterface>
@@ -453,10 +478,16 @@ class CellularTest : public testing::TestWithParam<Cellular::Type> {
       return std::move(test_->mm1_modem_cdma_proxy_);
     }
 
-    std::unique_ptr<mm1::ModemProxyInterface> CreateMM1ModemProxy(
-        const RpcIdentifier& path, const std::string& service) override {
+    std::unique_ptr<mm1::Mm1ProxyInterface> CreateMM1Proxy(
+        const std::string& service) override {
       CHECK(test_->mm1_proxy_);
       return std::move(test_->mm1_proxy_);
+    }
+
+    std::unique_ptr<mm1::ModemProxyInterface> CreateMM1ModemProxy(
+        const RpcIdentifier& path, const std::string& service) override {
+      CHECK(test_->mm1_modem_proxy_);
+      return std::move(test_->mm1_modem_proxy_);
     }
 
     std::unique_ptr<mm1::ModemSimpleProxyInterface> CreateMM1ModemSimpleProxy(
@@ -513,10 +544,11 @@ class CellularTest : public testing::TestWithParam<Cellular::Type> {
 
   bool create_gsm_card_proxy_from_factory_;
   unique_ptr<DBusPropertiesProxy> dbus_properties_proxy_;
+  unique_ptr<mm1::MockMm1Proxy> mm1_proxy_;
   unique_ptr<mm1::MockModemModem3gppProxy> mm1_modem_3gpp_proxy_;
   unique_ptr<mm1::MockModemModemCdmaProxy> mm1_modem_cdma_proxy_;
   unique_ptr<mm1::MockModemLocationProxy> mm1_modem_location_proxy_;
-  unique_ptr<mm1::MockModemProxy> mm1_proxy_;
+  unique_ptr<mm1::MockModemProxy> mm1_modem_proxy_;
   unique_ptr<mm1::MockModemSimpleProxy> mm1_simple_proxy_;
   MockMobileOperatorInfo* mock_home_provider_info_;
   MockMobileOperatorInfo* mock_serving_operator_info_;
@@ -1252,40 +1284,32 @@ TEST_P(CellularTest, ModemStateChangeLostRegistration) {
 
 TEST_P(CellularTest, StartModemCallback) {
   EXPECT_CALL(*this, TestCallback(IsSuccess()));
-  EXPECT_EQ(device_->state_, Cellular::kStateDisabled);
-  device_->StartModemCallback(
-      Bind(&CellularTest::TestCallback, Unretained(this)),
-      Error(Error::kSuccess));
-  EXPECT_EQ(device_->state_, Cellular::kStateEnabled);
+  EXPECT_EQ(device_->state(), Cellular::kStateDisabled);
+  CallStartModemCallback(Error(Error::kSuccess));
+  EXPECT_EQ(device_->state(), Cellular::kStateEnabled);
 }
 
 TEST_P(CellularTest, StartModemCallbackFail) {
   EXPECT_CALL(*this, TestCallback(IsFailure()));
-  EXPECT_EQ(device_->state_, Cellular::kStateDisabled);
-  device_->StartModemCallback(
-      Bind(&CellularTest::TestCallback, Unretained(this)),
-      Error(Error::kOperationFailed));
-  EXPECT_EQ(device_->state_, Cellular::kStateDisabled);
+  EXPECT_EQ(device_->state(), Cellular::kStateDisabled);
+  CallStartModemCallback(Error(Error::kOperationFailed));
+  EXPECT_EQ(device_->state(), Cellular::kStateDisabled);
 }
 
 TEST_P(CellularTest, StopModemCallback) {
   EXPECT_CALL(*this, TestCallback(IsSuccess()));
   SetMockService();
-  device_->StopModemCallback(
-      Bind(&CellularTest::TestCallback, Unretained(this)),
-      Error(Error::kSuccess));
-  EXPECT_EQ(device_->state_, Cellular::kStateDisabled);
-  EXPECT_EQ(nullptr, device_->service_);
+  CallStopModemCallback(Error(Error::kSuccess));
+  EXPECT_EQ(device_->state(), Cellular::kStateDisabled);
+  EXPECT_EQ(device_->service(), nullptr);
 }
 
 TEST_P(CellularTest, StopModemCallbackFail) {
   EXPECT_CALL(*this, TestCallback(IsFailure()));
   SetMockService();
-  device_->StopModemCallback(
-      Bind(&CellularTest::TestCallback, Unretained(this)),
-      Error(Error::kOperationFailed));
-  EXPECT_EQ(device_->state_, Cellular::kStateDisabled);
-  EXPECT_EQ(nullptr, device_->service_);
+  CallStopModemCallback(Error(Error::kOperationFailed));
+  EXPECT_EQ(device_->state(), Cellular::kStateDisabled);
+  EXPECT_EQ(device_->service(), nullptr);
 }
 
 TEST_P(CellularTest, IsRoamingAllowedOrRequired) {
@@ -1308,6 +1332,31 @@ TEST_P(CellularTest, SetAllowRoaming) {
   device_->SetAllowRoaming(true, &error);
   EXPECT_TRUE(error.IsSuccess());
   EXPECT_TRUE(device_->allow_roaming_);
+}
+
+TEST_P(CellularTest, SetInhibited) {
+  PopulateProxies();
+
+  // Cellular takes ownership of mm1_proxy_ on construction, so cast its
+  // mm1_proxy_ to a MockMm1Proxy*.
+  auto* mm1_proxy =
+      static_cast<mm1::MockMm1Proxy*>(device_->mm1_proxy_for_testing());
+
+  // Cellular::SetInhibit() will call mm1_proxy_->InhibitDevice which should
+  // invoke |callback| with an empty (successful) Error parameter.
+  EXPECT_CALL(*mm1_proxy, InhibitDevice(kUid, true, _))
+      .WillOnce(
+          Invoke([](const std::string&, bool, const ResultCallback& callback) {
+            callback.Run(Error());
+          }));
+
+  // Invoke Cellular::StartModemCallback() to simulate the modem starting, which
+  // is required before SetInhibit can succeed.
+  CallStartModemCallback(Error(Error::kSuccess));
+
+  EXPECT_FALSE(device_->inhibited());
+  device_->SetInhibited(true, /*error=*/nullptr);
+  EXPECT_TRUE(device_->inhibited());
 }
 
 class TestRpcTaskDelegate : public RpcTaskDelegate,
@@ -1689,14 +1738,14 @@ TEST_P(CellularTest, OnAfterResumeDisabledWantDisabled) {
   // things alone.
 
   // Initial state.
-  mm1::MockModemProxy* mm1_proxy = SetupOnAfterResume();
+  mm1::MockModemProxy* mm1_modem_proxy = SetupOnAfterResume();
   set_enabled_persistent(false);
   EXPECT_FALSE(device_->running());
   EXPECT_FALSE(device_->enabled_persistent());
   EXPECT_EQ(Cellular::kStateDisabled, device_->state_);
 
   // Resume, while device is disabled.
-  EXPECT_CALL(*mm1_proxy, Enable(_, _, _, _)).Times(0);
+  EXPECT_CALL(*mm1_modem_proxy, Enable(_, _, _, _)).Times(0);
   device_->OnAfterResume();
   EXPECT_FALSE(device_->running());
   EXPECT_FALSE(device_->enabled_persistent());
@@ -1714,9 +1763,9 @@ TEST_P(CellularTest, OnAfterResumeDisableInProgressWantDisabled) {
   // complete before we suspended. We should leave things alone.
 
   // Initial state.
-  mm1::MockModemProxy* mm1_proxy = SetupOnAfterResume();
+  mm1::MockModemProxy* mm1_modem_proxy = SetupOnAfterResume();
   Error error;
-  EXPECT_CALL(*mm1_proxy, Enable(true, _, _, _))
+  EXPECT_CALL(*mm1_modem_proxy, Enable(true, _, _, _))
       .WillOnce(Invoke(this, &CellularTest::InvokeEnable));
   device_->SetEnabled(true);
   EXPECT_TRUE(device_->running());
@@ -1736,9 +1785,9 @@ TEST_P(CellularTest, OnAfterResumeDisableInProgressWantDisabled) {
   EXPECT_EQ(Cellular::kStateEnabled, device_->state_);
 
   // Finish the disable operation.
-  EXPECT_CALL(*mm1_proxy, Enable(false, _, _, _))
+  EXPECT_CALL(*mm1_modem_proxy, Enable(false, _, _, _))
       .WillOnce(Invoke(this, &CellularTest::InvokeEnable));
-  EXPECT_CALL(*mm1_proxy, SetPowerState(_, _, _, _))
+  EXPECT_CALL(*mm1_modem_proxy, SetPowerState(_, _, _, _))
       .WillOnce(Invoke(this, &CellularTest::InvokeSetPowerState));
   dispatcher_.DispatchPendingEvents();
   EXPECT_FALSE(device_->running());
@@ -1760,8 +1809,8 @@ TEST_P(CellularTest, OnAfterResumeDisableQueuedWantEnabled) {
   // The tests exists to document this corner case, which we get wrong.
 
   // Initial state.
-  mm1::MockModemProxy* mm1_proxy = SetupOnAfterResume();
-  EXPECT_CALL(*mm1_proxy, Enable(true, _, _, _))
+  mm1::MockModemProxy* mm1_modem_proxy = SetupOnAfterResume();
+  EXPECT_CALL(*mm1_modem_proxy, Enable(true, _, _, _))
       .WillOnce(Invoke(this, &CellularTest::InvokeEnable));
   device_->SetEnabled(true);
   EXPECT_TRUE(device_->running());
@@ -1778,11 +1827,11 @@ TEST_P(CellularTest, OnAfterResumeDisableQueuedWantEnabled) {
   // new proxies. Also, stash away references for later.
   PopulateProxies();
   SetCommonOnAfterResumeExpectations();
-  mm1_proxy = mm1_proxy_.get();
+  mm1_modem_proxy = mm1_modem_proxy_.get();
   auto dbus_properties_proxy = dbus_properties_proxy_.get();
 
   // Resume, with disable still in progress.
-  EXPECT_CALL(*mm1_proxy, Enable(true, _, _, _))
+  EXPECT_CALL(*mm1_modem_proxy, Enable(true, _, _, _))
       .WillOnce(Invoke(this, &CellularTest::InvokeEnableReturningWrongState));
   EXPECT_EQ(Cellular::kStateEnabled, device_->state_);  // disable still pending
   device_->OnAfterResume();
@@ -1796,9 +1845,9 @@ TEST_P(CellularTest, OnAfterResumeDisableQueuedWantEnabled) {
                                 Cellular::kModemStateDisabled);
 
   // Let the disable complete.
-  EXPECT_CALL(*mm1_proxy, Enable(false, _, _, _))
+  EXPECT_CALL(*mm1_modem_proxy, Enable(false, _, _, _))
       .WillOnce(Invoke(this, &CellularTest::InvokeEnable));
-  EXPECT_CALL(*mm1_proxy, SetPowerState(_, _, _, _))
+  EXPECT_CALL(*mm1_modem_proxy, SetPowerState(_, _, _, _))
       .WillOnce(Invoke(this, &CellularTest::InvokeSetPowerState));
   dbus_properties_proxy->GetFakePropertiesProxyForTesting()
       ->SetDictionaryForTesting(MM_DBUS_INTERFACE_MODEM,
@@ -1837,8 +1886,8 @@ TEST_P(CellularTest, OnAfterResumePowerDownInProgressWantEnabled) {
   // device is currently enabled.
 
   // Initial state.
-  mm1::MockModemProxy* mm1_proxy = SetupOnAfterResume();
-  EXPECT_CALL(*mm1_proxy, Enable(true, _, _, _))
+  mm1::MockModemProxy* mm1_modem_proxy = SetupOnAfterResume();
+  EXPECT_CALL(*mm1_modem_proxy, Enable(true, _, _, _))
       .WillOnce(Invoke(this, &CellularTest::InvokeEnable));
   device_->SetEnabled(true);
   EXPECT_TRUE(device_->running());
@@ -1847,7 +1896,7 @@ TEST_P(CellularTest, OnAfterResumePowerDownInProgressWantEnabled) {
 
   // Start disable.
   ResultCallback modem_proxy_enable_callback;
-  EXPECT_CALL(*mm1_proxy, Enable(false, _, _, _))
+  EXPECT_CALL(*mm1_modem_proxy, Enable(false, _, _, _))
       .WillOnce(SaveArg<2>(&modem_proxy_enable_callback));
   device_->SetEnabled(false);
   dispatcher_.DispatchPendingEvents();  // SetEnabled yields a deferred task
@@ -1863,7 +1912,8 @@ TEST_P(CellularTest, OnAfterResumePowerDownInProgressWantEnabled) {
   // proxy OnAfterResume, below.
   Error error;
   ASSERT_TRUE(error.IsSuccess());
-  EXPECT_CALL(*mm1_proxy, SetPowerState(MM_MODEM_POWER_STATE_LOW, _, _, _))
+  EXPECT_CALL(*mm1_modem_proxy,
+              SetPowerState(MM_MODEM_POWER_STATE_LOW, _, _, _))
       .WillOnce(SetErrorTypeInArgument<1>(Error::kOperationInitiated));
   modem_proxy_enable_callback.Run(error);
 
@@ -1874,13 +1924,13 @@ TEST_P(CellularTest, OnAfterResumePowerDownInProgressWantEnabled) {
   // new proxies. Also, stash away references for later.
   PopulateProxies();
   SetCommonOnAfterResumeExpectations();
-  auto new_mm1_proxy = mm1_proxy_.get();
+  auto new_mm1_modem_proxy = mm1_modem_proxy_.get();
   auto dbus_properties_proxy = dbus_properties_proxy_.get();
 
   // Resume.
   ResultCallback new_callback;
   EXPECT_EQ(Cellular::kStateEnabled, device_->state_);  // disable still pending
-  EXPECT_CALL(*new_mm1_proxy, Enable(true, _, _, _))
+  EXPECT_CALL(*new_mm1_modem_proxy, Enable(true, _, _, _))
       .WillOnce(SaveArg<2>(&modem_proxy_enable_callback));
   device_->OnAfterResume();
   EXPECT_TRUE(device_->running());                       // changes immediately
@@ -1893,7 +1943,7 @@ TEST_P(CellularTest, OnAfterResumePowerDownInProgressWantEnabled) {
   //
   // The pointers must differ, because the new proxy is constructed
   // before the old one is destructed.
-  EXPECT_FALSE(new_mm1_proxy == mm1_proxy);
+  EXPECT_FALSE(new_mm1_modem_proxy == mm1_modem_proxy);
 
   // Set up state that we need.
   KeyValueStore modem_properties;
@@ -1919,14 +1969,14 @@ TEST_P(CellularTest, OnAfterResumeDisabledWantEnabled) {
 
   // This is the ideal case. The disable process completed before
   // going into suspend.
-  mm1::MockModemProxy* mm1_proxy = SetupOnAfterResume();
+  mm1::MockModemProxy* mm1_modem_proxy = SetupOnAfterResume();
   EXPECT_FALSE(device_->running());
   EXPECT_TRUE(device_->enabled_persistent());
   EXPECT_EQ(Cellular::kStateDisabled, device_->state_);
 
   // Resume.
   ResultCallback modem_proxy_enable_callback;
-  EXPECT_CALL(*mm1_proxy, Enable(true, _, _, _))
+  EXPECT_CALL(*mm1_modem_proxy, Enable(true, _, _, _))
       .WillOnce(SaveArg<2>(&modem_proxy_enable_callback));
   device_->OnAfterResume();
 

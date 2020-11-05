@@ -176,6 +176,7 @@ Device::Device(Manager* manager,
   // kImeiProperty: Registered in Cellular
   // kIccidProperty: Registered in Cellular
   // kImsiProperty: Registered in Cellular
+  // kInhibit: Registered in Cellular
   // kManufacturerProperty: Registered in Cellular
   // kMdnProperty: Registered in Cellular
   // kMeidProperty: Registered in Cellular

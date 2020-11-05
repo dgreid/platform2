@@ -56,6 +56,10 @@ using testing::Return;
 using testing::ReturnRef;
 using testing::SaveArg;
 
+namespace {
+constexpr char kDeviceId[] = "<device_id>";
+}
+
 namespace shill {
 
 MATCHER_P(HasApn, expected_apn, "") {
@@ -347,6 +351,11 @@ class CellularCapability3gppTest : public testing::TestWithParam<string> {
       return std::move(test_->modem_3gpp_proxy_);
     }
 
+    std::unique_ptr<mm1::Mm1ProxyInterface> CreateMM1Proxy(
+        const std::string& service) override {
+      return nullptr;
+    }
+
     std::unique_ptr<mm1::ModemProxyInterface> CreateMM1ModemProxy(
         const RpcIdentifier& /*path*/,
         const std::string& /*service*/) override {
@@ -381,6 +390,9 @@ class CellularCapability3gppTest : public testing::TestWithParam<string> {
         fake_properties->SetDictionaryForTesting(
             MM_DBUS_INTERFACE_BEARER, inactive_bearer_properties_.properties());
       }
+      fake_properties->SetForTesting(modemmanager::kModemManager1ModemInterface,
+                                     MM_MODEM_PROPERTY_DEVICE,
+                                     brillo::Any(std::string(kDeviceId)));
       // Replace properties_proxy for CellularCapability3gpp.
       test_->CreatePropertiesProxy();
       return properties_proxy;

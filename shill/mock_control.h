@@ -25,6 +25,7 @@
 #include "shill/cellular/mm1_modem_modemcdma_proxy_interface.h"
 #include "shill/cellular/mm1_modem_proxy_interface.h"
 #include "shill/cellular/mm1_modem_simple_proxy_interface.h"
+#include "shill/cellular/mm1_proxy_interface.h"
 #include "shill/cellular/mm1_sim_proxy_interface.h"
 #include "shill/dbus/dbus_properties_proxy.h"
 #endif  // DISABLE_CELLULAR
@@ -127,6 +128,10 @@ class MockControl : public ControlInterface {
                const std::string&,
                const base::Closure&,
                const base::Closure&),
+              (override));
+  MOCK_METHOD(std::unique_ptr<mm1::Mm1ProxyInterface>,
+              CreateMM1Proxy,
+              (const std::string&),
               (override));
   MOCK_METHOD(std::unique_ptr<mm1::ModemLocationProxyInterface>,
               CreateMM1ModemLocationProxy,

@@ -25,18 +25,16 @@ class Mm1ProxyInterface {
  public:
   virtual ~Mm1ProxyInterface() = default;
 
-  virtual void ScanDevices(const ResultCallback& callback, int timeout) = 0;
+  virtual void ScanDevices(const ResultCallback& callback) = 0;
 
   virtual void SetLogging(const std::string& level,
-                          const ResultCallback& callback,
-                          int timeout) = 0;
+                          const ResultCallback& callback) = 0;
 
   // ReportKernelEvent not implemented.
 
   virtual void InhibitDevice(const std::string& uid,
                              bool inhibit,
-                             const ResultCallback& callback,
-                             int timeout) = 0;
+                             const ResultCallback& callback) = 0;
 };
 
 }  // namespace mm1

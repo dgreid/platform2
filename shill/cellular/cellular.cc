@@ -21,6 +21,7 @@
 #include <base/strings/stringprintf.h>
 #include <base/time/time.h>
 #include <chromeos/dbus/service_constants.h>
+#include <ModemManager/ModemManager.h>
 
 #include "shill/adaptor_interfaces.h"
 #include "shill/cellular/cellular_bearer.h"
@@ -31,6 +32,7 @@
 #include "shill/cellular/modem_info.h"
 #include "shill/connection.h"
 #include "shill/control_interface.h"
+#include "shill/dbus/dbus_properties_proxy.h"
 #include "shill/device.h"
 #include "shill/device_info.h"
 #include "shill/error.h"
@@ -162,6 +164,7 @@ Cellular::Cellular(ModemInfo* modem_info,
       ppp_device_factory_(PPPDeviceFactory::GetInstance()),
       process_manager_(ProcessManager::GetInstance()),
       allow_roaming_(false),
+      inhibited_(false),
       proposed_scan_in_progress_(false),
       explicit_disconnect_(false),
       is_ppp_authenticating_(false),
@@ -182,6 +185,8 @@ Cellular::Cellular(ModemInfo* modem_info,
     LOG(WARNING) << "Socket destroyer failed to initialize; "
                  << "IPv6 will be unavailable.";
   }
+
+  mm1_proxy_ = control_interface()->CreateMM1Proxy(dbus_service_);
 
   SLOG(this, 1) << "Cellular() " << this->link_name();
 }
@@ -436,14 +441,48 @@ void Cellular::StartModemCallback(const EnabledStateChangedCallback& callback,
                                   const Error& error) {
   SLOG(this, 1) << __func__ << ": " << GetStateString(state_);
   SetCapabilityState(CapabilityState::kModemStarted);
-  if (error.IsSuccess() && (state_ == kStateDisabled)) {
+
+  if (inhibited_) {
+    inhibited_ = false;
+    adaptor()->EmitBoolChanged(kInhibited, inhibited_);
+  }
+
+  if (!error.IsSuccess()) {
+    if (callback)
+      callback.Run(error);
+    return;
+  }
+
+  if (state_ == kStateDisabled) {
     SetState(kStateEnabled);
     // Registration state updates may have been ignored while the
     // modem was not yet marked enabled.
     HandleNewRegistrationState();
   }
+
+  // Request Device property for setting uid_.
+  std::unique_ptr<DBusPropertiesProxy> dbus_properties_proxy =
+      control_interface()->CreateDBusPropertiesProxy(dbus_path_, dbus_service_);
+  dbus_properties_proxy->GetAsync(
+      modemmanager::kModemManager1ModemInterface, MM_MODEM_PROPERTY_DEVICE,
+      base::Bind(&Cellular::StartModemGetDeviceCallback,
+                 weak_ptr_factory_.GetWeakPtr(), callback),
+      base::Bind(
+          [](const EnabledStateChangedCallback& callback, const Error& error) {
+            LOG(ERROR) << "Error geeting Device property from Modem: " << error;
+            if (callback)
+              callback.Run(Error(Error::kOperationFailed));
+          },
+          callback));
+}
+
+void Cellular::StartModemGetDeviceCallback(
+    const EnabledStateChangedCallback& callback, const brillo::Any& device) {
+  if (!device.IsEmpty())
+    uid_ = device.Get<std::string>();
+
   if (callback)
-    callback.Run(error);
+    callback.Run(Error());
 }
 
 void Cellular::StopModem(Error* error,
@@ -1149,6 +1188,34 @@ bool Cellular::SetAllowRoaming(const bool& value, Error* error) {
   return true;
 }
 
+bool Cellular::GetInhibited(Error* error) {
+  return inhibited_;
+}
+
+bool Cellular::SetInhibited(const bool& inhibited, Error* error) {
+  if (inhibited == inhibited_)
+    return false;
+
+  if (!mm1_proxy_)
+    return false;
+
+  mm1_proxy_->InhibitDevice(
+      uid_, inhibited,
+      base::Bind(&Cellular::OnInhibitDevice, weak_ptr_factory_.GetWeakPtr(),
+                 inhibited));
+  return true;
+}
+
+void Cellular::OnInhibitDevice(bool inhibited, const Error& error) {
+  if (!error.IsSuccess()) {
+    LOG(ERROR) << __func__ << " Failed: " << error;
+    return;
+  }
+  LOG(INFO) << __func__ << " Succeeded. Inhibited= " << inhibited;
+  inhibited_ = inhibited;
+  adaptor()->EmitBoolChanged(kInhibited, inhibited_);
+}
+
 KeyValueStore Cellular::GetSimLockStatus(Error* error) {
   if (!capability_) {
     // modemmanager might be inhibited or restarting.
@@ -1394,6 +1461,8 @@ void Cellular::RegisterProperties() {
   HelpRegisterDerivedBool(kCellularAllowRoamingProperty,
                           &Cellular::GetAllowRoaming,
                           &Cellular::SetAllowRoaming);
+  HelpRegisterDerivedBool(kInhibited, &Cellular::GetInhibited,
+                          &Cellular::SetInhibited);
 
   store->RegisterDerivedKeyValueStore(
       kSIMLockStatusProperty,
