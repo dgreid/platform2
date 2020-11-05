@@ -22,7 +22,6 @@
 #include "cros-disks/device_ejector.h"
 #include "cros-disks/disk.h"
 #include "cros-disks/disk_monitor.h"
-#include "cros-disks/filesystem.h"
 #include "cros-disks/metrics.h"
 #include "cros-disks/mount_point.h"
 #include "cros-disks/mounter.h"
@@ -102,8 +101,7 @@ TEST_F(DiskManagerTest, CreateExFATMounter) {
   Disk disk;
   disk.device_file = "/dev/sda1";
 
-  Filesystem filesystem("exfat");
-  filesystem.mounter_type = "exfat";
+  DiskManager::Filesystem filesystem = {.type = "exfat"};
 
   std::string target_path = "/media/disk";
   std::vector<std::string> options = {"rw", "nodev", "noexec", "nosuid"};
@@ -117,8 +115,7 @@ TEST_F(DiskManagerTest, CreateNTFSMounter) {
   Disk disk;
   disk.device_file = "/dev/sda1";
 
-  Filesystem filesystem("ntfs");
-  filesystem.mounter_type = "ntfs";
+  DiskManager::Filesystem filesystem = {.type = "ntfs"};
 
   std::string target_path = "/media/disk";
   std::vector<std::string> options = {"rw", "nodev", "noexec", "nosuid"};
@@ -132,7 +129,7 @@ TEST_F(DiskManagerTest, CreateVFATSystemMounter) {
   Disk disk;
   disk.device_file = "/dev/sda1";
 
-  Filesystem filesystem("vfat");
+  DiskManager::Filesystem filesystem = {.type = "vfat"};
   filesystem.extra_mount_options = {"utf8", "shortname=mixed"};
 
   std::string target_path = "/media/disk";
@@ -161,7 +158,7 @@ TEST_F(DiskManagerTest, CreateExt4SystemMounter) {
   std::vector<std::string> options = {"rw", "nodev", "noexec", "nosuid",
                                       "mand"};
 
-  Filesystem filesystem("ext4");
+  DiskManager::Filesystem filesystem = {.type = "ext4"};
   auto mounter = manager_.CreateMounter(disk, filesystem, target_path, options);
   ASSERT_NE(nullptr, mounter.get());
   const SystemMounter* sysmounter =
@@ -172,24 +169,25 @@ TEST_F(DiskManagerTest, CreateExt4SystemMounter) {
 TEST_F(DiskManagerTest, GetFilesystem) {
   EXPECT_EQ(nullptr, manager_.GetFilesystem("nonexistent-fs"));
 
-  Filesystem normal_fs("normal-fs");
+  DiskManager::Filesystem normal_fs = {.type = "normal-fs"};
   EXPECT_EQ(nullptr, manager_.GetFilesystem(normal_fs.type));
   manager_.RegisterFilesystem(normal_fs);
   EXPECT_NE(nullptr, manager_.GetFilesystem(normal_fs.type));
 }
 
 TEST_F(DiskManagerTest, RegisterFilesystem) {
-  const std::map<std::string, Filesystem>& filesystems = manager_.filesystems_;
+  const std::map<std::string, DiskManager::Filesystem>& filesystems =
+      manager_.filesystems_;
   EXPECT_EQ(0, filesystems.size());
   EXPECT_TRUE(filesystems.find("nonexistent") == filesystems.end());
 
-  Filesystem fat_fs("fat");
+  DiskManager::Filesystem fat_fs = {.type = "fat"};
   fat_fs.accepts_user_and_group_id = true;
   manager_.RegisterFilesystem(fat_fs);
   EXPECT_EQ(1, filesystems.size());
   EXPECT_TRUE(filesystems.find(fat_fs.type) != filesystems.end());
 
-  Filesystem vfat_fs("vfat");
+  DiskManager::Filesystem vfat_fs = {.type = "vfat"};
   vfat_fs.accepts_user_and_group_id = true;
   manager_.RegisterFilesystem(vfat_fs);
   EXPECT_EQ(2, filesystems.size());

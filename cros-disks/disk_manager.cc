@@ -24,7 +24,6 @@
 
 #include "cros-disks/device_ejector.h"
 #include "cros-disks/disk_monitor.h"
-#include "cros-disks/filesystem.h"
 #include "cros-disks/fuse_mounter.h"
 #include "cros-disks/metrics.h"
 #include "cros-disks/mount_options.h"
@@ -101,7 +100,7 @@ bool DiskManager::Initialize() {
   return MountManager::Initialize();
 }
 
-const Filesystem* DiskManager::GetFilesystem(
+const DiskManager::Filesystem* DiskManager::GetFilesystem(
     const std::string& filesystem_type) const {
   std::map<std::string, Filesystem>::const_iterator filesystem_iterator =
       filesystems_.find(filesystem_type);
@@ -115,48 +114,43 @@ void DiskManager::RegisterDefaultFilesystems() {
   std::string uid = base::StringPrintf("uid=%d", platform()->mount_user_id());
   std::string gid = base::StringPrintf("gid=%d", platform()->mount_group_id());
 
-  Filesystem vfat_fs("vfat");
+  Filesystem vfat_fs = {.type = "vfat"};
   vfat_fs.extra_mount_options = {MountOptions::kOptionFlush, "shortname=mixed",
                                  MountOptions::kOptionUtf8, uid, gid};
   RegisterFilesystem(vfat_fs);
 
-  Filesystem exfat_fs("exfat");
-  exfat_fs.mounter_type = kMounterTypeExFAT;
-  exfat_fs.accepts_user_and_group_id = true;
+  Filesystem exfat_fs = {.type = "exfat", .accepts_user_and_group_id = true};
   exfat_fs.extra_mount_options = {MountOptions::kOptionDirSync};
   RegisterFilesystem(exfat_fs);
 
-  Filesystem ntfs_fs("ntfs");
-  ntfs_fs.mounter_type = kMounterTypeNTFS;
-  ntfs_fs.accepts_user_and_group_id = true;
+  Filesystem ntfs_fs = {.type = "ntfs", .accepts_user_and_group_id = true};
   ntfs_fs.extra_mount_options = {MountOptions::kOptionDirSync};
   RegisterFilesystem(ntfs_fs);
 
-  Filesystem hfsplus_fs("hfsplus");
+  Filesystem hfsplus_fs = {.type = "hfsplus"};
   hfsplus_fs.extra_mount_options = {uid, gid};
   RegisterFilesystem(hfsplus_fs);
 
-  Filesystem iso9660_fs("iso9660");
-  iso9660_fs.is_mounted_read_only = true;
+  Filesystem iso9660_fs = {.type = "iso9660", .is_read_only = true};
   iso9660_fs.extra_mount_options = {MountOptions::kOptionUtf8, uid, gid};
   RegisterFilesystem(iso9660_fs);
 
-  Filesystem udf_fs("udf");
-  udf_fs.is_mounted_read_only = true;
+  Filesystem udf_fs = {.type = "udf", .is_read_only = true};
   udf_fs.extra_mount_options = {MountOptions::kOptionUtf8, uid, gid};
   RegisterFilesystem(udf_fs);
 
-  Filesystem ext2_fs("ext2");
+  Filesystem ext2_fs = {.type = "ext2"};
   RegisterFilesystem(ext2_fs);
 
-  Filesystem ext3_fs("ext3");
+  Filesystem ext3_fs = {.type = "ext3"};
   RegisterFilesystem(ext3_fs);
 
-  Filesystem ext4_fs("ext4");
+  Filesystem ext4_fs = {.type = "ext4"};
   RegisterFilesystem(ext4_fs);
 }
 
-void DiskManager::RegisterFilesystem(const Filesystem& filesystem) {
+void DiskManager::RegisterFilesystem(
+    const DiskManager::Filesystem& filesystem) {
   filesystems_.emplace(filesystem.type, filesystem);
 }
 
@@ -211,38 +205,34 @@ std::unique_ptr<MounterCompat> DiskManager::CreateMounter(
                            default_user_id, default_group_id);
 
   bool mount_read_only = read_only_requested;
-  if (filesystem.is_mounted_read_only || disk.is_read_only ||
-      disk.IsOpticalDisk()) {
+  if (filesystem.is_read_only || disk.is_read_only || disk.IsOpticalDisk()) {
     mount_read_only = true;
     mount_options.SetReadOnlyOption();
   }
 
-  if (filesystem.mounter_type.empty())
-    return std::make_unique<MounterCompat>(
-        MountOptions(), std::make_unique<SystemMounter>(
-                            platform(), filesystem.mount_type, mount_read_only,
-                            std::move(extended_options)));
-
-  if (filesystem.mounter_type == kMounterTypeExFAT)
+  if (filesystem.type == kMounterTypeExFAT)
     return std::make_unique<FUSEMounter>(
-        FUSEMounter::Params({.filesystem_type = filesystem.mount_type,
+        FUSEMounter::Params({.filesystem_type = filesystem.type,
                              .mount_options = std::move(mount_options),
                              .mount_program = "/usr/sbin/mount.exfat-fuse",
                              .mount_user = "fuse-exfat",
                              .platform = platform(),
                              .process_reaper = process_reaper()}));
 
-  if (filesystem.mounter_type == kMounterTypeNTFS)
+  if (filesystem.type == kMounterTypeNTFS)
     return std::make_unique<FUSEMounter>(
-        FUSEMounter::Params({.filesystem_type = filesystem.mount_type,
+        FUSEMounter::Params({.filesystem_type = filesystem.type,
                              .mount_options = std::move(mount_options),
                              .mount_program = "/usr/bin/ntfs-3g",
                              .mount_user = "ntfs-3g",
                              .platform = platform(),
                              .process_reaper = process_reaper()}));
 
-  LOG(FATAL) << "Invalid mounter type " << quote(filesystem.mounter_type);
-  return nullptr;
+  // Otherwise use syscall-based mounting.
+  return std::make_unique<MounterCompat>(
+      MountOptions(), std::make_unique<SystemMounter>(
+                          platform(), filesystem.type, mount_read_only,
+                          std::move(extended_options)));
 }
 
 bool DiskManager::CanMount(const std::string& source_path) const {

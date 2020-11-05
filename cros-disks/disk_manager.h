@@ -27,8 +27,6 @@ class DiskMonitor;
 class MounterCompat;
 class Platform;
 
-struct Filesystem;
-
 // The DiskManager is responsible for mounting removable media.
 //
 // This class is designed to run within a single-threaded GMainLoop application
@@ -61,10 +59,6 @@ class DiskManager : public MountManager {
   // Registers a set of default filesystems to the disk manager.
   void RegisterDefaultFilesystems();
 
-  // Registers a filesystem to the disk manager.
-  // Subsequent registrations of the same filesystem type are ignored.
-  void RegisterFilesystem(const Filesystem& filesystem);
-
  protected:
   // Mounts |source_path| to |mount_path| as |filesystem_type| with |options|.
   std::unique_ptr<MountPoint> DoMount(const std::string& source_path,
@@ -85,12 +79,33 @@ class DiskManager : public MountManager {
   // MountPoint implementation that ejects the device on unmount.
   class EjectingMountPoint;
 
+  // Properties of a filesystem.
+  struct Filesystem {
+    // Filesystem type.
+    std::string type;
+
+    // This variable is set to true if default user and group ID can be
+    // specified for mounting the filesystem.
+    bool accepts_user_and_group_id = false;
+
+    // Extra mount options to specify when mounting the filesystem.
+    std::vector<std::string> extra_mount_options;
+
+    // This variable is set to true if the filesystem should be mounted
+    // as read-only.
+    bool is_read_only = false;
+  };
+
   // Creates an appropriate mounter object for a given filesystem.
   std::unique_ptr<MounterCompat> CreateMounter(
       const Disk& disk,
       const Filesystem& filesystem,
       const std::string& target_path,
       const std::vector<std::string>& options) const;
+
+  // Registers a filesystem to the disk manager.
+  // Subsequent registrations of the same filesystem type are ignored.
+  void RegisterFilesystem(const Filesystem& filesystem);
 
   // Returns a Filesystem object if a given filesystem type is supported.
   // Otherwise, it returns NULL. This pointer is owned by the DiskManager.
