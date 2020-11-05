@@ -9,16 +9,16 @@
 
 #include <base/json/json_writer.h>
 #include <base/macros.h>
+#include <base/optional.h>
 #include <base/values.h>
 
 namespace {
 
-std::unique_ptr<base::DictionaryValue> SaveAsJson(const ipp::Collection* coll);
+base::Value SaveAsJson(const ipp::Collection* coll);
 
 // It saves a single value (at given index) from the attribute as JSON
 // structure. The parameter "attr" cannot be nullptr, "index" must be correct.
-std::unique_ptr<base::Value> SaveAsJson(const ipp::Attribute* attr,
-                                        unsigned index) {
+base::Value SaveAsJson(const ipp::Attribute* attr, unsigned index) {
   CHECK(attr != nullptr);
   CHECK(index < attr->GetSize());
   using AttrType = ipp::AttrType;
@@ -26,12 +26,12 @@ std::unique_ptr<base::Value> SaveAsJson(const ipp::Attribute* attr,
     case AttrType::integer: {
       int vi;
       attr->GetValue(&vi, index);
-      return std::make_unique<base::Value>(vi);
+      return base::Value(vi);
     }
     case AttrType::boolean: {
       int vb;
       attr->GetValue(&vb, index);
-      return std::make_unique<base::Value>(static_cast<bool>(vb));
+      return base::Value(static_cast<bool>(vb));
     }
     case AttrType::enum_: {
       std::string vs;
@@ -39,9 +39,9 @@ std::unique_ptr<base::Value> SaveAsJson(const ipp::Attribute* attr,
       if (vs.empty()) {
         int vi;
         attr->GetValue(&vi, index);
-        return std::make_unique<base::Value>(vi);
+        return base::Value(vi);
       }
-      return std::make_unique<base::Value>(vs);
+      return base::Value(vs);
     }
     case AttrType::collection:
       return SaveAsJson(attr->GetCollection(index));
@@ -50,10 +50,10 @@ std::unique_ptr<base::Value> SaveAsJson(const ipp::Attribute* attr,
       ipp::StringWithLanguage vs;
       attr->GetValue(&vs, index);
       if (vs.language.empty())
-        return std::make_unique<base::Value>(vs.value);
-      std::unique_ptr<base::DictionaryValue> obj(new base::DictionaryValue);
-      obj->SetString("value", vs.value);
-      obj->SetString("language", vs.language);
+        return base::Value(vs.value);
+      base::Value obj(base::Value::Type::DICTIONARY);
+      obj.SetStringKey("value", vs.value);
+      obj.SetStringKey("language", vs.language);
       return obj;
     }
     case AttrType::dateTime:
@@ -68,21 +68,21 @@ std::unique_ptr<base::Value> SaveAsJson(const ipp::Attribute* attr,
     case AttrType::mimeMediaType: {
       std::string vs;
       attr->GetValue(&vs, index);
-      return std::make_unique<base::Value>(vs);
+      return base::Value(vs);
     }
   }
-  return std::make_unique<base::Value>();  // not reachable
+  return base::Value();  // not reachable
 }
 
 // It saves all attribute's values as JSON structure.
 // The parameter "attr" cannot be nullptr.
-std::unique_ptr<base::Value> SaveAsJson(const ipp::Attribute* attr) {
+base::Value SaveAsJson(const ipp::Attribute* attr) {
   CHECK(attr != nullptr);
   if (attr->IsASet()) {
-    auto arr = std::make_unique<base::ListValue>();
+    base::Value arr(base::Value::Type::LIST);
     const unsigned size = attr->GetSize();
     for (unsigned i = 0; i < size; ++i)
-      arr->Append(SaveAsJson(attr, i));
+      arr.Append(SaveAsJson(attr, i));
     return arr;
   } else {
     return SaveAsJson(attr, 0);
@@ -91,9 +91,9 @@ std::unique_ptr<base::Value> SaveAsJson(const ipp::Attribute* attr) {
 
 // It saves a given Collection as JSON object.
 // The parameter "coll" cannot be nullptr.
-std::unique_ptr<base::DictionaryValue> SaveAsJson(const ipp::Collection* coll) {
+base::Value SaveAsJson(const ipp::Collection* coll) {
   CHECK(coll != nullptr);
-  auto obj = std::make_unique<base::DictionaryValue>();
+  base::Value obj(base::Value::Type::DICTIONARY);
   std::vector<const ipp::Attribute*> attrs = coll->GetAllAttributes();
 
   for (auto a : attrs) {
@@ -102,12 +102,12 @@ std::unique_ptr<base::DictionaryValue> SaveAsJson(const ipp::Collection* coll) {
       continue;
 
     if (state == ipp::AttrState::set) {
-      auto obj2 = std::make_unique<base::DictionaryValue>();
-      obj2->SetString("type", ToString(a->GetType()));
-      obj2->Set("value", SaveAsJson(a));
-      obj->Set(a->GetName(), std::move(obj2));
+      base::Value obj2(base::Value::Type::DICTIONARY);
+      obj2.SetStringKey("type", ToString(a->GetType()));
+      obj2.SetKey("value", SaveAsJson(a));
+      obj.SetKey(a->GetName(), std::move(obj2));
     } else {
-      obj->SetString(a->GetName(), ToString(state));
+      obj.SetStringKey(a->GetName(), ToString(state));
     }
   }
 
@@ -116,9 +116,9 @@ std::unique_ptr<base::DictionaryValue> SaveAsJson(const ipp::Collection* coll) {
 
 // It saves all groups from given Package as JSON object.
 // The parameter "pkg" cannot be nullptr.
-std::unique_ptr<base::DictionaryValue> SaveAsJson(const ipp::Package* pkg) {
+base::Value SaveAsJson(const ipp::Package* pkg) {
   CHECK(pkg != nullptr);
-  auto obj = std::make_unique<base::DictionaryValue>();
+  base::Value obj(base::Value::Type::DICTIONARY);
   std::vector<const ipp::Group*> groups = pkg->GetAllGroups();
 
   for (auto g : groups) {
@@ -126,12 +126,12 @@ std::unique_ptr<base::DictionaryValue> SaveAsJson(const ipp::Package* pkg) {
     if (size == 0)
       continue;
     if (g->IsASet()) {
-      auto arr = std::make_unique<base::ListValue>();
+      base::Value arr(base::Value::Type::LIST);
       for (size_t i = 0; i < size; ++i)
-        arr->Append(SaveAsJson(g->GetCollection(i)));
-      obj->Set(ToString(g->GetName()), std::move(arr));
+        arr.Append(SaveAsJson(g->GetCollection(i)));
+      obj.SetKey(ToString(g->GetName()), std::move(arr));
     } else {
-      obj->Set(ToString(g->GetName()), SaveAsJson(g->GetCollection()));
+      obj.SetKey(ToString(g->GetName()), SaveAsJson(g->GetCollection()));
     }
   }
 
@@ -139,16 +139,16 @@ std::unique_ptr<base::DictionaryValue> SaveAsJson(const ipp::Package* pkg) {
 }
 
 // Saves given logs as JSON array.
-std::unique_ptr<base::ListValue> SaveAsJson(const std::vector<ipp::Log>& log) {
-  auto arr = std::make_unique<base::ListValue>();
+base::Value SaveAsJson(const std::vector<ipp::Log>& log) {
+  base::Value arr(base::Value::Type::LIST);
   for (const auto& l : log) {
-    auto obj = std::make_unique<base::DictionaryValue>();
-    obj->SetString("message", l.message);
+    base::Value obj(base::Value::Type::DICTIONARY);
+    obj.SetStringKey("message", l.message);
     if (!l.frame_context.empty())
-      obj->SetString("frame_context", l.frame_context);
+      obj.SetStringKey("frame_context", l.frame_context);
     if (!l.parser_context.empty())
-      obj->SetString("parser_context", l.parser_context);
-    arr->Append(std::move(obj));
+      obj.SetStringKey("parser_context", l.parser_context);
+    arr.Append(std::move(obj));
   }
   return arr;
 }
@@ -160,19 +160,19 @@ bool ConvertToJson(const ipp::Response& response,
                    bool compressed_json,
                    std::string* json) {
   // Build structure.
-  auto doc = std::make_unique<base::DictionaryValue>();
-  doc->SetString("status", ipp::ToString(response.StatusCode()));
+  base::Value doc(base::Value::Type::DICTIONARY);
+  doc.SetStringKey("status", ipp::ToString(response.StatusCode()));
   if (!log.empty()) {
-    doc->Set("parsing_logs", SaveAsJson(log));
+    doc.SetKey("parsing_logs", SaveAsJson(log));
   }
-  doc->Set("response", SaveAsJson(&response));
+  doc.SetKey("response", SaveAsJson(&response));
   // Convert to JSON.
   bool result;
   if (compressed_json) {
-    result = base::JSONWriter::Write(*doc, json);
+    result = base::JSONWriter::Write(doc, json);
   } else {
     const int options = base::JSONWriter::OPTIONS_PRETTY_PRINT;
-    result = base::JSONWriter::WriteWithOptions(*doc, options, json);
+    result = base::JSONWriter::WriteWithOptions(doc, options, json);
   }
   return result;
 }
