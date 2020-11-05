@@ -6,8 +6,6 @@
 # when it works with arcvm
 
 mmap: arg2 in ~PROT_EXEC || arg2 in ~PROT_WRITE
-mremap: 1
-sched_yield: 1
 stat: 1
 mprotect: arg2 in ~PROT_EXEC || arg2 in ~PROT_WRITE
 close: 1
