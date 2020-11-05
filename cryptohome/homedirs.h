@@ -121,8 +121,9 @@ class HomeDirs {
   //
   // The caller DOES take ownership of the returned VaultKeyset pointer.
   // There is no guarantee the keyset is valid.
-  virtual VaultKeyset* GetVaultKeyset(const std::string& obfuscated_username,
-                                      const std::string& key_label) const;
+  virtual std::unique_ptr<VaultKeyset> GetVaultKeyset(
+      const std::string& obfuscated_username,
+      const std::string& key_label) const;
 
   // Creates the cryptohome for the named user.
   virtual bool Create(const std::string& username);
@@ -172,21 +173,23 @@ class HomeDirs {
   base::FilePath GetUserMountDirectory(
       const std::string& obfuscated_username) const;
 
-  // Returns true if a valid keyset can be decrypted with |creds|.  If true,
-  // |vk| will contain the decrypted value, and if false, |vk| will contain
-  // the last failed keyset attempt, and |error|, if non-null, will contain
-  // the error details.
+  // Returns decrypted with |creds| keyset, or nullptr if none decryptable
+  // with the provided |creds| found and |error| will be populated with the
+  // partucular failure reason.
   // NOTE: The LE Credential Keysets are only considered when the key label
   // provided via |creds| is non-empty.
-  virtual bool GetValidKeyset(const Credentials& creds,
-                              VaultKeyset* vk,
-                              MountError* error);
+  std::unique_ptr<VaultKeyset> GetValidKeyset(const Credentials& creds,
+                                              MountError* error);
 
   // Loads the vault keyset for the supplied obfuscated username and index.
   // Returns true for success, false for failure.
-  bool LoadVaultKeysetForUser(const std::string& obfuscated_user,
-                              int index,
-                              VaultKeyset* keyset) const;
+  std::unique_ptr<VaultKeyset> LoadVaultKeysetForUser(
+      const std::string& obfuscated_user, int index) const;
+
+  // Looks for a keyset which matches the credentals and returns it decrypted.
+  // TODO(dlunev): replace MountError with CryptohomeErrorCode.
+  virtual std::unique_ptr<VaultKeyset> LoadUnwrappedKeyset(
+      const Credentials& credentials, MountError* error);
 
   // Returns the vault keyset path for the supplied obfuscated username.
   virtual base::FilePath GetVaultKeysetPath(const std::string& obfuscated,
@@ -194,24 +197,6 @@ class HomeDirs {
 
   // Adds initial keyset for the credentials.
   virtual bool AddInitialKeyset(const Credentials& credentials);
-
-  // Check if the vault keyset needs re-encryption.
-  virtual bool ShouldReSaveKeyset(VaultKeyset* vault_keyset) const;
-
-  // Resaves the vault keyset, restoring on failure.
-  virtual bool ReSaveKeyset(const Credentials& credentials,
-                            VaultKeyset* keyset) const;
-
-  // Checks whether the keyset is up to date (e.g. has correct encryption
-  // parameters, has all required fields populated etc.) and if not, updates
-  // and resaves the keyset.
-  virtual bool ReSaveKeysetIfNeeded(const Credentials& credentials,
-                                    VaultKeyset* keyset) const;
-
-  // Looks for a keyset which matches the credentals and returns it decrypted.
-  // TODO(dlunev): replace MountError with CryptohomeErrorCode.
-  virtual std::unique_ptr<VaultKeyset> LoadUnwrappedKeyset(
-      const Credentials& credentials, MountError* error);
 
   // Adds a new vault keyset for the user using the |existing_credentials| to
   // unwrap the homedir key and the |new_credentials| to rewrap and persist to
@@ -382,6 +367,18 @@ class HomeDirs {
   // UID.
   bool IsOwnedByAndroidSystem(const base::FilePath& directory) const;
 
+  // Check if the vault keyset needs re-encryption.
+  bool ShouldReSaveKeyset(VaultKeyset* vault_keyset) const;
+
+  // Resaves the vault keyset, restoring on failure.
+  bool ReSaveKeyset(const Credentials& credentials, VaultKeyset* keyset) const;
+
+  // Checks whether the keyset is up to date (e.g. has correct encryption
+  // parameters, has all required fields populated etc.) and if not, updates
+  // and resaves the keyset.
+  bool ReSaveKeysetIfNeeded(const Credentials& credentials,
+                            VaultKeyset* keyset) const;
+
   // Takes ownership of the supplied PolicyProvider. Used to avoid leaking mocks
   // in unit tests.
   void own_policy_provider(policy::PolicyProvider* value) {
@@ -413,6 +410,10 @@ class HomeDirs {
 
   friend class HomeDirsTest;
   FRIEND_TEST(HomeDirsTest, GetTrackedDirectoryForDirCrypto);
+
+  FRIEND_TEST(KeysetManagementTest, ReSaveOnLoadNoReSave);
+  FRIEND_TEST(KeysetManagementTest, ReSaveOnLoadTestRegularCreds);
+  FRIEND_TEST(KeysetManagementTest, ReSaveOnLoadTestLeCreds);
 };
 
 }  // namespace cryptohome

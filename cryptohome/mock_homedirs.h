@@ -36,10 +36,6 @@ class MockHomeDirs : public HomeDirs {
   MOCK_METHOD(bool, GetPlainOwner, (std::string*), (override));
   MOCK_METHOD(bool, AreEphemeralUsersEnabled, (), (override));
   MOCK_METHOD(bool, AreCredentialsValid, (const Credentials&), (override));
-  MOCK_METHOD(bool,
-              GetValidKeyset,
-              (const Credentials&, VaultKeyset*, MountError*),
-              (override));
   MOCK_METHOD(bool, Create, (const std::string&), (override));
   MOCK_METHOD(bool, Remove, (const std::string&), (override));
   MOCK_METHOD(bool,
@@ -57,7 +53,7 @@ class MockHomeDirs : public HomeDirs {
               LoadUnwrappedKeyset,
               (const Credentials&, MountError*),
               (override));
-  MOCK_METHOD(VaultKeyset*,
+  MOCK_METHOD(std::unique_ptr<VaultKeyset>,
               GetVaultKeyset,
               (const std::string&, const std::string&),
               (const, override));

@@ -1908,14 +1908,15 @@ class UserDataAuthExTest : public UserDataAuthTest {
 
   ~UserDataAuthExTest() override = default;
 
-  VaultKeyset* GetNiceMockVaultKeyset(const std::string& obfuscated_username,
-                                      const std::string& key_label) const {
+  std::unique_ptr<VaultKeyset> GetNiceMockVaultKeyset(
+      const std::string& obfuscated_username,
+      const std::string& key_label) const {
     // Note that technically speaking this is not strictly a mock, and probably
     // closer to a stub. However, the underlying class is
     // NiceMock<MockVaultKeyset>, thus we name the method accordingly.
     std::unique_ptr<VaultKeyset> mvk(new NiceMock<MockVaultKeyset>);
     mvk->mutable_serialized()->mutable_key_data()->set_label(key_label);
-    return mvk.release();
+    return mvk;
   }
 
   void CallCheckKeyAndVerify(
@@ -2752,9 +2753,9 @@ TEST_F(UserDataAuthExTest, GetKeyDataExNoMatch) {
       "non-existent label");
 
   // Ensure there are no matches.
+  std::unique_ptr<VaultKeyset> vk;
   EXPECT_CALL(homedirs_, GetVaultKeyset(_, _))
-      .Times(1)
-      .WillRepeatedly(Return(static_cast<VaultKeyset*>(NULL)));
+      .WillOnce(Return(ByMove(std::move(vk))));
 
   cryptohome::KeyData keydata_out;
   bool found = false;

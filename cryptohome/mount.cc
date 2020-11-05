@@ -642,18 +642,17 @@ bool Mount::UpdateCurrentUserActivityTimestamp(int time_shift_sec,
   std::string obfuscated_username =
       SanitizeUserNameWithSalt(username_, system_salt_);
   if (!obfuscated_username.empty() && mount_type_ != MountType::EPHEMERAL) {
-    VaultKeyset keyset;
-    keyset.Initialize(platform_, crypto_);
-    if (!homedirs_->LoadVaultKeysetForUser(obfuscated_username,
-                                           active_key_index, &keyset)) {
+    std::unique_ptr<VaultKeyset> keyset(homedirs_->LoadVaultKeysetForUser(
+        obfuscated_username, active_key_index));
+    if (!keyset) {
       return false;
     }
     base::Time timestamp = platform_->GetCurrentTime();
     if (time_shift_sec > 0)
       timestamp -= base::TimeDelta::FromSeconds(time_shift_sec);
-    keyset.mutable_serialized()->set_last_activity_timestamp(
+    keyset->mutable_serialized()->set_last_activity_timestamp(
         timestamp.ToInternalValue());
-    if (!StoreTimestampForUser(obfuscated_username, &keyset)) {
+    if (!StoreTimestampForUser(obfuscated_username, keyset.get())) {
       return false;
     }
     if (user_timestamp_cache_->initialized()) {
@@ -673,14 +672,16 @@ bool Mount::StoreVaultKeysetForUser(const std::string& obfuscated_username,
   }
   if (platform_->FileExists(
           GetUserLegacyKeyFileForUser(obfuscated_username, index))) {
-    VaultKeyset keyset;
-    keyset.Initialize(platform_, crypto_);
-    homedirs_->LoadVaultKeysetForUser(obfuscated_username, index, &keyset);
+    std::unique_ptr<VaultKeyset> keyset(
+        homedirs_->LoadVaultKeysetForUser(obfuscated_username, index));
+    if (!keyset) {
+      return false;
+    }
     if (vault_keyset->serialized().has_last_activity_timestamp()) {
-      keyset.mutable_serialized()->set_last_activity_timestamp(
+      keyset->mutable_serialized()->set_last_activity_timestamp(
           vault_keyset->serialized().last_activity_timestamp());
       if (MessageDifferencer::Equals(vault_keyset->serialized(),
-                                     keyset.serialized())) {
+                                     keyset->serialized())) {
         LOG(INFO) << "Only the timestamp has changed, should not store keyset.";
         return StoreTimestampForUser(obfuscated_username, vault_keyset);
       }
@@ -862,8 +863,6 @@ void Mount::RemovePkcs11Token() {
 }
 
 base::Value Mount::GetStatus(int active_key_index) {
-  VaultKeyset keyset;
-  keyset.Initialize(platform_, crypto_);
   base::Value dv(base::Value::Type::DICTIONARY);
   std::string user = SanitizeUserNameWithSalt(username_, system_salt_);
   base::Value keysets(base::Value::Type::LIST);
@@ -871,20 +870,22 @@ base::Value Mount::GetStatus(int active_key_index) {
   if (user.length() && homedirs_->GetVaultKeysets(user, &key_indices)) {
     for (auto key_index : key_indices) {
       base::Value keyset_dict(base::Value::Type::DICTIONARY);
-      if (homedirs_->LoadVaultKeysetForUser(user, key_index, &keyset)) {
+      std::unique_ptr<VaultKeyset> keyset(
+          homedirs_->LoadVaultKeysetForUser(user, key_index));
+      if (keyset.get()) {
         bool tpm =
-            keyset.serialized().flags() & SerializedVaultKeyset::TPM_WRAPPED;
-        bool scrypt =
-            keyset.serialized().flags() & SerializedVaultKeyset::SCRYPT_WRAPPED;
+            keyset->serialized().flags() & SerializedVaultKeyset::TPM_WRAPPED;
+        bool scrypt = keyset->serialized().flags() &
+                      SerializedVaultKeyset::SCRYPT_WRAPPED;
         keyset_dict.SetBoolKey("tpm", tpm);
         keyset_dict.SetBoolKey("scrypt", scrypt);
         keyset_dict.SetBoolKey("ok", true);
         keyset_dict.SetIntKey("last_activity",
-                              keyset.serialized().last_activity_timestamp());
-        if (keyset.serialized().has_key_data()) {
+                              keyset->serialized().last_activity_timestamp());
+        if (keyset->serialized().has_key_data()) {
           // TODO(wad) Add additional KeyData
           keyset_dict.SetStringKey("label",
-                                   keyset.serialized().key_data().label());
+                                   keyset->serialized().key_data().label());
         }
       } else {
         keyset_dict.SetBoolKey("ok", false);

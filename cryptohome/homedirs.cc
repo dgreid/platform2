@@ -124,22 +124,14 @@ bool HomeDirs::AreEphemeralUsersEnabled() {
 }
 
 bool HomeDirs::AreCredentialsValid(const Credentials& creds) {
-  std::unique_ptr<VaultKeyset> vk(
-      vault_keyset_factory()->New(platform_, crypto_));
-  return GetValidKeyset(creds, vk.get(), nullptr /* error */);
+  std::unique_ptr<VaultKeyset> vk = GetValidKeyset(creds, nullptr /* error */);
+  return vk.get() != nullptr;
 }
 
-bool HomeDirs::GetValidKeyset(const Credentials& creds,
-                              VaultKeyset* vk,
-                              MountError* error) {
+std::unique_ptr<VaultKeyset> HomeDirs::GetValidKeyset(const Credentials& creds,
+                                                      MountError* error) {
   if (error)
     *error = MOUNT_ERROR_NONE;
-
-  if (!vk) {
-    if (error)
-      *error = MOUNT_ERROR_FATAL;
-    return false;
-  }
 
   std::string owner;
   std::string obfuscated = creds.GetObfuscatedUsername(system_salt_);
@@ -147,7 +139,7 @@ bool HomeDirs::GetValidKeyset(const Credentials& creds,
   if (AreEphemeralUsersEnabled() && GetOwner(&owner) && obfuscated != owner) {
     if (error)
       *error = MOUNT_ERROR_FATAL;
-    return false;
+    return nullptr;
   }
 
   std::vector<int> key_indices;
@@ -155,14 +147,16 @@ bool HomeDirs::GetValidKeyset(const Credentials& creds,
     LOG(WARNING) << "No valid keysets on disk for " << obfuscated;
     if (error)
       *error = MOUNT_ERROR_VAULT_UNRECOVERABLE;
-    return false;
+    return nullptr;
   }
 
   bool any_keyset_exists = false;
   CryptoError last_crypto_error = CryptoError::CE_NONE;
   for (int index : key_indices) {
-    if (!LoadVaultKeysetForUser(obfuscated, index, vk))
+    std::unique_ptr<VaultKeyset> vk = LoadVaultKeysetForUser(obfuscated, index);
+    if (!vk) {
       continue;
+    }
     any_keyset_exists = true;
     // Skip decrypt attempts if the label doesn't match.
     // Treat an empty creds label as a wildcard.
@@ -178,7 +172,7 @@ bool HomeDirs::GetValidKeyset(const Credentials& creds,
         platform_->FileExists(base::FilePath(kLockedToSingleUserFile));
     if (vk->Decrypt(creds.passkey(), locked_to_single_user,
                     &last_crypto_error)) {
-      return true;
+      return vk;
     }
   }
 
@@ -224,7 +218,7 @@ bool HomeDirs::GetValidKeyset(const Credentials& creds,
   }
   if (error)
     *error = local_error;
-  return false;
+  return nullptr;
 }
 
 bool HomeDirs::SetLockedToSingleUser() const {
@@ -267,24 +261,26 @@ FilePath HomeDirs::GetUserMountDirectory(
   return GetUserMountDirectory(shadow_root_, obfuscated_username);
 }
 
-VaultKeyset* HomeDirs::GetVaultKeyset(const std::string& obfuscated_username,
-                                      const std::string& key_label) const {
+std::unique_ptr<VaultKeyset> HomeDirs::GetVaultKeyset(
+    const std::string& obfuscated_username,
+    const std::string& key_label) const {
   if (key_label.empty())
     return NULL;
 
   // Walk all indices to find a match.
   // We should move to label-derived suffixes to be efficient.
   std::vector<int> key_indices;
-  if (!GetVaultKeysets(obfuscated_username, &key_indices))
+  if (!GetVaultKeysets(obfuscated_username, &key_indices)) {
     return NULL;
-  std::unique_ptr<VaultKeyset> vk(
-      vault_keyset_factory()->New(platform_, crypto_));
+  }
   for (int index : key_indices) {
-    if (!LoadVaultKeysetForUser(obfuscated_username, index, vk.get())) {
+    std::unique_ptr<VaultKeyset> vk =
+        LoadVaultKeysetForUser(obfuscated_username, index);
+    if (!vk) {
       continue;
     }
     if (vk->label() == key_label) {
-      return vk.release();
+      return vk;
     }
   }
   return NULL;
@@ -332,8 +328,6 @@ bool HomeDirs::GetVaultKeysetLabels(const std::string& obfuscated_username,
   std::unique_ptr<FileEnumerator> file_enumerator(platform_->GetFileEnumerator(
       user_dir, false /* Not recursive. */, base::FileEnumerator::FILES));
   FilePath next_path;
-  std::unique_ptr<VaultKeyset> vk(
-      vault_keyset_factory()->New(platform_, crypto_));
   while (!(next_path = file_enumerator->Next()).empty()) {
     FilePath file_name = next_path.BaseName();
     // Scan for "master." files.
@@ -351,7 +345,9 @@ bool HomeDirs::GetVaultKeysetLabels(const std::string& obfuscated_username,
       continue;
     }
     // Now parse the keyset to get its label or skip it.
-    if (!LoadVaultKeysetForUser(obfuscated_username, index, vk.get())) {
+    std::unique_ptr<VaultKeyset> vk =
+        LoadVaultKeysetForUser(obfuscated_username, index);
+    if (!vk) {
       continue;
     }
     labels->push_back(vk->label());
@@ -450,13 +446,12 @@ CryptohomeErrorCode HomeDirs::UpdateKeyset(
     const std::string& authorization_signature) {
   const std::string obfuscated_username =
       credentials.GetObfuscatedUsername(system_salt_);
-  std::unique_ptr<VaultKeyset> vk(
-      vault_keyset_factory()->New(platform_, crypto_));
-  if (!GetValidKeyset(credentials, vk.get(), nullptr /* error */)) {
+  std::unique_ptr<VaultKeyset> vk =
+      GetValidKeyset(credentials, nullptr /* error */);
+  if (!vk) {
     // Differentiate between failure and non-existent.
     if (!credentials.key_data().label().empty()) {
-      vk.reset(
-          GetVaultKeyset(obfuscated_username, credentials.key_data().label()));
+      vk = GetVaultKeyset(obfuscated_username, credentials.key_data().label());
       if (!vk.get()) {
         LOG(WARNING) << "UpdateKeyset: key not found";
         return CRYPTOHOME_ERROR_AUTHORIZATION_KEY_NOT_FOUND;
@@ -701,10 +696,9 @@ std::unique_ptr<VaultKeyset> HomeDirs::LoadUnwrappedKeyset(
     *error = MOUNT_ERROR_NONE;
   }
 
-  std::unique_ptr<VaultKeyset> vk(
-      vault_keyset_factory()->New(platform_, crypto_));
+  std::unique_ptr<VaultKeyset> vk = GetValidKeyset(credentials, error);
 
-  if (!GetValidKeyset(credentials, vk.get(), error)) {
+  if (!vk) {
     LOG(INFO) << "Could not find keyset matching credentials for user: "
               << credentials.username();
     return nullptr;
@@ -727,13 +721,12 @@ CryptohomeErrorCode HomeDirs::AddKeyset(const Credentials& existing_credentials,
   std::string obfuscated =
       existing_credentials.GetObfuscatedUsername(system_salt_);
 
-  std::unique_ptr<VaultKeyset> vk(
-      vault_keyset_factory()->New(platform_, crypto_));
-  if (!GetValidKeyset(existing_credentials, vk.get(), nullptr /* error */)) {
+  std::unique_ptr<VaultKeyset> vk =
+      GetValidKeyset(existing_credentials, nullptr /* error */);
+  if (!vk) {
     // Differentiate between failure and non-existent.
     if (!existing_credentials.key_data().label().empty()) {
-      vk.reset(
-          GetVaultKeyset(obfuscated, existing_credentials.key_data().label()));
+      vk = GetVaultKeyset(obfuscated, existing_credentials.key_data().label());
       if (!vk.get()) {
         LOG(WARNING) << "AddKeyset: key not found";
         return CRYPTOHOME_ERROR_AUTHORIZATION_KEY_NOT_FOUND;
@@ -792,8 +785,8 @@ CryptohomeErrorCode HomeDirs::AddKeyset(const Credentials& existing_credentials,
   // Before persisting, check, in a racy-way, if there is
   // an existing labeled credential.
   if (new_data) {
-    std::unique_ptr<VaultKeyset> match(
-        GetVaultKeyset(obfuscated, new_data->label()));
+    std::unique_ptr<VaultKeyset> match =
+        GetVaultKeyset(obfuscated, new_data->label());
     if (match.get()) {
       LOG(INFO) << "Label already exists.";
       platform_->DeleteFile(vk_path, false);
@@ -837,19 +830,19 @@ CryptohomeErrorCode HomeDirs::RemoveKeyset(const Credentials& credentials,
   const std::string obfuscated =
       credentials.GetObfuscatedUsername(system_salt_);
 
-  std::unique_ptr<VaultKeyset> remove_vk(
-      GetVaultKeyset(obfuscated, key_data.label()));
+  std::unique_ptr<VaultKeyset> remove_vk =
+      GetVaultKeyset(obfuscated, key_data.label());
   if (!remove_vk.get()) {
     LOG(WARNING) << "RemoveKeyset: key to remove not found";
     return CRYPTOHOME_ERROR_KEY_NOT_FOUND;
   }
 
-  std::unique_ptr<VaultKeyset> vk(
-      vault_keyset_factory()->New(platform_, crypto_));
-  if (!GetValidKeyset(credentials, vk.get(), nullptr /* error */)) {
+  std::unique_ptr<VaultKeyset> vk =
+      GetValidKeyset(credentials, nullptr /* error */);
+  if (!vk) {
     // Differentiate between failure and non-existent.
     if (!credentials.key_data().label().empty()) {
-      vk.reset(GetVaultKeyset(obfuscated, credentials.key_data().label()));
+      vk = GetVaultKeyset(obfuscated, credentials.key_data().label());
       if (!vk.get()) {
         LOG(WARNING) << "RemoveKeyset: key not found";
         return CRYPTOHOME_ERROR_AUTHORIZATION_KEY_NOT_FOUND;
@@ -879,9 +872,8 @@ bool HomeDirs::ForceRemoveKeyset(const std::string& obfuscated, int index) {
   if (index < 0 || index >= kKeyFileMax)
     return false;
 
-  std::unique_ptr<VaultKeyset> vk(
-      vault_keyset_factory()->New(platform_, crypto_));
-  if (!LoadVaultKeysetForUser(obfuscated, index, vk.get())) {
+  std::unique_ptr<VaultKeyset> vk = LoadVaultKeysetForUser(obfuscated, index);
+  if (!vk) {
     LOG(WARNING) << "ForceRemoveKeyset: keyset " << index << " for "
                  << obfuscated << " does not exist";
     // Since it doesn't exist, then we're done.
@@ -1104,15 +1096,14 @@ void HomeDirs::AddUserTimestampToCache(const std::string& obfuscated) {
   std::vector<int> key_indices;
   // Failure is okay since the loop falls through.
   GetVaultKeysets(obfuscated, &key_indices);
-  std::unique_ptr<VaultKeyset> keyset(
-      vault_keyset_factory()->New(platform_, crypto_));
   // Collect the most recent time for a given user by walking all
   // vaults.  This avoids trying to keep them in sync atomically.
   // TODO(wad,?) Move non-key vault metadata to a standalone file.
   base::Time timestamp = base::Time();
   for (int index : key_indices) {
-    if (LoadVaultKeysetForUser(obfuscated, index, keyset.get()) &&
-        keyset->serialized().has_last_activity_timestamp()) {
+    std::unique_ptr<VaultKeyset> keyset =
+        LoadVaultKeysetForUser(obfuscated, index);
+    if (keyset.get() && keyset->serialized().has_last_activity_timestamp()) {
       const base::Time t = base::Time::FromInternalValue(
           keyset->serialized().last_activity_timestamp());
       if (t > timestamp)
@@ -1124,19 +1115,20 @@ void HomeDirs::AddUserTimestampToCache(const std::string& obfuscated) {
   }
 }
 
-bool HomeDirs::LoadVaultKeysetForUser(const std::string& obfuscated_user,
-                                      int index,
-                                      VaultKeyset* keyset) const {
+std::unique_ptr<VaultKeyset> HomeDirs::LoadVaultKeysetForUser(
+    const std::string& obfuscated_user, int index) const {
+  std::unique_ptr<VaultKeyset> keyset(
+      vault_keyset_factory()->New(platform_, crypto_));
   // Load the encrypted keyset
   FilePath user_key_file = GetVaultKeysetPath(obfuscated_user, index);
   // We don't have keys yet, so just load it.
   // TODO(wad) Move to passing around keysets and not serialized versions.
   if (!keyset->Load(user_key_file)) {
     LOG(ERROR) << "Failed to load keyset file for user " << obfuscated_user;
-    return false;
+    return nullptr;
   }
   keyset->set_legacy_index(index);
-  return true;
+  return keyset;
 }
 
 bool HomeDirs::GetPlainOwner(std::string* owner) {
@@ -1357,10 +1349,10 @@ bool HomeDirs::Migrate(const Credentials& newcreds,
   Credentials oldcreds(newcreds.username(), oldkey);
   std::string obfuscated = newcreds.GetObfuscatedUsername(system_salt_);
 
-  std::unique_ptr<VaultKeyset> vk(
-      vault_keyset_factory()->New(platform_, crypto_));
   int key_index = -1;
-  if (!GetValidKeyset(oldcreds, vk.get(), nullptr /* error */)) {
+  std::unique_ptr<VaultKeyset> vk =
+      GetValidKeyset(oldcreds, nullptr /* error */);
+  if (!vk) {
     LOG(ERROR) << "Can not retrieve keyset for the user: "
                << newcreds.username();
     return false;
@@ -1463,9 +1455,6 @@ bool HomeDirs::NeedsDircryptoMigration(
 }
 
 void HomeDirs::ResetLECredentials(const Credentials& creds) {
-  std::unique_ptr<VaultKeyset> vk(
-      vault_keyset_factory()->New(platform_, crypto_));
-
   std::string obfuscated = creds.GetObfuscatedUsername(system_salt_);
   std::vector<int> key_indices;
   if (!GetVaultKeysets(obfuscated, &key_indices)) {
@@ -1474,21 +1463,21 @@ void HomeDirs::ResetLECredentials(const Credentials& creds) {
   }
 
   bool credentials_checked = false;
-  std::unique_ptr<VaultKeyset> vk_reset(
-      vault_keyset_factory()->New(platform_, crypto_));
+  std::unique_ptr<VaultKeyset> vk;
   for (int index : key_indices) {
-    if (!LoadVaultKeysetForUser(obfuscated, index, vk_reset.get()))
+    std::unique_ptr<VaultKeyset> vk_reset =
+        LoadVaultKeysetForUser(obfuscated, index);
+    if (!vk_reset || !vk_reset->IsLECredential() ||  // Skip non-LE Credentials.
+        crypto_->GetWrongAuthAttempts(vk_reset->serialized()) == 0) {
       continue;
-    // Skip non-LE Credentials.
-    if (!vk_reset->IsLECredential())
-      continue;
-    if (crypto_->GetWrongAuthAttempts(vk_reset->serialized()) == 0)
-      continue;
+    }
 
     if (!credentials_checked) {
       // Make sure the credential can actually be used for sign-in.
       // It is also the easiest way to get a valid keyset.
-      if (!GetValidKeyset(creds, vk.get(), nullptr /* error */)) {
+      std::unique_ptr<VaultKeyset> vk =
+          GetValidKeyset(creds, nullptr /* error */);
+      if (!vk) {
         LOG(WARNING) << "The provided credentials are incorrect or invalid"
                         " for LE credential reset, reset skipped.";
         return;
@@ -1518,15 +1507,11 @@ void HomeDirs::RemoveLECredentials(const std::string& obfuscated_username) {
     return;
   }
 
-  std::unique_ptr<VaultKeyset> vk_remove(
-      vault_keyset_factory()->New(platform_, crypto_));
   for (int index : key_indices) {
-    if (!LoadVaultKeysetForUser(obfuscated_username, index, vk_remove.get())) {
-      continue;
-    }
-
-    // Skip non-LE Credentials.
-    if (!vk_remove->IsLECredential()) {
+    std::unique_ptr<VaultKeyset> vk_remove =
+        LoadVaultKeysetForUser(obfuscated_username, index);
+    if (!vk_remove ||
+        !vk_remove->IsLECredential()) {  // Skip non-LE Credentials.
       continue;
     }
 

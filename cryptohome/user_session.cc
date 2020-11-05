@@ -54,6 +54,9 @@ MountError UserSession::MountVault(const Credentials& credentials,
   if (code != MOUNT_ERROR_NONE) {
     return code;
   }
+  if (!vk) {
+    return MOUNT_ERROR_FATAL;
+  }
   FileSystemKeys fs_keys(*vk);
 
   if (!mount_->MountCryptohome(credentials.username(), fs_keys, mount_args,

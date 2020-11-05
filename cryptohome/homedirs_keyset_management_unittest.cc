@@ -250,31 +250,31 @@ class KeysetManagementTest : public ::testing::Test {
   }
 
   void VerifyKeysetNotPresentWithCreds(const Credentials& creds) {
-    VaultKeyset vk;
-    vk.Initialize(&platform_, homedirs_.crypto());
-    ASSERT_FALSE(homedirs_.GetValidKeyset(creds, &vk, /* error */ nullptr));
+    std::unique_ptr<VaultKeyset> vk =
+        homedirs_.GetValidKeyset(creds, /* error */ nullptr);
+    ASSERT_EQ(vk.get(), nullptr);
   }
 
   void VerifyKeysetPresentWithCredsAtIndex(const Credentials& creds,
                                            int index) {
-    VaultKeyset vk;
-    vk.Initialize(&platform_, homedirs_.crypto());
-    ASSERT_TRUE(homedirs_.GetValidKeyset(creds, &vk, /* error */ nullptr));
-    EXPECT_EQ(vk.legacy_index(), index);
-    EXPECT_TRUE(vk.serialized().has_wrapped_chaps_key());
-    EXPECT_TRUE(vk.serialized().has_wrapped_reset_seed());
+    std::unique_ptr<VaultKeyset> vk =
+        homedirs_.GetValidKeyset(creds, /* error */ nullptr);
+    ASSERT_NE(vk.get(), nullptr);
+    EXPECT_EQ(vk->legacy_index(), index);
+    EXPECT_TRUE(vk->serialized().has_wrapped_chaps_key());
+    EXPECT_TRUE(vk->serialized().has_wrapped_reset_seed());
   }
 
   void VerifyKeysetPresentWithCredsAtIndexAndRevision(const Credentials& creds,
                                                       int index,
                                                       int revision) {
-    VaultKeyset vk;
-    vk.Initialize(&platform_, homedirs_.crypto());
-    ASSERT_TRUE(homedirs_.GetValidKeyset(creds, &vk, /* error */ nullptr));
-    EXPECT_EQ(vk.legacy_index(), index);
-    EXPECT_EQ(vk.serialized().key_data().revision(), revision);
-    EXPECT_TRUE(vk.serialized().has_wrapped_chaps_key());
-    EXPECT_TRUE(vk.serialized().has_wrapped_reset_seed());
+    std::unique_ptr<VaultKeyset> vk =
+        homedirs_.GetValidKeyset(creds, /* error */ nullptr);
+    ASSERT_NE(vk.get(), nullptr);
+    EXPECT_EQ(vk->legacy_index(), index);
+    EXPECT_EQ(vk->serialized().key_data().revision(), revision);
+    EXPECT_TRUE(vk->serialized().has_wrapped_chaps_key());
+    EXPECT_TRUE(vk->serialized().has_wrapped_reset_seed());
   }
 };
 
@@ -545,6 +545,8 @@ TEST_F(KeysetManagementTest, AddKeysetEncryptFail) {
   EXPECT_CALL(*mock_vk, Load(_)).WillOnce(Return(true));
   EXPECT_CALL(*mock_vk, Decrypt(_, _, _)).WillOnce(Return(true));
   EXPECT_CALL(*mock_vk, Encrypt(new_passkey, _)).WillOnce(Return(false));
+
+  auto real_vault_keyset_factory = homedirs_.vault_keyset_factory();
   homedirs_.set_vault_keyset_factory(&vault_keyset_factory);
 
   // TEST
@@ -558,6 +560,8 @@ TEST_F(KeysetManagementTest, AddKeysetEncryptFail) {
   // VERIFY
   // If we failed to save the added keyset due to encryption failure, the old
   // keyset should still exist and be readable with the old credentials.
+
+  homedirs_.set_vault_keyset_factory(real_vault_keyset_factory);
 
   VerifyKeysetIndicies({kInitialKeysetIndex});
 
@@ -584,6 +588,8 @@ TEST_F(KeysetManagementTest, AddKeysetSaveFail) {
   EXPECT_CALL(*mock_vk, Decrypt(_, _, _)).WillOnce(Return(true));
   EXPECT_CALL(*mock_vk, Encrypt(new_passkey, _)).WillOnce(Return(true));
   EXPECT_CALL(*mock_vk, Save(_)).WillOnce(Return(false));
+
+  auto real_vault_keyset_factory = homedirs_.vault_keyset_factory();
   homedirs_.set_vault_keyset_factory(&vault_keyset_factory);
 
   // TEST
@@ -597,6 +603,8 @@ TEST_F(KeysetManagementTest, AddKeysetSaveFail) {
   // VERIFY
   // If we failed to save the added keyset due to disk failure, the old
   // keyset should still exist and be readable with the old credentials.
+
+  homedirs_.set_vault_keyset_factory(real_vault_keyset_factory);
 
   VerifyKeysetIndicies({kInitialKeysetIndex});
 
@@ -654,6 +662,8 @@ TEST_F(KeysetManagementTest, UpdateKeysetEncryptFail) {
   EXPECT_CALL(*mock_vk, Load(_)).WillOnce(Return(true));
   EXPECT_CALL(*mock_vk, Decrypt(_, _, _)).WillOnce(Return(true));
   EXPECT_CALL(*mock_vk, Encrypt(new_passkey, _)).WillOnce(Return(false));
+
+  auto real_vault_keyset_factory = homedirs_.vault_keyset_factory();
   homedirs_.set_vault_keyset_factory(&vault_keyset_factory);
 
   // TEST
@@ -665,6 +675,8 @@ TEST_F(KeysetManagementTest, UpdateKeysetEncryptFail) {
   // VERIFY
   // Failed encrypting updated keyset. Old keyset shall still be
   // readable with old credentials, and the new one shall not  exist.
+
+  homedirs_.set_vault_keyset_factory(real_vault_keyset_factory);
 
   VerifyKeysetIndicies({kInitialKeysetIndex});
 
@@ -698,6 +710,8 @@ TEST_F(KeysetManagementTest, UpdateKeysetSaveFail) {
   EXPECT_CALL(*mock_vk, Encrypt(new_passkey, _)).WillOnce(Return(true));
   EXPECT_CALL(*mock_vk, source_file()).WillOnce(ReturnRef(source_path));
   EXPECT_CALL(*mock_vk, Save(_)).WillOnce(Return(false));
+
+  auto real_vault_keyset_factory = homedirs_.vault_keyset_factory();
   homedirs_.set_vault_keyset_factory(&vault_keyset_factory);
 
   // TEST
@@ -709,6 +723,8 @@ TEST_F(KeysetManagementTest, UpdateKeysetSaveFail) {
   // VERIFY
   // Failed saving updated keyset. Old keyset shall still be
   // readable with old credentials, and the new one shall not  exist.
+
+  homedirs_.set_vault_keyset_factory(real_vault_keyset_factory);
 
   VerifyKeysetIndicies({kInitialKeysetIndex});
 
@@ -1362,10 +1378,9 @@ TEST_F(KeysetManagementTest, ReSaveKeysetNoReSave) {
 
   KeysetSetUpWithKeyData(DefaultKeyData());
 
-  VaultKeyset vk0;
-  vk0.Initialize(&platform_, homedirs_.crypto());
-  EXPECT_TRUE(homedirs_.GetValidKeyset(users_[0].credentials, &vk0,
-                                       /* error */ nullptr));
+  std::unique_ptr<VaultKeyset> vk0 =
+      homedirs_.GetValidKeyset(users_[0].credentials, /* error */ nullptr);
+  ASSERT_NE(vk0.get(), nullptr);
 
   // TEST
 
@@ -1376,14 +1391,13 @@ TEST_F(KeysetManagementTest, ReSaveKeysetNoReSave) {
 
   // VERIFY
 
-  VaultKeyset vk0_new;
-  vk0_new.Initialize(&platform_, homedirs_.crypto());
-  EXPECT_TRUE(homedirs_.GetValidKeyset(users_[0].credentials, &vk0_new,
-                                       /* error */ nullptr));
+  std::unique_ptr<VaultKeyset> vk0_new(
+      homedirs_.GetValidKeyset(users_[0].credentials, /* error */ nullptr));
+  ASSERT_NE(vk0_new.get(), nullptr);
 
   brillo::SecureBlob lhs, rhs;
-  GetKeysetBlob(vk0.serialized(), &lhs);
-  GetKeysetBlob(vk0_new.serialized(), &rhs);
+  GetKeysetBlob(vk0->serialized(), &lhs);
+  GetKeysetBlob(vk0_new->serialized(), &rhs);
   ASSERT_EQ(lhs.size(), rhs.size());
   ASSERT_EQ(0, brillo::SecureMemcmp(lhs.data(), rhs.data(), lhs.size()));
 }
@@ -1393,12 +1407,12 @@ TEST_F(KeysetManagementTest, ReSaveKeysetChapsRepopulation) {
 
   KeysetSetUpWithKeyData(DefaultKeyData());
 
-  VaultKeyset vk0;
-  vk0.Initialize(&platform_, homedirs_.crypto());
-  EXPECT_TRUE(homedirs_.LoadVaultKeysetForUser(users_[0].obfuscated, 0, &vk0));
-  vk0.mutable_serialized()->clear_wrapped_chaps_key();
-  EXPECT_FALSE(vk0.serialized().has_wrapped_chaps_key());
-  ASSERT_TRUE(vk0.Save(vk0.source_file()));
+  std::unique_ptr<VaultKeyset> vk0 =
+      homedirs_.LoadVaultKeysetForUser(users_[0].obfuscated, 0);
+  ASSERT_NE(vk0.get(), nullptr);
+  vk0->mutable_serialized()->clear_wrapped_chaps_key();
+  EXPECT_FALSE(vk0->serialized().has_wrapped_chaps_key());
+  ASSERT_TRUE(vk0->Save(vk0->source_file()));
 
   // TEST
 
@@ -1410,16 +1424,15 @@ TEST_F(KeysetManagementTest, ReSaveKeysetChapsRepopulation) {
 
   // VERIFY
 
-  VaultKeyset vk0_new;
-  vk0_new.Initialize(&platform_, homedirs_.crypto());
-  EXPECT_TRUE(homedirs_.GetValidKeyset(users_[0].credentials, &vk0_new,
-                                       /* error */ nullptr));
-  EXPECT_TRUE(vk0_new.serialized().has_wrapped_chaps_key());
+  std::unique_ptr<VaultKeyset> vk0_new =
+      homedirs_.GetValidKeyset(users_[0].credentials, /* error */ nullptr);
+  ASSERT_NE(vk0_new.get(), nullptr);
+  EXPECT_TRUE(vk0_new->serialized().has_wrapped_chaps_key());
 
-  ASSERT_EQ(vk0_new.chaps_key().size(), vk_load->chaps_key().size());
-  ASSERT_EQ(0, brillo::SecureMemcmp(vk0_new.chaps_key().data(),
+  ASSERT_EQ(vk0_new->chaps_key().size(), vk_load->chaps_key().size());
+  ASSERT_EQ(0, brillo::SecureMemcmp(vk0_new->chaps_key().data(),
                                     vk_load->chaps_key().data(),
-                                    vk0_new.chaps_key().size()));
+                                    vk0_new->chaps_key().size()));
 }
 
 TEST_F(KeysetManagementTest, ReSaveOnLoadNoReSave) {
@@ -1427,14 +1440,13 @@ TEST_F(KeysetManagementTest, ReSaveOnLoadNoReSave) {
 
   KeysetSetUpWithKeyData(DefaultKeyData());
 
-  VaultKeyset vk0;
-  vk0.Initialize(&platform_, homedirs_.crypto());
-  EXPECT_TRUE(homedirs_.GetValidKeyset(users_[0].credentials, &vk0,
-                                       /* error */ nullptr));
+  std::unique_ptr<VaultKeyset> vk0 =
+      homedirs_.GetValidKeyset(users_[0].credentials, /* error */ nullptr);
+  ASSERT_NE(vk0.get(), nullptr);
 
   // TEST
 
-  EXPECT_FALSE(homedirs_.ShouldReSaveKeyset(&vk0));
+  EXPECT_FALSE(homedirs_.ShouldReSaveKeyset(vk0.get()));
 }
 
 // The following tests use MOCKs for TpmState and hand-crafted vault keyset
@@ -1445,10 +1457,9 @@ TEST_F(KeysetManagementTest, ReSaveOnLoadTestRegularCreds) {
 
   KeysetSetUpWithKeyData(DefaultKeyData());
 
-  VaultKeyset vk0;
-  vk0.Initialize(&platform_, homedirs_.crypto());
-  EXPECT_TRUE(homedirs_.GetValidKeyset(users_[0].credentials, &vk0,
-                                       /* error */ nullptr));
+  std::unique_ptr<VaultKeyset> vk0 =
+      homedirs_.GetValidKeyset(users_[0].credentials, /* error */ nullptr);
+  ASSERT_NE(vk0.get(), nullptr);
 
   NiceMock<MockTpmInit> mock_tpm_init;
   EXPECT_CALL(mock_tpm_init, HasCryptohomeKey()).WillRepeatedly(Return(true));
@@ -1464,31 +1475,31 @@ TEST_F(KeysetManagementTest, ReSaveOnLoadTestRegularCreds) {
   // TEST
 
   // Scrypt wrapped shall be resaved when tpm present.
-  EXPECT_TRUE(homedirs_.ShouldReSaveKeyset(&vk0));
+  EXPECT_TRUE(homedirs_.ShouldReSaveKeyset(vk0.get()));
 
   // Tpm wrapped not pcr bound, but no public hash - resave.
-  vk0.mutable_serialized()->set_flags(SerializedVaultKeyset::TPM_WRAPPED |
-                                      SerializedVaultKeyset::SCRYPT_DERIVED);
-  EXPECT_TRUE(homedirs_.ShouldReSaveKeyset(&vk0));
+  vk0->mutable_serialized()->set_flags(SerializedVaultKeyset::TPM_WRAPPED |
+                                       SerializedVaultKeyset::SCRYPT_DERIVED);
+  EXPECT_TRUE(homedirs_.ShouldReSaveKeyset(vk0.get()));
 
   // Tpm wrapped pcr bound, but no public hash - resave.
-  vk0.mutable_serialized()->set_flags(SerializedVaultKeyset::TPM_WRAPPED |
-                                      SerializedVaultKeyset::SCRYPT_DERIVED |
-                                      SerializedVaultKeyset::PCR_BOUND);
-  EXPECT_TRUE(homedirs_.ShouldReSaveKeyset(&vk0));
+  vk0->mutable_serialized()->set_flags(SerializedVaultKeyset::TPM_WRAPPED |
+                                       SerializedVaultKeyset::SCRYPT_DERIVED |
+                                       SerializedVaultKeyset::PCR_BOUND);
+  EXPECT_TRUE(homedirs_.ShouldReSaveKeyset(vk0.get()));
 
   // Tpm wrapped not pcr bound, public hash - resave.
-  vk0.mutable_serialized()->set_tpm_public_key_hash("public hash");
-  vk0.mutable_serialized()->set_flags(SerializedVaultKeyset::TPM_WRAPPED |
-                                      SerializedVaultKeyset::SCRYPT_DERIVED);
-  EXPECT_TRUE(homedirs_.ShouldReSaveKeyset(&vk0));
+  vk0->mutable_serialized()->set_tpm_public_key_hash("public hash");
+  vk0->mutable_serialized()->set_flags(SerializedVaultKeyset::TPM_WRAPPED |
+                                       SerializedVaultKeyset::SCRYPT_DERIVED);
+  EXPECT_TRUE(homedirs_.ShouldReSaveKeyset(vk0.get()));
 
   // Tpm wrapped pcr bound, public hash - no resave.
-  vk0.mutable_serialized()->set_tpm_public_key_hash("public hash");
-  vk0.mutable_serialized()->set_flags(SerializedVaultKeyset::TPM_WRAPPED |
-                                      SerializedVaultKeyset::SCRYPT_DERIVED |
-                                      SerializedVaultKeyset::PCR_BOUND);
-  EXPECT_FALSE(homedirs_.ShouldReSaveKeyset(&vk0));
+  vk0->mutable_serialized()->set_tpm_public_key_hash("public hash");
+  vk0->mutable_serialized()->set_flags(SerializedVaultKeyset::TPM_WRAPPED |
+                                       SerializedVaultKeyset::SCRYPT_DERIVED |
+                                       SerializedVaultKeyset::PCR_BOUND);
+  EXPECT_FALSE(homedirs_.ShouldReSaveKeyset(vk0.get()));
 }
 
 TEST_F(KeysetManagementTest, ReSaveOnLoadTestLeCreds) {
@@ -1496,10 +1507,9 @@ TEST_F(KeysetManagementTest, ReSaveOnLoadTestLeCreds) {
 
   KeysetSetUpWithKeyData(DefaultKeyData());
 
-  VaultKeyset vk0;
-  vk0.Initialize(&platform_, homedirs_.crypto());
-  EXPECT_TRUE(homedirs_.GetValidKeyset(users_[0].credentials, &vk0,
-                                       /* error */ nullptr));
+  std::unique_ptr<VaultKeyset> vk0 =
+      homedirs_.GetValidKeyset(users_[0].credentials, /* error */ nullptr);
+  ASSERT_NE(vk0.get(), nullptr);
 
   NiceMock<MockTpmInit> mock_tpm_init;
   EXPECT_CALL(mock_tpm_init, HasCryptohomeKey()).WillRepeatedly(Return(true));
@@ -1521,14 +1531,14 @@ TEST_F(KeysetManagementTest, ReSaveOnLoadTestLeCreds) {
   // le credentials which doesn't need pcr binding - no re-save
   EXPECT_CALL(*le_cred_manager, NeedsPcrBinding(_))
       .WillRepeatedly(Return(false));
-  vk0.mutable_serialized()->set_flags(SerializedVaultKeyset::LE_CREDENTIAL);
-  EXPECT_FALSE(homedirs_.ShouldReSaveKeyset(&vk0));
+  vk0->mutable_serialized()->set_flags(SerializedVaultKeyset::LE_CREDENTIAL);
+  EXPECT_FALSE(homedirs_.ShouldReSaveKeyset(vk0.get()));
 
   // le credentials which needs pcr binding - no resave.
   EXPECT_CALL(*le_cred_manager, NeedsPcrBinding(_))
       .WillRepeatedly(Return(true));
-  vk0.mutable_serialized()->set_flags(SerializedVaultKeyset::LE_CREDENTIAL);
-  EXPECT_TRUE(homedirs_.ShouldReSaveKeyset(&vk0));
+  vk0->mutable_serialized()->set_flags(SerializedVaultKeyset::LE_CREDENTIAL);
+  EXPECT_TRUE(homedirs_.ShouldReSaveKeyset(vk0.get()));
 }
 
 }  // namespace cryptohome

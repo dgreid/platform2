@@ -952,11 +952,12 @@ class ServiceExTest : public ServiceTest {
 
   ~ServiceExTest() override = default;
 
-  VaultKeyset* GetNiceMockVaultKeyset(const std::string& obfuscated_username,
-                                      const std::string& key_label) const {
+  std::unique_ptr<VaultKeyset> GetNiceMockVaultKeyset(
+      const std::string& obfuscated_username,
+      const std::string& key_label) const {
     std::unique_ptr<VaultKeyset> mvk(new NiceMock<MockVaultKeyset>);
     mvk->mutable_serialized()->mutable_key_data()->set_label(key_label);
-    return mvk.release();
+    return mvk;
   }
 
  protected:
@@ -1852,9 +1853,9 @@ TEST_F(ServiceExTest, GetKeyDataExNoMatch) {
   GetKeyDataRequest req;
   req.mutable_key()->mutable_data()->set_label("non-existent label");
   // Ensure there are no matches.
+  std::unique_ptr<VaultKeyset> vk;
   EXPECT_CALL(homedirs_, GetVaultKeyset(_, _))
-      .Times(1)
-      .WillRepeatedly(Return(static_cast<VaultKeyset*>(NULL)));
+      .WillOnce(Return(ByMove(std::move(vk))));
   service_.DoGetKeyDataEx(id_.get(), auth_.get(), &req, NULL);
   DispatchEvents();
   ASSERT_TRUE(reply());
