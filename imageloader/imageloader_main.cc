@@ -110,6 +110,8 @@ bool CreateComponentsPath() {
 }  // namespace
 
 int main(int argc, char** argv) {
+  DEFINE_bool(init_only, false,
+              "Only executes one-time setup process for imageloader.");
   DEFINE_bool(dry_run, false,
               "Changes unmount_all to print the paths which would be "
               "affected.");
@@ -148,6 +150,8 @@ int main(int argc, char** argv) {
   if (!Init(FLAGS_loaded_mounts_base)) {
     return 1;
   }
+  if (FLAGS_init_only)
+    return 0;
 
   // Create folder for component copies. This ensures that
   // imageloader's storage exists and is owned by `imageloaderd` user.
