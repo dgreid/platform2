@@ -120,6 +120,10 @@ MATCHER_P(MountArgsEqual, mount_args, "") {
 TEST_F(UserSessionTest, MountVaultOk) {
   // SETUP
 
+  constexpr int64_t kTs1 = 42;
+  constexpr int64_t kTs2 = 43;
+  constexpr int64_t kTs3 = 44;
+
   Mount::MountArgs mount_args_create;
   // Test with ecryptfs since it has a simpler existence check.
   mount_args_create.create_as_ecryptfs = true;
@@ -131,8 +135,9 @@ TEST_F(UserSessionTest, MountVaultOk) {
               MountCryptohome(users_[0].name, _,
                               MountArgsEqual(mount_args_create), true, _))
       .WillOnce(Return(true));
-  EXPECT_CALL(*mount_, UpdateCurrentUserActivityTimestamp(0, 0))
-      .WillOnce(Return(true));
+  EXPECT_CALL(*mount_, IsNonEphemeralMounted()).WillOnce(Return(true));
+  EXPECT_CALL(platform_, GetCurrentTime())
+      .WillOnce(Return(base::Time::FromInternalValue(kTs1)));
 
   // TEST
 
@@ -145,6 +150,11 @@ TEST_F(UserSessionTest, MountVaultOk) {
   EXPECT_TRUE(platform_.DirectoryExists(users_[0].homedir_path));
   EXPECT_TRUE(session_->VerifyCredentials(users_[0].credentials));
   EXPECT_TRUE(homedirs_.AreCredentialsValid(users_[0].credentials));
+
+  std::unique_ptr<VaultKeyset> vk0 =
+      homedirs_.LoadVaultKeysetForUser(users_[0].obfuscated, 0);
+  const int64_t ts1 = vk0->serialized().last_activity_timestamp();
+  EXPECT_EQ(ts1, kTs1);
 
   // SETUP
 
@@ -160,8 +170,9 @@ TEST_F(UserSessionTest, MountVaultOk) {
               MountCryptohome(users_[0].name, _,
                               MountArgsEqual(mount_args_no_create), false, _))
       .WillOnce(Return(true));
-  EXPECT_CALL(*mount_, UpdateCurrentUserActivityTimestamp(0, 0))
-      .WillOnce(Return(true));
+  EXPECT_CALL(*mount_, IsNonEphemeralMounted()).WillOnce(Return(true));
+  EXPECT_CALL(platform_, GetCurrentTime())
+      .WillOnce(Return(base::Time::FromInternalValue(kTs2)));
 
   // TEST
 
@@ -170,10 +181,110 @@ TEST_F(UserSessionTest, MountVaultOk) {
 
   // VERIFY
   // Vault still exists when tried to remount with no create.
+  // ts updated on mount
 
   EXPECT_TRUE(platform_.DirectoryExists(users_[0].homedir_path));
   EXPECT_TRUE(session_->VerifyCredentials(users_[0].credentials));
   EXPECT_TRUE(homedirs_.AreCredentialsValid(users_[0].credentials));
+
+  vk0 = homedirs_.LoadVaultKeysetForUser(users_[0].obfuscated, 0);
+  const int64_t ts2 = vk0->serialized().last_activity_timestamp();
+  EXPECT_EQ(ts2, kTs2);
+
+  // SETUP
+
+  EXPECT_CALL(*mount_, IsNonEphemeralMounted()).WillOnce(Return(true));
+  EXPECT_CALL(platform_, GetCurrentTime())
+      .WillOnce(Return(base::Time::FromInternalValue(kTs3)));
+  EXPECT_CALL(*mount_, UnmountCryptohome()).WillOnce(Return(true));
+
+  // TEST
+
+  ASSERT_TRUE(session_->Unmount());
+
+  // VERIFY
+  // ts updated on unmount
+
+  vk0 = homedirs_.LoadVaultKeysetForUser(users_[0].obfuscated, 0);
+  const int64_t ts3 = vk0->serialized().last_activity_timestamp();
+  EXPECT_EQ(ts3, kTs3);
+}
+
+TEST_F(UserSessionTest, MountVaultWrongCreds) {
+  // SETUP
+
+  constexpr int64_t kTs1 = 42;
+
+  Mount::MountArgs mount_args_create;
+  // Test with ecryptfs since it has a simpler existence check.
+  mount_args_create.create_as_ecryptfs = true;
+  mount_args_create.create_if_missing = true;
+
+  EXPECT_CALL(*mount_, PrepareCryptohome(users_[0].obfuscated, true))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*mount_,
+              MountCryptohome(users_[0].name, _,
+                              MountArgsEqual(mount_args_create), true, _))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*mount_, IsNonEphemeralMounted()).WillOnce(Return(true));
+  EXPECT_CALL(platform_, GetCurrentTime())
+      .WillOnce(Return(base::Time::FromInternalValue(kTs1)));
+
+  ASSERT_EQ(MOUNT_ERROR_NONE,
+            session_->MountVault(users_[0].credentials, mount_args_create));
+
+  std::unique_ptr<VaultKeyset> vk0 =
+      homedirs_.LoadVaultKeysetForUser(users_[0].obfuscated, 0);
+  const int64_t ts1 = vk0->serialized().last_activity_timestamp();
+  EXPECT_EQ(ts1, kTs1);
+
+  // TODO(dlunev): this is required to mimic a real Mount::PrepareCryptohome
+  // call. Remove it when we are not mocking mount.
+  platform_.CreateDirectory(
+      homedirs_.GetEcryptfsUserVaultPath(users_[0].obfuscated));
+
+  Mount::MountArgs mount_args_no_create;
+  mount_args_no_create.create_if_missing = false;
+
+  EXPECT_CALL(*mount_,
+              MountCryptohome(users_[0].name, _,
+                              MountArgsEqual(mount_args_no_create), false, _))
+      .Times(0);
+
+  Credentials wrong_creds(users_[0].name, brillo::SecureBlob("wrong"));
+
+  // TEST
+
+  ASSERT_EQ(MOUNT_ERROR_KEY_FAILURE,
+            session_->MountVault(wrong_creds, mount_args_no_create));
+
+  // VERIFY
+  // Failed to remount with wrong credentials.
+
+  EXPECT_TRUE(platform_.DirectoryExists(users_[0].homedir_path));
+  EXPECT_TRUE(session_->VerifyCredentials(users_[0].credentials));
+  EXPECT_TRUE(homedirs_.AreCredentialsValid(users_[0].credentials));
+
+  // No mount, no ts update.
+  vk0 = homedirs_.LoadVaultKeysetForUser(users_[0].obfuscated, 0);
+  const int64_t ts2 = vk0->serialized().last_activity_timestamp();
+  EXPECT_EQ(ts2, ts1);
+
+  // SETUP
+
+  EXPECT_CALL(*mount_, IsNonEphemeralMounted()).WillOnce(Return(false));
+  EXPECT_CALL(*mount_, UnmountCryptohome()).WillOnce(Return(true));
+
+  // TEST
+
+  ASSERT_TRUE(session_->Unmount());
+
+  // VERIFY
+  // No unmount, no ts update.
+
+  vk0 = homedirs_.LoadVaultKeysetForUser(users_[0].obfuscated, 0);
+  const int64_t ts3 = vk0->serialized().last_activity_timestamp();
+  EXPECT_EQ(ts3, ts2);
 }
 
 // Fail to mount because vault doesn't exist and creation is disaalowed.
@@ -182,8 +293,6 @@ TEST_F(UserSessionTest, MountVaultNoExistNoCreate) {
 
   Mount::MountArgs mount_args;
   mount_args.create_if_missing = false;
-
-  EXPECT_CALL(*mount_, UpdateCurrentUserActivityTimestamp(_, _)).Times(0);
 
   // TEST
 

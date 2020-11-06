@@ -84,14 +84,16 @@ MountError UserSession::MountGuest() {
 }
 
 bool UserSession::Unmount() {
-  if (mount_->IsNonEphemeralMounted()) {
-    UpdateActivityTimestamp(0);
-  }
+  UpdateActivityTimestamp(0);
   return mount_->UnmountCryptohome();
 }
 
 bool UserSession::UpdateActivityTimestamp(int time_shift_sec) {
-  return mount_->UpdateCurrentUserActivityTimestamp(time_shift_sec, key_index_);
+  if (!mount_->IsNonEphemeralMounted()) {
+    return false;
+  }
+  return homedirs_->UpdateActivityTimestamp(obfuscated_username_, key_index_,
+                                            time_shift_sec);
 }
 
 base::Value UserSession::GetStatus() const {

@@ -31,7 +31,6 @@
 #include "cryptohome/dircrypto_util.h"
 #include "cryptohome/disk_cleanup.h"
 #include "cryptohome/key.pb.h"
-#include "cryptohome/mount.h"
 #include "cryptohome/mount_helper.h"
 #include "cryptohome/platform.h"
 #include "cryptohome/signed_secret.pb.h"
@@ -46,6 +45,7 @@ namespace cryptohome {
 
 namespace {
 constexpr int kInitialKeysetIndex = 0;
+constexpr char kTsFile[] = "timestamp";
 }  // namespace
 
 const char* kShadowRoot = "/home/.shadow";
@@ -711,6 +711,53 @@ std::unique_ptr<VaultKeyset> HomeDirs::LoadUnwrappedKeyset(
   return vk;
 }
 
+bool HomeDirs::UpdateActivityTimestamp(const std::string& obfuscated,
+                                       int index,
+                                       int time_shift_sec) {
+  std::unique_ptr<VaultKeyset> keyset(
+      LoadVaultKeysetForUser(obfuscated, index));
+  if (!keyset) {
+    return false;
+  }
+  base::Time timestamp = platform_->GetCurrentTime();
+  if (time_shift_sec > 0) {
+    timestamp -= base::TimeDelta::FromSeconds(time_shift_sec);
+  }
+
+  Timestamp ts_proto;
+  ts_proto.set_timestamp(timestamp.ToInternalValue());
+  std::string timestamp_str;
+  if (!ts_proto.SerializeToString(&timestamp_str)) {
+    return false;
+  }
+
+  base::FilePath ts_file = GetUserActivityTimestampPath(obfuscated, index);
+  if (!platform_->WriteStringToFileAtomicDurable(ts_file, timestamp_str,
+                                                 kKeyFilePermissions)) {
+    LOG(ERROR) << "Failed writing to timestamp file: " << ts_file;
+    return false;
+  }
+
+  // The first time we write to a timestamp file we need to update the
+  // vault_keyset to indicate that the timestamp is stored separately.
+  // The initial 0 timestamp is also written to the vault_keyset which
+  // means a timestamp will exist and can be read in case of a rollback.
+  if (!keyset->serialized().timestamp_file_exists()) {
+    keyset->mutable_serialized()->set_timestamp_file_exists(true);
+    if (!keyset->Save(keyset->source_file())) {
+      LOG(ERROR) << "Failed updating ts marker in keyset: "
+                 << keyset->source_file();
+      return false;
+    }
+  }
+
+  if (timestamp_cache_ && timestamp_cache_->initialized()) {
+    timestamp_cache_->UpdateExistingUser(obfuscated, timestamp);
+  }
+
+  return true;
+}
+
 CryptohomeErrorCode HomeDirs::AddKeyset(const Credentials& existing_credentials,
                                         const SecureBlob& new_passkey,
                                         const KeyData* new_data,  // NULLable
@@ -925,6 +972,11 @@ FilePath HomeDirs::GetVaultKeysetPath(const std::string& obfuscated,
   return shadow_root_.Append(obfuscated)
       .Append(kKeyFile)
       .AddExtension(base::NumberToString(index));
+}
+
+FilePath HomeDirs::GetUserActivityTimestampPath(const std::string& obfuscated,
+                                                int index) const {
+  return GetVaultKeysetPath(obfuscated, index).AddExtension(kTsFile);
 }
 
 void HomeDirs::RemoveNonOwnerCryptohomesCallback(

@@ -67,12 +67,6 @@ void GetKeysetBlob(const SerializedVaultKeyset& serialized,
 
 }  // namespace
 
-// TODO(dlunev): Remove kKey* extern declarations once we have it declared
-// in the proper place.
-extern const char kKeyFile[];
-extern const int kKeyFileMax;
-extern const char kKeyLegacyPrefix[];
-
 class KeysetManagementTest : public ::testing::Test {
  public:
   KeysetManagementTest() : crypto_(&platform_) {}

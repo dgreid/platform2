@@ -969,53 +969,6 @@ TEST_P(MountTest, MountPristineCryptohome) {
   ASSERT_EQ(MOUNT_ERROR_NONE, error);
 }
 
-TEST_P(MountTest, UserActivityTimestampUpdated) {
-  // checks that user activity timestamp is updated during Mount() and
-  // periodically while mounted, other Keyset fields remains the same
-  EXPECT_CALL(platform_, DirectoryExists(kImageDir))
-      .WillRepeatedly(Return(true));
-  EXPECT_TRUE(DoMountInit());
-
-  InsertTestUsers(&kDefaultUsers[9], 1);
-  TestUser* user = &helper_.users[0];
-
-  EXPECT_CALL(platform_,
-              CreateDirectory(AnyOf(
-                  MountHelper::GetNewUserPath(user->username),
-                  Property(&FilePath::value, StartsWith(kImageDir.value())))))
-      .WillRepeatedly(Return(true));
-
-  user->InjectKeyset(&platform_, true);
-  user->InjectUserPaths(&platform_, fake_platform::kChronosUID,
-                        fake_platform::kChronosGID, fake_platform::kSharedGID,
-                        kDaemonGid, ShouldTestEcryptfs());
-
-  // Mount()
-  MountError error;
-  ExpectCryptohomeMount(*user);
-  ASSERT_TRUE(mount_->MountCryptohome(user->username, FileSystemKeys(),
-                                      GetDefaultMountArgs(),
-                                      /* is_pristine */ false, &error));
-
-  // Update the timestamp. Normally it is called in MountTask::Run() in
-  // background but here in the test we must call it manually.
-  static const int kMagicTimestamp = 123;
-  brillo::Blob updated_keyset;
-  std::string timestamp_str;
-  EXPECT_CALL(platform_,
-              WriteStringToFileAtomicDurable(user->timestamp_path, _, _))
-      .WillRepeatedly(DoAll(SaveArg<1>(&timestamp_str), Return(true)));
-  EXPECT_CALL(platform_, GetCurrentTime())
-      .WillOnce(Return(base::Time::FromInternalValue(kMagicTimestamp)));
-  mount_->UpdateCurrentUserActivityTimestamp(0, 0);
-
-  // Check that last activity timestamp is updated.
-  ASSERT_TRUE(platform_.FileExists(user->timestamp_path));
-  Timestamp tstamp;
-  tstamp.ParseFromString(timestamp_str);
-  EXPECT_EQ(kMagicTimestamp, tstamp.timestamp());
-}
-
 TEST_P(MountTest, RememberMountOrderingTest) {
   // Checks that mounts made with MountAndPush/BindAndPush are undone in the
   // right order.
@@ -1328,22 +1281,6 @@ class AltImageTest : public MountTest {
     EXPECT_CALL(platform_, DirectoryExists(kImageDir))
         .WillRepeatedly(Return(true));
     EXPECT_TRUE(DoMountInit());
-  }
-
-  // Set the user with specified |key_file| old.
-  bool SetUserTimestamp(TestUser* user, base::Time timestamp) {
-    SerializedVaultKeyset serialized;
-    if (!LoadSerializedKeyset(user->credentials, &serialized)) {
-      LOG(ERROR) << "Failed to parse keyset for " << user->username;
-      return false;
-    }
-    serialized.set_last_activity_timestamp(timestamp.ToInternalValue());
-    bool ok = StoreSerializedKeyset(serialized, user);
-    if (!ok) {
-      LOG(ERROR) << "Failed to serialize new timestamp'd keyset for "
-                 << user->username;
-    }
-    return ok;
   }
 
   void PrepareHomedirs(bool inject_keyset,

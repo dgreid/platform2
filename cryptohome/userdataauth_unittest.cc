@@ -1258,7 +1258,9 @@ TEST_F(UserDataAuthTest, UpdateCurrentUserActivityTimestampSuccess) {
 
   // Test case for single mount
   SetupMount("foo@gmail.com");
-  EXPECT_CALL(*mount_, UpdateCurrentUserActivityTimestamp(kTimeshift, _))
+
+  EXPECT_CALL(*mount_, IsNonEphemeralMounted()).WillRepeatedly(Return(true));
+  EXPECT_CALL(homedirs_, UpdateActivityTimestamp(_, _, kTimeshift))
       .WillOnce(Return(true));
 
   EXPECT_TRUE(userdataauth_->UpdateCurrentUserActivityTimestamp(kTimeshift));
@@ -1267,9 +1269,9 @@ TEST_F(UserDataAuthTest, UpdateCurrentUserActivityTimestampSuccess) {
   scoped_refptr<MockMount> prev_mount = mount_;
   SetupMount("bar@gmail.com");
 
-  EXPECT_CALL(*mount_, UpdateCurrentUserActivityTimestamp(kTimeshift, _))
-      .WillOnce(Return(true));
-  EXPECT_CALL(*prev_mount, UpdateCurrentUserActivityTimestamp(kTimeshift, _))
+  EXPECT_CALL(*mount_, IsNonEphemeralMounted()).WillRepeatedly(Return(true));
+  EXPECT_CALL(homedirs_, UpdateActivityTimestamp(_, _, kTimeshift))
+      .WillOnce(Return(true))
       .WillOnce(Return(true));
 
   EXPECT_TRUE(userdataauth_->UpdateCurrentUserActivityTimestamp(kTimeshift));
@@ -1280,7 +1282,9 @@ TEST_F(UserDataAuthTest, UpdateCurrentUserActivityTimestampFailure) {
 
   // Test case for single mount
   SetupMount("foo@gmail.com");
-  EXPECT_CALL(*mount_, UpdateCurrentUserActivityTimestamp(kTimeshift, _))
+
+  EXPECT_CALL(*mount_, IsNonEphemeralMounted()).WillRepeatedly(Return(true));
+  EXPECT_CALL(homedirs_, UpdateActivityTimestamp(_, _, kTimeshift))
       .WillOnce(Return(false));
 
   EXPECT_FALSE(userdataauth_->UpdateCurrentUserActivityTimestamp(kTimeshift));
@@ -1587,8 +1591,6 @@ TEST_F(UserDataAuthTest, CleanUpStale_FilledMap_NoOpenFiles_ShadowOnly) {
   EXPECT_CALL(homedirs_, LoadUnwrappedKeyset(_, _))
       .WillOnce(Return(ByMove(std::move(vk))));
   EXPECT_CALL(*mount, MountCryptohome(_, _, _, _, _)).WillOnce(Return(true));
-  EXPECT_CALL(*mount, UpdateCurrentUserActivityTimestamp(_, _))
-      .WillOnce(Return(true));
   EXPECT_CALL(platform_, GetMountsBySourcePrefix(_, _)).WillOnce(Return(false));
   EXPECT_CALL(platform_, GetAttachedLoopDevices())
       .WillRepeatedly(Return(std::vector<Platform::LoopDevice>()));
@@ -1684,8 +1686,6 @@ TEST_F(UserDataAuthTest,
   EXPECT_CALL(homedirs_, LoadUnwrappedKeyset(_, _))
       .WillOnce(Return(ByMove(std::move(vk))));
   EXPECT_CALL(*mount, MountCryptohome(_, _, _, _, _)).WillOnce(Return(true));
-  EXPECT_CALL(*mount, UpdateCurrentUserActivityTimestamp(_, _))
-      .WillOnce(Return(true));
   EXPECT_CALL(platform_, GetMountsBySourcePrefix(_, _)).WillOnce(Return(false));
   EXPECT_CALL(platform_, GetAttachedLoopDevices())
       .WillRepeatedly(Return(std::vector<Platform::LoopDevice>()));
@@ -3175,12 +3175,12 @@ class UserDataAuthTestThreaded : public UserDataAuthTestNotInitialized {
   base::Thread origin_thread_;
 };
 
-TEST_F(UserDataAuthTestThreaded,
-       CheckUpdateCurrentUserActivityTimestampCalledDaily) {
+TEST_F(UserDataAuthTestThreaded, CheckUpdateActivityTimestampCalledDaily) {
   // Note: This test is constructed similar to CheckAutoCleanupCallback test.
   constexpr int kTimesUpdateUserActivityCalled = 3;
 
   SetupMount("some-user-to-clean-up");
+  EXPECT_CALL(*mount_, IsNonEphemeralMounted()).WillRepeatedly(Return(true));
 
   // Used to signal that the test is done.
   base::WaitableEvent done(base::WaitableEvent::ResetPolicy::MANUAL,
@@ -3202,18 +3202,18 @@ TEST_F(UserDataAuthTestThreaded,
         return current_time;
       }));
 
-  // Count the number of times updateCurrentUserActivityTimestamp happens.
-  EXPECT_CALL(*mount_, UpdateCurrentUserActivityTimestamp(0, _))
+  // Count the number of times UpdateActivityTimestamp happens.
+  EXPECT_CALL(homedirs_, UpdateActivityTimestamp(_, _, 0))
       .Times(AtLeast(kTimesUpdateUserActivityCalled))
-      .WillRepeatedly(
-          Invoke([&lock, &update_user_activity_called, &done](int, int) {
-            base::AutoLock scoped_lock(lock);
-            update_user_activity_called++;
-            if (update_user_activity_called == kTimesUpdateUserActivityCalled) {
-              done.Signal();
-            }
-            return true;
-          }));
+      .WillRepeatedly(Invoke([&lock, &update_user_activity_called, &done](
+                                 const std::string&, int, int) {
+        base::AutoLock scoped_lock(lock);
+        update_user_activity_called++;
+        if (update_user_activity_called == kTimesUpdateUserActivityCalled) {
+          done.Signal();
+        }
+        return true;
+      }));
 
   const int period_ms = 1;
 

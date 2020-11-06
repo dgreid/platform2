@@ -396,9 +396,10 @@ TEST_F(ServiceTestNotInitialized, CheckAutoCleanupCallback) {
   // Service will schedule periodic clean-ups.
   SetupMount("some-user-to-clean-up");
 
-  // Check that UpdateCurrentUserActivityTimestamp happens daily.
-  EXPECT_CALL(*mount_, UpdateCurrentUserActivityTimestamp(0, _))
-      .Times(AtLeast(1));
+  EXPECT_CALL(*mount_, IsNonEphemeralMounted()).WillRepeatedly(Return(true));
+
+  // Check that UpdateActivityTimestamp happens daily.
+  EXPECT_CALL(homedirs_, UpdateActivityTimestamp(_, _, 0)).Times(AtLeast(1));
 
   // These are shared between Mount and Platform threads, guarded by the lock.
   int free_disk_space_count = 0;
@@ -423,7 +424,7 @@ TEST_F(ServiceTestNotInitialized, CheckAutoCleanupCallback) {
 
   // Make sure that we have at least 48 FreeDiskSpace calls executed.
   // (48 hourly callbacks == two days,
-  // at least 1 UpdateCurrentUserActivityTimestamp)
+  // at least 1 UpdateActivityTimestamp)
   for (int count = 0; count < 48;) {
     {
       base::AutoLock scoped_lock(lock);
@@ -882,8 +883,6 @@ TEST_F(ServiceTestNotInitialized,
   EXPECT_CALL(homedirs_, LoadUnwrappedKeyset(_, _))
       .WillOnce(Return(ByMove(std::move(vk))));
   EXPECT_CALL(*mount, MountCryptohome(_, _, _, _, _)).WillOnce(Return(true));
-  EXPECT_CALL(*mount, UpdateCurrentUserActivityTimestamp(_, _))
-      .WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, GetMountsBySourcePrefix(_, _)).WillOnce(Return(false));
   EXPECT_CALL(platform_, GetAttachedLoopDevices())
       .WillRepeatedly(Return(std::vector<Platform::LoopDevice>()));

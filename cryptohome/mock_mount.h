@@ -40,10 +40,6 @@ class MockMount : public Mount {
   MOCK_METHOD(bool, IsMounted, (), (const, override));
   MOCK_METHOD(bool, IsNonEphemeralMounted, (), (const, override));
   MOCK_METHOD(bool, MountGuestCryptohome, (), (override));
-  MOCK_METHOD(bool,
-              UpdateCurrentUserActivityTimestamp,
-              (int, int),
-              (override));  // NOLINT
   MOCK_METHOD(const base::FilePath&, mount_point, (), (const, override));
   MOCK_METHOD(bool, OwnsMountPoint, (const base::FilePath&), (const, override));
   MOCK_METHOD(bool, InsertPkcs11Token, (), (override));

@@ -47,13 +47,6 @@
 
 namespace cryptohome {
 
-// Name of the key file.
-extern const char kKeyFile[];
-// Automatic label prefix of a legacy key ("%s%d")
-extern const char kKeyLegacyPrefix[];
-// Maximum number of key files.
-extern const int kKeyFileMax;
-
 class ChapsClientFactory;
 class UserOldestActivityTimestampCache;
 
@@ -136,20 +129,6 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   // current user that is not ephemeral.
   //
   virtual bool IsNonEphemeralMounted() const;
-
-  // Updates current user activity timestamp. This is called daily.
-  // So we may not consider current user as old (and delete it soon after they
-  // log off). Returns true if current user is logged in and timestamp was
-  // updated.
-  // If no user is logged or the mount is ephemeral, nothing is done and false
-  // is returned.
-  //
-  // Parameters
-  //   time_shift_sec - normally must be 0. Shifts the updated time backwards
-  //                    by specified number of seconds. Used in manual tests.
-  //   active_key_index - index of the active keyset
-  virtual bool UpdateCurrentUserActivityTimestamp(int time_shift_sec,
-                                                  int active_key_index);
 
   // Used to override the default shadow root
   void set_shadow_root(const base::FilePath& value) { shadow_root_ = value; }
@@ -285,23 +264,6 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   virtual bool AddEcryptfsAuthToken(const FileSystemKeys& file_system_keys,
                                     std::string* key_signature,
                                     std::string* filename_key_signature) const;
-
-  virtual bool StoreVaultKeysetForUser(const std::string& obfuscated_username,
-                                       VaultKeyset* vault_keyset) const;
-
-  virtual bool StoreTimestampForUser(const std::string& obfuscated_username,
-                                     VaultKeyset* vault_keyset) const;
-
-  base::FilePath GetUserTimestampFileForUser(
-      const std::string& obfuscated_username, int index) const;
-
-  // Gets the user's key file name by index
-  //
-  // Parameters
-  //   obfuscated_username - Obfuscated username field of the Credentials
-  //   index - which key file to load
-  base::FilePath GetUserLegacyKeyFileForUser(
-      const std::string& obfuscated_username, int index) const;
 
   // Gets the directory in the shadow root where the user's salt, key, and vault
   // are stored.
@@ -508,7 +470,6 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   FRIEND_TEST(MountTest, NamespaceCreationPass);
   FRIEND_TEST(MountTest, NamespaceCreationFail);
   FRIEND_TEST(MountTest, RememberMountOrderingTest);
-  FRIEND_TEST(MountTest, UserActivityTimestampUpdated);
   FRIEND_TEST(MountTest, CreateCryptohomeTest);
   FRIEND_TEST(MountTest, CreateTrackedSubdirectories);
   FRIEND_TEST(MountTest, CreateTrackedSubdirectoriesReplaceExistingDir);

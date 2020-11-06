@@ -25,7 +25,6 @@
 #include <policy/device_policy.h>
 #include <policy/libpolicy.h>
 
-#include "cryptohome/mount_factory.h"
 #include "cryptohome/rpc.pb.h"
 #include "cryptohome/vault_keyset.h"
 #include "cryptohome/vault_keyset.pb.h"
@@ -46,6 +45,11 @@ extern const char kTrackedDirectoryNameAttribute[];
 extern const char kRemovableFileAttribute[];
 extern const char kEcryptfsVaultDir[];
 extern const char kMountDir[];
+
+constexpr mode_t kKeyFilePermissions = 0600;
+constexpr int kKeyFileMax = 100;  // master.0 ... master.99
+constexpr char kKeyFile[] = "master";
+constexpr char kKeyLegacyPrefix[] = "legacy-";
 
 class Credentials;
 class Crypto;
@@ -194,6 +198,13 @@ class HomeDirs {
   // Returns the vault keyset path for the supplied obfuscated username.
   virtual base::FilePath GetVaultKeysetPath(const std::string& obfuscated,
                                             int index) const;
+
+  base::FilePath GetUserActivityTimestampPath(const std::string& obfuscated,
+                                              int index) const;
+
+  virtual bool UpdateActivityTimestamp(const std::string& obfuscted,
+                                       int index,
+                                       int time_shift_sec);
 
   // Adds initial keyset for the credentials.
   virtual bool AddInitialKeyset(const Credentials& credentials);

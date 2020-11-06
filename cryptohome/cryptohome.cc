@@ -37,8 +37,8 @@
 #include "cryptohome/attestation.pb.h"
 #include "cryptohome/crypto.h"
 #include "cryptohome/cryptolib.h"
+#include "cryptohome/homedirs.h"
 #include "cryptohome/key.pb.h"
-#include "cryptohome/mount.h"
 #include "cryptohome/pkcs11_init.h"
 #include "cryptohome/platform.h"
 #include "cryptohome/rpc.pb.h"
@@ -3090,7 +3090,7 @@ int main(int argc, char** argv) {
     cryptohome::BaseReply reply;
     brillo::glib::ScopedError error;
     GArray* out_reply = NULL;
-    if (!org_chromium_CryptohomeInterface_lock_to_single_user_mount_until_reboot(
+    if (!org_chromium_CryptohomeInterface_lock_to_single_user_mount_until_reboot(  // NOLINT
             proxy.gproxy(), req_ary.get(), &out_reply,
             &brillo::Resetter(&error).lvalue())) {
       printf("LockToSingleUserMountUntilReboot call failed: %s",

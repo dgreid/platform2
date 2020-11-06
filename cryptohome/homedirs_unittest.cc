@@ -60,12 +60,6 @@ ACTION_P(SetEphemeralUsersEnabled, ephemeral_users_enabled) {
 
 }  // namespace
 
-// TODO(dlunev): Remove kKeyFile extern declaration once we have it declared
-// in the proper place.
-extern const char kKeyFile[];
-constexpr char kKeyFileIndexSuffix[] = "0";
-constexpr char kKeyFileTimestampSuffix[] = "0.timestamp";
-
 class HomeDirsTest
     : public ::testing::TestWithParam<bool /* should_test_ecryptfs */> {
  public:
@@ -431,6 +425,8 @@ TEST_P(HomeDirsTest, AddUserTimestampToCache) {
   vk.Initialize(&platform_, homedirs_.crypto());
   // Populate and encrypt keyset to satisfy sanity check within |Save|.
   vk.CreateRandom();
+  constexpr char kKeyFileIndexSuffix[] = "0";
+  constexpr char kKeyFileTimestampSuffix[] = "0.timestamp";
   constexpr int kTime = 499;
   const base::Time t = base::Time::FromInternalValue(kTime);
   Timestamp timestamp;
