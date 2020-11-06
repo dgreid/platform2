@@ -105,6 +105,7 @@ class Manager : public org::chromium::lorgnette::ManagerAdaptor,
   struct ScanJobState {
     std::string device_name;
     bool in_use = false;
+    bool cancelled = false;
     std::unique_ptr<SaneDevice> device;
     int current_page = 1;
     // The total number of pages to scan for the scan job. If this is nullopt,

@@ -156,6 +156,18 @@ class ManagerTest : public testing::Test {
     sane_client_->SetDeviceForName(name, std::move(device));
   }
 
+  // Set up a multi-page color scan.
+  void SetUpMultiPageScan() {
+    ScanParameters parameters;
+    parameters.format = kRGB;
+    parameters.bytes_per_line = 98 * 3;
+    parameters.pixels_per_line = 98;
+    parameters.lines = 50;
+    parameters.depth = 8;
+    base::FilePath path("test_images/color.pnm");
+    SetUpTestDevice("TestDevice", {path, path}, parameters);
+  }
+
   StartScanResponse StartScan(const std::string& device_name,
                               ColorMode color_mode,
                               const std::string& source_name) {
@@ -330,15 +342,7 @@ TEST_F(ManagerTest, StartScan16BitColorSuccess) {
 }
 
 TEST_F(ManagerTest, StartScanMultiPageColorSuccess) {
-  ScanParameters parameters;
-  parameters.format = kRGB;
-  parameters.bytes_per_line = 98 * 3;
-  parameters.pixels_per_line = 98;
-  parameters.lines = 50;
-  parameters.depth = 8;
-  base::FilePath path("test_images/color.pnm");
-  SetUpTestDevice("TestDevice", {path, path}, parameters);
-
+  SetUpMultiPageScan();
   ExpectScanRequest(kOtherBackend);
   ExpectScanSuccess(kOtherBackend);
 
@@ -364,15 +368,47 @@ TEST_F(ManagerTest, StartScanMultiPageColorSuccess) {
   ValidateSignals(signals_, response.scan_uuid());
 }
 
-TEST_F(ManagerTest, StartScanCancelled) {
-  ScanParameters parameters;
-  parameters.format = kRGB;
-  parameters.bytes_per_line = 98 * 3;
-  parameters.pixels_per_line = 98;
-  parameters.lines = 50;
-  parameters.depth = 8;
-  base::FilePath color_path("./test_images/color.pnm");
-  SetUpTestDevice("TestDevice", {color_path, color_path}, parameters);
+TEST_F(ManagerTest, StartScanCancelledImmediately) {
+  SetUpMultiPageScan();
+
+  ExpectScanRequest(kOtherBackend);
+  // Set the source to "ADF" so that lorgnette knows to expect multiple pages.
+  StartScanResponse response = StartScan("TestDevice", MODE_COLOR, "ADF");
+  std::string uuid = response.scan_uuid();
+  EXPECT_EQ(response.state(), SCAN_STATE_IN_PROGRESS);
+  EXPECT_NE(uuid, "");
+
+  CancelScanResponse cancel_scan_response = CancelScan(uuid);
+  EXPECT_TRUE(cancel_scan_response.success());
+
+  GetNextImageResponse get_next_image_response = GetNextImage(uuid, scan_fd_);
+  EXPECT_FALSE(get_next_image_response.success());
+
+  EXPECT_EQ(signals_.back().scan_uuid(), uuid);
+  EXPECT_EQ(signals_.back().state(), SCAN_STATE_CANCELLED);
+  ValidateProgressSignals(signals_, uuid);
+}
+
+TEST_F(ManagerTest, StartScanCancelledWithNoFurtherOperations) {
+  SetUpMultiPageScan();
+
+  ExpectScanRequest(kOtherBackend);
+  // Set the source to "ADF" so that lorgnette knows to expect multiple pages.
+  StartScanResponse response = StartScan("TestDevice", MODE_COLOR, "ADF");
+  std::string uuid = response.scan_uuid();
+  EXPECT_EQ(response.state(), SCAN_STATE_IN_PROGRESS);
+  EXPECT_NE(uuid, "");
+
+  CancelScanResponse cancel_scan_response = CancelScan(uuid);
+  EXPECT_TRUE(cancel_scan_response.success());
+
+  EXPECT_EQ(signals_.back().scan_uuid(), uuid);
+  EXPECT_EQ(signals_.back().state(), SCAN_STATE_CANCELLED);
+  ValidateProgressSignals(signals_, uuid);
+}
+
+TEST_F(ManagerTest, StartScanCancelledAfterGettingPage) {
+  SetUpMultiPageScan();
 
   ExpectScanRequest(kOtherBackend);
   // Set the source to "ADF" so that lorgnette knows to expect multiple pages.
@@ -388,7 +424,7 @@ TEST_F(ManagerTest, StartScanCancelled) {
   EXPECT_TRUE(cancel_scan_response.success());
 
   get_next_image_response = GetNextImage(uuid, scan_fd_);
-  EXPECT_TRUE(get_next_image_response.success());
+  EXPECT_FALSE(get_next_image_response.success());
 
   EXPECT_EQ(signals_.back().scan_uuid(), uuid);
   EXPECT_EQ(signals_.back().state(), SCAN_STATE_CANCELLED);

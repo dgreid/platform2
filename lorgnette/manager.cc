@@ -564,9 +564,16 @@ void Manager::GetNextImage(
       [](base::WeakPtr<Manager> manager, const std::string& uuid) {
         if (manager) {
           base::AutoLock(manager->active_scans_lock_);
-          auto state = manager->active_scans_.find(uuid);
-          if (state != manager->active_scans_.end()) {
-            state->second.in_use = false;
+          auto state_entry = manager->active_scans_.find(uuid);
+          if (state_entry == manager->active_scans_.end())
+            return;
+
+          ScanJobState& state = state_entry->second;
+          if (state.cancelled) {
+            manager->SendCancelledSignal(uuid);
+            manager->active_scans_.erase(uuid);
+          } else {
+            state.in_use = false;
           }
         }
       },
@@ -600,7 +607,6 @@ std::vector<uint8_t> Manager::CancelScan(
     return impl::SerializeProto(response);
   }
   std::string uuid = request.scan_uuid();
-  ScanJobState* scan_state;
   {
     base::AutoLock auto_lock(active_scans_lock_);
     if (!base::Contains(active_scans_, uuid)) {
@@ -608,16 +614,32 @@ std::vector<uint8_t> Manager::CancelScan(
       response.set_failure_reason("No scan job with UUID " + uuid + " found");
       return impl::SerializeProto(response);
     }
-    scan_state = &active_scans_[uuid];
-    // Purposefully, we do not care if scan_state->in_use is set. sane_cancel()
-    // is required to be async safe, so we can call it even if the device is
-    // actively being used.
-    brillo::ErrorPtr error;
-    if (!scan_state->device->CancelScan(&error)) {
+
+    ScanJobState& scan_state = active_scans_[uuid];
+    if (scan_state.cancelled) {
       response.set_success(false);
-      response.set_failure_reason("Failed to cancel scan: " +
-                                  SerializeError(error));
+      response.set_failure_reason("Job has already been cancelled");
       return impl::SerializeProto(response);
+    }
+
+    if (scan_state.in_use) {
+      // We can't just delete the scan job entirely since it's in use.
+      // sane_cancel() is required to be async safe, so we can call it even if
+      // the device is actively being used.
+      brillo::ErrorPtr error;
+      if (!scan_state.device->CancelScan(&error)) {
+        response.set_success(false);
+        response.set_failure_reason("Failed to cancel scan: " +
+                                    SerializeError(error));
+        return impl::SerializeProto(response);
+      }
+      // When the job that is actively using the device finishes, it will erase
+      // the job, freeing the device for use by other scans.
+      scan_state.cancelled = true;
+    } else {
+      // If we're not actively using the device, just delete the scan job.
+      SendCancelledSignal(uuid);
+      active_scans_.erase(uuid);
     }
   }
 
