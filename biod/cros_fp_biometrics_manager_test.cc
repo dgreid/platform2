@@ -365,32 +365,22 @@ class CrosFpBiometricsManagerMockTest : public ::testing::Test {
   metrics::MockBiodMetrics* mock_metrics_;
 };
 
-// TODO(b/76037094#comment37): This test should be removed and the other
-//  maintenance timer tests should be re-enabled when the maintenance timer
-//  is re-enabled.
-TEST_F(CrosFpBiometricsManagerMockTest, TestMaintenanceTimer_NotCalled) {
-  EXPECT_CALL(*mock_, OnMaintenanceTimerFired).Times(0);
-  task_environment_.FastForwardBy(base::TimeDelta::FromDays(1));
-}
-
-TEST_F(CrosFpBiometricsManagerMockTest,
-       DISABLED_TestMaintenanceTimer_TooShort) {
+TEST_F(CrosFpBiometricsManagerMockTest, TestMaintenanceTimer_TooShort) {
   EXPECT_CALL(*mock_, OnMaintenanceTimerFired).Times(0);
   task_environment_.FastForwardBy(base::TimeDelta::FromHours(12));
 }
 
-TEST_F(CrosFpBiometricsManagerMockTest, DISABLED_TestMaintenanceTimer_Once) {
+TEST_F(CrosFpBiometricsManagerMockTest, TestMaintenanceTimer_Once) {
   EXPECT_CALL(*mock_, OnMaintenanceTimerFired).Times(1);
   task_environment_.FastForwardBy(base::TimeDelta::FromDays(1));
 }
 
-TEST_F(CrosFpBiometricsManagerMockTest,
-       DISABLED_TestMaintenanceTimer_Multiple) {
+TEST_F(CrosFpBiometricsManagerMockTest, TestMaintenanceTimer_Multiple) {
   EXPECT_CALL(*mock_, OnMaintenanceTimerFired).Times(2);
   task_environment_.FastForwardBy(base::TimeDelta::FromDays(2));
 }
 
-TEST_F(CrosFpBiometricsManagerMockTest, DISABLED_TestOnMaintenanceTimerFired) {
+TEST_F(CrosFpBiometricsManagerMockTest, TestOnMaintenanceTimerFired) {
   constexpr int kNumDeadPixels = 1;
 
   EXPECT_NE(mock_cros_dev_, nullptr);

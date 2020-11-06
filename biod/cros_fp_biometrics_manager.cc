@@ -333,14 +333,10 @@ CrosFpBiometricsManager::CrosFpBiometricsManager(
 
   use_positive_match_secret_ = cros_dev_->SupportsPositiveMatchSecret();
 
-  // TODO(b/76037094#comment37): Disabling for M87 since firmware doesn't
-  //  support maintenance functionality.
-#if 0
   maintenance_timer_->Start(
       FROM_HERE, base::TimeDelta::FromDays(1),
       base::Bind(&CrosFpBiometricsManager::OnMaintenanceTimerFired,
                  base::Unretained(this)));
-#endif
 }
 
 CrosFpBiometricsManager::~CrosFpBiometricsManager() {}
