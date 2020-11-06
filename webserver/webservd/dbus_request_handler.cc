@@ -23,14 +23,18 @@ namespace {
 
 constexpr int kDbusTimeoutInMsec = 50 * 1000;
 
-void OnError(Request* request, bool debug, brillo::Error* error) {
+void OnError(base::WeakPtr<webservd::Request> in_request,
+             bool debug,
+             brillo::Error* error) {
+  auto* request = in_request.get();
+  if (!request) {
+    LOG(ERROR) << "Request Instance is expired";
+    return;
+  }
+
   std::string error_msg{"Internal Server Error"};
   if (debug) {
     error_msg += "\r\n" + error->GetMessage();
-  }
-  if (!request) {
-    LOG(ERROR) << "Invalid Request Instance";
-    return;
   }
   request->Complete(brillo::http::status_code::InternalServerError, {},
                     brillo::mime::text::kPlain, error_msg);
@@ -51,8 +55,14 @@ DBusRequestHandler::DBusRequestHandler(Server* server,
                                        RequestHandlerProxy* handler_proxy)
     : server_{server}, handler_proxy_{handler_proxy} {}
 
-void DBusRequestHandler::HandleRequest(Request* request,
-                                       const std::string& src) {
+void DBusRequestHandler::HandleRequest(
+    base::WeakPtr<webservd::Request> in_request, const std::string& src) {
+  auto* request = in_request.get();
+  if (!request) {
+    LOG(INFO) << "Request Instance is not valid";
+    return;
+  }
+
   std::vector<std::tuple<std::string, std::string>> headers;
   for (const auto& pair : request->GetHeaders()) {
     if (CompleteRequestIfInvalid(request, pair.first) ||
@@ -103,8 +113,8 @@ void DBusRequestHandler::HandleRequest(Request* request,
     return;
   }
 
-  auto error_callback = base::Bind(&OnError, base::Unretained(request),
-                                   server_->GetConfig().use_debug);
+  auto error_callback =
+      base::Bind(&OnError, in_request, server_->GetConfig().use_debug);
 
   auto request_id = std::make_tuple(
       request->GetProtocolHandlerID(), request->GetRequestHandlerID(),

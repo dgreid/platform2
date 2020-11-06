@@ -23,7 +23,8 @@ class RequestHandlerInterface {
 
   virtual ~RequestHandlerInterface() = default;
 
-  virtual void HandleRequest(Request* request, const std::string& src) = 0;
+  virtual void HandleRequest(base::WeakPtr<webservd::Request> in_request,
+                             const std::string& src) = 0;
 };
 
 }  // namespace webservd

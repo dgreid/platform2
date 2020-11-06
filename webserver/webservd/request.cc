@@ -252,7 +252,7 @@ void Request::ForwardRequestToHandler() {
       inet_ntop(AF_INET6, &sock_addr->sin6_addr, src, INET6_ADDRSTRLEN);
     }
     // Send the request over D-Bus and await the response.
-    p->second.handler->HandleRequest(this, src);
+    p->second.handler->HandleRequest(weak_ptr_factory_.GetWeakPtr(), src);
   } else {
     // There was no handler found when request was made, respond with
     // 404 Page Not Found.
