@@ -338,9 +338,15 @@ class CrashSenderUtilTest : public testing::Test {
     if (!CreateFile(devcore_devcore_, "", now))
       return false;
 
+    // This should be ignored, since the metadata is corrupted but the file is
+    // still fairly new.
+    new_corrupted_meta_ = crash_directory.Append("new_corrupted.meta");
+    if (!CreateFile(new_corrupted_meta_, "foo\ndone=1\n", now))
+      return false;
+
     // This should be removed, since metadata is corrupted.
-    corrupted_meta_ = crash_directory.Append("corrupted.meta");
-    if (!CreateFile(corrupted_meta_, "!@#$%^&*\ndone=1\n", now))
+    old_corrupted_meta_ = crash_directory.Append("old_corrupted.meta");
+    if (!CreateFile(old_corrupted_meta_, "!@#$%^&*\ndone=1\n", now - hour * 1))
       return false;
 
     // This should be removed, since no payload info is recorded.
@@ -468,7 +474,8 @@ class CrashSenderUtilTest : public testing::Test {
   base::FilePath devcore_meta_;
   base::FilePath devcore_devcore_;
   base::FilePath empty_meta_;
-  base::FilePath corrupted_meta_;
+  base::FilePath new_corrupted_meta_;
+  base::FilePath old_corrupted_meta_;
   base::FilePath nonexistent_meta_;
   base::FilePath unknown_meta_;
   base::FilePath unknown_xxx_;
@@ -790,15 +797,21 @@ TEST_F(CrashSenderUtilTest, ChooseAction) {
   EXPECT_THAT(reason, HasSubstr("Payload is not found"));
   EXPECT_FALSE(base::PathExists(empty_meta_.ReplaceExtension(".processing")));
 
+  EXPECT_EQ(Sender::kIgnore,
+            sender.ChooseAction(new_corrupted_meta_, &reason, &info));
+  EXPECT_THAT(reason, HasSubstr("Recent incomplete metadata"));
+  EXPECT_FALSE(
+      base::PathExists(new_corrupted_meta_.ReplaceExtension(".processing")));
+
   EXPECT_CALL(
       *raw_metrics_lib,
       SendEnumToUMA("Platform.CrOS.CrashSenderRemoveReason",
                     Sender::kUnparseableMetaFile, Sender::kSendReasonCount));
   EXPECT_EQ(Sender::kRemove,
-            sender.ChooseAction(corrupted_meta_, &reason, &info));
+            sender.ChooseAction(old_corrupted_meta_, &reason, &info));
   EXPECT_THAT(reason, HasSubstr("Corrupted metadata"));
   EXPECT_FALSE(
-      base::PathExists(corrupted_meta_.ReplaceExtension(".processing")));
+      base::PathExists(old_corrupted_meta_.ReplaceExtension(".processing")));
 
   EXPECT_CALL(
       *raw_metrics_lib,
@@ -979,7 +992,8 @@ TEST_F(CrashSenderUtilTest, RemoveAndPickCrashFiles) {
   EXPECT_TRUE(base::PathExists(recent_os_meta_));
   EXPECT_TRUE(base::PathExists(recent_os_log_));
   EXPECT_FALSE(base::PathExists(empty_meta_));
-  EXPECT_FALSE(base::PathExists(corrupted_meta_));
+  EXPECT_TRUE(base::PathExists(new_corrupted_meta_));
+  EXPECT_FALSE(base::PathExists(old_corrupted_meta_));
   EXPECT_FALSE(base::PathExists(nonexistent_meta_));
   EXPECT_FALSE(base::PathExists(unknown_meta_));
   EXPECT_FALSE(base::PathExists(unknown_xxx_));

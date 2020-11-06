@@ -26,6 +26,7 @@ constexpr char kUploadTextPrefix[] = "upload_text_";
 constexpr char kUploadFilePrefix[] = "upload_file_";
 constexpr char kOsTimestamp[] = "os_millis";
 constexpr char kProcessingExt[] = ".processing";
+constexpr char kRecentIncompleteMeta[] = "Recent incomplete metadata";
 
 // Length of the client ID. This is a standard GUID which has the dashes
 // removed.
@@ -328,14 +329,6 @@ SenderBase::Action SenderBase::EvaluateMetaFileMinimal(
     return kRemove;
   }
 
-  if (!ParseMetadata(raw_metadata, &info->metadata)) {
-    *reason = "Corrupted metadata: " + raw_metadata;
-    RecordCrashRemoveReason(kUnparseableMetaFile);
-    return kRemove;
-  }
-
-  MetadataToCrashInfo(info->metadata, info);
-
   base::File::Info file_info;
   if (!base::GetFileInfo(meta_file, &file_info)) {
     // Should not happen since it succeeded to read the file.
@@ -343,19 +336,38 @@ SenderBase::Action SenderBase::EvaluateMetaFileMinimal(
     return kIgnore;
   }
 
+  const base::TimeDelta delta = clock_->Now() - file_info.last_modified;
+
+  if (!ParseMetadata(raw_metadata, &info->metadata)) {
+    // If the file fails to parse but is still relatively new, it's possible
+    // that we're racing with the file write and, for example, may have read in
+    // a partial line.
+    // Therefore, don't give up on a meta file as corrupt until it's been around
+    // for long enough that we can be sure that race is not happening.
+    if (delta.InHours() >= 1) {
+      *reason = "Corrupted metadata: " + raw_metadata;
+      RecordCrashRemoveReason(kUnparseableMetaFile);
+      return kRemove;
+    } else {
+      *reason = kRecentIncompleteMeta;
+      return kIgnore;
+    }
+  }
+
+  MetadataToCrashInfo(info->metadata, info);
+  info->last_modified = file_info.last_modified;
+
   // Before verifying any properties of the metadata file (e.g. that all fields
   // are completely written), we must check that it is actually complete.
   // For example, we shouldn't remove a metadata file due to a missing payload
   // while that meta file is still being written.
-  info->last_modified = file_info.last_modified;
   if (!IsCompleteMetadata(info->metadata)) {
-    const base::TimeDelta delta = clock_->Now() - file_info.last_modified;
     if (delta.InHours() >= 24) {
       *reason = "Removing old incomplete metadata";
       RecordCrashRemoveReason(kOldIncompleteMeta);
       return kRemove;
     } else {
-      *reason = "Recent incomplete metadata";
+      *reason = kRecentIncompleteMeta;
       return kIgnore;
     }
   }
