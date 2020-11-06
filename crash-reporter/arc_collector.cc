@@ -53,6 +53,7 @@ const char kBoardProperty[] = "ro.product.board";
 const char kCpuAbiProperty[] = "ro.product.cpu.abi";
 const char kDeviceProperty[] = "ro.product.device";
 const char kFingerprintProperty[] = "ro.build.fingerprint";
+const char kAbiMigrationStateProperty[] = "arc.abi.migrationstatus";
 
 const size_t kBufferSize = 4096;
 
@@ -66,6 +67,10 @@ bool GetChromeVersion(std::string* version);
 
 bool GetArcRoot(FilePath* root);
 bool GetArcProperties(arc_util::BuildProperty* build_property);
+// Get ARC primary ABI 32 bits to 64 bits migration status from ARC container.
+// This is for container only. ARCVM should have separate implementation.
+// See b/170238737 for detail.
+bool GetAbiMigrationState(std::string* state);
 
 std::string FormatDuration(uint64_t seconds);
 
@@ -330,16 +335,22 @@ void ArcCollector::AddArcMetaData(const std::string& process,
 
   arc_util::BuildProperty build_property;
 
-  if (add_arc_properties && GetArcProperties(&build_property)) {
-    AddCrashMetaUploadData(arc_util::kArcVersionField,
-                           build_property.fingerprint);
-    AddCrashMetaUploadData(arc_util::kDeviceField, build_property.device);
-    AddCrashMetaUploadData(arc_util::kBoardField, build_property.board);
-    AddCrashMetaUploadData(arc_util::kCpuAbiField, build_property.cpu_abi);
-    AddCrashMetaUploadData(
-        arc_util::kAndroidVersionField,
-        arc_util::GetVersionFromFingerprint(build_property.fingerprint)
-            .value_or(kUnknownValue));
+  if (add_arc_properties) {
+    if (GetArcProperties(&build_property)) {
+      AddCrashMetaUploadData(arc_util::kArcVersionField,
+                             build_property.fingerprint);
+      AddCrashMetaUploadData(arc_util::kDeviceField, build_property.device);
+      AddCrashMetaUploadData(arc_util::kBoardField, build_property.board);
+      AddCrashMetaUploadData(arc_util::kCpuAbiField, build_property.cpu_abi);
+      AddCrashMetaUploadData(
+          arc_util::kAndroidVersionField,
+          arc_util::GetVersionFromFingerprint(build_property.fingerprint)
+              .value_or(kUnknownValue));
+    }
+    std::string abi_migration_state;
+    // Error logging sits inside |GetAbiMigrationState|
+    if (GetAbiMigrationState(&abi_migration_state))
+      AddCrashMetaUploadData(arc_util::kAbiMigrationField, abi_migration_state);
   }
 
   int64_t start_time;
@@ -544,6 +555,32 @@ bool GetArcProperties(arc_util::BuildProperty* build_property) {
 
   LOG(ERROR) << "Failed to get ARC properties";
   return false;
+}
+
+bool GetAbiMigrationState(std::string* state) {
+  brillo::ProcessImpl androidsh;
+  androidsh.AddArg("/usr/sbin/android-sh");
+  androidsh.AddArg("-c");
+  androidsh.AddArg(std::string("getprop ") + kAbiMigrationStateProperty);
+
+  base::FilePath temp_file;
+  if (!base::CreateTemporaryFile(&temp_file)) {
+    LOG(ERROR) << "Fail to create tmp file to receive result from getprop cmd.";
+    return false;
+  }
+  androidsh.RedirectOutput(temp_file.value());
+  int result = androidsh.Run();
+  if (result == 0) {
+    if (!base::ReadFileToString(temp_file, state)) {
+      LOG(ERROR) << "Fail to read result of getprop cmd from tmp file";
+      return false;
+    }
+    base::TrimWhitespaceASCII(*state, base::TRIM_TRAILING, state);
+    return !state->empty();
+  } else {
+    LOG(ERROR) << "Process for android-sh fail to run, err code: " << result;
+    return false;
+  }
 }
 
 std::string FormatDuration(uint64_t seconds) {

@@ -29,6 +29,7 @@ using CrashLogHeaderMap = std::unordered_map<std::string, std::string>;
 
 const char kArcProduct[] = "ChromeOS_ARC";
 
+const char kAbiMigrationField[] = "abi_migration_status";
 const char kAndroidVersionField[] = "android_version";
 const char kArcVersionField[] = "arc_version";
 const char kBoardField[] = "board";

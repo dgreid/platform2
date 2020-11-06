@@ -22,6 +22,7 @@ using CrashLogHeaderMap = std::unordered_map<std::string, std::string>;
 extern const char kArcProduct[];
 
 // Metadata fields included in reports.
+extern const char kAbiMigrationField[];
 extern const char kAndroidVersionField[];
 extern const char kArcVersionField[];
 extern const char kBoardField[];
