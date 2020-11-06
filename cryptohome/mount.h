@@ -31,7 +31,6 @@
 #include <policy/device_policy.h>
 #include <policy/libpolicy.h>
 
-#include "cryptohome/crypto.h"
 #include "cryptohome/dircrypto_data_migrator/migration_helper.h"
 #include "cryptohome/file_system_keys.h"
 #include "cryptohome/homedirs.h"
@@ -40,15 +39,12 @@
 #include "cryptohome/mount_helper.h"
 #include "cryptohome/out_of_process_mount_helper.h"
 #include "cryptohome/platform.h"
-#include "cryptohome/timestamp.pb.h"
-#include "cryptohome/user_oldest_activity_timestamp_cache.h"
 #include "cryptohome/vault_keyset.h"
 #include "cryptohome/vault_keyset.pb.h"
 
 namespace cryptohome {
 
 class ChapsClientFactory;
-class UserOldestActivityTimestampCache;
 
 // The Mount class handles mounting/unmounting of the user's cryptohome
 // directory.
@@ -75,15 +71,14 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
 
   // Sets up Mount with the default locations, username, etc., as defined above.
   Mount();
+  Mount(Platform* platform, HomeDirs* homedirs);
   Mount(const Mount&) = delete;
   Mount& operator=(const Mount&) = delete;
 
   virtual ~Mount();
 
   // Gets the uid/gid of the default user and loads the system salt
-  virtual bool Init(Platform* platform,
-                    Crypto* crypto,
-                    UserOldestActivityTimestampCache* cache);
+  virtual bool Init();
 
   // Makes mount type-specific preparation.
   //
@@ -136,33 +131,13 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   // Used to override the default skeleton directory
   void set_skel_source(const base::FilePath& value) { skel_source_ = value; }
 
-  // Used to override the default Crypto handler (does not take ownership)
-  void set_crypto(Crypto* value) { crypto_ = value; }
-
-  // Get the Crypto instance
-  virtual Crypto* crypto() { return crypto_; }
-
-  // Used to override the default HomeDirs handler (does not take ownership)
-  void set_homedirs(HomeDirs* value) { homedirs_ = value; }
-
   // Get the HomeDirs instance
   virtual HomeDirs* homedirs() { return homedirs_; }
 
+  // Returns associated platform object
   virtual Platform* platform() { return platform_; }
 
   virtual const base::FilePath& mount_point() const { return mount_point_; }
-
-  // Used to override the default Platform handler (does not take ownership)
-  void set_platform(Platform* value) { platform_ = value; }
-
-  // Override whether to use the TPM for added security
-  void set_use_tpm(bool value) { use_tpm_ = value; }
-
-  // Set/get a flag, that this machine is enterprise owned.
-  void set_enterprise_owned(bool value) {
-    enterprise_owned_ = value;
-    homedirs_->set_enterprise_owned(value);
-  }
 
   // Flag indicating if PKCS#11 is ready.
   typedef enum {
@@ -212,13 +187,6 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
 
   // Returns the WebAuthn secret and clears it from memory.
   std::unique_ptr<brillo::SecureBlob> GetWebAuthnSecret();
-
-  // Used to override the policy provider for testing (takes ownership)
-  // TODO(wad) move this in line with other testing accessors
-  void set_policy_provider(policy::PolicyProvider* provider) {
-    policy_provider_.reset(provider);
-    homedirs_->set_policy_provider(provider);
-  }
 
   void set_legacy_mount(bool legacy) { legacy_mount_ = legacy; }
 
@@ -390,29 +358,10 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   brillo::SecureBlob system_salt_;
 
   // The platform-specific calls
-  std::unique_ptr<Platform> default_platform_;
   Platform* platform_;
 
-  // The crypto implementation
-  Crypto* crypto_;
-
-  // TODO(wad,ellyjones) Require HomeDirs at Init().
   // HomeDirs encapsulates operations on Cryptohomes at rest.
-  std::unique_ptr<HomeDirs> default_homedirs_;
   HomeDirs* homedirs_;
-
-  // Whether to use the TPM for added security
-  bool use_tpm_;
-
-  // Cache of last access timestamp for existing users.
-  UserOldestActivityTimestampCache* user_timestamp_cache_;
-
-  // Used to retrieve the owner user.  Currently used only for tests.
-  std::unique_ptr<policy::PolicyProvider> policy_provider_;
-
-  // True if the machine is enterprise owned, false if not or we have
-  // not discovered it in this session.
-  bool enterprise_owned_;
 
   // Name of the user the mount belongs to.
   std::string username_;

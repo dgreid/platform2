@@ -86,8 +86,8 @@ namespace cryptohome {
 
 namespace {
 
-constexpr char kImageDir[] = "test_image_dir";
-constexpr char kSaltFile[] = "test_image_dir/salt";
+constexpr char kImageDir[] = "/home/.shadow";
+constexpr char kSaltFile[] = "/home/.shadow/salt";
 
 class FakeEventSourceSink : public CryptohomeEventSourceSink {
  public:
@@ -867,7 +867,7 @@ TEST_F(ServiceTestNotInitialized,
   // ownership handed off to the Service MountMap
   MockMountFactory mount_factory;
   MockMount* mount = new MockMount();
-  EXPECT_CALL(mount_factory, New()).WillOnce(Return(mount));
+  EXPECT_CALL(mount_factory, New(_, _)).WillOnce(Return(mount));
   service_.set_mount_factory(&mount_factory);
   EXPECT_CALL(platform_, GetMountsBySourcePrefix(_, _)).WillOnce(Return(false));
   EXPECT_CALL(platform_, GetAttachedLoopDevices())
@@ -876,8 +876,7 @@ TEST_F(ServiceTestNotInitialized,
   ASSERT_TRUE(service_.Initialize());
 
   EXPECT_CALL(lockbox_, FinalizeBoot());
-  EXPECT_CALL(*mount, Init(&platform_, service_.crypto(), _))
-      .WillOnce(Return(true));
+  EXPECT_CALL(*mount, Init()).WillOnce(Return(true));
   EXPECT_CALL(homedirs_, CryptohomeExists(_)).WillOnce(Return(true));
   auto vk = std::make_unique<VaultKeyset>();
   EXPECT_CALL(homedirs_, LoadUnwrappedKeyset(_, _))
@@ -2323,7 +2322,6 @@ TEST_F(ServiceTestNotInitialized, OwnershipCallbackRepeated) {
   // Called by OwnershipCallback().
   EXPECT_CALL(tpm_, HandleOwnershipTakenEvent).WillOnce(Return());
   // Called by ResetAllTPMContext().
-  mount_->set_crypto(&crypto_);
   EXPECT_CALL(crypto_, EnsureTpm(true)).WillOnce(Return(CryptoError::CE_NONE));
   // Called by InitializeInstallAttributes()
   EXPECT_CALL(attrs_, Init(_)).WillOnce(Return(true));

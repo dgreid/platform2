@@ -194,17 +194,20 @@ void TestUser::GenerateCredentials(bool force_ecryptfs) {
   crypto.set_use_tpm(false);
   crypto.set_disable_logging_for_testing(/*disable=*/true);
   CryptoLib::SetScryptTestingParams();
+  HomeDirs homedirs;
   UserOldestActivityTimestampCache timestamp_cache;
 
-  scoped_refptr<Mount> mount = new Mount();
-  mount->set_shadow_root(shadow_root);
-  mount->set_skel_source(skel_dir);
-  mount->set_use_tpm(false);
   NiceMock<policy::MockDevicePolicy>* device_policy =
       new NiceMock<policy::MockDevicePolicy>;
   EXPECT_CALL(*device_policy, LoadPolicy()).WillRepeatedly(Return(true));
-  mount->set_policy_provider(new policy::PolicyProvider(
+  homedirs.own_policy_provider(new policy::PolicyProvider(
       std::unique_ptr<NiceMock<policy::MockDevicePolicy>>(device_policy)));
+  homedirs.set_shadow_root(shadow_root);
+
+  homedirs.Init(&platform, &crypto, &timestamp_cache);
+
+  scoped_refptr<Mount> mount = new Mount(&platform, &homedirs);
+  mount->set_skel_source(skel_dir);
   FilePath keyset_path =
       shadow_root.Append(obfuscated_username).Append("master.0");
   FilePath salt_path = shadow_root.Append("salt");
@@ -219,7 +222,7 @@ void TestUser::GenerateCredentials(bool force_ecryptfs) {
   EXPECT_CALL(platform, DirectoryExists(shadow_root))
       .WillRepeatedly(Return(true));
   platform.GetFake()->SetStandardUsersAndGroups();
-  mount->Init(&platform, &crypto, &timestamp_cache);
+  mount->Init();
 
   cryptohome::Crypto::PasswordToPasskey(password, sec_salt, &passkey);
   Credentials local_credentials(username, passkey);
@@ -255,9 +258,9 @@ void TestUser::GenerateCredentials(bool force_ecryptfs) {
   // Grab the generated credential
   EXPECT_CALL(platform, WriteFileAtomicDurable(keyset_path, _, _))
       .WillOnce(DoAll(SaveArg<1>(&credentials), Return(true)));
-  ASSERT_TRUE(mount->homedirs()->Create(local_credentials.username()));
+  ASSERT_TRUE(homedirs.Create(local_credentials.username()));
   ASSERT_TRUE(mount->PrepareCryptohome(obfuscated_username, force_ecryptfs));
-  ASSERT_TRUE(mount->homedirs()->AddInitialKeyset(local_credentials));
+  ASSERT_TRUE(homedirs.AddInitialKeyset(local_credentials));
   DCHECK(credentials.size());
 
   // Unmount succeeds. This is called when |mount| is destroyed.

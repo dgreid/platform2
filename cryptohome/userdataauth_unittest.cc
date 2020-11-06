@@ -1228,7 +1228,6 @@ TEST_F(UserDataAuthTest, OwnershipCallbackValidity) {
   // Called by OwnershipCallback().
   EXPECT_CALL(tpm_, HandleOwnershipTakenEvent).WillOnce(Return());
   // Called by ResetAllTPMContext().
-  mount_->set_crypto(&crypto_);
   EXPECT_CALL(crypto_, EnsureTpm(true)).WillOnce(Return(CryptoError::CE_NONE));
   // Called by InitializeInstallAttributes()
   EXPECT_CALL(attrs_, Init(_)).WillOnce(Return(true));
@@ -1242,7 +1241,6 @@ TEST_F(UserDataAuthTest, OwnershipCallbackRepeated) {
   // Called by OwnershipCallback().
   EXPECT_CALL(tpm_, HandleOwnershipTakenEvent).WillOnce(Return());
   // Called by ResetAllTPMContext().
-  mount_->set_crypto(&crypto_);
   EXPECT_CALL(crypto_, EnsureTpm(true)).WillOnce(Return(CryptoError::CE_NONE));
   // Called by InitializeInstallAttributes()
   EXPECT_CALL(attrs_, Init(_)).WillOnce(Return(true));
@@ -1575,7 +1573,7 @@ TEST_F(UserDataAuthTest, CleanUpStale_FilledMap_NoOpenFiles_ShadowOnly) {
   // ownership handed off to the Service MountMap
   MockMountFactory mount_factory;
   MockMount* mount = new MockMount();
-  EXPECT_CALL(mount_factory, New()).WillOnce(Return(mount));
+  EXPECT_CALL(mount_factory, New(_, _)).WillOnce(Return(mount));
   userdataauth_->set_mount_factory(&mount_factory);
   EXPECT_CALL(platform_, FileExists(_)).WillOnce(Return(true));
   EXPECT_CALL(platform_, GetMountsBySourcePrefix(_, _)).WillOnce(Return(false));
@@ -1585,7 +1583,7 @@ TEST_F(UserDataAuthTest, CleanUpStale_FilledMap_NoOpenFiles_ShadowOnly) {
   ASSERT_TRUE(userdataauth_->Initialize());
 
   EXPECT_CALL(lockbox_, FinalizeBoot());
-  EXPECT_CALL(*mount, Init(&platform_, &crypto_, _)).WillOnce(Return(true));
+  EXPECT_CALL(*mount, Init()).WillOnce(Return(true));
   EXPECT_CALL(homedirs_, CryptohomeExists(_)).WillOnce(Return(true));
   auto vk = std::make_unique<VaultKeyset>();
   EXPECT_CALL(homedirs_, LoadUnwrappedKeyset(_, _))
@@ -1671,7 +1669,7 @@ TEST_F(UserDataAuthTest,
   // ownership handed off to the Service MountMap
   MockMountFactory mount_factory;
   MockMount* mount = new MockMount();
-  EXPECT_CALL(mount_factory, New()).WillOnce(Return(mount));
+  EXPECT_CALL(mount_factory, New(_, _)).WillOnce(Return(mount));
   userdataauth_->set_mount_factory(&mount_factory);
   EXPECT_CALL(platform_, FileExists(_)).WillOnce(Return(false));
   EXPECT_CALL(platform_, GetMountsBySourcePrefix(_, _)).Times(0);
@@ -1680,7 +1678,7 @@ TEST_F(UserDataAuthTest,
   ASSERT_TRUE(userdataauth_->Initialize());
 
   EXPECT_CALL(lockbox_, FinalizeBoot());
-  EXPECT_CALL(*mount, Init(&platform_, &crypto_, _)).WillOnce(Return(true));
+  EXPECT_CALL(*mount, Init()).WillOnce(Return(true));
   EXPECT_CALL(homedirs_, CryptohomeExists(_)).WillOnce(Return(true));
   auto vk = std::make_unique<VaultKeyset>();
   EXPECT_CALL(homedirs_, LoadUnwrappedKeyset(_, _))
@@ -1997,12 +1995,13 @@ TEST_F(UserDataAuthExTest, MountGuestValidity) {
   EXPECT_CALL(*mount_, IsMounted()).WillOnce(Return(true));
   EXPECT_CALL(*mount_, UnmountCryptohome()).WillOnce(Return(true));
 
-  EXPECT_CALL(mount_factory_, New()).WillOnce(Invoke([]() {
-    NiceMock<MockMount>* res = new NiceMock<MockMount>();
-    EXPECT_CALL(*res, Init(_, _, _)).WillOnce(Return(true));
-    EXPECT_CALL(*res, MountGuestCryptohome()).WillOnce(Return(true));
-    return reinterpret_cast<Mount*>(res);
-  }));
+  EXPECT_CALL(mount_factory_, New(_, _))
+      .WillOnce(Invoke([](Platform*, HomeDirs*) {
+        NiceMock<MockMount>* res = new NiceMock<MockMount>();
+        EXPECT_CALL(*res, Init()).WillOnce(Return(true));
+        EXPECT_CALL(*res, MountGuestCryptohome()).WillOnce(Return(true));
+        return reinterpret_cast<Mount*>(res);
+      }));
 
   bool called = false;
   userdataauth_->DoMount(
@@ -2031,7 +2030,7 @@ TEST_F(UserDataAuthExTest, MountGuestMountPointBusy) {
   EXPECT_CALL(*mount_, IsMounted()).WillOnce(Return(true));
   EXPECT_CALL(*mount_, UnmountCryptohome()).WillOnce(Return(false));
 
-  EXPECT_CALL(mount_factory_, New()).Times(0);
+  EXPECT_CALL(mount_factory_, New(_, _)).Times(0);
 
   bool called = false;
   userdataauth_->DoMount(
@@ -2056,12 +2055,13 @@ TEST_F(UserDataAuthExTest, MountGuestMountFailed) {
 
   mount_req_->set_guest_mount(true);
 
-  EXPECT_CALL(mount_factory_, New()).WillOnce(Invoke([]() {
-    NiceMock<MockMount>* res = new NiceMock<MockMount>();
-    EXPECT_CALL(*res, Init(_, _, _)).WillOnce(Return(true));
-    EXPECT_CALL(*res, MountGuestCryptohome()).WillOnce(Return(false));
-    return reinterpret_cast<Mount*>(res);
-  }));
+  EXPECT_CALL(mount_factory_, New(_, _))
+      .WillOnce(Invoke([](Platform*, HomeDirs*) {
+        NiceMock<MockMount>* res = new NiceMock<MockMount>();
+        EXPECT_CALL(*res, Init()).WillOnce(Return(true));
+        EXPECT_CALL(*res, MountGuestCryptohome()).WillOnce(Return(false));
+        return reinterpret_cast<Mount*>(res);
+      }));
 
   bool called = false;
   userdataauth_->DoMount(

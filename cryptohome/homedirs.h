@@ -328,6 +328,13 @@ class HomeDirs {
   }
   void set_use_tpm(bool use_tpm) { use_tpm_ = use_tpm; }
 
+  // Takes ownership of the supplied PolicyProvider. Used to avoid leaking mocks
+  // in unit tests.
+  void own_policy_provider(policy::PolicyProvider* value) {
+    default_policy_provider_.reset(value);
+    policy_provider_ = value;
+  }
+
  private:
   base::TimeDelta GetUserInactivityThresholdForRemoval();
   // Loads the device policy, either by initializing it or reloading the
@@ -389,13 +396,6 @@ class HomeDirs {
   // and resaves the keyset.
   bool ReSaveKeysetIfNeeded(const Credentials& credentials,
                             VaultKeyset* keyset) const;
-
-  // Takes ownership of the supplied PolicyProvider. Used to avoid leaking mocks
-  // in unit tests.
-  void own_policy_provider(policy::PolicyProvider* value) {
-    default_policy_provider_.reset(value);
-    policy_provider_ = value;
-  }
 
   std::unique_ptr<Platform> default_platform_;
   Platform* platform_;

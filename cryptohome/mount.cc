@@ -35,7 +35,6 @@
 #include <google/protobuf/util/message_differencer.h>
 
 #include "cryptohome/chaps_client_factory.h"
-#include "cryptohome/crypto.h"
 #include "cryptohome/cryptohome_common.h"
 #include "cryptohome/cryptohome_metrics.h"
 #include "cryptohome/cryptolib.h"
@@ -45,7 +44,6 @@
 #include "cryptohome/mount_utils.h"
 #include "cryptohome/pkcs11_init.h"
 #include "cryptohome/platform.h"
-#include "cryptohome/timestamp.pb.h"
 #include "cryptohome/tpm.h"
 #include "cryptohome/vault_keyset.h"
 #include "cryptohome/vault_keyset.pb.h"
@@ -94,7 +92,7 @@ void StartUserFileAttrsCleanerService(cryptohome::Platform* platform,
     PLOG(WARNING) << "Error while running file_attrs_cleaner_tool";
 }
 
-Mount::Mount()
+Mount::Mount(Platform* platform, HomeDirs* homedirs)
     : default_user_(-1),
       chaps_user_(-1),
       default_group_(-1),
@@ -102,14 +100,8 @@ Mount::Mount()
       shadow_root_(kDefaultShadowRoot),
       skel_source_(kDefaultSkeletonSource),
       system_salt_(),
-      default_platform_(new Platform()),
-      platform_(default_platform_.get()),
-      crypto_(NULL),
-      default_homedirs_(new HomeDirs()),
-      homedirs_(default_homedirs_.get()),
-      use_tpm_(true),
-      user_timestamp_cache_(NULL),
-      enterprise_owned_(false),
+      platform_(platform),
+      homedirs_(homedirs),
       pkcs11_state_(kUninitialized),
       dircrypto_key_reference_(),
       legacy_mount_(true),
@@ -122,32 +114,15 @@ Mount::Mount()
       mount_non_ephemeral_session_out_of_process_(MountUserSessionOOP()),
       mount_guest_session_non_root_namespace_(true) {}
 
+Mount::Mount() : Mount(nullptr, nullptr) {}
+
 Mount::~Mount() {
   if (IsMounted())
     UnmountCryptohome();
 }
 
-bool Mount::Init(Platform* platform,
-                 Crypto* crypto,
-                 UserOldestActivityTimestampCache* cache) {
-  platform_ = platform;
-  crypto_ = crypto;
-  user_timestamp_cache_ = cache;
-
+bool Mount::Init() {
   bool result = true;
-
-  homedirs_->set_platform(platform_);
-  homedirs_->set_shadow_root(FilePath(shadow_root_));
-  homedirs_->set_enterprise_owned(enterprise_owned_);
-  homedirs_->set_use_tpm(use_tpm_);
-
-  // Make sure |homedirs_| uses the same PolicyProvider instance as we in case
-  // it was set by a test.
-  if (policy_provider_)
-    homedirs_->set_policy_provider(policy_provider_.get());
-
-  if (!homedirs_->Init(platform, crypto, user_timestamp_cache_))
-    result = false;
 
   // Get the user id and group id of the default user
   if (!platform_->GetUserId(kDefaultSharedUser, &default_user_,
@@ -167,22 +142,11 @@ bool Mount::Init(Platform* platform,
     result = false;
   }
 
-  {
-    brillo::ScopedUmask scoped_umask(kDefaultUmask);
-    // Create the shadow root if it doesn't exist
-    if (!platform_->DirectoryExists(shadow_root_)) {
-      platform_->CreateDirectory(shadow_root_);
-    }
-
-    // One-time load of the global system salt (used in generating username
-    // hashes)
-    FilePath system_salt_file = shadow_root_.Append(kSystemSaltFile);
-    if (!crypto_->GetOrCreateSalt(system_salt_file,
-                                  CRYPTOHOME_DEFAULT_SALT_LENGTH, false,
-                                  &system_salt_)) {
-      LOG(ERROR) << "Failed to load or create the system salt";
-      result = false;
-    }
+  // One-time load of the global system salt (used in generating username
+  // hashes)
+  if (!homedirs_->GetSystemSalt(&system_salt_)) {
+    LOG(ERROR) << "Failed to load or create the system salt";
+    result = false;
   }
 
   mounter_.reset(new MountHelper(
@@ -790,7 +754,7 @@ base::Value Mount::GetStatus(int active_key_index) {
   std::string obfuscated_owner;
   homedirs_->GetOwner(&obfuscated_owner);
   dv.SetStringKey("owner", obfuscated_owner);
-  dv.SetBoolKey("enterprise", enterprise_owned_);
+  dv.SetBoolKey("enterprise", homedirs_->enterprise_owned());
 
   std::string mount_type_string;
   switch (mount_type_) {
@@ -876,5 +840,4 @@ void Mount::MaybeCancelActiveDircryptoMigrationAndWait() {
 bool Mount::IsShadowOnly() const {
   return shadow_only_;
 }
-
 }  // namespace cryptohome

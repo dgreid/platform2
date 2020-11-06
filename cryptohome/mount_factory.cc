@@ -4,14 +4,16 @@
 
 #include "cryptohome/mount_factory.h"
 
+#include "cryptohome/homedirs.h"
 #include "cryptohome/mount.h"
+#include "cryptohome/platform.h"
 
 namespace cryptohome {
 
 MountFactory::MountFactory() {}
 MountFactory::~MountFactory() {}
 
-Mount* MountFactory::New() {
-  return new Mount();
+Mount* MountFactory::New(Platform* platform, HomeDirs* homedirs) {
+  return new Mount(platform, homedirs);
 }
 }  // namespace cryptohome

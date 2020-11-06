@@ -74,6 +74,7 @@
 #include "cryptohome/service_distributed.h"
 #include "cryptohome/stateful_recovery.h"
 #include "cryptohome/tpm.h"
+#include "cryptohome/user_oldest_activity_timestamp_cache.h"
 #include "cryptohome/vault_keyset.pb.h"
 
 using base::FilePath;
@@ -1056,10 +1057,7 @@ void Service::NotifyEvent(CryptohomeEventBase* event) {
 
 void Service::DoResetTPMContext(UserSession* session) {
   if (session) {
-    Crypto* crypto = session->GetMount()->crypto();
-    if (crypto) {
-      crypto->EnsureTpm(true);
-    }
+    crypto_->EnsureTpm(true);
   }
 }
 
@@ -4039,11 +4037,6 @@ void Service::DetectEnterpriseOwnership() {
   brillo::Blob value;
   if (install_attrs_->Get("enterprise.owned", &value) && value == true_value) {
     enterprise_owned_ = true;
-    // Update any active mounts with the state.
-    base::AutoLock _lock(sessions_lock_);
-    for (const auto& session_pair : sessions_) {
-      session_pair.second->GetMount()->set_enterprise_owned(true);
-    }
     homedirs_->set_enterprise_owned(true);
   }
 }
@@ -4053,11 +4046,10 @@ scoped_refptr<cryptohome::Mount> Service::CreateMount(
   scoped_refptr<cryptohome::Mount> m;
   // TODO(dlunev): Decide if finalization should be moved to MountFactory.
   EnsureBootLockboxFinalized();
-  m = mount_factory_->New();
-  if (!m->Init(platform_, crypto_, user_timestamp_cache_.get())) {
+  m = mount_factory_->New(platform_, homedirs_);
+  if (!m->Init()) {
     return nullptr;
   }
-  m->set_enterprise_owned(enterprise_owned_);
   m->set_legacy_mount(legacy_mount_);
   return m;
 }

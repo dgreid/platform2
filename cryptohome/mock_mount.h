@@ -19,10 +19,7 @@ class MockMount : public Mount {
  public:
   MockMount();
   ~MockMount();
-  MOCK_METHOD(bool,
-              Init,
-              (Platform*, Crypto*, UserOldestActivityTimestampCache*),
-              (override));
+  MOCK_METHOD(bool, Init, (), (override));
   MOCK_METHOD(bool, PrepareCryptohome, (const std::string&, bool), (override));
   MOCK_METHOD(bool,
               MountCryptohome,

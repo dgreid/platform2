@@ -8,6 +8,10 @@
 #include <string>
 #include <vector>
 
+#include "cryptohome/homedirs.h"
+#include "cryptohome/mount.h"
+#include "cryptohome/platform.h"
+
 namespace cryptohome {
 class Mount;
 
@@ -17,7 +21,7 @@ class MountFactory {
  public:
   MountFactory();
   virtual ~MountFactory();
-  virtual Mount* New();
+  virtual Mount* New(Platform*, HomeDirs*);
 };
 
 }  // namespace cryptohome

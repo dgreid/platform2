@@ -938,14 +938,7 @@ void UserDataAuth::ResetAllTPMContext() {
     return;
   }
 
-  for (auto& session_pair : sessions_) {
-    if (session_pair.second) {
-      Crypto* crypto = session_pair.second->GetMount()->crypto();
-      if (crypto) {
-        crypto->EnsureTpm(true);
-      }
-    }
-  }
+  crypto_->EnsureTpm(true);
 }
 
 void UserDataAuth::set_cleanup_threshold(uint64_t cleanup_threshold) {
@@ -1016,9 +1009,6 @@ void UserDataAuth::SetEnterpriseOwned(bool enterprise_owned) {
   AssertOnMountThread();
 
   enterprise_owned_ = enterprise_owned;
-  for (auto& session_pair : sessions_) {
-    session_pair.second->GetMount()->set_enterprise_owned(enterprise_owned);
-  }
   homedirs_->set_enterprise_owned(enterprise_owned);
 }
 
@@ -1120,11 +1110,10 @@ scoped_refptr<Mount> UserDataAuth::CreateMount(const std::string& username) {
   scoped_refptr<Mount> m;
   // TODO(dlunev): Decide if finalization should be moved to MountFactory.
   EnsureBootLockboxFinalized();
-  m = mount_factory_->New();
-  if (!m->Init(platform_, crypto_, user_timestamp_cache_.get())) {
+  m = mount_factory_->New(platform_, homedirs_);
+  if (!m->Init()) {
     return nullptr;
   }
-  m->set_enterprise_owned(enterprise_owned_);
   m->set_legacy_mount(legacy_mount_);
   return m;
 }
