@@ -88,7 +88,10 @@ void CameraMonitor::SetTaskRunnerOnThread(base::Callback<void()> callback) {
 
 void CameraMonitor::StartMonitorOnThread() {
   DCHECK(thread_.task_runner()->BelongsToCurrentThread());
-  DCHECK(!base::OneShotTimer::IsRunning());
+  if (base::OneShotTimer::IsRunning()) {
+    base::OneShotTimer::Stop();
+  }
+
   base::OneShotTimer::Start(
       FROM_HERE, kMonitorTimeDelta,
       base::Bind(&CameraMonitor::MonitorTimeout, base::Unretained(this)));
