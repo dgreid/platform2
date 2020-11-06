@@ -32,6 +32,7 @@ ioctl: arg1 == TCGETS
 # arg2 must exclude PROT_WRITE ('in 0xfffffffd') or PROT_EXEC ('in 0xfffffffb'):
 mmap2: arg2 in 0xfffffffd || arg2 in 0xfffffffb
 mprotect: arg2 in 0xfffffffd || arg2 in 0xfffffffb
+mremap: 1
 munmap: 1
 open: 1
 openat: 1
