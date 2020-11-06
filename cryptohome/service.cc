@@ -665,6 +665,7 @@ bool Service::Initialize() {
     firmware_management_parameters_ = default_firmware_management_params_.get();
   }
   crypto_->set_use_tpm(use_tpm_);
+  homedirs_->set_use_tpm(use_tpm_);
   if (!crypto_->Init(tpm_init_))
     return false;
   if (!homedirs_->Init(platform_, crypto_, user_timestamp_cache_.get()))

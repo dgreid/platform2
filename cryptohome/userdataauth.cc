@@ -250,6 +250,7 @@ bool UserDataAuth::Initialize() {
   }
 
   crypto_->set_use_tpm(true);
+  homedirs_->set_use_tpm(true);
   if (!crypto_->Init(tpm_init_)) {
     return false;
   }
