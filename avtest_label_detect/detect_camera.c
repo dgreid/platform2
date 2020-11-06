@@ -102,8 +102,18 @@ static bool is_builtin_usb_camera(const char* dev_path, int fd) {
 
 /* Checks if the device is a builtin MIPI camera. */
 static bool is_builtin_mipi_camera(int fd) {
+  struct media_device_info info;
   struct media_entity_desc desc;
 
+  memset(&info, 0, sizeof(info));
+  if (do_ioctl(fd, MEDIA_IOC_DEVICE_INFO, &info) != 0) {
+    TRACE("failed to get media device info\n");
+    return false;
+  }
+  if (strcmp(info.driver, "uvcvideo") == 0)
+    return false;
+
+  memset(&desc, 0, sizeof(desc));
   for (desc.id = MEDIA_ENT_ID_FLAG_NEXT;
        !do_ioctl(fd, MEDIA_IOC_ENUM_ENTITIES, &desc);
        desc.id |= MEDIA_ENT_ID_FLAG_NEXT) {
