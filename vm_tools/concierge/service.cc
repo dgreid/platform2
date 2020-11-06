@@ -1006,42 +1006,40 @@ std::unique_ptr<dbus::Response> Service::StartVm(
   base::Optional<base::ScopedFD> kernel_fd;
   base::Optional<base::ScopedFD> rootfs_fd;
   base::Optional<base::ScopedFD> storage_fd;
-  if (request.start_termina()) {
-    if (request.use_fd_for_kernel()) {
-      base::ScopedFD fd;
-      if (!reader.PopFileDescriptor(&fd)) {
-        LOG(ERROR) << "failed to get a kernel FD";
-        response.set_failure_reason("failed to get a kernel FD");
-        writer.AppendProtoAsArrayOfBytes(response);
-        return dbus_response;
-      }
-
-      kernel_fd = std::move(fd);
+  if (request.use_fd_for_kernel()) {
+    base::ScopedFD fd;
+    if (!reader.PopFileDescriptor(&fd)) {
+      LOG(ERROR) << "failed to get a kernel FD";
+      response.set_failure_reason("failed to get a kernel FD");
+      writer.AppendProtoAsArrayOfBytes(response);
+      return dbus_response;
     }
 
-    if (request.use_fd_for_rootfs()) {
-      base::ScopedFD fd;
-      if (!reader.PopFileDescriptor(&fd)) {
-        LOG(ERROR) << "failed to get a rootfs FD";
-        response.set_failure_reason("failed to get a rootfs FD");
-        writer.AppendProtoAsArrayOfBytes(response);
-        return dbus_response;
-      }
+    kernel_fd = std::move(fd);
+  }
 
-      rootfs_fd = std::move(fd);
+  if (request.use_fd_for_rootfs()) {
+    base::ScopedFD fd;
+    if (!reader.PopFileDescriptor(&fd)) {
+      LOG(ERROR) << "failed to get a rootfs FD";
+      response.set_failure_reason("failed to get a rootfs FD");
+      writer.AppendProtoAsArrayOfBytes(response);
+      return dbus_response;
     }
 
-    if (request.use_fd_for_storage()) {
-      base::ScopedFD fd;
-      if (!reader.PopFileDescriptor(&fd)) {
-        LOG(ERROR) << "failed to get an extra storage FD";
-        response.set_failure_reason("failed to get an extra storage FD");
-        writer.AppendProtoAsArrayOfBytes(response);
-        return dbus_response;
-      }
+    rootfs_fd = std::move(fd);
+  }
 
-      storage_fd = std::move(fd);
+  if (request.use_fd_for_storage()) {
+    base::ScopedFD fd;
+    if (!reader.PopFileDescriptor(&fd)) {
+      LOG(ERROR) << "failed to get an extra storage FD";
+      response.set_failure_reason("failed to get an extra storage FD");
+      writer.AppendProtoAsArrayOfBytes(response);
+      return dbus_response;
     }
+
+    storage_fd = std::move(fd);
   }
 
   // Make sure we have our signal connected if starting a Termina VM.
