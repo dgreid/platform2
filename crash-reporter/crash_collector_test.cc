@@ -939,6 +939,9 @@ TEST_P(CrashCollectorParameterizedTest, MetaData) {
   const char kPayload[] = "foo";
   ASSERT_TRUE(test_util::CreateFile(payload_file, kPayload));
   collector_.AddCrashMetaData("foo", "bar");
+  collector_.AddCrashMetaData("weird  key#@!", "weird\nvalue");
+  // Empty key should be ignored and not added.
+  collector_.AddCrashMetaData("", "empty_key_val");
   std::unique_ptr<base::SimpleTestClock> test_clock =
       std::make_unique<base::SimpleTestClock>();
   test_clock->SetNow(base::Time::UnixEpoch() +
@@ -959,6 +962,7 @@ std::vector<MetaDataTest> GenerateMetaDataTests() {
   base.expected_meta = StringPrintf(
       "upload_var_collector=mock\n"
       "foo=bar\n"
+      "weird__key___=weird\\nvalue\n"
       "upload_var_reportTimeMillis=%" PRId64
       "\n"
       "exec_name=kernel\n"
@@ -982,6 +986,7 @@ std::vector<MetaDataTest> GenerateMetaDataTests() {
   test_in_progress.expected_meta = StringPrintf(
       "upload_var_collector=mock\n"
       "foo=bar\n"
+      "weird__key___=weird\\nvalue\n"
       "upload_var_in_progress_integration_test=some.Test\n"
       "upload_var_reportTimeMillis=%" PRId64
       "\n"
@@ -1006,6 +1011,7 @@ std::vector<MetaDataTest> GenerateMetaDataTests() {
   no_exec_name.expected_meta = StringPrintf(
       "upload_var_collector=mock\n"
       "foo=bar\n"
+      "weird__key___=weird\\nvalue\n"
       "upload_var_reportTimeMillis=%" PRId64
       "\n"
       "upload_var_lsb-release=6727.0.2015_01_26_0853 (Test Build - foo)\n"

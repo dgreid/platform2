@@ -1135,7 +1135,35 @@ bool CrashCollector::GetProcessTree(pid_t pid,
 
 void CrashCollector::AddCrashMetaData(const std::string& key,
                                       const std::string& value) {
-  extra_metadata_.append(StringPrintf("%s=%s\n", key.c_str(), value.c_str()));
+  if (key.empty()) {
+    LOG(ERROR) << "Cannot use empty key";
+    return;
+  }
+
+  std::string sanitized_key;
+  for (char c : key) {
+    if (!(base::IsAsciiAlpha(c) || base::IsAsciiDigit(c) || c == '_' ||
+          c == '-' || c == '.')) {
+      // Replace invalid characters with '_'
+      c = '_';
+    }
+    sanitized_key.push_back(c);
+  }
+
+  std::string sanitized_value;
+  for (char c : value) {
+    if (c == '\n') {
+      // append a literal '\n' to indicate to users that there was a newline
+      // here, but do not use an actual newline, since brillo's KeyValueStore
+      // parser cannot handle unescaped newlines, and downstream systems might
+      // also have trouble with them.
+      sanitized_value.append("\\n");
+    } else {
+      sanitized_value.push_back(c);
+    }
+  }
+  extra_metadata_.append(
+      StringPrintf("%s=%s\n", sanitized_key.c_str(), sanitized_value.c_str()));
 }
 
 void CrashCollector::AddCrashMetaUploadFile(const std::string& key,
