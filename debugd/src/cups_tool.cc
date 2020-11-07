@@ -5,6 +5,7 @@
 // Tool to manipulate CUPS.
 #include "debugd/src/cups_tool.h"
 
+#include <pwd.h>
 #include <signal.h>
 #include <unistd.h>
 
@@ -13,7 +14,9 @@
 
 #include <base/bind.h>
 #include <base/callback_helpers.h>
+#include <base/environment.h>
 #include <base/files/file_util.h>
+#include <base/files/scoped_temp_dir.h>
 #include <base/logging.h>
 #include <chromeos/dbus/debugd/dbus-constants.h>
 
@@ -26,6 +29,21 @@ namespace debugd {
 
 namespace {
 
+constexpr char kPdfContent[] = R"(%PDF-1.0
+1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj 2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj 3 0 obj<</Type/Page/MediaBox[0 0 3 3]>>endobj
+xref
+0 4
+0000000000 65535 f 
+0000000009 00000 n 
+0000000052 00000 n 
+0000000101 00000 n 
+trailer<</Size 4/Root 1 0 R>>
+startxref
+147
+%EOF)";
+
+constexpr char kGzipCommand[] = "/bin/gzip";
+constexpr char kFoomaticCommand[] = "/usr/bin/foomatic-rip";
 constexpr char kLpadminCommand[] = "/usr/sbin/lpadmin";
 constexpr char kLpadminSeccompPolicy[] =
     "/usr/share/policy/lpadmin-seccomp.policy";
@@ -50,17 +68,14 @@ int RunAsUser(const std::string& user,
               const std::string& seccomp_policy,
               const ProcessWithOutput::ArgList& arg_list,
               const std::vector<uint8_t>* std_input = nullptr,
-              bool root_mount_ns = false,
-              bool inherit_usergroups = false) {
+              bool inherit_usergroups = false,
+              std::string* out = nullptr) {
   ProcessWithOutput process;
   process.set_separate_stderr(true);
   process.SandboxAs(user, group);
 
   if (!seccomp_policy.empty())
     process.SetSeccompFilterPolicyFile(seccomp_policy);
-
-  if (root_mount_ns)
-    process.AllowAccessRootMountNamespace();
 
   if (inherit_usergroups)
     process.InheritUsergroups();
@@ -110,6 +125,10 @@ int RunAsUser(const std::string& user,
       process.Kill(SIGKILL, 0);
     }
     result = process.Wait();
+    if (out && !process.GetOutput(out)) {
+      PLOG(ERROR) << "Failed to get process output";
+      return 1;
+    }
   }
 
   if (result != 0) {
@@ -122,11 +141,56 @@ int RunAsUser(const std::string& user,
 }
 
 // Runs cupstestppd on |ppd_content| returns the result code.  0 is the expected
-// success code.
-int TestPPD(const std::vector<uint8_t>& ppd_content) {
-  return RunAsUser(kLpadminUser, kLpadminGroup, kTestPPDCommand,
-                   kTestPPDSeccompPolicy, {"-W", "translations", "-"},
-                   &(ppd_content), true /* root_mount_ns */);
+// success code. Verify the foomatic command is valid if the PPD uses the
+// foomatic-rip filter.
+int TestPPD(const std::vector<uint8_t>& ppd_data) {
+  std::vector<uint8_t> ppd_content = ppd_data;
+  if (ppd_content[0] == 0x1f && ppd_content[1] == 0x8b) {  // gzip header
+    std::string out;
+    int ret = RunAsUser(kLpadminUser, kLpadminGroup, kGzipCommand, "", {"-cfd"},
+                        &ppd_content, false, &out);
+    if (ret || out.empty()) {
+      LOG(ERROR) << "gzip failed";
+      return ret ? ret : 1;
+    }
+    ppd_content.assign(out.begin(), out.end());
+  }
+  int ret = RunAsUser(kLpadminUser, kLpadminGroup, kTestPPDCommand,
+                      kTestPPDSeccompPolicy, {"-W", "translations", "-"},
+                      &ppd_content, false);
+  // Check if the foomatic-rip cups filter is present in the PPD file.
+  constexpr uint8_t kFoomaticRip[] = "foomatic-rip\"";
+  // Subtract 1 to exclude the null terminator.
+  if (!ret && std::search(ppd_content.begin(), ppd_content.end(),
+                          std::begin(kFoomaticRip),
+                          std::end(kFoomaticRip) - 1) != ppd_content.end()) {
+    base::ScopedTempDir tmp;
+    if (!tmp.CreateUniqueTempDir()) {
+      PLOG(ERROR) << "Could not create temporary directory";
+      return 1;
+    }
+    base::FilePath ppd_file = tmp.GetPath().Append("ppd.ppd");
+    if (!base::WriteFile(ppd_file, ppd_content)) {
+      PLOG(ERROR) << "Could not write to file";
+      return 1;
+    }
+    if (chown(tmp.GetPath().MaybeAsASCII().c_str(),
+              getpwnam(kLpadminUser)->pw_uid, -1)) {
+      PLOG(ERROR) << "Could not set directory ownership";
+      return 1;
+    }
+    auto env = base::Environment::Create();
+    env->SetVar("FOOMATIC_VERIFY_MODE", "true");
+    env->SetVar("PATH", "/bin:/usr/bin:/usr/libexec/cups/filter");
+    env->SetVar("PPD", ppd_file.MaybeAsASCII());
+    const std::vector<uint8_t> kPdf(std::begin(kPdfContent),
+                                    std::end(kPdfContent));
+    ret = RunAsUser(kLpadminUser, kLpadminGroup, kFoomaticCommand, "",
+                    {"1" /*jobID*/, "chronos" /*user*/, "Untitled" /*title*/,
+                     "1" /*copies*/, "" /*options*/},
+                    &kPdf);
+  }
+  return ret;
 }
 
 // Runs lpadmin with the provided |arg_list| and |std_input|.
@@ -135,7 +199,7 @@ int Lpadmin(const ProcessWithOutput::ArgList& arg_list,
             const std::vector<uint8_t>* std_input = nullptr) {
   // Run in lp group so we can read and write /run/cups/cups.sock.
   return RunAsUser(kLpadminUser, kLpGroup, kLpadminCommand,
-                   kLpadminSeccompPolicy, arg_list, std_input, false,
+                   kLpadminSeccompPolicy, arg_list, std_input,
                    inherit_usergroups);
 }
 
