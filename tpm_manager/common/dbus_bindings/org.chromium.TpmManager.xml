@@ -107,7 +107,7 @@
     </method>
   </interface>
 
-  <interface name="org.chromium.TpmOwnership">
+  <interface name="org.chromium.TpmManager">
     <method name="GetTpmStatus">
       <annotation name="org.chromium.DBus.Method.Kind"
                   value="async"/>

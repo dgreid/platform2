@@ -503,7 +503,7 @@ class UserDataAuth {
   }
 
   void set_tpm_ownership_proxy(
-      org::chromium::TpmOwnershipProxyInterface* tpm_ownership_proxy) {
+      org::chromium::TpmManagerProxyInterface* tpm_ownership_proxy) {
     tpm_ownership_proxy_ = tpm_ownership_proxy;
   }
 
@@ -914,12 +914,12 @@ class UserDataAuth {
 
   // The default D-Bus proxy for invoking any ownership related methods in
   // tpm_manager.
-  std::unique_ptr<org::chromium::TpmOwnershipProxyInterface>
+  std::unique_ptr<org::chromium::TpmManagerProxyInterface>
       default_tpm_ownership_proxy_;
 
   // The actual D-Bus proxy for invoking any ownership related methods in
   // tpm_manager, but can be overridden for testing.
-  org::chromium::TpmOwnershipProxyInterface* tpm_ownership_proxy_;
+  org::chromium::TpmManagerProxyInterface* tpm_ownership_proxy_;
 
   // The default BootLockbox object for finalizing it.
   std::unique_ptr<BootLockbox> default_boot_lockbox_;

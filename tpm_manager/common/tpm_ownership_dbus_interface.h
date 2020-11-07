@@ -7,7 +7,7 @@
 
 namespace tpm_manager {
 
-constexpr char kTpmOwnershipInterface[] = "org.chromium.TpmOwnership";
+constexpr char kTpmOwnershipInterface[] = "org.chromium.TpmManager";
 
 // Methods exported by tpm_manager ownership D-Bus interface.
 

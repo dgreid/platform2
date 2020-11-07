@@ -76,7 +76,7 @@ class LegacyCryptohomeInterfaceAdaptor
         dbus_object_(dbus_object),
         default_attestation_proxy_(new org::chromium::AttestationProxy(bus)),
         attestation_proxy_(default_attestation_proxy_.get()),
-        default_tpm_ownership_proxy_(new org::chromium::TpmOwnershipProxy(bus)),
+        default_tpm_ownership_proxy_(new org::chromium::TpmManagerProxy(bus)),
         tpm_ownership_proxy_(default_tpm_ownership_proxy_.get()),
         default_tpm_nvram_proxy_(new org::chromium::TpmNvramProxy(bus)),
         tpm_nvram_proxy_(default_tpm_nvram_proxy_.get()),
@@ -592,7 +592,7 @@ class LegacyCryptohomeInterfaceAdaptor
   // This constructor is reserved only for testing.
   LegacyCryptohomeInterfaceAdaptor(
       org::chromium::AttestationProxyInterface* attestation_proxy,
-      org::chromium::TpmOwnershipProxyInterface* tpm_ownership_proxy,
+      org::chromium::TpmManagerProxyInterface* tpm_ownership_proxy,
       org::chromium::TpmNvramProxyInterface* tpm_nvram_proxy,
       org::chromium::UserDataAuthInterfaceProxyInterface* userdataauth_proxy,
       org::chromium::ArcQuotaProxyInterface* arc_quota_proxy,
@@ -1052,9 +1052,9 @@ class LegacyCryptohomeInterfaceAdaptor
   std::unique_ptr<org::chromium::AttestationProxyInterface>
       default_attestation_proxy_;
   org::chromium::AttestationProxyInterface* attestation_proxy_;
-  std::unique_ptr<org::chromium::TpmOwnershipProxyInterface>
+  std::unique_ptr<org::chromium::TpmManagerProxyInterface>
       default_tpm_ownership_proxy_;
-  org::chromium::TpmOwnershipProxyInterface* tpm_ownership_proxy_;
+  org::chromium::TpmManagerProxyInterface* tpm_ownership_proxy_;
   std::unique_ptr<org::chromium::TpmNvramProxyInterface>
       default_tpm_nvram_proxy_;
   org::chromium::TpmNvramProxyInterface* tpm_nvram_proxy_;

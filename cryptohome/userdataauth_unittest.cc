@@ -221,7 +221,7 @@ class UserDataAuthTestNotInitialized : public ::testing::Test {
 
   // Mock tpm ownership proxy object, will be passed to UserDataAuth for its
   // internal use.
-  NiceMock<org::chromium::TpmOwnershipProxyMock> tpm_ownership_proxy_;
+  NiceMock<org::chromium::TpmManagerProxyMock> tpm_ownership_proxy_;
 
   // Mock challenge credential helper utility object, will be passed to
   // UserDataAuth for its internal use.

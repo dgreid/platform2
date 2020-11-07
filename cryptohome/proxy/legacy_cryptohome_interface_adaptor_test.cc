@@ -35,7 +35,7 @@ class LegacyCryptohomeInterfaceAdaptorForTesting
  public:
   LegacyCryptohomeInterfaceAdaptorForTesting(
       org::chromium::AttestationProxyInterface* attestation_proxy,
-      org::chromium::TpmOwnershipProxyInterface* tpm_ownership_proxy,
+      org::chromium::TpmManagerProxyInterface* tpm_ownership_proxy,
       org::chromium::TpmNvramProxyInterface* tpm_nvram_proxy,
       org::chromium::UserDataAuthInterfaceProxyInterface* userdataauth_proxy,
       org::chromium::ArcQuotaProxyInterface* arc_quota_proxy,
@@ -94,7 +94,7 @@ class LegacyCryptohomeInterfaceAdaptorTest : public ::testing::Test {
  protected:
   // Mocks that will be passed into |adaptor_| for its internal use.
   NiceMock<org::chromium::AttestationProxyMock> attestation_;
-  NiceMock<org::chromium::TpmOwnershipProxyMock> ownership_;
+  NiceMock<org::chromium::TpmManagerProxyMock> ownership_;
   NiceMock<org::chromium::TpmNvramProxyMock> nvram_;
   NiceMock<org::chromium::UserDataAuthInterfaceProxyMock> userdataauth_;
   NiceMock<org::chromium::ArcQuotaProxyMock> arc_quota_;

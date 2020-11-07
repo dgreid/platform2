@@ -421,7 +421,7 @@ bool UserDataAuth::PostDBusInitialize() {
   // Initialize the tpm_ownership_proxy_ and register the signals.
   if (!default_tpm_ownership_proxy_) {
     default_tpm_ownership_proxy_.reset(
-        new org::chromium::TpmOwnershipProxy(bus_));
+        new org::chromium::TpmManagerProxy(bus_));
   }
 
   if (!tpm_ownership_proxy_) {

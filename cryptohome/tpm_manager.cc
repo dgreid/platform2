@@ -76,7 +76,7 @@ int TakeOwnership(bool finalize) {
 
   dbus::Bus::Options options;
   options.bus_type = dbus::Bus::SYSTEM;
-  org::chromium::TpmOwnershipProxy proxy(
+  org::chromium::TpmManagerProxy proxy(
       base::MakeRefCounted<dbus::Bus>(options));
   brillo::ErrorPtr error;
 
