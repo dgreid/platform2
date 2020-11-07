@@ -186,6 +186,8 @@ const char kUserAuthenticationServiceInterface[] =
     "org.chromium.UserAuthenticationServiceInterface";
 const char kUserAuthenticationServiceShowAuthDialogMethod[] = "ShowAuthDialog";
 const char kUserAuthenticationServiceCancelMethod[] = "Cancel";
+const char kUserAuthenticationServiceIsAuthenticatorAvailableMethod[] =
+    "IsAuthenticatorAvailable";
 
 constexpr char kVirtualFileRequestServiceName[] =
     "org.chromium.VirtualFileRequestService";

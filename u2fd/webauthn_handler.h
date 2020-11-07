@@ -25,6 +25,8 @@ using MakeCredentialMethodResponse =
     brillo::dbus_utils::DBusMethodResponse<MakeCredentialResponse>;
 using GetAssertionMethodResponse =
     brillo::dbus_utils::DBusMethodResponse<GetAssertionResponse>;
+using IsUvpaaMethodResponse =
+    brillo::dbus_utils::DBusMethodResponse<IsUvpaaResponse>;
 
 struct MakeCredentialSession {
   bool empty() { return !response; }
@@ -89,6 +91,10 @@ class WebAuthnHandler {
   // be called by the browser only in UV operations, because UP operations
   // themselves will timeout after ~5 seconds.
   CancelWebAuthnFlowResponse Cancel(const CancelWebAuthnFlowRequest& request);
+
+  // Check whether user-verifying platform authenticator is available.
+  void IsUvpaa(std::unique_ptr<IsUvpaaMethodResponse> method_response,
+               const IsUvpaaRequest& request);
 
  private:
   friend class WebAuthnHandlerTest;

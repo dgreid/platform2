@@ -840,4 +840,39 @@ WebAuthnHandler::DoU2fSignCheckOnly(const std::vector<uint8_t>& rp_id_hash,
                             : HasCredentialsResponse::UNKNOWN_CREDENTIAL_ID;
 }
 
+void WebAuthnHandler::IsUvpaa(
+    std::unique_ptr<IsUvpaaMethodResponse> method_response,
+    const IsUvpaaRequest& request) {
+  // An alternative is to call biod and cryptohome to check auth methods
+  // availability, but that way we'll introduce extra dependency and increase
+  // the cost to maintain the code. So we call the auth dialog service in UI,
+  // which has the lowest cost to maintain.
+  dbus::MethodCall call(
+      chromeos::kUserAuthenticationServiceInterface,
+      chromeos::kUserAuthenticationServiceIsAuthenticatorAvailableMethod);
+  std::unique_ptr<dbus::Response> auth_dialog_resp =
+      auth_dialog_dbus_proxy_->CallMethodAndBlock(
+          &call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
+
+  IsUvpaaResponse response;
+  if (!auth_dialog_resp) {
+    LOG(ERROR) << "Failed to check IsUvpaa with UI.";
+    response.set_available(false);
+    method_response->Return(response);
+    return;
+  }
+
+  dbus::MessageReader response_reader(auth_dialog_resp.get());
+  bool available;
+  if (!response_reader.PopBool(&available)) {
+    LOG(ERROR) << "Failed to parse IsUvpaa reply from UI.";
+    response.set_available(false);
+    method_response->Return(response);
+    return;
+  }
+
+  response.set_available(available);
+  method_response->Return(response);
+}
+
 }  // namespace u2f

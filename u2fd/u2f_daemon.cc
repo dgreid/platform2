@@ -272,6 +272,10 @@ void U2fDaemon::RegisterDBusObjectsAsync(
                                         base::Unretained(&webauthn_handler_),
                                         &WebAuthnHandler::Cancel);
 
+  u2f_interface->AddMethodHandler(kU2FIsUvpaa,
+                                  base::Unretained(&webauthn_handler_),
+                                  &WebAuthnHandler::IsUvpaa);
+
   dbus_object_->RegisterAsync(
       sequencer->GetHandler("Failed to register DBus Interface.", true));
 }

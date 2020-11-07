@@ -249,12 +249,25 @@ void Cancel(dbus::ObjectProxy* proxy, int request_id) {
   LOG(INFO) << (resp.canceled() ? "Canceled" : "Not canceled");
 }
 
+void IsUvpaa(dbus::ObjectProxy* proxy) {
+  u2f::IsUvpaaResponse resp =
+      SendRequest<u2f::IsUvpaaRequest, u2f::IsUvpaaResponse>(
+          proxy, u2f::kU2FIsUvpaa, u2f::IsUvpaaRequest());
+
+  if (resp.available()) {
+    LOG(INFO) << "User verifying platform authenticator is available.";
+  } else {
+    LOG(INFO) << "User verifying platform authenticator is NOT available.";
+  }
+}
+
 int main(int argc, char* argv[]) {
   DEFINE_bool(make_credential, false, "make a credential");
   DEFINE_bool(get_assertion, false, "get an assertion");
   DEFINE_bool(has_credentials, false,
               "check validity/existence of credentials");
   DEFINE_bool(cancel, false, "cancel ongoing WebAuthn operations");
+  DEFINE_bool(is_uvpaa, false, "check whether user-verification is available");
 
   DEFINE_int32(verification_type, 1,
                "type of verification to request: presence=1, verification=2");
@@ -309,6 +322,11 @@ int main(int argc, char* argv[]) {
 
   if (FLAGS_cancel) {
     Cancel(u2f_proxy, FLAGS_request_id);
+    return EX_OK;
+  }
+
+  if (FLAGS_is_uvpaa) {
+    IsUvpaa(u2f_proxy);
     return EX_OK;
   }
 

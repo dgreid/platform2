@@ -142,3 +142,10 @@ message CancelWebAuthnFlowRequest {
 message CancelWebAuthnFlowResponse {
   bool canceled = 1;
 }
+
+// Check whether user-verifying platform authenticator is available.
+message IsUvpaaRequest {}
+
+message IsUvpaaResponse {
+  bool available = 1;
+}
