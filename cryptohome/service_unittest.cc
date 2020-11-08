@@ -21,6 +21,7 @@
 #include <base/strings/sys_string_conversions.h>
 #include <base/synchronization/lock.h>
 #include <base/threading/platform_thread.h>
+#include <base/test/task_environment.h>
 #include <base/time/time.h>
 #include <brillo/cryptohome.h>
 #include <brillo/secure_blob.h>
@@ -990,6 +991,8 @@ class ServiceExTest : public ServiceTest {
   std::unique_ptr<ListKeysRequest> list_keys_req_;
 
  private:
+  base::test::TaskEnvironment task_environment_{
+      base::test::TaskEnvironment::TimeSource::MOCK_TIME};
   DISALLOW_COPY_AND_ASSIGN(ServiceExTest);
 };
 

@@ -2843,8 +2843,8 @@ user_data_auth::GetWebAuthnSecretReply UserDataAuth::GetWebAuthnSecret(
 
   scoped_refptr<UserSession> session = GetUserSession(account_id);
   std::unique_ptr<brillo::SecureBlob> secret;
-  if (session && session->GetMount()) {
-    secret = session->GetMount()->GetWebAuthnSecret();
+  if (session) {
+    secret = session->GetWebAuthnSecret();
   }
   if (!secret) {
     LOG(ERROR) << "Failed to get WebAuthn secret.";

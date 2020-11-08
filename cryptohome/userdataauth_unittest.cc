@@ -11,6 +11,7 @@
 #include <base/files/file_util.h>
 #include <base/location.h>
 #include <base/stl_util.h>
+#include <base/test/task_environment.h>
 #include <brillo/cryptohome.h>
 #include <chaps/token_manager_client_mock.h>
 #include <dbus/mock_bus.h>
@@ -273,6 +274,9 @@ class UserDataAuthTest : public UserDataAuthTestNotInitialized {
   }
 
  private:
+  base::test::TaskEnvironment task_environment_{
+      base::test::TaskEnvironment::TimeSource::MOCK_TIME};
+
   DISALLOW_COPY_AND_ASSIGN(UserDataAuthTest);
 };
 
