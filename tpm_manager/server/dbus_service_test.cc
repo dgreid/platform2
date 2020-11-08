@@ -16,7 +16,6 @@
 #include "tpm_manager/common/mock_tpm_nvram_interface.h"
 #include "tpm_manager/common/mock_tpm_ownership_interface.h"
 #include "tpm_manager/common/tpm_nvram_dbus_interface.h"
-#include "tpm_manager/common/tpm_ownership_dbus_interface.h"
 #include "tpm_manager/server/dbus_service.h"
 #include "tpm_manager/server/mock_local_data_store.h"
 
@@ -96,7 +95,7 @@ TEST_F(DBusServiceTest, CopyableCallback) {
           })));
   GetTpmStatusRequest request;
   GetTpmStatusReply reply;
-  ExecuteMethod(kGetTpmStatus, request, &reply, kTpmOwnershipInterface);
+  ExecuteMethod(kGetTpmStatus, request, &reply, kTpmManagerInterface);
 }
 
 TEST_F(DBusServiceTest, GetTpmStatus) {
@@ -114,7 +113,7 @@ TEST_F(DBusServiceTest, GetTpmStatus) {
             callback.Run(reply);
           }));
   GetTpmStatusReply reply;
-  ExecuteMethod(kGetTpmStatus, request, &reply, kTpmOwnershipInterface);
+  ExecuteMethod(kGetTpmStatus, request, &reply, kTpmManagerInterface);
   EXPECT_EQ(STATUS_SUCCESS, reply.status());
   EXPECT_TRUE(reply.enabled());
   EXPECT_TRUE(reply.owned());
@@ -143,7 +142,7 @@ TEST_F(DBusServiceTest, GetVersionInfo) {
 
   GetVersionInfoReply actual_version_info;
   ExecuteMethod(kGetVersionInfo, request, &actual_version_info,
-                kTpmOwnershipInterface);
+                kTpmManagerInterface);
   EXPECT_EQ(actual_version_info.SerializeAsString(),
             expected_version_info.SerializeAsString());
 }
@@ -167,7 +166,7 @@ TEST_F(DBusServiceTest, GetDictionaryAttackInfo) {
           }));
   GetDictionaryAttackInfoReply reply;
   ExecuteMethod(kGetDictionaryAttackInfo, request, &reply,
-                kTpmOwnershipInterface);
+                kTpmManagerInterface);
   EXPECT_EQ(STATUS_SUCCESS, reply.status());
   EXPECT_EQ(3, reply.dictionary_attack_counter());
   EXPECT_EQ(4, reply.dictionary_attack_threshold());
@@ -190,7 +189,7 @@ TEST_F(DBusServiceTest, ResetDictionaryAttackLock) {
           }));
   ResetDictionaryAttackLockReply reply;
   ExecuteMethod(kResetDictionaryAttackLock, request, &reply,
-                kTpmOwnershipInterface);
+                kTpmManagerInterface);
   EXPECT_EQ(STATUS_SUCCESS, reply.status());
 }
 
@@ -207,7 +206,7 @@ TEST_F(DBusServiceTest, TakeOwnership) {
           }));
   TakeOwnershipRequest request;
   TakeOwnershipReply reply;
-  ExecuteMethod(kTakeOwnership, request, &reply, kTpmOwnershipInterface);
+  ExecuteMethod(kTakeOwnership, request, &reply, kTpmManagerInterface);
   EXPECT_EQ(STATUS_SUCCESS, reply.status());
 }
 
@@ -230,8 +229,7 @@ TEST_F(DBusServiceTest, RemoveOwnerDependency) {
             callback.Run(reply);
           }));
   RemoveOwnerDependencyReply reply;
-  ExecuteMethod(kRemoveOwnerDependency, request, &reply,
-                kTpmOwnershipInterface);
+  ExecuteMethod(kRemoveOwnerDependency, request, &reply, kTpmManagerInterface);
   EXPECT_EQ(STATUS_SUCCESS, reply.status());
 }
 
@@ -250,7 +248,7 @@ TEST_F(DBusServiceTest, ClearStoredOwnerPassword) {
           }));
   ClearStoredOwnerPasswordReply reply;
   ExecuteMethod(kClearStoredOwnerPassword, request, &reply,
-                kTpmOwnershipInterface);
+                kTpmManagerInterface);
   EXPECT_EQ(STATUS_SUCCESS, reply.status());
 }
 

@@ -219,7 +219,7 @@ message GetSpaceInfoReply {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// A series of request and reply messages for the ownership interface methods.
+// A series of request and reply messages for the tpm manager interface methods.
 ////////////////////////////////////////////////////////////////////////////////
 message GetTpmStatusRequest {
   reserved 1;

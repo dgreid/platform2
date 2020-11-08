@@ -13,7 +13,6 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include "tpm_manager/client/mock_tpm_ownership_signal_handler.h"
-#include "tpm_manager/common/tpm_ownership_dbus_interface.h"
 #include "tpm_manager-client/tpm_manager/dbus-constants.h"
 
 using testing::_;
@@ -56,23 +55,23 @@ TEST_F(TpmOwnershipDBusProxyTest, ConnectToSignal) {
   dbus::ObjectProxy::OnConnectedCallback signal_connected_callback;
   EXPECT_CALL(
       *mock_object_proxy_,
-      DoConnectToSignal(kTpmOwnershipInterface, kOwnershipTakenSignal, _, _))
+      DoConnectToSignal(kTpmManagerInterface, kOwnershipTakenSignal, _, _))
       .WillOnce(DoAll(SaveArg<2>(&ownership_taken_callback),
                       MovePointee<3>(&signal_connected_callback)));
   EXPECT_CALL(mock_signal_handler, OnOwnershipTaken(_))
       .WillOnce(SaveArg<0>(&result_signal));
   EXPECT_CALL(
       mock_signal_handler,
-      OnSignalConnected(kTpmOwnershipInterface, kOwnershipTakenSignal, true))
+      OnSignalConnected(kTpmManagerInterface, kOwnershipTakenSignal, true))
       .Times(1);
 
   proxy_.ConnectToSignal(&mock_signal_handler);
-  dbus::Signal signal(kTpmOwnershipInterface, kOwnershipTakenSignal);
+  dbus::Signal signal(kTpmManagerInterface, kOwnershipTakenSignal);
   dbus::MessageWriter writer(&signal);
   brillo::dbus_utils::DBusParamWriter::Append(&writer, expected_signal);
   ownership_taken_callback.Run(&signal);
   std::move(signal_connected_callback)
-      .Run(kTpmOwnershipInterface, kOwnershipTakenSignal, true);
+      .Run(kTpmManagerInterface, kOwnershipTakenSignal, true);
   EXPECT_EQ(expected_signal.SerializeAsString(),
             result_signal.SerializeAsString());
 }

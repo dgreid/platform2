@@ -15,7 +15,6 @@
 #include <trunks/tpm_utility.h>
 #include <trunks/trunks_factory_impl.h>
 
-#include "tpm_manager/common/tpm_ownership_dbus_interface.h"
 #include "tpm_manager/server/openssl_crypto_util_impl.h"
 
 using trunks::TPM_RC;

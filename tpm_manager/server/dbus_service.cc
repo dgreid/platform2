@@ -15,7 +15,6 @@
 #include <tpm_manager-client/tpm_manager/dbus-constants.h>
 
 #include "tpm_manager/common/tpm_nvram_dbus_interface.h"
-#include "tpm_manager/common/tpm_ownership_dbus_interface.h"
 
 namespace tpm_manager {
 
@@ -64,7 +63,7 @@ void DBusService::RegisterDBusObjectsAsync(
         nullptr, bus_, dbus::ObjectPath(kTpmManagerServicePath)));
   }
   brillo::dbus_utils::DBusInterface* ownership_dbus_interface =
-      dbus_object_->AddOrGetInterface(kTpmOwnershipInterface);
+      dbus_object_->AddOrGetInterface(kTpmManagerInterface);
 
   ownership_dbus_interface->AddMethodHandler(
       kGetTpmStatus, base::Unretained(this),

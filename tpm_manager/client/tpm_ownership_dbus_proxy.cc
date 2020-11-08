@@ -9,8 +9,6 @@
 #include <brillo/dbus/dbus_signal_handler.h>
 #include <tpm_manager-client/tpm_manager/dbus-constants.h>
 
-#include "tpm_manager/common/tpm_ownership_dbus_interface.h"
-
 namespace {
 
 // Use a two minute timeout because TPM operations can take a long time.
@@ -48,7 +46,7 @@ bool TpmOwnershipDBusProxy::ConnectToSignal(
   }
   ownership_taken_signal_handler_ = handler;
   brillo::dbus_utils::ConnectToSignal(
-      object_proxy_, kTpmOwnershipInterface, kOwnershipTakenSignal,
+      object_proxy_, kTpmManagerInterface, kOwnershipTakenSignal,
       base::Bind(&TpmOwnershipTakenSignalHandler::OnOwnershipTaken,
                  base::Unretained(handler)),
       base::Bind(&TpmOwnershipTakenSignalHandler::OnSignalConnected,
@@ -115,7 +113,7 @@ void TpmOwnershipDBusProxy::CallMethod(const std::string& method_name,
     callback.Run(reply);
   };
   brillo::dbus_utils::CallMethodWithTimeout(
-      kDBusTimeoutMS, object_proxy_, tpm_manager::kTpmOwnershipInterface,
+      kDBusTimeoutMS, object_proxy_, tpm_manager::kTpmManagerInterface,
       method_name, callback, base::Bind(on_error, callback), request);
 }
 
