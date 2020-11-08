@@ -14,6 +14,9 @@ enum TpmManagerStatus {
   STATUS_SUCCESS = 0;
   STATUS_DEVICE_ERROR = 1;
   STATUS_NOT_AVAILABLE = 2;
+  // The error that is translated into by the client to indicate any kind of
+  // D-Bus error.
+  STATUS_DBUS_ERROR = 3;
 }
 
 // Result codes. For convenience, keep these in sync with Brillo NVRAM HAL
