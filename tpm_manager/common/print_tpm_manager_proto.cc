@@ -1,4 +1,4 @@
-// Copyright 2019 The Chromium OS Authors. All rights reserved.
+// Copyright 2020 The Chromium OS Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -32,6 +32,9 @@ std::string GetProtoDebugStringWithIndent(TpmManagerStatus value,
   }
   if (value == STATUS_NOT_AVAILABLE) {
     return "STATUS_NOT_AVAILABLE";
+  }
+  if (value == STATUS_DBUS_ERROR) {
+    return "STATUS_DBUS_ERROR";
   }
   return "<unknown>";
 }
