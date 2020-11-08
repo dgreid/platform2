@@ -9,8 +9,7 @@
 
 #include "base/optional.h"
 #include "base/strings/string_piece.h"
-
-#include "patchpanel/dns/net_export.h"
+#include "brillo/brillo_export.h"
 
 namespace patchpanel {
 
@@ -20,8 +19,8 @@ namespace patchpanel {
 //
 //   dotted: a string in dotted form: "www.google.com"
 //   out: a result in DNS form: "\x03www\x06google\x03com\x00"
-NET_EXPORT bool DNSDomainFromDot(const base::StringPiece& dotted,
-                                 std::string* out);
+BRILLO_EXPORT bool DNSDomainFromDot(const base::StringPiece& dotted,
+                                    std::string* out);
 
 // Returns true if the character is valid in a DNS hostname label, whether in
 // the first position or later in the label.
@@ -35,13 +34,13 @@ NET_EXPORT bool DNSDomainFromDot(const base::StringPiece& dotted,
 //
 // TODO(palmer): In the future, when we can remove support for invalid names,
 // this can be a private implementation detail of |DNSDomainFromDot|, and need
-// not be NET_EXPORT_PRIVATE.
-NET_EXPORT_PRIVATE bool IsValidHostLabelCharacter(char c, bool is_first_char);
+// not be BRILLO_EXPORT.
+BRILLO_EXPORT bool IsValidHostLabelCharacter(char c, bool is_first_char);
 
 // Converts a domain in DNS format to a dotted string. Excludes the dot at the
 // end. Assumes the standard terminating zero-length label at the end if not
 // included in the input. Returns nullopt on malformed input.
-NET_EXPORT base::Optional<std::string> DnsDomainToString(
+BRILLO_EXPORT base::Optional<std::string> DnsDomainToString(
     base::StringPiece dns_name);
 
 }  // namespace patchpanel

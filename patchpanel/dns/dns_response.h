@@ -16,10 +16,10 @@
 #include "base/optional.h"
 #include "base/strings/string_piece.h"
 #include "base/time/time.h"
+#include "brillo/brillo_export.h"
 
 #include "patchpanel/dns/dns_protocol.h"
 #include "patchpanel/dns/io_buffer.h"
-#include "patchpanel/dns/net_export.h"
 
 namespace base {
 class BigEndianWriter;
@@ -35,7 +35,7 @@ struct Header;
 
 // Structure representing a Resource Record as specified in RFC 1035, Section
 // 4.1.3.
-struct NET_EXPORT_PRIVATE DnsResourceRecord {
+struct BRILLO_EXPORT DnsResourceRecord {
   DnsResourceRecord();
   explicit DnsResourceRecord(const DnsResourceRecord& other);
   DnsResourceRecord(DnsResourceRecord&& other);
@@ -66,7 +66,7 @@ struct NET_EXPORT_PRIVATE DnsResourceRecord {
 };
 
 // Iterator to walk over resource records of the DNS response packet.
-class NET_EXPORT_PRIVATE DnsRecordParser {
+class BRILLO_EXPORT DnsRecordParser {
  public:
   // Construct an uninitialized iterator.
   DnsRecordParser();
@@ -109,7 +109,7 @@ class NET_EXPORT_PRIVATE DnsRecordParser {
 // Buffer-holder for the DNS response allowing easy access to the header fields
 // and resource records. After reading into |io_buffer| must call InitParse to
 // position the RR parser.
-class NET_EXPORT_PRIVATE DnsResponse {
+class BRILLO_EXPORT DnsResponse {
  public:
   // Possible results from ParseToAddressList.
   enum Result {

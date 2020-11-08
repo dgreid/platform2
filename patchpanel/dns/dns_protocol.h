@@ -7,7 +7,7 @@
 
 #include <stdint.h>
 
-#include "patchpanel/dns/net_export.h"
+#include "brillo/brillo_export.h"
 
 namespace patchpanel {
 
@@ -88,7 +88,7 @@ static const char kMdnsMulticastGroupIPv6[] = "FF02::FB";
 #pragma pack(1)
 
 // On-the-wire header. All uint16_t are in network order.
-struct NET_EXPORT Header {
+struct BRILLO_EXPORT Header {
   uint16_t id = 0;
   uint16_t flags = 0;
   uint16_t qdcount = 0;

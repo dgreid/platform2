@@ -14,8 +14,7 @@
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
 #include "base/strings/string_piece.h"
-
-#include "patchpanel/dns/net_export.h"
+#include "brillo/brillo_export.h"
 
 namespace base {
 class BigEndianReader;
@@ -30,7 +29,7 @@ struct Header;
 class IOBufferWithSize;
 
 // Represents on-the-wire DNS query message as an object.
-class NET_EXPORT_PRIVATE DnsQuery {
+class BRILLO_EXPORT DnsQuery {
  public:
   // Constructs an empty query from a raw packet in |buffer|. If the raw packet
   // represents a valid DNS query in the wire format (RFC 1035), Parse() will
