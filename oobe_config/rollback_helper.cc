@@ -285,6 +285,8 @@ void TryFileCopy(const base::FilePath& source,
   }
 }
 
+// TODO(mpolzer) This was a quickfix, make sure we do not follow symlinks when
+// opening files (see crbug/960109#c11).
 bool IsSymlink(const base::FilePath& path) {
   int fd = HANDLE_EINTR(open(path.value().c_str(), O_PATH));
   if (fd < 0)
