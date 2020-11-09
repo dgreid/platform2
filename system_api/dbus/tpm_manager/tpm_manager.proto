@@ -238,6 +238,21 @@ message GetTpmStatusReply {
   reserved 5 to 9;
 }
 
+message GetTpmNonsensitiveStatusRequest {
+}
+
+message GetTpmNonsensitiveStatusReply {
+  optional TpmManagerStatus status = 1;
+  // Whether a TPM is enabled on the system.
+  optional bool is_enabled = 2;
+  // Whether the TPM has been owned.
+  optional bool is_owned = 3;
+  // Whether the owner password is still retained.
+  optional bool is_owner_password_present = 4;
+  // Whether tpm manager is capable of reset DA.
+  optional bool has_reset_lock_permissions = 5;
+}
+
 message GetVersionInfoRequest {
 }
 

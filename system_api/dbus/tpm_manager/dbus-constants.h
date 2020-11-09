@@ -14,6 +14,7 @@ constexpr char kTpmManagerServicePath[] = "/org/chromium/TpmManager";
 
 // Methods exported by tpm_manager.
 constexpr char kGetTpmStatus[] = "GetTpmStatus";
+constexpr char kGetTpmNonsensitiveStatus[] = "GetTpmNonsensitiveStatus";
 constexpr char kGetVersionInfo[] = "GetVersionInfo";
 constexpr char kGetDictionaryAttackInfo[] = "GetDictionaryAttackInfo";
 constexpr char kResetDictionaryAttackLock[] = "ResetDictionaryAttackLock";
