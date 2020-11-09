@@ -8,6 +8,7 @@ group("all") {
   deps = [
     ":arc-apply-per-board-config",
     ":arc-create-data",
+    ":arc-handle-upgrade",
     ":arc-remove-data",
     ":arc-remove-stale-data",
     ":arc-setup",
@@ -99,6 +100,12 @@ executable("arc-apply-per-board-config") {
 
 executable("arc-create-data") {
   sources = [ "arc_create_data_main.cc" ]
+  configs += [ ":target_defaults" ]
+  deps = [ ":libarc_setup" ]
+}
+
+executable("arc-handle-upgrade") {
+  sources = [ "arc_handle_upgrade_main.cc" ]
   configs += [ ":target_defaults" ]
   deps = [ ":libarc_setup" ]
 }

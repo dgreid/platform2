@@ -74,6 +74,7 @@ enum class Mode {
   MOUNT_SDCARD,
   UNMOUNT_SDCARD,
   UPDATE_RESTORECON_LAST,
+  HANDLE_UPGRADE,  // for ARC upgrades
   UNKNOWN,
 };
 
@@ -322,8 +323,14 @@ class ArcSetup {
   // Restores SELinux contexts of files inside the container's mount namespace.
   void RestoreContextOnPreChroot(const base::FilePath& rootfs);
 
-  // Creates /dev/.coldboot_done file in the container's mount namespace
+  // Creates /dev/.coldboot_done file in the container's mount namespace.
   void CreateDevColdbootDoneOnPreChroot(const base::FilePath& rootfs);
+
+  // Sends details about updated version to UMA.
+  void SendUpgradeMetrics(AndroidSdkVersion data_sdk_version);
+
+  // Deletes Android data if we are doing an unsupported upgrade.
+  void DeleteAndroidDataOnUpgrade(AndroidSdkVersion data_sdk_version);
 
   // Converts |version_str| to the enum.
   AndroidSdkVersion SdkVersionFromString(const std::string& version_str);
@@ -371,6 +378,9 @@ class ArcSetup {
 
   // Called when arc-setup is called with --mode=update-restorecon-last.
   void OnUpdateRestoreconLast();
+
+  // Called on every boot to handle any necessary upgrades.
+  void OnHandleUpgrade();
 
   // Returns system build property.
   std::string GetSystemBuildPropertyOrDie(const std::string& name);

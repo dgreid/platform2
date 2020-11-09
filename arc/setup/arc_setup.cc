@@ -101,6 +101,8 @@ constexpr char kBuildPropFileVm[] = "/usr/share/arcvm/properties/build.prop";
 constexpr char kCameraProfileDir[] =
     "/mnt/stateful_partition/encrypted/var/cache/camera";
 constexpr char kCrasSocketDirectory[] = "/run/cras";
+constexpr char kCombinedPropFileVm[] =
+    "/run/arcvm/host_generated/combined.prop";
 constexpr char kDebugfsDirectory[] = "/run/arc/debugfs";
 constexpr char kFakeKptrRestrict[] = "/run/arc/fake_kptr_restrict";
 constexpr char kFakeMmapRndBits[] = "/run/arc/fake_mmap_rnd_bits";
@@ -481,6 +483,7 @@ bool IsChromeOSUserAvailable(Mode mode) {
     case Mode::CREATE_DATA:
     case Mode::REMOVE_DATA:
     case Mode::REMOVE_STALE_DATA:
+    case Mode::HANDLE_UPGRADE:
       return true;
     case Mode::APPLY_PER_BOARD_CONFIG:
     case Mode::SETUP:
@@ -598,7 +601,7 @@ ArcSetup::ArcSetup(Mode mode, const base::FilePath& config_json)
       arc_setup_metrics_(std::make_unique<ArcSetupMetrics>()) {
   CHECK(mode == Mode::APPLY_PER_BOARD_CONFIG || mode == Mode::CREATE_DATA ||
         mode == Mode::REMOVE_DATA || mode == Mode::REMOVE_STALE_DATA ||
-        !config_json.empty());
+        mode == Mode::HANDLE_UPGRADE || !config_json.empty());
 }
 
 ArcSetup::~ArcSetup() = default;
@@ -1543,6 +1546,8 @@ AndroidSdkVersion ArcSetup::SdkVersionFromString(
         return AndroidSdkVersion::ANDROID_N_MR1;
       case 28:
         return AndroidSdkVersion::ANDROID_P;
+      case 30:
+        return AndroidSdkVersion::ANDROID_R;
     }
   }
 
@@ -2001,6 +2006,21 @@ void ArcSetup::CreateDevColdbootDoneOnPreChroot(const base::FilePath& rootfs) {
   EXIT_IF(!Chown(kRootUid, kRootGid, coldboot_done));
 }
 
+void ArcSetup::SendUpgradeMetrics(AndroidSdkVersion data_sdk_version) {
+  LOG(INFO) << "Sending upgrade metrics";
+  arc_setup_metrics_->SendSdkVersionUpgradeType(
+      GetUpgradeType(GetSdkVersion(), data_sdk_version));
+}
+
+void ArcSetup::DeleteAndroidDataOnUpgrade(AndroidSdkVersion data_sdk_version) {
+  if (!ShouldDeleteAndroidData(GetSdkVersion(), data_sdk_version))
+    return;
+
+  LOG(INFO) << "Deleting old Android data";
+  EXIT_IF(!MoveDirIntoDataOldDir(arc_paths_->android_data_directory,
+                                 arc_paths_->android_data_old_directory));
+}
+
 void ArcSetup::OnSetup() {
   const bool is_dev_mode = config_.GetBoolOrDie("CHROMEOS_DEV_MODE");
   const bool is_inside_vm = config_.GetBoolOrDie("CHROMEOS_INSIDE_VM");
@@ -2088,13 +2108,8 @@ void ArcSetup::OnBootContinue() {
   AndroidSdkVersion data_sdk_version;
   GetBootTypeAndDataSdkVersion(&boot_type, &data_sdk_version);
 
-  arc_setup_metrics_->SendSdkVersionUpgradeType(
-      GetUpgradeType(GetSdkVersion(), data_sdk_version));
-
-  if (ShouldDeleteAndroidData(GetSdkVersion(), data_sdk_version)) {
-    EXIT_IF(!MoveDirIntoDataOldDir(arc_paths_->android_data_directory,
-                                   arc_paths_->android_data_old_directory));
-  }
+  SendUpgradeMetrics(data_sdk_version);
+  DeleteAndroidDataOnUpgrade(data_sdk_version);
 
   bool should_delete_data_dalvik_cache_directory;
   bool should_delete_data_app_executables;
@@ -2305,11 +2320,28 @@ void ArcSetup::OnUpdateRestoreconLast() {
   }
 }
 
+void ArcSetup::OnHandleUpgrade() {
+  ArcBootType boot_type;
+  AndroidSdkVersion data_sdk_version;
+  GetBootTypeAndDataSdkVersion(&boot_type, &data_sdk_version);
+
+  SendUpgradeMetrics(data_sdk_version);
+  DeleteAndroidDataOnUpgrade(data_sdk_version);
+}
+
 std::string ArcSetup::GetSystemBuildPropertyOrDie(const std::string& name) {
   if (system_properties_.empty()) {
+    // First time read of system properties file.
+    // We don't know if we are in a container or on VM yet, so try the
+    // build.prop location on container first and fall back to the
+    // conbined.prop location on VM if empty.
     const base::FilePath build_prop =
         arc_paths_->android_generated_properties_directory.Append("build.prop");
-    EXIT_IF(!GetPropertiesFromFile(build_prop, &system_properties_));
+    GetPropertiesFromFile(build_prop, &system_properties_);
+    if (system_properties_.empty()) {
+      const base::FilePath combined_prop_vm(kCombinedPropFileVm);
+      GetPropertiesFromFile(combined_prop_vm, &system_properties_);
+    }
   }
   DCHECK(!system_properties_.empty());
   const auto it = system_properties_.find(name);
@@ -2362,6 +2394,9 @@ void ArcSetup::Run() {
       break;
     case Mode::UPDATE_RESTORECON_LAST:
       OnUpdateRestoreconLast();
+      break;
+    case Mode::HANDLE_UPGRADE:
+      OnHandleUpgrade();
       break;
     case Mode::UNKNOWN:
       NOTREACHED();
