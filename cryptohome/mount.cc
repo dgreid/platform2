@@ -796,8 +796,7 @@ FilePath Mount::GetUserTemporaryMountDirectory(
   return mounter_->GetUserTemporaryMountDirectory(obfuscated_username);
 }
 
-bool Mount::CheckChapsDirectory(const FilePath& dir,
-                                const FilePath& legacy_dir) {
+bool Mount::CheckChapsDirectory(const FilePath& dir) {
   const Platform::Permissions kChapsDirPermissions = {
       chaps_user_,                 // chaps
       default_access_group_,       // chronos-access
@@ -816,30 +815,18 @@ bool Mount::CheckChapsDirectory(const FilePath& dir,
 
   // If the Chaps database directory does not exist, create it.
   if (!platform_->DirectoryExists(dir)) {
-    if (platform_->DirectoryExists(legacy_dir)) {
-      LOG(INFO) << "Moving chaps directory from " << legacy_dir.value()
-                << " to " << dir.value();
-      if (!platform_->CopyWithPermissions(legacy_dir, dir)) {
-        return false;
-      }
-      if (!platform_->DeleteFile(legacy_dir, true)) {
-        PLOG(WARNING) << "Failed to clean up " << legacy_dir.value();
-        return false;
-      }
-    } else {
-      if (!platform_->CreateDirectory(dir)) {
-        LOG(ERROR) << "Failed to create " << dir.value();
-        return false;
-      }
-      if (!platform_->SetOwnership(dir, kChapsDirPermissions.user,
-                                   kChapsDirPermissions.group, true)) {
-        LOG(ERROR) << "Couldn't set file ownership for " << dir.value();
-        return false;
-      }
-      if (!platform_->SetPermissions(dir, kChapsDirPermissions.mode)) {
-        LOG(ERROR) << "Couldn't set permissions for " << dir.value();
-        return false;
-      }
+    if (!platform_->CreateDirectory(dir)) {
+      LOG(ERROR) << "Failed to create " << dir.value();
+      return false;
+    }
+    if (!platform_->SetOwnership(dir, kChapsDirPermissions.user,
+                                 kChapsDirPermissions.group, true)) {
+      LOG(ERROR) << "Couldn't set file ownership for " << dir.value();
+      return false;
+    }
+    if (!platform_->SetPermissions(dir, kChapsDirPermissions.mode)) {
+      LOG(ERROR) << "Couldn't set permissions for " << dir.value();
+      return false;
     }
     return true;
   }
@@ -857,8 +844,7 @@ bool Mount::CheckChapsDirectory(const FilePath& dir,
 
 bool Mount::InsertPkcs11Token() {
   FilePath token_dir = homedirs_->GetChapsTokenDir(username_);
-  FilePath legacy_token_dir = homedirs_->GetLegacyChapsTokenDir(username_);
-  if (!CheckChapsDirectory(token_dir, legacy_token_dir))
+  if (!CheckChapsDirectory(token_dir))
     return false;
   // We may create a salt file and, if so, we want to restrict access to it.
   brillo::ScopedUmask scoped_umask(kDefaultUmask);

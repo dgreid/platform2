@@ -726,7 +726,6 @@ class ChapsDirectoryTest : public ::testing::Test {
         kSaltFile("/base_chaps_dir/auth_data_salt"),
         kDatabaseDir("/base_chaps_dir/database"),
         kDatabaseFile("/base_chaps_dir/database/file"),
-        kLegacyDir("/legacy"),
         mount_(new Mount()),
         user_timestamp_cache_(new UserOldestActivityTimestampCache()) {
     crypto_.set_platform(&platform_);
@@ -776,14 +775,13 @@ class ChapsDirectoryTest : public ::testing::Test {
         .WillRepeatedly(DoAll(SetArgPointee<1>(base_stat_), Return(true)));
   }
 
-  bool RunCheck() { return mount_->CheckChapsDirectory(kBaseDir, kLegacyDir); }
+  bool RunCheck() { return mount_->CheckChapsDirectory(kBaseDir); }
 
  protected:
   const FilePath kBaseDir;
   const FilePath kSaltFile;
   const FilePath kDatabaseDir;
   const FilePath kDatabaseFile;
-  const FilePath kLegacyDir;
 
   base::stat_wrapper_t base_stat_;
   base::stat_wrapper_t salt_stat_;
@@ -815,8 +813,6 @@ TEST_F(ChapsDirectoryTest, DirectoryDoesNotExist) {
   // Specify directory does not exist.
   EXPECT_CALL(platform_, DirectoryExists(kBaseDir))
       .WillRepeatedly(Return(false));
-  EXPECT_CALL(platform_, DirectoryExists(kLegacyDir))
-      .WillRepeatedly(Return(false));
   // Expect basic setup.
   EXPECT_CALL(platform_, CreateDirectory(kBaseDir))
       .WillRepeatedly(Return(true));
@@ -831,8 +827,6 @@ TEST_F(ChapsDirectoryTest, DirectoryDoesNotExist) {
 TEST_F(ChapsDirectoryTest, CreateFailure) {
   // Specify directory does not exist.
   EXPECT_CALL(platform_, DirectoryExists(kBaseDir))
-      .WillRepeatedly(Return(false));
-  EXPECT_CALL(platform_, DirectoryExists(kLegacyDir))
       .WillRepeatedly(Return(false));
   // Expect basic setup but fail.
   EXPECT_CALL(platform_, CreateDirectory(kBaseDir))
@@ -899,63 +893,6 @@ TEST_F(ChapsDirectoryTest, FixBadOwnershipFailure) {
   EXPECT_CALL(platform_, SetOwnership(_, _, _, _))
       .WillRepeatedly(Return(false));
   ASSERT_FALSE(RunCheck());
-}
-
-TEST_P(MountTest, CheckChapsDirectoryMigration) {
-  EXPECT_CALL(platform_, DirectoryExists(kImageDir))
-      .WillRepeatedly(Return(true));
-
-  // Configure stub methods.
-  EXPECT_CALL(platform_, Copy(_, _)).WillRepeatedly(Return(true));
-  EXPECT_CALL(platform_, DeleteFile(_, _)).WillRepeatedly(Return(true));
-
-  // Stubs which will trigger the migration code path.
-  EXPECT_CALL(platform_, DirectoryExists(FilePath("/fake")))
-      .WillRepeatedly(Return(false));
-  EXPECT_CALL(platform_, DirectoryExists(FilePath("/fake_legacy")))
-      .WillRepeatedly(Return(true));
-
-  // Configure stat for the base directory.
-  base::stat_wrapper_t base_stat = {0};
-  base_stat.st_mode = 040123;
-  base_stat.st_uid = 1;
-  base_stat.st_gid = 2;
-  EXPECT_CALL(platform_, Stat(_, _))
-      .WillRepeatedly(DoAll(SetArgPointee<1>(base_stat), Return(true)));
-
-  // Configure a fake enumerator.
-  MockFileEnumerator* enumerator = new MockFileEnumerator();
-  EXPECT_CALL(platform_, GetFileEnumerator(_, _, _))
-      .WillOnce(Return(enumerator));
-  base::stat_wrapper_t file_info1 = {0};
-  file_info1.st_mode = 0555;
-  file_info1.st_uid = 3;
-  file_info1.st_gid = 4;
-  base::stat_wrapper_t file_info2 = {0};
-  file_info2.st_mode = 0777;
-  file_info2.st_uid = 5;
-  file_info2.st_gid = 6;
-  enumerator->entries_.push_back(FileEnumerator::FileInfo(
-      FilePath("/fake_legacy/test_file1"), file_info1));
-  enumerator->entries_.push_back(
-      FileEnumerator::FileInfo(FilePath("test_file2"), file_info2));
-
-  // These expectations will ensure the ownership and permissions are being
-  // correctly applied after the directory has been moved.
-  EXPECT_CALL(platform_, SetOwnership(FilePath("/fake/test_file1"), 3, 4, true))
-      .Times(1);
-  EXPECT_CALL(platform_, SetPermissions(FilePath("/fake/test_file1"), 0555))
-      .Times(1);
-  EXPECT_CALL(platform_, SetOwnership(FilePath("/fake/test_file2"), 5, 6, true))
-      .Times(1);
-  EXPECT_CALL(platform_, SetPermissions(FilePath("/fake/test_file2"), 0777))
-      .Times(1);
-  EXPECT_CALL(platform_, SetOwnership(FilePath("/fake"), 1, 2, true)).Times(1);
-  EXPECT_CALL(platform_, SetPermissions(FilePath("/fake"), 0123)).Times(1);
-
-  DoMountInit();
-  EXPECT_TRUE(
-      mount_->CheckChapsDirectory(FilePath("/fake"), FilePath("/fake_legacy")));
 }
 
 TEST_P(MountTest, MountCryptohome) {

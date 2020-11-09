@@ -357,14 +357,11 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   // does not exist, it is created and initialzed with the correct
   // values. If the directory or its attributes cannot be checked,
   // set or created, a fatal error has occured and the function
-  // returns false.  If the directory does not exist and a legacy directory
-  // exists, the legacy directory will be moved to the new location.
+  // returns false.
   //
   // Parameters
   //   dir - directory to check
-  //   legacy_dir - legacy directory location
-  bool CheckChapsDirectory(const base::FilePath& dir,
-                           const base::FilePath& legacy_dir);
+  bool CheckChapsDirectory(const base::FilePath& dir);
 
   // Mounts and populates an ephemeral cryptohome backed by tmpfs for the given
   // user.
@@ -522,7 +519,6 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   FRIEND_TEST(MountTest, NamespaceCreationFail);
   FRIEND_TEST(MountTest, RememberMountOrderingTest);
   FRIEND_TEST(MountTest, UserActivityTimestampUpdated);
-  FRIEND_TEST(MountTest, CheckChapsDirectoryMigration);
   FRIEND_TEST(MountTest, CreateCryptohomeTest);
   FRIEND_TEST(MountTest, CreateTrackedSubdirectories);
   FRIEND_TEST(MountTest, CreateTrackedSubdirectoriesReplaceExistingDir);
