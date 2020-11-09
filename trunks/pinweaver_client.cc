@@ -195,16 +195,16 @@ void GetInsertLeafDefaults(uint64_t* label,
   }
 }
 
-void SetupBaseOutcome(uint32_t result_code,
-                      const std::string& root,
-                      base::DictionaryValue* outcome) {
+base::Value SetupBaseOutcome(uint32_t result_code, const std::string& root) {
   // This is exported as a string because the API handles integers as signed.
-  outcome->SetString("result_code.value", std::to_string(result_code));
-  outcome->SetString("result_code.name", PwErrorStr(result_code));
-  outcome->SetString("root_hash", HexEncode(root));
+  base::Value outcome(base::Value::Type::DICTIONARY);
+  outcome.SetStringKey("result_code.value", std::to_string(result_code));
+  outcome.SetStringKey("result_code.name", PwErrorStr(result_code));
+  outcome.SetStringKey("root_hash", HexEncode(root));
+  return outcome;
 }
 
-std::string GetOutcomeJson(const base::DictionaryValue& outcome) {
+std::string GetOutcomeJson(const base::Value& outcome) {
   std::string json;
   base::JSONWriter::WriteWithOptions(
       outcome, base::JSONWriter::OPTIONS_PRETTY_PRINT, &json);
@@ -238,8 +238,7 @@ int HandleResetTree(base::CommandLine::StringVector::const_iterator begin,
     LOG(ERROR) << "PinWeaverResetTree: " << trunks::GetErrorString(result);
   }
 
-  base::DictionaryValue outcome;
-  SetupBaseOutcome(result_code, root, &outcome);
+  base::Value outcome = SetupBaseOutcome(result_code, root);
   puts(GetOutcomeJson(outcome).c_str());
   return result;
 }
@@ -305,10 +304,9 @@ int HandleInsert(base::CommandLine::StringVector::const_iterator begin,
     LOG(ERROR) << "PinWeaverInsertLeaf: " << trunks::GetErrorString(result);
   }
 
-  base::DictionaryValue outcome;
-  SetupBaseOutcome(result_code, root, &outcome);
-  outcome.SetString("cred_metadata", HexEncode(cred_metadata));
-  outcome.SetString("mac", HexEncode(mac));
+  base::Value outcome = SetupBaseOutcome(result_code, root);
+  outcome.SetStringKey("cred_metadata", HexEncode(cred_metadata));
+  outcome.SetStringKey("mac", HexEncode(mac));
   puts(GetOutcomeJson(outcome).c_str());
   return result;
 }
@@ -343,8 +341,7 @@ int HandleRemove(base::CommandLine::StringVector::const_iterator begin,
     LOG(ERROR) << "PinWeaverRemoveLeaf: " << trunks::GetErrorString(result);
   }
 
-  base::DictionaryValue outcome;
-  SetupBaseOutcome(result_code, root, &outcome);
+  base::Value outcome = SetupBaseOutcome(result_code, root);
   puts(GetOutcomeJson(outcome).c_str());
   return result;
 }
@@ -393,12 +390,11 @@ int HandleAuth(base::CommandLine::StringVector::const_iterator begin,
     LOG(ERROR) << "PinWeaverTryAuth: " << trunks::GetErrorString(result);
   }
 
-  base::DictionaryValue outcome;
-  SetupBaseOutcome(result_code, root, &outcome);
-  outcome.SetString("seconds_to_wait", std::to_string(seconds_to_wait));
-  outcome.SetString("he_secret", HexEncode(he_secret.to_string()));
-  outcome.SetString("cred_metadata", HexEncode(cred_metadata_out));
-  outcome.SetString("mac", HexEncode(mac_out));
+  base::Value outcome = SetupBaseOutcome(result_code, root);
+  outcome.SetStringKey("seconds_to_wait", std::to_string(seconds_to_wait));
+  outcome.SetStringKey("he_secret", HexEncode(he_secret.to_string()));
+  outcome.SetStringKey("cred_metadata", HexEncode(cred_metadata_out));
+  outcome.SetStringKey("mac", HexEncode(mac_out));
   puts(GetOutcomeJson(outcome).c_str());
   return result;
 }
@@ -444,11 +440,10 @@ int HandleResetLeaf(base::CommandLine::StringVector::const_iterator begin,
     LOG(ERROR) << "PinWeaverResetAuth: " << trunks::GetErrorString(result);
   }
 
-  base::DictionaryValue outcome;
-  SetupBaseOutcome(result_code, root, &outcome);
-  outcome.SetString("he_secret", HexEncode(he_secret.to_string()));
-  outcome.SetString("cred_metadata", HexEncode(cred_metadata_out));
-  outcome.SetString("mac", HexEncode(mac_out));
+  base::Value outcome = SetupBaseOutcome(result_code, root);
+  outcome.SetStringKey("he_secret", HexEncode(he_secret.to_string()));
+  outcome.SetStringKey("cred_metadata", HexEncode(cred_metadata_out));
+  outcome.SetStringKey("mac", HexEncode(mac_out));
   puts(GetOutcomeJson(outcome).c_str());
   return result;
 }
@@ -481,45 +476,44 @@ int HandleGetLog(base::CommandLine::StringVector::const_iterator begin,
     LOG(ERROR) << "PinWeaverGetLog: " << trunks::GetErrorString(result);
   }
 
-  base::DictionaryValue outcome;
-  SetupBaseOutcome(result_code, root, &outcome);
+  base::Value outcome = SetupBaseOutcome(result_code, root);
 
-  auto out_entries = std::make_unique<base::ListValue>();
+  base::Value out_entries(base::Value::Type::LIST);
   for (const auto& entry : log) {
-    auto out_entry = std::make_unique<base::DictionaryValue>();
-    out_entry->SetString("label", std::to_string(entry.label()));
-    out_entry->SetString("root", HexEncode(entry.root()));
+    base::Value out_entry(base::Value::Type::DICTIONARY);
+    out_entry.SetStringKey("label", std::to_string(entry.label()));
+    out_entry.SetStringKey("root", HexEncode(entry.root()));
     switch (entry.type_case()) {
       case trunks::PinWeaverLogEntry::TypeCase::kInsertLeaf:
-        out_entry->SetString("type", "InsertLeaf");
-        out_entry->SetString("hmac", HexEncode(entry.insert_leaf().hmac()));
+        out_entry.SetStringKey("type", "InsertLeaf");
+        out_entry.SetStringKey("hmac", HexEncode(entry.insert_leaf().hmac()));
         break;
       case trunks::PinWeaverLogEntry::TypeCase::kRemoveLeaf:
-        out_entry->SetString("type", "RemoveLeaf");
+        out_entry.SetStringKey("type", "RemoveLeaf");
         break;
       case trunks::PinWeaverLogEntry::TypeCase::kAuth:
-        out_entry->SetString("type", "Auth");
-        out_entry->SetString(
+        out_entry.SetStringKey("type", "Auth");
+        out_entry.SetStringKey(
             "timestamp.boot_count",
             std::to_string(entry.auth().timestamp().boot_count()));
-        out_entry->SetString(
+        out_entry.SetStringKey(
             "timestamp.timer_value",
             std::to_string(entry.auth().timestamp().timer_value()));
-        out_entry->SetString("return_code.value",
-                             std::to_string(entry.auth().return_code()));
-        out_entry->SetString(
+        out_entry.SetStringKey("return_code.value",
+                               std::to_string(entry.auth().return_code()));
+        out_entry.SetStringKey(
             "return_code.name",
             trunks::GetErrorString(entry.auth().return_code()));
         break;
       case trunks::PinWeaverLogEntry::TypeCase::kResetTree:
-        out_entry->SetString("type", "ResetTree");
+        out_entry.SetStringKey("type", "ResetTree");
         break;
       default:
-        out_entry->SetString("type", std::to_string(entry.type_case()));
+        out_entry.SetStringKey("type", std::to_string(entry.type_case()));
     }
-    out_entries->Append(std::move(out_entry));
+    out_entries.Append(std::move(out_entry));
   }
-  outcome.Set("entries", std::move(out_entries));
+  outcome.SetKey("entries", std::move(out_entries));
   puts(GetOutcomeJson(outcome).c_str());
   return result;
 }
@@ -564,10 +558,9 @@ int HandleReplay(base::CommandLine::StringVector::const_iterator begin,
     LOG(ERROR) << "PinWeaverResetAuth: " << trunks::GetErrorString(result);
   }
 
-  base::DictionaryValue outcome;
-  SetupBaseOutcome(result_code, root, &outcome);
-  outcome.SetString("cred_metadata", HexEncode(cred_metadata_out));
-  outcome.SetString("mac", HexEncode(mac_out));
+  base::Value outcome = SetupBaseOutcome(result_code, root);
+  outcome.SetStringKey("cred_metadata", HexEncode(cred_metadata_out));
+  outcome.SetStringKey("mac", HexEncode(mac_out));
   puts(GetOutcomeJson(outcome).c_str());
   return result;
 }
