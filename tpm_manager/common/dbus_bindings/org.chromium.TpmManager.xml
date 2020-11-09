@@ -121,6 +121,19 @@
       </arg>
     </method>
 
+    <method name="GetTpmNonsensitiveStatus">
+      <annotation name="org.chromium.DBus.Method.Kind"
+                  value="async"/>
+      <arg name="request" type="ay" direction="in">
+        <annotation name="org.chromium.DBus.Argument.ProtobufClass"
+                    value="tpm_manager::GetTpmNonsensitiveStatusRequest" />
+      </arg>
+      <arg name="reply" type="ay" direction="out">
+        <annotation name="org.chromium.DBus.Argument.ProtobufClass"
+                    value="tpm_manager::GetTpmNonsensitiveStatusReply" />
+      </arg>
+    </method>
+
     <method name="GetVersionInfo">
       <annotation name="org.chromium.DBus.Method.Kind"
                   value="async"/>

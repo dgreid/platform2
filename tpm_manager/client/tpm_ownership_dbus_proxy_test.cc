@@ -110,6 +110,46 @@ TEST_F(TpmOwnershipDBusProxyTest, GetTpmStatus) {
   EXPECT_EQ(1, callback_count);
 }
 
+TEST_F(TpmOwnershipDBusProxyTest, GetTpmNonsensitiveStatus) {
+  auto fake_dbus_call =
+      [](dbus::MethodCall* method_call,
+         dbus::MockObjectProxy::ResponseCallback* response_callback) {
+        // Verify request protobuf.
+        dbus::MessageReader reader(method_call);
+        GetTpmNonsensitiveStatusRequest request;
+        EXPECT_TRUE(reader.PopArrayOfBytesAsProto(&request));
+        // Create reply protobuf.
+        auto response = dbus::Response::CreateEmpty();
+        dbus::MessageWriter writer(response.get());
+        GetTpmNonsensitiveStatusReply reply;
+        reply.set_status(STATUS_SUCCESS);
+        reply.set_is_enabled(true);
+        reply.set_is_owned(true);
+        reply.set_is_owner_password_present(true);
+        reply.set_has_reset_lock_permissions(true);
+        writer.AppendProtoAsArrayOfBytes(reply);
+        std::move(*response_callback).Run(response.get());
+      };
+  EXPECT_CALL(*mock_object_proxy_, DoCallMethodWithErrorCallback(_, _, _, _))
+      .WillOnce(WithArgs<0, 2>(Invoke(fake_dbus_call)));
+
+  // Set expectations on the outputs.
+  int callback_count = 0;
+  auto callback = [](int* callback_count,
+                     const GetTpmNonsensitiveStatusReply& reply) {
+    (*callback_count)++;
+    EXPECT_EQ(STATUS_SUCCESS, reply.status());
+    EXPECT_TRUE(reply.is_owned());
+    EXPECT_TRUE(reply.is_enabled());
+    EXPECT_TRUE(reply.is_owner_password_present());
+    EXPECT_TRUE(reply.has_reset_lock_permissions());
+  };
+  GetTpmNonsensitiveStatusRequest request;
+  proxy_.GetTpmNonsensitiveStatus(request,
+                                  base::Bind(callback, &callback_count));
+  EXPECT_EQ(1, callback_count);
+}
+
 TEST_F(TpmOwnershipDBusProxyTest, GetVersionInfo) {
   GetVersionInfoReply expected_version_info;
   expected_version_info.set_status(STATUS_SUCCESS);

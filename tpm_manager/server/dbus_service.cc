@@ -72,6 +72,12 @@ void DBusService::RegisterDBusObjectsAsync(
           &TpmOwnershipInterface::GetTpmStatus>);
 
   ownership_dbus_interface->AddMethodHandler(
+      kGetTpmNonsensitiveStatus, base::Unretained(this),
+      &DBusService::HandleOwnershipDBusMethod<
+          GetTpmNonsensitiveStatusRequest, GetTpmNonsensitiveStatusReply,
+          &TpmOwnershipInterface::GetTpmNonsensitiveStatus>);
+
+  ownership_dbus_interface->AddMethodHandler(
       kGetVersionInfo, base::Unretained(this),
       &DBusService::HandleOwnershipDBusMethod<
           GetVersionInfoRequest, GetVersionInfoReply,

@@ -304,6 +304,14 @@ void TpmManagerService::GetTpmStatus(const GetTpmStatusRequest& request,
       &TpmManagerService::GetTpmStatusTask);
 }
 
+void TpmManagerService::GetTpmNonsensitiveStatus(
+    const GetTpmNonsensitiveStatusRequest& request,
+    const GetTpmNonsensitiveStatusCallback& callback) {
+  GetTpmNonsensitiveStatusReply reply;
+  reply.set_status(STATUS_DEVICE_ERROR);
+  callback.Run(reply);
+}
+
 void TpmManagerService::UpdateTpmStatusCallback(
     const GetTpmStatusReply& reply) {
   DCHECK_NE(base::PlatformThread::CurrentId(), worker_thread_->GetThreadId());

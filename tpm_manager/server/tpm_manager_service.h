@@ -100,6 +100,9 @@ class TpmManagerService : public TpmNvramInterface,
   // TpmOwnershipInterface methods.
   void GetTpmStatus(const GetTpmStatusRequest& request,
                     const GetTpmStatusCallback& callback) override;
+  void GetTpmNonsensitiveStatus(
+      const GetTpmNonsensitiveStatusRequest& request,
+      const GetTpmNonsensitiveStatusCallback& callback) override;
   void GetVersionInfo(const GetVersionInfoRequest& request,
                       const GetVersionInfoCallback& callback) override;
   void GetDictionaryAttackInfo(
@@ -330,7 +333,6 @@ class TpmManagerService : public TpmNvramInterface,
     void CleanUp() override { service_->ShutdownTask(); }
 
     TpmManagerService* const service_;
-
   };
 
 #if USE_TPM2

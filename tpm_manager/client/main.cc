@@ -52,6 +52,7 @@ constexpr char kPasswordSwitch[] = "password";
 constexpr char kBindToPCR0Switch[] = "bind_to_pcr0";
 constexpr char kFileSwitch[] = "file";
 constexpr char kUseOwnerSwitch[] = "use_owner_authorization";
+constexpr char kNonsensitiveSwitch[] = "nonsensitive";
 constexpr char kLockRead[] = "lock_read";
 constexpr char kLockWrite[] = "lock_write";
 
@@ -217,8 +218,14 @@ class ClientLoop : public ClientLoopBase {
     }
     std::string command = command_line->GetArgs()[0];
     if (command == kGetTpmStatusCommand) {
-      task = base::Bind(&ClientLoop::HandleGetTpmStatus,
-                        weak_factory_.GetWeakPtr());
+      if (!command_line->HasSwitch(kNonsensitiveSwitch)) {
+        task = base::Bind(&ClientLoop::HandleGetTpmStatus,
+                          weak_factory_.GetWeakPtr());
+      } else {
+        task = base::Bind(&ClientLoop::HandleGetTpmNonsensitiveStatus,
+                          weak_factory_.GetWeakPtr());
+      }
+
     } else if (command == kGetVersionInfoCommand) {
       task = base::Bind(&ClientLoop::HandleGetVersionInfo,
                         weak_factory_.GetWeakPtr());
@@ -323,6 +330,15 @@ class ClientLoop : public ClientLoopBase {
     tpm_ownership_->GetTpmStatus(
         request, base::Bind(&ClientLoop::PrintReplyAndQuit<GetTpmStatusReply>,
                             weak_factory_.GetWeakPtr()));
+  }
+
+  void HandleGetTpmNonsensitiveStatus() {
+    GetTpmNonsensitiveStatusRequest request;
+    tpm_ownership_->GetTpmNonsensitiveStatus(
+        request,
+        base::Bind(
+            &ClientLoop::PrintReplyAndQuit<GetTpmNonsensitiveStatusReply>,
+            weak_factory_.GetWeakPtr()));
   }
 
   void HandleGetVersionInfo() {

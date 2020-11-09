@@ -25,6 +25,15 @@ class TPM_MANAGER_EXPORT TpmOwnershipInterface {
   virtual void GetTpmStatus(const GetTpmStatusRequest& request,
                             const GetTpmStatusCallback& callback) = 0;
 
+  // Gets TPM nonsensitive status, which includes enabled, owned, presence of
+  // password, etc. Processes |request| and calls |callback| with a reply when
+  // the process is done.
+  using GetTpmNonsensitiveStatusCallback =
+      base::Callback<void(const GetTpmNonsensitiveStatusReply&)>;
+  virtual void GetTpmNonsensitiveStatus(
+      const GetTpmNonsensitiveStatusRequest& request,
+      const GetTpmNonsensitiveStatusCallback& callback) = 0;
+
   // Gets TPM version info. Processes |request| and calls |callback| with a
   // reply when the process is done.
   using GetVersionInfoCallback =

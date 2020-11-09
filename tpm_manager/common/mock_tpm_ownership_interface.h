@@ -21,6 +21,11 @@ class MockTpmOwnershipInterface : public TpmOwnershipInterface {
               (const GetTpmStatusRequest&, const GetTpmStatusCallback&),
               (override));
   MOCK_METHOD(void,
+              GetTpmNonsensitiveStatus,
+              (const GetTpmNonsensitiveStatusRequest&,
+               const GetTpmNonsensitiveStatusCallback&),
+              (override));
+  MOCK_METHOD(void,
               GetVersionInfo,
               (const GetVersionInfoRequest&, const GetVersionInfoCallback&),
               (override));

@@ -59,6 +59,13 @@ void TpmOwnershipDBusProxy::GetTpmStatus(const GetTpmStatusRequest& request,
   CallMethod<GetTpmStatusReply>(tpm_manager::kGetTpmStatus, request, callback);
 }
 
+void TpmOwnershipDBusProxy::GetTpmNonsensitiveStatus(
+    const GetTpmNonsensitiveStatusRequest& request,
+    const GetTpmNonsensitiveStatusCallback& callback) {
+  CallMethod<GetTpmNonsensitiveStatusReply>(
+      tpm_manager::kGetTpmNonsensitiveStatus, request, callback);
+}
+
 void TpmOwnershipDBusProxy::GetVersionInfo(
     const GetVersionInfoRequest& request,
     const GetVersionInfoCallback& callback) {

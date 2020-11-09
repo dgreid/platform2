@@ -119,6 +119,33 @@ TEST_F(DBusServiceTest, GetTpmStatus) {
   EXPECT_TRUE(reply.owned());
 }
 
+TEST_F(DBusServiceTest, GetTpmNonsensitiveStatus) {
+  RegisterDBusObjectsAsync();
+
+  GetTpmNonsensitiveStatusRequest request;
+  EXPECT_CALL(mock_ownership_service_, GetTpmNonsensitiveStatus(_, _))
+      .WillOnce(Invoke(
+          [](const GetTpmNonsensitiveStatusRequest& request,
+             const TpmOwnershipInterface::GetTpmNonsensitiveStatusCallback&
+                 callback) {
+            GetTpmNonsensitiveStatusReply reply;
+            reply.set_status(STATUS_SUCCESS);
+            reply.set_is_enabled(true);
+            reply.set_is_owned(true);
+            reply.set_is_owner_password_present(true);
+            reply.set_has_reset_lock_permissions(true);
+            callback.Run(reply);
+          }));
+  GetTpmNonsensitiveStatusReply reply;
+  ExecuteMethod(kGetTpmNonsensitiveStatus, request, &reply,
+                kTpmManagerInterface);
+  EXPECT_EQ(STATUS_SUCCESS, reply.status());
+  EXPECT_TRUE(reply.is_enabled());
+  EXPECT_TRUE(reply.is_owned());
+  EXPECT_TRUE(reply.is_owner_password_present());
+  EXPECT_TRUE(reply.has_reset_lock_permissions());
+}
+
 TEST_F(DBusServiceTest, GetVersionInfo) {
   RegisterDBusObjectsAsync();
 
