@@ -759,7 +759,12 @@ impl Server {
         let file = if let Some(ref file) = fid.file {
             MaybeOwned::Borrowed(file)
         } else {
-            MaybeOwned::Owned(open_fid(&self.proc, &fid.path, P9_NONBLOCK | P9_RDWR)?)
+            let flags = match fid.filetype {
+                FileType::Regular => P9_RDWR,
+                FileType::Directory => P9_RDONLY | P9_DIRECTORY,
+                FileType::Other => P9_RDWR,
+            };
+            MaybeOwned::Owned(open_fid(&self.proc, &fid.path, P9_NONBLOCK | flags)?)
         };
 
         if set_attr.valid & P9_SETATTR_SIZE != 0 {

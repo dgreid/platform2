@@ -596,14 +596,38 @@ fn create_existing_file() {
     .expect_err("successfully created existing file");
 }
 
-fn set_attr_test<F>(set_fields: F) -> io::Result<fs::Metadata>
+enum SetAttrKind {
+    File,
+    Directory,
+}
+
+fn set_attr_test<F>(kind: SetAttrKind, set_fields: F) -> io::Result<fs::Metadata>
 where
     F: FnOnce(&mut Tsetattr),
 {
     let (test_dir, mut server) = setup("set_attr");
 
     let name = "existing";
-    create_local_file(&test_dir, name);
+    match kind {
+        SetAttrKind::File => {
+            create_local_file(&test_dir, name);
+        }
+        SetAttrKind::Directory => {
+            let tmkdir = Tmkdir {
+                dfid: ROOT_FID,
+                name: String::from(name),
+                mode: 0o755,
+                gid: 0,
+            };
+
+            let rmkdir = server.mkdir(tmkdir).expect("failed to create directory");
+            let md = fs::symlink_metadata(test_dir.join(name))
+                .expect("failed to get metadata for directory");
+
+            assert!(md.is_dir());
+            check_qid(&rmkdir.qid, &md);
+        }
+    };
 
     let fid = ROOT_FID + 1;
     walk(
@@ -636,7 +660,7 @@ where
 #[test]
 fn set_len() {
     let len = 661;
-    let md = set_attr_test(|tsetattr| {
+    let md = set_attr_test(SetAttrKind::File, |tsetattr| {
         tsetattr.valid = P9_SETATTR_SIZE;
         tsetattr.size = len;
     })
@@ -646,9 +670,9 @@ fn set_len() {
 }
 
 #[test]
-fn set_mode() {
+fn set_file_mode() {
     let mode = 0o640;
-    let err = set_attr_test(|tsetattr| {
+    let err = set_attr_test(SetAttrKind::File, |tsetattr| {
         tsetattr.valid = P9_SETATTR_MODE;
         tsetattr.mode = mode;
     })
@@ -658,9 +682,9 @@ fn set_mode() {
 }
 
 #[test]
-fn set_uid() {
+fn set_file_uid() {
     let uid = 294;
-    let err = set_attr_test(|tsetattr| {
+    let err = set_attr_test(SetAttrKind::File, |tsetattr| {
         tsetattr.valid = P9_SETATTR_UID;
         tsetattr.uid = uid;
     })
@@ -670,9 +694,9 @@ fn set_uid() {
 }
 
 #[test]
-fn set_gid() {
+fn set_file_gid() {
     let gid = 9024;
-    let err = set_attr_test(|tsetattr| {
+    let err = set_attr_test(SetAttrKind::File, |tsetattr| {
         tsetattr.valid = P9_SETATTR_GID;
         tsetattr.gid = gid;
     })
@@ -682,9 +706,9 @@ fn set_gid() {
 }
 
 #[test]
-fn set_mtime() {
+fn set_file_mtime() {
     let (secs, nanos) = (1245247825, 524617);
-    let md = set_attr_test(|tsetattr| {
+    let md = set_attr_test(SetAttrKind::File, |tsetattr| {
         tsetattr.valid = P9_SETATTR_MTIME | P9_SETATTR_MTIME_SET;
         tsetattr.mtime_sec = secs;
         tsetattr.mtime_nsec = nanos;
@@ -696,9 +720,73 @@ fn set_mtime() {
 }
 
 #[test]
-fn set_atime() {
+fn set_file_atime() {
     let (secs, nanos) = (9247605, 4016);
-    let md = set_attr_test(|tsetattr| {
+    let md = set_attr_test(SetAttrKind::File, |tsetattr| {
+        tsetattr.valid = P9_SETATTR_ATIME | P9_SETATTR_ATIME_SET;
+        tsetattr.atime_sec = secs;
+        tsetattr.atime_nsec = nanos;
+    })
+    .expect("failed to set atime");
+
+    assert_eq!(md.atime() as u64, secs);
+    assert_eq!(md.atime_nsec() as u64, nanos);
+}
+
+#[test]
+fn set_dir_mode() {
+    let mode = 0o640;
+    let err = set_attr_test(SetAttrKind::Directory, |tsetattr| {
+        tsetattr.valid = P9_SETATTR_MODE;
+        tsetattr.mode = mode;
+    })
+    .expect_err("successfully set mode");
+
+    assert_eq!(err.kind(), io::ErrorKind::PermissionDenied);
+}
+
+#[test]
+fn set_dir_uid() {
+    let uid = 294;
+    let err = set_attr_test(SetAttrKind::Directory, |tsetattr| {
+        tsetattr.valid = P9_SETATTR_UID;
+        tsetattr.uid = uid;
+    })
+    .expect_err("successfully set uid");
+
+    assert_eq!(err.kind(), io::ErrorKind::PermissionDenied);
+}
+
+#[test]
+fn set_dir_gid() {
+    let gid = 9024;
+    let err = set_attr_test(SetAttrKind::Directory, |tsetattr| {
+        tsetattr.valid = P9_SETATTR_GID;
+        tsetattr.gid = gid;
+    })
+    .expect_err("successfully set gid");
+
+    assert_eq!(err.kind(), io::ErrorKind::PermissionDenied);
+}
+
+#[test]
+fn set_dir_mtime() {
+    let (secs, nanos) = (1245247825, 524617);
+    let md = set_attr_test(SetAttrKind::Directory, |tsetattr| {
+        tsetattr.valid = P9_SETATTR_MTIME | P9_SETATTR_MTIME_SET;
+        tsetattr.mtime_sec = secs;
+        tsetattr.mtime_nsec = nanos;
+    })
+    .expect("failed to set mtime");
+
+    assert_eq!(md.mtime() as u64, secs);
+    assert_eq!(md.mtime_nsec() as u64, nanos);
+}
+
+#[test]
+fn set_dir_atime() {
+    let (secs, nanos) = (9247605, 4016);
+    let md = set_attr_test(SetAttrKind::Directory, |tsetattr| {
         tsetattr.valid = P9_SETATTR_ATIME | P9_SETATTR_ATIME_SET;
         tsetattr.atime_sec = secs;
         tsetattr.atime_nsec = nanos;
