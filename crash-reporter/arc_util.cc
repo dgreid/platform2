@@ -53,6 +53,7 @@ const std::vector<std::pair<const char*, const char*>> kHeaderToFieldMapping = {
     {"NDK-Execution", "ndk_execution"},
     {"Package", "package"},
     {"Target-SDK", "target_sdk"},
+    {"Abi-Migration-Status", "abi_migration_status"},
 };
 
 base::Optional<std::string> GetVersionFromFingerprint(
