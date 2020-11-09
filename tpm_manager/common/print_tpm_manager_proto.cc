@@ -779,6 +779,63 @@ std::string GetProtoDebugStringWithIndent(const GetTpmStatusReply& value,
   return output;
 }
 
+std::string GetProtoDebugString(const GetTpmNonsensitiveStatusRequest& value) {
+  return GetProtoDebugStringWithIndent(value, 0);
+}
+
+std::string GetProtoDebugStringWithIndent(
+    const GetTpmNonsensitiveStatusRequest& value, int indent_size) {
+  std::string indent(indent_size, ' ');
+  std::string output =
+      base::StringPrintf("[%s] {\n", value.GetTypeName().c_str());
+
+  output += indent + "}\n";
+  return output;
+}
+
+std::string GetProtoDebugString(const GetTpmNonsensitiveStatusReply& value) {
+  return GetProtoDebugStringWithIndent(value, 0);
+}
+
+std::string GetProtoDebugStringWithIndent(
+    const GetTpmNonsensitiveStatusReply& value, int indent_size) {
+  std::string indent(indent_size, ' ');
+  std::string output =
+      base::StringPrintf("[%s] {\n", value.GetTypeName().c_str());
+
+  if (value.has_status()) {
+    output += indent + "  status: ";
+    base::StringAppendF(
+        &output, "%s",
+        GetProtoDebugStringWithIndent(value.status(), indent_size + 2).c_str());
+    output += "\n";
+  }
+  if (value.has_is_enabled()) {
+    output += indent + "  is_enabled: ";
+    base::StringAppendF(&output, "%s", value.is_enabled() ? "true" : "false");
+    output += "\n";
+  }
+  if (value.has_is_owned()) {
+    output += indent + "  is_owned: ";
+    base::StringAppendF(&output, "%s", value.is_owned() ? "true" : "false");
+    output += "\n";
+  }
+  if (value.has_is_owner_password_present()) {
+    output += indent + "  is_owner_password_present: ";
+    base::StringAppendF(&output, "%s",
+                        value.is_owner_password_present() ? "true" : "false");
+    output += "\n";
+  }
+  if (value.has_has_reset_lock_permissions()) {
+    output += indent + "  has_reset_lock_permissions: ";
+    base::StringAppendF(&output, "%s",
+                        value.has_reset_lock_permissions() ? "true" : "false");
+    output += "\n";
+  }
+  output += indent + "}\n";
+  return output;
+}
+
 std::string GetProtoDebugString(const GetVersionInfoRequest& value) {
   return GetProtoDebugStringWithIndent(value, 0);
 }
