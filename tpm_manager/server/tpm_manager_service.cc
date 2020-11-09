@@ -70,6 +70,24 @@ int GetFingerprint(uint32_t family,
 
 namespace tpm_manager {
 
+namespace {
+
+GetTpmNonsensitiveStatusReply ToGetTpmNonSensitiveStatusReply(
+    const GetTpmStatusReply& from) {
+  GetTpmNonsensitiveStatusReply to;
+  to.set_is_owned(from.owned());
+  to.set_is_enabled(from.enabled());
+  const LocalData& sensitive = from.local_data();
+  to.set_is_owner_password_present(!sensitive.owner_password().empty());
+  // This works regardless of TPM version.
+  to.set_has_reset_lock_permissions(
+      !sensitive.lockout_password().empty() ||
+      sensitive.owner_delegate().has_reset_lock_permissions());
+  return to;
+}
+
+}  // namespace
+
 TpmManagerService::TpmManagerService(bool wait_for_ownership,
                                      bool perform_preinit,
                                      LocalDataStore* local_data_store)
@@ -307,9 +325,19 @@ void TpmManagerService::GetTpmStatus(const GetTpmStatusRequest& request,
 void TpmManagerService::GetTpmNonsensitiveStatus(
     const GetTpmNonsensitiveStatusRequest& request,
     const GetTpmNonsensitiveStatusCallback& callback) {
-  GetTpmNonsensitiveStatusReply reply;
-  reply.set_status(STATUS_DEVICE_ERROR);
-  callback.Run(reply);
+  // This function has a different way to proceed the request from other
+  // request; the callback is wrapped to `GetTpmStatusCallback` followed by a
+  // handle of `GetTpmStatus()`. Before sending the response,
+  // `ToGetTpmNonSensitiveStatusReply()` absracts the sensitive secret in
+  // `GetTpmStatusReply` away.
+  GetTpmStatusCallback wrapped_callback = base::Bind(
+      [](const GetTpmNonsensitiveStatusCallback& cb,
+         const GetTpmStatusReply& reply) {
+        cb.Run(ToGetTpmNonSensitiveStatusReply(reply));
+      },
+      callback);
+
+  GetTpmStatus(GetTpmStatusRequest(), wrapped_callback);
 }
 
 void TpmManagerService::UpdateTpmStatusCallback(

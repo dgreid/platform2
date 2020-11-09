@@ -332,6 +332,15 @@ TEST_F(TpmManagerServiceTest_Preinit, GetTpmStatusSuccess) {
 
   SetupService();
 
+  auto callback_nonsensitive = [](TpmManagerServiceTestBase* self,
+                                  const GetTpmNonsensitiveStatusReply& reply) {
+    EXPECT_EQ(STATUS_SUCCESS, reply.status());
+    EXPECT_TRUE(reply.is_enabled());
+    EXPECT_TRUE(reply.is_owned());
+    // kOwnerPassword is not empty.
+    EXPECT_TRUE(reply.is_owner_password_present());
+    EXPECT_FALSE(reply.has_reset_lock_permissions());
+  };
   auto callback = [](TpmManagerServiceTestBase* self,
                      const GetTpmStatusReply& reply) {
     EXPECT_EQ(STATUS_SUCCESS, reply.status());
@@ -340,8 +349,48 @@ TEST_F(TpmManagerServiceTest_Preinit, GetTpmStatusSuccess) {
     EXPECT_EQ(kOwnerPassword, reply.local_data().owner_password());
     self->Quit();
   };
+  service_->GetTpmNonsensitiveStatus(GetTpmNonsensitiveStatusRequest(),
+                                     base::Bind(callback_nonsensitive, this));
+  service_->GetTpmStatus(GetTpmStatusRequest(), base::Bind(callback, this));
+  Run();
+}
+
+TEST_F(TpmManagerServiceTest_Preinit,
+       GetTpmNonsensitiveStatusHasLockoutPassword) {
+  LocalData local_data;
+  local_data.set_lockout_password("lockout password");
+  EXPECT_CALL(mock_local_data_store_, Read(_))
+      .WillRepeatedly(DoAll(SetArgPointee<0>(local_data), Return(true)));
+
+  SetupService();
+
+  auto callback = [](TpmManagerServiceTestBase* self,
+                     const GetTpmNonsensitiveStatusReply& reply) {
+    EXPECT_TRUE(reply.has_reset_lock_permissions());
+    self->Quit();
+  };
+  service_->GetTpmNonsensitiveStatus(GetTpmNonsensitiveStatusRequest(),
+                                     base::Bind(callback, this));
+  Run();
+}
+
+TEST_F(TpmManagerServiceTest_Preinit,
+       GetTpmNonsensitiveStatusDelegateCanResetDA) {
+  LocalData local_data;
+  local_data.mutable_owner_delegate()->set_has_reset_lock_permissions(true);
+  EXPECT_CALL(mock_local_data_store_, Read(_))
+      .WillRepeatedly(DoAll(SetArgPointee<0>(local_data), Return(true)));
+
+  SetupService();
+
+  auto callback = [](TpmManagerServiceTestBase* self,
+                     const GetTpmNonsensitiveStatusReply& reply) {
+    EXPECT_TRUE(reply.has_reset_lock_permissions());
+    self->Quit();
+  };
   GetTpmStatusRequest request;
-  service_->GetTpmStatus(request, base::Bind(callback, this));
+  service_->GetTpmNonsensitiveStatus(GetTpmNonsensitiveStatusRequest(),
+                                     base::Bind(callback, this));
   Run();
 }
 
