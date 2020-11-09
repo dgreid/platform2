@@ -63,7 +63,6 @@ class AndroidInstallerTest(unittest.TestCase):
         ['--caller', 'ebuild_src_compile']).use, {})
 
   def test_caller(self):
-    self.assertTrue(False)
     # Test --caller ebuild_src_compile
     self.assertEqual(
         android_installer.AndroidInstaller(
