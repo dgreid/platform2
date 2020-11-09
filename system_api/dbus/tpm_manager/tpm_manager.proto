@@ -229,6 +229,7 @@ message GetTpmStatusReply {
   // Whether the TPM has been owned.
   optional bool owned = 3;
   // Local TPM management data (including the owner password if available).
+  // TODO(b/168852740): Refine the comments above.
   optional LocalData local_data = 4;
 
   reserved 5 to 9;
