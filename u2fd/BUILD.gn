@@ -67,6 +67,7 @@ static_library("libu2fd") {
     "user_state.cc",
     "util.cc",
     "webauthn_handler.cc",
+    "webauthn_storage.cc",
   ]
   libs = [
     "policy",
@@ -162,6 +163,7 @@ if (use.test) {
       "allowlisting_util_test.cc",
       "u2f_msg_handler_test.cc",
       "webauthn_handler_test.cc",
+      "webauthn_storage_test.cc",
     ]
     deps = [
       ":libu2fd",

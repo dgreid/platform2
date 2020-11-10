@@ -18,6 +18,7 @@
 
 #include "u2fd/tpm_vendor_cmd.h"
 #include "u2fd/user_state.h"
+#include "u2fd/webauthn_storage.h"
 
 namespace u2f {
 
@@ -96,6 +97,8 @@ class WebAuthnHandler {
   void IsUvpaa(std::unique_ptr<IsUvpaaMethodResponse> method_response,
                const IsUvpaaRequest& request);
 
+  void SetWebAuthnStorageForTesting(std::unique_ptr<WebAuthnStorage> storage);
+
  private:
   friend class WebAuthnHandlerTest;
 
@@ -129,6 +132,7 @@ class WebAuthnHandler {
   // |rp_id_hash| must be exactly 32 bytes.
   MakeCredentialResponse::MakeCredentialStatus DoU2fGenerate(
       const std::vector<uint8_t>& rp_id_hash,
+      const brillo::SecureBlob& credential_secret,
       PresenceRequirement presence_requirement,
       bool uv_compatible,
       std::vector<uint8_t>* credential_id,
@@ -151,6 +155,7 @@ class WebAuthnHandler {
       const std::vector<uint8_t>& rp_id_hash,
       const std::vector<uint8_t>& hash_to_sign,
       const std::vector<uint8_t>& credential_id,
+      const brillo::SecureBlob& credential_secret,
       PresenceRequirement presence_requirement,
       std::vector<uint8_t>* signature);
 
@@ -165,7 +170,8 @@ class WebAuthnHandler {
   // |credential_id| is a key handle owned by this device tied to |rp_id_hash|.
   HasCredentialsResponse::HasCredentialsStatus DoU2fSignCheckOnly(
       const std::vector<uint8_t>& rp_id_hash,
-      const std::vector<uint8_t>& credential_id);
+      const std::vector<uint8_t>& credential_id,
+      const brillo::SecureBlob& credential_secret);
 
   // Prompts the user for presence through |request_presence_| and calls |fn|
   // repeatedly until success or timeout.
@@ -205,6 +211,9 @@ class WebAuthnHandler {
 
   // Hash of the per-user auth-time secret for WebAuthn.
   std::unique_ptr<brillo::Blob> auth_time_secret_hash_;
+
+  // Storage for WebAuthn credential records.
+  std::unique_ptr<WebAuthnStorage> webauthn_storage_;
 };
 
 }  // namespace u2f

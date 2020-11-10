@@ -1,5 +1,5 @@
 apronin@chromium.org
 cylai@chromium.org
 
-per-file webauthn_handler* = yichengli@chromium.org
+per-file *webauthn* = yichengli@chromium.org
 per-file g2f_tools/webauthntool.cc = yichengli@chromium.org

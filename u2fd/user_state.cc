@@ -4,7 +4,7 @@
 
 #include "u2fd/user_state.h"
 
-#include <sys/random.h>
+#include <utility>
 
 #include <base/bind.h>
 #include <base/strings/string_number_conversions.h>
@@ -49,6 +49,15 @@ UserState::UserState(org::chromium::SessionManagerInterfaceProxy* sm_proxy,
 }
 
 UserState::UserState() : weak_ptr_factory_(this), counter_min_(0) {}
+
+base::Optional<std::string> UserState::GetSanitizedUser() {
+  if (sanitized_user_.has_value()) {
+    return *sanitized_user_;
+  } else {
+    LOG(ERROR) << "Sanitized user requested but not available.";
+    return base::nullopt;
+  }
+}
 
 base::Optional<brillo::SecureBlob> UserState::GetUserSecret() {
   if (user_secret_.has_value()) {

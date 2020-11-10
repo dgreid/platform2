@@ -48,6 +48,8 @@ class UserState {
   virtual void SetSessionStoppedCallback(
       base::RepeatingCallback<void()> callback);
 
+  virtual base::Optional<std::string> GetSanitizedUser();
+
  protected:
   // Constructor for use by mock objects.
   UserState();
