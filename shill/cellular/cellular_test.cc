@@ -95,11 +95,15 @@ class CellularPropertyTest : public PropertyStoreTest {
                              3,
                              Cellular::kType3gpp,
                              "",
-                             RpcIdentifier(""))) {}
+                             RpcIdentifier(""))) {
+    device_->CreateCapability(&modem_info_);
+  }
+
+  ~CellularPropertyTest() { device_->DestroyCapability(); }
 
  protected:
   MockModemInfo modem_info_;
-  DeviceRefPtr device_;
+  CellularRefPtr device_;
 };
 
 TEST_F(CellularPropertyTest, Contains) {
@@ -156,10 +160,13 @@ class CellularTest : public testing::TestWithParam<Cellular::Type> {
                              kDBusService,
                              kDBusPath)),
         profile_(new NiceMock<MockProfile>(&manager_)) {
+    device_->CreateCapability(&modem_info_);
     cellular_service_provider_.set_profile_for_testing(profile_);
     PopulateProxies();
     metrics_.RegisterDevice(device_->interface_index(), Technology::kCellular);
   }
+
+  ~CellularTest() { device_->DestroyCapability(); }
 
   void SetUp() override {
     static_cast<Device*>(device_.get())->rtnl_handler_ = &rtnl_handler_;

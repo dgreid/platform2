@@ -134,6 +134,15 @@ class Cellular : public Device,
   // and the associated service, allowing eventual device destruction.
   virtual void DestroyService();
 
+  // Creates a CellularCapability based on properties of |this| and
+  // |modem_info|. Sets |capability_| to the created capability.
+  // Called once the associated Modem instance is available.
+  void CreateCapability(ModemInfo* modem_info);
+
+  // Destroys |capability_|. Called when the associated Modem instance is
+  // destroyed.
+  void DestroyCapability();
+
   static std::string GetStateString(State state);
   static std::string GetModemStateString(ModemState modem_state);
 
@@ -540,6 +549,7 @@ class Cellular : public Device,
   // End of DBus properties.
   // ///////////////////////////////////////////////////////////////////////////
 
+  Type type_;
   std::unique_ptr<CellularCapability> capability_;
 
   PPPDeviceFactory* ppp_device_factory_;

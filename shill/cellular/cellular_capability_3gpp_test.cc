@@ -131,7 +131,6 @@ class CellularCapability3gppTest : public testing::TestWithParam<string> {
     cellular_->service_ = nullptr;
     CHECK(cellular_->HasOneRef());
     cellular_ = nullptr;
-    capability_ = nullptr;
     device_adaptor_ = nullptr;
   }
 
@@ -139,6 +138,7 @@ class CellularCapability3gppTest : public testing::TestWithParam<string> {
     EXPECT_CALL(*modem_proxy_, set_state_changed_callback(_))
         .Times(AnyNumber());
 
+    cellular_->CreateCapability(&modem_info_);
     capability_ =
         static_cast<CellularCapability3gpp*>(cellular_->capability_.get());
     device_adaptor_ = static_cast<DeviceMockAdaptor*>(cellular_->adaptor());
@@ -156,6 +156,11 @@ class CellularCapability3gppTest : public testing::TestWithParam<string> {
         .WillRepeatedly(Return(&cellular_service_provider_));
 
     SetMockMobileOperatorInfoObjects();
+  }
+
+  void TearDown() override {
+    cellular_->DestroyCapability();
+    capability_ = nullptr;
   }
 
   void CreateService() {

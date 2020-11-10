@@ -156,7 +156,7 @@ Cellular::Cellular(ModemInfo* modem_info,
       provider_requires_roaming_(false),
       scan_interval_(0),
       sim_present_(false),
-      capability_(CellularCapability::Create(type, this, modem_info)),
+      type_(type),
       ppp_device_factory_(PPPDeviceFactory::GetInstance()),
       process_manager_(ProcessManager::GetInstance()),
       allow_roaming_(false),
@@ -290,7 +290,7 @@ string Cellular::GetModemStateString(ModemState modem_state) {
 }
 
 string Cellular::GetTechnologyFamily(Error* error) {
-  return capability_->GetTypeString();
+  return capability_ ? capability_->GetTypeString() : "";
 }
 
 string Cellular::GetDeviceId(Error* error) {
@@ -323,7 +323,8 @@ bool Cellular::ShouldBringNetworkInterfaceDownAfterDisabled() const {
 }
 
 void Cellular::SetState(State state) {
-  SLOG(this, 2) << GetStateString(state_) << " -> " << GetStateString(state);
+  SLOG(this, 1) << __func__ << ": " << GetStateString(state_) << " -> "
+                << GetStateString(state);
   state_ = state;
 }
 
@@ -345,7 +346,7 @@ void Cellular::HelpRegisterConstDerivedString(const string& name,
 void Cellular::Start(Error* error,
                      const EnabledStateChangedCallback& callback) {
   DCHECK(error);
-  SLOG(this, 2) << __func__ << ": " << GetStateString(state_);
+  SLOG(this, 1) << __func__ << ": " << GetStateString(state_);
   // We can only short circuit the start operation if both the cellular state
   // is not disabled AND the proxies have been initialized.  We have seen
   // crashes due to NULL proxies and the state being not disabled.
@@ -359,7 +360,7 @@ void Cellular::Start(Error* error,
 }
 
 void Cellular::Stop(Error* error, const EnabledStateChangedCallback& callback) {
-  SLOG(this, 2) << __func__ << ": " << GetStateString(state_);
+  SLOG(this, 1) << __func__ << ": " << GetStateString(state_);
   explicit_disconnect_ = true;
   ResultCallback cb = Bind(&Cellular::StopModemCallback,
                            weak_ptr_factory_.GetWeakPtr(), callback);
@@ -738,6 +739,15 @@ void Cellular::DestroyService() {
   }
 }
 
+void Cellular::CreateCapability(ModemInfo* modem_info) {
+  CHECK(!capability_);
+  capability_ = CellularCapability::Create(type_, this, modem_info);
+}
+
+void Cellular::DestroyCapability() {
+  capability_.reset();
+}
+
 void Cellular::Connect(Error* error) {
   SLOG(this, 2) << __func__;
   if (state_ == kStateConnected || state_ == kStateLinked) {
@@ -1013,7 +1023,7 @@ void Cellular::OnModemStateChanged(ModemState new_state) {
 }
 
 bool Cellular::IsActivating() const {
-  return capability_->IsActivating();
+  return capability_ && capability_->IsActivating();
 }
 
 bool Cellular::IsRoamingAllowedOrRequired() const {

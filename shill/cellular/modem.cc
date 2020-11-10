@@ -48,17 +48,18 @@ Modem::Modem(const string& service,
       type_(Cellular::kTypeInvalid),
       has_pending_device_info_(false),
       rtnl_handler_(RTNLHandler::GetInstance()) {
-  LOG(INFO) << "Modem created: at " << path.value();
+  SLOG(this, 1) << "Modem() Path: " << path.value();
 }
 
 Modem::~Modem() {
-  LOG(INFO) << "Modem destructed: " << path_.value();
+  SLOG(this, 1) << "~Modem() Path: " << path_.value();
   if (!device_) {
     return;
   }
 
   device_->DestroyService();
   device_->StopLocationPolling();
+  device_->DestroyCapability();
   // Under certain conditions, Cellular::StopModem may not be called before
   // the Cellular device is destroyed. This happens if the dbus modem exported
   // by the modem-manager daemon disappears soon after the modem is disabled,
@@ -145,8 +146,10 @@ Cellular* Modem::ConstructCellular(const string& mac_address,
                                    int interface_index) {
   SLOG(this, 1) << __func__ << " link_name: " << link_name_
                 << " interface index " << interface_index;
-  return new Cellular(modem_info_, link_name_, mac_address, interface_index,
-                      type_, service_, path_);
+  auto cellular = new Cellular(modem_info_, link_name_, mac_address,
+                               interface_index, type_, service_, path_);
+  cellular->CreateCapability(modem_info_);
+  return cellular;
 }
 
 bool Modem::GetLinkName(const KeyValueStore& modem_props, string* name) const {

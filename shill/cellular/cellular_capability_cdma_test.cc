@@ -77,12 +77,15 @@ class CellularCapabilityCdmaTest : public testing::Test {
   }
 
   void SetUp() override {
+    cellular_->CreateCapability(&modem_info_);
     capability_ =
         static_cast<CellularCapabilityCdma*>(cellular_->capability_.get());
     device_adaptor_ =
         static_cast<NiceMock<DeviceMockAdaptor>*>(cellular_->adaptor());
     cellular_->service_ = service_;
   }
+
+  void TearDown() override { cellular_->DestroyCapability(); }
 
   void SetService() {
     cellular_->service_ =
@@ -196,8 +199,6 @@ TEST_F(CellularCapabilityCdmaMainTest, PropertiesChanged) {
   modem_cdma_properties.Set<string>(MM_MODEM_MODEMCDMA_PROPERTY_MEID, kMeid);
   modem_cdma_properties.Set<string>(MM_MODEM_MODEMCDMA_PROPERTY_ESN, kEsn);
 
-  SetUp();
-
   EXPECT_TRUE(cellular_->meid().empty());
   EXPECT_TRUE(cellular_->esn().empty());
 
@@ -289,7 +290,6 @@ TEST_F(CellularCapabilityCdmaMainTest, ActivateAutomatic) {
   SetMockMobileOperatorInfoObjects();
 
   mm1::MockModemModemCdmaProxy* cdma_proxy = modem_cdma_proxy_.get();
-  SetUp();
   capability_->InitProxies();
 
   // Cases when activation fails because |activation_code| is not available.
