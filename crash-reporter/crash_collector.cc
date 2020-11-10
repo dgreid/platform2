@@ -650,32 +650,17 @@ void CrashCollector::StripMacAddresses(std::string* contents) {
 }
 
 void CrashCollector::StripEmailAddresses(std::string* contents) {
-  std::ostringstream result;
-  pcrecpp::StringPiece input(*contents);
-  std::string pre_re_str;
-  std::string re_str;
-
-  // Email regex according RFC 5322. I feel dirty after this...
-  pcrecpp::RE email_re(
-      "(.*?)(\\b"
-      "(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*"
-      "|\"(?:[\\x01-\\x08\\x0b\\x0c\\x0e-\\x1f\\x21\\x23-\\x5b\\x5d-\\x7f]"
-      "|\\\\[\\x01-\\x09\\x0b\\x0c\\x0e-\\x7f])*\")"
-      "@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.)+"
-      "[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\\[(?:(?:(2(5[0-5]|[0-4][0-9])"
-      "|1[0-9][0-9]|[1-9]?[0-9]))\\.){3}(?:(2(5[0-5]|[0-4][0-9])|1[0-9][0-9]"
-      "|[1-9]?[0-9])|[a-z0-9-]*[a-z0-9]:"
-      "(?:[\\x01-\\x08\\x0b\\x0c\\x0e-\\x1f\\x21-"
-      "\\x5a\\x53-\\x7f]|\\\\[\\x01-\\x09\\x0b\\x0c\\x0e-\\x7f])+)\\])"
-      "\\b)",
-      pcrecpp::RE_Options().set_multiline(true).set_dotall(true));
+  // Simplified email-matching regex based on
+  // https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input/email#Validation
+  pcrecpp::RE email_re(R"(\b)"
+                       R"([a-zA-Z0-9.!#$%&’*+/=?^_`{|}~-]{1,256})"
+                       "@"
+                       R"([a-zA-Z0-9-\.]{1,256}[^\.])"
+                       R"(\b)",
+                       pcrecpp::RE_Options().set_multiline(true));
   CHECK_EQ("", email_re.error());
 
-  while (email_re.Consume(&input, &pre_re_str, &re_str)) {
-    result << pre_re_str << "<redacted email address>";
-  }
-  result << input;
-  *contents = result.str();
+  email_re.GlobalReplace("<redacted email address>", contents);
 }
 
 void CrashCollector::StripSerialNumbers(std::string* contents) {
