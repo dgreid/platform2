@@ -94,6 +94,7 @@ socketpair: 1
 stat: 1
 statfs: 1
 symlink: 1
+sysinfo: 1
 time: 1
 tgkill: 1
 uname: 1
