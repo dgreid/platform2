@@ -9,6 +9,7 @@ group("all") {
     ":cros_installer",
     ":cros_oobe_crypto",
     ":evwaitkey",
+    ":key_reader",
   ]
   if (use.mtd) {
     deps += [ ":nand_partition" ]
@@ -65,6 +66,24 @@ executable("evwaitkey") {
   sources = [ "util/evwaitkey.c" ]
 }
 
+static_library("libkey_reader") {
+  configs += [ ":target_defaults" ]
+  sources = [ "util/key_reader.cc" ]
+}
+
+pkg_config("key_reader_config") {
+  pkg_deps = [ "xkbcommon" ]
+}
+
+executable("key_reader") {
+  configs += [
+    ":target_defaults",
+    ":key_reader_config",
+  ]
+  deps = [ ":libkey_reader" ]
+  sources = [ "util/key_reader_main.cc" ]
+}
+
 pkg_config("cros_oobe_crypto_config") {
   pkg_deps = [ "libcrypto" ]
 }
@@ -99,8 +118,10 @@ if (use.test) {
     pkg_deps = [
       "libchrome",
       "libchrome-test",
+      "xkbcommon",
     ]
   }
+
   executable("cros_installer_test") {
     configs += [
       "//common-mk:test",
@@ -109,12 +130,14 @@ if (use.test) {
     ]
     deps = [
       ":libcros_installer",
+      ":libkey_reader",
       "//common-mk/testrunner:testrunner",
     ]
     sources = [
       "chromeos_install_config_test.cc",
       "chromeos_legacy_test.cc",
       "inst_util_test.cc",
+      "util/key_reader_test.cc",
     ]
     if (use.enable_slow_boot_notify) {
       sources += [ "slow_boot_notify_test.cc" ]
