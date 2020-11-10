@@ -651,6 +651,9 @@ class LegacyCryptohomeInterfaceAdaptor
   // Forwards LowDiskSpace Signal
   void OnLowDiskSpaceSignal(const user_data_auth::LowDiskSpace& payload);
 
+  // Forwards OwnershipTakenSignal from tpm manager.
+  void OnOwnershipTakenSignal(const tpm_manager::OwnershipTakenSignal& payload);
+
   // Handles signal registration failure
   void OnSignalConnectedHandler(const std::string& interface,
                                 const std::string& signal,

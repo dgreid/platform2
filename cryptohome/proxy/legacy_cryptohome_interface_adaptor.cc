@@ -38,6 +38,11 @@ void LegacyCryptohomeInterfaceAdaptor::RegisterAsync() {
                  base::Unretained(this)),
       base::Bind(&LegacyCryptohomeInterfaceAdaptor::OnSignalConnectedHandler,
                  base::Unretained(this)));
+  tpm_ownership_proxy_->RegisterSignalOwnershipTakenSignalHandler(
+      base::Bind(&LegacyCryptohomeInterfaceAdaptor::OnOwnershipTakenSignal,
+                 base::Unretained(this)),
+      base::Bind(&LegacyCryptohomeInterfaceAdaptor::OnSignalConnectedHandler,
+                 base::Unretained(this)));
 }
 
 void LegacyCryptohomeInterfaceAdaptor::IsMounted(
@@ -2927,6 +2932,16 @@ void LegacyCryptohomeInterfaceAdaptor::OnDircryptoMigrationProgressSignal(
 void LegacyCryptohomeInterfaceAdaptor::OnLowDiskSpaceSignal(
     const user_data_auth::LowDiskSpace& payload) {
   VirtualSendLowDiskSpaceSignal(payload.disk_free_bytes());
+}
+
+void LegacyCryptohomeInterfaceAdaptor::OnOwnershipTakenSignal(
+    const tpm_manager::OwnershipTakenSignal& /*payload*/) {
+  // Since the ownership taken signal is only sent when the ownership is taken,
+  // it implies `is_ready` and `is_owned`. We also hardcode
+  // `was_owned_this_boot` to be `false`; it's not used anymore so we don't
+  // bother maintaining it in tpm manager.
+  SendTpmInitStatusSignal(/*is_ready=*/true, /*is_owned=*/true,
+                          /*was_owned_this_boot=*/false);
 }
 
 void LegacyCryptohomeInterfaceAdaptor::OnSignalConnectedHandler(
