@@ -911,8 +911,7 @@ TEST_F(LegacyCryptohomeInterfaceAdaptorTest, LowDiskSpaceSignalValidity) {
 
 // --------------- TPM Ownership Interface Related Tests ---------------------
 TEST_F(LegacyCryptohomeInterfaceAdaptorTest, GetVersionInfo) {
-  EXPECT_CALL(ownership_, GetVersionInfoAsync(
-                              _, _, _, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT))
+  EXPECT_CALL(ownership_, GetVersionInfoAsync(_, _, _, _))
       .WillOnce(
           Invoke([](const tpm_manager::GetVersionInfoRequest& in_request,
                     const base::Callback<void(
@@ -1012,9 +1011,7 @@ class LegacyCryptohomeInterfaceAdaptorTestForGetTpmStatus
 
   void ExpectGetTpmStatus(
       const base::Optional<tpm_manager::GetTpmStatusReply>& reply) {
-    EXPECT_CALL(
-        ownership_,
-        GetTpmStatusAsync(_, _, _, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT))
+    EXPECT_CALL(ownership_, GetTpmStatusAsync(_, _, _, _))
         .WillOnce(Invoke(
             [reply](const tpm_manager::GetTpmStatusRequest& in_request,
                     const base::Callback<void(
@@ -1035,9 +1032,7 @@ class LegacyCryptohomeInterfaceAdaptorTestForGetTpmStatus
 
   void ExpectGetDictionaryAttackInfo(
       const base::Optional<tpm_manager::GetDictionaryAttackInfoReply>& reply) {
-    EXPECT_CALL(ownership_,
-                GetDictionaryAttackInfoAsync(
-                    _, _, _, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT))
+    EXPECT_CALL(ownership_, GetDictionaryAttackInfoAsync(_, _, _, _))
         .WillOnce(Invoke(
             [reply](
                 const tpm_manager::GetDictionaryAttackInfoRequest& in_request,
@@ -1059,8 +1054,7 @@ class LegacyCryptohomeInterfaceAdaptorTestForGetTpmStatus
       const base::Optional<user_data_auth::InstallAttributesGetStatusReply>&
           reply) {
     EXPECT_CALL(install_attributes_,
-                InstallAttributesGetStatusAsync(
-                    _, _, _, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT))
+                InstallAttributesGetStatusAsync(_, _, _, _))
         .WillOnce(Invoke(
             [reply](const user_data_auth::InstallAttributesGetStatusRequest&
                         in_request,

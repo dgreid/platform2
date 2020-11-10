@@ -986,12 +986,14 @@ class LegacyCryptohomeInterfaceAdaptor
   // Note that this version deals with async method calls that return only
   // status but not data.
   template <typename RequestProtoType, typename ReplyProtoType>
-  int HandleAsyncStatus(RequestProtoType request,
-                        base::OnceCallback<void(
-                            const RequestProtoType&,
-                            const base::Callback<void(const ReplyProtoType&)>&,
-                            const base::Callback<void(brillo::Error*)>&,
-                            int)> target_method) {
+  int HandleAsyncStatus(
+      RequestProtoType request,
+      base::OnceCallback<
+          void(const RequestProtoType&,
+               const base::Callback<void(const ReplyProtoType&)>&,
+               const base::Callback<void(brillo::Error*)>&,
+               int)> target_method,
+      int timeout_ms = dbus::ObjectProxy::TIMEOUT_USE_DEFAULT) {
     int async_id = NextSequence();
 
     base::Callback<void(const ReplyProtoType&)> on_success = base::Bind(
@@ -1001,9 +1003,7 @@ class LegacyCryptohomeInterfaceAdaptor
         &LegacyCryptohomeInterfaceAdaptor::AsyncForwardErrorWithNoData<
             ReplyProtoType>,
         base::Unretained(this), async_id);
-    std::move(target_method)
-        .Run(request, on_success, on_failure,
-             dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
+    std::move(target_method).Run(request, on_success, on_failure, timeout_ms);
 
     return async_id;
   }
