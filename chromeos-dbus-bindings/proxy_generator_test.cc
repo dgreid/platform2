@@ -155,6 +155,9 @@ class TestInterfaceProxy final : public TestInterfaceProxyInterface {
               bus_->GetObjectProxy(service_name_, object_path_)} {
   }
 
+  TestInterfaceProxy(const TestInterfaceProxy&) = delete;
+  TestInterfaceProxy& operator=(const TestInterfaceProxy&) = delete;
+
   ~TestInterfaceProxy() override {
   }
 
@@ -352,7 +355,6 @@ class TestInterfaceProxy final : public TestInterfaceProxyInterface {
   const dbus::ObjectPath object_path_{"/org/chromium/Test"};
   dbus::ObjectProxy* dbus_object_proxy_;
 
-  DISALLOW_COPY_AND_ASSIGN(TestInterfaceProxy);
 };
 
 }  // namespace chromium
@@ -400,6 +402,9 @@ class TestInterface2Proxy final : public TestInterface2ProxyInterface {
           dbus_object_proxy_{
               bus_->GetObjectProxy(service_name_, object_path_)} {
   }
+
+  TestInterface2Proxy(const TestInterface2Proxy&) = delete;
+  TestInterface2Proxy& operator=(const TestInterface2Proxy&) = delete;
 
   ~TestInterface2Proxy() override {
   }
@@ -450,7 +455,6 @@ class TestInterface2Proxy final : public TestInterface2ProxyInterface {
   dbus::ObjectPath object_path_;
   dbus::ObjectProxy* dbus_object_proxy_;
 
-  DISALLOW_COPY_AND_ASSIGN(TestInterface2Proxy);
 };
 
 }  // namespace chromium
@@ -512,6 +516,9 @@ class TestInterfaceProxy final : public TestInterfaceProxyInterface {
           bus_->GetObjectProxy(service_name_, object_path_)} {
   }
 
+  TestInterfaceProxy(const TestInterfaceProxy&) = delete;
+  TestInterfaceProxy& operator=(const TestInterfaceProxy&) = delete;
+
   ~TestInterfaceProxy() override {
   }
 
@@ -544,7 +551,6 @@ class TestInterfaceProxy final : public TestInterfaceProxyInterface {
   const dbus::ObjectPath object_path_{"/org/chromium/Test"};
   dbus::ObjectProxy* dbus_object_proxy_;
 
-  DISALLOW_COPY_AND_ASSIGN(TestInterfaceProxy);
 };
 
 }  // namespace chromium
@@ -580,6 +586,9 @@ class TestInterface2Proxy final : public TestInterface2ProxyInterface {
               bus_->GetObjectProxy(service_name_, object_path_)} {
   }
 
+  TestInterface2Proxy(const TestInterface2Proxy&) = delete;
+  TestInterface2Proxy& operator=(const TestInterface2Proxy&) = delete;
+
   ~TestInterface2Proxy() override {
   }
 
@@ -601,7 +610,6 @@ class TestInterface2Proxy final : public TestInterface2ProxyInterface {
   dbus::ObjectPath object_path_;
   dbus::ObjectProxy* dbus_object_proxy_;
 
-  DISALLOW_COPY_AND_ASSIGN(TestInterface2Proxy);
 };
 
 }  // namespace chromium
@@ -683,12 +691,12 @@ class Itf1Proxy final : public Itf1ProxyInterface {
       RegisterProperty(DataName(), &data);
       RegisterProperty(NameName(), &name);
     }
+    PropertySet(const PropertySet&) = delete;
+    PropertySet& operator=(const PropertySet&) = delete;
 
     brillo::dbus_utils::Property<std::string> data;
     brillo::dbus_utils::Property<std::string> name;
 
-   private:
-    DISALLOW_COPY_AND_ASSIGN(PropertySet);
   };
 
   Itf1Proxy(
@@ -701,6 +709,9 @@ class Itf1Proxy final : public Itf1ProxyInterface {
           dbus_object_proxy_{
               bus_->GetObjectProxy(service_name_, object_path_)} {
   }
+
+  Itf1Proxy(const Itf1Proxy&) = delete;
+  Itf1Proxy& operator=(const Itf1Proxy&) = delete;
 
   ~Itf1Proxy() override {
   }
@@ -763,7 +774,6 @@ class Itf1Proxy final : public Itf1ProxyInterface {
   dbus::ObjectProxy* dbus_object_proxy_;
 
   friend class org::chromium::ObjectManagerProxy;
-  DISALLOW_COPY_AND_ASSIGN(Itf1Proxy);
 };
 
 }  // namespace chromium
@@ -798,10 +808,10 @@ class Itf2Proxy final : public Itf2ProxyInterface {
                             "org.chromium.Itf2",
                             callback} {
     }
+    PropertySet(const PropertySet&) = delete;
+    PropertySet& operator=(const PropertySet&) = delete;
 
 
-   private:
-    DISALLOW_COPY_AND_ASSIGN(PropertySet);
   };
 
   Itf2Proxy(
@@ -814,6 +824,9 @@ class Itf2Proxy final : public Itf2ProxyInterface {
           dbus_object_proxy_{
               bus_->GetObjectProxy(service_name_, object_path_)} {
   }
+
+  Itf2Proxy(const Itf2Proxy&) = delete;
+  Itf2Proxy& operator=(const Itf2Proxy&) = delete;
 
   ~Itf2Proxy() override {
   }
@@ -836,7 +849,6 @@ class Itf2Proxy final : public Itf2ProxyInterface {
   dbus::ObjectPath object_path_;
   dbus::ObjectProxy* dbus_object_proxy_;
 
-  DISALLOW_COPY_AND_ASSIGN(Itf2Proxy);
 };
 
 }  // namespace chromium
@@ -857,6 +869,9 @@ class ObjectManagerProxy : public dbus::ObjectManager::Interface {
     dbus_object_manager_->RegisterInterface("org.chromium.Itf1", this);
     dbus_object_manager_->RegisterInterface("org.chromium.Itf2", this);
   }
+
+  ObjectManagerProxy(const ObjectManagerProxy&) = delete;
+  ObjectManagerProxy& operator=(const ObjectManagerProxy&) = delete;
 
   ~ObjectManagerProxy() override {
     dbus_object_manager_->UnregisterInterface("org.chromium.Itf1");
@@ -1012,8 +1027,6 @@ class ObjectManagerProxy : public dbus::ObjectManager::Interface {
   base::Callback<void(org::chromium::Itf2ProxyInterface*)> on_itf2_added_;
   base::Callback<void(const dbus::ObjectPath&)> on_itf2_removed_;
   base::WeakPtrFactory<ObjectManagerProxy> weak_ptr_factory_{this};
-
-  DISALLOW_COPY_AND_ASSIGN(ObjectManagerProxy);
 };
 
 }  // namespace chromium
@@ -1085,12 +1098,12 @@ class TestProxy final : public TestProxyInterface {
       RegisterProperty(DataName(), &data);
       RegisterProperty(NameName(), &name);
     }
+    PropertySet(const PropertySet&) = delete;
+    PropertySet& operator=(const PropertySet&) = delete;
 
     brillo::dbus_utils::Property<std::string> data;
     brillo::dbus_utils::Property<std::string> name;
 
-   private:
-    DISALLOW_COPY_AND_ASSIGN(PropertySet);
   };
 
   TestProxy(const scoped_refptr<dbus::Bus>& bus) :
@@ -1098,6 +1111,9 @@ class TestProxy final : public TestProxyInterface {
       dbus_object_proxy_{
           bus_->GetObjectProxy(service_name_, object_path_)} {
   }
+
+  TestProxy(const TestProxy&) = delete;
+  TestProxy& operator=(const TestProxy&) = delete;
 
   ~TestProxy() override {
   }
@@ -1145,7 +1161,6 @@ class TestProxy final : public TestProxyInterface {
   dbus::ObjectProxy* dbus_object_proxy_;
   std::unique_ptr<PropertySet> property_set_;
 
-  DISALLOW_COPY_AND_ASSIGN(TestProxy);
 };
 
 }  // namespace chromium
@@ -1215,10 +1230,10 @@ class Itf1Proxy final : public Itf1ProxyInterface {
                             "org.chromium.Itf1",
                             callback} {
     }
+    PropertySet(const PropertySet&) = delete;
+    PropertySet& operator=(const PropertySet&) = delete;
 
 
-   private:
-    DISALLOW_COPY_AND_ASSIGN(PropertySet);
   };
 
   Itf1Proxy(const scoped_refptr<dbus::Bus>& bus) :
@@ -1226,6 +1241,9 @@ class Itf1Proxy final : public Itf1ProxyInterface {
       dbus_object_proxy_{
           bus_->GetObjectProxy(service_name_, object_path_)} {
   }
+
+  Itf1Proxy(const Itf1Proxy&) = delete;
+  Itf1Proxy& operator=(const Itf1Proxy&) = delete;
 
   ~Itf1Proxy() override {
   }
@@ -1259,7 +1277,6 @@ class Itf1Proxy final : public Itf1ProxyInterface {
   const dbus::ObjectPath object_path_{"/org/chromium/Test/Object"};
   dbus::ObjectProxy* dbus_object_proxy_;
 
-  DISALLOW_COPY_AND_ASSIGN(Itf1Proxy);
 };
 
 }  // namespace chromium
@@ -1294,10 +1311,10 @@ class Itf2Proxy final : public Itf2ProxyInterface {
                             "org.chromium.Itf2",
                             callback} {
     }
+    PropertySet(const PropertySet&) = delete;
+    PropertySet& operator=(const PropertySet&) = delete;
 
 
-   private:
-    DISALLOW_COPY_AND_ASSIGN(PropertySet);
   };
 
   Itf2Proxy(
@@ -1308,6 +1325,9 @@ class Itf2Proxy final : public Itf2ProxyInterface {
           dbus_object_proxy_{
               bus_->GetObjectProxy(service_name_, object_path_)} {
   }
+
+  Itf2Proxy(const Itf2Proxy&) = delete;
+  Itf2Proxy& operator=(const Itf2Proxy&) = delete;
 
   ~Itf2Proxy() override {
   }
@@ -1330,7 +1350,6 @@ class Itf2Proxy final : public Itf2ProxyInterface {
   dbus::ObjectPath object_path_;
   dbus::ObjectProxy* dbus_object_proxy_;
 
-  DISALLOW_COPY_AND_ASSIGN(Itf2Proxy);
 };
 
 }  // namespace chromium
@@ -1349,6 +1368,9 @@ class ObjectManagerProxy : public dbus::ObjectManager::Interface {
     dbus_object_manager_->RegisterInterface("org.chromium.Itf1", this);
     dbus_object_manager_->RegisterInterface("org.chromium.Itf2", this);
   }
+
+  ObjectManagerProxy(const ObjectManagerProxy&) = delete;
+  ObjectManagerProxy& operator=(const ObjectManagerProxy&) = delete;
 
   ~ObjectManagerProxy() override {
     dbus_object_manager_->UnregisterInterface("org.chromium.Itf1");
@@ -1492,8 +1514,6 @@ class ObjectManagerProxy : public dbus::ObjectManager::Interface {
   base::Callback<void(org::chromium::Itf2ProxyInterface*)> on_itf2_added_;
   base::Callback<void(const dbus::ObjectPath&)> on_itf2_removed_;
   base::WeakPtrFactory<ObjectManagerProxy> weak_ptr_factory_{this};
-
-  DISALLOW_COPY_AND_ASSIGN(ObjectManagerProxy);
 };
 
 }  // namespace chromium
@@ -1570,6 +1590,9 @@ class TestInterfaceProxy final : public TestInterfaceProxyInterface {
               bus_->GetObjectProxy(service_name_, object_path_)} {
   }
 
+  TestInterfaceProxy(const TestInterfaceProxy&) = delete;
+  TestInterfaceProxy& operator=(const TestInterfaceProxy&) = delete;
+
   ~TestInterfaceProxy() override {
   }
 
@@ -1633,7 +1656,6 @@ class TestInterfaceProxy final : public TestInterfaceProxyInterface {
   const dbus::ObjectPath object_path_{"/org/chromium/Test"};
   dbus::ObjectProxy* dbus_object_proxy_;
 
-  DISALLOW_COPY_AND_ASSIGN(TestInterfaceProxy);
 };
 
 }  // namespace chromium

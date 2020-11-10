@@ -42,6 +42,7 @@ static_library("libchromeos-dbus-bindings") {
   sources = [
     "adaptor_generator.cc",
     "dbus_signature.cc",
+    "disallow_copy_and_assign.cc",
     "header_generator.cc",
     "indented_text.cc",
     "method_name_generator.cc",

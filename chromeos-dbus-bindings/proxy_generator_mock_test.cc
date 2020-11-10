@@ -53,6 +53,8 @@ namespace chromium {
 class TestInterfaceProxyMock : public TestInterfaceProxyInterface {
  public:
   TestInterfaceProxyMock() = default;
+  TestInterfaceProxyMock(const TestInterfaceProxyMock&) = delete;
+  TestInterfaceProxyMock& operator=(const TestInterfaceProxyMock&) = delete;
 
   MOCK_METHOD5(Elements,
                bool(const std::string& /*in_space_walk*/,
@@ -137,9 +139,6 @@ class TestInterfaceProxyMock : public TestInterfaceProxyInterface {
                     dbus::ObjectProxy::OnConnectedCallback* /*on_connected_callback*/));
   MOCK_CONST_METHOD0(GetObjectPath, const dbus::ObjectPath&());
   MOCK_CONST_METHOD0(GetObjectProxy, dbus::ObjectProxy*());
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(TestInterfaceProxyMock);
 };
 }  // namespace chromium
 }  // namespace org
@@ -151,6 +150,8 @@ namespace chromium {
 class TestInterface2ProxyMock : public TestInterface2ProxyInterface {
  public:
   TestInterface2ProxyMock() = default;
+  TestInterface2ProxyMock(const TestInterface2ProxyMock&) = delete;
+  TestInterface2ProxyMock& operator=(const TestInterface2ProxyMock&) = delete;
 
   MOCK_METHOD4(GetPersonInfo,
                bool(std::string* /*out_name*/,
@@ -168,9 +169,6 @@ class TestInterface2ProxyMock : public TestInterface2ProxyInterface {
   MOCK_CONST_METHOD0(GetObjectProxy, dbus::ObjectProxy*());
   MOCK_METHOD1(SetPropertyChangedCallback,
                void(const base::Callback<void(TestInterface2ProxyInterface*, const std::string&)>&));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(TestInterface2ProxyMock);
 };
 }  // namespace chromium
 }  // namespace org

@@ -11,6 +11,7 @@
 #include <base/strings/stringprintf.h>
 
 #include "chromeos-dbus-bindings/dbus_signature.h"
+#include "chromeos-dbus-bindings/disallow_copy_and_assign.h"
 #include "chromeos-dbus-bindings/header_generator.h"
 #include "chromeos-dbus-bindings/indented_text.h"
 #include "chromeos-dbus-bindings/interface.h"
@@ -88,6 +89,7 @@ void AdaptorGenerator::GenerateInterfaceAdaptor(const Interface& interface,
   text->AddLineWithOffset("public:", kScopeOffset);
   text->PushOffset(kBlockOffset);
   AddConstructor(interface, class_name, itf_name, text);
+  AddDisallowCopyAndAssign(class_name, text);
   AddRegisterWithDBusObject(itf_name, interface, text);
   AddSendSignalMethods(interface, text);
   AddPropertyMethodImplementation(interface, text);
@@ -117,9 +119,6 @@ void AdaptorGenerator::GenerateInterfaceAdaptor(const Interface& interface,
                      itf_name.c_str()));
   }
 
-  text->AddBlankLine();
-  text->AddLine(
-      StringPrintf("DISALLOW_COPY_AND_ASSIGN(%s);", class_name.c_str()));
   text->PopOffset();
   text->AddLine("};");
 

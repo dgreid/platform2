@@ -13,6 +13,7 @@
 #include <base/strings/string_util.h>
 #include <base/strings/stringprintf.h>
 
+#include "chromeos-dbus-bindings/disallow_copy_and_assign.h"
 #include "chromeos-dbus-bindings/dbus_signature.h"
 #include "chromeos-dbus-bindings/header_generator.h"
 #include "chromeos-dbus-bindings/indented_text.h"
@@ -244,6 +245,8 @@ void ProxyGenerator::GenerateInterfaceProxy(const ServiceConfig& config,
   text->PushOffset(kBlockOffset);
   AddPropertySet(config, interface, text);
   AddConstructor(config, interface, proxy_name, text);
+  AddDisallowCopyAndAssign(proxy_name, text);
+  text->AddBlankLine();
   AddDestructor(proxy_name, text);
   for (const auto& signal : interface.signals) {
     AddSignalHandlerRegistration(signal, interface.name, false, text);
@@ -301,8 +304,6 @@ void ProxyGenerator::GenerateInterfaceProxy(const ServiceConfig& config,
         "friend class %s;",
         NameParser{config.object_manager.name}.MakeProxyName(true).c_str()));
   }
-  text->AddLine(
-      StringPrintf("DISALLOW_COPY_AND_ASSIGN(%s);", proxy_name.c_str()));
   text->PopOffset();
   text->AddLine("};");
 
@@ -331,6 +332,7 @@ void ProxyGenerator::GenerateInterfaceMock(const ServiceConfig& config,
   text->AddLineWithOffset("public:", kScopeOffset);
   text->PushOffset(kBlockOffset);
   text->AddLine(StringPrintf("%s() = default;", mock_name.c_str()));
+  AddDisallowCopyAndAssign(mock_name, text);
   text->AddBlankLine();
 
   for (const auto& method : interface.methods) {
@@ -380,11 +382,6 @@ void ProxyGenerator::GenerateInterfaceMock(const ServiceConfig& config,
   }
 
   text->PopOffset();
-  text->AddBlankLine();
-  text->AddLineWithOffset("private:", kScopeOffset);
-  text->AddLineWithOffset(
-      StringPrintf("DISALLOW_COPY_AND_ASSIGN(%s);", mock_name.c_str()),
-      kBlockOffset);
   text->AddLine("};");
 
   parser.AddCloseNamespaces(text, false);
@@ -588,6 +585,7 @@ void ProxyGenerator::AddPropertySet(const ServiceConfig& config,
   }
   block.PopOffset();
   block.AddLine("}");
+  AddDisallowCopyAndAssign("PropertySet", &block);
   block.AddBlankLine();
 
   DBusSignature signature;
@@ -602,9 +600,6 @@ void ProxyGenerator::AddPropertySet(const ServiceConfig& config,
   block.AddBlankLine();
 
   block.PopOffset();
-  block.AddLineWithOffset("private:", kScopeOffset);
-  block.AddLineWithOffset("DISALLOW_COPY_AND_ASSIGN(PropertySet);",
-                          kBlockOffset);
   block.AddLine("};");
   block.AddBlankLine();
 
@@ -997,6 +992,8 @@ void ProxyGenerator::ObjectManager::GenerateProxy(
   text->PushOffset(kBlockOffset);
 
   AddConstructor(config, class_name, interfaces, text);
+  AddDisallowCopyAndAssign(class_name, text);
+  text->AddBlankLine();
   AddDestructor(class_name, interfaces, text);
   AddGetObjectManagerProxy(text);
   for (const auto& itf : interfaces) {
@@ -1012,8 +1009,6 @@ void ProxyGenerator::ObjectManager::GenerateProxy(
   AddCreateProperties(interfaces, class_name, text);
   AddDataMembers(config, interfaces, class_name, text);
 
-  text->AddLine(
-      StringPrintf("DISALLOW_COPY_AND_ASSIGN(%s);", class_name.c_str()));
   text->PopOffset();
   text->AddLine("};");
   text->AddBlankLine();
@@ -1408,7 +1403,6 @@ void ProxyGenerator::ObjectManager::AddDataMembers(
   }
   text->AddLine(StringPrintf(
       "base::WeakPtrFactory<%s> weak_ptr_factory_{this};", class_name.c_str()));
-  text->AddBlankLine();
 }
 
 string ProxyGenerator::GetHandlerNameForSignal(const string& signal) {

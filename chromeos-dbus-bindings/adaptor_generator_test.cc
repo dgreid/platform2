@@ -85,6 +85,8 @@ class TestInterface {
 class TestAdaptor {
  public:
   TestAdaptor(TestInterface* interface) : interface_(interface) {}
+  TestAdaptor(const TestAdaptor&) = delete;
+  TestAdaptor& operator=(const TestAdaptor&) = delete;
 
   void RegisterWithDBusObject(brillo::dbus_utils::DBusObject* object) {
     brillo::dbus_utils::DBusInterface* itf =
@@ -204,8 +206,6 @@ class TestAdaptor {
   brillo::dbus_utils::ExportedProperty<std::string> write_property_;
 
   TestInterface* interface_;  // Owned by container of this adapter.
-
-  DISALLOW_COPY_AND_ASSIGN(TestAdaptor);
 };
 
 }  // namespace chromium
@@ -233,6 +233,8 @@ class Test2Interface {
 class Test2Adaptor {
  public:
   Test2Adaptor(Test2Interface* interface) : interface_(interface) {}
+  Test2Adaptor(const Test2Adaptor&) = delete;
+  Test2Adaptor& operator=(const Test2Adaptor&) = delete;
 
   void RegisterWithDBusObject(brillo::dbus_utils::DBusObject* object) {
     brillo::dbus_utils::DBusInterface* itf =
@@ -271,8 +273,6 @@ class Test2Adaptor {
 
  private:
   Test2Interface* interface_;  // Owned by container of this adapter.
-
-  DISALLOW_COPY_AND_ASSIGN(Test2Adaptor);
 };
 
 }  // namespace chromium
@@ -312,6 +312,8 @@ class TestInterface {
 class TestAdaptor {
  public:
   TestAdaptor(TestInterface* interface) : interface_(interface) {}
+  TestAdaptor(const TestAdaptor&) = delete;
+  TestAdaptor& operator=(const TestAdaptor&) = delete;
 
   void RegisterWithDBusObject(brillo::dbus_utils::DBusObject* object) {
     brillo::dbus_utils::DBusInterface* itf =
@@ -355,8 +357,6 @@ class TestAdaptor {
   std::weak_ptr<SignalFileType> signal_File_;
 
   TestInterface* interface_;  // Owned by container of this adapter.
-
-  DISALLOW_COPY_AND_ASSIGN(TestAdaptor);
 };
 
 }  // namespace chromium
