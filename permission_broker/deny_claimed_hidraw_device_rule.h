@@ -15,6 +15,10 @@ namespace permission_broker {
 class DenyClaimedHidrawDeviceRule : public HidrawSubsystemUdevRule {
  public:
   DenyClaimedHidrawDeviceRule();
+  DenyClaimedHidrawDeviceRule(const DenyClaimedHidrawDeviceRule&) = delete;
+  DenyClaimedHidrawDeviceRule& operator=(const DenyClaimedHidrawDeviceRule&) =
+      delete;
+
   ~DenyClaimedHidrawDeviceRule() override = default;
 
   Result ProcessHidrawDevice(struct udev_device* device) override;
@@ -28,9 +32,6 @@ class DenyClaimedHidrawDeviceRule : public HidrawSubsystemUdevRule {
       const char* abs_capabilities,
       const char* rel_capabilities,
       const char* key_capabilities);
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(DenyClaimedHidrawDeviceRule);
 };
 
 }  // namespace permission_broker

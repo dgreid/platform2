@@ -18,15 +18,15 @@ namespace shill {
 class MockUpstartProxy : public UpstartProxyInterface {
  public:
   MockUpstartProxy();
+  MockUpstartProxy(const MockUpstartProxy&) = delete;
+  MockUpstartProxy& operator=(const MockUpstartProxy&) = delete;
+
   ~MockUpstartProxy() override;
 
   MOCK_METHOD(void,
               EmitEvent,
               (const std::string&, const std::vector<std::string>&, bool),
               (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockUpstartProxy);
 };
 
 }  // namespace shill

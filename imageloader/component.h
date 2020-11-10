@@ -64,6 +64,8 @@ class Component {
   // you need to load the manifest before doing anything anyway, so use the
   // static factory method above.
   Component(const base::FilePath& component_dir, int key_number);
+  Component(const Component&) = delete;
+  Component& operator=(const Component&) = delete;
 
   // Loads and verifies the manfiest. Returns false on failure. |public_key| is
   // the public key used to check the manifest signature.
@@ -90,8 +92,6 @@ class Component {
   std::string manifest_raw_;
   std::string manifest_sig_;
   Manifest manifest_;
-
-  DISALLOW_COPY_AND_ASSIGN(Component);
 };
 
 }  // namespace imageloader

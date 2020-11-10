@@ -72,6 +72,9 @@ class CertProvisionTest : public testing::Test {
     PCAProxy::subst_obj = &pca_proxy_;
     KeyStore::subst_obj = &key_store_;
   }
+  CertProvisionTest(const CertProvisionTest&) = delete;
+  CertProvisionTest& operator=(const CertProvisionTest&) = delete;
+
   ~CertProvisionTest() {
     CryptohomeProxy::subst_obj = nullptr;
     PCAProxy::subst_obj = nullptr;
@@ -206,8 +209,6 @@ class CertProvisionTest : public testing::Test {
   }
 
   crypto::ScopedRSA rsa_;
-
-  DISALLOW_COPY_AND_ASSIGN(CertProvisionTest);
 };
 
 // Checks that provisioning succeeds after sending EnrollRequest if not

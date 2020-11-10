@@ -28,6 +28,8 @@ struct Interface;
 class ProxyGenerator {
  public:
   ProxyGenerator();
+  ProxyGenerator(const ProxyGenerator&) = delete;
+  ProxyGenerator& operator=(const ProxyGenerator&) = delete;
 
   bool GenerateProxies(const ServiceConfig& config,
                        const std::vector<Interface>& interfaces,
@@ -195,8 +197,6 @@ class ProxyGenerator {
   };
   // Generates the signal handler name for a given signal name.
   std::string GetHandlerNameForSignal(const std::string& signal);
-
-  DISALLOW_COPY_AND_ASSIGN(ProxyGenerator);
 };
 
 }  // namespace chromeos_dbus_bindings

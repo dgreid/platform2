@@ -39,6 +39,8 @@ class UsbModemSwitchContext {
                         uint16_t vendor_id,
                         uint16_t product_id,
                         const UsbModemInfo* modem_info);
+  UsbModemSwitchContext(const UsbModemSwitchContext&) = delete;
+  UsbModemSwitchContext& operator=(const UsbModemSwitchContext&) = delete;
 
   ~UsbModemSwitchContext() = default;
 
@@ -63,8 +65,6 @@ class UsbModemSwitchContext {
   uint16_t vendor_id_;
   uint16_t product_id_;
   const UsbModemInfo* modem_info_;
-
-  DISALLOW_COPY_AND_ASSIGN(UsbModemSwitchContext);
 };
 
 }  // namespace mist

@@ -18,6 +18,9 @@ class MockDHCPConfig : public DHCPConfig {
  public:
   MockDHCPConfig(ControlInterface* control_interface,
                  const std::string& device_name);
+  MockDHCPConfig(const MockDHCPConfig&) = delete;
+  MockDHCPConfig& operator=(const MockDHCPConfig&) = delete;
+
   ~MockDHCPConfig() override;
 
   void ProcessEventSignal(const std::string& reason,
@@ -28,9 +31,6 @@ class MockDHCPConfig : public DHCPConfig {
   MOCK_METHOD(bool, ReleaseIP, (ReleaseReason), (override));
   MOCK_METHOD(bool, RenewIP, (), (override));
   MOCK_METHOD(void, set_minimum_mtu, (int), (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockDHCPConfig);
 };
 
 }  // namespace shill

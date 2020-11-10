@@ -53,6 +53,8 @@ class UsbError {
   // Constructs a UsbError object with its error type set to a value equivalent
   // to the libusb error |error|.
   explicit UsbError(libusb_error error);
+  UsbError(const UsbError&) = delete;
+  UsbError& operator=(const UsbError&) = delete;
 
   ~UsbError() = default;
 
@@ -77,8 +79,6 @@ class UsbError {
 
  private:
   Type type_;
-
-  DISALLOW_COPY_AND_ASSIGN(UsbError);
 };
 
 }  // namespace mist

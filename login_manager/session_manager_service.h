@@ -124,6 +124,9 @@ class SessionManagerService
                         base::TimeDelta hang_detection_interval,
                         LoginMetrics* metrics,
                         SystemUtils* system);
+  SessionManagerService(const SessionManagerService&) = delete;
+  SessionManagerService& operator=(const SessionManagerService&) = delete;
+
   ~SessionManagerService() override;
 
   // TestApi exposes internal routines for testing purposes.
@@ -280,8 +283,6 @@ class SessionManagerService
   // chrome starts and check the 'SessionManaagerLongKillTimeout' feature
   // enabled state via ChromeFeaturesService.
   bool use_long_kill_timeout_ = false;
-
-  DISALLOW_COPY_AND_ASSIGN(SessionManagerService);
 };
 }  // namespace login_manager
 

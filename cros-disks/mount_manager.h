@@ -60,6 +60,8 @@ class MountManager {
                Platform* platform,
                Metrics* metrics,
                brillo::ProcessReaper* process_reaper);
+  MountManager(const MountManager&) = delete;
+  MountManager& operator=(const MountManager&) = delete;
 
   // Destructor that performs no specific operations and does not unmount
   // any mounted or reserved mount paths. A derived class should override
@@ -274,8 +276,6 @@ class MountManager {
   FRIEND_TEST(MountManagerTest, ExtractMountLabelFromOptionsWithTwoMountLabels);
   FRIEND_TEST(MountManagerTest, IsPathImmediateChildOfParent);
   FRIEND_TEST(MountManagerTest, IsValidMountPath);
-
-  DISALLOW_COPY_AND_ASSIGN(MountManager);
 };
 
 }  // namespace cros_disks

@@ -22,6 +22,8 @@ namespace smbfs {
 class AuthPolicyClient : public KerberosArtifactClientInterface {
  public:
   explicit AuthPolicyClient(scoped_refptr<dbus::Bus> bus);
+  AuthPolicyClient(const AuthPolicyClient&) = delete;
+  AuthPolicyClient& operator=(const AuthPolicyClient&) = delete;
 
   // KerberosArtifactClientInterface overrides.
   void GetUserKerberosFiles(const std::string& object_guid,
@@ -36,8 +38,6 @@ class AuthPolicyClient : public KerberosArtifactClientInterface {
 
   dbus::ObjectProxy* const auth_policy_object_proxy_;
   base::WeakPtrFactory<AuthPolicyClient> weak_ptr_factory_{this};
-
-  DISALLOW_COPY_AND_ASSIGN(AuthPolicyClient);
 };
 
 }  // namespace smbfs

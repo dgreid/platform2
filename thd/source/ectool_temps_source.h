@@ -28,6 +28,9 @@ class EctoolTempsSource : public Source {
  public:
   // |sensor_id| informs what sensors ID to read when calling "ectool temps x".
   explicit EctoolTempsSource(int sensor_id);
+  EctoolTempsSource(const EctoolTempsSource&) = delete;
+  EctoolTempsSource& operator=(const EctoolTempsSource&) = delete;
+
   ~EctoolTempsSource() override;
 
   // Source:
@@ -37,7 +40,6 @@ class EctoolTempsSource : public Source {
   // The arguments to use for the command line are stored here on construction,
   // and used to call "ectool temps x" on each ReadValue call.
   const std::vector<std::string> cmd_args_;
-  DISALLOW_COPY_AND_ASSIGN(EctoolTempsSource);
 };
 
 }  // namespace thd

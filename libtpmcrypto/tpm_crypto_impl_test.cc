@@ -31,6 +31,9 @@ bool FakeRandBytes(uint8_t* bytes, int length) {
 class FakeTpm : public Tpm {
  public:
   FakeTpm() = default;
+  FakeTpm(const FakeTpm&) = delete;
+  FakeTpm& operator=(const FakeTpm&) = delete;
+
   ~FakeTpm() override = default;
 
   // The fake implementation just flips every bit in the input. The Unseal
@@ -65,8 +68,6 @@ class FakeTpm : public Tpm {
                     std::string* data) override {
     return true;
   }
-
-  DISALLOW_COPY_AND_ASSIGN(FakeTpm);
 };
 
 class TpmCryptoImplTest : public testing::Test {
@@ -76,6 +77,8 @@ class TpmCryptoImplTest : public testing::Test {
     tpm_ = tpm.get();
     tpm_crypto_ = std::make_unique<TpmCryptoImpl>(std::move(tpm));
   }
+  TpmCryptoImplTest(const TpmCryptoImplTest&) = delete;
+  TpmCryptoImplTest& operator=(const TpmCryptoImplTest&) = delete;
 
   ~TpmCryptoImplTest() override = default;
 
@@ -94,8 +97,6 @@ class TpmCryptoImplTest : public testing::Test {
 
   std::unique_ptr<TpmCryptoImpl> tpm_crypto_;
   FakeTpm* tpm_;  // Not owned
-
-  DISALLOW_COPY_AND_ASSIGN(TpmCryptoImplTest);
 };
 
 TEST_F(TpmCryptoImplTest, SanityTestFakeTpm) {

@@ -20,6 +20,9 @@ namespace thd {
 class FileSource : public Source {
  public:
   explicit FileSource(const base::FilePath& file_path);
+  FileSource(const FileSource&) = delete;
+  FileSource& operator=(const FileSource&) = delete;
+
   ~FileSource() override;
 
   // Source:
@@ -27,7 +30,6 @@ class FileSource : public Source {
 
  private:
   const base::FilePath file_path_;
-  DISALLOW_COPY_AND_ASSIGN(FileSource);
 };
 
 }  // namespace thd

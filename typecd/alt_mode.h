@@ -22,6 +22,8 @@ class AltMode {
   static std::unique_ptr<AltMode> CreateAltMode(const base::FilePath& syspath);
 
   explicit AltMode(const base::FilePath& syspath) : syspath_(syspath) {}
+  AltMode(const AltMode&) = delete;
+  AltMode& operator=(const AltMode&) = delete;
 
   uint16_t GetSVID() const { return svid_; }
   uint32_t GetVDO() const { return vdo_; }
@@ -41,8 +43,6 @@ class AltMode {
   // The index of the VDO for this alt mode in the Discover Mode response.
   int mode_index_;
   base::FilePath syspath_;
-
-  DISALLOW_COPY_AND_ASSIGN(AltMode);
 };
 
 }  // namespace typecd

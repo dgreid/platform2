@@ -28,6 +28,8 @@ class Metrics {
   };
 
   Metrics();
+  Metrics(const Metrics&) = delete;
+  Metrics& operator=(const Metrics&) = delete;
 
   void RecordRestoreResult(OobeRestoreResult result);
 
@@ -35,8 +37,6 @@ class Metrics {
 
  private:
   MetricsLibrary metrics_library_;
-
-  DISALLOW_COPY_AND_ASSIGN(Metrics);
 };
 
 }  // namespace oobe_config

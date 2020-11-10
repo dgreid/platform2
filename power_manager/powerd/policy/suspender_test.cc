@@ -41,6 +41,9 @@ const char kNoActions[] = "";
 class TestDelegate : public Suspender::Delegate, public ActionRecorder {
  public:
   TestDelegate() = default;
+  TestDelegate(const TestDelegate&) = delete;
+  TestDelegate& operator=(const TestDelegate&) = delete;
+
   ~TestDelegate() override = default;
 
   void set_lid_closed(bool closed) { lid_closed_ = closed; }
@@ -187,8 +190,6 @@ class TestDelegate : public Suspender::Delegate, public ActionRecorder {
   // Dark resume wake data provided to GenerateDarkResumeMetrics().
   std::vector<Suspender::DarkResumeInfo> dark_resume_wake_durations_;
   base::TimeDelta last_suspend_duration_;
-
-  DISALLOW_COPY_AND_ASSIGN(TestDelegate);
 };
 
 }  // namespace
@@ -199,6 +200,8 @@ class SuspenderTest : public testing::Test {
       : test_api_(&suspender_),
         pref_retry_delay_ms_(10000),
         pref_num_retries_(10) {}
+  SuspenderTest(const SuspenderTest&) = delete;
+  SuspenderTest& operator=(const SuspenderTest&) = delete;
 
  protected:
   void Init() {
@@ -276,9 +279,6 @@ class SuspenderTest : public testing::Test {
 
   int64_t pref_retry_delay_ms_;
   int64_t pref_num_retries_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(SuspenderTest);
 };
 
 // Tests the standard suspend/resume cycle.

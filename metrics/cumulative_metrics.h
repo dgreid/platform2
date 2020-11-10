@@ -94,6 +94,9 @@ class CumulativeMetrics {
                     Callback update_callback,
                     base::TimeDelta accumulation_period,
                     Callback cycle_end_callback);
+  CumulativeMetrics(const CumulativeMetrics&) = delete;
+  CumulativeMetrics& operator=(const CumulativeMetrics&) = delete;
+
   virtual ~CumulativeMetrics() {}
 
   // Calls |update_callback_|.
@@ -153,8 +156,6 @@ class CumulativeMetrics {
   // instance, one day worth) to send histogram samples.
   Callback cycle_end_callback_;
   base::RepeatingTimer timer_;
-
-  DISALLOW_COPY_AND_ASSIGN(CumulativeMetrics);
 };
 
 }  // namespace chromeos_metrics

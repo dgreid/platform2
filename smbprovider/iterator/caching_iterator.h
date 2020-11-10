@@ -29,6 +29,8 @@ class CachingIterator {
       : CachingIterator(DirectoryIterator(full_path, samba_interface), cache) {}
 
   CachingIterator(CachingIterator&& other) = default;
+  CachingIterator(const CachingIterator&) = delete;
+  CachingIterator& operator=(const CachingIterator&) = delete;
 
   ~CachingIterator() = default;
 
@@ -53,8 +55,6 @@ class CachingIterator {
  private:
   DirectoryIterator inner_it_;
   MetadataCache* cache_ = nullptr;  // Not owned.
-
-  DISALLOW_COPY_AND_ASSIGN(CachingIterator);
 };
 
 }  // namespace smbprovider

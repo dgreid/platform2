@@ -16,6 +16,9 @@ namespace shill {
 class MockIcmpSession : public IcmpSession {
  public:
   explicit MockIcmpSession(EventDispatcher* dispatcher);
+  MockIcmpSession(const MockIcmpSession&) = delete;
+  MockIcmpSession& operator=(const MockIcmpSession&) = delete;
+
   ~MockIcmpSession() override;
 
   MOCK_METHOD(bool,
@@ -25,9 +28,6 @@ class MockIcmpSession : public IcmpSession {
                const IcmpSession::IcmpSessionResultCallback&),
               (override));
   MOCK_METHOD(void, Stop, (), (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockIcmpSession);
 };
 
 }  // namespace shill

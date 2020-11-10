@@ -16,6 +16,9 @@ namespace shill {
 class MockNetlinkManager : public NetlinkManager {
  public:
   MockNetlinkManager() = default;
+  MockNetlinkManager(const MockNetlinkManager&) = delete;
+  MockNetlinkManager& operator=(const MockNetlinkManager&) = delete;
+
   ~MockNetlinkManager() override = default;
 
   MOCK_METHOD(bool, Init, (), (override));
@@ -50,9 +53,6 @@ class MockNetlinkManager : public NetlinkManager {
               SubscribeToEvents,
               (const std::string&, const std::string&),
               (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockNetlinkManager);
 };
 
 }  // namespace shill

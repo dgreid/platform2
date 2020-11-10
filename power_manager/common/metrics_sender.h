@@ -59,6 +59,9 @@ class MetricsSender : public MetricsSenderInterface {
   // The c'tor and d'tor call SetInstance() to register and unregister this
   // instance.
   explicit MetricsSender(std::unique_ptr<MetricsLibraryInterface> metrics_lib);
+  MetricsSender(const MetricsSender&) = delete;
+  MetricsSender& operator=(const MetricsSender&) = delete;
+
   ~MetricsSender() override;
 
   // MetricsSenderInterface implementation:
@@ -71,8 +74,6 @@ class MetricsSender : public MetricsSenderInterface {
 
  private:
   std::unique_ptr<MetricsLibraryInterface> metrics_lib_;
-
-  DISALLOW_COPY_AND_ASSIGN(MetricsSender);
 };
 
 // Convenience wrapper for calling SendMetric() on the currently-registered

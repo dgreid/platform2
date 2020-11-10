@@ -80,6 +80,9 @@ class ShillClient {
       base::Callback<void(const std::string& device, const IPConfig& ipconfig)>;
 
   explicit ShillClient(const scoped_refptr<dbus::Bus>& bus);
+  ShillClient(const ShillClient&) = delete;
+  ShillClient& operator=(const ShillClient&) = delete;
+
   virtual ~ShillClient() = default;
 
   void RegisterDefaultInterfaceChangedHandler(
@@ -159,8 +162,6 @@ class ShillClient {
   std::unique_ptr<org::chromium::flimflam::ManagerProxy> manager_proxy_;
 
   base::WeakPtrFactory<ShillClient> weak_factory_{this};
-
-  DISALLOW_COPY_AND_ASSIGN(ShillClient);
 };
 
 }  // namespace patchpanel

@@ -20,6 +20,8 @@ class DBusDaemon : public brillo::Daemon {
  public:
   // |bluetooth_daemon| is a delegate of this daemon.
   explicit DBusDaemon(std::unique_ptr<BluetoothDaemon> bluetooth_daemon);
+  DBusDaemon(const DBusDaemon&) = delete;
+  DBusDaemon& operator=(const DBusDaemon&) = delete;
 
   // brillo::Daemon overrides.
   int OnInit() override;
@@ -28,8 +30,6 @@ class DBusDaemon : public brillo::Daemon {
   scoped_refptr<dbus::Bus> bus_;
 
   std::unique_ptr<BluetoothDaemon> bluetooth_daemon_;
-
-  DISALLOW_COPY_AND_ASSIGN(DBusDaemon);
 };
 
 }  // namespace bluetooth

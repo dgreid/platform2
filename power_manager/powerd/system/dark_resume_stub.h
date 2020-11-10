@@ -18,6 +18,9 @@ namespace system {
 class DarkResumeStub : public DarkResumeInterface {
  public:
   DarkResumeStub();
+  DarkResumeStub(const DarkResumeStub&) = delete;
+  DarkResumeStub& operator=(const DarkResumeStub&) = delete;
+
   ~DarkResumeStub() override;
 
   void set_in_dark_resume(bool in_dark_resume) {
@@ -35,8 +38,6 @@ class DarkResumeStub : public DarkResumeInterface {
   // Values to return.
   bool in_dark_resume_ = false;
   bool enabled_ = false;
-
-  DISALLOW_COPY_AND_ASSIGN(DarkResumeStub);
 };
 
 }  // namespace system

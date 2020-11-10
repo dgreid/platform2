@@ -16,6 +16,9 @@ namespace shill {
 class MockEventDispatcher : public EventDispatcher {
  public:
   MockEventDispatcher();
+  MockEventDispatcher(const MockEventDispatcher&) = delete;
+  MockEventDispatcher& operator=(const MockEventDispatcher&) = delete;
+
   ~MockEventDispatcher() override;
 
   MOCK_METHOD(void, DispatchForever, (), (override));
@@ -24,9 +27,6 @@ class MockEventDispatcher : public EventDispatcher {
               PostDelayedTask,
               (const base::Location&, const base::Closure&, int64_t),
               (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockEventDispatcher);
 };
 
 }  // namespace shill

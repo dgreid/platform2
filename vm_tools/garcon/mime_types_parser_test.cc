@@ -24,6 +24,9 @@ class MimeTypesParserTest : public ::testing::Test {
     CHECK(temp_dir_.CreateUniqueTempDir());
     mime_types_path_ = temp_dir_.GetPath().Append("mime.types");
   }
+  MimeTypesParserTest(const MimeTypesParserTest&) = delete;
+  MimeTypesParserTest& operator=(const MimeTypesParserTest&) = delete;
+
   ~MimeTypesParserTest() override = default;
 
   void WriteContents(const std::string& file_contents) {
@@ -37,8 +40,6 @@ class MimeTypesParserTest : public ::testing::Test {
  private:
   base::ScopedTempDir temp_dir_;
   base::FilePath mime_types_path_;
-
-  DISALLOW_COPY_AND_ASSIGN(MimeTypesParserTest);
 };
 
 }  // namespace

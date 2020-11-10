@@ -17,15 +17,16 @@ namespace permission_broker {
 class DenyClaimedHidrawDeviceRuleTest : public testing::Test {
  public:
   DenyClaimedHidrawDeviceRuleTest() : udev_(udev_new()) {}
+  DenyClaimedHidrawDeviceRuleTest(const DenyClaimedHidrawDeviceRuleTest&) =
+      delete;
+  DenyClaimedHidrawDeviceRuleTest& operator=(
+      const DenyClaimedHidrawDeviceRuleTest&) = delete;
 
   ~DenyClaimedHidrawDeviceRuleTest() override = default;
 
  protected:
   ScopedUdevPtr udev_;
   DenyClaimedHidrawDeviceRule rule_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(DenyClaimedHidrawDeviceRuleTest);
 };
 
 TEST_F(DenyClaimedHidrawDeviceRuleTest, DenyClaimedHidrawDevices) {

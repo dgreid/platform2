@@ -28,6 +28,9 @@ class PropertyStore {
   using PropertyChangeCallback = base::Callback<void(const std::string&)>;
   PropertyStore();
   explicit PropertyStore(PropertyChangeCallback property_change_callback);
+  PropertyStore(const PropertyStore&) = delete;
+  PropertyStore& operator=(const PropertyStore&) = delete;
+
   virtual ~PropertyStore();
 
   virtual bool Contains(const std::string& property) const;
@@ -304,8 +307,6 @@ class PropertyStore {
   std::map<std::string, Uint64Accessor> uint64_properties_;
 
   PropertyChangeCallback property_changed_callback_;
-
-  DISALLOW_COPY_AND_ASSIGN(PropertyStore);
 };
 
 }  // namespace shill

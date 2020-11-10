@@ -30,9 +30,8 @@ class FileChangeWatcher {
 
  protected:
   FileChangeWatcher();
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(FileChangeWatcher);
+  FileChangeWatcher(const FileChangeWatcher&) = delete;
+  FileChangeWatcher& operator=(const FileChangeWatcher&) = delete;
 };
 
 }  // namespace croslog

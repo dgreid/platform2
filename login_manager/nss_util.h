@@ -37,6 +37,9 @@ using ScopedPK11SlotDescriptor = std::unique_ptr<PK11SlotDescriptor>;
 class NssUtil {
  public:
   NssUtil();
+  NssUtil(const NssUtil&) = delete;
+  NssUtil& operator=(const NssUtil&) = delete;
+
   virtual ~NssUtil();
 
   // Creates an NssUtil. If there is no Factory (the default) this creates and
@@ -76,9 +79,6 @@ class NssUtil {
   virtual bool Sign(const std::vector<uint8_t>& data,
                     crypto::RSAPrivateKey* key,
                     std::vector<uint8_t>* out_signature) = 0;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(NssUtil);
 };
 }  // namespace login_manager
 

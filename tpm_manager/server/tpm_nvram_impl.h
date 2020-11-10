@@ -25,6 +25,9 @@ class LocalDataStore;
 class TpmNvramImpl : public TpmNvram {
  public:
   explicit TpmNvramImpl(LocalDataStore* local_data_store);
+  TpmNvramImpl(const TpmNvramImpl&) = delete;
+  TpmNvramImpl& operator=(const TpmNvramImpl&) = delete;
+
   ~TpmNvramImpl() override = default;
 
   // TpmNvram methods.
@@ -97,8 +100,6 @@ class TpmNvramImpl : public TpmNvram {
   LocalDataStore* local_data_store_;
   // A default non-owner connection.
   TpmConnection tpm_connection_;
-
-  DISALLOW_COPY_AND_ASSIGN(TpmNvramImpl);
 };
 
 }  // namespace tpm_manager

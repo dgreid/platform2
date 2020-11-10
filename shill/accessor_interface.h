@@ -28,6 +28,9 @@ template <class T>
 class AccessorInterface {
  public:
   AccessorInterface() = default;
+  AccessorInterface(const AccessorInterface&) = delete;
+  AccessorInterface& operator=(const AccessorInterface&) = delete;
+
   virtual ~AccessorInterface() = default;
 
   // Reset the property to its default value. Sets |error| on failure.
@@ -39,9 +42,6 @@ class AccessorInterface {
   // modified. If the new value is the same as the old value, Set
   // returns false, but with |error| unchanged.
   virtual bool Set(const T& value, Error* error) = 0;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(AccessorInterface);
 };
 
 // Using a smart pointer here allows pointers to classes derived from

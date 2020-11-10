@@ -18,6 +18,9 @@ namespace debugd {
 class PingTool : public SubprocessTool {
  public:
   PingTool() = default;
+  PingTool(const PingTool&) = delete;
+  PingTool& operator=(const PingTool&) = delete;
+
   ~PingTool() override = default;
 
   bool Start(const base::ScopedFD& outfd,
@@ -25,9 +28,6 @@ class PingTool : public SubprocessTool {
              const brillo::VariantDictionary& options,
              std::string* out_id,
              brillo::ErrorPtr* error);
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(PingTool);
 };
 
 }  // namespace debugd

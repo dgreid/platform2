@@ -19,6 +19,9 @@ class MockConnection : public Connection {
  public:
   using Connection::Connection;
 
+  MockConnection(const MockConnection&) = delete;
+  MockConnection& operator=(const MockConnection&) = delete;
+
   MOCK_METHOD(bool, SendHeaders, (const HeaderList&, ErrorPtr*), (override));
   MOCK_METHOD(bool, MockSetRequestData, (Stream*, ErrorPtr*));
   MOCK_METHOD(void, MockSetResponseData, (Stream*));
@@ -46,8 +49,6 @@ class MockConnection : public Connection {
   StreamPtr ExtractDataStream(brillo::ErrorPtr* error) override {
     return StreamPtr{MockExtractDataStream(error)};
   }
-
-  DISALLOW_COPY_AND_ASSIGN(MockConnection);
 };
 
 }  // namespace http

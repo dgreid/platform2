@@ -33,6 +33,9 @@ class Pkcs11KeyStore : public KeyStore {
  public:
   // Does not take ownership of pointers.
   explicit Pkcs11KeyStore(chaps::TokenManagerClient* token_manager);
+  Pkcs11KeyStore(const Pkcs11KeyStore&) = delete;
+  Pkcs11KeyStore& operator=(const Pkcs11KeyStore&) = delete;
+
   ~Pkcs11KeyStore() override;
 
   // KeyStore interface.
@@ -100,8 +103,6 @@ class Pkcs11KeyStore : public KeyStore {
                             const std::string& certificate);
 
   chaps::TokenManagerClient* token_manager_;
-
-  DISALLOW_COPY_AND_ASSIGN(Pkcs11KeyStore);
 };
 
 }  // namespace attestation

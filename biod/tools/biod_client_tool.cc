@@ -191,6 +191,8 @@ class BiometricsManagerProxy : public biod::BiometricsManagerProxyBase {
 
  private:
   BiometricsManagerProxy() : weak_factory_(this) {}
+  BiometricsManagerProxy(const BiometricsManagerProxy&) = delete;
+  BiometricsManagerProxy& operator=(const BiometricsManagerProxy&) = delete;
 
   bool Initialize(const scoped_refptr<dbus::Bus>& bus,
                   const dbus::ObjectPath& path,
@@ -289,8 +291,6 @@ class BiometricsManagerProxy : public biod::BiometricsManagerProxyBase {
   BiometricsManagerType type_ = BiometricsManagerType::BIOMETRIC_TYPE_UNKNOWN;
   std::vector<RecordProxy> records_;
   base::WeakPtrFactory<BiometricsManagerProxy> weak_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(BiometricsManagerProxy);
 };
 
 class BiodProxy {

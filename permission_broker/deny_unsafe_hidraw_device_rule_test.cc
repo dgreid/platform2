@@ -75,10 +75,12 @@ bool IsDeviceSafe(const std::vector<HidUsage>& usages) {
 class DenyUnsafeHidrawDeviceRuleTest : public testing::Test {
  public:
   DenyUnsafeHidrawDeviceRuleTest() = default;
-  ~DenyUnsafeHidrawDeviceRuleTest() override = default;
+  DenyUnsafeHidrawDeviceRuleTest(const DenyUnsafeHidrawDeviceRuleTest&) =
+      delete;
+  DenyUnsafeHidrawDeviceRuleTest& operator=(
+      const DenyUnsafeHidrawDeviceRuleTest&) = delete;
 
- private:
-  DISALLOW_COPY_AND_ASSIGN(DenyUnsafeHidrawDeviceRuleTest);
+  ~DenyUnsafeHidrawDeviceRuleTest() override = default;
 };
 
 TEST_F(DenyUnsafeHidrawDeviceRuleTest, IgnoreInvalidDescriptors) {

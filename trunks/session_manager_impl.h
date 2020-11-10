@@ -27,6 +27,9 @@ constexpr size_t kEccKeySize = 32;
 class TRUNKS_EXPORT SessionManagerImpl : public SessionManager {
  public:
   explicit SessionManagerImpl(const TrunksFactory& factory);
+  SessionManagerImpl(const SessionManagerImpl&) = delete;
+  SessionManagerImpl& operator=(const SessionManagerImpl&) = delete;
+
   ~SessionManagerImpl() override;
 
   TPM_HANDLE GetSessionHandle() const override { return session_handle_; }
@@ -63,7 +66,6 @@ class TRUNKS_EXPORT SessionManagerImpl : public SessionManager {
   TPM_HANDLE session_handle_;
 
   friend class SessionManagerTest;
-  DISALLOW_COPY_AND_ASSIGN(SessionManagerImpl);
 };
 
 }  // namespace trunks

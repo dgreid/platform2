@@ -24,6 +24,10 @@ class DBusWrapperInterface;
 class DisplayPowerSetterInterface {
  public:
   DisplayPowerSetterInterface() {}
+  DisplayPowerSetterInterface(const DisplayPowerSetterInterface&) = delete;
+  DisplayPowerSetterInterface& operator=(const DisplayPowerSetterInterface&) =
+      delete;
+
   virtual ~DisplayPowerSetterInterface() {}
 
   // Configures displays to use |state| after |delay|. If another change has
@@ -36,9 +40,6 @@ class DisplayPowerSetterInterface {
   // software.  This is used as a substitute for actually changing the
   // display's brightness in some cases, e.g. for external displays.
   virtual void SetDisplaySoftwareDimming(bool dimmed) = 0;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(DisplayPowerSetterInterface);
 };
 
 // Real DisplayPowerSetterInterface implementation that makes D-Bus method
@@ -48,6 +49,9 @@ class DisplayPowerSetterInterface {
 class DisplayPowerSetter : public DisplayPowerSetterInterface {
  public:
   DisplayPowerSetter();
+  DisplayPowerSetter(const DisplayPowerSetter&) = delete;
+  DisplayPowerSetter& operator=(const DisplayPowerSetter&) = delete;
+
   ~DisplayPowerSetter() override;
 
   // Ownership of |dbus_wrapper| remains with the caller.
@@ -67,8 +71,6 @@ class DisplayPowerSetter : public DisplayPowerSetterInterface {
 
   DBusWrapperInterface* dbus_wrapper_;        // weak
   dbus::ObjectProxy* display_service_proxy_;  // non-owned
-
-  DISALLOW_COPY_AND_ASSIGN(DisplayPowerSetter);
 };
 
 }  // namespace system

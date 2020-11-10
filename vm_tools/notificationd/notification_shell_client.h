@@ -77,6 +77,8 @@ class NotificationShellClient {
     NotificationClient(zcr_notification_shell_notification_v1* proxy,
                        const std::string& notification_key,
                        NotificationShellClient* shell_client);
+    NotificationClient(const NotificationClient&) = delete;
+    NotificationClient& operator=(const NotificationClient&) = delete;
 
     // Sends a close notification request to Wayland server which this client
     // is connected to.
@@ -127,11 +129,12 @@ class NotificationShellClient {
 
     NotificationShellClient* shell_client_;  // Not owned.
 
-    DISALLOW_COPY_AND_ASSIGN(NotificationClient);
   };
 
   NotificationShellClient(NotificationShellInterface* interface,
                           base::Closure quit_closure);
+  NotificationShellClient(const NotificationShellClient&) = delete;
+  NotificationShellClient& operator=(const NotificationShellClient&) = delete;
 
   // Initializes the Wayland client. Returns true on success.
   bool Init(const char* display_name, const char* virtwl_device);
@@ -213,8 +216,6 @@ class NotificationShellClient {
       notification_clients_;
 
   base::Closure quit_closure_;
-
-  DISALLOW_COPY_AND_ASSIGN(NotificationShellClient);
 };
 
 }  // namespace notificationd

@@ -64,6 +64,8 @@ class SmbProvider : public org::chromium::SmbProviderAdaptor,
               std::unique_ptr<KerberosArtifactSynchronizer>
                   kerberos_artifact_synchronizer,
               const base::FilePath& daemon_store_directory);
+  SmbProvider(const SmbProvider&) = delete;
+  SmbProvider& operator=(const SmbProvider&) = delete;
 
   // org::chromium::SmbProviderInterface: (see org.chromium.SmbProvider.xml).
   void Mount(const ProtoBlob& options_blob,
@@ -498,8 +500,6 @@ class SmbProvider : public org::chromium::SmbProviderAdaptor,
   // ReadDirProgress.
   IdMap<std::unique_ptr<ReadDirProgress>> read_dir_tracker_;
   const base::FilePath daemon_store_directory_;
-
-  DISALLOW_COPY_AND_ASSIGN(SmbProvider);
 };
 
 }  // namespace smbprovider

@@ -15,12 +15,12 @@ namespace permission_broker {
 class AllowHidrawDeviceRule : public HidrawSubsystemUdevRule {
  public:
   AllowHidrawDeviceRule();
+  AllowHidrawDeviceRule(const AllowHidrawDeviceRule&) = delete;
+  AllowHidrawDeviceRule& operator=(const AllowHidrawDeviceRule&) = delete;
+
   ~AllowHidrawDeviceRule() override = default;
 
   Result ProcessHidrawDevice(struct udev_device* device) override;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(AllowHidrawDeviceRule);
 };
 
 }  // namespace permission_broker

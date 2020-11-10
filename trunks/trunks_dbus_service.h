@@ -30,6 +30,9 @@ namespace trunks {
 class TrunksDBusService : public brillo::DBusServiceDaemon {
  public:
   TrunksDBusService();
+  TrunksDBusService(const TrunksDBusService&) = delete;
+  TrunksDBusService& operator=(const TrunksDBusService&) = delete;
+
   ~TrunksDBusService() override = default;
 
   // The |transceiver| will be the target of all incoming TPM commands. This
@@ -68,7 +71,6 @@ class TrunksDBusService : public brillo::DBusServiceDaemon {
 
   // Declared last so weak pointers are invalidated first on destruction.
   base::WeakPtrFactory<TrunksDBusService> weak_factory_{this};
-  DISALLOW_COPY_AND_ASSIGN(TrunksDBusService);
 };
 
 }  // namespace trunks

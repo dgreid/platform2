@@ -66,6 +66,9 @@ class InputDeviceController : public policy::BacklightControllerObserver,
   };
 
   InputDeviceController();
+  InputDeviceController(const InputDeviceController&) = delete;
+  InputDeviceController& operator=(const InputDeviceController&) = delete;
+
   ~InputDeviceController() override;
 
   void Init(policy::BacklightController* backlight_controller,
@@ -128,8 +131,6 @@ class InputDeviceController : public policy::BacklightControllerObserver,
   Mode mode_ = Mode::LAPTOP;
 
   bool initialized_ = false;
-
-  DISALLOW_COPY_AND_ASSIGN(InputDeviceController);
 };
 
 }  // namespace policy

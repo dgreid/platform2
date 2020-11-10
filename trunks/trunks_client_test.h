@@ -25,6 +25,9 @@ class TrunksClientTest {
  public:
   // Does not take ownership of factory.
   explicit TrunksClientTest(const TrunksFactory& factory);
+  TrunksClientTest(const TrunksClientTest&) = delete;
+  TrunksClientTest& operator=(const TrunksClientTest&) = delete;
+
   virtual ~TrunksClientTest();
 
   // This test verifies that the Random Number Generator on the TPM is working
@@ -145,8 +148,6 @@ class TrunksClientTest {
 
   // Factory for instantiation of Tpm classes
   const TrunksFactory& factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(TrunksClientTest);
 };
 
 }  // namespace trunks

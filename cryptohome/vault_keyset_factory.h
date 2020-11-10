@@ -16,11 +16,11 @@ class VaultKeyset;
 class VaultKeysetFactory {
  public:
   VaultKeysetFactory();
+  VaultKeysetFactory(const VaultKeysetFactory&) = delete;
+  VaultKeysetFactory& operator=(const VaultKeysetFactory&) = delete;
+
   virtual ~VaultKeysetFactory();
   virtual VaultKeyset* New(Platform* platform, Crypto* crypto);
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(VaultKeysetFactory);
 };
 
 }  // namespace cryptohome

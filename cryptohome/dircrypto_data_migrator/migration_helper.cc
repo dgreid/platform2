@@ -101,6 +101,10 @@ class MigrationStartAndEndStatusReporter {
     ReportDircryptoMigrationStartStatus(
         migration_type, resumed_ ? kMigrationResumed : kMigrationStarted);
   }
+  MigrationStartAndEndStatusReporter(
+      const MigrationStartAndEndStatusReporter&) = delete;
+  MigrationStartAndEndStatusReporter& operator=(
+      const MigrationStartAndEndStatusReporter&) = delete;
 
   ~MigrationStartAndEndStatusReporter() {
     if (is_cancelled_.IsSet()) {
@@ -137,8 +141,6 @@ class MigrationStartAndEndStatusReporter {
   const bool resumed_;
   const AtomicFlag& is_cancelled_;
   DircryptoMigrationEndStatus end_status_;
-
-  DISALLOW_COPY_AND_ASSIGN(MigrationStartAndEndStatusReporter);
 };
 
 struct PathTypeMapping {
@@ -187,6 +189,8 @@ class MigrationHelper::WorkerPool {
       : migration_helper_(migration_helper),
         job_thread_wakeup_condition_(&jobs_lock_),
         main_thread_wakeup_condition_(&jobs_lock_) {}
+  WorkerPool(const WorkerPool&) = delete;
+  WorkerPool& operator=(const WorkerPool&) = delete;
 
   ~WorkerPool() { Join(); }
 
@@ -308,8 +312,6 @@ class MigrationHelper::WorkerPool {
   // Condition variables associated with jobs_lock_.
   base::ConditionVariable job_thread_wakeup_condition_;
   base::ConditionVariable main_thread_wakeup_condition_;
-
-  DISALLOW_COPY_AND_ASSIGN(WorkerPool);
 };
 
 MigrationHelper::MigrationHelper(Platform* platform,

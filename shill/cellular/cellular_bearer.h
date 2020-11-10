@@ -34,6 +34,9 @@ class CellularBearer {
   CellularBearer(ControlInterface* control_interface,
                  const RpcIdentifier& dbus_path,
                  const std::string& dbus_service);
+  CellularBearer(const CellularBearer&) = delete;
+  CellularBearer& operator=(const CellularBearer&) = delete;
+
   ~CellularBearer();
 
   // Initializes this object by creating a DBus properties proxy to observe
@@ -120,8 +123,6 @@ class CellularBearer {
   std::unique_ptr<IPConfig::Properties> ipv4_config_properties_;
   IPConfig::Method ipv6_config_method_;
   std::unique_ptr<IPConfig::Properties> ipv6_config_properties_;
-
-  DISALLOW_COPY_AND_ASSIGN(CellularBearer);
 };
 
 }  // namespace shill

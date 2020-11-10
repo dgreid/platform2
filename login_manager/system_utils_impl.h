@@ -28,6 +28,9 @@ namespace login_manager {
 class SystemUtilsImpl : public SystemUtils {
  public:
   SystemUtilsImpl();
+  SystemUtilsImpl(const SystemUtilsImpl&) = delete;
+  SystemUtilsImpl& operator=(const SystemUtilsImpl&) = delete;
+
   ~SystemUtilsImpl() override;
 
   int kill(pid_t pid, uid_t owner, int signal) override;
@@ -97,8 +100,6 @@ class SystemUtilsImpl : public SystemUtils {
   VmState vm_state_ = VmState::UNKNOWN;
   base::ScopedTempDir temp_dir_;
   base::FilePath base_dir_for_testing_;
-
-  DISALLOW_COPY_AND_ASSIGN(SystemUtilsImpl);
 };
 
 }  // namespace login_manager

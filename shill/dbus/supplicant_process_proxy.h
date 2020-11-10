@@ -27,6 +27,9 @@ class SupplicantProcessProxy : public SupplicantProcessProxyInterface {
                          const scoped_refptr<dbus::Bus>& bus,
                          const base::Closure& service_appeared_callback,
                          const base::Closure& service_vanished_callback);
+  SupplicantProcessProxy(const SupplicantProcessProxy&) = delete;
+  SupplicantProcessProxy& operator=(const SupplicantProcessProxy&) = delete;
+
   ~SupplicantProcessProxy() override;
 
   // Implementation of SupplicantProcessProxyInterface.
@@ -47,6 +50,9 @@ class SupplicantProcessProxy : public SupplicantProcessProxyInterface {
     PropertySet(dbus::ObjectProxy* object_proxy,
                 const std::string& interface_name,
                 const PropertyChangedCallback& callback);
+    PropertySet(const PropertySet&) = delete;
+    PropertySet& operator=(const PropertySet&) = delete;
+
     brillo::dbus_utils::Property<std::string> debug_level;
     brillo::dbus_utils::Property<bool> debug_timestamp;
     brillo::dbus_utils::Property<bool> debug_show_keys;
@@ -54,7 +60,6 @@ class SupplicantProcessProxy : public SupplicantProcessProxyInterface {
     brillo::dbus_utils::Property<std::vector<std::string>> eap_methods;
 
    private:
-    DISALLOW_COPY_AND_ASSIGN(PropertySet);
   };
 
   static const char kInterfaceName[];
@@ -93,7 +98,6 @@ class SupplicantProcessProxy : public SupplicantProcessProxyInterface {
   bool service_available_;
 
   base::WeakPtrFactory<SupplicantProcessProxy> weak_factory_{this};
-  DISALLOW_COPY_AND_ASSIGN(SupplicantProcessProxy);
 };
 
 }  // namespace shill

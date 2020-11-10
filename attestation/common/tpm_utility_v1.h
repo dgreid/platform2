@@ -22,6 +22,9 @@ namespace attestation {
 class TpmUtilityV1 : public TpmUtilityCommon {
  public:
   TpmUtilityV1() = default;
+  TpmUtilityV1(const TpmUtilityV1&) = delete;
+  TpmUtilityV1& operator=(const TpmUtilityV1&) = delete;
+
   ~TpmUtilityV1() override;
 
   // TpmUtility methods.
@@ -206,8 +209,6 @@ class TpmUtilityV1 : public TpmUtilityCommon {
   trousers::ScopedTssContext context_handle_;
   TSS_HTPM tpm_handle_{0};
   trousers::ScopedTssKey srk_handle_{0};
-
-  DISALLOW_COPY_AND_ASSIGN(TpmUtilityV1);
 };
 
 }  // namespace attestation

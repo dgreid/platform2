@@ -32,6 +32,9 @@ std::string Hex(uint8_t byte) {
 class TestDelegate : public ExternalDisplay::Delegate {
  public:
   TestDelegate() : report_write_failure_(false), report_read_failure_(false) {}
+  TestDelegate(const TestDelegate&) = delete;
+  TestDelegate& operator=(const TestDelegate&) = delete;
+
   ~TestDelegate() override {}
 
   void set_reply_message(const std::vector<uint8_t>& message) {
@@ -114,8 +117,6 @@ class TestDelegate : public ExternalDisplay::Delegate {
   // True if either writes or reads should report failure.
   bool report_write_failure_;
   bool report_read_failure_;
-
-  DISALLOW_COPY_AND_ASSIGN(TestDelegate);
 };
 
 }  // namespace

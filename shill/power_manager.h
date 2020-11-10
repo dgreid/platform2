@@ -46,6 +46,9 @@ class PowerManager : public PowerManagerProxyDelegate {
   // |control_itnerface| creates the PowerManagerProxy. Use a fake for testing.
   // Note: |Start| should be called to initialize this object before using it.
   explicit PowerManager(ControlInterface* control_interface);
+  PowerManager(const PowerManager&) = delete;
+  PowerManager& operator=(const PowerManager&) = delete;
+
   ~PowerManager() override;
 
   bool suspending() const { return suspending_; }
@@ -150,8 +153,6 @@ class PowerManager : public PowerManagerProxyDelegate {
 
   power_manager::WifiRegDomainDbus wifi_reg_domain_;
   bool wifi_reg_domain_is_set;
-
-  DISALLOW_COPY_AND_ASSIGN(PowerManager);
 };
 
 }  // namespace shill

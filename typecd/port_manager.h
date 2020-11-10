@@ -23,6 +23,8 @@ namespace typecd {
 class PortManager : public UdevMonitor::Observer {
  public:
   PortManager() = default;
+  PortManager(const PortManager&) = delete;
+  PortManager& operator=(const PortManager&) = delete;
 
  private:
   // UdevMonitor::Observer overrides.
@@ -40,8 +42,6 @@ class PortManager : public UdevMonitor::Observer {
                              bool added) override;
 
   std::map<int, std::unique_ptr<Port>> ports_;
-
-  DISALLOW_COPY_AND_ASSIGN(PortManager);
 };
 
 }  // namespace typecd

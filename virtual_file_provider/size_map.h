@@ -19,6 +19,9 @@ namespace virtual_file_provider {
 class SizeMap {
  public:
   SizeMap();
+  SizeMap(const SizeMap&) = delete;
+  SizeMap& operator=(const SizeMap&) = delete;
+
   ~SizeMap();
 
   // Sets the size of the specified entry.
@@ -33,8 +36,6 @@ class SizeMap {
  private:
   std::map<std::string, int64_t> id_to_size_;
   base::Lock id_to_size_lock_;
-
-  DISALLOW_COPY_AND_ASSIGN(SizeMap);
 };
 
 }  // namespace virtual_file_provider

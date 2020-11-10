@@ -20,12 +20,11 @@ namespace smbprovider {
 class SmbProviderHelperTest : public testing::Test {
  public:
   SmbProviderHelperTest() = default;
+  SmbProviderHelperTest(const SmbProviderHelperTest&) = delete;
+  SmbProviderHelperTest& operator=(const SmbProviderHelperTest&) = delete;
 
  protected:
   TempFileManager temp_file_manager_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(SmbProviderHelperTest);
 };
 
 // Tests that AppendPath properly appends with or without the trailing separator

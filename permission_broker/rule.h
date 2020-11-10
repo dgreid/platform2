@@ -37,11 +37,11 @@ class Rule {
 
  protected:
   explicit Rule(const std::string& name);
+  Rule(const Rule&) = delete;
+  Rule& operator=(const Rule&) = delete;
 
  private:
   const std::string name_;
-
-  DISALLOW_COPY_AND_ASSIGN(Rule);
 };
 
 }  // namespace permission_broker

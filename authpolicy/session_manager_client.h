@@ -32,6 +32,9 @@ namespace authpolicy {
 class SessionManagerClient {
  public:
   explicit SessionManagerClient(brillo::dbus_utils::DBusObject* dbus_object);
+  SessionManagerClient(const SessionManagerClient&) = delete;
+  SessionManagerClient& operator=(const SessionManagerClient&) = delete;
+
   virtual ~SessionManagerClient();
 
   // Exposed Session Manager methods.
@@ -73,8 +76,6 @@ class SessionManagerClient {
 
   std::unique_ptr<org::chromium::SessionManagerInterfaceProxy> proxy_;
   base::WeakPtrFactory<SessionManagerClient> weak_ptr_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(SessionManagerClient);
 };
 
 }  // namespace authpolicy

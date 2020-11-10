@@ -22,6 +22,9 @@ namespace kerberos {
 class Krb5InterfaceImpl : public Krb5Interface {
  public:
   Krb5InterfaceImpl();
+  Krb5InterfaceImpl(const Krb5InterfaceImpl&) = delete;
+  Krb5InterfaceImpl& operator=(const Krb5InterfaceImpl&) = delete;
+
   ~Krb5InterfaceImpl() override;
 
   // Krb5Interface:
@@ -45,8 +48,6 @@ class Krb5InterfaceImpl : public Krb5Interface {
 
  private:
   ConfigParser config_parser_;
-
-  DISALLOW_COPY_AND_ASSIGN(Krb5InterfaceImpl);
 };
 
 }  // namespace kerberos

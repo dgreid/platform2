@@ -190,6 +190,9 @@ class ConnectionDiagnostics {
                         Metrics* metrics,
                         const DeviceInfo* device_info,
                         const ResultCallback& result_callback);
+  ConnectionDiagnostics(const ConnectionDiagnostics&) = delete;
+  ConnectionDiagnostics& operator=(const ConnectionDiagnostics&) = delete;
+
   ~ConnectionDiagnostics();
 
   // Starts diagnosing problems that |connection_| encounters reaching
@@ -375,8 +378,6 @@ class ConnectionDiagnostics {
   // Record of all diagnostic events that occurred, sorted in order of
   // occurrence.
   std::vector<Event> diagnostic_events_;
-
-  DISALLOW_COPY_AND_ASSIGN(ConnectionDiagnostics);
 };
 
 }  // namespace shill

@@ -25,6 +25,9 @@ class ServiceUnderTest : public Service {
   static const char kStorageId[];
 
   explicit ServiceUnderTest(Manager* manager);
+  ServiceUnderTest(const ServiceUnderTest&) = delete;
+  ServiceUnderTest& operator=(const ServiceUnderTest&) = delete;
+
   ~ServiceUnderTest() override;
 
   const RpcIdentifier& GetRpcIdentifier() const override;
@@ -60,8 +63,6 @@ class ServiceUnderTest : public Service {
   KeyValueStore key_value_store_;
 
   bool disconnectable_;
-
-  DISALLOW_COPY_AND_ASSIGN(ServiceUnderTest);
 };
 
 }  // namespace shill

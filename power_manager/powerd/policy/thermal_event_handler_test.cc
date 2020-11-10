@@ -30,6 +30,8 @@ class ThermalEventHandlerTest : public ::testing::Test {
     handler_.clock_for_testing()->set_current_time_for_testing(
         base::TimeTicks::FromInternalValue(1000));
   }
+  ThermalEventHandlerTest(const ThermalEventHandlerTest&) = delete;
+  ThermalEventHandlerTest& operator=(const ThermalEventHandlerTest&) = delete;
   ~ThermalEventHandlerTest() override {}
 
   void SetUp() override { handler_.Init(); }
@@ -69,9 +71,6 @@ class ThermalEventHandlerTest : public ::testing::Test {
     handler_.clock_for_testing()->set_current_time_for_testing(Now() +
                                                                interval);
   }
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ThermalEventHandlerTest);
 };
 
 TEST_F(ThermalEventHandlerTest, BasicThermalEvents) {

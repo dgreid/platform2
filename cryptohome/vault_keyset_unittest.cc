@@ -31,6 +31,9 @@ using ::testing::WithArg;
 class VaultKeysetTest : public ::testing::Test {
  public:
   VaultKeysetTest() {}
+  VaultKeysetTest(const VaultKeysetTest&) = delete;
+  VaultKeysetTest& operator=(const VaultKeysetTest&) = delete;
+
   virtual ~VaultKeysetTest() {}
 
   static bool FindBlobInBlob(const brillo::SecureBlob& haystack,
@@ -49,9 +52,6 @@ class VaultKeysetTest : public ::testing::Test {
 
  protected:
   MockPlatform platform_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(VaultKeysetTest);
 };
 
 TEST_F(VaultKeysetTest, AllocateRandom) {

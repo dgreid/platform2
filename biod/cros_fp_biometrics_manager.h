@@ -30,6 +30,8 @@ class CrosFpBiometricsManager : public BiometricsManager {
       std::unique_ptr<PowerButtonFilterInterface> power_button_filter,
       std::unique_ptr<CrosFpDeviceInterface> cros_fp_device,
       std::unique_ptr<BiodMetricsInterface> biod_metrics);
+  CrosFpBiometricsManager(const CrosFpBiometricsManager&) = delete;
+  CrosFpBiometricsManager& operator=(const CrosFpBiometricsManager&) = delete;
 
   // BiometricsManager overrides:
   ~CrosFpBiometricsManager() override;
@@ -175,8 +177,6 @@ class CrosFpBiometricsManager : public BiometricsManager {
   bool use_positive_match_secret_;
 
   std::unique_ptr<base::RepeatingTimer> maintenance_timer_;
-
-  DISALLOW_COPY_AND_ASSIGN(CrosFpBiometricsManager);
 };
 
 }  // namespace biod

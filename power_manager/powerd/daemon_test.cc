@@ -120,6 +120,9 @@ class DaemonTest : public ::testing::Test, public DaemonDelegate {
     battery_tool_lock_path_ = temp_dir_.GetPath().Append("battery_tool_lock");
     proc_path_ = temp_dir_.GetPath().Append("proc");
   }
+  DaemonTest(const DaemonTest&) = delete;
+  DaemonTest& operator=(const DaemonTest&) = delete;
+
   ~DaemonTest() override {}
 
   void Init() {
@@ -422,9 +425,6 @@ class DaemonTest : public ::testing::Test, public DaemonDelegate {
   std::vector<std::string> sync_commands_;
 
   std::unique_ptr<Daemon> daemon_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(DaemonTest);
 };
 
 TEST_F(DaemonTest, NotifyMembersAboutEvents) {

@@ -87,6 +87,9 @@ class Service : public brillo::dbus::AbstractDbusService,
                 public CryptohomeEventSourceSink {
  public:
   Service();
+  Service(const Service&) = delete;
+  Service& operator=(const Service&) = delete;
+
   virtual ~Service();
 
   // Create the right Service based on command-line flags and TPM version.
@@ -1097,8 +1100,6 @@ class Service : public brillo::dbus::AbstractDbusService,
 
   // This is set to true iff OwnershipCallback has run.
   bool ownership_callback_has_run_;
-
-  DISALLOW_COPY_AND_ASSIGN(Service);
 };
 
 }  // namespace cryptohome

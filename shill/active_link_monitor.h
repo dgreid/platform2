@@ -61,6 +61,9 @@ class ActiveLinkMonitor {
                     DeviceInfo* device_info,
                     const FailureCallback& failure_callback,
                     const SuccessCallback& success_callback);
+  ActiveLinkMonitor(const ActiveLinkMonitor&) = delete;
+  ActiveLinkMonitor& operator=(const ActiveLinkMonitor&) = delete;
+
   virtual ~ActiveLinkMonitor();
 
   // Starts an active link-monitoring cycle on the selected connection, with
@@ -195,8 +198,6 @@ class ActiveLinkMonitor {
   struct timeval sent_request_at_;
   // Time instance for performing GetTimeMonotonic().
   Time* time_;
-
-  DISALLOW_COPY_AND_ASSIGN(ActiveLinkMonitor);
 };
 
 }  // namespace shill

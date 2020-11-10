@@ -36,6 +36,9 @@ class MinijailedProcessRunner {
   // Provided for testing only.
   MinijailedProcessRunner(brillo::Minijail* mj,
                           std::unique_ptr<SyscallImpl> syscall);
+  MinijailedProcessRunner(const MinijailedProcessRunner&) = delete;
+  MinijailedProcessRunner& operator=(const MinijailedProcessRunner&) = delete;
+
   virtual ~MinijailedProcessRunner() = default;
 
   // Runs brctl.
@@ -111,8 +114,6 @@ class MinijailedProcessRunner {
   brillo::Minijail* mj_;
 
   std::unique_ptr<SyscallImpl> syscall_;
-
-  DISALLOW_COPY_AND_ASSIGN(MinijailedProcessRunner);
 };
 
 }  // namespace patchpanel

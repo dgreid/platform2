@@ -27,6 +27,8 @@ struct FileDescriptor {
   FileDescriptor(int fd) : fd(dup(fd)) {}
   FileDescriptor(FileDescriptor&& other) : fd(std::move(other.fd)) {}
   FileDescriptor(base::ScopedFD&& other) : fd(std::move(other)) {}
+  FileDescriptor(const FileDescriptor&) = delete;
+  FileDescriptor& operator=(const FileDescriptor&) = delete;
 
   inline FileDescriptor& operator=(int new_fd) {
     fd.reset(dup(new_fd));
@@ -48,7 +50,6 @@ struct FileDescriptor {
   int get() const { return fd.get(); }
 
  private:
-  DISALLOW_COPY_AND_ASSIGN(FileDescriptor);
 
   base::ScopedFD fd;
 };

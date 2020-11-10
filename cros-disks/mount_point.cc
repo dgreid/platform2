@@ -20,12 +20,12 @@ class LeakingMountPoint : public MountPoint {
  public:
   explicit LeakingMountPoint(const base::FilePath& path) : MountPoint(path) {}
   ~LeakingMountPoint() override { DestructorUnmount(); }
+  LeakingMountPoint(const LeakingMountPoint&) = delete;
+  LeakingMountPoint& operator=(const LeakingMountPoint&) = delete;
 
  protected:
   // MountPoint overrides.
   MountErrorType UnmountImpl() override { return MOUNT_ERROR_PATH_NOT_MOUNTED; }
-
-  DISALLOW_COPY_AND_ASSIGN(LeakingMountPoint);
 };
 
 }  // namespace

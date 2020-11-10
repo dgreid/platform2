@@ -80,6 +80,11 @@ constexpr char kRequestOrigin[] = "SomeOrigin";
 class LegacyCryptohomeInterfaceAdaptorTest : public ::testing::Test {
  public:
   LegacyCryptohomeInterfaceAdaptorTest() = default;
+  LegacyCryptohomeInterfaceAdaptorTest(
+      const LegacyCryptohomeInterfaceAdaptorTest&) = delete;
+  LegacyCryptohomeInterfaceAdaptorTest& operator=(
+      const LegacyCryptohomeInterfaceAdaptorTest&) = delete;
+
   ~LegacyCryptohomeInterfaceAdaptorTest() override = default;
 
   void SetUp() override {
@@ -111,9 +116,6 @@ class LegacyCryptohomeInterfaceAdaptorTest : public ::testing::Test {
   // value to avoid repeating the same pattern in many test.
   cryptohome::AccountIdentifier account_;
   cryptohome::AuthorizationRequest auth_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(LegacyCryptohomeInterfaceAdaptorTest);
 };
 
 // -------------------------- MountEx Related Tests --------------------------
@@ -966,6 +968,11 @@ class LegacyCryptohomeInterfaceAdaptorTestForGetTpmStatus
     : public LegacyCryptohomeInterfaceAdaptorTest {
  public:
   LegacyCryptohomeInterfaceAdaptorTestForGetTpmStatus() = default;
+  LegacyCryptohomeInterfaceAdaptorTestForGetTpmStatus(
+      const LegacyCryptohomeInterfaceAdaptorTestForGetTpmStatus&) = delete;
+  LegacyCryptohomeInterfaceAdaptorTestForGetTpmStatus& operator=(
+      const LegacyCryptohomeInterfaceAdaptorTestForGetTpmStatus&) = delete;
+
   ~LegacyCryptohomeInterfaceAdaptorTestForGetTpmStatus() override = default;
 
  protected:
@@ -1116,8 +1123,6 @@ class LegacyCryptohomeInterfaceAdaptorTestForGetTpmStatus
                          DBUS_ERROR_FAILED, "Here's a fake error");
     return error;
   }
-
-  DISALLOW_COPY_AND_ASSIGN(LegacyCryptohomeInterfaceAdaptorTestForGetTpmStatus);
 };
 
 constexpr char LegacyCryptohomeInterfaceAdaptorTestForGetTpmStatus::kPassword[];

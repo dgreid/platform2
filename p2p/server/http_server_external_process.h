@@ -28,6 +28,10 @@ class HttpServerExternalProcess : public HttpServer {
                             const base::FilePath& root_dir,
                             const base::FilePath& bin_dir,
                             uint16_t port);
+  HttpServerExternalProcess(const HttpServerExternalProcess&) = delete;
+  HttpServerExternalProcess& operator=(const HttpServerExternalProcess&) =
+      delete;
+
   ~HttpServerExternalProcess();
 
   virtual bool Start();
@@ -84,8 +88,6 @@ class HttpServerExternalProcess : public HttpServer {
   std::unique_ptr<
       p2p::util::StructSerializerWatcher<p2p::util::P2PServerMessage>>
       child_watch_;
-
-  DISALLOW_COPY_AND_ASSIGN(HttpServerExternalProcess);
 };
 
 }  // namespace server

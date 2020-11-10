@@ -66,6 +66,8 @@ class HttpProxyTest : public testing::Test {
                        dbus::ObjectPath(chromeos::kNetworkProxyServicePath)))
         .WillOnce(Return(object_proxy_.get()));
   }
+  HttpProxyTest(const HttpProxyTest&) = delete;
+  HttpProxyTest& operator=(const HttpProxyTest&) = delete;
 
   std::unique_ptr<dbus::Response> CreateDBusResponse(
       dbus::MethodCall* method_call) {
@@ -92,9 +94,6 @@ class HttpProxyTest : public testing::Test {
   std::string proxy_err_;
   bool null_dbus_response_ = false;
   bool invalid_dbus_response_ = false;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(HttpProxyTest);
 };
 
 TEST_F(HttpProxyTest, DBusNullResponseFails) {

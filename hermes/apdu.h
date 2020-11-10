@@ -53,6 +53,9 @@ class CommandApdu {
               uint16_t le = 0);
 
   CommandApdu(CommandApdu&&) = default;
+  CommandApdu(const CommandApdu&) = delete;
+  CommandApdu& operator=(const CommandApdu&) = delete;
+
   CommandApdu& operator=(CommandApdu&&) = default;
 
   // Add data to the APDU.
@@ -82,8 +85,6 @@ class CommandApdu {
   size_t current_index_;
   size_t max_data_size_;
   std::vector<uint8_t> data_;
-
-  DISALLOW_COPY_AND_ASSIGN(CommandApdu);
 };
 
 // Class representing a smart card response APDU.
@@ -92,6 +93,9 @@ class ResponseApdu {
   ResponseApdu() = default;
 
   ResponseApdu(ResponseApdu&&) = default;
+  ResponseApdu(const ResponseApdu&) = delete;
+  ResponseApdu& operator=(const ResponseApdu&) = delete;
+
   ResponseApdu& operator=(ResponseApdu&&) = default;
 
   // Add an entire received response APDU to this class. The response payload
@@ -120,8 +124,6 @@ class ResponseApdu {
 
  private:
   std::vector<uint8_t> data_;
-
-  DISALLOW_COPY_AND_ASSIGN(ResponseApdu);
 };
 
 }  // namespace hermes

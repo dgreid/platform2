@@ -84,6 +84,9 @@ class TestObserver : public InputObserver, public ActionRecorder {
   explicit TestObserver(InputWatcher* watcher) : watcher_(watcher) {
     watcher_->AddObserver(this);
   }
+  TestObserver(const TestObserver&) = delete;
+  TestObserver& operator=(const TestObserver&) = delete;
+
   ~TestObserver() override { watcher_->RemoveObserver(this); }
 
   // InputObserver implementation:
@@ -104,8 +107,6 @@ class TestObserver : public InputObserver, public ActionRecorder {
 
  private:
   InputWatcher* watcher_;  // Not owned.
-
-  DISALLOW_COPY_AND_ASSIGN(TestObserver);
 };
 
 }  // namespace

@@ -24,6 +24,8 @@ class ExportedInterface {
   ExportedInterface(const dbus::ObjectPath& object_path,
                     const std::string& interface_name,
                     brillo::dbus_utils::DBusObject* dbus_object);
+  ExportedInterface(const ExportedInterface&) = delete;
+  ExportedInterface& operator=(const ExportedInterface&) = delete;
 
   ~ExportedInterface() = default;
 
@@ -114,8 +116,6 @@ class ExportedInterface {
   std::map<std::string,
            std::unique_ptr<brillo::dbus_utils::ExportedPropertyBase>>
       exported_properties_;
-
-  DISALLOW_COPY_AND_ASSIGN(ExportedInterface);
 };
 
 // Wrapper of brillo::dbus_utils::DBusObject.
@@ -129,6 +129,9 @@ class ExportedObject {
       const dbus::ObjectPath& object_path,
       brillo::dbus_utils::DBusObject::PropertyHandlerSetupCallback
           property_handler_setup_callback);
+  ExportedObject(const ExportedObject&) = delete;
+  ExportedObject& operator=(const ExportedObject&) = delete;
+
   ~ExportedObject();
 
   // Returns the exported interface having name |interface_name|. The returned
@@ -161,8 +164,6 @@ class ExportedObject {
       exported_interfaces_;
 
   bool is_registered_ = false;
-
-  DISALLOW_COPY_AND_ASSIGN(ExportedObject);
 };
 
 // A wrapper of brillo::dbus_utils::ExportedObjectManager that provides a higher
@@ -173,6 +174,9 @@ class ExportedObjectManagerWrapper {
       scoped_refptr<dbus::Bus> bus,
       std::unique_ptr<brillo::dbus_utils::ExportedObjectManager>
           exported_object_manager);
+  ExportedObjectManagerWrapper(const ExportedObjectManagerWrapper&) = delete;
+  ExportedObjectManagerWrapper& operator=(const ExportedObjectManagerWrapper&) =
+      delete;
 
   // Set the property handler setup callback that will be used to handle D-Bus'
   // Properties method handlers (Get/Set/GetAll).
@@ -229,8 +233,6 @@ class ExportedObjectManagerWrapper {
   // Must come last so that weak pointers will be invalidated before other
   // members are destroyed.
   base::WeakPtrFactory<ExportedObjectManagerWrapper> weak_ptr_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(ExportedObjectManagerWrapper);
 };
 
 }  // namespace bluetooth

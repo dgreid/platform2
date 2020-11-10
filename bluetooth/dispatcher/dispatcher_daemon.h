@@ -16,6 +16,9 @@ namespace bluetooth {
 class DispatcherDaemon : public BluetoothDaemon {
  public:
   DispatcherDaemon() = default;
+  DispatcherDaemon(const DispatcherDaemon&) = delete;
+  DispatcherDaemon& operator=(const DispatcherDaemon&) = delete;
+
   ~DispatcherDaemon() override = default;
 
   // Initializes the daemon D-Bus operations.
@@ -28,8 +31,6 @@ class DispatcherDaemon : public BluetoothDaemon {
 
   // Exposes D-Bus API to enable debug logs
   std::unique_ptr<DispatcherDebugManager> debug_manager_;
-
-  DISALLOW_COPY_AND_ASSIGN(DispatcherDaemon);
 };
 
 }  // namespace bluetooth

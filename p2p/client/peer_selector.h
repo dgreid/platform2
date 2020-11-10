@@ -25,6 +25,8 @@ class PeerSelector {
  public:
   // Constructs the PeerSelector with the provided interfaces.
   PeerSelector(ServiceFinder* finder, p2p::common::ClockInterface* clock);
+  PeerSelector(const PeerSelector&) = delete;
+  PeerSelector& operator=(const PeerSelector&) = delete;
 
   // Finds an URL for the file |id| with at least |minimum_size| bytes and
   // waits until the number of connections in the LAN has dropped below the
@@ -103,8 +105,6 @@ class PeerSelector {
 
   // A flag used to signal the request was canceled.
   volatile bool must_exit_now_;
-
-  DISALLOW_COPY_AND_ASSIGN(PeerSelector);
 };
 
 }  // namespace client

@@ -29,6 +29,9 @@ class GpoVersionCacheTest : public ::testing::Test {
     cache_.SetClockForTesting(std::make_unique<base::SimpleTestClock>());
     flags_.set_log_caches(true);
   }
+  GpoVersionCacheTest(const GpoVersionCacheTest&) = delete;
+  GpoVersionCacheTest& operator=(const GpoVersionCacheTest&) = delete;
+
   ~GpoVersionCacheTest() override {}
 
  protected:
@@ -39,7 +42,6 @@ class GpoVersionCacheTest : public ::testing::Test {
 
  private:
   protos::DebugFlags flags_;
-  DISALLOW_COPY_AND_ASSIGN(GpoVersionCacheTest);
 };
 
 TEST_F(GpoVersionCacheTest, AddingAndRemoving) {

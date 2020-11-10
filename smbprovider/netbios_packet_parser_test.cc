@@ -23,13 +23,13 @@ const std::vector<uint8_t> CreateName(const std::string& name) {
 class NetBiosPacketParserTest : public testing::Test {
  public:
   NetBiosPacketParserTest() = default;
+  NetBiosPacketParserTest(const NetBiosPacketParserTest&) = delete;
+  NetBiosPacketParserTest& operator=(const NetBiosPacketParserTest&) = delete;
+
   ~NetBiosPacketParserTest() override = default;
 
  protected:
   const uint16_t transaction_id_ = 123;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(NetBiosPacketParserTest);
 };
 
 // An empty packet returns no results.

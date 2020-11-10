@@ -52,6 +52,9 @@ class BRILLO_EXPORT BiometricsManagerProxyBase {
 
  protected:
   BiometricsManagerProxyBase();
+  BiometricsManagerProxyBase(const BiometricsManagerProxyBase&) = delete;
+  BiometricsManagerProxyBase& operator=(const BiometricsManagerProxyBase&) =
+      delete;
 
   bool Initialize(const scoped_refptr<dbus::Bus>& bus,
                   const dbus::ObjectPath& path);
@@ -84,8 +87,6 @@ class BRILLO_EXPORT BiometricsManagerProxyBase {
   base::WeakPtrFactory<BiometricsManagerProxyBase> weak_factory_;
 
   dbus::ObjectProxy* biod_auth_session_;
-
-  DISALLOW_COPY_AND_ASSIGN(BiometricsManagerProxyBase);
 };
 
 }  // namespace biod

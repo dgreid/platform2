@@ -23,6 +23,8 @@ namespace cryptohome {
 class TpmBoundToPcrAuthBlock : public AuthBlock {
  public:
   TpmBoundToPcrAuthBlock(Tpm* tpm, TpmInit* tpm_init);
+  TpmBoundToPcrAuthBlock(const TpmBoundToPcrAuthBlock&) = delete;
+  TpmBoundToPcrAuthBlock& operator=(const TpmBoundToPcrAuthBlock&) = delete;
 
   base::Optional<AuthBlockState> Create(const AuthInput& user_input,
                                         KeyBlobs* key_blobs,
@@ -48,8 +50,6 @@ class TpmBoundToPcrAuthBlock : public AuthBlock {
   TpmAuthBlockUtils utils_;
 
   FRIEND_TEST_ALL_PREFIXES(TPMAuthBlockTest, DecryptBoundToPcrTest);
-
-  DISALLOW_COPY_AND_ASSIGN(TpmBoundToPcrAuthBlock);
 };
 
 }  // namespace cryptohome

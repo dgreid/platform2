@@ -104,6 +104,9 @@ class PluginVm final : public VmBaseImpl {
            base::FilePath iso_dir,
            base::FilePath root_dir,
            base::FilePath runtime_dir);
+  PluginVm(const PluginVm&) = delete;
+  PluginVm& operator=(const PluginVm&) = delete;
+
   void HandleSuspendImminent() override {}
   void HandleSuspendDone() override {}
   bool Start(base::FilePath stateful_dir,
@@ -165,8 +168,6 @@ class PluginVm final : public VmBaseImpl {
   std::unique_ptr<base::FileDescriptorWatcher::Controller> usb_vm_read_watcher_;
   std::unique_ptr<base::FileDescriptorWatcher::Controller>
       usb_vm_write_watcher_;
-
-  DISALLOW_COPY_AND_ASSIGN(PluginVm);
 };
 
 }  // namespace concierge

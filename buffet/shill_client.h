@@ -29,6 +29,9 @@ class ShillClient final : public weave::provider::Network,
   ShillClient(const scoped_refptr<dbus::Bus>& bus,
               const std::set<std::string>& device_whitelist,
               bool disable_xmpp);
+  ShillClient(const ShillClient&) = delete;
+  ShillClient& operator=(const ShillClient&) = delete;
+
   ~ShillClient();
 
   void Init();
@@ -122,8 +125,6 @@ class ShillClient final : public weave::provider::Network,
   std::string ip_address_;
 
   base::WeakPtrFactory<ShillClient> weak_factory_{this};
-
-  DISALLOW_COPY_AND_ASSIGN(ShillClient);
 };
 
 }  // namespace buffet

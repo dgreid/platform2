@@ -182,6 +182,9 @@ class NetlinkManagerTest : public Test {
     MockHandlerNetlink()
         : on_netlink_message_(base::Bind(&MockHandlerNetlink::OnNetlinkMessage,
                                          base::Unretained(this))) {}
+    MockHandlerNetlink(const MockHandlerNetlink&) = delete;
+    MockHandlerNetlink& operator=(const MockHandlerNetlink&) = delete;
+
     MOCK_METHOD(void, OnNetlinkMessage, (const NetlinkMessage& msg));
     const NetlinkManager::NetlinkMessageHandler& on_netlink_message() const {
       return on_netlink_message_;
@@ -189,7 +192,6 @@ class NetlinkManagerTest : public Test {
 
    private:
     NetlinkManager::NetlinkMessageHandler on_netlink_message_;
-    DISALLOW_COPY_AND_ASSIGN(MockHandlerNetlink);
   };
 
   class MockHandlerNetlinkAuxilliary {
@@ -198,6 +200,10 @@ class NetlinkManagerTest : public Test {
         : on_netlink_message_(
               base::Bind(&MockHandlerNetlinkAuxilliary::OnErrorHandler,
                          base::Unretained(this))) {}
+    MockHandlerNetlinkAuxilliary(const MockHandlerNetlinkAuxilliary&) = delete;
+    MockHandlerNetlinkAuxilliary& operator=(
+        const MockHandlerNetlinkAuxilliary&) = delete;
+
     MOCK_METHOD(void,
                 OnErrorHandler,
                 (NetlinkManager::AuxilliaryMessageType, const NetlinkMessage*));
@@ -208,7 +214,6 @@ class NetlinkManagerTest : public Test {
 
    private:
     NetlinkManager::NetlinkAuxilliaryMessageHandler on_netlink_message_;
-    DISALLOW_COPY_AND_ASSIGN(MockHandlerNetlinkAuxilliary);
   };
 
   class MockHandler80211 {
@@ -216,6 +221,9 @@ class NetlinkManagerTest : public Test {
     MockHandler80211()
         : on_netlink_message_(base::Bind(&MockHandler80211::OnNetlinkMessage,
                                          base::Unretained(this))) {}
+    MockHandler80211(const MockHandler80211&) = delete;
+    MockHandler80211& operator=(const MockHandler80211&) = delete;
+
     MOCK_METHOD(void, OnNetlinkMessage, (const Nl80211Message&));
     const NetlinkManager::Nl80211MessageHandler& on_netlink_message() const {
       return on_netlink_message_;
@@ -223,7 +231,6 @@ class NetlinkManagerTest : public Test {
 
    private:
     NetlinkManager::Nl80211MessageHandler on_netlink_message_;
-    DISALLOW_COPY_AND_ASSIGN(MockHandler80211);
   };
 
   class MockHandlerNetlinkAck {
@@ -231,6 +238,9 @@ class NetlinkManagerTest : public Test {
     MockHandlerNetlinkAck()
         : on_netlink_message_(base::Bind(&MockHandlerNetlinkAck::OnAckHandler,
                                          base::Unretained(this))) {}
+    MockHandlerNetlinkAck(const MockHandlerNetlinkAck&) = delete;
+    MockHandlerNetlinkAck& operator=(const MockHandlerNetlinkAck&) = delete;
+
     MOCK_METHOD(void, OnAckHandler, (bool*));
     const NetlinkManager::NetlinkAckHandler& on_netlink_message() const {
       return on_netlink_message_;
@@ -238,7 +248,6 @@ class NetlinkManagerTest : public Test {
 
    private:
     NetlinkManager::NetlinkAckHandler on_netlink_message_;
-    DISALLOW_COPY_AND_ASSIGN(MockHandlerNetlinkAck);
   };
 
   void Reset() { netlink_manager_->Reset(false); }

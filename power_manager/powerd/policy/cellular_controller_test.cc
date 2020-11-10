@@ -23,6 +23,11 @@ constexpr int64_t kInvalidDprGpioNumber = -2;
 class TestCellularControllerDelegate : public CellularController::Delegate {
  public:
   TestCellularControllerDelegate() = default;
+  TestCellularControllerDelegate(const TestCellularControllerDelegate&) =
+      delete;
+  TestCellularControllerDelegate& operator=(
+      const TestCellularControllerDelegate&) = delete;
+
   ~TestCellularControllerDelegate() override = default;
 
   int num_set_calls() const { return num_set_calls_; }
@@ -56,8 +61,6 @@ class TestCellularControllerDelegate : public CellularController::Delegate {
 
   // Last DPR GPIO number passed to SetCellularTransmitPower().
   int64_t last_dpr_gpio_number_ = kUnknownDprGpioNumber;
-
-  DISALLOW_COPY_AND_ASSIGN(TestCellularControllerDelegate);
 };
 
 }  // namespace
@@ -65,6 +68,9 @@ class TestCellularControllerDelegate : public CellularController::Delegate {
 class CellularControllerTest : public ::testing::Test {
  public:
   CellularControllerTest() = default;
+  CellularControllerTest(const CellularControllerTest&) = delete;
+  CellularControllerTest& operator=(const CellularControllerTest&) = delete;
+
   ~CellularControllerTest() override = default;
 
  protected:
@@ -84,9 +90,6 @@ class CellularControllerTest : public ::testing::Test {
   FakePrefs prefs_;
   TestCellularControllerDelegate delegate_;
   CellularController controller_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(CellularControllerTest);
 };
 
 TEST_F(CellularControllerTest, LowPowerOnSensorDetect) {

@@ -23,6 +23,8 @@ class ResilientPolicyStore : public PolicyStore {
   // Expected to have non-null |metrics|.
   explicit ResilientPolicyStore(const base::FilePath& default_policy_path,
                                 LoginMetrics* metrics);
+  ResilientPolicyStore(const ResilientPolicyStore&) = delete;
+  ResilientPolicyStore& operator=(const ResilientPolicyStore&) = delete;
 
   // Persist |policy_| to disk. If it's the first call after boot, as
   // established by the absense of |kCleanupDoneFileName| temporary file, then
@@ -57,8 +59,6 @@ class ResilientPolicyStore : public PolicyStore {
                                             int number_of_invalid_files);
 
   LoginMetrics* metrics_ = nullptr;  //  Not owned.
-
-  DISALLOW_COPY_AND_ASSIGN(ResilientPolicyStore);
 };
 }  // namespace login_manager
 

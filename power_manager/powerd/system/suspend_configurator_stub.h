@@ -16,14 +16,14 @@ namespace system {
 class SuspendConfiguratorStub : public SuspendConfiguratorInterface {
  public:
   SuspendConfiguratorStub() = default;
+  SuspendConfiguratorStub(const SuspendConfiguratorStub&) = delete;
+  SuspendConfiguratorStub& operator=(const SuspendConfiguratorStub&) = delete;
+
   ~SuspendConfiguratorStub() override = default;
 
   // SuspendConfiguratorInterface implementation.
   void PrepareForSuspend(const base::TimeDelta& suspend_duration) override {}
   bool UndoPrepareForSuspend() override { return true; }
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(SuspendConfiguratorStub);
 };
 
 }  // namespace system

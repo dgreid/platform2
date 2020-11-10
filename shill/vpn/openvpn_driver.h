@@ -39,6 +39,9 @@ class OpenVPNDriver : public VPNDriver,
   };
 
   OpenVPNDriver(Manager* manager, ProcessManager* process_manager);
+  OpenVPNDriver(const OpenVPNDriver&) = delete;
+  OpenVPNDriver& operator=(const OpenVPNDriver&) = delete;
+
   ~OpenVPNDriver() override;
 
   virtual void OnReconnecting(ReconnectReason reason);
@@ -253,8 +256,6 @@ class OpenVPNDriver : public VPNDriver,
   VPNService::DriverEventCallback service_callback_;
 
   base::WeakPtrFactory<OpenVPNDriver> weak_factory_{this};
-
-  DISALLOW_COPY_AND_ASSIGN(OpenVPNDriver);
 };
 
 }  // namespace shill

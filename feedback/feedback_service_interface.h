@@ -55,14 +55,15 @@ class FeedbackServiceInterface
 class DBusFeedbackServiceInterface : public FeedbackServiceInterface {
  public:
   DBusFeedbackServiceInterface();
+  DBusFeedbackServiceInterface(const DBusFeedbackServiceInterface&) = delete;
+  DBusFeedbackServiceInterface& operator=(const DBusFeedbackServiceInterface&) =
+      delete;
 
   bool SendFeedback(const FeedbackCommon& feedback,
                     FeedbackResultCallback callback) override;
 
  private:
   scoped_refptr<dbus::Bus> bus_;
-
-  DISALLOW_COPY_AND_ASSIGN(DBusFeedbackServiceInterface);
 };
 
 #endif  // FEEDBACK_FEEDBACK_SERVICE_INTERFACE_H_

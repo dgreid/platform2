@@ -54,6 +54,8 @@ class Resolver {
 
  protected:
   Resolver();
+  Resolver(const Resolver&) = delete;
+  Resolver& operator=(const Resolver&) = delete;
 
  private:
   friend class ResolverTest;
@@ -61,8 +63,6 @@ class Resolver {
 
   base::FilePath path_;
   std::vector<std::string> ignored_search_list_;
-
-  DISALLOW_COPY_AND_ASSIGN(Resolver);
 };
 
 }  // namespace shill

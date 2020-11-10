@@ -30,6 +30,8 @@ class LogManager final {
   };
 
   LogManager() = default;
+  LogManager(const LogManager&) = delete;
+  LogManager& operator=(const LogManager&) = delete;
 
   // Initializes the logger and sets the log output directory.
   static void Init(const base::FilePath& log_directory);
@@ -63,7 +65,6 @@ class LogManager final {
   std::unique_ptr<LoggerInterface> logger_;
 
   base::WeakPtrFactory<LogManager> weak_ptr_factory_{this};
-  DISALLOW_COPY_AND_ASSIGN(LogManager);
 };
 
 }  // namespace webservd

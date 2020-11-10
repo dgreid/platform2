@@ -34,6 +34,8 @@ class MockServicePublisher : public ServicePublisher {
     ON_CALL(*this, files())
         .WillByDefault(testing::Invoke(&fake_, &FakeServicePublisher::files));
   }
+  MockServicePublisher(const MockServicePublisher&) = delete;
+  MockServicePublisher& operator=(const MockServicePublisher&) = delete;
 
   MOCK_METHOD(void, AddFile, (const std::string&, size_t), (override));
   MOCK_METHOD(void, RemoveFile, (const std::string&), (override));
@@ -45,8 +47,6 @@ class MockServicePublisher : public ServicePublisher {
 
  private:
   FakeServicePublisher fake_;
-
-  DISALLOW_COPY_AND_ASSIGN(MockServicePublisher);
 };
 
 }  // namespace server

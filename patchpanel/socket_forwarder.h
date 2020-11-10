@@ -28,6 +28,9 @@ class BRILLO_EXPORT SocketForwarder : public base::SimpleThread {
   SocketForwarder(const std::string& name,
                   std::unique_ptr<Socket> sock0,
                   std::unique_ptr<Socket> sock1);
+  SocketForwarder(const SocketForwarder&) = delete;
+  SocketForwarder& operator=(const SocketForwarder&) = delete;
+
   virtual ~SocketForwarder();
 
   // Runs the forwarder. The sockets are closed and released on exit,
@@ -68,8 +71,6 @@ class BRILLO_EXPORT SocketForwarder : public base::SimpleThread {
   std::atomic<bool> done_;
 
   base::OnceClosure stop_quit_closure_for_testing_;
-
-  DISALLOW_COPY_AND_ASSIGN(SocketForwarder);
 };
 
 }  // namespace patchpanel

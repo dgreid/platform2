@@ -25,6 +25,8 @@ using testing::MatchesRegex;
 class PolicyToolTest : public ::testing::Test {
  public:
   PolicyToolTest() = default;
+  PolicyToolTest(const PolicyToolTest&) = delete;
+  PolicyToolTest& operator=(const PolicyToolTest&) = delete;
 
   void SetUp() override {
     ASSERT_TRUE(temp_dir_.CreateUniqueTempDir());
@@ -40,8 +42,6 @@ class PolicyToolTest : public ::testing::Test {
   base::ScopedTempDir temp_dir_;
   FilePath dest_dir_path_;
   std::unique_ptr<PolicyTool> policy_tool_;
-
-  DISALLOW_COPY_AND_ASSIGN(PolicyToolTest);
 };
 
 // Test setting and clearing policy DeviceAllowBluetooth.

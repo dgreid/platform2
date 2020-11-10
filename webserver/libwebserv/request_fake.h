@@ -27,6 +27,8 @@ class RequestFake : public Request {
  public:
   RequestFake(const std::string& url, const std::string& method)
       : Request(url, method) {}
+  RequestFake(const RequestFake&) = delete;
+  RequestFake& operator=(const RequestFake&) = delete;
 
   void SetDataStream(brillo::StreamPtr data_stream) {
     data_stream_ = std::move(data_stream);
@@ -54,8 +56,6 @@ class RequestFake : public Request {
 
  private:
   brillo::StreamPtr data_stream_;
-
-  DISALLOW_COPY_AND_ASSIGN(RequestFake);
 };
 
 }  // namespace libwebserv

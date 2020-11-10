@@ -23,6 +23,9 @@ enum class StorageDeviceType {
 class MountFailureCollector : public CrashCollector {
  public:
   explicit MountFailureCollector(StorageDeviceType device_type);
+  MountFailureCollector(const MountFailureCollector&) = delete;
+  MountFailureCollector& operator=(const MountFailureCollector&) = delete;
+
   ~MountFailureCollector() override = default;
 
   bool Collect(bool is_mount_failure);
@@ -32,7 +35,6 @@ class MountFailureCollector : public CrashCollector {
 
  private:
   StorageDeviceType device_type_;
-  DISALLOW_COPY_AND_ASSIGN(MountFailureCollector);
 };
 
 #endif  // CRASH_REPORTER_MOUNT_FAILURE_COLLECTOR_H_

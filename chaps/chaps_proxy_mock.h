@@ -33,6 +33,8 @@ class ChapsProxyMock : public ChapsInterface {
             IsolateCredentialManager::GetDefaultIsolateCredential()) {
     EnableMockProxy(this, &isolate_credential_, is_initialized);
   }
+  ChapsProxyMock(const ChapsProxyMock&) = delete;
+  ChapsProxyMock& operator=(const ChapsProxyMock&) = delete;
 
   ~ChapsProxyMock() override { DisableMockProxy(); }
 
@@ -357,8 +359,6 @@ class ChapsProxyMock : public ChapsInterface {
 
  private:
   brillo::SecureBlob isolate_credential_;
-
-  DISALLOW_COPY_AND_ASSIGN(ChapsProxyMock);
 };
 
 }  // namespace chaps

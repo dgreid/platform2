@@ -111,6 +111,8 @@ class SmbProviderTest : public testing::Test {
   }
 
   SmbProviderTest() { SetUpSmbProvider(false /* enable_metadata_cache */); }
+  SmbProviderTest(const SmbProviderTest&) = delete;
+  SmbProviderTest& operator=(const SmbProviderTest&) = delete;
 
  protected:
   using DirEntries = std::vector<smbc_dirent>;
@@ -352,9 +354,6 @@ class SmbProviderTest : public testing::Test {
   // |metadata_cache| is used to test the GetEntries method
   std::unique_ptr<MetadataCache> metadata_cache_;
   bool enable_ntlm_ = false;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(SmbProviderTest);
 };
 
 // Should properly serialize protobuf.

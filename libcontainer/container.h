@@ -17,14 +17,15 @@ namespace libcontainer {
 class BRILLO_EXPORT Container {
  public:
   Container(base::StringPiece name, const base::FilePath& rundir);
+  Container(const Container&) = delete;
+  Container& operator=(const Container&) = delete;
+
   ~Container();
 
   container* get() const { return container_; }
 
  private:
   container* const container_;
-
-  DISALLOW_COPY_AND_ASSIGN(Container);
 };
 
 }  // namespace libcontainer

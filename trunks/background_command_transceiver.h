@@ -38,6 +38,10 @@ class TRUNKS_EXPORT BackgroundCommandTransceiver : public CommandTransceiver {
   explicit BackgroundCommandTransceiver(
       CommandTransceiver* next_transceiver,
       const scoped_refptr<base::SequencedTaskRunner>& task_runner);
+  BackgroundCommandTransceiver(const BackgroundCommandTransceiver&) = delete;
+  BackgroundCommandTransceiver& operator=(const BackgroundCommandTransceiver&) =
+      delete;
+
   ~BackgroundCommandTransceiver() override;
 
   // CommandTranceiver methods.
@@ -60,8 +64,6 @@ class TRUNKS_EXPORT BackgroundCommandTransceiver : public CommandTransceiver {
 
   // Declared last so weak pointers are invalidated first on destruction.
   base::WeakPtrFactory<BackgroundCommandTransceiver> weak_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(BackgroundCommandTransceiver);
 };
 
 }  // namespace trunks

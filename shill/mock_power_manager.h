@@ -17,6 +17,9 @@ class ControlInterface;
 class MockPowerManager : public PowerManager {
  public:
   explicit MockPowerManager(ControlInterface* control_interface);
+  MockPowerManager(const MockPowerManager&) = delete;
+  MockPowerManager& operator=(const MockPowerManager&) = delete;
+
   ~MockPowerManager() override;
 
   MOCK_METHOD(bool, ReportSuspendReadiness, (), (override));
@@ -30,9 +33,6 @@ class MockPowerManager : public PowerManager {
               (override));
   MOCK_METHOD(void, Stop, (), (override));
   MOCK_METHOD(bool, ChangeRegDomain, (nl80211_dfs_regions), (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockPowerManager);
 };
 
 }  // namespace shill

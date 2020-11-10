@@ -98,6 +98,9 @@ class KmParamSet {
     other.param_set_.length = 0;
     other.param_set_.params = nullptr;
   }
+  KmParamSet(const KmParamSet&) = delete;
+  KmParamSet& operator=(const KmParamSet&) = delete;
+
   ~KmParamSet() { delete[] param_set_.params; }
 
   inline const keymaster_key_param_set_t& param_set() const {
@@ -106,8 +109,6 @@ class KmParamSet {
 
  private:
   keymaster_key_param_set_t param_set_;
-
-  DISALLOW_COPY_AND_ASSIGN(KmParamSet);
 };
 
 }  // namespace

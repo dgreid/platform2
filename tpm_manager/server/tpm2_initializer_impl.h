@@ -45,6 +45,9 @@ class Tpm2InitializerImpl : public TpmInitializer {
                       OpensslCryptoUtil* openssl_util,
                       LocalDataStore* local_data_store,
                       TpmStatus* tpm_status);
+  Tpm2InitializerImpl(const Tpm2InitializerImpl&) = delete;
+  Tpm2InitializerImpl& operator=(const Tpm2InitializerImpl&) = delete;
+
   ~Tpm2InitializerImpl() override = default;
 
   // TpmInitializer methods.
@@ -68,8 +71,6 @@ class Tpm2InitializerImpl : public TpmInitializer {
   OpensslCryptoUtil* openssl_util_;
   LocalDataStore* local_data_store_;
   TpmStatus* tpm_status_;
-
-  DISALLOW_COPY_AND_ASSIGN(Tpm2InitializerImpl);
 };
 
 }  // namespace tpm_manager

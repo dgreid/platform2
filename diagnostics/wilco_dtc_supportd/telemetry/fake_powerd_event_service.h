@@ -15,6 +15,9 @@ namespace diagnostics {
 class FakePowerdEventService : public PowerdEventService {
  public:
   FakePowerdEventService();
+  FakePowerdEventService(const FakePowerdEventService&) = delete;
+  FakePowerdEventService& operator=(const FakePowerdEventService&) = delete;
+
   ~FakePowerdEventService() override;
 
   // PowerdEventService overrides:
@@ -27,8 +30,6 @@ class FakePowerdEventService : public PowerdEventService {
 
  private:
   base::ObserverList<Observer> observers_;
-
-  DISALLOW_COPY_AND_ASSIGN(FakePowerdEventService);
 };
 
 }  // namespace diagnostics

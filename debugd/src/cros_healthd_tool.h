@@ -15,14 +15,14 @@ namespace debugd {
 class CrosHealthdTool {
  public:
   CrosHealthdTool() = default;
+  CrosHealthdTool(const CrosHealthdTool&) = delete;
+  CrosHealthdTool& operator=(const CrosHealthdTool&) = delete;
+
   ~CrosHealthdTool() = default;
 
   bool CollectSmartBatteryMetric(brillo::ErrorPtr* error,
                                  const std::string& metric_name,
                                  std::string* output);
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(CrosHealthdTool);
 };
 
 }  // namespace debugd

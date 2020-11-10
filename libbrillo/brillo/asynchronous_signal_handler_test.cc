@@ -22,6 +22,10 @@ namespace brillo {
 class AsynchronousSignalHandlerTest : public ::testing::Test {
  public:
   AsynchronousSignalHandlerTest() {}
+  AsynchronousSignalHandlerTest(const AsynchronousSignalHandlerTest&) = delete;
+  AsynchronousSignalHandlerTest& operator=(
+      const AsynchronousSignalHandlerTest&) = delete;
+
   virtual ~AsynchronousSignalHandlerTest() {}
 
   virtual void SetUp() {
@@ -42,9 +46,6 @@ class AsynchronousSignalHandlerTest : public ::testing::Test {
   BaseMessageLoop brillo_loop_{task_executor_.task_runner()};
   std::vector<struct signalfd_siginfo> infos_;
   AsynchronousSignalHandler handler_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(AsynchronousSignalHandlerTest);
 };
 
 TEST_F(AsynchronousSignalHandlerTest, CheckTerm) {

@@ -21,13 +21,13 @@ namespace {
 class DeviceManagerTest : public testing::Test {
  public:
   DeviceManagerTest() = default;
+  DeviceManagerTest(const DeviceManagerTest&) = delete;
+  DeviceManagerTest& operator=(const DeviceManagerTest&) = delete;
 
  private:
   // DeviceManager needs the current thread to have a task runner.
   base::test::TaskEnvironment task_environment_{
       base::test::TaskEnvironment::ThreadingMode::MAIN_THREAD_ONLY};
-
-  DISALLOW_COPY_AND_ASSIGN(DeviceManagerTest);
 };
 
 TEST_F(DeviceManagerTest, ParseStorageName) {
@@ -60,29 +60,29 @@ TEST_F(DeviceManagerTest, ParseStorageName) {
 class TestDeviceEventDelegate : public DeviceEventDelegate {
  public:
   TestDeviceEventDelegate() {}
+  TestDeviceEventDelegate(const TestDeviceEventDelegate&) = delete;
+  TestDeviceEventDelegate& operator=(const TestDeviceEventDelegate&) = delete;
+
   ~TestDeviceEventDelegate() {}
 
   // DeviceEventDelegate implementation.
   void StorageAttached(const std::string& storage_name) override {}
   void StorageDetached(const std::string& storage_name) override {}
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(TestDeviceEventDelegate);
 };
 
 class TestDeviceManager : public DeviceManager {
  public:
   explicit TestDeviceManager(DeviceEventDelegate* delegate)
       : DeviceManager(delegate) {}
+  TestDeviceManager(const TestDeviceManager&) = delete;
+  TestDeviceManager& operator=(const TestDeviceManager&) = delete;
+
   ~TestDeviceManager() {}
 
   bool AddStorage(const std::string& storage_name,
                   const StorageInfo& storage_info) {
     return AddStorageForTest(storage_name, storage_info);
   }
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(TestDeviceManager);
 };
 
 // Devices do not actually have a root node, so one is synthesized.

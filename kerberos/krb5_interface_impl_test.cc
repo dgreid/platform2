@@ -22,13 +22,13 @@ constexpr char kBadBoolKrb5conf[] =
 class Krb5InterfaceImplTest : public ::testing::Test {
  public:
   Krb5InterfaceImplTest() {}
+  Krb5InterfaceImplTest(const Krb5InterfaceImplTest&) = delete;
+  Krb5InterfaceImplTest& operator=(const Krb5InterfaceImplTest&) = delete;
+
   ~Krb5InterfaceImplTest() override = default;
 
  protected:
   Krb5InterfaceImpl krb5_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(Krb5InterfaceImplTest);
 };
 
 // Can't test terribly much here since the actual krb5 functionality involves

@@ -33,6 +33,8 @@ class DeviceEventModerator : public SessionManagerObserverInterface {
   DeviceEventModerator(DeviceEventDispatcherInterface* event_dispatcher,
                        DeviceEventSourceInterface* event_source,
                        bool dispatch_initially);
+  DeviceEventModerator(const DeviceEventModerator&) = delete;
+  DeviceEventModerator& operator=(const DeviceEventModerator&) = delete;
 
   virtual ~DeviceEventModerator() = default;
 
@@ -73,8 +75,6 @@ class DeviceEventModerator : public SessionManagerObserverInterface {
   // This variable is set to true if any new device event should be queued
   // instead of being dispatched immediately.
   bool is_event_queued_;
-
-  DISALLOW_COPY_AND_ASSIGN(DeviceEventModerator);
 };
 
 }  // namespace cros_disks

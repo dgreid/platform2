@@ -27,6 +27,9 @@ class HwVerificationSpecGetterImpl : public HwVerificationSpecGetter {
   HwVerificationSpecGetterImpl();
   explicit HwVerificationSpecGetterImpl(
       std::unique_ptr<VbSystemPropertyGetter> vb_system_property_getter);
+  HwVerificationSpecGetterImpl(const HwVerificationSpecGetterImpl&) = delete;
+  HwVerificationSpecGetterImpl& operator=(const HwVerificationSpecGetterImpl&) =
+      delete;
 
   base::Optional<HwVerificationSpec> GetDefault() const override;
   base::Optional<HwVerificationSpec> GetFromFile(
@@ -37,8 +40,6 @@ class HwVerificationSpecGetterImpl : public HwVerificationSpecGetter {
 
   std::unique_ptr<VbSystemPropertyGetter> vb_system_property_getter_;
   base::FilePath root_;
-
-  DISALLOW_COPY_AND_ASSIGN(HwVerificationSpecGetterImpl);
 };
 
 }  // namespace hardware_verifier

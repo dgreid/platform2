@@ -29,6 +29,9 @@ const uint32_t kLockboxIndex = 0x20000004;
 class TpmImpl : public Tpm {
  public:
   TpmImpl();
+  TpmImpl(const TpmImpl&) = delete;
+  TpmImpl& operator=(const TpmImpl&) = delete;
+
   virtual ~TpmImpl();
   // Tpm methods
   TpmVersion GetVersion() override { return TpmVersion::TPM_1_2; }
@@ -419,8 +422,6 @@ class TpmImpl : public Tpm {
   // A single instance of the backend for signature-sealing operations that is
   // returned from GetSignatureSealingBackend().
   SignatureSealingBackendTpm1Impl signature_sealing_backend_{this};
-
-  DISALLOW_COPY_AND_ASSIGN(TpmImpl);
 };
 
 }  // namespace cryptohome

@@ -30,6 +30,9 @@ class UsbManager;
 class Context {
  public:
   Context();
+  Context(const Context&) = delete;
+  Context& operator=(const Context&) = delete;
+
   virtual ~Context();
 
   // Initializes all helper objects in the context. Returns true on success.
@@ -53,8 +56,6 @@ class Context {
   std::unique_ptr<brillo::Udev> udev_;
   std::unique_ptr<UsbDeviceEventNotifier> usb_device_event_notifier_;
   std::unique_ptr<UsbManager> usb_manager_;
-
-  DISALLOW_COPY_AND_ASSIGN(Context);
 };
 
 }  // namespace mist

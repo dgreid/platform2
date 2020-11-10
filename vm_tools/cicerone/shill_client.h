@@ -22,6 +22,8 @@ namespace cicerone {
 class ShillClient final {
  public:
   explicit ShillClient(scoped_refptr<dbus::Bus> bus);
+  ShillClient(const ShillClient&) = delete;
+  ShillClient& operator=(const ShillClient&) = delete;
 
   void RegisterDefaultServiceChangedHandler(base::Callback<void()> callback);
 
@@ -40,8 +42,6 @@ class ShillClient final {
   std::unique_ptr<org::chromium::flimflam::ManagerProxy> manager_proxy_;
 
   base::WeakPtrFactory<ShillClient> weak_factory_{this};
-
-  DISALLOW_COPY_AND_ASSIGN(ShillClient);
 };
 
 }  // namespace cicerone

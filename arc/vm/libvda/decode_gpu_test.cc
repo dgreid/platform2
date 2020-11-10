@@ -78,10 +78,10 @@ bool WaitForDecodesDone(arc::test::DecodeEventThread* event_thread,
 class LibvdaGpuTest : public ::testing::Test {
  public:
   LibvdaGpuTest() = default;
-  ~LibvdaGpuTest() override = default;
+  LibvdaGpuTest(const LibvdaGpuTest&) = delete;
+  LibvdaGpuTest& operator=(const LibvdaGpuTest&) = delete;
 
- private:
-  DISALLOW_COPY_AND_ASSIGN(LibvdaGpuTest);
+  ~LibvdaGpuTest() override = default;
 };
 
 // Test that the gpu implementation initializes and deinitializes successfully.

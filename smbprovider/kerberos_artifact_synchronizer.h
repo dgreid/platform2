@@ -34,6 +34,9 @@ class KerberosArtifactSynchronizer {
       const std::string& krb5_ccache_path,
       std::unique_ptr<KerberosArtifactClientInterface> client,
       bool allow_credentials_update);
+  KerberosArtifactSynchronizer(const KerberosArtifactSynchronizer&) = delete;
+  KerberosArtifactSynchronizer& operator=(const KerberosArtifactSynchronizer&) =
+      delete;
 
   // Sets up Keberos for user with |account_identifier|.
   // |account_identifier| is run with the result. If |allow_credentials_update|
@@ -94,8 +97,6 @@ class KerberosArtifactSynchronizer {
   std::unique_ptr<KerberosArtifactClientInterface> client_;
 
   const bool allow_credentials_update_ = false;
-
-  DISALLOW_COPY_AND_ASSIGN(KerberosArtifactSynchronizer);
 };
 
 }  // namespace smbprovider

@@ -132,6 +132,9 @@ class TRUNKS_EXPORT Tpm {
  public:
   // Does not take ownership of |transceiver|.
   explicit Tpm(CommandTransceiver* transceiver) : transceiver_(transceiver) {}
+  Tpm(const Tpm&) = delete;
+  Tpm& operator=(const Tpm&) = delete;
+
   virtual ~Tpm() {}
   CommandTransceiver* get_transceiver() { return transceiver_; }
 
@@ -139,8 +142,6 @@ class TRUNKS_EXPORT Tpm {
 _CLASS_END = """
  private:
   CommandTransceiver* transceiver_;
-
-  DISALLOW_COPY_AND_ASSIGN(Tpm);
 };
 """
 _SERIALIZE_BASIC_TYPE = """

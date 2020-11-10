@@ -40,6 +40,9 @@ class ObjectPoolImpl : public ObjectPool {
                  HandleGenerator* handle_generator,
                  ObjectStore* store,
                  ObjectImporter* importer);
+  ObjectPoolImpl(const ObjectPoolImpl&) = delete;
+  ObjectPoolImpl& operator=(const ObjectPoolImpl&) = delete;
+
   ~ObjectPoolImpl() override;
   virtual bool Init();
   bool GetInternalBlob(int blob_id, std::string* blob) override;
@@ -77,8 +80,6 @@ class ObjectPoolImpl : public ObjectPool {
   bool is_private_loaded_;
   base::Lock lock_;
   bool finish_import_required_;
-
-  DISALLOW_COPY_AND_ASSIGN(ObjectPoolImpl);
 };
 
 }  // namespace chaps

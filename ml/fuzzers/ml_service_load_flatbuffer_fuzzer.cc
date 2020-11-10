@@ -45,6 +45,9 @@ class Environment {
 class MLServiceFuzzer {
  public:
   MLServiceFuzzer() = default;
+  MLServiceFuzzer(const MLServiceFuzzer&) = delete;
+  MLServiceFuzzer& operator=(const MLServiceFuzzer&) = delete;
+
   ~MLServiceFuzzer() = default;
   void SetUp() {
     ipc_support_ = std::make_unique<mojo::core::ScopedIPCSupport>(
@@ -78,8 +81,6 @@ class MLServiceFuzzer {
   MachineLearningServicePtr ml_service_;
   std::unique_ptr<MachineLearningServiceImpl> ml_service_impl_;
   ModelPtr model_;
-
-  DISALLOW_COPY_AND_ASSIGN(MLServiceFuzzer);
 };
 
 }  // namespace ml

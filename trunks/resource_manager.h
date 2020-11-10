@@ -45,6 +45,9 @@ class ResourceManager : public CommandTransceiver {
   // does NOT take ownership of the pointer.
   ResourceManager(const TrunksFactory& factory,
                   CommandTransceiver* next_transceiver);
+  ResourceManager(const ResourceManager&) = delete;
+  ResourceManager& operator=(const ResourceManager&) = delete;
+
   ~ResourceManager() override;
 
   void Initialize();
@@ -256,8 +259,6 @@ class ResourceManager : public CommandTransceiver {
   base::TimeTicks suspended_timestamp_;
   // Maximum suspend duration before the resource manager auto-resumes.
   base::TimeDelta max_suspend_duration_;
-
-  DISALLOW_COPY_AND_ASSIGN(ResourceManager);
 };
 
 }  // namespace trunks

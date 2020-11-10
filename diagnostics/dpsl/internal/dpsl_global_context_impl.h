@@ -22,12 +22,13 @@ class DpslGlobalContextImpl final : public DpslGlobalContext {
   static void CleanGlobalCounterForTesting();
 
   DpslGlobalContextImpl();
+  DpslGlobalContextImpl(const DpslGlobalContextImpl&) = delete;
+  DpslGlobalContextImpl& operator=(const DpslGlobalContextImpl&) = delete;
+
   ~DpslGlobalContextImpl() override;
 
  private:
   base::ThreadCheckerImpl thread_checker_;
-
-  DISALLOW_COPY_AND_ASSIGN(DpslGlobalContextImpl);
 };
 
 }  // namespace diagnostics

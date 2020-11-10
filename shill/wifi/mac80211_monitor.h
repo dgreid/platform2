@@ -43,6 +43,9 @@ class Mac80211Monitor {
                   size_t queue_length_limit,
                   const base::Closure& on_repair_callback,
                   Metrics* metrics);
+  Mac80211Monitor(const Mac80211Monitor&) = delete;
+  Mac80211Monitor& operator=(const Mac80211Monitor&) = delete;
+
   virtual ~Mac80211Monitor();
 
   virtual void Start(const std::string& phy_name);
@@ -121,8 +124,6 @@ class Mac80211Monitor {
   base::CancelableClosure check_queues_callback_;
   bool is_device_connected_;
   base::WeakPtrFactory<Mac80211Monitor> weak_ptr_factory_;  // keep last
-
-  DISALLOW_COPY_AND_ASSIGN(Mac80211Monitor);
 };
 
 }  // namespace shill

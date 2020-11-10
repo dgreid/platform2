@@ -35,11 +35,11 @@ class DnsClientFactory {
 
  protected:
   DnsClientFactory();
+  DnsClientFactory(const DnsClientFactory&) = delete;
+  DnsClientFactory& operator=(const DnsClientFactory&) = delete;
 
  private:
   friend class base::NoDestructor<DnsClientFactory>;
-
-  DISALLOW_COPY_AND_ASSIGN(DnsClientFactory);
 };
 
 }  // namespace shill

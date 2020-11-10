@@ -26,6 +26,9 @@ class DHCPv6Config : public DHCPConfig {
                DHCPProvider* provider,
                const std::string& device_name,
                const std::string& lease_file_suffix);
+  DHCPv6Config(const DHCPv6Config&) = delete;
+  DHCPv6Config& operator=(const DHCPv6Config&) = delete;
+
   ~DHCPv6Config() override;
 
   // Inherited from DHCPConfig.
@@ -83,8 +86,6 @@ class DHCPv6Config : public DHCPConfig {
   // configuration will be the shorter of the two leases (most likely the two
   // lease time will be identical).
   IPConfig::Properties properties_;
-
-  DISALLOW_COPY_AND_ASSIGN(DHCPv6Config);
 };
 
 }  // namespace shill

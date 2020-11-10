@@ -130,6 +130,8 @@ class Converter {
     }
     controller_->HandlePowerSourceChange(power_source);
   }
+  Converter(const Converter&) = delete;
+  Converter& operator=(const Converter&) = delete;
 
   // Converts a brightness level to a nonlinear percent in [0.0, 100.0].
   double LevelToNonlinearPercent(int64_t level) {
@@ -163,8 +165,6 @@ class Converter {
   DisplayPowerSetterStub display_power_setter_;
   DBusWrapperStub dbus_wrapper_;
   std::unique_ptr<BacklightController> controller_;
-
-  DISALLOW_COPY_AND_ASSIGN(Converter);
 };
 
 class ObserverImpl : public power_manager::system::AmbientLightObserver {

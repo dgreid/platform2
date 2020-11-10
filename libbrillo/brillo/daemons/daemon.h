@@ -29,6 +29,9 @@ namespace brillo {
 class BRILLO_EXPORT Daemon : public AsynchronousSignalHandlerInterface {
  public:
   Daemon();
+  Daemon(const Daemon&) = delete;
+  Daemon& operator=(const Daemon&) = delete;
+
   virtual ~Daemon();
 
   // Performs proper initialization of the daemon and runs the message loop.
@@ -113,8 +116,6 @@ class BRILLO_EXPORT Daemon : public AsynchronousSignalHandlerInterface {
   int exit_code_;
   // Daemon is in the process of exiting.
   bool exiting_;
-
-  DISALLOW_COPY_AND_ASSIGN(Daemon);
 };
 
 // Moves |latest_log_symlink| to |previous_log_symlink| and creates a relative

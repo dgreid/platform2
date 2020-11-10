@@ -46,6 +46,9 @@ class MountManager : public base::SupportsWeakPtr<MountManager> {
 
   MountManager(std::unique_ptr<MountTracker> mount_tracker,
                SambaInterfaceFactory samba_interface_factory);
+  MountManager(const MountManager&) = delete;
+  MountManager& operator=(const MountManager&) = delete;
+
   ~MountManager();
 
   // Returns true if |mount_id| is already mounted.
@@ -134,8 +137,6 @@ class MountManager : public base::SupportsWeakPtr<MountManager> {
   const std::unique_ptr<MountTracker> mount_tracker_;
   const SambaInterfaceFactory samba_interface_factory_;
   const std::unique_ptr<SambaInterface> system_samba_interface_;
-
-  DISALLOW_COPY_AND_ASSIGN(MountManager);
 };
 
 }  // namespace smbprovider

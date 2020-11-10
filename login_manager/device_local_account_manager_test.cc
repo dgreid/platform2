@@ -45,6 +45,9 @@ std::vector<uint8_t> GetTestPolicyBlob() {
 class DeviceLocalAccountManagerTest : public ::testing::Test {
  public:
   DeviceLocalAccountManagerTest() = default;
+  DeviceLocalAccountManagerTest(const DeviceLocalAccountManagerTest&) = delete;
+  DeviceLocalAccountManagerTest& operator=(
+      const DeviceLocalAccountManagerTest&) = delete;
 
   void SetUp() override {
     fake_loop_.SetAsCurrent();
@@ -89,9 +92,6 @@ class DeviceLocalAccountManagerTest : public ::testing::Test {
   MockPolicyKey key_;
 
   std::unique_ptr<DeviceLocalAccountManager> manager_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(DeviceLocalAccountManagerTest);
 };
 
 TEST_F(DeviceLocalAccountManagerTest, GetPolicyServiceFailsNoAccount) {

@@ -18,6 +18,9 @@ class InputObserver;
 class InputWatcherInterface {
  public:
   InputWatcherInterface() {}
+  InputWatcherInterface(const InputWatcherInterface&) = delete;
+  InputWatcherInterface& operator=(const InputWatcherInterface&) = delete;
+
   virtual ~InputWatcherInterface() {}
 
   // Adds or removes an observer.
@@ -34,9 +37,6 @@ class InputWatcherInterface {
 
   // Checks if any USB input devices are connected.
   virtual bool IsUSBInputDeviceConnected() const = 0;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(InputWatcherInterface);
 };
 
 }  // namespace system

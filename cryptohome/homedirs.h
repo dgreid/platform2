@@ -63,6 +63,9 @@ class HomeDirs {
   };
 
   HomeDirs();
+  HomeDirs(const HomeDirs&) = delete;
+  HomeDirs& operator=(const HomeDirs&) = delete;
+
   virtual ~HomeDirs();
 
   // Gets the user's eCryptfs vault directory for the given shadow root path and
@@ -410,8 +413,6 @@ class HomeDirs {
 
   friend class HomeDirsTest;
   FRIEND_TEST(HomeDirsTest, GetTrackedDirectoryForDirCrypto);
-
-  DISALLOW_COPY_AND_ASSIGN(HomeDirs);
 };
 
 }  // namespace cryptohome

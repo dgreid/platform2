@@ -28,6 +28,9 @@ class IPAddressStore {
   using IPAddresses = std::set<IPAddress, IPAddressLTIgnorePrefix>;
 
   IPAddressStore();
+  IPAddressStore(const IPAddressStore&) = delete;
+  IPAddressStore& operator=(const IPAddressStore&) = delete;
+
   ~IPAddressStore();
 
   // Add a new IP address if it does not already exist.
@@ -44,8 +47,6 @@ class IPAddressStore {
 
  private:
   IPAddresses ip_addresses_;
-
-  DISALLOW_COPY_AND_ASSIGN(IPAddressStore);
 };
 
 }  // namespace shill

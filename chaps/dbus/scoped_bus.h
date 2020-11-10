@@ -22,6 +22,8 @@ class ScopedBus {
   explicit ScopedBus(const dbus::Bus::Options& options);
   // Move constructor.
   ScopedBus(ScopedBus&& other);
+  ScopedBus(const ScopedBus&) = delete;
+  ScopedBus& operator=(const ScopedBus&) = delete;
 
   virtual ~ScopedBus();
 
@@ -37,8 +39,6 @@ class ScopedBus {
  private:
   scoped_refptr<dbus::Bus> bus_;
   scoped_refptr<base::SingleThreadTaskRunner> task_runner_;
-
-  DISALLOW_COPY_AND_ASSIGN(ScopedBus);
 };
 
 }  // namespace chaps

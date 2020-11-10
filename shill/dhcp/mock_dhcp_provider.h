@@ -20,6 +20,9 @@ namespace shill {
 class MockDHCPProvider : public DHCPProvider {
  public:
   MockDHCPProvider();
+  MockDHCPProvider(const MockDHCPProvider&) = delete;
+  MockDHCPProvider& operator=(const MockDHCPProvider&) = delete;
+
   ~MockDHCPProvider() override;
 
   MOCK_METHOD(void,
@@ -39,9 +42,6 @@ class MockDHCPProvider : public DHCPProvider {
 #endif
   MOCK_METHOD(void, BindPID, (int, const DHCPConfigRefPtr&), (override));
   MOCK_METHOD(void, UnbindPID, (int), (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockDHCPProvider);
 };
 
 }  // namespace shill

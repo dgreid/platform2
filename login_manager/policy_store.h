@@ -27,6 +27,9 @@ class PolicyKey;
 class PolicyStore {
  public:
   explicit PolicyStore(const base::FilePath& policy_path);
+  PolicyStore(const PolicyStore&) = delete;
+  PolicyStore& operator=(const PolicyStore&) = delete;
+
   virtual ~PolicyStore();
 
   virtual bool DefunctPrefsFilePresent();
@@ -73,8 +76,6 @@ class PolicyStore {
 
   enum LoadResult { NOT_LOADED, LOAD_SUCCEEDED, LOAD_FAILED };
   LoadResult load_result_ = NOT_LOADED;
-
-  DISALLOW_COPY_AND_ASSIGN(PolicyStore);
 };
 }  // namespace login_manager
 

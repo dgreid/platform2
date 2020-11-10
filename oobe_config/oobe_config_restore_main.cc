@@ -37,6 +37,8 @@ class OobeConfigRestoreDaemon : public brillo::DBusServiceDaemon {
       : DBusServiceDaemon(kOobeConfigRestoreServiceName),
         allow_unencrypted_(allow_unencrypted),
         skip_reboot_for_testing_(skip_reboot_for_testing) {}
+  OobeConfigRestoreDaemon(const OobeConfigRestoreDaemon&) = delete;
+  OobeConfigRestoreDaemon& operator=(const OobeConfigRestoreDaemon&) = delete;
 
  protected:
   void RegisterDBusObjectsAsync(AsyncEventSequencer* sequencer) override {
@@ -59,7 +61,6 @@ class OobeConfigRestoreDaemon : public brillo::DBusServiceDaemon {
   std::unique_ptr<OobeConfigRestoreService> service_;
   bool allow_unencrypted_;
   bool skip_reboot_for_testing_;
-  DISALLOW_COPY_AND_ASSIGN(OobeConfigRestoreDaemon);
 };
 
 // Runs OobeConfigRestoreDaemon.

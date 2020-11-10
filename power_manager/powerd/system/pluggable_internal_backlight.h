@@ -29,6 +29,10 @@ class PluggableInternalBacklight : public BacklightInterface,
                                    public UdevSubsystemObserver {
  public:
   PluggableInternalBacklight();
+  PluggableInternalBacklight(const PluggableInternalBacklight&) = delete;
+  PluggableInternalBacklight& operator=(const PluggableInternalBacklight&) =
+      delete;
+
   ~PluggableInternalBacklight() override;
 
   // Ownership of |udev| remains with the caller.
@@ -68,8 +72,6 @@ class PluggableInternalBacklight : public BacklightInterface,
 
   // The underlying backlight device, or null when the device isn't present.
   std::unique_ptr<InternalBacklight> device_;
-
-  DISALLOW_COPY_AND_ASSIGN(PluggableInternalBacklight);
 };
 
 }  // namespace system

@@ -43,6 +43,8 @@ class TextClassifierImpl
       const std::string& langid_model_path,
       mojo::PendingReceiver<chromeos::machine_learning::mojom::TextClassifier>
           receiver);
+  TextClassifierImpl(const TextClassifierImpl&) = delete;
+  TextClassifierImpl& operator=(const TextClassifierImpl&) = delete;
 
   void SetDisconnectionHandler(base::Closure disconnect_handler);
 
@@ -66,8 +68,6 @@ class TextClassifierImpl
       language_identifier_;
 
   mojo::Receiver<chromeos::machine_learning::mojom::TextClassifier> receiver_;
-
-  DISALLOW_COPY_AND_ASSIGN(TextClassifierImpl);
 };
 
 }  // namespace ml

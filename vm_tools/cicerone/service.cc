@@ -357,8 +357,8 @@ class CiceroneGrpcCallbacks final : public grpc::Server::GlobalCallbacks {
     // it will be created at most once, thus satisfying GRPC requirement.
     grpc::Server::SetGlobalCallbacks(this);
   }
-
-  DISALLOW_COPY_AND_ASSIGN(CiceroneGrpcCallbacks);
+  CiceroneGrpcCallbacks(const CiceroneGrpcCallbacks&) = delete;
+  CiceroneGrpcCallbacks& operator=(const CiceroneGrpcCallbacks&) = delete;
 };
 
 }  // namespace

@@ -24,6 +24,9 @@ class PowerManager {
   // class does not take ownership of |resource_manager|.
   explicit PowerManager(ResourceManager* resource_manager = nullptr)
       : resource_manager_(resource_manager) {}
+  PowerManager(const PowerManager&) = delete;
+  PowerManager& operator=(const PowerManager&) = delete;
+
   ~PowerManager() = default;
 
   void set_resource_manager(ResourceManager* resource_manager) {
@@ -107,7 +110,6 @@ class PowerManager {
 
   // Declared last so weak pointers are invalidated first on destruction.
   base::WeakPtrFactory<PowerManager> weak_factory_{this};
-  DISALLOW_COPY_AND_ASSIGN(PowerManager);
 };
 
 }  // namespace trunks

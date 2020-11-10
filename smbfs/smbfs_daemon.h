@@ -28,6 +28,9 @@ struct Options;
 class SmbFsDaemon : public brillo::DBusDaemon {
  public:
   SmbFsDaemon(fuse_chan* chan, const Options& options);
+  SmbFsDaemon(const SmbFsDaemon&) = delete;
+  SmbFsDaemon& operator=(const SmbFsDaemon&) = delete;
+
   ~SmbFsDaemon() override;
 
  protected:
@@ -61,8 +64,6 @@ class SmbFsDaemon : public brillo::DBusDaemon {
 
   std::unique_ptr<mojo::core::ScopedIPCSupport> ipc_support_;
   std::unique_ptr<MojoSession> mojo_session_;
-
-  DISALLOW_COPY_AND_ASSIGN(SmbFsDaemon);
 };
 
 }  // namespace smbfs

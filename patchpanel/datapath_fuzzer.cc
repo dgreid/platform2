@@ -30,6 +30,8 @@ class RandomProcessRunner : public MinijailedProcessRunner {
  public:
   explicit RandomProcessRunner(FuzzedDataProvider* data_provider)
       : data_provider_{data_provider} {}
+  RandomProcessRunner(const RandomProcessRunner&) = delete;
+  RandomProcessRunner& operator=(const RandomProcessRunner&) = delete;
   ~RandomProcessRunner() = default;
 
   int Run(const std::vector<std::string>& argv, bool log_failures) override {
@@ -38,8 +40,6 @@ class RandomProcessRunner : public MinijailedProcessRunner {
 
  private:
   FuzzedDataProvider* data_provider_;
-
-  DISALLOW_COPY_AND_ASSIGN(RandomProcessRunner);
 };
 
 namespace {

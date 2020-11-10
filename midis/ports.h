@@ -32,6 +32,8 @@ class InPort {
          uint32_t port_id,
          SubscribeCallback sub_cb,
          DeletionCallback del_cb);
+  InPort(const InPort&) = delete;
+  InPort& operator=(const InPort&) = delete;
 
   // Function to initiate the subscription to a MIDI H/W input port.
   bool Subscribe() { return sub_cb_.Run(device_id_, port_id_); }
@@ -40,8 +42,6 @@ class InPort {
   int port_id_;
   SubscribeCallback sub_cb_;
   DeletionCallback del_cb_;
-
-  DISALLOW_COPY_AND_ASSIGN(InPort);
 };
 
 // Representiation for an output port, i.e, a port on which we send data *to*
@@ -72,6 +72,8 @@ class OutPort {
           SubscribeCallback sub_cb,
           DeletionCallback del_cb,
           SendMidiDataCallback send_data_cb);
+  OutPort(const OutPort&) = delete;
+  OutPort& operator=(const OutPort&) = delete;
 
   // Function to create a output seq port and initiate the subscription to a
   // MIDI H/W output port.
@@ -83,8 +85,6 @@ class OutPort {
   DeletionCallback del_cb_;
   SendMidiDataCallback send_data_cb_;
   int out_port_id_;
-
-  DISALLOW_COPY_AND_ASSIGN(OutPort);
 };
 
 }  // namespace midis

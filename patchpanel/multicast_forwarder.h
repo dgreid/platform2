@@ -39,6 +39,9 @@ class MulticastForwarder {
                      uint32_t mcast_addr,
                      const std::string& mcast_addr6,
                      uint16_t port);
+  MulticastForwarder(const MulticastForwarder&) = delete;
+  MulticastForwarder& operator=(const MulticastForwarder&) = delete;
+
   virtual ~MulticastForwarder() = default;
 
   // Start forwarding multicast packets between the guest's interface
@@ -109,8 +112,6 @@ class MulticastForwarder {
 
  private:
   void OnFileCanReadWithoutBlocking(int fd, sa_family_t sa_family);
-
-  DISALLOW_COPY_AND_ASSIGN(MulticastForwarder);
 };
 
 }  // namespace patchpanel

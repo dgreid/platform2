@@ -21,12 +21,12 @@ class TestMetricsLogBase : public MetricsLogBase {
   TestMetricsLogBase()
       : MetricsLogBase("client_id", 1, MetricsLogBase::ONGOING_LOG, "1.2.3.4") {
   }
+  TestMetricsLogBase(const TestMetricsLogBase&) = delete;
+  TestMetricsLogBase& operator=(const TestMetricsLogBase&) = delete;
+
   virtual ~TestMetricsLogBase() {}
 
   using MetricsLogBase::uma_proto;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(TestMetricsLogBase);
 };
 
 }  // namespace

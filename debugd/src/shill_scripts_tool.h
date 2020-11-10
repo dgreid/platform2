@@ -19,6 +19,9 @@ namespace debugd {
 class ShillScriptsTool : public SubprocessTool {
  public:
   ShillScriptsTool() = default;
+  ShillScriptsTool(const ShillScriptsTool&) = delete;
+  ShillScriptsTool& operator=(const ShillScriptsTool&) = delete;
+
   ~ShillScriptsTool() override = default;
 
   bool Run(const base::ScopedFD& outfd,
@@ -26,9 +29,6 @@ class ShillScriptsTool : public SubprocessTool {
            const std::vector<std::string>& script_args,
            std::string* out_id,
            brillo::ErrorPtr* error);
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ShillScriptsTool);
 };
 
 }  // namespace debugd

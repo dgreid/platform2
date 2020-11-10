@@ -38,6 +38,8 @@ class MountPoint {
  protected:
   // Protected constructor for subclasses.
   explicit MountPoint(const base::FilePath& path);
+  MountPoint(const MountPoint&) = delete;
+  MountPoint& operator=(const MountPoint&) = delete;
 
   // Unmounts the point point and logs errors as appropriate. MUST be called in
   // the destructor.
@@ -52,8 +54,6 @@ class MountPoint {
   const base::FilePath path_;
   bool released_ = false;
   bool unmounted_on_destruction_ = false;
-
-  DISALLOW_COPY_AND_ASSIGN(MountPoint);
 };
 
 }  // namespace cros_disks

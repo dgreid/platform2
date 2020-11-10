@@ -17,6 +17,9 @@ class UsbDevice;
 class UsbBulkTransfer : public UsbTransfer {
  public:
   UsbBulkTransfer() = default;
+  UsbBulkTransfer(const UsbBulkTransfer&) = delete;
+  UsbBulkTransfer& operator=(const UsbBulkTransfer&) = delete;
+
   ~UsbBulkTransfer() = default;
 
   // Initializes this USB bulk transfer for the specified |endpoint_address| on
@@ -27,9 +30,6 @@ class UsbBulkTransfer : public UsbTransfer {
                   uint8_t endpoint_address,
                   int length,
                   uint32_t timeout);
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(UsbBulkTransfer);
 };
 
 }  // namespace mist

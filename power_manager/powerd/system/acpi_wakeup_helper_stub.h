@@ -18,6 +18,9 @@ namespace system {
 class AcpiWakeupHelperStub : public AcpiWakeupHelperInterface {
  public:
   AcpiWakeupHelperStub();
+  AcpiWakeupHelperStub(const AcpiWakeupHelperStub&) = delete;
+  AcpiWakeupHelperStub& operator=(const AcpiWakeupHelperStub&) = delete;
+
   ~AcpiWakeupHelperStub() override;
 
   // Implementation of AcpiWakeupHelperInterface.
@@ -28,8 +31,6 @@ class AcpiWakeupHelperStub : public AcpiWakeupHelperInterface {
 
  private:
   std::map<std::string, bool> wakeup_enabled_;
-
-  DISALLOW_COPY_AND_ASSIGN(AcpiWakeupHelperStub);
 };
 
 }  // namespace system

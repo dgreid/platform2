@@ -22,6 +22,9 @@ namespace system {
 class EventDeviceStub : public EventDeviceInterface {
  public:
   EventDeviceStub();
+  EventDeviceStub(const EventDeviceStub&) = delete;
+  EventDeviceStub& operator=(const EventDeviceStub&) = delete;
+
   ~EventDeviceStub() override;
 
   const base::Closure& new_events_cb() const { return new_events_cb_; }
@@ -80,8 +83,6 @@ class EventDeviceStub : public EventDeviceInterface {
 
   // Callback registed via WatchForEvents() and called by NotifyAboutEvents().
   base::Closure new_events_cb_;
-
-  DISALLOW_COPY_AND_ASSIGN(EventDeviceStub);
 };
 
 // EventDeviceFactoryInterface interface that returns EventDeviceStubs for
@@ -89,6 +90,9 @@ class EventDeviceStub : public EventDeviceInterface {
 class EventDeviceFactoryStub : public EventDeviceFactoryInterface {
  public:
   EventDeviceFactoryStub();
+  EventDeviceFactoryStub(const EventDeviceFactoryStub&) = delete;
+  EventDeviceFactoryStub& operator=(const EventDeviceFactoryStub&) = delete;
+
   ~EventDeviceFactoryStub() override;
 
   // Adds a mapping in |devices_| so that |device| will be returned in response
@@ -103,8 +107,6 @@ class EventDeviceFactoryStub : public EventDeviceFactoryInterface {
  private:
   // Map from device paths to registered devices.
   std::map<base::FilePath, std::shared_ptr<EventDeviceInterface>> devices_;
-
-  DISALLOW_COPY_AND_ASSIGN(EventDeviceFactoryStub);
 };
 
 }  // namespace system

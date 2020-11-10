@@ -23,6 +23,8 @@ class FuzzedCommandTransceiver : public CommandTransceiver {
  public:
   FuzzedCommandTransceiver(FuzzedDataProvider* const data_provider,
                            size_t max_message_size);
+  FuzzedCommandTransceiver(const FuzzedCommandTransceiver&) = delete;
+  FuzzedCommandTransceiver& operator=(const FuzzedCommandTransceiver&) = delete;
 
   // CommandTransceiver methods.
   void SendCommand(const std::string& command,
@@ -66,8 +68,6 @@ class FuzzedCommandTransceiver : public CommandTransceiver {
 
   FuzzedDataProvider* const data_provider_;
   const size_t max_message_size_;
-
-  DISALLOW_COPY_AND_ASSIGN(FuzzedCommandTransceiver);
 };
 
 }  // namespace trunks

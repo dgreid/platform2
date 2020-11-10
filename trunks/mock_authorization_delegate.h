@@ -17,6 +17,10 @@ namespace trunks {
 class MockAuthorizationDelegate : public AuthorizationDelegate {
  public:
   MockAuthorizationDelegate();
+  MockAuthorizationDelegate(const MockAuthorizationDelegate&) = delete;
+  MockAuthorizationDelegate& operator=(const MockAuthorizationDelegate&) =
+      delete;
+
   ~MockAuthorizationDelegate() override;
 
   MOCK_METHOD4(GetCommandAuthorization,
@@ -26,9 +30,6 @@ class MockAuthorizationDelegate : public AuthorizationDelegate {
   MOCK_METHOD1(EncryptCommandParameter, bool(std::string*));
   MOCK_METHOD1(DecryptResponseParameter, bool(std::string*));
   MOCK_METHOD1(GetTpmNonce, bool(std::string*));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockAuthorizationDelegate);
 };
 
 }  // namespace trunks

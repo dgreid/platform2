@@ -23,6 +23,9 @@ class ObjectPolicy;
 class ObjectImpl : public Object {
  public:
   explicit ObjectImpl(ChapsFactory* factory);
+  ObjectImpl(const ObjectImpl&) = delete;
+  ObjectImpl& operator=(const ObjectImpl&) = delete;
+
   ~ObjectImpl() override;
   ObjectStage GetStage() const override;
   int GetSize() const override;
@@ -66,8 +69,6 @@ class ObjectImpl : public Object {
   int store_id_;
 
   bool SetPolicyByClass();
-
-  DISALLOW_COPY_AND_ASSIGN(ObjectImpl);
 };
 
 }  // namespace chaps

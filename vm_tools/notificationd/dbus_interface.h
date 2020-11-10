@@ -45,6 +45,9 @@ class DBusInterface {
   };
 
   DBusInterface() = default;
+  DBusInterface(const DBusInterface&) = delete;
+  DBusInterface& operator=(const DBusInterface&) = delete;
+
   virtual ~DBusInterface() = default;
 
   // Callback for GetCapabilities in org.freedesktop.notifications. Returns true
@@ -62,9 +65,6 @@ class DBusInterface {
   // Callback for CloseNotification in org.freedesktop.notifications. Returns
   // true on success.
   virtual bool CloseNotification(uint32_t id) = 0;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(DBusInterface);
 };
 
 }  // namespace notificationd

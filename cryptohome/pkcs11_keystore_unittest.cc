@@ -101,6 +101,9 @@ class KeyStoreTest : public testing::Test {
                          // This just controls whether the first call to
                          // C_Initialize returns 'already initialized'.
         next_handle_(1) {}
+  KeyStoreTest(const KeyStoreTest&) = delete;
+  KeyStoreTest& operator=(const KeyStoreTest&) = delete;
+
   virtual ~KeyStoreTest() {}
 
   void SetUp() {
@@ -258,8 +261,6 @@ class KeyStoreTest : public testing::Test {
     }
     return std::string();
   }
-
-  DISALLOW_COPY_AND_ASSIGN(KeyStoreTest);
 };
 
 // This test assumes that chaps in not available on the system running the test.

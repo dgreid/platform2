@@ -22,6 +22,9 @@ class MockEthernet : public Ethernet {
                const std::string& link_name,
                const std::string& address,
                int interface_index);
+  MockEthernet(const MockEthernet&) = delete;
+  MockEthernet& operator=(const MockEthernet&) = delete;
+
   ~MockEthernet() override;
 
   MOCK_METHOD(void,
@@ -36,9 +39,6 @@ class MockEthernet : public Ethernet {
   MOCK_METHOD(void, DisconnectFrom, (EthernetService*), (override));
   MOCK_METHOD(bool, IsConnectedViaTether, (), (const, override));
   MOCK_METHOD(bool, link_up, (), (const, override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockEthernet);
 };
 
 }  // namespace shill

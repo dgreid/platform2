@@ -29,6 +29,9 @@ class OpenVPNManagementServer {
   static const char kStateResolve[];
 
   explicit OpenVPNManagementServer(OpenVPNDriver* driver);
+  OpenVPNManagementServer(const OpenVPNManagementServer&) = delete;
+  OpenVPNManagementServer& operator=(const OpenVPNManagementServer&) = delete;
+
   virtual ~OpenVPNManagementServer();
 
   // Returns false on failure. On success, returns true and appends management
@@ -149,8 +152,6 @@ class OpenVPNManagementServer {
 
   bool hold_waiting_;
   bool hold_release_;
-
-  DISALLOW_COPY_AND_ASSIGN(OpenVPNManagementServer);
 };
 
 }  // namespace shill

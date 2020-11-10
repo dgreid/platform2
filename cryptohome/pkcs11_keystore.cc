@@ -47,6 +47,8 @@ class ScopedSession {
       return;
     }
   }
+  ScopedSession(const ScopedSession&) = delete;
+  ScopedSession& operator=(const ScopedSession&) = delete;
 
   ~ScopedSession() {
     if (IsValid() && (C_CloseSession(handle_) != CKR_OK)) {
@@ -61,8 +63,6 @@ class ScopedSession {
 
  private:
   CK_SESSION_HANDLE handle_;
-
-  DISALLOW_COPY_AND_ASSIGN(ScopedSession);
 };
 
 Pkcs11KeyStore::Pkcs11KeyStore()

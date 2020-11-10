@@ -33,6 +33,9 @@ class ArcDiskQuotaTest : public ::testing::Test {
  public:
   ArcDiskQuotaTest()
       : arc_disk_quota_(&homedirs_, &platform_, base::FilePath(kArcDiskHome)) {}
+  ArcDiskQuotaTest(const ArcDiskQuotaTest&) = delete;
+  ArcDiskQuotaTest& operator=(const ArcDiskQuotaTest&) = delete;
+
   ~ArcDiskQuotaTest() override {}
 
  protected:
@@ -46,8 +49,6 @@ class ArcDiskQuotaTest : public ::testing::Test {
   static const gid_t kAndroidGidEnd = ArcDiskQuota::kAndroidGidEnd;
   static const uid_t kValidAndroidUid = (kAndroidUidStart + kAndroidUidEnd) / 2;
   static const gid_t kValidAndroidGid = (kAndroidGidStart + kAndroidGidEnd) / 2;
-
-  DISALLOW_COPY_AND_ASSIGN(ArcDiskQuotaTest);
 };
 
 TEST_F(ArcDiskQuotaTest, QuotaIsSupported) {

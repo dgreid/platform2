@@ -33,6 +33,9 @@ class KeyGenerator : public ChildExitHandler {
   };
 
   KeyGenerator(uid_t uid, SystemUtils* utils);
+  KeyGenerator(const KeyGenerator&) = delete;
+  KeyGenerator& operator=(const KeyGenerator&) = delete;
+
   ~KeyGenerator() override;
 
   void set_delegate(Delegate* delegate) { delegate_ = delegate; }
@@ -74,7 +77,6 @@ class KeyGenerator : public ChildExitHandler {
   bool generating_ = false;
   std::string key_owner_username_;
   std::string temporary_key_filename_;
-  DISALLOW_COPY_AND_ASSIGN(KeyGenerator);
 };
 
 }  // namespace login_manager

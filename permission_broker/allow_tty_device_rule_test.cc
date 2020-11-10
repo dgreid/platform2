@@ -12,13 +12,13 @@ namespace permission_broker {
 class AllowTtyDeviceRuleTest : public RuleTest {
  public:
   AllowTtyDeviceRuleTest() = default;
+  AllowTtyDeviceRuleTest(const AllowTtyDeviceRuleTest&) = delete;
+  AllowTtyDeviceRuleTest& operator=(const AllowTtyDeviceRuleTest&) = delete;
+
   ~AllowTtyDeviceRuleTest() override = default;
 
  protected:
   AllowTtyDeviceRule rule_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(AllowTtyDeviceRuleTest);
 };
 
 TEST_F(AllowTtyDeviceRuleTest, IgnoreNonTtyDevice) {

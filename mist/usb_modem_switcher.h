@@ -27,6 +27,8 @@ class UsbModemSwitcher : public UsbDeviceEventObserver {
   // object as |context|. The ownership of |context| is not transferred, and
   // thus it should outlive this object.
   explicit UsbModemSwitcher(Context* context);
+  UsbModemSwitcher(const UsbModemSwitcher&) = delete;
+  UsbModemSwitcher& operator=(const UsbModemSwitcher&) = delete;
 
   ~UsbModemSwitcher();
 
@@ -51,8 +53,6 @@ class UsbModemSwitcher : public UsbDeviceEventObserver {
   void OnUsbDeviceRemoved(const std::string& sys_path) override;
 
   Context* const context_;
-
-  DISALLOW_COPY_AND_ASSIGN(UsbModemSwitcher);
 };
 
 }  // namespace mist

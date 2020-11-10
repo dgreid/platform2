@@ -24,6 +24,9 @@ class Manager;
 class CellularServiceProvider : public ProviderInterface {
  public:
   explicit CellularServiceProvider(Manager* manager);
+  CellularServiceProvider(const CellularServiceProvider&) = delete;
+  CellularServiceProvider& operator=(const CellularServiceProvider&) = delete;
+
   ~CellularServiceProvider() override;
 
   // ProviderInterface
@@ -62,8 +65,6 @@ class CellularServiceProvider : public ProviderInterface {
   // user profile. The SIM card itself can provide access security with a PIN.
   ProfileRefPtr profile_;
   std::vector<CellularServiceRefPtr> services_;
-
-  DISALLOW_COPY_AND_ASSIGN(CellularServiceProvider);
 };
 
 }  // namespace shill

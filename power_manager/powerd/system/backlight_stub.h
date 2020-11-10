@@ -23,6 +23,9 @@ class BacklightStub : public BacklightInterface {
   BacklightStub(int64_t max_level,
                 int64_t current_level,
                 BrightnessScale scale);
+  BacklightStub(const BacklightStub&) = delete;
+  BacklightStub& operator=(const BacklightStub&) = delete;
+
   ~BacklightStub() override;
 
   void set_clock(Clock* clock) { clock_ = clock; }
@@ -85,8 +88,6 @@ class BacklightStub : public BacklightInterface {
 
   // Return value for GetBrightnessScale()
   BrightnessScale scale_ = BrightnessScale::kUnknown;
-
-  DISALLOW_COPY_AND_ASSIGN(BacklightStub);
 };
 
 }  // namespace system

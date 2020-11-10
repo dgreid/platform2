@@ -48,6 +48,8 @@ class MountTrackerTest : public testing::Test {
     mount_tracker_ = std::make_unique<MountTracker>(
         std::move(tick_clock), false /* metadata_cache_enabled */);
   }
+  MountTrackerTest(const MountTrackerTest&) = delete;
+  MountTrackerTest& operator=(const MountTrackerTest&) = delete;
 
   ~MountTrackerTest() override = default;
 
@@ -133,8 +135,6 @@ class MountTrackerTest : public testing::Test {
   std::unique_ptr<password_provider::Password> GetEmptyPassword() {
     return GetPassword(WriteEmptyPasswordToFile());
   }
-
-  DISALLOW_COPY_AND_ASSIGN(MountTrackerTest);
 };
 
 TEST_F(MountTrackerTest, TestNegativeMounts) {

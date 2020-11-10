@@ -32,6 +32,9 @@ class DBusAdaptor {
 
   DBusAdaptor(const scoped_refptr<dbus::Bus>& bus,
               easy_unlock::Service* service);
+  DBusAdaptor(const DBusAdaptor&) = delete;
+  DBusAdaptor& operator=(const DBusAdaptor&) = delete;
+
   ~DBusAdaptor();
 
   // Registers handlers for EasyUnlock service method calls.
@@ -68,8 +71,6 @@ class DBusAdaptor {
   // are forwarded.
   easy_unlock::Service* const service_impl_;
   brillo::dbus_utils::DBusObject dbus_object_;
-
-  DISALLOW_COPY_AND_ASSIGN(DBusAdaptor);
 };
 
 }  // namespace easy_unlock

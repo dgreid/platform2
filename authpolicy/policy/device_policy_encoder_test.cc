@@ -40,6 +40,8 @@ class DevicePolicyEncoderTest
     : public PolicyEncoderTestBase<em::ChromeDeviceSettingsProto> {
  public:
   DevicePolicyEncoderTest() {}
+  DevicePolicyEncoderTest(const DevicePolicyEncoderTest&) = delete;
+  DevicePolicyEncoderTest& operator=(const DevicePolicyEncoderTest&) = delete;
   ~DevicePolicyEncoderTest() override {}
 
  protected:
@@ -68,8 +70,6 @@ class DevicePolicyEncoderTest
   // Keeps track of handled device policies. Used to detect device policies that
   // device_policy_encoder forgets to encode.
   std::unordered_set<std::string> handled_policy_keys_;
-
-  DISALLOW_COPY_AND_ASSIGN(DevicePolicyEncoderTest);
 };
 
 TEST_F(DevicePolicyEncoderTest, TestEncoding) {

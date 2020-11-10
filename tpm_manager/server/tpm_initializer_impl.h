@@ -40,6 +40,9 @@ class TpmInitializerImpl : public TpmInitializer {
  public:
   // Does not take ownership of |local_data_store| or |tpm_status|.
   TpmInitializerImpl(LocalDataStore* local_data_store, TpmStatus* tpm_status);
+  TpmInitializerImpl(const TpmInitializerImpl&) = delete;
+  TpmInitializerImpl& operator=(const TpmInitializerImpl&) = delete;
+
   ~TpmInitializerImpl() override = default;
 
   // TpmInitializer methods.
@@ -123,8 +126,6 @@ class TpmInitializerImpl : public TpmInitializer {
   // If set, an auth error was encountered in a previous attempt of resetting DA
   // lock, and there was no auth update after the attempt.
   bool reset_da_lock_auth_failed_ = false;
-
-  DISALLOW_COPY_AND_ASSIGN(TpmInitializerImpl);
 };
 
 }  // namespace tpm_manager

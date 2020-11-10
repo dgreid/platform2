@@ -16,11 +16,11 @@ namespace cryptohome {
 class ChapsClientFactory {
  public:
   ChapsClientFactory();
+  ChapsClientFactory(const ChapsClientFactory&) = delete;
+  ChapsClientFactory& operator=(const ChapsClientFactory&) = delete;
+
   virtual ~ChapsClientFactory();
   virtual chaps::TokenManagerClient* New();
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ChapsClientFactory);
 };
 
 }  // namespace cryptohome

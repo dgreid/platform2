@@ -41,6 +41,9 @@ class FakeBrowser final {
   FakeBrowser(MojomWilcoDtcSupportdServiceFactoryPtr*
                   wilco_dtc_supportd_service_factory_ptr,
               DBusMethodCallCallback bootstrap_mojo_connection_dbus_method);
+  FakeBrowser(const FakeBrowser&) = delete;
+  FakeBrowser& operator=(const FakeBrowser&) = delete;
+
   ~FakeBrowser();
 
   // Returns a mock WilcoDtcSupportdClient instance, whose methods are invoked
@@ -117,8 +120,6 @@ class FakeBrowser final {
   // the tested code. Gets initialized after a call to
   // CallGetServiceMojoMethod().
   MojomWilcoDtcSupportdServicePtr wilco_dtc_supportd_service_ptr_;
-
-  DISALLOW_COPY_AND_ASSIGN(FakeBrowser);
 };
 
 }  // namespace diagnostics

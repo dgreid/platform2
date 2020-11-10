@@ -19,6 +19,9 @@ namespace mm1 {
 class MockModemProxy : public ModemProxyInterface {
  public:
   MockModemProxy();
+  MockModemProxy(const MockModemProxy&) = delete;
+  MockModemProxy& operator=(const MockModemProxy&) = delete;
+
   ~MockModemProxy() override;
 
   // Inherited methods from ModemProxyInterface.
@@ -65,9 +68,6 @@ class MockModemProxy : public ModemProxyInterface {
               set_state_changed_callback,
               (const ModemStateChangedSignalCallback&),
               (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockModemProxy);
 };
 
 }  // namespace mm1

@@ -24,6 +24,9 @@ namespace {
 class TestObserver : public DisplayWatcherObserver {
  public:
   TestObserver() : num_display_changes_(0) {}
+  TestObserver(const TestObserver&) = delete;
+  TestObserver& operator=(const TestObserver&) = delete;
+
   virtual ~TestObserver() {}
 
   int num_display_changes() const { return num_display_changes_; }
@@ -36,8 +39,6 @@ class TestObserver : public DisplayWatcherObserver {
  private:
   // Number of times that OnDisplaysChanged() has been called.
   int num_display_changes_;
-
-  DISALLOW_COPY_AND_ASSIGN(TestObserver);
 };
 
 }  // namespace

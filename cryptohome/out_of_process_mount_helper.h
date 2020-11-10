@@ -48,6 +48,9 @@ class OutOfProcessMountHelper : public MountHelperInterface {
         platform_(platform),
         username_(),
         write_to_helper_(-1) {}
+  OutOfProcessMountHelper(const OutOfProcessMountHelper&) = delete;
+  OutOfProcessMountHelper& operator=(const OutOfProcessMountHelper&) = delete;
+
   ~OutOfProcessMountHelper() = default;
 
   // Carries out dircrypto mount(2) operations for an ephemeral cryptohome,
@@ -119,8 +122,6 @@ class OutOfProcessMountHelper : public MountHelperInterface {
 
   // Set of mounts returned by the helper.
   std::set<std::string> mounted_paths_;
-
-  DISALLOW_COPY_AND_ASSIGN(OutOfProcessMountHelper);
 };
 
 }  // namespace cryptohome

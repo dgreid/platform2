@@ -36,6 +36,9 @@ class KerberosAdaptor : public org::chromium::KerberosAdaptor,
  public:
   explicit KerberosAdaptor(
       std::unique_ptr<brillo::dbus_utils::DBusObject> dbus_object);
+  KerberosAdaptor(const KerberosAdaptor&) = delete;
+  KerberosAdaptor& operator=(const KerberosAdaptor&) = delete;
+
   ~KerberosAdaptor();
 
   // Registers the D-Bus object and interfaces.
@@ -106,7 +109,6 @@ class KerberosAdaptor : public org::chromium::KerberosAdaptor,
   std::unique_ptr<Krb5Interface> krb5_for_testing_;
 
   base::WeakPtrFactory<KerberosAdaptor> weak_ptr_factory_{this};
-  DISALLOW_COPY_AND_ASSIGN(KerberosAdaptor);
 };
 
 }  // namespace kerberos

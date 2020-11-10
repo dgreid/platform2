@@ -773,6 +773,9 @@ class Init::Worker {
             base::StringPrintf(
                 "vsock:%u:%u", VMADDR_CID_HOST, vm_tools::kCrashListenerPort),
             grpc::InsecureChannelCredentials())) {}
+  Worker(const Worker&) = delete;
+  Worker& operator=(const Worker&) = delete;
+
   ~Worker() = default;
 
   // Start the worker.  This will set up a signalfd for receiving SIGCHLD
@@ -812,8 +815,6 @@ class Init::Worker {
   // File descriptor for "/dev/console".
   // This is used for spawned processes when |use_console| is true.
   base::ScopedFD console_fd_;
-
-  DISALLOW_COPY_AND_ASSIGN(Worker);
 };
 
 void Init::Worker::Start() {

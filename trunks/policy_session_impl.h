@@ -36,6 +36,9 @@ class TRUNKS_EXPORT PolicySessionImpl : public PolicySession {
   // be TPM_SE_TRIAL or TPM_SE_POLICY. If other values are used,
   // StartBoundSession will return SAPI_RC_INVALID_SESSIONS.
   PolicySessionImpl(const TrunksFactory& factory, TPM_SE session_type);
+  PolicySessionImpl(const PolicySessionImpl&) = delete;
+  PolicySessionImpl& operator=(const PolicySessionImpl&) = delete;
+
   ~PolicySessionImpl() override;
 
   // PolicySession methods
@@ -90,7 +93,6 @@ class TRUNKS_EXPORT PolicySessionImpl : public PolicySession {
   std::unique_ptr<SessionManager> session_manager_;
 
   friend class PolicySessionTest;
-  DISALLOW_COPY_AND_ASSIGN(PolicySessionImpl);
 };
 
 }  // namespace trunks

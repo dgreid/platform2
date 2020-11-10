@@ -14,14 +14,14 @@ namespace shill {
 class Config {
  public:
   Config();
+  Config(const Config&) = delete;
+  Config& operator=(const Config&) = delete;
+
   virtual ~Config();
 
   virtual std::string GetRunDirectory() const;
   virtual std::string GetStorageDirectory() const;
   virtual std::string GetUserStorageDirectory() const;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(Config);
 };
 
 }  // namespace shill

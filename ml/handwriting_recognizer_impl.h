@@ -40,6 +40,9 @@ class HandwritingRecognizerImpl
       chromeos::machine_learning::mojom::HandwritingRecognizerSpecPtr spec,
       mojo::PendingReceiver<
           chromeos::machine_learning::mojom::HandwritingRecognizer> receiver);
+  HandwritingRecognizerImpl(const HandwritingRecognizerImpl&) = delete;
+  HandwritingRecognizerImpl& operator=(const HandwritingRecognizerImpl&) =
+      delete;
 
   // mojom::HandwritingRecognizer:
   void Recognize(
@@ -54,8 +57,6 @@ class HandwritingRecognizerImpl
 
   mojo::Receiver<chromeos::machine_learning::mojom::HandwritingRecognizer>
       receiver_;
-
-  DISALLOW_COPY_AND_ASSIGN(HandwritingRecognizerImpl);
 };
 
 }  // namespace ml

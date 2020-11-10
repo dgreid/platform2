@@ -25,6 +25,9 @@ namespace brillo {
 class MountNamespaceTest : public ::testing::Test {
  public:
   MountNamespaceTest() {}
+  MountNamespaceTest(const MountNamespaceTest&) = delete;
+  MountNamespaceTest& operator=(const MountNamespaceTest&) = delete;
+
   ~MountNamespaceTest() {}
   void SetUp() {}
 
@@ -32,9 +35,6 @@ class MountNamespaceTest : public ::testing::Test {
 
  protected:
   NiceMock<MockPlatform> platform_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MountNamespaceTest);
 };
 
 TEST_F(MountNamespaceTest, CreateNamespace) {

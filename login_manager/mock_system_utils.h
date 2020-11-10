@@ -21,6 +21,9 @@ namespace login_manager {
 class MockSystemUtils : public SystemUtils {
  public:
   MockSystemUtils();
+  MockSystemUtils(const MockSystemUtils&) = delete;
+  MockSystemUtils& operator=(const MockSystemUtils&) = delete;
+
   ~MockSystemUtils() override;
 
   MOCK_METHOD(int, kill, (pid_t, uid_t, int), (override));
@@ -97,9 +100,6 @@ class MockSystemUtils : public SystemUtils {
                const std::vector<std::string>&,
                pid_t*),
               (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockSystemUtils);
 };
 
 }  // namespace login_manager

@@ -35,6 +35,8 @@ class ImageLoaderImpl {
   // Instantiate an object with a configuration object.
   explicit ImageLoaderImpl(ImageLoaderConfig config)
       : config_(std::move(config)) {}
+  ImageLoaderImpl(const ImageLoaderImpl&) = delete;
+  ImageLoaderImpl& operator=(const ImageLoaderImpl&) = delete;
 
   // Register a component.
   bool RegisterComponent(const std::string& name,
@@ -128,8 +130,6 @@ class ImageLoaderImpl {
 
   // Report if a component name is valid or not.
   static bool IsIdValid(const std::string& id);
-
-  DISALLOW_COPY_AND_ASSIGN(ImageLoaderImpl);
 };
 
 }  // namespace imageloader

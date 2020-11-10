@@ -21,6 +21,9 @@ namespace cryptohome {
 class TpmLiveTest {
  public:
   TpmLiveTest();
+  TpmLiveTest(const TpmLiveTest&) = delete;
+  TpmLiveTest& operator=(const TpmLiveTest&) = delete;
+
   ~TpmLiveTest() = default;
 
   // This method runs all or a subset of all tests, depending on the supplied
@@ -69,8 +72,6 @@ class TpmLiveTest {
   bool SignatureSealedSecretTest(const brillo::SecureBlob& owner_password);
 
   Tpm* tpm_;
-
-  DISALLOW_COPY_AND_ASSIGN(TpmLiveTest);
 };
 
 }  // namespace cryptohome

@@ -82,6 +82,8 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
 
   // Sets up Mount with the default locations, username, etc., as defined above.
   Mount();
+  Mount(const Mount&) = delete;
+  Mount& operator=(const Mount&) = delete;
 
   virtual ~Mount();
 
@@ -513,8 +515,6 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   FRIEND_TEST(EphemeralNoUserSystemTest, CreateMyFilesDownloads);
   FRIEND_TEST(EphemeralNoUserSystemTest, CreateMyFilesDownloadsAlreadyExists);
   FRIEND_TEST(EphemeralNoUserSystemTest, MountGuestUserDir);
-
-  DISALLOW_COPY_AND_ASSIGN(Mount);
 };
 
 }  // namespace cryptohome

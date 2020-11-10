@@ -112,6 +112,9 @@ class Manager {
           const std::string& run_directory,
           const std::string& storage_directory,
           const std::string& user_storage_directory);
+  Manager(const Manager&) = delete;
+  Manager& operator=(const Manager&) = delete;
+
   virtual ~Manager();
 
   void RegisterAsync(const base::Callback<void(bool)>& completion_callback);
@@ -891,8 +894,6 @@ class Manager {
   bool should_blackhole_user_traffic_;
   std::vector<uint32_t> user_traffic_uids_;
   base::WeakPtrFactory<Manager> weak_factory_{this};
-
-  DISALLOW_COPY_AND_ASSIGN(Manager);
 };
 
 }  // namespace shill

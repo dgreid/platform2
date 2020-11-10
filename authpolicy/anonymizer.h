@@ -22,6 +22,8 @@ namespace authpolicy {
 class Anonymizer {
  public:
   Anonymizer();
+  Anonymizer(const Anonymizer&) = delete;
+  Anonymizer& operator=(const Anonymizer&) = delete;
 
   // Causes Process() to replace |string_to_replace| by |replacement|.
   void SetReplacement(const std::string& string_to_replace,
@@ -90,8 +92,6 @@ class Anonymizer {
 
   bool process_called_for_testing_ = false;
   bool disabled_ = false;
-
-  DISALLOW_COPY_AND_ASSIGN(Anonymizer);
 };
 
 }  // namespace authpolicy

@@ -32,6 +32,9 @@ class DHCPCDListener final : public DHCPCDListenerInterface {
   DHCPCDListener(const scoped_refptr<dbus::Bus>& bus,
                  EventDispatcher* dispatcher,
                  DHCPProvider* provider);
+  DHCPCDListener(const DHCPCDListener&) = delete;
+  DHCPCDListener& operator=(const DHCPCDListener&) = delete;
+
   ~DHCPCDListener() override;
 
  private:
@@ -63,7 +66,6 @@ class DHCPCDListener final : public DHCPCDListenerInterface {
   const std::string match_rule_;
 
   base::WeakPtrFactory<DHCPCDListener> weak_factory_{this};
-  DISALLOW_COPY_AND_ASSIGN(DHCPCDListener);
 };
 
 }  // namespace shill

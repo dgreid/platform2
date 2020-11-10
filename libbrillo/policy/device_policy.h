@@ -64,6 +64,9 @@ class DevicePolicy {
   };
 
   DevicePolicy();
+  DevicePolicy(const DevicePolicy&) = delete;
+  DevicePolicy& operator=(const DevicePolicy&) = delete;
+
   virtual ~DevicePolicy();
 
   // Load device policy off of disk into |policy_|.
@@ -269,8 +272,6 @@ class DevicePolicy {
  private:
   // Verifies that the policy signature is correct.
   virtual bool VerifyPolicySignature() = 0;
-
-  DISALLOW_COPY_AND_ASSIGN(DevicePolicy);
 };
 }  // namespace policy
 

@@ -124,6 +124,8 @@ class SeqHandler {
  protected:
   // For testing purposes.
   SeqHandler();
+  SeqHandler(const SeqHandler&) = delete;
+  SeqHandler& operator=(const SeqHandler&) = delete;
 
  private:
   friend class SeqHandlerTest;
@@ -154,8 +156,6 @@ class SeqHandler {
   IsDevicePresentCallback is_device_present_cb_;
   IsPortPresentCallback is_port_present_cb_;
   base::WeakPtrFactory<SeqHandler> weak_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(SeqHandler);
 };
 
 }  // namespace midis

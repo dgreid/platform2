@@ -23,13 +23,14 @@ class Environment {
     CHECK(temp_dir_.CreateUniqueTempDir());
     temp_file_ = temp_dir_.GetPath().Append(kTestConsentIdFile);
   }
+  Environment(const Environment&) = delete;
+  Environment& operator=(const Environment&) = delete;
+
   const base::FilePath& temp_file() { return temp_file_; }
 
  private:
   base::ScopedTempDir temp_dir_;
   base::FilePath temp_file_;
-
-  DISALLOW_COPY_AND_ASSIGN(Environment);
 };
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {

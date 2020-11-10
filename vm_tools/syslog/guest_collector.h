@@ -35,6 +35,8 @@ class GuestCollector : public Collector {
   // Private default constructor.  Use the static factory function to create new
   // instances of this class.
   explicit GuestCollector(base::Closure shutdown_closure);
+  GuestCollector(const GuestCollector&) = delete;
+  GuestCollector& operator=(const GuestCollector&) = delete;
 
   // Initializes this Collector for tests.  Starts listening on the
   // provided file descriptor instead of creating a socket and binding to a
@@ -59,8 +61,6 @@ class GuestCollector : public Collector {
   std::unique_ptr<vm_tools::LogCollector::Stub> stub_;
 
   base::WeakPtrFactory<GuestCollector> weak_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(GuestCollector);
 };
 
 }  // namespace syslog

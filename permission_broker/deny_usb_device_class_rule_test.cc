@@ -13,13 +13,14 @@ namespace permission_broker {
 class DenyUsbDeviceClassRuleTest : public RuleTest {
  public:
   DenyUsbDeviceClassRuleTest() : rule_(USB_CLASS_HUB) {}
+  DenyUsbDeviceClassRuleTest(const DenyUsbDeviceClassRuleTest&) = delete;
+  DenyUsbDeviceClassRuleTest& operator=(const DenyUsbDeviceClassRuleTest&) =
+      delete;
+
   ~DenyUsbDeviceClassRuleTest() override = default;
 
  protected:
   DenyUsbDeviceClassRule rule_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(DenyUsbDeviceClassRuleTest);
 };
 
 TEST_F(DenyUsbDeviceClassRuleTest, IgnoreNonUsbDevice) {

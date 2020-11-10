@@ -42,6 +42,9 @@ class BaseActivityLogger {
   BaseActivityLogger(const std::string& activity_name,
                      base::TimeDelta stopped_delay,
                      base::TimeDelta ongoing_interval);
+  BaseActivityLogger(const BaseActivityLogger&) = delete;
+  BaseActivityLogger& operator=(const BaseActivityLogger&) = delete;
+
   virtual ~BaseActivityLogger();
 
   // Returns a string of the format "0.5 sec ago" describing how long ago
@@ -65,9 +68,6 @@ class BaseActivityLogger {
   // Used to log the cessation of activity and ongoing activity, respectively.
   base::OneShotTimer stopped_timer_;
   base::RepeatingTimer ongoing_timer_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(BaseActivityLogger);
 };
 
 // PeriodicActivityLogger should be used for activity that is reported to powerd
@@ -106,6 +106,9 @@ class PeriodicActivityLogger : public BaseActivityLogger {
   PeriodicActivityLogger(const std::string& activity_name,
                          base::TimeDelta stopped_delay,
                          base::TimeDelta ongoing_interval);
+  PeriodicActivityLogger(const PeriodicActivityLogger&) = delete;
+  PeriodicActivityLogger& operator=(const PeriodicActivityLogger&) = delete;
+
   ~PeriodicActivityLogger() override;
 
   // Should be called when a periodic report of activity is received.
@@ -118,8 +121,6 @@ class PeriodicActivityLogger : public BaseActivityLogger {
   // The time at which activity was last reported. Zero if activity hasn't yet
   // been reported.
   base::TimeTicks last_report_time_;
-
-  DISALLOW_COPY_AND_ASSIGN(PeriodicActivityLogger);
 };
 
 // StartStopActivityLogger should be used for activity that is reported to
@@ -155,6 +156,9 @@ class StartStopActivityLogger : public BaseActivityLogger {
   StartStopActivityLogger(const std::string& activity_name,
                           base::TimeDelta stopped_delay,
                           base::TimeDelta ongoing_interval);
+  StartStopActivityLogger(const StartStopActivityLogger&) = delete;
+  StartStopActivityLogger& operator=(const StartStopActivityLogger&) = delete;
+
   ~StartStopActivityLogger() override;
 
   // Should be called when activity starts or stops.
@@ -168,8 +172,6 @@ class StartStopActivityLogger : public BaseActivityLogger {
   // The time at which activity last stopped. Zero if activity is currently
   // active or never started.
   base::TimeTicks stopped_time_;
-
-  DISALLOW_COPY_AND_ASSIGN(StartStopActivityLogger);
 };
 
 // OngoingStateActivityLogger periodically logs a caller-provided state.
@@ -190,6 +192,10 @@ class OngoingStateActivityLogger : public BaseActivityLogger {
   // |ongoing_interval| contains the interval between log messages while
   // |state_| is non-empty.
   explicit OngoingStateActivityLogger(base::TimeDelta ongoing_interval);
+  OngoingStateActivityLogger(const OngoingStateActivityLogger&) = delete;
+  OngoingStateActivityLogger& operator=(const OngoingStateActivityLogger&) =
+      delete;
+
   ~OngoingStateActivityLogger() override;
 
   // Should be called when the state to log has changed.
@@ -203,8 +209,6 @@ class OngoingStateActivityLogger : public BaseActivityLogger {
 
   // Current state message to log.
   std::string state_;
-
-  DISALLOW_COPY_AND_ASSIGN(OngoingStateActivityLogger);
 };
 
 }  // namespace power_manager

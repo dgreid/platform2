@@ -36,10 +36,10 @@ class Mechanism {
 
  protected:
   Mechanism();
-  virtual ~Mechanism();
+  Mechanism(const Mechanism&) = delete;
+  Mechanism& operator=(const Mechanism&) = delete;
 
- private:
-  DISALLOW_COPY_AND_ASSIGN(Mechanism);
+  virtual ~Mechanism();
 };
 
 }  // namespace thd

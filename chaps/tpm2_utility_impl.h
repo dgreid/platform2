@@ -42,6 +42,9 @@ class TPM2UtilityImpl : public TPMUtility {
       const scoped_refptr<base::SingleThreadTaskRunner>& task_runner);
   // Does not take ownership of |factory|.
   explicit TPM2UtilityImpl(trunks::TrunksFactory* factory);
+  TPM2UtilityImpl(const TPM2UtilityImpl&) = delete;
+  TPM2UtilityImpl& operator=(const TPM2UtilityImpl&) = delete;
+
   ~TPM2UtilityImpl() override;
   size_t MinRSAKeyBits() override { return kMinModulusSize * 8; }
   size_t MaxRSAKeyBits() override { return kMaxModulusSize * 8; }
@@ -160,8 +163,6 @@ class TPM2UtilityImpl : public TPMUtility {
   FRIEND_TEST(TPM2UtilityTest, IsTPMAvailable);
   FRIEND_TEST(TPM2UtilityTest, LoadKeySuccess);
   FRIEND_TEST(TPM2UtilityTest, UnloadKeysTest);
-
-  DISALLOW_COPY_AND_ASSIGN(TPM2UtilityImpl);
 };
 
 }  // namespace chaps

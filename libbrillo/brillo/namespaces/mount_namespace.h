@@ -29,6 +29,8 @@ class BRILLO_EXPORT UnownedMountNamespace : public MountNamespaceInterface {
  public:
   explicit UnownedMountNamespace(const base::FilePath& ns_path)
       : ns_path_(ns_path) {}
+  UnownedMountNamespace(const UnownedMountNamespace&) = delete;
+  UnownedMountNamespace& operator=(const UnownedMountNamespace&) = delete;
 
   ~UnownedMountNamespace() override;
 
@@ -36,8 +38,6 @@ class BRILLO_EXPORT UnownedMountNamespace : public MountNamespaceInterface {
 
  private:
   base::FilePath ns_path_;
-
-  DISALLOW_COPY_AND_ASSIGN(UnownedMountNamespace);
 };
 
 class BRILLO_EXPORT MountNamespace : public MountNamespaceInterface {
@@ -51,6 +51,9 @@ class BRILLO_EXPORT MountNamespace : public MountNamespaceInterface {
   // destroyed when the object goes out of scope.
  public:
   MountNamespace(const base::FilePath& ns_path, Platform* platform);
+  MountNamespace(const MountNamespace&) = delete;
+  MountNamespace& operator=(const MountNamespace&) = delete;
+
   ~MountNamespace() override;
 
   bool Create();
@@ -61,8 +64,6 @@ class BRILLO_EXPORT MountNamespace : public MountNamespaceInterface {
   base::FilePath ns_path_;
   Platform* platform_;
   bool exists_;
-
-  DISALLOW_COPY_AND_ASSIGN(MountNamespace);
 };
 
 }  // namespace brillo

@@ -121,6 +121,9 @@ class WiFi : public Device, public SupplicantEventDelegateInterface {
        const std::string& address,
        int interface_index,
        std::unique_ptr<WakeOnWiFiInterface> wake_on_wifi);
+  WiFi(const WiFi&) = delete;
+  WiFi& operator=(const WiFi&) = delete;
+
   ~WiFi() override;
 
   void Start(Error* error,
@@ -731,8 +734,6 @@ class WiFi : public Device, public SupplicantEventDelegateInterface {
   // For weak pointers that will only be invalidated at destruction. Useful for
   // callbacks that need to survive Restart().
   base::WeakPtrFactory<WiFi> weak_ptr_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(WiFi);
 };
 
 }  // namespace shill

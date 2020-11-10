@@ -20,6 +20,10 @@ class AmbientLightSensorManagerStub
  public:
   AmbientLightSensorManagerStub();
   explicit AmbientLightSensorManagerStub(int lux);
+  AmbientLightSensorManagerStub(const AmbientLightSensorManagerStub&) = delete;
+  AmbientLightSensorManagerStub& operator=(
+      const AmbientLightSensorManagerStub&) = delete;
+
   ~AmbientLightSensorManagerStub() override;
 
   // AmbientLightSensorManagerInterface implementation:
@@ -30,8 +34,6 @@ class AmbientLightSensorManagerStub
  private:
   std::unique_ptr<system::AmbientLightSensorStub> internal_backlight_sensor_;
   std::unique_ptr<system::AmbientLightSensorStub> keyboard_backlight_sensor_;
-
-  DISALLOW_COPY_AND_ASSIGN(AmbientLightSensorManagerStub);
 };
 
 }  // namespace system

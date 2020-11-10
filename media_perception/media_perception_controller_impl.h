@@ -24,6 +24,9 @@ class MediaPerceptionControllerImpl
       std::shared_ptr<VideoCaptureServiceClient> video_capture_service_client,
       std::shared_ptr<ChromeAudioServiceClient> chrome_audio_service_client,
       std::shared_ptr<Rtanalytics> rtanalytics);
+  MediaPerceptionControllerImpl(const MediaPerceptionControllerImpl&) = delete;
+  MediaPerceptionControllerImpl& operator=(
+      const MediaPerceptionControllerImpl&) = delete;
 
   void set_connection_error_handler(base::Closure connection_error_handler);
 
@@ -40,8 +43,6 @@ class MediaPerceptionControllerImpl
   std::shared_ptr<ChromeAudioServiceClient> chrome_audio_service_client_;
 
   std::shared_ptr<Rtanalytics> rtanalytics_;
-
-  DISALLOW_COPY_AND_ASSIGN(MediaPerceptionControllerImpl);
 };
 
 }  // namespace mri

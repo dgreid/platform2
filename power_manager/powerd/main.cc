@@ -69,6 +69,9 @@ namespace power_manager {
 class DaemonDelegateImpl : public DaemonDelegate {
  public:
   DaemonDelegateImpl() = default;
+  DaemonDelegateImpl(const DaemonDelegateImpl&) = delete;
+  DaemonDelegateImpl& operator=(const DaemonDelegateImpl&) = delete;
+
   ~DaemonDelegateImpl() override = default;
 
   // DaemonDelegate:
@@ -297,8 +300,6 @@ class DaemonDelegateImpl : public DaemonDelegate {
  private:
   base::FilePath read_write_prefs_dir_;
   base::FilePath read_only_prefs_dir_;
-
-  DISALLOW_COPY_AND_ASSIGN(DaemonDelegateImpl);
 };
 
 }  // namespace power_manager

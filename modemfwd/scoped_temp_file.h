@@ -22,10 +22,10 @@ class ScopedTempFile {
 
  private:
   explicit ScopedTempFile(const base::FilePath& path);
+  ScopedTempFile(const ScopedTempFile&) = delete;
+  ScopedTempFile& operator=(const ScopedTempFile&) = delete;
 
   const base::FilePath path_;
-
-  DISALLOW_COPY_AND_ASSIGN(ScopedTempFile);
 };
 
 }  // namespace modemfwd

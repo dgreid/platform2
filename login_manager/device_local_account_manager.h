@@ -35,6 +35,10 @@ class DeviceLocalAccountManager {
 
   DeviceLocalAccountManager(const base::FilePath& state_dir,
                             PolicyKey* owner_key);
+  DeviceLocalAccountManager(const DeviceLocalAccountManager&) = delete;
+  DeviceLocalAccountManager& operator=(const DeviceLocalAccountManager&) =
+      delete;
+
   ~DeviceLocalAccountManager();
 
   // Updates device settings, i.e. what device-local accounts are available.
@@ -79,8 +83,6 @@ class DeviceLocalAccountManager {
   std::map<std::string, std::unique_ptr<PolicyService>> policy_map_;
 
   FRIEND_TEST(DeviceLocalAccountManagerTest, MigrateUppercaseDirs);
-
-  DISALLOW_COPY_AND_ASSIGN(DeviceLocalAccountManager);
 };
 
 }  // namespace login_manager

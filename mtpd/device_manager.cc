@@ -83,6 +83,9 @@ class DeviceManager::MtpPoller : public base::Thread {
 
   explicit MtpPoller(scoped_refptr<base::SingleThreadTaskRunner> task_runner)
       : Thread("MTP poller"), main_thread_task_runner_(task_runner) {}
+  MtpPoller(const MtpPoller&) = delete;
+  MtpPoller& operator=(const MtpPoller&) = delete;
+
   ~MtpPoller() override { Stop(); }
 
   void WaitForEvent(LIBMTP_mtpdevice_t* mtp_device, EventCallback callback) {
@@ -166,8 +169,6 @@ class DeviceManager::MtpPoller : public base::Thread {
   base::Lock lock_;
   // Number of waiters waiting for an event.
   int num_pending_ = 0;
-
-  DISALLOW_COPY_AND_ASSIGN(MtpPoller);
 };
 
 DeviceManager::DeviceManager(DeviceEventDelegate* delegate)

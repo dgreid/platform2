@@ -21,6 +21,8 @@ class DBusProtocolHandler;
 // Implementation of the Response interface.
 class DBusResponse final : public Response {
  public:
+  DBusResponse(const DBusResponse&) = delete;
+  DBusResponse& operator=(const DBusResponse&) = delete;
   ~DBusResponse() override;
 
   // Overrides from Response.
@@ -42,8 +44,6 @@ class DBusResponse final : public Response {
   brillo::StreamPtr data_stream_;
   std::multimap<std::string, std::string> headers_;
   bool reply_sent_{false};
-
-  DISALLOW_COPY_AND_ASSIGN(DBusResponse);
 };
 
 }  // namespace libwebserv

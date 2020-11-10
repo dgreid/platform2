@@ -80,6 +80,8 @@ class SealedStorage {
   // TpmOwnershipInterface, which connect to the corresponding daemons over
   // dbus.
   explicit SealedStorage(const Policy& policy);
+  SealedStorage(const SealedStorage&) = delete;
+  SealedStorage& operator=(const SealedStorage&) = delete;
 
   // Returns the default TrunksFactory that connects to trunksd over dbus.
   static ScopedTrunksFactory CreateTrunksFactory();
@@ -195,8 +197,6 @@ class SealedStorage {
   ScopedTpmOwnership dft_tpm_ownership_;
   trunks::TrunksFactory* trunks_factory_;
   tpm_manager::TpmOwnershipInterface* tpm_ownership_;
-
-  DISALLOW_COPY_AND_ASSIGN(SealedStorage);
 };
 
 }  // namespace sealed_storage

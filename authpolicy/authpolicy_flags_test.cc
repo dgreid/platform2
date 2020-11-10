@@ -13,10 +13,9 @@ namespace authpolicy {
 class AuthPolicyFlagsTest : public ::testing::Test {
  public:
   AuthPolicyFlagsTest() {}
+  AuthPolicyFlagsTest(const AuthPolicyFlagsTest&) = delete;
+  AuthPolicyFlagsTest& operator=(const AuthPolicyFlagsTest&) = delete;
   ~AuthPolicyFlagsTest() override {}
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(AuthPolicyFlagsTest);
 };
 
 // By default, all debug flags should be off.

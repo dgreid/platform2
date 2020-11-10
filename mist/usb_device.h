@@ -41,6 +41,8 @@ class UsbDevice : public base::SupportsWeakPtr<UsbDevice> {
   // lifetime of this object. |device_handle| is closed when this object is
   // destructed.
   explicit UsbDevice(libusb_device_handle* device_handle);
+  UsbDevice(const UsbDevice&) = delete;
+  UsbDevice& operator=(const UsbDevice&) = delete;
 
   // Destructs this UsbDevice object, closes any open libusb_device_handle, and
   // decreases the reference count of the underlying libusb_device struct by
@@ -116,8 +118,6 @@ class UsbDevice : public base::SupportsWeakPtr<UsbDevice> {
   libusb_device_handle* device_handle_;
   std::unique_ptr<libusb_device_descriptor> device_descriptor_;
   UsbError error_;
-
-  DISALLOW_COPY_AND_ASSIGN(UsbDevice);
 };
 
 }  // namespace mist

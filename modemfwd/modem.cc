@@ -90,6 +90,9 @@ class ModemImpl : public Modem {
     if (!helper->GetFirmwareInfo(&installed_firmware_))
       LOG(WARNING) << "Could not fetch installed firmware information";
   }
+  ModemImpl(const ModemImpl&) = delete;
+  ModemImpl& operator=(const ModemImpl&) = delete;
+
   ~ModemImpl() override = default;
 
   // modemfwd::Modem overrides.
@@ -140,8 +143,6 @@ class ModemImpl : public Modem {
   std::unique_ptr<Inhibitor> inhibitor_;
   FirmwareInfo installed_firmware_;
   ModemHelper* helper_;
-
-  DISALLOW_COPY_AND_ASSIGN(ModemImpl);
 };
 
 std::unique_ptr<Modem> CreateModem(
@@ -212,6 +213,9 @@ class StubModem : public Modem {
       : device_id_(device_id),
         equipment_id_(base::UnguessableToken().ToString()),
         helper_(helper) {}
+  StubModem(const StubModem&) = delete;
+  StubModem& operator=(const StubModem&) = delete;
+
   ~StubModem() override = default;
 
   // modemfwd::Modem overrides.
@@ -247,8 +251,6 @@ class StubModem : public Modem {
   std::string device_id_;
   std::string equipment_id_;
   ModemHelper* helper_;
-
-  DISALLOW_COPY_AND_ASSIGN(StubModem);
 };
 
 std::unique_ptr<Modem> CreateStubModem(const std::string& device_id,

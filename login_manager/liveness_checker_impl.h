@@ -33,6 +33,9 @@ class LivenessCheckerImpl : public LivenessChecker {
                       dbus::ObjectProxy* dbus_proxy,
                       bool enable_aborting,
                       base::TimeDelta interval);
+  LivenessCheckerImpl(const LivenessCheckerImpl&) = delete;
+  LivenessCheckerImpl& operator=(const LivenessCheckerImpl&) = delete;
+
   ~LivenessCheckerImpl() override;
 
   // Implementation of LivenessChecker.
@@ -63,8 +66,6 @@ class LivenessCheckerImpl : public LivenessChecker {
   bool last_ping_acked_ = true;
   base::CancelableClosure liveness_check_;
   base::WeakPtrFactory<LivenessCheckerImpl> weak_ptr_factory_{this};
-
-  DISALLOW_COPY_AND_ASSIGN(LivenessCheckerImpl);
 };
 }  // namespace login_manager
 

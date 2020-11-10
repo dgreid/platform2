@@ -111,6 +111,9 @@ class Daemon : public policy::InputEventHandler::Delegate,
   static constexpr char kAlreadyRanFileName[] = "already_ran";
 
   Daemon(DaemonDelegate* delegate, const base::FilePath& run_dir);
+  Daemon(const Daemon&) = delete;
+  Daemon& operator=(const Daemon&) = delete;
+
   ~Daemon() override;
 
   void set_wakeup_count_path_for_testing(const base::FilePath& path) {
@@ -425,8 +428,6 @@ class Daemon : public policy::InputEventHandler::Delegate,
   // Must come last so that weak pointers will be invalidated before other
   // members are destroyed.
   base::WeakPtrFactory<Daemon> weak_ptr_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(Daemon);
 };
 
 }  // namespace power_manager

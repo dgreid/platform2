@@ -37,6 +37,8 @@ class Server : public ServerInterface {
          uint16_t port,
          int message_fd,
          ConnectionDelegateFactory delegate_factory);
+  Server(const Server&) = delete;
+  Server& operator=(const Server&) = delete;
 
   ~Server() override;
 
@@ -101,8 +103,6 @@ class Server : public ServerInterface {
 
   // A ConnectionDelegateInterface factory used to serve the connections.
   ConnectionDelegateFactory* delegate_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(Server);
 };
 
 }  // namespace http_server

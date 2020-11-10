@@ -17,6 +17,9 @@ namespace brillo {
 class MockMinijail : public brillo::Minijail {
  public:
   MockMinijail() {}
+  MockMinijail(const MockMinijail&) = delete;
+  MockMinijail& operator=(const MockMinijail&) = delete;
+
   virtual ~MockMinijail() {}
 
   MOCK_METHOD(struct minijail*, New, (), (override));
@@ -83,9 +86,6 @@ class MockMinijail : public brillo::Minijail {
                int*,
                int*),
               (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockMinijail);
 };
 
 }  // namespace brillo

@@ -31,6 +31,8 @@ class UsbDeviceDescriptor {
   // outlive this object.
   UsbDeviceDescriptor(const base::WeakPtr<UsbDevice>& device,
                       const libusb_device_descriptor* device_descriptor);
+  UsbDeviceDescriptor(const UsbDeviceDescriptor&) = delete;
+  UsbDeviceDescriptor& operator=(const UsbDeviceDescriptor&) = delete;
 
   ~UsbDeviceDescriptor() = default;
 
@@ -55,8 +57,6 @@ class UsbDeviceDescriptor {
  private:
   base::WeakPtr<UsbDevice> device_;
   const libusb_device_descriptor* const device_descriptor_;
-
-  DISALLOW_COPY_AND_ASSIGN(UsbDeviceDescriptor);
 };
 
 }  // namespace mist

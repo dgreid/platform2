@@ -43,6 +43,9 @@ class Service final {
     // default move constructor because ScopedTempDir doesn't have a move
     // constructor.
     ServerInfo(ServerInfo&& other) noexcept;
+    ServerInfo(const ServerInfo&) = delete;
+    ServerInfo& operator=(const ServerInfo&) = delete;
+
     ServerInfo& operator=(ServerInfo&& other) noexcept;
 
     pid_t pid() const { return pid_; }
@@ -55,10 +58,11 @@ class Service final {
     // The root of this server.
     base::ScopedTempDir root_dir_;
 
-    DISALLOW_COPY_AND_ASSIGN(ServerInfo);
   };
 
   explicit Service(base::Closure quit_closure);
+  Service(const Service&) = delete;
+  Service& operator=(const Service&) = delete;
 
   // Initializes the service by connecting to the system DBus daemon, exporting
   // its methods, and taking ownership of it's name.
@@ -103,7 +107,6 @@ class Service final {
   base::Closure quit_closure_;
 
   base::WeakPtrFactory<Service> weak_factory_;
-  DISALLOW_COPY_AND_ASSIGN(Service);
 };
 
 }  // namespace seneschal

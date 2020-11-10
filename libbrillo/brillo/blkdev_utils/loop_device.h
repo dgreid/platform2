@@ -79,6 +79,9 @@ class BRILLO_EXPORT LoopDeviceManager {
   // Parameters
   //   ioctl_runner - base::Callback to run ioctls.
   explicit LoopDeviceManager(LoopIoctl ioctl_runner);
+  LoopDeviceManager(const LoopDeviceManager&) = delete;
+  LoopDeviceManager& operator=(const LoopDeviceManager&) = delete;
+
   virtual ~LoopDeviceManager() = default;
 
   // Allocates a loop device and attaches it to a backing file.
@@ -109,7 +112,6 @@ class BRILLO_EXPORT LoopDeviceManager {
       int device_number, const base::FilePath& backing_file);
 
   LoopIoctl loop_ioctl_;
-  DISALLOW_COPY_AND_ASSIGN(LoopDeviceManager);
 };
 
 }  // namespace brillo

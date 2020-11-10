@@ -33,6 +33,9 @@ class DBusAdaptor {
 
   DBusAdaptor(const scoped_refptr<dbus::Bus>& bus,
               const std::string& object_path);
+  DBusAdaptor(const DBusAdaptor&) = delete;
+  DBusAdaptor& operator=(const DBusAdaptor&) = delete;
+
   ~DBusAdaptor();
 
   const dbus::ObjectPath& dbus_path() const { return dbus_path_; }
@@ -121,8 +124,6 @@ class DBusAdaptor {
   dbus::ObjectPath dbus_path_;
   std::unique_ptr<brillo::dbus_utils::DBusObject> dbus_object_;
   base::WeakPtrFactory<DBusAdaptor> weak_factory_{this};
-
-  DISALLOW_COPY_AND_ASSIGN(DBusAdaptor);
 };
 
 }  // namespace shill

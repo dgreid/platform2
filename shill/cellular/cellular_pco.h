@@ -45,10 +45,10 @@ class CellularPco {
   // Used by CreateFromRawData to construct a CellularPco object with the
   // elements extracted from a PCO structure.
   explicit CellularPco(std::vector<Element> elements);
+  CellularPco(const CellularPco&) = delete;
+  CellularPco& operator=(const CellularPco&) = delete;
 
   const std::vector<Element> elements_;
-
-  DISALLOW_COPY_AND_ASSIGN(CellularPco);
 };
 
 }  // namespace shill

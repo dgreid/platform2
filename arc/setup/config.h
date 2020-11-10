@@ -27,6 +27,9 @@ class Config {
  public:
   Config(const base::FilePath& config_json,
          std::unique_ptr<base::Environment> config_env);
+  Config(const Config&) = delete;
+  Config& operator=(const Config&) = delete;
+
   ~Config();
 
   // Finds a string config with |name| first in JSON and stores it in |out| if
@@ -57,8 +60,6 @@ class Config {
 
   std::map<std::string, std::unique_ptr<base::Value>> json_;
   std::unique_ptr<base::Environment> env_;
-
-  DISALLOW_COPY_AND_ASSIGN(Config);
 };
 
 }  // namespace arc

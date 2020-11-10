@@ -35,6 +35,9 @@ class CellularController : public UserProximityHandler::Delegate {
   };
 
   CellularController();
+  CellularController(const CellularController&) = delete;
+  CellularController& operator=(const CellularController&) = delete;
+
   ~CellularController() override;
 
   // Ownership of raw pointers remains with the caller.
@@ -66,8 +69,6 @@ class CellularController : public UserProximityHandler::Delegate {
   // GPIO number for the dynamic power reduction signal of a built-in cellular
   // modem.
   int64_t dpr_gpio_number_ = -1;
-
-  DISALLOW_COPY_AND_ASSIGN(CellularController);
 };
 
 }  // namespace policy

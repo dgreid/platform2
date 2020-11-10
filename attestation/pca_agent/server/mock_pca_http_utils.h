@@ -17,6 +17,9 @@ namespace pca_agent {
 class MockPcaHttpUtils : public PcaHttpUtils {
  public:
   MockPcaHttpUtils() = default;
+  MockPcaHttpUtils(const MockPcaHttpUtils&) = delete;
+  MockPcaHttpUtils& operator=(const MockPcaHttpUtils&) = delete;
+
   ~MockPcaHttpUtils() override = default;
 
   MOCK_METHOD(void,
@@ -24,8 +27,6 @@ class MockPcaHttpUtils : public PcaHttpUtils {
               (const std::string&,
                const brillo::http::GetChromeProxyServersCallback&),
               (override));
-
-  DISALLOW_COPY_AND_ASSIGN(MockPcaHttpUtils);
 };
 
 }  // namespace pca_agent

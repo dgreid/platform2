@@ -30,6 +30,9 @@ class LIBMEMS_EXPORT IioDeviceImpl : public IioDevice {
 
   // iio_device objects are kept alive by the IioContextImpl.
   IioDeviceImpl(IioContextImpl* ctx, iio_device* dev);
+  IioDeviceImpl(const IioDeviceImpl&) = delete;
+  IioDeviceImpl& operator=(const IioDeviceImpl&) = delete;
+
   ~IioDeviceImpl() override = default;
 
   IioContext* GetContext() const override;
@@ -80,8 +83,6 @@ class LIBMEMS_EXPORT IioDeviceImpl : public IioDevice {
 
   using ScopedBuffer = std::unique_ptr<iio_buffer, decltype(&IioBufferDeleter)>;
   ScopedBuffer buffer_;
-
-  DISALLOW_COPY_AND_ASSIGN(IioDeviceImpl);
 };
 
 }  // namespace libmems

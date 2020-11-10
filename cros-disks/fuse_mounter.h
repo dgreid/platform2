@@ -36,6 +36,8 @@ class FUSEMounter : public Mounter {
               brillo::ProcessReaper* process_reaper,
               std::string filesystem_type,
               bool nosymfollow);
+  FUSEMounter(const FUSEMounter&) = delete;
+  FUSEMounter& operator=(const FUSEMounter&) = delete;
   ~FUSEMounter() override;
 
   const Platform* platform() const { return platform_; }
@@ -61,8 +63,6 @@ class FUSEMounter : public Mounter {
   brillo::ProcessReaper* const process_reaper_;
   const std::string filesystem_type_;
   const bool nosymfollow_;
-
-  DISALLOW_COPY_AND_ASSIGN(FUSEMounter);
 };
 
 // A class for mounting something using a FUSE mount program.
@@ -133,6 +133,8 @@ class FUSEMounterLegacy : public FUSEMounter {
   };
 
   explicit FUSEMounterLegacy(Params params);
+  FUSEMounterLegacy(const FUSEMounterLegacy&) = delete;
+  FUSEMounterLegacy& operator=(const FUSEMounterLegacy&) = delete;
 
   // If necessary, extracts the password from the given options and sets the
   // standard input of the given process. Does nothing if password_needed_codes
@@ -195,9 +197,6 @@ class FUSEMounterLegacy : public FUSEMounter {
   std::vector<int> password_needed_codes_;
 
   const MountOptions mount_options_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(FUSEMounterLegacy);
 };
 
 }  // namespace cros_disks

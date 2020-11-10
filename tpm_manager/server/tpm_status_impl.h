@@ -22,6 +22,9 @@ namespace tpm_manager {
 class TpmStatusImpl : public TpmStatus {
  public:
   TpmStatusImpl() = default;
+  TpmStatusImpl(const TpmStatusImpl&) = delete;
+  TpmStatusImpl& operator=(const TpmStatusImpl&) = delete;
+
   ~TpmStatusImpl() override = default;
 
   // TpmState methods.
@@ -79,8 +82,6 @@ class TpmStatusImpl : public TpmStatus {
   // Whether current owner password in the TPM is the default one; in case of
   // nullopt the password status is not determined yet.
   base::Optional<bool> is_owner_password_default_;
-
-  DISALLOW_COPY_AND_ASSIGN(TpmStatusImpl);
 };
 
 }  // namespace tpm_manager

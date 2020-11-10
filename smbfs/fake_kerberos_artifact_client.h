@@ -25,6 +25,9 @@ namespace smbfs {
 class FakeKerberosArtifactClient : public KerberosArtifactClientInterface {
  public:
   FakeKerberosArtifactClient();
+  FakeKerberosArtifactClient(const FakeKerberosArtifactClient&) = delete;
+  FakeKerberosArtifactClient& operator=(const FakeKerberosArtifactClient&) =
+      delete;
 
   // KerberosArtifactClientInterface overrides.
   void GetUserKerberosFiles(const std::string& object_guid,
@@ -58,8 +61,6 @@ class FakeKerberosArtifactClient : public KerberosArtifactClientInterface {
   dbus::ObjectProxy::SignalCallback signal_callback_;
   // Maps account_id : KerberosFiles.
   std::map<std::string, authpolicy::KerberosFiles> kerberos_files_map_;
-
-  DISALLOW_COPY_AND_ASSIGN(FakeKerberosArtifactClient);
 };
 
 }  // namespace smbfs

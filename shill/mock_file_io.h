@@ -14,15 +14,15 @@ namespace shill {
 class MockFileIO : public FileIO {
  public:
   MockFileIO() = default;
+  MockFileIO(const MockFileIO&) = delete;
+  MockFileIO& operator=(const MockFileIO&) = delete;
+
   ~MockFileIO() override = default;
 
   MOCK_METHOD(ssize_t, Write, (int, const void*, size_t), (override));
   MOCK_METHOD(ssize_t, Read, (int, void*, size_t), (override));
   MOCK_METHOD(int, Close, (int), (override));
   MOCK_METHOD(int, SetFdNonBlocking, (int), (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockFileIO);
 };
 
 }  // namespace shill

@@ -19,6 +19,9 @@ namespace arc {
 class EventPipe {
  public:
   EventPipe();
+  EventPipe(const EventPipe&) = delete;
+  EventPipe& operator=(const EventPipe&) = delete;
+
   ~EventPipe();
 
   // Returns the read-only endpoint of the event pipe file descriptor.
@@ -37,8 +40,6 @@ class EventPipe {
   base::ScopedFD event_write_fd_;
 
   base::Thread event_write_thread_;
-
-  DISALLOW_COPY_AND_ASSIGN(EventPipe);
 };
 
 }  // namespace arc

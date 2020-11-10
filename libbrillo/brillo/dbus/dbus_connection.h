@@ -17,6 +17,9 @@ namespace brillo {
 class BRILLO_EXPORT DBusConnection final {
  public:
   DBusConnection();
+  DBusConnection(const DBusConnection&) = delete;
+  DBusConnection& operator=(const DBusConnection&) = delete;
+
   ~DBusConnection();
 
   // Instantiates dbus::Bus and establishes a D-Bus connection. Returns a
@@ -30,9 +33,6 @@ class BRILLO_EXPORT DBusConnection final {
 
  private:
   scoped_refptr<::dbus::Bus> bus_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(DBusConnection);
 };
 
 }  // namespace brillo

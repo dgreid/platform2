@@ -21,6 +21,9 @@ constexpr int kDMSetupTimeoutSeconds = 6;
 class VerityMounter {
  public:
   VerityMounter() = default;
+  VerityMounter(const VerityMounter&) = delete;
+  VerityMounter& operator=(const VerityMounter&) = delete;
+
   virtual ~VerityMounter() = default;
 
   virtual bool Mount(const base::ScopedFD& image_fd,
@@ -37,9 +40,6 @@ class VerityMounter {
   // Take the raw table, clean up any newlines, insert the device_path, and add
   // the correct error_condition.
   static bool SetupTable(std::string* table, const std::string& device_path);
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(VerityMounter);
 };
 
 }  // namespace imageloader

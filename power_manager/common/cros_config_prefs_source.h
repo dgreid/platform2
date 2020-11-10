@@ -21,6 +21,9 @@ class CrosConfigPrefsSource : public PrefsSourceInterface {
   // |config| must already be initialized with CrosConfig::Init().
   explicit CrosConfigPrefsSource(
       std::unique_ptr<brillo::CrosConfigInterface> config);
+  CrosConfigPrefsSource(const CrosConfigPrefsSource&) = delete;
+  CrosConfigPrefsSource& operator=(const CrosConfigPrefsSource&) = delete;
+
   ~CrosConfigPrefsSource() override;
 
   // PrefsSourceInterface:
@@ -29,8 +32,6 @@ class CrosConfigPrefsSource : public PrefsSourceInterface {
 
  private:
   std::unique_ptr<brillo::CrosConfigInterface> config_;
-
-  DISALLOW_COPY_AND_ASSIGN(CrosConfigPrefsSource);
 };
 
 }  // namespace power_manager

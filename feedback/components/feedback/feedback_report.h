@@ -30,6 +30,8 @@ class FeedbackReport : public base::RefCounted<FeedbackReport> {
                  const base::Time& upload_at,
                  const std::string& data,
                  scoped_refptr<base::SequencedTaskRunner> task_runner);
+  FeedbackReport(const FeedbackReport&) = delete;
+  FeedbackReport& operator=(const FeedbackReport&) = delete;
 
   // Stops the disk write of the report and deletes the report file if already
   // written.
@@ -55,8 +57,6 @@ class FeedbackReport : public base::RefCounted<FeedbackReport> {
   std::string data_;
 
   scoped_refptr<base::SequencedTaskRunner> reports_task_runner_;
-
-  DISALLOW_COPY_AND_ASSIGN(FeedbackReport);
 };
 
 }  // namespace feedback

@@ -33,6 +33,9 @@ class TpmInit {
       base::Callback<void(bool status, bool took_ownership)>;
 
   TpmInit(Tpm* tpm, Platform* platform);
+  TpmInit(const TpmInit&) = delete;
+  TpmInit& operator=(const TpmInit&) = delete;
+
   virtual ~TpmInit();
 
   virtual void Init(OwnershipCallback ownership_callback);
@@ -173,8 +176,6 @@ class TpmInit {
   Platform* platform_ = nullptr;
   TpmPersistentState tpm_persistent_state_;
   ScopedKeyHandle cryptohome_key_;
-
-  DISALLOW_COPY_AND_ASSIGN(TpmInit);
 };
 
 }  // namespace cryptohome

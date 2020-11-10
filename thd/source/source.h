@@ -25,10 +25,10 @@ class Source {
 
  protected:
   Source() {}
-  virtual ~Source() {}
+  Source(const Source&) = delete;
+  Source& operator=(const Source&) = delete;
 
- private:
-  DISALLOW_COPY_AND_ASSIGN(Source);
+  virtual ~Source() {}
 };
 
 }  // namespace thd

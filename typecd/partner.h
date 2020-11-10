@@ -22,6 +22,8 @@ namespace typecd {
 class Partner : public Peripheral {
  public:
   explicit Partner(const base::FilePath& syspath);
+  Partner(const Partner&) = delete;
+  Partner& operator=(const Partner&) = delete;
 
   // Check if a particular alt mode index (as specified by the Type C connector
   // class framework) is registered.
@@ -66,8 +68,6 @@ class Partner : public Peripheral {
   // "/sys/class/typec/port1-partner/port1-partner.0" will use an key of "0".
   std::map<int, std::unique_ptr<AltMode>> alt_modes_;
   int num_alt_modes_;
-
-  DISALLOW_COPY_AND_ASSIGN(Partner);
 };
 
 }  // namespace typecd

@@ -19,6 +19,10 @@ namespace {
 class TestWifiControllerDelegate : public WifiController::Delegate {
  public:
   TestWifiControllerDelegate() = default;
+  TestWifiControllerDelegate(const TestWifiControllerDelegate&) = delete;
+  TestWifiControllerDelegate& operator=(const TestWifiControllerDelegate&) =
+      delete;
+
   ~TestWifiControllerDelegate() override = default;
 
   int num_set_calls() const { return num_set_calls_; }
@@ -51,8 +55,6 @@ class TestWifiControllerDelegate : public WifiController::Delegate {
   RadioTransmitPower last_transmit_power_ = RadioTransmitPower::UNSPECIFIED;
 
   WifiRegDomain last_reg_domain_ = WifiRegDomain::NONE;
-
-  DISALLOW_COPY_AND_ASSIGN(TestWifiControllerDelegate);
 };
 
 }  // namespace
@@ -60,6 +62,9 @@ class TestWifiControllerDelegate : public WifiController::Delegate {
 class WifiControllerTest : public ::testing::Test {
  public:
   WifiControllerTest() = default;
+  WifiControllerTest(const WifiControllerTest&) = delete;
+  WifiControllerTest& operator=(const WifiControllerTest&) = delete;
+
   ~WifiControllerTest() override = default;
 
  protected:
@@ -89,9 +94,6 @@ class WifiControllerTest : public ::testing::Test {
   FakePrefs prefs_;
   TestWifiControllerDelegate delegate_;
   WifiController controller_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(WifiControllerTest);
 };
 
 TEST_F(WifiControllerTest, SetTransmitPowerForInitialTabletMode) {

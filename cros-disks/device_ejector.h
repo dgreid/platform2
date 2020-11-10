@@ -20,6 +20,9 @@ namespace cros_disks {
 class DeviceEjector {
  public:
   explicit DeviceEjector(brillo::ProcessReaper* process_reaper);
+  DeviceEjector(const DeviceEjector&) = delete;
+  DeviceEjector& operator=(const DeviceEjector&) = delete;
+
   virtual ~DeviceEjector();
 
   // Ejects any removable media on a device at |device_path| using the
@@ -39,8 +42,6 @@ class DeviceEjector {
   std::map<std::string, SandboxedProcess> eject_process_;
 
   base::WeakPtrFactory<DeviceEjector> weak_ptr_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(DeviceEjector);
 };
 
 }  // namespace cros_disks

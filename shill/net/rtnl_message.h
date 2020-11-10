@@ -154,6 +154,8 @@ class SHILL_EXPORT RTNLMessage {
               uint32_t pid,
               int32_t interface_index,
               IPAddress::Family family);
+  RTNLMessage(const RTNLMessage&) = delete;
+  RTNLMessage& operator=(const RTNLMessage&) = delete;
 
   // Parse an RTNL message.  Returns true on success.
   bool Decode(const ByteString& data);
@@ -315,8 +317,6 @@ class SHILL_EXPORT RTNLMessage {
   // Additional rtattr contained in the message.
   RTNLAttrMap attributes_;
   // NOTE: Update Reset() accordingly when adding a new member field.
-
-  DISALLOW_COPY_AND_ASSIGN(RTNLMessage);
 };
 
 }  // namespace shill

@@ -29,6 +29,9 @@ class SaveOobeConfigUsb {
                     const base::FilePath& usb_device,
                     const base::FilePath& private_key_file,
                     const base::FilePath& public_key_file);
+  SaveOobeConfigUsb(const SaveOobeConfigUsb&) = delete;
+  SaveOobeConfigUsb& operator=(const SaveOobeConfigUsb&) = delete;
+
   virtual ~SaveOobeConfigUsb() = default;
 
   // Does the main job of signing config and enrollment domain, and copying the
@@ -54,8 +57,6 @@ class SaveOobeConfigUsb {
   base::FilePath usb_device_;
   base::FilePath private_key_file_;
   base::FilePath public_key_file_;
-
-  DISALLOW_COPY_AND_ASSIGN(SaveOobeConfigUsb);
 };
 
 }  // namespace oobe_config

@@ -25,10 +25,10 @@ int64_t GetCurrentOffset(int32_t fd) {
 class TempFileManagerTest : public testing::Test {
  public:
   TempFileManagerTest() = default;
-  ~TempFileManagerTest() override = default;
+  TempFileManagerTest(const TempFileManagerTest&) = delete;
+  TempFileManagerTest& operator=(const TempFileManagerTest&) = delete;
 
- private:
-  DISALLOW_COPY_AND_ASSIGN(TempFileManagerTest);
+  ~TempFileManagerTest() override = default;
 };
 
 // Should properly create a path when the object is created.

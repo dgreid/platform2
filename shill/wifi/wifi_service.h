@@ -38,6 +38,9 @@ class WiFiService : public Service {
               const std::string& mode,
               const std::string& security_class,
               bool hidden_ssid);
+  WiFiService(const WiFiService&) = delete;
+  WiFiService& operator=(const WiFiService&) = delete;
+
   ~WiFiService();
 
   // Inherited from Service.
@@ -342,8 +345,6 @@ class WiFiService : public Service {
   // the WiFiProvider and are guaranteed to be deallocated by the time
   // the WiFiProvider is.
   WiFiProvider* provider_;
-
-  DISALLOW_COPY_AND_ASSIGN(WiFiService);
 };
 
 }  // namespace shill

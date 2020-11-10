@@ -109,6 +109,9 @@ class MlBenchmarkTest : public ::testing::Test {
     // Set ExpectedInputOutput.
     SetExpectedValue(0.75f);
   }
+  MlBenchmarkTest(const MlBenchmarkTest&) = delete;
+  MlBenchmarkTest& operator=(const MlBenchmarkTest&) = delete;
+
   // Write the output with given expected value.
   void SetExpectedValue(const float val) {
     ExpectedInputOutput input_output;
@@ -128,9 +131,6 @@ class MlBenchmarkTest : public ::testing::Test {
   base::ScopedTempDir temp_dir_;
   base::FilePath input_output_filepath_;
   CrOSBenchmarkConfig benchmark_config_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MlBenchmarkTest);
 };
 
 TEST_F(MlBenchmarkTest, TfliteModelMatchedValueTest) {

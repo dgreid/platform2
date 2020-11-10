@@ -52,6 +52,9 @@ class DnsClient {
             int timeout_ms,
             EventDispatcher* dispatcher,
             const ClientCallback& callback);
+  DnsClient(const DnsClient&) = delete;
+  DnsClient& operator=(const DnsClient&) = delete;
+
   virtual ~DnsClient();
 
   // Returns true if the DNS client started successfully, false otherwise.
@@ -97,8 +100,6 @@ class DnsClient {
   base::WeakPtrFactory<DnsClient> weak_ptr_factory_;
   Ares* ares_;
   Time* time_;
-
-  DISALLOW_COPY_AND_ASSIGN(DnsClient);
 };
 
 }  // namespace shill

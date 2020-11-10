@@ -17,12 +17,12 @@ namespace debugd {
 class MemtesterTool : public SubprocessTool {
  public:
   MemtesterTool() = default;
+  MemtesterTool(const MemtesterTool&) = delete;
+  MemtesterTool& operator=(const MemtesterTool&) = delete;
+
   ~MemtesterTool() override = default;
 
   std::string Start(const base::ScopedFD& outfd, const uint32_t& memory);
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MemtesterTool);
 };
 
 }  // namespace debugd

@@ -33,6 +33,9 @@ class Firewall {
   typedef std::pair<uint16_t, std::string> Hole;
 
   Firewall() = default;
+  Firewall(const Firewall&) = delete;
+  Firewall& operator=(const Firewall&) = delete;
+
   ~Firewall() = default;
 
   bool AddAcceptRules(Protocol protocol,
@@ -90,8 +93,6 @@ class Firewall {
                                           uint16_t port);
 
   virtual int RunInMinijail(const std::vector<std::string>& argv);
-
-  DISALLOW_COPY_AND_ASSIGN(Firewall);
 };
 
 }  // namespace patchpanel

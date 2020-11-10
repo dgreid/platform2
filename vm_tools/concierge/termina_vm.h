@@ -223,6 +223,8 @@ class TerminaVm final : public VmBaseImpl {
             uint64_t stateful_size,
             VmFeatures features,
             bool is_termina);
+  TerminaVm(const TerminaVm&) = delete;
+  TerminaVm& operator=(const TerminaVm&) = delete;
 
   void HandleSuspendImminent() override;
   void HandleSuspendDone() override;
@@ -299,8 +301,6 @@ class TerminaVm final : public VmBaseImpl {
   // Confusingly, this class is also used for non-termina VMs that don't fit in
   // other types. This bool indicates if the VM is really a termina VM.
   const bool is_termina_;
-
-  DISALLOW_COPY_AND_ASSIGN(TerminaVm);
 };
 
 }  // namespace concierge

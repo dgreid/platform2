@@ -31,6 +31,10 @@ class ChromiumCommandBuilderTest : public testing::Test {
         ChromiumCommandBuilder::kPepperPluginsPath, base_path_);
     PCHECK(base::CreateDirectory(pepper_dir_));
   }
+  ChromiumCommandBuilderTest(const ChromiumCommandBuilderTest&) = delete;
+  ChromiumCommandBuilderTest& operator=(const ChromiumCommandBuilderTest&) =
+      delete;
+
   virtual ~ChromiumCommandBuilderTest() {}
 
   // Does testing-related initialization and returns the result of |builder_|'s
@@ -90,9 +94,6 @@ class ChromiumCommandBuilderTest : public testing::Test {
   base::FilePath pepper_dir_;
 
   ChromiumCommandBuilder builder_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ChromiumCommandBuilderTest);
 };
 
 TEST_F(ChromiumCommandBuilderTest, MissingUseFlagsFile) {

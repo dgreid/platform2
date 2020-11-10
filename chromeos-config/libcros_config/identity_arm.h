@@ -21,6 +21,9 @@ namespace brillo {
 class CrosConfigIdentityArm : public CrosConfigIdentity {
  public:
   CrosConfigIdentityArm();
+  CrosConfigIdentityArm(const CrosConfigIdentityArm&) = delete;
+  CrosConfigIdentityArm& operator=(const CrosConfigIdentityArm&) = delete;
+
   ~CrosConfigIdentityArm();
 
   // Checks if the device_name exists in the compatible devices string.
@@ -49,8 +52,6 @@ class CrosConfigIdentityArm : public CrosConfigIdentity {
 
  private:
   std::string compatible_devices_;
-
-  DISALLOW_COPY_AND_ASSIGN(CrosConfigIdentityArm);
 };
 
 }  // namespace brillo

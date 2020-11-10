@@ -401,6 +401,8 @@ class Service final {
   }
 
   explicit Service(base::Closure quit_closure, scoped_refptr<dbus::Bus> bus);
+  Service(const Service&) = delete;
+  Service& operator=(const Service&) = delete;
 
   // Initializes the service by exporting our DBus methods, taking ownership of
   // its name, and starting our gRPC servers. If |unix_socket_path_for_testing|
@@ -667,8 +669,6 @@ class Service final {
   static bool run_grpc_;
 
   base::WeakPtrFactory<Service> weak_ptr_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(Service);
 };
 
 }  // namespace cicerone

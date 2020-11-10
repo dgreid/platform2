@@ -51,6 +51,9 @@ class HttpRequest {
               IPAddress::Family family,
               const std::vector<std::string>& dns_list,
               bool allow_non_google_https = false);
+  HttpRequest(const HttpRequest&) = delete;
+  HttpRequest& operator=(const HttpRequest&) = delete;
+
   virtual ~HttpRequest();
 
   // Start an http GET request to the URL |url|. If the request succeeds,
@@ -106,8 +109,6 @@ class HttpRequest {
   int server_port_;
   std::string server_path_;
   bool is_running_;
-
-  DISALLOW_COPY_AND_ASSIGN(HttpRequest);
 };
 
 }  // namespace shill

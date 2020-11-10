@@ -418,6 +418,9 @@ class PowerSetter {
     nl_cb_set(cb_, NL_CB_ACK, NL_CB_CUSTOM, AckHandler, &err_);
     nl_cb_set(cb_, NL_CB_VALID, NL_CB_CUSTOM, ValidHandler, nullptr);
   }
+  PowerSetter(const PowerSetter&) = delete;
+  PowerSetter& operator=(const PowerSetter&) = delete;
+
   ~PowerSetter() {
     nl_socket_free(nl_sock_);
     nl_cb_put(cb_);
@@ -515,8 +518,6 @@ class PowerSetter {
   int nl_family_id_ = 0;
   struct nl_cb* cb_;
   int err_ = 0;  // Used by |cb_| to store errors.
-
-  DISALLOW_COPY_AND_ASSIGN(PowerSetter);
 };
 
 }  // namespace

@@ -53,13 +53,14 @@ class ApkCacheDatabaseTest : public testing::Test {
 
  protected:
   ApkCacheDatabaseTest() = default;
+  ApkCacheDatabaseTest(const ApkCacheDatabaseTest&) = delete;
+  ApkCacheDatabaseTest& operator=(const ApkCacheDatabaseTest&) = delete;
 
   void SetUp() override { ASSERT_TRUE(temp_dir_.CreateUniqueTempDir()); }
   void TearDown() override { ASSERT_TRUE(temp_dir_.Delete()); }
 
  private:
   base::ScopedTempDir temp_dir_;
-  DISALLOW_COPY_AND_ASSIGN(ApkCacheDatabaseTest);
 };
 
 // Test create database and check integrity

@@ -22,6 +22,9 @@ class FileSourceTest : public ::testing::Test {
     file_ = temp_dir_.GetPath().Append("content");
     source_ = std::make_unique<FileSource>(file_);
   }
+  FileSourceTest(const FileSourceTest&) = delete;
+  FileSourceTest& operator=(const FileSourceTest&) = delete;
+
   ~FileSourceTest() override {}
 
  protected:
@@ -33,9 +36,6 @@ class FileSourceTest : public ::testing::Test {
 
   // File source object to test.
   std::unique_ptr<FileSource> source_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(FileSourceTest);
 };
 
 // Test to verify that the value written to the file is read out properly.

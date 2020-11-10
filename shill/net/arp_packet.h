@@ -21,6 +21,9 @@ class SHILL_EXPORT ArpPacket {
             const IPAddress& remote_ip,
             const ByteString& local_mac,
             const ByteString& remote_mac);
+  ArpPacket(const ArpPacket&) = delete;
+  ArpPacket& operator=(const ArpPacket&) = delete;
+
   virtual ~ArpPacket();
 
   // Parse a payload and save to local parameters.
@@ -68,8 +71,6 @@ class SHILL_EXPORT ArpPacket {
   IPAddress remote_ip_address_;
   ByteString local_mac_address_;
   ByteString remote_mac_address_;
-
-  DISALLOW_COPY_AND_ASSIGN(ArpPacket);
 };
 
 }  // namespace shill

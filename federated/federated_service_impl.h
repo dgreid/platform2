@@ -24,6 +24,8 @@ class FederatedServiceImpl
   FederatedServiceImpl(mojo::ScopedMessagePipeHandle pipe,
                        base::Closure disconnect_handler,
                        StorageManager* storage_manager);
+  FederatedServiceImpl(const FederatedServiceImpl&) = delete;
+  FederatedServiceImpl& operator=(const FederatedServiceImpl&) = delete;
 
  private:
   // chromeos::federated::mojom::FederatedService:
@@ -40,8 +42,6 @@ class FederatedServiceImpl
   // Additional receivers bound via `Clone`.
   mojo::ReceiverSet<chromeos::federated::mojom::FederatedService>
       clone_receivers_;
-
-  DISALLOW_COPY_AND_ASSIGN(FederatedServiceImpl);
 };
 
 }  // namespace federated

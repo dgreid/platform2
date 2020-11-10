@@ -41,6 +41,9 @@ class BluetoothEventService {
   };
 
   BluetoothEventService();
+  BluetoothEventService(const BluetoothEventService&) = delete;
+  BluetoothEventService& operator=(const BluetoothEventService&) = delete;
+
   virtual ~BluetoothEventService();
 
   virtual const std::vector<AdapterData>& GetLatestEvent() = 0;
@@ -50,9 +53,6 @@ class BluetoothEventService {
 
  protected:
   base::ObserverList<Observer> observers_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(BluetoothEventService);
 };
 
 }  // namespace diagnostics

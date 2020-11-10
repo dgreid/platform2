@@ -28,6 +28,9 @@ namespace login_manager {
 class LivenessCheckerImplTest : public ::testing::Test {
  public:
   LivenessCheckerImplTest() {}
+  LivenessCheckerImplTest(const LivenessCheckerImplTest&) = delete;
+  LivenessCheckerImplTest& operator=(const LivenessCheckerImplTest&) = delete;
+
   ~LivenessCheckerImplTest() override {}
 
   void SetUp() override {
@@ -74,8 +77,6 @@ class LivenessCheckerImplTest : public ::testing::Test {
                dbus::ObjectProxy::ResponseCallback* callback) {
     std::move(*callback).Run(dbus::Response::CreateEmpty().get());
   }
-
-  DISALLOW_COPY_AND_ASSIGN(LivenessCheckerImplTest);
 };
 
 TEST_F(LivenessCheckerImplTest, CheckAndSendOutstandingPing) {

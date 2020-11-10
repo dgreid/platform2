@@ -25,6 +25,9 @@ namespace permission_broker {
 class UsbControl {
  public:
   explicit UsbControl(std::unique_ptr<UsbDeviceManagerInterface> manager);
+  UsbControl(const UsbControl&) = delete;
+  UsbControl& operator=(const UsbControl&) = delete;
+
   ~UsbControl();
 
   // Based on |vid| and |pid| of a USB device, this function determines if the
@@ -43,8 +46,6 @@ class UsbControl {
 
  private:
   std::unique_ptr<UsbDeviceManagerInterface> manager_ = nullptr;
-
-  DISALLOW_COPY_AND_ASSIGN(UsbControl);
 };
 
 }  // namespace permission_broker

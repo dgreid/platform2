@@ -28,11 +28,11 @@ class PPPDeviceFactory {
 
  protected:
   PPPDeviceFactory();
+  PPPDeviceFactory(const PPPDeviceFactory&) = delete;
+  PPPDeviceFactory& operator=(const PPPDeviceFactory&) = delete;
 
  private:
   friend class base::NoDestructor<PPPDeviceFactory>;
-
-  DISALLOW_COPY_AND_ASSIGN(PPPDeviceFactory);
 };
 
 }  // namespace shill

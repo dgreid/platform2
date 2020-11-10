@@ -36,6 +36,8 @@ class Daemon final : public brillo::DBusServiceDaemon {
   explicit Daemon(webservd::Config config)
       : DBusServiceDaemon{kServiceName, kRootServicePath},
         config_{std::move(config)} {}
+  Daemon(const Daemon&) = delete;
+  Daemon& operator=(const Daemon&) = delete;
 
  protected:
   void RegisterDBusObjectsAsync(AsyncEventSequencer* sequencer) override {
@@ -52,8 +54,6 @@ class Daemon final : public brillo::DBusServiceDaemon {
  private:
   webservd::Config config_;
   std::unique_ptr<webservd::Server> server_;
-
-  DISALLOW_COPY_AND_ASSIGN(Daemon);
 };
 
 }  // namespace

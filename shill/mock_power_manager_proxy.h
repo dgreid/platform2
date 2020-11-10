@@ -17,6 +17,9 @@ namespace shill {
 class MockPowerManagerProxy : public PowerManagerProxyInterface {
  public:
   MockPowerManagerProxy();
+  MockPowerManagerProxy(const MockPowerManagerProxy&) = delete;
+  MockPowerManagerProxy& operator=(const MockPowerManagerProxy&) = delete;
+
   ~MockPowerManagerProxy() override;
 
   MOCK_METHOD(bool,
@@ -39,9 +42,6 @@ class MockPowerManagerProxy : public PowerManagerProxyInterface {
               ChangeRegDomain,
               (power_manager::WifiRegDomainDbus),
               (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockPowerManagerProxy);
 };
 
 }  // namespace shill

@@ -612,6 +612,10 @@ class LegacyCryptohomeInterfaceAdaptor
         install_attributes_proxy_(install_attributes_proxy),
         misc_proxy_(misc_proxy),
         platform_(platform) {}
+  LegacyCryptohomeInterfaceAdaptor(const LegacyCryptohomeInterfaceAdaptor&) =
+      delete;
+  LegacyCryptohomeInterfaceAdaptor& operator=(
+      const LegacyCryptohomeInterfaceAdaptor&) = delete;
 
   // This is used in testing to be able to mock SendAsyncCallStatusSignal.
   virtual void VirtualSendAsyncCallStatusSignal(int32_t in_async_id,
@@ -1084,8 +1088,6 @@ class LegacyCryptohomeInterfaceAdaptor
   // The actual platform object used by this class, usually set to
   // default_platform_, but can be overridden for testing
   cryptohome::Platform* platform_;
-
-  DISALLOW_COPY_AND_ASSIGN(LegacyCryptohomeInterfaceAdaptor);
 };
 
 }  // namespace cryptohome

@@ -34,6 +34,9 @@ namespace {
 class FakeSystemUtils : public SystemUtilsImpl {
  public:
   FakeSystemUtils() : time_(0) {}
+  FakeSystemUtils(const FakeSystemUtils&) = delete;
+  FakeSystemUtils& operator=(const FakeSystemUtils&) = delete;
+
   ~FakeSystemUtils() override {}
 
   time_t time(time_t* t) override {
@@ -47,8 +50,6 @@ class FakeSystemUtils : public SystemUtilsImpl {
  private:
   // Current time.
   time_t time_;
-
-  DISALLOW_COPY_AND_ASSIGN(FakeSystemUtils);
 };
 
 }  // namespace
@@ -63,6 +64,11 @@ class ServerBackedStateKeyGeneratorTest : public ::testing::Test {
     EXPECT_CALL(metrics_, SendStateKeyGenerationStatus(_))
         .WillRepeatedly(SaveArg<0>(&last_state_key_generation_status_));
   }
+  ServerBackedStateKeyGeneratorTest(const ServerBackedStateKeyGeneratorTest&) =
+      delete;
+  ServerBackedStateKeyGeneratorTest& operator=(
+      const ServerBackedStateKeyGeneratorTest&) = delete;
+
   ~ServerBackedStateKeyGeneratorTest() override {}
 
   // Installs mock data for the required parameters.
@@ -98,9 +104,6 @@ class ServerBackedStateKeyGeneratorTest : public ::testing::Test {
   std::vector<std::vector<uint8_t>> state_keys_;
 
   LoginMetrics::StateKeyGenerationStatus last_state_key_generation_status_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ServerBackedStateKeyGeneratorTest);
 };
 
 TEST_F(ServerBackedStateKeyGeneratorTest, RequestStateKeys) {

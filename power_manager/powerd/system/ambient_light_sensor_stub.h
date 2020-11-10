@@ -17,6 +17,9 @@ namespace system {
 class AmbientLightSensorStub : public AmbientLightSensorInterface {
  public:
   explicit AmbientLightSensorStub(int lux);
+  AmbientLightSensorStub(const AmbientLightSensorStub&) = delete;
+  AmbientLightSensorStub& operator=(const AmbientLightSensorStub&) = delete;
+
   ~AmbientLightSensorStub() override;
 
   void set_lux(int lux) { lux_ = lux; }
@@ -44,8 +47,6 @@ class AmbientLightSensorStub : public AmbientLightSensorInterface {
   // returns -1. Otherwise, IsColorSensor returns true and GetColorTemperature
   // returns this value.
   base::Optional<int> color_temperature_;
-
-  DISALLOW_COPY_AND_ASSIGN(AmbientLightSensorStub);
 };
 
 }  // namespace system

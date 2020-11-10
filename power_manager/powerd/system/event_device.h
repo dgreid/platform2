@@ -23,6 +23,9 @@ namespace system {
 class EventDevice : public EventDeviceInterface {
  public:
   EventDevice(int fd, const base::FilePath& path);
+  EventDevice(const EventDevice&) = delete;
+  EventDevice& operator=(const EventDevice&) = delete;
+
   ~EventDevice() override;
 
   // Implementation of EventDeviceInterface.
@@ -52,21 +55,19 @@ class EventDevice : public EventDeviceInterface {
   int fd_;
   base::FilePath path_;
   std::unique_ptr<base::FileDescriptorWatcher::Controller> fd_watcher_;
-
-  DISALLOW_COPY_AND_ASSIGN(EventDevice);
 };
 
 class EventDeviceFactory : public EventDeviceFactoryInterface {
  public:
   EventDeviceFactory();
+  EventDeviceFactory(const EventDeviceFactory&) = delete;
+  EventDeviceFactory& operator=(const EventDeviceFactory&) = delete;
+
   ~EventDeviceFactory() override;
 
   // Implementation of EventDeviceFactoryInterface.
   std::shared_ptr<EventDeviceInterface> Open(
       const base::FilePath& path) override;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(EventDeviceFactory);
 };
 
 }  // namespace system

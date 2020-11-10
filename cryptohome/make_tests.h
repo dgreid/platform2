@@ -39,6 +39,8 @@ class TestUser;
 class MakeTests {
  public:
   MakeTests();
+  MakeTests(const MakeTests&) = delete;
+  MakeTests& operator=(const MakeTests&) = delete;
 
   virtual ~MakeTests() {}
 
@@ -55,9 +57,6 @@ class MakeTests {
 
   std::vector<TestUser> users;
   brillo::SecureBlob system_salt;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MakeTests);
 };
 
 class TestUser {

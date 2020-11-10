@@ -78,6 +78,8 @@ class EntryManager {
                bool user_db_read_only,
                bool is_guest_session,
                DevpathToRuleCallback rule_from_devpath);
+  EntryManager(const EntryManager&) = delete;
+  EntryManager& operator=(const EntryManager&) = delete;
 
   // Removes expired entries from the trash of the global DB. If |global_only|
   // is false expired entries are removed from the user DB as well. This does
@@ -105,8 +107,6 @@ class EntryManager {
   RuleDBStorage user_db_;
 
   MetricsLibrary metrics_;
-
-  DISALLOW_COPY_AND_ASSIGN(EntryManager);
 };
 
 }  // namespace usb_bouncer

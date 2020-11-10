@@ -28,6 +28,9 @@ namespace power_manager {
 class TestMainLoopRunner {
  public:
   TestMainLoopRunner();
+  TestMainLoopRunner(const TestMainLoopRunner&) = delete;
+  TestMainLoopRunner& operator=(const TestMainLoopRunner&) = delete;
+
   ~TestMainLoopRunner();
 
   // Runs the event loop until StopLoop() is called or |timeout_delay| has
@@ -55,8 +58,6 @@ class TestMainLoopRunner {
   // Was the loop stopped as a result of OnTimeout() being called rather than
   // StopLoop()?
   bool timed_out_;
-
-  DISALLOW_COPY_AND_ASSIGN(TestMainLoopRunner);
 };
 
 }  // namespace power_manager

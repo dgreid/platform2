@@ -20,6 +20,9 @@ class ArcSetupMetricsTest : public testing::Test {
     arc_setup_metrics_.SetMetricsLibraryForTesting(
         std::make_unique<MetricsLibraryMock>());
   }
+  ArcSetupMetricsTest(const ArcSetupMetricsTest&) = delete;
+  ArcSetupMetricsTest& operator=(const ArcSetupMetricsTest&) = delete;
+
   ~ArcSetupMetricsTest() override = default;
 
   MetricsLibraryMock* GetMetricsLibraryMock() {
@@ -28,9 +31,6 @@ class ArcSetupMetricsTest : public testing::Test {
   }
 
   ArcSetupMetrics arc_setup_metrics_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ArcSetupMetricsTest);
 };
 
 TEST_F(ArcSetupMetricsTest, SendCodeVerificationResult) {

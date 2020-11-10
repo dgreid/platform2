@@ -23,6 +23,8 @@ namespace imageloader {
 class HelperProcessReceiver : public brillo::Daemon {
  public:
   explicit HelperProcessReceiver(base::ScopedFD control_fd);
+  HelperProcessReceiver(const HelperProcessReceiver&) = delete;
+  HelperProcessReceiver& operator=(const HelperProcessReceiver&) = delete;
 
   // Helper function defined in helper_process_receiver_fuzzer.cc.
   friend void helper_process_receiver_fuzzer_run(const char*, size_t);
@@ -41,8 +43,6 @@ class HelperProcessReceiver : public brillo::Daemon {
   std::unique_ptr<base::FileDescriptorWatcher::Controller> controller_;
   int pending_fd_;
   VerityMounter mounter_;
-
-  DISALLOW_COPY_AND_ASSIGN(HelperProcessReceiver);
 };
 
 }  // namespace imageloader

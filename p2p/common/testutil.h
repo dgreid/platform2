@@ -33,14 +33,15 @@ class TimeBombAbort {
   // finishing the program. This class uses SIGALRM and should not be used
   // together with sleep(2).
   TimeBombAbort(int timeout_seconds, const char* message);
+  TimeBombAbort(const TimeBombAbort&) = delete;
+  TimeBombAbort& operator=(const TimeBombAbort&) = delete;
+
   ~TimeBombAbort();
 
  private:
   static void TimeoutHandler(int signal);
 
   struct sigaction previous_;
-
-  DISALLOW_COPY_AND_ASSIGN(TimeBombAbort);
 };
 
 // Utility macro to run the command expressed by the printf()-style string

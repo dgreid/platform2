@@ -102,6 +102,9 @@ class BluetoothEventServiceImplTest : public ::testing::Test {
             new BluetoothEventServiceImpl(&fake_bluetooth_client_)) {
     bluetooth_service_->AddObserver(&observer_);
   }
+  BluetoothEventServiceImplTest(const BluetoothEventServiceImplTest&) = delete;
+  BluetoothEventServiceImplTest& operator=(
+      const BluetoothEventServiceImplTest&) = delete;
 
   ~BluetoothEventServiceImplTest() override {
     bluetooth_service_->RemoveObserver(&observer_);
@@ -130,9 +133,6 @@ class BluetoothEventServiceImplTest : public ::testing::Test {
   std::unique_ptr<BluetoothEventServiceImpl> bluetooth_service_;
 
   StrictMock<MockBluetoothEventServiceObserver> observer_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(BluetoothEventServiceImplTest);
 };
 
 TEST_F(BluetoothEventServiceImplTest, AdapterAdded) {

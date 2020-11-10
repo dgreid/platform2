@@ -27,6 +27,9 @@ class UHidDevice : public HidInterface {
              uint32_t product_id,
              const std::string& name,
              const std::string& phys);
+  UHidDevice(const UHidDevice&) = delete;
+  UHidDevice& operator=(const UHidDevice&) = delete;
+
   ~UHidDevice() override;
 
   // HidInterface implementation:
@@ -58,8 +61,6 @@ class UHidDevice : public HidInterface {
   HidInterface::OutputReportCallback on_output_report_;
 
   std::unique_ptr<base::FileDescriptorWatcher::Controller> watcher_;
-
-  DISALLOW_COPY_AND_ASSIGN(UHidDevice);
 };
 
 }  // namespace u2f

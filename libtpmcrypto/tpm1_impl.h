@@ -20,6 +20,9 @@ namespace tpmcrypto {
 class Tpm1Impl : public Tpm {
  public:
   Tpm1Impl();
+  Tpm1Impl(const Tpm1Impl&) = delete;
+  Tpm1Impl& operator=(const Tpm1Impl&) = delete;
+
   ~Tpm1Impl() override;
 
   bool SealToPCR0(const brillo::SecureBlob& value,
@@ -57,8 +60,6 @@ class Tpm1Impl : public Tpm {
   bool LoadSrk(TSS_HCONTEXT context_handle,
                TSS_HKEY* srk_handle,
                TSS_RESULT* result) const;
-
-  DISALLOW_COPY_AND_ASSIGN(Tpm1Impl);
 };
 
 }  // namespace tpmcrypto

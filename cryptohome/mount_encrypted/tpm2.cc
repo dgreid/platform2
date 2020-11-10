@@ -74,6 +74,8 @@ const size_t kOwnerSecretSize = 0;
 class Tpm2SystemKeyLoader : public SystemKeyLoader {
  public:
   explicit Tpm2SystemKeyLoader(Tpm* tpm) : tpm_(tpm) {}
+  Tpm2SystemKeyLoader(const Tpm2SystemKeyLoader&) = delete;
+  Tpm2SystemKeyLoader& operator=(const Tpm2SystemKeyLoader&) = delete;
 
   result_code Load(brillo::SecureBlob* key) override;
   result_code Initialize(const brillo::SecureBlob& key_material,
@@ -92,8 +94,6 @@ class Tpm2SystemKeyLoader : public SystemKeyLoader {
   // Provisional space contents that get initialized by Generate() and written
   // to the NVRAM space by Persist();
   std::unique_ptr<brillo::SecureBlob> provisional_contents_;
-
-  DISALLOW_COPY_AND_ASSIGN(Tpm2SystemKeyLoader);
 };
 
 // For TPM2, NVRAM area is separate from Lockbox.

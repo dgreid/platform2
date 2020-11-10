@@ -30,6 +30,9 @@ class ServerInterface;
 class ProtocolHandler final {
  public:
   ProtocolHandler(const std::string& name, ServerInterface* server_interface);
+  ProtocolHandler(const ProtocolHandler&) = delete;
+  ProtocolHandler& operator=(const ProtocolHandler&) = delete;
+
   ~ProtocolHandler();
 
   // Registers a new request handler for the given URL and request method.
@@ -121,7 +124,6 @@ class ProtocolHandler final {
   bool work_scheduled_{false};
 
   base::WeakPtrFactory<ProtocolHandler> weak_ptr_factory_{this};
-  DISALLOW_COPY_AND_ASSIGN(ProtocolHandler);
 };
 
 }  // namespace webservd

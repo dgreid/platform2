@@ -18,6 +18,8 @@ namespace croslog {
 class LogParserSyslogTest : public ::testing::Test {
  public:
   LogParserSyslogTest() = default;
+  LogParserSyslogTest(const LogParserSyslogTest&) = delete;
+  LogParserSyslogTest& operator=(const LogParserSyslogTest&) = delete;
 
   static base::Time TimeFromExploded(int year,
                                      int month,
@@ -36,9 +38,6 @@ class LogParserSyslogTest : public ::testing::Test {
     time -= base::TimeDelta::FromHours(timezone_hour);
     return time;
   }
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(LogParserSyslogTest);
 };
 
 TEST_F(LogParserSyslogTest, Parse) {

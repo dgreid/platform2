@@ -35,6 +35,8 @@ class FileInfo final {
            const std::string& in_file_name,
            const std::string& in_content_type,
            const std::string& in_transfer_encoding);
+  FileInfo(const FileInfo&) = delete;
+  FileInfo& operator=(const FileInfo&) = delete;
 
   // The name of the form field for the file upload.
   std::string field_name;
@@ -49,9 +51,6 @@ class FileInfo final {
   brillo::StreamPtr data_stream;
   // The temporary file containing the file part data.
   base::FilePath temp_file_name;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(FileInfo);
 };
 
 // A class that represents the HTTP request data.
@@ -63,6 +62,9 @@ class Request final {
           const std::string& version,
           MHD_Connection* connection,
           ProtocolHandler* protocol_handler);
+  Request(const Request&) = delete;
+  Request& operator=(const Request&) = delete;
+
   ~Request();
 
   // Obtains the file descriptor containing data of uploaded file identified
@@ -203,7 +205,6 @@ class Request final {
   ProtocolHandler* protocol_handler_;
 
   base::WeakPtrFactory<Request> weak_ptr_factory_{this};
-  DISALLOW_COPY_AND_ASSIGN(Request);
 };
 
 }  // namespace webservd

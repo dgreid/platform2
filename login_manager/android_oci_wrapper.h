@@ -25,6 +25,9 @@ class AndroidOciWrapper : public ContainerManagerInterface {
   // Ownership of |system_utils| remains with the caller.
   AndroidOciWrapper(SystemUtils* system_utils,
                     const base::FilePath& containers_directory);
+  AndroidOciWrapper(const AndroidOciWrapper&) = delete;
+  AndroidOciWrapper& operator=(const AndroidOciWrapper&) = delete;
+
   ~AndroidOciWrapper() override;
 
   // ChildExitHandler:
@@ -107,8 +110,6 @@ class AndroidOciWrapper : public ContainerManagerInterface {
 
   // Whether container is stateful or stateless.
   StatefulMode stateful_mode_ = StatefulMode::STATELESS;
-
-  DISALLOW_COPY_AND_ASSIGN(AndroidOciWrapper);
 };
 
 }  // namespace login_manager

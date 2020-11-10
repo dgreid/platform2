@@ -32,6 +32,8 @@ namespace brillo {
 class FileDescriptor : public FileStream::FileDescriptorInterface {
  public:
   FileDescriptor(int fd, bool own) : fd_{fd}, own_{own} {}
+  FileDescriptor(const FileDescriptor&) = delete;
+  FileDescriptor& operator=(const FileDescriptor&) = delete;
   ~FileDescriptor() override {
     if (IsOpen()) {
       Close();
@@ -189,8 +191,6 @@ class FileDescriptor : public FileStream::FileDescriptorInterface {
   // Monitoring read/write operations on the file descriptor.
   std::unique_ptr<base::FileDescriptorWatcher::Controller> read_watcher_;
   std::unique_ptr<base::FileDescriptorWatcher::Controller> write_watcher_;
-
-  DISALLOW_COPY_AND_ASSIGN(FileDescriptor);
 };
 
 StreamPtr FileStream::Open(const base::FilePath& path,

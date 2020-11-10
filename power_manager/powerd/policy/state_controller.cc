@@ -238,6 +238,9 @@ bool StateController::Delays::operator!=(
 class StateController::ActivityInfo {
  public:
   ActivityInfo() = default;
+  ActivityInfo(const ActivityInfo&) = delete;
+  ActivityInfo& operator=(const ActivityInfo&) = delete;
+
   ~ActivityInfo() = default;
 
   bool active() const { return active_; }
@@ -270,8 +273,6 @@ class StateController::ActivityInfo {
   // If the activity is currently inactive, the time at which it was last
   // active. Unset if it is currently active or was never active.
   base::TimeTicks last_active_time_;
-
-  DISALLOW_COPY_AND_ASSIGN(ActivityInfo);
 };
 
 const int StateController::kUserActivityAfterScreenOffIncreaseDelaysMs = 60000;

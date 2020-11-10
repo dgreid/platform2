@@ -224,6 +224,10 @@ class DircryptoMigrationProgress : public CryptohomeEventBase {
       : status_(status),
         current_bytes_(current_bytes),
         total_bytes_(total_bytes) {}
+  DircryptoMigrationProgress(const DircryptoMigrationProgress&) = delete;
+  DircryptoMigrationProgress& operator=(const DircryptoMigrationProgress&) =
+      delete;
+
   ~DircryptoMigrationProgress() override = default;
 
   const char* GetEventName() const override {
@@ -238,8 +242,6 @@ class DircryptoMigrationProgress : public CryptohomeEventBase {
   DircryptoMigrationStatus status_;
   uint64_t current_bytes_;
   uint64_t total_bytes_;
-
-  DISALLOW_COPY_AND_ASSIGN(DircryptoMigrationProgress);
 };
 
 void MountThreadObserver::PostTask() {

@@ -18,6 +18,9 @@ namespace debugd {
 class PacketCaptureTool : public SubprocessTool {
  public:
   PacketCaptureTool() = default;
+  PacketCaptureTool(const PacketCaptureTool&) = delete;
+  PacketCaptureTool& operator=(const PacketCaptureTool&) = delete;
+
   ~PacketCaptureTool() override = default;
 
   bool Start(const base::ScopedFD& status_fd,
@@ -25,9 +28,6 @@ class PacketCaptureTool : public SubprocessTool {
              const brillo::VariantDictionary& options,
              std::string* out_id,
              brillo::ErrorPtr* error);
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(PacketCaptureTool);
 };
 
 }  // namespace debugd

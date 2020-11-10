@@ -23,6 +23,9 @@ namespace login_manager {
 class NssUtilTest : public ::testing::Test {
  public:
   NssUtilTest() : util_(NssUtil::Create()) {}
+  NssUtilTest(const NssUtilTest&) = delete;
+  NssUtilTest& operator=(const NssUtilTest&) = delete;
+
   ~NssUtilTest() override {}
 
   void SetUp() override {
@@ -37,9 +40,6 @@ class NssUtilTest : public ::testing::Test {
   base::ScopedTempDir tmpdir_;
   std::unique_ptr<NssUtil> util_;
   ScopedPK11SlotDescriptor desc_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(NssUtilTest);
 };
 
 const char NssUtilTest::kUsername[] = "someone@nowhere.com";

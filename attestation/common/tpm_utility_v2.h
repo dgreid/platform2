@@ -28,6 +28,9 @@ class TpmUtilityV2 : public TpmUtilityCommon {
   TpmUtilityV2() = default;
   TpmUtilityV2(tpm_manager::TpmManagerUtility* tpm_manager_utility,
                trunks::TrunksFactory* trunks_factory);
+  TpmUtilityV2(const TpmUtilityV2&) = delete;
+  TpmUtilityV2& operator=(const TpmUtilityV2&) = delete;
+
   ~TpmUtilityV2() override;
 
   // TpmUtility methods.
@@ -115,8 +118,6 @@ class TpmUtilityV2 : public TpmUtilityCommon {
   trunks::TrunksFactory* trunks_factory_{nullptr};
   std::unique_ptr<trunks::TrunksFactoryImpl> default_trunks_factory_;
   std::unique_ptr<trunks::TpmUtility> trunks_utility_;
-
-  DISALLOW_COPY_AND_ASSIGN(TpmUtilityV2);
 };
 
 }  // namespace attestation

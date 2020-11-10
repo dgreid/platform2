@@ -26,16 +26,22 @@ class SupplicantManager {
    public:
     ScopedSupplicantListener(SupplicantManager* supplicant_manager,
                              const SupplicantListenerCallback& callback);
+    ScopedSupplicantListener(const ScopedSupplicantListener&) = delete;
+    ScopedSupplicantListener& operator=(const ScopedSupplicantListener&) =
+        delete;
+
     ~ScopedSupplicantListener();
 
    private:
     SupplicantListenerCallback callback_;
     SupplicantManager* const supplicant_manager_;
 
-    DISALLOW_COPY_AND_ASSIGN(ScopedSupplicantListener);
   };
 
   explicit SupplicantManager(Manager* manager);
+  SupplicantManager(const SupplicantManager&) = delete;
+  SupplicantManager& operator=(const SupplicantManager&) = delete;
+
   ~SupplicantManager();
 
   void Start();
@@ -62,8 +68,6 @@ class SupplicantManager {
   std::unique_ptr<SupplicantProcessProxyInterface> proxy_;
   std::vector<SupplicantListenerCallback> listeners_;
   bool present_ = false;
-
-  DISALLOW_COPY_AND_ASSIGN(SupplicantManager);
 };
 
 }  // namespace shill

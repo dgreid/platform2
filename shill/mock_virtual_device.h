@@ -19,6 +19,9 @@ class MockVirtualDevice : public VirtualDevice {
                     const std::string& link_name,
                     int interface_index,
                     Technology technology);
+  MockVirtualDevice(const MockVirtualDevice&) = delete;
+  MockVirtualDevice& operator=(const MockVirtualDevice&) = delete;
+
   ~MockVirtualDevice() override;
 
   MOCK_METHOD(void,
@@ -30,9 +33,6 @@ class MockVirtualDevice : public VirtualDevice {
   MOCK_METHOD(void, ResetConnection, (), (override));
   MOCK_METHOD(void, SetServiceState, (Service::ConnectState), (override));
   MOCK_METHOD(void, SetEnabled, (bool), (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockVirtualDevice);
 };
 
 }  // namespace shill

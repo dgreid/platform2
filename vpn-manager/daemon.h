@@ -31,6 +31,9 @@ class Daemon {
   };
 
   explicit Daemon(const std::string& pid_file);
+  Daemon(const Daemon&) = delete;
+  Daemon& operator=(const Daemon&) = delete;
+
   virtual ~Daemon();
 
   // Clear any reference to a process, terminating the process if it is
@@ -82,8 +85,6 @@ class Daemon {
 
   // File name where the process id for this daemon is held.
   std::string pid_file_;
-
-  DISALLOW_COPY_AND_ASSIGN(Daemon);
 };
 
 }  // namespace vpn_manager

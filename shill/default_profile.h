@@ -26,6 +26,9 @@ class DefaultProfile : public Profile {
                  const base::FilePath& storage_directory,
                  const std::string& profile_id,
                  const Manager::Properties& manager_props);
+  DefaultProfile(const DefaultProfile&) = delete;
+  DefaultProfile& operator=(const DefaultProfile&) = delete;
+
   ~DefaultProfile() override;
 
   // Loads global configuration into manager properties.  This should
@@ -78,8 +81,6 @@ class DefaultProfile : public Profile {
   const std::string profile_id_;
   const Manager::Properties& props_;
   std::default_random_engine random_engine_;
-
-  DISALLOW_COPY_AND_ASSIGN(DefaultProfile);
 };
 
 }  // namespace shill

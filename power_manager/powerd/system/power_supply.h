@@ -244,6 +244,9 @@ class PowerSupply : public PowerSupplyInterface, public UdevSubsystemObserver {
   class TestApi {
    public:
     explicit TestApi(PowerSupply* power_supply) : power_supply_(power_supply) {}
+    TestApi(const TestApi&) = delete;
+    TestApi& operator=(const TestApi&) = delete;
+
     ~TestApi() {}
 
     base::TimeDelta current_poll_delay() const {
@@ -266,7 +269,6 @@ class PowerSupply : public PowerSupplyInterface, public UdevSubsystemObserver {
    private:
     PowerSupply* power_supply_;  // weak
 
-    DISALLOW_COPY_AND_ASSIGN(TestApi);
   };
 
   // Power supply subsystem for udev events.
@@ -322,6 +324,9 @@ class PowerSupply : public PowerSupplyInterface, public UdevSubsystemObserver {
                                        const PowerStatus& b);
 
   PowerSupply();
+  PowerSupply(const PowerSupply&) = delete;
+  PowerSupply& operator=(const PowerSupply&) = delete;
+
   ~PowerSupply() override;
 
   base::TimeTicks battery_stabilized_timestamp() const {
@@ -553,8 +558,6 @@ class PowerSupply : public PowerSupplyInterface, public UdevSubsystemObserver {
   std::map<std::string, PowerSupplyProperties::PowerSource::Port> port_names_;
 
   base::WeakPtrFactory<PowerSupply> weak_ptr_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(PowerSupply);
 };
 
 }  // namespace system

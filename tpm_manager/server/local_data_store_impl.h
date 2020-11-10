@@ -19,6 +19,8 @@ class LocalDataStoreImpl : public LocalDataStore {
 
   // A constructor that takes the parameter of the path of the local data.
   explicit LocalDataStoreImpl(const std::string& local_data_path);
+  LocalDataStoreImpl(const LocalDataStoreImpl&) = delete;
+  LocalDataStoreImpl& operator=(const LocalDataStoreImpl&) = delete;
 
   ~LocalDataStoreImpl() override = default;
 
@@ -28,8 +30,6 @@ class LocalDataStoreImpl : public LocalDataStore {
 
  private:
   const std::string local_data_path_;
-
-  DISALLOW_COPY_AND_ASSIGN(LocalDataStoreImpl);
 };
 
 }  // namespace tpm_manager

@@ -23,6 +23,9 @@ class Tpm2StatusImpl : public TpmStatus {
  public:
   // Does not take ownership of |factory|.
   explicit Tpm2StatusImpl(const trunks::TrunksFactory& factory);
+  Tpm2StatusImpl(const Tpm2StatusImpl&) = delete;
+  Tpm2StatusImpl& operator=(const Tpm2StatusImpl&) = delete;
+
   ~Tpm2StatusImpl() override = default;
 
   // TpmStatus methods.
@@ -51,8 +54,6 @@ class Tpm2StatusImpl : public TpmStatus {
   TpmOwnershipStatus ownership_status_{kTpmUnowned};
   const trunks::TrunksFactory& trunks_factory_;
   std::unique_ptr<trunks::TpmState> trunks_tpm_state_;
-
-  DISALLOW_COPY_AND_ASSIGN(Tpm2StatusImpl);
 };
 
 }  // namespace tpm_manager

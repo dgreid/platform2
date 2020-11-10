@@ -24,6 +24,9 @@ class ScopedSocketCloser;
 class SHILL_EXPORT ArpClient {
  public:
   explicit ArpClient(int interface_index);
+  ArpClient(const ArpClient&) = delete;
+  ArpClient& operator=(const ArpClient&) = delete;
+
   virtual ~ArpClient();
 
   // Create a socket for reception of ARP replies, and packet trasmission.
@@ -69,8 +72,6 @@ class SHILL_EXPORT ArpClient {
   std::unique_ptr<Sockets> sockets_;
   std::unique_ptr<ScopedSocketCloser> socket_closer_;
   int socket_;
-
-  DISALLOW_COPY_AND_ASSIGN(ArpClient);
 };
 
 }  // namespace shill

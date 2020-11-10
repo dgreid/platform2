@@ -38,6 +38,9 @@ class MachineLearningServiceImpl
   MachineLearningServiceImpl(mojo::ScopedMessagePipeHandle pipe,
                              base::Closure disconnect_handler,
                              const std::string& model_dir);
+  MachineLearningServiceImpl(const MachineLearningServiceImpl&) = delete;
+  MachineLearningServiceImpl& operator=(const MachineLearningServiceImpl&) =
+      delete;
 
  private:
   // chromeos::machine_learning::mojom::MachineLearningService:
@@ -95,8 +98,6 @@ class MachineLearningServiceImpl
   // Additional receivers bound via `Clone`.
   mojo::ReceiverSet<chromeos::machine_learning::mojom::MachineLearningService>
       clone_receivers_;
-
-  DISALLOW_COPY_AND_ASSIGN(MachineLearningServiceImpl);
 };
 
 }  // namespace ml

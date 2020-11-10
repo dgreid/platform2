@@ -53,9 +53,8 @@ inline brillo::SecureVector* AsVector(SecureBlob* blob) {
 class ProxyAtExitManager : public base::AtExitManager {
  public:
   ProxyAtExitManager() : AtExitManager(true) {}
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ProxyAtExitManager);
+  ProxyAtExitManager(const ProxyAtExitManager&) = delete;
+  ProxyAtExitManager& operator=(const ProxyAtExitManager&) = delete;
 };
 
 }  // namespace

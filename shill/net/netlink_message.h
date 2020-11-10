@@ -82,6 +82,9 @@ class SHILL_EXPORT NetlinkMessage {
       : flags_(0),
         message_type_(message_type),
         sequence_number_(kBroadcastSequenceNumber) {}
+  NetlinkMessage(const NetlinkMessage&) = delete;
+  NetlinkMessage& operator=(const NetlinkMessage&) = delete;
+
   virtual ~NetlinkMessage() = default;
 
   // Returns a string of bytes representing the message (with it headers) and
@@ -129,8 +132,6 @@ class SHILL_EXPORT NetlinkMessage {
   static void PrintPayload(int log_level,
                            const unsigned char* buf,
                            size_t num_bytes);
-
-  DISALLOW_COPY_AND_ASSIGN(NetlinkMessage);
 };
 
 // The Error and Ack messages are received from the kernel and are combined,
@@ -147,6 +148,9 @@ class SHILL_EXPORT ErrorAckMessage : public NetlinkMessage {
   ErrorAckMessage() : NetlinkMessage(kMessageType), error_(0) {}
   explicit ErrorAckMessage(uint32_t err)
       : NetlinkMessage(kMessageType), error_(err) {}
+  ErrorAckMessage(const ErrorAckMessage&) = delete;
+  ErrorAckMessage& operator=(const ErrorAckMessage&) = delete;
+
   static uint16_t GetMessageType() { return kMessageType; }
   bool InitFromPacket(NetlinkPacket* packet, MessageContext context) override;
   ByteString Encode(uint32_t sequence_number) override;
@@ -156,8 +160,6 @@ class SHILL_EXPORT ErrorAckMessage : public NetlinkMessage {
 
  private:
   uint32_t error_;
-
-  DISALLOW_COPY_AND_ASSIGN(ErrorAckMessage);
 };
 
 class SHILL_EXPORT NoopMessage : public NetlinkMessage {
@@ -165,13 +167,13 @@ class SHILL_EXPORT NoopMessage : public NetlinkMessage {
   static const uint16_t kMessageType;
 
   NoopMessage() : NetlinkMessage(kMessageType) {}
+  NoopMessage(const NoopMessage&) = delete;
+  NoopMessage& operator=(const NoopMessage&) = delete;
+
   static uint16_t GetMessageType() { return kMessageType; }
   ByteString Encode(uint32_t sequence_number) override;
   void Print(int header_log_level, int detail_log_level) const override;
   std::string ToString() const { return "<NOOP>"; }
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(NoopMessage);
 };
 
 class SHILL_EXPORT DoneMessage : public NetlinkMessage {
@@ -179,13 +181,13 @@ class SHILL_EXPORT DoneMessage : public NetlinkMessage {
   static const uint16_t kMessageType;
 
   DoneMessage() : NetlinkMessage(kMessageType) {}
+  DoneMessage(const DoneMessage&) = delete;
+  DoneMessage& operator=(const DoneMessage&) = delete;
+
   static uint16_t GetMessageType() { return kMessageType; }
   ByteString Encode(uint32_t sequence_number) override;
   void Print(int header_log_level, int detail_log_level) const override;
   std::string ToString() const { return "<DONE with multipart message>"; }
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(DoneMessage);
 };
 
 class SHILL_EXPORT OverrunMessage : public NetlinkMessage {
@@ -193,26 +195,27 @@ class SHILL_EXPORT OverrunMessage : public NetlinkMessage {
   static const uint16_t kMessageType;
 
   OverrunMessage() : NetlinkMessage(kMessageType) {}
+  OverrunMessage(const OverrunMessage&) = delete;
+  OverrunMessage& operator=(const OverrunMessage&) = delete;
+
   static uint16_t GetMessageType() { return kMessageType; }
   ByteString Encode(uint32_t sequence_number) override;
   void Print(int header_log_level, int detail_log_level) const override;
   std::string ToString() const { return "<OVERRUN - data lost>"; }
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(OverrunMessage);
 };
 
 class SHILL_EXPORT UnknownMessage : public NetlinkMessage {
  public:
   UnknownMessage(uint16_t message_type, ByteString message_body)
       : NetlinkMessage(message_type), message_body_(message_body) {}
+  UnknownMessage(const UnknownMessage&) = delete;
+  UnknownMessage& operator=(const UnknownMessage&) = delete;
+
   ByteString Encode(uint32_t sequence_number) override;
   void Print(int header_log_level, int detail_log_level) const override;
 
  private:
   ByteString message_body_;
-
-  DISALLOW_COPY_AND_ASSIGN(UnknownMessage);
 };
 
 //
@@ -225,6 +228,8 @@ class SHILL_EXPORT NetlinkMessageFactory {
       const NetlinkPacket& packet)>;
 
   NetlinkMessageFactory() = default;
+  NetlinkMessageFactory(const NetlinkMessageFactory&) = delete;
+  NetlinkMessageFactory& operator=(const NetlinkMessageFactory&) = delete;
 
   // Adds a message factory for a specific message_type.  Intended to be used
   // at initialization.
@@ -235,8 +240,6 @@ class SHILL_EXPORT NetlinkMessageFactory {
 
  private:
   std::map<uint16_t, FactoryMethod> factories_;
-
-  DISALLOW_COPY_AND_ASSIGN(NetlinkMessageFactory);
 };
 
 }  // namespace shill

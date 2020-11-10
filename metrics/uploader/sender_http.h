@@ -15,6 +15,9 @@
 class HttpSender : public Sender {
  public:
   explicit HttpSender(std::string server_url);
+  HttpSender(const HttpSender&) = delete;
+  HttpSender& operator=(const HttpSender&) = delete;
+
   ~HttpSender() override = default;
   // Sends |content| whose SHA1 hash is |hash| to server_url with a synchronous
   // POST request to server_url.
@@ -22,8 +25,6 @@ class HttpSender : public Sender {
 
  private:
   const std::string server_url_;
-
-  DISALLOW_COPY_AND_ASSIGN(HttpSender);
 };
 
 #endif  // METRICS_UPLOADER_SENDER_HTTP_H_

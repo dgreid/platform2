@@ -18,6 +18,9 @@ namespace cryptohome {
 class MountStack {
  public:
   MountStack();
+  MountStack(const MountStack&) = delete;
+  MountStack& operator=(const MountStack&) = delete;
+
   virtual ~MountStack();
 
   virtual void Push(const base::FilePath& src, const base::FilePath& dest);
@@ -37,8 +40,6 @@ class MountStack {
   };
 
   std::vector<MountInfo> mounts_;
-
-  DISALLOW_COPY_AND_ASSIGN(MountStack);
 };
 
 }  // namespace cryptohome

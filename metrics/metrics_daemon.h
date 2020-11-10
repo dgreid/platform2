@@ -28,6 +28,9 @@ namespace chromeos_metrics {
 class MetricsDaemon : public brillo::DBusDaemon {
  public:
   MetricsDaemon();
+  MetricsDaemon(const MetricsDaemon&) = delete;
+  MetricsDaemon& operator=(const MetricsDaemon&) = delete;
+
   ~MetricsDaemon();
 
   // Initializes metrics class variables.
@@ -527,8 +530,6 @@ class MetricsDaemon : public brillo::DBusDaemon {
 
   // The backing directory for persistent integers.
   base::FilePath backing_dir_;
-
-  DISALLOW_COPY_AND_ASSIGN(MetricsDaemon);
 };
 
 }  // namespace chromeos_metrics

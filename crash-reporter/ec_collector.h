@@ -26,6 +26,8 @@
 class ECCollector : public CrashCollector {
  public:
   ECCollector();
+  ECCollector(const ECCollector&) = delete;
+  ECCollector& operator=(const ECCollector&) = delete;
 
   ~ECCollector() override;
 
@@ -37,8 +39,6 @@ class ECCollector : public CrashCollector {
   friend class ECCollectorTest;
 
   base::FilePath debugfs_path_;
-
-  DISALLOW_COPY_AND_ASSIGN(ECCollector);
 };
 
 #endif  // CRASH_REPORTER_EC_COLLECTOR_H_

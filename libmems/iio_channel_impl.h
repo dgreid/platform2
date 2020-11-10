@@ -21,6 +21,9 @@ class LIBMEMS_EXPORT IioChannelImpl : public IioChannel {
  public:
   // iio_channel objects are kept alive by the IioContextImpl.
   explicit IioChannelImpl(iio_channel* channel);
+  IioChannelImpl(const IioChannelImpl&) = delete;
+  IioChannelImpl& operator=(const IioChannelImpl&) = delete;
+
   ~IioChannelImpl() override = default;
 
   const char* GetId() const override;
@@ -45,8 +48,6 @@ class LIBMEMS_EXPORT IioChannelImpl : public IioChannel {
 
  private:
   iio_channel* const channel_;  // non-owned
-
-  DISALLOW_COPY_AND_ASSIGN(IioChannelImpl);
 };
 
 }  // namespace libmems

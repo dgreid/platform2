@@ -66,6 +66,9 @@ class ProcessNode {
  public:
   explicit ProcessNode(int pid)
       : pid_(pid), cmdline_(base::CommandLine::NO_PROGRAM) {}
+  ProcessNode(const ProcessNode&) = delete;
+  ProcessNode& operator=(const ProcessNode&) = delete;
+
   ~ProcessNode() {}
 
   // GetPID returns the PID of the process.
@@ -103,8 +106,6 @@ class ProcessNode {
   // All ProcessNode instances are owned by process_map_ in ProcessInfo.
   ProcessNode* parent_ = nullptr;
   std::vector<ProcessNode*> children_;
-
-  DISALLOW_COPY_AND_ASSIGN(ProcessNode);
 };
 
 // If ARC is running, returns true and places the ARC init PID in |pid_out|.
@@ -122,6 +123,9 @@ class ProcessInfo {
  public:
   ProcessInfo(const base::FilePath& procfs_root, const base::FilePath& run_root)
       : procfs_root_(procfs_root), run_root_(run_root) {}
+  ProcessInfo(const ProcessInfo&) = delete;
+  ProcessInfo& operator=(const ProcessInfo&) = delete;
+
   ~ProcessInfo() {}
 
   // Takes a snapshot of existing processes and builds the process tree.
@@ -143,8 +147,6 @@ class ProcessInfo {
   // Paths to /proc and /run, or mocks for testing.
   base::FilePath procfs_root_;
   base::FilePath run_root_;
-
-  DISALLOW_COPY_AND_ASSIGN(ProcessInfo);
 };
 
 // Accumulates memory usage stats for a group of processes.  |procfs_path|

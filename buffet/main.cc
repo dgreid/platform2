@@ -29,6 +29,8 @@ class Daemon final : public DBusServiceDaemon {
  public:
   explicit Daemon(const Manager::Options& options)
       : DBusServiceDaemon(kServiceName, kRootServicePath), options_{options} {}
+  Daemon(const Daemon&) = delete;
+  Daemon& operator=(const Daemon&) = delete;
 
  protected:
   void RegisterDBusObjectsAsync(AsyncEventSequencer* sequencer) override {
@@ -42,7 +44,6 @@ class Daemon final : public DBusServiceDaemon {
   Manager::Options options_;
 
   std::unique_ptr<buffet::Manager> manager_;
-  DISALLOW_COPY_AND_ASSIGN(Daemon);
 };
 
 }  // namespace buffet

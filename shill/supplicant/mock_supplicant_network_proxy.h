@@ -16,13 +16,14 @@ namespace shill {
 class MockSupplicantNetworkProxy : public SupplicantNetworkProxyInterface {
  public:
   MockSupplicantNetworkProxy();
+  MockSupplicantNetworkProxy(const MockSupplicantNetworkProxy&) = delete;
+  MockSupplicantNetworkProxy& operator=(const MockSupplicantNetworkProxy&) =
+      delete;
+
   ~MockSupplicantNetworkProxy() override;
 
   MOCK_METHOD(bool, SetEnabled, (bool), (override));
   MOCK_METHOD(bool, SetProperties, (const KeyValueStore&), (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockSupplicantNetworkProxy);
 };
 
 }  // namespace shill

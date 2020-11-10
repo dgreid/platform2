@@ -14,12 +14,12 @@ namespace debugd {
 class WifiFWDumpTool {
  public:
   WifiFWDumpTool() = default;
+  WifiFWDumpTool(const WifiFWDumpTool&) = delete;
+  WifiFWDumpTool& operator=(const WifiFWDumpTool&) = delete;
+
   ~WifiFWDumpTool() = default;
   // Trigger WiFi firmware dumper.
   std::string WifiFWDump();
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(WifiFWDumpTool);
 };
 
 }  // namespace debugd

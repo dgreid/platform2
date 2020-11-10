@@ -30,6 +30,9 @@ class LockfileChecker : public LockfileCheckerInterface {
   // Lockfiles within |dir| or |files| will be honored.
   LockfileChecker(const base::FilePath& dir,
                   const std::vector<base::FilePath>& files);
+  LockfileChecker(const LockfileChecker&) = delete;
+  LockfileChecker& operator=(const LockfileChecker&) = delete;
+
   ~LockfileChecker() override;
 
   void set_proc_dir_for_test(const base::FilePath& dir) { proc_dir_ = dir; }
@@ -47,8 +50,6 @@ class LockfileChecker : public LockfileCheckerInterface {
 
   // Legacy lockfiles outside of |dir_| that should also be checked.
   const std::vector<base::FilePath> files_;
-
-  DISALLOW_COPY_AND_ASSIGN(LockfileChecker);
 };
 
 }  // namespace system

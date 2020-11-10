@@ -12,6 +12,9 @@ namespace {
 class ServiceImpl : public easy_unlock::Service {
  public:
   ServiceImpl() : crypto_service_(new easy_unlock_crypto::ServiceImpl()) {}
+  ServiceImpl(const ServiceImpl&) = delete;
+  ServiceImpl& operator=(const ServiceImpl&) = delete;
+
   virtual ~ServiceImpl() {}
 
   void GenerateEcP256KeyPair(std::vector<uint8_t>* private_key,
@@ -57,8 +60,6 @@ class ServiceImpl : public easy_unlock::Service {
 
  private:
   std::unique_ptr<easy_unlock_crypto::ServiceImpl> crypto_service_;
-
-  DISALLOW_COPY_AND_ASSIGN(ServiceImpl);
 };
 
 }  // namespace

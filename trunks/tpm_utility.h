@@ -52,6 +52,9 @@ class TRUNKS_EXPORT TpmUtility {
   enum AsymmetricKeyUsage { kDecryptKey, kSignKey, kDecryptAndSignKey };
 
   TpmUtility() {}
+  TpmUtility(const TpmUtility&) = delete;
+  TpmUtility& operator=(const TpmUtility&) = delete;
+
   virtual ~TpmUtility() {}
 
   // Synchronously performs a TPM startup sequence and self tests. Typically
@@ -713,9 +716,6 @@ class TRUNKS_EXPORT TpmUtility {
 
   // Retrieves cached RSU device id.
   virtual TPM_RC GetRsuDeviceId(std::string* device_id) = 0;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(TpmUtility);
 };
 
 }  // namespace trunks

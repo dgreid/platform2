@@ -22,6 +22,9 @@ class ModemModemCdmaProxy : public ModemModemCdmaProxyInterface {
   ModemModemCdmaProxy(const scoped_refptr<dbus::Bus>& bus,
                       const RpcIdentifier& path,
                       const std::string& service);
+  ModemModemCdmaProxy(const ModemModemCdmaProxy&) = delete;
+  ModemModemCdmaProxy& operator=(const ModemModemCdmaProxy&) = delete;
+
   ~ModemModemCdmaProxy() override;
 
   // Inherited methods from ModemModemCdmaProxyInterface.
@@ -63,7 +66,6 @@ class ModemModemCdmaProxy : public ModemModemCdmaProxyInterface {
       proxy_;
 
   base::WeakPtrFactory<ModemModemCdmaProxy> weak_factory_{this};
-  DISALLOW_COPY_AND_ASSIGN(ModemModemCdmaProxy);
 };
 
 }  // namespace mm1

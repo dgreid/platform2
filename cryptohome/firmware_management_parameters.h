@@ -54,6 +54,10 @@ class FirmwareManagementParameters {
   // supplied, none of the operations will succeed, but it should not crash or
   // behave unexpectedly.  See README.firmware_management_parameters for info.
   explicit FirmwareManagementParameters(Tpm* tpm);
+  FirmwareManagementParameters(const FirmwareManagementParameters&) = delete;
+  FirmwareManagementParameters& operator=(const FirmwareManagementParameters&) =
+      delete;
+
   virtual ~FirmwareManagementParameters();
 
   // Creates the backend state needed for this firmware management parameters.
@@ -131,8 +135,6 @@ class FirmwareManagementParameters {
   Tpm* tpm_;
   std::unique_ptr<FirmwareManagementParametersRawV1_0> raw_;
   bool loaded_ = false;
-
-  DISALLOW_COPY_AND_ASSIGN(FirmwareManagementParameters);
 };
 }  // namespace cryptohome
 

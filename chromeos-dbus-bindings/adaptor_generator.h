@@ -26,6 +26,8 @@ struct Interface;
 class AdaptorGenerator {
  public:
   AdaptorGenerator();
+  AdaptorGenerator(const AdaptorGenerator&) = delete;
+  AdaptorGenerator& operator=(const AdaptorGenerator&) = delete;
 
   bool GenerateAdaptors(const std::vector<Interface>& interfaces,
                         const base::FilePath& output_file);
@@ -72,8 +74,6 @@ class AdaptorGenerator {
   // introspection interface for this particular interface.
   void GenerateQuotedIntrospectionForInterface(const Interface& interface,
                                                IndentedText* text);
-
-  DISALLOW_COPY_AND_ASSIGN(AdaptorGenerator);
 };
 
 }  // namespace chromeos_dbus_bindings

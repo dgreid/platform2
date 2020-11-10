@@ -225,6 +225,8 @@ class CellularCapability {
  protected:
   // |cellular| is the parent Cellular device.
   CellularCapability(Cellular* cellular, ModemInfo* modem_info);
+  CellularCapability(const CellularCapability&) = delete;
+  CellularCapability& operator=(const CellularCapability&) = delete;
 
   // Releases all proxies held by the object. This is most useful during unit
   // tests.
@@ -242,8 +244,6 @@ class CellularCapability {
   Cellular* cellular_;
   ControlInterface* control_interface_;
   ModemInfo* modem_info_;
-
-  DISALLOW_COPY_AND_ASSIGN(CellularCapability);
 };
 
 }  // namespace shill

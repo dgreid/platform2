@@ -67,6 +67,8 @@ namespace policy {
 class PregPolicyEncoderTest : public ::testing::Test {
  public:
   PregPolicyEncoderTest() = default;
+  PregPolicyEncoderTest(const PregPolicyEncoderTest&) = delete;
+  PregPolicyEncoderTest& operator=(const PregPolicyEncoderTest&) = delete;
 
   void SetUp() override {
     // Create temp directory for policy files.
@@ -154,9 +156,6 @@ class PregPolicyEncoderTest : public ::testing::Test {
   base::FilePath base_path_;
   base::FilePath preg_1_path_;
   base::FilePath preg_2_path_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(PregPolicyEncoderTest);
 };
 
 // Encodes user policies of different types.

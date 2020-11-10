@@ -18,6 +18,9 @@ namespace system {
 class PowerSupplyStub : public PowerSupplyInterface {
  public:
   PowerSupplyStub();
+  PowerSupplyStub(const PowerSupplyStub&) = delete;
+  PowerSupplyStub& operator=(const PowerSupplyStub&) = delete;
+
   ~PowerSupplyStub() override;
 
   void set_refresh_result(bool result) { refresh_result_ = result; }
@@ -41,8 +44,6 @@ class PowerSupplyStub : public PowerSupplyInterface {
   PowerStatus status_;
 
   base::ObserverList<PowerSupplyObserver> observers_;
-
-  DISALLOW_COPY_AND_ASSIGN(PowerSupplyStub);
 };
 
 }  // namespace system

@@ -32,6 +32,9 @@ class SuspendDelayController {
   SuspendDelayController(int initial_delay_id,
                          const std::string& description,
                          base::TimeDelta max_delay_timeout);
+  SuspendDelayController(const SuspendDelayController&) = delete;
+  SuspendDelayController& operator=(const SuspendDelayController&) = delete;
+
   ~SuspendDelayController();
 
   // Default value corresponding to maximum suspend delay i.e. maximum time
@@ -174,8 +177,6 @@ class SuspendDelayController {
   base::TimeDelta dark_resume_min_delay_ = kDarkResumeMinDelayTimeout;
 
   base::ObserverList<SuspendDelayObserver> observers_;
-
-  DISALLOW_COPY_AND_ASSIGN(SuspendDelayController);
 };
 
 }  // namespace policy

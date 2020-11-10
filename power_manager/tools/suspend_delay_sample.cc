@@ -75,6 +75,8 @@ class SuspendDelayRegisterer {
         base::Bind(&SuspendDelayRegisterer::NameOwnerChangedReceived,
                    weak_ptr_factory_.GetWeakPtr()));
   }
+  SuspendDelayRegisterer(const SuspendDelayRegisterer&) = delete;
+  SuspendDelayRegisterer& operator=(const SuspendDelayRegisterer&) = delete;
 
  private:
   // Announces that the process is ready for suspend attempt |suspend_id|.
@@ -175,8 +177,6 @@ class SuspendDelayRegisterer {
   dbus::ObjectProxy* powerd_proxy_ = nullptr;
 
   base::WeakPtrFactory<SuspendDelayRegisterer> weak_ptr_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(SuspendDelayRegisterer);
 };
 
 int main(int argc, char* argv[]) {

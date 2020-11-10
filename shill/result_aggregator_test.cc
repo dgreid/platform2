@@ -71,6 +71,9 @@ class ResultGenerator {
  public:
   explicit ResultGenerator(const scoped_refptr<ResultAggregator>& aggregator)
       : aggregator_(aggregator) {}
+  ResultGenerator(const ResultGenerator&) = delete;
+  ResultGenerator& operator=(const ResultGenerator&) = delete;
+
   ~ResultGenerator() = default;
 
   void GenerateResult(const Error::Type error_type) {
@@ -79,7 +82,6 @@ class ResultGenerator {
 
  private:
   scoped_refptr<ResultAggregator> aggregator_;
-  DISALLOW_COPY_AND_ASSIGN(ResultGenerator);
 };
 
 TEST_F(ResultAggregatorTestWithMockDispatcher, Unused) {

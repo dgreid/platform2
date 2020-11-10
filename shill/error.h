@@ -54,6 +54,9 @@ class Error {
   Error();                    // Success by default.
   explicit Error(Type type);  // Uses the default message for |type|.
   Error(Type type, const std::string& message);
+  Error(const Error&) = delete;
+  Error& operator=(const Error&) = delete;
+
   ~Error();
 
   void Populate(Type type);  // Uses the default message for |type|.
@@ -91,8 +94,6 @@ class Error {
   Type type_;
   std::string message_;
   base::Location location_;
-
-  DISALLOW_COPY_AND_ASSIGN(Error);
 };
 
 // stream operator provided to facilitate logging

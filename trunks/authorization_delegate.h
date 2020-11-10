@@ -18,6 +18,9 @@ namespace trunks {
 class AuthorizationDelegate {
  public:
   AuthorizationDelegate() {}
+  AuthorizationDelegate(const AuthorizationDelegate&) = delete;
+  AuthorizationDelegate& operator=(const AuthorizationDelegate&) = delete;
+
   virtual ~AuthorizationDelegate() {}
 
   // Provides authorization data for a command which has a cpHash value of
@@ -47,9 +50,6 @@ class AuthorizationDelegate {
   // Returns the current TPM-generated nonce that is associated with the
   // authorization session. Returns true on success.
   virtual bool GetTpmNonce(std::string* nonce) = 0;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(AuthorizationDelegate);
 };
 
 }  // namespace trunks

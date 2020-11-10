@@ -21,6 +21,8 @@ namespace fido_device {
 class PublicKey {
  public:
   PublicKey() = default;
+  PublicKey(const PublicKey&) = delete;
+  PublicKey& operator=(const PublicKey&) = delete;
   // public key
   virtual ~PublicKey() = default;
 
@@ -39,8 +41,6 @@ class PublicKey {
   explicit PublicKey(std::string algorithm);
 
   std::string algorithm_;
-
-  DISALLOW_COPY_AND_ASSIGN(PublicKey);
 };
 
 }  // namespace fido_device

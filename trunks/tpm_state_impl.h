@@ -25,6 +25,9 @@ class TrunksFactory;
 class TRUNKS_EXPORT TpmStateImpl : public TpmState {
  public:
   explicit TpmStateImpl(const TrunksFactory& factory);
+  TpmStateImpl(const TpmStateImpl&) = delete;
+  TpmStateImpl& operator=(const TpmStateImpl&) = delete;
+
   ~TpmStateImpl() override = default;
 
   // TpmState methods.
@@ -78,8 +81,6 @@ class TRUNKS_EXPORT TpmStateImpl : public TpmState {
   bool initialized_{false};
   std::map<TPM_PT, uint32_t> tpm_properties_;
   std::map<TPM_ALG_ID, TPMA_ALGORITHM> algorithm_properties_;
-
-  DISALLOW_COPY_AND_ASSIGN(TpmStateImpl);
 };
 
 }  // namespace trunks

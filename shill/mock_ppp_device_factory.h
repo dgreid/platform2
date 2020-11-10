@@ -29,11 +29,11 @@ class MockPPPDeviceFactory : public PPPDeviceFactory {
 
  protected:
   MockPPPDeviceFactory();
+  MockPPPDeviceFactory(const MockPPPDeviceFactory&) = delete;
+  MockPPPDeviceFactory& operator=(const MockPPPDeviceFactory&) = delete;
 
  private:
   friend class base::NoDestructor<MockPPPDeviceFactory>;
-
-  DISALLOW_COPY_AND_ASSIGN(MockPPPDeviceFactory);
 };
 
 }  // namespace shill

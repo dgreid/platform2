@@ -42,6 +42,8 @@ class BaseDirectoryIterator {
                         SambaInterface* samba_interface);
 
   BaseDirectoryIterator(BaseDirectoryIterator&& other);
+  BaseDirectoryIterator(const BaseDirectoryIterator&) = delete;
+  BaseDirectoryIterator& operator=(const BaseDirectoryIterator&) = delete;
 
   // Initializes the iterator, setting the first value of current. Returns 0 on
   // success, error on failure. Must be called before any other operation.
@@ -110,8 +112,6 @@ class BaseDirectoryIterator {
   bool include_metadata_ = false;
 
   SambaInterface::WeakPtr samba_interface_;
-
-  DISALLOW_COPY_AND_ASSIGN(BaseDirectoryIterator);
 };
 
 // DirectoryIterator is an implementation of BaseDirectoryIterator that only
@@ -127,13 +127,13 @@ class DirectoryIterator : public BaseDirectoryIterator {
                           kDefaultMetadataBatchSize,
                           true /* include_metadata */) {}
   DirectoryIterator(DirectoryIterator&& other) = default;
+  DirectoryIterator(const DirectoryIterator&) = delete;
+  DirectoryIterator& operator=(const DirectoryIterator&) = delete;
 
  protected:
   bool ShouldIncludeEntryType(uint32_t smbc_type) const override {
     return IsFileOrDir(smbc_type);
   }
-
-  DISALLOW_COPY_AND_ASSIGN(DirectoryIterator);
 };
 
 }  // namespace smbprovider

@@ -24,6 +24,9 @@ class IconIndexFileTest : public ::testing::Test {
     CHECK(temp_dir_.CreateUniqueTempDir());
     icon_theme_dir_ = temp_dir_.GetPath();
   }
+  IconIndexFileTest(const IconIndexFileTest&) = delete;
+  IconIndexFileTest& operator=(const IconIndexFileTest&) = delete;
+
   ~IconIndexFileTest() override = default;
 
   base::FilePath WriteIndexThemeFile(const std::string& contents) {
@@ -54,8 +57,6 @@ class IconIndexFileTest : public ::testing::Test {
  private:
   base::ScopedTempDir temp_dir_;
   base::FilePath icon_theme_dir_;
-
-  DISALLOW_COPY_AND_ASSIGN(IconIndexFileTest);
 };
 
 }  // namespace

@@ -31,11 +31,12 @@ class DBusServiceWatcherFactory {
 
  protected:
   DBusServiceWatcherFactory();
+  DBusServiceWatcherFactory(const DBusServiceWatcherFactory&) = delete;
+  DBusServiceWatcherFactory& operator=(const DBusServiceWatcherFactory&) =
+      delete;
 
  private:
   friend class base::NoDestructor<DBusServiceWatcherFactory>;
-
-  DISALLOW_COPY_AND_ASSIGN(DBusServiceWatcherFactory);
 };
 
 }  // namespace shill

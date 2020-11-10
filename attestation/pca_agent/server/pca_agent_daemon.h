@@ -18,6 +18,8 @@ namespace pca_agent {
 class PcaAgentDaemon : public brillo::DBusServiceDaemon {
  public:
   PcaAgentDaemon() : DBusServiceDaemon(kPcaAgentServiceName) {}
+  PcaAgentDaemon(const PcaAgentDaemon&) = delete;
+  PcaAgentDaemon& operator=(const PcaAgentDaemon&) = delete;
 
  protected:
   void RegisterDBusObjectsAsync(
@@ -31,8 +33,6 @@ class PcaAgentDaemon : public brillo::DBusServiceDaemon {
  private:
   std::unique_ptr<PcaAgentService> service_;
   std::unique_ptr<PcaAgentServiceAdaptor> adaptor_;
-
-  DISALLOW_COPY_AND_ASSIGN(PcaAgentDaemon);
 };
 
 }  // namespace pca_agent

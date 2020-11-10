@@ -17,6 +17,9 @@ namespace debugd {
 class DebugModeTool {
  public:
   explicit DebugModeTool(scoped_refptr<dbus::Bus> bus);
+  DebugModeTool(const DebugModeTool&) = delete;
+  DebugModeTool& operator=(const DebugModeTool&) = delete;
+
   virtual ~DebugModeTool() = default;
 
   virtual void SetDebugMode(const std::string& subsystem);
@@ -25,8 +28,6 @@ class DebugModeTool {
   void SetModemManagerLogging(const std::string& level);
 
   scoped_refptr<dbus::Bus> bus_;
-
-  DISALLOW_COPY_AND_ASSIGN(DebugModeTool);
 };
 
 }  // namespace debugd

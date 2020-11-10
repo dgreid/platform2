@@ -30,6 +30,9 @@ class CommandResponse;
 class HelperProcessProxy {
  public:
   HelperProcessProxy() = default;
+  HelperProcessProxy(const HelperProcessProxy&) = delete;
+  HelperProcessProxy& operator=(const HelperProcessProxy&) = delete;
+
   virtual ~HelperProcessProxy() = default;
 
   // Re-execs imageloader with a new argument: "|fd_arg|=N", where N is the side
@@ -70,8 +73,6 @@ class HelperProcessProxy {
   // Constructs msghdr and sends it.
   virtual std::unique_ptr<CommandResponse> SendCommand(
       const ImageCommand& msg_proto, struct msghdr* msg);
-
-  DISALLOW_COPY_AND_ASSIGN(HelperProcessProxy);
 };
 
 }  // namespace imageloader

@@ -20,6 +20,8 @@ namespace brillo {
 class BRILLO_EXPORT Platform {
  public:
   Platform();
+  Platform(const Platform&) = delete;
+  Platform& operator=(const Platform&) = delete;
 
   virtual ~Platform();
   // Calls the platform fork() function and returns the pid returned
@@ -62,8 +64,6 @@ class BRILLO_EXPORT Platform {
   //   pid - The child pid to be waited on
   //   status (OUT)- Termination status of a child process.
   virtual pid_t Waitpid(pid_t pid, int* status);
-
-  DISALLOW_COPY_AND_ASSIGN(Platform);
 };
 
 }  // namespace brillo

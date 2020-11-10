@@ -37,6 +37,9 @@ class MidisHostImpl : public arc::mojom::MidisHost {
   // |client_tracker|, which must outlive MidisHostImpl, is owned by the caller.
   MidisHostImpl(arc::mojom::MidisHostRequest request,
                 midis::ClientTracker* client_tracker);
+  MidisHostImpl(const MidisHostImpl&) = delete;
+  MidisHostImpl& operator=(const MidisHostImpl&) = delete;
+
   ~MidisHostImpl() override = default;
 
   // mojom::MidisHost:
@@ -49,8 +52,6 @@ class MidisHostImpl : public arc::mojom::MidisHost {
   // MidisHostImpl.
   midis::ClientTracker* client_tracker_;
   mojo::Binding<arc::mojom::MidisHost> binding_;
-
-  DISALLOW_COPY_AND_ASSIGN(MidisHostImpl);
 };
 
 MidisHostImpl::MidisHostImpl(arc::mojom::MidisHostRequest request,

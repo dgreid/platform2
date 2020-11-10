@@ -23,6 +23,9 @@ class Manager;
 class MockDeviceInfo : public DeviceInfo {
  public:
   explicit MockDeviceInfo(Manager* manager);
+  MockDeviceInfo(const MockDeviceInfo&) = delete;
+  MockDeviceInfo& operator=(const MockDeviceInfo&) = delete;
+
   ~MockDeviceInfo() override;
 
   MOCK_METHOD(bool, IsDeviceBlocked, (const std::string&), (override));
@@ -63,9 +66,6 @@ class MockDeviceInfo : public DeviceInfo {
   MOCK_METHOD(bool, DeleteInterface, (int), (const, override));
   MOCK_METHOD(void, RegisterDevice, (const DeviceRefPtr&), (override));
   MOCK_METHOD(bool, SetHostname, (const std::string&), (const, override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockDeviceInfo);
 };
 
 }  // namespace shill

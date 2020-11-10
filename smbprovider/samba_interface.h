@@ -23,6 +23,9 @@ class SambaInterface {
   using SambaInterfaceId = uintptr_t;
 
   SambaInterface() = default;
+  SambaInterface(const SambaInterface&) = delete;
+  SambaInterface& operator=(const SambaInterface&) = delete;
+
   virtual ~SambaInterface() = default;
 
   // Opens a file at a given |file_path|.
@@ -162,7 +165,6 @@ class SambaInterface {
   static_assert(std::is_same<int, int32_t>::value,
                 "Ensure that int32_t is same as int, due to casting of int to "
                 "int32_t in samba interface");
-  DISALLOW_COPY_AND_ASSIGN(SambaInterface);
 };
 
 }  // namespace smbprovider

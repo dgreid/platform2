@@ -23,14 +23,14 @@ namespace tpm_manager {
 class OpensslCryptoUtilImpl : public OpensslCryptoUtil {
  public:
   OpensslCryptoUtilImpl() = default;
+  OpensslCryptoUtilImpl(const OpensslCryptoUtilImpl&) = delete;
+  OpensslCryptoUtilImpl& operator=(const OpensslCryptoUtilImpl&) = delete;
+
   ~OpensslCryptoUtilImpl() override = default;
 
   // OpensslCryptoUtil methods.
   bool GetRandomBytes(size_t num_bytes,
                       std::string* random_data) override WARN_UNUSED_RESULT;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(OpensslCryptoUtilImpl);
 };
 
 }  // namespace tpm_manager

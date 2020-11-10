@@ -22,6 +22,8 @@ namespace password_provider {
 class FakePasswordProvider : public PasswordProviderInterface {
  public:
   FakePasswordProvider() {}
+  FakePasswordProvider(const FakePasswordProvider&) = delete;
+  FakePasswordProvider& operator=(const FakePasswordProvider&) = delete;
 
   bool password_saved() const { return password_saved_; }
   bool password_discarded() const {
@@ -63,8 +65,6 @@ class FakePasswordProvider : public PasswordProviderInterface {
   mutable bool password_discarded_ =
       false;  // true if password_ is cleared out.
   mutable std::string password_;
-
-  DISALLOW_COPY_AND_ASSIGN(FakePasswordProvider);
 };
 
 }  // namespace password_provider

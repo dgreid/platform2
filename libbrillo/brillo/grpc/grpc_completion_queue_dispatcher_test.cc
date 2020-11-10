@@ -32,6 +32,9 @@ namespace {
 class TagAvailableCalledTester {
  public:
   TagAvailableCalledTester() = default;
+  TagAvailableCalledTester(const TagAvailableCalledTester&) = delete;
+  TagAvailableCalledTester& operator=(const TagAvailableCalledTester&) = delete;
+
   ~TagAvailableCalledTester() = default;
 
   GrpcCompletionQueueDispatcher::TagAvailableCallback
@@ -74,8 +77,6 @@ class TagAvailableCalledTester {
   bool has_been_called_ = false;
   bool value_of_ok_ = false;
   std::list<base::Closure> call_when_invoked_;
-
-  DISALLOW_COPY_AND_ASSIGN(TagAvailableCalledTester);
 };
 
 // Allows testing if an object (owned by callback) has been destroyed. Also
@@ -90,6 +91,8 @@ class ObjectDestroyedTester {
         has_been_destroyed_(has_been_destroyed) {
     *has_been_destroyed_ = false;
   }
+  ObjectDestroyedTester(const ObjectDestroyedTester&) = delete;
+  ObjectDestroyedTester& operator=(const ObjectDestroyedTester&) = delete;
 
   ~ObjectDestroyedTester() {
     EXPECT_TRUE(expected_task_runner_->BelongsToCurrentThread());
@@ -99,8 +102,6 @@ class ObjectDestroyedTester {
  private:
   const scoped_refptr<base::SingleThreadTaskRunner> expected_task_runner_;
   bool* const has_been_destroyed_;
-
-  DISALLOW_COPY_AND_ASSIGN(ObjectDestroyedTester);
 };
 
 // An adapter to be able to give a Callback to
@@ -121,6 +122,10 @@ class GrpcCompletionQueueDispatcherTest : public ::testing::Test {
       : dispatcher_(&completion_queue_, base::ThreadTaskRunnerHandle::Get()) {
     dispatcher_.Start();
   }
+  GrpcCompletionQueueDispatcherTest(const GrpcCompletionQueueDispatcherTest&) =
+      delete;
+  GrpcCompletionQueueDispatcherTest& operator=(
+      const GrpcCompletionQueueDispatcherTest&) = delete;
 
   ~GrpcCompletionQueueDispatcherTest() override = default;
 
@@ -139,9 +144,6 @@ class GrpcCompletionQueueDispatcherTest : public ::testing::Test {
     dispatcher_.Shutdown(run_loop.QuitClosure());
     run_loop.Run();
   }
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(GrpcCompletionQueueDispatcherTest);
 };
 
 // Start and shutdown a dispatcher, with no tags posted to the underlying

@@ -25,6 +25,9 @@ class SystemFilesServiceImpl final : public SystemFilesService {
   static base::FilePath GetPathForVpdField(VpdField vpd_field);
 
   SystemFilesServiceImpl();
+  SystemFilesServiceImpl(const SystemFilesServiceImpl&) = delete;
+  SystemFilesServiceImpl& operator=(const SystemFilesServiceImpl&) = delete;
+
   ~SystemFilesServiceImpl() override;
 
   // SystemFilesService overrides:
@@ -54,8 +57,6 @@ class SystemFilesServiceImpl final : public SystemFilesService {
   bool ShouldFollowSymlink(const base::FilePath& link) const;
 
   base::FilePath root_dir_{"/"};
-
-  DISALLOW_COPY_AND_ASSIGN(SystemFilesServiceImpl);
 };
 
 }  // namespace diagnostics

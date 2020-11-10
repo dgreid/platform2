@@ -20,6 +20,9 @@ class TRUNKS_EXPORT ScopedKeyHandle {
   // resources associated with the handle.
   explicit ScopedKeyHandle(const TrunksFactory& factory);
   ScopedKeyHandle(const TrunksFactory& factory, TPM_HANDLE handle);
+  ScopedKeyHandle(const ScopedKeyHandle&) = delete;
+  ScopedKeyHandle& operator=(const ScopedKeyHandle&) = delete;
+
   virtual ~ScopedKeyHandle();
 
   // This method releases the TPM_HANDLE associated with this class.
@@ -50,8 +53,6 @@ class TRUNKS_EXPORT ScopedKeyHandle {
   const TrunksFactory& factory_;
   TPM_HANDLE handle_;
   void FlushHandleContext(TPM_HANDLE handle);
-
-  DISALLOW_COPY_AND_ASSIGN(ScopedKeyHandle);
 };
 
 }  // namespace trunks

@@ -43,6 +43,9 @@ class TestPrefsObserver : public PrefsObserver {
   explicit TestPrefsObserver(Prefs* prefs) : prefs_(prefs) {
     prefs_->AddObserver(this);
   }
+  TestPrefsObserver(const TestPrefsObserver&) = delete;
+  TestPrefsObserver& operator=(const TestPrefsObserver&) = delete;
+
   ~TestPrefsObserver() override { prefs_->RemoveObserver(this); }
 
   // Runs |loop_| until OnPrefChanged() is called, then quits the loop
@@ -67,8 +70,6 @@ class TestPrefsObserver : public PrefsObserver {
 
   // Name of the last pref that was changed.
   std::string pref_name_;
-
-  DISALLOW_COPY_AND_ASSIGN(TestPrefsObserver);
 };
 
 class PrefsTest : public testing::Test {

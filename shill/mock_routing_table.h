@@ -15,6 +15,9 @@ namespace shill {
 class MockRoutingTable : public RoutingTable {
  public:
   MockRoutingTable();
+  MockRoutingTable(const MockRoutingTable&) = delete;
+  MockRoutingTable& operator=(const MockRoutingTable&) = delete;
+
   ~MockRoutingTable() override;
 
   MOCK_METHOD(void, Start, (), (override));
@@ -49,9 +52,6 @@ class MockRoutingTable : public RoutingTable {
   MOCK_METHOD(void, FreeAdditionalTableId, (uint32_t), (override));
   MOCK_METHOD(bool, AddRule, (int, const RoutingPolicyEntry&), (override));
   MOCK_METHOD(void, FlushRules, (int), (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockRoutingTable);
 };
 
 }  // namespace shill

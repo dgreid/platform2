@@ -32,6 +32,9 @@ typedef struct PK11SlotInfoStr PK11SlotInfo;
 class MockNssUtil : public NssUtil {
  public:
   MockNssUtil();
+  MockNssUtil(const MockNssUtil&) = delete;
+  MockNssUtil& operator=(const MockNssUtil&) = delete;
+
   ~MockNssUtil() override;
 
   std::unique_ptr<crypto::RSAPrivateKey> CreateShortKey();
@@ -80,36 +83,33 @@ class MockNssUtil : public NssUtil {
   crypto::ScopedTestNSSDB test_nssdb_;
   base::ScopedTempDir temp_dir_;
   ScopedPK11SlotDescriptor desc_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockNssUtil);
 };
 
 class CheckPublicKeyUtil : public MockNssUtil {
  public:
   explicit CheckPublicKeyUtil(bool expected);
-  ~CheckPublicKeyUtil() override;
+  CheckPublicKeyUtil(const CheckPublicKeyUtil&) = delete;
+  CheckPublicKeyUtil& operator=(const CheckPublicKeyUtil&) = delete;
 
- private:
-  DISALLOW_COPY_AND_ASSIGN(CheckPublicKeyUtil);
+  ~CheckPublicKeyUtil() override;
 };
 
 class KeyCheckUtil : public MockNssUtil {
  public:
   KeyCheckUtil();
-  ~KeyCheckUtil() override;
+  KeyCheckUtil(const KeyCheckUtil&) = delete;
+  KeyCheckUtil& operator=(const KeyCheckUtil&) = delete;
 
- private:
-  DISALLOW_COPY_AND_ASSIGN(KeyCheckUtil);
+  ~KeyCheckUtil() override;
 };
 
 class KeyFailUtil : public MockNssUtil {
  public:
   KeyFailUtil();
-  ~KeyFailUtil() override;
+  KeyFailUtil(const KeyFailUtil&) = delete;
+  KeyFailUtil& operator=(const KeyFailUtil&) = delete;
 
- private:
-  DISALLOW_COPY_AND_ASSIGN(KeyFailUtil);
+  ~KeyFailUtil() override;
 };
 
 }  // namespace login_manager

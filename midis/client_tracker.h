@@ -23,6 +23,9 @@ namespace midis {
 class ClientTracker {
  public:
   ClientTracker();
+  ClientTracker(const ClientTracker&) = delete;
+  ClientTracker& operator=(const ClientTracker&) = delete;
+
   ~ClientTracker();
   void InitClientTracker();
   void SetDeviceTracker(DeviceTracker* ptr) { device_tracker_ = ptr; }
@@ -62,7 +65,6 @@ class ClientTracker {
   std::unique_ptr<arc::mojom::MidisHost> midis_host_;
 
   base::WeakPtrFactory<ClientTracker> weak_factory_;
-  DISALLOW_COPY_AND_ASSIGN(ClientTracker);
 };
 
 }  // namespace midis

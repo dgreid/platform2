@@ -26,6 +26,9 @@ namespace appfuse {
 class DataFilter {
  public:
   DataFilter();
+  DataFilter(const DataFilter&) = delete;
+  DataFilter& operator=(const DataFilter&) = delete;
+
   ~DataFilter();
 
   // The given callback will be run when this filter stops.
@@ -88,8 +91,6 @@ class DataFilter {
 
   scoped_refptr<base::TaskRunner> origin_task_runner_;
   base::Closure on_stopped_callback_;
-
-  DISALLOW_COPY_AND_ASSIGN(DataFilter);
 };
 
 }  // namespace appfuse

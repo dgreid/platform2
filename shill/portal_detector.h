@@ -119,6 +119,9 @@ class PortalDetector {
       const base::Callback<void(const PortalDetector::Result& http_result,
                                 const PortalDetector::Result& https_result)>&
           callback);
+  PortalDetector(const PortalDetector&) = delete;
+  PortalDetector& operator=(const PortalDetector&) = delete;
+
   virtual ~PortalDetector();
 
   // Static method used to map a portal detection phase to a string.  This
@@ -245,8 +248,6 @@ class PortalDetector {
   std::string https_url_string_;
   base::CancelableClosure trial_;
   bool is_active_;
-
-  DISALLOW_COPY_AND_ASSIGN(PortalDetector);
 };
 
 }  // namespace shill

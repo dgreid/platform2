@@ -57,6 +57,8 @@ class MountManagerTest : public testing::Test {
     mounts_ = std::make_unique<MountManager>(
         std::move(mount_tracker), std::move(samba_interface_factory));
   }
+  MountManagerTest(const MountManagerTest&) = delete;
+  MountManagerTest& operator=(const MountManagerTest&) = delete;
 
   ~MountManagerTest() override = default;
 
@@ -104,9 +106,6 @@ class MountManagerTest : public testing::Test {
   std::unique_ptr<MountManager> mounts_;
   TempFileManager temp_files_;
   bool enable_ntlm_ = false;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MountManagerTest);
 };
 
 TEST_F(MountManagerTest, TestEmptyManager) {

@@ -39,6 +39,8 @@ class PPP {
 
  protected:
   PPP();
+  PPP(const PPP&) = delete;
+  PPP& operator=(const PPP&) = delete;
 
  private:
   friend base::LazyInstanceTraitsBase<PPP>;
@@ -51,8 +53,6 @@ class PPP {
   scoped_refptr<dbus::Bus> bus_;
   std::unique_ptr<TaskProxy> proxy_;
   bool running_;
-
-  DISALLOW_COPY_AND_ASSIGN(PPP);
 };
 
 }  // namespace shims

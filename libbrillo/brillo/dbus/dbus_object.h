@@ -16,6 +16,8 @@ class MyDbusObject {
                const scoped_refptr<dbus::Bus>& bus)
       : dbus_object_(object_manager, bus,
                      dbus::ObjectPath("/org/chromium/my_obj")) {}
+  MyDbusObject(const MyDbusObject&) = delete;
+  MyDbusObject& operator=(const MyDbusObject&) = delete;
 
   void Init(const AsyncEventSequencer::CompletionAction& callback) {
     DBusInterface* my_interface =
@@ -54,8 +56,6 @@ class MyDbusObject {
     int32_t message_len = message.length();
     response->Return(message_len);
   }
-
-  DISALLOW_COPY_AND_ASSIGN(MyDbusObject);
 };
 */
 
@@ -120,6 +120,8 @@ class DBusObject;
 class BRILLO_EXPORT DBusInterface final {
  public:
   DBusInterface(DBusObject* dbus_object, const std::string& interface_name);
+  DBusInterface(const DBusInterface&) = delete;
+  DBusInterface& operator=(const DBusInterface&) = delete;
 
   // Register sync DBus method handler for |method_name| as base::Callback.
   template <typename R, typename... Args>
@@ -519,7 +521,6 @@ class BRILLO_EXPORT DBusInterface final {
   base::ScopedClosureRunner release_interface_cb_;
 
   base::WeakPtrFactory<DBusInterface> weak_factory_{this};
-  DISALLOW_COPY_AND_ASSIGN(DBusInterface);
 };
 
 // A D-Bus object implementation class. Manages the interfaces implemented
@@ -546,6 +547,8 @@ class BRILLO_EXPORT DBusObject {
              const scoped_refptr<::dbus::Bus>& bus,
              const ::dbus::ObjectPath& object_path,
              PropertyHandlerSetupCallback property_handler_setup_callback);
+  DBusObject(const DBusObject&) = delete;
+  DBusObject& operator=(const DBusObject&) = delete;
 
   virtual ~DBusObject();
 
@@ -640,7 +643,6 @@ class BRILLO_EXPORT DBusObject {
   PropertyHandlerSetupCallback property_handler_setup_callback_;
 
   friend class DBusInterface;
-  DISALLOW_COPY_AND_ASSIGN(DBusObject);
 };
 
 }  // namespace dbus_utils

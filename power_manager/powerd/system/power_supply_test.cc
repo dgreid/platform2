@@ -70,6 +70,9 @@ class TestObserver : public PowerSupplyObserver {
       : power_supply_(power_supply), num_updates_(0) {
     power_supply_->AddObserver(this);
   }
+  TestObserver(const TestObserver&) = delete;
+  TestObserver& operator=(const TestObserver&) = delete;
+
   ~TestObserver() override { power_supply_->RemoveObserver(this); }
 
   int num_updates() const { return num_updates_; }
@@ -95,8 +98,6 @@ class TestObserver : public PowerSupplyObserver {
   int num_updates_;
 
   TestMainLoopRunner runner_;
-
-  DISALLOW_COPY_AND_ASSIGN(TestObserver);
 };
 
 }  // namespace

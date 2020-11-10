@@ -31,6 +31,9 @@ class TrunksFactory;
 class TRUNKS_EXPORT TpmUtilityImpl : public TpmUtility {
  public:
   explicit TpmUtilityImpl(const TrunksFactory& factory);
+  TpmUtilityImpl(const TpmUtilityImpl&) = delete;
+  TpmUtilityImpl& operator=(const TpmUtilityImpl&) = delete;
+
   ~TpmUtilityImpl() override;
 
   // TpmUtility methods.
@@ -432,8 +435,6 @@ class TRUNKS_EXPORT TpmUtilityImpl : public TpmUtility {
 
   // Obrains RSU device id from Cr50.
   TPM_RC GetRsuDeviceIdInternal(std::string* device_id);
-
-  DISALLOW_COPY_AND_ASSIGN(TpmUtilityImpl);
 };
 
 }  // namespace trunks

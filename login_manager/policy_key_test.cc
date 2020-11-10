@@ -29,6 +29,9 @@ namespace login_manager {
 class PolicyKeyTest : public ::testing::Test {
  public:
   PolicyKeyTest() {}
+  PolicyKeyTest(const PolicyKeyTest&) = delete;
+  PolicyKeyTest& operator=(const PolicyKeyTest&) = delete;
+
   ~PolicyKeyTest() override {}
 
   void SetUp() override {
@@ -57,7 +60,6 @@ class PolicyKeyTest : public ::testing::Test {
 
  private:
   base::ScopedTempDir tmpdir_;
-  DISALLOW_COPY_AND_ASSIGN(PolicyKeyTest);
 };
 
 TEST_F(PolicyKeyTest, Equals) {

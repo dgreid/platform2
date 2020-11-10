@@ -29,6 +29,9 @@ namespace cros_disks {
 class UdevDevice {
  public:
   explicit UdevDevice(std::unique_ptr<brillo::UdevDevice> dev);
+  UdevDevice(const UdevDevice&) = delete;
+  UdevDevice& operator=(const UdevDevice&) = delete;
+
   ~UdevDevice();
 
   // Gets the string value of a device attribute.
@@ -142,8 +145,6 @@ class UdevDevice {
 
   FRIEND_TEST(UdevDeviceTest, EnsureUTF8String);
   FRIEND_TEST(UdevDeviceTest, IsValueBooleanTrue);
-
-  DISALLOW_COPY_AND_ASSIGN(UdevDevice);
 };
 
 }  // namespace cros_disks

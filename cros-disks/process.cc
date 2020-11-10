@@ -52,6 +52,8 @@ ReadResult ReadFD(int fd, std::string* data) {
 class StreamMerger {
  public:
   explicit StreamMerger(std::vector<std::string>* output) : output_(output) {}
+  StreamMerger(const StreamMerger&) = delete;
+  StreamMerger& operator=(const StreamMerger&) = delete;
 
   ~StreamMerger() {
     for (size_t i = 0; i < kStreamCount; ++i) {
@@ -91,8 +93,6 @@ class StreamMerger {
   static const base::StringPiece kTags[kStreamCount];
   std::vector<std::string>* const output_;
   std::string remaining_[kStreamCount];
-
-  DISALLOW_COPY_AND_ASSIGN(StreamMerger);
 };
 
 const size_t StreamMerger::kStreamCount;

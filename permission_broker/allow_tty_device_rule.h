@@ -15,12 +15,12 @@ namespace permission_broker {
 class AllowTtyDeviceRule : public TtySubsystemUdevRule {
  public:
   AllowTtyDeviceRule();
+  AllowTtyDeviceRule(const AllowTtyDeviceRule&) = delete;
+  AllowTtyDeviceRule& operator=(const AllowTtyDeviceRule&) = delete;
+
   ~AllowTtyDeviceRule() override = default;
 
   Result ProcessTtyDevice(udev_device* device) override;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(AllowTtyDeviceRule);
 };
 
 }  // namespace permission_broker

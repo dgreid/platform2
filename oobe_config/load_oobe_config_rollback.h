@@ -29,6 +29,9 @@ class LoadOobeConfigRollback : public LoadOobeConfigInterface {
                          bool allow_unencrypted,
                          bool skip_reboot_for_testing,
                          org::chromium::PowerManagerProxy* power_manager_proxy);
+  LoadOobeConfigRollback(const LoadOobeConfigRollback&) = delete;
+  LoadOobeConfigRollback& operator=(const LoadOobeConfigRollback&) = delete;
+
   ~LoadOobeConfigRollback() = default;
 
   bool GetOobeConfigJson(std::string* config,
@@ -46,8 +49,6 @@ class LoadOobeConfigRollback : public LoadOobeConfigInterface {
   bool skip_reboot_for_testing_ = false;
   org::chromium::PowerManagerProxy* power_manager_proxy_;
   Metrics metrics_;  // For UMA metrics logging.
-
-  DISALLOW_COPY_AND_ASSIGN(LoadOobeConfigRollback);
 };
 
 }  // namespace oobe_config

@@ -88,9 +88,8 @@ class Filesystem {
 
  protected:
   Filesystem();
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(Filesystem);
+  Filesystem(const Filesystem&) = delete;
+  Filesystem& operator=(const Filesystem&) = delete;
 };
 
 }  // namespace smbfs

@@ -30,6 +30,9 @@ enum class ThermalDeviceType {
 class ThermalDeviceInterface {
  public:
   ThermalDeviceInterface() {}
+  ThermalDeviceInterface(const ThermalDeviceInterface&) = delete;
+  ThermalDeviceInterface& operator=(const ThermalDeviceInterface&) = delete;
+
   virtual ~ThermalDeviceInterface() {}
 
   // Adds or removes observers for thermal state change.
@@ -41,15 +44,15 @@ class ThermalDeviceInterface {
 
   // Return type of thermal device.
   virtual ThermalDeviceType GetType() const = 0;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ThermalDeviceInterface);
 };
 
 class ThermalDevice : public ThermalDeviceInterface {
  public:
   ThermalDevice();
   explicit ThermalDevice(base::FilePath device_path);
+  ThermalDevice(const ThermalDevice&) = delete;
+  ThermalDevice& operator=(const ThermalDevice&) = delete;
+
   ~ThermalDevice() override;
 
   void set_poll_interval_ms_for_testing(int interval_ms) {
@@ -121,8 +124,6 @@ class ThermalDevice : public ThermalDeviceInterface {
 
   // Cached value of current thermal state.
   DeviceThermalState current_state_;
-
-  DISALLOW_COPY_AND_ASSIGN(ThermalDevice);
 };
 
 }  // namespace system

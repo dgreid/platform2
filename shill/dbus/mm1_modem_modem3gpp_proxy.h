@@ -24,6 +24,9 @@ class ModemModem3gppProxy : public ModemModem3gppProxyInterface {
   ModemModem3gppProxy(const scoped_refptr<dbus::Bus>& bus,
                       const RpcIdentifier& path,
                       const std::string& service);
+  ModemModem3gppProxy(const ModemModem3gppProxy&) = delete;
+  ModemModem3gppProxy& operator=(const ModemModem3gppProxy&) = delete;
+
   ~ModemModem3gppProxy() override;
   // Inherited methods from ModemModem3gppProxyInterface.
   void Register(const std::string& operator_id,
@@ -59,7 +62,6 @@ class ModemModem3gppProxy : public ModemModem3gppProxyInterface {
       proxy_;
 
   base::WeakPtrFactory<ModemModem3gppProxy> weak_factory_{this};
-  DISALLOW_COPY_AND_ASSIGN(ModemModem3gppProxy);
 };
 
 }  // namespace mm1

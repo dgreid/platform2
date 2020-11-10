@@ -22,6 +22,10 @@ class BatteryPercentageConverter {
 
   BatteryPercentageConverter(double low_battery_shutdown_percent,
                              double full_factor);
+  BatteryPercentageConverter(const BatteryPercentageConverter&) = delete;
+  BatteryPercentageConverter& operator=(const BatteryPercentageConverter&) =
+      delete;
+
   ~BatteryPercentageConverter();
 
   // Converts actual battery percentage to the battery percentage which will be
@@ -41,8 +45,6 @@ class BatteryPercentageConverter {
   // The fraction of the full charge at which the battery is considered full,
   // in the range (0.0, 1.0]. Initialized from |kPowerSupplyFullFactorPref|.
   const double full_factor_ = 1.0;
-
-  DISALLOW_COPY_AND_ASSIGN(BatteryPercentageConverter);
 };
 
 }  // namespace power_manager

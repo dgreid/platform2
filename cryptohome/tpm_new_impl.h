@@ -107,8 +107,8 @@ class TpmNewImpl : public TpmImpl {
   // The following fields are for testing purpose.
   friend class TpmNewImplTest;
   explicit TpmNewImpl(tpm_manager::TpmManagerUtility* tpm_manager_utility);
-
-  DISALLOW_COPY_AND_ASSIGN(TpmNewImpl);
+  TpmNewImpl(const TpmNewImpl&) = delete;
+  TpmNewImpl& operator=(const TpmNewImpl&) = delete;
 };
 
 }  // namespace cryptohome

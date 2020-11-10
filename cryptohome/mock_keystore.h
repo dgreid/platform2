@@ -17,6 +17,9 @@ namespace cryptohome {
 class MockKeyStore : public KeyStore {
  public:
   MockKeyStore();
+  MockKeyStore(const MockKeyStore&) = delete;
+  MockKeyStore& operator=(const MockKeyStore&) = delete;
+
   virtual ~MockKeyStore();
 
   MOCK_METHOD(
@@ -50,9 +53,6 @@ class MockKeyStore : public KeyStore {
               RegisterCertificate,
               (bool, const std::string&, const brillo::SecureBlob&),
               (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockKeyStore);
 };
 
 }  // namespace cryptohome

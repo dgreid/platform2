@@ -21,6 +21,9 @@ namespace kerberos {
 class Krb5Interface {
  public:
   Krb5Interface() = default;
+  Krb5Interface(const Krb5Interface&) = delete;
+  Krb5Interface& operator=(const Krb5Interface&) = delete;
+
   virtual ~Krb5Interface() = default;
 
   // Ticket-granting-ticket status, see GetTgtStatus().
@@ -75,9 +78,6 @@ class Krb5Interface {
   virtual ErrorType ValidateConfig(const std::string& krb5conf,
                                    ConfigErrorInfo* error_info)
       WARN_UNUSED_RESULT = 0;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(Krb5Interface);
 };
 
 }  // namespace kerberos

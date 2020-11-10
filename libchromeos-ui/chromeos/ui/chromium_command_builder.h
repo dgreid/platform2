@@ -54,6 +54,9 @@ class ChromiumCommandBuilder {
   static const char kDisableBlinkFeaturesFlag[];
 
   ChromiumCommandBuilder();
+  ChromiumCommandBuilder(const ChromiumCommandBuilder&) = delete;
+  ChromiumCommandBuilder& operator=(const ChromiumCommandBuilder&) = delete;
+
   ~ChromiumCommandBuilder();
 
   uid_t uid() const { return uid_; }
@@ -207,8 +210,6 @@ class ChromiumCommandBuilder {
   // --enable-features), keyed by base flag name (e.g. "vmodule",
   // "enable-features"). Flags that have not been set are not included.
   std::map<std::string, int> list_argument_indexes_;
-
-  DISALLOW_COPY_AND_ASSIGN(ChromiumCommandBuilder);
 };
 
 }  // namespace ui

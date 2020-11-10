@@ -27,6 +27,9 @@ class GbmBoMap {
            uint32_t y,
            uint32_t width,
            uint32_t height);
+  GbmBoMap(const GbmBoMap&) = delete;
+  GbmBoMap& operator=(const GbmBoMap&) = delete;
+
   ~GbmBoMap();
 
   uint32_t width() const { return width_; }
@@ -42,8 +45,6 @@ class GbmBoMap {
   uint32_t stride_ = 0;
   void* map_data_ = nullptr;
   void* buffer_ = nullptr;
-
-  DISALLOW_COPY_AND_ASSIGN(GbmBoMap);
 };
 
 // Captures a screenshot from the specified CRTC.

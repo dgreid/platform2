@@ -30,6 +30,9 @@ class LIBMEMS_EXPORT IioDeviceTriggerImpl : public IioDevice {
 
   // iio_device objects are kept alive by the IioContextImpl.
   IioDeviceTriggerImpl(IioContextImpl* ctx, iio_device* dev);
+  IioDeviceTriggerImpl(const IioDeviceTriggerImpl&) = delete;
+  IioDeviceTriggerImpl& operator=(const IioDeviceTriggerImpl&) = delete;
+
   ~IioDeviceTriggerImpl() override = default;
 
   IioContext* GetContext() const override;
@@ -80,8 +83,6 @@ class LIBMEMS_EXPORT IioDeviceTriggerImpl : public IioDevice {
  private:
   IioContextImpl* context_;    // non-owned
   iio_device* const trigger_;  // non-owned
-
-  DISALLOW_COPY_AND_ASSIGN(IioDeviceTriggerImpl);
 };
 
 }  // namespace libmems

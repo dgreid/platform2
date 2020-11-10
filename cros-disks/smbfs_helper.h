@@ -28,6 +28,9 @@ class Platform;
 class SmbfsHelper : public FUSEHelper {
  public:
   SmbfsHelper(const Platform* platform, brillo::ProcessReaper* process_reaper);
+  SmbfsHelper(const SmbfsHelper&) = delete;
+  SmbfsHelper& operator=(const SmbfsHelper&) = delete;
+
   ~SmbfsHelper() override;
 
   // FUSEHelper overrides:
@@ -39,8 +42,6 @@ class SmbfsHelper : public FUSEHelper {
 
  private:
   friend class SmbfsHelperTest;
-
-  DISALLOW_COPY_AND_ASSIGN(SmbfsHelper);
 };
 
 }  // namespace cros_disks

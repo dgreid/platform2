@@ -17,6 +17,9 @@ namespace system {
 class AudioClientStub : public AudioClientInterface {
  public:
   AudioClientStub();
+  AudioClientStub(const AudioClientStub&) = delete;
+  AudioClientStub& operator=(const AudioClientStub&) = delete;
+
   ~AudioClientStub() override;
 
   bool suspended() const { return suspended_; }
@@ -39,8 +42,6 @@ class AudioClientStub : public AudioClientInterface {
   bool suspended_ = false;
 
   base::ObserverList<AudioObserver> observers_;
-
-  DISALLOW_COPY_AND_ASSIGN(AudioClientStub);
 };
 
 }  // namespace system

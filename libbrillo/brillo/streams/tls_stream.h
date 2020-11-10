@@ -73,9 +73,10 @@ class BRILLO_EXPORT TlsStream : public Stream {
 
   // Private constructor called from TlsStream::Connect() factory method.
   explicit TlsStream(std::unique_ptr<TlsStreamImpl> impl);
+  TlsStream(const TlsStream&) = delete;
+  TlsStream& operator=(const TlsStream&) = delete;
 
   std::unique_ptr<TlsStreamImpl> impl_;
-  DISALLOW_COPY_AND_ASSIGN(TlsStream);
 };
 
 }  // namespace brillo

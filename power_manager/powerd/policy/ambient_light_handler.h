@@ -60,6 +60,9 @@ class AmbientLightHandler : public system::AmbientLightObserver {
 
   AmbientLightHandler(system::AmbientLightSensorInterface* sensor,
                       Delegate* delegate);
+  AmbientLightHandler(const AmbientLightHandler&) = delete;
+  AmbientLightHandler& operator=(const AmbientLightHandler&) = delete;
+
   virtual ~AmbientLightHandler();
 
   void set_name(const std::string& name) { name_ = name; }
@@ -198,8 +201,6 @@ class AmbientLightHandler : public system::AmbientLightObserver {
   // around). Used for logging.
   std::vector<int> recent_lux_readings_;
   int recent_lux_start_index_ = 0;
-
-  DISALLOW_COPY_AND_ASSIGN(AmbientLightHandler);
 };
 
 }  // namespace policy

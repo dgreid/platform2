@@ -66,6 +66,9 @@ class MetricsCollector {
       const base::TimeDelta& actual_residency);
 
   MetricsCollector();
+  MetricsCollector(const MetricsCollector&) = delete;
+  MetricsCollector& operator=(const MetricsCollector&) = delete;
+
   ~MetricsCollector();
 
   // Initializes the object and starts |generate_backlight_metrics_timer_|.
@@ -238,8 +241,6 @@ class MetricsCollector {
 
   // If non-empty, contains a temp dir that will be prepended to paths.
   base::FilePath prefix_path_for_testing_;
-
-  DISALLOW_COPY_AND_ASSIGN(MetricsCollector);
 };
 
 }  // namespace metrics

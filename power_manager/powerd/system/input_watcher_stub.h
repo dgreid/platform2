@@ -16,6 +16,9 @@ namespace system {
 class InputWatcherStub : public InputWatcherInterface {
  public:
   InputWatcherStub();
+  InputWatcherStub(const InputWatcherStub&) = delete;
+  InputWatcherStub& operator=(const InputWatcherStub&) = delete;
+
   ~InputWatcherStub() override;
 
   void set_lid_state(LidState state) { lid_state_ = state; }
@@ -44,8 +47,6 @@ class InputWatcherStub : public InputWatcherInterface {
   bool usb_input_device_connected_;
 
   base::ObserverList<InputObserver> observers_;
-
-  DISALLOW_COPY_AND_ASSIGN(InputWatcherStub);
 };
 
 }  // namespace system

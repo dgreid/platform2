@@ -29,6 +29,8 @@ class KeyChallengeServiceImpl final : public KeyChallengeService {
   // the org.chromium.CryptohomeKeyDelegateInterface interface.
   KeyChallengeServiceImpl(scoped_refptr<dbus::Bus> dbus_bus,
                           const std::string& key_delegate_dbus_service_name);
+  KeyChallengeServiceImpl(const KeyChallengeServiceImpl&) = delete;
+  KeyChallengeServiceImpl& operator=(const KeyChallengeServiceImpl&) = delete;
 
   ~KeyChallengeServiceImpl() override;
 
@@ -40,8 +42,6 @@ class KeyChallengeServiceImpl final : public KeyChallengeService {
  private:
   const std::string key_delegate_dbus_service_name_;
   org::chromium::CryptohomeKeyDelegateInterfaceProxy dbus_proxy_;
-
-  DISALLOW_COPY_AND_ASSIGN(KeyChallengeServiceImpl);
 };
 
 }  // namespace cryptohome

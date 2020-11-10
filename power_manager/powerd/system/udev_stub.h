@@ -24,6 +24,9 @@ namespace system {
 class UdevStub : public UdevInterface {
  public:
   UdevStub();
+  UdevStub(const UdevStub&) = delete;
+  UdevStub& operator=(const UdevStub&) = delete;
+
   ~UdevStub() override;
 
   // Returns true if |observer| is registered for |subsystem|.
@@ -90,8 +93,6 @@ class UdevStub : public UdevInterface {
   // value.
   typedef std::map<std::pair<std::string, std::string>, std::string> SysattrMap;
   SysattrMap map_;
-
-  DISALLOW_COPY_AND_ASSIGN(UdevStub);
 };
 
 }  // namespace system

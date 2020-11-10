@@ -51,6 +51,10 @@ const char* const kTSCR = InputDeviceController::kTSCR;
 class InputDeviceControllerTest : public ::testing::Test {
  public:
   InputDeviceControllerTest() = default;
+  InputDeviceControllerTest(const InputDeviceControllerTest&) = delete;
+  InputDeviceControllerTest& operator=(const InputDeviceControllerTest&) =
+      delete;
+
   ~InputDeviceControllerTest() override = default;
 
  protected:
@@ -108,9 +112,6 @@ class InputDeviceControllerTest : public ::testing::Test {
   DisplayMode initial_display_mode_ = DisplayMode::NORMAL;
 
   InputDeviceController input_device_controller_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(InputDeviceControllerTest);
 };
 
 TEST_F(InputDeviceControllerTest, ConfigureWakeupOnInit) {

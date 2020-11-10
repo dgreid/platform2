@@ -19,6 +19,9 @@ class Manager;
 class EphemeralProfile : public Profile {
  public:
   explicit EphemeralProfile(Manager* manager);
+  EphemeralProfile(const EphemeralProfile&) = delete;
+  EphemeralProfile& operator=(const EphemeralProfile&) = delete;
+
   ~EphemeralProfile() override;
 
   std::string GetFriendlyName() const override;
@@ -27,9 +30,6 @@ class EphemeralProfile : public Profile {
 
   // Should not be called.
   bool Save() override;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(EphemeralProfile);
 };
 
 }  // namespace shill

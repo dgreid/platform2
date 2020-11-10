@@ -14,15 +14,16 @@ namespace biod {
 class PowerManagerClientInterface {
  public:
   PowerManagerClientInterface() = default;
+  PowerManagerClientInterface(const PowerManagerClientInterface&) = delete;
+  PowerManagerClientInterface& operator=(const PowerManagerClientInterface&) =
+      delete;
+
   virtual ~PowerManagerClientInterface() = default;
 
   // Interface to add observers interested in powerd events.
   virtual void AddObserver(PowerEventObserver* observer) = 0;
   virtual bool HasObserver(PowerEventObserver* observer) = 0;
   virtual void RemoveObserver(PowerEventObserver* observer) = 0;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(PowerManagerClientInterface);
 };
 
 }  // namespace biod

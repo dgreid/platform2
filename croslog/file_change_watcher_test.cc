@@ -19,6 +19,9 @@ class FileChangeWatcherTest : public ::testing::Test,
                               public FileChangeWatcher::Observer {
  public:
   FileChangeWatcherTest() = default;
+  FileChangeWatcherTest(const FileChangeWatcherTest&) = delete;
+  FileChangeWatcherTest& operator=(const FileChangeWatcherTest&) = delete;
+
   ~FileChangeWatcherTest() override = default;
 
   void OnFileContentMaybeChanged() override { counter_++; }
@@ -41,8 +44,6 @@ class FileChangeWatcherTest : public ::testing::Test,
 
  private:
   uint32_t counter_ = 0;
-
-  DISALLOW_COPY_AND_ASSIGN(FileChangeWatcherTest);
 };
 
 TEST_F(FileChangeWatcherTest, FileChange) {

@@ -28,6 +28,8 @@ class UsbEndpointDescriptor {
   // this object.
   explicit UsbEndpointDescriptor(
       const libusb_endpoint_descriptor* endpoint_descriptor);
+  UsbEndpointDescriptor(const UsbEndpointDescriptor&) = delete;
+  UsbEndpointDescriptor& operator=(const UsbEndpointDescriptor&) = delete;
 
   ~UsbEndpointDescriptor() = default;
 
@@ -48,8 +50,6 @@ class UsbEndpointDescriptor {
 
  private:
   const libusb_endpoint_descriptor* const endpoint_descriptor_;
-
-  DISALLOW_COPY_AND_ASSIGN(UsbEndpointDescriptor);
 };
 
 }  // namespace mist

@@ -22,6 +22,9 @@ namespace power_manager {
 class FakePrefs : public PrefsInterface {
  public:
   FakePrefs();
+  FakePrefs(const FakePrefs&) = delete;
+  FakePrefs& operator=(const FakePrefs&) = delete;
+
   ~FakePrefs() override;
 
   // Deletes |name| from |*_prefs_|.
@@ -47,8 +50,6 @@ class FakePrefs : public PrefsInterface {
   std::map<std::string, int64_t> int64_prefs_;
   std::map<std::string, double> double_prefs_;
   std::map<std::string, std::string> string_prefs_;
-
-  DISALLOW_COPY_AND_ASSIGN(FakePrefs);
 };
 
 }  // namespace power_manager

@@ -72,10 +72,10 @@ class BRILLO_EXPORT UdevEnumerate {
   // Constructs a UdevEnumerate object without referencing a udev_enumerate
   // struct, which is only allowed to be called by MockUdevEnumerate.
   UdevEnumerate();
+  UdevEnumerate(const UdevEnumerate&) = delete;
+  UdevEnumerate& operator=(const UdevEnumerate&) = delete;
 
   udev_enumerate* enumerate_;
-
-  DISALLOW_COPY_AND_ASSIGN(UdevEnumerate);
 };
 
 }  // namespace brillo

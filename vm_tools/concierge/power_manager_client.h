@@ -25,6 +25,9 @@ namespace concierge {
 class PowerManagerClient final {
  public:
   explicit PowerManagerClient(scoped_refptr<dbus::Bus> bus);
+  PowerManagerClient(const PowerManagerClient&) = delete;
+  PowerManagerClient& operator=(const PowerManagerClient&) = delete;
+
   ~PowerManagerClient();
 
   // Registers a suspend delay with the power manager.  Calls
@@ -61,8 +64,6 @@ class PowerManagerClient final {
   FRIEND_TEST(PowerManagerClientTest, WrongSuspendId);
   FRIEND_TEST(PowerManagerClientTest, MultipleSuspendImminents);
   FRIEND_TEST(PowerManagerClientTest, NameOwnerChanged);
-
-  DISALLOW_COPY_AND_ASSIGN(PowerManagerClient);
 };
 
 }  // namespace concierge

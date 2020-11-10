@@ -24,6 +24,9 @@ struct UserTypeTestParams {
 class LoginMetricsTest : public testing::Test {
  public:
   LoginMetricsTest() {}
+  LoginMetricsTest(const LoginMetricsTest&) = delete;
+  LoginMetricsTest& operator=(const LoginMetricsTest&) = delete;
+
   ~LoginMetricsTest() override {}
 
   void SetUp() override {
@@ -38,9 +41,6 @@ class LoginMetricsTest : public testing::Test {
  protected:
   base::ScopedTempDir tmpdir_;
   std::unique_ptr<LoginMetrics> metrics_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(LoginMetricsTest);
 };
 
 TEST_F(LoginMetricsTest, AllGood) {

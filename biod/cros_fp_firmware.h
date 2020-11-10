@@ -28,6 +28,8 @@ class CrosFpFirmware {
   };
 
   explicit CrosFpFirmware(const base::FilePath& image_path);
+  CrosFpFirmware(const CrosFpFirmware&) = delete;
+  CrosFpFirmware& operator=(const CrosFpFirmware&) = delete;
   virtual ~CrosFpFirmware() = default;
   base::FilePath GetPath() const;
   bool IsValid() const;
@@ -37,6 +39,7 @@ class CrosFpFirmware {
 
  protected:
   CrosFpFirmware() = default;
+
   void set_status(Status status) { status_ = status; }
   void set_version(const ImageVersion& version) { version_ = version; }
 
@@ -49,8 +52,6 @@ class CrosFpFirmware {
   void DecodeVersionFromFile();
 
   static std::string StatusToString(Status status);
-
-  DISALLOW_COPY_AND_ASSIGN(CrosFpFirmware);
 };
 
 }  // namespace biod

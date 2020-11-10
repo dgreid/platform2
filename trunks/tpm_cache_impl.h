@@ -20,6 +20,9 @@ namespace trunks {
 class TRUNKS_EXPORT TpmCacheImpl : public TpmCache {
  public:
   explicit TpmCacheImpl(const TrunksFactory& factory);
+  TpmCacheImpl(const TpmCacheImpl&) = delete;
+  TpmCacheImpl& operator=(const TpmCacheImpl&) = delete;
+
   ~TpmCacheImpl() override = default;
 
   TPM_RC GetSaltingKeyPublicArea(TPMT_PUBLIC* public_area) override;
@@ -35,8 +38,6 @@ class TRUNKS_EXPORT TpmCacheImpl : public TpmCache {
   base::Optional<TPM_ALG_ID> best_key_type_;
 
   const TrunksFactory& factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(TpmCacheImpl);
 };
 
 }  // namespace trunks

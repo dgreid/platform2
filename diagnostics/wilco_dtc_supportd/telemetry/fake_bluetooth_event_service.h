@@ -16,6 +16,10 @@ namespace diagnostics {
 class FakeBluetoothEventService : public BluetoothEventService {
  public:
   FakeBluetoothEventService();
+  FakeBluetoothEventService(const FakeBluetoothEventService&) = delete;
+  FakeBluetoothEventService& operator=(const FakeBluetoothEventService&) =
+      delete;
+
   ~FakeBluetoothEventService() override;
 
   const std::vector<AdapterData>& GetLatestEvent() override;
@@ -25,8 +29,6 @@ class FakeBluetoothEventService : public BluetoothEventService {
 
  private:
   std::vector<BluetoothEventService::AdapterData> last_adapters_data_;
-
-  DISALLOW_COPY_AND_ASSIGN(FakeBluetoothEventService);
 };
 
 }  // namespace diagnostics

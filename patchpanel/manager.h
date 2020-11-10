@@ -57,6 +57,9 @@ class Manager final : public brillo::DBusDaemon, private TrafficForwarder {
   Manager(std::unique_ptr<HelperProcess> adb_proxy,
           std::unique_ptr<HelperProcess> mcast_proxy,
           std::unique_ptr<HelperProcess> nd_proxy);
+  Manager(const Manager&) = delete;
+  Manager& operator=(const Manager&) = delete;
+
   ~Manager();
 
   // TrafficForwarder methods.
@@ -218,7 +221,6 @@ class Manager final : public brillo::DBusDaemon, private TrafficForwarder {
   int connected_namespaces_epollfd_;
 
   base::WeakPtrFactory<Manager> weak_factory_{this};
-  DISALLOW_COPY_AND_ASSIGN(Manager);
 };
 
 std::ostream& operator<<(std::ostream& stream,

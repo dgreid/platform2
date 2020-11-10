@@ -29,6 +29,9 @@ class Tpm;
 class TRUNKS_EXPORT TrunksFactory {
  public:
   TrunksFactory() {}
+  TrunksFactory(const TrunksFactory&) = delete;
+  TrunksFactory& operator=(const TrunksFactory&) = delete;
+
   virtual ~TrunksFactory() {}
 
   // Returns a Tpm instance. The caller does not take ownership. All calls to
@@ -65,9 +68,6 @@ class TRUNKS_EXPORT TrunksFactory {
 
   // Returns a BlobParser instance. The caller takes ownership.
   virtual std::unique_ptr<BlobParser> GetBlobParser() const = 0;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(TrunksFactory);
 };
 
 }  // namespace trunks

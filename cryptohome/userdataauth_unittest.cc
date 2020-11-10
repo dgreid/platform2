@@ -87,6 +87,11 @@ bool AssignSalt(size_t size, SecureBlob* salt) {
 class UserDataAuthTestNotInitialized : public ::testing::Test {
  public:
   UserDataAuthTestNotInitialized() = default;
+  UserDataAuthTestNotInitialized(const UserDataAuthTestNotInitialized&) =
+      delete;
+  UserDataAuthTestNotInitialized& operator=(
+      const UserDataAuthTestNotInitialized&) = delete;
+
   ~UserDataAuthTestNotInitialized() override = default;
 
   void SetUp() override {
@@ -252,9 +257,6 @@ class UserDataAuthTestNotInitialized : public ::testing::Test {
 
   // Passed to homedirs_.
   base::FilePath kShadowRoot = base::FilePath("/home/.shadow");
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(UserDataAuthTestNotInitialized);
 };
 
 // Variant of UserDataAuthTestNotInitialized for DeathTest. We should be careful
@@ -265,15 +267,15 @@ using UserDataAuthTestNotInitializedDeathTest = UserDataAuthTestNotInitialized;
 class UserDataAuthTest : public UserDataAuthTestNotInitialized {
  public:
   UserDataAuthTest() = default;
+  UserDataAuthTest(const UserDataAuthTest&) = delete;
+  UserDataAuthTest& operator=(const UserDataAuthTest&) = delete;
+
   ~UserDataAuthTest() override = default;
 
   void SetUp() override {
     UserDataAuthTestNotInitialized::SetUp();
     ASSERT_TRUE(userdataauth_->Initialize());
   }
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(UserDataAuthTest);
 };
 
 namespace CryptohomeErrorCodeEquivalenceTest {
@@ -1895,13 +1897,15 @@ TEST_F(UserDataAuthTest, GetAccountDiskUsage) {
   EXPECT_EQ(kHomedirSize, userdataauth_->GetAccountDiskUsage(account));
 }
 
-// ==================== Mount and Keys related tests =======================
 
 // A test fixture with some utility functions for testing mount and keys related
 // functionalities.
 class UserDataAuthExTest : public UserDataAuthTest {
  public:
   UserDataAuthExTest() { platform_.GetFake()->SetStandardUsersAndGroups(); }
+  UserDataAuthExTest(const UserDataAuthExTest&) = delete;
+  UserDataAuthExTest& operator=(const UserDataAuthExTest&) = delete;
+
   ~UserDataAuthExTest() override = default;
 
   VaultKeyset* GetNiceMockVaultKeyset(const std::string& obfuscated_username,
@@ -1977,9 +1981,6 @@ class UserDataAuthExTest : public UserDataAuthTest {
 
   static constexpr char kUser[] = "chromeos-user";
   static constexpr char kKey[] = "274146c6e8886a843ddfea373e2dc71b";
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(UserDataAuthExTest);
 };
 
 constexpr char UserDataAuthExTest::kUser[];
@@ -3101,6 +3102,9 @@ TEST_F(ChallengeResponseUserDataAuthExTest, FallbackLightweightCheckKey) {
 class UserDataAuthTestThreaded : public UserDataAuthTestNotInitialized {
  public:
   UserDataAuthTestThreaded() : origin_thread_("origin_thread") {}
+  UserDataAuthTestThreaded(const UserDataAuthTestThreaded&) = delete;
+  UserDataAuthTestThreaded& operator=(const UserDataAuthTestThreaded&) = delete;
+
   ~UserDataAuthTestThreaded() override = default;
 
   // Post a task to the origin thread, then wait for it to finish.
@@ -3168,9 +3172,6 @@ class UserDataAuthTestThreaded : public UserDataAuthTestNotInitialized {
   // The thread on which the |userdataauth_| object is created. This is the same
   // as |userdataauth_->origin_thread_|.
   base::Thread origin_thread_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(UserDataAuthTestThreaded);
 };
 
 TEST_F(UserDataAuthTestThreaded,

@@ -104,6 +104,8 @@ class ArcVm final : public VmBaseImpl {
         std::unique_ptr<SeneschalServerProxy> seneschal_server_proxy,
         base::FilePath runtime_dir,
         ArcVmFeatures features);
+  ArcVm(const ArcVm&) = delete;
+  ArcVm& operator=(const ArcVm&) = delete;
 
   void HandleSuspendImminent() override;
   void HandleSuspendDone() override;
@@ -121,8 +123,6 @@ class ArcVm final : public VmBaseImpl {
 
   // Flags passed to vmc start.
   ArcVmFeatures features_;
-
-  DISALLOW_COPY_AND_ASSIGN(ArcVm);
 };
 
 }  // namespace concierge

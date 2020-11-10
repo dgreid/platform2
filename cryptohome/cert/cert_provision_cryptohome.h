@@ -86,6 +86,9 @@ class CryptohomeProxy {
 class CryptohomeProxyImpl : public CryptohomeProxy {
  public:
   CryptohomeProxyImpl();
+  CryptohomeProxyImpl(const CryptohomeProxyImpl&) = delete;
+  CryptohomeProxyImpl& operator=(const CryptohomeProxyImpl&) = delete;
+
   OpResult Init() override;
   OpResult CheckIfPrepared(bool* is_prepared) override;
   OpResult CheckIfEnrolled(bool* is_enrolled) override;
@@ -115,8 +118,6 @@ class CryptohomeProxyImpl : public CryptohomeProxy {
   brillo::dbus::BusConnection bus_;
   brillo::dbus::Proxy proxy_;
   ::DBusGProxy* gproxy_;
-
-  DISALLOW_COPY_AND_ASSIGN(CryptohomeProxyImpl);
 };
 
 }  // namespace cert_provision

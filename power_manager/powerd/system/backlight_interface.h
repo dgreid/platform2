@@ -20,6 +20,9 @@ class BacklightObserver;
 class BacklightInterface {
  public:
   BacklightInterface() {}
+  BacklightInterface(const BacklightInterface&) = delete;
+  BacklightInterface& operator=(const BacklightInterface&) = delete;
+
   virtual ~BacklightInterface() {}
 
   enum class BrightnessScale {
@@ -52,9 +55,6 @@ class BacklightInterface {
 
   // Returns true if the brightness is currently being animated.
   virtual bool TransitionInProgress() const = 0;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(BacklightInterface);
 };
 
 }  // namespace system

@@ -14,7 +14,10 @@ namespace chaps {
 class ChapsFactoryImpl : public ChapsFactory {
  public:
   ChapsFactoryImpl() {}
+  ChapsFactoryImpl(const ChapsFactoryImpl&) = delete;
+  ChapsFactoryImpl& operator=(const ChapsFactoryImpl&) = delete;
   ~ChapsFactoryImpl() override {}
+
   Session* CreateSession(int slot_id,
                          ObjectPool* token_object_pool,
                          TPMUtility* tpm_utility,
@@ -31,9 +34,6 @@ class ChapsFactoryImpl : public ChapsFactory {
                                        TPMUtility* tpm_utility) override;
 
   static ObjectPolicy* GetObjectPolicyForType(CK_OBJECT_CLASS type);
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ChapsFactoryImpl);
 };
 
 }  // namespace chaps

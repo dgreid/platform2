@@ -43,6 +43,8 @@ static_assert(sizeof(acpi_table_bert) == 48,
 class BERTCollector : public CrashCollector {
  public:
   BERTCollector();
+  BERTCollector(const BERTCollector&) = delete;
+  BERTCollector& operator=(const BERTCollector&) = delete;
 
   ~BERTCollector() override;
 
@@ -53,8 +55,6 @@ class BERTCollector : public CrashCollector {
   friend class BERTCollectorTest;
 
   base::FilePath acpitable_path_;
-
-  DISALLOW_COPY_AND_ASSIGN(BERTCollector);
 };
 
 #endif  // CRASH_REPORTER_BERT_COLLECTOR_H_

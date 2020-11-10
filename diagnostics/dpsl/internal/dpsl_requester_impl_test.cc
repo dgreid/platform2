@@ -53,6 +53,9 @@ TEST(GetWilcoDtcSupportdGrpcUriTest, Vsock) {
 class DpslRequesterImplTest : public testing::Test {
  public:
   DpslRequesterImplTest() = default;
+  DpslRequesterImplTest(const DpslRequesterImplTest&) = delete;
+  DpslRequesterImplTest& operator=(const DpslRequesterImplTest&) = delete;
+
   ~DpslRequesterImplTest() override {
     DpslThreadContextImpl::CleanThreadCounterForTesting();
     DpslGlobalContextImpl::CleanGlobalCounterForTesting();
@@ -69,9 +72,6 @@ class DpslRequesterImplTest : public testing::Test {
  protected:
   std::unique_ptr<DpslGlobalContext> global_context_;
   std::unique_ptr<DpslThreadContext> main_thread_context_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(DpslRequesterImplTest);
 };
 
 class DpslRequesterImplDeathTest : public DpslRequesterImplTest {
@@ -79,10 +79,11 @@ class DpslRequesterImplDeathTest : public DpslRequesterImplTest {
   DpslRequesterImplDeathTest() {
     ::testing::FLAGS_gtest_death_test_style = "threadsafe";
   }
-  ~DpslRequesterImplDeathTest() override = default;
+  DpslRequesterImplDeathTest(const DpslRequesterImplDeathTest&) = delete;
+  DpslRequesterImplDeathTest& operator=(const DpslRequesterImplDeathTest&) =
+      delete;
 
- private:
-  DISALLOW_COPY_AND_ASSIGN(DpslRequesterImplDeathTest);
+  ~DpslRequesterImplDeathTest() override = default;
 };
 
 TEST_F(DpslRequesterImplDeathTest, CreateWithNullThreadContext) {
@@ -406,6 +407,9 @@ class TestDsplMultiRequesterServer {
         base::Bind(&TestDsplMultiRequesterServer::HandlePerformWebRequest,
                    base::Unretained(this)));
   }
+  TestDsplMultiRequesterServer(const TestDsplMultiRequesterServer&) = delete;
+  TestDsplMultiRequesterServer& operator=(const TestDsplMultiRequesterServer&) =
+      delete;
 
   ~TestDsplMultiRequesterServer() {
     base::RunLoop run_loop;
@@ -487,8 +491,6 @@ class TestDsplMultiRequesterServer {
 
   brillo::AsyncGrpcServer<grpc_api::WilcoDtcSupportd::AsyncService>
       async_grpc_server_;
-
-  DISALLOW_COPY_AND_ASSIGN(TestDsplMultiRequesterServer);
 };
 
 }  // namespace
@@ -496,6 +498,11 @@ class TestDsplMultiRequesterServer {
 class DpslRequesterImplWithRequesterTest : public DpslRequesterImplTest {
  public:
   DpslRequesterImplWithRequesterTest() = default;
+  DpslRequesterImplWithRequesterTest(
+      const DpslRequesterImplWithRequesterTest&) = delete;
+  DpslRequesterImplWithRequesterTest& operator=(
+      const DpslRequesterImplWithRequesterTest&) = delete;
+
   ~DpslRequesterImplWithRequesterTest() override = default;
 
   void SetUp() override {
@@ -514,9 +521,6 @@ class DpslRequesterImplWithRequesterTest : public DpslRequesterImplTest {
 
   base::ScopedTempDir temp_dir_;
   std::unique_ptr<DpslRequesterImpl> requester_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(DpslRequesterImplWithRequesterTest);
 };
 
 TEST_F(DpslRequesterImplWithRequesterTest, MultiRequest) {
@@ -587,6 +591,8 @@ class TestDsplRequesterServer {
         base::Bind(&TestDsplRequesterServer::HandleCall,
                    base::Unretained(this)));
   }
+  TestDsplRequesterServer(const TestDsplRequesterServer&) = delete;
+  TestDsplRequesterServer& operator=(const TestDsplRequesterServer&) = delete;
 
   ~TestDsplRequesterServer() {
     base::RunLoop run_loop;
@@ -627,8 +633,6 @@ class TestDsplRequesterServer {
 
   brillo::AsyncGrpcServer<grpc_api::WilcoDtcSupportd::AsyncService>
       async_grpc_server_;
-
-  DISALLOW_COPY_AND_ASSIGN(TestDsplRequesterServer);
 };
 
 }  // namespace
@@ -640,6 +644,10 @@ class DpslRequesterImplServerTest : public DpslRequesterImplWithRequesterTest {
   using Response = typename TestParam::Response;
 
   DpslRequesterImplServerTest() = default;
+  DpslRequesterImplServerTest(const DpslRequesterImplServerTest&) = delete;
+  DpslRequesterImplServerTest& operator=(const DpslRequesterImplServerTest&) =
+      delete;
+
   ~DpslRequesterImplServerTest() override = default;
 
   void SetUp() override {
@@ -665,9 +673,6 @@ class DpslRequesterImplServerTest : public DpslRequesterImplWithRequesterTest {
 
  protected:
   std::unique_ptr<TestDsplRequesterServer<TestParam>> server_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(DpslRequesterImplServerTest);
 };
 
 using DpslRequesterImplServerTestTypes =

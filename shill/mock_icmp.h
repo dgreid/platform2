@@ -16,15 +16,15 @@ namespace shill {
 class MockIcmp : public Icmp {
  public:
   MockIcmp();
+  MockIcmp(const MockIcmp&) = delete;
+  MockIcmp& operator=(const MockIcmp&) = delete;
+
   ~MockIcmp() override;
 
   MOCK_METHOD(bool, Start, (const IPAddress&, int), (override));
   MOCK_METHOD(void, Stop, (), (override));
   MOCK_METHOD(bool, IsStarted, (), (const, override));
   MOCK_METHOD(bool, TransmitEchoRequest, (uint16_t, uint16_t), (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockIcmp);
 };
 
 }  // namespace shill

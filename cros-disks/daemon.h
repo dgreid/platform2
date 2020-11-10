@@ -34,6 +34,8 @@ class Daemon : public brillo::DBusServiceDaemon {
   // |has_session_manager| indicates whether the presence of a SessionManager is
   // expected.
   explicit Daemon(bool has_session_manager);
+  Daemon(const Daemon&) = delete;
+  Daemon& operator=(const Daemon&) = delete;
 
   ~Daemon() override;
 
@@ -62,8 +64,6 @@ class Daemon : public brillo::DBusServiceDaemon {
   std::unique_ptr<CrosDisksServer> server_;
   std::unique_ptr<base::FileDescriptorWatcher::Controller>
       device_event_watcher_;
-
-  DISALLOW_COPY_AND_ASSIGN(Daemon);
 };
 
 }  // namespace cros_disks

@@ -13,15 +13,15 @@ namespace smbprovider {
 class ShareIteratorTest : public testing::Test {
  public:
   ShareIteratorTest() = default;
+  ShareIteratorTest(const ShareIteratorTest&) = delete;
+  ShareIteratorTest& operator=(const ShareIteratorTest&) = delete;
+
   ~ShareIteratorTest() override = default;
 
  protected:
   void CreateHost() { fake_samba_.AddDirectory(GetDefaultServer()); }
 
   FakeSambaInterface fake_samba_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ShareIteratorTest);
 };
 
 TEST_F(ShareIteratorTest, InitSucceedsOnHostWithNoShares) {

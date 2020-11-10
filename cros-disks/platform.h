@@ -27,6 +27,9 @@ namespace cros_disks {
 class Platform {
  public:
   Platform();
+  Platform(const Platform&) = delete;
+  Platform& operator=(const Platform&) = delete;
+
   virtual ~Platform() = default;
 
   // Gets the canonicalized absolute path of |path| using realpath() and returns
@@ -149,8 +152,6 @@ class Platform {
 
   // User ID to perform mount operations.
   std::string mount_user_;
-
-  DISALLOW_COPY_AND_ASSIGN(Platform);
 };
 
 }  // namespace cros_disks

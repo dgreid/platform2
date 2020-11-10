@@ -21,6 +21,9 @@ namespace arc {
 class VdaContext {
  public:
   VdaContext();
+  VdaContext(const VdaContext&) = delete;
+  VdaContext& operator=(const VdaContext&) = delete;
+
   virtual ~VdaContext();
 
   // Decodes the frame pointed to by |fd|. |offset| and |bytes_used|
@@ -88,8 +91,6 @@ class VdaContext {
   void WriteEvent(const vda_event_t& event);
 
   EventPipe event_pipe_;
-
-  DISALLOW_COPY_AND_ASSIGN(VdaContext);
 };
 
 // VdaImpl encapsulates a vda implementation that can be used to create decode
@@ -97,6 +98,9 @@ class VdaContext {
 class VdaImpl {
  public:
   VdaImpl();
+  VdaImpl(const VdaImpl&) = delete;
+  VdaImpl& operator=(const VdaImpl&) = delete;
+
   virtual ~VdaImpl();
 
   // Returns the decoding capabilities of this implementation.
@@ -111,8 +115,6 @@ class VdaImpl {
 
  protected:
   vda_capabilities_t capabilities_;
-
-  DISALLOW_COPY_AND_ASSIGN(VdaImpl);
 };
 
 }  // namespace arc

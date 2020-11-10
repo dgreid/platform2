@@ -28,6 +28,8 @@ namespace chaps {
 class ChapsInterface {
  public:
   ChapsInterface() {}
+  ChapsInterface(const ChapsInterface&) = delete;
+  ChapsInterface& operator=(const ChapsInterface&) = delete;
   virtual ~ChapsInterface() {}
 
   // The following methods map to PKCS #11 calls. Each method name is identical
@@ -401,9 +403,6 @@ class ChapsInterface {
                                   uint64_t session_id,
                                   uint64_t num_bytes,
                                   std::vector<uint8_t>* random_data) = 0;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ChapsInterface);
 };
 
 }  // namespace chaps

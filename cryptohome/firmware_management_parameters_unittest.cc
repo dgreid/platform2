@@ -41,6 +41,11 @@ using ::testing::SetArgPointee;
 class FirmwareManagementParametersTest : public ::testing::Test {
  public:
   FirmwareManagementParametersTest() : fwmp_(&tpm_) {}
+  FirmwareManagementParametersTest(const FirmwareManagementParametersTest&) =
+      delete;
+  FirmwareManagementParametersTest& operator=(
+      const FirmwareManagementParametersTest&) = delete;
+
   virtual ~FirmwareManagementParametersTest() {}
 
   virtual void SetUp() {
@@ -100,9 +105,6 @@ class FirmwareManagementParametersTest : public ::testing::Test {
   uint32_t fwmp_flags_;
   brillo::Blob fwmp_hash_;
   brillo::Blob* fwmp_hash_ptr_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(FirmwareManagementParametersTest);
 };
 const char* FirmwareManagementParametersTest::kHashData =
     "AxxxxxxxBxxxxxxxCxxxxxxxDxxxxxxE";

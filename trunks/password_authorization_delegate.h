@@ -24,6 +24,10 @@ class TRUNKS_EXPORT PasswordAuthorizationDelegate
     : public AuthorizationDelegate {
  public:
   explicit PasswordAuthorizationDelegate(const std::string& password);
+  PasswordAuthorizationDelegate(const PasswordAuthorizationDelegate&) = delete;
+  PasswordAuthorizationDelegate& operator=(
+      const PasswordAuthorizationDelegate&) = delete;
+
   ~PasswordAuthorizationDelegate() override;
   // AuthorizationDelegate methods.
   bool GetCommandAuthorization(const std::string& command_hash,
@@ -41,8 +45,6 @@ class TRUNKS_EXPORT PasswordAuthorizationDelegate
 
  private:
   TPM2B_AUTH password_;
-
-  DISALLOW_COPY_AND_ASSIGN(PasswordAuthorizationDelegate);
 };
 
 }  // namespace trunks

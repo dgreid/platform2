@@ -61,6 +61,8 @@ class TgtRenewalScheduler {
   };
 
   TgtRenewalScheduler(const std::string& principal_name, Delegate* delegate);
+  TgtRenewalScheduler(const TgtRenewalScheduler&) = delete;
+  TgtRenewalScheduler& operator=(const TgtRenewalScheduler&) = delete;
 
   // If the ticket is valid and not about to expire soon, schedules
   // RunScheduledTgtRenewal() with a delay of a fraction of the TGT's remaining
@@ -81,8 +83,6 @@ class TgtRenewalScheduler {
 
   // Callback for scheduled renewal tasks.
   base::CancelableClosure tgt_renewal_callback_;
-
-  DISALLOW_COPY_AND_ASSIGN(TgtRenewalScheduler);
 };
 
 }  // namespace kerberos

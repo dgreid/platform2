@@ -39,6 +39,8 @@ class BRILLO_EXPORT SubnetPool {
 
  private:
   SubnetPool(uint32_t base_addr, uint32_t prefix_length, uint32_t num_subnets);
+  SubnetPool(const SubnetPool&) = delete;
+  SubnetPool& operator=(const SubnetPool&) = delete;
 
   // Called by Subnets on destruction to free a given subnet.
   void Release(uint32_t index);
@@ -50,7 +52,6 @@ class BRILLO_EXPORT SubnetPool {
   std::bitset<kMaxSubnets + 1> subnets_;
 
   base::WeakPtrFactory<SubnetPool> weak_ptr_factory_{this};
-  DISALLOW_COPY_AND_ASSIGN(SubnetPool);
 };
 
 }  // namespace patchpanel

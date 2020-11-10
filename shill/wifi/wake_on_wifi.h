@@ -166,6 +166,9 @@ class WakeOnWiFi : public WakeOnWiFiInterface {
              Metrics* metrics,
              const std::string& mac_address,
              RecordWakeReasonCallback record_wake_reason_callback);
+  WakeOnWiFi(const WakeOnWiFi&) = delete;
+  WakeOnWiFi& operator=(const WakeOnWiFi&) = delete;
+
   ~WakeOnWiFi() override;
 
   // Registers |store| with properties related to wake on WiFi.
@@ -665,8 +668,6 @@ class WakeOnWiFi : public WakeOnWiFiInterface {
   NetlinkManager::NetlinkMessageHandler netlink_handler_;
 
   base::WeakPtrFactory<WakeOnWiFi> weak_ptr_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(WakeOnWiFi);
 };
 
 }  // namespace shill

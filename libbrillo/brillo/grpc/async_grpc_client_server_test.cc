@@ -55,6 +55,9 @@ class PendingIncomingRpcQueue {
   };
 
   PendingIncomingRpcQueue() : weak_ptr_factory_(this) {}
+  PendingIncomingRpcQueue(const PendingIncomingRpcQueue&) = delete;
+  PendingIncomingRpcQueue& operator=(const PendingIncomingRpcQueue&) = delete;
+
   ~PendingIncomingRpcQueue() = default;
 
   // Returns a callback that should be called when an incoming RPC is available.
@@ -101,8 +104,6 @@ class PendingIncomingRpcQueue {
   std::unique_ptr<base::RunLoop> waiting_loop_;
 
   base::WeakPtrFactory<PendingIncomingRpcQueue> weak_ptr_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(PendingIncomingRpcQueue);
 };
 
 // A utility for testing outgoing RPCs. It gets notified of a response to an
@@ -114,6 +115,9 @@ class RpcReply {
       base::Callback<void(grpc::Status status, std::unique_ptr<ResponseType>)>;
 
   RpcReply() : weak_ptr_factory_(this) {}
+  RpcReply(const RpcReply&) = delete;
+  RpcReply& operator=(const RpcReply&) = delete;
+
   ~RpcReply() = default;
 
   // Returns a callback that should be called when a response to the outgoing
@@ -163,8 +167,6 @@ class RpcReply {
   std::unique_ptr<ResponseType> response_;
 
   base::WeakPtrFactory<RpcReply> weak_ptr_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(RpcReply);
 };
 
 // Implementation of test_rpcs.ExampleService that synchronously replies to the
@@ -237,6 +239,9 @@ class SelfStoppingExampleService final {
 class AsyncGrpcClientServerTest : public ::testing::Test {
  public:
   AsyncGrpcClientServerTest() = default;
+  AsyncGrpcClientServerTest(const AsyncGrpcClientServerTest&) = delete;
+  AsyncGrpcClientServerTest& operator=(const AsyncGrpcClientServerTest&) =
+      delete;
 
   void SetUp() override {
     ASSERT_TRUE(tmpdir_.CreateUniqueTempDir());
@@ -353,8 +358,6 @@ class AsyncGrpcClientServerTest : public ::testing::Test {
 
   base::ScopedTempDir tmpdir_;
   base::FilePath tmpfile_;
-
-  DISALLOW_COPY_AND_ASSIGN(AsyncGrpcClientServerTest);
 };
 
 // Start and shutdown a server and a client.

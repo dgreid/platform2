@@ -59,6 +59,9 @@ class CellularCapability3gpp : public CellularCapability {
   static const char kConnectAllowRoaming[];
 
   CellularCapability3gpp(Cellular* cellular, ModemInfo* modem_info);
+  CellularCapability3gpp(const CellularCapability3gpp&) = delete;
+  CellularCapability3gpp& operator=(const CellularCapability3gpp&) = delete;
+
   ~CellularCapability3gpp() override;
 
   // Inherited from CellularCapability.
@@ -401,8 +404,6 @@ class CellularCapability3gpp : public CellularCapability {
   int64_t registration_dropped_update_timeout_milliseconds_;
 
   base::WeakPtrFactory<CellularCapability3gpp> weak_ptr_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(CellularCapability3gpp);
 };
 
 }  // namespace shill

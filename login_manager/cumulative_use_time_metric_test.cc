@@ -53,6 +53,8 @@ base::TimeTicks GetReferenceTimeTicks() {
 class TestClockCopy : public base::Clock {
  public:
   explicit TestClockCopy(base::SimpleTestClock* clock) : clock_(clock) {}
+  TestClockCopy(const TestClockCopy&) = delete;
+  TestClockCopy& operator=(const TestClockCopy&) = delete;
 
   ~TestClockCopy() override = default;
 
@@ -60,8 +62,6 @@ class TestClockCopy : public base::Clock {
 
  private:
   base::SimpleTestClock* clock_;
-
-  DISALLOW_COPY_AND_ASSIGN(TestClockCopy);
 };
 
 // Helper clock class that returns the same time as the clock provided in
@@ -70,14 +70,15 @@ class TestTickClockCopy : public base::TickClock {
  public:
   explicit TestTickClockCopy(base::SimpleTestTickClock* tick_clock)
       : tick_clock_(tick_clock) {}
+  TestTickClockCopy(const TestTickClockCopy&) = delete;
+  TestTickClockCopy& operator=(const TestTickClockCopy&) = delete;
+
   ~TestTickClockCopy() override = default;
 
   base::TimeTicks NowTicks() const override { return tick_clock_->NowTicks(); }
 
  private:
   base::SimpleTestTickClock* tick_clock_;
-
-  DISALLOW_COPY_AND_ASSIGN(TestTickClockCopy);
 };
 
 // Single thread task runner used in tests.
@@ -90,6 +91,9 @@ class FakeSingleThreadTaskRunner : public base::SingleThreadTaskRunner {
   FakeSingleThreadTaskRunner(base::SimpleTestClock* clock,
                              base::SimpleTestTickClock* tick_clock)
       : clock_(clock), tick_clock_(tick_clock) {}
+  FakeSingleThreadTaskRunner(const FakeSingleThreadTaskRunner&) = delete;
+  FakeSingleThreadTaskRunner& operator=(const FakeSingleThreadTaskRunner&) =
+      delete;
 
   ~FakeSingleThreadTaskRunner() override = default;
 
@@ -145,8 +149,6 @@ class FakeSingleThreadTaskRunner : public base::SingleThreadTaskRunner {
   // assumption becomes invalid, the data strucute should be changed.
   using PendingTask = std::pair<base::TimeTicks, base::OnceClosure>;
   std::list<PendingTask> pending_tasks_;
-
-  DISALLOW_COPY_AND_ASSIGN(FakeSingleThreadTaskRunner);
 };
 
 // Fake metrics library used in the tests.
@@ -154,6 +156,8 @@ class TestMetricsLibrary : public MetricsLibraryInterface {
  public:
   explicit TestMetricsLibrary(const std::string& expected_use_time_metric)
       : expected_use_time_metric_name_(expected_use_time_metric) {}
+  TestMetricsLibrary(const TestMetricsLibrary&) = delete;
+  TestMetricsLibrary& operator=(const TestMetricsLibrary&) = delete;
 
   ~TestMetricsLibrary() override = default;
 
@@ -231,8 +235,6 @@ class TestMetricsLibrary : public MetricsLibraryInterface {
   const std::string expected_use_time_metric_name_;
   int total_sent_{0};
   int times_sent_{0};
-
-  DISALLOW_COPY_AND_ASSIGN(TestMetricsLibrary);
 };
 
 }  // namespace
@@ -242,6 +244,10 @@ class CumulativeUseTimeMetricTest : public testing::Test {
   CumulativeUseTimeMetricTest()
       : task_runner_(new FakeSingleThreadTaskRunner(&clock_, &tick_clock_)),
         task_runner_handle_(task_runner_.get()) {}
+  CumulativeUseTimeMetricTest(const CumulativeUseTimeMetricTest&) = delete;
+  CumulativeUseTimeMetricTest& operator=(const CumulativeUseTimeMetricTest&) =
+      delete;
+
   ~CumulativeUseTimeMetricTest() override = default;
 
   void SetUp() override {
@@ -316,8 +322,6 @@ class CumulativeUseTimeMetricTest : public testing::Test {
   base::ThreadTaskRunnerHandle task_runner_handle_;
 
   base::ScopedTempDir temp_dir_;
-
-  DISALLOW_COPY_AND_ASSIGN(CumulativeUseTimeMetricTest);
 };
 
 TEST_F(CumulativeUseTimeMetricTest, MetricsNotReportedBeforeStart) {

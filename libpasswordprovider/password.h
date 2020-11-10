@@ -32,6 +32,9 @@ std::unique_ptr<Password> CreatePassword(const char* data, size_t len);
 class LIBPASSWORDPROVIDER_EXPORT Password {
  public:
   Password() = default;
+  Password(const Password&) = delete;
+  Password& operator=(const Password&) = delete;
+
   ~Password();
 
   // Create and return Password object from the given file descriptor. |bytes|
@@ -74,8 +77,6 @@ class LIBPASSWORDPROVIDER_EXPORT Password {
   size_t buffer_alloc_size_ = 0;
   size_t max_size_ = 0;
   size_t size_ = 0;
-
-  DISALLOW_COPY_AND_ASSIGN(Password);
 };
 
 }  // namespace password_provider

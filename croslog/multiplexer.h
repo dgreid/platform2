@@ -28,6 +28,8 @@ class Multiplexer : public LogLineReader::Observer {
   };
 
   Multiplexer();
+  Multiplexer(const Multiplexer&) = delete;
+  Multiplexer& operator=(const Multiplexer&) = delete;
 
   // Add a source log file to read.
   void AddSource(base::FilePath log_file,
@@ -65,8 +67,6 @@ class Multiplexer : public LogLineReader::Observer {
 
   std::vector<std::unique_ptr<LogSource>> sources_;
   base::ObserverList<Observer> observers_;
-
-  DISALLOW_COPY_AND_ASSIGN(Multiplexer);
 };
 
 }  // namespace croslog

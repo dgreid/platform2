@@ -18,6 +18,9 @@ namespace thd {
 class FakeSource : public Source {
  public:
   FakeSource(int64_t value, bool success);
+  FakeSource(const FakeSource&) = delete;
+  FakeSource& operator=(const FakeSource&) = delete;
+
   ~FakeSource() override;
 
   void set_value(int64_t value_to_set) { value_ = value_to_set; }
@@ -29,7 +32,6 @@ class FakeSource : public Source {
  private:
   int64_t value_;
   bool success_;
-  DISALLOW_COPY_AND_ASSIGN(FakeSource);
 };
 
 }  // namespace thd

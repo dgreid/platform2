@@ -29,6 +29,8 @@ class SyslogStdioAdapter {
 
  private:
   explicit SyslogStdioAdapter(base::Process child);
+  SyslogStdioAdapter(const SyslogStdioAdapter&) = delete;
+  SyslogStdioAdapter& operator=(const SyslogStdioAdapter&) = delete;
 
   // The child process' run loop. Reads from the stdout/stderr read ends of the
   // pipe and logs all lines with INFO/ERROR severity.
@@ -39,8 +41,6 @@ class SyslogStdioAdapter {
 
   // The child process.
   base::Process child_;
-
-  DISALLOW_COPY_AND_ASSIGN(SyslogStdioAdapter);
 };
 
 struct Mountpoint {

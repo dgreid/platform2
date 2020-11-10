@@ -43,6 +43,9 @@ class BRILLO_EXPORT AsyncGrpcClientBase {
 
   explicit AsyncGrpcClientBase(
       scoped_refptr<base::SequencedTaskRunner> task_runner);
+  AsyncGrpcClientBase(const AsyncGrpcClientBase&) = delete;
+  AsyncGrpcClientBase& operator=(const AsyncGrpcClientBase&) = delete;
+
   virtual ~AsyncGrpcClientBase();
 
   // Shuts down this client. This instance may only be destroyed after
@@ -58,8 +61,6 @@ class BRILLO_EXPORT AsyncGrpcClientBase {
  private:
   grpc::CompletionQueue completion_queue_;
   GrpcCompletionQueueDispatcher dispatcher_;
-
-  DISALLOW_COPY_AND_ASSIGN(AsyncGrpcClientBase);
 };
 
 }  // namespace internal
@@ -89,6 +90,8 @@ class AsyncGrpcClient final : public internal::AsyncGrpcClientBase {
       : AsyncGrpcClientBase(task_runner) {
     stub_ = ServiceType::NewStub(CreateGrpcChannel(target_uri));
   }
+  AsyncGrpcClient(const AsyncGrpcClient&) = delete;
+  AsyncGrpcClient& operator=(const AsyncGrpcClient&) = delete;
 
   ~AsyncGrpcClient() override = default;
 
@@ -186,8 +189,6 @@ class AsyncGrpcClient final : public internal::AsyncGrpcClientBase {
 
   base::TimeDelta default_rpc_deadline_ = kDefaultRpcDeadline;
   std::unique_ptr<typename ServiceType::Stub> stub_;
-
-  DISALLOW_COPY_AND_ASSIGN(AsyncGrpcClient);
 };
 
 }  // namespace brillo

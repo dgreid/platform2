@@ -53,6 +53,8 @@ class Connection : public base::RefCounted<Connection> {
              Technology technology_,
              const DeviceInfo* device_info,
              ControlInterface* control_interface);
+  Connection(const Connection&) = delete;
+  Connection& operator=(const Connection&) = delete;
 
   // Add the contents of an IPConfig reference to the list of managed state.
   // This will replace all previous state for this address family.
@@ -212,8 +214,6 @@ class Connection : public base::RefCounted<Connection> {
   RTNLHandler* rtnl_handler_;
 
   ControlInterface* control_interface_;
-
-  DISALLOW_COPY_AND_ASSIGN(Connection);
 };
 
 }  // namespace shill

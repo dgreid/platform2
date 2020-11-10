@@ -156,6 +156,9 @@ class KeyStoreTest : public testing::Test {
                          // This just controls whether the first call to
                          // C_Initialize returns 'already initialized'.
         next_handle_(1) {}
+  KeyStoreTest(const KeyStoreTest&) = delete;
+  KeyStoreTest& operator=(const KeyStoreTest&) = delete;
+
   ~KeyStoreTest() override = default;
 
   void SetUp() override {
@@ -314,8 +317,6 @@ class KeyStoreTest : public testing::Test {
   ScopedFakeSalt fake_system_salt_;
   // We want to avoid all the Chaps verbose logging.
   ScopedDisableVerboseLogging no_verbose_logging;
-
-  DISALLOW_COPY_AND_ASSIGN(KeyStoreTest);
 };
 
 // This test assumes that chaps in not available on the system running the test.

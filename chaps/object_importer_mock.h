@@ -15,13 +15,13 @@ namespace chaps {
 class ObjectImporterMock : public ObjectImporter {
  public:
   ObjectImporterMock();
+  ObjectImporterMock(const ObjectImporterMock&) = delete;
+  ObjectImporterMock& operator=(const ObjectImporterMock&) = delete;
+
   ~ObjectImporterMock() override;
 
   MOCK_METHOD1(ImportObjects, bool(ObjectPool*));  // NOLINT - 'unnamed' param
   MOCK_METHOD1(FinishImportAsync, bool(ObjectPool*));  // NOLINT - 'unnamed'
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ObjectImporterMock);
 };
 
 }  // namespace chaps

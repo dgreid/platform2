@@ -43,6 +43,8 @@ class ArcDiskQuota {
   ArcDiskQuota(HomeDirs* homedirs,
                Platform* platform,
                const base::FilePath& home);
+  ArcDiskQuota(const ArcDiskQuota&) = delete;
+  ArcDiskQuota& operator=(const ArcDiskQuota&) = delete;
 
   virtual ~ArcDiskQuota();
 
@@ -122,8 +124,6 @@ class ArcDiskQuota {
   base::FilePath device_;
 
   friend class ArcDiskQuotaTest;
-
-  DISALLOW_COPY_AND_ASSIGN(ArcDiskQuota);
 };
 
 }  // namespace cryptohome

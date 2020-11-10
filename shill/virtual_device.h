@@ -26,6 +26,9 @@ class VirtualDevice : public Device {
                 const std::string& link_name,
                 int interface_index,
                 Technology technology);
+  VirtualDevice(const VirtualDevice&) = delete;
+  VirtualDevice& operator=(const VirtualDevice&) = delete;
+
   ~VirtualDevice() override;
 
   bool Load(const StoreInterface* storage) override;
@@ -44,9 +47,6 @@ class VirtualDevice : public Device {
   void SetServiceState(Service::ConnectState state) override;
   void SetServiceFailure(Service::ConnectFailure failure_state) override;
   void SetServiceFailureSilent(Service::ConnectFailure failure_state) override;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(VirtualDevice);
 };
 
 }  // namespace shill

@@ -21,6 +21,8 @@ namespace smbfs {
 class TestFilesystem : public Filesystem {
  public:
   TestFilesystem(uid_t uid, gid_t gid);
+  TestFilesystem(const TestFilesystem&) = delete;
+  TestFilesystem& operator=(const TestFilesystem&) = delete;
 
   void Lookup(std::unique_ptr<EntryRequest> request,
               fuse_ino_t parent_inode,
@@ -30,8 +32,6 @@ class TestFilesystem : public Filesystem {
  private:
   const uid_t uid_;
   const gid_t gid_;
-
-  DISALLOW_COPY_AND_ASSIGN(TestFilesystem);
 };
 
 }  // namespace smbfs

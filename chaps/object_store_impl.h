@@ -24,6 +24,9 @@ namespace chaps {
 class ObjectStoreImpl : public ObjectStore {
  public:
   ObjectStoreImpl();
+  ObjectStoreImpl(const ObjectStoreImpl&) = delete;
+  ObjectStoreImpl& operator=(const ObjectStoreImpl&) = delete;
+
   ~ObjectStoreImpl() override;
 
   // Initializes the object store with the given database path. The magic file
@@ -123,8 +126,6 @@ class ObjectStoreImpl : public ObjectStore {
   FRIEND_TEST(TestObjectStoreEncryption, EncryptionInit);
   FRIEND_TEST(TestObjectStoreEncryption, Encryption);
   FRIEND_TEST(TestObjectStoreEncryption, CBCMode);
-
-  DISALLOW_COPY_AND_ASSIGN(ObjectStoreImpl);
 };
 
 }  // namespace chaps

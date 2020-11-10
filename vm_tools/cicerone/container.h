@@ -74,6 +74,8 @@ class Container {
   Container(const std::string& name,
             const std::string& token,
             base::WeakPtr<VirtualMachine> vm);
+  Container(const Container&) = delete;
+  Container& operator=(const Container&) = delete;
 
   ~Container() = default;
 
@@ -142,8 +144,6 @@ class Container {
 
   // Stub for making RPC requests to the garcon process inside the container.
   std::unique_ptr<vm_tools::container::Garcon::Stub> garcon_stub_;
-
-  DISALLOW_COPY_AND_ASSIGN(Container);
 };
 
 }  // namespace cicerone

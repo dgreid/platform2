@@ -376,6 +376,8 @@ class FirmwareUpdater : public FirmwareUpdaterInterface {
   // Used in unit tests to inject mocks.
   FirmwareUpdater(std::unique_ptr<UsbEndpointInterface> endpoint,
                   std::unique_ptr<FmapInterface> fmap);
+  FirmwareUpdater(const FirmwareUpdater&) = delete;
+  FirmwareUpdater& operator=(const FirmwareUpdater&) = delete;
 
   // Fetches the version of the currently-running section.
   bool FetchVersion();
@@ -427,7 +429,6 @@ class FirmwareUpdater : public FirmwareUpdaterInterface {
 
  private:
   bool CheckEmptyBlock(const uint8_t* transfer_data_ptr, size_t payload_size);
-  DISALLOW_COPY_AND_ASSIGN(FirmwareUpdater);
 };
 
 }  // namespace hammerd

@@ -79,12 +79,12 @@ class GpuInfo {
 
  protected:
   GpuInfo(std::unique_ptr<std::istream> gpu_freq_stream, GpuType gpu_type);
+  GpuInfo(const GpuInfo&) = delete;
+  GpuInfo& operator=(const GpuInfo&) = delete;
 
  private:
   std::unique_ptr<std::istream> gpu_freq_stream_;
   GpuType gpu_type_;
-
-  DISALLOW_COPY_AND_ASSIGN(GpuInfo);
 };
 
 // Encapsulates access to Intel RAPL information.
@@ -111,13 +111,13 @@ class RAPLInfo {
  private:
   RAPLInfo(std::unique_ptr<std::vector<PowerDomain>> rapl_domains,
            CpuType cpu_type);
+  RAPLInfo(const RAPLInfo&) = delete;
+  RAPLInfo& operator=(const RAPLInfo&) = delete;
 
   static bool ReadUint64File(const base::FilePath& path, uint64_t* value_out);
 
   std::unique_ptr<std::vector<PowerDomain>> power_domains_;
   CpuType cpu_type_;
-
-  DISALLOW_COPY_AND_ASSIGN(RAPLInfo);
 };
 
 // Encapsulates the logic for writing to vmlog and rotating log files when
@@ -131,6 +131,9 @@ class VmlogFile {
             const base::FilePath& rotated_path,
             const uint64_t max_size,
             const std::string& header);
+  VmlogFile(const VmlogFile&) = delete;
+  VmlogFile& operator=(const VmlogFile&) = delete;
+
   ~VmlogFile();
 
   // Writes the requested data to the vmlog log file. Returns false on failure.
@@ -146,8 +149,6 @@ class VmlogFile {
   std::string header_;
   uint64_t cur_size_ = 0;
   int fd_ = -1;
-
-  DISALLOW_COPY_AND_ASSIGN(VmlogFile);
 };
 
 // Reads information from /proc/vmstat periodically and writes summary data to
@@ -158,6 +159,9 @@ class VmlogWriter {
  public:
   VmlogWriter(const base::FilePath& vmlog_dir,
               const base::TimeDelta& log_interval);
+  VmlogWriter(const VmlogWriter&) = delete;
+  VmlogWriter& operator=(const VmlogWriter&) = delete;
+
   ~VmlogWriter();
 
  private:
@@ -212,8 +216,6 @@ class VmlogWriter {
 
   base::RepeatingTimer timer_;
   base::OneShotTimer valid_time_delay_timer_;
-
-  DISALLOW_COPY_AND_ASSIGN(VmlogWriter);
 };
 
 }  // namespace chromeos_metrics

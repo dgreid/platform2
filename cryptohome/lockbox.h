@@ -73,6 +73,9 @@ class Lockbox {
   // operations will succeed, but it should not crash or behave unexpectedly.
   // The |nvram_index| should be chosen carefully. See README.lockbox for info.
   Lockbox(Tpm* tpm, uint32_t nvram_index);
+  Lockbox(const Lockbox&) = delete;
+  Lockbox& operator=(const Lockbox&) = delete;
+
   virtual ~Lockbox();
 
   // Sets up the backend state needed for this lockbox.
@@ -141,8 +144,6 @@ class Lockbox {
   brillo::Process* process_;
   std::unique_ptr<Platform> default_platform_;
   Platform* platform_;
-
-  DISALLOW_COPY_AND_ASSIGN(Lockbox);
 };
 
 // Represents decoded lockbox NVRAM space contents and provides operations to

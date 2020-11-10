@@ -23,6 +23,9 @@ class CrosDnsDaemon : public brillo::DBusServiceDaemon,
                       public org::chromium::CrosDnsInterface {
  public:
   CrosDnsDaemon();
+  CrosDnsDaemon(const CrosDnsDaemon&) = delete;
+  CrosDnsDaemon& operator=(const CrosDnsDaemon&) = delete;
+
   ~CrosDnsDaemon() override;
 
   // Implementations of the public methods interface.
@@ -46,8 +49,6 @@ class CrosDnsDaemon : public brillo::DBusServiceDaemon,
   org::chromium::CrosDnsAdaptor dbus_adaptor_;
 
   HostsModifier hosts_modifier_;
-
-  DISALLOW_COPY_AND_ASSIGN(CrosDnsDaemon);
 };
 
 }  // namespace crosdns

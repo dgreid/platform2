@@ -19,6 +19,9 @@ class Upstart {
  public:
   // |control_interface| creates the UpstartProxy. Use a fake for testing.
   explicit Upstart(ControlInterface* control_interface);
+  Upstart(const Upstart&) = delete;
+  Upstart& operator=(const Upstart&) = delete;
+
   virtual ~Upstart();
 
   // Report an event to upstart indicating that the system has disconnected.
@@ -34,8 +37,6 @@ class Upstart {
 
   // The upstart proxy created by this class.
   const std::unique_ptr<UpstartProxyInterface> upstart_proxy_;
-
-  DISALLOW_COPY_AND_ASSIGN(Upstart);
 };
 
 }  // namespace shill

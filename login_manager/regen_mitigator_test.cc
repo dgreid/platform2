@@ -30,13 +30,13 @@ namespace login_manager {
 class RegenMitigatorTest : public ::testing::Test {
  public:
   RegenMitigatorTest() {}
+  RegenMitigatorTest(const RegenMitigatorTest&) = delete;
+  RegenMitigatorTest& operator=(const RegenMitigatorTest&) = delete;
+
   ~RegenMitigatorTest() override {}
 
  protected:
   SystemUtilsImpl utils_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(RegenMitigatorTest);
 };
 
 TEST_F(RegenMitigatorTest, Mitigate) {

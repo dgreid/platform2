@@ -16,14 +16,15 @@ class FeedbackUploaderHttp : public feedback::FeedbackUploader {
   FeedbackUploaderHttp(const base::FilePath& path,
                        scoped_refptr<base::SingleThreadTaskRunner> task_runner,
                        const std::string& url);
+  FeedbackUploaderHttp(const FeedbackUploaderHttp&) = delete;
+  FeedbackUploaderHttp& operator=(const FeedbackUploaderHttp&) = delete;
+
   ~FeedbackUploaderHttp() override = default;
 
  private:
   friend class FeedbackServiceTest;
 
   void DispatchReport(const std::string& data) override;
-
-  DISALLOW_COPY_AND_ASSIGN(FeedbackUploaderHttp);
 };
 
 }  // namespace feedback

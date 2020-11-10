@@ -59,6 +59,9 @@ class DisplayWatcher : public DisplayWatcherInterface,
   static const char kDrmStatusUnknown[];
 
   DisplayWatcher();
+  DisplayWatcher(const DisplayWatcher&) = delete;
+  DisplayWatcher& operator=(const DisplayWatcher&) = delete;
+
   ~DisplayWatcher() override;
 
   void set_sysfs_drm_path_for_testing(const base::FilePath& path) {
@@ -112,8 +115,6 @@ class DisplayWatcher : public DisplayWatcherInterface,
   // Used instead of the default paths if non-empty.
   base::FilePath sysfs_drm_path_for_testing_;
   base::FilePath i2c_dev_path_for_testing_;
-
-  DISALLOW_COPY_AND_ASSIGN(DisplayWatcher);
 };
 
 }  // namespace system

@@ -114,6 +114,8 @@ class LogTool {
               cryptohome_proxy,
           const std::unique_ptr<LogTool::Log> arc_bug_report_log,
           const base::FilePath& daemon_store_base_dir);
+  LogTool(const LogTool&) = delete;
+  LogTool& operator=(const LogTool&) = delete;
 
   void CreateConnectivityReport(bool wait_for_results);
 
@@ -133,8 +135,6 @@ class LogTool {
   // Set containing userhash of all users for which
   // ARC bug report has been backed up.
   std::set<std::string> arc_bug_report_backups_;
-
-  DISALLOW_COPY_AND_ASSIGN(LogTool);
 };
 
 }  // namespace debugd

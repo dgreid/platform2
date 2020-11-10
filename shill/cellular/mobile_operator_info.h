@@ -70,6 +70,9 @@ class MobileOperatorInfo {
   // expected to outlive this object.
   MobileOperatorInfo(EventDispatcher* dispatcher,
                      const std::string& info_owner);
+  MobileOperatorInfo(const MobileOperatorInfo&) = delete;
+  MobileOperatorInfo& operator=(const MobileOperatorInfo&) = delete;
+
   virtual ~MobileOperatorInfo();
 
   // These functions can be called before Init to read non default database
@@ -226,7 +229,6 @@ class MobileOperatorInfo {
 
  private:
   std::unique_ptr<MobileOperatorInfoImpl> impl_;
-  DISALLOW_COPY_AND_ASSIGN(MobileOperatorInfo);
 };
 
 }  // namespace shill

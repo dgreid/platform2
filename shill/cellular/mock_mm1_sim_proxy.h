@@ -18,6 +18,9 @@ namespace mm1 {
 class MockSimProxy : public SimProxyInterface {
  public:
   MockSimProxy();
+  MockSimProxy(const MockSimProxy&) = delete;
+  MockSimProxy& operator=(const MockSimProxy&) = delete;
+
   ~MockSimProxy() override;
 
   MOCK_METHOD(void,
@@ -45,9 +48,6 @@ class MockSimProxy : public SimProxyInterface {
                const ResultCallback&,
                int),
               (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockSimProxy);
 };
 
 }  // namespace mm1

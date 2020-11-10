@@ -27,6 +27,9 @@ class BRILLO_EXPORT DBusSignalBase {
   DBusSignalBase(DBusObject* dbus_object,
                  const std::string& interface_name,
                  const std::string& signal_name);
+  DBusSignalBase(const DBusSignalBase&) = delete;
+  DBusSignalBase& operator=(const DBusSignalBase&) = delete;
+
   virtual ~DBusSignalBase() = default;
 
  protected:
@@ -37,8 +40,6 @@ class BRILLO_EXPORT DBusSignalBase {
 
  private:
   DBusObject* dbus_object_;
-
-  DISALLOW_COPY_AND_ASSIGN(DBusSignalBase);
 };
 
 // DBusSignal<...> is a concrete signal proxy class that knows about the
@@ -46,6 +47,8 @@ class BRILLO_EXPORT DBusSignalBase {
 template <typename... Args>
 class DBusSignal : public DBusSignalBase {
  public:
+  DBusSignal(const DBusSignal&) = delete;
+  DBusSignal& operator=(const DBusSignal&) = delete;
   // Expose the custom constructor from DBusSignalBase.
   using DBusSignalBase::DBusSignalBase;
   ~DBusSignal() override = default;
@@ -59,9 +62,6 @@ class DBusSignal : public DBusSignalBase {
     DBusParamWriter::Append(&signal_writer, args...);
     return SendSignal(&signal);
   }
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(DBusSignal);
 };
 
 }  // namespace dbus_utils

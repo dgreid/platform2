@@ -17,6 +17,9 @@ namespace attestation {
 class MockKeyStore : public KeyStore {
  public:
   MockKeyStore();
+  MockKeyStore(const MockKeyStore&) = delete;
+  MockKeyStore& operator=(const MockKeyStore&) = delete;
+
   ~MockKeyStore() override;
 
   MOCK_METHOD(bool,
@@ -49,9 +52,6 @@ class MockKeyStore : public KeyStore {
               RegisterCertificate,
               (const std::string&, const std::string&),
               (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockKeyStore);
 };
 
 }  // namespace attestation

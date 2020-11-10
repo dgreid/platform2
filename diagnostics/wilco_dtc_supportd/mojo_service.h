@@ -58,6 +58,9 @@ class MojoService final
   MojoService(MojoGrpcAdapter* grpc_adapter,
               MojomWilcoDtcSupportdServiceRequest self_interface_request,
               MojomWilcoDtcSupportdClientPtr client_ptr);
+  MojoService(const MojoService&) = delete;
+  MojoService& operator=(const MojoService&) = delete;
+
   ~MojoService() override;
 
   // chromeos::wilco_dtc_supportd::mojom::WilcoDtcSupportdService overrides:
@@ -95,8 +98,6 @@ class MojoService final
   //
   // In production this interface is implemented in the Chrome browser process.
   MojomWilcoDtcSupportdClientPtr client_ptr_;
-
-  DISALLOW_COPY_AND_ASSIGN(MojoService);
 };
 
 }  // namespace diagnostics

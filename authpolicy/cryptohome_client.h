@@ -25,6 +25,9 @@ namespace authpolicy {
 class CryptohomeClient {
  public:
   explicit CryptohomeClient(brillo::dbus_utils::DBusObject* dbus_object);
+  CryptohomeClient(const CryptohomeClient&) = delete;
+  CryptohomeClient& operator=(const CryptohomeClient&) = delete;
+
   virtual ~CryptohomeClient();
 
   // Exposes Cryptohome's GetSanitizedUsername(). This is a 32-byte lowercase
@@ -34,8 +37,6 @@ class CryptohomeClient {
 
  private:
   dbus::ObjectProxy* cryptohome_proxy_ = nullptr;  // Not owned.
-
-  DISALLOW_COPY_AND_ASSIGN(CryptohomeClient);
 };
 
 }  // namespace authpolicy

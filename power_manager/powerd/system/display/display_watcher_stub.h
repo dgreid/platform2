@@ -16,6 +16,9 @@ namespace system {
 class DisplayWatcherStub : public DisplayWatcherInterface {
  public:
   DisplayWatcherStub();
+  DisplayWatcherStub(const DisplayWatcherStub&) = delete;
+  DisplayWatcherStub& operator=(const DisplayWatcherStub&) = delete;
+
   ~DisplayWatcherStub() override;
 
   void set_displays(const std::vector<DisplayInfo>& displays) {
@@ -30,8 +33,6 @@ class DisplayWatcherStub : public DisplayWatcherInterface {
  private:
   // Currently-connected displays.
   std::vector<DisplayInfo> displays_;
-
-  DISALLOW_COPY_AND_ASSIGN(DisplayWatcherStub);
 };
 
 }  // namespace system

@@ -33,6 +33,8 @@ const int kFileChangedDelayMSec = 10000;
 class ServicePublisherAvahi : public ServicePublisher {
  public:
   explicit ServicePublisherAvahi(uint16_t http_port);
+  ServicePublisherAvahi(const ServicePublisherAvahi&) = delete;
+  ServicePublisherAvahi& operator=(const ServicePublisherAvahi&) = delete;
 
   ~ServicePublisherAvahi() override;
 
@@ -89,8 +91,6 @@ class ServicePublisherAvahi : public ServicePublisher {
 
   // GLib source id used for timeout management - see kFileChangedDelayMSec.
   guint delay_timeout_id_;
-
-  DISALLOW_COPY_AND_ASSIGN(ServicePublisherAvahi);
 };
 
 ServicePublisherAvahi::ServicePublisherAvahi(uint16_t http_port)

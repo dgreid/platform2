@@ -17,6 +17,9 @@ namespace crosdns {
 class HostsModifier {
  public:
   HostsModifier();
+  HostsModifier(const HostsModifier&) = delete;
+  HostsModifier& operator=(const HostsModifier&) = delete;
+
   ~HostsModifier();
 
   // Upon loading, this class will read in the file at the specified path and
@@ -55,8 +58,6 @@ class HostsModifier {
 
   // Mapping of hostnames to ipv4 addresses.
   std::map<std::string, std::string> hostname_ipv4_map_;
-
-  DISALLOW_COPY_AND_ASSIGN(HostsModifier);
 };
 
 }  // namespace crosdns

@@ -17,6 +17,8 @@ namespace cryptohome {
 class CryptohomeProxyDaemon : public brillo::DBusDaemon {
  public:
   CryptohomeProxyDaemon() : DBusDaemon() {}
+  CryptohomeProxyDaemon(const CryptohomeProxyDaemon&) = delete;
+  CryptohomeProxyDaemon& operator=(const CryptohomeProxyDaemon&) = delete;
 
  protected:
   int OnInit() override {
@@ -28,8 +30,6 @@ class CryptohomeProxyDaemon : public brillo::DBusDaemon {
 
  private:
   std::unique_ptr<CryptohomeProxyService> proxy_service_;
-
-  DISALLOW_COPY_AND_ASSIGN(CryptohomeProxyDaemon);
 };
 
 }  // namespace cryptohome

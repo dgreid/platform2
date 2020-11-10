@@ -19,6 +19,9 @@ namespace permission_broker {
 class HidrawSubsystemUdevRule : public Rule {
  public:
   explicit HidrawSubsystemUdevRule(const std::string& name);
+  HidrawSubsystemUdevRule(const HidrawSubsystemUdevRule&) = delete;
+  HidrawSubsystemUdevRule& operator=(const HidrawSubsystemUdevRule&) = delete;
+
   ~HidrawSubsystemUdevRule() override = default;
 
   // Called with every device belonging to the hidraw subsystem.
@@ -36,9 +39,6 @@ class HidrawSubsystemUdevRule : public Rule {
   // errors.
   static bool GetHidToplevelUsages(struct udev_device* device,
                                    std::vector<HidUsage>* usages);
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(HidrawSubsystemUdevRule);
 };
 
 }  // namespace permission_broker

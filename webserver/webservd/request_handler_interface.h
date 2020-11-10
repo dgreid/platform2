@@ -18,12 +18,12 @@ class Request;
 class RequestHandlerInterface {
  public:
   RequestHandlerInterface() = default;
+  RequestHandlerInterface(const RequestHandlerInterface&) = delete;
+  RequestHandlerInterface& operator=(const RequestHandlerInterface&) = delete;
+
   virtual ~RequestHandlerInterface() = default;
 
   virtual void HandleRequest(Request* request, const std::string& src) = 0;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(RequestHandlerInterface);
 };
 
 }  // namespace webservd

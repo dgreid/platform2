@@ -19,6 +19,9 @@ namespace policy {
 class UserProximityVoting {
  public:
   UserProximityVoting();
+  UserProximityVoting(const UserProximityVoting&) = delete;
+  UserProximityVoting& operator=(const UserProximityVoting&) = delete;
+
   ~UserProximityVoting();
 
   // Sets the vote of sensor |id| to |vote|. The sensor is added
@@ -36,8 +39,6 @@ class UserProximityVoting {
 
   std::unordered_map<int, UserProximity> votes_;
   UserProximity consensus_ = UserProximity::UNKNOWN;
-
-  DISALLOW_COPY_AND_ASSIGN(UserProximityVoting);
 };
 
 }  // namespace policy

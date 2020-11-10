@@ -26,6 +26,8 @@ template <typename T_POLICY>
 class PolicyEncoderTestBase : public ::testing::Test {
  public:
   PolicyEncoderTestBase() {}
+  PolicyEncoderTestBase(const PolicyEncoderTestBase&) = delete;
+  PolicyEncoderTestBase& operator=(const PolicyEncoderTestBase&) = delete;
   ~PolicyEncoderTestBase() override {}
 
  protected:
@@ -105,8 +107,6 @@ class PolicyEncoderTestBase : public ::testing::Test {
   //   {"gihmafigllmhbppdfjnfecimiohcljba", "Policy"}
   // for extension policy.
   std::vector<const char*> path_;
-
-  DISALLOW_COPY_AND_ASSIGN(PolicyEncoderTestBase);
 };
 
 }  // namespace policy

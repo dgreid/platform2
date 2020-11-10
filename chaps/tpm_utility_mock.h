@@ -17,6 +17,9 @@ namespace chaps {
 class TPMUtilityMock : public TPMUtility {
  public:
   TPMUtilityMock();
+  TPMUtilityMock(const TPMUtilityMock&) = delete;
+  TPMUtilityMock& operator=(const TPMUtilityMock&) = delete;
+
   ~TPMUtilityMock() override;
 
   MOCK_METHOD0(MinRSAKeyBits, size_t());
@@ -82,9 +85,6 @@ class TPMUtilityMock : public TPMUtility {
                     const std::string&,
                     std::string*));
   MOCK_METHOD0(IsSRKReady, bool());
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(TPMUtilityMock);
 };
 
 }  // namespace chaps

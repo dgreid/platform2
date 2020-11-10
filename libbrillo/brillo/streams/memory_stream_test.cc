@@ -32,6 +32,8 @@ int ReadByte(Stream* stream, brillo::ErrorPtr* error) {
 class MockMemoryContainer : public data_container::DataContainerInterface {
  public:
   MockMemoryContainer() = default;
+  MockMemoryContainer(const MockMemoryContainer&) = delete;
+  MockMemoryContainer& operator=(const MockMemoryContainer&) = delete;
 
   MOCK_METHOD(bool,
               Read,
@@ -44,9 +46,6 @@ class MockMemoryContainer : public data_container::DataContainerInterface {
   MOCK_METHOD(bool, Resize, (size_t, ErrorPtr*), (override));
   MOCK_METHOD(size_t, GetSize, (), (const, override));
   MOCK_METHOD(bool, IsReadOnly, (), (const, override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockMemoryContainer);
 };
 
 }  // anonymous namespace

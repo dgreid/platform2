@@ -78,6 +78,9 @@ namespace brillo {
 class TlsStream::TlsStreamImpl {
  public:
   TlsStreamImpl();
+  TlsStreamImpl(const TlsStreamImpl&) = delete;
+  TlsStreamImpl& operator=(const TlsStreamImpl&) = delete;
+
   ~TlsStreamImpl();
 
   bool Init(StreamPtr socket,
@@ -129,7 +132,6 @@ class TlsStream::TlsStreamImpl {
   bool need_more_write_{false};
 
   base::WeakPtrFactory<TlsStreamImpl> weak_ptr_factory_{this};
-  DISALLOW_COPY_AND_ASSIGN(TlsStreamImpl);
 };
 
 TlsStream::TlsStreamImpl::TlsStreamImpl() {

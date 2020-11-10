@@ -23,6 +23,9 @@ namespace trunks {
 class TRUNKS_EXPORT TrunksFtdiSpi : public CommandTransceiver {
  public:
   TrunksFtdiSpi() : mpsse_(NULL), locality_(0) {}
+  TrunksFtdiSpi(const TrunksFtdiSpi&) = delete;
+  TrunksFtdiSpi& operator=(const TrunksFtdiSpi&) = delete;
+
   ~TrunksFtdiSpi() override;
 
   // CommandTransceiver methods.
@@ -60,8 +63,6 @@ class TRUNKS_EXPORT TrunksFtdiSpi : public CommandTransceiver {
                      int timeout_ms = 10000);
   // Retrieve current value of the burst count field.
   size_t GetBurstCount(void);
-
-  DISALLOW_COPY_AND_ASSIGN(TrunksFtdiSpi);
 };
 
 }  // namespace trunks

@@ -348,12 +348,12 @@ class ChapsProxyImpl : public ChapsInterface {
   ChapsProxyImpl(std::unique_ptr<base::AtExitManager> at_exit,
                  std::unique_ptr<base::Thread> dbus_thread,
                  scoped_refptr<DBusProxyWrapper> proxy);
+  ChapsProxyImpl(const ChapsProxyImpl&) = delete;
+  ChapsProxyImpl& operator=(const ChapsProxyImpl&) = delete;
 
   std::unique_ptr<base::AtExitManager> at_exit_;
   std::unique_ptr<base::Thread> dbus_thread_;  // Runs D-Bus tasks for |proxy_|.
   scoped_refptr<DBusProxyWrapper> proxy_;
-
-  DISALLOW_COPY_AND_ASSIGN(ChapsProxyImpl);
 };
 
 }  // namespace chaps

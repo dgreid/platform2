@@ -13,6 +13,8 @@ namespace croslog {
 class ViewerPlaintextTest : public ::testing::Test {
  public:
   ViewerPlaintextTest() = default;
+  ViewerPlaintextTest(const ViewerPlaintextTest&) = delete;
+  ViewerPlaintextTest& operator=(const ViewerPlaintextTest&) = delete;
 
   static std::vector<BootRecords::BootEntry> GenerateBootLog(base::Time now) {
     std::vector<BootRecords::BootEntry> boot_entries;
@@ -27,9 +29,6 @@ class ViewerPlaintextTest : public ::testing::Test {
     return LogEntry{time, Severity::ERROR, "TAG",
                     1234, "MESSAGE",       "ENTIRE STRING"};
   }
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ViewerPlaintextTest);
 };
 
 TEST_F(ViewerPlaintextTest, ShouldFilterOutEntry) {

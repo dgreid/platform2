@@ -59,6 +59,9 @@ class DaemonTask {
   };
 
   DaemonTask(const Settings& settings, Config* config);
+  DaemonTask(const DaemonTask&) = delete;
+  DaemonTask& operator=(const DaemonTask&) = delete;
+
   virtual ~DaemonTask();
 
   void Init();
@@ -106,8 +109,6 @@ class DaemonTask {
   ProcessManager* process_manager_;
   std::unique_ptr<Manager> manager_;
   base::Closure termination_completed_callback_;
-
-  DISALLOW_COPY_AND_ASSIGN(DaemonTask);
 };
 
 }  // namespace shill

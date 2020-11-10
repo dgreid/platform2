@@ -19,15 +19,15 @@ class ConnectionInfo;
 class MockConnectionInfoReader : public ConnectionInfoReader {
  public:
   MockConnectionInfoReader();
+  MockConnectionInfoReader(const MockConnectionInfoReader&) = delete;
+  MockConnectionInfoReader& operator=(const MockConnectionInfoReader&) = delete;
+
   ~MockConnectionInfoReader() override;
 
   MOCK_METHOD(bool,
               LoadConnectionInfo,
               (std::vector<ConnectionInfo>*),
               (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockConnectionInfoReader);
 };
 
 }  // namespace shill

@@ -99,6 +99,8 @@ class DHCPProvider {
 
  protected:
   DHCPProvider();
+  DHCPProvider(const DHCPProvider&) = delete;
+  DHCPProvider& operator=(const DHCPProvider&) = delete;
 
  private:
   friend base::LazyInstanceTraitsBase<DHCPProvider>;
@@ -129,8 +131,6 @@ class DHCPProvider {
   // Track the set of PIDs recently unbound from the provider in case messages
   // arrive addressed from them.
   std::set<int> recently_unbound_pids_;
-
-  DISALLOW_COPY_AND_ASSIGN(DHCPProvider);
 };
 
 }  // namespace shill

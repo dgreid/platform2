@@ -26,6 +26,8 @@ class Configuration {
                 libmems::IioDevice* sensor,
                 SensorKind kind,
                 Delegate* delegate);
+  Configuration(const Configuration&) = delete;
+  Configuration& operator=(const Configuration&) = delete;
 
   bool Configure();
 
@@ -60,8 +62,6 @@ class Configuration {
   libmems::IioContext* context_;  // non-owned
 
   base::Optional<gid_t> iioservice_gid_ = base::nullopt;
-
-  DISALLOW_COPY_AND_ASSIGN(Configuration);
 };
 
 }  // namespace mems_setup

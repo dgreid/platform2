@@ -17,6 +17,9 @@ namespace shill {
 class MockPortalDetector : public PortalDetector {
  public:
   explicit MockPortalDetector(ConnectionRefPtr connection);
+  MockPortalDetector(const MockPortalDetector&) = delete;
+  MockPortalDetector& operator=(const MockPortalDetector&) = delete;
+
   ~MockPortalDetector() override;
 
   MOCK_METHOD(bool,
@@ -26,9 +29,6 @@ class MockPortalDetector : public PortalDetector {
   MOCK_METHOD(void, Stop, (), (override));
   MOCK_METHOD(bool, IsInProgress, (), (override));
   MOCK_METHOD(int, AdjustStartDelay, (int), (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockPortalDetector);
 };
 
 }  // namespace shill

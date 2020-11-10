@@ -62,6 +62,9 @@ class MachineLearningServiceImplForTesting : public MachineLearningServiceImpl {
 class MLServiceFuzzer {
  public:
   MLServiceFuzzer() = default;
+  MLServiceFuzzer(const MLServiceFuzzer&) = delete;
+  MLServiceFuzzer& operator=(const MLServiceFuzzer&) = delete;
+
   ~MLServiceFuzzer() = default;
 
   void SetUp() {
@@ -148,8 +151,6 @@ class MLServiceFuzzer {
   std::unique_ptr<MachineLearningServiceImplForTesting> ml_service_impl_;
   ModelPtr model_;
   GraphExecutorPtr graph_executor_;
-
-  DISALLOW_COPY_AND_ASSIGN(MLServiceFuzzer);
 };
 
 }  // namespace ml

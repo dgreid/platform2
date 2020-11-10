@@ -15,6 +15,9 @@ namespace trunks {
 class TRUNKS_EXPORT BlobParser {
  public:
   BlobParser() = default;
+  BlobParser(const BlobParser&) = delete;
+  BlobParser& operator=(const BlobParser&) = delete;
+
   virtual ~BlobParser() = default;
 
   // This method is used to construct a |key_blob| given the associated key's
@@ -44,9 +47,6 @@ class TRUNKS_EXPORT BlobParser {
                                  TPM2B_CREATION_DATA* creation_data,
                                  TPM2B_DIGEST* creation_hash,
                                  TPMT_TK_CREATION* creation_ticket);
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(BlobParser);
 };
 
 }  // namespace trunks

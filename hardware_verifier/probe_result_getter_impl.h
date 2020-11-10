@@ -22,12 +22,12 @@ namespace hardware_verifier {
 class RuntimeProbeProxy {
  public:
   RuntimeProbeProxy() = default;
+  RuntimeProbeProxy(const RuntimeProbeProxy&) = delete;
+  RuntimeProbeProxy& operator=(const RuntimeProbeProxy&) = delete;
+
   virtual ~RuntimeProbeProxy() = default;
   virtual bool ProbeCategories(const runtime_probe::ProbeRequest& req,
                                runtime_probe::ProbeResult* resp) const;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(RuntimeProbeProxy);
 };
 
 // The real implementation of |ProbeResultGetter|.
@@ -45,10 +45,10 @@ class ProbeResultGetterImpl : public ProbeResultGetter {
 
   explicit ProbeResultGetterImpl(
       std::unique_ptr<RuntimeProbeProxy> runtime_probe_proxy);
+  ProbeResultGetterImpl(const ProbeResultGetterImpl&) = delete;
+  ProbeResultGetterImpl& operator=(const ProbeResultGetterImpl&) = delete;
 
   std::unique_ptr<RuntimeProbeProxy> runtime_probe_proxy_;
-
-  DISALLOW_COPY_AND_ASSIGN(ProbeResultGetterImpl);
 };
 
 }  // namespace hardware_verifier

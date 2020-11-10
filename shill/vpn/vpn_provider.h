@@ -26,6 +26,9 @@ class Manager;
 class VPNProvider : public ProviderInterface {
  public:
   explicit VPNProvider(Manager* manager);
+  VPNProvider(const VPNProvider&) = delete;
+  VPNProvider& operator=(const VPNProvider&) = delete;
+
   ~VPNProvider() override;
 
   // Called by Manager as a part of the Provider interface.  The attributes
@@ -122,8 +125,6 @@ class VPNProvider : public ProviderInterface {
   std::vector<std::string> allowed_iifs_;
 
   VirtualDeviceRefPtr arc_device_;
-
-  DISALLOW_COPY_AND_ASSIGN(VPNProvider);
 };
 
 }  // namespace shill

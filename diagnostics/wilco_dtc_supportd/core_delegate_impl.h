@@ -24,6 +24,9 @@ namespace diagnostics {
 class CoreDelegateImpl final : public Core::Delegate {
  public:
   CoreDelegateImpl();
+  CoreDelegateImpl(const CoreDelegateImpl&) = delete;
+  CoreDelegateImpl& operator=(const CoreDelegateImpl&) = delete;
+
   ~CoreDelegateImpl() override;
 
   // Core::Delegate overrides:
@@ -40,9 +43,6 @@ class CoreDelegateImpl final : public Core::Delegate {
       PowerdAdapter* powerd_adapter) override;
   std::unique_ptr<ProbeService> CreateProbeService(
       ProbeService::Delegate* delegate) override;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(CoreDelegateImpl);
 };
 
 }  // namespace diagnostics

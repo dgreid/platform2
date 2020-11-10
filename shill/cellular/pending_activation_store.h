@@ -48,6 +48,9 @@ class PendingActivationStore {
 
   // Constructor performs no initialization.
   PendingActivationStore();
+  PendingActivationStore(const PendingActivationStore&) = delete;
+  PendingActivationStore& operator=(const PendingActivationStore&) = delete;
+
   virtual ~PendingActivationStore();
 
   // Tries to open the underlying store interface from the given file path.
@@ -91,8 +94,6 @@ class PendingActivationStore {
   static std::string IdentifierTypeToGroupId(IdentifierType type);
 
   std::unique_ptr<StoreInterface> storage_;
-
-  DISALLOW_COPY_AND_ASSIGN(PendingActivationStore);
 };
 
 }  // namespace shill

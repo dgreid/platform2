@@ -30,6 +30,8 @@ class ProgressReporter {
  public:
   ProgressReporter(const ProgressCallback& callback, int total_steps)
       : callback_(callback), total_steps_(total_steps) {}
+  ProgressReporter(const ProgressReporter&) = delete;
+  ProgressReporter& operator=(const ProgressReporter&) = delete;
 
   // Sets the number of steps to take. The number of steps can change
   // mid-flight if an optional path is added or deleted.
@@ -66,8 +68,6 @@ class ProgressReporter {
   const ProgressCallback& callback_;
   int total_steps_;
   int cur_step_ = 0;
-
-  DISALLOW_COPY_AND_ASSIGN(ProgressReporter);
 };
 
 // Class allowing substituting mocks in place of real-life proxy implementaions.

@@ -60,6 +60,8 @@ class PowerButtonFilter : public PowerButtonFilterInterface,
 
  private:
   PowerButtonFilter() = default;
+  PowerButtonFilter(const PowerButtonFilter&) = delete;
+  PowerButtonFilter& operator=(const PowerButtonFilter&) = delete;
 
   // Timestamp of last power button event.
   base::TimeTicks last_power_button_event_;
@@ -76,8 +78,6 @@ class PowerButtonFilter : public PowerButtonFilterInterface,
   std::unique_ptr<base::TickClock> tick_clock_;
 
   bool fp_on_power_button_ = false;
-
-  DISALLOW_COPY_AND_ASSIGN(PowerButtonFilter);
 };
 
 }  // namespace biod

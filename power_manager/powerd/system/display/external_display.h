@@ -139,6 +139,9 @@ class ExternalDisplay {
   class RealDelegate : public Delegate {
    public:
     RealDelegate();
+    RealDelegate(const RealDelegate&) = delete;
+    RealDelegate& operator=(const RealDelegate&) = delete;
+
     ~RealDelegate() override;
 
     // Initializes the object to use the I2C device at |i2c_path|.
@@ -173,13 +176,15 @@ class ExternalDisplay {
     // File path for the I2C bus.
     base::FilePath i2c_path_;
 
-    DISALLOW_COPY_AND_ASSIGN(RealDelegate);
   };
 
   // Class used by tests to interact with ExternalDisplay's internals.
   class TestApi {
    public:
     explicit TestApi(ExternalDisplay* display);
+    TestApi(const TestApi&) = delete;
+    TestApi& operator=(const TestApi&) = delete;
+
     ~TestApi();
 
     // Advances |display_|'s clock by |interval|.
@@ -195,10 +200,12 @@ class ExternalDisplay {
    private:
     ExternalDisplay* display_;  // weak pointer
 
-    DISALLOW_COPY_AND_ASSIGN(TestApi);
   };
 
   explicit ExternalDisplay(std::unique_ptr<Delegate> delegate);
+  ExternalDisplay(const ExternalDisplay&) = delete;
+  ExternalDisplay& operator=(const ExternalDisplay&) = delete;
+
   ~ExternalDisplay();
 
   // Adjusts the display's brightness by |offset_percent|, a linearly-calculated
@@ -284,8 +291,6 @@ class ExternalDisplay {
   // requesting the brightness and reading the reply, and after sending a "set"
   // request to the display.
   base::OneShotTimer timer_;
-
-  DISALLOW_COPY_AND_ASSIGN(ExternalDisplay);
 };
 
 }  // namespace system

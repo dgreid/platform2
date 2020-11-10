@@ -23,6 +23,9 @@ class BurnWriter : public FileSystemWriter {
       base::RepeatingCallback<int(int, base::stat_wrapper_t*)>;
 
   BurnWriter();
+  BurnWriter(const BurnWriter&) = delete;
+  BurnWriter& operator=(const BurnWriter&) = delete;
+
   ~BurnWriter() override = default;
 
   bool Open(const char* path) override;
@@ -39,13 +42,14 @@ class BurnWriter : public FileSystemWriter {
   int writes_count_{0};
 
   FstatCallback fstat_callback_;
-
-  DISALLOW_COPY_AND_ASSIGN(BurnWriter);
 };
 
 class BurnReader : public FileSystemReader {
  public:
   BurnReader();
+  BurnReader(const BurnReader&) = delete;
+  BurnReader& operator=(const BurnReader&) = delete;
+
   ~BurnReader() override = default;
 
   bool Open(const char* path) override;
@@ -55,20 +59,18 @@ class BurnReader : public FileSystemReader {
 
  private:
   base::File file_;
-
-  DISALLOW_COPY_AND_ASSIGN(BurnReader);
 };
 
 class BurnPathGetter : public PathGetter {
  public:
   BurnPathGetter() = default;
+  BurnPathGetter(const BurnPathGetter&) = delete;
+  BurnPathGetter& operator=(const BurnPathGetter&) = delete;
+
   ~BurnPathGetter() override = default;
 
   bool GetRealPath(const char* path, std::string* real_path) override;
   bool GetRootPath(std::string* path) override;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(BurnPathGetter);
 };
 
 }  // namespace imageburn

@@ -28,6 +28,11 @@ class Tpm2Impl;
 class SignatureSealingBackendTpm2Impl final : public SignatureSealingBackend {
  public:
   explicit SignatureSealingBackendTpm2Impl(Tpm2Impl* tpm);
+  SignatureSealingBackendTpm2Impl(const SignatureSealingBackendTpm2Impl&) =
+      delete;
+  SignatureSealingBackendTpm2Impl& operator=(
+      const SignatureSealingBackendTpm2Impl&) = delete;
+
   ~SignatureSealingBackendTpm2Impl() override;
 
   // SignatureSealingBackend:
@@ -49,8 +54,6 @@ class SignatureSealingBackendTpm2Impl final : public SignatureSealingBackend {
  private:
   // Unowned.
   Tpm2Impl* const tpm_;
-
-  DISALLOW_COPY_AND_ASSIGN(SignatureSealingBackendTpm2Impl);
 };
 
 }  // namespace cryptohome

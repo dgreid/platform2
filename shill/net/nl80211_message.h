@@ -28,6 +28,9 @@ class SHILL_EXPORT Nl80211Message : public GenericNetlinkMessage {
 
   Nl80211Message(uint8_t command, const char* command_string)
       : GenericNetlinkMessage(nl80211_message_type_, command, command_string) {}
+  Nl80211Message(const Nl80211Message&) = delete;
+  Nl80211Message& operator=(const Nl80211Message&) = delete;
+
   ~Nl80211Message() override = default;
 
   // Gets the family_id / message_type for all Nl80211 messages.
@@ -50,8 +53,6 @@ class SHILL_EXPORT Nl80211Message : public GenericNetlinkMessage {
 
  private:
   static uint16_t nl80211_message_type_;
-
-  DISALLOW_COPY_AND_ASSIGN(Nl80211Message);
 };
 
 class SHILL_EXPORT Nl80211Frame {
@@ -68,6 +69,9 @@ class SHILL_EXPORT Nl80211Frame {
   };
 
   explicit Nl80211Frame(const ByteString& init);
+  Nl80211Frame(const Nl80211Frame&) = delete;
+  Nl80211Frame& operator=(const Nl80211Frame&) = delete;
+
   std::string ToString() const;
   bool IsEqual(const Nl80211Frame& other) const;
   uint16_t reason() const { return reason_; }
@@ -83,8 +87,6 @@ class SHILL_EXPORT Nl80211Frame {
   uint16_t reason_;
   uint16_t status_;
   ByteString frame_;
-
-  DISALLOW_COPY_AND_ASSIGN(Nl80211Frame);
 };
 
 //
@@ -97,9 +99,8 @@ class SHILL_EXPORT AssociateMessage : public Nl80211Message {
   static const char kCommandString[];
 
   AssociateMessage() : Nl80211Message(kCommand, kCommandString) {}
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(AssociateMessage);
+  AssociateMessage(const AssociateMessage&) = delete;
+  AssociateMessage& operator=(const AssociateMessage&) = delete;
 };
 
 class SHILL_EXPORT AuthenticateMessage : public Nl80211Message {
@@ -108,9 +109,8 @@ class SHILL_EXPORT AuthenticateMessage : public Nl80211Message {
   static const char kCommandString[];
 
   AuthenticateMessage() : Nl80211Message(kCommand, kCommandString) {}
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(AuthenticateMessage);
+  AuthenticateMessage(const AuthenticateMessage&) = delete;
+  AuthenticateMessage& operator=(const AuthenticateMessage&) = delete;
 };
 
 class SHILL_EXPORT CancelRemainOnChannelMessage : public Nl80211Message {
@@ -119,9 +119,9 @@ class SHILL_EXPORT CancelRemainOnChannelMessage : public Nl80211Message {
   static const char kCommandString[];
 
   CancelRemainOnChannelMessage() : Nl80211Message(kCommand, kCommandString) {}
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(CancelRemainOnChannelMessage);
+  CancelRemainOnChannelMessage(const CancelRemainOnChannelMessage&) = delete;
+  CancelRemainOnChannelMessage& operator=(const CancelRemainOnChannelMessage&) =
+      delete;
 };
 
 class SHILL_EXPORT ConnectMessage : public Nl80211Message {
@@ -130,9 +130,8 @@ class SHILL_EXPORT ConnectMessage : public Nl80211Message {
   static const char kCommandString[];
 
   ConnectMessage() : Nl80211Message(kCommand, kCommandString) {}
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ConnectMessage);
+  ConnectMessage(const ConnectMessage&) = delete;
+  ConnectMessage& operator=(const ConnectMessage&) = delete;
 };
 
 class SHILL_EXPORT DeauthenticateMessage : public Nl80211Message {
@@ -141,9 +140,8 @@ class SHILL_EXPORT DeauthenticateMessage : public Nl80211Message {
   static const char kCommandString[];
 
   DeauthenticateMessage() : Nl80211Message(kCommand, kCommandString) {}
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(DeauthenticateMessage);
+  DeauthenticateMessage(const DeauthenticateMessage&) = delete;
+  DeauthenticateMessage& operator=(const DeauthenticateMessage&) = delete;
 };
 
 class SHILL_EXPORT DelInterfaceMessage : public Nl80211Message {
@@ -152,9 +150,8 @@ class SHILL_EXPORT DelInterfaceMessage : public Nl80211Message {
   static const char kCommandString[];
 
   DelInterfaceMessage() : Nl80211Message(kCommand, kCommandString) {}
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(DelInterfaceMessage);
+  DelInterfaceMessage(const DelInterfaceMessage&) = delete;
+  DelInterfaceMessage& operator=(const DelInterfaceMessage&) = delete;
 };
 
 class SHILL_EXPORT DeleteStationMessage : public Nl80211Message {
@@ -163,9 +160,8 @@ class SHILL_EXPORT DeleteStationMessage : public Nl80211Message {
   static const char kCommandString[];
 
   DeleteStationMessage() : Nl80211Message(kCommand, kCommandString) {}
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(DeleteStationMessage);
+  DeleteStationMessage(const DeleteStationMessage&) = delete;
+  DeleteStationMessage& operator=(const DeleteStationMessage&) = delete;
 };
 
 class SHILL_EXPORT DisassociateMessage : public Nl80211Message {
@@ -174,9 +170,8 @@ class SHILL_EXPORT DisassociateMessage : public Nl80211Message {
   static const char kCommandString[];
 
   DisassociateMessage() : Nl80211Message(kCommand, kCommandString) {}
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(DisassociateMessage);
+  DisassociateMessage(const DisassociateMessage&) = delete;
+  DisassociateMessage& operator=(const DisassociateMessage&) = delete;
 };
 
 class SHILL_EXPORT DisconnectMessage : public Nl80211Message {
@@ -185,9 +180,8 @@ class SHILL_EXPORT DisconnectMessage : public Nl80211Message {
   static const char kCommandString[];
 
   DisconnectMessage() : Nl80211Message(kCommand, kCommandString) {}
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(DisconnectMessage);
+  DisconnectMessage(const DisconnectMessage&) = delete;
+  DisconnectMessage& operator=(const DisconnectMessage&) = delete;
 };
 
 class SHILL_EXPORT FrameTxStatusMessage : public Nl80211Message {
@@ -196,9 +190,8 @@ class SHILL_EXPORT FrameTxStatusMessage : public Nl80211Message {
   static const char kCommandString[];
 
   FrameTxStatusMessage() : Nl80211Message(kCommand, kCommandString) {}
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(FrameTxStatusMessage);
+  FrameTxStatusMessage(const FrameTxStatusMessage&) = delete;
+  FrameTxStatusMessage& operator=(const FrameTxStatusMessage&) = delete;
 };
 
 class SHILL_EXPORT GetRegMessage : public Nl80211Message {
@@ -207,9 +200,8 @@ class SHILL_EXPORT GetRegMessage : public Nl80211Message {
   static const char kCommandString[];
 
   GetRegMessage();
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(GetRegMessage);
+  GetRegMessage(const GetRegMessage&) = delete;
+  GetRegMessage& operator=(const GetRegMessage&) = delete;
 };
 
 class SHILL_EXPORT GetStationMessage : public Nl80211Message {
@@ -218,9 +210,8 @@ class SHILL_EXPORT GetStationMessage : public Nl80211Message {
   static const char kCommandString[];
 
   GetStationMessage();
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(GetStationMessage);
+  GetStationMessage(const GetStationMessage&) = delete;
+  GetStationMessage& operator=(const GetStationMessage&) = delete;
 };
 
 class SHILL_EXPORT SetWakeOnPacketConnMessage : public Nl80211Message {
@@ -229,9 +220,9 @@ class SHILL_EXPORT SetWakeOnPacketConnMessage : public Nl80211Message {
   static const char kCommandString[];
 
   SetWakeOnPacketConnMessage() : Nl80211Message(kCommand, kCommandString) {}
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(SetWakeOnPacketConnMessage);
+  SetWakeOnPacketConnMessage(const SetWakeOnPacketConnMessage&) = delete;
+  SetWakeOnPacketConnMessage& operator=(const SetWakeOnPacketConnMessage&) =
+      delete;
 };
 
 class SHILL_EXPORT GetWakeOnPacketConnMessage : public Nl80211Message {
@@ -240,9 +231,9 @@ class SHILL_EXPORT GetWakeOnPacketConnMessage : public Nl80211Message {
   static const char kCommandString[];
 
   GetWakeOnPacketConnMessage() : Nl80211Message(kCommand, kCommandString) {}
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(GetWakeOnPacketConnMessage);
+  GetWakeOnPacketConnMessage(const GetWakeOnPacketConnMessage&) = delete;
+  GetWakeOnPacketConnMessage& operator=(const GetWakeOnPacketConnMessage&) =
+      delete;
 };
 
 class SHILL_EXPORT GetWiphyMessage : public Nl80211Message {
@@ -251,9 +242,8 @@ class SHILL_EXPORT GetWiphyMessage : public Nl80211Message {
   static const char kCommandString[];
 
   GetWiphyMessage();
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(GetWiphyMessage);
+  GetWiphyMessage(const GetWiphyMessage&) = delete;
+  GetWiphyMessage& operator=(const GetWiphyMessage&) = delete;
 };
 
 class SHILL_EXPORT JoinIbssMessage : public Nl80211Message {
@@ -262,9 +252,8 @@ class SHILL_EXPORT JoinIbssMessage : public Nl80211Message {
   static const char kCommandString[];
 
   JoinIbssMessage() : Nl80211Message(kCommand, kCommandString) {}
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(JoinIbssMessage);
+  JoinIbssMessage(const JoinIbssMessage&) = delete;
+  JoinIbssMessage& operator=(const JoinIbssMessage&) = delete;
 };
 
 class SHILL_EXPORT MichaelMicFailureMessage : public Nl80211Message {
@@ -273,9 +262,8 @@ class SHILL_EXPORT MichaelMicFailureMessage : public Nl80211Message {
   static const char kCommandString[];
 
   MichaelMicFailureMessage() : Nl80211Message(kCommand, kCommandString) {}
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MichaelMicFailureMessage);
+  MichaelMicFailureMessage(const MichaelMicFailureMessage&) = delete;
+  MichaelMicFailureMessage& operator=(const MichaelMicFailureMessage&) = delete;
 };
 
 class SHILL_EXPORT NewScanResultsMessage : public Nl80211Message {
@@ -284,9 +272,8 @@ class SHILL_EXPORT NewScanResultsMessage : public Nl80211Message {
   static const char kCommandString[];
 
   NewScanResultsMessage() : Nl80211Message(kCommand, kCommandString) {}
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(NewScanResultsMessage);
+  NewScanResultsMessage(const NewScanResultsMessage&) = delete;
+  NewScanResultsMessage& operator=(const NewScanResultsMessage&) = delete;
 };
 
 class SHILL_EXPORT NewStationMessage : public Nl80211Message {
@@ -295,9 +282,8 @@ class SHILL_EXPORT NewStationMessage : public Nl80211Message {
   static const char kCommandString[];
 
   NewStationMessage() : Nl80211Message(kCommand, kCommandString) {}
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(NewStationMessage);
+  NewStationMessage(const NewStationMessage&) = delete;
+  NewStationMessage& operator=(const NewStationMessage&) = delete;
 };
 
 class SHILL_EXPORT NewWiphyMessage : public Nl80211Message {
@@ -306,9 +292,8 @@ class SHILL_EXPORT NewWiphyMessage : public Nl80211Message {
   static const char kCommandString[];
 
   NewWiphyMessage() : Nl80211Message(kCommand, kCommandString) {}
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(NewWiphyMessage);
+  NewWiphyMessage(const NewWiphyMessage&) = delete;
+  NewWiphyMessage& operator=(const NewWiphyMessage&) = delete;
 };
 
 class SHILL_EXPORT NotifyCqmMessage : public Nl80211Message {
@@ -317,9 +302,8 @@ class SHILL_EXPORT NotifyCqmMessage : public Nl80211Message {
   static const char kCommandString[];
 
   NotifyCqmMessage() : Nl80211Message(kCommand, kCommandString) {}
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(NotifyCqmMessage);
+  NotifyCqmMessage(const NotifyCqmMessage&) = delete;
+  NotifyCqmMessage& operator=(const NotifyCqmMessage&) = delete;
 };
 
 class SHILL_EXPORT PmksaCandidateMessage : public Nl80211Message {
@@ -328,9 +312,8 @@ class SHILL_EXPORT PmksaCandidateMessage : public Nl80211Message {
   static const char kCommandString[];
 
   PmksaCandidateMessage() : Nl80211Message(kCommand, kCommandString) {}
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(PmksaCandidateMessage);
+  PmksaCandidateMessage(const PmksaCandidateMessage&) = delete;
+  PmksaCandidateMessage& operator=(const PmksaCandidateMessage&) = delete;
 };
 
 class SHILL_EXPORT ProbeMeshLinkMessage : public Nl80211Message {
@@ -339,9 +322,8 @@ class SHILL_EXPORT ProbeMeshLinkMessage : public Nl80211Message {
   static const char kCommandString[];
 
   ProbeMeshLinkMessage();
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ProbeMeshLinkMessage);
+  ProbeMeshLinkMessage(const ProbeMeshLinkMessage&) = delete;
+  ProbeMeshLinkMessage& operator=(const ProbeMeshLinkMessage&) = delete;
 };
 
 class SHILL_EXPORT RegBeaconHintMessage : public Nl80211Message {
@@ -350,9 +332,8 @@ class SHILL_EXPORT RegBeaconHintMessage : public Nl80211Message {
   static const char kCommandString[];
 
   RegBeaconHintMessage() : Nl80211Message(kCommand, kCommandString) {}
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(RegBeaconHintMessage);
+  RegBeaconHintMessage(const RegBeaconHintMessage&) = delete;
+  RegBeaconHintMessage& operator=(const RegBeaconHintMessage&) = delete;
 };
 
 class SHILL_EXPORT RegChangeMessage : public Nl80211Message {
@@ -361,9 +342,8 @@ class SHILL_EXPORT RegChangeMessage : public Nl80211Message {
   static const char kCommandString[];
 
   RegChangeMessage();
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(RegChangeMessage);
+  RegChangeMessage(const RegChangeMessage&) = delete;
+  RegChangeMessage& operator=(const RegChangeMessage&) = delete;
 };
 
 class SHILL_EXPORT RemainOnChannelMessage : public Nl80211Message {
@@ -372,9 +352,8 @@ class SHILL_EXPORT RemainOnChannelMessage : public Nl80211Message {
   static const char kCommandString[];
 
   RemainOnChannelMessage() : Nl80211Message(kCommand, kCommandString) {}
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(RemainOnChannelMessage);
+  RemainOnChannelMessage(const RemainOnChannelMessage&) = delete;
+  RemainOnChannelMessage& operator=(const RemainOnChannelMessage&) = delete;
 };
 
 class SHILL_EXPORT RoamMessage : public Nl80211Message {
@@ -383,9 +362,8 @@ class SHILL_EXPORT RoamMessage : public Nl80211Message {
   static const char kCommandString[];
 
   RoamMessage() : Nl80211Message(kCommand, kCommandString) {}
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(RoamMessage);
+  RoamMessage(const RoamMessage&) = delete;
+  RoamMessage& operator=(const RoamMessage&) = delete;
 };
 
 class SHILL_EXPORT ScanAbortedMessage : public Nl80211Message {
@@ -394,9 +372,8 @@ class SHILL_EXPORT ScanAbortedMessage : public Nl80211Message {
   static const char kCommandString[];
 
   ScanAbortedMessage() : Nl80211Message(kCommand, kCommandString) {}
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ScanAbortedMessage);
+  ScanAbortedMessage(const ScanAbortedMessage&) = delete;
+  ScanAbortedMessage& operator=(const ScanAbortedMessage&) = delete;
 };
 
 class SHILL_EXPORT GetScanMessage : public Nl80211Message {
@@ -405,9 +382,8 @@ class SHILL_EXPORT GetScanMessage : public Nl80211Message {
   static const char kCommandString[];
 
   GetScanMessage();
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(GetScanMessage);
+  GetScanMessage(const GetScanMessage&) = delete;
+  GetScanMessage& operator=(const GetScanMessage&) = delete;
 };
 
 class SHILL_EXPORT TriggerScanMessage : public Nl80211Message {
@@ -416,18 +392,16 @@ class SHILL_EXPORT TriggerScanMessage : public Nl80211Message {
   static const char kCommandString[];
 
   TriggerScanMessage();
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(TriggerScanMessage);
+  TriggerScanMessage(const TriggerScanMessage&) = delete;
+  TriggerScanMessage& operator=(const TriggerScanMessage&) = delete;
 };
 
 class SHILL_EXPORT UnknownNl80211Message : public Nl80211Message {
  public:
   explicit UnknownNl80211Message(uint8_t command)
       : Nl80211Message(command, "<UNKNOWN NL80211 MESSAGE>") {}
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(UnknownNl80211Message);
+  UnknownNl80211Message(const UnknownNl80211Message&) = delete;
+  UnknownNl80211Message& operator=(const UnknownNl80211Message&) = delete;
 };
 
 class SHILL_EXPORT UnprotDeauthenticateMessage : public Nl80211Message {
@@ -436,9 +410,9 @@ class SHILL_EXPORT UnprotDeauthenticateMessage : public Nl80211Message {
   static const char kCommandString[];
 
   UnprotDeauthenticateMessage() : Nl80211Message(kCommand, kCommandString) {}
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(UnprotDeauthenticateMessage);
+  UnprotDeauthenticateMessage(const UnprotDeauthenticateMessage&) = delete;
+  UnprotDeauthenticateMessage& operator=(const UnprotDeauthenticateMessage&) =
+      delete;
 };
 
 class SHILL_EXPORT UnprotDisassociateMessage : public Nl80211Message {
@@ -447,9 +421,9 @@ class SHILL_EXPORT UnprotDisassociateMessage : public Nl80211Message {
   static const char kCommandString[];
 
   UnprotDisassociateMessage() : Nl80211Message(kCommand, kCommandString) {}
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(UnprotDisassociateMessage);
+  UnprotDisassociateMessage(const UnprotDisassociateMessage&) = delete;
+  UnprotDisassociateMessage& operator=(const UnprotDisassociateMessage&) =
+      delete;
 };
 
 class SHILL_EXPORT WiphyRegChangeMessage : public Nl80211Message {
@@ -458,9 +432,8 @@ class SHILL_EXPORT WiphyRegChangeMessage : public Nl80211Message {
   static const char kCommandString[];
 
   WiphyRegChangeMessage();
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(WiphyRegChangeMessage);
+  WiphyRegChangeMessage(const WiphyRegChangeMessage&) = delete;
+  WiphyRegChangeMessage& operator=(const WiphyRegChangeMessage&) = delete;
 };
 
 class SHILL_EXPORT GetInterfaceMessage : public Nl80211Message {
@@ -469,9 +442,8 @@ class SHILL_EXPORT GetInterfaceMessage : public Nl80211Message {
   static const char kCommandString[];
 
   GetInterfaceMessage();
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(GetInterfaceMessage);
+  GetInterfaceMessage(const GetInterfaceMessage&) = delete;
+  GetInterfaceMessage& operator=(const GetInterfaceMessage&) = delete;
 };
 
 class SHILL_EXPORT NewInterfaceMessage : public Nl80211Message {
@@ -480,9 +452,8 @@ class SHILL_EXPORT NewInterfaceMessage : public Nl80211Message {
   static const char kCommandString[];
 
   NewInterfaceMessage() : Nl80211Message(kCommand, kCommandString) {}
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(NewInterfaceMessage);
+  NewInterfaceMessage(const NewInterfaceMessage&) = delete;
+  NewInterfaceMessage& operator=(const NewInterfaceMessage&) = delete;
 };
 
 class SHILL_EXPORT GetSurveyMessage : public Nl80211Message {
@@ -491,9 +462,8 @@ class SHILL_EXPORT GetSurveyMessage : public Nl80211Message {
   static const char kCommandString[];
 
   GetSurveyMessage();
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(GetSurveyMessage);
+  GetSurveyMessage(const GetSurveyMessage&) = delete;
+  GetSurveyMessage& operator=(const GetSurveyMessage&) = delete;
 };
 
 class SHILL_EXPORT SurveyResultsMessage : public Nl80211Message {
@@ -502,9 +472,8 @@ class SHILL_EXPORT SurveyResultsMessage : public Nl80211Message {
   static const char kCommandString[];
 
   SurveyResultsMessage() : Nl80211Message(kCommand, kCommandString) {}
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(SurveyResultsMessage);
+  SurveyResultsMessage(const SurveyResultsMessage&) = delete;
+  SurveyResultsMessage& operator=(const SurveyResultsMessage&) = delete;
 };
 
 class SHILL_EXPORT GetMeshPathInfoMessage : public Nl80211Message {
@@ -513,9 +482,8 @@ class SHILL_EXPORT GetMeshPathInfoMessage : public Nl80211Message {
   static const char kCommandString[];
 
   GetMeshPathInfoMessage();
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(GetMeshPathInfoMessage);
+  GetMeshPathInfoMessage(const GetMeshPathInfoMessage&) = delete;
+  GetMeshPathInfoMessage& operator=(const GetMeshPathInfoMessage&) = delete;
 };
 
 class SHILL_EXPORT GetMeshProxyPathMessage : public Nl80211Message {
@@ -524,9 +492,8 @@ class SHILL_EXPORT GetMeshProxyPathMessage : public Nl80211Message {
   static const char kCommandString[];
 
   GetMeshProxyPathMessage();
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(GetMeshProxyPathMessage);
+  GetMeshProxyPathMessage(const GetMeshProxyPathMessage&) = delete;
+  GetMeshProxyPathMessage& operator=(const GetMeshProxyPathMessage&) = delete;
 };
 
 }  // namespace shill

@@ -23,6 +23,9 @@ class DBusPropertiesProxy : public DBusPropertiesProxyInterface {
   DBusPropertiesProxy(const scoped_refptr<dbus::Bus>& bus,
                       const RpcIdentifier& path,
                       const std::string& service);
+  DBusPropertiesProxy(const DBusPropertiesProxy&) = delete;
+  DBusPropertiesProxy& operator=(const DBusPropertiesProxy&) = delete;
+
   ~DBusPropertiesProxy() override;
 
   // Inherited from DBusPropertiesProxyInterface.
@@ -60,7 +63,6 @@ class DBusPropertiesProxy : public DBusPropertiesProxyInterface {
   std::unique_ptr<org::freedesktop::DBus::PropertiesProxy> proxy_;
 
   base::WeakPtrFactory<DBusPropertiesProxy> weak_factory_{this};
-  DISALLOW_COPY_AND_ASSIGN(DBusPropertiesProxy);
 };
 
 }  // namespace shill

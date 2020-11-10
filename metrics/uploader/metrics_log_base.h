@@ -38,6 +38,9 @@ class MetricsLogBase {
                  int session_id,
                  LogType log_type,
                  const std::string& version_string);
+  MetricsLogBase(const MetricsLogBase&) = delete;
+  MetricsLogBase& operator=(const MetricsLogBase&) = delete;
+
   virtual ~MetricsLogBase();
 
   // Computes the MD5 hash of the given string, and returns the first 8 bytes of
@@ -101,8 +104,6 @@ class MetricsLogBase {
 
   // Stores the protocol buffer representation for this log.
   metrics::ChromeUserMetricsExtension uma_proto_;
-
-  DISALLOW_COPY_AND_ASSIGN(MetricsLogBase);
 };
 
 }  // namespace metrics

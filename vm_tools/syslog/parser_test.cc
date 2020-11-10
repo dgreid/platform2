@@ -75,10 +75,10 @@ const PriorityTestCase priority_tests[] = {
 class PriorityTest : public ::testing::TestWithParam<PriorityTestCase> {
  public:
   PriorityTest() = default;
-  ~PriorityTest() override = default;
+  PriorityTest(const PriorityTest&) = delete;
+  PriorityTest& operator=(const PriorityTest&) = delete;
 
- private:
-  DISALLOW_COPY_AND_ASSIGN(PriorityTest);
+  ~PriorityTest() override = default;
 };
 
 struct TimestampTestCase {
@@ -152,10 +152,10 @@ const TimestampTestCase timestamp_tests[] = {
 class TimestampTest : public ::testing::TestWithParam<TimestampTestCase> {
  public:
   TimestampTest() = default;
-  ~TimestampTest() override = default;
+  TimestampTest(const TimestampTest&) = delete;
+  TimestampTest& operator=(const TimestampTest&) = delete;
 
- private:
-  DISALLOW_COPY_AND_ASSIGN(TimestampTest);
+  ~TimestampTest() override = default;
 };
 
 struct EndToEndTestCase {
@@ -240,10 +240,10 @@ const EndToEndTestCase end_to_end_tests[] = {
 class EndToEndSyslogTest : public ::testing::TestWithParam<EndToEndTestCase> {
  public:
   EndToEndSyslogTest() = default;
-  ~EndToEndSyslogTest() override = default;
+  EndToEndSyslogTest(const EndToEndSyslogTest&) = delete;
+  EndToEndSyslogTest& operator=(const EndToEndSyslogTest&) = delete;
 
- private:
-  DISALLOW_COPY_AND_ASSIGN(EndToEndSyslogTest);
+  ~EndToEndSyslogTest() override = default;
 };
 
 }  // namespace

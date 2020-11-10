@@ -19,6 +19,10 @@ class WilcoChargeControllerHelper final
     : public ChargeControllerHelperInterface {
  public:
   WilcoChargeControllerHelper();
+  WilcoChargeControllerHelper(const WilcoChargeControllerHelper&) = delete;
+  WilcoChargeControllerHelper& operator=(const WilcoChargeControllerHelper&) =
+      delete;
+
   ~WilcoChargeControllerHelper() override;
 
   // ChargeControllerHelperInterface overrides:
@@ -36,8 +40,6 @@ class WilcoChargeControllerHelper final
       PowerManagementPolicy::BatteryChargeMode::Mode mode) override;
   bool SetBatteryChargeCustomThresholds(int custom_charge_start,
                                         int custom_charge_stop) override;
-
-  DISALLOW_COPY_AND_ASSIGN(WilcoChargeControllerHelper);
 };
 
 }  // namespace system

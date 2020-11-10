@@ -16,6 +16,9 @@ namespace shill {
 class MockEthernetService : public EthernetService {
  public:
   MockEthernetService(Manager* manager, base::WeakPtr<Ethernet> ethernet);
+  MockEthernetService(const MockEthernetService&) = delete;
+  MockEthernetService& operator=(const MockEthernetService&) = delete;
+
   ~MockEthernetService() override;
 
   MOCK_METHOD(void, Configure, (const KeyValueStore&, Error*), (override));
@@ -39,9 +42,6 @@ class MockEthernetService : public EthernetService {
               (override));
   MOCK_METHOD(void, ClearEAPCertification, (), (override));
 #endif  // DISABLE_WIFI || DISABLE_WIRED_8021X
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockEthernetService);
 };
 
 }  // namespace shill

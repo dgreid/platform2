@@ -23,6 +23,9 @@ using MacAddress = std::array<uint8_t, 6>;
 class BRILLO_EXPORT MacAddressGenerator {
  public:
   MacAddressGenerator() = default;
+  MacAddressGenerator(const MacAddressGenerator&) = delete;
+  MacAddressGenerator& operator=(const MacAddressGenerator&) = delete;
+
   ~MacAddressGenerator() = default;
 
   // Generates a new EUI-48 MAC address and ensures that there are no
@@ -57,8 +60,6 @@ class BRILLO_EXPORT MacAddressGenerator {
   // "Duplicates" unit test by ~33% (~150 seconds -> ~100 seconds) and it
   // doesn't have a huge impact in production use so that's why we use it here.
   std::unordered_set<MacAddress, MacAddressHasher> addrs_;
-
-  DISALLOW_COPY_AND_ASSIGN(MacAddressGenerator);
 };
 
 }  // namespace patchpanel

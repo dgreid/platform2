@@ -22,6 +22,9 @@
 class EphemeralCrashCollector : public CrashCollector {
  public:
   EphemeralCrashCollector();
+  EphemeralCrashCollector(const EphemeralCrashCollector&) = delete;
+  EphemeralCrashCollector& operator=(const EphemeralCrashCollector&) = delete;
+
   ~EphemeralCrashCollector() override = default;
 
   void Initialize(IsFeedbackAllowedFunction is_feedback_allowed_function,
@@ -34,8 +37,6 @@ class EphemeralCrashCollector : public CrashCollector {
   bool early_;
   std::vector<base::FilePath> source_directories_;
   friend class EphemeralCrashCollectorTest;
-
-  DISALLOW_COPY_AND_ASSIGN(EphemeralCrashCollector);
 };
 
 #endif  // CRASH_REPORTER_EPHEMERAL_CRASH_COLLECTOR_H_

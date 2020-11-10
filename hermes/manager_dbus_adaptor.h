@@ -16,6 +16,8 @@ class ManagerDBusAdaptor : public org::chromium::Hermes::ManagerInterface,
                            public ManagerAdaptorInterface {
  public:
   explicit ManagerDBusAdaptor(Manager* manager);
+  ManagerDBusAdaptor(const ManagerDBusAdaptor&) = delete;
+  ManagerDBusAdaptor& operator=(const ManagerDBusAdaptor&) = delete;
 
   // org::chromium::Hermes::ManagerInterface overrides.
   // Set/unset test mode. Normally, only production profiles may be
@@ -25,8 +27,6 @@ class ManagerDBusAdaptor : public org::chromium::Hermes::ManagerInterface,
  private:
   Manager* manager_;
   brillo::dbus_utils::DBusObject dbus_object_;
-
-  DISALLOW_COPY_AND_ASSIGN(ManagerDBusAdaptor);
 };
 
 }  // namespace hermes

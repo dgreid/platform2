@@ -18,6 +18,9 @@ namespace chaps {
 class TokenFileManager {
  public:
   TokenFileManager(uid_t chapsd_uid, gid_t chapsd_gid);
+  TokenFileManager(const TokenFileManager&) = delete;
+  TokenFileManager& operator=(const TokenFileManager&) = delete;
+
   virtual ~TokenFileManager();
 
   // Returns true if the user's token exists at the expected location, and
@@ -49,8 +52,6 @@ class TokenFileManager {
  private:
   uid_t chapsd_uid_;
   gid_t chapsd_gid_;
-
-  DISALLOW_COPY_AND_ASSIGN(TokenFileManager);
 };
 
 }  // namespace chaps

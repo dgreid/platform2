@@ -35,6 +35,8 @@ class MethodCallHandlers {
       Handler;
 
   MethodCallHandlers() {}
+  MethodCallHandlers(const MethodCallHandlers&) = delete;
+  MethodCallHandlers& operator=(const MethodCallHandlers&) = delete;
 
   ~MethodCallHandlers() {}
 
@@ -120,8 +122,6 @@ class MethodCallHandlers {
   Handler perform_ecdh_key_agreement_handler_;
   Handler create_secure_message_handler_;
   Handler unwrap_secure_message_handler_;
-
-  DISALLOW_COPY_AND_ASSIGN(MethodCallHandlers);
 };
 
 class EasyUnlockTest : public ::testing::Test {

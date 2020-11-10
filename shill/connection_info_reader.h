@@ -19,6 +19,9 @@ namespace shill {
 class ConnectionInfoReader {
  public:
   ConnectionInfoReader();
+  ConnectionInfoReader(const ConnectionInfoReader&) = delete;
+  ConnectionInfoReader& operator=(const ConnectionInfoReader&) = delete;
+
   virtual ~ConnectionInfoReader();
 
   // Returns the file path (/proc/net/ip_conntrack by default) from where
@@ -47,8 +50,6 @@ class ConnectionInfoReader {
                       IPAddress* ip_address,
                       bool* is_source);
   bool ParsePort(const std::string& input, uint16_t* port, bool* is_source);
-
-  DISALLOW_COPY_AND_ASSIGN(ConnectionInfoReader);
 };
 
 }  // namespace shill

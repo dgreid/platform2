@@ -227,6 +227,8 @@ class DBusAdaptor : public org::chromium::FrobinatorInterface,
   explicit DBusAdaptor(scoped_refptr<dbus::Bus> bus)
     : org::chromium::FrobinatorAdaptor(this),
       dbus_object_(nullptr, bus, dbus::ObjectPath(kFrobinatorServicePath)) {}
+  DBusAdaptor(const DBusAdaptor&) = delete;
+  DBusAdaptor& operator=(const DBusAdaptor&) = delete;
 
   void RegisterAsync(
       const brillo::dbus_utils::AsyncEventSequencer::CompletionAction& cb) {
@@ -242,13 +244,13 @@ class DBusAdaptor : public org::chromium::FrobinatorInterface,
 
  private:
   brillo::dbus_utils::DBusObject dbus_object_;
-
-  DISALLOW_COPY_AND_ASSIGN(DBusAdaptor);
 };
 
 class FrobinatorDaemon : public brillo::DBusServiceDaemon {
  public:
   FrobinatorDaemon() : DBusServiceDaemon(kFrobinatorServiceName) {}
+  FrobinatorDaemon(const FrobinatorDaemon&) = delete;
+  FrobinatorDaemon& operator=(const FrobinatorDaemon&) = delete;
 
  protected:
   void RegisterDBusObjectsAsync(
@@ -260,8 +262,6 @@ class FrobinatorDaemon : public brillo::DBusServiceDaemon {
 
  private:
   std::unique_ptr<DBusAdaptor> adaptor_;
-
-  DISALLOW_COPY_AND_ASSIGN(FrobinatorDaemon);
 };
 
 int main(int argc, char** argv) {

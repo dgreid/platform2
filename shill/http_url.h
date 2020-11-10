@@ -20,6 +20,9 @@ class HttpUrl {
   static const int kDefaultHttpsPort;
 
   HttpUrl();
+  HttpUrl(const HttpUrl&) = delete;
+  HttpUrl& operator=(const HttpUrl&) = delete;
+
   ~HttpUrl();
 
   // Parse a URL from |url_string|.
@@ -35,8 +38,6 @@ class HttpUrl {
   std::string path_;
   int port_;
   Protocol protocol_;
-
-  DISALLOW_COPY_AND_ASSIGN(HttpUrl);
 };
 
 }  // namespace shill

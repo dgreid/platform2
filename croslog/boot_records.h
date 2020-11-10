@@ -81,8 +81,8 @@ class BootRecords {
   explicit BootRecords(base::FilePath file_path);
   // TEST ONLY: Set the boot log entries.
   explicit BootRecords(std::vector<BootEntry>);
-
-  DISALLOW_COPY_AND_ASSIGN(BootRecords);
+  BootRecords(const BootRecords&) = delete;
+  BootRecords& operator=(const BootRecords&) = delete;
 };
 
 }  // namespace croslog

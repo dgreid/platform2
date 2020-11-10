@@ -111,6 +111,9 @@ class GpuVdaContext : public VdaContext, arc::mojom::VideoDecodeClient {
   GpuVdaContext(
       const scoped_refptr<base::SingleThreadTaskRunner> ipc_task_runner,
       arc::mojom::VideoDecodeAcceleratorPtr vda_ptr);
+  GpuVdaContext(const GpuVdaContext&) = delete;
+  GpuVdaContext& operator=(const GpuVdaContext&) = delete;
+
   ~GpuVdaContext();
 
   using InitializeCallback = base::OnceCallback<void(vda_result_t)>;
@@ -197,8 +200,6 @@ class GpuVdaContext : public VdaContext, arc::mojom::VideoDecodeClient {
   mojo::Binding<arc::mojom::VideoDecodeClient> binding_;
 
   std::set<int32_t> decoding_bitstream_ids_;
-
-  DISALLOW_COPY_AND_ASSIGN(GpuVdaContext);
 };
 
 GpuVdaContext::GpuVdaContext(

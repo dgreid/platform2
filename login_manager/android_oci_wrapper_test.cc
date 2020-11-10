@@ -34,6 +34,9 @@ namespace {
 class AndroidOciWrapperTest : public ::testing::Test {
  public:
   AndroidOciWrapperTest() = default;
+  AndroidOciWrapperTest(const AndroidOciWrapperTest&) = delete;
+  AndroidOciWrapperTest& operator=(const AndroidOciWrapperTest&) = delete;
+
   ~AndroidOciWrapperTest() override = default;
 
   void SetUp() override {
@@ -111,9 +114,6 @@ class AndroidOciWrapperTest : public ::testing::Test {
 
   bool callback_called_ = false;
   ArcContainerStopReason exit_reason_ = ArcContainerStopReason::CRASH;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(AndroidOciWrapperTest);
 };
 
 TEST_F(AndroidOciWrapperTest, KillOnLaunchTimeOut) {

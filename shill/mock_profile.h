@@ -17,6 +17,9 @@ class MockProfile : public Profile {
  public:
   explicit MockProfile(Manager* manager);
   MockProfile(Manager* manager, const std::string& identifier);
+  MockProfile(const MockProfile&) = delete;
+  MockProfile& operator=(const MockProfile&) = delete;
+
   ~MockProfile() override;
 
   MOCK_METHOD(bool, AdoptService, (const ServiceRefPtr&), (override));
@@ -35,7 +38,6 @@ class MockProfile : public Profile {
 
  private:
   RpcIdentifier rpcid_;
-  DISALLOW_COPY_AND_ASSIGN(MockProfile);
 };
 
 }  // namespace shill

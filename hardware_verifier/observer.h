@@ -52,11 +52,11 @@ class Observer {
   friend class base::NoDestructor<Observer>;
 
   Observer() = default;
+  Observer(const Observer&) = delete;
+  Observer& operator=(const Observer&) = delete;
 
   std::map<std::string, base::TimeTicks> timers_;
   std::unique_ptr<MetricsLibraryInterface> metrics_;
-
-  DISALLOW_COPY_AND_ASSIGN(Observer);
 };
 
 }  // namespace hardware_verifier

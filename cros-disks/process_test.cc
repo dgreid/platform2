@@ -53,6 +53,8 @@ class AlarmGuard {
     CHECK_NE(old_handler_, SIG_ERR);
     SetIntervalTimer(timer_interval_ms * 1000 /* microseconds */);
   }
+  AlarmGuard(const AlarmGuard&) = delete;
+  AlarmGuard& operator=(const AlarmGuard&) = delete;
 
   ~AlarmGuard() {
     SetIntervalTimer(0);
@@ -81,8 +83,6 @@ class AlarmGuard {
 
   using SigHandler = void (*)(int);
   static SigHandler old_handler_;
-
-  DISALLOW_COPY_AND_ASSIGN(AlarmGuard);
 };
 
 int AlarmGuard::count_ = 0;

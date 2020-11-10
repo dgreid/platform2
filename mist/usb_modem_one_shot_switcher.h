@@ -24,6 +24,8 @@ class UsbModemOneShotSwitcher {
   // Context object as |context|. The ownership of |context| is not transferred,
   // and thus they should outlive this object.
   explicit UsbModemOneShotSwitcher(Context* context);
+  UsbModemOneShotSwitcher(const UsbModemOneShotSwitcher&) = delete;
+  UsbModemOneShotSwitcher& operator=(const UsbModemOneShotSwitcher&) = delete;
 
   ~UsbModemOneShotSwitcher();
 
@@ -45,8 +47,6 @@ class UsbModemOneShotSwitcher {
   Context* const context_;
   std::unique_ptr<UsbModemSwitchOperation> operation_;
   bool is_success_;
-
-  DISALLOW_COPY_AND_ASSIGN(UsbModemOneShotSwitcher);
 };
 
 }  // namespace mist

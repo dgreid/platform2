@@ -38,6 +38,8 @@ const char kCommandStatusDone[] = "done";
 class CommandHandler final {
  public:
   CommandHandler() : weak_ptr_factory_(this) {}
+  CommandHandler(const CommandHandler&) = delete;
+  CommandHandler& operator=(const CommandHandler&) = delete;
 
   // Initialize the object and start listening for Buffet commands on D-Bus.
   void Start(const scoped_refptr<dbus::Bus>& bus,
@@ -72,7 +74,6 @@ class CommandHandler final {
   base::Closure reboot_callback_;
 
   base::WeakPtrFactory<CommandHandler> weak_ptr_factory_;
-  DISALLOW_COPY_AND_ASSIGN(CommandHandler);
 };
 
 }  // anonymous namespace

@@ -29,6 +29,9 @@ class CrosFpDeviceInterface {
  public:
   using MkbpCallback = base::Callback<void(const uint32_t event)>;
   CrosFpDeviceInterface() = default;
+  CrosFpDeviceInterface(const CrosFpDeviceInterface&) = delete;
+  CrosFpDeviceInterface& operator=(const CrosFpDeviceInterface&) = delete;
+
   virtual ~CrosFpDeviceInterface() = default;
 
   struct EcVersion {
@@ -71,8 +74,6 @@ class CrosFpDeviceInterface {
 
   virtual EcCmdVersionSupportStatus EcCmdVersionSupported(uint16_t cmd,
                                                           uint32_t ver) = 0;
-
-  DISALLOW_COPY_AND_ASSIGN(CrosFpDeviceInterface);
 };
 
 }  // namespace biod

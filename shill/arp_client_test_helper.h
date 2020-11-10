@@ -18,6 +18,9 @@ namespace shill {
 class ArpClientTestHelper {
  public:
   explicit ArpClientTestHelper(MockArpClient* client);
+  ArpClientTestHelper(const ArpClientTestHelper&) = delete;
+  ArpClientTestHelper& operator=(const ArpClientTestHelper&) = delete;
+
   virtual ~ArpClientTestHelper();
 
   void GeneratePacket(uint16_t operation,
@@ -31,8 +34,6 @@ class ArpClientTestHelper {
 
   MockArpClient* client_;
   ArpPacket packet_;
-
-  DISALLOW_COPY_AND_ASSIGN(ArpClientTestHelper);
 };
 
 }  // namespace shill

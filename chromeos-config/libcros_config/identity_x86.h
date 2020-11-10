@@ -22,6 +22,9 @@ namespace brillo {
 class CrosConfigIdentityX86 : public CrosConfigIdentity {
  public:
   CrosConfigIdentityX86();
+  CrosConfigIdentityX86(const CrosConfigIdentityX86&) = delete;
+  CrosConfigIdentityX86& operator=(const CrosConfigIdentityX86&) = delete;
+
   ~CrosConfigIdentityX86();
 
   // @return Name value read via ReadSmbios
@@ -45,8 +48,6 @@ class CrosConfigIdentityX86 : public CrosConfigIdentity {
 
  private:
   std::string name_;
-
-  DISALLOW_COPY_AND_ASSIGN(CrosConfigIdentityX86);
 };
 
 }  // namespace brillo

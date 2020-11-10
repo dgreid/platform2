@@ -59,6 +59,8 @@ class UsbModemSwitchOperation
   // |switch_context| is transferred.
   UsbModemSwitchOperation(Context* context,
                           UsbModemSwitchContext* switch_context);
+  UsbModemSwitchOperation(const UsbModemSwitchOperation&) = delete;
+  UsbModemSwitchOperation& operator=(const UsbModemSwitchOperation&) = delete;
 
   ~UsbModemSwitchOperation();
 
@@ -180,8 +182,6 @@ class UsbModemSwitchOperation
   std::unique_ptr<UsbBulkTransfer> bulk_transfer_;
   base::CancelableClosure pending_task_;
   base::CancelableClosure reconnect_timeout_callback_;
-
-  DISALLOW_COPY_AND_ASSIGN(UsbModemSwitchOperation);
 };
 
 }  // namespace mist

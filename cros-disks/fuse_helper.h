@@ -49,6 +49,9 @@ class FUSEHelper {
              brillo::ProcessReaper* process_reaper,
              const base::FilePath& mount_program_path,
              const std::string& mount_user);
+  FUSEHelper(const FUSEHelper&) = delete;
+  FUSEHelper& operator=(const FUSEHelper&) = delete;
+
   virtual ~FUSEHelper();
 
   const std::string& type() const { return fuse_type_; }
@@ -85,8 +88,6 @@ class FUSEHelper {
   brillo::ProcessReaper* const process_reaper_;
   const base::FilePath mount_program_path_;
   const std::string mount_user_;
-
-  DISALLOW_COPY_AND_ASSIGN(FUSEHelper);
 };
 
 }  // namespace cros_disks

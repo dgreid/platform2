@@ -29,6 +29,9 @@ class WakeupSourceIdentifier : public WakeupSourceIdentifierInterface,
                                public UdevSubsystemObserver {
  public:
   explicit WakeupSourceIdentifier(UdevInterface* udev);
+  WakeupSourceIdentifier(const WakeupSourceIdentifier&) = delete;
+  WakeupSourceIdentifier& operator=(const WakeupSourceIdentifier&) = delete;
+
   ~WakeupSourceIdentifier() override;
 
   // WakeupSourceIdentifierInterface implementation.
@@ -55,8 +58,6 @@ class WakeupSourceIdentifier : public WakeupSourceIdentifierInterface,
   using MonitoredPathsMap =
       std::map<base::FilePath, std::unique_ptr<WakeupDeviceInterface>>;
   MonitoredPathsMap monitored_paths_;
-
-  DISALLOW_COPY_AND_ASSIGN(WakeupSourceIdentifier);
 };
 
 }  // namespace system

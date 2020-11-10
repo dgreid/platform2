@@ -12,6 +12,9 @@ namespace debugd {
 class ContainerTool {
  public:
   ContainerTool() = default;
+  ContainerTool(const ContainerTool&) = delete;
+  ContainerTool& operator=(const ContainerTool&) = delete;
+
   ~ContainerTool() = default;
 
   void ContainerStarted();
@@ -19,8 +22,6 @@ class ContainerTool {
 
  private:
   bool device_jail_started_;
-
-  DISALLOW_COPY_AND_ASSIGN(ContainerTool);
 };
 
 }  // namespace debugd

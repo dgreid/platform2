@@ -29,6 +29,9 @@ class DecodeEventThread {
  public:
   DecodeEventThread(const vda_capabilities_t* caps,
                     const vda_session_info_t* session);
+  DecodeEventThread(const DecodeEventThread&) = delete;
+  DecodeEventThread& operator=(const DecodeEventThread&) = delete;
+
   ~DecodeEventThread();
 
   // Starts the thread and the event loop to handle the provided capabilities.
@@ -87,8 +90,6 @@ class DecodeEventThread {
   base::Lock end_of_bitstream_buffer_event_count_lock_;
 
   base::WeakPtrFactory<DecodeEventThread> weak_factory_{this};
-
-  DISALLOW_COPY_AND_ASSIGN(DecodeEventThread);
 };
 
 }  // namespace test

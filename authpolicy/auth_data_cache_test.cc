@@ -47,6 +47,8 @@ class AuthDataCacheTest : public ::testing::Test {
     cache_.SetClockForTesting(std::make_unique<base::SimpleTestClock>());
     flags_.set_log_caches(true);
   }
+  AuthDataCacheTest(const AuthDataCacheTest&) = delete;
+  AuthDataCacheTest& operator=(const AuthDataCacheTest&) = delete;
 
   ~AuthDataCacheTest() override = default;
 
@@ -58,9 +60,6 @@ class AuthDataCacheTest : public ::testing::Test {
   protos::DebugFlags flags_;
   AuthDataCache cache_{&flags_};
   base::FilePath tmp_path_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(AuthDataCacheTest);
 };
 
 TEST_F(AuthDataCacheTest, GetSetWorkgroup) {

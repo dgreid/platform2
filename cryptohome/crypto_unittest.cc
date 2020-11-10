@@ -115,6 +115,9 @@ ShaTestVectors::ShaTestVectors(int type) {
 class CryptoTest : public ::testing::Test {
  public:
   CryptoTest() {}
+  CryptoTest(const CryptoTest&) = delete;
+  CryptoTest& operator=(const CryptoTest&) = delete;
+
   virtual ~CryptoTest() {}
 
   static bool FindBlobInBlob(const SecureBlob& haystack,
@@ -147,9 +150,6 @@ class CryptoTest : public ::testing::Test {
 
  protected:
   MockPlatform platform_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(CryptoTest);
 };
 
 TEST_F(CryptoTest, EncryptionTest) {

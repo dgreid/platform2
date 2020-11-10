@@ -28,6 +28,9 @@ class GpoVersionCache {
   // |flags| is a non-owned pointer to DebugFlags flags (the class listens to
   // flags->log_caches() to toggle logging).
   explicit GpoVersionCache(const protos::DebugFlags* flags);
+  GpoVersionCache(const GpoVersionCache&) = delete;
+  GpoVersionCache& operator=(const GpoVersionCache&) = delete;
+
   ~GpoVersionCache();
 
   // Clears the cache.
@@ -86,8 +89,6 @@ class GpoVersionCache {
   // false (misses) for testing.
   int cache_hits_for_testing_ = 0;
   int cache_misses_for_testing_ = 0;
-
-  DISALLOW_COPY_AND_ASSIGN(GpoVersionCache);
 };
 
 }  // namespace authpolicy

@@ -19,6 +19,9 @@ namespace cros_disks {
 class Metrics {
  public:
   Metrics() = default;
+  Metrics(const Metrics&) = delete;
+  Metrics& operator=(const Metrics&) = delete;
+
   ~Metrics() = default;
 
   // Records the type of archive that cros-disks is trying to mount.
@@ -89,8 +92,6 @@ class Metrics {
 
   FRIEND_TEST(MetricsTest, GetArchiveType);
   FRIEND_TEST(MetricsTest, GetFilesystemType);
-
-  DISALLOW_COPY_AND_ASSIGN(Metrics);
 };
 
 }  // namespace cros_disks

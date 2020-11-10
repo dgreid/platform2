@@ -46,6 +46,9 @@ class ByteString;
 class SHILL_EXPORT NetlinkSocket {
  public:
   NetlinkSocket();
+  NetlinkSocket(const NetlinkSocket&) = delete;
+  NetlinkSocket& operator=(const NetlinkSocket&) = delete;
+
   virtual ~NetlinkSocket();
 
   // Non-trivial initialization.
@@ -82,8 +85,6 @@ class SHILL_EXPORT NetlinkSocket {
 
   std::unique_ptr<Sockets> sockets_;
   int file_descriptor_;
-
-  DISALLOW_COPY_AND_ASSIGN(NetlinkSocket);
 };
 
 }  // namespace shill

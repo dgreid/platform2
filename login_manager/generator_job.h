@@ -43,6 +43,9 @@ class GeneratorJob : public GeneratorJobInterface {
   class Factory : public GeneratorJobFactoryInterface {
    public:
     Factory();
+    Factory(const Factory&) = delete;
+    Factory& operator=(const Factory&) = delete;
+
     ~Factory() override;
     std::unique_ptr<GeneratorJobInterface> Create(
         const std::string& filename,
@@ -52,7 +55,6 @@ class GeneratorJob : public GeneratorJobInterface {
         SystemUtils* utils) override;
 
    private:
-    DISALLOW_COPY_AND_ASSIGN(Factory);
   };
 
   ~GeneratorJob() override;
@@ -71,6 +73,8 @@ class GeneratorJob : public GeneratorJobInterface {
                const base::Optional<base::FilePath> ns_path,
                uid_t desired_uid,
                SystemUtils* utils);
+  GeneratorJob(const GeneratorJob&) = delete;
+  GeneratorJob& operator=(const GeneratorJob&) = delete;
 
   // Fully-specified name for generated key file.
   const std::string filename_;
@@ -85,8 +89,6 @@ class GeneratorJob : public GeneratorJobInterface {
 
   // The subprocess tracked by this job.
   Subprocess subprocess_;
-
-  DISALLOW_COPY_AND_ASSIGN(GeneratorJob);
 };
 
 }  // namespace login_manager

@@ -27,11 +27,11 @@ class FmapInterface {
 class Fmap : public FmapInterface {
  public:
   Fmap() = default;
+  Fmap(const Fmap&) = delete;
+  Fmap& operator=(const Fmap&) = delete;
+
   int64_t Find(const uint8_t* image, unsigned int len) override;
   const fmap_area* FindArea(const fmap* fmap, const std::string& name) override;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(Fmap);
 };
 
 }  // namespace hammerd

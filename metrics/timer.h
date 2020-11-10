@@ -32,19 +32,22 @@ class TimerInterface {
 class ClockWrapper {
  public:
   ClockWrapper() {}
+  ClockWrapper(const ClockWrapper&) = delete;
+  ClockWrapper& operator=(const ClockWrapper&) = delete;
+
   virtual ~ClockWrapper() {}
 
   // Returns the current time from the system.
   virtual base::TimeTicks GetCurrentTime() const;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ClockWrapper);
 };
 
 // Implements a Timer.
 class Timer : public TimerInterface {
  public:
   Timer();
+  Timer(const Timer&) = delete;
+  Timer& operator=(const Timer&) = delete;
+
   virtual ~Timer() {}
 
   // Starts the timer. If a timer is already running, also resets current
@@ -110,8 +113,6 @@ class Timer : public TimerInterface {
 
   // Wrapper for the calls to the system clock.
   std::unique_ptr<ClockWrapper> clock_wrapper_;
-
-  DISALLOW_COPY_AND_ASSIGN(Timer);
 };
 
 // Extends the Timer class to report the elapsed time in milliseconds through
@@ -124,6 +125,9 @@ class TimerReporter : public Timer {
                 int min,
                 int max,
                 int num_buckets);
+  TimerReporter(const TimerReporter&) = delete;
+  TimerReporter& operator=(const TimerReporter&) = delete;
+
   virtual ~TimerReporter() {}
 
   // Sets the metrics library used by all instances of this class.
@@ -151,8 +155,6 @@ class TimerReporter : public Timer {
   int min_;
   int max_;
   int num_buckets_;
-
-  DISALLOW_COPY_AND_ASSIGN(TimerReporter);
 };
 
 }  // namespace chromeos_metrics

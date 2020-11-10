@@ -106,10 +106,10 @@ class BRILLO_EXPORT UdevDevice {
   // Constructs a UdevDevice object without referencing a udev_device struct,
   // which is only allowed to be called by MockUdevDevice.
   UdevDevice();
+  UdevDevice(const UdevDevice&) = delete;
+  UdevDevice& operator=(const UdevDevice&) = delete;
 
   udev_device* device_;
-
-  DISALLOW_COPY_AND_ASSIGN(UdevDevice);
 };
 
 }  // namespace brillo

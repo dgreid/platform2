@@ -49,6 +49,9 @@ class TgtManager {
              Delegate* delegate,
              Path config_path,
              Path credential_cache_path);
+  TgtManager(const TgtManager&) = delete;
+  TgtManager& operator=(const TgtManager&) = delete;
+
   ~TgtManager();
 
   // Sets the principal (user@REALM or machine$@REALM).
@@ -207,8 +210,6 @@ class TgtManager {
   // be called if it exists. Prevents that signals are fired too often, e.g. if
   // both krb5cc and config change in the same call.
   mutable bool kerberos_files_dirty_ = false;
-
-  DISALLOW_COPY_AND_ASSIGN(TgtManager);
 };
 
 }  // namespace authpolicy

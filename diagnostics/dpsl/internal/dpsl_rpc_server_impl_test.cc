@@ -107,6 +107,9 @@ class MockDpslRpcHandler : public DpslRpcHandler {
 class DpslRpcServerImplBaseTest : public testing::Test {
  public:
   DpslRpcServerImplBaseTest() = default;
+  DpslRpcServerImplBaseTest(const DpslRpcServerImplBaseTest&) = delete;
+  DpslRpcServerImplBaseTest& operator=(const DpslRpcServerImplBaseTest&) =
+      delete;
 
   ~DpslRpcServerImplBaseTest() override {
     DpslThreadContextImpl::CleanThreadCounterForTesting();
@@ -125,9 +128,6 @@ class DpslRpcServerImplBaseTest : public testing::Test {
 
   std::unique_ptr<DpslGlobalContext> global_context_;
   std::unique_ptr<DpslThreadContext> thread_context_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(DpslRpcServerImplBaseTest);
 };
 
 class DpslRpcServerImplBaseDeathTest : public DpslRpcServerImplBaseTest {
@@ -143,9 +143,10 @@ class DpslRpcServerImplBaseDeathTest : public DpslRpcServerImplBaseTest {
     // CHECK(sequence_checker_.CalledOnValidSequence()) does not.
     ::testing::FLAGS_gtest_death_test_style = "threadsafe";
   }
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(DpslRpcServerImplBaseDeathTest);
+  DpslRpcServerImplBaseDeathTest(const DpslRpcServerImplBaseDeathTest&) =
+      delete;
+  DpslRpcServerImplBaseDeathTest& operator=(
+      const DpslRpcServerImplBaseDeathTest&) = delete;
 };
 
 TEST_F(DpslRpcServerImplBaseDeathTest, CreateWithNullThreadContext) {
@@ -183,11 +184,10 @@ class DpslRpcServerImplTest
       public testing::WithParamInterface<DpslRpcServer::GrpcServerUri> {
  public:
   DpslRpcServerImplTest() = default;
+  DpslRpcServerImplTest(const DpslRpcServerImplTest&) = delete;
+  DpslRpcServerImplTest& operator=(const DpslRpcServerImplTest&) = delete;
 
   DpslRpcServer::GrpcServerUri grpc_server_uri() const { return GetParam(); }
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(DpslRpcServerImplTest);
 };
 
 TEST_P(DpslRpcServerImplTest, CreateUsingVsock) {
@@ -230,6 +230,10 @@ INSTANTIATE_TEST_SUITE_P(
 class DpslRpcServerImplUnixSocketTest : public DpslRpcServerImplTest {
  public:
   DpslRpcServerImplUnixSocketTest() = default;
+  DpslRpcServerImplUnixSocketTest(const DpslRpcServerImplUnixSocketTest&) =
+      delete;
+  DpslRpcServerImplUnixSocketTest& operator=(
+      const DpslRpcServerImplUnixSocketTest&) = delete;
 
   ~DpslRpcServerImplUnixSocketTest() override = default;
 
@@ -293,9 +297,6 @@ class DpslRpcServerImplUnixSocketTest : public DpslRpcServerImplTest {
   std::unique_ptr<brillo::AsyncGrpcClient<grpc_api::WilcoDtc>>
       wilco_dtc_grpc_client_;
   std::unique_ptr<DpslRpcServerImpl> dpsl_rpc_server_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(DpslRpcServerImplUnixSocketTest);
 };
 
 TEST_P(DpslRpcServerImplUnixSocketTest, HandleMessageFromUi) {

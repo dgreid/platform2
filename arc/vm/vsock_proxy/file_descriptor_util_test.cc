@@ -21,6 +21,10 @@ namespace {
 class FileDescriptorUtilSocketTest : public testing::Test {
  public:
   FileDescriptorUtilSocketTest() = default;
+  FileDescriptorUtilSocketTest(const FileDescriptorUtilSocketTest&) = delete;
+  FileDescriptorUtilSocketTest& operator=(const FileDescriptorUtilSocketTest&) =
+      delete;
+
   ~FileDescriptorUtilSocketTest() override = default;
 
  protected:
@@ -32,8 +36,6 @@ class FileDescriptorUtilSocketTest : public testing::Test {
 
  private:
   base::ScopedTempDir temp_dir_;
-
-  DISALLOW_COPY_AND_ASSIGN(FileDescriptorUtilSocketTest);
 };
 
 // Checks the common scenario about using unix domain socket; create a socket,

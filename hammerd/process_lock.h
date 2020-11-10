@@ -15,6 +15,9 @@ namespace hammerd {
 class ProcessLock {
  public:
   explicit ProcessLock(const base::FilePath& lock_file);
+  ProcessLock(const ProcessLock&) = delete;
+  ProcessLock& operator=(const ProcessLock&) = delete;
+
   virtual ~ProcessLock();
   bool IsLocked() const;
   bool Acquire();
@@ -23,7 +26,6 @@ class ProcessLock {
  private:
   base::FilePath lock_file_;
   base::ScopedFD fd_;
-  DISALLOW_COPY_AND_ASSIGN(ProcessLock);
 };
 
 }  // namespace hammerd

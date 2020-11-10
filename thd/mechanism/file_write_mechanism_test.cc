@@ -35,6 +35,9 @@ class FileWriteMechanismTest : public ::testing::Test {
     CHECK(temp_dir_.CreateUniqueTempDir());
     file_ = temp_dir_.GetPath().Append("content");
   }
+  FileWriteMechanismTest(const FileWriteMechanismTest&) = delete;
+  FileWriteMechanismTest& operator=(const FileWriteMechanismTest&) = delete;
+
   ~FileWriteMechanismTest() override {}
 
  protected:
@@ -43,9 +46,6 @@ class FileWriteMechanismTest : public ::testing::Test {
 
   // Path to file that the mechanism will write to.
   base::FilePath file_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(FileWriteMechanismTest);
 };
 
 // Test that FileWriteMechanism rejects any request to SetLevel(level)

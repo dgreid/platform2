@@ -11,10 +11,10 @@ namespace brillo {
 class SyslogLoggingDeathTest : public ::testing::Test {
  public:
   SyslogLoggingDeathTest() {}
-  virtual ~SyslogLoggingDeathTest() {}
+  SyslogLoggingDeathTest(const SyslogLoggingDeathTest&) = delete;
+  SyslogLoggingDeathTest& operator=(const SyslogLoggingDeathTest&) = delete;
 
- private:
-  DISALLOW_COPY_AND_ASSIGN(SyslogLoggingDeathTest);
+  virtual ~SyslogLoggingDeathTest() {}
 };
 
 TEST_F(SyslogLoggingDeathTest, FatalLoggingIsFatal) {

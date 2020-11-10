@@ -17,6 +17,9 @@ namespace shill {
 class MockSockets : public Sockets {
  public:
   MockSockets() = default;
+  MockSockets(const MockSockets&) = delete;
+  MockSockets& operator=(const MockSockets&) = delete;
+
   ~MockSockets() override = default;
 
   MOCK_METHOD(int,
@@ -65,9 +68,6 @@ class MockSockets : public Sockets {
   MOCK_METHOD(int, SetReceiveBuffer, (int, int), (const, override));
   MOCK_METHOD(int, ShutDown, (int, int), (const, override));
   MOCK_METHOD(int, Socket, (int, int, int), (const, override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockSockets);
 };
 
 }  // namespace shill

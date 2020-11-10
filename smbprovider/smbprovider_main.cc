@@ -145,6 +145,8 @@ std::unique_ptr<SambaInterface> SambaInterfaceFactoryFunction(
 class SmbProviderDaemon : public brillo::DBusServiceDaemon {
  public:
   SmbProviderDaemon() : DBusServiceDaemon(kSmbProviderServiceName) {}
+  SmbProviderDaemon(const SmbProviderDaemon&) = delete;
+  SmbProviderDaemon& operator=(const SmbProviderDaemon&) = delete;
 
  protected:
   void RegisterDBusObjectsAsync(
@@ -200,7 +202,6 @@ class SmbProviderDaemon : public brillo::DBusServiceDaemon {
 
  private:
   std::unique_ptr<SmbProvider> smb_provider_;
-  DISALLOW_COPY_AND_ASSIGN(SmbProviderDaemon);
 };
 
 // Runs SmbProviderDaemon.

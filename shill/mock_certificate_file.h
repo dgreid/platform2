@@ -17,15 +17,15 @@ namespace shill {
 class MockCertificateFile : public CertificateFile {
  public:
   MockCertificateFile();
+  MockCertificateFile(const MockCertificateFile&) = delete;
+  MockCertificateFile& operator=(const MockCertificateFile&) = delete;
+
   ~MockCertificateFile() override;
 
   MOCK_METHOD(base::FilePath,
               CreatePEMFromStrings,
               (const std::vector<std::string>&),
               (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockCertificateFile);
 };
 
 }  // namespace shill

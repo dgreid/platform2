@@ -23,6 +23,8 @@ namespace kerberos {
 class ConfigParser {
  public:
   ConfigParser();
+  ConfigParser(const ConfigParser&) = delete;
+  ConfigParser& operator=(const ConfigParser&) = delete;
 
   // Checks the Kerberos configuration |krb5conf|. If the config cannot be
   // parsed or a non-whitelisted option is used, returns a message with proper
@@ -64,8 +66,6 @@ class ConfigParser {
   const StringSet enctypes_fields_;
   const StringSet weak_enctypes_;
   const StringSet strong_enctypes_;
-
-  DISALLOW_COPY_AND_ASSIGN(ConfigParser);
 };
 
 }  // namespace kerberos

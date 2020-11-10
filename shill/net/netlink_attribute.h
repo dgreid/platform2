@@ -46,6 +46,9 @@ class SHILL_EXPORT NetlinkAttribute {
                    const char* id_string,
                    Type datatype,
                    const char* datatype_string);
+  NetlinkAttribute(const NetlinkAttribute&) = delete;
+  NetlinkAttribute& operator=(const NetlinkAttribute&) = delete;
+
   virtual ~NetlinkAttribute() = default;
 
   // Static factories generate the appropriate attribute object from the
@@ -128,8 +131,6 @@ class SHILL_EXPORT NetlinkAttribute {
   std::string id_string_;
   Type datatype_;
   const char* datatype_string_;
-
-  DISALLOW_COPY_AND_ASSIGN(NetlinkAttribute);
 };
 
 class NetlinkU8Attribute : public NetlinkAttribute {
@@ -138,6 +139,9 @@ class NetlinkU8Attribute : public NetlinkAttribute {
   static const Type kType;
   NetlinkU8Attribute(int id, const char* id_string)
       : NetlinkAttribute(id, id_string, kType, kMyTypeString) {}
+  NetlinkU8Attribute(const NetlinkU8Attribute&) = delete;
+  NetlinkU8Attribute& operator=(const NetlinkU8Attribute&) = delete;
+
   bool InitFromValue(const ByteString& data) override;
   bool GetU8Value(uint8_t* value) const override;
   bool SetU8Value(uint8_t new_value) override;
@@ -146,8 +150,6 @@ class NetlinkU8Attribute : public NetlinkAttribute {
 
  private:
   uint8_t value_;
-
-  DISALLOW_COPY_AND_ASSIGN(NetlinkU8Attribute);
 };
 
 class NetlinkU16Attribute : public NetlinkAttribute {
@@ -156,6 +158,9 @@ class NetlinkU16Attribute : public NetlinkAttribute {
   static const Type kType;
   NetlinkU16Attribute(int id, const char* id_string)
       : NetlinkAttribute(id, id_string, kType, kMyTypeString) {}
+  NetlinkU16Attribute(const NetlinkU16Attribute&) = delete;
+  NetlinkU16Attribute& operator=(const NetlinkU16Attribute&) = delete;
+
   bool InitFromValue(const ByteString& data) override;
   bool GetU16Value(uint16_t* value) const override;
   bool SetU16Value(uint16_t new_value) override;
@@ -164,8 +169,6 @@ class NetlinkU16Attribute : public NetlinkAttribute {
 
  private:
   uint16_t value_;
-
-  DISALLOW_COPY_AND_ASSIGN(NetlinkU16Attribute);
 };
 
 // Set SHILL_EXPORT to allow unit tests to instantiate these.
@@ -175,6 +178,9 @@ class SHILL_EXPORT NetlinkU32Attribute : public NetlinkAttribute {
   static const Type kType;
   NetlinkU32Attribute(int id, const char* id_string)
       : NetlinkAttribute(id, id_string, kType, kMyTypeString) {}
+  NetlinkU32Attribute(const NetlinkU32Attribute&) = delete;
+  NetlinkU32Attribute& operator=(const NetlinkU32Attribute&) = delete;
+
   bool InitFromValue(const ByteString& data) override;
   bool GetU32Value(uint32_t* value) const override;
   bool SetU32Value(uint32_t new_value) override;
@@ -183,8 +189,6 @@ class SHILL_EXPORT NetlinkU32Attribute : public NetlinkAttribute {
 
  private:
   uint32_t value_;
-
-  DISALLOW_COPY_AND_ASSIGN(NetlinkU32Attribute);
 };
 
 class NetlinkU64Attribute : public NetlinkAttribute {
@@ -193,6 +197,9 @@ class NetlinkU64Attribute : public NetlinkAttribute {
   static const Type kType;
   NetlinkU64Attribute(int id, const char* id_string)
       : NetlinkAttribute(id, id_string, kType, kMyTypeString) {}
+  NetlinkU64Attribute(const NetlinkU64Attribute&) = delete;
+  NetlinkU64Attribute& operator=(const NetlinkU64Attribute&) = delete;
+
   bool InitFromValue(const ByteString& data) override;
   bool GetU64Value(uint64_t* value) const override;
   bool SetU64Value(uint64_t new_value) override;
@@ -201,8 +208,6 @@ class NetlinkU64Attribute : public NetlinkAttribute {
 
  private:
   uint64_t value_;
-
-  DISALLOW_COPY_AND_ASSIGN(NetlinkU64Attribute);
 };
 
 class NetlinkFlagAttribute : public NetlinkAttribute {
@@ -211,6 +216,9 @@ class NetlinkFlagAttribute : public NetlinkAttribute {
   static const Type kType;
   NetlinkFlagAttribute(int id, const char* id_string)
       : NetlinkAttribute(id, id_string, kType, kMyTypeString) {}
+  NetlinkFlagAttribute(const NetlinkFlagAttribute&) = delete;
+  NetlinkFlagAttribute& operator=(const NetlinkFlagAttribute&) = delete;
+
   bool InitFromValue(const ByteString& data) override;
   bool GetFlagValue(bool* value) const override;
   bool SetFlagValue(bool new_value) override;
@@ -219,8 +227,6 @@ class NetlinkFlagAttribute : public NetlinkAttribute {
 
  private:
   bool value_;
-
-  DISALLOW_COPY_AND_ASSIGN(NetlinkFlagAttribute);
 };
 
 // Set SHILL_EXPORT to allow unit tests to instantiate these.
@@ -230,6 +236,9 @@ class SHILL_EXPORT NetlinkStringAttribute : public NetlinkAttribute {
   static const Type kType;
   NetlinkStringAttribute(int id, const char* id_string)
       : NetlinkAttribute(id, id_string, kType, kMyTypeString) {}
+  NetlinkStringAttribute(const NetlinkStringAttribute&) = delete;
+  NetlinkStringAttribute& operator=(const NetlinkStringAttribute&) = delete;
+
   bool InitFromValue(const ByteString& data) override;
   bool GetStringValue(std::string* value) const override;
   bool SetStringValue(const std::string& new_value) override;
@@ -240,7 +249,6 @@ class SHILL_EXPORT NetlinkStringAttribute : public NetlinkAttribute {
 
  private:
   std::string value_;
-  DISALLOW_COPY_AND_ASSIGN(NetlinkStringAttribute);
 };
 
 // SSID attributes are just string attributes with different output semantics.
@@ -248,12 +256,11 @@ class NetlinkSsidAttribute : public NetlinkStringAttribute {
  public:
   NetlinkSsidAttribute(int id, const char* id_string)
       : NetlinkStringAttribute(id, id_string) {}
+  NetlinkSsidAttribute(const NetlinkSsidAttribute&) = delete;
+  NetlinkSsidAttribute& operator=(const NetlinkSsidAttribute&) = delete;
 
   // NOTE: |ToString| or |Print| must be used for logging to allow scrubbing.
   bool ToString(std::string* output) const override;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(NetlinkSsidAttribute);
 };
 
 class NetlinkNestedAttribute : public NetlinkAttribute {
@@ -261,6 +268,9 @@ class NetlinkNestedAttribute : public NetlinkAttribute {
   static const char kMyTypeString[];
   static const Type kType;
   NetlinkNestedAttribute(int id, const char* id_string);
+  NetlinkNestedAttribute(const NetlinkNestedAttribute&) = delete;
+  NetlinkNestedAttribute& operator=(const NetlinkNestedAttribute&) = delete;
+
   bool InitFromValue(const ByteString& data) override;
   bool GetNestedAttributeList(AttributeListRefPtr* value) override;
   bool ConstGetNestedAttributeList(
@@ -353,8 +363,6 @@ class NetlinkNestedAttribute : public NetlinkAttribute {
       const AttributeListRefPtr& list,
       int id,
       const ByteString& value);
-
-  DISALLOW_COPY_AND_ASSIGN(NetlinkNestedAttribute);
 };
 
 class NetlinkRawAttribute : public NetlinkAttribute {
@@ -363,6 +371,9 @@ class NetlinkRawAttribute : public NetlinkAttribute {
   static const Type kType;
   NetlinkRawAttribute(int id, const char* id_string)
       : NetlinkAttribute(id, id_string, kType, kMyTypeString) {}
+  NetlinkRawAttribute(const NetlinkRawAttribute&) = delete;
+  NetlinkRawAttribute& operator=(const NetlinkRawAttribute&) = delete;
+
   bool InitFromValue(const ByteString& data) override;
   // Gets the value of the data (the header is not stored).
   bool GetRawValue(ByteString* value) const override;
@@ -370,20 +381,18 @@ class NetlinkRawAttribute : public NetlinkAttribute {
   bool SetRawValue(const ByteString value) override;
   bool ToString(std::string* value) const override;
   ByteString Encode() const override;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(NetlinkRawAttribute);
 };
 
 class NetlinkAttributeGeneric : public NetlinkRawAttribute {
  public:
   explicit NetlinkAttributeGeneric(int id);
+  NetlinkAttributeGeneric(const NetlinkAttributeGeneric&) = delete;
+  NetlinkAttributeGeneric& operator=(const NetlinkAttributeGeneric&) = delete;
+
   const char* id_string() const override;
 
  private:
   std::string id_string_;
-
-  DISALLOW_COPY_AND_ASSIGN(NetlinkAttributeGeneric);
 };
 
 }  // namespace shill

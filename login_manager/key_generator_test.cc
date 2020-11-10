@@ -46,6 +46,8 @@ class KeyGeneratorTest : public ::testing::Test {
  public:
   KeyGeneratorTest()
       : original_user_prefix_(GetUserPathPrefix()), fake_salt_("fake salt") {}
+  KeyGeneratorTest(const KeyGeneratorTest&) = delete;
+  KeyGeneratorTest& operator=(const KeyGeneratorTest&) = delete;
 
   ~KeyGeneratorTest() override {}
 
@@ -65,9 +67,6 @@ class KeyGeneratorTest : public ::testing::Test {
   base::ScopedTempDir tmpdir_;
   const base::FilePath original_user_prefix_;
   std::string fake_salt_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(KeyGeneratorTest);
 };
 
 TEST_F(KeyGeneratorTest, KeygenEndToEndTest) {

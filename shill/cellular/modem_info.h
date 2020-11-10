@@ -29,6 +29,9 @@ class PendingActivationStore;
 class ModemInfo {
  public:
   ModemInfo(ControlInterface* control, Manager* manager);
+  ModemInfo(const ModemInfo&) = delete;
+  ModemInfo& operator=(const ModemInfo&) = delete;
+
   virtual ~ModemInfo();
 
   // Starts watching for and handling the DBus modem manager service.
@@ -95,8 +98,6 @@ class ModemInfo {
   std::unique_ptr<PendingActivationStore> pending_activation_store_;
 
   base::WeakPtrFactory<ModemInfo> weak_ptr_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(ModemInfo);
 };
 
 }  // namespace shill

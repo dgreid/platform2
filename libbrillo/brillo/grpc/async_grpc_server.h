@@ -43,6 +43,9 @@ class BRILLO_EXPORT AsyncGrpcServerBase {
 
   AsyncGrpcServerBase(scoped_refptr<base::SequencedTaskRunner> task_runner,
                       const std::vector<std::string>& server_uris);
+  AsyncGrpcServerBase(const AsyncGrpcServerBase&) = delete;
+  AsyncGrpcServerBase& operator=(const AsyncGrpcServerBase&) = delete;
+
   virtual ~AsyncGrpcServerBase();
 
   // Starts this server. When this returns failure, no further methods are
@@ -131,8 +134,6 @@ class BRILLO_EXPORT AsyncGrpcServerBase {
   // Handler but do not have a reply yet.
   std::map<const void*, std::unique_ptr<RpcStateBase>>
       rpcs_awaiting_handler_reply_;
-
-  DISALLOW_COPY_AND_ASSIGN(AsyncGrpcServerBase);
 };
 
 }  // namespace internal
@@ -173,6 +174,9 @@ class AsyncGrpcServer final : public internal::AsyncGrpcServerBase {
                   const std::vector<std::string>& server_uris)
       : internal::AsyncGrpcServerBase(task_runner, server_uris),
         service_(std::make_unique<AsyncService>()) {}
+  AsyncGrpcServer(const AsyncGrpcServer&) = delete;
+  AsyncGrpcServer& operator=(const AsyncGrpcServer&) = delete;
+
   ~AsyncGrpcServer() = default;
 
   // A factory function which creates a |RpcState<RequestType, ResponseType>|.
@@ -227,8 +231,6 @@ class AsyncGrpcServer final : public internal::AsyncGrpcServerBase {
 
  private:
   std::unique_ptr<AsyncService> service_;
-
-  DISALLOW_COPY_AND_ASSIGN(AsyncGrpcServer);
 };
 
 }  // namespace brillo

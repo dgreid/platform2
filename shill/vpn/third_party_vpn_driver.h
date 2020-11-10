@@ -42,6 +42,9 @@ class ThirdPartyVpnDriver : public VPNDriver, public DefaultServiceObserver {
   };
 
   ThirdPartyVpnDriver(Manager* manager, ProcessManager* process_manager);
+  ThirdPartyVpnDriver(const ThirdPartyVpnDriver&) = delete;
+  ThirdPartyVpnDriver& operator=(const ThirdPartyVpnDriver&) = delete;
+
   ~ThirdPartyVpnDriver() override;
 
   // UpdateConnectionState is called by DBus adaptor when
@@ -261,8 +264,6 @@ class ThirdPartyVpnDriver : public VPNDriver, public DefaultServiceObserver {
   VPNService::DriverEventCallback service_callback_;
 
   base::WeakPtrFactory<ThirdPartyVpnDriver> weak_factory_{this};
-
-  DISALLOW_COPY_AND_ASSIGN(ThirdPartyVpnDriver);
 };
 
 }  // namespace shill

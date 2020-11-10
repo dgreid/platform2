@@ -135,6 +135,8 @@ class Tpm1SystemKeyLoader : public SystemKeyLoader {
  public:
   Tpm1SystemKeyLoader(Tpm* tpm, const base::FilePath& rootdir)
       : tpm_(tpm), rootdir_(rootdir) {}
+  Tpm1SystemKeyLoader(const Tpm1SystemKeyLoader&) = delete;
+  Tpm1SystemKeyLoader& operator=(const Tpm1SystemKeyLoader&) = delete;
 
   result_code Load(brillo::SecureBlob* key) override;
   result_code Initialize(const brillo::SecureBlob& key_material,
@@ -179,8 +181,6 @@ class Tpm1SystemKeyLoader : public SystemKeyLoader {
 
   // Whether we're using the lockbox salt as system key.
   bool using_lockbox_key_ = false;
-
-  DISALLOW_COPY_AND_ASSIGN(Tpm1SystemKeyLoader);
 };
 
 // TPM cases:

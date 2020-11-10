@@ -25,6 +25,9 @@ namespace trunks {
 class TpmHandle : public CommandTransceiver {
  public:
   TpmHandle();
+  TpmHandle(const TpmHandle&) = delete;
+  TpmHandle& operator=(const TpmHandle&) = delete;
+
   ~TpmHandle() override;
 
   // Initializes a TpmHandle instance. This method must be called successfully
@@ -42,8 +45,6 @@ class TpmHandle : public CommandTransceiver {
   TPM_RC SendCommandInternal(const std::string& command, std::string* response);
 
   int fd_;  // A file descriptor for /dev/tpm0.
-
-  DISALLOW_COPY_AND_ASSIGN(TpmHandle);
 };
 
 }  // namespace trunks

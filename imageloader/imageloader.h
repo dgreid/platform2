@@ -37,6 +37,9 @@ class ImageLoader : public brillo::DBusServiceDaemon,
 
   ImageLoader(ImageLoaderConfig config,
               std::unique_ptr<HelperProcessProxy> proxy);
+  ImageLoader(const ImageLoader&) = delete;
+  ImageLoader& operator=(const ImageLoader&) = delete;
+
   ~ImageLoader();
 
   // Implementations of the public methods interface.
@@ -123,8 +126,6 @@ class ImageLoader : public brillo::DBusServiceDaemon,
   org::chromium::ImageLoaderInterfaceAdaptor dbus_adaptor_{this};
 
   base::WeakPtrFactory<ImageLoader> weak_factory_{this};
-
-  DISALLOW_COPY_AND_ASSIGN(ImageLoader);
 };
 
 }  // namespace imageloader

@@ -24,10 +24,10 @@ std::unique_ptr<vea_config_t> CreateVeaConfig() {
 class LibvdaFakeVeaImplTest : public ::testing::Test {
  public:
   LibvdaFakeVeaImplTest() = default;
-  ~LibvdaFakeVeaImplTest() override = default;
+  LibvdaFakeVeaImplTest(const LibvdaFakeVeaImplTest&) = delete;
+  LibvdaFakeVeaImplTest& operator=(const LibvdaFakeVeaImplTest&) = delete;
 
- private:
-  DISALLOW_COPY_AND_ASSIGN(LibvdaFakeVeaImplTest);
+  ~LibvdaFakeVeaImplTest() override = default;
 };
 
 // Test that the fake implementation initializes and deinitializes

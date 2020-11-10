@@ -44,6 +44,8 @@ class Profile : public base::RefCounted<Profile> {
           const Identifier& name,
           const base::FilePath& storage_directory,
           bool connect_to_rpc);
+  Profile(const Profile&) = delete;
+  Profile& operator=(const Profile&) = delete;
 
   virtual ~Profile();
 
@@ -215,8 +217,6 @@ class Profile : public base::RefCounted<Profile> {
   std::unique_ptr<StoreInterface> storage_;
 
   std::unique_ptr<ProfileAdaptorInterface> adaptor_;
-
-  DISALLOW_COPY_AND_ASSIGN(Profile);
 };
 
 }  // namespace shill

@@ -18,6 +18,9 @@ namespace mm1 {
 class MockModemSimpleProxy : public ModemSimpleProxyInterface {
  public:
   MockModemSimpleProxy();
+  MockModemSimpleProxy(const MockModemSimpleProxy&) = delete;
+  MockModemSimpleProxy& operator=(const MockModemSimpleProxy&) = delete;
+
   ~MockModemSimpleProxy() override;
 
   MOCK_METHOD(void,
@@ -32,9 +35,6 @@ class MockModemSimpleProxy : public ModemSimpleProxyInterface {
               GetStatus,
               (Error*, const KeyValueStoreCallback&, int),
               (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockModemSimpleProxy);
 };
 
 }  // namespace mm1

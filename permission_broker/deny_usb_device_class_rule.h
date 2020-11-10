@@ -14,14 +14,15 @@ namespace permission_broker {
 class DenyUsbDeviceClassRule : public UsbSubsystemUdevRule {
  public:
   explicit DenyUsbDeviceClassRule(const uint8_t device_class);
+  DenyUsbDeviceClassRule(const DenyUsbDeviceClassRule&) = delete;
+  DenyUsbDeviceClassRule& operator=(const DenyUsbDeviceClassRule&) = delete;
+
   ~DenyUsbDeviceClassRule() override = default;
 
   Result ProcessUsbDevice(struct udev_device* device) override;
 
  private:
   const std::string device_class_;
-
-  DISALLOW_COPY_AND_ASSIGN(DenyUsbDeviceClassRule);
 };
 
 }  // namespace permission_broker

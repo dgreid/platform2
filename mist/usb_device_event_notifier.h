@@ -36,6 +36,8 @@ class UsbDeviceEventNotifier {
   // brillo::Udev as |udev|. The ownership of |udev| is not transferred, and
   // thus they should outlive this object.
   explicit UsbDeviceEventNotifier(brillo::Udev* udev);
+  UsbDeviceEventNotifier(const UsbDeviceEventNotifier&) = delete;
+  UsbDeviceEventNotifier& operator=(const UsbDeviceEventNotifier&) = delete;
 
   ~UsbDeviceEventNotifier();
 
@@ -95,8 +97,6 @@ class UsbDeviceEventNotifier {
   std::unique_ptr<brillo::UdevMonitor> udev_monitor_;
   std::unique_ptr<base::FileDescriptorWatcher::Controller>
       udev_monitor_watcher_;
-
-  DISALLOW_COPY_AND_ASSIGN(UsbDeviceEventNotifier);
 };
 
 }  // namespace mist

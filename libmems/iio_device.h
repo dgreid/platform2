@@ -159,10 +159,10 @@ class LIBMEMS_EXPORT IioDevice {
                                               const char* prefix);
 
   IioDevice() = default;
-  std::vector<ChannelData> channels_;
+  IioDevice(const IioDevice&) = delete;
+  IioDevice& operator=(const IioDevice&) = delete;
 
- private:
-  DISALLOW_COPY_AND_ASSIGN(IioDevice);
+  std::vector<ChannelData> channels_;
 };
 
 }  // namespace libmems

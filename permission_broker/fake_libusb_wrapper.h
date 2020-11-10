@@ -46,6 +46,9 @@ class FakeUsbDevice : public UsbDeviceInterface {
   FakeUsbDevice(const UsbDeviceInfo& info,
                 const UsbDeviceInfo& parent_info,
                 State* state);
+  FakeUsbDevice(const FakeUsbDevice&) = delete;
+  FakeUsbDevice& operator=(const FakeUsbDevice&) = delete;
+
   ~FakeUsbDevice() override;
 
   UsbDeviceInfo GetInfo() const override;
@@ -64,8 +67,6 @@ class FakeUsbDevice : public UsbDeviceInterface {
   // this class. |state_| is meant as a way to communicate back the collected
   // state of a UsbDeviceInterface object in tests.
   State* state_;
-
-  DISALLOW_COPY_AND_ASSIGN(FakeUsbDevice);
 };
 
 // Fake implementation of the UsbDeviceManagerInterface used for testing. This
@@ -75,6 +76,9 @@ class FakeUsbDeviceManager : public UsbDeviceManagerInterface {
  public:
   FakeUsbDeviceManager(
       std::vector<std::unique_ptr<UsbDeviceInterface>> devices);
+  FakeUsbDeviceManager(const FakeUsbDeviceManager&) = delete;
+  FakeUsbDeviceManager& operator=(const FakeUsbDeviceManager&) = delete;
+
   ~FakeUsbDeviceManager() override;
 
   std::vector<std::unique_ptr<UsbDeviceInterface>> GetDevicesByVidPid(
@@ -82,7 +86,6 @@ class FakeUsbDeviceManager : public UsbDeviceManagerInterface {
 
  private:
   std::vector<std::unique_ptr<UsbDeviceInterface>> devices_;
-  DISALLOW_COPY_AND_ASSIGN(FakeUsbDeviceManager);
 };
 
 }  // namespace permission_broker

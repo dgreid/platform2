@@ -30,6 +30,8 @@ class MetadataCacheTest : public testing::Test {
     cache_ = std::make_unique<MetadataCache>(tick_clock_.get(), cache_lifetime_,
                                              MetadataCache::Mode::kStandard);
   }
+  MetadataCacheTest(const MetadataCacheTest&) = delete;
+  MetadataCacheTest& operator=(const MetadataCacheTest&) = delete;
 
   ~MetadataCacheTest() override = default;
 
@@ -37,8 +39,6 @@ class MetadataCacheTest : public testing::Test {
   base::TimeDelta cache_lifetime_;
   std::unique_ptr<MetadataCache> cache_;
   std::unique_ptr<base::SimpleTestTickClock> tick_clock_;
-
-  DISALLOW_COPY_AND_ASSIGN(MetadataCacheTest);
 };
 
 TEST_F(MetadataCacheTest, FindOnEmptyCache) {

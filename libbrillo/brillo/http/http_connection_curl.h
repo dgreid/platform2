@@ -27,6 +27,9 @@ class BRILLO_EXPORT Connection : public http::Connection {
              const std::string& method,
              const std::shared_ptr<CurlInterface>& curl_interface,
              const std::shared_ptr<http::Transport>& transport);
+  Connection(const Connection&) = delete;
+  Connection& operator=(const Connection&) = delete;
+
   ~Connection() override;
 
   // Overrides from http::Connection.
@@ -93,7 +96,6 @@ class BRILLO_EXPORT Connection : public http::Connection {
 
  private:
   friend class http::curl::Transport;
-  DISALLOW_COPY_AND_ASSIGN(Connection);
 };
 
 }  // namespace curl

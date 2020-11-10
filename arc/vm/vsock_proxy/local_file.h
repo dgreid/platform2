@@ -36,6 +36,9 @@ class LocalFile {
             bool can_send_fds,
             base::OnceClosure error_handler,
             scoped_refptr<base::TaskRunner> blocking_task_runner);
+  LocalFile(const LocalFile&) = delete;
+  LocalFile& operator=(const LocalFile&) = delete;
+
   ~LocalFile();
 
   // Reads the message from the file descriptor.
@@ -84,7 +87,6 @@ class LocalFile {
   scoped_refptr<base::TaskRunner> blocking_task_runner_;
 
   base::WeakPtrFactory<LocalFile> weak_factory_{this};
-  DISALLOW_COPY_AND_ASSIGN(LocalFile);
 };
 
 }  // namespace arc

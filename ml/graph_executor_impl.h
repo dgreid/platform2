@@ -50,6 +50,8 @@ class GraphExecutorImpl
       mojo::PendingReceiver<chromeos::machine_learning::mojom::GraphExecutor>
           receiver,
       const std::string& metrics_model_name);
+  GraphExecutorImpl(const GraphExecutorImpl&) = delete;
+  GraphExecutorImpl& operator=(const GraphExecutorImpl&) = delete;
 
   void set_disconnect_handler(base::Closure disconnect_handler);
 
@@ -70,8 +72,6 @@ class GraphExecutorImpl
 
   // Model name as it should appear in UMA histogram names.
   const std::string metrics_model_name_;
-
-  DISALLOW_COPY_AND_ASSIGN(GraphExecutorImpl);
 };
 
 }  // namespace ml

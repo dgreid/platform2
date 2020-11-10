@@ -25,6 +25,9 @@ namespace {
 class MockArcMounter : public ArcMounter {
  public:
   MockArcMounter() = default;
+  MockArcMounter(const MockArcMounter&) = delete;
+  MockArcMounter& operator=(const MockArcMounter&) = delete;
+
   ~MockArcMounter() override = default;
 
   bool Mount(const std::string& source,
@@ -87,9 +90,6 @@ class MockArcMounter : public ArcMounter {
 
   std::multiset<std::string> mount_points_;
   std::multiset<std::string> loop_mount_points_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockArcMounter);
 };
 
 }  // namespace

@@ -51,6 +51,8 @@ std::string ValueToString(T value) {
 class InfoDisplay {
  public:
   InfoDisplay() : name_indent_(0), value_indent_(0) {}
+  InfoDisplay(const InfoDisplay&) = delete;
+  InfoDisplay& operator=(const InfoDisplay&) = delete;
 
   void SetIndent(int name_indent, int value_indent) {
     name_indent_ = name_indent;
@@ -78,8 +80,6 @@ class InfoDisplay {
  private:
   int name_indent_;
   int value_indent_;
-
-  DISALLOW_COPY_AND_ASSIGN(InfoDisplay);
 };
 
 }  // namespace

@@ -14,6 +14,9 @@ namespace mist {
 class MockConfigLoader : public ConfigLoader {
  public:
   MockConfigLoader() = default;
+  MockConfigLoader(const MockConfigLoader&) = delete;
+  MockConfigLoader& operator=(const MockConfigLoader&) = delete;
+
   ~MockConfigLoader() override = default;
 
   MOCK_METHOD(bool, LoadDefaultConfig, (), (override));
@@ -22,9 +25,6 @@ class MockConfigLoader : public ConfigLoader {
               GetUsbModemInfo,
               (uint16_t, uint16_t),
               (const, override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockConfigLoader);
 };
 
 }  // namespace mist

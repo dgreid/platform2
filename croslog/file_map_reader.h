@@ -64,6 +64,8 @@ class FileMapReader {
     MappedBuffer(const uint8_t* buffer_,
                  uint64_t buffer_start_,
                  uint64_t buffer_length_);
+    MappedBuffer(const MappedBuffer&) = delete;
+    MappedBuffer& operator=(const MappedBuffer&) = delete;
 
     const uint8_t* const buffer_ = nullptr;
     const uint64_t buffer_start_ = 0;
@@ -71,7 +73,6 @@ class FileMapReader {
 
     base::WeakPtrFactory<MappedBuffer> weak_factory_{this};
 
-    DISALLOW_COPY_AND_ASSIGN(MappedBuffer);
   };
 
   // Creates an instance and returns it.
@@ -89,6 +90,9 @@ class FileMapReader {
 
   // ctor and dtor
   explicit FileMapReader(std::unique_ptr<FileMapReaderDelegate> delegate);
+  FileMapReader(const FileMapReader&) = delete;
+  FileMapReader& operator=(const FileMapReader&) = delete;
+
   ~FileMapReader();
 
   // Should be called when the file size is expanded.
@@ -123,8 +127,6 @@ class FileMapReader {
   int64_t file_size_;
 
   base::WeakPtr<MappedBuffer> instantiated_mapped_buffer_;
-
-  DISALLOW_COPY_AND_ASSIGN(FileMapReader);
 };
 
 }  // namespace croslog

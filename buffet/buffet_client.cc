@@ -143,6 +143,8 @@ brillo::Any GetJsonList(const base::ListValue& list) {
 class Daemon final : public brillo::DBusDaemon {
  public:
   Daemon() = default;
+  Daemon(const Daemon&) = delete;
+  Daemon& operator=(const Daemon&) = delete;
 
  protected:
   int OnInit() override {
@@ -361,7 +363,6 @@ class Daemon final : public brillo::DBusDaemon {
   base::CancelableCallback<void()> timeout_task_;
 
   base::WeakPtrFactory<Daemon> weak_factory_{this};
-  DISALLOW_COPY_AND_ASSIGN(Daemon);
 };
 
 }  // anonymous namespace

@@ -12,12 +12,13 @@ namespace permission_broker {
 class DenyUninitializedDeviceRule : public Rule {
  public:
   DenyUninitializedDeviceRule();
+  DenyUninitializedDeviceRule(const DenyUninitializedDeviceRule&) = delete;
+  DenyUninitializedDeviceRule& operator=(const DenyUninitializedDeviceRule&) =
+      delete;
+
   ~DenyUninitializedDeviceRule() override = default;
 
   Result ProcessDevice(struct udev_device* device) override;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(DenyUninitializedDeviceRule);
 };
 
 }  // namespace permission_broker

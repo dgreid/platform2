@@ -283,6 +283,9 @@ class SessionManagerImpl::DBusService {
  public:
   explicit DBusService(org::chromium::SessionManagerInterfaceAdaptor* adaptor)
       : adaptor_(adaptor), weak_ptr_factory_(this) {}
+  DBusService(const DBusService&) = delete;
+  DBusService& operator=(const DBusService&) = delete;
+
   ~DBusService() = default;
 
   bool Start(const scoped_refptr<dbus::Bus>& bus) {
@@ -341,7 +344,6 @@ class SessionManagerImpl::DBusService {
   std::unique_ptr<brillo::dbus_utils::DBusObject> dbus_object_;
 
   base::WeakPtrFactory<DBusService> weak_ptr_factory_;
-  DISALLOW_COPY_AND_ASSIGN(DBusService);
 };
 
 struct SessionManagerImpl::UserSession {

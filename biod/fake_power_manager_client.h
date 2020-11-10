@@ -15,6 +15,9 @@ namespace biod {
 class FakePowerManagerClient : public PowerManagerClientInterface {
  public:
   FakePowerManagerClient() = default;
+  FakePowerManagerClient(const FakePowerManagerClient&) = delete;
+  FakePowerManagerClient& operator=(const FakePowerManagerClient&) = delete;
+
   ~FakePowerManagerClient() override = default;
 
   // Implement PowerManagerInterface.
@@ -26,8 +29,6 @@ class FakePowerManagerClient : public PowerManagerClientInterface {
 
  private:
   base::ObserverList<PowerEventObserver> observers_;
-
-  DISALLOW_COPY_AND_ASSIGN(FakePowerManagerClient);
 };
 
 }  // namespace biod

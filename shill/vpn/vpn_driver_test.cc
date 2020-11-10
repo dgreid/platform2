@@ -50,6 +50,9 @@ const char kStorageID[] = "vpn_service_id";
 class VPNDriverUnderTest : public VPNDriver {
  public:
   explicit VPNDriverUnderTest(Manager* manager);
+  VPNDriverUnderTest(const VPNDriverUnderTest&) = delete;
+  VPNDriverUnderTest& operator=(const VPNDriverUnderTest&) = delete;
+
   ~VPNDriverUnderTest() override = default;
 
   // Inherited from VPNDriver.
@@ -64,8 +67,6 @@ class VPNDriverUnderTest : public VPNDriver {
 
  private:
   static const Property kProperties[];
-
-  DISALLOW_COPY_AND_ASSIGN(VPNDriverUnderTest);
 };
 
 // static

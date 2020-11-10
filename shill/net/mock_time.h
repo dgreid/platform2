@@ -15,6 +15,9 @@ namespace shill {
 class MockTime : public Time {
  public:
   MockTime() = default;
+  MockTime(const MockTime&) = delete;
+  MockTime& operator=(const MockTime&) = delete;
+
   ~MockTime() override = default;
 
   MOCK_METHOD(bool, GetSecondsMonotonic, (time_t*), (override));
@@ -27,9 +30,6 @@ class MockTime : public Time {
               (override));
   MOCK_METHOD(Timestamp, GetNow, (), (override));
   MOCK_METHOD(time_t, GetSecondsSinceEpoch, (), (const, override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockTime);
 };
 
 }  // namespace shill

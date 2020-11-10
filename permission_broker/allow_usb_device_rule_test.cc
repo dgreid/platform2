@@ -12,13 +12,13 @@ namespace permission_broker {
 class AllowUsbDeviceRuleTest : public RuleTest {
  public:
   AllowUsbDeviceRuleTest() = default;
+  AllowUsbDeviceRuleTest(const AllowUsbDeviceRuleTest&) = delete;
+  AllowUsbDeviceRuleTest& operator=(const AllowUsbDeviceRuleTest&) = delete;
+
   ~AllowUsbDeviceRuleTest() override = default;
 
  protected:
   AllowUsbDeviceRule rule_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(AllowUsbDeviceRuleTest);
 };
 
 TEST_F(AllowUsbDeviceRuleTest, IgnoreNonUsbDevice) {

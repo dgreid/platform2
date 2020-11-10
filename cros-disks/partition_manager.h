@@ -29,6 +29,8 @@ class PartitionManager {
   PartitionManager(brillo::ProcessReaper* process_reaper,
                    DiskMonitor* disk_monitor)
       : process_reaper_(process_reaper), disk_monitor_(disk_monitor) {}
+  PartitionManager(const PartitionManager&) = delete;
+  PartitionManager& operator=(const PartitionManager&) = delete;
 
   virtual ~PartitionManager() = default;
 
@@ -54,8 +56,6 @@ class PartitionManager {
   DiskMonitor* disk_monitor_;
 
   base::WeakPtrFactory<PartitionManager> weak_ptr_factory_{this};
-
-  DISALLOW_COPY_AND_ASSIGN(PartitionManager);
 };
 
 }  // namespace cros_disks

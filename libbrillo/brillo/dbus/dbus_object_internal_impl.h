@@ -77,6 +77,10 @@ class SimpleDBusInterfaceMethodHandler
   explicit SimpleDBusInterfaceMethodHandler(
       const base::Callback<R(Args...)>& handler)
       : handler_(handler) {}
+  SimpleDBusInterfaceMethodHandler(const SimpleDBusInterfaceMethodHandler&) =
+      delete;
+  SimpleDBusInterfaceMethodHandler& operator=(
+      const SimpleDBusInterfaceMethodHandler&) = delete;
 
   void HandleMethod(::dbus::MethodCall* method_call,
                     ResponseSender sender) override {
@@ -98,7 +102,6 @@ class SimpleDBusInterfaceMethodHandler
  private:
   // C++ callback to be called when a DBus method is dispatched.
   base::Callback<R(Args...)> handler_;
-  DISALLOW_COPY_AND_ASSIGN(SimpleDBusInterfaceMethodHandler);
 };
 
 // Specialization of SimpleDBusInterfaceMethodHandlerInterface for
@@ -112,6 +115,10 @@ class SimpleDBusInterfaceMethodHandler<void, Args...>
   explicit SimpleDBusInterfaceMethodHandler(
       const base::Callback<void(Args...)>& handler)
       : handler_(handler) {}
+  SimpleDBusInterfaceMethodHandler(const SimpleDBusInterfaceMethodHandler&) =
+      delete;
+  SimpleDBusInterfaceMethodHandler& operator=(
+      const SimpleDBusInterfaceMethodHandler&) = delete;
 
   void HandleMethod(::dbus::MethodCall* method_call,
                     ResponseSender sender) override {
@@ -136,7 +143,6 @@ class SimpleDBusInterfaceMethodHandler<void, Args...>
  private:
   // C++ callback to be called when a DBus method is dispatched.
   base::Callback<void(Args...)> handler_;
-  DISALLOW_COPY_AND_ASSIGN(SimpleDBusInterfaceMethodHandler);
 };
 
 // An implementation of DBusInterfaceMethodHandlerInterface for simple
@@ -158,6 +164,10 @@ class SimpleDBusInterfaceMethodHandlerWithError
   explicit SimpleDBusInterfaceMethodHandlerWithError(
       const base::Callback<bool(ErrorPtr*, Args...)>& handler)
       : handler_(handler) {}
+  SimpleDBusInterfaceMethodHandlerWithError(
+      const SimpleDBusInterfaceMethodHandlerWithError&) = delete;
+  SimpleDBusInterfaceMethodHandlerWithError& operator=(
+      const SimpleDBusInterfaceMethodHandlerWithError&) = delete;
 
   void HandleMethod(::dbus::MethodCall* method_call,
                     ResponseSender sender) override {
@@ -186,7 +196,6 @@ class SimpleDBusInterfaceMethodHandlerWithError
  private:
   // C++ callback to be called when a DBus method is dispatched.
   base::Callback<bool(ErrorPtr*, Args...)> handler_;
-  DISALLOW_COPY_AND_ASSIGN(SimpleDBusInterfaceMethodHandlerWithError);
 };
 
 // An implementation of SimpleDBusInterfaceMethodHandlerWithErrorAndMessage
@@ -209,6 +218,10 @@ class SimpleDBusInterfaceMethodHandlerWithErrorAndMessage
   explicit SimpleDBusInterfaceMethodHandlerWithErrorAndMessage(
       const base::Callback<bool(ErrorPtr*, ::dbus::Message*, Args...)>& handler)
       : handler_(handler) {}
+  SimpleDBusInterfaceMethodHandlerWithErrorAndMessage(
+      const SimpleDBusInterfaceMethodHandlerWithErrorAndMessage&) = delete;
+  SimpleDBusInterfaceMethodHandlerWithErrorAndMessage& operator=(
+      const SimpleDBusInterfaceMethodHandlerWithErrorAndMessage&) = delete;
 
   void HandleMethod(::dbus::MethodCall* method_call,
                     ResponseSender sender) override {
@@ -238,7 +251,6 @@ class SimpleDBusInterfaceMethodHandlerWithErrorAndMessage
  private:
   // C++ callback to be called when a DBus method is dispatched.
   base::Callback<bool(ErrorPtr*, ::dbus::Message*, Args...)> handler_;
-  DISALLOW_COPY_AND_ASSIGN(SimpleDBusInterfaceMethodHandlerWithErrorAndMessage);
 };
 
 // An implementation of DBusInterfaceMethodHandlerInterface for more generic
@@ -256,6 +268,9 @@ class DBusInterfaceMethodHandler : public DBusInterfaceMethodHandlerInterface {
   explicit DBusInterfaceMethodHandler(
       const base::Callback<void(std::unique_ptr<Response>, Args...)>& handler)
       : handler_(handler) {}
+  DBusInterfaceMethodHandler(const DBusInterfaceMethodHandler&) = delete;
+  DBusInterfaceMethodHandler& operator=(const DBusInterfaceMethodHandler&) =
+      delete;
 
   // This method forwards the call to |handler_| after extracting the required
   // arguments from the DBus message buffer specified in |method_call|.
@@ -281,8 +296,6 @@ class DBusInterfaceMethodHandler : public DBusInterfaceMethodHandlerInterface {
  private:
   // C++ callback to be called when a D-Bus method is dispatched.
   base::Callback<void(std::unique_ptr<Response>, Args...)> handler_;
-
-  DISALLOW_COPY_AND_ASSIGN(DBusInterfaceMethodHandler);
 };
 
 // An implementation of DBusInterfaceMethodHandlerWithMessage which is almost
@@ -304,6 +317,10 @@ class DBusInterfaceMethodHandlerWithMessage
       const base::Callback<
           void(std::unique_ptr<Response>, ::dbus::Message*, Args...)>& handler)
       : handler_(handler) {}
+  DBusInterfaceMethodHandlerWithMessage(
+      const DBusInterfaceMethodHandlerWithMessage&) = delete;
+  DBusInterfaceMethodHandlerWithMessage& operator=(
+      const DBusInterfaceMethodHandlerWithMessage&) = delete;
 
   // This method forwards the call to |handler_| after extracting the required
   // arguments from the DBus message buffer specified in |method_call|.
@@ -330,8 +347,6 @@ class DBusInterfaceMethodHandlerWithMessage
   // C++ callback to be called when a D-Bus method is dispatched.
   base::Callback<void(std::unique_ptr<Response>, ::dbus::Message*, Args...)>
       handler_;
-
-  DISALLOW_COPY_AND_ASSIGN(DBusInterfaceMethodHandlerWithMessage);
 };
 
 // An implementation of DBusInterfaceMethodHandlerInterface that has custom
@@ -349,6 +364,9 @@ class RawDBusInterfaceMethodHandler
   RawDBusInterfaceMethodHandler(
       const base::Callback<void(::dbus::MethodCall*, ResponseSender)>& handler)
       : handler_(handler) {}
+  RawDBusInterfaceMethodHandler(const RawDBusInterfaceMethodHandler&) = delete;
+  RawDBusInterfaceMethodHandler& operator=(
+      const RawDBusInterfaceMethodHandler&) = delete;
 
   void HandleMethod(::dbus::MethodCall* method_call,
                     ResponseSender sender) override {
@@ -358,8 +376,6 @@ class RawDBusInterfaceMethodHandler
  private:
   // C++ callback to be called when a D-Bus method is dispatched.
   base::Callback<void(::dbus::MethodCall*, ResponseSender)> handler_;
-
-  DISALLOW_COPY_AND_ASSIGN(RawDBusInterfaceMethodHandler);
 };
 
 }  // namespace dbus_utils

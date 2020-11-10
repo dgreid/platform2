@@ -50,6 +50,9 @@ class BRILLO_EXPORT FormField {
             const std::string& content_disposition,
             const std::string& content_type,
             const std::string& transfer_encoding);
+  FormField(const FormField&) = delete;
+  FormField& operator=(const FormField&) = delete;
+
   virtual ~FormField() = default;
 
   // Returns the full Content-Disposition header value. This might include the
@@ -86,9 +89,6 @@ class BRILLO_EXPORT FormField {
   // Transfer encoding for field data. If omitted, "7bit" is assumed. For most
   // binary contents (e.g. for file content), use "binary".
   std::string transfer_encoding_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(FormField);
 };
 
 // Simple text form field.
@@ -104,13 +104,13 @@ class BRILLO_EXPORT TextFormField : public FormField {
                 const std::string& data,
                 const std::string& content_type = {},
                 const std::string& transfer_encoding = {});
+  TextFormField(const TextFormField&) = delete;
+  TextFormField& operator=(const TextFormField&) = delete;
 
   bool ExtractDataStreams(std::vector<StreamPtr>* streams) override;
 
  private:
   std::string data_;  // Buffer/reader for field data.
-
-  DISALLOW_COPY_AND_ASSIGN(TextFormField);
 };
 
 // File upload form field.
@@ -130,6 +130,8 @@ class BRILLO_EXPORT FileFormField : public FormField {
                 const std::string& content_disposition,
                 const std::string& content_type,
                 const std::string& transfer_encoding = {});
+  FileFormField(const FileFormField&) = delete;
+  FileFormField& operator=(const FileFormField&) = delete;
 
   // Override from FormField.
   // Appends "filename" parameter to Content-Disposition header.
@@ -140,8 +142,6 @@ class BRILLO_EXPORT FileFormField : public FormField {
  private:
   StreamPtr stream_;
   std::string file_name_;
-
-  DISALLOW_COPY_AND_ASSIGN(FileFormField);
 };
 
 // Multipart form field.
@@ -158,6 +158,8 @@ class BRILLO_EXPORT MultiPartFormField : public FormField {
   MultiPartFormField(const std::string& name,
                      const std::string& content_type = {},
                      const std::string& boundary = {});
+  MultiPartFormField(const MultiPartFormField&) = delete;
+  MultiPartFormField& operator=(const MultiPartFormField&) = delete;
 
   // Override from FormField.
   // Appends "boundary" parameter to Content-Type header.
@@ -190,8 +192,6 @@ class BRILLO_EXPORT MultiPartFormField : public FormField {
 
   std::string boundary_;  // Boundary string used as field separator.
   std::vector<std::unique_ptr<FormField>> parts_;  // Form field list.
-
-  DISALLOW_COPY_AND_ASSIGN(MultiPartFormField);
 };
 
 // A class representing a multipart form data for sending as HTTP POST request.
@@ -200,6 +200,8 @@ class BRILLO_EXPORT FormData final {
   FormData();
   // Allows to specify a custom |boundary| separator string.
   explicit FormData(const std::string& boundary);
+  FormData(const FormData&) = delete;
+  FormData& operator=(const FormData&) = delete;
 
   // Adds a form field to the form data. The |field| could be a simple text
   // field, a file upload field or a multipart form field.
@@ -223,8 +225,6 @@ class BRILLO_EXPORT FormData final {
 
  private:
   MultiPartFormField form_data_;
-
-  DISALLOW_COPY_AND_ASSIGN(FormData);
 };
 
 }  // namespace http

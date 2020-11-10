@@ -17,13 +17,13 @@ namespace shill {
 class MockDHCPProxy : public DHCPProxyInterface {
  public:
   MockDHCPProxy();
+  MockDHCPProxy(const MockDHCPProxy&) = delete;
+  MockDHCPProxy& operator=(const MockDHCPProxy&) = delete;
+
   ~MockDHCPProxy() override;
 
   MOCK_METHOD(void, Rebind, (const std::string&), (override));
   MOCK_METHOD(void, Release, (const std::string&), (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockDHCPProxy);
 };
 
 }  // namespace shill

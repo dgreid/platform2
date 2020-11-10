@@ -23,6 +23,9 @@ namespace power_manager {
 class Clock {
  public:
   Clock();
+  Clock(const Clock&) = delete;
+  Clock& operator=(const Clock&) = delete;
+
   ~Clock();
 
   void set_current_time_for_testing(base::TimeTicks now) {
@@ -62,8 +65,6 @@ class Clock {
   // Amount of time that |current_*time_for_testing_| should be advanced by each
   // successive call to GetCurrent*Time().
   base::TimeDelta time_step_for_testing_;
-
-  DISALLOW_COPY_AND_ASSIGN(Clock);
 };
 
 }  // namespace power_manager

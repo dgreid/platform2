@@ -49,6 +49,9 @@ class BRILLO_EXPORT GrpcCompletionQueueDispatcher {
   GrpcCompletionQueueDispatcher(
       grpc::CompletionQueue* completion_queue,
       scoped_refptr<base::SequencedTaskRunner> task_runner);
+  GrpcCompletionQueueDispatcher(const GrpcCompletionQueueDispatcher&) = delete;
+  GrpcCompletionQueueDispatcher& operator=(
+      const GrpcCompletionQueueDispatcher&) = delete;
 
   // Note that the destructor CHECKs that this instance has been shut down
   // properly using |Shutdown|.
@@ -113,8 +116,6 @@ class BRILLO_EXPORT GrpcCompletionQueueDispatcher {
   std::map<const void*, TagAvailableCallback> tag_to_callback_map_;
 
   base::SequenceCheckerImpl sequence_checker_;
-
-  DISALLOW_COPY_AND_ASSIGN(GrpcCompletionQueueDispatcher);
 };
 
 }  // namespace brillo

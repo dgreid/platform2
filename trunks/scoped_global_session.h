@@ -49,12 +49,13 @@ class ScopedGlobalHmacSession {
       *target_session_ = std::move(new_session);
     }
   }
+  ScopedGlobalHmacSession(const ScopedGlobalHmacSession&) = delete;
+  ScopedGlobalHmacSession& operator=(const ScopedGlobalHmacSession&) = delete;
 
   ~ScopedGlobalHmacSession() { *target_session_ = nullptr; }
 
  private:
   std::unique_ptr<HmacSession>* target_session_;
-  DISALLOW_COPY_AND_ASSIGN(ScopedGlobalHmacSession);
 };
 #else  // TRUNKS_USE_PER_OP_SESSIONS
 class ScopedGlobalHmacSession {
@@ -63,9 +64,8 @@ class ScopedGlobalHmacSession {
                           bool /* salted */,
                           bool /* enable_encryption */,
                           std::unique_ptr<HmacSession>* /* session */) {}
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ScopedGlobalHmacSession);
+  ScopedGlobalHmacSession(const ScopedGlobalHmacSession&) = delete;
+  ScopedGlobalHmacSession& operator=(const ScopedGlobalHmacSession&) = delete;
 };
 #endif  // TRUNKS_USE_PER_OP_SESSIONS
 

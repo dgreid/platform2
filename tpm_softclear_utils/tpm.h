@@ -16,6 +16,9 @@ namespace tpm_softclear_utils {
 class Tpm {
  public:
   Tpm() = default;
+  Tpm(const Tpm&) = delete;
+  Tpm& operator=(const Tpm&) = delete;
+
   virtual ~Tpm() = default;
 
   // Performs TPM-version-dependent initialization and returns if the
@@ -45,9 +48,6 @@ class Tpm {
   // Creates a new TpmImpl or Tpm2Impl object, according to which
   // version the TPM is, and returns the pointer to the new object.
   static Tpm* Create();
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(Tpm);
 };
 
 }  // namespace tpm_softclear_utils

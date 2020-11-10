@@ -16,6 +16,8 @@ namespace keymaster {
 class CertStoreInstance : public mojom::CertStoreInstance {
  public:
   CertStoreInstance() = default;
+  CertStoreInstance(const CertStoreInstance&) = delete;
+  CertStoreInstance& operator=(const CertStoreInstance&) = delete;
 
   ~CertStoreInstance() override = default;
 
@@ -36,7 +38,6 @@ class CertStoreInstance : public mojom::CertStoreInstance {
   bool is_security_token_operation_proxy_ready_ = false;
 
   base::WeakPtrFactory<CertStoreInstance> weak_ptr_factory_{this};
-  DISALLOW_COPY_AND_ASSIGN(CertStoreInstance);
 };
 
 }  // namespace keymaster

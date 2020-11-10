@@ -54,13 +54,12 @@ namespace authpolicy {
 class AnonymizerTest : public ::testing::Test {
  public:
   AnonymizerTest() {}
+  AnonymizerTest(const AnonymizerTest&) = delete;
+  AnonymizerTest& operator=(const AnonymizerTest&) = delete;
   ~AnonymizerTest() override {}
 
  protected:
   Anonymizer anonymizer_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(AnonymizerTest);
 };
 
 // Anonymizer does not change string if no replacements are set.

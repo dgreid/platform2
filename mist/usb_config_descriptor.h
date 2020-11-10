@@ -36,6 +36,8 @@ class UsbConfigDescriptor {
   UsbConfigDescriptor(const base::WeakPtr<UsbDevice>& device,
                       libusb_config_descriptor* config_descriptor,
                       bool own_config_descriptor);
+  UsbConfigDescriptor(const UsbConfigDescriptor&) = delete;
+  UsbConfigDescriptor& operator=(const UsbConfigDescriptor&) = delete;
 
   // Destructs this UsbConfigDescriptor object and frees the underlying
   // libusb_config_descriptor struct if that is owned by this object.
@@ -66,8 +68,6 @@ class UsbConfigDescriptor {
   base::WeakPtr<UsbDevice> device_;
   libusb_config_descriptor* config_descriptor_;
   bool own_config_descriptor_;
-
-  DISALLOW_COPY_AND_ASSIGN(UsbConfigDescriptor);
 };
 
 }  // namespace mist

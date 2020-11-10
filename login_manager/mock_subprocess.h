@@ -21,6 +21,9 @@ namespace login_manager {
 class MockSubprocess : public SubprocessInterface {
  public:
   MockSubprocess();
+  MockSubprocess(const MockSubprocess&) = delete;
+  MockSubprocess& operator=(const MockSubprocess&) = delete;
+
   ~MockSubprocess() override;
 
   MOCK_METHOD(void, UseNewMountNamespace, (), (override));
@@ -37,9 +40,6 @@ class MockSubprocess : public SubprocessInterface {
   MOCK_METHOD(void, KillEverything, (int), (override));
   MOCK_METHOD(pid_t, GetPid, (), (const, override));
   MOCK_METHOD(void, ClearPid, (), (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockSubprocess);
 };
 
 }  // namespace login_manager

@@ -142,10 +142,10 @@ class FlashMode {
   // Use the static factory method above.
   explicit FlashMode(const HelperInfo& helper_info)
       : helper_info_(helper_info) {}
+  FlashMode(const FlashMode&) = delete;
+  FlashMode& operator=(const FlashMode&) = delete;
 
   HelperInfo helper_info_;
-
-  DISALLOW_COPY_AND_ASSIGN(FlashMode);
 };
 
 }  // namespace
@@ -154,6 +154,9 @@ class ModemHelperImpl : public ModemHelper {
  public:
   explicit ModemHelperImpl(const HelperInfo& helper_info)
       : helper_info_(helper_info) {}
+  ModemHelperImpl(const ModemHelperImpl&) = delete;
+  ModemHelperImpl& operator=(const ModemHelperImpl&) = delete;
+
   ~ModemHelperImpl() override = default;
 
   bool GetFirmwareInfo(FirmwareInfo* out_info) override {
@@ -224,8 +227,6 @@ class ModemHelperImpl : public ModemHelper {
 
  private:
   HelperInfo helper_info_;
-
-  DISALLOW_COPY_AND_ASSIGN(ModemHelperImpl);
 };
 
 std::unique_ptr<ModemHelper> CreateModemHelper(const HelperInfo& helper_info) {

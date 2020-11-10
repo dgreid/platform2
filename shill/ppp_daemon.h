@@ -93,9 +93,10 @@ class PPPDaemon {
   FRIEND_TEST(PPPDaemonTest, PluginUsed);
 
   PPPDaemon();
-  ~PPPDaemon();
+  PPPDaemon(const PPPDaemon&) = delete;
+  PPPDaemon& operator=(const PPPDaemon&) = delete;
 
-  DISALLOW_COPY_AND_ASSIGN(PPPDaemon);
+  ~PPPDaemon();
 };
 
 }  // namespace shill

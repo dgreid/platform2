@@ -60,6 +60,9 @@ class UnsealingSessionTpm2Impl final
       TPM_ALG_ID hash_alg,
       std::unique_ptr<trunks::PolicySession> policy_session,
       const Blob& policy_session_tpm_nonce);
+  UnsealingSessionTpm2Impl(const UnsealingSessionTpm2Impl&) = delete;
+  UnsealingSessionTpm2Impl& operator=(const UnsealingSessionTpm2Impl&) = delete;
+
   ~UnsealingSessionTpm2Impl() override;
 
   // UnsealingSession:
@@ -81,8 +84,6 @@ class UnsealingSessionTpm2Impl final
   const std::unique_ptr<trunks::PolicySession> policy_session_;
   const Blob policy_session_tpm_nonce_;
   base::ThreadChecker thread_checker_;
-
-  DISALLOW_COPY_AND_ASSIGN(UnsealingSessionTpm2Impl);
 };
 
 // Obtains the TPM 2.0 signature scheme and hashing algorithms that correspond

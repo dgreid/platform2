@@ -68,6 +68,9 @@ class TestDelegate : public VSockProxy::Delegate {
 class VSockProxyTest : public testing::Test {
  public:
   VSockProxyTest() = default;
+  VSockProxyTest(const VSockProxyTest&) = delete;
+  VSockProxyTest& operator=(const VSockProxyTest&) = delete;
+
   ~VSockProxyTest() override = default;
 
   void SetUp() override {
@@ -141,8 +144,6 @@ class VSockProxyTest : public testing::Test {
 
   base::ScopedFD server_fd_;
   base::ScopedFD client_fd_;
-
-  DISALLOW_COPY_AND_ASSIGN(VSockProxyTest);
 };
 
 // Runs the message loop until the given |fd| gets read ready.

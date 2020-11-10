@@ -15,14 +15,14 @@ namespace login_manager {
 class MockLivenessChecker : public LivenessChecker {
  public:
   MockLivenessChecker();
+  MockLivenessChecker(const MockLivenessChecker&) = delete;
+  MockLivenessChecker& operator=(const MockLivenessChecker&) = delete;
+
   ~MockLivenessChecker() override;
 
   MOCK_METHOD(void, Start, (), (override));
   MOCK_METHOD(void, Stop, (), (override));
   MOCK_METHOD(bool, IsRunning, (), (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockLivenessChecker);
 };
 
 }  // namespace login_manager

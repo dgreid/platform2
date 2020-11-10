@@ -25,6 +25,11 @@ namespace system {
 class WakeupSourceIdentifierInterface {
  public:
   WakeupSourceIdentifierInterface() {}
+  WakeupSourceIdentifierInterface(const WakeupSourceIdentifierInterface&) =
+      delete;
+  WakeupSourceIdentifierInterface& operator=(
+      const WakeupSourceIdentifierInterface&) = delete;
+
   virtual ~WakeupSourceIdentifierInterface() {}
 
   // Should be called at the beginning of a new suspend request.
@@ -36,9 +41,6 @@ class WakeupSourceIdentifierInterface {
   // Returns true if any of the input devices' wakeup counts differed (compared
   // to the pre-suspend wakeup counts).
   virtual bool InputDeviceCausedLastWake() const = 0;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(WakeupSourceIdentifierInterface);
 };
 
 }  // namespace system

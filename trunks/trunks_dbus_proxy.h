@@ -58,6 +58,8 @@ class TRUNKS_EXPORT TrunksDBusProxy : public CommandTransceiver {
 
   // Constructor for mock bus injection in unit tests.
   explicit TrunksDBusProxy(dbus::Bus* bus) : bus_(bus) {}
+  TrunksDBusProxy(const TrunksDBusProxy&) = delete;
+  TrunksDBusProxy& operator=(const TrunksDBusProxy&) = delete;
 
   // Checks service readiness, i.e. that trunksd is registered on dbus.
   bool CheckIfServiceReady();
@@ -81,8 +83,6 @@ class TRUNKS_EXPORT TrunksDBusProxy : public CommandTransceiver {
 
   // Declared last so weak pointers are invalidated first on destruction.
   base::WeakPtrFactory<TrunksDBusProxy> weak_factory_{this};
-
-  DISALLOW_COPY_AND_ASSIGN(TrunksDBusProxy);
 };
 
 }  // namespace trunks

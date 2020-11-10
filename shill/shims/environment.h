@@ -32,11 +32,11 @@ class Environment {
 
  protected:
   Environment();
+  Environment(const Environment&) = delete;
+  Environment& operator=(const Environment&) = delete;
 
  private:
   friend class base::NoDestructor<Environment>;
-
-  DISALLOW_COPY_AND_ASSIGN(Environment);
 };
 
 }  // namespace shims

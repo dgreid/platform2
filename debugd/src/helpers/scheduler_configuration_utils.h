@@ -30,6 +30,9 @@ class SchedulerConfigurationUtils {
         online_cpus_{},
         cpusets_fds_{},
         online_cpus_fd_{} {}
+  SchedulerConfigurationUtils(const SchedulerConfigurationUtils&) = delete;
+  SchedulerConfigurationUtils& operator=(const SchedulerConfigurationUtils&) =
+      delete;
 
   ~SchedulerConfigurationUtils() = default;
 
@@ -112,8 +115,6 @@ class SchedulerConfigurationUtils {
   FRIEND_TEST_ALL_PREFIXES(SchedulerConfigurationHelperTest, WriteFlag);
   FRIEND_TEST_ALL_PREFIXES(SchedulerConfigurationHelperTest, ParseCPUs);
   FRIEND_TEST_ALL_PREFIXES(SchedulerConfigurationHelperTest, TestSchedulers);
-
-  DISALLOW_COPY_AND_ASSIGN(SchedulerConfigurationUtils);
 };
 
 }  // namespace debugd

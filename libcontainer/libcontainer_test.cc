@@ -94,6 +94,9 @@ MockCgroupState* g_mock_cgroup_state = nullptr;
 class MockCgroup : public libcontainer::Cgroup {
  public:
   explicit MockCgroup(MockCgroupState* state) : state_(state) {}
+  MockCgroup(const MockCgroup&) = delete;
+  MockCgroup& operator=(const MockCgroup&) = delete;
+
   ~MockCgroup() = default;
 
   static std::unique_ptr<libcontainer::Cgroup> Create(
@@ -153,8 +156,6 @@ class MockCgroup : public libcontainer::Cgroup {
 
  private:
   MockCgroupState* const state_;
-
-  DISALLOW_COPY_AND_ASSIGN(MockCgroup);
 };
 
 struct MockMinijailState {
@@ -222,6 +223,9 @@ TEST(LibcontainerTest, DumpConfig) {
 class ContainerTest : public ::testing::Test {
  public:
   ContainerTest() = default;
+  ContainerTest(const ContainerTest&) = delete;
+  ContainerTest& operator=(const ContainerTest&) = delete;
+
   ~ContainerTest() override = default;
 
   void SetUp() override {
@@ -299,8 +303,6 @@ class ContainerTest : public ::testing::Test {
 
  private:
   base::ScopedTempDir temp_dir_;
-
-  DISALLOW_COPY_AND_ASSIGN(ContainerTest);
 };
 
 TEST_F(ContainerTest, TestMountTmpStart) {

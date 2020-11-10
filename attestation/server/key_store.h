@@ -16,6 +16,8 @@ namespace attestation {
 class KeyStore {
  public:
   KeyStore() {}
+  KeyStore(const KeyStore&) = delete;
+  KeyStore& operator=(const KeyStore&) = delete;
   virtual ~KeyStore() {}
 
   // Reads key data from the store for the key identified by |key_label| and by
@@ -59,9 +61,6 @@ class KeyStore {
   // certificate will be associated with |username|.
   virtual bool RegisterCertificate(const std::string& username,
                                    const std::string& certificate) = 0;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(KeyStore);
 };
 
 }  // namespace attestation

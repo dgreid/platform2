@@ -64,6 +64,9 @@ class SHILL_EXPORT GenericNetlinkMessage : public NetlinkMessage {
         attributes_(new AttributeList),
         command_(command),
         command_string_(command_string) {}
+  GenericNetlinkMessage(const GenericNetlinkMessage&) = delete;
+  GenericNetlinkMessage& operator=(const GenericNetlinkMessage&) = delete;
+
   ~GenericNetlinkMessage() override = default;
 
   ByteString Encode(uint32_t sequence_number) override;
@@ -86,9 +89,6 @@ class SHILL_EXPORT GenericNetlinkMessage : public NetlinkMessage {
   AttributeListRefPtr attributes_;
   const uint8_t command_;
   const char* command_string_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(GenericNetlinkMessage);
 };
 
 // Control Messages
@@ -98,6 +98,8 @@ class SHILL_EXPORT ControlNetlinkMessage : public GenericNetlinkMessage {
   static const uint16_t kMessageType;
   ControlNetlinkMessage(uint8_t command, const char* command_string)
       : GenericNetlinkMessage(kMessageType, command, command_string) {}
+  ControlNetlinkMessage(const ControlNetlinkMessage&) = delete;
+  ControlNetlinkMessage& operator=(const ControlNetlinkMessage&) = delete;
 
   static uint16_t GetMessageType() { return kMessageType; }
 
@@ -106,9 +108,6 @@ class SHILL_EXPORT ControlNetlinkMessage : public GenericNetlinkMessage {
   // Message factory for all types of Control netlink message.
   static std::unique_ptr<NetlinkMessage> CreateMessage(
       const NetlinkPacket& packet);
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ControlNetlinkMessage);
 };
 
 class SHILL_EXPORT NewFamilyMessage : public ControlNetlinkMessage {
@@ -117,9 +116,8 @@ class SHILL_EXPORT NewFamilyMessage : public ControlNetlinkMessage {
   static const char kCommandString[];
 
   NewFamilyMessage() : ControlNetlinkMessage(kCommand, kCommandString) {}
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(NewFamilyMessage);
+  NewFamilyMessage(const NewFamilyMessage&) = delete;
+  NewFamilyMessage& operator=(const NewFamilyMessage&) = delete;
 };
 
 class SHILL_EXPORT GetFamilyMessage : public ControlNetlinkMessage {
@@ -128,18 +126,16 @@ class SHILL_EXPORT GetFamilyMessage : public ControlNetlinkMessage {
   static const char kCommandString[];
 
   GetFamilyMessage();
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(GetFamilyMessage);
+  GetFamilyMessage(const GetFamilyMessage&) = delete;
+  GetFamilyMessage& operator=(const GetFamilyMessage&) = delete;
 };
 
 class SHILL_EXPORT UnknownControlMessage : public ControlNetlinkMessage {
  public:
   explicit UnknownControlMessage(uint8_t command)
       : ControlNetlinkMessage(command, "<UNKNOWN CONTROL MESSAGE>") {}
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(UnknownControlMessage);
+  UnknownControlMessage(const UnknownControlMessage&) = delete;
+  UnknownControlMessage& operator=(const UnknownControlMessage&) = delete;
 };
 
 }  // namespace shill

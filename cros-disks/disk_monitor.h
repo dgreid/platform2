@@ -38,6 +38,9 @@ namespace cros_disks {
 class DiskMonitor : public DeviceEventSourceInterface {
  public:
   DiskMonitor();
+  DiskMonitor(const DiskMonitor&) = delete;
+  DiskMonitor& operator=(const DiskMonitor&) = delete;
+
   ~DiskMonitor() override;
 
   // Initializes the disk monitor.
@@ -103,8 +106,6 @@ class DiskMonitor : public DeviceEventSourceInterface {
   std::map<std::string, std::set<std::string>> disks_detected_;
 
   std::set<std::string> allowlist_;
-
-  DISALLOW_COPY_AND_ASSIGN(DiskMonitor);
 };
 
 }  // namespace cros_disks

@@ -24,6 +24,10 @@ namespace system {
 class SuspendConfiguratorInterface {
  public:
   SuspendConfiguratorInterface() = default;
+  SuspendConfiguratorInterface(const SuspendConfiguratorInterface&) = delete;
+  SuspendConfiguratorInterface& operator=(const SuspendConfiguratorInterface&) =
+      delete;
+
   virtual ~SuspendConfiguratorInterface() = default;
 
   // Do pre-suspend configuration and logging just before asking kernel to
@@ -32,9 +36,6 @@ class SuspendConfiguratorInterface {
   // Do post-suspend work just after resuming from suspend. Returns false if the
   // last suspend was a failure. Returns true otherwise.
   virtual bool UndoPrepareForSuspend() = 0;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(SuspendConfiguratorInterface);
 };
 
 class SuspendConfigurator : public SuspendConfiguratorInterface {
@@ -43,6 +44,9 @@ class SuspendConfigurator : public SuspendConfiguratorInterface {
   static const base::FilePath kConsoleSuspendPath;
 
   SuspendConfigurator() = default;
+  SuspendConfigurator(const SuspendConfigurator&) = delete;
+  SuspendConfigurator& operator=(const SuspendConfigurator&) = delete;
+
   ~SuspendConfigurator() override = default;
 
   void Init(PrefsInterface* prefs);
@@ -81,8 +85,6 @@ class SuspendConfigurator : public SuspendConfiguratorInterface {
   // Mode for suspend. One of Suspend-to-idle, Power-on-suspend, or
   // Suspend-to-RAM.
   std::string suspend_mode_;
-
-  DISALLOW_COPY_AND_ASSIGN(SuspendConfigurator);
 };
 
 }  // namespace system

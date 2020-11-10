@@ -38,6 +38,8 @@ constexpr vda_pixel_format_t kOutputFormats[] = {YV12, NV12};
 class FakeContext : public VdaContext {
  public:
   FakeContext();
+  FakeContext(const FakeContext&) = delete;
+  FakeContext& operator=(const FakeContext&) = delete;
 
   // VdaContext overrides.
   vda_result_t Decode(int32_t bitstream_id,
@@ -53,8 +55,6 @@ class FakeContext : public VdaContext {
   vda_result_t ReuseOutputBuffer(int32_t picture_buffer_id) override;
   vda_result_t Reset() override;
   vda_result_t Flush() override;
-
-  DISALLOW_COPY_AND_ASSIGN(FakeContext);
 };
 
 FakeContext::FakeContext() = default;

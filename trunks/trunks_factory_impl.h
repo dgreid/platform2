@@ -34,6 +34,9 @@ class TRUNKS_EXPORT TrunksFactoryImpl : public TrunksFactory {
   // transceiver is forwarded down to the Tpm instance maintained by
   // this factory. It is assumed that the |transceiver| is already initialized.
   explicit TrunksFactoryImpl(CommandTransceiver* transceiver);
+  TrunksFactoryImpl(const TrunksFactoryImpl&) = delete;
+  TrunksFactoryImpl& operator=(const TrunksFactoryImpl&) = delete;
+
   ~TrunksFactoryImpl() override;
 
   // Initialize the factory. This must be called before any other methods.
@@ -72,8 +75,6 @@ class TRUNKS_EXPORT TrunksFactoryImpl : public TrunksFactory {
   std::unique_ptr<TpmCache> tpm_cache_;
   std::unique_ptr<Tpm> tpm_;
   bool initialized_ = false;
-
-  DISALLOW_COPY_AND_ASSIGN(TrunksFactoryImpl);
 };
 
 }  // namespace trunks

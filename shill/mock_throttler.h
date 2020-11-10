@@ -17,6 +17,9 @@ namespace shill {
 class MockThrottler : public Throttler {
  public:
   MockThrottler();
+  MockThrottler(const MockThrottler&) = delete;
+  MockThrottler& operator=(const MockThrottler&) = delete;
+
   ~MockThrottler() override;
 
   MOCK_METHOD(bool,
@@ -48,9 +51,6 @@ class MockThrottler : public Throttler {
   MOCK_METHOD(std::string, GetNextInterface, (), (override));
   MOCK_METHOD(void, ClearTCState, (), (override));
   MOCK_METHOD(void, ClearThrottleStatus, (), (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockThrottler);
 };
 
 }  // namespace shill

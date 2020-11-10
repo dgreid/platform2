@@ -75,6 +75,8 @@ class SystemServiceProxy {
  protected:
   SystemServiceProxy(scoped_refptr<dbus::Bus> bus,
                      const std::string& service_name);
+  SystemServiceProxy(const SystemServiceProxy&) = delete;
+  SystemServiceProxy& operator=(const SystemServiceProxy&) = delete;
 
   // Connects to the system bus. Returns the Bus instance after a successful
   // connection or nullptr on error.
@@ -83,8 +85,6 @@ class SystemServiceProxy {
  private:
   scoped_refptr<dbus::Bus> bus_;
   const std::string service_name_;
-
-  DISALLOW_COPY_AND_ASSIGN(SystemServiceProxy);
 };
 
 }  // namespace debugd

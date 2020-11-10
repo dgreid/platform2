@@ -155,6 +155,8 @@ class BRILLO_EXPORT FileStream : public Stream {
   // and FromFileDescriptor().
   FileStream(std::unique_ptr<FileDescriptorInterface> fd_interface,
              AccessMode mode);
+  FileStream(const FileStream&) = delete;
+  FileStream& operator=(const FileStream&) = delete;
 
   // Wrapper for the file descriptor. Used in testing to mock out the real
   // file system APIs.
@@ -168,8 +170,6 @@ class BRILLO_EXPORT FileStream : public Stream {
 
   // Set to false for streams that have unknown size.
   bool can_get_size_{false};
-
-  DISALLOW_COPY_AND_ASSIGN(FileStream);
 };
 
 }  // namespace brillo

@@ -70,12 +70,14 @@ bool SetSavedUserAndDropCaps(uid_t saved_uid);
 class ScopedSwitchToSavedUid {
  public:
   ScopedSwitchToSavedUid();
+  ScopedSwitchToSavedUid(const ScopedSwitchToSavedUid&) = delete;
+  ScopedSwitchToSavedUid& operator=(const ScopedSwitchToSavedUid&) = delete;
+
   ~ScopedSwitchToSavedUid();
 
  private:
   uid_t real_and_effective_uid_ = -1;
   uid_t saved_uid_ = -1;
-  DISALLOW_COPY_AND_ASSIGN(ScopedSwitchToSavedUid);
 };
 
 }  // namespace authpolicy

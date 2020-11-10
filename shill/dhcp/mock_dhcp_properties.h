@@ -16,6 +16,9 @@ namespace shill {
 class MockDhcpProperties : public DhcpProperties {
  public:
   MockDhcpProperties();
+  MockDhcpProperties(const MockDhcpProperties&) = delete;
+  MockDhcpProperties& operator=(const MockDhcpProperties&) = delete;
+
   ~MockDhcpProperties() override;
 
   MOCK_METHOD(void,
@@ -26,9 +29,6 @@ class MockDhcpProperties : public DhcpProperties {
               Load,
               (const StoreInterface*, const std::string&),
               (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockDhcpProperties);
 };
 
 }  // namespace shill

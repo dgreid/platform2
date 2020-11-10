@@ -19,6 +19,9 @@ namespace shill {
 class FileReader {
  public:
   FileReader();
+  FileReader(const FileReader&) = delete;
+  FileReader& operator=(const FileReader&) = delete;
+
   ~FileReader();
 
   // Closes the file.
@@ -35,8 +38,6 @@ class FileReader {
  private:
   // The file to read.
   base::ScopedFILE file_;
-
-  DISALLOW_COPY_AND_ASSIGN(FileReader);
 };
 
 }  // namespace shill

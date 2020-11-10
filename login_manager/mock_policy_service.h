@@ -69,6 +69,9 @@ class MockPolicyService : public PolicyService {
       else
         EXPECT_CALL(*this, HandleErrorInternal(testing::NotNull()));
     }
+    ExpectingErrorHandler(const ExpectingErrorHandler&) = delete;
+    ExpectingErrorHandler& operator=(const ExpectingErrorHandler&) = delete;
+
     virtual ~ExpectingErrorHandler() = default;
 
     // Proxy to HandleInternal() to support a passed-by-value move-only-type
@@ -80,7 +83,6 @@ class MockPolicyService : public PolicyService {
     MOCK_METHOD(void, HandleErrorInternal, (brillo::Error*));
 
    private:
-    DISALLOW_COPY_AND_ASSIGN(ExpectingErrorHandler);
   };
 
   static void DoNothingWithError(brillo::ErrorPtr error) {}

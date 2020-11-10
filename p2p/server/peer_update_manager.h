@@ -27,6 +27,8 @@ class PeerUpdateManager {
                     ServicePublisher* publisher,
                     HttpServer* http_server,
                     MetricsLibraryInterface* metrics_lib);
+  PeerUpdateManager(const PeerUpdateManager&) = delete;
+  PeerUpdateManager& operator=(const PeerUpdateManager&) = delete;
 
   ~PeerUpdateManager();
 
@@ -60,8 +62,6 @@ class PeerUpdateManager {
   // A copy of publisher_->files().size() the last time it was reported
   // to libmetrics.
   int last_num_files_;
-
-  DISALLOW_COPY_AND_ASSIGN(PeerUpdateManager);
 };
 
 }  // namespace server

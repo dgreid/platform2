@@ -24,6 +24,9 @@ using HookCallback = base::Callback<bool(pid_t)>;
 class BRILLO_EXPORT Config {
  public:
   Config();
+  Config(const Config&) = delete;
+  Config& operator=(const Config&) = delete;
+
   ~Config();
 
   container_config* get() const { return config_; }
@@ -35,8 +38,6 @@ class BRILLO_EXPORT Config {
 
  private:
   container_config* const config_;
-
-  DISALLOW_COPY_AND_ASSIGN(Config);
 };
 
 }  // namespace libcontainer

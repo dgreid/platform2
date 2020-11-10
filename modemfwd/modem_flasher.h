@@ -25,6 +25,8 @@ class ModemFlasher {
  public:
   ModemFlasher(std::unique_ptr<FirmwareDirectory> firmware_directory,
                std::unique_ptr<Journal> journal);
+  ModemFlasher(const ModemFlasher&) = delete;
+  ModemFlasher& operator=(const ModemFlasher&) = delete;
 
   // Returns a callback that should be executed when the modem reappears.
   base::Closure TryFlash(Modem* modem);
@@ -87,8 +89,6 @@ class ModemFlasher {
   std::unique_ptr<Journal> journal_;
 
   std::map<std::string, FlashState> modem_info_;
-
-  DISALLOW_COPY_AND_ASSIGN(ModemFlasher);
 };
 
 }  // namespace modemfwd

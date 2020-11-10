@@ -22,6 +22,8 @@ namespace server {
 class FakeHttpServer : public HttpServer {
  public:
   FakeHttpServer() : is_running_(false), num_connections_(0) {}
+  FakeHttpServer(const FakeHttpServer&) = delete;
+  FakeHttpServer& operator=(const FakeHttpServer&) = delete;
 
   bool Start() override {
     is_running_ = true;
@@ -53,8 +55,6 @@ class FakeHttpServer : public HttpServer {
   bool is_running_;
   NumConnectionsCallback callback_;
   int num_connections_;
-
-  DISALLOW_COPY_AND_ASSIGN(FakeHttpServer);
 };
 
 }  // namespace server

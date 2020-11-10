@@ -67,6 +67,9 @@ NssUtil::~NssUtil() = default;
 class NssUtilImpl : public NssUtil {
  public:
   NssUtilImpl();
+  NssUtilImpl(const NssUtilImpl&) = delete;
+  NssUtilImpl& operator=(const NssUtilImpl&) = delete;
+
   ~NssUtilImpl() override;
 
   ScopedPK11SlotDescriptor OpenUserDB(
@@ -97,8 +100,6 @@ class NssUtilImpl : public NssUtil {
  private:
   static const uint16_t kKeySizeInBits;
   static const char kNssdbSubpath[];
-
-  DISALLOW_COPY_AND_ASSIGN(NssUtilImpl);
 };
 
 // Defined here, instead of up above, because we need NssUtilImpl.

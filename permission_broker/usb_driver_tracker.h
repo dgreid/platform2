@@ -20,6 +20,9 @@ constexpr const int kInvalidLifelineFD = -1;
 class UsbDriverTracker {
  public:
   UsbDriverTracker();
+  UsbDriverTracker(const UsbDriverTracker&) = delete;
+  UsbDriverTracker& operator=(const UsbDriverTracker&) = delete;
+
   ~UsbDriverTracker();
 
   // Detach all the interfaces of the USB device at |path| from their
@@ -46,7 +49,6 @@ class UsbDriverTracker {
   std::map<int, UsbInterfaces> dev_fds_;
 
   base::WeakPtrFactory<UsbDriverTracker> weak_ptr_factory_{this};
-  DISALLOW_COPY_AND_ASSIGN(UsbDriverTracker);
 };
 
 }  // namespace permission_broker

@@ -22,6 +22,9 @@ class ModemSimpleProxy : public ModemSimpleProxyInterface {
   ModemSimpleProxy(const scoped_refptr<dbus::Bus>& bus,
                    const RpcIdentifier& path,
                    const std::string& service);
+  ModemSimpleProxy(const ModemSimpleProxy&) = delete;
+  ModemSimpleProxy& operator=(const ModemSimpleProxy&) = delete;
+
   ~ModemSimpleProxy() override;
 
   // Inherited methods from SimpleProxyInterface.
@@ -58,7 +61,6 @@ class ModemSimpleProxy : public ModemSimpleProxyInterface {
   std::unique_ptr<org::freedesktop::ModemManager1::Modem::SimpleProxy> proxy_;
 
   base::WeakPtrFactory<ModemSimpleProxy> weak_factory_{this};
-  DISALLOW_COPY_AND_ASSIGN(ModemSimpleProxy);
 };
 
 }  // namespace mm1

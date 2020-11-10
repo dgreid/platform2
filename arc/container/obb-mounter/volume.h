@@ -56,6 +56,9 @@ class Volume {
   class FileReader {
    public:
     FileReader(Volume* volume, int64_t start_cluster, int64_t file_size);
+    FileReader(const FileReader&) = delete;
+    FileReader& operator=(const FileReader&) = delete;
+
     ~FileReader();
 
     // Reads the given number of bytes from the given offset and returns the
@@ -72,10 +75,12 @@ class Volume {
     int64_t current_offset_;       // Current offset within the file being read.
     int64_t current_cluster_;      // Current cluster in the image file.
 
-    DISALLOW_COPY_AND_ASSIGN(FileReader);
   };
 
   Volume();
+  Volume(const Volume&) = delete;
+  Volume& operator=(const Volume&) = delete;
+
   ~Volume();
 
   // Reads the boot sector from the image and initializes member variables.
@@ -126,8 +131,6 @@ class Volume {
   // The sector from which the data region starts.
   int64_t data_start_sector_ = 0;
   FatType fat_type_ = FatType::FAT_12;  // The type of this FAT volume.
-
-  DISALLOW_COPY_AND_ASSIGN(Volume);
 };
 
 }  // namespace fat

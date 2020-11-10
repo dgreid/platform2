@@ -34,6 +34,9 @@ class DrivefsHelper : public FUSEHelper {
  public:
   DrivefsHelper(const Platform* platform,
                 brillo::ProcessReaper* process_reaper);
+  DrivefsHelper(const DrivefsHelper&) = delete;
+  DrivefsHelper& operator=(const DrivefsHelper&) = delete;
+
   ~DrivefsHelper() override;
 
   // FUSEHelper overrides:
@@ -57,8 +60,6 @@ class DrivefsHelper : public FUSEHelper {
   // present and valid. Returns an empty path on failure.
   base::FilePath GetValidatedDirectory(const std::vector<std::string>& options,
                                        base::StringPiece prefix) const;
-
-  DISALLOW_COPY_AND_ASSIGN(DrivefsHelper);
 };
 
 }  // namespace cros_disks

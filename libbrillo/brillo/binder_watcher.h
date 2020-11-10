@@ -17,6 +17,9 @@ namespace brillo {
 class BinderWatcher final {
  public:
   BinderWatcher();
+  BinderWatcher(const BinderWatcher&) = delete;
+  BinderWatcher& operator=(const BinderWatcher&) = delete;
+
   ~BinderWatcher();
 
   // Initializes the object, returning true on success.
@@ -24,8 +27,6 @@ class BinderWatcher final {
 
  private:
   std::unique_ptr<base::FileDescriptorWatcher::Controller> watcher_;
-
-  DISALLOW_COPY_AND_ASSIGN(BinderWatcher);
 };
 
 }  // namespace brillo

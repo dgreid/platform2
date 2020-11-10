@@ -53,6 +53,8 @@ class FirmwareDirectoryImpl : public FirmwareDirectory {
       : index_(std::move(index)),
         directory_(directory),
         variant_(GetModemFirmwareVariant()) {}
+  FirmwareDirectoryImpl(const FirmwareDirectoryImpl&) = delete;
+  FirmwareDirectoryImpl& operator=(const FirmwareDirectoryImpl&) = delete;
 
   // modemfwd::FirmwareDirectory overrides.
   FirmwareDirectory::Files FindFirmware(const std::string& device_id,
@@ -147,8 +149,6 @@ class FirmwareDirectoryImpl : public FirmwareDirectory {
   FirmwareIndex index_;
   base::FilePath directory_;
   std::string variant_;
-
-  DISALLOW_COPY_AND_ASSIGN(FirmwareDirectoryImpl);
 };
 
 std::unique_ptr<FirmwareDirectory> CreateFirmwareDirectory(

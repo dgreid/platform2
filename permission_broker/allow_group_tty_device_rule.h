@@ -14,14 +14,15 @@ namespace permission_broker {
 class AllowGroupTtyDeviceRule : public TtySubsystemUdevRule {
  public:
   explicit AllowGroupTtyDeviceRule(const std::string& group_name);
+  AllowGroupTtyDeviceRule(const AllowGroupTtyDeviceRule&) = delete;
+  AllowGroupTtyDeviceRule& operator=(const AllowGroupTtyDeviceRule&) = delete;
+
   ~AllowGroupTtyDeviceRule() override = default;
 
   Result ProcessTtyDevice(udev_device* device) override;
 
  private:
   const std::string group_name_;
-
-  DISALLOW_COPY_AND_ASSIGN(AllowGroupTtyDeviceRule);
 };
 
 }  // namespace permission_broker

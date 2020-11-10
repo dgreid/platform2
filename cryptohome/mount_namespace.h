@@ -23,6 +23,9 @@ class MountNamespace {
  public:
   MountNamespace(const base::FilePath& ns_path, Platform* platform)
       : ns_path_(ns_path), exists_(false), platform_(platform) {}
+  MountNamespace(const MountNamespace&) = delete;
+  MountNamespace& operator=(const MountNamespace&) = delete;
+
   ~MountNamespace();
 
   base::FilePath path() const { return ns_path_; }
@@ -34,8 +37,6 @@ class MountNamespace {
   base::FilePath ns_path_;
   bool exists_;
   Platform* platform_;
-
-  DISALLOW_COPY_AND_ASSIGN(MountNamespace);
 };
 
 }  // namespace cryptohome

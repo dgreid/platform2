@@ -54,6 +54,9 @@ class AccountManager : public TgtRenewalScheduler::Delegate {
                  std::unique_ptr<password_provider::PasswordProviderInterface>
                      password_provider,
                  KerberosMetrics* metrics);
+  AccountManager(const AccountManager&) = delete;
+  AccountManager& operator=(const AccountManager&) = delete;
+
   ~AccountManager() override;
 
   // Saves all accounts to disk. Returns ERROR_LOCAL_IO and logs on error.
@@ -251,8 +254,6 @@ class AccountManager : public TgtRenewalScheduler::Delegate {
   ConfigParser config_parser_;
 
   ErrorType last_renew_tgt_error_for_testing_ = ERROR_NONE;
-
-  DISALLOW_COPY_AND_ASSIGN(AccountManager);
 };
 
 }  // namespace kerberos

@@ -24,6 +24,9 @@ class BRILLO_EXPORT PolicyWriter {
   // directory (/etc/opt/chrome/policies/recommended/). Using a directory other
   // than recommended is only useful for testing.
   explicit PolicyWriter(const std::string& dest_dir_path);
+  PolicyWriter(const PolicyWriter&) = delete;
+  PolicyWriter& operator=(const PolicyWriter&) = delete;
+
   ~PolicyWriter();
 
   // Sets policy DeviceAllowBluetooth to value |is_allowed|. Returns whether
@@ -41,8 +44,6 @@ class BRILLO_EXPORT PolicyWriter {
  private:
   // The path to the directory into which JSON policy files should be written.
   base::FilePath dest_dir_path_;
-
-  DISALLOW_COPY_AND_ASSIGN(PolicyWriter);
 };
 
 }  // namespace policy_utils

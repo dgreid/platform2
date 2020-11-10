@@ -38,6 +38,8 @@ class VshForwarder {
                bool inherit_env,
                std::string default_user,
                bool allow_to_switch_user);
+  VshForwarder(const VshForwarder&) = delete;
+  VshForwarder& operator=(const VshForwarder&) = delete;
 
   bool Init();
 
@@ -70,8 +72,6 @@ class VshForwarder {
   int exit_code_;
   const std::string default_user_;
   const bool allow_to_switch_user_;
-
-  DISALLOW_COPY_AND_ASSIGN(VshForwarder);
 };
 
 }  // namespace vsh

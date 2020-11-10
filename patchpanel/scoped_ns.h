@@ -14,6 +14,9 @@ namespace patchpanel {
 class ScopedNS {
  public:
   explicit ScopedNS(pid_t pid);
+  ScopedNS(const ScopedNS&) = delete;
+  ScopedNS& operator=(const ScopedNS&) = delete;
+
   ~ScopedNS();
 
   // Returns whether or not the object was able to enter the network namespace.
@@ -23,8 +26,6 @@ class ScopedNS {
   bool valid_;
   base::ScopedFD ns_fd_;
   base::ScopedFD self_fd_;
-
-  DISALLOW_COPY_AND_ASSIGN(ScopedNS);
 };
 
 }  // namespace patchpanel

@@ -19,6 +19,9 @@ namespace brillo {
 class BRILLO_EXPORT MockUdev : public Udev {
  public:
   MockUdev() : Udev(nullptr) {}
+  MockUdev(const MockUdev&) = delete;
+  MockUdev& operator=(const MockUdev&) = delete;
+
   ~MockUdev() override = default;
 
   MOCK_METHOD(std::unique_ptr<UdevDevice>,
@@ -38,9 +41,6 @@ class BRILLO_EXPORT MockUdev : public Udev {
               CreateMonitorFromNetlink,
               (const char*),
               (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockUdev);
 };
 
 }  // namespace brillo

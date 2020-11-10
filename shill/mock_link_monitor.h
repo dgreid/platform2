@@ -14,6 +14,9 @@ namespace shill {
 class MockLinkMonitor : public LinkMonitor {
  public:
   MockLinkMonitor();
+  MockLinkMonitor(const MockLinkMonitor&) = delete;
+  MockLinkMonitor& operator=(const MockLinkMonitor&) = delete;
+
   ~MockLinkMonitor() override;
 
   MOCK_METHOD(bool, Start, (), (override));
@@ -21,9 +24,6 @@ class MockLinkMonitor : public LinkMonitor {
   MOCK_METHOD(void, OnAfterResume, (), (override));
   MOCK_METHOD(int, GetResponseTimeMilliseconds, (), (const, override));
   MOCK_METHOD(bool, IsGatewayFound, (), (const, override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockLinkMonitor);
 };
 
 }  // namespace shill

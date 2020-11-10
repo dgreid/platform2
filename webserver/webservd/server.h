@@ -34,6 +34,9 @@ class Server final : public org::chromium::WebServer::ServerInterface,
   Server(brillo::dbus_utils::ExportedObjectManager* object_manager,
          const Config& config,
          std::unique_ptr<FirewallInterface> firewall);
+  Server(const Server&) = delete;
+  Server& operator=(const Server&) = delete;
+
   // Need to off-line the destructor to allow |protocol_handler_map_| to contain
   // a forward-declared pointer to DBusProtocolHandler.
   ~Server();
@@ -88,7 +91,6 @@ class Server final : public org::chromium::WebServer::ServerInterface,
   TempFileManager temp_file_manager_{GetUploadDirectory(), &file_deleter_};
 
   base::WeakPtrFactory<Server> weak_ptr_factory_{this};
-  DISALLOW_COPY_AND_ASSIGN(Server);
 };
 
 }  // namespace webservd

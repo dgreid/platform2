@@ -19,6 +19,8 @@ namespace http {
 class MockTransport : public Transport {
  public:
   MockTransport() = default;
+  MockTransport(const MockTransport&) = delete;
+  MockTransport& operator=(const MockTransport&) = delete;
 
   MOCK_METHOD(std::shared_ptr<Connection>,
               CreateConnection,
@@ -49,9 +51,6 @@ class MockTransport : public Transport {
 
  protected:
   MOCK_METHOD(void, ClearHost, (), (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockTransport);
 };
 
 }  // namespace http

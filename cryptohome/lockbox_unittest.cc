@@ -37,6 +37,9 @@ using ::testing::SetArgPointee;
 class LockboxTest : public ::testing::TestWithParam<Tpm::TpmVersion> {
  public:
   LockboxTest() : lockbox_(nullptr, 0xdeadbeef) {}
+  LockboxTest(const LockboxTest&) = delete;
+  LockboxTest& operator=(const LockboxTest&) = delete;
+
   ~LockboxTest() override = default;
 
   void SetUp() override {
@@ -67,9 +70,6 @@ class LockboxTest : public ::testing::TestWithParam<Tpm::TpmVersion> {
   NiceMock<MockTpm> tpm_;
   NiceMock<brillo::ProcessMock> process_;
   brillo::Blob file_data_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(LockboxTest);
 };
 
 const char* LockboxTest::kFileData = "42";

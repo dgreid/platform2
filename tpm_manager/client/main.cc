@@ -167,6 +167,9 @@ using ClientLoopBase = brillo::Daemon;
 class ClientLoop : public ClientLoopBase {
  public:
   ClientLoop() = default;
+  ClientLoop(const ClientLoop&) = delete;
+  ClientLoop& operator=(const ClientLoop&) = delete;
+
   ~ClientLoop() override = default;
 
  protected:
@@ -544,8 +547,6 @@ class ClientLoop : public ClientLoopBase {
 
   // Declared last so that weak pointers will be destroyed first.
   base::WeakPtrFactory<ClientLoop> weak_factory_{this};
-
-  DISALLOW_COPY_AND_ASSIGN(ClientLoop);
 };
 
 }  // namespace tpm_manager

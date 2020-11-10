@@ -97,6 +97,8 @@ class VPNDriver {
             ProcessManager* process_manager,
             const Property* properties,
             size_t property_count);
+  VPNDriver(const VPNDriver&) = delete;
+  VPNDriver& operator=(const VPNDriver&) = delete;
 
   ControlInterface* control_interface() const;
   EventDispatcher* dispatcher() const;
@@ -152,8 +154,6 @@ class VPNDriver {
   int connect_timeout_seconds_;
 
   base::WeakPtrFactory<VPNDriver> weak_ptr_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(VPNDriver);
 };
 
 }  // namespace shill

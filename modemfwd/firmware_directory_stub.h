@@ -18,6 +18,8 @@ namespace modemfwd {
 class FirmwareDirectoryStub : public FirmwareDirectory {
  public:
   FirmwareDirectoryStub() = default;
+  FirmwareDirectoryStub(const FirmwareDirectoryStub&) = delete;
+  FirmwareDirectoryStub& operator=(const FirmwareDirectoryStub&) = delete;
 
   void AddMainFirmware(const std::string& device_id, FirmwareFileInfo info);
   void AddMainFirmwareForCarrier(const std::string& device_id,
@@ -46,8 +48,6 @@ class FirmwareDirectoryStub : public FirmwareDirectory {
   std::map<std::string, FirmwareFileInfo> main_fw_info_;
   CarrierFirmwareMap main_fw_info_for_carrier_;
   CarrierFirmwareMap carrier_fw_info_;
-
-  DISALLOW_COPY_AND_ASSIGN(FirmwareDirectoryStub);
 };
 
 }  // namespace modemfwd

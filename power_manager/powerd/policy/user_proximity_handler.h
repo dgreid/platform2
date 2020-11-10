@@ -37,6 +37,9 @@ class UserProximityHandler : public system::UserProximityObserver {
     virtual void HandleProximityChange(UserProximity value) = 0;
   };
   UserProximityHandler();
+  UserProximityHandler(const UserProximityHandler&) = delete;
+  UserProximityHandler& operator=(const UserProximityHandler&) = delete;
+
   ~UserProximityHandler() override;
 
   // Delegates may be == nullptr. Ownership remains with the caller.
@@ -58,8 +61,6 @@ class UserProximityHandler : public system::UserProximityObserver {
   UserProximityVoting lte_proximity_voting_;
   system::UserProximityWatcherInterface* user_proximity_watcher_ =
       nullptr;  //  Not owned.
-
-  DISALLOW_COPY_AND_ASSIGN(UserProximityHandler);
 };
 
 }  // namespace policy

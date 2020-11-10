@@ -60,6 +60,9 @@ class ChargeController {
   static int ClampPeakShiftBatteryThreshold(int threshold);
 
   ChargeController();
+  ChargeController(const ChargeController&) = delete;
+  ChargeController& operator=(const ChargeController&) = delete;
+
   ~ChargeController();
 
   // |helper| and |battery_percentage_converter| must be non-null.
@@ -104,8 +107,6 @@ class ChargeController {
 
   // Contains last successfully applied power policies settings.
   base::Optional<PowerManagementPolicy> cached_policy_;
-
-  DISALLOW_COPY_AND_ASSIGN(ChargeController);
 };
 
 }  // namespace policy

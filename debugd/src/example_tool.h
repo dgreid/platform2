@@ -16,12 +16,12 @@ namespace debugd {
 class ExampleTool {
  public:
   ExampleTool() = default;
+  ExampleTool(const ExampleTool&) = delete;
+  ExampleTool& operator=(const ExampleTool&) = delete;
+
   ~ExampleTool() = default;
 
   std::string GetExample();
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ExampleTool);
 };
 
 }  // namespace debugd

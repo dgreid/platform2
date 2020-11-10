@@ -56,12 +56,12 @@ class LogPipe {
   LogPipe(VmId vm_id,
           std::unique_ptr<HostCollector> collector,
           std::unique_ptr<Forwarder> forwarder);
+  LogPipe(const LogPipe&) = delete;
+  LogPipe& operator=(const LogPipe&) = delete;
 
   VmId vm_id_;
   std::unique_ptr<HostCollector> collector_;
   std::unique_ptr<Forwarder> forwarder_;
-
-  DISALLOW_COPY_AND_ASSIGN(LogPipe);
 };
 
 // LogPipeManager maintains a map LogPipe instances, updated in response to
@@ -74,6 +74,9 @@ class LogPipe {
 class LogPipeManager final : public LogCollector::Service {
  public:
   explicit LogPipeManager(base::OnceClosure shutdown_closure);
+  LogPipeManager(const LogPipeManager&) = delete;
+  LogPipeManager& operator=(const LogPipeManager&) = delete;
+
   ~LogPipeManager();
 
   bool Init(base::ScopedFD syslog_fd, bool only_forward_to_syslog);
@@ -135,8 +138,6 @@ class LogPipeManager final : public LogCollector::Service {
   scoped_refptr<dbus::Bus> bus_;
 
   base::WeakPtrFactory<LogPipeManager> weak_ptr_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(LogPipeManager);
 };
 
 }  // namespace syslog

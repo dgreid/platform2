@@ -22,6 +22,9 @@ namespace arc {
 class VeaContext {
  public:
   VeaContext();
+  VeaContext(const VeaContext&) = delete;
+  VeaContext& operator=(const VeaContext&) = delete;
+
   virtual ~VeaContext();
 
   // Encodes the frame pointed to by |fd|.
@@ -79,8 +82,6 @@ class VeaContext {
   void WriteEvent(const vea_event_t& event);
 
   EventPipe event_pipe_;
-
-  DISALLOW_COPY_AND_ASSIGN(VeaContext);
 };
 
 // VeaImpl encapsulates a VEA implementation that can be used to create encode
@@ -88,6 +89,9 @@ class VeaContext {
 class VeaImpl {
  public:
   VeaImpl();
+  VeaImpl(const VeaImpl&) = delete;
+  VeaImpl& operator=(const VeaImpl&) = delete;
+
   virtual ~VeaImpl();
 
   // Returns the encoding capabilities of this implementation.
@@ -102,8 +106,6 @@ class VeaImpl {
 
  protected:
   vea_capabilities_t capabilities_;
-
-  DISALLOW_COPY_AND_ASSIGN(VeaImpl);
 };
 
 }  // namespace arc

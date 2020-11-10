@@ -271,6 +271,9 @@ class BRILLO_EXPORT FlagHelper final {
 
  private:
   FlagHelper();
+  FlagHelper(const FlagHelper&) = delete;
+  FlagHelper& operator=(const FlagHelper&) = delete;
+
   ~FlagHelper();
 
   // Generates a help message from the Usage Message and registered flags.
@@ -283,8 +286,6 @@ class BRILLO_EXPORT FlagHelper final {
   // object isn't owned by this class, so don't need to delete it in the
   // destructor.
   base::CommandLine* command_line_;
-
-  DISALLOW_COPY_AND_ASSIGN(FlagHelper);
 };
 
 }  // namespace brillo

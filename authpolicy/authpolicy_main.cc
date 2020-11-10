@@ -34,6 +34,8 @@ class Daemon : public brillo::DBusServiceDaemon {
       : DBusServiceDaemon(kAuthPolicyServiceName, kObjectServicePath),
         device_is_locked_(device_is_locked),
         weak_ptr_factory_(this) {}
+  Daemon(const Daemon&) = delete;
+  Daemon& operator=(const Daemon&) = delete;
 
   // Cleans the authpolicy daemon state directory. Returns true if all files
   // were cleared.
@@ -81,7 +83,6 @@ class Daemon : public brillo::DBusServiceDaemon {
   AuthPolicy authpolicy_{&metrics_, &path_service_};
 
   base::WeakPtrFactory<Daemon> weak_ptr_factory_;
-  DISALLOW_COPY_AND_ASSIGN(Daemon);
 };
 
 }  // namespace authpolicy

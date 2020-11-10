@@ -21,6 +21,8 @@ class SystemShutdownBlocker {
   explicit SystemShutdownBlocker(
       const scoped_refptr<base::SingleThreadTaskRunner>&
           origin_thread_task_runner);
+  SystemShutdownBlocker(const SystemShutdownBlocker&) = delete;
+  SystemShutdownBlocker& operator=(const SystemShutdownBlocker&) = delete;
 
   // Unblocks all remaining blocked slots (see |blocked_slots_|).
   ~SystemShutdownBlocker();
@@ -52,8 +54,6 @@ class SystemShutdownBlocker {
 
   scoped_refptr<base::SingleThreadTaskRunner> origin_thread_task_runner_;
   std::set<int> blocked_slots_;
-
-  DISALLOW_COPY_AND_ASSIGN(SystemShutdownBlocker);
 };
 
 }  // namespace chaps

@@ -25,6 +25,9 @@ class SystemdUnitStarter : public InitDaemonController {
   static const char kPath[];
 
   explicit SystemdUnitStarter(dbus::ObjectProxy* proxy);
+  SystemdUnitStarter(const SystemdUnitStarter&) = delete;
+  SystemdUnitStarter& operator=(const SystemdUnitStarter&) = delete;
+
   ~SystemdUnitStarter() override;
 
   // InitDaemonController:
@@ -35,7 +38,6 @@ class SystemdUnitStarter : public InitDaemonController {
 
  private:
   dbus::ObjectProxy* systemd_dbus_proxy_;  // Weak, owned by caller.
-  DISALLOW_COPY_AND_ASSIGN(SystemdUnitStarter);
 };
 
 }  // namespace login_manager

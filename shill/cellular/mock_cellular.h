@@ -23,6 +23,9 @@ class MockCellular : public Cellular {
                Type type,
                const std::string& service,
                const RpcIdentifier& path);
+  MockCellular(const MockCellular&) = delete;
+  MockCellular& operator=(const MockCellular&) = delete;
+
   ~MockCellular() override;
 
   MOCK_METHOD(void, Connect, (Error*), (override));
@@ -35,9 +38,6 @@ class MockCellular : public Cellular {
               (override));
   MOCK_METHOD(void, DestroyService, (), (override));
   MOCK_METHOD(void, StartPPP, (const std::string&), (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockCellular);
 };
 
 }  // namespace shill

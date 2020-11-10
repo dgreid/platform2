@@ -46,6 +46,9 @@ class Error;
 class HookTable {
  public:
   explicit HookTable(EventDispatcher* event_dispatcher);
+  HookTable(const HookTable&) = delete;
+  HookTable& operator=(const HookTable&) = delete;
+
   ~HookTable();
 
   // Adds a closure to the hook table.  |name| should be unique; otherwise, a
@@ -107,8 +110,6 @@ class HookTable {
   // Used for setting a timeout action to run in case all the actions do not
   // complete in time.
   EventDispatcher* const event_dispatcher_;
-
-  DISALLOW_COPY_AND_ASSIGN(HookTable);
 };
 
 }  // namespace shill

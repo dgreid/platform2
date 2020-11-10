@@ -30,6 +30,9 @@ class SupplicantInterfaceProxy : public SupplicantInterfaceProxyInterface {
   SupplicantInterfaceProxy(const scoped_refptr<dbus::Bus>& bus,
                            const RpcIdentifier& object_path,
                            SupplicantEventDelegateInterface* delegate);
+  SupplicantInterfaceProxy(const SupplicantInterfaceProxy&) = delete;
+  SupplicantInterfaceProxy& operator=(const SupplicantInterfaceProxy&) = delete;
+
   ~SupplicantInterfaceProxy() override;
 
   // Implementation of SupplicantInterfaceProxyInterface.
@@ -63,6 +66,9 @@ class SupplicantInterfaceProxy : public SupplicantInterfaceProxyInterface {
     PropertySet(dbus::ObjectProxy* object_proxy,
                 const std::string& interface_name,
                 const PropertyChangedCallback& callback);
+    PropertySet(const PropertySet&) = delete;
+    PropertySet& operator=(const PropertySet&) = delete;
+
     brillo::dbus_utils::Property<bool> fast_reauth;
     brillo::dbus_utils::Property<bool> scan;
     brillo::dbus_utils::Property<int32_t> scan_interval;
@@ -71,7 +77,6 @@ class SupplicantInterfaceProxy : public SupplicantInterfaceProxyInterface {
         mac_address_randomization_mask;
 
    private:
-    DISALLOW_COPY_AND_ASSIGN(PropertySet);
   };
 
   static const char kInterfaceName[];
@@ -112,7 +117,6 @@ class SupplicantInterfaceProxy : public SupplicantInterfaceProxyInterface {
   SupplicantEventDelegateInterface* delegate_;
 
   base::WeakPtrFactory<SupplicantInterfaceProxy> weak_factory_{this};
-  DISALLOW_COPY_AND_ASSIGN(SupplicantInterfaceProxy);
 };
 
 }  // namespace shill

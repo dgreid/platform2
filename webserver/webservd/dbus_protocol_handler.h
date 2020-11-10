@@ -40,6 +40,9 @@ class DBusProtocolHandler final
                       const dbus::ObjectPath& object_path,
                       ProtocolHandler* protocol_handler,
                       Server* server);
+  DBusProtocolHandler(const DBusProtocolHandler&) = delete;
+  DBusProtocolHandler& operator=(const DBusProtocolHandler&) = delete;
+
   ~DBusProtocolHandler();
 
   void RegisterAsync(
@@ -120,7 +123,6 @@ class DBusProtocolHandler final
   std::map<std::string, std::string> handler_to_service_name_map_;
 
   base::WeakPtrFactory<DBusProtocolHandler> weak_ptr_factory_{this};
-  DISALLOW_COPY_AND_ASSIGN(DBusProtocolHandler);
 };
 
 }  // namespace webservd

@@ -42,6 +42,9 @@ constexpr char kNonPeripheralBatterySysname[] = "AC";
 class TestWrapper : public DBusWrapperStub {
  public:
   TestWrapper() {}
+  TestWrapper(const TestWrapper&) = delete;
+  TestWrapper& operator=(const TestWrapper&) = delete;
+
   ~TestWrapper() override {}
 
   // Runs |loop_| until battery status is sent through D-Bus.
@@ -63,8 +66,6 @@ class TestWrapper : public DBusWrapperStub {
 
  private:
   TestMainLoopRunner loop_runner_;
-
-  DISALLOW_COPY_AND_ASSIGN(TestWrapper);
 };
 
 }  // namespace
@@ -72,6 +73,10 @@ class TestWrapper : public DBusWrapperStub {
 class PeripheralBatteryWatcherTest : public ::testing::Test {
  public:
   PeripheralBatteryWatcherTest() {}
+  PeripheralBatteryWatcherTest(const PeripheralBatteryWatcherTest&) = delete;
+  PeripheralBatteryWatcherTest& operator=(const PeripheralBatteryWatcherTest&) =
+      delete;
+
   ~PeripheralBatteryWatcherTest() override {}
 
   void SetUp() override {
@@ -134,9 +139,6 @@ class PeripheralBatteryWatcherTest : public ::testing::Test {
   UdevStub udev_;
 
   PeripheralBatteryWatcher battery_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(PeripheralBatteryWatcherTest);
 };
 
 TEST_F(PeripheralBatteryWatcherTest, Basic) {

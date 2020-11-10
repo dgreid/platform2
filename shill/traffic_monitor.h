@@ -44,6 +44,9 @@ class TrafficMonitor {
       Device* device,
       EventDispatcher* dispatcher,
       NetworkProblemDetectedCallback network_problem_detected_callback);
+  TrafficMonitor(const TrafficMonitor&) = delete;
+  TrafficMonitor& operator=(const TrafficMonitor&) = delete;
+
   virtual ~TrafficMonitor();
 
   // Starts traffic monitoring on the selected device.
@@ -133,8 +136,6 @@ class TrafficMonitor {
 
   // Number of consecutive sample intervals that contains failed DNS requests.
   int accummulated_dns_failures_samples_;
-
-  DISALLOW_COPY_AND_ASSIGN(TrafficMonitor);
 };
 
 }  // namespace shill

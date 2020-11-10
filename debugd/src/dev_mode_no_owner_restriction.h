@@ -17,6 +17,9 @@ namespace debugd {
 class DevModeNoOwnerRestriction {
  public:
   explicit DevModeNoOwnerRestriction(scoped_refptr<dbus::Bus> bus);
+  DevModeNoOwnerRestriction(const DevModeNoOwnerRestriction&) = delete;
+  DevModeNoOwnerRestriction& operator=(const DevModeNoOwnerRestriction&) =
+      delete;
 
   virtual ~DevModeNoOwnerRestriction() = default;
 
@@ -39,8 +42,6 @@ class DevModeNoOwnerRestriction {
 
  private:
   scoped_refptr<dbus::Bus> bus_;
-
-  DISALLOW_COPY_AND_ASSIGN(DevModeNoOwnerRestriction);
 };
 
 }  // namespace debugd

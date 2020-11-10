@@ -18,6 +18,8 @@ namespace mri {
 class CrOSDbusService : public DbusService {
  public:
   CrOSDbusService() : connection_(nullptr) {}
+  CrOSDbusService(const CrOSDbusService&) = delete;
+  CrOSDbusService& operator=(const CrOSDbusService&) = delete;
 
   // |mojo_connector| is owned externally but is instantiated in the main() so
   // it will live for as long as the program is running.
@@ -65,8 +67,6 @@ class CrOSDbusService : public DbusService {
   // The MojoConnector object pointer for bootstrapping the mojo connection over
   // D-Bus.
   MojoConnector* mojo_connector_;
-
-  DISALLOW_COPY_AND_ASSIGN(CrOSDbusService);
 };
 
 }  // namespace mri

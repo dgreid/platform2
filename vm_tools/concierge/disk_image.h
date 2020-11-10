@@ -45,6 +45,8 @@ class DiskImageOperation {
 
  protected:
   DiskImageOperation();
+  DiskImageOperation(const DiskImageOperation&) = delete;
+  DiskImageOperation& operator=(const DiskImageOperation&) = delete;
 
   // Executes up to |io_limit| bytes of disk operation.
   virtual bool ExecuteIo(uint64_t io_limit) = 0;
@@ -75,8 +77,6 @@ class DiskImageOperation {
 
   // Number of bytes consumed from the source.
   uint64_t processed_size_;
-
-  DISALLOW_COPY_AND_ASSIGN(DiskImageOperation);
 };
 
 class PluginVmCreateOperation : public DiskImageOperation {
@@ -97,6 +97,8 @@ class PluginVmCreateOperation : public DiskImageOperation {
                           uint64_t source_size,
                           const VmId vm_id_,
                           const std::vector<std::string> params);
+  PluginVmCreateOperation(const PluginVmCreateOperation&) = delete;
+  PluginVmCreateOperation& operator=(const PluginVmCreateOperation&) = delete;
 
   bool PrepareOutput(const base::FilePath& iso_dir);
 
@@ -119,8 +121,6 @@ class PluginVmCreateOperation : public DiskImageOperation {
 
   // Destination directory object.
   base::ScopedTempDir output_dir_;
-
-  DISALLOW_COPY_AND_ASSIGN(PluginVmCreateOperation);
 };
 
 struct ArchiveReadDeleter {
@@ -166,6 +166,8 @@ class VmExportOperation : public DiskImageOperation {
                     base::ScopedFD out_fd,
                     base::ScopedFD out_digest_fd,
                     ArchiveFormat out_fmt);
+  VmExportOperation(const VmExportOperation&) = delete;
+  VmExportOperation& operator=(const VmExportOperation&) = delete;
 
   bool PrepareInput();
   bool PrepareOutput();
@@ -208,8 +210,6 @@ class VmExportOperation : public DiskImageOperation {
 
   // Hasher to generate digest of the produced image.
   std::unique_ptr<crypto::SecureHash> sha256_;
-
-  DISALLOW_COPY_AND_ASSIGN(VmExportOperation);
 };
 
 class PluginVmImportOperation : public DiskImageOperation {
@@ -233,6 +233,8 @@ class PluginVmImportOperation : public DiskImageOperation {
                           const base::FilePath disk_path,
                           const VmId vm_id_,
                           dbus::ObjectProxy* vmplugin_service_proxy);
+  PluginVmImportOperation(const PluginVmImportOperation&) = delete;
+  PluginVmImportOperation& operator=(const PluginVmImportOperation&) = delete;
 
   bool PrepareInput();
   bool PrepareOutput();
@@ -269,8 +271,6 @@ class PluginVmImportOperation : public DiskImageOperation {
 
   // "Archive" representing output uncompressed directory.
   ArchiveWriter out_;
-
-  DISALLOW_COPY_AND_ASSIGN(PluginVmImportOperation);
 };
 
 class VmResizeOperation : public DiskImageOperation {
@@ -300,6 +300,8 @@ class VmResizeOperation : public DiskImageOperation {
                     const base::FilePath disk_path,
                     uint64_t size,
                     ResizeCallback process_resize_cb);
+  VmResizeOperation(const VmResizeOperation&) = delete;
+  VmResizeOperation& operator=(const VmResizeOperation&) = delete;
 
   ResizeCallback process_resize_cb_;
 
@@ -311,8 +313,6 @@ class VmResizeOperation : public DiskImageOperation {
   base::FilePath disk_path_;
 
   uint64_t target_size_;
-
-  DISALLOW_COPY_AND_ASSIGN(VmResizeOperation);
 };
 
 }  // namespace concierge

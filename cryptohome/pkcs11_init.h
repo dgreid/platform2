@@ -25,6 +25,9 @@ namespace cryptohome {
 class Pkcs11Init {
  public:
   Pkcs11Init();
+  Pkcs11Init(const Pkcs11Init&) = delete;
+  Pkcs11Init& operator=(const Pkcs11Init&) = delete;
+
   virtual ~Pkcs11Init();
 
   virtual void GetTpmTokenInfo(std::string* OUT_label,
@@ -61,8 +64,6 @@ class Pkcs11Init {
 
   std::unique_ptr<Platform> default_platform_;
   Platform* platform_;
-
-  DISALLOW_COPY_AND_ASSIGN(Pkcs11Init);
 };
 
 }  // namespace cryptohome

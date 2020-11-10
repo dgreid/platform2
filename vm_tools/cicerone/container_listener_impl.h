@@ -27,6 +27,9 @@ class ContainerListenerImpl final
  public:
   explicit ContainerListenerImpl(
       base::WeakPtr<vm_tools::cicerone::Service> service);
+  ContainerListenerImpl(const ContainerListenerImpl&) = delete;
+  ContainerListenerImpl& operator=(const ContainerListenerImpl&) = delete;
+
   ~ContainerListenerImpl() override = default;
 
   // Pretend that every service call comes from |testing_peer_address| instead
@@ -104,8 +107,6 @@ class ContainerListenerImpl final
   // rate control algorithm to do this.
   uint32_t open_count_;
   base::TimeTicks open_rate_window_start_;
-
-  DISALLOW_COPY_AND_ASSIGN(ContainerListenerImpl);
 };
 
 }  // namespace cicerone

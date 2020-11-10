@@ -16,6 +16,9 @@ namespace shill {
 class MockCellularService : public CellularService {
  public:
   MockCellularService(Manager* manager, const CellularRefPtr& device);
+  MockCellularService(const MockCellularService&) = delete;
+  MockCellularService& operator=(const MockCellularService&) = delete;
+
   ~MockCellularService() override;
 
   MOCK_METHOD(void, AutoConnect, (), (override));
@@ -33,8 +36,6 @@ class MockCellularService : public CellularService {
 
  private:
   std::string default_activation_state_;
-
-  DISALLOW_COPY_AND_ASSIGN(MockCellularService);
 };
 
 }  // namespace shill

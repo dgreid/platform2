@@ -15,6 +15,8 @@ namespace modemfwd {
 class ModemHelperDirectoryStub : public ModemHelperDirectory {
  public:
   ModemHelperDirectoryStub() = default;
+  ModemHelperDirectoryStub(const ModemHelperDirectoryStub&) = delete;
+  ModemHelperDirectoryStub& operator=(const ModemHelperDirectoryStub&) = delete;
 
   void AddHelper(const std::string& device_id, ModemHelper* helper) {
     helpers_[device_id] = helper;
@@ -36,8 +38,6 @@ class ModemHelperDirectoryStub : public ModemHelperDirectory {
 
  private:
   std::map<std::string, ModemHelper*> helpers_;
-
-  DISALLOW_COPY_AND_ASSIGN(ModemHelperDirectoryStub);
 };
 
 }  // namespace modemfwd

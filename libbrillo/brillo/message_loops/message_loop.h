@@ -93,13 +93,13 @@ class BRILLO_EXPORT MessageLoop {
 
  protected:
   MessageLoop() = default;
+  MessageLoop(const MessageLoop&) = delete;
+  MessageLoop& operator=(const MessageLoop&) = delete;
 
  private:
   // Tells whether Run() should quit the message loop in the default
   // implementation.
   bool should_exit_ = false;
-
-  DISALLOW_COPY_AND_ASSIGN(MessageLoop);
 };
 
 }  // namespace brillo

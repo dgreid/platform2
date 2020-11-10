@@ -35,6 +35,8 @@ constexpr base::TimeDelta kLoginTimeout = base::TimeDelta::FromSeconds(50);
 class GoldfishDaemon : public brillo::Daemon {
  public:
   GoldfishDaemon() = default;
+  GoldfishDaemon(const GoldfishDaemon&) = delete;
+  GoldfishDaemon& operator=(const GoldfishDaemon&) = delete;
 
  private:
   void DoAutoLogin() {
@@ -101,8 +103,6 @@ class GoldfishDaemon : public brillo::Daemon {
 
   base::ScopedFD fd_;
   std::unique_ptr<base::FileDescriptorWatcher::Controller> watcher_;
-
-  DISALLOW_COPY_AND_ASSIGN(GoldfishDaemon);
 };
 
 }  // namespace

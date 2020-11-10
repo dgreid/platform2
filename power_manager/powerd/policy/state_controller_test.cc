@@ -54,6 +54,9 @@ const char kNoActions[] = "";
 class TestDelegate : public StateController::Delegate, public ActionRecorder {
  public:
   TestDelegate() = default;
+  TestDelegate(const TestDelegate&) = delete;
+  TestDelegate& operator=(const TestDelegate&) = delete;
+
   ~TestDelegate() override = default;
 
   void set_record_metrics_actions(bool record) {
@@ -114,8 +117,6 @@ class TestDelegate : public StateController::Delegate, public ActionRecorder {
 
   // Should IsHeadphoneJackPlugged() return true?
   bool headphone_jack_plugged_ = false;
-
-  DISALLOW_COPY_AND_ASSIGN(TestDelegate);
 };
 
 // Fills an update_engine message used either for a GetStatusAdvanced response
@@ -199,6 +200,8 @@ class StateControllerTest : public testing::Test {
     // if they want to verify these method calls.
     controller_.set_request_smart_dim_decision_for_testing(false);
   }
+  StateControllerTest(const StateControllerTest&) = delete;
+  StateControllerTest& operator=(const StateControllerTest&) = delete;
 
  protected:
   void SetMillisecondPref(const std::string& name, base::TimeDelta value) {
@@ -447,8 +450,6 @@ class StateControllerTest : public testing::Test {
   // If true, RequestSmartDimDecision will receive a nullptr as response, just
   // like when timeout.
   bool simulate_smart_dim_timeout_ = false;
-
-  DISALLOW_COPY_AND_ASSIGN(StateControllerTest);
 };
 
 // Tests the basic operation of the different delays.

@@ -92,6 +92,10 @@ class FileMapReaderDelegateImpl : public FileMapReaderDelegate {
  public:
   explicit FileMapReaderDelegateImpl(base::File file)
       : file_(std::move(file)) {}
+  FileMapReaderDelegateImpl(const FileMapReaderDelegateImpl&) = delete;
+  FileMapReaderDelegateImpl& operator=(const FileMapReaderDelegateImpl&) =
+      delete;
+
   ~FileMapReaderDelegateImpl() override = default;
 
   int64_t GetCurrentFileSize() override { return file_.GetLength(); }
@@ -134,8 +138,6 @@ class FileMapReaderDelegateImpl : public FileMapReaderDelegate {
  private:
   base::File file_;
   std::unique_ptr<base::MemoryMappedFile> mmap_;
-
-  DISALLOW_COPY_AND_ASSIGN(FileMapReaderDelegateImpl);
 };
 
 // ============================================================================
@@ -148,6 +150,10 @@ class FileMapReaderDelegateImplMemoryReader : public FileMapReaderDelegate {
       : buffer_(buffer), buffer_length_(length) {}
 
   int64_t GetCurrentFileSize() override { return buffer_length_; }
+  FileMapReaderDelegateImplMemoryReader(
+      const FileMapReaderDelegateImplMemoryReader&) = delete;
+  FileMapReaderDelegateImplMemoryReader& operator=(
+      const FileMapReaderDelegateImplMemoryReader&) = delete;
 
   std::pair<const uint8_t*, uint64_t> DoMap(int64_t request_pos,
                                             int64_t request_length) override {
@@ -163,8 +169,6 @@ class FileMapReaderDelegateImplMemoryReader : public FileMapReaderDelegate {
  private:
   const uint8_t* const buffer_ = nullptr;
   const int64_t buffer_length_ = 0;
-
-  DISALLOW_COPY_AND_ASSIGN(FileMapReaderDelegateImplMemoryReader);
 };
 
 // ============================================================================

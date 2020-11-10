@@ -22,6 +22,9 @@ class AuthorizationDelegate;
 class PolicySession {
  public:
   PolicySession() {}
+  PolicySession(const PolicySession&) = delete;
+  PolicySession& operator=(const PolicySession&) = delete;
+
   virtual ~PolicySession() {}
 
   // Returns an authorization delegate for this session. Ownership of the
@@ -136,9 +139,6 @@ class PolicySession {
       const std::vector<FIDO_DATA_RANGE>& auth_data_descr,
       const TPMT_SIGNATURE& signature,
       AuthorizationDelegate* delegate) = 0;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(PolicySession);
 };
 
 }  // namespace trunks

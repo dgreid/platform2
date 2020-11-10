@@ -21,12 +21,14 @@ constexpr double kFullFactor = 0.97;
 class BatteryPercentageConverterTest : public ::testing::Test {
  public:
   BatteryPercentageConverterTest() = default;
+  BatteryPercentageConverterTest(const BatteryPercentageConverterTest&) =
+      delete;
+  BatteryPercentageConverterTest& operator=(
+      const BatteryPercentageConverterTest&) = delete;
 
  protected:
   BatteryPercentageConverter converter_{kLowBatteryShutdownPercent,
                                         kFullFactor};
-
-  DISALLOW_COPY_AND_ASSIGN(BatteryPercentageConverterTest);
 };
 
 }  // namespace

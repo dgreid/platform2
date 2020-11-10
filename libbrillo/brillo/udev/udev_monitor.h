@@ -61,10 +61,10 @@ class BRILLO_EXPORT UdevMonitor {
   // Constructs a UdevMonitor object without referencing a udev_monitor struct,
   // which is only allowed to be called by MockUdevMonitor.
   UdevMonitor();
+  UdevMonitor(const UdevMonitor&) = delete;
+  UdevMonitor& operator=(const UdevMonitor&) = delete;
 
   udev_monitor* monitor_;
-
-  DISALLOW_COPY_AND_ASSIGN(UdevMonitor);
 };
 
 }  // namespace brillo

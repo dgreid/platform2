@@ -17,14 +17,14 @@ namespace shill {
 class MockDnsClient : public DnsClient {
  public:
   MockDnsClient();
+  MockDnsClient(const MockDnsClient&) = delete;
+  MockDnsClient& operator=(const MockDnsClient&) = delete;
+
   ~MockDnsClient() override;
 
   MOCK_METHOD(bool, Start, (const std::string&, Error*), (override));
   MOCK_METHOD(void, Stop, (), (override));
   MOCK_METHOD(bool, IsActive, (), (const, override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockDnsClient);
 };
 
 }  // namespace shill

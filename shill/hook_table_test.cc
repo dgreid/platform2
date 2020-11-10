@@ -228,10 +228,10 @@ TEST_F(HookTableTest, IsEmpty) {
 class SomeClass : public base::RefCounted<SomeClass> {
  public:
   SomeClass() = default;
-  void StartAction() {}
+  SomeClass(const SomeClass&) = delete;
+  SomeClass& operator=(const SomeClass&) = delete;
 
- private:
-  DISALLOW_COPY_AND_ASSIGN(SomeClass);
+  void StartAction() {}
 };
 
 // This test verifies that a class that removes itself from a hook table upon

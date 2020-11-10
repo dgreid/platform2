@@ -60,6 +60,9 @@ class EcCommand : public EcCommandInterface {
                     .result = kEcCommandUninitializedResult},
             .req = req,
         }) {}
+  EcCommand(const EcCommand&) = delete;
+  EcCommand& operator=(const EcCommand&) = delete;
+
   ~EcCommand() override = default;
 
   void SetRespSize(uint32_t insize) { data_.cmd.insize = insize; }
@@ -151,8 +154,6 @@ class EcCommand : public EcCommandInterface {
   virtual int ioctl(int fd, uint32_t request, Data* data) {
     return ::ioctl(fd, request, data);
   }
-
-  DISALLOW_COPY_AND_ASSIGN(EcCommand);
 };
 
 }  // namespace biod

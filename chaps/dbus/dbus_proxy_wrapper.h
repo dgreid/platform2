@@ -50,6 +50,8 @@ class DBusProxyWrapper : public base::RefCountedThreadSafe<DBusProxyWrapper> {
       : task_runner_(task_runner),
         bus_(std::move(bus)),
         dbus_proxy_(dbus_proxy) {}
+  DBusProxyWrapper(const DBusProxyWrapper&) = delete;
+  DBusProxyWrapper& operator=(const DBusProxyWrapper&) = delete;
 
   template <typename... Args>
   std::unique_ptr<dbus::Response> CallMethod(const std::string& method_name,
@@ -91,8 +93,6 @@ class DBusProxyWrapper : public base::RefCountedThreadSafe<DBusProxyWrapper> {
 
   ScopedBus bus_;
   scoped_refptr<dbus::ObjectProxy> dbus_proxy_;
-
-  DISALLOW_COPY_AND_ASSIGN(DBusProxyWrapper);
 };
 
 // To ensure we don't block forever waiting for the chapsd service to
@@ -101,6 +101,9 @@ class ProxyWrapperConstructionTask
     : public base::RefCountedThreadSafe<ProxyWrapperConstructionTask> {
  public:
   ProxyWrapperConstructionTask();
+  ProxyWrapperConstructionTask(const ProxyWrapperConstructionTask&) = delete;
+  ProxyWrapperConstructionTask& operator=(const ProxyWrapperConstructionTask&) =
+      delete;
 
   scoped_refptr<DBusProxyWrapper> ConstructProxyWrapper(
       scoped_refptr<base::SingleThreadTaskRunner> task_runner);
@@ -130,8 +133,6 @@ class ProxyWrapperConstructionTask
   bool success_;
   ScopedBus bus_;
   scoped_refptr<dbus::ObjectProxy> object_proxy_;
-
-  DISALLOW_COPY_AND_ASSIGN(ProxyWrapperConstructionTask);
 };
 
 }  // namespace chaps

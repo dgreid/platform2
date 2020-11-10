@@ -31,6 +31,9 @@ class VPNService : public Service {
                                    const std::string& /*error_details*/)>;
 
   VPNService(Manager* manager, std::unique_ptr<VPNDriver> driver);
+  VPNService(const VPNService&) = delete;
+  VPNService& operator=(const VPNService&) = delete;
+
   ~VPNService() override;
 
   // Inherited from Service.
@@ -98,8 +101,6 @@ class VPNService : public Service {
   VirtualDeviceRefPtr device_;
 
   base::WeakPtrFactory<VPNService> weak_factory_{this};
-
-  DISALLOW_COPY_AND_ASSIGN(VPNService);
 };
 
 }  // namespace shill

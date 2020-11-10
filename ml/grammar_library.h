@@ -92,6 +92,8 @@ class GrammarLibrary {
 
   // Initialize the grammar library.
   GrammarLibrary();
+  GrammarLibrary(const GrammarLibrary&) = delete;
+  GrammarLibrary& operator=(const GrammarLibrary&) = delete;
 
   base::Optional<base::ScopedNativeLibrary> library_;
   Status status_;
@@ -103,8 +105,6 @@ class GrammarLibrary {
   CheckGrammarFn check_grammar_;
   DeleteGrammarCheckerResultDataFn delete_grammar_checker_result_data_;
   DestroyGrammarCheckerFn destroy_grammar_checker_;
-
-  DISALLOW_COPY_AND_ASSIGN(GrammarLibrary);
 };
 
 }  // namespace ml

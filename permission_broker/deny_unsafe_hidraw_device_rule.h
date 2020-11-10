@@ -16,14 +16,15 @@ namespace permission_broker {
 class DenyUnsafeHidrawDeviceRule : public HidrawSubsystemUdevRule {
  public:
   DenyUnsafeHidrawDeviceRule();
+  DenyUnsafeHidrawDeviceRule(const DenyUnsafeHidrawDeviceRule&) = delete;
+  DenyUnsafeHidrawDeviceRule& operator=(const DenyUnsafeHidrawDeviceRule&) =
+      delete;
+
   ~DenyUnsafeHidrawDeviceRule() override = default;
 
   Result ProcessHidrawDevice(struct udev_device* device) override;
 
   static bool IsUnsafeUsage(const HidUsage& usage);
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(DenyUnsafeHidrawDeviceRule);
 };
 
 }  // namespace permission_broker

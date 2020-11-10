@@ -29,6 +29,8 @@ class UserDataAuthAdaptor
     service_->SetLowDiskSpaceCallback(base::Bind(
         &UserDataAuthAdaptor::LowDiskSpaceCallback, base::Unretained(this)));
   }
+  UserDataAuthAdaptor(const UserDataAuthAdaptor&) = delete;
+  UserDataAuthAdaptor& operator=(const UserDataAuthAdaptor&) = delete;
 
   void RegisterAsync() { RegisterWithDBusObject(dbus_object_); }
 
@@ -214,8 +216,6 @@ class UserDataAuthAdaptor
   // This object is owned by the parent dbus service daemon, and whose lifetime
   // will cover the entire lifetime of this class.
   UserDataAuth* service_;
-
-  DISALLOW_COPY_AND_ASSIGN(UserDataAuthAdaptor);
 };
 
 class ArcQuotaAdaptor : public org::chromium::ArcQuotaInterface,
@@ -231,6 +231,8 @@ class ArcQuotaAdaptor : public org::chromium::ArcQuotaInterface,
     // removed once we start to use it.
     (void)service_;
   }
+  ArcQuotaAdaptor(const ArcQuotaAdaptor&) = delete;
+  ArcQuotaAdaptor& operator=(const ArcQuotaAdaptor&) = delete;
 
   void RegisterAsync() { RegisterWithDBusObject(dbus_object_); }
 
@@ -262,8 +264,6 @@ class ArcQuotaAdaptor : public org::chromium::ArcQuotaInterface,
   // This object is owned by the parent dbus service daemon, and whose lifetime
   // will cover the entire lifetime of this class.
   UserDataAuth* service_;
-
-  DISALLOW_COPY_AND_ASSIGN(ArcQuotaAdaptor);
 };
 
 class Pkcs11Adaptor : public org::chromium::CryptohomePkcs11InterfaceInterface,
@@ -279,6 +279,8 @@ class Pkcs11Adaptor : public org::chromium::CryptohomePkcs11InterfaceInterface,
     // removed once we start to use it.
     (void)service_;
   }
+  Pkcs11Adaptor(const Pkcs11Adaptor&) = delete;
+  Pkcs11Adaptor& operator=(const Pkcs11Adaptor&) = delete;
 
   void RegisterAsync() { RegisterWithDBusObject(dbus_object_); }
 
@@ -318,8 +320,6 @@ class Pkcs11Adaptor : public org::chromium::CryptohomePkcs11InterfaceInterface,
   // This object is owned by the parent dbus service daemon, and whose lifetime
   // will cover the entire lifetime of this class.
   UserDataAuth* service_;
-
-  DISALLOW_COPY_AND_ASSIGN(Pkcs11Adaptor);
 };
 
 class InstallAttributesAdaptor
@@ -336,6 +336,8 @@ class InstallAttributesAdaptor
     // removed once we start to use it.
     (void)service_;
   }
+  InstallAttributesAdaptor(const InstallAttributesAdaptor&) = delete;
+  InstallAttributesAdaptor& operator=(const InstallAttributesAdaptor&) = delete;
 
   void RegisterAsync() { RegisterWithDBusObject(dbus_object_); }
 
@@ -398,8 +400,6 @@ class InstallAttributesAdaptor
   // This object is owned by the parent dbus service daemon, and whose lifetime
   // will cover the entire lifetime of this class.
   UserDataAuth* service_;
-
-  DISALLOW_COPY_AND_ASSIGN(InstallAttributesAdaptor);
 };
 
 class CryptohomeMiscAdaptor
@@ -416,6 +416,8 @@ class CryptohomeMiscAdaptor
     // removed once we start to use it.
     (void)service_;
   }
+  CryptohomeMiscAdaptor(const CryptohomeMiscAdaptor&) = delete;
+  CryptohomeMiscAdaptor& operator=(const CryptohomeMiscAdaptor&) = delete;
 
   void RegisterAsync() { RegisterWithDBusObject(dbus_object_); }
 
@@ -474,8 +476,6 @@ class CryptohomeMiscAdaptor
   // This object is owned by the parent dbus service daemon, and whose lifetime
   // will cover the entire lifetime of this class.
   UserDataAuth* service_;
-
-  DISALLOW_COPY_AND_ASSIGN(CryptohomeMiscAdaptor);
 };
 
 }  // namespace cryptohome

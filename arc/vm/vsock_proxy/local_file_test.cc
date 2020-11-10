@@ -154,6 +154,9 @@ TEST_F(LocalFileTest, FstatError) {
 class SocketStreamTest : public testing::Test {
  public:
   SocketStreamTest() = default;
+  SocketStreamTest(const SocketStreamTest&) = delete;
+  SocketStreamTest& operator=(const SocketStreamTest&) = delete;
+
   ~SocketStreamTest() override = default;
 
   void SetUp() override {
@@ -173,8 +176,6 @@ class SocketStreamTest : public testing::Test {
   base::test::TaskEnvironment task_environment_{
       base::test::TaskEnvironment::ThreadingMode::MAIN_THREAD_ONLY,
       base::test::TaskEnvironment::MainThreadType::IO};
-
-  DISALLOW_COPY_AND_ASSIGN(SocketStreamTest);
 };
 
 TEST_F(SocketStreamTest, Read) {
@@ -280,6 +281,9 @@ TEST_F(SocketStreamTest, WriteError) {
 class SocketSeqpacketTest : public testing::Test {
  public:
   SocketSeqpacketTest() = default;
+  SocketSeqpacketTest(const SocketSeqpacketTest&) = delete;
+  SocketSeqpacketTest& operator=(const SocketSeqpacketTest&) = delete;
+
   ~SocketSeqpacketTest() override = default;
 
   void SetUp() override {
@@ -299,8 +303,6 @@ class SocketSeqpacketTest : public testing::Test {
   base::test::TaskEnvironment task_environment_{
       base::test::TaskEnvironment::ThreadingMode::MAIN_THREAD_ONLY,
       base::test::TaskEnvironment::MainThreadType::IO};
-
-  DISALLOW_COPY_AND_ASSIGN(SocketSeqpacketTest);
 };
 
 TEST_F(SocketSeqpacketTest, PendingWrite) {
@@ -345,6 +347,9 @@ TEST_F(SocketSeqpacketTest, PendingWrite) {
 class PipeStreamTest : public testing::Test {
  public:
   PipeStreamTest() = default;
+  PipeStreamTest(const PipeStreamTest&) = delete;
+  PipeStreamTest& operator=(const PipeStreamTest&) = delete;
+
   ~PipeStreamTest() override = default;
 
   void SetUp() override {
@@ -361,8 +366,6 @@ class PipeStreamTest : public testing::Test {
   base::test::TaskEnvironment task_environment_{
       base::test::TaskEnvironment::ThreadingMode::MAIN_THREAD_ONLY,
       base::test::TaskEnvironment::MainThreadType::IO};
-
-  DISALLOW_COPY_AND_ASSIGN(PipeStreamTest);
 };
 
 TEST_F(PipeStreamTest, Read) {

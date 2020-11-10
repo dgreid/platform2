@@ -32,6 +32,9 @@ namespace client {
 class ServiceFinderAvahi : public ServiceFinder {
  public:
   ServiceFinderAvahi();
+  ServiceFinderAvahi(const ServiceFinderAvahi&) = delete;
+  ServiceFinderAvahi& operator=(const ServiceFinderAvahi&) = delete;
+
   virtual ~ServiceFinderAvahi();
 
   vector<const Peer*> GetPeersForFile(const string& file) const;
@@ -112,8 +115,6 @@ class ServiceFinderAvahi : public ServiceFinder {
 
   // The source tag for the |abort_io_channel_| watch on the main loop.
   guint abort_source_;
-
-  DISALLOW_COPY_AND_ASSIGN(ServiceFinderAvahi);
 };
 
 ServiceFinderAvahi::ServiceFinderAvahi()

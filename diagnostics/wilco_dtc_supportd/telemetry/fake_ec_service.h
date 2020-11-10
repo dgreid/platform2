@@ -14,12 +14,12 @@ namespace diagnostics {
 class FakeEcService : public EcService {
  public:
   FakeEcService();
+  FakeEcService(const FakeEcService&) = delete;
+  FakeEcService& operator=(const FakeEcService&) = delete;
+
   ~FakeEcService() override;
 
   void EmitEcEvent(const EcService::EcEvent& ec_event) const;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(FakeEcService);
 };
 
 }  // namespace diagnostics

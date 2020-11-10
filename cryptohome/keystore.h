@@ -17,6 +17,9 @@ namespace cryptohome {
 class KeyStore {
  public:
   KeyStore() {}
+  KeyStore(const KeyStore&) = delete;
+  KeyStore& operator=(const KeyStore&) = delete;
+
   virtual ~KeyStore() {}
 
   // Reads key data from the store for the key identified by |key_name| and by
@@ -67,9 +70,6 @@ class KeyStore {
   virtual bool RegisterCertificate(bool is_user_specific,
                                    const std::string& username,
                                    const brillo::SecureBlob& certificate) = 0;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(KeyStore);
 };
 
 }  // namespace cryptohome

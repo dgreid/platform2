@@ -16,6 +16,9 @@ namespace shill {
 class MockMetrics : public Metrics {
  public:
   MockMetrics();
+  MockMetrics(const MockMetrics&) = delete;
+  MockMetrics& operator=(const MockMetrics&) = delete;
+
   ~MockMetrics() override;
 
   MOCK_METHOD(void, Start, (), (override));
@@ -126,9 +129,6 @@ class MockMetrics : public Metrics {
               NotifyPortalDetectionMultiProbeResult,
               (const PortalDetector::Result&, const PortalDetector::Result&),
               (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockMetrics);
 };
 
 }  // namespace shill

@@ -48,6 +48,9 @@ class SubprocessInterface {
 class Subprocess : public SubprocessInterface {
  public:
   Subprocess(uid_t uid, SystemUtils* system);
+  Subprocess(const Subprocess&) = delete;
+  Subprocess& operator=(const Subprocess&) = delete;
+
   ~Subprocess() override;
 
   // SubprocessInterface:
@@ -75,7 +78,6 @@ class Subprocess : public SubprocessInterface {
   base::Optional<base::FilePath> ns_mnt_path_;
 
   SystemUtils* const system_;  // weak; owned by embedder.
-  DISALLOW_COPY_AND_ASSIGN(Subprocess);
 };
 
 }  // namespace login_manager

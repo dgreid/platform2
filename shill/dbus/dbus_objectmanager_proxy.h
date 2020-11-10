@@ -25,6 +25,9 @@ class DBusObjectManagerProxy : public DBusObjectManagerProxyInterface {
                          const std::string& service,
                          const base::Closure& service_appeared_callback,
                          const base::Closure& service_vanished_callback);
+  DBusObjectManagerProxy(const DBusObjectManagerProxy&) = delete;
+  DBusObjectManagerProxy& operator=(const DBusObjectManagerProxy&) = delete;
+
   ~DBusObjectManagerProxy() override;
 
   // Inherited methods from DBusObjectManagerProxyInterface.
@@ -88,7 +91,6 @@ class DBusObjectManagerProxy : public DBusObjectManagerProxyInterface {
   bool service_available_;
 
   base::WeakPtrFactory<DBusObjectManagerProxy> weak_factory_{this};
-  DISALLOW_COPY_AND_ASSIGN(DBusObjectManagerProxy);
 };
 
 }  // namespace shill

@@ -14,6 +14,9 @@ namespace shill {
 class MockIOHandlerFactory : public IOHandlerFactory {
  public:
   MockIOHandlerFactory() = default;
+  MockIOHandlerFactory(const MockIOHandlerFactory&) = delete;
+  MockIOHandlerFactory& operator=(const MockIOHandlerFactory&) = delete;
+
   ~MockIOHandlerFactory() override = default;
 
   MOCK_METHOD(IOHandler*,
@@ -26,9 +29,6 @@ class MockIOHandlerFactory : public IOHandlerFactory {
               CreateIOReadyHandler,
               (int, IOHandler::ReadyMode, const IOHandler::ReadyCallback&),
               (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockIOHandlerFactory);
 };
 
 }  // namespace shill

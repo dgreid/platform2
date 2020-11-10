@@ -18,6 +18,9 @@ namespace login_manager {
 class FakeContainerManager : public ContainerManagerInterface {
  public:
   explicit FakeContainerManager(pid_t pid);
+  FakeContainerManager(const FakeContainerManager&) = delete;
+  FakeContainerManager& operator=(const FakeContainerManager&) = delete;
+
   ~FakeContainerManager() override = default;
 
   bool running() const { return running_; }
@@ -42,8 +45,6 @@ class FakeContainerManager : public ContainerManagerInterface {
 
   const pid_t pid_;
   ExitCallback exit_callback_;
-
-  DISALLOW_COPY_AND_ASSIGN(FakeContainerManager);
 };
 
 }  // namespace login_manager

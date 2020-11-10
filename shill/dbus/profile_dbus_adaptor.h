@@ -32,6 +32,9 @@ class ProfileDBusAdaptor : public org::chromium::flimflam::ProfileAdaptor,
   static const char kPath[];
 
   ProfileDBusAdaptor(const scoped_refptr<dbus::Bus>& bus, Profile* profile);
+  ProfileDBusAdaptor(const ProfileDBusAdaptor&) = delete;
+  ProfileDBusAdaptor& operator=(const ProfileDBusAdaptor&) = delete;
+
   ~ProfileDBusAdaptor() override;
 
   // Implementation of ProfileAdaptorInterface.
@@ -60,8 +63,6 @@ class ProfileDBusAdaptor : public org::chromium::flimflam::ProfileAdaptor,
 
  private:
   Profile* profile_;
-
-  DISALLOW_COPY_AND_ASSIGN(ProfileDBusAdaptor);
 };
 
 }  // namespace shill

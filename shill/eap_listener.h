@@ -24,6 +24,9 @@ class EapListener {
   using EapRequestReceivedCallback = base::Callback<void()>;
 
   explicit EapListener(int interface_index);
+  EapListener(const EapListener&) = delete;
+  EapListener& operator=(const EapListener&) = delete;
+
   virtual ~EapListener();
 
   // Create a socket for tranmission and reception.  Returns true
@@ -72,8 +75,6 @@ class EapListener {
 
   // Input handler for |socket_|.  Calls ReceiveRequest().
   std::unique_ptr<IOHandler> receive_request_handler_;
-
-  DISALLOW_COPY_AND_ASSIGN(EapListener);
 };
 
 }  // namespace shill

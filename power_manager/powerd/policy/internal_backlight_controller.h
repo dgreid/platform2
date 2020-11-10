@@ -70,6 +70,10 @@ class InternalBacklightController : public BacklightController,
   static const int kAmbientLightSensorTimeoutSec;
 
   InternalBacklightController();
+  InternalBacklightController(const InternalBacklightController&) = delete;
+  InternalBacklightController& operator=(const InternalBacklightController&) =
+      delete;
+
   ~InternalBacklightController() override;
 
   Clock* clock() { return clock_.get(); }
@@ -263,8 +267,6 @@ class InternalBacklightController : public BacklightController,
   base::TimeDelta turn_off_screen_timeout_;
 
   base::WeakPtrFactory<InternalBacklightController> weak_ptr_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(InternalBacklightController);
 };
 
 }  // namespace policy

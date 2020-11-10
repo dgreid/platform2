@@ -36,6 +36,9 @@ class CryptohomeEventSourceSink;
 class CryptohomeEventSource {
  public:
   CryptohomeEventSource();
+  CryptohomeEventSource(const CryptohomeEventSource&) = delete;
+  CryptohomeEventSource& operator=(const CryptohomeEventSource&) = delete;
+
   virtual ~CryptohomeEventSource();
 
   // Resets the event queue and re-attaches this GSource to the GMainContext.
@@ -100,8 +103,6 @@ class CryptohomeEventSource {
 
   // The pipe used for our GPollFD
   int pipe_fds_[2];
-
-  DISALLOW_COPY_AND_ASSIGN(CryptohomeEventSource);
 };
 
 class CryptohomeEventBase {

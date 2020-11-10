@@ -30,6 +30,9 @@ class RpcTaskDBusAdaptor : public org::chromium::flimflam::TaskAdaptor,
   static const char kPath[];
 
   RpcTaskDBusAdaptor(const scoped_refptr<dbus::Bus>& bus, RpcTask* task);
+  RpcTaskDBusAdaptor(const RpcTaskDBusAdaptor&) = delete;
+  RpcTaskDBusAdaptor& operator=(const RpcTaskDBusAdaptor&) = delete;
+
   ~RpcTaskDBusAdaptor() override;
 
   // Implementation of RpcTaskAdaptorInterface.
@@ -47,8 +50,6 @@ class RpcTaskDBusAdaptor : public org::chromium::flimflam::TaskAdaptor,
  private:
   RpcTask* task_;
   const RpcIdentifier connection_name_;
-
-  DISALLOW_COPY_AND_ASSIGN(RpcTaskDBusAdaptor);
 };
 
 }  // namespace shill

@@ -57,6 +57,8 @@ class Device : public base::RefCounted<Device> {
          const std::string& mac_address,
          int interface_index,
          Technology technology);
+  Device(const Device&) = delete;
+  Device& operator=(const Device&) = delete;
 
   // Initialize type-specific network interface properties.
   virtual void Initialize();
@@ -916,8 +918,6 @@ class Device : public base::RefCounted<Device> {
       traffic_counters_callback_map_;
 
   base::WeakPtrFactory<Device> weak_ptr_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(Device);
 };
 
 }  // namespace shill

@@ -39,14 +39,13 @@ class LIBPASSWORDPROVIDER_EXPORT PasswordProvider
     : public PasswordProviderInterface {
  public:
   PasswordProvider();
+  PasswordProvider(const PasswordProvider&) = delete;
+  PasswordProvider& operator=(const PasswordProvider&) = delete;
 
   // PasswordProviderInterface overrides
   bool SavePassword(const Password& password) const override;
   std::unique_ptr<Password> GetPassword() const override;
   bool DiscardPassword() const override;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(PasswordProvider);
 };
 
 }  // namespace password_provider

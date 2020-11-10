@@ -41,6 +41,9 @@ class DHCPConfig : public IPConfig {
              const std::string& device_name,
              const std::string& type,
              const std::string& lease_file_suffix);
+  DHCPConfig(const DHCPConfig&) = delete;
+  DHCPConfig& operator=(const DHCPConfig&) = delete;
+
   ~DHCPConfig() override;
 
   // Inherited from IPConfig.
@@ -196,8 +199,6 @@ class DHCPConfig : public IPConfig {
   EventDispatcher* dispatcher_;
   ProcessManager* process_manager_;
   Metrics* metrics_;
-
-  DISALLOW_COPY_AND_ASSIGN(DHCPConfig);
 };
 
 }  // namespace shill

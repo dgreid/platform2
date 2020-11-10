@@ -22,6 +22,10 @@ namespace smbprovider {
 class KerberosKerberosArtifactClient : public KerberosArtifactClientInterface {
  public:
   explicit KerberosKerberosArtifactClient(scoped_refptr<dbus::Bus> bus);
+  KerberosKerberosArtifactClient(const KerberosKerberosArtifactClient&) =
+      delete;
+  KerberosKerberosArtifactClient& operator=(
+      const KerberosKerberosArtifactClient&) = delete;
 
   // KerberosArtifactClientInterface overrides.
   void GetUserKerberosFiles(const std::string& principal_name,
@@ -36,8 +40,6 @@ class KerberosKerberosArtifactClient : public KerberosArtifactClientInterface {
 
   dbus::ObjectProxy* kerberos_object_proxy_ = nullptr;
   base::WeakPtrFactory<KerberosKerberosArtifactClient> weak_ptr_factory_{this};
-
-  DISALLOW_COPY_AND_ASSIGN(KerberosKerberosArtifactClient);
 };
 
 }  // namespace smbprovider

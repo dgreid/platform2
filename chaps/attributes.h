@@ -23,6 +23,9 @@ class EXPORT_SPEC Attributes {
   // This constructor does not take ownership of the array.  I.e. No memory
   // deallocation will be performed when the object destructs.
   Attributes(CK_ATTRIBUTE_PTR attributes, CK_ULONG num_attributes);
+  Attributes(const Attributes&) = delete;
+  Attributes& operator=(const Attributes&) = delete;
+
   virtual ~Attributes();
   CK_ATTRIBUTE_PTR attributes() const { return attributes_; }
   CK_ULONG num_attributes() const { return num_attributes_; }
@@ -76,8 +79,6 @@ class EXPORT_SPEC Attributes {
   std::vector<std::unique_ptr<CK_ATTRIBUTE[]>> allocated_attribute_arrays_;
   // A container that keeps track of all allocated byte arrays.
   std::vector<std::unique_ptr<CK_BYTE[]>> allocated_byte_arrays_;
-
-  DISALLOW_COPY_AND_ASSIGN(Attributes);
 };
 
 }  // namespace chaps

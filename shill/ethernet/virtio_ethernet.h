@@ -17,13 +17,13 @@ class VirtioEthernet : public Ethernet {
                  const std::string& link_name,
                  const std::string& address,
                  int interface_index);
+  VirtioEthernet(const VirtioEthernet&) = delete;
+  VirtioEthernet& operator=(const VirtioEthernet&) = delete;
+
   ~VirtioEthernet() override;
 
   void Start(Error* error,
              const EnabledStateChangedCallback& callback) override;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(VirtioEthernet);
 };
 
 }  // namespace shill

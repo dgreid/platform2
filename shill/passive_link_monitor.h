@@ -36,6 +36,9 @@ class PassiveLinkMonitor {
   PassiveLinkMonitor(const ConnectionRefPtr& connection,
                      EventDispatcher* dispatcher,
                      const ResultCallback& result_callback);
+  PassiveLinkMonitor(const PassiveLinkMonitor&) = delete;
+  PassiveLinkMonitor& operator=(const PassiveLinkMonitor&) = delete;
+
   virtual ~PassiveLinkMonitor();
 
   // Starts passive link-monitoring for the specified number of cycles.
@@ -83,8 +86,6 @@ class PassiveLinkMonitor {
   base::CancelableClosure monitor_cycle_timeout_callback_;
   // Callback for handling monitor completed event.
   base::CancelableClosure monitor_completed_callback_;
-
-  DISALLOW_COPY_AND_ASSIGN(PassiveLinkMonitor);
 };
 
 }  // namespace shill

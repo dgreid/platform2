@@ -196,6 +196,8 @@ class BRILLO_EXPORT MemoryStream : public Stream {
   MemoryStream(
       std::unique_ptr<data_container::DataContainerInterface> container,
       size_t stream_position);
+  MemoryStream(const MemoryStream&) = delete;
+  MemoryStream& operator=(const MemoryStream&) = delete;
 
   // Checks if the stream has a valid container.
   bool CheckContainer(ErrorPtr* error) const;
@@ -205,8 +207,6 @@ class BRILLO_EXPORT MemoryStream : public Stream {
 
   // The current stream pointer position.
   size_t stream_position_{0};
-
-  DISALLOW_COPY_AND_ASSIGN(MemoryStream);
 };
 
 }  // namespace brillo

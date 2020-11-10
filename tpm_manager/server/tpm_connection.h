@@ -29,6 +29,8 @@ class TpmConnection {
 
   // Creates a TPM connection on behalf of the owner with the owner delegate.
   explicit TpmConnection(const AuthDelegate& owner_delegate);
+  TpmConnection(const TpmConnection&) = delete;
+  TpmConnection& operator=(const TpmConnection&) = delete;
 
   ~TpmConnection() = default;
 
@@ -49,8 +51,6 @@ class TpmConnection {
   const std::string owner_password_;
   const AuthDelegate owner_delegate_;
   const ConnectionType connection_type_;
-
-  DISALLOW_COPY_AND_ASSIGN(TpmConnection);
 };
 
 }  // namespace tpm_manager

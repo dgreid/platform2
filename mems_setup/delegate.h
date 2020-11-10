@@ -35,9 +35,8 @@ class Delegate {
 
  protected:
   Delegate() = default;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(Delegate);
+  Delegate(const Delegate&) = delete;
+  Delegate& operator=(const Delegate&) = delete;
 };
 
 }  // namespace mems_setup

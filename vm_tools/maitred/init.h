@@ -85,6 +85,8 @@ class Init final {
 
  private:
   Init() = default;
+  Init(const Init&) = delete;
+  Init& operator=(const Init&) = delete;
 
   // Subroutine to setup resource limits. For more details of resource limits,
   // see man page of setrlimits and sysctl.
@@ -99,8 +101,6 @@ class Init final {
 
   // The actual worker thread.
   base::Thread worker_thread_{"init worker thread"};
-
-  DISALLOW_COPY_AND_ASSIGN(Init);
 };
 
 }  //  namespace maitred

@@ -14,13 +14,13 @@ namespace shill {
 class MockTrafficMonitor : public TrafficMonitor {
  public:
   MockTrafficMonitor();
+  MockTrafficMonitor(const MockTrafficMonitor&) = delete;
+  MockTrafficMonitor& operator=(const MockTrafficMonitor&) = delete;
+
   ~MockTrafficMonitor() override;
 
   MOCK_METHOD(void, Start, (), (override));
   MOCK_METHOD(void, Stop, (), (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockTrafficMonitor);
 };
 
 }  // namespace shill

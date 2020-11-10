@@ -14,12 +14,12 @@ namespace debugd {
 class NetifTool {
  public:
   NetifTool() = default;
+  NetifTool(const NetifTool&) = delete;
+  NetifTool& operator=(const NetifTool&) = delete;
+
   ~NetifTool() = default;
 
   std::string GetInterfaces();
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(NetifTool);
 };
 
 }  // namespace debugd

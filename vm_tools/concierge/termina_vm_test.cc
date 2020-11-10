@@ -76,6 +76,9 @@ constexpr char kKernelVersion[] = "some kernel version";
 class TerminaVmTest : public ::testing::Test {
  public:
   TerminaVmTest() = default;
+  TerminaVmTest(const TerminaVmTest&) = delete;
+  TerminaVmTest& operator=(const TerminaVmTest&) = delete;
+
   ~TerminaVmTest() override = default;
 
   // Called by FakeMaitredService to indicate a test failure.
@@ -154,13 +157,15 @@ class TerminaVmTest : public ::testing::Test {
   std::shared_ptr<grpc::Server> server_;
 
   base::WeakPtrFactory<TerminaVmTest> weak_factory_{this};
-  DISALLOW_COPY_AND_ASSIGN(TerminaVmTest);
 };
 
 // Test server that verifies the RPCs it receives with the expected RPCs.
 class FakeMaitredService final : public vm_tools::Maitred::Service {
  public:
   explicit FakeMaitredService(TerminaVmTest* vm_test);
+  FakeMaitredService(const FakeMaitredService&) = delete;
+  FakeMaitredService& operator=(const FakeMaitredService&) = delete;
+
   ~FakeMaitredService() override = default;
 
   // Maitred::Service overrides.
@@ -203,8 +208,6 @@ class FakeMaitredService final : public vm_tools::Maitred::Service {
   // RPCs are synchronous, which means the main thread will be blocked while the
   // grpc thread is processing the RPC.
   TerminaVmTest* vm_test_;
-
-  DISALLOW_COPY_AND_ASSIGN(FakeMaitredService);
 };
 
 FakeMaitredService::FakeMaitredService(TerminaVmTest* vm_test)

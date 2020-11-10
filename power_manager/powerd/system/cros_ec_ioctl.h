@@ -38,6 +38,8 @@ class IoctlCommand {
             {ver, cmd, realsizeof<Request>(), realsizeof<Response>(), 0xff},
             {req},
         }) {}
+  IoctlCommand(const IoctlCommand&) = delete;
+  IoctlCommand& operator=(const IoctlCommand&) = delete;
 
   virtual ~IoctlCommand() = default;
 
@@ -78,8 +80,6 @@ class IoctlCommand {
   }
 
   Data data_;
-
-  DISALLOW_COPY_AND_ASSIGN(IoctlCommand);
 };
 
 }  // namespace cros_ec_ioctl

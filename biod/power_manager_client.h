@@ -36,6 +36,9 @@ class PowerManagerClient : public PowerManagerClientInterface {
   // Constructs a PowerManager dbus client with signals dispatched to
   // |observers|.
   explicit PowerManagerClient(const scoped_refptr<dbus::Bus>& bus);
+  PowerManagerClient(const PowerManagerClient&) = delete;
+  PowerManagerClient& operator=(const PowerManagerClient&) = delete;
+
   // InputEvent handler.
   void InputEvent(const std::vector<uint8_t>& serialized_proto);
 
@@ -47,8 +50,6 @@ class PowerManagerClient : public PowerManagerClientInterface {
   std::unique_ptr<org::chromium::PowerManagerProxy> proxy_;
   base::ObserverList<PowerEventObserver> observers_;
   base::WeakPtrFactory<PowerManagerClient> weak_factory_{this};
-
-  DISALLOW_COPY_AND_ASSIGN(PowerManagerClient);
 };
 
 }  // namespace biod

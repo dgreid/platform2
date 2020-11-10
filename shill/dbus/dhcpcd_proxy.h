@@ -20,6 +20,9 @@ class DHCPCDProxy : public DHCPProxyInterface {
  public:
   DHCPCDProxy(const scoped_refptr<dbus::Bus>& bus,
               const std::string& service_name);
+  DHCPCDProxy(const DHCPCDProxy&) = delete;
+  DHCPCDProxy& operator=(const DHCPCDProxy&) = delete;
+
   ~DHCPCDProxy() override;
 
   // Inherited from DHCPProxyInterface.
@@ -32,8 +35,6 @@ class DHCPCDProxy : public DHCPProxyInterface {
                     const std::string& interface);
 
   std::unique_ptr<org::chromium::dhcpcdProxy> dhcpcd_proxy_;
-
-  DISALLOW_COPY_AND_ASSIGN(DHCPCDProxy);
 };
 
 }  // namespace shill

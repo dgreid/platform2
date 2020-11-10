@@ -25,13 +25,15 @@ namespace permission_broker {
 class DenyFwUpdateHidrawDeviceRuleTest : public testing::Test {
  public:
   DenyFwUpdateHidrawDeviceRuleTest() = default;
+  DenyFwUpdateHidrawDeviceRuleTest(const DenyFwUpdateHidrawDeviceRuleTest&) =
+      delete;
+  DenyFwUpdateHidrawDeviceRuleTest& operator=(
+      const DenyFwUpdateHidrawDeviceRuleTest&) = delete;
+
   ~DenyFwUpdateHidrawDeviceRuleTest() override = default;
 
  protected:
   DenyFwUpdateHidrawDeviceRule rule_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(DenyFwUpdateHidrawDeviceRuleTest);
 };
 
 TEST_F(DenyFwUpdateHidrawDeviceRuleTest, AllowEmptyFwDeviceList) {

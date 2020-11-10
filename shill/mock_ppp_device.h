@@ -19,6 +19,9 @@ class MockPPPDevice : public PPPDevice {
   MockPPPDevice(Manager* manager,
                 const std::string& link_name,
                 int interface_index);
+  MockPPPDevice(const MockPPPDevice&) = delete;
+  MockPPPDevice& operator=(const MockPPPDevice&) = delete;
+
   ~MockPPPDevice() override;
 
   MOCK_METHOD(void,
@@ -42,9 +45,6 @@ class MockPPPDevice : public PPPDevice {
 #ifndef DISABLE_DHCPV6
   MOCK_METHOD(bool, AcquireIPv6Config, (), (override));
 #endif
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockPPPDevice);
 };
 
 }  // namespace shill

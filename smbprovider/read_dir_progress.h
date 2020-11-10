@@ -27,6 +27,8 @@ class ReadDirProgress {
 
   // Allows setting |batch_size_| to a small number for testing.
   ReadDirProgress(SambaInterface* samba_interface, uint32_t initial_batch_size);
+  ReadDirProgress(const ReadDirProgress&) = delete;
+  ReadDirProgress& operator=(const ReadDirProgress&) = delete;
 
   ~ReadDirProgress();
 
@@ -55,8 +57,6 @@ class ReadDirProgress {
   uint32_t batch_size_;
   std::unique_ptr<CachingIterator> iterator_;
   bool is_started_ = false;
-
-  DISALLOW_COPY_AND_ASSIGN(ReadDirProgress);
 };
 
 }  // namespace smbprovider

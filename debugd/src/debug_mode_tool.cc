@@ -44,6 +44,8 @@ class SupplicantProxy {
       : bus_(bus),
         properties_(bus->GetObjectProxy(
             kSupplicantServiceName, dbus::ObjectPath(kSupplicantObjectPath))) {}
+  SupplicantProxy(const SupplicantProxy&) = delete;
+  SupplicantProxy& operator=(const SupplicantProxy&) = delete;
 
   ~SupplicantProxy() {}
 
@@ -54,8 +56,6 @@ class SupplicantProxy {
  private:
   scoped_refptr<dbus::Bus> bus_;
   Properties properties_;
-
-  DISALLOW_COPY_AND_ASSIGN(SupplicantProxy);
 };
 
 // Marvell wifi.

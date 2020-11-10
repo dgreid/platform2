@@ -32,6 +32,9 @@ class ServiceDBusAdaptor : public org::chromium::flimflam::ServiceAdaptor,
   static const char kPath[];
 
   ServiceDBusAdaptor(const scoped_refptr<dbus::Bus>& bus, Service* service);
+  ServiceDBusAdaptor(const ServiceDBusAdaptor&) = delete;
+  ServiceDBusAdaptor& operator=(const ServiceDBusAdaptor&) = delete;
+
   ~ServiceDBusAdaptor() override;
 
   // Implementation of ServiceAdaptorInterface.
@@ -78,8 +81,6 @@ class ServiceDBusAdaptor : public org::chromium::flimflam::ServiceAdaptor,
 
  private:
   Service* service_;
-
-  DISALLOW_COPY_AND_ASSIGN(ServiceDBusAdaptor);
 };
 
 }  // namespace shill

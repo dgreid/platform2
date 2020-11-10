@@ -20,14 +20,14 @@ class MockMac80211Monitor : public Mac80211Monitor {
                       size_t queue_length_limit,
                       const base::Closure& on_repair_callback,
                       Metrics* metrics);
+  MockMac80211Monitor(const MockMac80211Monitor&) = delete;
+  MockMac80211Monitor& operator=(const MockMac80211Monitor&) = delete;
+
   ~MockMac80211Monitor() override;
 
   MOCK_METHOD(void, Start, (const std::string&), (override));
   MOCK_METHOD(void, Stop, (), (override));
   MOCK_METHOD(void, UpdateConnectedState, (bool), (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockMac80211Monitor);
 };
 
 }  // namespace shill

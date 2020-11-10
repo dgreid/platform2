@@ -20,14 +20,14 @@
 class CrashReporterFailureCollector : public CrashCollector {
  public:
   CrashReporterFailureCollector();
+  CrashReporterFailureCollector(const CrashReporterFailureCollector&) = delete;
+  CrashReporterFailureCollector& operator=(
+      const CrashReporterFailureCollector&) = delete;
 
   ~CrashReporterFailureCollector() override;
 
   // Collect crash reporter failures.
   bool Collect();
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(CrashReporterFailureCollector);
 };
 
 #endif  // CRASH_REPORTER_CRASH_REPORTER_FAILURE_COLLECTOR_H_

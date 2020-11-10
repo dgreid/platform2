@@ -31,12 +31,13 @@ class BRILLO_EXPORT ScopedMountNamespace {
       const base::FilePath& ns_path);
 
   explicit ScopedMountNamespace(base::ScopedFD mount_namespace_fd);
+  ScopedMountNamespace(const ScopedMountNamespace&) = delete;
+  ScopedMountNamespace& operator=(const ScopedMountNamespace&) = delete;
+
   ~ScopedMountNamespace();
 
  private:
   base::ScopedFD mount_namespace_fd_;
-
-  DISALLOW_COPY_AND_ASSIGN(ScopedMountNamespace);
 };
 
 }  // namespace brillo

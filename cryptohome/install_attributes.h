@@ -55,6 +55,9 @@ class InstallAttributes {
   // is NULL, InstallAttributes will proceed insecurely (unless it is set with
   // SetTpm at a later time).
   explicit InstallAttributes(Tpm* tpm);
+  InstallAttributes(const InstallAttributes&) = delete;
+  InstallAttributes& operator=(const InstallAttributes&) = delete;
+
   virtual ~InstallAttributes();
 
   virtual Status status() const { return status_; }
@@ -184,8 +187,6 @@ class InstallAttributes {
   Lockbox* lockbox_ = nullptr;
   Platform* platform_ = nullptr;
   base::ObserverList<Observer> observer_list_;
-
-  DISALLOW_COPY_AND_ASSIGN(InstallAttributes);
 };
 
 }  // namespace cryptohome

@@ -118,14 +118,14 @@ class CrosFpUpdaterTest : public ::testing::Test {
   UpdateResult RunUpdater() { return DoUpdate(dev_update_, boot_ctrl_, fw_); }
 
   CrosFpUpdaterTest() = default;
+  CrosFpUpdaterTest(const CrosFpUpdaterTest&) = delete;
+  CrosFpUpdaterTest& operator=(const CrosFpUpdaterTest&) = delete;
+
   ~CrosFpUpdaterTest() override = default;
 
   MockCrosFpDeviceUpdate dev_update_;
   MockCrosFpBootUpdateCtrl boot_ctrl_;
   MockCrosFpFirmware fw_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(CrosFpUpdaterTest);
 };
 
 // EcCurrentImageToString Tests

@@ -28,6 +28,9 @@ namespace data_container {
 class BRILLO_EXPORT DataContainerInterface {
  public:
   DataContainerInterface() = default;
+  DataContainerInterface(const DataContainerInterface&) = delete;
+  DataContainerInterface& operator=(const DataContainerInterface&) = delete;
+
   virtual ~DataContainerInterface() = default;
 
   // Read the data from the container into |buffer|. Up to |size_to_read| bytes
@@ -57,9 +60,6 @@ class BRILLO_EXPORT DataContainerInterface {
   virtual size_t GetSize() const = 0;
   // Returns true if the container is read-only.
   virtual bool IsReadOnly() const = 0;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(DataContainerInterface);
 };
 
 // ContiguousBufferBase is a helper base class for memory containers that
@@ -69,6 +69,9 @@ class BRILLO_EXPORT DataContainerInterface {
 class BRILLO_EXPORT ContiguousBufferBase : public DataContainerInterface {
  public:
   ContiguousBufferBase() = default;
+  ContiguousBufferBase(const ContiguousBufferBase&) = delete;
+  ContiguousBufferBase& operator=(const ContiguousBufferBase&) = delete;
+
   // Implementation of DataContainerInterface::Read().
   bool Read(void* buffer,
             size_t size_to_read,
@@ -95,9 +98,6 @@ class BRILLO_EXPORT ContiguousBufferBase : public DataContainerInterface {
  protected:
   // Wrapper around memcpy which can be mocked out in tests.
   virtual void CopyMemoryBlock(void* dest, const void* src, size_t size) const;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ContiguousBufferBase);
 };
 
 // ContiguousReadOnlyBufferBase is a specialization of ContiguousBufferBase for
@@ -105,6 +105,10 @@ class BRILLO_EXPORT ContiguousBufferBase : public DataContainerInterface {
 class BRILLO_EXPORT ContiguousReadOnlyBufferBase : public ContiguousBufferBase {
  public:
   ContiguousReadOnlyBufferBase() = default;
+  ContiguousReadOnlyBufferBase(const ContiguousReadOnlyBufferBase&) = delete;
+  ContiguousReadOnlyBufferBase& operator=(const ContiguousReadOnlyBufferBase&) =
+      delete;
+
   // Fails with an error "operation_not_supported" (Stream is read-only) error.
   bool Write(const void* buffer,
              size_t size_to_write,
@@ -117,9 +121,6 @@ class BRILLO_EXPORT ContiguousReadOnlyBufferBase : public ContiguousBufferBase {
   bool IsReadOnly() const override { return true; }
   // Fails with an error "operation_not_supported" (Stream is read-only) error.
   void* GetBuffer(size_t offset, ErrorPtr* error) override;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ContiguousReadOnlyBufferBase);
 };
 
 // ReadOnlyBuffer implements a read-only container based on raw memory block.
@@ -130,6 +131,8 @@ class BRILLO_EXPORT ReadOnlyBuffer : public ContiguousReadOnlyBufferBase {
   // the stream using this container.
   ReadOnlyBuffer(const void* buffer, size_t size)
       : buffer_(buffer), size_(size) {}
+  ReadOnlyBuffer(const ReadOnlyBuffer&) = delete;
+  ReadOnlyBuffer& operator=(const ReadOnlyBuffer&) = delete;
 
   // Returns the pointer to data at |offset|.
   const void* GetReadOnlyBuffer(size_t offset,
@@ -143,8 +146,6 @@ class BRILLO_EXPORT ReadOnlyBuffer : public ContiguousReadOnlyBufferBase {
   // Raw memory pointer to the data block and its size.
   const void* buffer_;
   size_t size_;
-
-  DISALLOW_COPY_AND_ASSIGN(ReadOnlyBuffer);
 };
 
 // VectorPtr<T> is a read/write container based on a vector<T> pointer.
@@ -155,6 +156,8 @@ class VectorPtr : public ContiguousBufferBase {
  public:
   static_assert(sizeof(T) == 1, "Only char/byte is supported");
   explicit VectorPtr(std::vector<T>* vector) : vector_ptr_(vector) {}
+  VectorPtr(const VectorPtr&) = delete;
+  VectorPtr& operator=(const VectorPtr&) = delete;
 
   bool Resize(size_t new_size, ErrorPtr* /* error */) override {
     vector_ptr_->resize(new_size);
@@ -172,9 +175,6 @@ class VectorPtr : public ContiguousBufferBase {
 
  protected:
   std::vector<T>* vector_ptr_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(VectorPtr);
 };
 
 // ReadOnlyVectorRef<T> is a read-only container based on a vector<T> reference.
@@ -186,6 +186,8 @@ class ReadOnlyVectorRef : public ContiguousReadOnlyBufferBase {
   static_assert(sizeof(T) == 1, "Only char/byte is supported");
   explicit ReadOnlyVectorRef(const std::vector<T>& vector)
       : vector_ref_(vector) {}
+  ReadOnlyVectorRef(const ReadOnlyVectorRef&) = delete;
+  ReadOnlyVectorRef& operator=(const ReadOnlyVectorRef&) = delete;
 
   const void* GetReadOnlyBuffer(size_t offset,
                                 ErrorPtr* /* error */) const override {
@@ -195,9 +197,6 @@ class ReadOnlyVectorRef : public ContiguousReadOnlyBufferBase {
 
  protected:
   const std::vector<T>& vector_ref_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ReadOnlyVectorRef);
 };
 
 // ReadOnlyVectorCopy<T> is a read-only container based on a copy of vector<T>.
@@ -213,6 +212,8 @@ class ReadOnlyVectorCopy : public ContiguousReadOnlyBufferBase {
 
   ReadOnlyVectorCopy(const T* buffer, size_t size)
       : vector_copy_(buffer, buffer + size) {}
+  ReadOnlyVectorCopy(const ReadOnlyVectorCopy&) = delete;
+  ReadOnlyVectorCopy& operator=(const ReadOnlyVectorCopy&) = delete;
 
   const void* GetReadOnlyBuffer(size_t offset,
                                 ErrorPtr* /* error */) const override {
@@ -222,9 +223,6 @@ class ReadOnlyVectorCopy : public ContiguousReadOnlyBufferBase {
 
  protected:
   std::vector<T> vector_copy_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ReadOnlyVectorCopy);
 };
 
 // ByteBuffer is a read/write container that manages the data and underlying
@@ -232,16 +230,18 @@ class ReadOnlyVectorCopy : public ContiguousReadOnlyBufferBase {
 class BRILLO_EXPORT ByteBuffer : public VectorPtr<uint8_t> {
  public:
   explicit ByteBuffer(size_t reserve_size);
-  ~ByteBuffer() override;
+  ByteBuffer(const ByteBuffer&) = delete;
+  ByteBuffer& operator=(const ByteBuffer&) = delete;
 
- private:
-  DISALLOW_COPY_AND_ASSIGN(ByteBuffer);
+  ~ByteBuffer() override;
 };
 
 // StringPtr is a read/write container based on external std::string storage.
 class BRILLO_EXPORT StringPtr : public ContiguousBufferBase {
  public:
   explicit StringPtr(std::string* string);
+  StringPtr(const StringPtr&) = delete;
+  StringPtr& operator=(const StringPtr&) = delete;
 
   bool Resize(size_t new_size, ErrorPtr* error) override;
   size_t GetSize() const override { return string_ptr_->size(); }
@@ -251,23 +251,20 @@ class BRILLO_EXPORT StringPtr : public ContiguousBufferBase {
 
  protected:
   std::string* string_ptr_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(StringPtr);
 };
 
 // ReadOnlyStringRef is a read-only container based on external std::string.
 class BRILLO_EXPORT ReadOnlyStringRef : public ContiguousReadOnlyBufferBase {
  public:
   explicit ReadOnlyStringRef(const std::string& string);
+  ReadOnlyStringRef(const ReadOnlyStringRef&) = delete;
+  ReadOnlyStringRef& operator=(const ReadOnlyStringRef&) = delete;
+
   const void* GetReadOnlyBuffer(size_t offset, ErrorPtr* error) const override;
   size_t GetSize() const override { return string_ref_.size(); }
 
  protected:
   const std::string& string_ref_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ReadOnlyStringRef);
 };
 
 // ReadOnlyStringCopy is a read-only container based on a copy of a std::string.
@@ -275,12 +272,11 @@ class BRILLO_EXPORT ReadOnlyStringRef : public ContiguousReadOnlyBufferBase {
 class BRILLO_EXPORT ReadOnlyStringCopy : public ReadOnlyStringRef {
  public:
   explicit ReadOnlyStringCopy(std::string string);
+  ReadOnlyStringCopy(const ReadOnlyStringCopy&) = delete;
+  ReadOnlyStringCopy& operator=(const ReadOnlyStringCopy&) = delete;
 
  protected:
   std::string string_copy_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ReadOnlyStringCopy);
 };
 
 }  // namespace data_container

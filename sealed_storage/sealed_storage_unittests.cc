@@ -55,6 +55,9 @@ namespace sealed_storage {
 class SealedStorageTest : public ::testing::Test {
  public:
   SealedStorageTest() = default;
+  SealedStorageTest(const SealedStorageTest&) = delete;
+  SealedStorageTest& operator=(const SealedStorageTest&) = delete;
+
   virtual ~SealedStorageTest() = default;
 
   static SecretData DftDataToSeal() { return SecretData("testdata"); }
@@ -375,9 +378,6 @@ class SealedStorageTest : public ::testing::Test {
   std::string policy_digest_ = DftPolicyDigest();
 
   trunks::TPM_RC policy_pcr_result_ = trunks::TPM_RC_SUCCESS;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(SealedStorageTest);
 };
 
 TEST_F(SealedStorageTest, TrivialPolicySuccess) {

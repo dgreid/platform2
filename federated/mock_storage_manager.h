@@ -17,6 +17,9 @@ namespace federated {
 class MockStorageManager : public StorageManager {
  public:
   MockStorageManager() = default;
+  MockStorageManager(const MockStorageManager&) = delete;
+  MockStorageManager& operator=(const MockStorageManager&) = delete;
+
   ~MockStorageManager() override = default;
 
   MOCK_METHOD(bool,
@@ -29,9 +32,6 @@ class MockStorageManager : public StorageManager {
               (override));
   MOCK_METHOD(bool, GetNextExample, (std::string*), (override));
   MOCK_METHOD(bool, CloseStreaming, (), (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockStorageManager);
 };
 
 }  // namespace federated

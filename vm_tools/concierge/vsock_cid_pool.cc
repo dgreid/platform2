@@ -47,10 +47,10 @@ class FileLock final {
 
  private:
   explicit FileLock(base::ScopedFD file) : file_(std::move(file)) {}
+  FileLock(const FileLock&) = delete;
+  FileLock& operator=(const FileLock&) = delete;
 
   base::ScopedFD file_;
-
-  DISALLOW_COPY_AND_ASSIGN(FileLock);
 };
 
 }  // namespace

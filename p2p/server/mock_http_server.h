@@ -35,6 +35,8 @@ class MockHttpServer : public HttpServer {
         .WillByDefault(testing::Invoke(
             &fake_, &FakeHttpServer::SetNumConnectionsCallback));
   }
+  MockHttpServer(const MockHttpServer&) = delete;
+  MockHttpServer& operator=(const MockHttpServer&) = delete;
 
   MOCK_METHOD(bool, Start, (), (override));
   MOCK_METHOD(bool, Stop, (), (override));
@@ -49,8 +51,6 @@ class MockHttpServer : public HttpServer {
 
  private:
   FakeHttpServer fake_;
-
-  DISALLOW_COPY_AND_ASSIGN(MockHttpServer);
 };
 
 }  // namespace server

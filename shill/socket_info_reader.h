@@ -19,6 +19,9 @@ namespace shill {
 class SocketInfoReader {
  public:
   SocketInfoReader();
+  SocketInfoReader(const SocketInfoReader&) = delete;
+  SocketInfoReader& operator=(const SocketInfoReader&) = delete;
+
   virtual ~SocketInfoReader();
 
   // Returns the file path (/proc/net/tcp by default) from where TCP/IPv4
@@ -61,8 +64,6 @@ class SocketInfoReader {
                             SocketInfo::ConnectionState* connection_state);
   bool ParseTimerState(const std::string& input,
                        SocketInfo::TimerState* timer_state);
-
-  DISALLOW_COPY_AND_ASSIGN(SocketInfoReader);
 };
 
 }  // namespace shill

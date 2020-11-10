@@ -34,6 +34,9 @@ class BootLockbox {
  public:
   // Does not take ownership of pointers.
   BootLockbox(Tpm* tpm, Platform* platform, Crypto* crypto);
+  BootLockbox(const BootLockbox&) = delete;
+  BootLockbox& operator=(const BootLockbox&) = delete;
+
   virtual ~BootLockbox();
 
   // Signs |data| for boot-time tamper evidence.  This always fails after
@@ -85,9 +88,6 @@ class BootLockbox {
   Crypto* crypto_;
   BootLockboxKey key_;
   const brillo::Blob initial_pcr_value_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(BootLockbox);
 };
 
 }  // namespace cryptohome

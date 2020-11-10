@@ -41,6 +41,10 @@ class KerberosArtifactSynchronizerTest : public testing::Test {
 
     Initialize(false /* allow_credentials_update */);
   }
+  KerberosArtifactSynchronizerTest(const KerberosArtifactSynchronizerTest&) =
+      delete;
+  KerberosArtifactSynchronizerTest& operator=(
+      const KerberosArtifactSynchronizerTest&) = delete;
 
   ~KerberosArtifactSynchronizerTest() override = default;
 
@@ -59,9 +63,6 @@ class KerberosArtifactSynchronizerTest : public testing::Test {
   std::string krb5_ccache_path_;
   FakeKerberosArtifactClient* fake_artifact_client_;
   std::unique_ptr<KerberosArtifactSynchronizer> synchronizer_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(KerberosArtifactSynchronizerTest);
 };
 
 // SetupKerberos makes a call to GetUserKerberosFiles.

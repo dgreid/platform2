@@ -20,6 +20,9 @@ namespace debugd {
 class DevFeaturesPasswordUtils {
  public:
   DevFeaturesPasswordUtils() = default;
+  DevFeaturesPasswordUtils(const DevFeaturesPasswordUtils&) = delete;
+  DevFeaturesPasswordUtils& operator=(const DevFeaturesPasswordUtils&) = delete;
+
   virtual ~DevFeaturesPasswordUtils() = default;
 
   // Checks if |username| is valid. This may be slightly different than the
@@ -50,8 +53,6 @@ class DevFeaturesPasswordUtils {
   bool SetPasswordInEntries(const std::string& username,
                             const std::string& hashed_password,
                             std::vector<std::string>* entries);
-
-  DISALLOW_COPY_AND_ASSIGN(DevFeaturesPasswordUtils);
 };
 
 }  // namespace debugd

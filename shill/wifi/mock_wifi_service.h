@@ -22,6 +22,9 @@ class MockWiFiService : public WiFiService {
                   const std::string& mode,
                   const std::string& security,
                   bool hidden_ssid);
+  MockWiFiService(const MockWiFiService&) = delete;
+  MockWiFiService& operator=(const MockWiFiService&) = delete;
+
   ~MockWiFiService() override;
 
   MOCK_METHOD(void, Configure, (const KeyValueStore&, Error*), (override));
@@ -65,9 +68,6 @@ class MockWiFiService : public WiFiService {
               (const, override));
   MOCK_METHOD(bool, IsAutoConnectable, (const char**), (const, override));
   MOCK_METHOD(bool, HasStaticIPAddress, (), (const, override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockWiFiService);
 };
 
 }  // namespace shill

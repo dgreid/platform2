@@ -15,6 +15,9 @@ namespace debugd {
 class WifiPowerTool {
  public:
   WifiPowerTool() = default;
+  WifiPowerTool(const WifiPowerTool&) = delete;
+  WifiPowerTool& operator=(const WifiPowerTool&) = delete;
+
   ~WifiPowerTool() = default;
 
   // Sets the power save mode and returns the new mode, or an error.
@@ -22,9 +25,6 @@ class WifiPowerTool {
 
   // Returns the current power save mode.
   std::string GetWifiPowerSave() const;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(WifiPowerTool);
 };
 
 }  // namespace debugd

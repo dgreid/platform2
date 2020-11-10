@@ -17,6 +17,9 @@ namespace shill {
 class MockVPNService : public VPNService {
  public:
   MockVPNService(Manager* manager, std::unique_ptr<VPNDriver> driver);
+  MockVPNService(const MockVPNService&) = delete;
+  MockVPNService& operator=(const MockVPNService&) = delete;
+
   ~MockVPNService() override;
 
   MOCK_METHOD(void, SetState, (ConnectState), (override));
@@ -34,7 +37,6 @@ class MockVPNService : public VPNService {
 
  private:
   base::WeakPtrFactory<MockVPNService> weak_factory_{this};
-  DISALLOW_COPY_AND_ASSIGN(MockVPNService);
 };
 
 }  // namespace shill

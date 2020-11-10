@@ -33,6 +33,9 @@ class StoreInterface;
 class PPPoEService : public EthernetService, public RpcTaskDelegate {
  public:
   PPPoEService(Manager* manager, base::WeakPtr<Ethernet> ethernet);
+  PPPoEService(const PPPoEService&) = delete;
+  PPPoEService& operator=(const PPPoEService&) = delete;
+
   ~PPPoEService() override;
 
   bool Load(const StoreInterface* storage) override;
@@ -78,8 +81,6 @@ class PPPoEService : public EthernetService, public RpcTaskDelegate {
   PPPDeviceRefPtr ppp_device_;
 
   base::WeakPtrFactory<PPPoEService> weak_ptr_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(PPPoEService);
 };
 
 }  // namespace shill

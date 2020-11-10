@@ -25,6 +25,9 @@ class Connection : public http::Connection {
   Connection(const std::string& url,
              const std::string& method,
              const std::shared_ptr<http::Transport>& transport);
+  Connection(const Connection&) = delete;
+  Connection& operator=(const Connection&) = delete;
+
   ~Connection() override;
 
   // Overrides from http::Connection.
@@ -53,8 +56,6 @@ class Connection : public http::Connection {
   // the handler in response to the request.
   ServerRequest request_;
   ServerResponse response_;
-
-  DISALLOW_COPY_AND_ASSIGN(Connection);
 };
 
 }  // namespace fake

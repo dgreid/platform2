@@ -119,6 +119,8 @@ class HandwritingLibrary {
 
   // Initialize the handwriting library.
   explicit HandwritingLibrary(const std::string& root_path);
+  HandwritingLibrary(const HandwritingLibrary&) = delete;
+  HandwritingLibrary& operator=(const HandwritingLibrary&) = delete;
 
   // Currently HandwritingLibrary is supported only when the "sanitizer" is not
   // enabled (see https://crbug.com/1082632).
@@ -137,8 +139,6 @@ class HandwritingLibrary {
   RecognizeHandwritingFn recognize_handwriting_;
   DeleteHandwritingResultDataFn delete_handwriting_result_data_;
   DestroyHandwritingRecognizerFn destroy_handwriting_recognizer_;
-
-  DISALLOW_COPY_AND_ASSIGN(HandwritingLibrary);
 };
 
 }  // namespace ml

@@ -23,6 +23,9 @@ namespace concierge {
 class StartupListenerImpl final : public vm_tools::StartupListener::Service {
  public:
   StartupListenerImpl() = default;
+  StartupListenerImpl(const StartupListenerImpl&) = delete;
+  StartupListenerImpl& operator=(const StartupListenerImpl&) = delete;
+
   ~StartupListenerImpl() override = default;
 
   // StartupListener overrides.
@@ -43,8 +46,6 @@ class StartupListenerImpl final : public vm_tools::StartupListener::Service {
 
   // Lock to protect |pending_vms_|.
   base::Lock vm_lock_;
-
-  DISALLOW_COPY_AND_ASSIGN(StartupListenerImpl);
 };
 
 }  // namespace concierge

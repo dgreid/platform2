@@ -38,6 +38,9 @@ class TRUNKS_EXPORT HmacSessionImpl : public HmacSession {
   // producation code, this factory is used to access the TPM class to forward
   // commands to the TPM. In test code, this is used to mock out the TPM calls.
   explicit HmacSessionImpl(const TrunksFactory& factory);
+  HmacSessionImpl(const HmacSessionImpl&) = delete;
+  HmacSessionImpl& operator=(const HmacSessionImpl&) = delete;
+
   ~HmacSessionImpl() override;
 
   // HmacSession methods.
@@ -62,7 +65,6 @@ class TRUNKS_EXPORT HmacSessionImpl : public HmacSession {
   std::unique_ptr<SessionManager> session_manager_;
 
   friend class HmacSessionTest;
-  DISALLOW_COPY_AND_ASSIGN(HmacSessionImpl);
 };
 
 }  // namespace trunks

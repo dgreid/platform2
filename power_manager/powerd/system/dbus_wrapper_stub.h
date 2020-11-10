@@ -36,6 +36,9 @@ class DBusWrapperStub : public DBusWrapperInterface {
   };
 
   DBusWrapperStub();
+  DBusWrapperStub(const DBusWrapperStub&) = delete;
+  DBusWrapperStub& operator=(const DBusWrapperStub&) = delete;
+
   ~DBusWrapperStub() override;
 
   bool service_published() const { return service_published_; }
@@ -162,8 +165,6 @@ class DBusWrapperStub : public DBusWrapperInterface {
 
   // Invoked to handle calls to CallMethod*().
   MethodCallback method_callback_;
-
-  DISALLOW_COPY_AND_ASSIGN(DBusWrapperStub);
 };
 
 }  // namespace system

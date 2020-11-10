@@ -24,6 +24,9 @@ class OobeConfig {
  public:
   OobeConfig();
   explicit OobeConfig(std::unique_ptr<tpmcrypto::TpmCrypto> crypto);
+  OobeConfig(const OobeConfig&) = delete;
+  OobeConfig& operator=(const OobeConfig&) = delete;
+
   ~OobeConfig();
 
   // Saves the rollback data into an unencrypted file. Only use for testing.
@@ -106,8 +109,6 @@ class OobeConfig {
 
   // Class for implementing crypto.
   std::unique_ptr<tpmcrypto::TpmCrypto> crypto_;
-
-  DISALLOW_COPY_AND_ASSIGN(OobeConfig);
 };
 
 }  // namespace oobe_config

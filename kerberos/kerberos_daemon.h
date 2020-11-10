@@ -23,6 +23,9 @@ class KerberosAdaptor;
 class KerberosDaemon : public brillo::DBusServiceDaemon {
  public:
   KerberosDaemon();
+  KerberosDaemon(const KerberosDaemon&) = delete;
+  KerberosDaemon& operator=(const KerberosDaemon&) = delete;
+
   ~KerberosDaemon();
 
  protected:
@@ -31,8 +34,6 @@ class KerberosDaemon : public brillo::DBusServiceDaemon {
 
  private:
   std::unique_ptr<KerberosAdaptor> adaptor_;
-
-  DISALLOW_COPY_AND_ASSIGN(KerberosDaemon);
 };
 
 }  // namespace kerberos

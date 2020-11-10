@@ -14,6 +14,9 @@ namespace smbprovider {
 class IdMapTest : public testing::Test {
  public:
   IdMapTest() : map_(0 /* initial_value */) {}
+  IdMapTest(const IdMapTest&) = delete;
+  IdMapTest& operator=(const IdMapTest&) = delete;
+
   ~IdMapTest() override = default;
 
  protected:
@@ -31,7 +34,6 @@ class IdMapTest : public testing::Test {
   }
 
   IdMap<const std::string> map_;
-  DISALLOW_COPY_AND_ASSIGN(IdMapTest);
 };
 
 TEST_F(IdMapTest, FindOnEmpty) {

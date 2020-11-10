@@ -80,6 +80,8 @@ class PathService {
  public:
   // Calls Initialize().
   PathService();
+  PathService(const PathService&) = delete;
+  PathService& operator=(const PathService&) = delete;
   virtual ~PathService();
 
   // Retrieves the file or directory path for the given |path_key|.
@@ -101,8 +103,6 @@ class PathService {
 
  private:
   std::map<Path, std::string> paths_;
-
-  DISALLOW_COPY_AND_ASSIGN(PathService);
 };
 
 }  // namespace authpolicy

@@ -30,6 +30,11 @@ class TpmImpl;
 class SignatureSealingBackendTpm1Impl final : public SignatureSealingBackend {
  public:
   explicit SignatureSealingBackendTpm1Impl(TpmImpl* tpm);
+  SignatureSealingBackendTpm1Impl(const SignatureSealingBackendTpm1Impl&) =
+      delete;
+  SignatureSealingBackendTpm1Impl& operator=(
+      const SignatureSealingBackendTpm1Impl&) = delete;
+
   ~SignatureSealingBackendTpm1Impl() override;
 
   // SignatureSealingBackend:
@@ -51,8 +56,6 @@ class SignatureSealingBackendTpm1Impl final : public SignatureSealingBackend {
  private:
   // Unowned.
   TpmImpl* const tpm_;
-
-  DISALLOW_COPY_AND_ASSIGN(SignatureSealingBackendTpm1Impl);
 };
 
 // Extracts the CMK's private key from the output of the migration procedure:

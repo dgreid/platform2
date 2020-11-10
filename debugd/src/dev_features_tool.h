@@ -19,6 +19,9 @@ namespace debugd {
 class DevFeaturesTool {
  public:
   DevFeaturesTool() = default;
+  DevFeaturesTool(const DevFeaturesTool&) = delete;
+  DevFeaturesTool& operator=(const DevFeaturesTool&) = delete;
+
   ~DevFeaturesTool() = default;
 
   bool RemoveRootfsVerification(brillo::ErrorPtr* error) const;
@@ -32,9 +35,6 @@ class DevFeaturesTool {
                                brillo::ErrorPtr* error) const;
 
   bool QueryDevFeatures(int32_t* flags, brillo::ErrorPtr* error) const;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(DevFeaturesTool);
 };
 
 }  // namespace debugd

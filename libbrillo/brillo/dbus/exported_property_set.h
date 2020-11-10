@@ -98,6 +98,9 @@ class BRILLO_EXPORT ExportedPropertySet {
   using PropertyWriter = base::Callback<void(VariantDictionary* dict)>;
 
   explicit ExportedPropertySet(::dbus::Bus* bus);
+  ExportedPropertySet(const ExportedPropertySet&) = delete;
+  ExportedPropertySet& operator=(const ExportedPropertySet&) = delete;
+
   virtual ~ExportedPropertySet() = default;
 
   // Called to notify ExportedPropertySet that the Properties interface of the
@@ -163,13 +166,15 @@ class BRILLO_EXPORT ExportedPropertySet {
 
   friend class DBusObject;
   friend class ExportedPropertySetTest;
-  DISALLOW_COPY_AND_ASSIGN(ExportedPropertySet);
 };
 
 template <typename T>
 class ExportedProperty : public ExportedPropertyBase {
  public:
   ExportedProperty() = default;
+  ExportedProperty(const ExportedProperty&) = delete;
+  ExportedProperty& operator=(const ExportedProperty&) = delete;
+
   ~ExportedProperty() override = default;
 
   // Retrieves the current value.
@@ -221,8 +226,6 @@ class ExportedProperty : public ExportedPropertyBase {
  private:
   T value_{};
   base::Callback<bool(brillo::ErrorPtr*, const T&)> validator_;
-
-  DISALLOW_COPY_AND_ASSIGN(ExportedProperty);
 };
 
 }  // namespace dbus_utils

@@ -23,6 +23,9 @@ namespace cryptohome {
 class TpmNotBoundToPcrAuthBlock : public AuthBlock {
  public:
   TpmNotBoundToPcrAuthBlock(Tpm* tpm, TpmInit* tpm_init);
+  TpmNotBoundToPcrAuthBlock(const TpmNotBoundToPcrAuthBlock&) = delete;
+  TpmNotBoundToPcrAuthBlock& operator=(const TpmNotBoundToPcrAuthBlock&) =
+      delete;
 
   base::Optional<AuthBlockState> Create(const AuthInput& user_input,
                                         KeyBlobs* key_blobs,
@@ -49,8 +52,6 @@ class TpmNotBoundToPcrAuthBlock : public AuthBlock {
   TpmAuthBlockUtils utils_;
 
   FRIEND_TEST_ALL_PREFIXES(TPMAuthBlockTest, DecryptNotBoundToPcrTest);
-
-  DISALLOW_COPY_AND_ASSIGN(TpmNotBoundToPcrAuthBlock);
 };
 
 }  // namespace cryptohome

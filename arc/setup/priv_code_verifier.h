@@ -27,6 +27,9 @@ class PrivCodeVerifier {
  public:
   explicit PrivCodeVerifier(
       std::unique_ptr<BootLockboxClient> boot_lockbox_client);
+  PrivCodeVerifier(const PrivCodeVerifier&) = delete;
+  PrivCodeVerifier& operator=(const PrivCodeVerifier&) = delete;
+
   ~PrivCodeVerifier();
 
   // Waits for cryptohomed to be ready before calling to cryptohomed.
@@ -53,8 +56,6 @@ class PrivCodeVerifier {
 
  private:
   std::unique_ptr<BootLockboxClient> boot_lockbox_client_;
-
-  DISALLOW_COPY_AND_ASSIGN(PrivCodeVerifier);
 };
 
 std::unique_ptr<PrivCodeVerifier> CreatePrivCodeVerifier();

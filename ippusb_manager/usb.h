@@ -35,13 +35,13 @@ class UsbPrinterInfo {
 
  private:
   UsbPrinterInfo(uint16_t vid, uint16_t pid);
+  UsbPrinterInfo(const UsbPrinterInfo&) = delete;
+  UsbPrinterInfo& operator=(const UsbPrinterInfo&) = delete;
 
   uint16_t vid_;
   uint16_t pid_;
   uint8_t bus_;
   uint8_t device_;
-
-  DISALLOW_COPY_AND_ASSIGN(UsbPrinterInfo);
 };
 
 // Parses a given string of the format "<vid> <pid>" where the values in the

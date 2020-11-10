@@ -20,6 +20,9 @@ namespace shill {
 class MockWakeOnWiFi : public WakeOnWiFiInterface {
  public:
   MockWakeOnWiFi();
+  MockWakeOnWiFi(const MockWakeOnWiFi&) = delete;
+  MockWakeOnWiFi& operator=(const MockWakeOnWiFi&) = delete;
+
   ~MockWakeOnWiFi() override;
 
   MOCK_METHOD(void, InitPropertyStore, (PropertyStore * store), (override));
@@ -76,9 +79,6 @@ class MockWakeOnWiFi : public WakeOnWiFiInterface {
   MOCK_METHOD(void, OnScanStarted, (bool), (override));
   MOCK_METHOD(bool, InDarkResume, (), (override));
   MOCK_METHOD(void, OnWiphyIndexReceived, (uint32_t), (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockWakeOnWiFi);
 };
 
 }  // namespace shill

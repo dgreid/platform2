@@ -46,6 +46,9 @@ class BRILLO_EXPORT MockMessageLoop : public MessageLoop {
         .WillByDefault(
             ::testing::Invoke(&fake_loop_, &FakeMessageLoop::RunOnce));
   }
+  MockMessageLoop(const MockMessageLoop&) = delete;
+  MockMessageLoop& operator=(const MockMessageLoop&) = delete;
+
   ~MockMessageLoop() override = default;
 
   MOCK_METHOD(TaskId,
@@ -62,8 +65,6 @@ class BRILLO_EXPORT MockMessageLoop : public MessageLoop {
 
  private:
   FakeMessageLoop fake_loop_;
-
-  DISALLOW_COPY_AND_ASSIGN(MockMessageLoop);
 };
 
 }  // namespace brillo

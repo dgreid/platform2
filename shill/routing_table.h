@@ -146,6 +146,8 @@ class RoutingTable {
 
  protected:
   RoutingTable();
+  RoutingTable(const RoutingTable&) = delete;
+  RoutingTable& operator=(const RoutingTable&) = delete;
 
  private:
   friend base::LazyInstanceTraitsBase<RoutingTable>;
@@ -217,8 +219,6 @@ class RoutingTable {
 
   // Cache singleton pointer for performance and test purposes.
   RTNLHandler* rtnl_handler_;
-
-  DISALLOW_COPY_AND_ASSIGN(RoutingTable);
 };
 
 }  // namespace shill

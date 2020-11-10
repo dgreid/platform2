@@ -24,6 +24,9 @@ class DeviceClaimer {
   DeviceClaimer(const std::string& service_name,
                 DeviceInfo* device_info,
                 bool default_claimer);
+  DeviceClaimer(const DeviceClaimer&) = delete;
+  DeviceClaimer& operator=(const DeviceClaimer&) = delete;
+
   virtual ~DeviceClaimer();
 
   virtual bool Claim(const std::string& device_name, Error* error);
@@ -58,8 +61,6 @@ class DeviceClaimer {
   // Flag indicating if this is the default claimer. When set to true, this
   // claimer will only be deleted when shill terminates.
   bool default_claimer_;
-
-  DISALLOW_COPY_AND_ASSIGN(DeviceClaimer);
 };
 
 }  // namespace shill

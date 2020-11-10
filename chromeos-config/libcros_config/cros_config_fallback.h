@@ -22,6 +22,9 @@ namespace brillo {
 class BRILLO_EXPORT CrosConfigFallback {
  public:
   CrosConfigFallback();
+  CrosConfigFallback(const CrosConfigFallback&) = delete;
+  CrosConfigFallback& operator=(const CrosConfigFallback&) = delete;
+
   ~CrosConfigFallback();
 
   // Write files corresponding to each defined fallback value into a
@@ -30,9 +33,6 @@ class BRILLO_EXPORT CrosConfigFallback {
   // @output_dir: Directory to write the files and directories into.
   // @return true on success, false on error.
   bool WriteConfigFS(const base::FilePath& output_dir);
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(CrosConfigFallback);
 };
 
 }  // namespace brillo

@@ -47,6 +47,9 @@ class KeyboardBacklightController : public BacklightController,
   class TestApi {
    public:
     explicit TestApi(KeyboardBacklightController* controller);
+    TestApi(const TestApi&) = delete;
+    TestApi& operator=(const TestApi&) = delete;
+
     ~TestApi();
 
     Clock* clock() { return controller_->clock_.get(); }
@@ -59,13 +62,16 @@ class KeyboardBacklightController : public BacklightController,
    private:
     KeyboardBacklightController* controller_;  // weak
 
-    DISALLOW_COPY_AND_ASSIGN(TestApi);
   };
 
   // Backlight brightness percent to use when the screen is dimmed.
   static const double kDimPercent;
 
   KeyboardBacklightController();
+  KeyboardBacklightController(const KeyboardBacklightController&) = delete;
+  KeyboardBacklightController& operator=(const KeyboardBacklightController&) =
+      delete;
+
   ~KeyboardBacklightController() override;
 
   // Initializes the object. Ownership of passed-in pointers remains with the
@@ -259,8 +265,6 @@ class KeyboardBacklightController : public BacklightController,
   bool display_brightness_is_zero_ = false;
 
   base::WeakPtrFactory<KeyboardBacklightController> weak_ptr_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(KeyboardBacklightController);
 };
 
 }  // namespace policy

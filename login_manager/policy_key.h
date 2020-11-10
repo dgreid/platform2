@@ -38,6 +38,9 @@ class SystemUtils;
 class PolicyKey {
  public:
   PolicyKey(const base::FilePath& key_file, NssUtil* nss);
+  PolicyKey(const PolicyKey&) = delete;
+  PolicyKey& operator=(const PolicyKey&) = delete;
+
   virtual ~PolicyKey();
 
   virtual bool Equals(const std::string& key_der) const;
@@ -97,8 +100,6 @@ class PolicyKey {
   std::vector<uint8_t> key_;
   NssUtil* nss_;
   std::unique_ptr<SystemUtils> utils_;
-
-  DISALLOW_COPY_AND_ASSIGN(PolicyKey);
 };
 }  // namespace login_manager
 

@@ -26,6 +26,9 @@ class UpstartSignalEmitter : public InitDaemonController {
   static const char kPath[];
 
   explicit UpstartSignalEmitter(dbus::ObjectProxy* proxy);
+  UpstartSignalEmitter(const UpstartSignalEmitter&) = delete;
+  UpstartSignalEmitter& operator=(const UpstartSignalEmitter&) = delete;
+
   ~UpstartSignalEmitter() override;
 
   // InitDaemonController:
@@ -43,7 +46,6 @@ class UpstartSignalEmitter : public InitDaemonController {
 
  private:
   dbus::ObjectProxy* upstart_dbus_proxy_;  // Weak, owned by caller.
-  DISALLOW_COPY_AND_ASSIGN(UpstartSignalEmitter);
 };
 
 }  // namespace login_manager

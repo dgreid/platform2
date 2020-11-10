@@ -28,6 +28,9 @@ namespace tpm_manager {
 class TPM_MANAGER_EXPORT TpmOwnershipDBusProxy : public TpmOwnershipInterface {
  public:
   TpmOwnershipDBusProxy() = default;
+  TpmOwnershipDBusProxy(const TpmOwnershipDBusProxy&) = delete;
+  TpmOwnershipDBusProxy& operator=(const TpmOwnershipDBusProxy&) = delete;
+
   ~TpmOwnershipDBusProxy() override;
 
   // Performs initialization tasks. This method must be called before calling
@@ -77,8 +80,6 @@ class TPM_MANAGER_EXPORT TpmOwnershipDBusProxy : public TpmOwnershipInterface {
   dbus::ObjectProxy* object_proxy_;
 
   TpmOwnershipTakenSignalHandler* ownership_taken_signal_handler_{nullptr};
-
-  DISALLOW_COPY_AND_ASSIGN(TpmOwnershipDBusProxy);
 };
 
 }  // namespace tpm_manager

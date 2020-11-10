@@ -28,6 +28,9 @@ class StaticIPParameters {
   static const char kSavedConfigKeyPrefix[];
 
   StaticIPParameters();
+  StaticIPParameters(const StaticIPParameters&) = delete;
+  StaticIPParameters& operator=(const StaticIPParameters&) = delete;
+
   virtual ~StaticIPParameters();
 
   // Take a property store and add static IP parameters to them.
@@ -109,8 +112,6 @@ class StaticIPParameters {
   KeyValueStore args_;
   KeyValueStore saved_args_;
   base::WeakPtr<IPConfig> ipconfig_;
-
-  DISALLOW_COPY_AND_ASSIGN(StaticIPParameters);
 };
 
 }  // namespace shill

@@ -34,6 +34,9 @@ class Connection;
 class Transport : public http::Transport {
  public:
   Transport();
+  Transport(const Transport&) = delete;
+  Transport& operator=(const Transport&) = delete;
+
   ~Transport() override;
 
   // Server handler callback signature.
@@ -126,8 +129,6 @@ class Transport : public http::Transport {
 
   // Fake error to be returned from CreateConnection method.
   brillo::ErrorPtr create_connection_error_;
-
-  DISALLOW_COPY_AND_ASSIGN(Transport);
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -137,6 +138,9 @@ class Transport : public http::Transport {
 class ServerRequestResponseBase {
  public:
   ServerRequestResponseBase() = default;
+  ServerRequestResponseBase(const ServerRequestResponseBase&) = delete;
+  ServerRequestResponseBase& operator=(const ServerRequestResponseBase&) =
+      delete;
 
   // Add/retrieve request/response body data.
   void SetData(StreamPtr stream);
@@ -159,9 +163,6 @@ class ServerRequestResponseBase {
   std::vector<uint8_t> data_;
   // Header map.
   std::multimap<std::string, std::string> headers_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ServerRequestResponseBase);
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -170,6 +171,8 @@ class ServerRequestResponseBase {
 class ServerRequest : public ServerRequestResponseBase {
  public:
   ServerRequest(const std::string& url, const std::string& method);
+  ServerRequest(const ServerRequest&) = delete;
+  ServerRequest& operator=(const ServerRequest&) = delete;
 
   // Get the actual request URL. Does not include the query string or fragment.
   const std::string& GetURL() const { return url_; }
@@ -191,8 +194,6 @@ class ServerRequest : public ServerRequestResponseBase {
   // Flag used on first request to GetFormField to parse the body of HTTP POST
   // request with application/x-www-form-urlencoded content.
   mutable bool form_fields_parsed_ = false;
-
-  DISALLOW_COPY_AND_ASSIGN(ServerRequest);
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -208,6 +209,8 @@ class ServerRequest : public ServerRequestResponseBase {
 class ServerResponse : public ServerRequestResponseBase {
  public:
   ServerResponse() = default;
+  ServerResponse(const ServerResponse&) = delete;
+  ServerResponse& operator=(const ServerResponse&) = delete;
 
   // Generic reply method.
   void Reply(int status_code,
@@ -266,8 +269,6 @@ class ServerResponse : public ServerRequestResponseBase {
  private:
   int status_code_ = 0;
   std::string protocol_version_ = "HTTP/1.1";
-
-  DISALLOW_COPY_AND_ASSIGN(ServerResponse);
 };
 
 }  // namespace fake

@@ -24,6 +24,9 @@ class SupplicantBSSProxy : public SupplicantBSSProxyInterface {
   SupplicantBSSProxy(const scoped_refptr<dbus::Bus>& bus,
                      const RpcIdentifier& object_path,
                      WiFiEndpoint* wifi_endpoint);
+  SupplicantBSSProxy(const SupplicantBSSProxy&) = delete;
+  SupplicantBSSProxy& operator=(const SupplicantBSSProxy&) = delete;
+
   ~SupplicantBSSProxy() override;
 
  private:
@@ -42,7 +45,6 @@ class SupplicantBSSProxy : public SupplicantBSSProxyInterface {
   WiFiEndpoint* wifi_endpoint_;
 
   base::WeakPtrFactory<SupplicantBSSProxy> weak_factory_{this};
-  DISALLOW_COPY_AND_ASSIGN(SupplicantBSSProxy);
 };
 
 }  // namespace shill

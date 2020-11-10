@@ -16,6 +16,9 @@ namespace trunks {
 class MockSessionManager : public SessionManager {
  public:
   MockSessionManager();
+  MockSessionManager(const MockSessionManager&) = delete;
+  MockSessionManager& operator=(const MockSessionManager&) = delete;
+
   ~MockSessionManager() override;
 
   MOCK_CONST_METHOD0(GetSessionHandle, TPM_HANDLE());
@@ -27,9 +30,6 @@ class MockSessionManager : public SessionManager {
                       bool,
                       bool,
                       HmacAuthorizationDelegate*));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockSessionManager);
 };
 
 }  // namespace trunks

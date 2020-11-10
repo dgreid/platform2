@@ -34,6 +34,8 @@ class TensorView {
   explicit TensorView(
       const chromeos::machine_learning::mojom::TensorPtr& tensor)
       : tensor_(tensor) {}
+  TensorView(const TensorView&) = delete;
+  TensorView& operator=(const TensorView&) = delete;
 
   // Return the shape array of the tensor.
   std::vector<int64_t>& GetShape() { return tensor_->shape->value; }
@@ -88,8 +90,6 @@ class TensorView {
   void AllocateValues();
 
   const chromeos::machine_learning::mojom::TensorPtr& tensor_;
-
-  DISALLOW_COPY_AND_ASSIGN(TensorView);
 };
 
 // Specializations for int tensors.

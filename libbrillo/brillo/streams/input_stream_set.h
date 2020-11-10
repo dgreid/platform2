@@ -112,6 +112,8 @@ class BRILLO_EXPORT InputStreamSet : public Stream {
   InputStreamSet(std::vector<Stream*> source_streams,
                  std::vector<StreamPtr> owned_source_streams,
                  uint64_t initial_stream_size);
+  InputStreamSet(const InputStreamSet&) = delete;
+  InputStreamSet& operator=(const InputStreamSet&) = delete;
 
   // List of streams to read data from.
   std::vector<Stream*> source_streams_;
@@ -123,8 +125,6 @@ class BRILLO_EXPORT InputStreamSet : public Stream {
 
   uint64_t initial_stream_size_{0};
   bool closed_{false};
-
-  DISALLOW_COPY_AND_ASSIGN(InputStreamSet);
 };
 
 }  // namespace brillo

@@ -150,6 +150,8 @@ class Sender : public SenderBase {
   Sender(std::unique_ptr<MetricsLibraryInterface> metrics_lib,
          std::unique_ptr<base::Clock> clock,
          const Options& options);
+  Sender(const Sender&) = delete;
+  Sender& operator=(const Sender&) = delete;
 
   // Chooses an action to take for the crash report associated with the given
   // meta file, and reports the reason. The crash information will be stored in
@@ -227,8 +229,6 @@ class Sender : public SenderBase {
   bool allow_dev_sending_;
   const bool test_mode_;
   const bool upload_old_reports_;
-
-  DISALLOW_COPY_AND_ASSIGN(Sender);
 };
 
 }  // namespace util

@@ -48,6 +48,8 @@ class LogLineReaderTest : public ::testing::Test,
                           public LogLineReader::Observer {
  public:
   LogLineReaderTest() = default;
+  LogLineReaderTest(const LogLineReaderTest&) = delete;
+  LogLineReaderTest& operator=(const LogLineReaderTest&) = delete;
 
   void SetLogContentText(LogLineReader* reader, const char* text) {
     reader->OpenMemoryBufferForTest(text, strlen(text));
@@ -76,9 +78,6 @@ class LogLineReaderTest : public ::testing::Test,
     }
     return true;
   }
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(LogLineReaderTest);
 };
 
 TEST_F(LogLineReaderTest, Forward) {

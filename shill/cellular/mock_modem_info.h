@@ -19,6 +19,8 @@ namespace shill {
 class MockModemInfo : public ModemInfo {
  public:
   MockModemInfo(ControlInterface* control, Manager* manager);
+  MockModemInfo(const MockModemInfo&) = delete;
+  MockModemInfo& operator=(const MockModemInfo&) = delete;
 
   ~MockModemInfo() override;
 
@@ -33,8 +35,6 @@ class MockModemInfo : public ModemInfo {
  private:
   // owned by ModemInfo
   MockPendingActivationStore* mock_pending_activation_store_;
-
-  DISALLOW_COPY_AND_ASSIGN(MockModemInfo);
 };
 
 }  // namespace shill

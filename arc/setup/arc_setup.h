@@ -81,6 +81,9 @@ enum class Mode {
 class ArcSetup {
  public:
   ArcSetup(Mode mode, const base::FilePath& config_json);
+  ArcSetup(const ArcSetup&) = delete;
+  ArcSetup& operator=(const ArcSetup&) = delete;
+
   ~ArcSetup();
 
   // Does the setup or stop operations depending on the environment variable.
@@ -382,8 +385,6 @@ class ArcSetup {
   // read, it's content is stored here. If map is empty this indicates that
   // properties file was never read.
   std::map<std::string, std::string> system_properties_;
-
-  DISALLOW_COPY_AND_ASSIGN(ArcSetup);
 };
 
 }  // namespace arc

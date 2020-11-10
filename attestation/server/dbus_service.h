@@ -25,6 +25,9 @@ class DBusService {
   // the lifetime of the DBusService instance.
   DBusService(const scoped_refptr<dbus::Bus>& bus,
               AttestationInterface* service);
+  DBusService(const DBusService&) = delete;
+  DBusService& operator=(const DBusService&) = delete;
+
   virtual ~DBusService() = default;
 
   // Connects to D-Bus system bus and exports methods.
@@ -179,8 +182,6 @@ class DBusService {
 
   brillo::dbus_utils::DBusObject dbus_object_;
   AttestationInterface* service_;
-
-  DISALLOW_COPY_AND_ASSIGN(DBusService);
 };
 
 }  // namespace attestation

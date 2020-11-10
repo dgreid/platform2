@@ -104,6 +104,8 @@ constexpr int kTpmMigrateAsymkeyBlobSize =
 class ScopedKey12 final {
  public:
   ScopedKey12() { memset(&value_, 0, sizeof(TPM_KEY12)); }
+  ScopedKey12(const ScopedKey12&) = delete;
+  ScopedKey12& operator=(const ScopedKey12&) = delete;
 
   ~ScopedKey12() {
     free(value_.algorithmParms.parms);
@@ -118,8 +120,6 @@ class ScopedKey12 final {
 
  private:
   TPM_KEY12 value_;
-
-  DISALLOW_COPY_AND_ASSIGN(ScopedKey12);
 };
 
 class UnsealingSessionTpm1Impl final
@@ -136,6 +136,9 @@ class UnsealingSessionTpm1Impl final
                            const Blob& protection_key_pubkey,
                            crypto::ScopedRSA migration_destination_rsa,
                            const Blob& migration_destination_key_pubkey);
+  UnsealingSessionTpm1Impl(const UnsealingSessionTpm1Impl&) = delete;
+  UnsealingSessionTpm1Impl& operator=(const UnsealingSessionTpm1Impl&) = delete;
+
   ~UnsealingSessionTpm1Impl() override;
 
   // UnsealingSession:
@@ -177,8 +180,6 @@ class UnsealingSessionTpm1Impl final
   // The SHA-1 digest of the TPM_MSA_COMPOSITE structure containing a sole
   // reference to |protection_key_pubkey_digest_|.
   const Blob msa_composite_digest_;
-
-  DISALLOW_COPY_AND_ASSIGN(UnsealingSessionTpm1Impl);
 };
 
 // Extracts the public modulus from the OpenSSL RSA struct.

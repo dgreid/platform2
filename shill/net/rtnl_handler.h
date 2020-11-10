@@ -126,6 +126,8 @@ class SHILL_EXPORT RTNLHandler {
 
  protected:
   RTNLHandler();
+  RTNLHandler(const RTNLHandler&) = delete;
+  RTNLHandler& operator=(const RTNLHandler&) = delete;
 
  private:
   using ErrorMask = std::set<int>;
@@ -224,8 +226,6 @@ class SHILL_EXPORT RTNLHandler {
   // matched by message sequence id must be called with encoded error in
   // |NLMSG_ERROR| message.
   std::unordered_map<uint32_t, ResponseCallback> response_callbacks_;
-
-  DISALLOW_COPY_AND_ASSIGN(RTNLHandler);
 };
 
 }  // namespace shill

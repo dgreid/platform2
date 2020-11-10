@@ -41,6 +41,9 @@ class VmBaseImpl : public VmInterface {
              std::string cros_vm_socket,
              base::FilePath runtime_dir);
 
+  VmBaseImpl(const VmBaseImpl&) = delete;
+  VmBaseImpl& operator=(const VmBaseImpl&) = delete;
+
   // The pid of the child process.
   pid_t pid() { return process_.pid(); }
 
@@ -93,8 +96,6 @@ class VmBaseImpl : public VmInterface {
 
   // Name of the socket to communicate to the crosvm binary.
   const std::string cros_vm_socket_;
-
-  DISALLOW_COPY_AND_ASSIGN(VmBaseImpl);
 };
 
 }  // namespace concierge

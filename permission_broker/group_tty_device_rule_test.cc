@@ -14,14 +14,14 @@ class GroupTtyDeviceRuleTest : public RuleTest {
  public:
   GroupTtyDeviceRuleTest()
       : allow_rule_("nonexistent"), deny_rule_("nonexistent") {}
+  GroupTtyDeviceRuleTest(const GroupTtyDeviceRuleTest&) = delete;
+  GroupTtyDeviceRuleTest& operator=(const GroupTtyDeviceRuleTest&) = delete;
+
   ~GroupTtyDeviceRuleTest() override = default;
 
  protected:
   AllowGroupTtyDeviceRule allow_rule_;
   DenyGroupTtyDeviceRule deny_rule_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(GroupTtyDeviceRuleTest);
 };
 
 TEST_F(GroupTtyDeviceRuleTest, AllowRuleIgnoreNonMatchingGroup) {

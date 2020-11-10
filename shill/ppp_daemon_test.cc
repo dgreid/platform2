@@ -33,6 +33,9 @@ using testing::WithArg;
 class PPPDaemonTest : public Test, public RpcTaskDelegate {
  public:
   PPPDaemonTest() : weak_ptr_factory_(this) {}
+  PPPDaemonTest(const PPPDaemonTest&) = delete;
+  PPPDaemonTest& operator=(const PPPDaemonTest&) = delete;
+
   ~PPPDaemonTest() override = default;
 
   std::unique_ptr<ExternalTask> Start(const PPPDaemon::Options& options,
@@ -64,9 +67,6 @@ class PPPDaemonTest : public Test, public RpcTaskDelegate {
   base::WeakPtrFactory<PPPDaemonTest> weak_ptr_factory_;
 
   MOCK_METHOD(void, DeathCallback, (pid_t, int));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(PPPDaemonTest);
 };
 
 TEST_F(PPPDaemonTest, PluginUsed) {

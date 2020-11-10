@@ -27,6 +27,9 @@ class ServerProxy : public VSockProxy::Delegate,
   ServerProxy(scoped_refptr<base::TaskRunner> proxy_file_system_task_runner,
               const base::FilePath& proxy_file_system_mount_path,
               base::OnceClosure quit_closure);
+  ServerProxy(const ServerProxy&) = delete;
+  ServerProxy& operator=(const ServerProxy&) = delete;
+
   ~ServerProxy() override;
 
   // Sets up the ServerProxy. Specifically, start listening VSOCK.
@@ -66,8 +69,6 @@ class ServerProxy : public VSockProxy::Delegate,
   bool guest_is_using_vsock_ = false;
   std::unique_ptr<MessageStream> message_stream_;
   std::unique_ptr<VSockProxy> vsock_proxy_;
-
-  DISALLOW_COPY_AND_ASSIGN(ServerProxy);
 };
 
 }  // namespace arc

@@ -32,6 +32,9 @@ class MtpdServer : public org::chromium::MtpdInterface,
                    public DeviceEventDelegate {
  public:
   explicit MtpdServer(scoped_refptr<dbus::Bus> bus);
+  MtpdServer(const MtpdServer&) = delete;
+  MtpdServer& operator=(const MtpdServer&) = delete;
+
   virtual ~MtpdServer();
 
   // org::chromium::MtpdAdaptor implementation.
@@ -111,8 +114,6 @@ class MtpdServer : public org::chromium::MtpdInterface,
 
   // Device manager needs to be last, so it is the first to be destroyed.
   DeviceManager device_manager_;
-
-  DISALLOW_COPY_AND_ASSIGN(MtpdServer);
 };
 
 }  // namespace mtpd

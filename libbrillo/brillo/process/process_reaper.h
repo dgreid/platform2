@@ -22,6 +22,9 @@ class BRILLO_EXPORT ProcessReaper final {
   using ChildCallback = base::OnceCallback<void(const siginfo_t&)>;
 
   ProcessReaper() = default;
+  ProcessReaper(const ProcessReaper&) = delete;
+  ProcessReaper& operator=(const ProcessReaper&) = delete;
+
   ~ProcessReaper();
 
   // Register the ProcessReaper using either the provided
@@ -64,8 +67,6 @@ class BRILLO_EXPORT ProcessReaper final {
   // The |async_signal_handler_| is owned by the caller and is |nullptr| when
   // not registered.
   AsynchronousSignalHandlerInterface* async_signal_handler_{nullptr};
-
-  DISALLOW_COPY_AND_ASSIGN(ProcessReaper);
 };
 
 }  // namespace brillo

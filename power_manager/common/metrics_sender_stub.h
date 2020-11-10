@@ -46,6 +46,9 @@ class MetricsSenderStub : public MetricsSenderInterface {
   // The c'tor and d'tor call SetInstance() to register and unregister this
   // instance.
   MetricsSenderStub();
+  MetricsSenderStub(const MetricsSenderStub&) = delete;
+  MetricsSenderStub& operator=(const MetricsSenderStub&) = delete;
+
   ~MetricsSenderStub() override;
 
   int num_metrics() const { return metrics_.size(); }
@@ -66,8 +69,6 @@ class MetricsSenderStub : public MetricsSenderInterface {
  private:
   // Sent metrics.
   std::vector<Metric> metrics_;
-
-  DISALLOW_COPY_AND_ASSIGN(MetricsSenderStub);
 };
 
 }  // namespace power_manager

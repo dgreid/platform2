@@ -17,6 +17,8 @@ namespace http_server {
 class MockServer : public ServerInterface {
  public:
   MockServer() = default;
+  MockServer(const MockServer&) = delete;
+  MockServer& operator=(const MockServer&) = delete;
 
   MOCK_METHOD(bool, Start, (), (override));
   MOCK_METHOD(void, Stop, (), (override));
@@ -32,9 +34,6 @@ class MockServer : public ServerInterface {
               ReportServerMessage,
               (p2p::util::P2PServerMessageType, int64_t),
               (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockServer);
 };
 
 }  // namespace http_server

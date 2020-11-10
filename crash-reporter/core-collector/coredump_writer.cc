@@ -80,6 +80,8 @@ inline int64_t GetFreeDiskSpace(const char* path) {
 class CoredumpWriter::Reader {
  public:
   explicit Reader(int fd) : fd_(fd) {}
+  Reader(const Reader&) = delete;
+  Reader& operator=(const Reader&) = delete;
 
   bool Read(void* buf, size_t count) {
     if (!ReadAllBlocking(fd_, buf, count))
@@ -117,8 +119,6 @@ class CoredumpWriter::Reader {
  private:
   const int fd_;
   size_t bytes_read_ = 0;
-
-  DISALLOW_COPY_AND_ASSIGN(Reader);
 };
 
 CoredumpWriter::CoredumpWriter(int fd,

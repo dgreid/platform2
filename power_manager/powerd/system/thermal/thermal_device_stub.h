@@ -19,6 +19,9 @@ namespace system {
 class ThermalDeviceStub : public ThermalDeviceInterface {
  public:
   ThermalDeviceStub();
+  ThermalDeviceStub(const ThermalDeviceStub&) = delete;
+  ThermalDeviceStub& operator=(const ThermalDeviceStub&) = delete;
+
   ~ThermalDeviceStub() override;
 
   // ThermalDeviceInterface implementation:
@@ -44,8 +47,6 @@ class ThermalDeviceStub : public ThermalDeviceInterface {
   DeviceThermalState current_state_;
 
   ThermalDeviceType type_;
-
-  DISALLOW_COPY_AND_ASSIGN(ThermalDeviceStub);
 };
 
 }  // namespace system

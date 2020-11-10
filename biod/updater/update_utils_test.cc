@@ -99,12 +99,13 @@ class CrosFpUpdaterFindFirmwareTest : public ::testing::Test {
   }
 
   CrosFpUpdaterFindFirmwareTest() = default;
+  CrosFpUpdaterFindFirmwareTest(const CrosFpUpdaterFindFirmwareTest&) = delete;
+  CrosFpUpdaterFindFirmwareTest& operator=(
+      const CrosFpUpdaterFindFirmwareTest&) = delete;
+
   ~CrosFpUpdaterFindFirmwareTest() override = default;
 
   base::ScopedTempDir temp_dir_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(CrosFpUpdaterFindFirmwareTest);
 };
 
 TEST_F(CrosFpUpdaterFindFirmwareTest, InvalidPathBlank) {

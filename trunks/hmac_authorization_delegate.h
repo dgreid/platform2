@@ -49,6 +49,10 @@ const size_t kHashDigestSize = 32;  // 256 bits is SHA256 digest size.
 class TRUNKS_EXPORT HmacAuthorizationDelegate : public AuthorizationDelegate {
  public:
   HmacAuthorizationDelegate();
+  HmacAuthorizationDelegate(const HmacAuthorizationDelegate&) = delete;
+  HmacAuthorizationDelegate& operator=(const HmacAuthorizationDelegate&) =
+      delete;
+
   ~HmacAuthorizationDelegate() override;
 
   // AuthorizationDelegate methods.
@@ -141,8 +145,6 @@ class TRUNKS_EXPORT HmacAuthorizationDelegate : public AuthorizationDelegate {
   // when computing the hmac_key to create the authorization hmac. Defaults
   // to false, but policy sessions may set this flag to true.
   bool use_entity_authorization_for_encryption_only_;
-
-  DISALLOW_COPY_AND_ASSIGN(HmacAuthorizationDelegate);
 };
 
 }  // namespace trunks

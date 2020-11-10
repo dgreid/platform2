@@ -40,6 +40,9 @@ class BRILLO_EXPORT BaseMessageLoop : public MessageLoop {
   // base::SingleThreadTaskRunner instance.
   explicit BaseMessageLoop(
       scoped_refptr<base::SingleThreadTaskRunner> task_runner);
+  BaseMessageLoop(const BaseMessageLoop&) = delete;
+  BaseMessageLoop& operator=(const BaseMessageLoop&) = delete;
+
   ~BaseMessageLoop() override;
 
   // MessageLoop overrides.
@@ -120,7 +123,6 @@ class BRILLO_EXPORT BaseMessageLoop : public MessageLoop {
   // base::SingleThreadTaskRunner since we can't cancel the callbacks we have
   // scheduled there once this instance is destroyed.
   base::WeakPtrFactory<BaseMessageLoop> weak_ptr_factory_{this};
-  DISALLOW_COPY_AND_ASSIGN(BaseMessageLoop);
 };
 
 }  // namespace brillo

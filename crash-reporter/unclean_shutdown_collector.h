@@ -25,6 +25,9 @@
 class UncleanShutdownCollector : public CrashCollector {
  public:
   UncleanShutdownCollector();
+  UncleanShutdownCollector(const UncleanShutdownCollector&) = delete;
+  UncleanShutdownCollector& operator=(const UncleanShutdownCollector&) = delete;
+
   ~UncleanShutdownCollector() override;
 
   void set_os_release_for_test(const base::FilePath& os_release) {
@@ -60,8 +63,6 @@ class UncleanShutdownCollector : public CrashCollector {
   base::FilePath powerd_trace_path_;
   base::FilePath powerd_suspended_file_;
   base::FilePath os_release_path_;
-
-  DISALLOW_COPY_AND_ASSIGN(UncleanShutdownCollector);
 };
 
 #endif  // CRASH_REPORTER_UNCLEAN_SHUTDOWN_COLLECTOR_H_

@@ -27,6 +27,8 @@ class Disk {
  public:
   Disk(base::FilePath path, bool writable);
   Disk(base::FilePath path, bool writable, bool sparse);
+  Disk(const Disk&) = delete;
+  Disk& operator=(const Disk&) = delete;
   Disk(Disk&&);
   virtual ~Disk();
 
@@ -43,8 +45,6 @@ class Disk {
 
   // Whether the disk should allow sparse file operations (discard) by the VM.
   base::Optional<bool> sparse_;
-
-  DISALLOW_COPY_AND_ASSIGN(Disk);
 };
 
 // Path to the crosvm binary.

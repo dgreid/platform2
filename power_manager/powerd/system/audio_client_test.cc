@@ -29,6 +29,9 @@ class TestObserver : public AudioObserver {
   explicit TestObserver(AudioClient* client) : client_(client) {
     client_->AddObserver(this);
   }
+  TestObserver(const TestObserver&) = delete;
+  TestObserver& operator=(const TestObserver&) = delete;
+
   ~TestObserver() override { client_->RemoveObserver(this); }
 
   bool audio_active() const { return audio_active_; }
@@ -45,8 +48,6 @@ class TestObserver : public AudioObserver {
 
   bool audio_active_ = false;
   int num_changes_ = 0;
-
-  DISALLOW_COPY_AND_ASSIGN(TestObserver);
 };
 
 }  // namespace
@@ -61,6 +62,9 @@ class AudioClientTest : public testing::Test {
     CHECK(run_dir_.CreateUniqueTempDir());
     CHECK(run_dir_.IsValid());
   }
+  AudioClientTest(const AudioClientTest&) = delete;
+  AudioClientTest& operator=(const AudioClientTest&) = delete;
+
   ~AudioClientTest() override {}
 
   void Init() { audio_client_.Init(&dbus_wrapper_, run_dir_.GetPath()); }
@@ -149,8 +153,6 @@ class AudioClientTest : public testing::Test {
       top_writer.CloseContainer(&node_writer);
     }
   }
-
-  DISALLOW_COPY_AND_ASSIGN(AudioClientTest);
 };
 
 TEST_F(AudioClientTest, AudioState) {

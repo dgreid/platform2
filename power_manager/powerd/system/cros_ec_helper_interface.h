@@ -14,6 +14,9 @@ namespace system {
 class CrosEcHelperInterface {
  public:
   CrosEcHelperInterface() {}
+  CrosEcHelperInterface(const CrosEcHelperInterface&) = delete;
+  CrosEcHelperInterface& operator=(const CrosEcHelperInterface&) = delete;
+
   virtual ~CrosEcHelperInterface() {}
 
   // Checks whether EC supports setting wake angle.
@@ -22,9 +25,6 @@ class CrosEcHelperInterface {
   // Controls whether the EC will allow keyboard wakeups in tablet mode.
   // Returns true on success.
   virtual bool AllowWakeupAsTablet(bool enabled) = 0;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(CrosEcHelperInterface);
 };
 
 }  // namespace system

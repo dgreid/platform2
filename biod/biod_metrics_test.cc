@@ -25,6 +25,9 @@ class BiodMetricsTest : public testing::Test {
     biod_metrics_.SetMetricsLibraryForTesting(
         std::make_unique<MetricsLibraryMock>());
   }
+  BiodMetricsTest(const BiodMetricsTest&) = delete;
+  BiodMetricsTest& operator=(const BiodMetricsTest&) = delete;
+
   ~BiodMetricsTest() override = default;
 
   MetricsLibraryMock* GetMetricsLibraryMock() {
@@ -33,9 +36,6 @@ class BiodMetricsTest : public testing::Test {
   }
 
   BiodMetrics biod_metrics_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(BiodMetricsTest);
 };
 
 TEST_F(BiodMetricsTest, SendEnrolledFingerCount) {

@@ -37,9 +37,8 @@ class OwnerKeyLossMitigator {
 
  protected:
   OwnerKeyLossMitigator();
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(OwnerKeyLossMitigator);
+  OwnerKeyLossMitigator(const OwnerKeyLossMitigator&) = delete;
+  OwnerKeyLossMitigator& operator=(const OwnerKeyLossMitigator&) = delete;
 };
 
 }  // namespace login_manager

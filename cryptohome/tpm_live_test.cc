@@ -585,6 +585,9 @@ class SignatureSealedSecretTestCase final {
     LOG(INFO) << "SignatureSealedSecretTestCase: " << param_.key_size_bits
               << "-bit key, " << param_.test_case_description;
   }
+  SignatureSealedSecretTestCase(const SignatureSealedSecretTestCase&) = delete;
+  SignatureSealedSecretTestCase& operator=(
+      const SignatureSealedSecretTestCase&) = delete;
 
   ~SignatureSealedSecretTestCase() { CleanUpDelegate(); }
 
@@ -1079,8 +1082,6 @@ class SignatureSealedSecretTestCase final {
   Blob delegate_secret_;
   crypto::ScopedEVP_PKEY pkey_;
   Blob key_spki_der_;
-
-  DISALLOW_COPY_AND_ASSIGN(SignatureSealedSecretTestCase);
 };
 
 }  // namespace

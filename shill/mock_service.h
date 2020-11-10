@@ -21,6 +21,9 @@ class MockService : public Service {
  public:
   // A constructor for the Service object
   explicit MockService(Manager* manager);
+  MockService(const MockService&) = delete;
+  MockService& operator=(const MockService&) = delete;
+
   ~MockService() override;
 
   MOCK_METHOD(void, AutoConnect, (), (override));
@@ -111,7 +114,6 @@ class MockService : public Service {
   ConnectionRefPtr mock_connection_;
   RpcIdentifier id_;
   RpcIdentifier null_id_;
-  DISALLOW_COPY_AND_ASSIGN(MockService);
 };
 
 }  // namespace shill

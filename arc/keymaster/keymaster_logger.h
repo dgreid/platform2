@@ -15,12 +15,12 @@ namespace keymaster {
 class KeymasterLogger : public ::keymaster::Logger {
  public:
   KeymasterLogger();
+  KeymasterLogger(const KeymasterLogger&) = delete;
+  KeymasterLogger& operator=(const KeymasterLogger&) = delete;
+
   ~KeymasterLogger() override = default;
 
   int log_msg(LogLevel level, const char* fmt, va_list args) const override;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(KeymasterLogger);
 };
 
 // Expose the TrimFilePath function in the anonymous namespace for testing.

@@ -16,6 +16,9 @@ namespace system {
 class CrosEcHelper : public CrosEcHelperInterface {
  public:
   CrosEcHelper();
+  CrosEcHelper(const CrosEcHelper&) = delete;
+  CrosEcHelper& operator=(const CrosEcHelper&) = delete;
+
   ~CrosEcHelper() override;
 
   // Implementation of EcHelperInterface.
@@ -29,8 +32,6 @@ class CrosEcHelper : public CrosEcHelperInterface {
   int cached_wake_angle_ = -1;
   // Path of the sysfs node to write to.
   base::FilePath wake_angle_sysfs_node_;
-
-  DISALLOW_COPY_AND_ASSIGN(CrosEcHelper);
 };
 
 }  // namespace system

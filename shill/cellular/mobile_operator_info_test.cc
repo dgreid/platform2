@@ -77,6 +77,9 @@ class MobileOperatorInfoInitTest : public Test {
   MobileOperatorInfoInitTest()
       : operator_info_(new MobileOperatorInfo(&dispatcher_, "Operator")),
         operator_info_impl_(operator_info_->impl()) {}
+  MobileOperatorInfoInitTest(const MobileOperatorInfoInitTest&) = delete;
+  MobileOperatorInfoInitTest& operator=(const MobileOperatorInfoInitTest&) =
+      delete;
 
  protected:
   bool SetUpDatabase(const vector<string>& files) {
@@ -100,9 +103,6 @@ class MobileOperatorInfoInitTest : public Test {
   std::unique_ptr<MobileOperatorInfo> operator_info_;
   // Owned by |operator_info_| and tied to its life cycle.
   MobileOperatorInfoImpl* operator_info_impl_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MobileOperatorInfoInitTest);
 };
 
 TEST_F(MobileOperatorInfoInitTest, FailedInitNoPath) {
@@ -165,6 +165,9 @@ class MobileOperatorInfoMainTest
       public WithParamInterface<EventCheckingPolicy> {
  public:
   MobileOperatorInfoMainTest() : event_checking_policy_(GetParam()) {}
+  MobileOperatorInfoMainTest(const MobileOperatorInfoMainTest&) = delete;
+  MobileOperatorInfoMainTest& operator=(const MobileOperatorInfoMainTest&) =
+      delete;
 
   void SetUp() override {
     EXPECT_TRUE(SetUpDatabase({"main_test.pbf"}));
@@ -263,9 +266,6 @@ class MobileOperatorInfoMainTest
   // Data.
   MockMobileOperatorInfoObserver observer_;
   const EventCheckingPolicy event_checking_policy_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MobileOperatorInfoMainTest);
 };
 
 TEST_P(MobileOperatorInfoMainTest, InitialConditions) {
@@ -1031,6 +1031,9 @@ TEST_P(MobileOperatorInfoMainTest, MNOByMCCMNCAndSID) {
 class MobileOperatorInfoDataTest : public MobileOperatorInfoMainTest {
  public:
   MobileOperatorInfoDataTest() = default;
+  MobileOperatorInfoDataTest(const MobileOperatorInfoDataTest&) = delete;
+  MobileOperatorInfoDataTest& operator=(const MobileOperatorInfoDataTest&) =
+      delete;
 
   // Same as MobileOperatorInfoMainTest, except that the database used is
   // different.
@@ -1188,9 +1191,6 @@ class MobileOperatorInfoDataTest : public MobileOperatorInfoMainTest {
 
   // Extra data to be verified only against user updates.
   string sid_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MobileOperatorInfoDataTest);
 };
 
 TEST_P(MobileOperatorInfoDataTest, MNODetailedInformation) {
@@ -1459,6 +1459,10 @@ TEST_P(MobileOperatorInfoDataTest, FilteredOLP) {
 class MobileOperatorInfoObserverTest : public MobileOperatorInfoMainTest {
  public:
   MobileOperatorInfoObserverTest() = default;
+  MobileOperatorInfoObserverTest(const MobileOperatorInfoObserverTest&) =
+      delete;
+  MobileOperatorInfoObserverTest& operator=(
+      const MobileOperatorInfoObserverTest&) = delete;
 
   // Same as |MobileOperatorInfoMainTest::SetUp|, except that we don't add a
   // default observer.
@@ -1468,9 +1472,6 @@ class MobileOperatorInfoObserverTest : public MobileOperatorInfoMainTest {
   // ///////////////////////////////////////////////////////////////////////////
   // Data.
   MockMobileOperatorInfoObserver second_observer_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MobileOperatorInfoObserverTest);
 };
 
 TEST_P(MobileOperatorInfoObserverTest, NoObserver) {

@@ -29,13 +29,13 @@ gateway: 0
 class ServiceTest : public ::testing::Test {
  public:
   ServiceTest();
+  ServiceTest(const ServiceTest&) = delete;
+  ServiceTest& operator=(const ServiceTest&) = delete;
+
   ~ServiceTest() override = default;
 
  protected:
   ServiceImpl service_impl_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ServiceTest);
 };
 
 ServiceTest::ServiceTest() : service_impl_(nullptr) {}

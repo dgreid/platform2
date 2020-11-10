@@ -22,6 +22,9 @@ class FakeMechanism : public Mechanism {
                 int64_t min_level,
                 int64_t default_level,
                 const std::string& name);
+  FakeMechanism(const FakeMechanism&) = delete;
+  FakeMechanism& operator=(const FakeMechanism&) = delete;
+
   ~FakeMechanism() override;
 
   int64_t GetCurrentLevel();
@@ -38,8 +41,6 @@ class FakeMechanism : public Mechanism {
   int64_t default_level_;
   int64_t current_level_;
   std::string name_;
-
-  DISALLOW_COPY_AND_ASSIGN(FakeMechanism);
 };
 
 }  // namespace thd

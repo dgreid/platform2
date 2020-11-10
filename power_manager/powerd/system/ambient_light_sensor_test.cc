@@ -34,6 +34,9 @@ const int kPollIntervalMs = 100;
 class TestObserver : public AmbientLightObserver {
  public:
   TestObserver() {}
+  TestObserver(const TestObserver&) = delete;
+  TestObserver& operator=(const TestObserver&) = delete;
+
   ~TestObserver() override {}
 
   // Runs |loop_| until OnAmbientLightUpdated() is called.
@@ -49,8 +52,6 @@ class TestObserver : public AmbientLightObserver {
 
  private:
   TestMainLoopRunner loop_runner_;
-
-  DISALLOW_COPY_AND_ASSIGN(TestObserver);
 };
 
 }  // namespace
@@ -58,6 +59,9 @@ class TestObserver : public AmbientLightObserver {
 class AmbientLightSensorTest : public ::testing::Test {
  public:
   AmbientLightSensorTest() {}
+  AmbientLightSensorTest(const AmbientLightSensorTest&) = delete;
+  AmbientLightSensorTest& operator=(const AmbientLightSensorTest&) = delete;
+
   ~AmbientLightSensorTest() override {}
 
   void SetUp() override {
@@ -94,9 +98,6 @@ class AmbientLightSensorTest : public ::testing::Test {
   TestObserver observer_;
 
   std::unique_ptr<AmbientLightSensor> sensor_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(AmbientLightSensorTest);
 };
 
 TEST_F(AmbientLightSensorTest, Basic) {

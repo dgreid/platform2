@@ -59,6 +59,9 @@ namespace {
 class ResetSigmaskDelegate : public base::LaunchOptions::PreExecDelegate {
  public:
   ResetSigmaskDelegate() = default;
+  ResetSigmaskDelegate(const ResetSigmaskDelegate&) = delete;
+  ResetSigmaskDelegate& operator=(const ResetSigmaskDelegate&) = delete;
+
   ~ResetSigmaskDelegate() override = default;
 
   void RunAsyncSafe() override {
@@ -69,9 +72,6 @@ class ResetSigmaskDelegate : public base::LaunchOptions::PreExecDelegate {
     if (sigprocmask(SIG_SETMASK, &new_sigset, nullptr) != 0)
       abort();
   }
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ResetSigmaskDelegate);
 };
 
 }  // namespace

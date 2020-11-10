@@ -24,6 +24,9 @@
 class ChromeCollector : public CrashCollector {
  public:
   explicit ChromeCollector(CrashSendingMode crash_sending_mode);
+  ChromeCollector(const ChromeCollector&) = delete;
+  ChromeCollector& operator=(const ChromeCollector&) = delete;
+
   ~ChromeCollector() override;
 
   // Magic string to let Chrome know the crash report succeeded.
@@ -124,8 +127,6 @@ class ChromeCollector : public CrashCollector {
   // would make the report larger than max_upload_bytes_. In production, this
   // is always kDefaultMaxUploadBytes.
   int max_upload_bytes_;
-
-  DISALLOW_COPY_AND_ASSIGN(ChromeCollector);
 };
 
 #endif  // CRASH_REPORTER_CHROME_COLLECTOR_H_

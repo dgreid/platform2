@@ -55,6 +55,8 @@ class SambaInterface : public TgtManager::Delegate {
   SambaInterface(AuthPolicyMetrics* metrics,
                  const PathService* path_service,
                  const base::Closure& user_kerberos_files_changed);
+  SambaInterface(const SambaInterface&) = delete;
+  SambaInterface& operator=(const SambaInterface&) = delete;
 
   ~SambaInterface();
 
@@ -581,8 +583,6 @@ class SambaInterface : public TgtManager::Delegate {
 
   // Disables seccomp filtering for unit tests.
   bool disable_seccomp_for_testing_ = false;
-
-  DISALLOW_COPY_AND_ASSIGN(SambaInterface);
 };
 
 }  // namespace authpolicy

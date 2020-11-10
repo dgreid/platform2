@@ -20,6 +20,9 @@ namespace chaps {
 class SlotManagerMock : public SlotManager {
  public:
   SlotManagerMock();
+  SlotManagerMock(const SlotManagerMock&) = delete;
+  SlotManagerMock& operator=(const SlotManagerMock&) = delete;
+
   ~SlotManagerMock() override;
 
   MOCK_METHOD0(GetSlotCount, int());
@@ -36,9 +39,6 @@ class SlotManagerMock : public SlotManager {
   MOCK_METHOD2(CloseAllSessions, void(const brillo::SecureBlob&, int));
   MOCK_CONST_METHOD3(GetSession,
                      bool(const brillo::SecureBlob&, int, Session**));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(SlotManagerMock);
 };
 
 }  // namespace chaps

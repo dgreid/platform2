@@ -42,6 +42,8 @@ class RuleEngine {
  protected:
   // This constructor is for use by test code only.
   RuleEngine();
+  RuleEngine(const RuleEngine&) = delete;
+  RuleEngine& operator=(const RuleEngine&) = delete;
 
  private:
   friend class RuleEngineTest;
@@ -59,8 +61,6 @@ class RuleEngine {
 
   base::TimeDelta poll_interval_;
   std::string udev_run_path_;
-
-  DISALLOW_COPY_AND_ASSIGN(RuleEngine);
 };
 
 }  // namespace permission_broker

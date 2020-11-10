@@ -14,14 +14,15 @@ namespace debugd {
 class DebugLogsTool {
  public:
   explicit DebugLogsTool(scoped_refptr<dbus::Bus> bus) : bus_(bus) {}
+  DebugLogsTool(const DebugLogsTool&) = delete;
+  DebugLogsTool& operator=(const DebugLogsTool&) = delete;
+
   ~DebugLogsTool() = default;
 
   void GetDebugLogs(bool is_compressed, const base::ScopedFD& fd);
 
  private:
   scoped_refptr<dbus::Bus> bus_;
-
-  DISALLOW_COPY_AND_ASSIGN(DebugLogsTool);
 };
 
 }  // namespace debugd

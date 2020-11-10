@@ -36,6 +36,9 @@ class ThermalEventHandler : public system::ThermalDeviceObserver {
   ThermalEventHandler(
       std::vector<system::ThermalDeviceInterface*> thermal_devices,
       system::DBusWrapperInterface* dbus_wrapper);
+  ThermalEventHandler(const ThermalEventHandler&) = delete;
+  ThermalEventHandler& operator=(const ThermalEventHandler&) = delete;
+
   ~ThermalEventHandler() override;
 
   Clock* clock_for_testing() { return clock_.get(); }
@@ -68,8 +71,6 @@ class ThermalEventHandler : public system::ThermalDeviceObserver {
   PowerSource power_source_;
 
   base::WeakPtrFactory<ThermalEventHandler> weak_ptr_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(ThermalEventHandler);
 };
 
 }  // namespace policy

@@ -173,6 +173,8 @@ class Service : public base::RefCounted<Service> {
 
   // A constructor for the Service object
   Service(Manager* manager, Technology technology);
+  Service(const Service&) = delete;
+  Service& operator=(const Service&) = delete;
 
   // AutoConnect MAY choose to ignore the connection request in some
   // cases. For example, if the corresponding Device only supports one
@@ -983,8 +985,6 @@ class Service : public base::RefCounted<Service> {
   TrafficCounterMap current_traffic_counters_;
   // Snapshot of the counter values from the last time they were refreshed.
   TrafficCounterMap traffic_counter_snapshot_;
-
-  DISALLOW_COPY_AND_ASSIGN(Service);
 };
 
 }  // namespace shill

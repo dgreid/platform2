@@ -35,6 +35,9 @@ class ExternalTask : public RpcTaskDelegate {
                ProcessManager* process_manager,
                const base::WeakPtr<RpcTaskDelegate>& task_delegate,
                const base::Callback<void(pid_t, int)>& death_callback);
+  ExternalTask(const ExternalTask&) = delete;
+  ExternalTask& operator=(const ExternalTask&) = delete;
+
   ~ExternalTask() override;
 
   // Forks off a process to run |program|, with the command-line
@@ -108,8 +111,6 @@ class ExternalTask : public RpcTaskDelegate {
   // The PID of the spawned process. May be 0 if no process has been
   // spawned yet or the process has died.
   pid_t pid_;
-
-  DISALLOW_COPY_AND_ASSIGN(ExternalTask);
 };
 
 }  // namespace shill

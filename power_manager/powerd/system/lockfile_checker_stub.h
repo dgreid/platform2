@@ -19,6 +19,9 @@ namespace system {
 class LockfileCheckerStub : public LockfileCheckerInterface {
  public:
   LockfileCheckerStub();
+  LockfileCheckerStub(const LockfileCheckerStub&) = delete;
+  LockfileCheckerStub& operator=(const LockfileCheckerStub&) = delete;
+
   ~LockfileCheckerStub() override;
 
   void set_files_to_return(const std::vector<base::FilePath>& files) {
@@ -31,8 +34,6 @@ class LockfileCheckerStub : public LockfileCheckerInterface {
  private:
   // Paths to be returned by GetValidLockfiles().
   std::vector<base::FilePath> files_to_return_;
-
-  DISALLOW_COPY_AND_ASSIGN(LockfileCheckerStub);
 };
 
 }  // namespace system

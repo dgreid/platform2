@@ -40,6 +40,9 @@ class FakeSambaTest : public testing::Test {
     fake_samba_.AddDirectory(GetDefaultServer());
     fake_samba_.AddDirectory(GetDefaultMountRoot());
   }
+  FakeSambaTest(const FakeSambaTest&) = delete;
+  FakeSambaTest& operator=(const FakeSambaTest&) = delete;
+
   ~FakeSambaTest() = default;
 
  protected:
@@ -64,9 +67,6 @@ class FakeSambaTest : public testing::Test {
   }
 
   FakeSambaInterface fake_samba_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(FakeSambaTest);
 };
 
 TEST_F(FakeSambaTest, FileEqualReturnsFalseOnFileThatDoesntExist) {

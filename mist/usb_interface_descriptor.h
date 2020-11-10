@@ -36,6 +36,8 @@ class UsbInterfaceDescriptor {
   UsbInterfaceDescriptor(
       const base::WeakPtr<UsbDevice>& device,
       const libusb_interface_descriptor* interface_descriptor);
+  UsbInterfaceDescriptor(const UsbInterfaceDescriptor&) = delete;
+  UsbInterfaceDescriptor& operator=(const UsbInterfaceDescriptor&) = delete;
 
   ~UsbInterfaceDescriptor();
 
@@ -71,8 +73,6 @@ class UsbInterfaceDescriptor {
  private:
   base::WeakPtr<UsbDevice> device_;
   const libusb_interface_descriptor* const interface_descriptor_;
-
-  DISALLOW_COPY_AND_ASSIGN(UsbInterfaceDescriptor);
 };
 
 }  // namespace mist

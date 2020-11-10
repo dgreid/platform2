@@ -121,6 +121,8 @@ class ArcTimerManagerTest : public ::testing::Test {
     arc_timer_manager_.set_for_testing_(true);
     arc_timer_manager_.Init(&dbus_wrapper_);
   }
+  ArcTimerManagerTest(const ArcTimerManagerTest&) = delete;
+  ArcTimerManagerTest& operator=(const ArcTimerManagerTest&) = delete;
 
  protected:
   bool CreateTimers(const std::string& tag,
@@ -285,6 +287,8 @@ class ArcTimerManagerTest : public ::testing::Test {
   class ArcTimerStore {
    public:
     ArcTimerStore() = default;
+    ArcTimerStore(const ArcTimerStore&) = delete;
+    ArcTimerStore& operator=(const ArcTimerStore&) = delete;
 
     bool AddTimerEntry(clockid_t clock_id,
                        ArcTimerManager::TimerId timer_id,
@@ -327,15 +331,12 @@ class ArcTimerManagerTest : public ::testing::Test {
     // timer.
     std::map<ArcTimerManager::TimerId, base::ScopedFD> arc_timers_;
 
-    DISALLOW_COPY_AND_ASSIGN(ArcTimerStore);
   };
 
   // Mapping of a client's tag and the |ArcTimerStore| to use with it.
   std::map<std::string, std::unique_ptr<ArcTimerStore>> arc_timer_stores_;
 
   DBusWrapperStub dbus_wrapper_;
-
-  DISALLOW_COPY_AND_ASSIGN(ArcTimerManagerTest);
 };
 
 TEST_F(ArcTimerManagerTest, CreateAndStartTimer) {

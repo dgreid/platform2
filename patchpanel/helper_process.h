@@ -25,6 +25,9 @@ namespace patchpanel {
 class HelperProcess {
  public:
   HelperProcess() = default;
+  HelperProcess(const HelperProcess&) = delete;
+  HelperProcess& operator=(const HelperProcess&) = delete;
+
   virtual ~HelperProcess() = default;
 
   // Re-execs patchpanel with a new argument: "|fd_arg|=N", where N is the
@@ -58,8 +61,6 @@ class HelperProcess {
   std::vector<std::string> argv_;
   std::string fd_arg_;
   std::unique_ptr<MessageDispatcher> msg_dispatcher_;
-
-  DISALLOW_COPY_AND_ASSIGN(HelperProcess);
 };
 
 }  // namespace patchpanel

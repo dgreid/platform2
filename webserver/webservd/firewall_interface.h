@@ -33,9 +33,8 @@ class FirewallInterface {
 
  protected:
   FirewallInterface() = default;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(FirewallInterface);
+  FirewallInterface(const FirewallInterface&) = delete;
+  FirewallInterface& operator=(const FirewallInterface&) = delete;
 };
 
 }  // namespace webservd

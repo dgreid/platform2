@@ -53,11 +53,10 @@ class HttpServerListener {
     server->SetNumConnectionsCallback(base::Bind(
         &HttpServerListener::NumConnectionsCallback, base::Unretained(this)));
   }
+  HttpServerListener(const HttpServerListener&) = delete;
+  HttpServerListener& operator=(const HttpServerListener&) = delete;
 
   virtual void NumConnectionsCallback(int num_connections) = 0;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(HttpServerListener);
 };
 
 class MockHttpServerListener : public HttpServerListener {
@@ -68,6 +67,8 @@ class MockHttpServerListener : public HttpServerListener {
         .WillByDefault(
             testing::InvokeWithoutArgs(this, &MockHttpServerListener::OnCall));
   }
+  MockHttpServerListener(const MockHttpServerListener&) = delete;
+  MockHttpServerListener& operator=(const MockHttpServerListener&) = delete;
 
   MOCK_METHOD(void, NumConnectionsCallback, (int));
 
@@ -80,8 +81,6 @@ class MockHttpServerListener : public HttpServerListener {
   void OnCall() { num_calls_++; }
 
   int num_calls_;
-
-  DISALLOW_COPY_AND_ASSIGN(MockHttpServerListener);
 };
 
 // ------------------------------------------------------------------------
@@ -95,6 +94,8 @@ class ClientThread : public base::SimpleThread {
         testdir_path_(testdir_path),
         port_(port),
         num_(num) {}
+  ClientThread(const ClientThread&) = delete;
+  ClientThread& operator=(const ClientThread&) = delete;
 
  private:
   void Run() override {
@@ -110,8 +111,6 @@ class ClientThread : public base::SimpleThread {
   FilePath testdir_path_;
   uint16_t port_;
   int num_;
-
-  DISALLOW_COPY_AND_ASSIGN(ClientThread);
 };
 
 // TODO(adlr): Find an owner for this code and have them reenable this test. It

@@ -29,6 +29,9 @@ extern const char kOobeConfigRestoreUser[];
 class ScopedPathUnlinker {
  public:
   explicit ScopedPathUnlinker(const base::FilePath& file) : file_(file) {}
+  ScopedPathUnlinker(const ScopedPathUnlinker&) = delete;
+  ScopedPathUnlinker& operator=(const ScopedPathUnlinker&) = delete;
+
   ~ScopedPathUnlinker() {
     if (!base::DeleteFile(file_, false)) {
       PLOG(ERROR) << "Unable to unlink path " << file_.value();
@@ -37,7 +40,6 @@ class ScopedPathUnlinker {
 
  private:
   const base::FilePath file_;
-  DISALLOW_COPY_AND_ASSIGN(ScopedPathUnlinker);
 };
 
 // Using |priv_key|, signs |src| file, and writes the digest into |dst|.

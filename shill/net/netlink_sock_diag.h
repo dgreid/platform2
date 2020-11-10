@@ -44,6 +44,8 @@ class SHILL_EXPORT NetlinkSockDiag {
  private:
   // Hidden; use the static Create function above.
   NetlinkSockDiag(std::unique_ptr<Sockets> sockets, int file_descriptor);
+  NetlinkSockDiag(const NetlinkSockDiag&) = delete;
+  NetlinkSockDiag& operator=(const NetlinkSockDiag&) = delete;
 
   // Get a list of sockets matching the family and protocol.
   bool GetSockets(uint8_t family,
@@ -56,8 +58,6 @@ class SHILL_EXPORT NetlinkSockDiag {
   std::unique_ptr<Sockets> sockets_;
   int file_descriptor_;
   int sequence_number_;
-
-  DISALLOW_COPY_AND_ASSIGN(NetlinkSockDiag);
 };
 
 }  // namespace shill

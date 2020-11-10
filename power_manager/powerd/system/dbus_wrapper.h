@@ -162,6 +162,8 @@ class DBusWrapper : public DBusWrapperInterface {
   // Create DBusWrappers using the factory method above.
   DBusWrapper(scoped_refptr<dbus::Bus> bus,
               dbus::ExportedObject* exported_object);
+  DBusWrapper(const DBusWrapper&) = delete;
+  DBusWrapper& operator=(const DBusWrapper&) = delete;
 
   // Handles NameOwnerChanged signals emitted by dbus-daemon.
   void HandleNameOwnerChangedSignal(dbus::Signal* signal);
@@ -176,8 +178,6 @@ class DBusWrapper : public DBusWrapperInterface {
   base::ObserverList<Observer> observers_;
 
   base::WeakPtrFactory<DBusWrapper> weak_ptr_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(DBusWrapper);
 };
 
 }  // namespace system

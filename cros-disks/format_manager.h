@@ -24,6 +24,9 @@ class FormatManagerObserverInterface;
 class FormatManager {
  public:
   explicit FormatManager(brillo::ProcessReaper* process_reaper);
+  FormatManager(const FormatManager&) = delete;
+  FormatManager& operator=(const FormatManager&) = delete;
+
   ~FormatManager();
 
   // Starts a formatting process of a given device.
@@ -59,8 +62,6 @@ class FormatManager {
   FormatManagerObserverInterface* observer_;
 
   base::WeakPtrFactory<FormatManager> weak_ptr_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(FormatManager);
 };
 
 }  // namespace cros_disks

@@ -24,6 +24,8 @@ class CachingIteratorTest : public testing::Test {
         base::TimeDelta::FromMicroseconds(kMetadataCacheLifetimeMicroseconds),
         MetadataCache::Mode::kStandard);
   }
+  CachingIteratorTest(const CachingIteratorTest&) = delete;
+  CachingIteratorTest& operator=(const CachingIteratorTest&) = delete;
 
   ~CachingIteratorTest() override = default;
 
@@ -40,8 +42,6 @@ class CachingIteratorTest : public testing::Test {
   FakeSambaInterface fake_samba_;
   std::unique_ptr<base::TickClock> tick_clock_;
   std::unique_ptr<MetadataCache> cache_;
-
-  DISALLOW_COPY_AND_ASSIGN(CachingIteratorTest);
 };
 
 TEST_F(CachingIteratorTest, NonExistentDir) {

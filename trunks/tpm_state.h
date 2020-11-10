@@ -18,6 +18,9 @@ namespace trunks {
 class TRUNKS_EXPORT TpmState {
  public:
   TpmState() {}
+  TpmState(const TpmState&) = delete;
+  TpmState& operator=(const TpmState&) = delete;
+
   virtual ~TpmState() {}
 
   // Initializes based on the current TPM state. This method must be called once
@@ -108,9 +111,6 @@ class TRUNKS_EXPORT TpmState {
   // properties are not available for the algorithm.
   virtual bool GetAlgorithmProperties(TPM_ALG_ID algorithm,
                                       TPMA_ALGORITHM* properties) = 0;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(TpmState);
 };
 
 }  // namespace trunks

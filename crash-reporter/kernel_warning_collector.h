@@ -30,6 +30,8 @@ class KernelWarningCollector : public CrashCollector {
   };
 
   KernelWarningCollector();
+  KernelWarningCollector(const KernelWarningCollector&) = delete;
+  KernelWarningCollector& operator=(const KernelWarningCollector&) = delete;
 
   ~KernelWarningCollector() override;
 
@@ -57,8 +59,6 @@ class KernelWarningCollector : public CrashCollector {
   bool ExtractSMMUFaultSignature(const std::string& content,
                                  std::string* signature,
                                  std::string* func_name);
-
-  DISALLOW_COPY_AND_ASSIGN(KernelWarningCollector);
 };
 
 #endif  // CRASH_REPORTER_KERNEL_WARNING_COLLECTOR_H_

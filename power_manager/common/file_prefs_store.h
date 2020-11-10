@@ -20,6 +20,9 @@ namespace power_manager {
 class FilePrefsStore : public PrefsStoreInterface {
  public:
   explicit FilePrefsStore(const base::FilePath& pref_path);
+  FilePrefsStore(const FilePrefsStore&) = delete;
+  FilePrefsStore& operator=(const FilePrefsStore&) = delete;
+
   ~FilePrefsStore() override = default;
 
   // PrefsStoreInterface:
@@ -50,8 +53,6 @@ class FilePrefsStore : public PrefsStoreInterface {
 
   // Watches files in |pref_path_| for changes, calling HandleFileChanged().
   FileWatcherMap file_watchers_;
-
-  DISALLOW_COPY_AND_ASSIGN(FilePrefsStore);
 };
 
 }  // namespace power_manager

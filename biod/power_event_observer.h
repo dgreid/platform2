@@ -13,14 +13,14 @@ namespace biod {
 class PowerEventObserver : public base::CheckedObserver {
  public:
   PowerEventObserver() = default;
+  PowerEventObserver(const PowerEventObserver&) = delete;
+  PowerEventObserver& operator=(const PowerEventObserver&) = delete;
+
   virtual ~PowerEventObserver() = default;
 
   // Called when power button is pressed or released.
   virtual void PowerButtonEventReceived(bool down,
                                         const base::TimeTicks& timestamp) = 0;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(PowerEventObserver);
 };
 
 }  // namespace biod

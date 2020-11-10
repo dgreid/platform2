@@ -26,11 +26,11 @@ class FakeVeaImpl : public VeaImpl {
 
  private:
   FakeVeaImpl();
+  FakeVeaImpl(const FakeVeaImpl&) = delete;
+  FakeVeaImpl& operator=(const FakeVeaImpl&) = delete;
 
   video_pixel_format_t input_format_;
   vea_profile_t output_format_;
-
-  DISALLOW_COPY_AND_ASSIGN(FakeVeaImpl);
 };
 
 }  // namespace arc

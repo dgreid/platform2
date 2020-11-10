@@ -38,6 +38,9 @@ class DBusWrapperInterface {
 class DBusWrapper : public DBusWrapperInterface {
  public:
   DBusWrapper();
+  DBusWrapper(const DBusWrapper&) = delete;
+  DBusWrapper& operator=(const DBusWrapper&) = delete;
+
   virtual ~DBusWrapper() = default;
 
   void SendSignal(const std::string& signal_name) override;
@@ -48,15 +51,15 @@ class DBusWrapper : public DBusWrapperInterface {
  protected:
   scoped_refptr<dbus::Bus> bus_;
   dbus::ExportedObject* exported_object_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(DBusWrapper);
 };
 
 // The dummy class used in hammerd API.
 class DummyDBusWrapper : public DBusWrapperInterface {
  public:
   DummyDBusWrapper() {}
+  DummyDBusWrapper(const DummyDBusWrapper&) = delete;
+  DummyDBusWrapper& operator=(const DummyDBusWrapper&) = delete;
+
   virtual ~DummyDBusWrapper() = default;
 
   void SendSignal(const std::string& signal_name) override {
@@ -79,8 +82,6 @@ class DummyDBusWrapper : public DBusWrapperInterface {
   // Record the last signal that was "sent"
   std::string last_signal_name_;
   std::string last_value_;
-
-  DISALLOW_COPY_AND_ASSIGN(DummyDBusWrapper);
 };
 
 }  // namespace hammerd

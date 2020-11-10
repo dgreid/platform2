@@ -33,6 +33,9 @@ class ThirdPartyVpnDBusAdaptor
 
   ThirdPartyVpnDBusAdaptor(const scoped_refptr<dbus::Bus>& bus,
                            ThirdPartyVpnDriver* client);
+  ThirdPartyVpnDBusAdaptor(const ThirdPartyVpnDBusAdaptor&) = delete;
+  ThirdPartyVpnDBusAdaptor& operator=(const ThirdPartyVpnDBusAdaptor&) = delete;
+
   ~ThirdPartyVpnDBusAdaptor() override;
 
   // Implementation of ThirdPartyVpnAdaptorInterface
@@ -50,8 +53,6 @@ class ThirdPartyVpnDBusAdaptor
 
  private:
   ThirdPartyVpnDriver* client_;
-
-  DISALLOW_COPY_AND_ASSIGN(ThirdPartyVpnDBusAdaptor);
 };
 
 }  // namespace shill

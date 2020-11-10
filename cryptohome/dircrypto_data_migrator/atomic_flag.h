@@ -21,6 +21,9 @@ namespace dircrypto_data_migrator {
 class AtomicFlag {
  public:
   AtomicFlag();
+  AtomicFlag(const AtomicFlag&) = delete;
+  AtomicFlag& operator=(const AtomicFlag&) = delete;
+
   ~AtomicFlag() = default;
 
   // Set the flag. Must always be called from the same sequence.
@@ -38,8 +41,6 @@ class AtomicFlag {
  private:
   base::subtle::Atomic32 flag_ = 0;
   base::SequenceChecker set_sequence_checker_;
-
-  DISALLOW_COPY_AND_ASSIGN(AtomicFlag);
 };
 
 }  // namespace dircrypto_data_migrator

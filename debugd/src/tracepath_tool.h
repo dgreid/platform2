@@ -17,14 +17,14 @@ namespace debugd {
 class TracePathTool : public SubprocessTool {
  public:
   TracePathTool() = default;
+  TracePathTool(const TracePathTool&) = delete;
+  TracePathTool& operator=(const TracePathTool&) = delete;
+
   ~TracePathTool() override = default;
 
   std::string Start(const base::ScopedFD& outfd,
                     const std::string& destination,
                     const brillo::VariantDictionary& options);
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(TracePathTool);
 };
 
 }  // namespace debugd

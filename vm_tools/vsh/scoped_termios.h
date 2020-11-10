@@ -22,6 +22,9 @@ class ScopedTermios {
   // settings for a TTY. The TTY fd must be valid for at least the lifetime of
   // this ScopedTermios instance.
   explicit ScopedTermios(base::ScopedFD tty_fd);
+  ScopedTermios(const ScopedTermios&) = delete;
+  ScopedTermios& operator=(const ScopedTermios&) = delete;
+
   ~ScopedTermios();
 
   enum class TermiosMode { RAW, CANON };
@@ -40,8 +43,6 @@ class ScopedTermios {
   base::ScopedFD tty_fd_;
   bool has_termios_;
   struct termios saved_termios_;
-
-  DISALLOW_COPY_AND_ASSIGN(ScopedTermios);
 };
 
 }  // namespace vsh

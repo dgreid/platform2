@@ -18,6 +18,9 @@ namespace cryptohome {
 class BootLockboxService : public brillo::DBusServiceDaemon {
  public:
   BootLockboxService();
+  BootLockboxService(const BootLockboxService&) = delete;
+  BootLockboxService& operator=(const BootLockboxService&) = delete;
+
   ~BootLockboxService();
 
  protected:
@@ -31,8 +34,6 @@ class BootLockboxService : public brillo::DBusServiceDaemon {
   std::unique_ptr<NVRamBootLockbox> boot_lockbox_;
   std::unique_ptr<BootLockboxDBusAdaptor> boot_lockbox_dbus_adaptor_;
   base::WeakPtrFactory<BootLockboxService> weak_factory_{this};
-
-  DISALLOW_COPY_AND_ASSIGN(BootLockboxService);
 };
 
 }  // namespace cryptohome

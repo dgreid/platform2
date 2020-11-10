@@ -26,6 +26,8 @@ constexpr uint8_t kPDRevision20 = 0x2;
 class Peripheral {
  public:
   explicit Peripheral(const base::FilePath& syspath);
+  Peripheral(const Peripheral&) = delete;
+  Peripheral& operator=(const Peripheral&) = delete;
 
   // Setters and Getters for PD identity information.
   void SetIdHeaderVDO(uint32_t id_header_vdo) {
@@ -97,8 +99,6 @@ class Peripheral {
   uint8_t pd_revision_;
   // Sysfs path used to access peripheral PD information.
   base::FilePath syspath_;
-
-  DISALLOW_COPY_AND_ASSIGN(Peripheral);
 };
 
 }  // namespace typecd

@@ -19,6 +19,9 @@ namespace arc {
 class MessageStream {
  public:
   explicit MessageStream(base::ScopedFD fd);
+  MessageStream(const MessageStream&) = delete;
+  MessageStream& operator=(const MessageStream&) = delete;
+
   ~MessageStream();
 
   // Returns the raw file descriptor.
@@ -35,8 +38,6 @@ class MessageStream {
  private:
   base::ScopedFD fd_;
   std::vector<char> buf_;
-
-  DISALLOW_COPY_AND_ASSIGN(MessageStream);
 };
 
 }  // namespace arc

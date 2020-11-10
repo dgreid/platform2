@@ -38,6 +38,9 @@ class RpcTask {
  public:
   // A constructor for the RpcTask object.
   RpcTask(ControlInterface* control_interface, RpcTaskDelegate* delegate);
+  RpcTask(const RpcTask&) = delete;
+  RpcTask& operator=(const RpcTask&) = delete;
+
   virtual ~RpcTask();
 
   virtual void GetLogin(std::string* user, std::string* password) const;
@@ -59,8 +62,6 @@ class RpcTask {
   static unsigned int serial_number_;
   std::string unique_name_;  // MUST be unique amongst RPC task instances
   std::unique_ptr<RpcTaskAdaptorInterface> adaptor_;
-
-  DISALLOW_COPY_AND_ASSIGN(RpcTask);
 };
 
 }  // namespace shill

@@ -21,6 +21,10 @@ namespace system {
 class AmbientLightSensorManager : public AmbientLightSensorManagerInterface {
  public:
   AmbientLightSensorManager();
+  AmbientLightSensorManager(const AmbientLightSensorManager&) = delete;
+  AmbientLightSensorManager& operator=(const AmbientLightSensorManager&) =
+      delete;
+
   ~AmbientLightSensorManager() override;
 
   void set_device_list_path_for_testing(const base::FilePath& path);
@@ -43,8 +47,6 @@ class AmbientLightSensorManager : public AmbientLightSensorManagerInterface {
   // Weak pointers into the relevant entries of |sensors_|.
   system::AmbientLightSensor* lid_sensor_ = nullptr;
   system::AmbientLightSensor* base_sensor_ = nullptr;
-
-  DISALLOW_COPY_AND_ASSIGN(AmbientLightSensorManager);
 };
 
 }  // namespace system

@@ -21,6 +21,8 @@ class EuiccDBusAdaptor : public EuiccAdaptorInterface,
   using DBusResponse = brillo::dbus_utils::DBusMethodResponse<T...>;
 
   explicit EuiccDBusAdaptor(Euicc* euicc);
+  EuiccDBusAdaptor(const EuiccDBusAdaptor&) = delete;
+  EuiccDBusAdaptor& operator=(const EuiccDBusAdaptor&) = delete;
 
   // org::chromium::Hermes::EuiccInterface overrides.
   // Install a profile. An empty activation code will cause the default profile
@@ -49,8 +51,6 @@ class EuiccDBusAdaptor : public EuiccAdaptorInterface,
   Euicc* euicc_;
   dbus::ObjectPath object_path_;
   brillo::dbus_utils::DBusObject dbus_object_;
-
-  DISALLOW_COPY_AND_ASSIGN(EuiccDBusAdaptor);
 };
 
 }  // namespace hermes

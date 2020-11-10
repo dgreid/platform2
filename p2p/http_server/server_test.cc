@@ -87,6 +87,8 @@ static int ConnectToLocalPort(uint16_t port) {
 class Barrier {
  public:
   explicit Barrier(int n) : n_(n), cond_(&lock_) {}
+  Barrier(const Barrier&) = delete;
+  Barrier& operator=(const Barrier&) = delete;
 
   // Wait on the barrier. This function is thread-safe.
   void Wait() {
@@ -106,8 +108,6 @@ class Barrier {
   int n_;
   base::Lock lock_;
   base::ConditionVariable cond_;
-
-  DISALLOW_COPY_AND_ASSIGN(Barrier);
 };
 
 TEST(P2PHttpServer, InvalidDirectoryFails) {
@@ -197,6 +197,8 @@ class MultipleClientThread : public base::SimpleThread {
         server_(server),
         pre_check_(pre_check),
         post_check_(post_check) {}
+  MultipleClientThread(const MultipleClientThread&) = delete;
+  MultipleClientThread& operator=(const MultipleClientThread&) = delete;
 
  private:
   void Run() override {
@@ -229,8 +231,6 @@ class MultipleClientThread : public base::SimpleThread {
   ServerInterface* server_;
   Barrier* pre_check_;
   Barrier* post_check_;
-
-  DISALLOW_COPY_AND_ASSIGN(MultipleClientThread);
 };
 
 bool ConnectionsReached(ServerInterface* server, int conns) {

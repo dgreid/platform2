@@ -44,10 +44,10 @@ class BRILLO_EXPORT UdevListEntry {
   // Constructs a UdevListEntry object without referencing a udev_list_entry
   // struct, which is only allowed to be called by MockUdevListEntry.
   UdevListEntry();
+  UdevListEntry(const UdevListEntry&) = delete;
+  UdevListEntry& operator=(const UdevListEntry&) = delete;
 
   udev_list_entry* const list_entry_;
-
-  DISALLOW_COPY_AND_ASSIGN(UdevListEntry);
 };
 
 }  // namespace brillo

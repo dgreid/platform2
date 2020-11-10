@@ -26,6 +26,9 @@ class OobeConfigRestoreService
       std::unique_ptr<brillo::dbus_utils::DBusObject> dbus_object,
       bool allow_unencrypted,
       bool skip_reboot_for_testing);
+  OobeConfigRestoreService(const OobeConfigRestoreService&) = delete;
+  OobeConfigRestoreService& operator=(const OobeConfigRestoreService&) = delete;
+
   ~OobeConfigRestoreService() override;
 
   // Registers the D-Bus object and interfaces.
@@ -43,8 +46,6 @@ class OobeConfigRestoreService
   std::unique_ptr<org::chromium::PowerManagerProxy> power_manager_proxy_;
   bool allow_unencrypted_;
   bool skip_reboot_for_testing_;
-
-  DISALLOW_COPY_AND_ASSIGN(OobeConfigRestoreService);
 };
 
 }  // namespace oobe_config

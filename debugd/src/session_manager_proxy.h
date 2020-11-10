@@ -26,6 +26,9 @@ namespace debugd {
 class SessionManagerProxy {
  public:
   explicit SessionManagerProxy(scoped_refptr<dbus::Bus> bus);
+  SessionManagerProxy(const SessionManagerProxy&) = delete;
+  SessionManagerProxy& operator=(const SessionManagerProxy&) = delete;
+
   ~SessionManagerProxy() = default;
   // Sets up the proxy for Chrome remote debugging and tries to enable it.
   void EnableChromeRemoteDebugging();
@@ -46,8 +49,6 @@ class SessionManagerProxy {
   bool is_chrome_remote_debugging_enabled_ = false;
 
   base::WeakPtrFactory<SessionManagerProxy> weak_ptr_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(SessionManagerProxy);
 };
 
 }  // namespace debugd

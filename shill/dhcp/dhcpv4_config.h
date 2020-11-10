@@ -33,6 +33,9 @@ class DHCPv4Config : public DHCPConfig {
                bool arp_gateway,
                const DhcpProperties& dhcp_props,
                Metrics* metrics);
+  DHCPv4Config(const DHCPv4Config&) = delete;
+  DHCPv4Config& operator=(const DHCPv4Config&) = delete;
+
   ~DHCPv4Config() override;
 
   // Inherited from DHCPConfig.
@@ -145,8 +148,6 @@ class DHCPv4Config : public DHCPConfig {
   std::string vendor_class_;
 
   Metrics* metrics_;
-
-  DISALLOW_COPY_AND_ASSIGN(DHCPv4Config);
 };
 
 }  // namespace shill

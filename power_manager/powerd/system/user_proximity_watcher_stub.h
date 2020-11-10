@@ -18,6 +18,9 @@ namespace system {
 class UserProximityWatcherStub : public UserProximityWatcherInterface {
  public:
   UserProximityWatcherStub() = default;
+  UserProximityWatcherStub(const UserProximityWatcherStub&) = delete;
+  UserProximityWatcherStub& operator=(const UserProximityWatcherStub&) = delete;
+
   ~UserProximityWatcherStub() override = default;
 
   // UserProximityWatcherInterface overrides:
@@ -29,8 +32,6 @@ class UserProximityWatcherStub : public UserProximityWatcherInterface {
 
  private:
   base::ObserverList<UserProximityObserver> observers_;
-
-  DISALLOW_COPY_AND_ASSIGN(UserProximityWatcherStub);
 };
 
 }  // namespace system

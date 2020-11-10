@@ -37,6 +37,11 @@ constexpr Krb5Interface::TgtStatus kValidTgtStatus(3600, 7200);
 class MockTgtRenewalSchedulerDelegate : public TgtRenewalScheduler::Delegate {
  public:
   MockTgtRenewalSchedulerDelegate() = default;
+  MockTgtRenewalSchedulerDelegate(const MockTgtRenewalSchedulerDelegate&) =
+      delete;
+  MockTgtRenewalSchedulerDelegate& operator=(
+      const MockTgtRenewalSchedulerDelegate&) = delete;
+
   ~MockTgtRenewalSchedulerDelegate() override = default;
 
   MOCK_METHOD(ErrorType,
@@ -48,9 +53,6 @@ class MockTgtRenewalSchedulerDelegate : public TgtRenewalScheduler::Delegate {
               NotifyTgtExpiration,
               (const std::string&, TgtRenewalScheduler::TgtExpiration),
               (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockTgtRenewalSchedulerDelegate);
 };
 
 }  // namespace
@@ -58,6 +60,9 @@ class MockTgtRenewalSchedulerDelegate : public TgtRenewalScheduler::Delegate {
 class TgtRenewalSchedulerTest : public ::testing::Test {
  public:
   TgtRenewalSchedulerTest() : scheduler_(kPrincipal, &scheduler_delegate_) {}
+  TgtRenewalSchedulerTest(const TgtRenewalSchedulerTest&) = delete;
+  TgtRenewalSchedulerTest& operator=(const TgtRenewalSchedulerTest&) = delete;
+
   ~TgtRenewalSchedulerTest() override = default;
 
  protected:
@@ -91,9 +96,6 @@ class TgtRenewalSchedulerTest : public ::testing::Test {
   scoped_refptr<base::TestMockTimeTaskRunner> task_runner_{
       new base::TestMockTimeTaskRunner()};
   base::TestMockTimeTaskRunner::ScopedContext scoped_context_{task_runner_};
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(TgtRenewalSchedulerTest);
 };
 
 // If GetTgtStatus() returns an error, there should be an expiry notification.

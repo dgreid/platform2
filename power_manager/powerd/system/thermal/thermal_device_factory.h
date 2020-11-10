@@ -22,8 +22,8 @@ class ThermalDeviceFactory {
  private:
   // Private constructor to make this class static method only.
   ThermalDeviceFactory() {}
-
-  DISALLOW_COPY_AND_ASSIGN(ThermalDeviceFactory);
+  ThermalDeviceFactory(const ThermalDeviceFactory&) = delete;
+  ThermalDeviceFactory& operator=(const ThermalDeviceFactory&) = delete;
 };
 
 }  // namespace system

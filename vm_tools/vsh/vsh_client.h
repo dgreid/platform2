@@ -49,6 +49,8 @@ class VshClient {
   explicit VshClient(base::ScopedFD sock_fd,
                      base::ScopedFD stdout_fd,
                      base::ScopedFD stderr_fd);
+  VshClient(const VshClient&) = delete;
+  VshClient& operator=(const VshClient&) = delete;
 
   bool Init(const std::string& user,
             const std::string& container,
@@ -79,8 +81,6 @@ class VshClient {
   brillo::AsynchronousSignalHandler signal_handler_;
 
   int exit_code_;
-
-  DISALLOW_COPY_AND_ASSIGN(VshClient);
 };
 
 }  // namespace vsh

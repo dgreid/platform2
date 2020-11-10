@@ -17,14 +17,15 @@ namespace pca_agent {
 class PcaHttpUtils {
  public:
   PcaHttpUtils() = default;
+  PcaHttpUtils(const PcaHttpUtils&) = delete;
+  PcaHttpUtils& operator=(const PcaHttpUtils&) = delete;
+
   virtual ~PcaHttpUtils() = default;
 
   // An interface that is related to |brillo::http::GetChromeProxyServersAsync|.
   virtual void GetChromeProxyServersAsync(
       const std::string& url,
       const brillo::http::GetChromeProxyServersCallback& callback) = 0;
-
-  DISALLOW_COPY_AND_ASSIGN(PcaHttpUtils);
 };
 
 }  // namespace pca_agent

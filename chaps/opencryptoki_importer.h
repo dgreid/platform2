@@ -28,6 +28,9 @@ class OpencryptokiImporter : public ObjectImporter {
                        const base::FilePath& path,
                        TPMUtility* tpm,
                        ChapsFactory* factory);
+  OpencryptokiImporter(const OpencryptokiImporter&) = delete;
+  OpencryptokiImporter& operator=(const OpencryptokiImporter&) = delete;
+
   ~OpencryptokiImporter() override;
 
   // ObjectImporter interface.
@@ -107,8 +110,6 @@ class OpencryptokiImporter : public ObjectImporter {
   std::map<std::string, std::string> encrypted_objects_;
   // Stores decrypted, unflattened objects ready for import.
   std::vector<AttributeMap> unflattened_objects_;
-
-  DISALLOW_COPY_AND_ASSIGN(OpencryptokiImporter);
 };
 
 }  // namespace chaps

@@ -18,14 +18,15 @@ namespace permission_broker {
 class DenyUsbVendorIdRule : public UsbSubsystemUdevRule {
  public:
   explicit DenyUsbVendorIdRule(const uint16_t vendor_id);
+  DenyUsbVendorIdRule(const DenyUsbVendorIdRule&) = delete;
+  DenyUsbVendorIdRule& operator=(const DenyUsbVendorIdRule&) = delete;
+
   ~DenyUsbVendorIdRule() override = default;
 
   Result ProcessUsbDevice(struct udev_device* device) override;
 
  private:
   const std::string vendor_id_;
-
-  DISALLOW_COPY_AND_ASSIGN(DenyUsbVendorIdRule);
 };
 
 }  // namespace permission_broker

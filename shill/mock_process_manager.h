@@ -20,6 +20,9 @@ namespace shill {
 class MockProcessManager : public ProcessManager {
  public:
   MockProcessManager();
+  MockProcessManager(const MockProcessManager&) = delete;
+  MockProcessManager& operator=(const MockProcessManager&) = delete;
+
   ~MockProcessManager() override;
 
   MOCK_METHOD(void, Init, (EventDispatcher*), (override));
@@ -66,9 +69,6 @@ class MockProcessManager : public ProcessManager {
               UpdateExitCallback,
               (pid_t, const base::Callback<void(int)>&),
               (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockProcessManager);
 };
 
 }  // namespace shill

@@ -43,6 +43,9 @@ class AmbientLightSensor : public AmbientLightSensorInterface {
   explicit AmbientLightSensor(bool allow_ambient_eq);
   AmbientLightSensor(SensorLocation expected_sensor_location,
                      bool allow_ambient_eq);
+  AmbientLightSensor(const AmbientLightSensor&) = delete;
+  AmbientLightSensor& operator=(const AmbientLightSensor&) = delete;
+
   ~AmbientLightSensor() override;
 
   void set_device_list_path_for_testing(const base::FilePath& path) {
@@ -137,8 +140,6 @@ class AmbientLightSensor : public AmbientLightSensorInterface {
   // Location on the device (e.g. lid, base) where this sensor reports itself
   // to be. If set to unknown, powerd looks for a sensor at any location.
   SensorLocation expected_sensor_location_;
-
-  DISALLOW_COPY_AND_ASSIGN(AmbientLightSensor);
 };
 
 }  // namespace system

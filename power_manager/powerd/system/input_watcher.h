@@ -56,6 +56,9 @@ class InputWatcher : public InputWatcherInterface,
   static const char kAcpiLidDevice[];
 
   InputWatcher();
+  InputWatcher(const InputWatcher&) = delete;
+  InputWatcher& operator=(const InputWatcher&) = delete;
+
   ~InputWatcher() override;
 
   void set_dev_input_path_for_testing(const base::FilePath& path) {
@@ -211,8 +214,6 @@ class InputWatcher : public InputWatcherInterface,
   base::FilePath sysfs_input_path_for_testing_;
 
   base::WeakPtrFactory<InputWatcher> weak_ptr_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(InputWatcher);
 };
 
 }  // namespace system

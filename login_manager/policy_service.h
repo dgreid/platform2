@@ -86,6 +86,9 @@ class PolicyService {
                 PolicyKey* policy_key,
                 LoginMetrics* metrics,
                 bool resilient_chrome_policy_store);
+  PolicyService(const PolicyService&) = delete;
+  PolicyService& operator=(const PolicyService&) = delete;
+
   virtual ~PolicyService();
 
   // Stores a new policy under the namespace |ns|. If mandated by
@@ -204,8 +207,6 @@ class PolicyService {
   // Put at the last member, so that inflight weakptrs will be invalidated
   // before other members' destruction.
   base::WeakPtrFactory<PolicyService> weak_ptr_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(PolicyService);
 };
 
 }  // namespace login_manager

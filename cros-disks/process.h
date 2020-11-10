@@ -68,6 +68,8 @@ class Process {
 
  protected:
   Process();
+  Process(const Process&) = delete;
+  Process& operator=(const Process&) = delete;
 
   // Gets the arguments used to start the process. This method calls
   // BuildArgumentsArray() to build |arguments_array_| only once (i.e. when
@@ -138,8 +140,6 @@ class Process {
 
   FRIEND_TEST(ProcessTest, GetArguments);
   FRIEND_TEST(ProcessTest, GetArgumentsWithNoArgumentsAdded);
-
-  DISALLOW_COPY_AND_ASSIGN(Process);
 };
 
 }  // namespace cros_disks

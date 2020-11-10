@@ -43,6 +43,9 @@ class AudioClient : public AudioClientInterface,
   static constexpr char kAudioSuspendedFile[] = "audio_suspended";
 
   AudioClient();
+  AudioClient(const AudioClient&) = delete;
+  AudioClient& operator=(const AudioClient&) = delete;
+
   ~AudioClient() override;
 
   // Initializes the object. Ownership of |dbus_wrapper| remains with the
@@ -116,8 +119,6 @@ class AudioClient : public AudioClientInterface,
   base::FilePath audio_suspended_path_;
 
   base::WeakPtrFactory<AudioClient> weak_ptr_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(AudioClient);
 };
 
 }  // namespace system

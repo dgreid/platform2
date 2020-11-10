@@ -22,6 +22,9 @@ class XmlInterfaceParser {
   using XmlAttributeMap = std::map<std::string, std::string>;
 
   XmlInterfaceParser() = default;
+  XmlInterfaceParser(const XmlInterfaceParser&) = delete;
+  XmlInterfaceParser& operator=(const XmlInterfaceParser&) = delete;
+
   virtual ~XmlInterfaceParser() = default;
 
   bool ParseXmlInterfaceFile(const std::string& contents,
@@ -126,8 +129,6 @@ class XmlInterfaceParser {
 
   // Tracks the last argument that we've seen.
   Interface::Argument* last_arg_;
-
-  DISALLOW_COPY_AND_ASSIGN(XmlInterfaceParser);
 };
 
 }  // namespace chromeos_dbus_bindings

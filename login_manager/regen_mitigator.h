@@ -23,6 +23,9 @@ class PolicyKey;
 class RegenMitigator : public OwnerKeyLossMitigator {
  public:
   explicit RegenMitigator(KeyGenerator* generator);
+  RegenMitigator(const RegenMitigator&) = delete;
+  RegenMitigator& operator=(const RegenMitigator&) = delete;
+
   ~RegenMitigator() override;
 
   // Deal with loss of the owner's private key.
@@ -39,7 +42,6 @@ class RegenMitigator : public OwnerKeyLossMitigator {
  private:
   KeyGenerator* generator_;
   bool mitigating_ = false;
-  DISALLOW_COPY_AND_ASSIGN(RegenMitigator);
 };
 
 }  // namespace login_manager

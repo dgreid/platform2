@@ -22,6 +22,9 @@ namespace system {
 class AsyncFileReader {
  public:
   AsyncFileReader();
+  AsyncFileReader(const AsyncFileReader&) = delete;
+  AsyncFileReader& operator=(const AsyncFileReader&) = delete;
+
   ~AsyncFileReader();
 
   const base::FilePath& path() const { return path_; }
@@ -87,8 +90,6 @@ class AsyncFileReader {
 
   // Runs UpdateState().
   base::RepeatingTimer update_state_timer_;
-
-  DISALLOW_COPY_AND_ASSIGN(AsyncFileReader);
 };
 
 }  // namespace system

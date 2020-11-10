@@ -22,13 +22,13 @@ struct Interface;
 
 class MethodNameGenerator {
  public:
+  MethodNameGenerator(const MethodNameGenerator&) = delete;
+  MethodNameGenerator& operator=(const MethodNameGenerator&) = delete;
   static bool GenerateMethodNames(const std::vector<Interface>& interfaces,
                                   const base::FilePath& output_file);
 
  private:
   friend class MethodNameGeneratorTest;
-
-  DISALLOW_COPY_AND_ASSIGN(MethodNameGenerator);
 };
 
 }  // namespace chromeos_dbus_bindings

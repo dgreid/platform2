@@ -29,6 +29,9 @@ class CrostiniService {
                   AddressManager* addr_mgr,
                   Datapath* datapath,
                   TrafficForwarder* forwarder);
+  CrostiniService(const CrostiniService&) = delete;
+  CrostiniService& operator=(const CrostiniService&) = delete;
+
   ~CrostiniService();
 
   bool Start(uint64_t vm_id, bool is_termina, int subnet_index);
@@ -69,7 +72,6 @@ class CrostiniService {
   scoped_refptr<dbus::Bus> bus_;
 
   base::WeakPtrFactory<CrostiniService> weak_factory_{this};
-  DISALLOW_COPY_AND_ASSIGN(CrostiniService);
 };
 
 }  // namespace patchpanel

@@ -92,6 +92,9 @@ constexpr char kSaltFile[] = "test_image_dir/salt";
 class FakeEventSourceSink : public CryptohomeEventSourceSink {
  public:
   FakeEventSourceSink() = default;
+  FakeEventSourceSink(const FakeEventSourceSink&) = delete;
+  FakeEventSourceSink& operator=(const FakeEventSourceSink&) = delete;
+
   ~FakeEventSourceSink() override = default;
 
   void NotifyEvent(CryptohomeEventBase* event) override {
@@ -127,8 +130,6 @@ class FakeEventSourceSink : public CryptohomeEventSourceSink {
  private:
   std::unique_ptr<BaseReply> reply_;
   std::unique_ptr<std::string> error_reply_;
-
-  DISALLOW_COPY_AND_ASSIGN(FakeEventSourceSink);
 };
 
 bool AssignSalt(size_t size, SecureBlob* salt) {
@@ -190,6 +191,10 @@ class ServiceDistributedNoRealDBus : public ServiceDistributed {
 class ServiceTestNotInitialized : public ::testing::Test {
  public:
   ServiceTestNotInitialized() = default;
+  ServiceTestNotInitialized(const ServiceTestNotInitialized&) = delete;
+  ServiceTestNotInitialized& operator=(const ServiceTestNotInitialized&) =
+      delete;
+
   ~ServiceTestNotInitialized() override = default;
 
   void SetUp() override {
@@ -285,23 +290,20 @@ class ServiceTestNotInitialized : public ::testing::Test {
   // important because otherwise the background thread may call into mocks that
   // have already been destroyed.
   ServiceDistributedNoRealDBus service_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ServiceTestNotInitialized);
 };
 
 class ServiceTest : public ServiceTestNotInitialized {
  public:
   ServiceTest() = default;
+  ServiceTest(const ServiceTest&) = delete;
+  ServiceTest& operator=(const ServiceTest&) = delete;
+
   ~ServiceTest() override = default;
 
   void SetUp() override {
     ServiceTestNotInitialized::SetUp();
     ASSERT_TRUE(service_.Initialize());
   }
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ServiceTest);
 };
 
 TEST_F(ServiceTestNotInitialized, CheckAsyncTestCredentials) {
@@ -945,6 +947,9 @@ TEST_F(ServiceTestNotInitialized,
 class ServiceExTest : public ServiceTest {
  public:
   ServiceExTest() { platform_.GetFake()->SetStandardUsersAndGroups(); }
+  ServiceExTest(const ServiceExTest&) = delete;
+  ServiceExTest& operator=(const ServiceExTest&) = delete;
+
   ~ServiceExTest() override = default;
 
   VaultKeyset* GetNiceMockVaultKeyset(const std::string& obfuscated_username,
@@ -988,9 +993,6 @@ class ServiceExTest : public ServiceTest {
   std::unique_ptr<MountRequest> mount_req_;
   std::unique_ptr<RemoveKeyRequest> remove_req_;
   std::unique_ptr<ListKeysRequest> list_keys_req_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ServiceExTest);
 };
 
 TEST_F(ServiceExTest, AddDataRestoreKeyInvalidArgsNoEmail) {

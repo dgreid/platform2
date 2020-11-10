@@ -15,6 +15,9 @@ namespace easy_unlock {
 class FakeService : public Service {
  public:
   FakeService();
+  FakeService(const FakeService&) = delete;
+  FakeService& operator=(const FakeService&) = delete;
+
   virtual ~FakeService();
 
   // easy_unlock::Service overrides:
@@ -45,8 +48,6 @@ class FakeService : public Service {
  private:
   int private_key_count_;
   int public_key_count_;
-
-  DISALLOW_COPY_AND_ASSIGN(FakeService);
 };
 
 }  // namespace easy_unlock

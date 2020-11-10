@@ -19,12 +19,12 @@ struct SocketInfo;
 class MockSocketInfoReader : public SocketInfoReader {
  public:
   MockSocketInfoReader();
+  MockSocketInfoReader(const MockSocketInfoReader&) = delete;
+  MockSocketInfoReader& operator=(const MockSocketInfoReader&) = delete;
+
   ~MockSocketInfoReader() override;
 
   MOCK_METHOD(bool, LoadTcpSocketInfo, (std::vector<SocketInfo>*), (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockSocketInfoReader);
 };
 
 }  // namespace shill

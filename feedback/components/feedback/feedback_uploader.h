@@ -32,6 +32,9 @@ class FeedbackUploader : public base::SupportsWeakPtr<FeedbackUploader> {
   FeedbackUploader(const base::FilePath& path,
                    scoped_refptr<base::SingleThreadTaskRunner> task_runner,
                    const std::string& url);
+  FeedbackUploader(const FeedbackUploader&) = delete;
+  FeedbackUploader& operator=(const FeedbackUploader&) = delete;
+
   virtual ~FeedbackUploader();
 
   // Queues a report for uploading.
@@ -79,8 +82,6 @@ class FeedbackUploader : public base::SupportsWeakPtr<FeedbackUploader> {
   base::TimeDelta retry_delay_;
   scoped_refptr<base::SingleThreadTaskRunner> task_runner_;
   std::string url_;
-
-  DISALLOW_COPY_AND_ASSIGN(FeedbackUploader);
 };
 
 }  // namespace feedback

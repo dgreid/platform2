@@ -47,6 +47,8 @@ class Context {
           Executor* executor,
           AdaptorFactoryInterface* adaptor_factory,
           ModemControlInterface* modem_control);
+  Context(const Context&) = delete;
+  Context& operator=(const Context&) = delete;
 
   static Context* context_;
 
@@ -55,8 +57,6 @@ class Context {
   Executor* executor_;
   AdaptorFactoryInterface* adaptor_factory_;
   ModemControlInterface* modem_control_;
-
-  DISALLOW_COPY_AND_ASSIGN(Context);
 };
 
 }  // namespace hermes

@@ -29,6 +29,9 @@ class AuthDataCache {
   // |flags| is a non-owned pointer to DebugFlags flags (the class listens to
   // flags->log_caches() to toggle logging).
   explicit AuthDataCache(const protos::DebugFlags* flags);
+  AuthDataCache(const AuthDataCache&) = delete;
+  AuthDataCache& operator=(const AuthDataCache&) = delete;
+
   ~AuthDataCache();
 
   // Loads |data_| from the file at |path|. Returns true if the file was
@@ -91,8 +94,6 @@ class AuthDataCache {
   // Whether the cache is enabled or not. While disabled, getters return nullopt
   // and setters do nothing.
   bool enabled_ = true;
-
-  DISALLOW_COPY_AND_ASSIGN(AuthDataCache);
 };
 
 }  // namespace authpolicy

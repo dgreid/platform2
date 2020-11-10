@@ -84,6 +84,9 @@ class ResultAggregator : public base::RefCounted<ResultAggregator> {
   ResultAggregator(const ResultCallback& callback,
                    EventDispatcher* dispatcher,
                    int timeout_milliseconds);
+  ResultAggregator(const ResultAggregator&) = delete;
+  ResultAggregator& operator=(const ResultAggregator&) = delete;
+
   virtual ~ResultAggregator();
 
   void ReportResult(const Error& error);
@@ -98,8 +101,6 @@ class ResultAggregator : public base::RefCounted<ResultAggregator> {
   bool got_result_;
   bool timed_out_;
   Error error_;
-
-  DISALLOW_COPY_AND_ASSIGN(ResultAggregator);
 };
 
 }  // namespace shill

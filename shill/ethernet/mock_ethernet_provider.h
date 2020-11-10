@@ -16,6 +16,9 @@ namespace shill {
 class MockEthernetProvider : public EthernetProvider {
  public:
   MockEthernetProvider();
+  MockEthernetProvider(const MockEthernetProvider&) = delete;
+  MockEthernetProvider& operator=(const MockEthernetProvider&) = delete;
+
   ~MockEthernetProvider() override;
 
   MOCK_METHOD(void, Start, (), (override));
@@ -31,9 +34,6 @@ class MockEthernetProvider : public EthernetProvider {
   MOCK_METHOD(void, RegisterService, (EthernetServiceRefPtr), (override));
   MOCK_METHOD(void, DeregisterService, (EthernetServiceRefPtr), (override));
   MOCK_METHOD(void, RefreshGenericEthernetService, (), (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockEthernetProvider);
 };
 
 }  // namespace shill

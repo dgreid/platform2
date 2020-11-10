@@ -31,6 +31,9 @@ class IconFinderTest : public ::testing::Test {
     icon_dir_ = icon_theme_dir_.Append("48x48").Append("apps");
     CHECK(base::CreateDirectory(icon_dir_));
   }
+  IconFinderTest(const IconFinderTest&) = delete;
+  IconFinderTest& operator=(const IconFinderTest&) = delete;
+
   ~IconFinderTest() override = default;
 
   void WriteIndexThemeFile(const std::string& contents) {
@@ -56,8 +59,6 @@ class IconFinderTest : public ::testing::Test {
   base::FilePath desktop_file_dir_;
   base::FilePath icon_theme_dir_;
   base::FilePath icon_dir_;
-
-  DISALLOW_COPY_AND_ASSIGN(IconFinderTest);
 };
 
 }  // namespace

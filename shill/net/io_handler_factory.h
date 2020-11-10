@@ -20,6 +20,9 @@ class SHILL_EXPORT IOHandlerFactory {
   // IOHandlerFactory has been migrated to use IOHandlerFactory::GetInstance()
   // instead of constructing a new IOHandlerFactory.
   IOHandlerFactory();
+  IOHandlerFactory(const IOHandlerFactory&) = delete;
+  IOHandlerFactory& operator=(const IOHandlerFactory&) = delete;
+
   virtual ~IOHandlerFactory();
 
   virtual IOHandler* CreateIOInputHandler(
@@ -34,8 +37,6 @@ class SHILL_EXPORT IOHandlerFactory {
 
  private:
   friend class base::NoDestructor<IOHandlerFactory>;
-
-  DISALLOW_COPY_AND_ASSIGN(IOHandlerFactory);
 };
 
 }  // namespace shill

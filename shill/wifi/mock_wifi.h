@@ -31,6 +31,9 @@ class MockWiFi : public WiFi {
            const std::string& address,
            int interface_index,
            WakeOnWiFiInterface* wake_on_wifi);
+  MockWiFi(const MockWiFi&) = delete;
+  MockWiFi& operator=(const MockWiFi&) = delete;
+
   ~MockWiFi() override;
 
   MOCK_METHOD(void,
@@ -57,9 +60,6 @@ class MockWiFi : public WiFi {
   MOCK_METHOD(bool, IsCurrentService, (const WiFiService* service), (const));
   MOCK_METHOD(void, DestroyIPConfigLease, (const std::string&), (override));
   MOCK_METHOD(bool, IsConnectedViaTether, (), (const, override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockWiFi);
 };
 
 }  // namespace shill

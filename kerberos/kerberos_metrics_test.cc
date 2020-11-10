@@ -27,6 +27,9 @@ class KerberosMetricsTest : public ::testing::Test {
     clock->SetNow(time);
     metrics_->SetClockForTesting(std::move(clock));
   }
+  KerberosMetricsTest(const KerberosMetricsTest&) = delete;
+  KerberosMetricsTest& operator=(const KerberosMetricsTest&) = delete;
+
   ~KerberosMetricsTest() override = default;
 
  protected:
@@ -37,9 +40,6 @@ class KerberosMetricsTest : public ::testing::Test {
   base::ScopedTempDir storage_dir_;
 
   std::unique_ptr<KerberosMetrics> metrics_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(KerberosMetricsTest);
 };
 
 // Tests whether ShouldReportDailyUsageStats only triggers once a day and works

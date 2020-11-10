@@ -37,6 +37,9 @@ namespace diagnostics {
 class SystemFilesServiceTest : public testing::Test {
  public:
   SystemFilesServiceTest() = default;
+  SystemFilesServiceTest(const SystemFilesServiceTest&) = delete;
+  SystemFilesServiceTest& operator=(const SystemFilesServiceTest&) = delete;
+
   ~SystemFilesServiceTest() override = default;
 
   void SetUp() override {
@@ -48,9 +51,6 @@ class SystemFilesServiceTest : public testing::Test {
  protected:
   base::ScopedTempDir temp_dir_;
   SystemFilesServiceImpl system_files_service_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(SystemFilesServiceTest);
 };
 
 // Test that GetFileDump() returns false when the file doesn't exist.
@@ -319,6 +319,11 @@ class SystemFilesServiceFileLocationTest
           std::tuple<SystemFilesService::File, std::string>> {
  public:
   SystemFilesServiceFileLocationTest() = default;
+  SystemFilesServiceFileLocationTest(
+      const SystemFilesServiceFileLocationTest&) = delete;
+  SystemFilesServiceFileLocationTest& operator=(
+      const SystemFilesServiceFileLocationTest&) = delete;
+
   ~SystemFilesServiceFileLocationTest() override = default;
 
  protected:
@@ -332,9 +337,6 @@ class SystemFilesServiceFileLocationTest
     return temp_dir_.GetPath().Append(GetPathParam());
   }
   const std::string& GetTestFileContents() const { return GetPathParam(); }
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(SystemFilesServiceFileLocationTest);
 };
 
 TEST_P(SystemFilesServiceFileLocationTest, Path) {
@@ -376,6 +378,10 @@ class SystemFilesServiceDirectoryLocationTest
           std::tuple<SystemFilesService::Directory, std::string>> {
  public:
   SystemFilesServiceDirectoryLocationTest() = default;
+  SystemFilesServiceDirectoryLocationTest(
+      const SystemFilesServiceDirectoryLocationTest&) = delete;
+  SystemFilesServiceDirectoryLocationTest& operator=(
+      const SystemFilesServiceDirectoryLocationTest&) = delete;
 
  protected:
   SystemFilesService::Directory GetLocationParam() const {
@@ -388,9 +394,6 @@ class SystemFilesServiceDirectoryLocationTest
     return temp_dir_.GetPath().Append(GetPathParam()).Append("f");
   }
   const std::string& GetTestFileContents() const { return GetPathParam(); }
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(SystemFilesServiceDirectoryLocationTest);
 };
 
 TEST_P(SystemFilesServiceDirectoryLocationTest, Path) {

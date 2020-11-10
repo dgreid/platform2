@@ -165,6 +165,9 @@ class Daemon::StateControllerDelegate
     : public policy::StateController::Delegate {
  public:
   explicit StateControllerDelegate(Daemon* daemon) : daemon_(daemon) {}
+  StateControllerDelegate(const StateControllerDelegate&) = delete;
+  StateControllerDelegate& operator=(const StateControllerDelegate&) = delete;
+
   ~StateControllerDelegate() override { daemon_ = nullptr; }
 
   // Overridden from policy::StateController::Delegate:
@@ -245,8 +248,6 @@ class Daemon::StateControllerDelegate
 
  private:
   Daemon* daemon_;  // weak
-
-  DISALLOW_COPY_AND_ASSIGN(StateControllerDelegate);
 };
 
 Daemon::Daemon(DaemonDelegate* delegate, const base::FilePath& run_dir)

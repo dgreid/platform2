@@ -16,6 +16,9 @@ namespace login_manager {
 class FakeGeneratedKeyHandler : public KeyGenerator::Delegate {
  public:
   FakeGeneratedKeyHandler();
+  FakeGeneratedKeyHandler(const FakeGeneratedKeyHandler&) = delete;
+  FakeGeneratedKeyHandler& operator=(const FakeGeneratedKeyHandler&) = delete;
+
   ~FakeGeneratedKeyHandler() override;
 
   const std::string& key_username() { return key_username_; }
@@ -28,7 +31,6 @@ class FakeGeneratedKeyHandler : public KeyGenerator::Delegate {
  private:
   std::string key_username_;
   std::string key_contents_;
-  DISALLOW_COPY_AND_ASSIGN(FakeGeneratedKeyHandler);
 };
 }  // namespace login_manager
 

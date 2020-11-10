@@ -117,6 +117,8 @@ class HammerUpdater {
                 std::unique_ptr<PairManagerInterface> pair_manager,
                 std::unique_ptr<DBusWrapperInterface> dbus_wrapper,
                 std::unique_ptr<MetricsLibraryInterface> metrics);
+  HammerUpdater(const HammerUpdater&) = delete;
+  HammerUpdater& operator=(const HammerUpdater&) = delete;
 
   // Waits for hammer USB device ready. It is called after the whole updating
   // process to prevent invoking hammerd infinitely.
@@ -175,8 +177,6 @@ class HammerUpdater {
 
   // Helper function to update RW section.
   HammerUpdater::RunStatus UpdateRW();
-
-  DISALLOW_COPY_AND_ASSIGN(HammerUpdater);
 };
 
 }  // namespace hammerd

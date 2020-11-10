@@ -21,6 +21,8 @@ namespace smbprovider {
 class FakeSambaProxy : public SambaInterface {
  public:
   explicit FakeSambaProxy(FakeSambaInterface* fake_samba_interface);
+  FakeSambaProxy(const FakeSambaProxy&) = delete;
+  FakeSambaProxy& operator=(const FakeSambaProxy&) = delete;
 
   // FakeSambaInterface overrides.
   int32_t OpenDirectory(const std::string& directory_path,
@@ -88,8 +90,6 @@ class FakeSambaProxy : public SambaInterface {
 
   // Weak pointer factory. Should be the last member.
   base::WeakPtrFactory<FakeSambaProxy> weak_factory_{this};
-
-  DISALLOW_COPY_AND_ASSIGN(FakeSambaProxy);
 };
 
 }  // namespace smbprovider

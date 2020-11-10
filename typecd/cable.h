@@ -22,11 +22,11 @@ namespace typecd {
 class Cable : public Peripheral {
  public:
   explicit Cable(const base::FilePath& syspath) : Peripheral(syspath) {}
+  Cable(const Cable&) = delete;
+  Cable& operator=(const Cable&) = delete;
 
   // Check whether the cable supports Thunderbolt3 speed requirements.
   bool TBT3PDIdentityCheck();
-
-  DISALLOW_COPY_AND_ASSIGN(Cable);
 };
 
 }  // namespace typecd

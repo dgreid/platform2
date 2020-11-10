@@ -33,6 +33,9 @@ class MockPowerdEventServiceObserver : public PowerdEventService::Observer {
 class PowerdEventServiceImplTest : public ::testing::Test {
  public:
   PowerdEventServiceImplTest() = default;
+  PowerdEventServiceImplTest(const PowerdEventServiceImplTest&) = delete;
+  PowerdEventServiceImplTest& operator=(const PowerdEventServiceImplTest&) =
+      delete;
 
   void SetUp() override {
     service_ = std::make_unique<PowerdEventServiceImpl>(&fake_powerd_adapter_);
@@ -52,9 +55,6 @@ class PowerdEventServiceImplTest : public ::testing::Test {
   StrictMock<MockPowerdEventServiceObserver> observer_;
 
   std::unique_ptr<PowerdEventServiceImpl> service_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(PowerdEventServiceImplTest);
 };
 
 TEST_F(PowerdEventServiceImplTest, OnPowerSupplyPollSignal) {

@@ -15,6 +15,9 @@ namespace policy {
 class ShutdownFromSuspendStub : public ShutdownFromSuspendInterface {
  public:
   ShutdownFromSuspendStub() = default;
+  ShutdownFromSuspendStub(const ShutdownFromSuspendStub&) = delete;
+  ShutdownFromSuspendStub& operator=(const ShutdownFromSuspendStub&) = delete;
+
   ~ShutdownFromSuspendStub() = default;
 
   void set_action(Action action) { action_ = action; }
@@ -26,8 +29,6 @@ class ShutdownFromSuspendStub : public ShutdownFromSuspendInterface {
 
  private:
   Action action_ = Action::SUSPEND;
-
-  DISALLOW_COPY_AND_ASSIGN(ShutdownFromSuspendStub);
 };
 
 }  // namespace policy

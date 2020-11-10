@@ -12,13 +12,12 @@ namespace croslog {
 class ViewerJournal {
  public:
   ViewerJournal() = default;
+  ViewerJournal(const ViewerJournal&) = delete;
+  ViewerJournal& operator=(const ViewerJournal&) = delete;
 
   // Run the plaintext viewer. This may run the runloop to retrieve update
   // events.
   bool Run(const croslog::Config& config);
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ViewerJournal);
 };
 
 }  // namespace croslog

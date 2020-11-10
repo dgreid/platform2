@@ -45,6 +45,9 @@ namespace internal {
 class BRILLO_EXPORT RpcStateBase {
  public:
   RpcStateBase();
+  RpcStateBase(const RpcStateBase&) = delete;
+  RpcStateBase& operator=(const RpcStateBase&) = delete;
+
   virtual ~RpcStateBase();
 
   // Returns the tag uniquely identifying this |RpcStateBase|. Whenever
@@ -78,9 +81,6 @@ class BRILLO_EXPORT RpcStateBase {
 
  protected:
   grpc::ServerContext ctx_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(RpcStateBase);
 };
 
 // Templatized version of |RpcStateBase|. Implements the actual RequestType /
@@ -112,6 +112,9 @@ class RpcState final : public RpcStateBase {
       : request_rpc_closure_(request_rpc_closure),
         handler_callback_(handler_callback),
         responder_(&ctx_) {}
+  RpcState(const RpcState&) = delete;
+  RpcState& operator=(const RpcState&) = delete;
+
   ~RpcState() = default;
 
   void RequestRpc(
@@ -169,8 +172,6 @@ class RpcState final : public RpcStateBase {
   grpc::ServerAsyncResponseWriter<ResponseType> responder_;
 
   base::WeakPtrFactory<RpcState> weak_ptr_factory_{this};
-
-  DISALLOW_COPY_AND_ASSIGN(RpcState);
 };
 
 }  // namespace internal

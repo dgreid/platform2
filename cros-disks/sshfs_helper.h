@@ -17,6 +17,9 @@ namespace cros_disks {
 class SshfsHelper : public FUSEHelper {
  public:
   SshfsHelper(const Platform* platform, brillo::ProcessReaper* process_reaper);
+  SshfsHelper(const SshfsHelper&) = delete;
+  SshfsHelper& operator=(const SshfsHelper&) = delete;
+
   ~SshfsHelper() override;
 
   std::unique_ptr<FUSEMounter> CreateMounter(
@@ -30,8 +33,6 @@ class SshfsHelper : public FUSEHelper {
                                uid_t uid,
                                gid_t gid,
                                std::vector<std::string>* options) const;
-
-  DISALLOW_COPY_AND_ASSIGN(SshfsHelper);
 };
 
 }  // namespace cros_disks

@@ -62,6 +62,8 @@ class SodaRecognizerImpl
           soda_client,
       mojo::PendingReceiver<chromeos::machine_learning::mojom::SodaRecognizer>
           receiver);
+  SodaRecognizerImpl(const SodaRecognizerImpl&) = delete;
+  SodaRecognizerImpl& operator=(const SodaRecognizerImpl&) = delete;
 
   bool successfully_loaded_;
 
@@ -73,8 +75,6 @@ class SodaRecognizerImpl
 
   mojo::SharedRemote<chromeos::machine_learning::mojom::SodaClient>
       client_remote_;
-
-  DISALLOW_COPY_AND_ASSIGN(SodaRecognizerImpl);
 };
 
 }  // namespace ml

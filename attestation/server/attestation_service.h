@@ -85,6 +85,9 @@ class AttestationService : public AttestationInterface {
   // If abe_data is not an empty blob, its contents will be
   // used to enable attestation-based enterprise enrollment.
   explicit AttestationService(brillo::SecureBlob* abe_data);
+  AttestationService(const AttestationService&) = delete;
+  AttestationService& operator=(const AttestationService&) = delete;
+
   ~AttestationService() override = default;
 
   // AttestationInterface methods.
@@ -208,6 +211,9 @@ class AttestationService : public AttestationInterface {
         : base::Thread("Attestation Service Worker"), service_(service) {
       DCHECK(service_);
     }
+    ServiceWorkerThread(const ServiceWorkerThread&) = delete;
+    ServiceWorkerThread& operator=(const ServiceWorkerThread&) = delete;
+
     ~ServiceWorkerThread() override { Stop(); }
 
    private:
@@ -215,7 +221,6 @@ class AttestationService : public AttestationInterface {
 
     AttestationService* const service_;
 
-    DISALLOW_COPY_AND_ASSIGN(ServiceWorkerThread);
   };
 
   // A relay callback which allows the use of weak pointer semantics for a reply
@@ -794,8 +799,6 @@ class AttestationService : public AttestationInterface {
 
   // Declared last so any weak pointers are destroyed first.
   base::WeakPtrFactory<AttestationService> weak_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(AttestationService);
 };
 
 }  // namespace attestation

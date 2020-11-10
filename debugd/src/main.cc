@@ -130,6 +130,8 @@ void enter_vfs_namespace() {
 class Daemon : public brillo::DBusServiceDaemon {
  public:
   Daemon() : DBusServiceDaemon(debugd::kDebugdServiceName) {}
+  Daemon(const Daemon&) = delete;
+  Daemon& operator=(const Daemon&) = delete;
 
  protected:
   void RegisterDBusObjectsAsync(
@@ -141,8 +143,6 @@ class Daemon : public brillo::DBusServiceDaemon {
 
  private:
   std::unique_ptr<debugd::DebugdDBusAdaptor> adaptor_;
-
-  DISALLOW_COPY_AND_ASSIGN(Daemon);
 };
 
 }  // namespace

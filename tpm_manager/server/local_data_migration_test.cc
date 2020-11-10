@@ -145,6 +145,9 @@ bool EncryptLegacyAttestationDatabase(
 class FakeTpm : public tpmcrypto::Tpm {
  public:
   FakeTpm() = default;
+  FakeTpm(const FakeTpm&) = delete;
+  FakeTpm& operator=(const FakeTpm&) = delete;
+
   ~FakeTpm() override = default;
 
   bool SealToPCR0(const brillo::SecureBlob& value,
@@ -180,8 +183,6 @@ class FakeTpm : public tpmcrypto::Tpm {
     return true;
   }
   bool is_failure_mode_{false};
-
-  DISALLOW_COPY_AND_ASSIGN(FakeTpm);
 };
 
 MATCHER_P(

@@ -24,6 +24,9 @@ class RenameManagerObserverInterface;
 class RenameManager {
  public:
   RenameManager(Platform* platform, brillo::ProcessReaper* process_reaper);
+  RenameManager(const RenameManager&) = delete;
+  RenameManager& operator=(const RenameManager&) = delete;
+
   ~RenameManager();
 
   // Starts a renaming process of a given device.
@@ -56,8 +59,6 @@ class RenameManager {
   RenameManagerObserverInterface* observer_;
 
   base::WeakPtrFactory<RenameManager> weak_ptr_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(RenameManager);
 };
 
 }  // namespace cros_disks

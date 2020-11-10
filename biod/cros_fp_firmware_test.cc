@@ -45,7 +45,10 @@ const std::vector<biod::CrosFpFirmware::Status> kCrosFpFirmwareStatuses = {
 class Fmap {
  public:
   Fmap() : fmap_(nullptr) {}
+  Fmap(const Fmap&) = delete;
+  Fmap& operator=(const Fmap&) = delete;
   ~Fmap() { Destroy(); }
+
   bool Create(uint64_t base, uint32_t size, const char* name) {
     Destroy();
     // fmap_create does not modify name internally
@@ -74,8 +77,6 @@ class Fmap {
   }
 
   struct fmap* fmap_;
-
-  DISALLOW_COPY_AND_ASSIGN(Fmap);
 };
 
 }  // namespace
@@ -217,11 +218,13 @@ class CrosFpFirmwareTest : public ::testing::Test {
   base::ScopedTempDir temp_dir_;
 
   CrosFpFirmwareTest() = default;
+  CrosFpFirmwareTest(const CrosFpFirmwareTest&) = delete;
+  CrosFpFirmwareTest& operator=(const CrosFpFirmwareTest&) = delete;
+
   ~CrosFpFirmwareTest() override = default;
 
  private:
   FRIEND_TEST(CrosFpFirmwareTest, UniqueErrorMessages);
-  DISALLOW_COPY_AND_ASSIGN(CrosFpFirmwareTest);
 };
 
 TEST_F(CrosFpFirmwareTest, InvalidPathBlank) {

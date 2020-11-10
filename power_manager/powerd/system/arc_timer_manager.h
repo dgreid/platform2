@@ -33,6 +33,9 @@ namespace system {
 class ArcTimerManager {
  public:
   ArcTimerManager();
+  ArcTimerManager(const ArcTimerManager&) = delete;
+  ArcTimerManager& operator=(const ArcTimerManager&) = delete;
+
   ~ArcTimerManager();
 
   using TimerId = int32_t;
@@ -134,8 +137,6 @@ class ArcTimerManager {
   std::map<std::string, std::vector<TimerId>> client_timer_ids_;
 
   base::WeakPtrFactory<ArcTimerManager> weak_ptr_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(ArcTimerManager);
 };
 
 }  // namespace system

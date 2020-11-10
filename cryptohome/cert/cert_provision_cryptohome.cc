@@ -26,6 +26,9 @@ namespace cert_provision {
 class AsyncStatus {
  public:
   explicit AsyncStatus(::DBusGProxy* gproxy);
+  AsyncStatus(const AsyncStatus&) = delete;
+  AsyncStatus& operator=(const AsyncStatus&) = delete;
+
   // Waits for AsyncCallStatus with the given |async_id|. Returns the
   // status reported in that AsyncCallStatus.
   bool StatusWait(int async_id);
@@ -43,8 +46,6 @@ class AsyncStatus {
   int async_id_ = 0;
   gboolean status_ = 0;
   ::DBusGProxy* gproxy_;
-
-  DISALLOW_COPY_AND_ASSIGN(AsyncStatus);
 };
 
 CryptohomeProxy* CryptohomeProxy::subst_obj = nullptr;

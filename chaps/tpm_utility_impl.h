@@ -25,6 +25,9 @@ class TPMUtilityImpl : public TPMUtility {
   const uint32_t kMaxModulusSize = 256;
 
   explicit TPMUtilityImpl(const std::string& srk_auth_data);
+  TPMUtilityImpl(const TPMUtilityImpl&) = delete;
+  TPMUtilityImpl& operator=(const TPMUtilityImpl&) = delete;
+
   ~TPMUtilityImpl() override;
   size_t MinRSAKeyBits() override { return kMinModulusSize * 8; }
   size_t MaxRSAKeyBits() override { return kMaxModulusSize * 8; }
@@ -152,8 +155,6 @@ class TPMUtilityImpl : public TPMUtility {
   int last_handle_;
   bool is_enabled_;
   bool is_enabled_ready_;
-
-  DISALLOW_COPY_AND_ASSIGN(TPMUtilityImpl);
 };
 
 }  // namespace chaps

@@ -26,6 +26,8 @@ class DevInstall {
              bool yes,
              bool only_bootstrap,
              uint32_t jobs);
+  DevInstall(const DevInstall&) = delete;
+  DevInstall& operator=(const DevInstall&) = delete;
 
   // Run the dev_install routine.
   int Run();
@@ -92,8 +94,6 @@ class DevInstall {
   std::string devserver_url_;
   // The active board for calculating default binhost.
   std::string board_;
-
-  DISALLOW_COPY_AND_ASSIGN(DevInstall);
 };
 
 }  // namespace dev_install

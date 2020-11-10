@@ -24,6 +24,8 @@
 class GenericFailureCollector : public CrashCollector {
  public:
   GenericFailureCollector();
+  GenericFailureCollector(const GenericFailureCollector&) = delete;
+  GenericFailureCollector& operator=(const GenericFailureCollector&) = delete;
 
   ~GenericFailureCollector() override;
 
@@ -57,8 +59,6 @@ class GenericFailureCollector : public CrashCollector {
 
   // Generic failure dump consists only of the signature.
   bool LoadGenericFailure(std::string* content, std::string* signature);
-
-  DISALLOW_COPY_AND_ASSIGN(GenericFailureCollector);
 };
 
 #endif  // CRASH_REPORTER_GENERIC_FAILURE_COLLECTOR_H_

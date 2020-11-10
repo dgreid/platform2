@@ -59,6 +59,10 @@ class ServerBackedStateKeyGenerator {
 
   ServerBackedStateKeyGenerator(SystemUtils* system_utils,
                                 LoginMetrics* metrics);
+  ServerBackedStateKeyGenerator(const ServerBackedStateKeyGenerator&) = delete;
+  ServerBackedStateKeyGenerator& operator=(
+      const ServerBackedStateKeyGenerator&) = delete;
+
   virtual ~ServerBackedStateKeyGenerator();
 
   // Parses a machine information string containing newline-separated key=value
@@ -101,8 +105,6 @@ class ServerBackedStateKeyGenerator {
   std::string machine_serial_number_;
   std::string disk_serial_number_;
   std::string group_code_key_;
-
-  DISALLOW_COPY_AND_ASSIGN(ServerBackedStateKeyGenerator);
 };
 
 }  // namespace login_manager

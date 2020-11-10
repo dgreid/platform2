@@ -44,6 +44,8 @@ class Scalar : public DBusType {
   };
 
   explicit Scalar(Type type) : type_(type) {}
+  Scalar(const Scalar&) = delete;
+  Scalar& operator=(const Scalar&) = delete;
 
   bool IsValidPropertyType() const override { return true; }
 
@@ -81,8 +83,6 @@ class Scalar : public DBusType {
 
  private:
   Type type_;
-
-  DISALLOW_COPY_AND_ASSIGN(Scalar);
 };
 
 // DBusType representing argument types that correspond to C++ objects.
@@ -113,6 +113,8 @@ class SimpleNonScalar : public NonScalar {
   };
 
   explicit SimpleNonScalar(Type type) : type_(type) {}
+  SimpleNonScalar(const SimpleNonScalar&) = delete;
+  SimpleNonScalar& operator=(const SimpleNonScalar&) = delete;
 
   bool IsValidPropertyType() const override { return true; }
 
@@ -131,8 +133,6 @@ class SimpleNonScalar : public NonScalar {
 
  private:
   Type type_;
-
-  DISALLOW_COPY_AND_ASSIGN(SimpleNonScalar);
 };
 
 class FileDescriptor : public NonScalar {
@@ -150,6 +150,8 @@ class Array : public NonScalar {
  public:
   explicit Array(std::unique_ptr<DBusType> inner_type)
       : inner_type_(std::move(inner_type)) {}
+  Array(const Array&) = delete;
+  Array& operator=(const Array&) = delete;
 
   bool IsValidPropertyType() const override {
     return inner_type_->IsValidPropertyType();
@@ -162,8 +164,6 @@ class Array : public NonScalar {
 
  private:
   std::unique_ptr<DBusType> inner_type_;
-
-  DISALLOW_COPY_AND_ASSIGN(Array);
 };
 
 class Dict : public NonScalar {
@@ -171,6 +171,8 @@ class Dict : public NonScalar {
   explicit Dict(std::unique_ptr<DBusType> key_type,
                 std::unique_ptr<DBusType> value_type)
       : key_type_(std::move(key_type)), value_type_(std::move(value_type)) {}
+  Dict(const Dict&) = delete;
+  Dict& operator=(const Dict&) = delete;
 
   bool IsValidPropertyType() const override {
     return key_type_->IsValidPropertyType() &&
@@ -186,20 +188,21 @@ class Dict : public NonScalar {
  private:
   std::unique_ptr<DBusType> key_type_;
   std::unique_ptr<DBusType> value_type_;
-
-  DISALLOW_COPY_AND_ASSIGN(Dict);
 };
 
 class Struct : public NonScalar {
  public:
   explicit Struct(std::vector<std::unique_ptr<DBusType>>&& inner_types)
       : inner_types_(std::move(inner_types)) {}
+  Struct(const Struct&) = delete;
+  Struct& operator=(const Struct&) = delete;
 
   bool IsValidPropertyType() const override {
     for (const auto& child : inner_types_) {
       if (!child->IsValidPropertyType())
         return false;
     }
+
     return true;
   }
 
@@ -213,14 +216,14 @@ class Struct : public NonScalar {
 
  private:
   std::vector<std::unique_ptr<DBusType>> inner_types_;
-
-  DISALLOW_COPY_AND_ASSIGN(Struct);
 };
 
 class ProtobufClass : public NonScalar {
  public:
   explicit ProtobufClass(std::string protobuf_class)
       : protobuf_class_(protobuf_class) {}
+  ProtobufClass(const ProtobufClass&) = delete;
+  ProtobufClass& operator=(const ProtobufClass&) = delete;
 
   bool IsValidPropertyType() const override {
     // Using protobuf class for property is not yet supported.
@@ -233,8 +236,6 @@ class ProtobufClass : public NonScalar {
 
  private:
   string protobuf_class_;
-
-  DISALLOW_COPY_AND_ASSIGN(ProtobufClass);
 };
 
 }  // namespace

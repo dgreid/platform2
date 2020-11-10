@@ -29,6 +29,8 @@ class SerializationUtilsTest : public testing::Test {
       filename_ = filepath_.value();
     }
   }
+  SerializationUtilsTest(const SerializationUtilsTest&) = delete;
+  SerializationUtilsTest& operator=(const SerializationUtilsTest&) = delete;
 
   void SetUp() override { base::DeleteFile(filepath_, false); }
 
@@ -42,9 +44,6 @@ class SerializationUtilsTest : public testing::Test {
   std::string filename_;
   base::ScopedTempDir temporary_dir_;
   base::FilePath filepath_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(SerializationUtilsTest);
 };
 
 TEST_F(SerializationUtilsTest, CrashSerializeTest) {

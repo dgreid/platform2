@@ -22,6 +22,9 @@ namespace brillo {
 class CrosConfigImpl : public CrosConfigInterface {
  public:
   CrosConfigImpl();
+  CrosConfigImpl(const CrosConfigImpl&) = delete;
+  CrosConfigImpl& operator=(const CrosConfigImpl&) = delete;
+
   ~CrosConfigImpl() override;
 
   // Read the config into our internal structures
@@ -40,9 +43,6 @@ class CrosConfigImpl : public CrosConfigInterface {
   bool InitCheck() const;
 
   bool inited_ = false;  // true if the class is ready for use (Init*ed)
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(CrosConfigImpl);
 };
 
 }  // namespace brillo

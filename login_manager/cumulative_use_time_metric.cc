@@ -54,6 +54,8 @@ const char kElapsedMillisecondsKey[] = "elapsed_milliseconds";
 class CumulativeUseTimeMetric::AccumulatedActiveTime {
  public:
   explicit AccumulatedActiveTime(const base::FilePath& metrics_file);
+  AccumulatedActiveTime(const AccumulatedActiveTime&) = delete;
+  AccumulatedActiveTime& operator=(const AccumulatedActiveTime&) = delete;
 
   base::FilePath metrics_file() const { return metrics_file_; }
 
@@ -92,8 +94,6 @@ class CumulativeUseTimeMetric::AccumulatedActiveTime {
   // The day id is the number of 24-hour periods that passed from
   // Time::UnixEpoch() (though, this class does not directly depend on this).
   int start_day_{0};
-
-  DISALLOW_COPY_AND_ASSIGN(AccumulatedActiveTime);
 };
 
 CumulativeUseTimeMetric::AccumulatedActiveTime::AccumulatedActiveTime(

@@ -60,6 +60,9 @@ class Tpm2Impl : public Tpm {
   // Does not take ownership of pointers.
   Tpm2Impl(trunks::TrunksFactory* factory,
            tpm_manager::TpmManagerUtility* tpm_manager_utility);
+  Tpm2Impl(const Tpm2Impl&) = delete;
+  Tpm2Impl& operator=(const Tpm2Impl&) = delete;
+
   virtual ~Tpm2Impl() = default;
 
   // Tpm methods
@@ -302,8 +305,6 @@ class Tpm2Impl : public Tpm {
   PinweaverLECredentialBackend le_credential_backend_{this};
 #endif
   SignatureSealingBackendTpm2Impl signature_sealing_backend_{this};
-
-  DISALLOW_COPY_AND_ASSIGN(Tpm2Impl);
 };
 
 }  // namespace cryptohome

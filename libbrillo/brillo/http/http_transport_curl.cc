@@ -33,6 +33,8 @@ class Transport::SocketPollData {
         curl_multi_handle_(curl_multi_handle),
         transport_(transport),
         socket_fd_(socket_fd) {}
+  SocketPollData(const SocketPollData&) = delete;
+  SocketPollData& operator=(const SocketPollData&) = delete;
 
   void StopWatcher() {
     read_watcher_ = nullptr;
@@ -80,8 +82,6 @@ class Transport::SocketPollData {
 
   std::unique_ptr<base::FileDescriptorWatcher::Controller> read_watcher_;
   std::unique_ptr<base::FileDescriptorWatcher::Controller> write_watcher_;
-
-  DISALLOW_COPY_AND_ASSIGN(SocketPollData);
 };
 
 // The request data associated with an asynchronous operation on a particular

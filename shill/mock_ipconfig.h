@@ -19,6 +19,9 @@ class MockIPConfig : public IPConfig {
  public:
   MockIPConfig(ControlInterface* control_interface,
                const std::string& device_name);
+  MockIPConfig(const MockIPConfig&) = delete;
+  MockIPConfig& operator=(const MockIPConfig&) = delete;
+
   ~MockIPConfig() override;
 
   MOCK_METHOD(const Properties&, properties, (), (const, override));
@@ -32,8 +35,6 @@ class MockIPConfig : public IPConfig {
 
  private:
   const Properties& real_properties() const { return IPConfig::properties(); }
-
-  DISALLOW_COPY_AND_ASSIGN(MockIPConfig);
 };
 
 }  // namespace shill

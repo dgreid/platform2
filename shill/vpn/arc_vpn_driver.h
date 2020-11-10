@@ -23,6 +23,9 @@ namespace shill {
 class ArcVpnDriver : public VPNDriver {
  public:
   ArcVpnDriver(Manager* manager, ProcessManager* process_manager);
+  ArcVpnDriver(const ArcVpnDriver&) = delete;
+  ArcVpnDriver& operator=(const ArcVpnDriver&) = delete;
+
   ~ArcVpnDriver() override = default;
 
   std::string GetProviderType() const override;
@@ -36,8 +39,6 @@ class ArcVpnDriver : public VPNDriver {
   friend class ArcVpnDriverTest;
 
   static const Property kProperties[];
-
-  DISALLOW_COPY_AND_ASSIGN(ArcVpnDriver);
 };
 
 }  // namespace shill

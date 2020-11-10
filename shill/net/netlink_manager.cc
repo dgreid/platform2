@@ -94,6 +94,8 @@ class ControlResponseHandler : public NetlinkManager::NetlinkResponseHandler {
       const NetlinkManager::ControlNetlinkMessageHandler& handler)
       : NetlinkManager::NetlinkResponseHandler(ack_handler, error_handler),
         handler_(handler) {}
+  ControlResponseHandler(const ControlResponseHandler&) = delete;
+  ControlResponseHandler& operator=(const ControlResponseHandler&) = delete;
 
   bool HandleMessage(const NetlinkMessage& netlink_message) const override {
     if (netlink_message.message_type() !=
@@ -124,8 +126,6 @@ class ControlResponseHandler : public NetlinkManager::NetlinkResponseHandler {
 
  private:
   NetlinkManager::ControlNetlinkMessageHandler handler_;
-
-  DISALLOW_COPY_AND_ASSIGN(ControlResponseHandler);
 };
 
 class Nl80211ResponseHandler : public NetlinkManager::NetlinkResponseHandler {
@@ -136,6 +136,8 @@ class Nl80211ResponseHandler : public NetlinkManager::NetlinkResponseHandler {
       const NetlinkManager::Nl80211MessageHandler& handler)
       : NetlinkManager::NetlinkResponseHandler(ack_handler, error_handler),
         handler_(handler) {}
+  Nl80211ResponseHandler(const Nl80211ResponseHandler&) = delete;
+  Nl80211ResponseHandler& operator=(const Nl80211ResponseHandler&) = delete;
 
   bool HandleMessage(const NetlinkMessage& netlink_message) const override {
     if (netlink_message.message_type() != Nl80211Message::GetMessageType()) {
@@ -165,8 +167,6 @@ class Nl80211ResponseHandler : public NetlinkManager::NetlinkResponseHandler {
 
  private:
   NetlinkManager::Nl80211MessageHandler handler_;
-
-  DISALLOW_COPY_AND_ASSIGN(Nl80211ResponseHandler);
 };
 
 NetlinkManager::MessageType::MessageType()

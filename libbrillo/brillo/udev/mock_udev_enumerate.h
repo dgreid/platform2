@@ -16,6 +16,9 @@ namespace brillo {
 class BRILLO_EXPORT MockUdevEnumerate : public UdevEnumerate {
  public:
   MockUdevEnumerate() = default;
+  MockUdevEnumerate(const MockUdevEnumerate&) = delete;
+  MockUdevEnumerate& operator=(const MockUdevEnumerate&) = delete;
+
   ~MockUdevEnumerate() override = default;
 
   MOCK_METHOD(bool, AddMatchSubsystem, (const char*), (override));
@@ -39,9 +42,6 @@ class BRILLO_EXPORT MockUdevEnumerate : public UdevEnumerate {
               GetListEntry,
               (),
               (const, override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockUdevEnumerate);
 };
 
 }  // namespace brillo

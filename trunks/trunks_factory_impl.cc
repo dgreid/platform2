@@ -47,6 +47,9 @@ class TrunksFactoryImpl::PostProcessingTransceiver : public CommandTransceiver {
         transceiver_(transceiver) {
     CHECK(transceiver_);
   }
+  PostProcessingTransceiver(const PostProcessingTransceiver&) = delete;
+  PostProcessingTransceiver& operator=(const PostProcessingTransceiver&) =
+      delete;
 
   void set_max_command_retries(int max_command_retries) {
     max_command_retries_ = max_command_retries;
@@ -121,8 +124,6 @@ class TrunksFactoryImpl::PostProcessingTransceiver : public CommandTransceiver {
   base::TimeDelta command_retry_delay_;
   int max_command_retries_;
   CommandTransceiver* transceiver_;
-
-  DISALLOW_COPY_AND_ASSIGN(PostProcessingTransceiver);
 };
 
 TrunksFactoryImpl::TrunksFactoryImpl() {

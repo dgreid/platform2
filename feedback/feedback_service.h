@@ -20,6 +20,9 @@ class FeedbackUploader;
 class FeedbackService : public base::RefCounted<FeedbackService> {
  public:
   explicit FeedbackService(feedback::FeedbackUploader* uploader);
+  FeedbackService(const FeedbackService&) = delete;
+  FeedbackService& operator=(const FeedbackService&) = delete;
+
   virtual ~FeedbackService();
 
   // Send the given report to the server |uploader_| is configured for.
@@ -32,13 +35,14 @@ class FeedbackService : public base::RefCounted<FeedbackService> {
 
  private:
   feedback::FeedbackUploader* uploader_;
-
-  DISALLOW_COPY_AND_ASSIGN(FeedbackService);
 };
 
 class DBusFeedbackServiceImpl : public FeedbackService {
  public:
   explicit DBusFeedbackServiceImpl(feedback::FeedbackUploader* uploader);
+  DBusFeedbackServiceImpl(const DBusFeedbackServiceImpl&) = delete;
+  DBusFeedbackServiceImpl& operator=(const DBusFeedbackServiceImpl&) = delete;
+
   virtual ~DBusFeedbackServiceImpl();
 
   bool Start(dbus::Bus* bus);
@@ -51,8 +55,6 @@ class DBusFeedbackServiceImpl : public FeedbackService {
                         dbus::ExportedObject::ResponseSender sender,
                         bool status,
                         const std::string& message);
-
-  DISALLOW_COPY_AND_ASSIGN(DBusFeedbackServiceImpl);
 };
 
 }  // namespace feedback

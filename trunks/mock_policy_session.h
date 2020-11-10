@@ -18,6 +18,9 @@ namespace trunks {
 class MockPolicySession : public PolicySession {
  public:
   MockPolicySession();
+  MockPolicySession(const MockPolicySession&) = delete;
+  MockPolicySession& operator=(const MockPolicySession&) = delete;
+
   ~MockPolicySession() override;
 
   MOCK_METHOD0(GetDelegate, AuthorizationDelegate*());
@@ -59,9 +62,6 @@ class MockPolicySession : public PolicySession {
   MOCK_METHOD0(PolicyAuthValue, TPM_RC());
   MOCK_METHOD0(PolicyRestart, TPM_RC());
   MOCK_METHOD1(SetEntityAuthorizationValue, void(const std::string&));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockPolicySession);
 };
 
 }  // namespace trunks

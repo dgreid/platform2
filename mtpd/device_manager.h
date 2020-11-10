@@ -32,6 +32,9 @@ class DeviceEventDelegate;
 class DeviceManager {
  public:
   explicit DeviceManager(DeviceEventDelegate* delegate);
+  DeviceManager(const DeviceManager&) = delete;
+  DeviceManager& operator=(const DeviceManager&) = delete;
+
   ~DeviceManager();
 
   // Returns a file descriptor for monitoring device events.
@@ -235,8 +238,6 @@ class DeviceManager {
   std::unique_ptr<MtpPoller> mtp_poller_;
 
   base::WeakPtrFactory<DeviceManager> weak_ptr_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(DeviceManager);
 };
 
 }  // namespace mtpd

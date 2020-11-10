@@ -16,6 +16,9 @@ namespace trunks {
 class MockTpmCache : public TpmCache {
  public:
   MockTpmCache();
+  MockTpmCache(const MockTpmCache&) = delete;
+  MockTpmCache& operator=(const MockTpmCache&) = delete;
+
   ~MockTpmCache() override = default;
 
   MOCK_METHOD(TPM_RC,
@@ -23,9 +26,6 @@ class MockTpmCache : public TpmCache {
               (TPMT_PUBLIC * public_area),
               (override));
   MOCK_METHOD(TPM_ALG_ID, GetBestSupportedKeyType, (), (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockTpmCache);
 };
 
 }  // namespace trunks

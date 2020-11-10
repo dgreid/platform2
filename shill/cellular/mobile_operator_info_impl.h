@@ -79,6 +79,8 @@ class MobileOperatorInfoImpl {
                          const std::string& info_owner,
                          const base::FilePath& default_db_path,
                          const base::FilePath& override_db_path);
+  MobileOperatorInfoImpl(const MobileOperatorInfoImpl&) = delete;
+  MobileOperatorInfoImpl& operator=(const MobileOperatorInfoImpl&) = delete;
 
   // ///////////////////////////////////////////////////////////////////////////
   // Static variables.
@@ -222,8 +224,6 @@ class MobileOperatorInfoImpl {
 
   // This must be the last data member of this class.
   base::WeakPtrFactory<MobileOperatorInfoImpl> weak_ptr_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(MobileOperatorInfoImpl);
 };
 
 }  // namespace shill

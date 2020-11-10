@@ -37,9 +37,10 @@ class KerberosArtifactClientInterface {
 
  protected:
   KerberosArtifactClientInterface() = default;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(KerberosArtifactClientInterface);
+  KerberosArtifactClientInterface(const KerberosArtifactClientInterface&) =
+      delete;
+  KerberosArtifactClientInterface& operator=(
+      const KerberosArtifactClientInterface&) = delete;
 };
 
 }  // namespace smbfs

@@ -17,6 +17,11 @@ namespace cryptohome {
 class UserOldestActivityTimestampCache {
  public:
   UserOldestActivityTimestampCache() : initialized_(false) {}
+  UserOldestActivityTimestampCache(const UserOldestActivityTimestampCache&) =
+      delete;
+  UserOldestActivityTimestampCache& operator=(
+      const UserOldestActivityTimestampCache&) = delete;
+
   virtual ~UserOldestActivityTimestampCache() {}
 
   // Initialize the cache. This must be done only once. No methods
@@ -46,8 +51,6 @@ class UserOldestActivityTimestampCache {
  private:
   std::map<std::string, base::Time> users_timestamp_lookup_;
   bool initialized_;
-
-  DISALLOW_COPY_AND_ASSIGN(UserOldestActivityTimestampCache);
 };
 
 }  // namespace cryptohome

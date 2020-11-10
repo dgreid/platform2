@@ -29,6 +29,9 @@ class PPPDeviceFactory;
 class L2TPIPSecDriver : public VPNDriver, public RpcTaskDelegate {
  public:
   L2TPIPSecDriver(Manager* manager, ProcessManager* process_manager);
+  L2TPIPSecDriver(const L2TPIPSecDriver&) = delete;
+  L2TPIPSecDriver& operator=(const L2TPIPSecDriver&) = delete;
+
   ~L2TPIPSecDriver() override;
 
  protected:
@@ -119,8 +122,6 @@ class L2TPIPSecDriver : public VPNDriver, public RpcTaskDelegate {
   VPNService::DriverEventCallback service_callback_;
 
   base::WeakPtrFactory<L2TPIPSecDriver> weak_ptr_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(L2TPIPSecDriver);
 };
 
 }  // namespace shill

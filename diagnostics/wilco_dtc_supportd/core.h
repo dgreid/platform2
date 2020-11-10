@@ -95,6 +95,9 @@ class Core final : public GrpcService::Delegate,
        const GrpcClientManager* grpc_client_manager,
        const std::vector<std::string>& grpc_service_uris,
        MojoServiceFactory* mojo_service_factory);
+  Core(const Core&) = delete;
+  Core& operator=(const Core&) = delete;
+
   ~Core() override;
 
   // Overrides the file system root directory for file operations in tests.
@@ -225,8 +228,6 @@ class Core final : public GrpcService::Delegate,
   RoutineService routine_service_{this /* delegate */};
 
   std::unique_ptr<ProbeService> probe_service_;
-
-  DISALLOW_COPY_AND_ASSIGN(Core);
 };
 
 }  // namespace diagnostics

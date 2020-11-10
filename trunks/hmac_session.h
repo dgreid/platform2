@@ -20,6 +20,9 @@ class AuthorizationDelegate;
 class HmacSession {
  public:
   HmacSession() {}
+  HmacSession(const HmacSession&) = delete;
+  HmacSession& operator=(const HmacSession&) = delete;
+
   virtual ~HmacSession() {}
 
   // Returns an authorization delegate for this session. Ownership of the
@@ -51,9 +54,6 @@ class HmacSession {
   // We need to perform this because the HMAC value returned from
   // HierarchyChangeAuth uses the new auth_value.
   virtual void SetFutureAuthorizationValue(const std::string& value) = 0;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(HmacSession);
 };
 
 }  // namespace trunks

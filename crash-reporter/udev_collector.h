@@ -27,6 +27,8 @@
 class UdevCollector : public CrashCollector {
  public:
   UdevCollector();
+  UdevCollector(const UdevCollector&) = delete;
+  UdevCollector& operator=(const UdevCollector&) = delete;
 
   ~UdevCollector() override;
 
@@ -72,8 +74,6 @@ class UdevCollector : public CrashCollector {
       const base::FilePath& failing_uevent_path);
   // Return the driver name of the device that generates the coredump.
   std::string GetFailingDeviceDriverName(int instance_number);
-
-  DISALLOW_COPY_AND_ASSIGN(UdevCollector);
 };
 
 #endif  // CRASH_REPORTER_UDEV_COLLECTOR_H_

@@ -31,6 +31,8 @@ class Metrics {
   };
 
   Metrics();
+  Metrics(const Metrics&) = delete;
+  Metrics& operator=(const Metrics&) = delete;
 
   // Starts periodic sampling of process metrics.
   void StartCollectingProcessMetrics();
@@ -58,8 +60,6 @@ class Metrics {
 
   // Accumulator of process metrics (even across restarts).
   std::unique_ptr<chromeos_metrics::CumulativeMetrics> cumulative_metrics_;
-
-  DISALLOW_COPY_AND_ASSIGN(Metrics);
 };
 
 }  // namespace ml

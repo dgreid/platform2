@@ -93,6 +93,8 @@ class HostNotifier : public PackageKitProxy::PackageKitObserver,
   };
 
   explicit HostNotifier(base::Closure shutdown_closure);
+  HostNotifier(const HostNotifier&) = delete;
+  HostNotifier& operator=(const HostNotifier&) = delete;
 
   // Sends a message to the host indicating that our server is ready for
   // accepting incoming calls.
@@ -195,8 +197,6 @@ class HostNotifier : public PackageKitProxy::PackageKitObserver,
   std::unique_ptr<AnsiblePlaybookApplication> ansible_playbook_application_;
 
   scoped_refptr<base::SingleThreadTaskRunner> task_runner_;
-
-  DISALLOW_COPY_AND_ASSIGN(HostNotifier);
 };
 
 }  // namespace garcon

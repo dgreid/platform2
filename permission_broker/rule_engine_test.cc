@@ -20,28 +20,31 @@ namespace permission_broker {
 class MockRule : public Rule {
  public:
   MockRule() : Rule("MockRule") {}
+  MockRule(const MockRule&) = delete;
+  MockRule& operator=(const MockRule&) = delete;
+
   ~MockRule() override = default;
 
   MOCK_METHOD(Result, ProcessDevice, (udev_device * device), (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockRule);
 };
 
 class MockRuleEngine : public RuleEngine {
  public:
   MockRuleEngine() = default;
+  MockRuleEngine(const MockRuleEngine&) = delete;
+  MockRuleEngine& operator=(const MockRuleEngine&) = delete;
+
   ~MockRuleEngine() override = default;
 
   MOCK_METHOD(void, WaitForEmptyUdevQueue, (), (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockRuleEngine);
 };
 
 class RuleEngineTest : public testing::Test {
  public:
   RuleEngineTest() = default;
+  RuleEngineTest(const RuleEngineTest&) = delete;
+  RuleEngineTest& operator=(const RuleEngineTest&) = delete;
+
   ~RuleEngineTest() override = default;
 
   Rule::Result ProcessPath(const string& path) {
@@ -56,9 +59,6 @@ class RuleEngineTest : public testing::Test {
   }
 
   MockRuleEngine engine_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(RuleEngineTest);
 };
 
 TEST_F(RuleEngineTest, EmptyRuleChain) {

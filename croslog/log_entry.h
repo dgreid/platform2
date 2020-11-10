@@ -24,6 +24,8 @@ class LogEntry {
            std::string&& message,
            std::string&& entire_string);
   LogEntry(LogEntry&& other) = default;
+  LogEntry(const LogEntry&) = delete;
+  LogEntry& operator=(const LogEntry&) = delete;
 
   const std::string& entire_line() const { return entire_line_; }
   base::Time time() const { return time_; }
@@ -39,8 +41,6 @@ class LogEntry {
   const int pid_;
   const std::string message_;
   const std::string entire_line_;
-
-  DISALLOW_COPY_AND_ASSIGN(LogEntry);
 };
 
 }  // namespace croslog

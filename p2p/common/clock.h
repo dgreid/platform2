@@ -16,13 +16,12 @@ namespace common {
 class Clock : public ClockInterface {
  public:
   Clock() = default;
+  Clock(const Clock&) = delete;
+  Clock& operator=(const Clock&) = delete;
 
   void Sleep(const base::TimeDelta& duration) override;
 
   base::Time GetMonotonicTime() override;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(Clock);
 };
 
 }  // namespace common

@@ -23,6 +23,9 @@ namespace shill {
 class SHILL_EXPORT Sockets {
  public:
   Sockets();
+  Sockets(const Sockets&) = delete;
+  Sockets& operator=(const Sockets&) = delete;
+
   virtual ~Sockets();
 
   static const int kInvalidFileDescriptor = -1;
@@ -117,14 +120,14 @@ class SHILL_EXPORT Sockets {
 
   // socket
   virtual int Socket(int domain, int type, int protocol) const;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(Sockets);
 };
 
 class SHILL_EXPORT ScopedSocketCloser {
  public:
   ScopedSocketCloser(Sockets* sockets, int fd);
+  ScopedSocketCloser(const ScopedSocketCloser&) = delete;
+  ScopedSocketCloser& operator=(const ScopedSocketCloser&) = delete;
+
   ~ScopedSocketCloser();
 
   // Release and return the socket file descriptor, allowing the socket to
@@ -134,8 +137,6 @@ class SHILL_EXPORT ScopedSocketCloser {
  private:
   Sockets* sockets_;
   int fd_;
-
-  DISALLOW_COPY_AND_ASSIGN(ScopedSocketCloser);
 };
 
 }  // namespace shill

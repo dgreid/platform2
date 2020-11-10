@@ -25,6 +25,9 @@ class Icmp {
   static const int kIcmpEchoCode;
 
   Icmp();
+  Icmp(const Icmp&) = delete;
+  Icmp& operator=(const Icmp&) = delete;
+
   virtual ~Icmp();
 
   // Create a socket for transmission of ICMP frames.
@@ -62,8 +65,6 @@ class Icmp {
   int socket_;
   IPAddress destination_;
   int interface_index_;
-
-  DISALLOW_COPY_AND_ASSIGN(Icmp);
 };
 
 }  // namespace shill

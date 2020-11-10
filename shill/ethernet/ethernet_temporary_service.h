@@ -19,6 +19,9 @@ class EthernetTemporaryService : public Service {
  public:
   EthernetTemporaryService(Manager* manager,
                            const std::string& storage_identifier);
+  EthernetTemporaryService(const EthernetTemporaryService&) = delete;
+  EthernetTemporaryService& operator=(const EthernetTemporaryService&) = delete;
+
   ~EthernetTemporaryService() override;
 
   // Inherited from Service.
@@ -33,7 +36,6 @@ class EthernetTemporaryService : public Service {
 
  private:
   std::string storage_identifier_;
-  DISALLOW_COPY_AND_ASSIGN(EthernetTemporaryService);
 };
 
 }  // namespace shill

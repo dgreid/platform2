@@ -44,6 +44,8 @@ namespace mtpd {
 class Daemon : public brillo::DBusServiceDaemon {
  public:
   Daemon() : DBusServiceDaemon(kMtpdServiceName) {}
+  Daemon(const Daemon&) = delete;
+  Daemon& operator=(const Daemon&) = delete;
 
  protected:
   // brillo::DBusServiceDaemon overrides.
@@ -76,8 +78,6 @@ class Daemon : public brillo::DBusServiceDaemon {
  private:
   std::unique_ptr<MtpdServer> adaptor_;
   std::unique_ptr<base::FileDescriptorWatcher::Controller> controller_;
-
-  DISALLOW_COPY_AND_ASSIGN(Daemon);
 };
 
 }  // namespace mtpd

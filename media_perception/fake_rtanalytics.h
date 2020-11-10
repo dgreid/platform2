@@ -17,6 +17,8 @@ namespace mri {
 class FakeRtanalytics : public Rtanalytics {
  public:
   FakeRtanalytics() = default;
+  FakeRtanalytics(const FakeRtanalytics&) = delete;
+  FakeRtanalytics& operator=(const FakeRtanalytics&) = delete;
 
   void SetSerializedDeviceTemplates(
       std::vector<SerializedDeviceTemplate> serialized_device_templates);
@@ -61,8 +63,6 @@ class FakeRtanalytics : public Rtanalytics {
   std::vector<SerializedDeviceTemplate> serialized_device_templates_;
 
   std::string most_recent_output_stream_name_;
-
-  DISALLOW_COPY_AND_ASSIGN(FakeRtanalytics);
 };
 
 }  // namespace mri

@@ -13,10 +13,10 @@
 class LibvdaFakeTest : public ::testing::Test {
  public:
   LibvdaFakeTest() = default;
-  ~LibvdaFakeTest() override = default;
+  LibvdaFakeTest(const LibvdaFakeTest&) = delete;
+  LibvdaFakeTest& operator=(const LibvdaFakeTest&) = delete;
 
- private:
-  DISALLOW_COPY_AND_ASSIGN(LibvdaFakeTest);
+  ~LibvdaFakeTest() override = default;
 };
 
 // Test that the fake implementation initializes and deinitializes

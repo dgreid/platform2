@@ -69,6 +69,8 @@ void InitPolicyFetchResponse(const std::string& policy_value_str,
 class UserPolicyServiceTest : public ::testing::Test {
  public:
   UserPolicyServiceTest() = default;
+  UserPolicyServiceTest(const UserPolicyServiceTest&) = delete;
+  UserPolicyServiceTest& operator=(const UserPolicyServiceTest&) = delete;
 
   void SetUp() override {
     fake_loop_.SetAsCurrent();
@@ -113,9 +115,6 @@ class UserPolicyServiceTest : public ::testing::Test {
   StrictMock<MockPolicyStore>* store_;
 
   std::unique_ptr<UserPolicyService> service_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(UserPolicyServiceTest);
 };
 
 TEST_F(UserPolicyServiceTest, StoreSignedPolicy) {

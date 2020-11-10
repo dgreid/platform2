@@ -25,6 +25,9 @@ class FakeDiagnosticsService final
       public chromeos::cros_healthd::mojom::CrosHealthdDiagnosticsService {
  public:
   FakeDiagnosticsService();
+  FakeDiagnosticsService(const FakeDiagnosticsService&) = delete;
+  FakeDiagnosticsService& operator=(const FakeDiagnosticsService&) = delete;
+
   ~FakeDiagnosticsService();
 
   // RoutineService::Delegate overrides:
@@ -149,8 +152,6 @@ class FakeDiagnosticsService final
   bool is_available_ = true;
   // Determines whether or not the service should present itself as responsive.
   bool is_responsive_ = true;
-
-  DISALLOW_COPY_AND_ASSIGN(FakeDiagnosticsService);
 };
 
 }  // namespace diagnostics

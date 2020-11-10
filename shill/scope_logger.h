@@ -117,6 +117,8 @@ class ScopeLogger {
   FRIEND_TEST(ScopeLoggerTest, SetVerboseLevel);
 
   ScopeLogger();
+  ScopeLogger(const ScopeLogger&) = delete;
+  ScopeLogger& operator=(const ScopeLogger&) = delete;
 
   // Disables logging for all scopes.
   void DisableAllScopes();
@@ -132,8 +134,6 @@ class ScopeLogger {
 
   // Hooks to notify interested parties of changes to log scopes.
   ScopeEnableChangedCallbacks log_scope_callbacks_[kNumScopes];
-
-  DISALLOW_COPY_AND_ASSIGN(ScopeLogger);
 };
 
 }  // namespace shill

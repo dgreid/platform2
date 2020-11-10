@@ -56,6 +56,8 @@ class ArtContainer {
   ArtContainer(ArcMounter* mounter,
                std::unique_ptr<ArtContainerPaths> arc_paths,
                AndroidSdkVersion sdk_version);
+  ArtContainer(const ArtContainer&) = delete;
+  ArtContainer& operator=(const ArtContainer&) = delete;
 
   // Starts ART container in a mount namespace.
   bool PatchImageChild(uint64_t offset_seed);
@@ -71,8 +73,6 @@ class ArtContainer {
 
   // Android Sdk version.
   const AndroidSdkVersion sdk_version_;
-
-  DISALLOW_COPY_AND_ASSIGN(ArtContainer);
 };
 
 }  // namespace arc

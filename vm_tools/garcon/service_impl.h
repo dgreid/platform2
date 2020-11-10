@@ -25,6 +25,9 @@ class ServiceImpl final : public vm_tools::container::Garcon::Service {
   explicit ServiceImpl(PackageKitProxy* package_kit_proxy,
                        base::TaskRunner* task_runner,
                        HostNotifier* host_notifier);
+  ServiceImpl(const ServiceImpl&) = delete;
+  ServiceImpl& operator=(const ServiceImpl&) = delete;
+
   ~ServiceImpl() override = default;
 
   // Garcon::Service overrides.
@@ -92,8 +95,6 @@ class ServiceImpl final : public vm_tools::container::Garcon::Service {
   PackageKitProxy* package_kit_proxy_;  // Not owned.
   base::TaskRunner* task_runner_;
   HostNotifier* host_notifier_;
-
-  DISALLOW_COPY_AND_ASSIGN(ServiceImpl);
 };
 
 }  // namespace garcon

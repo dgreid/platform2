@@ -20,6 +20,9 @@ struct USBDeviceEntry;
 class USBDeviceInfo {
  public:
   USBDeviceInfo();
+  USBDeviceInfo(const USBDeviceInfo&) = delete;
+  USBDeviceInfo& operator=(const USBDeviceInfo&) = delete;
+
   ~USBDeviceInfo();
 
   // Returns the device media type of a USB device with |vendor_id| and
@@ -61,8 +64,6 @@ class USBDeviceInfo {
   FRIEND_TEST(USBDeviceInfoTest, ConvertToDeviceMediaType);
   FRIEND_TEST(USBDeviceInfoTest, ExtractIdAndName);
   FRIEND_TEST(USBDeviceInfoTest, IsLineSkippable);
-
-  DISALLOW_COPY_AND_ASSIGN(USBDeviceInfo);
 };
 
 }  // namespace cros_disks

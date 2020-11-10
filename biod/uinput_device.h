@@ -19,6 +19,9 @@ namespace biod {
 class UinputDevice {
  public:
   UinputDevice();
+  UinputDevice(const UinputDevice&) = delete;
+  UinputDevice& operator=(const UinputDevice&) = delete;
+
   ~UinputDevice();
 
   // Generate a new uinput device. Once this call is successful, SendEvent
@@ -35,8 +38,6 @@ class UinputDevice {
   bool FinalizeUinputCreation() const;
 
   base::ScopedFD uinput_fd_;
-
-  DISALLOW_COPY_AND_ASSIGN(UinputDevice);
 };
 
 }  // namespace biod

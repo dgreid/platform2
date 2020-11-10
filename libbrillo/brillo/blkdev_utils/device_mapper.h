@@ -80,6 +80,8 @@ class BRILLO_EXPORT DeviceMapper {
 
   // Set a non-default dm task factory.
   explicit DeviceMapper(const DevmapperTaskFactory& factory);
+  DeviceMapper(const DeviceMapper&) = delete;
+  DeviceMapper& operator=(const DeviceMapper&) = delete;
 
   // Default destructor.
   ~DeviceMapper() = default;
@@ -108,7 +110,6 @@ class BRILLO_EXPORT DeviceMapper {
  private:
   // Devmapper task factory.
   DevmapperTaskFactory dm_task_factory_;
-  DISALLOW_COPY_AND_ASSIGN(DeviceMapper);
 };
 
 }  // namespace brillo

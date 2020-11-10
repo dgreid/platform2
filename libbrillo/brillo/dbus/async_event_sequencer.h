@@ -46,6 +46,8 @@ class BRILLO_EXPORT AsyncEventSequencer
   using CompletionTask = base::Callback<void(void)>;
 
   AsyncEventSequencer();
+  AsyncEventSequencer(const AsyncEventSequencer&) = delete;
+  AsyncEventSequencer& operator=(const AsyncEventSequencer&) = delete;
 
   // Get a Finished handler callback.  Each callback is "unique" in the sense
   // that subsequent calls to GetHandler() will create new handlers
@@ -103,7 +105,6 @@ class BRILLO_EXPORT AsyncEventSequencer
   // Ref counted objects have private destructors.
   ~AsyncEventSequencer();
   friend class base::RefCounted<AsyncEventSequencer>;
-  DISALLOW_COPY_AND_ASSIGN(AsyncEventSequencer);
 };
 
 }  // namespace dbus_utils

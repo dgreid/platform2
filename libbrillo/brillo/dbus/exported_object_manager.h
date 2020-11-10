@@ -87,6 +87,9 @@ class BRILLO_EXPORT ExportedObjectManager
 
   ExportedObjectManager(scoped_refptr<::dbus::Bus> bus,
                         const ::dbus::ObjectPath& path);
+  ExportedObjectManager(const ExportedObjectManager&) = delete;
+  ExportedObjectManager& operator=(const ExportedObjectManager&) = delete;
+
   virtual ~ExportedObjectManager() = default;
 
   // Registers methods implementing the ObjectManager interface on the object
@@ -126,7 +129,6 @@ class BRILLO_EXPORT ExportedObjectManager
   std::weak_ptr<SignalInterfacesRemoved> signal_itf_removed_;
 
   friend class ExportedObjectManagerTest;
-  DISALLOW_COPY_AND_ASSIGN(ExportedObjectManager);
 };
 
 }  // namespace dbus_utils

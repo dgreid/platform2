@@ -16,6 +16,9 @@ namespace brillo {
 class BRILLO_EXPORT MockUdevDevice : public UdevDevice {
  public:
   MockUdevDevice() = default;
+  MockUdevDevice(const MockUdevDevice&) = delete;
+  MockUdevDevice& operator=(const MockUdevDevice&) = delete;
+
   ~MockUdevDevice() override = default;
 
   MOCK_METHOD(std::unique_ptr<UdevDevice>, GetParent, (), (const, override));
@@ -58,9 +61,6 @@ class BRILLO_EXPORT MockUdevDevice : public UdevDevice {
               (const char*),
               (const, override));
   MOCK_METHOD(std::unique_ptr<UdevDevice>, Clone, (), (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockUdevDevice);
 };
 
 }  // namespace brillo

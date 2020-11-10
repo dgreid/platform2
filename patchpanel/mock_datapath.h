@@ -20,6 +20,9 @@ class MockDatapath : public Datapath {
  public:
   explicit MockDatapath(MinijailedProcessRunner* runner, Firewall* firewall)
       : Datapath(runner, firewall) {}
+  MockDatapath(const MockDatapath&) = delete;
+  MockDatapath& operator=(const MockDatapath&) = delete;
+
   ~MockDatapath() = default;
 
   MOCK_METHOD0(Start, void());
@@ -68,9 +71,6 @@ class MockDatapath : public Datapath {
   MOCK_METHOD2(RemoveIPv6Forwarding,
                void(const std::string& ifname1, const std::string& ifname2));
   MOCK_METHOD3(AddIPv4Route, bool(uint32_t gw, uint32_t dst, uint32_t netmask));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockDatapath);
 };
 
 }  // namespace patchpanel

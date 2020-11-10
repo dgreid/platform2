@@ -79,6 +79,8 @@ class CrashCollector {
       CrashDirectorySelectionMethod crash_directory_selection_method,
       CrashSendingMode crash_sending_mode,
       const std::string& tag = "");
+  CrashCollector(const CrashCollector&) = delete;
+  CrashCollector& operator=(const CrashCollector&) = delete;
 
   virtual ~CrashCollector();
 
@@ -473,8 +475,6 @@ class CrashCollector {
   const std::string tag_;
 
   std::unique_ptr<MetricsLibraryInterface> metrics_lib_;
-
-  DISALLOW_COPY_AND_ASSIGN(CrashCollector);
 };
 
 #endif  // CRASH_REPORTER_CRASH_COLLECTOR_H_

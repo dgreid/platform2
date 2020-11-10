@@ -29,6 +29,9 @@ namespace login_manager {
 class ArcSideloadStatus : public ArcSideloadStatusInterface {
  public:
   explicit ArcSideloadStatus(dbus::ObjectProxy* boot_lockbox_proxy);
+  ArcSideloadStatus(const ArcSideloadStatus&) = delete;
+  ArcSideloadStatus& operator=(const ArcSideloadStatus&) = delete;
+
   virtual ~ArcSideloadStatus();
 
   // Overridden from ArcSideloadStatusInterface
@@ -72,8 +75,6 @@ class ArcSideloadStatus : public ArcSideloadStatusInterface {
   std::queue<QueryAdbSideloadCallback> query_arc_sideload_callback_queue_;
 
   base::WeakPtrFactory<ArcSideloadStatus> weak_ptr_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(ArcSideloadStatus);
 };
 
 }  // namespace login_manager

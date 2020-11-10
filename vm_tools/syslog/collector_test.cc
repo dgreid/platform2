@@ -51,6 +51,9 @@ class FakeLogCollectorService final : public vm_tools::LogCollector::Service {
   FakeLogCollectorService(
       scoped_refptr<base::SingleThreadTaskRunner> main_task_runner,
       HandleLogsCallback handle_user_logs_cb);
+  FakeLogCollectorService(const FakeLogCollectorService&) = delete;
+  FakeLogCollectorService& operator=(const FakeLogCollectorService&) = delete;
+
   ~FakeLogCollectorService() override = default;
 
   // LogCollector::Service overrides.
@@ -65,8 +68,6 @@ class FakeLogCollectorService final : public vm_tools::LogCollector::Service {
   // Task which will get posted to main_task_runner_ whenever this service
   // receives user logs.
   HandleLogsCallback handle_user_logs_cb_;
-
-  DISALLOW_COPY_AND_ASSIGN(FakeLogCollectorService);
 };
 
 FakeLogCollectorService::FakeLogCollectorService(
@@ -117,6 +118,9 @@ constexpr char kServerSocket[] = "server";
 class CollectorTest : public ::testing::Test {
  public:
   CollectorTest();
+  CollectorTest(const CollectorTest&) = delete;
+  CollectorTest& operator=(const CollectorTest&) = delete;
+
   ~CollectorTest() override = default;
 
  protected:
@@ -171,8 +175,6 @@ class CollectorTest : public ::testing::Test {
   std::shared_ptr<grpc::Server> server_;
 
   base::WeakPtrFactory<CollectorTest> weak_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(CollectorTest);
 };
 
 CollectorTest::CollectorTest()

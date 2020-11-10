@@ -26,6 +26,9 @@ class ModemTracker {
  public:
   ModemTracker(scoped_refptr<dbus::Bus> bus,
                const OnModemAppearedCallback& on_modem_appeared_callback);
+  ModemTracker(const ModemTracker&) = delete;
+  ModemTracker& operator=(const ModemTracker&) = delete;
+
   ~ModemTracker() = default;
 
  private:
@@ -46,8 +49,6 @@ class ModemTracker {
   std::set<dbus::ObjectPath> modem_objects_;
 
   base::WeakPtrFactory<ModemTracker> weak_ptr_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(ModemTracker);
 };
 
 }  // namespace modemfwd

@@ -52,6 +52,9 @@ class IconIndexFile {
 
   explicit IconIndexFile(const base::FilePath& icon_dir)
       : icon_dir_(icon_dir) {}
+  IconIndexFile(const IconIndexFile&) = delete;
+  IconIndexFile& operator=(const IconIndexFile&) = delete;
+
   // Read and parse the input |file_path|.
   bool LoadFromFile(const base::FilePath& file_path);
   // Process the |icon_theme_entry| when the section is over.
@@ -94,8 +97,6 @@ class IconIndexFile {
   FRIEND_TEST(IconIndexFileTest, ScalableNotWithinLimit);
   FRIEND_TEST(IconIndexFileTest, FixedWithinLimit);
   FRIEND_TEST(IconIndexFileTest, FixedNotWithinLimit);
-
-  DISALLOW_COPY_AND_ASSIGN(IconIndexFile);
 };
 
 }  // namespace garcon

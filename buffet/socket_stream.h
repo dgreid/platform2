@@ -20,6 +20,8 @@ namespace buffet {
 class SocketStream : public weave::Stream {
  public:
   explicit SocketStream(brillo::StreamPtr ptr) : ptr_{std::move(ptr)} {}
+  SocketStream(const SocketStream&) = delete;
+  SocketStream& operator=(const SocketStream&) = delete;
 
   ~SocketStream() override = default;
 
@@ -43,7 +45,6 @@ class SocketStream : public weave::Stream {
 
  private:
   brillo::StreamPtr ptr_;
-  DISALLOW_COPY_AND_ASSIGN(SocketStream);
 };
 
 }  // namespace buffet

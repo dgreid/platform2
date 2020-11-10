@@ -47,6 +47,9 @@ class DnsServerTester {
                   const std::vector<std::string>& dns_servers,
                   const bool retry_until_success,
                   const base::Callback<void(const Status)>& callback);
+  DnsServerTester(const DnsServerTester&) = delete;
+  DnsServerTester& operator=(const DnsServerTester&) = delete;
+
   virtual ~DnsServerTester();
 
   // Start the test.
@@ -78,8 +81,6 @@ class DnsServerTester {
   base::CancelableClosure start_attempt_;
   base::Callback<void(const Status)> dns_result_callback_;
   std::unique_ptr<DnsClient> dns_test_client_;
-
-  DISALLOW_COPY_AND_ASSIGN(DnsServerTester);
 };
 
 }  // namespace shill

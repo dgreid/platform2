@@ -21,6 +21,9 @@ namespace shill {
 class UpstartProxy : public UpstartProxyInterface {
  public:
   explicit UpstartProxy(const scoped_refptr<dbus::Bus>& bus);
+  UpstartProxy(const UpstartProxy&) = delete;
+  UpstartProxy& operator=(const UpstartProxy&) = delete;
+
   ~UpstartProxy() override = default;
 
   // Inherited from UpstartProxyInterface.
@@ -34,7 +37,6 @@ class UpstartProxy : public UpstartProxyInterface {
   std::unique_ptr<com::ubuntu::Upstart0_6::JobProxy> shill_event_proxy_;
 
   base::WeakPtrFactory<UpstartProxy> weak_factory_{this};
-  DISALLOW_COPY_AND_ASSIGN(UpstartProxy);
 };
 
 }  // namespace shill

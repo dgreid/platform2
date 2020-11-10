@@ -28,6 +28,9 @@ class VaultKeyset {
  public:
   VaultKeyset();
   VaultKeyset(VaultKeyset&&);
+  VaultKeyset(const VaultKeyset&) = delete;
+  VaultKeyset& operator=(const VaultKeyset&) = delete;
+
   virtual ~VaultKeyset();
 
   // Does not take ownership of platform and crypto. The objects pointed to by
@@ -107,8 +110,6 @@ class VaultKeyset {
   // unfortunately, wasn't followed through.
   // TODO(dlunev): rename it not to say legacy.
   int legacy_index_;
-
-  DISALLOW_COPY_AND_ASSIGN(VaultKeyset);
 };
 
 }  // namespace cryptohome

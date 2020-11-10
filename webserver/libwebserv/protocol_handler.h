@@ -25,6 +25,9 @@ namespace libwebserv {
 class LIBWEBSERV_EXPORT ProtocolHandler {
  public:
   ProtocolHandler() = default;
+  ProtocolHandler(const ProtocolHandler&) = delete;
+  ProtocolHandler& operator=(const ProtocolHandler&) = delete;
+
   virtual ~ProtocolHandler() = default;
 
   // Returns true if the protocol handler object is backed by a ProtocolHandler
@@ -94,9 +97,6 @@ class LIBWEBSERV_EXPORT ProtocolHandler {
 
   static const char kHttp[];
   static const char kHttps[];
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ProtocolHandler);
 };
 
 }  // namespace libwebserv

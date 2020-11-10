@@ -34,6 +34,9 @@ class BRILLO_EXPORT FakeMessageLoop : public MessageLoop {
   // Create a FakeMessageLoop optionally using a SimpleTestClock to update the
   // time when Run() or RunOnce(true) are called and should block.
   explicit FakeMessageLoop(base::SimpleTestClock* clock);
+  FakeMessageLoop(const FakeMessageLoop&) = delete;
+  FakeMessageLoop& operator=(const FakeMessageLoop&) = delete;
+
   ~FakeMessageLoop() override = default;
 
   TaskId PostDelayedTask(const base::Location& from_here,
@@ -70,8 +73,6 @@ class BRILLO_EXPORT FakeMessageLoop : public MessageLoop {
   base::Time current_time_ = base::Time::FromDoubleT(1246996800.);
 
   MessageLoop::TaskId last_id_ = kTaskIdNull;
-
-  DISALLOW_COPY_AND_ASSIGN(FakeMessageLoop);
 };
 
 }  // namespace brillo

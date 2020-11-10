@@ -28,6 +28,9 @@ class AsyncEventSequencer;
 class BRILLO_EXPORT DBusDaemon : public Daemon {
  public:
   DBusDaemon();
+  DBusDaemon(const DBusDaemon&) = delete;
+  DBusDaemon& operator=(const DBusDaemon&) = delete;
+
   ~DBusDaemon() override = default;
 
  protected:
@@ -41,8 +44,6 @@ class BRILLO_EXPORT DBusDaemon : public Daemon {
 
  private:
   DBusConnection dbus_connection_;
-
-  DISALLOW_COPY_AND_ASSIGN(DBusDaemon);
 };
 
 // DBusServiceDaemon adds D-Bus service support to DBusDaemon.
@@ -62,6 +63,8 @@ class BRILLO_EXPORT DBusServiceDaemon : public DBusDaemon {
                     const ::dbus::ObjectPath& object_manager_path);
   DBusServiceDaemon(const std::string& service_name,
                     base::StringPiece object_manager_path);
+  DBusServiceDaemon(const DBusServiceDaemon&) = delete;
+  DBusServiceDaemon& operator=(const DBusServiceDaemon&) = delete;
 
  protected:
   // OnInit() overload exporting D-Bus objects. Exports the contained
@@ -84,8 +87,6 @@ class BRILLO_EXPORT DBusServiceDaemon : public DBusDaemon {
   // exported successfully and the daemon is ready to claim the D-Bus service
   // ownership.
   void TakeServiceOwnership(bool success);
-
-  DISALLOW_COPY_AND_ASSIGN(DBusServiceDaemon);
 };
 
 }  // namespace brillo

@@ -19,6 +19,9 @@ namespace shill {
 class CertificateFile {
  public:
   CertificateFile();
+  CertificateFile(const CertificateFile&) = delete;
+  CertificateFile& operator=(const CertificateFile&) = delete;
+
   virtual ~CertificateFile();
 
   // Write out a PEM file from an input vector of strings in PEM format.
@@ -57,8 +60,6 @@ class CertificateFile {
 
   // File path for the created temporary file.
   base::FilePath output_file_;
-
-  DISALLOW_COPY_AND_ASSIGN(CertificateFile);
 };
 
 }  // namespace shill

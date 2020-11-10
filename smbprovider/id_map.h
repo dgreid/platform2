@@ -25,6 +25,8 @@ class IdMap {
 
   explicit IdMap(int initial_value)
       : initial_id_(initial_value), next_unused_id_(initial_value) {}
+  IdMap(const IdMap&) = delete;
+  IdMap& operator=(const IdMap&) = delete;
 
   ~IdMap() = default;
 
@@ -92,7 +94,6 @@ class IdMap {
   std::stack<int32_t> free_ids_;
   const int32_t initial_id_;
   int32_t next_unused_id_;
-  DISALLOW_COPY_AND_ASSIGN(IdMap);
 };
 
 }  // namespace smbprovider

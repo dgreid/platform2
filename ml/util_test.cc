@@ -30,13 +30,14 @@ class ScopedTempStatusFile {
     file_path_ = dir_.GetPath().Append("status");
     CHECK(brillo::WriteStringToFile(file_path_, content));
   }
+  ScopedTempStatusFile(const ScopedTempStatusFile&) = delete;
+  ScopedTempStatusFile& operator=(const ScopedTempStatusFile&) = delete;
+
   base::FilePath GetPath() { return file_path_; }
 
  private:
   base::ScopedTempDir dir_;
   base::FilePath file_path_;
-
-  DISALLOW_COPY_AND_ASSIGN(ScopedTempStatusFile);
 };
 
 // Status file does not exist.

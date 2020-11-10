@@ -25,6 +25,9 @@ class Manager;
 class EthernetProvider : public ProviderInterface {
  public:
   explicit EthernetProvider(Manager* manager);
+  EthernetProvider(const EthernetProvider&) = delete;
+  EthernetProvider& operator=(const EthernetProvider&) = delete;
+
   ~EthernetProvider() override;
 
   // Called by Manager as a part of the Provider interface.
@@ -63,8 +66,6 @@ class EthernetProvider : public ProviderInterface {
 
   Manager* manager_;
   std::vector<EthernetServiceRefPtr> services_;
-
-  DISALLOW_COPY_AND_ASSIGN(EthernetProvider);
 };
 
 }  // namespace shill

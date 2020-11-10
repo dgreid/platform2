@@ -41,6 +41,9 @@ class MojoSession : public SmbFsBootstrapImpl::Delegate,
               uid_t uid,
               gid_t gid,
               base::OnceClosure shutdown_callback);
+  MojoSession(const MojoSession&) = delete;
+  MojoSession& operator=(const MojoSession&) = delete;
+
   virtual ~MojoSession();
 
  private:
@@ -84,8 +87,6 @@ class MojoSession : public SmbFsBootstrapImpl::Delegate,
   std::unique_ptr<KerberosArtifactSynchronizer> kerberos_sync_;
   std::unique_ptr<SmbFsImpl> smbfs_impl_;
   mojom::SmbFsDelegatePtr smbfs_delegate_;
-
-  DISALLOW_COPY_AND_ASSIGN(MojoSession);
 };
 
 }  // namespace smbfs

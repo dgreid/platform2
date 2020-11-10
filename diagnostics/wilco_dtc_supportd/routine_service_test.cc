@@ -721,13 +721,12 @@ class RunRoutineTest
       public testing::WithParamInterface<grpc_api::RunRoutineRequest> {
  public:
   RunRoutineTest() = default;
+  RunRoutineTest(const RunRoutineTest&) = delete;
+  RunRoutineTest& operator=(const RunRoutineTest&) = delete;
 
   // Accessors to the test parameter returned by gtest's GetParam():
 
   grpc_api::RunRoutineRequest request() const { return GetParam(); }
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(RunRoutineTest);
 };
 
 // Test that we can request that the given routine is run.

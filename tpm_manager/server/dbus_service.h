@@ -45,6 +45,9 @@ class DBusService : public brillo::DBusServiceDaemon {
               TpmNvramInterface* nvram_service,
               TpmOwnershipInterface* ownership_service,
               LocalDataStore* local_data_store);
+  DBusService(const DBusService&) = delete;
+  DBusService& operator=(const DBusService&) = delete;
+
   ~DBusService() override = default;
 
   // Registers objects exported by this service.
@@ -109,8 +112,6 @@ class DBusService : public brillo::DBusServiceDaemon {
   // Pointer of the ownership taken signal. The signal is indirectly owned by
   // dbus_object_.
   std::weak_ptr<DBusSignal<OwnershipTakenSignal>> ownership_taken_signal_;
-
-  DISALLOW_COPY_AND_ASSIGN(DBusService);
 };
 
 }  // namespace tpm_manager

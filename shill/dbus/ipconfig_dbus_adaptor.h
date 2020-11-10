@@ -32,6 +32,9 @@ class IPConfigDBusAdaptor : public org::chromium::flimflam::IPConfigAdaptor,
   static const char kPath[];
 
   IPConfigDBusAdaptor(const scoped_refptr<dbus::Bus>& bus, IPConfig* ipconfig);
+  IPConfigDBusAdaptor(const IPConfigDBusAdaptor&) = delete;
+  IPConfigDBusAdaptor& operator=(const IPConfigDBusAdaptor&) = delete;
+
   ~IPConfigDBusAdaptor() override;
 
   // Implementation of IPConfigAdaptorInterface.
@@ -55,7 +58,6 @@ class IPConfigDBusAdaptor : public org::chromium::flimflam::IPConfigAdaptor,
 
  private:
   IPConfig* ipconfig_;
-  DISALLOW_COPY_AND_ASSIGN(IPConfigDBusAdaptor);
 };
 
 }  // namespace shill

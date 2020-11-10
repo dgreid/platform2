@@ -21,6 +21,8 @@ namespace patchpanel {
 class MessageDispatcher {
  public:
   explicit MessageDispatcher(base::ScopedFD fd, bool start = true);
+  MessageDispatcher(const MessageDispatcher&) = delete;
+  MessageDispatcher& operator=(const MessageDispatcher&) = delete;
 
   void Start();
 
@@ -51,7 +53,6 @@ class MessageDispatcher {
   IpHelperMessage msg_;
 
   base::WeakPtrFactory<MessageDispatcher> weak_factory_{this};
-  DISALLOW_COPY_AND_ASSIGN(MessageDispatcher);
 };
 
 }  // namespace patchpanel

@@ -15,15 +15,15 @@ namespace imageloader {
 class MockVerityMounter : public VerityMounter {
  public:
   MockVerityMounter() = default;
+  MockVerityMounter(const MockVerityMounter&) = delete;
+  MockVerityMounter& operator=(const MockVerityMounter&) = delete;
+
   MOCK_METHOD(bool,
               Mount,
               (const base::ScopedFD&,
                const base::FilePath&,
                const std::string&),
               (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockVerityMounter);
 };
 
 }  // namespace imageloader

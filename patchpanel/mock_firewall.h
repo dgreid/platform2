@@ -18,6 +18,9 @@ namespace patchpanel {
 class MockFirewall : public Firewall {
  public:
   MockFirewall() = default;
+  MockFirewall(const MockFirewall&) = delete;
+  MockFirewall& operator=(const MockFirewall&) = delete;
+
   ~MockFirewall() = default;
 
   int SetRunInMinijailFailCriterion(const std::vector<std::string>& keywords,
@@ -69,8 +72,6 @@ class MockFirewall : public Firewall {
   // Given an ip/iptables command, return the command that undoes its effect.
   std::vector<std::string> GetInverseCommand(
       const std::vector<std::string>& command);
-
-  DISALLOW_COPY_AND_ASSIGN(MockFirewall);
 };
 
 }  // namespace patchpanel

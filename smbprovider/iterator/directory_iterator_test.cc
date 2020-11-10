@@ -17,6 +17,8 @@ namespace smbprovider {
 class DirectoryIteratorTest : public testing::Test {
  public:
   DirectoryIteratorTest() {}
+  DirectoryIteratorTest(const DirectoryIteratorTest&) = delete;
+  DirectoryIteratorTest& operator=(const DirectoryIteratorTest&) = delete;
 
  protected:
   void CreateDefaultMountRoot() {
@@ -25,9 +27,6 @@ class DirectoryIteratorTest : public testing::Test {
   }
 
   FakeSambaInterface fake_samba_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(DirectoryIteratorTest);
 };
 
 // DirectoryIterator fails to initialize on a non-existent directory.

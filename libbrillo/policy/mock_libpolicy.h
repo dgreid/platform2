@@ -18,15 +18,15 @@ namespace policy {
 class MockPolicyProvider : public PolicyProvider {
  public:
   MockPolicyProvider() = default;
+  MockPolicyProvider(const MockPolicyProvider&) = delete;
+  MockPolicyProvider& operator=(const MockPolicyProvider&) = delete;
+
   ~MockPolicyProvider() override = default;
 
   MOCK_METHOD(bool, Reload, (), (override));
   MOCK_METHOD(bool, device_policy_is_loaded, (), (const, override));
   MOCK_METHOD(const DevicePolicy&, GetDevicePolicy, (), (const, override));
   MOCK_METHOD(bool, IsConsumerDevice, (), (const, override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockPolicyProvider);
 };
 
 }  // namespace policy

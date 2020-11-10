@@ -18,6 +18,8 @@ namespace hermes {
 class Manager final : public EuiccManagerInterface {
  public:
   Manager();
+  Manager(const Manager&) = delete;
+  Manager& operator=(const Manager&) = delete;
 
   // Set/unset test mode. Normally, only production profiles may be
   // downloaded. In test mode, only test profiles may be downloaded.
@@ -35,8 +37,6 @@ class Manager final : public EuiccManagerInterface {
 
   // Map of physical SIM slot -> Euicc.
   std::map<uint8_t, std::unique_ptr<Euicc>> available_euiccs_;
-
-  DISALLOW_COPY_AND_ASSIGN(Manager);
 };
 
 }  // namespace hermes

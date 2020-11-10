@@ -23,6 +23,9 @@ class ShutdownFromSuspendTest : public ::testing::Test {
  public:
   ShutdownFromSuspendTest()
       : shutdown_from_suspend_(timers::SimpleAlarmTimer::CreateForTesting()) {}
+  ShutdownFromSuspendTest(const ShutdownFromSuspendTest&) = delete;
+  ShutdownFromSuspendTest& operator=(const ShutdownFromSuspendTest&) = delete;
+
   ~ShutdownFromSuspendTest() override = default;
 
  protected:
@@ -42,9 +45,6 @@ class ShutdownFromSuspendTest : public ::testing::Test {
   FakePrefs prefs_;
   system::PowerSupplyStub power_supply_;
   TestMainLoopRunner runner_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ShutdownFromSuspendTest);
 };
 
 // Test that ShutdownFromSuspend is enabled when

@@ -28,6 +28,8 @@ class MediaPerceptionImpl
       std::shared_ptr<VideoCaptureServiceClient> vidcap_client,
       std::shared_ptr<ChromeAudioServiceClient> cras_client,
       std::shared_ptr<Rtanalytics> rtanalytics);
+  MediaPerceptionImpl(const MediaPerceptionImpl&) = delete;
+  MediaPerceptionImpl& operator=(const MediaPerceptionImpl&) = delete;
 
   // chromeos::media_perception::mojom::MediaPerception:
   void SetupConfiguration(const std::string& configuration_name,
@@ -76,8 +78,6 @@ class MediaPerceptionImpl
   std::shared_ptr<ChromeAudioServiceClient> cras_client_;
 
   std::shared_ptr<Rtanalytics> rtanalytics_;
-
-  DISALLOW_COPY_AND_ASSIGN(MediaPerceptionImpl);
 };
 
 }  // namespace mri

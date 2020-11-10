@@ -38,6 +38,8 @@ class FakeStream : public Stream {
   //   mode        - expected read/write mode supported by the stream.
   //   clock       - the clock to use to get the current time.
   FakeStream(Stream::AccessMode mode, base::Clock* clock);
+  FakeStream(const FakeStream&) = delete;
+  FakeStream& operator=(const FakeStream&) = delete;
 
   // Add data packets to the read queue of the stream.
   // Optional |delay| indicates that the data packet should be delayed.
@@ -161,8 +163,6 @@ class FakeStream : public Stream {
   size_t max_output_buffer_size_{0};
   bool report_write_error_{false};
   brillo::Blob all_output_data_;
-
-  DISALLOW_COPY_AND_ASSIGN(FakeStream);
 };
 
 }  // namespace brillo

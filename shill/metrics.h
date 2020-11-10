@@ -922,6 +922,9 @@ class Metrics : public DefaultServiceObserver {
   static const char kMetricHS20Support[];
 
   Metrics();
+  Metrics(const Metrics&) = delete;
+  Metrics& operator=(const Metrics&) = delete;
+
   virtual ~Metrics();
 
   // Converts the WiFi frequency into the associated UMA channel enumerator.
@@ -1447,8 +1450,6 @@ class Metrics : public DefaultServiceObserver {
   int dark_resume_scan_retries_;
   std::unique_ptr<chromeos_metrics::CumulativeMetrics> daily_metrics_;
   std::unique_ptr<chromeos_metrics::CumulativeMetrics> monthly_metrics_;
-
-  DISALLOW_COPY_AND_ASSIGN(Metrics);
 };
 
 }  // namespace shill

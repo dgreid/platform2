@@ -33,6 +33,9 @@ class Dlc {
   explicit Dlc(const std::string& id,
                const std::string& package,
                const base::FilePath& mount_base);
+  Dlc(const Dlc&) = delete;
+  Dlc& operator=(const Dlc&) = delete;
+
   // Mount the image.
   bool Mount(HelperProcessProxy* proxy, const std::string& a_or_b);
 
@@ -72,8 +75,6 @@ class Dlc {
   // The base directory where we need to mount the image. The DLC image will be
   // mounted at |mount_base|/|id_|/|package_|/a_or_b.
   base::FilePath mount_base_;
-
-  DISALLOW_COPY_AND_ASSIGN(Dlc);
 };
 
 }  // namespace imageloader

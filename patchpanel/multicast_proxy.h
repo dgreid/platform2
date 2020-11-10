@@ -22,6 +22,9 @@ namespace patchpanel {
 class MulticastProxy : public brillo::Daemon {
  public:
   explicit MulticastProxy(base::ScopedFD control_fd);
+  MulticastProxy(const MulticastProxy&) = delete;
+  MulticastProxy& operator=(const MulticastProxy&) = delete;
+
   virtual ~MulticastProxy() = default;
 
  protected:
@@ -39,7 +42,6 @@ class MulticastProxy : public brillo::Daemon {
   std::map<std::string, std::unique_ptr<BroadcastForwarder>> bcast_fwds_;
 
   base::WeakPtrFactory<MulticastProxy> weak_factory_{this};
-  DISALLOW_COPY_AND_ASSIGN(MulticastProxy);
 };
 
 }  // namespace patchpanel

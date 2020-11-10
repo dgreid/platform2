@@ -38,6 +38,9 @@ class Pkcs11KeyStore : public KeyStore {
  public:
   Pkcs11KeyStore();
   explicit Pkcs11KeyStore(Pkcs11Init* pkcs11_init);
+  Pkcs11KeyStore(const Pkcs11KeyStore&) = delete;
+  Pkcs11KeyStore& operator=(const Pkcs11KeyStore&) = delete;
+
   virtual ~Pkcs11KeyStore();
 
   // KeyStore interface.
@@ -111,8 +114,6 @@ class Pkcs11KeyStore : public KeyStore {
   // Returns true iff the given certificate already exists in the token.
   bool DoesCertificateExist(CK_SESSION_HANDLE session_handle,
                             const brillo::SecureBlob& certificate);
-
-  DISALLOW_COPY_AND_ASSIGN(Pkcs11KeyStore);
 };
 
 }  // namespace cryptohome

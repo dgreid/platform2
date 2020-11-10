@@ -22,6 +22,9 @@ class MockDevice : public Device {
              const std::string& link_name,
              const std::string& address,
              int interface_index);
+  MockDevice(const MockDevice&) = delete;
+  MockDevice& operator=(const MockDevice&) = delete;
+
   ~MockDevice() override;
 
   MOCK_METHOD(void, Initialize, (), (override));
@@ -70,9 +73,6 @@ class MockDevice : public Device {
   MOCK_METHOD(bool, StartConnectivityTest, (), (override));
   MOCK_METHOD(const ConnectionRefPtr&, connection, (), (const, override));
   MOCK_METHOD(void, UpdateBlackholeUserTraffic, (), (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockDevice);
 };
 
 }  // namespace shill

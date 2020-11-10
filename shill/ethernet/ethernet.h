@@ -51,6 +51,9 @@ class Ethernet
            const std::string& link_name,
            const std::string& mac_address,
            int interface_index);
+  Ethernet(const Ethernet&) = delete;
+  Ethernet& operator=(const Ethernet&) = delete;
+
   ~Ethernet() override;
 
   void Start(Error* error,
@@ -213,8 +216,6 @@ class Ethernet
   std::string permanent_mac_address_;
 
   base::WeakPtrFactory<Ethernet> weak_ptr_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(Ethernet);
 };
 
 }  // namespace shill

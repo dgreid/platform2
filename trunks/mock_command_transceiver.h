@@ -18,13 +18,13 @@ namespace trunks {
 class MockCommandTransceiver : public CommandTransceiver {
  public:
   MockCommandTransceiver();
+  MockCommandTransceiver(const MockCommandTransceiver&) = delete;
+  MockCommandTransceiver& operator=(const MockCommandTransceiver&) = delete;
+
   ~MockCommandTransceiver() override;
 
   MOCK_METHOD2(SendCommand, void(const std::string&, const ResponseCallback&));
   MOCK_METHOD1(SendCommandAndWait, std::string(const std::string&));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockCommandTransceiver);
 };
 
 }  // namespace trunks

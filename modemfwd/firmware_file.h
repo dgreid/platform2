@@ -18,6 +18,9 @@ namespace modemfwd {
 class FirmwareFile {
  public:
   FirmwareFile();
+  FirmwareFile(const FirmwareFile&) = delete;
+  FirmwareFile& operator=(const FirmwareFile&) = delete;
+
   ~FirmwareFile();
 
   // Prepares the firmware file based on the given firmware file information.
@@ -39,8 +42,6 @@ class FirmwareFile {
   base::ScopedTempDir temp_dir_;
   base::FilePath path_for_logging_;
   base::FilePath path_on_filesystem_;
-
-  DISALLOW_COPY_AND_ASSIGN(FirmwareFile);
 };
 
 }  // namespace modemfwd

@@ -147,13 +147,15 @@ class SHILL_EXPORT NetlinkManager {
 
    protected:
     NetlinkResponseHandler();
+    NetlinkResponseHandler(const NetlinkResponseHandler&) = delete;
+    NetlinkResponseHandler& operator=(const NetlinkResponseHandler&) = delete;
+
     NetlinkAckHandler ack_handler_;
 
    private:
     NetlinkAuxilliaryMessageHandler error_handler_;
     struct timeval delete_after_;
 
-    DISALLOW_COPY_AND_ASSIGN(NetlinkResponseHandler);
   };
 
   // Encapsulates all the different things we know about a specific message
@@ -259,6 +261,8 @@ class SHILL_EXPORT NetlinkManager {
 
  protected:
   NetlinkManager();
+  NetlinkManager(const NetlinkManager&) = delete;
+  NetlinkManager& operator=(const NetlinkManager&) = delete;
 
  private:
   friend base::LazyInstanceTraitsBase<NetlinkManager>;
@@ -429,8 +433,6 @@ class SHILL_EXPORT NetlinkManager {
   Time* time_;
   IOHandlerFactory* io_handler_factory_;
   bool dump_pending_;
-
-  DISALLOW_COPY_AND_ASSIGN(NetlinkManager);
 };
 
 }  // namespace shill

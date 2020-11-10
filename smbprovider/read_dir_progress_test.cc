@@ -26,6 +26,9 @@ class ReadDirProgressTest : public testing::Test {
         base::TimeDelta::FromMicroseconds(kMetadataCacheLifetimeMicroseconds),
         MetadataCache::Mode::kDisabled);
   }
+  ReadDirProgressTest(const ReadDirProgressTest&) = delete;
+  ReadDirProgressTest& operator=(const ReadDirProgressTest&) = delete;
+
   ~ReadDirProgressTest() override = default;
 
  protected:
@@ -37,8 +40,6 @@ class ReadDirProgressTest : public testing::Test {
   std::unique_ptr<FakeSambaInterface> fake_samba_;
   std::unique_ptr<base::TickClock> fake_tick_clock_;
   std::unique_ptr<MetadataCache> cache_;
-
-  DISALLOW_COPY_AND_ASSIGN(ReadDirProgressTest);
 };
 
 TEST_F(ReadDirProgressTest, StartSucceedsOnEmptyDir) {

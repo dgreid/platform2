@@ -28,6 +28,9 @@ class DispatcherDebugManager final {
   DispatcherDebugManager(
       scoped_refptr<dbus::Bus> bus,
       ExportedObjectManagerWrapper* exported_object_manager_wrapper);
+  DispatcherDebugManager(const DispatcherDebugManager&) = delete;
+  DispatcherDebugManager& operator=(const DispatcherDebugManager&) = delete;
+
   ~DispatcherDebugManager() = default;
 
   // Initializes the D-Bus operations.
@@ -66,8 +69,6 @@ class DispatcherDebugManager final {
   // Must come last so that weak pointers will be invalidated before other
   // members are destroyed.
   base::WeakPtrFactory<DispatcherDebugManager> weak_ptr_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(DispatcherDebugManager);
 };
 
 }  // namespace bluetooth

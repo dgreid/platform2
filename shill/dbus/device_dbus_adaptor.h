@@ -29,6 +29,9 @@ class DeviceDBusAdaptor : public org::chromium::flimflam::DeviceAdaptor,
   static const char kPath[];
 
   DeviceDBusAdaptor(const scoped_refptr<dbus::Bus>& bus, Device* device);
+  DeviceDBusAdaptor(const DeviceDBusAdaptor&) = delete;
+  DeviceDBusAdaptor& operator=(const DeviceDBusAdaptor&) = delete;
+
   ~DeviceDBusAdaptor() override;
 
   // Implementation of DeviceAdaptorInterface.
@@ -103,8 +106,6 @@ class DeviceDBusAdaptor : public org::chromium::flimflam::DeviceAdaptor,
 
  private:
   Device* device_;
-
-  DISALLOW_COPY_AND_ASSIGN(DeviceDBusAdaptor);
 };
 
 }  // namespace shill

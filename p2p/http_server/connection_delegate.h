@@ -34,6 +34,8 @@ class ConnectionDelegate : public ConnectionDelegateInterface {
                      const std::string& pretty_addr,
                      ServerInterface* server,
                      int64_t max_download_rate);
+  ConnectionDelegate(const ConnectionDelegate&) = delete;
+  ConnectionDelegate& operator=(const ConnectionDelegate&) = delete;
 
   ~ConnectionDelegate() override;
 
@@ -170,8 +172,6 @@ class ConnectionDelegate : public ConnectionDelegateInterface {
   //
   // https://code.google.com/p/chromium/issues/detail?id=246325
   static const unsigned int kPayloadBufferSize = 65536;
-
-  DISALLOW_COPY_AND_ASSIGN(ConnectionDelegate);
 };
 
 }  // namespace http_server

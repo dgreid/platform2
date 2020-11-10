@@ -30,6 +30,9 @@ class DBusCommandProxy : public org::chromium::Buffet::CommandInterface {
                    const scoped_refptr<dbus::Bus>& bus,
                    const std::weak_ptr<weave::Command>& command,
                    std::string object_path);
+  DBusCommandProxy(const DBusCommandProxy&) = delete;
+  DBusCommandProxy& operator=(const DBusCommandProxy&) = delete;
+
   ~DBusCommandProxy() override = default;
 
   void RegisterAsync(
@@ -55,7 +58,6 @@ class DBusCommandProxy : public org::chromium::Buffet::CommandInterface {
 
   friend class DBusCommandProxyTest;
   friend class DBusCommandDispacherTest;
-  DISALLOW_COPY_AND_ASSIGN(DBusCommandProxy);
 };
 
 }  // namespace buffet

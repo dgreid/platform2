@@ -17,6 +17,10 @@ namespace shill {
 class MockOpenVPNManagementServer : public OpenVPNManagementServer {
  public:
   MockOpenVPNManagementServer();
+  MockOpenVPNManagementServer(const MockOpenVPNManagementServer&) = delete;
+  MockOpenVPNManagementServer& operator=(const MockOpenVPNManagementServer&) =
+      delete;
+
   ~MockOpenVPNManagementServer() override;
 
   MOCK_METHOD(bool,
@@ -27,9 +31,6 @@ class MockOpenVPNManagementServer : public OpenVPNManagementServer {
   MOCK_METHOD(void, ReleaseHold, (), (override));
   MOCK_METHOD(void, Hold, (), (override));
   MOCK_METHOD(void, Restart, (), (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockOpenVPNManagementServer);
 };
 
 }  // namespace shill

@@ -203,6 +203,8 @@ class TokenInitThread : public base::PlatformThread::Delegate {
                   TPMUtility* tpm_utility,
                   ObjectPool* object_pool,
                   SystemShutdownBlocker* system_shutdown_blocker);
+  TokenInitThread(const TokenInitThread&) = delete;
+  TokenInitThread& operator=(const TokenInitThread&) = delete;
 
   ~TokenInitThread() override {}
 
@@ -218,8 +220,6 @@ class TokenInitThread : public base::PlatformThread::Delegate {
   TPMUtility* tpm_utility_;
   ObjectPool* object_pool_;
   SystemShutdownBlocker* system_shutdown_blocker_;
-
-  DISALLOW_COPY_AND_ASSIGN(TokenInitThread);
 };
 
 // Performs expensive tasks required to terminate a token.
@@ -228,6 +228,8 @@ class TokenTermThread : public base::PlatformThread::Delegate {
   // This class will not take ownership of any pointers.
   TokenTermThread(int slot_id, TPMUtility* tpm_utility)
       : slot_id_(slot_id), tpm_utility_(tpm_utility) {}
+  TokenTermThread(const TokenTermThread&) = delete;
+  TokenTermThread& operator=(const TokenTermThread&) = delete;
 
   ~TokenTermThread() override {}
 
@@ -237,8 +239,6 @@ class TokenTermThread : public base::PlatformThread::Delegate {
  private:
   int slot_id_;
   TPMUtility* tpm_utility_;
-
-  DISALLOW_COPY_AND_ASSIGN(TokenTermThread);
 };
 
 TokenInitThread::TokenInitThread(int slot_id,

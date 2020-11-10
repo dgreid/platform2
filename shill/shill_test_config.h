@@ -16,6 +16,9 @@ namespace shill {
 class TestConfig : public Config {
  public:
   TestConfig();
+  TestConfig(const TestConfig&) = delete;
+  TestConfig& operator=(const TestConfig&) = delete;
+
   ~TestConfig() override;
 
   std::string GetRunDirectory() const override;
@@ -24,8 +27,6 @@ class TestConfig : public Config {
 
  private:
   base::ScopedTempDir dir_;
-
-  DISALLOW_COPY_AND_ASSIGN(TestConfig);
 };
 
 }  // namespace shill

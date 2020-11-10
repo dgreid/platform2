@@ -17,6 +17,9 @@ namespace cros_disks {
 class MountInfo {
  public:
   MountInfo();
+  MountInfo(const MountInfo&) = delete;
+  MountInfo& operator=(const MountInfo&) = delete;
+
   ~MountInfo();
 
   // Decodes an encoded path by replacing any occurrence of \xxx, a backslash
@@ -51,8 +54,6 @@ class MountInfo {
   std::vector<MountPointData> mount_points_;
 
   FRIEND_TEST(MountInfoTest, ConvertOctalStringToInt);
-
-  DISALLOW_COPY_AND_ASSIGN(MountInfo);
 };
 
 }  // namespace cros_disks

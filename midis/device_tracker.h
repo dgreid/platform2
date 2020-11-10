@@ -27,6 +27,9 @@ class SeqHandler;
 class DeviceTracker {
  public:
   DeviceTracker();
+  DeviceTracker(const DeviceTracker&) = delete;
+  DeviceTracker& operator=(const DeviceTracker&) = delete;
+
   void AddDevice(std::unique_ptr<Device> dev);
   void RemoveDevice(uint32_t sys_num, uint32_t dev_num);
   bool InitDeviceTracker();
@@ -97,8 +100,6 @@ class DeviceTracker {
   std::unique_ptr<SeqHandler> seq_handler_;
 
   base::ObserverList<Observer> observer_list_;
-
-  DISALLOW_COPY_AND_ASSIGN(DeviceTracker);
 };
 
 }  // namespace midis

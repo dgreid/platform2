@@ -22,6 +22,9 @@ namespace chaps {
 class ObjectMock : public Object {
  public:
   ObjectMock();
+  ObjectMock(const ObjectMock&) = delete;
+  ObjectMock& operator=(const ObjectMock&) = delete;
+
   ~ObjectMock() override;
   MOCK_CONST_METHOD0(GetStage, ObjectStage());
   MOCK_CONST_METHOD0(GetObjectClass, CK_OBJECT_CLASS());
@@ -165,8 +168,6 @@ class ObjectMock : public Object {
   int FakeGetHandle() { return handle_; }
 
   int FakeGetStoreID() { return store_id_; }
-
-  DISALLOW_COPY_AND_ASSIGN(ObjectMock);
 };
 
 }  // namespace chaps

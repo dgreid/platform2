@@ -46,6 +46,8 @@ class ModemHelperDirectoryImpl : public ModemHelperDirectory {
       available_helpers_.push_back(std::move(helper));
     }
   }
+  ModemHelperDirectoryImpl(const ModemHelperDirectoryImpl&) = delete;
+  ModemHelperDirectoryImpl& operator=(const ModemHelperDirectoryImpl&) = delete;
 
   ~ModemHelperDirectoryImpl() override = default;
 
@@ -70,8 +72,6 @@ class ModemHelperDirectoryImpl : public ModemHelperDirectory {
   std::vector<std::unique_ptr<ModemHelper>> available_helpers_;
   // Pointers in this map are owned by |available_helpers_|.
   std::map<std::string, ModemHelper*> helpers_by_id_;
-
-  DISALLOW_COPY_AND_ASSIGN(ModemHelperDirectoryImpl);
 };
 
 std::unique_ptr<ModemHelperDirectory> CreateModemHelperDirectory(

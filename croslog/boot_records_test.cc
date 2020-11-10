@@ -18,6 +18,8 @@ namespace croslog {
 class BootRecordsTest : public ::testing::Test {
  public:
   BootRecordsTest() = default;
+  BootRecordsTest(const BootRecordsTest&) = delete;
+  BootRecordsTest& operator=(const BootRecordsTest&) = delete;
 
   static base::Time TimeFromExploded(
       int year, int month, int day_of_month, int hour, int minute, int second) {
@@ -28,9 +30,6 @@ class BootRecordsTest : public ::testing::Test {
         &time));
     return time;
   }
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(BootRecordsTest);
 };
 
 TEST_F(BootRecordsTest, Load) {

@@ -25,11 +25,11 @@ class FileIO {
 
  protected:
   FileIO();
+  FileIO(const FileIO&) = delete;
+  FileIO& operator=(const FileIO&) = delete;
 
  private:
   friend class base::NoDestructor<FileIO>;
-
-  DISALLOW_COPY_AND_ASSIGN(FileIO);
 };
 
 }  // namespace shill

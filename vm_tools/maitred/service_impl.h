@@ -24,6 +24,9 @@ namespace maitred {
 class ServiceImpl final : public vm_tools::Maitred::Service {
  public:
   explicit ServiceImpl(std::unique_ptr<Init> init);
+  ServiceImpl(const ServiceImpl&) = delete;
+  ServiceImpl& operator=(const ServiceImpl&) = delete;
+
   ~ServiceImpl() override = default;
 
   // Initializes ServiceImpl for first use.
@@ -123,8 +126,6 @@ class ServiceImpl final : public vm_tools::Maitred::Service {
     uint64_t current_size = 0;
     uint64_t target_size = 0;
   } resize_state_;
-
-  DISALLOW_COPY_AND_ASSIGN(ServiceImpl);
 };
 
 }  // namespace maitred

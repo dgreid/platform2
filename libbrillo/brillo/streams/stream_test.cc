@@ -41,6 +41,8 @@ using Whence = Stream::Whence;
 class MockStreamImpl : public Stream {
  public:
   MockStreamImpl() = default;
+  MockStreamImpl(const MockStreamImpl&) = delete;
+  MockStreamImpl& operator=(const MockStreamImpl&) = delete;
 
   MOCK_METHOD(bool, IsOpen, (), (const, override));
   MOCK_METHOD(bool, CanRead, (), (const, override));
@@ -84,9 +86,6 @@ class MockStreamImpl : public Stream {
               WaitForDataBlocking,
               (AccessMode, base::TimeDelta, AccessMode*, ErrorPtr*),
               (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockStreamImpl);
 };
 
 TEST(Stream, TruncateBlocking) {

@@ -16,15 +16,15 @@ namespace tpm_manager {
 class OpensslCryptoUtil {
  public:
   OpensslCryptoUtil() = default;
+  OpensslCryptoUtil(const OpensslCryptoUtil&) = delete;
+  OpensslCryptoUtil& operator=(const OpensslCryptoUtil&) = delete;
+
   virtual ~OpensslCryptoUtil() = default;
 
   // This method sets the out argument |random_data| to a string with at
   // least |num_bytes| of random data and returns true on success.
   virtual bool GetRandomBytes(size_t num_bytes,
                               std::string* random_data) WARN_UNUSED_RESULT = 0;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(OpensslCryptoUtil);
 };
 
 }  // namespace tpm_manager

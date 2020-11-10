@@ -19,6 +19,9 @@ namespace shill {
 class EventDispatcher {
  public:
   EventDispatcher();
+  EventDispatcher(const EventDispatcher&) = delete;
+  EventDispatcher& operator=(const EventDispatcher&) = delete;
+
   virtual ~EventDispatcher();
 
   virtual void DispatchForever();
@@ -37,7 +40,6 @@ class EventDispatcher {
 
  private:
   base::RepeatingClosure quit_closure_;
-  DISALLOW_COPY_AND_ASSIGN(EventDispatcher);
 };
 
 }  // namespace shill

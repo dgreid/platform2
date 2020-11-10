@@ -25,6 +25,9 @@ class TestObserver : public SuspendDelayObserver {
  public:
   TestObserver()
       : timeout_(base::TimeDelta::FromMilliseconds(kSuspendTimeoutMs)) {}
+  TestObserver(const TestObserver&) = delete;
+  TestObserver& operator=(const TestObserver&) = delete;
+
   ~TestObserver() override {}
 
   // Must be called before RunUntilReadyForSuspend().
@@ -44,8 +47,6 @@ class TestObserver : public SuspendDelayObserver {
   base::TimeDelta timeout_;
 
   TestMainLoopRunner loop_runner_;
-
-  DISALLOW_COPY_AND_ASSIGN(TestObserver);
 };
 
 class SuspendDelayControllerTest : public ::testing::Test {
@@ -55,6 +56,9 @@ class SuspendDelayControllerTest : public ::testing::Test {
             1, "", SuspendDelayController::kDefaultMaxSuspendDelayTimeout) {
     controller_.AddObserver(&observer_);
   }
+  SuspendDelayControllerTest(const SuspendDelayControllerTest&) = delete;
+  SuspendDelayControllerTest& operator=(const SuspendDelayControllerTest&) =
+      delete;
 
   ~SuspendDelayControllerTest() override {
     controller_.RemoveObserver(&observer_);
@@ -91,9 +95,6 @@ class SuspendDelayControllerTest : public ::testing::Test {
 
   TestObserver observer_;
   SuspendDelayController controller_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(SuspendDelayControllerTest);
 };
 
 }  // namespace

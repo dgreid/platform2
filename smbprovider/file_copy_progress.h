@@ -19,6 +19,8 @@ class FileCopyProgress : public CopyProgressInterface {
 
   // Allows setting of |iteration_chunk_size_| for testing.
   FileCopyProgress(SambaInterface* samba_interface, off_t iteration_chunk_size);
+  FileCopyProgress(const FileCopyProgress&) = delete;
+  FileCopyProgress& operator=(const FileCopyProgress&) = delete;
 
   ~FileCopyProgress() override;
 
@@ -50,8 +52,6 @@ class FileCopyProgress : public CopyProgressInterface {
   int32_t source_fd_ = -1;
   int32_t target_fd_ = -1;
   off_t bytes_remaining_;
-
-  DISALLOW_COPY_AND_ASSIGN(FileCopyProgress);
 };
 
 }  // namespace smbprovider

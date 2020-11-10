@@ -38,11 +38,11 @@ class MockDnsClientFactory : public DnsClientFactory {
 
  protected:
   MockDnsClientFactory();
+  MockDnsClientFactory(const MockDnsClientFactory&) = delete;
+  MockDnsClientFactory& operator=(const MockDnsClientFactory&) = delete;
 
  private:
   friend class base::NoDestructor<MockDnsClientFactory>;
-
-  DISALLOW_COPY_AND_ASSIGN(MockDnsClientFactory);
 };
 
 }  // namespace shill

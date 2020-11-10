@@ -14,9 +14,8 @@ namespace croslog {
 class MultiplexerTest : public ::testing::Test {
  public:
   MultiplexerTest() = default;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MultiplexerTest);
+  MultiplexerTest(const MultiplexerTest&) = delete;
+  MultiplexerTest& operator=(const MultiplexerTest&) = delete;
 };
 
 TEST_F(MultiplexerTest, Forward) {

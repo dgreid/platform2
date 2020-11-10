@@ -20,6 +20,9 @@ namespace webservd {
 class PermissionBrokerFirewall : public FirewallInterface {
  public:
   PermissionBrokerFirewall();
+  PermissionBrokerFirewall(const PermissionBrokerFirewall&) = delete;
+  PermissionBrokerFirewall& operator=(const PermissionBrokerFirewall&) = delete;
+
   ~PermissionBrokerFirewall() override;
 
   // Interface overrides.
@@ -50,8 +53,6 @@ class PermissionBrokerFirewall : public FirewallInterface {
   int lifeline_write_fd_{-1};
 
   base::WeakPtrFactory<PermissionBrokerFirewall> weak_ptr_factory_{this};
-
-  DISALLOW_COPY_AND_ASSIGN(PermissionBrokerFirewall);
 };
 
 }  // namespace webservd

@@ -29,6 +29,9 @@ class Tpm2NvramImpl : public TpmNvram {
   Tpm2NvramImpl(const trunks::TrunksFactory& factory,
                 LocalDataStore* local_data_store,
                 TpmStatus* tpm_status);
+  Tpm2NvramImpl(const Tpm2NvramImpl&) = delete;
+  Tpm2NvramImpl& operator=(const Tpm2NvramImpl&) = delete;
+
   ~Tpm2NvramImpl() override = default;
 
   // TpmNvram methods.
@@ -111,7 +114,6 @@ class Tpm2NvramImpl : public TpmNvram {
   std::unique_ptr<trunks::TpmUtility> trunks_utility_;
 
   friend class Tpm2NvramTest;
-  DISALLOW_COPY_AND_ASSIGN(Tpm2NvramImpl);
 };
 
 }  // namespace tpm_manager

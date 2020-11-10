@@ -29,11 +29,11 @@ class MockIcmpSessionFactory : public IcmpSessionFactory {
 
  protected:
   MockIcmpSessionFactory();
+  MockIcmpSessionFactory(const MockIcmpSessionFactory&) = delete;
+  MockIcmpSessionFactory& operator=(const MockIcmpSessionFactory&) = delete;
 
  private:
   friend class base::NoDestructor<MockIcmpSessionFactory>;
-
-  DISALLOW_COPY_AND_ASSIGN(MockIcmpSessionFactory);
 };
 
 }  // namespace shill

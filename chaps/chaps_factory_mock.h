@@ -15,6 +15,9 @@ namespace chaps {
 class ChapsFactoryMock : public ChapsFactory {
  public:
   ChapsFactoryMock();
+  ChapsFactoryMock(const ChapsFactoryMock&) = delete;
+  ChapsFactoryMock& operator=(const ChapsFactoryMock&) = delete;
+
   ~ChapsFactoryMock() override;
 
   MOCK_METHOD5(CreateSession,
@@ -26,9 +29,6 @@ class ChapsFactoryMock : public ChapsFactory {
   MOCK_METHOD1(CreateObjectPolicy, ObjectPolicy*(CK_OBJECT_CLASS));
   MOCK_METHOD3(CreateObjectImporter,
                ObjectImporter*(int, const base::FilePath&, TPMUtility*));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ChapsFactoryMock);
 };
 
 }  // namespace chaps

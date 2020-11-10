@@ -35,8 +35,8 @@ class Environment {
   Environment() {
     logging::SetMinLogLevel(logging::LOG_FATAL);  // Disable logging.
   }
-
-  DISALLOW_COPY_AND_ASSIGN(Environment);
+  Environment(const Environment&) = delete;
+  Environment& operator=(const Environment&) = delete;
 };
 
 class ReadEventThread {
@@ -48,6 +48,8 @@ class ReadEventThread {
         FROM_HERE, base::BindOnce(&ReadEventThread::StartWatching,
                                   base::Unretained(this)));
   }
+  ReadEventThread(const ReadEventThread&) = delete;
+  ReadEventThread& operator=(const ReadEventThread&) = delete;
 
   ~ReadEventThread() {
     thread_.task_runner()->PostTask(
@@ -136,8 +138,6 @@ class ReadEventThread {
       event_pipe_fd_controller_;
 
   base::WeakPtrFactory<ReadEventThread> weak_factory_{this};
-
-  DISALLOW_COPY_AND_ASSIGN(ReadEventThread);
 };
 
 class ScopedSession {
@@ -145,6 +145,8 @@ class ScopedSession {
   ScopedSession()
       : impl_(SetupImpl(GAVDA)),
         session_(SetupSession(impl_, H264PROFILE_MIN)) {}
+  ScopedSession(const ScopedSession&) = delete;
+  ScopedSession& operator=(const ScopedSession&) = delete;
 
   ~ScopedSession() { DestroyImpl(); }
 
@@ -182,14 +184,14 @@ class ScopedSession {
   ImplPtr impl_;
   SessionPtr session_;
   std::unique_ptr<ReadEventThread> event_thread_;
-
-  DISALLOW_COPY_AND_ASSIGN(ScopedSession);
 };
 
 class DataReader {
  public:
   DataReader(const uint8_t* data, size_t size)
       : data_(data), size_(size), index_(0) {}
+  DataReader(const DataReader&) = delete;
+  DataReader& operator=(const DataReader&) = delete;
 
   uint8_t GetUint8() {
     if (index_ >= size_) {
@@ -225,8 +227,6 @@ class DataReader {
   const uint8_t* data_;
   size_t size_;
   size_t index_;
-
-  DISALLOW_COPY_AND_ASSIGN(DataReader);
 };
 
 enum class VdaCommand : uint8_t {

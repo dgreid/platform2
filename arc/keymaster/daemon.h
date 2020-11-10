@@ -26,6 +26,9 @@ namespace keymaster {
 class Daemon : public brillo::DBusDaemon {
  public:
   Daemon();
+  Daemon(const Daemon&) = delete;
+  Daemon& operator=(const Daemon&) = delete;
+
   ~Daemon() override;
 
  protected:
@@ -49,8 +52,6 @@ class Daemon : public brillo::DBusDaemon {
   std::unique_ptr<mojo::core::ScopedIPCSupport> ipc_support_;
 
   base::WeakPtrFactory<Daemon> weak_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(Daemon);
 };
 
 }  // namespace keymaster

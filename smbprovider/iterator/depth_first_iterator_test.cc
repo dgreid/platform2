@@ -18,14 +18,16 @@ class TestDepthFirstIterator : public DepthFirstIterator {
   TestDepthFirstIterator(const std::string& dir_path,
                          SambaInterface* samba_interface)
       : DepthFirstIterator(dir_path, samba_interface) {}
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(TestDepthFirstIterator);
+  TestDepthFirstIterator(const TestDepthFirstIterator&) = delete;
+  TestDepthFirstIterator& operator=(const TestDepthFirstIterator&) = delete;
 };
 
 class DepthFirstIteratorTest : public testing::Test {
  public:
   DepthFirstIteratorTest() {}
+  DepthFirstIteratorTest(const DepthFirstIteratorTest&) = delete;
+  DepthFirstIteratorTest& operator=(const DepthFirstIteratorTest&) = delete;
+
   ~DepthFirstIteratorTest() override = default;
 
  protected:
@@ -35,9 +37,6 @@ class DepthFirstIteratorTest : public testing::Test {
   }
 
   FakeSambaInterface fake_samba_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(DepthFirstIteratorTest);
 };
 
 // DepthFirstIterator fails to initialize on a non-existent directory.

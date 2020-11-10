@@ -27,6 +27,9 @@ class UserPolicyService : public PolicyService {
                     std::unique_ptr<PolicyKey> policy_key,
                     const base::FilePath& key_copy_path,
                     SystemUtils* system_utils);
+  UserPolicyService(const UserPolicyService&) = delete;
+  UserPolicyService& operator=(const UserPolicyService&) = delete;
+
   ~UserPolicyService() override;
 
   // Persists a copy of |scoped_policy_key_| at |key_copy_path_|, if both the
@@ -58,8 +61,6 @@ class UserPolicyService : public PolicyService {
 
   // Owned by our owner.
   SystemUtils* system_utils_;
-
-  DISALLOW_COPY_AND_ASSIGN(UserPolicyService);
 };
 
 }  // namespace login_manager

@@ -52,6 +52,9 @@ const char kDefaultPcrValue[32] = {0};
 class ScopedKeyHandle {
  public:
   ScopedKeyHandle();
+  ScopedKeyHandle(const ScopedKeyHandle&) = delete;
+  ScopedKeyHandle& operator=(const ScopedKeyHandle&) = delete;
+
   ~ScopedKeyHandle();
   TpmKeyHandle value();
   TpmKeyHandle release();
@@ -60,7 +63,6 @@ class ScopedKeyHandle {
  private:
   Tpm* tpm_;
   TpmKeyHandle handle_;
-  DISALLOW_COPY_AND_ASSIGN(ScopedKeyHandle);
 };
 
 class Tpm {

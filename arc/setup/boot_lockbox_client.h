@@ -63,11 +63,11 @@ class BootLockboxClient {
       std::unique_ptr<org::chromium::CryptohomeInterfaceProxyInterface>
           cryotohome,
       scoped_refptr<dbus::Bus> bus);
+  BootLockboxClient(const BootLockboxClient&) = delete;
+  BootLockboxClient& operator=(const BootLockboxClient&) = delete;
 
   std::unique_ptr<org::chromium::CryptohomeInterfaceProxyInterface> cryptohome_;
   scoped_refptr<dbus::Bus> bus_;
-
-  DISALLOW_COPY_AND_ASSIGN(BootLockboxClient);
 };
 
 }  // namespace arc

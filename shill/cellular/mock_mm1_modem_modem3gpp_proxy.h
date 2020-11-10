@@ -18,6 +18,9 @@ namespace mm1 {
 class MockModemModem3gppProxy : public ModemModem3gppProxyInterface {
  public:
   MockModemModem3gppProxy();
+  MockModemModem3gppProxy(const MockModemModem3gppProxy&) = delete;
+  MockModemModem3gppProxy& operator=(const MockModemModem3gppProxy&) = delete;
+
   ~MockModemModem3gppProxy() override;
 
   MOCK_METHOD(void,
@@ -35,9 +38,6 @@ class MockModemModem3gppProxy : public ModemModem3gppProxyInterface {
                const ResultCallback& callback,
                int timeout),
               (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockModemModem3gppProxy);
 };
 
 }  // namespace mm1

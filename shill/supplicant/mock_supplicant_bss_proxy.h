@@ -15,12 +15,12 @@ namespace shill {
 class MockSupplicantBSSProxy : public SupplicantBSSProxyInterface {
  public:
   MockSupplicantBSSProxy();
+  MockSupplicantBSSProxy(const MockSupplicantBSSProxy&) = delete;
+  MockSupplicantBSSProxy& operator=(const MockSupplicantBSSProxy&) = delete;
+
   ~MockSupplicantBSSProxy() override;
 
   MOCK_METHOD(void, Die, ());  // So we can EXPECT the dtor.
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockSupplicantBSSProxy);
 };
 
 }  // namespace shill

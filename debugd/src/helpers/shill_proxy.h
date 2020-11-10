@@ -36,8 +36,8 @@ class ShillProxy : public SystemServiceProxy {
 
  private:
   explicit ShillProxy(scoped_refptr<dbus::Bus> bus);
-
-  DISALLOW_COPY_AND_ASSIGN(ShillProxy);
+  ShillProxy(const ShillProxy&) = delete;
+  ShillProxy& operator=(const ShillProxy&) = delete;
 };
 
 }  // namespace debugd

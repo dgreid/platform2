@@ -17,6 +17,9 @@ namespace shill {
 class MockVPNProvider : public VPNProvider {
  public:
   MockVPNProvider();
+  MockVPNProvider(const MockVPNProvider&) = delete;
+  MockVPNProvider& operator=(const MockVPNProvider&) = delete;
+
   ~MockVPNProvider() override;
 
   MOCK_METHOD(void, Start, (), (override));
@@ -26,9 +29,6 @@ class MockVPNProvider : public VPNProvider {
               (const std::string&, int, Technology),
               (override));
   MOCK_METHOD(bool, HasActiveService, (), (const, override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockVPNProvider);
 };
 
 }  // namespace shill

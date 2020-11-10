@@ -14,6 +14,10 @@ namespace smbprovider {
 class PostDepthFirstIteratorTest : public testing::Test {
  public:
   PostDepthFirstIteratorTest() {}
+  PostDepthFirstIteratorTest(const PostDepthFirstIteratorTest&) = delete;
+  PostDepthFirstIteratorTest& operator=(const PostDepthFirstIteratorTest&) =
+      delete;
+
   ~PostDepthFirstIteratorTest() override = default;
 
  protected:
@@ -23,9 +27,6 @@ class PostDepthFirstIteratorTest : public testing::Test {
   }
 
   FakeSambaInterface fake_samba_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(PostDepthFirstIteratorTest);
 };
 
 // PostDepthFirstIterator iterates over a single empty directory correctly.

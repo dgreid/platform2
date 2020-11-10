@@ -70,6 +70,9 @@ class VSockProxy {
     virtual void OnStopped() = 0;
   };
   explicit VSockProxy(Delegate* delegate);
+  VSockProxy(const VSockProxy&) = delete;
+  VSockProxy& operator=(const VSockProxy&) = delete;
+
   ~VSockProxy();
 
   // Registers the |fd| whose type is |fd_type| to watch.
@@ -198,8 +201,6 @@ class VSockProxy {
   // on destruction, any pending Callbacks bound to WeakPtr are cancelled
   // first.
   base::WeakPtrFactory<VSockProxy> weak_factory_{this};
-
-  DISALLOW_COPY_AND_ASSIGN(VSockProxy);
 };
 
 }  // namespace arc

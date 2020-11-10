@@ -89,9 +89,8 @@ class LIBMEMS_EXPORT IioContext {
 
  protected:
   IioContext() = default;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(IioContext);
+  IioContext(const IioContext&) = delete;
+  IioContext& operator=(const IioContext&) = delete;
 };
 
 }  // namespace libmems

@@ -24,6 +24,9 @@ class BRILLO_EXPORT TpmCryptoImpl : public TpmCrypto {
   TpmCryptoImpl();
   explicit TpmCryptoImpl(std::unique_ptr<Tpm> tpm);
   TpmCryptoImpl(std::unique_ptr<Tpm> tpm, RandBytesFn rand_bytes_fn);
+  TpmCryptoImpl(const TpmCryptoImpl&) = delete;
+  TpmCryptoImpl& operator=(const TpmCryptoImpl&) = delete;
+
   ~TpmCryptoImpl() override;
 
   bool Encrypt(const brillo::SecureBlob& data,
@@ -51,8 +54,6 @@ class BRILLO_EXPORT TpmCryptoImpl : public TpmCrypto {
   // The TPM implementation
   std::unique_ptr<Tpm> tpm_;
   RandBytesFn rand_bytes_fn_;
-
-  DISALLOW_COPY_AND_ASSIGN(TpmCryptoImpl);
 };
 
 }  // namespace tpmcrypto

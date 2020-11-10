@@ -80,6 +80,9 @@ class InputEventHandler : public system::InputObserver {
       base::TimeDelta::FromSeconds(2);
 
   InputEventHandler();
+  InputEventHandler(const InputEventHandler&) = delete;
+  InputEventHandler& operator=(const InputEventHandler&) = delete;
+
   ~InputEventHandler() override;
 
   Clock* clock_for_testing() { return clock_.get(); }
@@ -152,8 +155,6 @@ class InputEventHandler : public system::InputObserver {
   bool power_button_down_ignored_ = false;
 
   base::WeakPtrFactory<InputEventHandler> weak_ptr_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(InputEventHandler);
 };
 
 }  // namespace policy

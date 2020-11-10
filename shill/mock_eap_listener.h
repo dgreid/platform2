@@ -14,6 +14,9 @@ namespace shill {
 class MockEapListener : public EapListener {
  public:
   MockEapListener();
+  MockEapListener(const MockEapListener&) = delete;
+  MockEapListener& operator=(const MockEapListener&) = delete;
+
   ~MockEapListener() override;
 
   MOCK_METHOD(bool, Start, (), (override));
@@ -22,9 +25,6 @@ class MockEapListener : public EapListener {
               set_request_received_callback,
               (const EapListener::EapRequestReceivedCallback&),
               (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockEapListener);
 };
 
 }  // namespace shill

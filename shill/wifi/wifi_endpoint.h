@@ -66,6 +66,9 @@ class WiFiEndpoint : public base::RefCounted<WiFiEndpoint> {
                const RpcIdentifier& rpc_id,
                const KeyValueStore& properties,
                Metrics* metrics);
+  WiFiEndpoint(const WiFiEndpoint&) = delete;
+  WiFiEndpoint& operator=(const WiFiEndpoint&) = delete;
+
   virtual ~WiFiEndpoint();
 
   // Set up RPC channel. Broken out from the ctor, so that WiFi can
@@ -240,8 +243,6 @@ class WiFiEndpoint : public base::RefCounted<WiFiEndpoint> {
   WiFiRefPtr device_;
   RpcIdentifier rpc_id_;
   std::unique_ptr<SupplicantBSSProxyInterface> supplicant_bss_proxy_;
-
-  DISALLOW_COPY_AND_ASSIGN(WiFiEndpoint);
 };
 
 }  // namespace shill

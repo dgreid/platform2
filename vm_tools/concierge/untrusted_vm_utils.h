@@ -22,6 +22,8 @@ class UntrustedVMUtils {
   // |mds_status_path| - Path to read MDS vulnerability status from.
   UntrustedVMUtils(const base::FilePath& l1tf_status_path,
                    const base::FilePath& mds_status_path);
+  UntrustedVMUtils(const UntrustedVMUtils&) = delete;
+  UntrustedVMUtils& operator=(const UntrustedVMUtils&) = delete;
 
   // Mitigation status for L1TF and MDS vulnerabilities.
   enum class MitigationStatus {
@@ -48,8 +50,6 @@ class UntrustedVMUtils {
 
   // Path to read MDS vulnerability status from.
   base::FilePath mds_status_path_;
-
-  DISALLOW_COPY_AND_ASSIGN(UntrustedVMUtils);
 };
 
 }  // namespace concierge

@@ -17,6 +17,10 @@ namespace shill {
 class MockSupplicantProcessProxy : public SupplicantProcessProxyInterface {
  public:
   MockSupplicantProcessProxy();
+  MockSupplicantProcessProxy(const MockSupplicantProcessProxy&) = delete;
+  MockSupplicantProcessProxy& operator=(const MockSupplicantProcessProxy&) =
+      delete;
+
   ~MockSupplicantProcessProxy() override;
 
   MOCK_METHOD(bool,
@@ -31,9 +35,6 @@ class MockSupplicantProcessProxy : public SupplicantProcessProxyInterface {
   MOCK_METHOD(bool, GetDebugLevel, (std::string*), (override));
   MOCK_METHOD(bool, SetDebugLevel, (const std::string&), (override));
   MOCK_METHOD(bool, ExpectDisconnect, (), (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockSupplicantProcessProxy);
 };
 
 }  // namespace shill

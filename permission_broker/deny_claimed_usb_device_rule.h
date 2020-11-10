@@ -30,6 +30,9 @@ namespace permission_broker {
 class DenyClaimedUsbDeviceRule : public UsbSubsystemUdevRule {
  public:
   DenyClaimedUsbDeviceRule();
+  DenyClaimedUsbDeviceRule(const DenyClaimedUsbDeviceRule&) = delete;
+  DenyClaimedUsbDeviceRule& operator=(const DenyClaimedUsbDeviceRule&) = delete;
+
   ~DenyClaimedUsbDeviceRule() override;
 
   Result ProcessUsbDevice(udev_device* device) override;
@@ -51,8 +54,6 @@ class DenyClaimedUsbDeviceRule : public UsbSubsystemUdevRule {
   // If so, then its parent node is an Android device with USB debugging
   // enabled and we can detach its other interfaces to use it.
   bool IsInterfaceAdb(udev_device* device);
-
-  DISALLOW_COPY_AND_ASSIGN(DenyClaimedUsbDeviceRule);
 };
 
 }  // namespace permission_broker

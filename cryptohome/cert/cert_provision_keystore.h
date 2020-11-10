@@ -72,6 +72,9 @@ class KeyStore {
 class KeyStoreImpl : public KeyStore {
  public:
   KeyStoreImpl() = default;
+  KeyStoreImpl(const KeyStoreImpl&) = delete;
+  KeyStoreImpl& operator=(const KeyStoreImpl&) = delete;
+
   ~KeyStoreImpl();
   OpResult Init() override;
   void TearDown() override;
@@ -109,8 +112,6 @@ class KeyStoreImpl : public KeyStore {
 
   bool initialized_ = false;
   CK_SESSION_HANDLE session_ = CK_INVALID_HANDLE;
-
-  DISALLOW_COPY_AND_ASSIGN(KeyStoreImpl);
 };
 
 }  // namespace cert_provision

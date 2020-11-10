@@ -19,6 +19,9 @@ class RollingAverage {
  public:
   // Up to |window_size| samples will be held.
   explicit RollingAverage(size_t window_size);
+  RollingAverage(const RollingAverage&) = delete;
+  RollingAverage& operator=(const RollingAverage&) = delete;
+
   ~RollingAverage();
 
   // Adds a sample of |value| collected at |time|. Negative values are allowed.
@@ -61,8 +64,6 @@ class RollingAverage {
 
   // Maximum number of samples to store.
   size_t window_size_;
-
-  DISALLOW_COPY_AND_ASSIGN(RollingAverage);
 };
 
 }  // namespace system

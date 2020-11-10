@@ -15,13 +15,13 @@ namespace shill {
 class MockPassiveLinkMonitor : public PassiveLinkMonitor {
  public:
   MockPassiveLinkMonitor();
+  MockPassiveLinkMonitor(const MockPassiveLinkMonitor&) = delete;
+  MockPassiveLinkMonitor& operator=(const MockPassiveLinkMonitor&) = delete;
+
   ~MockPassiveLinkMonitor() override;
 
   MOCK_METHOD(bool, Start, (int), (override));
   MOCK_METHOD(void, Stop, (), (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockPassiveLinkMonitor);
 };
 
 }  // namespace shill

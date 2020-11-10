@@ -15,13 +15,13 @@ namespace shill {
 class MockUpstart : public Upstart {
  public:
   explicit MockUpstart(ControlInterface* control_interface);
+  MockUpstart(const MockUpstart&) = delete;
+  MockUpstart& operator=(const MockUpstart&) = delete;
+
   ~MockUpstart() override;
 
   MOCK_METHOD(void, NotifyDisconnected, (), (override));
   MOCK_METHOD(void, NotifyConnected, (), (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockUpstart);
 };
 
 }  // namespace shill

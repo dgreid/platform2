@@ -14,11 +14,11 @@ namespace croslog {
 class LogParserAudit : public LogParser {
  public:
   LogParserAudit();
+  LogParserAudit(const LogParserAudit&) = delete;
+  LogParserAudit& operator=(const LogParserAudit&) = delete;
 
  private:
   MaybeLogEntry ParseInternal(std::string&& entire_line);
-
-  DISALLOW_COPY_AND_ASSIGN(LogParserAudit);
 };
 
 }  // namespace croslog

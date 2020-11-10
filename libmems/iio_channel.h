@@ -74,9 +74,8 @@ class IioChannel {
 
  protected:
   IioChannel() = default;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(IioChannel);
+  IioChannel(const IioChannel&) = delete;
+  IioChannel& operator=(const IioChannel&) = delete;
 };
 
 }  // namespace libmems

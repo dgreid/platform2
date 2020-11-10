@@ -27,6 +27,9 @@ class DpslThreadContextImpl final : public DpslThreadContext {
   static void CleanThreadCounterForTesting();
 
   DpslThreadContextImpl();
+  DpslThreadContextImpl(const DpslThreadContextImpl&) = delete;
+  DpslThreadContextImpl& operator=(const DpslThreadContextImpl&) = delete;
+
   ~DpslThreadContextImpl() override;
 
   // DpslThreadContext overrides:
@@ -51,8 +54,6 @@ class DpslThreadContextImpl final : public DpslThreadContext {
   base::RunLoop* current_run_loop_ = nullptr;
 
   base::SequenceCheckerImpl sequence_checker_;
-
-  DISALLOW_COPY_AND_ASSIGN(DpslThreadContextImpl);
 };
 
 }  // namespace diagnostics

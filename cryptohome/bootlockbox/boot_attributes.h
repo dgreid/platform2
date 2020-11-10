@@ -28,6 +28,9 @@ class BootAttributes {
 
   // Does not take ownership of pointers.
   BootAttributes(BootLockbox* boot_lockbox, Platform* platform);
+  BootAttributes(const BootAttributes&) = delete;
+  BootAttributes& operator=(const BootAttributes&) = delete;
+
   virtual ~BootAttributes();
 
   // Loads the attributes from the file and verifies the signature. Returns
@@ -58,8 +61,6 @@ class BootAttributes {
 
   AttributeMap attributes_;
   AttributeMap write_buffer_;
-
-  DISALLOW_COPY_AND_ASSIGN(BootAttributes);
 };
 
 }  // namespace cryptohome

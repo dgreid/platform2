@@ -16,6 +16,9 @@ class PolicyKey;
 class MockMetrics : public LoginMetrics {
  public:
   MockMetrics();
+  MockMetrics(const MockMetrics&) = delete;
+  MockMetrics& operator=(const MockMetrics&) = delete;
+
   ~MockMetrics() override;
 
   MOCK_METHOD(void, SendConsumerAllowsNewUsers, (bool), (override));
@@ -33,9 +36,6 @@ class MockMetrics : public LoginMetrics {
   MOCK_METHOD(void, SendSessionExitType, (SessionExitType), (override));
   MOCK_METHOD(void, SendBrowserShutdownTime, (base::TimeDelta), (override));
   MOCK_METHOD(void, SendArcBugReportBackupTime, (base::TimeDelta), (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockMetrics);
 };
 
 }  // namespace login_manager

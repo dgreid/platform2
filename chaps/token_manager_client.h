@@ -34,6 +34,9 @@ class ChapsProxyImpl;
 class EXPORT_SPEC TokenManagerClient : public TokenManagerInterface {
  public:
   TokenManagerClient();
+  TokenManagerClient(const TokenManagerClient&) = delete;
+  TokenManagerClient& operator=(const TokenManagerClient&) = delete;
+
   virtual ~TokenManagerClient();
 
   // TokenManagerInterface methods.
@@ -65,8 +68,6 @@ class EXPORT_SPEC TokenManagerClient : public TokenManagerInterface {
 
   // Attempts to connect to the Chaps daemon. Returns true on success.
   bool Connect();
-
-  DISALLOW_COPY_AND_ASSIGN(TokenManagerClient);
 };
 
 }  // namespace chaps

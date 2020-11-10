@@ -30,6 +30,8 @@ class PolicyProvider {
 
   // Constructor for tests only!
   explicit PolicyProvider(std::unique_ptr<DevicePolicy> device_policy);
+  PolicyProvider(const PolicyProvider&) = delete;
+  PolicyProvider& operator=(const PolicyProvider&) = delete;
 
   // This function will ensure the freshness of the contents that the getters
   // are delivering. Normally contents are cached to prevent unnecessary load.
@@ -53,8 +55,6 @@ class PolicyProvider {
   std::unique_ptr<DevicePolicy> device_policy_;
   bool device_policy_is_loaded_ = false;
   std::unique_ptr<InstallAttributesReader> install_attributes_reader_;
-
-  DISALLOW_COPY_AND_ASSIGN(PolicyProvider);
 };
 }  // namespace policy
 

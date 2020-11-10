@@ -39,6 +39,9 @@ class BRILLO_EXPORT Transport : public http::Transport {
   // If not defined, protocol is assumed to be http://.
   Transport(const std::shared_ptr<CurlInterface>& curl_interface,
             const std::string& proxy);
+  Transport(const Transport&) = delete;
+  Transport& operator=(const Transport&) = delete;
+
   ~Transport() override;
 
   // Overrides from http::Transport.
@@ -144,7 +147,6 @@ class BRILLO_EXPORT Transport : public http::Transport {
 
   base::WeakPtrFactory<Transport> weak_ptr_factory_for_timer_{this};
   base::WeakPtrFactory<Transport> weak_ptr_factory_{this};
-  DISALLOW_COPY_AND_ASSIGN(Transport);
 };
 
 }  // namespace curl

@@ -15,6 +15,9 @@ namespace power_manager {
 class ActivityLoggerTest : public testing::Test {
  public:
   ActivityLoggerTest() : kName("test activity") {}
+  ActivityLoggerTest(const ActivityLoggerTest&) = delete;
+  ActivityLoggerTest& operator=(const ActivityLoggerTest&) = delete;
+
   ~ActivityLoggerTest() override {}
 
   // Initialize |logger| for testing. Ownership remains with the caller.
@@ -55,8 +58,6 @@ class ActivityLoggerTest : public testing::Test {
 
   // The last message passed to SaveMessage().
   std::string last_message_;
-
-  DISALLOW_COPY_AND_ASSIGN(ActivityLoggerTest);
 };
 
 TEST_F(ActivityLoggerTest, StartStopNoDelay) {

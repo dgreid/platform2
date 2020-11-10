@@ -16,6 +16,10 @@ namespace shill {
 class MockSupplicantEAPStateHandler : public SupplicantEAPStateHandler {
  public:
   MockSupplicantEAPStateHandler();
+  MockSupplicantEAPStateHandler(const MockSupplicantEAPStateHandler&) = delete;
+  MockSupplicantEAPStateHandler& operator=(
+      const MockSupplicantEAPStateHandler&) = delete;
+
   ~MockSupplicantEAPStateHandler() override;
 
   MOCK_METHOD(bool,
@@ -26,9 +30,6 @@ class MockSupplicantEAPStateHandler : public SupplicantEAPStateHandler {
               (override));
   MOCK_METHOD(void, Reset, (), (override));
   MOCK_METHOD(bool, is_eap_in_progress, (), (const, override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockSupplicantEAPStateHandler);
 };
 
 }  // namespace shill

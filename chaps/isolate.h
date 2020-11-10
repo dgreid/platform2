@@ -26,6 +26,9 @@ const size_t kIsolateCredentialBytes = 16;
 class IsolateCredentialManager {
  public:
   IsolateCredentialManager();
+  IsolateCredentialManager(const IsolateCredentialManager&) = delete;
+  IsolateCredentialManager& operator=(const IsolateCredentialManager&) = delete;
+
   virtual ~IsolateCredentialManager();
 
   // Get the well known credential for the default isolate.
@@ -48,9 +51,6 @@ class IsolateCredentialManager {
   // GetUserIsolateCredential. Return true on success and false on failure.
   virtual bool SaveIsolateCredential(
       const std::string& user, const brillo::SecureBlob& isolate_credential);
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(IsolateCredentialManager);
 };
 
 }  // namespace chaps

@@ -125,13 +125,14 @@ class CacheCleanerTest : public testing::Test {
 
  protected:
   CacheCleanerTest() = default;
+  CacheCleanerTest(const CacheCleanerTest&) = delete;
+  CacheCleanerTest& operator=(const CacheCleanerTest&) = delete;
 
   void SetUp() override { ASSERT_TRUE(temp_dir_.CreateUniqueTempDir()); }
   void TearDown() override { ASSERT_TRUE(temp_dir_.Delete()); }
 
  private:
   base::ScopedTempDir temp_dir_;
-  DISALLOW_COPY_AND_ASSIGN(CacheCleanerTest);
 };
 
 // Creates 2 valid packages and checks that none of them is deleted.

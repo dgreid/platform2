@@ -34,6 +34,9 @@ enum class KerberosEncryptionTypes {
 class KerberosMetrics {
  public:
   explicit KerberosMetrics(const base::FilePath& storage_dir);
+  KerberosMetrics(const KerberosMetrics&) = delete;
+  KerberosMetrics& operator=(const KerberosMetrics&) = delete;
+
   virtual ~KerberosMetrics();
 
   // Starts timing Kerberos ticket acquisition.
@@ -92,8 +95,6 @@ class KerberosMetrics {
 
   // Clock to rate-limit daily events, can be overridden for tests.
   std::unique_ptr<base::Clock> clock_;
-
-  DISALLOW_COPY_AND_ASSIGN(KerberosMetrics);
 };
 
 }  // namespace kerberos

@@ -33,6 +33,8 @@ class SHILL_EXPORT EventHistory {
       : max_events_specified_(true),
         max_events_saved_(max_events_saved),
         time_(Time::GetInstance()) {}
+  EventHistory(const EventHistory&) = delete;
+  EventHistory& operator=(const EventHistory&) = delete;
 
   // Records the current event by adding the current time to the list.
   // If |event_limit_specificed_| and the size of |events_| is larger than
@@ -80,8 +82,6 @@ class SHILL_EXPORT EventHistory {
   int max_events_saved_;
   std::deque<Timestamp> events_;
   Time* time_;
-
-  DISALLOW_COPY_AND_ASSIGN(EventHistory);
 };
 
 }  // namespace shill

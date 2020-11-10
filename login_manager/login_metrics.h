@@ -91,6 +91,9 @@ class LoginMetrics {
   };
 
   explicit LoginMetrics(const base::FilePath& per_boot_flag_dir);
+  LoginMetrics(const LoginMetrics&) = delete;
+  LoginMetrics& operator=(const LoginMetrics&) = delete;
+
   virtual ~LoginMetrics();
 
   // Sends metric reporting whether the mount namespace creation succeeded or
@@ -167,8 +170,6 @@ class LoginMetrics {
   const base::FilePath per_boot_flag_file_;
   MetricsLibrary metrics_lib_;
   std::unique_ptr<CumulativeUseTimeMetric> arc_cumulative_use_time_;
-
-  DISALLOW_COPY_AND_ASSIGN(LoginMetrics);
 };
 }  // namespace login_manager
 

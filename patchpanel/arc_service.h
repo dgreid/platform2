@@ -39,6 +39,9 @@ class ArcService {
              AddressManager* addr_mgr,
              TrafficForwarder* forwarder,
              GuestMessage::GuestType guest);
+  ArcService(const ArcService&) = delete;
+  ArcService& operator=(const ArcService&) = delete;
+
   ~ArcService();
 
   bool Start(uint32_t id);
@@ -105,7 +108,6 @@ class ArcService {
   FRIEND_TEST(ArcServiceTest, NotStarted_AddRemoveDevice);
 
   base::WeakPtrFactory<ArcService> weak_factory_{this};
-  DISALLOW_COPY_AND_ASSIGN(ArcService);
 };
 
 }  // namespace patchpanel

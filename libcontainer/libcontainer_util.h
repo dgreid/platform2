@@ -31,6 +31,8 @@ struct WaitablePipe {
   ~WaitablePipe();
 
   WaitablePipe(WaitablePipe&&);
+  WaitablePipe(const WaitablePipe&) = delete;
+  WaitablePipe& operator=(const WaitablePipe&) = delete;
 
   // Waits for Signal() to be called.
   void Wait();
@@ -39,9 +41,6 @@ struct WaitablePipe {
   void Signal();
 
   int pipe_fds[2];
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(WaitablePipe);
 };
 
 // HookState holds two WaitablePipes so that the container can wait for its
@@ -52,6 +51,8 @@ class HookState {
   ~HookState();
 
   HookState(HookState&& state);
+  HookState(const HookState&) = delete;
+  HookState& operator=(const HookState&) = delete;
 
   // Initializes this HookState so that WaitForHookAndRun() can be invoked and
   // waited upon when |j| reaches |event|. Returns true on success.
@@ -72,8 +73,6 @@ class HookState {
   bool installed_ = false;
   WaitablePipe reached_pipe_;
   WaitablePipe ready_pipe_;
-
-  DISALLOW_COPY_AND_ASSIGN(HookState);
 };
 
 // Loopdev represents an active loopback device.

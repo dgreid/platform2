@@ -36,6 +36,8 @@ class MountTaskTest : public ::testing::Test {
         result_() {
     wait_time_ = base::TimeDelta::FromSeconds(180);
   }
+  MountTaskTest(const MountTaskTest&) = delete;
+  MountTaskTest& operator=(const MountTaskTest&) = delete;
 
   virtual ~MountTaskTest() {}
 
@@ -60,9 +62,6 @@ class MountTaskTest : public ::testing::Test {
 
   // An atomic incrementing sequence for setting asynchronous call ids.
   base::AtomicSequenceNumber sequence_holder_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MountTaskTest);
 };
 
 class MountTaskNotifier : public MountTaskObserver {

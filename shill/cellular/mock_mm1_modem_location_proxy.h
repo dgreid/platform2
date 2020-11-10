@@ -16,6 +16,9 @@ namespace mm1 {
 class MockModemLocationProxy : public ModemLocationProxyInterface {
  public:
   MockModemLocationProxy();
+  MockModemLocationProxy(const MockModemLocationProxy&) = delete;
+  MockModemLocationProxy& operator=(const MockModemLocationProxy&) = delete;
+
   ~MockModemLocationProxy() override;
 
   // Inherited methods from ModemLocationProxyInterface.
@@ -27,9 +30,6 @@ class MockModemLocationProxy : public ModemLocationProxyInterface {
               GetLocation,
               (Error*, const BrilloAnyCallback&, int),
               (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockModemLocationProxy);
 };
 
 }  // namespace mm1

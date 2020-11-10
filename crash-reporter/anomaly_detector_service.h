@@ -27,6 +27,9 @@ namespace anomaly {
 class Service {
  public:
   Service(base::OnceClosure shutdown_callback, bool testonly_send_all);
+  Service(const Service&) = delete;
+  Service& operator=(const Service&) = delete;
+
   bool Init();
 
  private:
@@ -49,8 +52,6 @@ class Service {
   base::RepeatingTimer long_timer_;
 
   base::WeakPtrFactory<Service> weak_ptr_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(Service);
 };
 
 }  // namespace anomaly

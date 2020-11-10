@@ -38,6 +38,9 @@ class TestObserver : public UserProximityObserver, public ActionRecorder {
       : watcher_(watcher), loop_runner_(runner) {
     watcher_->AddObserver(this);
   }
+  TestObserver(const TestObserver&) = delete;
+  TestObserver& operator=(const TestObserver&) = delete;
+
   ~TestObserver() override { watcher_->RemoveObserver(this); }
 
   // UserProximityObserver implementation:
@@ -55,8 +58,6 @@ class TestObserver : public UserProximityObserver, public ActionRecorder {
  private:
   SarWatcher* watcher_;              // Not owned.
   TestMainLoopRunner* loop_runner_;  // Not owned.
-
-  DISALLOW_COPY_AND_ASSIGN(TestObserver);
 };
 
 class SarWatcherTest : public testing::Test {

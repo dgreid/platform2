@@ -48,12 +48,12 @@ class BRILLO_EXPORT BootLockboxClient {
   BootLockboxClient(
       std::unique_ptr<org::chromium::BootLockboxInterfaceProxy> bootlockbox,
       scoped_refptr<dbus::Bus> bus);
+  BootLockboxClient(const BootLockboxClient&) = delete;
+  BootLockboxClient& operator=(const BootLockboxClient&) = delete;
 
  private:
   std::unique_ptr<org::chromium::BootLockboxInterfaceProxy> bootlockbox_;
   scoped_refptr<dbus::Bus> bus_;
-
-  DISALLOW_COPY_AND_ASSIGN(BootLockboxClient);
 };
 
 }  // namespace cryptohome

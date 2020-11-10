@@ -28,6 +28,9 @@ namespace shill {
 class KeyFileStore : public StoreInterface {
  public:
   explicit KeyFileStore(const base::FilePath& path);
+  KeyFileStore(const KeyFileStore&) = delete;
+  KeyFileStore& operator=(const KeyFileStore&) = delete;
+
   ~KeyFileStore() override;
 
   // Inherited from StoreInterface.
@@ -96,8 +99,6 @@ class KeyFileStore : public StoreInterface {
 
   std::unique_ptr<KeyFile> key_file_;
   const base::FilePath path_;
-
-  DISALLOW_COPY_AND_ASSIGN(KeyFileStore);
 };
 
 }  // namespace shill

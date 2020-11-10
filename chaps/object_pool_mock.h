@@ -20,6 +20,9 @@ namespace chaps {
 class ObjectPoolMock : public ObjectPool {
  public:
   ObjectPoolMock();
+  ObjectPoolMock(const ObjectPoolMock&) = delete;
+  ObjectPoolMock& operator=(const ObjectPoolMock&) = delete;
+
   ~ObjectPoolMock() override;
 
   MOCK_METHOD2(GetInternalBlob, bool(int, std::string*));
@@ -83,8 +86,6 @@ class ObjectPoolMock : public ObjectPool {
   }
   std::vector<const Object*> v_;
   int last_handle_;
-
-  DISALLOW_COPY_AND_ASSIGN(ObjectPoolMock);
 };
 
 }  // namespace chaps

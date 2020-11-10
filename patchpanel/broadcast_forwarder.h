@@ -30,6 +30,9 @@ constexpr uint32_t kBcastAddr = Ipv4Addr(255, 255, 255, 255);
 class BroadcastForwarder {
  public:
   explicit BroadcastForwarder(const std::string& dev_ifname);
+  BroadcastForwarder(const BroadcastForwarder&) = delete;
+  BroadcastForwarder& operator=(const BroadcastForwarder&) = delete;
+
   virtual ~BroadcastForwarder() = default;
 
   bool AddGuest(const std::string& br_ifname);
@@ -91,7 +94,6 @@ class BroadcastForwarder {
   void OnFileCanReadWithoutBlocking(int fd);
 
   base::WeakPtrFactory<BroadcastForwarder> weak_factory_{this};
-  DISALLOW_COPY_AND_ASSIGN(BroadcastForwarder);
 };
 
 }  // namespace patchpanel

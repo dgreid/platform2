@@ -62,6 +62,9 @@ class DesktopFileTest : public ::testing::Test {
     CHECK(env->GetVar("PATH", &curr_path));
     env->SetVar("PATH", curr_path + ":" + sys_path.value());
   }
+  DesktopFileTest(const DesktopFileTest&) = delete;
+  DesktopFileTest& operator=(const DesktopFileTest&) = delete;
+
   ~DesktopFileTest() override = default;
 
   base::FilePath WriteContentsToPath(const std::string& file_contents,
@@ -133,8 +136,6 @@ class DesktopFileTest : public ::testing::Test {
  private:
   base::ScopedTempDir temp_dir_;
   base::FilePath apps_dir_;
-
-  DISALLOW_COPY_AND_ASSIGN(DesktopFileTest);
 };
 
 }  // namespace

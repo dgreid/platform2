@@ -34,6 +34,9 @@ class PowerManagerProxy : public PowerManagerProxyInterface {
                     PowerManagerProxyDelegate* delegate,
                     const base::Closure& service_appeared_callback,
                     const base::Closure& service_vanished_callback);
+  PowerManagerProxy(const PowerManagerProxy&) = delete;
+  PowerManagerProxy& operator=(const PowerManagerProxy&) = delete;
+
   ~PowerManagerProxy() override;
 
   // Inherited from PowerManagerProxyInterface.
@@ -91,7 +94,6 @@ class PowerManagerProxy : public PowerManagerProxyInterface {
   bool service_available_;
 
   base::WeakPtrFactory<PowerManagerProxy> weak_factory_{this};
-  DISALLOW_COPY_AND_ASSIGN(PowerManagerProxy);
 };
 
 }  // namespace shill

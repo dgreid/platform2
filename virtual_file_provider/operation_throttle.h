@@ -18,6 +18,9 @@ namespace virtual_file_provider {
 class OperationThrottle {
  public:
   explicit OperationThrottle(int max_operation_count);
+  OperationThrottle(const OperationThrottle&) = delete;
+  OperationThrottle& operator=(const OperationThrottle&) = delete;
+
   ~OperationThrottle();
 
   // Increments the operation counter, possibly after blocking the caller until
@@ -33,8 +36,6 @@ class OperationThrottle {
   int operation_count_ = 0;
   base::Lock lock_;
   base::ConditionVariable operation_count_changed_condition_;
-
-  DISALLOW_COPY_AND_ASSIGN(OperationThrottle);
 };
 
 }  // namespace virtual_file_provider

@@ -55,11 +55,11 @@ class Ares {
 
  protected:
   Ares();
+  Ares(const Ares&) = delete;
+  Ares& operator=(const Ares&) = delete;
 
  private:
   friend class base::NoDestructor<Ares>;
-
-  DISALLOW_COPY_AND_ASSIGN(Ares);
 };
 
 }  // namespace shill

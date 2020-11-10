@@ -23,6 +23,9 @@ namespace kerberos {
 class FakeKrb5Interface : public Krb5Interface {
  public:
   FakeKrb5Interface();
+  FakeKrb5Interface(const FakeKrb5Interface&) = delete;
+  FakeKrb5Interface& operator=(const FakeKrb5Interface&) = delete;
+
   ~FakeKrb5Interface() override;
 
   // Krb5Interface:
@@ -107,8 +110,6 @@ class FakeKrb5Interface : public Krb5Interface {
 
   TgtStatus tgt_status_;
   ConfigErrorInfo error_info_;
-
-  DISALLOW_COPY_AND_ASSIGN(FakeKrb5Interface);
 };
 
 }  // namespace kerberos

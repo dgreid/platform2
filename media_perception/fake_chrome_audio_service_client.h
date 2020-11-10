@@ -17,6 +17,9 @@ namespace mri {
 class FakeChromeAudioServiceClient : public ChromeAudioServiceClient {
  public:
   FakeChromeAudioServiceClient() = default;
+  FakeChromeAudioServiceClient(const FakeChromeAudioServiceClient&) = delete;
+  FakeChromeAudioServiceClient& operator=(const FakeChromeAudioServiceClient&) =
+      delete;
 
   void SetDevicesForGetInputDevices(std::vector<SerializedAudioDevice> devices);
 
@@ -36,8 +39,6 @@ class FakeChromeAudioServiceClient : public ChromeAudioServiceClient {
  private:
   std::vector<SerializedAudioDevice> devices_;
   bool connected_;
-
-  DISALLOW_COPY_AND_ASSIGN(FakeChromeAudioServiceClient);
 };
 
 }  // namespace mri

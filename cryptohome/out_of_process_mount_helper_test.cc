@@ -52,6 +52,10 @@ namespace cryptohome {
 class OutOfProcessMountHelperTest : public ::testing::Test {
  public:
   OutOfProcessMountHelperTest() {}
+  OutOfProcessMountHelperTest(const OutOfProcessMountHelperTest&) = delete;
+  OutOfProcessMountHelperTest& operator=(const OutOfProcessMountHelperTest&) =
+      delete;
+
   virtual ~OutOfProcessMountHelperTest() {}
 
   void SetUp() {
@@ -91,9 +95,6 @@ class OutOfProcessMountHelperTest : public ::testing::Test {
   MakeTests helper_;
   NiceMock<MockPlatform> platform_;
   std::unique_ptr<OutOfProcessMountHelper> out_of_process_mounter_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(OutOfProcessMountHelperTest);
 };
 
 TEST_F(OutOfProcessMountHelperTest, MountGuestUserDirOOP) {

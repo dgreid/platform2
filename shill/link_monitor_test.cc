@@ -46,6 +46,9 @@ class LinkMonitorObserver {
             Bind(&LinkMonitorObserver::OnFailureCallback, Unretained(this))),
         gateway_change_callback_(Bind(
             &LinkMonitorObserver::OnGatewayChangeCallback, Unretained(this))) {}
+  LinkMonitorObserver(const LinkMonitorObserver&) = delete;
+  LinkMonitorObserver& operator=(const LinkMonitorObserver&) = delete;
+
   virtual ~LinkMonitorObserver() = default;
 
   MOCK_METHOD(void, OnFailureCallback, ());
@@ -62,8 +65,6 @@ class LinkMonitorObserver {
  private:
   LinkMonitor::FailureCallback failure_callback_;
   LinkMonitor::GatewayChangeCallback gateway_change_callback_;
-
-  DISALLOW_COPY_AND_ASSIGN(LinkMonitorObserver);
 };
 
 class LinkMonitorTest : public Test {

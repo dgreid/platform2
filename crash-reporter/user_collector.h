@@ -24,6 +24,8 @@
 class UserCollector : public UserCollectorBase {
  public:
   UserCollector();
+  UserCollector(const UserCollector&) = delete;
+  UserCollector& operator=(const UserCollector&) = delete;
 
   // Initialize the user crash collector for detection of crashes,
   // given the path to this executable, metrics collection enabled
@@ -132,8 +134,6 @@ class UserCollector : public UserCollectorBase {
 
   // Force a core2md failure for testing.
   bool core2md_failure_;
-
-  DISALLOW_COPY_AND_ASSIGN(UserCollector);
 };
 
 #endif  // CRASH_REPORTER_USER_COLLECTOR_H_

@@ -26,6 +26,9 @@ namespace debugd {
 class PerfTool {
  public:
   PerfTool();
+  PerfTool(const PerfTool&) = delete;
+  PerfTool& operator=(const PerfTool&) = delete;
+
   ~PerfTool() = default;
 
   // Runs the perf tool with the request command for |duration_secs| seconds
@@ -60,8 +63,6 @@ class PerfTool {
   base::ScopedFD quipper_process_output_fd_;
   brillo::AsynchronousSignalHandler signal_handler_;
   brillo::ProcessReaper process_reaper_;
-
-  DISALLOW_COPY_AND_ASSIGN(PerfTool);
 };
 
 }  // namespace debugd

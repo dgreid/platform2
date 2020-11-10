@@ -28,6 +28,9 @@ class TremplinListenerImpl final
  public:
   explicit TremplinListenerImpl(
       base::WeakPtr<vm_tools::cicerone::Service> service);
+  TremplinListenerImpl(const TremplinListenerImpl&) = delete;
+  TremplinListenerImpl& operator=(const TremplinListenerImpl&) = delete;
+
   ~TremplinListenerImpl() override = default;
 
   // Pretend that every service call comes from |testing_peer_address| instead
@@ -97,8 +100,6 @@ class TremplinListenerImpl final
   // Task runner for the DBus thread; requests to perform DBus operations
   // on |service_| generally need to be posted to this thread.
   scoped_refptr<base::SequencedTaskRunner> task_runner_;
-
-  DISALLOW_COPY_AND_ASSIGN(TremplinListenerImpl);
 };
 
 }  // namespace cicerone

@@ -19,6 +19,9 @@ namespace http {
 class CurlInterface {
  public:
   CurlInterface() = default;
+  CurlInterface(const CurlInterface&) = delete;
+  CurlInterface& operator=(const CurlInterface&) = delete;
+
   virtual ~CurlInterface() = default;
 
   // Wrapper around curl_easy_init().
@@ -121,14 +124,14 @@ class CurlInterface {
                               unsigned int extra_nfds,
                               int timeout_ms,
                               int* numfds) = 0;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(CurlInterface);
 };
 
 class BRILLO_EXPORT CurlApi : public CurlInterface {
  public:
   CurlApi();
+  CurlApi(const CurlApi&) = delete;
+  CurlApi& operator=(const CurlApi&) = delete;
+
   ~CurlApi() override;
 
   // Wrapper around curl_easy_init().
@@ -216,9 +219,6 @@ class BRILLO_EXPORT CurlApi : public CurlInterface {
                       unsigned int extra_nfds,
                       int timeout_ms,
                       int* numfds) override;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(CurlApi);
 };
 
 }  // namespace http

@@ -35,6 +35,8 @@ class KernelCollector : public CrashCollector {
   };
 
   KernelCollector();
+  KernelCollector(const KernelCollector&) = delete;
+  KernelCollector& operator=(const KernelCollector&) = delete;
 
   ~KernelCollector() override;
 
@@ -208,8 +210,6 @@ class KernelCollector : public CrashCollector {
 
   // The architecture of kernel dump strings we are working with.
   ArchKind arch_;
-
-  DISALLOW_COPY_AND_ASSIGN(KernelCollector);
 };
 
 #endif  // CRASH_REPORTER_KERNEL_COLLECTOR_H_

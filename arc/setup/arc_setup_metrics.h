@@ -65,6 +65,9 @@ enum class ArcSdkVersionUpgradeType {
 class ArcSetupMetrics {
  public:
   ArcSetupMetrics();
+  ArcSetupMetrics(const ArcSetupMetrics&) = delete;
+  ArcSetupMetrics& operator=(const ArcSetupMetrics&) = delete;
+
   ~ArcSetupMetrics() = default;
 
   // Sends host code verification result.
@@ -107,8 +110,6 @@ class ArcSetupMetrics {
                          base::TimeDelta duration);
 
   std::unique_ptr<MetricsLibraryInterface> metrics_library_;
-
-  DISALLOW_COPY_AND_ASSIGN(ArcSetupMetrics);
 };
 
 }  // namespace arc

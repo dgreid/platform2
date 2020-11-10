@@ -15,6 +15,9 @@ namespace shill {
 class MockWiFiProvider : public WiFiProvider {
  public:
   MockWiFiProvider();
+  MockWiFiProvider(const MockWiFiProvider&) = delete;
+  MockWiFiProvider& operator=(const MockWiFiProvider&) = delete;
+
   ~MockWiFiProvider() override;
 
   MOCK_METHOD(void, Start, (), (override));
@@ -54,9 +57,6 @@ class MockWiFiProvider : public WiFiProvider {
   MOCK_METHOD(bool, OnServiceUnloaded, (const WiFiServiceRefPtr&), (override));
   MOCK_METHOD(ByteArrays, GetHiddenSSIDList, (), (override));
   MOCK_METHOD(int, NumAutoConnectableServices, (), (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockWiFiProvider);
 };
 
 }  // namespace shill

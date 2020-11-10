@@ -39,6 +39,9 @@ class ArcCollector : public UserCollectorBase {
 
   ArcCollector();
   explicit ArcCollector(ContextPtr context);
+  ArcCollector(const ArcCollector&) = delete;
+  ArcCollector& operator=(const ArcCollector&) = delete;
+
   ~ArcCollector() override = default;
 
   const Context& context() const { return *context_; }
@@ -117,8 +120,6 @@ class ArcCollector : public UserCollectorBase {
   ErrorType Is64BitProcess(int pid, bool* is_64_bit) const;
 
   const ContextPtr context_;
-
-  DISALLOW_COPY_AND_ASSIGN(ArcCollector);
 };
 
 #endif  // CRASH_REPORTER_ARC_COLLECTOR_H_

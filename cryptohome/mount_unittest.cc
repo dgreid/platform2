@@ -129,6 +129,9 @@ class MountTest
     : public ::testing::TestWithParam<bool /* should_test_ecryptfs */> {
  public:
   MountTest() : crypto_(&platform_) {}
+  MountTest(const MountTest&) = delete;
+  MountTest& operator=(const MountTest&) = delete;
+
   virtual ~MountTest() {}
 
   void SetUp() {
@@ -468,9 +471,6 @@ class MountTest
   scoped_refptr<Mount> mount_;
   base::test::TaskEnvironment task_environment_{
       base::test::TaskEnvironment::TimeSource::MOCK_TIME};
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MountTest);
 };
 
 INSTANTIATE_TEST_SUITE_P(WithEcryptfs, MountTest, ::testing::Values(true));
@@ -743,6 +743,8 @@ class ChapsDirectoryTest : public ::testing::Test {
     InitStat(&database_file_stat_, 0640, fake_platform::kChapsUID,
              fake_platform::kSharedGID);
   }
+  ChapsDirectoryTest(const ChapsDirectoryTest&) = delete;
+  ChapsDirectoryTest& operator=(const ChapsDirectoryTest&) = delete;
 
   virtual ~ChapsDirectoryTest() {}
 
@@ -800,8 +802,6 @@ class ChapsDirectoryTest : public ::testing::Test {
     s->st_uid = uid;
     s->st_gid = gid;
   }
-
-  DISALLOW_COPY_AND_ASSIGN(ChapsDirectoryTest);
 };
 
 TEST_F(ChapsDirectoryTest, DirectoryOK) {
@@ -1315,6 +1315,9 @@ const int kAlternateUserCount = base::size(kAlternateUsers);
 class AltImageTest : public MountTest {
  public:
   AltImageTest() {}
+  AltImageTest(const AltImageTest&) = delete;
+  AltImageTest& operator=(const AltImageTest&) = delete;
+
   ~AltImageTest() { MountTest::TearDown(); }
 
   void SetUpAltImage(const TestUserInfo* users, int user_count) {
@@ -1384,19 +1387,16 @@ class AltImageTest : public MountTest {
   }
 
   std::vector<FilePath> vaults_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(AltImageTest);
 };
 
 class EphemeralNoUserSystemTest : public AltImageTest {
  public:
   EphemeralNoUserSystemTest() {}
+  EphemeralNoUserSystemTest(const EphemeralNoUserSystemTest&) = delete;
+  EphemeralNoUserSystemTest& operator=(const EphemeralNoUserSystemTest&) =
+      delete;
 
   void SetUp() { SetUpAltImage(kNoUsers, kNoUserCount); }
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(EphemeralNoUserSystemTest);
 };
 
 INSTANTIATE_TEST_SUITE_P(WithEcryptfs,
@@ -1812,11 +1812,11 @@ TEST_P(EphemeralNoUserSystemTest, EnterpriseMountEnsureUserMountFailure) {
 class EphemeralOwnerOnlySystemTest : public AltImageTest {
  public:
   EphemeralOwnerOnlySystemTest() {}
+  EphemeralOwnerOnlySystemTest(const EphemeralOwnerOnlySystemTest&) = delete;
+  EphemeralOwnerOnlySystemTest& operator=(const EphemeralOwnerOnlySystemTest&) =
+      delete;
 
   void SetUp() { SetUpAltImage(kOwnerOnlyUsers, kOwnerOnlyUserCount); }
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(EphemeralOwnerOnlySystemTest);
 };
 
 INSTANTIATE_TEST_SUITE_P(WithEcryptfs,
@@ -1917,11 +1917,12 @@ TEST_P(EphemeralOwnerOnlySystemTest, OwnerMountIsEphemeralTest) {
 class EphemeralExistingUserSystemTest : public AltImageTest {
  public:
   EphemeralExistingUserSystemTest() {}
+  EphemeralExistingUserSystemTest(const EphemeralExistingUserSystemTest&) =
+      delete;
+  EphemeralExistingUserSystemTest& operator=(
+      const EphemeralExistingUserSystemTest&) = delete;
 
   void SetUp() { SetUpAltImage(kAlternateUsers, kAlternateUserCount); }
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(EphemeralExistingUserSystemTest);
 };
 
 INSTANTIATE_TEST_SUITE_P(WithEcryptfs,

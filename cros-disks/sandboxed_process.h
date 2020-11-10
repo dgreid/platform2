@@ -22,6 +22,9 @@ namespace cros_disks {
 class SandboxedProcess : public Process {
  public:
   SandboxedProcess();
+  SandboxedProcess(const SandboxedProcess&) = delete;
+  SandboxedProcess& operator=(const SandboxedProcess&) = delete;
+
   ~SandboxedProcess() override;
 
   // Loads the seccomp filters from |policy_file|. The calling process will be
@@ -107,8 +110,6 @@ class SandboxedProcess : public Process {
   minijail* jail_;
   bool run_custom_init_ = false;
   base::ScopedFD custom_init_control_fd_;
-
-  DISALLOW_COPY_AND_ASSIGN(SandboxedProcess);
 };
 
 }  // namespace cros_disks

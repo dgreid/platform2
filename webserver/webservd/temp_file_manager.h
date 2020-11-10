@@ -31,6 +31,9 @@ class TempFileManager {
 
   TempFileManager(const base::FilePath& temp_dir_path,
                   FileDeleterInterface* file_deleter);
+  TempFileManager(const TempFileManager&) = delete;
+  TempFileManager& operator=(const TempFileManager&) = delete;
+
   ~TempFileManager();
 
   // Generate a new temporary file name for a request with unique ID
@@ -53,8 +56,6 @@ class TempFileManager {
 
   // List of files belonging to a particular request.
   std::map<std::string, std::vector<base::FilePath>> request_files_;
-
-  DISALLOW_COPY_AND_ASSIGN(TempFileManager);
 };
 
 // Actual implementation of FileDeleterInterface to delete temporary files

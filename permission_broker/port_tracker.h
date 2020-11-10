@@ -104,6 +104,8 @@ class PortTracker {
 
  protected:
   explicit PortTracker(scoped_refptr<base::SequencedTaskRunner> task_runner);
+  PortTracker(const PortTracker&) = delete;
+  PortTracker& operator=(const PortTracker&) = delete;
 
  private:
   // Call patchpanel's DBus API to create or remove firewall rule.
@@ -138,8 +140,6 @@ class PortTracker {
   // object associated with it.
   std::map<int, std::unique_ptr<base::FileDescriptorWatcher::Controller>>
       lifeline_fd_controllers_;
-
-  DISALLOW_COPY_AND_ASSIGN(PortTracker);
 };
 
 }  // namespace permission_broker

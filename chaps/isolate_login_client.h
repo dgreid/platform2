@@ -32,6 +32,9 @@ class IsolateLoginClient {
   IsolateLoginClient(IsolateCredentialManager* isolate_manager,
                      TokenFileManager* file_manager,
                      TokenManagerClient* token_manager);
+  IsolateLoginClient(const IsolateLoginClient&) = delete;
+  IsolateLoginClient& operator=(const IsolateLoginClient&) = delete;
+
   virtual ~IsolateLoginClient();
 
   // Should be called whenever a user logs into a session. Will ensure that
@@ -57,8 +60,6 @@ class IsolateLoginClient {
   IsolateCredentialManager* isolate_manager_;
   TokenFileManager* file_manager_;
   TokenManagerClient* token_manager_;
-
-  DISALLOW_COPY_AND_ASSIGN(IsolateLoginClient);
 };
 
 }  // namespace chaps

@@ -219,6 +219,9 @@ class BRILLO_EXPORT Request final {
   Request(const std::string& url,
           const std::string& method,
           std::shared_ptr<Transport> transport);
+  Request(const Request&) = delete;
+  Request& operator=(const Request&) = delete;
+
   ~Request();
 
   // Gets/Sets "Accept:" header value. The default value is "*/*" if not set.
@@ -328,8 +331,6 @@ class BRILLO_EXPORT Request final {
   // E.g. range (10,range_value_omitted) represents bytes from 10 to the end
   // of the data stream.
   const uint64_t range_value_omitted = std::numeric_limits<uint64_t>::max();
-
-  DISALLOW_COPY_AND_ASSIGN(Request);
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -340,6 +341,9 @@ class BRILLO_EXPORT Request final {
 class BRILLO_EXPORT Response final {
  public:
   explicit Response(const std::shared_ptr<Connection>& connection);
+  Response(const Response&) = delete;
+  Response& operator=(const Response&) = delete;
+
   ~Response();
 
   // Returns true if server returned a success code (status code below 400).
@@ -371,8 +375,6 @@ class BRILLO_EXPORT Response final {
   friend class HttpRequestTest;
 
   std::shared_ptr<Connection> connection_;
-
-  DISALLOW_COPY_AND_ASSIGN(Response);
 };
 
 }  // namespace http

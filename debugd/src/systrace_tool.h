@@ -17,14 +17,14 @@ namespace debugd {
 class SystraceTool {
  public:
   SystraceTool() = default;
+  SystraceTool(const SystraceTool&) = delete;
+  SystraceTool& operator=(const SystraceTool&) = delete;
+
   ~SystraceTool() = default;
 
   std::string Start(const std::string& categories);
   void Stop(const base::ScopedFD& outfd);
   std::string Status();
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(SystraceTool);
 };
 
 }  // namespace debugd

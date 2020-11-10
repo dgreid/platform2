@@ -26,8 +26,8 @@ class FakeVdaImpl : public VdaImpl {
 
  private:
   FakeVdaImpl();
-
-  DISALLOW_COPY_AND_ASSIGN(FakeVdaImpl);
+  FakeVdaImpl(const FakeVdaImpl&) = delete;
+  FakeVdaImpl& operator=(const FakeVdaImpl&) = delete;
 };
 
 }  // namespace arc

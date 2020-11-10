@@ -66,6 +66,8 @@ class AttestedCredentialData {
       base::span<const uint8_t, kCredentialIdLengthLength> credential_id_length,
       std::vector<uint8_t> credential_id,
       std::unique_ptr<PublicKey> public_key);
+  AttestedCredentialData(const AttestedCredentialData&) = delete;
+  AttestedCredentialData& operator=(const AttestedCredentialData&) = delete;
 
   uint16_t GetCredentialIdLength();
 
@@ -81,8 +83,6 @@ class AttestedCredentialData {
   std::vector<uint8_t> credential_id_;
 
   std::unique_ptr<PublicKey> public_key_;
-
-  DISALLOW_COPY_AND_ASSIGN(AttestedCredentialData);
 };
 
 }  // namespace fido_device

@@ -21,6 +21,9 @@ namespace shill {
 class CellularCapabilityCdma : public CellularCapability3gpp {
  public:
   CellularCapabilityCdma(Cellular* cellular, ModemInfo* modem_info);
+  CellularCapabilityCdma(const CellularCapabilityCdma&) = delete;
+  CellularCapabilityCdma& operator=(const CellularCapabilityCdma&) = delete;
+
   ~CellularCapabilityCdma() override;
 
   // Returns true if the service is activated.
@@ -122,8 +125,6 @@ class CellularCapabilityCdma : public CellularCapability3gpp {
   // TODO(armansito): Should probably call this |weak_ptr_factory_| after
   // 3gpp refactor
   base::WeakPtrFactory<CellularCapabilityCdma> weak_cdma_ptr_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(CellularCapabilityCdma);
 };
 
 }  // namespace shill

@@ -39,6 +39,9 @@ class FileReaderThreadSafe {
                        int64_t start_cluster,
                        int64_t file_size)
       : reader_(volume, start_cluster, file_size) {}
+  FileReaderThreadSafe(const FileReaderThreadSafe&) = delete;
+  FileReaderThreadSafe& operator=(const FileReaderThreadSafe&) = delete;
+
   ~FileReaderThreadSafe() = default;
 
   int64_t Read(char* buf, int64_t size, int64_t offset) {
@@ -49,8 +52,6 @@ class FileReaderThreadSafe {
  private:
   fat::Volume::FileReader reader_;
   base::Lock lock_;
-
-  DISALLOW_COPY_AND_ASSIGN(FileReaderThreadSafe);
 };
 
 // Converts DirectoryEntry to stat.

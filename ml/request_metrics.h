@@ -31,6 +31,8 @@ class RequestMetrics {
   // "MachineLearningService.`model_name`.`request_name`."
   RequestMetrics(const std::string& model_name,
                  const std::string& request_name);
+  RequestMetrics(const RequestMetrics&) = delete;
+  RequestMetrics& operator=(const RequestMetrics&) = delete;
 
   // Logs (to UMA) the specified `event` associated with this request.
   template <class RequestEventEnum>
@@ -68,8 +70,6 @@ class RequestMetrics {
   // 4. `FinishRecordingPerformanceMetrics()` must be called when
   // `status_=kRecording` and it sets `status_` to `kEventFinished`.
   Status status_;
-
-  DISALLOW_COPY_AND_ASSIGN(RequestMetrics);
 };
 
 // UMA metric names:

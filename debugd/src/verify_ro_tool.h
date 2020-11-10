@@ -18,6 +18,9 @@ namespace debugd {
 class VerifyRoTool : public SubprocessTool {
  public:
   VerifyRoTool() = default;
+  VerifyRoTool(const VerifyRoTool&) = delete;
+  VerifyRoTool& operator=(const VerifyRoTool&) = delete;
+
   ~VerifyRoTool() override = default;
 
   // Checks and updates the Cr50 FW and verifies the AP and EC RO FW integrity
@@ -37,8 +40,6 @@ class VerifyRoTool : public SubprocessTool {
   // i.e., a file or dir under /opt/google/cr50. If |is_dir| is set, returns
   // false if |path| isn't a dir.
   bool CheckCr50ResourceLocation(const std::string& path, bool is_dir);
-
-  DISALLOW_COPY_AND_ASSIGN(VerifyRoTool);
 };
 
 }  // namespace debugd

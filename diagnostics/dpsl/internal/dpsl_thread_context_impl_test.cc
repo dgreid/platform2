@@ -26,6 +26,9 @@ namespace diagnostics {
 class DpslThreadContextImplBaseTest : public testing::Test {
  public:
   DpslThreadContextImplBaseTest() = default;
+  DpslThreadContextImplBaseTest(const DpslThreadContextImplBaseTest&) = delete;
+  DpslThreadContextImplBaseTest& operator=(
+      const DpslThreadContextImplBaseTest&) = delete;
 
   ~DpslThreadContextImplBaseTest() override {
     DpslThreadContextImpl::CleanThreadCounterForTesting();
@@ -39,9 +42,6 @@ class DpslThreadContextImplBaseTest : public testing::Test {
 
  protected:
   std::unique_ptr<DpslGlobalContext> global_context_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(DpslThreadContextImplBaseTest);
 };
 
 using DpslThreadContextImplBaseDeathTest = DpslThreadContextImplBaseTest;
@@ -82,6 +82,10 @@ class DpslThreadContextImplMainThreadTest
     : public DpslThreadContextImplBaseTest {
  public:
   DpslThreadContextImplMainThreadTest() = default;
+  DpslThreadContextImplMainThreadTest(
+      const DpslThreadContextImplMainThreadTest&) = delete;
+  DpslThreadContextImplMainThreadTest& operator=(
+      const DpslThreadContextImplMainThreadTest&) = delete;
 
   void SetUp() override {
     DpslThreadContextImplBaseTest::SetUp();
@@ -105,9 +109,6 @@ class DpslThreadContextImplMainThreadTest
   std::unique_ptr<DpslThreadContext> main_thread_context_;
 
   std::vector<int> task_id_queue_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(DpslThreadContextImplMainThreadTest);
 };
 
 TEST_F(DpslThreadContextImplMainThreadTest, BelongsToCurrentThread) {
@@ -204,6 +205,10 @@ class DpslThreadContextImplMultiThreadTest
     // The default style "fast" does not support multi-threaded tests.
     ::testing::FLAGS_gtest_death_test_style = "threadsafe";
   }
+  DpslThreadContextImplMultiThreadTest(
+      const DpslThreadContextImplMultiThreadTest&) = delete;
+  DpslThreadContextImplMultiThreadTest& operator=(
+      const DpslThreadContextImplMultiThreadTest&) = delete;
 
   ~DpslThreadContextImplMultiThreadTest() override = default;
 
@@ -241,9 +246,6 @@ class DpslThreadContextImplMultiThreadTest
 
  protected:
   std::unique_ptr<TestDpslBackgroundThread> background_thread_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(DpslThreadContextImplMultiThreadTest);
 };
 
 TEST_F(DpslThreadContextImplMultiThreadTest, PostTask) {

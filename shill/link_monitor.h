@@ -42,6 +42,8 @@ class LinkMonitor {
               DeviceInfo* device_info,
               const FailureCallback& failure_callback,
               const GatewayChangeCallback& gateway_change_callback);
+  LinkMonitor(const LinkMonitor&) = delete;
+  LinkMonitor& operator=(const LinkMonitor&) = delete;
   virtual ~LinkMonitor();
 
   // Starts link-monitoring on the selected connection.  Returns
@@ -95,8 +97,6 @@ class LinkMonitor {
   struct timeval started_monitoring_at_;
   // Time instance for performing GetTimeMonotonic().
   Time* time_;
-
-  DISALLOW_COPY_AND_ASSIGN(LinkMonitor);
 };
 
 }  // namespace shill

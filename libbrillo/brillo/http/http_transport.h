@@ -60,6 +60,9 @@ class BRILLO_EXPORT Transport : public std::enable_shared_from_this<Transport> {
   };
 
   Transport() = default;
+  Transport(const Transport&) = delete;
+  Transport& operator=(const Transport&) = delete;
+
   virtual ~Transport() = default;
 
   // Creates a connection object and initializes it with the specified data.
@@ -140,9 +143,6 @@ class BRILLO_EXPORT Transport : public std::enable_shared_from_this<Transport> {
   virtual void ClearHost() {}
 
   static base::FilePath CertificateToPath(Certificate cert);
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(Transport);
 };
 
 }  // namespace http

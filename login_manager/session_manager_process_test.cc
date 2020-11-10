@@ -53,6 +53,9 @@ class SessionManagerProcessTest : public ::testing::Test {
         liveness_checker_(new MockLivenessChecker),
         session_manager_impl_(new MockSessionManager),
         must_destroy_mocks_(true) {}
+  SessionManagerProcessTest(const SessionManagerProcessTest&) = delete;
+  SessionManagerProcessTest& operator=(const SessionManagerProcessTest&) =
+      delete;
 
   ~SessionManagerProcessTest() override {
     if (must_destroy_mocks_) {
@@ -157,8 +160,6 @@ class SessionManagerProcessTest : public ::testing::Test {
   bool must_destroy_mocks_;
   base::ScopedTempDir tmpdir_;
   brillo::BaseMessageLoop brillo_loop_;
-
-  DISALLOW_COPY_AND_ASSIGN(SessionManagerProcessTest);
 };
 
 // static

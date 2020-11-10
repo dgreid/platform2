@@ -51,6 +51,9 @@ class CertProvisionKeyStoreTest : public testing::Test {
  public:
   using Pkcs11Mock = chaps::ChapsProxyMock;
   CertProvisionKeyStoreTest() = default;
+  CertProvisionKeyStoreTest(const CertProvisionKeyStoreTest&) = delete;
+  CertProvisionKeyStoreTest& operator=(const CertProvisionKeyStoreTest&) =
+      delete;
 
   void SetUp() {
     ON_CALL(pkcs11_, OpenSession(_, _, _, _))
@@ -148,9 +151,6 @@ class CertProvisionKeyStoreTest : public testing::Test {
 
   // Signature returned by Sign().
   std::string signature_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(CertProvisionKeyStoreTest);
 };
 
 // Checks that initialization succeeds under normal conditions

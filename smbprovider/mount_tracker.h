@@ -29,6 +29,9 @@ class MountTracker {
  public:
   MountTracker(std::unique_ptr<base::TickClock> tick_clock,
                bool metadata_cache_enabled);
+  MountTracker(const MountTracker&) = delete;
+  MountTracker& operator=(const MountTracker&) = delete;
+
   ~MountTracker();
 
   // Returns true if |mount_id| is already mounted.
@@ -121,6 +124,8 @@ class MountTracker {
           base::TimeDelta::FromMicroseconds(kMetadataCacheLifetimeMicroseconds),
           cache_mode);
     }
+    MountInfo(const MountInfo&) = delete;
+    MountInfo& operator=(const MountInfo&) = delete;
 
     MountInfo& operator=(MountInfo&& other) = default;
 
@@ -129,7 +134,6 @@ class MountTracker {
     std::unique_ptr<SambaInterface> samba_interface;
     std::unique_ptr<MetadataCache> cache;
 
-    DISALLOW_COPY_AND_ASSIGN(MountInfo);
   };
 
   // Returns true if |mount_id| exists as a value in |samba_interface_map_|.
@@ -161,8 +165,6 @@ class MountTracker {
 
   std::unique_ptr<base::TickClock> tick_clock_;
   bool metadata_cache_enabled_;
-
-  DISALLOW_COPY_AND_ASSIGN(MountTracker);
 };
 
 }  // namespace smbprovider

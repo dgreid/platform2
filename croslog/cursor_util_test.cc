@@ -18,6 +18,8 @@ namespace croslog {
 class CursorUtilTest : public ::testing::Test {
  public:
   CursorUtilTest() = default;
+  CursorUtilTest(const CursorUtilTest&) = delete;
+  CursorUtilTest& operator=(const CursorUtilTest&) = delete;
 
   static base::Time TimeFromExploded(int year,
                                      int month,
@@ -36,9 +38,6 @@ class CursorUtilTest : public ::testing::Test {
     time -= base::TimeDelta::FromHours(timezone_hour);
     return time;
   }
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(CursorUtilTest);
 };
 
 TEST_F(CursorUtilTest, Generate) {

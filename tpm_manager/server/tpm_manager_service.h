@@ -86,6 +86,8 @@ class TpmManagerService : public TpmNvramInterface,
                     TpmInitializer* tpm_initializer,
                     TpmNvram* tpm_nvram,
                     TpmManagerMetrics* tpm_manager_metrics);
+  TpmManagerService(const TpmManagerService&) = delete;
+  TpmManagerService& operator=(const TpmManagerService&) = delete;
 
   ~TpmManagerService() override;
 
@@ -319,6 +321,9 @@ class TpmManagerService : public TpmNvramInterface,
         : base::Thread(name), service_(service) {
       DCHECK(service_);
     }
+    ServiceWorkerThread(const ServiceWorkerThread&) = delete;
+    ServiceWorkerThread& operator=(const ServiceWorkerThread&) = delete;
+
     ~ServiceWorkerThread() override { Stop(); }
 
    private:
@@ -326,7 +331,6 @@ class TpmManagerService : public TpmNvramInterface,
 
     TpmManagerService* const service_;
 
-    DISALLOW_COPY_AND_ASSIGN(ServiceWorkerThread);
   };
 
 #if USE_TPM2
@@ -360,8 +364,6 @@ class TpmManagerService : public TpmNvramInterface,
   // Function that's called after TPM ownership is taken by tpm_initializer_.
   // It's value should be set by SetOwnershipTakenCallback() before being used.
   OwnershipTakenCallBack ownership_taken_callback_;
-
-  DISALLOW_COPY_AND_ASSIGN(TpmManagerService);
 };
 
 }  // namespace tpm_manager

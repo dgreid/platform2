@@ -52,6 +52,9 @@ class ResultCallbackObserver {
   ResultCallbackObserver()
       : result_callback_(Bind(&ResultCallbackObserver::OnResultCallback,
                               Unretained(this))) {}
+  ResultCallbackObserver(const ResultCallbackObserver&) = delete;
+  ResultCallbackObserver& operator=(const ResultCallbackObserver&) = delete;
+
   virtual ~ResultCallbackObserver() = default;
 
   MOCK_METHOD(void, OnResultCallback, (bool));
@@ -62,8 +65,6 @@ class ResultCallbackObserver {
 
  private:
   PassiveLinkMonitor::ResultCallback result_callback_;
-
-  DISALLOW_COPY_AND_ASSIGN(ResultCallbackObserver);
 };
 
 class PassiveLinkMonitorTest : public Test {

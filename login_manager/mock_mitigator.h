@@ -18,6 +18,9 @@ class PolicyKey;
 class MockMitigator : public OwnerKeyLossMitigator {
  public:
   MockMitigator();
+  MockMitigator(const MockMitigator&) = delete;
+  MockMitigator& operator=(const MockMitigator&) = delete;
+
   ~MockMitigator() override;
 
   MOCK_METHOD(bool,
@@ -25,9 +28,6 @@ class MockMitigator : public OwnerKeyLossMitigator {
               (const std::string&, const base::Optional<base::FilePath>&),
               (override));
   MOCK_METHOD(bool, Mitigating, (), (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockMitigator);
 };
 
 }  // namespace login_manager

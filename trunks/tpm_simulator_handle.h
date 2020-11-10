@@ -26,6 +26,9 @@ namespace trunks {
 class TpmSimulatorHandle : public CommandTransceiver {
  public:
   TpmSimulatorHandle();
+  TpmSimulatorHandle(const TpmSimulatorHandle&) = delete;
+  TpmSimulatorHandle& operator=(const TpmSimulatorHandle&) = delete;
+
   ~TpmSimulatorHandle() override;
 
   // CommandTranceiver methods.
@@ -39,8 +42,6 @@ class TpmSimulatorHandle : public CommandTransceiver {
   void InitializeSimulator();
 
   bool init_ = false;
-
-  DISALLOW_COPY_AND_ASSIGN(TpmSimulatorHandle);
 };
 
 }  // namespace trunks

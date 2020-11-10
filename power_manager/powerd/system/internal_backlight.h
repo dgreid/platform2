@@ -33,6 +33,9 @@ class InternalBacklight : public BacklightInterface {
   static const char kScaleFilename[];
 
   InternalBacklight();
+  InternalBacklight(const InternalBacklight&) = delete;
+  InternalBacklight& operator=(const InternalBacklight&) = delete;
+
   ~InternalBacklight() override;
 
   // Initialize the backlight object.
@@ -119,8 +122,6 @@ class InternalBacklight : public BacklightInterface {
   // Start and end brightness level for the current transition.
   int64_t transition_start_level_;
   int64_t transition_end_level_;
-
-  DISALLOW_COPY_AND_ASSIGN(InternalBacklight);
 };
 
 }  // namespace system

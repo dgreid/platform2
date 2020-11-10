@@ -18,6 +18,9 @@ namespace typecd {
 class Daemon : public brillo::Daemon {
  public:
   Daemon();
+  Daemon(const Daemon&) = delete;
+  Daemon& operator=(const Daemon&) = delete;
+
   ~Daemon() override;
 
  protected:
@@ -27,8 +30,6 @@ class Daemon : public brillo::Daemon {
   std::unique_ptr<UdevMonitor> udev_monitor_;
   std::unique_ptr<PortManager> port_manager_;
   base::WeakPtrFactory<Daemon> weak_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(Daemon);
 };
 
 }  // namespace typecd

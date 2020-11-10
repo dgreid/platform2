@@ -36,6 +36,10 @@ class SignatureSealedCreationMocker final {
  public:
   explicit SignatureSealedCreationMocker(
       MockSignatureSealingBackend* mock_backend);
+  SignatureSealedCreationMocker(const SignatureSealedCreationMocker&) = delete;
+  SignatureSealedCreationMocker& operator=(
+      const SignatureSealedCreationMocker&) = delete;
+
   ~SignatureSealedCreationMocker();
 
   void set_public_key_spki_der(const brillo::Blob& public_key_spki_der) {
@@ -73,8 +77,6 @@ class SignatureSealedCreationMocker final {
   brillo::Blob delegate_blob_;
   brillo::Blob delegate_secret_;
   brillo::Blob secret_value_;
-
-  DISALLOW_COPY_AND_ASSIGN(SignatureSealedCreationMocker);
 };
 
 // Helper for setting up mock expectation and mock response for the
@@ -90,6 +92,11 @@ class SignatureSealedUnsealingMocker final {
  public:
   explicit SignatureSealedUnsealingMocker(
       MockSignatureSealingBackend* mock_backend);
+  SignatureSealedUnsealingMocker(const SignatureSealedUnsealingMocker&) =
+      delete;
+  SignatureSealedUnsealingMocker& operator=(
+      const SignatureSealedUnsealingMocker&) = delete;
+
   ~SignatureSealedUnsealingMocker();
 
   void set_public_key_spki_der(const brillo::Blob& public_key_spki_der) {
@@ -144,8 +151,6 @@ class SignatureSealedUnsealingMocker final {
   brillo::Blob challenge_value_;
   brillo::Blob challenge_signature_;
   brillo::Blob secret_value_;
-
-  DISALLOW_COPY_AND_ASSIGN(SignatureSealedUnsealingMocker);
 };
 
 }  // namespace cryptohome

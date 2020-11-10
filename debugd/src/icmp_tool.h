@@ -15,15 +15,15 @@ namespace debugd {
 class ICMPTool {
  public:
   ICMPTool() = default;
+  ICMPTool(const ICMPTool&) = delete;
+  ICMPTool& operator=(const ICMPTool&) = delete;
+
   ~ICMPTool() = default;
 
   std::string TestICMP(const std::string& host);
   std::string TestICMPWithOptions(
       const std::string& host,
       const std::map<std::string, std::string>& options);
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ICMPTool);
 };
 
 }  // namespace debugd

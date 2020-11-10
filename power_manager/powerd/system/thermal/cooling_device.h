@@ -16,6 +16,8 @@ namespace system {
 class CoolingDevice : public ThermalDevice {
  public:
   using ThermalDevice::ThermalDevice;
+  CoolingDevice(const CoolingDevice&) = delete;
+  CoolingDevice& operator=(const CoolingDevice&) = delete;
   // Read sysfs to determine the scaling for nominal/fair/serious/critcal state.
   bool InitSysfsFile() override;
 
@@ -31,8 +33,6 @@ class CoolingDevice : public ThermalDevice {
   int threshold_fair_;
   int threshold_serious_;
   int threshold_critical_;
-
-  DISALLOW_COPY_AND_ASSIGN(CoolingDevice);
 };
 
 }  // namespace system

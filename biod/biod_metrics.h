@@ -84,6 +84,9 @@ class BiodMetricsInterface {
 class BiodMetrics : public BiodMetricsInterface {
  public:
   BiodMetrics();
+  BiodMetrics(const BiodMetrics&) = delete;
+  BiodMetrics& operator=(const BiodMetrics&) = delete;
+
   ~BiodMetrics() override = default;
 
   // Send number of fingers enrolled.
@@ -138,8 +141,6 @@ class BiodMetrics : public BiodMetricsInterface {
 
  private:
   std::unique_ptr<MetricsLibraryInterface> metrics_lib_;
-
-  DISALLOW_COPY_AND_ASSIGN(BiodMetrics);
 };
 
 }  // namespace biod

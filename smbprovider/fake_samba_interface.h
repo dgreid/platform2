@@ -26,6 +26,8 @@ constexpr size_t kDirEntBufSize = 1024;
 class FakeSambaInterface : public SambaInterface {
  public:
   FakeSambaInterface();
+  FakeSambaInterface(const FakeSambaInterface&) = delete;
+  FakeSambaInterface& operator=(const FakeSambaInterface&) = delete;
 
   // SambaInterface overrides.
   int32_t OpenDirectory(const std::string& directory_path,
@@ -176,6 +178,8 @@ class FakeSambaInterface : public SambaInterface {
               size_t size,
               time_t date,
               bool locked);
+    FakeEntry(const FakeEntry&) = delete;
+    FakeEntry& operator=(const FakeEntry&) = delete;
 
     virtual ~FakeEntry() = default;
 
@@ -191,7 +195,6 @@ class FakeSambaInterface : public SambaInterface {
     // Checks whether this entry is a file or an empty directory.
     bool IsFileOrEmptyDir() const;
 
-    DISALLOW_COPY_AND_ASSIGN(FakeEntry);
   };
 
   struct FakeDirectory : FakeEntry {
@@ -209,6 +212,8 @@ class FakeSambaInterface : public SambaInterface {
 
     explicit FakeDirectory(const std::string& base_name)
         : FakeDirectory(base_name, false /* locked */) {}
+    FakeDirectory(const FakeDirectory&) = delete;
+    FakeDirectory& operator=(const FakeDirectory&) = delete;
 
     // Returns entries.empty().
     bool IsEmpty() const;
@@ -227,7 +232,6 @@ class FakeSambaInterface : public SambaInterface {
     // Contains pointers to entries that can be found in this directory.
     Entries entries;
 
-    DISALLOW_COPY_AND_ASSIGN(FakeDirectory);
   };
 
   struct FakeFile : FakeEntry {
@@ -245,6 +249,8 @@ class FakeSambaInterface : public SambaInterface {
               base_name, SMBC_FILE, file_data.size(), date, false /* locked */),
           has_data(true),
           data(std::move(file_data)) {}
+    FakeFile(const FakeFile&) = delete;
+    FakeFile& operator=(const FakeFile&) = delete;
 
     // Writes |buffer_size| bytes from |buffer| into the file starting from
     // |offset|.
@@ -260,7 +266,6 @@ class FakeSambaInterface : public SambaInterface {
     // Contains the data for the file.
     std::vector<uint8_t> data;
 
-    DISALLOW_COPY_AND_ASSIGN(FakeFile);
   };
 
   struct OpenInfo {
@@ -295,11 +300,12 @@ class FakeSambaInterface : public SambaInterface {
           smbc_type(other.smbc_type),
           readable(other.readable),
           writeable(other.writeable) {}
+    OpenInfo(const OpenInfo&) = delete;
+    OpenInfo& operator=(const OpenInfo&) = delete;
 
     // Returns true if |dir_path| is the same as full_path.
     bool IsForDir(const std::string& dir_path);
 
-    DISALLOW_COPY_AND_ASSIGN(OpenInfo);
   };
 
   using OpenEntries = std::map<uint32_t, OpenInfo>;
@@ -418,8 +424,6 @@ class FakeSambaInterface : public SambaInterface {
 
   // Weak pointer factory. Should be the last member.
   base::WeakPtrFactory<FakeSambaInterface> weak_factory_{this};
-
-  DISALLOW_COPY_AND_ASSIGN(FakeSambaInterface);
 };
 
 }  // namespace smbprovider

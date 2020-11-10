@@ -95,6 +95,9 @@ class Prefs : public PrefsInterface {
   class TestApi {
    public:
     explicit TestApi(Prefs* prefs);
+    TestApi(const TestApi&) = delete;
+    TestApi& operator=(const TestApi&) = delete;
+
     ~TestApi();
 
     void set_write_interval(base::TimeDelta interval) {
@@ -108,10 +111,12 @@ class Prefs : public PrefsInterface {
    private:
     Prefs* prefs_;  // weak
 
-    DISALLOW_COPY_AND_ASSIGN(TestApi);
   };
 
   Prefs();
+  Prefs(const Prefs&) = delete;
+  Prefs& operator=(const Prefs&) = delete;
+
   ~Prefs() override;
 
   // Returns the default writable store of prefs, to be passed to Init().
@@ -182,8 +187,6 @@ class Prefs : public PrefsInterface {
   // Map from name to stringified value of prefs that need to be written to
   // the first path in |pref_paths_|.
   std::map<std::string, std::string> prefs_to_write_;
-
-  DISALLOW_COPY_AND_ASSIGN(Prefs);
 };
 
 }  // namespace power_manager

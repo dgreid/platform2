@@ -25,6 +25,8 @@ namespace {
 class MockContiguousBuffer : public data_container::ContiguousBufferBase {
  public:
   MockContiguousBuffer() = default;
+  MockContiguousBuffer(const MockContiguousBuffer&) = delete;
+  MockContiguousBuffer& operator=(const MockContiguousBuffer&) = delete;
 
   MOCK_METHOD(bool, Resize, (size_t, ErrorPtr*), (override));
   MOCK_METHOD(size_t, GetSize, (), (const, override));
@@ -40,9 +42,6 @@ class MockContiguousBuffer : public data_container::ContiguousBufferBase {
               CopyMemoryBlock,
               (void*, const void*, size_t),
               (const, override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockContiguousBuffer);
 };
 }  // anonymous namespace
 

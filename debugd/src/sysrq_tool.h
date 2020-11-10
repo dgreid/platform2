@@ -13,12 +13,12 @@ namespace debugd {
 class SysrqTool {
  public:
   SysrqTool() = default;
+  SysrqTool(const SysrqTool&) = delete;
+  SysrqTool& operator=(const SysrqTool&) = delete;
+
   ~SysrqTool() = default;
 
   bool LogKernelTaskStates(brillo::ErrorPtr* error);
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(SysrqTool);
 };
 
 }  // namespace debugd

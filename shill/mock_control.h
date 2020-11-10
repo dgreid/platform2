@@ -46,6 +46,9 @@ namespace shill {
 class MockControl : public ControlInterface {
  public:
   MockControl();
+  MockControl(const MockControl&) = delete;
+  MockControl& operator=(const MockControl&) = delete;
+
   ~MockControl() override;
 
   void RegisterManagerObject(
@@ -158,8 +161,6 @@ class MockControl : public ControlInterface {
   base::Closure supplicant_appear_;
   base::Closure supplicant_vanish_;
 #endif  // DISABLE_WIFI || DISABLE_WIRED_8021X
-
-  DISALLOW_COPY_AND_ASSIGN(MockControl);
 };
 
 }  // namespace shill

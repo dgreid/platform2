@@ -48,6 +48,8 @@ using ::testing::StrEq;
 class BrowserJobTest : public ::testing::Test {
  public:
   BrowserJobTest() {}
+  BrowserJobTest(const BrowserJobTest&) = delete;
+  BrowserJobTest& operator=(const BrowserJobTest&) = delete;
 
   ~BrowserJobTest() override {}
 
@@ -84,9 +86,6 @@ class BrowserJobTest : public ::testing::Test {
   MockMetrics metrics_;
   MockSystemUtils utils_;
   std::unique_ptr<BrowserJob> job_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(BrowserJobTest);
 };
 
 // Default argument list for a job to use in mostly all test cases.

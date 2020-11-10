@@ -16,6 +16,10 @@ namespace system {
 class AcpiWakeupHelperInterface {
  public:
   AcpiWakeupHelperInterface() {}
+  AcpiWakeupHelperInterface(const AcpiWakeupHelperInterface&) = delete;
+  AcpiWakeupHelperInterface& operator=(const AcpiWakeupHelperInterface&) =
+      delete;
+
   virtual ~AcpiWakeupHelperInterface() {}
 
   // Checks whether /proc/acpi/wakeup is available on this system.
@@ -30,9 +34,6 @@ class AcpiWakeupHelperInterface {
   // success.
   virtual bool SetWakeupEnabled(const std::string& device_name,
                                 bool enabled) = 0;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(AcpiWakeupHelperInterface);
 };
 
 }  // namespace system

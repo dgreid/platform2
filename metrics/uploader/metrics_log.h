@@ -21,6 +21,8 @@ class MetricsLog : public metrics::MetricsLogBase {
   // The constructor doesn't set any metadata. The metadata is only set by a
   // SystemProfileSetter.
   MetricsLog();
+  MetricsLog(const MetricsLog&) = delete;
+  MetricsLog& operator=(const MetricsLog&) = delete;
 
   void IncrementUserCrashCount();
   void IncrementKernelCrashCount();
@@ -35,8 +37,6 @@ class MetricsLog : public metrics::MetricsLogBase {
   FRIEND_TEST(UploadServiceTest, LogUncleanShutdown);
   FRIEND_TEST(UploadServiceTest, LogUserCrash);
   FRIEND_TEST(UploadServiceTest, UnknownCrashIgnored);
-
-  DISALLOW_COPY_AND_ASSIGN(MetricsLog);
 };
 
 #endif  // METRICS_UPLOADER_METRICS_LOG_H_

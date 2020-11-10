@@ -32,12 +32,13 @@ class SHILL_EXPORT IOHandlerFactoryContainer {
 
  protected:
   IOHandlerFactoryContainer();
+  IOHandlerFactoryContainer(const IOHandlerFactoryContainer&) = delete;
+  IOHandlerFactoryContainer& operator=(const IOHandlerFactoryContainer&) =
+      delete;
 
  private:
   friend class base::NoDestructor<IOHandlerFactoryContainer>;
   std::unique_ptr<IOHandlerFactory> factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(IOHandlerFactoryContainer);
 };
 
 }  // namespace shill

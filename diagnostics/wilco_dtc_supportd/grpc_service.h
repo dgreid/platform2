@@ -208,6 +208,9 @@ class GrpcService final {
           grpc_api::GetStatefulPartitionAvailableCapacityResponse>)>;
 
   explicit GrpcService(Delegate* delegate);
+  GrpcService(const GrpcService&) = delete;
+  GrpcService& operator=(const GrpcService&) = delete;
+
   ~GrpcService();
 
   // Overrides the file system root directory for file operations in tests.
@@ -278,8 +281,6 @@ class GrpcService final {
 
   // The file system root directory. Can be overridden in tests.
   base::FilePath root_dir_{"/"};
-
-  DISALLOW_COPY_AND_ASSIGN(GrpcService);
 };
 
 }  // namespace diagnostics

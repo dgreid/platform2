@@ -99,6 +99,9 @@ class UdevInterface {
 class Udev : public UdevInterface {
  public:
   Udev();
+  Udev(const Udev&) = delete;
+  Udev& operator=(const Udev&) = delete;
+
   ~Udev() override;
 
   // Initializes the object to listen for events. Returns true on success.
@@ -178,8 +181,6 @@ class Udev : public UdevInterface {
 
   // Controller for watching |udev_monitor_|'s FD for readability.
   std::unique_ptr<base::FileDescriptorWatcher::Controller> controller_;
-
-  DISALLOW_COPY_AND_ASSIGN(Udev);
 };
 
 }  // namespace system

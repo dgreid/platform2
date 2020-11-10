@@ -17,6 +17,9 @@ namespace mri {
 class FakeVideoCaptureServiceClient : public VideoCaptureServiceClient {
  public:
   FakeVideoCaptureServiceClient() = default;
+  FakeVideoCaptureServiceClient(const FakeVideoCaptureServiceClient&) = delete;
+  FakeVideoCaptureServiceClient& operator=(
+      const FakeVideoCaptureServiceClient&) = delete;
 
   void SetDevicesForGetDevices(std::vector<SerializedVideoDevice> devices);
 
@@ -49,8 +52,6 @@ class FakeVideoCaptureServiceClient : public VideoCaptureServiceClient {
  private:
   std::vector<SerializedVideoDevice> devices_;
   bool connected_;
-
-  DISALLOW_COPY_AND_ASSIGN(FakeVideoCaptureServiceClient);
 };
 
 }  // namespace mri

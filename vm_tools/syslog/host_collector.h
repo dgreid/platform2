@@ -53,6 +53,8 @@ class HostCollector : public Collector {
                          int64_t cid,
                          VmKernelLogRequest::VmType vm_type,
                          base::WeakPtr<LogPipeManager> log_pipe_manager);
+  HostCollector(const HostCollector&) = delete;
+  HostCollector& operator=(const HostCollector&) = delete;
 
   int64_t cid_;
 
@@ -62,8 +64,6 @@ class HostCollector : public Collector {
   VmKernelLogRequest::VmType vm_type_;
 
   base::WeakPtrFactory<Collector> weak_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(HostCollector);
 };
 
 }  // namespace syslog

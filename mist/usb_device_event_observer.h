@@ -29,10 +29,10 @@ class UsbDeviceEventObserver : public base::CheckedObserver {
 
  protected:
   UsbDeviceEventObserver() = default;
-  virtual ~UsbDeviceEventObserver() = default;
+  UsbDeviceEventObserver(const UsbDeviceEventObserver&) = delete;
+  UsbDeviceEventObserver& operator=(const UsbDeviceEventObserver&) = delete;
 
- private:
-  DISALLOW_COPY_AND_ASSIGN(UsbDeviceEventObserver);
+  virtual ~UsbDeviceEventObserver() = default;
 };
 
 }  // namespace mist

@@ -16,6 +16,9 @@ namespace shill {
 class MockArpClient : public ArpClient {
  public:
   MockArpClient();
+  MockArpClient(const MockArpClient&) = delete;
+  MockArpClient& operator=(const MockArpClient&) = delete;
+
   ~MockArpClient() override;
 
   MOCK_METHOD(bool, StartReplyListener, (), (override));
@@ -27,9 +30,6 @@ class MockArpClient : public ArpClient {
               (const, override));
   MOCK_METHOD(bool, TransmitRequest, (const ArpPacket&), (const, override));
   MOCK_METHOD(int, socket, (), (const, override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockArpClient);
 };
 
 }  // namespace shill

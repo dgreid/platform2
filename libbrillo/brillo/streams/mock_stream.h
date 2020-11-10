@@ -15,6 +15,8 @@ namespace brillo {
 class MockStream : public Stream {
  public:
   MockStream() = default;
+  MockStream(const MockStream&) = delete;
+  MockStream& operator=(const MockStream&) = delete;
 
   MOCK_METHOD(bool, IsOpen, (), (const, override));
   MOCK_METHOD(bool, CanRead, (), (const, override));
@@ -92,9 +94,6 @@ class MockStream : public Stream {
               WaitForDataBlocking,
               (AccessMode, base::TimeDelta, AccessMode*, ErrorPtr*),
               (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockStream);
 };
 
 }  // namespace brillo

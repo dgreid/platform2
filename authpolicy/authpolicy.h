@@ -51,6 +51,8 @@ class AuthPolicy : public org::chromium::AuthPolicyAdaptor,
       brillo::dbus_utils::ExportedObjectManager* object_manager);
 
   AuthPolicy(AuthPolicyMetrics* metrics, const PathService* path_service);
+  AuthPolicy(const AuthPolicy&) = delete;
+  AuthPolicy& operator=(const AuthPolicy&) = delete;
 
   ~AuthPolicy();
 
@@ -146,8 +148,6 @@ class AuthPolicy : public org::chromium::AuthPolicyAdaptor,
 
   std::unique_ptr<brillo::dbus_utils::DBusObject> dbus_object_;
   std::unique_ptr<SessionManagerClient> session_manager_client_;
-
-  DISALLOW_COPY_AND_ASSIGN(AuthPolicy);
 };
 
 }  // namespace authpolicy

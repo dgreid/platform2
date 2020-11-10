@@ -23,6 +23,9 @@ class LoadOobeConfigUsb : public LoadOobeConfigInterface {
   LoadOobeConfigUsb(const base::FilePath& stateful_dir,
                     const base::FilePath& device_ids_dir,
                     const base::FilePath& store_dir);
+  LoadOobeConfigUsb(const LoadOobeConfigUsb&) = delete;
+  LoadOobeConfigUsb& operator=(const LoadOobeConfigUsb&) = delete;
+
   ~LoadOobeConfigUsb() = default;
 
   bool GetOobeConfigJson(std::string* config,
@@ -80,8 +83,6 @@ class LoadOobeConfigUsb : public LoadOobeConfigInterface {
   bool config_is_verified_;
   std::string config_;
   std::string enrollment_domain_;
-
-  DISALLOW_COPY_AND_ASSIGN(LoadOobeConfigUsb);
 };
 
 }  // namespace oobe_config

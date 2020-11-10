@@ -21,6 +21,9 @@ namespace brillo {
 class BRILLO_EXPORT FakeCrosConfig : public CrosConfigInterface {
  public:
   FakeCrosConfig();
+  FakeCrosConfig(const FakeCrosConfig&) = delete;
+  FakeCrosConfig& operator=(const FakeCrosConfig&) = delete;
+
   ~FakeCrosConfig() override;
 
   // Sets up string to return for a future call to GetString().
@@ -44,8 +47,6 @@ class BRILLO_EXPORT FakeCrosConfig : public CrosConfigInterface {
   // This stores the string values, keyed by a pair consisting of the path
   // and the property.
   std::map<PathProp, std::string> values_;
-
-  DISALLOW_COPY_AND_ASSIGN(FakeCrosConfig);
 };
 
 }  // namespace brillo

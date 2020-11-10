@@ -54,6 +54,9 @@ class RoutineService final {
 
   // |delegate| - Unowned pointer; must outlive this instance.
   explicit RoutineService(Delegate* delegate);
+  RoutineService(const RoutineService&) = delete;
+  RoutineService& operator=(const RoutineService&) = delete;
+
   ~RoutineService();
 
   void GetAvailableRoutines(
@@ -129,8 +132,6 @@ class RoutineService final {
 
   // Must be the last class member.
   base::WeakPtrFactory<RoutineService> weak_ptr_factory_{this};
-
-  DISALLOW_COPY_AND_ASSIGN(RoutineService);
 };
 
 }  // namespace diagnostics

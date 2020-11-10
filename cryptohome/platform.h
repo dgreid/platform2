@@ -144,6 +144,8 @@ class Platform {
       FileEnumeratorCallback;
 
   Platform();
+  Platform(const Platform&) = delete;
+  Platform& operator=(const Platform&) = delete;
 
   virtual ~Platform();
 
@@ -982,7 +984,6 @@ class Platform {
   FRIEND_TEST(PlatformTest, ReadMountInfoFileCorruptedMountInfo);
   FRIEND_TEST(PlatformTest, ReadMountInfoFileIncompleteMountInfo);
   FRIEND_TEST(PlatformTest, ReadMountInfoFileGood);
-  DISALLOW_COPY_AND_ASSIGN(Platform);
 };
 
 class ProcessInformation {

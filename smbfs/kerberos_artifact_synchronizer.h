@@ -36,6 +36,9 @@ class KerberosArtifactSynchronizer {
       const base::FilePath& krb5_ccache_path,
       const std::string& account_identifier,
       std::unique_ptr<KerberosArtifactClientInterface> client);
+  KerberosArtifactSynchronizer(const KerberosArtifactSynchronizer&) = delete;
+  KerberosArtifactSynchronizer& operator=(const KerberosArtifactSynchronizer&) =
+      delete;
 
   // Sets up Kerberos for user with |account_identifier_|. User must be ChromAD.
   // |callback| is run with the result. May only be called once per instance.
@@ -83,8 +86,6 @@ class KerberosArtifactSynchronizer {
 
   const std::unique_ptr<KerberosArtifactClientInterface> client_;
   bool setup_called_ = false;
-
-  DISALLOW_COPY_AND_ASSIGN(KerberosArtifactSynchronizer);
 };
 
 }  // namespace smbfs

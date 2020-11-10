@@ -295,6 +295,8 @@ Request* ProtocolHandler::GetRequest(const std::string& request_id) const {
 class ProtocolHandler::Watcher final {
  public:
   Watcher(ProtocolHandler* handler, int fd) : fd_{fd}, handler_{handler} {}
+  Watcher(const Watcher&) = delete;
+  Watcher& operator=(const Watcher&) = delete;
 
   void Watch(bool read, bool write) {
     if (read == (controller_read_ != nullptr) &&
@@ -309,6 +311,7 @@ class ProtocolHandler::Watcher final {
       controller_read_ = base::FileDescriptorWatcher::WatchReadable(
           fd_, base::BindRepeating(&Watcher::OnReady, base::Unretained(this)));
     }
+
     if (write) {
       controller_write_ = base::FileDescriptorWatcher::WatchWritable(
           fd_, base::BindRepeating(&Watcher::OnReady, base::Unretained(this)));
@@ -330,8 +333,6 @@ class ProtocolHandler::Watcher final {
   bool triggered_{false};
   std::unique_ptr<base::FileDescriptorWatcher::Controller> controller_read_;
   std::unique_ptr<base::FileDescriptorWatcher::Controller> controller_write_;
-
-  DISALLOW_COPY_AND_ASSIGN(Watcher);
 };
 
 void ProtocolHandler::ScheduleWork() {

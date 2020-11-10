@@ -78,6 +78,8 @@ class AuthPolicyMetrics;
 class ScopedTimerReporter {
  public:
   explicit ScopedTimerReporter(TimerType timer_type);
+  ScopedTimerReporter(const ScopedTimerReporter&) = delete;
+  ScopedTimerReporter& operator=(const ScopedTimerReporter&) = delete;
   ~ScopedTimerReporter();
 
  private:
@@ -88,14 +90,17 @@ class ScopedTimerReporter {
     TimerType value_;
   };
   explicit ScopedTimerReporter(CheckedTimerType timer_type);
+
   chromeos_metrics::TimerReporter timer_;
-  DISALLOW_COPY_AND_ASSIGN(ScopedTimerReporter);
 };
 
 // Submits UMA metrics for authpolicy. Some methods are virtual for tests.
 class AuthPolicyMetrics {
  public:
   AuthPolicyMetrics();
+  AuthPolicyMetrics(const AuthPolicyMetrics&) = delete;
+  AuthPolicyMetrics& operator=(const AuthPolicyMetrics&) = delete;
+
   virtual ~AuthPolicyMetrics();
 
   // Report a |sample| for the given |metric_type|.
@@ -112,7 +117,6 @@ class AuthPolicyMetrics {
 
  private:
   MetricsLibrary metrics_;
-  DISALLOW_COPY_AND_ASSIGN(AuthPolicyMetrics);
 };
 
 }  // namespace authpolicy

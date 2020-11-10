@@ -143,6 +143,9 @@ class VirtualMachine {
 
   // |cid| is nonzero for termina VMs, |vm_token| is non-empty for plugin VMs.
   VirtualMachine(uint32_t cid, pid_t pid, std::string vm_token);
+  VirtualMachine(const VirtualMachine&) = delete;
+  VirtualMachine& operator=(const VirtualMachine&) = delete;
+
   ~VirtualMachine();
 
   bool is_stopping() const { return is_stopping_; }
@@ -372,8 +375,6 @@ class VirtualMachine {
   bool is_stopping_ = false;
 
   base::WeakPtrFactory<VirtualMachine> weak_ptr_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(VirtualMachine);
 };
 
 }  // namespace cicerone

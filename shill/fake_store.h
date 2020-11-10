@@ -24,6 +24,8 @@ namespace shill {
 class FakeStore : public StoreInterface {
  public:
   FakeStore();
+  FakeStore(const FakeStore&) = delete;
+  FakeStore& operator=(const FakeStore&) = delete;
 
   // Inherited from StoreInterface.
   bool IsEmpty() const override;
@@ -92,8 +94,6 @@ class FakeStore : public StoreInterface {
 
   std::map<std::string, brillo::VariantDictionary> group_name_to_settings_;
   bool writes_fail_ = false;
-
-  DISALLOW_COPY_AND_ASSIGN(FakeStore);
 };
 
 }  // namespace shill

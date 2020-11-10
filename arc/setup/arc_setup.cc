@@ -586,8 +586,8 @@ struct ArcPaths {
            const base::FilePath& android_data_old_directory)
       : android_data_directory(android_data_directory),
         android_data_old_directory(android_data_old_directory) {}
-
-  DISALLOW_COPY_AND_ASSIGN(ArcPaths);
+  ArcPaths(const ArcPaths&) = delete;
+  ArcPaths& operator=(const ArcPaths&) = delete;
 };
 
 ArcSetup::ArcSetup(Mode mode, const base::FilePath& config_json)

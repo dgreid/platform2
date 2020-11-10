@@ -18,6 +18,8 @@ class ByteString;
 class MockNetlinkSocket : public NetlinkSocket {
  public:
   MockNetlinkSocket() = default;
+  MockNetlinkSocket(const MockNetlinkSocket&) = delete;
+  MockNetlinkSocket& operator=(const MockNetlinkSocket&) = delete;
 
   uint32_t GetLastSequenceNumber() const { return sequence_number_; }
 
@@ -26,9 +28,6 @@ class MockNetlinkSocket : public NetlinkSocket {
   MOCK_METHOD(bool, SendMessage, (const ByteString&), (override));
   MOCK_METHOD(bool, SubscribeToEvents, (uint32_t), (override));
   MOCK_METHOD(bool, RecvMessage, (ByteString*), (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockNetlinkSocket);
 };
 
 }  // namespace shill

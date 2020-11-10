@@ -30,6 +30,9 @@ class Modem {
   Modem(const std::string& service,
         const RpcIdentifier& path,
         ModemInfo* modem_info);
+  Modem(const Modem&) = delete;
+  Modem& operator=(const Modem&) = delete;
+
   virtual ~Modem();
 
   // Gathers information and passes it to CreateDeviceFromModemProperties.
@@ -112,8 +115,6 @@ class Modem {
   // devices that don't have network devices. (Names must be unique
   // for D-Bus, and PPP dongles don't have network devices.)
   static size_t fake_dev_serial_;
-
-  DISALLOW_COPY_AND_ASSIGN(Modem);
 };
 
 }  // namespace shill

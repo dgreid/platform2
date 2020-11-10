@@ -17,6 +17,9 @@ class MockOpenVPNDriver : public OpenVPNDriver {
  public:
   MockOpenVPNDriver(Manager* manager, ProcessManager* process_manager)
       : OpenVPNDriver(manager, process_manager) {}
+  MockOpenVPNDriver(const MockOpenVPNDriver&) = delete;
+  MockOpenVPNDriver& operator=(const MockOpenVPNDriver&) = delete;
+
   ~MockOpenVPNDriver() = default;
 
   MOCK_METHOD(void, OnReconnecting, (ReconnectReason), (override));
@@ -24,9 +27,6 @@ class MockOpenVPNDriver : public OpenVPNDriver {
               FailService,
               (Service::ConnectFailure, const std::string&),
               (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockOpenVPNDriver);
 };
 
 }  // namespace shill

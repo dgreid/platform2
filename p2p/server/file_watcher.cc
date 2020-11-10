@@ -26,6 +26,8 @@ namespace server {
 class FileWatcherGLib : public FileWatcher {
  public:
   FileWatcherGLib(const FilePath& dir, const string& file_extension);
+  FileWatcherGLib(const FileWatcherGLib&) = delete;
+  FileWatcherGLib& operator=(const FileWatcherGLib&) = delete;
 
   ~FileWatcherGLib() override;
 
@@ -68,8 +70,6 @@ class FileWatcherGLib : public FileWatcher {
   // The GLib abstraction used to interface with the kernel's inotify
   // subsystem.
   GFileMonitor* monitor_;
-
-  DISALLOW_COPY_AND_ASSIGN(FileWatcherGLib);
 };
 
 const FilePath& FileWatcherGLib::dir() const {

@@ -30,6 +30,9 @@ class DpslRequesterImpl final : public DpslRequester {
       DpslRequester::GrpcClientUri grpc_client_uri);
 
   explicit DpslRequesterImpl(const std::string& wilco_dtc_supportd_grpc_uri);
+  DpslRequesterImpl(const DpslRequesterImpl&) = delete;
+  DpslRequesterImpl& operator=(const DpslRequesterImpl&) = delete;
+
   ~DpslRequesterImpl() override;
 
   // DpslRequester overrides:
@@ -111,8 +114,6 @@ class DpslRequesterImpl final : public DpslRequester {
 
   // Must be the last member.
   base::WeakPtrFactory<DpslRequesterImpl> weak_ptr_factory_{this};
-
-  DISALLOW_COPY_AND_ASSIGN(DpslRequesterImpl);
 };
 
 }  // namespace diagnostics

@@ -19,6 +19,8 @@ namespace cryptohome {
 class TpmAuthBlockUtils {
  public:
   TpmAuthBlockUtils(Tpm* tpm, TpmInit* tpm_init);
+  TpmAuthBlockUtils(const TpmAuthBlockUtils&) = delete;
+  TpmAuthBlockUtils& operator=(const TpmAuthBlockUtils&) = delete;
 
   // A static method which converts an error object.
   static CryptoError TpmErrorToCrypto(Tpm::TpmRetryAction retry_action);
@@ -38,8 +40,6 @@ class TpmAuthBlockUtils {
  private:
   Tpm* tpm_;
   TpmInit* tpm_init_;
-
-  DISALLOW_COPY_AND_ASSIGN(TpmAuthBlockUtils);
 };
 
 }  // namespace cryptohome

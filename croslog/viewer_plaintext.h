@@ -54,6 +54,8 @@ class ViewerPlaintext : public Multiplexer::Observer {
 
   // FOR TEST: Initialize with the custom boot logs.
   ViewerPlaintext(const croslog::Config& config, BootRecords&& boot_logs);
+  ViewerPlaintext(const ViewerPlaintext&) = delete;
+  ViewerPlaintext& operator=(const ViewerPlaintext&) = delete;
 
   void Initialize();
 
@@ -72,8 +74,6 @@ class ViewerPlaintext : public Multiplexer::Observer {
   void WriteLogInJsonFormat(const LogEntry& entry);
   void WriteOutput(const std::string& str);
   void WriteOutput(const char* str, size_t size);
-
-  DISALLOW_COPY_AND_ASSIGN(ViewerPlaintext);
 };
 
 }  // namespace croslog

@@ -25,6 +25,8 @@ class JailHelper {
   JailHelper(const PathService* path_service,
              const protos::DebugFlags* flags,
              Anonymizer* anonymizer);
+  JailHelper(const JailHelper&) = delete;
+  JailHelper& operator=(const JailHelper&) = delete;
 
   // Sets up minijail and executes |cmd|. |seccomp_path_key| specifies the path
   // of the seccomp filter to use. |timer_type| is the UMA timer metric to
@@ -38,8 +40,6 @@ class JailHelper {
   const PathService* paths_ = nullptr;         // File paths, not owned.
   const protos::DebugFlags* flags_ = nullptr;  // Debug flags, not owned.
   Anonymizer* anonymizer_ = nullptr;           // Log anonymizer, not owned.
-
-  DISALLOW_COPY_AND_ASSIGN(JailHelper);
 };
 
 }  // namespace authpolicy

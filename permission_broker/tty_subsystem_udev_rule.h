@@ -19,6 +19,9 @@ class TtySubsystemUdevRule : public Rule {
   static std::string GetDevNodeGroupName(udev_device* device);
 
   explicit TtySubsystemUdevRule(const std::string& name);
+  TtySubsystemUdevRule(const TtySubsystemUdevRule&) = delete;
+  TtySubsystemUdevRule& operator=(const TtySubsystemUdevRule&) = delete;
+
   ~TtySubsystemUdevRule() override = default;
 
   // Called with every device belonging to the TTY subsystem. The return value
@@ -27,9 +30,6 @@ class TtySubsystemUdevRule : public Rule {
   virtual Result ProcessTtyDevice(udev_device* device) = 0;
 
   Result ProcessDevice(udev_device* device) override;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(TtySubsystemUdevRule);
 };
 
 }  // namespace permission_broker

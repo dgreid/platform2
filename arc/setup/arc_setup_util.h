@@ -74,6 +74,9 @@ class ArcMounter {
 class ScopedMount {
  public:
   ScopedMount(const base::FilePath& path, ArcMounter* mounter, bool is_loop);
+  ScopedMount(const ScopedMount&) = delete;
+  ScopedMount& operator=(const ScopedMount&) = delete;
+
   ~ScopedMount();
 
   // Mounts |source| to |target| and returns a unique_ptr that umounts the
@@ -106,8 +109,6 @@ class ScopedMount {
   ArcMounter* const mounter_;
   const base::FilePath path_;
   const bool is_loop_;
-
-  DISALLOW_COPY_AND_ASSIGN(ScopedMount);
 };
 
 // Resolves |path| to an absolute path that does not include symbolic links

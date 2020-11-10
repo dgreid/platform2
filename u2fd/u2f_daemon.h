@@ -39,6 +39,8 @@ class U2fDaemon : public brillo::DBusServiceDaemon {
             bool legacy_kh_fallback,
             uint32_t vendor_id,
             uint32_t product_id);
+  U2fDaemon(const U2fDaemon&) = delete;
+  U2fDaemon& operator=(const U2fDaemon&) = delete;
 
  protected:
   int OnInit() override;
@@ -119,8 +121,6 @@ class U2fDaemon : public brillo::DBusServiceDaemon {
 
   // UMA, used by Virtual USB Device
   MetricsLibrary metrics_library_;
-
-  DISALLOW_COPY_AND_ASSIGN(U2fDaemon);
 };
 
 }  // namespace u2f

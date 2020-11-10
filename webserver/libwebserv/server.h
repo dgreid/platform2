@@ -25,6 +25,9 @@ class ProtocolHandler;
 class LIBWEBSERV_EXPORT Server {
  public:
   Server() = default;
+  Server(const Server&) = delete;
+  Server& operator=(const Server&) = delete;
+
   virtual ~Server() = default;
 
   // Establish a connection to the system webserver.
@@ -81,9 +84,6 @@ class LIBWEBSERV_EXPORT Server {
   // else the web server will automatically abort the connection. If the timeout
   // is not set, the returned value will be base::TimeDelta::Max().
   virtual base::TimeDelta GetDefaultRequestTimeout() const = 0;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(Server);
 };
 
 }  // namespace libwebserv

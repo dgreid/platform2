@@ -35,6 +35,9 @@ class TestDpslBackgroundThread final
   TestDpslBackgroundThread(const std::string& name,
                            DpslGlobalContext* global_context,
                            DpslThreadContext* main_thread_context);
+  TestDpslBackgroundThread(const TestDpslBackgroundThread&) = delete;
+  TestDpslBackgroundThread& operator=(const TestDpslBackgroundThread&) = delete;
+
   ~TestDpslBackgroundThread() override;
 
   // Starts background event loop. Must be called no more than once.
@@ -62,8 +65,6 @@ class TestDpslBackgroundThread final
   base::WaitableEvent run_event_loop_event_;
 
   base::DelegateSimpleThread thread_;
-
-  DISALLOW_COPY_AND_ASSIGN(TestDpslBackgroundThread);
 };
 
 }  // namespace diagnostics

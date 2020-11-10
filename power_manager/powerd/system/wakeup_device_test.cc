@@ -47,6 +47,9 @@ class WakeupDeviceTest : public testing::Test {
     wakeup_device_ = WakeupDevice::CreateWakeupDevice(wakeup_device_path_);
     CHECK(wakeup_device_);
   }
+  WakeupDeviceTest(const WakeupDeviceTest&) = delete;
+  WakeupDeviceTest& operator=(const WakeupDeviceTest&) = delete;
+
   ~WakeupDeviceTest() override {}
 
  protected:
@@ -56,9 +59,6 @@ class WakeupDeviceTest : public testing::Test {
   base::FilePath wakeup_device_path_;
   base::FilePath wakeup_attr_path_;
   base::FilePath event_count_attr_path_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(WakeupDeviceTest);
 };
 
 // An incremented event_count value should result in proper identification of

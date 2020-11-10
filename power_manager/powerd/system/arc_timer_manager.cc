@@ -85,6 +85,8 @@ struct ArcTimerManager::ArcTimerInfo {
       : clock_id(clock_id),
         expiration_fd(std::move(expiration_fd)),
         timer(std::move(timer)) {}
+  ArcTimerInfo(const ArcTimerInfo&) = delete;
+  ArcTimerInfo& operator=(const ArcTimerInfo&) = delete;
 
   // Clock id associated with this timer.
   const clockid_t clock_id;
@@ -97,8 +99,6 @@ struct ArcTimerManager::ArcTimerInfo {
   //
   // The timer that will be scheduled.
   const std::unique_ptr<timers::SimpleAlarmTimer> timer;
-
-  DISALLOW_COPY_AND_ASSIGN(ArcTimerInfo);
 };
 
 void ArcTimerManager::Init(DBusWrapperInterface* dbus_wrapper) {

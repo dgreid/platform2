@@ -50,6 +50,8 @@ class RestrictedToolWrapper {
   // parameters to the constructor.
   explicit RestrictedToolWrapper(scoped_refptr<dbus::Bus> bus)
       : restriction_(bus) {}
+  RestrictedToolWrapper(const RestrictedToolWrapper&) = delete;
+  RestrictedToolWrapper& operator=(const RestrictedToolWrapper&) = delete;
 
   ~RestrictedToolWrapper() = default;
 
@@ -73,8 +75,6 @@ class RestrictedToolWrapper {
  private:
   T tool_;
   DevModeNoOwnerRestriction restriction_;
-
-  DISALLOW_COPY_AND_ASSIGN(RestrictedToolWrapper);
 };
 
 }  // namespace debugd

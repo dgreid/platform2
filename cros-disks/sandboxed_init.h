@@ -46,6 +46,9 @@ class SandboxedInit {
                 base::ScopedFD out_fd,
                 base::ScopedFD err_fd,
                 base::ScopedFD ctrl_fd);
+  SandboxedInit(const SandboxedInit&) = delete;
+  SandboxedInit& operator=(const SandboxedInit&) = delete;
+
   ~SandboxedInit();
 
   // To be run inside the jail. Never returns.
@@ -61,8 +64,6 @@ class SandboxedInit {
   pid_t StartLauncher(base::OnceCallback<int()> launcher);
 
   base::ScopedFD in_fd_, out_fd_, err_fd_, ctrl_fd_;
-
-  DISALLOW_COPY_AND_ASSIGN(SandboxedInit);
 };
 
 }  // namespace cros_disks

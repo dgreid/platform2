@@ -53,6 +53,8 @@ class BRILLO_EXPORT Udev {
 
   // Creates a Udev by taking ownership of the |udev|.
   explicit Udev(struct udev* udev);
+  Udev(const Udev&) = delete;
+  Udev& operator=(const Udev&) = delete;
 
   // Creates a UdevDevice object that wraps a given udev_device struct pointed
   // by |device|. The ownership of |device| is transferred to returned
@@ -60,8 +62,6 @@ class BRILLO_EXPORT Udev {
   static std::unique_ptr<UdevDevice> CreateDevice(udev_device* device);
 
   struct udev* udev_;
-
-  DISALLOW_COPY_AND_ASSIGN(Udev);
 };
 
 }  // namespace brillo

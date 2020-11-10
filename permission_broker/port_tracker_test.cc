@@ -18,6 +18,9 @@ namespace permission_broker {
 class MockPortTracker : public PortTracker {
  public:
   MockPortTracker() : PortTracker(nullptr) {}
+  MockPortTracker(const MockPortTracker&) = delete;
+  MockPortTracker& operator=(const MockPortTracker&) = delete;
+
   ~MockPortTracker() override = default;
 
   MOCK_METHOD(bool,
@@ -27,14 +30,14 @@ class MockPortTracker : public PortTracker {
 
   MOCK_METHOD(int, AddLifelineFd, (int), (override));
   MOCK_METHOD(bool, DeleteLifelineFd, (int), (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockPortTracker);
 };
 
 class PortTrackerTest : public testing::Test {
  public:
   PortTrackerTest() = default;
+  PortTrackerTest(const PortTrackerTest&) = delete;
+  PortTrackerTest& operator=(const PortTrackerTest&) = delete;
+
   ~PortTrackerTest() override = default;
 
  protected:
@@ -54,9 +57,6 @@ class PortTrackerTest : public testing::Test {
 
   int dbus_fd = 3;     // First fd not std{in|out|err}. Doesn't get used at all.
   int tracked_fd = 4;  // Next "available" fd. Used only as a placeholder.
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(PortTrackerTest);
 };
 
 TEST_F(PortTrackerTest, AllowTcpPortAccess_Success) {

@@ -52,6 +52,9 @@ class Datapath {
   Datapath(MinijailedProcessRunner* process_runner,
            Firewall* firewall,
            ioctl_t ioctl_hook);
+  Datapath(const Datapath&) = delete;
+  Datapath& operator=(const Datapath&) = delete;
+
   virtual ~Datapath() = default;
 
   // Start and stop the Datapath, creating or destroying the initial iptables
@@ -313,8 +316,6 @@ class Datapath {
   // TODO(b/161507671) Rely on RoutingService to obtain this information once
   // shill/routing_table.cc has been migrated to patchpanel.
   std::map<std::string, int> if_nametoindex_;
-
-  DISALLOW_COPY_AND_ASSIGN(Datapath);
 };
 
 }  // namespace patchpanel

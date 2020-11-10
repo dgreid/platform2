@@ -68,13 +68,13 @@ class Cgroup {
 
  protected:
   Cgroup();
+  Cgroup(const Cgroup&) = delete;
+  Cgroup& operator=(const Cgroup&) = delete;
 
  private:
   std::string name_;
   base::FilePath cgroup_paths_[Type::NUM_TYPES];
   base::FilePath cgroup_tasks_paths_[Type::NUM_TYPES];
-
-  DISALLOW_COPY_AND_ASSIGN(Cgroup);
 };
 
 }  // namespace libcontainer

@@ -16,6 +16,8 @@ namespace login_manager {
 class PolicyStoreTest : public ::testing::Test {
  public:
   PolicyStoreTest() {}
+  PolicyStoreTest(const PolicyStoreTest&) = delete;
+  PolicyStoreTest& operator=(const PolicyStoreTest&) = delete;
 
   ~PolicyStoreTest() override {}
 
@@ -41,9 +43,6 @@ class PolicyStoreTest : public ::testing::Test {
 
   base::ScopedTempDir tmpdir_;
   base::FilePath tmpfile_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(PolicyStoreTest);
 };
 
 TEST_F(PolicyStoreTest, InitialEmptyStore) {

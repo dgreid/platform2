@@ -23,6 +23,9 @@ namespace libmems {
 class LIBMEMS_EXPORT IioContextImpl : public IioContext {
  public:
   IioContextImpl();
+  IioContextImpl(const IioContextImpl&) = delete;
+  IioContextImpl& operator=(const IioContextImpl&) = delete;
+
   ~IioContextImpl() override = default;
 
   iio_context* GetCurrentContext() const override;
@@ -57,8 +60,6 @@ class LIBMEMS_EXPORT IioContextImpl : public IioContext {
   std::map<int, std::unique_ptr<IioDeviceImpl>> devices_;
   // trigger id to IioDevice
   std::map<int, std::unique_ptr<IioDeviceTriggerImpl>> triggers_;
-
-  DISALLOW_COPY_AND_ASSIGN(IioContextImpl);
 };
 
 }  // namespace libmems

@@ -54,6 +54,9 @@ class DBusType {
 class DBusSignature {
  public:
   DBusSignature();
+  DBusSignature(const DBusSignature&) = delete;
+  DBusSignature& operator=(const DBusSignature&) = delete;
+
   virtual ~DBusSignature() = default;
 
   // Returns a DBusType corresponding to the D-Bus signature given in
@@ -98,8 +101,6 @@ class DBusSignature {
       std::string::const_iterator signature,
       std::string::const_iterator end,
       std::string::const_iterator* next);
-
-  DISALLOW_COPY_AND_ASSIGN(DBusSignature);
 };
 
 }  // namespace chromeos_dbus_bindings

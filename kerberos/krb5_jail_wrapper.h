@@ -27,6 +27,9 @@ namespace kerberos {
 class Krb5JailWrapper : public Krb5Interface {
  public:
   explicit Krb5JailWrapper(std::unique_ptr<Krb5Interface> krb5);
+  Krb5JailWrapper(const Krb5JailWrapper&) = delete;
+  Krb5JailWrapper& operator=(const Krb5JailWrapper&) = delete;
+
   ~Krb5JailWrapper() override;
 
   // Krb5Interface:
@@ -55,8 +58,6 @@ class Krb5JailWrapper : public Krb5Interface {
  private:
   // Inner interface where calls are forwarded to after they've been jailed.
   std::unique_ptr<Krb5Interface> krb5_;
-
-  DISALLOW_COPY_AND_ASSIGN(Krb5JailWrapper);
 };
 
 }  // namespace kerberos

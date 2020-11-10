@@ -46,6 +46,10 @@ class CellularControllerTrogdor : public UserProximityHandler::Delegate {
   };
 
   CellularControllerTrogdor();
+  CellularControllerTrogdor(const CellularControllerTrogdor&) = delete;
+  CellularControllerTrogdor& operator=(const CellularControllerTrogdor&) =
+      delete;
+
   ~CellularControllerTrogdor() override;
 
   // Ownership of raw pointers remains with the caller.
@@ -92,8 +96,6 @@ class CellularControllerTrogdor : public UserProximityHandler::Delegate {
   base::ScopedFD socket_;
   std::unique_ptr<base::FileDescriptorWatcher::Controller> watcher_;
   std::vector<uint8_t> buffer_;
-
-  DISALLOW_COPY_AND_ASSIGN(CellularControllerTrogdor);
 };
 
 }  // namespace policy

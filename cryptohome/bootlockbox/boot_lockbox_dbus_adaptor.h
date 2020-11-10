@@ -22,6 +22,8 @@ class BootLockboxDBusAdaptor
   // Don't own boot_lockbox, it is managed by BootLockboxService.
   explicit BootLockboxDBusAdaptor(scoped_refptr<dbus::Bus> bus,
                                   NVRamBootLockbox* boot_lockbox);
+  BootLockboxDBusAdaptor(const BootLockboxDBusAdaptor&) = delete;
+  BootLockboxDBusAdaptor& operator=(const BootLockboxDBusAdaptor&) = delete;
 
   // Registers dbus objects.
   void RegisterAsync(
@@ -49,8 +51,6 @@ class BootLockboxDBusAdaptor
  private:
   NVRamBootLockbox* boot_lockbox_;
   brillo::dbus_utils::DBusObject dbus_object_;
-
-  DISALLOW_COPY_AND_ASSIGN(BootLockboxDBusAdaptor);
 };
 
 }  // namespace cryptohome

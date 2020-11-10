@@ -15,6 +15,10 @@ namespace shill {
 class MockDBusObjectManagerProxy : public DBusObjectManagerProxyInterface {
  public:
   MockDBusObjectManagerProxy();
+  MockDBusObjectManagerProxy(const MockDBusObjectManagerProxy&) = delete;
+  MockDBusObjectManagerProxy& operator=(const MockDBusObjectManagerProxy&) =
+      delete;
+
   ~MockDBusObjectManagerProxy() override;
 
   MOCK_METHOD(void,
@@ -30,9 +34,6 @@ class MockDBusObjectManagerProxy : public DBusObjectManagerProxyInterface {
               (const InterfacesRemovedSignalCallback&),
               (override));
   void IgnoreSetCallbacks();
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockDBusObjectManagerProxy);
 };
 
 }  // namespace shill

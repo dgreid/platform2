@@ -16,6 +16,9 @@ namespace system {
 class AudioClientInterface {
  public:
   AudioClientInterface() {}
+  AudioClientInterface(const AudioClientInterface&) = delete;
+  AudioClientInterface& operator=(const AudioClientInterface&) = delete;
+
   virtual ~AudioClientInterface() {}
 
   // Returns the current state of the headphone jack and of HDMI audio.
@@ -28,9 +31,6 @@ class AudioClientInterface {
 
   // Suspends or resumes the audio according to the value of |suspended|.
   virtual void SetSuspended(bool suspended) = 0;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(AudioClientInterface);
 };
 
 }  // namespace system

@@ -38,6 +38,9 @@ namespace midis {
 class ClientTest : public ::testing::Test {
  public:
   ClientTest() = default;
+  ClientTest(const ClientTest&) = delete;
+  ClientTest& operator=(const ClientTest&) = delete;
+
   ~ClientTest() override = default;
 
  protected:
@@ -55,8 +58,6 @@ class ClientTest : public ::testing::Test {
 
  private:
   brillo::BaseMessageLoop message_loop_;
-
-  DISALLOW_COPY_AND_ASSIGN(ClientTest);
 };
 
 // Check that the MidisServer implementation sends back the correct

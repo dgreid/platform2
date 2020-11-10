@@ -26,11 +26,11 @@ class IcmpSessionFactory {
 
  protected:
   IcmpSessionFactory();
+  IcmpSessionFactory(const IcmpSessionFactory&) = delete;
+  IcmpSessionFactory& operator=(const IcmpSessionFactory&) = delete;
 
  private:
   friend class base::NoDestructor<IcmpSessionFactory>;
-
-  DISALLOW_COPY_AND_ASSIGN(IcmpSessionFactory);
 };
 
 }  // namespace shill

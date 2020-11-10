@@ -29,6 +29,9 @@ class StoreInterface;
 class EapCredentials {
  public:
   EapCredentials();
+  EapCredentials(const EapCredentials&) = delete;
+  EapCredentials& operator=(const EapCredentials&) = delete;
+
   virtual ~EapCredentials();
 
   // Add property accessors to the EAP credential parameters in |this| to
@@ -192,8 +195,6 @@ class EapCredentials {
 
   std::unique_ptr<password_provider::PasswordProviderInterface>
       password_provider_;
-
-  DISALLOW_COPY_AND_ASSIGN(EapCredentials);
 };
 
 }  // namespace shill

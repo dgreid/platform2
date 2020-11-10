@@ -22,6 +22,9 @@ class SimProxy : public SimProxyInterface {
   SimProxy(const scoped_refptr<dbus::Bus>& bus,
            const RpcIdentifier& path,
            const std::string& service);
+  SimProxy(const SimProxy&) = delete;
+  SimProxy& operator=(const SimProxy&) = delete;
+
   ~SimProxy() override;
 
   // Inherited methods from SimProxyInterface.
@@ -56,7 +59,6 @@ class SimProxy : public SimProxyInterface {
   std::unique_ptr<org::freedesktop::ModemManager1::SimProxy> proxy_;
 
   base::WeakPtrFactory<SimProxy> weak_factory_{this};
-  DISALLOW_COPY_AND_ASSIGN(SimProxy);
 };
 
 }  // namespace mm1

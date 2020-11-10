@@ -31,6 +31,9 @@ class TPM_MANAGER_EXPORT TpmManagerUtility
   // a constructor which enables injection of mock interfaces.
   TpmManagerUtility(tpm_manager::TpmOwnershipInterface* tpm_owner,
                     tpm_manager::TpmNvramInterface* tpm_nvram);
+  TpmManagerUtility(const TpmManagerUtility&) = delete;
+  TpmManagerUtility& operator=(const TpmManagerUtility&) = delete;
+
   ~TpmManagerUtility() override = default;
 
   // Initializes the worker thread and proxies of |tpm_manager| and returns
@@ -171,6 +174,9 @@ class TPM_MANAGER_EXPORT TpmManagerUtility
         : base::Thread("tpm_manager_thread"), utility_(utility) {
       DCHECK(utility_);
     }
+    TpmManagerThread(const TpmManagerThread&) = delete;
+    TpmManagerThread& operator=(const TpmManagerThread&) = delete;
+
     ~TpmManagerThread() override { Stop(); }
 
    private:
@@ -178,7 +184,6 @@ class TPM_MANAGER_EXPORT TpmManagerUtility
 
     TpmManagerUtility* const utility_;
 
-    DISALLOW_COPY_AND_ASSIGN(TpmManagerThread);
   };
 
   // Initialization operation that must be performed on the tpm_manager
@@ -270,8 +275,6 @@ class TPM_MANAGER_EXPORT TpmManagerUtility
   base::Optional<OwnershipTakenSignal> ownership_taken_signal_;
 
   std::vector<OwnershipCallback> ownership_callbacks_;
-
-  DISALLOW_COPY_AND_ASSIGN(TpmManagerUtility);
 };
 
 }  // namespace tpm_manager

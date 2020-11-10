@@ -24,6 +24,9 @@ class SystemUtils;
 class UserPolicyServiceFactory {
  public:
   UserPolicyServiceFactory(NssUtil* nss, SystemUtils* system_utils);
+  UserPolicyServiceFactory(const UserPolicyServiceFactory&) = delete;
+  UserPolicyServiceFactory& operator=(const UserPolicyServiceFactory&) = delete;
+
   virtual ~UserPolicyServiceFactory();
 
   // Creates a new user policy service instance.
@@ -42,8 +45,6 @@ class UserPolicyServiceFactory {
 
   NssUtil* nss_;
   SystemUtils* system_utils_;
-
-  DISALLOW_COPY_AND_ASSIGN(UserPolicyServiceFactory);
 };
 
 }  // namespace login_manager

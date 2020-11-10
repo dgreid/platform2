@@ -13,6 +13,10 @@ namespace system {
 class WakeupSourceIdentifierStub : public WakeupSourceIdentifierInterface {
  public:
   WakeupSourceIdentifierStub();
+  WakeupSourceIdentifierStub(const WakeupSourceIdentifierStub&) = delete;
+  WakeupSourceIdentifierStub& operator=(const WakeupSourceIdentifierStub&) =
+      delete;
+
   ~WakeupSourceIdentifierStub();
 
   void PrepareForSuspendRequest() override;
@@ -25,8 +29,6 @@ class WakeupSourceIdentifierStub : public WakeupSourceIdentifierInterface {
 
  private:
   bool input_device_caused_last_wake_ = false;
-
-  DISALLOW_COPY_AND_ASSIGN(WakeupSourceIdentifierStub);
 };
 
 }  // namespace system

@@ -76,6 +76,8 @@ class UsbTransfer {
 
  protected:
   UsbTransfer();
+  UsbTransfer(const UsbTransfer&) = delete;
+  UsbTransfer& operator=(const UsbTransfer&) = delete;
 
   // Verifies that the underlying libusb_transfer struct is allocated,
   // and if so, returns true. Otherwise, set |error_| to
@@ -119,8 +121,6 @@ class UsbTransfer {
   State state_;
   CompletionCallback completion_callback_;
   UsbError error_;
-
-  DISALLOW_COPY_AND_ASSIGN(UsbTransfer);
 };
 
 }  // namespace mist

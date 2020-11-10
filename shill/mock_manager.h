@@ -23,6 +23,9 @@ class MockManager : public Manager {
   MockManager(ControlInterface* control_interface,
               EventDispatcher* dispatcher,
               Metrics* metrics);
+  MockManager(const MockManager&) = delete;
+  MockManager& operator=(const MockManager&) = delete;
+
   ~MockManager() override;
 
   MOCK_METHOD(void,
@@ -176,8 +179,6 @@ class MockManager : public Manager {
  private:
   DeviceInfo* mock_device_info_;
   std::unique_ptr<MockEthernetProvider> mock_ethernet_provider_;
-
-  DISALLOW_COPY_AND_ASSIGN(MockManager);
 };
 
 }  // namespace shill

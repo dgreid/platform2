@@ -27,6 +27,8 @@ class FakeFileWatcher : public FileWatcher {
  public:
   FakeFileWatcher(const base::FilePath& dir, const std::string& file_extension)
       : dir_(dir), file_extension_(file_extension), source_id_(0) {}
+  FakeFileWatcher(const FakeFileWatcher&) = delete;
+  FakeFileWatcher& operator=(const FakeFileWatcher&) = delete;
 
   ~FakeFileWatcher() override {
     if (source_id_ != 0)
@@ -150,8 +152,6 @@ class FakeFileWatcher : public FileWatcher {
 
   // The source_id used to dispatch file events.
   guint source_id_;
-
-  DISALLOW_COPY_AND_ASSIGN(FakeFileWatcher);
 };
 
 }  // namespace server

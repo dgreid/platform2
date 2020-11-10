@@ -99,6 +99,8 @@ class BRILLO_EXPORT Error {
         const std::string& code,
         const std::string& message,
         ErrorPtr inner_error);
+  Error(const Error&) = delete;
+  Error& operator=(const Error&) = delete;
 
   // Error domain. The domain defines the scopes for error codes.
   // Two errors with the same code but different domains are different errors.
@@ -112,9 +114,6 @@ class BRILLO_EXPORT Error {
   base::Location location_;
   // Pointer to inner error, if any. This forms a chain of errors.
   ErrorPtr inner_error_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(Error);
 };
 
 }  // namespace brillo

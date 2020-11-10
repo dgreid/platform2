@@ -19,6 +19,8 @@ class DBusProtocolHandler;
 // Implementation of the Request interface.
 class RequestImpl final : public Request {
  public:
+  RequestImpl(const RequestImpl&) = delete;
+  RequestImpl& operator=(const RequestImpl&) = delete;
   // Overrides from Request.
   brillo::StreamPtr GetDataStream() override;
 
@@ -31,8 +33,6 @@ class RequestImpl final : public Request {
   DBusProtocolHandler* handler_{nullptr};
   base::File raw_data_fd_;
   bool last_posted_data_was_file_{false};
-
-  DISALLOW_COPY_AND_ASSIGN(RequestImpl);
 };
 
 }  // namespace libwebserv

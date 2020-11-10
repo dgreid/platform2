@@ -11,14 +11,15 @@ namespace login_manager {
 class FileChecker {
  public:
   explicit FileChecker(const base::FilePath& filename);
+  FileChecker(const FileChecker&) = delete;
+  FileChecker& operator=(const FileChecker&) = delete;
+
   virtual ~FileChecker();
 
   virtual bool exists();
 
  private:
   const base::FilePath filename_;
-
-  DISALLOW_COPY_AND_ASSIGN(FileChecker);
 };
 
 }  // namespace login_manager

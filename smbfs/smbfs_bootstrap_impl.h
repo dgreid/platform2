@@ -53,6 +53,9 @@ class SmbFsBootstrapImpl : public mojom::SmbFsBootstrap {
                      SmbFilesystemFactory smb_filesystem_factory,
                      Delegate* delegate,
                      const base::FilePath& daemon_store_root);
+  SmbFsBootstrapImpl(const SmbFsBootstrapImpl&) = delete;
+  SmbFsBootstrapImpl& operator=(const SmbFsBootstrapImpl&) = delete;
+
   ~SmbFsBootstrapImpl() override;
 
   // Start the bootstrap process and run |callback| when finished or the Mojo
@@ -90,8 +93,6 @@ class SmbFsBootstrapImpl : public mojom::SmbFsBootstrap {
   Delegate* const delegate_;
   const base::FilePath daemon_store_root_;
   BootstrapCompleteCallback completion_callback_;
-
-  DISALLOW_COPY_AND_ASSIGN(SmbFsBootstrapImpl);
 };
 
 }  // namespace smbfs

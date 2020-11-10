@@ -187,6 +187,9 @@ class PackageKitProxy {
 
  private:
   explicit PackageKitProxy(PackageKitObserver* observer);
+  PackageKitProxy(const PackageKitProxy&) = delete;
+  PackageKitProxy& operator=(const PackageKitProxy&) = delete;
+
   bool Init();
   void GetLinuxPackageInfoOnDBusThread(
       std::shared_ptr<PackageInfoTransactionData> data);
@@ -256,8 +259,6 @@ class PackageKitProxy {
   base::SequenceChecker sequence_checker_;
 
   base::ObserverList<PackageKitDeathObserver> death_observers_;
-
-  DISALLOW_COPY_AND_ASSIGN(PackageKitProxy);
 };
 
 }  // namespace garcon

@@ -18,6 +18,9 @@ namespace shill {
 class MockConnection : public Connection {
  public:
   explicit MockConnection(const DeviceInfo* device_info);
+  MockConnection(const MockConnection&) = delete;
+  MockConnection& operator=(const MockConnection&) = delete;
+
   ~MockConnection() override;
 
   MOCK_METHOD(void, UpdateFromIPConfig, (const IPConfigRefPtr&), (override));
@@ -51,9 +54,6 @@ class MockConnection : public Connection {
               RemoveInputInterfaceFromRoutingTable,
               (const std::string&),
               (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockConnection);
 };
 
 }  // namespace shill

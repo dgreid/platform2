@@ -22,6 +22,8 @@ class BRILLO_EXPORT OsReleaseReader final {
  public:
   // Create an empty reader
   OsReleaseReader() = default;
+  OsReleaseReader(const OsReleaseReader&) = delete;
+  OsReleaseReader& operator=(const OsReleaseReader&) = delete;
 
   // Loads the key=value pairs from either /etc/os-release.d/<KEY> or
   // /etc/os-release.
@@ -49,8 +51,6 @@ class BRILLO_EXPORT OsReleaseReader final {
 
   // Load the data from a given root_dir.
   BRILLO_PRIVATE void Load(const base::FilePath& root_dir);
-
-  DISALLOW_COPY_AND_ASSIGN(OsReleaseReader);
 };
 
 }  // namespace brillo

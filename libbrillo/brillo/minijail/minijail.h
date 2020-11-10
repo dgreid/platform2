@@ -134,11 +134,11 @@ class BRILLO_EXPORT Minijail {
 
  protected:
   Minijail();
+  Minijail(const Minijail&) = delete;
+  Minijail& operator=(const Minijail&) = delete;
 
  private:
   friend base::LazyInstanceTraitsBase<Minijail>;
-
-  DISALLOW_COPY_AND_ASSIGN(Minijail);
 };
 
 }  // namespace brillo

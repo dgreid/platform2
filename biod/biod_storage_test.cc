@@ -114,6 +114,8 @@ class BiodStorageBaseTest : public ::testing::Test {
     biod_storage_->set_allow_access(true);
     biod_storage_->SetRootPathForTesting(root_path_);
   }
+  BiodStorageBaseTest(const BiodStorageBaseTest&) = delete;
+  BiodStorageBaseTest& operator=(const BiodStorageBaseTest&) = delete;
 
   ~BiodStorageBaseTest() override {
     EXPECT_TRUE(base::DeleteFile(temp_dir_.GetPath(), true));
@@ -152,8 +154,6 @@ class BiodStorageBaseTest : public ::testing::Test {
         TestRecord(record_id, user_id, label, validation_val, data));
     return true;
   }
-
-  DISALLOW_COPY_AND_ASSIGN(BiodStorageBaseTest);
 };
 
 class BiodStorageTest : public BiodStorageBaseTest,

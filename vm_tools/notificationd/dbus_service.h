@@ -50,6 +50,8 @@ class DBusService {
 
  private:
   explicit DBusService(DBusInterface* interface);
+  DBusService(const DBusService&) = delete;
+  DBusService& operator=(const DBusService&) = delete;
 
   bool RegisterMethods();
 
@@ -76,8 +78,6 @@ class DBusService {
   FRIEND_TEST(DBusServiceTest, CloseNotification);
   FRIEND_TEST(DBusServiceTest, NotificationClosedSignal);
   FRIEND_TEST(DBusServiceTest, ActionInvokedSignal);
-
-  DISALLOW_COPY_AND_ASSIGN(DBusService);
 };
 
 }  // namespace notificationd

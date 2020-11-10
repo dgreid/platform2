@@ -22,6 +22,9 @@ class SHILL_EXPORT RTNLListener : public base::CheckedObserver {
   RTNLListener(int listen_flags,
                const base::Callback<void(const RTNLMessage&)>& callback,
                RTNLHandler* rtnl_handler);
+  RTNLListener(const RTNLListener&) = delete;
+  RTNLListener& operator=(const RTNLListener&) = delete;
+
   ~RTNLListener();
 
   void NotifyEvent(int type, const RTNLMessage& msg) const;
@@ -30,8 +33,6 @@ class SHILL_EXPORT RTNLListener : public base::CheckedObserver {
   const int listen_flags_;
   const base::Callback<void(const RTNLMessage&)> callback_;
   RTNLHandler* const rtnl_handler_;
-
-  DISALLOW_COPY_AND_ASSIGN(RTNLListener);
 };
 
 }  // namespace shill

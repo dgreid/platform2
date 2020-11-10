@@ -21,6 +21,9 @@ class MockExternalTask : public ExternalTask {
                    ProcessManager* process_manager,
                    const base::WeakPtr<RpcTaskDelegate>& task_delegate,
                    const base::Callback<void(pid_t, int)>& death_callback);
+  MockExternalTask(const MockExternalTask&) = delete;
+  MockExternalTask& operator=(const MockExternalTask&) = delete;
+
   ~MockExternalTask() override;
 
   MOCK_METHOD(bool,
@@ -33,9 +36,6 @@ class MockExternalTask : public ExternalTask {
               (override));
   MOCK_METHOD(void, Stop, (), (override));
   MOCK_METHOD(void, OnDelete, ());
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockExternalTask);
 };
 
 }  // namespace shill

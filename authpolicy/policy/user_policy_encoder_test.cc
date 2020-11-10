@@ -31,6 +31,8 @@ class UserPolicyEncoderTest
     : public PolicyEncoderTestBase<em::CloudPolicySettings> {
  public:
   UserPolicyEncoderTest() {}
+  UserPolicyEncoderTest(const UserPolicyEncoderTest&) = delete;
+  UserPolicyEncoderTest& operator=(const UserPolicyEncoderTest&) = delete;
   ~UserPolicyEncoderTest() override {}
 
  protected:
@@ -42,9 +44,6 @@ class UserPolicyEncoderTest
   }
 
   PolicyLevel policy_level_ = POLICY_LEVEL_MANDATORY;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(UserPolicyEncoderTest);
 };
 
 TEST_F(UserPolicyEncoderTest, TestEncodingBoolean) {

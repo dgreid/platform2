@@ -31,6 +31,8 @@ class DBusProtocolHandler;
 // POST request using multipart/form-data request.
 class LIBWEBSERV_EXPORT FileInfo final {
  public:
+  FileInfo(const FileInfo&) = delete;
+  FileInfo& operator=(const FileInfo&) = delete;
   const std::string& GetFileName() const { return file_name_; }
   const std::string& GetContentType() const { return content_type_; }
   const std::string& GetTransferEncoding() const { return transfer_encoding_; }
@@ -54,8 +56,6 @@ class LIBWEBSERV_EXPORT FileInfo final {
   std::string file_name_;
   std::string content_type_;
   std::string transfer_encoding_;
-
-  DISALLOW_COPY_AND_ASSIGN(FileInfo);
 };
 
 // A class that represents the HTTP request data.

@@ -19,6 +19,8 @@ class TempFileManager;
 class ServerInterface {
  public:
   ServerInterface() = default;
+  ServerInterface(const ServerInterface&) = delete;
+  ServerInterface& operator=(const ServerInterface&) = delete;
 
   // Called by ProtocolHandler to notify the server that a new protocol handler
   // appears online or goes offline.
@@ -42,9 +44,6 @@ class ServerInterface {
   // So, just declare the destructor as protected, so nobody can just call
   // delete on a pointer to ServerInterface.
   ~ServerInterface() = default;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ServerInterface);
 };
 
 }  // namespace webservd

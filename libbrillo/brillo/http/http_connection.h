@@ -45,6 +45,9 @@ class BRILLO_EXPORT Connection
  public:
   explicit Connection(const std::shared_ptr<Transport>& transport)
       : transport_(transport) {}
+  Connection(const Connection&) = delete;
+  Connection& operator=(const Connection&) = delete;
+
   virtual ~Connection() = default;
 
   // The following methods are used by http::Request object to initiate the
@@ -97,9 +100,6 @@ class BRILLO_EXPORT Connection
   // connection exists. But some implementations of Connection could use
   // the Transport-derived class for their own needs as well.
   std::shared_ptr<Transport> transport_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(Connection);
 };
 
 }  // namespace http

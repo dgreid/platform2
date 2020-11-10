@@ -35,6 +35,8 @@ class PolicyTool {
   // directory. Use one of the standard paths above for overriding policies in
   // Chrome or Chromium.
   explicit PolicyTool(const std::string& policy_dir_path);
+  PolicyTool(const PolicyTool&) = delete;
+  PolicyTool& operator=(const PolicyTool&) = delete;
 
   ~PolicyTool() = default;
 
@@ -46,8 +48,6 @@ class PolicyTool {
 
  private:
   PolicyWriter writer_;
-
-  DISALLOW_COPY_AND_ASSIGN(PolicyTool);
 };
 
 }  // namespace policy_utils

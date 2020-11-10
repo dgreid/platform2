@@ -35,6 +35,9 @@ class WakeupDevice : public WakeupDeviceInterface {
 
  private:
   explicit WakeupDevice(const base::FilePath& path);
+  WakeupDevice(const WakeupDevice&) = delete;
+  WakeupDevice& operator=(const WakeupDevice&) = delete;
+
   // Reads the |kPowerEventCountPath|. |event_count_out| is set to the read
   // value if the read is successful. Returns true on success, false otherwise.
   bool ReadEventCount(uint64_t* event_count_out);
@@ -50,8 +53,6 @@ class WakeupDevice : public WakeupDeviceInterface {
 
   // Was event_count read before suspend successful?
   bool was_pre_suspend_read_successful_ = false;
-
-  DISALLOW_COPY_AND_ASSIGN(WakeupDevice);
 };
 
 }  // namespace system

@@ -25,6 +25,9 @@ class SimpleServiceTool {
                              scoped_refptr<dbus::Bus> bus,
                              const std::string& dbus_service_name,
                              const std::string& dbus_service_path);
+  SimpleServiceTool(const SimpleServiceTool&) = delete;
+  SimpleServiceTool& operator=(const SimpleServiceTool&) = delete;
+
   ~SimpleServiceTool() = default;
 
   void StartService(
@@ -50,7 +53,6 @@ class SimpleServiceTool {
   bool running_;
 
   base::WeakPtrFactory<SimpleServiceTool> weak_factory_{this};
-  DISALLOW_COPY_AND_ASSIGN(SimpleServiceTool);
 };
 
 }  // namespace debugd

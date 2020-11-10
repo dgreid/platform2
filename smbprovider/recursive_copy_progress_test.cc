@@ -19,6 +19,10 @@ class RecursiveCopyProgressTest : public testing::Test {
   RecursiveCopyProgressTest() {
     fake_samba_ = std::make_unique<FakeSambaInterface>();
   }
+  RecursiveCopyProgressTest(const RecursiveCopyProgressTest&) = delete;
+  RecursiveCopyProgressTest& operator=(const RecursiveCopyProgressTest&) =
+      delete;
+
   ~RecursiveCopyProgressTest() override = default;
 
  protected:
@@ -29,8 +33,6 @@ class RecursiveCopyProgressTest : public testing::Test {
   }
 
   std::unique_ptr<FakeSambaInterface> fake_samba_;
-
-  DISALLOW_COPY_AND_ASSIGN(RecursiveCopyProgressTest);
 };
 
 TEST_F(RecursiveCopyProgressTest, CopyFailsWhenSourceDoesNotExist) {

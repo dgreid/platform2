@@ -19,6 +19,9 @@ namespace system {
 class DisplayPowerSetterStub : public DisplayPowerSetterInterface {
  public:
   DisplayPowerSetterStub();
+  DisplayPowerSetterStub(const DisplayPowerSetterStub&) = delete;
+  DisplayPowerSetterStub& operator=(const DisplayPowerSetterStub&) = delete;
+
   ~DisplayPowerSetterStub() override;
 
   chromeos::DisplayPowerState state() const { return state_; }
@@ -52,8 +55,6 @@ class DisplayPowerSetterStub : public DisplayPowerSetterInterface {
 
   // Value of most-recent SetDisplaySoftwareDimming() call.
   bool dimmed_;
-
-  DISALLOW_COPY_AND_ASSIGN(DisplayPowerSetterStub);
 };
 
 }  // namespace system

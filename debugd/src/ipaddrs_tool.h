@@ -16,13 +16,13 @@ namespace debugd {
 class IpAddrsTool {
  public:
   IpAddrsTool() = default;
+  IpAddrsTool(const IpAddrsTool&) = delete;
+  IpAddrsTool& operator=(const IpAddrsTool&) = delete;
+
   ~IpAddrsTool() = default;
 
   std::vector<std::string> GetIpAddresses(
       const brillo::VariantDictionary& options);
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(IpAddrsTool);
 };
 
 }  // namespace debugd

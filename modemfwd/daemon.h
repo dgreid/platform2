@@ -30,6 +30,8 @@ class DBusAdaptor : public org::chromium::ModemfwdInterface,
                     public org::chromium::ModemfwdAdaptor {
  public:
   explicit DBusAdaptor(scoped_refptr<dbus::Bus> bus, Daemon* daemon);
+  DBusAdaptor(const DBusAdaptor&) = delete;
+  DBusAdaptor& operator=(const DBusAdaptor&) = delete;
 
   void RegisterAsync(
       const brillo::dbus_utils::AsyncEventSequencer::CompletionAction& cb);
@@ -41,8 +43,6 @@ class DBusAdaptor : public org::chromium::ModemfwdInterface,
  private:
   brillo::dbus_utils::DBusObject dbus_object_;
   Daemon* daemon_;  // weak
-
-  DISALLOW_COPY_AND_ASSIGN(DBusAdaptor);
 };
 
 class Daemon : public brillo::DBusServiceDaemon {
@@ -54,6 +54,9 @@ class Daemon : public brillo::DBusServiceDaemon {
   Daemon(const std::string& journal_file,
          const std::string& helper_directory,
          const std::string& firmware_directory);
+  Daemon(const Daemon&) = delete;
+  Daemon& operator=(const Daemon&) = delete;
+
   ~Daemon() override = default;
 
   bool ForceFlash(const std::string& device_id);
@@ -99,8 +102,6 @@ class Daemon : public brillo::DBusServiceDaemon {
   std::unique_ptr<DBusAdaptor> dbus_adaptor_;
 
   base::WeakPtrFactory<Daemon> weak_ptr_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(Daemon);
 };
 
 }  // namespace modemfwd

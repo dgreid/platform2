@@ -155,6 +155,8 @@ class DevicePolicyService : public PolicyService {
                       Crossystem* crossystem,
                       VpdProcess* vpd_process,
                       InstallAttributesReader* install_attributes_reader);
+  DevicePolicyService(const DevicePolicyService&) = delete;
+  DevicePolicyService& operator=(const DevicePolicyService&) = delete;
 
   // Returns true if |policy| allows arbitrary new users to sign in.
   // Only exposed for testing.
@@ -206,8 +208,6 @@ class DevicePolicyService : public PolicyService {
   // access, the cache is cleared whenever a new policy gets installed via
   // Store().
   std::unique_ptr<enterprise_management::ChromeDeviceSettingsProto> settings_;
-
-  DISALLOW_COPY_AND_ASSIGN(DevicePolicyService);
 };
 
 }  // namespace login_manager

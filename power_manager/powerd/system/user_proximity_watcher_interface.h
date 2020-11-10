@@ -16,6 +16,10 @@ class UserProximityObserver;
 class UserProximityWatcherInterface {
  public:
   UserProximityWatcherInterface() = default;
+  UserProximityWatcherInterface(const UserProximityWatcherInterface&) = delete;
+  UserProximityWatcherInterface& operator=(
+      const UserProximityWatcherInterface&) = delete;
+
   virtual ~UserProximityWatcherInterface() = default;
 
   // Adds or removes an observer.
@@ -23,8 +27,6 @@ class UserProximityWatcherInterface {
   virtual void RemoveObserver(UserProximityObserver* observer) = 0;
 
   // TODO(egranata): add querying mechanisms
- private:
-  DISALLOW_COPY_AND_ASSIGN(UserProximityWatcherInterface);
 };
 
 }  // namespace system

@@ -56,12 +56,11 @@ class FileWatcherListener {
     file_watcher->SetChangedCallback(
         Bind(&FileWatcherListener::OnChanged, Unretained(this)));
   }
+  FileWatcherListener(const FileWatcherListener&) = delete;
+  FileWatcherListener& operator=(const FileWatcherListener&) = delete;
 
   virtual void OnChanged(const FilePath& file,
                          FileWatcher::EventType event_type) = 0;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(FileWatcherListener);
 };
 
 class MockFileWatcherListener : public FileWatcherListener {
@@ -72,6 +71,8 @@ class MockFileWatcherListener : public FileWatcherListener {
         .WillByDefault(
             testing::InvokeWithoutArgs(this, &MockFileWatcherListener::OnCall));
   }
+  MockFileWatcherListener(const MockFileWatcherListener&) = delete;
+  MockFileWatcherListener& operator=(const MockFileWatcherListener&) = delete;
 
   MOCK_METHOD(void,
               OnChanged,
@@ -87,8 +88,6 @@ class MockFileWatcherListener : public FileWatcherListener {
   void OnCall() { num_calls_++; }
 
   int num_calls_;
-
-  DISALLOW_COPY_AND_ASSIGN(MockFileWatcherListener);
 };
 
 // ------------------------------------------------------------------------

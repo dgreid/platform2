@@ -31,6 +31,9 @@ constexpr uint16_t kAdbProxyTcpListenPort = 5555;
 class AdbProxy : public brillo::Daemon {
  public:
   explicit AdbProxy(base::ScopedFD control_fd);
+  AdbProxy(const AdbProxy&) = delete;
+  AdbProxy& operator=(const AdbProxy&) = delete;
+
   virtual ~AdbProxy();
 
  protected:
@@ -55,7 +58,6 @@ class AdbProxy : public brillo::Daemon {
   uint32_t arcvm_vsock_cid_;
 
   base::WeakPtrFactory<AdbProxy> weak_factory_{this};
-  DISALLOW_COPY_AND_ASSIGN(AdbProxy);
 };
 
 }  // namespace patchpanel

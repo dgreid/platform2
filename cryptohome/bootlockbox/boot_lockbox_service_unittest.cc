@@ -53,6 +53,8 @@ class ResponseCapturer {
         weak_ptr_factory_(this) {
     call_.SetSerial(1);  // Placeholder serial is needed.
   }
+  ResponseCapturer(const ResponseCapturer&) = delete;
+  ResponseCapturer& operator=(const ResponseCapturer&) = delete;
 
   ~ResponseCapturer() = default;
 
@@ -77,7 +79,6 @@ class ResponseCapturer {
   dbus::MethodCall call_;
   std::unique_ptr<dbus::Response> response_;
   base::WeakPtrFactory<ResponseCapturer> weak_ptr_factory_;
-  DISALLOW_COPY_AND_ASSIGN(ResponseCapturer);
 };
 
 class BootLockboxDBusAdaptorTest : public ::testing::Test {

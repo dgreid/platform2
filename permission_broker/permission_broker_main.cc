@@ -23,6 +23,8 @@ class Daemon : public brillo::DBusServiceDaemon {
       : DBusServiceDaemon(kPermissionBrokerServiceName),
         udev_run_path_(udev_run_path),
         poll_interval_(poll_interval) {}
+  Daemon(const Daemon&) = delete;
+  Daemon& operator=(const Daemon&) = delete;
 
  protected:
   void RegisterDBusObjectsAsync(AsyncEventSequencer* sequencer) override {
@@ -35,8 +37,6 @@ class Daemon : public brillo::DBusServiceDaemon {
   std::unique_ptr<PermissionBroker> broker_;
   std::string udev_run_path_;
   base::TimeDelta poll_interval_;
-
-  DISALLOW_COPY_AND_ASSIGN(Daemon);
 };
 
 }  // namespace permission_broker

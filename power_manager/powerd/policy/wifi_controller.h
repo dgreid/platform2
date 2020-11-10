@@ -39,6 +39,9 @@ class WifiController : public system::UdevSubsystemObserver,
   static const char kUdevDevtype[];
 
   WifiController();
+  WifiController(const WifiController&) = delete;
+  WifiController& operator=(const WifiController&) = delete;
+
   ~WifiController() override;
 
   // Ownership of raw pointers remains with the caller.
@@ -89,8 +92,6 @@ class WifiController : public system::UdevSubsystemObserver,
   // True if powerd has been configured to set wifi transmit power in response
   // to proximity changes.
   bool set_transmit_power_for_proximity_ = false;
-
-  DISALLOW_COPY_AND_ASSIGN(WifiController);
 };
 
 }  // namespace policy

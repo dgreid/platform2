@@ -26,6 +26,11 @@ class ProtobufLiteCopyingFileInputStream
  public:
   // Takes ownership of |fd| and closes it when the object is deleted.
   explicit ProtobufLiteCopyingFileInputStream(int fd);
+  ProtobufLiteCopyingFileInputStream(
+      const ProtobufLiteCopyingFileInputStream&) = delete;
+  ProtobufLiteCopyingFileInputStream& operator=(
+      const ProtobufLiteCopyingFileInputStream&) = delete;
+
   ~ProtobufLiteCopyingFileInputStream() override;
   int Read(void* buffer, int size) override;
   int Skip(int count) override;
@@ -34,8 +39,6 @@ class ProtobufLiteCopyingFileInputStream
   int fd_;
   base::ScopedFD scoped_fd_closer_;
   bool previous_seek_failed_;
-
-  DISALLOW_COPY_AND_ASSIGN(ProtobufLiteCopyingFileInputStream);
 };
 
 }  // namespace shill

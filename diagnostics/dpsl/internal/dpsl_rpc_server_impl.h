@@ -28,6 +28,9 @@ class DpslRpcServerImpl final : public DpslRpcServer {
   DpslRpcServerImpl(DpslRpcHandler* rpc_handler,
                     GrpcServerUri grpc_server_uri,
                     const std::string& grpc_server_uri_string);
+  DpslRpcServerImpl(const DpslRpcServerImpl&) = delete;
+  DpslRpcServerImpl& operator=(const DpslRpcServerImpl&) = delete;
+
   ~DpslRpcServerImpl() override;
 
   // Starts the gRPC server. Returns whether the startup succeeded.
@@ -78,8 +81,6 @@ class DpslRpcServerImpl final : public DpslRpcServer {
   brillo::AsyncGrpcServer<grpc_api::WilcoDtc::AsyncService> async_grpc_server_;
 
   base::SequenceCheckerImpl sequence_checker_;
-
-  DISALLOW_COPY_AND_ASSIGN(DpslRpcServerImpl);
 };
 
 }  // namespace diagnostics

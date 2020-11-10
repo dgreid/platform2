@@ -18,6 +18,9 @@ namespace mm1 {
 class MockModemModemCdmaProxy : public ModemModemCdmaProxyInterface {
  public:
   MockModemModemCdmaProxy();
+  MockModemModemCdmaProxy(const MockModemModemCdmaProxy&) = delete;
+  MockModemModemCdmaProxy& operator=(const MockModemModemCdmaProxy&) = delete;
+
   ~MockModemModemCdmaProxy() override;
 
   MOCK_METHOD(void,
@@ -32,9 +35,6 @@ class MockModemModemCdmaProxy : public ModemModemCdmaProxyInterface {
               set_activation_state_callback,
               (const ActivationStateSignalCallback&),
               (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockModemModemCdmaProxy);
 };
 
 }  // namespace mm1

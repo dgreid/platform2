@@ -35,6 +35,10 @@ class ExternalBacklightController : public BacklightController,
                                     public system::DisplayWatcherObserver {
  public:
   ExternalBacklightController();
+  ExternalBacklightController(const ExternalBacklightController&) = delete;
+  ExternalBacklightController& operator=(const ExternalBacklightController&) =
+      delete;
+
   ~ExternalBacklightController() override;
 
   // Initializes the object. Ownership of raw pointers remains with the caller.
@@ -123,8 +127,6 @@ class ExternalBacklightController : public BacklightController,
   int num_brightness_adjustments_in_session_ = 0;
 
   base::WeakPtrFactory<ExternalBacklightController> weak_ptr_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(ExternalBacklightController);
 };
 
 }  // namespace policy

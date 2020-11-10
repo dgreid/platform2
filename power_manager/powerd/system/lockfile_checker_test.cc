@@ -38,6 +38,9 @@ class LockfileCheckerTest : public ::testing::Test {
     lock_dir_ = temp_dir_.GetPath().Append("lock");
     CHECK(base::CreateDirectory(lock_dir_));
   }
+  LockfileCheckerTest(const LockfileCheckerTest&) = delete;
+  LockfileCheckerTest& operator=(const LockfileCheckerTest&) = delete;
+
   ~LockfileCheckerTest() override = default;
 
  protected:
@@ -66,9 +69,6 @@ class LockfileCheckerTest : public ::testing::Test {
   base::ScopedTempDir temp_dir_;
   base::FilePath proc_dir_;
   base::FilePath lock_dir_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(LockfileCheckerTest);
 };
 
 TEST_F(LockfileCheckerTest, NoLockfiles) {

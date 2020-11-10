@@ -186,6 +186,9 @@ class PackageKitTransaction : PackageKitProxy::PackageKitDeathObserver {
     DCHECK_EQ(signal_mask, signal_mask & kValidSignalMask);
     packagekit_proxy_->AddPackageKitDeathObserver(this);
   }
+  PackageKitTransaction(const PackageKitTransaction&) = delete;
+  PackageKitTransaction& operator=(const PackageKitTransaction&) = delete;
+
   virtual ~PackageKitTransaction() {
     if (transaction_path_.IsValid()) {
       bus_->RemoveObjectProxy(kPackageKitServiceName, transaction_path_,
@@ -487,8 +490,6 @@ class PackageKitTransaction : PackageKitProxy::PackageKitDeathObserver {
   dbus::ObjectProxy* transaction_proxy_;  // Owned by bus_.
   dbus::ObjectPath transaction_path_;
   std::unique_ptr<PackageKitTransactionProperties> transaction_properties_;
-
-  DISALLOW_COPY_AND_ASSIGN(PackageKitTransaction);
 };
 
 // Sublcass for handling GetDetailsLocal and GetDetails transactions. If

@@ -20,6 +20,9 @@ namespace pca_agent {
 class PcaAgentService : public org::chromium::PcaAgentInterface {
  public:
   PcaAgentService() = default;
+  PcaAgentService(const PcaAgentService&) = delete;
+  PcaAgentService& operator=(const PcaAgentService&) = delete;
+
   ~PcaAgentService() override = default;
 
   // org::chromium::PcaAgentInterface overrides.
@@ -30,9 +33,6 @@ class PcaAgentService : public org::chromium::PcaAgentInterface {
       std::unique_ptr<
           brillo::dbus_utils::DBusMethodResponse<GetCertificateReply>> response,
       const GetCertificateRequest& in_request) override;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(PcaAgentService);
 };
 
 class PcaAgentServiceAdaptor : public org::chromium::PcaAgentAdaptor {
@@ -42,6 +42,8 @@ class PcaAgentServiceAdaptor : public org::chromium::PcaAgentAdaptor {
       scoped_refptr<dbus::Bus> bus)
       : org::chromium::PcaAgentAdaptor(pca_agent_interface),
         dbus_object_(nullptr, bus, dbus::ObjectPath(kPcaAgentServicePath)) {}
+  PcaAgentServiceAdaptor(const PcaAgentServiceAdaptor&) = delete;
+  PcaAgentServiceAdaptor& operator=(const PcaAgentServiceAdaptor&) = delete;
 
   void RegisterAsync(
       const brillo::dbus_utils::AsyncEventSequencer::CompletionAction& cb) {
@@ -51,8 +53,6 @@ class PcaAgentServiceAdaptor : public org::chromium::PcaAgentAdaptor {
 
  private:
   brillo::dbus_utils::DBusObject dbus_object_;
-
-  DISALLOW_COPY_AND_ASSIGN(PcaAgentServiceAdaptor);
 };
 
 }  // namespace pca_agent

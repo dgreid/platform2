@@ -25,6 +25,10 @@ class ChargeControllerHelperStub : public ChargeControllerHelperInterface {
   static const int kCustomChargeThresholdUnset;
 
   ChargeControllerHelperStub() = default;
+  ChargeControllerHelperStub(const ChargeControllerHelperStub&) = delete;
+  ChargeControllerHelperStub& operator=(const ChargeControllerHelperStub&) =
+      delete;
+
   ~ChargeControllerHelperStub() override = default;
 
   bool peak_shift_enabled() const { return peak_shift_enabled_; }
@@ -90,8 +94,6 @@ class ChargeControllerHelperStub : public ChargeControllerHelperInterface {
       kBatteryChargeModeUnset;
   int custom_charge_start_ = kCustomChargeThresholdUnset;
   int custom_charge_stop_ = kCustomChargeThresholdUnset;
-
-  DISALLOW_COPY_AND_ASSIGN(ChargeControllerHelperStub);
 };
 
 }  // namespace system

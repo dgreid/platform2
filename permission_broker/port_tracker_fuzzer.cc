@@ -17,6 +17,8 @@ namespace permission_broker {
 class FakePortTracker : public PortTracker {
  public:
   FakePortTracker() : PortTracker(nullptr), next_fd_{1} {}
+  FakePortTracker(const FakePortTracker&) = delete;
+  FakePortTracker& operator=(const FakePortTracker&) = delete;
   ~FakePortTracker() override = default;
 
   bool ModifyPortRule(patchpanel::ModifyPortRuleRequest::Operation,
@@ -28,7 +30,6 @@ class FakePortTracker : public PortTracker {
 
  private:
   int next_fd_;
-  DISALLOW_COPY_AND_ASSIGN(FakePortTracker);
 };
 
 // Helper struct for keeping track of randomly generated request.

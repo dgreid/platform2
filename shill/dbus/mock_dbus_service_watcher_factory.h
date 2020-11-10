@@ -17,6 +17,10 @@ namespace shill {
 class MockDBusServiceWatcherFactory : public DBusServiceWatcherFactory {
  public:
   MockDBusServiceWatcherFactory() = default;
+  MockDBusServiceWatcherFactory(const MockDBusServiceWatcherFactory&) = delete;
+  MockDBusServiceWatcherFactory& operator=(
+      const MockDBusServiceWatcherFactory&) = delete;
+
   virtual ~MockDBusServiceWatcherFactory() = default;
 
   MOCK_METHOD(std::unique_ptr<DBusServiceWatcher>,
@@ -25,9 +29,6 @@ class MockDBusServiceWatcherFactory : public DBusServiceWatcherFactory {
                const std::string&,
                const base::Closure&),
               (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockDBusServiceWatcherFactory);
 };
 
 }  // namespace shill

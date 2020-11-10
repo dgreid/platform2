@@ -38,6 +38,9 @@ class MetadataCache {
   MetadataCache(base::TickClock* tick_clock,
                 base::TimeDelta entry_lifetime,
                 Mode mode);
+  MetadataCache(const MetadataCache&) = delete;
+  MetadataCache& operator=(const MetadataCache&) = delete;
+
   ~MetadataCache();
 
   MetadataCache& operator=(MetadataCache&& other) = default;
@@ -68,12 +71,14 @@ class MetadataCache {
     CacheEntry() = default;
     CacheEntry(const DirectoryEntry& entry, base::TimeTicks expiration_time)
         : entry(entry), expiration_time(expiration_time) {}
+    CacheEntry(const CacheEntry&) = delete;
+    CacheEntry& operator=(const CacheEntry&) = delete;
+
     CacheEntry& operator=(CacheEntry&& other) = default;
 
     DirectoryEntry entry;
     base::TimeTicks expiration_time;
 
-    DISALLOW_COPY_AND_ASSIGN(CacheEntry);
   };
 
   // Returns true if the expiration time of this entry has passed.
@@ -92,7 +97,6 @@ class MetadataCache {
   base::TimeDelta entry_lifetime_;
   base::TimeTicks max_expiration_time_;
   Mode mode_;
-  DISALLOW_COPY_AND_ASSIGN(MetadataCache);
 };
 
 }  // namespace smbprovider

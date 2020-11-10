@@ -160,6 +160,9 @@ class SessionManagerImpl
                      dbus::ObjectProxy* system_clock_proxy,
                      dbus::ObjectProxy* debugd_proxy,
                      ArcSideloadStatusInterface* arc_sideload_status);
+  SessionManagerImpl(const SessionManagerImpl&) = delete;
+  SessionManagerImpl& operator=(const SessionManagerImpl&) = delete;
+
   ~SessionManagerImpl() override;
 
   // Tests can call these before Initialize() to inject their own objects.
@@ -498,8 +501,6 @@ class SessionManagerImpl
   std::unique_ptr<LoginScreenStorage> login_screen_storage_;
 
   base::WeakPtrFactory<SessionManagerImpl> weak_ptr_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(SessionManagerImpl);
 };
 
 }  // namespace login_manager

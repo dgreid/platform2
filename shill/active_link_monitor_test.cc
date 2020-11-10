@@ -61,6 +61,10 @@ class ActiveLinkMonitorObserver {
                                Unretained(this))),
         success_callback_(Bind(&ActiveLinkMonitorObserver::OnSuccessCallback,
                                Unretained(this))) {}
+  ActiveLinkMonitorObserver(const ActiveLinkMonitorObserver&) = delete;
+  ActiveLinkMonitorObserver& operator=(const ActiveLinkMonitorObserver&) =
+      delete;
+
   virtual ~ActiveLinkMonitorObserver() = default;
 
   MOCK_METHOD(void, OnFailureCallback, (Metrics::LinkMonitorFailure, int, int));
@@ -77,8 +81,6 @@ class ActiveLinkMonitorObserver {
  private:
   ActiveLinkMonitor::FailureCallback failure_callback_;
   ActiveLinkMonitor::SuccessCallback success_callback_;
-
-  DISALLOW_COPY_AND_ASSIGN(ActiveLinkMonitorObserver);
 };
 
 MATCHER_P4(IsArpRequest, local_ip, remote_ip, local_mac, remote_mac, "") {

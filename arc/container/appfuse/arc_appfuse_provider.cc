@@ -43,6 +43,8 @@ class DBusAdaptor : public org::chromium::ArcAppfuseProviderAdaptor,
             nullptr,
             bus,
             dbus::ObjectPath(arc::appfuse::kArcAppfuseProviderServicePath)) {}
+  DBusAdaptor(const DBusAdaptor&) = delete;
+  DBusAdaptor& operator=(const DBusAdaptor&) = delete;
 
   ~DBusAdaptor() override = default;
 
@@ -138,13 +140,14 @@ class DBusAdaptor : public org::chromium::ArcAppfuseProviderAdaptor,
   using AppfuseMountMap =
       std::map<UIDMountIDPair, std::unique_ptr<arc::appfuse::AppfuseMount>>;
   AppfuseMountMap mounts_;
-
-  DISALLOW_COPY_AND_ASSIGN(DBusAdaptor);
 };
 
 class Daemon : public brillo::DBusServiceDaemon {
  public:
   Daemon() : DBusServiceDaemon(arc::appfuse::kArcAppfuseProviderServiceName) {}
+  Daemon(const Daemon&) = delete;
+  Daemon& operator=(const Daemon&) = delete;
+
   ~Daemon() override = default;
 
  protected:
@@ -157,8 +160,6 @@ class Daemon : public brillo::DBusServiceDaemon {
 
  private:
   std::unique_ptr<DBusAdaptor> adaptor_;
-
-  DISALLOW_COPY_AND_ASSIGN(Daemon);
 };
 
 }  // namespace

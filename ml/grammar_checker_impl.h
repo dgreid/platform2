@@ -35,6 +35,8 @@ class GrammarCheckerImpl
   GrammarCheckerImpl(
       mojo::PendingReceiver<chromeos::machine_learning::mojom::GrammarChecker>
           receiver);
+  GrammarCheckerImpl(const GrammarCheckerImpl&) = delete;
+  GrammarCheckerImpl& operator=(const GrammarCheckerImpl&) = delete;
 
   // mojom::GrammarChecker
   void Check(chromeos::machine_learning::mojom::GrammarCheckerQueryPtr query,
@@ -48,8 +50,6 @@ class GrammarCheckerImpl
   const ml::GrammarLibrary* const library_;
 
   mojo::Receiver<chromeos::machine_learning::mojom::GrammarChecker> receiver_;
-
-  DISALLOW_COPY_AND_ASSIGN(GrammarCheckerImpl);
 };
 
 }  // namespace ml

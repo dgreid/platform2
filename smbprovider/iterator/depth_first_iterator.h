@@ -39,6 +39,8 @@ class DepthFirstIterator {
  protected:
   DepthFirstIterator(const std::string& dir_path,
                      SambaInterface* samba_interface);
+  DepthFirstIterator(const DepthFirstIterator&) = delete;
+  DepthFirstIterator& operator=(const DepthFirstIterator&) = delete;
 
   virtual ~DepthFirstIterator() = default;
 
@@ -83,8 +85,6 @@ class DepthFirstIterator {
   DirectoryEntry current_;
 
   SambaInterface* samba_interface_;  // not owned.
-
-  DISALLOW_COPY_AND_ASSIGN(DepthFirstIterator);
 };
 
 }  // namespace smbprovider

@@ -17,6 +17,10 @@ namespace mist {
 class MockUsbDeviceEventObserver : public UsbDeviceEventObserver {
  public:
   MockUsbDeviceEventObserver() = default;
+  MockUsbDeviceEventObserver(const MockUsbDeviceEventObserver&) = delete;
+  MockUsbDeviceEventObserver& operator=(const MockUsbDeviceEventObserver&) =
+      delete;
+
   ~MockUsbDeviceEventObserver() override = default;
 
   MOCK_METHOD(void,
@@ -24,9 +28,6 @@ class MockUsbDeviceEventObserver : public UsbDeviceEventObserver {
               (const std::string&, uint8_t, uint8_t, uint16_t, uint16_t),
               (override));
   MOCK_METHOD(void, OnUsbDeviceRemoved, (const std::string&), (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockUsbDeviceEventObserver);
 };
 
 }  // namespace mist

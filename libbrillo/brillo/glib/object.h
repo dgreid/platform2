@@ -334,6 +334,8 @@ class ScopedPtrArray {
   ScopedPtrArray() : object_(0) {}
 
   explicit ScopedPtrArray(::GPtrArray* x) : object_(x) {}
+  ScopedPtrArray(const ScopedPtrArray&) = delete;
+  ScopedPtrArray& operator=(const ScopedPtrArray&) = delete;
 
   ~ScopedPtrArray() { clear(); }
 
@@ -383,8 +385,6 @@ class ScopedPtrArray {
   friend void swap(ScopedPtrArray<U>& x, ScopedPtrArray<U>& y);
 
   ::GPtrArray* object_;
-
-  DISALLOW_COPY_AND_ASSIGN(ScopedPtrArray);
 };
 
 template <typename U>

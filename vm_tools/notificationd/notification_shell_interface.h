@@ -14,6 +14,10 @@ namespace notificationd {
 class NotificationShellInterface {
  public:
   NotificationShellInterface() = default;
+  NotificationShellInterface(const NotificationShellInterface&) = delete;
+  NotificationShellInterface& operator=(const NotificationShellInterface&) =
+      delete;
+
   virtual ~NotificationShellInterface() = default;
 
   // Callback for closed event in notification shell.
@@ -22,9 +26,6 @@ class NotificationShellInterface {
   // Callback for clicked event in notification shell.
   virtual void OnClicked(const std::string& notification_key,
                          int32_t button_index) = 0;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(NotificationShellInterface);
 };
 
 }  // namespace notificationd

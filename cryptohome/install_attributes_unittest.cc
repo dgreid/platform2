@@ -46,6 +46,9 @@ static constexpr char kTestData[] = "Duffle";
 class InstallAttributesTest : public ::testing::Test {
  public:
   InstallAttributesTest() : install_attrs_(nullptr) {}
+  InstallAttributesTest(const InstallAttributesTest&) = delete;
+  InstallAttributesTest& operator=(const InstallAttributesTest&) = delete;
+
   ~InstallAttributesTest() override = default;
 
   void SetUp() override {
@@ -103,9 +106,6 @@ class InstallAttributesTest : public ::testing::Test {
   NiceMock<MockPlatform> platform_;
   NiceMock<MockTpm> tpm_;
   NiceMock<MockTpmInit> tpm_init_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(InstallAttributesTest);
 };
 
 TEST_F(InstallAttributesTest, OobeWithTpm) {

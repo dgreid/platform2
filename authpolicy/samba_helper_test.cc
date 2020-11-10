@@ -39,6 +39,8 @@ namespace authpolicy {
 class SambaHelperTest : public ::testing::Test {
  public:
   SambaHelperTest() {}
+  SambaHelperTest(const SambaHelperTest&) = delete;
+  SambaHelperTest& operator=(const SambaHelperTest&) = delete;
   ~SambaHelperTest() override {}
 
  protected:
@@ -65,9 +67,6 @@ class SambaHelperTest : public ::testing::Test {
 
   // Helpers for ParseGpFLags
   int gp_flags_ = kGpFlagInvalid;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(SambaHelperTest);
 };
 
 // a@b.c succeeds.

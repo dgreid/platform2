@@ -20,6 +20,9 @@ namespace client {
 class FakeServiceFinder : public ServiceFinder {
  public:
   FakeServiceFinder();
+  FakeServiceFinder(const FakeServiceFinder&) = delete;
+  FakeServiceFinder& operator=(const FakeServiceFinder&) = delete;
+
   ~FakeServiceFinder() override;
 
   // ServiceFinder interface methods.
@@ -129,8 +132,6 @@ class FakeServiceFinder : public ServiceFinder {
   typedef std::string RemoveAvailableFileCall;
   std::map<int, std::vector<RemoveAvailableFileCall>>
       remove_available_file_calls_;
-
-  DISALLOW_COPY_AND_ASSIGN(FakeServiceFinder);
 };
 
 }  // namespace client

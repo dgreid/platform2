@@ -29,6 +29,9 @@ class BRILLO_EXPORT SubnetAddress {
   SubnetAddress(uint32_t addr,
                 uint32_t prefix_length,
                 base::Closure release_cb);
+  SubnetAddress(const SubnetAddress&) = delete;
+  SubnetAddress& operator=(const SubnetAddress&) = delete;
+
   ~SubnetAddress();
 
   // Returns this address in network-byte order.
@@ -53,8 +56,6 @@ class BRILLO_EXPORT SubnetAddress {
 
   // Callback to run when this object is destroyed.
   base::Closure release_cb_;
-
-  DISALLOW_COPY_AND_ASSIGN(SubnetAddress);
 };
 
 // Represents an allocated IPv4 subnet.
@@ -65,6 +66,9 @@ class BRILLO_EXPORT Subnet {
   // destructor of this class and can be used to free other resources associated
   // with the subnet.
   Subnet(uint32_t base_addr, uint32_t prefix_length, base::Closure release_cb);
+  Subnet(const Subnet&) = delete;
+  Subnet& operator=(const Subnet&) = delete;
+
   ~Subnet();
 
   // Marks |addr| as allocated. |addr| must be in network-byte order. Returns
@@ -120,8 +124,6 @@ class BRILLO_EXPORT Subnet {
   base::Closure release_cb_;
 
   base::WeakPtrFactory<Subnet> weak_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(Subnet);
 };
 
 }  // namespace patchpanel

@@ -32,6 +32,9 @@ class BRILLO_EXPORT DBusServiceWatcher {
   DBusServiceWatcher(scoped_refptr<::dbus::Bus> bus,
                      const std::string& connection_name,
                      const base::Closure& on_connection_vanish);
+  DBusServiceWatcher(const DBusServiceWatcher&) = delete;
+  DBusServiceWatcher& operator=(const DBusServiceWatcher&) = delete;
+
   virtual ~DBusServiceWatcher();
   virtual std::string connection_name() const { return connection_name_; }
 
@@ -44,7 +47,6 @@ class BRILLO_EXPORT DBusServiceWatcher {
   base::Closure on_connection_vanish_;
 
   base::WeakPtrFactory<DBusServiceWatcher> weak_factory_{this};
-  DISALLOW_COPY_AND_ASSIGN(DBusServiceWatcher);
 };
 
 }  // namespace dbus_utils

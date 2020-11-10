@@ -22,6 +22,8 @@ namespace system {
 class AmbientLightSensorFuzzer {
  public:
   AmbientLightSensorFuzzer() { CHECK(temp_dir_.CreateUniqueTempDir()); }
+  AmbientLightSensorFuzzer(const AmbientLightSensorFuzzer&) = delete;
+  AmbientLightSensorFuzzer& operator=(const AmbientLightSensorFuzzer&) = delete;
 
   ~AmbientLightSensorFuzzer() {
     CHECK(base::DeleteFile(temp_dir_.GetPath(), true));
@@ -63,9 +65,6 @@ class AmbientLightSensorFuzzer {
 
  protected:
   base::ScopedTempDir temp_dir_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(AmbientLightSensorFuzzer);
 };
 
 }  // namespace system

@@ -44,6 +44,9 @@ class PeripheralBatteryWatcher : public UdevSubsystemObserver {
   static const char kUdevSubsystem[];
 
   PeripheralBatteryWatcher();
+  PeripheralBatteryWatcher(const PeripheralBatteryWatcher&) = delete;
+  PeripheralBatteryWatcher& operator=(const PeripheralBatteryWatcher&) = delete;
+
   ~PeripheralBatteryWatcher();
 
   void set_battery_path_for_testing(const base::FilePath& path) {
@@ -106,8 +109,6 @@ class PeripheralBatteryWatcher : public UdevSubsystemObserver {
   std::vector<std::unique_ptr<AsyncFileReader>> battery_readers_;
 
   base::WeakPtrFactory<PeripheralBatteryWatcher> weak_ptr_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(PeripheralBatteryWatcher);
 };
 
 }  // namespace system

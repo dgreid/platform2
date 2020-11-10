@@ -77,6 +77,9 @@ class Daemon : public brillo::DBusServiceDaemon {
   explicit Daemon(std::unique_ptr<easy_unlock::Service> service_impl)
       : brillo::DBusServiceDaemon(kEasyUnlockServiceName),
         service_impl_(std::move(service_impl)) {}
+  Daemon(const Daemon&) = delete;
+  Daemon& operator=(const Daemon&) = delete;
+
   ~Daemon() override {}
 
  protected:
@@ -89,8 +92,6 @@ class Daemon : public brillo::DBusServiceDaemon {
  private:
   std::unique_ptr<easy_unlock::Service> service_impl_;
   std::unique_ptr<easy_unlock::DBusAdaptor> adaptor_;
-
-  DISALLOW_COPY_AND_ASSIGN(Daemon);
 };
 
 }  // namespace easy_unlock

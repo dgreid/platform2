@@ -34,6 +34,9 @@ class ChapsAdaptor {
                base::Lock* lock,
                ChapsInterface* service,
                TokenManagerInterface* token_manager);
+  ChapsAdaptor(const ChapsAdaptor&) = delete;
+  ChapsAdaptor& operator=(const ChapsAdaptor&) = delete;
+
   virtual ~ChapsAdaptor();
 
   void RegisterAsync(
@@ -392,8 +395,6 @@ class ChapsAdaptor {
   base::Lock* lock_;
   ChapsInterface* service_;
   TokenManagerInterface* token_manager_;
-
-  DISALLOW_COPY_AND_ASSIGN(ChapsAdaptor);
 };
 
 }  // namespace chaps

@@ -42,6 +42,8 @@ class BuffetConfig final : public weave::provider::ConfigStore {
   ~BuffetConfig() override = default;
 
   explicit BuffetConfig(const Options& options);
+  BuffetConfig(const BuffetConfig&) = delete;
+  BuffetConfig& operator=(const BuffetConfig&) = delete;
 
   // Config overrides.
   bool LoadDefaults(weave::Settings* settings) override;
@@ -53,8 +55,6 @@ class BuffetConfig final : public weave::provider::ConfigStore {
 
  private:
   Options options_;
-
-  DISALLOW_COPY_AND_ASSIGN(BuffetConfig);
 };
 
 }  // namespace buffet

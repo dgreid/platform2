@@ -82,6 +82,9 @@ class SystemFilesService {
   };
 
   SystemFilesService() = default;
+  SystemFilesService(const SystemFilesService&) = delete;
+  SystemFilesService& operator=(const SystemFilesService&) = delete;
+
   virtual ~SystemFilesService() = default;
 
   // Gets the dump of the specified file. Returns base::nullopt on failure.
@@ -97,9 +100,6 @@ class SystemFilesService {
   // TODO(b/154595154): consider changing behavior: empty string is valid, non
   // ASCII symbols are allowed.
   virtual base::Optional<std::string> GetVpdField(VpdField vpd_field) = 0;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(SystemFilesService);
 };
 
 }  // namespace diagnostics

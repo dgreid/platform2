@@ -32,9 +32,10 @@ struct SmbCredential {
         password_file(password_file) {}
 
   SmbCredential(SmbCredential&& other) = default;
-  SmbCredential& operator=(SmbCredential&& other) = default;
+  SmbCredential(const SmbCredential&) = delete;
+  SmbCredential& operator=(const SmbCredential&) = delete;
 
-  DISALLOW_COPY_AND_ASSIGN(SmbCredential);
+  SmbCredential& operator=(SmbCredential&& other) = default;
 };
 
 }  // namespace smbprovider

@@ -16,12 +16,12 @@ namespace debugd {
 class RouteTool {
  public:
   RouteTool() = default;
+  RouteTool(const RouteTool&) = delete;
+  RouteTool& operator=(const RouteTool&) = delete;
+
   ~RouteTool() = default;
 
   std::vector<std::string> GetRoutes(const brillo::VariantDictionary& options);
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(RouteTool);
 };
 
 }  // namespace debugd

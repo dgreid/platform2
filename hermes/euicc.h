@@ -23,6 +23,8 @@ namespace hermes {
 class Euicc {
  public:
   Euicc(uint8_t physical_slot, EuiccSlotInfo slot_info);
+  Euicc(const Euicc&) = delete;
+  Euicc& operator=(const Euicc&) = delete;
 
   void UpdateSlotInfo(EuiccSlotInfo slot_info);
 
@@ -64,8 +66,6 @@ class Euicc {
 
   std::vector<std::unique_ptr<Profile>> installed_profiles_;
   std::vector<std::unique_ptr<Profile>> pending_profiles_;
-
-  DISALLOW_COPY_AND_ASSIGN(Euicc);
 };
 
 }  // namespace hermes

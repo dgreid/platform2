@@ -62,6 +62,9 @@ class Manager final : public org::chromium::Buffet::ManagerInterface {
       const Options& options,
       const base::WeakPtr<brillo::dbus_utils::ExportedObjectManager>&
           object_manager);
+  Manager(const Manager&) = delete;
+  Manager& operator=(const Manager&) = delete;
+
   ~Manager();
 
   void Start(brillo::dbus_utils::AsyncEventSequencer* sequencer);
@@ -127,7 +130,6 @@ class Manager final : public org::chromium::Buffet::ManagerInterface {
   std::string ip_address_;
 
   base::WeakPtrFactory<Manager> weak_ptr_factory_{this};
-  DISALLOW_COPY_AND_ASSIGN(Manager);
 };
 
 }  // namespace buffet

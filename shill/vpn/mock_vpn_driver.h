@@ -16,6 +16,9 @@ namespace shill {
 class MockVPNDriver : public VPNDriver {
  public:
   MockVPNDriver();
+  MockVPNDriver(const MockVPNDriver&) = delete;
+  MockVPNDriver& operator=(const MockVPNDriver&) = delete;
+
   ~MockVPNDriver() override;
 
   MOCK_METHOD(void,
@@ -42,8 +45,6 @@ class MockVPNDriver : public VPNDriver {
 
  private:
   IfType if_type_;
-
-  DISALLOW_COPY_AND_ASSIGN(MockVPNDriver);
 };
 
 }  // namespace shill

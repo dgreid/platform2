@@ -45,14 +45,15 @@ class PCAProxy {
 class PCAProxyImpl : public PCAProxy {
  public:
   explicit PCAProxyImpl(const std::string& pca_url);
+  PCAProxyImpl(const PCAProxyImpl&) = delete;
+  PCAProxyImpl& operator=(const PCAProxyImpl&) = delete;
+
   OpResult MakeRequest(const std::string& action,
                        const brillo::SecureBlob& request,
                        brillo::SecureBlob* reply) override;
 
  private:
   std::shared_ptr<brillo::http::Transport> http_transport_;
-
-  DISALLOW_COPY_AND_ASSIGN(PCAProxyImpl);
 };
 
 }  // namespace cert_provision

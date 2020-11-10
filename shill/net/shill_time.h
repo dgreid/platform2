@@ -68,11 +68,11 @@ class SHILL_EXPORT Time {
 
  protected:
   Time();
+  Time(const Time&) = delete;
+  Time& operator=(const Time&) = delete;
 
  private:
   friend class base::NoDestructor<Time>;
-
-  DISALLOW_COPY_AND_ASSIGN(Time);
 };
 
 }  // namespace shill

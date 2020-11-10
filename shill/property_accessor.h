@@ -49,6 +49,9 @@ class PropertyAccessor : public AccessorInterface<T> {
       : property_(property), default_value_(*property) {
     DCHECK(property);
   }
+  PropertyAccessor(const PropertyAccessor&) = delete;
+  PropertyAccessor& operator=(const PropertyAccessor&) = delete;
+
   ~PropertyAccessor() override = default;
 
   void Clear(Error* error) override { Set(default_value_, error); }
@@ -64,7 +67,6 @@ class PropertyAccessor : public AccessorInterface<T> {
  private:
   T* const property_;
   const T default_value_;
-  DISALLOW_COPY_AND_ASSIGN(PropertyAccessor);
 };
 
 template <class T>
@@ -73,6 +75,9 @@ class ConstPropertyAccessor : public AccessorInterface<T> {
   explicit ConstPropertyAccessor(const T* property) : property_(property) {
     DCHECK(property);
   }
+  ConstPropertyAccessor(const ConstPropertyAccessor&) = delete;
+  ConstPropertyAccessor& operator=(const ConstPropertyAccessor&) = delete;
+
   ~ConstPropertyAccessor() override = default;
 
   void Clear(Error* error) override {
@@ -90,7 +95,6 @@ class ConstPropertyAccessor : public AccessorInterface<T> {
 
  private:
   const T* const property_;
-  DISALLOW_COPY_AND_ASSIGN(ConstPropertyAccessor);
 };
 
 template <class T>
@@ -100,6 +104,10 @@ class WriteOnlyPropertyAccessor : public AccessorInterface<T> {
       : property_(property), default_value_(*property) {
     DCHECK(property);
   }
+  WriteOnlyPropertyAccessor(const WriteOnlyPropertyAccessor&) = delete;
+  WriteOnlyPropertyAccessor& operator=(const WriteOnlyPropertyAccessor&) =
+      delete;
+
   ~WriteOnlyPropertyAccessor() override = default;
 
   void Clear(Error* error) override { Set(default_value_, error); }
@@ -123,7 +131,6 @@ class WriteOnlyPropertyAccessor : public AccessorInterface<T> {
 
   T* const property_;
   const T default_value_;
-  DISALLOW_COPY_AND_ASSIGN(WriteOnlyPropertyAccessor);
 };
 
 // CustomAccessor<> allows custom getter and setter methods to be provided.
@@ -162,6 +169,9 @@ class CustomAccessor : public AccessorInterface<T> {
                  T (C::*getter)(Error* error),
                  bool (C::*setter)(const T& value, Error* error))
       : CustomAccessor(target, getter, setter, nullptr) {}
+  CustomAccessor(const CustomAccessor&) = delete;
+  CustomAccessor& operator=(const CustomAccessor&) = delete;
+
   ~CustomAccessor() override = default;
 
   void Clear(Error* error) override {
@@ -189,7 +199,6 @@ class CustomAccessor : public AccessorInterface<T> {
   T (C::*const getter_)(Error* error);
   bool (C::*const setter_)(const T& value, Error* error);  // NOLINT - "casting"
   void (C::*const clearer_)(Error* error);
-  DISALLOW_COPY_AND_ASSIGN(CustomAccessor);
 };
 
 // CustomWriteOnlyAccessor<> allows a custom writer method to be provided.
@@ -218,6 +227,8 @@ class CustomWriteOnlyAccessor : public AccessorInterface<T> {
       default_value_ = *default_value;
     }
   }
+  CustomWriteOnlyAccessor(const CustomWriteOnlyAccessor&) = delete;
+  CustomWriteOnlyAccessor& operator=(const CustomWriteOnlyAccessor&) = delete;
   ~CustomWriteOnlyAccessor() override = default;
 
   void Clear(Error* error) override {
@@ -242,7 +253,6 @@ class CustomWriteOnlyAccessor : public AccessorInterface<T> {
   // |default_value_| is non-const because it can't be initialized in
   // the initializer list.
   T default_value_;
-  DISALLOW_COPY_AND_ASSIGN(CustomWriteOnlyAccessor);
 };
 
 // CustomReadOnlyAccessor<> allows a custom getter method to be provided.
@@ -258,6 +268,9 @@ class CustomReadOnlyAccessor : public AccessorInterface<T> {
     DCHECK(target);
     DCHECK(getter);
   }
+  CustomReadOnlyAccessor(const CustomReadOnlyAccessor&) = delete;
+  CustomReadOnlyAccessor& operator=(const CustomReadOnlyAccessor&) = delete;
+
   ~CustomReadOnlyAccessor() override = default;
 
   void Clear(Error* error) override {
@@ -272,7 +285,6 @@ class CustomReadOnlyAccessor : public AccessorInterface<T> {
  private:
   C* const target_;
   T (C::*const getter_)(Error* error) const;
-  DISALLOW_COPY_AND_ASSIGN(CustomReadOnlyAccessor);
 };
 
 // CustomMappedAccessor<> passes an argument to the getter and setter
@@ -304,6 +316,9 @@ class CustomMappedAccessor : public AccessorInterface<T> {
     DCHECK(target);
     DCHECK(getter);
   }
+  CustomMappedAccessor(const CustomMappedAccessor&) = delete;
+  CustomMappedAccessor& operator=(const CustomMappedAccessor&) = delete;
+
   ~CustomMappedAccessor() override = default;
 
   void Clear(Error* error) override { (target_->*clearer_)(argument_, error); }
@@ -325,7 +340,6 @@ class CustomMappedAccessor : public AccessorInterface<T> {
                            const T& value,
                            Error* error);
   A argument_;
-  DISALLOW_COPY_AND_ASSIGN(CustomMappedAccessor);
 };
 
 }  // namespace shill

@@ -124,6 +124,8 @@ class ProcessManager {
 
  protected:
   ProcessManager();
+  ProcessManager(const ProcessManager&) = delete;
+  ProcessManager& operator=(const ProcessManager&) = delete;
 
  private:
   friend class ProcessManagerTest;
@@ -184,7 +186,6 @@ class ProcessManager {
       pending_termination_processes_;
 
   base::WeakPtrFactory<ProcessManager> weak_factory_{this};
-  DISALLOW_COPY_AND_ASSIGN(ProcessManager);
 };
 
 }  // namespace shill

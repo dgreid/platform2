@@ -16,6 +16,9 @@ namespace tpm_manager {
 class TpmManagerMetrics : private MetricsLibrary {
  public:
   TpmManagerMetrics() = default;
+  TpmManagerMetrics(const TpmManagerMetrics&) = delete;
+  TpmManagerMetrics& operator=(const TpmManagerMetrics&) = delete;
+
   virtual ~TpmManagerMetrics() = default;
 
   virtual void ReportDictionaryAttackResetStatus(
@@ -34,7 +37,6 @@ class TpmManagerMetrics : private MetricsLibrary {
 
  private:
   MetricsLibraryInterface* metrics_library_{this};
-  DISALLOW_COPY_AND_ASSIGN(TpmManagerMetrics);
 };
 
 }  // namespace tpm_manager

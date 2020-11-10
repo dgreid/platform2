@@ -88,6 +88,9 @@ class UsbDevice : public UsbDeviceInterface {
   // In other words, UsbDevice will take care of ref up and ref down the object
   // respectively at construction and at destructiopn.
   explicit UsbDevice(libusb_device* device);
+  UsbDevice(const UsbDevice&) = delete;
+  UsbDevice& operator=(const UsbDevice&) = delete;
+
   ~UsbDevice() override;
 
   UsbDeviceInfo GetInfo() const override;
@@ -99,8 +102,6 @@ class UsbDevice : public UsbDeviceInterface {
  private:
   std::unique_ptr<libusb_device, void (*)(libusb_device*)> device_;
   UsbDeviceInfo info_;
-
-  DISALLOW_COPY_AND_ASSIGN(UsbDevice);
 };
 
 // Manager intended to provide an API to interact with multiple USB devices. The
@@ -120,6 +121,9 @@ class UsbDeviceManagerInterface {
 class UsbDeviceManager : public UsbDeviceManagerInterface {
  public:
   UsbDeviceManager();
+  UsbDeviceManager(const UsbDeviceManager&) = delete;
+  UsbDeviceManager& operator=(const UsbDeviceManager&) = delete;
+
   ~UsbDeviceManager() override;
 
   std::vector<std::unique_ptr<UsbDeviceInterface>> GetDevicesByVidPid(
@@ -127,8 +131,6 @@ class UsbDeviceManager : public UsbDeviceManagerInterface {
 
  private:
   std::unique_ptr<libusb_context, LibusbContextDeleter> context_;
-
-  DISALLOW_COPY_AND_ASSIGN(UsbDeviceManager);
 };
 
 }  // namespace permission_broker

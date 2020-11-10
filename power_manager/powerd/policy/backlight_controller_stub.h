@@ -22,6 +22,9 @@ namespace policy {
 class BacklightControllerStub : public policy::BacklightController {
  public:
   BacklightControllerStub();
+  BacklightControllerStub(const BacklightControllerStub&) = delete;
+  BacklightControllerStub& operator=(const BacklightControllerStub&) = delete;
+
   ~BacklightControllerStub() override;
 
   const std::vector<PowerSource>& power_source_changes() const {
@@ -127,8 +130,6 @@ class BacklightControllerStub : public policy::BacklightController {
   // Counts to be returned by GetNum*Adjustments().
   int num_als_adjustments_ = 0;
   int num_user_adjustments_ = 0;
-
-  DISALLOW_COPY_AND_ASSIGN(BacklightControllerStub);
 };
 
 }  // namespace policy

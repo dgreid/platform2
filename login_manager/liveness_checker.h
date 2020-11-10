@@ -14,6 +14,9 @@ namespace login_manager {
 class LivenessChecker {
  public:
   LivenessChecker() {}
+  LivenessChecker(const LivenessChecker&) = delete;
+  LivenessChecker& operator=(const LivenessChecker&) = delete;
+
   virtual ~LivenessChecker() {}
 
   // Begin sending periodic liveness pings to the browser.
@@ -25,9 +28,6 @@ class LivenessChecker {
 
   // Returns true if this instance has been started and not yet stopped.
   virtual bool IsRunning() = 0;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(LivenessChecker);
 };
 }  // namespace login_manager
 

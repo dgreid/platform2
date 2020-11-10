@@ -18,6 +18,9 @@ namespace system {
 class CrosEcHelperStub : public CrosEcHelperInterface {
  public:
   CrosEcHelperStub();
+  CrosEcHelperStub(const CrosEcHelperStub&) = delete;
+  CrosEcHelperStub& operator=(const CrosEcHelperStub&) = delete;
+
   ~CrosEcHelperStub() override;
 
   // Implementation of EcHelperInterface.
@@ -28,8 +31,6 @@ class CrosEcHelperStub : public CrosEcHelperInterface {
 
  private:
   bool wakeup_as_tablet_allowed_;
-
-  DISALLOW_COPY_AND_ASSIGN(CrosEcHelperStub);
 };
 
 }  // namespace system

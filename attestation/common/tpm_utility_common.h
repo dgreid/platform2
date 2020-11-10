@@ -23,6 +23,9 @@ class TpmUtilityCommon : public TpmUtility {
   // Testing constructor.
   explicit TpmUtilityCommon(
       tpm_manager::TpmManagerUtility* tpm_manager_utility);
+  TpmUtilityCommon(const TpmUtilityCommon&) = delete;
+  TpmUtilityCommon& operator=(const TpmUtilityCommon&) = delete;
+
   ~TpmUtilityCommon() override;
 
   // TpmUtility methods.
@@ -64,8 +67,6 @@ class TpmUtilityCommon : public TpmUtility {
   // For testing purpose.
   template <typename T>
   friend class TpmUtilityCommonTest;
-
-  DISALLOW_COPY_AND_ASSIGN(TpmUtilityCommon);
 };
 
 }  // namespace attestation

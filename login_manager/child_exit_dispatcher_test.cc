@@ -72,6 +72,9 @@ class FakeChildExitHandler : public ChildExitHandler {
 class ChildExitDispatcherTest : public ::testing::Test {
  public:
   ChildExitDispatcherTest() = default;
+  ChildExitDispatcherTest(const ChildExitDispatcherTest&) = delete;
+  ChildExitDispatcherTest& operator=(const ChildExitDispatcherTest&) = delete;
+
   ~ChildExitDispatcherTest() override = default;
 
   void SetUp() override { brillo_loop_.SetAsCurrent(); }
@@ -81,9 +84,6 @@ class ChildExitDispatcherTest : public ::testing::Test {
   brillo::BaseMessageLoop brillo_loop_{task_executor_.task_runner()};
   SystemUtilsImpl system_utils_;
   brillo::AsynchronousSignalHandler signal_handler_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ChildExitDispatcherTest);
 };
 
 TEST_F(ChildExitDispatcherTest, ChildExit) {

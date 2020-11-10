@@ -15,12 +15,12 @@ namespace permission_broker {
 class AllowUsbDeviceRule : public UsbSubsystemUdevRule {
  public:
   AllowUsbDeviceRule();
+  AllowUsbDeviceRule(const AllowUsbDeviceRule&) = delete;
+  AllowUsbDeviceRule& operator=(const AllowUsbDeviceRule&) = delete;
+
   ~AllowUsbDeviceRule() override = default;
 
   Result ProcessUsbDevice(struct udev_device* device) override;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(AllowUsbDeviceRule);
 };
 
 }  // namespace permission_broker

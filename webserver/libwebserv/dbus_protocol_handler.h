@@ -41,6 +41,9 @@ class Request;
 class LIBWEBSERV_PRIVATE DBusProtocolHandler : public ProtocolHandler {
  public:
   DBusProtocolHandler(const std::string& name, DBusServer* server);
+  DBusProtocolHandler(const DBusProtocolHandler&) = delete;
+  DBusProtocolHandler& operator=(const DBusProtocolHandler&) = delete;
+
   ~DBusProtocolHandler() override;
 
   bool IsConnected() const override;
@@ -144,7 +147,6 @@ class LIBWEBSERV_PRIVATE DBusProtocolHandler : public ProtocolHandler {
   std::map<std::string, std::string> request_id_map_;
 
   base::WeakPtrFactory<DBusProtocolHandler> weak_ptr_factory_{this};
-  DISALLOW_COPY_AND_ASSIGN(DBusProtocolHandler);
 };
 
 }  // namespace libwebserv

@@ -49,6 +49,9 @@ TEST(BlobTest, CombineBlobs) {
 class SecureBlobTest : public ::testing::Test {
  public:
   SecureBlobTest() {}
+  SecureBlobTest(const SecureBlobTest&) = delete;
+  SecureBlobTest& operator=(const SecureBlobTest&) = delete;
+
   virtual ~SecureBlobTest() {}
 
   static bool FindBlobInBlob(const brillo::SecureBlob& haystack,
@@ -67,9 +70,6 @@ class SecureBlobTest : public ::testing::Test {
     }
     return std::distance(haystack.begin(), pos);
   }
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(SecureBlobTest);
 };
 
 TEST_F(SecureBlobTest, AllocationSizeTest) {

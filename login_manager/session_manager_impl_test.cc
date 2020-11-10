@@ -305,6 +305,8 @@ class SessionManagerImplTest : public ::testing::Test,
             nullptr, "", dbus::ObjectPath("/fake/clock"))),
         debugd_proxy_(new dbus::MockObjectProxy(
             nullptr, "", dbus::ObjectPath("/fake/debugd"))) {}
+  SessionManagerImplTest(const SessionManagerImplTest&) = delete;
+  SessionManagerImplTest& operator=(const SessionManagerImplTest&) = delete;
 
   ~SessionManagerImplTest() override = default;
 
@@ -461,6 +463,10 @@ class SessionManagerImplTest : public ::testing::Test,
   class StartArcInstanceExpectationsBuilder {
    public:
     StartArcInstanceExpectationsBuilder() = default;
+    StartArcInstanceExpectationsBuilder(
+        const StartArcInstanceExpectationsBuilder&) = delete;
+    StartArcInstanceExpectationsBuilder& operator=(
+        const StartArcInstanceExpectationsBuilder&) = delete;
 
     StartArcInstanceExpectationsBuilder& SetDevMode(bool v) {
       dev_mode_ = v;
@@ -542,12 +548,15 @@ class SessionManagerImplTest : public ::testing::Test,
         StartArcMiniContainerRequest_PlayStoreAutoUpdate_AUTO_UPDATE_DEFAULT;
     int arc_lcd_density_ = -1;
 
-    DISALLOW_COPY_AND_ASSIGN(StartArcInstanceExpectationsBuilder);
   };
 
   class UpgradeContainerExpectationsBuilder {
    public:
     UpgradeContainerExpectationsBuilder() = default;
+    UpgradeContainerExpectationsBuilder(
+        const UpgradeContainerExpectationsBuilder&) = delete;
+    UpgradeContainerExpectationsBuilder& operator=(
+        const UpgradeContainerExpectationsBuilder&) = delete;
 
     UpgradeContainerExpectationsBuilder& SetDevMode(bool v) {
       dev_mode_ = v;
@@ -638,7 +647,6 @@ class SessionManagerImplTest : public ::testing::Test,
     int supervision_transition_ = 0;
     bool enable_adb_sideload_ = false;
 
-    DISALLOW_COPY_AND_ASSIGN(UpgradeContainerExpectationsBuilder);
   };
 #endif
 
@@ -975,8 +983,6 @@ class SessionManagerImplTest : public ::testing::Test,
   uint32_t expected_locks_ = 0;
   uint32_t actual_restarts_ = 0;
   uint32_t expected_restarts_ = 0;
-
-  DISALLOW_COPY_AND_ASSIGN(SessionManagerImplTest);
 };
 
 class SessionManagerPackagesCacheTest
@@ -985,10 +991,12 @@ class SessionManagerPackagesCacheTest
           std::tuple<UpgradeArcContainerRequest_PackageCacheMode, bool>> {
  public:
   SessionManagerPackagesCacheTest() = default;
-  ~SessionManagerPackagesCacheTest() override = default;
+  SessionManagerPackagesCacheTest(const SessionManagerPackagesCacheTest&) =
+      delete;
+  SessionManagerPackagesCacheTest& operator=(
+      const SessionManagerPackagesCacheTest&) = delete;
 
- private:
-  DISALLOW_COPY_AND_ASSIGN(SessionManagerPackagesCacheTest);
+  ~SessionManagerPackagesCacheTest() override = default;
 };
 
 class SessionManagerPlayStoreAutoUpdateTest
@@ -997,10 +1005,12 @@ class SessionManagerPlayStoreAutoUpdateTest
           StartArcMiniContainerRequest_PlayStoreAutoUpdate> {
  public:
   SessionManagerPlayStoreAutoUpdateTest() = default;
-  ~SessionManagerPlayStoreAutoUpdateTest() override = default;
+  SessionManagerPlayStoreAutoUpdateTest(
+      const SessionManagerPlayStoreAutoUpdateTest&) = delete;
+  SessionManagerPlayStoreAutoUpdateTest& operator=(
+      const SessionManagerPlayStoreAutoUpdateTest&) = delete;
 
- private:
-  DISALLOW_COPY_AND_ASSIGN(SessionManagerPlayStoreAutoUpdateTest);
+  ~SessionManagerPlayStoreAutoUpdateTest() override = default;
 };
 
 const pid_t SessionManagerImplTest::kDummyPid = 4;

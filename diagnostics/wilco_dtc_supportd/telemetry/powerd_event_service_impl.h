@@ -23,6 +23,8 @@ class PowerdEventServiceImpl : public PowerdEventService,
                                public PowerdAdapter::PowerObserver {
  public:
   explicit PowerdEventServiceImpl(PowerdAdapter* powerd_adapter);
+  PowerdEventServiceImpl(const PowerdEventServiceImpl&) = delete;
+  PowerdEventServiceImpl& operator=(const PowerdEventServiceImpl&) = delete;
 
   ~PowerdEventServiceImpl() override;
 
@@ -53,8 +55,6 @@ class PowerdEventServiceImpl : public PowerdEventService,
   // (updates every 30 seconds or when something changes in power supply).
   base::Optional<PowerdEventService::Observer::PowerEventType>
       external_power_ac_event_;
-
-  DISALLOW_COPY_AND_ASSIGN(PowerdEventServiceImpl);
 };
 
 }  // namespace diagnostics

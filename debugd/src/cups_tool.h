@@ -17,6 +17,9 @@ namespace debugd {
 class CupsTool {
  public:
   CupsTool() = default;
+  CupsTool(const CupsTool&) = delete;
+  CupsTool& operator=(const CupsTool&) = delete;
+
   ~CupsTool() = default;
 
   // Add a printer that can be configured automatically.
@@ -37,9 +40,6 @@ class CupsTool {
   // which the trailing port spec is optional. In addition, they must
   // already be appropriately percent-encoded.
   bool UriSeemsReasonable(const std::string& uri);
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(CupsTool);
 };
 
 }  // namespace debugd

@@ -14,6 +14,9 @@ namespace oobe_config {
 class LoadOobeConfigInterface {
  public:
   LoadOobeConfigInterface() = default;
+  LoadOobeConfigInterface(const LoadOobeConfigInterface&) = delete;
+  LoadOobeConfigInterface& operator=(const LoadOobeConfigInterface&) = delete;
+
   virtual ~LoadOobeConfigInterface() = default;
 
   // Populates |config| with the oobe config file in json format. Additionally
@@ -21,9 +24,6 @@ class LoadOobeConfigInterface {
   // otherwise it returns true.
   virtual bool GetOobeConfigJson(std::string* config,
                                  std::string* enrollment_domain) = 0;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(LoadOobeConfigInterface);
 };
 
 }  // namespace oobe_config

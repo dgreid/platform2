@@ -52,6 +52,8 @@ class PPPoEServiceTest : public testing::Test {
     manager_.set_mock_device_info(&device_info_);
     service_->process_manager_ = &process_manager_;
   }
+  PPPoEServiceTest(const PPPoEServiceTest&) = delete;
+  PPPoEServiceTest& operator=(const PPPoEServiceTest&) = delete;
 
   ~PPPoEServiceTest() override {
     Error error;
@@ -87,9 +89,6 @@ class PPPoEServiceTest : public testing::Test {
   NiceMock<MockDeviceInfo> device_info_;
 
   scoped_refptr<PPPoEService> service_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(PPPoEServiceTest);
 };
 
 MATCHER_P(LinkNamed, name, "") {

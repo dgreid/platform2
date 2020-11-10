@@ -38,6 +38,9 @@ class LogLineReader : public FileChangeWatcher::Observer {
   static void SetMaxLineLengthForTest(int64_t max_line_length);
 
   explicit LogLineReader(Backend backend_mode);
+  LogLineReader(const LogLineReader&) = delete;
+  LogLineReader& operator=(const LogLineReader&) = delete;
+
   virtual ~LogLineReader();
 
   // Open the file to read.
@@ -92,8 +95,6 @@ class LogLineReader : public FileChangeWatcher::Observer {
   int64_t pos_ = 0;
 
   base::ObserverList<Observer> observers_;
-
-  DISALLOW_COPY_AND_ASSIGN(LogLineReader);
 };
 
 }  // namespace croslog

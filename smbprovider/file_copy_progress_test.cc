@@ -18,6 +18,8 @@ class FileCopyProgressTest : public testing::Test {
  public:
   FileCopyProgressTest()
       : fake_samba_(std::make_unique<FakeSambaInterface>()) {}
+  FileCopyProgressTest(const FileCopyProgressTest&) = delete;
+  FileCopyProgressTest& operator=(const FileCopyProgressTest&) = delete;
 
   ~FileCopyProgressTest() override = default;
 
@@ -29,8 +31,6 @@ class FileCopyProgressTest : public testing::Test {
   }
 
   std::unique_ptr<FakeSambaInterface> fake_samba_;
-
-  DISALLOW_COPY_AND_ASSIGN(FileCopyProgressTest);
 };
 
 // The copy fails if the source does not exist.

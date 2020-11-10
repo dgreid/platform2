@@ -23,6 +23,9 @@ class BRILLO_EXPORT Socket {
  public:
   Socket(int family, int type);
   explicit Socket(base::ScopedFD fd);
+  Socket(const Socket&) = delete;
+  Socket& operator=(const Socket&) = delete;
+
   virtual ~Socket() = default;
 
   bool Bind(const struct sockaddr* addr, socklen_t addrlen);
@@ -47,8 +50,6 @@ class BRILLO_EXPORT Socket {
 
  private:
   base::ScopedFD fd_;
-
-  DISALLOW_COPY_AND_ASSIGN(Socket);
 };
 
 BRILLO_EXPORT std::ostream& operator<<(std::ostream& stream,

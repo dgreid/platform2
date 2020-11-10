@@ -17,13 +17,13 @@ class ShareIterator : public BaseDirectoryIterator {
 
  public:
   ShareIterator(ShareIterator&& other) = default;
+  ShareIterator(const ShareIterator&) = delete;
+  ShareIterator& operator=(const ShareIterator&) = delete;
 
  protected:
   bool ShouldIncludeEntryType(uint32_t smbc_type) const override {
     return IsSmbShare(smbc_type);
   }
-
-  DISALLOW_COPY_AND_ASSIGN(ShareIterator);
 };
 
 }  // namespace smbprovider

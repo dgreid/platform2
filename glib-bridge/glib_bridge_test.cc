@@ -48,6 +48,9 @@ void ScheduleTimeoutCallback(int timeout_ms, GSourceFunc func, gpointer data) {
 class GlibBridgeTest : public ::testing::Test {
  public:
   GlibBridgeTest() : glib_bridge_(new GlibBridge()) {}
+  GlibBridgeTest(const GlibBridgeTest&) = delete;
+  GlibBridgeTest& operator=(const GlibBridgeTest&) = delete;
+
   ~GlibBridgeTest() override {}
 
   void Finish() { run_loop_.Quit(); }
@@ -66,8 +69,6 @@ class GlibBridgeTest : public ::testing::Test {
       base::test::TaskEnvironment::MainThreadType::IO};
   base::RunLoop run_loop_;
   std::unique_ptr<GlibBridge> glib_bridge_;
-
-  DISALLOW_COPY_AND_ASSIGN(GlibBridgeTest);
 };
 
 TEST_F(GlibBridgeTest, ReadFileCallback) {

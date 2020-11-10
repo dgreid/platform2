@@ -33,6 +33,9 @@ class PermissionBroker : public org::chromium::PermissionBrokerAdaptor,
   PermissionBroker(scoped_refptr<dbus::Bus> bus,
                    const std::string& udev_run_path,
                    const base::TimeDelta& poll_interval);
+  PermissionBroker(const PermissionBroker&) = delete;
+  PermissionBroker& operator=(const PermissionBroker&) = delete;
+
   ~PermissionBroker();
 
   // Register the D-Bus object and interfaces.
@@ -93,8 +96,6 @@ class PermissionBroker : public org::chromium::PermissionBrokerAdaptor,
   PortTracker port_tracker_;
   UsbControl usb_control_;
   UsbDriverTracker usb_driver_tracker_;
-
-  DISALLOW_COPY_AND_ASSIGN(PermissionBroker);
 };
 
 }  // namespace permission_broker

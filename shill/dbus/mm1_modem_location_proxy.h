@@ -23,6 +23,9 @@ class ModemLocationProxy : public ModemLocationProxyInterface {
   ModemLocationProxy(const scoped_refptr<dbus::Bus>& bus,
                      const RpcIdentifier& path,
                      const std::string& service);
+  ModemLocationProxy(const ModemLocationProxy&) = delete;
+  ModemLocationProxy& operator=(const ModemLocationProxy&) = delete;
+
   ~ModemLocationProxy() override;
   // Inherited methods from ModemLocationProxyInterface.
   void Setup(uint32_t sources,
@@ -50,7 +53,6 @@ class ModemLocationProxy : public ModemLocationProxyInterface {
   std::unique_ptr<org::freedesktop::ModemManager1::Modem::LocationProxy> proxy_;
 
   base::WeakPtrFactory<ModemLocationProxy> weak_factory_{this};
-  DISALLOW_COPY_AND_ASSIGN(ModemLocationProxy);
 };
 
 }  // namespace mm1

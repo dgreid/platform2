@@ -18,6 +18,8 @@ namespace server {
 class FakeServicePublisher : public ServicePublisher {
  public:
   FakeServicePublisher() : num_connections_(0) {}
+  FakeServicePublisher(const FakeServicePublisher&) = delete;
+  FakeServicePublisher& operator=(const FakeServicePublisher&) = delete;
 
   void AddFile(const std::string& file, size_t file_size) override {
     files_[file] = file_size;
@@ -42,8 +44,6 @@ class FakeServicePublisher : public ServicePublisher {
  private:
   std::map<std::string, size_t> files_;
   int num_connections_;
-
-  DISALLOW_COPY_AND_ASSIGN(FakeServicePublisher);
 };
 
 }  // namespace server

@@ -37,6 +37,9 @@ class RuleDBStorage {
   // initial member construction (e.g. a default constructed RuleDBStorage can
   // be replaced at a later time once the db_dir is known).
   RuleDBStorage(RuleDBStorage&&) = default;
+  RuleDBStorage(const RuleDBStorage&) = delete;
+  RuleDBStorage& operator=(const RuleDBStorage&) = delete;
+
   RuleDBStorage& operator=(RuleDBStorage&&) = default;
 
   RuleDB& Get();
@@ -52,8 +55,6 @@ class RuleDBStorage {
   base::FilePath path_;
   brillo::SafeFD fd_;
   std::unique_ptr<RuleDB> val_;
-
-  DISALLOW_COPY_AND_ASSIGN(RuleDBStorage);
 };
 
 }  // namespace usb_bouncer

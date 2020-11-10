@@ -69,6 +69,9 @@ class MockMetrics : public KerberosMetrics {
  public:
   explicit MockMetrics(const base::FilePath& storage_dir)
       : KerberosMetrics(storage_dir) {}
+  MockMetrics(const MockMetrics&) = delete;
+  MockMetrics& operator=(const MockMetrics&) = delete;
+
   ~MockMetrics() override = default;
 
   MOCK_METHOD(void, StartAcquireTgtTimer, (), (override));
@@ -82,9 +85,6 @@ class MockMetrics : public KerberosMetrics {
               (const std::string&, ErrorType),
               (override));
   MOCK_METHOD(bool, ShouldReportDailyUsageStats, (), (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockMetrics);
 };
 
 // Stub completion callback for RegisterAsync().
@@ -128,6 +128,9 @@ std::unique_ptr<dbus::Response> StubRetrievePrimarySession(
 class KerberosAdaptorTest : public ::testing::Test {
  public:
   KerberosAdaptorTest() = default;
+  KerberosAdaptorTest(const KerberosAdaptorTest&) = delete;
+  KerberosAdaptorTest& operator=(const KerberosAdaptorTest&) = delete;
+
   ~KerberosAdaptorTest() override = default;
 
   void SetUp() override {
@@ -260,9 +263,6 @@ class KerberosAdaptorTest : public ::testing::Test {
   base::ScopedTempDir storage_dir_;
 
   NiceMock<MockMetrics>* metrics_ = nullptr;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(KerberosAdaptorTest);
 };
 
 // RetrievePrimarySession is called to figure out the proper storage dir if the

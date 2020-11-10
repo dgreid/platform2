@@ -28,6 +28,9 @@ constexpr size_t kLockoutPasswordSize = 20;
 class Tpm2Impl : public Tpm {
  public:
   Tpm2Impl() = default;
+  Tpm2Impl(const Tpm2Impl&) = delete;
+  Tpm2Impl& operator=(const Tpm2Impl&) = delete;
+
   ~Tpm2Impl() override = default;
 
   // Initializes trunks factory. Returns if the initialization succeeded.
@@ -69,8 +72,6 @@ class Tpm2Impl : public Tpm {
   trunks::TrunksFactory* trunks_factory_ = nullptr;
 
   const base::FilePath local_data_path_{kTpmLocalDataFile};
-
-  DISALLOW_COPY_AND_ASSIGN(Tpm2Impl);
 };
 
 }  // namespace tpm_softclear_utils

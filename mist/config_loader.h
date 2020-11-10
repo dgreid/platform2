@@ -25,6 +25,9 @@ class UsbModemInfo;
 class ConfigLoader {
  public:
   ConfigLoader();
+  ConfigLoader(const ConfigLoader&) = delete;
+  ConfigLoader& operator=(const ConfigLoader&) = delete;
+
   virtual ~ConfigLoader();
 
   // Loads the default configuration. Returns true on success.
@@ -49,8 +52,6 @@ class ConfigLoader {
   FRIEND_TEST(ConfigLoaderTest, LoadValidConfigFile);
 
   std::unique_ptr<Config> config_;
-
-  DISALLOW_COPY_AND_ASSIGN(ConfigLoader);
 };
 
 }  // namespace mist

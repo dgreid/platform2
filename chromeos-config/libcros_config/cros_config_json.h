@@ -29,6 +29,9 @@ class CrosConfigJson : public CrosConfigImpl {
   static constexpr char kConfigListName[] = "configs";
 
   CrosConfigJson();
+  CrosConfigJson(const CrosConfigJson&) = delete;
+  CrosConfigJson& operator=(const CrosConfigJson&) = delete;
+
   ~CrosConfigJson() override;
 
   // CrosConfigInterface:
@@ -53,8 +56,6 @@ class CrosConfigJson : public CrosConfigImpl {
   const base::Value* config_dict_;  // Root of configs
 
   int device_index_;
-
-  DISALLOW_COPY_AND_ASSIGN(CrosConfigJson);
 };
 
 }  // namespace brillo

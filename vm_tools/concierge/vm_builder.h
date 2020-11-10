@@ -31,6 +31,8 @@ class VmBuilder {
   VmBuilder();
   VmBuilder(VmBuilder&&);
   VmBuilder& operator=(VmBuilder&& other);
+  VmBuilder(const VmBuilder&) = delete;
+  VmBuilder& operator=(const VmBuilder&) = delete;
   ~VmBuilder();
 
   VmBuilder& SetKernel(base::FilePath kernel);
@@ -92,8 +94,6 @@ class VmBuilder {
   base::StringPairs custom_params_;
 
   std::string gpu_arg_;
-
-  DISALLOW_COPY_AND_ASSIGN(VmBuilder);
 };
 
 }  // namespace concierge

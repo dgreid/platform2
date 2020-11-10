@@ -26,6 +26,9 @@ namespace tpm_manager {
 class TPM_MANAGER_EXPORT TpmNvramDBusProxy : public TpmNvramInterface {
  public:
   TpmNvramDBusProxy() = default;
+  TpmNvramDBusProxy(const TpmNvramDBusProxy&) = delete;
+  TpmNvramDBusProxy& operator=(const TpmNvramDBusProxy&) = delete;
+
   ~TpmNvramDBusProxy() override;
 
   // Performs initialization tasks. This method must be called before calling
@@ -63,7 +66,6 @@ class TPM_MANAGER_EXPORT TpmNvramDBusProxy : public TpmNvramInterface {
 
   scoped_refptr<dbus::Bus> bus_;
   dbus::ObjectProxy* object_proxy_;
-  DISALLOW_COPY_AND_ASSIGN(TpmNvramDBusProxy);
 };
 
 }  // namespace tpm_manager

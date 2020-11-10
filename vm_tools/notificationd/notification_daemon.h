@@ -56,6 +56,8 @@ class NotificationDaemon : public DBusInterface,
   };
 
   NotificationDaemon() = default;
+  NotificationDaemon(const NotificationDaemon&) = delete;
+  NotificationDaemon& operator=(const NotificationDaemon&) = delete;
 
   // Initializes the notification daemon. Returns true on success.
   bool Init(const std::string& display_name,
@@ -75,7 +77,6 @@ class NotificationDaemon : public DBusInterface,
   FRIEND_TEST(DBusServiceTest, GetCapabilities);
   FRIEND_TEST(DBusServiceTest, Notify);
   FRIEND_TEST(DBusServiceTest, GetServerInformation);
-  DISALLOW_COPY_AND_ASSIGN(NotificationDaemon);
 };
 
 }  // namespace notificationd

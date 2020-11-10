@@ -36,6 +36,9 @@ class Krb5JailWrapperTest : public ::testing::Test {
 
     Krb5JailWrapper::DisableChangeUserForTesting(true);
   }
+  Krb5JailWrapperTest(const Krb5JailWrapperTest&) = delete;
+  Krb5JailWrapperTest& operator=(const Krb5JailWrapperTest&) = delete;
+
   ~Krb5JailWrapperTest() override = default;
 
  protected:
@@ -49,9 +52,6 @@ class Krb5JailWrapperTest : public ::testing::Test {
   base::ScopedTempDir storage_dir_;
   base::FilePath krb5cc_path_;
   base::FilePath krb5conf_path_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(Krb5JailWrapperTest);
 };
 
 TEST_F(Krb5JailWrapperTest, AcquireTgtSucceeds) {

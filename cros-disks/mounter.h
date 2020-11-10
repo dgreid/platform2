@@ -23,6 +23,9 @@ class MountPoint;
 class Mounter {
  public:
   Mounter();
+  Mounter(const Mounter&) = delete;
+  Mounter& operator=(const Mounter&) = delete;
+
   virtual ~Mounter();
 
   // Mounts the filesystem. On failure returns nullptr and |error| is
@@ -41,9 +44,6 @@ class Mounter {
   virtual bool CanMount(const std::string& source,
                         const std::vector<std::string>& params,
                         base::FilePath* suggested_dir_name) const = 0;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(Mounter);
 };
 
 // Temporary adaptor to keep some signatures compatible with old implementation
@@ -53,6 +53,9 @@ class MounterCompat : public Mounter {
  public:
   explicit MounterCompat(MountOptions mount_options,
                          std::unique_ptr<Mounter> mounter = {});
+  MounterCompat(const MounterCompat&) = delete;
+  MounterCompat& operator=(const MounterCompat&) = delete;
+
   ~MounterCompat() override;
 
   // Mounter overrides.
@@ -71,8 +74,6 @@ class MounterCompat : public Mounter {
  private:
   const std::unique_ptr<Mounter> mounter_;
   const MountOptions mount_options_;
-
-  DISALLOW_COPY_AND_ASSIGN(MounterCompat);
 };
 
 }  // namespace cros_disks

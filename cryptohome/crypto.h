@@ -42,6 +42,8 @@ class Crypto {
  public:
   // Default constructor
   explicit Crypto(Platform* platform);
+  Crypto(const Crypto&) = delete;
+  Crypto& operator=(const Crypto&) = delete;
 
   virtual ~Crypto();
 
@@ -276,8 +278,6 @@ class Crypto {
   std::unique_ptr<LECredentialManager> le_manager_;
 
   bool disable_logging_for_tests_;
-
-  DISALLOW_COPY_AND_ASSIGN(Crypto);
 };
 
 }  // namespace cryptohome

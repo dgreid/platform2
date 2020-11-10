@@ -84,6 +84,8 @@ class SodaLibrary {
 
   // Initializes the soda library.
   SodaLibrary();
+  SodaLibrary(const SodaLibrary&) = delete;
+  SodaLibrary& operator=(const SodaLibrary&) = delete;
 
   base::Optional<base::ScopedNativeLibrary> library_;
   Status status_;
@@ -103,8 +105,6 @@ class SodaLibrary {
   ExtendedSodaStopFn extended_soda_stop_;
   ExtendedSodaStartFn extended_soda_start_;
   ExtendedSodaMarkDoneFn extended_soda_mark_done_;
-
-  DISALLOW_COPY_AND_ASSIGN(SodaLibrary);
 };
 
 }  // namespace ml

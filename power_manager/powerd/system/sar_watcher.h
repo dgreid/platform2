@@ -47,6 +47,9 @@ class SarWatcher : public UserProximityWatcherInterface,
   void set_open_iio_events_func_for_testing(OpenIioEventsFunc f);
 
   SarWatcher();
+  SarWatcher(const SarWatcher&) = delete;
+  SarWatcher& operator=(const SarWatcher&) = delete;
+
   ~SarWatcher() override;
 
   // Returns true on success.
@@ -111,8 +114,6 @@ class SarWatcher : public UserProximityWatcherInterface,
 
   bool use_proximity_for_cellular_ = false;
   bool use_proximity_for_wifi_ = false;
-
-  DISALLOW_COPY_AND_ASSIGN(SarWatcher);
 };
 
 }  // namespace system

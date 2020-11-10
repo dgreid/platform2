@@ -17,6 +17,9 @@ namespace biod {
 class PowerButtonFilterTest : public testing::Test {
  public:
   PowerButtonFilterTest() = default;
+  PowerButtonFilterTest(const PowerButtonFilterTest&) = delete;
+  PowerButtonFilterTest& operator=(const PowerButtonFilterTest&) = delete;
+
   ~PowerButtonFilterTest() = default;
 
   void SetUp() override {
@@ -50,9 +53,6 @@ class PowerButtonFilterTest : public testing::Test {
         base::WrapUnique(power_manager_client_),
         base::WrapUnique(cros_config_prefs_), base::WrapUnique(test_clock_));
   }
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(PowerButtonFilterTest);
 };
 
 // Tests PowerButtonFilter reports true on ShouldFilterFingerprintMatch() if

@@ -24,6 +24,8 @@ namespace hermes {
 class Daemon : public brillo::DBusServiceDaemon {
  public:
   Daemon();
+  Daemon(const Daemon&) = delete;
+  Daemon& operator=(const Daemon&) = delete;
 
  private:
   // brillo::Daemon override.
@@ -41,8 +43,6 @@ class Daemon : public brillo::DBusServiceDaemon {
   AdaptorFactory adaptor_factory_;
 
   std::unique_ptr<Manager> manager_;
-
-  DISALLOW_COPY_AND_ASSIGN(Daemon);
 };
 
 }  // namespace hermes

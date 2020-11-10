@@ -87,6 +87,9 @@ class Cellular : public Device,
            Type type,
            const std::string& service,
            const RpcIdentifier& path);
+  Cellular(const Cellular&) = delete;
+  Cellular& operator=(const Cellular&) = delete;
+
   ~Cellular() override;
 
   // Returns the equipment identifier of the device. If the device is a 3GPP
@@ -570,8 +573,6 @@ class Cellular : public Device,
   int64_t scanning_timeout_milliseconds_;
 
   base::WeakPtrFactory<Cellular> weak_ptr_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(Cellular);
 };
 
 }  // namespace shill

@@ -27,6 +27,11 @@ class BacklightControllerObserverStub : public BacklightControllerObserver {
   };
 
   BacklightControllerObserverStub();
+  BacklightControllerObserverStub(const BacklightControllerObserverStub&) =
+      delete;
+  BacklightControllerObserverStub& operator=(
+      const BacklightControllerObserverStub&) = delete;
+
   ~BacklightControllerObserverStub() override;
 
   const std::vector<ChangeTuple>& changes() const { return changes_; }
@@ -42,8 +47,6 @@ class BacklightControllerObserverStub : public BacklightControllerObserver {
  private:
   // Received changes, in oldest-to-newest order.
   std::vector<ChangeTuple> changes_;
-
-  DISALLOW_COPY_AND_ASSIGN(BacklightControllerObserverStub);
 };
 
 }  // namespace policy

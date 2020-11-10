@@ -17,6 +17,9 @@ namespace shill {
 class EventDispatcherForTest : public EventDispatcher {
  public:
   EventDispatcherForTest() = default;
+  EventDispatcherForTest(const EventDispatcherForTest&) = delete;
+  EventDispatcherForTest& operator=(const EventDispatcherForTest&) = delete;
+
   ~EventDispatcherForTest() override = default;
 
   base::test::TaskEnvironment& task_environment() { return task_environment_; }
@@ -25,8 +28,6 @@ class EventDispatcherForTest : public EventDispatcher {
   base::test::TaskEnvironment task_environment_{
       base::test::TaskEnvironment::TimeSource::MOCK_TIME,
       base::test::TaskEnvironment::MainThreadType::IO};
-
-  DISALLOW_COPY_AND_ASSIGN(EventDispatcherForTest);
 };
 
 }  // namespace shill

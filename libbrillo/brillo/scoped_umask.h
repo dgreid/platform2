@@ -17,6 +17,9 @@ namespace brillo {
 class BRILLO_EXPORT ScopedUmask {
  public:
   explicit ScopedUmask(mode_t new_umask);
+  ScopedUmask(const ScopedUmask&) = delete;
+  ScopedUmask& operator=(const ScopedUmask&) = delete;
+
   ~ScopedUmask();
 
  private:
@@ -44,7 +47,6 @@ class BRILLO_EXPORT ScopedUmask {
   //    ScopedUmask a(new_value);
   //    ... code here ...
   // }
-  DISALLOW_COPY_AND_ASSIGN(ScopedUmask);
 };
 
 }  // namespace brillo

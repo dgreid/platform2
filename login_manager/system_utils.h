@@ -46,6 +46,9 @@ class ScopedDBusPendingCall;
 class SystemUtils {
  public:
   SystemUtils() {}
+  SystemUtils(const SystemUtils&) = delete;
+  SystemUtils& operator=(const SystemUtils&) = delete;
+
   virtual ~SystemUtils() {}
 
   // Sends |signal| to |pid|, with uid and euid set to |owner|.
@@ -179,9 +182,6 @@ class SystemUtils {
                              const std::vector<std::string>& args,
                              const std::vector<std::string>& env_vars,
                              pid_t* pchild_pid) = 0;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(SystemUtils);
 };
 
 }  // namespace login_manager

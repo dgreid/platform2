@@ -29,6 +29,8 @@ class EglPixelBuf {
               uint32_t width,
               uint32_t height,
               uint32_t stride);
+  EglPixelBuf(const EglPixelBuf&) = delete;
+  EglPixelBuf& operator=(const EglPixelBuf&) = delete;
 
   uint32_t width() const { return width_; }
   uint32_t height() const { return height_; }
@@ -41,8 +43,6 @@ class EglPixelBuf {
   const uint32_t height_;
   uint32_t stride_ = 0;
   std::vector<char> buffer_;
-
-  DISALLOW_COPY_AND_ASSIGN(EglPixelBuf);
 };
 
 // Captures a screenshot from the specified CRTC.

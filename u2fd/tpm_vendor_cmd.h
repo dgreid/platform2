@@ -36,6 +36,9 @@ const uint32_t kVendorRcInvalidResponse = 0xffffffff;
 class TpmVendorCommandProxy : public trunks::TrunksDBusProxy {
  public:
   TpmVendorCommandProxy();
+  TpmVendorCommandProxy(const TpmVendorCommandProxy&) = delete;
+  TpmVendorCommandProxy& operator=(const TpmVendorCommandProxy&) = delete;
+
   ~TpmVendorCommandProxy() override;
 
   // Sends the VENDOR_CC_U2F_GENERATE command to cr50, and populates
@@ -110,8 +113,6 @@ class TpmVendorCommandProxy : public trunks::TrunksDBusProxy {
   // executed sequentially. Client code is responsible for acquiring the lock.
   // TODO(louiscollard): Change to something more robust.
   base::Lock lock_;
-
-  DISALLOW_COPY_AND_ASSIGN(TpmVendorCommandProxy);
 };
 
 }  // namespace u2f

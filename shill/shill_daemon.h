@@ -20,6 +20,9 @@ class Config;
 class ShillDaemon : public brillo::Daemon {
  public:
   ShillDaemon(const shill::DaemonTask::Settings& settings, Config* config);
+  ShillDaemon(const ShillDaemon&) = delete;
+  ShillDaemon& operator=(const ShillDaemon&) = delete;
+
   virtual ~ShillDaemon();
 
  private:
@@ -28,8 +31,6 @@ class ShillDaemon : public brillo::Daemon {
   void OnShutdown(int* return_code) override;
 
   DaemonTask daemon_task_;
-
-  DISALLOW_COPY_AND_ASSIGN(ShillDaemon);
 };
 
 }  // namespace shill

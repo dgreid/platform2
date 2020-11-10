@@ -55,6 +55,9 @@ class AuthenticatorData {
 
   // Moveable.
   AuthenticatorData(AuthenticatorData&& other);
+  AuthenticatorData(const AuthenticatorData&) = delete;
+  AuthenticatorData& operator=(const AuthenticatorData&) = delete;
+
   AuthenticatorData& operator=(AuthenticatorData&& other);
 
   ~AuthenticatorData();
@@ -128,8 +131,6 @@ class AuthenticatorData {
   base::Optional<AttestedCredentialData> attested_data_;
   // If |extensions_| has a value, then it will be a CBOR map.
   base::Optional<cbor::Value> extensions_;
-
-  DISALLOW_COPY_AND_ASSIGN(AuthenticatorData);
 };
 
 }  // namespace fido_device

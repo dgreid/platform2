@@ -23,6 +23,10 @@ class ExtensionPolicyEncoderTest
     : public PolicyEncoderTestBase<ExtensionPolicies> {
  public:
   ExtensionPolicyEncoderTest() = default;
+  ExtensionPolicyEncoderTest(const ExtensionPolicyEncoderTest&) = delete;
+  ExtensionPolicyEncoderTest& operator=(const ExtensionPolicyEncoderTest&) =
+      delete;
+
   ~ExtensionPolicyEncoderTest() override = default;
 
  protected:
@@ -32,9 +36,6 @@ class ExtensionPolicyEncoderTest
     policy->clear();
     encoder.EncodePolicy(policy);
   }
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ExtensionPolicyEncoderTest);
 };
 
 // Test encoding with "<extension_id>\\Policy" registry path for mandatory

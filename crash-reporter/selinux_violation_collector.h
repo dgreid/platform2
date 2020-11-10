@@ -22,6 +22,9 @@
 class SELinuxViolationCollector : public CrashCollector {
  public:
   SELinuxViolationCollector();
+  SELinuxViolationCollector(const SELinuxViolationCollector&) = delete;
+  SELinuxViolationCollector& operator=(const SELinuxViolationCollector&) =
+      delete;
 
   ~SELinuxViolationCollector() override;
 
@@ -57,8 +60,6 @@ class SELinuxViolationCollector : public CrashCollector {
                             std::map<std::string, std::string>* extra_metadata);
 
   bool ShouldDropThisReport();
-
-  DISALLOW_COPY_AND_ASSIGN(SELinuxViolationCollector);
 };
 
 #endif  // CRASH_REPORTER_SELINUX_VIOLATION_COLLECTOR_H_

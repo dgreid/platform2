@@ -16,6 +16,9 @@ namespace brillo {
 class BRILLO_EXPORT MockUdevMonitor : public UdevMonitor {
  public:
   MockUdevMonitor() = default;
+  MockUdevMonitor(const MockUdevMonitor&) = delete;
+  MockUdevMonitor& operator=(const MockUdevMonitor&) = delete;
+
   ~MockUdevMonitor() override = default;
 
   MOCK_METHOD(bool, EnableReceiving, (), (override));
@@ -28,9 +31,6 @@ class BRILLO_EXPORT MockUdevMonitor : public UdevMonitor {
   MOCK_METHOD(bool, FilterAddMatchTag, (const char*), (override));
   MOCK_METHOD(bool, FilterUpdate, (), (override));
   MOCK_METHOD(bool, FilterRemove, (), (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockUdevMonitor);
 };
 
 }  // namespace brillo

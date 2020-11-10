@@ -30,6 +30,9 @@ class Gpio {
   // the GPIO signal is active high or not.
   Gpio(uint32_t gpio_number, bool active_high)
       : gpio_number_(gpio_number), active_high_(active_high) {}
+  Gpio(const Gpio&) = delete;
+  Gpio& operator=(const Gpio&) = delete;
+
   ~Gpio() = default;
 
   // Asserts the GPIO signal. If |active_high_| is true, a value 1 is output to
@@ -115,8 +118,6 @@ class Gpio {
 
   const uint32_t gpio_number_;
   const bool active_high_;
-
-  DISALLOW_COPY_AND_ASSIGN(Gpio);
 };
 
 }  // namespace

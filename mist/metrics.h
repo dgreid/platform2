@@ -14,14 +14,15 @@ namespace mist {
 class Metrics {
  public:
   Metrics();
+  Metrics(const Metrics&) = delete;
+  Metrics& operator=(const Metrics&) = delete;
+
   ~Metrics() = default;
 
   void RecordSwitchResult(bool success);
 
  private:
   MetricsLibrary metrics_library_;
-
-  DISALLOW_COPY_AND_ASSIGN(Metrics);
 };
 
 }  // namespace mist

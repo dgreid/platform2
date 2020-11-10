@@ -24,6 +24,9 @@ class ChapsServiceImpl : public ChapsInterface {
   // ChapsServiceImpl does not take ownership of slot_manager and will not
   // delete it.
   explicit ChapsServiceImpl(SlotManager* slot_manager);
+  ChapsServiceImpl(const ChapsServiceImpl&) = delete;
+  ChapsServiceImpl& operator=(const ChapsServiceImpl&) = delete;
+
   ~ChapsServiceImpl() override = default;
 
   // ChapsInterface methods
@@ -314,8 +317,6 @@ class ChapsServiceImpl : public ChapsInterface {
 
  private:
   SlotManager* slot_manager_;
-
-  DISALLOW_COPY_AND_ASSIGN(ChapsServiceImpl);
 };
 
 }  // namespace chaps

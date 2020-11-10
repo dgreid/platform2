@@ -13,10 +13,9 @@ namespace shill {
 
 class CellularError {
  public:
+  CellularError(const CellularError&) = delete;
+  CellularError& operator=(const CellularError&) = delete;
   static void FromMM1ChromeosDBusError(brillo::Error* dbus_error, Error* error);
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(CellularError);
 };
 
 }  // namespace shill

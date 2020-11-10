@@ -81,6 +81,9 @@ class FakeWilcoDtc final {
 
   FakeWilcoDtc(const std::string& grpc_server_uri,
                const std::string& wilco_dtc_supportd_grpc_uri);
+  FakeWilcoDtc(const FakeWilcoDtc&) = delete;
+  FakeWilcoDtc& operator=(const FakeWilcoDtc&) = delete;
+
   ~FakeWilcoDtc();
 
   // Methods that correspond to the "WilcoDtcSupportd" gRPC interface and allow
@@ -212,8 +215,6 @@ class FakeWilcoDtc final {
 
   base::Optional<HandleBluetoothDataChangedRequestCallback>
       bluetooth_data_changed_request_callback_;
-
-  DISALLOW_COPY_AND_ASSIGN(FakeWilcoDtc);
 };
 
 }  // namespace diagnostics

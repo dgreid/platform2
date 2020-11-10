@@ -16,14 +16,14 @@ namespace concierge {
 class VsockCidPool {
  public:
   VsockCidPool() = default;
+  VsockCidPool(const VsockCidPool&) = delete;
+  VsockCidPool& operator=(const VsockCidPool&) = delete;
+
   ~VsockCidPool() = default;
 
   // Allocates and returns a vsock context id.  Returns 0 if it is unable to
   // allocate a cid because 0 is a reserved cid.
   uint32_t Allocate();
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(VsockCidPool);
 };
 
 }  // namespace concierge

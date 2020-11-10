@@ -22,6 +22,8 @@ constexpr char kTimezoneEnvName[] = "TZ";
 class LogParserAuditTest : public ::testing::Test {
  public:
   LogParserAuditTest() = default;
+  LogParserAuditTest(const LogParserAuditTest&) = delete;
+  LogParserAuditTest& operator=(const LogParserAuditTest&) = delete;
 
   static base::Time TimeFromExploded(int year,
                                      int month,
@@ -67,8 +69,6 @@ class LogParserAuditTest : public ::testing::Test {
     free(const_cast<char*>(saved_tz_));
     saved_tz_ = nullptr;
   }
-
-  DISALLOW_COPY_AND_ASSIGN(LogParserAuditTest);
 };
 
 TEST_F(LogParserAuditTest, Parse) {

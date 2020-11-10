@@ -24,6 +24,9 @@ class FileWriteMechanism : public Mechanism {
                      int64_t default_level,
                      const std::string& name,
                      const base::FilePath& path);
+  FileWriteMechanism(const FileWriteMechanism&) = delete;
+  FileWriteMechanism& operator=(const FileWriteMechanism&) = delete;
+
   ~FileWriteMechanism() override;
 
   // Mechanism:
@@ -38,8 +41,6 @@ class FileWriteMechanism : public Mechanism {
   const int64_t default_level_;
   const std::string name_;
   const base::FilePath path_;
-
-  DISALLOW_COPY_AND_ASSIGN(FileWriteMechanism);
 };
 
 }  // namespace thd

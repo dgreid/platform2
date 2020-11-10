@@ -128,6 +128,9 @@ class BrowserJob : public BrowserJobInterface {
              SystemUtils* utils,
              const BrowserJob::Config& cfg,
              std::unique_ptr<SubprocessInterface> subprocess);
+  BrowserJob(const BrowserJob&) = delete;
+  BrowserJob& operator=(const BrowserJob&) = delete;
+
   ~BrowserJob() override;
 
   // Overridden from BrowserJobInterface
@@ -229,7 +232,6 @@ class BrowserJob : public BrowserJobInterface {
   FRIEND_TEST(BrowserJobTest, InitializationTest);
   FRIEND_TEST(BrowserJobTest, ShouldStopTest);
   FRIEND_TEST(BrowserJobTest, ShouldNotStopTest);
-  DISALLOW_COPY_AND_ASSIGN(BrowserJob);
 };
 
 }  // namespace login_manager

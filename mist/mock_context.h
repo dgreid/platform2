@@ -22,6 +22,9 @@ class MockConfigLoader;
 class MockContext : public Context {
  public:
   MockContext() = default;
+  MockContext(const MockContext&) = delete;
+  MockContext& operator=(const MockContext&) = delete;
+
   ~MockContext() override = default;
 
   // Initializes all helper objects with mocks in the context for unit testing.
@@ -33,9 +36,6 @@ class MockContext : public Context {
 
   // Returns the brillo::MockUdev object held by this context object.
   brillo::MockUdev* GetMockUdev() const;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockContext);
 };
 
 }  // namespace mist

@@ -15,6 +15,9 @@ namespace federated {
 class StorageManagerImpl : public StorageManager {
  public:
   StorageManagerImpl() = default;
+  StorageManagerImpl(const StorageManagerImpl&) = delete;
+  StorageManagerImpl& operator=(const StorageManagerImpl&) = delete;
+
   ~StorageManagerImpl() override = default;
 
   bool OnExampleReceived(const std::string& client_name,
@@ -26,7 +29,6 @@ class StorageManagerImpl : public StorageManager {
 
  private:
   SEQUENCE_CHECKER(sequence_checker_);
-  DISALLOW_COPY_AND_ASSIGN(StorageManagerImpl);
 };
 
 }  // namespace federated

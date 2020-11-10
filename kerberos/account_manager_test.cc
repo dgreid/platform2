@@ -74,6 +74,9 @@ class MockMetrics : public KerberosMetrics {
  public:
   explicit MockMetrics(const base::FilePath& storage_dir)
       : KerberosMetrics(storage_dir) {}
+  MockMetrics(const MockMetrics&) = delete;
+  MockMetrics& operator=(const MockMetrics&) = delete;
+
   ~MockMetrics() override = default;
 
   MOCK_METHOD(bool, ShouldReportDailyUsageStats, (), (override));
@@ -85,9 +88,6 @@ class MockMetrics : public KerberosMetrics {
               ReportKerberosEncryptionTypes,
               (KerberosEncryptionTypes),
               (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockMetrics);
 };
 
 }  // namespace
@@ -101,6 +101,9 @@ class AccountManagerTest : public ::testing::Test {
         kerberos_ticket_expiring_(
             base::BindRepeating(&AccountManagerTest::OnKerberosTicketExpiring,
                                 base::Unretained(this))) {}
+  AccountManagerTest(const AccountManagerTest&) = delete;
+  AccountManagerTest& operator=(const AccountManagerTest&) = delete;
+
   ~AccountManagerTest() override = default;
 
   void SetUp() override {
@@ -231,9 +234,6 @@ class AccountManagerTest : public ::testing::Test {
   scoped_refptr<base::TestMockTimeTaskRunner> task_runner_{
       new base::TestMockTimeTaskRunner()};
   base::TestMockTimeTaskRunner::ScopedContext scoped_context_{task_runner_};
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(AccountManagerTest);
 };
 
 // Adding an account succeeds and serializes the file on disk.

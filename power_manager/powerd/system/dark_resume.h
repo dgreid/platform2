@@ -25,6 +25,9 @@ class WakeupSourceIdentifierInterface;
 class DarkResume : public DarkResumeInterface, public PrefsObserver {
  public:
   DarkResume();
+  DarkResume(const DarkResume&) = delete;
+  DarkResume& operator=(const DarkResume&) = delete;
+
   ~DarkResume() override;
 
   // Reads preferences on whether dark resume is enabled.
@@ -52,8 +55,6 @@ class DarkResume : public DarkResumeInterface, public PrefsObserver {
   PrefsInterface* prefs_;  // weak
 
   WakeupSourceIdentifierInterface* wakeup_source_identifier_;  // weak
-
-  DISALLOW_COPY_AND_ASSIGN(DarkResume);
 };
 
 }  // namespace system

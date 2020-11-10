@@ -21,6 +21,9 @@ class Forwarder {
  public:
   explicit Forwarder(base::ScopedFD destination,
                      bool is_socket_destination = true);
+  Forwarder(const Forwarder&) = delete;
+  Forwarder& operator=(const Forwarder&) = delete;
+
   ~Forwarder() = default;
 
   // Common implementation for actually forwarding logs to the syslog daemon.
@@ -32,8 +35,6 @@ class Forwarder {
  private:
   base::ScopedFD destination_;
   bool is_socket_destination_;
-
-  DISALLOW_COPY_AND_ASSIGN(Forwarder);
 };
 
 }  // namespace syslog

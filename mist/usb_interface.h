@@ -29,6 +29,8 @@ class UsbInterface {
   // this object.
   UsbInterface(const base::WeakPtr<UsbDevice>& device,
                const libusb_interface* interface);
+  UsbInterface(const UsbInterface&) = delete;
+  UsbInterface& operator=(const UsbInterface&) = delete;
 
   ~UsbInterface() = default;
 
@@ -43,8 +45,6 @@ class UsbInterface {
  private:
   base::WeakPtr<UsbDevice> device_;
   const libusb_interface* const interface_;
-
-  DISALLOW_COPY_AND_ASSIGN(UsbInterface);
 };
 
 }  // namespace mist

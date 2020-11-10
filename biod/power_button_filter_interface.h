@@ -10,15 +10,16 @@ namespace biod {
 class PowerButtonFilterInterface {
  public:
   PowerButtonFilterInterface() = default;
+  PowerButtonFilterInterface(const PowerButtonFilterInterface&) = delete;
+  PowerButtonFilterInterface& operator=(const PowerButtonFilterInterface&) =
+      delete;
+
   virtual ~PowerButtonFilterInterface() = default;
 
   // Returns true if a power Button event is seen in the last
   // |kAuthIgnoreTimeoutmsecs| and if we have not filtered a match after latest
   // power button press.
   virtual bool ShouldFilterFingerprintMatch() = 0;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(PowerButtonFilterInterface);
 };
 
 }  // namespace biod

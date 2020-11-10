@@ -29,6 +29,9 @@ class FUSEMountManager : public MountManager {
                    Platform* platform,
                    Metrics* metrics,
                    brillo::ProcessReaper* process_reaper);
+  FUSEMountManager(const FUSEMountManager&) = delete;
+  FUSEMountManager& operator=(const FUSEMountManager&) = delete;
+
   ~FUSEMountManager() override;
 
   bool Initialize() override;
@@ -69,8 +72,6 @@ class FUSEMountManager : public MountManager {
 
   std::vector<std::unique_ptr<FUSEHelper>> helpers_;
   const std::string working_dirs_root_;
-
-  DISALLOW_COPY_AND_ASSIGN(FUSEMountManager);
 };
 
 }  // namespace cros_disks

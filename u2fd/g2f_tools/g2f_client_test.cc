@@ -108,6 +108,8 @@ static constexpr int kHidTimeoutMs = 100;
 class G2fClientTest : public ::testing::Test {
  public:
   G2fClientTest() = default;
+  G2fClientTest(const G2fClientTest&) = delete;
+  G2fClientTest& operator=(const G2fClientTest&) = delete;
 
   ~G2fClientTest() override = default;
 
@@ -124,9 +126,6 @@ class G2fClientTest : public ::testing::Test {
 
  protected:
   std::unique_ptr<HidDevice> device_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(G2fClientTest);
 };
 
 TEST_F(G2fClientTest, HidDeviceOpenClose) {
@@ -335,6 +334,9 @@ class MockHidDevice : public HidDevice {
 class U2FHidTest : public ::testing::Test {
  public:
   U2FHidTest() : hid_(&device_) {}
+  U2FHidTest(const U2FHidTest&) = delete;
+  U2FHidTest& operator=(const U2FHidTest&) = delete;
+
   ~U2FHidTest() override = default;
 
  protected:
@@ -353,9 +355,6 @@ class U2FHidTest : public ::testing::Test {
   U2FHid::Command request;
   U2FHid::Command response;
   brillo::Blob nonce;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(U2FHidTest);
 };
 
 MATCHER(IsBroadcastCid, "Matches the broadcast cid.") {
@@ -526,6 +525,9 @@ class MockU2FHid : public U2FHid {
 class U2FTest : public ::testing::Test {
  public:
   U2FTest() : u2f_(&u2f_hid_) {}
+  U2FTest(const U2FTest&) = delete;
+  U2FTest& operator=(const U2FTest&) = delete;
+
   ~U2FTest() override = default;
 
  protected:
@@ -559,9 +561,6 @@ class U2FTest : public ::testing::Test {
 
   MockU2FHid u2f_hid_;
   U2F u2f_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(U2FTest);
 };
 
 TEST_F(U2FTest, RegisterSuccess) {

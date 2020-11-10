@@ -392,6 +392,8 @@ class BRILLO_EXPORT Stream {
 
  protected:
   Stream() = default;
+  Stream(const Stream&) = delete;
+  Stream& operator=(const Stream&) = delete;
 
  private:
   // Simple wrapper to call the externally exposed |success_callback| that only
@@ -494,7 +496,6 @@ class BRILLO_EXPORT Stream {
   bool is_async_write_pending_{false};
 
   base::WeakPtrFactory<Stream> weak_ptr_factory_{this};
-  DISALLOW_COPY_AND_ASSIGN(Stream);
 };
 
 // A smart pointer to the stream used to pass the stream object around.

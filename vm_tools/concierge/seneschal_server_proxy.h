@@ -39,6 +39,8 @@ class SeneschalServerProxy final {
 
  private:
   SeneschalServerProxy(dbus::ObjectProxy* seneschal_proxy, uint32_t handle);
+  SeneschalServerProxy(const SeneschalServerProxy&) = delete;
+  SeneschalServerProxy& operator=(const SeneschalServerProxy&) = delete;
 
   static std::unique_ptr<SeneschalServerProxy> SeneschalCreateProxy(
       dbus::ObjectProxy* seneschal_proxy, dbus::MethodCall* method_call);
@@ -48,8 +50,6 @@ class SeneschalServerProxy final {
 
   // The handle for this server.
   uint32_t handle_;
-
-  DISALLOW_COPY_AND_ASSIGN(SeneschalServerProxy);
 };
 
 }  // namespace concierge

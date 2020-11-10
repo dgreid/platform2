@@ -18,6 +18,9 @@ namespace shill {
 class MockResolver : public Resolver {
  public:
   MockResolver();
+  MockResolver(const MockResolver&) = delete;
+  MockResolver& operator=(const MockResolver&) = delete;
+
   ~MockResolver() override;
 
   MOCK_METHOD(bool,
@@ -30,9 +33,6 @@ class MockResolver : public Resolver {
               set_ignored_search_list,
               (const std::vector<std::string>&),
               (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockResolver);
 };
 
 }  // namespace shill

@@ -24,6 +24,9 @@ class DeviceStub : public Device {
              int interface_index,
              Technology technology)
       : Device(manager, link_name, address, interface_index, technology) {}
+  DeviceStub(const DeviceStub&) = delete;
+  DeviceStub& operator=(const DeviceStub&) = delete;
+
   void Start(Error* /*error*/,
              const EnabledStateChangedCallback& /*callback*/) override {}
   void Stop(Error* /*error*/,
@@ -33,9 +36,6 @@ class DeviceStub : public Device {
   void OnIPConfigUpdated(const IPConfigRefPtr& /*ipconfig*/,
                          bool /*new_lease_acquired*/) override {}
   void OnIPv6ConfigUpdated() override {}
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(DeviceStub);
 };
 
 }  // namespace shill

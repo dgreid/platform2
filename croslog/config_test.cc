@@ -12,10 +12,10 @@ namespace croslog {
 class ConfigTest : public ::testing::Test {
  public:
   ConfigTest() = default;
-  ~ConfigTest() override = default;
+  ConfigTest(const ConfigTest&) = delete;
+  ConfigTest& operator=(const ConfigTest&) = delete;
 
- private:
-  DISALLOW_COPY_AND_ASSIGN(ConfigTest);
+  ~ConfigTest() override = default;
 };
 
 TEST_F(ConfigTest, ParseCommandLineSourceMode) {

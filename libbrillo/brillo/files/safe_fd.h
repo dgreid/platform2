@@ -48,6 +48,8 @@ class SafeFDTest;
 
 class SafeFD {
  public:
+  SafeFD(const SafeFD&) = delete;
+  SafeFD& operator=(const SafeFD&) = delete;
   enum class Error {
     kNoError = 0,
     kBadArgument,
@@ -195,8 +197,6 @@ class SafeFD {
   BRILLO_EXPORT static const char* RootPath;
 
   base::ScopedFD fd_;
-
-  DISALLOW_COPY_AND_ASSIGN(SafeFD);
 };
 
 }  // namespace brillo

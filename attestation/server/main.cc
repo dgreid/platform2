@@ -125,6 +125,8 @@ class AttestationDaemon : public brillo::DBusServiceDaemon {
       attestation_service_.set_google_keys(*google_keys);
     }
   }
+  AttestationDaemon(const AttestationDaemon&) = delete;
+  AttestationDaemon& operator=(const AttestationDaemon&) = delete;
 
  protected:
   int OnInit() override {
@@ -147,8 +149,6 @@ class AttestationDaemon : public brillo::DBusServiceDaemon {
   brillo::SecureBlob abe_data_;
   attestation::AttestationService attestation_service_;
   std::unique_ptr<attestation::DBusService> dbus_service_;
-
-  DISALLOW_COPY_AND_ASSIGN(AttestationDaemon);
 };
 
 int main(int argc, char* argv[]) {

@@ -20,6 +20,9 @@ class TaskProxy {
   TaskProxy(scoped_refptr<dbus::Bus> bus,
             const std::string& path,
             const std::string& service);
+  TaskProxy(const TaskProxy&) = delete;
+  TaskProxy& operator=(const TaskProxy&) = delete;
+
   ~TaskProxy();
 
   void Notify(const std::string& reason,
@@ -29,8 +32,6 @@ class TaskProxy {
 
  private:
   org::chromium::flimflam::TaskProxy proxy_;
-
-  DISALLOW_COPY_AND_ASSIGN(TaskProxy);
 };
 
 }  // namespace shims

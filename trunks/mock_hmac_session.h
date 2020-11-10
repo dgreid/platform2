@@ -16,6 +16,9 @@ namespace trunks {
 class MockHmacSession : public HmacSession {
  public:
   MockHmacSession();
+  MockHmacSession(const MockHmacSession&) = delete;
+  MockHmacSession& operator=(const MockHmacSession&) = delete;
+
   ~MockHmacSession() override;
 
   MOCK_METHOD0(GetDelegate, AuthorizationDelegate*());
@@ -28,9 +31,6 @@ class MockHmacSession : public HmacSession {
                TPM_RC(bool salted, bool enable_encryption));
   MOCK_METHOD1(SetEntityAuthorizationValue, void(const std::string& value));
   MOCK_METHOD1(SetFutureAuthorizationValue, void(const std::string& value));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockHmacSession);
 };
 
 }  // namespace trunks

@@ -29,6 +29,8 @@ class UsbManager {
   // EventDispatcher as |dispatcher|. The ownership of |dispatcher| is not
   // transferred, and thus it should outlive this object.
   explicit UsbManager(EventDispatcher* dispatcher);
+  UsbManager(const UsbManager&) = delete;
+  UsbManager& operator=(const UsbManager&) = delete;
 
   ~UsbManager();
 
@@ -74,8 +76,6 @@ class UsbManager {
   UsbError error_;
 
   base::WeakPtrFactory<UsbManager> weak_factory_{this};
-
-  DISALLOW_COPY_AND_ASSIGN(UsbManager);
 };
 
 }  // namespace mist

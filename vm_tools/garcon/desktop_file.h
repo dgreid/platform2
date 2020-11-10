@@ -87,6 +87,9 @@ class DesktopFile {
 
  private:
   DesktopFile() = default;
+  DesktopFile(const DesktopFile&) = delete;
+  DesktopFile& operator=(const DesktopFile&) = delete;
+
   bool LoadFromFile(const base::FilePath& file_path);
 
   base::FilePath file_path_;
@@ -108,8 +111,6 @@ class DesktopFile {
   std::vector<std::string> categories_;
   std::string startup_wm_class_;
   bool startup_notify_ = false;
-
-  DISALLOW_COPY_AND_ASSIGN(DesktopFile);
 };
 
 }  // namespace garcon

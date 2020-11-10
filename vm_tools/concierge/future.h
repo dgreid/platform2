@@ -151,7 +151,6 @@ struct is_future : std::false_type {};
 template <class F, class Error>
 struct is_future<F, Error, Future<typename get_future_type<F>::type, Error>>
     : std::true_type {};
-
 };  // namespace internal
 
 // Error: User defined error type used in |Reject| and |OnReject|.
@@ -162,6 +161,9 @@ class Future {
   explicit Future(std::shared_ptr<internal::SharedState<T, Error>> state)
       : state_(std::move(state)) {}
   Future(Future&&) = default;
+  Future(const Future&) = delete;
+  Future& operator=(const Future&) = delete;
+
   Future& operator=(Future&&) = default;
 
   // |func| will be posted to the task_runner when this future is fulfilled by
@@ -281,7 +283,6 @@ class Future {
           reject_func);
 
   std::shared_ptr<internal::SharedState<T, Error>> state_;
-  DISALLOW_COPY_AND_ASSIGN(Future);
 };
 
 template <typename T, typename Error = void>
@@ -291,6 +292,9 @@ class Promise {
   explicit Promise(std::shared_ptr<internal::SharedState<T, Error>> state)
       : state_(std::move(state)) {}
   Promise(Promise&&) = default;
+  Promise(const Promise&) = delete;
+  Promise& operator=(const Promise&) = delete;
+
   Promise& operator=(Promise&&) = default;
 
   // Returns a future that can be used to wait for this promise to be fulfilled.
@@ -319,7 +323,6 @@ class Promise {
   void SetValueHelperLocked();
 
   std::shared_ptr<internal::SharedState<T, Error>> state_;
-  DISALLOW_COPY_AND_ASSIGN(Promise);
 };
 
 // ------ Promise impl ------
@@ -477,7 +480,6 @@ FutureBind(base::OnceCallback<T_then(Ts...)> func) {
       },
       std::move(func));
 }
-
 };  // namespace internal
 
 template <typename T, typename Error>

@@ -29,6 +29,9 @@ const trunks::TPM_HANDLE kUninitializedHandle = 0;
 class TRUNKS_EXPORT SessionManager {
  public:
   SessionManager() {}
+  SessionManager(const SessionManager&) = delete;
+  SessionManager& operator=(const SessionManager&) = delete;
+
   virtual ~SessionManager() {}
 
   // This method is used get the handle to the AuthorizationSession managed by
@@ -51,9 +54,6 @@ class TRUNKS_EXPORT SessionManager {
                               bool salted,
                               bool enable_encryption,
                               HmacAuthorizationDelegate* delegate) = 0;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(SessionManager);
 };
 
 }  // namespace trunks

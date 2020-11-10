@@ -15,6 +15,9 @@ namespace debugd {
 class U2fTool {
  public:
   U2fTool() = default;
+  U2fTool(const U2fTool&) = delete;
+  U2fTool& operator=(const U2fTool&) = delete;
+
   ~U2fTool() = default;
 
   // Set override/debugging flags for u2fd.
@@ -22,9 +25,6 @@ class U2fTool {
 
   // Get current flags.
   std::string GetFlags() const;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(U2fTool);
 };
 
 }  // namespace debugd

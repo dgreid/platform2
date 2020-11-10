@@ -52,6 +52,8 @@ class CLI {
  public:
   // Constructor, it sets the dependent classes to the default implementation.
   CLI();
+  CLI(const CLI&) = delete;
+  CLI& operator=(const CLI&) = delete;
 
   // Verifies the probe result with the verification payload and then outputs
   // the report.
@@ -83,8 +85,6 @@ class CLI {
 
   // Instance to the output stream, default to |std::cout|.
   std::ostream* output_stream_;
-
-  DISALLOW_COPY_AND_ASSIGN(CLI);
 };
 
 }  // namespace hardware_verifier

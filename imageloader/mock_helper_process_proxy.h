@@ -19,6 +19,9 @@ namespace imageloader {
 class MockHelperProcessProxy : public HelperProcessProxy {
  public:
   MockHelperProcessProxy() = default;
+  MockHelperProcessProxy(const MockHelperProcessProxy&) = delete;
+  MockHelperProcessProxy& operator=(const MockHelperProcessProxy&) = delete;
+
   ~MockHelperProcessProxy() = default;
 
   // Sends a message telling the helper process to mount the file backed by |fd|
@@ -34,9 +37,6 @@ class MockHelperProcessProxy : public HelperProcessProxy {
               (override));
 
   MOCK_METHOD(bool, SendUnmountCommand, (const std::string&), (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockHelperProcessProxy);
 };
 
 }  // namespace imageloader

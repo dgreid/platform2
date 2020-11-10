@@ -70,6 +70,10 @@ class KerberosArtifactSynchronizerTest : public testing::Test {
     synchronizer_ = std::make_unique<KerberosArtifactSynchronizer>(
         krb5_conf_path_, krb5_ccache_path_, kTestUserGuid, std::move(fake_ptr));
   }
+  KerberosArtifactSynchronizerTest(const KerberosArtifactSynchronizerTest&) =
+      delete;
+  KerberosArtifactSynchronizerTest& operator=(
+      const KerberosArtifactSynchronizerTest&) = delete;
 
   ~KerberosArtifactSynchronizerTest() override = default;
 
@@ -79,9 +83,6 @@ class KerberosArtifactSynchronizerTest : public testing::Test {
   base::FilePath krb5_ccache_path_;
   FakeKerberosArtifactClient* fake_artifact_client_;
   std::unique_ptr<KerberosArtifactSynchronizer> synchronizer_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(KerberosArtifactSynchronizerTest);
 };
 
 // SetupKerberos makes a call to GetUserKerberosFiles.

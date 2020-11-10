@@ -27,6 +27,9 @@ class Client : public DeviceTracker::Observer, public arc::mojom::MidisServer {
          ClientDeletionCallback del_cb,
          arc::mojom::MidisServerRequest request,
          arc::mojom::MidisClientPtr client_ptr);
+  Client(const Client&) = delete;
+  Client& operator=(const Client&) = delete;
+
   ~Client() override;
 
   void NotifyDeviceAddedOrRemoved(const Device& dev, bool added);
@@ -65,8 +68,6 @@ class Client : public DeviceTracker::Observer, public arc::mojom::MidisServer {
   mojo::Binding<arc::mojom::MidisServer> binding_;
 
   base::WeakPtrFactory<Client> weak_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(Client);
 };
 
 }  // namespace midis

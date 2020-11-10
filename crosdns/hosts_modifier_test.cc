@@ -28,6 +28,9 @@ class HostsModifierTest : public ::testing::Test {
     hosts_file_ = temp_dir_.GetPath().Append("hosts");
     WriteHostsContents(kBaseFileContents);
   }
+  HostsModifierTest(const HostsModifierTest&) = delete;
+  HostsModifierTest& operator=(const HostsModifierTest&) = delete;
+
   ~HostsModifierTest() override = default;
 
   void WriteHostsContents(const std::string& file_contents) {
@@ -49,8 +52,6 @@ class HostsModifierTest : public ::testing::Test {
   base::ScopedTempDir temp_dir_;
   base::FilePath hosts_file_;
   HostsModifier hosts_modifier_;
-
-  DISALLOW_COPY_AND_ASSIGN(HostsModifierTest);
 };
 
 }  // namespace

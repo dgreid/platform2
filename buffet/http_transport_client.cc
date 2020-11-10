@@ -27,10 +27,12 @@ const char kErrorDomain[] = "buffet";
 
 class ResponseImpl : public HttpClient::Response {
  public:
-  ~ResponseImpl() override = default;
   explicit ResponseImpl(std::unique_ptr<brillo::http::Response> response)
       : response_{std::move(response)},
         data_{response_->ExtractDataAsString()} {}
+  ResponseImpl(const ResponseImpl&) = delete;
+  ResponseImpl& operator=(const ResponseImpl&) = delete;
+  ~ResponseImpl() override = default;
 
   // HttpClient::Response implementation
   int GetStatusCode() const override { return response_->GetStatusCode(); }
@@ -44,7 +46,6 @@ class ResponseImpl : public HttpClient::Response {
  private:
   std::unique_ptr<brillo::http::Response> response_;
   std::string data_;
-  DISALLOW_COPY_AND_ASSIGN(ResponseImpl);
 };
 
 }  // anonymous namespace

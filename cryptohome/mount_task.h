@@ -167,6 +167,9 @@ class MountTask : public base::RefCountedThreadSafe<MountTask> {
             const Credentials& credentials,
             int sequence_id);
   MountTask(MountTaskObserver* observer, Mount* mount, int sequence_id);
+  MountTask(const MountTask&) = delete;
+  MountTask& operator=(const MountTask&) = delete;
+
   virtual ~MountTask();
 
   // Run is called by the worker thread when this task is being processed
@@ -241,8 +244,6 @@ class MountTask : public base::RefCountedThreadSafe<MountTask> {
 
   // The completion event to signal when this task is complete
   base::WaitableEvent* complete_event_;
-
-  DISALLOW_COPY_AND_ASSIGN(MountTask);
 };
 
 }  // namespace cryptohome

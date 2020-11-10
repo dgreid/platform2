@@ -22,6 +22,9 @@ class Filesystem;
 class FuseSession {
  public:
   FuseSession(std::unique_ptr<Filesystem> fs, fuse_chan* chan);
+  FuseSession(const FuseSession&) = delete;
+  FuseSession& operator=(const FuseSession&) = delete;
+
   ~FuseSession();
 
   // Start processing FUSE requests. |stop_callback| is run if the filesystem is
@@ -49,8 +52,6 @@ class FuseSession {
   std::vector<char> read_buffer_;
 
   base::SequenceChecker sequence_checker_;
-
-  DISALLOW_COPY_AND_ASSIGN(FuseSession);
 };
 
 }  // namespace smbfs

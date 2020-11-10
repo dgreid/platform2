@@ -47,10 +47,10 @@ class DBusCommandDispacher final {
 
   // Default constructor is used in special circumstances such as for testing.
   DBusCommandDispacher() = default;
+  DBusCommandDispacher(const DBusCommandDispacher&) = delete;
+  DBusCommandDispacher& operator=(const DBusCommandDispacher&) = delete;
 
   base::WeakPtrFactory<DBusCommandDispacher> weak_ptr_factory_{this};
-
-  DISALLOW_COPY_AND_ASSIGN(DBusCommandDispacher);
 };
 
 }  // namespace buffet

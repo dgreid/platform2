@@ -79,6 +79,8 @@ class JournalImpl : public Journal {
     // any operations an extra time.
     ClearJournalFile();
   }
+  JournalImpl(const JournalImpl&) = delete;
+  JournalImpl& operator=(const JournalImpl&) = delete;
 
   void MarkStartOfFlashingMainFirmware(const std::string& device_id,
                                        const std::string& carrier_id) override {
@@ -154,8 +156,6 @@ class JournalImpl : public Journal {
   }
 
   base::File journal_file_;
-
-  DISALLOW_COPY_AND_ASSIGN(JournalImpl);
 };
 
 }  // namespace

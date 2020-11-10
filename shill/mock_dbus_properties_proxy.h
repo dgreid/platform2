@@ -17,6 +17,9 @@ namespace shill {
 class MockDBusPropertiesProxy : public DBusPropertiesProxyInterface {
  public:
   MockDBusPropertiesProxy();
+  MockDBusPropertiesProxy(const MockDBusPropertiesProxy&) = delete;
+  MockDBusPropertiesProxy& operator=(const MockDBusPropertiesProxy&) = delete;
+
   ~MockDBusPropertiesProxy() override;
 
   MOCK_METHOD(KeyValueStore, GetAll, (const std::string&), (override));
@@ -32,9 +35,6 @@ class MockDBusPropertiesProxy : public DBusPropertiesProxyInterface {
               set_modem_manager_properties_changed_callback,
               (const ModemManagerPropertiesChangedCallback&),
               (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockDBusPropertiesProxy);
 };
 
 }  // namespace shill

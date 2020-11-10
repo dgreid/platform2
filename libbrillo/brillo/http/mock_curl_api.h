@@ -19,6 +19,8 @@ namespace http {
 class MockCurlInterface : public CurlInterface {
  public:
   MockCurlInterface() = default;
+  MockCurlInterface(const MockCurlInterface&) = delete;
+  MockCurlInterface& operator=(const MockCurlInterface&) = delete;
 
   MOCK_METHOD(CURL*, EasyInit, (), (override));
   MOCK_METHOD(void, EasyCleanup, (CURL*), (override));
@@ -81,9 +83,6 @@ class MockCurlInterface : public CurlInterface {
               MultiWait,
               (CURLM*, curl_waitfd[], unsigned int, int, int*),
               (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockCurlInterface);
 };
 
 }  // namespace http

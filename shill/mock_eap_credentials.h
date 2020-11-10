@@ -16,6 +16,9 @@ namespace shill {
 class MockEapCredentials : public EapCredentials {
  public:
   MockEapCredentials();
+  MockEapCredentials(const MockEapCredentials&) = delete;
+  MockEapCredentials& operator=(const MockEapCredentials&) = delete;
+
   ~MockEapCredentials() override;
 
   MOCK_METHOD(bool, IsConnectable, (), (const, override));
@@ -45,8 +48,6 @@ class MockEapCredentials : public EapCredentials {
 
  private:
   std::string kDefaultKeyManagement;
-
-  DISALLOW_COPY_AND_ASSIGN(MockEapCredentials);
 };
 
 }  // namespace shill

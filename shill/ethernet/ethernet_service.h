@@ -69,6 +69,8 @@ class EthernetService : public Service {
   EthernetService(Manager* manager,
                   Technology technology,
                   const Properties& props);
+  EthernetService(const EthernetService&) = delete;
+  EthernetService& operator=(const EthernetService&) = delete;
 
   // Inherited from Service.
   void OnConnect(Error* error) override;
@@ -85,7 +87,6 @@ class EthernetService : public Service {
   RpcIdentifier GetDeviceRpcId(Error* error) const override;
 
   Properties props_;
-  DISALLOW_COPY_AND_ASSIGN(EthernetService);
 };
 
 }  // namespace shill

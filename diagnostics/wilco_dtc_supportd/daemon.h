@@ -25,6 +25,9 @@ namespace diagnostics {
 class Daemon final : public brillo::DBusServiceDaemon {
  public:
   Daemon();
+  Daemon(const Daemon&) = delete;
+  Daemon& operator=(const Daemon&) = delete;
+
   ~Daemon() override;
 
  private:
@@ -47,8 +50,6 @@ class Daemon final : public brillo::DBusServiceDaemon {
   Core wilco_dtc_supportd_core_;
 
   base::OneShotTimer force_shutdown_timer_;
-
-  DISALLOW_COPY_AND_ASSIGN(Daemon);
 };
 
 }  // namespace diagnostics

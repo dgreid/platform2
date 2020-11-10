@@ -41,6 +41,9 @@ class TSSEncryptedData {
  public:
   explicit TSSEncryptedData(TSS_HCONTEXT context)
       : context_(context), handle_(context) {}
+  TSSEncryptedData(const TSSEncryptedData&) = delete;
+  TSSEncryptedData& operator=(const TSSEncryptedData&) = delete;
+
   bool Create() {
     TSS_RESULT result = Tspi_Context_CreateObject(
         context_, TSS_OBJECT_TYPE_ENCDATA, TSS_ENCDATA_BIND, handle_.ptr());
@@ -49,6 +52,7 @@ class TSSEncryptedData {
                  << TPMUtilityImpl::ResultToString(result);
       return false;
     }
+
     return true;
   }
   bool GetData(string* data) {
@@ -82,8 +86,6 @@ class TSSEncryptedData {
  private:
   TSS_HCONTEXT context_;
   ScopedTssObject<TSS_HENCDATA> handle_;
-
-  DISALLOW_COPY_AND_ASSIGN(TSSEncryptedData);
 };
 
 // TSSHash wraps a TSS hash object. The underlying TSS object will be closed
@@ -92,6 +94,9 @@ class TSSHash {
  public:
   explicit TSSHash(TSS_HCONTEXT context)
       : context_(context), handle_(context) {}
+  TSSHash(const TSSHash&) = delete;
+  TSSHash& operator=(const TSSHash&) = delete;
+
   bool Create(const string& value) {
     TSS_RESULT result = Tspi_Context_CreateObject(
         context_, TSS_OBJECT_TYPE_HASH, TSS_HASH_OTHER, handle_.ptr());
@@ -100,6 +105,7 @@ class TSSHash {
                  << TPMUtilityImpl::ResultToString(result);
       return false;
     }
+
     result = Tspi_Hash_SetHashValue(handle_, value.length(),
                                     ConvertStringToByteBuffer(value.data()));
     if (result != TSS_SUCCESS) {
@@ -114,8 +120,6 @@ class TSSHash {
  private:
   TSS_HCONTEXT context_;
   ScopedTssObject<TSS_HHASH> handle_;
-
-  DISALLOW_COPY_AND_ASSIGN(TSSHash);
 };
 
 TPMUtilityImpl::TPMUtilityImpl(const string& srk_auth_data)

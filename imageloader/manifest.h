@@ -21,6 +21,9 @@ enum class BRILLO_EXPORT FileSystem { kExt4, kSquashFS };
 class BRILLO_EXPORT Manifest {
  public:
   Manifest();
+  Manifest(const Manifest&) = delete;
+  Manifest& operator=(const Manifest&) = delete;
+
   // Parse the manifest raw string. Return true if successful.
   bool ParseManifest(const std::string& manifest_raw);
 
@@ -69,8 +72,6 @@ class BRILLO_EXPORT Manifest {
   std::string used_by_;
   std::string description_;
   std::map<std::string, std::string> metadata_;
-
-  DISALLOW_COPY_AND_ASSIGN(Manifest);
 };
 
 }  // namespace imageloader

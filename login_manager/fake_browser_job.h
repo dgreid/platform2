@@ -24,6 +24,9 @@ class FakeBrowserJob : public BrowserJobInterface {
  public:
   explicit FakeBrowserJob(const std::string& name);
   FakeBrowserJob(const std::string& name, bool schedule_exit);
+  FakeBrowserJob(const FakeBrowserJob&) = delete;
+  FakeBrowserJob& operator=(const FakeBrowserJob&) = delete;
+
   ~FakeBrowserJob() override;
 
   void set_fake_child_process(std::unique_ptr<FakeChildProcess> fake) {
@@ -72,7 +75,6 @@ class FakeBrowserJob : public BrowserJobInterface {
   bool running_ = false;
   const bool schedule_exit_;
   bool should_run_ = true;
-  DISALLOW_COPY_AND_ASSIGN(FakeBrowserJob);
 };
 }  // namespace login_manager
 

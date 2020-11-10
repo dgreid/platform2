@@ -27,6 +27,9 @@ class TlclStub {
   };
 
   TlclStub();
+  TlclStub(const TlclStub&) = delete;
+  TlclStub& operator=(const TlclStub&) = delete;
+
   ~TlclStub();
 
   // Get the space data for |index|.
@@ -116,8 +119,6 @@ class TlclStub {
   // The static instance pointer return by Get(). Points at the most recently
   // constructed TlclStub instance.
   static TlclStub* g_instance;
-
-  DISALLOW_COPY_AND_ASSIGN(TlclStub);
 };
 
 }  // namespace mount_encrypted

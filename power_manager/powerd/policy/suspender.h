@@ -172,6 +172,8 @@ class Suspender : public SuspendDelayObserver,
   class TestApi {
    public:
     explicit TestApi(Suspender* suspender);
+    TestApi(const TestApi&) = delete;
+    TestApi& operator=(const TestApi&) = delete;
 
     int suspend_id() const { return suspender_->suspend_request_id_; }
     int dark_suspend_id() const { return suspender_->dark_suspend_id_; }
@@ -197,10 +199,12 @@ class Suspender : public SuspendDelayObserver,
    private:
     Suspender* suspender_;  // weak
 
-    DISALLOW_COPY_AND_ASSIGN(TestApi);
   };
 
   Suspender();
+  Suspender(const Suspender&) = delete;
+  Suspender& operator=(const Suspender&) = delete;
+
   ~Suspender() override;
 
   void Init(Delegate* delegate,
@@ -455,8 +459,6 @@ class Suspender : public SuspendDelayObserver,
 
   // Keep this last.
   base::WeakPtrFactory<Suspender> weak_ptr_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(Suspender);
 };
 
 }  // namespace policy

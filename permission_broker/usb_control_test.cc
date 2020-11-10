@@ -23,13 +23,13 @@ namespace permission_broker {
 class UsbControlTest : public testing::Test {
  public:
   UsbControlTest() : loop_(nullptr) { loop_.SetAsCurrent(); }
+  UsbControlTest(const UsbControlTest&) = delete;
+  UsbControlTest& operator=(const UsbControlTest&) = delete;
+
   ~UsbControlTest() override = default;
 
  protected:
   brillo::FakeMessageLoop loop_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(UsbControlTest);
 };
 
 TEST_F(UsbControlTest, DeviceNotAllowed) {

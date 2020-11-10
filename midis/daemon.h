@@ -25,6 +25,9 @@ class DeviceTracker;
 class Daemon : public brillo::Daemon {
  public:
   Daemon();
+  Daemon(const Daemon&) = delete;
+  Daemon& operator=(const Daemon&) = delete;
+
   ~Daemon() override;
 
  protected:
@@ -47,8 +50,6 @@ class Daemon : public brillo::Daemon {
   std::unique_ptr<ClientTracker> client_tracker_;
 
   base::WeakPtrFactory<Daemon> weak_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(Daemon);
 };
 }  // namespace midis
 #endif  // MIDIS_DAEMON_H_

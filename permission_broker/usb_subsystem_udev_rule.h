@@ -17,6 +17,9 @@ namespace permission_broker {
 class UsbSubsystemUdevRule : public Rule {
  public:
   explicit UsbSubsystemUdevRule(const std::string& name);
+  UsbSubsystemUdevRule(const UsbSubsystemUdevRule&) = delete;
+  UsbSubsystemUdevRule& operator=(const UsbSubsystemUdevRule&) = delete;
+
   ~UsbSubsystemUdevRule() override = default;
 
   // Called with every device belonging to the USB subsystem. The return value
@@ -25,9 +28,6 @@ class UsbSubsystemUdevRule : public Rule {
   virtual Result ProcessUsbDevice(struct udev_device* device) = 0;
 
   Result ProcessDevice(struct udev_device* device) override;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(UsbSubsystemUdevRule);
 };
 
 }  // namespace permission_broker

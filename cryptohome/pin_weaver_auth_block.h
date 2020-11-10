@@ -17,6 +17,8 @@ class PinWeaverAuthBlock : public AuthBlock {
  public:
   explicit PinWeaverAuthBlock(LECredentialManager* le_manager,
                               TpmInit* tpm_init);
+  PinWeaverAuthBlock(const PinWeaverAuthBlock&) = delete;
+  PinWeaverAuthBlock& operator=(const PinWeaverAuthBlock&) = delete;
 
   base::Optional<AuthBlockState> Create(const AuthInput& user_input,
                                         KeyBlobs* key_blobs,
@@ -32,8 +34,6 @@ class PinWeaverAuthBlock : public AuthBlock {
   LECredentialManager* le_manager_;
 
   TpmInit* tpm_init_;
-
-  DISALLOW_COPY_AND_ASSIGN(PinWeaverAuthBlock);
 };
 
 }  // namespace cryptohome

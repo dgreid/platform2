@@ -17,6 +17,9 @@ class FakeChildProcess {
   // |status| should be constructed using macros defined in
   // <bits/waitstatus.h>.
   FakeChildProcess(pid_t pid, int status, SessionManagerService::TestApi api);
+  FakeChildProcess(const FakeChildProcess&) = delete;
+  FakeChildProcess& operator=(const FakeChildProcess&) = delete;
+
   ~FakeChildProcess();
 
   pid_t pid() { return pid_; }
@@ -29,8 +32,6 @@ class FakeChildProcess {
   pid_t pid_;
   int exit_status_;
   SessionManagerService::TestApi test_api_;
-
-  DISALLOW_COPY_AND_ASSIGN(FakeChildProcess);
 };
 
 }  // namespace login_manager

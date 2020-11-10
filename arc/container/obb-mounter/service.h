@@ -21,6 +21,9 @@ namespace obb_mounter {
 class Service {
  public:
   Service();
+  Service(const Service&) = delete;
+  Service& operator=(const Service&) = delete;
+
   ~Service();
 
   // Exports D-Bus methods via the given bus and requests the ownership of the
@@ -38,8 +41,6 @@ class Service {
   dbus::ExportedObject* exported_object_ = nullptr;
 
   base::WeakPtrFactory<Service> weak_ptr_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(Service);
 };
 
 }  // namespace obb_mounter

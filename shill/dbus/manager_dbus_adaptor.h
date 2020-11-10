@@ -37,6 +37,9 @@ class ManagerDBusAdaptor : public org::chromium::flimflam::ManagerAdaptor,
   ManagerDBusAdaptor(const scoped_refptr<dbus::Bus>& adaptor_bus,
                      const scoped_refptr<dbus::Bus> proxy_bus,
                      Manager* manager);
+  ManagerDBusAdaptor(const ManagerDBusAdaptor&) = delete;
+  ManagerDBusAdaptor& operator=(const ManagerDBusAdaptor&) = delete;
+
   ~ManagerDBusAdaptor() override;
 
   // Implementation of ManagerAdaptorInterface.
@@ -136,8 +139,6 @@ class ManagerDBusAdaptor : public org::chromium::flimflam::ManagerAdaptor,
   scoped_refptr<dbus::Bus> proxy_bus_;
   DBusServiceWatcherFactory* dbus_service_watcher_factory_;
   std::unique_ptr<DBusServiceWatcher> watcher_for_device_claimer_;
-
-  DISALLOW_COPY_AND_ASSIGN(ManagerDBusAdaptor);
 };
 
 }  // namespace shill

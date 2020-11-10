@@ -49,6 +49,9 @@ class DeviceInfo {
   using LinkReadyCallback = base::OnceCallback<void(const std::string&, int)>;
 
   explicit DeviceInfo(Manager* manager);
+  DeviceInfo(const DeviceInfo&) = delete;
+  DeviceInfo& operator=(const DeviceInfo&) = delete;
+
   virtual ~DeviceInfo();
 
   virtual void BlockDevice(const std::string& device_name);
@@ -291,8 +294,6 @@ class DeviceInfo {
 
   Time* time_;
   base::WeakPtrFactory<DeviceInfo> weak_factory_{this};
-
-  DISALLOW_COPY_AND_ASSIGN(DeviceInfo);
 };
 
 }  // namespace shill

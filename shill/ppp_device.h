@@ -34,6 +34,9 @@ class PPPDevice : public VirtualDevice {
   PPPDevice(Manager* manager,
             const std::string& link_name,
             int interface_index);
+  PPPDevice(const PPPDevice&) = delete;
+  PPPDevice& operator=(const PPPDevice&) = delete;
+
   ~PPPDevice() override;
 
   // Set IPConfig for this device, based on the dictionary of
@@ -69,8 +72,6 @@ class PPPDevice : public VirtualDevice {
 
  private:
   FRIEND_TEST(PPPDeviceTest, GetInterfaceName);
-
-  DISALLOW_COPY_AND_ASSIGN(PPPDevice);
 };
 
 }  // namespace shill

@@ -47,8 +47,8 @@ class BRILLO_EXPORT TpmCrypto {
 
  protected:
   TpmCrypto() = default;
-
-  DISALLOW_COPY_AND_ASSIGN(TpmCrypto);
+  TpmCrypto(const TpmCrypto&) = delete;
+  TpmCrypto& operator=(const TpmCrypto&) = delete;
 };
 
 }  // namespace tpmcrypto

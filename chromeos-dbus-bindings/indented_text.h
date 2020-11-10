@@ -16,6 +16,9 @@ namespace chromeos_dbus_bindings {
 class IndentedText {
  public:
   IndentedText();
+  IndentedText(const IndentedText&) = delete;
+  IndentedText& operator=(const IndentedText&) = delete;
+
   virtual ~IndentedText() = default;
 
   // Insert a blank line.
@@ -60,8 +63,6 @@ class IndentedText {
   size_t offset_;
   std::vector<size_t> offset_history_;
   std::vector<IndentedLine> contents_;
-
-  DISALLOW_COPY_AND_ASSIGN(IndentedText);
 };
 
 }  // namespace chromeos_dbus_bindings

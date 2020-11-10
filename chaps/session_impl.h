@@ -68,6 +68,9 @@ class SessionImpl : public Session {
               ChapsFactory* factory,
               HandleGenerator* handle_generator,
               bool is_read_only);
+  SessionImpl(const SessionImpl&) = delete;
+  SessionImpl& operator=(const SessionImpl&) = delete;
+
   ~SessionImpl() override;
 
   // General state management.
@@ -232,8 +235,6 @@ class SessionImpl : public Session {
   bool is_legacy_loaded_;  // Tracks whether the legacy root keys are loaded.
   int private_root_key_;   // The legacy private root key.
   int public_root_key_;    // The legacy public root key.
-
-  DISALLOW_COPY_AND_ASSIGN(SessionImpl);
 };
 
 }  // namespace chaps

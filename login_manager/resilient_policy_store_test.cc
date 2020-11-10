@@ -21,6 +21,8 @@ namespace login_manager {
 class ResilientPolicyStoreTest : public ::testing::Test {
  public:
   ResilientPolicyStoreTest() {}
+  ResilientPolicyStoreTest(const ResilientPolicyStoreTest&) = delete;
+  ResilientPolicyStoreTest& operator=(const ResilientPolicyStoreTest&) = delete;
 
   virtual ~ResilientPolicyStoreTest() {}
 
@@ -46,9 +48,6 @@ class ResilientPolicyStoreTest : public ::testing::Test {
 
   base::ScopedTempDir tmpdir_;
   base::FilePath tmpfile_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ResilientPolicyStoreTest);
 };
 
 TEST_F(ResilientPolicyStoreTest, LoadResilientMissingPolicy) {

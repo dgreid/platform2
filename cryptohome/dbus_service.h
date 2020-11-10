@@ -19,6 +19,8 @@ class UserDataAuthDaemon : public brillo::DBusServiceDaemon {
   UserDataAuthDaemon()
       : DBusServiceDaemon(kUserDataAuthServiceName),
         service_(new cryptohome::UserDataAuth()) {}
+  UserDataAuthDaemon(const UserDataAuthDaemon&) = delete;
+  UserDataAuthDaemon& operator=(const UserDataAuthDaemon&) = delete;
 
   // Retrieve the UserDataAuth object, it holds the service's state and provides
   // a good chunk of functionality.
@@ -150,8 +152,6 @@ class UserDataAuthDaemon : public brillo::DBusServiceDaemon {
     }
     on_done->Signal();
   }
-
-  DISALLOW_COPY_AND_ASSIGN(UserDataAuthDaemon);
 };
 
 }  // namespace cryptohome

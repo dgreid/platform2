@@ -38,6 +38,9 @@ class Device {
            std::unique_ptr<SubnetAddress> host_ipv4_addr,
            std::unique_ptr<SubnetAddress> guest_ipv4_addr,
            std::unique_ptr<Subnet> lxd_ipv4_subnet = nullptr);
+    Config(const Config&) = delete;
+    Config& operator=(const Config&) = delete;
+
     ~Config() = default;
 
     MacAddress mac_addr() const { return mac_addr_; }
@@ -80,7 +83,6 @@ class Device {
     // TAP devices currently associated with the configuration.
     std::string tap_;
 
-    DISALLOW_COPY_AND_ASSIGN(Config);
   };
 
   struct Options {
@@ -99,6 +101,9 @@ class Device {
          const std::string& guest_ifname,
          std::unique_ptr<Config> config,
          const Options& options);
+  Device(const Device&) = delete;
+  Device& operator=(const Device&) = delete;
+
   ~Device() = default;
 
   const std::string& phys_ifname() const { return phys_ifname_; }
@@ -120,7 +125,6 @@ class Device {
   FRIEND_TEST(DeviceTest, DisableLegacyAndroidDeviceSendsTwoMessages);
 
   base::WeakPtrFactory<Device> weak_factory_{this};
-  DISALLOW_COPY_AND_ASSIGN(Device);
 };
 
 }  // namespace patchpanel

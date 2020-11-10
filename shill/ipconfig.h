@@ -125,6 +125,9 @@ class IPConfig : public base::RefCounted<IPConfig> {
   IPConfig(ControlInterface* control_interface,
            const std::string& device_name,
            const std::string& type);
+  IPConfig(const IPConfig&) = delete;
+  IPConfig& operator=(const IPConfig&) = delete;
+
   virtual ~IPConfig();
 
   const std::string& device_name() const { return device_name_; }
@@ -263,8 +266,6 @@ class IPConfig : public base::RefCounted<IPConfig> {
   struct timeval current_lease_expiration_time_;
   Time* time_;
   base::WeakPtrFactory<IPConfig> weak_ptr_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(IPConfig);
 };
 
 }  // namespace shill

@@ -19,6 +19,9 @@ namespace debugd {
 class StorageTool : public SubprocessTool {
  public:
   StorageTool() = default;
+  StorageTool(const StorageTool&) = delete;
+  StorageTool& operator=(const StorageTool&) = delete;
+
   ~StorageTool() override = default;
 
   std::string Smartctl(const std::string& option);
@@ -42,8 +45,6 @@ class StorageTool : public SubprocessTool {
   // Removes the partition from |dstPath| which is expected
   // to be a storage device path (e.g. "/dev/mmcblk1p2").
   void StripPartition(base::FilePath* dstPath);
-
-  DISALLOW_COPY_AND_ASSIGN(StorageTool);
 };
 
 }  // namespace debugd

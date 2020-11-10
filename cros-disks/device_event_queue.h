@@ -17,6 +17,8 @@ struct DeviceEvent;
 class DeviceEventQueue {
  public:
   DeviceEventQueue() = default;
+  DeviceEventQueue(const DeviceEventQueue&) = delete;
+  DeviceEventQueue& operator=(const DeviceEventQueue&) = delete;
 
   ~DeviceEventQueue() = default;
 
@@ -58,8 +60,6 @@ class DeviceEventQueue {
   // A list of events in the event queue.
   // The latest event is inserted at the beginning of the list.
   DeviceEventList events_;
-
-  DISALLOW_COPY_AND_ASSIGN(DeviceEventQueue);
 };
 
 }  // namespace cros_disks

@@ -23,6 +23,9 @@ class SupplicantNetworkProxy : public SupplicantNetworkProxyInterface {
  public:
   SupplicantNetworkProxy(const scoped_refptr<dbus::Bus>& bus,
                          const RpcIdentifier& object_path);
+  SupplicantNetworkProxy(const SupplicantNetworkProxy&) = delete;
+  SupplicantNetworkProxy& operator=(const SupplicantNetworkProxy&) = delete;
+
   ~SupplicantNetworkProxy() override;
 
   // Implementation of SupplicantNetworkProxyInterface.
@@ -38,11 +41,13 @@ class SupplicantNetworkProxy : public SupplicantNetworkProxyInterface {
     PropertySet(dbus::ObjectProxy* object_proxy,
                 const std::string& interface_name,
                 const PropertyChangedCallback& callback);
+    PropertySet(const PropertySet&) = delete;
+    PropertySet& operator=(const PropertySet&) = delete;
+
     brillo::dbus_utils::Property<bool> enabled;
     brillo::dbus_utils::Property<brillo::VariantDictionary> properties;
 
    private:
-    DISALLOW_COPY_AND_ASSIGN(PropertySet);
   };
 
   static const char kInterfaceName[];
@@ -64,7 +69,6 @@ class SupplicantNetworkProxy : public SupplicantNetworkProxyInterface {
   std::unique_ptr<PropertySet> properties_;
 
   base::WeakPtrFactory<SupplicantNetworkProxy> weak_factory_{this};
-  DISALLOW_COPY_AND_ASSIGN(SupplicantNetworkProxy);
 };
 
 }  // namespace shill

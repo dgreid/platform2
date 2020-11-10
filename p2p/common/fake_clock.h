@@ -21,6 +21,8 @@ class FakeClock : public ClockInterface {
       : monotonic_time_(base::Time::Now()),
         sleep_called_(base::WaitableEvent::ResetPolicy::MANUAL,
                       base::WaitableEvent::InitialState::NOT_SIGNALED) {}
+  FakeClock(const FakeClock&) = delete;
+  FakeClock& operator=(const FakeClock&) = delete;
 
   void Sleep(const base::TimeDelta& duration) override {
     slept_duration_ += duration;
@@ -48,8 +50,6 @@ class FakeClock : public ClockInterface {
   base::TimeDelta slept_duration_;
   base::Time monotonic_time_;
   base::WaitableEvent sleep_called_;
-
-  DISALLOW_COPY_AND_ASSIGN(FakeClock);
 };
 
 }  // namespace common

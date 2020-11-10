@@ -49,6 +49,9 @@ class TpmUtility;
 class TRUNKS_EXPORT TrunksFactoryForTest : public TrunksFactory {
  public:
   TrunksFactoryForTest();
+  TrunksFactoryForTest(const TrunksFactoryForTest&) = delete;
+  TrunksFactoryForTest& operator=(const TrunksFactoryForTest&) = delete;
+
   ~TrunksFactoryForTest() override;
 
   // TrunksFactory methods.
@@ -122,8 +125,6 @@ class TRUNKS_EXPORT TrunksFactoryForTest : public TrunksFactory {
   PolicySession* trial_session_;
   std::unique_ptr<MockBlobParser> default_blob_parser_;
   BlobParser* blob_parser_;
-
-  DISALLOW_COPY_AND_ASSIGN(TrunksFactoryForTest);
 };
 
 }  // namespace trunks

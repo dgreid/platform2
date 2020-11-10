@@ -14,6 +14,8 @@ namespace {
 class FakeVeaContext : public VeaContext {
  public:
   FakeVeaContext();
+  FakeVeaContext(const FakeVeaContext&) = delete;
+  FakeVeaContext& operator=(const FakeVeaContext&) = delete;
 
   // VeaContext overrides.
   int Encode(vea_input_buffer_id_t input_buffer_id,
@@ -32,8 +34,6 @@ class FakeVeaContext : public VeaContext {
                                   uint32_t framerate) override;
 
   int Flush() override;
-
-  DISALLOW_COPY_AND_ASSIGN(FakeVeaContext);
 };
 
 FakeVeaContext::FakeVeaContext() {

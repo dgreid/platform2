@@ -36,6 +36,9 @@ class TpmInitTest : public ::testing::Test {
         is_tpm_being_owned_(false),
         is_tpm_initialized_(false),
         tpm_init_(&tpm_, &platform_) {}
+  TpmInitTest(const TpmInitTest&) = delete;
+  TpmInitTest& operator=(const TpmInitTest&) = delete;
+
   ~TpmInitTest() override = default;
 
   // Default mock implementations for |tpm_| methods.
@@ -216,9 +219,6 @@ class TpmInitTest : public ::testing::Test {
 
   // Declare tpm_init_ last, so it gets destroyed before all the mocks.
   TpmInit tpm_init_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(TpmInitTest);
 };
 
 MATCHER_P(HasStoredCryptohomeKey, str, "") {

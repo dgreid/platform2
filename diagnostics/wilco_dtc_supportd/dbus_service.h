@@ -24,6 +24,9 @@ class MojoServiceFactory;
 class DBusService final {
  public:
   explicit DBusService(MojoServiceFactory* mojo_service_factory);
+  DBusService(const DBusService&) = delete;
+  DBusService& operator=(const DBusService&) = delete;
+
   ~DBusService();
 
   // Implementation of the "org.chromium.WilcoDtcSupportdInterface" D-Bus
@@ -46,8 +49,6 @@ class DBusService final {
 
   // Manages the D-Bus interfaces exposed by the wilco_dtc_supportd daemon.
   std::unique_ptr<brillo::dbus_utils::DBusObject> dbus_object_;
-
-  DISALLOW_COPY_AND_ASSIGN(DBusService);
 };
 
 }  // namespace diagnostics

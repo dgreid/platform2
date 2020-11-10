@@ -20,6 +20,9 @@ namespace chaps {
 class SessionMock : public Session {
  public:
   SessionMock();
+  SessionMock(const SessionMock&) = delete;
+  SessionMock& operator=(const SessionMock&) = delete;
+
   ~SessionMock() override;
 
   MOCK_CONST_METHOD0(GetSlot, int());
@@ -65,9 +68,6 @@ class SessionMock : public Session {
   MOCK_METHOD1(SeedRandom, CK_RV(const std::string&));
   MOCK_METHOD2(GenerateRandom, CK_RV(int, std::string*));
   MOCK_METHOD0(IsPrivateLoaded, bool());
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(SessionMock);
 };
 
 }  // namespace chaps

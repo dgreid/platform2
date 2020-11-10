@@ -57,6 +57,8 @@ class TPM2NVSpaceUtility : public TPMNVSpaceUtilityInterface {
   // Constructor that does not take ownership of tpm_nvram and trunks_factory.
   TPM2NVSpaceUtility(tpm_manager::TpmNvramInterface* tpm_nvram,
                      trunks::TrunksFactory* trunks_factory);
+  TPM2NVSpaceUtility(const TPM2NVSpaceUtility&) = delete;
+  TPM2NVSpaceUtility& operator=(const TPM2NVSpaceUtility&) = delete;
 
   ~TPM2NVSpaceUtility() {}
 
@@ -89,6 +91,9 @@ class TPM2NVSpaceUtility : public TPMNVSpaceUtilityInterface {
         : base::Thread("tpm_manager_thread"), tpm_utility_(tpm_utility) {
       DCHECK(tpm_utility_);
     }
+    TpmManagerThread(const TpmManagerThread&) = delete;
+    TpmManagerThread& operator=(const TpmManagerThread&) = delete;
+
     ~TpmManagerThread() override { Stop(); }
 
    private:
@@ -96,7 +101,6 @@ class TPM2NVSpaceUtility : public TPMNVSpaceUtilityInterface {
 
     TPM2NVSpaceUtility* const tpm_utility_;
 
-    DISALLOW_COPY_AND_ASSIGN(TpmManagerThread);
   };
 
   void InitializationTask(base::WaitableEvent* completion, bool* result);
@@ -119,8 +123,6 @@ class TPM2NVSpaceUtility : public TPMNVSpaceUtilityInterface {
   // Trunks interface.
   std::unique_ptr<trunks::TrunksFactoryImpl> default_trunks_factory_;
   trunks::TrunksFactory* trunks_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(TPM2NVSpaceUtility);
 };
 
 }  // namespace cryptohome

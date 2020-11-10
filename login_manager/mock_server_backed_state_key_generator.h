@@ -17,12 +17,14 @@ class MockServerBackedStateKeyGenerator : public ServerBackedStateKeyGenerator {
   MockServerBackedStateKeyGenerator(SystemUtils* system_utils,
                                     LoginMetrics* metrics)
       : ServerBackedStateKeyGenerator(system_utils, metrics) {}
+  MockServerBackedStateKeyGenerator(const MockServerBackedStateKeyGenerator&) =
+      delete;
+  MockServerBackedStateKeyGenerator& operator=(
+      const MockServerBackedStateKeyGenerator&) = delete;
+
   ~MockServerBackedStateKeyGenerator() override {}
 
   MOCK_METHOD(void, RequestStateKeys, (const StateKeyCallback&), (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockServerBackedStateKeyGenerator);
 };
 
 }  // namespace login_manager

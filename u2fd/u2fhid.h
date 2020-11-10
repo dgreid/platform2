@@ -74,6 +74,9 @@ class U2fHid {
   // Create a new virtual U2F HID Device. Does not take ownership of
   // msg_handler, which must outlive this instance.
   U2fHid(std::unique_ptr<HidInterface> hid, U2fMessageHandler* msg_handler);
+  U2fHid(const U2fHid&) = delete;
+  U2fHid& operator=(const U2fHid&) = delete;
+
   ~U2fHid();
   bool Init();
 
@@ -122,8 +125,6 @@ class U2fHid {
   struct Transaction;
 
   std::unique_ptr<Transaction> transaction_;
-
-  DISALLOW_COPY_AND_ASSIGN(U2fHid);
 };
 
 }  // namespace u2f

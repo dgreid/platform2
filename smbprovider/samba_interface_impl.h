@@ -125,6 +125,9 @@ class SambaInterfaceImpl : public SambaInterface {
   void CloseOutstandingFileDescriptors();
 
   explicit SambaInterfaceImpl(SMBCCTX* context);
+  SambaInterfaceImpl(const SambaInterfaceImpl&) = delete;
+  SambaInterfaceImpl& operator=(const SambaInterfaceImpl&) = delete;
+
   SMBCCTX* context_ = nullptr;
   smbc_close_fn smbc_close_ctx_ = nullptr;
   smbc_closedir_fn smbc_closedir_ctx_ = nullptr;
@@ -146,8 +149,6 @@ class SambaInterfaceImpl : public SambaInterface {
 
   // Weak pointer factory. Should be the last member.
   base::WeakPtrFactory<SambaInterfaceImpl> weak_factory_{this};
-
-  DISALLOW_COPY_AND_ASSIGN(SambaInterfaceImpl);
 };
 
 }  // namespace smbprovider

@@ -52,6 +52,9 @@ const char PingRequestHandler::kUrl[] = "/webservd-test-client/ping";
 class WebservTestClient : public WebservTestClientBaseClass {
  public:
   WebservTestClient() = default;
+  WebservTestClient(const WebservTestClient&) = delete;
+  WebservTestClient& operator=(const WebservTestClient&) = delete;
+
   ~WebservTestClient() override = default;
 
  protected:
@@ -78,8 +81,6 @@ class WebservTestClient : public WebservTestClientBaseClass {
 
  private:
   std::unique_ptr<Server> webserver_;
-
-  DISALLOW_COPY_AND_ASSIGN(WebservTestClient);
 };  // class WebservTestClient
 
 }  // namespace

@@ -92,6 +92,8 @@ class ModelImpl : public chromeos::machine_learning::mojom::Model {
       std::unique_ptr<AlignedModelData> model_data,
       mojo::PendingReceiver<chromeos::machine_learning::mojom::Model> receiver,
       const std::string& metrics_model_name);
+  ModelImpl(const ModelImpl&) = delete;
+  ModelImpl& operator=(const ModelImpl&) = delete;
 
   void set_disconnect_handler(base::Closure disconnect_handler);
 
@@ -130,8 +132,6 @@ class ModelImpl : public chromeos::machine_learning::mojom::Model {
 
   // Model name as it should appear in UMA histogram names.
   const std::string metrics_model_name_;
-
-  DISALLOW_COPY_AND_ASSIGN(ModelImpl);
 };
 
 }  // namespace ml

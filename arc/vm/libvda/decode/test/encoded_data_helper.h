@@ -20,6 +20,8 @@ class EncodedDataHelper {
  public:
   EncodedDataHelper(const std::string& encoded_data, vda_profile_t profile);
   EncodedDataHelper(const std::vector<uint8_t>& stream, vda_profile_t profile);
+  EncodedDataHelper(const EncodedDataHelper&) = delete;
+  EncodedDataHelper& operator=(const EncodedDataHelper&) = delete;
 
   // Compute and return the next fragment to be sent to the decoder, starting
   // from the current position in the stream, and advance the current position
@@ -47,8 +49,6 @@ class EncodedDataHelper {
   vda_profile_t profile_;
   size_t next_pos_to_decode_ = 0;
   size_t num_skipped_fragments_ = 0;
-
-  DISALLOW_COPY_AND_ASSIGN(EncodedDataHelper);
 };
 
 #endif  // ARC_VM_LIBVDA_DECODE_TEST_ENCODED_DATA_HELPER_H_

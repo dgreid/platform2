@@ -22,6 +22,8 @@ class Anonymizer;
 class ProcessExecutor {
  public:
   explicit ProcessExecutor(std::vector<std::string> args);
+  ProcessExecutor(const ProcessExecutor&) = delete;
+  ProcessExecutor& operator=(const ProcessExecutor&) = delete;
 
   // Gets the arguments passed into the constructor.
   const std::vector<std::string>& GetArgs() const { return args_; }
@@ -121,7 +123,6 @@ class ProcessExecutor {
   bool perform_pipe_io_after_process_exit_for_testing_ = false;
 
   // We better not copy/assign because of |input_fd_|.
-  DISALLOW_COPY_AND_ASSIGN(ProcessExecutor);
 };
 
 }  // namespace authpolicy

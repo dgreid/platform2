@@ -16,6 +16,9 @@ namespace debugd {
 class ProbeTool {
  public:
   ProbeTool() = default;
+  ProbeTool(const ProbeTool&) = delete;
+  ProbeTool& operator=(const ProbeTool&) = delete;
+
   ~ProbeTool() = default;
 
   // Executes the function defined for runtime_probe.
@@ -23,9 +26,6 @@ class ProbeTool {
                              const std::string& sandbox_info,
                              const std::string& probe_statement,
                              brillo::dbus_utils::FileDescriptor* outfd);
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ProbeTool);
 };
 
 }  // namespace debugd

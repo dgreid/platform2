@@ -38,6 +38,9 @@ class IOHandlerFactory;
 class Throttler {
  public:
   Throttler(EventDispatcher* dispatcher, Manager* manager);
+  Throttler(const Throttler&) = delete;
+  Throttler& operator=(const Throttler&) = delete;
+
   virtual ~Throttler();
 
   virtual bool DisableThrottlingOnAllInterfaces(const ResultCallback& callback);
@@ -115,8 +118,6 @@ class Throttler {
   ProcessManager* process_manager_;
 
   base::WeakPtrFactory<Throttler> weak_factory_{this};
-
-  DISALLOW_COPY_AND_ASSIGN(Throttler);
 };
 
 }  // namespace shill

@@ -79,6 +79,10 @@ class TestInputEventHandlerDelegate : public InputEventHandler::Delegate,
                                       public ActionRecorder {
  public:
   TestInputEventHandlerDelegate() {}
+  TestInputEventHandlerDelegate(const TestInputEventHandlerDelegate&) = delete;
+  TestInputEventHandlerDelegate& operator=(
+      const TestInputEventHandlerDelegate&) = delete;
+
   ~TestInputEventHandlerDelegate() override {}
 
   // InputEventHandler::Delegate implementation:
@@ -103,9 +107,6 @@ class TestInputEventHandlerDelegate : public InputEventHandler::Delegate,
   void ReportPowerButtonAcknowledgmentDelay(base::TimeDelta delay) override {
     AppendAction(GetAcknowledgmentDelayAction(delay));
   }
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(TestInputEventHandlerDelegate);
 };
 
 }  // namespace

@@ -30,6 +30,8 @@ class BiometricsManagerWrapper {
       dbus::ObjectPath object_path,
       const brillo::dbus_utils::AsyncEventSequencer::CompletionAction&
           completion_callback);
+  BiometricsManagerWrapper(const BiometricsManagerWrapper&) = delete;
+  BiometricsManagerWrapper& operator=(const BiometricsManagerWrapper&) = delete;
 
   BiometricsManager& get() {
     DCHECK(biometrics_manager_);
@@ -46,6 +48,9 @@ class BiometricsManagerWrapper {
                   std::unique_ptr<BiometricsManager::Record> record,
                   brillo::dbus_utils::ExportedObjectManager* object_manager,
                   const dbus::ObjectPath& object_path);
+    RecordWrapper(const RecordWrapper&) = delete;
+    RecordWrapper& operator=(const RecordWrapper&) = delete;
+
     ~RecordWrapper();
 
     const dbus::ObjectPath& path() const { return object_path_; }
@@ -62,7 +67,6 @@ class BiometricsManagerWrapper {
     dbus::ObjectPath object_path_;
     brillo::dbus_utils::ExportedProperty<std::string> property_label_;
 
-    DISALLOW_COPY_AND_ASSIGN(RecordWrapper);
   };
 
   void FinalizeEnrollSessionObject();
@@ -107,13 +111,13 @@ class BiometricsManagerWrapper {
   std::string auth_session_owner_;
   dbus::ObjectPath auth_session_object_path_;
   std::unique_ptr<brillo::dbus_utils::DBusObject> auth_session_dbus_object_;
-
-  DISALLOW_COPY_AND_ASSIGN(BiometricsManagerWrapper);
 };
 
 class BiometricsDaemon {
  public:
   BiometricsDaemon();
+  BiometricsDaemon(const BiometricsDaemon&) = delete;
+  BiometricsDaemon& operator=(const BiometricsDaemon&) = delete;
 
  private:
   // Query session manager for the current primary user. Return true and update
@@ -131,8 +135,6 @@ class BiometricsDaemon {
   scoped_refptr<dbus::ObjectProxy> session_manager_proxy_;
   // Sanitized username of the primary user. Empty if no primary user present.
   std::string primary_user_;
-
-  DISALLOW_COPY_AND_ASSIGN(BiometricsDaemon);
 };
 }  // namespace biod
 

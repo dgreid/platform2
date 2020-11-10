@@ -14,13 +14,13 @@ namespace permission_broker {
 class DenyUsbVendorIdRuleTest : public RuleTest {
  public:
   DenyUsbVendorIdRuleTest() : rule_(kLinuxFoundationUsbVendorId) {}
+  DenyUsbVendorIdRuleTest(const DenyUsbVendorIdRuleTest&) = delete;
+  DenyUsbVendorIdRuleTest& operator=(const DenyUsbVendorIdRuleTest&) = delete;
+
   ~DenyUsbVendorIdRuleTest() override = default;
 
  protected:
   DenyUsbVendorIdRule rule_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(DenyUsbVendorIdRuleTest);
 };
 
 TEST_F(DenyUsbVendorIdRuleTest, IgnoreNonUsbDevice) {

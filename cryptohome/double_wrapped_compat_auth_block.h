@@ -23,6 +23,9 @@ class TpmInit;
 class DoubleWrappedCompatAuthBlock : public AuthBlock {
  public:
   DoubleWrappedCompatAuthBlock(Tpm* tpm, TpmInit* tpm_init);
+  DoubleWrappedCompatAuthBlock(const DoubleWrappedCompatAuthBlock&) = delete;
+  DoubleWrappedCompatAuthBlock& operator=(const DoubleWrappedCompatAuthBlock&) =
+      delete;
 
   // This auth block represents legacy keysets left in an inconsistent state, so
   // calling Create() here is FATAL.
@@ -39,8 +42,6 @@ class DoubleWrappedCompatAuthBlock : public AuthBlock {
  private:
   TpmNotBoundToPcrAuthBlock tpm_auth_block_;
   LibScryptCompatAuthBlock lib_scrypt_compat_auth_block_;
-
-  DISALLOW_COPY_AND_ASSIGN(DoubleWrappedCompatAuthBlock);
 };
 
 }  // namespace cryptohome

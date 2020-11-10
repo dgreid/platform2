@@ -21,6 +21,8 @@ namespace smbprovider {
 class RecursiveCopyProgress : public CopyProgressInterface {
  public:
   explicit RecursiveCopyProgress(SambaInterface* samba_interface);
+  RecursiveCopyProgress(const RecursiveCopyProgress&) = delete;
+  RecursiveCopyProgress& operator=(const RecursiveCopyProgress&) = delete;
 
   ~RecursiveCopyProgress() override;
 
@@ -52,8 +54,6 @@ class RecursiveCopyProgress : public CopyProgressInterface {
   SambaInterface* samba_interface_;  // not owned.
   std::string source_root_;
   std::string target_root_;
-
-  DISALLOW_COPY_AND_ASSIGN(RecursiveCopyProgress);
 };
 
 }  // namespace smbprovider

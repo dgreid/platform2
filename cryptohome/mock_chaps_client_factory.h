@@ -12,11 +12,11 @@ namespace cryptohome {
 class MockChapsClientFactory : public ChapsClientFactory {
  public:
   MockChapsClientFactory();
+  MockChapsClientFactory(const MockChapsClientFactory&) = delete;
+  MockChapsClientFactory& operator=(const MockChapsClientFactory&) = delete;
+
   virtual ~MockChapsClientFactory();
   virtual chaps::TokenManagerClient* New();
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockChapsClientFactory);
 };
 
 }  // namespace cryptohome

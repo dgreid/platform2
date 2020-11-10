@@ -43,6 +43,9 @@ class CumulativeUseTimeMetric {
                           const base::FilePath& metrics_files_dir,
                           std::unique_ptr<base::Clock> time_clock,
                           std::unique_ptr<base::TickClock> time_tick_clock);
+  CumulativeUseTimeMetric(const CumulativeUseTimeMetric&) = delete;
+  CumulativeUseTimeMetric& operator=(const CumulativeUseTimeMetric&) = delete;
+
   ~CumulativeUseTimeMetric();
 
   // Initializes the metric state according to the last persisted value. The
@@ -95,8 +98,6 @@ class CumulativeUseTimeMetric {
 
   // Timer for scheduling tasks that update usage time metric.
   base::RepeatingTimer update_stats_timer_;
-
-  DISALLOW_COPY_AND_ASSIGN(CumulativeUseTimeMetric);
 };
 
 }  // namespace login_manager

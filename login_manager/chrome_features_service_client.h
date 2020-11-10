@@ -23,6 +23,10 @@ namespace login_manager {
 class ChromeFeaturesServiceClient {
  public:
   explicit ChromeFeaturesServiceClient(dbus::ObjectProxy* proxy);
+  ChromeFeaturesServiceClient(const ChromeFeaturesServiceClient&) = delete;
+  ChromeFeaturesServiceClient& operator=(const ChromeFeaturesServiceClient&) =
+      delete;
+
   ~ChromeFeaturesServiceClient();
 
   // Async call to check whether given feature is enabled. |enabled| is
@@ -46,8 +50,6 @@ class ChromeFeaturesServiceClient {
   dbus::ObjectProxy* proxy_ = nullptr;
 
   base::WeakPtrFactory<ChromeFeaturesServiceClient> weak_ptr_factory_{this};
-
-  DISALLOW_COPY_AND_ASSIGN(ChromeFeaturesServiceClient);
 };
 
 }  // namespace login_manager

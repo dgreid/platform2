@@ -22,6 +22,9 @@ class ByteString;
 class SHILL_EXPORT NetlinkPacket {
  public:
   NetlinkPacket(const unsigned char* buf, size_t len);
+  NetlinkPacket(const NetlinkPacket&) = delete;
+  NetlinkPacket& operator=(const NetlinkPacket&) = delete;
+
   virtual ~NetlinkPacket();
 
   // Returns whether a packet was properly retrieved in the constructor.
@@ -80,8 +83,6 @@ class SHILL_EXPORT NetlinkPacket {
   nlmsghdr header_;
   std::unique_ptr<ByteString> payload_;
   size_t consumed_bytes_;
-
-  DISALLOW_COPY_AND_ASSIGN(NetlinkPacket);
 };
 
 // Mutable Netlink packets are used in unit tests where it is convenient
@@ -90,6 +91,9 @@ class SHILL_EXPORT NetlinkPacket {
 class SHILL_EXPORT MutableNetlinkPacket : public NetlinkPacket {
  public:
   MutableNetlinkPacket(const unsigned char* buf, size_t len);
+  MutableNetlinkPacket(const MutableNetlinkPacket&) = delete;
+  MutableNetlinkPacket& operator=(const MutableNetlinkPacket&) = delete;
+
   virtual ~MutableNetlinkPacket();
 
   // Reset consumed_bytes_ as if this packet never underwent processing.
@@ -106,9 +110,6 @@ class SHILL_EXPORT MutableNetlinkPacket : public NetlinkPacket {
 
   // Set the sequence number in the header.
   void SetMessageSequence(uint32_t sequence);
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MutableNetlinkPacket);
 };
 
 }  // namespace shill

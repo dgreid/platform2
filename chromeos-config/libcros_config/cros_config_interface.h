@@ -16,6 +16,8 @@ namespace brillo {
 class CrosConfigInterface {
  public:
   CrosConfigInterface() {}
+  CrosConfigInterface(const CrosConfigInterface&) = delete;
+  CrosConfigInterface& operator=(const CrosConfigInterface&) = delete;
   virtual ~CrosConfigInterface() {}
 
   // Obtain a config property.
@@ -48,9 +50,6 @@ class CrosConfigInterface {
   // Currently this checks for a non-empty CROS_CONFIG_DEBUG environment
   // variable.
   static bool IsLoggingEnabled();
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(CrosConfigInterface);
 };
 
 #define CROS_CONFIG_LOG(severity) \

@@ -26,6 +26,9 @@ static const int kDefaultSkuId = -1;
 class BRILLO_EXPORT CrosConfig : public CrosConfigInterface {
  public:
   CrosConfig();
+  CrosConfig(const CrosConfig&) = delete;
+  CrosConfig& operator=(const CrosConfig&) = delete;
+
   ~CrosConfig() override;
 
   // Prepare the configuration system for access to the configuration for
@@ -113,8 +116,6 @@ class BRILLO_EXPORT CrosConfig : public CrosConfigInterface {
   // When InitForTest is is called, the underlying CrosConfigJson that
   // is used.
   std::unique_ptr<CrosConfigInterface> cros_config_;
-
-  DISALLOW_COPY_AND_ASSIGN(CrosConfig);
 };
 
 }  // namespace brillo

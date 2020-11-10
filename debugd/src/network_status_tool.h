@@ -14,12 +14,12 @@ namespace debugd {
 class NetworkStatusTool {
  public:
   NetworkStatusTool() = default;
+  NetworkStatusTool(const NetworkStatusTool&) = delete;
+  NetworkStatusTool& operator=(const NetworkStatusTool&) = delete;
+
   ~NetworkStatusTool() = default;
 
   std::string GetNetworkStatus();
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(NetworkStatusTool);
 };
 
 }  // namespace debugd

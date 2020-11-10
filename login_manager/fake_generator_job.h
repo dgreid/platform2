@@ -24,6 +24,9 @@ class FakeGeneratorJob : public GeneratorJobInterface {
     Factory(pid_t pid,
             const std::string& name,
             const std::string& key_contents);
+    Factory(const Factory&) = delete;
+    Factory& operator=(const Factory&) = delete;
+
     ~Factory() override;
     std::unique_ptr<GeneratorJobInterface> Create(
         const std::string& filename,
@@ -36,13 +39,15 @@ class FakeGeneratorJob : public GeneratorJobInterface {
     pid_t pid_;
     const std::string name_;
     const std::string key_contents_;
-    DISALLOW_COPY_AND_ASSIGN(Factory);
   };
 
   FakeGeneratorJob(pid_t pid,
                    const std::string& name,
                    const std::string& key_contents,
                    const std::string& filename);
+  FakeGeneratorJob(const FakeGeneratorJob&) = delete;
+  FakeGeneratorJob& operator=(const FakeGeneratorJob&) = delete;
+
   ~FakeGeneratorJob() override;
 
   bool RunInBackground() override;
@@ -58,8 +63,6 @@ class FakeGeneratorJob : public GeneratorJobInterface {
   const std::string name_;
   const std::string key_contents_;
   const std::string filename_;
-
-  DISALLOW_COPY_AND_ASSIGN(FakeGeneratorJob);
 };
 }  // namespace login_manager
 

@@ -103,6 +103,9 @@ class StateController : public PrefsObserver {
   class TestApi {
    public:
     explicit TestApi(StateController* controller);
+    TestApi(const TestApi&) = delete;
+    TestApi& operator=(const TestApi&) = delete;
+
     ~TestApi();
 
     Clock* clock() { return controller_->clock_.get(); }
@@ -129,7 +132,6 @@ class StateController : public PrefsObserver {
    private:
     StateController* controller_;  // weak
 
-    DISALLOW_COPY_AND_ASSIGN(TestApi);
   };
 
   // Delays are lengthened if user activity is observed while the screen is
@@ -150,6 +152,9 @@ class StateController : public PrefsObserver {
   static std::string GetPolicyDebugString(const PowerManagementPolicy& policy);
 
   StateController();
+  StateController(const StateController&) = delete;
+  StateController& operator=(const StateController&) = delete;
+
   ~StateController() override;
 
   base::TimeTicks last_user_activity_time() const {
@@ -569,8 +574,6 @@ class StateController : public PrefsObserver {
   base::FilePathWatcher crash_boot_collector_watcher_;
 
   base::WeakPtrFactory<StateController> weak_ptr_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(StateController);
 };
 
 }  // namespace policy

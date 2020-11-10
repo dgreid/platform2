@@ -19,6 +19,9 @@ namespace appfuse {
 class DataFilterTest : public testing::Test {
  public:
   DataFilterTest() = default;
+  DataFilterTest(const DataFilterTest&) = delete;
+  DataFilterTest& operator=(const DataFilterTest&) = delete;
+
   ~DataFilterTest() override = default;
 
   void SetUp() override {
@@ -97,8 +100,6 @@ class DataFilterTest : public testing::Test {
   base::ScopedFD fd_dev_;  // /dev/fuse-side FD connected to the filter.
   bool was_stopped_ = false;
   bool stop_expected_ = false;
-
-  DISALLOW_COPY_AND_ASSIGN(DataFilterTest);
 };
 
 TEST_F(DataFilterTest, ValidRequestAndResponse) {

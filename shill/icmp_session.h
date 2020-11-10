@@ -48,6 +48,8 @@ class IcmpSession {
       base::Callback<void(const IcmpSessionResult&)>;
 
   explicit IcmpSession(EventDispatcher* dispatcher);
+  IcmpSession(const IcmpSession&) = delete;
+  IcmpSession& operator=(const IcmpSession&) = delete;
 
   // We always call IcmpSession::Stop in the destructor to clean up, in case an
   // ICMP session is still in progress.
@@ -136,8 +138,6 @@ class IcmpSession {
   base::CancelableClosure timeout_callback_;
   IcmpSessionResultCallback result_callback_;
   std::unique_ptr<IOHandler> echo_reply_handler_;
-
-  DISALLOW_COPY_AND_ASSIGN(IcmpSession);
 };
 
 }  // namespace shill

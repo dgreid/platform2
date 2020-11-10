@@ -25,6 +25,8 @@ class PersistentInteger {
   // written in order to preserves the integer value across restarts of the
   // program using it.  The directory of the file must exist.
   explicit PersistentInteger(const base::FilePath& backing_file_path);
+  PersistentInteger(const PersistentInteger&) = delete;
+  PersistentInteger& operator=(const PersistentInteger&) = delete;
 
   // Virtual only because of mock.
   virtual ~PersistentInteger();
@@ -63,8 +65,6 @@ class PersistentInteger {
   int32_t version_;
 
   static bool testing_;
-
-  DISALLOW_COPY_AND_ASSIGN(PersistentInteger);
 };
 
 }  // namespace chromeos_metrics

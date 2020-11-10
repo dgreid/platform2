@@ -15,6 +15,9 @@ namespace shill {
 class MockAres : public Ares {
  public:
   MockAres();
+  MockAres(const MockAres&) = delete;
+  MockAres& operator=(const MockAres&) = delete;
+
   ~MockAres() override;
 
   MOCK_METHOD(void, Destroy, (ares_channel), (override));
@@ -37,9 +40,6 @@ class MockAres : public Ares {
               (ares_channel, struct timeval*, struct timeval*),
               (override));
   MOCK_METHOD(int, SetServersCsv, (ares_channel, const char*), (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockAres);
 };
 
 }  // namespace shill

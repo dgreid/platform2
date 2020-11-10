@@ -29,6 +29,9 @@ class FuseSession::Impl {
       : session_(session), fs_(std::move(fs)) {
     DCHECK(fs_);
   }
+  Impl(const Impl&) = delete;
+  Impl& operator=(const Impl&) = delete;
+
   ~Impl() = default;
 
   // FUSE low-level operations. See fuse_lowlevel_ops in fuse_lowlevel.h for
@@ -316,8 +319,6 @@ class FuseSession::Impl {
 
   FuseSession* session_;
   std::unique_ptr<Filesystem> fs_;
-
-  DISALLOW_COPY_AND_ASSIGN(Impl);
 };
 
 FuseSession::FuseSession(std::unique_ptr<Filesystem> fs, fuse_chan* chan)

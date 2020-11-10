@@ -26,6 +26,9 @@ std::string JoinActions(const char* action, ...);
 class ActionRecorder {
  public:
   ActionRecorder();
+  ActionRecorder(const ActionRecorder&) = delete;
+  ActionRecorder& operator=(const ActionRecorder&) = delete;
+
   virtual ~ActionRecorder();
 
   // Returns a comma-separated string describing the actions that were
@@ -41,8 +44,6 @@ class ActionRecorder {
  private:
   // Comma-separated list of actions that have been performed.
   std::string actions_;
-
-  DISALLOW_COPY_AND_ASSIGN(ActionRecorder);
 };
 
 }  // namespace power_manager

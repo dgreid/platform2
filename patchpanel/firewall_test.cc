@@ -19,6 +19,9 @@ using testing::Return;
 class FirewallTest : public testing::Test {
  public:
   FirewallTest() = default;
+  FirewallTest(const FirewallTest&) = delete;
+  FirewallTest& operator=(const FirewallTest&) = delete;
+
   ~FirewallTest() override = default;
 
  protected:
@@ -39,9 +42,6 @@ class FirewallTest : public testing::Test {
       firewall->SetRunInMinijailFailCriterion(
           std::vector<std::string>({kIp6TablesPath}), true, false);
   }
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(FirewallTest);
 };
 
 TEST_F(FirewallTest, Port0Fails) {

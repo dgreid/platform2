@@ -34,10 +34,10 @@ void CheckDirectoryEntryAndDirectoryEntryProtoAreEqual(
 class SmbProviderProtoTest : public testing::Test {
  public:
   SmbProviderProtoTest() = default;
-  ~SmbProviderProtoTest() override = default;
+  SmbProviderProtoTest(const SmbProviderProtoTest&) = delete;
+  SmbProviderProtoTest& operator=(const SmbProviderProtoTest&) = delete;
 
- private:
-  DISALLOW_COPY_AND_ASSIGN(SmbProviderProtoTest);
+  ~SmbProviderProtoTest() override = default;
 };
 
 // Blobs should be serialized correctly.

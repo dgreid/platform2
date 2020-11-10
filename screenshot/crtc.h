@@ -41,6 +41,8 @@ class Crtc {
        ScopedDrmModeEncoderPtr encoder,
        ScopedDrmModeCrtcPtr crtc,
        std::vector<PlaneInfo> planes);
+  Crtc(const Crtc&) = delete;
+  Crtc& operator=(const Crtc&) = delete;
 
   const base::File& file() const { return file_; }
   drmModeConnector* connector() const { return connector_.get(); }
@@ -65,8 +67,6 @@ class Crtc {
   ScopedDrmModeFB2Ptr fb2_;
 
   std::vector<PlaneInfo> planes_;
-
-  DISALLOW_COPY_AND_ASSIGN(Crtc);
 };
 
 class CrtcFinder {

@@ -20,6 +20,9 @@ namespace debugd {
 class SubprocessTool {
  public:
   SubprocessTool() = default;
+  SubprocessTool(const SubprocessTool&) = delete;
+  SubprocessTool& operator=(const SubprocessTool&) = delete;
+
   virtual ~SubprocessTool() = default;
 
   virtual ProcessWithId* CreateProcess(bool sandboxed,
@@ -36,8 +39,6 @@ class SubprocessTool {
 
  private:
   std::map<std::string, std::unique_ptr<ProcessWithId>> processes_;
-
-  DISALLOW_COPY_AND_ASSIGN(SubprocessTool);
 };
 
 }  // namespace debugd

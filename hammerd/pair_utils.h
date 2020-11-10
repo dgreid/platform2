@@ -61,6 +61,9 @@ class PairManagerInterface {
 class PairManager : public PairManagerInterface {
  public:
   PairManager() = default;
+  PairManager(const PairManager&) = delete;
+  PairManager& operator=(const PairManager&) = delete;
+
   ~PairManager() override = default;
   ChallengeStatus PairChallenge(FirmwareUpdaterInterface* fw_updater,
                                 DBusWrapperInterface* dbus_wrapper) override;
@@ -71,9 +74,6 @@ class PairManager : public PairManagerInterface {
   bool VerifyChallenge(const PairChallengeRequest& request,
                        uint8_t* private_key,
                        const PairChallengeResponse& resp);
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(PairManager);
 };
 
 }  // namespace hammerd

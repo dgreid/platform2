@@ -31,6 +31,9 @@ namespace policy {
 class DevicePolicyImpl : public DevicePolicy {
  public:
   DevicePolicyImpl();
+  DevicePolicyImpl(const DevicePolicyImpl&) = delete;
+  DevicePolicyImpl& operator=(const DevicePolicyImpl&) = delete;
+
   ~DevicePolicyImpl() override;
 
   const enterprise_management::ChromeDeviceSettingsProto& get_device_policy()
@@ -149,8 +152,6 @@ class DevicePolicyImpl : public DevicePolicy {
   // If false, all types of verification are disabled. True in production
   // but can be set to false by tests.
   bool verify_policy_ = true;
-
-  DISALLOW_COPY_AND_ASSIGN(DevicePolicyImpl);
 };
 }  // namespace policy
 

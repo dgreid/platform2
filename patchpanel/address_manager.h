@@ -38,6 +38,9 @@ class BRILLO_EXPORT AddressManager {
   };
 
   AddressManager();
+  AddressManager(const AddressManager&) = delete;
+  AddressManager& operator=(const AddressManager&) = delete;
+
   virtual ~AddressManager() = default;
 
   // Generates a MAC address guaranteed to be unique for the lifetime of this
@@ -60,8 +63,6 @@ class BRILLO_EXPORT AddressManager {
   std::map<Guest, std::unique_ptr<SubnetPool>> pools_;
 
   base::WeakPtrFactory<AddressManager> weak_ptr_factory_{this};
-
-  DISALLOW_COPY_AND_ASSIGN(AddressManager);
 };
 
 }  // namespace patchpanel

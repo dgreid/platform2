@@ -82,6 +82,8 @@ class ProcessExecutorTest : public ::testing::Test {
     prev_log_message_handler = logging::GetLogMessageHandler();
     logging::SetLogMessageHandler(&HandleLogMessage);
   }
+  ProcessExecutorTest(const ProcessExecutorTest&) = delete;
+  ProcessExecutorTest& operator=(const ProcessExecutorTest&) = delete;
 
   ~ProcessExecutorTest() override {
     logging::SetLogMessageHandler(prev_log_message_handler);
@@ -90,9 +92,6 @@ class ProcessExecutorTest : public ::testing::Test {
     g_info_log = nullptr;
     g_error_log = nullptr;
   }
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ProcessExecutorTest);
 };
 
 // Calling Execute() on an instance with no command args should succeed.

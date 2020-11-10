@@ -26,14 +26,15 @@ using RangeListMap = std::unordered_map<int, std::vector<ProductIdRange>>;
 class DenyFwUpdateHidrawDeviceRule : public HidrawSubsystemUdevRule {
  public:
   DenyFwUpdateHidrawDeviceRule();
+  DenyFwUpdateHidrawDeviceRule(const DenyFwUpdateHidrawDeviceRule&) = delete;
+  DenyFwUpdateHidrawDeviceRule& operator=(const DenyFwUpdateHidrawDeviceRule&) =
+      delete;
+
   ~DenyFwUpdateHidrawDeviceRule() override = default;
 
   Result ProcessHidrawDevice(struct udev_device* device) override;
 
   bool IsFwUpdateDevice(const char* path, const RangeListMap& blockedDevices);
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(DenyFwUpdateHidrawDeviceRule);
 };
 
 }  // namespace permission_broker

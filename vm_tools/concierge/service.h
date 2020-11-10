@@ -70,6 +70,8 @@ class Service final {
   };
 
   explicit Service(base::Closure quit_closure);
+  Service(const Service&) = delete;
+  Service& operator=(const Service&) = delete;
 
   // Initializes the service by connecting to the system DBus daemon, exporting
   // its methods, and taking ownership of it's name.
@@ -376,8 +378,6 @@ class Service final {
   // Used to serialize erasing and creating the GPU shader disk cache in the
   // event that VMs are started simultaneously from multiple threads.
   base::Lock cache_mutex_;
-
-  DISALLOW_COPY_AND_ASSIGN(Service);
 };
 
 }  // namespace concierge

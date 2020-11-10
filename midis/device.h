@@ -43,6 +43,9 @@ class Device {
          OutPort::DeletionCallback out_del_cb,
          OutPort::SendMidiDataCallback send_data_cb,
          const std::map<uint32_t, unsigned int>& port_caps);
+  Device(const Device&) = delete;
+  Device& operator=(const Device&) = delete;
+
   ~Device();
 
   const std::string& GetName() const { return name_; }
@@ -128,8 +131,6 @@ class Device {
   std::map<uint32_t, std::unique_ptr<OutPort>> out_ports_;
 
   base::WeakPtrFactory<Device> weak_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(Device);
 };
 
 }  // namespace midis

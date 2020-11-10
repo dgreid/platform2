@@ -21,6 +21,8 @@ namespace libwebserv {
 class MockResponse : public Response {
  public:
   MockResponse() = default;
+  MockResponse(const MockResponse&) = delete;
+  MockResponse& operator=(const MockResponse&) = delete;
 
   MOCK_METHOD2(AddHeader, void(const std::string&, const std::string&));
   MOCK_METHOD1(AddHeaders,
@@ -44,8 +46,6 @@ class MockResponse : public Response {
              const std::string& mime_type) override {
     return MockReply(status_code, data_stream.get(), mime_type);
   }
-
-  DISALLOW_COPY_AND_ASSIGN(MockResponse);
 };
 
 }  // namespace libwebserv

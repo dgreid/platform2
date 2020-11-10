@@ -89,6 +89,9 @@ class ClientImpl : public Client {
  public:
   ClientImpl(const scoped_refptr<dbus::Bus>& bus, dbus::ObjectProxy* proxy)
       : bus_(std::move(bus)), proxy_(proxy) {}
+  ClientImpl(const ClientImpl&) = delete;
+  ClientImpl& operator=(const ClientImpl&) = delete;
+
   ~ClientImpl();
 
   bool NotifyArcStartup(pid_t pid) override;
@@ -139,8 +142,6 @@ class ClientImpl : public Client {
 
   bool SendSetVpnIntentRequest(int socket,
                                SetVpnIntentRequest::VpnRoutingPolicy policy);
-
-  DISALLOW_COPY_AND_ASSIGN(ClientImpl);
 };
 
 ClientImpl::~ClientImpl() {

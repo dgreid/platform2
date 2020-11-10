@@ -34,6 +34,9 @@ class TestObserver : public BacklightObserver {
   explicit TestObserver(BacklightInterface* backlight) : backlight_(backlight) {
     backlight_->AddObserver(this);
   }
+  TestObserver(const TestObserver&) = delete;
+  TestObserver& operator=(const TestObserver&) = delete;
+
   ~TestObserver() override { backlight_->RemoveObserver(this); }
 
   int num_changes() const { return num_changes_; }
@@ -49,8 +52,6 @@ class TestObserver : public BacklightObserver {
 
   // Number of times that OnBacklightDeviceChanged() has been called.
   int num_changes_ = 0;
-
-  DISALLOW_COPY_AND_ASSIGN(TestObserver);
 };
 
 }  // namespace
@@ -61,6 +62,11 @@ class PluggableInternalBacklightTest : public ::testing::Test {
     CHECK(temp_dir_.CreateUniqueTempDir());
     backlight_.Init(&udev_, kSubsystem, temp_dir_.GetPath(), kPattern);
   }
+  PluggableInternalBacklightTest(const PluggableInternalBacklightTest&) =
+      delete;
+  PluggableInternalBacklightTest& operator=(
+      const PluggableInternalBacklightTest&) = delete;
+
   ~PluggableInternalBacklightTest() override = default;
 
  protected:
@@ -83,9 +89,6 @@ class PluggableInternalBacklightTest : public ::testing::Test {
   base::ScopedTempDir temp_dir_;
   UdevStub udev_;
   PluggableInternalBacklight backlight_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(PluggableInternalBacklightTest);
 };
 
 TEST_F(PluggableInternalBacklightTest, NoDevice) {

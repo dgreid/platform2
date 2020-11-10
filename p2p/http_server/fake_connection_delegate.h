@@ -24,6 +24,8 @@ class FakeConnectionDelegate : public ConnectionDelegateInterface {
                          ServerInterface* server,
                          int64_t max_download_rate)
       : fd_(fd), server_(server) {}
+  FakeConnectionDelegate(const FakeConnectionDelegate&) = delete;
+  FakeConnectionDelegate& operator=(const FakeConnectionDelegate&) = delete;
 
   // A ConnectionDelegate factory.
   static ConnectionDelegateInterface* Construct(int dirfd,
@@ -62,8 +64,6 @@ class FakeConnectionDelegate : public ConnectionDelegateInterface {
  private:
   int fd_;
   ServerInterface* server_;
-
-  DISALLOW_COPY_AND_ASSIGN(FakeConnectionDelegate);
 };
 
 }  // namespace http_server

@@ -16,6 +16,9 @@ namespace mm1 {
 class MockModemTimeProxy : public ModemTimeProxyInterface {
  public:
   MockModemTimeProxy();
+  MockModemTimeProxy(const MockModemTimeProxy&) = delete;
+  MockModemTimeProxy& operator=(const MockModemTimeProxy&) = delete;
+
   ~MockModemTimeProxy() override;
 
   // Inherited methods from ModemTimeProxyInterface.
@@ -27,9 +30,6 @@ class MockModemTimeProxy : public ModemTimeProxyInterface {
               set_network_time_changed_callback,
               (const NetworkTimeChangedSignalCallback&),
               (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockModemTimeProxy);
 };
 
 }  // namespace mm1

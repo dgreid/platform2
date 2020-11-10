@@ -25,6 +25,9 @@ const int kTestDataBufferSize = 100;
 class BurnReaderTest : public ::testing::Test {
  public:
   BurnReaderTest() {}
+  BurnReaderTest(const BurnReaderTest&) = delete;
+  BurnReaderTest& operator=(const BurnReaderTest&) = delete;
+
   ~BurnReaderTest() override = default;
 
   void SetUp() override {
@@ -44,14 +47,14 @@ class BurnReaderTest : public ::testing::Test {
 
   base::ScopedTempDir test_dir_;
   base::FilePath test_file_path_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(BurnReaderTest);
 };
 
 class BurnWriterTest : public ::testing::Test {
  public:
   BurnWriterTest() {}
+  BurnWriterTest(const BurnWriterTest&) = delete;
+  BurnWriterTest& operator=(const BurnWriterTest&) = delete;
+
   ~BurnWriterTest() override = default;
 
   void SetUp() override {
@@ -79,9 +82,6 @@ class BurnWriterTest : public ::testing::Test {
 
   base::ScopedTempDir test_dir_;
   base::FilePath test_file_path_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(BurnWriterTest);
 };
 
 TEST_F(BurnReaderTest, ReadFile) {

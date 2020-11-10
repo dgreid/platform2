@@ -43,6 +43,9 @@ class SlotManagerImpl : public SlotManager,
                   TPMUtility* tpm_utility,
                   bool auto_load_system_token,
                   SystemShutdownBlocker* system_shutdown_blocker);
+  SlotManagerImpl(const SlotManagerImpl&) = delete;
+  SlotManagerImpl& operator=(const SlotManagerImpl&) = delete;
+
   ~SlotManagerImpl() override;
 
   // Initializes the slot manager. Returns true on success.
@@ -190,8 +193,6 @@ class SlotManagerImpl : public SlotManager,
   bool auto_load_system_token_;
   bool is_initialized_;
   SystemShutdownBlocker* system_shutdown_blocker_;
-
-  DISALLOW_COPY_AND_ASSIGN(SlotManagerImpl);
 };
 
 }  // namespace chaps

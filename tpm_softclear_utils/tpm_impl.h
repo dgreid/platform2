@@ -18,6 +18,9 @@ namespace tpm_softclear_utils {
 class TpmImpl : public Tpm {
  public:
   TpmImpl() = default;
+  TpmImpl(const TpmImpl&) = delete;
+  TpmImpl& operator=(const TpmImpl&) = delete;
+
   ~TpmImpl() override = default;
 
   // Not used by TPM 1.2.
@@ -71,8 +74,6 @@ class TpmImpl : public Tpm {
   //
   // Returns if the DA counter is reset successfully.
   bool ResetDictionaryAttackCounter();
-
-  DISALLOW_COPY_AND_ASSIGN(TpmImpl);
 };
 
 }  // namespace tpm_softclear_utils

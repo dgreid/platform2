@@ -24,6 +24,8 @@ namespace buffet {
 class HttpTransportClient : public weave::provider::HttpClient {
  public:
   HttpTransportClient();
+  HttpTransportClient(const HttpTransportClient&) = delete;
+  HttpTransportClient& operator=(const HttpTransportClient&) = delete;
 
   ~HttpTransportClient() override;
 
@@ -47,7 +49,6 @@ class HttpTransportClient : public weave::provider::HttpClient {
   std::shared_ptr<brillo::http::Transport> transport_;
 
   base::WeakPtrFactory<HttpTransportClient> weak_ptr_factory_{this};
-  DISALLOW_COPY_AND_ASSIGN(HttpTransportClient);
 };
 
 }  // namespace buffet

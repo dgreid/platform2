@@ -114,6 +114,8 @@ class Daemon : public brillo::DBusServiceDaemon {
         auto_load_system_token_(auto_load_system_token),
         tpm_background_thread_(kTpmThreadName),
         async_init_thread_(kInitThreadName) {}
+  Daemon(const Daemon&) = delete;
+  Daemon& operator=(const Daemon&) = delete;
 
   ~Daemon() override {
     // We join these two threads here so that the code running in these two
@@ -222,8 +224,6 @@ class Daemon : public brillo::DBusServiceDaemon {
   std::unique_ptr<SlotManagerImpl> slot_manager_;
   std::unique_ptr<ChapsInterface> service_;
   std::unique_ptr<ChapsAdaptor> adaptor_;
-
-  DISALLOW_COPY_AND_ASSIGN(Daemon);
 };
 
 }  // namespace chaps

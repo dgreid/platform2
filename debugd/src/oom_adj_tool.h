@@ -20,12 +20,12 @@ namespace debugd {
 class OomAdjTool : public SubprocessTool {
  public:
   OomAdjTool() = default;
+  OomAdjTool(const OomAdjTool&) = delete;
+  OomAdjTool& operator=(const OomAdjTool&) = delete;
+
   ~OomAdjTool() override = default;
 
   std::string Set(const std::map<pid_t, int32_t>& scores);
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(OomAdjTool);
 };
 
 }  // namespace debugd

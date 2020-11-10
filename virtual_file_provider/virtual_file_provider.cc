@@ -31,6 +31,8 @@ class ServiceThread : public base::Thread {
       : Thread("Service thread"),
         fuse_mount_path_(fuse_mount_path),
         service_(std::make_unique<Service>(fuse_mount_path, size_map)) {}
+  ServiceThread(const ServiceThread&) = delete;
+  ServiceThread& operator=(const ServiceThread&) = delete;
 
   ~ServiceThread() override { Stop(); }
 
@@ -73,14 +75,15 @@ class ServiceThread : public base::Thread {
 
   const base::FilePath fuse_mount_path_;
   std::unique_ptr<Service> service_;
-
-  DISALLOW_COPY_AND_ASSIGN(ServiceThread);
 };
 
 class FuseMainDelegateImpl : public FuseMainDelegate {
  public:
   FuseMainDelegateImpl(ServiceThread* service_thread, SizeMap* size_map)
       : service_thread_(service_thread), size_map_(size_map) {}
+  FuseMainDelegateImpl(const FuseMainDelegateImpl&) = delete;
+  FuseMainDelegateImpl& operator=(const FuseMainDelegateImpl&) = delete;
+
   ~FuseMainDelegateImpl() override = default;
 
   // FuseMainDelegate overrides:
@@ -94,8 +97,6 @@ class FuseMainDelegateImpl : public FuseMainDelegate {
  private:
   ServiceThread* const service_thread_;
   SizeMap* const size_map_;
-
-  DISALLOW_COPY_AND_ASSIGN(FuseMainDelegateImpl);
 };
 
 int64_t FuseMainDelegateImpl::GetSize(const std::string& id) {

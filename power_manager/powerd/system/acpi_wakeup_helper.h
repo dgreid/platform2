@@ -21,6 +21,9 @@ namespace system {
 class AcpiWakeupFileInterface {
  public:
   AcpiWakeupFileInterface() {}
+  AcpiWakeupFileInterface(const AcpiWakeupFileInterface&) = delete;
+  AcpiWakeupFileInterface& operator=(const AcpiWakeupFileInterface&) = delete;
+
   virtual ~AcpiWakeupFileInterface() {}
 
   // Checks whether the file exists.
@@ -31,14 +34,14 @@ class AcpiWakeupFileInterface {
 
   // Writes file contents. Returns true on success.
   virtual bool Write(const std::string& contents) = 0;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(AcpiWakeupFileInterface);
 };
 
 class AcpiWakeupHelper : public AcpiWakeupHelperInterface {
  public:
   AcpiWakeupHelper();
+  AcpiWakeupHelper(const AcpiWakeupHelper&) = delete;
+  AcpiWakeupHelper& operator=(const AcpiWakeupHelper&) = delete;
+
   ~AcpiWakeupHelper() override;
 
   // Forces use of a fake implementation instead of /proc/acpi/wakeup. Only for
@@ -58,8 +61,6 @@ class AcpiWakeupHelper : public AcpiWakeupHelperInterface {
   bool ToggleWakeupEnabled(const std::string& device_name);
 
   std::unique_ptr<AcpiWakeupFileInterface> file_;
-
-  DISALLOW_COPY_AND_ASSIGN(AcpiWakeupHelper);
 };
 
 }  // namespace system

@@ -15,6 +15,10 @@ namespace debugd {
 class SchedulerConfigurationTool {
  public:
   SchedulerConfigurationTool() = default;
+  SchedulerConfigurationTool(const SchedulerConfigurationTool&) = delete;
+  SchedulerConfigurationTool& operator=(const SchedulerConfigurationTool&) =
+      delete;
+
   ~SchedulerConfigurationTool() = default;
 
   // This sets the core sharing policy.
@@ -28,8 +32,6 @@ class SchedulerConfigurationTool {
   // time. If set to |true| can't be set to false and configuration policy can't
   // be changed.
   bool policy_locked_conservative_ = false;
-
-  DISALLOW_COPY_AND_ASSIGN(SchedulerConfigurationTool);
 };
 
 }  // namespace debugd

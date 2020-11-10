@@ -20,6 +20,8 @@ class TestBackoffEntry : public BackoffEntry {
     // fake time.
     SetCustomReleaseTime(TimeTicks());
   }
+  TestBackoffEntry(const TestBackoffEntry&) = delete;
+  TestBackoffEntry& operator=(const TestBackoffEntry&) = delete;
 
   ~TestBackoffEntry() override {}
 
@@ -29,8 +31,6 @@ class TestBackoffEntry : public BackoffEntry {
 
  private:
   TimeTicks now_;
-
-  DISALLOW_COPY_AND_ASSIGN(TestBackoffEntry);
 };
 
 TEST(BackoffEntryTest, BaseTest) {

@@ -24,6 +24,9 @@ class Daemon final {
   // IDs may be unique to that server, so the clients also need to be
   // configured properly for the chosen server.
   explicit Daemon(const std::string& url);
+  Daemon(const Daemon&) = delete;
+  Daemon& operator=(const Daemon&) = delete;
+
   ~Daemon();
 
   // Does all the work. Blocks until the daemon is finished.
@@ -34,8 +37,6 @@ class Daemon final {
   base::Thread worker_thread_;
   base::FileDescriptorWatcher watcher_;
   std::unique_ptr<feedback::FeedbackUploader> uploader_;
-
-  DISALLOW_COPY_AND_ASSIGN(Daemon);
 };
 
 }  // namespace feedback

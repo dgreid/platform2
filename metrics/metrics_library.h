@@ -45,6 +45,9 @@ class MetricsLibraryInterface {
 class MetricsLibrary : public MetricsLibraryInterface {
  public:
   MetricsLibrary();
+  MetricsLibrary(const MetricsLibrary&) = delete;
+  MetricsLibrary& operator=(const MetricsLibrary&) = delete;
+
   virtual ~MetricsLibrary();
 
   // Formerly used to initialize the library.
@@ -189,8 +192,6 @@ class MetricsLibrary : public MetricsLibraryInterface {
   base::FilePath consent_file_;
 
   std::unique_ptr<policy::PolicyProvider> policy_provider_;
-
-  DISALLOW_COPY_AND_ASSIGN(MetricsLibrary);
 };
 
 #endif  // METRICS_METRICS_LIBRARY_H_

@@ -26,6 +26,8 @@ class CoredumpWriter {
   // Core dump is read from |fd|, and written to |coredump_path|. Files needed
   // for minidump conversion are stored in |container_dir|.
   CoredumpWriter(int fd, const char* coredump_path, const char* container_dir);
+  CoredumpWriter(const CoredumpWriter&) = delete;
+  CoredumpWriter& operator=(const CoredumpWriter&) = delete;
 
   // Returns sysexits.h exit code.
   int WriteCoredump();
@@ -67,8 +69,6 @@ class CoredumpWriter {
   const int fd_;  // Source stream.
   const char* const coredump_path_;
   const char* const container_dir_;
-
-  DISALLOW_COPY_AND_ASSIGN(CoredumpWriter);
 };
 
 namespace std {

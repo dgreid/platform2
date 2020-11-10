@@ -340,6 +340,9 @@ class ManagerTest : public PropertyStoreTest {
     static const char kActionName[];
 
     TerminationActionTest() : manager_(nullptr) {}
+    TerminationActionTest(const TerminationActionTest&) = delete;
+    TerminationActionTest& operator=(const TerminationActionTest&) = delete;
+
     virtual ~TerminationActionTest() = default;
 
     MOCK_METHOD(void, Done, (const Error&));
@@ -350,32 +353,38 @@ class ManagerTest : public PropertyStoreTest {
 
    private:
     Manager* manager_;
-    DISALLOW_COPY_AND_ASSIGN(TerminationActionTest);
   };
 
   class DestinationVerificationTest
       : public base::SupportsWeakPtr<DestinationVerificationTest> {
    public:
     DestinationVerificationTest() = default;
+    DestinationVerificationTest(const DestinationVerificationTest&) = delete;
+    DestinationVerificationTest& operator=(const DestinationVerificationTest&) =
+        delete;
+
     virtual ~DestinationVerificationTest() = default;
 
     MOCK_METHOD(void, ResultBoolCallbackStub, (const Error&, bool));
     MOCK_METHOD(void, ResultStringCallbackStub, (const Error&, const string&));
 
    private:
-    DISALLOW_COPY_AND_ASSIGN(DestinationVerificationTest);
   };
 
   class DisableTechnologyReplyHandler
       : public base::SupportsWeakPtr<DisableTechnologyReplyHandler> {
    public:
     DisableTechnologyReplyHandler() = default;
+    DisableTechnologyReplyHandler(const DisableTechnologyReplyHandler&) =
+        delete;
+    DisableTechnologyReplyHandler& operator=(
+        const DisableTechnologyReplyHandler&) = delete;
+
     virtual ~DisableTechnologyReplyHandler() = default;
 
     MOCK_METHOD(void, ReportResult, (const Error&));
 
    private:
-    DISALLOW_COPY_AND_ASSIGN(DisableTechnologyReplyHandler);
   };
 
   class ResultCallbackObserver {
@@ -383,6 +392,9 @@ class ManagerTest : public PropertyStoreTest {
     ResultCallbackObserver()
         : result_callback_(Bind(&ResultCallbackObserver::OnResultCallback,
                                 Unretained(this))) {}
+    ResultCallbackObserver(const ResultCallbackObserver&) = delete;
+    ResultCallbackObserver& operator=(const ResultCallbackObserver&) = delete;
+
     virtual ~ResultCallbackObserver() = default;
 
     MOCK_METHOD(void, OnResultCallback, (const Error&));
@@ -392,7 +404,6 @@ class ManagerTest : public PropertyStoreTest {
    private:
     ResultCallback result_callback_;
 
-    DISALLOW_COPY_AND_ASSIGN(ResultCallbackObserver);
   };
 
   void SetSuspending(bool suspending) {

@@ -39,6 +39,9 @@ class BacklightController {
   };
 
   BacklightController() {}
+  BacklightController(const BacklightController&) = delete;
+  BacklightController& operator=(const BacklightController&) = delete;
+
   virtual ~BacklightController() {}
 
   // Adds or removes an observer.
@@ -157,9 +160,6 @@ class BacklightController {
       const std::string& signal_name,
       double brightness_percent,
       BacklightBrightnessChange_Cause cause);
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(BacklightController);
 };
 
 }  // namespace policy

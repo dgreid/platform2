@@ -27,6 +27,9 @@ class SubDeviceClientFdHolder {
                           uint32_t subdevice_id,
                           base::ScopedFD fd,
                           ClientDataCallback client_data_cb);
+  SubDeviceClientFdHolder(const SubDeviceClientFdHolder&) = delete;
+  SubDeviceClientFdHolder& operator=(const SubDeviceClientFdHolder&) = delete;
+
   static std::unique_ptr<SubDeviceClientFdHolder> Create(
       uint32_t client_id,
       uint32_t subdevice_id,
@@ -57,8 +60,6 @@ class SubDeviceClientFdHolder {
   ClientDataCallback client_data_cb_;
   std::unique_ptr<midi::MidiMessageQueue> queue_;
   base::WeakPtrFactory<SubDeviceClientFdHolder> weak_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(SubDeviceClientFdHolder);
 };
 
 }  // namespace midis

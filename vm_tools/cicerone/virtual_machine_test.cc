@@ -36,14 +36,15 @@ constexpr char kVmToken[] = "token";
 class VirtualMachineTest : public ::testing::Test {
  public:
   VirtualMachineTest() : termina_vm_(1, 2, ""), plugin_vm_(0, 3, kVmToken) {}
+  VirtualMachineTest(const VirtualMachineTest&) = delete;
+  VirtualMachineTest& operator=(const VirtualMachineTest&) = delete;
+
   ~VirtualMachineTest() override = default;
 
  protected:
   // Actual virtual machine being tested.
   VirtualMachine termina_vm_;
   VirtualMachine plugin_vm_;
-
-  DISALLOW_COPY_AND_ASSIGN(VirtualMachineTest);
 };
 
 TEST_F(VirtualMachineTest, NoContainerToken) {

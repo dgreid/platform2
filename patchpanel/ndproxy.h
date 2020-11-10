@@ -41,6 +41,9 @@ class NDProxy {
   static constexpr ssize_t kTranslateErrorBufferMisaligned = -4;
 
   NDProxy();
+  NDProxy(const NDProxy&) = delete;
+  NDProxy& operator=(const NDProxy&) = delete;
+
   virtual ~NDProxy() = default;
 
   ssize_t TranslateNDFrame(const uint8_t* in_frame,
@@ -150,7 +153,6 @@ class NDProxy {
   base::WeakPtrFactory<NDProxy> weak_factory_{this};
 
   FRIEND_TEST(NDProxyTest, TranslateFrame);
-  DISALLOW_COPY_AND_ASSIGN(NDProxy);
 };
 
 // A wrapper class for running NDProxy in a daemon process. Control messages and
@@ -158,6 +160,9 @@ class NDProxy {
 class NDProxyDaemon : public brillo::Daemon {
  public:
   explicit NDProxyDaemon(base::ScopedFD control_fd);
+  NDProxyDaemon(const NDProxyDaemon&) = delete;
+  NDProxyDaemon& operator=(const NDProxyDaemon&) = delete;
+
   virtual ~NDProxyDaemon();
 
  private:
@@ -193,8 +198,6 @@ class NDProxyDaemon : public brillo::Daemon {
   NDProxy proxy_;
 
   base::WeakPtrFactory<NDProxyDaemon> weak_factory_{this};
-
-  DISALLOW_COPY_AND_ASSIGN(NDProxyDaemon);
 };
 
 }  // namespace patchpanel

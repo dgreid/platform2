@@ -21,6 +21,9 @@ class FakeProcessRunner : public MinijailedProcessRunner {
  public:
   explicit FakeProcessRunner(std::vector<std::string>* runs = nullptr)
       : runs_(runs ? runs : &runs_vec_) {}
+  FakeProcessRunner(const FakeProcessRunner&) = delete;
+  FakeProcessRunner& operator=(const FakeProcessRunner&) = delete;
+
   ~FakeProcessRunner() = default;
 
   int Run(const std::vector<std::string>& argv, bool log_failures) override {
@@ -79,8 +82,6 @@ class FakeProcessRunner : public MinijailedProcessRunner {
   uint32_t add_con_prefix_len_;
   bool add_enable_multicast_;
   std::string add_con_pid_;
-
-  DISALLOW_COPY_AND_ASSIGN(FakeProcessRunner);
 };
 
 }  // namespace patchpanel

@@ -33,6 +33,8 @@ class SHILL_EXPORT AttributeList : public base::RefCounted<AttributeList> {
   using AttributeMethod = base::Callback<bool(int id, const ByteString& value)>;
 
   AttributeList();
+  AttributeList(const AttributeList&) = delete;
+  AttributeList& operator=(const AttributeList&) = delete;
 
   // Instantiates an NetlinkAttribute of the appropriate type from |id|,
   // and adds it to |attributes_|.
@@ -140,8 +142,6 @@ class SHILL_EXPORT AttributeList : public base::RefCounted<AttributeList> {
   SHILL_PRIVATE NetlinkAttribute* GetAttribute(int id) const;
 
   AttributeMap attributes_;
-
-  DISALLOW_COPY_AND_ASSIGN(AttributeList);
 };
 
 // Provides a mechanism to iterate through the ids of all of the attributes
@@ -151,6 +151,9 @@ class AttributeIdIterator {
  public:
   explicit AttributeIdIterator(const AttributeList& list)
       : iter_(list.attributes_.begin()), end_(list.attributes_.end()) {}
+  AttributeIdIterator(const AttributeIdIterator&) = delete;
+  AttributeIdIterator& operator=(const AttributeIdIterator&) = delete;
+
   void Advance() { ++iter_; }
   bool AtEnd() const { return iter_ == end_; }
   int GetId() const { return iter_->first; }
@@ -158,8 +161,6 @@ class AttributeIdIterator {
  private:
   AttributeList::AttributeMap::const_iterator iter_;
   const AttributeList::AttributeMap::const_iterator end_;
-
-  DISALLOW_COPY_AND_ASSIGN(AttributeIdIterator);
 };
 
 }  // namespace shill

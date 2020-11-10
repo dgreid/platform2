@@ -20,13 +20,14 @@ namespace patchpanel {
 class FakeFirewall : public Firewall {
  public:
   FakeFirewall() = default;
+  FakeFirewall(const FakeFirewall&) = delete;
+  FakeFirewall& operator=(const FakeFirewall&) = delete;
+
   ~FakeFirewall() = default;
 
  private:
   // The fake's implementation always succeeds.
   int RunInMinijail(const std::vector<std::string>& argv) override { return 0; }
-
-  DISALLOW_COPY_AND_ASSIGN(FakeFirewall);
 };
 
 }  // namespace patchpanel

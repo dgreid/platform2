@@ -16,6 +16,9 @@ namespace trunks {
 class TRUNKS_EXPORT TpmCache {
  public:
   TpmCache() = default;
+  TpmCache(const TpmCache&) = delete;
+  TpmCache& operator=(const TpmCache&) = delete;
+
   virtual ~TpmCache() = default;
 
   // Stores the cached salting key public area in |public_area|. If the cache
@@ -28,9 +31,6 @@ class TRUNKS_EXPORT TpmCache {
   // doesn't exist, gets the info from TPM and caches it. In case neither ECC
   // nor RSA is supported, or there is an error, returns TPM_ALG_ERROR.
   virtual TPM_ALG_ID GetBestSupportedKeyType() = 0;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(TpmCache);
 };
 
 }  // namespace trunks

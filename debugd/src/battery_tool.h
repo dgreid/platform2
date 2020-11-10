@@ -16,12 +16,12 @@ namespace debugd {
 class BatteryTool : public SubprocessTool {
  public:
   BatteryTool() = default;
+  BatteryTool(const BatteryTool&) = delete;
+  BatteryTool& operator=(const BatteryTool&) = delete;
+
   ~BatteryTool() override = default;
 
   std::string BatteryFirmware(const std::string& option);
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(BatteryTool);
 };
 
 }  // namespace debugd

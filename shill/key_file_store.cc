@@ -159,6 +159,8 @@ bool IsBlankComment(const KeyValuePair& kv) {
 class Group {
  public:
   explicit Group(const string& name) : name_(name) {}
+  Group(const Group&) = delete;
+  Group& operator=(const Group&) = delete;
 
   void Set(const string& key, const string& value) {
     if (index_.count(key) > 0) {
@@ -219,8 +221,6 @@ class Group {
   string name_;
   std::list<KeyValuePair> entries_;
   std::map<string, KeyValuePair*> index_;
-
-  DISALLOW_COPY_AND_ASSIGN(Group);
 };
 
 }  // namespace
@@ -381,13 +381,13 @@ class KeyFileStore::KeyFile {
         pre_group_comments_(pre_group_comments),
         groups_(std::move(groups)),
         index_(std::move(index)) {}
+  KeyFile(const KeyFile&) = delete;
+  KeyFile& operator=(const KeyFile&) = delete;
 
   base::FilePath path_;
   std::list<string> pre_group_comments_;
   std::list<Group> groups_;
   std::map<string, Group*> index_;
-
-  DISALLOW_COPY_AND_ASSIGN(KeyFile);
 };
 
 const char KeyFileStore::kCorruptSuffix[] = ".corrupted";

@@ -24,6 +24,9 @@ class TestDelegate : public AmbientLightHandler::Delegate {
   TestDelegate()
       : percent_(-1.0),
         cause_(AmbientLightHandler::BrightnessChangeCause::AMBIENT_LIGHT) {}
+  TestDelegate(const TestDelegate&) = delete;
+  TestDelegate& operator=(const TestDelegate&) = delete;
+
   ~TestDelegate() override {}
 
   double percent() const { return percent_; }
@@ -41,14 +44,14 @@ class TestDelegate : public AmbientLightHandler::Delegate {
  private:
   double percent_;
   AmbientLightHandler::BrightnessChangeCause cause_;
-
-  DISALLOW_COPY_AND_ASSIGN(TestDelegate);
 };
 
 class AmbientLightHandlerTest : public ::testing::Test {
  public:
   AmbientLightHandlerTest()
       : light_sensor_(0), handler_(&light_sensor_, &delegate_) {}
+  AmbientLightHandlerTest(const AmbientLightHandlerTest&) = delete;
+  AmbientLightHandlerTest& operator=(const AmbientLightHandlerTest&) = delete;
 
   ~AmbientLightHandlerTest() override {}
 
@@ -82,9 +85,6 @@ class AmbientLightHandlerTest : public ::testing::Test {
 
   // Initial als smoothing constant passed to AmbientLightHandler::Init().
   double als_smoothing_constant_ = 1.0;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(AmbientLightHandlerTest);
 };
 
 }  // namespace

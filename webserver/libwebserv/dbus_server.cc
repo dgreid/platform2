@@ -20,6 +20,9 @@ class DBusServer::RequestHandler final
     : public org::chromium::WebServer::RequestHandlerInterface {
  public:
   explicit RequestHandler(DBusServer* server) : server_{server} {}
+  RequestHandler(const RequestHandler&) = delete;
+  RequestHandler& operator=(const RequestHandler&) = delete;
+
   bool ProcessRequest(
       brillo::ErrorPtr* error,
       const std::tuple<std::string,
@@ -38,7 +41,6 @@ class DBusServer::RequestHandler final
 
  private:
   DBusServer* server_{nullptr};
-  DISALLOW_COPY_AND_ASSIGN(RequestHandler);
 };
 
 bool DBusServer::RequestHandler::ProcessRequest(

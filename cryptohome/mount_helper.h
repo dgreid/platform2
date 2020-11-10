@@ -91,6 +91,9 @@ class MountHelper : public MountHelperInterface {
         system_salt_(system_salt),
         legacy_mount_(legacy_mount),
         platform_(platform) {}
+  MountHelper(const MountHelper&) = delete;
+  MountHelper& operator=(const MountHelper&) = delete;
+
   ~MountHelper() = default;
 
   // Returns the temporary user path while we're migrating for
@@ -344,8 +347,6 @@ class MountHelper : public MountHelperInterface {
 
   FRIEND_TEST(EphemeralNoUserSystemTest, CreateMyFilesDownloads);
   FRIEND_TEST(EphemeralNoUserSystemTest, CreateMyFilesDownloadsAlreadyExists);
-
-  DISALLOW_COPY_AND_ASSIGN(MountHelper);
 };
 
 }  // namespace cryptohome

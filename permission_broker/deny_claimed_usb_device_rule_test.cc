@@ -24,6 +24,11 @@ namespace permission_broker {
 class DenyClaimedUsbDeviceRuleMockPolicy : public DenyClaimedUsbDeviceRule {
  public:
   DenyClaimedUsbDeviceRuleMockPolicy() = default;
+  DenyClaimedUsbDeviceRuleMockPolicy(
+      const DenyClaimedUsbDeviceRuleMockPolicy&) = delete;
+  DenyClaimedUsbDeviceRuleMockPolicy& operator=(
+      const DenyClaimedUsbDeviceRuleMockPolicy&) = delete;
+
   ~DenyClaimedUsbDeviceRuleMockPolicy() override = default;
 
   void SetMockedUsbAllowList(
@@ -33,13 +38,15 @@ class DenyClaimedUsbDeviceRuleMockPolicy : public DenyClaimedUsbDeviceRule {
 
  private:
   bool LoadPolicy() override { return true; }
-
-  DISALLOW_COPY_AND_ASSIGN(DenyClaimedUsbDeviceRuleMockPolicy);
 };
 
 class DenyClaimedUsbDeviceRuleTest : public RuleTest {
  public:
   DenyClaimedUsbDeviceRuleTest() = default;
+  DenyClaimedUsbDeviceRuleTest(const DenyClaimedUsbDeviceRuleTest&) = delete;
+  DenyClaimedUsbDeviceRuleTest& operator=(const DenyClaimedUsbDeviceRuleTest&) =
+      delete;
+
   ~DenyClaimedUsbDeviceRuleTest() override = default;
 
  protected:
@@ -113,9 +120,6 @@ class DenyClaimedUsbDeviceRuleTest : public RuleTest {
   set<string> partially_claimed_devices_;
   set<string> detachable_devices_;
   std::vector<policy::DevicePolicy::UsbDeviceId> detachable_allow_list_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(DenyClaimedUsbDeviceRuleTest);
 };
 
 TEST_F(DenyClaimedUsbDeviceRuleTest, IgnoreNonUsbDevice) {

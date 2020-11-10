@@ -208,6 +208,9 @@ class EcService {
   };
 
   EcService();
+  EcService(const EcService&) = delete;
+  EcService& operator=(const EcService&) = delete;
+
   virtual ~EcService();
 
   // Starts service.
@@ -275,8 +278,6 @@ class EcService {
   std::unique_ptr<base::SimpleThread> monitoring_thread_;
 
   base::SequenceCheckerImpl sequence_checker_;
-
-  DISALLOW_COPY_AND_ASSIGN(EcService);
 };
 
 }  // namespace diagnostics

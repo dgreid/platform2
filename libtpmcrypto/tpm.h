@@ -67,8 +67,8 @@ class BRILLO_EXPORT Tpm {
 
  protected:
   Tpm() = default;
-
-  DISALLOW_COPY_AND_ASSIGN(Tpm);
+  Tpm(const Tpm&) = delete;
+  Tpm& operator=(const Tpm&) = delete;
 };
 
 BRILLO_EXPORT std::unique_ptr<Tpm> CreateTpmInstance();

@@ -30,6 +30,9 @@ class CrashSenderTool : public SubprocessTool {
       "org.chromium.debugd.error.BadFileName";
 
   CrashSenderTool() = default;
+  CrashSenderTool(const CrashSenderTool&) = delete;
+  CrashSenderTool& operator=(const CrashSenderTool&) = delete;
+
   ~CrashSenderTool() override = default;
 
   // Run crash_sender to upload any crashes currently on the system.
@@ -54,7 +57,6 @@ class CrashSenderTool : public SubprocessTool {
 
   void RunCrashSender(bool ignore_hold_off_time,
                       const base::FilePath& crash_directory);
-  DISALLOW_COPY_AND_ASSIGN(CrashSenderTool);
 };
 
 }  // namespace debugd

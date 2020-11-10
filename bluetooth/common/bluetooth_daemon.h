@@ -16,6 +16,9 @@ class DBusDaemon;
 class BluetoothDaemon {
  public:
   BluetoothDaemon() = default;
+  BluetoothDaemon(const BluetoothDaemon&) = delete;
+  BluetoothDaemon& operator=(const BluetoothDaemon&) = delete;
+
   virtual ~BluetoothDaemon() = default;
 
   // Initializes the daemon's D-Bus operation.
@@ -23,9 +26,6 @@ class BluetoothDaemon {
   // |bus| is the main D-Bus connection provided by DBusDaemon.
   // |dbus_daemon| refers to the delegator (DBusDaemon). Pointer is not owned.
   virtual bool Init(scoped_refptr<dbus::Bus> bus, DBusDaemon* dbus_daemon) = 0;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(BluetoothDaemon);
 };
 
 }  // namespace bluetooth

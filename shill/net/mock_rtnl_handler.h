@@ -18,6 +18,9 @@ namespace shill {
 class MockRTNLHandler : public RTNLHandler {
  public:
   MockRTNLHandler() = default;
+  MockRTNLHandler(const MockRTNLHandler&) = delete;
+  MockRTNLHandler& operator=(const MockRTNLHandler&) = delete;
+
   ~MockRTNLHandler() override = default;
 
   MOCK_METHOD(void, Start, (uint32_t), (override));
@@ -48,9 +51,6 @@ class MockRTNLHandler : public RTNLHandler {
                    uint32_t* seq) override {
     return DoSendMessage(message.get(), seq);
   }
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockRTNLHandler);
 };
 
 }  // namespace shill

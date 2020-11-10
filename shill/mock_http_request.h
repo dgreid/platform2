@@ -19,6 +19,9 @@ namespace shill {
 class MockHttpRequest : public HttpRequest {
  public:
   MockHttpRequest();
+  MockHttpRequest(const MockHttpRequest&) = delete;
+  MockHttpRequest& operator=(const MockHttpRequest&) = delete;
+
   ~MockHttpRequest() override;
 
   MOCK_METHOD(
@@ -30,9 +33,6 @@ class MockHttpRequest : public HttpRequest {
        const base::Callback<void(Result)>&),
       (override));
   MOCK_METHOD(void, Stop, (), (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockHttpRequest);
 };
 
 }  // namespace shill

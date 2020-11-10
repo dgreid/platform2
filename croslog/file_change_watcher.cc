@@ -153,6 +153,8 @@ class FileChangeWatcherImpl : public FileChangeWatcher,
 
     thread_.StartThread(inotify_fd_.get());
   }
+  FileChangeWatcherImpl(const FileChangeWatcherImpl&) = delete;
+  FileChangeWatcherImpl& operator=(const FileChangeWatcherImpl&) = delete;
 
   // Note: This class is initialized with base::NoDestructor so its destructor
   // is never called.
@@ -255,8 +257,6 @@ class FileChangeWatcherImpl : public FileChangeWatcher,
       }
     }
   }
-
-  DISALLOW_COPY_AND_ASSIGN(FileChangeWatcherImpl);
 };
 
 }  // anonymous namespace

@@ -30,6 +30,9 @@ class EventDispatcher {
   };
 
   EventDispatcher();
+  EventDispatcher(const EventDispatcher&) = delete;
+  EventDispatcher& operator=(const EventDispatcher&) = delete;
+
   ~EventDispatcher();
 
   // Starts dispatching event in a blocking manner until Stop() is called.
@@ -71,8 +74,6 @@ class EventDispatcher {
   base::OnceClosure quit_closure_;
   base::FileDescriptorWatcher watcher_{task_executor_.task_runner()};
   std::map<int, Watcher> file_descriptor_watchers_;
-
-  DISALLOW_COPY_AND_ASSIGN(EventDispatcher);
 };
 
 }  // namespace mist

@@ -134,6 +134,9 @@ class NvramSpace {
 class Tpm {
  public:
   Tpm();
+  Tpm(const Tpm&) = delete;
+  Tpm& operator=(const Tpm&) = delete;
+
   ~Tpm();
 
   bool available() const { return available_; }
@@ -187,8 +190,6 @@ class Tpm {
 
   std::unique_ptr<NvramSpace> lockbox_space_;
   std::unique_ptr<NvramSpace> encstateful_space_;
-
-  DISALLOW_COPY_AND_ASSIGN(Tpm);
 };
 
 // The interface used by the key handling logic to access the system key. The

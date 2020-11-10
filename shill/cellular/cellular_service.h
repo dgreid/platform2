@@ -47,6 +47,9 @@ class CellularService : public Service {
                   const std::string& imsi,
                   const std::string& iccid,
                   const std::string& sim_card_id);
+  CellularService(const CellularService&) = delete;
+  CellularService& operator=(const CellularService&) = delete;
+
   ~CellularService() override;
 
   void SetDevice(Cellular* device);
@@ -229,8 +232,6 @@ class CellularService : public Service {
   bool is_auto_connecting_;
   // Flag indicating if the user has run out of data credits.
   bool out_of_credits_;
-
-  DISALLOW_COPY_AND_ASSIGN(CellularService);
 };
 
 }  // namespace shill

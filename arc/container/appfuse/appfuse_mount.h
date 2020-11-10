@@ -32,6 +32,9 @@ class AppfuseMount {
                uid_t uid,
                int mount_id,
                Delegate* delegate);
+  AppfuseMount(const AppfuseMount&) = delete;
+  AppfuseMount& operator=(const AppfuseMount&) = delete;
+
   ~AppfuseMount();
 
   uid_t uid() const { return uid_; }
@@ -59,8 +62,6 @@ class AppfuseMount {
   DataFilter data_filter_;
 
   base::WeakPtrFactory<AppfuseMount> weak_ptr_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(AppfuseMount);
 };
 
 }  // namespace appfuse

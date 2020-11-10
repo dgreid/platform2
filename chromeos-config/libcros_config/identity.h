@@ -29,6 +29,9 @@ enum class SystemArchitecture {
 class BRILLO_EXPORT CrosConfigIdentity {
  public:
   CrosConfigIdentity();
+  CrosConfigIdentity(const CrosConfigIdentity&) = delete;
+  CrosConfigIdentity& operator=(const CrosConfigIdentity&) = delete;
+
   virtual ~CrosConfigIdentity();
 
   // Get the current system architecture
@@ -112,8 +115,6 @@ class BRILLO_EXPORT CrosConfigIdentity {
 
  private:
   std::string vpd_id_;
-
-  DISALLOW_COPY_AND_ASSIGN(CrosConfigIdentity);
 };
 
 }  // namespace brillo

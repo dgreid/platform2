@@ -19,6 +19,9 @@ namespace cryptohome {
 class ServiceDistributed : public Service {
  public:
   ServiceDistributed();
+  ServiceDistributed(const ServiceDistributed&) = delete;
+  ServiceDistributed& operator=(const ServiceDistributed&) = delete;
+
   virtual ~ServiceDistributed();
 
   void AttestationInitialize() override;
@@ -319,8 +322,6 @@ class ServiceDistributed : public Service {
 
   // dbus proxy that handles the ownership taken signal registration.
   std::unique_ptr<brillo::dbus::Proxy> tpm_manager_proxy_;
-
-  DISALLOW_COPY_AND_ASSIGN(ServiceDistributed);
 };
 
 }  // namespace cryptohome

@@ -35,6 +35,9 @@ enum class MergingRule {
 class PropertyFactoryBase {
  public:
   PropertyFactoryBase() = default;
+  PropertyFactoryBase(const PropertyFactoryBase&) = delete;
+  PropertyFactoryBase& operator=(const PropertyFactoryBase&) = delete;
+
   virtual ~PropertyFactoryBase() = default;
 
   // Instantiates a dbus::Property having the same type as this factory.
@@ -51,9 +54,6 @@ class PropertyFactoryBase {
   virtual void MergePropertiesToExportedProperty(
       const std::vector<dbus::PropertyBase*>& remote_properties,
       brillo::dbus_utils::ExportedPropertyBase* exported_property_base) = 0;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(PropertyFactoryBase);
 };
 
 // The type-specific property factory.
@@ -63,6 +63,9 @@ class PropertyFactory : public PropertyFactoryBase {
   PropertyFactory() : merging_rule_(MergingRule::DEFAULT) {}
   explicit PropertyFactory(MergingRule merging_rule)
       : merging_rule_(merging_rule) {}
+  PropertyFactory(const PropertyFactory&) = delete;
+  PropertyFactory& operator=(const PropertyFactory&) = delete;
+
   ~PropertyFactory() override = default;
 
   std::unique_ptr<dbus::PropertyBase> CreateProperty() override {
@@ -227,14 +230,15 @@ class PropertyFactory : public PropertyFactoryBase {
   }
 
   MergingRule merging_rule_;
-
-  DISALLOW_COPY_AND_ASSIGN(PropertyFactory);
 };
 
 // A dbus::PropertySet that also holds the individual properties.
 class PropertySet : public dbus::PropertySet {
  public:
   using dbus::PropertySet::PropertySet;
+
+  PropertySet(const PropertySet&) = delete;
+  PropertySet& operator=(const PropertySet&) = delete;
 
   // Holds the specified property |property_base| and registers it with the
   // specified name |property_name|.
@@ -248,8 +252,6 @@ class PropertySet : public dbus::PropertySet {
  private:
   // Keeps the registered properties.
   std::map<std::string, std::unique_ptr<dbus::PropertyBase>> properties_;
-
-  DISALLOW_COPY_AND_ASSIGN(PropertySet);
 };
 
 }  // namespace bluetooth

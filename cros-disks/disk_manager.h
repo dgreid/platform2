@@ -39,6 +39,9 @@ class DiskManager : public MountManager {
               brillo::ProcessReaper* process_reaper,
               DiskMonitor* disk_monitor,
               DeviceEjector* device_ejector);
+  DiskManager(const DiskManager&) = delete;
+  DiskManager& operator=(const DiskManager&) = delete;
+
   ~DiskManager() override;
 
   // Initializes the disk manager and registers default filesystems.
@@ -147,8 +150,6 @@ class DiskManager : public MountManager {
   FRIEND_TEST(DiskManagerTest, EjectDeviceWhenUnmountFailed);
   FRIEND_TEST(DiskManagerTest, EjectDeviceWhenExplicitlyDisabled);
   FRIEND_TEST(DiskManagerTest, EjectDeviceWhenReleased);
-
-  DISALLOW_COPY_AND_ASSIGN(DiskManager);
 };
 
 }  // namespace cros_disks

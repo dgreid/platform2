@@ -29,6 +29,9 @@ class WiFiService;
 class WiFiProvider : public ProviderInterface {
  public:
   explicit WiFiProvider(Manager* manager);
+  WiFiProvider(const WiFiProvider&) = delete;
+  WiFiProvider& operator=(const WiFiProvider&) = delete;
+
   ~WiFiProvider() override;
 
   // Called by Manager as a part of the Provider interface.  The attributes
@@ -131,8 +134,6 @@ class WiFiProvider : public ProviderInterface {
 
   // Disable 802.11ac Very High Throughput (VHT) connections.
   bool disable_vht_;
-
-  DISALLOW_COPY_AND_ASSIGN(WiFiProvider);
 };
 
 }  // namespace shill

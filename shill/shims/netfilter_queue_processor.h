@@ -26,6 +26,9 @@ namespace shims {
 class NetfilterQueueProcessor {
  public:
   NetfilterQueueProcessor(int input_queue, int output_queue);
+  NetfilterQueueProcessor(const NetfilterQueueProcessor&) = delete;
+  NetfilterQueueProcessor& operator=(const NetfilterQueueProcessor&) = delete;
+
   virtual ~NetfilterQueueProcessor();
 
   // Run the main loop of the processor.
@@ -44,6 +47,9 @@ class NetfilterQueueProcessor {
   class Packet {
    public:
     Packet();
+    Packet(const Packet&) = delete;
+    Packet& operator=(const Packet&) = delete;
+
     virtual ~Packet();
 
     // Inputs a netfilter data packet and reads meta-information (packet id)
@@ -86,7 +92,6 @@ class NetfilterQueueProcessor {
     uint16_t source_port_;
     uint16_t destination_port_;
 
-    DISALLOW_COPY_AND_ASSIGN(Packet);
   };
 
   struct ListenerEntry {
@@ -188,8 +193,6 @@ class NetfilterQueueProcessor {
 
   // A list of records of listening sockets.
   std::deque<ListenerEntryPtr> listeners_;
-
-  DISALLOW_COPY_AND_ASSIGN(NetfilterQueueProcessor);
 };
 
 }  // namespace shims

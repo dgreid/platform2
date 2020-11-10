@@ -24,6 +24,9 @@ class SystemMounter : public Mounter {
                 std::string filesystem_type,
                 bool read_only,
                 std::vector<std::string> options);
+  SystemMounter(const SystemMounter&) = delete;
+  SystemMounter& operator=(const SystemMounter&) = delete;
+
   ~SystemMounter() override;
 
   const std::string& filesystem_type() const { return filesystem_type_; }
@@ -47,8 +50,6 @@ class SystemMounter : public Mounter {
   const std::string filesystem_type_;
   const int flags_;
   const std::vector<std::string> options_;
-
-  DISALLOW_COPY_AND_ASSIGN(SystemMounter);
 };
 
 }  // namespace cros_disks

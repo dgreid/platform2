@@ -19,6 +19,10 @@ namespace shill {
 class MockSupplicantInterfaceProxy : public SupplicantInterfaceProxyInterface {
  public:
   MockSupplicantInterfaceProxy();
+  MockSupplicantInterfaceProxy(const MockSupplicantInterfaceProxy&) = delete;
+  MockSupplicantInterfaceProxy& operator=(const MockSupplicantInterfaceProxy&) =
+      delete;
+
   ~MockSupplicantInterfaceProxy() override;
 
   MOCK_METHOD(bool,
@@ -48,9 +52,6 @@ class MockSupplicantInterfaceProxy : public SupplicantInterfaceProxyInterface {
               (const std::vector<unsigned char>&, bool),
               (override));
   MOCK_METHOD(bool, DisableMacAddressRandomization, (), (override));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockSupplicantInterfaceProxy);
 };
 
 }  // namespace shill

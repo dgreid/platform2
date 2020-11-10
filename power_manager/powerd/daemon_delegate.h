@@ -52,6 +52,9 @@ class PrefsInterface;
 class DaemonDelegate {
  public:
   DaemonDelegate() {}
+  DaemonDelegate(const DaemonDelegate&) = delete;
+  DaemonDelegate& operator=(const DaemonDelegate&) = delete;
+
   virtual ~DaemonDelegate() {}
 
   // Crashes if prefs can't be loaded (e.g. due to a missing directory).
@@ -163,9 +166,6 @@ class DaemonDelegate {
 
   // Runs |command| synchronously.  The process's exit code is returned.
   virtual int Run(const std::string& command) = 0;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(DaemonDelegate);
 };
 
 }  // namespace power_manager

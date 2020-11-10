@@ -38,6 +38,9 @@ class DBusProtocolHandler;
 class LIBWEBSERV_PRIVATE DBusServer : public Server {
  public:
   DBusServer();
+  DBusServer(const DBusServer&) = delete;
+  DBusServer& operator=(const DBusServer&) = delete;
+
   ~DBusServer() override = default;
 
   // Establish a connection to the system webserver.
@@ -129,8 +132,6 @@ class LIBWEBSERV_PRIVATE DBusServer : public Server {
 
   // D-Bus service name used by the daemon hosting this object.
   std::string service_name_;
-
-  DISALLOW_COPY_AND_ASSIGN(DBusServer);
 };
 
 }  // namespace libwebserv

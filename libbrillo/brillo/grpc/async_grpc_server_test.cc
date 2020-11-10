@@ -31,6 +31,8 @@ std::string MakeGrpcUri(const base::FilePath& socket_path) {
 class AsyncGrpcServerTest : public ::testing::Test {
  public:
   AsyncGrpcServerTest() = default;
+  AsyncGrpcServerTest(const AsyncGrpcServerTest&) = delete;
+  AsyncGrpcServerTest& operator=(const AsyncGrpcServerTest&) = delete;
 
   void SetUp() override { ASSERT_TRUE(temp_dir_.CreateUniqueTempDir()); }
 
@@ -71,8 +73,6 @@ class AsyncGrpcServerTest : public ::testing::Test {
   base::ScopedTempDir temp_dir_;
   std::unique_ptr<AsyncGrpcServer<test_rpcs::ExampleService::AsyncService>>
       server_;
-
-  DISALLOW_COPY_AND_ASSIGN(AsyncGrpcServerTest);
 };
 
 // Test that the server gets successfully started on the given socket file path.

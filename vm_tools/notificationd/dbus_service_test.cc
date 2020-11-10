@@ -92,6 +92,8 @@ namespace notificationd {
 class DBusServiceTest : public ::testing::Test {
  public:
   DBusServiceTest() = default;
+  DBusServiceTest(const DBusServiceTest&) = delete;
+  DBusServiceTest& operator=(const DBusServiceTest&) = delete;
 
   // Create dummy method call.
   std::unique_ptr<dbus::MethodCall> CreateMockMethodCall(
@@ -119,9 +121,6 @@ class DBusServiceTest : public ::testing::Test {
 
     writer->CloseContainer(&array_writer);
   }
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(DBusServiceTest);
 };
 
 // Test if dbus adaptor can properly call GetCapability method and recieve the
