@@ -206,12 +206,6 @@ TEST_F(VPNServiceTest, IsAlwaysOnVpn) {
   EXPECT_FALSE(service_->IsAlwaysOnVpn(kOtherPackage));
 }
 
-TEST_F(VPNServiceTest, GetDeviceRpcId) {
-  Error error;
-  EXPECT_EQ(RpcIdentifier("/"), service_->GetDeviceRpcId(&error));
-  EXPECT_EQ(Error::kNotSupported, error.type());
-}
-
 TEST_F(VPNServiceTest, Load) {
   FakeStore storage;
   static const char kStorageID[] = "storage-id";
