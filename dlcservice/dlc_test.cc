@@ -196,8 +196,7 @@ TEST_F(DlcBaseTest, UpdateCompleted) {
 TEST_F(DlcBaseTest, MakeReadyForUpdate) {
   DlcBase dlc(kSecondDlc);
   dlc.Initialize();
-  dlc.is_verified_ = true;
-
+  dlc.MarkVerified();
   // Make sure the function recreates the inactive image.
   auto inactive_image_path =
       dlc.GetImagePath(SystemState::Get()->inactive_boot_slot());

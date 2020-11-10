@@ -69,8 +69,8 @@ bool DlcBase::Initialize() {
           << "Failed to delete indirect root mount file during Initialization: "
           << JoinPaths(prefs_package_path_, kDlcRootMount);
   }
-  is_verified_ =
-      Prefs(*this, system_state->active_boot_slot()).Exists(kDlcPrefVerified);
+  state_.set_is_verified(
+      Prefs(*this, system_state->active_boot_slot()).Exists(kDlcPrefVerified));
   return true;
 }
 
@@ -99,7 +99,7 @@ bool DlcBase::IsInstalled() const {
 }
 
 bool DlcBase::IsVerified() const {
-  return is_verified_;
+  return state_.is_verified();
 }
 
 bool DlcBase::HasContent() const {
@@ -222,13 +222,13 @@ bool DlcBase::MakeReadyForUpdate() const {
 }
 
 bool DlcBase::MarkVerified() {
-  is_verified_ = true;
+  state_.set_is_verified(true);
   return Prefs(*this, SystemState::Get()->active_boot_slot())
       .Create(kDlcPrefVerified);
 }
 
 bool DlcBase::MarkUnverified() {
-  is_verified_ = false;
+  state_.set_is_verified(false);
   return Prefs(*this, SystemState::Get()->active_boot_slot())
       .Delete(kDlcPrefVerified);
 }

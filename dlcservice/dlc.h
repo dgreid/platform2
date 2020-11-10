@@ -30,7 +30,7 @@ using DlcId = std::string;
 
 class DlcBase {
  public:
-  explicit DlcBase(DlcId id) : id_(std::move(id)), is_verified_(false) {}
+  explicit DlcBase(DlcId id) : id_(std::move(id)) {}
   virtual ~DlcBase() = default;
 
   // Returns the list of directories related to a DLC for deletion.
@@ -188,9 +188,6 @@ class DlcBase {
   base::FilePath prefs_path_;
   base::FilePath prefs_package_path_;
   base::FilePath preloaded_image_path_;
-
-  // True if the pref |kDlcPrefVerified| exists.
-  bool is_verified_;
 
   // The object that keeps track of ref counts. NOTE: Do NOT access this object
   // directly. Use |GetRefCount()| instead.
