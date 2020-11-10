@@ -151,6 +151,9 @@ std::unique_ptr<dbus::Response> Service::StartArcVm(
       std::make_move_iterator(request.mutable_params()->end()));
   params.emplace_back(base::StringPrintf("androidboot.seneschal_server_port=%d",
                                          seneschal_server_port));
+  // Parameters for drivers of the ac97 devices.
+  params.emplace_back("snd_intel8x0.ac97_clock=48000");
+  params.emplace_back("snd_intel8x0.inside_vm=1");
 
   // Start the VM and build the response.
   ArcVmFeatures features;
