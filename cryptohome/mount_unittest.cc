@@ -22,6 +22,7 @@
 #include <base/logging.h>
 #include <base/stl_util.h>
 #include <base/strings/string_number_conversions.h>
+#include <base/test/task_environment.h>
 #include <base/time/time.h>
 #include <brillo/cryptohome.h>
 #include <brillo/process/process_mock.h>
@@ -465,6 +466,8 @@ class MountTest
   MockChapsClientFactory chaps_client_factory_;
   std::unique_ptr<UserOldestActivityTimestampCache> user_timestamp_cache_;
   scoped_refptr<Mount> mount_;
+  base::test::TaskEnvironment task_environment_{
+      base::test::TaskEnvironment::TimeSource::MOCK_TIME};
 
  private:
   DISALLOW_COPY_AND_ASSIGN(MountTest);

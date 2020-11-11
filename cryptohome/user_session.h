@@ -9,7 +9,6 @@
 #include <string>
 
 #include <base/memory/ref_counted.h>
-#include <base/timer/timer.h>
 #include <brillo/secure_blob.h>
 
 #include "cryptohome/credentials.h"
@@ -61,9 +60,6 @@ class UserSession : public base::RefCountedThreadSafe<UserSession> {
   // Returns status string of the proxied Mount objest.
   base::Value GetStatus() const;
 
-  // Returns the WebAuthn secret and clears it from memory.
-  std::unique_ptr<brillo::SecureBlob> GetWebAuthnSecret();
-
   // Sets credentials current session can be re-authenticated with and the
   // index of the keyset those credentials belong to. Returns false in case
   // anything went wrong in setting up new re-auth state.
@@ -84,13 +80,6 @@ class UserSession : public base::RefCountedThreadSafe<UserSession> {
   int key_index() const { return key_index_; }
 
  private:
-  // Computes a public derivative from |fek| and |fnek| for u2fd to fetch.
-  void PrepareWebAuthnSecret(const std::string& obfuscated_username,
-                             const brillo::SecureBlob& fek,
-                             const brillo::SecureBlob& fnek);
-  // Clears the WebAuthn secret if it's not read yet.
-  void ClearWebAuthnSecret();
-
   HomeDirs* homedirs_;
 
   std::string obfuscated_username_;
@@ -99,11 +88,6 @@ class UserSession : public base::RefCountedThreadSafe<UserSession> {
   std::unique_ptr<PasswordVerifier> password_verifier_;
   int key_index_ = -1;
   KeyData key_data_;
-
-  // Secret for WebAuthn credentials.
-  std::unique_ptr<brillo::SecureBlob> webauthn_secret_;
-  // Timer for clearing the |webauthn_secret_| if not read.
-  base::OneShotTimer clear_webauthn_secret_timer_;
 
   scoped_refptr<cryptohome::Mount> mount_;
 };

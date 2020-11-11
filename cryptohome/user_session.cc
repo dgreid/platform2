@@ -6,7 +6,6 @@
 
 #include <memory>
 #include <string>
-#include <utility>
 
 #include <base/memory/ref_counted.h>
 
@@ -15,9 +14,6 @@
 #include "cryptohome/mount.h"
 
 namespace cryptohome {
-
-// Message to use when generating a secret for WebAuthn.
-constexpr char kWebAuthnSecretHmacMessage[] = "AuthTimeWebAuthnSecret";
 
 UserSession::UserSession() {}
 UserSession::~UserSession() {}
@@ -68,9 +64,6 @@ MountError UserSession::MountVault(const Credentials& credentials,
   }
   SetCredentials(credentials, vk->legacy_index());
   UpdateActivityTimestamp(0);
-
-  PrepareWebAuthnSecret(obfuscated_username_, fs_keys.fek(), fs_keys.fnek());
-
   return code;
 }
 
@@ -100,29 +93,6 @@ bool UserSession::UpdateActivityTimestamp(int time_shift_sec) {
 
 base::Value UserSession::GetStatus() const {
   return mount_->GetStatus(key_index_);
-}
-
-void UserSession::PrepareWebAuthnSecret(const std::string& obfuscated_username,
-                                        const brillo::SecureBlob& fek,
-                                        const brillo::SecureBlob& fnek) {
-  // This WebAuthn secret can be rederived upon in-session user auth success
-  // since they will unlock the vault keyset.
-  const std::string message(kWebAuthnSecretHmacMessage);
-  webauthn_secret_ = std::make_unique<brillo::SecureBlob>(
-      CryptoLib::HmacSha256(brillo::SecureBlob::Combine(fnek, fek),
-                            brillo::Blob(message.cbegin(), message.cend())));
-  clear_webauthn_secret_timer_.Start(
-      FROM_HERE, base::TimeDelta::FromSeconds(5),
-      base::BindOnce(&UserSession::ClearWebAuthnSecret,
-                     base::Unretained(this)));
-}
-
-void UserSession::ClearWebAuthnSecret() {
-  webauthn_secret_.reset();
-}
-
-std::unique_ptr<brillo::SecureBlob> UserSession::GetWebAuthnSecret() {
-  return std::move(webauthn_secret_);
 }
 
 bool UserSession::SetCredentials(const Credentials& credentials,

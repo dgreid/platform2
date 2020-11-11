@@ -3734,13 +3734,14 @@ gboolean Service::GetWebAuthnSecret(const GArray* account_id,
   scoped_refptr<UserSession> session =
       GetUserSession(GetAccountId(*identifier));
   BaseReply reply;
-  if (!session) {
+  if (!session || !session->GetMount()) {
     reply.set_error(CRYPTOHOME_ERROR_ACCOUNT_NOT_FOUND);
     SendReply(context, reply);
     return TRUE;
   }
 
-  std::unique_ptr<brillo::SecureBlob> secret = session->GetWebAuthnSecret();
+  std::unique_ptr<brillo::SecureBlob> secret =
+      session->GetMount()->GetWebAuthnSecret();
   if (!secret) {
     reply.set_error(CRYPTOHOME_ERROR_KEY_NOT_FOUND);
     SendReply(context, reply);
