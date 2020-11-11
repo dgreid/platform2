@@ -402,6 +402,7 @@ const char kSetPlayerMetadata[] = "SetPlayerMetadata";
 const char kSetNextHandsfreeProfile[] = "SetNextHandsfreeProfile";
 const char kSetFixA2dpPacketSize[] = "SetFixA2dpPacketSize";
 const char kResendBluetoothBattery[] = "ResendBluetoothBattery";
+const char kGetDeprioritizeBtWbsMic[] = "GetDeprioritizeBtWbsMic";
 
 // Names of properties returned by GetNodes()
 const char kIsInputProperty[] = "IsInput";
