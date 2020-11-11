@@ -142,7 +142,7 @@ bool CrosFpDeviceUpdate::Flash(const CrosFpFirmware& fw,
   cmd.AppendSwitch("write");
   cmd.AppendArgPath(fw.GetPath());
 
-  DLOG(INFO) << "Launching '" << cmd.GetCommandLineString() << "'.";
+  LOG(INFO) << "Launching '" << cmd.GetCommandLineString() << "'.";
 
   // TODO(b/130026657): Impose timeout on flashrom.
   std::string cmd_output;
