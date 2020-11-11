@@ -75,7 +75,7 @@ public:
     virtual ~PSysDAG();
     void setFrameInfo(const std::map<Port, stream_t>& inputInfo,
                       const std::map<Port, stream_t>& outputInfo);
-    int configure(ConfigMode configMode, TuningMode tuningMode);
+    int configure(ConfigMode configMode, TuningMode tuningMode, bool useTnrOutBuffer);
     int start();
     int stop();
 
@@ -106,7 +106,7 @@ private:
 
     void tuningReconfig(TuningMode newTuningMode);
 
-    int createPipeExecutors();
+    int createPipeExecutors(bool useTnrOutBuffer);
     int linkAndConfigExecutors();
     int bindExternalPortsToExecutor();
     void releasePipeExecutors();

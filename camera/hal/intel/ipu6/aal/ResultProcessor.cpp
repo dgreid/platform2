@@ -152,9 +152,10 @@ int ResultProcessor::shutterDone(const ShutterEvent& event) {
     std::lock_guard<std::mutex> l(mLock);
     bool inputBuffer = mInputCam3Bufs.find(event.frameNumber) != mInputCam3Bufs.end();
     for (uint32_t i = 0; i < mRequestStateVector.size(); i++) {
-        if (mRequestStateVector.at(i).frameNumber != event.frameNumber ||
-            mRequestStateVector.at(i).isShutterDone) {
+        if (mRequestStateVector.at(i).frameNumber != event.frameNumber) {
             continue;
+        } else if (mRequestStateVector.at(i).isShutterDone) {
+            return icamera::OK;
         }
 
         camera3_notify_msg_t notifyMsg;
@@ -192,15 +193,14 @@ int ResultProcessor::shutterDone(const ShutterEvent& event) {
 }
 
 int ResultProcessor::metadataDone(const MetadataEvent& event) {
+    std::lock_guard<std::mutex> l(mLock);
+
     MetadataMemory* metaMem = nullptr;
-    {
-        std::lock_guard<std::mutex> l(mLock);
-        for (auto& reqStat : mRequestStateVector) {
-            if (reqStat.frameNumber == event.frameNumber &&
-                reqStat.partialResultReturned < reqStat.partialResultCount) {
-                reqStat.partialResultReturned = 1;
-                metaMem = reqStat.metaResult;
-            }
+    for (auto& reqStat : mRequestStateVector) {
+        if (reqStat.frameNumber == event.frameNumber &&
+            reqStat.partialResultReturned < reqStat.partialResultCount) {
+            reqStat.partialResultReturned = 1;
+            metaMem = reqStat.metaResult;
         }
     }
 
@@ -227,7 +227,6 @@ int ResultProcessor::metadataDone(const MetadataEvent& event) {
     }
 
     bool found = false;
-    std::lock_guard<std::mutex> l(mLock);
     for (uint32_t i = 0; i < mRequestStateVector.size(); i++) {
         if (mRequestStateVector.at(i).frameNumber == event.frameNumber) {
             if (checkRequestDone(mRequestStateVector.at(i))) {
@@ -249,6 +248,8 @@ int ResultProcessor::metadataDone(const MetadataEvent& event) {
 }
 
 int ResultProcessor::bufferDone(const BufferEvent& event) {
+    std::lock_guard<std::mutex> l(mLock);
+
     camera3_capture_result_t result;
     CLEAR(result);
 
@@ -261,21 +262,19 @@ int ResultProcessor::bufferDone(const BufferEvent& event) {
     mCallbackOps->process_capture_result(mCallbackOps, &result);
 
     bool found = false;
-    {
-        std::lock_guard<std::mutex> l(mLock);
-        for (uint32_t i = 0; i < mRequestStateVector.size(); i++) {
-            if (mRequestStateVector.at(i).frameNumber == event.frameNumber) {
-                mRequestStateVector.at(i).buffersReturned++;
-                if (checkRequestDone(mRequestStateVector.at(i))) {
-                    returnInputBuffer(event.frameNumber);
-                    returnRequestDone(event.frameNumber);
-                    releaseMetadataMemory(mRequestStateVector.at(i).metaResult);
-                    mRequestStateVector.erase(mRequestStateVector.begin() + i);
-                }
-                found = true;
+    for (uint32_t i = 0; i < mRequestStateVector.size(); i++) {
+        if (mRequestStateVector.at(i).frameNumber == event.frameNumber) {
+            mRequestStateVector.at(i).buffersReturned++;
+            if (checkRequestDone(mRequestStateVector.at(i))) {
+                returnInputBuffer(event.frameNumber);
+                returnRequestDone(event.frameNumber);
+                releaseMetadataMemory(mRequestStateVector.at(i).metaResult);
+                mRequestStateVector.erase(mRequestStateVector.begin() + i);
             }
+            found = true;
         }
     }
+
     if (!found) {
         LOGW("%s, event.frameNumber %u wasn't found!", __func__, event.frameNumber);
     } else {

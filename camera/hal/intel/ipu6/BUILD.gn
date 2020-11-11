@@ -438,6 +438,7 @@ if (use.ipu6se) {
       "include/linux",
       "src",
       "src/core",
+      "src/fd",
       "src/platformdata",
       "src/3a",
       "src/platformdata/gc",

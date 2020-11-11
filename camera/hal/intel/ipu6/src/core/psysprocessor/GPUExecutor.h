@@ -36,7 +36,7 @@ class PSysDAG;
 class GPUExecutor : public PipeLiteExecutor {
  public:
     GPUExecutor(int cameraId, const ExecutorPolicy& policy, std::vector<std::string> exclusivePGs,
-                PSysDAG* psysDag, std::shared_ptr<IGraphConfig> gc);
+                PSysDAG* psysDag, std::shared_ptr<IGraphConfig> gc, bool useTnrOutBuffer);
     virtual ~GPUExecutor();
     virtual int start();
     virtual int initPipe();
@@ -60,6 +60,7 @@ class GPUExecutor : public PipeLiteExecutor {
     Tnr7Param* mTnr7usParam;
     std::unique_ptr<IntelTNR7US> mIntelTNR;
     uint32_t mLastSequence;
+    bool mUseInternalTnrBuffer;
     /* the lock is used for protecting GPU resource, every thread running GPU calculation
      * should require this lock. */
     static std::mutex mGPULock;

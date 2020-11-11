@@ -336,7 +336,8 @@ int RequestManager::configureStreams(camera3_stream_configuration_t* stream_list
     }
 
     if (faceDetectionOwner != nullptr) {
-        faceDetectionOwner->activateFaceDetection(MAX_FACES_DETECTABLE);
+        unsigned int maxFacesNum = icamera::PlatformData::getMaxFaceDetectionNumber(mCameraId);
+        faceDetectionOwner->activateFaceDetection(maxFacesNum);
     }
 
     return icamera::OK;
@@ -732,7 +733,7 @@ int RequestManager::chooseHALStreams(const uint32_t requestStreamNum, int* halSt
             } else {
                 bool found = false;
                 for (auto& vs : videoHALStream) {
-                    if (s->width == vs->width && s->height == vs->height) {
+                    if (vs && s->width == vs->width && s->height == vs->height) {
                         found = true;
                         break;
                     }

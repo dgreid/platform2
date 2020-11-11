@@ -183,7 +183,7 @@ int IntelAEModeAuto::processState(uint8_t controlMode, uint8_t sceneMode,
         // convergence. Thus we need to figure out changes in compensation and
         // only change the state immediately to locked,
         // IF the EV did not change.
-        if (mLastAeControls.evCompensation != aeControls.evCompensation) mEvChanged = true;
+        mEvChanged = (mLastAeControls.evCompensation != aeControls.evCompensation) ? true : false;
 
         if (!mEvChanged) mCurrentAeState = ANDROID_CONTROL_AE_STATE_LOCKED;
     } else if (aeControls.aeMode != mLastAeControls.aeMode ||

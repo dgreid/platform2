@@ -48,11 +48,12 @@ namespace icamera {
 std::mutex GPUExecutor::mGPULock;
 
 GPUExecutor::GPUExecutor(int cameraId, const ExecutorPolicy& policy, vector<string> exclusivePGs,
-                         PSysDAG* psysDag, shared_ptr<IGraphConfig> gc)
+                         PSysDAG* psysDag, shared_ptr<IGraphConfig> gc, bool useTnrOutBuffer)
         : PipeExecutor(cameraId, policy, exclusivePGs, psysDag, gc),
           mTnr7usParam(nullptr),
           mIntelTNR(nullptr),
           mLastSequence(UINT32_MAX),
+          mUseInternalTnrBuffer(useTnrOutBuffer),
           mOutBufferSize(0) {
     LOG1("@%s %s", __func__, mName.c_str());
 }
@@ -204,6 +205,8 @@ int GPUExecutor::allocBuffers() {
 }
 
 bool GPUExecutor::fetchTnrOutBuffer(int64_t seq, std::shared_ptr<CameraBuffer> buf) {
+    if (!mUseInternalTnrBuffer) return false;
+
     std::unique_lock<std::mutex> lock(mTnrOutBufMapLock);
     if (mTnrOutBufMap.find(seq) != mTnrOutBufMap.end()) {
         void* pSrcBuf = (buf->getMemory() == V4L2_MEMORY_DMABUF)
@@ -224,9 +227,10 @@ bool GPUExecutor::fetchTnrOutBuffer(int64_t seq, std::shared_ptr<CameraBuffer> b
 
 int GPUExecutor::allocTnrOutBufs(uint32_t bufSize) {
     mOutBufferSize = bufSize;
+
     /* for yuv still stream, we use maxRaw buffer to do reprocessing, and for real still stream, 2
      * tnr buffers are enough */
-    int maxTnrOutBufCount = (mStreamId == VIDEO_STREAM_ID)
+    int maxTnrOutBufCount = (mStreamId == VIDEO_STREAM_ID && mUseInternalTnrBuffer)
                                 ? PlatformData::getMaxRawDataNum(mCameraId)
                                 : DEFAULT_TNR7US_BUFFER_COUNT;
 
@@ -485,16 +489,27 @@ int GPUExecutor::runTnrFrame(const std::shared_ptr<CameraBuffer>& inBuf,
         mTnr7usParam->bc.is_first_frame = 0;
     }
 
+    void* dstBuf = outPtr;
+    int dstSize = bufferSize;
+    int dstFd = fd;
     std::map<int64_t, void*>::iterator tnrOutBuf;
-    {
+    // use internal tnr buffer for ZSL and none APP buffer request usage
+    bool useInternalBuffer = mUseInternalTnrBuffer || memoryType != V4L2_MEMORY_DMABUF;
+    if (useInternalBuffer) {
         std::unique_lock<std::mutex> lock(mTnrOutBufMapLock);
         tnrOutBuf = mTnrOutBufMap.begin();
+        dstBuf = tnrOutBuf->second;
+        dstSize = mOutBufferSize;
+        // when use internal tnr buffer, we don't need to use fd map buffer
+        dstFd = -1;
     }
-    ret = mIntelTNR->runTnrFrame(inBuf->getBufferAddr(), tnrOutBuf->second, inBuf->getBufferSize(),
-                                 mOutBufferSize, mTnr7usParam);
+    ret = mIntelTNR->runTnrFrame(inBuf->getBufferAddr(), dstBuf, inBuf->getBufferSize(), dstSize,
+                                 mTnr7usParam, dstFd);
 
     if (ret == OK) {
-        MEMCPY_S(outPtr, bufferSize, tnrOutBuf->second, mOutBufferSize);
+        if (useInternalBuffer) {
+            MEMCPY_S(outPtr, bufferSize, tnrOutBuf->second, mOutBufferSize);
+        }
     } else {
         LOG2("%s, Just copy source buffer if run TNR failed", __func__);
         MEMCPY_S(outPtr, bufferSize, inBuf->getBufferAddr(), inBuf->getBufferSize());
@@ -503,7 +518,7 @@ int GPUExecutor::runTnrFrame(const std::shared_ptr<CameraBuffer>& inBuf,
         mGPULock.unlock();
     }
 
-    {
+    if (useInternalBuffer) {
         std::unique_lock<std::mutex> lock(mTnrOutBufMapLock);
         mTnrOutBufMap.erase(tnrOutBuf->first);
         mTnrOutBufMap[sequence] = tnrOutBuf->second;
@@ -532,7 +547,8 @@ int GPUExecutor::runTnrFrame(const std::shared_ptr<CameraBuffer>& inBuf,
                                     aiqResults->mAeResults.exposures[0].exposure->digital_gain);
 
         // update tnr param when total gain changes, gain set to analog_gain * digital_gain.
-        ret = mIntelTNR->asyncParamUpdate(gain);
+        bool isTnrParamForceUpdate = icamera::PlatformData::isTnrParamForceUpdate();
+        ret = mIntelTNR->asyncParamUpdate(gain, isTnrParamForceUpdate);
     }
 
     LOG2("Exit %s executor name:%s, sequence: %u", __func__, mName.c_str(), inBuf->getSequence());
