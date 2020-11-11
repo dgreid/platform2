@@ -18,11 +18,11 @@
 
 #include "runtime_probe/daemon.h"
 #include "runtime_probe/probe_config.h"
-#include "runtime_probe/utils/config_utils.h"
+#include "runtime_probe/probe_config_loader_impl.h"
 
 namespace runtime_probe {
 
-const char kErrorMsgFailedToPackProtobuf[] = "Failed to serailize the protobuf";
+const char kErrorMsgFailedToPackProtobuf[] = "Failed to serialize the protobuf";
 
 namespace {
 
@@ -120,26 +120,20 @@ void Daemon::ProbeCategories(
 
   DumpProtocolBuffer(request, "ProbeRequest");
 
-  std::string probe_config_path;
-  if (!runtime_probe::GetProbeConfigPath("", &probe_config_path)) {
-    reply.set_error(RUNTIME_PROBE_ERROR_DEFAULT_PROBE_CONFIG_NOT_FOUND);
-    return SendProbeResult(reply, method_call, std::move(response_sender));
-  }
-
-  const auto probe_config_data =
-      runtime_probe::ParseProbeConfig(probe_config_path);
-
+  const auto probe_config_loader =
+      std::make_unique<runtime_probe::ProbeConfigLoaderImpl>();
+  const auto probe_config_data = probe_config_loader->LoadDefault();
   if (!probe_config_data) {
-    reply.set_error(RUNTIME_PROBE_ERROR_PROBE_CONFIG_SYNTAX_ERROR);
+    reply.set_error(RUNTIME_PROBE_ERROR_PROBE_CONFIG_INVALID);
     return SendProbeResult(reply, method_call, std::move(response_sender));
   }
+  LOG(INFO) << "Load probe config from: " << probe_config_data->path
+            << " (checksum: " << probe_config_data->sha1_hash << ")";
 
-  reply.set_probe_config_checksum(probe_config_data.value().sha1_hash);
-  VLOG(2) << "SHA1 checksum returned with protocol buffer: "
-          << reply.probe_config_checksum();
+  reply.set_probe_config_checksum(probe_config_data->sha1_hash);
 
   const auto probe_config =
-      runtime_probe::ProbeConfig::FromValue(probe_config_data.value().config);
+      runtime_probe::ProbeConfig::FromValue(probe_config_data->config);
   if (!probe_config) {
     reply.set_error(RUNTIME_PROBE_ERROR_PROBE_CONFIG_INCOMPLETE_PROBE_FUNCTION);
     return SendProbeResult(reply, method_call, std::move(response_sender));
@@ -164,7 +158,7 @@ void Daemon::ProbeCategories(
   // TODO(itspeter): Report assigned but not in the probe config's category.
   std::string output_js;
   base::JSONWriter::Write(probe_result, &output_js);
-  VLOG(3) << "Raw JSON probe result\n" << output_js;
+  DVLOG(3) << "Raw JSON probe result\n" << output_js;
 
   // Convert JSON to Protocol Buffer.
   auto options = google::protobuf::util::JsonParseOptions();

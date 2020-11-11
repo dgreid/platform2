@@ -14,8 +14,8 @@
 
 #include "runtime_probe/daemon.h"
 #include "runtime_probe/probe_config.h"
+#include "runtime_probe/probe_config_loader_impl.h"
 #include "runtime_probe/probe_function.h"
-#include "runtime_probe/utils/config_utils.h"
 
 namespace {
 enum ExitStatus {
@@ -23,9 +23,8 @@ enum ExitStatus {
   kUnknownError = 1,
   kFailedToParseProbeStatementFromArg = 2,
   kArgumentError = 3,
-  kConfigFileSyntaxError = 11,
+  kFailedToLoadProbeConfig = 11,
   kFailToParseProbeArgFromConfig = 12,
-  kNoPermissionForArbitraryProbeConfig = 13,
 };
 
 void SetVerbosityLevel(uint32_t verbosity_level) {
@@ -39,7 +38,7 @@ int RunAsHelper() {
   const auto args = command_line->GetArgs();
 
   for (size_t i = 0; i < args.size(); ++i) {
-    DLOG(INFO) << "Got arguments, index " << i << " = " << args[i];
+    DVLOG(1) << "Got arguments, index " << i << " = " << args[i];
   }
 
   if (args.size() != 1) {
@@ -79,19 +78,28 @@ int RunAsDaemon() {
 int RunningInCli(const std::string& config_file_path, bool to_stdout) {
   LOG(INFO) << "Starting Runtime Probe. Running in CLI mode";
 
-  std::string probe_config_path;
-  if (!runtime_probe::GetProbeConfigPath(config_file_path, &probe_config_path))
-    return ExitStatus::kNoPermissionForArbitraryProbeConfig;
+  const auto probe_config_loader =
+      std::make_unique<runtime_probe::ProbeConfigLoaderImpl>();
 
-  const auto probe_config_data =
-      runtime_probe::ParseProbeConfig(probe_config_path);
-  if (!probe_config_data)
-    return ExitStatus::kConfigFileSyntaxError;
+  base::Optional<runtime_probe::ProbeConfigData> probe_config_data;
+  if (config_file_path == "") {
+    probe_config_data = probe_config_loader->LoadDefault();
+  } else {
+    probe_config_data =
+        probe_config_loader->LoadFromFile(base::FilePath{config_file_path});
+  }
+  if (!probe_config_data) {
+    LOG(ERROR) << "Failed to load probe config";
+    return ExitStatus::kFailedToLoadProbeConfig;
+  }
+
+  LOG(INFO) << "Load probe config from: " << probe_config_data->path
+            << " (checksum: " << probe_config_data->sha1_hash << ")";
 
   auto probe_config =
-      runtime_probe::ProbeConfig::FromValue(probe_config_data.value().config);
+      runtime_probe::ProbeConfig::FromValue(probe_config_data->config);
   if (!probe_config) {
-    LOG(ERROR) << "Failed to parse from argument from ProbeConfig\n";
+    LOG(ERROR) << "Failed to parse from argument from ProbeConfig";
     return ExitStatus::kFailToParseProbeArgFromConfig;
   }
 

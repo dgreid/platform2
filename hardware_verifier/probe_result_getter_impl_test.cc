@@ -83,7 +83,7 @@ TEST_F(TestProbeResultGetterImpl, TestGetFromRuntimeProbeDBusCallFail) {
 TEST_F(TestProbeResultGetterImpl, TestGetFromRuntimeProbeProbeResultError) {
   runtime_probe::ProbeResult expected_pr;
   expected_pr.set_error(
-      runtime_probe::ErrorCode::RUNTIME_PROBE_ERROR_PROBE_CONFIG_SYNTAX_ERROR);
+      runtime_probe::ErrorCode::RUNTIME_PROBE_ERROR_PROBE_CONFIG_INVALID);
 
   runtime_probe_proxy_->ConfigProbeCategories(true, expected_pr);
 

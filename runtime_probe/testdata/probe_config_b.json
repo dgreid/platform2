@@ -1,0 +1,17 @@
+{
+    "battery": {
+        "generic": {
+            "eval": {
+                "generic_battery": {}
+            }
+        }
+    },
+    "virtual_category": {
+        "component_1": {
+            "eval": "func_not_existed"
+        },
+        "component_2": {
+            "eval": { "func_with_args" : {"argName": "value"} }
+        }
+    }
+}

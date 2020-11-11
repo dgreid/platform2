@@ -64,11 +64,12 @@ static_library("libruntime_probe") {
     "functions/vpd_cached.cc",
     "functions/wireless_network.cc",
     "probe_config.cc",
+    "probe_config_loader_impl.cc",
     "probe_function.cc",
     "probe_function_argument.cc",
     "probe_result_checker.cc",
     "probe_statement.cc",
-    "utils/config_utils.cc",
+    "system_property_impl.cc",
     "utils/edid.cc",
     "utils/file_utils.cc",
     "utils/type_utils.cc",
@@ -91,10 +92,10 @@ if (use.test) {
     sources = [
       "functions/sequence_test.cc",
       "functions/sysfs_test.cc",
+      "probe_config_loader_impl_test.cc",
       "probe_config_test.cc",
       "probe_result_checker_test.cc",
       "probe_statement_test.cc",
-      "utils/config_utils_test.cc",
     ]
     deps = [
       ":libruntime_probe",
