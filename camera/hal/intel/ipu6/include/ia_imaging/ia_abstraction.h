@@ -88,7 +88,7 @@ typedef double float64_t;
  * \param b Alignment.
  * \return  Aligned number.
  */
-#define IA_ALIGN(a,b)            (((unsigned)(a)+(unsigned)(b-1)) & ~(unsigned)(b-1))
+#define IA_ALIGN(a,b)            (((unsigned)(a)+(unsigned)(b-1)) & (~(unsigned)(b-1)))
 
 #define IA_ALLOC(x)              malloc(x)
 #define IA_CALLOC(x)             calloc(1, x)
@@ -288,7 +288,8 @@ inline static int memcpy_s(void *dest, size_t destsz, const void *src, size_t co
 #define IA_ISNAN(val) isnan((double)(val))
 #endif
 
-#if ((defined(_WIN32) || defined(WIN32)) && !defined (BUILD_FOR_ARM))
+#ifndef BUILD_FOR_ARM
+#if (defined(_WIN32) || defined(WIN32))
 
 /* P2P_WINDOWS_KERNELSPACE */
 /* To be fixed properly. */
@@ -342,22 +343,6 @@ inline static int memcpy_s(void *dest, size_t destsz, const void *src, size_t co
   #define ALIGNED_FREE _aligned_free
   #define ALIGNED_TYPE(x, ALIGNMENT) __declspec(align(ALIGNMENT)) x
 
-#elif defined (BUILD_FOR_ARM)
-#define IA_MUTEX_CREATE(m)          #error "not supported on ARM"
-#define IA_MUTEX_DELETE(m)          #error "not supported on ARM"
-#define IA_MUTEX_LOCK(m)            #error "not supported on ARM"
-#define IA_MUTEX_UNLOCK(m)          #error "not supported on ARM"
-#define IA_RWLOCK_CREATE(l)         #error "not supported on ARM"
-#define IA_RWLOCK_DELETE(l)         #error "not supported on ARM"
-#define IA_RWLOCK_WRLOCK(l)         #error "not supported on ARM"
-#define IA_RWLOCK_WRUNLOCK(l)       #error "not supported on ARM"
-#define IA_RWLOCK_RDLOCK(l)         #error "not supported on ARM"
-#define IA_RWLOCK_RDUNLOCK(l)       #error "not supported on ARM"
-
-/* Use VS-specific headers for SSE vector intrinsics */
-#define ALIGNED_MALLOC(size, align) #error "not supported on ARM"
-#define ALIGNED_FREE                #error "not supported on ARM"
-#define ALIGNED_TYPE(x, ALIGNMENT)  #error "not supported on ARM"
 #else
 
   #include <stdbool.h> /* defines bool */
@@ -416,6 +401,7 @@ inline static int memcpy_s(void *dest, size_t destsz, const void *src, size_t co
     #endif
   #endif
 #endif
+#endif     // BUILD_FOR_ARM
 
 /* These macros are used for allocating one big chunk of memory and assigning parts of it.
 * MEMDEBUG flag can be used to debug / check with if memory read & writes stay within the

@@ -27,6 +27,9 @@
 #include "ia_aiq_types.h"
 #include "ia_cmc_types.h"
 #include "ia_ccat_params.h"
+#ifdef IA_CCAT_LIGHT_SOURCE_ESTIMATION_ENABLED
+#include "chromaticity.h"
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -314,7 +317,8 @@ ia_ccat_calculate_weighted_acm(
     unsigned int sector_count,                                         /*!< [in] Number of sectors in ACMs. */
     cmc_chromaticity point,                                            /*!< [in] Chromaticity to calculate distance (x and y axis) against input list of chromaticities in R/G and B/G plane. */
     float (*out_acm)[3][3],                                            /*!< [out] Resulting ACMs. Array length is defined by sector_count. */
-    float (*out_ccm)[3][3]);                                           /*!< [out] Resulting CCM. */
+    float (*out_ccm)[3][3],                                            /*!< [out] Resulting CCM. */
+    float (*ccm_weights)[CMC_NUM_LIGHTSOURCES]);                       /*!< [out] CCM weight. */
 
 /*!
  * \brief Get closest CCMs for a white point.
@@ -325,7 +329,8 @@ ia_ccat_calculate_weighted_ccm(
     const cmc_parsed_color_matrices_t *parsed_color_matrices,          /*!< [in] CCM characterization data with R/G and B/G chromaticities. */
     bool output_ccm_type_preferred,                                    /*!< [in] Flag to control output CCM to be preferred (true) or accurate (false). */
     cmc_chromaticity point,                                            /*!< [in] Chromaticity to calculate distance (x and y axis) against input list of chromaticities in R/G and B/G plane. */
-    float (*out_ccm)[3][3]);                                           /*!< [out] Resulting CCM. */
+    float (*out_ccm)[3][3],                                            /*!< [out] Resulting CCM. */
+    float (*ccm_weights)[CMC_NUM_LIGHTSOURCES]);                       /*!< [out] CCM weight. */
 
 LIBEXPORT ia_err
 ia_ccat_get_frame_scaled_cmc_lens_shading(
@@ -337,10 +342,13 @@ LIBEXPORT ia_err
 ia_ccat_calculate_chromaticity_based_weights(
     ia_ccat_frame_info *frame_info,                                      /*!< [in] Frame handle. */
     cmc_chromaticity(*a_chromaticities_ptr)[CMC_NUM_LIGHTSOURCES],       /*!< [in] CCM characterization data with R/G and B/G chromaticities. */
+    cmc_cie_coords (*a_cie_coords)[CMC_NUM_LIGHTSOURCES],                /*!< [in] CCM characterization data with CIE X/Y chromaticities. */
     unsigned int num_chromaticities,                                     /*!< [in] Number of input chromaticities. */
-    cmc_chromaticity point,                                              /*!< [in] Chromaticity to calculate distance (x and y axis) against input list of chromaticities in R/G and B/G plane. */
+    cmc_chromaticity point,                                              /*!< [in] Chromaticity to calculate distance (x and y axis) against input list of chromaticities in R/G and B/G plane or CIE X/Y plane. */
+    ia_ccat_point_type_t a_point_type,                                   /*!< [in] Option for using accurate or preferred CCM interpolation */
     const float *ir_proportion,                                          /*!< [in] Ir effect on chromaticity point distance (z axis). */
-    float(*weights)[CMC_NUM_LIGHTSOURCES]);                              /*!< [out] Normalized chromaticity distances translated into weights. */
+    float(*weights)[CMC_NUM_LIGHTSOURCES],                               /*!< [out] Normalized chromaticity distances translated into weights. */
+    float *frame_ir_proportion);                                         /*!< [out] Frame ir proportion, ir mean divided by y_mean. */
 
 #ifdef IA_AEC_FEATURE_FLASH
 /*!
@@ -497,6 +505,21 @@ ia_ccat_get_face_coverage(
     float *coverage);
 
 LIBEXPORT ia_err
+ia_ccat_hold_frame_faces_histogram(
+    ia_ccat_frame_info *a_frame_info_ptr,
+    const ia_face_roi *a_face_ptr,
+    unsigned int a_exposure_index,
+    ia_ccat_histogram_type a_histogram_type,
+    const ia_histogram **a_histogram_ptr);
+
+LIBEXPORT ia_err ia_ccat_release_frame_histogram_face(
+    ia_ccat_frame_info *a_frame_info_ptr,
+    unsigned int a_exposure_index,
+    const ia_face_roi *a_face_ptr,
+    ia_ccat_histogram_type a_histogram_type,
+    const ia_histogram **a_histogram_ptr);
+
+LIBEXPORT ia_err
 ia_ccat_get_frame_face_y_mean(
     ia_ccat_frame_info *frame_info,
     unsigned int exposure_index,
@@ -631,6 +654,37 @@ ia_ccat_get_sensor_events_ambient_light(
                                                        /* Following functions require frame_info structure as input. Client should call ia_ccat_hold_frame() to get the frame handle.
                                                        * Once frame handle is no longer used, ia_ccat_release_frame() must be called. */
 #endif /* IA_CCAT_EXTERNAL_SENSORS_ENABLED */
+
+#ifdef IA_CCAT_LIGHT_SOURCE_ESTIMATION_ENABLED
+/*!
+* \brief Get a copy of ambient light events.
+* Outputs all events within given timestamps.
+*/
+LIBEXPORT ia_err
+ia_ccat_get_lse_results(
+    ia_ccat_frame_info *frame_info,                                    /*!< [in]  Frame data structure pointer. */
+    const ia_ccat_lse_results_t **lse_results_ptr);                    /*!< [out] Copied lse results. */
+
+LIBEXPORT ia_err
+ia_ccat_lse_run(
+    ia_ccat_frame_info *a_frame_info_ptr,
+    uint16_t *a_cct_lsc_weights_ptr,
+    uint16_t* a_prev_lse_weights_ptr,
+    const uint16_t* a_lsc_weights_cct_range_ptr,
+    const ia_cmc_t *a_cmc_ptr,
+    chromaticity_characterization_t *a_sensor_chromaticity_characterization_ptr,
+    const crop_params *a_lsc_crop_params_ptr,
+    unsigned int a_final_cct_estimate,
+    const unsigned int *a_cmc_cct,
+    const ia_ccat_lse_results_t **a_lse_results_ptr);
+
+LIBEXPORT ia_err
+ia_ccat_remap_ir_light_sources(
+    const cmc_parsed_ir_weight_t *a_cmc_parsed_ir_weight,
+    const cmc_light_source *lsrc_in,
+    unsigned int a_num_of_lsources_in,
+    float *a_ir_proportion);
+#endif /* IA_CCAT_LIGHT_SOURCE_ESTIMATION_ENABLED */
 
 #ifdef __cplusplus
 }

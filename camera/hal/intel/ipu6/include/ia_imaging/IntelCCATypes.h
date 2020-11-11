@@ -348,6 +348,7 @@ typedef struct
                                                  -1.0 if NA (uses tunings).
                                                  0.0  forces update of LSC table, this is similar behavior as in previous API when using frame_use still
                                                  > 0.0  Overrides convergence speed from tunings */
+    bool lsc_on;                            /*!< Optional, return the lsc results */
 } cca_sa_input_params;
 
 /*!
@@ -370,7 +371,9 @@ typedef struct
     float r_gamma_lut[MAX_GAMMA_LUT_SIZE];          /*!< Gamma LUT for R channel. Range [0.0, 1.0]. */
     float b_gamma_lut[MAX_GAMMA_LUT_SIZE];          /*!< Gamma LUT for B channel. Range [0.0, 1.0]. */
     float g_gamma_lut[MAX_GAMMA_LUT_SIZE];          /*!< Gamma LUT for G channel. Range [0.0, 1.0]. */
-    uint32_t gamma_lut_size;                        /*!< size of LUT. */
+    uint32_t gamma_lut_size;                        /*!< size of gamma LUT. */
+    float tone_map_lut[MAX_TONE_MAP_LUT_SIZE];      /*!< GTM LUT. */
+    uint32_t tone_map_lut_size;                     /*!< size of GTM LUT. */
 } cca_gbce_params;
 
 /*!
@@ -520,6 +523,8 @@ typedef struct
     cca_pa_params manual_pa_setting;           /*!< Optional. manual settings (ccm & gain) for pa results.*/
     cca_gbce_params manual_gbce_setting;       /*!< Optional. manual settings (gamma lut) for gbce results.*/
     bool force_lsc_update;                     /*!< Optional. force to update LSC for SA results.*/
+
+    ia_isp_call_rate_control call_rate_control;
 } cca_pal_input_params;
 
 /*!
@@ -538,6 +543,7 @@ struct cca_init_params{
     cca_aiqd aiq_aiqd;
     unsigned int bitmap;       /*!< Mandatory. list all components (CCAModuleBitMap) that need initialization. */
     ia_aiq_frame_params frameParams; /*!< Mandatory. Sensor frame parameters. Describe frame scaling/cropping done in sensor. */
+    ia_aiq_frame_use frameUse;
     //BComp init params
     float conversionGainRatio;
     ia_bcomp_dol_mode_t dolMode;
@@ -546,12 +552,17 @@ struct cca_init_params{
     float dvsZoomRatio;
     bool enableVideoStablization;
     cca_gdc_configuration gdcConfig;
+    uint8_t aiqStorageLen;
+    uint8_t aecFrameDelay;
     cca_init_params() :
+        frameUse(ia_aiq_frame_use_preview),
         conversionGainRatio(1),
         dolMode(ia_bcomp_non_dol),
         dvsOutputType(CCA_DVS_MORPH_TABLE),
         dvsZoomRatio(1.0f),
-        enableVideoStablization(false)
+        enableVideoStablization(false),
+        aiqStorageLen(3),
+        aecFrameDelay(2)
         {
             bitmap = CCA_MODULE_AE | CCA_MODULE_AF | CCA_MODULE_AWB |
                      CCA_MODULE_PA | CCA_MODULE_SA | CCA_MODULE_GBCE |

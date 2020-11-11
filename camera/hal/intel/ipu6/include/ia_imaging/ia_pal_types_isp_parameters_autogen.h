@@ -8682,7 +8682,7 @@ typedef struct
     /*!< granularity_pointer_update Valid according the streaming mode: number of lines (LB)/lines of blocks (BB) to be written/release before sending a pointer update (reporting always done with producer view)*/
     int32_t granularity_pointer_update;
     /*!< max_stride provides the maximum stride value to be used at the connection*/
-    int32_t max_stride;
+    uint32_t max_stride;
     /*!< block_width buffer block width configuration in pixels*/
     int32_t block_width;
     /*!< block_height buffer block height configuration in lines*/
@@ -15913,7 +15913,7 @@ typedef struct
     /*!< max_credits provides the maximum amount of credits for eliminating the need to calculate it in HW according the next formula: (end_address-start_address)/Max_Stride*/
     uint32_t max_credits;
     /*!< max_stride provides the maximum stride value to be used at the connection*/
-    uint16_t max_stride;
+    uint32_t max_stride;
     /*!< middle_ack_enable If set, enable the mechansim to generate middle ack when consumed amount of configured lines*/
     uint8_t middle_ack_enable;
     /*!< middle_ack_line_number Valid if ack enable  If enabled, the device should generate middle ack when delivers the EOL of the configured line (global number) assuming the first line delievered at SOF is zero.  In case of multiple planes the counting is done using plane1 but only when all the planes are synced*/
@@ -15996,6 +15996,16 @@ typedef struct
     uint8_t zlr_transaction_enable;
 
 } ia_pal_system_api_io_buffer_t;
+
+/*! \system api struct lsc_1_2
+Lens shading correction up to 24 bit
+*/
+typedef struct
+{
+    /*!< ir_processing 0 - RGB processing or 1 - IR processing*/
+    uint8_t ir_processing;
+
+} ia_pal_system_api_lsc_1_2_t;
 
 /*! \system api struct tvs_1_0
 Trainable visual scaler

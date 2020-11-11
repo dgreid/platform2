@@ -29,6 +29,9 @@ extern "C" {
 #define MANUAL_CONVERGENCE_TIME_GRANULARITY 0.01f
 #define TIMED_TRIMMED_FILTER_SIZE 34
 #define DEFAULT_MODULE_ISO 100
+#define MAX_IR_WEIGHT_GRID_SIZE 480u /* Max IR weight grid size = ir_width x ir_height*/
+#define MAX_NUM_SECTORS 36u
+#define MAX_NUM_IR_WEIGHT_GRIDS 30u
 
 #ifdef __cplusplus
 }

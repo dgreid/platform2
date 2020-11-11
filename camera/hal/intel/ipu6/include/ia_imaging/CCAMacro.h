@@ -47,6 +47,7 @@ const uint32_t MAX_CUSTOM_CONTROLS_PARAM_SIZE = 128;
 const uint32_t MAX_KERNEL_NUMBERS_IN_PIPE = 128;
 const uint32_t MAX_AF_GRID_WIDTH = 128;
 const uint32_t MAX_AF_GRID_HEIGHT = 128;
+const uint32_t MAX_WEIGHT_GRID_SIZE = 64 * 64;
 const uint32_t MAX_AF_STATS_GRID_SIZE (MAX_AF_GRID_WIDTH * MAX_AF_GRID_HEIGHT);
 const uint32_t MAX_GRBS_GRID_WIDTH = 150;
 const uint32_t MAX_GRBS_GRID_HEIGHT = 150;
@@ -57,7 +58,9 @@ const uint32_t MAX_LSC_DIM  = 2;
 const uint32_t MAX_LSC_DIM_SIZE (MAX_LSC_DIM * MAX_LSC_DIM);
 const uint32_t MAX_LSC_GRID_SIZE = 128 * 128;
 const uint32_t MAX_GAMMA_LUT_SIZE = 2048;
-
+const uint32_t MAX_TONE_MAP_LUT_SIZE = 2048;
+const uint32_t MAX_NUM_SECTORS = 36;
+const uint32_t MAX_IR_WEIGHT_GRID_SIZE = 480;
 
 const uint32_t GDC_Y_BLOCK_WIDTH = 64;
 const uint32_t GDC_UV_BLOCK_WIDTH = 64;
