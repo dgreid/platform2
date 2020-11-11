@@ -18,10 +18,12 @@
 #include <gtest/gtest.h>
 #include <libyuv.h>
 
+#include "cros-camera/camera_buffer_manager.h"
 #include "cros-camera/exif_utils.h"
 #include "cros-camera/future.h"
 #include "cros-camera/jpeg_compressor.h"
 #include "cros-camera/jpeg_encode_accelerator.h"
+#include "hardware/gralloc.h"
 
 namespace cros {
 
@@ -61,18 +63,16 @@ struct Frame {
   int height;
   base::FilePath yuv_file;
 
-  // Memory Region of input file.
-  base::UnsafeSharedMemoryRegion in_shm_region;
-  base::WritableSharedMemoryMapping in_shm_mapping;
-  // Memory Region of output buffer from hardware decoder.
-  base::UnsafeSharedMemoryRegion hw_out_shm_region;
-  base::WritableSharedMemoryMapping hw_out_shm_mapping;
+  buffer_handle_t input_handle;
+  buffer_handle_t output_handle;
+
   // Memory Region of output buffer from software decoder.
   base::WritableSharedMemoryRegion sw_out_shm_region;
   base::WritableSharedMemoryMapping sw_out_shm_mapping;
 
   // Actual data size in |hw_out_shm|.
   uint32_t hw_out_size;
+  uint32_t hw_memory_size;
   // Actual data size in |sw_out_shm|.
   uint32_t sw_out_size;
 };
@@ -112,6 +112,7 @@ class JpegEncodeAcceleratorTest : public ::testing::Test {
 
   Frame jpeg_frame1_;
   Frame jpeg_frame2_;
+  CameraBufferManager* buffer_manager_;
 };
 
 class JpegEncodeTestEnvironment : public ::testing::Environment {
@@ -134,6 +135,7 @@ class JpegEncodeTestEnvironment : public ::testing::Environment {
 void JpegEncodeAcceleratorTest::SetUp() {
   jpeg_encoder_ =
       JpegEncodeAccelerator::CreateInstance(g_env->mojo_manager_.get());
+  buffer_manager_ = CameraBufferManager::GetInstance();
 }
 
 bool JpegEncodeAcceleratorTest::StartJea() {
@@ -188,25 +190,46 @@ void JpegEncodeAcceleratorTest::LoadFrame(const char* yuv_filename,
 }
 
 void JpegEncodeAcceleratorTest::PrepareMemory(Frame* frame) {
-  size_t input_size = frame->data_str.size();
-  // Prepare enought size for encoded JPEG.
+  // Prepare enough size for encoded JPEG.
   size_t output_size = frame->width * frame->height * 3 / 2;
-  if (!frame->in_shm_mapping.IsValid() ||
-      input_size > frame->in_shm_mapping.mapped_size()) {
-    frame->in_shm_region = base::UnsafeSharedMemoryRegion::Create(input_size);
-    frame->in_shm_mapping = frame->in_shm_region.Map();
-    LOG_ASSERT(frame->in_shm_mapping.IsValid());
-  }
-  memcpy(frame->in_shm_mapping.memory(), frame->data_str.data(), input_size);
+  frame->hw_memory_size = output_size;
 
-  if (!frame->hw_out_shm_mapping.IsValid() ||
-      output_size > frame->hw_out_shm_mapping.mapped_size()) {
-    frame->hw_out_shm_region =
-        base::UnsafeSharedMemoryRegion::Create(output_size);
-    frame->hw_out_shm_mapping = frame->hw_out_shm_region.Map();
-    LOG_ASSERT(frame->hw_out_shm_mapping.IsValid());
-  }
-  memset(frame->hw_out_shm_mapping.memory(), 0, output_size);
+  uint32_t input_stride;
+  uint32_t output_stride;
+  LOG_ASSERT(buffer_manager_->Allocate(
+                 frame->width, frame->height, HAL_PIXEL_FORMAT_YCbCr_420_888,
+                 GRALLOC_USAGE_HW_CAMERA_READ | GRALLOC_USAGE_SW_WRITE_OFTEN,
+                 cros::GRALLOC, &frame->input_handle, &input_stride) == 0);
+
+  LOG_ASSERT(buffer_manager_->Allocate(
+                 frame->hw_memory_size, 1, HAL_PIXEL_FORMAT_BLOB,
+                 GRALLOC_USAGE_SW_WRITE_OFTEN | GRALLOC_USAGE_SW_READ_OFTEN |
+                     GRALLOC_USAGE_HW_CAMERA_WRITE,
+                 cros::GRALLOC, &frame->output_handle, &output_stride) == 0);
+
+  struct android_ycbcr mapped_input;
+  LOG_ASSERT(buffer_manager_->LockYCbCr(frame->input_handle, 0, 0, 0, 0, 0,
+                                        &mapped_input) == 0);
+
+  size_t y_plane_size = frame->width * frame->height;
+  const uint8_t* i420_y_plane =
+      reinterpret_cast<const uint8_t*>(frame->data_str.data());
+  const uint8_t* i420_u_plane = i420_y_plane + y_plane_size;
+  const uint8_t* i420_v_plane = i420_u_plane + y_plane_size / 4;
+  LOG_ASSERT(libyuv::I420ToNV12(
+                 i420_y_plane, frame->width, i420_u_plane, frame->width / 2,
+                 i420_v_plane, frame->width / 2,
+                 static_cast<uint8_t*>(mapped_input.y), mapped_input.ystride,
+                 static_cast<uint8_t*>(mapped_input.cb), mapped_input.cstride,
+                 frame->width, frame->height) == 0);
+
+  LOG_ASSERT(buffer_manager_->Unlock(frame->input_handle) == 0);
+
+  void* addr = nullptr;
+  LOG_ASSERT(
+      buffer_manager_->Lock(frame->output_handle, 0, 0, 0, 0, 0, &addr) == 0);
+  memset(addr, 0, frame->hw_memory_size);
+  LOG_ASSERT(buffer_manager_->Unlock(frame->output_handle) == 0);
 
   if (!frame->sw_out_shm_mapping.IsValid() ||
       output_size > frame->sw_out_shm_mapping.mapped_size()) {
@@ -229,7 +252,7 @@ double JpegEncodeAcceleratorTest::GetMeanAbsoluteDifference(
 bool JpegEncodeAcceleratorTest::GetSoftwareEncodeResult(Frame* frame) {
   std::unique_ptr<JpegCompressor> compressor(
       JpegCompressor::GetInstance(g_env->mojo_manager_.get()));
-  if (!compressor->CompressImage(frame->in_shm_mapping.memory(), frame->width,
+  if (!compressor->CompressImage(frame->data_str.data(), frame->width,
                                  frame->height, kJpegDefaultQuality, nullptr, 0,
                                  frame->sw_out_shm_mapping.mapped_size(),
                                  frame->sw_out_shm_mapping.memory(),
@@ -249,10 +272,12 @@ bool JpegEncodeAcceleratorTest::CompareHwAndSwResults(Frame* frame) {
   int y_stride = width;
   int u_stride = width / 2;
   int v_stride = u_stride;
+  void* addr;
+  LOG_ASSERT(
+      buffer_manager_->Lock(frame->output_handle, 0, 0, 0, 0, 0, &addr) == 0);
   if (libyuv::ConvertToI420(
-          frame->hw_out_shm_mapping.GetMemoryAs<const uint8_t>(),
-          frame->hw_out_size, hw_yuv_result, y_stride,
-          hw_yuv_result + y_stride * height, u_stride,
+          static_cast<uint8_t*>(addr), frame->hw_out_size, hw_yuv_result,
+          y_stride, hw_yuv_result + y_stride * height, u_stride,
           hw_yuv_result + y_stride * height + u_stride * height / 2, v_stride,
           0, 0, width, height, width, height, libyuv::kRotate0,
           libyuv::FOURCC_MJPG)) {
@@ -285,16 +310,14 @@ bool JpegEncodeAcceleratorTest::CompareHwAndSwResults(Frame* frame) {
 }
 
 void JpegEncodeAcceleratorTest::EncodeTest(Frame* frame) {
-  int input_fd, output_fd;
   int status;
 
   // Clear HW encode results.
-  memset(frame->hw_out_shm_mapping.memory(), 0,
-         frame->hw_out_shm_mapping.mapped_size());
-
-  input_fd = frame->in_shm_region.GetPlatformHandle().fd;
-  output_fd = frame->hw_out_shm_region.GetPlatformHandle().fd;
-  VLOG(1) << "input fd " << input_fd << " output fd " << output_fd;
+  void* addr = nullptr;
+  LOG_ASSERT(
+      buffer_manager_->Lock(frame->output_handle, 0, 0, 0, 0, 0, &addr) == 0);
+  memset(addr, 0, frame->hw_memory_size);
+  LOG_ASSERT(buffer_manager_->Unlock(frame->output_handle) == 0);
 
   ExifUtils utils;
   ASSERT_TRUE(utils.Initialize());
@@ -304,19 +327,41 @@ void JpegEncodeAcceleratorTest::EncodeTest(Frame* frame) {
   thumbnail.resize(0);
   utils.GenerateApp1(thumbnail.data(), 0);
 
-  // Pretend the shared memory as DMA buffer. Since we use mmap to get the user
-  // space address, it won't cause any problems.
+  auto GetDmaBufPlanes = [&](buffer_handle_t handle) {
+    std::vector<JpegCompressor::DmaBufPlane> planes;
+    uint32_t num_planes = cros::CameraBufferManager::GetNumPlanes(handle);
+    for (int i = 0; i < num_planes; i++) {
+      JpegCompressor::DmaBufPlane plane;
+      plane.fd = handle->data[i];
+      plane.stride = cros::CameraBufferManager::GetPlaneStride(handle, i);
+      plane.offset = cros::CameraBufferManager::GetPlaneOffset(handle, i);
+      plane.size = cros::CameraBufferManager::GetPlaneSize(handle, i);
+      planes.push_back(std::move(plane));
+    }
+    return planes;
+  };
+
+  std::vector<JpegCompressor::DmaBufPlane> input_planes =
+      GetDmaBufPlanes(frame->input_handle);
+  LOG_ASSERT(input_planes.size() == 2);
+
+  std::vector<JpegCompressor::DmaBufPlane> output_planes =
+      GetDmaBufPlanes(frame->output_handle);
+  LOG_ASSERT(output_planes.size() == 1);
+
   status = jpeg_encoder_->EncodeSync(
-      input_fd, nullptr, frame->in_shm_mapping.mapped_size(), frame->width,
-      frame->height, utils.GetApp1Buffer(), utils.GetApp1Length(), output_fd,
-      frame->hw_out_shm_mapping.mapped_size(), &frame->hw_out_size);
+      cros::CameraBufferManager::GetV4L2PixelFormat(frame->input_handle),
+      std::move(input_planes), std::move(output_planes), utils.GetApp1Buffer(),
+      utils.GetApp1Length(), frame->width, frame->height, &frame->hw_out_size);
   EXPECT_EQ(status, JpegEncodeAccelerator::ENCODE_OK);
   if (status == static_cast<int>(JpegEncodeAccelerator::ENCODE_OK)) {
     if (g_env->save_to_file_) {
       base::FilePath encoded_file = frame->yuv_file.ReplaceExtension(".jpg");
-      base::WriteFile(encoded_file,
-                      frame->hw_out_shm_mapping.GetMemoryAs<char>(),
+      LOG_ASSERT(buffer_manager_->Lock(frame->output_handle, 0, 0, 0, 0, 0,
+                                       &addr) == 0);
+      base::WriteFile(encoded_file, static_cast<const char*>(addr),
                       frame->hw_out_size);
+      LOG_ASSERT(buffer_manager_->Unlock(frame->output_handle) == 0);
     }
 
     EXPECT_EQ(true, GetSoftwareEncodeResult(frame));
