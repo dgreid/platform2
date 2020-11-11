@@ -14,6 +14,7 @@
 #include <base/synchronization/atomic_flag.h>
 #include <base/threading/thread.h>
 #include <base/time/time.h>
+#include <base/unguessable_token.h>
 #include <mojo/public/cpp/bindings/binding.h>
 
 #include "common/libcamera_connector/camera_client.h"
@@ -54,9 +55,14 @@ class CameraServiceConnector {
   using ConnectDispatcherCallback = base::OnceCallback<void()>;
 
   // Registers the camera HAL client to camera HAL dispatcher.
-  void RegisterClient(mojom::CameraHalClientPtr camera_hal_client);
+  void RegisterClient(mojom::CameraHalClientPtr camera_hal_client,
+                      IntOnceCallback on_registered_callback);
 
-  void RegisterClientOnThread(mojom::CameraHalClientPtr camera_hal_client);
+  void RegisterClientOnThread(mojom::CameraHalClientPtr camera_hal_client,
+                              IntOnceCallback on_registered_callback);
+
+  void OnRegisteredClient(IntOnceCallback on_registered_callback,
+                          int32_t result);
 
   void InitOnThread(IntOnceCallback init_callback);
 
@@ -66,6 +72,7 @@ class CameraServiceConnector {
   std::unique_ptr<mojo::core::ScopedIPCSupport> ipc_support_;
   mojom::CameraHalDispatcherPtr dispatcher_;
   std::unique_ptr<CameraClient> camera_client_;
+  base::Optional<base::UnguessableToken> token_;
 
   base::AtomicFlag initialized_;
 

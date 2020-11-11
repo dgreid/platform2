@@ -188,7 +188,19 @@ void CameraClient::RegisterClient(
 
   mojom::CameraHalClientPtr client_ptr;
   camera_hal_client_.Bind(mojo::MakeRequest(&client_ptr));
-  std::move(register_client_callback).Run(std::move(client_ptr));
+  std::move(register_client_callback)
+      .Run(std::move(client_ptr),
+           base::BindOnce(&CameraClient::OnRegisteredClient,
+                          base::Unretained(this)));
+}
+
+void CameraClient::OnRegisteredClient(int32_t result) {
+  if (result != 0) {
+    LOGF(ERROR) << "Failed to register client: "
+                << base::safe_strerror(-result);
+    std::move(init_callback_).Run(result);
+  }
+  LOGF(INFO) << "Successfully registered client";
 }
 
 void CameraClient::CloseOnIpcThread() {

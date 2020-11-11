@@ -20,6 +20,7 @@
 #include "cros-camera/constants.h"
 #include "cros-camera/future.h"
 #include "cros-camera/ipc_util.h"
+#include "mojo/unguessable_token.mojom.h"
 
 namespace cros {
 
@@ -40,9 +41,14 @@ int CameraServiceConnector::Init(const cros_cam_init_option_t* option) {
     return -EPERM;
   }
 
-  if (option->api_version != 0) {
-    LOGF(ERROR) << "The only supported api version is 0 now";
-    return -EINVAL;
+  // TODO(b/170075468): Remove support for api_version 0 when Parallels migrates
+  // to api_version 1.
+  if (option->api_version >= 1) {
+    token_ = TokenFromString(option->token);
+    if (!token_) {
+      LOGF(ERROR) << "Failed to parse token string";
+      return -EPERM;
+    }
   }
 
   mojo::core::Init();
@@ -118,7 +124,8 @@ int CameraServiceConnector::StopCapture(int id) {
 }
 
 void CameraServiceConnector::RegisterClient(
-    mojom::CameraHalClientPtr camera_hal_client) {
+    mojom::CameraHalClientPtr camera_hal_client,
+    IntOnceCallback on_registered_callback) {
   VLOGF_ENTER();
   // This may be called from a different thread than the main thread,
   // (for example here it is called from CameraClient thread),
@@ -127,15 +134,42 @@ void CameraServiceConnector::RegisterClient(
   ipc_thread_.task_runner()->PostTask(
       FROM_HERE,
       base::BindOnce(&CameraServiceConnector::RegisterClientOnThread,
-                     base::Unretained(this), std::move(camera_hal_client)));
+                     base::Unretained(this), std::move(camera_hal_client),
+                     std::move(on_registered_callback)));
 }
 
 void CameraServiceConnector::RegisterClientOnThread(
-    mojom::CameraHalClientPtr camera_hal_client) {
+    mojom::CameraHalClientPtr camera_hal_client,
+    IntOnceCallback on_registered_callback) {
   VLOGF_ENTER();
   DCHECK(ipc_thread_.task_runner()->BelongsToCurrentThread());
 
-  dispatcher_->RegisterClient(std::move(camera_hal_client));
+  if (!token_) {
+    // TODO(b/170075468): Remove when this method is deprecated.
+    dispatcher_->RegisterClient(std::move(camera_hal_client));
+    std::move(on_registered_callback).Run(0);
+  } else {
+    auto mojo_token = mojo_base::mojom::UnguessableToken::New();
+    mojo_token->high = token_->GetHighForSerialization();
+    mojo_token->low = token_->GetLowForSerialization();
+    dispatcher_->RegisterClientWithToken(
+        std::move(camera_hal_client), cros::mojom::CameraClientType::UNKNOWN,
+        std::move(mojo_token),
+        base::BindOnce(&CameraServiceConnector::OnRegisteredClient,
+                       base::Unretained(this),
+                       std::move(on_registered_callback)));
+  }
+}
+
+void CameraServiceConnector::OnRegisteredClient(
+    IntOnceCallback on_registered_callback, int32_t result) {
+  VLOGF_ENTER();
+  DCHECK(ipc_thread_.task_runner()->BelongsToCurrentThread());
+
+  if (result != 0) {
+    LOGF(ERROR) << "Failed to register client: " << result;
+  }
+  std::move(on_registered_callback).Run(result);
 }
 
 void CameraServiceConnector::InitOnThread(IntOnceCallback init_callback) {

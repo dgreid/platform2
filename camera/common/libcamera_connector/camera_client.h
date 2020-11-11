@@ -53,7 +53,7 @@ namespace cros {
 class CameraClient final : public mojom::CameraHalClient {
  public:
   using RegisterClientCallback =
-      base::OnceCallback<void(mojom::CameraHalClientPtr)>;
+      base::OnceCallback<void(mojom::CameraHalClientPtr, IntOnceCallback)>;
 
   CameraClient();
 
@@ -149,6 +149,8 @@ class CameraClient final : public mojom::CameraHalClient {
 
   // Registers the client at camera HAL dispatcher.
   void RegisterClient(RegisterClientCallback register_client_callback);
+
+  void OnRegisteredClient(int32_t result);
 
   // Closes the message pipe associated with this client.
   void CloseOnIpcThread();

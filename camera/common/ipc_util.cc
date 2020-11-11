@@ -260,4 +260,20 @@ MojoResult CreateMojoChannelToChildByUnixDomainSocket(
   return MOJO_RESULT_OK;
 }
 
+base::Optional<base::UnguessableToken> TokenFromString(
+    const std::string& token_string) {
+  if (token_string.length() != 32) {
+    return base::nullopt;
+  }
+  std::string token_high_string = token_string.substr(0, 16);
+  std::string token_low_string = token_string.substr(16, 16);
+  uint64_t token_high, token_low;
+  if (!base::HexStringToUInt64(token_high_string, &token_high) ||
+      !base::HexStringToUInt64(token_low_string, &token_low)) {
+    LOGF(ERROR) << "Failed to convert token strings";
+    return base::nullopt;
+  }
+  return base::UnguessableToken::Deserialize(token_high, token_low);
+}
+
 }  // namespace cros

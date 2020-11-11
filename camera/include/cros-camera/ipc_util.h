@@ -10,6 +10,8 @@
 #include <string>
 
 #include <base/files/scoped_file.h>
+#include <base/optional.h>
+#include <base/unguessable_token.h>
 #include <mojo/public/c/system/types.h>
 #include <mojo/public/cpp/system/message_pipe.h>
 
@@ -38,6 +40,9 @@ CROS_CAMERA_EXPORT MojoResult CreateMojoChannelToChildByUnixDomainSocket(
     const base::FilePath& socket_path,
     mojo::ScopedMessagePipeHandle* parent_pipe,
     const std::string& pipe_name);
+
+CROS_CAMERA_EXPORT base::Optional<base::UnguessableToken> TokenFromString(
+    const std::string& token_string);
 
 }  // namespace cros
 
