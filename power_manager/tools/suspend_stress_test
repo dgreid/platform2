@@ -255,14 +255,16 @@ while true; do
   fi
   end_time="$(cat /sys/class/rtc/rtc0/since_epoch)"
 
-  diff_sus_time=$(( (end_time - start_time) - sus_time ))
+  actual_sus_time=$(( end_time - start_time ))
+  diff_sus_time=$(( actual_sus_time - sus_time ))
+  sus_time_str="slept for ${actual_sus_time}s, expected ${sus_time}s"
   if [ ${diff_sus_time} -lt -${FLAGS_wake_early_margin} ]; then
     : $(( premature_wake_count += 1 ))
-    echo "Premature wake detected (ignoring)."
+    echo "Premature wake detected: ${sus_time_str} (ignoring)."
   fi
   if [ ${diff_sus_time} -gt ${FLAGS_wake_worst_case} ]; then
     : $(( late_wake_count += 1 ))
-    echo "Late wake detected (ignoring)."
+    echo "Late wake detected: ${sus_time_str} (ignoring)."
   fi
   # Wakealarm is expected to be cleared after the set wakeup time,
   # which is the resume time if the device does not resume due to
