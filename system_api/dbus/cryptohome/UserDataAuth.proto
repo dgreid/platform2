@@ -529,6 +529,16 @@ message LowDiskSpace {
   uint64 disk_free_bytes = 1;
 }
 
+message StartAuthSessionRequest {
+  // The account of the user whose home directory is requested for mounting.
+  cryptohome.AccountIdentifier account_id = 1;
+}
+
+message StartAuthSessionReply {
+  // Error if any to start the Auth Session
+  CryptohomeErrorCode error = 1;
+}
+
 // ------------------------- ArcQuota Interface -------------------------
 
 // Input parameters to GetArcDiskFeatures().

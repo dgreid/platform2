@@ -308,6 +308,25 @@ do.
       </arg>
     </method>
 
+    <!--This API will be used to call for start of an AuthSession.
+        TODO(crbug.com/1152113): This API is still a work in progress.
+         May be called asynchronously.  All arguments are protobufs:
+         request: StartAuthSessionRequest
+         reply: BaseReply with StartAuthSession
+    -->
+    <method name="StartAuthSession">
+      <annotation name="org.chromium.DBus.Method.Kind"
+                  value="async"/>
+      <arg name="request" type="ay" direction="in">
+        <annotation name="org.chromium.DBus.Argument.ProtobufClass"
+                    value="user_data_auth::StartAuthSessionRequest" />
+      </arg>
+      <arg name="reply" type="ay" direction="out">
+        <annotation name="org.chromium.DBus.Argument.ProtobufClass"
+                    value="user_data_auth::StartAuthSessionReply" />
+      </arg>
+    </method>
+
     <!-- LowDiskSpace: Emitted when the system is running low on disk space
                        for home directories. -->
     <signal name="LowDiskSpace">

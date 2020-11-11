@@ -4482,4 +4482,11 @@ gboolean Service::ShutdownService(gpointer user_data) {
   return false;
 }
 
+gboolean Service::StartAuthSession(const GArray* account_id,
+                                   const GArray* start_auth_session_request,
+                                   DBusGMethodInvocation* context) {
+  SendInvalidArgsReply(context, "Auth sessions is only used in UserDataAuth");
+  return FALSE;
+}
+
 }  // namespace cryptohome

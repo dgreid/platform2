@@ -1956,6 +1956,7 @@ class UserDataAuthExTest : public UserDataAuthTest {
     migrate_req_.reset(new user_data_auth::MigrateKeyRequest);
     remove_homedir_req_.reset(new user_data_auth::RemoveRequest);
     rename_homedir_req_.reset(new user_data_auth::RenameRequest);
+    start_auth_session_req_.reset(new user_data_auth::StartAuthSessionRequest);
   }
 
   template <class ProtoBuf>
@@ -1985,6 +1986,8 @@ class UserDataAuthExTest : public UserDataAuthTest {
   std::unique_ptr<user_data_auth::MigrateKeyRequest> migrate_req_;
   std::unique_ptr<user_data_auth::RemoveRequest> remove_homedir_req_;
   std::unique_ptr<user_data_auth::RenameRequest> rename_homedir_req_;
+  std::unique_ptr<user_data_auth::StartAuthSessionRequest>
+      start_auth_session_req_;
 
   static constexpr char kUser[] = "chromeos-user";
   static constexpr char kKey[] = "274146c6e8886a843ddfea373e2dc71b";
@@ -2994,6 +2997,25 @@ TEST_F(UserDataAuthExTest, RenameInvalidArguments) {
   rename_homedir_req_->mutable_id_to()->set_account_id(kUsername1);
   EXPECT_EQ(userdataauth_->Rename(*rename_homedir_req_),
             user_data_auth::CRYPTOHOME_ERROR_INVALID_ARGUMENT);
+}
+
+TEST_F(UserDataAuthExTest, StartAuthSession) {
+  PrepareArguments();
+  start_auth_session_req_->mutable_account_id()->set_account_id(
+      "foo@example.com");
+  bool started = false;
+  userdataauth_->StartAuthSession(
+      *start_auth_session_req_,
+      base::BindOnce(
+          [](bool* started_ptr,
+             const user_data_auth::StartAuthSessionReply& reply) {
+            *started_ptr = true;
+            EXPECT_EQ(user_data_auth::CRYPTOHOME_ERROR_NOT_IMPLEMENTED,
+                      reply.error());
+          },
+          base::Unretained(&started)));
+
+  EXPECT_TRUE(started);
 }
 
 class ChallengeResponseUserDataAuthExTest : public UserDataAuthExTest {

@@ -574,6 +574,11 @@ class LegacyCryptohomeInterfaceAdaptor
   void CheckHealth(std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
                        cryptohome::BaseReply>> response,
                    const cryptohome::CheckHealthRequest& in_request) override;
+  void StartAuthSession(
+      std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
+          cryptohome::BaseReply>> response,
+      const cryptohome::AccountIdentifier& in_account_id,
+      const cryptohome::StartAuthSessionRequest& in_request) override;
 
   // This is a public version of OnDircryptoMigrationProgressSignal() that
   // simply calls the protected version. This is only used for testing because

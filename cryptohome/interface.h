@@ -505,6 +505,11 @@ gboolean cryptohome_check_health(Cryptohome* self,
                                  GArray* request,
                                  DBusGMethodInvocation* error);
 
+gboolean cryptohome_start_auth_session(Cryptohome* self,
+                                       GArray* id,
+                                       GArray* request,
+                                       DBusGMethodInvocation* error);
+
 }  // namespace gobject
 }  // namespace cryptohome
 #endif  // CRYPTOHOME_INTERFACE_H_

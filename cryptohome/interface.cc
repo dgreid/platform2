@@ -792,6 +792,13 @@ gboolean cryptohome_check_health(Cryptohome* self,
   CRYPTOHOME_WRAP_METHOD(CheckHealth, request);
 }
 
+gboolean cryptohome_start_auth_session(Cryptohome* self,
+                                       GArray* id,
+                                       GArray* request,
+                                       DBusGMethodInvocation* error) {
+  CRYPTOHOME_WRAP_METHOD(StartAuthSession, id, request);
+}
+
 #undef CRYPTOHOME_WRAP_METHOD
 
 }  // namespace gobject

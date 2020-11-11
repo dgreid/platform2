@@ -3128,4 +3128,18 @@ void UserDataAuth::SeedUrandom() {
   }
 }
 
+bool UserDataAuth::StartAuthSession(
+    user_data_auth::StartAuthSessionRequest request,
+    base::OnceCallback<void(const user_data_auth::StartAuthSessionReply&)>
+        on_done) {
+  // TODO(crbug.com/1152113): expand to make it a full functioning auth session
+  // API.
+  user_data_auth::StartAuthSessionReply reply;
+  reply.set_error(
+      user_data_auth::CryptohomeErrorCode::CRYPTOHOME_ERROR_NOT_IMPLEMENTED);
+  std::move(on_done).Run(reply);
+
+  return false;
+}
+
 }  // namespace cryptohome

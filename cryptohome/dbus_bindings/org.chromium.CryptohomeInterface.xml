@@ -943,6 +943,30 @@
                     value="cryptohome::BaseReply" />
       </arg>
     </method>
+    <!--This API will be used to call for start of an AuthSession and
+        will only be used for UserDataAuth. It may be called asynchronously.
+        All arguments are protobufs:
+         id: AccountIdentier
+         request: StartAuthSessionRequest
+         reply: BaseReply with StartAuthSession
+    -->
+    <method name="StartAuthSession">
+      <annotation name="org.chromium.DBus.Method.Kind"
+                  value="async"/>
+      <annotation name="org.freedesktop.DBus.GLib.Async" value="true"/>
+      <arg type="ay" name="account_id" direction="in">
+        <annotation name="org.chromium.DBus.Argument.ProtobufClass"
+                    value="cryptohome::AccountIdentifier" />
+      </arg>
+      <arg type="ay" name="request" direction="in">
+        <annotation name="org.chromium.DBus.Argument.ProtobufClass"
+                    value="cryptohome::StartAuthSessionRequest" />
+      </arg>
+      <arg type="ay" name="reply" direction="out">
+        <annotation name="org.chromium.DBus.Argument.ProtobufClass"
+                    value="cryptohome::BaseReply" />
+      </arg>
+    </method>
 
     <!-- May be called asynchronously.  Both arguments are protobufs:
          request: GetFirmwareManagementParametersRequest

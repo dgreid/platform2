@@ -758,6 +758,10 @@ class Service : public brillo::dbus::AbstractDbusService,
 
   void PostTaskToEventLoop(base::OnceClosure task);
 
+  virtual gboolean StartAuthSession(const GArray* account_id,
+                                    const GArray* request,
+                                    DBusGMethodInvocation* context);
+
  protected:
   FRIEND_TEST(ServiceTest, NoDeadlocksInInitializeTpmComplete);
 

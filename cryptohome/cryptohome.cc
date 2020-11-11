@@ -165,6 +165,7 @@ static const char* kActions[] = {"mount_ex",
                                  "check_health",
                                  "start_fingerprint_auth_session",
                                  "end_fingerprint_auth_session",
+                                 "start_auth_session",
                                  NULL};
 enum ActionEnum {
   ACTION_MOUNT_EX,
@@ -246,6 +247,7 @@ enum ActionEnum {
   ACTION_CHECK_HEALTH,
   ACTION_START_FINGERPRINT_AUTH_SESSION,
   ACTION_END_FINGERPRINT_AUTH_SESSION,
+  ACTION_START_AUTH_SESSION,
 };
 static const char kUserSwitch[] = "user";
 static const char kPasswordSwitch[] = "password";
@@ -3125,6 +3127,37 @@ int main(int argc, char** argv) {
       printf("CheckHealthReply missing.\n");
       return 1;
     }
+  } else if (!strcmp(switches::kActions[switches::ACTION_START_AUTH_SESSION],
+                     action.c_str())) {
+    cryptohome::AccountIdentifier id;
+    if (!BuildAccountId(cl, &id))
+      return 1;
+
+    cryptohome::StartAuthSessionRequest req;
+
+    brillo::glib::ScopedArray account_ary(GArrayFromProtoBuf(id));
+    brillo::glib::ScopedArray req_ary(GArrayFromProtoBuf(req));
+    if (!account_ary.get() || !req_ary.get())
+      return 1;
+
+    cryptohome::BaseReply reply;
+    brillo::glib::ScopedError error;
+
+    GArray* out_reply = NULL;
+    VLOG(1) << "Attempt to start auth session.";
+    if (!org_chromium_CryptohomeInterface_start_auth_session(
+            proxy.gproxy(), account_ary.get(), req_ary.get(), &out_reply,
+            &brillo::Resetter(&error).lvalue())) {
+      return 1;
+    }
+    // TODO(crbug.com/1152474): Print Auth Session token here for the developer
+    // to easily access token.
+    ParseBaseReply(out_reply, &reply, true /* print_reply */);
+    if (reply.has_error()) {
+      printf("Auth session failed to start.\n");
+      return reply.error();
+    }
+    printf("Auth session start succeeded.\n");
   } else {
     printf("Unknown action or no action given.  Available actions:\n");
     for (int i = 0; switches::kActions[i]; i++)

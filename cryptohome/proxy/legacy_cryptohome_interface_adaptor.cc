@@ -3075,4 +3075,26 @@ void LegacyCryptohomeInterfaceAdaptor::ClearErrorIfNotSet(
   }
 }
 
+void LegacyCryptohomeInterfaceAdaptor::StartAuthSession(
+    std::unique_ptr<
+        brillo::dbus_utils::DBusMethodResponse<cryptohome::BaseReply>> response,
+    const cryptohome::AccountIdentifier& in_account_id,
+    const cryptohome::StartAuthSessionRequest& in_request) {
+  auto response_shared =
+      std::make_shared<SharedDBusMethodResponse<cryptohome::BaseReply>>(
+          std::move(response));
+
+  user_data_auth::StartAuthSessionRequest request;
+  request.mutable_account_id()->CopyFrom(in_account_id);
+  userdataauth_proxy_->StartAuthSessionAsync(
+      request,
+      base::Bind(&LegacyCryptohomeInterfaceAdaptor::ForwardBaseReplyErrorCode<
+                     user_data_auth::StartAuthSessionReply>,
+                 response_shared),
+      base::Bind(&LegacyCryptohomeInterfaceAdaptor::ForwardError<
+                     cryptohome::BaseReply>,
+                 base::Unretained(this), response_shared),
+      kDefaultTimeout.InMilliseconds());
+}
+
 }  // namespace cryptohome

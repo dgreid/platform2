@@ -559,6 +559,9 @@ message StartFingerprintAuthSessionRequest {}
 // Ends fingerprint auth session by calling Biometrics Daemon.
 message EndFingerprintAuthSessionRequest {}
 
+// Starts AuthSession.
+message StartAuthSessionRequest {}
+
 // Reads the WebAuthn secret if it's available.
 message GetWebAuthnSecretRequest {}
 
