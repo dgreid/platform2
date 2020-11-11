@@ -418,6 +418,7 @@ if (use.test) {
     sources = [
       "arc_disk_quota_unittest.cc",
       "auth_block_unittest.cc",
+      "auth_session_unittest.cc",
       "boot_attributes_unittest.cc",
       "bootlockbox/boot_lockbox_unittest.cc",
       "challenge_credentials/challenge_credentials_helper_impl_unittest.cc",

@@ -14,12 +14,14 @@
 #include <base/files/file_path.h>
 #include <base/location.h>
 #include <base/threading/thread.h>
+#include <base/unguessable_token.h>
 #include <brillo/secure_blob.h>
 #include <dbus/bus.h>
 #include <tpm_manager/proto_bindings/tpm_manager.pb.h>
 #include <tpm_manager-client/tpm_manager/dbus-proxies.h>
 
 #include "cryptohome/arc_disk_quota.h"
+#include "cryptohome/auth_session.h"
 #include "cryptohome/bootlockbox/boot_lockbox.h"
 #include "cryptohome/challenge_credentials/challenge_credentials_helper.h"
 #include "cryptohome/credentials.h"
@@ -1111,6 +1113,15 @@ class UserDataAuth {
   // connected to the DBus signal emitter, so calling this will emit the DBus
   // signal to notify various other services that we are low on disk space.
   base::Callback<void(uint64_t)> low_disk_space_callback_;
+
+  // Defines a type for tracking Auth Sessions by token.
+  typedef std::map<const base::UnguessableToken, std::unique_ptr<AuthSession>>
+      AuthSessionMap;
+
+  AuthSessionMap auth_sessions_;
+
+  friend class UserDataAuthExTest;
+  FRIEND_TEST(UserDataAuthExTest, StartAuthSession);
 };
 
 }  // namespace cryptohome

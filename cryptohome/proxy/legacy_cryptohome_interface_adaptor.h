@@ -896,6 +896,9 @@ class LegacyCryptohomeInterfaceAdaptor
   void GetWebAuthnSecretOnSuccess(
       std::shared_ptr<SharedDBusMethodResponse<cryptohome::BaseReply>> response,
       const user_data_auth::GetWebAuthnSecretReply& reply);
+  void StartAuthSessionOnStarted(
+      std::shared_ptr<SharedDBusMethodResponse<cryptohome::BaseReply>> response,
+      const user_data_auth::StartAuthSessionReply& reply);
 
   // This method forwards the error received from calling the new interface back
   // to the old interface

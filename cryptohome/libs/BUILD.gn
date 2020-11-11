@@ -169,6 +169,7 @@ pkg_config("libcrostpm_dependent_config") {
 static_library("libcrostpm") {
   configs += [ ":target_defaults" ]
   sources = [
+    "../auth_session.cc",
     "../bootlockbox/boot_lockbox.cc",
     "../challenge_credential_auth_block.cc",
     "../crc8.c",

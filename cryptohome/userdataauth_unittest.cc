@@ -532,9 +532,15 @@ static_assert(
     "user_data_auth:: and cryptohome::");
 
 static_assert(
-    user_data_auth::CryptohomeErrorCode_MAX == 47,
+    static_cast<int>(user_data_auth::CRYPTOHOME_TOKEN_SERIALIZATION_FAILED) ==
+        static_cast<int>(cryptohome::CRYPTOHOME_TOKEN_SERIALIZATION_FAILED),
+    "Enum member CRYPTOHOME_TOKEN_SERIALIZATION_FAILED differs between "
+    "user_data_auth:: and cryptohome::");
+
+static_assert(
+    user_data_auth::CryptohomeErrorCode_MAX == 48,
     "user_data_auth::CrytpohomeErrorCode's element count is incorrect");
-static_assert(cryptohome::CryptohomeErrorCode_MAX == 47,
+static_assert(cryptohome::CryptohomeErrorCode_MAX == 48,
               "cryptohome::CrytpohomeErrorCode's element count is incorrect");
 }  // namespace CryptohomeErrorCodeEquivalenceTest
 
@@ -2957,19 +2963,23 @@ TEST_F(UserDataAuthExTest, StartAuthSession) {
   PrepareArguments();
   start_auth_session_req_->mutable_account_id()->set_account_id(
       "foo@example.com");
-  bool started = false;
+  user_data_auth::StartAuthSessionReply auth_session_reply;
   userdataauth_->StartAuthSession(
       *start_auth_session_req_,
       base::BindOnce(
-          [](bool* started_ptr,
+          [](user_data_auth::StartAuthSessionReply* auth_reply_ptr,
              const user_data_auth::StartAuthSessionReply& reply) {
-            *started_ptr = true;
-            EXPECT_EQ(user_data_auth::CRYPTOHOME_ERROR_NOT_IMPLEMENTED,
-                      reply.error());
+            *auth_reply_ptr = reply;
           },
-          base::Unretained(&started)));
-
-  EXPECT_TRUE(started);
+          base::Unretained(&auth_session_reply)));
+  EXPECT_EQ(auth_session_reply.error(),
+            user_data_auth::CRYPTOHOME_ERROR_NOT_SET);
+  base::Optional<base::UnguessableToken> auth_session_id =
+      AuthSession::GetTokenFromSerializedString(
+          auth_session_reply.auth_session_id());
+  EXPECT_TRUE(auth_session_id.has_value());
+  EXPECT_NE(userdataauth_->auth_sessions_.find(auth_session_id.value()),
+            userdataauth_->auth_sessions_.end());
 }
 
 class ChallengeResponseUserDataAuthExTest : public UserDataAuthExTest {

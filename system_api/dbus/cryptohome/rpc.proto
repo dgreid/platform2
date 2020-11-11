@@ -79,6 +79,7 @@ enum CryptohomeErrorCode {
   CRYPTOHOME_ERROR_VAULT_UNRECOVERABLE = 45;
   CRYPTOHOME_ERROR_FIDO_MAKE_CREDENTIAL_FAILED = 46;
   CRYPTOHOME_ERROR_FIDO_GET_ASSERTION_FAILED = 47;
+  CRYPTOHOME_TOKEN_SERIALIZATION_FAILED = 48;
 }
 
 message AccountIdentifier {
@@ -566,4 +567,10 @@ message GetWebAuthnSecretReply {
   extend BaseReply { optional GetWebAuthnSecretReply reply = 1016; }
   // WebAuthn secret bytes
   optional bytes webauthn_secret = 1;
+}
+
+message StartAuthSessionReply {
+  extend BaseReply { optional StartAuthSessionReply reply = 1017; }
+
+  optional bytes auth_session_id = 1;
 }

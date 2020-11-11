@@ -3090,13 +3090,24 @@ void LegacyCryptohomeInterfaceAdaptor::StartAuthSession(
   request.mutable_account_id()->CopyFrom(in_account_id);
   userdataauth_proxy_->StartAuthSessionAsync(
       request,
-      base::Bind(&LegacyCryptohomeInterfaceAdaptor::ForwardBaseReplyErrorCode<
-                     user_data_auth::StartAuthSessionReply>,
-                 response_shared),
+      base::Bind(&LegacyCryptohomeInterfaceAdaptor::StartAuthSessionOnStarted,
+                 base::Unretained(this), response_shared),
       base::Bind(&LegacyCryptohomeInterfaceAdaptor::ForwardError<
                      cryptohome::BaseReply>,
                  base::Unretained(this), response_shared),
       kDefaultTimeout.InMilliseconds());
+}
+
+void LegacyCryptohomeInterfaceAdaptor::StartAuthSessionOnStarted(
+    std::shared_ptr<SharedDBusMethodResponse<cryptohome::BaseReply>> response,
+    const user_data_auth::StartAuthSessionReply& reply) {
+  cryptohome::BaseReply result;
+  result.set_error(static_cast<cryptohome::CryptohomeErrorCode>(reply.error()));
+  cryptohome::StartAuthSessionReply* result_extension =
+      result.MutableExtension(cryptohome::StartAuthSessionReply::reply);
+  result_extension->set_auth_session_id(reply.auth_session_id());
+  ClearErrorIfNotSet(&result);
+  response->Return(result);
 }
 
 }  // namespace cryptohome

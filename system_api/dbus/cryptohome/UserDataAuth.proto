@@ -83,6 +83,7 @@ enum CryptohomeErrorCode {
   CRYPTOHOME_ERROR_VAULT_UNRECOVERABLE = 45;
   CRYPTOHOME_ERROR_FIDO_MAKE_CREDENTIAL_FAILED = 46;
   CRYPTOHOME_ERROR_FIDO_GET_ASSERTION_FAILED = 47;
+  CRYPTOHOME_TOKEN_SERIALIZATION_FAILED = 48;
 }
 
 // This is used by MountRequest to store details about the mount to create
@@ -522,6 +523,8 @@ message StartAuthSessionRequest {
 message StartAuthSessionReply {
   // Error if any to start the Auth Session
   CryptohomeErrorCode error = 1;
+  // Token that would be used to conduct any auth-related operation.
+  bytes auth_session_id = 2;
 }
 
 // ------------------------- ArcQuota Interface -------------------------

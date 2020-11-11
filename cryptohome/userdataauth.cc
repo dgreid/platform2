@@ -3057,14 +3057,24 @@ bool UserDataAuth::StartAuthSession(
     user_data_auth::StartAuthSessionRequest request,
     base::OnceCallback<void(const user_data_auth::StartAuthSessionReply&)>
         on_done) {
-  // TODO(crbug.com/1152113): expand to make it a full functioning auth session
-  // API.
+  std::unique_ptr<AuthSession> auth_session =
+      std::make_unique<AuthSession>(request.account_id().account_id());
+
   user_data_auth::StartAuthSessionReply reply;
-  reply.set_error(
-      user_data_auth::CryptohomeErrorCode::CRYPTOHOME_ERROR_NOT_IMPLEMENTED);
+  base::Optional<std::string> serialized_string =
+      AuthSession::GetSerializedStringFromToken(auth_session->token());
+  if (!serialized_string.has_value()) {
+    reply.set_error(user_data_auth::CRYPTOHOME_TOKEN_SERIALIZATION_FAILED);
+    LOG(ERROR) << "Error converting token to string";
+    std::move(on_done).Run(reply);
+    return false;
+  }
+  reply.set_auth_session_id(serialized_string.value());
+
+  auth_sessions_[auth_session->token()] = std::move(auth_session);
   std::move(on_done).Run(reply);
 
-  return false;
+  return true;
 }
 
 }  // namespace cryptohome
