@@ -42,10 +42,8 @@ group("all") {
     deps += [
       ":cryptohome_cryptolib_blob_to_hex_fuzzer",
       ":cryptohome_cryptolib_rsa_oaep_decrypt_fuzzer",
+      ":cryptohome_tpm1_cmk_migration_parser_fuzzer",
     ]
-    if (use.tpm) {
-      deps += [ ":cryptohome_tpm1_cmk_migration_parser_fuzzer" ]
-    }
   }
   if (use.tpm2) {
     deps += [
