@@ -420,6 +420,9 @@ void WebAuthnHandler::DoMakeCredential(
     return;
   }
 
+  if (uv_compatible)
+    InsertAuthTimeSecretHashToCredentialId(&credential_id);
+
   auto ret = HasExcludedCredentials(session.request);
   if (ret == HasCredentialsResponse::INTERNAL_ERROR) {
     response.set_status(MakeCredentialResponse::INTERNAL_ERROR);
@@ -598,6 +601,17 @@ WebAuthnHandler::SendU2fGenerateWaitForPresence(
   }
 
   return MakeCredentialResponse::VERIFICATION_FAILED;
+}
+
+// TODO(b/172971998): Remove this workaround once cr50 handles this.
+void WebAuthnHandler::InsertAuthTimeSecretHashToCredentialId(
+    std::vector<uint8_t>* input) {
+  CHECK(input->size() == sizeof(u2f_versioned_key_handle));
+  // The auth time secret hash should be inserted right after the header and
+  // the authorization salt, before the authorization hmac.
+  input->insert(
+      input->cbegin() + offsetof(u2f_versioned_key_handle, authorization_hmac),
+      auth_time_secret_hash_->cbegin(), auth_time_secret_hash_->cend());
 }
 
 HasCredentialsResponse::HasCredentialsStatus

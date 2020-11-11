@@ -243,6 +243,10 @@ class WebAuthnHandlerTest : public ::testing::Test {
     handler_->auth_time_secret_hash_ = std::make_unique<brillo::Blob>(32, 0x12);
   }
 
+  void InsertAuthTimeSecretHashToCredentialId(std::vector<uint8_t>* input) {
+    handler_->InsertAuthTimeSecretHashToCredentialId(input);
+  }
+
   StrictMock<MockTpmVendorCommandProxy> mock_tpm_proxy_;
   StrictMock<MockUserState> mock_user_state_;
 
@@ -442,8 +446,12 @@ TEST_F(WebAuthnHandlerTest, MakeCredentialSuccess) {
           "41"          // Flag: user present, attested credential data included
           "(..){4}"     // Signature counter
           "(00){16}"    // AAGUID
-          "0071"        // Credential ID length
-          "(FD){113}"   // Credential ID, from kU2fGenerateVersionedResponse
+          "0091"        // Credential ID length
+                        // Credential ID, from kU2fGenerateVersionedResponse:
+          "(FD){65}"    // Versioned key handle header
+          "(FD){16}"    // Authorization salt
+          "(12){32}"    // Hash of authorization secret
+          "(FD){32}"    // Authorization hmac
                         // CBOR encoded credential public key:
           "A5"          // Start a CBOR map of 5 elements
           "01"          // unsigned(1), COSE key type field
@@ -769,6 +777,24 @@ TEST_F(WebAuthnHandlerTest, MakeAuthenticatorDataNoAttestedCredData) {
   EXPECT_THAT(
       base::HexEncode(authenticator_data.data(), authenticator_data.size()),
       MatchesRegex(expected_authenticator_data_regex));
+}
+
+TEST_F(WebAuthnHandlerTest, InsertAuthTimeSecretHashToCredentialId) {
+  SetUpAuthTimeSecretHash();
+  std::vector<uint8_t> input;
+  input.reserve(sizeof(u2f_versioned_key_handle));
+  input.insert(input.cend(), 65, 0x01);  // header
+  input.insert(input.cend(), 16, 0x02);  // authorization_salt
+  input.insert(input.cend(), 32, 0x03);  // authorization_hmac
+  InsertAuthTimeSecretHashToCredentialId(&input);
+
+  const std::string expected_output(
+      "(01){65}"    // header
+      "(02){16}"    // authorization_salt
+      "(12){32}"    // auth_time_secret_hash
+      "(03){32}");  // authorization_hmac
+  EXPECT_THAT(base::HexEncode(input.data(), input.size()),
+              MatchesRegex(expected_output));
 }
 
 }  // namespace

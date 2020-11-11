@@ -118,6 +118,9 @@ class WebAuthnHandler {
   void DoMakeCredential(struct MakeCredentialSession session,
                         PresenceRequirement presence_requirement);
 
+  // Inserts the hash of auth-time secret into a credential id.
+  void InsertAuthTimeSecretHashToCredentialId(std::vector<uint8_t>* input);
+
   // Proceeds to cr50 for the current GetAssertion request, and responds to
   // the request with assertions.
   // Called directly if the request is user-presence only.
