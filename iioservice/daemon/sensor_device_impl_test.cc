@@ -26,7 +26,8 @@ constexpr char kDeviceAttrValue[] = "FakeDeviceAttrValue\0\n\0";
 constexpr char kParsedDeviceAttrValue[] = "FakeDeviceAttrValue";
 
 constexpr char kChnAttrName[] = "FakeChnAttr";
-constexpr char kChnAttrValue[] = "FakeChnValue";
+constexpr char kChnAttrValue[] = "FakeChnValue\n\0\n";
+constexpr char kParsedChnAttrValue[] = "FakeChnValue";
 
 constexpr char kDummyChnAttrName1[] = "DummyChnAttr1";
 constexpr char kDummyChnAttrName2[] = "DummyChnAttr2";
@@ -226,7 +227,7 @@ TEST_F(SensorDeviceImplTest, GetChannelsAttributes) {
             for (int i = 0; i < values.size(); ++i) {
               if (i % 2 == 0) {
                 EXPECT_TRUE(values[i].has_value());
-                EXPECT_EQ(values[i].value().compare(kChnAttrValue), 0);
+                EXPECT_EQ(values[i].value().compare(kParsedChnAttrValue), 0);
               }
             }
             closure.Run();

@@ -250,7 +250,15 @@ void SensorDeviceImpl::GetChannelsAttributes(
       continue;
     }
 
-    values.push_back(chn->ReadStringAttribute(attr_name));
+    base::Optional<std::string> value_opt = chn->ReadStringAttribute(attr_name);
+    if (value_opt.has_value()) {
+      value_opt =
+          base::TrimString(value_opt.value(), base::StringPiece("\0\n", 2),
+                           base::TRIM_TRAILING)
+              .as_string();
+    }
+
+    values.push_back(value_opt);
   }
 
   std::move(callback).Run(std::move(values));
