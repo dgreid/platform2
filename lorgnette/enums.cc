@@ -84,6 +84,11 @@ DocumentScanSaneBackend SaneBackendFromString(const std::string& name) {
     return kHs2P;
   if (name == "ibm")
     return kIbm;
+  if (name == "ippusb") {
+    // TODO(b/160472550): expand this to specify the manufacturer of an airscan
+    // scanner.
+    return kIppUsbOther;
+  }
   if (name == "kodak")
     return kKodak;
   if (name == "kodakaio")

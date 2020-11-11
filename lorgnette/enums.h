@@ -104,7 +104,19 @@ enum DocumentScanSaneBackend {
   kUmax1220U = 92,
   kUmaxPp = 93,
   kXeroxMfp = 94,
-  kMaxValue = kXeroxMfp,
+  kIppUsbBrother = 95,  // IppUsb is the airscan backend used over USB.
+  kIppUsbCanon = 96,
+  kIppUsbEpson = 97,
+  kIppUsbHp = 98,
+  kIppUsbKodak = 99,
+  kIppUsbKonicaMinolta = 100,
+  kIppUsbKyocera = 101,
+  kIppUsbLexmark = 102,
+  kIppUsbOther = 103,
+  kIppUsbRicoh = 104,
+  kIppUsbSamsung = 105,
+  kIppUsbXerox = 106,
+  kMaxValue = kIppUsbXerox,
 };
 
 // Gets the UMA enum corresponding to the SANE backend with the given name. If
