@@ -22,6 +22,7 @@
 #include <cros_config/cros_config_interface.h>
 
 #include "biod/biod_config.h"
+#include "biod/biod_system.h"
 #include "biod/biod_version.h"
 #include "biod/cros_fp_device.h"
 #include "biod/cros_fp_firmware.h"
@@ -222,6 +223,11 @@ UpdateResult DoUpdate(const CrosFpDeviceUpdate& ec_dev,
     return result;
   }
 
+  BiodSystem system;
+  LOG(INFO) << "Hardware write protect: "
+            << (system.HardwareWriteProtectIsEnabled() ? "enabled"
+                                                       : "disabled");
+
   // If write protection is not enabled, the RO firmware should
   // be updated first, as this allows for re-keying (dev->premp->mp)
   // and non-forward compatible changes.
@@ -245,6 +251,13 @@ UpdateResult DoUpdate(const CrosFpDeviceUpdate& ec_dev,
     }
   } else {
     LOG(INFO) << "FPMCU RO firmware is protected: no update.";
+
+    // TODO(b/119131962): Remove when flashrom is fixed.
+    if (!system.HardwareWriteProtectIsEnabled()) {
+      LOG(ERROR) << "FPMCU software write protect enabled while system hardware"
+                    " write is protect disabled. Updating will fail due to "
+                    "http://go/flashrom-fpmcu-wp-bug.";
+    }
   }
 
   // The firmware should be updated if RO is active (i.e. RW is corrupted) or if
