@@ -53,3 +53,4 @@ fcntl64: 1
 # Used by sqlite3 to make sure shm file has the same ownership as db file.
 geteuid32: 1
 fchmod: 1
+clock_gettime: 1
