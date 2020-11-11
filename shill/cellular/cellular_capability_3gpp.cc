@@ -69,6 +69,14 @@ const int CellularCapability3gpp::kSetPowerStateTimeoutMilliseconds = 20000;
 const int CellularCapability3gpp::kUnknownLockRetriesLeft = 999;
 
 namespace {
+// Range of rssi's that modem manager can report.
+const double kModemManagerRssiMax = -51.0;
+const double kModemManagerRssiMin = -113.0;
+
+// Range of rssi's reported to UI. Any RSSI out of this range is clamped to the
+// nearest threshold.
+const double kChromeRssiMin = -103.0;
+const double kChromeRssiMax = -63.0;
 
 // Plugin strings via ModemManager.
 const char kTelitMMPlugin[] = "Telit";
@@ -1600,21 +1608,35 @@ void CellularCapability3gpp::OnModemStateChangedSignal(int32_t old_state,
 }
 
 void CellularCapability3gpp::OnSignalQualityChanged(uint32_t quality) {
-  // Chrome OS UI uses signal quality values set by this method to draw network
-  // icons. UI code maps |quality| to to number of bars: [1-25] 1 bar,
-  // [26-50] 2 bars, [51-75] 3 bars and [76-100] 4 bars.
+  // Shill does not query RSRP or RSRQ from ModemManager yet. For now, we will
+  // rely on RSSI.
+  // TODO(pholla): Report RSRQ instead of RSSI b/173016943
+  // Reference from android:
+  // https://android.googlesource.com/platform/frameworks/base.git/+/master/telephony/java/android/telephony/CarrierConfigManager.java
+  // RSSI thresholds = Androids RSRP thresholds + 25dB (assuming no noise and
+  // 5Mhz channel).
+  // RSSI(dBm) -> UI bars mapping
+  // >-73   GREAT (4 bars)
+  // >-83   GOOD (3 bars)
+  // >-93   MODERATE (2 bars)
+  // >-inf  POOR (1 bar)
+
   // Modem manager measures signal strength in RSSI and maps it to a value in
   // the range of [0-100].
-  // We don't want linear mappings in celluar signal strength icons.
-  // The mappings we desire are: [1-12] 1 bar, [13-24] 2 bars, [25-37] 3 bars
-  // and [38-100] 4 bars.
-  // A simple way to accomplish the desired mappings is to scale signal strength
-  // measurements by 2*x+1.
-  // For example: modem manager reports a signal strength of 25. After
-  // applying our scaling function chrome OS UI will receive a reading of 51.
-  // 51 maps to an icon with 3 bars on Chrome OS UI.
-  uint32_t scaled_quality = std::min(100u, 2 * quality + 1);
-  cellular()->HandleNewSignalQuality(scaled_quality);
+  double rssi =
+      kModemManagerRssiMin + static_cast<double>(quality) / 100.0 *
+                                 (kModemManagerRssiMax - kModemManagerRssiMin);
+  double clamped_rssi =
+      std::min(std::max(rssi, kChromeRssiMin), kChromeRssiMax);
+
+  // Chrome OS UI uses signal quality values set by this method to draw
+  // network icons. UI code maps |quality| to number of bars as follows: [1-25]
+  // 1 bar, [26-50] 2 bars, [51-75] 3 bars and [76-100] 4 bars.
+  // -103->-63 rssi scales to UI quality of 0->100
+  // i.e. UI scaled_quality = min(max(rssi,-103),-63) / 40 * 100
+  double scaled_quality =
+      (clamped_rssi - kChromeRssiMin) * 100 / (kChromeRssiMax - kChromeRssiMin);
+  cellular()->HandleNewSignalQuality(static_cast<uint32_t>(scaled_quality));
 }
 
 void CellularCapability3gpp::OnFacilityLocksChanged(uint32_t locks) {
