@@ -28,6 +28,8 @@ class PortraitModeEffect final
       public base::SupportsWeakPtr<PortraitModeEffect> {
  public:
   PortraitModeEffect();
+  PortraitModeEffect(const PortraitModeEffect&) = delete;
+  PortraitModeEffect& operator=(const PortraitModeEffect&) = delete;
 
   ~PortraitModeEffect() = default;
 
@@ -85,8 +87,6 @@ class PortraitModeEffect final
   base::ConditionVariable condvar_;
 
   int32_t return_status_;
-
-  DISALLOW_COPY_AND_ASSIGN(PortraitModeEffect);
 };
 
 }  // namespace cros

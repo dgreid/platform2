@@ -82,6 +82,8 @@ struct CameraModuleCallbacksAux : camera_module_callbacks_t {
 class Camera3Module {
  public:
   Camera3Module();
+  Camera3Module(const Camera3Module&) = delete;
+  Camera3Module& operator=(const Camera3Module&) = delete;
 
   // Get number of cameras
   int GetNumberOfCameras();
@@ -138,19 +140,16 @@ class Camera3Module {
   // Id of cameras to be tested exclusively. Empty vector for test all available
   // cameras.
   std::vector<int> test_camera_ids_;
-
-  DISALLOW_COPY_AND_ASSIGN(Camera3Module);
 };
 
 class Camera3ModuleFixture : public testing::Test {
  public:
   Camera3ModuleFixture() {}
+  Camera3ModuleFixture(const Camera3ModuleFixture&) = delete;
+  Camera3ModuleFixture& operator=(const Camera3ModuleFixture&) = delete;
 
  protected:
   Camera3Module cam_module_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(Camera3ModuleFixture);
 };
 
 }  // namespace camera3_test

@@ -108,6 +108,8 @@ typedef std::unordered_map<MappedBufferInfoKeyType,
 class CameraBufferManagerImpl final : public CameraBufferManager {
  public:
   CameraBufferManagerImpl();
+  CameraBufferManagerImpl(const CameraBufferManagerImpl&) = delete;
+  CameraBufferManagerImpl& operator=(const CameraBufferManagerImpl&) = delete;
 
   // CameraBufferManager implementation.
   ~CameraBufferManagerImpl();
@@ -209,8 +211,6 @@ class CameraBufferManagerImpl final : public CameraBufferManager {
   MappedGrallocBufferInfoCache buffer_info_;
 
   // ** End of lock_ scope **
-
-  DISALLOW_COPY_AND_ASSIGN(CameraBufferManagerImpl);
 };
 
 }  // namespace cros

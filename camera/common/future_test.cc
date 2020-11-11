@@ -18,6 +18,8 @@ namespace cros {
 class FutureTest : public ::testing::Test {
  public:
   FutureTest() : thread_("Test Thread") {}
+  FutureTest(const FutureTest&) = delete;
+  FutureTest& operator=(const FutureTest&) = delete;
 
   virtual void SetUp() {
     if (!thread_.StartWithOptions(
@@ -43,9 +45,6 @@ class FutureTest : public ::testing::Test {
   base::Thread thread_;
 
   CancellationRelay relay_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(FutureTest);
 };
 
 TEST_F(FutureTest, WaitTest) {

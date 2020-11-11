@@ -28,6 +28,8 @@ const char kVendorGoogleSectionName[] = "com.google";
 class ReprocessEffectManager : public vendor_tag_ops_t {
  public:
   ReprocessEffectManager();
+  ReprocessEffectManager(const ReprocessEffectManager&) = delete;
+  ReprocessEffectManager& operator=(const ReprocessEffectManager&) = delete;
 
   ~ReprocessEffectManager() = default;
 
@@ -78,8 +80,6 @@ class ReprocessEffectManager : public vendor_tag_ops_t {
   CameraBufferManager* buffer_manager_;
 
   std::unique_ptr<PortraitModeEffect> portrait_mode_;
-
-  DISALLOW_COPY_AND_ASSIGN(ReprocessEffectManager);
 };
 
 }  // namespace cros

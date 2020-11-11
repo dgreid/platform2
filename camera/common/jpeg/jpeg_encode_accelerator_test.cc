@@ -80,6 +80,9 @@ struct Frame {
 class JpegEncodeAcceleratorTest : public ::testing::Test {
  public:
   JpegEncodeAcceleratorTest() {}
+  JpegEncodeAcceleratorTest(const JpegEncodeAcceleratorTest&) = delete;
+  JpegEncodeAcceleratorTest& operator=(const JpegEncodeAcceleratorTest&) =
+      delete;
 
   ~JpegEncodeAcceleratorTest() {}
 
@@ -109,9 +112,6 @@ class JpegEncodeAcceleratorTest : public ::testing::Test {
 
   Frame jpeg_frame1_;
   Frame jpeg_frame2_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(JpegEncodeAcceleratorTest);
 };
 
 class JpegEncodeTestEnvironment : public ::testing::Environment {

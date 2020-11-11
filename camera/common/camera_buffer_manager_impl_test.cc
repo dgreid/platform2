@@ -374,6 +374,9 @@ static size_t GetFormatBpp(uint32_t drm_format) {
 class CameraBufferManagerImplTest : public ::testing::Test {
  public:
   CameraBufferManagerImplTest() = default;
+  CameraBufferManagerImplTest(const CameraBufferManagerImplTest&) = delete;
+  CameraBufferManagerImplTest& operator=(const CameraBufferManagerImplTest&) =
+      delete;
 
   void SetUp() {
     EXPECT_CALL(gbm_, CreateGbmDevice())
@@ -440,9 +443,6 @@ class CameraBufferManagerImplTest : public ::testing::Test {
   CameraBufferManagerImpl* cbm_;
 
   MockGbm gbm_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(CameraBufferManagerImplTest);
 };
 
 TEST_F(CameraBufferManagerImplTest, AllocateTest) {

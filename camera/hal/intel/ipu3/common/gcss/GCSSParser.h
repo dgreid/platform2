@@ -32,6 +32,9 @@ namespace GCSS {
 class GCSSParser {
 public:
     GCSSParser();
+    GCSSParser(const GCSSParser&) = delete;
+    GCSSParser& operator=(const GCSSParser&) = delete;
+
     ~GCSSParser();
     void parseGCSSXmlFile(const char*, GraphConfigNode**);
     void parseGCSSXmlFile(const char*, IGraphConfig**);
@@ -48,7 +51,6 @@ private: /* Methods */
     void handleGraph(const char *name, const char **atts);
     void handleNode(const char *name, const char **atts);
     void checkField(GCSSParser *profiles, const char *name, const char **atts);
-    DISALLOW_COPY_AND_ASSIGN(GCSSParser);
 
 private:  /* Members */
 

@@ -24,6 +24,10 @@ class CameraAlgorithmCallbackOpsImpl
   CameraAlgorithmCallbackOpsImpl(
       scoped_refptr<base::SingleThreadTaskRunner> ipc_task_runner,
       const camera_algorithm_callback_ops_t* callback_ops);
+  CameraAlgorithmCallbackOpsImpl(const CameraAlgorithmCallbackOpsImpl&) =
+      delete;
+  CameraAlgorithmCallbackOpsImpl& operator=(
+      const CameraAlgorithmCallbackOpsImpl&) = delete;
 
   ~CameraAlgorithmCallbackOpsImpl() override {}
 
@@ -45,8 +49,6 @@ class CameraAlgorithmCallbackOpsImpl
 
   // Return callback registered by HAL
   const camera_algorithm_callback_ops_t* callback_ops_;
-
-  DISALLOW_COPY_AND_ASSIGN(CameraAlgorithmCallbackOpsImpl);
 };
 
 }  // namespace cros

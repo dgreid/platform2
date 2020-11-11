@@ -31,6 +31,8 @@ class ArcCameraDBusDaemon::DBusAdaptor
         dbus_object_(
             nullptr, bus, dbus::ObjectPath(arc_camera::kArcCameraServicePath)) {
   }
+  DBusAdaptor(const DBusAdaptor&) = delete;
+  DBusAdaptor& operator=(const DBusAdaptor&) = delete;
 
   ~DBusAdaptor() override = default;
 
@@ -74,8 +76,6 @@ class ArcCameraDBusDaemon::DBusAdaptor
 
  private:
   brillo::dbus_utils::DBusObject dbus_object_;
-
-  DISALLOW_COPY_AND_ASSIGN(DBusAdaptor);
 };
 
 ArcCameraDBusDaemon::ArcCameraDBusDaemon()

@@ -26,6 +26,9 @@ class ArcCameraDBusDaemon : public brillo::DBusServiceDaemon {
   static constexpr int kMojoChannelFD = 3;
 
   ArcCameraDBusDaemon();
+  ArcCameraDBusDaemon(const ArcCameraDBusDaemon&) = delete;
+  ArcCameraDBusDaemon& operator=(const ArcCameraDBusDaemon&) = delete;
+
   ~ArcCameraDBusDaemon() override;
 
  protected:
@@ -36,8 +39,6 @@ class ArcCameraDBusDaemon : public brillo::DBusServiceDaemon {
   class DBusAdaptor;
 
   std::unique_ptr<DBusAdaptor> adaptor_;
-
-  DISALLOW_COPY_AND_ASSIGN(ArcCameraDBusDaemon);
 };
 
 }  // namespace arc

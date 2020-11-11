@@ -20,6 +20,9 @@ namespace cros {
 class CaptureRequest {
  public:
   explicit CaptureRequest(camera3_capture_request_t* request);
+  CaptureRequest(const CaptureRequest&) = delete;
+  CaptureRequest& operator=(const CaptureRequest&) = delete;
+
   ~CaptureRequest();
 
   const uint32_t GetFrameNumber() const;
@@ -31,8 +34,6 @@ class CaptureRequest {
   const uint32_t frame_number_;
   buffer_handle_t buffer_handle_;
   camera3_stream_buffer_t output_stream_buffer_;
-
-  DISALLOW_COPY_AND_ASSIGN(CaptureRequest);
 };
 
 // This class provides its own locking and is therefore thread-safe. It is
@@ -40,6 +41,9 @@ class CaptureRequest {
 class RequestQueue {
  public:
   RequestQueue();
+  RequestQueue(const RequestQueue&) = delete;
+  RequestQueue& operator=(const RequestQueue&) = delete;
+
   ~RequestQueue();
 
   // Must be called before using any other functionality of the RequestQueue.
@@ -83,8 +87,6 @@ class RequestQueue {
   bool flushing_;
 
   const camera3_callback_ops_t* callback_ops_;
-
-  DISALLOW_COPY_AND_ASSIGN(RequestQueue);
 };
 
 }  // namespace cros

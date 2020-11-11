@@ -22,6 +22,9 @@ namespace arc {
 class V4L2CameraDevice : public CameraDeviceDelegate {
  public:
   V4L2CameraDevice();
+  V4L2CameraDevice(const V4L2CameraDevice&) = delete;
+  V4L2CameraDevice& operator=(const V4L2CameraDevice&) = delete;
+
   ~V4L2CameraDevice() override;
 
   int Connect(const std::string& device_path) override;
@@ -70,8 +73,6 @@ class V4L2CameraDevice : public CameraDeviceDelegate {
 
   // True if the buffer is used by client after GetNextFrameBuffer().
   std::vector<bool> buffers_at_client_;
-
-  DISALLOW_COPY_AND_ASSIGN(V4L2CameraDevice);
 };
 
 }  // namespace arc

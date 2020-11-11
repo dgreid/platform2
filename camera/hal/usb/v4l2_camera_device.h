@@ -59,6 +59,9 @@ class V4L2CameraDevice {
  public:
   V4L2CameraDevice();
   explicit V4L2CameraDevice(const DeviceInfo& device_info);
+  V4L2CameraDevice(const V4L2CameraDevice&) = delete;
+  V4L2CameraDevice& operator=(const V4L2CameraDevice&) = delete;
+
   virtual ~V4L2CameraDevice();
 
   // Connect camera device with |device_path|. Return 0 if device is opened
@@ -259,8 +262,6 @@ class V4L2CameraDevice {
   // Since V4L2CameraDevice may be called on different threads, this is used to
   // guard all variables.
   base::Lock lock_;
-
-  DISALLOW_COPY_AND_ASSIGN(V4L2CameraDevice);
 };
 
 }  // namespace cros

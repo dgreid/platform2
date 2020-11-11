@@ -31,6 +31,9 @@ namespace intel {
 class FaceEngineLibrary {
 public:
     FaceEngineLibrary();
+    FaceEngineLibrary(const FaceEngineLibrary&) = delete;
+    FaceEngineLibrary& operator=(const FaceEngineLibrary&) = delete;
+
     virtual ~FaceEngineLibrary();
 
     status_t init(void* pData, int dataSize);
@@ -48,8 +51,6 @@ private:
     unsigned int mMaxFacesNum;
 
     void convertCoordinate(int faceId, int width, int height, pvl_rect& src, pvl_rect* dst);
-
-    DISALLOW_COPY_AND_ASSIGN(FaceEngineLibrary);
 };
 } /* namespace intel */
 } /* namespace cros */

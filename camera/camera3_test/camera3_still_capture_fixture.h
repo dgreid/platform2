@@ -20,6 +20,9 @@ class Camera3StillCaptureFixture : public Camera3PreviewFixture {
  public:
   explicit Camera3StillCaptureFixture(std::vector<int> cam_ids)
       : Camera3PreviewFixture(cam_ids), cam_ids_(cam_ids) {}
+  Camera3StillCaptureFixture(const Camera3StillCaptureFixture&) = delete;
+  Camera3StillCaptureFixture& operator=(const Camera3StillCaptureFixture&) =
+      delete;
 
   void SetUp() override;
 
@@ -59,8 +62,6 @@ class Camera3StillCaptureFixture : public Camera3PreviewFixture {
 
  private:
   std::vector<int> cam_ids_;
-
-  DISALLOW_COPY_AND_ASSIGN(Camera3StillCaptureFixture);
 };
 
 }  // namespace camera3_test

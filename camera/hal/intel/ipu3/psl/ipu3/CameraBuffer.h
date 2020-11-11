@@ -54,6 +54,8 @@ public:
      * These are used via the utility methods in the MemoryUtils namespace
      */
     CameraBuffer(int w, int h, int s, int v4l2fmt, void* usrPtr, int cameraId, int dataSizeOverride = 0);
+    CameraBuffer(const CameraBuffer&) = delete;
+    CameraBuffer& operator=(const CameraBuffer&) = delete;
 
     /**
      * no need to delete a buffer since it is RefBase'd. Buffer will be deleted
@@ -102,7 +104,6 @@ public:
     BufferType type() {return mType;}
 
 private:
-    DISALLOW_COPY_AND_ASSIGN(CameraBuffer);
 
     status_t registerBuffer();
     status_t deregisterBuffer();

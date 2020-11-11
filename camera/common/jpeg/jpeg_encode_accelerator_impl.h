@@ -30,6 +30,9 @@ namespace cros {
 class JpegEncodeAcceleratorImpl : public JpegEncodeAccelerator {
  public:
   explicit JpegEncodeAcceleratorImpl(CameraMojoChannelManager* mojo_manager);
+  JpegEncodeAcceleratorImpl(const JpegEncodeAcceleratorImpl&) = delete;
+  JpegEncodeAcceleratorImpl& operator=(const JpegEncodeAcceleratorImpl&) =
+      delete;
 
   ~JpegEncodeAcceleratorImpl() override;
 
@@ -171,8 +174,6 @@ class JpegEncodeAcceleratorImpl : public JpegEncodeAccelerator {
   // The instance which deals with the IPC-related calls. It should always run
   // and be deleted on IPC thread.
   std::unique_ptr<IPCBridge> ipc_bridge_;
-
-  DISALLOW_COPY_AND_ASSIGN(JpegEncodeAcceleratorImpl);
 };
 
 }  // namespace cros

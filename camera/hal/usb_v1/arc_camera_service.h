@@ -25,6 +25,9 @@ namespace arc {
 class ArcCameraServiceImpl : public ArcCameraService {
  public:
   explicit ArcCameraServiceImpl(base::Closure quit_cb);
+  ArcCameraServiceImpl(const ArcCameraServiceImpl&) = delete;
+  ArcCameraServiceImpl& operator=(const ArcCameraServiceImpl&) = delete;
+
   ~ArcCameraServiceImpl();
 
   // Create a mojo connection to container with a socket FD.
@@ -67,8 +70,6 @@ class ArcCameraServiceImpl : public ArcCameraService {
   base::Thread ipc_thread_;
   std::unique_ptr<mojo::core::ScopedIPCSupport> ipc_support_;
   std::unique_ptr<mojo::IsolatedConnection> isolated_connection_;
-
-  DISALLOW_COPY_AND_ASSIGN(ArcCameraServiceImpl);
 };
 
 }  // namespace arc

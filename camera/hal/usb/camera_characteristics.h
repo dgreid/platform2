@@ -54,6 +54,8 @@ class CameraCharacteristics {
 
   // Initialize camera characteristics from |config_file|.
   explicit CameraCharacteristics(const base::FilePath& config_file);
+  CameraCharacteristics(const CameraCharacteristics&) = delete;
+  CameraCharacteristics& operator=(const CameraCharacteristics&) = delete;
 
   // Get the device information by vid and pid. Returns |nullptr| if not found.
   const DeviceInfo* Find(const std::string& vid, const std::string& pid) const;
@@ -64,8 +66,6 @@ class CameraCharacteristics {
   // The key is a pair of usb (vid, pid).
   std::map<std::pair<std::string, std::string>, DeviceInfo>
       camera_module_infos_;
-
-  DISALLOW_COPY_AND_ASSIGN(CameraCharacteristics);
 };
 
 }  // namespace cros

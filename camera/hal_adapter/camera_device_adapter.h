@@ -63,6 +63,8 @@ class Camera3CaptureRequest : public camera3_capture_request_t {
 class CameraMonitor : public base::OneShotTimer {
  public:
   explicit CameraMonitor(const std::string& name);
+  CameraMonitor(const CameraMonitor&) = delete;
+  CameraMonitor& operator=(const CameraMonitor&) = delete;
 
   ~CameraMonitor() override = default;
 
@@ -82,8 +84,6 @@ class CameraMonitor : public base::OneShotTimer {
 
   base::Lock lock_;
   bool is_kicked_ GUARDED_BY(lock_);
-
-  DISALLOW_COPY_AND_ASSIGN(CameraMonitor);
 };
 
 class CameraDeviceAdapter : public camera3_callback_ops_t {

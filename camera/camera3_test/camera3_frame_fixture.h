@@ -89,6 +89,8 @@ class Camera3FrameFixture : public Camera3StreamFixture {
         supported_color_bars_test_pattern_modes_(
             {ANDROID_SENSOR_TEST_PATTERN_MODE_COLOR_BARS_FADE_TO_GRAY,
              ANDROID_SENSOR_TEST_PATTERN_MODE_COLOR_BARS}) {}
+  Camera3FrameFixture(const Camera3FrameFixture&) = delete;
+  Camera3FrameFixture& operator=(const Camera3FrameFixture&) = delete;
 
  protected:
   // Create and process capture request of given metadata |metadata|. The frame
@@ -181,8 +183,6 @@ class Camera3FrameFixture : public Camera3StreamFixture {
                                uint32_t* frame_number);
 
   std::vector<int32_t> supported_color_bars_test_pattern_modes_;
-
-  DISALLOW_COPY_AND_ASSIGN(Camera3FrameFixture);
 };
 
 void GetTimeOfTimeout(int32_t ms, struct timespec* ts);

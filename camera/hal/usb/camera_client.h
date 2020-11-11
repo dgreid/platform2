@@ -62,6 +62,9 @@ class CameraClient {
                const camera_metadata_t& request_template,
                const hw_module_t* module,
                hw_device_t** hw_device);
+  CameraClient(const CameraClient&) = delete;
+  CameraClient& operator=(const CameraClient&) = delete;
+
   ~CameraClient();
 
   // Camera Device Operations from CameraHal.
@@ -325,8 +328,6 @@ class CameraClient {
 
   // Task runner for request thread.
   scoped_refptr<base::SingleThreadTaskRunner> request_task_runner_;
-
-  DISALLOW_COPY_AND_ASSIGN(CameraClient);
 };
 
 }  // namespace cros

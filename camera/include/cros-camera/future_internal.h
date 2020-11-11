@@ -21,6 +21,8 @@ namespace internal {
 class CROS_CAMERA_EXPORT FutureLock {
  public:
   explicit FutureLock(CancellationRelay* relay);
+  FutureLock(const FutureLock&) = delete;
+  FutureLock& operator=(const FutureLock&) = delete;
 
   ~FutureLock();
 
@@ -47,8 +49,6 @@ class CROS_CAMERA_EXPORT FutureLock {
 
   /* Registerred by FutureLock to receive cancel signal */
   CancellationRelay* relay_;
-
-  DISALLOW_COPY_AND_ASSIGN(FutureLock);
 };
 
 }  // namespace internal

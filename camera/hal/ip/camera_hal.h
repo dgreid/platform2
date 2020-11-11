@@ -28,6 +28,9 @@ namespace cros {
 class CameraHal : public mojom::IpCameraConnectionListener {
  public:
   CameraHal();
+  CameraHal(const CameraHal&) = delete;
+  CameraHal& operator=(const CameraHal&) = delete;
+
   ~CameraHal();
 
   static CameraHal& GetInstance();
@@ -76,8 +79,6 @@ class CameraHal : public mojom::IpCameraConnectionListener {
 
   // Mojo manager which is used for Mojo communication.
   CameraMojoChannelManager* mojo_manager_;
-
-  DISALLOW_COPY_AND_ASSIGN(CameraHal);
 };
 
 }  // namespace cros

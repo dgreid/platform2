@@ -20,6 +20,9 @@ namespace arc {
 class CameraDeviceDelegate {
  public:
   CameraDeviceDelegate() {}
+  CameraDeviceDelegate(const CameraDeviceDelegate&) = delete;
+  CameraDeviceDelegate& operator=(const CameraDeviceDelegate&) = delete;
+
   virtual ~CameraDeviceDelegate() {}
 
   // Connect camera device with |device_path|. Return 0 if device is opened
@@ -71,8 +74,6 @@ class CameraDeviceDelegate {
   // Get all camera devices information. This function can be called without
   // calling Connect().
   virtual const DeviceInfos GetCameraDeviceInfos() = 0;
-
-  DISALLOW_COPY_AND_ASSIGN(CameraDeviceDelegate);
 };
 
 }  // namespace arc

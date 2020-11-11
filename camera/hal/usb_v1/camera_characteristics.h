@@ -39,6 +39,9 @@ namespace arc {
 class CameraCharacteristics {
  public:
   CameraCharacteristics();
+  CameraCharacteristics(const CameraCharacteristics&) = delete;
+  CameraCharacteristics& operator=(const CameraCharacteristics&) = delete;
+
   ~CameraCharacteristics();
 
   // Parses /etc/camera/camera_characteristics.conf.
@@ -59,8 +62,6 @@ class CameraCharacteristics {
   void AddFloatValue(const char* value,
                      const char* characteristic_name,
                      float* characteristic);
-
-  DISALLOW_COPY_AND_ASSIGN(CameraCharacteristics);
 };
 
 }  // namespace arc

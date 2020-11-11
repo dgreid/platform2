@@ -31,6 +31,9 @@ class CameraAlgorithmBridgeImpl : public CameraAlgorithmBridge {
  public:
   CameraAlgorithmBridgeImpl(CameraAlgorithmBackend backend,
                             CameraMojoChannelManager* mojo_manager);
+  CameraAlgorithmBridgeImpl(const CameraAlgorithmBridgeImpl&) = delete;
+  CameraAlgorithmBridgeImpl& operator=(const CameraAlgorithmBridgeImpl&) =
+      delete;
 
   ~CameraAlgorithmBridgeImpl();
 
@@ -112,8 +115,6 @@ class CameraAlgorithmBridgeImpl : public CameraAlgorithmBridge {
   // The instance which deals with the IPC-related calls. It should always run
   // and be deleted on IPC thread.
   std::unique_ptr<IPCBridge> ipc_bridge_;
-
-  DISALLOW_COPY_AND_ASSIGN(CameraAlgorithmBridgeImpl);
 };
 
 }  // namespace cros

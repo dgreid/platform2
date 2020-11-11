@@ -79,6 +79,9 @@ class ParameterWorker: public FrameWorker
 {
 public:
     ParameterWorker(std::shared_ptr<cros::V4L2VideoNode> node, int cameraId, GraphConfig::PipeType pipeType);
+    ParameterWorker(const ParameterWorker&) = delete;
+    ParameterWorker& operator=(const ParameterWorker&) = delete;
+
     virtual ~ParameterWorker();
 
     virtual status_t configure(std::shared_ptr<GraphConfig> &config);
@@ -89,7 +92,6 @@ public:
     void dump();
 
 private:
-    DISALLOW_COPY_AND_ASSIGN(ParameterWorker);
     struct CsiBeOut {
         int width;
         int height;

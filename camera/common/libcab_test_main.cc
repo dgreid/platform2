@@ -39,6 +39,10 @@ class CameraAlgorithmBridgeFixture : public testing::Test,
     sem_init(&return_sem_, 0, 0);
   }
 
+  CameraAlgorithmBridgeFixture(const CameraAlgorithmBridgeFixture&) = delete;
+  CameraAlgorithmBridgeFixture& operator=(const CameraAlgorithmBridgeFixture&) =
+      delete;
+
   ~CameraAlgorithmBridgeFixture() { sem_destroy(&return_sem_); }
 
   void Request(const std::vector<uint8_t>& req_header, int32_t buffer_handle) {
@@ -97,8 +101,6 @@ class CameraAlgorithmBridgeFixture : public testing::Test,
   base::Lock request_map_lock_;
 
   std::unordered_map<uint32_t, int32_t> request_map_;
-
-  DISALLOW_COPY_AND_ASSIGN(CameraAlgorithmBridgeFixture);
 };
 
 TEST_F(CameraAlgorithmBridgeFixture, BasicOperation) {
@@ -235,6 +237,10 @@ TEST_F(CameraAlgorithmBridgeFixture, DeadLockRecovery) {
 class CameraAlgorithmBridgeStatusFixture : public CameraAlgorithmBridgeFixture {
  public:
   CameraAlgorithmBridgeStatusFixture() {}
+  CameraAlgorithmBridgeStatusFixture(
+      const CameraAlgorithmBridgeStatusFixture&) = delete;
+  CameraAlgorithmBridgeStatusFixture& operator=(
+      const CameraAlgorithmBridgeStatusFixture&) = delete;
 
  protected:
   void ReturnCallback(uint32_t req_id,
@@ -254,9 +260,6 @@ class CameraAlgorithmBridgeStatusFixture : public CameraAlgorithmBridgeFixture {
 
   // Stores hashcode generated from |req_header| of the Request calls.
   std::vector<uint32_t> hash_codes_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(CameraAlgorithmBridgeStatusFixture);
 };
 
 static int GenerateRandomHeader(uint32_t max_header_len,

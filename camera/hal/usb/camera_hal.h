@@ -35,6 +35,9 @@ namespace cros {
 class CameraHal : public UdevWatcher::Observer {
  public:
   CameraHal();
+  CameraHal(const CameraHal&) = delete;
+  CameraHal& operator=(const CameraHal&) = delete;
+
   ~CameraHal();
 
   static CameraHal& GetInstance();
@@ -114,8 +117,6 @@ class CameraHal : public UdevWatcher::Observer {
 
   // Mojo manager which is used for Mojo communication.
   CameraMojoChannelManager* mojo_manager_;
-
-  DISALLOW_COPY_AND_ASSIGN(CameraHal);
 };
 
 // Callback for camera_device.common.close().

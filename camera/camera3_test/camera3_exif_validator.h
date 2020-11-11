@@ -34,6 +34,8 @@ class Camera3ExifValidator {
 
   explicit Camera3ExifValidator(const Camera3Device::StaticInfo& cam_info)
       : cam_info_(cam_info) {}
+  Camera3ExifValidator(const Camera3ExifValidator&) = delete;
+  Camera3ExifValidator& operator=(const Camera3ExifValidator&) = delete;
 
   void ValidateExifKeys(const ResolutionInfo& jpeg_resolution,
                         const ExifTestData& exif_test_data,
@@ -45,9 +47,6 @@ class Camera3ExifValidator {
 
  protected:
   const Camera3Device::StaticInfo& cam_info_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(Camera3ExifValidator);
 };
 
 }  // namespace camera3_test

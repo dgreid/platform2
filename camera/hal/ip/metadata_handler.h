@@ -16,6 +16,9 @@ namespace cros {
 class MetadataHandler {
  public:
   MetadataHandler();
+  MetadataHandler(const MetadataHandler&) = delete;
+  MetadataHandler& operator=(const MetadataHandler&) = delete;
+
   ~MetadataHandler();
 
   // The caller is responsible for freeing the memory returned
@@ -27,9 +30,6 @@ class MetadataHandler {
                                                       double fps);
 
   static camera_metadata_t* GetDefaultRequestSettings();
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MetadataHandler);
 };
 
 }  // namespace cros

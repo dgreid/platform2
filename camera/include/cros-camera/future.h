@@ -53,6 +53,9 @@ class CROS_CAMERA_EXPORT CancellationRelay {
 template <typename T>
 class Future : public base::RefCountedThreadSafe<Future<T>> {
  public:
+  Future(const Future&) = delete;
+  Future& operator=(const Future&) = delete;
+
   static scoped_refptr<Future<T>> Create(CancellationRelay* relay) {
     return base::WrapRefCounted(new Future<T>(relay));
   }
@@ -90,13 +93,14 @@ class Future : public base::RefCountedThreadSafe<Future<T>> {
   internal::FutureLock lock_;
 
   T value_;
-
-  DISALLOW_COPY_AND_ASSIGN(Future);
 };
 
 template <>
 class Future<void> : public base::RefCountedThreadSafe<Future<void>> {
  public:
+  Future(const Future&) = delete;
+  Future& operator=(const Future&) = delete;
+
   static scoped_refptr<Future<void>> Create(CancellationRelay* relay) {
     return base::WrapRefCounted(new Future<void>(relay));
   }
@@ -123,8 +127,6 @@ class Future<void> : public base::RefCountedThreadSafe<Future<void>> {
   ~Future() = default;
 
   internal::FutureLock lock_;
-
-  DISALLOW_COPY_AND_ASSIGN(Future);
 };
 
 template <typename T>

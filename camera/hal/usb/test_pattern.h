@@ -20,6 +20,9 @@ namespace cros {
 class TestPattern {
  public:
   explicit TestPattern(Size sensor_pixel_array_size, Size resolution);
+  TestPattern(const TestPattern&) = delete;
+  TestPattern& operator=(const TestPattern&) = delete;
+
   ~TestPattern();
 
   // Sets pattern mode.
@@ -42,8 +45,6 @@ class TestPattern {
   int32_t pattern_mode_;
   std::unique_ptr<SharedFrameBuffer> pattern_image_rgb_;
   std::unique_ptr<SharedFrameBuffer> pattern_image_yuv_;
-
-  DISALLOW_COPY_AND_ASSIGN(TestPattern);
 };
 
 }  // namespace cros

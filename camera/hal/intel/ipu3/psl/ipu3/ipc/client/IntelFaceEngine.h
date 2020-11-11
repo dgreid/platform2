@@ -31,6 +31,9 @@ namespace intel {
 class IntelFaceEngine {
 public:
     IntelFaceEngine();
+    IntelFaceEngine(const IntelFaceEngine&) = delete;
+    IntelFaceEngine& operator=(const IntelFaceEngine&) = delete;
+
     virtual ~IntelFaceEngine();
 
     bool init(unsigned int max_face_num, int maxWidth, int maxHeight, face_detection_mode fd_mode);
@@ -56,8 +59,6 @@ private:
     std::queue<ShmMemInfo *> mMemRunningPool;
 
     std::vector<ShmMem> mMems;
-
-    DISALLOW_COPY_AND_ASSIGN(IntelFaceEngine);
 };
 } /* namespace intel */
 } /* namespace cros */

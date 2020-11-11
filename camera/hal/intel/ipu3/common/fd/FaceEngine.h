@@ -51,6 +51,9 @@ class FaceEngine {
 public:
     FaceEngine(int cameraId, unsigned int maxFaceNum,
                    int maxWidth, int maxHeight, face_detection_mode fdMode);
+    FaceEngine(const FaceEngine&) = delete;
+    FaceEngine& operator=(const FaceEngine&) = delete;
+
     ~FaceEngine();
 
     void run(const pvl_image& frame);
@@ -86,8 +89,6 @@ private:
     IntelFaceEngine mFace;
 
     cros::CameraThread mCameraThread;
-
-    DISALLOW_COPY_AND_ASSIGN(FaceEngine);
 };  // class FaceEngine
 }  // namespace intel
 }  // namespace cros

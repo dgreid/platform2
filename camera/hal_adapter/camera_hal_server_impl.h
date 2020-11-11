@@ -32,6 +32,9 @@ class CameraMojoChannelManager;
 class CameraHalServerImpl final {
  public:
   CameraHalServerImpl();
+  CameraHalServerImpl(const CameraHalServerImpl&) = delete;
+  CameraHalServerImpl& operator=(const CameraHalServerImpl&) = delete;
+
   ~CameraHalServerImpl();
 
   // Initializes the threads and start monitoring the unix domain socket file
@@ -106,8 +109,6 @@ class CameraHalServerImpl final {
   std::unique_ptr<CameraHalAdapter> camera_hal_adapter_;
 
   THREAD_CHECKER(thread_checker_);
-
-  DISALLOW_COPY_AND_ASSIGN(CameraHalServerImpl);
 };
 
 }  // namespace cros

@@ -33,6 +33,8 @@ class GPUAlgoManager final : public camera_algorithm_callback_ops_t {
 
  private:
   explicit GPUAlgoManager(CameraMojoChannelManager* mojo_manager);
+  GPUAlgoManager(const GPUAlgoManager&) = delete;
+  GPUAlgoManager& operator=(const GPUAlgoManager&) = delete;
 
   ~GPUAlgoManager() = default;
 
@@ -52,8 +54,6 @@ class GPUAlgoManager final : public camera_algorithm_callback_ops_t {
   uint32_t req_id_;
 
   std::map<uint32_t, base::Callback<void(uint32_t, int32_t)>> cb_map_;
-
-  DISALLOW_COPY_AND_ASSIGN(GPUAlgoManager);
 };
 
 }  // namespace cros

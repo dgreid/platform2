@@ -71,6 +71,9 @@ struct Frame {
 class JpegDecodeAcceleratorTest : public ::testing::Test {
  public:
   JpegDecodeAcceleratorTest() {}
+  JpegDecodeAcceleratorTest(const JpegDecodeAcceleratorTest&) = delete;
+  JpegDecodeAcceleratorTest& operator=(const JpegDecodeAcceleratorTest&) =
+      delete;
 
   ~JpegDecodeAcceleratorTest() {}
   void SetUp();
@@ -98,8 +101,6 @@ class JpegDecodeAcceleratorTest : public ::testing::Test {
 
  private:
   void ResetJDAChannelOnIpcThread(scoped_refptr<cros::Future<void>> future);
-
-  DISALLOW_COPY_AND_ASSIGN(JpegDecodeAcceleratorTest);
 };
 
 class JpegDecodeTestEnvironment : public ::testing::Environment {

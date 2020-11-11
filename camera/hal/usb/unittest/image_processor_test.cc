@@ -20,9 +20,8 @@ namespace tests {
 class ImageProcessorTest : public ::testing::Test {
  public:
   ImageProcessorTest() = default;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ImageProcessorTest);
+  ImageProcessorTest(const ImageProcessorTest&) = delete;
+  ImageProcessorTest& operator=(const ImageProcessorTest&) = delete;
 };
 
 TEST_F(ImageProcessorTest, GetConvertedSize) {

@@ -35,6 +35,9 @@ class ExifMetaData
 {
 public:
     ExifMetaData();
+    ExifMetaData(const ExifMetaData&) = delete;
+    ExifMetaData& operator=(const ExifMetaData&) = delete;
+
     virtual ~ExifMetaData();
     status_t saveAeConfig(SensorAeConfig& config);
     status_t saveIa3AMkNote(const ia_binary_data& mkNote);
@@ -89,8 +92,6 @@ typedef makernote_info MakernoteType;
     int8_t mV3AeMode;                           /*!< v3 ae mode (e.g. for flash) */
     int8_t mFlashMode;                          /*!< flash mode (e.g. TORCH,SINGLE,OFF) */
     int mZoomRatio;
-private:
-    DISALLOW_COPY_AND_ASSIGN(ExifMetaData);
 };
 } /* namespace intel */
 } /* namespace cros */

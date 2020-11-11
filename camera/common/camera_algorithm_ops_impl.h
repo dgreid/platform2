@@ -23,6 +23,9 @@ namespace cros {
 class CameraAlgorithmOpsImpl : public mojom::CameraAlgorithmOps,
                                private camera_algorithm_callback_ops_t {
  public:
+  CameraAlgorithmOpsImpl(const CameraAlgorithmOpsImpl&) = delete;
+  CameraAlgorithmOpsImpl& operator=(const CameraAlgorithmOpsImpl&) = delete;
+
   // Get singleton instance
   static CameraAlgorithmOpsImpl* GetInstance();
 
@@ -82,8 +85,6 @@ class CameraAlgorithmOpsImpl : public mojom::CameraAlgorithmOps,
   // Pointer to local proxy of remote CameraAlgorithmCallback interface
   // implementation
   mojom::CameraAlgorithmCallbackOpsPtr cb_ptr_;
-
-  DISALLOW_COPY_AND_ASSIGN(CameraAlgorithmOpsImpl);
 };
 
 }  // namespace cros

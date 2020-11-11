@@ -26,6 +26,10 @@ namespace cros {
 class CameraMojoChannelManagerImpl final : public CameraMojoChannelManager {
  public:
   CameraMojoChannelManagerImpl();
+  CameraMojoChannelManagerImpl(const CameraMojoChannelManagerImpl&) = delete;
+  CameraMojoChannelManagerImpl& operator=(const CameraMojoChannelManagerImpl&) =
+      delete;
+
   ~CameraMojoChannelManagerImpl();
 
   // CameraMojoChannelManager implementations.
@@ -102,8 +106,6 @@ class CameraMojoChannelManagerImpl final : public CameraMojoChannelManager {
   // TODO(b/151270948): Remove this static variable once we implemnet CrOS
   // specific interface on all camera HALs.
   static CameraMojoChannelManagerImpl* instance_;
-
-  DISALLOW_COPY_AND_ASSIGN(CameraMojoChannelManagerImpl);
 };
 
 }  // namespace cros

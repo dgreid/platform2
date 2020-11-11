@@ -25,6 +25,9 @@ namespace cros {
 class CameraAlgorithmAdapter {
  public:
   CameraAlgorithmAdapter();
+  CameraAlgorithmAdapter(const CameraAlgorithmAdapter&) = delete;
+  CameraAlgorithmAdapter& operator=(const CameraAlgorithmAdapter&) = delete;
+
   ~CameraAlgorithmAdapter();
 
   // Build up IPC and load the camera algorithm library. This method returns
@@ -51,8 +54,6 @@ class CameraAlgorithmAdapter {
 
   // Store observers for future locks
   cros::CancellationRelay relay_;
-
-  DISALLOW_COPY_AND_ASSIGN(CameraAlgorithmAdapter);
 };
 
 }  // namespace cros

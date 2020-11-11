@@ -32,6 +32,9 @@ class JpegDecodeAcceleratorTest;
 class JpegDecodeAcceleratorImpl final : public JpegDecodeAccelerator {
  public:
   explicit JpegDecodeAcceleratorImpl(CameraMojoChannelManager* mojo_manager);
+  JpegDecodeAcceleratorImpl(const JpegDecodeAcceleratorImpl&) = delete;
+  JpegDecodeAcceleratorImpl& operator=(const JpegDecodeAcceleratorImpl&) =
+      delete;
 
   ~JpegDecodeAcceleratorImpl() final;
 
@@ -145,8 +148,6 @@ class JpegDecodeAcceleratorImpl final : public JpegDecodeAccelerator {
 
   // Metrics that used to record things like decoding latency.
   std::unique_ptr<CameraMetrics> camera_metrics_;
-
-  DISALLOW_COPY_AND_ASSIGN(JpegDecodeAcceleratorImpl);
 };
 
 }  // namespace cros

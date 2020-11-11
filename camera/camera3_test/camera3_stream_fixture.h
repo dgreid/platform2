@@ -23,6 +23,8 @@ class Camera3StreamFixture : public Camera3DeviceFixture {
         default_format_(HAL_PIXEL_FORMAT_YCbCr_420_888),
         default_width_(640),
         default_height_(480) {}
+  Camera3StreamFixture(const Camera3StreamFixture&) = delete;
+  Camera3StreamFixture& operator=(const Camera3StreamFixture&) = delete;
 
   void SetUp() override;
 
@@ -50,9 +52,6 @@ class Camera3StreamFixture : public Camera3DeviceFixture {
   int32_t default_width_;
 
   int32_t default_height_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(Camera3StreamFixture);
 };
 
 }  // namespace camera3_test

@@ -28,6 +28,8 @@ const char kZoneInfoFilePath[] = "/usr/share/zoneinfo/";
 
 class TimezoneMap {
  public:
+  TimezoneMap(const TimezoneMap&) = delete;
+  TimezoneMap& operator=(const TimezoneMap&) = delete;
   static TimezoneMap* GetInstance() {
     // TODO(shik): change to base::NoDestructor after libchrome uprev.
     static TimezoneMap* instance = new TimezoneMap();
@@ -607,8 +609,6 @@ class TimezoneMap {
     }
   };
   std::map<const char*, const char*, CompareCStrings> map_;
-
-  DISALLOW_COPY_AND_ASSIGN(TimezoneMap);
 };
 
 }  // namespace

@@ -31,6 +31,9 @@ enum class FrameEvent {
 
 class Camera3PerfLog final {
  public:
+  Camera3PerfLog(const Camera3PerfLog&) = delete;
+  Camera3PerfLog& operator=(const Camera3PerfLog&) = delete;
+
   // Gets the singleton instance
   static Camera3PerfLog* GetInstance();
 
@@ -66,8 +69,6 @@ class Camera3PerfLog final {
   // Record per-frame performance logs with camera id and frame event
   std::map<int, std::map<uint32_t, std::map<FrameEvent, base::TimeTicks>>>
       frame_events_;
-
-  DISALLOW_COPY_AND_ASSIGN(Camera3PerfLog);
 };
 
 }  // namespace camera3_test

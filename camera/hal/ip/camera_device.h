@@ -28,6 +28,9 @@ namespace cros {
 class CameraDevice : public mojom::IpCameraFrameListener {
  public:
   explicit CameraDevice(int id);
+  CameraDevice(const CameraDevice&) = delete;
+  CameraDevice& operator=(const CameraDevice&) = delete;
+
   ~CameraDevice();
 
   int Init(mojom::IpCameraDevicePtr ip_device,
@@ -86,8 +89,6 @@ class CameraDevice : public mojom::IpCameraFrameListener {
   // we need a separate thread to call it.
   base::Thread jpeg_thread_;
   std::unique_ptr<JpegDecodeAccelerator> jda_;
-
-  DISALLOW_COPY_AND_ASSIGN(CameraDevice);
 };
 
 }  // namespace cros
