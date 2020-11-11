@@ -104,17 +104,6 @@ class Tpm {
     kTpmNvramFirmwareReadable = (1 << 2),
   };
 
-  // Specifies the type of the currently signed in user.
-  enum class UserType {
-    // Type not known: is set initially, before the first SetUserType, or
-    // in case of errors only.
-    Unknown,
-    // Non-owner or no user signed in.
-    NonOwner,
-    // Owner signed in.
-    Owner,
-  };
-
   // Results of PCR quoting.
   enum class QuotePcrResult {
     kSuccess,
@@ -747,15 +736,6 @@ class Tpm {
 
   // Obtains field upgrade status for IFX TPMs.
   virtual bool GetIFXFieldUpgradeInfo(IFXFieldUpgradeInfo* info) = 0;
-
-  // For TPMs that require it, performs TPM-specific actions when the type of
-  // the signed-in user changes (owner vs non-owner/no-user).
-  // Returns true if successful or no action is needed (see below).
-  // In Cr50 case: Enables/disables changing CCD password.
-  // For other TPMs: Does nothing, always returns TPM_RC_SUCCESS. These TPMs
-  // have no notion of restricting the CCD password and don't need a signal to
-  // lock things down at login.
-  virtual bool SetUserType(Tpm::UserType type) = 0;
 
   // Obtains RSU device id from TPM for the Remote Server Unlock process.
   // Due to the privacy reasons, this id must not be used for any purpose other

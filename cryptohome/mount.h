@@ -513,7 +513,6 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   FRIEND_TEST(EphemeralNoUserSystemTest, CreateMyFilesDownloads);
   FRIEND_TEST(EphemeralNoUserSystemTest, CreateMyFilesDownloadsAlreadyExists);
   FRIEND_TEST(EphemeralNoUserSystemTest, MountGuestUserDir);
-  FRIEND_TEST(EphemeralNoUserSystemTest, MountGuestUserFailSetUserType);
 
   DISALLOW_COPY_AND_ASSIGN(Mount);
 };

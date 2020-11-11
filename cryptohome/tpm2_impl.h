@@ -202,7 +202,6 @@ class Tpm2Impl : public Tpm {
   bool ClearStoredPassword() override;
   bool GetVersionInfo(TpmVersionInfo* version_info) override;
   bool GetIFXFieldUpgradeInfo(IFXFieldUpgradeInfo* info) override;
-  bool SetUserType(Tpm::UserType type) override;
   bool GetRsuDeviceId(std::string* device_id) override;
   LECredentialBackend* GetLECredentialBackend() override;
   SignatureSealingBackend* GetSignatureSealingBackend() override;
@@ -298,9 +297,6 @@ class Tpm2Impl : public Tpm {
   // Records |LocalData| from tpm_manager last time we query, either by
   // explicitly requesting the update or from dbus signal.
   tpm_manager::LocalData last_tpm_manager_data_;
-
-  // Specifies the currently set user type.
-  Tpm::UserType cur_user_type_ = Tpm::UserType::Unknown;
 
 #if USE_PINWEAVER
   PinweaverLECredentialBackend le_credential_backend_{this};

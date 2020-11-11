@@ -52,10 +52,6 @@ namespace {
 // These bits are always 0 for the hardware TPM response codes.
 constexpr TPM_RC kResponseLayerMask = 0xFFFFF000;
 
-// Cr50 vendor command error codes.
-constexpr TPM_RC kVendorRC = 0x500;
-constexpr TPM_RC kCr50ErrorNoSuchCommand = kVendorRC + 0x7F;
-
 Tpm::TpmRetryAction ResultToRetryAction(TPM_RC result) {
   // For hardware TPM errors and TPM-equivalent response codes produced by
   // Resource Manager, use just the error number and strip everything else.
@@ -1534,50 +1530,6 @@ bool Tpm2Impl::GetVersionInfo(TpmVersionInfo* version_info) {
 
 bool Tpm2Impl::GetIFXFieldUpgradeInfo(IFXFieldUpgradeInfo* info) {
   return false;
-}
-
-bool Tpm2Impl::SetUserType(Tpm::UserType type) {
-  VLOG(1) << __func__ << ": " << static_cast<int>(cur_user_type_) << " -> "
-          << static_cast<int>(type);
-  if (cur_user_type_ == UserType::NonOwner || cur_user_type_ == type) {
-    // It's not possible to transition from NonOwner to Owner, so don't even
-    // try. Also, if we are already in the desired state, no reason to
-    // repeat sending the command.
-    VLOG(1) << "ManageCCDPwd not needed";
-    return true;
-  }
-  TrunksClientContext* trunks;
-  if (!GetTrunksContext(&trunks)) {
-    LOG(WARNING) << "Failed to obtain trunks context to set user type";
-    cur_user_type_ = Tpm::UserType::Unknown;
-    return false;
-  }
-  TPM_RC res =
-      trunks->tpm_utility->ManageCCDPwd(type == UserType::Owner ? true : false);
-  if (res != TPM_RC_SUCCESS) {
-    cur_user_type_ = Tpm::UserType::Unknown;
-    if (res == kCr50ErrorNoSuchCommand) {
-      // In case we deal with Cr50 revision that doesn't support the command
-      // yet. We will still keep trying on each login.
-      LOG(WARNING) << "ManageCCDPwd is not supported";
-      return true;
-    } else if (type == UserType::Owner) {
-      // If we fail to transition to Owner, that's fine. Worst thing that
-      // happens in this case: the owner user fails to set a CCD password until
-      // reboot. We only need to make sure that we don't let users sign in if
-      // setting NonOwner state fails.
-      LOG(WARNING) << "ManageCCDPwd(Owner) failed, ignoring: error=0x"
-                   << std::hex << res;
-      return true;
-    } else {
-      LOG(ERROR) << "ManageCCDPwd(NonOwner) failed: error=0x" << std::hex
-                 << res;
-      return false;
-    }
-  }
-  VLOG(1) << "ManageCCDPwd succeeded";
-  cur_user_type_ = type;
-  return true;
 }
 
 bool Tpm2Impl::GetRsuDeviceId(std::string* device_id) {

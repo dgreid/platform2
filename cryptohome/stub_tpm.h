@@ -232,7 +232,6 @@ class StubTpm : public Tpm {
   bool GetIFXFieldUpgradeInfo(IFXFieldUpgradeInfo* info) override {
     return false;
   }
-  bool SetUserType(Tpm::UserType type) override { return true; }
   bool GetRsuDeviceId(std::string* device_id) { return false; }
   LECredentialBackend* GetLECredentialBackend() override { return nullptr; }
   SignatureSealingBackend* GetSignatureSealingBackend() override {

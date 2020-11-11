@@ -178,7 +178,6 @@ class TpmImpl : public Tpm {
   bool ClearStoredPassword() override;
   bool GetVersionInfo(TpmVersionInfo* version_info) override;
   bool GetIFXFieldUpgradeInfo(IFXFieldUpgradeInfo* info) override;
-  bool SetUserType(Tpm::UserType type) override;
   bool GetRsuDeviceId(std::string* device_id) override;
   LECredentialBackend* GetLECredentialBackend() override;
   SignatureSealingBackend* GetSignatureSealingBackend() override;

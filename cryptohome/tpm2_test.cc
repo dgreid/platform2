@@ -1445,53 +1445,6 @@ TEST_F(Tpm2Test, DeclareTpmFirmwareStable) {
   tpm_->DeclareTpmFirmwareStable();
 }
 
-TEST_F(Tpm2Test, SetUserType) {
-  // Setting user type to Owner results in allowing CCD password change.
-  EXPECT_CALL(mock_tpm_utility_, ManageCCDPwd(true))
-      .WillOnce(Return(TPM_RC_SUCCESS));
-  EXPECT_TRUE(tpm_->SetUserType(Tpm::UserType::Owner));
-  testing::Mock::VerifyAndClearExpectations(&mock_tpm_utility_);
-  // Setting user type to NonOwner results in prohibiting CCD password change.
-  EXPECT_CALL(mock_tpm_utility_, ManageCCDPwd(false))
-      .WillOnce(Return(TPM_RC_SUCCESS));
-  EXPECT_TRUE(tpm_->SetUserType(Tpm::UserType::NonOwner));
-}
-
-TEST_F(Tpm2Test, SetUserTypeAfterNonOwner) {
-  EXPECT_CALL(mock_tpm_utility_, ManageCCDPwd(_))
-      .WillOnce(Return(TPM_RC_SUCCESS));
-  // First attempt shall call TpmUtility since we haven't called it yet.
-  EXPECT_TRUE(tpm_->SetUserType(Tpm::UserType::NonOwner));
-  testing::Mock::VerifyAndClearExpectations(&mock_tpm_utility_);
-
-  EXPECT_CALL(mock_tpm_utility_, ManageCCDPwd(_)).Times(0);
-  // Second attempt shall not call TpmUtility since transitioning from NonOwner
-  // is not possible.
-  EXPECT_TRUE(tpm_->SetUserType(Tpm::UserType::Owner));
-  // Third attempt shall not call TpmUtility since the current type is still
-  // NonOwner.
-  EXPECT_TRUE(tpm_->SetUserType(Tpm::UserType::NonOwner));
-}
-
-TEST_F(Tpm2Test, SetUserTypeCaching) {
-  EXPECT_CALL(mock_tpm_utility_, ManageCCDPwd(_))
-      .Times(2)
-      .WillOnce(Return(TPM_RC_FAILURE))
-      .WillOnce(Return(TPM_RC_SUCCESS));
-  // First attempt shall call TpmUtility since we haven't called it yet, and
-  // fail. Despite the failure in TpmUtility, SetUserType shall return success
-  // since errors are ignored when transitioning to Owner.
-  EXPECT_TRUE(tpm_->SetUserType(Tpm::UserType::Owner));
-  // Second attempt shall call TpmUtility since the first attempt failed.
-  EXPECT_TRUE(tpm_->SetUserType(Tpm::UserType::Owner));
-  testing::Mock::VerifyAndClearExpectations(&mock_tpm_utility_);
-
-  // Subsequent attempts shall do nothing since we already succeeded on the
-  // second attempt.
-  EXPECT_CALL(mock_tpm_utility_, ManageCCDPwd(_)).Times(0);
-  EXPECT_TRUE(tpm_->SetUserType(Tpm::UserType::Owner));
-}
-
 TEST_F(Tpm2Test, RemoveOwnerDependencySuccess) {
   std::string dependency;
   EXPECT_CALL(mock_tpm_manager_utility_, RemoveOwnerDependency(_))

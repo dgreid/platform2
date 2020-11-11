@@ -3302,11 +3302,6 @@ bool TpmImpl::DelegateCanResetDACounter() {
   return has_reset_lock_permissions_;
 }
 
-bool TpmImpl::SetUserType(Tpm::UserType type) {
-  // Nothing to do for TPM 1.2.
-  return true;
-}
-
 bool TpmImpl::GetRsuDeviceId(std::string* device_id) {
   // Not supported for TPM 1.2.
   return false;

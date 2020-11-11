@@ -225,7 +225,6 @@ class MockTpm : public Tpm {
   MOCK_METHOD(bool, ClearStoredPassword, (), (override));
   MOCK_METHOD(bool, GetVersionInfo, (TpmVersionInfo*), (override));
   MOCK_METHOD(bool, GetIFXFieldUpgradeInfo, (IFXFieldUpgradeInfo*), (override));
-  MOCK_METHOD(bool, SetUserType, (Tpm::UserType), (override));
   MOCK_METHOD(bool, GetRsuDeviceId, (std::string*), (override));
   MOCK_METHOD(LECredentialBackend*, GetLECredentialBackend, (), (override));
   MOCK_METHOD(SignatureSealingBackend*,
