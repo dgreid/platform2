@@ -98,15 +98,6 @@ std::unique_ptr<SaneDevice> SaneClientImpl::ConnectToDeviceInternal(
     brillo::ErrorPtr* error, const std::string& device_name) {
   base::AutoLock auto_lock(lock_);
   SANE_Handle handle;
-  SANE_Status status = sane_open(device_name.c_str(), &handle);
-  if (status != SANE_STATUS_GOOD) {
-    brillo::Error::AddToPrintf(error, FROM_HERE, kDbusDomain,
-                               kManagerServiceError,
-                               "Unable to open device '%s': %s",
-                               device_name.c_str(), sane_strstatus(status));
-    return nullptr;
-  }
-
   {
     base::AutoLock auto_lock(open_devices_->first);
     if (open_devices_->second.count(device_name) != 0) {
@@ -115,6 +106,16 @@ std::unique_ptr<SaneDevice> SaneClientImpl::ConnectToDeviceInternal(
           "Device '%s' is currently in-use", device_name.c_str());
       return nullptr;
     }
+
+    SANE_Status status = sane_open(device_name.c_str(), &handle);
+    if (status != SANE_STATUS_GOOD) {
+      brillo::Error::AddToPrintf(error, FROM_HERE, kDbusDomain,
+                                 kManagerServiceError,
+                                 "Unable to open device '%s': %s",
+                                 device_name.c_str(), sane_strstatus(status));
+      return nullptr;
+    }
+
     open_devices_->second.insert(device_name);
   }
 
