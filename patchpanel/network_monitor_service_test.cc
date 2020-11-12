@@ -12,9 +12,9 @@
 #include <base/test/task_environment.h>
 #include <chromeos/dbus/service_constants.h>
 #include <gtest/gtest.h>
+#include <shill/net/mock_rtnl_handler.h>
 
 #include "patchpanel/fake_shill_client.h"
-#include "shill/net/mock_rtnl_handler.h"
 
 namespace patchpanel {
 
@@ -49,9 +49,9 @@ MATCHER_P(IsNeighborProbeMessage, address, "") {
 
 // Helper class for testing. Similar to mock class but only allowed one
 // expectation set at the same time.
-class FakeNeighborConnectedStateChangedHandler {
+class FakeNeighborReachabilityEventHandler {
  public:
-  ~FakeNeighborConnectedStateChangedHandler() {
+  ~FakeNeighborReachabilityEventHandler() {
     if (!enabled_)
       return;
 
@@ -71,7 +71,7 @@ class FakeNeighborConnectedStateChangedHandler {
   void Expect(int ifindex,
               const std::string& ip_addr,
               NeighborLinkMonitor::NeighborRole role,
-              bool connected) {
+              NeighborReachabilityEventSignal::EventType event_type) {
     EXPECT_TRUE(enabled_);
     EXPECT_FALSE(expectation_set_)
         << "Expected " << ExpectationToString() << ", but not called.";
@@ -79,41 +79,43 @@ class FakeNeighborConnectedStateChangedHandler {
     expected_ifindex_ = ifindex;
     expected_ip_addr_ = ip_addr;
     expected_role_ = role;
-    expected_connected_ = connected;
+    expected_event_type_ = event_type;
   }
 
   void Run(int ifindex,
            const shill::IPAddress& ip_addr,
            NeighborLinkMonitor::NeighborRole role,
-           bool connected) {
+           NeighborReachabilityEventSignal::EventType event_type) {
     if (!enabled_)
       return;
 
     const std::string callback_str =
-        CallbackToString(ifindex, ip_addr.ToString(), role, connected);
+        CallbackToString(ifindex, ip_addr.ToString(), role, event_type);
     EXPECT_TRUE(expectation_set_)
         << callback_str << " called, but not expected.";
     expectation_set_ = false;
     EXPECT_TRUE((expected_ifindex_ == ifindex) &&
                 (expected_ip_addr_ == ip_addr.ToString()) &&
-                (expected_role_ == role) && (expected_connected_ == connected))
+                (expected_role_ == role) &&
+                (expected_event_type_ == event_type))
         << "Expected " << ExpectationToString() << ", but got " << callback_str;
   }
 
  private:
-  static std::string CallbackToString(int ifindex,
-                                      const std::string& ip_addr,
-                                      NeighborLinkMonitor::NeighborRole role,
-                                      bool connected) {
+  static std::string CallbackToString(
+      int ifindex,
+      const std::string& ip_addr,
+      NeighborLinkMonitor::NeighborRole role,
+      NeighborReachabilityEventSignal::EventType event_type) {
     return base::StrCat(
         {"{ ifindex: ", base::NumberToString(ifindex), ", ip_addr: ", ip_addr,
          ", role: ", NeighborLinkMonitor::NeighborRoleToString(role),
-         ", connected: ", base::NumberToString(connected), " }"});
+         ", type: ", base::NumberToString(event_type), " }"});
   }
 
   std::string ExpectationToString() {
     return CallbackToString(expected_ifindex_, expected_ip_addr_,
-                            expected_role_, expected_connected_);
+                            expected_role_, expected_event_type_);
   }
 
   bool enabled_ = false;
@@ -122,7 +124,8 @@ class FakeNeighborConnectedStateChangedHandler {
   std::string expected_ip_addr_;
   NeighborLinkMonitor::NeighborRole expected_role_ =
       NeighborLinkMonitor::NeighborRole::kGateway;
-  bool expected_connected_ = false;
+  NeighborReachabilityEventSignal::EventType expected_event_type_ =
+      NeighborReachabilityEventSignal::INVALID_EVENT_TYPE;
 };
 
 }  // namespace
@@ -132,7 +135,7 @@ class NeighborLinkMonitorTest : public testing::Test {
   void SetUp() override {
     mock_rtnl_handler_ = std::make_unique<shill::MockRTNLHandler>();
     callback_ =
-        base::BindRepeating(&FakeNeighborConnectedStateChangedHandler::Run,
+        base::BindRepeating(&FakeNeighborReachabilityEventHandler::Run,
                             base::Unretained(&fake_neighbor_event_handler_));
     link_monitor_ = std::make_unique<NeighborLinkMonitor>(
         kTestInterfaceIndex, kTestInterfaceName, mock_rtnl_handler_.get(),
@@ -187,8 +190,8 @@ class NeighborLinkMonitorTest : public testing::Test {
   base::test::TaskEnvironment task_env_{
     base::test::TaskEnvironment::TimeSource::MOCK_TIME
   };
-  FakeNeighborConnectedStateChangedHandler fake_neighbor_event_handler_;
-  NeighborLinkMonitor::ConnectedStateChangedHandler callback_;
+  FakeNeighborReachabilityEventHandler fake_neighbor_event_handler_;
+  NeighborLinkMonitor::NeighborReachabilityEventHandler callback_;
   std::unique_ptr<shill::MockRTNLHandler> mock_rtnl_handler_;
   std::unique_ptr<NeighborLinkMonitor> link_monitor_;
   shill::RTNLListener* registered_listener_ = nullptr;
@@ -316,7 +319,7 @@ TEST_F(NeighborLinkMonitorTest, UpdateWatchingEntriesWithSameAddress) {
   link_monitor_->OnIPConfigChanged(ipconfig);
 }
 
-TEST_F(NeighborLinkMonitorTest, NotifyNeighborStateChanged) {
+TEST_F(NeighborLinkMonitorTest, NotifyNeighborReachabilityEvent) {
   ShillClient::IPConfig ipconfig;
   ipconfig.ipv4_address = "1.2.3.4";
   ipconfig.ipv4_gateway = "1.2.3.5";
@@ -328,14 +331,13 @@ TEST_F(NeighborLinkMonitorTest, NotifyNeighborStateChanged) {
   link_monitor_->OnIPConfigChanged(ipconfig);
   NotifyNUDStateChanged("1.2.3.5", NUD_PROBE);
   NotifyNUDStateChanged("1.2.3.5", NUD_REACHABLE);
-  task_env_.FastForwardBy(NeighborLinkMonitor::kBackToConnectedTimeout);
+  task_env_.FastForwardBy(NeighborLinkMonitor::kResetFailureStateTimeout);
 
-  SCOPED_TRACE(
-      "Messages with NUD state not in NUD_VALID should trigger the callback "
-      "once.");
+  SCOPED_TRACE("Messages with NUD_FAILED should trigger the callback once.");
   fake_neighbor_event_handler_.Expect(
       kTestInterfaceIndex, "1.2.3.5",
-      NeighborLinkMonitor::NeighborRole::kGateway, false /* connected */);
+      NeighborLinkMonitor::NeighborRole::kGateway,
+      NeighborReachabilityEventSignal::FAILED);
   NotifyNUDStateChanged("1.2.3.5", NUD_FAILED);
   NotifyNUDStateChanged("1.2.3.5", NUD_FAILED);
   NotifyNeighborRemoved("1.2.3.5");
@@ -344,20 +346,22 @@ TEST_F(NeighborLinkMonitorTest, NotifyNeighborStateChanged) {
   NotifyNUDStateChanged("1.2.3.5", NUD_INCOMPLETE);
   NotifyNUDStateChanged("1.2.3.5", NUD_REACHABLE);
   NotifyNUDStateChanged("1.2.3.5", NUD_FAILED);
-  task_env_.FastForwardBy(NeighborLinkMonitor::kBackToConnectedTimeout);
+  task_env_.FastForwardBy(NeighborLinkMonitor::kResetFailureStateTimeout);
 
   SCOPED_TRACE(
-      "Callback should be called at kBackToConnectedTimeout seconds after NUD "
+      "Callback should be called at kResetFailureStateTimeout seconds after "
+      "NUD "
       "state becomes NUD_VALID.");
   NotifyNUDStateChanged("1.2.3.5", NUD_REACHABLE);
   fake_neighbor_event_handler_.Expect(
       kTestInterfaceIndex, "1.2.3.5",
-      NeighborLinkMonitor::NeighborRole::kGateway, true /* connected */);
-  task_env_.FastForwardBy(NeighborLinkMonitor::kBackToConnectedTimeout);
+      NeighborLinkMonitor::NeighborRole::kGateway,
+      NeighborReachabilityEventSignal::RECOVERED);
+  task_env_.FastForwardBy(NeighborLinkMonitor::kResetFailureStateTimeout);
 
   SCOPED_TRACE("No callback should come when the neighbor keeps in NUD_VALID.");
   NotifyNUDStateChanged("1.2.3.5", NUD_REACHABLE);
-  task_env_.FastForwardBy(NeighborLinkMonitor::kBackToConnectedTimeout * 2);
+  task_env_.FastForwardBy(NeighborLinkMonitor::kResetFailureStateTimeout * 2);
 }
 
 TEST_F(NeighborLinkMonitorTest, NeighborRole) {
@@ -373,18 +377,20 @@ TEST_F(NeighborLinkMonitorTest, NeighborRole) {
   link_monitor_->OnIPConfigChanged(ipconfig);
   fake_neighbor_event_handler_.Expect(
       kTestInterfaceIndex, "1.2.3.5",
-      NeighborLinkMonitor::NeighborRole::kGateway, false /* connected */);
+      NeighborLinkMonitor::NeighborRole::kGateway,
+      NeighborReachabilityEventSignal::FAILED);
   NotifyNUDStateChanged("1.2.3.5", NUD_FAILED);
   fake_neighbor_event_handler_.Expect(
       kTestInterfaceIndex, "1.2.3.6",
-      NeighborLinkMonitor::NeighborRole::kDNSServer, false /* connected */);
+      NeighborLinkMonitor::NeighborRole::kDNSServer,
+      NeighborReachabilityEventSignal::FAILED);
   NotifyNUDStateChanged("1.2.3.6", NUD_FAILED);
 
   SCOPED_TRACE("Neighbors back to normal.");
   fake_neighbor_event_handler_.Disable();
   NotifyNUDStateChanged("1.2.3.5", NUD_REACHABLE);
   NotifyNUDStateChanged("1.2.3.6", NUD_REACHABLE);
-  task_env_.FastForwardBy(NeighborLinkMonitor::kBackToConnectedTimeout);
+  task_env_.FastForwardBy(NeighborLinkMonitor::kResetFailureStateTimeout);
   fake_neighbor_event_handler_.Enable();
 
   SCOPED_TRACE("On neighbor as gateway and DNS server failed");
@@ -394,13 +400,13 @@ TEST_F(NeighborLinkMonitorTest, NeighborRole) {
   fake_neighbor_event_handler_.Expect(
       kTestInterfaceIndex, "1.2.3.5",
       NeighborLinkMonitor::NeighborRole::kGatewayAndDNSServer,
-      false /* connected */);
+      NeighborReachabilityEventSignal::FAILED);
   NotifyNUDStateChanged("1.2.3.5", NUD_FAILED);
 
   SCOPED_TRACE("Neighbors back to normal.");
   fake_neighbor_event_handler_.Disable();
   NotifyNUDStateChanged("1.2.3.5", NUD_REACHABLE);
-  task_env_.FastForwardBy(NeighborLinkMonitor::kBackToConnectedTimeout);
+  task_env_.FastForwardBy(NeighborLinkMonitor::kResetFailureStateTimeout);
   fake_neighbor_event_handler_.Enable();
 
   SCOPED_TRACE("Swaps the roles.");
@@ -409,11 +415,13 @@ TEST_F(NeighborLinkMonitorTest, NeighborRole) {
   link_monitor_->OnIPConfigChanged(ipconfig);
   fake_neighbor_event_handler_.Expect(
       kTestInterfaceIndex, "1.2.3.5",
-      NeighborLinkMonitor::NeighborRole::kDNSServer, false /* connected */);
+      NeighborLinkMonitor::NeighborRole::kDNSServer,
+      NeighborReachabilityEventSignal::FAILED);
   NotifyNUDStateChanged("1.2.3.5", NUD_FAILED);
   fake_neighbor_event_handler_.Expect(
       kTestInterfaceIndex, "1.2.3.6",
-      NeighborLinkMonitor::NeighborRole::kGateway, false /* connected */);
+      NeighborLinkMonitor::NeighborRole::kGateway,
+      NeighborReachabilityEventSignal::FAILED);
   NotifyNUDStateChanged("1.2.3.6", NUD_FAILED);
 }
 
@@ -423,13 +431,13 @@ class NetworkMonitorServiceTest : public testing::Test {
     fake_shill_client_ = shill_helper_.FakeClient();
     monitor_svc_ = std::make_unique<NetworkMonitorService>(
         fake_shill_client_.get(),
-        base::BindRepeating(&FakeNeighborConnectedStateChangedHandler::Run,
+        base::BindRepeating(&FakeNeighborReachabilityEventHandler::Run,
                             base::Unretained(&fake_neighbor_event_handler_)));
     mock_rtnl_handler_ = std::make_unique<shill::MockRTNLHandler>();
   }
 
   FakeShillClientHelper shill_helper_;
-  FakeNeighborConnectedStateChangedHandler fake_neighbor_event_handler_;
+  FakeNeighborReachabilityEventHandler fake_neighbor_event_handler_;
   std::unique_ptr<FakeShillClient> fake_shill_client_;
   std::unique_ptr<shill::MockRTNLHandler> mock_rtnl_handler_;
   std::unique_ptr<NetworkMonitorService> monitor_svc_;

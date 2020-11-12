@@ -62,12 +62,12 @@ class BRILLO_EXPORT FakeClient : public Client {
                       const std::string& dst_ip,
                       uint32_t dst_port) override;
 
-  void RegisterNeighborConnectedStateChangedHandler(
-      NeighborConnectedStateChangedHandler handler) override;
+  void RegisterNeighborReachabilityEventHandler(
+      NeighborReachabilityEventHandler handler) override;
 
-  // Triggers registered handlers for NeighborConnectedStateChangedSignal.
-  void TriggerNeighborConnectedStateChange(
-      const NeighborConnectedStateChangedSignal& signal);
+  // Triggers registered handlers for NeighborReachabilityEventSignal.
+  void TriggerNeighborReachabilityEvent(
+      const NeighborReachabilityEventSignal& signal);
 
   void set_stored_traffic_counters(
       const std::vector<TrafficCounter>& counters) {
@@ -76,7 +76,7 @@ class BRILLO_EXPORT FakeClient : public Client {
 
  private:
   std::vector<TrafficCounter> stored_traffic_counters_;
-  std::vector<NeighborConnectedStateChangedHandler> neighbor_handlers_;
+  std::vector<NeighborReachabilityEventHandler> neighbor_handlers_;
 };
 
 }  // namespace patchpanel

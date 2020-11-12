@@ -159,11 +159,12 @@ class Manager final : public brillo::DBusDaemon, private TrafficForwarder {
   std::unique_ptr<dbus::Response> OnModifyPortRule(
       dbus::MethodCall* method_call);
 
-  // Sends out DBus signal for notifying neighbor connected state changed.
-  void OnNeighborConnectedStateChanged(int ifindex,
-                                       const shill::IPAddress& ip_addr,
-                                       NeighborLinkMonitor::NeighborRole role,
-                                       bool connected);
+  // Sends out DBus signal for notifying neighbor reachability event.
+  void OnNeighborReachabilityEvent(
+      int ifindex,
+      const shill::IPAddress& ip_addr,
+      NeighborLinkMonitor::NeighborRole role,
+      NeighborReachabilityEventSignal::EventType event_type);
 
   std::unique_ptr<patchpanel::ConnectNamespaceResponse> ConnectNamespace(
       base::ScopedFD client_fd,

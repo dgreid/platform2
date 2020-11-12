@@ -13,10 +13,8 @@
 #include <base/strings/strcat.h>
 #include <base/threading/sequenced_task_runner_handle.h>
 #include <base/logging.h>
-#include <chromeos/dbus/service_constants.h>
-
-#include "shill/net/rtnl_handler.h"
-#include "shill/net/rtnl_listener.h"
+#include <shill/net/rtnl_handler.h>
+#include <shill/net/rtnl_listener.h>
 
 namespace patchpanel {
 
@@ -71,13 +69,13 @@ bool NeedProbeForState(uint16_t current_state) {
 }  // namespace
 
 constexpr base::TimeDelta NeighborLinkMonitor::kActiveProbeInterval;
-constexpr base::TimeDelta NeighborLinkMonitor::kBackToConnectedTimeout;
+constexpr base::TimeDelta NeighborLinkMonitor::kResetFailureStateTimeout;
 
 NeighborLinkMonitor::NeighborLinkMonitor(
     int ifindex,
     const std::string& ifname,
     shill::RTNLHandler* rtnl_handler,
-    ConnectedStateChangedHandler* neighbor_event_handler)
+    NeighborReachabilityEventHandler* neighbor_event_handler)
     : ifindex_(ifindex),
       ifname_(ifname),
       rtnl_handler_(rtnl_handler),
@@ -316,35 +314,46 @@ void NeighborLinkMonitor::OnNeighborMessage(const shill::RTNLMessage& msg) {
   if (old_nud_state == NUD_NONE && NeedProbeForState(new_nud_state))
     SendNeighborProbeRTNLMessage(it->second);
 
-  // Triggers NeighborStateChanged logic if the NUD valid state changed. Note
-  // that normally if |connected| is true then the NUD state should be valid,
-  // but this is not true for a new added entry because we always assume a new
-  // neighbor is connected, so we treat that case specially.
-  bool old_nud_state_is_valid =
-      (old_nud_state & kNUDStateValid) || it->second.connected;
+  // When the "valid" state (i.e., whether kernel knows the MAC address of a
+  // neighbor) changed from valid to invalid, it doesn't always mean a failure
+  // happens: e.g., an NUD_STALE entry could be removed if it's not been
+  // accessed for a while. But it's still an uncommon case here, because we're
+  // trying to make kernel probing the neighbor periodically. Thus we would
+  // expect the NUD state stays valid if the neighbor is reachable.
+  bool old_nud_state_is_valid = old_nud_state & kNUDStateValid;
   bool new_nud_state_is_valid = new_nud_state & kNUDStateValid;
-  if (old_nud_state_is_valid == new_nud_state_is_valid)
+  if (old_nud_state_is_valid != new_nud_state_is_valid) {
+    LOG(INFO) << "NUD state changed on " << ifname_ << " for "
+              << it->second.ToString()
+              << ", old_state=" << NUDStateToString(old_nud_state);
+  }
+
+  // NUD_REACHABLE indicates the bidirectional reachability has been confirmed.
+  if (new_nud_state == NUD_REACHABLE) {
+    if (!it->second.in_failure ||
+        it->second.reset_failure_state_timer.IsRunning())
+      return;
+
+    it->second.reset_failure_state_timer.Start(
+        FROM_HERE, kResetFailureStateTimeout,
+        base::BindOnce(&NeighborLinkMonitor::ChangeWatchingEntryInFailureState,
+                       base::Unretained(this), addr, false /* in_failure */));
     return;
+  }
 
-  LOG(INFO) << "NUD state changed on " << ifname_ << " for "
-            << it->second.ToString()
-            << ", old_state=" << NUDStateToString(old_nud_state);
-
-  if (new_nud_state_is_valid) {
-    it->second.back_to_connected_timer.Start(
-        FROM_HERE, kBackToConnectedTimeout,
-        base::BindOnce(&NeighborLinkMonitor::ChangeWatchingEntryState,
-                       base::Unretained(this), addr, true /* connected */));
-  } else {
-    LOG(WARNING) << "Neighbor becomes invalid on " << ifname_ << " "
+  // NUD_FAILED indicates we have a reachability issue now.
+  if (new_nud_state == NUD_FAILED) {
+    LOG(WARNING) << "Neighbor becomes NUD_FAILED from "
+                 << NUDStateToString(old_nud_state) << " on " << ifname_ << " "
                  << it->second.ToString();
-    it->second.back_to_connected_timer.Stop();
-    ChangeWatchingEntryState(addr, false /* connected */);
+    it->second.reset_failure_state_timer.Stop();
+    if (!it->second.in_failure)
+      ChangeWatchingEntryInFailureState(addr, true /* in_failure */);
   }
 }
 
-void NeighborLinkMonitor::ChangeWatchingEntryState(const shill::IPAddress& addr,
-                                                   bool connected) {
+void NeighborLinkMonitor::ChangeWatchingEntryInFailureState(
+    const shill::IPAddress& addr, bool in_failure) {
   // If this function is triggered by a timer, the WatchingEntry which contains
   // that timer must exist.
   const auto it = watching_entries_.find(addr);
@@ -353,17 +362,23 @@ void NeighborLinkMonitor::ChangeWatchingEntryState(const shill::IPAddress& addr,
     return;
   }
 
-  if (it->second.connected == connected)
+  if (it->second.in_failure == in_failure) {
+    LOG(DFATAL) << __func__ << " is called with |in_failure|=" << in_failure
+                << ", while the entry is already in that state";
     return;
+  }
 
-  it->second.connected = connected;
+  it->second.in_failure = in_failure;
+  using SignalProto = NeighborReachabilityEventSignal;
+  SignalProto::EventType event_type =
+      in_failure ? SignalProto::FAILED : SignalProto::RECOVERED;
   neighbor_event_handler_->Run(ifindex_, it->second.addr, it->second.role,
-                               connected);
+                               event_type);
 }
 
 NetworkMonitorService::NetworkMonitorService(
     ShillClient* shill_client,
-    const NeighborLinkMonitor::ConnectedStateChangedHandler&
+    const NeighborLinkMonitor::NeighborReachabilityEventHandler&
         neighbor_event_handler)
     : neighbor_event_handler_(neighbor_event_handler),
       shill_client_(shill_client),

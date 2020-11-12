@@ -26,8 +26,7 @@ const char kGetTrafficCountersMethod[] = "GetTrafficCounters";
 const char kModifyPortRuleMethod[] = "ModifyPortRule";
 
 // Signals.
-const char kNeighborConnectedStateChangedSignal[] =
-    "NeighborConnectedStateChanged";
+const char kNeighborReachabilityEventSignal[] = "NeighborReachabilityEvent";
 
 }  // namespace patchpanel
 

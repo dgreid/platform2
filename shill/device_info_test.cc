@@ -1238,7 +1238,7 @@ TEST_F(DeviceInfoTest, IPv6DnsServerAddressesChanged) {
   EXPECT_EQ(kTestIPAddress2, dns_server_addresses_out.at(1).ToString());
 }
 
-TEST_F(DeviceInfoTest, NeighborConnectedStateChanged) {
+TEST_F(DeviceInfoTest, OnNeighborReachabilityEvent) {
   device_info_.OnPatchpanelClientReady();
 
   scoped_refptr<MockDevice> device0(
@@ -1248,25 +1248,25 @@ TEST_F(DeviceInfoTest, NeighborConnectedStateChanged) {
   device_info_.RegisterDevice(device0);
   device_info_.RegisterDevice(device1);
 
-  using NeighborSignal = patchpanel::NeighborConnectedStateChangedSignal;
+  using NeighborSignal = patchpanel::NeighborReachabilityEventSignal;
 
   NeighborSignal signal0;
   signal0.set_ifindex(kTestDeviceIndex);
   signal0.set_ip_addr(kTestIPAddress0);
   signal0.set_role(NeighborSignal::GATEWAY);
-  signal0.set_connected(false);
-  EXPECT_CALL(*device0, OnNeighborDisconnected(IPAddress(kTestIPAddress0),
-                                               NeighborSignal::GATEWAY));
-  patchpanel_client_->TriggerNeighborConnectedStateChange(signal0);
+  signal0.set_type(NeighborSignal::FAILED);
+  EXPECT_CALL(*device0, OnNeighborLinkFailure(IPAddress(kTestIPAddress0),
+                                              NeighborSignal::GATEWAY));
+  patchpanel_client_->TriggerNeighborReachabilityEvent(signal0);
 
   NeighborSignal signal1;
   signal1.set_ifindex(kTestDeviceIndex + 1);
   signal1.set_ip_addr(kTestIPAddress1);
   signal1.set_role(NeighborSignal::DNS_SERVER);
-  signal1.set_connected(false);
-  EXPECT_CALL(*device1, OnNeighborDisconnected(IPAddress(kTestIPAddress1),
-                                               NeighborSignal::DNS_SERVER));
-  patchpanel_client_->TriggerNeighborConnectedStateChange(signal1);
+  signal1.set_type(NeighborSignal::FAILED);
+  EXPECT_CALL(*device1, OnNeighborLinkFailure(IPAddress(kTestIPAddress1),
+                                              NeighborSignal::DNS_SERVER));
+  patchpanel_client_->TriggerNeighborReachabilityEvent(signal1);
 }
 
 class DeviceInfoTechnologyTest : public DeviceInfoTest {

@@ -90,13 +90,13 @@ bool FakeClient::ModifyPortRule(
   return true;
 }
 
-void FakeClient::RegisterNeighborConnectedStateChangedHandler(
-    NeighborConnectedStateChangedHandler handler) {
+void FakeClient::RegisterNeighborReachabilityEventHandler(
+    NeighborReachabilityEventHandler handler) {
   neighbor_handlers_.push_back(handler);
 }
 
-void FakeClient::TriggerNeighborConnectedStateChange(
-    const NeighborConnectedStateChangedSignal& signal) {
+void FakeClient::TriggerNeighborReachabilityEvent(
+    const NeighborReachabilityEventSignal& signal) {
   for (const auto& handler : neighbor_handlers_)
     handler.Run(signal);
 }

@@ -882,9 +882,9 @@ void Device::FetchTrafficCounters(const ServiceRefPtr& old_service,
                         AsWeakPtr(), traffic_counter_callback_id_));
 }
 
-void Device::OnNeighborDisconnected(
+void Device::OnNeighborLinkFailure(
     const IPAddress& ip_address,
-    patchpanel::NeighborConnectedStateChangedSignal::Role role) {
+    patchpanel::NeighborReachabilityEventSignal::Role role) {
   metrics()->NotifyNeighborLinkMonitorFailure(technology_, ip_address.family(),
                                               role);
 }

@@ -238,7 +238,7 @@ void Manager::InitialSetup() {
                                                 datapath_.get(), forwarder);
   network_monitor_svc_ = std::make_unique<NetworkMonitorService>(
       shill_client_.get(),
-      base::BindRepeating(&Manager::OnNeighborConnectedStateChanged,
+      base::BindRepeating(&Manager::OnNeighborReachabilityEvent,
                           weak_factory_.GetWeakPtr()));
   network_monitor_svc_->Start();
 
@@ -789,20 +789,21 @@ std::unique_ptr<dbus::Response> Manager::OnModifyPortRule(
   return dbus_response;
 }
 
-void Manager::OnNeighborConnectedStateChanged(
+void Manager::OnNeighborReachabilityEvent(
     int ifindex,
     const shill::IPAddress& ip_addr,
     NeighborLinkMonitor::NeighborRole role,
-    bool connected) {
+    NeighborReachabilityEventSignal::EventType event_type) {
   if (!ip_addr.IsValid()) {
     LOG(DFATAL) << "ip_addr is not valid";
     return;
   }
 
-  using SignalProto = NeighborConnectedStateChangedSignal;
+  using SignalProto = NeighborReachabilityEventSignal;
   SignalProto proto;
   proto.set_ifindex(ifindex);
   proto.set_ip_addr(ip_addr.ToString());
+  proto.set_type(event_type);
   switch (role) {
     case NeighborLinkMonitor::NeighborRole::kGateway:
       proto.set_role(SignalProto::GATEWAY);
@@ -817,11 +818,10 @@ void Manager::OnNeighborConnectedStateChanged(
       NOTREACHED();
   }
 
-  dbus::Signal signal(kPatchPanelInterface,
-                      kNeighborConnectedStateChangedSignal);
+  dbus::Signal signal(kPatchPanelInterface, kNeighborReachabilityEventSignal);
   dbus::MessageWriter writer(&signal);
   if (!writer.AppendProtoAsArrayOfBytes(proto)) {
-    LOG(ERROR) << "Failed to encode proto NeighborConnectedStateChangedSignal";
+    LOG(ERROR) << "Failed to encode proto NeighborReachabilityEventSignal";
     return;
   }
 

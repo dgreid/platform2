@@ -65,11 +65,11 @@ void OnGetTrafficCountersDBusResponse(
       {response.counters().begin(), response.counters().end()});
 }
 
-void OnNeighborConnectedStateChangedSignal(
-    const Client::NeighborConnectedStateChangedHandler& handler,
+void OnNeighborReachabilityEventSignal(
+    const Client::NeighborReachabilityEventHandler& handler,
     dbus::Signal* signal) {
   dbus::MessageReader reader(signal);
-  NeighborConnectedStateChangedSignal proto;
+  NeighborReachabilityEventSignal proto;
   if (!reader.PopArrayOfBytesAsProto(&proto)) {
     LOG(ERROR) << "Failed to parse NeighborConnectedStateChangedSignal proto";
     return;
@@ -133,8 +133,8 @@ class ClientImpl : public Client {
                       const std::string& dst_ip,
                       uint32_t dst_port) override;
 
-  void RegisterNeighborConnectedStateChangedHandler(
-      NeighborConnectedStateChangedHandler handler) override;
+  void RegisterNeighborReachabilityEventHandler(
+      NeighborReachabilityEventHandler handler) override;
 
  private:
   scoped_refptr<dbus::Bus> bus_;
@@ -587,11 +587,11 @@ bool ClientImpl::ModifyPortRule(ModifyPortRuleRequest::Operation op,
   return true;
 }
 
-void ClientImpl::RegisterNeighborConnectedStateChangedHandler(
-    NeighborConnectedStateChangedHandler handler) {
+void ClientImpl::RegisterNeighborReachabilityEventHandler(
+    NeighborReachabilityEventHandler handler) {
   proxy_->ConnectToSignal(
-      kPatchPanelInterface, kNeighborConnectedStateChangedSignal,
-      base::BindRepeating(OnNeighborConnectedStateChangedSignal, handler),
+      kPatchPanelInterface, kNeighborReachabilityEventSignal,
+      base::BindRepeating(OnNeighborReachabilityEventSignal, handler),
       base::BindOnce(OnSignalConnectedCallback));
 }
 

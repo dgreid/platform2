@@ -1227,11 +1227,11 @@ void Metrics::NotifyLinkMonitorResponseTimeSampleAdded(
 void Metrics::NotifyNeighborLinkMonitorFailure(
     Technology technology,
     IPAddress::Family family,
-    patchpanel::NeighborConnectedStateChangedSignal::Role role) {
+    patchpanel::NeighborReachabilityEventSignal::Role role) {
   string histogram =
       GetFullMetricName(kMetricNeighborLinkMonitorFailureSuffix, technology);
   NeighborLinkMonitorFailure failure = kNeighborLinkMonitorFailureUnknown;
-  using NeighborSignal = patchpanel::NeighborConnectedStateChangedSignal;
+  using NeighborSignal = patchpanel::NeighborReachabilityEventSignal;
   if (family == IPAddress::kFamilyIPv4) {
     switch (role) {
       case NeighborSignal::GATEWAY:

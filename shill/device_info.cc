@@ -1485,18 +1485,17 @@ bool DeviceInfo::IsGuestDevice(const std::string& interface_name) {
 }
 
 void DeviceInfo::OnPatchpanelClientReady() {
-  manager_->patchpanel_client()->RegisterNeighborConnectedStateChangedHandler(
-      base::BindRepeating(&DeviceInfo::OnNeighborConnectedStateChanged,
+  manager_->patchpanel_client()->RegisterNeighborReachabilityEventHandler(
+      base::BindRepeating(&DeviceInfo::OnNeighborReachabilityEvent,
                           weak_factory_.GetWeakPtr()));
 }
 
-void DeviceInfo::OnNeighborConnectedStateChanged(
-    const patchpanel::NeighborConnectedStateChangedSignal& signal) {
+void DeviceInfo::OnNeighborReachabilityEvent(
+    const patchpanel::NeighborReachabilityEventSignal& signal) {
   SLOG(this, 2) << __func__ << ": interface index: " << signal.ifindex()
                 << ", ip address: " << signal.ip_addr()
-                << ", role: " << signal.role()
-                << ", connected: " << signal.connected();
-  using SignalProto = patchpanel::NeighborConnectedStateChangedSignal;
+                << ", role: " << signal.role() << ", type: " << signal.type();
+  using SignalProto = patchpanel::NeighborReachabilityEventSignal;
 
   auto device = GetDevice(signal.ifindex());
   if (!device) {
@@ -1510,8 +1509,15 @@ void DeviceInfo::OnNeighborConnectedStateChanged(
     return;
   }
 
-  if (!signal.connected()) {
-    device->OnNeighborDisconnected(address, signal.role());
+  switch (signal.type()) {
+    case SignalProto::FAILED:
+      device->OnNeighborLinkFailure(address, signal.role());
+      return;
+    case SignalProto::RECOVERED:
+      // TODO(jiejiang): handle this event.
+      return;
+    default:
+      LOG(ERROR) << "Invalid NeighborRecabilityEvent type " << signal.type();
   }
 }
 

@@ -1090,7 +1090,7 @@ class Metrics : public DefaultServiceObserver {
   void NotifyNeighborLinkMonitorFailure(
       Technology technology,
       IPAddress::Family family,
-      patchpanel::NeighborConnectedStateChangedSignal::Role role);
+      patchpanel::NeighborReachabilityEventSignal::Role role);
 
   // Notifies this object that an AP was discovered and of that AP's 802.11k
   // support.

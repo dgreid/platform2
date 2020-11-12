@@ -15,11 +15,12 @@
 #include <base/memory/weak_ptr.h>
 #include <base/timer/timer.h>
 #include <gtest/gtest_prod.h>  // for FRIEND_TEST
+#include <patchpanel/proto_bindings/patchpanel_service.pb.h>
+#include <shill/net/ip_address.h>
+#include <shill/net/rtnl_listener.h>
+#include <shill/net/rtnl_message.h>
 
 #include "patchpanel/shill_client.h"
-#include "shill/net/ip_address.h"
-#include "shill/net/rtnl_listener.h"
-#include "shill/net/rtnl_message.h"
 
 namespace patchpanel {
 
@@ -60,26 +61,30 @@ namespace patchpanel {
 //   NUD_FAILED. Then we will do nothing for this address, until we heard about
 //   it again from kernel.
 //
-// We use the following logic to determine L2 connectivity state of a neighbor,
-// and broadcast a signal when the state changed, based on the NUD state:
-// - If the NUD state is not in NUD_VALID, the neighbor is considered as
-//   "disconnected".
-// - If the NUD state is kept in NUD_VALID for a while, the neighbor is
-//   considered as "connected". That means we will not send out the signal
-//   immediately after the NUD state back to NUD_VALID, but wait for some time
-//   to make sure it will not become invalid again soon.
-// - A new neighbor will always be considered as "connected", before we know its
-//   NUD state.
+// We will broadcast a signal when the bidirectional reachability of a monitored
+// neighbor changes, based on its NUD state, as follows:
+// - If the NUD state becomes NUD_FAILED, that is a clear signal that the
+//   reachability has been lost. We will consider the neighbor is "in failure"
+//   now and broadcast the "FAILED" signal if its previous state was not in
+//   failure. (It's possible that the NUD state becomes NUD_FAILED for several
+//   times before it comes to NUD_REACHABLE, because (something makes) the
+//   kernel probing that entry. We only generate one signal for that case.)
+// - If the NUD state becomes NUD_REACHABLE when the neighbor is in failure,
+//   that is a clear signal that the reachability has been recovered. To avoid
+//   the unstable case, we will wait for some time to make sure it will not
+//   become NUD_FAILURE again soon, and after that, we will reset the in failure
+//   state, and broadcast a "RECOVERED" signal.
+// Also see the comments for |WatchingEntry::in_failure|.
 class NeighborLinkMonitor {
  public:
   static constexpr base::TimeDelta kActiveProbeInterval =
       base::TimeDelta::FromSeconds(60);
 
-  // If a neighbor does not become invalid again in kBackToConnectedTimeout
-  // after it comes back to NUD_VALID, we consider it as connected. Since
-  // currently the "connected" signal is only used by shill for comparing link
-  // monitors, we use a relatively longer value here.
-  static constexpr base::TimeDelta kBackToConnectedTimeout =
+  // If a neighbor does not become NUD_FAILED again in kResetFailureStateTimeout
+  // after it comes back to NUD_REACHABLE, we consider it as recovered from the
+  // previous failure. Since currently the RECOVERED signal is only used by
+  // shill for comparing link monitors, we use a relatively longer value here.
+  static constexpr base::TimeDelta kResetFailureStateTimeout =
       base::TimeDelta::FromMinutes(3);
 
   // Possible neighbor roles in the ipconfig. Represents each individual role by
@@ -90,16 +95,16 @@ class NeighborLinkMonitor {
     kGatewayAndDNSServer = 0x3,
   };
 
-  using ConnectedStateChangedHandler =
-      base::RepeatingCallback<void(int ifindex,
-                                   const shill::IPAddress& ip_addr,
-                                   NeighborRole role,
-                                   bool connected)>;
+  using NeighborReachabilityEventHandler = base::RepeatingCallback<void(
+      int ifindex,
+      const shill::IPAddress& ip_addr,
+      NeighborRole role,
+      NeighborReachabilityEventSignal::EventType event_type)>;
 
   NeighborLinkMonitor(int ifindex,
                       const std::string& ifname,
                       shill::RTNLHandler* rtnl_handler,
-                      ConnectedStateChangedHandler* neighbor_event_handler);
+                      NeighborReachabilityEventHandler* neighbor_event_handler);
   ~NeighborLinkMonitor() = default;
 
   NeighborLinkMonitor(const NeighborLinkMonitor&) = delete;
@@ -140,14 +145,23 @@ class NeighborLinkMonitor {
     // changing this struct into a class if it becomes more complicated.
     uint16_t nud_state = NUD_NONE;
 
-    // Indicates the L2 connectivity state of this neighbor. See the class
-    // comment above for more details.
-    bool connected = true;
+    // Indicates whether we have detected a failure and the layer 2 reachability
+    // has not been recovered from that. Specifically, this state will be set
+    // when the |nud_state| changes to NUD_FAILED, and be reset when the
+    // |nud_state| changes to NUD_REACHABLE once and hasn't become NUD_FAILED
+    // again in a given period (kResetFailureStateTimeout). Note that this state
+    // doesn't exactly mean whether the neighbor is reachable currently: for
+    // instance, when the link is going down, the kernel would remove this entry
+    // from the neighbor table and thus we will get a RTM_DELNEIGH message and
+    // change the |nud_state| to NUD_NONE. Although the neighbor may not be
+    // reachable at that time, we will not consider it as a failure case, unless
+    // we get a NUD_FAILED signal.
+    bool in_failure = false;
 
-    // This timer is set when the NUD state of neighbor back to NUD_VALID to
-    // broadcast the connected signal, and reset if the NUD state becomes
-    // invalid again before triggered.
-    base::OneShotTimer back_to_connected_timer;
+    // This timer is used to reset |in_failure| state. It will be set on the
+    // first time when the NUD state of neighbor back to NUD_REACHABLE, and
+    // will be reset if the NUD state becomes NUD_FAILED again before triggered.
+    base::OneShotTimer reset_failure_state_timer;
   };
 
   // ProbeAll() is invoked periodically by |probe_timer_|. It will scan the
@@ -170,10 +184,11 @@ class NeighborLinkMonitor {
   // Creates a new entry if not exist or updates the role of an existing entry.
   void UpdateWatchingEntry(const shill::IPAddress& addr, NeighborRole role);
 
-  // Sets the connected state of the watching entry with |addr| to |connected|,
+  // Sets the failure state of the watching entry with |addr| to |in_failure|,
   // and invokes |neighbor_event_handler_| to sent out a signal if the state
   // changes.
-  void ChangeWatchingEntryState(const shill::IPAddress& addr, bool connected);
+  void ChangeWatchingEntryInFailureState(const shill::IPAddress& addr,
+                                         bool in_failure);
 
   void SendNeighborDumpRTNLMessage();
   void SendNeighborProbeRTNLMessage(const WatchingEntry& entry);
@@ -190,15 +205,15 @@ class NeighborLinkMonitor {
   // RTNLHandler is a singleton object. Stores it here for test purpose.
   shill::RTNLHandler* rtnl_handler_;
 
-  const ConnectedStateChangedHandler* neighbor_event_handler_;
+  const NeighborReachabilityEventHandler* neighbor_event_handler_;
 };
 
 class NetworkMonitorService {
  public:
   explicit NetworkMonitorService(
       ShillClient* shill_client,
-      const NeighborLinkMonitor::ConnectedStateChangedHandler&
-          neighbor_handler);
+      const NeighborLinkMonitor::NeighborReachabilityEventHandler&
+          neighbor_event_handler);
   ~NetworkMonitorService() = default;
 
   NetworkMonitorService(const NetworkMonitorService&) = delete;
@@ -215,7 +230,7 @@ class NetworkMonitorService {
   // ifname => NeighborLinkMonitor.
   std::map<std::string, std::unique_ptr<NeighborLinkMonitor>>
       neighbor_link_monitors_;
-  NeighborLinkMonitor::ConnectedStateChangedHandler neighbor_event_handler_;
+  NeighborLinkMonitor::NeighborReachabilityEventHandler neighbor_event_handler_;
   ShillClient* shill_client_;
   // RTNLHandler is a singleton object. Stores it here for test purpose.
   shill::RTNLHandler* rtnl_handler_;

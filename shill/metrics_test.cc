@@ -1301,7 +1301,7 @@ TEST_F(MetricsTest, CumulativeCellWifiTest) {
 }
 
 TEST_F(MetricsTest, NotifyNeighborLinkMonitorFailure) {
-  using NeighborSignal = patchpanel::NeighborConnectedStateChangedSignal;
+  using NeighborSignal = patchpanel::NeighborReachabilityEventSignal;
   const std::string histogram = "Network.Shill.Wifi.NeighborLinkMonitorFailure";
 
   EXPECT_CALL(library_,

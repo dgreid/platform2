@@ -79,10 +79,10 @@ TEST_F(ClientTest, ConnectNamespace) {
 }
 
 TEST_F(ClientTest, RegisterNeighborEventHandler) {
-  static NeighborConnectedStateChangedSignal actual_signal_proto;
+  static NeighborReachabilityEventSignal actual_signal_proto;
   static int call_num = 0;
   auto callback =
-      base::BindRepeating([](const NeighborConnectedStateChangedSignal& sig) {
+      base::BindRepeating([](const NeighborReachabilityEventSignal& sig) {
         call_num++;
         actual_signal_proto = sig;
       });
@@ -91,17 +91,16 @@ TEST_F(ClientTest, RegisterNeighborEventHandler) {
 
   EXPECT_CALL(*proxy_,
               DoConnectToSignal(kPatchPanelInterface,
-                                kNeighborConnectedStateChangedSignal, _, _))
+                                kNeighborReachabilityEventSignal, _, _))
       .WillOnce(SaveArg<2>(&registered_dbus_callback));
-  client_->RegisterNeighborConnectedStateChangedHandler(callback);
+  client_->RegisterNeighborReachabilityEventHandler(callback);
 
-  NeighborConnectedStateChangedSignal signal_proto;
+  NeighborReachabilityEventSignal signal_proto;
   signal_proto.set_ifindex(1);
   signal_proto.set_ip_addr("1.2.3.4");
-  signal_proto.set_role(NeighborConnectedStateChangedSignal::GATEWAY);
-  signal_proto.set_connected(false);
-  dbus::Signal signal(kPatchPanelInterface,
-                      kNeighborConnectedStateChangedSignal);
+  signal_proto.set_role(NeighborReachabilityEventSignal::GATEWAY);
+  signal_proto.set_type(NeighborReachabilityEventSignal::FAILED);
+  dbus::Signal signal(kPatchPanelInterface, kNeighborReachabilityEventSignal);
   dbus::MessageWriter writer(&signal);
   writer.AppendProtoAsArrayOfBytes(signal_proto);
 
@@ -111,7 +110,7 @@ TEST_F(ClientTest, RegisterNeighborEventHandler) {
   EXPECT_EQ(actual_signal_proto.ifindex(), signal_proto.ifindex());
   EXPECT_EQ(actual_signal_proto.ip_addr(), signal_proto.ip_addr());
   EXPECT_EQ(actual_signal_proto.role(), signal_proto.role());
-  EXPECT_EQ(actual_signal_proto.connected(), signal_proto.connected());
+  EXPECT_EQ(actual_signal_proto.type(), signal_proto.type());
 }
 
 }  // namespace
