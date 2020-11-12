@@ -6,9 +6,11 @@
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include <iterator>
 #include <list>
 #include <map>
 #include <utility>
+#include <vector>
 
 #include <base/bind.h>
 #include <base/bind_helpers.h>
@@ -17,6 +19,7 @@
 #include <base/files/scoped_file.h>
 #include <base/memory/weak_ptr.h>
 #include <base/strings/stringprintf.h>
+#include <base/strings/utf_string_conversions.h>
 #include <base/task/single_thread_task_executor.h>
 #include <brillo/dbus/async_event_sequencer.h>
 #include <brillo/dbus/dbus_object.h>
@@ -32,6 +35,7 @@
 
 #include "bindings/worker_common.pb.h"
 #include "system-proxy/kerberos_client.h"
+#include "system-proxy/net/ntlm/ntlm_test_data.h"
 #include "system_proxy/proto_bindings/system_proxy_service.pb.h"
 #include "system-proxy/protobuf_util.h"
 #include "system-proxy/sandboxed_worker.h"
@@ -528,6 +532,50 @@ TEST_F(SystemProxyAdaptorTest, ClearUserCredentialsRestartService) {
 
   ASSERT_TRUE(adaptor_->system_services_worker_.get());
   EXPECT_EQ(2, adaptor_->create_worker_count_);
+}
+
+// This test verifies that System-proxy correctly generates an NTLM
+// authentication message based on a server challenge. The test data and
+// expected result are taken from the chromium //net test code.
+TEST_F(SystemProxyAdaptorTest, NtlmAuthMessageRequest) {
+  NtlmAuthMessageRequest request;
+  request.set_ntlmv2_enabled(true);
+  request.set_mic_enabled(true);
+  request.set_epa_enabled(true);
+  request.set_domain(base::UTF16ToUTF8(net::ntlm::test::kNtlmDomain));
+  request.set_username(base::UTF16ToUTF8(net::ntlm::test::kUser));
+  request.set_hostname(net::ntlm::test::kHostnameAscii);
+  request.set_channel_bindings(net::ntlm::test::kChannelBindings);
+  request.set_spn(net::ntlm::test::kNtlmSpn);
+  request.set_client_time(net::ntlm::test::kClientTimestamp);
+
+  std::vector<uint8_t> client_challenge(
+      std::begin(net::ntlm::test::kClientChallenge),
+      std::end(net::ntlm::test::kClientChallenge));
+  request.set_client_challenge(client_challenge.data(),
+                               client_challenge.size());
+
+  std::vector<uint8_t> server_challenge_message(
+      std::begin(net::ntlm::test::kChallengeMsgFromSpecV2),
+      std::end(net::ntlm::test::kChallengeMsgFromSpecV2));
+  request.set_server_challenge_message(server_challenge_message.data(),
+                                       server_challenge_message.size());
+  GenerateNetworkAuthMessageRequest network_request;
+  *network_request.mutable_ntlm_message_auth_request() = request;
+
+  std::vector<uint8_t> proto_blob(network_request.ByteSizeLong());
+  network_request.SerializeToArray(proto_blob.data(), proto_blob.size());
+  proto_blob = adaptor_->GenerateNetworkAuthMessage(proto_blob);
+
+  GenerateNetworkAuthMessageResponse response;
+  ASSERT_TRUE(response.ParseFromArray(proto_blob.data(), proto_blob.size()));
+  EXPECT_TRUE(response.has_auth_message());
+  std::vector<uint8_t> result(response.auth_message().begin(),
+                              response.auth_message().end());
+  ASSERT_EQ(base::size(net::ntlm::test::kExpectedAuthenticateMsgSpecResponseV2),
+            result.size());
+  ASSERT_EQ(0, memcmp(net::ntlm::test::kExpectedAuthenticateMsgSpecResponseV2,
+                      result.data(), result.size()));
 }
 
 }  // namespace system_proxy

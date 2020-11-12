@@ -91,5 +91,21 @@
       </arg>
       <annotation name="org.chromium.DBus.Method.Kind" value="simple" />
     </method>
+    <method name="GenerateNetworkAuthMessage">
+      <tp:docstring>
+        Generates NTLM authentication messages.
+      </tp:docstring>
+      <arg name="request" type="ay" direction="in">
+        <tp:docstring>
+          Serialized GenerateNetworkAuthMessageRequest.
+        </tp:docstring>
+      </arg>
+      <arg name="response" type="ay" direction="out">
+        <tp:docstring>
+          Serialized GenerateNetworkAuthMessageResponse.
+        </tp:docstring>
+      </arg>
+      <annotation name="org.chromium.DBus.Method.Kind" value="simple" />
+    </method>
   </interface>
 </node>

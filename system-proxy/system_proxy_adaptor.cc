@@ -7,6 +7,8 @@
 #include <utility>
 #include <vector>
 
+#include <base/strings/string16.h>
+#include <base/strings/utf_string_conversions.h>
 #include <base/location.h>
 #include <base/strings/stringprintf.h>
 #include <base/time/time.h>
@@ -17,6 +19,8 @@
 #include <dbus/object_proxy.h>
 
 #include "system-proxy/kerberos_client.h"
+#include "system-proxy/net/ntlm/ntlm_client.h"
+#include "system-proxy/net/ntlm/ntlm_constants.h"
 #include "system-proxy/sandboxed_worker.h"
 
 namespace system_proxy {
@@ -227,6 +231,58 @@ std::vector<uint8_t> SystemProxyAdaptor::ShutDownProcess(
         FROM_HERE, base::Bind(&SystemProxyAdaptor::ShutDownTask,
                               weak_ptr_factory_.GetWeakPtr()));
   }
+  return SerializeProto(response);
+}
+
+std::vector<uint8_t> SystemProxyAdaptor::GenerateNetworkAuthMessage(
+    const std::vector<uint8_t>& request_blob) {
+  LOG(INFO) << "Received request to generate NTLM token.";
+  GenerateNetworkAuthMessageRequest request;
+  std::string error_message =
+      DeserializeProto(FROM_HERE, &request, request_blob);
+
+  GenerateNetworkAuthMessageResponse response;
+  if (!error_message.empty()) {
+    response.set_error_message(error_message);
+    return SerializeProto(response);
+  }
+
+  if (!request.has_ntlm_message_auth_request()) {
+    response.set_error_message("Missing NTLM token generation request");
+    return SerializeProto(response);
+  }
+
+  NtlmAuthMessageRequest ntlm_request = request.ntlm_message_auth_request();
+  net::ntlm::NtlmFeatures features(ntlm_request.ntlmv2_enabled());
+  features.enable_MIC = ntlm_request.mic_enabled();
+  features.enable_EPA = ntlm_request.epa_enabled();
+
+  base::string16 domain = base::UTF8ToUTF16(ntlm_request.domain());
+  base::string16 username = base::UTF8ToUTF16(ntlm_request.username());
+  // TODO(acostinas) Replace placeholder password with Chrome OS login password
+  // from libpasswordprovider.
+  base::string16 pwd = base::ASCIIToUTF16("Password");
+
+  if (ntlm_request.client_challenge().size() != net::ntlm::kChallengeLen) {
+    response.set_error_message("NTLM client challenge has unexpected length");
+    return SerializeProto(response);
+  }
+  uint8_t client_challenge[net::ntlm::kChallengeLen];
+  std::memcpy(client_challenge, ntlm_request.client_challenge().data(),
+              net::ntlm::kChallengeLen);
+
+  base::span<const uint8_t> server_challenge_message =
+      base::as_bytes(base::make_span(ntlm_request.server_challenge_message()));
+
+  net::ntlm::NtlmClient client(features);
+  std::vector<uint8_t> auth_message = client.GenerateAuthenticateMessage(
+      domain, username, pwd, ntlm_request.hostname(),
+      ntlm_request.channel_bindings(), ntlm_request.spn(),
+      (uint64_t)ntlm_request.client_time(), client_challenge,
+      server_challenge_message);
+
+  response.set_auth_message(auth_message.data(), auth_message.size());
+
   return SerializeProto(response);
 }
 

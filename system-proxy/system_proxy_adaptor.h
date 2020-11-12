@@ -53,6 +53,8 @@ class SystemProxyAdaptor : public org::chromium::SystemProxyAdaptor,
       const std::vector<uint8_t>& request_blob) override;
   std::vector<uint8_t> ShutDownProcess(
       const std::vector<uint8_t>& request_blob) override;
+  std::vector<uint8_t> GenerateNetworkAuthMessage(
+      const std::vector<uint8_t>& request_blob) override;
 
   void GetChromeProxyServersAsync(
       const std::string& target_url,
