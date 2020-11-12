@@ -647,138 +647,66 @@ bool Crypto::EncryptVaultKeyset(const VaultKeyset& vault_keyset,
                                 const SecureBlob& vault_key_salt,
                                 const std::string& obfuscated_username,
                                 SerializedVaultKeyset* serialized) const {
-  // This if statement picks the correct auth block for a given credential,
-  // invokes the Create() method, and then calls GenerateAndWrapKeys.
-  // TODO(kerrnel): Convert if statement into a method to return the auth block
-  // for a given serialized blob.
-  if (vault_keyset.IsLECredential()) {
-    SecureBlob reset_secret;
-    SecureBlob reset_salt;
-    if (!GenerateResetSecret(vault_keyset, &reset_secret, &reset_salt)) {
-      return false;
-    }
-
-    serialized->set_reset_salt(reset_salt.data(), reset_salt.size());
-
-    KeyBlobs blobs;
-    PinWeaverAuthBlock pin_weaver_auth(le_manager_.get(), tpm_init_);
-
-    AuthInput user_input = {vault_key, /*is_pcr_extended=*/base::nullopt,
-                            vault_key_salt, obfuscated_username, reset_secret};
-    KeyBlobs vkk_data;
-    CryptoError error;
-
-    // TODO(kerrnel): When switching to a factory method, report the error
-    // object.
-    auto auth_state = pin_weaver_auth.Create(user_input, &vkk_data, &error);
-    if (auth_state == base::nullopt) {
-      LOG(ERROR) << "Failed to create pinweaver credential: " << error;
-      return false;
-    }
-
-    const AuthBlockState& state = auth_state.value();
-    serialized->set_le_fek_iv(state.vault_keyset.value().le_fek_iv());
-    serialized->set_le_chaps_iv(state.vault_keyset.value().le_chaps_iv());
-    serialized->set_flags(state.vault_keyset.value().flags());
-    serialized->set_le_label(state.vault_keyset.value().le_label());
-    serialized->mutable_key_data()->mutable_policy()->set_auth_locked(false);
-
-    if (!GenerateAndWrapKeys(vault_keyset, vkk_data,
-                             /*store_reset_seed=*/false, serialized)) {
-      LOG(ERROR) << "GenerateAndWrapKeys failed.";
-      return false;
-    }
-
-    serialized->set_salt(vault_key_salt.data(), vault_key_salt.size());
-    return true;
-  }
-
-  if (vault_keyset.IsSignatureChallengeProtected()) {
-    AuthInput user_input;
-    user_input.user_input = vault_key;
-
-    KeyBlobs key_blobs;
-    CryptoError error;
-    ChallengeCredentialAuthBlock auth_block;
-    auto auth_state = auth_block.Create(user_input, &key_blobs, &error);
-    if (auth_state == base::nullopt) {
-      return false;
-    }
-
-    serialized->set_flags(auth_state->vault_keyset->flags());
-    if (!GenerateAndWrapKeys(vault_keyset, key_blobs,
-                             /*store_reset_seed=*/true, serialized)) {
-      LOG(ERROR) << "GenerateAndWrapKeys failed.";
-      return false;
-    }
-
-    serialized->set_salt(vault_key_salt.data(), vault_key_salt.size());
-    return true;
-  }
-
-  if (use_tpm_ && tpm_ && tpm_->IsOwned()) {
-    AuthInput user_input;
-    user_input.user_input = vault_key;
-    user_input.salt = vault_key_salt;
-    user_input.obfuscated_username = obfuscated_username;
-
-    std::unique_ptr<AuthBlock> tpm_auth_block;
-    if (CanUnsealWithUserAuth()) {
-      tpm_auth_block =
-          std::make_unique<TpmBoundToPcrAuthBlock>(tpm_, tpm_init_);
-    } else {
-      tpm_auth_block =
-          std::make_unique<TpmNotBoundToPcrAuthBlock>(tpm_, tpm_init_);
-    }
-
-    KeyBlobs blobs;
-    CryptoError error;
-    auto auth_state = tpm_auth_block->Create(user_input, &blobs, &error);
-    if (auth_state == base::nullopt) {
-      LOG_IF(ERROR, !disable_logging_for_tests_)
-          << "Failed to encrypt with TPM.";
-      ReportCryptohomeError(kEncryptWithTpmFailed);
-      return false;
-    }
-
-    serialized->set_flags(auth_state->vault_keyset->flags());
-    serialized->set_tpm_key(auth_state->vault_keyset->tpm_key());
-    if (auth_state->vault_keyset->has_tpm_public_key_hash()) {
-      serialized->set_tpm_public_key_hash(
-          auth_state->vault_keyset->tpm_public_key_hash());
-    }
-    if (auth_state->vault_keyset->has_extended_tpm_key()) {
-      serialized->set_extended_tpm_key(
-          auth_state->vault_keyset->extended_tpm_key());
-    }
-
-    if (!GenerateAndWrapKeys(vault_keyset, blobs,
-                             /*store_reset_seed=*/true, serialized)) {
-      LOG(ERROR) << "Failed to generate unwrapped keys";
-      return false;
-    }
-
-    serialized->set_salt(vault_key_salt.data(), vault_key_salt.size());
-    return true;
-  }
-
-  AuthInput user_input;
-  user_input.user_input = vault_key;
-  user_input.salt = vault_key_salt;
-  user_input.obfuscated_username = obfuscated_username;
-
-  KeyBlobs blobs;
-  CryptoError error;
-  LibScryptCompatAuthBlock auth_block;
-  auto auth_state = auth_block.Create(user_input, &blobs, &error);
-  if (auth_state == base::nullopt) {
+  std::unique_ptr<AuthBlock> auth_block = CreateAuthBlock(vault_keyset);
+  if (!auth_block) {
+    LOG(ERROR) << "Failed to retrieve auth block.";
     return false;
   }
 
-  serialized->set_flags(auth_state->vault_keyset->flags());
-  if (!GenerateAndWrapKeys(vault_keyset, blobs,
-                           /*store_reset_seed=*/true, serialized)) {
-    LOG(ERROR) << "Failed to generate and wrap keys";
+  bool store_reset_seed = true;
+  base::Optional<SecureBlob> reset_secret;
+  if (vault_keyset.IsLECredential()) {
+    SecureBlob inner_reset_secret;
+    SecureBlob reset_salt;
+    if (!GenerateResetSecret(vault_keyset, &inner_reset_secret, &reset_salt)) {
+      return false;
+    }
+
+    reset_secret = inner_reset_secret;
+    serialized->set_reset_salt(reset_salt.data(), reset_salt.size());
+    store_reset_seed = false;
+
+    // This field only applies to PinWeaver credentials.
+    serialized->mutable_key_data()->mutable_policy()->set_auth_locked(false);
+  }
+
+  AuthInput user_input = {vault_key, /*locked_to_single_user*=*/base::nullopt,
+                          vault_key_salt, obfuscated_username, reset_secret};
+
+  KeyBlobs vkk_data;
+  CryptoError error;
+  auto auth_state = auth_block->Create(user_input, &vkk_data, &error);
+  if (auth_state == base::nullopt) {
+    LOG_IF(ERROR, !disable_logging_for_tests_)
+        << "Failed to create the credential: " << error;
+    return false;
+  }
+
+  const SerializedVaultKeyset& out_serialized =
+      auth_state.value().vault_keyset.value();
+  serialized->set_flags(out_serialized.flags());
+  if (out_serialized.has_le_fek_iv()) {
+    serialized->set_le_fek_iv(out_serialized.le_fek_iv());
+  }
+  if (out_serialized.has_le_chaps_iv()) {
+    serialized->set_le_chaps_iv(out_serialized.le_chaps_iv());
+  }
+  if (out_serialized.has_le_label()) {
+    serialized->set_le_label(out_serialized.le_label());
+  }
+  if (out_serialized.has_tpm_key()) {
+    serialized->set_tpm_key(out_serialized.tpm_key());
+  }
+  if (out_serialized.has_tpm_public_key_hash()) {
+    serialized->set_tpm_public_key_hash(out_serialized.tpm_public_key_hash());
+  }
+  if (out_serialized.has_extended_tpm_key()) {
+    serialized->set_extended_tpm_key(out_serialized.extended_tpm_key());
+  }
+
+  if (!GenerateAndWrapKeys(vault_keyset, vkk_data, store_reset_seed,
+                           serialized)) {
+    LOG(ERROR) << "GenerateAndWrapKeys failed.";
     return false;
   }
 
@@ -985,6 +913,29 @@ bool Crypto::CanUnsealWithUserAuth() const {
 #else
   return true;
 #endif
+}
+
+std::unique_ptr<AuthBlock> Crypto::CreateAuthBlock(
+    const VaultKeyset& vk) const {
+  if (vk.IsLECredential()) {
+    return std::make_unique<PinWeaverAuthBlock>(le_manager_.get(), tpm_init_);
+  }
+
+  if (vk.IsSignatureChallengeProtected()) {
+    return std::make_unique<ChallengeCredentialAuthBlock>();
+  }
+
+  bool use_tpm = use_tpm_ && tpm_ && tpm_->IsOwned();
+  bool with_user_auth = CanUnsealWithUserAuth();
+  if (use_tpm && with_user_auth) {
+    return std::make_unique<TpmBoundToPcrAuthBlock>(tpm_, tpm_init_);
+  }
+
+  if (use_tpm && !with_user_auth) {
+    return std::make_unique<TpmNotBoundToPcrAuthBlock>(tpm_, tpm_init_);
+  }
+
+  return std::make_unique<LibScryptCompatAuthBlock>();
 }
 
 std::unique_ptr<AuthBlock> Crypto::DeriveAuthBlock(int serialized_key_flags) {

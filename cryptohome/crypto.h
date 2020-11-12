@@ -258,7 +258,13 @@ class Crypto {
                                 const brillo::SecureBlob& vkk_iv) const;
 
   // This function serves as a factory method to return the authblock used in
-  // authentication.
+  // authentication creation.
+  // |serialized_key_flags| is the flag data stores in the vault keyset which
+  // helps determine the type of AuthBlock.
+  std::unique_ptr<AuthBlock> CreateAuthBlock(const VaultKeyset& vk) const;
+
+  // This function serves as a factory method to return the authblock used in
+  // authentication derivation.
   // |serialized_key_flags| is the flag data stores in the vault keyset which
   // helps determine the type of AuthBlock.
   std::unique_ptr<AuthBlock> DeriveAuthBlock(int serialized_key_flags);
