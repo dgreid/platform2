@@ -56,6 +56,7 @@ proto_library("interface_proto") {
 
   # Use -fPIC so this code can be linked into a shared library.
   use_pic = true
+  standalone = true
 }
 
 proto_library("pinweaver_proto") {
@@ -156,7 +157,7 @@ static_library("trunksd_lib") {
     "tpm_simulator_handle.cc",
     "trunks_dbus_service.cc",
   ]
-  deps = [ ":interface_proto" ]
+  deps = [ ":trunks" ]
 }
 
 pkg_config("trunksd_pkg_deps") {
@@ -170,7 +171,6 @@ executable("trunksd") {
   ]
   sources = [ "trunksd.cc" ]
   deps = [
-    ":interface_proto",
     ":trunks",
     ":trunksd_lib",
   ]
