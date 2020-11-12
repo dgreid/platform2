@@ -14,21 +14,6 @@ generate_dbus_proxies("bootlockbox-proxies") {
   sources = [ "../dbus_adaptors/org.chromium.BootLockboxInterface.xml" ]
 }
 
-# Copy boot_lockbox_rpc.proto from /usr/include/chromeos/dbus.
-action("bootlockbox-proto-external") {
-  proto_out_dir = "${target_gen_dir}/bootlockbox"
-  shared_proto_path = "${sysroot}/usr/include/chromeos/dbus/bootlockbox"
-  inputs = [ "${shared_proto_path}/boot_lockbox_rpc.proto" ]
-  outputs =
-      process_file_template(inputs, [ "${proto_out_dir}/{{source_file_part}}" ])
-
-  script = "../libs/external_proto_generator.py"
-  args = [
-           "-o",
-           "${proto_out_dir}",
-         ] + inputs
-}
-
 pkg_config("proto_config") {
   pkg_deps = [ "protobuf" ]
 }
