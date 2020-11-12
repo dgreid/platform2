@@ -52,7 +52,17 @@ const std::vector<uint8_t> kKeyHandle(sizeof(struct u2f_key_handle), 0xab);
 // Dummy hash to sign.
 const std::vector<uint8_t> kHashToSign(U2F_P256_SIZE, 0xcd);
 
-const std::string ExpectedU2fGenerateRequestRegex() {
+const std::string ExpectedUserPresenceU2fGenerateRequestRegex() {
+  // See U2F_GENERATE_REQ in //platform/ec/include/u2f.h
+  static const std::string request_regex =
+      base::HexEncode(kRpIdHash.data(), kRpIdHash.size()) +  // AppId
+      std::string("(EE){32}") +                              // User Secret
+      std::string("0B") +       // U2F_UV_ENABLED_KH | U2F_AUTH_ENFORCE
+      std::string("(00){32}");  // Auth time secret hash
+  return request_regex;
+}
+
+const std::string ExpectedUserVerificationU2fGenerateRequestRegex() {
   // See U2F_GENERATE_REQ in //platform/ec/include/u2f.h
   static const std::string request_regex =
       base::HexEncode(kRpIdHash.data(), kRpIdHash.size()) +  // AppId
@@ -279,12 +289,13 @@ TEST_F(WebAuthnHandlerTest, DoU2fGenerateNoSecret) {
       MakeCredentialResponse::INTERNAL_ERROR);
 }
 
-TEST_F(WebAuthnHandlerTest, DoU2fGenerateSuccess) {
+TEST_F(WebAuthnHandlerTest, DoU2fGenerateSuccessUserPresence) {
   ExpectGetUserSecret();
   EXPECT_CALL(
       mock_tpm_proxy_,
-      SendU2fGenerate(StructMatchesRegex(ExpectedU2fGenerateRequestRegex()),
-                      Matcher<u2f_generate_versioned_resp*>(_)))
+      SendU2fGenerate(
+          StructMatchesRegex(ExpectedUserPresenceU2fGenerateRequestRegex()),
+          Matcher<u2f_generate_versioned_resp*>(_)))
       .WillOnce(Return(kCr50StatusNotAllowed))
       .WillOnce(DoAll(SetArgPointee<1>(kU2fGenerateVersionedResponse),
                       Return(kCr50StatusSuccess)));
@@ -295,6 +306,25 @@ TEST_F(WebAuthnHandlerTest, DoU2fGenerateSuccess) {
   EXPECT_EQ(cred_id, std::vector<uint8_t>(113, 0xFD));
   EXPECT_EQ(cred_pubkey, std::vector<uint8_t>(65, 0xAB));
   presence_requested_expected_ = 1;
+}
+
+TEST_F(WebAuthnHandlerTest, DoU2fGenerateSuccessUserVerification) {
+  ExpectGetUserSecret();
+  EXPECT_CALL(
+      mock_tpm_proxy_,
+      SendU2fGenerate(
+          StructMatchesRegex(ExpectedUserVerificationU2fGenerateRequestRegex()),
+          Matcher<u2f_generate_versioned_resp*>(_)))
+      // Should succeed at the first time since no presence is required.
+      .WillOnce(DoAll(SetArgPointee<1>(kU2fGenerateVersionedResponse),
+                      Return(kCr50StatusSuccess)));
+  std::vector<uint8_t> cred_id, cred_pubkey;
+  // UI has verified the user so do not require presence.
+  EXPECT_EQ(DoU2fGenerate(PresenceRequirement::kNone, &cred_id, &cred_pubkey),
+            MakeCredentialResponse::SUCCESS);
+  EXPECT_EQ(cred_id, std::vector<uint8_t>(113, 0xFD));
+  EXPECT_EQ(cred_pubkey, std::vector<uint8_t>(65, 0xAB));
+  presence_requested_expected_ = 0;
 }
 
 TEST_F(WebAuthnHandlerTest, DoU2fSignNoSecret) {
@@ -400,8 +430,9 @@ TEST_F(WebAuthnHandlerTest, MakeCredentialSuccess) {
   ExpectGetUserSecret();
   EXPECT_CALL(
       mock_tpm_proxy_,
-      SendU2fGenerate(StructMatchesRegex(ExpectedU2fGenerateRequestRegex()),
-                      Matcher<u2f_generate_versioned_resp*>(_)))
+      SendU2fGenerate(
+          StructMatchesRegex(ExpectedUserPresenceU2fGenerateRequestRegex()),
+          Matcher<u2f_generate_versioned_resp*>(_)))
       .WillOnce(Return(kCr50StatusNotAllowed))
       .WillOnce(DoAll(SetArgPointee<1>(kU2fGenerateVersionedResponse),
                       Return(kCr50StatusSuccess)));

@@ -200,9 +200,7 @@ void WebAuthnHandler::HandleUVFlowResultMakeCredential(
     return;
   }
 
-  // TODO(yichengli): Change the presence requirement here once cr50 supports
-  // fp.
-  DoMakeCredential(std::move(session), PresenceRequirement::kPowerButton);
+  DoMakeCredential(std::move(session), PresenceRequirement::kNone);
 }
 
 void WebAuthnHandler::HandleUVFlowResultGetAssertion(
@@ -232,9 +230,7 @@ void WebAuthnHandler::HandleUVFlowResultGetAssertion(
     return;
   }
 
-  // TODO(yichengli): Change the presence requirement here once cr50 supports
-  // fp.
-  DoGetAssertion(std::move(session), PresenceRequirement::kPowerButton);
+  DoGetAssertion(std::move(session), PresenceRequirement::kAuthorizationSecret);
 }
 
 void WebAuthnHandler::DoMakeCredential(
@@ -370,10 +366,20 @@ MakeCredentialResponse::MakeCredentialStatus WebAuthnHandler::DoU2fGenerate(
   if (uv_compatible) {
     generate_req.flags |= U2F_UV_ENABLED_KH;
     struct u2f_generate_versioned_resp generate_resp = {};
+
     if (presence_requirement != PresenceRequirement::kPowerButton) {
-      // TODO(yichengli): SendU2fGenerate directly.
-      return MakeCredentialResponse::INTERNAL_ERROR;
+      uint32_t generate_status =
+          tpm_proxy_->SendU2fGenerate(generate_req, &generate_resp);
+      if (generate_status != 0)
+        return MakeCredentialResponse::INTERNAL_ERROR;
+
+      util::AppendToVector(generate_resp.pubKey, credential_public_key);
+      util::AppendToVector(generate_resp.keyHandle, credential_id);
+      return MakeCredentialResponse::SUCCESS;
     }
+
+    // Require user presence, consume.
+    generate_req.flags |= U2F_AUTH_ENFORCE;
     return SendU2fGenerateWaitForPresence(&generate_req, &generate_resp,
                                           credential_id, credential_public_key);
   } else {
@@ -559,10 +565,21 @@ GetAssertionResponse::GetAssertionStatus WebAuthnHandler::DoU2fSign(
     struct u2f_sign_resp sign_resp = {};
 
     if (presence_requirement != PresenceRequirement::kPowerButton) {
-      // TODO(yichengli): SendU2fSign directly, without U2F_AUTH_ENFORCE
-      return GetAssertionResponse::INTERNAL_ERROR;
+      uint32_t sign_status = tpm_proxy_->SendU2fSign(sign_req, &sign_resp);
+      if (sign_status != 0)
+        return GetAssertionResponse::INTERNAL_ERROR;
+
+      base::Optional<std::vector<uint8_t>> opt_signature =
+          util::SignatureToDerBytes(sign_resp.sig_r, sign_resp.sig_s);
+      if (!opt_signature.has_value()) {
+        return GetAssertionResponse::INTERNAL_ERROR;
+      }
+      *signature = *opt_signature;
+      return GetAssertionResponse::SUCCESS;
     }
 
+    // Require user presence, consume.
+    sign_req.flags |= U2F_AUTH_ENFORCE;
     return SendU2fSignWaitForPresence(&sign_req, &sign_resp, signature);
   } else {
     // Non-versioned KH must be signed with power button press.

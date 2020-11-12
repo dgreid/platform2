@@ -42,8 +42,11 @@ struct GetAssertionSession {
 };
 
 enum class PresenceRequirement {
+  kNone,  // Does not require presence. Used only after user-verification in
+          // MakeCredential.
   kPowerButton,  // Requires a power button press as indication of presence.
   kFingerprint,  // Requires the GPIO line from fingerprint MCU to be active.
+  kAuthorizationSecret,  // Requires the correct authorization secret.
 };
 
 // Implementation of the WebAuthn DBus API.
