@@ -213,6 +213,8 @@ INSTANTIATE_TEST_SUITE_P(
         ReportProgressPercentTestParams{
             mojo_ipc::DiagnosticRoutineStatusEnum::kCancelling, 0},
         ReportProgressPercentTestParams{
-            mojo_ipc::DiagnosticRoutineStatusEnum::kUnsupported, 0}));
+            mojo_ipc::DiagnosticRoutineStatusEnum::kUnsupported, 0},
+        ReportProgressPercentTestParams{
+            mojo_ipc::DiagnosticRoutineStatusEnum::kNotRun, 0}));
 
 }  // namespace diagnostics

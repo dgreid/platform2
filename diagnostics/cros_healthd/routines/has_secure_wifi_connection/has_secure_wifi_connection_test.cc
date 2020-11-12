@@ -92,9 +92,9 @@ TEST_F(HasSecureWiFiConnectionRoutineTest, RoutineSuccess) {
                              kHasSecureWiFiConnectionRoutineNoProblemMessage);
 }
 
-// Test that the HasSecureWiFiConnection routine returns an error when it is not
-// run.
-TEST_F(HasSecureWiFiConnectionRoutineTest, RoutineError) {
+// Test that the HasSecureWiFiConnection routine returns a kNotRun status when
+// it is not run.
+TEST_F(HasSecureWiFiConnectionRoutineTest, RoutineNotRun) {
   EXPECT_CALL(*(network_diagnostics_adapter()),
               RunHasSecureWiFiConnectionRoutine(_))
       .WillOnce(Invoke([&](network_diagnostics_ipc::NetworkDiagnosticsRoutines::
@@ -106,7 +106,7 @@ TEST_F(HasSecureWiFiConnectionRoutineTest, RoutineError) {
 
   mojo_ipc::RoutineUpdatePtr routine_update = RunRoutineAndWaitForExit();
   VerifyNonInteractiveUpdate(routine_update->routine_update_union,
-                             mojo_ipc::DiagnosticRoutineStatusEnum::kError,
+                             mojo_ipc::DiagnosticRoutineStatusEnum::kNotRun,
                              kHasSecureWiFiConnectionRoutineNotRunMessage);
 }
 

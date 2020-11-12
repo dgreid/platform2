@@ -88,9 +88,9 @@ TEST_F(DnsLatencyRoutineTest, RoutineSuccess) {
                              kDnsLatencyRoutineNoProblemMessage);
 }
 
-// Test that the DnsLatency routine returns an error when it is not
+// Test that the DnsLatency routine returns a kNotRun status when it is not
 // run.
-TEST_F(DnsLatencyRoutineTest, RoutineError) {
+TEST_F(DnsLatencyRoutineTest, RoutineNotRun) {
   EXPECT_CALL(*(network_diagnostics_adapter()), RunDnsLatencyRoutine(_))
       .WillOnce(Invoke([&](network_diagnostics_ipc::NetworkDiagnosticsRoutines::
                                DnsLatencyCallback callback) {
@@ -101,7 +101,7 @@ TEST_F(DnsLatencyRoutineTest, RoutineError) {
 
   mojo_ipc::RoutineUpdatePtr routine_update = RunRoutineAndWaitForExit();
   VerifyNonInteractiveUpdate(routine_update->routine_update_union,
-                             mojo_ipc::DiagnosticRoutineStatusEnum::kError,
+                             mojo_ipc::DiagnosticRoutineStatusEnum::kNotRun,
                              kDnsLatencyRoutineNotRunMessage);
 }
 

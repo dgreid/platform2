@@ -38,7 +38,7 @@ void ParseHasSecureWiFiConnectionResult(
       *status_message = kHasSecureWiFiConnectionRoutineNoProblemMessage;
       break;
     case network_diagnostics_ipc::RoutineVerdict::kNotRun:
-      *status = mojo_ipc::DiagnosticRoutineStatusEnum::kError;
+      *status = mojo_ipc::DiagnosticRoutineStatusEnum::kNotRun;
       *status_message = kHasSecureWiFiConnectionRoutineNotRunMessage;
       break;
     case network_diagnostics_ipc::RoutineVerdict::kProblem:

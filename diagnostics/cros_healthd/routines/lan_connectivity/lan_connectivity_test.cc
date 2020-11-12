@@ -101,9 +101,9 @@ TEST_F(LanConnectivityRoutineTest, RoutineFailed) {
 }
 
 // Test that the LanConnectivity routine returns
-// cros_healthd::mojom::DiagnosticRoutineStatusEnum::kError when the routine is
-// a network_diagnostics::mojom::RoutineVerdict::kNotRun.
-TEST_F(LanConnectivityRoutineTest, RoutineError) {
+// cros_healthd::mojom::DiagnosticRoutineStatusEnum::kNotRun when the
+// routine is a network_diagnostics::mojom::RoutineVerdict::kNotRun.
+TEST_F(LanConnectivityRoutineTest, RoutineNotRun) {
   EXPECT_CALL(*(network_diagnostics_adapter()), RunLanConnectivityRoutine(_))
       .WillOnce(Invoke([&](network_diagnostics_ipc::NetworkDiagnosticsRoutines::
                                LanConnectivityCallback callback) {
@@ -114,7 +114,7 @@ TEST_F(LanConnectivityRoutineTest, RoutineError) {
   mojo_ipc::RoutineUpdatePtr routine_update = RunRoutineAndWaitForExit();
 
   VerifyNonInteractiveUpdate(routine_update->routine_update_union,
-                             mojo_ipc::DiagnosticRoutineStatusEnum::kError,
+                             mojo_ipc::DiagnosticRoutineStatusEnum::kNotRun,
                              kLanConnectivityRoutineNotRunMessage);
 }
 

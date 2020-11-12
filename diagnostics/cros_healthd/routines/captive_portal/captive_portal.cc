@@ -38,7 +38,7 @@ void ParseCaptivePortalResult(
       *status_message = kPortalRoutineNoProblemMessage;
       break;
     case network_diagnostics_ipc::RoutineVerdict::kNotRun:
-      *status = mojo_ipc::DiagnosticRoutineStatusEnum::kError;
+      *status = mojo_ipc::DiagnosticRoutineStatusEnum::kNotRun;
       *status_message = kPortalRoutineNotRunMessage;
       break;
     case network_diagnostics_ipc::RoutineVerdict::kProblem:

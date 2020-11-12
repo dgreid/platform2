@@ -38,7 +38,7 @@ void ParseGatewayCanBePingedResult(
       *status_message = kPingRoutineNoProblemMessage;
       break;
     case network_diagnostics_ipc::RoutineVerdict::kNotRun:
-      *status = mojo_ipc::DiagnosticRoutineStatusEnum::kError;
+      *status = mojo_ipc::DiagnosticRoutineStatusEnum::kNotRun;
       *status_message = kPingRoutineNotRunMessage;
       break;
     case network_diagnostics_ipc::RoutineVerdict::kProblem:

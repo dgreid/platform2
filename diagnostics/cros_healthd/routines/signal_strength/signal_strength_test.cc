@@ -89,8 +89,9 @@ TEST_F(SignalStrengthRoutineTest, RoutineSuccess) {
                              kSignalStrengthRoutineNoProblemMessage);
 }
 
-// Test that the SignalStrength routine returns an error when it is not run.
-TEST_F(SignalStrengthRoutineTest, RoutineError) {
+// Test that the SignalStrength routine returns a kNotRun status when it is not
+// run.
+TEST_F(SignalStrengthRoutineTest, RoutineNotRun) {
   EXPECT_CALL(*(network_diagnostics_adapter()), RunSignalStrengthRoutine(_))
       .WillOnce(Invoke([&](network_diagnostics_ipc::NetworkDiagnosticsRoutines::
                                SignalStrengthCallback callback) {
@@ -101,7 +102,7 @@ TEST_F(SignalStrengthRoutineTest, RoutineError) {
 
   mojo_ipc::RoutineUpdatePtr routine_update = RunRoutineAndWaitForExit();
   VerifyNonInteractiveUpdate(routine_update->routine_update_union,
-                             mojo_ipc::DiagnosticRoutineStatusEnum::kError,
+                             mojo_ipc::DiagnosticRoutineStatusEnum::kNotRun,
                              kSignalStrengthRoutineNotRunMessage);
 }
 

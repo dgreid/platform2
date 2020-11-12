@@ -38,7 +38,7 @@ void ParseDnsResolverPresentResult(
       *status_message = kDnsResolverPresentRoutineNoProblemMessage;
       break;
     case network_diagnostics_ipc::RoutineVerdict::kNotRun:
-      *status = mojo_ipc::DiagnosticRoutineStatusEnum::kError;
+      *status = mojo_ipc::DiagnosticRoutineStatusEnum::kNotRun;
       *status_message = kDnsResolverPresentRoutineNotRunMessage;
       break;
     case network_diagnostics_ipc::RoutineVerdict::kProblem:

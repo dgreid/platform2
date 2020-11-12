@@ -89,8 +89,9 @@ TEST_F(GatewayCanBePingedRoutineTest, RoutineSuccess) {
                              kPingRoutineNoProblemMessage);
 }
 
-// Test that the GatewayCanBePinged routine returns an error when it is not run.
-TEST_F(GatewayCanBePingedRoutineTest, RoutineError) {
+// Test that the GatewayCanBePinged routine returns a kNotRun status when it is
+// not run.
+TEST_F(GatewayCanBePingedRoutineTest, RoutineNotRun) {
   EXPECT_CALL(*(network_diagnostics_adapter()), RunGatewayCanBePingedRoutine(_))
       .WillOnce(Invoke([&](network_diagnostics_ipc::NetworkDiagnosticsRoutines::
                                GatewayCanBePingedCallback callback) {
@@ -101,7 +102,7 @@ TEST_F(GatewayCanBePingedRoutineTest, RoutineError) {
 
   mojo_ipc::RoutineUpdatePtr routine_update = RunRoutineAndWaitForExit();
   VerifyNonInteractiveUpdate(routine_update->routine_update_union,
-                             mojo_ipc::DiagnosticRoutineStatusEnum::kError,
+                             mojo_ipc::DiagnosticRoutineStatusEnum::kNotRun,
                              kPingRoutineNotRunMessage);
 }
 

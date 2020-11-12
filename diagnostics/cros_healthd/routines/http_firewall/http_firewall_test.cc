@@ -88,9 +88,9 @@ TEST_F(HttpFirewallRoutineTest, RoutineSuccess) {
                              kHttpFirewallRoutineNoProblemMessage);
 }
 
-// Test that the HttpFirewall routine returns an error when it is not
+// Test that the HttpFirewall routine returns a kNotRun status when it is not
 // run.
-TEST_F(HttpFirewallRoutineTest, RoutineError) {
+TEST_F(HttpFirewallRoutineTest, RoutineNotRun) {
   EXPECT_CALL(*(network_diagnostics_adapter()), RunHttpFirewallRoutine(_))
       .WillOnce(Invoke([&](network_diagnostics_ipc::NetworkDiagnosticsRoutines::
                                HttpFirewallCallback callback) {
@@ -101,7 +101,7 @@ TEST_F(HttpFirewallRoutineTest, RoutineError) {
 
   mojo_ipc::RoutineUpdatePtr routine_update = RunRoutineAndWaitForExit();
   VerifyNonInteractiveUpdate(routine_update->routine_update_union,
-                             mojo_ipc::DiagnosticRoutineStatusEnum::kError,
+                             mojo_ipc::DiagnosticRoutineStatusEnum::kNotRun,
                              kHttpFirewallRoutineNotRunMessage);
 }
 

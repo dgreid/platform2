@@ -88,9 +88,9 @@ TEST_F(DnsResolutionRoutineTest, RoutineSuccess) {
                              kDnsResolutionRoutineNoProblemMessage);
 }
 
-// Test that the DnsResolution routine returns an error when it is not
+// Test that the DnsResolution routine returns a kNotRun status when it is not
 // run.
-TEST_F(DnsResolutionRoutineTest, RoutineError) {
+TEST_F(DnsResolutionRoutineTest, RoutineNotRun) {
   EXPECT_CALL(*(network_diagnostics_adapter()), RunDnsResolutionRoutine(_))
       .WillOnce(Invoke([&](network_diagnostics_ipc::NetworkDiagnosticsRoutines::
                                DnsResolutionCallback callback) {
@@ -101,7 +101,7 @@ TEST_F(DnsResolutionRoutineTest, RoutineError) {
 
   mojo_ipc::RoutineUpdatePtr routine_update = RunRoutineAndWaitForExit();
   VerifyNonInteractiveUpdate(routine_update->routine_update_union,
-                             mojo_ipc::DiagnosticRoutineStatusEnum::kError,
+                             mojo_ipc::DiagnosticRoutineStatusEnum::kNotRun,
                              kDnsResolutionRoutineNotRunMessage);
 }
 
