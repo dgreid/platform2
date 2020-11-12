@@ -26,6 +26,7 @@
 #include <base/files/file_util.h>
 #include <base/files/scoped_file.h>
 #include <base/logging.h>
+#include <base/posix/safe_strerror.h>
 #include <base/threading/thread_task_runner_handle.h>
 
 #include "common/camera_mojo_channel_manager_impl.h"
@@ -142,6 +143,12 @@ void CameraHalServerImpl::IPCBridge::OnServerRegistered(
     int32_t result, mojom::CameraHalServerCallbacksPtr callbacks) {
   VLOGF_ENTER();
   DCHECK(ipc_task_runner_->BelongsToCurrentThread());
+
+  if (result != 0) {
+    LOGF(ERROR) << "Failed to register camera HAL: "
+                << base::safe_strerror(-result);
+    return;
+  }
   callbacks_.Bind(callbacks.PassInterface());
   LOGF(INFO) << "Registered camera HAL";
 }

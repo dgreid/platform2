@@ -45,7 +45,7 @@ int CameraServiceConnector::Init(const cros_cam_init_option_t* option) {
   // to api_version 1.
   if (option->api_version >= 1) {
     token_ = TokenFromString(option->token);
-    if (!token_) {
+    if (token_.is_empty()) {
       LOGF(ERROR) << "Failed to parse token string";
       return -EPERM;
     }
@@ -144,14 +144,14 @@ void CameraServiceConnector::RegisterClientOnThread(
   VLOGF_ENTER();
   DCHECK(ipc_thread_.task_runner()->BelongsToCurrentThread());
 
-  if (!token_) {
+  if (token_.is_empty()) {
     // TODO(b/170075468): Remove when this method is deprecated.
     dispatcher_->RegisterClient(std::move(camera_hal_client));
     std::move(on_registered_callback).Run(0);
   } else {
     auto mojo_token = mojo_base::mojom::UnguessableToken::New();
-    mojo_token->high = token_->GetHighForSerialization();
-    mojo_token->low = token_->GetLowForSerialization();
+    mojo_token->high = token_.GetHighForSerialization();
+    mojo_token->low = token_.GetLowForSerialization();
     dispatcher_->RegisterClientWithToken(
         std::move(camera_hal_client), cros::mojom::CameraClientType::UNKNOWN,
         std::move(mojo_token),

@@ -41,7 +41,7 @@ CROS_CAMERA_EXPORT MojoResult CreateMojoChannelToChildByUnixDomainSocket(
     mojo::ScopedMessagePipeHandle* parent_pipe,
     const std::string& pipe_name);
 
-CROS_CAMERA_EXPORT base::Optional<base::UnguessableToken> TokenFromString(
+CROS_CAMERA_EXPORT base::UnguessableToken TokenFromString(
     const std::string& token_string);
 
 }  // namespace cros

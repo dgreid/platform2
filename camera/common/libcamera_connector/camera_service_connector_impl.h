@@ -72,7 +72,7 @@ class CameraServiceConnector {
   std::unique_ptr<mojo::core::ScopedIPCSupport> ipc_support_;
   mojom::CameraHalDispatcherPtr dispatcher_;
   std::unique_ptr<CameraClient> camera_client_;
-  base::Optional<base::UnguessableToken> token_;
+  base::UnguessableToken token_;
 
   base::AtomicFlag initialized_;
 
