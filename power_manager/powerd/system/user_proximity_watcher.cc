@@ -145,6 +145,9 @@ void UserProximityWatcher::OnFileCanReadWithoutBlocking(int fd) {
       return;
   }
 
+  // This log is also used for tast-test: hardware.SensorActivity
+  LOG(INFO) << "User proximity: "
+            << (proximity == UserProximity::FAR ? "Far" : "Near");
   for (auto& observer : observers_)
     observer.OnProximityEvent(fd, proximity);
 }
