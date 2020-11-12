@@ -6,12 +6,11 @@
 
 #include <string>
 
-#include <trunks/tpm_pinweaver.h>
-
 #include <brillo/secure_blob.h>
 #include <gtest/gtest.h>
+#include <trunks/pinweaver.pb.h>
+#include <trunks/tpm_pinweaver.h>
 
-#include "cryptohome/pinweaver.pb.h"
 #include "cryptohome/tpm2_impl.h"
 
 namespace cryptohome {

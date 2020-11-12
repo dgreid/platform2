@@ -211,7 +211,6 @@ static_library("libcrostpm") {
       "../tpm2_metrics.cc",
     ]
     libs += [ "trunks" ]
-    deps += [ ":pinweaver-proto-external" ]
   }
 
   if (!use.tpm2) {
@@ -346,13 +345,6 @@ generate_dbus_adaptors("bootlockbox-adaptors") {
 }
 
 if (use.tpm2) {
-  proto_library("pinweaver-proto-external") {
-    proto_in_dir = "${sysroot}/usr/include/proto"
-    proto_out_dir = "include/cryptohome"
-    sources = [ "${proto_in_dir}/pinweaver.proto" ]
-    configs = [ ":cryptohome-proto_config" ]
-  }
-
   pkg_config("libnvram-boot-lockbox_dependent_config") {
     pkg_deps = [
       "libbootlockbox-client",

@@ -10,8 +10,8 @@
 #include <utility>
 
 #include <base/logging.h>
-
 #include <trunks/error_codes.h>
+#include <trunks/pinweaver.pb.h>
 #include <trunks/tpm_utility.h>
 #include <trunks/trunks_factory.h>
 
@@ -21,7 +21,6 @@ extern "C" {
 #include <trunks/cr50_headers/pinweaver_types.h>
 }
 
-#include "cryptohome/pinweaver.pb.h"
 #include "cryptohome/tpm2_impl.h"
 
 namespace cryptohome {
