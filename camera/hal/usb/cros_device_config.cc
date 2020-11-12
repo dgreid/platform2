@@ -49,22 +49,36 @@ CrosDeviceConfig CrosDeviceConfig::Get() {
     res.is_v1_device = false;
   }
 
-  // Get USB camera count from "devices" array in cros_config.
-  // TODO(kamesan): Use the id, facing, orientation in cros_config to identify
+  // Get USB camera count from "count" and "devices" array in cros_config.
+  // TODO(kamesan): Use the ids, facing, orientation in cros_config to identify
   // cameras and their layout.
-  for (int i = 0;; ++i) {
-    std::string interface;
-    if (!cros_config.GetString(base::StringPrintf("/camera/devices/%i", i),
-                               "interface", &interface)) {
-      break;
+  res.usb_camera_count = [&]() -> base::Optional<int> {
+    // The "count" includes both MIPI and USB cameras, so we only know there's
+    // no USB camera when it's zero.
+    std::string count_str;
+    if (cros_config.GetString("/camera", "count", &count_str)) {
+      if (count_str == "0") {
+        return 0;
+      }
     }
-    if (!res.usb_camera_count.has_value()) {
-      res.usb_camera_count = 0;
+    int count = 0;
+    for (int i = 0;; ++i) {
+      std::string interface;
+      if (!cros_config.GetString(base::StringPrintf("/camera/devices/%i", i),
+                                 "interface", &interface)) {
+        if (i == 0) {
+          // The "devices" array may be empty because there's no camera or
+          // the config is not provided, so we get no information in this case.
+          return base::nullopt;
+        }
+        break;
+      }
+      if (interface == "usb") {
+        ++count;
+      }
     }
-    if (interface == "usb") {
-      ++*res.usb_camera_count;
-    }
-  }
+    return count;
+  }();
 
   res.is_initialized = true;
   return res;
