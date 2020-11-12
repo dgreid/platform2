@@ -227,9 +227,17 @@ base::Optional<ScannerInfo> ScannerInfoForDevice(
   }
   std::string model_name((const char*)buf.data(), bytes);
 
-  std::string device_name = base::StringPrintf(
-      "ippusb:escl:%s %s:%04x_%04x/eSCL/", mfgr_name.c_str(),
-      model_name.c_str(), descriptor.idVendor, descriptor.idProduct);
+  std::string printer_name;
+  if (base::StartsWith(model_name, mfgr_name,
+                       base::CompareCase::INSENSITIVE_ASCII)) {
+    printer_name = model_name;
+  } else {
+    printer_name = mfgr_name + " " + model_name;
+  }
+
+  std::string device_name =
+      base::StringPrintf("ippusb:escl:%s:%04x_%04x/eSCL/", printer_name.c_str(),
+                         descriptor.idVendor, descriptor.idProduct);
   LOG(INFO) << "Adding " << device_name << " to possible IPP-USB scanners.";
   ScannerInfo info;
   info.set_name(device_name);
