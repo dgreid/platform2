@@ -211,15 +211,6 @@ base::ScopedFILE SetupOutputFile(brillo::ErrorPtr* error,
   return file;
 }
 
-DocumentScanSaneBackend BackendFromDeviceName(const std::string& device_name) {
-  size_t colon_index = device_name.find(":");
-  if (colon_index != std::string::npos) {
-    return SaneBackendFromString(device_name.substr(0, colon_index));
-  } else {
-    return SaneBackendFromString(device_name);
-  }
-}
-
 // Uses |firwewall_manager| to request port access if |device_name| corresponds
 // to a SANE backend that needs the access when connecting to a device. The
 // caller should keep the returned object alive as long as port access is

@@ -119,8 +119,8 @@ enum DocumentScanSaneBackend {
   kMaxValue = kIppUsbXerox,
 };
 
-// Gets the UMA enum corresponding to the SANE backend with the given name. If
-// no matching backend is found, returns kOtherBackend.
-DocumentScanSaneBackend SaneBackendFromString(const std::string& name);
+// Gets the UMA enum corresponding to the SANE backend with the given
+// device_name. If no matching backend is found, returns kOtherBackend.
+DocumentScanSaneBackend BackendFromDeviceName(const std::string& device);
 
 #endif  // LORGNETTE_ENUMS_H_

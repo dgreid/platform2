@@ -605,4 +605,30 @@ TEST_F(ManagerTest, RemoveDupWithRepeats) {
   }
 }
 
+TEST(BackendFromDeviceName, IppUsbAndAirscan) {
+  std::vector<std::pair<std::string, DocumentScanSaneBackend>> cases = {
+      {"airscan:escl:HP LaserJet 4:http://192.168.0.15:80/eSCL/", kAirscanHp},
+      {"airscan:escl:Hewlett-Packard Scanjet Pro 2000:http://localhost/eSCL/",
+       kAirscanHp},
+      {"airscan:escl:HewlettPackard Scanjet Pro 2000:http://localhost/eSCL/",
+       kAirscanHp},
+      {"airscan:wsd:Konica Minolta Bizhub 3622:http://192.168.0.15:443/eSCL/",
+       kAirscanKonicaMinolta},
+      {"airscan:escl:RicohPrinter:http://192.168.0.15:80/eSCL/", kAirscanOther},
+      {"airscan", kAirscanOther},
+      {"ippusb:escl:EPSON XP-7100 Series:05a8_1134/eSCL/", kIppUsbEpson},
+      {"ippusb:escl:Hewlett Packard Scanjet N6310:05a8_1134/eSCL/", kIppUsbHp},
+      {"ippusb:escl:Lexmark Lexmark MB2236adwe:05a8_1134/eSCL/",
+       kIppUsbLexmark},
+      {"ippusb:escl:Scanner Kodak i3250:05a8_1134/eSCL/", kIppUsbKodak},
+      {"ippusb:escl:Ye Olde Unbranded Scanner:05a8_1134/eSCL/", kIppUsbOther},
+      {"ippusb", kIppUsbOther},
+  };
+
+  for (const auto& [device_name, expected_backend] : cases) {
+    EXPECT_EQ(BackendFromDeviceName(device_name), expected_backend)
+        << "Expected backend for device " << device_name << " was not correct.";
+  }
+}
+
 }  // namespace lorgnette

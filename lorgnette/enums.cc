@@ -4,17 +4,82 @@
 
 #include "lorgnette/enums.h"
 
-#include <base/logging.h>
+#include <vector>
 
-DocumentScanSaneBackend SaneBackendFromString(const std::string& name) {
+#include <base/logging.h>
+#include <base/strings/string_split.h>
+#include <base/strings/stringprintf.h>
+#include <re2/re2.h>
+
+namespace {
+
+// Index of the ScannerName within the ':' separated fields of an Airscan or
+// IPP-USB device specification. e.g.
+// "airscan:escl:ScannerName:http://127.0.0.2/eSCL"
+constexpr size_t kScannerNameIndex = 2;
+
+// Use const char* so that ManufacturerBackend is trivially-destructible.
+struct ManufacturerBackend {
+  const char* name_regex;
+  DocumentScanSaneBackend airscan;
+  DocumentScanSaneBackend ippusb;
+};
+
+constexpr ManufacturerBackend manufacturers[] = {
+    {"brother", kAirscanBrother, kIppUsbBrother},
+    {"canon", kAirscanCanon, kIppUsbCanon},
+    {"epson", kAirscanEpson, kIppUsbEpson},
+    {"kodak", kAirscanKodak, kIppUsbKodak},
+    {"konica[- ]?minolta", kAirscanKonicaMinolta, kIppUsbKonicaMinolta},
+    {"kyocera", kAirscanKyocera, kIppUsbKyocera},
+    {"lexmark", kAirscanLexmark, kIppUsbLexmark},
+    {"ricoh", kAirscanRicoh, kIppUsbRicoh},
+    {"samsung", kAirscanSamsung, kIppUsbSamsung},
+    {"xerox", kAirscanXerox, kIppUsbXerox},
+    // Keep the HP cases last. It is possible that some other manufacturer
+    // would use the abbreviation HP within their model name, so we only want
+    // to match this if no other manufacturer matched.
+    {"hp", kAirscanHp, kIppUsbHp},
+    {"hewlett[- ]?packard", kAirscanHp, kIppUsbHp},
+};
+
+DocumentScanSaneBackend GuessManufacturer(DocumentScanSaneBackend base_type,
+                                          const std::string& scanner_name) {
+  DCHECK(base_type == kAirscanOther || base_type == kIppUsbOther);
+
+  for (const ManufacturerBackend& manufacturer : manufacturers) {
+    // Use a case-insensitive match, and require matching at a word boundary
+    // e.g if we're searching for "HP", we'll match "hp scanner" and "My HP
+    // scanner" but not "RICOHPrinter".
+    std::string regex =
+        base::StringPrintf("(?i)\\b%s\\b", manufacturer.name_regex);
+    if (RE2::PartialMatch(scanner_name, regex)) {
+      if (base_type == kAirscanOther)
+        return manufacturer.airscan;
+      else if (base_type == kIppUsbOther)
+        return manufacturer.ippusb;
+    }
+  }
+
+  return base_type;
+}
+
+}  // namespace
+
+DocumentScanSaneBackend BackendFromDeviceName(const std::string& device) {
+  std::vector<std::string> components = base::SplitString(
+      device, ":", base::KEEP_WHITESPACE, base::SPLIT_WANT_ALL);
+
+  const std::string& name = components[0];
   if (name == "abaton")
     return kAbaton;
   if (name == "agfafocus")
     return kAgfafocus;
   if (name == "airscan") {
-    // TODO(fletcherw): expand this to specify the manufacturer of an airscan
-    // scanner.
-    return kAirscanOther;
+    if (kScannerNameIndex < components.size())
+      return GuessManufacturer(kAirscanOther, components[kScannerNameIndex]);
+    else
+      return kAirscanOther;
   }
   if (name == "apple")
     return kApple;
@@ -85,9 +150,10 @@ DocumentScanSaneBackend SaneBackendFromString(const std::string& name) {
   if (name == "ibm")
     return kIbm;
   if (name == "ippusb") {
-    // TODO(b/160472550): expand this to specify the manufacturer of an airscan
-    // scanner.
-    return kIppUsbOther;
+    if (kScannerNameIndex < components.size())
+      return GuessManufacturer(kIppUsbOther, components[kScannerNameIndex]);
+    else
+      return kIppUsbOther;
   }
   if (name == "kodak")
     return kKodak;
