@@ -36,10 +36,6 @@ class SELinuxViolationCollector : public CrashCollector {
     violation_report_path_ = file_path;
   }
 
-  void set_developer_image_for_testing() {
-    developer_image_for_testing_ = true;
-  }
-
  private:
   friend class SELinuxViolationCollectorTest;
   FRIEND_TEST(SELinuxViolationCollectorTest, CollectOK);
@@ -52,7 +48,6 @@ class SELinuxViolationCollector : public CrashCollector {
   FRIEND_TEST(SELinuxViolationCollectorTest, CollectSample);
 
   base::FilePath violation_report_path_;
-  bool developer_image_for_testing_ = false;
   int fake_random_for_statistic_sampling_ = -1;
 
   bool LoadSELinuxViolation(std::string* content,

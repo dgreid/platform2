@@ -31,7 +31,7 @@ void RunTestWithLogContents(base::StringPiece log_contents) {
   MissedCrashCollector collector;
   collector.set_crash_directory_for_test(tmp_dir.GetPath());
   collector.set_input_file_for_testing(input_file.get());
-  collector.Initialize([]() { return true; }, false /*early*/);
+  collector.Initialize(false /*early*/);
   constexpr int kPid = 234;
   constexpr int kRecentMissCount = 5;
   constexpr int kRecentMatchCount = 2;

@@ -86,12 +86,10 @@ UserCollector::UserCollector()
 
 void UserCollector::Initialize(
     const std::string& our_path,
-    UserCollector::IsFeedbackAllowedFunction is_feedback_allowed_function,
     bool core2md_failure,
     bool directory_failure,
     bool early) {
-  UserCollectorBase::Initialize(is_feedback_allowed_function, directory_failure,
-                                early);
+  UserCollectorBase::Initialize(directory_failure, early);
   our_path_ = our_path;
   core2md_failure_ = core2md_failure;
 }
@@ -342,8 +340,6 @@ bool UserCollector::RunFilter(pid_t pid) {
 }
 
 bool UserCollector::ShouldDump(pid_t pid,
-                               bool has_owner_consent,
-                               bool is_developer,
                                bool handle_chrome_crashes,
                                const std::string& exec,
                                std::string* reason) {
@@ -366,17 +362,14 @@ bool UserCollector::ShouldDump(pid_t pid,
     return false;
   }
 
-  return UserCollectorBase::ShouldDump(pid, has_owner_consent, is_developer,
-                                       reason);
+  return UserCollectorBase::ShouldDump(pid, reason);
 }
 
 bool UserCollector::ShouldDump(pid_t pid,
                                uid_t,
                                const std::string& exec,
                                std::string* reason) {
-  return ShouldDump(pid, is_feedback_allowed_function_(),
-                    util::IsDeveloperImage(), ShouldHandleChromeCrashes(), exec,
-                    reason);
+  return ShouldDump(pid, ShouldHandleChromeCrashes(), exec, reason);
 }
 
 UserCollector::ErrorType UserCollector::ConvertCoreToMinidump(

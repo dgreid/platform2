@@ -41,13 +41,9 @@ bool ArcvmNativeCollector::HandleCrashWithMinidumpFD(
     const arc_util::BuildProperty& build_property,
     const CrashInfo& crash_info,
     base::ScopedFD minidump_fd) {
-  std::string reason;
-  const bool should_dump = ShouldDump(&reason);
   const std::string message =
       "Received crash notification for " + crash_info.exec_name;
-  LogCrash(message, reason);
-  if (!should_dump)
-    return true;
+  LogCrash(message, "handling");
 
   bool out_of_capacity = false;
   base::FilePath crash_dir;
@@ -75,28 +71,6 @@ bool ArcvmNativeCollector::HandleCrashWithMinidumpFD(
   FinishCrash(metadata_path, crash_info.exec_name,
               minidump_path.BaseName().value());
 
-  return true;
-}
-
-bool ArcvmNativeCollector::ShouldDump(std::string* reason) const {
-  // For developer builds, we always want to keep the crash reports unless
-  // we're testing the crash facilities themselves.  This overrides
-  // metrics consent.  Crash sending still obeys consent.
-
-  bool has_owner_consent = is_feedback_allowed_function_();
-  bool is_developer = util::IsDeveloperImage();
-
-  if (is_developer) {
-    *reason = "developer build - not testing - always dumping";
-    return true;
-  }
-
-  if (!has_owner_consent) {
-    *reason = "ignoring - no consent";
-    return false;
-  }
-
-  *reason = "handling";
   return true;
 }
 

@@ -34,7 +34,7 @@ void Initialize(MountFailureCollector* collector,
       scoped_tmp_dir->GetPath().Append(kLogConfigFileName);
   ASSERT_TRUE(test_util::CreateFile(log_config_path, kLogConfigFileContents));
 
-  collector->Initialize([]() { return true; }, false);
+  collector->Initialize(false);
 
   collector->set_crash_directory_for_test(scoped_tmp_dir->GetPath());
   collector->set_log_config_path(log_config_path.value());

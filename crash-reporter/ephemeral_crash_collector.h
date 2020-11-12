@@ -27,14 +27,20 @@ class EphemeralCrashCollector : public CrashCollector {
 
   ~EphemeralCrashCollector() override = default;
 
-  void Initialize(IsFeedbackAllowedFunction is_feedback_allowed_function,
-                  bool preserve_across_clobber);
+  void Initialize(bool preserve_across_clobber);
+
+  // True iff we should run the collector even without metrics consent.
+  // (The consent file may not be available after a clobber or a powerwash that
+  // happened after a mount failure).
+  // We'll defer to crash_sender on these crashes.
+  bool SkipConsent() { return skip_consent_; }
 
   // Collect early crashes collected into /run/crash_reporter/crash
   bool Collect();
 
  private:
   bool early_;
+  bool skip_consent_ = false;
   std::vector<base::FilePath> source_directories_;
   friend class EphemeralCrashCollectorTest;
 };

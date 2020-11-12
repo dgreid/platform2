@@ -67,14 +67,11 @@ class Test : public ::testing::Test {
   void Initialize() {
     EXPECT_CALL(*collector_, SetUpDBus()).WillRepeatedly(testing::Return());
 
-    collector_->Initialize(IsFeedbackAllowed, false, false);
+    collector_->Initialize(false, false);
     ClearLog();
   }
 
   std::unique_ptr<MockArcCollector> collector_;
-
- private:
-  static bool IsFeedbackAllowed() { return true; }
 };
 
 class ArcCollectorTest : public Test {

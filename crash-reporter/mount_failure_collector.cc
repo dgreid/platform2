@@ -69,11 +69,6 @@ std::string MountFailureCollector::StorageDeviceTypeToString(
 }
 
 bool MountFailureCollector::Collect(bool is_mount_failure) {
-  if (!is_feedback_allowed_function_()) {
-    LOG(INFO) << "Not collecting clobber report; no user consent";
-    return true;
-  }
-
   if (device_type_ == StorageDeviceType::kInvalidDevice) {
     LOG(ERROR) << "Invalid storage device.";
     return true;

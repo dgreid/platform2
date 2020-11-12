@@ -40,18 +40,6 @@ class EphemeralCrashCollectorTest : public testing::Test {
     collector_.set_crash_directory_for_test(dest_dir_);
   }
 
-  void ExpectConsent() {
-    collector_.Initialize([]() { return true; }, false);
-  }
-
-  void ExpectConsentNotFound() {
-    collector_.Initialize([]() { return false; }, false);
-  }
-
-  void ExpectPreserveAcrossClobber() {
-    collector_.Initialize([]() { return true; }, true);
-  }
-
   void ExpectOobeComplete() {
     ASSERT_TRUE(
         test_util::CreateFile(paths::Get(paths::kOobeCompletePath), "1"));
@@ -89,18 +77,18 @@ class EphemeralCrashCollectorTest : public testing::Test {
 };
 
 TEST_F(EphemeralCrashCollectorTest, PreserveAcrossClobberPathsTest) {
-  ExpectPreserveAcrossClobber();
+  collector_.Initialize(/*preserve_across_clobber=*/true);
   CheckPreserveAcrossClobberPaths();
 }
 
 TEST_F(EphemeralCrashCollectorTest, CheckRegularCollectorPathsTest) {
-  ExpectConsent();
+  collector_.Initialize(/*preserve_across_clobber=*/false);
   CheckRegularCollectorPaths();
 }
 
 TEST_F(EphemeralCrashCollectorTest, CollectOk) {
   ExpectOobeComplete();
-  ExpectConsent();
+  collector_.Initialize(/*preserve_across_clobber=*/false);
   SetUpTestDirectories();
 
   ExpectCrashReportsParsed();
@@ -112,30 +100,34 @@ TEST_F(EphemeralCrashCollectorTest, CollectOk) {
   EXPECT_STREQ(content.c_str(), kTestCrashFileContents);
 }
 
-TEST_F(EphemeralCrashCollectorTest, NoConsent) {
+TEST_F(EphemeralCrashCollectorTest, NoOobeCollectOk) {
+  collector_.Initialize(/*preserve_across_clobber=*/false);
+  SetUpTestDirectories();
+
+  ExpectCrashReportsParsed();
+
+  std::string content;
+  base::FilePath destination_crash_file = dest_dir_.Append(kTestCrashFileName);
+
+  EXPECT_TRUE(base::PathExists(destination_crash_file));
+  base::ReadFileToString(destination_crash_file, &content);
+  EXPECT_STREQ(content.c_str(), kTestCrashFileContents);
+}
+
+TEST_F(EphemeralCrashCollectorTest, NoSkipConsentDefault) {
   ExpectOobeComplete();
-  ExpectConsentNotFound();
-  SetUpTestDirectories();
-
-  ExpectCrashReportsParsed();
-
-  std::string content;
-  base::FilePath destination_crash_file = dest_dir_.Append(kTestCrashFileName);
-
-  EXPECT_FALSE(base::PathExists(destination_crash_file));
-  EXPECT_EQ(collector_.get_bytes_written(), 0);
+  collector_.Initialize(/*preserve_across_clobber=*/false);
+  EXPECT_FALSE(collector_.SkipConsent());
 }
 
-TEST_F(EphemeralCrashCollectorTest, NoConsentNoOobeCollectOk) {
-  ExpectConsentNotFound();
-  SetUpTestDirectories();
+TEST_F(EphemeralCrashCollectorTest, PreserveAcrossClobberSkipConsent) {
+  ExpectOobeComplete();
+  collector_.Initialize(/*preserve_across_clobber=*/true);
+  EXPECT_TRUE(collector_.SkipConsent());
+}
 
-  ExpectCrashReportsParsed();
-
-  std::string content;
-  base::FilePath destination_crash_file = dest_dir_.Append(kTestCrashFileName);
-
-  EXPECT_TRUE(base::PathExists(destination_crash_file));
-  base::ReadFileToString(destination_crash_file, &content);
-  EXPECT_STREQ(content.c_str(), kTestCrashFileContents);
+TEST_F(EphemeralCrashCollectorTest, NoOobeSkipConsent) {
+  // No ExpectOobeComplete.
+  collector_.Initialize(/*preserve_across_clobber=*/false);
+  EXPECT_TRUE(collector_.SkipConsent());
 }

@@ -86,19 +86,7 @@ bool BERTCollector::Collect() {
     return false;
   }
 
-  std::string reason = "handling";
-  bool feedback = true;
-  if (util::IsDeveloperImage()) {
-    reason = "developer build - always dumping";
-    feedback = true;
-  } else if (!is_feedback_allowed_function_()) {
-    reason = "ignoring - no consent";
-    feedback = false;
-  }
-  LOG(INFO) << "BERT error from previous boot (" << reason << ")";
-  if (!feedback) {
-    return true;
-  }
+  LOG(INFO) << "BERT error from previous boot (handling)";
 
   std::string bert_table_contents;
   std::string bert_data_contents;

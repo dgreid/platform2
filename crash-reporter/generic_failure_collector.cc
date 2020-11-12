@@ -46,21 +46,7 @@ bool GenericFailureCollector::LoadGenericFailure(std::string* content,
 bool GenericFailureCollector::CollectFull(const std::string& exec_name,
                                           const std::string& log_key_name,
                                           base::Optional<int> weight) {
-  std::string reason = "normal collection";
-  bool feedback = true;
-  if (util::IsDeveloperImage()) {
-    reason = "always collect from developer builds";
-    feedback = true;
-  } else if (!is_feedback_allowed_function_()) {
-    reason = "no user consent";
-    feedback = false;
-  }
-
-  LOG(INFO) << "Processing generic failure: " << reason;
-
-  if (!feedback) {
-    return true;
-  }
+  LOG(INFO) << "Processing generic failure";
 
   std::string generic_failure;
   std::string failure_signature;

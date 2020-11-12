@@ -238,21 +238,7 @@ bool KernelWarningCollector::ExtractSMMUFaultSignature(
 }
 
 bool KernelWarningCollector::Collect(WarningType type) {
-  std::string reason = "normal collection";
-  bool feedback = true;
-  if (util::IsDeveloperImage()) {
-    reason = "always collect from developer builds";
-    feedback = true;
-  } else if (!is_feedback_allowed_function_()) {
-    reason = "no user consent";
-    feedback = false;
-  }
-
-  LOG(INFO) << "Processing kernel warning: " << reason;
-
-  if (!feedback) {
-    return true;
-  }
+  LOG(INFO) << "Processing kernel warning";
 
   std::string kernel_warning;
   std::string warning_signature;

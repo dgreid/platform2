@@ -38,11 +38,8 @@ UserCollectorBase::UserCollectorBase(
                      kNormalCrashSendMode,
                      collector_name) {}
 
-void UserCollectorBase::Initialize(
-    IsFeedbackAllowedFunction is_feedback_allowed_function,
-    bool directory_failure,
-    bool early) {
-  CrashCollector::Initialize(is_feedback_allowed_function, early);
+void UserCollectorBase::Initialize(bool directory_failure, bool early) {
+  CrashCollector::Initialize(early);
   initialized_ = true;
   directory_failure_ = directory_failure;
 }
@@ -137,22 +134,7 @@ UserCollectorBase::ParseCrashAttributes(const std::string& crash_attributes) {
 }
 
 bool UserCollectorBase::ShouldDump(base::Optional<pid_t> pid,
-                                   bool has_owner_consent,
-                                   bool is_developer,
                                    std::string* reason) const {
-  // For developer builds, we always want to keep the crash reports unless
-  // we're testing the crash facilities themselves.  This overrides
-  // feedback.  Crash sending still obeys consent.
-  if (is_developer) {
-    *reason = "developer build - not testing - always dumping";
-    return true;
-  }
-
-  if (!has_owner_consent) {
-    *reason = "ignoring - no consent";
-    return false;
-  }
-
   VmSupport* vm_support = VmSupport::Get();
   if (vm_support) {
     if (!pid.has_value()) {
@@ -169,10 +151,8 @@ bool UserCollectorBase::ShouldDump(base::Optional<pid_t> pid,
   return true;
 }
 
-bool UserCollectorBase::ShouldDump(bool has_owner_consent,
-                                   bool is_developer,
-                                   std::string* reason) const {
-  return ShouldDump(base::nullopt, has_owner_consent, is_developer, reason);
+bool UserCollectorBase::ShouldDump(std::string* reason) const {
+  return ShouldDump(base::nullopt, reason);
 }
 
 bool UserCollectorBase::GetFirstLineWithPrefix(

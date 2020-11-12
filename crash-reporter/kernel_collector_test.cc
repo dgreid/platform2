@@ -23,11 +23,6 @@ using brillo::GetLog;
 namespace {
 
 const int kMaxEfiParts = 100;
-bool s_metrics = false;
-
-bool IsMetrics() {
-  return s_metrics;
-}
 
 }  // namespace
 
@@ -56,11 +51,9 @@ class KernelCollectorTest : public ::testing::Test {
 
  private:
   void SetUp() override {
-    s_metrics = true;
-
     EXPECT_CALL(collector_, SetUpDBus()).WillRepeatedly(testing::Return());
 
-    collector_.Initialize(IsMetrics, false);
+    collector_.Initialize(false);
     ASSERT_TRUE(scoped_temp_dir_.CreateUniqueTempDir());
     test_kcrash_ = scoped_temp_dir_.GetPath().Append("kcrash");
     ASSERT_TRUE(base::CreateDirectory(test_kcrash_));
@@ -293,28 +286,6 @@ void KernelCollectorTest::SetUpSuccessfulWatchdog(const FilePath& path) {
       "113 | 2016-03-24 15:11:20 | System boot | 0\n"
       "114 | 2016-03-24 15:11:20 | Hardware watchdog reset\n"));
   ASSERT_TRUE(test_util::CreateFile(path, "\n[ 0.0000] I can haz boot!"));
-}
-
-TEST_F(KernelCollectorTest, CollectOptedOut) {
-  SetUpSuccessfulCollect();
-  s_metrics = false;
-  ASSERT_TRUE(collector_.Collect());
-  ASSERT_TRUE(FindLog("(ignoring - no consent)"));
-}
-
-void KernelCollectorTest::WatchdogOptedOutHelper(const FilePath& path) {
-  SetUpSuccessfulWatchdog(path);
-  s_metrics = false;
-  ASSERT_TRUE(collector_.Collect());
-  ASSERT_TRUE(FindLog("(ignoring - no consent)"));
-}
-
-TEST_F(KernelCollectorTest, WatchdogOptedOut) {
-  WatchdogOptedOutHelper(console_ramoops_file());
-}
-
-TEST_F(KernelCollectorTest, WatchdogOptedOutOld) {
-  WatchdogOptedOutHelper(console_ramoops_file_old());
 }
 
 TEST_F(KernelCollectorTest, CollectOK) {

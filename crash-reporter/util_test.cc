@@ -11,6 +11,7 @@
 #include <memory>
 #include <sys/mman.h>
 
+#include <base/command_line.h>
 #include <base/files/file_util.h>
 #include <base/files/scoped_temp_dir.h>
 #include <base/rand_util.h>
@@ -23,6 +24,7 @@
 #include "crash-reporter/crash_sender_paths.h"
 #include "crash-reporter/paths.h"
 #include "crash-reporter/test_util.h"
+#include "metrics/metrics_library_mock.h"
 
 // The QEMU emulator we use to run unit tests on simulated ARM boards does not
 // support memfd_create. (https://bugs.launchpad.net/qemu/+bug/1734792) Skip
@@ -127,6 +129,10 @@ class CrashCommonUtilTest : public testing::Test {
     base::FilePath file = scoped_temp_dir_.GetPath().Append("tmpfile");
     ASSERT_TRUE(test_util::CreateFile(file, kReadFdToStreamContents));
     fd_ = open(file.value().c_str(), O_RDONLY);
+
+    // We need to properly init the CommandLine object for the metrics tests,
+    // which log it.
+    base::CommandLine::Init(0, nullptr);
   }
 
   void TearDown() override { paths::SetPrefixForTesting(base::FilePath()); }
@@ -214,6 +220,17 @@ TEST_F(CrashCommonUtilTest, HasMockConsent) {
   ASSERT_TRUE(test_util::CreateFile(
       paths::GetAt(paths::kSystemRunStateDirectory, paths::kMockConsent), ""));
   EXPECT_TRUE(HasMockConsent());
+}
+
+TEST_F(CrashCommonUtilTest, IgnoresMockConsentNonTest) {
+  ASSERT_TRUE(test_util::CreateFile(paths::Get("/etc/lsb-release"),
+                                    "CHROMEOS_RELEASE_TRACK=dev-channel\n"
+                                    "CHROMEOS_RELEASE_DESCRIPTION=12985.0.0 "
+                                    "(Official Build) dev-channel asuka"));
+  EXPECT_FALSE(HasMockConsent());
+  ASSERT_TRUE(test_util::CreateFile(
+      paths::GetAt(paths::kSystemRunStateDirectory, paths::kMockConsent), ""));
+  EXPECT_FALSE(HasMockConsent());
 }
 
 TEST_F(CrashCommonUtilTest, GetOsTimestamp) {
@@ -404,5 +421,49 @@ TEST_F(CrashCommonUtilTest, ReadFdToStream) {
   EXPECT_TRUE(ReadFdToStream(fd_, &stream));
   EXPECT_EQ(kReadFdToStreamContents, stream.str());
 }
+
+TEST_F(CrashCommonUtilTest, IsFeedbackAllowedMock) {
+  MetricsLibraryMock mock_metrics;
+  mock_metrics.set_metrics_enabled(false);
+
+  ASSERT_TRUE(test_util::CreateFile(paths::Get("/etc/lsb-release"),
+                                    "CHROMEOS_RELEASE_TRACK=testimage-channel\n"
+                                    "CHROMEOS_RELEASE_DESCRIPTION=12985.0.0 "
+                                    "(Official Build) dev-channel asuka test"));
+
+  EXPECT_FALSE(IsFeedbackAllowed(&mock_metrics));
+  ASSERT_TRUE(test_util::CreateFile(
+      paths::GetAt(paths::kSystemRunStateDirectory, paths::kMockConsent), ""));
+  EXPECT_TRUE(HasMockConsent());
+
+  EXPECT_TRUE(IsFeedbackAllowed(&mock_metrics));
+}
+
+TEST_F(CrashCommonUtilTest, IsFeedbackAllowedDev) {
+  MetricsLibraryMock mock_metrics;
+  mock_metrics.set_metrics_enabled(false);
+
+  EXPECT_FALSE(IsFeedbackAllowed(&mock_metrics));
+
+  ASSERT_TRUE(test_util::CreateFile(paths::Get(paths::kLeaveCoreFile), ""));
+
+  EXPECT_TRUE(IsFeedbackAllowed(&mock_metrics));
+}
+
+// Disable this test when in a VM because there's no easy way to mock the
+// VmSupport class.
+// TODO(https://crbug.com/1150011): When that class can be replaced for tests,
+// use a fake implementation here to set metrics consent appropriately.
+#if !USE_KVM_GUEST
+TEST_F(CrashCommonUtilTest, IsFeedbackAllowedRespectsMetricsLib) {
+  MetricsLibraryMock mock_metrics;
+  mock_metrics.set_metrics_enabled(false);
+
+  EXPECT_FALSE(IsFeedbackAllowed(&mock_metrics));
+
+  mock_metrics.set_metrics_enabled(true);
+  EXPECT_TRUE(IsFeedbackAllowed(&mock_metrics));
+}
+#endif  // USE_KVM_GUEST
 
 }  // namespace util

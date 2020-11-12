@@ -53,9 +53,6 @@ class ArcvmNativeCollector : public CrashCollector {
                                  const CrashInfo& crash_info,
                                  base::ScopedFD minidump_fd);
 
-  // Checks whether it should dump the crash.
-  bool ShouldDump(std::string* reason) const;
-
   // Adds ARC-related metadata to the crash report.
   void AddArcMetadata(const arc_util::BuildProperty& build_property,
                       const CrashInfo& crash_info);

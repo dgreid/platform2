@@ -84,11 +84,8 @@ bool UdevCollector::HandleCrash(const std::string& udev_event) {
     // Clear devcoredump memory before returning.
     ClearDevCoredump(coredump_path);
     return false;
-  } else if (is_feedback_allowed_function_()) {
-    LOG(INFO) << "Consent given - collect udev crash info.";
   } else {
-    LOG(INFO) << "Ignoring - Non-developer image and no consent given.";
-    return false;
+    LOG(INFO) << "Consent given - collect udev crash info.";
   }
 
   // Make sure the crash directory exists, or create it if it doesn't.

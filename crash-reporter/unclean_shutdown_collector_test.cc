@@ -20,16 +20,6 @@
 using base::FilePath;
 using ::brillo::FindLog;
 
-namespace {
-
-bool s_metrics = true;
-
-bool IsMetrics() {
-  return s_metrics;
-}
-
-}  // namespace
-
 class UncleanShutdownCollectorMock : public UncleanShutdownCollector {
  public:
   MOCK_METHOD(void, SetUpDBus, (), (override));
@@ -39,7 +29,7 @@ class UncleanShutdownCollectorTest : public ::testing::Test {
   void SetUp() {
     EXPECT_CALL(collector_, SetUpDBus()).WillRepeatedly(testing::Return());
 
-    collector_.Initialize(IsMetrics, false);
+    collector_.Initialize(false);
 
     ASSERT_TRUE(scoped_temp_dir_.CreateUniqueTempDir());
     test_dir_ = scoped_temp_dir_.GetPath();

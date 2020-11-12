@@ -105,8 +105,7 @@ bool ArcCollector::HandleJavaCrash(
     const std::string& crash_type,
     const arc_util::BuildProperty& build_property) {
   std::string reason;
-  const bool should_dump = UserCollectorBase::ShouldDump(
-      is_feedback_allowed_function_(), util::IsDeveloperImage(), &reason);
+  const bool should_dump = UserCollectorBase::ShouldDump(&reason);
 
   std::ostringstream message;
   message << "Received " << crash_type << " notification";
@@ -257,8 +256,7 @@ bool ArcCollector::ShouldDump(pid_t pid,
     return false;
   }
 
-  return UserCollectorBase::ShouldDump(is_feedback_allowed_function_(),
-                                       util::IsDeveloperImage(), reason);
+  return UserCollectorBase::ShouldDump(reason);
 }
 
 UserCollectorBase::ErrorType ArcCollector::ConvertCoreToMinidump(

@@ -17,8 +17,6 @@ using base::FilePath;
 
 namespace {
 
-bool s_metrics = false;
-
 constexpr char kLogConfigFileName[] = "crash_reporter_logs.conf";
 constexpr char kTestFilename[] = "test-crash-reporter-failure";
 constexpr char kTestCrashDirectory[] = "test-crash-directory";
@@ -30,10 +28,6 @@ constexpr char kTestCrashReporterFailureMessagePayload[] =
 constexpr char kTestCrashReporterFailureLogMessages[] =
     "===/var/log/messages===";
 
-bool IsMetrics() {
-  return s_metrics;
-}
-
 }  // namespace
 
 class CrashReporterFailureCollectorMock : public CrashReporterFailureCollector {
@@ -43,11 +37,9 @@ class CrashReporterFailureCollectorMock : public CrashReporterFailureCollector {
 
 class CrashReporterFailureCollectorTest : public ::testing::Test {
   void SetUp() {
-    s_metrics = true;
-
     EXPECT_CALL(collector_, SetUpDBus()).WillRepeatedly(testing::Return());
 
-    collector_.Initialize(IsMetrics, false);
+    collector_.Initialize(false);
 
     ASSERT_TRUE(scoped_temp_dir_.CreateUniqueTempDir());
     test_path_ = scoped_temp_dir_.GetPath().Append(kTestFilename);
@@ -99,11 +91,4 @@ TEST_F(CrashReporterFailureCollectorTest, CollectLog) {
   base::ReadFileToString(meta_path, &meta_content);
   EXPECT_FALSE((meta_content.find("payload=" + log_path.BaseName().value()) ==
                 std::string::npos));
-}
-
-TEST_F(CrashReporterFailureCollectorTest, FeedbackNotAllowed) {
-  // Feedback not allowed.
-  s_metrics = false;
-  collector_.Collect();
-  EXPECT_TRUE(IsDirectoryEmpty(test_crash_directory_));
 }

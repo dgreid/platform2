@@ -49,7 +49,7 @@ ArcvmNativeCollector::CrashInfo GetCrashInfo() {
 class TestArcvmNativeCollector : public ArcvmNativeCollector {
  public:
   explicit TestArcvmNativeCollector(const base::FilePath& crash_directory) {
-    Initialize(&IsFeedbackAllowed, false /* early */);
+    Initialize(false /* early */);
     set_crash_directory_for_test(crash_directory);
   }
   ~TestArcvmNativeCollector() override = default;
@@ -61,7 +61,6 @@ class TestArcvmNativeCollector : public ArcvmNativeCollector {
   }
 
  private:
-  static bool IsFeedbackAllowed() { return true; }
   void SetUpDBus() override {}
 };
 

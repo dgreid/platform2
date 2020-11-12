@@ -95,11 +95,6 @@ bool ChromeCollector::HandleCrashWithDumpData(
   LOG(WARNING) << "Received crash notification for " << key_for_basename << "["
                << pid << "] user " << uid << " (called directly)";
 
-  if (!is_feedback_allowed_function_()) {
-    LOG(WARNING) << "consent not given - ignoring";
-    return true;
-  }
-
   if (key_for_basename.find('/') != std::string::npos) {
     LOG(ERROR) << "--exe or --error_key contains illegal characters: "
                << key_for_basename;

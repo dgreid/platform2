@@ -341,17 +341,11 @@ CrashCollector::~CrashCollector() {
     bus_->ShutdownAndBlock();
 }
 
-void CrashCollector::Initialize(
-    CrashCollector::IsFeedbackAllowedFunction is_feedback_allowed_function,
-    bool early) {
-  CHECK(is_feedback_allowed_function);
-  is_feedback_allowed_function_ = is_feedback_allowed_function;
-  // For early boot crash collectors, the consent file will not be accessible.
-  // Instead, collect the crashes into /run and check consent during boot
-  // collection.
+void CrashCollector::Initialize(bool early) {
+  // For early boot crash collectors, /var and /home will not be accessible.
+  // Instead, collect the crashes into /run.
   if (early) {
     AddCrashMetaUploadData(kEarlyCrashKey, "true");
-    is_feedback_allowed_function_ = []() { return true; };
     system_crash_path_ = base::FilePath(paths::kSystemRunCrashDirectory);
   }
 }

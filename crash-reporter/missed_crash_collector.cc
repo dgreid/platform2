@@ -47,18 +47,7 @@ bool MissedCrashCollector::Collect(int pid,
                                    int recent_miss_count,
                                    int recent_match_count,
                                    int pending_miss_count) {
-  std::string reason = "normal collection";
-  bool feedback = true;
-  if (!is_feedback_allowed_function_()) {
-    reason = "no user consent";
-    feedback = false;
-  }
-
-  LOG(INFO) << "Processing missed crash for process " << pid << ": " << reason;
-
-  if (!feedback) {
-    return true;
-  }
+  LOG(INFO) << "Processing missed crash for process " << pid;
 
   std::string logs;
   if (!ReadFILEToString(input_file_, &logs)) {

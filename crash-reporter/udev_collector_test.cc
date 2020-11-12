@@ -44,12 +44,6 @@ const char kNoCollectDriverName[] = "iwlwifi";
 // Driver name for a coredump that should be collected:
 const char kCollectedDriverName[] = "msm";
 
-bool s_consent_given = true;
-
-bool IsMetrics() {
-  return s_consent_given;
-}
-
 // Returns the number of files found in the given path that matches the
 // specified file name pattern.
 int GetNumFiles(const FilePath& path, const std::string& file_pattern) {
@@ -101,7 +95,7 @@ class UdevCollectorTest : public ::testing::Test {
 
   void SetUpCollector(UdevCollectorMock* collector) {
     EXPECT_CALL(*collector, SetUpDBus()).WillRepeatedly(testing::Return());
-    collector->Initialize(IsMetrics, false);
+    collector->Initialize(false);
 
     collector->log_config_path_ = log_config_path_;
     collector->set_crash_directory_for_test(temp_dir_generator_.GetPath());
@@ -113,8 +107,6 @@ class UdevCollectorTest : public ::testing::Test {
 
  private:
   void SetUp() override {
-    s_consent_given = true;
-
     ASSERT_TRUE(temp_dir_generator_.CreateUniqueTempDir());
     log_config_path_ = temp_dir_generator_.GetPath().Append(kLogConfigFileName);
 
@@ -128,13 +120,6 @@ class UdevCollectorTest : public ::testing::Test {
   FilePath log_config_path_;
   UdevCollectorMock collector_;
 };
-
-TEST_F(UdevCollectorTest, TestNoConsent) {
-  s_consent_given = false;
-  HandleCrash("ACTION=change:KERNEL=card0:SUBSYSTEM=drm");
-  EXPECT_EQ(0,
-            GetNumFiles(temp_dir_generator_.GetPath(), kCrashLogFilePattern));
-}
 
 TEST_F(UdevCollectorTest, TestNoMatch) {
   // No rule should match this.

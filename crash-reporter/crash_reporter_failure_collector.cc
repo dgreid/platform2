@@ -23,21 +23,7 @@ CrashReporterFailureCollector::CrashReporterFailureCollector()
 CrashReporterFailureCollector::~CrashReporterFailureCollector() {}
 
 bool CrashReporterFailureCollector::Collect() {
-  std::string reason = "normal collection";
-  bool feedback = true;
-  if (util::IsDeveloperImage()) {
-    reason = "collected as per developer build";
-    feedback = true;
-  } else if (!is_feedback_allowed_function_()) {
-    reason = "not reported, missing user consent";
-    feedback = false;
-  }
-
-  LOG(INFO) << "Detected crash_reporter failure: (" << reason << ")";
-
-  if (!feedback) {
-    return false;
-  }
+  LOG(INFO) << "Detected crash_reporter failure";
 
   FilePath crash_directory;
   if (!GetCreatedCrashDirectoryByEuid(kRootUid, &crash_directory, nullptr)) {

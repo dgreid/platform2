@@ -32,7 +32,6 @@ class UserCollector : public UserCollectorBase {
   // oracle, and system logger facility. Crash detection/reporting
   // is not enabled until Enable is called.
   void Initialize(const std::string& our_path,
-                  IsFeedbackAllowedFunction is_metrics_allowed,
                   bool core2md_failure,
                   bool directory_failure,
                   bool early);
@@ -111,8 +110,6 @@ class UserCollector : public UserCollectorBase {
   bool RunFilter(pid_t pid);
 
   bool ShouldDump(pid_t pid,
-                  bool has_owner_consent,
-                  bool is_developer,
                   bool handle_chrome_crashes,
                   const std::string& exec,
                   std::string* reason);

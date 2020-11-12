@@ -147,10 +147,6 @@ const char kSampleDriErrorStateEncodedLong[] =
     "4OTAwMTIzNDU2Nzg5MDAxMjM0NTY3ODkwMDEyMzQ1Njc4OTAwMTIzNDU2Nzg5MDAxMjM0NTY3"
     "ODkwMDEyMzQ1Njc4OTAK";
 
-bool IsMetrics() {
-  return true;
-}
-
 }  // namespace
 
 class ChromeCollectorMock : public ChromeCollector {
@@ -236,7 +232,7 @@ class ChromeCollectorTest : public ::testing::Test {
         kSampleDriErrorStateEncodedLong + strlen("<base64>: "),
         &dummy_to_check_validity));
 
-    collector_.Initialize(IsMetrics, false);
+    collector_.Initialize(false);
     brillo::ClearLog();
 
     ASSERT_TRUE(scoped_temp_dir_.CreateUniqueTempDir());

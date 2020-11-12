@@ -61,64 +61,51 @@ bool ECCollector::Collect() {
     return false;
   }
 
-  std::string reason = "handling";
-  bool feedback = true;
-  if (util::IsDeveloperImage()) {
-    reason = "developer build - always dumping";
-    feedback = true;
-  } else if (!is_feedback_allowed_function_()) {
-    reason = "ignoring - no consent";
-    feedback = false;
+  LOG(INFO) << "Received crash notification from EC (handling)";
+
+  if (!GetCreatedCrashDirectoryByEuid(0, &root_crash_directory, nullptr)) {
+    return true;
   }
 
-  LOG(INFO) << "Received crash notification from EC (" << reason << ")";
+  ProcessImpl panicinfo_parser;
+  panicinfo_parser.AddArg(kECPanicInfoParser);
+  panicinfo_parser.RedirectInput(panicinfo_path.value());
 
-  if (feedback) {
-    if (!GetCreatedCrashDirectoryByEuid(0, &root_crash_directory, nullptr)) {
-      return true;
-    }
-
-    ProcessImpl panicinfo_parser;
-    panicinfo_parser.AddArg(kECPanicInfoParser);
-    panicinfo_parser.RedirectInput(panicinfo_path.value());
-
-    std::string output;
-    int err =
-        util::RunAndCaptureOutput(&panicinfo_parser, STDOUT_FILENO, &output);
-    if (err < 0) {
-      PLOG(ERROR) << "Failed to run ec_parse_panicinfo. Error=" << err;
-      return true;
-    }
-    if (err > 0) {
-      output.assign(data, len);
-    }
-
-    std::string dump_basename =
-        FormatDumpBasename(kECExecName, time(nullptr), 0);
-    FilePath ec_crash_path = root_crash_directory.Append(
-        StringPrintf("%s.eccrash", dump_basename.c_str()));
-
-    // We must use WriteNewFile instead of base::WriteFile as we
-    // do not want to write with root access to a symlink that an attacker
-    // might have created.
-    if (WriteNewFile(ec_crash_path, output.c_str(), output.size()) !=
-        static_cast<int>(output.size())) {
-      PLOG(ERROR) << "Failed to write EC dump to "
-                  << ec_crash_path.value().c_str();
-      return true;
-    }
-
-    std::string signature = StringPrintf("%s-%08X", kECExecName,
-                                         HashString(StringPiece(data, len)));
-
-    /* TODO(drinkcat): Figure out a way to add EC version to metadata. */
-    AddCrashMetaData("sig", signature);
-    FinishCrash(root_crash_directory.Append(
-                    StringPrintf("%s.meta", dump_basename.c_str())),
-                kECExecName, ec_crash_path.BaseName().value());
-
-    LOG(INFO) << "Stored EC crash to " << ec_crash_path.value();
+  std::string output;
+  int err =
+      util::RunAndCaptureOutput(&panicinfo_parser, STDOUT_FILENO, &output);
+  if (err < 0) {
+    PLOG(ERROR) << "Failed to run ec_parse_panicinfo. Error=" << err;
+    return true;
   }
+  if (err > 0) {
+    output.assign(data, len);
+  }
+
+  std::string dump_basename = FormatDumpBasename(kECExecName, time(nullptr), 0);
+  FilePath ec_crash_path = root_crash_directory.Append(
+      StringPrintf("%s.eccrash", dump_basename.c_str()));
+
+  // We must use WriteNewFile instead of base::WriteFile as we
+  // do not want to write with root access to a symlink that an attacker
+  // might have created.
+  if (WriteNewFile(ec_crash_path, output.c_str(), output.size()) !=
+      static_cast<int>(output.size())) {
+    PLOG(ERROR) << "Failed to write EC dump to "
+                << ec_crash_path.value().c_str();
+    return true;
+  }
+
+  std::string signature =
+      StringPrintf("%s-%08X", kECExecName, HashString(StringPiece(data, len)));
+
+  /* TODO(drinkcat): Figure out a way to add EC version to metadata. */
+  AddCrashMetaData("sig", signature);
+  FinishCrash(root_crash_directory.Append(
+                  StringPrintf("%s.meta", dump_basename.c_str())),
+              kECExecName, ec_crash_path.BaseName().value());
+
+  LOG(INFO) << "Stored EC crash to " << ec_crash_path.value();
 
   return true;
 }

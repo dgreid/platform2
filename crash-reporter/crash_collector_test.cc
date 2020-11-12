@@ -57,11 +57,6 @@ namespace {
 // Sept 1, 2020, but basically arbitrary.
 constexpr int64_t kFakeNow = 1598929274543LL;
 
-bool IsMetrics() {
-  ADD_FAILURE();
-  return false;
-}
-
 }  // namespace
 
 CrashCollectorMock::CrashCollectorMock() : CrashCollector("mock") {}
@@ -76,7 +71,7 @@ class CrashCollectorTest : public ::testing::Test {
   void SetUp() {
     EXPECT_CALL(collector_, SetUpDBus()).WillRepeatedly(Return());
 
-    collector_.Initialize(IsMetrics, false);
+    collector_.Initialize(false);
 
     ASSERT_TRUE(scoped_temp_dir_.CreateUniqueTempDir());
     test_dir_ = scoped_temp_dir_.GetPath();
@@ -99,10 +94,6 @@ class CrashCollectorTest : public ::testing::Test {
   base::ScopedTempDir scoped_temp_dir_;
 };
 
-TEST_F(CrashCollectorTest, Initialize) {
-  ASSERT_TRUE(IsMetrics == collector_.is_feedback_allowed_function_);
-}
-
 TEST_F(CrashCollectorTest, WriteNewFile) {
   FilePath test_file = test_dir_.Append("test_new");
   const char kBuffer[] = "buffer";
@@ -118,7 +109,7 @@ TEST_F(CrashCollectorTest,
   CrashCollectorMock collector(
       CrashCollector::kUseNormalCrashDirectorySelectionMethod,
       CrashCollector::kCrashLoopSendingMode);
-  collector.Initialize(IsMetrics, false);
+  collector.Initialize(false);
 
   const char kBuffer[] = "Hello, this is buffer";
   const FilePath kPath = test_dir_.Append("buffer.txt");
@@ -146,7 +137,7 @@ TEST_F(CrashCollectorTest,
   CrashCollectorMock collector(
       CrashCollector::kUseNormalCrashDirectorySelectionMethod,
       CrashCollector::kCrashLoopSendingMode);
-  collector.Initialize(IsMetrics, false);
+  collector.Initialize(false);
 
   const char kBuffer1[] = "Hello, this is buffer";
   const FilePath kPath1 = test_dir_.Append("buffer1.txt");
@@ -207,7 +198,7 @@ TEST_F(CrashCollectorTest,
   CrashCollectorMock collector(
       CrashCollector::kUseNormalCrashDirectorySelectionMethod,
       CrashCollector::kCrashLoopSendingMode);
-  collector.Initialize(IsMetrics, false);
+  collector.Initialize(false);
 
   const FilePath kPath = test_dir_.Append("buffer.txt");
   const char kBuffer[] = "Hello, this is buffer";
@@ -262,7 +253,7 @@ TEST_F(CrashCollectorTest,
   CrashCollectorMock collector(
       CrashCollector::kUseNormalCrashDirectorySelectionMethod,
       CrashCollector::kCrashLoopSendingMode);
-  collector.Initialize(IsMetrics, false);
+  collector.Initialize(false);
 
   const char kBuffer[] = "Hello, this is buffer";
   const FilePath kPath = test_dir_.Append("buffer.txt.gz");
@@ -308,7 +299,7 @@ TEST_F(CrashCollectorTest,
   CrashCollectorMock collector(
       CrashCollector::kUseNormalCrashDirectorySelectionMethod,
       CrashCollector::kCrashLoopSendingMode);
-  collector.Initialize(IsMetrics, false);
+  collector.Initialize(false);
 
   const FilePath kPath = test_dir_.Append("buffer.txt.gz");
   const char kBuffer[] = "Hello, this is buffer";
@@ -364,7 +355,7 @@ TEST_F(CrashCollectorTest,
   CrashCollectorMock collector(
       CrashCollector::kUseNormalCrashDirectorySelectionMethod,
       CrashCollector::kCrashLoopSendingMode);
-  collector.Initialize(IsMetrics, false);
+  collector.Initialize(false);
 
   const FilePath kPath = test_dir_.Append("buffer.txt");
   const char kBuffer[] = "Hello, this is buffer";
@@ -383,7 +374,7 @@ TEST_F(CrashCollectorTest,
   CrashCollectorMock collector(
       CrashCollector::kUseNormalCrashDirectorySelectionMethod,
       CrashCollector::kCrashLoopSendingMode);
-  collector.Initialize(IsMetrics, false);
+  collector.Initialize(false);
 
   const FilePath kPath1 = test_dir_.Append("buffer1.txt");
   const char kBuffer1[] = "Hello, this is buffer";
@@ -410,7 +401,7 @@ TEST_F(CrashCollectorTest,
   CrashCollectorMock collector(
       CrashCollector::kUseNormalCrashDirectorySelectionMethod,
       CrashCollector::kCrashLoopSendingMode);
-  collector.Initialize(IsMetrics, false);
+  collector.Initialize(false);
 
   const FilePath kPath = test_dir_.Append("buffer.txt.gz");
   const char kBuffer[] = "Hello, this is buffer";
@@ -428,7 +419,7 @@ TEST_F(CrashCollectorTest,
   CrashCollectorMock collector(
       CrashCollector::kUseNormalCrashDirectorySelectionMethod,
       CrashCollector::kCrashLoopSendingMode);
-  collector.Initialize(IsMetrics, false);
+  collector.Initialize(false);
 
   const FilePath kPath = test_dir_.Append("doesnt_exist");
   EXPECT_FALSE(collector.RemoveNewFile(kPath));
@@ -1634,7 +1625,7 @@ void CrashCollectorTest::TestFinishCrashInCrashLoopMode(
         }
       }));
 
-  collector.Initialize(IsMetrics, false);
+  collector.Initialize(false);
 
   EXPECT_EQ(collector.WriteNewFile(kPath, kBuffer, strlen(kBuffer)),
             strlen(kBuffer));

@@ -13,6 +13,7 @@
 #include <base/time/time.h>
 #include <brillo/process/process.h>
 #include <brillo/streams/stream.h>
+#include <metrics/metrics_library.h>
 #include <session_manager/dbus-proxies.h>
 
 namespace util {
@@ -37,6 +38,13 @@ bool IsOfficialImage();
 
 // Returns true if we are mocking metrics consent as granted.
 bool HasMockConsent();
+
+// Determines whether feedback is allowed, based on:
+// * The presence/absence of mock consent
+// * Whether this is a developer image
+// * Whether the metrics library indicates consent
+// Does not take ownership of |metrics_lib|
+bool IsFeedbackAllowed(MetricsLibraryInterface* metrics_lib);
 
 // Returns true if we should skip crash collection (based on the filter-in
 // file).

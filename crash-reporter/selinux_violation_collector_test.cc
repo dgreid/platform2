@@ -19,8 +19,6 @@ using base::FilePath;
 
 namespace {
 
-bool s_metrics = false;
-
 // Source tree log config file name.
 constexpr char kLogConfigFileName[] = "crash_reporter_logs.conf";
 
@@ -77,10 +75,6 @@ constexpr char TestSELinuxViolationMessageWithNonTerminatedComm[] =
     "comm\001init\002scontext\001context1\002\n"
     "comm=\"aaaa AT context1.\n";
 
-bool IsMetrics() {
-  return s_metrics;
-}
-
 }  // namespace
 
 class SELinuxViolationCollectorMock : public SELinuxViolationCollector {
@@ -90,11 +84,9 @@ class SELinuxViolationCollectorMock : public SELinuxViolationCollector {
 
 class SELinuxViolationCollectorTest : public ::testing::Test {
   void SetUp() {
-    s_metrics = true;
-
     EXPECT_CALL(collector_, SetUpDBus()).WillRepeatedly(testing::Return());
 
-    collector_.Initialize(IsMetrics, false);
+    collector_.Initialize(false);
     ASSERT_TRUE(scoped_temp_dir_.CreateUniqueTempDir());
     test_path_ = scoped_temp_dir_.GetPath().Append(kTestFilename);
     collector_.set_violation_report_path_for_testing(test_path_);
@@ -116,7 +108,6 @@ class SELinuxViolationCollectorTest : public ::testing::Test {
 
 TEST_F(SELinuxViolationCollectorTest, CollectOK) {
   // Collector produces a violation report.
-  collector_.set_developer_image_for_testing();
   ASSERT_TRUE(test_util::CreateFile(test_path_, TestSELinuxViolationMessage));
   EXPECT_TRUE(collector_.Collect());
   EXPECT_FALSE(IsDirectoryEmpty(test_crash_directory_));
@@ -132,7 +123,6 @@ TEST_F(SELinuxViolationCollectorTest, CollectOK) {
 
 TEST_F(SELinuxViolationCollectorTest, CollectOKWithComm) {
   // Collector produces a violation report named using the "comm" key.
-  collector_.set_developer_image_for_testing();
   ASSERT_TRUE(
       test_util::CreateFile(test_path_, TestSELinuxViolationMessageWithComm));
   EXPECT_TRUE(collector_.Collect());
@@ -150,7 +140,6 @@ TEST_F(SELinuxViolationCollectorTest, CollectOKWithComm) {
 
 TEST_F(SELinuxViolationCollectorTest, CollectOKWithPid) {
   // Collector produces a violation report named using the "pid" key.
-  collector_.set_developer_image_for_testing();
   ASSERT_TRUE(
       test_util::CreateFile(test_path_, TestSELinuxViolationMessageWithPid));
   EXPECT_TRUE(collector_.Collect());
@@ -168,7 +157,6 @@ TEST_F(SELinuxViolationCollectorTest, CollectOKWithPid) {
 
 TEST_F(SELinuxViolationCollectorTest, CollectOKWithPidAndComm) {
   // Collector produces a violation report named using "pid" and "comm" keys.
-  collector_.set_developer_image_for_testing();
   ASSERT_TRUE(test_util::CreateFile(test_path_,
                                     TestSELinuxViolationMessageWithPidAndComm));
   EXPECT_TRUE(collector_.Collect());
@@ -187,7 +175,6 @@ TEST_F(SELinuxViolationCollectorTest, CollectOKWithPidAndComm) {
 
 TEST_F(SELinuxViolationCollectorTest, CollectWithInvalidComm) {
   // Collector properly sanitizes an invalid "comm" key
-  collector_.set_developer_image_for_testing();
   ASSERT_TRUE(test_util::CreateFile(
       test_path_, TestSELinuxViolationMessageWithInvalidComm));
   EXPECT_TRUE(collector_.Collect());
@@ -203,7 +190,6 @@ TEST_F(SELinuxViolationCollectorTest, CollectWithInvalidComm) {
 
 TEST_F(SELinuxViolationCollectorTest, CollectWithLongComm) {
   // Collector properly shortens a long "comm" key
-  collector_.set_developer_image_for_testing();
   ASSERT_TRUE(test_util::CreateFile(test_path_,
                                     TestSELinuxViolationMessageWithLongComm));
   EXPECT_TRUE(collector_.Collect());
@@ -220,7 +206,6 @@ TEST_F(SELinuxViolationCollectorTest, CollectWithLongComm) {
 
 TEST_F(SELinuxViolationCollectorTest, CollectWithNonTerminatedComm) {
   // Collector properly shortens a long "comm" key
-  collector_.set_developer_image_for_testing();
   ASSERT_TRUE(test_util::CreateFile(
       test_path_, TestSELinuxViolationMessageWithNonTerminatedComm));
   EXPECT_TRUE(collector_.Collect());
@@ -260,14 +245,6 @@ TEST_F(SELinuxViolationCollectorTest, EmptyFailureReport) {
   // SELinux violation report file exists, but doesn't have the expected
   // contents.
   ASSERT_TRUE(test_util::CreateFile(test_path_, ""));
-  EXPECT_TRUE(collector_.Collect());
-  EXPECT_TRUE(IsDirectoryEmpty(test_crash_directory_));
-}
-
-TEST_F(SELinuxViolationCollectorTest, FeedbackNotAllowed) {
-  // Feedback not allowed.
-  s_metrics = false;
-  ASSERT_TRUE(test_util::CreateFile(test_path_, TestSELinuxViolationMessage));
   EXPECT_TRUE(collector_.Collect());
   EXPECT_TRUE(IsDirectoryEmpty(test_crash_directory_));
 }

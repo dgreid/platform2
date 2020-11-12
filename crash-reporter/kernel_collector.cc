@@ -701,69 +701,57 @@ bool KernelCollector::HandleCrash(const std::string& kernel_dump,
                                   const std::string& bios_dump,
                                   const std::string& signature) {
   FilePath root_crash_directory;
-  std::string reason = "handling";
-  bool feedback = true;
-  if (util::IsDeveloperImage()) {
-    reason = "developer build - always dumping";
-    feedback = true;
-  } else if (!is_feedback_allowed_function_()) {
-    reason = "ignoring - no consent";
-    feedback = false;
-  }
 
   LOG(INFO) << "Received prior crash notification from "
-            << "kernel (signature " << signature << ") (" << reason << ")";
+            << "kernel (signature " << signature << ") (handling)";
 
-  if (feedback) {
-    if (!GetCreatedCrashDirectoryByEuid(kRootUid, &root_crash_directory,
-                                        nullptr)) {
-      return true;
-    }
-
-    std::string dump_basename =
-        FormatDumpBasename(kKernelExecName, time(nullptr), kKernelPid);
-    FilePath kernel_crash_path = root_crash_directory.Append(
-        StringPrintf("%s.kcrash", dump_basename.c_str()));
-    FilePath bios_dump_path = root_crash_directory.Append(
-        StringPrintf("%s.%s", dump_basename.c_str(), kBiosDumpName));
-    FilePath log_path = root_crash_directory.Append(
-        StringPrintf("%s.log", dump_basename.c_str()));
-
-    // We must use WriteNewFile instead of base::WriteFile as we
-    // do not want to write with root access to a symlink that an attacker
-    // might have created.
-    if (WriteNewFile(kernel_crash_path, kernel_dump.data(),
-                     kernel_dump.length()) !=
-        static_cast<int>(kernel_dump.length())) {
-      LOG(INFO) << "Failed to write kernel dump to "
-                << kernel_crash_path.value().c_str();
-      return true;
-    }
-    if (!bios_dump.empty()) {
-      if (WriteNewFile(bios_dump_path, bios_dump.data(), bios_dump.length()) !=
-          static_cast<int>(bios_dump.length())) {
-        PLOG(WARNING) << "Failed to write BIOS log to "
-                      << bios_dump_path.value() << " (ignoring)";
-      } else {
-        AddCrashMetaUploadFile(kBiosDumpName,
-                               bios_dump_path.BaseName().value());
-        LOG(INFO) << "Stored BIOS log to " << bios_dump_path.value();
-      }
-    }
-
-    AddCrashMetaData(kKernelSignatureKey, signature);
-
-    // Collect additional logs if one is specified in the config file.
-    if (GetLogContents(log_config_path_, kKernelExecName, log_path)) {
-      AddCrashMetaUploadFile("log", log_path.BaseName().value());
-    }
-
-    FinishCrash(root_crash_directory.Append(
-                    StringPrintf("%s.meta", dump_basename.c_str())),
-                kKernelExecName, kernel_crash_path.BaseName().value());
-
-    LOG(INFO) << "Stored kcrash to " << kernel_crash_path.value();
+  if (!GetCreatedCrashDirectoryByEuid(kRootUid, &root_crash_directory,
+                                      nullptr)) {
+    return true;
   }
+
+  std::string dump_basename =
+      FormatDumpBasename(kKernelExecName, time(nullptr), kKernelPid);
+  FilePath kernel_crash_path = root_crash_directory.Append(
+      StringPrintf("%s.kcrash", dump_basename.c_str()));
+  FilePath bios_dump_path = root_crash_directory.Append(
+      StringPrintf("%s.%s", dump_basename.c_str(), kBiosDumpName));
+  FilePath log_path = root_crash_directory.Append(
+      StringPrintf("%s.log", dump_basename.c_str()));
+
+  // We must use WriteNewFile instead of base::WriteFile as we
+  // do not want to write with root access to a symlink that an attacker
+  // might have created.
+  if (WriteNewFile(kernel_crash_path, kernel_dump.data(),
+                   kernel_dump.length()) !=
+      static_cast<int>(kernel_dump.length())) {
+    LOG(INFO) << "Failed to write kernel dump to "
+              << kernel_crash_path.value().c_str();
+    return true;
+  }
+  if (!bios_dump.empty()) {
+    if (WriteNewFile(bios_dump_path, bios_dump.data(), bios_dump.length()) !=
+        static_cast<int>(bios_dump.length())) {
+      PLOG(WARNING) << "Failed to write BIOS log to " << bios_dump_path.value()
+                    << " (ignoring)";
+    } else {
+      AddCrashMetaUploadFile(kBiosDumpName, bios_dump_path.BaseName().value());
+      LOG(INFO) << "Stored BIOS log to " << bios_dump_path.value();
+    }
+  }
+
+  AddCrashMetaData(kKernelSignatureKey, signature);
+
+  // Collect additional logs if one is specified in the config file.
+  if (GetLogContents(log_config_path_, kKernelExecName, log_path)) {
+    AddCrashMetaUploadFile("log", log_path.BaseName().value());
+  }
+
+  FinishCrash(root_crash_directory.Append(
+                  StringPrintf("%s.meta", dump_basename.c_str())),
+              kKernelExecName, kernel_crash_path.BaseName().value());
+
+  LOG(INFO) << "Stored kcrash to " << kernel_crash_path.value();
 
   return true;
 }

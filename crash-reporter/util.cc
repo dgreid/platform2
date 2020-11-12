@@ -16,6 +16,7 @@
 #include <keyutils.h>
 #endif  // USE_DIRENCRYPTION
 
+#include <base/command_line.h>
 #include <base/files/file_util.h>
 #include <base/strings/string_split.h>
 #include <base/strings/string_util.h>
@@ -26,6 +27,7 @@
 #include <zlib.h>
 
 #include "crash-reporter/paths.h"
+#include "crash-reporter/vm_support.h"
 
 namespace util {
 
@@ -109,6 +111,36 @@ bool HasMockConsent() {
   }
   return base::PathExists(
       paths::GetAt(paths::kSystemRunStateDirectory, paths::kMockConsent));
+}
+
+bool IsFeedbackAllowed(MetricsLibraryInterface* metrics_lib) {
+  if (HasMockConsent()) {
+    LOG(INFO) << "mock-consent file present; assuming consent";
+    return true;
+  }
+  // For developer builds, we always want to keep the crash reports unless
+  // we're testing the crash facilities themselves.  This overrides
+  // feedback.  Crash sending still obeys consent.
+  if (IsDeveloperImage()) {
+    LOG(INFO) << "developer build - not testing - always dumping";
+    return true;
+  }
+
+  VmSupport* vm_support = VmSupport::Get();
+  bool ret = false;
+  if (vm_support) {
+    ret = vm_support->GetMetricsConsent();
+  } else {
+    ret = metrics_lib->AreMetricsEnabled();
+  }
+
+  if (!ret) {
+    LOG(WARNING)
+        << "No consent. Not handling invocation: "
+        << base::CommandLine::ForCurrentProcess()->GetCommandLineString();
+  }
+
+  return ret;
 }
 
 bool SkipCrashCollection(int argc, char* argv[]) {

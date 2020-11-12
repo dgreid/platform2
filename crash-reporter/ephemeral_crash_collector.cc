@@ -18,16 +18,14 @@ EphemeralCrashCollector::EphemeralCrashCollector()
       early_(false),
       source_directories_({base::FilePath(paths::kSystemRunCrashDirectory)}) {}
 
-void EphemeralCrashCollector::Initialize(
-    IsFeedbackAllowedFunction is_feedback_allowed_function,
-    bool preserve_across_clobber) {
+void EphemeralCrashCollector::Initialize(bool preserve_across_clobber) {
   // For preserving crash reports across clobbers, the consent file may not be
   // available. Instead, collect the crashes into the encrypted reboot vault
   // directory and let crash-sender decide how to deal with these reports.
   if (preserve_across_clobber) {
     system_crash_path_ =
         base::FilePath(paths::kEncryptedRebootVaultCrashDirectory);
-    is_feedback_allowed_function = []() { return true; };
+    skip_consent_ = true;
   } else {
     // In case of powerwash, there is a chance that the powerwash was a result
     // of failure to mount the partition: in such situations, we may have crash
@@ -41,14 +39,14 @@ void EphemeralCrashCollector::Initialize(
                 << std::boolalpha << util::IsCrashTestInProgress()
                 << " Mock consent? " << std::boolalpha
                 << util::HasMockConsent();
-      is_feedback_allowed_function = []() { return true; };
+      skip_consent_ = true;
     }
     source_directories_.push_back(
         base::FilePath(paths::kEncryptedRebootVaultCrashDirectory));
   }
 
   // Disable early mode.
-  CrashCollector::Initialize(is_feedback_allowed_function, false /* early */);
+  CrashCollector::Initialize(false /* early */);
 }
 
 bool EphemeralCrashCollector::Collect() {
@@ -57,35 +55,31 @@ bool EphemeralCrashCollector::Collect() {
   util::JoinSessionKeyring();
 #endif  // USE_DIRENCRYPTION
 
-  if (is_feedback_allowed_function_()) {
-    for (auto& dir : source_directories_) {
-      base::FileEnumerator source_directory_enumerator(
-          dir, false /* recursive */, base::FileEnumerator::FILES);
+  for (auto& dir : source_directories_) {
+    base::FileEnumerator source_directory_enumerator(
+        dir, false /* recursive */, base::FileEnumerator::FILES);
 
-      LOG(INFO) << "Examining " << dir << " for crashes";
+    LOG(INFO) << "Examining " << dir << " for crashes";
 
-      for (auto source_path = source_directory_enumerator.Next();
-           !source_path.empty();
-           source_path = source_directory_enumerator.Next()) {
-        // Get crash directory to put logs in.
-        base::FilePath destination_directory;
+    for (auto source_path = source_directory_enumerator.Next();
+         !source_path.empty();
+         source_path = source_directory_enumerator.Next()) {
+      // Get crash directory to put logs in.
+      base::FilePath destination_directory;
 
-        // If the crash reporter directory is already fully occupied, then exit.
-        if (!GetCreatedCrashDirectoryByEuid(0, &destination_directory, nullptr))
-          break;
+      // If the crash reporter directory is already fully occupied, then exit.
+      if (!GetCreatedCrashDirectoryByEuid(0, &destination_directory, nullptr))
+        break;
 
-        base::FilePath destination_path =
-            destination_directory.Append(source_path.BaseName());
-        LOG(INFO) << "Copying early crash to: " << destination_path.value();
+      base::FilePath destination_path =
+          destination_directory.Append(source_path.BaseName());
+      LOG(INFO) << "Copying early crash to: " << destination_path.value();
 
-        if (!base::Move(source_path, destination_path)) {
-          PLOG(WARNING) << "Unable to copy " << source_path.value();
-          continue;
-        }
+      if (!base::Move(source_path, destination_path)) {
+        PLOG(WARNING) << "Unable to copy " << source_path.value();
+        continue;
       }
     }
-  } else {
-    LOG(INFO) << "Not collecting early crashes: No user consent available.";
   }
 
   // Cleanup crash directory.

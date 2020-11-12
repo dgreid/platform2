@@ -19,17 +19,11 @@ using base::FilePath;
 
 namespace {
 
-bool s_metrics = false;
-
 // Source tree log config file name.
 const char kLogConfigFileName[] = "crash_reporter_logs.conf";
 
 const char kTestFilename[] = "test-generic-failure";
 const char kTestFailureDirectory[] = "test-failure_directory";
-
-bool IsMetrics() {
-  return s_metrics;
-}
 
 }  // namespace
 
@@ -45,11 +39,9 @@ class GenericFailureCollectorTest : public ::testing::Test {
   GenericFailureCollectorTest() {}
 
   void SetUp() {
-    s_metrics = true;
-
     EXPECT_CALL(collector_, SetUpDBus()).WillRepeatedly(testing::Return());
 
-    collector_.Initialize(IsMetrics, false);
+    collector_.Initialize(false);
     ASSERT_TRUE(scoped_temp_dir_.CreateUniqueTempDir());
     test_path_ = scoped_temp_dir_.GetPath().Append(kTestFilename);
     collector_.failure_report_path_ = test_path_.value();
@@ -102,15 +94,6 @@ TEST_F(GenericFailureCollectorTest, FailureReportDoesNotExist) {
 TEST_F(GenericFailureCollectorTest, EmptyFailureReport) {
   // Generic failure report file exists, but doesn't have the expected contents.
   ASSERT_TRUE(test_util::CreateFile(test_path_, ""));
-  EXPECT_TRUE(collector_.Collect("generic-failure"));
-  EXPECT_TRUE(IsDirectoryEmpty(test_failure_directory_));
-}
-
-TEST_F(GenericFailureCollectorTest, FeedbackNotAllowed) {
-  // Feedback not allowed.
-  s_metrics = false;
-  ASSERT_TRUE(test_util::CreateFile(test_path_,
-                                    "generic failure for testing purposes\n"));
   EXPECT_TRUE(collector_.Collect("generic-failure"));
   EXPECT_TRUE(IsDirectoryEmpty(test_failure_directory_));
 }

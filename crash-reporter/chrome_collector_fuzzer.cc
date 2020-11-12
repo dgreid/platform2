@@ -30,11 +30,6 @@ class Environment {
   }
 };
 
-bool g_is_feedback_allowed = false;
-bool IsFeedbackAllowed() {
-  return g_is_feedback_allowed;
-}
-
 class ChromeCollectorForFuzzing : public ChromeCollector {
  public:
   explicit ChromeCollectorForFuzzing(CrashSendingMode crash_sending_mode,
@@ -86,7 +81,6 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   if (exe_name.empty() || pid < (pid_t)0 || uid < (uid_t)0) {
     return 0;  // Or we'll CHECK-fail. Fuzzers shouldn't exit on any input.
   }
-  g_is_feedback_allowed = provider.ConsumeBool();
   std::string user_name =
       provider.ConsumeRandomLengthString(kArbitraryMaxNameLength);
   std::string user_hash =
@@ -112,7 +106,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   ChromeCollectorForFuzzing collector(CrashCollector::kNormalCrashSendMode,
                                       std::move(user_name),
                                       std::move(user_hash));
-  collector.Initialize(&IsFeedbackAllowed, false);
+  collector.Initialize(false);
   collector.HandleCrashThroughMemfd(test_input.TakePlatformFile(), pid, uid,
                                     exe_name, non_exe_error_key, kEmptyDumpDir);
   return 0;

@@ -93,19 +93,7 @@ bool GetValueFromLog(const std::string& log,
 }
 
 bool SELinuxViolationCollector::Collect() {
-  std::string reason = "normal collection";
-  bool feedback = true;
-  if (util::IsDeveloperImage() || developer_image_for_testing_) {
-    feedback = true;
-    reason = "always collect from developer builds";
-  } else if (!is_feedback_allowed_function_()) {
-    reason = "no user consent";
-    feedback = false;
-  }
-  LOG(INFO) << "Processing selinux violation: " << reason;
-
-  if (!feedback)
-    return true;
+  LOG(INFO) << "Processing selinux violation";
 
   std::string violation_signature;
   std::string content;

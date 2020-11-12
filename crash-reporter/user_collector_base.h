@@ -23,9 +23,7 @@ class UserCollectorBase : public CrashCollector {
       const std::string& collector_name,
       CrashDirectorySelectionMethod crash_directory_selection_method);
 
-  void Initialize(IsFeedbackAllowedFunction is_metrics_allowed,
-                  bool directory_failure,
-                  bool early);
+  void Initialize(bool directory_failure, bool early);
 
   struct CrashAttributes {
     pid_t pid;
@@ -61,14 +59,9 @@ class UserCollectorBase : public CrashCollector {
     kIdMax
   };
 
-  bool ShouldDump(base::Optional<pid_t> pid,
-                  bool has_owner_consent,
-                  bool is_developer,
-                  std::string* reason) const;
+  bool ShouldDump(base::Optional<pid_t> pid, std::string* reason) const;
 
-  bool ShouldDump(bool has_owner_consent,
-                  bool is_developer,
-                  std::string* reason) const;
+  bool ShouldDump(std::string* reason) const;
 
   // Returns, via |line|, the first line in |lines| that starts with |prefix|.
   // Returns true if a line is found, or false otherwise.

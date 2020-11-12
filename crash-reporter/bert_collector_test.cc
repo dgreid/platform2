@@ -21,12 +21,6 @@ namespace {
 
 constexpr char kACPITableDirectory[] = "sys/firmware/acpi/tables";
 
-bool s_consent_given = true;
-
-bool IsMetrics() {
-  return s_consent_given;
-}
-
 }  // namespace
 
 class BERTCollectorMock : public BERTCollector {
@@ -73,11 +67,9 @@ class BERTCollectorTest : public ::testing::Test {
 
  public:
   void SetUp() override {
-    s_consent_given = true;
-
     EXPECT_CALL(collector_, SetUpDBus()).WillRepeatedly(testing::Return());
 
-    collector_.Initialize(IsMetrics, false);
+    collector_.Initialize(false);
     ASSERT_TRUE(scoped_temp_dir_.CreateUniqueTempDir());
     FilePath test_dir_ = scoped_temp_dir_.GetPath();
 
@@ -88,14 +80,6 @@ class BERTCollectorTest : public ::testing::Test {
 
 TEST_F(BERTCollectorTest, TestNoBERTData) {
   ASSERT_FALSE(collector_.Collect());
-  EXPECT_EQ(collector_.get_bytes_written(), 0);
-}
-
-TEST_F(BERTCollectorTest, TestNoConsent) {
-  s_consent_given = false;
-  PrepareBertDataTest(false);
-  ASSERT_TRUE(collector_.Collect());
-  ASSERT_TRUE(FindLog("(ignoring - no consent)"));
   EXPECT_EQ(collector_.get_bytes_written(), 0);
 }
 

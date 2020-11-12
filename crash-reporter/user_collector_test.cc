@@ -31,18 +31,12 @@ using ::testing::StartsWith;
 
 namespace {
 
-bool s_metrics = false;
-
 const char kFilePath[] = "/my/path";
 
 // Keep in sync with UserCollector::ShouldDump.
 const char kChromeIgnoreMsg[] =
     "ignoring call by kernel - chrome crash; "
     "waiting for chrome to call us directly";
-
-bool IsMetrics() {
-  return s_metrics;
-}
 
 }  // namespace
 
@@ -76,7 +70,7 @@ class UserCollectorTest : public ::testing::Test {
     test_dir_ = scoped_temp_dir_.GetPath();
 
     const pid_t pid = getpid();
-    collector_.Initialize(kFilePath, IsMetrics, false, false, false);
+    collector_.Initialize(kFilePath, false, false, false);
     // Setup paths for output files.
     test_core_pattern_file_ = test_dir_.Append("core_pattern");
     collector_.set_core_pattern_file(test_core_pattern_file_.value());
@@ -216,103 +210,65 @@ TEST_F(UserCollectorTest, ParseCrashAttributes) {
   EXPECT_FALSE(UserCollectorBase::ParseCrashAttributes("123456::::foobar"));
 }
 
-TEST_F(UserCollectorTest, ShouldDumpDeveloperImageOverridesConsent) {
-  std::string reason;
-  EXPECT_TRUE(
-      collector_.ShouldDump(pid_, false, true, false, "chrome-wm", &reason));
-  EXPECT_EQ("developer build - not testing - always dumping", reason);
-
-  // When running a crash test, behave as normal.
-  EXPECT_FALSE(
-      collector_.ShouldDump(pid_, false, false, false, "chrome-wm", &reason));
-  EXPECT_EQ("ignoring - no consent", reason);
-}
-
 TEST_F(UserCollectorTest, ShouldDumpChromeOverridesDeveloperImage) {
   std::string reason;
-  // When running a crash test, behave as normal.
+  // When handle_chrome_crashes is false, should ignore chrome processes.
+  EXPECT_FALSE(collector_.ShouldDump(pid_, false, "chrome", &reason));
+  EXPECT_EQ(kChromeIgnoreMsg, reason);
   EXPECT_FALSE(
-      collector_.ShouldDump(pid_, false, false, false, "chrome", &reason));
+      collector_.ShouldDump(pid_, false, "supplied_Compositor", &reason));
   EXPECT_EQ(kChromeIgnoreMsg, reason);
-  EXPECT_FALSE(collector_.ShouldDump(pid_, false, false, false,
-                                     "supplied_Compositor", &reason));
+  EXPECT_FALSE(
+      collector_.ShouldDump(pid_, false, "supplied_PipelineThread", &reason));
   EXPECT_EQ(kChromeIgnoreMsg, reason);
-  EXPECT_FALSE(collector_.ShouldDump(pid_, false, false, false,
-                                     "supplied_PipelineThread", &reason));
+  EXPECT_FALSE(
+      collector_.ShouldDump(pid_, false, "Chrome_ChildIOThread", &reason));
   EXPECT_EQ(kChromeIgnoreMsg, reason);
-  EXPECT_FALSE(collector_.ShouldDump(pid_, false, false, false,
-                                     "Chrome_ChildIOThread", &reason));
+  EXPECT_FALSE(
+      collector_.ShouldDump(pid_, false, "supplied_Chrome_ChildIOT", &reason));
   EXPECT_EQ(kChromeIgnoreMsg, reason);
-  EXPECT_FALSE(collector_.ShouldDump(pid_, false, false, false,
-                                     "supplied_Chrome_ChildIOT", &reason));
+  EXPECT_FALSE(
+      collector_.ShouldDump(pid_, false, "supplied_ChromotingClien", &reason));
   EXPECT_EQ(kChromeIgnoreMsg, reason);
-  EXPECT_FALSE(collector_.ShouldDump(pid_, false, false, false,
-                                     "supplied_ChromotingClien", &reason));
-  EXPECT_EQ(kChromeIgnoreMsg, reason);
-  EXPECT_FALSE(collector_.ShouldDump(pid_, false, false, false,
-                                     "supplied_LocalInputMonit", &reason));
+  EXPECT_FALSE(
+      collector_.ShouldDump(pid_, false, "supplied_LocalInputMonit", &reason));
   EXPECT_EQ(kChromeIgnoreMsg, reason);
 
-  // When running a developer image, test that chrome crashes are handled
-  // when the "handle_chrome_crashes" flag is set.
+  // Test that chrome crashes are handled when the "handle_chrome_crashes" flag
+  // is set.
+  EXPECT_TRUE(collector_.ShouldDump(pid_, true, "chrome", &reason));
+  EXPECT_EQ("handling", reason);
   EXPECT_TRUE(
-      collector_.ShouldDump(pid_, false, true, true, "chrome", &reason));
-  EXPECT_EQ("developer build - not testing - always dumping", reason);
-  EXPECT_TRUE(collector_.ShouldDump(pid_, false, true, true,
-                                    "supplied_Compositor", &reason));
-  EXPECT_EQ("developer build - not testing - always dumping", reason);
-  EXPECT_TRUE(collector_.ShouldDump(pid_, false, true, true,
-                                    "supplied_PipelineThread", &reason));
-  EXPECT_EQ("developer build - not testing - always dumping", reason);
-  EXPECT_TRUE(collector_.ShouldDump(pid_, false, true, true,
-                                    "Chrome_ChildIOThread", &reason));
-  EXPECT_EQ("developer build - not testing - always dumping", reason);
-  EXPECT_TRUE(collector_.ShouldDump(pid_, false, true, true,
-                                    "supplied_Chrome_ChildIOT", &reason));
-  EXPECT_EQ("developer build - not testing - always dumping", reason);
-  EXPECT_TRUE(collector_.ShouldDump(pid_, false, true, true,
-                                    "supplied_ChromotingClien", &reason));
-  EXPECT_EQ("developer build - not testing - always dumping", reason);
-  EXPECT_TRUE(collector_.ShouldDump(pid_, false, true, true,
-                                    "supplied_LocalInputMonit", &reason));
-  EXPECT_EQ("developer build - not testing - always dumping", reason);
+      collector_.ShouldDump(pid_, true, "supplied_Compositor", &reason));
+  EXPECT_EQ("handling", reason);
+  EXPECT_TRUE(
+      collector_.ShouldDump(pid_, true, "supplied_PipelineThread", &reason));
+  EXPECT_EQ("handling", reason);
+  EXPECT_TRUE(
+      collector_.ShouldDump(pid_, true, "Chrome_ChildIOThread", &reason));
+  EXPECT_EQ("handling", reason);
+  EXPECT_TRUE(
+      collector_.ShouldDump(pid_, true, "supplied_Chrome_ChildIOT", &reason));
+  EXPECT_EQ("handling", reason);
+  EXPECT_TRUE(
+      collector_.ShouldDump(pid_, true, "supplied_ChromotingClien", &reason));
+  EXPECT_EQ("handling", reason);
+  EXPECT_TRUE(
+      collector_.ShouldDump(pid_, true, "supplied_LocalInputMonit", &reason));
+  EXPECT_EQ("handling", reason);
 }
 
 TEST_F(UserCollectorTest, ShouldDumpUserConsentProductionImage) {
   std::string reason;
-  EXPECT_FALSE(
-      collector_.ShouldDump(pid_, false, false, false, "chrome-wm", &reason));
-  EXPECT_EQ("ignoring - no consent", reason);
 
-  EXPECT_TRUE(
-      collector_.ShouldDump(pid_, true, false, false, "chrome-wm", &reason));
+  EXPECT_TRUE(collector_.ShouldDump(pid_, false, "chrome-wm", &reason));
   EXPECT_EQ("handling", reason);
-}
-
-// HandleCrashWithoutConsent tests that we do not attempt to create a dmp file
-// if we don't have user consent to collect crash data.
-TEST_F(UserCollectorTest, HandleCrashWithoutConsent) {
-  s_metrics = false;
-  EXPECT_CALL(collector_, AccounceUserCrash()).Times(0);
-  EXPECT_CALL(collector_, ConvertCoreToMinidump(_, _, _, _)).Times(0);
-
-  UserCollectorBase::CrashAttributes attrs;
-  attrs.pid = 20;
-  attrs.signal = 10;
-  attrs.uid = 1000;
-  attrs.gid = 1000;
-  attrs.exec_name = "ignored";
-  EXPECT_TRUE(collector_.HandleCrash(attrs, "foobar"));
-  if (!VmSupport::Get()) {
-    EXPECT_TRUE(FindLog("Received crash notification for foobar[20] sig 10"));
-  }
 }
 
 // HandleNonChromeCrashWithConsent tests that we will create a dmp file if we
 // (a) have user consent to collect crash data and
 // (b) the process is not a Chrome process.
 TEST_F(UserCollectorTest, HandleNonChromeCrashWithConsent) {
-  s_metrics = true;
   // Note the _ which is different from the - in the original |force_exec|
   // passed to HandleCrash. This is due to the CrashCollector::Sanitize call in
   // FormatDumpBasename.
@@ -352,7 +308,6 @@ TEST_F(UserCollectorTest, HandleNonChromeCrashWithConsent) {
 // crash handling library (Breakpad or Crashpad) to call us directly -- see
 // chrome_collector.h.
 TEST_F(UserCollectorTest, HandleChromeCrashWithConsent) {
-  s_metrics = true;
   EXPECT_CALL(collector_, AccounceUserCrash()).Times(0);
   EXPECT_CALL(collector_, ConvertCoreToMinidump(_, _, _, _)).Times(0);
 
@@ -374,7 +329,6 @@ TEST_F(UserCollectorTest, HandleChromeCrashWithConsent) {
 // fact that we are using the kernel's supplied name instead of the |force_exec|
 // name. This is actually much closer to the real usage.
 TEST_F(UserCollectorTest, HandleSuppliedChromeCrashWithConsent) {
-  s_metrics = true;
   EXPECT_CALL(collector_, AccounceUserCrash()).Times(0);
   EXPECT_CALL(collector_, ConvertCoreToMinidump(_, _, _, _)).Times(0);
 

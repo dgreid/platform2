@@ -34,8 +34,6 @@ constexpr mode_t kSystemCrashFilesMode = 0660;
 // User crash collector.
 class CrashCollector {
  public:
-  typedef bool (*IsFeedbackAllowedFunction)();
-
   enum CrashDirectorySelectionMethod {
     // Force reports to be stored in the user crash directory, even if we are
     // not running as the "chronos" user.
@@ -133,7 +131,7 @@ class CrashCollector {
 
   // Initialize the crash collector for detection of crashes, given a
   // metrics collection enabled oracle.
-  void Initialize(IsFeedbackAllowedFunction is_metrics_allowed, bool early);
+  void Initialize(bool early);
 
   // Return the number of bytes successfully written by all calls to
   // WriteNewFile() and WriteNewCompressedFile() so far. For
@@ -397,7 +395,6 @@ class CrashCollector {
   // Returns true if chrome crashes should be handled.
   bool ShouldHandleChromeCrashes();
 
-  IsFeedbackAllowedFunction is_feedback_allowed_function_;
   std::string extra_metadata_;
   const std::string collector_name_;
   base::FilePath forced_crash_directory_;

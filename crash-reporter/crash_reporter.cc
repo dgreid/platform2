@@ -43,7 +43,6 @@
 #include "crash-reporter/user_collector.h"
 #include "crash-reporter/util.h"
 #include "crash-reporter/vm_collector.h"
-#include "crash-reporter/vm_support.h"
 
 using base::FilePath;
 using base::StringPrintf;
@@ -56,20 +55,9 @@ const char kUncleanShutdownDetected[] =
     "/run/metrics/external/crash-reporter/unclean-shutdown-detected";
 const char kBootCollectorDone[] = "/run/crash_reporter/boot-collector-done";
 
-bool always_allow_feedback = false;
-
+// Used for consent verification.
+// TODO(mutexlox): Declare this in main and plumb it through via parameters.
 MetricsLibrary s_metrics_lib;
-
-bool IsFeedbackAllowed() {
-  if (always_allow_feedback || util::HasMockConsent())
-    return true;
-
-  VmSupport* vm_support = VmSupport::Get();
-  if (vm_support)
-    return vm_support->GetMetricsConsent();
-
-  return s_metrics_lib.AreMetricsEnabled();
-}
 
 bool TouchFile(const FilePath& file_path) {
   return base::WriteFile(file_path, "", 0) == 0;
@@ -115,7 +103,8 @@ bool InitializeSystem(UserCollector* user_collector, bool early) {
   return user_collector->Enable(early);
 }
 
-int BootCollect(KernelCollector* kernel_collector,
+int BootCollect(bool always_allow_feedback,
+                KernelCollector* kernel_collector,
                 ECCollector* ec_collector,
                 BERTCollector* bert_collector,
                 UncleanShutdownCollector* unclean_shutdown_collector,
@@ -124,22 +113,22 @@ int BootCollect(KernelCollector* kernel_collector,
   bool was_unclean_shutdown = false;
   LOG(INFO) << "Running boot collector";
 
-  /* TODO(drinkcat): Distinguish between EC crash and unclean shutdown. */
-  ec_collector->Collect();
+  if (always_allow_feedback || util::IsFeedbackAllowed(&s_metrics_lib)) {
+    /* TODO(drinkcat): Distinguish between EC crash and unclean shutdown. */
+    ec_collector->Collect();
 
-  // Invoke to collect firmware bert dump.
-  bert_collector->Collect();
+    // Invoke to collect firmware bert dump.
+    bert_collector->Collect();
 
-  kernel_collector->Enable();
-  if (kernel_collector->is_enabled()) {
-    was_kernel_crash = kernel_collector->Collect();
-  }
-  was_unclean_shutdown = unclean_shutdown_collector->Collect();
+    kernel_collector->Enable();
+    if (kernel_collector->is_enabled()) {
+      was_kernel_crash = kernel_collector->Collect();
+    }
+    was_unclean_shutdown = unclean_shutdown_collector->Collect();
 
-  // Touch a file to notify the metrics daemon that a kernel
-  // crash has been detected so that it can log the time since
-  // the last kernel crash.
-  if (IsFeedbackAllowed()) {
+    // Touch a file to notify the metrics daemon that a kernel
+    // crash has been detected so that it can log the time since
+    // the last kernel crash.
     if (was_kernel_crash) {
       TouchFile(FilePath(kKernelCrashDetected));
     } else if (was_unclean_shutdown) {
@@ -147,7 +136,13 @@ int BootCollect(KernelCollector* kernel_collector,
       // an associated kernel crash.
       TouchFile(FilePath(kUncleanShutdownDetected));
     }
+    ephemeral_crash_collector->Collect();
+  } else if (ephemeral_crash_collector->SkipConsent()) {
+    ephemeral_crash_collector->Collect();
   }
+
+  // The below calls happen independently of metrics consent, as they do not
+  // generate any crash reports.
 
   // Must enable the unclean shutdown collector *after* collecting.
   unclean_shutdown_collector->Enable();
@@ -156,9 +151,6 @@ int BootCollect(KernelCollector* kernel_collector,
   // collecting so that boot-time collected crashes will be associated with the
   // previous boot.
   unclean_shutdown_collector->SaveVersionData();
-
-  // Collect ephemeral crashes.
-  ephemeral_crash_collector->Collect();
 
   // Presence of this files unblocks powerd from performing lid-closed action
   // (crbug.com/988831).
@@ -352,8 +344,10 @@ int main(int argc, char* argv[]) {
     return 0;
   }
 
+  bool always_allow_feedback = false;
   if (FLAGS_always_allow_feedback) {
     CHECK(util::IsTestImage()) << "--always_allow_feedback is only for tests";
+    LOG(INFO) << "--always_allow_feedback set; skipping consent check";
     always_allow_feedback = true;
   }
 
@@ -425,8 +419,7 @@ int main(int argc, char* argv[]) {
 
   // Always initialize arc_collector so that we can use it to determine if the
   // process is an arc process.
-  arc_collector.Initialize(IsFeedbackAllowed, FLAGS_directory_failure,
-                           false /* early */);
+  arc_collector.Initialize(FLAGS_directory_failure, false /* early */);
   bool is_arc_process = !FLAGS_user.empty() && ArcCollector::IsArcRunning() &&
                         arc_collector.IsArcProcess(user_crash_attrs.pid);
 
@@ -462,10 +455,10 @@ int main(int argc, char* argv[]) {
   UserCollector user_collector;
   collectors.push_back({
       .collector = &user_collector,
-      .init = base::BindRepeating(
-          &UserCollector::Initialize, base::Unretained(&user_collector),
-          my_path.value(), IsFeedbackAllowed, FLAGS_core2md_failure,
-          FLAGS_directory_failure, FLAGS_early),
+      .init = base::BindRepeating(&UserCollector::Initialize,
+                                  base::Unretained(&user_collector),
+                                  my_path.value(), FLAGS_core2md_failure,
+                                  FLAGS_directory_failure, FLAGS_early),
       .handlers = {{
                        // NOTE: This is not handling a crash; it's instead
                        // initializing the entire crash reporting system.
@@ -490,10 +483,9 @@ int main(int argc, char* argv[]) {
   EphemeralCrashCollector ephemeral_crash_collector;
   collectors.push_back({
       .collector = &ephemeral_crash_collector,
-      .init =
-          base::BindRepeating(&EphemeralCrashCollector::Initialize,
-                              base::Unretained(&ephemeral_crash_collector),
-                              IsFeedbackAllowed, FLAGS_preserve_across_clobber),
+      .init = base::BindRepeating(&EphemeralCrashCollector::Initialize,
+                                  base::Unretained(&ephemeral_crash_collector),
+                                  FLAGS_preserve_across_clobber),
       .handlers =
           {{
                .should_handle = FLAGS_ephemeral_collect,
@@ -714,7 +706,7 @@ int main(int argc, char* argv[]) {
           if (collector.init) {
             collector.init.Run();
           } else {
-            collector.collector->Initialize(IsFeedbackAllowed, FLAGS_early);
+            collector.collector->Initialize(FLAGS_early);
           }
           ran_init = true;
         }
@@ -722,7 +714,23 @@ int main(int argc, char* argv[]) {
           // Accumulate logs to a string to help in diagnosing failures during
           // collection.
           brillo::LogToString(true);
-          bool handled = info.cb.Run();
+
+          // Default to successful exit status if there's no consent.
+          bool handled = true;
+          // For early boot crash collectors, the consent file will not be
+          // accessible.  Instead, check consent during boot collection.
+          if (FLAGS_early || always_allow_feedback ||
+              util::IsFeedbackAllowed(&s_metrics_lib)) {
+            handled = info.cb.Run();
+          } else if (collector.collector == &ephemeral_crash_collector &&
+                     ephemeral_crash_collector.SkipConsent()) {
+            // Due to the specific circumstances in which the ephemeral
+            // collector runs, it might need to skip consent checks (e.g. if
+            // it's running just after a disk clobber, the clobber may have
+            // wiped out a user's preferences). Other collectors should not skip
+            // consent checks.
+            handled = info.cb.Run();
+          }
           brillo::LogToString(false);
           return handled ? 0 : 1;
         }
@@ -733,8 +741,9 @@ int main(int argc, char* argv[]) {
   // These special cases (which use multiple collectors) are at the end so that
   // it's clear that all relevant collectors have been initialized.
   if (FLAGS_boot_collect) {
-    return BootCollect(&kernel_collector, &ec_collector, &bert_collector,
-                       &unclean_shutdown_collector, &ephemeral_crash_collector);
+    return BootCollect(always_allow_feedback, &kernel_collector, &ec_collector,
+                       &bert_collector, &unclean_shutdown_collector,
+                       &ephemeral_crash_collector);
   }
 
   if (FLAGS_clean_shutdown) {

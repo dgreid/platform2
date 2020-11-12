@@ -18,12 +18,6 @@ namespace {
 const char kECPanicInfo[] = "panicinfo";
 const char kDevCoredumpDirectory[] = "cros_ec";
 
-bool s_consent_given = true;
-
-bool IsMetrics() {
-  return s_consent_given;
-}
-
 }  // namespace
 
 class ECCollectorMock : public ECCollector {
@@ -59,11 +53,9 @@ class ECCollectorTest : public ::testing::Test {
 
  private:
   void SetUp() override {
-    s_consent_given = true;
-
     EXPECT_CALL(collector_, SetUpDBus()).WillRepeatedly(testing::Return());
 
-    collector_.Initialize(IsMetrics, false);
+    collector_.Initialize(false);
 
     ASSERT_TRUE(temp_dir_generator_.CreateUniqueTempDir());
 
@@ -75,14 +67,6 @@ class ECCollectorTest : public ::testing::Test {
     collector_.debugfs_path_ = debugfs_path;
   }
 };
-
-TEST_F(ECCollectorTest, TestNoConsent) {
-  s_consent_given = false;
-  PreparePanicInfo(true, false);
-  ASSERT_TRUE(collector_.Collect());
-  ASSERT_TRUE(FindLog("(ignoring - no consent)"));
-  EXPECT_EQ(collector_.get_bytes_written(), 0);
-}
 
 TEST_F(ECCollectorTest, TestNoCrash) {
   PreparePanicInfo(false, false);
