@@ -50,6 +50,10 @@ UserState::UserState(org::chromium::SessionManagerInterfaceProxy* sm_proxy,
 
 UserState::UserState() : weak_ptr_factory_(this), counter_min_(0) {}
 
+bool UserState::HasUser() {
+  return user_.has_value() && sanitized_user_.has_value();
+}
+
 base::Optional<std::string> UserState::GetUser() {
   if (user_.has_value()) {
     return *user_;

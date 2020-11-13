@@ -89,12 +89,12 @@ class WebAuthnHandler {
   // Tests validity and/or presence of specified credentials.
   HasCredentialsResponse HasCredentials(const HasCredentialsRequest& request);
 
-  // Dismiss user verification UI and abort the operation. This is expected to
+  // Dismisses user verification UI and abort the operation. This is expected to
   // be called by the browser only in UV operations, because UP operations
   // themselves will timeout after ~5 seconds.
   CancelWebAuthnFlowResponse Cancel(const CancelWebAuthnFlowRequest& request);
 
-  // Check whether user-verifying platform authenticator is available.
+  // Checks whether user-verifying platform authenticator is available.
   void IsUvpaa(std::unique_ptr<IsUvpaaMethodResponse> method_response,
                const IsUvpaaRequest& request);
 
@@ -109,8 +109,9 @@ class WebAuthnHandler {
 
   bool Initialized();
 
-  // Fetch auth-time WebAuthn secret and keep the hash of it.
-  void GetWebAuthnSecret(const std::string& account_id);
+  // Fetches auth-time WebAuthn secret and keep the hash of it. Returns true on
+  // success, false otherwise.
+  bool GetWebAuthnSecret(const std::string& account_id);
 
   // Callbacks invoked when UI completes user verification flow.
   void HandleUVFlowResultMakeCredential(dbus::Response* flow_response);
@@ -146,7 +147,7 @@ class WebAuthnHandler {
       std::vector<uint8_t>* credential_id,
       std::vector<uint8_t>* credential_public_key);
 
-  // Repeatedly send u2f_generate request to the TPM if there's no presence.
+  // Repeatedly sends u2f_generate request to the TPM if there's no presence.
   template <typename Response>
   MakeCredentialResponse::MakeCredentialStatus SendU2fGenerateWaitForPresence(
       struct u2f_generate_req* generate_req,
@@ -167,7 +168,7 @@ class WebAuthnHandler {
       PresenceRequirement presence_requirement,
       std::vector<uint8_t>* signature);
 
-  // Repeatedly send u2f_sign request to the TPM if there's no presence.
+  // Repeatedly sends u2f_sign request to the TPM if there's no presence.
   template <typename Request>
   GetAssertionResponse::GetAssertionStatus SendU2fSignWaitForPresence(
       Request* sign_req,

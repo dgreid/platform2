@@ -5,6 +5,7 @@
 #ifndef U2FD_WEBAUTHN_STORAGE_H_
 #define U2FD_WEBAUTHN_STORAGE_H_
 
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -54,6 +55,11 @@ class WebAuthnStorage {
 
   virtual base::Optional<WebAuthnRecord> GetRecordByCredentialId(
       const std::string& credential_id);
+
+  // Writes auth-time secret hash to disk.
+  bool PersistAuthTimeSecretHash(const brillo::Blob& hash);
+  // Loads auth-time secret hash from disk.
+  std::unique_ptr<brillo::Blob> LoadAuthTimeSecretHash();
 
   // Sets the |allow_access_| which determines whether the backing storage
   // location can be accessed or not.

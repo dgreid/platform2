@@ -43,13 +43,16 @@ class UserState {
   // could not be persisted to disk.
   virtual bool IncrementCounter();
 
-  // Called when a primary session started, with the username.
+  // Sets a callback that is invoked when a primary session started, with the
+  // username.
   virtual void SetSessionStartedCallback(
       base::RepeatingCallback<void(const std::string&)> callback);
-  // Called when the user session stopped.
+  // Sets a callback that is invoked when the user session stopped.
   virtual void SetSessionStoppedCallback(
       base::RepeatingCallback<void()> callback);
 
+  // Returns if there is a known primary session username.
+  virtual bool HasUser();
   // Returns the known primary session username.
   virtual base::Optional<std::string> GetUser();
   // Returns the sanitized username.
