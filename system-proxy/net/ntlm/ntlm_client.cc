@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "net/ntlm/ntlm_client.h"
+#include "system-proxy/net/ntlm/ntlm_client.h"
 
 #include <string.h>
 #include <vector>
@@ -10,10 +10,10 @@
 #include "base/check_op.h"
 #include "base/containers/span.h"
 #include "base/strings/utf_string_conversions.h"
-#include "net/ntlm/ntlm.h"
-#include "net/ntlm/ntlm_buffer_reader.h"
-#include "net/ntlm/ntlm_buffer_writer.h"
-#include "net/ntlm/ntlm_constants.h"
+#include "system-proxy/net/ntlm/ntlm.h"
+#include "system-proxy/net/ntlm/ntlm_buffer_reader.h"
+#include "system-proxy/net/ntlm/ntlm_buffer_writer.h"
+#include "system-proxy/net/ntlm/ntlm_constants.h"
 
 namespace net {
 namespace ntlm {

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "net/ntlm/ntlm_client.h"
+#include "system-proxy/net/ntlm/ntlm_client.h"
 
 #include <string>
 #include <utility>
@@ -12,10 +12,10 @@
 #include "base/stl_util.h"
 #include "base/strings/string_util.h"
 #include "build/build_config.h"
-#include "net/ntlm/ntlm.h"
-#include "net/ntlm/ntlm_buffer_reader.h"
-#include "net/ntlm/ntlm_buffer_writer.h"
-#include "net/ntlm/ntlm_test_data.h"
+#include "system-proxy/net/ntlm/ntlm.h"
+#include "system-proxy/net/ntlm/ntlm_buffer_reader.h"
+#include "system-proxy/net/ntlm/ntlm_buffer_writer.h"
+#include "system-proxy/net/ntlm/ntlm_test_data.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace net {

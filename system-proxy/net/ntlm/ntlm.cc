@@ -2,10 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "net/ntlm/ntlm.h"
+#include "system-proxy/net/ntlm/ntlm.h"
 
-#include <string>
+#include <algorithm>
+#include <string.h>
 #include <utility>
+
+#include <crypto/scoped_openssl_types.h>
+#include <openssl/des.h>
+#include <openssl/hmac.h>
+#include <openssl/md4.h>
+#include <openssl/md5.h>
 
 #include "base/check_op.h"
 #include "base/containers/span.h"
@@ -13,13 +20,8 @@
 #include "base/notreached.h"
 #include "base/strings/string_util.h"
 #include "base/strings/utf_string_conversions.h"
-#include "net/base/net_string_util.h"
-#include "net/ntlm/ntlm_buffer_writer.h"
-#include "net/ntlm/ntlm_constants.h"
-#include "third_party/boringssl/src/include/openssl/des.h"
-#include "third_party/boringssl/src/include/openssl/hmac.h"
-#include "third_party/boringssl/src/include/openssl/md4.h"
-#include "third_party/boringssl/src/include/openssl/md5.h"
+#include "system-proxy/net/ntlm/ntlm_buffer_writer.h"
+#include "system-proxy/net/ntlm/ntlm_constants.h"
 
 namespace net {
 namespace ntlm {
@@ -213,8 +215,8 @@ void GenerateResponseDesl(base::span<const uint8_t, kNtlmHashLen> hash,
     DES_key_schedule key_schedule;
     DES_set_odd_parity(key_block);
     DES_set_key(key_block, &key_schedule);
-    DES_ecb_encrypt(challenge_block, response_block, &key_schedule,
-                    DES_ENCRYPT);
+    DES_ecb_encrypt(const_cast<DES_cblock*>(challenge_block), response_block,
+                    &key_schedule, DES_ENCRYPT);
   }
 }
 
@@ -295,9 +297,7 @@ void GenerateNtlmHashV2(const base::string16& domain,
                         base::span<uint8_t, kNtlmHashLen> v2_hash) {
   // NOTE: According to [MS-NLMP] Section 3.3.2 only the username and not the
   // domain is uppercased.
-  base::string16 upper_username;
-  bool result = ToUpper(username, &upper_username);
-  DCHECK(result);
+  base::string16 upper_username = base::ToUpperASCII(username);
 
   // TODO(https://crbug.com/1051924): Using a locale-sensitive upper casing
   // algorithm is problematic. A more predictable approach is to only uppercase
@@ -344,7 +344,7 @@ void GenerateNtlmProofV2(
     base::span<const uint8_t, kProofInputLenV2> v2_input,
     base::span<const uint8_t> target_info,
     base::span<uint8_t, kNtlmProofLenV2> v2_proof) {
-  bssl::ScopedHMAC_CTX ctx;
+  crypto::ScopedHMAC_CTX ctx(HMAC_CTX_new());
   HMAC_Init_ex(ctx.get(), v2_hash.data(), kNtlmHashLen, EVP_md5(), NULL);
   DCHECK_EQ(kNtlmProofLenV2, HMAC_size(ctx.get()));
   HMAC_Update(ctx.get(), server_challenge.data(), kChallengeLen);
@@ -389,7 +389,7 @@ void GenerateMicV2(base::span<const uint8_t, kSessionKeyLenV2> session_key,
                    base::span<const uint8_t> challenge_msg,
                    base::span<const uint8_t> authenticate_msg,
                    base::span<uint8_t, kMicLenV2> mic) {
-  bssl::ScopedHMAC_CTX ctx;
+  crypto::ScopedHMAC_CTX ctx(HMAC_CTX_new());
   HMAC_Init_ex(ctx.get(), session_key.data(), kSessionKeyLenV2, EVP_md5(),
                NULL);
   DCHECK_EQ(kMicLenV2, HMAC_size(ctx.get()));

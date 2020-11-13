@@ -48,6 +48,7 @@ pkg_config("target_defaults") {
     "libminijail",
     "libpatchpanel-client",
     "libpatchpanel-util",
+    "openssl",
 
     # system_api depends on protobuf (or protobuf-lite). It must
     # appear before protobuf or the linker flags won't be in the right
@@ -68,6 +69,16 @@ static_library("libsystemproxy") {
   configs += [ ":target_defaults" ]
   sources = [
     "kerberos_client.cc",
+    "net/ntlm/ntlm.cc",
+    "net/ntlm/ntlm.h",
+    "net/ntlm/ntlm_buffer_reader.cc",
+    "net/ntlm/ntlm_buffer_reader.h",
+    "net/ntlm/ntlm_buffer_writer.cc",
+    "net/ntlm/ntlm_buffer_writer.h",
+    "net/ntlm/ntlm_client.cc",
+    "net/ntlm/ntlm_client.h",
+    "net/ntlm/ntlm_constants.cc",
+    "net/ntlm/ntlm_constants.h",
     "protobuf_util.cc",
     "sandboxed_worker.cc",
     "system_proxy_adaptor.cc",
@@ -126,6 +137,11 @@ if (use.test) {
     sources = [
       "http_util_test.cc",
       "kerberos_client_test.cc",
+      "net/ntlm/ntlm_buffer_reader_test.cc",
+      "net/ntlm/ntlm_buffer_writer_test.cc",
+      "net/ntlm/ntlm_client_test.cc",
+      "net/ntlm/ntlm_test.cc",
+      "net/ntlm/ntlm_test_data.h",
       "proxy_connect_job_test.cc",
       "server_proxy_test.cc",
       "system_proxy_adaptor_test.cc",

@@ -11,7 +11,7 @@
 //
 // [1] https://msdn.microsoft.com/en-us/library/cc236621.aspx
 
-#include "net/ntlm/ntlm.h"
+#include "system-proxy/net/ntlm/ntlm.h"
 
 #include <algorithm>
 #include <iterator>
@@ -21,7 +21,7 @@
 #include "base/stl_util.h"
 #include "base/strings/string16.h"
 #include "base/strings/utf_string_conversions.h"
-#include "net/ntlm/ntlm_test_data.h"
+#include "system-proxy/net/ntlm/ntlm_test_data.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace net {

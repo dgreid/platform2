@@ -11,7 +11,6 @@
 #include <vector>
 
 #include "base/stl_util.h"
-#include "net/base/net_export.h"
 
 namespace net {
 namespace ntlm {
@@ -130,7 +129,7 @@ constexpr TargetInfoAvFlags operator&(TargetInfoAvFlags lhs,
 // other AvPairs the value of these 2 fields is undefined and the payload
 // is in the |buffer| field. For these fields the payload is copied verbatim
 // and it's content is not read or validated in any way.
-struct NET_EXPORT_PRIVATE AvPair {
+struct AvPair {
   AvPair();
   AvPair(TargetInfoAvId avid, uint16_t avlen);
   AvPair(TargetInfoAvId avid, std::vector<uint8_t> buffer);

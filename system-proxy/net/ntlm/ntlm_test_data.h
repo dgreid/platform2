@@ -16,7 +16,7 @@
 #ifndef SYSTEM_PROXY_NET_NTLM_NTLM_TEST_DATA_H_
 #define SYSTEM_PROXY_NET_NTLM_NTLM_TEST_DATA_H_
 
-#include "net/ntlm/ntlm_constants.h"
+#include "system-proxy/net/ntlm/ntlm_constants.h"
 
 namespace net {
 namespace ntlm {
@@ -43,12 +43,60 @@ constexpr char kUserAscii[] = "User";
 constexpr char kHostnameAscii[] = "COMPUTER";
 
 // Test data obtained from [2].
-constexpr char kChannelBindings[] = {
-    't',  'l',  's',  '-',  's',  'e',  'r',  'v',  'e',  'r',  '-',
-    'e',  'n',  'd',  '-',  'p',  'o',  'i',  'n',  't',  ':',  0xea,
-    0x05, 0xfe, 0xfe, 0xcc, 0x6b, 0x0b, 0xd5, 0x71, 0xdb, 0xbc, 0x5b,
-    0xaa, 0x3e, 0xd4, 0x53, 0x86, 0xd0, 0x44, 0x68, 0x35, 0xf7, 0xb7,
-    0x4c, 0x85, 0x62, 0x1b, 0x99, 0x83, 0x47, 0x5f, 0x95, '\0'};
+constexpr char kChannelBindings[] = {'t',
+                                     'l',
+                                     's',
+                                     '-',
+                                     's',
+                                     'e',
+                                     'r',
+                                     'v',
+                                     'e',
+                                     'r',
+                                     '-',
+                                     'e',
+                                     'n',
+                                     'd',
+                                     '-',
+                                     'p',
+                                     'o',
+                                     'i',
+                                     'n',
+                                     't',
+                                     ':',
+                                     static_cast<char>(0xea),
+                                     static_cast<char>(0x05),
+                                     static_cast<char>(0xfe),
+                                     static_cast<char>(0xfe),
+                                     static_cast<char>(0xcc),
+                                     static_cast<char>(0x6b),
+                                     static_cast<char>(0x0b),
+                                     static_cast<char>(0xd5),
+                                     static_cast<char>(0x71),
+                                     static_cast<char>(0xdb),
+                                     static_cast<char>(0xbc),
+                                     static_cast<char>(0x5b),
+                                     static_cast<char>(0xaa),
+                                     static_cast<char>(0x3e),
+                                     static_cast<char>(0xd4),
+                                     static_cast<char>(0x53),
+                                     static_cast<char>(0x86),
+                                     static_cast<char>(0xd0),
+                                     static_cast<char>(0x44),
+                                     static_cast<char>(0x68),
+                                     static_cast<char>(0x35),
+                                     static_cast<char>(0xf7),
+                                     static_cast<char>(0xb7),
+                                     static_cast<char>(0x4c),
+                                     static_cast<char>(0x85),
+                                     static_cast<char>(0x62),
+                                     static_cast<char>(0x1b),
+                                     static_cast<char>(0x99),
+                                     static_cast<char>(0x83),
+                                     static_cast<char>(0x47),
+                                     static_cast<char>(0x5f),
+                                     static_cast<char>(0x95),
+                                     '\0'};
 
 constexpr char kNtlmSpn[] = {'H', 'T', 'T', 'P', '/', 'S',
                              'e', 'r', 'v', 'e', 'r', '\0'};
