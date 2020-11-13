@@ -63,7 +63,6 @@ _IUSE = [
     'double_extend_pcr_issue',
     'enable_slow_boot_notify',
     'fake_drivefs_launcher',
-    'fast_transition',
     'feedback',
     'fp_on_power_button',
     'ftdi_tpm',

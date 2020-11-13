@@ -552,10 +552,7 @@ TEST_F(WiFiServiceTest, ConnectTaskFT) {
 
     wifi_service->Connect(nullptr, "in test");
     KeyValueStore params = wifi_service->GetSupplicantConfigurationParameters();
-    string default_key_mgmt = "WPA-PSK";
-#if !defined(DISABLE_FT)
-    default_key_mgmt += " FT-PSK";
-#endif  // DISABLE_FT
+    string default_key_mgmt = "WPA-PSK FT-PSK";
     EXPECT_EQ(
         default_key_mgmt,
         params.Get<string>(WPASupplicant::kNetworkPropertyEapKeyManagement));
@@ -582,10 +579,7 @@ TEST_F(WiFiServiceTest, ConnectTaskFT) {
     manager()->props_.ft_enabled = base::nullopt;
     wifi_service->Connect(nullptr, "in test");
     KeyValueStore params = wifi_service->GetSupplicantConfigurationParameters();
-    string default_key_mgmt = "WPA-EAP";
-#if !defined(DISABLE_FT)
-    default_key_mgmt += " FT-EAP";
-#endif  // DISABLE_FT
+    string default_key_mgmt = "WPA-EAP FT-EAP";
     EXPECT_EQ(
         default_key_mgmt,
         params.Get<string>(WPASupplicant::kNetworkPropertyEapKeyManagement));

@@ -1351,11 +1351,7 @@ bool Manager::GetFTEnabled(Error* error) {
   if (props_.ft_enabled.has_value()) {
     return props_.ft_enabled.value();
   }
-#if !defined(DISABLE_FT)
   return true;
-#else
-  return false;
-#endif  // DISABLE_FT
 }
 #endif  // DISABLE_WIFI
 

@@ -72,10 +72,6 @@ pkg_config("target_defaults") {
     defines += [ "DISABLE_DHCPV6" ]
   }
 
-  if (!use.fast_transition) {
-    defines += [ "DISABLE_FT" ]
-  }
-
   if (!use.pppoe) {
     defines += [ "DISABLE_PPPOE" ]
   }
