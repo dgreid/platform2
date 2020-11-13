@@ -10,7 +10,10 @@
 #include <utility>
 #include <vector>
 
+#include <base/files/file_util.h>
 #include <base/no_destructor.h>
+#include <base/optional.h>
+#include <base/unguessable_token.h>
 #include <mojo/core/embedder/embedder.h>
 #include <mojo/core/embedder/scoped_ipc_support.h>
 #include <gtest/gtest.h>
@@ -20,6 +23,24 @@
 #include "cros-camera/constants.h"
 #include "cros-camera/future.h"
 #include "cros-camera/ipc_util.h"
+#include "mojo/unguessable_token.mojom.h"
+
+namespace {
+
+base::UnguessableToken ReadTestClientToken() {
+  static constexpr char kTestClientTokenPath[] =
+      "/run/camera_tokens/testing/token";
+
+  base::FilePath token_path(kTestClientTokenPath);
+  std::string token_string;
+  if (!base::ReadFileToString(token_path, &token_string)) {
+    LOGF(ERROR) << "Failed to read token for test client";
+    return {};
+  }
+  return cros::TokenFromString(token_string);
+}
+
+}  // namespace
 
 namespace camera3_test {
 
@@ -220,10 +241,20 @@ void CameraHalClient::ConnectToDispatcher(base::Callback<void(int)> callback) {
     return;
   }
 
+  base::UnguessableToken token = ReadTestClientToken();
+  if (token.is_empty()) {
+    LOGF(ERROR) << "Failed to read test client token";
+    callback.Run(-EIO);
+    return;
+  }
+  auto mojo_token = mojo_base::mojom::UnguessableToken::New();
+  mojo_token->high = token.GetHighForSerialization();
+  mojo_token->low = token.GetLowForSerialization();
   cros::mojom::CameraHalClientPtr client_ptr;
   camera_hal_client_.Bind(mojo::MakeRequest(&client_ptr));
-  dispatcher_->RegisterClient(std::move(client_ptr));
-  callback.Run(0);
+  dispatcher_->RegisterClientWithToken(
+      std::move(client_ptr), cros::mojom::CameraClientType::TESTING,
+      std::move(mojo_token), std::move(callback));
 }
 
 void CameraHalClient::SetUpChannel(cros::mojom::CameraModulePtr camera_module) {

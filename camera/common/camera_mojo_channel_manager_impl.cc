@@ -64,7 +64,7 @@ base::UnguessableToken ReadServerToken() {
     LOGF(ERROR) << "Failed to read server token";
     return {};
   }
-  return TokenFromString(token_string);
+  return cros::TokenFromString(token_string);
 }
 
 }  // namespace
