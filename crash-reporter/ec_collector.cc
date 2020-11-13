@@ -85,11 +85,13 @@ bool ECCollector::Collect() {
     std::string output;
     int err =
         util::RunAndCaptureOutput(&panicinfo_parser, STDOUT_FILENO, &output);
-    if (err) {
-      PLOG(ERROR) << "Failed to parse EC crash. Error=" << err;
+    if (err < 0) {
+      PLOG(ERROR) << "Failed to run ec_parse_panicinfo. Error=" << err;
       return true;
     }
-    len = output.length();
+    if (err > 0) {
+      output.assign(data, len);
+    }
 
     std::string dump_basename =
         FormatDumpBasename(kECExecName, time(nullptr), 0);
@@ -99,8 +101,8 @@ bool ECCollector::Collect() {
     // We must use WriteNewFile instead of base::WriteFile as we
     // do not want to write with root access to a symlink that an attacker
     // might have created.
-    if (WriteNewFile(ec_crash_path, output.c_str(), len) !=
-        static_cast<int>(len)) {
+    if (WriteNewFile(ec_crash_path, output.c_str(), output.size()) !=
+        static_cast<int>(output.size())) {
       PLOG(ERROR) << "Failed to write EC dump to "
                   << ec_crash_path.value().c_str();
       return true;
