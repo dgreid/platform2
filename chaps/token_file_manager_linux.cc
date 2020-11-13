@@ -86,7 +86,7 @@ bool TokenFileManager::CreateUserTokenDirectory(const FilePath& token_path) {
     return false;
   }
   SecureBlob salt(salt_string);
-  ClearString(&salt_string);
+  brillo::SecureClear(&salt_string);
 
   FilePath salt_file = token_path.Append(kSaltFileName);
   int bytes_written = base::WriteFile(
@@ -134,7 +134,7 @@ bool TokenFileManager::SaltAuthData(const FilePath& token_path,
     return false;
   }
   SecureBlob salt(salt_string);
-  ClearString(&salt_string);
+  brillo::SecureClear(&salt_string);
   if (salt.size() != kSaltBytes) {
     LOG(ERROR) << "Salt invalid for token directory " << token_path.value();
     return false;

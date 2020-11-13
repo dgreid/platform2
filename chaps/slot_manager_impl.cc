@@ -345,7 +345,7 @@ bool TokenInitThread::InitializeKeyHierarchy(SecureBlob* master_key) {
     LOG(ERROR) << "Failed to write key hierarchy blobs.";
     return false;
   }
-  ClearString(&master_key_str);
+  brillo::SecureClear(&master_key_str);
   return true;
 }
 
@@ -593,7 +593,7 @@ bool SlotManagerImpl::OpenIsolate(SecureBlob* isolate_credential,
                  kIsolateCredentialBytes);
     }
     SecureBlob new_isolate_credential(credential_string);
-    ClearString(&credential_string);
+    brillo::SecureClear(&credential_string);
 
     if (isolate_map_.find(new_isolate_credential) != isolate_map_.end()) {
       // A collision on 128 bits should be extremely unlikely if the random
@@ -731,7 +731,7 @@ bool SlotManagerImpl::LoadSoftwareToken(const SecureBlob& auth_data,
     return InitializeSoftwareToken(auth_data, object_pool);
   }
   SecureBlob master_key(master_key_str);
-  ClearString(&master_key_str);
+  brillo::SecureClear(&master_key_str);
   if (!object_pool->SetEncryptionKey(master_key)) {
     LOG(ERROR) << "SetEncryptionKey failed.";
     return false;
@@ -904,7 +904,7 @@ void SlotManagerImpl::ChangeTokenAuthData(const FilePath& path,
       LOG(ERROR) << "Failed to encrypt master key with new auth data.";
       return;
     }
-    ClearString(&master_key);
+    brillo::SecureClear(&master_key);
     // Write out the new blobs.
     SecureBlob new_auth_key_mac =
         Sha256(SecureBlob::Combine(new_auth_data, SecureBlob(kKeyPurposeMac)));

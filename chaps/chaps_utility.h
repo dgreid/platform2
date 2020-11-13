@@ -300,14 +300,6 @@ bool RunCipher(bool is_encrypt,
 // Returns true if the given attribute type has an integral value.
 bool IsIntegralAttribute(CK_ATTRIBUTE_TYPE type);
 
-inline void ClearString(std::string* str) {
-  brillo::SecureClear(base::data(*str), str->length());
-}
-
-inline void ClearVector(std::vector<uint8_t>* vector) {
-  brillo::SecureClear(vector->data(), vector->size());
-}
-
 // TODO(crbug/916023): Move pure OpenSSL conversion wrappers to a cross daemon
 // library.
 //
