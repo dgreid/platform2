@@ -41,6 +41,33 @@ void RoutineParameterFetcher::GetBatteryHealthParameters(
                       percent_battery_wear_allowed_out);
 }
 
+void RoutineParameterFetcher::GetPrimeSearchParameters(
+    base::Optional<uint64_t>* max_num_out) const {
+  FetchUint64Parameter(kPrimeSearchPropertiesPath, kMaxNumProperty,
+                       max_num_out);
+}
+
+void RoutineParameterFetcher::FetchUint64Parameter(
+    const std::string& path,
+    const std::string& parameter_name,
+    base::Optional<uint64_t>* parameter_out) const {
+  DCHECK(parameter_out);
+
+  // Assume the property cannot be fetched.
+  *parameter_out = base::nullopt;
+
+  std::string parameter_str;
+  if (cros_config_->GetString(path, parameter_name, &parameter_str)) {
+    uint64_t parameter;
+    if (base::StringToUint64(parameter_str, &parameter))
+      *parameter_out = parameter;
+  } else {
+    LOG(ERROR) << base::StringPrintf(
+        "Failed to convert cros_config value: %s to uint64_t.",
+        parameter_str.c_str());
+  }
+}
+
 void RoutineParameterFetcher::FetchUint32Parameter(
     const std::string& path,
     const std::string& parameter_name,

@@ -8,6 +8,7 @@
 #include <string>
 #include <vector>
 
+#include "diagnostics/cros_healthd/routines/shared_defaults.h"
 #include "diagnostics/cros_healthd/routines/subproc_routine.h"
 
 namespace diagnostics {
@@ -20,12 +21,14 @@ constexpr char kFloatingPointAccuracyTestExePath[] =
 }  // namespace
 
 std::unique_ptr<DiagnosticRoutine> CreateFloatingPointAccuracyRoutine(
-    base::TimeDelta exec_duration) {
-  std::string duration_value = std::to_string(exec_duration.InSeconds());
+    const base::Optional<base::TimeDelta>& exec_duration) {
+  uint32_t duration_in_seconds =
+      exec_duration.value_or(kDefaultCpuStressRuntime).InSeconds();
   return std::make_unique<SubprocRoutine>(
       base::CommandLine(std::vector<std::string>{
-          kFloatingPointAccuracyTestExePath, "--duration=" + duration_value}),
-      exec_duration.InSeconds());
+          kFloatingPointAccuracyTestExePath,
+          "--duration=" + std::to_string(duration_in_seconds)}),
+      duration_in_seconds);
 }
 
 }  // namespace diagnostics

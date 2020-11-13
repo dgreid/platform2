@@ -294,7 +294,8 @@ void RoutineService::RunRoutine(const grpc_api::RunRoutineRequest& request,
       DCHECK_EQ(request.parameters_case(),
                 grpc_api::RunRoutineRequest::kCpuParams);
       service_ptr_->RunCpuCacheRoutine(
-          request.cpu_params().length_seconds(),
+          chromeos::cros_healthd::mojom::NullableUint32::New(
+              request.cpu_params().length_seconds()),
           base::Bind(&RoutineService::ForwardRunRoutineResponse,
                      weak_ptr_factory_.GetWeakPtr(), callback_key));
       break;
@@ -302,7 +303,8 @@ void RoutineService::RunRoutine(const grpc_api::RunRoutineRequest& request,
       DCHECK_EQ(request.parameters_case(),
                 grpc_api::RunRoutineRequest::kCpuParams);
       service_ptr_->RunCpuStressRoutine(
-          request.cpu_params().length_seconds(),
+          chromeos::cros_healthd::mojom::NullableUint32::New(
+              request.cpu_params().length_seconds()),
           base::Bind(&RoutineService::ForwardRunRoutineResponse,
                      weak_ptr_factory_.GetWeakPtr(), callback_key));
       break;
@@ -310,7 +312,8 @@ void RoutineService::RunRoutine(const grpc_api::RunRoutineRequest& request,
       DCHECK_EQ(request.parameters_case(),
                 grpc_api::RunRoutineRequest::kFloatingPointAccuracyParams);
       service_ptr_->RunFloatingPointAccuracyRoutine(
-          request.floating_point_accuracy_params().length_seconds(),
+          chromeos::cros_healthd::mojom::NullableUint32::New(
+              request.floating_point_accuracy_params().length_seconds()),
           base::Bind(&RoutineService::ForwardRunRoutineResponse,
                      weak_ptr_factory_.GetWeakPtr(), callback_key));
       break;
@@ -362,8 +365,8 @@ void RoutineService::RunRoutine(const grpc_api::RunRoutineRequest& request,
       DCHECK_EQ(request.parameters_case(),
                 grpc_api::RunRoutineRequest::kPrimeSearchParams);
       service_ptr_->RunPrimeSearchRoutine(
-          request.prime_search_params().length_seconds(),
-          request.prime_search_params().max_num(),
+          chromeos::cros_healthd::mojom::NullableUint32::New(
+              request.prime_search_params().length_seconds()),
           base::Bind(&RoutineService::ForwardRunRoutineResponse,
                      weak_ptr_factory_.GetWeakPtr(), callback_key));
       break;

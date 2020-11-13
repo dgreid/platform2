@@ -20,6 +20,7 @@
 #include <brillo/flag_helper.h>
 
 #include "diagnostics/cros_health_tool/diag/diag_actions.h"
+#include "diagnostics/cros_healthd/routines/shared_defaults.h"
 #include "diagnostics/cros_healthd/routines/urandom/urandom.h"
 #include "mojo/cros_healthd_diagnostics.mojom.h"
 
@@ -88,6 +89,12 @@ int diag_main(int argc, char** argv) {
                 kUrandomDefaultLengthSeconds.InSeconds(),
                 "Number of seconds to run the urandom routine for.");
 
+  // Flag shared by the CPU stress, CPU cache, floating point accuracy and prime
+  // search routines.
+  DEFINE_uint32(cpu_stress_length_seconds, kDefaultCpuStressRuntime.InSeconds(),
+                "Number of seconds to run the {cpu_stress, cpu_cache, "
+                "floating_point_accuracy, prime_search} routine for.");
+
   DEFINE_uint32(length_seconds, 10,
                 "Number of seconds to run the routine for.");
   DEFINE_bool(ac_power_is_connected, true,
@@ -107,9 +114,6 @@ int diag_main(int argc, char** argv) {
   DEFINE_string(disk_read_routine_type, "linear",
                 "Disk read routine type for the disk_read routine. Options are:"
                 "\n\tlinear - linear read.\n\trandom - random read.");
-  DEFINE_uint64(max_num, 1000000,
-                "max. prime number to search for in "
-                "prime-search routine. Max. is 1000000");
   DEFINE_uint32(maximum_discharge_percent_allowed, 100,
                 "Upper bound for the battery discharge routine.");
   DEFINE_uint32(minimum_charge_percent_required, 0,
@@ -179,15 +183,15 @@ int diag_main(int argc, char** argv) {
         break;
       case mojo_ipc::DiagnosticRoutineEnum::kCpuCache:
         routine_result = actions.ActionRunCpuCacheRoutine(
-            base::TimeDelta().FromSeconds(FLAGS_length_seconds));
+            base::TimeDelta().FromSeconds(FLAGS_cpu_stress_length_seconds));
         break;
       case mojo_ipc::DiagnosticRoutineEnum::kCpuStress:
         routine_result = actions.ActionRunCpuStressRoutine(
-            base::TimeDelta().FromSeconds(FLAGS_length_seconds));
+            base::TimeDelta().FromSeconds(FLAGS_cpu_stress_length_seconds));
         break;
       case mojo_ipc::DiagnosticRoutineEnum::kFloatingPointAccuracy:
         routine_result = actions.ActionRunFloatingPointAccuracyRoutine(
-            base::TimeDelta::FromSeconds(FLAGS_length_seconds));
+            base::TimeDelta::FromSeconds(FLAGS_cpu_stress_length_seconds));
         break;
       case mojo_ipc::DiagnosticRoutineEnum::kNvmeWearLevel:
         routine_result =
@@ -216,7 +220,7 @@ int diag_main(int argc, char** argv) {
         break;
       case mojo_ipc::DiagnosticRoutineEnum::kPrimeSearch:
         routine_result = actions.ActionRunPrimeSearchRoutine(
-            base::TimeDelta::FromSeconds(FLAGS_length_seconds), FLAGS_max_num);
+            base::TimeDelta::FromSeconds(FLAGS_cpu_stress_length_seconds));
         break;
       case mojo_ipc::DiagnosticRoutineEnum::kBatteryDischarge:
         routine_result = actions.ActionRunBatteryDischargeRoutine(

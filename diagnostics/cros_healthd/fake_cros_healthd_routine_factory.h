@@ -57,11 +57,11 @@ class FakeCrosHealthdRoutineFactory final : public CrosHealthdRoutineFactory {
       chromeos::cros_healthd::mojom::AcPowerStatusEnum expected_status,
       const base::Optional<std::string>& expected_power_type) override;
   std::unique_ptr<DiagnosticRoutine> MakeCpuCacheRoutine(
-      base::TimeDelta exec_duration) override;
+      const base::Optional<base::TimeDelta>& exec_duration) override;
   std::unique_ptr<DiagnosticRoutine> MakeCpuStressRoutine(
-      base::TimeDelta exec_duration) override;
+      const base::Optional<base::TimeDelta>& exec_duration) override;
   std::unique_ptr<DiagnosticRoutine> MakeFloatingPointAccuracyRoutine(
-      base::TimeDelta exec_duration) override;
+      const base::Optional<base::TimeDelta>& exec_duration) override;
   std::unique_ptr<DiagnosticRoutine> MakeNvmeWearLevelRoutine(
       DebugdAdapter* debugd_adapter, uint32_t wear_level_threshold) override;
   std::unique_ptr<DiagnosticRoutine> MakeNvmeSelfTestRoutine(
@@ -73,7 +73,7 @@ class FakeCrosHealthdRoutineFactory final : public CrosHealthdRoutineFactory {
       base::TimeDelta exec_duration,
       uint32_t file_size_mb) override;
   std::unique_ptr<DiagnosticRoutine> MakePrimeSearchRoutine(
-      base::TimeDelta exec_duration, uint64_t max_num) override;
+      const base::Optional<base::TimeDelta>& exec_duration) override;
   std::unique_ptr<DiagnosticRoutine> MakeBatteryDischargeRoutine(
       base::TimeDelta exec_duration,
       uint32_t maximum_discharge_percent_allowed) override;

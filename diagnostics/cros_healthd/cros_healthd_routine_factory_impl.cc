@@ -89,19 +89,19 @@ CrosHealthdRoutineFactoryImpl::MakeAcPowerRoutine(
 
 std::unique_ptr<DiagnosticRoutine>
 CrosHealthdRoutineFactoryImpl::MakeCpuCacheRoutine(
-    base::TimeDelta exec_duration) {
+    const base::Optional<base::TimeDelta>& exec_duration) {
   return CreateCpuCacheRoutine(exec_duration);
 }
 
 std::unique_ptr<DiagnosticRoutine>
 CrosHealthdRoutineFactoryImpl::MakeCpuStressRoutine(
-    base::TimeDelta exec_duration) {
+    const base::Optional<base::TimeDelta>& exec_duration) {
   return CreateCpuStressRoutine(exec_duration);
 }
 
 std::unique_ptr<DiagnosticRoutine>
 CrosHealthdRoutineFactoryImpl::MakeFloatingPointAccuracyRoutine(
-    base::TimeDelta exec_duration) {
+    const base::Optional<base::TimeDelta>& exec_duration) {
   return CreateFloatingPointAccuracyRoutine(exec_duration);
 }
 
@@ -138,7 +138,9 @@ CrosHealthdRoutineFactoryImpl::MakeDiskReadRoutine(
 
 std::unique_ptr<DiagnosticRoutine>
 CrosHealthdRoutineFactoryImpl::MakePrimeSearchRoutine(
-    base::TimeDelta exec_duration, uint64_t max_num) {
+    const base::Optional<base::TimeDelta>& exec_duration) {
+  base::Optional<uint64_t> max_num;
+  parameter_fetcher_->GetPrimeSearchParameters(&max_num);
   return CreatePrimeSearchRoutine(exec_duration, max_num);
 }
 

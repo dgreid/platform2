@@ -53,7 +53,10 @@ class DiagActions final {
       uint32_t maximum_discharge_percent_allowed);
   bool ActionRunBatteryHealthRoutine();
   bool ActionRunCaptivePortalRoutine();
-  bool ActionRunCpuCacheRoutine(base::TimeDelta exec_duration);
+  bool ActionRunCpuCacheRoutine(
+      const base::Optional<base::TimeDelta>& exec_duration);
+  bool ActionRunCpuStressRoutine(
+      const base::Optional<base::TimeDelta>& exec_duration);
   bool ActionRunDiskReadRoutine(
       chromeos::cros_healthd::mojom::DiskReadRoutineTypeEnum type,
       base::TimeDelta exec_duration,
@@ -61,8 +64,8 @@ class DiagActions final {
   bool ActionRunDnsLatencyRoutine();
   bool ActionRunDnsResolutionRoutine();
   bool ActionRunDnsResolverPresentRoutine();
-  bool ActionRunCpuStressRoutine(base::TimeDelta exec_duration);
-  bool ActionRunFloatingPointAccuracyRoutine(base::TimeDelta exec_duration);
+  bool ActionRunFloatingPointAccuracyRoutine(
+      const base::Optional<base::TimeDelta>& exec_duration);
   bool ActionRunGatewayCanBePingedRoutine();
   bool ActionRunHasSecureWiFiConnectionRoutine();
   bool ActionRunHttpFirewallRoutine();
@@ -71,8 +74,8 @@ class DiagActions final {
   bool ActionRunNvmeSelfTestRoutine(
       chromeos::cros_healthd::mojom::NvmeSelfTestTypeEnum nvme_self_test_type);
   bool ActionRunNvmeWearLevelRoutine(uint32_t wear_level_threshold);
-  bool ActionRunPrimeSearchRoutine(base::TimeDelta exec_duration,
-                                   uint64_t max_num);
+  bool ActionRunPrimeSearchRoutine(
+      const base::Optional<base::TimeDelta>& exec_duration);
   bool ActionRunSignalStrengthRoutine();
   bool ActionRunSmartctlCheckRoutine();
   bool ActionRunUrandomRoutine(

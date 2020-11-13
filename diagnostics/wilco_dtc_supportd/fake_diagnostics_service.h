@@ -55,12 +55,14 @@ class FakeDiagnosticsService final
       chromeos::cros_healthd::mojom::AcPowerStatusEnum expected_status,
       const base::Optional<std::string>& expected_power_type,
       RunAcPowerRoutineCallback callback) override;
-  void RunCpuCacheRoutine(uint32_t length_seconds,
-                          RunCpuCacheRoutineCallback callback) override;
-  void RunCpuStressRoutine(uint32_t length_seconds,
-                           RunCpuStressRoutineCallback callback) override;
+  void RunCpuCacheRoutine(
+      chromeos::cros_healthd::mojom::NullableUint32Ptr length_seconds,
+      RunCpuCacheRoutineCallback callback) override;
+  void RunCpuStressRoutine(
+      chromeos::cros_healthd::mojom::NullableUint32Ptr length_seconds,
+      RunCpuStressRoutineCallback callback) override;
   void RunFloatingPointAccuracyRoutine(
-      uint32_t length_seconds,
+      chromeos::cros_healthd::mojom::NullableUint32Ptr length_seconds,
       RunFloatingPointAccuracyRoutineCallback callback) override;
   void RunNvmeWearLevelRoutine(
       uint32_t wear_level_threshold,
@@ -73,9 +75,9 @@ class FakeDiagnosticsService final
       uint32_t length_seconds,
       uint32_t file_size_mb,
       RunDiskReadRoutineCallback callback) override;
-  void RunPrimeSearchRoutine(uint32_t length_seconds,
-                             uint64_t max_num,
-                             RunPrimeSearchRoutineCallback callback) override;
+  void RunPrimeSearchRoutine(
+      chromeos::cros_healthd::mojom::NullableUint32Ptr length_seconds,
+      RunPrimeSearchRoutineCallback callback) override;
   void RunBatteryDischargeRoutine(
       uint32_t length_seconds,
       uint32_t maximum_discharge_percent_allowed,

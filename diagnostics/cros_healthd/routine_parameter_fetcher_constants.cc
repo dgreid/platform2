@@ -10,6 +10,7 @@ const char kBatteryCapacityPropertiesPath[] =
     "/cros-healthd/routines/battery-capacity";
 const char kBatteryHealthPropertiesPath[] =
     "/cros-healthd/routines/battery-health";
+const char kPrimeSearchPropertiesPath[] = "/cros-healthd/routines/prime-search";
 
 const char kLowMahProperty[] = "low-mah";
 const char kHighMahProperty[] = "high-mah";
@@ -17,5 +18,7 @@ const char kHighMahProperty[] = "high-mah";
 const char kMaximumCycleCountProperty[] = "maximum-cycle-count";
 const char kPercentBatteryWearAllowedProperty[] =
     "percent-battery-wear-allowed";
+
+const char kMaxNumProperty[] = "max-num";
 
 }  // namespace diagnostics

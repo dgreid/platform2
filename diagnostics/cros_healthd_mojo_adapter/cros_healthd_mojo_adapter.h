@@ -66,11 +66,16 @@ class CrosHealthdMojoAdapter {
 
   // Runs the CPU cache routine.
   virtual chromeos::cros_healthd::mojom::RunRoutineResponsePtr
-  RunCpuCacheRoutine(base::TimeDelta exec_duration) = 0;
+  RunCpuCacheRoutine(const base::Optional<base::TimeDelta>& exec_duration) = 0;
 
   // Runs the CPU stress routine.
   virtual chromeos::cros_healthd::mojom::RunRoutineResponsePtr
-  RunCpuStressRoutine(base::TimeDelta exec_duration) = 0;
+  RunCpuStressRoutine(const base::Optional<base::TimeDelta>& exec_duration) = 0;
+
+  // Runs the floating-point-accuracy routine.
+  virtual chromeos::cros_healthd::mojom::RunRoutineResponsePtr
+  RunFloatingPointAccuracyRoutine(
+      const base::Optional<base::TimeDelta>& exec_duration) = 0;
 
   // Runs the NvmeWearLevel routine.
   virtual chromeos::cros_healthd::mojom::RunRoutineResponsePtr
@@ -90,7 +95,8 @@ class CrosHealthdMojoAdapter {
 
   // Runs the prime search routine.
   virtual chromeos::cros_healthd::mojom::RunRoutineResponsePtr
-  RunPrimeSearchRoutine(base::TimeDelta exec_duration, uint64_t max_num) = 0;
+  RunPrimeSearchRoutine(
+      const base::Optional<base::TimeDelta>& exec_duration) = 0;
 
   // Runs the battery discharge routine.
   virtual chromeos::cros_healthd::mojom::RunRoutineResponsePtr
@@ -151,10 +157,6 @@ class CrosHealthdMojoAdapter {
       int32_t id,
       chromeos::cros_healthd::mojom::DiagnosticRoutineCommandEnum command,
       bool include_output) = 0;
-
-  // Runs the floating-point-accuracy routine.
-  virtual chromeos::cros_healthd::mojom::RunRoutineResponsePtr
-  RunFloatingPointAccuracyRoutine(base::TimeDelta exec_duration) = 0;
 
   // Subscribes the client to Bluetooth events.
   virtual void AddBluetoothObserver(

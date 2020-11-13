@@ -34,6 +34,12 @@ struct GetBatteryHealthParametersTestParams {
   base::Optional<uint8_t> expected_percent_battery_wear_allowed_out;
 };
 
+// POD struct for GetPrimeSearchParametersTest.
+struct GetPrimeSearchParametersTestParams {
+  base::Optional<std::string> max_num_in;
+  base::Optional<uint64_t> expected_max_num_out;
+};
+
 }  // namespace
 
 class RoutineParameterFetcherTest : public testing::Test {
@@ -242,5 +248,46 @@ INSTANTIATE_TEST_SUITE_P(
                         /*percent_battery_wear_allowed_in=*/"50",
                         /*expected_maximum_cycle_count_out=*/1000,
                         /*percent_battery_wear_allowed_out=*/50}));
+
+// Tests for the GetPrimeSearchParameters() method of RoutineParameterFetcher
+// with different values present in cros_config.
+//
+// This is a parameterized test with the following parameters (accessed
+// through the GetPrimeSearchParametersTestParams POD struct):
+// * |max_num_in| - If specified, will be written to cros_config's max_num
+// property.
+// * |expected_max_num_out| - Expected value of
+// |max_num_out| after GetPrimeSearchParameters() returns.
+class GetPrimeSearchParametersTest
+    : public RoutineParameterFetcherTest,
+      public testing::WithParamInterface<GetPrimeSearchParametersTestParams> {
+ protected:
+  // Accessors to the test parameters returned by gtest's GetParam():
+  GetPrimeSearchParametersTestParams params() const { return GetParam(); }
+};
+
+// Test that GetBatteryHealthParameters() returns correct values.
+TEST_P(GetPrimeSearchParametersTest, ReturnsCorrectValues) {
+  MaybeWriteCrosConfigData(params().max_num_in, kMaxNumProperty,
+                           kPrimeSearchPropertiesPath);
+
+  base::Optional<uint64_t> actual_max_num_out;
+  parameter_fetcher()->GetPrimeSearchParameters(&actual_max_num_out);
+
+  EXPECT_EQ(actual_max_num_out, params().expected_max_num_out);
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    ,
+    GetPrimeSearchParametersTest,
+    testing::Values(GetPrimeSearchParametersTestParams{
+                        /*max_num_in=*/base::nullopt,
+                        /*expected_max_num_out=*/base::nullopt},
+                    GetPrimeSearchParametersTestParams{
+                        /*max_num_in=*/"not_int_value",
+                        /*expected_max_num_out=*/base::nullopt},
+                    GetPrimeSearchParametersTestParams{
+                        /*max_num_in=*/"10000000000",
+                        /*expected_max_num_out=*/10000000000}));
 
 }  // namespace diagnostics

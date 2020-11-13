@@ -185,14 +185,16 @@ bool DiagActions::ActionRunCaptivePortalRoutine() {
   return PollRoutineAndProcessResult();
 }
 
-bool DiagActions::ActionRunCpuCacheRoutine(base::TimeDelta exec_duration) {
+bool DiagActions::ActionRunCpuCacheRoutine(
+    const base::Optional<base::TimeDelta>& exec_duration) {
   auto response = adapter_->RunCpuCacheRoutine(exec_duration);
   CHECK(response) << "No RunRoutineResponse received.";
   id_ = response->id;
   return PollRoutineAndProcessResult();
 }
 
-bool DiagActions::ActionRunCpuStressRoutine(base::TimeDelta exec_duration) {
+bool DiagActions::ActionRunCpuStressRoutine(
+    const base::Optional<base::TimeDelta>& exec_duration) {
   auto response = adapter_->RunCpuStressRoutine(exec_duration);
   CHECK(response) << "No RunRoutineResponse received.";
   id_ = response->id;
@@ -232,7 +234,7 @@ bool DiagActions::ActionRunDnsResolverPresentRoutine() {
 }
 
 bool DiagActions::ActionRunFloatingPointAccuracyRoutine(
-    base::TimeDelta exec_duration) {
+    const base::Optional<base::TimeDelta>& exec_duration) {
   auto response = adapter_->RunFloatingPointAccuracyRoutine(exec_duration);
   CHECK(response) << "No RunRoutineResponse received.";
   id_ = response->id;
@@ -289,9 +291,9 @@ bool DiagActions::ActionRunNvmeWearLevelRoutine(uint32_t wear_level_threshold) {
   return PollRoutineAndProcessResult();
 }
 
-bool DiagActions::ActionRunPrimeSearchRoutine(base::TimeDelta exec_duration,
-                                              uint64_t max_num) {
-  auto response = adapter_->RunPrimeSearchRoutine(exec_duration, max_num);
+bool DiagActions::ActionRunPrimeSearchRoutine(
+    const base::Optional<base::TimeDelta>& exec_duration) {
+  auto response = adapter_->RunPrimeSearchRoutine(exec_duration);
   id_ = response->id;
   CHECK(response) << "No RunRoutineResponse received.";
   return PollRoutineAndProcessResult();

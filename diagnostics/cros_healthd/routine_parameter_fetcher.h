@@ -36,7 +36,15 @@ class RoutineParameterFetcher {
       base::Optional<uint32_t>* maximum_cycle_count_out,
       base::Optional<uint8_t>* percent_battery_wear_allowed_out) const;
 
+  // Fetches the parameter for the prime search routine.
+  void GetPrimeSearchParameters(base::Optional<uint64_t>* max_num_out) const;
+
  private:
+  // Fetches a uint64_t parameter from cros_config.
+  void FetchUint64Parameter(const std::string& path,
+                            const std::string& parameter_name,
+                            base::Optional<uint64_t>* parameter_out) const;
+
   // Fetches a uint32_t parameter from cros_config.
   void FetchUint32Parameter(const std::string& path,
                             const std::string& parameter_name,

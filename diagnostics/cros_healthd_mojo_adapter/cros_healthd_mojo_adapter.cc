@@ -70,11 +70,16 @@ class CrosHealthdMojoAdapterImpl final : public CrosHealthdMojoAdapter {
 
   // Runs the CPU cache routine.
   chromeos::cros_healthd::mojom::RunRoutineResponsePtr RunCpuCacheRoutine(
-      base::TimeDelta exec_duration) override;
+      const base::Optional<base::TimeDelta>& exec_duration) override;
 
   // Runs the CPU stress routine.
   chromeos::cros_healthd::mojom::RunRoutineResponsePtr RunCpuStressRoutine(
-      base::TimeDelta exec_duration) override;
+      const base::Optional<base::TimeDelta>& exec_duration) override;
+
+  // Runs the floating-point-accuracy routine.
+  chromeos::cros_healthd::mojom::RunRoutineResponsePtr
+  RunFloatingPointAccuracyRoutine(
+      const base::Optional<base::TimeDelta>& exec_duration) override;
 
   // Runs the NvmeWearLevel routine.
   chromeos::cros_healthd::mojom::RunRoutineResponsePtr RunNvmeWearLevelRoutine(
@@ -93,7 +98,7 @@ class CrosHealthdMojoAdapterImpl final : public CrosHealthdMojoAdapter {
 
   // Runs the prime search routine.
   chromeos::cros_healthd::mojom::RunRoutineResponsePtr RunPrimeSearchRoutine(
-      base::TimeDelta exec_duration, uint64_t max_num) override;
+      const base::Optional<base::TimeDelta>& exec_duration) override;
 
   // Runs the battery discharge routine.
   chromeos::cros_healthd::mojom::RunRoutineResponsePtr
@@ -155,10 +160,6 @@ class CrosHealthdMojoAdapterImpl final : public CrosHealthdMojoAdapter {
       int32_t id,
       chromeos::cros_healthd::mojom::DiagnosticRoutineCommandEnum command,
       bool include_output) override;
-
-  // Runs the floating-point-accuracy routine.
-  chromeos::cros_healthd::mojom::RunRoutineResponsePtr
-  RunFloatingPointAccuracyRoutine(base::TimeDelta exec_duration) override;
 
   // Subscribes the client to Bluetooth events.
   void AddBluetoothObserver(
@@ -354,14 +355,21 @@ CrosHealthdMojoAdapterImpl::RunAcPowerRoutine(
 }
 
 chromeos::cros_healthd::mojom::RunRoutineResponsePtr
-CrosHealthdMojoAdapterImpl::RunCpuCacheRoutine(base::TimeDelta exec_duration) {
+CrosHealthdMojoAdapterImpl::RunCpuCacheRoutine(
+    const base::Optional<base::TimeDelta>& exec_duration) {
   if (!cros_healthd_service_factory_.is_bound())
     Connect();
 
   chromeos::cros_healthd::mojom::RunRoutineResponsePtr response;
   base::RunLoop run_loop;
+  chromeos::cros_healthd::mojom::NullableUint32Ptr exec_duration_parameter;
+  if (exec_duration.has_value()) {
+    exec_duration_parameter =
+        chromeos::cros_healthd::mojom::NullableUint32::New(
+            exec_duration.value().InSeconds());
+  }
   cros_healthd_diagnostics_service_->RunCpuCacheRoutine(
-      exec_duration.InSeconds(),
+      std::move(exec_duration_parameter),
       base::Bind(&OnMojoResponseReceived<
                      chromeos::cros_healthd::mojom::RunRoutineResponsePtr>,
                  &response, run_loop.QuitClosure()));
@@ -371,14 +379,21 @@ CrosHealthdMojoAdapterImpl::RunCpuCacheRoutine(base::TimeDelta exec_duration) {
 }
 
 chromeos::cros_healthd::mojom::RunRoutineResponsePtr
-CrosHealthdMojoAdapterImpl::RunCpuStressRoutine(base::TimeDelta exec_duration) {
+CrosHealthdMojoAdapterImpl::RunCpuStressRoutine(
+    const base::Optional<base::TimeDelta>& exec_duration) {
   if (!cros_healthd_service_factory_.is_bound())
     Connect();
 
   chromeos::cros_healthd::mojom::RunRoutineResponsePtr response;
   base::RunLoop run_loop;
+  chromeos::cros_healthd::mojom::NullableUint32Ptr exec_duration_parameter;
+  if (exec_duration.has_value()) {
+    exec_duration_parameter =
+        chromeos::cros_healthd::mojom::NullableUint32::New(
+            exec_duration.value().InSeconds());
+  }
   cros_healthd_diagnostics_service_->RunCpuStressRoutine(
-      exec_duration.InSeconds(),
+      std::move(exec_duration_parameter),
       base::Bind(&OnMojoResponseReceived<
                      chromeos::cros_healthd::mojom::RunRoutineResponsePtr>,
                  &response, run_loop.QuitClosure()));
@@ -389,14 +404,20 @@ CrosHealthdMojoAdapterImpl::RunCpuStressRoutine(base::TimeDelta exec_duration) {
 
 chromeos::cros_healthd::mojom::RunRoutineResponsePtr
 CrosHealthdMojoAdapterImpl::RunFloatingPointAccuracyRoutine(
-    base::TimeDelta exec_duration) {
+    const base::Optional<base::TimeDelta>& exec_duration) {
   if (!cros_healthd_service_factory_.is_bound())
     Connect();
 
   chromeos::cros_healthd::mojom::RunRoutineResponsePtr response;
   base::RunLoop run_loop;
+  chromeos::cros_healthd::mojom::NullableUint32Ptr exec_duration_parameter;
+  if (exec_duration.has_value()) {
+    exec_duration_parameter =
+        chromeos::cros_healthd::mojom::NullableUint32::New(
+            exec_duration.value().InSeconds());
+  }
   cros_healthd_diagnostics_service_->RunFloatingPointAccuracyRoutine(
-      exec_duration.InSeconds(),
+      std::move(exec_duration_parameter),
       base::Bind(&OnMojoResponseReceived<
                      chromeos::cros_healthd::mojom::RunRoutineResponsePtr>,
                  &response, run_loop.QuitClosure()));
@@ -462,15 +483,21 @@ CrosHealthdMojoAdapterImpl::RunDiskReadRoutine(
 }
 
 chromeos::cros_healthd::mojom::RunRoutineResponsePtr
-CrosHealthdMojoAdapterImpl::RunPrimeSearchRoutine(base::TimeDelta exec_duration,
-                                                  uint64_t max_num) {
+CrosHealthdMojoAdapterImpl::RunPrimeSearchRoutine(
+    const base::Optional<base::TimeDelta>& exec_duration) {
   if (!cros_healthd_service_factory_.is_bound())
     Connect();
 
   chromeos::cros_healthd::mojom::RunRoutineResponsePtr response;
   base::RunLoop run_loop;
+  chromeos::cros_healthd::mojom::NullableUint32Ptr exec_duration_parameter;
+  if (exec_duration.has_value()) {
+    exec_duration_parameter =
+        chromeos::cros_healthd::mojom::NullableUint32::New(
+            exec_duration.value().InSeconds());
+  }
   cros_healthd_diagnostics_service_->RunPrimeSearchRoutine(
-      exec_duration.InSeconds(), max_num,
+      std::move(exec_duration_parameter),
       base::Bind(&OnMojoResponseReceived<
                      chromeos::cros_healthd::mojom::RunRoutineResponsePtr>,
                  &response, run_loop.QuitClosure()));

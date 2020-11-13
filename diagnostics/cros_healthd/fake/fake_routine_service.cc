@@ -61,17 +61,20 @@ void FakeRoutineService::RunAcPowerRoutine(
 }
 
 void FakeRoutineService::RunCpuCacheRoutine(
-    uint32_t length_seconds, RunCpuCacheRoutineCallback callback) {
+    chromeos::cros_healthd::mojom::NullableUint32Ptr length_seconds,
+    RunCpuCacheRoutineCallback callback) {
   NOTIMPLEMENTED();
 }
 
 void FakeRoutineService::RunCpuStressRoutine(
-    uint32_t length_seconds, RunCpuStressRoutineCallback callback) {
+    chromeos::cros_healthd::mojom::NullableUint32Ptr length_seconds,
+    RunCpuStressRoutineCallback callback) {
   NOTIMPLEMENTED();
 }
 
 void FakeRoutineService::RunFloatingPointAccuracyRoutine(
-    uint32_t length_seconds, RunFloatingPointAccuracyRoutineCallback callback) {
+    chromeos::cros_healthd::mojom::NullableUint32Ptr length_seconds,
+    RunFloatingPointAccuracyRoutineCallback callback) {
   NOTIMPLEMENTED();
 }
 
@@ -95,8 +98,7 @@ void FakeRoutineService::RunDiskReadRoutine(
 }
 
 void FakeRoutineService::RunPrimeSearchRoutine(
-    uint32_t length_seconds,
-    uint64_t max_num,
+    chromeos::cros_healthd::mojom::NullableUint32Ptr length_seconds,
     RunPrimeSearchRoutineCallback callback) {
   NOTIMPLEMENTED();
 }

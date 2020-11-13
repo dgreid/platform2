@@ -153,16 +153,22 @@ void CrosHealthdRoutineService::RunCaptivePortalRoutine(
 }
 
 void CrosHealthdRoutineService::RunCpuCacheRoutine(
-    uint32_t length_seconds, RunCpuCacheRoutineCallback callback) {
-  RunRoutine(routine_factory_->MakeCpuCacheRoutine(
-                 base::TimeDelta::FromSeconds(length_seconds)),
+    chromeos::cros_healthd::mojom::NullableUint32Ptr length_seconds,
+    RunCpuCacheRoutineCallback callback) {
+  base::Optional<base::TimeDelta> exec_duration;
+  if (!length_seconds.is_null())
+    exec_duration = base::TimeDelta::FromSeconds(length_seconds->value);
+  RunRoutine(routine_factory_->MakeCpuCacheRoutine(exec_duration),
              mojo_ipc::DiagnosticRoutineEnum::kCpuCache, std::move(callback));
 }
 
 void CrosHealthdRoutineService::RunCpuStressRoutine(
-    uint32_t length_seconds, RunCpuStressRoutineCallback callback) {
-  RunRoutine(routine_factory_->MakeCpuStressRoutine(
-                 base::TimeDelta::FromSeconds(length_seconds)),
+    chromeos::cros_healthd::mojom::NullableUint32Ptr length_seconds,
+    RunCpuStressRoutineCallback callback) {
+  base::Optional<base::TimeDelta> exec_duration;
+  if (!length_seconds.is_null())
+    exec_duration = base::TimeDelta::FromSeconds(length_seconds->value);
+  RunRoutine(routine_factory_->MakeCpuStressRoutine(exec_duration),
              mojo_ipc::DiagnosticRoutineEnum::kCpuStress, std::move(callback));
 }
 
@@ -198,9 +204,12 @@ void CrosHealthdRoutineService::RunDnsResolverPresentRoutine(
 }
 
 void CrosHealthdRoutineService::RunFloatingPointAccuracyRoutine(
-    uint32_t length_seconds, RunFloatingPointAccuracyRoutineCallback callback) {
-  RunRoutine(routine_factory_->MakeFloatingPointAccuracyRoutine(
-                 base::TimeDelta::FromSeconds(length_seconds)),
+    chromeos::cros_healthd::mojom::NullableUint32Ptr length_seconds,
+    RunFloatingPointAccuracyRoutineCallback callback) {
+  base::Optional<base::TimeDelta> exec_duration;
+  if (!length_seconds.is_null())
+    exec_duration = base::TimeDelta::FromSeconds(length_seconds->value);
+  RunRoutine(routine_factory_->MakeFloatingPointAccuracyRoutine(exec_duration),
              mojo_ipc::DiagnosticRoutineEnum::kFloatingPointAccuracy,
              std::move(callback));
 }
@@ -257,11 +266,12 @@ void CrosHealthdRoutineService::RunNvmeWearLevelRoutine(
 }
 
 void CrosHealthdRoutineService::RunPrimeSearchRoutine(
-    uint32_t length_seconds,
-    uint64_t max_num,
+    chromeos::cros_healthd::mojom::NullableUint32Ptr length_seconds,
     RunPrimeSearchRoutineCallback callback) {
-  RunRoutine(routine_factory_->MakePrimeSearchRoutine(
-                 base::TimeDelta::FromSeconds(length_seconds), max_num),
+  base::Optional<base::TimeDelta> exec_duration;
+  if (!length_seconds.is_null())
+    exec_duration = base::TimeDelta::FromSeconds(length_seconds->value);
+  RunRoutine(routine_factory_->MakePrimeSearchRoutine(exec_duration),
              mojo_ipc::DiagnosticRoutineEnum::kPrimeSearch,
              std::move(callback));
 }

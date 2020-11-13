@@ -282,19 +282,19 @@ Status message: Routine passed.
 Performs cache coherency testing via stressapptest --cc_test.
 
 Parameters:
--   `--length_seconds` - Length of time to run the routine for, in seconds.
-    Type: `uint32_t`. Default: `10`.
+-   `--cpu_stress_length_seconds` - Length of time to run the routine for, in
+    seconds. Type: `uint32_t`. Default: `60`.
 
 To run cache coherency testing for 600 seconds:
 
 From crosh:
 ```bash
-crosh> diag cpu_cache --length_seconds=600
+crosh> diag cpu_cache --cpu_stress_length_seconds=600
 ```
 
 From cros-health-tool:
 ```bash
-$ cros-health-tool diag --action=run_routine --routine=cpu_cache --length_seconds=600
+$ cros-health-tool diag --action=run_routine --routine=cpu_cache --cpu_stress_length_seconds=600
 ```
 
 Sample output:
@@ -310,10 +310,10 @@ Performs CPU stress-testing via stressapptest -W, which mimics a realistic
 high-load situation.
 
 Parameters:
--   `--length_seconds` - Length of time to run the routine for, in seconds.
-    Type: `uint32_t`. Default: `10`.
+-   `--cpu_stress_length_seconds` - Length of time to run the routine for, in
+    seconds. Type: `uint32_t`. Default: `60`.
 
-To run the stress test for the default 10 seconds:
+To run the stress test for the default 60 seconds:
 
 From crosh:
 ```bash
@@ -338,19 +338,19 @@ Repeatedly checks the accuracy of millions of floating-point operations against
 known good values for the duration of the routine.
 
 Parameters:
--   `--length_seconds` - Length of time to run the routine for, in seconds.
-    Type: `uint32_t`. Default: `10`.
+-   `--cpu_stress_length_seconds` - Length of time to run the routine for, in
+    seconds. Type: `uint32_t`. Default: `60`.
 
 To perform floating-point operations for 300 seconds:
 
 From crosh:
 ```bash
-crosh> diag floating_point_accuracy --length_seconds=300
+crosh> diag floating_point_accuracy --cpu_stress_length_seconds=300
 ```
 
 From cros-health-tool:
 ```bash
-$ cros-health-tool diag --action=run_routine --routine=floating_point_accuracy --length_seconds=300
+$ cros-health-tool diag --action=run_routine --routine=floating_point_accuracy --cpu_stress_length_seconds=300
 ```
 
 Sample output:
@@ -365,22 +365,24 @@ Status message: Routine passed.
 Repeatedly checks the CPU's brute-force calculations of prime numbers from 2 to
 the given maximum number for the duration of the routine.
 
-Parameters:
--   `--length_seconds` - Length of time to run the routine for, in seconds.
-    Type: `uint32_t`. Default: `10`.
--   `--max_num` - Primes between two and this parameter will be calculated.
-    Type: `uint64_t`. Default: `1000000`.
+Configuration Data:
+-   `max-num` - Primes between two and this parameter will be calculated. Type:
+    `uint64_t`. Default: `1000000`.
 
-To search for prime numbers between 2 and 10000 for the default 10 seconds:
+Parameters:
+-   `--cpu_stress_length_seconds` - Length of time to run the routine for, in
+    seconds. Type: `uint32_t`. Default: `60`.
+
+To search for prime numbers for the default 60 seconds:
 
 From crosh:
 ```bash
-crosh> diag prime_search --max_num=10000
+crosh> diag prime_search
 ```
 
 From cros-health-tool:
 ```bash
-$ cros-health-tool diag --action=run_routine --routine=prime_search --max_num=10000
+$ cros-health-tool diag --action=run_routine --routine=prime_search
 ```
 
 Sample output:

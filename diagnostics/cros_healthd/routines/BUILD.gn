@@ -89,6 +89,7 @@ source_set("libdiag_routine") {
     "nvme_self_test/nvme_self_test.cc",
     "nvme_wear_level/nvme_wear_level.cc",
     "prime_search/prime_search.cc",
+    "shared_defaults.cc",
     "signal_strength/signal_strength.cc",
     "simple_routine.cc",
     "smartctl_check/smartctl_check.cc",

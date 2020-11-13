@@ -59,10 +59,12 @@ class CrosHealthdRoutineService final
       RunBatteryHealthRoutineCallback callback) override;
   void RunCaptivePortalRoutine(
       RunCaptivePortalRoutineCallback callback) override;
-  void RunCpuCacheRoutine(uint32_t length_seconds,
-                          RunCpuCacheRoutineCallback callback) override;
-  void RunCpuStressRoutine(uint32_t length_seconds,
-                           RunCpuStressRoutineCallback callback) override;
+  void RunCpuCacheRoutine(
+      chromeos::cros_healthd::mojom::NullableUint32Ptr length_seconds,
+      RunCpuCacheRoutineCallback callback) override;
+  void RunCpuStressRoutine(
+      chromeos::cros_healthd::mojom::NullableUint32Ptr length_seconds,
+      RunCpuStressRoutineCallback callback) override;
   void RunDiskReadRoutine(
       chromeos::cros_healthd::mojom::DiskReadRoutineTypeEnum type,
       uint32_t length_seconds,
@@ -74,7 +76,7 @@ class CrosHealthdRoutineService final
   void RunDnsResolverPresentRoutine(
       RunDnsResolverPresentRoutineCallback callback) override;
   void RunFloatingPointAccuracyRoutine(
-      uint32_t length_seconds,
+      chromeos::cros_healthd::mojom::NullableUint32Ptr length_seconds,
       RunFloatingPointAccuracyRoutineCallback callback) override;
   void RunGatewayCanBePingedRoutine(
       RunGatewayCanBePingedRoutineCallback callback) override;
@@ -90,9 +92,9 @@ class CrosHealthdRoutineService final
   void RunNvmeWearLevelRoutine(
       uint32_t wear_level_threshold,
       RunNvmeWearLevelRoutineCallback callback) override;
-  void RunPrimeSearchRoutine(uint32_t length_seconds,
-                             uint64_t max_num,
-                             RunPrimeSearchRoutineCallback callback) override;
+  void RunPrimeSearchRoutine(
+      chromeos::cros_healthd::mojom::NullableUint32Ptr length_seconds,
+      RunPrimeSearchRoutineCallback callback) override;
   void RunSignalStrengthRoutine(
       RunSignalStrengthRoutineCallback callback) override;
   void RunSmartctlCheckRoutine(

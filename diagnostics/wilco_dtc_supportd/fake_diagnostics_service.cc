@@ -78,17 +78,20 @@ void FakeDiagnosticsService::RunAcPowerRoutine(
 }
 
 void FakeDiagnosticsService::RunCpuCacheRoutine(
-    uint32_t length_seconds, RunCpuCacheRoutineCallback callback) {
+    chromeos::cros_healthd::mojom::NullableUint32Ptr length_seconds,
+    RunCpuCacheRoutineCallback callback) {
   std::move(callback).Run(run_routine_response_.Clone());
 }
 
 void FakeDiagnosticsService::RunCpuStressRoutine(
-    uint32_t length_seconds, RunCpuStressRoutineCallback callback) {
+    chromeos::cros_healthd::mojom::NullableUint32Ptr length_seconds,
+    RunCpuStressRoutineCallback callback) {
   std::move(callback).Run(run_routine_response_.Clone());
 }
 
 void FakeDiagnosticsService::RunFloatingPointAccuracyRoutine(
-    uint32_t length_seconds, RunFloatingPointAccuracyRoutineCallback callback) {
+    chromeos::cros_healthd::mojom::NullableUint32Ptr length_seconds,
+    RunFloatingPointAccuracyRoutineCallback callback) {
   std::move(callback).Run(run_routine_response_.Clone());
 }
 
@@ -112,8 +115,7 @@ void FakeDiagnosticsService::RunDiskReadRoutine(
 }
 
 void FakeDiagnosticsService::RunPrimeSearchRoutine(
-    uint32_t length_seconds,
-    uint64_t max_num,
+    chromeos::cros_healthd::mojom::NullableUint32Ptr length_seconds,
     RunPrimeSearchRoutineCallback callback) {
   std::move(callback).Run(run_routine_response_.Clone());
 }

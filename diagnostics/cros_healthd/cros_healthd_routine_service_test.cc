@@ -280,12 +280,11 @@ TEST_F(CrosHealthdRoutineServiceTest, RunBatteryCapacityRoutine) {
 
   mojo_ipc::RunRoutineResponsePtr response;
   base::RunLoop run_loop;
-  service()->RunBatteryCapacityRoutine(
-      base::BindLambdaForTesting(
-          [&](mojo_ipc::RunRoutineResponsePtr received_response) {
-            response = std::move(received_response);
-            run_loop.Quit();
-          }));
+  service()->RunBatteryCapacityRoutine(base::BindLambdaForTesting(
+      [&](mojo_ipc::RunRoutineResponsePtr received_response) {
+        response = std::move(received_response);
+        run_loop.Quit();
+      }));
   run_loop.Run();
 
   EXPECT_EQ(response->id, 1);
@@ -392,7 +391,7 @@ TEST_F(CrosHealthdRoutineServiceTest, RunCpuCacheRoutine) {
   mojo_ipc::RunRoutineResponsePtr response;
   base::RunLoop run_loop;
   service()->RunCpuCacheRoutine(
-      /*length_seconds=*/10,
+      /*length_seconds=*/mojo_ipc::NullableUint32::New(120),
       base::BindLambdaForTesting(
           [&](mojo_ipc::RunRoutineResponsePtr received_response) {
             response = std::move(received_response);
@@ -415,7 +414,7 @@ TEST_F(CrosHealthdRoutineServiceTest, RunCpuStressRoutine) {
   mojo_ipc::RunRoutineResponsePtr response;
   base::RunLoop run_loop;
   service()->RunCpuStressRoutine(
-      /*length_seconds=*/5 * 60,
+      /*length_seconds=*/mojo_ipc::NullableUint32::New(120),
       base::BindLambdaForTesting(
           [&](mojo_ipc::RunRoutineResponsePtr received_response) {
             response = std::move(received_response);
@@ -438,7 +437,7 @@ TEST_F(CrosHealthdRoutineServiceTest, RunFloatingPointAccuracyRoutine) {
   mojo_ipc::RunRoutineResponsePtr response;
   base::RunLoop run_loop;
   service()->RunFloatingPointAccuracyRoutine(
-      /*length_seconds=*/2 * 60,
+      /*length_seconds=*/mojo_ipc::NullableUint32::New(120),
       base::BindLambdaForTesting(
           [&](mojo_ipc::RunRoutineResponsePtr received_response) {
             response = std::move(received_response);
@@ -531,7 +530,7 @@ TEST_F(CrosHealthdRoutineServiceTest, RunPrimeSearchRoutine) {
   mojo_ipc::RunRoutineResponsePtr response;
   base::RunLoop run_loop;
   service()->RunPrimeSearchRoutine(
-      /*length_seconds=*/10, /*max_num=*/1000000,
+      /*length_seconds=*/mojo_ipc::NullableUint32::New(120),
       base::BindLambdaForTesting(
           [&](mojo_ipc::RunRoutineResponsePtr received_response) {
             response = std::move(received_response);

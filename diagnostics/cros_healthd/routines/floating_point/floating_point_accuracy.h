@@ -7,12 +7,15 @@
 
 #include <memory>
 
+#include <base/optional.h>
+#include <base/time/time.h>
+
 #include "diagnostics/cros_healthd/routines/diag_routine.h"
 
 namespace diagnostics {
 
 std::unique_ptr<DiagnosticRoutine> CreateFloatingPointAccuracyRoutine(
-    base::TimeDelta exec_duration);
+    const base::Optional<base::TimeDelta>& exec_duration);
 
 }  // namespace diagnostics
 

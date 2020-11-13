@@ -227,19 +227,19 @@ FakeCrosHealthdRoutineFactory::MakeAcPowerRoutine(
 
 std::unique_ptr<DiagnosticRoutine>
 FakeCrosHealthdRoutineFactory::MakeCpuCacheRoutine(
-    base::TimeDelta exec_duration) {
+    const base::Optional<base::TimeDelta>& exec_duration) {
   return std::move(next_routine_);
 }
 
 std::unique_ptr<DiagnosticRoutine>
 FakeCrosHealthdRoutineFactory::MakeCpuStressRoutine(
-    base::TimeDelta exec_duration) {
+    const base::Optional<base::TimeDelta>& exec_duration) {
   return std::move(next_routine_);
 }
 
 std::unique_ptr<DiagnosticRoutine>
 FakeCrosHealthdRoutineFactory::MakeFloatingPointAccuracyRoutine(
-    base::TimeDelta exec_duration) {
+    const base::Optional<base::TimeDelta>& exec_duration) {
   return std::move(next_routine_);
 }
 
@@ -268,7 +268,7 @@ FakeCrosHealthdRoutineFactory::MakeDiskReadRoutine(
 
 std::unique_ptr<DiagnosticRoutine>
 FakeCrosHealthdRoutineFactory::MakePrimeSearchRoutine(
-    base::TimeDelta exec_duration, uint64_t max_num) {
+    const base::Optional<base::TimeDelta>& exec_duration) {
   return std::move(next_routine_);
 }
 

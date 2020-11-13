@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 
+#include "diagnostics/cros_healthd/routines/shared_defaults.h"
 #include "diagnostics/cros_healthd/routines/subproc_routine.h"
 
 namespace diagnostics {
@@ -18,8 +19,9 @@ constexpr char kCpuRoutineExePath[] = "/usr/bin/stressapptest";
 }  // namespace
 
 std::unique_ptr<DiagnosticRoutine> CreateCpuCacheRoutine(
-    base::TimeDelta exec_duration) {
-  uint32_t duration_in_seconds = exec_duration.InSeconds();
+    const base::Optional<base::TimeDelta>& exec_duration) {
+  uint32_t duration_in_seconds =
+      exec_duration.value_or(kDefaultCpuStressRuntime).InSeconds();
   std::vector<std::string> cmd{kCpuRoutineExePath, "--cc_test", "-s",
                                std::to_string(duration_in_seconds)};
   if (duration_in_seconds == 0) {
