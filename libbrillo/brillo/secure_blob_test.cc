@@ -12,6 +12,7 @@
 #include <iterator>
 #include <limits>
 #include <numeric>
+#include <utility>
 
 #include <base/logging.h>
 #include <gtest/gtest.h>
@@ -302,6 +303,37 @@ TEST(SecureAllocator, SecureVectorIsClearedOnDestruction) {
   // buffer (page in this case) is deallocated through
   // SecureAllocator::deallocate, which clears the memory.
   EXPECT_EQ(allocator.GetErasedCount(), 4 + 4096);
+}
+
+TEST(SecureAllocator, OperatorEqual) {
+  SecureAllocator<uint8_t> allocator1;
+  SecureAllocator<uint8_t> allocator2;
+  EXPECT_TRUE(allocator1 == allocator2);
+}
+
+TEST(SecureAllocator, OperatorNotEqual) {
+  SecureAllocator<uint8_t> allocator1;
+  SecureAllocator<uint8_t> allocator2;
+  // SecureAllocators should always be equal.
+  EXPECT_FALSE(allocator1 != allocator2);
+}
+
+TEST(SecureVector, CopyAssignment) {
+  SecureVector vector1 = {1, 2, 3, 4};
+  SecureVector vector2 = {5, 6, 7, 8};
+  EXPECT_NE(vector1, vector2);
+
+  vector2 = vector1;
+  EXPECT_EQ(vector1, vector2);
+}
+
+TEST(SecureVector, MoveAssignment) {
+  SecureVector vector1 = {1, 2, 3, 4};
+  SecureVector vector2 = {5, 6, 7, 8};
+  EXPECT_NE(vector1, vector2);
+
+  vector2 = std::move(vector1);
+  EXPECT_EQ(vector2, SecureVector({1, 2, 3, 4}));
 }
 
 // DeathTests fork a new process and check how it proceeds. Take advantage
