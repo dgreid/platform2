@@ -17,6 +17,9 @@
 #include "ml/mojom/soda.mojom.h"
 
 namespace ml {
+// Defined in ml/soda.h . Can't include in header due to fake implementation not
+// being able to include that file.
+class SodaLibrary;
 
 // The implementation of SodaSpeechRecognizer.
 class SodaRecognizerImpl
@@ -70,6 +73,8 @@ class SodaRecognizerImpl
   // Pointer handle to the internal implementation of SodaRecognizer inside
   // the SodaLibrary.
   void* recognizer_;
+  // Not owned: owned by a std::map in soda.h::GetInstanceAt.
+  SodaLibrary* soda_library_;
 
   mojo::Receiver<chromeos::machine_learning::mojom::SodaRecognizer> receiver_;
 

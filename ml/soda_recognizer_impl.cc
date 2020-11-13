@@ -63,27 +63,23 @@ bool SodaRecognizerImpl::Create(
 }
 
 void SodaRecognizerImpl::AddAudio(const std::string& audio) {
-  auto* const soda_library = ml::SodaLibrary::GetInstance();
-  DCHECK(soda_library->GetStatus() == ml::SodaLibrary::Status::kOk);
-  soda_library->ExtendedAddAudio(recognizer_, audio);
+  DCHECK(soda_library_->GetStatus() == ml::SodaLibrary::Status::kOk);
+  soda_library_->ExtendedAddAudio(recognizer_, audio);
 }
 
 void SodaRecognizerImpl::Stop() {
-  auto* const soda_library = ml::SodaLibrary::GetInstance();
-  DCHECK(soda_library->GetStatus() == ml::SodaLibrary::Status::kOk);
-  soda_library->ExtendedSodaStop(recognizer_);
+  DCHECK(soda_library_->GetStatus() == ml::SodaLibrary::Status::kOk);
+  soda_library_->ExtendedSodaStop(recognizer_);
 }
 
 void SodaRecognizerImpl::Start() {
-  auto* const soda_library = ml::SodaLibrary::GetInstance();
-  DCHECK(soda_library->GetStatus() == ml::SodaLibrary::Status::kOk);
-  soda_library->ExtendedSodaStart(recognizer_);
+  DCHECK(soda_library_->GetStatus() == ml::SodaLibrary::Status::kOk);
+  soda_library_->ExtendedSodaStart(recognizer_);
 }
 
 void SodaRecognizerImpl::MarkDone() {
-  auto* const soda_library = ml::SodaLibrary::GetInstance();
-  DCHECK(soda_library->GetStatus() == ml::SodaLibrary::Status::kOk);
-  soda_library->ExtendedSodaMarkDone(recognizer_);
+  DCHECK(soda_library_->GetStatus() == ml::SodaLibrary::Status::kOk);
+  soda_library_->ExtendedSodaMarkDone(recognizer_);
 }
 
 void SodaRecognizerImpl::OnSodaEvent(const std::string& response_str) {
@@ -107,8 +103,8 @@ SodaRecognizerImpl::SodaRecognizerImpl(
     mojo::PendingReceiver<SodaRecognizer> soda_recognizer)
     : receiver_(this, std::move(soda_recognizer)),
       client_remote_(std::move(soda_client)) {
-  auto* const soda_library = ml::SodaLibrary::GetInstance();
-  DCHECK(soda_library->GetStatus() == ml::SodaLibrary::Status::kOk)
+  soda_library_ = ml::SodaLibrary::GetInstance();
+  DCHECK(soda_library_->GetStatus() == ml::SodaLibrary::Status::kOk)
       << "SodaRecognizerImpl should be created only if "
          "SodaLibrary is initialized successfully.";
   speech::soda::chrome::ExtendedSodaConfigMsg cfg_msg;
@@ -124,13 +120,13 @@ SodaRecognizerImpl::SodaRecognizerImpl(
   cfg.callback = &SodaCallback;
   cfg.callback_handle = this;
 
-  recognizer_ = soda_library->CreateExtendedSodaAsync(cfg);
+  recognizer_ = soda_library_->CreateExtendedSodaAsync(cfg);
 
   successfully_loaded_ = (recognizer_ != nullptr);
 }
 
 SodaRecognizerImpl::~SodaRecognizerImpl() {
-  ml::SodaLibrary::GetInstance()->DeleteExtendedSodaAsync(recognizer_);
+  soda_library_->DeleteExtendedSodaAsync(recognizer_);
 }
 
 }  // namespace ml

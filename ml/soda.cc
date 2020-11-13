@@ -2,12 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <string>
+#include <unordered_map>
+
 #include "ml/soda.h"
 
 #include <base/files/file_path.h>
 #include <base/logging.h>
 #include <base/native_library.h>
-
 namespace ml {
 
 namespace {
@@ -17,7 +19,7 @@ constexpr char kSodaLibraryPath[] =
 
 }  // namespace
 
-SodaLibrary::SodaLibrary()
+SodaLibrary::SodaLibrary(const std::string& library_path)
     : status_(Status::kUninitialized),
       create_soda_async_(nullptr),
       add_audio_(nullptr),
@@ -27,7 +29,7 @@ SodaLibrary::SodaLibrary()
   base::NativeLibraryOptions native_library_options;
   native_library_options.prefer_own_symbols = true;
   library_.emplace(base::LoadNativeLibraryWithOptions(
-      base::FilePath(kSodaLibraryPath), native_library_options, nullptr));
+      base::FilePath(library_path), native_library_options, nullptr));
   if (!library_->is_valid()) {
     status_ = Status::kLoadLibraryFailed;
     return;
@@ -64,8 +66,23 @@ SodaLibrary::Status SodaLibrary::GetStatus() const {
 }
 
 SodaLibrary* SodaLibrary::GetInstance() {
-  static base::NoDestructor<SodaLibrary> instance;
-  return instance.get();
+  return GetInstanceAt(kSodaLibraryPath);
+}
+
+SodaLibrary* SodaLibrary::GetInstanceAt(const std::string& library_path) {
+  static base::NoDestructor<std::unordered_map<std::string, SodaLibrary*>>
+      instances;
+  auto* const std_map = instances.get();
+  auto it = std_map->find(library_path);
+  SodaLibrary* instance;
+  if (it == std_map->end()) {
+    // make a new one!
+    instance = new SodaLibrary(library_path);
+    std_map->insert({library_path, instance});
+  } else {
+    instance = it->second;
+  }
+  return instance;
 }
 
 // Proxy functions to the library function pointers.

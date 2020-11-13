@@ -37,6 +37,7 @@ class SodaLibrary {
   virtual ~SodaLibrary() = default;
 
   static SodaLibrary* GetInstance();
+  static SodaLibrary* GetInstanceAt(const std::string& library_path);
 
   // Get whether the library is successfully initialized.
   // Initially, the status is `Status::kUninitialized` (this value should never
@@ -83,7 +84,7 @@ class SodaLibrary {
   friend class base::NoDestructor<SodaLibrary>;
 
   // Initializes the soda library.
-  SodaLibrary();
+  explicit SodaLibrary(const std::string& library_path);
   SodaLibrary(const SodaLibrary&) = delete;
   SodaLibrary& operator=(const SodaLibrary&) = delete;
 
