@@ -117,7 +117,14 @@ TEST_F(SystemConfigTest, TestSmartBatteryUnset) {
 
 TEST_F(SystemConfigTest, NvmeSupportedTrue) {
   WriteFileAndCreateParentDirs(GetTempPath().AppendASCII(kNvmeToolPath), "");
+  WriteFileAndCreateParentDirs(
+      GetTempPath().AppendASCII(kDevicePath).AppendASCII("nvme01p1"), "");
   ASSERT_TRUE(system_config()->NvmeSupported());
+}
+
+TEST_F(SystemConfigTest, NvmeSupportedToolOnlyFalse) {
+  WriteFileAndCreateParentDirs(GetTempPath().AppendASCII(kNvmeToolPath), "");
+  ASSERT_FALSE(system_config()->NvmeSupported());
 }
 
 TEST_F(SystemConfigTest, NvmeSupportedFalse) {

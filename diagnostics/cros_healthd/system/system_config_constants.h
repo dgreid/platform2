@@ -31,6 +31,8 @@ extern const char kCachedVpdPropertiesPath[];
 extern const char kHasSkuNumberProperty[];
 // NVME utility program path relative to the root directory.
 extern const char kNvmeToolPath[];
+// Linux device path relative to the root directory.
+extern const char kDevicePath[];
 // Smartctl utility program path relative to the root directory.
 extern const char kSmartctlToolPath[];
 // Fio utility program path relative to the root directory.

@@ -17,6 +17,7 @@ const char kArcBuildPropertiesPath[] = "/arc/build-properties";
 const char kMarketingNameProperty[] = "marketing-name";
 
 const char kNvmeToolPath[] = "usr/sbin/nvme";
+const char kDevicePath[] = "dev";
 const char kSmartctlToolPath[] = "usr/sbin/smartctl";
 const char kFioToolPath[] = "usr/bin/fio";
 

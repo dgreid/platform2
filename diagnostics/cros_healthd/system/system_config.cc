@@ -8,6 +8,7 @@
 #include <string>
 
 #include <chromeos/chromeos-config/libcros_config/cros_config.h>
+#include <base/files/file_enumerator.h>
 #include <base/files/file_util.h>
 #include <base/system/sys_info.h>
 
@@ -72,7 +73,11 @@ bool SystemConfig::HasSmartBattery() {
 }
 
 bool SystemConfig::NvmeSupported() {
-  return base::PathExists(root_dir_.AppendASCII(kNvmeToolPath));
+  return base::PathExists(root_dir_.AppendASCII(kNvmeToolPath)) &&
+         !base::FileEnumerator(root_dir_.AppendASCII(kDevicePath), false,
+                               base::FileEnumerator::FILES, "nvme*")
+              .Next()
+              .empty();
 }
 
 bool SystemConfig::SmartCtlSupported() {
