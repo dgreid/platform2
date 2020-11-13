@@ -106,16 +106,20 @@ void ObserverImpl::OnSampleUpdated(
     base::TimeDelta latency =
         base::TimeTicks::Now() -
         (base::TimeTicks() + base::TimeDelta::FromNanoseconds(it->second));
-    LOG(INFO) << "Latency: " << latency;
+    LOGF(INFO) << "Latency: " << latency;
 
     total_latency_ += latency;
     latencies_.push_back(latency);
   }
 
-  if (++num_success_reads_ >= kNumSuccessReads) {
-    // Don't Change: Used as a check sentence in the tast test.
-    LOGF(INFO) << "Number of success reads " << kNumSuccessReads << " achieved";
+  if (++num_success_reads_ < kNumSuccessReads)
+    return;
 
+  // Don't Change: Used as a check sentence in the tast test.
+  LOGF(INFO) << "Number of success reads " << kNumSuccessReads << " achieved";
+
+  // Calculate the latencies only when timestamp channel is enabled.
+  if (!latencies_.empty()) {
     base::TimeDelta latency_tolerance =
         kMaximumBaseLatencyTolerance +
         base::TimeDelta::FromSecondsD(1.0 / result_freq_);
@@ -131,26 +135,26 @@ void ObserverImpl::OnSampleUpdated(
     std::nth_element(latencies_.begin(), --latencies_.end(), latencies_.end());
     base::TimeDelta max_latency = *(--latencies_.end());
 
-    LOG(INFO) << "Latency tolerance: " << latency_tolerance;
-    LOG(INFO) << "Max latency      : " << max_latency;
-    LOG(INFO) << "Median latency   : " << median_latency;
-    LOG(INFO) << "Min latency      : " << min_latency;
-    LOG(INFO) << "Mean latency     : " << total_latency_ / n;
+    LOGF(INFO) << "Latency tolerance: " << latency_tolerance;
+    LOGF(INFO) << "Max latency      : " << max_latency;
+    LOGF(INFO) << "Median latency   : " << median_latency;
+    LOGF(INFO) << "Min latency      : " << min_latency;
+    LOGF(INFO) << "Mean latency     : " << total_latency_ / n;
 
     if (max_latency > latency_tolerance) {
       // Don't Change: Used as a check sentence in the tast test.
-      LOG(ERROR) << "Max latency exceeds latency tolerance.";
+      LOGF(ERROR) << "Max latency exceeds latency tolerance.";
     }
 
     if (min_latency < base::TimeDelta::FromSecondsD(0.0)) {
       // Don't Change: Used as a check sentence in the tast test.
-      LOG(ERROR)
+      LOGF(ERROR)
           << "Min latency less than zero: a timestamp was set in the past.";
     }
-
-    if (quit_callback_)
-      std::move(quit_callback_).Run();
   }
+
+  if (quit_callback_)
+    std::move(quit_callback_).Run();
 }
 
 void ObserverImpl::OnErrorOccurred(cros::mojom::ObserverErrorType type) {
