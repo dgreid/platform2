@@ -77,6 +77,17 @@ class Cellular : public Device,
     kModemStateConnected = 11,
   };
 
+  // Enum for tracking Cellular::Start/Stop and
+  // CellularCapability::Start/StopModem to support modemmanager restarts
+  // which requires reconstructing CellularCapability.
+  enum class CapabilityState {
+    kCellularStopped,
+    kCellularStarted,
+    kModemStarting,
+    kModemStarted,
+    kModemStopping,
+  };
+
   // |path| is the ModemManager.Modem DBus object path (e.g.,
   // "/org/freedesktop/ModemManager1/Modem/0"). |service| is the modem
   // mananager service name (e.g., /org/freedesktop/ModemManager1).
@@ -216,11 +227,6 @@ class Cellular : public Device,
   void OnBeforeSuspend(const ResultCallback& callback) override;
   void OnAfterResume() override;
   std::vector<GeolocationInfo> GetGeolocationObjects() const override;
-
-  void StartModemCallback(const EnabledStateChangedCallback& callback,
-                          const Error& error);
-  void StopModemCallback(const EnabledStateChangedCallback& callback,
-                         const Error& error);
 
   void OnDisabled();
   void OnEnabled();
@@ -425,6 +431,14 @@ class Cellular : public Device,
   static const char kGenericServiceNamePrefix[];
   static unsigned int friendly_service_name_id_;
 
+  // TODO(b/173635024): Fix order of cellular.h and .cc methods.
+  void StartModem(Error* error, const EnabledStateChangedCallback& callback);
+  void StartModemCallback(const EnabledStateChangedCallback& callback,
+                          const Error& error);
+  void StopModem(Error* error, const EnabledStateChangedCallback& callback);
+  void StopModemCallback(const EnabledStateChangedCallback& callback,
+                         const Error& error);
+
   bool ShouldBringNetworkInterfaceDownAfterDisabled() const override;
 
   void SetState(State state);
@@ -488,6 +502,8 @@ class Cellular : public Device,
                            const Error& error);
 
   void PollLocationTask();
+
+  void SetCapabilityState(CapabilityState capability_state);
 
   void set_sim_card_id_for_testing(const std::string& sim_card_id) {
     sim_card_id_ = sim_card_id;
@@ -575,10 +591,7 @@ class Cellular : public Device,
   // Flag indicating that a disconnect has been explicitly requested.
   bool explicit_disconnect_;
 
-  // Set to true when Start() is called and false when Stop() is called.
-  // Used to determine whether to call StartModem when |capability_| is
-  // created.
-  bool started_;
+  CapabilityState capability_state_ = CapabilityState::kCellularStopped;
 
   std::unique_ptr<ExternalTask> ppp_task_;
   PPPDeviceRefPtr ppp_device_;

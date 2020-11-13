@@ -239,17 +239,17 @@ void CellularCapability3gpp::InitProxies() {
 
 void CellularCapability3gpp::StartModem(Error* error,
                                         const ResultCallback& callback) {
-  SLOG(this, 3) << __func__;
+  SLOG(this, 1) << __func__;
   InitProxies();
 
   deferred_enable_modem_callback_.Reset();
-  EnableModem(true, error, callback);
+  EnableModem(/*deferrable=*/true, error, callback);
 }
 
 void CellularCapability3gpp::EnableModem(bool deferrable,
                                          Error* error,
                                          const ResultCallback& callback) {
-  SLOG(this, 3) << __func__ << "(deferrable=" << deferrable << ")";
+  SLOG(this, 1) << __func__ << "(deferrable=" << deferrable << ")";
   CHECK(!callback.is_null());
   Error local_error(Error::kOperationInitiated);
   metrics_->NotifyDeviceEnableStarted(cellular()->interface_index());
@@ -268,7 +268,7 @@ void CellularCapability3gpp::EnableModem(bool deferrable,
 
 void CellularCapability3gpp::EnableModemCompleted(
     bool deferrable, const ResultCallback& callback, const Error& error) {
-  SLOG(this, 3) << __func__ << "(deferrable=" << deferrable
+  SLOG(this, 1) << __func__ << "(deferrable=" << deferrable
                 << ", error=" << error << ")";
 
   // If the enable operation failed with Error::kWrongState, the modem is not
@@ -289,7 +289,7 @@ void CellularCapability3gpp::EnableModemCompleted(
     }
 
     if (deferred_enable_modem_callback_.is_null()) {
-      SLOG(this, 2) << "Defer enable operation.";
+      SLOG(this, 1) << "Defer enable operation.";
       // The Enable operation to be deferred should not be further deferrable.
       deferred_enable_modem_callback_ = Bind(
           &CellularCapability3gpp::EnableModem, weak_ptr_factory_.GetWeakPtr(),
@@ -1339,11 +1339,12 @@ void CellularCapability3gpp::OnModemStateChanged(Cellular::ModemState state) {
   }
 
   cellular()->OnModemStateChanged(state);
+
   // TODO(armansito): Move the deferred enable logic to Cellular
   // (See crbug.com/279499).
   if (!deferred_enable_modem_callback_.is_null() &&
       state == Cellular::kModemStateDisabled) {
-    SLOG(this, 2) << "Enabling modem after deferring.";
+    SLOG(this, 1) << "Enabling modem after deferring.";
     deferred_enable_modem_callback_.Run();
     deferred_enable_modem_callback_.Reset();
   }
