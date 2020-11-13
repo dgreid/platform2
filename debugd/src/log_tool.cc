@@ -184,7 +184,8 @@ const std::vector<Log> kCommandLogs {
   {kCommand, "crosvm.log", "nsenter -t1 -m /bin/sh -c 'tail -n+1"
     " /run/daemon-store/crosvm/*/log/*.log.1"
     " /run/daemon-store/crosvm/*/log/*.log'", kRoot, kRoot},
-  {kCommand, "dmesg", "/bin/dmesg"},
+  // 'dmesg' needs CAP_SYSLOG.
+  {kCommand, "dmesg", "/bin/dmesg", kRoot, kRoot},
   {kCommand, "drm_gem_objects", "cat /sys/kernel/debug/dri/?/gem",
     SandboxedProcess::kDefaultUser, kDebugfsGroup},
   {kCommand, "drm_state", "cat /sys/kernel/debug/dri/?/state",
