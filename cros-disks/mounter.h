@@ -21,11 +21,10 @@ class MountPoint;
 // Interface for mounting a given filesystem.
 class Mounter {
  public:
-  Mounter();
+  Mounter() = default;
   Mounter(const Mounter&) = delete;
   Mounter& operator=(const Mounter&) = delete;
-
-  virtual ~Mounter();
+  virtual ~Mounter() = default;
 
   // Mounts the filesystem. On failure returns nullptr and |error| is
   // set accordingly. Both |source| and |params| are just some strings
@@ -45,35 +44,6 @@ class Mounter {
                         base::FilePath* suggested_dir_name) const = 0;
 };
 
-// Temporary adaptor to keep some signatures compatible with old implementation
-// and minimize churn.
-// TODO(crbug.com/933018): Remove when done.
-class MounterCompat : public Mounter {
- public:
-  explicit MounterCompat(MountOptions mount_options,
-                         std::unique_ptr<Mounter> mounter = {});
-  MounterCompat(const MounterCompat&) = delete;
-  MounterCompat& operator=(const MounterCompat&) = delete;
-
-  ~MounterCompat() override;
-
-  // Mounter overrides.
-  std::unique_ptr<MountPoint> Mount(const std::string& source,
-                                    const base::FilePath& target_path,
-                                    std::vector<std::string> params,
-                                    MountErrorType* error) const override;
-  // Always returns true.
-  bool CanMount(const std::string& source,
-                const std::vector<std::string>& params,
-                base::FilePath* suggested_dir_name) const override;
-
-  const Mounter* mounter() const { return mounter_.get(); }
-  const MountOptions& mount_options() const { return mount_options_; }
-
- private:
-  const std::unique_ptr<Mounter> mounter_;
-  const MountOptions mount_options_;
-};
 
 }  // namespace cros_disks
 
