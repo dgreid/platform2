@@ -166,9 +166,11 @@ sequence of events on devices with fingerprint overlapped on power button.
 
 #### Enrollment
 
+<!-- mdformat off(b/139308852) -->
 *** note
 TODO
 ***
+<!-- mdformat on -->
 
 ## Chrome
 

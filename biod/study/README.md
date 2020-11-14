@@ -1,6 +1,6 @@
 # Fingerprint Study Tool
 
-<!-- mdformat off(Gitiles note syntax will get mangled by mdformat) -->
+<!-- mdformat off(b/139308852) -->
 *** note
 See [Typography conventions] to understand what `(outside)`, `(inside)`,
 `(in/out)`, and `(device)` mean.
