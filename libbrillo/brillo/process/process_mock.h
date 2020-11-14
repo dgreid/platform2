@@ -20,8 +20,12 @@ class ProcessMock : public Process {
   virtual ~ProcessMock() {}
 
   MOCK_METHOD(void, AddArg, (const std::string&), (override));
+  MOCK_METHOD(void, RedirectDevNull, (int), (override));
   MOCK_METHOD(void, RedirectInput, (const std::string&), (override));
   MOCK_METHOD(void, RedirectOutput, (const std::string&), (override));
+  MOCK_METHOD(void, RedirectOutputToMemory, (bool), (override));
+  MOCK_METHOD(void, RedirectUsingFile, (int, const std::string&), (override));
+  MOCK_METHOD(void, RedirectUsingMemory, (int), (override));
   MOCK_METHOD(void, RedirectUsingPipe, (int, bool), (override));
   MOCK_METHOD(void, BindFd, (int, int), (override));
   MOCK_METHOD(void, SetUid, (uid_t), (override));
@@ -32,6 +36,8 @@ class ProcessMock : public Process {
   MOCK_METHOD(void, SetInheritParentSignalMask, (bool), (override));
   MOCK_METHOD(void, SetPreExecCallback, (const PreExecCallback&), (override));
   MOCK_METHOD(void, SetSearchPath, (bool), (override));
+  MOCK_METHOD(int, GetOutputFd, (int), (override));
+  MOCK_METHOD(std::string, GetOutputString, (int), (override));
   MOCK_METHOD(int, GetPipe, (int), (override));
   MOCK_METHOD(bool, Start, (), (override));
   MOCK_METHOD(int, Wait, (), (override));

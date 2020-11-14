@@ -7,6 +7,7 @@
 #include <fcntl.h>
 #include <signal.h>
 #include <stdint.h>
+#include <sys/mman.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -30,6 +31,24 @@
 #endif  // !__linux__
 
 namespace brillo {
+
+namespace {
+
+// This process is used to open a file and dup2() into a file descriptor in the
+// child process after fork().
+void OpenFileAndDup2Fd(const std::string& filename, int fd) {
+  int output_handle = HANDLE_EINTR(
+      open(filename.c_str(), O_CREAT | O_WRONLY | O_TRUNC | O_NOFOLLOW, 0666));
+  if (output_handle < 0) {
+    PLOG(ERROR) << "Could not create " << filename;
+    // Avoid exit() to avoid atexit handlers from parent.
+    _exit(Process::kErrorExitStatus);
+  }
+  HANDLE_EINTR(dup2(output_handle, fd));
+  IGNORE_EINTR(close(output_handle));
+}
+
+}  // namespace
 
 bool ReturnTrue() {
   return true;
@@ -61,12 +80,68 @@ void ProcessImpl::AddArg(const std::string& arg) {
   arguments_.push_back(arg);
 }
 
+void ProcessImpl::RedirectDevNull(int child_fd) {
+  RedirectUsingFile(child_fd, "/dev/null");
+}
+
 void ProcessImpl::RedirectInput(const std::string& input_file) {
-  input_file_ = input_file;
+  stdin_.type_ = FileDescriptorRedirectType::kFile;
+  stdin_.filename_ = input_file;
 }
 
 void ProcessImpl::RedirectOutput(const std::string& output_file) {
-  output_file_ = output_file;
+  RedirectUsingFile(STDOUT_FILENO, output_file);
+  RedirectUsingFile(STDERR_FILENO, output_file);
+}
+
+void ProcessImpl::RedirectOutputToMemory(bool combine) {
+  RedirectUsingMemory(STDOUT_FILENO);
+  if (combine) {
+    stderr_.parent_fd_ = dup(stdout_.parent_fd_);
+    stderr_.type_ = FileDescriptorRedirectType::kMemory;
+  } else {
+    RedirectUsingMemory(STDERR_FILENO);
+  }
+}
+
+void ProcessImpl::RedirectUsingFile(int child_fd,
+                                    const std::string& output_file) {
+  switch (child_fd) {
+    case STDOUT_FILENO:
+      stdout_.type_ = FileDescriptorRedirectType::kFile;
+      stdout_.filename_ = output_file;
+      break;
+    case STDERR_FILENO:
+      stderr_.type_ = FileDescriptorRedirectType::kFile;
+      stderr_.filename_ = output_file;
+      break;
+    default:
+      LOG(ERROR) << "Invalid file descriptor " << child_fd
+                 << " redirect to /dev/null";
+  }
+}
+
+void ProcessImpl::RedirectUsingMemory(int child_fd) {
+  int parent_fd = memfd_create(base::NumberToString(child_fd).c_str(), 0);
+  if (parent_fd < 0) {
+    PLOG(ERROR) << "Could not memfd_create for " << child_fd;
+    return;
+  }
+  switch (child_fd) {
+    case STDOUT_FILENO:
+      stdout_.parent_fd_ = parent_fd;
+      stdout_.type_ = FileDescriptorRedirectType::kMemory;
+      break;
+    case STDERR_FILENO:
+      stderr_.parent_fd_ = parent_fd;
+      stderr_.type_ = FileDescriptorRedirectType::kMemory;
+      break;
+    default:
+      LOG(ERROR) << "Invalid file descriptor " << child_fd
+                 << " redirect to memfd";
+      IGNORE_EINTR(close(parent_fd));
+      return;
+  }
 }
 
 void ProcessImpl::RedirectUsingPipe(int child_fd, bool is_input) {
@@ -126,6 +201,53 @@ void ProcessImpl::SetPreExecCallback(const PreExecCallback& cb) {
 
 void ProcessImpl::SetSearchPath(bool search_path) {
   search_path_ = search_path;
+}
+
+int ProcessImpl::GetOutputFd(int child_fd) {
+  switch (child_fd) {
+    case STDOUT_FILENO:
+      return stdout_.type_ == FileDescriptorRedirectType::kMemory
+                 ? stdout_.parent_fd_
+                 : -1;
+    case STDERR_FILENO:
+      return stderr_.type_ == FileDescriptorRedirectType::kMemory
+                 ? stderr_.parent_fd_
+                 : -1;
+    default:
+      return -1;
+  }
+}
+
+std::string ProcessImpl::GetOutputString(int child_fd) {
+  int fd = GetOutputFd(child_fd);
+  std::string output;
+
+  if (fd < 0)
+    return output;
+
+  struct stat st;
+
+  if (fstat(fd, &st)) {
+    PLOG(ERROR) << "Failed to stat memfd";
+    return output;
+  }
+
+  ssize_t remaining_read_bytes = st.st_size, bytes_read = 0;
+  output.resize(remaining_read_bytes);
+
+  while (true) {
+    const ssize_t count = HANDLE_EINTR(
+        pread(fd, &output[bytes_read], output.size() - bytes_read, bytes_read));
+    if (count < 0) {
+      PLOG(ERROR) << "Failed to read from fd";
+      return std::string();
+    }
+
+    bytes_read += count;
+
+    if (bytes_read == output.size())
+      return output;
+  }
 }
 
 int ProcessImpl::GetPipe(int child_fd) {
@@ -194,6 +316,11 @@ void ProcessImpl::CloseUnusedFileDescriptors() {
       continue;
     }
 
+    // Ignore redirect memfds for stdout and stderr.
+    if (fd == stdout_.parent_fd_ || fd == stderr_.parent_fd_) {
+      continue;
+    }
+
     // Ignore file descriptors used by the PipeMap, they will be handled
     // by this process later on.
     if (IsFileDescriptorInPipeMap(fd)) {
@@ -258,11 +385,12 @@ bool ProcessImpl::Start() {
       IGNORE_EINTR(close(i->second.child_fd_));
     }
 
-    if (!input_file_.empty()) {
+    if (stdin_.type_ == FileDescriptorRedirectType::kFile &&
+        !stdin_.filename_.empty()) {
       int input_handle = HANDLE_EINTR(
-          open(input_file_.c_str(), O_RDONLY | O_NOFOLLOW | O_NOCTTY));
+          open(stdin_.filename_.c_str(), O_RDONLY | O_NOFOLLOW | O_NOCTTY));
       if (input_handle < 0) {
-        PLOG(ERROR) << "Could not open " << input_file_;
+        PLOG(ERROR) << "Could not open " << stdin_.filename_;
         // Avoid exit() to avoid atexit handlers from parent.
         _exit(kErrorExitStatus);
       }
@@ -271,30 +399,45 @@ bool ProcessImpl::Start() {
       // to dup into that file descriptor and close the original.
       if (input_handle != STDIN_FILENO) {
         if (HANDLE_EINTR(dup2(input_handle, STDIN_FILENO)) < 0) {
-          PLOG(ERROR) << "Could not dup fd to stdin for " << input_file_;
+          PLOG(ERROR) << "Could not dup fd to stdin for " << stdin_.filename_;
           _exit(kErrorExitStatus);
         }
         IGNORE_EINTR(close(input_handle));
       }
     }
 
-    if (!output_file_.empty()) {
-      int output_handle =
-          HANDLE_EINTR(open(output_file_.c_str(),
-                            O_CREAT | O_WRONLY | O_TRUNC | O_NOFOLLOW, 0666));
-      if (output_handle < 0) {
-        PLOG(ERROR) << "Could not create " << output_file_;
-        // Avoid exit() to avoid atexit handlers from parent.
-        _exit(kErrorExitStatus);
-      }
-      HANDLE_EINTR(dup2(output_handle, STDOUT_FILENO));
-      HANDLE_EINTR(dup2(output_handle, STDERR_FILENO));
-      // Only close output_handle if it does not happen to be one of
-      // the two standard file descriptors we are trying to redirect.
-      if (output_handle != STDOUT_FILENO && output_handle != STDERR_FILENO) {
-        IGNORE_EINTR(close(output_handle));
-      }
+    switch (stdout_.type_) {
+      case FileDescriptorRedirectType::kFile:
+        if (!stdout_.filename_.empty()) {
+          OpenFileAndDup2Fd(stdout_.filename_, STDOUT_FILENO);
+        }
+        break;
+      case FileDescriptorRedirectType::kMemory:
+        HANDLE_EINTR(dup2(stdout_.parent_fd_, STDOUT_FILENO));
+        IGNORE_EINTR(close(stdout_.parent_fd_));
+        break;
+      default:
+        VLOG(2) << "Ignoring stdout";
     }
+
+    switch (stderr_.type_) {
+      case FileDescriptorRedirectType::kFile:
+        if (!stderr_.filename_.empty()) {
+          if (stderr_.filename_ == stdout_.filename_) {
+            HANDLE_EINTR(dup2(STDOUT_FILENO, STDERR_FILENO));
+          } else {
+            OpenFileAndDup2Fd(stderr_.filename_, STDERR_FILENO);
+          }
+        }
+        break;
+      case FileDescriptorRedirectType::kMemory:
+        HANDLE_EINTR(dup2(stderr_.parent_fd_, STDERR_FILENO));
+        IGNORE_EINTR(close(stderr_.parent_fd_));
+        break;
+      default:
+        VLOG(2) << "Ignoring stderr";
+    }
+
     if (gid_ != static_cast<gid_t>(-1) && setresgid(gid_, gid_, gid_) < 0) {
       int saved_errno = errno;
       LOG(ERROR) << "Unable to set GID to " << gid_ << ": " << saved_errno;
@@ -416,6 +559,9 @@ void ProcessImpl::Reset(pid_t new_pid) {
   for (PipeMap::iterator i = pipe_map_.begin(); i != pipe_map_.end(); ++i)
     IGNORE_EINTR(close(i->second.parent_fd_));
   pipe_map_.clear();
+  IGNORE_EINTR(close(stdout_.parent_fd_));
+  IGNORE_EINTR(close(stderr_.parent_fd_));
+  stderr_ = stdout_ = stdin_ = StandardFileDescriptorInfo();
   if (pid_)
     Kill(SIGKILL, 0);
   UpdatePid(new_pid);

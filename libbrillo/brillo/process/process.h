@@ -49,6 +49,9 @@ class BRILLO_EXPORT Process {
     AddArg(base::StringPrintf("%d", value));
   }
 
+  // Redirects |child_fd| to /dev/null.
+  virtual void RedirectDevNull(int child_fd) = 0;
+
   // Redirects to read stdin from |input_file|. |input_file| must not be
   // a symlink.
   virtual void RedirectInput(const std::string& input_file) = 0;
@@ -56,6 +59,19 @@ class BRILLO_EXPORT Process {
   // Redirects stderr and stdout to |output_file|. |output_file| must not be
   // a symlink.
   virtual void RedirectOutput(const std::string& output_file) = 0;
+
+  // Redirect stderr and stdout to memfd, use |combine| to combine stderr and
+  // stdout.
+  virtual void RedirectOutputToMemory(bool combine) = 0;
+
+  // Indicates we want to redirect |child_fd| in the child process's
+  // file table to |output_file|.
+  virtual void RedirectUsingFile(int child_fd,
+                                 const std::string& output_file) = 0;
+
+  // Indicates we want to redirect |child_fd| in the child process's
+  // file table to a memfd.
+  virtual void RedirectUsingMemory(int child_fd) = 0;
 
   // Indicates we want to redirect |child_fd| in the child process's
   // file table to a pipe.  |child_fd| will be available for reading
@@ -119,6 +135,12 @@ class BRILLO_EXPORT Process {
   // Gets the pipe file descriptor mapped to the process's |child_fd|.
   virtual int GetPipe(int child_fd) = 0;
 
+  // Gets the contents of memfd for the |child_fd|.
+  virtual std::string GetOutputString(int child_fd) = 0;
+
+  // Gets the memfd for the |child_fd|.
+  virtual int GetOutputFd(int child_fd) = 0;
+
   // Starts this process, returning true if successful.
   virtual bool Start() = 0;
 
@@ -169,8 +191,12 @@ class BRILLO_EXPORT ProcessImpl : public Process {
   virtual ~ProcessImpl();
 
   virtual void AddArg(const std::string& arg);
+  virtual void RedirectDevNull(int child_fd);
   virtual void RedirectInput(const std::string& input_file);
   virtual void RedirectOutput(const std::string& output_file);
+  virtual void RedirectOutputToMemory(bool combine);
+  virtual void RedirectUsingFile(int child_fd, const std::string& output_file);
+  virtual void RedirectUsingMemory(int child_fd);
   virtual void RedirectUsingPipe(int child_fd, bool is_input);
   virtual void BindFd(int parent_fd, int child_fd);
   virtual void SetCloseUnusedFileDescriptors(bool close_unused_fds);
@@ -183,6 +209,8 @@ class BRILLO_EXPORT ProcessImpl : public Process {
   virtual void SetPreExecCallback(const PreExecCallback& cb);
   virtual void SetSearchPath(bool search_path);
   virtual int GetPipe(int child_fd);
+  virtual std::string GetOutputString(int child_fd);
+  virtual int GetOutputFd(int child_fd);
   virtual bool Start();
   virtual int Wait();
   virtual int Run();
@@ -206,6 +234,29 @@ class BRILLO_EXPORT ProcessImpl : public Process {
   };
   typedef std::map<int, PipeInfo> PipeMap;
 
+  enum class FileDescriptorRedirectType {
+    // Do not redirect the file descriptor in any way.
+    kIgnore = 0,
+    // Use a memfd to store the fd contents.
+    kMemory,
+    // Use a file to store the file descriptor.
+    kFile,
+  };
+
+  struct StandardFileDescriptorInfo {
+    StandardFileDescriptorInfo()
+        : parent_fd_(-1),
+          type_(FileDescriptorRedirectType::kIgnore),
+          filename_("") {}
+    // (Optional) Parent file descriptor, only exists for kMemory.
+    int parent_fd_;
+    // File descriptor redirect type.
+    FileDescriptorRedirectType type_;
+    // (Optional) Filename if the type is kFile.
+    // TODO(sarthakkukreti): Switch to using base::FilePath.
+    std::string filename_;
+  };
+
   void UpdatePid(pid_t new_pid);
   bool PopulatePipeMap();
 
@@ -219,12 +270,12 @@ class BRILLO_EXPORT ProcessImpl : public Process {
   // process.  pid must not be modified except by calling
   // UpdatePid(new_pid).
   pid_t pid_;
-  std::string input_file_;
-  std::string output_file_;
   std::vector<std::string> arguments_;
   // Map of child target file descriptors (first) to information about
   // pipes created (second).
   PipeMap pipe_map_;
+  // Describes file descriptor state for the child process.
+  StandardFileDescriptorInfo stdin_, stdout_, stderr_;
   uid_t uid_;
   gid_t gid_;
   PreExecCallback pre_exec_;

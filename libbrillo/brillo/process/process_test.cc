@@ -195,6 +195,55 @@ TEST_F(ProcessTest, StderrCaptured) {
   CheckStderrCaptured();
 }
 
+TEST_F(ProcessTest, StderrCaptureMemoryMemfd) {
+  std::string contents;
+  process_.RedirectUsingMemory(STDERR_FILENO);
+  process_.AddArg(kBinSh);
+  process_.AddArg("-c");
+  process_.AddArg("echo errormessage >&2 && exit 1");
+  EXPECT_EQ(1, process_.Run());
+  EXPECT_NE(std::string::npos,
+            process_.GetOutputString(STDERR_FILENO).find("errormessage"));
+}
+
+TEST_F(ProcessTest, StdoutCaptureMemoryMemfd) {
+  std::string contents;
+  process_.RedirectUsingMemory(STDOUT_FILENO);
+  process_.AddArg(kBinSh);
+  process_.AddArg("-c");
+  process_.AddArg("echo errormessage && exit 1");
+  EXPECT_EQ(1, process_.Run());
+  EXPECT_NE(std::string::npos,
+            process_.GetOutputString(STDOUT_FILENO).find("errormessage"));
+}
+
+TEST_F(ProcessTest, StdoutCaptureSeparateMemoryMemfd) {
+  std::string contents;
+  process_.RedirectOutputToMemory(false);
+  process_.AddArg(kBinSh);
+  process_.AddArg("-c");
+  process_.AddArg("echo errormessage1; echo errormessage2 >&2; exit 1");
+  EXPECT_EQ(1, process_.Run());
+  EXPECT_NE(std::string::npos,
+            process_.GetOutputString(STDOUT_FILENO).find("errormessage1"));
+  EXPECT_NE(std::string::npos,
+            process_.GetOutputString(STDERR_FILENO).find("errormessage2"));
+}
+
+TEST_F(ProcessTest, StdoutCaptureCombinedMemoryMemfd) {
+  std::string contents;
+  process_.RedirectOutputToMemory(true);
+  process_.AddArg(kBinSh);
+  process_.AddArg("-c");
+  process_.AddArg("echo errormessage1 >&2; echo errormessage2; exit 1");
+  EXPECT_EQ(1, process_.Run());
+  LOG(ERROR) << process_.GetOutputString(STDOUT_FILENO);
+  EXPECT_NE(std::string::npos,
+            process_.GetOutputString(STDOUT_FILENO).find("errormessage1"));
+  EXPECT_NE(std::string::npos,
+            process_.GetOutputString(STDOUT_FILENO).find("errormessage2"));
+}
+
 TEST_F(ProcessTest, StderrCapturedWhenPreviouslyClosed) {
   int saved_stderr = dup(STDERR_FILENO);
   close(STDERR_FILENO);
