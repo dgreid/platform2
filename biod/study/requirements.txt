@@ -4,7 +4,8 @@
 #
 # Fingerprint Study Tool
 #
-# Confirmed working Jan 8, 2020
+# Confirmed working November 17, 2020
 
-CherryPy == 17.4.2
-ws4py    == 0.5.1
+CherryPy==17.4.2
+python-gnupg==0.4.5
+ws4py==0.5.1

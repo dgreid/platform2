@@ -21,6 +21,7 @@ import threading
 import time
 
 import cherrypy
+import gnupg
 from ws4py.server.cherrypyserver import WebSocketPlugin, WebSocketTool
 from ws4py.websocket import WebSocket
 
@@ -63,6 +64,9 @@ class FingerWebSocket(WebSocket):
     pict_dir = '/tmp'
     # FpUtils class to process images through the external library.
     utils = None
+    # Optional GNUGPG instance used for encryption
+    gpg = None
+    gpg_recipients: list = None
     # The worker thread processing the images.
     worker = None
     # The current request processed by the worker thread.
@@ -81,6 +85,13 @@ class FingerWebSocket(WebSocket):
         self.pict_dir = arg.picture_dir
         if fputils:
             self.utils = fputils.FpUtils()
+        if arg.gpg_keyring:
+            self.gpg = gnupg.GPG(keyring=arg.gpg_keyring, options=[
+                '--no-options',
+                '--no-default-recipient',
+                '--trust-model', 'always',
+            ])
+            self.gpg_recipients = arg.gpg_recipients.split()
         self.worker = threading.Thread(target=self.finger_worker)
         self.worker.start()
 
@@ -117,6 +128,19 @@ class FingerWebSocket(WebSocket):
         if not os.path.exists(path):
             os.makedirs(path)
 
+    def save_to_file(self, data: bytes, file_path: str):
+        """Save data bytes to file at file_path.
+        If GPG is enabled, the .gpg suffix is added to file_path."""
+
+        if self.gpg:
+            file_path += '.gpg'
+            enc = self.gpg.encrypt(data, self.gpg_recipients)
+            data = enc.data
+
+        cherrypy.log("Saving file '%s' size %d" % (file_path, len(data)))
+        with open(file_path, 'wb') as f:
+            f.write(data)
+
     def ectool(self, command: str, *params) -> bytes:
         """Run the ectool command and return its stdout as bytes"""
 
@@ -152,15 +176,13 @@ class FingerWebSocket(WebSocket):
         fmi_file = file_base + '.fmi'
         img = self.ectool('fpframe', 'raw')
         if not img:
+            cherrypy.log('Failed to download fpframe')
             return
-        cherrypy.log("Saving file '%s' size %d" % (raw_file, len(img)))
-        with open(raw_file, 'wb') as f:
-            f.write(img)
+        self.save_to_file(img, raw_file)
         if self.utils:
             rc, fmi = self.utils.image_data_to_fmi(img)
             if rc == 0:
-                with open(fmi_file, 'wb') as f:
-                    f.write(fmi)
+                self.save_to_file(fmi, fmi_file)
             else:
                 cherrypy.log('FMI conversion failed %d' % (rc))
 
@@ -247,8 +269,18 @@ def main(argv: list):
                         help='Log files directory')
     parser.add_argument('-s', '--syslog', action='store_true',
                         help='Log to syslog')
-
+    parser.add_argument('-k', '--gpg-keyring', type=str,
+                        help='Path to the GPG keyring')
+    parser.add_argument('-r', '--gpg-recipients', type=str,
+                        help='User IDs of GPG recipients')
     args = parser.parse_args(argv)
+
+    # GPG can only be used when both gpg-keyring and gpg-recipient are specified
+    if args.gpg_keyring and not args.gpg_recipients:
+        parser.error('gpg-recipients must be specified with gpg-keyring')
+    if args.gpg_recipients and not args.gpg_keyring:
+        parser.error('gpg-keyring must be specified with gpg-recipients')
+
     # Configure cherrypy server
     cherrypy.config.update({'server.socket_port': args.port})
     if args.log_dir:
