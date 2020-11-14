@@ -21,6 +21,7 @@
 #include "cros-disks/mount_options.h"
 #include "cros-disks/mount_point.h"
 #include "cros-disks/platform.h"
+#include "cros-disks/sandboxed_process.h"
 #include "cros-disks/uri.h"
 
 using testing::_;
@@ -92,6 +93,16 @@ class MockHelper : public FUSEHelper {
               (const, override));
 };
 
+class MockSandboxedProcess : public SandboxedProcess {
+ public:
+  MockSandboxedProcess() = default;
+  pid_t StartImpl(base::ScopedFD, base::ScopedFD, base::ScopedFD) override {
+    return 123;
+  }
+  MOCK_METHOD(int, WaitImpl, (), (override));
+  MOCK_METHOD(int, WaitNonBlockingImpl, (), (override));
+};
+
 class MockMounter : public FUSEMounterLegacy {
  public:
   MockMounter(const Platform* platform, brillo::ProcessReaper* process_reaper)
@@ -101,10 +112,9 @@ class MockMounter : public FUSEMounterLegacy {
                            .platform = platform,
                            .process_reaper = process_reaper}) {}
 
-  MOCK_METHOD(pid_t,
-              StartDaemon,
-              (const base::File& fuse_file,
-               const std::string&,
+  MOCK_METHOD(std::unique_ptr<SandboxedProcess>,
+              PrepareSandbox,
+              (const std::string&,
                const base::FilePath&,
                std::vector<std::string>,
                MountErrorType*),
@@ -234,9 +244,11 @@ TEST_F(FUSEMountManagerTest, DoMount_BySource) {
       .WillOnce(DoAll(SetArgPointee<2>("/blah"), Return(true)));
   EXPECT_CALL(platform_, SetPermissions("/blah", 0755)).WillOnce(Return(true));
   MockMounter* mounter = new MockMounter(&platform_, &process_reaper_);
-  EXPECT_CALL(*mounter, StartDaemon(_, kSomeSource.value(),
-                                    base::FilePath(kSomeMountpoint), _, _))
-      .WillOnce(DoAll(SetArgPointee<4>(MOUNT_ERROR_NONE), Return(123)));
+  EXPECT_CALL(*mounter, PrepareSandbox(kSomeSource.value(),
+                                       base::FilePath(kSomeMountpoint), _, _))
+      .WillOnce(
+          DoAll(SetArgPointee<3>(MOUNT_ERROR_NONE),
+                Return(ByMove(std::make_unique<MockSandboxedProcess>()))));
   std::unique_ptr<FUSEMounter> ptr(mounter);
   EXPECT_CALL(*bar_, CreateMounter(base::FilePath("/blah"), kSomeSource,
                                    base::FilePath(kSomeMountpoint), _))

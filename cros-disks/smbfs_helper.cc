@@ -15,6 +15,7 @@
 #include "cros-disks/mount_options.h"
 #include "cros-disks/mount_point.h"
 #include "cros-disks/platform.h"
+#include "cros-disks/sandboxed_process.h"
 #include "cros-disks/uri.h"
 
 namespace cros_disks {
@@ -50,13 +51,12 @@ class SmbfsMounter : public FUSEMounterLegacy {
                            .seccomp_policy = seccomp_policy}) {}
 
   // FUSEMounterLegacy overrides:
-  pid_t StartDaemon(const base::File& fuse_file,
-                    const std::string& source,
-                    const base::FilePath& target_path,
-                    std::vector<std::string> params,
-                    MountErrorType* error) const override {
-    return FUSEMounterLegacy::StartDaemon(fuse_file, "", target_path, params,
-                                          error);
+  std::unique_ptr<SandboxedProcess> PrepareSandbox(
+      const std::string& source,
+      const base::FilePath& target_path,
+      std::vector<std::string> params,
+      MountErrorType* error) const override {
+    return FUSEMounterLegacy::PrepareSandbox("", target_path, params, error);
   }
 };
 

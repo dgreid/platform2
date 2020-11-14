@@ -344,6 +344,47 @@ std::unique_ptr<MountPoint> FUSEMounter::Mount(
   return std::move(mount_point);
 }
 
+pid_t FUSEMounter::StartDaemon(const base::File& fuse_file,
+                               const std::string& source,
+                               const base::FilePath& target_path,
+                               std::vector<std::string> params,
+                               MountErrorType* error) const {
+  auto mount_process =
+      PrepareSandbox(source, target_path, std::move(params), error);
+  if (*error != MOUNT_ERROR_NONE) {
+    return Process::kInvalidProcessId;
+  }
+
+  mount_process->AddArgument(
+      base::StringPrintf("/dev/fd/%d", fuse_file.GetPlatformFile()));
+
+  std::vector<std::string> output;
+  const int return_code = mount_process->Run(&output);
+  *error = InterpretReturnCode(return_code);
+
+  if (*error != MOUNT_ERROR_NONE) {
+    const auto& executable = mount_process->arguments()[0];
+    if (!output.empty()) {
+      LOG(ERROR) << "FUSE mount program " << quote(executable) << " outputted "
+                 << output.size() << " lines:";
+      for (const std::string& line : output) {
+        LOG(ERROR) << line;
+      }
+    }
+    LOG(ERROR) << "FUSE mount program " << quote(executable)
+               << " returned error code " << return_code;
+    return Process::kInvalidProcessId;
+  }
+
+  return mount_process->pid();
+}
+
+MountErrorType FUSEMounter::InterpretReturnCode(int return_code) const {
+  if (return_code != 0)
+    return MOUNT_ERROR_MOUNT_PROGRAM_FAILED;
+  return MOUNT_ERROR_NONE;
+}
+
 FUSEMounterLegacy::FUSEMounterLegacy(Params params)
     : FUSEMounter(params.platform,
                   params.process_reaper,
@@ -382,16 +423,16 @@ void FUSEMounterLegacy::CopyPassword(const std::vector<std::string>& options,
   process->SetStdIn(it->substr(prefix.size()));
 }
 
-pid_t FUSEMounterLegacy::StartDaemon(const base::File& fuse_file,
-                                     const std::string& source,
-                                     const base::FilePath&,
-                                     std::vector<std::string> params,
-                                     MountErrorType* error) const {
+std::unique_ptr<SandboxedProcess> FUSEMounterLegacy::PrepareSandbox(
+    const std::string& source,
+    const base::FilePath& target_path,
+    std::vector<std::string> params,
+    MountErrorType* error) const {
   auto mount_process = CreateSandboxedProcess();
   *error = ConfigureCommonSandbox(mount_process.get(), platform(),
                                   network_access_, seccomp_policy_);
   if (*error != MOUNT_ERROR_NONE) {
-    return Process::kInvalidProcessId;
+    return nullptr;
   }
 
   uid_t mount_user_id;
@@ -400,12 +441,12 @@ pid_t FUSEMounterLegacy::StartDaemon(const base::File& fuse_file,
                                      &mount_group_id)) {
     LOG(ERROR) << "Cannot resolve user " << quote(mount_user_);
     *error = MOUNT_ERROR_INTERNAL;
-    return Process::kInvalidProcessId;
+    return nullptr;
   }
   if (!mount_group_.empty() &&
       !platform()->GetGroupId(mount_group_, &mount_group_id)) {
     *error = MOUNT_ERROR_INTERNAL;
-    return Process::kInvalidProcessId;
+    return nullptr;
   }
 
   mount_process->SetUserId(mount_user_id);
@@ -415,7 +456,7 @@ pid_t FUSEMounterLegacy::StartDaemon(const base::File& fuse_file,
   if (!platform()->PathExists(mount_program_)) {
     LOG(ERROR) << "Cannot find mount program " << quote(mount_program_);
     *error = MOUNT_ERROR_MOUNT_PROGRAM_NOT_FOUND;
-    return Process::kInvalidProcessId;
+    return nullptr;
   }
   mount_process->AddArgument(mount_program_);
 
@@ -426,13 +467,13 @@ pid_t FUSEMounterLegacy::StartDaemon(const base::File& fuse_file,
         !platform()->SetPermissions(source, kSourcePathPermissions)) {
       LOG(ERROR) << "Can't set up permissions on " << quote(source);
       *error = MOUNT_ERROR_INSUFFICIENT_PERMISSIONS;
-      return Process::kInvalidProcessId;
+      return nullptr;
     }
 
     if (!mount_process->BindMount(source, source, true, false)) {
       LOG(ERROR) << "Cannot bind mount device " << quote(source);
       *error = MOUNT_ERROR_INVALID_ARGUMENT;
-      return Process::kInvalidProcessId;
+      return nullptr;
     }
   }
 
@@ -446,7 +487,7 @@ pid_t FUSEMounterLegacy::StartDaemon(const base::File& fuse_file,
                                   bind_path.writable, bind_path.recursive)) {
       LOG(ERROR) << "Cannot bind-mount " << quote(bind_path.path);
       *error = MOUNT_ERROR_INVALID_ARGUMENT;
-      return Process::kInvalidProcessId;
+      return nullptr;
     }
   }
 
@@ -462,34 +503,19 @@ pid_t FUSEMounterLegacy::StartDaemon(const base::File& fuse_file,
     mount_process->AddArgument(source);
   }
 
-  mount_process->AddArgument(
-      base::StringPrintf("/dev/fd/%d", fuse_file.GetPlatformFile()));
-
   CopyPassword(params, mount_process.get());
 
-  std::vector<std::string> output;
-  const int return_code = mount_process->Run(&output);
+  return mount_process;
+}
 
+MountErrorType FUSEMounterLegacy::InterpretReturnCode(int return_code) const {
   if (metrics_ && !metrics_name_.empty())
     metrics_->RecordFuseMounterErrorCode(metrics_name_, return_code);
 
-  if (return_code != 0) {
-    if (!output.empty()) {
-      LOG(ERROR) << "FUSE mount program " << quote(mount_program_)
-                 << " outputted " << output.size() << " lines:";
-      for (const std::string& line : output) {
-        LOG(ERROR) << line;
-      }
-    }
-    LOG(ERROR) << "FUSE mount program " << quote(mount_program_)
-               << " returned error code " << return_code;
-    *error = base::Contains(password_needed_codes_, return_code)
-                 ? MOUNT_ERROR_NEED_PASSWORD
-                 : MOUNT_ERROR_MOUNT_PROGRAM_FAILED;
-    return Process::kInvalidProcessId;
-  }
+  if (base::Contains(password_needed_codes_, return_code))
+    return MOUNT_ERROR_NEED_PASSWORD;
 
-  return mount_process->pid();
+  return FUSEMounter::InterpretReturnCode(return_code);
 }
 
 bool FUSEMounterLegacy::CanMount(const std::string& source,

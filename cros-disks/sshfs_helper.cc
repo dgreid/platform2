@@ -18,6 +18,7 @@
 #include "cros-disks/mount_point.h"
 #include "cros-disks/platform.h"
 #include "cros-disks/quote.h"
+#include "cros-disks/sandboxed_process.h"
 #include "cros-disks/uri.h"
 
 namespace cros_disks {
@@ -80,17 +81,17 @@ class SshfsMounter : public FUSEMounterLegacy {
                            .seccomp_policy = std::move(seccomp_policy)}) {}
 
   // FUSEMounterLegacy overrides:
-  pid_t StartDaemon(const base::File& fuse_file,
-                    const std::string& source,
-                    const base::FilePath& target_path,
-                    std::vector<std::string> params,
-                    MountErrorType* error) const override {
+  std::unique_ptr<SandboxedProcess> PrepareSandbox(
+      const std::string& source,
+      const base::FilePath& target_path,
+      std::vector<std::string> params,
+      MountErrorType* error) const override {
     // This mounter will be created and invoked by FUSEMountManager, which
     // expects the source to be a URI.
     Uri uri = Uri::Parse(source);
     CHECK(uri.valid());
-    return FUSEMounterLegacy::StartDaemon(fuse_file, uri.path(), target_path,
-                                          params, error);
+    return FUSEMounterLegacy::PrepareSandbox(uri.path(), target_path, params,
+                                             error);
   }
 };
 

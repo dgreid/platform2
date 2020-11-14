@@ -50,13 +50,31 @@ class FUSEMounter : public Mounter {
                                     MountErrorType* error) const final;
 
  protected:
+  // Translates mount app's return codes into errors. The base
+  // implementation just assumes any non-zero return code to be a
+  // MOUNT_ERROR_MOUNT_PROGRAM_FAILED, but subclasses can implement more
+  // elaborate mappings.
+  virtual MountErrorType InterpretReturnCode(int return_code) const;
+
+  // Performs necessary set up and makes a SandboxedProcess ready to be
+  // launched to serve a mount. The returned instance will have one more
+  // last argument added to indicate the FUSE mount path according to
+  // fusermount's conventions, so implementation doesn't have to do this,
+  // |target_path| is purely informational.
+  virtual std::unique_ptr<SandboxedProcess> PrepareSandbox(
+      const std::string& source,
+      const base::FilePath& target_path,
+      std::vector<std::string> params,
+      MountErrorType* error) const = 0;
+
+ private:
   // Performs necessary set up and launches FUSE daemon that communicates to
   // FUSE kernel layer via the |fuse_file|. Returns PID of the daemon process.
-  virtual pid_t StartDaemon(const base::File& fuse_file,
-                            const std::string& source,
-                            const base::FilePath& target_path,
-                            std::vector<std::string> params,
-                            MountErrorType* error) const = 0;
+  pid_t StartDaemon(const base::File& fuse_file,
+                    const std::string& source,
+                    const base::FilePath& target_path,
+                    std::vector<std::string> params,
+                    MountErrorType* error) const;
 
  private:
   const Platform* const platform_;
@@ -152,11 +170,13 @@ class FUSEMounterLegacy : public FUSEMounter {
                 const std::vector<std::string>& params,
                 base::FilePath* suggested_name) const override;
 
-  pid_t StartDaemon(const base::File& fuse_file,
-                    const std::string& source,
-                    const base::FilePath& target_path,
-                    std::vector<std::string> params,
-                    MountErrorType* error) const override;
+  MountErrorType InterpretReturnCode(int return_code) const override;
+
+  std::unique_ptr<SandboxedProcess> PrepareSandbox(
+      const std::string& source,
+      const base::FilePath& target_path,
+      std::vector<std::string> params,
+      MountErrorType* error) const override;
 
   // Protected for mocking out in testing.
   virtual std::unique_ptr<SandboxedProcess> CreateSandboxedProcess() const;
