@@ -9,8 +9,6 @@
 #include <string>
 #include <vector>
 
-#include <base/macros.h>
-
 #include "cros-disks/fuse_helper.h"
 
 namespace cros_disks {

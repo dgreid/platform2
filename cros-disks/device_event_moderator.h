@@ -5,8 +5,6 @@
 #ifndef CROS_DISKS_DEVICE_EVENT_MODERATOR_H_
 #define CROS_DISKS_DEVICE_EVENT_MODERATOR_H_
 
-#include <base/macros.h>
-
 #include "cros-disks/device_event_queue.h"
 #include "cros-disks/session_manager_observer_interface.h"
 

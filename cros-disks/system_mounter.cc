@@ -31,6 +31,9 @@ class SystemMountPoint : public MountPoint {
   SystemMountPoint(const base::FilePath& path, const Platform* platform)
       : MountPoint(path), platform_(platform) {}
 
+  SystemMountPoint(const SystemMountPoint&) = delete;
+  SystemMountPoint& operator=(const SystemMountPoint&) = delete;
+
   ~SystemMountPoint() override { DestructorUnmount(); }
 
  protected:
@@ -46,8 +49,6 @@ class SystemMountPoint : public MountPoint {
 
  private:
   const Platform* platform_;
-
-  DISALLOW_IMPLICIT_CONSTRUCTORS(SystemMountPoint);
 };
 
 }  // namespace

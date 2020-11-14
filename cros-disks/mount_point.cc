@@ -19,9 +19,9 @@ namespace {
 class LeakingMountPoint : public MountPoint {
  public:
   explicit LeakingMountPoint(const base::FilePath& path) : MountPoint(path) {}
-  ~LeakingMountPoint() override { DestructorUnmount(); }
   LeakingMountPoint(const LeakingMountPoint&) = delete;
   LeakingMountPoint& operator=(const LeakingMountPoint&) = delete;
+  ~LeakingMountPoint() override { DestructorUnmount(); }
 
  protected:
   // MountPoint overrides.

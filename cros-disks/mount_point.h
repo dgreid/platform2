@@ -8,7 +8,6 @@
 #include <memory>
 
 #include <base/files/file_path.h>
-#include <base/macros.h>
 #include <chromeos/dbus/service_constants.h>
 
 namespace cros_disks {
@@ -21,6 +20,9 @@ class MountPoint {
   // Creates a MountPoint that does nothing on unmount and 'leaks' the mount
   // point.
   static std::unique_ptr<MountPoint> CreateLeaking(const base::FilePath& path);
+
+  MountPoint(const MountPoint&) = delete;
+  MountPoint& operator=(const MountPoint&) = delete;
 
   // Unmounts the mount point. Subclasses MUST call DestructorUnmount().
   virtual ~MountPoint();
@@ -38,8 +40,6 @@ class MountPoint {
  protected:
   // Protected constructor for subclasses.
   explicit MountPoint(const base::FilePath& path);
-  MountPoint(const MountPoint&) = delete;
-  MountPoint& operator=(const MountPoint&) = delete;
 
   // Unmounts the point point and logs errors as appropriate. MUST be called in
   // the destructor.

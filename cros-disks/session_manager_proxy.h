@@ -7,7 +7,6 @@
 
 #include <string>
 
-#include <base/macros.h>
 #include <base/memory/ref_counted.h>
 #include <base/memory/weak_ptr.h>
 #include <base/observer_list.h>
@@ -25,7 +24,6 @@ class SessionManagerProxy {
   explicit SessionManagerProxy(scoped_refptr<dbus::Bus> bus);
   SessionManagerProxy(const SessionManagerProxy&) = delete;
   SessionManagerProxy& operator=(const SessionManagerProxy&) = delete;
-
   ~SessionManagerProxy() = default;
 
   void AddObserver(SessionManagerObserverInterface* observer);

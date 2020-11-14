@@ -13,7 +13,6 @@
 #include <vector>
 
 #include <base/callback.h>
-#include <base/macros.h>
 #include <chromeos/dbus/service_constants.h>
 #include <gtest/gtest_prod.h>
 

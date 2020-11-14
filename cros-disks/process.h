@@ -10,7 +10,6 @@
 #include <vector>
 
 #include <base/files/scoped_file.h>
-#include <base/macros.h>
 #include <base/strings/string_piece.h>
 
 #include <gtest/gtest_prod.h>
@@ -26,6 +25,9 @@ class Process {
   static const pid_t kInvalidProcessId;
 
   static const int kInvalidFD;
+
+  Process(const Process&) = delete;
+  Process& operator=(const Process&) = delete;
 
   virtual ~Process();
 
@@ -68,8 +70,6 @@ class Process {
 
  protected:
   Process();
-  Process(const Process&) = delete;
-  Process& operator=(const Process&) = delete;
 
   // Gets the arguments used to start the process. This method calls
   // BuildArgumentsArray() to build |arguments_array_| only once (i.e. when

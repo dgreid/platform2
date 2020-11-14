@@ -13,7 +13,6 @@
 
 #include <base/callback.h>
 #include <base/files/scoped_file.h>
-#include <base/macros.h>
 
 namespace cros_disks {
 

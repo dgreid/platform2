@@ -25,7 +25,6 @@
 #include <base/callback_helpers.h>
 #include <base/files/file.h>
 #include <base/logging.h>
-#include <base/macros.h>
 #include <base/memory/weak_ptr.h>
 #include <base/stl_util.h>
 #include <base/strings/string_util.h>
@@ -55,6 +54,9 @@ class FUSEMountPoint : public MountPoint {
  public:
   FUSEMountPoint(const base::FilePath& path, const Platform* platform)
       : MountPoint(path), platform_(platform) {}
+
+  FUSEMountPoint(const FUSEMountPoint&) = delete;
+  FUSEMountPoint& operator=(const FUSEMountPoint&) = delete;
 
   ~FUSEMountPoint() override { DestructorUnmount(); }
 
@@ -133,8 +135,6 @@ class FUSEMountPoint : public MountPoint {
   const Platform* platform_;
 
   base::WeakPtrFactory<FUSEMountPoint> weak_factory_{this};
-
-  DISALLOW_IMPLICIT_CONSTRUCTORS(FUSEMountPoint);
 };
 
 MountErrorType ConfigureCommonSandbox(SandboxedProcess* sandbox,

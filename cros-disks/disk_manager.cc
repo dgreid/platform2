@@ -53,6 +53,9 @@ class DiskManager::EjectingMountPoint : public MountPoint {
     DCHECK(!device_file_.empty());
   }
 
+  EjectingMountPoint(const EjectingMountPoint&) = delete;
+  EjectingMountPoint& operator=(const EjectingMountPoint&) = delete;
+
   ~EjectingMountPoint() override { DestructorUnmount(); }
 
   void Release() override {
@@ -76,8 +79,6 @@ class DiskManager::EjectingMountPoint : public MountPoint {
   const std::unique_ptr<MountPoint> mount_point_;
   DiskManager* const disk_manager_;
   const std::string device_file_;
-
-  DISALLOW_IMPLICIT_CONSTRUCTORS(EjectingMountPoint);
 };
 
 DiskManager::DiskManager(const std::string& mount_root,

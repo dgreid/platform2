@@ -10,7 +10,6 @@
 #include <vector>
 
 #include <base/files/file_path.h>
-#include <base/macros.h>
 #include <chromeos/dbus/service_constants.h>
 
 #include "cros-disks/mount_options.h"

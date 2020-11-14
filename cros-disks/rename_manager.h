@@ -8,7 +8,6 @@
 #include <map>
 #include <string>
 
-#include <base/macros.h>
 #include <base/memory/weak_ptr.h>
 #include <brillo/process/process_reaper.h>
 #include <chromeos/dbus/service_constants.h>

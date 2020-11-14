@@ -5,8 +5,6 @@
 #ifndef CROS_DISKS_DEVICE_EVENT_QUEUE_H_
 #define CROS_DISKS_DEVICE_EVENT_QUEUE_H_
 
-#include <base/macros.h>
-
 #include "cros-disks/device_event.h"
 
 namespace cros_disks {

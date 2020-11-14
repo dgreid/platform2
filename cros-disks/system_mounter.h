@@ -9,8 +9,6 @@
 #include <string>
 #include <vector>
 
-#include <base/macros.h>
-
 #include "cros-disks/mount_point.h"
 #include "cros-disks/mounter.h"
 #include "cros-disks/platform.h"

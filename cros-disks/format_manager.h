@@ -9,7 +9,6 @@
 #include <string>
 #include <vector>
 
-#include <base/macros.h>
 #include <base/memory/weak_ptr.h>
 #include <brillo/process/process_reaper.h>
 #include <chromeos/dbus/service_constants.h>

@@ -17,7 +17,6 @@
 #include <set>
 #include <string>
 
-#include <base/macros.h>
 #include <chromeos/dbus/service_constants.h>
 
 namespace cros_disks {
