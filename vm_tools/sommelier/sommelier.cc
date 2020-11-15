@@ -196,7 +196,10 @@ struct sl_mwm_hints {
 #define LOCK_SUFFIX ".lock"
 #define LOCK_SUFFIXLEN 5
 
-#define APPLICATION_ID_FORMAT_PREFIX "org.chromium.termina"
+// TODO(b/173147612): Use container_token rather than this name.
+#define DEFAULT_VM_NAME "termina"
+
+#define APPLICATION_ID_FORMAT_PREFIX "org.chromium.%s"
 #define XID_APPLICATION_ID_FORMAT APPLICATION_ID_FORMAT_PREFIX ".xid.%d"
 #define WM_CLIENT_LEADER_APPLICATION_ID_FORMAT \
   APPLICATION_ID_FORMAT_PREFIX ".wmclientleader.%d"
@@ -615,13 +618,14 @@ void sl_update_application_id(struct sl_context* ctx,
   if (!ctx->xwayland || window->managed) {
     char* application_id_str;
     if (window->clazz) {
-      application_id_str =
-          sl_xasprintf(WM_CLASS_APPLICATION_ID_FORMAT, window->clazz);
+      application_id_str = sl_xasprintf(WM_CLASS_APPLICATION_ID_FORMAT,
+                                        ctx->vm_id, window->clazz);
     } else if (window->client_leader != XCB_WINDOW_NONE) {
       application_id_str = sl_xasprintf(WM_CLIENT_LEADER_APPLICATION_ID_FORMAT,
-                                        window->client_leader);
+                                        ctx->vm_id, window->client_leader);
     } else {
-      application_id_str = sl_xasprintf(XID_APPLICATION_ID_FORMAT, window->id);
+      application_id_str =
+          sl_xasprintf(XID_APPLICATION_ID_FORMAT, ctx->vm_id, window->id);
     }
 
     zaura_surface_set_application_id(window->aura_surface, application_id_str);
@@ -3596,6 +3600,7 @@ static void sl_print_usage() {
       "  --master\t\t\tRun as master and spawn child processes\n"
       "  --socket=SOCKET\t\tName of socket to listen on\n"
       "  --display=DISPLAY\t\tWayland display to connect to\n"
+      "  --vm-identifier=NAME\t\tName of the VM, used to identify X11 windows\n"
       "  --shm-driver=DRIVER\t\tSHM driver to use (noop, dmabuf, virtwl)\n"
       "  --data-driver=DRIVER\t\tData driver to use (noop, virtwl)\n"
       "  --scale=SCALE\t\t\tScale factor for contents\n"
@@ -3658,6 +3663,7 @@ int main(int argc, char** argv) {
   ctx.virtwl_socket_fd = -1;
   ctx.virtwl_ctx_event_source = NULL;
   ctx.virtwl_socket_event_source = NULL;
+  ctx.vm_id = DEFAULT_VM_NAME;
   ctx.drm_device = NULL;
   ctx.gbm = NULL;
   ctx.xwayland = 0;
@@ -3785,6 +3791,8 @@ int main(int argc, char** argv) {
       socket_name = sl_arg_value(arg);
     } else if (strstr(arg, "--display") == arg) {
       display = sl_arg_value(arg);
+    } else if (strstr(arg, "--vm-identifier") == arg) {
+      ctx.vm_id = sl_arg_value(arg);
     } else if (strstr(arg, "--shm-driver") == arg) {
       shm_driver = sl_arg_value(arg);
     } else if (strstr(arg, "--data-driver") == arg) {

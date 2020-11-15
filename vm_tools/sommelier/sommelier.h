@@ -122,6 +122,7 @@ struct sl_context {
   int virtwl_socket_fd;
   struct wl_event_source* virtwl_ctx_event_source;
   struct wl_event_source* virtwl_socket_event_source;
+  const char* vm_id;
   const char* drm_device;
   struct gbm_device* gbm;
   int xwayland;
