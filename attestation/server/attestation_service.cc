@@ -2628,7 +2628,15 @@ void AttestationService::StartCertificateTask(
   CertifiedKey key;
   if (!data->forced_get_certificate() &&
       FindKeyByLabel(data->username(), data->key_label(), &key)) {
-    data->set_public_key(key.public_key());
+    std::string public_key_info;
+    if (!GetSubjectPublicKeyInfo(key.key_type(), key.public_key(),
+                                 &public_key_info)) {
+      LOG(ERROR) << __func__ << ": Failed to call `GetSubjectPublicKeyInfo()`.";
+      data->set_status(STATUS_UNEXPECTED_DEVICE_ERROR);
+      data->set_action(AttestationFlowAction::kAbort);
+      return;
+    }
+    data->set_public_key(std::move(public_key_info));
     data->set_certificate(CreatePEMCertificateChain(key));
     data->set_action(AttestationFlowAction::kNoop);
     return;
@@ -2814,7 +2822,13 @@ void AttestationService::FinishCertificateRequestTask(
     result->set_status(STATUS_UNEXPECTED_DEVICE_ERROR);
     return;
   }
-  result->set_public_key(key.public_key());
+  if (!GetSubjectPublicKeyInfo(key.key_type(), key.public_key(),
+                               result->mutable_public_key())) {
+    LOG(ERROR) << __func__ << ": Failed to call `GetSubjectPublicKeyInfo()`.";
+    pending_cert_requests_.erase(iter);
+    result->set_status(STATUS_UNEXPECTED_DEVICE_ERROR);
+    return;
+  }
   pending_cert_requests_.erase(iter);
   if (!PopulateAndStoreCertifiedKey(response_pb, request.username(),
                                     request.key_label(), &key,
