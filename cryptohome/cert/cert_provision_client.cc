@@ -78,9 +78,8 @@ int main(int argc, char** argv) {
       return 2;
     }
 
-    sts = cert_provision::ProvisionCertificate(pca_type, std::string(),
-                                               cert_label, cert_profile,
-                                               base::Bind(&ProgressCallback));
+    sts = cert_provision::ProvisionCertificate(
+        pca_type, cert_label, cert_profile, base::Bind(&ProgressCallback));
     if (sts != cert_provision::Status::Success) {
       LOG(ERROR) << "ProvisionCertificate returned " << static_cast<int>(sts);
       return 3;
@@ -98,8 +97,7 @@ int main(int argc, char** argv) {
       return 2;
     }
 
-    sts = cert_provision::ForceEnroll(pca_type, std::string(),
-                                      base::Bind(&ProgressCallback));
+    sts = cert_provision::ForceEnroll(pca_type, base::Bind(&ProgressCallback));
     if (sts != cert_provision::Status::Success) {
       LOG(ERROR) << "ForceEnroll returned " << static_cast<int>(sts);
       return 3;

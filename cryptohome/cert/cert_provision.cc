@@ -87,6 +87,14 @@ namespace {
 }  // namespace
 
 Status ProvisionCertificate(PCAType pca_type,
+                            const std::string& label,
+                            CertificateProfile cert_profile,
+                            const ProgressCallback& progress_callback) {
+  return ProvisionCertificate(pca_type, /*pca_url=*/std::string(), label,
+                              cert_profile, progress_callback);
+}
+
+Status ProvisionCertificate(PCAType pca_type,
                             const std::string& pca_url,
                             const std::string& label,
                             CertificateProfile cert_profile,
@@ -186,6 +194,11 @@ Status ProvisionCertificate(PCAType pca_type,
 
   reporter.Done();
   return Status::Success;
+}
+
+Status ForceEnroll(PCAType pca_type,
+                   const ProgressCallback& progress_callback) {
+  return ForceEnroll(pca_type, /*pca_url=*/std::string(), progress_callback);
 }
 
 Status ForceEnroll(PCAType pca_type,
