@@ -1141,6 +1141,14 @@ std::string GetProtoDebugStringWithIndent(
             .c_str());
     output += "\n";
   }
+  if (value.has_public_key()) {
+    output += indent + "  public_key: ";
+    base::StringAppendF(
+        &output, "%s",
+        base::HexEncode(value.public_key().data(), value.public_key().size())
+            .c_str());
+    output += "\n";
+  }
   output += indent + "}\n";
   return output;
 }
@@ -1231,6 +1239,14 @@ std::string GetProtoDebugStringWithIndent(const GetCertificateReply& value,
     base::StringAppendF(
         &output, "%s",
         base::HexEncode(value.certificate().data(), value.certificate().size())
+            .c_str());
+    output += "\n";
+  }
+  if (value.has_public_key()) {
+    output += indent + "  public_key: ";
+    base::StringAppendF(
+        &output, "%s",
+        base::HexEncode(value.public_key().data(), value.public_key().size())
             .c_str());
     output += "\n";
   }
