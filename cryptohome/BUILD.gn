@@ -369,9 +369,7 @@ if (use.cert_provision) {
     configs += [ ":cert_provision-proto_config" ]
     sources = [
       "cert/cert_provision.cc",
-      "cert/cert_provision_cryptohome.cc",
       "cert/cert_provision_keystore.cc",
-      "cert/cert_provision_pca.cc",
       "cert/cert_provision_util.cc",
     ]
 
