@@ -77,6 +77,9 @@ class AttestationFlowData {
     result_response_ = result_response;
   }
   const std::string& certificate() const { return certificate_; }
+  void set_public_key(std::string public_key) {
+    public_key_ = std::move(public_key);
+  }
   void set_certificate(std::string certificate) {
     certificate_ = std::move(certificate);
   }
@@ -94,6 +97,7 @@ class AttestationFlowData {
   AttestationStatus status_{STATUS_SUCCESS};
   std::string result_request_;
   std::string result_response_;
+  std::string public_key_;
   std::string certificate_;
 };
 

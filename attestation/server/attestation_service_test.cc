@@ -2844,6 +2844,7 @@ TEST_P(AttestationServiceTest, AttestationFlowSuccess) {
                      const GetCertificateReply& reply) {
     EXPECT_EQ(reply.status(), STATUS_SUCCESS);
     EXPECT_TRUE(reply.has_certificate());
+    EXPECT_TRUE(reply.has_public_key());
     quit_closure.Run();
   };
   GetCertificateRequest request;

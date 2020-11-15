@@ -2628,6 +2628,7 @@ void AttestationService::StartCertificateTask(
   CertifiedKey key;
   if (!data->forced_get_certificate() &&
       FindKeyByLabel(data->username(), data->key_label(), &key)) {
+    data->set_public_key(key.public_key());
     data->set_certificate(CreatePEMCertificateChain(key));
     data->set_action(AttestationFlowAction::kNoop);
     return;
@@ -2671,6 +2672,7 @@ void AttestationService::FinishCertificateTask(
     data->set_action(AttestationFlowAction::kAbort);
     return;
   }
+  data->set_public_key(std::move(*(reply->mutable_public_key())));
   data->set_certificate(std::move(*(reply->mutable_certificate())));
   data->set_action(AttestationFlowAction::kNoop);
 }
@@ -2812,6 +2814,7 @@ void AttestationService::FinishCertificateRequestTask(
     result->set_status(STATUS_UNEXPECTED_DEVICE_ERROR);
     return;
   }
+  result->set_public_key(key.public_key());
   pending_cert_requests_.erase(iter);
   if (!PopulateAndStoreCertifiedKey(response_pb, request.username(),
                                     request.key_label(), &key,

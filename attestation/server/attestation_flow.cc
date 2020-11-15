@@ -70,6 +70,7 @@ void AttestationFlowData::ReturnCertificate() {
   DCHECK_EQ(status_, STATUS_SUCCESS);
   GetCertificateReply reply;
   reply.set_status(STATUS_SUCCESS);
+  reply.set_public_key(public_key_);
   reply.set_certificate(certificate_);
   get_certificate_callback_->Run(reply);
 }
