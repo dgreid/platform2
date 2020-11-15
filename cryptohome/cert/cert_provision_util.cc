@@ -4,18 +4,30 @@
 //
 // Utility classes for cert_provision library.
 
+#include "cryptohome/cert/cert_provision_util.h"
+
+// This group goes first so the next group can see the needed definitions.
+#include <attestation/proto_bindings/interface.pb.h>
+
+#include <attestation-client/attestation/dbus-proxies.h>
 #include <base/logging.h>
 #include <base/stl_util.h>
 #include <brillo/secure_blob.h>
 #include <crypto/libcrypto-compat.h>
 #include <crypto/scoped_openssl_types.h>
+#include <dbus/bus.h>
 #include <openssl/rsa.h>
 #include <openssl/sha.h>
 #include <openssl/x509.h>
 
-#include "cryptohome/cert/cert_provision_util.h"
 
 namespace cert_provision {
+
+namespace {
+
+AttestationProxyFactory* g_fake_factory = nullptr;
+
+}  // namespace
 
 void ProgressReporter::Step(const std::string& message) {
   VLOG(1) << "Step " << cur_step_ << "/" << total_steps_ << ": " << message;
@@ -66,6 +78,29 @@ std::string GetKeyID(const brillo::SecureBlob& public_key) {
   SHA1_Final(md_value, &sha_context);
 
   return std::string(reinterpret_cast<char*>(md_value), base::size(md_value));
+}
+
+// static
+std::unique_ptr<org::chromium::AttestationProxyInterface>
+AttestationProxyFactory::Create() {
+  if (g_fake_factory) {
+    return g_fake_factory->CreateObject();
+  }
+  AttestationProxyFactory factory;
+  return factory.CreateObject();
+}
+
+// static
+void AttestationProxyFactory::DeferToFake(AttestationProxyFactory* fake) {
+  g_fake_factory = fake;
+}
+
+std::unique_ptr<org::chromium::AttestationProxyInterface>
+AttestationProxyFactory::CreateObject() {
+  dbus::Bus::Options options;
+  options.bus_type = dbus::Bus::SYSTEM;
+  scoped_refptr<dbus::Bus> bus(new dbus::Bus(options));
+  return std::make_unique<org::chromium::AttestationProxy>(bus);
 }
 
 }  // namespace cert_provision

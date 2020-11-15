@@ -10,6 +10,10 @@
 #include <memory>
 #include <string>
 
+// This group goes first so the next group can see the needed definitions.
+#include <attestation/proto_bindings/interface.pb.h>
+
+#include <attestation-client/attestation/dbus-proxies.h>
 #include <brillo/secure_blob.h>
 
 #include "cryptohome/cert_provision.h"
@@ -82,6 +86,24 @@ class Scoped {
  private:
   std::unique_ptr<T> holder_;
   T* ptr_;
+};
+
+class AttestationProxyFactory {
+ public:
+  // Creates an object with this class, or defers to the factory set by
+  // `DeferToFake()`.
+  static std::unique_ptr<org::chromium::AttestationProxyInterface> Create();
+  // Defers the job to the `fake_factory`; useful for testing. This call doesn't
+  // transfer the ownership of `fake_factory`.
+  static void DeferToFake(AttestationProxyFactory* fake_factory);
+
+  // Creates an object used for production.
+  virtual std::unique_ptr<org::chromium::AttestationProxyInterface>
+  CreateObject();
+
+ protected:
+  AttestationProxyFactory() = default;
+  virtual ~AttestationProxyFactory() = default;
 };
 
 // Returns the |id| generated from the |public_key| for accessing the given

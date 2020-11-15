@@ -383,8 +383,11 @@ if (use.cert_provision) {
       "chaps",
       "pthread",
     ]
+
+    # NOSORT
     public_pkg_deps = [
       "dbus-glib-1",
+      "libattestation-client",
       "libbrillo",
       "libbrillo-glib",
       "libchrome",
@@ -402,6 +405,7 @@ if (use.cert_provision) {
   executable("cert_provision_client") {
     sources = [ "cert/cert_provision_client.cc" ]
     deps = [ ":cert_provision" ]
+    public_pkg_deps = [ "system_api" ]
     pkg_deps = [
       "libbrillo",
       "libchrome",

@@ -6,7 +6,12 @@
 #include <tuple>
 #include <vector>
 
+// This group goes first so the next group can see the needed definitions.
+#include <attestation/proto_bindings/interface.pb.h>
+
+#include <attestation-client-test/attestation/dbus-proxy-mocks.h>
 #include <base/bind.h>
+#include <base/optional.h>
 #include <chaps/attributes.h>
 #include <chaps/chaps_proxy_mock.h>
 #include <crypto/scoped_openssl_types.h>
@@ -17,13 +22,9 @@
 #include <openssl/x509.h>
 
 #include "cert/cert_provision.pb.h"
-#include "cryptohome/cert/cert_provision_cryptohome.h"
 #include "cryptohome/cert/cert_provision_keystore.h"
-#include "cryptohome/cert/cert_provision_pca.h"
 #include "cryptohome/cert/cert_provision_util.h"
-#include "cryptohome/cert/mock_cert_provision_cryptohome.h"
 #include "cryptohome/cert/mock_cert_provision_keystore.h"
-#include "cryptohome/cert/mock_cert_provision_pca.h"
 #include "cryptohome/cert_provision.h"
 
 using ::brillo::SecureBlob;
@@ -35,12 +36,14 @@ using ::testing::NiceMock;
 using ::testing::Return;
 using ::testing::ReturnRef;
 using ::testing::SetArgPointee;
+using ::testing::StrictMock;
 
 namespace {
 
 // Some arbitrary certificate label used for testing.
 const char kCertLabel[] = "test";
 const char kWrongLabel[] = "some wrong label";
+const char kFakeErrorMessage[] = "fake error message";
 
 const char kBegCertificate[] = "-----BEGIN CERTIFICATE-----";
 const char kEndCertificate[] = "-----END CERTIFICATE-----";
@@ -64,52 +67,157 @@ MATCHER_P(ResultsNotIn, status, "") {
 
 namespace cert_provision {
 
+namespace {
+class RecordingAttestationProxy : public org::chromium::AttestationProxyMock {
+ public:
+  struct ReplySource {
+    attestation::GetStatusReply get_status_reply;
+    attestation::EnrollReply enroll_reply;
+    attestation::GetCertificateReply get_cert_reply;
+    attestation::RegisterKeyWithChapsTokenReply register_key_reply;
+  };
+  struct ErrorSource {
+    brillo::ErrorPtr get_status_error;
+    brillo::ErrorPtr enroll_error;
+    brillo::ErrorPtr get_cert_error;
+    brillo::ErrorPtr register_key_error;
+  };
+  struct RequestSink {
+    attestation::GetStatusRequest get_status_request;
+    attestation::EnrollRequest enroll_request;
+    attestation::GetCertificateRequest get_cert_request;
+    attestation::RegisterKeyWithChapsTokenRequest register_key_request;
+  };
+
+ public:
+  RecordingAttestationProxy(ReplySource* reply_source,
+                            ErrorSource* error_source,
+                            RequestSink* request_sink)
+      : reply_source_(reply_source),
+        error_source_(error_source),
+        request_sink_(request_sink) {
+    ON_CALL(*this, GetStatus(_, _, _, _))
+        .WillByDefault(
+            Invoke(this, &RecordingAttestationProxy::HandleGetStatus));
+    ON_CALL(*this, Enroll(_, _, _, _))
+        .WillByDefault(Invoke(this, &RecordingAttestationProxy::HandleEnroll));
+    ON_CALL(*this, GetCertificate(_, _, _, _))
+        .WillByDefault(
+            Invoke(this, &RecordingAttestationProxy::HandleGetCertificate));
+    ON_CALL(*this, RegisterKeyWithChapsToken(_, _, _, _))
+        .WillByDefault(Invoke(
+            this, &RecordingAttestationProxy::HandleRegisterKeyWithChapsToken));
+  }
+
+  bool HandleGetStatus(const attestation::GetStatusRequest& request,
+                       attestation::GetStatusReply* reply,
+                       brillo::ErrorPtr* error,
+                       int /*timeout_ms*/) {
+    if (error_source_->get_status_error) {
+      *error = std::move(error_source_->get_status_error);
+      return false;
+    }
+    request_sink_->get_status_request = request;
+    *reply = reply_source_->get_status_reply;
+    return true;
+  }
+  bool HandleEnroll(const attestation::EnrollRequest& request,
+                    attestation::EnrollReply* reply,
+                    brillo::ErrorPtr* error,
+                    int /*timeout_ms*/) {
+    if (error_source_->enroll_error) {
+      *error = std::move(error_source_->enroll_error);
+      return false;
+    }
+    request_sink_->enroll_request = request;
+    *reply = reply_source_->enroll_reply;
+    return true;
+  }
+  bool HandleGetCertificate(const attestation::GetCertificateRequest& request,
+                            attestation::GetCertificateReply* reply,
+                            brillo::ErrorPtr* error,
+                            int /*timeout_ms*/) {
+    if (error_source_->get_cert_error) {
+      *error = std::move(error_source_->get_cert_error);
+      return false;
+    }
+    request_sink_->get_cert_request = request;
+    *reply = reply_source_->get_cert_reply;
+    return true;
+  }
+  bool HandleRegisterKeyWithChapsToken(
+      const attestation::RegisterKeyWithChapsTokenRequest& request,
+      attestation::RegisterKeyWithChapsTokenReply* reply,
+      brillo::ErrorPtr* error,
+      int /*timeout_ms*/) {
+    if (error_source_->register_key_error) {
+      *error = std::move(error_source_->register_key_error);
+      return false;
+    }
+    request_sink_->register_key_request = request;
+    *reply = reply_source_->register_key_reply;
+    return true;
+  }
+  ReplySource* const reply_source_;
+  ErrorSource* const error_source_;
+  RequestSink* const request_sink_;
+};
+
+class FakeAttestationProxyFactory : public AttestationProxyFactory {
+ public:
+  FakeAttestationProxyFactory() {
+    ReiniailizeProxyObject();
+    DeferToFake(this);
+  }
+  ~FakeAttestationProxyFactory() override { DeferToFake(nullptr); }
+  std::unique_ptr<org::chromium::AttestationProxyInterface> CreateObject()
+      override {
+    AssertProxyNotTaken();
+    return std::move(mock_proxy_to_transfer_);
+  }
+  RecordingAttestationProxy::ReplySource* get_reply_source() {
+    return &reply_source_;
+  }
+  RecordingAttestationProxy::ErrorSource* get_error_source() {
+    return &error_source_;
+  }
+  RecordingAttestationProxy::RequestSink* get_request_sink() {
+    return &request_sink_;
+  }
+  RecordingAttestationProxy* get_mock_proxy() { return mock_proxy_; }
+  void ReiniailizeProxyObject() {
+    mock_proxy_to_transfer_ =
+        std::make_unique<StrictMock<RecordingAttestationProxy>>(
+            &reply_source_, &error_source_, &request_sink_);
+    mock_proxy_ = mock_proxy_to_transfer_.get();
+  }
+
+ private:
+  void AssertProxyNotTaken() const {
+    ASSERT_NE(mock_proxy_to_transfer_.get(), nullptr);
+  }
+  RecordingAttestationProxy::ReplySource reply_source_;
+  RecordingAttestationProxy::ErrorSource error_source_;
+  RecordingAttestationProxy::RequestSink request_sink_;
+  std::unique_ptr<StrictMock<RecordingAttestationProxy>>
+      mock_proxy_to_transfer_;
+  RecordingAttestationProxy* mock_proxy_;
+};
+
+}  // namespace
+
 // Test class for testing top-level functions.
 class CertProvisionTest : public testing::Test {
  public:
-  CertProvisionTest() {
-    CryptohomeProxy::subst_obj = &c_proxy_;
-    PCAProxy::subst_obj = &pca_proxy_;
-    KeyStore::subst_obj = &key_store_;
-  }
+  CertProvisionTest() { KeyStore::subst_obj = &key_store_; }
   CertProvisionTest(const CertProvisionTest&) = delete;
   CertProvisionTest& operator=(const CertProvisionTest&) = delete;
 
-  ~CertProvisionTest() {
-    CryptohomeProxy::subst_obj = nullptr;
-    PCAProxy::subst_obj = nullptr;
-    KeyStore::subst_obj = nullptr;
-  }
+  ~CertProvisionTest() { KeyStore::subst_obj = nullptr; }
 
   void SetUp() {
-    ON_CALL(c_proxy_, Init()).WillByDefault(Return(OpResult()));
-    ON_CALL(c_proxy_, CheckIfPrepared(_))
-        .WillByDefault(Invoke([this](bool* prepared) {
-          *prepared = prepared_;
-          return OpResult();
-        }));
-    ON_CALL(c_proxy_, CheckIfEnrolled(_))
-        .WillByDefault(Invoke([this](bool* enrolled) {
-          *enrolled = enrolled_;
-          return OpResult();
-        }));
-    ON_CALL(c_proxy_, CreateEnrollRequest(_, _))
-        .WillByDefault(Return(OpResult()));
-    ON_CALL(c_proxy_, ProcessEnrollResponse(_, _))
-        .WillByDefault(Return(OpResult()));
-    ON_CALL(c_proxy_, CreateCertRequest(_, _, _))
-        .WillByDefault(Return(OpResult()));
-    ON_CALL(c_proxy_, ProcessCertResponse(_, _, _))
-        .WillByDefault(Return(OpResult()));
-    ON_CALL(c_proxy_, GetPublicKey(_, _))
-        .WillByDefault(
-            Invoke([this](const std::string& /* label */, SecureBlob* key) {
-              *key = GetTestPublicKey();
-              return OpResult();
-            }));
-    ON_CALL(c_proxy_, Register(_)).WillByDefault(Return(OpResult()));
-
-    ON_CALL(pca_proxy_, MakeRequest(_, _, _)).WillByDefault(Return(OpResult()));
+    attestation_proxy_factory_.get_reply_source()
+        ->get_cert_reply.set_public_key(GetTestPublicKey().to_string());
 
     ON_CALL(key_store_, Init()).WillByDefault(Return(OpResult()));
     ON_CALL(key_store_, Sign(_, _, _, _, _)).WillByDefault(Return(OpResult()));
@@ -146,6 +254,30 @@ class CertProvisionTest : public testing::Test {
                   CertificateProfile::CAST_CERTIFICATE, GetProgressCallback()));
     ExpectProvisioned(true);
     EXPECT_EQ(GetTestKeyID(), provision_status_.key_id());
+  }
+
+  // Perform the same thing as `Provision()` does with expectations to
+  // attestation proxy, which we don't really care about if it's just in order
+  // to set provision state to "provisioned". Also, at the end of the function
+  // the proxy object gets reset in the factory so the test body doesn't have to
+  // do it.
+  void SetupProvisionState() {
+    InitializeAttestationStatus(/*is_prepared=*/true, /*is_enrolled=*/false);
+    EXPECT_CALL(*attestation_proxy_factory_.get_mock_proxy(),
+                GetStatus(_, _, _, _));
+    EXPECT_CALL(*attestation_proxy_factory_.get_mock_proxy(),
+                GetCertificate(_, _, _, _));
+    EXPECT_CALL(*attestation_proxy_factory_.get_mock_proxy(),
+                RegisterKeyWithChapsToken(_, _, _, _));
+    // We don't share the code with `Provision()` to get better verbosity when
+    // gmock reports unsatisfied expectations.
+    EXPECT_EQ(Status::Success,
+              ProvisionCertificate(
+                  PCAType::kDefaultPCA, std::string(), kCertLabel,
+                  CertificateProfile::CAST_CERTIFICATE, GetProgressCallback()));
+    ExpectProvisioned(true);
+    EXPECT_EQ(GetTestKeyID(), provision_status_.key_id());
+    attestation_proxy_factory_.ReiniailizeProxyObject();
   }
 
   // Verifies that a cert is provisioned/not provisioned.
@@ -187,6 +319,13 @@ class CertProvisionTest : public testing::Test {
   // Calculates the id for the current test public key.
   std::string GetTestKeyID() { return GetKeyID(GetTestPublicKey()); }
 
+  void InitializeAttestationStatus(bool is_prepared, bool is_enrolled) {
+    attestation_proxy_factory_.get_reply_source()
+        ->get_status_reply.set_prepared_for_enrollment(is_prepared);
+    attestation_proxy_factory_.get_reply_source()
+        ->get_status_reply.set_enrolled(is_enrolled);
+  }
+
   // Captures progress reported through callback.
   std::vector<Progress> progress_;
 
@@ -197,8 +336,8 @@ class CertProvisionTest : public testing::Test {
   // Emulated storage for ProvisionStatus in keystore.
   ProvisionStatus provision_status_;
 
-  NiceMock<MockCryptohomeProxy> c_proxy_;
-  NiceMock<MockPCAProxy> pca_proxy_;
+  FakeAttestationProxyFactory attestation_proxy_factory_;
+
   NiceMock<MockKeyStore> key_store_;
 
  private:
@@ -216,39 +355,20 @@ class CertProvisionTest : public testing::Test {
 // ends with 100%, and success is reported to the callback on all steps.
 TEST_F(CertProvisionTest, ProvisionCertificateSuccessEnroll) {
   ExpectProvisioned(false);
-  prepared_ = true;
-  enrolled_ = false;
-  EXPECT_CALL(c_proxy_, CreateEnrollRequest(_, _));
-  EXPECT_CALL(c_proxy_, ProcessEnrollResponse(_, _));
-  EXPECT_CALL(pca_proxy_, MakeRequest(_, _, _)).Times(2);
-  EXPECT_EQ(Status::Success,
-            ProvisionCertificate(
-                PCAType::kDefaultPCA, std::string(), kCertLabel,
-                CertificateProfile::CAST_CERTIFICATE, GetProgressCallback()));
-  int last_progress = 0;
-  for (auto p : progress_) {
-    EXPECT_EQ(Status::Success, p.status);
-    EXPECT_LE(last_progress, p.progress);
-    last_progress = p.progress;
-  }
-  EXPECT_EQ(100, last_progress);
-  ExpectProvisioned(true);
-}
 
-// Checks that provisioning succeeds w/o sending EnrollRequest if already
-// enrolled. Checks that the reported progress is not decreasing and
-// ends with 100%, and success is reported to the callback on all steps.
-TEST_F(CertProvisionTest, ProvisionCertificateSuccessAlreadyEnrolled) {
-  ExpectProvisioned(false);
-  prepared_ = true;
-  enrolled_ = true;
-  EXPECT_CALL(c_proxy_, CreateEnrollRequest(_, _)).Times(0);
-  EXPECT_CALL(c_proxy_, ProcessEnrollResponse(_, _)).Times(0);
-  EXPECT_CALL(pca_proxy_, MakeRequest(_, _, _)).Times(1);
+  InitializeAttestationStatus(/*is_prepared=*/true, /*is_enrolled=*/false);
+
+  EXPECT_CALL(*attestation_proxy_factory_.get_mock_proxy(),
+              GetStatus(_, _, _, _));
+  EXPECT_CALL(*attestation_proxy_factory_.get_mock_proxy(),
+              GetCertificate(_, _, _, _));
+  EXPECT_CALL(*attestation_proxy_factory_.get_mock_proxy(),
+              RegisterKeyWithChapsToken(_, _, _, _));
   EXPECT_EQ(Status::Success,
             ProvisionCertificate(
                 PCAType::kDefaultPCA, std::string(), kCertLabel,
                 CertificateProfile::CAST_CERTIFICATE, GetProgressCallback()));
+
   int last_progress = 0;
   for (auto p : progress_) {
     EXPECT_EQ(Status::Success, p.status);
@@ -257,12 +377,44 @@ TEST_F(CertProvisionTest, ProvisionCertificateSuccessAlreadyEnrolled) {
   }
   EXPECT_EQ(100, last_progress);
   ExpectProvisioned(true);
+
+  // Verify if the recorded requests meet expectations.
+  EXPECT_TRUE(attestation_proxy_factory_.get_request_sink()
+                  ->get_cert_request.username()
+                  .empty());
+  EXPECT_TRUE(attestation_proxy_factory_.get_request_sink()
+                  ->get_cert_request.request_origin()
+                  .empty());
+  EXPECT_TRUE(
+      attestation_proxy_factory_.get_request_sink()->get_cert_request.forced());
+  EXPECT_TRUE(attestation_proxy_factory_.get_request_sink()
+                  ->get_cert_request.shall_trigger_enrollment());
+  EXPECT_EQ(kCertLabel, attestation_proxy_factory_.get_request_sink()
+                            ->get_cert_request.key_label());
+  EXPECT_EQ(::attestation::CAST_CERTIFICATE,
+            attestation_proxy_factory_.get_request_sink()
+                ->get_cert_request.certificate_profile());
+  EXPECT_EQ(::attestation::DEFAULT_ACA,
+            attestation_proxy_factory_.get_request_sink()
+                ->get_cert_request.aca_type());
+
+  // Also, verify the right key is registered.
+  EXPECT_TRUE(attestation_proxy_factory_.get_request_sink()
+                  ->register_key_request.username()
+                  .empty());
+  EXPECT_EQ(kCertLabel, attestation_proxy_factory_.get_request_sink()
+                            ->register_key_request.key_label());
 }
 
 // Checks that if enrollment is not prepared, provisioning fails.
 TEST_F(CertProvisionTest, ProvisionCertificateNotPrepared) {
   ExpectProvisioned(false);
-  prepared_ = false;
+
+  InitializeAttestationStatus(/*is_prepared=*/false, /*is_enrolled=*/false);
+
+  EXPECT_CALL(*attestation_proxy_factory_.get_mock_proxy(),
+              GetStatus(_, _, _, _));
+
   EXPECT_EQ(Status::NotPrepared,
             ProvisionCertificate(
                 PCAType::kDefaultPCA, std::string(), kCertLabel,
@@ -271,66 +423,132 @@ TEST_F(CertProvisionTest, ProvisionCertificateNotPrepared) {
   ExpectProvisioned(false);
 }
 
-// Checks that a failure in EnrollRequest is handled properly.
-TEST_F(CertProvisionTest, ProvisionCertificateFailureEnroll) {
+TEST_F(CertProvisionTest, ProvisionCertificateDBusErrorGetStatus) {
   ExpectProvisioned(false);
-  enrolled_ = false;
-  EXPECT_CALL(c_proxy_, ProcessEnrollResponse(_, _))
-      .WillOnce(Return(TestError(Status::CryptohomeError)));
+
+  brillo::Error::AddTo(
+      &attestation_proxy_factory_.get_error_source()->get_status_error,
+      FROM_HERE, "", "", kFakeErrorMessage);
+  const std::string exepcted_error_message =
+      attestation_proxy_factory_.get_error_source()
+          ->get_status_error->GetMessage();
+
+  EXPECT_CALL(*attestation_proxy_factory_.get_mock_proxy(),
+              GetStatus(_, _, _, _));
+
   EXPECT_NE(Status::Success,
             ProvisionCertificate(
                 PCAType::kDefaultPCA, std::string(), kCertLabel,
                 CertificateProfile::CAST_CERTIFICATE, GetProgressCallback()));
-  EXPECT_THAT(progress_, ResultsNotIn(Status::Success));
-  EXPECT_EQ("Test error", progress_.back().message);
+  EXPECT_THAT(progress_, ResultsIn(Status::DBusError));
   ExpectProvisioned(false);
+  EXPECT_EQ(exepcted_error_message, progress_.back().message);
 }
 
 // Checks that a failure in CertRequest is handled properly.
 TEST_F(CertProvisionTest, ProvisionCertificateFailureCert) {
   ExpectProvisioned(false);
-  EXPECT_CALL(c_proxy_, ProcessCertResponse(kCertLabel, _, _))
-      .WillOnce(Return(TestError(Status::CryptohomeError)));
+  InitializeAttestationStatus(/*is_prepared=*/true, /*is_enrolled=*/false);
+
+  attestation_proxy_factory_.get_reply_source()->get_cert_reply.set_status(
+      ::attestation::STATUS_UNEXPECTED_DEVICE_ERROR);
+  EXPECT_CALL(*attestation_proxy_factory_.get_mock_proxy(),
+              GetStatus(_, _, _, _));
+  EXPECT_CALL(*attestation_proxy_factory_.get_mock_proxy(),
+              GetCertificate(_, _, _, _));
+
   EXPECT_NE(Status::Success,
             ProvisionCertificate(
                 PCAType::kDefaultPCA, std::string(), kCertLabel,
                 CertificateProfile::CAST_CERTIFICATE, GetProgressCallback()));
   EXPECT_THAT(progress_, ResultsNotIn(Status::Success));
-  EXPECT_EQ("Test error", progress_.back().message);
   ExpectProvisioned(false);
 }
 
-// Checks that a failure to access PCA is handled properly.
-TEST_F(CertProvisionTest, ProvisionCertificateFailurePCA) {
+TEST_F(CertProvisionTest, ProvisionCertificateDBusErrorCert) {
   ExpectProvisioned(false);
-  EXPECT_CALL(pca_proxy_, MakeRequest(_, _, _))
-      .WillOnce(Return(TestError(Status::ServerError)));
-  EXPECT_NE(Status::Success,
+  InitializeAttestationStatus(/*is_prepared=*/true, /*is_enrolled=*/false);
+
+  brillo::Error::AddTo(
+      &attestation_proxy_factory_.get_error_source()->get_cert_error, FROM_HERE,
+      "", "", kFakeErrorMessage);
+  const std::string exepcted_error_message =
+      attestation_proxy_factory_.get_error_source()
+          ->get_cert_error->GetMessage();
+  EXPECT_CALL(*attestation_proxy_factory_.get_mock_proxy(),
+              GetStatus(_, _, _, _));
+  EXPECT_CALL(*attestation_proxy_factory_.get_mock_proxy(),
+              GetCertificate(_, _, _, _));
+
+  EXPECT_EQ(Status::DBusError,
             ProvisionCertificate(
                 PCAType::kDefaultPCA, std::string(), kCertLabel,
                 CertificateProfile::CAST_CERTIFICATE, GetProgressCallback()));
-  EXPECT_THAT(progress_, ResultsNotIn(Status::Success));
-  EXPECT_EQ("Test error", progress_.back().message);
+  EXPECT_THAT(progress_, ResultsIn(Status::DBusError));
   ExpectProvisioned(false);
+  EXPECT_EQ(exepcted_error_message, progress_.back().message);
 }
 
 // Checks that a failure when registering the keys is handled properly.
+TEST_F(CertProvisionTest, ProvisionCertificateDBusErrorRegister) {
+  ExpectProvisioned(false);
+  InitializeAttestationStatus(/*is_prepared=*/true, /*is_enrolled=*/false);
+
+  brillo::Error::AddTo(
+      &attestation_proxy_factory_.get_error_source()->register_key_error,
+      FROM_HERE, "", "", kFakeErrorMessage);
+  const std::string exepcted_error_message =
+      attestation_proxy_factory_.get_error_source()
+          ->register_key_error->GetMessage();
+  EXPECT_CALL(*attestation_proxy_factory_.get_mock_proxy(),
+              GetStatus(_, _, _, _));
+  EXPECT_CALL(*attestation_proxy_factory_.get_mock_proxy(),
+              GetCertificate(_, _, _, _));
+  EXPECT_CALL(*attestation_proxy_factory_.get_mock_proxy(),
+              RegisterKeyWithChapsToken(_, _, _, _));
+
+  EXPECT_EQ(Status::DBusError,
+            ProvisionCertificate(
+                PCAType::kDefaultPCA, std::string(), kCertLabel,
+                CertificateProfile::CAST_CERTIFICATE, GetProgressCallback()));
+  EXPECT_THAT(progress_, ResultsIn(Status::DBusError));
+  ExpectProvisioned(false);
+  EXPECT_EQ(exepcted_error_message, progress_.back().message);
+}
+
 TEST_F(CertProvisionTest, ProvisionCertificateFailureRegister) {
   ExpectProvisioned(false);
-  EXPECT_CALL(c_proxy_, Register(kCertLabel))
-      .WillOnce(Return(TestError(Status::CryptohomeError)));
+  InitializeAttestationStatus(/*is_prepared=*/true, /*is_enrolled=*/false);
+
+  attestation_proxy_factory_.get_reply_source()->register_key_reply.set_status(
+      ::attestation::STATUS_UNEXPECTED_DEVICE_ERROR);
+  EXPECT_CALL(*attestation_proxy_factory_.get_mock_proxy(),
+              GetStatus(_, _, _, _));
+  EXPECT_CALL(*attestation_proxy_factory_.get_mock_proxy(),
+              GetCertificate(_, _, _, _));
+  EXPECT_CALL(*attestation_proxy_factory_.get_mock_proxy(),
+              RegisterKeyWithChapsToken(_, _, _, _));
+
   EXPECT_NE(Status::Success,
             ProvisionCertificate(
                 PCAType::kDefaultPCA, std::string(), kCertLabel,
                 CertificateProfile::CAST_CERTIFICATE, GetProgressCallback()));
   EXPECT_THAT(progress_, ResultsNotIn(Status::Success));
-  EXPECT_EQ("Test error", progress_.back().message);
   ExpectProvisioned(false);
 }
 
 // Checks that a failure when accessing the keystore is handled properly.
 TEST_F(CertProvisionTest, ProvisionCertificateFailureKeyStore) {
   ExpectProvisioned(false);
+  InitializeAttestationStatus(/*is_prepared=*/true, /*is_enrolled=*/false);
+
+  EXPECT_CALL(*attestation_proxy_factory_.get_mock_proxy(),
+              GetStatus(_, _, _, _));
+  EXPECT_CALL(*attestation_proxy_factory_.get_mock_proxy(),
+              GetCertificate(_, _, _, _));
+  EXPECT_CALL(*attestation_proxy_factory_.get_mock_proxy(),
+              RegisterKeyWithChapsToken(_, _, _, _));
+
   EXPECT_CALL(key_store_, Init())
       .WillOnce(Return(TestError(Status::KeyStoreError)))
       .WillRepeatedly(Return(OpResult()));
@@ -346,9 +564,19 @@ TEST_F(CertProvisionTest, ProvisionCertificateFailureKeyStore) {
 // Checks that re-provisioning the certificate deletes the old keys and
 // replaces the cert with the new one.
 TEST_F(CertProvisionTest, ReProvisionCertificateSuccess) {
-  Provision();
+  SetupProvisionState();
   std::string old_key_id = provision_status_.key_id();
   ResetObtainedTestKey();
+
+  attestation_proxy_factory_.get_reply_source()->get_cert_reply.set_public_key(
+      GetTestPublicKey().to_string());
+
+  EXPECT_CALL(*attestation_proxy_factory_.get_mock_proxy(),
+              GetStatus(_, _, _, _));
+  EXPECT_CALL(*attestation_proxy_factory_.get_mock_proxy(),
+              GetCertificate(_, _, _, _));
+  EXPECT_CALL(*attestation_proxy_factory_.get_mock_proxy(),
+              RegisterKeyWithChapsToken(_, _, _, _));
 
   EXPECT_CALL(key_store_, DeleteKeys(old_key_id, kCertLabel));
   Provision();
@@ -358,12 +586,22 @@ TEST_F(CertProvisionTest, ReProvisionCertificateSuccess) {
 // Checks that registration failure upon re-provisioning keeps the old cert
 // in place.
 TEST_F(CertProvisionTest, ReProvisionCertificateFailureRegister) {
-  Provision();
+  SetupProvisionState();
   std::string old_key_id = provision_status_.key_id();
   ResetObtainedTestKey();
 
-  EXPECT_CALL(c_proxy_, Register(kCertLabel))
-      .WillOnce(Return(TestError(Status::CryptohomeError)));
+  attestation_proxy_factory_.get_reply_source()->get_cert_reply.set_public_key(
+      GetTestPublicKey().to_string());
+
+  attestation_proxy_factory_.get_reply_source()->register_key_reply.set_status(
+      ::attestation::STATUS_UNEXPECTED_DEVICE_ERROR);
+  EXPECT_CALL(*attestation_proxy_factory_.get_mock_proxy(),
+              GetStatus(_, _, _, _));
+  EXPECT_CALL(*attestation_proxy_factory_.get_mock_proxy(),
+              GetCertificate(_, _, _, _));
+  EXPECT_CALL(*attestation_proxy_factory_.get_mock_proxy(),
+              RegisterKeyWithChapsToken(_, _, _, _));
+
   EXPECT_CALL(key_store_, DeleteKeys(_, _)).Times(0);
   EXPECT_NE(Status::Success,
             ProvisionCertificate(
@@ -378,9 +616,19 @@ TEST_F(CertProvisionTest, ReProvisionCertificateFailureRegister) {
 // though the new cert is stored. Checks that the new cert is usable,
 // if the old keys were not deleted.
 TEST_F(CertProvisionTest, ReProvisionCertificateFailureDeleteKeys) {
-  Provision();
+  SetupProvisionState();
   std::string old_key_id = provision_status_.key_id();
   ResetObtainedTestKey();
+
+  attestation_proxy_factory_.get_reply_source()->get_cert_reply.set_public_key(
+      GetTestPublicKey().to_string());
+
+  EXPECT_CALL(*attestation_proxy_factory_.get_mock_proxy(),
+              GetStatus(_, _, _, _));
+  EXPECT_CALL(*attestation_proxy_factory_.get_mock_proxy(),
+              GetCertificate(_, _, _, _));
+  EXPECT_CALL(*attestation_proxy_factory_.get_mock_proxy(),
+              RegisterKeyWithChapsToken(_, _, _, _));
 
   EXPECT_CALL(key_store_, DeleteKeys(old_key_id, kCertLabel))
       .WillOnce(Return(TestError(Status::KeyStoreError)));
@@ -399,9 +647,16 @@ TEST_F(CertProvisionTest, GetCertificateSuccess) {
       std::string(kBegCertificate) + "first" + kEndCertificate,
       std::string(kBegCertificate) + "second" + kEndCertificate};
   std::string cert_chain = cert[0] + cert[1];
-  SecureBlob cert_chain_blob(cert_chain);
-  EXPECT_CALL(c_proxy_, ProcessCertResponse(kCertLabel, _, _))
-      .WillOnce(DoAll(SetArgPointee<2>(cert_chain_blob), Return(OpResult())));
+  InitializeAttestationStatus(/*is_prepared=*/true, /*is_enrolled=*/false);
+  EXPECT_CALL(*attestation_proxy_factory_.get_mock_proxy(),
+              GetStatus(_, _, _, _));
+  EXPECT_CALL(*attestation_proxy_factory_.get_mock_proxy(),
+              GetCertificate(_, _, _, _));
+  EXPECT_CALL(*attestation_proxy_factory_.get_mock_proxy(),
+              RegisterKeyWithChapsToken(_, _, _, _));
+  attestation_proxy_factory_.get_reply_source()->get_cert_reply.set_certificate(
+      cert_chain);
+
   Provision();
   std::string result_cert;
   EXPECT_EQ(Status::Success, GetCertificate(kCertLabel, true, &result_cert));
@@ -422,7 +677,7 @@ TEST_F(CertProvisionTest, GetCertificateNotProvisioned) {
 
 // Checks that signing succeeds and returns the requested data.
 TEST_F(CertProvisionTest, SignSuccess) {
-  Provision();
+  SetupProvisionState();
 
   std::string data = "some data";
   std::string keystore_sig("signature");
@@ -453,7 +708,7 @@ TEST_F(CertProvisionTest, SignNotProvisioned) {
 
 // Checks that signing fails if keystore Sign operation fails.
 TEST_F(CertProvisionTest, SignFailure) {
-  Provision();
+  SetupProvisionState();
   std::string data = "some data";
   std::string sig;
   EXPECT_CALL(key_store_, Sign(GetTestKeyID(), kCertLabel, SHA1_RSA_PKCS, _, _))
@@ -465,7 +720,7 @@ TEST_F(CertProvisionTest, SignFailure) {
 // Checks that if a cert is provisioned for one label, it doesn't affect
 // other labels.
 TEST_F(CertProvisionTest, WrongLabel) {
-  Provision();
+  SetupProvisionState();
   EXPECT_CALL(key_store_, ReadProvisionStatus(kWrongLabel, _))
       .WillRepeatedly(Return(OpResult()));
   EXPECT_CALL(key_store_, ReadProvisionStatus(kCertLabel, _)).Times(0);
@@ -478,6 +733,97 @@ TEST_F(CertProvisionTest, WrongLabel) {
   EXPECT_EQ(Status::NotProvisioned,
             Sign(kWrongLabel, SHA1_RSA_PKCS, data, &sig));
   EXPECT_TRUE(sig.empty());
+}
+
+TEST_F(CertProvisionTest, ForceEnroll) {
+  ExpectProvisioned(false);
+
+  InitializeAttestationStatus(/*is_prepared=*/true, /*is_enrolled=*/true);
+
+  EXPECT_CALL(*attestation_proxy_factory_.get_mock_proxy(),
+              GetStatus(_, _, _, _));
+  EXPECT_CALL(*attestation_proxy_factory_.get_mock_proxy(), Enroll(_, _, _, _));
+  EXPECT_EQ(Status::Success, ForceEnroll(PCAType::kDefaultPCA, std::string(),
+                                         GetProgressCallback()));
+
+  int last_progress = 0;
+  for (auto p : progress_) {
+    EXPECT_EQ(Status::Success, p.status);
+    EXPECT_LE(last_progress, p.progress);
+    last_progress = p.progress;
+  }
+  EXPECT_EQ(100, last_progress);
+
+  // Verify if the recorded requests meet expectations.
+  EXPECT_TRUE(
+      attestation_proxy_factory_.get_request_sink()->enroll_request.forced());
+}
+
+TEST_F(CertProvisionTest, ForceEnrollNotPrepared) {
+  ExpectProvisioned(false);
+
+  InitializeAttestationStatus(/*is_prepared=*/false, /*is_enrolled=*/false);
+
+  EXPECT_CALL(*attestation_proxy_factory_.get_mock_proxy(),
+              GetStatus(_, _, _, _));
+
+  EXPECT_EQ(
+      Status::NotPrepared,
+      ForceEnroll(PCAType::kDefaultPCA, std::string(), GetProgressCallback()));
+  EXPECT_THAT(progress_, ResultsIn(Status::NotPrepared));
+}
+
+TEST_F(CertProvisionTest, ForceEnrollDBusErrorGetStatus) {
+  ExpectProvisioned(false);
+
+  brillo::Error::AddTo(
+      &attestation_proxy_factory_.get_error_source()->get_status_error,
+      FROM_HERE, "", "", kFakeErrorMessage);
+  const std::string exepcted_error_message =
+      attestation_proxy_factory_.get_error_source()
+          ->get_status_error->GetMessage();
+
+  EXPECT_CALL(*attestation_proxy_factory_.get_mock_proxy(),
+              GetStatus(_, _, _, _));
+
+  EXPECT_EQ(Status::DBusError, ForceEnroll(PCAType::kDefaultPCA, std::string(),
+                                           GetProgressCallback()));
+  EXPECT_THAT(progress_, ResultsIn(Status::DBusError));
+  EXPECT_EQ(exepcted_error_message, progress_.back().message);
+}
+
+TEST_F(CertProvisionTest, ForceEnrollFailure) {
+  ExpectProvisioned(false);
+  InitializeAttestationStatus(/*is_prepared=*/true, /*is_enrolled=*/true);
+
+  attestation_proxy_factory_.get_reply_source()->enroll_reply.set_status(
+      ::attestation::STATUS_UNEXPECTED_DEVICE_ERROR);
+  EXPECT_CALL(*attestation_proxy_factory_.get_mock_proxy(),
+              GetStatus(_, _, _, _));
+  EXPECT_CALL(*attestation_proxy_factory_.get_mock_proxy(), Enroll(_, _, _, _));
+
+  EXPECT_NE(Status::Success, ForceEnroll(PCAType::kDefaultPCA, std::string(),
+                                         GetProgressCallback()));
+  EXPECT_THAT(progress_, ResultsNotIn(Status::Success));
+}
+
+TEST_F(CertProvisionTest, ForceEnrollDBusError) {
+  ExpectProvisioned(false);
+  InitializeAttestationStatus(/*is_prepared=*/true, /*is_enrolled=*/true);
+
+  brillo::Error::AddTo(
+      &attestation_proxy_factory_.get_error_source()->enroll_error, FROM_HERE,
+      "", "", kFakeErrorMessage);
+  const std::string exepcted_error_message =
+      attestation_proxy_factory_.get_error_source()->enroll_error->GetMessage();
+  EXPECT_CALL(*attestation_proxy_factory_.get_mock_proxy(),
+              GetStatus(_, _, _, _));
+  EXPECT_CALL(*attestation_proxy_factory_.get_mock_proxy(), Enroll(_, _, _, _));
+
+  EXPECT_EQ(Status::DBusError, ForceEnroll(PCAType::kDefaultPCA, std::string(),
+                                           GetProgressCallback()));
+  EXPECT_THAT(progress_, ResultsIn(Status::DBusError));
+  EXPECT_EQ(exepcted_error_message, progress_.back().message);
 }
 
 }  // namespace cert_provision

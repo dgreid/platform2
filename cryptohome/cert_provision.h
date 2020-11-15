@@ -25,6 +25,7 @@ enum class Status {
   DBusError = 5,
   CryptohomeError = 6,
   KeyStoreError = 7,
+  AttestationError = 8,
 };
 
 // Privacy CA types. These values match PCAType values in attestation.h,
