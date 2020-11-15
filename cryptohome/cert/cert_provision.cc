@@ -307,4 +307,22 @@ Status Sign(const std::string& label,
   return Status::Success;
 }
 
+Status GetEndorsementPublicKey(std::string* ek_public_key) {
+  auto proxy = AttestationProxyFactory::Create();
+  // By design, the factory must return a valid object.
+  CHECK(proxy);
+  ::attestation::GetEndorsementInfoReply reply;
+  brillo::ErrorPtr error;
+  if (!proxy->GetEndorsementInfo(attestation::GetEndorsementInfoRequest(),
+                                 &reply, &error)) {
+    return ReportAndReturn(Status::DBusError, error->GetMessage());
+  }
+  if (reply.status() != ::attestation::STATUS_SUCCESS) {
+    return ReportAndReturn(Status::AttestationError,
+                           "Failed to get endorsement info");
+  }
+  *ek_public_key = reply.ek_public_key();
+  return Status::Success;
+}
+
 }  // namespace cert_provision

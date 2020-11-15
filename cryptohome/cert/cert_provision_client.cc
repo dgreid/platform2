@@ -35,6 +35,8 @@ void PrintHelp() {
   printf("  --sign --label=<label> --in=<file_in> [--out=<file_out>]\n");
   printf("         --mechanism=<mechanism>\n");
   printf("  where mechanism: sha1_rsa, sha256_rsa, sha256_rsa_pss\n");
+  printf("  Get endorsement public key:'\n");
+  printf("  --get_ek_public_key\n");
 }
 
 int main(int argc, char** argv) {
@@ -174,6 +176,18 @@ int main(int argc, char** argv) {
     } else {
       puts(base::HexEncode(sig.data(), sig.size()).c_str());
     }
+  } else if (cl->HasSwitch("get_ek_public_key")) {
+    std::string ek_public_key;
+    sts = cert_provision::GetEndorsementPublicKey(&ek_public_key);
+    if (sts != cert_provision::Status::Success) {
+      LOG(ERROR) << "Getting EK returned " << static_cast<int>(sts);
+      return 3;
+    }
+    if (ek_public_key.empty()) {
+      LOG(ERROR) << "Empty endorsement public key";
+      return 1;
+    }
+    puts(base::HexEncode(ek_public_key.data(), ek_public_key.size()).c_str());
   }
   return 0;
 }

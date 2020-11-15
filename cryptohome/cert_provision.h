@@ -157,6 +157,10 @@ CERT_PROVISION_EXPORT Status Sign(const std::string& label,
                                   const std::string& data,
                                   std::string* signature);
 
+// Gets endorsement public key of the TPM.
+CERT_PROVISION_EXPORT Status
+GetEndorsementPublicKey(std::string* ek_public_key);
+
 }  // namespace cert_provision
 
 #endif  // CRYPTOHOME_CERT_PROVISION_H_

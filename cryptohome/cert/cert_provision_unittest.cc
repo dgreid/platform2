@@ -41,9 +41,10 @@ using ::testing::StrictMock;
 namespace {
 
 // Some arbitrary certificate label used for testing.
-const char kCertLabel[] = "test";
-const char kWrongLabel[] = "some wrong label";
-const char kFakeErrorMessage[] = "fake error message";
+constexpr char kCertLabel[] = "test";
+constexpr char kWrongLabel[] = "some wrong label";
+constexpr char kFakeErrorMessage[] = "fake error message";
+constexpr char kFakeEndorsementPublicKey[] = "fake public ek";
 
 const char kBegCertificate[] = "-----BEGIN CERTIFICATE-----";
 const char kEndCertificate[] = "-----END CERTIFICATE-----";
@@ -71,18 +72,21 @@ namespace {
 class RecordingAttestationProxy : public org::chromium::AttestationProxyMock {
  public:
   struct ReplySource {
+    attestation::GetEndorsementInfoReply get_endorsement_info_reply;
     attestation::GetStatusReply get_status_reply;
     attestation::EnrollReply enroll_reply;
     attestation::GetCertificateReply get_cert_reply;
     attestation::RegisterKeyWithChapsTokenReply register_key_reply;
   };
   struct ErrorSource {
+    brillo::ErrorPtr get_endorsement_info_error;
     brillo::ErrorPtr get_status_error;
     brillo::ErrorPtr enroll_error;
     brillo::ErrorPtr get_cert_error;
     brillo::ErrorPtr register_key_error;
   };
   struct RequestSink {
+    attestation::GetEndorsementInfoRequest get_endorsement_info_request;
     attestation::GetStatusRequest get_status_request;
     attestation::EnrollRequest enroll_request;
     attestation::GetCertificateRequest get_cert_request;
@@ -96,6 +100,9 @@ class RecordingAttestationProxy : public org::chromium::AttestationProxyMock {
       : reply_source_(reply_source),
         error_source_(error_source),
         request_sink_(request_sink) {
+    ON_CALL(*this, GetEndorsementInfo(_, _, _, _))
+        .WillByDefault(
+            Invoke(this, &RecordingAttestationProxy::HandleGetEndorsementInfo));
     ON_CALL(*this, GetStatus(_, _, _, _))
         .WillByDefault(
             Invoke(this, &RecordingAttestationProxy::HandleGetStatus));
@@ -109,6 +116,19 @@ class RecordingAttestationProxy : public org::chromium::AttestationProxyMock {
             this, &RecordingAttestationProxy::HandleRegisterKeyWithChapsToken));
   }
 
+  bool HandleGetEndorsementInfo(
+      const attestation::GetEndorsementInfoRequest& request,
+      attestation::GetEndorsementInfoReply* reply,
+      brillo::ErrorPtr* error,
+      int /*timeout_ms*/) {
+    if (error_source_->get_endorsement_info_error) {
+      *error = std::move(error_source_->get_endorsement_info_error);
+      return false;
+    }
+    request_sink_->get_endorsement_info_request = request;
+    *reply = reply_source_->get_endorsement_info_reply;
+    return true;
+  }
   bool HandleGetStatus(const attestation::GetStatusRequest& request,
                        attestation::GetStatusReply* reply,
                        brillo::ErrorPtr* error,
@@ -824,6 +844,29 @@ TEST_F(CertProvisionTest, ForceEnrollDBusError) {
                                            GetProgressCallback()));
   EXPECT_THAT(progress_, ResultsIn(Status::DBusError));
   EXPECT_EQ(exepcted_error_message, progress_.back().message);
+}
+
+TEST_F(CertProvisionTest, GetEndorsementPublicKeySuccess) {
+  attestation_proxy_factory_.get_reply_source()
+      ->get_endorsement_info_reply.set_ek_public_key(kFakeEndorsementPublicKey);
+  EXPECT_CALL(*attestation_proxy_factory_.get_mock_proxy(),
+              GetEndorsementInfo(_, _, _, _));
+  std::string endorsment_public_key;
+  EXPECT_EQ(Status::Success, GetEndorsementPublicKey(&endorsment_public_key));
+  EXPECT_EQ(endorsment_public_key, kFakeEndorsementPublicKey);
+}
+
+TEST_F(CertProvisionTest, GetEndorsementPublicKeyDBusError) {
+  brillo::Error::AddTo(&attestation_proxy_factory_.get_error_source()
+                            ->get_endorsement_info_error,
+                       FROM_HERE, "", "", kFakeErrorMessage);
+  const std::string exepcted_error_message =
+      attestation_proxy_factory_.get_error_source()
+          ->get_endorsement_info_error->GetMessage();
+  EXPECT_CALL(*attestation_proxy_factory_.get_mock_proxy(),
+              GetEndorsementInfo(_, _, _, _));
+  std::string endorsment_public_key;
+  EXPECT_NE(Status::Success, GetEndorsementPublicKey(&endorsment_public_key));
 }
 
 }  // namespace cert_provision
