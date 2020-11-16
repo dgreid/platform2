@@ -8,13 +8,17 @@
 #include <sys/mount.h>
 #include <time.h>
 
+#include <map>
 #include <memory>
 #include <utility>
 
 #include <base/files/file_path.h>
 #include <base/files/file_util.h>
+#include <base/files/scoped_temp_dir.h>
 #include <base/logging.h>
 #include <base/stl_util.h>
+#include <base/strings/string_split.h>
+#include <base/strings/string_util.h>
 #include <brillo/process/process_reaper.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -33,11 +37,19 @@ namespace cros_disks {
 namespace {
 
 using testing::_;
+using testing::AllOf;
 using testing::Contains;
+using testing::DoAll;
+using testing::DoDefault;
+using testing::ElementsAre;
+using testing::HasSubstr;
+using testing::Invoke;
 using testing::Return;
+using testing::SaveArg;
 using testing::StrEq;
 
-const char kMountRootDirectory[] = "/media/removable";
+const uint64_t kExpectedMountFlags =
+    MS_NODEV | MS_NOEXEC | MS_NOSUID | MS_NOSYMFOLLOW;
 
 class MockDeviceEjector : public DeviceEjector {
  public:
@@ -46,17 +58,27 @@ class MockDeviceEjector : public DeviceEjector {
   MOCK_METHOD(bool, Eject, (const std::string&), (override));
 };
 
-class MockDiskMonitor : public DiskMonitor {
+class FakeDiskMonitor : public DiskMonitor {
  public:
-  MockDiskMonitor() = default;
+  FakeDiskMonitor() = default;
 
   bool Initialize() override { return true; }
 
-  MOCK_METHOD(std::vector<Disk>, EnumerateDisks, (), (const, override));
-  MOCK_METHOD(bool,
-              GetDiskByDevicePath,
-              (const base::FilePath&, Disk*),
-              (const, override));
+  std::vector<Disk> EnumerateDisks() const override { return disks_; }
+
+  bool GetDiskByDevicePath(const base::FilePath& path,
+                           Disk* disk) const override {
+    for (const auto& d : disks_) {
+      if (d.device_file == path.value()) {
+        if (disk)
+          *disk = d;
+        return true;
+      }
+    }
+    return false;
+  }
+
+  std::vector<Disk> disks_;
 };
 
 class MockPlatform : public Platform {
@@ -67,6 +89,57 @@ class MockPlatform : public Platform {
               Unmount,
               (const std::string&, int),
               (const, override));
+
+  MOCK_METHOD(MountErrorType,
+              Mount,
+              (const std::string& source,
+               const std::string& target,
+               const std::string& filesystem_type,
+               uint64_t flags,
+               const std::string& options),
+              (const, override));
+
+  MOCK_METHOD(bool, PathExists, (const std::string& path), (const, override));
+  bool PathExistsImpl(const std::string& path) const {
+    return Platform::PathExists(path);
+  }
+
+  bool Lstat(const std::string& path,
+             base::stat_wrapper_t* out) const override {
+    if (base::StartsWith(path, "/dev/", base::CompareCase::SENSITIVE)) {
+      out->st_mode = S_IFBLK | 0640;
+      return true;
+    }
+    NOTREACHED();
+    return false;
+  }
+
+  bool SetOwnership(const std::string& path,
+                    uid_t user_id,
+                    gid_t group_id) const override {
+    return true;
+  }
+
+  bool SetPermissions(const std::string& path, mode_t mode) const override {
+    return true;
+  }
+
+  bool GetUserAndGroupId(const std::string& user_name,
+                         uid_t* user_id,
+                         gid_t* group_id) const override {
+    if (user_name == "fuse-exfat") {
+      *user_id = 111;
+      *group_id = 222;
+      return true;
+    }
+    if (user_name == "ntfs-3g") {
+      *user_id = 333;
+      *group_id = 444;
+      return true;
+    }
+    NOTREACHED();
+    return false;
+  }
 };
 
 class MockMountPoint : public MountPoint {
@@ -77,173 +150,364 @@ class MockMountPoint : public MountPoint {
   MOCK_METHOD(MountErrorType, UnmountImpl, (), (override));
 };
 
+class MockSandboxedProcess : public SandboxedProcess {
+ public:
+  pid_t StartImpl(base::ScopedFD, base::ScopedFD, base::ScopedFD) override {
+    OnStart(arguments());
+    return 123;
+  }
+  int WaitImpl() override { return WaitNonBlockingImpl(); }
+  int WaitNonBlockingImpl() override { return 0; }
+  MOCK_METHOD(void, OnStart, (const std::vector<std::string>& args), (const));
+};
+
 }  // namespace
 
-class DiskManagerTest : public ::testing::Test {
+class DiskManagerTest : public ::testing::Test, public SandboxedProcessFactory {
  public:
-  DiskManagerTest()
-      : manager_(kMountRootDirectory,
-                 &platform_,
-                 &metrics_,
-                 &process_reaper_,
-                 &monitor_,
-                 &ejector_) {}
+  DiskManagerTest() {}
+
+  void SetUp() override {
+    CHECK(dir_.CreateUniqueTempDir());
+    ON_CALL(platform_, PathExists)
+        .WillByDefault(Invoke(&platform_, &MockPlatform::PathExistsImpl));
+    ON_CALL(platform_, PathExists("/dev/sda1")).WillByDefault(Return(true));
+    manager_ = std::make_unique<DiskManager>(dir_.GetPath().value(), &platform_,
+                                             &metrics_, &process_reaper_,
+                                             &monitor_, &ejector_, this);
+    CHECK(manager_->Initialize());
+  }
 
  protected:
+  std::unique_ptr<SandboxedProcess> CreateSandboxedProcess() const override {
+    auto ptr = std::make_unique<MockSandboxedProcess>();
+    ON_CALL(*ptr, OnStart).WillByDefault(SaveArg<0>(&fuse_args_));
+    return ptr;
+  }
+
+  base::ScopedTempDir dir_;
   Metrics metrics_;
   MockPlatform platform_;
   brillo::ProcessReaper process_reaper_;
   MockDeviceEjector ejector_;
-  MockDiskMonitor monitor_;
-  DiskManager manager_;
+  FakeDiskMonitor monitor_;
+  std::unique_ptr<DiskManager> manager_;
+  mutable std::vector<std::string> fuse_args_;
 };
 
-TEST_F(DiskManagerTest, CreateExFATMounter) {
-  Disk disk;
-  disk.device_file = "/dev/sda1";
-
-  DiskManager::Filesystem filesystem = {.type = "exfat"};
-
-  std::string target_path = "/media/disk";
-  std::vector<std::string> options = {"rw", "nodev", "noexec", "nosuid"};
-
-  auto mounter = manager_.CreateMounter(disk, filesystem, target_path, options);
-  EXPECT_NE(nullptr, mounter.get());
-  const FUSEMounterLegacy* legacy =
-      static_cast<FUSEMounterLegacy*>(mounter.get());
-  EXPECT_EQ("rw,nodev,noexec,nosuid", legacy->mount_options().ToString());
+MATCHER_P(HasBits, bits, "") {
+  return bits == (bits & arg);
 }
 
-TEST_F(DiskManagerTest, CreateNTFSMounter) {
-  Disk disk;
-  disk.device_file = "/dev/sda1";
-
-  DiskManager::Filesystem filesystem = {.type = "ntfs"};
-
-  std::string target_path = "/media/disk";
-  std::vector<std::string> options = {"rw", "nodev", "noexec", "nosuid"};
-
-  auto mounter = manager_.CreateMounter(disk, filesystem, target_path, options);
-  EXPECT_NE(nullptr, mounter.get());
-  const FUSEMounterLegacy* legacy =
-      static_cast<FUSEMounterLegacy*>(mounter.get());
-  EXPECT_EQ("rw,nodev,noexec,nosuid", legacy->mount_options().ToString());
+TEST_F(DiskManagerTest, MountBootDeviceNotAllowed) {
+  EXPECT_CALL(platform_, Mount).Times(0);
+  EXPECT_CALL(platform_, Unmount).Times(0);
+  std::string path;
+  MountErrorType err = manager_->Mount("/dev/sda1", "vfat", {}, &path);
+  EXPECT_EQ(MOUNT_ERROR_INVALID_DEVICE_PATH, err);
+  monitor_.disks_.push_back({
+      .is_on_boot_device = true,
+      .device_file = "/dev/sda1",
+      .filesystem_type = "vfat",
+  });
+  err = manager_->Mount("/dev/sda1", "vfat", {}, &path);
+  EXPECT_EQ(MOUNT_ERROR_INVALID_DEVICE_PATH, err);
 }
 
-TEST_F(DiskManagerTest, CreateVFATSystemMounter) {
-  Disk disk;
-  disk.device_file = "/dev/sda1";
+TEST_F(DiskManagerTest, MountNonExistingDevice) {
+  EXPECT_CALL(platform_, Mount).Times(0);
+  EXPECT_CALL(platform_, Unmount).Times(0);
+  monitor_.disks_.push_back({
+      .is_on_boot_device = false,
+      .device_file = "/dev/sda1",
+      .filesystem_type = "vfat",
+  });
+  EXPECT_CALL(platform_, PathExists("/dev/sda1")).WillRepeatedly(Return(false));
+  std::string path;
+  MountErrorType err = manager_->Mount("/dev/sda1", "vfat", {}, &path);
+  EXPECT_EQ(MOUNT_ERROR_INVALID_DEVICE_PATH, err);
+}
 
-  DiskManager::Filesystem filesystem = {.type = "vfat"};
-  filesystem.extra_mount_options = {"utf8", "shortname=mixed"};
+TEST_F(DiskManagerTest, MountUsesLabel) {
+  monitor_.disks_.push_back({
+      .is_on_boot_device = false,
+      .device_file = "/dev/sda1",
+      .filesystem_type = "vfat",
+      .label = "foo",
+  });
 
-  std::string target_path = "/media/disk";
-  std::vector<std::string> options = {"rw", "nodev", "noexec", "nosuid"};
+  std::string opts;
+  EXPECT_CALL(platform_, Mount("/dev/sda1", _, "vfat", _, _))
+      .WillOnce(DoAll(SaveArg<4>(&opts), Return(MOUNT_ERROR_NONE)));
+  std::string path;
+  MountErrorType err = manager_->Mount("/dev/sda1", "", {}, &path);
+  EXPECT_EQ(MOUNT_ERROR_NONE, err);
+  EXPECT_EQ("foo", base::FilePath(path).BaseName().value());
 
+  EXPECT_CALL(platform_, Unmount(path, _)).WillOnce(Return(MOUNT_ERROR_NONE));
+  err = manager_->Unmount("/dev/sda1");
+  EXPECT_EQ(MOUNT_ERROR_NONE, err);
+}
+
+TEST_F(DiskManagerTest, MountFAT) {
   // Override the time zone to make this test deterministic.
   // This test uses AWST (Perth, Australia), which is UTC+8, as the test time
   // zone. However, the TZ environment variable is the time to be added to local
   // time to get to UTC, hence the negative.
   setenv("TZ", "UTC-8", 1);
 
-  auto mounter = manager_.CreateMounter(disk, filesystem, target_path, options);
-  ASSERT_NE(nullptr, mounter.get());
-  const SystemMounter* sysmounter =
-      static_cast<const SystemMounter*>(mounter.get());
-  EXPECT_FALSE(sysmounter->read_only());
-  EXPECT_THAT(sysmounter->options(), Contains(StrEq("time_offset=480")));
+  monitor_.disks_.push_back({
+      .is_on_boot_device = false,
+      .device_file = "/dev/sda1",
+      .filesystem_type = "vfat",
+  });
+
+  std::string opts;
+  EXPECT_CALL(platform_,
+              Mount("/dev/sda1", _, "vfat", HasBits(kExpectedMountFlags), _))
+      .WillOnce(DoAll(SaveArg<4>(&opts), Return(MOUNT_ERROR_NONE)));
+  std::string path;
+  MountErrorType err = manager_->Mount("/dev/sda1", "", {}, &path);
+  EXPECT_EQ(MOUNT_ERROR_NONE, err);
+  auto options =
+      base::SplitString(opts, ",", base::KEEP_WHITESPACE, base::SPLIT_WANT_ALL);
+  EXPECT_THAT(options,
+              AllOf(Contains("uid=1000"), Contains("gid=1001"),
+                    Contains("shortname=mixed"), Contains("time_offset=480")));
+
+  EXPECT_CALL(platform_, Unmount(path, _)).WillOnce(Return(MOUNT_ERROR_NONE));
+  err = manager_->Unmount("/dev/sda1");
+  EXPECT_EQ(MOUNT_ERROR_NONE, err);
 }
 
-TEST_F(DiskManagerTest, CreateExt4SystemMounter) {
-  Disk disk;
-  disk.device_file = "/dev/sda1";
+TEST_F(DiskManagerTest, MountExFAT) {
+  monitor_.disks_.push_back({
+      .is_on_boot_device = false,
+      .device_file = "/dev/sda1",
+      .filesystem_type = "exfat",
+      .label = "foo",
+  });
 
-  std::string target_path = "/media/disk";
-  // "mand" is not an allowed option, so it should be skipped.
-  std::vector<std::string> options = {"rw", "nodev", "noexec", "nosuid",
-                                      "mand"};
+  std::string opts;
+  EXPECT_CALL(platform_, Mount("/dev/sda1", _, "fuseblk.exfat",
+                               HasBits(kExpectedMountFlags), _))
+      .WillOnce(DoAll(SaveArg<4>(&opts), Return(MOUNT_ERROR_NONE)));
+  std::string path;
+  MountErrorType err = manager_->Mount("/dev/sda1", "", {}, &path);
+  EXPECT_EQ(MOUNT_ERROR_NONE, err);
+  auto options =
+      base::SplitString(opts, ",", base::KEEP_WHITESPACE, base::SPLIT_WANT_ALL);
+  EXPECT_THAT(options,
+              AllOf(Contains("user_id=1000"), Contains("group_id=1001")));
+  EXPECT_THAT(fuse_args_,
+              ElementsAre("/usr/sbin/mount.exfat-fuse", "-o",
+                          HasSubstr("uid=1000,gid=1001"), "/dev/sda1", _));
 
-  DiskManager::Filesystem filesystem = {.type = "ext4"};
-  auto mounter = manager_.CreateMounter(disk, filesystem, target_path, options);
-  ASSERT_NE(nullptr, mounter.get());
-  const SystemMounter* sysmounter =
-      static_cast<const SystemMounter*>(mounter.get());
-  EXPECT_FALSE(sysmounter->read_only());
+  EXPECT_CALL(platform_, Unmount(path, _)).WillOnce(Return(MOUNT_ERROR_NONE));
+  err = manager_->Unmount("/dev/sda1");
+  EXPECT_EQ(MOUNT_ERROR_NONE, err);
 }
 
-TEST_F(DiskManagerTest, GetFilesystem) {
-  EXPECT_EQ(nullptr, manager_.GetFilesystem("nonexistent-fs"));
+TEST_F(DiskManagerTest, MountNTFS) {
+  monitor_.disks_.push_back({
+      .is_on_boot_device = false,
+      .device_file = "/dev/sda1",
+      .filesystem_type = "ntfs",
+      .label = "foo",
+  });
 
-  DiskManager::Filesystem normal_fs = {.type = "normal-fs"};
-  EXPECT_EQ(nullptr, manager_.GetFilesystem(normal_fs.type));
-  manager_.RegisterFilesystem(normal_fs);
-  EXPECT_NE(nullptr, manager_.GetFilesystem(normal_fs.type));
+  std::string opts;
+  EXPECT_CALL(platform_, Mount("/dev/sda1", _, "fuseblk.ntfs",
+                               HasBits(kExpectedMountFlags), _))
+      .WillOnce(DoAll(SaveArg<4>(&opts), Return(MOUNT_ERROR_NONE)));
+  std::string path;
+  MountErrorType err = manager_->Mount("/dev/sda1", "", {}, &path);
+  EXPECT_EQ(MOUNT_ERROR_NONE, err);
+  auto options =
+      base::SplitString(opts, ",", base::KEEP_WHITESPACE, base::SPLIT_WANT_ALL);
+  EXPECT_THAT(options,
+              AllOf(Contains("user_id=1000"), Contains("group_id=1001")));
+  EXPECT_THAT(fuse_args_,
+              ElementsAre("/usr/bin/ntfs-3g", "-o",
+                          HasSubstr("uid=1000,gid=1001"), "/dev/sda1", _));
+
+  EXPECT_CALL(platform_, Unmount(path, _)).WillOnce(Return(MOUNT_ERROR_NONE));
+  err = manager_->Unmount("/dev/sda1");
+  EXPECT_EQ(MOUNT_ERROR_NONE, err);
 }
 
-TEST_F(DiskManagerTest, RegisterFilesystem) {
-  const std::map<std::string, DiskManager::Filesystem>& filesystems =
-      manager_.filesystems_;
-  EXPECT_EQ(0, filesystems.size());
-  EXPECT_TRUE(filesystems.find("nonexistent") == filesystems.end());
+TEST_F(DiskManagerTest, MountCD) {
+  monitor_.disks_.push_back({
+      .is_on_boot_device = false,
+      .device_file = "/dev/sda1",
+      .filesystem_type = "iso9660",
+      .label = "foo",
+  });
 
-  DiskManager::Filesystem fat_fs = {.type = "fat"};
-  fat_fs.accepts_user_and_group_id = true;
-  manager_.RegisterFilesystem(fat_fs);
-  EXPECT_EQ(1, filesystems.size());
-  EXPECT_TRUE(filesystems.find(fat_fs.type) != filesystems.end());
+  std::string opts;
+  EXPECT_CALL(platform_, Mount("/dev/sda1", _, "iso9660",
+                               HasBits(kExpectedMountFlags | MS_RDONLY), _))
+      .WillOnce(DoAll(SaveArg<4>(&opts), Return(MOUNT_ERROR_NONE)));
+  std::string path;
+  MountErrorType err = manager_->Mount("/dev/sda1", "", {}, &path);
+  EXPECT_EQ(MOUNT_ERROR_NONE, err);
+  auto options =
+      base::SplitString(opts, ",", base::KEEP_WHITESPACE, base::SPLIT_WANT_ALL);
+  EXPECT_THAT(options, AllOf(Contains("uid=1000"), Contains("gid=1001")));
 
-  DiskManager::Filesystem vfat_fs = {.type = "vfat"};
-  vfat_fs.accepts_user_and_group_id = true;
-  manager_.RegisterFilesystem(vfat_fs);
-  EXPECT_EQ(2, filesystems.size());
-  EXPECT_TRUE(filesystems.find(vfat_fs.type) != filesystems.end());
+  EXPECT_CALL(platform_, Unmount(path, _)).WillOnce(Return(MOUNT_ERROR_NONE));
+  err = manager_->Unmount("/dev/sda1");
+  EXPECT_EQ(MOUNT_ERROR_NONE, err);
+}
+
+TEST_F(DiskManagerTest, MountDVD) {
+  monitor_.disks_.push_back({
+      .is_on_boot_device = false,
+      .device_file = "/dev/sda1",
+      .filesystem_type = "udf",
+      .label = "foo",
+  });
+
+  std::string opts;
+  EXPECT_CALL(platform_, Mount("/dev/sda1", _, "udf",
+                               HasBits(kExpectedMountFlags | MS_RDONLY), _))
+      .WillOnce(DoAll(SaveArg<4>(&opts), Return(MOUNT_ERROR_NONE)));
+  std::string path;
+  MountErrorType err = manager_->Mount("/dev/sda1", "", {}, &path);
+  EXPECT_EQ(MOUNT_ERROR_NONE, err);
+  auto options =
+      base::SplitString(opts, ",", base::KEEP_WHITESPACE, base::SPLIT_WANT_ALL);
+  EXPECT_THAT(options, AllOf(Contains("uid=1000"), Contains("gid=1001")));
+
+  EXPECT_CALL(platform_, Unmount(path, _)).WillOnce(Return(MOUNT_ERROR_NONE));
+  err = manager_->Unmount("/dev/sda1");
+  EXPECT_EQ(MOUNT_ERROR_NONE, err);
+}
+
+TEST_F(DiskManagerTest, MountHFS) {
+  monitor_.disks_.push_back({
+      .is_on_boot_device = false,
+      .device_file = "/dev/sda1",
+      .filesystem_type = "hfsplus",
+      .label = "foo",
+  });
+
+  std::string opts;
+  EXPECT_CALL(platform_,
+              Mount("/dev/sda1", _, "hfsplus", HasBits(kExpectedMountFlags), _))
+      .WillOnce(DoAll(SaveArg<4>(&opts), Return(MOUNT_ERROR_NONE)));
+  std::string path;
+  MountErrorType err = manager_->Mount("/dev/sda1", "", {}, &path);
+  EXPECT_EQ(MOUNT_ERROR_NONE, err);
+  auto options =
+      base::SplitString(opts, ",", base::KEEP_WHITESPACE, base::SPLIT_WANT_ALL);
+  EXPECT_THAT(options, AllOf(Contains("uid=1000"), Contains("gid=1001")));
+
+  EXPECT_CALL(platform_, Unmount(path, _)).WillOnce(Return(MOUNT_ERROR_NONE));
+  err = manager_->Unmount("/dev/sda1");
+  EXPECT_EQ(MOUNT_ERROR_NONE, err);
+}
+
+TEST_F(DiskManagerTest, MountReadOnlyMedia) {
+  monitor_.disks_.push_back({
+      .is_on_boot_device = false,
+      .is_read_only = true,
+      .device_file = "/dev/sda1",
+      .filesystem_type = "vfat",
+      .label = "foo",
+  });
+
+  std::string opts;
+  EXPECT_CALL(platform_, Mount("/dev/sda1", _, "vfat",
+                               HasBits(kExpectedMountFlags | MS_RDONLY), _))
+      .WillOnce(DoAll(SaveArg<4>(&opts), Return(MOUNT_ERROR_NONE)));
+  std::string path;
+  MountErrorType err = manager_->Mount("/dev/sda1", "", {}, &path);
+  EXPECT_EQ(MOUNT_ERROR_NONE, err);
+
+  EXPECT_CALL(platform_, Unmount(path, _)).WillOnce(Return(MOUNT_ERROR_NONE));
+  err = manager_->Unmount("/dev/sda1");
+  EXPECT_EQ(MOUNT_ERROR_NONE, err);
+}
+
+TEST_F(DiskManagerTest, MountForcedReadOnly) {
+  monitor_.disks_.push_back({
+      .is_on_boot_device = false,
+      .device_file = "/dev/sda1",
+      .filesystem_type = "vfat",
+      .label = "foo",
+  });
+
+  std::string opts;
+  EXPECT_CALL(platform_, Mount("/dev/sda1", _, "vfat",
+                               HasBits(kExpectedMountFlags | MS_RDONLY), _))
+      .WillOnce(DoAll(SaveArg<4>(&opts), Return(MOUNT_ERROR_NONE)));
+  std::string path;
+  MountErrorType err = manager_->Mount("/dev/sda1", "", {"ro"}, &path);
+  EXPECT_EQ(MOUNT_ERROR_NONE, err);
+
+  EXPECT_CALL(platform_, Unmount(path, _)).WillOnce(Return(MOUNT_ERROR_NONE));
+  err = manager_->Unmount("/dev/sda1");
+  EXPECT_EQ(MOUNT_ERROR_NONE, err);
+}
+
+TEST_F(DiskManagerTest, MountRetryReadOnlyIfFailed) {
+  monitor_.disks_.push_back({
+      .is_on_boot_device = false,
+      .device_file = "/dev/sda1",
+      .filesystem_type = "vfat",
+      .label = "foo",
+  });
+
+  EXPECT_CALL(platform_,
+              Mount("/dev/sda1", _, "vfat", HasBits(kExpectedMountFlags), _))
+      .WillOnce(Return(MOUNT_ERROR_PATH_NOT_MOUNTED));
+  std::string opts;
+  EXPECT_CALL(platform_, Mount("/dev/sda1", _, "vfat",
+                               HasBits(kExpectedMountFlags | MS_RDONLY), _))
+      .WillOnce(DoAll(SaveArg<4>(&opts), Return(MOUNT_ERROR_NONE)));
+
+  std::string path;
+  MountErrorType err = manager_->Mount("/dev/sda1", "", {}, &path);
+  EXPECT_EQ(MOUNT_ERROR_NONE, err);
+
+  EXPECT_CALL(platform_, Unmount(path, _)).WillOnce(Return(MOUNT_ERROR_NONE));
+  err = manager_->Unmount("/dev/sda1");
+  EXPECT_EQ(MOUNT_ERROR_NONE, err);
 }
 
 TEST_F(DiskManagerTest, CanMount) {
-  EXPECT_TRUE(manager_.CanMount("/dev/sda1"));
-  EXPECT_TRUE(manager_.CanMount("/devices/block/sda/sda1"));
-  EXPECT_TRUE(manager_.CanMount("/sys/devices/block/sda/sda1"));
-  EXPECT_FALSE(manager_.CanMount("/media/removable/disk1"));
-  EXPECT_FALSE(manager_.CanMount("/media/removable/disk1/"));
-  EXPECT_FALSE(manager_.CanMount("/media/removable/disk 1"));
-  EXPECT_FALSE(manager_.CanMount("/media/archive/test.zip"));
-  EXPECT_FALSE(manager_.CanMount("/media/archive/test.zip/"));
-  EXPECT_FALSE(manager_.CanMount("/media/archive/test 1.zip"));
-  EXPECT_FALSE(manager_.CanMount("/media/removable/disk1/test.zip"));
-  EXPECT_FALSE(manager_.CanMount("/media/removable/disk1/test 1.zip"));
-  EXPECT_FALSE(manager_.CanMount("/media/removable/disk1/dir1/test.zip"));
-  EXPECT_FALSE(manager_.CanMount("/media/removable/test.zip/test1.zip"));
-  EXPECT_FALSE(manager_.CanMount("/home/chronos/user/Downloads/test1.zip"));
-  EXPECT_FALSE(manager_.CanMount("/home/chronos/user/GCache/test1.zip"));
+  EXPECT_TRUE(manager_->CanMount("/dev/sda1"));
+  EXPECT_TRUE(manager_->CanMount("/devices/block/sda/sda1"));
+  EXPECT_TRUE(manager_->CanMount("/sys/devices/block/sda/sda1"));
+  EXPECT_FALSE(manager_->CanMount("/media/removable/disk1"));
+  EXPECT_FALSE(manager_->CanMount("/media/removable/disk1/"));
+  EXPECT_FALSE(manager_->CanMount("/media/removable/disk 1"));
+  EXPECT_FALSE(manager_->CanMount("/media/archive/test.zip"));
+  EXPECT_FALSE(manager_->CanMount("/media/archive/test.zip/"));
+  EXPECT_FALSE(manager_->CanMount("/media/archive/test 1.zip"));
+  EXPECT_FALSE(manager_->CanMount("/media/removable/disk1/test.zip"));
+  EXPECT_FALSE(manager_->CanMount("/media/removable/disk1/test 1.zip"));
+  EXPECT_FALSE(manager_->CanMount("/media/removable/disk1/dir1/test.zip"));
+  EXPECT_FALSE(manager_->CanMount("/media/removable/test.zip/test1.zip"));
+  EXPECT_FALSE(manager_->CanMount("/home/chronos/user/Downloads/test1.zip"));
+  EXPECT_FALSE(manager_->CanMount("/home/chronos/user/GCache/test1.zip"));
   EXPECT_FALSE(
-      manager_.CanMount("/home/chronos"
-                        "/u-0123456789abcdef0123456789abcdef01234567"
-                        "/Downloads/test1.zip"));
+      manager_->CanMount("/home/chronos"
+                         "/u-0123456789abcdef0123456789abcdef01234567"
+                         "/Downloads/test1.zip"));
   EXPECT_FALSE(
-      manager_.CanMount("/home/chronos"
-                        "/u-0123456789abcdef0123456789abcdef01234567"
-                        "/GCache/test1.zip"));
-  EXPECT_FALSE(manager_.CanMount(""));
-  EXPECT_FALSE(manager_.CanMount("/tmp"));
-  EXPECT_FALSE(manager_.CanMount("/media/removable"));
-  EXPECT_FALSE(manager_.CanMount("/media/removable/"));
-  EXPECT_FALSE(manager_.CanMount("/media/archive"));
-  EXPECT_FALSE(manager_.CanMount("/media/archive/"));
-  EXPECT_FALSE(manager_.CanMount("/home/chronos/user/Downloads"));
-  EXPECT_FALSE(manager_.CanMount("/home/chronos/user/Downloads/"));
-}
-
-TEST_F(DiskManagerTest, DoMountDiskWithNonexistentSourcePath) {
-  std::string filesystem_type = "ext3";
-  std::string source_path = "/dev/nonexistent-path";
-  std::string mount_path = "/tmp/cros-disks-test";
-  MountOptions applied_options;
-  MountErrorType mount_error = MOUNT_ERROR_UNKNOWN;
-  std::unique_ptr<MountPoint> mount_point = manager_.DoMount(
-      source_path, filesystem_type, {} /* options */,
-      base::FilePath(mount_path), &applied_options, &mount_error);
-  EXPECT_FALSE(mount_point);
-  EXPECT_EQ(MOUNT_ERROR_INVALID_DEVICE_PATH, mount_error);
+      manager_->CanMount("/home/chronos"
+                         "/u-0123456789abcdef0123456789abcdef01234567"
+                         "/GCache/test1.zip"));
+  EXPECT_FALSE(manager_->CanMount(""));
+  EXPECT_FALSE(manager_->CanMount("/tmp"));
+  EXPECT_FALSE(manager_->CanMount("/media/removable"));
+  EXPECT_FALSE(manager_->CanMount("/media/removable/"));
+  EXPECT_FALSE(manager_->CanMount("/media/archive"));
+  EXPECT_FALSE(manager_->CanMount("/media/archive/"));
+  EXPECT_FALSE(manager_->CanMount("/home/chronos/user/Downloads"));
+  EXPECT_FALSE(manager_->CanMount("/home/chronos/user/Downloads/"));
 }
 
 TEST_F(DiskManagerTest, EjectDevice) {
@@ -257,7 +521,7 @@ TEST_F(DiskManagerTest, EjectDevice) {
   disk.media_type = DEVICE_MEDIA_USB;
   EXPECT_CALL(ejector_, Eject("/dev/sda")).Times(0);
   std::unique_ptr<MountPoint> wrapped_mount_point =
-      manager_.MaybeWrapMountPointForEject(std::move(mount_point), disk);
+      manager_->MaybeWrapMountPointForEject(std::move(mount_point), disk);
   EXPECT_EQ(MOUNT_ERROR_NONE, wrapped_mount_point->Unmount());
 
   mount_point = std::make_unique<MockMountPoint>(kMountPath);
@@ -266,7 +530,7 @@ TEST_F(DiskManagerTest, EjectDevice) {
   disk.media_type = DEVICE_MEDIA_OPTICAL_DISC;
   EXPECT_CALL(ejector_, Eject("/dev/sr0")).WillOnce(Return(true));
   wrapped_mount_point =
-      manager_.MaybeWrapMountPointForEject(std::move(mount_point), disk);
+      manager_->MaybeWrapMountPointForEject(std::move(mount_point), disk);
   EXPECT_EQ(MOUNT_ERROR_NONE, wrapped_mount_point->Unmount());
 
   mount_point = std::make_unique<MockMountPoint>(kMountPath);
@@ -275,7 +539,7 @@ TEST_F(DiskManagerTest, EjectDevice) {
   disk.media_type = DEVICE_MEDIA_DVD;
   EXPECT_CALL(ejector_, Eject("/dev/sr1")).WillOnce(Return(true));
   wrapped_mount_point =
-      manager_.MaybeWrapMountPointForEject(std::move(mount_point), disk);
+      manager_->MaybeWrapMountPointForEject(std::move(mount_point), disk);
   EXPECT_EQ(MOUNT_ERROR_NONE, wrapped_mount_point->Unmount());
 }
 
@@ -291,7 +555,7 @@ TEST_F(DiskManagerTest, EjectDeviceWhenUnmountFailed) {
       .WillRepeatedly(Return(MOUNT_ERROR_UNKNOWN));
   EXPECT_CALL(ejector_, Eject("/dev/sr0")).Times(0);
   std::unique_ptr<MountPoint> wrapped_mount_point =
-      manager_.MaybeWrapMountPointForEject(std::move(mount_point), disk);
+      manager_->MaybeWrapMountPointForEject(std::move(mount_point), disk);
   EXPECT_EQ(MOUNT_ERROR_UNKNOWN, wrapped_mount_point->Unmount());
 }
 
@@ -304,10 +568,10 @@ TEST_F(DiskManagerTest, EjectDeviceWhenExplicitlyDisabled) {
   std::unique_ptr<MockMountPoint> mount_point =
       std::make_unique<MockMountPoint>(kMountPath);
   EXPECT_CALL(*mount_point, UnmountImpl()).WillOnce(Return(MOUNT_ERROR_NONE));
-  manager_.eject_device_on_unmount_ = false;
+  manager_->eject_device_on_unmount_ = false;
   EXPECT_CALL(ejector_, Eject("/dev/sr0")).Times(0);
   std::unique_ptr<MountPoint> wrapped_mount_point =
-      manager_.MaybeWrapMountPointForEject(std::move(mount_point), disk);
+      manager_->MaybeWrapMountPointForEject(std::move(mount_point), disk);
   EXPECT_EQ(MOUNT_ERROR_NONE, wrapped_mount_point->Unmount());
 }
 
@@ -322,7 +586,7 @@ TEST_F(DiskManagerTest, EjectDeviceWhenReleased) {
   EXPECT_CALL(*mount_point, UnmountImpl()).Times(0);
   EXPECT_CALL(ejector_, Eject("/dev/sr0")).Times(0);
   std::unique_ptr<MountPoint> wrapped_mount_point =
-      manager_.MaybeWrapMountPointForEject(std::move(mount_point), disk);
+      manager_->MaybeWrapMountPointForEject(std::move(mount_point), disk);
   wrapped_mount_point->Release();
   EXPECT_EQ(MOUNT_ERROR_PATH_NOT_MOUNTED, wrapped_mount_point->Unmount());
 }

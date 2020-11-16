@@ -71,13 +71,19 @@ std::unique_ptr<MountPoint> SystemMounter::Mount(
     MountErrorType* error) const {
   int flags = flags_;
 
-  // All params are ignored except "ro".
+  // We only care about "ro" here.
   if (IsReadOnlyMount(params)) {
     flags |= MS_RDONLY;
   }
 
+  std::vector<std::string> options = options_;
+  *error = ParseParams(std::move(params), &options);
+  if (*error != MOUNT_ERROR_NONE) {
+    return nullptr;
+  }
+
   *error = platform_->Mount(source, target_path.value(), filesystem_type_,
-                            flags, base::JoinString(options_, ","));
+                            flags, base::JoinString(options, ","));
   if (*error != MOUNT_ERROR_NONE) {
     return nullptr;
   }
@@ -86,7 +92,7 @@ std::unique_ptr<MountPoint> SystemMounter::Mount(
 }
 
 bool SystemMounter::CanMount(const std::string& source,
-                             const std::vector<std::string>& params,
+                             const std::vector<std::string>& /*params*/,
                              base::FilePath* suggested_dir_name) const {
   if (source.empty()) {
     *suggested_dir_name = base::FilePath("disk");
@@ -94,6 +100,12 @@ bool SystemMounter::CanMount(const std::string& source,
     *suggested_dir_name = base::FilePath(source).BaseName();
   }
   return true;
+}
+
+MountErrorType SystemMounter::ParseParams(
+    std::vector<std::string> /*params*/,
+    std::vector<std::string>* /*mount_options*/) const {
+  return MOUNT_ERROR_NONE;
 }
 
 }  // namespace cros_disks

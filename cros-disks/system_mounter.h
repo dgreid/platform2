@@ -43,6 +43,11 @@ class SystemMounter : public Mounter {
                 const std::vector<std::string>& params,
                 base::FilePath* suggested_dir_name) const override;
 
+ protected:
+  virtual MountErrorType ParseParams(
+      std::vector<std::string> params,
+      std::vector<std::string>* mount_options) const;
+
  private:
   const Platform* const platform_;
   const std::string filesystem_type_;

@@ -7,10 +7,10 @@
 
 #include <libudev.h>
 
-#include <map>
 #include <memory>
 #include <set>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include <base/callback.h>
@@ -25,6 +25,7 @@ class DeviceEjector;
 class DiskMonitor;
 class Mounter;
 class Platform;
+class SandboxedProcessFactory;
 
 // The DiskManager is responsible for mounting removable media.
 //
@@ -37,7 +38,8 @@ class DiskManager : public MountManager {
               Metrics* metrics,
               brillo::ProcessReaper* process_reaper,
               DiskMonitor* disk_monitor,
-              DeviceEjector* device_ejector);
+              DeviceEjector* device_ejector,
+              const SandboxedProcessFactory* test_sandbox_factory = nullptr);
   DiskManager(const DiskManager&) = delete;
   DiskManager& operator=(const DiskManager&) = delete;
 
@@ -57,9 +59,6 @@ class DiskManager : public MountManager {
 
   // Unmounts all mounted paths.
   bool UnmountAll() override;
-
-  // Registers a set of default filesystems to the disk manager.
-  void RegisterDefaultFilesystems();
 
  protected:
   // Mounts |source_path| to |mount_path| as |filesystem_type| with |options|.
@@ -81,38 +80,6 @@ class DiskManager : public MountManager {
   // MountPoint implementation that ejects the device on unmount.
   class EjectingMountPoint;
 
-  // Properties of a filesystem.
-  struct Filesystem {
-    // Filesystem type.
-    std::string type;
-
-    // This variable is set to true if default user and group ID can be
-    // specified for mounting the filesystem.
-    bool accepts_user_and_group_id = false;
-
-    // Extra mount options to specify when mounting the filesystem.
-    std::vector<std::string> extra_mount_options;
-
-    // This variable is set to true if the filesystem should be mounted
-    // as read-only.
-    bool is_read_only = false;
-  };
-
-  // Creates an appropriate mounter object for a given filesystem.
-  std::unique_ptr<Mounter> CreateMounter(
-      const Disk& disk,
-      const Filesystem& filesystem,
-      const std::string& target_path,
-      const std::vector<std::string>& options) const;
-
-  // Registers a filesystem to the disk manager.
-  // Subsequent registrations of the same filesystem type are ignored.
-  void RegisterFilesystem(const Filesystem& filesystem);
-
-  // Returns a Filesystem object if a given filesystem type is supported.
-  // Otherwise, it returns NULL. This pointer is owned by the DiskManager.
-  const Filesystem* GetFilesystem(const std::string& filesystem_type) const;
-
   // Ejects media for the device |device_file|. Return true if the eject process
   // has started or |eject_device_on_unmount_| is false, or false if the eject
   // process failed.
@@ -127,23 +94,18 @@ class DiskManager : public MountManager {
 
   DiskMonitor* const disk_monitor_;
   DeviceEjector* const device_ejector_;
+  const SandboxedProcessFactory* const test_sandbox_factory_;
 
   // Set to true if devices should be ejected upon unmount.
   bool eject_device_on_unmount_;
 
   // A mapping from a mount path to the corresponding device that should
   // be ejected on unmount.
-  std::map<std::string, Disk> devices_to_eject_on_unmount_;
+  std::unordered_map<std::string, Disk> devices_to_eject_on_unmount_;
 
-  // A set of supported filesystems indexed by filesystem type.
-  std::map<std::string, Filesystem> filesystems_;
+  // Mapping of filesystem types to corresponding mounters.
+  std::unordered_map<std::string, std::unique_ptr<Mounter>> mounters_;
 
-  FRIEND_TEST(DiskManagerTest, CreateExFATMounter);
-  FRIEND_TEST(DiskManagerTest, CreateNTFSMounter);
-  FRIEND_TEST(DiskManagerTest, CreateVFATSystemMounter);
-  FRIEND_TEST(DiskManagerTest, CreateExt4SystemMounter);
-  FRIEND_TEST(DiskManagerTest, GetFilesystem);
-  FRIEND_TEST(DiskManagerTest, RegisterFilesystem);
   FRIEND_TEST(DiskManagerTest, DoMountDiskWithNonexistentSourcePath);
   FRIEND_TEST(DiskManagerTest, EjectDevice);
   FRIEND_TEST(DiskManagerTest, EjectDeviceWhenUnmountFailed);
