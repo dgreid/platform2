@@ -66,7 +66,6 @@ class BiometricsManagerWrapper {
     brillo::dbus_utils::DBusObject dbus_object_;
     dbus::ObjectPath object_path_;
     brillo::dbus_utils::ExportedProperty<std::string> property_label_;
-
   };
 
   void FinalizeEnrollSessionObject();
