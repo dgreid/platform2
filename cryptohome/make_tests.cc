@@ -30,6 +30,7 @@
 
 #include "cryptohome/crypto.h"
 #include "cryptohome/cryptolib.h"
+#include "cryptohome/filesystem_layout.h"
 #include "cryptohome/mock_crypto.h"
 #include "cryptohome/mock_platform.h"
 #include "cryptohome/mock_tpm.h"
@@ -194,17 +195,17 @@ void TestUser::GenerateCredentials(bool force_ecryptfs) {
   crypto.set_use_tpm(false);
   crypto.set_disable_logging_for_testing(/*disable=*/true);
   CryptoLib::SetScryptTestingParams();
-  HomeDirs homedirs;
   UserOldestActivityTimestampCache timestamp_cache;
-
   NiceMock<policy::MockDevicePolicy>* device_policy =
       new NiceMock<policy::MockDevicePolicy>;
   EXPECT_CALL(*device_policy, LoadPolicy()).WillRepeatedly(Return(true));
-  homedirs.own_policy_provider(new policy::PolicyProvider(
-      std::unique_ptr<NiceMock<policy::MockDevicePolicy>>(device_policy)));
-  homedirs.set_shadow_root(shadow_root);
 
-  homedirs.Init(&platform, &crypto, &timestamp_cache);
+  InitializeFilesystemLayout(&platform, &crypto, shadow_root, nullptr);
+  HomeDirs homedirs(
+      &platform, &crypto, shadow_root, sec_salt, &timestamp_cache,
+      std::make_unique<policy::PolicyProvider>(
+          std::unique_ptr<policy::MockDevicePolicy>(device_policy)),
+      std::make_unique<VaultKeysetFactory>());
 
   scoped_refptr<Mount> mount = new Mount(&platform, &homedirs);
   mount->set_skel_source(skel_dir);

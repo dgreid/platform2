@@ -25,7 +25,11 @@
 #include <policy/device_policy.h>
 #include <policy/libpolicy.h>
 
+#include "cryptohome/credentials.h"
+#include "cryptohome/crypto.h"
+#include "cryptohome/platform.h"
 #include "cryptohome/rpc.pb.h"
+#include "cryptohome/user_oldest_activity_timestamp_cache.h"
 #include "cryptohome/vault_keyset.h"
 #include "cryptohome/vault_keyset.pb.h"
 #include "cryptohome/vault_keyset_factory.h"
@@ -48,12 +52,6 @@ constexpr int kKeyFileMax = 100;  // master.0 ... master.99
 constexpr char kKeyFile[] = "master";
 constexpr char kKeyLegacyPrefix[] = "legacy-";
 
-class Credentials;
-class Crypto;
-class Platform;
-class UserOldestActivityTimestampCache;
-class VaultKeyset;
-
 class HomeDirs {
  public:
   // HomeDir contains lists the current user profiles.
@@ -62,7 +60,14 @@ class HomeDirs {
     bool is_mounted = false;
   };
 
-  HomeDirs();
+  HomeDirs() = default;
+  HomeDirs(Platform* platform,
+           Crypto* crypto,
+           const base::FilePath& shadow_root,
+           const brillo::SecureBlob& system_salt,
+           UserOldestActivityTimestampCache* timestamp_cache,
+           std::unique_ptr<policy::PolicyProvider> policy_provider,
+           std::unique_ptr<VaultKeysetFactory> vault_keyset_factory);
   HomeDirs(const HomeDirs&) = delete;
   HomeDirs& operator=(const HomeDirs&) = delete;
 
@@ -80,17 +85,11 @@ class HomeDirs {
       const base::FilePath& shadow_root,
       const std::string& obfuscated_username);
 
-  // Initializes this HomeDirs object. Returns true for success.
-  virtual bool Init(Platform* platform,
-                    Crypto* crypto,
-                    UserOldestActivityTimestampCache* cache);
-
   // Removes all cryptohomes owned by anyone other than the owner user (if set),
   // regardless of free disk space.
   virtual void RemoveNonOwnerCryptohomes();
 
-  // Returns the system salt, creating a new one if necessary. If loading the
-  // system salt fails, returns false, and blob is unchanged.
+  // Returns the system salt.
   virtual bool GetSystemSalt(brillo::SecureBlob* blob);
 
   // Returns the owner's obfuscated username.
@@ -299,35 +298,9 @@ class HomeDirs {
 
   // Accessors. Mostly used for unit testing. These do not take ownership of
   // passed-in pointers.
-  // TODO(wad) Should this update default_crypto_.set_platform()?
-  void set_platform(Platform* value) { platform_ = value; }
-  Platform* platform() { return platform_; }
-  virtual void set_shadow_root(const base::FilePath& value) {
-    shadow_root_ = value;
-  }
   virtual const base::FilePath& shadow_root() const { return shadow_root_; }
   virtual void set_enterprise_owned(bool value) { enterprise_owned_ = value; }
   virtual bool enterprise_owned() const { return enterprise_owned_; }
-  void set_policy_provider(policy::PolicyProvider* value) {
-    policy_provider_ = value;
-  }
-  policy::PolicyProvider* policy_provider() { return policy_provider_; }
-  void set_crypto(Crypto* value) { crypto_ = value; }
-  Crypto* crypto() const { return crypto_; }
-  void set_vault_keyset_factory(VaultKeysetFactory* value) {
-    vault_keyset_factory_ = value;
-  }
-  VaultKeysetFactory* vault_keyset_factory() const {
-    return vault_keyset_factory_;
-  }
-  void set_use_tpm(bool use_tpm) { use_tpm_ = use_tpm; }
-
-  // Takes ownership of the supplied PolicyProvider. Used to avoid leaking mocks
-  // in unit tests.
-  void own_policy_provider(policy::PolicyProvider* value) {
-    default_policy_provider_.reset(value);
-    policy_provider_ = value;
-  }
 
  private:
   base::TimeDelta GetUserInactivityThresholdForRemoval();
@@ -391,25 +364,18 @@ class HomeDirs {
   bool ReSaveKeysetIfNeeded(const Credentials& credentials,
                             VaultKeyset* keyset) const;
 
-  std::unique_ptr<Platform> default_platform_;
   Platform* platform_;
-  base::FilePath shadow_root_;
-  UserOldestActivityTimestampCache* timestamp_cache_;
-  bool enterprise_owned_;
-  std::unique_ptr<policy::PolicyProvider> default_policy_provider_;
-  policy::PolicyProvider* policy_provider_;
   Crypto* crypto_;
-  // TODO(wad) Collapse all factories into a single manufacturing plant to save
-  //           some pointers.
-  std::unique_ptr<VaultKeysetFactory> default_vault_keyset_factory_;
-  VaultKeysetFactory* vault_keyset_factory_;
+  base::FilePath shadow_root_;
   brillo::SecureBlob system_salt_;
+  UserOldestActivityTimestampCache* timestamp_cache_;
+  std::unique_ptr<policy::PolicyProvider> policy_provider_;
+  std::unique_ptr<VaultKeysetFactory> vault_keyset_factory_;
+  bool enterprise_owned_;
   chaps::TokenManagerClient chaps_client_;
 
   // The container a not-shifted system UID in ARC++ container (AID_SYSTEM).
   static constexpr uid_t kAndroidSystemUid = 1000;
-
-  bool use_tpm_;
 
   friend class HomeDirsTest;
   FRIEND_TEST(HomeDirsTest, GetTrackedDirectoryForDirCrypto);

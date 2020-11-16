@@ -28,6 +28,7 @@
 #include "cryptohome/cryptohome_metrics.h"
 #include "cryptohome/cryptolib.h"
 #include "cryptohome/disk_cleanup.h"
+#include "cryptohome/filesystem_layout.h"
 #include "cryptohome/key_challenge_service.h"
 #include "cryptohome/key_challenge_service_factory.h"
 #include "cryptohome/key_challenge_service_factory_impl.h"
@@ -166,6 +167,7 @@ UserDataAuth::UserDataAuth()
     : origin_thread_id_(base::PlatformThread::CurrentId()),
       mount_thread_(kMountThreadName),
       disable_threading_(false),
+      shadow_root_(base::FilePath(kShadowRoot)),
       system_salt_(),
       tpm_(nullptr),
       default_tpm_init_(nullptr),
@@ -191,8 +193,8 @@ UserDataAuth::UserDataAuth()
       install_attrs_(default_install_attrs_.get()),
       enterprise_owned_(false),
       reported_pkcs11_init_fail_(false),
-      default_homedirs_(new cryptohome::HomeDirs()),
-      homedirs_(default_homedirs_.get()),
+      default_homedirs_(nullptr),
+      homedirs_(nullptr),
       user_timestamp_cache_(new UserOldestActivityTimestampCache()),
       default_mount_factory_(new cryptohome::MountFactory()),
       mount_factory_(default_mount_factory_.get()),
@@ -200,12 +202,14 @@ UserDataAuth::UserDataAuth()
       guest_user_(brillo::cryptohome::home::kGuestUserName),
       force_ecryptfs_(true),
       legacy_mount_(true),
-      default_arc_disk_quota_(new cryptohome::ArcDiskQuota(
-          homedirs_, platform_, base::FilePath(kArcDiskHome))),
-      arc_disk_quota_(default_arc_disk_quota_.get()),
-      default_disk_cleanup_(
-          new DiskCleanup(platform_, homedirs_, user_timestamp_cache_.get())),
-      disk_cleanup_(default_disk_cleanup_.get()),
+      default_arc_disk_quota_(nullptr),
+      arc_disk_quota_(nullptr),
+      default_disk_cleanup_(nullptr),
+      disk_cleanup_(nullptr),
+      disk_cleanup_threshold_(kFreeSpaceThresholdToTriggerCleanup),
+      disk_cleanup_aggressive_threshold_(
+          kFreeSpaceThresholdToTriggerAggressiveCleanup),
+      disk_cleanup_target_free_space_(kTargetFreeSpaceAfterCleanup),
       low_disk_notification_period_ms_(kLowDiskNotificationPeriodMS),
       low_disk_space_signal_was_emitted_(false),
       low_disk_space_callback_(base::Bind([](uint64_t free_disk_space) {})) {}
@@ -253,21 +257,41 @@ bool UserDataAuth::Initialize() {
   }
 
   crypto_->set_use_tpm(true);
-  homedirs_->set_use_tpm(true);
   if (!crypto_->Init(tpm_init_)) {
     return false;
   }
 
-  if (!homedirs_->Init(platform_, crypto_, user_timestamp_cache_.get())) {
+  if (!InitializeFilesystemLayout(platform_, crypto_, shadow_root_,
+                                  &system_salt_)) {
+    LOG(ERROR) << "Failed to initialize filesystem layout.";
     return false;
   }
 
-  if (!homedirs_->GetSystemSalt(&system_salt_)) {
-    return false;
+  if (!homedirs_) {
+    default_homedirs_ = std::make_unique<HomeDirs>(
+        platform_, crypto_, shadow_root_, system_salt_,
+        user_timestamp_cache_.get(), std::make_unique<policy::PolicyProvider>(),
+        std::make_unique<VaultKeysetFactory>());
+    homedirs_ = default_homedirs_.get();
   }
 
+  if (!arc_disk_quota_) {
+    default_arc_disk_quota_ = std::make_unique<ArcDiskQuota>(
+        homedirs_, platform_, base::FilePath(kArcDiskHome));
+    arc_disk_quota_ = default_arc_disk_quota_.get();
+  }
   // Initialize ARC Disk Quota Service.
   arc_disk_quota_->Initialize();
+
+  if (!disk_cleanup_) {
+    default_disk_cleanup_ = std::make_unique<DiskCleanup>(
+        platform_, homedirs_, user_timestamp_cache_.get());
+    disk_cleanup_ = default_disk_cleanup_.get();
+  }
+  disk_cleanup_->set_cleanup_threshold(disk_cleanup_threshold_);
+  disk_cleanup_->set_aggressive_cleanup_threshold(
+      disk_cleanup_aggressive_threshold_);
+  disk_cleanup_->set_target_free_space(disk_cleanup_target_free_space_);
 
   if (!disable_threading_) {
     base::Thread::Options options;
@@ -715,7 +739,7 @@ bool UserDataAuth::CleanUpStaleMounts(bool force) {
 
   // Retrieve all the mounts that's currently mounted by the kernel and concerns
   // us
-  platform_->GetMountsBySourcePrefix(homedirs_->shadow_root(), &shadow_mounts);
+  platform_->GetMountsBySourcePrefix(shadow_root_, &shadow_mounts);
   GetEphemeralLoopDevicesMounts(&ephemeral_mounts);
 
   // Remove mounts that we've a record of or have open files on them
@@ -945,16 +969,16 @@ void UserDataAuth::ResetAllTPMContext() {
 }
 
 void UserDataAuth::set_cleanup_threshold(uint64_t cleanup_threshold) {
-  disk_cleanup_->set_cleanup_threshold(cleanup_threshold);
+  disk_cleanup_threshold_ = cleanup_threshold;
 }
 
 void UserDataAuth::set_aggressive_cleanup_threshold(
     uint64_t aggressive_cleanup_threshold) {
-  disk_cleanup_->set_aggressive_cleanup_threshold(aggressive_cleanup_threshold);
+  disk_cleanup_aggressive_threshold_ = aggressive_cleanup_threshold;
 }
 
 void UserDataAuth::set_target_free_space(uint64_t target_free_space) {
-  disk_cleanup_->set_target_free_space(target_free_space);
+  disk_cleanup_target_free_space_ = target_free_space;
 }
 
 void UserDataAuth::OwnershipCallback(bool status, bool took_ownership) {

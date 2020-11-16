@@ -23,6 +23,7 @@
 #include "cryptohome/cryptohome_common.h"
 #include "cryptohome/cryptohome_metrics.h"
 #include "cryptohome/cryptolib.h"
+#include "cryptohome/filesystem_layout.h"
 #include "cryptohome/homedirs.h"
 #include "cryptohome/mock_arc_disk_quota.h"
 #include "cryptohome/mock_crypto.h"
@@ -128,10 +129,7 @@ class UserDataAuthTestNotInitialized : public ::testing::Test {
     userdataauth_->set_key_challenge_service_factory(
         &key_challenge_service_factory_);
     userdataauth_->set_disable_threading(true);
-    homedirs_.set_crypto(&crypto_);
-    homedirs_.set_platform(&platform_);
     ON_CALL(homedirs_, shadow_root()).WillByDefault(ReturnRef(kShadowRoot));
-    ON_CALL(homedirs_, Init(_, _, _)).WillByDefault(Return(true));
     // Return valid values for the amount of free space.
     ON_CALL(cleanup_, AmountOfFreeDiskSpace())
         .WillByDefault(Return(kFreeSpaceThresholdToTriggerCleanup));

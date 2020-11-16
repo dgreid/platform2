@@ -12,10 +12,10 @@
 
 #include <base/files/file_path.h>
 
-namespace cryptohome {
+#include "cryptohome/homedirs.h"
+#include "cryptohome/platform.h"
 
-class HomeDirs;
-class Platform;
+namespace cryptohome {
 
 class DiskCleanupRoutines {
  public:

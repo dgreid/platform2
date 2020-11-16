@@ -36,8 +36,6 @@ struct KeyBlobs;
 class VaultKeyset;
 class AuthBlock;
 
-extern const char kSystemSaltFile[];
-
 class Crypto {
  public:
   // Default constructor
@@ -186,11 +184,14 @@ class Crypto {
   // credentials.
   void set_use_tpm(bool value) { use_tpm_ = value; }
 
+  // Whether tpm shall be used.
+  bool use_tpm() const { return has_tpm() && use_tpm_; }
+
   // Sets the TPM implementation
   void set_tpm(Tpm* value) { tpm_ = value; }
 
   // Gets whether the TPM is set
-  bool has_tpm() { return (tpm_ != NULL); }
+  bool has_tpm() const { return (tpm_ != NULL); }
 
   // Gets the TPM implementation
   Tpm* get_tpm() { return tpm_; }

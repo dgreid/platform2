@@ -853,6 +853,9 @@ class UserDataAuth {
   bool disable_threading_;
 
   // =============== Basic Utilities Related Variables ===============
+  // Root of user vaults.
+  base::FilePath shadow_root_;
+
   // The system salt that is used for obfuscating the username
   brillo::SecureBlob system_salt_;
 
@@ -1055,6 +1058,16 @@ class UserDataAuth {
   // The actual disk cleaunp service. Usually set to default_disk_cleanup, but
   // can be overridden for testing.
   DiskCleanup* disk_cleanup_;
+
+  // TODO(dlunev): This three variables are a hack to pass cleanup parameters
+  // from main to the actual object. The reason it is done like this is that
+  // the object is created in UserDataAuth::Initialize, which is called from the
+  // deamonization function, but they are attempted to be set from the main,
+  // before the daemonization. Once service.cc is gone, we shall refactor the
+  // whole initialization process of UserDataAuth to avoid such hacks.
+  uint64_t disk_cleanup_threshold_;
+  uint64_t disk_cleanup_aggressive_threshold_;
+  uint64_t disk_cleanup_target_free_space_;
 
   // The amount of time (in milliseconds) between each subsequent run of
   // LowDiskCallback(). This is usually set to a constant value that is

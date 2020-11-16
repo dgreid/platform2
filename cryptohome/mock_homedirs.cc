@@ -9,9 +9,7 @@ using testing::Return;
 
 namespace cryptohome {
 
-MockHomeDirs::MockHomeDirs() {
-  ON_CALL(*this, Init(_, _, _)).WillByDefault(Return(true));
-}
+MockHomeDirs::MockHomeDirs() {}
 MockHomeDirs::~MockHomeDirs() {}
 
 bool MockHomeDirs::ActualGetPlainOwner(std::string* owner) {

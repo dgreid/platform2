@@ -29,6 +29,7 @@
 #include "cryptohome/cryptohome_metrics.h"
 #include "cryptohome/cryptolib.h"
 #include "cryptohome/dircrypto_util.h"
+#include "cryptohome/filesystem_layout.h"
 #include "cryptohome/key.pb.h"
 #include "cryptohome/mount_helper.h"
 #include "cryptohome/platform.h"
@@ -47,7 +48,6 @@ constexpr int kInitialKeysetIndex = 0;
 constexpr char kTsFile[] = "timestamp";
 }  // namespace
 
-const char* kShadowRoot = "/home/.shadow";
 const char* kEmptyOwner = "";
 // Each xattr is set to Android app internal data directory, contains
 // 8-byte inode number of cache subdirectory.  See
@@ -61,18 +61,21 @@ const char kEcryptfsVaultDir[] = "vault";
 // Name of the mount directory.
 const char kMountDir[] = "mount";
 
-HomeDirs::HomeDirs()
-    : default_platform_(new Platform()),
-      platform_(default_platform_.get()),
-      shadow_root_(FilePath(kShadowRoot)),
-      timestamp_cache_(NULL),
-      enterprise_owned_(false),
-      default_policy_provider_(new policy::PolicyProvider()),
-      policy_provider_(default_policy_provider_.get()),
-      crypto_(NULL),
-      default_vault_keyset_factory_(new VaultKeysetFactory()),
-      vault_keyset_factory_(default_vault_keyset_factory_.get()),
-      use_tpm_(false) {}
+HomeDirs::HomeDirs(Platform* platform,
+                   Crypto* crypto,
+                   const base::FilePath& shadow_root,
+                   const brillo::SecureBlob& system_salt,
+                   UserOldestActivityTimestampCache* timestamp_cache,
+                   std::unique_ptr<policy::PolicyProvider> policy_provider,
+                   std::unique_ptr<VaultKeysetFactory> vault_keyset_factory)
+    : platform_(platform),
+      crypto_(crypto),
+      shadow_root_(shadow_root),
+      system_salt_(system_salt),
+      timestamp_cache_(timestamp_cache),
+      policy_provider_(std::move(policy_provider)),
+      vault_keyset_factory_(std::move(vault_keyset_factory)),
+      enterprise_owned_(false) {}
 
 HomeDirs::~HomeDirs() {}
 
@@ -86,21 +89,6 @@ FilePath HomeDirs::GetEcryptfsUserVaultPath(
 FilePath HomeDirs::GetUserMountDirectory(
     const FilePath& shadow_root, const std::string& obfuscated_username) {
   return shadow_root.Append(obfuscated_username).Append(kMountDir);
-}
-
-bool HomeDirs::Init(Platform* platform,
-                    Crypto* crypto,
-                    UserOldestActivityTimestampCache* cache) {
-  platform_ = platform;
-  crypto_ = crypto;
-  timestamp_cache_ = cache;
-
-  LoadDevicePolicy();
-  if (!platform_->DirectoryExists(shadow_root_)) {
-    platform_->CreateDirectory(shadow_root_);
-    platform_->RestoreSELinuxContexts(shadow_root_, true);
-  }
-  return GetSystemSalt(NULL);
 }
 
 void HomeDirs::LoadDevicePolicy() {
@@ -527,7 +515,7 @@ bool HomeDirs::AddInitialKeyset(const Credentials& credentials) {
       credentials.GetObfuscatedUsername(system_salt_);
 
   std::unique_ptr<VaultKeyset> vk(
-      vault_keyset_factory()->New(platform_, crypto_));
+      vault_keyset_factory_->New(platform_, crypto_));
   vk->Initialize(platform_, crypto_);
   vk->CreateRandom();
   vk->set_legacy_index(kInitialKeysetIndex);
@@ -586,7 +574,7 @@ bool HomeDirs::ShouldReSaveKeyset(VaultKeyset* vault_keyset) const {
   bool is_signature_challenge_protected =
       (crypt_flags & SerializedVaultKeyset::SIGNATURE_CHALLENGE_PROTECTED) != 0;
   bool should_tpm =
-      (crypto_->has_tpm() && use_tpm_ && crypto_->is_cryptohome_key_loaded() &&
+      (crypto_->use_tpm() && crypto_->is_cryptohome_key_loaded() &&
        !is_signature_challenge_protected);
   bool can_unseal_with_user_auth = crypto_->CanUnsealWithUserAuth();
   bool has_tpm_public_key_hash =
@@ -667,7 +655,7 @@ bool HomeDirs::ReSaveKeysetIfNeeded(const Credentials& credentials,
   // configured to use the TPM, calling EnsureTpm will try to connect, and
   // if successful, the call to has_tpm() below will succeed, allowing
   // re-wrapping (migration) using the TPM.
-  if (use_tpm_) {
+  if (crypto_->use_tpm()) {
     crypto_->EnsureTpm(false);
   }
 
@@ -1164,7 +1152,7 @@ void HomeDirs::AddUserTimestampToCache(const std::string& obfuscated) {
 std::unique_ptr<VaultKeyset> HomeDirs::LoadVaultKeysetForUser(
     const std::string& obfuscated_user, int index) const {
   std::unique_ptr<VaultKeyset> keyset(
-      vault_keyset_factory()->New(platform_, crypto_));
+      vault_keyset_factory_->New(platform_, crypto_));
   // Load the encrypted keyset
   FilePath user_key_file = GetVaultKeysetPath(obfuscated_user, index);
   // We don't have keys yet, so just load it.
@@ -1190,8 +1178,6 @@ bool HomeDirs::GetOwner(std::string* owner) {
   if (!GetPlainOwner(&plain_owner) || plain_owner.empty())
     return false;
 
-  if (!GetSystemSalt(NULL))
-    return false;
   *owner = SanitizeUserNameWithSalt(plain_owner, system_salt_);
   return true;
 }
@@ -1203,14 +1189,7 @@ bool HomeDirs::IsOrWillBeOwner(const std::string& account_id) {
 }
 
 bool HomeDirs::GetSystemSalt(SecureBlob* blob) {
-  FilePath salt_file = shadow_root_.Append(kSystemSaltFile);
-  if (!crypto_->GetOrCreateSalt(salt_file, CRYPTOHOME_DEFAULT_SALT_LENGTH,
-                                false, &system_salt_)) {
-    LOG(ERROR) << "Failed to create system salt.";
-    return false;
-  }
-  if (blob)
-    *blob = system_salt_;
+  *blob = system_salt_;
   return true;
 }
 

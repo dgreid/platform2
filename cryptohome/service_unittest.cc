@@ -39,6 +39,7 @@
 #include "cryptohome/crypto.h"
 #include "cryptohome/crypto_error.h"
 #include "cryptohome/disk_cleanup.h"
+#include "cryptohome/filesystem_layout.h"
 #include "cryptohome/glib_transition.h"
 #include "cryptohome/interface.h"
 #include "cryptohome/make_tests.h"
@@ -85,9 +86,6 @@ using ::testing::WithArgs;
 namespace cryptohome {
 
 namespace {
-
-constexpr char kImageDir[] = "/home/.shadow";
-constexpr char kSaltFile[] = "/home/.shadow/salt";
 
 class FakeEventSourceSink : public CryptohomeEventSourceSink {
  public:
@@ -214,11 +212,8 @@ class ServiceTestNotInitialized : public ::testing::Test {
     service_.set_challenge_credentials_helper(&challenge_credentials_helper_);
     service_.set_key_challenge_service_factory(&key_challenge_service_factory_);
     test_helper_.SetUpSystemSalt();
-    homedirs_.set_crypto(&crypto_);
-    homedirs_.set_platform(&platform_);
     tpm_init_.set_tpm(&tpm_);
     ON_CALL(homedirs_, shadow_root()).WillByDefault(ReturnRef(kShadowRoot));
-    ON_CALL(homedirs_, Init(_, _, _)).WillByDefault(Return(true));
     // Return valid values for the amount of free space.
     ON_CALL(cleanup_, AmountOfFreeDiskSpace())
         .WillByDefault(Return(kFreeSpaceThresholdToTriggerCleanup));
@@ -308,8 +303,10 @@ class ServiceTest : public ServiceTestNotInitialized {
 
 TEST_F(ServiceTestNotInitialized, CheckAsyncTestCredentials) {
   // Setup a real homedirs instance (making this a pseudo-integration test).
-  test_helper_.InjectSystemSalt(&platform_, FilePath(kSaltFile));
-  test_helper_.InitTestData(FilePath(kImageDir), kDefaultUsers, 1,
+  base::FilePath shadow_root(kShadowRoot);
+  test_helper_.InjectSystemSalt(&platform_,
+                                shadow_root.Append(kSystemSaltFile));
+  test_helper_.InitTestData(shadow_root, kDefaultUsers, 1,
                             false /* force_ecryptfs */);
   TestUser* user = &test_helper_.users[0];
   user->InjectKeyset(&platform_);
@@ -328,14 +325,13 @@ TEST_F(ServiceTestNotInitialized, CheckAsyncTestCredentials) {
   Crypto real_crypto(&platform_);
   real_crypto.set_use_tpm(false);
   real_crypto.Init(nullptr);
-  HomeDirs real_homedirs;
-  real_homedirs.set_crypto(&real_crypto);
-  real_homedirs.set_shadow_root(FilePath(kImageDir));
-  real_homedirs.set_platform(&platform_);
-  policy::PolicyProvider policy_provider(
-      std::unique_ptr<NiceMock<policy::MockDevicePolicy>>(
-          new NiceMock<policy::MockDevicePolicy>));
-  real_homedirs.set_policy_provider(&policy_provider);
+  InitializeFilesystemLayout(&platform_, &real_crypto, shadow_root, nullptr);
+  HomeDirs real_homedirs(
+      &platform_, &real_crypto, kShadowRoot, test_helper_.system_salt, nullptr,
+      std::make_unique<policy::PolicyProvider>(
+          std::unique_ptr<NiceMock<policy::MockDevicePolicy>>(
+              new NiceMock<policy::MockDevicePolicy>)),
+      std::make_unique<VaultKeysetFactory>());
   service_.set_disk_cleanup(&cleanup_);
   service_.set_homedirs(&real_homedirs);
   service_.set_crypto(&real_crypto);

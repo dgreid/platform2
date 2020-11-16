@@ -60,6 +60,7 @@
 #include "cryptohome/cryptolib.h"
 #include "cryptohome/dbus_transition.h"
 #include "cryptohome/disk_cleanup.h"
+#include "cryptohome/filesystem_layout.h"
 #include "cryptohome/firmware_management_parameters.h"
 #include "cryptohome/glib_transition.h"
 #include "cryptohome/install_attributes.h"
@@ -276,6 +277,7 @@ Service::Service()
     : use_tpm_(true),
       loop_(NULL),
       cryptohome_(NULL),
+      shadow_root_(base::FilePath(kShadowRoot)),
       system_salt_(),
       default_platform_(new Platform()),
       platform_(default_platform_.get()),
@@ -303,14 +305,12 @@ Service::Service()
       user_timestamp_cache_(new UserOldestActivityTimestampCache()),
       default_mount_factory_(new cryptohome::MountFactory()),
       mount_factory_(default_mount_factory_.get()),
-      default_homedirs_(new cryptohome::HomeDirs()),
-      homedirs_(default_homedirs_.get()),
-      default_arc_disk_quota_(new cryptohome::ArcDiskQuota(
-          homedirs_, platform_, base::FilePath(kArcDiskHome))),
-      arc_disk_quota_(default_arc_disk_quota_.get()),
-      default_disk_cleanup_(
-          new DiskCleanup(platform_, homedirs_, user_timestamp_cache_.get())),
-      disk_cleanup_(default_disk_cleanup_.get()),
+      default_homedirs_(nullptr),
+      homedirs_(nullptr),
+      default_arc_disk_quota_(nullptr),
+      arc_disk_quota_(nullptr),
+      default_disk_cleanup_(nullptr),
+      disk_cleanup_(nullptr),
       guest_user_(brillo::cryptohome::home::kGuestUserName),
       force_ecryptfs_(true),
       legacy_mount_(true),
@@ -541,7 +541,7 @@ bool Service::CleanUpStaleMounts(bool force) {
   // (*) Relies on the expectation that all processes have been killed off.
   std::multimap<const FilePath, const FilePath> shadow_mounts;
   std::multimap<const FilePath, const FilePath> ephemeral_mounts;
-  platform_->GetMountsBySourcePrefix(homedirs_->shadow_root(), &shadow_mounts);
+  platform_->GetMountsBySourcePrefix(shadow_root_, &shadow_mounts);
   GetEphemeralLoopDevicesMounts(&ephemeral_mounts);
 
   std::multimap<const FilePath, const FilePath> excluded;
@@ -671,15 +671,36 @@ bool Service::Initialize() {
     firmware_management_parameters_ = default_firmware_management_params_.get();
   }
   crypto_->set_use_tpm(use_tpm_);
-  homedirs_->set_use_tpm(use_tpm_);
   if (!crypto_->Init(tpm_init_))
     return false;
-  if (!homedirs_->Init(platform_, crypto_, user_timestamp_cache_.get()))
-    return false;
-  if (!homedirs_->GetSystemSalt(&system_salt_))
-    return false;
 
+  if (!InitializeFilesystemLayout(platform_, crypto_, shadow_root_,
+                                  &system_salt_)) {
+    LOG(ERROR) << "Failed to initialize filesystem layout.";
+    return false;
+  }
+
+  if (!homedirs_) {
+    default_homedirs_ = std::make_unique<HomeDirs>(
+        platform_, crypto_, shadow_root_, system_salt_,
+        user_timestamp_cache_.get(), std::make_unique<policy::PolicyProvider>(),
+        std::make_unique<VaultKeysetFactory>());
+    homedirs_ = default_homedirs_.get();
+  }
+
+  if (!arc_disk_quota_) {
+    default_arc_disk_quota_ = std::make_unique<ArcDiskQuota>(
+        homedirs_, platform_, base::FilePath(kArcDiskHome));
+    arc_disk_quota_ = default_arc_disk_quota_.get();
+  }
+  // Initialize ARC Disk Quota Service.
   arc_disk_quota_->Initialize();
+
+  if (!disk_cleanup_) {
+    default_disk_cleanup_ = std::make_unique<DiskCleanup>(
+        platform_, homedirs_, user_timestamp_cache_.get());
+    disk_cleanup_ = default_disk_cleanup_.get();
+  }
 
   // Install the type-info for the service with dbus.
   dbus_g_object_type_install_info(gobject::cryptohome_get_type(),

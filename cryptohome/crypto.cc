@@ -365,9 +365,6 @@ bool WrapScryptVaultKeyset(const VaultKeyset& vault_keyset,
 
 }  // namespace
 
-// File name of the system salt file.
-const char kSystemSaltFile[] = "salt";
-
 Crypto::Crypto(Platform* platform)
     : use_tpm_(false),
       tpm_(NULL),
@@ -433,7 +430,9 @@ bool Crypto::GetOrCreateSalt(const FilePath& path,
       return false;
     }
   }
-  salt->swap(local_salt);
+  if (salt) {
+    salt->swap(local_salt);
+  }
   return true;
 }
 

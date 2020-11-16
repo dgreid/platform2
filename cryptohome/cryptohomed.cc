@@ -161,14 +161,15 @@ int main(int argc, char** argv) {
 
     service->set_legacy_mount(!nolegacymount);
     service->set_force_ecryptfs(!direncryption);
-    service->set_cleanup_threshold(cleanup_threshold);
-    service->set_aggressive_cleanup_threshold(aggressive_cleanup_threshold);
-    service->set_target_free_space(target_free_space);
 
     if (!service->Initialize()) {
       LOG(FATAL) << "Service initialization failed";
       return 1;
     }
+
+    service->set_cleanup_threshold(cleanup_threshold);
+    service->set_aggressive_cleanup_threshold(aggressive_cleanup_threshold);
+    service->set_target_free_space(target_free_space);
 
     if (!service->Register(brillo::dbus::GetSystemBusConnection())) {
       LOG(FATAL) << "DBUS service registration failed";

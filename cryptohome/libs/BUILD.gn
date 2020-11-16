@@ -290,6 +290,7 @@ static_library("libcryptohome") {
     "../disk_cleanup.cc",
     "../disk_cleanup_routines.cc",
     "../file_system_keys.cc",
+    "../filesystem_layout.cc",
     "../fingerprint_manager.cc",
     "../homedirs.cc",
     "../interface.cc",

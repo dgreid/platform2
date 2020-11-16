@@ -27,10 +27,6 @@ class MockHomeDirs : public HomeDirs {
   MockHomeDirs();
   virtual ~MockHomeDirs();
 
-  MOCK_METHOD(bool,
-              Init,
-              (Platform*, Crypto*, UserOldestActivityTimestampCache*),
-              (override));
   MOCK_METHOD(void, RemoveNonOwnerCryptohomes, (), (override));
   MOCK_METHOD(bool, GetOwner, (std::string*), (override));
   MOCK_METHOD(bool, GetPlainOwner, (std::string*), (override));
@@ -106,7 +102,6 @@ class MockHomeDirs : public HomeDirs {
               (override));
   MOCK_METHOD(void, set_enterprise_owned, (bool), (override));
   MOCK_METHOD(bool, enterprise_owned, (), (const, override));
-  MOCK_METHOD(void, set_shadow_root, (const base::FilePath&), (override));
   MOCK_METHOD(const base::FilePath&, shadow_root, (), (const, override));
 
   // Some unit tests require that MockHomeDirs actually call the real

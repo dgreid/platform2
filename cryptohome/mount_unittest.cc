@@ -36,6 +36,7 @@
 #include "cryptohome/crypto.h"
 #include "cryptohome/cryptohome_common.h"
 #include "cryptohome/cryptolib.h"
+#include "cryptohome/filesystem_layout.h"
 #include "cryptohome/homedirs.h"
 #include "cryptohome/make_tests.h"
 #include "cryptohome/mock_chaps_client_factory.h"
@@ -46,6 +47,7 @@
 #include "cryptohome/mock_tpm_init.h"
 #include "cryptohome/mock_vault_keyset.h"
 #include "cryptohome/mount_helper.h"
+#include "cryptohome/user_oldest_activity_timestamp_cache.h"
 #include "cryptohome/vault_keyset.h"
 #include "cryptohome/vault_keyset.pb.h"
 
@@ -139,14 +141,21 @@ class MountTest
 
     crypto_.set_tpm(&tpm_);
     crypto_.set_use_tpm(false);
-    homedirs_.set_use_tpm(false);
-    homedirs_.set_shadow_root(kImageDir);
-    homedirs_.Init(&platform_, &crypto_, nullptr);
-    EXPECT_TRUE(homedirs_.GetSystemSalt(nullptr /* blob */));
+
+    mock_device_policy_ = new policy::MockDevicePolicy();
+
+    InitializeFilesystemLayout(&platform_, &crypto_,
+                               base::FilePath(kShadowRoot), nullptr);
+    homedirs_ = std::make_unique<HomeDirs>(
+        &platform_, &crypto_, base::FilePath(kShadowRoot), helper_.system_salt,
+        nullptr,
+        std::make_unique<policy::PolicyProvider>(
+            std::unique_ptr<policy::MockDevicePolicy>(mock_device_policy_)),
+        nullptr);
 
     platform_.GetFake()->SetStandardUsersAndGroups();
 
-    mount_ = new Mount(&platform_, &homedirs_);
+    mount_ = new Mount(&platform_, homedirs_.get());
 
     mount_->set_shadow_root(kImageDir);
     mount_->set_skel_source(kSkelDir);
@@ -195,16 +204,13 @@ class MountTest
   void set_policy(bool owner_known,
                   const std::string& owner,
                   bool ephemeral_users_enabled) {
-    policy::MockDevicePolicy* device_policy = new policy::MockDevicePolicy();
-    EXPECT_CALL(*device_policy, LoadPolicy())
+    EXPECT_CALL(*mock_device_policy_, LoadPolicy())
         .Times(AnyNumber())
         .WillRepeatedly(Return(true));
-    EXPECT_CALL(*device_policy, GetOwner(_))
+    EXPECT_CALL(*mock_device_policy_, GetOwner(_))
         .WillRepeatedly(SetOwner(owner_known, owner));
-    EXPECT_CALL(*device_policy, GetEphemeralUsersEnabled(_))
+    EXPECT_CALL(*mock_device_policy_, GetEphemeralUsersEnabled(_))
         .WillRepeatedly(SetEphemeralUsersEnabled(ephemeral_users_enabled));
-    homedirs_.own_policy_provider(new policy::PolicyProvider(
-        std::unique_ptr<policy::MockDevicePolicy>(device_policy)));
   }
 
   // Returns true if the test is running for eCryptfs, false if for dircrypto.
@@ -459,7 +465,8 @@ class MountTest
   NiceMock<MockTpm> tpm_;
   NiceMock<MockTpmInit> tpm_init_;
   Crypto crypto_;
-  HomeDirs homedirs_;
+  policy::MockDevicePolicy* mock_device_policy_;  // owned by homedirs_
+  std::unique_ptr<HomeDirs> homedirs_;
   MockChapsClientFactory chaps_client_factory_;
   scoped_refptr<Mount> mount_;
   base::test::TaskEnvironment task_environment_{
@@ -713,8 +720,15 @@ class ChapsDirectoryTest : public ::testing::Test {
         kDatabaseFile("/base_chaps_dir/database/file") {
     crypto_.set_platform(&platform_);
     platform_.GetFake()->SetStandardUsersAndGroups();
-    homedirs_.Init(&platform_, &crypto_, nullptr);
-    mount_ = new Mount(&platform_, &homedirs_);
+
+    brillo::SecureBlob salt;
+    InitializeFilesystemLayout(&platform_, &crypto_,
+                               base::FilePath(kShadowRoot), &salt);
+    homedirs_ = std::make_unique<HomeDirs>(&platform_, &crypto_,
+                                           base::FilePath(kShadowRoot), salt,
+                                           nullptr, nullptr, nullptr);
+
+    mount_ = new Mount(&platform_, homedirs_.get());
     mount_->Init();
     mount_->chaps_user_ = fake_platform::kChapsUID;
     mount_->default_access_group_ = fake_platform::kSharedGID;
@@ -778,7 +792,7 @@ class ChapsDirectoryTest : public ::testing::Test {
   scoped_refptr<Mount> mount_;
   NiceMock<MockPlatform> platform_;
   NiceMock<MockCrypto> crypto_;
-  HomeDirs homedirs_;
+  std::unique_ptr<HomeDirs> homedirs_;
 
  private:
   void InitStat(base::stat_wrapper_t* s, mode_t mode, uid_t uid, gid_t gid) {
@@ -1506,7 +1520,7 @@ TEST_P(EphemeralNoUserSystemTest, EnterpriseMountNoCreateTest) {
   // Checks that when a device is enterprise enrolled, a tmpfs cryptohome is
   // mounted and no regular vault is created.
   set_policy(false, "", true);
-  homedirs_.set_enterprise_owned(true);
+  homedirs_->set_enterprise_owned(true);
   TestUser* user = &helper_.users[0];
 
   // Always removes non-owner cryptohomes.
@@ -1540,7 +1554,7 @@ TEST_P(EphemeralNoUserSystemTest, EnterpriseMountIsEphemeralTest) {
   // |is_ephemeral| flag set causes a tmpfs cryptohome to be mounted and no
   // regular vault to be created.
   set_policy(true, "", false);
-  homedirs_.set_enterprise_owned(true);
+  homedirs_->set_enterprise_owned(true);
   TestUser* user = &helper_.users[0];
 
   // Always removes non-owner cryptohomes.
@@ -1583,7 +1597,7 @@ TEST_P(EphemeralNoUserSystemTest, EnterpriseMountIsEphemeralTest) {
 TEST_P(EphemeralNoUserSystemTest, EnterpriseMountStatVFSFailure) {
   // Checks the case when ephemeral statvfs call fails.
   set_policy(false, "", true);
-  homedirs_.set_enterprise_owned(true);
+  homedirs_->set_enterprise_owned(true);
   const TestUser* const user = &helper_.users[0];
 
   EXPECT_CALL(platform_, DetachLoop(_)).Times(0);
@@ -1600,7 +1614,7 @@ TEST_P(EphemeralNoUserSystemTest, EnterpriseMountCreateSparseDirFailure) {
   // Checks the case when directory for ephemeral sparse files fails to be
   // created.
   set_policy(false, "", true);
-  homedirs_.set_enterprise_owned(true);
+  homedirs_->set_enterprise_owned(true);
   const TestUser* const user = &helper_.users[0];
 
   EXPECT_CALL(platform_, DetachLoop(_)).Times(0);
@@ -1620,7 +1634,7 @@ TEST_P(EphemeralNoUserSystemTest, EnterpriseMountCreateSparseDirFailure) {
 TEST_P(EphemeralNoUserSystemTest, EnterpriseMountCreateSparseFailure) {
   // Checks the case when ephemeral sparse file fails to create.
   set_policy(false, "", true);
-  homedirs_.set_enterprise_owned(true);
+  homedirs_->set_enterprise_owned(true);
   const TestUser* const user = &helper_.users[0];
   const FilePath ephemeral_filename =
       MountHelper::GetEphemeralSparseFile(user->obfuscated_username);
@@ -1644,7 +1658,7 @@ TEST_P(EphemeralNoUserSystemTest, EnterpriseMountAttachLoopFailure) {
   // Checks that when ephemeral loop device fails to attach, clean up happens
   // appropriately.
   set_policy(false, "", true);
-  homedirs_.set_enterprise_owned(true);
+  homedirs_->set_enterprise_owned(true);
   const TestUser* const user = &helper_.users[0];
   const FilePath ephemeral_filename =
       MountHelper::GetEphemeralSparseFile(user->obfuscated_username);
@@ -1673,7 +1687,7 @@ TEST_P(EphemeralNoUserSystemTest, EnterpriseMountFormatFailure) {
   // Checks that when ephemeral loop device fails to be formatted, clean up
   // happens appropriately.
   set_policy(false, "", true);
-  homedirs_.set_enterprise_owned(true);
+  homedirs_->set_enterprise_owned(true);
   const TestUser* const user = &helper_.users[0];
   const FilePath ephemeral_filename =
       MountHelper::GetEphemeralSparseFile(user->obfuscated_username);
@@ -1700,7 +1714,7 @@ TEST_P(EphemeralNoUserSystemTest, EnterpriseMountEnsureUserMountFailure) {
   // Checks that when ephemeral mount fails to ensure mount points, clean up
   // happens appropriately.
   set_policy(false, "", true);
-  homedirs_.set_enterprise_owned(true);
+  homedirs_->set_enterprise_owned(true);
   const TestUser* const user = &helper_.users[0];
   const FilePath ephemeral_filename =
       MountHelper::GetEphemeralSparseFile(user->obfuscated_username);
@@ -1929,7 +1943,7 @@ TEST_P(EphemeralExistingUserSystemTest, EnterpriseMountRemoveTest) {
   // Checks that when a device is enterprise enrolled, all stale cryptohomes are
   // removed while mounting.
   set_policy(false, "", true);
-  homedirs_.set_enterprise_owned(true);
+  homedirs_->set_enterprise_owned(true);
   TestUser* user = &helper_.users[0];
 
   std::vector<int> expect_deletion;
@@ -2150,7 +2164,7 @@ TEST_P(EphemeralExistingUserSystemTest, EnterpriseUnmountRemoveTest) {
   // Checks that when a device is enterprise enrolled, all stale cryptohomes are
   // removed while unmounting.
   set_policy(false, "", true);
-  homedirs_.set_enterprise_owned(true);
+  homedirs_->set_enterprise_owned(true);
 
   EXPECT_CALL(platform_, DirectoryExists(_)).WillRepeatedly(Return(true));
 
@@ -2287,7 +2301,7 @@ TEST_P(EphemeralExistingUserSystemTest, EnterpriseMountIsEphemeralTest) {
   // if a regular vault exists for the user.
   // Since ephemeral users aren't enabled, no vaults will be deleted.
   set_policy(true, "", false);
-  homedirs_.set_enterprise_owned(true);
+  homedirs_->set_enterprise_owned(true);
 
   TestUser* user = &helper_.users[0];
 

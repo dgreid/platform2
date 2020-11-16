@@ -19,6 +19,7 @@
 #include "cryptohome/credentials.h"
 #include "cryptohome/crypto.h"
 #include "cryptohome/cryptolib.h"
+#include "cryptohome/filesystem_layout.h"
 #include "cryptohome/mock_platform.h"
 #include "cryptohome/mock_user_oldest_activity_timestamp_cache.h"
 #include "cryptohome/mount_constants.h"
@@ -63,7 +64,10 @@ ACTION_P(SetEphemeralUsersEnabled, ephemeral_users_enabled) {
 class HomeDirsTest
     : public ::testing::TestWithParam<bool /* should_test_ecryptfs */> {
  public:
-  HomeDirsTest() : crypto_(&platform_) {}
+  HomeDirsTest()
+      : crypto_(&platform_),
+        shadow_root_(kShadowRoot),
+        mock_device_policy_(new policy::MockDevicePolicy()) {}
   ~HomeDirsTest() override {}
 
   // Not copyable or movable
@@ -75,9 +79,15 @@ class HomeDirsTest
   void SetUp() override {
     PreparePolicy(true, kOwner, false, "");
     crypto_.set_use_tpm(false);
-    homedirs_.Init(&platform_, &crypto_, &timestamp_cache_);
 
-    ASSERT_TRUE(homedirs_.GetSystemSalt(&system_salt_));
+    InitializeFilesystemLayout(&platform_, &crypto_, shadow_root_,
+                               &system_salt_);
+    homedirs_ = std::make_unique<HomeDirs>(
+        &platform_, &crypto_, shadow_root_, system_salt_, &timestamp_cache_,
+        std::make_unique<policy::PolicyProvider>(
+            std::unique_ptr<policy::MockDevicePolicy>(mock_device_policy_)),
+        std::make_unique<VaultKeysetFactory>());
+
     platform_.GetFake()->SetSystemSaltForLibbrillo(system_salt_);
 
     AddUser(kUser0, kUserPassword0);
@@ -105,7 +115,7 @@ class HomeDirsTest
                      obfuscated,
                      passkey,
                      credentials,
-                     homedirs_.shadow_root().Append(obfuscated),
+                     homedirs_->shadow_root().Append(obfuscated),
                      brillo::cryptohome::home::GetHashedUserPath(obfuscated)};
     users_.push_back(info);
   }
@@ -114,14 +124,12 @@ class HomeDirsTest
                      const std::string& owner,
                      bool ephemeral_users_enabled,
                      const std::string& clean_up_strategy) {
-    policy::MockDevicePolicy* device_policy = new policy::MockDevicePolicy();
-    EXPECT_CALL(*device_policy, LoadPolicy()).WillRepeatedly(Return(true));
-    EXPECT_CALL(*device_policy, GetOwner(_))
+    EXPECT_CALL(*mock_device_policy_, LoadPolicy())
+        .WillRepeatedly(Return(true));
+    EXPECT_CALL(*mock_device_policy_, GetOwner(_))
         .WillRepeatedly(SetOwner(owner_known, owner));
-    EXPECT_CALL(*device_policy, GetEphemeralUsersEnabled(_))
+    EXPECT_CALL(*mock_device_policy_, GetEphemeralUsersEnabled(_))
         .WillRepeatedly(SetEphemeralUsersEnabled(ephemeral_users_enabled));
-    homedirs_.own_policy_provider(new policy::PolicyProvider(
-        std::unique_ptr<policy::MockDevicePolicy>(device_policy)));
   }
 
   // Returns true if the test is running for eCryptfs, false if for dircrypto.
@@ -131,8 +139,10 @@ class HomeDirsTest
   NiceMock<MockPlatform> platform_;
   NiceMock<MockUserOldestActivityTimestampCache> timestamp_cache_;
   Crypto crypto_;
-  HomeDirs homedirs_;
+  base::FilePath shadow_root_;
   brillo::SecureBlob system_salt_;
+  policy::MockDevicePolicy* mock_device_policy_;  // owned by homedirs_
+  std::unique_ptr<HomeDirs> homedirs_;
 
   struct UserInfo {
     std::string name;
@@ -150,7 +160,6 @@ class HomeDirsTest
       HomeDirs::kAndroidSystemUid + kArcContainerShiftUid;
 
   void PrepareDirectoryStructure() {
-    ASSERT_TRUE(platform_.CreateDirectory(homedirs_.shadow_root()));
     ASSERT_TRUE(platform_.CreateDirectory(
         brillo::cryptohome::home::GetUserPathPrefix()));
     for (const auto& user : users_) {
@@ -176,7 +185,7 @@ TEST_P(HomeDirsTest, RemoveNonOwnerCryptohomes) {
   EXPECT_TRUE(platform_.DirectoryExists(users_[kOwnerIndex].homedir_path));
 
   EXPECT_CALL(platform_, IsDirectoryMounted(_)).WillRepeatedly(Return(false));
-  homedirs_.RemoveNonOwnerCryptohomes();
+  homedirs_->RemoveNonOwnerCryptohomes();
 
   // Non-owners' vaults are removed
   EXPECT_FALSE(platform_.DirectoryExists(users_[0].homedir_path));
@@ -193,7 +202,7 @@ TEST_P(HomeDirsTest, RenameCryptohome) {
       brillo::cryptohome::home::SanitizeUserNameWithSalt(kNewUserId,
                                                          system_salt_);
   const base::FilePath kNewUserPath =
-      homedirs_.shadow_root().Append(kHashedNewUserId);
+      homedirs_->shadow_root().Append(kHashedNewUserId);
 
   // Original state - pregenerated users' vaults exist, kNewUserId's vault
   // doesn't exist
@@ -204,7 +213,7 @@ TEST_P(HomeDirsTest, RenameCryptohome) {
   EXPECT_FALSE(platform_.DirectoryExists(kNewUserPath));
 
   // Rename user0
-  EXPECT_TRUE(homedirs_.Rename(users_[0].name, kNewUserId));
+  EXPECT_TRUE(homedirs_->Rename(users_[0].name, kNewUserId));
 
   // Renamed user0 to kNewUserId, thus user0's vault doesn't exist and
   // kNewUserId's does.
@@ -215,7 +224,7 @@ TEST_P(HomeDirsTest, RenameCryptohome) {
   EXPECT_TRUE(platform_.DirectoryExists(kNewUserPath));
 
   // If source directory doesn't exist, assume renamed.
-  EXPECT_TRUE(homedirs_.Rename(users_[0].name, kNewUserId));
+  EXPECT_TRUE(homedirs_->Rename(users_[0].name, kNewUserId));
 
   // Since renaming already renamed user, no changes are expected.
   EXPECT_FALSE(platform_.DirectoryExists(users_[0].homedir_path));
@@ -225,7 +234,7 @@ TEST_P(HomeDirsTest, RenameCryptohome) {
   EXPECT_TRUE(platform_.DirectoryExists(kNewUserPath));
 
   // This should fail as target directory already exists.
-  EXPECT_FALSE(homedirs_.Rename(users_[1].name, users_[2].name));
+  EXPECT_FALSE(homedirs_->Rename(users_[1].name, users_[2].name));
 
   // Since renaming failed, no changes are expected.
   EXPECT_FALSE(platform_.DirectoryExists(users_[0].homedir_path));
@@ -235,7 +244,7 @@ TEST_P(HomeDirsTest, RenameCryptohome) {
   EXPECT_TRUE(platform_.DirectoryExists(kNewUserPath));
 
   // Rename back.
-  EXPECT_TRUE(homedirs_.Rename(kNewUserId, users_[0].name));
+  EXPECT_TRUE(homedirs_->Rename(kNewUserId, users_[0].name));
 
   // Back to the original state - pregenerated users' vaults exist, kNewUserId's
   // vault doesn't exist.
@@ -252,9 +261,9 @@ TEST_P(HomeDirsTest, CreateCryptohome) {
       brillo::cryptohome::home::SanitizeUserNameWithSalt(kNewUserId,
                                                          system_salt_);
   const base::FilePath kNewUserPath =
-      homedirs_.shadow_root().Append(kHashedNewUserId);
+      homedirs_->shadow_root().Append(kHashedNewUserId);
 
-  EXPECT_TRUE(homedirs_.Create(kNewUserId));
+  EXPECT_TRUE(homedirs_->Create(kNewUserId));
   EXPECT_TRUE(platform_.DirectoryExists(kNewUserPath));
 }
 
@@ -277,7 +286,7 @@ TEST_P(HomeDirsTest, ComputeDiskUsage) {
 
   const int64_t expected_bytes =
       ShouldTestEcryptfs() ? vault_bytes : mount_bytes;
-  EXPECT_EQ(expected_bytes, homedirs_.ComputeDiskUsage(users_[0].name));
+  EXPECT_EQ(expected_bytes, homedirs_->ComputeDiskUsage(users_[0].name));
 }
 
 TEST_P(HomeDirsTest, ComputeDiskUsageEphemeral) {
@@ -299,14 +308,14 @@ TEST_P(HomeDirsTest, ComputeDiskUsageEphemeral) {
       .WillRepeatedly(Return(userdir_bytes));
 
   int64_t expected_bytes = userdir_bytes;
-  EXPECT_EQ(expected_bytes, homedirs_.ComputeDiskUsage(users_[0].name));
+  EXPECT_EQ(expected_bytes, homedirs_->ComputeDiskUsage(users_[0].name));
 }
 
 TEST_P(HomeDirsTest, ComputeDiskUsageWithNonexistentUser) {
   // If the specified user doesn't exist, there is no directory for the user, so
   // ComputeDiskUsage should return 0.
   const char kNonExistentUserId[] = "non_existent_user";
-  EXPECT_EQ(0, homedirs_.ComputeDiskUsage(kNonExistentUserId));
+  EXPECT_EQ(0, homedirs_->ComputeDiskUsage(kNonExistentUserId));
 }
 
 TEST_P(HomeDirsTest, GetTrackedDirectoryForDirCrypto) {
@@ -336,7 +345,7 @@ TEST_P(HomeDirsTest, GetTrackedDirectoryForDirCrypto) {
   for (const auto& directory : kDirectories) {
     SCOPED_TRACE(directory);
     base::FilePath result;
-    EXPECT_TRUE(homedirs_.GetTrackedDirectory(
+    EXPECT_TRUE(homedirs_->GetTrackedDirectory(
         users_[0].homedir_path, base::FilePath(directory), &result));
     if (ShouldTestEcryptfs()) {
       EXPECT_EQ(vault_dir.Append(base::FilePath(directory)).value(),
@@ -352,9 +361,9 @@ TEST_P(HomeDirsTest, GetTrackedDirectoryForDirCrypto) {
   if (!ShouldTestEcryptfs()) {
     // Return false for unknown directories.
     base::FilePath result;
-    EXPECT_FALSE(homedirs_.GetTrackedDirectory(users_[0].homedir_path,
-                                               base::FilePath("zzz"), &result));
-    EXPECT_FALSE(homedirs_.GetTrackedDirectory(
+    EXPECT_FALSE(homedirs_->GetTrackedDirectory(
+        users_[0].homedir_path, base::FilePath("zzz"), &result));
+    EXPECT_FALSE(homedirs_->GetTrackedDirectory(
         users_[0].homedir_path, base::FilePath("aaa/zzz"), &result));
   }
 }
@@ -362,7 +371,7 @@ TEST_P(HomeDirsTest, GetTrackedDirectoryForDirCrypto) {
 TEST_P(HomeDirsTest, GetUnmountedAndroidDataCount) {
   if (ShouldTestEcryptfs()) {
     // We don't support Ecryptfs.
-    EXPECT_EQ(0, homedirs_.GetUnmountedAndroidDataCount());
+    EXPECT_EQ(0, homedirs_->GetUnmountedAndroidDataCount());
     return;
   }
 
@@ -402,12 +411,12 @@ TEST_P(HomeDirsTest, GetUnmountedAndroidDataCount) {
                                      kAndroidSystemRealUid, false));
 
   // Expect 1 home directory with android-data: homedir_paths_[0].
-  EXPECT_EQ(1, homedirs_.GetUnmountedAndroidDataCount());
+  EXPECT_EQ(1, homedirs_->GetUnmountedAndroidDataCount());
 }
 
 TEST_P(HomeDirsTest, AddUserTimestampToCacheEmpty) {
   VaultKeyset vk;
-  vk.Initialize(&platform_, homedirs_.crypto());
+  vk.Initialize(&platform_, &crypto_);
   // Populate and encrypt keyset to satisfy sanity check within |Save|.
   vk.CreateRandom();
   ASSERT_TRUE(vk.Encrypt(brillo::SecureBlob("random"), users_[0].obfuscated));
@@ -417,12 +426,12 @@ TEST_P(HomeDirsTest, AddUserTimestampToCacheEmpty) {
   // No user ts is added.
   EXPECT_CALL(timestamp_cache_, AddExistingUser(users_[0].obfuscated, _))
       .Times(0);
-  homedirs_.AddUserTimestampToCache(users_[0].obfuscated);
+  homedirs_->AddUserTimestampToCache(users_[0].obfuscated);
 }
 
 TEST_P(HomeDirsTest, AddUserTimestampToCache) {
   VaultKeyset vk;
-  vk.Initialize(&platform_, homedirs_.crypto());
+  vk.Initialize(&platform_, &crypto_);
   // Populate and encrypt keyset to satisfy sanity check within |Save|.
   vk.CreateRandom();
   constexpr char kKeyFileIndexSuffix[] = "0";
@@ -445,7 +454,7 @@ TEST_P(HomeDirsTest, AddUserTimestampToCache) {
   // TS from an external file
   EXPECT_CALL(timestamp_cache_, AddExistingUser(users_[2].obfuscated, t))
       .Times(1);
-  homedirs_.AddUserTimestampToCache(users_[2].obfuscated);
+  homedirs_->AddUserTimestampToCache(users_[2].obfuscated);
 }
 
 TEST_P(HomeDirsTest, GetHomedirsAllMounted) {
@@ -458,7 +467,7 @@ TEST_P(HomeDirsTest, GetHomedirsAllMounted) {
 
   EXPECT_CALL(platform_, AreDirectoriesMounted(_))
       .WillOnce(Return(all_mounted));
-  auto dirs = homedirs_.GetHomeDirs();
+  auto dirs = homedirs_->GetHomeDirs();
 
   for (const auto& dir : dirs) {
     EXPECT_TRUE(dir.is_mounted);
@@ -478,7 +487,7 @@ TEST_P(HomeDirsTest, GetHomedirsSomeMounted) {
 
   EXPECT_CALL(platform_, AreDirectoriesMounted(_))
       .WillOnce(Return(some_mounted));
-  auto dirs = homedirs_.GetHomeDirs();
+  auto dirs = homedirs_->GetHomeDirs();
   for (int i = 0; i < users_.size(); i++) {
     EXPECT_EQ(dirs[i].is_mounted, some_mounted[i]);
     got_hashes.insert(dirs[i].obfuscated);
@@ -489,7 +498,7 @@ TEST_P(HomeDirsTest, GetHomedirsSomeMounted) {
 TEST_P(HomeDirsTest, RemoveLECredentials) {
   // TODO(dlunev): this tests nothing really, re-write the test to actually do
   // functionality test.
-  homedirs_.RemoveLECredentials(users_[0].obfuscated);
+  homedirs_->RemoveLECredentials(users_[0].obfuscated);
 }
 
 }  // namespace cryptohome
