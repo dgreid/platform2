@@ -9,7 +9,6 @@
 #include <base/logging.h>
 #include <base/time/default_tick_clock.h>
 #include <chromeos/chromeos-config/libcros_config/cros_config.h>
-#include <dbus/power_manager/dbus-constants.h>
 
 #include "debugd/dbus-proxies.h"
 #include "diagnostics/common/system/bluetooth_client_impl.h"
@@ -48,11 +47,6 @@ bool Context::Initialize() {
   // Create the NetworkDiagnosticsAdapter.
   network_diagnostics_adapter_ =
       std::make_unique<NetworkDiagnosticsAdapterImpl>();
-  // TODO(crbug/1074476): Remove |power_manager_proxy_| once |powerd_adapter_|
-  // supports all the methods we call on |power_manager_proxy_|.
-  power_manager_proxy_ = dbus_bus_->GetObjectProxy(
-      power_manager::kPowerManagerServiceName,
-      dbus::ObjectPath(power_manager::kPowerManagerServicePath));
   powerd_adapter_ = std::make_unique<PowerdAdapterImpl>(dbus_bus_);
 
   cros_config_ = std::make_unique<brillo::CrosConfig>();
@@ -97,10 +91,6 @@ NetworkHealthAdapter* Context::network_health_adapter() const {
 
 NetworkDiagnosticsAdapter* Context::network_diagnostics_adapter() const {
   return network_diagnostics_adapter_.get();
-}
-
-dbus::ObjectProxy* Context::power_manager_proxy() const {
-  return power_manager_proxy_;
 }
 
 PowerdAdapter* Context::powerd_adapter() const {

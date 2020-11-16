@@ -10,6 +10,7 @@
 #include <base/memory/ref_counted.h>
 #include <base/memory/weak_ptr.h>
 #include <base/observer_list.h>
+#include <base/optional.h>
 #include <dbus/bus.h>
 #include <dbus/message.h>
 #include <power_manager/proto_bindings/power_supply_properties.pb.h>
@@ -33,6 +34,8 @@ class PowerdAdapterImpl : public PowerdAdapter {
   void RemovePowerObserver(PowerObserver* observer) override;
   void AddLidObserver(LidObserver* observer) override;
   void RemoveLidObserver(LidObserver* observer) override;
+  base::Optional<power_manager::PowerSupplyProperties>
+  GetPowerSupplyProperties() override;
 
  private:
   // Handles PowerSupplyPoll signals emitted by powerd daemon.
@@ -55,6 +58,9 @@ class PowerdAdapterImpl : public PowerdAdapter {
 
   base::ObserverList<PowerObserver> power_observers_;
   base::ObserverList<LidObserver> lid_observers_;
+
+  // Owned by external D-Bus bus passed in constructor.
+  dbus::ObjectProxy* bus_proxy_;
 
   base::WeakPtrFactory<PowerdAdapterImpl> weak_ptr_factory_;
 };

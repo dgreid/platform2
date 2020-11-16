@@ -9,9 +9,6 @@
 #include <base/memory/scoped_refptr.h>
 #include <base/test/simple_test_tick_clock.h>
 #include <chromeos/chromeos-config/libcros_config/fake_cros_config.h>
-#include <dbus/mock_bus.h>
-#include <dbus/mock_object_proxy.h>
-#include <dbus/object_path.h>
 
 #include "diagnostics/common/system/fake_bluetooth_client.h"
 #include "diagnostics/common/system/fake_powerd_adapter.h"
@@ -47,7 +44,6 @@ class MockContext final : public Context {
   brillo::FakeCrosConfig* fake_cros_config() const;
   org::chromium::debugdProxyMock* mock_debugd_proxy() const;
   MockDebugdAdapter* mock_debugd_adapter() const;
-  dbus::MockObjectProxy* mock_power_manager_proxy() const;
   FakeNetworkHealthAdapter* fake_network_health_adapter() const;
   MockNetworkDiagnosticsAdapter* network_diagnostics_adapter() const;
   FakePowerdAdapter* fake_powerd_adapter() const;
@@ -57,10 +53,6 @@ class MockContext final : public Context {
   base::SimpleTestTickClock* mock_tick_clock() const;
 
  private:
-  // Used to create a mock power manager proxy.
-  dbus::Bus::Options options_;
-  scoped_refptr<dbus::MockBus> mock_bus_;
-  scoped_refptr<dbus::MockObjectProxy> mock_power_manager_proxy_;
   // Used to create a temporary root directory.
   base::ScopedTempDir temp_dir_;
 };

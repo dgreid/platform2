@@ -147,6 +147,11 @@ class BasePowerdAdapterImplTest : public ::testing::Test {
     return powerd_adapter_.get();
   }
 
+  dbus::MockObjectProxy* mock_dbus_object_proxy() const {
+    DCHECK(dbus_object_proxy_);
+    return dbus_object_proxy_.get();
+  }
+
  private:
   scoped_refptr<StrictMock<dbus::MockBus>> dbus_bus_;
 
@@ -157,6 +162,42 @@ class BasePowerdAdapterImplTest : public ::testing::Test {
   std::unordered_map<std::string, base::Callback<void(dbus::Signal* signal)>>
       on_signal_callbacks_;
 };
+
+TEST_F(BasePowerdAdapterImplTest, PowerSupplySuccess) {
+  power_manager::PowerSupplyProperties power_supply_proto;
+  EXPECT_CALL(*mock_dbus_object_proxy(), CallMethodAndBlock(_, _))
+      .WillOnce([&power_supply_proto](dbus::MethodCall*, int) {
+        std::unique_ptr<dbus::Response> power_manager_response =
+            dbus::Response::CreateEmpty();
+        dbus::MessageWriter power_manager_writer(power_manager_response.get());
+        power_manager_writer.AppendProtoAsArrayOfBytes(power_supply_proto);
+        return power_manager_response;
+      });
+
+  auto response = powerd_adapter()->GetPowerSupplyProperties();
+  EXPECT_TRUE(response);
+  // The proto structure is simple enough where it can be compared as a string.
+  // If if becomes more complex this will need to change.
+  EXPECT_EQ(response.value().SerializeAsString(),
+            power_supply_proto.SerializeAsString());
+}
+
+TEST_F(BasePowerdAdapterImplTest, PowerSupplyFail) {
+  power_manager::PowerSupplyProperties power_supply_proto;
+  EXPECT_CALL(*mock_dbus_object_proxy(), CallMethodAndBlock(_, _))
+      .WillOnce([](dbus::MethodCall*, int) { return nullptr; });
+
+  ASSERT_EQ(powerd_adapter()->GetPowerSupplyProperties(), base::nullopt);
+}
+
+TEST_F(BasePowerdAdapterImplTest, PowerSupplyParseError) {
+  power_manager::PowerSupplyProperties power_supply_proto;
+  EXPECT_CALL(*mock_dbus_object_proxy(), CallMethodAndBlock(_, _))
+      .WillOnce(
+          [](dbus::MethodCall*, int) { return dbus::Response::CreateEmpty(); });
+
+  ASSERT_EQ(powerd_adapter()->GetPowerSupplyProperties(), base::nullopt);
+}
 
 // This is a parameterized test with the following parameters:
 // * |signal_name| - signal name which will be invoked;

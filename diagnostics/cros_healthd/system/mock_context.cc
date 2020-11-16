@@ -6,7 +6,6 @@
 
 #include <memory>
 
-#include <dbus/power_manager/dbus-constants.h>
 #include <gmock/gmock.h>
 
 #include "debugd/dbus-proxy-mocks.h"
@@ -17,13 +16,6 @@ MockContext::MockContext() = default;
 MockContext::~MockContext() = default;
 
 bool MockContext::Initialize() {
-  // Initialize the mock D-Bus connection.
-  options_.bus_type = dbus::Bus::SYSTEM;
-  mock_bus_ = new dbus::MockBus(options_);
-  mock_power_manager_proxy_ = new dbus::MockObjectProxy(
-      mock_bus_.get(), power_manager::kPowerManagerServiceName,
-      dbus::ObjectPath(power_manager::kPowerManagerServicePath));
-
   bluetooth_client_ = std::make_unique<FakeBluetoothClient>();
   cros_config_ = std::make_unique<brillo::FakeCrosConfig>();
   debugd_proxy_ =
@@ -32,7 +24,6 @@ bool MockContext::Initialize() {
   network_health_adapter_ = std::make_unique<FakeNetworkHealthAdapter>();
   network_diagnostics_adapter_ =
       std::make_unique<MockNetworkDiagnosticsAdapter>();
-  power_manager_proxy_ = mock_power_manager_proxy_.get();
   powerd_adapter_ = std::make_unique<FakePowerdAdapter>();
   system_config_ = std::make_unique<FakeSystemConfig>();
   system_utils_ = std::make_unique<FakeSystemUtilities>();
@@ -72,10 +63,6 @@ MockNetworkDiagnosticsAdapter* MockContext::network_diagnostics_adapter()
     const {
   return static_cast<MockNetworkDiagnosticsAdapter*>(
       network_diagnostics_adapter_.get());
-}
-
-dbus::MockObjectProxy* MockContext::mock_power_manager_proxy() const {
-  return mock_power_manager_proxy_.get();
 }
 
 FakePowerdAdapter* MockContext::fake_powerd_adapter() const {

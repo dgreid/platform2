@@ -77,10 +77,6 @@ class Context {
   // Example: cros_healthd calls out to the NetworkDiagnosticsRoutines interface
   // with async callbacks when it needs to run network diagnostics.
   NetworkDiagnosticsAdapter* network_diagnostics_adapter() const;
-  // Use the object returned by power_manager_proxy() to make calls to
-  // power_manager. Example: cros_healthd calls out to power_manager when it
-  // needs to collect battery metrics like cycle count.
-  dbus::ObjectProxy* power_manager_proxy() const;
   // Use the object returned by powerd_adapter() to subscribe to notifications
   // from powerd.
   PowerdAdapter* powerd_adapter() const;
@@ -121,8 +117,6 @@ class Context {
   std::unique_ptr<DebugdAdapter> debugd_adapter_;
   std::unique_ptr<NetworkHealthAdapter> network_health_adapter_;
   std::unique_ptr<NetworkDiagnosticsAdapter> network_diagnostics_adapter_;
-  // Owned by |dbus_bus_|.
-  dbus::ObjectProxy* power_manager_proxy_;
   std::unique_ptr<PowerdAdapter> powerd_adapter_;
   std::unique_ptr<SystemConfigInterface> system_config_;
   std::unique_ptr<ExecutorAdapter> executor_;

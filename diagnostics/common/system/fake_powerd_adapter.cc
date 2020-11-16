@@ -26,6 +26,11 @@ void FakePowerdAdapter::RemoveLidObserver(LidObserver* observer) {
   lid_observers_.RemoveObserver(observer);
 }
 
+base::Optional<power_manager::PowerSupplyProperties>
+FakePowerdAdapter::GetPowerSupplyProperties() {
+  return power_supply_properties_;
+}
+
 bool FakePowerdAdapter::HasPowerObserver(PowerObserver* observer) const {
   return power_observers_.HasObserver(observer);
 }
@@ -72,6 +77,11 @@ void FakePowerdAdapter::EmitLidOpenedSignal() const {
   for (auto& observer : lid_observers_) {
     observer.OnLidOpenedSignal();
   }
+}
+
+void FakePowerdAdapter::SetPowerSupplyProperties(
+    base::Optional<power_manager::PowerSupplyProperties> properties) {
+  power_supply_properties_ = properties;
 }
 
 }  // namespace diagnostics

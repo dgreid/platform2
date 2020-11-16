@@ -33,11 +33,11 @@ class BatteryFetcher {
   using OptionalProbeErrorPtr =
       base::Optional<chromeos::cros_healthd::mojom::ProbeErrorPtr>;
 
-  // Populates general battery data fields in |info| obtained from a
-  // powerd |response|. Returns base::nullopt on success or a ProbeError
+  // Populates general battery data fields in |info| obtained from the provided
+  // |power_supply_proto|. Returns base::nullopt on success or a ProbeError
   // on failure.
   OptionalProbeErrorPtr PopulateBatteryInfoFromPowerdResponse(
-      dbus::Response* response,
+      const power_manager::PowerSupplyProperties& power_supply_proto,
       chromeos::cros_healthd::mojom::BatteryInfo* info);
 
   // Populates the Smart Battery fields in |info| obtained by using ectool

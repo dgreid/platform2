@@ -6,6 +6,7 @@
 #define DIAGNOSTICS_COMMON_SYSTEM_POWERD_ADAPTER_H_
 
 #include <base/observer_list_types.h>
+#include <base/optional.h>
 #include <power_manager/proto_bindings/power_supply_properties.pb.h>
 #include <power_manager/proto_bindings/suspend.pb.h>
 
@@ -45,6 +46,12 @@ class PowerdAdapter {
 
   virtual void AddLidObserver(LidObserver* observer) = 0;
   virtual void RemoveLidObserver(LidObserver* observer) = 0;
+
+  // Returns a PowerSupplyProperties proto from powerd on success. Will return a
+  // base::nullopt if the powerd service is not available or the D-Bus response
+  // cannot be parsed into the proto structure.
+  virtual base::Optional<power_manager::PowerSupplyProperties>
+  GetPowerSupplyProperties() = 0;
 };
 
 }  // namespace diagnostics

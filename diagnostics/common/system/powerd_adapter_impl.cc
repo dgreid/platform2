@@ -8,13 +8,20 @@
 
 #include <base/bind.h>
 #include <base/logging.h>
+#include <base/optional.h>
 #include <base/memory/ptr_util.h>
 #include <dbus/object_proxy.h>
+#include <dbus/message.h>
 #include <dbus/power_manager/dbus-constants.h>
+#include <base/time/time.h>
 
 namespace diagnostics {
 
 namespace {
+
+// The maximum amount of time to wait for a powerd response.
+constexpr base::TimeDelta kPowerManagerDBusTimeout =
+    base::TimeDelta::FromSeconds(3);
 
 // Handles the result of an attempt to connect to a D-Bus signal.
 void HandleSignalConnected(const std::string& interface,
@@ -31,47 +38,46 @@ void HandleSignalConnected(const std::string& interface,
 }  // namespace
 
 PowerdAdapterImpl::PowerdAdapterImpl(const scoped_refptr<dbus::Bus>& bus)
-    : weak_ptr_factory_(this) {
+    : bus_proxy_(bus->GetObjectProxy(
+          power_manager::kPowerManagerServiceName,
+          dbus::ObjectPath(power_manager::kPowerManagerServicePath))),
+      weak_ptr_factory_(this) {
   DCHECK(bus);
+  DCHECK(bus_proxy_);
 
-  dbus::ObjectProxy* bus_proxy = bus->GetObjectProxy(
-      power_manager::kPowerManagerServiceName,
-      dbus::ObjectPath(power_manager::kPowerManagerServicePath));
-  DCHECK(bus_proxy);
-
-  bus_proxy->ConnectToSignal(
+  bus_proxy_->ConnectToSignal(
       power_manager::kPowerManagerInterface,
       power_manager::kPowerSupplyPollSignal,
       base::Bind(&PowerdAdapterImpl::HandlePowerSupplyPoll,
                  weak_ptr_factory_.GetWeakPtr()),
       base::Bind(&HandleSignalConnected));
-  bus_proxy->ConnectToSignal(
+  bus_proxy_->ConnectToSignal(
       power_manager::kPowerManagerInterface,
       power_manager::kSuspendImminentSignal,
       base::Bind(&PowerdAdapterImpl::HandleSuspendImminent,
                  weak_ptr_factory_.GetWeakPtr()),
       base::Bind(&HandleSignalConnected));
-  bus_proxy->ConnectToSignal(
+  bus_proxy_->ConnectToSignal(
       power_manager::kPowerManagerInterface,
       power_manager::kDarkSuspendImminentSignal,
       base::Bind(&PowerdAdapterImpl::HandleDarkSuspendImminent,
                  weak_ptr_factory_.GetWeakPtr()),
       base::Bind(&HandleSignalConnected));
-  bus_proxy->ConnectToSignal(power_manager::kPowerManagerInterface,
-                             power_manager::kSuspendDoneSignal,
-                             base::Bind(&PowerdAdapterImpl::HandleSuspendDone,
-                                        weak_ptr_factory_.GetWeakPtr()),
-                             base::Bind(&HandleSignalConnected));
-  bus_proxy->ConnectToSignal(power_manager::kPowerManagerInterface,
-                             power_manager::kLidClosedSignal,
-                             base::Bind(&PowerdAdapterImpl::HandleLidClosed,
-                                        weak_ptr_factory_.GetWeakPtr()),
-                             base::Bind(&HandleSignalConnected));
-  bus_proxy->ConnectToSignal(power_manager::kPowerManagerInterface,
-                             power_manager::kLidOpenedSignal,
-                             base::Bind(&PowerdAdapterImpl::HandleLidOpened,
-                                        weak_ptr_factory_.GetWeakPtr()),
-                             base::Bind(&HandleSignalConnected));
+  bus_proxy_->ConnectToSignal(power_manager::kPowerManagerInterface,
+                              power_manager::kSuspendDoneSignal,
+                              base::Bind(&PowerdAdapterImpl::HandleSuspendDone,
+                                         weak_ptr_factory_.GetWeakPtr()),
+                              base::Bind(&HandleSignalConnected));
+  bus_proxy_->ConnectToSignal(power_manager::kPowerManagerInterface,
+                              power_manager::kLidClosedSignal,
+                              base::Bind(&PowerdAdapterImpl::HandleLidClosed,
+                                         weak_ptr_factory_.GetWeakPtr()),
+                              base::Bind(&HandleSignalConnected));
+  bus_proxy_->ConnectToSignal(power_manager::kPowerManagerInterface,
+                              power_manager::kLidOpenedSignal,
+                              base::Bind(&PowerdAdapterImpl::HandleLidOpened,
+                                         weak_ptr_factory_.GetWeakPtr()),
+                              base::Bind(&HandleSignalConnected));
 }
 
 PowerdAdapterImpl::~PowerdAdapterImpl() = default;
@@ -94,6 +100,29 @@ void PowerdAdapterImpl::AddLidObserver(LidObserver* observer) {
 void PowerdAdapterImpl::RemoveLidObserver(LidObserver* observer) {
   DCHECK(observer);
   lid_observers_.RemoveObserver(observer);
+}
+
+base::Optional<power_manager::PowerSupplyProperties>
+PowerdAdapterImpl::GetPowerSupplyProperties() {
+  dbus::MethodCall method_call(power_manager::kPowerManagerInterface,
+                               power_manager::kGetPowerSupplyPropertiesMethod);
+  auto response = bus_proxy_->CallMethodAndBlock(
+      &method_call, kPowerManagerDBusTimeout.InMilliseconds());
+
+  if (!response) {
+    LOG(ERROR) << "Failed to call powerd D-Bus method: "
+               << power_manager::kGetPowerSupplyPropertiesMethod;
+    return base::nullopt;
+  }
+
+  dbus::MessageReader reader(response.get());
+  power_manager::PowerSupplyProperties power_supply_proto;
+  if (!reader.PopArrayOfBytesAsProto(&power_supply_proto)) {
+    LOG(ERROR) << "Could not successfully read PowerSupplyProperties protobuf";
+    return base::nullopt;
+  }
+
+  return power_supply_proto;
 }
 
 void PowerdAdapterImpl::HandlePowerSupplyPoll(dbus::Signal* signal) {

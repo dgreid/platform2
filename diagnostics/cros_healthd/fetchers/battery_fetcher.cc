@@ -18,13 +18,7 @@
 #include <base/strings/stringprintf.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_util.h>
-#include <base/time/time.h>
 #include <base/values.h>
-#include <chromeos/dbus/service_constants.h>
-#include <dbus/bus.h>
-#include <dbus/message.h>
-#include <dbus/object_proxy.h>
-#include <dbus/power_manager/dbus-constants.h>
 #include <re2/re2.h>
 
 #include "debugd/dbus-proxies.h"
@@ -41,10 +35,6 @@ namespace mojo_ipc = ::chromeos::cros_healthd::mojom;
 constexpr char kManufactureDateSmart[] = "manufacture_date_smart";
 // The name of the Smart Battery temperature metric.
 constexpr char kTemperatureSmart[] = "temperature_smart";
-
-// The maximum amount of time to wait for a powerd response.
-constexpr base::TimeDelta kPowerManagerDBusTimeout =
-    base::TimeDelta::FromSeconds(3);
 
 // The maximum amount of time to wait for a debugd response.
 constexpr int kDebugdDBusTimeout = 10 * 1000;
@@ -74,17 +64,16 @@ mojo_ipc::BatteryResultPtr BatteryFetcher::FetchBatteryInfo() {
     return mojo_ipc::BatteryResult::NewBatteryInfo(mojo_ipc::BatteryInfoPtr());
 
   mojo_ipc::BatteryInfo info;
-  dbus::MethodCall method_call(power_manager::kPowerManagerInterface,
-                               power_manager::kGetPowerSupplyPropertiesMethod);
-  auto response = context_->power_manager_proxy()->CallMethodAndBlock(
-      &method_call, kPowerManagerDBusTimeout.InMilliseconds());
-  if (!response) {
+  auto power_supply_proto =
+      context_->powerd_adapter()->GetPowerSupplyProperties();
+  if (!power_supply_proto) {
     return mojo_ipc::BatteryResult::NewError(CreateAndLogProbeError(
         mojo_ipc::ErrorType::kSystemUtilityError,
         "Failed to obtain power supply properties from powerd"));
   }
 
-  auto error = PopulateBatteryInfoFromPowerdResponse(response.get(), &info);
+  auto error =
+      PopulateBatteryInfoFromPowerdResponse(power_supply_proto.value(), &info);
   if (error.has_value()) {
     return mojo_ipc::BatteryResult::NewError(std::move(error.value()));
   }
@@ -101,17 +90,9 @@ mojo_ipc::BatteryResultPtr BatteryFetcher::FetchBatteryInfo() {
 
 base::Optional<mojo_ipc::ProbeErrorPtr>
 BatteryFetcher::PopulateBatteryInfoFromPowerdResponse(
-    dbus::Response* response, mojo_ipc::BatteryInfo* info) {
-  DCHECK(response);
+    const power_manager::PowerSupplyProperties& power_supply_proto,
+    mojo_ipc::BatteryInfo* info) {
   DCHECK(info);
-
-  power_manager::PowerSupplyProperties power_supply_proto;
-  dbus::MessageReader reader(response);
-  if (!reader.PopArrayOfBytesAsProto(&power_supply_proto)) {
-    return CreateAndLogProbeError(
-        mojo_ipc::ErrorType::kParseError,
-        "Could not successfully read PowerSupplyProperties protobuf");
-  }
 
   if (!power_supply_proto.has_battery_state() ||
       power_supply_proto.battery_state() ==
