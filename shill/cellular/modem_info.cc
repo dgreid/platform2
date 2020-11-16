@@ -41,7 +41,7 @@ ModemInfo::~ModemInfo() {
 }
 
 void ModemInfo::Start() {
-  LOG(INFO) << "ModemInfo::Start";
+  SLOG(this, 1) << "ModemInfo::Start";
 
   pending_activation_store_.reset(new PendingActivationStore());
   pending_activation_store_->InitStorage(manager_->storage_path());
@@ -51,7 +51,7 @@ void ModemInfo::Start() {
 }
 
 void ModemInfo::Stop() {
-  LOG(INFO) << "ModemInfo::Stop";
+  SLOG(this, 1) << "ModemInfo::Stop";
   pending_activation_store_.reset();
   proxy_.reset();
   Disconnect();
@@ -109,7 +109,7 @@ bool ModemInfo::ModemExists(const RpcIdentifier& path) const {
 void ModemInfo::AddModem(const RpcIdentifier& path,
                          const InterfaceToProperties& properties) {
   if (ModemExists(path)) {
-    LOG(INFO) << "Modem " << path.value() << " already exists.";
+    LOG(WARNING) << "Modem " << path.value() << " already exists.";
     return;
   }
   SLOG(this, 1) << __func__ << ": " << path.value();

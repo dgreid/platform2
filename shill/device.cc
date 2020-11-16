@@ -207,13 +207,12 @@ Device::Device(Manager* manager,
                                    &Device::GetTransmitByteCountProperty);
   }
 
-  LOG(INFO) << "Device created: " << link_name_ << " index "
-            << interface_index_;
+  SLOG(this, 1) << "Device(): " << link_name_ << " index: " << interface_index_;
 }
 
 Device::~Device() {
-  LOG(INFO) << "Device destructed: " << link_name_ << " index "
-            << interface_index_;
+  SLOG(this, 1) << "~Device(): " << link_name_
+                << " index: " << interface_index_;
 }
 
 void Device::Initialize() {
