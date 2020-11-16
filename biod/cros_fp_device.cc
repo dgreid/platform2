@@ -43,21 +43,26 @@ CrosFpDevice::~CrosFpDevice() {
     ResetContext();
 }
 
-bool CrosFpDevice::EcProtoInfo(uint16_t* max_read, uint16_t* max_write) {
+base::Optional<CrosFpDevice::EcProtocolInfo> CrosFpDevice::EcProtoInfo() {
   /* read max request / response size from the MCU for protocol v3+ */
   EcCommand<EmptyParam, struct ec_response_get_protocol_info> cmd(
       EC_CMD_GET_PROTOCOL_INFO);
   // We retry this command because it is known to occasionally fail
   // with ETIMEDOUT on first attempt.
-  if (!cmd.RunWithMultipleAttempts(cros_fd_.get(), kMaxIoAttempts))
-    return false;
+  if (!cmd.RunWithMultipleAttempts(cros_fd_.get(), kMaxIoAttempts)) {
+    return base::nullopt;
+  }
 
-  *max_read =
+  uint16_t max_read =
       cmd.Resp()->max_response_packet_size - sizeof(struct ec_host_response);
   // TODO(vpalatin): workaround for b/78544921, can be removed if MCU is fixed.
-  *max_write =
+  uint16_t max_write =
       cmd.Resp()->max_request_packet_size - sizeof(struct ec_host_request) - 4;
-  return true;
+
+  return EcProtocolInfo{
+      .max_read = max_read,
+      .max_write = max_write,
+  };
 }
 
 ssize_t CrosFpDevice::ReadVersion(char* buffer, size_t size) {
@@ -105,10 +110,13 @@ bool CrosFpDevice::EcDevInit() {
     return false;
   }
 
-  if (!EcProtoInfo(&max_read_size_, &max_write_size_)) {
+  base::Optional<EcProtocolInfo> info = EcProtoInfo();
+  if (!info) {
     LOG(ERROR) << "Failed to get cros_fp protocol info.";
     return false;
   }
+
+  ec_protocol_info_ = *info;
 
   unsigned long mask = 1 << EC_MKBP_EVENT_FINGERPRINT;  // NOLINT(runtime/int)
   if (ioctl(cros_fd_.get(), CROS_EC_DEV_IOCEVENTMASK_V2, mask) < 0) {
@@ -533,7 +541,7 @@ std::unique_ptr<VendorTemplate> CrosFpDevice::GetTemplate(int index) {
   // is used for the finger image.
   auto fp_frame_cmd = ec_command_factory_->FpFrameCommand(
       index + FP_FRAME_INDEX_TEMPLATE, info_->template_info()->size,
-      max_read_size_);
+      ec_protocol_info_.max_read);
   if (!fp_frame_cmd->Run(cros_fd_.get())) {
     LOG(ERROR) << "Failed to get frame, result: " << fp_frame_cmd->Result();
     return nullptr;
@@ -549,8 +557,8 @@ bool CrosFpDevice::UploadTemplate(const VendorTemplate& tmpl) {
   EcCommand<union cmd_with_data, EmptyParam> cmd(EC_CMD_FP_TEMPLATE);
   struct ec_params_fp_template* req = &cmd.Req()->req;
 
-  size_t max_chunk =
-      max_write_size_ - offsetof(struct ec_params_fp_template, data);
+  size_t max_chunk = ec_protocol_info_.max_write -
+                     offsetof(struct ec_params_fp_template, data);
 
   auto pos = tmpl.begin();
   while (pos < tmpl.end()) {
