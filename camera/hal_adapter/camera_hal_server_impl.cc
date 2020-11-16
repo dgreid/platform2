@@ -49,10 +49,6 @@ CameraHalServerImpl::CameraHalServerImpl()
 CameraHalServerImpl::~CameraHalServerImpl() {
   VLOGF_ENTER();
 
-  for (auto* cros_camera_hal : cros_camera_hals_) {
-    cros_camera_hal->tear_down();
-  }
-
   ExitOnMainThread(0);
 }
 
@@ -214,6 +210,10 @@ void CameraHalServerImpl::LoadCameraHal() {
 void CameraHalServerImpl::ExitOnMainThread(int exit_status) {
   VLOGF_ENTER();
   DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
+
+  for (auto* cros_camera_hal : cros_camera_hals_) {
+    cros_camera_hal->tear_down();
+  }
 
   auto future = Future<void>::Create(nullptr);
   auto delete_ipc_bridge = base::BindOnce(
