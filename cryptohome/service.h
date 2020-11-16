@@ -31,6 +31,7 @@
 #include "cryptohome/challenge_credentials/challenge_credentials_helper.h"
 #include "cryptohome/cryptohome_event_source.h"
 #include "cryptohome/dbus_transition.h"
+#include "cryptohome/disk_cleanup.h"
 #include "cryptohome/fingerprint_manager.h"
 #include "cryptohome/firmware_management_parameters.h"
 #include "cryptohome/install_attributes.h"
@@ -157,6 +158,10 @@ class Service : public brillo::dbus::AbstractDbusService,
   void set_key_challenge_service_factory(
       KeyChallengeServiceFactory* key_challenge_service_factory) {
     key_challenge_service_factory_ = key_challenge_service_factory;
+  }
+
+  void set_disk_cleanup(DiskCleanup* disk_cleanup) {
+    disk_cleanup_ = disk_cleanup;
   }
 
   // Checks if the given user is the system owner.
@@ -1068,6 +1073,8 @@ class Service : public brillo::dbus::AbstractDbusService,
   HomeDirs* homedirs_;
   std::unique_ptr<ArcDiskQuota> default_arc_disk_quota_;
   ArcDiskQuota* arc_disk_quota_;
+  std::unique_ptr<DiskCleanup> default_disk_cleanup_;
+  DiskCleanup* disk_cleanup_;
   std::string guest_user_;
   bool force_ecryptfs_;
   bool legacy_mount_;

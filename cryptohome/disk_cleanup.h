@@ -15,14 +15,19 @@
 #include <base/optional.h>
 #include <base/time/time.h>
 
+#include "cryptohome/disk_cleanup_routines.h"
 #include "cryptohome/homedirs.h"
+#include "cryptohome/platform.h"
+#include "cryptohome/user_oldest_activity_timestamp_cache.h"
 
 namespace cryptohome {
 
+// Cleanup parameters in bytes.
+const int64_t kFreeSpaceThresholdToTriggerCleanup = 1LL << 30;
+const int64_t kFreeSpaceThresholdToTriggerAggressiveCleanup = 768 * 1024 * 1024;
+const int64_t kTargetFreeSpaceAfterCleanup = 2LL << 30;
+
 class DiskCleanupRoutines;
-class HomeDirs;
-class Platform;
-class UserOldestActivityTimestampCache;
 
 class DiskCleanup {
  public:
@@ -37,14 +42,11 @@ class DiskCleanup {
     kNeedAggressiveCleanup,  // below threshold for aggressive cleanup
   };
 
-  DiskCleanup();
-  virtual ~DiskCleanup();
-
-  // Initialize disk cleanup. Only setters for disk cleanup thresholds can be
-  // called before Init.
-  virtual bool Init(HomeDirs* homedirs,
-                    Platform* platform,
-                    UserOldestActivityTimestampCache* timestamp_cache);
+  DiskCleanup() = default;
+  DiskCleanup(Platform* platform,
+              HomeDirs* homedirs,
+              UserOldestActivityTimestampCache* timestamp_cache);
+  virtual ~DiskCleanup() = default;
 
   // Return the available disk space in bytes for home directories, or nullopt
   // on failure.
@@ -105,8 +107,8 @@ class DiskCleanup {
       base::Time cutoff, std::vector<HomeDirs::HomeDir>* homedirs);
 
   // Not owned. Must outlive DiskCleanup. Passed with call to Init.
-  HomeDirs* homedirs_ = nullptr;
   Platform* platform_ = nullptr;
+  HomeDirs* homedirs_ = nullptr;
   UserOldestActivityTimestampCache* timestamp_cache_ = nullptr;
 
   // Cleanup routines.

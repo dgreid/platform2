@@ -36,9 +36,6 @@ namespace cryptohome {
 const uid_t kArcContainerShiftUid = 655360;
 // The gid shift of ARC++ container.
 const gid_t kArcContainerShiftGid = 655360;
-const int64_t kFreeSpaceThresholdToTriggerCleanup = 1LL << 30;
-const int64_t kFreeSpaceThresholdToTriggerAggressiveCleanup = 768 * 1024 * 1024;
-const int64_t kTargetFreeSpaceAfterCleanup = 2LL << 30;
 extern const char kAndroidCacheInodeAttribute[];
 extern const char kAndroidCodeCacheInodeAttribute[];
 extern const char kTrackedDirectoryNameAttribute[];
@@ -53,7 +50,6 @@ constexpr char kKeyLegacyPrefix[] = "legacy-";
 
 class Credentials;
 class Crypto;
-class DiskCleanup;
 class Platform;
 class UserOldestActivityTimestampCache;
 class VaultKeyset;
@@ -318,8 +314,6 @@ class HomeDirs {
   policy::PolicyProvider* policy_provider() { return policy_provider_; }
   void set_crypto(Crypto* value) { crypto_ = value; }
   Crypto* crypto() const { return crypto_; }
-  virtual DiskCleanup* disk_cleanup() const { return cleanup_; }
-  virtual void set_disk_cleanup(DiskCleanup* cleanup) { cleanup_ = cleanup; }
   void set_vault_keyset_factory(VaultKeysetFactory* value) {
     vault_keyset_factory_ = value;
   }
@@ -405,8 +399,6 @@ class HomeDirs {
   std::unique_ptr<policy::PolicyProvider> default_policy_provider_;
   policy::PolicyProvider* policy_provider_;
   Crypto* crypto_;
-  std::unique_ptr<DiskCleanup> default_cleanup_;
-  DiskCleanup* cleanup_;
   // TODO(wad) Collapse all factories into a single manufacturing plant to save
   //           some pointers.
   std::unique_ptr<VaultKeysetFactory> default_vault_keyset_factory_;

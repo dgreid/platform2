@@ -210,6 +210,7 @@ class ServiceTestNotInitialized : public ::testing::Test {
     service_.set_firmware_management_parameters(&fwmp_);
     service_.set_event_source_sink(&event_sink_);
     service_.set_arc_disk_quota(&arc_disk_quota_);
+    service_.set_disk_cleanup(&cleanup_);
     service_.set_challenge_credentials_helper(&challenge_credentials_helper_);
     service_.set_key_challenge_service_factory(&key_challenge_service_factory_);
     test_helper_.SetUpSystemSalt();
@@ -217,7 +218,6 @@ class ServiceTestNotInitialized : public ::testing::Test {
     homedirs_.set_platform(&platform_);
     tpm_init_.set_tpm(&tpm_);
     ON_CALL(homedirs_, shadow_root()).WillByDefault(ReturnRef(kShadowRoot));
-    ON_CALL(homedirs_, disk_cleanup()).WillByDefault(Return(&cleanup_));
     ON_CALL(homedirs_, Init(_, _, _)).WillByDefault(Return(true));
     // Return valid values for the amount of free space.
     ON_CALL(cleanup_, AmountOfFreeDiskSpace())
@@ -336,7 +336,7 @@ TEST_F(ServiceTestNotInitialized, CheckAsyncTestCredentials) {
       std::unique_ptr<NiceMock<policy::MockDevicePolicy>>(
           new NiceMock<policy::MockDevicePolicy>));
   real_homedirs.set_policy_provider(&policy_provider);
-  real_homedirs.set_disk_cleanup(&cleanup_);
+  service_.set_disk_cleanup(&cleanup_);
   service_.set_homedirs(&real_homedirs);
   service_.set_crypto(&real_crypto);
   service_.Initialize();

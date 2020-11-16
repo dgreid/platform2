@@ -119,6 +119,7 @@ class UserDataAuthTestNotInitialized : public ::testing::Test {
     userdataauth_->set_firmware_management_parameters(&fwmp_);
     userdataauth_->set_fingerprint_manager(&fingerprint_manager_);
     userdataauth_->set_arc_disk_quota(&arc_disk_quota_);
+    userdataauth_->set_disk_cleanup(&cleanup_);
     userdataauth_->set_pkcs11_init(&pkcs11_init_);
     userdataauth_->set_mount_factory(&mount_factory_);
     userdataauth_->set_tpm_ownership_proxy(&tpm_ownership_proxy_);
@@ -129,7 +130,6 @@ class UserDataAuthTestNotInitialized : public ::testing::Test {
     userdataauth_->set_disable_threading(true);
     homedirs_.set_crypto(&crypto_);
     homedirs_.set_platform(&platform_);
-    ON_CALL(homedirs_, disk_cleanup).WillByDefault(Return(&cleanup_));
     ON_CALL(homedirs_, shadow_root()).WillByDefault(ReturnRef(kShadowRoot));
     ON_CALL(homedirs_, Init(_, _, _)).WillByDefault(Return(true));
     // Return valid values for the amount of free space.

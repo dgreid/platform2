@@ -203,6 +203,9 @@ UserDataAuth::UserDataAuth()
       default_arc_disk_quota_(new cryptohome::ArcDiskQuota(
           homedirs_, platform_, base::FilePath(kArcDiskHome))),
       arc_disk_quota_(default_arc_disk_quota_.get()),
+      default_disk_cleanup_(
+          new DiskCleanup(platform_, homedirs_, user_timestamp_cache_.get())),
+      disk_cleanup_(default_disk_cleanup_.get()),
       low_disk_notification_period_ms_(kLowDiskNotificationPeriodMS),
       low_disk_space_signal_was_emitted_(false),
       low_disk_space_callback_(base::Bind([](uint64_t free_disk_space) {})) {}
@@ -942,17 +945,16 @@ void UserDataAuth::ResetAllTPMContext() {
 }
 
 void UserDataAuth::set_cleanup_threshold(uint64_t cleanup_threshold) {
-  homedirs_->disk_cleanup()->set_cleanup_threshold(cleanup_threshold);
+  disk_cleanup_->set_cleanup_threshold(cleanup_threshold);
 }
 
 void UserDataAuth::set_aggressive_cleanup_threshold(
     uint64_t aggressive_cleanup_threshold) {
-  homedirs_->disk_cleanup()->set_aggressive_cleanup_threshold(
-      aggressive_cleanup_threshold);
+  disk_cleanup_->set_aggressive_cleanup_threshold(aggressive_cleanup_threshold);
 }
 
 void UserDataAuth::set_target_free_space(uint64_t target_free_space) {
-  homedirs_->disk_cleanup()->set_target_free_space(target_free_space);
+  disk_cleanup_->set_target_free_space(target_free_space);
 }
 
 void UserDataAuth::OwnershipCallback(bool status, bool took_ownership) {
@@ -3017,7 +3019,7 @@ void UserDataAuth::ResetDictionaryAttackMitigation() {
 }
 
 void UserDataAuth::DoAutoCleanup() {
-  homedirs_->disk_cleanup()->FreeDiskSpace();
+  disk_cleanup_->FreeDiskSpace();
   last_auto_cleanup_time_ = platform_->GetCurrentTime();
 }
 
@@ -3026,9 +3028,8 @@ void UserDataAuth::LowDiskCallback() {
   DCHECK(!disable_threading_);
 
   bool low_disk_space_signal_emitted = false;
-  auto free_disk_space = homedirs_->disk_cleanup()->AmountOfFreeDiskSpace();
-  auto free_space_state =
-      homedirs_->disk_cleanup()->GetFreeDiskSpaceState(free_disk_space);
+  auto free_disk_space = disk_cleanup_->AmountOfFreeDiskSpace();
+  auto free_space_state = disk_cleanup_->GetFreeDiskSpaceState(free_disk_space);
   if (free_space_state == DiskCleanup::FreeSpaceState::kError) {
     LOG(ERROR) << "Error getting free disk space";
   } else if (free_space_state ==
@@ -3052,7 +3053,7 @@ void UserDataAuth::LowDiskCallback() {
   const bool early_cleanup_needed =
       low_disk_space_signal_emitted &&
       (!low_disk_space_signal_was_emitted_ ||
-       homedirs_->disk_cleanup()->IsFreeableDiskSpaceAvailable());
+       disk_cleanup_->IsFreeableDiskSpaceAvailable());
 
   if (time_for_auto_cleanup || early_cleanup_needed) {
     DoAutoCleanup();

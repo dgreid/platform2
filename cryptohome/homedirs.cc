@@ -29,7 +29,6 @@
 #include "cryptohome/cryptohome_metrics.h"
 #include "cryptohome/cryptolib.h"
 #include "cryptohome/dircrypto_util.h"
-#include "cryptohome/disk_cleanup.h"
 #include "cryptohome/key.pb.h"
 #include "cryptohome/mount_helper.h"
 #include "cryptohome/platform.h"
@@ -71,8 +70,6 @@ HomeDirs::HomeDirs()
       default_policy_provider_(new policy::PolicyProvider()),
       policy_provider_(default_policy_provider_.get()),
       crypto_(NULL),
-      default_cleanup_(new DiskCleanup()),
-      cleanup_(default_cleanup_.get()),
       default_vault_keyset_factory_(new VaultKeysetFactory()),
       vault_keyset_factory_(default_vault_keyset_factory_.get()),
       use_tpm_(false) {}
@@ -97,9 +94,6 @@ bool HomeDirs::Init(Platform* platform,
   platform_ = platform;
   crypto_ = crypto;
   timestamp_cache_ = cache;
-
-  if (!cleanup_->Init(this, platform_, timestamp_cache_))
-    return false;
 
   LoadDevicePolicy();
   if (!platform_->DirectoryExists(shadow_root_)) {

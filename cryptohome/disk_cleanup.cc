@@ -23,20 +23,13 @@
 
 namespace cryptohome {
 
-DiskCleanup::DiskCleanup() = default;
-DiskCleanup::~DiskCleanup() = default;
-
-bool DiskCleanup::Init(HomeDirs* homedirs,
-                       Platform* platform,
-                       UserOldestActivityTimestampCache* timestamp_cache) {
-  homedirs_ = homedirs;
-  platform_ = platform;
-  timestamp_cache_ = timestamp_cache;
-
-  routines_ = std::make_unique<DiskCleanupRoutines>(homedirs_, platform_);
-
-  return true;
-}
+DiskCleanup::DiskCleanup(Platform* platform,
+                         HomeDirs* homedirs,
+                         UserOldestActivityTimestampCache* timestamp_cache)
+    : platform_(platform),
+      homedirs_(homedirs),
+      timestamp_cache_(timestamp_cache),
+      routines_(std::make_unique<DiskCleanupRoutines>(homedirs_, platform_)) {}
 
 base::Optional<int64_t> DiskCleanup::AmountOfFreeDiskSpace() const {
   int64_t free_space =

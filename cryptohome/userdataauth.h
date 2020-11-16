@@ -24,6 +24,7 @@
 #include "cryptohome/challenge_credentials/challenge_credentials_helper.h"
 #include "cryptohome/credentials.h"
 #include "cryptohome/crypto.h"
+#include "cryptohome/disk_cleanup.h"
 #include "cryptohome/fingerprint_manager.h"
 #include "cryptohome/firmware_management_parameters.h"
 #include "cryptohome/homedirs.h"
@@ -487,6 +488,11 @@ class UserDataAuth {
   // Override |arc_disk_quota_| for testing purpose
   void set_arc_disk_quota(cryptohome::ArcDiskQuota* arc_disk_quota) {
     arc_disk_quota_ = arc_disk_quota;
+  }
+
+  // Override |disk_cleanup_| for testing purpose
+  void set_disk_cleanup(DiskCleanup* disk_cleanup) {
+    disk_cleanup_ = disk_cleanup;
   }
 
   // Override |pkcs11_init_| for testing purpose
@@ -1037,6 +1043,13 @@ class UserDataAuth {
   ArcDiskQuota* arc_disk_quota_;
 
   // =============== Low Disk Space/Cleanup Related Variables ===============
+
+  // The default disk cleanup service.
+  std::unique_ptr<DiskCleanup> default_disk_cleanup_;
+
+  // The actual disk cleaunp service. Usually set to default_disk_cleanup, but
+  // can be overridden for testing.
+  DiskCleanup* disk_cleanup_;
 
   // The amount of time (in milliseconds) between each subsequent run of
   // LowDiskCallback(). This is usually set to a constant value that is

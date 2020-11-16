@@ -108,8 +108,6 @@ class MockHomeDirs : public HomeDirs {
   MOCK_METHOD(bool, enterprise_owned, (), (const, override));
   MOCK_METHOD(void, set_shadow_root, (const base::FilePath&), (override));
   MOCK_METHOD(const base::FilePath&, shadow_root, (), (const, override));
-  MOCK_METHOD(void, set_disk_cleanup, (DiskCleanup*), (override));
-  MOCK_METHOD(DiskCleanup*, disk_cleanup, (), (const, override));
 
   // Some unit tests require that MockHomeDirs actually call the real
   // GetPlainOwner() function. In those cases, you can use this function

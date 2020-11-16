@@ -49,24 +49,12 @@ const int kHomedirsCount = sizeof(kHomedirs) / sizeof(struct test_homedir);
 
 namespace cryptohome {
 
-TEST(DiskCleanupInitialization, Init) {
-  StrictMock<MockPlatform> platform_;
-  StrictMock<MockHomeDirs> homedirs_;
-  StrictMock<UserOldestActivityTimestampCache> timestamp_cache_;
-
-  DiskCleanup cleanup;
-
-  EXPECT_TRUE(cleanup.Init(&homedirs_, &platform_, &timestamp_cache_));
-  cleanup.set_routines_for_testing(new StrictMock<MockDiskCleanupRoutines>);
-}
-
 class DiskCleanupTest : public ::testing::Test {
  public:
   DiskCleanupTest() = default;
 
   void SetUp() {
-    cleanup_.reset(new DiskCleanup());
-    ASSERT_TRUE(cleanup_->Init(&homedirs_, &platform_, &timestamp_cache_));
+    cleanup_.reset(new DiskCleanup(&platform_, &homedirs_, &timestamp_cache_));
 
     cleanup_routines_ = new StrictMock<MockDiskCleanupRoutines>;
     cleanup_->set_routines_for_testing(cleanup_routines_);
