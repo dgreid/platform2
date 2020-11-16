@@ -1,5 +1,8 @@
 # Fingerprint Study Tool
 
+The fingerprint study tool allows you to capture raw fingerprint samples from
+study participants in order to analyze the performance of a fingerprint system.
+
 <!-- mdformat off(b/139308852) -->
 *** note
 See [Typography conventions] to understand what `(outside)`, `(inside)`,
@@ -7,7 +10,7 @@ See [Typography conventions] to understand what `(outside)`, `(inside)`,
 ***
 <!-- mdformat on -->
 
-## Running Fingerprint Study
+## Install/Run Fingerprint Study
 
 1.  On the host, run the following commands:
 
@@ -20,7 +23,7 @@ See [Typography conventions] to understand what `(outside)`, `(inside)`,
 
 2.  Reboot the device.
 
-3.  Navigate to http://localhost:9000 in a web browser.
+3.  Navigate to http://127.0.0.1:9000 in a web browser.
 
 ## Test on Host Using Mock ectool
 
@@ -109,11 +112,15 @@ Follow the `Generating Keys` section and then run the following commands:
 # Unfortunately, you still need a proper homedir for gpg to work.
 (in/out) $ export GNUPGHOME=/tmp/fpstudygpg-host
 (in/out) $ gio trash -f "${GNUPGHOME}" \
-           && mkdir -p "${GNUPGHOME}/private-keys-v1.d" \
-           && chmod -R 700 "${GNUPGHOME}"
+             && mkdir -p "${GNUPGHOME}/private-keys-v1.d" \
+             && chmod -R 700 "${GNUPGHOME}"
 
 # Test encrypting a sequence of numbers using only the public key.
-(in/out) $ gpg --verbose --no-default-keyring --keyring "${GNUPGHOME_KEYGEN}/chromeos-fpstudy-public-device.gpg" --trust-model always -ear ChromeOSFPStudy > test-output.gpg < <(seq 10)
+(in/out) $ gpg --verbose --no-default-keyring \
+             --keyring \
+             "${GNUPGHOME_KEYGEN}/chromeos-fpstudy-public-device.gpg" \
+             --trust-model always \
+             -ear ChromeOSFPStudy > test-output.gpg < <(seq 10)
 (in/out) $ file test-output.gpg
 (in/out) $ gpg --list-packets test-output.gpg
 
@@ -130,7 +137,9 @@ Follow the `Generating Keys` section and then run the following commands:
 Follow the `Generating Keys` section and then run the following commands:
 
 ```bash
-(in/out) $ ./host-run.sh --gpg-keyring "${GNUPGHOME}/chromeos-fpstudy-public-device.gpg" --gpg-recipients ChromeOSFPStudy
+(in/out) $ ./host-run.sh \
+             --gpg-keyring "${GNUPGHOME}/chromeos-fpstudy-public-device.gpg" \
+             --gpg-recipients ChromeOSFPStudy
 ```
 
 ### Decrypting Fingerprint Captures
@@ -233,7 +242,7 @@ expected by the fingerprint study tool, please modify
 
 Navigate to http://127.0.0.1:9000 in a web browser.
 
-### Build Fingerprint Study Image
+## Build Fingerprint Study Image
 
 This is an **untested** method of building an entire Chrome OS image with the
 fingerprint_study package included.
