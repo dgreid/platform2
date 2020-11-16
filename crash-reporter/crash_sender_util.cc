@@ -141,7 +141,22 @@ base::FilePath GetBasePartOfCrashFile(const base::FilePath& file_name) {
     return file_name;
   }
 
-  parts.resize(4);
+  // We temporarily must support two filename formats:
+  // foo.20201116.172933.1337.log AND
+  // foo.20201116.172933.12345.1337.log.
+  // The new format will roll out in M89, so we can remove this check and
+  // support only the new format once both:
+  // 1) M89 is more than six months old.
+  // 2) LTS releases are at M89 or later.
+  // TODO(https://crbug.com/1150566): remove this check.
+  // Check if this is the latter case by seeing if the 5th component (index 4)
+  // is all numbers
+  if (parts.size() > 5 &&
+      parts[4].find_first_not_of("0123456789") == std::string::npos) {
+    parts.resize(5);
+  } else {
+    parts.resize(4);
+  }
   const std::string base_name = base::JoinString(parts, ".");
 
   if (components.size() == 1)

@@ -639,14 +639,27 @@ TEST_F(CrashSenderUtilTest, DoesPauseFileExist) {
 }
 
 TEST_F(CrashSenderUtilTest, GetBasePartOfCrashFile) {
-  EXPECT_EQ("1", GetBasePartHelper("1"));
-  EXPECT_EQ("1.2", GetBasePartHelper("1.2"));
-  EXPECT_EQ("1.2.3", GetBasePartHelper("1.2.3"));
-  EXPECT_EQ("1.2.3.4", GetBasePartHelper("1.2.3.4"));
-  EXPECT_EQ("1.2.3.4", GetBasePartHelper("1.2.3.4.log"));
-  EXPECT_EQ("1.2.3.4", GetBasePartHelper("1.2.3.4.log"));
+  // The below are shorter than expected and shouldn't be touched
+  EXPECT_EQ("foo", GetBasePartHelper("foo"));
+  EXPECT_EQ("foo.1", GetBasePartHelper("foo.1"));
+  EXPECT_EQ("foo.1.2", GetBasePartHelper("foo.1.2"));
+  EXPECT_EQ("foo.1.2.3", GetBasePartHelper("foo.1.2.3"));
+
+  // Parsed according to old, four-component, version
+  EXPECT_EQ("foo.1.2.3", GetBasePartHelper("foo.1.2.3.4"));
+  // Parsed according to new, five-component version
+  EXPECT_EQ("foo.1.2.3.4", GetBasePartHelper("foo.1.2.3.4.log"));
+
+  // Parsed according to old, four-component, version
   EXPECT_EQ("1.2.3.4", GetBasePartHelper("1.2.3.4.log.tar"));
-  EXPECT_EQ("1.2.3.4", GetBasePartHelper("1.2.3.4.log.tar.gz"));
+  // Parsed according to new, five-component, version
+  EXPECT_EQ("foo.1.2.3.4", GetBasePartHelper("foo.1.2.3.4.log.tar"));
+
+  // Parsed according to old, four-component, version
+  EXPECT_EQ("foo.1.2.3", GetBasePartHelper("foo.1.2.3.log.tar.gz"));
+  // Parsed according to new, five-component, version
+  EXPECT_EQ("foo.1.2.3.4", GetBasePartHelper("foo.1.2.3.4.log.tar.gz"));
+
   // Directory should be preserved.
   EXPECT_EQ("/d/1.2", GetBasePartHelper("/d/1.2"));
   EXPECT_EQ("/d/1.2.3.4", GetBasePartHelper("/d/1.2.3.4.log"));
@@ -659,11 +672,11 @@ TEST_F(CrashSenderUtilTest, RemoveOrphanedCrashFiles) {
       paths::Get(paths::kSystemCrashDirectory);
   ASSERT_TRUE(base::CreateDirectory(crash_directory));
 
-  const base::FilePath new_log = crash_directory.Append("0.0.0.0.log");
-  const base::FilePath old1_log = crash_directory.Append("1.1.1.1.log");
-  const base::FilePath old1_meta = crash_directory.Append("1.1.1.1.meta");
-  const base::FilePath old2_log = crash_directory.Append("2.2.2.2.log");
-  const base::FilePath old3_log = crash_directory.Append("3.3.3.3.log");
+  const base::FilePath new_log = crash_directory.Append("0.0.0.0.0.log");
+  const base::FilePath old1_log = crash_directory.Append("1.1.1.1.1.log");
+  const base::FilePath old1_meta = crash_directory.Append("1.1.1.1.1.meta");
+  const base::FilePath old2_log = crash_directory.Append("2.2.2.2.2.log");
+  const base::FilePath old3_log = crash_directory.Append("3.3.3.3.3.log");
   const base::FilePath old4_log = crash_directory.Append("4.log");
 
   base::Time now = base::Time::Now();
@@ -1327,7 +1340,7 @@ TEST_P(CreateCrashFormDataTest, TestCreateCrashFormData) {
   const base::FilePath system_dir = paths::Get(paths::kSystemCrashDirectory);
   ASSERT_TRUE(base::CreateDirectory(system_dir));
 
-  const base::FilePath payload_file_relative("0.0.0.0.payload");
+  const base::FilePath payload_file_relative("0.0.0.0.0.payload");
   const base::FilePath payload_file_absolute =
       system_dir.Append(payload_file_relative);
   const std::string payload_contents = "foobar_payload";
@@ -1337,7 +1350,7 @@ TEST_P(CreateCrashFormDataTest, TestCreateCrashFormData) {
   const base::FilePath& payload_file =
       absolute_paths_ ? payload_file_absolute : payload_file_relative;
 
-  const base::FilePath log_file_relative("0.0.0.0.log");
+  const base::FilePath log_file_relative("0.0.0.0.0.log");
   const base::FilePath log_file_absolute = system_dir.Append(log_file_relative);
   const std::string log_contents = "foobar_log";
   if (missing_file_ != kLogFile) {
@@ -1382,7 +1395,7 @@ TEST_P(CreateCrashFormDataTest, TestCreateCrashFormData) {
   metadata.SetString("error_type", "fake_error");
 
   CrashDetails details = {
-      .meta_file = base::FilePath(system_dir).Append("0.0.0.0.meta"),
+      .meta_file = base::FilePath(system_dir).Append("0.0.0.0.0.meta"),
       .payload_file = payload_file,
       .payload_kind = "fake_payload",
       .client_id = kFakeClientId,
@@ -1437,7 +1450,7 @@ TEST_P(CreateCrashFormDataTest, TestCreateCrashFormData) {
        "fake_sig\r\n"
        "--boundary\r\n"
        "Content-Disposition: form-data; name=\"upload_file_fake_payload\"; "
-       "filename=\"0.0.0.0.payload\"\r\n"
+       "filename=\"0.0.0.0.0.payload\"\r\n"
        "Content-Transfer-Encoding: binary\r\n"
        "\r\n"
        "foobar_payload\r\n",
@@ -1463,7 +1476,7 @@ TEST_P(CreateCrashFormDataTest, TestCreateCrashFormData) {
            ? ""
            : "--boundary\r\n"
              "Content-Disposition: form-data; name=\"log\"; "
-             "filename=\"0.0.0.0.log\"\r\n"
+             "filename=\"0.0.0.0.0.log\"\r\n"
              "Content-Transfer-Encoding: binary\r\n"
              "\r\n"
              "foobar_log\r\n",
@@ -1504,12 +1517,12 @@ TEST_F(CrashSenderUtilTest, SendCrashes) {
   // Create the system crash directory, and crash files in it.
   const base::FilePath system_dir = paths::Get(paths::kSystemCrashDirectory);
   ASSERT_TRUE(base::CreateDirectory(system_dir));
-  const base::FilePath system_meta_file = system_dir.Append("0.0.0.0.meta");
-  const base::FilePath system_log = system_dir.Append("0.0.0.0.log");
+  const base::FilePath system_meta_file = system_dir.Append("0.0.0.0.0.meta");
+  const base::FilePath system_log = system_dir.Append("0.0.0.0.0.log");
   const base::FilePath system_processing =
-      system_dir.Append("0.0.0.0.processing");
+      system_dir.Append("0.0.0.0.0.processing");
   const char system_meta[] =
-      "payload=0.0.0.0.log\n"
+      "payload=0.0.0.0.0.log\n"
       "exec_name=exec_foo\n"
       "fake_report_id=123\n"
       "upload_var_prod=foo\n"
@@ -1528,11 +1541,12 @@ TEST_F(CrashSenderUtilTest, SendCrashes) {
   // Create a user crash directory, and crash files in it.
   const base::FilePath user_dir = paths::Get("/home/user/hash/crash");
   ASSERT_TRUE(base::CreateDirectory(user_dir));
-  const base::FilePath user_meta_file = user_dir.Append("0.0.0.0.meta");
-  const base::FilePath user_log = user_dir.Append("0.0.0.0.log");
-  const base::FilePath user_processing = user_dir.Append("0.0.0.0.processing");
+  const base::FilePath user_meta_file = user_dir.Append("0.0.0.0.0.meta");
+  const base::FilePath user_log = user_dir.Append("0.0.0.0.0.log");
+  const base::FilePath user_processing =
+      user_dir.Append("0.0.0.0.0.processing");
   const char user_meta[] =
-      "payload=0.0.0.0.log\n"
+      "payload=0.0.0.0.0.log\n"
       "exec_name=exec_bar\n"
       "fake_report_id=456\n"
       "upload_var_prod=bar\n"
@@ -1550,10 +1564,10 @@ TEST_F(CrashSenderUtilTest, SendCrashes) {
 
   // Create another user crash in "user". This will be skipped since the max
   // crash rate will be set to 2.
-  const base::FilePath user_meta_file2 = user_dir.Append("1.1.1.1.meta");
-  const base::FilePath user_log2 = user_dir.Append("1.1.1.1.log");
+  const base::FilePath user_meta_file2 = user_dir.Append("1.1.1.1.1.meta");
+  const base::FilePath user_log2 = user_dir.Append("1.1.1.1.1.log");
   const char user_meta2[] =
-      "payload=1.1.1.1.log\n"
+      "payload=1.1.1.1.1.log\n"
       "exec_name=exec_baz\n"
       "fake_report_id=789\n"
       "upload_var_prod=baz\n"
@@ -1693,12 +1707,12 @@ TEST_F(CrashSenderUtilTest, SendCrashes_Fail) {
   // Create the system crash directory, and crash files in it.
   const base::FilePath system_dir = paths::Get(paths::kSystemCrashDirectory);
   ASSERT_TRUE(base::CreateDirectory(system_dir));
-  const base::FilePath system_meta_file = system_dir.Append("0.0.0.0.meta");
-  const base::FilePath system_log = system_dir.Append("0.0.0.0.log");
+  const base::FilePath system_meta_file = system_dir.Append("0.0.0.0.0.meta");
+  const base::FilePath system_log = system_dir.Append("0.0.0.0.0.log");
   const base::FilePath system_processing =
-      system_dir.Append("0.0.0.0.processing");
+      system_dir.Append("0.0.0.0.0.processing");
   const char system_meta[] =
-      "payload=0.0.0.0.log\n"
+      "payload=0.0.0.0.0.log\n"
       "done=1\n";
   ASSERT_TRUE(test_util::CreateFile(system_meta_file, system_meta));
   ASSERT_TRUE(test_util::CreateFile(system_log, ""));
@@ -1751,12 +1765,12 @@ TEST_F(CrashSenderUtilDeathTest, SendCrashes_Crash) {
   // Create the system crash directory, and crash files in it.
   const base::FilePath system_dir = paths::Get(paths::kSystemCrashDirectory);
   ASSERT_TRUE(base::CreateDirectory(system_dir));
-  const base::FilePath system_meta_file = system_dir.Append("0.0.0.0.meta");
-  const base::FilePath system_log = system_dir.Append("0.0.0.0.log");
+  const base::FilePath system_meta_file = system_dir.Append("0.0.0.0.0.meta");
+  const base::FilePath system_log = system_dir.Append("0.0.0.0.0.log");
   const base::FilePath system_processing =
-      system_dir.Append("0.0.0.0.processing");
+      system_dir.Append("0.0.0.0.0.processing");
   const char system_meta[] =
-      "payload=0.0.0.0.log\n"
+      "payload=0.0.0.0.0.log\n"
       "done=1\n";
   ASSERT_TRUE(test_util::CreateFile(system_meta_file, system_meta));
   ASSERT_TRUE(test_util::CreateFile(system_log, ""));

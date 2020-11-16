@@ -739,19 +739,20 @@ TEST_F(CrashCollectorTest, FormatDumpBasename) {
   tm.tm_year = 110;
   tm.tm_isdst = -1;
   std::string basename = collector_.FormatDumpBasename("foo", mktime(&tm), 100);
-  ASSERT_EQ("foo.20100523.135015.100", basename);
+  EXPECT_THAT(basename,
+              testing::MatchesRegex(R"(foo\.20100523\.135015\.[0-9]{5}\.100)"));
 }
 
 TEST_F(CrashCollectorTest, GetCrashPath) {
-  EXPECT_EQ("/var/spool/crash/myprog.20100101.1200.1234.core",
+  EXPECT_EQ("/var/spool/crash/myprog.20100101.1200.56789.1234.core",
             collector_
                 .GetCrashPath(FilePath("/var/spool/crash"),
-                              "myprog.20100101.1200.1234", "core")
+                              "myprog.20100101.1200.56789.1234", "core")
                 .value());
-  EXPECT_EQ("/home/chronos/user/crash/chrome.20100101.1200.1234.dmp",
+  EXPECT_EQ("/home/chronos/user/crash/chrome.20100101.1200.56789.1234.dmp",
             collector_
                 .GetCrashPath(FilePath("/home/chronos/user/crash"),
-                              "chrome.20100101.1200.1234", "dmp")
+                              "chrome.20100101.1200.56789.1234", "dmp")
                 .value());
 }
 

@@ -67,10 +67,17 @@ void ParseCommandLine(int argc,
 // This can be overridden with a command line flag to the program.
 bool DoesPauseFileExist();
 
-// Gets the base part of a crash report file, such as name.01234.5678.9012 from
-// name.01234.5678.9012.meta or name.01234.5678.9012.log.tar.xz.  We make sure
-// "name" is sanitized in CrashCollector::Sanitize to not include any periods.
-// The directory part will be preserved.
+// Gets the base part of a crash report file, such as:
+// name.01234.5678.9012.meta -> name.01234.5678.9012
+// name.01234.5678.1234.9012.meta -> name.01234.5678.1234.9012
+// name.01234.5678.9012.log.tar.xz -> name.01234.5678.9012
+// name.01234.5678.1234.9012.log.tar.xz -> name.01234.5678.1234.9012
+// This supports both 4-segment and 5-segment basenames, as long as the last
+// segment always is numeric and the extension does not start with an
+// all-numeric component.
+//
+// We make sure "name" is sanitized in CrashCollector::Sanitize to not include
+// any periods. The directory part will be preserved.
 base::FilePath GetBasePartOfCrashFile(const base::FilePath& file_name);
 
 // Removes orphaned files in |crash_dir|, that are files 24 hours old or older,

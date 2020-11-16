@@ -21,7 +21,7 @@
 namespace {
 
 constexpr char kTestCrashDirectory[] = "test-crash-directory";
-constexpr char kBasenameWithoutExt[] = "arcvm_kernel.20190101.000000.0";
+constexpr char kBasenameWithoutExt[] = "arcvm_kernel.20190101.000000.*.0";
 constexpr char kExecName[] = "arcvm-kernel";
 constexpr time_t kTimestamp = 1546300800;
 
@@ -132,12 +132,14 @@ TEST_F(ArcvmKernelCollectorTest, HandleCrashWithRamoopsStreamAndTimestamp) {
   ASSERT_TRUE(collector_->HandleCrashWithRamoopsStreamAndTimestamp(
       GetBuildProperty(), ramoops_stream_.get(), kTimestamp));
 
-  base::FilePath metadata_path =
-      test_crash_directory_.Append(std::string(kBasenameWithoutExt) + ".meta");
-  EXPECT_TRUE(base::PathExists(metadata_path));
+  EXPECT_TRUE(test_util::DirectoryHasFileWithPattern(
+      test_crash_directory_, std::string(kBasenameWithoutExt) + ".meta",
+      nullptr));
 
-  base::FilePath ramoops_path =
-      test_crash_directory_.Append(std::string(kBasenameWithoutExt) + ".log");
+  base::FilePath ramoops_path;
+  ASSERT_TRUE(test_util::DirectoryHasFileWithPattern(
+      test_crash_directory_, std::string(kBasenameWithoutExt) + ".log",
+      &ramoops_path));
   std::string ramoops_content;
   EXPECT_TRUE(base::ReadFileToString(ramoops_path, &ramoops_content));
   EXPECT_THAT(ramoops_content, testing::HasSubstr(kKeywordinRamoops));

@@ -30,7 +30,7 @@ constexpr pid_t kPid = 1234;
 constexpr char kExecName[] = "execname";
 
 constexpr char kTestCrashDirectory[] = "test-crash-directory";
-constexpr char kBasenameWithoutExt[] = "execname.20190101.000000.1234";
+constexpr char kBasenameWithoutExt[] = "execname.20190101.000000.*.1234";
 
 constexpr char kMinidumpSampleContent[] = "*minidump*";
 
@@ -96,12 +96,14 @@ TEST_F(ArcvmNativeCollectorTest, HandleCrashWithMinidumpFD) {
   ASSERT_TRUE(collector_->HandleCrashWithMinidumpFD(
       GetBuildProperty(), GetCrashInfo(), std::move(minidump_fd_)));
 
-  base::FilePath metadata_path =
-      test_crash_directory_.Append(std::string(kBasenameWithoutExt) + ".meta");
-  EXPECT_TRUE(base::PathExists(metadata_path));
+  EXPECT_TRUE(test_util::DirectoryHasFileWithPattern(
+      test_crash_directory_, std::string(kBasenameWithoutExt) + ".meta",
+      nullptr));
 
-  base::FilePath minidump_path =
-      test_crash_directory_.Append(std::string(kBasenameWithoutExt) + ".dmp");
+  base::FilePath minidump_path;
+  ASSERT_TRUE(test_util::DirectoryHasFileWithPattern(
+      test_crash_directory_, std::string(kBasenameWithoutExt) + ".dmp",
+      &minidump_path));
   std::string minidump_content;
   EXPECT_TRUE(base::ReadFileToString(minidump_path, &minidump_content));
   EXPECT_EQ(minidump_content, kMinidumpSampleContent);

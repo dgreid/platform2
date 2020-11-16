@@ -27,6 +27,7 @@
 #include <base/files/scoped_file.h>
 #include <base/logging.h>
 #include <base/posix/eintr_wrapper.h>
+#include <base/rand_util.h>
 #include <base/run_loop.h>
 #include <base/scoped_clear_last_error.h>
 #include <base/strings/strcat.h>
@@ -684,10 +685,12 @@ std::string CrashCollector::FormatDumpBasename(const std::string& exec_name,
   struct tm tm;
   localtime_r(&timestamp, &tm);
   std::string sanitized_exec_name = Sanitize(exec_name);
-  return StringPrintf("%s.%04d%02d%02d.%02d%02d%02d.%d",
+  // Add a random 5-digit number to reduce the chance of filename collisions.
+  int rand = base::RandGenerator(100'000);
+  return StringPrintf("%s.%04d%02d%02d.%02d%02d%02d.%05d.%d",
                       sanitized_exec_name.c_str(), tm.tm_year + 1900,
                       tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min,
-                      tm.tm_sec, pid);
+                      tm.tm_sec, rand, pid);
 }
 
 FilePath CrashCollector::GetCrashPath(const FilePath& crash_directory,

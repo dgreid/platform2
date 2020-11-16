@@ -296,12 +296,12 @@ TEST_F(CrashSerializerTest, SerializeCrashes) {
   // Create the system crash directory, and crash files in it.
   const base::FilePath system_dir = paths::Get(paths::kSystemCrashDirectory);
   ASSERT_TRUE(base::CreateDirectory(system_dir));
-  const base::FilePath system_meta_file = system_dir.Append("0.0.0.0.meta");
-  const base::FilePath system_log = system_dir.Append("0.0.0.0.log");
+  const base::FilePath system_meta_file = system_dir.Append("0.0.0.0.0.meta");
+  const base::FilePath system_log = system_dir.Append("0.0.0.0.0.log");
   const base::FilePath system_processing =
-      system_dir.Append("0.0.0.0.processing");
+      system_dir.Append("0.0.0.0.0.processing");
   const char system_meta[] =
-      "payload=0.0.0.0.log\n"
+      "payload=0.0.0.0.0.log\n"
       "exec_name=exec_foo\n"
       "fake_report_id=123\n"
       "upload_var_prod=foo\n"
@@ -320,12 +320,13 @@ TEST_F(CrashSerializerTest, SerializeCrashes) {
   // Create a user crash directory, and crash files in it.
   const base::FilePath user_dir = paths::Get("/home/user/hash/crash");
   ASSERT_TRUE(base::CreateDirectory(user_dir));
-  const base::FilePath user_meta_file = user_dir.Append("0.0.0.0.meta");
-  const base::FilePath user_log = user_dir.Append("0.0.0.0.log");
-  const base::FilePath user_core = user_dir.Append("0.0.0.0.core");
-  const base::FilePath user_processing = user_dir.Append("0.0.0.0.processing");
+  const base::FilePath user_meta_file = user_dir.Append("0.0.0.0.0.meta");
+  const base::FilePath user_log = user_dir.Append("0.0.0.0.0.log");
+  const base::FilePath user_core = user_dir.Append("0.0.0.0.0.core");
+  const base::FilePath user_processing =
+      user_dir.Append("0.0.0.0.0.processing");
   const char user_meta[] =
-      "payload=0.0.0.0.log\n"
+      "payload=0.0.0.0.0.log\n"
       "exec_name=exec_bar\n"
       "fake_report_id=456\n"
       "upload_var_prod=bar\n"
@@ -401,7 +402,7 @@ TEST_F(CrashSerializerTest, SerializeCrashes) {
   EXPECT_EQ(resps[1].crash_id(), 0);
   ASSERT_TRUE(resps[1].has_blob());
   EXPECT_EQ(resps[1].blob().key(), "upload_file_log");
-  EXPECT_EQ(resps[1].blob().filename(), "0.0.0.0.log");
+  EXPECT_EQ(resps[1].blob().filename(), "0.0.0.0.0.log");
   EXPECT_EQ(resps[1].blob().blob(), "system log data");
 
   // Verify user crash
@@ -421,7 +422,7 @@ TEST_F(CrashSerializerTest, SerializeCrashes) {
   EXPECT_EQ(resps[3].crash_id(), 1);
   ASSERT_TRUE(resps[3].has_blob());
   EXPECT_EQ(resps[3].blob().key(), "upload_file_log");
-  EXPECT_EQ(resps[3].blob().filename(), "0.0.0.0.log");
+  EXPECT_EQ(resps[3].blob().filename(), "0.0.0.0.0.log");
   EXPECT_EQ(resps[3].blob().blob(), "user log data");
   EXPECT_EQ(resps[4].crash_id(), 1);
 
@@ -763,7 +764,7 @@ TEST_P(CrashSerializerParameterizedTest, SerializeCrash) {
   const base::FilePath system_dir = paths::Get(paths::kSystemCrashDirectory);
   ASSERT_TRUE(base::CreateDirectory(system_dir));
 
-  const base::FilePath payload_file_relative("0.0.0.0.payload");
+  const base::FilePath payload_file_relative("0.0.0.0.0.payload");
   const base::FilePath payload_file_absolute =
       system_dir.Append(payload_file_relative);
   const std::string payload_contents = "foobar_payload";
@@ -773,7 +774,7 @@ TEST_P(CrashSerializerParameterizedTest, SerializeCrash) {
   const base::FilePath& payload_file =
       absolute_paths_ ? payload_file_absolute : payload_file_relative;
 
-  const base::FilePath log_file_relative("0.0.0.0.log");
+  const base::FilePath log_file_relative("0.0.0.0.0.log");
   const base::FilePath log_file_absolute = system_dir.Append(log_file_relative);
   const std::string log_contents = "foobar_log";
   if (missing_file_ != kLogFile) {
@@ -804,7 +805,7 @@ TEST_P(CrashSerializerParameterizedTest, SerializeCrash) {
   const base::FilePath& file_var_file =
       absolute_paths_ ? file_var_file_absolute : file_var_file_relative;
 
-  const base::FilePath core_file_relative("0.0.0.0.core");
+  const base::FilePath core_file_relative("0.0.0.0.0.core");
   const base::FilePath core_file_absolute =
       system_dir.Append(core_file_relative);
   const std::string core_contents = "corey_mccoreface";
@@ -828,7 +829,7 @@ TEST_P(CrashSerializerParameterizedTest, SerializeCrash) {
   metadata.SetString("error_type", "fake_error");
 
   util::CrashDetails details = {
-      .meta_file = base::FilePath(system_dir).Append("0.0.0.0.meta"),
+      .meta_file = base::FilePath(system_dir).Append("0.0.0.0.0.meta"),
       .payload_file = payload_file,
       .payload_kind = "fake_payload",
       .client_id = kFakeClientId,
