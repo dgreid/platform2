@@ -183,6 +183,40 @@ TEST(DatapathTest, Start) {
                        ElementsAre("-A", "PREROUTING", "-i", "vmtap+", "-j",
                                    "MARK", "--set-mark", "1/1", "-w"),
                        true, nullptr));
+  // Asserts for apply_vpn_mark chain
+  EXPECT_CALL(runner, iptables(StrEq("mangle"),
+                               ElementsAre("-N", "apply_vpn_mark", "-w"), true,
+                               nullptr));
+  EXPECT_CALL(runner, iptables(StrEq("mangle"),
+                               ElementsAre("-F", "apply_vpn_mark", "-w"), true,
+                               nullptr));
+  EXPECT_CALL(runner, iptables(StrEq("mangle"),
+                               ElementsAre("-A", "OUTPUT", "-m", "mark",
+                                           "--mark", "0x00008000/0x0000c000",
+                                           "-j", "apply_vpn_mark", "-w"),
+                               true, nullptr));
+  EXPECT_CALL(runner, iptables(StrEq("mangle"),
+                               ElementsAre("-A", "apply_vpn_mark", "-m", "mark",
+                                           "!", "--mark", "0x0/0xffff0000",
+                                           "-j", "ACCEPT", "-w"),
+                               true, nullptr));
+  EXPECT_CALL(runner, ip6tables(StrEq("mangle"),
+                                ElementsAre("-N", "apply_vpn_mark", "-w"), true,
+                                nullptr));
+  EXPECT_CALL(runner, ip6tables(StrEq("mangle"),
+                                ElementsAre("-F", "apply_vpn_mark", "-w"), true,
+                                nullptr));
+  EXPECT_CALL(runner, ip6tables(StrEq("mangle"),
+                                ElementsAre("-A", "OUTPUT", "-m", "mark",
+                                            "--mark", "0x00008000/0x0000c000",
+                                            "-j", "apply_vpn_mark", "-w"),
+                                true, nullptr));
+  EXPECT_CALL(
+      runner,
+      ip6tables(StrEq("mangle"),
+                ElementsAre("-A", "apply_vpn_mark", "-m", "mark", "!", "--mark",
+                            "0x0/0xffff0000", "-j", "ACCEPT", "-w"),
+                true, nullptr));
 
   Datapath datapath(&runner, &firewall);
   datapath.Start();
@@ -257,6 +291,29 @@ TEST(DatapathTest, Stop) {
                        ElementsAre("-D", "OUTPUT", "-o", "rmnet+", "-s",
                                    "100.115.92.0/23", "-j", "DROP", "-w"),
                        true, nullptr));
+  // Asserts for apply_vpn_mark chain
+  EXPECT_CALL(runner, iptables(StrEq("mangle"),
+                               ElementsAre("-D", "OUTPUT", "-m", "mark",
+                                           "--mark", "0x00008000/0x0000c000",
+                                           "-j", "apply_vpn_mark", "-w"),
+                               true, nullptr));
+  EXPECT_CALL(runner, iptables(StrEq("mangle"),
+                               ElementsAre("-F", "apply_vpn_mark", "-w"), true,
+                               nullptr));
+  EXPECT_CALL(runner, iptables(StrEq("mangle"),
+                               ElementsAre("-X", "apply_vpn_mark", "-w"), true,
+                               nullptr));
+  EXPECT_CALL(runner, ip6tables(StrEq("mangle"),
+                                ElementsAre("-D", "OUTPUT", "-m", "mark",
+                                            "--mark", "0x00008000/0x0000c000",
+                                            "-j", "apply_vpn_mark", "-w"),
+                                true, nullptr));
+  EXPECT_CALL(runner, ip6tables(StrEq("mangle"),
+                                ElementsAre("-F", "apply_vpn_mark", "-w"), true,
+                                nullptr));
+  EXPECT_CALL(runner, ip6tables(StrEq("mangle"),
+                                ElementsAre("-X", "apply_vpn_mark", "-w"), true,
+                                nullptr));
 
   Datapath datapath(&runner, &firewall);
   datapath.Stop();
@@ -623,6 +680,14 @@ TEST(DatapathTest, StartRoutingDevice_CrosVM) {
                                             "-j", "CONNMARK", "--restore-mark",
                                             "--mask", "0xffff0000", "-w"),
                                 true, nullptr));
+  EXPECT_CALL(runner, iptables(StrEq("mangle"),
+                               ElementsAre("-A", "PREROUTING", "-i", "vmtap0",
+                                           "-j", "apply_vpn_mark", "-w"),
+                               true, nullptr));
+  EXPECT_CALL(runner, ip6tables(StrEq("mangle"),
+                                ElementsAre("-A", "PREROUTING", "-i", "vmtap0",
+                                            "-j", "apply_vpn_mark", "-w"),
+                                true, nullptr));
 
   Datapath datapath(&runner, &firewall);
   datapath.StartRoutingDevice("", "vmtap0", Ipv4Addr(1, 2, 3, 4),
@@ -714,6 +779,14 @@ TEST(DatapathTest, StopRoutingDevice_CrosVM) {
                                 ElementsAre("-D", "PREROUTING", "-i", "vmtap0",
                                             "-j", "CONNMARK", "--restore-mark",
                                             "--mask", "0xffff0000", "-w"),
+                                true, nullptr));
+  EXPECT_CALL(runner, iptables(StrEq("mangle"),
+                               ElementsAre("-D", "PREROUTING", "-i", "vmtap0",
+                                           "-j", "apply_vpn_mark", "-w"),
+                               true, nullptr));
+  EXPECT_CALL(runner, ip6tables(StrEq("mangle"),
+                                ElementsAre("-D", "PREROUTING", "-i", "vmtap0",
+                                            "-j", "apply_vpn_mark", "-w"),
                                 true, nullptr));
 
   Datapath datapath(&runner, &firewall);

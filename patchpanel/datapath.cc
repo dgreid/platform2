@@ -44,6 +44,8 @@ constexpr char kGuestIPv4Subnet[] = "100.115.92.0/23";
 constexpr std::array<const char*, 6> kPhysicalIfnamePrefixes{
     {"eth+", "wlan+", "mlan+", "usb+", "wwan+", "rmnet+"}};
 
+constexpr char kApplyVpnMarkChain[] = "apply_vpn_mark";
+
 std::string PrefixIfname(const std::string& prefix, const std::string& ifname) {
   std::string n = prefix + ifname;
   if (n.length() < IFNAMSIZ)
@@ -136,6 +138,28 @@ void Datapath::Start() {
   if (!AddOutboundIPv4SNATMark("vmtap+"))
     LOG(ERROR) << "Failed to set up NAT for TAP devices."
                << " Guest connectivity may be broken.";
+
+  // Sets up a mangle chain used in OUTPUT and PREROUTING for tagging "user"
+  // traffic that should be routed through a VPN.
+  if (!ModifyChain(IpFamily::Dual, "mangle", "-N", kApplyVpnMarkChain))
+    LOG(ERROR) << "Failed to set up " << kApplyVpnMarkChain << " mangle chain";
+  // Ensure that the chain is empty if patchpanel is restarting after a crash.
+  if (!ModifyChain(IpFamily::Dual, "mangle", "-F", kApplyVpnMarkChain))
+    LOG(ERROR) << "Failed to flush " << kApplyVpnMarkChain << " mangle chain";
+  // All local outgoing traffic eligible to VPN routing should traverse the VPN
+  // marking chain.
+  if (!ModifyFwmarkVpnJumpRule("OUTPUT", "-A", "" /*iif*/, kFwmarkRouteOnVpn,
+                               kFwmarkVpnMask))
+    LOG(ERROR) << "Failed to add jump rule to VPN chain in mangle OUTPUT chain";
+  // Any traffic that already has a routing tag applied is accepted.
+  if (!ModifyIptables(
+          IpFamily::Dual, "mangle",
+          {"-A", kApplyVpnMarkChain, "-m", "mark", "!", "--mark",
+           "0x0/" + kFwmarkRoutingMask.ToString(), "-j", "ACCEPT", "-w"}))
+    LOG(ERROR) << "Failed to add ACCEPT rule to VPN tagging chain for marked "
+                  "connections";
+  // TODO(b/161507671) Dynamically add fwmark routing tagging rules based on
+  // the VPN tunnel interface.
 }
 
 void Datapath::Stop() {
@@ -160,6 +184,16 @@ void Datapath::Stop() {
 
   if (process_runner_->sysctl_w("net.ipv4.ip_forward", "0") != 0)
     LOG(ERROR) << "Failed to restore net.ipv4.ip_forward.";
+
+  // Delete the VPN marking mangle chain
+  if (!ModifyFwmarkVpnJumpRule("OUTPUT", "-D", "" /*iif*/, kFwmarkRouteOnVpn,
+                               kFwmarkVpnMask))
+    LOG(ERROR)
+        << "Failed to remove from mangle OUTPUT chain jump rule to VPN chain";
+  if (!ModifyChain(IpFamily::Dual, "mangle", "-F", kApplyVpnMarkChain))
+    LOG(ERROR) << "Failed to flush " << kApplyVpnMarkChain << " mangle chain";
+  if (!ModifyChain(IpFamily::Dual, "mangle", "-X", kApplyVpnMarkChain))
+    LOG(ERROR) << "Failed to delete " << kApplyVpnMarkChain << " mangle chain";
 }
 
 bool Datapath::NetnsAttachName(const std::string& netns_name, pid_t netns_pid) {
@@ -569,8 +603,10 @@ void Datapath::StartRoutingDevice(const std::string& ext_ifname,
       LOG(ERROR) << "Failed to add PREROUTING CONNMARK restore rule for "
                  << int_ifname;
 
-    // TODO(b/161507671) When a VPN service starts, tag new connections with the
-    // fwmark routing tag for VPNs.
+    // Forwarded traffic from downstream virtual devices routed to the system
+    // logical default network is always eligible to be routed through a VPN.
+    if (!ModifyFwmarkVpnJumpRule("PREROUTING", "-A", int_ifname, {}, {}))
+      LOG(ERROR) << "Failed to add jump rule to VPN chain for " << int_ifname;
   }
 
   if (!ModifyFwmarkSourceTag("-A", int_ifname, source))
@@ -591,6 +627,7 @@ void Datapath::StopRoutingDevice(const std::string& ext_ifname,
     ModifyFwmarkRoutingTag("-D", ext_ifname, int_ifname);
   } else {
     ModifyConnmarkRestore(IpFamily::Dual, "PREROUTING", "-D", int_ifname);
+    ModifyFwmarkVpnJumpRule("PREROUTING", "-D", int_ifname, {}, {});
   }
 }
 
@@ -899,6 +936,49 @@ bool Datapath::ModifyIpForwarding(IpFamily family,
     success &= process_runner_->iptables("filter", args, log_failures) == 0;
   if (family & IpFamily::IPv6)
     success &= process_runner_->ip6tables("filter", args, log_failures) == 0;
+  return success;
+}
+
+bool Datapath::ModifyFwmarkVpnJumpRule(const std::string& chain,
+                                       const std::string& op,
+                                       const std::string& iif,
+                                       Fwmark mark,
+                                       Fwmark mask) {
+  std::vector<std::string> args = {op, chain};
+  if (!iif.empty()) {
+    args.push_back("-i");
+    args.push_back(iif);
+  }
+  if (mark.Value() != 0 && mask.Value() != 0) {
+    args.push_back("-m");
+    args.push_back("mark");
+    args.push_back("--mark");
+    args.push_back(mark.ToString() + "/" + mask.ToString());
+  }
+  args.insert(args.end(), {"-j", kApplyVpnMarkChain, "-w"});
+  return ModifyIptables(IpFamily::Dual, "mangle", args);
+}
+
+bool Datapath::ModifyChain(IpFamily family,
+                           const std::string& table,
+                           const std::string& op,
+                           const std::string& chain) {
+  return ModifyIptables(family, table, {op, chain, "-w"});
+}
+
+bool Datapath::ModifyIptables(IpFamily family,
+                              const std::string& table,
+                              const std::vector<std::string>& argv) {
+  if (!IsValidIpFamily(family)) {
+    LOG(ERROR) << "Incorrect IP family " << family;
+    return false;
+  }
+
+  bool success = true;
+  if (family & IpFamily::IPv4)
+    success &= process_runner_->iptables(table, argv) == 0;
+  if (family & IpFamily::IPv6)
+    success &= process_runner_->ip6tables(table, argv) == 0;
   return success;
 }
 

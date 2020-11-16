@@ -289,6 +289,18 @@ class Datapath {
                           const std::string& iif,
                           const std::string& oif,
                           bool log_failures = true);
+  bool ModifyFwmarkVpnJumpRule(const std::string& chain,
+                               const std::string& op,
+                               const std::string& iif,
+                               Fwmark mark,
+                               Fwmark mask);
+  bool ModifyChain(IpFamily family,
+                   const std::string& table,
+                   const std::string& op,
+                   const std::string& chain);
+  bool ModifyIptables(IpFamily family,
+                      const std::string& table,
+                      const std::vector<std::string>& argv);
   bool ModifyRtentry(ioctl_req_t op, struct rtentry* route);
   int FindIfIndex(const std::string& ifname);
 
