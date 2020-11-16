@@ -74,8 +74,6 @@ char kRootDirectoryInsideDlcModule[] = "root";
 const int kDlcFilePerms = 0644;
 const int kDlcDirectoryPerms = 0755;
 
-const int kImageLoaderTimeoutMs = 5000;
-
 bool WriteToFile(const FilePath& path, const string& data) {
   return WriteFile(path, data, /*truncate=*/true);
 }

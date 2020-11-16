@@ -461,7 +461,7 @@ bool DlcBase::Mount(ErrorPtr* err) {
           SystemState::Get()->active_boot_slot() == BootSlot::Slot::A
               ? imageloader::kSlotNameA
               : imageloader::kSlotNameB,
-          &mount_point, nullptr, kImageLoaderTimeoutMs)) {
+          &mount_point, nullptr)) {
     *err =
         Error::CreateInternal(FROM_HERE, error::kFailedToMountImage,
                               "Imageloader is unavailable for LoadDlcImage().");
@@ -494,8 +494,8 @@ bool DlcBase::Mount(ErrorPtr* err) {
 
 bool DlcBase::Unmount(ErrorPtr* err) {
   bool success = false;
-  if (!SystemState::Get()->image_loader()->UnloadDlcImage(
-          id_, package_, &success, nullptr, kImageLoaderTimeoutMs)) {
+  if (!SystemState::Get()->image_loader()->UnloadDlcImage(id_, package_,
+                                                          &success, nullptr)) {
     state_.set_last_error_code(kErrorInternal);
     *err = Error::Create(FROM_HERE, state_.last_error_code(),
                          "Imageloader is unavailable for UnloadDlcImage().");

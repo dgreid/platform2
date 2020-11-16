@@ -32,9 +32,6 @@ extern char kRootDirectoryInsideDlcModule[];
 extern const int kDlcFilePerms;
 extern const int kDlcDirectoryPerms;
 
-// Timeout in ms for DBus method calls into imageloader.
-extern const int kImageLoaderTimeoutMs;
-
 template <typename Arg>
 base::FilePath JoinPaths(Arg&& path) {
   return base::FilePath(path);
