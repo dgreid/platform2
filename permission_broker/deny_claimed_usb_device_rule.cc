@@ -5,6 +5,7 @@
 #include "permission_broker/deny_claimed_usb_device_rule.h"
 
 #include <libudev.h>
+#include <linux/usb/ch9.h>
 
 #include <memory>
 #include <string>
@@ -133,14 +134,28 @@ bool IsInterfaceUsbSerial(udev_device* iface) {
   return false;
 }
 
+bool IsInterfaceStorage(udev_device* iface) {
+  uint32_t interface_class;
+  if (!GetUIntSysattr(iface, "bInterfaceClass", &interface_class))
+    return false;
+  // This matches USB drives, SD adapters, and so on.
+  return interface_class == USB_CLASS_MASS_STORAGE;
+}
+
 bool IsInterfaceSafeToDetach(udev_device* iface) {
   // Normally the permission_broker prevents users from interfering with the
   // system usage of a USB device.
+
   // But in particular cases, a USB interface is deemed 'safe to detach' from
   // its kernel driver if the purpose of the driver is only exposing it to apps.
   // e.g. below the usb serial interfaces are only used by the chrome.serial
   // and WebSerial external API rather than in any intrinsic system use.
-  return IsInterfaceUsbSerial(iface);
+
+  // Storage devices are a special case that we allow to be shared to Guest VMs.
+  // Chrome provides extra protections to avoid exposing these devices to
+  // non-Guest VM components.
+
+  return IsInterfaceUsbSerial(iface) || IsInterfaceStorage(iface);
 }
 
 bool IsDeviceAllowedSerial(udev_device* device) {

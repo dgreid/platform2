@@ -79,7 +79,6 @@ PermissionBroker::PermissionBroker(scoped_refptr<dbus::Bus> bus,
   rule_engine_.AddRule(new DenyClaimedUsbDeviceRule());
   rule_engine_.AddRule(new DenyUninitializedDeviceRule());
   rule_engine_.AddRule(new DenyUsbDeviceClassRule(USB_CLASS_HUB));
-  rule_engine_.AddRule(new DenyUsbDeviceClassRule(USB_CLASS_MASS_STORAGE));
   rule_engine_.AddRule(new DenyUsbVendorIdRule(kLinuxFoundationUsbVendorId));
   rule_engine_.AddRule(new AllowHidrawDeviceRule());
   rule_engine_.AddRule(new AllowGroupTtyDeviceRule("serial"));
