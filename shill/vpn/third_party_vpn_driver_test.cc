@@ -121,37 +121,37 @@ TEST_F(ThirdPartyVpnDriverTest, ReconnectionEvents) {
   EXPECT_CALL(*adaptor_interface_, EmitPlatformMessage(static_cast<uint32_t>(
                                        ThirdPartyVpnDriver::kLinkChanged)));
   EXPECT_CALL(*mock_service, state()).WillOnce(Return(Service::kStateOnline));
-  driver_->OnDefaultServiceChanged(mock_service, true, mock_service, true);
+  service_->OnDefaultServiceChanged(mock_service, true, mock_service, true);
 
   // Default physical service has no connection -> kLinkDown.
   EXPECT_CALL(*adaptor_interface_, EmitPlatformMessage(static_cast<uint32_t>(
                                        ThirdPartyVpnDriver::kLinkDown)));
-  driver_->OnDefaultServiceChanged(nullptr, true, nullptr, true);
+  service_->OnDefaultServiceChanged(nullptr, true, nullptr, true);
 
   // New default physical service not online yet -> no change.
   EXPECT_CALL(*adaptor_interface_, EmitPlatformMessage(_)).Times(0);
   EXPECT_CALL(*mock_service, state())
       .WillOnce(Return(Service::kStateConnected));
-  driver_->OnDefaultServiceChanged(mock_service, true, mock_service, true);
+  service_->OnDefaultServiceChanged(mock_service, true, mock_service, true);
 
   EXPECT_CALL(*adaptor_interface_, EmitPlatformMessage(_)).Times(0);
   EXPECT_CALL(*mock_service, state())
       .WillOnce(Return(Service::kStateNoConnectivity));
-  driver_->OnDefaultServiceStateChanged(mock_service);
+  service_->OnDefaultServiceStateChanged(mock_service);
 
   // Default physical service comes Online -> kLinkUp.
   EXPECT_CALL(
       *adaptor_interface_,
       EmitPlatformMessage(static_cast<uint32_t>(ThirdPartyVpnDriver::kLinkUp)));
   EXPECT_CALL(*mock_service, state()).WillOnce(Return(Service::kStateOnline));
-  driver_->OnDefaultServiceStateChanged(mock_service);
+  service_->OnDefaultServiceStateChanged(mock_service);
 
   // Default physical service vanishes, but the app doesn't support
   // reconnecting -> kDisconnected.
   driver_->reconnect_supported_ = false;
   EXPECT_CALL(*adaptor_interface_, EmitPlatformMessage(static_cast<uint32_t>(
                                        ThirdPartyVpnDriver::kDisconnected)));
-  driver_->OnDefaultServiceChanged(nullptr, true, nullptr, true);
+  service_->OnDefaultServiceChanged(nullptr, true, nullptr, true);
 
   driver_->Disconnect();
 }

@@ -11,6 +11,7 @@
 #include <gtest/gtest_prod.h>  // for FRIEND_TEST
 
 #include "shill/callbacks.h"
+#include "shill/default_service_observer.h"
 #include "shill/service.h"
 
 namespace shill {
@@ -18,7 +19,7 @@ namespace shill {
 class KeyValueStore;
 class VPNDriver;
 
-class VPNService : public Service {
+class VPNService : public Service, public DefaultServiceObserver {
  public:
   enum DriverEvent {
     kEventConnectionSuccess = 0,
@@ -50,6 +51,10 @@ class VPNService : public Service {
   void OnBeforeSuspend(const ResultCallback& callback) override;
   void OnAfterResume() override;
   void OnDefaultServiceStateChanged(const ServiceRefPtr& service) override;
+  void OnDefaultServiceChanged(const ServiceRefPtr& logical_service,
+                               bool logical_service_changed,
+                               const ServiceRefPtr& physical_service,
+                               bool physical_service_changed) override;
 
   virtual void InitDriverPropertyStore();
 
@@ -99,6 +104,11 @@ class VPNService : public Service {
   std::string storage_id_;
   std::unique_ptr<VPNDriver> driver_;
   VirtualDeviceRefPtr device_;
+
+  // Helps distinguish between a network->network transition (where the
+  // client simply reconnects), and a network->link_down->network transition
+  // (where the client should disconnect, wait for link up, then reconnect).
+  bool link_down_;
 
   base::WeakPtrFactory<VPNService> weak_factory_{this};
 };

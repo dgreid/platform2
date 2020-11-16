@@ -13,7 +13,6 @@
 #include <base/files/file_path.h>
 #include <gtest/gtest_prod.h>  // for FRIEND_TEST
 
-#include "shill/default_service_observer.h"
 #include "shill/ipconfig.h"
 #include "shill/net/sockets.h"
 #include "shill/refptr_types.h"
@@ -28,9 +27,7 @@ class DeviceInfo;
 class Error;
 class OpenVPNManagementServer;
 
-class OpenVPNDriver : public VPNDriver,
-                      public RpcTaskDelegate,
-                      public DefaultServiceObserver {
+class OpenVPNDriver : public VPNDriver, public RpcTaskDelegate {
  public:
   enum ReconnectReason {
     kReconnectReasonUnknown,
@@ -222,13 +219,8 @@ class OpenVPNDriver : public VPNDriver,
   void Notify(const std::string& reason,
               const std::map<std::string, std::string>& dict) override;
 
-  // Implements DefaultServiceObserver.
-  void OnDefaultServiceChanged(const ServiceRefPtr& logical_service,
-                               bool logical_service_changed,
-                               const ServiceRefPtr& physical_service,
-                               bool physical_service_changed) override;
-
-  void OnDefaultServiceStateChanged(const ServiceRefPtr& service) override;
+  void OnDefaultPhysicalServiceEvent(
+      DefaultPhysicalServiceEvent event) override;
 
   void ReportConnectionMetrics();
 
@@ -247,11 +239,6 @@ class OpenVPNDriver : public VPNDriver,
   // The PID of the spawned openvpn process. May be 0 if no process has been
   // spawned yet or the process has died.
   int pid_;
-
-  // Helps distinguish between a network->network transition (where the
-  // client simply reconnects), and a network->link_down->network transition
-  // (where the client should disconnect, wait for link up, then reconnect).
-  bool link_down_;
 
   VPNService::DriverEventCallback service_callback_;
 

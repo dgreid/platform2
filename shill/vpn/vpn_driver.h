@@ -45,6 +45,17 @@ class VPNDriver {
     kArcBridge = 3,
   };
 
+  enum DefaultPhysicalServiceEvent {
+    // The default physical service becomes online from any other state.
+    kDefaultPhysicalServiceUp,
+    // There is no connected physical service (i.e., a physical service which
+    // has a connection) any more.
+    kDefaultPhysicalServiceDown,
+    // The default physical service changed from an online service to another
+    // online service.
+    kDefaultPhysicalServiceChanged,
+  };
+
   virtual ~VPNDriver();
 
   virtual void ConnectAsync(
@@ -68,7 +79,7 @@ class VPNDriver {
   // Power management events.
   virtual void OnBeforeSuspend(const ResultCallback& callback);
   virtual void OnAfterResume();
-  virtual void OnDefaultServiceStateChanged(const ServiceRefPtr& service);
+  virtual void OnDefaultPhysicalServiceEvent(DefaultPhysicalServiceEvent event);
 
   mockable std::string GetHost() const;
 

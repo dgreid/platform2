@@ -29,11 +29,20 @@ using std::string;
 
 namespace shill {
 
+namespace Logging {
+static auto kModuleLogScope = ScopeLogger::kVPN;
+static string ObjectID(const VPNService* s) {
+  return s->log_name();
+}
+}  // namespace Logging
+
 const char VPNService::kAutoConnNeverConnected[] = "never connected";
 const char VPNService::kAutoConnVPNAlreadyActive[] = "vpn already active";
 
 VPNService::VPNService(Manager* manager, std::unique_ptr<VPNDriver> driver)
-    : Service(manager, Technology::kVPN), driver_(std::move(driver)) {
+    : Service(manager, Technology::kVPN),
+      driver_(std::move(driver)),
+      link_down_(false) {
   if (driver_) {
     set_log_name("vpn_" + driver_->GetProviderType() + "_" +
                  base::NumberToString(serial_number()));
@@ -47,9 +56,12 @@ VPNService::VPNService(Manager* manager, std::unique_ptr<VPNDriver> driver)
       kPhysicalTechnologyProperty,
       StringAccessor(new CustomAccessor<VPNService, string>(
           this, &VPNService::GetPhysicalTechnologyProperty, nullptr)));
+  this->manager()->AddDefaultServiceObserver(this);
 }
 
-VPNService::~VPNService() = default;
+VPNService::~VPNService() {
+  manager()->RemoveDefaultServiceObserver(this);
+}
 
 void VPNService::OnConnect(Error* error) {
   manager()->vpn_provider()->DisconnectAll();
@@ -372,7 +384,41 @@ void VPNService::OnAfterResume() {
 }
 
 void VPNService::OnDefaultServiceStateChanged(const ServiceRefPtr& service) {
-  driver_->OnDefaultServiceStateChanged(service);
+  if (!link_down_ || service->state() != Service::kStateOnline)
+    return;
+
+  link_down_ = false;
+  driver_->OnDefaultPhysicalServiceEvent(VPNDriver::kDefaultPhysicalServiceUp);
+}
+
+void VPNService::OnDefaultServiceChanged(
+    const ServiceRefPtr& /* logical_service */,
+    bool /* logical_service_changed */,
+    const ServiceRefPtr& physical_service,
+    bool physical_service_changed) {
+  if (!physical_service_changed)
+    return;
+
+  SLOG(this, 2) << __func__ << "("
+                << (physical_service ? physical_service->log_name() : "-")
+                << ")";
+
+  if (physical_service && physical_service->state() == Service::kStateOnline) {
+    // The original service is no longer the default, but manager was able to
+    // find another physical service that is already Online.
+    driver_->OnDefaultPhysicalServiceEvent(
+        VPNDriver::kDefaultPhysicalServiceChanged);
+  } else {
+    // The default physical service went away, and nothing else is available
+    // right now. All we can do is wait.
+    if (link_down_)
+      return;
+    SLOG(this, 2) << __func__ << " - physical connection lost";
+    link_down_ = true;
+
+    driver_->OnDefaultPhysicalServiceEvent(
+        VPNDriver::kDefaultPhysicalServiceDown);
+  }
 }
 
 }  // namespace shill

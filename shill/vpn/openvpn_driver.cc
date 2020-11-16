@@ -161,8 +161,7 @@ OpenVPNDriver::OpenVPNDriver(Manager* manager, ProcessManager* process_manager)
       extra_certificates_file_(new CertificateFile()),
       lsb_release_file_(kLSBReleaseFile),
       openvpn_config_directory_(kDefaultOpenVPNConfigurationDirectory),
-      pid_(0),
-      link_down_(false) {}
+      pid_(0) {}
 
 OpenVPNDriver::~OpenVPNDriver() {
   Cleanup();
@@ -198,7 +197,6 @@ void OpenVPNDriver::Cleanup() {
     base::DeleteFile(openvpn_config_file_, false);
     openvpn_config_file_.clear();
   }
-  manager()->RemoveDefaultServiceObserver(this);
   rpc_task_.reset();
   ip_properties_ = IPConfig::Properties();
   if (pid_) {
@@ -607,9 +605,7 @@ void OpenVPNDriver::ConnectAsync(
   }
   StartConnectTimeout(kConnectTimeoutSeconds);
   rpc_task_.reset(new RpcTask(control_interface(), this));
-  if (SpawnOpenVPN()) {
-    manager()->AddDefaultServiceObserver(this);
-  } else {
+  if (!SpawnOpenVPN()) {
     FailService(Service::kFailureInternal, Service::kErrorDetailsNone);
   }
 }
@@ -1046,51 +1042,36 @@ vector<string> OpenVPNDriver::GetCommandLineArgs() {
   return args;
 }
 
-void OpenVPNDriver::OnDefaultServiceChanged(
-    const ServiceRefPtr& /*logical_service*/,
-    bool /*logical_service_changed*/,
-    const ServiceRefPtr& physical_service,
-    bool physical_service_changed) {
-  if (!physical_service_changed)
-    return;
-
-  SLOG(this, 2) << __func__ << "("
-                << (physical_service ? physical_service->log_name() : "-")
-                << ")";
-
+void OpenVPNDriver::OnDefaultPhysicalServiceEvent(
+    DefaultPhysicalServiceEvent event) {
   if (!service_callback_)
     return;
 
-  // Inform the user that the VPN is reconnecting.
-  service_callback_.Run(VPNService::kEventDriverReconnecting,
-                        Service::kFailureNone, Service::kErrorDetailsNone);
-  StopConnectTimeout();
-
-  if (physical_service && physical_service->state() == Service::kStateOnline) {
-    // The original service is no longer the default, but manager was able
-    // to find another physical service that is already Online.
-    // Ask the management server to reconnect immediately.
-    management_server_->ReleaseHold();
-    management_server_->Restart();
-    StartConnectTimeout(GetReconnectTimeoutSeconds(kReconnectReasonOffline));
-  } else {
-    // The default physical service went away, and nothing else is available
-    // right now.  All we can do is wait.
-    if (link_down_)
-      return;
-    SLOG(this, 2) << __func__ << " - physical connection lost";
-    link_down_ = true;
-
-    management_server_->Hold();
-    management_server_->Restart();
+  if (event == kDefaultPhysicalServiceDown ||
+      event == kDefaultPhysicalServiceChanged) {
+    // Inform the user that the VPN is reconnecting.
+    service_callback_.Run(VPNService::kEventDriverReconnecting,
+                          Service::kFailureNone, Service::kErrorDetailsNone);
+    StopConnectTimeout();
   }
-}
 
-void OpenVPNDriver::OnDefaultServiceStateChanged(const ServiceRefPtr& service) {
-  if (link_down_ && service->state() == Service::kStateOnline) {
-    link_down_ = false;
-    management_server_->ReleaseHold();
-    StartConnectTimeout(GetReconnectTimeoutSeconds(kReconnectReasonOffline));
+  switch (event) {
+    case kDefaultPhysicalServiceUp:
+      management_server_->ReleaseHold();
+      StartConnectTimeout(GetReconnectTimeoutSeconds(kReconnectReasonOffline));
+      break;
+    case kDefaultPhysicalServiceDown:
+      management_server_->Hold();
+      management_server_->Restart();
+      break;
+    case kDefaultPhysicalServiceChanged:
+      // Ask the management server to reconnect immediately.
+      management_server_->ReleaseHold();
+      management_server_->Restart();
+      StartConnectTimeout(GetReconnectTimeoutSeconds(kReconnectReasonOffline));
+      break;
+    default:
+      NOTREACHED();
   }
 }
 

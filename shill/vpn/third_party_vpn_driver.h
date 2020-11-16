@@ -14,7 +14,6 @@
 #include <base/callback.h>
 #include <gtest/gtest_prod.h>
 
-#include "shill/default_service_observer.h"
 #include "shill/ipconfig.h"
 #include "shill/net/io_handler.h"
 #include "shill/refptr_types.h"
@@ -28,7 +27,7 @@ class FileIO;
 class IOHandlerFactory;
 class ThirdPartyVpnAdaptorInterface;
 
-class ThirdPartyVpnDriver : public VPNDriver, public DefaultServiceObserver {
+class ThirdPartyVpnDriver : public VPNDriver {
  public:
   enum PlatformMessage {
     kConnected = 1,
@@ -73,13 +72,9 @@ class ThirdPartyVpnDriver : public VPNDriver, public DefaultServiceObserver {
   IfType GetIfType() const override;
   void Disconnect() override;
 
-  // Implements DefaultServiceObserver.
-  void OnDefaultServiceChanged(const ServiceRefPtr& logical_service,
-                               bool logical_service_changed,
-                               const ServiceRefPtr& physical_service,
-                               bool physical_service_changed) override;
+  void OnDefaultPhysicalServiceEvent(
+      DefaultPhysicalServiceEvent event) override;
 
-  void OnDefaultServiceStateChanged(const ServiceRefPtr& service) override;
   bool Load(const StoreInterface* storage,
             const std::string& storage_id) override;
   bool Save(StoreInterface* storage,
@@ -210,10 +205,6 @@ class ThirdPartyVpnDriver : public VPNDriver, public DefaultServiceObserver {
   void OnInput(InputData* data);
   void OnInputError(const std::string& error);
 
-  // This function is called when a new default service first comes online,
-  // so the app knows it needs to reconnect to the VPN gateway.
-  void TriggerReconnect(const ServiceRefPtr& service);
-
   static const Property kProperties[];
 
   // This variable keeps track of the active instance. There can be multiple
@@ -255,11 +246,6 @@ class ThirdPartyVpnDriver : public VPNDriver, public DefaultServiceObserver {
   // that wasn't in the original API.  If not, we won't send link_* or
   // suspend/resume signals.
   bool reconnect_supported_;
-
-  // Helps distinguish between a network->network transition (where the
-  // client simply reconnects), and a network->link_down->network transition
-  // (where the client should disconnect, wait for link up, then reconnect).
-  bool link_down_;
 
   VPNService::DriverEventCallback service_callback_;
 
