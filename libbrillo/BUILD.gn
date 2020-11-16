@@ -167,10 +167,8 @@ libbrillo_sublibs = [
   {
     library_name = "brillo-cryptohome"
     all_dependent_pkg_deps = [ "openssl" ]
-    sources = [
-      "brillo/cryptohome.cc",
-      "brillo/secure_blob.cc",
-    ]
+    deps = [ ":libbrillo-core" ]
+    sources = [ "brillo/cryptohome.cc" ]
   },
 
   {
