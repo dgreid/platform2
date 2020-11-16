@@ -217,8 +217,8 @@ bool CrosFpDevice::FpReadMatchSecret(uint16_t index,
             cmd.Resp()->positive_match_secret +
                 sizeof(cmd.Resp()->positive_match_secret),
             secret->begin());
-  brillo::SecureMemset(cmd.Resp()->positive_match_secret, 0,
-                       sizeof(cmd.Resp()->positive_match_secret));
+  brillo::SecureClear(cmd.Resp()->positive_match_secret,
+                      sizeof(cmd.Resp()->positive_match_secret));
   return true;
 }
 

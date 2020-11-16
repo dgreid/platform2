@@ -94,7 +94,7 @@ brillo::SecureBlob StoreRSAPrivateKey(RSA* rsa_key_pair) {
   CHECK_GT(size, 0u);
   CHECK(buffer);
   brillo::SecureBlob key_blob(buffer, buffer + size);
-  brillo::SecureMemset(buffer, 0, size);
+  brillo::SecureClear(buffer, size);
   return key_blob;
 }
 

@@ -6,13 +6,12 @@
 
 #include <cstdint>
 
+#include <openssl/crypto.h>
+
 namespace brillo {
 
-BRILLO_DISABLE_ASAN void* SecureMemset(void* v, int c, size_t n) {
-  volatile uint8_t* p = reinterpret_cast<volatile uint8_t*>(v);
-  while (n--)
-    *p++ = c;
-  return v;
+BRILLO_DISABLE_ASAN void SecureClear(void* v, size_t n) {
+  OPENSSL_cleanse(v, n);
 }
 
 int SecureMemcmp(const void* s1, const void* s2, size_t n) {

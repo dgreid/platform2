@@ -1036,7 +1036,7 @@ void Service::NotifyEvent(CryptohomeEventBase* event) {
       g_signal_emit(cryptohome_, async_data_complete_signal_, 0,
                     result->sequence_id(), result->return_status(),
                     tmp_array.get());
-      brillo::SecureMemset(tmp_array.get()->data, 0, tmp_array.get()->len);
+      brillo::SecureClear(tmp_array.get()->data, tmp_array.get()->len);
       SendAsyncIdInfoToUma(result->sequence_id(), base::Time::Now());
     }
     if (result->pkcs11_init()) {

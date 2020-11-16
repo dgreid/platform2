@@ -59,8 +59,9 @@ libbrillo_sublibs = [
     # for composing -l*** flags in libbrillo-${libbasever}.so.
     # (Current version of GN deployed to ChromeOS doesn't have string_replace.)
     library_name = "brillo-core"
+    all_dependent_pkg_deps = [ "openssl" ]
     if (use.dbus) {
-      all_dependent_pkg_deps = [ "dbus-1" ]
+      all_dependent_pkg_deps += [ "dbus-1" ]
     }
     libs = [ "modp_b64" ]
     sources = [

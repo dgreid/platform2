@@ -711,7 +711,7 @@ Tpm::TpmRetryAction TpmImpl::DecryptBlob(
 
   plaintext->resize(dec_data_length);
   memcpy(plaintext->data(), dec_data.value(), dec_data_length);
-  brillo::SecureMemset(dec_data.value(), 0, dec_data_length);
+  brillo::SecureClear(dec_data.value(), dec_data_length);
 
   return kTpmRetryNone;
 }
@@ -875,7 +875,7 @@ Tpm::TpmRetryAction TpmImpl::UnsealWithAuthorization(
     return ResultToRetryAction(result);
   }
   plaintext->assign(&dec_data.value()[0], &dec_data.value()[dec_data_length]);
-  brillo::SecureMemset(dec_data.value(), 0, dec_data_length);
+  brillo::SecureClear(dec_data.value(), dec_data_length);
 
   return kTpmRetryNone;
 }
@@ -895,7 +895,7 @@ bool TpmImpl::GetPublicKeyBlob(TSS_HCONTEXT context_handle,
 
   SecureBlob local_data(blob_size);
   memcpy(local_data.data(), blob.value(), blob_size);
-  brillo::SecureMemset(blob.value(), 0, blob_size);
+  brillo::SecureClear(blob.value(), blob_size);
   data_out->swap(local_data);
   return true;
 }
@@ -1286,7 +1286,7 @@ bool TpmImpl::GetRandomDataSecureBlob(size_t length, brillo::SecureBlob* data) {
     return false;
   }
   memcpy(random.data(), tpm_data.value(), random.size());
-  brillo::SecureMemset(tpm_data.value(), 0, random.size());
+  brillo::SecureClear(tpm_data.value(), random.size());
   data->swap(random);
   return true;
 }
@@ -1902,18 +1902,18 @@ bool TpmImpl::DecryptIdentityRequest(RSA* pca_key,
 
   identity_binding->assign(&proof.identityBinding[0],
                            &proof.identityBinding[proof.identityBindingSize]);
-  brillo::SecureMemset(proof.identityBinding, 0, proof.identityBindingSize);
+  brillo::SecureClear(proof.identityBinding, proof.identityBindingSize);
   endorsement_credential->assign(
       &proof.endorsementCredential[0],
       &proof.endorsementCredential[proof.endorsementSize]);
-  brillo::SecureMemset(proof.endorsementCredential, 0, proof.endorsementSize);
+  brillo::SecureClear(proof.endorsementCredential, proof.endorsementSize);
   platform_credential->assign(&proof.platformCredential[0],
                               &proof.platformCredential[proof.platformSize]);
-  brillo::SecureMemset(proof.platformCredential, 0, proof.platformSize);
+  brillo::SecureClear(proof.platformCredential, proof.platformSize);
   conformance_credential->assign(
       &proof.conformanceCredential[0],
       &proof.conformanceCredential[proof.conformanceSize]);
-  brillo::SecureMemset(proof.conformanceCredential, 0, proof.conformanceSize);
+  brillo::SecureClear(proof.conformanceCredential, proof.conformanceSize);
   return true;
 }
 
@@ -2040,7 +2040,7 @@ bool TpmImpl::MakeIdentity(SecureBlob* identity_public_key_der,
     LOG(ERROR) << "MakeIdentity: Failed to decrypt the identity request.";
     return false;
   }
-  brillo::SecureMemset(request.value(), 0, request_length);
+  brillo::SecureClear(request.value(), request_length);
 
   // We need the endorsement credential. If CollateIdentityRequest does not
   // provide it, read it manually.
@@ -2272,7 +2272,7 @@ bool TpmImpl::Unseal(const brillo::SecureBlob& sealed_value,
     return false;
   }
   value->assign(&dec_data.value()[0], &dec_data.value()[dec_data_length]);
-  brillo::SecureMemset(dec_data.value(), 0, dec_data_length);
+  brillo::SecureClear(dec_data.value(), dec_data_length);
   return true;
 }
 
@@ -2568,7 +2568,7 @@ bool TpmImpl::ActivateIdentity(const brillo::Blob& delegate_blob,
   }
   identity_credential->assign(&credential_buffer.value()[0],
                               &credential_buffer.value()[credential_length]);
-  brillo::SecureMemset(credential_buffer.value(), 0, credential_length);
+  brillo::SecureClear(credential_buffer.value(), credential_length);
   return true;
 }
 
@@ -2633,7 +2633,7 @@ bool TpmImpl::Sign(const SecureBlob& key_blob,
     return false;
   }
   SecureBlob tmp(buffer.value(), buffer.value() + length);
-  brillo::SecureMemset(buffer.value(), 0, length);
+  brillo::SecureClear(buffer.value(), length);
   signature->swap(tmp);
   return true;
 }
@@ -2902,7 +2902,7 @@ Tpm::TpmRetryAction TpmImpl::GetDataAttribute(TSS_HCONTEXT context,
     return ResultToRetryAction(result);
   }
   SecureBlob tmp(buf.value(), buf.value() + length);
-  brillo::SecureMemset(buf.value(), 0, length);
+  brillo::SecureClear(buf.value(), length);
   data->swap(tmp);
   return Tpm::kTpmRetryNone;
 }

@@ -34,7 +34,7 @@ DatabaseImpl::DatabaseImpl(CryptoUtility* crypto, TpmUtility* tpm_utility)
     : io_(this), crypto_(crypto), tpm_utility_(tpm_utility) {}
 
 DatabaseImpl::~DatabaseImpl() {
-  brillo::SecureMemset(base::data(database_key_), 0, database_key_.size());
+  brillo::SecureClear(base::data(database_key_), database_key_.size());
 }
 
 bool DatabaseImpl::Initialize() {

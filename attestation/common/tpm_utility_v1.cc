@@ -1122,7 +1122,7 @@ bool TpmUtilityV1::DecryptIdentityRequest(RSA* pca_key,
 
   identity_binding->assign(&proof.identityBinding[0],
                            &proof.identityBinding[proof.identityBindingSize]);
-  brillo::SecureMemset(proof.identityBinding, 0, proof.identityBindingSize);
+  brillo::SecureClear(proof.identityBinding, proof.identityBindingSize);
   return true;
 }
 
@@ -1391,7 +1391,7 @@ bool TpmUtilityV1::MakeIdentity(std::string* identity_public_key_der,
     LOG(ERROR) << "MakeIdentity: Failed to decrypt the identity request.";
     return false;
   }
-  brillo::SecureMemset(request.value(), 0, request_length);
+  brillo::SecureClear(request.value(), request_length);
 
   // Get the AIK public key.
   if (!GetDataAttribute(context_handle, identity_key, TSS_TSPATTRIB_KEY_BLOB,

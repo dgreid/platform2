@@ -12,6 +12,8 @@
 #include <limits>
 #include <memory>
 
+#include <openssl/crypto.h>
+
 #include <base/callback_helpers.h>
 #include <base/logging.h>
 #include <brillo/brillo_export.h>
@@ -176,7 +178,7 @@ class BRILLO_PRIVATE SecureAllocator {
     if (!v)
       return;
     // This is guaranteed not to be optimized out.
-    SecureMemset(v, 0, n);
+    SecureClear(v, n);
   }
 
  private:

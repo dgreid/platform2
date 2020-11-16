@@ -12,7 +12,10 @@
 
 namespace brillo {
 
-// Secure memset(). This function is guaranteed to fill in the whole buffer
+// An implementation of the proposed "secure_clear" standard:
+// http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2020/p1315r5.html.
+//
+// This function is guaranteed to fill in the whole buffer
 // and is not subject to compiler optimization as allowed by Sub-clause 5.1.2.3
 // of C Standard [ISO/IEC 9899:2011] which states:
 // In the abstract machine, all expressions are evaluated as specified by the
@@ -24,9 +27,9 @@ namespace brillo {
 // compilers implement this function as intrinsic and know of its side effects),
 // this function will not be optimized out.
 //
-// SecureMemset is used to write beyond the size() in several functions.
+// SecureClear is used to write beyond the size() in several functions.
 // Since this is intentional, disable address sanitizer from analyzing it.
-BRILLO_EXPORT BRILLO_DISABLE_ASAN void* SecureMemset(void* v, int c, size_t n);
+BRILLO_EXPORT BRILLO_DISABLE_ASAN void SecureClear(void* v, size_t n);
 
 // Compare [n] bytes starting at [s1] with [s2] and return 0 if they match,
 // 1 if they don't. Time taken to perform the comparison is only dependent on

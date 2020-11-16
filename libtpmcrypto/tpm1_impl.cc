@@ -155,7 +155,7 @@ bool Tpm1Impl::Unseal(const SecureBlob& sealed_value, SecureBlob* value) {
     return false;
   }
   value->assign(&dec_data.value()[0], &dec_data.value()[dec_data_length]);
-  brillo::SecureMemset(dec_data.value(), 0, dec_data_length);
+  brillo::SecureClear(dec_data.value(), dec_data_length);
   return true;
 }
 

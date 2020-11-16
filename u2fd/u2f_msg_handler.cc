@@ -309,8 +309,8 @@ U2fMessageHandler::Cr50CmdStatus U2fMessageHandler::DoU2fGenerate(
   Cr50CmdStatus generate_status = static_cast<Cr50CmdStatus>(
       proxy_->SendU2fGenerate(generate_req, &generate_resp));
 
-  brillo::SecureMemset(&generate_req.userSecret, 0,
-                       sizeof(generate_req.userSecret));
+  brillo::SecureClear(&generate_req.userSecret,
+                      sizeof(generate_req.userSecret));
 
   if (generate_status != Cr50CmdStatus::kSuccess) {
     return generate_status;
@@ -357,7 +357,7 @@ U2fMessageHandler::Cr50CmdStatus U2fMessageHandler::DoU2fSign(
   Cr50CmdStatus sign_status =
       static_cast<Cr50CmdStatus>(proxy_->SendU2fSign(sign_req, &sign_resp));
 
-  brillo::SecureMemset(&sign_req.userSecret, 0, sizeof(sign_req.userSecret));
+  brillo::SecureClear(&sign_req.userSecret, sizeof(sign_req.userSecret));
 
   if (sign_status != Cr50CmdStatus::kSuccess) {
     return sign_status;
@@ -402,7 +402,7 @@ U2fMessageHandler::Cr50CmdStatus U2fMessageHandler::DoU2fSignCheckOnly(
   Cr50CmdStatus sign_status =
       static_cast<Cr50CmdStatus>(proxy_->SendU2fSign(sign_req, nullptr));
 
-  brillo::SecureMemset(&sign_req.userSecret, 0, sizeof(sign_req.userSecret));
+  brillo::SecureClear(&sign_req.userSecret, sizeof(sign_req.userSecret));
 
   return sign_status;
 }
@@ -431,8 +431,7 @@ U2fMessageHandler::Cr50CmdStatus U2fMessageHandler::DoG2fAttest(
   Cr50CmdStatus attest_status = static_cast<Cr50CmdStatus>(
       proxy_->SendU2fAttest(attest_req, &attest_resp));
 
-  brillo::SecureMemset(&attest_req.userSecret, 0,
-                       sizeof(attest_req.userSecret));
+  brillo::SecureClear(&attest_req.userSecret, sizeof(attest_req.userSecret));
 
   if (attest_status != Cr50CmdStatus::kSuccess) {
     // We are attesting to a key handle that we just created, so if
