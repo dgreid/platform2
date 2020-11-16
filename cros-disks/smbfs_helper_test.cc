@@ -56,6 +56,9 @@ class SmbfsHelperTest : public ::testing::Test {
         .WillByDefault(DoAll(SetArgPointee<1>(kFilesAccessGID), Return(true)));
     ON_CALL(platform_, GetUserAndGroupId(FUSEHelper::kFilesUser, _, _))
         .WillByDefault(DoAll(SetArgPointee<1>(kFilesUID), Return(true)));
+    ON_CALL(platform_, GetUserAndGroupId("fuse-smbfs", _, _))
+        .WillByDefault(
+            DoAll(SetArgPointee<1>(123), SetArgPointee<2>(456), Return(true)));
   }
 
  protected:

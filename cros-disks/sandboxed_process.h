@@ -7,6 +7,7 @@
 
 #include <sys/types.h>
 
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -110,6 +111,20 @@ class SandboxedProcess : public Process {
   minijail* jail_;
   bool run_custom_init_ = false;
   base::ScopedFD custom_init_control_fd_;
+};
+
+// Interface for creating preconfigured instances of |SandboxedProcess|.
+class SandboxedProcessFactory {
+ public:
+  SandboxedProcessFactory() = default;
+  virtual ~SandboxedProcessFactory() = default;
+  virtual std::unique_ptr<SandboxedProcess> CreateSandboxedProcess() const = 0;
+};
+
+// Ties executable with the corresponding seccomp policy configuration.
+struct SandboxedExecutable {
+  base::FilePath executable;
+  base::Optional<base::FilePath> seccomp_policy = {};
 };
 
 }  // namespace cros_disks

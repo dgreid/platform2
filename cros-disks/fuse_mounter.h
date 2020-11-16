@@ -17,6 +17,8 @@
 
 #include "cros-disks/metrics.h"
 #include "cros-disks/mounter.h"
+#include "cros-disks/sandboxed_process.h"
+#include "cros-disks/user.h"
 
 namespace brillo {
 class ProcessReaper;
@@ -27,6 +29,52 @@ namespace cros_disks {
 class Platform;
 class Process;
 class SandboxedProcess;
+
+// Class for creating instances of SandboxedProcess with appropriate
+// configuration.
+class FUSESandboxedProcessFactory : public SandboxedProcessFactory {
+ public:
+  FUSESandboxedProcessFactory(
+      const Platform* platform,
+      SandboxedExecutable executable,
+      OwnerUser run_as,
+      bool has_network_access = false,
+      std::vector<gid_t> supplementary_groups = {},
+      base::Optional<base::FilePath> mount_namespace = {});
+  ~FUSESandboxedProcessFactory() override;
+
+  // Returns pre-configured sandbox with the most essential set up. Additional
+  // per-instance configuration should be done by the caller if needed.
+  std::unique_ptr<SandboxedProcess> CreateSandboxedProcess() const override;
+
+  const base::FilePath& executable() const { return executable_; }
+  const OwnerUser& run_as() const { return run_as_; }
+
+ private:
+  friend class FUSESandboxedProcessFactoryTest;
+
+  bool ConfigureSandbox(SandboxedProcess* sandbox) const;
+
+  const Platform* const platform_;
+
+  // Path to the FUSE daemon executable.
+  const base::FilePath executable_;
+
+  // Path to the seccomp policy configuration.
+  const base::Optional<base::FilePath> seccomp_policy_;
+
+  // UID/GID to run the FUSE daemon as.
+  const OwnerUser run_as_;
+
+  // Whether to leave network accessible from the sandbox.
+  const bool has_network_access_;
+
+  // Additional groups to associate with the FUSE daemon process.
+  const std::vector<gid_t> supplementary_groups_;
+
+  // Path identifying the mount namespace to use.
+  const base::Optional<base::FilePath> mount_namespace_;
+};
 
 // Uprivileged mounting of any FUSE filesystem. Filesystem-specific set up
 // and sandboxing is to be done in a subclass.
@@ -188,15 +236,6 @@ class FUSEMounterLegacy : public FUSEMounter {
   // Not recorded if empty or if metrics is null.
   const std::string metrics_name_;
 
-  // Path of the FUSE mount program.
-  const std::string mount_program_;
-
-  // User to run the FUSE mount program as.
-  const std::string mount_user_;
-
-  // Group to run the FUSE mount program as.
-  const std::string mount_group_;
-
   // If not empty the path to BPF seccomp filter policy.
   const std::string seccomp_policy_;
 
@@ -204,19 +243,12 @@ class FUSEMounterLegacy : public FUSEMounter {
   // etc).
   const BindPaths bind_paths_;
 
-  // Whether to FUSE mount program needs to access the network.
-  const bool network_access_;
-
-  // If not empty, mount namespace where the source path exists.
-  const std::string mount_namespace_;
-
-  // Supplementary groups to run the FUSE mount program with.
-  const std::vector<gid_t> supplementary_groups_;
-
   // Possible codes returned by the FUSE mount program to ask for a password.
   std::vector<int> password_needed_codes_;
 
   const MountOptions mount_options_;
+
+  const FUSESandboxedProcessFactory sandbox_factory_;
 };
 
 }  // namespace cros_disks

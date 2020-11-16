@@ -11,6 +11,9 @@
 #include <utility>
 #include <vector>
 
+#include <base/files/file_util.h>
+#include <base/files/scoped_temp_dir.h>
+#include <base/strings/stringprintf.h>
 #include <brillo/process/process_reaper.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -38,12 +41,9 @@ using testing::StartsWith;
 
 const uid_t kMountUID = 200;
 const gid_t kMountGID = 201;
-const uid_t kFilesUID = 700;
-const uid_t kFilesGID = 701;
-const uid_t kFilesAccessGID = 1501;
 const char kMountUser[] = "fuse-fuse";
 const char kFUSEType[] = "fuse";
-const char kMountProgram[] = "dummy";
+const char kMountProgram[] = "/bin/dummy";
 const char kSomeSource[] = "/dev/dummy";
 const char kMountDir[] = "/mnt";
 const int kPasswordNeededCode = 42;
@@ -54,8 +54,6 @@ class MockFUSEPlatform : public Platform {
   MockFUSEPlatform() {
     ON_CALL(*this, GetUserAndGroupId(_, _, _))
         .WillByDefault(Invoke(this, &MockFUSEPlatform::GetUserAndGroupIdImpl));
-    ON_CALL(*this, GetGroupId(_, _))
-        .WillByDefault(Invoke(this, &MockFUSEPlatform::GetGroupIdImpl));
     ON_CALL(*this, PathExists(_)).WillByDefault(Return(true));
     ON_CALL(*this, SetOwnership(_, _, _)).WillByDefault(Return(true));
     ON_CALL(*this, SetPermissions(_, _)).WillByDefault(Return(true));
@@ -64,10 +62,6 @@ class MockFUSEPlatform : public Platform {
   MOCK_METHOD(bool,
               GetUserAndGroupId,
               (const std::string&, uid_t*, gid_t*),
-              (const, override));
-  MOCK_METHOD(bool,
-              GetGroupId,
-              (const std::string&, gid_t*),
               (const, override));
   MOCK_METHOD(MountErrorType,
               Mount,
@@ -103,27 +97,11 @@ class MockFUSEPlatform : public Platform {
   bool GetUserAndGroupIdImpl(const std::string& user,
                              uid_t* user_id,
                              gid_t* group_id) const {
-    if (user == "chronos") {
-      if (user_id)
-        *user_id = kFilesUID;
-      if (group_id)
-        *group_id = kFilesGID;
-      return true;
-    }
     if (user == kMountUser) {
       if (user_id)
         *user_id = kMountUID;
       if (group_id)
         *group_id = kMountGID;
-      return true;
-    }
-    return false;
-  }
-
-  bool GetGroupIdImpl(const std::string& group, gid_t* group_id) const {
-    if (group == "chronos-access") {
-      if (group_id)
-        *group_id = kFilesAccessGID;
       return true;
     }
     return false;
@@ -166,6 +144,90 @@ class FUSEMounterForTesting : public FUSEMounter {
 
 }  // namespace
 
+class FUSESandboxedProcessFactoryTest : public ::testing::Test {
+ public:
+  FUSESandboxedProcessFactoryTest() {}
+
+ protected:
+  static bool ApplyConfiguration(const FUSESandboxedProcessFactory& factory,
+                                 SandboxedProcess* sandbox) {
+    return factory.ConfigureSandbox(sandbox);
+  }
+
+  MockFUSEPlatform platform_;
+  const base::FilePath exe_{"/bin/exe"};
+  const OwnerUser run_as_{123, 456};
+};
+
+TEST_F(FUSESandboxedProcessFactoryTest, BasicSetup) {
+  EXPECT_CALL(platform_, PathExists(exe_.value())).WillOnce(Return(true));
+  FUSESandboxedProcessFactory factory(&platform_, {exe_}, run_as_);
+  MockSandboxedProcess sandbox_;
+  EXPECT_TRUE(ApplyConfiguration(factory, &sandbox_));
+}
+
+TEST_F(FUSESandboxedProcessFactoryTest, BasicSetup_MissingExecutable) {
+  EXPECT_CALL(platform_, PathExists(exe_.value())).WillOnce(Return(false));
+  FUSESandboxedProcessFactory factory(&platform_, {exe_}, run_as_);
+  MockSandboxedProcess sandbox_;
+  EXPECT_FALSE(ApplyConfiguration(factory, &sandbox_));
+}
+
+// TODO(crbug.com/1149685): Disabled as seccomp crashes qemu used for ARM.
+TEST_F(FUSESandboxedProcessFactoryTest, DISABLED_SeccompPolicy) {
+  base::ScopedTempDir tmp;
+  ASSERT_TRUE(tmp.CreateUniqueTempDir());
+  base::FilePath seccomp = tmp.GetPath().Append("exe.policy");
+  std::string policy = "close: 1\n";
+  base::WriteFile(seccomp, policy.c_str(), policy.length());
+  EXPECT_CALL(platform_, PathExists(seccomp.value())).WillOnce(Return(true));
+  EXPECT_CALL(platform_, PathExists(exe_.value())).WillOnce(Return(true));
+  FUSESandboxedProcessFactory factory(&platform_, {exe_, seccomp}, run_as_);
+  MockSandboxedProcess sandbox_;
+  EXPECT_TRUE(ApplyConfiguration(factory, &sandbox_));
+}
+
+TEST_F(FUSESandboxedProcessFactoryTest, SeccompPolicy_MissingPolicy) {
+  base::ScopedTempDir tmp;
+  ASSERT_TRUE(tmp.CreateUniqueTempDir());
+  base::FilePath seccomp = tmp.GetPath().Append("exe.policy");
+  EXPECT_CALL(platform_, PathExists(seccomp.value())).WillOnce(Return(false));
+  FUSESandboxedProcessFactory factory(&platform_, {exe_, seccomp}, run_as_);
+  MockSandboxedProcess sandbox_;
+  EXPECT_FALSE(ApplyConfiguration(factory, &sandbox_));
+}
+
+TEST_F(FUSESandboxedProcessFactoryTest, NetworkEnabled_NonCrostini) {
+  EXPECT_CALL(platform_, PathExists(exe_.value())).WillOnce(Return(true));
+  EXPECT_CALL(platform_, PathExists("/etc/hosts.d")).WillOnce(Return(false));
+  FUSESandboxedProcessFactory factory(&platform_, {exe_}, run_as_, true);
+  MockSandboxedProcess sandbox_;
+  EXPECT_TRUE(ApplyConfiguration(factory, &sandbox_));
+}
+
+TEST_F(FUSESandboxedProcessFactoryTest, NetworkEnabled_Crostini) {
+  EXPECT_CALL(platform_, PathExists(exe_.value())).WillOnce(Return(true));
+  EXPECT_CALL(platform_, PathExists("/etc/hosts.d")).WillOnce(Return(true));
+  FUSESandboxedProcessFactory factory(&platform_, {exe_}, run_as_, true);
+  MockSandboxedProcess sandbox_;
+  EXPECT_TRUE(ApplyConfiguration(factory, &sandbox_));
+}
+
+TEST_F(FUSESandboxedProcessFactoryTest, SupplementaryGroups) {
+  FUSESandboxedProcessFactory factory(&platform_, {exe_}, run_as_, false,
+                                      {11, 22, 33});
+  MockSandboxedProcess sandbox_;
+  EXPECT_TRUE(ApplyConfiguration(factory, &sandbox_));
+}
+
+TEST_F(FUSESandboxedProcessFactoryTest, MountNamespace) {
+  base::FilePath mount_ns(base::StringPrintf("/proc/%d/ns/mnt", getpid()));
+  FUSESandboxedProcessFactory factory(&platform_, {exe_}, run_as_, false, {},
+                                      mount_ns);
+  MockSandboxedProcess sandbox_;
+  EXPECT_TRUE(ApplyConfiguration(factory, &sandbox_));
+}
+
 class FUSEMounterTest : public ::testing::Test {
  public:
   FUSEMounterTest() : mounter_(&platform_, &process_reaper_) {}
@@ -180,7 +242,7 @@ TEST_F(FUSEMounterTest, MountingUnprivileged) {
   EXPECT_CALL(platform_,
               Mount("fuse.fuse:source", kMountDir, "fuse.fuse",
                     MountOptions::kMountFlags | MS_DIRSYNC | MS_NOSYMFOLLOW,
-                    EndsWith(",user_id=1000,group_id=1000,allow_other,default_"
+                    EndsWith(",user_id=1000,group_id=1001,allow_other,default_"
                              "permissions,rootmode=40000")))
       .WillOnce(Return(MOUNT_ERROR_NONE));
   auto process_ptr = std::make_unique<MockSandboxedProcess>();
@@ -355,6 +417,7 @@ class FUSEMounterLegacyForTesting : public FUSEMounterLegacy {
   std::unique_ptr<SandboxedProcess> CreateSandboxedProcess() const override {
     auto mock = std::make_unique<MockSandboxedProcess>();
     const SandboxedProcess* const process = mock.get();
+    mock->AddArgument(kMountProgram);
     ON_CALL(*mock, StartImpl(_, _, _)).WillByDefault(Return(123));
     ON_CALL(*mock, WaitNonBlockingImpl())
         .WillByDefault(Invoke([this, process]() {
@@ -384,7 +447,6 @@ class FUSEMounterLegacyTest : public ::testing::Test {
                               kMountProgram, "-o", MountOptions().ToString(),
                               kSomeSource, StartsWith("/dev/fd/"))))
         .WillOnce(Return(0));
-    EXPECT_CALL(platform_, PathExists(kMountProgram)).WillOnce(Return(true));
     EXPECT_CALL(platform_, SetOwnership(kSomeSource, getuid(), kMountGID))
         .WillOnce(Return(true));
     EXPECT_CALL(platform_, SetPermissions(kSomeSource, S_IRUSR | S_IWUSR |
@@ -428,8 +490,13 @@ TEST_F(FUSEMounterLegacyTest, WithPassword) {
 }
 
 TEST(FUSEMounterPasswordTest, NoPassword) {
-  const FUSEMounterLegacy mounter(
-      {.password_needed_codes = {kPasswordNeededCode}});
+  MockFUSEPlatform platform;
+  const FUSEMounterLegacy mounter({
+      .mount_program = kMountProgram,
+      .mount_user = kMountUser,
+      .password_needed_codes = {kPasswordNeededCode},
+      .platform = &platform,
+  });
   SandboxedProcess process;
   mounter.CopyPassword(
       {
@@ -443,8 +510,13 @@ TEST(FUSEMounterPasswordTest, NoPassword) {
 }
 
 TEST(FUSEMounterPasswordTest, CopiesPassword) {
-  const FUSEMounterLegacy mounter(
-      {.password_needed_codes = {kPasswordNeededCode}});
+  MockFUSEPlatform platform;
+  const FUSEMounterLegacy mounter({
+      .mount_program = kMountProgram,
+      .mount_user = kMountUser,
+      .password_needed_codes = {kPasswordNeededCode},
+      .platform = &platform,
+  });
   for (const std::string password : {
            "",
            " ",
@@ -459,8 +531,13 @@ TEST(FUSEMounterPasswordTest, CopiesPassword) {
 }
 
 TEST(FUSEMounterPasswordTest, FirstPassword) {
-  const FUSEMounterLegacy mounter(
-      {.password_needed_codes = {kPasswordNeededCode}});
+  MockFUSEPlatform platform;
+  const FUSEMounterLegacy mounter({
+      .mount_program = kMountProgram,
+      .mount_user = kMountUser,
+      .password_needed_codes = {kPasswordNeededCode},
+      .platform = &platform,
+  });
   SandboxedProcess process;
   mounter.CopyPassword({"other1=value1", "password=1", "password=2",
                         "other2=value2", "password=3"},
@@ -469,7 +546,12 @@ TEST(FUSEMounterPasswordTest, FirstPassword) {
 }
 
 TEST(FUSEMounterPasswordTest, IgnoredIfNotNeeded) {
-  const FUSEMounterLegacy mounter({});
+  MockFUSEPlatform platform;
+  const FUSEMounterLegacy mounter({
+      .mount_program = kMountProgram,
+      .mount_user = kMountUser,
+      .platform = &platform,
+  });
   SandboxedProcess process;
   mounter.CopyPassword({"password=dummy"}, &process);
   EXPECT_EQ(process.input(), "");

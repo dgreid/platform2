@@ -45,10 +45,24 @@ const mode_t kSourcePathPermissions = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP;
 
 const char kFuseDeviceFile[] = "/dev/fuse";
 
-// UID and GID of the chronos user running UI and user apps.
-// I wish there was a centralized place for such constants.
-const uid_t kChronosUID = 1000;
-const gid_t kChronosGID = 1000;
+template <typename T>
+base::Optional<T> UnsetIfEmpty(T value) {
+  if (value.empty())
+    return base::Optional<T>();
+  return base::Optional<T>(std::move(value));
+}
+
+// TODO(dats): Remove when it's done beforehead by the caller.
+OwnerUser ResolveUserOrDie(const Platform* platform,
+                           const std::string& user,
+                           const std::string& group) {
+  OwnerUser result;
+  PCHECK(platform->GetUserAndGroupId(user, &result.uid, &result.gid));
+  if (!group.empty()) {
+    PCHECK(platform->GetGroupId(group, &result.gid));
+  }
+  return result;
+}
 
 class FUSEMountPoint : public MountPoint {
  public:
@@ -137,80 +151,6 @@ class FUSEMountPoint : public MountPoint {
   base::WeakPtrFactory<FUSEMountPoint> weak_factory_{this};
 };
 
-MountErrorType ConfigureCommonSandbox(SandboxedProcess* sandbox,
-                                      const Platform* platform,
-                                      bool network_access,
-                                      const std::string& seccomp_policy) {
-  sandbox->SetCapabilities(0);
-  sandbox->SetNoNewPrivileges();
-
-  // The FUSE mount program is put under a new mount namespace, so mounts
-  // inside that namespace don't normally propagate.
-  sandbox->NewMountNamespace();
-  sandbox->SkipRemountPrivate();
-
-  // TODO(benchan): Re-enable cgroup namespace when either Chrome OS
-  // kernel 3.8 supports it or no more supported devices use kernel
-  // 3.8.
-  // mount_process.NewCgroupNamespace();
-
-  sandbox->NewIpcNamespace();
-
-  sandbox->NewPidNamespace();
-
-  if (!network_access) {
-    sandbox->NewNetworkNamespace();
-  }
-
-  if (!seccomp_policy.empty()) {
-    if (!platform->PathExists(seccomp_policy)) {
-      LOG(ERROR) << "Seccomp policy " << quote(seccomp_policy) << " is missing";
-      return MOUNT_ERROR_INTERNAL;
-    }
-    sandbox->LoadSeccompFilterPolicy(seccomp_policy);
-  }
-
-  // Prepare mounts for pivot_root.
-  if (!sandbox->SetUpMinimalMounts()) {
-    LOG(ERROR) << "Can't set up minijail mounts";
-    return MOUNT_ERROR_INTERNAL;
-  }
-
-  // TODO(crbug.com/1053778) Only create the necessary tmpfs filesystems.
-  for (const char* const dir : {"/run", "/home", "/media"}) {
-    if (!sandbox->Mount("tmpfs", dir, "tmpfs", "mode=0755,size=10M")) {
-      LOG(ERROR) << "Cannot mount " << quote(dir);
-      return MOUNT_ERROR_INTERNAL;
-    }
-  }
-
-  // Data dirs if any are mounted inside /run/fuse.
-  if (!sandbox->BindMount("/run/fuse", "/run/fuse", false, false)) {
-    LOG(ERROR) << "Can't bind /run/fuse";
-    return MOUNT_ERROR_INTERNAL;
-  }
-
-  if (network_access) {
-    // Network DNS configs are in /run/shill.
-    if (!sandbox->BindMount("/run/shill", "/run/shill", false, false)) {
-      LOG(ERROR) << "Can't bind /run/shill";
-      return MOUNT_ERROR_INTERNAL;
-    }
-    // Hardcoded hosts are mounted into /etc/hosts.d when Crostini is enabled.
-    if (platform->PathExists("/etc/hosts.d") &&
-        !sandbox->BindMount("/etc/hosts.d", "/etc/hosts.d", false, false)) {
-      LOG(ERROR) << "Can't bind /etc/hosts.d";
-      return MOUNT_ERROR_INTERNAL;
-    }
-  }
-  if (!sandbox->EnterPivotRoot()) {
-    LOG(ERROR) << "Can't pivot root";
-    return MOUNT_ERROR_INTERNAL;
-  }
-
-  return MOUNT_ERROR_NONE;
-}
-
 bool GetPhysicalBlockSize(const std::string& source, int* size) {
   base::ScopedFD fd(open(source.c_str(), O_RDONLY | O_CLOEXEC));
 
@@ -229,6 +169,122 @@ bool GetPhysicalBlockSize(const std::string& source, int* size) {
 }
 
 }  // namespace
+
+FUSESandboxedProcessFactory::FUSESandboxedProcessFactory(
+    const Platform* platform,
+    SandboxedExecutable executable,
+    OwnerUser run_as,
+    bool has_network_access,
+    std::vector<gid_t> supplementary_groups,
+    base::Optional<base::FilePath> mount_namespace)
+    : platform_(platform),
+      executable_(std::move(executable.executable)),
+      seccomp_policy_(std::move(executable.seccomp_policy)),
+      run_as_(std::move(run_as)),
+      has_network_access_(has_network_access),
+      supplementary_groups_(std::move(supplementary_groups)),
+      mount_namespace_(std::move(mount_namespace)) {
+  CHECK(executable_.IsAbsolute());
+  if (seccomp_policy_) {
+    CHECK(seccomp_policy_.value().IsAbsolute());
+  }
+  if (mount_namespace_) {
+    CHECK(mount_namespace_.value().IsAbsolute());
+  }
+}
+
+FUSESandboxedProcessFactory::~FUSESandboxedProcessFactory() = default;
+
+std::unique_ptr<SandboxedProcess>
+FUSESandboxedProcessFactory::CreateSandboxedProcess() const {
+  auto sandbox = std::make_unique<SandboxedProcess>();
+  if (!ConfigureSandbox(sandbox.get()))
+    return nullptr;
+  return sandbox;
+}
+
+bool FUSESandboxedProcessFactory::ConfigureSandbox(
+    SandboxedProcess* sandbox) const {
+  sandbox->SetCapabilities(0);
+  sandbox->SetNoNewPrivileges();
+
+  // The FUSE mount program is put under a new mount namespace, so mounts
+  // inside that namespace don't normally propagate.
+  sandbox->NewMountNamespace();
+  sandbox->SkipRemountPrivate();
+
+  // TODO(benchan): Re-enable cgroup namespace when either Chrome OS
+  // kernel 3.8 supports it or no more supported devices use kernel
+  // 3.8.
+  // mount_process.NewCgroupNamespace();
+
+  sandbox->NewIpcNamespace();
+
+  sandbox->NewPidNamespace();
+
+  // Prepare mounts for pivot_root.
+  if (!sandbox->SetUpMinimalMounts()) {
+    LOG(ERROR) << "Cannot set up minijail mounts";
+    return false;
+  }
+
+  // /run is the place where mutable system configs are being kept.
+  // We don't expose them by default, but to be able to bind them when
+  // needed /run needs to be writeable.
+  if (!sandbox->Mount("tmpfs", "/run", "tmpfs", "mode=0755,size=1M")) {
+    LOG(ERROR) << "Cannot mount /run";
+    return false;
+  }
+
+  if (!has_network_access_) {
+    sandbox->NewNetworkNamespace();
+  } else {
+    // Network DNS configs are in /run/shill.
+    if (!sandbox->BindMount("/run/shill", "/run/shill", false, false)) {
+      LOG(ERROR) << "Cannot bind /run/shill";
+      return false;
+    }
+    // Hardcoded hosts are mounted into /etc/hosts.d when Crostini is enabled.
+    if (platform_->PathExists("/etc/hosts.d") &&
+        !sandbox->BindMount("/etc/hosts.d", "/etc/hosts.d", false, false)) {
+      LOG(ERROR) << "Cannot bind /etc/hosts.d";
+      return false;
+    }
+  }
+
+  if (!sandbox->EnterPivotRoot()) {
+    LOG(ERROR) << "Cannot pivot root";
+    return false;
+  }
+
+  if (seccomp_policy_) {
+    if (!platform_->PathExists(seccomp_policy_.value().value())) {
+      LOG(ERROR) << "Seccomp policy " << quote(seccomp_policy_.value())
+                 << " is missing";
+      return false;
+    }
+    sandbox->LoadSeccompFilterPolicy(seccomp_policy_.value().value());
+  }
+
+  sandbox->SetUserId(run_as_.uid);
+  sandbox->SetGroupId(run_as_.gid);
+  if (!supplementary_groups_.empty()) {
+    sandbox->SetSupplementaryGroupIds(supplementary_groups_);
+  }
+
+  // Enter mount namespace in the sandbox if necessary.
+  if (mount_namespace_) {
+    sandbox->EnterExistingMountNamespace(mount_namespace_.value().value());
+  }
+
+  if (!platform_->PathExists(executable_.value())) {
+    LOG(ERROR) << "Cannot find mount program " << quote(executable_);
+    return false;
+  }
+  sandbox->AddArgument(executable_.value());
+
+  return true;
+}
 
 FUSEMounter::FUSEMounter(const Platform* platform,
                          brillo::ProcessReaper* process_reaper,
@@ -273,7 +329,7 @@ std::unique_ptr<MountPoint> FUSEMounter::Mount(
   std::string fuse_mount_options = base::StringPrintf(
       "fd=%d,user_id=%u,group_id=%u,allow_other,default_permissions,"
       "rootmode=%o",
-      fuse_file.GetPlatformFile(), kChronosUID, kChronosGID, S_IFDIR);
+      fuse_file.GetPlatformFile(), kChronosUID, kChronosAccessGID, S_IFDIR);
 
   std::string fuse_type = "fuse";
   std::string source_descr = source;
@@ -302,7 +358,6 @@ std::unique_ptr<MountPoint> FUSEMounter::Mount(
     fuse_type += ".";
     fuse_type += filesystem_type_;
   }
-
   *error = platform_->Mount(source_descr, target_path.value(), fuse_type,
                             MountOptions::kMountFlags | MS_DIRSYNC |
                                 (read_only ? MS_RDONLY : 0) |
@@ -392,16 +447,18 @@ FUSEMounterLegacy::FUSEMounterLegacy(Params params)
                   params.nosymfollow),
       metrics_(params.metrics),
       metrics_name_(std::move(params.metrics_name)),
-      mount_program_(std::move(params.mount_program)),
-      mount_user_(std::move(params.mount_user)),
-      mount_group_(std::move(params.mount_group)),
-      seccomp_policy_(std::move(params.seccomp_policy)),
+      seccomp_policy_(),
       bind_paths_(std::move(params.bind_paths)),
-      network_access_(params.network_access),
-      mount_namespace_(std::move(params.mount_namespace)),
-      supplementary_groups_(std::move(params.supplementary_groups)),
       password_needed_codes_(std::move(params.password_needed_codes)),
-      mount_options_(std::move(params.mount_options)) {}
+      mount_options_(std::move(params.mount_options)),
+      sandbox_factory_(
+          platform(),
+          {base::FilePath(std::move(params.mount_program)),
+           UnsetIfEmpty(base::FilePath(std::move(params.seccomp_policy)))},
+          ResolveUserOrDie(platform(), params.mount_user, params.mount_group),
+          params.network_access,
+          std::move(params.supplementary_groups),
+          UnsetIfEmpty(base::FilePath(std::move(params.mount_namespace)))) {}
 
 void FUSEMounterLegacy::CopyPassword(const std::vector<std::string>& options,
                                      Process* const process) const {
@@ -428,42 +485,28 @@ std::unique_ptr<SandboxedProcess> FUSEMounterLegacy::PrepareSandbox(
     const base::FilePath& target_path,
     std::vector<std::string> params,
     MountErrorType* error) const {
-  auto mount_process = CreateSandboxedProcess();
-  *error = ConfigureCommonSandbox(mount_process.get(), platform(),
-                                  network_access_, seccomp_policy_);
-  if (*error != MOUNT_ERROR_NONE) {
-    return nullptr;
+  std::unique_ptr<SandboxedProcess> mount_process = CreateSandboxedProcess();
+
+  // TODO(crbug.com/1053778) Only create the necessary tmpfs filesystems.
+  for (const char* const dir : {"/home", "/media"}) {
+    if (!mount_process->Mount("tmpfs", dir, "tmpfs", "mode=0755,size=10M")) {
+      LOG(ERROR) << "Cannot mount " << quote(dir);
+      *error = MOUNT_ERROR_INTERNAL;
+      return nullptr;
+    }
   }
 
-  uid_t mount_user_id;
-  gid_t mount_group_id;
-  if (!platform()->GetUserAndGroupId(mount_user_, &mount_user_id,
-                                     &mount_group_id)) {
-    LOG(ERROR) << "Cannot resolve user " << quote(mount_user_);
-    *error = MOUNT_ERROR_INTERNAL;
+  // Data dirs if any are mounted inside /run/fuse.
+  if (!mount_process->BindMount("/run/fuse", "/run/fuse", false, false)) {
+    LOG(ERROR) << "Can't bind /run/fuse";
     return nullptr;
   }
-  if (!mount_group_.empty() &&
-      !platform()->GetGroupId(mount_group_, &mount_group_id)) {
-    *error = MOUNT_ERROR_INTERNAL;
-    return nullptr;
-  }
-
-  mount_process->SetUserId(mount_user_id);
-  mount_process->SetGroupId(mount_group_id);
-  mount_process->SetSupplementaryGroupIds(supplementary_groups_);
-
-  if (!platform()->PathExists(mount_program_)) {
-    LOG(ERROR) << "Cannot find mount program " << quote(mount_program_);
-    *error = MOUNT_ERROR_MOUNT_PROGRAM_NOT_FOUND;
-    return nullptr;
-  }
-  mount_process->AddArgument(mount_program_);
 
   // If a block device is being mounted, bind mount it into the sandbox.
   if (base::StartsWith(source, "/dev/", base::CompareCase::SENSITIVE)) {
     // Re-own source.
-    if (!platform()->SetOwnership(source, getuid(), mount_group_id) ||
+    if (!platform()->SetOwnership(source, getuid(),
+                                  sandbox_factory_.run_as().gid) ||
         !platform()->SetPermissions(source, kSourcePathPermissions)) {
       LOG(ERROR) << "Can't set up permissions on " << quote(source);
       *error = MOUNT_ERROR_INSUFFICIENT_PERMISSIONS;
@@ -476,10 +519,6 @@ std::unique_ptr<SandboxedProcess> FUSEMounterLegacy::PrepareSandbox(
       return nullptr;
     }
   }
-
-  // Enter mount namespace in the sandbox if necessary.
-  if (!mount_namespace_.empty())
-    mount_process->EnterExistingMountNamespace(mount_namespace_);
 
   // This is for additional data dirs.
   for (const BindPath& bind_path : bind_paths_) {
@@ -527,7 +566,7 @@ bool FUSEMounterLegacy::CanMount(const std::string& source,
 
 std::unique_ptr<SandboxedProcess> FUSEMounterLegacy::CreateSandboxedProcess()
     const {
-  return std::make_unique<SandboxedProcess>();
+  return sandbox_factory_.CreateSandboxedProcess();
 }
 
 }  // namespace cros_disks

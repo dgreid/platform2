@@ -23,7 +23,7 @@ namespace cros_disks {
 namespace {
 
 const char kFUSEType[] = "fuse";
-const char kMountProgram[] = "dummy";
+const char kMountProgram[] = "/bin/dummy";
 const char kMountUser[] = "nobody";
 const Uri kSomeUri("fuse", "some/src/path");
 const base::FilePath kWorkingDir("/wkdir");
