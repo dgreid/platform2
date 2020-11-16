@@ -51,7 +51,7 @@ constexpr char kModelDirForFuzzer[] = "/usr/libexec/fuzzers/";
 
 class MachineLearningServiceImplForTesting : public MachineLearningServiceImpl {
  public:
-  // Pass a dummy callback and use the testing model directory.
+  // Pass an empty callback and use the testing model directory.
   explicit MachineLearningServiceImplForTesting(
       mojo::ScopedMessagePipeHandle pipe)
       : MachineLearningServiceImpl(

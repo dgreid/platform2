@@ -233,7 +233,7 @@ using ::testing::StrictMock;
 // directory.
 class MachineLearningServiceImplForTesting : public MachineLearningServiceImpl {
  public:
-  // Pass a dummy callback and use the testing model directory.
+  // Pass an empty callback and use the testing model directory.
   explicit MachineLearningServiceImplForTesting(
       mojo::ScopedMessagePipeHandle pipe)
       : MachineLearningServiceImpl(
@@ -1262,9 +1262,9 @@ MATCHER_P(StructPtrEq, n, "") {
   return n.get().Equals(arg);
 }
 
-// Tests the SODA CrOS mojo callback for the dummy implementation can return
+// Tests the SODA CrOS mojo callback for the fake implementation can return
 // expected error string.
-TEST(SODARecognizerTest, DummyImplMojoCallback) {
+TEST(SODARecognizerTest, FakeImplMojoCallback) {
 #ifdef USE_ONDEVICE_SPEECH
   return;
 #else

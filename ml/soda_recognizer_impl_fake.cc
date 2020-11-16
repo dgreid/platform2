@@ -5,7 +5,7 @@
 // This file contains the implementation of `SodaRecognizerImpl` when SODA is
 // not intended to be supported.
 
-// Suppress unused-private-field since this dummy class impl is deliberately
+// Suppress unused-private-field since this fake class impl is deliberately
 // non-functional and needn't reference all variables.
 #pragma GCC diagnostic ignored "-Wunused-private-field"
 

@@ -137,7 +137,7 @@ static_library("ml_common") {
     ]
     deps += [ ":ml_soda_proto" ]
   } else {
-    sources += [ "soda_recognizer_impl_dummy.cc" ]
+    sources += [ "soda_recognizer_impl_fake.cc" ]
   }
   defines = [
     "USE_ONDEVICE_GRAMMAR=${use.ondevice_grammar}",
