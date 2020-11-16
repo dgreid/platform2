@@ -6,6 +6,9 @@
 
 #include <cryptohome/cryptolib.h>
 #include <cryptohome/dircrypto_util.h>
+#include <cryptohome/platform.h>
+#include <cryptohome/storage/encrypted_container/encrypted_container.h>
+#include <cryptohome/storage/encrypted_container/filesystem_key.h>
 
 #include <base/files/file_enumerator.h>
 #include <base/files/file_path.h>
@@ -40,12 +43,12 @@ bool IsSupported() {
   return true;
 }
 
-bool SaveKey(const brillo::SecureBlob& key) {
+bool SaveKey(const cryptohome::FileSystemKey& key) {
   // Do not use store.Save() since it uses WriteFileAtomically() which will
   // fail on /dev/pmsg0.
   brillo::KeyValueStore store;
   store.SetString(kEncryptionKeyTag,
-                  cryptohome::CryptoLib::SecureBlobToHex(key));
+                  cryptohome::CryptoLib::SecureBlobToHex(key.fek));
 
   std::string store_contents = store.SaveToString();
   if (store_contents.empty() ||
@@ -56,7 +59,8 @@ bool SaveKey(const brillo::SecureBlob& key) {
   return true;
 }
 
-brillo::SecureBlob RetrieveKey() {
+cryptohome::FileSystemKey RetrieveKey() {
+  cryptohome::FileSystemKey key;
   base::FileEnumerator pmsg_ramoops_enumerator(
       base::FilePath(kPstorePath), true /* recursive */,
       base::FileEnumerator::FILES, kPmsgKeystoreRamoopsPathDesc);
@@ -66,31 +70,30 @@ brillo::SecureBlob RetrieveKey() {
     brillo::KeyValueStore store;
     std::string val;
     if (store.Load(ramoops_file) && store.GetString(kEncryptionKeyTag, &val)) {
-      auto encryption_key =
-          brillo::SecureHexToSecureBlob(brillo::SecureBlob(val));
+      key.fek = brillo::SecureHexToSecureBlob(brillo::SecureBlob(val));
       base::DeleteFile(ramoops_file);
       // SaveKey stores the key again into pstore-pmsg on every boot since the
       // pstore object isn't persistent. Since the pstore object is always
       // stored in RAM on ChromiumOS, it is cleared the next time the device
       // shuts down or loses power.
-      if (!SaveKey(encryption_key))
+      if (!SaveKey(key))
         LOG(WARNING) << "Failed to store key for next reboot.";
-      return encryption_key;
+      return key;
     }
   }
-  return brillo::SecureBlob();
+  return key;
 }
 
 }  // namespace
 
 EncryptedRebootVault::EncryptedRebootVault()
     : vault_path_(base::FilePath(kEncryptedRebootVaultPath)) {
-  if (dircrypto::CheckFscryptKeyIoctlSupport()) {
-    key_reference_.policy_version = FSCRYPT_POLICY_V2;
-  } else {
-    key_reference_.reference = brillo::SecureBlob(kEncryptionKeyTag);
-    key_reference_.policy_version = FSCRYPT_POLICY_V1;
-  }
+  cryptohome::FileSystemKeyReference key_reference;
+  key_reference.fek_sig = brillo::SecureBlob(kEncryptionKeyTag);
+
+  encrypted_container_ = cryptohome::EncryptedContainer::Generate(
+      cryptohome::EncryptedContainerType::kFscrypt, vault_path_, key_reference,
+      &platform_);
 }
 
 bool EncryptedRebootVault::CreateVault() {
@@ -107,14 +110,9 @@ bool EncryptedRebootVault::CreateVault() {
   PurgeVault();
 
   // Generate encryption key.
-  brillo::SecureBlob transient_encryption_key =
+  cryptohome::FileSystemKey transient_encryption_key;
+  transient_encryption_key.fek =
       cryptohome::CryptoLib::CreateSecureRandomBlob(kEncryptionKeySize);
-
-  // The key descriptor needs to be exactly 8 bytes for v1 encryption policies.
-  if (!dircrypto::AddDirectoryKey(transient_encryption_key, &key_reference_)) {
-    LOG(ERROR) << "Failed to add pmsg-key";
-    return false;
-  }
 
   // Store key into pmsg. If it fails, we bail out.
   if (!SaveKey(transient_encryption_key)) {
@@ -123,14 +121,8 @@ bool EncryptedRebootVault::CreateVault() {
   }
 
   // Set up the encrypted reboot vault.
-  if (!base::CreateDirectory(vault_path_)) {
-    LOG(ERROR) << "Failed to create directory";
-    return false;
-  }
-
-  // Set the fscrypt context for the directory.
-  if (!dircrypto::SetDirectoryKey(vault_path_, key_reference_)) {
-    LOG(ERROR) << "Failed to set directory key";
+  if (!encrypted_container_->Setup(transient_encryption_key, /*create=*/true)) {
+    LOG(ERROR) << "Failed to setup encrypted container";
     return false;
   }
 
@@ -145,10 +137,10 @@ bool EncryptedRebootVault::Validate() {
 }
 
 bool EncryptedRebootVault::PurgeVault() {
-  if (!dircrypto::RemoveDirectoryKey(key_reference_, vault_path_)) {
+  if (!encrypted_container_->Teardown()) {
     LOG(WARNING) << "Failed to unlink encryption key from keyring.";
   }
-  return base::DeletePathRecursively(vault_path_);
+  return encrypted_container_->Purge();
 }
 
 bool EncryptedRebootVault::UnlockVault() {
@@ -168,30 +160,17 @@ bool EncryptedRebootVault::UnlockVault() {
     return false;
   }
 
-  // If the vault exists, get the policy version from the directory.
-  switch (dircrypto::GetDirectoryPolicyVersion(vault_path_)) {
-    case FSCRYPT_POLICY_V1:
-      key_reference_.policy_version = FSCRYPT_POLICY_V1;
-      key_reference_.reference = brillo::SecureBlob(kEncryptionKeyTag);
-      break;
-    case FSCRYPT_POLICY_V2:
-      key_reference_.policy_version = FSCRYPT_POLICY_V2;
-      break;
-    default:
-      LOG(ERROR) << "Failed to get policy version for directory";
-      return false;
-  }
-
   // Retrieve key.
-  brillo::SecureBlob transient_encryption_key = RetrieveKey();
-  if (transient_encryption_key.empty()) {
+  cryptohome::FileSystemKey transient_encryption_key = RetrieveKey();
+  if (transient_encryption_key.fek.empty()) {
     LOG(INFO) << "No valid key found: the device might have booted up from a "
                  "shutdown.";
     return false;
   }
 
   // Unlock vault.
-  if (!dircrypto::AddDirectoryKey(transient_encryption_key, &key_reference_)) {
+  if (!encrypted_container_->Setup(transient_encryption_key,
+                                   /*create=*/false)) {
     LOG(ERROR) << "Failed to add key to keyring.";
     return false;
   }

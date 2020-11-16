@@ -5,12 +5,15 @@
 #ifndef CRYPTOHOME_ENCRYPTED_REBOOT_VAULT_ENCRYPTED_REBOOT_VAULT_H_
 #define CRYPTOHOME_ENCRYPTED_REBOOT_VAULT_ENCRYPTED_REBOOT_VAULT_H_
 
+#include <memory>
 #include <string>
 
 #include <base/files/file_path.h>
 #include <brillo/brillo_export.h>
 
 #include <cryptohome/dircrypto_util.h>
+#include <cryptohome/platform.h>
+#include <cryptohome/storage/encrypted_container/encrypted_container.h>
 
 class EncryptedRebootVault {
  public:
@@ -27,7 +30,8 @@ class EncryptedRebootVault {
 
  private:
   base::FilePath vault_path_;
-  dircrypto::KeyReference key_reference_;
+  cryptohome::Platform platform_;
+  std::unique_ptr<cryptohome::EncryptedContainer> encrypted_container_;
 };
 
 #endif  // CRYPTOHOME_ENCRYPTED_REBOOT_VAULT_ENCRYPTED_REBOOT_VAULT_H_
