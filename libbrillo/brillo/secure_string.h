@@ -7,6 +7,7 @@
 
 #include <cstddef>
 
+#include <base/check.h>
 #include <brillo/asan.h>
 #include <brillo/brillo_export.h>
 
@@ -30,6 +31,14 @@ namespace brillo {
 // SecureClear is used to write beyond the size() in several functions.
 // Since this is intentional, disable address sanitizer from analyzing it.
 BRILLO_EXPORT BRILLO_DISABLE_ASAN void SecureClear(void* v, size_t n);
+
+// SecureClear overload that works with containers (vector, array, etc.) and
+// strings.
+template <typename T>
+BRILLO_EXPORT void SecureClear(T* v) {
+  CHECK(v);
+  SecureClear(v->data(), v->size());
+}
 
 // Compare [n] bytes starting at [s1] with [s2] and return 0 if they match,
 // 1 if they don't. Time taken to perform the comparison is only dependent on
