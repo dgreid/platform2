@@ -46,6 +46,9 @@ namespace {
 const char kStorageAPN[] = "Cellular.APN";
 const char kStorageLastGoodAPN[] = "Cellular.LastGoodAPN";
 
+const char kApnVersionProperty[] = "version";
+const int kCurrentApnCacheVersion = 1;
+
 bool GetNonEmptyField(const Stringmap& stringmap,
                       const string& fieldname,
                       string* value) {
@@ -517,6 +520,9 @@ bool CellularService::SetApn(const Stringmap& value, Error* error) {
       new_apn_info[kApnPasswordProperty] = str;
     if (GetNonEmptyField(value, kApnAuthenticationProperty, &str))
       new_apn_info[kApnAuthenticationProperty] = str;
+
+    new_apn_info[kApnVersionProperty] =
+        base::NumberToString(kCurrentApnCacheVersion);
   }
   if (apn_info_ == new_apn_info) {
     return false;
@@ -540,10 +546,23 @@ void CellularService::LoadApn(const StoreInterface* storage,
                               const string& storage_group,
                               const string& keytag,
                               Stringmap* apn_info) {
+  if (keytag == kStorageLastGoodAPN) {
+    // Ignore LastGoodAPN that is too old.
+    int version;
+    if (!LoadApnField(storage, storage_group, keytag, kApnVersionProperty,
+                      apn_info) ||
+        !base::StringToInt((*apn_info)[kApnVersionProperty], &version) ||
+        version < kCurrentApnCacheVersion) {
+      return;
+    }
+  }
+
   if (!LoadApnField(storage, storage_group, keytag, kApnProperty, apn_info))
     return;
   LoadApnField(storage, storage_group, keytag, kApnUsernameProperty, apn_info);
   LoadApnField(storage, storage_group, keytag, kApnPasswordProperty, apn_info);
+  LoadApnField(storage, storage_group, keytag, kApnAuthenticationProperty,
+               apn_info);
 }
 
 bool CellularService::LoadApnField(const StoreInterface* storage,
@@ -567,6 +586,9 @@ void CellularService::SaveApn(StoreInterface* storage,
   SaveApnField(storage, storage_group, apn_info, keytag, kApnProperty);
   SaveApnField(storage, storage_group, apn_info, keytag, kApnUsernameProperty);
   SaveApnField(storage, storage_group, apn_info, keytag, kApnPasswordProperty);
+  SaveApnField(storage, storage_group, apn_info, keytag,
+               kApnAuthenticationProperty);
+  SaveApnField(storage, storage_group, apn_info, keytag, kApnVersionProperty);
 }
 
 void CellularService::SaveApnField(StoreInterface* storage,

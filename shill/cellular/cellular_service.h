@@ -141,8 +141,9 @@ class CellularService : public Service {
   FRIEND_TEST(CellularServiceTest, SetApn);
   FRIEND_TEST(CellularServiceTest, ClearApn);
   FRIEND_TEST(CellularServiceTest, LastGoodApn);
-  FRIEND_TEST(CellularServiceTest, LoadResetsPPPAuthFailure);
   FRIEND_TEST(CellularServiceTest, IsAutoConnectable);
+  FRIEND_TEST(CellularServiceTest, LoadResetsPPPAuthFailure);
+  FRIEND_TEST(CellularServiceTest, SaveAndLoadApn);
   FRIEND_TEST(CellularServiceTest, CustomSetterNoopChange);
 
   static const char kAutoConnActivating[];

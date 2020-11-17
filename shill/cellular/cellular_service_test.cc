@@ -183,7 +183,6 @@ TEST_F(CellularServiceTest, SetApn) {
   EXPECT_TRUE(error.IsSuccess());
   Stringmap resultapn = service_->GetApn(&error);
   EXPECT_TRUE(error.IsSuccess());
-  EXPECT_EQ(2, resultapn.size());
   Stringmap::const_iterator it = resultapn.find(kApnProperty);
   EXPECT_TRUE(it != resultapn.end() && it->second == kApn);
   it = resultapn.find(kApnUsernameProperty);
@@ -205,7 +204,6 @@ TEST_F(CellularServiceTest, ClearApn) {
   service_->SetApn(testapn, &error);
   Stringmap resultapn = service_->GetApn(&error);
   ASSERT_TRUE(error.IsSuccess());
-  ASSERT_EQ(2, service_->GetApn(&error).size());
 
   Stringmap emptyapn;
   EXPECT_CALL(*adaptor_, EmitStringmapChanged(kCellularLastGoodApnProperty, _))
@@ -231,7 +229,6 @@ TEST_F(CellularServiceTest, LastGoodApn) {
   service_->SetLastGoodApn(testapn);
   Stringmap* resultapn = service_->GetLastGoodApn();
   ASSERT_NE(nullptr, resultapn);
-  EXPECT_EQ(2, resultapn->size());
   EXPECT_EQ(kApn, (*resultapn)[kApnProperty]);
   EXPECT_EQ(kUsername, (*resultapn)[kApnUsernameProperty]);
 
@@ -244,7 +241,6 @@ TEST_F(CellularServiceTest, LastGoodApn) {
   service_->SetApn(userapn, &error);
 
   ASSERT_NE(nullptr, service_->GetLastGoodApn());
-  EXPECT_EQ(2, resultapn->size());
   EXPECT_EQ(kApn, (*resultapn)[kApnProperty]);
   EXPECT_EQ(kUsername, (*resultapn)[kApnUsernameProperty]);
 }
@@ -396,6 +392,53 @@ TEST_F(CellularServiceTest, Save) {
   EXPECT_TRUE(
       storage_.GetString(storage_id_, CellularService::kStorageIccid, &iccid));
   EXPECT_EQ(iccid, device_->iccid());
+}
+
+TEST_F(CellularServiceTest, SaveAndLoadApn) {
+  static const char kApn[] = "petal.net";
+  static const char kUsername[] = "orekid";
+  static const char kPassword[] = "arlet";
+  static const char kAuthentication[] = "chap";
+
+  Error error;
+  Stringmap testapn;
+  testapn[kApnProperty] = kApn;
+  testapn[kApnUsernameProperty] = kUsername;
+  testapn[kApnPasswordProperty] = kPassword;
+  testapn[kApnAuthenticationProperty] = kAuthentication;
+  service_->SetApn(testapn, &error);
+  ASSERT_TRUE(error.IsSuccess());
+  EXPECT_TRUE(service_->Save(&storage_));
+
+  // Clear the APN, and then load it from storage again.
+  Stringmap emptyapn;
+  service_->SetApn(emptyapn, &error);
+  ASSERT_TRUE(error.IsSuccess());
+
+  EXPECT_TRUE(service_->Load(&storage_));
+
+  Stringmap resultapn = service_->GetApn(&error);
+  EXPECT_TRUE(error.IsSuccess());
+  EXPECT_EQ(kApn, resultapn[kApnProperty]);
+  EXPECT_EQ(kUsername, resultapn[kApnUsernameProperty]);
+  EXPECT_EQ(kPassword, resultapn[kApnPasswordProperty]);
+  EXPECT_EQ(kAuthentication, resultapn[kApnAuthenticationProperty]);
+}
+
+TEST_F(CellularServiceTest, IgnoreUnversionedLastGoodApn) {
+  static const char kApn[] = "petal.net";
+  static const char kUsername[] = "orekid";
+  Stringmap testapn;
+  testapn[kApnProperty] = kApn;
+  testapn[kApnUsernameProperty] = kUsername;
+  service_->SetLastGoodApn(testapn);
+  ASSERT_TRUE(service_->Save(&storage_));
+
+  // Now clear the LastGoodAPN and try to load it. It should be ignored.
+  service_->ClearLastGoodApn();
+  ASSERT_TRUE(service_->Load(&storage_));
+  Stringmap* resultapn = service_->GetLastGoodApn();
+  EXPECT_EQ(nullptr, resultapn);
 }
 
 // Some of these tests duplicate signals tested above. However, it's
