@@ -23,6 +23,7 @@
 #include "cros-camera/camera_buffer_manager.h"
 #include "cros-camera/future.h"
 #include "hal/usb/cached_frame.h"
+#include "hal/usb/camera_privacy_switch_monitor.h"
 #include "hal/usb/capture_request.h"
 #include "hal/usb/common_types.h"
 #include "hal/usb/frame_buffer.h"
@@ -61,10 +62,10 @@ class CameraClient {
                const camera_metadata_t& static_metadata,
                const camera_metadata_t& request_template,
                const hw_module_t* module,
-               hw_device_t** hw_device);
+               hw_device_t** hw_device,
+               CameraPrivacySwitchMonitor* privacy_switch_monitor);
   CameraClient(const CameraClient&) = delete;
   CameraClient& operator=(const CameraClient&) = delete;
-
   ~CameraClient();
 
   // Camera Device Operations from CameraHal.

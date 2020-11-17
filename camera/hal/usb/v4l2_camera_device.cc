@@ -88,6 +88,9 @@ const int ControlTypeToCid(ControlType type) {
     case kControlWhiteBalanceTemperature:
       return V4L2_CID_WHITE_BALANCE_TEMPERATURE;
 
+    case kControlPrivacy:
+      return V4L2_CID_PRIVACY;
+
     default:
       NOTREACHED() << "Unexpected control type " << type;
       return -1;
@@ -137,6 +140,9 @@ const std::string ControlTypeToString(ControlType type) {
 
     case kControlWhiteBalanceTemperature:
       return "white balance temperature";
+
+    case kControlPrivacy:
+      return "privacy";
 
     default:
       NOTREACHED() << "Unexpected control type " << type;
@@ -197,10 +203,17 @@ const std::string CidToString(int cid) {
 }  // namespace
 
 V4L2CameraDevice::V4L2CameraDevice()
-    : stream_on_(false), device_info_(DeviceInfo()) {}
+    : stream_on_(false),
+      device_info_(DeviceInfo()),
+      event_thread_("V4L2Event") {}
 
-V4L2CameraDevice::V4L2CameraDevice(const DeviceInfo& device_info)
-    : stream_on_(false), device_info_(device_info) {}
+V4L2CameraDevice::V4L2CameraDevice(
+    const DeviceInfo& device_info,
+    CameraPrivacySwitchMonitor* privacy_switch_monitor)
+    : stream_on_(false),
+      device_info_(device_info),
+      event_thread_("V4L2 Event Thread"),
+      privacy_switch_monitor_(privacy_switch_monitor) {}
 
 V4L2CameraDevice::~V4L2CameraDevice() {
   device_fd_.reset();
@@ -369,6 +382,12 @@ int V4L2CameraDevice::Connect(const std::string& device_path) {
     }
   }
 
+  ret = SubscribePrivacySwitchEvent();
+  if (ret != 0) {
+    LOGF(WARNING) << "Failed to subscribe privacy switch event: "
+                  << base::safe_strerror(-ret);
+  }
+
   // Initialize the capabilities.
   if (device_info_.quirks & kQuirkDisableFrameRateSetting) {
     can_update_frame_rate_ = false;
@@ -386,6 +405,14 @@ int V4L2CameraDevice::Connect(const std::string& device_path) {
 void V4L2CameraDevice::Disconnect() {
   base::AutoLock l(lock_);
   stream_on_ = false;
+
+  int ret = UnsubscribePrivacySwitchEvent();
+  if (ret != 0) {
+    LOGF(WARNING) << "Failed to unsubscribe privacy switch event: "
+                  << base::safe_strerror(-ret);
+  }
+  privacy_switch_monitor_->OnStatusChanged(PrivacySwitchState::kUnknown);
+
   device_fd_.reset();
   buffers_at_client_.clear();
 }
@@ -498,6 +525,19 @@ int V4L2CameraDevice::StreamOn(uint32_t width,
 
   for (size_t i = 0; i < temp_fds.size(); i++) {
     fds->push_back(std::move(temp_fds[i]));
+  }
+
+  // Query for the initial value of privacy button status while streaming on if
+  // it is supported.
+  if (IsControlSupported(kControlPrivacy)) {
+    int32_t value;
+    if (GetControlValue(kControlPrivacy, &value) == 0) {
+      privacy_switch_monitor_->OnStatusChanged(
+          value != 0 ? PrivacySwitchState::kOn : PrivacySwitchState::kOff);
+    } else {
+      LOGF(ERROR)
+          << "Failed to get the initial status of camera privacy switch";
+    }
   }
 
   stream_on_ = true;
@@ -1417,6 +1457,79 @@ int V4L2CameraDevice::SetPowerLineFrequency(PowerLineFrequency setting) {
 
 bool V4L2CameraDevice::IsExternalCamera() {
   return device_info_.lens_facing == LensFacing::kExternal;
+}
+
+int V4L2CameraDevice::SubscribePrivacySwitchEvent() {
+  struct v4l2_event_subscription sub = {.type = V4L2_EVENT_CTRL,
+                                        .id = V4L2_CID_PRIVACY};
+  if (HANDLE_EINTR(ioctl(device_fd_.get(), VIDIOC_SUBSCRIBE_EVENT, &sub)) < 0) {
+    LOGF(ERROR) << "Unable to subscribe for privacy status change";
+    return -errno;
+  }
+
+  if (!base::CreatePipe(&cancel_fd_, &cancel_pipe_, true)) {
+    LOGF(ERROR) << "Failed to create the cancelation pipe";
+    return -EINVAL;
+  }
+
+  DCHECK(!event_thread_.IsRunning());
+  if (!event_thread_.Start()) {
+    LOGF(ERROR) << "Failed to start V4L2 event thread";
+    return -EINVAL;
+  }
+
+  event_thread_.task_runner()->PostTask(
+      FROM_HERE, base::BindRepeating(&V4L2CameraDevice::RunDequeueEventsLoop,
+                                     base::Unretained(this)));
+  return 0;
+}
+
+int V4L2CameraDevice::UnsubscribePrivacySwitchEvent() {
+  DCHECK(event_thread_.IsRunning());
+  cancel_pipe_.reset();
+  event_thread_.Stop();
+
+  struct v4l2_event_subscription sub = {.type = V4L2_EVENT_CTRL,
+                                        .id = V4L2_CID_PRIVACY};
+  if (HANDLE_EINTR(ioctl(device_fd_.get(), VIDIOC_UNSUBSCRIBE_EVENT, &sub)) <
+      0) {
+    LOGF(ERROR) << "Unable to unsubscribe for privacy status change";
+    return -errno;
+  }
+  return 0;
+}
+
+void V4L2CameraDevice::RunDequeueEventsLoop() {
+  while (true) {
+    struct pollfd fds[2] = {
+        {device_fd_.get(), POLLPRI, 0},
+        {cancel_fd_.get(), POLLHUP, 0},
+    };
+
+    if (HANDLE_EINTR(poll(fds, base::size(fds), -1)) <= 0) {
+      LOGF(ERROR) << "Failed to poll to dequeue events";
+      return;
+    }
+
+    if (fds[1].revents > 0) {
+      cancel_fd_.reset();
+      return;
+    }
+
+    if (fds[0].revents > 0) {
+      struct v4l2_event ev = {};
+      if (HANDLE_EINTR(ioctl(device_fd_.get(), VIDIOC_DQEVENT, &ev)) == 0) {
+        if (ev.type == V4L2_EVENT_CTRL && ev.id == V4L2_CID_PRIVACY &&
+            privacy_switch_monitor_) {
+          privacy_switch_monitor_->OnStatusChanged(
+              ev.u.ctrl.value != 0 ? PrivacySwitchState::kOn
+                                   : PrivacySwitchState::kOff);
+        }
+      } else {
+        LOGF(ERROR) << "Failed to dequeue event from device";
+      }
+    }
+  }
 }
 
 }  // namespace cros

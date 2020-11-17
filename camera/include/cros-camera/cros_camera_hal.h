@@ -14,6 +14,15 @@
 
 namespace cros {
 
+enum class PrivacySwitchState {
+  kUnknown,
+  kOn,
+  kOff,
+};
+
+using PrivacySwitchStateChangeCallback =
+    base::RepeatingCallback<void(PrivacySwitchState state)>;
+
 typedef struct cros_camera_hal {
   /**
    * Sets up the camera HAL. The |mojo_manager| can be used for communication
@@ -26,8 +35,14 @@ typedef struct cros_camera_hal {
    */
   void (*tear_down)();
 
+  /**
+   * Registers camera privacy switch observer.
+   */
+  void (*set_privacy_switch_callback)(
+      PrivacySwitchStateChangeCallback callback);
+
   /* reserved for future use */
-  void* reserved[5];
+  void* reserved[4];
 } cros_camera_hal_t;
 
 }  // namespace cros

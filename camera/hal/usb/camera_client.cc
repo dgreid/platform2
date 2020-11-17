@@ -38,11 +38,12 @@ CameraClient::CameraClient(int id,
                            const camera_metadata_t& static_metadata,
                            const camera_metadata_t& request_template,
                            const hw_module_t* module,
-                           hw_device_t** hw_device)
+                           hw_device_t** hw_device,
+                           CameraPrivacySwitchMonitor* privacy_switch_monitor)
     : id_(id),
       device_info_(device_info),
       static_metadata_(clone_camera_metadata(&static_metadata)),
-      device_(new V4L2CameraDevice(device_info)),
+      device_(new V4L2CameraDevice(device_info, privacy_switch_monitor)),
       callback_ops_(nullptr),
       request_thread_("Capture request thread") {
   memset(&camera3_device_, 0, sizeof(camera3_device_));

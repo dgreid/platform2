@@ -13,7 +13,6 @@
 #include <base/threading/thread_task_runner_handle.h>
 
 #include "cros-camera/common.h"
-#include "cros-camera/cros_camera_hal.h"
 #include "cros-camera/udev_watcher.h"
 #include "hal/usb/camera_characteristics.h"
 #include "hal/usb/common_types.h"
@@ -160,9 +159,10 @@ int CameraHal::OpenDevice(int id,
                   << cameras_.begin()->first << " is already opened.";
     return -EUSERS;
   }
-  cameras_[id].reset(
-      new CameraClient(id, device_infos_[id], *static_metadata_[id].get(),
-                       *request_template_[id].get(), module, hw_device));
+  cameras_[id].reset(new CameraClient(id, device_infos_[id],
+                                      *static_metadata_[id].get(),
+                                      *request_template_[id].get(), module,
+                                      hw_device, &privacy_switch_monitor_));
   if (cameras_[id]->OpenDevice()) {
     cameras_.erase(id);
     return -ENODEV;
@@ -306,6 +306,11 @@ void CameraHal::SetUp(CameraMojoChannelManager* mojo_manager) {
 
 void CameraHal::TearDown() {
   mojo_manager_ = nullptr;
+}
+
+void CameraHal::SetPrivacySwitchCallback(
+    PrivacySwitchStateChangeCallback callback) {
+  privacy_switch_monitor_.RegisterCallback(std::move(callback));
 }
 
 void CameraHal::CloseDeviceOnOpsThread(int id) {
@@ -583,6 +588,11 @@ static void tear_down() {
   CameraHal::GetInstance().TearDown();
 }
 
+static void set_privacy_switch_callback(
+    PrivacySwitchStateChangeCallback callback) {
+  CameraHal::GetInstance().SetPrivacySwitchCallback(std::move(callback));
+}
+
 int camera_device_close(struct hw_device_t* hw_device) {
   camera3_device_t* cam_dev = reinterpret_cast<camera3_device_t*>(hw_device);
   CameraClient* cam = static_cast<CameraClient*>(cam_dev->priv);
@@ -621,4 +631,6 @@ camera_module_t HAL_MODULE_INFO_SYM CROS_CAMERA_EXPORT = {
     .reserved = {0}};
 
 cros::cros_camera_hal_t CROS_CAMERA_HAL_INFO_SYM CROS_CAMERA_EXPORT = {
-    .set_up = cros::set_up, .tear_down = cros::tear_down};
+    .set_up = cros::set_up,
+    .tear_down = cros::tear_down,
+    .set_privacy_switch_callback = cros::set_privacy_switch_callback};

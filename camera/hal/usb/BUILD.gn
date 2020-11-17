@@ -49,6 +49,7 @@ shared_library("libcamera_hal") {
     "camera_client.cc",
     "camera_hal.cc",
     "camera_hal_device_ops.cc",
+    "camera_privacy_switch_monitor.cc",
     "capture_request.cc",
     "cros_device_config.cc",
     "frame_buffer.cc",

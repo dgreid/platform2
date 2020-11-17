@@ -64,7 +64,18 @@ bool CameraHalServerImpl::Start() {
   mojo_manager_->GetIpcTaskRunner()->PostTask(
       FROM_HERE,
       base::Bind(&CameraHalServerImpl::IPCBridge::Start,
-                 ipc_bridge_->GetWeakPtr(), camera_hal_adapter_.get()));
+                 ipc_bridge_->GetWeakPtr(), camera_hal_adapter_.get(),
+                 base::BindRepeating(
+                     [](const std::vector<cros_camera_hal_t*>& hals,
+                        PrivacySwitchStateChangeCallback callback) {
+                       for (const auto* hal : hals) {
+                         if (hal->set_privacy_switch_callback != nullptr) {
+                           hal->set_privacy_switch_callback(
+                               std::move(callback));
+                         }
+                       }
+                     },
+                     cros_camera_hals_)));
   return true;
 }
 
@@ -85,7 +96,8 @@ CameraHalServerImpl::IPCBridge::~IPCBridge() {
 }
 
 void CameraHalServerImpl::IPCBridge::Start(
-    CameraHalAdapter* camera_hal_adapter) {
+    CameraHalAdapter* camera_hal_adapter,
+    SetPrivacySwitchCallback set_privacy_switch_callback) {
   VLOGF_ENTER();
   DCHECK(ipc_task_runner_->BelongsToCurrentThread());
 
@@ -103,7 +115,7 @@ void CameraHalServerImpl::IPCBridge::Start(
   mojo_manager_->RegisterServer(
       std::move(server_ptr),
       base::BindOnce(&CameraHalServerImpl::IPCBridge::OnServerRegistered,
-                     GetWeakPtr()),
+                     GetWeakPtr(), std::move(set_privacy_switch_callback)),
       base::BindOnce(&CameraHalServerImpl::IPCBridge::OnServiceMojoChannelError,
                      GetWeakPtr()));
 }
@@ -140,7 +152,9 @@ CameraHalServerImpl::IPCBridge::GetWeakPtr() {
 }
 
 void CameraHalServerImpl::IPCBridge::OnServerRegistered(
-    int32_t result, mojom::CameraHalServerCallbacksPtr callbacks) {
+    SetPrivacySwitchCallback set_privacy_switch_callback,
+    int32_t result,
+    mojom::CameraHalServerCallbacksPtr callbacks) {
   VLOGF_ENTER();
   DCHECK(ipc_task_runner_->BelongsToCurrentThread());
 
@@ -150,6 +164,12 @@ void CameraHalServerImpl::IPCBridge::OnServerRegistered(
     return;
   }
   callbacks_.Bind(callbacks.PassInterface());
+
+  std::move(set_privacy_switch_callback)
+      .Run(base::BindRepeating(
+          &CameraHalServerImpl::IPCBridge::OnPrivacySwitchStatusChanged,
+          base::Unretained(this)));
+
   LOGF(INFO) << "Registered camera HAL";
 }
 
@@ -163,6 +183,19 @@ void CameraHalServerImpl::IPCBridge::OnServiceMojoChannelError() {
   main_task_runner_->PostTask(
       FROM_HERE, base::Bind(&CameraHalServerImpl::ExitOnMainThread,
                             base::Unretained(camera_hal_server_), ECONNRESET));
+}
+
+void CameraHalServerImpl::IPCBridge::OnPrivacySwitchStatusChanged(
+    PrivacySwitchState state) {
+  cros::mojom::CameraPrivacySwitchState state_in_mojo;
+  if (state == PrivacySwitchState::kUnknown) {
+    state_in_mojo = cros::mojom::CameraPrivacySwitchState::UNKNOWN;
+  } else if (state == PrivacySwitchState::kOn) {
+    state_in_mojo = cros::mojom::CameraPrivacySwitchState::ON;
+  } else {  // state == PrivacySwitchState::kOff
+    state_in_mojo = cros::mojom::CameraPrivacySwitchState::OFF;
+  }
+  callbacks_->CameraPrivacySwitchStateChange(state_in_mojo);
 }
 
 void CameraHalServerImpl::LoadCameraHal() {

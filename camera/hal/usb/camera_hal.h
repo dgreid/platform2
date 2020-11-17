@@ -18,10 +18,12 @@
 #include <hardware/camera_common.h>
 
 #include "cros-camera/camera_mojo_channel_manager.h"
+#include "cros-camera/cros_camera_hal.h"
 #include "cros-camera/future.h"
 #include "cros-camera/udev_watcher.h"
 #include "hal/usb/camera_characteristics.h"
 #include "hal/usb/camera_client.h"
+#include "hal/usb/camera_privacy_switch_monitor.h"
 #include "hal/usb/common_types.h"
 #include "hal/usb/cros_device_config.h"
 
@@ -54,6 +56,7 @@ class CameraHal : public UdevWatcher::Observer {
   // Implementations for cros_camera_hal_t.
   void SetUp(CameraMojoChannelManager* mojo_manager);
   void TearDown();
+  void SetPrivacySwitchCallback(PrivacySwitchStateChangeCallback callback);
 
   // Runs on device ops thread. Post a task to the thread which is used for
   // OpenDevice.
@@ -67,6 +70,9 @@ class CameraHal : public UdevWatcher::Observer {
   // Implementation of UdevWatcher::Observer.
   void OnDeviceAdded(ScopedUdevDevicePtr dev) override;
   void OnDeviceRemoved(ScopedUdevDevicePtr dev) override;
+
+  // The monitor for camera privacy switch status changed.
+  CameraPrivacySwitchMonitor privacy_switch_monitor_;
 
   // Cache device information because querying the information is very slow.
   std::map<int, DeviceInfo> device_infos_;

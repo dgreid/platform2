@@ -42,6 +42,9 @@ class CameraHalServerImpl final {
   bool Start();
 
  private:
+  using SetPrivacySwitchCallback =
+      base::OnceCallback<void(PrivacySwitchStateChangeCallback)>;
+
   // IPCBridge wraps all the IPC-related calls. Most of its methods should/will
   // be run on IPC thread.
   class IPCBridge : public mojom::CameraHalServer {
@@ -51,7 +54,8 @@ class CameraHalServerImpl final {
 
     ~IPCBridge();
 
-    void Start(CameraHalAdapter* camera_hal_adapter);
+    void Start(CameraHalAdapter* camera_hal_adapter,
+               SetPrivacySwitchCallback set_privacy_switch_callback);
 
     // CameraHalServer Mojo interface implementation.
 
@@ -70,11 +74,16 @@ class CameraHalServerImpl final {
 
    private:
     // Triggered when the HAL server is registered.
-    void OnServerRegistered(int32_t result,
-                            mojom::CameraHalServerCallbacksPtr callbacks);
+    void OnServerRegistered(
+        SetPrivacySwitchCallback set_privacy_switch_callback,
+        int32_t result,
+        mojom::CameraHalServerCallbacksPtr callbacks);
 
     // Connection error handler for the Mojo connection to CameraHalDispatcher.
     void OnServiceMojoChannelError();
+
+    // Triggers when the camera privacy switch status changed.
+    void OnPrivacySwitchStatusChanged(PrivacySwitchState state);
 
     CameraHalServerImpl* camera_hal_server_;
 
