@@ -30,14 +30,16 @@ message MakeCredentialRequest {
   string rp_id = 2;
   // Whether to store as a resident credential. Currently not implemented.
   bool resident_credential = 3;
-  // Resident credentials not implemented yet; this field will be ignored.
-  bytes user_entity = 4;
+  // User id for listing credentials to the user.
+  bytes user_id = 4;
   // MakeCredential should fail if any excluded credential belongs to this
   // device.
   repeated bytes excluded_credential_id = 5;
   // Id used to idenfity the window that initiated the request.
   uint64 request_id = 6;
-  // Next ID: 7
+  // User display name for listing credentials to the user.
+  string user_display_name = 7;
+  // Next ID: 8
 }
 
 message MakeCredentialResponse {
