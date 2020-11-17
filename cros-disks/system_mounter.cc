@@ -77,7 +77,7 @@ std::unique_ptr<MountPoint> SystemMounter::Mount(
   }
 
   *error = platform_->Mount(source, target_path.value(), filesystem_type_,
-                            flags_, base::JoinString(options_, ","));
+                            flags, base::JoinString(options_, ","));
   if (*error != MOUNT_ERROR_NONE) {
     return nullptr;
   }
