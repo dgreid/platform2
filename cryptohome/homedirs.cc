@@ -1521,8 +1521,7 @@ void HomeDirs::ResetLECredentials(const Credentials& creds) {
     if (!credentials_checked) {
       // Make sure the credential can actually be used for sign-in.
       // It is also the easiest way to get a valid keyset.
-      std::unique_ptr<VaultKeyset> vk =
-          GetValidKeyset(creds, nullptr /* error */);
+      vk = GetValidKeyset(creds, nullptr /* error */);
       if (!vk) {
         LOG(WARNING) << "The provided credentials are incorrect or invalid"
                         " for LE credential reset, reset skipped.";
