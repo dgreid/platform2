@@ -293,17 +293,20 @@ void Manager::RegisterAsync(
 
 bool Manager::ListScanners(brillo::ErrorPtr* error,
                            std::vector<uint8_t>* scanner_list_out) {
+  LOG(INFO) << "Starting ListScanners()";
   if (!sane_client_) {
     brillo::Error::AddTo(error, FROM_HERE, kDbusDomain, kManagerServiceError,
                          "No connection to SANE");
     return false;
   }
 
+  LOG(INFO) << "Requesting port access";
   firewall_manager_->RequestScannerPortAccess();
   base::ScopedClosureRunner release_ports(
       base::BindOnce([](FirewallManager* fm) { fm->ReleaseAllPortsAccess(); },
                      firewall_manager_.get()));
 
+  LOG(INFO) << "Initializing libusb";
   libusb_context* context;
   if (libusb_init(&context) != 0) {
     LOG(ERROR) << "Error initializing libusb";
@@ -316,8 +319,10 @@ bool Manager::ListScanners(brillo::ErrorPtr* error,
   base::flat_set<std::string> seen_vidpid;
   base::flat_set<std::string> seen_busdev;
 
+  LOG(INFO) << "Finding IPP-USB devices";
   std::vector<ScannerInfo> ippusb_devices = FindIppUsbDevices();
   activity_callback_.Run();
+  LOG(INFO) << "Found " << ippusb_devices.size() << " possible IPP-USB devices";
   for (const ScannerInfo& scanner : ippusb_devices) {
     std::unique_ptr<SaneDevice> device =
         sane_client_->ConnectToDevice(nullptr, scanner.name());
@@ -350,12 +355,16 @@ bool Manager::ListScanners(brillo::ErrorPtr* error,
     // access and open a device given its ScannerInfo
     // It returns the first device matching the vid:pid
     // but doesn't handle multiple devices with same vid:pid but dif bus:dev
+    LOG(INFO) << "Opening libusb handle for " << vid_str;
     libusb_device_handle* dev_handle =
         libusb_open_device_with_vid_pid(context, vid, pid);
     if (dev_handle) {
+      LOG(INFO) << "Opening libusb device for " << vid_str;
       libusb_device* open_dev = libusb_get_device(dev_handle);
       uint8_t bus = libusb_get_bus_number(open_dev);
       uint8_t dev = libusb_get_device_address(open_dev);
+      LOG(INFO) << "Found " << vid_str << " at "
+                << base::StringPrintf("%03d:%03d", bus, dev);
       seen_busdev.insert(base::StringPrintf("%03d:%03d", bus, dev));
       libusb_close(dev_handle);
     } else {
@@ -363,17 +372,21 @@ bool Manager::ListScanners(brillo::ErrorPtr* error,
     }
   }
 
+  LOG(INFO) << "Getting list of SANE scanners.";
   base::Optional<std::vector<ScannerInfo>> sane_scanners =
       sane_client_->ListDevices(error);
   if (!sane_scanners.has_value()) {
     return false;
   }
+  LOG(INFO) << sane_scanners.value().size() << " scanners returned from SANE";
   // Only add sane scanners that don't have ippusb connection
   RemoveDuplicateScanners(&scanners, seen_vidpid, seen_busdev,
                           sane_scanners.value());
+  LOG(INFO) << scanners.size() << " scanners in list after de-duplication";
 
   activity_callback_.Run();
 
+  LOG(INFO) << "Probing for network scanners";
   std::vector<ScannerInfo> probed_scanners =
       epson_probe::ProbeForScanners(firewall_manager_.get());
   activity_callback_.Run();
@@ -389,6 +402,7 @@ bool Manager::ListScanners(brillo::ErrorPtr* error,
                 << " that isn't usable for scanning.";
     }
   }
+  LOG(INFO) << scanners.size() << " scanners in list after network scan";
 
   ListScannersResponse response;
   for (ScannerInfo& scanner : scanners) {
@@ -399,6 +413,7 @@ bool Manager::ListScanners(brillo::ErrorPtr* error,
   serialized.resize(response.ByteSizeLong());
   response.SerializeToArray(serialized.data(), serialized.size());
 
+  LOG(INFO) << "Returning scanner list";
   *scanner_list_out = std::move(serialized);
   return true;
 }
@@ -406,6 +421,7 @@ bool Manager::ListScanners(brillo::ErrorPtr* error,
 bool Manager::GetScannerCapabilities(brillo::ErrorPtr* error,
                                      const std::string& device_name,
                                      std::vector<uint8_t>* capabilities_out) {
+  LOG(INFO) << "Starting GetScannerCapabilities for device: " << device_name;
   if (!capabilities_out) {
     brillo::Error::AddTo(error, FROM_HERE, kDbusDomain, kManagerServiceError,
                          "'capabilities_out' must be non-null");
@@ -424,6 +440,7 @@ bool Manager::GetScannerCapabilities(brillo::ErrorPtr* error,
       sane_client_->ConnectToDevice(error, device_name);
   if (!device)
     return false;
+  LOG(INFO) << "Connected to device";
 
   base::Optional<ValidOptionValues> options =
       device->GetValidOptionValues(error);
@@ -457,12 +474,14 @@ bool Manager::GetScannerCapabilities(brillo::ErrorPtr* error,
   serialized.resize(capabilities.ByteSizeLong());
   capabilities.SerializeToArray(serialized.data(), serialized.size());
 
+  LOG(INFO) << "Returning scanner capabilities";
   *capabilities_out = std::move(serialized);
   return true;
 }
 
 std::vector<uint8_t> Manager::StartScan(
     const std::vector<uint8_t>& start_scan_request) {
+  LOG(INFO) << "Starting StartScan";
   StartScanResponse response;
   response.set_state(SCAN_STATE_FAILED);
 
@@ -679,6 +698,8 @@ void Manager::RemoveDuplicateScanners(
 bool Manager::StartScanInternal(brillo::ErrorPtr* error,
                                 const StartScanRequest& request,
                                 std::unique_ptr<SaneDevice>* device_out) {
+  LOG(INFO) << "Starting StartScanInternal for device: "
+            << request.device_name();
   if (!device_out) {
     brillo::Error::AddTo(error, FROM_HERE, kDbusDomain, kManagerServiceError,
                          "device_out cannot be null");
@@ -706,6 +727,7 @@ bool Manager::StartScanInternal(brillo::ErrorPtr* error,
   if (!device) {
     return false;
   }
+  LOG(INFO) << "Connected to device";
 
   ReportScanRequested(request.device_name());
 
@@ -751,6 +773,7 @@ bool Manager::StartScanInternal(brillo::ErrorPtr* error,
     }
   }
 
+  LOG(INFO) << "All settings applied.  Starting scan.";
   SANE_Status status = device->StartScan(error);
   if (status != SANE_STATUS_GOOD) {
     brillo::Error::AddToPrintf(error, FROM_HERE, kDbusDomain,

@@ -30,6 +30,7 @@ Daemon::Daemon(const base::Closure& startup_callback)
       startup_callback_(startup_callback) {}
 
 int Daemon::OnInit() {
+  LOG(INFO) << "Starting daemon";
   int return_code = brillo::DBusServiceDaemon::OnInit();
   if (return_code != EX_OK) {
     return return_code;
@@ -51,6 +52,7 @@ void Daemon::RegisterDBusObjectsAsync(
 }
 
 void Daemon::OnShutdown(int* return_code) {
+  LOG(INFO) << "Shutting down daemon";
   manager_.reset();
   brillo::DBusServiceDaemon::OnShutdown(return_code);
 }

@@ -50,6 +50,7 @@ base::Optional<std::vector<ScannerInfo>> SaneClientImpl::ListDevices(
     brillo::ErrorPtr* error) {
   base::AutoLock auto_lock(lock_);
   const SANE_Device** device_list;
+  LOG(INFO) << "Calling sane_get_devices";
   SANE_Status status = sane_get_devices(&device_list, SANE_FALSE);
   if (status != SANE_STATUS_GOOD) {
     brillo::Error::AddTo(error, FROM_HERE, kDbusDomain, kManagerServiceError,
@@ -96,9 +97,11 @@ SaneClientImpl::SaneClientImpl()
 
 std::unique_ptr<SaneDevice> SaneClientImpl::ConnectToDeviceInternal(
     brillo::ErrorPtr* error, const std::string& device_name) {
+  LOG(INFO) << "Creating connection to device: " << device_name;
   base::AutoLock auto_lock(lock_);
   SANE_Handle handle;
   {
+    LOG(INFO) << "Locking open_devices";
     base::AutoLock auto_lock(open_devices_->first);
     if (open_devices_->second.count(device_name) != 0) {
       brillo::Error::AddToPrintf(
@@ -107,6 +110,7 @@ std::unique_ptr<SaneDevice> SaneClientImpl::ConnectToDeviceInternal(
       return nullptr;
     }
 
+    LOG(INFO) << "Calling sane_open";
     SANE_Status status = sane_open(device_name.c_str(), &handle);
     if (status != SANE_STATUS_GOOD) {
       brillo::Error::AddToPrintf(error, FROM_HERE, kDbusDomain,
@@ -118,6 +122,7 @@ std::unique_ptr<SaneDevice> SaneClientImpl::ConnectToDeviceInternal(
 
     open_devices_->second.insert(device_name);
   }
+  LOG(INFO) << "SANE handle opened successfully";
 
   // Cannot use make_unique() with a private constructor.
   auto device = std::unique_ptr<SaneDeviceImpl>(
@@ -619,6 +624,7 @@ SaneDeviceImpl::SaneDeviceImpl(SANE_Handle handle,
       reached_eof_(false) {}
 
 bool SaneDeviceImpl::LoadOptions(brillo::ErrorPtr* error) {
+  LOG(INFO) << "Loading device options";
   // First we get option descriptor 0, which contains the total count of
   // options. We don't strictly need the descriptor, but it's "Good form" to
   // do so according to 'scanimage'.
@@ -697,6 +703,7 @@ bool SaneDeviceImpl::LoadOptions(brillo::ErrorPtr* error) {
     }
   }
 
+  LOG(INFO) << "Device options loaded successfully";
   return true;
 }
 
