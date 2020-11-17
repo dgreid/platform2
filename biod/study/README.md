@@ -96,10 +96,18 @@ EOF
 ### Install Keys on Device
 
 *   Copy the `chromeos-fpstudy-public-device.gpg` file to the test device.
+
+    ```bash
+    scp "${GNUPGHOME}/chromeos-fpstudy-public-device.gpg" \
+      dut1:/var/lib/fpstudygnupg
+    ssh dut1 chmod u=r,g=,o= \
+      /var/lib/fpstudygnupg/chromeos-fpstudy-public-device.gpg
+    ```
+
 *   Edit the `/etc/init/fingerprint_study.conf` file to have the following
     additional arguments to `exec study_serve`.
-    -   `--gpg-keyring PATH` where PATH is the path to the
-        `chromeos-fpstudy-public-device.gpg` file copied above.
+
+    -   `--gpg-keyring /var/lib/fpstudygnupg/chromeos-fpstudy-public-device.gpg`
     -   `--gpg-recipients KEYID` where KEYID is the keyid recorded in the
         `Generating Keys` section.
 
