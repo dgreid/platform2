@@ -897,7 +897,7 @@ class SessionManagerImplTest : public ::testing::Test,
   secret_util::SharedMemoryUtil* shared_memory_util_;
   base::FilePath login_screen_storage_path_;
 
-  static const pid_t kDummyPid;
+  static const pid_t kFakePid;
   static const char kNothing[];
   static const char kContainerInstanceId[];
   static const int kAllKeyFlags;
@@ -1013,7 +1013,7 @@ class SessionManagerPlayStoreAutoUpdateTest
   ~SessionManagerPlayStoreAutoUpdateTest() override = default;
 };
 
-const pid_t SessionManagerImplTest::kDummyPid = 4;
+const pid_t SessionManagerImplTest::kFakePid = 4;
 const char SessionManagerImplTest::kNothing[] = "";
 const int SessionManagerImplTest::kAllKeyFlags =
     PolicyService::KEY_ROTATE | PolicyService::KEY_INSTALL_NEW |
@@ -1087,7 +1087,7 @@ TEST_F(SessionManagerImplTest, EnableChromeTesting) {
   }
 
   // Force relaunch.  Should go through the whole path again.
-  args[0] = "--dummy";
+  args[0] = "--some-switch";
   args[1] = "--repeat-arg";
   EXPECT_CALL(manager_,
               SetBrowserTestArgs(ElementsAre(
@@ -2108,7 +2108,7 @@ TEST_F(SessionManagerImplTest, EndSessionDuringAndAfterSuspend) {
 }
 
 TEST_F(SessionManagerImplTest, StartDeviceWipe) {
-  // Just make sure the device is being restart as sanity check of
+  // Just make sure the device is being restart as a basic check of
   // InitiateDeviceWipe() invocation.
   ExpectDeviceRestart();
 
@@ -3076,7 +3076,7 @@ class StartTPMFirmwareUpdateTest : public SessionManagerImplTest {
     SetDeviceMode("consumer");
 
     SetFileContents(SessionManagerImpl::kTPMFirmwareUpdateLocationFile,
-                    "/lib/firmware/tpm/dummy.bin");
+                    "/lib/firmware/tpm/fake.bin");
     SetFileContents(SessionManagerImpl::kTPMFirmwareUpdateSRKVulnerableROCAFile,
                     "");
   }

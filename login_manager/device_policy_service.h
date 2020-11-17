@@ -60,7 +60,7 @@ class DevicePolicyService : public PolicyService {
   // Checks whether the given |current_user| is the device owner. The result of
   // the check is returned in |is_owner|. If so, it is validated that the device
   // policy settings are set up appropriately:
-  // - If |current_user| has the owner key, put them on the login white list.
+  // - If |current_user| has the owner key, put them on the login allowlist.
   // - If policy claims |current_user| is the device owner but they don't appear
   //   to have the owner key, run key mitigation.
   // Returns true on success. Fills in |error| upon encountering an error.
@@ -169,7 +169,7 @@ class DevicePolicyService : public PolicyService {
       const enterprise_management::PolicyFetchResponse& policy,
       const std::string& current_user);
 
-  // Given the private half of the owner keypair, this call whitelists
+  // Given the private half of the owner keypair, this call allowlists
   // |current_user| and sets a property indicating
   // |current_user| is the owner in the current policy and schedules a
   // PersistPolicy().

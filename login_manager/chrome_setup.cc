@@ -298,12 +298,12 @@ void CreateDirectories(ChromiumCommandBuilder* builder) {
   // exported to VMs and Android.
   CHECK(EnsureDirectoryExists(base::FilePath("/run/chrome"), uid, gid, 0755));
 
-  // Ensure the existence of the directory in which the whitelist and other
-  // ownership-related state will live. Yes, it should be owned by root. The
-  // permissions are set such that the policy-readers group can see the content
-  // of known files inside whitelist. The policy-readers group is composed of
-  // the chronos user and other daemon accessing the device policies but not
-  // anything else.
+  // Ensure the existence of the directory in which the device settings and
+  // other ownership-related state will live. Yes, it should be owned by root.
+  // The permissions are set such that the policy-readers group can see the
+  // content of known files inside the directory. The policy-readers group is
+  // composed of the chronos user and other daemon accessing the device policies
+  // but not anything else.
   gid_t policy_readers_gid;
   CHECK(brillo::userdb::GetGroupInfo("policy-readers", &policy_readers_gid));
   CHECK(EnsureDirectoryExists(base::FilePath("/var/lib/whitelist"), kRootUid,

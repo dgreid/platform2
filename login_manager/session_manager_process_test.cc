@@ -80,7 +80,7 @@ class SessionManagerProcessTest : public ::testing::Test {
   // kFakeEmail is NOT const so that it can be passed to methods that
   // implement dbus calls, which (of necessity) take bare gchar*.
   static char kFakeEmail[];
-  static const pid_t kDummyPid;
+  static const pid_t kFakePid;
   static const int kExit;
 
   void MockUtils() { manager_->test_api().set_systemutils(&utils_); }
@@ -110,7 +110,7 @@ class SessionManagerProcessTest : public ::testing::Test {
     EXPECT_CALL(metrics_, SendBrowserShutdownTime(_)).Times(0);
 
     job->set_fake_child_process(std::make_unique<FakeChildProcess>(
-        kDummyPid, exit_status, manager_->test_api()));
+        kFakePid, exit_status, manager_->test_api()));
   }
 
   void InitManager(std::unique_ptr<BrowserJobInterface> job) {
@@ -137,7 +137,7 @@ class SessionManagerProcessTest : public ::testing::Test {
     InitManager(base::WrapUnique(job));
 
     job->set_fake_child_process(
-        std::make_unique<FakeChildProcess>(kDummyPid, 0, manager_->test_api()));
+        std::make_unique<FakeChildProcess>(kFakePid, 0, manager_->test_api()));
 
     return job;
   }
@@ -164,7 +164,7 @@ class SessionManagerProcessTest : public ::testing::Test {
 
 // static
 char SessionManagerProcessTest::kFakeEmail[] = "cmasone@whaaat.org";
-const pid_t SessionManagerProcessTest::kDummyPid = 4;
+const pid_t SessionManagerProcessTest::kFakePid = 4;
 const int SessionManagerProcessTest::kExit = 1;
 
 class HandleSuspendReadinessMethodMatcher
@@ -414,7 +414,7 @@ TEST_F(SessionManagerProcessTest, TestAbortedBrowserPidWritten) {
   std::string read_pid_str;
   ASSERT_TRUE(base::ReadFileToString(aborted_browser_pid_path_, &read_pid_str));
   int read_pid = atoi(read_pid_str.c_str());
-  EXPECT_EQ(kDummyPid, read_pid);
+  EXPECT_EQ(kFakePid, read_pid);
 }
 
 // When the vm_concierge service is running, stop all vms when the session ends.

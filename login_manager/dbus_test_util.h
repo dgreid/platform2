@@ -29,9 +29,9 @@ MATCHER_P(DBusMethodCallEq, other, "Equality matcher for dbus::MethodCall") {
 class ResponseCapturer {
  public:
   ResponseCapturer()
-      : call_("org.chromium.SessionManagerInterface", "DummyDbusMethod"),
+      : call_("org.chromium.SessionManagerInterface", "PlaceholderDbusMethod"),
         weak_ptr_factory_(this) {
-    call_.SetSerial(1);  // Dummy serial is needed.
+    call_.SetSerial(1);  // Placeholder serial is needed.
   }
   ResponseCapturer(const ResponseCapturer&) = delete;
   ResponseCapturer& operator=(const ResponseCapturer&) = delete;

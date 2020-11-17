@@ -39,8 +39,8 @@ ps -u chronos --no-headers -o pid,stat,args |
 
 bootstat other-processes-terminated
 
-# Android master containers use run_oci to terminate and clean up containers.
-# If run_oci exists, let run_oci perform the task first before falling back to
+# Android containers use run_oci to terminate and clean up containers. If
+# run_oci exists, let run_oci perform the task first before falling back to
 # general cleanup. Note that the cleanup is done here only when session_manager
 # (e.g. crashes and) fails to kill/destroy the containers.
 for container in /run/containers/*-run_oci ; do

@@ -78,7 +78,7 @@ bool Subprocess::ForkAndExec(const std::vector<std::string>& args,
     minijail_namespace_enter_vfs(j.get(), ns_mnt_path_.value().value().c_str());
   }
   if (ns_mnt_path_.has_value() || new_mount_namespace_) {
-    // Remount all shared mount points as slave to allow shared mount points
+    // Remount all shared mount points as MS_SLAVE to allow shared mount points
     // from outside this namespace to propagate in. This is necessary for users
     // to be able to access USB drives/SD cards. cros-disks runs in its own
     // mount namespace and uses a shared mount point, /media, to make any

@@ -22,19 +22,19 @@ using ::testing::Return;
 using ::testing::SetArgPointee;
 
 TEST(SubprocessTest, ForkAndKill) {
-  const pid_t kDummyPid = 4;
-  const gid_t kDummyGid = getgid();
+  const pid_t kFakePid = 4;
+  const gid_t kFakeGid = getgid();
   MockSystemUtils utils;
   auto subp = std::make_unique<login_manager::Subprocess>(getuid(), &utils);
 
   EXPECT_CALL(utils, GetGidAndGroups(getuid(), _, _))
-      .WillOnce(DoAll(SetArgPointee<1>(kDummyGid), Return(true)));
+      .WillOnce(DoAll(SetArgPointee<1>(kFakeGid), Return(true)));
   EXPECT_CALL(utils, RunInMinijail(_, _, _, _))
-      .WillOnce(DoAll(SetArgPointee<3>(kDummyPid), Return(true)));
+      .WillOnce(DoAll(SetArgPointee<3>(kFakePid), Return(true)));
   ASSERT_TRUE(subp->ForkAndExec(std::vector<std::string>{"/bin/false"},
                                 std::vector<std::string>()));
 
-  EXPECT_CALL(utils, kill(kDummyPid, getuid(), SIGUSR1)).WillOnce(Return(0));
+  EXPECT_CALL(utils, kill(kFakePid, getuid(), SIGUSR1)).WillOnce(Return(0));
   subp->Kill(SIGUSR1);
 }
 

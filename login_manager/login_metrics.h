@@ -29,7 +29,7 @@ class LoginMetrics {
 
     NUM_VALUES  // Keep last
   };
-  enum AllowedUsersState { ANY_USER_ALLOWED = 0, ONLY_WHITELISTED_ALLOWED = 1 };
+  enum AllowedUsersState { ANY_USER_ALLOWED = 0, ONLY_ALLOWLISTED = 1 };
   enum PolicyFileState {
     GOOD = 0,
     MALFORMED = 1,

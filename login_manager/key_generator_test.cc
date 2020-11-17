@@ -72,17 +72,17 @@ class KeyGeneratorTest : public ::testing::Test {
 TEST_F(KeyGeneratorTest, KeygenEndToEndTest) {
   FakeGeneratedKeyHandler handler;
 
-  pid_t kDummyPid = 4;
+  pid_t kFakePid = 4;
   std::string fake_ownername("user");
   std::string fake_key_contents("stuff");
   siginfo_t fake_info;
   memset(&fake_info, 0, sizeof(siginfo_t));
-  fake_info.si_pid = kDummyPid;
+  fake_info.si_pid = kFakePid;
 
   KeyGenerator keygen(getuid(), &utils_);
   keygen.set_delegate(&handler);
   keygen.InjectJobFactory(std::unique_ptr<GeneratorJobFactoryInterface>(
-      new FakeGeneratorJob::Factory(kDummyPid, "gen", fake_key_contents)));
+      new FakeGeneratorJob::Factory(kFakePid, "gen", fake_key_contents)));
 
   ASSERT_TRUE(keygen.Start(fake_ownername, base::nullopt));
   keygen.HandleExit(fake_info);

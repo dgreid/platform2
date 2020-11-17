@@ -79,7 +79,7 @@ void LoginMetrics::SendNamespaceCreationResult(bool status) {
 }
 
 void LoginMetrics::SendConsumerAllowsNewUsers(bool allowed) {
-  int uma_code = allowed ? ANY_USER_ALLOWED : ONLY_WHITELISTED_ALLOWED;
+  int uma_code = allowed ? ANY_USER_ALLOWED : ONLY_ALLOWLISTED;
   metrics_lib_.SendEnumToUMA(kLoginConsumerAllowsNewUsersMetric, uma_code, 2);
 }
 

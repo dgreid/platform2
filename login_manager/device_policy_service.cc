@@ -117,12 +117,12 @@ bool DevicePolicyService::CheckAndHandleOwnerLogin(
     PK11SlotDescriptor* desc,
     bool* is_owner,
     brillo::ErrorPtr* error) {
-  // Record metrics around consumer usage of user whitelisting.
+  // Record metrics around consumer usage of user allowlisting.
   const em::PolicyFetchResponse& policy = GetChromeStore()->Get();
   if (IsConsumerPolicy(policy))
     metrics_->SendConsumerAllowsNewUsers(PolicyAllowsNewUsers(policy));
 
-  // If the current user is the owner, and isn't whitelisted or set as the owner
+  // If the current user is the owner, and isn't allowlisted or set as the owner
   // in the settings blob, then do so.
   brillo::ErrorPtr key_error;
   std::unique_ptr<RSAPrivateKey> signing_key =
@@ -428,7 +428,7 @@ bool DevicePolicyService::StoreOwnerProperties(const std::string& current_user,
   }
   poldata.set_username(current_user);
 
-  // We have now updated the whitelist and owner setting in |polval|.
+  // We have now updated the allowlist and owner setting in |polval|.
   // We need to put it into |poldata|, serialize that, sign it, and
   // write it back.
   poldata.set_policy_value(polval.SerializeAsString());

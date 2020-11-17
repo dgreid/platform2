@@ -115,18 +115,18 @@ TEST_F(BrowserJobTest, InitializationTest) {
 }
 
 TEST_F(BrowserJobTest, AbortAndKillAll) {
-  const gid_t kDummyGid = 1000;
-  const pid_t kDummyPid = 4;
+  const gid_t kFakeGid = 1000;
+  const pid_t kFakePid = 4;
   EXPECT_CALL(utils_, GetGidAndGroups(getuid(), _, _))
-      .WillOnce(DoAll(SetArgPointee<1>(kDummyGid), Return(true)));
+      .WillOnce(DoAll(SetArgPointee<1>(kFakeGid), Return(true)));
   EXPECT_CALL(utils_, RunInMinijail(_, _, _, _))
-      .WillOnce(DoAll(SetArgPointee<3>(kDummyPid), Return(true)));
-  EXPECT_CALL(utils_, ProcessGroupIsGone(kDummyPid, _))
+      .WillOnce(DoAll(SetArgPointee<3>(kFakePid), Return(true)));
+  EXPECT_CALL(utils_, ProcessGroupIsGone(kFakePid, _))
       .Times(3)
       .WillRepeatedly(Return(false));
-  EXPECT_CALL(utils_, ProcessIsGone(kDummyPid, _)).WillOnce(Return(false));
-  EXPECT_CALL(utils_, kill(kDummyPid, _, SIGABRT)).Times(1);
-  EXPECT_CALL(utils_, kill(-kDummyPid, _, SIGKILL)).Times(1);
+  EXPECT_CALL(utils_, ProcessIsGone(kFakePid, _)).WillOnce(Return(false));
+  EXPECT_CALL(utils_, kill(kFakePid, _, SIGABRT)).Times(1);
+  EXPECT_CALL(utils_, kill(-kFakePid, _, SIGKILL)).Times(1);
   EXPECT_CALL(utils_, time(nullptr)).WillRepeatedly(Return(0));
 
   EXPECT_CALL(metrics_, HasRecordedChromeExec()).WillRepeatedly(Return(false));
@@ -137,14 +137,14 @@ TEST_F(BrowserJobTest, AbortAndKillAll) {
 }
 
 TEST_F(BrowserJobTest, AbortAndKillAll_AlreadyGone) {
-  const gid_t kDummyGid = 1000;
-  const pid_t kDummyPid = 4;
+  const gid_t kFakeGid = 1000;
+  const pid_t kFakePid = 4;
   EXPECT_CALL(utils_, GetGidAndGroups(getuid(), _, _))
-      .WillOnce(DoAll(SetArgPointee<1>(kDummyGid), Return(true)));
+      .WillOnce(DoAll(SetArgPointee<1>(kFakeGid), Return(true)));
   EXPECT_CALL(utils_, RunInMinijail(_, _, _, _))
-      .WillOnce(DoAll(SetArgPointee<3>(kDummyPid), Return(true)));
-  EXPECT_CALL(utils_, ProcessGroupIsGone(kDummyPid, _)).WillOnce(Return(true));
-  EXPECT_CALL(utils_, ProcessIsGone(kDummyPid, _)).Times(0);
+      .WillOnce(DoAll(SetArgPointee<3>(kFakePid), Return(true)));
+  EXPECT_CALL(utils_, ProcessGroupIsGone(kFakePid, _)).WillOnce(Return(true));
+  EXPECT_CALL(utils_, ProcessIsGone(kFakePid, _)).Times(0);
   EXPECT_CALL(utils_, kill(_, _, _)).Times(0);
   EXPECT_CALL(utils_, time(nullptr)).WillRepeatedly(Return(0));
 
@@ -156,18 +156,18 @@ TEST_F(BrowserJobTest, AbortAndKillAll_AlreadyGone) {
 }
 
 TEST_F(BrowserJobTest, AbortAndKillAll_BrowserGoneChildrenLive) {
-  const gid_t kDummyGid = 1000;
-  const pid_t kDummyPid = 4;
+  const gid_t kFakeGid = 1000;
+  const pid_t kFakePid = 4;
   EXPECT_CALL(utils_, GetGidAndGroups(getuid(), _, _))
-      .WillOnce(DoAll(SetArgPointee<1>(kDummyGid), Return(true)));
+      .WillOnce(DoAll(SetArgPointee<1>(kFakeGid), Return(true)));
   EXPECT_CALL(utils_, RunInMinijail(_, _, _, _))
-      .WillOnce(DoAll(SetArgPointee<3>(kDummyPid), Return(true)));
-  EXPECT_CALL(utils_, ProcessGroupIsGone(kDummyPid, _))
+      .WillOnce(DoAll(SetArgPointee<3>(kFakePid), Return(true)));
+  EXPECT_CALL(utils_, ProcessGroupIsGone(kFakePid, _))
       .Times(2)
       .WillRepeatedly(Return(false));
-  EXPECT_CALL(utils_, ProcessIsGone(kDummyPid, _)).WillOnce(Return(true));
-  EXPECT_CALL(utils_, kill(kDummyPid, _, _)).Times(0);
-  EXPECT_CALL(utils_, kill(-kDummyPid, _, SIGKILL)).Times(1);
+  EXPECT_CALL(utils_, ProcessIsGone(kFakePid, _)).WillOnce(Return(true));
+  EXPECT_CALL(utils_, kill(kFakePid, _, _)).Times(0);
+  EXPECT_CALL(utils_, kill(-kFakePid, _, SIGKILL)).Times(1);
   EXPECT_CALL(utils_, time(nullptr)).WillRepeatedly(Return(0));
 
   EXPECT_CALL(metrics_, HasRecordedChromeExec()).WillRepeatedly(Return(false));
@@ -289,12 +289,12 @@ TEST_F(BrowserJobTest, ShouldDropExtraArgumentsTest) {
 }
 
 TEST_F(BrowserJobTest, ShouldAddCrashLoopArgBeforeStopping) {
-  const gid_t kDummyGid = 1000;
-  const pid_t kDummyPid = 4;
+  const gid_t kFakeGid = 1000;
+  const pid_t kFakePid = 4;
   EXPECT_CALL(utils_, GetGidAndGroups(getuid(), _, _))
-      .WillRepeatedly(DoAll(SetArgPointee<1>(kDummyGid), Return(true)));
+      .WillRepeatedly(DoAll(SetArgPointee<1>(kFakeGid), Return(true)));
   EXPECT_CALL(utils_, RunInMinijail(_, _, _, _))
-      .WillRepeatedly(DoAll(SetArgPointee<3>(kDummyPid), Return(true)));
+      .WillRepeatedly(DoAll(SetArgPointee<3>(kFakePid), Return(true)));
   EXPECT_CALL(utils_, time(nullptr))
       .WillRepeatedly(Return(BrowserJob::kRestartWindowSeconds + 1));
   for (int i = 0; i < BrowserJob::kRestartTries - 1; ++i) {
@@ -338,12 +338,12 @@ TEST_F(BrowserJobTest, NullFileCheckerTest) {
 // On the job's first run, it should have a one-time-flag.  That
 // should get cleared and not used again.
 TEST_F(BrowserJobTest, OneTimeBootFlags) {
-  const gid_t kDummyGid = 1000;
-  const pid_t kDummyPid = 4;
+  const gid_t kFakeGid = 1000;
+  const pid_t kFakePid = 4;
   EXPECT_CALL(utils_, GetGidAndGroups(getuid(), _, _))
-      .WillRepeatedly(DoAll(SetArgPointee<1>(kDummyGid), Return(true)));
+      .WillRepeatedly(DoAll(SetArgPointee<1>(kFakeGid), Return(true)));
   EXPECT_CALL(utils_, RunInMinijail(_, _, _, _))
-      .WillRepeatedly(DoAll(SetArgPointee<3>(kDummyPid), Return(true)));
+      .WillRepeatedly(DoAll(SetArgPointee<3>(kFakePid), Return(true)));
   EXPECT_CALL(utils_, time(nullptr)).WillRepeatedly(Return(0));
 
   EXPECT_CALL(metrics_, HasRecordedChromeExec())
@@ -361,14 +361,14 @@ TEST_F(BrowserJobTest, OneTimeBootFlags) {
 }
 
 TEST_F(BrowserJobTest, RunBrowserTermMessage) {
-  const gid_t kDummyGid = 1000;
-  const pid_t kDummyPid = 4;
+  const gid_t kFakeGid = 1000;
+  const pid_t kFakePid = 4;
   int signal = SIGKILL;
   EXPECT_CALL(utils_, GetGidAndGroups(getuid(), _, _))
-      .WillOnce(DoAll(SetArgPointee<1>(kDummyGid), Return(true)));
+      .WillOnce(DoAll(SetArgPointee<1>(kFakeGid), Return(true)));
   EXPECT_CALL(utils_, RunInMinijail(_, _, _, _))
-      .WillOnce(DoAll(SetArgPointee<3>(kDummyPid), Return(true)));
-  EXPECT_CALL(utils_, kill(kDummyPid, _, signal)).Times(1);
+      .WillOnce(DoAll(SetArgPointee<3>(kFakePid), Return(true)));
+  EXPECT_CALL(utils_, kill(kFakePid, _, signal)).Times(1);
   EXPECT_CALL(utils_, time(nullptr)).WillRepeatedly(Return(0));
 
   EXPECT_CALL(metrics_, HasRecordedChromeExec()).WillRepeatedly(Return(false));

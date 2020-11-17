@@ -64,7 +64,7 @@ ScopedPK11SlotDescriptor MockNssUtil::OpenUserDB(
 base::FilePath MockNssUtil::GetOwnerKeyFilePath() {
   if (!EnsureTempDir())
     return base::FilePath();
-  return temp_dir_.GetPath().AppendASCII("dummy");
+  return temp_dir_.GetPath().AppendASCII("fake");
 }
 
 PK11SlotDescriptor* MockNssUtil::GetDescriptor() {

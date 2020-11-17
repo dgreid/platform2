@@ -84,8 +84,8 @@ extern const char kOzoneNNPalmRadiusProperty[];
 // browser should be added to libchromeos's ChromiumCommandBuilder class
 // instead.
 //
-// |cros_config| (if non-null) provides the master configuration (used to look
-// up the default wallpaper filename).
+// |cros_config| (if non-null) provides the device model configuration (used to
+// look up the default wallpaper filename).
 void PerformChromeSetup(brillo::CrosConfigInterface* cros_config,
                         bool* is_developer_end_user_out,
                         std::map<std::string, std::string>* env_vars_out,
@@ -102,8 +102,8 @@ void AddSerializedAshFlags(chromeos::ui::ChromiumCommandBuilder* builder,
 // PerformChromeSetup and only present in the header for testing.
 // Flags are added to |builder|, and |path_exists| is called to test whether a
 // given file exists (e.g. use base::Bind(base::PathExists)).
-// |cros_config| (if non-null) provides the master configuration (used to look
-// up the default wallpaper filename).
+// |cros_config| (if non-null) provides the device model configuration (used to
+// look up the default wallpaper filename).
 void SetUpWallpaperFlags(
     chromeos::ui::ChromiumCommandBuilder* builder,
     brillo::CrosConfigInterface* cros_config,
