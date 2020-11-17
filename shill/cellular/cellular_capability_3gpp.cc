@@ -1555,8 +1555,8 @@ void CellularCapability3gpp::OnProfilesChanged(const Profiles& profiles) {
   FillInitialEpsBearerPropertyMap(&properties);
   ResultCallback cb = Bind(&CellularCapability3gpp::OnSetInitialEpsBearerReply,
                            weak_ptr_factory_.GetWeakPtr());
-  if (!properties.IsEmpty())
-    SetInitialEpsBearer(properties, &error, cb);
+  // If 'properties' is empty, this will clear the 'attach APN' on the modem.
+  SetInitialEpsBearer(properties, &error, cb);
 }
 
 void CellularCapability3gpp::On3gppRegistrationChanged(
