@@ -280,6 +280,8 @@ def main(argv: list):
         parser.error('gpg-recipients must be specified with gpg-keyring')
     if args.gpg_recipients and not args.gpg_keyring:
         parser.error('gpg-keyring must be specified with gpg-recipients')
+    if args.gpg_keyring and not os.access(args.gpg_keyring, os.R_OK):
+        parser.error('cannot read gpg-keyring file %s' % args.gpg_keyring)
 
     # Configure cherrypy server
     cherrypy.config.update({'server.socket_port': args.port})
