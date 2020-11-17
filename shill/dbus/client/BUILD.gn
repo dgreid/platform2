@@ -1,0 +1,55 @@
+# Copyright 2020 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//common-mk/deps.gni")
+import("//common-mk/pkg_config.gni")
+
+group("all") {
+  deps = [ ":libshill-dbus-client" ]
+  if (use.test) {
+    deps += [ ":libshill-dbus-client_test" ]
+  }
+}
+
+pkg_config("target_defaults") {
+  pkg_deps = [
+    "libbrillo",
+    "libchrome",
+    "libshill-client",
+  ]
+}
+
+write_deps("libshill-dbus-client_deps") {
+  pkg_deps = []
+  target = "libshill-dbus-client"
+}
+
+shared_library("libshill-dbus-client") {
+  configs += [ ":target_defaults" ]
+  sources = [ "client.cc" ]
+  deps = [ ":${target_name}_deps" ]
+}
+
+if (use.test) {
+  pkg_config("libshill-dbus-client_test_config") {
+    pkg_deps = [
+      "libbrillo-test",
+      "libchrome-test",
+      "libshill-client-test",
+    ]
+  }
+
+  executable("libshill-dbus-client_test") {
+    configs += [
+      "//common-mk:test",
+      ":libshill-dbus-client_test_config",
+      ":target_defaults",
+    ]
+    sources = [ "client_test.cc" ]
+    deps = [
+      ":libshill-dbus-client",
+      "//common-mk/testrunner",
+    ]
+  }
+}
