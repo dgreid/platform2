@@ -174,7 +174,8 @@ can run the following to create a temporary gpg homedir:
 (in/out) $ gpg --import chromeos-fpstudy-private.gpg
 # Decrypt all fingerprint captures, while place the decrypted file version
 # alongside the encrypted version.
-(in/out) $ find ./fpstudy-fingers -type f -name '*.gpg' | xargs gpg --decrypt-files
+(in/out) $ find ./fpstudy-fingers -type f -name '*.gpg' | \
+             xargs -P $(nproc) gpg --decrypt-files
 ```
 
 --------------------------------------------------------------------------------
