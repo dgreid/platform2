@@ -20,9 +20,10 @@
 static const char kDevInputEvent[] = "/dev/input";
 static const char kEventDevName[] = "event";
 
-// Maximum number of event devices to monitor.
-// 10 should be large enough for normal use case.
-static const int kMaxFds = 10;
+// Maximum number of event devices to monitor. 10 should be large enough for
+// normal use case. This uses a #define rather than a variable so that it can
+// be used as an array size.
+#define MAX_FDS 10
 
 // Determines if the given |bit| is set in the |bitmask| array.
 static bool TestBit(const int bit, const uint8_t* bitmask) {
@@ -76,7 +77,7 @@ static int WaitForKeys(const int* fds,
                        const int* events,
                        const int num_events) {
   // Boolean array to keep track of whether a key is currently up or down.
-  bool key_states[kMaxFds][KEY_MAX + 1] = {{}};
+  bool key_states[MAX_FDS][KEY_MAX + 1] = {{}};
 
   int epfd = epoll_create1(EPOLL_CLOEXEC);
   if (epfd < 0) {
@@ -219,7 +220,7 @@ int main(int argc, char** argv) {
 
   struct dirent** input_devs;
   int ndev = scandir(kDevInputEvent, &input_devs, IsEventDevice, NULL);
-  int fds[kMaxFds], num_fds = 0;
+  int fds[MAX_FDS], num_fds = 0;
 
   for (int i = 0; i < ndev; ++i) {
     char* ev_dev;
@@ -242,7 +243,7 @@ int main(int argc, char** argv) {
     if ((flag_include_usb || !IsUSBDevice(fd)) && IsKeyboardDevice(fd) &&
         SupportsAllKeys(fd, events, num_events)) {
       fds[num_fds++] = fd;
-      if (flag_check || num_fds >= kMaxFds) {
+      if (flag_check || num_fds >= MAX_FDS) {
         break;
       }
     } else {
