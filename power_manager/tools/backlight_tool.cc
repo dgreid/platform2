@@ -179,11 +179,8 @@ class ObserverImpl : public power_manager::system::AmbientLightObserver {
     CHECK(runner_.get());
 
     runner_->Run();
-
-    bool timed_out = timed_out_;
     ResetRunner();
-
-    return !timed_out;
+    return !timed_out_;
   }
 
   // AmbientLightObserver implementation:
