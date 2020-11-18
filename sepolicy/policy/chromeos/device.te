@@ -9,6 +9,7 @@ type ptmx_device, dev_type, cros_dev_type, cros_labeled_dev_type;
 type random_device, dev_type, cros_dev_type, cros_labeled_dev_type;
 type tpm_device, dev_type, cros_dev_type, cros_labeled_dev_type;
 type urandom_device, dev_type, cros_dev_type, cros_labeled_dev_type;
+type usb_device, dev_type, cros_dev_type, cros_labeled_dev_type;
 type zero_device, dev_type, cros_dev_type, cros_labeled_dev_type;
 
 typeattribute null_device dev_type, cros_dev_type, cros_labeled_dev_type;
