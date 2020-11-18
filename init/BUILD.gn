@@ -8,7 +8,6 @@ group("all") {
   deps = [
     ":clobber-state",
     ":cros_sysrq_init",
-    ":ext_pci_drivers_allowlist_init",
     ":file_attrs_cleaner_tool",
     ":net_poll_tool",
     ":periodic_scheduler",
@@ -80,11 +79,6 @@ executable("cros_sysrq_init") {
   configs += [ ":target_defaults" ]
   sources = [ "cros_sysrq_init.cc" ]
   pkg_deps = [ "vboot_host" ]
-}
-
-executable("ext_pci_drivers_allowlist_init") {
-  configs += [ ":target_defaults" ]
-  sources = [ "ext_pci_drivers_allowlist_init.cc" ]
 }
 
 executable("net_poll_tool") {
