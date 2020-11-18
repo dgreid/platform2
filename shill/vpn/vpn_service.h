@@ -51,10 +51,12 @@ class VPNService : public Service, public DefaultServiceObserver {
   void OnBeforeSuspend(const ResultCallback& callback) override;
   void OnAfterResume() override;
   void OnDefaultServiceStateChanged(const ServiceRefPtr& service) override;
-  void OnDefaultServiceChanged(const ServiceRefPtr& logical_service,
-                               bool logical_service_changed,
-                               const ServiceRefPtr& physical_service,
-                               bool physical_service_changed) override;
+
+  // Inherited from DefaultServiceObserver.
+  void OnDefaultLogicalServiceChanged(
+      const ServiceRefPtr& logical_service) override;
+  void OnDefaultPhysicalServiceChanged(
+      const ServiceRefPtr& physical_service) override;
 
   virtual void InitDriverPropertyStore();
 

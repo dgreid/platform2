@@ -323,8 +323,8 @@ TEST_F(MetricsTest, TimeOnlineTimeToDrop) {
       .Times(0);
   EXPECT_CALL(*mock_time_online_timer, Start()).Times(2);
   EXPECT_CALL(*mock_time_to_drop_timer, Start());
-  metrics_.OnDefaultServiceChanged(service_, true, nullptr, false);
-  metrics_.OnDefaultServiceChanged(wifi_service, true, nullptr, false);
+  metrics_.OnDefaultLogicalServiceChanged(service_);
+  metrics_.OnDefaultLogicalServiceChanged(wifi_service);
 
   EXPECT_CALL(*mock_time_online_timer, Start());
   EXPECT_CALL(*mock_time_to_drop_timer, Start()).Times(0);
@@ -336,7 +336,7 @@ TEST_F(MetricsTest, TimeOnlineTimeToDrop) {
                                   Metrics::kMetricTimeToDropSecondsMin,
                                   Metrics::kMetricTimeToDropSecondsMax,
                                   Metrics::kTimerHistogramNumBuckets));
-  metrics_.OnDefaultServiceChanged(nullptr, true, nullptr, false);
+  metrics_.OnDefaultLogicalServiceChanged(nullptr);
 }
 
 TEST_F(MetricsTest, Disconnect) {
@@ -1275,18 +1275,18 @@ TEST_F(MetricsTest, CumulativeCellWifiTest) {
   // must not exceed the length of the |times| vector above.
 
   EXPECT_CALL(*wifi_service, technology()).WillOnce(Return(Technology::kWifi));
-  metrics_.OnDefaultServiceChanged(wifi_service, true, nullptr, false);
+  metrics_.OnDefaultLogicalServiceChanged(wifi_service);
   Metrics::AccumulateTimeOnTechnology(&metrics_, cumulative_names,
                                       cumulative_metrics.get());
 
   EXPECT_CALL(*cell_service, technology())
       .WillOnce(Return(Technology::kCellular));
-  metrics_.OnDefaultServiceChanged(cell_service, true, nullptr, false);
+  metrics_.OnDefaultLogicalServiceChanged(cell_service);
   Metrics::AccumulateTimeOnTechnology(&metrics_, cumulative_names,
                                       cumulative_metrics.get());
 
   EXPECT_CALL(*wifi_service, technology()).WillOnce(Return(Technology::kWifi));
-  metrics_.OnDefaultServiceChanged(wifi_service, true, nullptr, false);
+  metrics_.OnDefaultLogicalServiceChanged(wifi_service);
   Metrics::AccumulateTimeOnTechnology(&metrics_, cumulative_names,
                                       cumulative_metrics.get());
   EXPECT_CALL(library_, SendToUMA("Histogram.TimeOnlineAny", 3, _, _, _));

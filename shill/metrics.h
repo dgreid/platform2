@@ -1009,10 +1009,10 @@ class Metrics : public DefaultServiceObserver {
       WiFiConnectionStatusAfterWake status);
 
   // Implements DefaultServiceObserver.
-  void OnDefaultServiceChanged(const ServiceRefPtr& logical_service,
-                               bool logical_service_changed,
-                               const ServiceRefPtr& physical_service,
-                               bool physical_service_changed) override;
+  void OnDefaultLogicalServiceChanged(
+      const ServiceRefPtr& logical_service) override;
+  void OnDefaultPhysicalServiceChanged(
+      const ServiceRefPtr& physical_service) override;
 
   // Notifies this object that |service| state has changed.
   virtual void NotifyServiceStateChanged(const Service& service,
@@ -1456,7 +1456,6 @@ class Metrics : public DefaultServiceObserver {
   MetricsLibraryInterface* library_;
   ServiceMetricsLookupMap services_metrics_;
   Technology last_default_technology_;
-  Technology last_physical_technology_;
   bool was_last_online_;
   std::unique_ptr<chromeos_metrics::Timer> time_online_timer_;
   std::unique_ptr<chromeos_metrics::Timer> time_to_drop_timer_;

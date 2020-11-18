@@ -1605,9 +1605,12 @@ void Manager::UpdateDefaultServices(const ServiceRefPtr& logical_service,
   }
 
   for (auto& observer : default_service_observers_) {
-    observer.OnDefaultServiceChanged(logical_service, logical_service_changed,
-                                     physical_service,
-                                     physical_service_changed);
+    if (logical_service_changed) {
+      observer.OnDefaultLogicalServiceChanged(logical_service);
+    }
+    if (physical_service_changed) {
+      observer.OnDefaultPhysicalServiceChanged(physical_service);
+    }
   }
 }
 

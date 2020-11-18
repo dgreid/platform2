@@ -327,11 +327,11 @@ class ManagerTest : public PropertyStoreTest {
   class ServiceWatcher : public DefaultServiceObserver {
    public:
     MOCK_METHOD(void,
-                OnDefaultServiceChanged,
-                (const ServiceRefPtr& logical_service,
-                 bool logical_service_changed,
-                 const ServiceRefPtr& physical_service,
-                 bool physical_service_changed));
+                OnDefaultLogicalServiceChanged,
+                (const ServiceRefPtr& logical_service));
+    MOCK_METHOD(void,
+                OnDefaultPhysicalServiceChanged,
+                (const ServiceRefPtr& physical_service));
   };
 
   class TerminationActionTest
@@ -403,7 +403,6 @@ class ManagerTest : public PropertyStoreTest {
 
    private:
     ResultCallback result_callback_;
-
   };
 
   void SetSuspending(bool suspending) {
@@ -2259,7 +2258,8 @@ TEST_F(ManagerTest, SortServicesWithConnection) {
                                              true));
   EXPECT_CALL(*mock_connection1,
               SetPriority(Connection::kDefaultPriority, true));
-  EXPECT_CALL(service_watcher, OnDefaultServiceChanged(_, _, _, _));
+  EXPECT_CALL(service_watcher, OnDefaultLogicalServiceChanged(_));
+  EXPECT_CALL(service_watcher, OnDefaultPhysicalServiceChanged(_));
   EXPECT_CALL(*manager_adaptor_,
               EmitRpcIdentifierChanged(kDefaultServiceProperty, _));
   manager()->SortServicesTask();
@@ -2269,7 +2269,8 @@ TEST_F(ManagerTest, SortServicesWithConnection) {
   // code causes DefaultService changes, but we see no further calls
   // to |service_watcher|.)
   manager()->RemoveDefaultServiceObserver(&service_watcher);
-  EXPECT_CALL(service_watcher, OnDefaultServiceChanged(_, _, _, _)).Times(0);
+  EXPECT_CALL(service_watcher, OnDefaultLogicalServiceChanged(_)).Times(0);
+  EXPECT_CALL(service_watcher, OnDefaultPhysicalServiceChanged(_)).Times(0);
 
   // Deregistering the current DefaultService causes the other Service
   // to become default.  Appropriate notifications are sent.
@@ -2315,27 +2316,24 @@ TEST_F(ManagerTest, UpdateDefaultServices) {
   manager()->AddDefaultServiceObserver(&service_watcher1);
   manager()->AddDefaultServiceObserver(&service_watcher2);
 
-  EXPECT_CALL(service_watcher1,
-              OnDefaultServiceChanged(service, false, service, true));
-  EXPECT_CALL(service_watcher2,
-              OnDefaultServiceChanged(service, false, service, true));
+  EXPECT_CALL(service_watcher1, OnDefaultPhysicalServiceChanged(service));
+  EXPECT_CALL(service_watcher2, OnDefaultPhysicalServiceChanged(service));
   manager()->UpdateDefaultServices(mock_service, mock_service);
 
-  EXPECT_CALL(service_watcher1,
-              OnDefaultServiceChanged(null_service, false, null_service, true));
-  EXPECT_CALL(service_watcher2,
-              OnDefaultServiceChanged(null_service, false, null_service, true));
+  EXPECT_CALL(service_watcher1, OnDefaultPhysicalServiceChanged(null_service));
+  EXPECT_CALL(service_watcher2, OnDefaultPhysicalServiceChanged(null_service));
   manager()->UpdateDefaultServices(null_service, null_service);
 
   manager()->RemoveDefaultServiceObserver(&service_watcher1);
-  EXPECT_CALL(service_watcher1, OnDefaultServiceChanged(_, _, _, _)).Times(0);
-  EXPECT_CALL(service_watcher2,
-              OnDefaultServiceChanged(service, false, service, true));
+  EXPECT_CALL(service_watcher1, OnDefaultLogicalServiceChanged(_)).Times(0);
+  EXPECT_CALL(service_watcher1, OnDefaultPhysicalServiceChanged(_)).Times(0);
+  EXPECT_CALL(service_watcher2, OnDefaultPhysicalServiceChanged(service));
   manager()->UpdateDefaultServices(mock_service, mock_service);
   EXPECT_EQ(GetDefaultServiceObserverCount(), 1);
 
   manager()->RemoveDefaultServiceObserver(&service_watcher2);
-  EXPECT_CALL(service_watcher2, OnDefaultServiceChanged(_, _, _, _)).Times(0);
+  EXPECT_CALL(service_watcher2, OnDefaultLogicalServiceChanged(_)).Times(0);
+  EXPECT_CALL(service_watcher2, OnDefaultPhysicalServiceChanged(_)).Times(0);
   manager()->UpdateDefaultServices(null_service, null_service);
 
   EXPECT_EQ(GetDefaultServiceObserverCount(), 0);
@@ -2357,10 +2355,8 @@ TEST_F(ManagerTest, UpdateDefaultServicesWithDefaultServiceCallbacksRemoved) {
   ServiceWatcher service_watchers[1000];
   for (auto& service_watcher : service_watchers) {
     manager()->AddDefaultServiceObserver(&service_watcher);
-    EXPECT_CALL(service_watcher,
-                OnDefaultServiceChanged(service, false, service, true))
-        .WillOnce(Invoke([this, &service_watcher](const ServiceRefPtr&, bool,
-                                                  const ServiceRefPtr&, bool) {
+    EXPECT_CALL(service_watcher, OnDefaultPhysicalServiceChanged(service))
+        .WillOnce(Invoke([this, &service_watcher](const ServiceRefPtr&) {
           manager()->RemoveDefaultServiceObserver(&service_watcher);
         }));
   }
@@ -2369,7 +2365,8 @@ TEST_F(ManagerTest, UpdateDefaultServicesWithDefaultServiceCallbacksRemoved) {
   EXPECT_EQ(GetDefaultServiceObserverCount(), 0);
 
   for (auto& service_watcher : service_watchers) {
-    EXPECT_CALL(service_watcher, OnDefaultServiceChanged(_, _, _, _)).Times(0);
+    EXPECT_CALL(service_watcher, OnDefaultLogicalServiceChanged(_)).Times(0);
+    EXPECT_CALL(service_watcher, OnDefaultPhysicalServiceChanged(_)).Times(0);
   }
   manager()->UpdateDefaultServices(null_service, null_service);
   EXPECT_EQ(GetDefaultServiceObserverCount(), 0);

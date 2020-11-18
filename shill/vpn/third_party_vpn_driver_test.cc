@@ -121,18 +121,18 @@ TEST_F(ThirdPartyVpnDriverTest, ReconnectionEvents) {
   EXPECT_CALL(*adaptor_interface_, EmitPlatformMessage(static_cast<uint32_t>(
                                        ThirdPartyVpnDriver::kLinkChanged)));
   EXPECT_CALL(*mock_service, state()).WillOnce(Return(Service::kStateOnline));
-  service_->OnDefaultServiceChanged(mock_service, true, mock_service, true);
+  service_->OnDefaultPhysicalServiceChanged(mock_service);
 
   // Default physical service has no connection -> kLinkDown.
   EXPECT_CALL(*adaptor_interface_, EmitPlatformMessage(static_cast<uint32_t>(
                                        ThirdPartyVpnDriver::kLinkDown)));
-  service_->OnDefaultServiceChanged(nullptr, true, nullptr, true);
+  service_->OnDefaultPhysicalServiceChanged(nullptr);
 
   // New default physical service not online yet -> no change.
   EXPECT_CALL(*adaptor_interface_, EmitPlatformMessage(_)).Times(0);
   EXPECT_CALL(*mock_service, state())
       .WillOnce(Return(Service::kStateConnected));
-  service_->OnDefaultServiceChanged(mock_service, true, mock_service, true);
+  service_->OnDefaultPhysicalServiceChanged(mock_service);
 
   EXPECT_CALL(*adaptor_interface_, EmitPlatformMessage(_)).Times(0);
   EXPECT_CALL(*mock_service, state())
@@ -151,7 +151,7 @@ TEST_F(ThirdPartyVpnDriverTest, ReconnectionEvents) {
   driver_->reconnect_supported_ = false;
   EXPECT_CALL(*adaptor_interface_, EmitPlatformMessage(static_cast<uint32_t>(
                                        ThirdPartyVpnDriver::kDisconnected)));
-  service_->OnDefaultServiceChanged(nullptr, true, nullptr, true);
+  service_->OnDefaultPhysicalServiceChanged(nullptr);
 
   driver_->Disconnect();
 }

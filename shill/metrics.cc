@@ -537,7 +537,6 @@ const int Metrics::kMetricServiceSignalStrengthNumBuckets = 40;
 Metrics::Metrics()
     : library_(&metrics_library_),
       last_default_technology_(Technology::kUnknown),
-      last_physical_technology_(Technology::kUnknown),
       was_last_online_(false),
       time_online_timer_(new chromeos_metrics::Timer),
       time_to_drop_timer_(new chromeos_metrics::Timer),
@@ -916,14 +915,8 @@ void Metrics::ReportTimeOnTechnology(
   }
 }
 
-void Metrics::OnDefaultServiceChanged(const ServiceRefPtr& logical_service,
-                                      bool /* logical_service_changed */,
-                                      const ServiceRefPtr& physical_service,
-                                      bool /* physical_service_changed */) {
-  last_physical_technology_ = physical_service
-                                  ? physical_service->technology()
-                                  : Technology(Technology::kUnknown);
-
+void Metrics::OnDefaultLogicalServiceChanged(
+    const ServiceRefPtr& logical_service) {
   base::TimeDelta elapsed_seconds;
   Technology technology = logical_service ? logical_service->technology()
                                           : Technology(Technology::kUnknown);
@@ -959,6 +952,8 @@ void Metrics::OnDefaultServiceChanged(const ServiceRefPtr& logical_service,
 
   was_last_online_ = (logical_service != nullptr);
 }
+
+void Metrics::OnDefaultPhysicalServiceChanged(const ServiceRefPtr&) {}
 
 void Metrics::NotifyServiceStateChanged(const Service& service,
                                         Service::ConnectState new_state) {

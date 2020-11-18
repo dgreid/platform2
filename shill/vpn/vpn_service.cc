@@ -391,14 +391,10 @@ void VPNService::OnDefaultServiceStateChanged(const ServiceRefPtr& service) {
   driver_->OnDefaultPhysicalServiceEvent(VPNDriver::kDefaultPhysicalServiceUp);
 }
 
-void VPNService::OnDefaultServiceChanged(
-    const ServiceRefPtr& /* logical_service */,
-    bool /* logical_service_changed */,
-    const ServiceRefPtr& physical_service,
-    bool physical_service_changed) {
-  if (!physical_service_changed)
-    return;
+void VPNService::OnDefaultLogicalServiceChanged(const ServiceRefPtr&) {}
 
+void VPNService::OnDefaultPhysicalServiceChanged(
+    const ServiceRefPtr& physical_service) {
   SLOG(this, 2) << __func__ << "("
                 << (physical_service ? physical_service->log_name() : "-")
                 << ")";

@@ -1258,7 +1258,7 @@ TEST_F(OpenVPNDriverTest, OnDefaultServiceChanged) {
   // Switch from Online service -> no service.  VPN should be put on hold.
   ServiceRefPtr null_service;
   EXPECT_CALL(*management_server_, Hold());
-  service_->OnDefaultServiceChanged(null_service, true, null_service, true);
+  service_->OnDefaultPhysicalServiceChanged(null_service);
   Mock::VerifyAndClearExpectations(management_server_);
 
   // Switch from no service -> Portal service.  VPN should stay on
@@ -1269,7 +1269,7 @@ TEST_F(OpenVPNDriverTest, OnDefaultServiceChanged) {
       .WillOnce(Return(Service::kStateNoConnectivity));
   EXPECT_CALL(*management_server_, Hold()).Times(0);
   EXPECT_CALL(*management_server_, ReleaseHold()).Times(0);
-  service_->OnDefaultServiceChanged(mock_service, true, mock_service, true);
+  service_->OnDefaultPhysicalServiceChanged(mock_service);
   Mock::VerifyAndClearExpectations(management_server_);
 
   // Current service transitions from Portal -> Online.  VPN should release
@@ -1285,7 +1285,7 @@ TEST_F(OpenVPNDriverTest, OnDefaultServiceChanged) {
 
   EXPECT_CALL(*mock_service2, state()).WillOnce(Return(Service::kStateOnline));
   EXPECT_CALL(*management_server_, Restart());
-  service_->OnDefaultServiceChanged(mock_service2, true, mock_service2, true);
+  service_->OnDefaultPhysicalServiceChanged(mock_service2);
 }
 
 TEST_F(OpenVPNDriverTest, GetReconnectTimeoutSeconds) {

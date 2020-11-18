@@ -11,28 +11,29 @@
 
 namespace shill {
 
-// Interface for Observer of default Service changes. Registered and
-// unregistered using Manager::{Add,Remove}DefaultServiceObserver.
+// Interface for Observer of default logical and physical service changes. When
+// both of the default services changed, OnDefaultLogicalServiceChanged will
+// be triggered at first. Registered and unregistered using
+// Manager::{Add,Remove}DefaultServiceObserver.
 class DefaultServiceObserver : public base::CheckedObserver {
  public:
   virtual ~DefaultServiceObserver() = default;
 
-  // This event is triggered when the logical and/or physical default Service
-  // has changed.
-  //
-  // Note: It is feasible in the future that we would actually have a chain of
-  // default Services rather than just two (e.g. VPNService -> (virtual)
-  // PPPoEService -> EthernetService). For now, the implicit assumption in a
-  // number of parts of Shill is that this chain of default Services can be at
-  // most two distinct Services.
-  //
-  // TODO(crbug.com/999589) Once lower Device is fully implemented, VPNDrivers
-  // can use their VirtualDevice instance to get the specific events they are
-  // looking for and the two bools can be removed.
-  virtual void OnDefaultServiceChanged(const ServiceRefPtr& logical_service,
-                                       bool logical_service_changed,
-                                       const ServiceRefPtr& physical_service,
-                                       bool physical_service_changed) = 0;
+  // For the default logical service, "changed" means one of the following
+  // events: 1) another logical service becomes the default, 2) the connected
+  // state of the default logical service (i.e., whether this service is
+  // associated with a Connection object) has changed, or 3) the above two
+  // events happen at the same time.
+  virtual void OnDefaultLogicalServiceChanged(
+      const ServiceRefPtr& logical_service) = 0;
+
+  // For the default physical service, "changed" means one of the following
+  // events: 1) another physical service becomes the default, 2) the connected
+  // state of the default physical service (i.e., whether this service is
+  // associated with a Connection object) has changed, or 3) the above two
+  // events happen at the same time.
+  virtual void OnDefaultPhysicalServiceChanged(
+      const ServiceRefPtr& physical_service) = 0;
 };
 
 }  // namespace shill
