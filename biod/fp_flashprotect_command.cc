@@ -20,7 +20,7 @@ std::unique_ptr<FpFlashProtectCommand> FpFlashProtectCommand::Create(
   fp_req.mask = mask;
 
   // Using new to access non-public constructor. See https://abseil.io/tips/134.
-  auto cmd = base::WrapUnique(new FpFlashProtectCommand);
+  auto cmd = base::WrapUnique(new FpFlashProtectCommand());
   cmd->SetReq(fp_req);
   return cmd;
 }

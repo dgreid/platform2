@@ -9,7 +9,6 @@
 #include <utility>
 
 #include <base/logging.h>
-#include <base/memory/ptr_util.h>
 
 #include "cros-disks/fuse_mounter.h"
 #include "cros-disks/mount_options.h"
@@ -55,13 +54,13 @@ std::unique_ptr<FUSEMounter> FUSEHelper::CreateMounter(
     const std::vector<std::string>& options) const {
   MountOptions mount_options;
   mount_options.Initialize(options, false, "", "");
-  return base::WrapUnique(
-      new FUSEMounterLegacy({.filesystem_type = type(),
-                             .mount_options = std::move(mount_options),
-                             .mount_program = program_path().value(),
-                             .mount_user = user(),
-                             .platform = platform(),
-                             .process_reaper = process_reaper()}));
+  return std::make_unique<FUSEMounterLegacy>(
+      FUSEMounterLegacy::Params{.filesystem_type = type(),
+                                .mount_options = std::move(mount_options),
+                                .mount_program = program_path().value(),
+                                .mount_user = user(),
+                                .platform = platform(),
+                                .process_reaper = process_reaper()});
 }
 
 }  // namespace cros_disks

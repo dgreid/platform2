@@ -48,7 +48,7 @@ std::unique_ptr<FpContextCommand_v0> FpContextCommand_v0::Create(
   }
   memcpy(ctxt.userid, user_id->data(), user_id->size());
   // Using new to access non-public constructor. See https://abseil.io/tips/134.
-  auto cmd = base::WrapUnique(new FpContextCommand_v0);
+  auto cmd = base::WrapUnique(new FpContextCommand_v0());
   cmd->SetReq(ctxt);
   return cmd;
 }

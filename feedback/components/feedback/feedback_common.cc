@@ -4,9 +4,9 @@
 
 #include "components/feedback/feedback_common.h"
 
+#include <memory>
 #include <utility>
 
-#include "base/memory/ptr_util.h"
 #include "base/strings/string_util.h"
 #include "components/feedback/proto/common.pb.h"
 #include "components/feedback/proto/dom.pb.h"
@@ -121,8 +121,8 @@ bool FeedbackCommon::BelowCompressionThreshold(const std::string& content) {
 void FeedbackCommon::CompressFile(const base::FilePath& filename,
                                   const std::string& zipname,
                                   std::unique_ptr<std::string> data) {
-  std::unique_ptr<AttachedFile> file(
-      new AttachedFile(zipname, base::WrapUnique(new std::string())));
+  auto file =
+      std::make_unique<AttachedFile>(zipname, std::make_unique<std::string>());
   if (file->name.empty()) {
     // We need to use the UTF8Unsafe methods here to accomodate Windows, which
     // uses wide strings to store filepaths.
@@ -144,7 +144,7 @@ void FeedbackCommon::AddFile(const std::string& filename,
 
 void FeedbackCommon::AddLog(const std::string& name, const std::string& value) {
   if (!logs_.get())
-    logs_ = base::WrapUnique(new SystemLogsMap);
+    logs_ = std::make_unique<SystemLogsMap>();
   (*logs_)[name] = value;
 }
 
