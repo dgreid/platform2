@@ -18,20 +18,6 @@ const char kFallbackPresentationName[] = "External Drive";
 
 }  // namespace
 
-Disk::Disk()
-    : is_drive(false),
-      is_hidden(false),
-      is_auto_mountable(false),
-      is_media_available(false),
-      is_on_boot_device(true),
-      is_on_removable_device(false),
-      is_rotational(false),
-      is_read_only(false),
-      is_virtual(true),
-      media_type(DEVICE_MEDIA_UNKNOWN),
-      device_capacity(0),
-      bytes_remaining(0) {}
-
 std::string Disk::GetPresentationName() const {
   if (!label.empty()) {
     std::string name = label;

@@ -19,10 +19,6 @@ namespace cros_disks {
 // This class was designed to run in a single threaded context and should not
 // be considered thread safe.
 struct Disk {
- public:
-  Disk();
-  ~Disk() = default;
-
   // Returns a presentation name of the disk, which can be used to name
   // the mount directory of the disk. The naming scheme is as follows:
   // (1) Use a non-empty label if the disk has one.
@@ -44,15 +40,15 @@ struct Disk {
             media_type == DEVICE_MEDIA_DVD);
   }
 
-  bool is_drive;
-  bool is_hidden;
-  bool is_auto_mountable;
-  bool is_media_available;
-  bool is_on_boot_device;
-  bool is_on_removable_device;
-  bool is_rotational;
-  bool is_read_only;
-  bool is_virtual;
+  bool is_drive = false;
+  bool is_hidden = false;
+  bool is_auto_mountable = false;
+  bool is_media_available = false;
+  bool is_on_boot_device = true;
+  bool is_on_removable_device = false;
+  bool is_rotational = false;
+  bool is_read_only = false;
+  bool is_virtual = true;
   std::vector<std::string> mount_paths;
   std::string native_path;
   std::string device_file;
@@ -65,11 +61,11 @@ struct Disk {
   std::string product_id;
   std::string product_name;
   std::string drive_model;
-  DeviceMediaType media_type;
-  int bus_number;
-  int device_number;
-  uint64_t device_capacity;
-  uint64_t bytes_remaining;
+  DeviceMediaType media_type = DEVICE_MEDIA_UNKNOWN;
+  int bus_number = -1;
+  int device_number = -1;
+  uint64_t device_capacity = 0;
+  uint64_t bytes_remaining = 0;
 };
 
 }  // namespace cros_disks
