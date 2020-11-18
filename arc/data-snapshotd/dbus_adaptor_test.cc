@@ -330,8 +330,9 @@ TEST_F(DBusAdaptorTest, TakeSnapshotAndroidDataFiFo) {
   EXPECT_FALSE(dbus_adaptor()->TakeSnapshot(kFakeAccountID));
 }
 
+// TODO(crbug.com/1149744) Enable test once bug is fixed.
 // Test basic TakeSnapshot success flow.
-TEST_F(DBusAdaptorTest, TakeSnapshotSuccess) {
+TEST_F(DBusAdaptorTest, DISABLED_TakeSnapshotSuccess) {
   // In this test the copied snapshot directory is verified against the origin
   // android data directory. Inodes verification must be disabled, because the
   // inode values are changed after copying.
