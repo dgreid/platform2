@@ -786,7 +786,7 @@ class Manager {
   // Last known default physical service (i.e. not a VPN).  Used to figure
   // out when to send the DefaultServiceChanged notification.
   ServiceRefPtr last_default_physical_service_;
-  bool last_default_physical_service_connected_;
+  bool last_default_physical_service_online_;
   // Map of technologies to Provider instances.  These pointers are owned
   // by the respective scoped_reptr objects that are held over the lifetime
   // of the Manager object.

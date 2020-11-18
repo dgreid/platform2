@@ -50,7 +50,6 @@ class VPNService : public Service, public DefaultServiceObserver {
   // Power management events.
   void OnBeforeSuspend(const ResultCallback& callback) override;
   void OnAfterResume() override;
-  void OnDefaultServiceStateChanged(const ServiceRefPtr& service) override;
 
   // Inherited from DefaultServiceObserver.
   void OnDefaultLogicalServiceChanged(
@@ -107,10 +106,16 @@ class VPNService : public Service, public DefaultServiceObserver {
   std::unique_ptr<VPNDriver> driver_;
   VirtualDeviceRefPtr device_;
 
-  // Helps distinguish between a network->network transition (where the
-  // client simply reconnects), and a network->link_down->network transition
-  // (where the client should disconnect, wait for link up, then reconnect).
-  bool link_down_;
+  // Indicates whether the default physical service state, which is known from
+  // Manager, is online. Helps distinguish between a network->network transition
+  // (where the client simply reconnects), and a network->link_down->network
+  // transition (where the client should disconnect, wait for link up, then
+  // reconnect). Uses true as the default value before we get the first
+  // notification from Manager, this is safe because the default physical
+  // service must be online before we connect to any VPN service.
+  bool last_default_physical_service_online_;
+  // The current default physical service known from Manager.
+  std::string last_default_physical_service_path_;
 
   base::WeakPtrFactory<VPNService> weak_factory_{this};
 };

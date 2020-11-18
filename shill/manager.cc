@@ -201,7 +201,7 @@ Manager::Manager(ControlInterface* control_interface,
       resolver_(Resolver::GetInstance()),
       running_(false),
       last_default_physical_service_(nullptr),
-      last_default_physical_service_connected_(false),
+      last_default_physical_service_online_(false),
       ephemeral_profile_(new EphemeralProfile(this)),
       use_startup_portal_list_(false),
       device_status_check_task_(
@@ -1417,7 +1417,7 @@ void Manager::DeregisterService(const ServiceRefPtr& to_forget) {
       // so need to remove any remaining reference to it.
       if (*it == last_default_physical_service_) {
         last_default_physical_service_ = nullptr;
-        last_default_physical_service_connected_ = false;
+        last_default_physical_service_online_ = false;
       }
       services_.erase(it);
       SortServices();
@@ -1581,20 +1581,20 @@ void Manager::UpdateDefaultServices(const ServiceRefPtr& logical_service,
   // for an unchanged default Service.
   bool logical_service_changed = EmitDefaultService();
 
-  bool physical_service_connected =
-      physical_service && physical_service->connection();
+  bool physical_service_online =
+      physical_service && physical_service->IsOnline();
   bool physical_service_changed =
       (physical_service != last_default_physical_service_ ||
-       physical_service_connected != last_default_physical_service_connected_);
+       physical_service_online != last_default_physical_service_online_);
 
   if (physical_service_changed) {
     last_default_physical_service_ = physical_service;
-    last_default_physical_service_connected_ = physical_service_connected;
+    last_default_physical_service_online_ = physical_service_online;
 
     if (physical_service) {
       LOG(INFO) << "Default physical service: " << physical_service->log_name()
-                << " (" << (physical_service->connection() ? "" : "not ")
-                << "connected)";
+                << " (" << (physical_service->IsOnline() ? "" : "not ")
+                << "online)";
     } else {
       LOG(INFO) << "Default physical service: NONE";
     }

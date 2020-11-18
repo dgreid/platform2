@@ -2590,11 +2590,11 @@ TEST_F(ManagerTest, UpdateServiceLogging) {
   string updated_message = base::StringPrintf("Service %s updated;",
                                               mock_service->log_name().c_str());
 
-  // An idle service should only be logged as unconnected.
+  // An idle service should only be logged as not online.
   {
     EXPECT_CALL(*mock_service, state())
         .WillRepeatedly(Return(Service::kStateIdle));
-    EXPECT_CALL(log, Log(logging::LOG_INFO, _, HasSubstr("not connected")));
+    EXPECT_CALL(log, Log(logging::LOG_INFO, _, HasSubstr("not online")));
     manager()->RegisterService(mock_service);
     CompleteServiceSort();
     manager()->UpdateService(mock_service);

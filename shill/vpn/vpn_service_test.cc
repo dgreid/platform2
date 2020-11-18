@@ -604,4 +604,39 @@ TEST_F(VPNServiceTest, PPPConnectFlow) {
   driver_->set_interface_name("");
 }
 
+TEST_F(VPNServiceTest, OnPhysicalDefaultServiceChanged) {
+  // Online -> no service
+  ServiceRefPtr null_service;
+  EXPECT_CALL(*driver_, OnDefaultPhysicalServiceEvent(
+                            VPNDriver::kDefaultPhysicalServiceDown));
+  service_->OnDefaultPhysicalServiceChanged(null_service);
+
+  scoped_refptr<MockService> mock_service(new MockService(&manager_));
+  scoped_refptr<MockService> mock_service2(new MockService(&manager_));
+
+  // No service -> online
+  EXPECT_CALL(*mock_service, IsOnline()).WillRepeatedly(Return(true));
+  EXPECT_CALL(*driver_, OnDefaultPhysicalServiceEvent(
+                            VPNDriver::kDefaultPhysicalServiceUp));
+  service_->OnDefaultPhysicalServiceChanged(mock_service);
+
+  // Online service -> another online service
+  EXPECT_CALL(*mock_service2, IsOnline()).WillRepeatedly(Return(true));
+  EXPECT_CALL(*driver_, OnDefaultPhysicalServiceEvent(
+                            VPNDriver::kDefaultPhysicalServiceChanged));
+  service_->OnDefaultPhysicalServiceChanged(mock_service2);
+
+  // Online -> connected
+  EXPECT_CALL(*mock_service2, IsOnline()).WillRepeatedly(Return(false));
+  EXPECT_CALL(*driver_, OnDefaultPhysicalServiceEvent(
+                            VPNDriver::kDefaultPhysicalServiceDown));
+  service_->OnDefaultPhysicalServiceChanged(mock_service2);
+
+  // Connected -> another online service
+  EXPECT_CALL(*mock_service, IsOnline()).WillRepeatedly(Return(true));
+  EXPECT_CALL(*driver_, OnDefaultPhysicalServiceEvent(
+                            VPNDriver::kDefaultPhysicalServiceUp));
+  service_->OnDefaultPhysicalServiceChanged(mock_service);
+}
+
 }  // namespace shill

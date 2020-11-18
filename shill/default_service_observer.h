@@ -28,9 +28,8 @@ class DefaultServiceObserver : public base::CheckedObserver {
       const ServiceRefPtr& logical_service) = 0;
 
   // For the default physical service, "changed" means one of the following
-  // events: 1) another physical service becomes the default, 2) the connected
-  // state of the default physical service (i.e., whether this service is
-  // associated with a Connection object) has changed, or 3) the above two
+  // events: 1) another physical service becomes the default, 2) the online
+  // state of the default physical service has changed, or 3) the above two
   // events happen at the same time.
   virtual void OnDefaultPhysicalServiceChanged(
       const ServiceRefPtr& physical_service) = 0;

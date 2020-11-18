@@ -45,11 +45,16 @@ class VPNDriver {
     kArcBridge = 3,
   };
 
+  // Note that the Up and Down events are triggered by whether the default
+  // physical service is online. This works in most cases, but in some
+  // scenarios, we may want to connect to a VPN service when the service is not
+  // online but only connected (e.g., the VPN server is in the same IP prefix on
+  // the LAN), events based on the connected state is more meaningful in those
+  // cases.
   enum DefaultPhysicalServiceEvent {
     // The default physical service becomes online from any other state.
     kDefaultPhysicalServiceUp,
-    // There is no connected physical service (i.e., a physical service which
-    // has a connection) any more.
+    // There is no online physical service any more.
     kDefaultPhysicalServiceDown,
     // The default physical service changed from an online service to another
     // online service.
