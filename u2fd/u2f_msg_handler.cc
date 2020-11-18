@@ -296,8 +296,14 @@ U2fMessageHandler::Cr50CmdStatus U2fMessageHandler::DoU2fGenerate(
   struct u2f_generate_req generate_req = {
       .flags = U2F_AUTH_ENFORCE  // Require user presence, consume.
   };
-  util::VectorToObject(app_id, generate_req.appId);
-  util::VectorToObject(*user_secret, generate_req.userSecret);
+  if (!util::VectorToObject(app_id, generate_req.appId,
+                            sizeof(generate_req.appId))) {
+    return Cr50CmdStatus::kInvalidState;
+  }
+  if (!util::VectorToObject(*user_secret, generate_req.userSecret,
+                            sizeof(generate_req.userSecret))) {
+    return Cr50CmdStatus::kInvalidState;
+  }
 
   struct u2f_generate_resp generate_resp = {};
   Cr50CmdStatus generate_status = static_cast<Cr50CmdStatus>(
@@ -332,10 +338,20 @@ U2fMessageHandler::Cr50CmdStatus U2fMessageHandler::DoU2fSign(
   };
   if (allow_legacy_kh_sign_)
     sign_req.flags |= SIGN_LEGACY_KH;
-  util::VectorToObject(app_id, sign_req.appId);
-  util::VectorToObject(*user_secret, sign_req.userSecret);
-  util::VectorToObject(key_handle, &sign_req.keyHandle);
-  util::VectorToObject(hash, sign_req.hash);
+  if (!util::VectorToObject(app_id, sign_req.appId, sizeof(sign_req.appId))) {
+    return Cr50CmdStatus::kInvalidState;
+  }
+  if (!util::VectorToObject(*user_secret, sign_req.userSecret,
+                            sizeof(sign_req.userSecret))) {
+    return Cr50CmdStatus::kInvalidState;
+  }
+  if (!util::VectorToObject(key_handle, &sign_req.keyHandle,
+                            sizeof(sign_req.keyHandle))) {
+    return Cr50CmdStatus::kInvalidState;
+  }
+  if (!util::VectorToObject(hash, sign_req.hash, sizeof(sign_req.hash))) {
+    return Cr50CmdStatus::kInvalidState;
+  }
 
   struct u2f_sign_resp sign_resp = {};
   Cr50CmdStatus sign_status =
@@ -371,9 +387,17 @@ U2fMessageHandler::Cr50CmdStatus U2fMessageHandler::DoU2fSignCheckOnly(
   struct u2f_sign_req sign_req = {
       .flags = U2F_AUTH_CHECK_ONLY  // No user presence required, no consume.
   };
-  util::VectorToObject(app_id, sign_req.appId);
-  util::VectorToObject(*user_secret, sign_req.userSecret);
-  util::VectorToObject(key_handle, &sign_req.keyHandle);
+  if (!util::VectorToObject(app_id, sign_req.appId, sizeof(sign_req.appId))) {
+    return Cr50CmdStatus::kInvalidState;
+  }
+  if (!util::VectorToObject(*user_secret, sign_req.userSecret,
+                            sizeof(sign_req.userSecret))) {
+    return Cr50CmdStatus::kInvalidState;
+  }
+  if (!util::VectorToObject(key_handle, &sign_req.keyHandle,
+                            sizeof(sign_req.keyHandle))) {
+    return Cr50CmdStatus::kInvalidState;
+  }
 
   Cr50CmdStatus sign_status =
       static_cast<Cr50CmdStatus>(proxy_->SendU2fSign(sign_req, nullptr));
@@ -395,10 +419,13 @@ U2fMessageHandler::Cr50CmdStatus U2fMessageHandler::DoG2fAttest(
 
   struct u2f_attest_req attest_req = {
       .format = format, .dataLen = static_cast<uint8_t>(data.size())};
-  util::VectorToObject(*user_secret, attest_req.userSecret);
-  // Only a programming error can cause this CHECK to fail.
-  CHECK_LE(data.size(), sizeof(attest_req.data));
-  util::VectorToObject(data, attest_req.data);
+  if (!util::VectorToObject(*user_secret, attest_req.userSecret,
+                            sizeof(attest_req.userSecret))) {
+    return Cr50CmdStatus::kInvalidState;
+  }
+  if (!util::VectorToObject(data, attest_req.data, sizeof(attest_req.data))) {
+    return Cr50CmdStatus::kInvalidState;
+  }
 
   struct u2f_attest_resp attest_resp = {};
   Cr50CmdStatus attest_status = static_cast<Cr50CmdStatus>(

@@ -524,8 +524,14 @@ MakeCredentialResponse::MakeCredentialStatus WebAuthnHandler::DoU2fGenerate(
   DCHECK(rp_id_hash.size() == SHA256_DIGEST_LENGTH);
 
   struct u2f_generate_req generate_req = {};
-  util::VectorToObject(rp_id_hash, generate_req.appId);
-  util::VectorToObject(credential_secret, generate_req.userSecret);
+  if (!util::VectorToObject(rp_id_hash, generate_req.appId,
+                            sizeof(generate_req.appId))) {
+    return MakeCredentialResponse::INVALID_REQUEST;
+  }
+  if (!util::VectorToObject(credential_secret, generate_req.userSecret,
+                            sizeof(generate_req.userSecret))) {
+    return MakeCredentialResponse::INVALID_REQUEST;
+  }
 
   if (uv_compatible) {
     if (!auth_time_secret_hash_) {
@@ -753,10 +759,22 @@ GetAssertionResponse::GetAssertionStatus WebAuthnHandler::DoU2fSign(
   if (credential_id.size() == sizeof(u2f_versioned_key_handle)) {
     // Allow waiving presence if sign_req.authTimeSecret is correct.
     struct u2f_sign_versioned_req sign_req = {};
-    util::VectorToObject(rp_id_hash, sign_req.appId);
-    util::VectorToObject(credential_secret, sign_req.userSecret);
-    util::VectorToObject(credential_id, &sign_req.keyHandle);
-    util::VectorToObject(hash_to_sign, sign_req.hash);
+    if (!util::VectorToObject(rp_id_hash, sign_req.appId,
+                              sizeof(sign_req.appId))) {
+      return GetAssertionResponse::INVALID_REQUEST;
+    }
+    if (!util::VectorToObject(credential_secret, sign_req.userSecret,
+                              sizeof(sign_req.userSecret))) {
+      return GetAssertionResponse::INVALID_REQUEST;
+    }
+    if (!util::VectorToObject(credential_id, &sign_req.keyHandle,
+                              sizeof(sign_req.keyHandle))) {
+      return GetAssertionResponse::INVALID_REQUEST;
+    }
+    if (!util::VectorToObject(hash_to_sign, sign_req.hash,
+                              sizeof(sign_req.hash))) {
+      return GetAssertionResponse::INVALID_REQUEST;
+    }
     struct u2f_sign_resp sign_resp = {};
 
     if (presence_requirement != PresenceRequirement::kPowerButton) {
@@ -784,10 +802,22 @@ GetAssertionResponse::GetAssertionStatus WebAuthnHandler::DoU2fSign(
     struct u2f_sign_req sign_req = {
         .flags = U2F_AUTH_ENFORCE  // Require user presence, consume.
     };
-    util::VectorToObject(rp_id_hash, sign_req.appId);
-    util::VectorToObject(credential_secret, sign_req.userSecret);
-    util::VectorToObject(credential_id, &sign_req.keyHandle);
-    util::VectorToObject(hash_to_sign, sign_req.hash);
+    if (!util::VectorToObject(rp_id_hash, sign_req.appId,
+                              sizeof(sign_req.appId))) {
+      return GetAssertionResponse::INVALID_REQUEST;
+    }
+    if (!util::VectorToObject(credential_secret, sign_req.userSecret,
+                              sizeof(sign_req.userSecret))) {
+      return GetAssertionResponse::INVALID_REQUEST;
+    }
+    if (!util::VectorToObject(credential_id, &sign_req.keyHandle,
+                              sizeof(sign_req.keyHandle))) {
+      return GetAssertionResponse::INVALID_REQUEST;
+    }
+    if (!util::VectorToObject(hash_to_sign, sign_req.hash,
+                              sizeof(sign_req.hash))) {
+      return GetAssertionResponse::INVALID_REQUEST;
+    }
 
     struct u2f_sign_resp sign_resp = {};
     return SendU2fSignWaitForPresence(&sign_req, &sign_resp, signature);
@@ -867,9 +897,18 @@ WebAuthnHandler::DoU2fSignCheckOnly(
 
   if (credential_id.size() == sizeof(u2f_versioned_key_handle)) {
     struct u2f_sign_versioned_req sign_req = {.flags = U2F_AUTH_CHECK_ONLY};
-    util::VectorToObject(rp_id_hash, sign_req.appId);
-    util::VectorToObject(credential_secret, sign_req.userSecret);
-    util::VectorToObject(credential_id, &sign_req.keyHandle);
+    if (!util::VectorToObject(rp_id_hash, sign_req.appId,
+                              sizeof(sign_req.appId))) {
+      return HasCredentialsResponse::INVALID_REQUEST;
+    }
+    if (!util::VectorToObject(credential_secret, sign_req.userSecret,
+                              sizeof(sign_req.userSecret))) {
+      return HasCredentialsResponse::INVALID_REQUEST;
+    }
+    if (!util::VectorToObject(credential_id, &sign_req.keyHandle,
+                              sizeof(sign_req.keyHandle))) {
+      return HasCredentialsResponse::INVALID_REQUEST;
+    }
 
     struct u2f_sign_resp sign_resp;
     base::AutoLock(tpm_proxy_->GetLock());
@@ -877,9 +916,18 @@ WebAuthnHandler::DoU2fSignCheckOnly(
     brillo::SecureMemset(&sign_req.userSecret, 0, sizeof(sign_req.userSecret));
   } else {
     struct u2f_sign_req sign_req = {.flags = U2F_AUTH_CHECK_ONLY};
-    util::VectorToObject(rp_id_hash, sign_req.appId);
-    util::VectorToObject(credential_secret, sign_req.userSecret);
-    util::VectorToObject(credential_id, &sign_req.keyHandle);
+    if (!util::VectorToObject(rp_id_hash, sign_req.appId,
+                              sizeof(sign_req.appId))) {
+      return HasCredentialsResponse::INVALID_REQUEST;
+    }
+    if (!util::VectorToObject(credential_secret, sign_req.userSecret,
+                              sizeof(sign_req.userSecret))) {
+      return HasCredentialsResponse::INVALID_REQUEST;
+    }
+    if (!util::VectorToObject(credential_id, &sign_req.keyHandle,
+                              sizeof(sign_req.keyHandle))) {
+      return HasCredentialsResponse::INVALID_REQUEST;
+    }
 
     struct u2f_sign_resp sign_resp;
     base::AutoLock(tpm_proxy_->GetLock());

@@ -41,10 +41,14 @@ std::vector<uint8_t> ToVector(const std::string& str);
 // Utility function to copy bytes from a vector to an object. This is the
 // inverse of AppendToVector.
 template <typename VectorAllocator, typename ToType>
-void VectorToObject(const std::vector<uint8_t, VectorAllocator>& from,
-                    ToType* to) {
-  // TODO(louiscollard): This, but nicer/safer.
+bool VectorToObject(const std::vector<uint8_t, VectorAllocator>& from,
+                    ToType* to,
+                    const size_t size) {
+  if (size < from.size()) {
+    return false;
+  }
   memcpy(to, &from.front(), from.size());
+  return true;
 }
 
 // Utility function to copy part of a string to a vector.
