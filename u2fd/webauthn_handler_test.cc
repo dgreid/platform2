@@ -12,6 +12,7 @@
 #include <base/time/time.h>
 #include <brillo/dbus/mock_dbus_method_response.h>
 #include <chromeos/dbus/service_constants.h>
+#include <cryptohome-client-test/cryptohome/dbus-proxy-mocks.h>
 #include <dbus/bus.h>
 #include <dbus/mock_bus.h>
 #include <dbus/mock_object_proxy.h>
@@ -188,8 +189,17 @@ class WebAuthnHandlerTest : public ::testing::Test {
 
   void CreateHandler() {
     handler_ = std::make_unique<WebAuthnHandler>();
+    PrepareMockCryptohome();
     handler_->Initialize(mock_bus_.get(), &mock_tpm_proxy_, &mock_user_state_,
                          [this]() { presence_requested_count_++; });
+  }
+
+  void PrepareMockCryptohome() {
+    auto mock_cryptohome_proxy =
+        std::make_unique<org::chromium::CryptohomeInterfaceProxyMock>();
+    mock_cryptohome_proxy_ = mock_cryptohome_proxy.get();
+    handler_->SetCryptohomeInterfaceProxyForTesting(
+        std::move(mock_cryptohome_proxy));
   }
 
   void PrepareMockStorage() {
@@ -258,6 +268,7 @@ class WebAuthnHandlerTest : public ::testing::Test {
  private:
   scoped_refptr<dbus::MockBus> mock_bus_;
   scoped_refptr<dbus::MockObjectProxy> mock_auth_dialog_proxy_;
+  org::chromium::CryptohomeInterfaceProxyMock* mock_cryptohome_proxy_;
   int presence_requested_count_ = 0;
 };
 

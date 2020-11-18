@@ -50,6 +50,15 @@ UserState::UserState(org::chromium::SessionManagerInterfaceProxy* sm_proxy,
 
 UserState::UserState() : weak_ptr_factory_(this), counter_min_(0) {}
 
+base::Optional<std::string> UserState::GetUser() {
+  if (user_.has_value()) {
+    return *user_;
+  } else {
+    LOG(ERROR) << "User requested but not available.";
+    return base::nullopt;
+  }
+}
+
 base::Optional<std::string> UserState::GetSanitizedUser() {
   if (sanitized_user_.has_value()) {
     return *sanitized_user_;

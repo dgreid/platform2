@@ -14,8 +14,6 @@
 #include <chromeos/cbor/values.h>
 #include <chromeos/cbor/writer.h>
 #include <chromeos/dbus/service_constants.h>
-#include <cryptohome/proto_bindings/rpc.pb.h>
-#include <cryptohome/proto_bindings/UserDataAuth.pb.h>
 #include <openssl/rand.h>
 #include <u2f/proto_bindings/u2f_interface.pb.h>
 
@@ -63,6 +61,12 @@ const int kCoseKeyAlgES256 = -7;
 const int kCoseECKeyCrvLabel = -1;
 const int kCoseECKeyXLabel = -2;
 const int kCoseECKeyYLabel = -3;
+
+// Key label in cryptohome.
+constexpr char kCryptohomePinLabel[] = "pin";
+
+// Relative DBus object path for fingerprint manager in biod.
+const char kCrosFpBiometricsManagerRelativePath[] = "/CrosFpBiometricsManager";
 
 std::vector<uint8_t> Uint16ToByteVector(uint16_t value) {
   return std::vector<uint8_t>({static_cast<uint8_t>((value >> 8) & 0xff),
@@ -131,6 +135,10 @@ void WebAuthnHandler::Initialize(dbus::Bus* bus,
   auth_dialog_dbus_proxy_ = bus_->GetObjectProxy(
       chromeos::kUserAuthenticationServiceName,
       dbus::ObjectPath(chromeos::kUserAuthenticationServicePath));
+  // Testing can inject a mock.
+  if (!cryptohome_proxy_)
+    cryptohome_proxy_ =
+        std::make_unique<org::chromium::CryptohomeInterfaceProxy>(bus_);
   DCHECK(auth_dialog_dbus_proxy_);
 }
 
@@ -162,46 +170,23 @@ void WebAuthnHandler::GetWebAuthnSecret(const std::string& account_id) {
   cryptohome::AccountIdentifier id;
   id.set_account_id(account_id);
   cryptohome::GetWebAuthnSecretRequest req;
+  cryptohome::BaseReply reply;
+  brillo::ErrorPtr error;
 
-  dbus::MethodCall method_call(cryptohome::kCryptohomeInterface,
-                               cryptohome::kCryptohomeGetWebAuthnSecret);
-  dbus::MessageWriter writer(&method_call);
-  writer.AppendProtoAsArrayOfBytes(id);
-  writer.AppendProtoAsArrayOfBytes(req);
-
-  dbus::ObjectProxy* cryptohome_proxy = bus_->GetObjectProxy(
-      cryptohome::kCryptohomeServiceName,
-      dbus::ObjectPath(cryptohome::kCryptohomeServicePath));
-
-  std::unique_ptr<dbus::Response> response =
-      cryptohome_proxy->CallMethodAndBlock(&method_call,
-                                           kCryptohomeTimeout.InMilliseconds());
-
-  if (!response) {
-    LOG(ERROR) << "Cannot get WebAuthn secret from cryptohome: no response.";
+  if (!cryptohome_proxy_->GetWebAuthnSecret(
+          id, req, &reply, &error, kCryptohomeTimeout.InMilliseconds())) {
+    LOG(ERROR) << "Failed to call GetWebAuthnSecret on cryptohome, error: "
+               << error->GetMessage();
     return;
   }
 
-  cryptohome::BaseReply result;
-  dbus::MessageReader reader(response.get());
-  if (!reader.PopArrayOfBytesAsProto(&result)) {
-    LOG(ERROR)
-        << "Cannot parse GetWebAuthnSecret dbus response from cryptohome.";
-    return;
-  }
-
-  if (result.has_error()) {
-    LOG(ERROR) << "GetWebAuthnSecret has error " << result.error();
-    return;
-  }
-
-  if (!result.HasExtension(cryptohome::GetWebAuthnSecretReply::reply)) {
+  if (!reply.HasExtension(cryptohome::GetWebAuthnSecretReply::reply)) {
     LOG(ERROR) << "GetWebAuthnSecret doesn't have the correct extension.";
     return;
   }
 
   brillo::SecureBlob secret(
-      result.GetExtension(cryptohome::GetWebAuthnSecretReply::reply)
+      reply.GetExtension(cryptohome::GetWebAuthnSecretReply::reply)
           .webauthn_secret());
   auth_time_secret_hash_ = std::make_unique<brillo::Blob>(util::Sha256(secret));
 }
@@ -961,41 +946,112 @@ WebAuthnHandler::DoU2fSignCheckOnly(
 void WebAuthnHandler::IsUvpaa(
     std::unique_ptr<IsUvpaaMethodResponse> method_response,
     const IsUvpaaRequest& request) {
-  // An alternative is to call biod and cryptohome to check auth methods
-  // availability, but that way we'll introduce extra dependency and increase
-  // the cost to maintain the code. So we call the auth dialog service in UI,
-  // which has the lowest cost to maintain.
-  dbus::MethodCall call(
-      chromeos::kUserAuthenticationServiceInterface,
-      chromeos::kUserAuthenticationServiceIsAuthenticatorAvailableMethod);
-  std::unique_ptr<dbus::Response> auth_dialog_resp =
-      auth_dialog_dbus_proxy_->CallMethodAndBlock(
-          &call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
+  // Checking with the authentication dialog (in Ash) will not work, because
+  // currently in Chrome the IsUvpaa is a blocking call, and Ash can't respond
+  // to us since it runs in the same process as Chrome. After the Chrome side
+  // is refactored to take a callback or Ash is split into a separate binary,
+  // we can change the implementation here to query with Ash.
 
   IsUvpaaResponse response;
-  if (!auth_dialog_resp) {
-    LOG(ERROR) << "Failed to check IsUvpaa with UI.";
+
+  base::Optional<std::string> account_id = user_state_->GetUser();
+  if (!account_id) {
+    LOG(ERROR) << "IsUvpaa called but no user.";
     response.set_available(false);
     method_response->Return(response);
     return;
   }
 
-  dbus::MessageReader response_reader(auth_dialog_resp.get());
-  bool available;
-  if (!response_reader.PopBool(&available)) {
-    LOG(ERROR) << "Failed to parse IsUvpaa reply from UI.";
-    response.set_available(false);
+  if (HasPin(*account_id)) {
+    response.set_available(true);
     method_response->Return(response);
     return;
   }
 
-  response.set_available(available);
+  base::Optional<std::string> sanitized_user = user_state_->GetSanitizedUser();
+  DCHECK(sanitized_user);
+  if (HasFingerprint(*sanitized_user)) {
+    response.set_available(true);
+    method_response->Return(response);
+    return;
+  }
+
+  response.set_available(false);
   method_response->Return(response);
+}
+
+bool WebAuthnHandler::HasPin(const std::string& account_id) {
+  cryptohome::AccountIdentifier id;
+  id.set_account_id(account_id);
+  cryptohome::AuthorizationRequest auth;
+  cryptohome::GetKeyDataRequest req;
+  req.mutable_key()->mutable_data()->set_label(kCryptohomePinLabel);
+  cryptohome::BaseReply reply;
+  brillo::ErrorPtr error;
+
+  if (!cryptohome_proxy_->GetKeyDataEx(id, auth, req, &reply, &error,
+                                       kCryptohomeTimeout.InMilliseconds())) {
+    LOG(ERROR) << "Cannot query PIN availability from cryptohome, error: "
+               << error->GetMessage();
+    return false;
+  }
+
+  if (!reply.HasExtension(cryptohome::GetKeyDataReply::reply)) {
+    LOG(ERROR) << "GetKeyData response doesn't have the correct extension.";
+    return false;
+  }
+
+  return reply.GetExtension(cryptohome::GetKeyDataReply::reply)
+             .key_data_size() > 0;
+}
+
+bool WebAuthnHandler::HasFingerprint(const std::string& sanitized_user) {
+  dbus::ObjectProxy* biod_proxy = bus_->GetObjectProxy(
+      biod::kBiodServiceName,
+      dbus::ObjectPath(std::string(biod::kBiodServicePath)
+                           .append(kCrosFpBiometricsManagerRelativePath)));
+
+  dbus::MethodCall method_call(biod::kBiometricsManagerInterface,
+                               biod::kBiometricsManagerGetRecordsForUserMethod);
+  dbus::MessageWriter method_writer(&method_call);
+  method_writer.AppendString(sanitized_user);
+
+  std::unique_ptr<dbus::Response> response = biod_proxy->CallMethodAndBlock(
+      &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
+  if (!response) {
+    LOG(ERROR)
+        << "Cannot check fingerprint availability: no response from biod.";
+    return false;
+  }
+
+  dbus::MessageReader response_reader(response.get());
+  dbus::MessageReader records_reader(nullptr);
+  if (!response_reader.PopArray(&records_reader)) {
+    LOG(ERROR) << "Cannot parse GetRecordsForUser response from biod.";
+    return false;
+  }
+
+  int records_count = 0;
+  while (records_reader.HasMoreData()) {
+    dbus::ObjectPath record_path;
+    if (!records_reader.PopObjectPath(&record_path)) {
+      LOG(WARNING) << "Cannot parse fingerprint record path";
+      continue;
+    }
+    records_count++;
+  }
+  return records_count > 0;
 }
 
 void WebAuthnHandler::SetWebAuthnStorageForTesting(
     std::unique_ptr<WebAuthnStorage> storage) {
   webauthn_storage_ = std::move(storage);
+}
+
+void WebAuthnHandler::SetCryptohomeInterfaceProxyForTesting(
+    std::unique_ptr<org::chromium::CryptohomeInterfaceProxyInterface>
+        cryptohome_proxy) {
+  cryptohome_proxy_ = std::move(cryptohome_proxy);
 }
 
 }  // namespace u2f

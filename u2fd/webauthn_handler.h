@@ -13,7 +13,8 @@
 
 #include <base/optional.h>
 #include <brillo/dbus/dbus_method_response.h>
-
+#include <cryptohome/proto_bindings/rpc.pb.h>
+#include <cryptohome-client/cryptohome/dbus-proxies.h>
 #include <u2f/proto_bindings/u2f_interface.pb.h>
 
 #include "u2fd/tpm_vendor_cmd.h"
@@ -98,6 +99,10 @@ class WebAuthnHandler {
                const IsUvpaaRequest& request);
 
   void SetWebAuthnStorageForTesting(std::unique_ptr<WebAuthnStorage> storage);
+
+  void SetCryptohomeInterfaceProxyForTesting(
+      std::unique_ptr<org::chromium::CryptohomeInterfaceProxyInterface>
+          cryptohome_proxy);
 
  private:
   friend class WebAuthnHandlerTest;
@@ -197,12 +202,21 @@ class WebAuthnHandler {
   HasCredentialsResponse::HasCredentialsStatus HasExcludedCredentials(
       const MakeCredentialRequest& request);
 
+  // Checks whether the user with |account_id| has PIN set up.
+  bool HasPin(const std::string& account_id);
+
+  // Checks whether the user with |account_id| has fingerprint set up.
+  bool HasFingerprint(const std::string& account_id);
+
   TpmVendorCommandProxy* tpm_proxy_ = nullptr;
   UserState* user_state_ = nullptr;
   std::function<void()> request_presence_;
   dbus::Bus* bus_ = nullptr;
   // Proxy to user authentication dialog in Ash. Used only in UV requests.
   dbus::ObjectProxy* auth_dialog_dbus_proxy_ = nullptr;
+
+  std::unique_ptr<org::chromium::CryptohomeInterfaceProxyInterface>
+      cryptohome_proxy_;
 
   // The MakeCredential session that's waiting on UI. There can only be one
   // such session. UP sessions should not use this since there can be multiple.
