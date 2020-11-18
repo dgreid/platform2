@@ -77,6 +77,7 @@ include(sepolicy/file_contexts/sysfs_contexts)
 /usr/bin/metrics_daemon         u:object_r:cros_metrics_daemon_exec:s0
 /usr/bin/midis                  u:object_r:cros_midis_exec:s0
 /usr/bin/ml_service             u:object_r:cros_ml_service_exec:s0
+/usr/bin/mmdata_mgr             u:object_r:cros_mmdata_mgr_exec:s0
 /usr/bin/modemfwd               u:object_r:cros_modemfwd_exec:s0
 /usr/bin/mount-passthrough      u:object_r:cros_mount_passthrough_exec:s0
 /usr/bin/mount-passthrough-jailed u:object_r:cros_mount_passthrough_jailed_exec:s0
