@@ -333,8 +333,8 @@ std::unique_ptr<MountPoint> FUSEMounter::Mount(
 
   std::string fuse_type = "fuse";
   std::string source_descr = source;
-  struct stat statbuf = {0};
-  if (stat(source.c_str(), &statbuf) == 0 && S_ISBLK(statbuf.st_mode)) {
+  base::stat_wrapper_t statbuf = {0};
+  if (platform_->Lstat(source, &statbuf) && S_ISBLK(statbuf.st_mode)) {
     int blksize = 0;
 
     // TODO(crbug.com/931500): It's possible that specifying a block size equal
@@ -351,7 +351,7 @@ std::unique_ptr<MountPoint> FUSEMounter::Mount(
 
     fuse_type = "fuseblk";
   } else {
-    source_descr = fuse_type + "." + filesystem_type_ + ":" + source;
+    source_descr = "fuse:" + source;
   }
 
   if (!filesystem_type_.empty()) {

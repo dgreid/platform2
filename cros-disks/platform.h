@@ -17,6 +17,7 @@
 #include <set>
 #include <string>
 
+#include <base/files/file.h>
 #include <chromeos/dbus/service_constants.h>
 
 namespace cros_disks {
@@ -41,6 +42,9 @@ class Platform {
 
   // Returns whether |path| exists and is a directory.
   virtual bool DirectoryExists(const std::string& path) const;
+
+  // lstats the |path|.
+  virtual bool Lstat(const std::string& path, base::stat_wrapper_t* out) const;
 
   // Creates a directory at |path| if it does not exist. Returns true on
   // success.

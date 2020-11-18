@@ -13,6 +13,7 @@
 
 #include <base/files/file_util.h>
 #include <base/files/scoped_temp_dir.h>
+#include <base/strings/string_util.h>
 #include <base/strings/stringprintf.h>
 #include <brillo/process/process_reaper.h>
 #include <gmock/gmock.h>
@@ -42,7 +43,7 @@ using testing::StartsWith;
 const uid_t kMountUID = 200;
 const gid_t kMountGID = 201;
 const char kMountUser[] = "fuse-fuse";
-const char kFUSEType[] = "fuse";
+const char kFUSEType[] = "fusefs";
 const char kMountProgram[] = "/bin/dummy";
 const char kSomeSource[] = "/dev/dummy";
 const char kMountDir[] = "/mnt";
@@ -92,6 +93,15 @@ class MockFUSEPlatform : public Platform {
               SetPermissions,
               (const std::string&, mode_t),
               (const, override));
+
+  bool Lstat(const std::string& path,
+             base::stat_wrapper_t* out) const override {
+    if (base::StartsWith(path, "/dev/", base::CompareCase::SENSITIVE)) {
+      out->st_mode = S_IFBLK | 0640;
+      return true;
+    }
+    return false;
+  }
 
  private:
   bool GetUserAndGroupIdImpl(const std::string& user,
@@ -240,7 +250,7 @@ class FUSEMounterTest : public ::testing::Test {
 
 TEST_F(FUSEMounterTest, MountingUnprivileged) {
   EXPECT_CALL(platform_,
-              Mount("fuse.fuse:source", kMountDir, "fuse.fuse",
+              Mount("fuse:source", kMountDir, "fuse.fusefs",
                     MountOptions::kMountFlags | MS_DIRSYNC | MS_NOSYMFOLLOW,
                     EndsWith(",user_id=1000,group_id=1001,allow_other,default_"
                              "permissions,rootmode=40000")))
@@ -279,6 +289,29 @@ TEST_F(FUSEMounterTest, MountingUnprivileged_ReadOnly) {
   MountErrorType error = MOUNT_ERROR_UNKNOWN;
   auto mount_point = mounter_.Mount(kSomeSource, base::FilePath(kMountDir),
                                     {"arg1", "arg2", "ro"}, &error);
+  EXPECT_TRUE(mount_point);
+  EXPECT_EQ(MOUNT_ERROR_NONE, error);
+}
+
+TEST_F(FUSEMounterTest, MountingUnprivileged_BlockDevice) {
+  EXPECT_CALL(platform_,
+              Mount("/dev/foobar", kMountDir, "fuseblk.fusefs",
+                    MountOptions::kMountFlags | MS_DIRSYNC | MS_NOSYMFOLLOW,
+                    EndsWith(",user_id=1000,group_id=1001,allow_other,default_"
+                             "permissions,rootmode=40000")))
+      .WillOnce(Return(MOUNT_ERROR_NONE));
+  auto process_ptr = std::make_unique<MockSandboxedProcess>();
+  EXPECT_CALL(*process_ptr, StartImpl).WillOnce(Return(123));
+  EXPECT_CALL(mounter_,
+              PrepareSandbox("/dev/foobar", base::FilePath(kMountDir), _, _))
+      .WillOnce(Return(ByMove(std::move(process_ptr))));
+  // The MountPoint returned by Mount() will unmount when it is destructed.
+  EXPECT_CALL(platform_, Unmount(kMountDir, 0))
+      .WillOnce(Return(MOUNT_ERROR_NONE));
+
+  MountErrorType error = MOUNT_ERROR_UNKNOWN;
+  auto mount_point =
+      mounter_.Mount("/dev/foobar", base::FilePath(kMountDir), {}, &error);
   EXPECT_TRUE(mount_point);
   EXPECT_EQ(MOUNT_ERROR_NONE, error);
 }
