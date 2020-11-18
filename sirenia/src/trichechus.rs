@@ -20,7 +20,7 @@ use sirenia::communication::{self, get_app_path, read_message, Request};
 use sirenia::linux::events::{
     AddEventSourceMutator, EventMultiplexer, EventSource, Mutator, RemoveFdMutator,
 };
-use sirenia::linux::syslog::Syslog;
+use sirenia::linux::syslog::{Syslog, SyslogReceiverMut};
 use sirenia::sandbox::{self, Sandbox};
 use sirenia::to_sys_util;
 use sirenia::transport::{
@@ -93,6 +93,12 @@ impl TrichechusState {
             running_apps: HashMap::new(),
             log_queue: VecDeque::new(),
         }
+    }
+}
+
+impl SyslogReceiverMut for TrichechusState {
+    fn receive(&mut self, data: String) {
+        self.log_queue.push_back(data);
     }
 }
 
@@ -174,7 +180,7 @@ struct EventsFromDugong {
 }
 
 impl EventsFromDugong {
-    fn new(bind_addr: &TransportType) -> Result<Self> {
+    fn new(bind_addr: &TransportType, state: Rc<RefCell<TrichechusState>>) -> Result<Self> {
         Ok(EventsFromDugong {
             transport: match bind_addr {
                 TransportType::IpConnection(url) => {
@@ -185,7 +191,7 @@ impl EventsFromDugong {
                 }
                 _ => return Err(Error::UnexpectedConnectionType(bind_addr.to_owned())),
             },
-            state: Rc::new(RefCell::new(TrichechusState::new())),
+            state,
         })
     }
 
@@ -277,12 +283,13 @@ fn main() -> Result<()> {
     // creating /dev/log.
     let args: Vec<String> = env::args().collect();
     let config = initialize_common_arguments(&args[1..]).unwrap();
+    let state = Rc::new(RefCell::new(TrichechusState::new()));
 
     // Create /dev/log if it doesn't already exist since trichechus is the first thing to run after
     // the kernel on the hypervisor.
     let syslog: Option<Syslog> = if !Syslog::is_syslog_present() {
         eprintln!("Creating syslog.");
-        Some(Syslog::new().unwrap())
+        Some(Syslog::new(state.clone()).unwrap())
     } else {
         eprintln!("Syslog exists.");
         None
@@ -318,7 +325,7 @@ fn main() -> Result<()> {
     }
 
     ctx.add_event(Box::new(
-        EventsFromDugong::new(&config.connection_type).unwrap(),
+        EventsFromDugong::new(&config.connection_type, state).unwrap(),
     ))
     .unwrap();
 

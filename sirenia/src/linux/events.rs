@@ -164,6 +164,11 @@ impl EventMultiplexer {
     pub fn is_empty(&self) -> bool {
         self.handlers.is_empty()
     }
+
+    /// Returns the number of handlers.
+    pub fn len(&self) -> usize {
+        self.handlers.len()
+    }
 }
 
 /// Adds the specified EventSource from the EventMultiplexer when the mutator is executed.
