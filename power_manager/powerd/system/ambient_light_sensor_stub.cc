@@ -40,5 +40,9 @@ int AmbientLightSensorStub::GetColorTemperature() {
   return color_temperature_.value_or(-1);
 }
 
+base::FilePath AmbientLightSensorStub::GetIlluminancePath() const {
+  return path_;
+}
+
 }  // namespace system
 }  // namespace power_manager

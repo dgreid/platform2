@@ -137,12 +137,14 @@ TEST_F(AmbientLightSensorManagerTest, OneSensor) {
   internal_backlight_sensor->AddObserver(&internal_backlight_observer_);
   ASSERT_TRUE(internal_backlight_observer_.RunUntilAmbientLightUpdated());
   EXPECT_EQ(0, internal_backlight_sensor->GetAmbientLightLux());
+  EXPECT_EQ(data_file, internal_backlight_sensor->GetIlluminancePath());
   internal_backlight_sensor->RemoveObserver(&internal_backlight_observer_);
 
   auto keyboard_backlight_sensor = manager_->GetSensorForKeyboardBacklight();
   keyboard_backlight_sensor->AddObserver(&keyboard_backlight_observer_);
   ASSERT_TRUE(keyboard_backlight_observer_.RunUntilAmbientLightUpdated());
   EXPECT_EQ(0, keyboard_backlight_sensor->GetAmbientLightLux());
+  EXPECT_EQ(data_file, keyboard_backlight_sensor->GetIlluminancePath());
   keyboard_backlight_sensor->RemoveObserver(&keyboard_backlight_observer_);
 
   EXPECT_FALSE(manager_->HasColorSensor());
@@ -162,12 +164,14 @@ TEST_F(AmbientLightSensorManagerTest, TwoSensors) {
   internal_backlight_sensor->AddObserver(&internal_backlight_observer_);
   ASSERT_TRUE(internal_backlight_observer_.RunUntilAmbientLightUpdated());
   EXPECT_EQ(0, internal_backlight_sensor->GetAmbientLightLux());
+  EXPECT_EQ(data0_file, internal_backlight_sensor->GetIlluminancePath());
   internal_backlight_sensor->RemoveObserver(&internal_backlight_observer_);
 
   auto keyboard_backlight_sensor = manager_->GetSensorForKeyboardBacklight();
   keyboard_backlight_sensor->AddObserver(&keyboard_backlight_observer_);
   ASSERT_TRUE(keyboard_backlight_observer_.RunUntilAmbientLightUpdated());
   EXPECT_EQ(1, keyboard_backlight_sensor->GetAmbientLightLux());
+  EXPECT_EQ(data1_file, keyboard_backlight_sensor->GetIlluminancePath());
   keyboard_backlight_sensor->RemoveObserver(&keyboard_backlight_observer_);
 
   EXPECT_FALSE(manager_->HasColorSensor());
@@ -188,12 +192,14 @@ TEST_F(AmbientLightSensorManagerTest, HasColorSensor) {
   internal_backlight_sensor->AddObserver(&internal_backlight_observer_);
   ASSERT_TRUE(internal_backlight_observer_.RunUntilAmbientLightUpdated());
   EXPECT_EQ(0, internal_backlight_sensor->GetAmbientLightLux());
+  EXPECT_EQ(data0_file, internal_backlight_sensor->GetIlluminancePath());
   internal_backlight_sensor->RemoveObserver(&internal_backlight_observer_);
 
   auto keyboard_backlight_sensor = manager_->GetSensorForKeyboardBacklight();
   keyboard_backlight_sensor->AddObserver(&keyboard_backlight_observer_);
   ASSERT_TRUE(keyboard_backlight_observer_.RunUntilAmbientLightUpdated());
   EXPECT_EQ(1, keyboard_backlight_sensor->GetAmbientLightLux());
+  EXPECT_EQ(data1_file, keyboard_backlight_sensor->GetIlluminancePath());
   keyboard_backlight_sensor->RemoveObserver(&keyboard_backlight_observer_);
 
   EXPECT_TRUE(manager_->HasColorSensor());

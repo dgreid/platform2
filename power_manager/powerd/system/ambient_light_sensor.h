@@ -70,6 +70,7 @@ class AmbientLightSensor : public AmbientLightSensorInterface {
   bool IsColorSensor() const override;
   int GetAmbientLightLux() override;
   int GetColorTemperature() override;
+  base::FilePath GetIlluminancePath() const override;
 
  private:
   // Starts |poll_timer_|.
