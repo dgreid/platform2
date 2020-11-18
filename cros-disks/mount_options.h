@@ -93,6 +93,10 @@ class MountOptions {
   std::vector<std::string> options_;
 };
 
+// Checks if after applying all the "ro and "rw" options
+// in order, the resulting mount should be read-only.
+bool IsReadOnlyMount(const std::vector<std::string>& options);
+
 }  // namespace cros_disks
 
 #endif  // CROS_DISKS_MOUNT_OPTIONS_H_

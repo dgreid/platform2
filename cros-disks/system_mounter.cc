@@ -72,7 +72,7 @@ std::unique_ptr<MountPoint> SystemMounter::Mount(
   int flags = flags_;
 
   // All params are ignored except "ro".
-  if (base::Contains(params, MountOptions::kOptionReadOnly)) {
+  if (IsReadOnlyMount(params)) {
     flags |= MS_RDONLY;
   }
 

@@ -304,7 +304,7 @@ std::unique_ptr<MountPoint> DiskManager::DoMount(
   if (*error != MOUNT_ERROR_NONE) {
     DCHECK(!mount_point);
     // Try to mount the filesystem read-only if mounting it read-write failed.
-    if (!base::Contains(options, MountOptions::kOptionReadOnly)) {
+    if (!IsReadOnlyMount(options)) {
       LOG(INFO) << "Trying to mount " << quote(source_path) << " read-only";
       std::vector<std::string> ro_options = options;
       ro_options.push_back("ro");

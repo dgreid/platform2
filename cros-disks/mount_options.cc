@@ -221,4 +221,14 @@ bool MountOptions::HasOption(const std::string& option) const {
   return base::Contains(options_, option);
 }
 
+bool IsReadOnlyMount(const std::vector<std::string>& options) {
+  for (const auto& option : base::Reversed(options)) {
+    if (option == MountOptions::kOptionReadOnly)
+      return true;
+    if (option == MountOptions::kOptionReadWrite)
+      return false;
+  }
+  return false;
+}
+
 }  // namespace cros_disks

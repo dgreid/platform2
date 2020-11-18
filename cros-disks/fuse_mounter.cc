@@ -303,7 +303,7 @@ std::unique_ptr<MountPoint> FUSEMounter::Mount(
     std::vector<std::string> params,
     MountErrorType* error) const {
   // Read-only is the only parameter that has any effect at this layer.
-  const bool read_only = base::Contains(params, MountOptions::kOptionReadOnly);
+  const bool read_only = IsReadOnlyMount(params);
 
   const base::File fuse_file = base::File(
       base::FilePath(kFuseDeviceFile),
