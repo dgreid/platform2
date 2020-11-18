@@ -144,6 +144,10 @@ class UserDataAuth {
   // main() because there's a command line switch for selecting this.
   void set_legacy_mount(bool legacy) { legacy_mount_ = legacy; }
 
+  // Set |bind_mount_downloads_|. The variable is passed to Mount to define
+  // whether the Downloads/ directory shall be bind mounted.
+  void set_bind_mount_downloads(bool bind) { bind_mount_downloads_ = bind; }
+
   // Set thresholds for automatic disk cleanup.
   void set_cleanup_threshold(uint64_t cleanup_threshold);
   void set_aggressive_cleanup_threshold(uint64_t aggressive_cleanup_threshold);
@@ -1041,6 +1045,9 @@ class UserDataAuth {
   // Whether we are using legacy mount. See Mount::MountLegacyHome()'s comment
   // for more information.
   bool legacy_mount_;
+
+  // Whether Downloads/ should be bind mounted.
+  bool bind_mount_downloads_;
 
   // The default ARC Disk Quota object. This is used to provide Quota related
   // information function for ARC.

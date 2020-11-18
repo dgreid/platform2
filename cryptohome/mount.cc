@@ -105,6 +105,7 @@ Mount::Mount(Platform* platform, HomeDirs* homedirs)
       pkcs11_state_(kUninitialized),
       dircrypto_key_reference_(),
       legacy_mount_(true),
+      bind_mount_downloads_(true),
       mount_type_(MountType::NONE),
       shadow_only_(false),
       default_chaps_client_factory_(new ChapsClientFactory()),
@@ -149,9 +150,10 @@ bool Mount::Init() {
     result = false;
   }
 
-  mounter_.reset(new MountHelper(
-      default_user_, default_group_, default_access_group_, shadow_root_,
-      skel_source_, system_salt_, legacy_mount_, platform_));
+  mounter_.reset(new MountHelper(default_user_, default_group_,
+                                 default_access_group_, shadow_root_,
+                                 skel_source_, system_salt_, legacy_mount_,
+                                 bind_mount_downloads_, platform_));
 
   std::unique_ptr<MountNamespace> chrome_mnt_ns;
   if (mount_guest_session_non_root_namespace_ || IsolateUserSession()) {
@@ -174,7 +176,8 @@ bool Mount::Init() {
   if (mount_guest_session_out_of_process_ ||
       mount_non_ephemeral_session_out_of_process_) {
     out_of_process_mounter_.reset(new OutOfProcessMountHelper(
-        system_salt_, std::move(chrome_mnt_ns), legacy_mount_, platform_));
+        system_salt_, std::move(chrome_mnt_ns), legacy_mount_,
+        bind_mount_downloads_, platform_));
   }
 
   return result;

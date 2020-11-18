@@ -33,6 +33,7 @@ static const char* kDistributedModeOption = "dbus";
 // Keeps std* open for debugging.
 static const char* kNoCloseOnDaemonize = "noclose";
 static const char* kNoLegacyMount = "nolegacymount";
+static const char* kNoDownloadsBindMount = "no_downloads_bind_mount";
 static const char* kDirEncryption = "direncryption";
 static const char* kNoDaemonize = "nodaemonize";
 static const char* kUserDataAuthInterface = "user_data_auth_interface";
@@ -83,6 +84,7 @@ int main(int argc, char** argv) {
   }
   int noclose = cl->HasSwitch(switches::kNoCloseOnDaemonize);
   bool nolegacymount = cl->HasSwitch(switches::kNoLegacyMount);
+  bool nodownloadsbind = cl->HasSwitch(switches::kNoDownloadsBindMount);
   bool direncryption = cl->HasSwitch(switches::kDirEncryption);
   bool daemonize = !cl->HasSwitch(switches::kNoDaemonize);
   bool use_new_dbus_interface = cl->HasSwitch(switches::kUserDataAuthInterface);
@@ -121,6 +123,8 @@ int main(int argc, char** argv) {
     // Set options on whether we are going to use legacy mount. See comments on
     // Mount::MountLegacyHome() for more information.
     user_data_auth_daemon->GetUserDataAuth()->set_legacy_mount(!nolegacymount);
+    user_data_auth_daemon->GetUserDataAuth()->set_bind_mount_downloads(
+        !nodownloadsbind);
 
     // Set options on whether we are going to use ext4 directory encryption or
     // eCryptfs.
@@ -160,6 +164,7 @@ int main(int argc, char** argv) {
     cryptohome::Service* service = cryptohome::Service::CreateDefault();
 
     service->set_legacy_mount(!nolegacymount);
+    service->set_bind_mount_downloads(!nodownloadsbind);
     service->set_force_ecryptfs(!direncryption);
 
     if (!service->Initialize()) {

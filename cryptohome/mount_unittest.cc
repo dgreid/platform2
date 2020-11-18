@@ -559,7 +559,7 @@ TEST_P(MountTest, BindMyFilesDownloadsSuccess) {
   MountHelper mnt_helper(fake_platform::kChronosUID, fake_platform::kChronosGID,
                          fake_platform::kSharedGID, kImageDir, kSkelDir,
                          helper_.system_salt, true /*legacy_mount*/,
-                         &platform_);
+                         true /* bind_mount_downloads */, &platform_);
 
   EXPECT_TRUE(mnt_helper.BindMyFilesDownloads(dest_dir));
 }
@@ -573,7 +573,7 @@ TEST_P(MountTest, BindMyFilesDownloadsMissingUserHome) {
   MountHelper mnt_helper(fake_platform::kChronosUID, fake_platform::kChronosGID,
                          fake_platform::kSharedGID, kImageDir, kSkelDir,
                          helper_.system_salt, true /*legacy_mount*/,
-                         &platform_);
+                         true /* bind_mount_downloads */, &platform_);
 
   EXPECT_FALSE(mnt_helper.BindMyFilesDownloads(dest_dir));
 }
@@ -590,7 +590,7 @@ TEST_P(MountTest, BindMyFilesDownloadsMissingDownloads) {
   MountHelper mnt_helper(fake_platform::kChronosUID, fake_platform::kChronosGID,
                          fake_platform::kSharedGID, kImageDir, kSkelDir,
                          helper_.system_salt, true /*legacy_mount*/,
-                         &platform_);
+                         true /* bind_mount_downloads */, &platform_);
 
   EXPECT_FALSE(mnt_helper.BindMyFilesDownloads(dest_dir));
 }
@@ -610,7 +610,7 @@ TEST_P(MountTest, BindMyFilesDownloadsMissingMyFilesDownloads) {
   MountHelper mnt_helper(fake_platform::kChronosUID, fake_platform::kChronosGID,
                          fake_platform::kSharedGID, kImageDir, kSkelDir,
                          helper_.system_salt, true /*legacy_mount*/,
-                         &platform_);
+                         true /* bind_mount_downloads */, &platform_);
 
   EXPECT_FALSE(mnt_helper.BindMyFilesDownloads(dest_dir));
 }
@@ -657,7 +657,7 @@ TEST_P(MountTest, BindMyFilesDownloadsRemoveExistingFiles) {
   MountHelper mnt_helper(fake_platform::kChronosUID, fake_platform::kChronosGID,
                          fake_platform::kSharedGID, kImageDir, kSkelDir,
                          helper_.system_salt, true /*legacy_mount*/,
-                         &platform_);
+                         true /* bind_mount_downloads */, &platform_);
 
   EXPECT_TRUE(mnt_helper.BindMyFilesDownloads(dest_dir));
 }
@@ -704,7 +704,7 @@ TEST_P(MountTest, BindMyFilesDownloadsMoveForgottenFiles) {
   MountHelper mnt_helper(fake_platform::kChronosUID, fake_platform::kChronosGID,
                          fake_platform::kSharedGID, kImageDir, kSkelDir,
                          helper_.system_salt, true /*legacy_mount*/,
-                         &platform_);
+                         true /* bind_mount_downloads */, &platform_);
 
   EXPECT_TRUE(mnt_helper.BindMyFilesDownloads(dest_dir));
 }
@@ -973,7 +973,7 @@ TEST_P(MountTest, RememberMountOrderingTest) {
   MountHelper mnt_helper(fake_platform::kChronosUID, fake_platform::kChronosGID,
                          fake_platform::kSharedGID, kImageDir, kSkelDir,
                          helper_.system_salt, true /*legacy_mount*/,
-                         &platform_);
+                         true /* bind_mount_downloads */, &platform_);
 
   FilePath src("/src");
   FilePath dest0("/dest/foo");
@@ -1418,7 +1418,7 @@ TEST_P(EphemeralNoUserSystemTest, CreateMyFilesDownloads) {
   MountHelper mnt_helper(fake_platform::kChronosUID, fake_platform::kChronosGID,
                          fake_platform::kSharedGID, kImageDir, kSkelDir,
                          helper_.system_salt, true /*legacy_mount*/,
-                         &platform_);
+                         true /* bind_mount_downloads */, &platform_);
 
   ASSERT_TRUE(mnt_helper.SetUpEphemeralCryptohome(base_path));
 }
@@ -1452,7 +1452,7 @@ TEST_P(EphemeralNoUserSystemTest, CreateMyFilesDownloadsAlreadyExists) {
   MountHelper mnt_helper(fake_platform::kChronosUID, fake_platform::kChronosGID,
                          fake_platform::kSharedGID, kImageDir, kSkelDir,
                          helper_.system_salt, true /*legacy_mount*/,
-                         &platform_);
+                         true /* bind_mount_downloads */, &platform_);
 
   ASSERT_TRUE(mnt_helper.SetUpEphemeralCryptohome(base_path));
 }

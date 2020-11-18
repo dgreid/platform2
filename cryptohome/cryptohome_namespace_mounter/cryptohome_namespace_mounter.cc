@@ -142,7 +142,7 @@ int main(int argc, char** argv) {
   cryptohome::MountHelper mounter(
       uid, gid, access_gid, FilePath(cryptohome::kDefaultShadowRoot),
       FilePath(cryptohome::kDefaultSkeletonSource), system_salt,
-      request.legacy_home(), &platform);
+      request.legacy_home(), request.bind_mount_downloads(), &platform);
 
   cryptohome::MountError error = cryptohome::MOUNT_ERROR_NONE;
   // Link the user keyring into session keyring to allow request_key() search

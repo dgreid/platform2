@@ -41,10 +41,12 @@ class OutOfProcessMountHelper : public MountHelperInterface {
   OutOfProcessMountHelper(const brillo::SecureBlob& system_salt,
                           std::unique_ptr<MountNamespace> chrome_mnt_ns,
                           bool legacy_home,
+                          bool bind_mount_downloads,
                           Platform* platform)
       : system_salt_(system_salt),
         chrome_mnt_ns_(std::move(chrome_mnt_ns)),
         legacy_home_(legacy_home),
+        bind_mount_downloads_(bind_mount_downloads),
         platform_(platform),
         username_(),
         write_to_helper_(-1) {}
@@ -105,6 +107,9 @@ class OutOfProcessMountHelper : public MountHelperInterface {
 
   // Whether to make the legacy home directory (/home/chronos/user) available.
   bool legacy_home_;
+
+  // Whether to bind mount Downloads/
+  bool bind_mount_downloads_;
 
   Platform* platform_;  // Un-owned.
 

@@ -65,7 +65,7 @@ class OutOfProcessMountHelperTest : public ::testing::Test {
 
     out_of_process_mounter_.reset(new OutOfProcessMountHelper(
         helper_.system_salt, std::unique_ptr<MountNamespace>(),
-        true /* legacy_mount */, &platform_));
+        true /* legacy_mount */, true /* bind_mount_downloads */, &platform_));
   }
 
   void TearDown() {
@@ -171,9 +171,9 @@ TEST_F(OutOfProcessMountHelperTest, MountGuestUserDirOOPNonRootMountNamespace) {
 
   std::unique_ptr<MountNamespace> mnt_ns =
       std::make_unique<MountNamespace>(kChromeMountNamespace, &platform_);
-  out_of_process_mounter_.reset(
-      new OutOfProcessMountHelper(helper_.system_salt, std::move(mnt_ns),
-                                  true /* legacy_mount */, &platform_));
+  out_of_process_mounter_.reset(new OutOfProcessMountHelper(
+      helper_.system_salt, std::move(mnt_ns), true /* legacy_mount */,
+      true /* bind_mount_downloads */, &platform_));
 
   // Reading from the helper always succeeds.
   base::ScopedFD dev_zero = GetDevZeroFd();

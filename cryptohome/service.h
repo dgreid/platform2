@@ -204,6 +204,7 @@ class Service : public brillo::dbus::AbstractDbusService,
   virtual bool CleanUpHiddenMounts();
 
   void set_legacy_mount(bool legacy) { legacy_mount_ = legacy; }
+  void set_bind_mount_downloads(bool bind) { bind_mount_downloads_ = bind; }
   void set_force_ecryptfs(bool force_ecryptfs) {
     force_ecryptfs_ = force_ecryptfs;
   }
@@ -1082,6 +1083,7 @@ class Service : public brillo::dbus::AbstractDbusService,
   std::string guest_user_;
   bool force_ecryptfs_;
   bool legacy_mount_;
+  bool bind_mount_downloads_;
   brillo::SecureBlob public_mount_salt_;
   std::unique_ptr<chaps::TokenManagerClient> default_chaps_client_;
   chaps::TokenManagerClient* chaps_client_;

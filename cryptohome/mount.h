@@ -189,6 +189,7 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   std::unique_ptr<brillo::SecureBlob> GetWebAuthnSecret();
 
   void set_legacy_mount(bool legacy) { legacy_mount_ = legacy; }
+  void set_bind_mount_downloads(bool bind) { bind_mount_downloads_ = bind; }
 
   // Does not take ownership.
   void set_chaps_client_factory(ChapsClientFactory* factory) {
@@ -377,6 +378,9 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
 
   // Whether to mount the legacy homedir or not (see MountLegacyHome)
   bool legacy_mount_;
+
+  // Whether to bind mount Downloads/.
+  bool bind_mount_downloads_;
 
   // Indicates the type of the current mount.
   // This is only valid when IsMounted() is true.

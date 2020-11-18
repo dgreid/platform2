@@ -139,6 +139,7 @@ bool OutOfProcessMountHelper::PerformEphemeralMount(
   request.set_username(username);
   request.set_system_salt(SecureBlobToSecureHex(system_salt_).to_string());
   request.set_legacy_home(legacy_home_);
+  request.set_bind_mount_downloads(bind_mount_downloads_);
   request.set_mount_namespace_path(
       chrome_mnt_ns_ ? chrome_mnt_ns_->path().value() : "");
   request.set_type(cryptohome::OutOfProcessMountRequest_MountType_EPHEMERAL);
@@ -255,6 +256,7 @@ bool OutOfProcessMountHelper::PerformMount(const Options& mount_opts,
   OutOfProcessMountRequest request;
   request.set_username(username);
   request.set_system_salt(SecureBlobToSecureHex(system_salt_).to_string());
+  request.set_bind_mount_downloads(bind_mount_downloads_);
   request.set_legacy_home(legacy_home_);
   request.set_mount_namespace_path(chrome_mnt_ns_ && IsolateUserSession()
                                        ? chrome_mnt_ns_->path().value()

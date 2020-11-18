@@ -481,22 +481,7 @@ bool MountHelper::BindMyFilesDownloads(const base::FilePath& user_home) {
    * crashed and bind mounts were removed by error. See crbug.com/1080730.
    * Move the files back to Download unless a file already exits.
    */
-  std::unique_ptr<FileEnumerator> enumerator(platform_->GetFileEnumerator(
-      downloads_in_myfiles, false /* recursive */,
-      base::FileEnumerator::DIRECTORIES | base::FileEnumerator::FILES));
-  bool warning_sent = false;
-  for (FilePath obj = enumerator->Next(); !obj.empty();
-       obj = enumerator->Next()) {
-    FilePath obj_in_downloads = downloads.Append(obj.BaseName());
-
-    if (platform_->FileExists(obj_in_downloads))
-      platform_->DeleteFile(obj, true);
-    else
-      platform_->Move(obj, obj_in_downloads);
-    LOG_IF(WARNING, !warning_sent)
-        << "Processing files in " << downloads_in_myfiles;
-    warning_sent = true;
-  }
+  MigrateDirectory(downloads, downloads_in_myfiles);
 
   if (!BindAndPush(downloads, downloads_in_myfiles))
     return false;
@@ -605,6 +590,27 @@ bool MountHelper::MountDaemonStoreDirectories(
   return true;
 }
 
+void MountHelper::MigrateDirectory(const base::FilePath& dst,
+                                   const base::FilePath& src) const {
+  VLOG(1) << "Migrating directory " << src << " -> " << dst;
+  std::unique_ptr<cryptohome::FileEnumerator> enumerator(
+      platform_->GetFileEnumerator(
+          src, false /* recursive */,
+          base::FileEnumerator::DIRECTORIES | base::FileEnumerator::FILES));
+  for (base::FilePath src_obj = enumerator->Next(); !src_obj.empty();
+       src_obj = enumerator->Next()) {
+    base::FilePath dst_obj = dst.Append(src_obj.BaseName());
+
+    // If the destination file exists, or rename failed for whatever reason,
+    // then log a warning and delete the source file.
+    if (platform_->FileExists(dst_obj) ||
+        !platform_->Rename(src_obj, dst_obj)) {
+      LOG(WARNING) << "Failed to migrate " << src_obj << " : deleting";
+      platform_->DeleteFile(src_obj, true);
+    }
+  }
+}
+
 bool MountHelper::MountHomesAndDaemonStores(
     const std::string& username,
     const std::string& obfuscated_username,
@@ -629,24 +635,26 @@ bool MountHelper::MountHomesAndDaemonStores(
   if (!BindAndPush(root_home, root_multi_home))
     return false;
 
-  // Mount Downloads to MyFiles/Downloads in:
-  //  - /home/chronos/u-<user_hash>
-  //  - /home/user/<user_hash>
-  if (!(BindMyFilesDownloads(new_user_path) &&
-        BindMyFilesDownloads(user_multi_home))) {
-    return false;
-  }
-
-  // Only bind mount /home/chronos/user/Downloads if it isn't mounted yet, in
-  // multi-profile login it skips.
-  if (legacy_mount_) {
-    auto downloads_folder =
-        FilePath(kDefaultHomeDir).Append(kMyFilesDir).Append(kDownloadsDir);
-
-    if (platform_->IsDirectoryMounted(downloads_folder)) {
-      LOG(INFO) << "Skipping binding to: " << downloads_folder.value();
-    } else if (!BindMyFilesDownloads(FilePath(kDefaultHomeDir))) {
+  if (bind_mount_downloads_) {
+    // Mount Downloads to MyFiles/Downloads in:
+    //  - /home/chronos/u-<user_hash>
+    //  - /home/user/<user_hash>
+    if (!(BindMyFilesDownloads(new_user_path) &&
+          BindMyFilesDownloads(user_multi_home))) {
       return false;
+    }
+
+    // Only bind mount /home/chronos/user/Downloads if it isn't mounted yet, in
+    // multi-profile login it skips.
+    if (legacy_mount_) {
+      auto downloads_folder =
+          FilePath(kDefaultHomeDir).Append(kMyFilesDir).Append(kDownloadsDir);
+
+      if (platform_->IsDirectoryMounted(downloads_folder)) {
+        LOG(INFO) << "Skipping binding to: " << downloads_folder.value();
+      } else if (!BindMyFilesDownloads(FilePath(kDefaultHomeDir))) {
+        return false;
+      }
     }
   }
 
@@ -719,6 +727,18 @@ bool MountHelper::CreateTrackedSubdirectories(
       }
     }
   }
+
+  if (!bind_mount_downloads_) {
+    // If we are not doing the downloads bind mount, move the content of the
+    // Downloads to MyFiles/Downloads. Doing it file by file in case there is
+    // a content in the MyFiles/Downloads already.
+    auto downloads = dest_dir.Append(kUserHomeSuffix).Append(kDownloadsDir);
+    auto downloads_in_myfiles = dest_dir.Append(kUserHomeSuffix)
+                                    .Append(kMyFilesDir)
+                                    .Append(kDownloadsDir);
+    MigrateDirectory(downloads_in_myfiles, downloads);
+  }
+
   return result;
 }
 

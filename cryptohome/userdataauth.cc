@@ -202,6 +202,7 @@ UserDataAuth::UserDataAuth()
       guest_user_(brillo::cryptohome::home::kGuestUserName),
       force_ecryptfs_(true),
       legacy_mount_(true),
+      bind_mount_downloads_(true),
       default_arc_disk_quota_(nullptr),
       arc_disk_quota_(nullptr),
       default_disk_cleanup_(nullptr),
@@ -1140,6 +1141,7 @@ scoped_refptr<Mount> UserDataAuth::CreateMount(const std::string& username) {
     return nullptr;
   }
   m->set_legacy_mount(legacy_mount_);
+  m->set_bind_mount_downloads(bind_mount_downloads_);
   return m;
 }
 

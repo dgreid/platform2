@@ -313,6 +313,7 @@ Service::Service()
       guest_user_(brillo::cryptohome::home::kGuestUserName),
       force_ecryptfs_(true),
       legacy_mount_(true),
+      bind_mount_downloads_(true),
       public_mount_salt_(),
       default_chaps_client_(new chaps::TokenManagerClient()),
       chaps_client_(default_chaps_client_.get()),
@@ -4067,6 +4068,7 @@ scoped_refptr<cryptohome::Mount> Service::CreateMount(
     return nullptr;
   }
   m->set_legacy_mount(legacy_mount_);
+  m->set_bind_mount_downloads(bind_mount_downloads_);
   return m;
 }
 

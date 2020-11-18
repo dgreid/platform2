@@ -82,6 +82,7 @@ class MountHelper : public MountHelperInterface {
               const base::FilePath& skel_source,
               const brillo::SecureBlob& system_salt,
               bool legacy_mount,
+              bool bind_mount_downloads,
               Platform* platform)
       : default_uid_(uid),
         default_gid_(gid),
@@ -90,6 +91,7 @@ class MountHelper : public MountHelperInterface {
         skeleton_source_(skel_source),
         system_salt_(system_salt),
         legacy_mount_(legacy_mount),
+        bind_mount_downloads_(bind_mount_downloads),
         platform_(platform) {}
   MountHelper(const MountHelper&) = delete;
   MountHelper& operator=(const MountHelper&) = delete;
@@ -251,6 +253,11 @@ class MountHelper : public MountHelperInterface {
   //   vault_path - directory to migrate
   void MigrateToUserHome(const FilePath& vault_path) const;
 
+  // Facilitates migration of files from one directory to another, removing the
+  // duplicates.
+  void MigrateDirectory(const base::FilePath& dst,
+                        const base::FilePath& src) const;
+
   // Bind-mounts
   //   /home/.shadow/$hash/mount/root/$daemon (*)
   // to
@@ -319,6 +326,7 @@ class MountHelper : public MountHelperInterface {
   brillo::SecureBlob system_salt_;
 
   bool legacy_mount_ = true;
+  bool bind_mount_downloads_ = true;
 
   // Stack of mounts (in the mount(2) sense) that have been made.
   MountStack stack_;
