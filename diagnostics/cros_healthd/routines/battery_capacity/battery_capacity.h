@@ -17,8 +17,6 @@ namespace diagnostics {
 
 // Output messages for the battery capacity routine when in various states.
 extern const char kBatteryCapacityRoutineParametersInvalidMessage[];
-extern const char kBatteryCapacityFailedReadingChargeFullDesignMessage[];
-extern const char kBatteryCapacityFailedParsingChargeFullDesignMessage[];
 extern const char kBatteryCapacityRoutineSucceededMessage[];
 extern const char kBatteryCapacityRoutineFailedMessage[];
 

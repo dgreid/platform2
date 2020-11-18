@@ -12,7 +12,6 @@ pkg_config("libcros_healthd_utils_pkg_deps") {
 source_set("libcros_healthd_utils") {
   configs += [ ":libcros_healthd_utils_pkg_deps" ]
   sources = [
-    "battery_utils.cc",
     "cpu_file_helpers.cc",
     "file_utils.cc",
     "helper_tool_utils.cc",
@@ -39,7 +38,6 @@ if (use.test) {
       "//diagnostics/common:libcommon_test_utils",
     ]
     sources = [
-      "battery_utils_test.cc",
       "cpu_file_helpers_test.cc",
       "helper_tool_utils_test.cc",
       "procfs_utils_test.cc",

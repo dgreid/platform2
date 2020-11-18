@@ -258,15 +258,15 @@ Sample output:
 Progress: 100
 Output: {
     "resultDetails": {
-        "chargeFull": 4621000,
-        "chargeFullDesign": 5275000,
-        "chargeNow": 4621000,
-        "currentNow": 0,
+        "chargeFullAh": 6.156,
+        "chargeFullDesignAh": 6.23,
+        "chargeNowAh": 6.017,
+        "currentNowA": 0.512,
         "cycleCount": 20,
         "manufacturer": "333-22-",
         "present": 1,
         "status": "Charging",
-        "voltageNow": 13023000,
+        "voltageNowV": 8.388,
         "wearPercentage": 13
     }
 }

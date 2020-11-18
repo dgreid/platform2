@@ -7,19 +7,17 @@
 #include <string>
 #include <utility>
 
-#include <base/files/file_path.h>
-#include <base/files/file_util.h>
-#include <base/files/scoped_temp_dir.h>
+#include <base/optional.h>
 #include <base/test/task_environment.h>
 #include <base/time/time.h>
 #include <gtest/gtest.h>
 #include <mojo/core/embedder/embedder.h>
 
-#include "diagnostics/common/file_test_utils.h"
+#include "diagnostics/common/system/fake_powerd_adapter.h"
 #include "diagnostics/cros_healthd/routines/battery_discharge/battery_discharge.h"
 #include "diagnostics/cros_healthd/routines/battery_discharge/battery_discharge_constants.h"
 #include "diagnostics/cros_healthd/routines/routine_test_utils.h"
-#include "diagnostics/cros_healthd/utils/battery_utils.h"
+#include "diagnostics/cros_healthd/system/mock_context.h"
 #include "mojo/cros_healthd_diagnostics.mojom.h"
 
 namespace diagnostics {
@@ -28,9 +26,8 @@ namespace {
 
 namespace mojo_ipc = ::chromeos::cros_healthd::mojom;
 
-constexpr uint32_t kStartingChargeNowFileContents = 4031000;
-constexpr uint32_t kEndingChargeNowFileContents = 3000000;
-constexpr uint32_t kChargeFullFileContents = 5042000;
+constexpr double kStartingChargePercent = 80;
+constexpr double kEndingChargePercent = 55;
 
 // With this value for maximum_discharge_percent_allowed, the routine should
 // pass.
@@ -46,6 +43,14 @@ constexpr base::TimeDelta kFullDuration = base::TimeDelta::FromSeconds(12);
 constexpr base::TimeDelta kHalfDuration = kFullDuration / 2;
 constexpr base::TimeDelta kQuarterDuration = kFullDuration / 4;
 
+power_manager::PowerSupplyProperties GetPowerSupplyProperties() {
+  power_manager::PowerSupplyProperties power_supply_proto;
+  power_supply_proto.set_battery_percent(kStartingChargePercent);
+  power_supply_proto.set_battery_state(
+      power_manager::PowerSupplyProperties_BatteryState_DISCHARGING);
+  return power_supply_proto;
+}
+
 }  // namespace
 
 class BatteryDischargeRoutineTest : public testing::Test {
@@ -55,13 +60,13 @@ class BatteryDischargeRoutineTest : public testing::Test {
   BatteryDischargeRoutineTest& operator=(const BatteryDischargeRoutineTest&) =
       delete;
 
-  void SetUp() override { ASSERT_TRUE(temp_dir_.CreateUniqueTempDir()); }
+  void SetUp() override { ASSERT_TRUE(mock_context_.Initialize()); }
 
   DiagnosticRoutine* routine() { return routine_.get(); }
 
   void CreateRoutine(uint32_t maximum_discharge_percent_allowed) {
     routine_ = std::make_unique<BatteryDischargeRoutine>(
-        kFullDuration, maximum_discharge_percent_allowed, temp_dir_.GetPath(),
+        mock_context(), kFullDuration, maximum_discharge_percent_allowed,
         task_environment_.GetMockTickClock());
   }
 
@@ -85,45 +90,37 @@ class BatteryDischargeRoutineTest : public testing::Test {
         std::move(update.routine_update_union));
   }
 
-  void WriteBatterySysfsNode(const std::string& file_name,
-                             const std::string& file_contents) {
-    EXPECT_TRUE(
-        WriteFileAndCreateParentDirs(temp_dir_.GetPath()
-                                         .AppendASCII(kBatteryDirectoryPath)
-                                         .AppendASCII(file_name),
-                                     file_contents));
-  }
-
   void FastForwardBy(base::TimeDelta time) {
     task_environment_.FastForwardBy(time);
   }
 
-  const base::FilePath GetTempPath() { return temp_dir_.GetPath(); }
+  MockContext* mock_context() { return &mock_context_; }
 
- private:
+  FakePowerdAdapter* fake_powerd_adapter() {
+    return mock_context_.fake_powerd_adapter();
+  }
+
+  MockContext mock_context_;
   base::test::TaskEnvironment task_environment_{
       base::test::TaskEnvironment::TimeSource::MOCK_TIME};
-  base::ScopedTempDir temp_dir_;
   std::unique_ptr<BatteryDischargeRoutine> routine_;
 };
 
 // Test that the routine can be created with the default tick clock and root
 // directory.
 TEST_F(BatteryDischargeRoutineTest, DefaultConstruction) {
-  BatteryDischargeRoutine routine{kFullDuration, kPassingPercent};
+  BatteryDischargeRoutine routine{mock_context(), kFullDuration,
+                                  kPassingPercent};
   EXPECT_EQ(routine.GetStatus(), mojo_ipc::DiagnosticRoutineStatusEnum::kReady);
 }
 
 // Test that the routine passes when the battery discharges less than
 // maximum_discharge_percent_allowed.
 TEST_F(BatteryDischargeRoutineTest, RoutineSuccess) {
-  CreateRoutine(kPassingPercent);
-  WriteBatterySysfsNode(kBatteryChargeNowFileName,
-                        std::to_string(kStartingChargeNowFileContents));
-  WriteBatterySysfsNode(kBatteryChargeFullFileName,
-                        std::to_string(kChargeFullFileContents));
-  WriteBatterySysfsNode(kBatteryStatusFileName, kBatteryStatusDischargingValue);
+  auto power_supply_proto = GetPowerSupplyProperties();
+  fake_powerd_adapter()->SetPowerSupplyProperties(power_supply_proto);
 
+  CreateRoutine(kPassingPercent);
   StartRoutineAndVerifyInteractiveResponse();
 
   routine()->Resume();
@@ -134,8 +131,8 @@ TEST_F(BatteryDischargeRoutineTest, RoutineSuccess) {
                              kBatteryDischargeRoutineRunningMessage);
   EXPECT_EQ(update->progress_percent, 50);
 
-  WriteBatterySysfsNode(kBatteryChargeNowFileName,
-                        std::to_string(kEndingChargeNowFileContents));
+  power_supply_proto.set_battery_percent(kEndingChargePercent);
+  fake_powerd_adapter()->SetPowerSupplyProperties(power_supply_proto);
 
   FastForwardBy(kHalfDuration);
   update = GetUpdate();
@@ -148,13 +145,10 @@ TEST_F(BatteryDischargeRoutineTest, RoutineSuccess) {
 // Test that the routine fails when the battery discharges more than
 // maximum_discharge_percent_allowed.
 TEST_F(BatteryDischargeRoutineTest, ExceedMaxDischargeFailure) {
-  CreateRoutine(kFailingPercent);
-  WriteBatterySysfsNode(kBatteryChargeNowFileName,
-                        std::to_string(kStartingChargeNowFileContents));
-  WriteBatterySysfsNode(kBatteryChargeFullFileName,
-                        std::to_string(kChargeFullFileContents));
-  WriteBatterySysfsNode(kBatteryStatusFileName, kBatteryStatusDischargingValue);
+  auto power_supply_proto = GetPowerSupplyProperties();
+  fake_powerd_adapter()->SetPowerSupplyProperties(power_supply_proto);
 
+  CreateRoutine(kFailingPercent);
   StartRoutineAndVerifyInteractiveResponse();
 
   routine()->Resume();
@@ -165,8 +159,8 @@ TEST_F(BatteryDischargeRoutineTest, ExceedMaxDischargeFailure) {
                              kBatteryDischargeRoutineRunningMessage);
   EXPECT_EQ(update->progress_percent, 50);
 
-  WriteBatterySysfsNode(kBatteryChargeNowFileName,
-                        std::to_string(kEndingChargeNowFileContents));
+  power_supply_proto.set_battery_percent(kEndingChargePercent);
+  fake_powerd_adapter()->SetPowerSupplyProperties(power_supply_proto);
 
   FastForwardBy(kHalfDuration);
   update = GetUpdate();
@@ -180,13 +174,10 @@ TEST_F(BatteryDischargeRoutineTest, ExceedMaxDischargeFailure) {
 // Test that the routine handles an invalid maximum_discharge_percent_allowed
 // input.
 TEST_F(BatteryDischargeRoutineTest, InvalidParameters) {
-  CreateRoutine(kErrorPercent);
-  WriteBatterySysfsNode(kBatteryChargeNowFileName,
-                        std::to_string(kStartingChargeNowFileContents));
-  WriteBatterySysfsNode(kBatteryChargeFullFileName,
-                        std::to_string(kChargeFullFileContents));
-  WriteBatterySysfsNode(kBatteryStatusFileName, kBatteryStatusDischargingValue);
+  auto power_supply_proto = GetPowerSupplyProperties();
+  fake_powerd_adapter()->SetPowerSupplyProperties(power_supply_proto);
 
+  CreateRoutine(kErrorPercent);
   StartRoutineAndVerifyInteractiveResponse();
 
   routine()->Resume();
@@ -199,13 +190,12 @@ TEST_F(BatteryDischargeRoutineTest, InvalidParameters) {
 
 // Test that the routine handles the battery not discharging.
 TEST_F(BatteryDischargeRoutineTest, BatteryNotDischarging) {
-  CreateRoutine(kPassingPercent);
-  WriteBatterySysfsNode(kBatteryChargeNowFileName,
-                        std::to_string(kStartingChargeNowFileContents));
-  WriteBatterySysfsNode(kBatteryChargeFullFileName,
-                        std::to_string(kChargeFullFileContents));
-  WriteBatterySysfsNode(kBatteryStatusFileName, kBatteryStatusChargingValue);
+  auto power_supply_proto = GetPowerSupplyProperties();
+  power_supply_proto.set_battery_state(
+      power_manager::PowerSupplyProperties_BatteryState_CHARGING);
+  fake_powerd_adapter()->SetPowerSupplyProperties(power_supply_proto);
 
+  CreateRoutine(kPassingPercent);
   StartRoutineAndVerifyInteractiveResponse();
 
   routine()->Resume();
@@ -219,13 +209,11 @@ TEST_F(BatteryDischargeRoutineTest, BatteryNotDischarging) {
 // Test that the routine handles an ending charge higher than the starting
 // charge.
 TEST_F(BatteryDischargeRoutineTest, EndingChargeHigherThanStartingCharge) {
-  CreateRoutine(kPassingPercent);
-  WriteBatterySysfsNode(kBatteryChargeNowFileName,
-                        std::to_string(kEndingChargeNowFileContents));
-  WriteBatterySysfsNode(kBatteryChargeFullFileName,
-                        std::to_string(kChargeFullFileContents));
-  WriteBatterySysfsNode(kBatteryStatusFileName, kBatteryStatusDischargingValue);
+  auto power_supply_proto = GetPowerSupplyProperties();
+  power_supply_proto.set_battery_percent(kEndingChargePercent);
+  fake_powerd_adapter()->SetPowerSupplyProperties(power_supply_proto);
 
+  CreateRoutine(kPassingPercent);
   StartRoutineAndVerifyInteractiveResponse();
 
   routine()->Resume();
@@ -236,8 +224,8 @@ TEST_F(BatteryDischargeRoutineTest, EndingChargeHigherThanStartingCharge) {
                              kBatteryDischargeRoutineRunningMessage);
   EXPECT_EQ(update->progress_percent, 50);
 
-  WriteBatterySysfsNode(kBatteryChargeNowFileName,
-                        std::to_string(kStartingChargeNowFileContents));
+  power_supply_proto.set_battery_percent(kStartingChargePercent);
+  fake_powerd_adapter()->SetPowerSupplyProperties(power_supply_proto);
 
   FastForwardBy(kHalfDuration);
   update = GetUpdate();
@@ -247,15 +235,29 @@ TEST_F(BatteryDischargeRoutineTest, EndingChargeHigherThanStartingCharge) {
   EXPECT_EQ(update->progress_percent, 50);
 }
 
-// Test that the routine handles a file going missing after the delayed task.
-TEST_F(BatteryDischargeRoutineTest, DelayedTaskHasMissingFile) {
-  CreateRoutine(kPassingPercent);
-  WriteBatterySysfsNode(kBatteryChargeNowFileName,
-                        std::to_string(kEndingChargeNowFileContents));
-  WriteBatterySysfsNode(kBatteryChargeFullFileName,
-                        std::to_string(kChargeFullFileContents));
-  WriteBatterySysfsNode(kBatteryStatusFileName, kBatteryStatusDischargingValue);
+// Test that the routine handles an error from powerd.
+TEST_F(BatteryDischargeRoutineTest, PowerdError) {
+  fake_powerd_adapter()->SetPowerSupplyProperties(base::nullopt);
 
+  CreateRoutine(kPassingPercent);
+  StartRoutineAndVerifyInteractiveResponse();
+
+  routine()->Resume();
+  FastForwardBy(kHalfDuration);
+  auto update = GetUpdate();
+  VerifyNonInteractiveUpdate(update->routine_update_union,
+                             mojo_ipc::DiagnosticRoutineStatusEnum::kError,
+                             kPowerdPowerSupplyPropertiesFailedMessage);
+  EXPECT_EQ(update->progress_percent, 0);
+}
+
+// Test that the routine handles an error from powerd after the delayed task.
+TEST_F(BatteryDischargeRoutineTest, DelayedTaskPowerdError) {
+  auto power_supply_proto = GetPowerSupplyProperties();
+  power_supply_proto.set_battery_percent(kEndingChargePercent);
+  fake_powerd_adapter()->SetPowerSupplyProperties(power_supply_proto);
+
+  CreateRoutine(kPassingPercent);
   StartRoutineAndVerifyInteractiveResponse();
 
   routine()->Resume();
@@ -266,28 +268,22 @@ TEST_F(BatteryDischargeRoutineTest, DelayedTaskHasMissingFile) {
                              kBatteryDischargeRoutineRunningMessage);
   EXPECT_EQ(update->progress_percent, 50);
 
-  ASSERT_TRUE(base::DeleteFile(GetTempPath()
-                                   .AppendASCII(kBatteryDirectoryPath)
-                                   .AppendASCII(kBatteryChargeNowFileName)));
+  fake_powerd_adapter()->SetPowerSupplyProperties(base::nullopt);
 
   FastForwardBy(kHalfDuration);
   update = GetUpdate();
-  VerifyNonInteractiveUpdate(
-      update->routine_update_union,
-      mojo_ipc::DiagnosticRoutineStatusEnum::kError,
-      kBatteryDischargeRoutineFailedReadingBatteryAttributesMessage);
+  VerifyNonInteractiveUpdate(update->routine_update_union,
+                             mojo_ipc::DiagnosticRoutineStatusEnum::kError,
+                             kPowerdPowerSupplyPropertiesFailedMessage);
   EXPECT_EQ(update->progress_percent, 50);
 }
 
 // Test that we can cancel the routine in its waiting state.
 TEST_F(BatteryDischargeRoutineTest, CancelWhileWaiting) {
-  CreateRoutine(kPassingPercent);
-  WriteBatterySysfsNode(kBatteryChargeNowFileName,
-                        std::to_string(kStartingChargeNowFileContents));
-  WriteBatterySysfsNode(kBatteryChargeFullFileName,
-                        std::to_string(kChargeFullFileContents));
-  WriteBatterySysfsNode(kBatteryStatusFileName, kBatteryStatusDischargingValue);
+  auto power_supply_proto = GetPowerSupplyProperties();
+  fake_powerd_adapter()->SetPowerSupplyProperties(power_supply_proto);
 
+  CreateRoutine(kPassingPercent);
   routine()->Start();
 
   EXPECT_EQ(routine()->GetStatus(),
@@ -311,13 +307,10 @@ TEST_F(BatteryDischargeRoutineTest, CancelWhileWaiting) {
 
 // Test that we can cancel the routine partway through running.
 TEST_F(BatteryDischargeRoutineTest, CancelWhileRunning) {
-  CreateRoutine(kPassingPercent);
-  WriteBatterySysfsNode(kBatteryChargeNowFileName,
-                        std::to_string(kEndingChargeNowFileContents));
-  WriteBatterySysfsNode(kBatteryChargeFullFileName,
-                        std::to_string(kChargeFullFileContents));
-  WriteBatterySysfsNode(kBatteryStatusFileName, kBatteryStatusDischargingValue);
+  auto power_supply_proto = GetPowerSupplyProperties();
+  fake_powerd_adapter()->SetPowerSupplyProperties(power_supply_proto);
 
+  CreateRoutine(kPassingPercent);
   StartRoutineAndVerifyInteractiveResponse();
 
   routine()->Resume();
@@ -347,70 +340,26 @@ TEST_F(BatteryDischargeRoutineTest, CancelWhileRunning) {
 
 // Test that cancelling a routine in an error state doesn't overwrite the state.
 TEST_F(BatteryDischargeRoutineTest, CancelWhileInErrorState) {
+  fake_powerd_adapter()->SetPowerSupplyProperties(base::nullopt);
   CreateRoutine(kPassingPercent);
 
   StartRoutineAndVerifyInteractiveResponse();
 
   routine()->Resume();
   auto update = GetUpdate();
-  VerifyNonInteractiveUpdate(
-      update->routine_update_union,
-      mojo_ipc::DiagnosticRoutineStatusEnum::kError,
-      kBatteryDischargeRoutineFailedReadingBatteryAttributesMessage);
+  VerifyNonInteractiveUpdate(update->routine_update_union,
+                             mojo_ipc::DiagnosticRoutineStatusEnum::kError,
+                             kPowerdPowerSupplyPropertiesFailedMessage);
   EXPECT_EQ(update->progress_percent, 0);
 
   FastForwardBy(kQuarterDuration);
   routine()->Cancel();
 
   update = GetUpdate();
-  VerifyNonInteractiveUpdate(
-      update->routine_update_union,
-      mojo_ipc::DiagnosticRoutineStatusEnum::kError,
-      kBatteryDischargeRoutineFailedReadingBatteryAttributesMessage);
+  VerifyNonInteractiveUpdate(update->routine_update_union,
+                             mojo_ipc::DiagnosticRoutineStatusEnum::kError,
+                             kPowerdPowerSupplyPropertiesFailedMessage);
   EXPECT_EQ(update->progress_percent, 0);
 }
-
-// Tests for the BatteryDischargeRoutine when various files are missing from
-// sysfs.
-//
-// This is a parameterized test with the following parameter:
-// * |file_name| - name of the missing file.
-class MissingFileTest : public BatteryDischargeRoutineTest,
-                        public testing::WithParamInterface<std::string> {
- protected:
-  // Accessors to the test parameters returned by gtest's GetParam():
-
-  const std::string param() const { return GetParam(); }
-};
-
-// Test that the routine deals appropriately with missing files.
-TEST_P(MissingFileTest, MisingFile) {
-  CreateRoutine(kPassingPercent);
-  if (param() != kBatteryChargeNowFileName)
-    WriteBatterySysfsNode(kBatteryChargeNowFileName,
-                          std::to_string(kStartingChargeNowFileContents));
-  if (param() != kBatteryChargeFullFileName)
-    WriteBatterySysfsNode(kBatteryChargeFullFileName,
-                          std::to_string(kChargeFullFileContents));
-  if (param() != kBatteryStatusFileName)
-    WriteBatterySysfsNode(kBatteryStatusFileName,
-                          kBatteryStatusDischargingValue);
-
-  StartRoutineAndVerifyInteractiveResponse();
-
-  routine()->Resume();
-  auto update = GetUpdate();
-  VerifyNonInteractiveUpdate(
-      update->routine_update_union,
-      mojo_ipc::DiagnosticRoutineStatusEnum::kError,
-      kBatteryDischargeRoutineFailedReadingBatteryAttributesMessage);
-  EXPECT_EQ(update->progress_percent, 0);
-}
-
-INSTANTIATE_TEST_SUITE_P(,
-                         MissingFileTest,
-                         testing::Values(kBatteryChargeNowFileName,
-                                         kBatteryChargeFullFileName,
-                                         kBatteryStatusFileName));
 
 }  // namespace diagnostics

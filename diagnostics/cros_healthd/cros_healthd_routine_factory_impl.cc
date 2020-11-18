@@ -150,14 +150,14 @@ std::unique_ptr<DiagnosticRoutine>
 CrosHealthdRoutineFactoryImpl::MakeBatteryDischargeRoutine(
     base::TimeDelta exec_duration, uint32_t maximum_discharge_percent_allowed) {
   return std::make_unique<BatteryDischargeRoutine>(
-      exec_duration, maximum_discharge_percent_allowed);
+      context_, exec_duration, maximum_discharge_percent_allowed);
 }
 
 std::unique_ptr<DiagnosticRoutine>
 CrosHealthdRoutineFactoryImpl::MakeBatteryChargeRoutine(
     base::TimeDelta exec_duration, uint32_t minimum_charge_percent_required) {
   return std::make_unique<BatteryChargeRoutine>(
-      exec_duration, minimum_charge_percent_required);
+      context_, exec_duration, minimum_charge_percent_required);
 }
 
 std::unique_ptr<DiagnosticRoutine>

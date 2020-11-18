@@ -10,18 +10,13 @@
 #include <string>
 #include <utility>
 
-#include <base/files/file_path.h>
 #include <base/json/json_writer.h>
 #include <base/logging.h>
-#include <base/optional.h>
-#include <base/strings/string_piece.h>
-#include <base/strings/stringprintf.h>
 #include <base/threading/thread_task_runner_handle.h>
+#include <power_manager/proto_bindings/power_supply_properties.pb.h>
 
 #include "diagnostics/common/mojo_utils.h"
 #include "diagnostics/cros_healthd/routines/battery_charge/battery_charge_constants.h"
-#include "diagnostics/cros_healthd/utils/battery_utils.h"
-#include "diagnostics/cros_healthd/utils/file_utils.h"
 #include "mojo/cros_healthd_diagnostics.mojom.h"
 
 namespace diagnostics {
@@ -33,20 +28,21 @@ namespace mojo_ipc = ::chromeos::cros_healthd::mojom;
 }  // namespace
 
 BatteryChargeRoutine::BatteryChargeRoutine(
+    Context* const context,
     base::TimeDelta exec_duration,
     uint32_t minimum_charge_percent_required,
-    const base::FilePath& root_dir,
     const base::TickClock* tick_clock)
-    : status_(mojo_ipc::DiagnosticRoutineStatusEnum::kReady),
+    : context_(context),
+      status_(mojo_ipc::DiagnosticRoutineStatusEnum::kReady),
       exec_duration_(exec_duration),
-      minimum_charge_percent_required_(minimum_charge_percent_required),
-      root_dir_(root_dir) {
+      minimum_charge_percent_required_(minimum_charge_percent_required) {
   if (tick_clock) {
     tick_clock_ = tick_clock;
   } else {
     default_tick_clock_ = std::make_unique<base::DefaultTickClock>();
     tick_clock_ = default_tick_clock_.get();
   }
+  DCHECK(context_);
   DCHECK(tick_clock_);
 }
 
@@ -128,34 +124,27 @@ void BatteryChargeRoutine::CalculateProgressPercent() {
 
 mojo_ipc::DiagnosticRoutineStatusEnum
 BatteryChargeRoutine::RunBatteryChargeRoutine() {
-  base::FilePath battery_path = root_dir_.Append(kBatteryDirectoryPath);
-
-  std::string status;
-  if (!ReadAndTrimString(battery_path, kBatteryStatusFileName, &status)) {
-    status_message_ =
-        kBatteryChargeRoutineFailedReadingBatteryAttributesMessage;
+  base::Optional<power_manager::PowerSupplyProperties> response =
+      context_->powerd_adapter()->GetPowerSupplyProperties();
+  if (!response.has_value()) {
+    status_message_ = kPowerdPowerSupplyPropertiesFailedMessage;
     return mojo_ipc::DiagnosticRoutineStatusEnum::kError;
   }
+  auto power_supply_proto = response.value();
 
-  if (status != kBatteryStatusChargingValue) {
+  if (power_supply_proto.battery_state() !=
+      power_manager::PowerSupplyProperties_BatteryState_CHARGING) {
     status_message_ = kBatteryChargeRoutineNotChargingMessage;
     return mojo_ipc::DiagnosticRoutineStatusEnum::kError;
   }
 
-  base::Optional<double> beginning_charge_percent =
-      CalculateBatteryChargePercent(root_dir_);
-  if (!beginning_charge_percent.has_value()) {
-    status_message_ =
-        kBatteryChargeRoutineFailedReadingBatteryAttributesMessage;
-    return mojo_ipc::DiagnosticRoutineStatusEnum::kError;
-  }
+  double beginning_charge_percent = power_supply_proto.battery_percent();
 
-  double beginning_charge_percent_value = beginning_charge_percent.value();
-  if (beginning_charge_percent_value + minimum_charge_percent_required_ > 100) {
+  if (beginning_charge_percent + minimum_charge_percent_required_ > 100) {
     status_message_ = kBatteryChargeRoutineInvalidParametersMessage;
     base::Value error_dict(base::Value::Type::DICTIONARY);
     error_dict.SetKey("startingBatteryChargePercent",
-                      base::Value(beginning_charge_percent_value));
+                      base::Value(beginning_charge_percent));
     error_dict.SetKey(
         "chargePercentRequested",
         base::Value(static_cast<int>(minimum_charge_percent_required_)));
@@ -167,7 +156,7 @@ BatteryChargeRoutine::RunBatteryChargeRoutine() {
 
   callback_.Reset(base::Bind(&BatteryChargeRoutine::DetermineRoutineResult,
                              weak_ptr_factory_.GetWeakPtr(),
-                             beginning_charge_percent_value));
+                             beginning_charge_percent));
   base::ThreadTaskRunnerHandle::Get()->PostDelayedTask(
       FROM_HERE, callback_.callback(), exec_duration_);
 
@@ -177,26 +166,25 @@ BatteryChargeRoutine::RunBatteryChargeRoutine() {
 
 void BatteryChargeRoutine::DetermineRoutineResult(
     double beginning_charge_percent) {
-  base::Optional<double> ending_charge_percent =
-      CalculateBatteryChargePercent(root_dir_);
-  if (!ending_charge_percent.has_value()) {
-    status_message_ =
-        kBatteryChargeRoutineFailedReadingBatteryAttributesMessage;
+  base::Optional<power_manager::PowerSupplyProperties> response =
+      context_->powerd_adapter()->GetPowerSupplyProperties();
+  if (!response.has_value()) {
+    status_message_ = kPowerdPowerSupplyPropertiesFailedMessage;
     status_ = mojo_ipc::DiagnosticRoutineStatusEnum::kError;
-    LOG(ERROR) << kBatteryChargeRoutineFailedReadingBatteryAttributesMessage;
+    LOG(ERROR) << kPowerdPowerSupplyPropertiesFailedMessage;
     return;
   }
+  auto power_supply_proto = response.value();
+  double ending_charge_percent = power_supply_proto.battery_percent();
 
-  double ending_charge_percent_value = ending_charge_percent.value();
-  if (ending_charge_percent_value < beginning_charge_percent) {
+  if (ending_charge_percent < beginning_charge_percent) {
     status_message_ = kBatteryChargeRoutineNotChargingMessage;
     status_ = mojo_ipc::DiagnosticRoutineStatusEnum::kError;
     LOG(ERROR) << kBatteryChargeRoutineNotChargingMessage;
     return;
   }
 
-  double charge_percent =
-      ending_charge_percent_value - beginning_charge_percent;
+  double charge_percent = ending_charge_percent - beginning_charge_percent;
   base::Value result_dict(base::Value::Type::DICTIONARY);
   result_dict.SetKey("chargePercent", base::Value(charge_percent));
   output_.SetKey("resultDetails", std::move(result_dict));

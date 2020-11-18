@@ -10,7 +10,6 @@
 #include <string>
 
 #include <base/cancelable_callback.h>
-#include <base/files/file_path.h>
 #include <base/memory/weak_ptr.h>
 #include <base/optional.h>
 #include <base/time/default_tick_clock.h>
@@ -19,6 +18,7 @@
 #include <base/values.h>
 
 #include "diagnostics/cros_healthd/routines/diag_routine.h"
+#include "diagnostics/cros_healthd/system/context.h"
 #include "mojo/cros_healthd_diagnostics.mojom.h"
 
 namespace diagnostics {
@@ -30,10 +30,10 @@ class BatteryDischargeRoutine final : public DiagnosticRoutine {
   // |maximum_discharge_percent_allowed| - the routine will fail if the battery
   // discharges more than this percentage during the execution of the routine.
   // Valid range: [0, 100].
-  // Override |root_dir| and |tick_clock| for testing only.
-  BatteryDischargeRoutine(base::TimeDelta exec_duration,
+  // Override |tick_clock| for testing only.
+  BatteryDischargeRoutine(Context* const context,
+                          base::TimeDelta exec_duration,
                           uint32_t maximum_discharge_percent_allowed,
-                          const base::FilePath& root_dir = base::FilePath("/"),
                           const base::TickClock* tick_clock = nullptr);
   BatteryDischargeRoutine(const BatteryDischargeRoutine&) = delete;
   BatteryDischargeRoutine& operator=(const BatteryDischargeRoutine&) = delete;
@@ -58,6 +58,8 @@ class BatteryDischargeRoutine final : public DiagnosticRoutine {
   // Determine success or failure for the routine.
   void DetermineRoutineResult(double beginning_discharge_percent);
 
+  // Unowned pointer that outlives this routine instance.
+  Context* const context_;
   // Status of the routine, reported by GetStatus() or noninteractive routine
   // updates.
   chromeos::cros_healthd::mojom::DiagnosticRoutineStatusEnum status_;
@@ -69,8 +71,6 @@ class BatteryDischargeRoutine final : public DiagnosticRoutine {
   const base::TimeDelta exec_duration_;
   // Maximum discharge percent allowed for the routine to pass.
   const uint32_t maximum_discharge_percent_allowed_;
-  // Root directory prepended to relative paths used by the routine.
-  base::FilePath root_dir_;
   // A measure of how far along the routine is, reported in all status updates.
   uint32_t progress_percent_ = 0;
   // When the routine started. Used to calculate |progress_percent_|.

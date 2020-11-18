@@ -60,7 +60,6 @@ source_set("libdiag_routine") {
   deps = [
     "//diagnostics/common:libcommon",
     "//diagnostics/cros_healthd/system:libcros_healthd_system",
-    "//diagnostics/cros_healthd/utils:libcros_healthd_utils",
     "//diagnostics/mojo:cros_healthd_mojo_bindings",
   ]
   sources = [

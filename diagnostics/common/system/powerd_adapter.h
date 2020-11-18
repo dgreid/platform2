@@ -12,6 +12,9 @@
 
 namespace diagnostics {
 
+constexpr char kPowerdPowerSupplyPropertiesFailedMessage[] =
+    "Failed to get power supply properties from powerd.";
+
 // Adapter for communication with powerd daemon.
 class PowerdAdapter {
  public:
