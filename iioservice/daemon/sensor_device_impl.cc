@@ -137,6 +137,9 @@ void SensorDeviceImpl::StartReadingSamples(
     return;
   }
   client.observer.Bind(std::move(observer));
+  client.observer.set_disconnect_handler(
+      base::BindOnce(&SensorDeviceImpl::OnSamplesObserverDisconnect,
+                     weak_factory_.GetWeakPtr(), id));
 
   samples_handlers_.at(client.iio_device)->AddClient(&client);
 }
@@ -145,12 +148,7 @@ void SensorDeviceImpl::StopReadingSamples() {
   DCHECK(ipc_task_runner_->RunsTasksInCurrentSequence());
 
   mojo::ReceiverId id = receiver_set_.current_receiver();
-  ClientData& client = clients_[id];
-
-  if (samples_handlers_.find(client.iio_device) != samples_handlers_.end())
-    samples_handlers_.at(client.iio_device)->RemoveClient(&client);
-
-  client.observer.reset();
+  StopReadingSamplesOnClient(id);
 }
 
 void SensorDeviceImpl::GetAllChannelIds(GetAllChannelIdsCallback callback) {
@@ -276,7 +274,7 @@ SensorDeviceImpl::SensorDeviceImpl(
   DCHECK(ipc_task_runner_->RunsTasksInCurrentSequence());
 
   receiver_set_.set_disconnect_handler(base::BindRepeating(
-      &SensorDeviceImpl::ConnectionErrorCallback, weak_factory_.GetWeakPtr()));
+      &SensorDeviceImpl::OnSensorDeviceDisconnect, weak_factory_.GetWeakPtr()));
 }
 
 void SensorDeviceImpl::AddReceiverOnThread(
@@ -296,13 +294,16 @@ void SensorDeviceImpl::AddReceiverOnThread(
   clients_[id].iio_device = iio_device;
 }
 
-void SensorDeviceImpl::ConnectionErrorCallback() {
+void SensorDeviceImpl::OnSensorDeviceDisconnect() {
   DCHECK(ipc_task_runner_->RunsTasksInCurrentSequence());
 
   mojo::ReceiverId id = receiver_set_.current_receiver();
 
-  LOGF(INFO) << "Connection error, ReceiverId: " << id;
-  StopReadingSamples();
+  LOGF(INFO) << "SensorDevice disconnected. ReceiverId: " << id;
+  StopReadingSamplesOnClient(id);
+
+  // Run RemoveClient(id) on |sample_thread_| so that tasks to remove the client
+  // in SamplesHandler have been done.
   sample_thread_->task_runner()->PostTask(
       FROM_HERE, base::BindOnce(&SensorDeviceImpl::RemoveClient,
                                 base::Unretained(this), id));
@@ -312,6 +313,29 @@ void SensorDeviceImpl::RemoveClient(mojo::ReceiverId id) {
   DCHECK(sample_thread_->task_runner()->RunsTasksInCurrentSequence());
 
   clients_.erase(id);
+}
+
+void SensorDeviceImpl::OnSamplesObserverDisconnect(mojo::ReceiverId id) {
+  DCHECK(ipc_task_runner_->RunsTasksInCurrentSequence());
+
+  LOGF(ERROR) << "SamplesObserver disconnected. ReceiverId: " << id;
+  StopReadingSamplesOnClient(id);
+}
+
+void SensorDeviceImpl::StopReadingSamplesOnClient(mojo::ReceiverId id) {
+  DCHECK(ipc_task_runner_->RunsTasksInCurrentSequence());
+
+  ClientData& client = clients_[id];
+
+  if (!client.observer.is_bound()) {
+    // The client is not reading samples.
+    return;
+  }
+
+  if (samples_handlers_.find(client.iio_device) != samples_handlers_.end())
+    samples_handlers_.at(client.iio_device)->RemoveClient(&client);
+
+  client.observer.reset();
 }
 
 bool SensorDeviceImpl::AddSamplesHandlerIfNotSet(

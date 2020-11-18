@@ -85,8 +85,6 @@ class FakeSamplesObserver : public cros::mojom::SensorDeviceSamplesObserver {
   mojo::PendingRemote<cros::mojom::SensorDeviceSamplesObserver> GetRemote();
   bool is_bound() const;
 
-  void OnObserverDisconnect();
-
   bool FinishedObserving() const;
   bool NoRemainingFailures() const;
 
@@ -99,6 +97,8 @@ class FakeSamplesObserver : public cros::mojom::SensorDeviceSamplesObserver {
       double dev_frequency,
       double dev_frequency2,
       int pause_index = kPauseIndex);
+
+  void OnObserverDisconnect();
 
   int GetStep() const;
 

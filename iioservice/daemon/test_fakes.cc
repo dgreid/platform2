@@ -204,12 +204,6 @@ bool FakeSamplesObserver::is_bound() const {
   return receiver_.is_bound();
 }
 
-void FakeSamplesObserver::OnObserverDisconnect() {
-  DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
-
-  receiver_.reset();
-}
-
 bool FakeSamplesObserver::FinishedObserving() const {
   DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
 
@@ -254,6 +248,12 @@ FakeSamplesObserver::FakeSamplesObserver(
     else
       sample_index_ = pause_index_;
   }
+}
+
+void FakeSamplesObserver::OnObserverDisconnect() {
+  DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
+
+  receiver_.reset();
 }
 
 int FakeSamplesObserver::GetStep() const {
