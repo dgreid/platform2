@@ -462,9 +462,9 @@ int main(int argc, char* argv[]) {
       .handlers = {{
                        // NOTE: This is not handling a crash; it's instead
                        // initializing the entire crash reporting system.
+                       // So, leave |cb| unset and call InitializeSystem
+                       // manually below.
                        .should_handle = FLAGS_init,
-                       .cb = base::BindRepeating(InitializeSystem,
-                                                 &user_collector, FLAGS_early),
                    },
                    {
                        .should_handle = FLAGS_clean_shutdown,
@@ -736,6 +736,12 @@ int main(int argc, char* argv[]) {
         }
       }
     }
+  }
+
+  if (FLAGS_init) {
+    // Called manually to skip the normal consent checks; we always initialize
+    // the system regardless of consent.
+    return InitializeSystem(&user_collector, FLAGS_early) ? 0 : 1;
   }
 
   // These special cases (which use multiple collectors) are at the end so that
