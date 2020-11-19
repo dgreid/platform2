@@ -59,6 +59,16 @@ The implementation can be tested on the laptop by using the [HIDTest] and
 
 [HIDTest] will also be converted to a unit-test for the `U2fHid` class.
 
+## Firmware compatibility
+
+To support versioned U2F key handles (used in WebAuthn), a cr50 firmware change
+was introduced in milestone M87. This new firmware will not work with the U2Fd
+daemon on older milestones. For example, if you update a device to M87 then downgrade
+to M86, keys registered on M87 will not work, as the cr50 firmware will not roll back
+to the M86 version. Registering new keys on M86 will not work either, because the M87
+cr50 firmware expects a different u2f_register_req struct from M86. You need to get
+the device back to M87 to use U2F keys.
+
 ## Specifications
 
 The FIDO Alliance specifications:
