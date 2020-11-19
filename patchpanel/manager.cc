@@ -249,8 +249,8 @@ void Manager::InitialSetup() {
                           weak_factory_.GetWeakPtr()));
   network_monitor_svc_->Start();
 
-  counters_svc_ =
-      std::make_unique<CountersService>(shill_client_.get(), runner_.get());
+  counters_svc_ = std::make_unique<CountersService>(
+      shill_client_.get(), datapath_.get(), runner_.get());
 
   nd_proxy_->Listen();
 }

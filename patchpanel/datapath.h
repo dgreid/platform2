@@ -229,6 +229,13 @@ class Datapath {
   // Only used for testing.
   void SetIfnameIndex(const std::string& ifname, int ifindex);
 
+  // Manipulates a chain |chain| in table |table|.
+  bool ModifyChain(IpFamily family,
+                   const std::string& table,
+                   const std::string& op,
+                   const std::string& chain,
+                   bool log_failures = true);
+
   MinijailedProcessRunner& runner() const;
 
  private:
@@ -322,11 +329,6 @@ class Datapath {
                                const std::string& iif,
                                Fwmark mark,
                                Fwmark mask);
-  bool ModifyChain(IpFamily family,
-                   const std::string& table,
-                   const std::string& op,
-                   const std::string& chain,
-                   bool log_failures = true);
   bool ModifyIptables(IpFamily family,
                       const std::string& table,
                       const std::vector<std::string>& argv,

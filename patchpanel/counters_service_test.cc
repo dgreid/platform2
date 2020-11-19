@@ -14,6 +14,7 @@
 #include <gtest/gtest.h>
 
 #include "patchpanel/fake_shill_client.h"
+#include "patchpanel/mock_firewall.h"
 
 namespace patchpanel {
 
@@ -145,8 +146,9 @@ class CountersServiceTest : public testing::Test {
  protected:
   void SetUp() override {
     fake_shill_client_ = shill_helper_.FakeClient();
-    counters_svc_ =
-        std::make_unique<CountersService>(fake_shill_client_.get(), &runner_);
+    datapath_ = std::make_unique<Datapath>(&runner_, &firewall_);
+    counters_svc_ = std::make_unique<CountersService>(
+        fake_shill_client_.get(), datapath_.get(), &runner_);
   }
 
   // Makes `iptables` returning a bad |output|. Expects an empty map from
@@ -179,7 +181,9 @@ class CountersServiceTest : public testing::Test {
 
   FakeShillClientHelper shill_helper_;
   MockProcessRunner runner_;
+  MockFirewall firewall_;
   std::unique_ptr<FakeShillClient> fake_shill_client_;
+  std::unique_ptr<Datapath> datapath_;
   std::unique_ptr<CountersService> counters_svc_;
 };
 

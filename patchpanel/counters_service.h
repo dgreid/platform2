@@ -13,6 +13,7 @@
 
 #include <patchpanel/proto_bindings/patchpanel_service.pb.h>
 
+#include "patchpanel/datapath.h"
 #include "patchpanel/minijailed_process_runner.h"
 #include "patchpanel/shill_client.h"
 
@@ -67,7 +68,9 @@ class CountersService {
     uint64_t tx_packets = 0;
   };
 
-  CountersService(ShillClient* shill_client, MinijailedProcessRunner* runner);
+  CountersService(ShillClient* shill_client,
+                  Datapath* datapath,
+                  MinijailedProcessRunner* runner);
   ~CountersService() = default;
 
   // Collects and returns counters from all the existing iptables rules.
@@ -81,9 +84,7 @@ class CountersService {
       const std::set<std::string>& devices);
 
  private:
-  // TODO(b/161060333): Move the following two functions elsewhere.
-  // Creates a new chain using both iptables and ip6tables in the mangle table.
-  void IptablesNewChain(const std::string& chain_name);
+  bool MakeAccountingChain(const std::string& chain_name);
 
   // Creates a new rule using both iptables and ip6tables in the mangle table.
   // The first element in |params| should be "-I" (insert) or "-A" (append), and
@@ -106,6 +107,7 @@ class CountersService {
                        const std::set<std::string>& removed);
 
   ShillClient* shill_client_;
+  Datapath* datapath_;
   MinijailedProcessRunner* runner_;
 
   base::WeakPtrFactory<CountersService> weak_factory_{this};

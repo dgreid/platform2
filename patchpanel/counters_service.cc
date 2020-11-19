@@ -13,6 +13,8 @@
 #include <base/strings/string_split.h>
 #include <re2/re2.h>
 
+#include "patchpanel/routing_service.h"
+
 namespace patchpanel {
 
 namespace {
@@ -117,8 +119,9 @@ Counter::Counter(uint64_t rx_bytes,
       tx_packets(tx_packets) {}
 
 CountersService::CountersService(ShillClient* shill_client,
+                                 Datapath* datapath,
                                  MinijailedProcessRunner* runner)
-    : shill_client_(shill_client), runner_(runner) {
+    : shill_client_(shill_client), datapath_(datapath), runner_(runner) {
   // Triggers the callback manually to make sure no device is missed.
   OnDeviceChanged(shill_client_->get_devices(), {});
   shill_client_->RegisterDevicesChangedHandler(base::BindRepeating(
@@ -164,12 +167,9 @@ void CountersService::OnDeviceChanged(const std::set<std::string>& added,
     SetupChainsAndRules(ifname);
 }
 
-void CountersService::IptablesNewChain(const std::string& chain_name) {
-  // There is no straightforward way to check if a chain exists or not.
-  runner_->iptables(kMangleTable, {"-N", chain_name, "-w"},
-                    false /*log_failures*/);
-  runner_->ip6tables(kMangleTable, {"-N", chain_name, "-w"},
-                     false /*log_failures*/);
+bool CountersService::MakeAccountingChain(const std::string& chain_name) {
+  return datapath_->ModifyChain(IpFamily::Dual, kMangleTable, "-N", chain_name,
+                                false /*log_failures*/);
 }
 
 void CountersService::IptablesNewRule(std::vector<std::string> params) {
@@ -200,7 +200,7 @@ void CountersService::SetupChainsAndRules(const std::string& ifname) {
   // Egress traffic in FORWARD chain. Only traffic for interface-type sources
   // will be counted by these rules.
   const std::string egress_forward_chain = "tx_fwd_" + ifname;
-  IptablesNewChain(egress_forward_chain);
+  MakeAccountingChain(egress_forward_chain);
   IptablesNewRule({"-A", "FORWARD", "-o", ifname, "-j", egress_forward_chain});
   SetupAccountingRules(egress_forward_chain);
 
@@ -210,7 +210,7 @@ void CountersService::SetupChainsAndRules(const std::string& ifname) {
   // socket so will only be counted in FORWARD, while traffic from OUTPUT will
   // always have an associated socket.
   const std::string egress_postrouting_chain = "tx_postrt_" + ifname;
-  IptablesNewChain(egress_postrouting_chain);
+  MakeAccountingChain(egress_postrouting_chain);
   IptablesNewRule({"-A", "POSTROUTING", "-o", ifname, "-m", "owner",
                    "--socket-exists", "-j", egress_postrouting_chain});
   SetupAccountingRules(egress_postrouting_chain);
@@ -218,14 +218,14 @@ void CountersService::SetupChainsAndRules(const std::string& ifname) {
   // Ingress traffic in FORWARD chain. Only traffic for interface-type sources
   // will be counted by these rules.
   const std::string ingress_forward_chain = "rx_fwd_" + ifname;
-  IptablesNewChain(ingress_forward_chain);
+  MakeAccountingChain(ingress_forward_chain);
   IptablesNewRule({"-A", "FORWARD", "-i", ifname, "-j", ingress_forward_chain});
   SetupAccountingRules(ingress_forward_chain);
 
   // Ingress traffic in INPUT chain. Only traffic for host-type sources will be
   // counted by these rules.
   const std::string ingress_input_chain = "rx_input_" + ifname;
-  IptablesNewChain(ingress_input_chain);
+  MakeAccountingChain(ingress_input_chain);
   IptablesNewRule({"-A", "INPUT", "-i", ifname, "-j", ingress_input_chain});
   SetupAccountingRules(ingress_input_chain);
 }
