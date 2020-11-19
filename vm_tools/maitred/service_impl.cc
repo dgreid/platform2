@@ -23,6 +23,7 @@
 #include <sys/utsname.h>
 #include <unistd.h>
 
+#include <linux/fs.h>
 #include <linux/vm_sockets.h>
 
 #include <map>
@@ -655,10 +656,10 @@ grpc::Status ServiceImpl::StartTermina(grpc::ServerContext* ctx,
   }
 
   Init::ProcessLaunchInfo launch_info;
-  const auto stateful_device = request->stateful_device().empty()
-                                   ? "/dev/vdb"
-                                   : request->stateful_device().c_str();
-  if (!init_->Spawn({"mkfs.btrfs", stateful_device}, lxd_env_,
+  stateful_device_ = request->stateful_device().empty()
+                         ? "/dev/vdb"
+                         : request->stateful_device();
+  if (!init_->Spawn({"mkfs.btrfs", stateful_device_}, lxd_env_,
                     false /*respawn*/, false /*use_console*/,
                     true /*wait_for_exit*/, &launch_info)) {
     return grpc::Status(grpc::INTERNAL, "failed to spawn mkfs.btrfs");
@@ -669,13 +670,13 @@ grpc::Status ServiceImpl::StartTermina(grpc::ServerContext* ctx,
   // mkfs.btrfs will fail if the disk is already formatted as btrfs.
   // Optimistically continue on - if the mount fails, then return an error.
 
-  int ret = mount(stateful_device, "/mnt/stateful", "btrfs", 0,
+  int ret = mount(stateful_device_.c_str(), "/mnt/stateful", "btrfs", 0,
                   "user_subvol_rm_allowed,discard");
   if (ret != 0) {
     int saved_errno = errno;
     PLOG(ERROR) << "Failed to mount stateful disk";
 
-    ret = mount(stateful_device, "/mnt/stateful", "btrfs", 0,
+    ret = mount(stateful_device_.c_str(), "/mnt/stateful", "btrfs", 0,
                 "user_subvol_rm_allowed,discard,usebackuproot");
 
     if (ret != 0) {
@@ -683,7 +684,7 @@ grpc::Status ServiceImpl::StartTermina(grpc::ServerContext* ctx,
       response->set_mount_result(StartTerminaResponse::FAILURE);
       return grpc::Status(grpc::INTERNAL,
                           string("failed to mount stateful(") +
-                              stateful_device + "): " + strerror(saved_errno) +
+                              stateful_device_ + "): " + strerror(saved_errno) +
                               ", " + strerror(saved_errno_retry));
     } else {
       response->set_mount_result(StartTerminaResponse::PARTIAL_DATA_LOSS);
@@ -794,6 +795,38 @@ grpc::Status ServiceImpl::ResizeFilesystem(
     LOG(INFO) << "Resize already in progress";
     response->set_status(ResizeFilesystemResponse::ALREADY_IN_PROGRESS);
     return grpc::Status::OK;
+  }
+
+  if (stateful_device_.empty()) {
+    return grpc::Status(grpc::INTERNAL, "unknown stateful device");
+  }
+
+  base::ScopedFD stateful_fd(
+      open(stateful_device_.c_str(), O_RDONLY | O_CLOEXEC));
+  if (!stateful_fd.is_valid()) {
+    return grpc::Status(grpc::INTERNAL, "unable to open mount point");
+  }
+
+  // The disk resize should be complete by the time this function is called
+  // (when expanding), but it's possible that the guest kernel hasn't processed
+  // the configuration change notification and updated the block device size
+  // yet. This loop waits until the disk is at least as large as the target
+  // filesystem size. If the disk resize does not finish in a reasonable amount
+  // of time, fall through and attempt the btrfs resize anyway; it will fail if
+  // the disk is still not a sufficient size.
+  useconds_t retry_delay = 100000;  // 0.1 seconds
+  int size_retries = 5;             // Retry up to 6 times (6.3 seconds).
+  while (size_retries--) {
+    uint64_t disk_bytes = 0;
+    if (ioctl(stateful_fd.get(), BLKGETSIZE64, &disk_bytes) == 0 &&
+        disk_bytes >= request->size()) {
+      break;
+    }
+    usleep(retry_delay);
+    retry_delay *= 2;
+  }
+  if (size_retries < 0) {
+    LOG(WARNING) << "disk size did not match expected value";
   }
 
   Init::ProcessLaunchInfo launch_info;

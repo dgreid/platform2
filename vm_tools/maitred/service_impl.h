@@ -126,6 +126,9 @@ class ServiceImpl final : public vm_tools::Maitred::Service {
     uint64_t current_size = 0;
     uint64_t target_size = 0;
   } resize_state_;
+
+  // Name of the stateful device (e.g. /dev/vdb) as determined by StartTermina.
+  std::string stateful_device_;
 };
 
 }  // namespace maitred
