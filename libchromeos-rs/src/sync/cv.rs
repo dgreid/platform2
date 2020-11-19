@@ -737,11 +737,7 @@ mod test {
         }
 
         ex.spawn_ok(increment(Arc::clone(&mu), Arc::clone(&cv), tx.clone()));
-        ex.spawn_ok(increment(
-            Arc::clone(&alt_mu),
-            Arc::clone(&alt_cv),
-            tx.clone(),
-        ));
+        ex.spawn_ok(increment(Arc::clone(&alt_mu), Arc::clone(&alt_cv), tx));
 
         for _ in 0..TASKS + OBSERVERS + 2 {
             if let Err(e) = rx.recv_timeout(Duration::from_secs(10)) {
@@ -816,11 +812,7 @@ mod test {
         }
 
         ex.spawn_ok(increment(Arc::clone(&mu), Arc::clone(&cv), tx.clone()));
-        ex.spawn_ok(increment(
-            Arc::clone(&alt_mu),
-            Arc::clone(&alt_cv),
-            tx.clone(),
-        ));
+        ex.spawn_ok(increment(Arc::clone(&alt_mu), Arc::clone(&alt_cv), tx));
 
         for _ in 0..TASKS + 2 {
             if let Err(e) = rx.recv_timeout(Duration::from_secs(10)) {

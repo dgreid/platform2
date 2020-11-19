@@ -1068,7 +1068,11 @@ mod test {
         }
 
         async fn double_read_lock(mu: Rc<Mutex<NonCopy>>) {
-            (mu.read_lock().await, mu.read_lock().await);
+            let first = mu.read_lock().await;
+            mu.read_lock().await;
+
+            // Make sure first lives past the second read lock.
+            first.as_raw_mutex();
         }
 
         let mu = Rc::new(Mutex::new(NonCopy(7)));
@@ -1122,7 +1126,7 @@ mod test {
     fn arc_access_in_unwind() {
         let arc = Arc::new(Mutex::new(1));
         let arc2 = arc.clone();
-        thread::spawn(move || -> () {
+        thread::spawn(move || {
             struct Unwinder {
                 i: Arc<Mutex<i32>>,
             }

@@ -18,5 +18,3 @@ futures = { version = "0.3", features = ["async-await"] }
 futures-executor = { version = "0.3", features = ["thread-pool"] }
 futures-util = "0.3"
 
-[features]
-nightly = ["intrusive-collections/nightly"]

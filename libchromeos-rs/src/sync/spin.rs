@@ -239,7 +239,7 @@ mod test {
     fn arc_access_in_unwind() {
         let arc = Arc::new(SpinLock::new(1));
         let arc2 = arc.clone();
-        thread::spawn(move || -> () {
+        thread::spawn(move || {
             struct Unwinder {
                 i: Arc<SpinLock<i32>>,
             }
