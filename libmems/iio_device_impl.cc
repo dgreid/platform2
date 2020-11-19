@@ -47,18 +47,21 @@ IioDeviceImpl::IioDeviceImpl(IioContextImpl* ctx, iio_device* dev)
   CHECK(context_);
   CHECK(device_);
 
+  log_prefix_ = base::StringPrintf("Device with id: %d and name: %s. ", GetId(),
+                                   (GetName() ? GetName() : "null"));
+
   uint32_t chn_count = iio_device_get_channels_count(device_);
   channels_.resize(chn_count);
 
   for (uint32_t i = 0; i < chn_count; ++i) {
     iio_channel* channel = iio_device_get_channel(device_, i);
     if (channel == nullptr) {
-      LOG(WARNING) << "Unable to get " << i
-                   << "th channel from device: " << GetId();
+      LOG(WARNING) << log_prefix_ << "Unable to get " << i << "th channel";
       continue;
     }
 
-    channels_[i].chn = std::make_unique<IioChannelImpl>(channel);
+    channels_[i].chn = std::make_unique<IioChannelImpl>(
+        channel, GetId(), GetName() ? GetName() : "null");
     channels_[i].chn_id = channels_[i].chn->GetId();
   }
 }
@@ -91,7 +94,7 @@ base::Optional<std::string> IioDeviceImpl::ReadStringAttribute(
   char data[kReadAttrBufferSize] = {0};
   ssize_t len = iio_device_attr_read(device_, name.c_str(), data, sizeof(data));
   if (len < 0) {
-    LOG(WARNING) << "Attempting to read attribute " << name
+    LOG(WARNING) << log_prefix_ << "Attempting to read attribute " << name
                  << " failed: " << len;
     return base::nullopt;
   }
@@ -103,7 +106,7 @@ base::Optional<int64_t> IioDeviceImpl::ReadNumberAttribute(
   long long val = 0;  // NOLINT(runtime/int)
   int error = iio_device_attr_read_longlong(device_, name.c_str(), &val);
   if (error) {
-    LOG(WARNING) << "Attempting to read attribute " << name
+    LOG(WARNING) << log_prefix_ << "Attempting to read attribute " << name
                  << " failed: " << error;
     return base::nullopt;
   }
@@ -115,7 +118,7 @@ base::Optional<double> IioDeviceImpl::ReadDoubleAttribute(
   double val = 0;
   int error = iio_device_attr_read_double(device_, name.c_str(), &val);
   if (error) {
-    LOG(WARNING) << "Attempting to read attribute " << name
+    LOG(WARNING) << log_prefix_ << "Attempting to read attribute " << name
                  << " failed: " << error;
     return base::nullopt;
   }
@@ -127,7 +130,7 @@ bool IioDeviceImpl::WriteStringAttribute(const std::string& name,
   int error = iio_device_attr_write_raw(device_, name.c_str(), value.data(),
                                         value.size());
   if (error < 0) {
-    LOG(WARNING) << "Attempting to write attribute " << name
+    LOG(WARNING) << log_prefix_ << "Attempting to write attribute " << name
                  << " failed: " << error;
     return false;
   }
@@ -138,7 +141,7 @@ bool IioDeviceImpl::WriteNumberAttribute(const std::string& name,
                                          int64_t value) {
   int error = iio_device_attr_write_longlong(device_, name.c_str(), value);
   if (error) {
-    LOG(WARNING) << "Attempting to write attribute " << name
+    LOG(WARNING) << log_prefix_ << "Attempting to write attribute " << name
                  << " failed: " << error;
     return false;
   }
@@ -149,7 +152,7 @@ bool IioDeviceImpl::WriteDoubleAttribute(const std::string& name,
                                          double value) {
   int error = iio_device_attr_write_double(device_, name.c_str(), value);
   if (error) {
-    LOG(WARNING) << "Attempting to write attribute " << name
+    LOG(WARNING) << log_prefix_ << "Attempting to write attribute " << name
                  << " failed: " << error;
     return false;
   }
@@ -164,8 +167,7 @@ bool IioDeviceImpl::SetTrigger(IioDevice* trigger_device) {
   // Reset the old - if any - and then add the new trigger.
   int error = iio_device_set_trigger(device_, NULL);
   if (error) {
-    LOG(WARNING) << "Unable to clean trigger of device " << GetId()
-                 << ", error: " << error;
+    LOG(WARNING) << log_prefix_ << "Unable to clean trigger, error: " << error;
     return false;
   }
   if (trigger_device == nullptr)
@@ -182,15 +184,15 @@ bool IioDeviceImpl::SetTrigger(IioDevice* trigger_device) {
                                           id_str.c_str());
   }
   if (!impl_device) {
-    LOG(WARNING) << "cannot find device " << id << " in the current context";
+    LOG(WARNING) << log_prefix_ << "Unable to find device " << id
+                 << " in the current context";
     return false;
   }
 
   error = iio_device_set_trigger(device_, impl_device);
   if (error) {
-    LOG(WARNING) << "Unable to set trigger for device " << GetId()
-                 << " to be device " << trigger_device->GetId()
-                 << ", error: " << error;
+    LOG(WARNING) << log_prefix_ << "Unable to set trigger to be device "
+                 << trigger_device->GetId() << ", error: " << error;
     return false;
   }
   return true;
@@ -200,7 +202,7 @@ IioDevice* IioDeviceImpl::GetTrigger() {
   const iio_device* trigger;
   int error = iio_device_get_trigger(device_, &trigger);
   if (error) {
-    LOG(WARNING) << "Unable to get trigger for device " << GetId();
+    LOG(WARNING) << log_prefix_ << "Unable to get trigger";
     return nullptr;
   }
 
@@ -215,8 +217,8 @@ IioDevice* IioDeviceImpl::GetTrigger() {
     trigger_device = GetContext()->GetTriggerById(id.value());
 
   if (trigger_device == nullptr) {
-    LOG(WARNING) << GetId() << " has trigger device " << id_str
-                 << "which cannot be found in this context";
+    LOG(WARNING) << log_prefix_ << "Has trigger device " << id_str
+                 << ", which cannot be found in this context";
   }
 
   return trigger_device;
@@ -227,7 +229,7 @@ base::Optional<size_t> IioDeviceImpl::GetSampleSize() const {
   if (sample_size < 0) {
     char errMsg[kErrorBufferSize];
     iio_strerror(errno, errMsg, sizeof(errMsg));
-    LOG(WARNING) << "Unable to get sample size: " << errMsg;
+    LOG(WARNING) << log_prefix_ << "Unable to get sample size: " << errMsg;
     return base::nullopt;
   }
 
@@ -261,7 +263,7 @@ base::Optional<int32_t> IioDeviceImpl::GetBufferFd() {
 
   int32_t fd = iio_buffer_get_poll_fd(buffer_.get());
   if (fd < 0) {
-    LOG(ERROR) << "Failed to get poll fd: " << fd;
+    LOG(ERROR) << log_prefix_ << "Failed to get poll fd: " << fd;
     return base::nullopt;
   }
 
@@ -276,7 +278,7 @@ base::Optional<IioDevice::IioSample> IioDeviceImpl::ReadSample() {
   if (ret < 0) {
     char errMsg[kErrorBufferSize];
     iio_strerror(-ret, errMsg, sizeof(errMsg));
-    LOG(ERROR) << "Unable to refill buffer: " << errMsg;
+    LOG(ERROR) << log_prefix_ << "Unable to refill buffer: " << errMsg;
     buffer_.reset();
 
     return base::nullopt;
@@ -287,7 +289,8 @@ base::Optional<IioDevice::IioSample> IioDeviceImpl::ReadSample() {
 
   // There is something wrong when refilling the buffer.
   if (buf_step != sample_size) {
-    LOG(ERROR) << "sample_size doesn't match in refill: " << buf_step
+    LOG(ERROR) << log_prefix_
+               << "sample_size doesn't match in refill: " << buf_step
                << ", sample_size: " << sample_size;
     buffer_.reset();
 
@@ -324,7 +327,7 @@ bool IioDeviceImpl::CreateBuffer() {
   if (!buffer_) {
     char errMsg[kErrorBufferSize];
     iio_strerror(errno, errMsg, sizeof(errMsg));
-    LOG(ERROR) << "Unable to allocate buffer: " << errMsg;
+    LOG(ERROR) << log_prefix_ << "Unable to allocate buffer: " << errMsg;
     return false;
   }
 

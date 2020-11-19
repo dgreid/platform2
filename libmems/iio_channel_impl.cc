@@ -14,8 +14,15 @@
 
 namespace libmems {
 
-IioChannelImpl::IioChannelImpl(iio_channel* channel) : channel_(channel) {
+IioChannelImpl::IioChannelImpl(iio_channel* channel,
+                               int device_id,
+                               const char* device_name)
+    : channel_(channel) {
   CHECK(channel_);
+
+  log_prefix_ =
+      base::StringPrintf("Device with id: %d and name: %s, channel: %s. ",
+                         device_id, device_name, GetId());
 }
 
 const char* IioChannelImpl::GetId() const {
@@ -42,7 +49,7 @@ bool IioChannelImpl::SetScanElementsEnabled(bool en) {
       GetId());
   int error = iio_channel_attr_write_bool(channel_, en_attrib_name.c_str(), en);
   if (error) {
-    LOG(WARNING) << "could not write to " << en_attrib_name
+    LOG(WARNING) << log_prefix_ << "Could not write to " << en_attrib_name
                  << ", error: " << error;
     return false;
   }
@@ -56,7 +63,7 @@ base::Optional<std::string> IioChannelImpl::ReadStringAttribute(
   ssize_t len =
       iio_channel_attr_read(channel_, name.c_str(), data, sizeof(data));
   if (len < 0) {
-    LOG(WARNING) << "Attempting to read attribute " << name
+    LOG(WARNING) << log_prefix_ << "Attempting to read attribute " << name
                  << " failed: " << len;
     return base::nullopt;
   }
@@ -68,17 +75,64 @@ base::Optional<int64_t> IioChannelImpl::ReadNumberAttribute(
   long long val = 0;  // NOLINT(runtime/int)
   int error = iio_channel_attr_read_longlong(channel_, name.c_str(), &val);
   if (error) {
-    LOG(WARNING) << "Attempting to read attribute " << name
+    LOG(WARNING) << log_prefix_ << "Attempting to read attribute " << name
                  << " failed: " << error;
     return base::nullopt;
   }
   return val;
 }
 
+base::Optional<double> IioChannelImpl::ReadDoubleAttribute(
+    const std::string& name) const {
+  double val = 0;
+  int error = iio_channel_attr_read_double(channel_, name.c_str(), &val);
+  if (error) {
+    LOG(WARNING) << log_prefix_ << "Attempting to read attribute " << name
+                 << " failed: " << error;
+    return base::nullopt;
+  }
+  return val;
+}
+
+bool IioChannelImpl::WriteStringAttribute(const std::string& name,
+                                          const std::string& value) {
+  int error = iio_channel_attr_write_raw(
+      channel_, name.size() > 0 ? name.c_str() : nullptr, value.data(),
+      value.size());
+  if (error) {
+    LOG(WARNING) << log_prefix_ << "Attempting to write attribute " << name
+                 << " failed: " << error;
+    return false;
+  }
+  return true;
+}
+
+bool IioChannelImpl::WriteNumberAttribute(const std::string& name,
+                                          int64_t value) {
+  int error = iio_channel_attr_write_longlong(channel_, name.c_str(), value);
+  if (error) {
+    LOG(WARNING) << log_prefix_ << "Attempting to write attribute " << name
+                 << " failed: " << error;
+    return false;
+  }
+  return true;
+}
+
+bool IioChannelImpl::WriteDoubleAttribute(const std::string& name,
+                                          double value) {
+  int error = iio_channel_attr_write_double(channel_, name.c_str(), value);
+  if (error) {
+    LOG(WARNING) << log_prefix_ << "Attempting to write attribute " << name
+                 << " failed: " << error;
+    return false;
+  }
+  return true;
+}
+
 base::Optional<int64_t> IioChannelImpl::Convert(const uint8_t* src) const {
   const iio_data_format* format = iio_channel_get_data_format(channel_);
   if (!format) {
-    LOG(WARNING) << "Cannot find format of channel: " << GetId();
+    LOG(WARNING) << log_prefix_ << "Cannot find format.";
     return base::nullopt;
   }
 
@@ -101,57 +155,10 @@ base::Optional<int64_t> IioChannelImpl::Convert(const uint8_t* src) const {
   return value;
 }
 
-base::Optional<double> IioChannelImpl::ReadDoubleAttribute(
-    const std::string& name) const {
-  double val = 0;
-  int error = iio_channel_attr_read_double(channel_, name.c_str(), &val);
-  if (error) {
-    LOG(WARNING) << "Attempting to read attribute " << name
-                 << " failed: " << error;
-    return base::nullopt;
-  }
-  return val;
-}
-
-bool IioChannelImpl::WriteStringAttribute(const std::string& name,
-                                          const std::string& value) {
-  int error = iio_channel_attr_write_raw(
-      channel_, name.size() > 0 ? name.c_str() : nullptr, value.data(),
-      value.size());
-  if (error) {
-    LOG(WARNING) << "Attempting to write attribute " << name
-                 << " failed: " << error;
-    return false;
-  }
-  return true;
-}
-
-bool IioChannelImpl::WriteNumberAttribute(const std::string& name,
-                                          int64_t value) {
-  int error = iio_channel_attr_write_longlong(channel_, name.c_str(), value);
-  if (error) {
-    LOG(WARNING) << "Attempting to write attribute " << name
-                 << " failed: " << error;
-    return false;
-  }
-  return true;
-}
-
-bool IioChannelImpl::WriteDoubleAttribute(const std::string& name,
-                                          double value) {
-  int error = iio_channel_attr_write_double(channel_, name.c_str(), value);
-  if (error) {
-    LOG(WARNING) << "Attempting to write attribute " << name
-                 << " failed: " << error;
-    return false;
-  }
-  return true;
-}
-
 base::Optional<uint64_t> IioChannelImpl::Length() const {
   const iio_data_format* format = iio_channel_get_data_format(channel_);
   if (!format) {
-    LOG(WARNING) << "Cannot find format of channel: " << GetId();
+    LOG(WARNING) << log_prefix_ << "Cannot find format.";
     return base::nullopt;
   }
 

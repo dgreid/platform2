@@ -20,7 +20,7 @@ class IioDevice;
 class LIBMEMS_EXPORT IioChannelImpl : public IioChannel {
  public:
   // iio_channel objects are kept alive by the IioContextImpl.
-  explicit IioChannelImpl(iio_channel* channel);
+  IioChannelImpl(iio_channel* channel, int device_id, const char* device_name);
   IioChannelImpl(const IioChannelImpl&) = delete;
   IioChannelImpl& operator=(const IioChannelImpl&) = delete;
 
@@ -50,6 +50,8 @@ class LIBMEMS_EXPORT IioChannelImpl : public IioChannel {
 
  private:
   iio_channel* const channel_;  // non-owned
+
+  std::string log_prefix_;
 };
 
 }  // namespace libmems

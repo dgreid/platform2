@@ -82,6 +82,8 @@ class LIBMEMS_EXPORT IioDeviceImpl : public IioDevice {
 
   using ScopedBuffer = std::unique_ptr<iio_buffer, decltype(&IioBufferDeleter)>;
   ScopedBuffer buffer_;
+
+  std::string log_prefix_;
 };
 
 }  // namespace libmems
