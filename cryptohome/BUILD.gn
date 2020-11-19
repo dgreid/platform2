@@ -467,6 +467,7 @@ if (use.test) {
       "storage/arc_disk_quota_unittest.cc",
       "storage/disk_cleanup_routines_unittest.cc",
       "storage/disk_cleanup_unittest.cc",
+      "storage/encrypted_container/fscrypt_container_test.cc",
       "storage/homedirs_unittest.cc",
       "storage/mock_disk_cleanup.cc",
       "storage/mock_disk_cleanup_routines.cc",
