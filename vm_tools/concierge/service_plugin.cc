@@ -200,7 +200,7 @@ std::unique_ptr<dbus::Response> Service::StartPluginVm(
   }
 
   std::unique_ptr<patchpanel::Client> network_client =
-      patchpanel::Client::New();
+      patchpanel::Client::New(bus_);
   if (!network_client) {
     LOG(ERROR) << "Unable to open networking service client";
 
@@ -210,7 +210,8 @@ std::unique_ptr<dbus::Response> Service::StartPluginVm(
   }
 
   std::unique_ptr<SeneschalServerProxy> seneschal_server_proxy =
-      SeneschalServerProxy::CreateFdProxy(seneschal_service_proxy_, p9_socket);
+      SeneschalServerProxy::CreateFdProxy(bus_, seneschal_service_proxy_,
+                                          p9_socket);
   if (!seneschal_server_proxy) {
     LOG(ERROR) << "Unable to start shared directory server";
 
@@ -241,7 +242,7 @@ std::unique_ptr<dbus::Response> Service::StartPluginVm(
   auto vm = PluginVm::Create(
       vm_id, std::move(stateful_dir), std::move(iso_dir), root_dir.Take(),
       runtime_dir.Take(), std::move(network_client), request.subnet_index(),
-      request.net_options().enable_vnet_hdr(),
+      request.net_options().enable_vnet_hdr(), bus_,
       std::move(seneschal_server_proxy), vm_permission_service_proxy_,
       vmplugin_service_proxy_, std::move(vm_builder));
   if (!vm) {
@@ -316,7 +317,7 @@ bool Service::RenamePluginVm(const std::string& owner_id,
 
   VmId old_id(owner_id, old_name);
   bool registered;
-  if (!pvm::dispatcher::IsVmRegistered(vmplugin_service_proxy_, old_id,
+  if (!pvm::dispatcher::IsVmRegistered(bus_, vmplugin_service_proxy_, old_id,
                                        &registered)) {
     *failure_reason = "failed to check Plugin VM registration status";
     return false;
@@ -329,7 +330,7 @@ bool Service::RenamePluginVm(const std::string& owner_id,
   }
 
   bool is_shut_down;
-  if (!pvm::dispatcher::IsVmShutDown(vmplugin_service_proxy_, old_id,
+  if (!pvm::dispatcher::IsVmShutDown(bus_, vmplugin_service_proxy_, old_id,
                                      &is_shut_down)) {
     *failure_reason = "failed to check Plugin VM state";
     return false;
@@ -348,7 +349,7 @@ bool Service::RenamePluginVm(const std::string& owner_id,
     return false;
   }
 
-  if (!pvm::dispatcher::UnregisterVm(vmplugin_service_proxy_, old_id)) {
+  if (!pvm::dispatcher::UnregisterVm(bus_, vmplugin_service_proxy_, old_id)) {
     *failure_reason = "failed to temporarily unregister VM";
     return false;
   }
@@ -359,7 +360,7 @@ bool Service::RenamePluginVm(const std::string& owner_id,
     return false;
   }
 
-  if (!pvm::dispatcher::RegisterVm(vmplugin_service_proxy_,
+  if (!pvm::dispatcher::RegisterVm(bus_, vmplugin_service_proxy_,
                                    VmId(owner_id, new_name), new_dir)) {
     *failure_reason = "Failed to re-register renamed VM";
     return false;

@@ -31,16 +31,29 @@ enum class VmOpResult {
 
 dbus::ObjectProxy* GetServiceProxy(scoped_refptr<dbus::Bus> bus);
 
-bool RegisterVm(dbus::ObjectProxy* proxy,
+bool RegisterVm(scoped_refptr<dbus::Bus> bus,
+                dbus::ObjectProxy* proxy,
                 const VmId& vm_id,
                 const base::FilePath& disk_image_path);
-bool UnregisterVm(dbus::ObjectProxy* proxy, const VmId& vm_id);
+bool UnregisterVm(scoped_refptr<dbus::Bus> bus,
+                  dbus::ObjectProxy* proxy,
+                  const VmId& vm_id);
 
-bool IsVmRegistered(dbus::ObjectProxy* proxy, const VmId& vm_id, bool* result);
-bool IsVmShutDown(dbus::ObjectProxy* proxy, const VmId& vm_id, bool* result);
+bool IsVmRegistered(scoped_refptr<dbus::Bus> bus,
+                    dbus::ObjectProxy* proxy,
+                    const VmId& vm_id,
+                    bool* result);
+bool IsVmShutDown(scoped_refptr<dbus::Bus> bus,
+                  dbus::ObjectProxy* proxy,
+                  const VmId& vm_id,
+                  bool* result);
 
-VmOpResult ShutdownVm(dbus::ObjectProxy* proxy, const VmId& vm_id);
-VmOpResult SuspendVm(dbus::ObjectProxy* proxy, const VmId& vm_id);
+VmOpResult ShutdownVm(scoped_refptr<dbus::Bus> bus,
+                      dbus::ObjectProxy* proxy,
+                      const VmId& vm_id);
+VmOpResult SuspendVm(scoped_refptr<dbus::Bus> bus,
+                     dbus::ObjectProxy* proxy,
+                     const VmId& vm_id);
 
 void RegisterVmToolsChangedCallbacks(
     dbus::ObjectProxy* proxy,

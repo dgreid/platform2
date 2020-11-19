@@ -9,6 +9,7 @@
 #include <vector>
 
 #include <base/files/file_path.h>
+#include <dbus/bus.h>
 
 #include "vm_tools/common/vm_id.h"
 
@@ -33,7 +34,8 @@ bool CreateCdromDevice(const VmId& vm_id, const std::string& iso_name);
 
 void CleanUpAfterInstall(const VmId& vm_id, const base::FilePath& iso_path);
 
-bool ToggleSharedProfile(dbus::ObjectProxy* dispatcher_proxy,
+bool ToggleSharedProfile(scoped_refptr<dbus::Bus> bus,
+                         dbus::ObjectProxy* dispatcher_proxy,
                          const VmId& vm_id,
                          std::vector<std::string> params,
                          std::string* failure_message);

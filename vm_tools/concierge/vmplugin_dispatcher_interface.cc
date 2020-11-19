@@ -8,6 +8,7 @@
 #include <base/guid.h>
 #include <base/optional.h>
 #include <base/time/time.h>
+#include <brillo/dbus/dbus_proxy_util.h>
 #include <chromeos/dbus/service_constants.h>
 #include <dbus/bus.h>
 #include <dbus/exported_object.h>
@@ -78,7 +79,8 @@ VmOpResult ConvertDispatcherResult(plugin_dispatcher::VmErrorCode result,
   }
 }
 
-bool GetVmInfo(dbus::ObjectProxy* proxy,
+bool GetVmInfo(scoped_refptr<dbus::Bus> bus,
+               dbus::ObjectProxy* proxy,
                const VmId& vm_id,
                base::Optional<vm_tools::plugin_dispatcher::VmInfo>* info) {
   dbus::MethodCall method_call(
@@ -96,8 +98,9 @@ bool GetVmInfo(dbus::ObjectProxy* proxy,
     return false;
   }
 
-  std::unique_ptr<dbus::Response> dbus_response = proxy->CallMethodAndBlock(
-      &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
+  std::unique_ptr<dbus::Response> dbus_response =
+      brillo::dbus_utils::CallDBusMethod(
+          bus, proxy, &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
   if (!dbus_response) {
     LOG(ERROR) << "Failed to send ListVm message to dispatcher service";
     return false;
@@ -136,7 +139,8 @@ dbus::ObjectProxy* GetServiceProxy(scoped_refptr<dbus::Bus> bus) {
           vm_tools::plugin_dispatcher::kVmPluginDispatcherServicePath));
 }
 
-bool RegisterVm(dbus::ObjectProxy* proxy,
+bool RegisterVm(scoped_refptr<dbus::Bus> bus,
+                dbus::ObjectProxy* proxy,
                 const VmId& vm_id,
                 const base::FilePath& image_path) {
   dbus::MethodCall method_call(
@@ -164,8 +168,9 @@ bool RegisterVm(dbus::ObjectProxy* proxy,
     return false;
   }
 
-  std::unique_ptr<dbus::Response> dbus_response = proxy->CallMethodAndBlock(
-      &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
+  std::unique_ptr<dbus::Response> dbus_response =
+      brillo::dbus_utils::CallDBusMethod(
+          bus, proxy, &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
   if (!dbus_response) {
     LOG(ERROR) << "Failed to send RegisterVm message to dispatcher service";
     return false;
@@ -187,7 +192,9 @@ bool RegisterVm(dbus::ObjectProxy* proxy,
   return true;
 }
 
-bool UnregisterVm(dbus::ObjectProxy* proxy, const VmId& vm_id) {
+bool UnregisterVm(scoped_refptr<dbus::Bus> bus,
+                  dbus::ObjectProxy* proxy,
+                  const VmId& vm_id) {
   LOG(INFO) << "Unregistering VM " << vm_id;
 
   dbus::MethodCall method_call(
@@ -205,8 +212,9 @@ bool UnregisterVm(dbus::ObjectProxy* proxy, const VmId& vm_id) {
     return false;
   }
 
-  std::unique_ptr<dbus::Response> dbus_response = proxy->CallMethodAndBlock(
-      &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
+  std::unique_ptr<dbus::Response> dbus_response =
+      brillo::dbus_utils::CallDBusMethod(
+          bus, proxy, &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
   if (!dbus_response) {
     LOG(ERROR) << "Failed to send UnregisterVm message to dispatcher service";
     return false;
@@ -228,22 +236,28 @@ bool UnregisterVm(dbus::ObjectProxy* proxy, const VmId& vm_id) {
   return true;
 }
 
-bool IsVmRegistered(dbus::ObjectProxy* proxy, const VmId& vm_id, bool* result) {
+bool IsVmRegistered(scoped_refptr<dbus::Bus> bus,
+                    dbus::ObjectProxy* proxy,
+                    const VmId& vm_id,
+                    bool* result) {
   LOG(INFO) << "Checking whether VM " << vm_id << " is registered";
 
   base::Optional<vm_tools::plugin_dispatcher::VmInfo> info;
-  if (!GetVmInfo(proxy, vm_id, &info))
+  if (!GetVmInfo(bus, proxy, vm_id, &info))
     return false;
 
   *result = info.has_value();
   return true;
 }
 
-bool IsVmShutDown(dbus::ObjectProxy* proxy, const VmId& vm_id, bool* result) {
+bool IsVmShutDown(scoped_refptr<dbus::Bus> bus,
+                  dbus::ObjectProxy* proxy,
+                  const VmId& vm_id,
+                  bool* result) {
   LOG(INFO) << "Checking whether VM " << vm_id << " is shut down";
 
   base::Optional<vm_tools::plugin_dispatcher::VmInfo> info;
-  if (!GetVmInfo(proxy, vm_id, &info))
+  if (!GetVmInfo(bus, proxy, vm_id, &info))
     return false;
 
   *result =
@@ -252,7 +266,9 @@ bool IsVmShutDown(dbus::ObjectProxy* proxy, const VmId& vm_id, bool* result) {
   return true;
 }
 
-VmOpResult ShutdownVm(dbus::ObjectProxy* proxy, const VmId& vm_id) {
+VmOpResult ShutdownVm(scoped_refptr<dbus::Bus> bus,
+                      dbus::ObjectProxy* proxy,
+                      const VmId& vm_id) {
   LOG(INFO) << "Shutting down VM " << vm_id;
 
   dbus::MethodCall method_call(
@@ -274,8 +290,9 @@ VmOpResult ShutdownVm(dbus::ObjectProxy* proxy, const VmId& vm_id) {
 
   dbus::ScopedDBusError dbus_error;
   std::unique_ptr<dbus::Response> dbus_response =
-      proxy->CallMethodAndBlockWithErrorDetails(
-          &method_call, kVmShutdownTimeout.InMilliseconds(), &dbus_error);
+      brillo::dbus_utils::CallDBusMethodWithErrorResponse(
+          bus, proxy, &method_call, kVmShutdownTimeout.InMilliseconds(),
+          &dbus_error);
   if (!dbus_response) {
     if (dbus_error.is_set() &&
         strcmp(dbus_error.name(), DBUS_ERROR_SERVICE_UNKNOWN) == 0) {
@@ -302,7 +319,9 @@ VmOpResult ShutdownVm(dbus::ObjectProxy* proxy, const VmId& vm_id) {
   return ConvertDispatcherResult(response.error(), response.result_code());
 }
 
-VmOpResult SuspendVm(dbus::ObjectProxy* proxy, const VmId& vm_id) {
+VmOpResult SuspendVm(scoped_refptr<dbus::Bus> bus,
+                     dbus::ObjectProxy* proxy,
+                     const VmId& vm_id) {
   LOG(INFO) << "Suspending VM " << vm_id;
 
   dbus::MethodCall method_call(
@@ -322,8 +341,9 @@ VmOpResult SuspendVm(dbus::ObjectProxy* proxy, const VmId& vm_id) {
 
   dbus::ScopedDBusError dbus_error;
   std::unique_ptr<dbus::Response> dbus_response =
-      proxy->CallMethodAndBlockWithErrorDetails(
-          &method_call, kVmSuspendTimeout.InMilliseconds(), &dbus_error);
+      brillo::dbus_utils::CallDBusMethodWithErrorResponse(
+          bus, proxy, &method_call, kVmSuspendTimeout.InMilliseconds(),
+          &dbus_error);
   if (!dbus_response) {
     if (dbus_error.is_set() &&
         strcmp(dbus_error.name(), DBUS_ERROR_SERVICE_UNKNOWN) == 0) {

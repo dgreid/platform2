@@ -25,25 +25,34 @@ class SeneschalServerProxy final {
   // Ask the seneschal service to start a new 9P server.  Callers must ensure
   // that the |seneschal_proxy| object outlives this object.
   static std::unique_ptr<SeneschalServerProxy> CreateVsockProxy(
+      scoped_refptr<dbus::Bus> bus,
       dbus::ObjectProxy* seneschal_proxy,
       uint32_t port,
       uint32_t accept_cid,
       std::vector<std::pair<uint32_t, uint32_t>> uid_map,
       std::vector<std::pair<uint32_t, uint32_t>> gid_map);
   static std::unique_ptr<SeneschalServerProxy> CreateFdProxy(
-      dbus::ObjectProxy* seneschal_proxy, const base::ScopedFD& socket_fd);
+      scoped_refptr<dbus::Bus> bus,
+      dbus::ObjectProxy* seneschal_proxy,
+      const base::ScopedFD& socket_fd);
 
   ~SeneschalServerProxy();
 
   uint32_t handle() const { return handle_; }
 
  private:
-  SeneschalServerProxy(dbus::ObjectProxy* seneschal_proxy, uint32_t handle);
+  SeneschalServerProxy(scoped_refptr<dbus::Bus> bus,
+                       dbus::ObjectProxy* seneschal_proxy,
+                       uint32_t handle);
   SeneschalServerProxy(const SeneschalServerProxy&) = delete;
   SeneschalServerProxy& operator=(const SeneschalServerProxy&) = delete;
 
   static std::unique_ptr<SeneschalServerProxy> SeneschalCreateProxy(
-      dbus::ObjectProxy* seneschal_proxy, dbus::MethodCall* method_call);
+      scoped_refptr<dbus::Bus> bus,
+      dbus::ObjectProxy* seneschal_proxy,
+      dbus::MethodCall* method_call);
+
+  scoped_refptr<dbus::Bus> bus_;
 
   // Proxy to the seneschal service.  Not owned.
   dbus::ObjectProxy* seneschal_proxy_;

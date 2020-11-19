@@ -325,7 +325,8 @@ void CleanUpAfterInstall(const VmId& vm_id, const base::FilePath& iso_path) {
   }
 }
 
-bool ToggleSharedProfile(dbus::ObjectProxy* dispatcher_proxy,
+bool ToggleSharedProfile(scoped_refptr<dbus::Bus> bus,
+                         dbus::ObjectProxy* dispatcher_proxy,
                          const VmId& vm_id,
                          std::vector<std::string> params,
                          std::string* failure_message) {
@@ -335,7 +336,7 @@ bool ToggleSharedProfile(dbus::ObjectProxy* dispatcher_proxy,
   }
 
   bool is_shut_down;
-  if (!dispatcher::IsVmShutDown(dispatcher_proxy, vm_id, &is_shut_down)) {
+  if (!dispatcher::IsVmShutDown(bus, dispatcher_proxy, vm_id, &is_shut_down)) {
     *failure_message = "Unable to query VM state";
     return false;
   }

@@ -11,6 +11,8 @@
 #include <base/bind.h>
 #include <base/bind_helpers.h>
 #include <base/memory/ref_counted.h>
+#include <base/test/task_environment.h>
+#include <base/threading/sequenced_task_runner_handle.h>
 #include <chromeos/dbus/service_constants.h>
 #include <dbus/bus.h>
 #include <dbus/message.h>
@@ -63,6 +65,9 @@ class PowerManagerClientTest : public ::testing::Test {
                     power_manager::kPowerManagerServiceName,
                     dbus::ObjectPath(power_manager::kPowerManagerServicePath)))
         .WillOnce(Return(power_manager_proxy_.get()));
+
+    EXPECT_CALL(*mock_bus_, GetDBusTaskRunner())
+        .WillRepeatedly(Return(base::SequencedTaskRunnerHandle::Get().get()));
   }
 
  protected:
@@ -100,6 +105,8 @@ class PowerManagerClientTest : public ::testing::Test {
 
     return response;
   }
+
+  base::test::TaskEnvironment task_environment_;
 
   scoped_refptr<dbus::MockBus> mock_bus_;
   scoped_refptr<dbus::MockObjectProxy> power_manager_proxy_;

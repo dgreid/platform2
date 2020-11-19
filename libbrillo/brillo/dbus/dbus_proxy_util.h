@@ -14,6 +14,7 @@
 #include <dbus/bus.h>
 #include <dbus/exported_object.h>
 #include <dbus/message.h>
+#include <dbus/object_proxy.h>
 
 namespace brillo {
 namespace dbus_utils {
@@ -25,6 +26,13 @@ BRILLO_EXPORT std::unique_ptr<dbus::Response> CallDBusMethod(
     dbus::ObjectProxy* proxy,
     dbus::MethodCall* method_call,
     int timeout_ms);
+
+BRILLO_EXPORT std::unique_ptr<dbus::Response> CallDBusMethodWithErrorResponse(
+    scoped_refptr<dbus::Bus> bus,
+    dbus::ObjectProxy* proxy,
+    dbus::MethodCall* method_call,
+    int timeout_ms,
+    dbus::ScopedDBusError* error);
 
 }  // namespace dbus_utils
 }  // namespace brillo

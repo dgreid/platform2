@@ -45,6 +45,7 @@ class PluginVm final : public VmBaseImpl {
       std::unique_ptr<patchpanel::Client> network_client,
       int subnet_index,
       bool enable_vnet_hdr,
+      scoped_refptr<dbus::Bus> bus,
       std::unique_ptr<SeneschalServerProxy> seneschal_server_proxy,
       dbus::ObjectProxy* vm_permission_service_proxy,
       dbus::ObjectProxy* vmplugin_service_proxy,
@@ -98,6 +99,7 @@ class PluginVm final : public VmBaseImpl {
  private:
   PluginVm(const VmId id,
            std::unique_ptr<patchpanel::Client> network_client,
+           scoped_refptr<dbus::Bus> bus,
            std::unique_ptr<SeneschalServerProxy> seneschal_server_proxy,
            dbus::ObjectProxy* vm_perrmission_service_proxy,
            dbus::ObjectProxy* vmplugin_service_proxy,
@@ -137,6 +139,9 @@ class PluginVm final : public VmBaseImpl {
 
   // The subnet assigned to the VM.
   std::unique_ptr<patchpanel::Subnet> subnet_;
+
+  // Connection to the system bus.
+  scoped_refptr<dbus::Bus> bus_;
 
   // Proxy to the dispatcher service.  Not owned.
   dbus::ObjectProxy* vm_permission_service_proxy_;

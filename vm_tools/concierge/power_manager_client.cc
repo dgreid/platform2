@@ -9,6 +9,7 @@
 #include <base/bind.h>
 #include <base/logging.h>
 #include <base/time/time.h>
+#include <brillo/dbus/dbus_proxy_util.h>
 #include <chromeos/dbus/service_constants.h>
 #include <dbus/object_path.h>
 #include <power_manager/proto_bindings/suspend.pb.h>
@@ -51,8 +52,9 @@ PowerManagerClient::~PowerManagerClient() {
     return;
   }
 
-  auto dbus_response = power_manager_proxy_->CallMethodAndBlock(
-      &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
+  auto dbus_response = brillo::dbus_utils::CallDBusMethod(
+      bus_, power_manager_proxy_, &method_call,
+      dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
   if (!dbus_response) {
     LOG(WARNING) << "Failed to un-register suspend delay with powerd";
   }
@@ -76,8 +78,9 @@ void PowerManagerClient::RegisterSuspendDelay(base::Closure suspend_imminent_cb,
     return;
   }
 
-  auto dbus_response = power_manager_proxy_->CallMethodAndBlock(
-      &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
+  auto dbus_response = brillo::dbus_utils::CallDBusMethod(
+      bus_, power_manager_proxy_, &method_call,
+      dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
   if (!dbus_response) {
     LOG(WARNING) << "Failed to register suspend delay with powerd";
     return;
@@ -144,8 +147,9 @@ void PowerManagerClient::HandleSuspendImminent(dbus::Signal* signal) {
     return;
   }
 
-  auto dbus_response = power_manager_proxy_->CallMethodAndBlock(
-      &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
+  auto dbus_response = brillo::dbus_utils::CallDBusMethod(
+      bus_, power_manager_proxy_, &method_call,
+      dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
   if (!dbus_response) {
     LOG(WARNING) << "Failed to notify powerd of suspend readiness for suspend "
                  << "id " << current_suspend_id_;

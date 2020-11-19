@@ -23,14 +23,21 @@ enum class VmType {
   PLUGIN_VM = 1,
 };
 
-bool RegisterVm(dbus::ObjectProxy* proxy,
+bool RegisterVm(scoped_refptr<dbus::Bus> bus,
+                dbus::ObjectProxy* proxy,
                 const VmId& vm_id,
                 VmType type,
                 std::string* token);
-bool UnregisterVm(dbus::ObjectProxy* proxy, const VmId& vm_id);
+bool UnregisterVm(scoped_refptr<dbus::Bus> bus,
+                  dbus::ObjectProxy* proxy,
+                  const VmId& vm_id);
 
-bool IsCameraEnabled(dbus::ObjectProxy* proxy, const std::string& vm_token);
-bool IsMicrophoneEnabled(dbus::ObjectProxy* proxy, const std::string& vm_token);
+bool IsCameraEnabled(scoped_refptr<dbus::Bus> bus,
+                     dbus::ObjectProxy* proxy,
+                     const std::string& vm_token);
+bool IsMicrophoneEnabled(scoped_refptr<dbus::Bus> bus,
+                         dbus::ObjectProxy* proxy,
+                         const std::string& vm_token);
 
 }  // namespace vm_permission
 }  // namespace concierge

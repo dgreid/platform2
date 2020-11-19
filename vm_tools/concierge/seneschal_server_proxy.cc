@@ -4,6 +4,7 @@
 
 #include "vm_tools/concierge/seneschal_server_proxy.h"
 
+#include <brillo/dbus/dbus_proxy_util.h>
 #include <chromeos/dbus/service_constants.h>
 #include <dbus/message.h>
 #include <dbus/object_path.h>
@@ -14,11 +15,13 @@ namespace concierge {
 
 // static
 std::unique_ptr<SeneschalServerProxy>
-SeneschalServerProxy::SeneschalCreateProxy(dbus::ObjectProxy* seneschal_proxy,
+SeneschalServerProxy::SeneschalCreateProxy(scoped_refptr<dbus::Bus> bus,
+                                           dbus::ObjectProxy* seneschal_proxy,
                                            dbus::MethodCall* method_call) {
   std::unique_ptr<dbus::Response> dbus_response =
-      seneschal_proxy->CallMethodAndBlock(
-          method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
+      brillo::dbus_utils::CallDBusMethod(
+          bus, seneschal_proxy, method_call,
+          dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
   if (!dbus_response) {
     LOG(ERROR) << "Failed to send StartServer message to seneschal service";
     return nullptr;
@@ -37,11 +40,12 @@ SeneschalServerProxy::SeneschalCreateProxy(dbus::ObjectProxy* seneschal_proxy,
   }
 
   return std::unique_ptr<SeneschalServerProxy>(
-      new SeneschalServerProxy(seneschal_proxy, response.handle()));
+      new SeneschalServerProxy(bus, seneschal_proxy, response.handle()));
 }
 
 // static
 std::unique_ptr<SeneschalServerProxy> SeneschalServerProxy::CreateVsockProxy(
+    scoped_refptr<dbus::Bus> bus,
     dbus::ObjectProxy* seneschal_proxy,
     uint32_t port,
     uint32_t accept_cid,
@@ -72,12 +76,14 @@ std::unique_ptr<SeneschalServerProxy> SeneschalServerProxy::CreateVsockProxy(
     return nullptr;
   }
 
-  return SeneschalCreateProxy(seneschal_proxy, &method_call);
+  return SeneschalCreateProxy(bus, seneschal_proxy, &method_call);
 }
 
 // static
 std::unique_ptr<SeneschalServerProxy> SeneschalServerProxy::CreateFdProxy(
-    dbus::ObjectProxy* seneschal_proxy, const base::ScopedFD& socket_fd) {
+    scoped_refptr<dbus::Bus> bus,
+    dbus::ObjectProxy* seneschal_proxy,
+    const base::ScopedFD& socket_fd) {
   dbus::MethodCall method_call(vm_tools::seneschal::kSeneschalInterface,
                                vm_tools::seneschal::kStartServerMethod);
   dbus::MessageWriter writer(&method_call);
@@ -91,12 +97,15 @@ std::unique_ptr<SeneschalServerProxy> SeneschalServerProxy::CreateFdProxy(
 
   writer.AppendFileDescriptor(socket_fd.get());
 
-  return SeneschalCreateProxy(seneschal_proxy, &method_call);
+  return SeneschalCreateProxy(bus, seneschal_proxy, &method_call);
 }
 
-SeneschalServerProxy::SeneschalServerProxy(dbus::ObjectProxy* seneschal_proxy,
+SeneschalServerProxy::SeneschalServerProxy(scoped_refptr<dbus::Bus> bus,
+                                           dbus::ObjectProxy* seneschal_proxy,
                                            uint32_t handle)
-    : seneschal_proxy_(seneschal_proxy), handle_(handle) {}
+    : bus_(std::move(bus)),
+      seneschal_proxy_(seneschal_proxy),
+      handle_(handle) {}
 
 SeneschalServerProxy::~SeneschalServerProxy() {
   dbus::MethodCall method_call(vm_tools::seneschal::kSeneschalInterface,
@@ -112,8 +121,9 @@ SeneschalServerProxy::~SeneschalServerProxy() {
   }
 
   std::unique_ptr<dbus::Response> dbus_response =
-      seneschal_proxy_->CallMethodAndBlock(
-          &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
+      brillo::dbus_utils::CallDBusMethod(
+          bus_, seneschal_proxy_, &method_call,
+          dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
   if (!dbus_response) {
     LOG(ERROR) << "Failed to send StopServer message to seneschal service";
     return;

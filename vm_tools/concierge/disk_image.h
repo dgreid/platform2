@@ -219,6 +219,7 @@ class PluginVmImportOperation : public DiskImageOperation {
       const base::FilePath disk_path,
       uint64_t source_size,
       const VmId vm_id,
+      scoped_refptr<dbus::Bus> bus,
       dbus::ObjectProxy* vmplugin_service_proxy);
 
   ~PluginVmImportOperation() override;
@@ -232,6 +233,7 @@ class PluginVmImportOperation : public DiskImageOperation {
                           uint64_t source_size,
                           const base::FilePath disk_path,
                           const VmId vm_id_,
+                          scoped_refptr<dbus::Bus> bus,
                           dbus::ObjectProxy* vmplugin_service_proxy);
   PluginVmImportOperation(const PluginVmImportOperation&) = delete;
   PluginVmImportOperation& operator=(const PluginVmImportOperation&) = delete;
@@ -251,6 +253,9 @@ class PluginVmImportOperation : public DiskImageOperation {
   // VM owner and name. Used when registering imported image with the
   // dispatcher.
   const VmId vm_id_;
+
+  // Connection to the system bus.
+  scoped_refptr<dbus::Bus> bus_;
 
   // Proxy to the dispatcher service.  Not owned.
   dbus::ObjectProxy* vmplugin_service_proxy_;

@@ -116,7 +116,7 @@ std::unique_ptr<dbus::Response> Service::StartArcVm(
   vm_info->set_cid(vsock_cid);
 
   std::unique_ptr<patchpanel::Client> network_client =
-      patchpanel::Client::New();
+      patchpanel::Client::New(bus_);
   if (!network_client) {
     LOG(ERROR) << "Unable to open networking service client";
 
@@ -129,7 +129,7 @@ std::unique_ptr<dbus::Response> Service::StartArcVm(
   // AID_EXTERNAL_STORAGE user and group (1077).
   uint32_t seneschal_server_port = next_seneschal_server_port_++;
   std::unique_ptr<SeneschalServerProxy> server_proxy =
-      SeneschalServerProxy::CreateVsockProxy(seneschal_service_proxy_,
+      SeneschalServerProxy::CreateVsockProxy(bus_, seneschal_service_proxy_,
                                              seneschal_server_port, vsock_cid,
                                              {{1000, 1077}}, {{1001, 1077}});
   if (!server_proxy) {

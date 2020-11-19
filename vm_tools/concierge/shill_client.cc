@@ -12,6 +12,8 @@
 #include <brillo/variant_dictionary.h>
 #include <chromeos/dbus/service_constants.h>
 
+#include "vm_tools/concierge/future.h"
+
 using org::chromium::flimflam::IPConfigProxy;
 using org::chromium::flimflam::ServiceProxy;
 
@@ -61,20 +63,47 @@ void ShillClient::OnShillServiceOwnerChange(const std::string& old_owner,
   }
 }
 
+template <typename Proxy>
+std::optional<brillo::VariantDictionary> GetPropertiesHelper(dbus::Bus* bus,
+                                                             Proxy* proxy) {
+  bus->AssertOnOriginThread();
+  brillo::VariantDictionary properties;
+  if (bus->HasDBusThread()) {
+    bool success =
+        AsyncNoReject(
+            bus->GetDBusTaskRunner(),
+            base::BindOnce(
+                [](Proxy* proxy, brillo::VariantDictionary* properties) {
+                  return proxy->GetProperties(properties, nullptr);
+                },
+                proxy, &properties))
+            .Get()
+            .val;
+    if (success) {
+      return properties;
+    }
+  } else {
+    if (proxy->GetProperties(&properties, nullptr)) {
+      return properties;
+    }
+  }
+  return std::nullopt;
+}
+
 void ShillClient::OnManagerPropertyChangeRegistration(
     const std::string& interface,
     const std::string& signal_name,
     bool success) {
   CHECK(success) << "Unable to register for Manager change events";
 
-  brillo::VariantDictionary properties;
-  if (!manager_proxy_->GetProperties(&properties, nullptr)) {
+  auto properties = GetPropertiesHelper(bus_.get(), manager_proxy_.get());
+  if (!properties) {
     LOG(ERROR) << "Unable to get shill Manager properties";
     return;
   }
 
-  auto it = properties.find(shill::kDefaultServiceProperty);
-  CHECK(it != properties.end())
+  auto it = properties->find(shill::kDefaultServiceProperty);
+  CHECK(it != properties->end())
       << "Shill should always publish a default service.";
   OnManagerPropertyChange(shill::kDefaultServiceProperty, it->second);
 }
@@ -120,14 +149,15 @@ void ShillClient::OnServicePropertyChangeRegistration(
     bool success) {
   CHECK(success) << "Unable to register for Service change events";
 
-  brillo::VariantDictionary properties;
-  if (!default_service_proxy_->GetProperties(&properties, nullptr)) {
+  auto properties =
+      GetPropertiesHelper(bus_.get(), default_service_proxy_.get());
+  if (!properties) {
     LOG(ERROR) << "Unable to get shill Service properties";
     return;
   }
 
-  auto it = properties.find(shill::kIPConfigProperty);
-  if (it == properties.end()) {
+  auto it = properties->find(shill::kIPConfigProperty);
+  if (it == properties->end()) {
     return;
   }
   OnServicePropertyChange(shill::kIPConfigProperty, it->second);
@@ -159,14 +189,14 @@ void ShillClient::OnServicePropertyChange(const std::string& property_name,
 
   std::unique_ptr<IPConfigProxy> ipconfig_proxy{
       new IPConfigProxy(bus_, ipconfig_path)};
-  brillo::VariantDictionary properties;
-  if (!ipconfig_proxy->GetProperties(&properties, nullptr)) {
+  auto properties = GetPropertiesHelper(bus_.get(), ipconfig_proxy.get());
+  if (!properties) {
     LOG(ERROR) << "Unable to get shill IPConfig properties";
     return;
   }
 
-  auto it = properties.find(shill::kMethodProperty);
-  if (it == properties.end()) {
+  auto it = properties->find(shill::kMethodProperty);
+  if (it == properties->end()) {
     return;
   }
 
@@ -188,19 +218,20 @@ void ShillClient::OnIPConfigPropertyChangeRegistration(
     bool success) {
   CHECK(success) << "Unable to register for IPConfig change events";
 
-  brillo::VariantDictionary properties;
-  if (!default_ipconfig_proxy_->GetProperties(&properties, nullptr)) {
+  auto properties =
+      GetPropertiesHelper(bus_.get(), default_ipconfig_proxy_.get());
+  if (!properties) {
     LOG(ERROR) << "Unable to get shill IPConfig properties";
     return;
   }
 
-  auto ns_it = properties.find(shill::kNameServersProperty);
-  if (ns_it != properties.end()) {
+  auto ns_it = properties->find(shill::kNameServersProperty);
+  if (ns_it != properties->end()) {
     OnIPConfigPropertyChange(shill::kNameServersProperty, ns_it->second);
   }
 
-  auto sd_it = properties.find(shill::kSearchDomainsProperty);
-  if (sd_it != properties.end()) {
+  auto sd_it = properties->find(shill::kSearchDomainsProperty);
+  if (sd_it != properties->end()) {
     OnIPConfigPropertyChange(shill::kSearchDomainsProperty, sd_it->second);
   }
 }

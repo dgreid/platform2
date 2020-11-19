@@ -312,6 +312,7 @@ class Service final {
   std::unique_ptr<base::FileDescriptorWatcher::Controller> watcher_;
 
   // Connection to the system bus.
+  base::Thread dbus_thread_{"dbus thread"};
   scoped_refptr<dbus::Bus> bus_;
   dbus::ExportedObject* exported_object_;           // Owned by |bus_|.
   dbus::ObjectProxy* cicerone_service_proxy_;       // Owned by |bus_|.

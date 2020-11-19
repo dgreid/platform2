@@ -54,6 +54,7 @@
 #include <base/threading/thread_task_runner_handle.h>
 #include <base/time/time.h>
 #include <base/version.h>
+#include <brillo/dbus/dbus_proxy_util.h>
 #include <chromeos/dbus/service_constants.h>
 #include <crosvm/qcow_utils.h>
 #include <dbus/object_proxy.h>
@@ -67,6 +68,7 @@
 #include "vm_tools/common/naming.h"
 #include "vm_tools/concierge/arc_vm.h"
 #include "vm_tools/concierge/dlc_helper.h"
+#include "vm_tools/concierge/future.h"
 #include "vm_tools/concierge/plugin_vm.h"
 #include "vm_tools/concierge/plugin_vm_helper.h"
 #include "vm_tools/concierge/seneschal_server_proxy.h"
@@ -220,13 +222,6 @@ void RunListenerService(grpc::Service* listener,
                         const std::string& listener_address,
                         base::WaitableEvent* event,
                         std::shared_ptr<grpc::Server>* server_copy) {
-  // We are not interested in getting SIGCHLD or SIGTERM on this thread.
-  sigset_t mask;
-  sigemptyset(&mask);
-  sigaddset(&mask, SIGCHLD);
-  sigaddset(&mask, SIGTERM);
-  sigprocmask(SIG_BLOCK, &mask, nullptr);
-
   // Build the grpc server.
   grpc::ServerBuilder builder;
   builder.AddListeningPort(listener_address, grpc::InsecureServerCredentials());
@@ -761,12 +756,69 @@ void Service::OnSignalReadable() {
 }
 
 bool Service::Init() {
+  // Change the umask so that the runtime directory for each VM will get the
+  // right permissions.
+  umask(002);
+
+  // Set up the signalfd for receiving SIGCHLD and SIGTERM.
+  // This applies to all threads created afterwards.
+  sigset_t mask;
+  sigemptyset(&mask);
+  sigaddset(&mask, SIGCHLD);
+  sigaddset(&mask, SIGTERM);
+
+  // Restore process' "dumpable" flag so that /proc will be writable.
+  // We need it to properly set up jail for Plugin VM helper process.
+  if (prctl(PR_SET_DUMPABLE, 1) < 0) {
+    PLOG(ERROR) << "Failed to set PR_SET_DUMPABLE";
+    return false;
+  }
+
+  signal_fd_.reset(signalfd(-1, &mask, SFD_NONBLOCK | SFD_CLOEXEC));
+  if (!signal_fd_.is_valid()) {
+    PLOG(ERROR) << "Failed to create signalfd";
+    return false;
+  }
+
+  watcher_ = base::FileDescriptorWatcher::WatchReadable(
+      signal_fd_.get(),
+      base::BindRepeating(&Service::OnSignalReadable, base::Unretained(this)));
+  if (!watcher_) {
+    LOG(ERROR) << "Failed to watch signalfd";
+    return false;
+  }
+
+  // Now block signals from the normal signal handling path so that we will get
+  // them via the signalfd.
+  if (sigprocmask(SIG_BLOCK, &mask, nullptr) < 0) {
+    PLOG(ERROR) << "Failed to block signals via sigprocmask";
+    return false;
+  }
+
+  base::Thread::Options thread_options;
+  thread_options.message_pump_type = base::MessagePumpType::IO;
+  if (!dbus_thread_.StartWithOptions(thread_options)) {
+    LOG(ERROR) << "Failed to start dbus thread";
+    return false;
+  }
+
   dbus::Bus::Options opts;
   opts.bus_type = dbus::Bus::SYSTEM;
+  opts.dbus_task_runner = dbus_thread_.task_runner();
   bus_ = new dbus::Bus(std::move(opts));
 
-  if (!bus_->Connect()) {
-    LOG(ERROR) << "Failed to connect to system bus";
+  if (!AsyncNoReject(dbus_thread_.task_runner(),
+                     base::BindOnce(
+                         [](scoped_refptr<dbus::Bus> bus) {
+                           if (!bus->Connect()) {
+                             LOG(ERROR) << "Failed to connect to system bus";
+                             return false;
+                           }
+                           return true;
+                         },
+                         bus_))
+           .Get()
+           .val) {
     return false;
   }
 
@@ -784,7 +836,7 @@ bool Service::Init() {
 
   using ServiceMethod =
       std::unique_ptr<dbus::Response> (Service::*)(dbus::MethodCall*);
-  const std::map<const char*, ServiceMethod> kServiceMethods = {
+  static const std::map<const char*, ServiceMethod> kServiceMethods = {
       {kStartVmMethod, &Service::StartVm},
       {kStartPluginVmMethod, &Service::StartPluginVm},
       {kStartArcVmMethod, &Service::StartArcVm},
@@ -814,20 +866,36 @@ bool Service::Init() {
       {kSetVmIdMethod, &Service::SetVmId},
   };
 
-  for (const auto& iter : kServiceMethods) {
-    bool ret = exported_object_->ExportMethodAndBlock(
-        kVmConciergeInterface, iter.first,
-        base::Bind(&HandleSynchronousDBusMethodCall,
-                   base::Bind(iter.second, base::Unretained(this))));
-    if (!ret) {
-      LOG(ERROR) << "Failed to export method " << iter.first;
-      return false;
-    }
-  }
+  if (!AsyncNoReject(
+           dbus_thread_.task_runner(),
+           base::BindOnce(
+               [](Service* service, dbus::ExportedObject* exported_object_,
+                  scoped_refptr<dbus::Bus> bus) {
+                 for (const auto& iter : kServiceMethods) {
+                   bool ret = exported_object_->ExportMethodAndBlock(
+                       kVmConciergeInterface, iter.first,
+                       base::Bind(
+                           &HandleSynchronousDBusMethodCall,
+                           base::Bind(iter.second, base::Unretained(service))));
+                   if (!ret) {
+                     LOG(ERROR) << "Failed to export method " << iter.first;
+                     return false;
+                   }
+                 }
 
-  if (!bus_->RequestOwnershipAndBlock(kVmConciergeServiceName,
-                                      dbus::Bus::REQUIRE_PRIMARY)) {
-    LOG(ERROR) << "Failed to take ownership of " << kVmConciergeServiceName;
+                 if (!bus->RequestOwnershipAndBlock(
+                         kVmConciergeServiceName, dbus::Bus::REQUIRE_PRIMARY)) {
+                   LOG(ERROR) << "Failed to take ownership of "
+                              << kVmConciergeServiceName;
+                   return false;
+                 }
+
+                 return true;
+               },
+               base::Unretained(this), base::Unretained(exported_object_),
+               bus_))
+           .Get()
+           .val) {
     return false;
   }
 
@@ -898,44 +966,6 @@ bool Service::Init() {
                              vm_tools::kDefaultStartupListenerPort),
           &grpc_server_vm_)) {
     LOG(ERROR) << "Failed to setup/startup the VM grpc server";
-    return false;
-  }
-
-  // Change the umask so that the runtime directory for each VM will get the
-  // right permissions.
-  umask(002);
-
-  // Set up the signalfd for receiving SIGCHLD and SIGTERM.
-  sigset_t mask;
-  sigemptyset(&mask);
-  sigaddset(&mask, SIGCHLD);
-  sigaddset(&mask, SIGTERM);
-
-  // Restore process' "dumpable" flag so that /proc will be writable.
-  // We need it to properly set up jail for Plugin VM helper process.
-  if (prctl(PR_SET_DUMPABLE, 1) < 0) {
-    PLOG(ERROR) << "Failed to set PR_SET_DUMPABLE";
-    return false;
-  }
-
-  signal_fd_.reset(signalfd(-1, &mask, SFD_NONBLOCK | SFD_CLOEXEC));
-  if (!signal_fd_.is_valid()) {
-    PLOG(ERROR) << "Failed to create signalfd";
-    return false;
-  }
-
-  watcher_ = base::FileDescriptorWatcher::WatchReadable(
-      signal_fd_.get(),
-      base::BindRepeating(&Service::OnSignalReadable, base::Unretained(this)));
-  if (!watcher_) {
-    LOG(ERROR) << "Failed to watch signalfd";
-    return false;
-  }
-
-  // Now block signals from the normal signal handling path so that we will get
-  // them via the signalfd.
-  if (sigprocmask(SIG_BLOCK, &mask, nullptr) < 0) {
-    PLOG(ERROR) << "Failed to block signals via sigprocmask";
     return false;
   }
 
@@ -1266,7 +1296,7 @@ std::unique_ptr<dbus::Response> Service::StartVm(
   vm_info->set_cid(vsock_cid);
 
   std::unique_ptr<patchpanel::Client> network_client =
-      patchpanel::Client::New();
+      patchpanel::Client::New(bus_);
   if (!network_client) {
     LOG(ERROR) << "Unable to open networking service client";
 
@@ -1277,8 +1307,9 @@ std::unique_ptr<dbus::Response> Service::StartVm(
 
   uint32_t seneschal_server_port = next_seneschal_server_port_++;
   std::unique_ptr<SeneschalServerProxy> server_proxy =
-      SeneschalServerProxy::CreateVsockProxy(
-          seneschal_service_proxy_, seneschal_server_port, vsock_cid, {}, {});
+      SeneschalServerProxy::CreateVsockProxy(bus_, seneschal_service_proxy_,
+                                             seneschal_server_port, vsock_cid,
+                                             {}, {});
   if (!server_proxy) {
     LOG(ERROR) << "Unable to start shared directory server";
 
@@ -1792,8 +1823,9 @@ std::unique_ptr<dbus::Response> Service::AdjustVm(
       failure_reason = "Operation is not supported for the VM";
     } else {
       success = pvm::helper::ToggleSharedProfile(
-          vmplugin_service_proxy_, VmId(request.owner_id(), request.name()),
-          std::move(params), &failure_reason);
+          bus_, vmplugin_service_proxy_,
+          VmId(request.owner_id(), request.name()), std::move(params),
+          &failure_reason);
     }
   } else if (request.operation() == "rename") {
     if (params.size() != 1) {
@@ -2186,7 +2218,7 @@ std::unique_ptr<dbus::Response> Service::DestroyDiskImage(
     // Plugin VMs need to be unregistered before we can delete them.
     VmId vm_id(request.cryptohome_id(), request.disk_path());
     bool registered;
-    if (!pvm::dispatcher::IsVmRegistered(vmplugin_service_proxy_, vm_id,
+    if (!pvm::dispatcher::IsVmRegistered(bus_, vmplugin_service_proxy_, vm_id,
                                          &registered)) {
       response.set_status(DISK_STATUS_FAILED);
       response.set_failure_reason(
@@ -2197,7 +2229,7 @@ std::unique_ptr<dbus::Response> Service::DestroyDiskImage(
     }
 
     if (registered &&
-        !pvm::dispatcher::UnregisterVm(vmplugin_service_proxy_, vm_id)) {
+        !pvm::dispatcher::UnregisterVm(bus_, vmplugin_service_proxy_, vm_id)) {
       response.set_status(DISK_STATUS_FAILED);
       response.set_failure_reason("failed to unregister Plugin VM");
       writer.AppendProtoAsArrayOfBytes(response);
@@ -2525,7 +2557,7 @@ std::unique_ptr<dbus::Response> Service::ImportDiskImage(
 
   auto op = PluginVmImportOperation::Create(
       std::move(in_fd), disk_path, request.source_size(),
-      VmId(request.cryptohome_id(), request.disk_path()),
+      VmId(request.cryptohome_id(), request.disk_path()), bus_,
       vmplugin_service_proxy_);
 
   response.set_status(op->status());
@@ -3114,10 +3146,9 @@ void Service::NotifyCiceroneOfVmStarted(const VmId& vm_id,
   request.set_vm_token(std::move(vm_token));
   request.set_pid(pid);
   writer.AppendProtoAsArrayOfBytes(request);
-  std::unique_ptr<dbus::Response> dbus_response =
-      cicerone_service_proxy_->CallMethodAndBlock(
-          &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
-  if (!dbus_response) {
+  if (!brillo::dbus_utils::CallDBusMethod(
+          bus_, cicerone_service_proxy_, &method_call,
+          dbus::ObjectProxy::TIMEOUT_USE_DEFAULT)) {
     LOG(ERROR) << "Failed notifying cicerone of VM startup";
   }
 }
@@ -3156,10 +3187,9 @@ void Service::NotifyVmStopping(const VmId& vm_id, int64_t cid) {
   request.set_owner_id(vm_id.owner_id());
   request.set_vm_name(vm_id.name());
   writer.AppendProtoAsArrayOfBytes(request);
-  std::unique_ptr<dbus::Response> dbus_response =
-      cicerone_service_proxy_->CallMethodAndBlock(
-          &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
-  if (!dbus_response) {
+  if (!brillo::dbus_utils::CallDBusMethod(
+          bus_, cicerone_service_proxy_, &method_call,
+          dbus::ObjectProxy::TIMEOUT_USE_DEFAULT)) {
     LOG(ERROR) << "Failed notifying cicerone of stopping VM";
   }
 }
@@ -3174,10 +3204,9 @@ void Service::NotifyVmStopped(const VmId& vm_id, int64_t cid) {
   request.set_owner_id(vm_id.owner_id());
   request.set_vm_name(vm_id.name());
   writer.AppendProtoAsArrayOfBytes(request);
-  std::unique_ptr<dbus::Response> dbus_response =
-      cicerone_service_proxy_->CallMethodAndBlock(
-          &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
-  if (!dbus_response) {
+  if (!brillo::dbus_utils::CallDBusMethod(
+          bus_, cicerone_service_proxy_, &method_call,
+          dbus::ObjectProxy::TIMEOUT_USE_DEFAULT)) {
     LOG(ERROR) << "Failed notifying cicerone of VM stopped";
   }
 
@@ -3217,8 +3246,9 @@ std::string Service::GetContainerToken(const VmId& vm_id,
   request.set_container_name(container_name);
   writer.AppendProtoAsArrayOfBytes(request);
   std::unique_ptr<dbus::Response> dbus_response =
-      cicerone_service_proxy_->CallMethodAndBlock(
-          &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
+      brillo::dbus_utils::CallDBusMethod(
+          bus_, cicerone_service_proxy_, &method_call,
+          dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
   if (!dbus_response) {
     LOG(ERROR) << "Failed getting container token from cicerone";
     return "";

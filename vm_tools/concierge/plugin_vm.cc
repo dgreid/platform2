@@ -71,12 +71,14 @@ std::unique_ptr<patchpanel::Subnet> MakeSubnet(
       subnet.base_addr(), subnet.prefix_len(), base::DoNothing());
 }
 
-void TrySuspendVm(dbus::ObjectProxy* vmplugin_service_proxy, const VmId& id) {
+void TrySuspendVm(scoped_refptr<dbus::Bus> bus,
+                  dbus::ObjectProxy* vmplugin_service_proxy,
+                  const VmId& id) {
   bool dispatcher_shutting_down = false;
   base::TimeTicks suspend_start_time(base::TimeTicks::Now());
   do {
     pvm::dispatcher::VmOpResult result =
-        pvm::dispatcher::SuspendVm(vmplugin_service_proxy, id);
+        pvm::dispatcher::SuspendVm(bus, vmplugin_service_proxy, id);
 
     switch (result) {
       case pvm::dispatcher::VmOpResult::SUCCESS:
@@ -120,12 +122,13 @@ std::unique_ptr<PluginVm> PluginVm::Create(
     std::unique_ptr<patchpanel::Client> network_client,
     int subnet_index,
     bool enable_vnet_hdr,
+    scoped_refptr<dbus::Bus> bus,
     std::unique_ptr<SeneschalServerProxy> seneschal_server_proxy,
     dbus::ObjectProxy* vm_permission_service_proxy,
     dbus::ObjectProxy* vmplugin_service_proxy,
     VmBuilder vm_builder) {
   auto vm = std::unique_ptr<PluginVm>(new PluginVm(
-      std::move(id), std::move(network_client),
+      std::move(id), std::move(network_client), std::move(bus),
       std::move(seneschal_server_proxy), vm_permission_service_proxy,
       vmplugin_service_proxy, std::move(iso_dir), std::move(root_dir),
       std::move(runtime_dir)));
@@ -154,7 +157,7 @@ bool PluginVm::StopVm() {
 
   // Notify permission service of VM destruction.
   if (!permission_token_.empty()) {
-    vm_permission::UnregisterVm(vm_permission_service_proxy_, id_);
+    vm_permission::UnregisterVm(bus_, vm_permission_service_proxy_, id_);
   }
 
   // Do a check here to make sure the process is still around.
@@ -164,7 +167,7 @@ bool PluginVm::StopVm() {
     return true;
   }
 
-  TrySuspendVm(vmplugin_service_proxy_, id_);
+  TrySuspendVm(bus_, vmplugin_service_proxy_, id_);
   if (!CheckProcessExists(process_.pid())) {
     process_.Release();
     return true;
@@ -197,7 +200,7 @@ bool PluginVm::Shutdown() {
   }
 
   return !CheckProcessExists(process_.pid()) ||
-         pvm::dispatcher::ShutdownVm(vmplugin_service_proxy_, id_) ==
+         pvm::dispatcher::ShutdownVm(bus_, vmplugin_service_proxy_, id_) ==
              pvm::dispatcher::VmOpResult::SUCCESS;
 }
 
@@ -629,6 +632,7 @@ void PluginVm::VmToolsStateChanged(bool running) {
 
 PluginVm::PluginVm(VmId id,
                    std::unique_ptr<patchpanel::Client> network_client,
+                   scoped_refptr<dbus::Bus> bus,
                    std::unique_ptr<SeneschalServerProxy> seneschal_server_proxy,
                    dbus::ObjectProxy* vm_permission_service_proxy,
                    dbus::ObjectProxy* vmplugin_service_proxy,
@@ -640,6 +644,7 @@ PluginVm::PluginVm(VmId id,
                  std::move(runtime_dir)),
       id_(std::move(id)),
       iso_dir_(std::move(iso_dir)),
+      bus_(std::move(bus)),
       vm_permission_service_proxy_(vm_permission_service_proxy),
       vmplugin_service_proxy_(vmplugin_service_proxy),
       usb_last_handle_(0) {
@@ -667,7 +672,7 @@ bool PluginVm::Start(base::FilePath stateful_dir,
 
   // Register the VM with permission service and obtain permission
   // token.
-  if (!vm_permission::RegisterVm(vm_permission_service_proxy_, id_,
+  if (!vm_permission::RegisterVm(bus_, vm_permission_service_proxy_, id_,
                                  vm_permission::VmType::PLUGIN_VM,
                                  &permission_token_)) {
     LOG(ERROR) << "Failed to register with permission service";
@@ -720,7 +725,7 @@ bool PluginVm::Start(base::FilePath stateful_dir,
                          "/etc"),
   };
 
-  if (vm_permission::IsCameraEnabled(vm_permission_service_proxy_,
+  if (vm_permission::IsCameraEnabled(bus_, vm_permission_service_proxy_,
                                      permission_token_)) {
     LOG(INFO) << "VM " << id_ << ": camera access enabled";
     bind_mounts.push_back("/run/camera:/run/camera:true");
@@ -728,7 +733,7 @@ bool PluginVm::Start(base::FilePath stateful_dir,
     LOG(INFO) << "VM " << id_ << ": camera access disabled";
   }
 
-  if (vm_permission::IsMicrophoneEnabled(vm_permission_service_proxy_,
+  if (vm_permission::IsMicrophoneEnabled(bus_, vm_permission_service_proxy_,
                                          permission_token_)) {
     LOG(INFO) << "VM " << id_ << ": microphone access enabled";
     bind_mounts.push_back("/run/cras/plugin/unified:/run/cras:true");

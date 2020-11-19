@@ -5,6 +5,7 @@
 #include <memory>
 #include <utility>
 
+#include <brillo/dbus/dbus_proxy_util.h>
 #include <chromeos/dbus/service_constants.h>
 #include <dbus/bus.h>
 #include <dbus/exported_object.h>
@@ -22,7 +23,8 @@ namespace vm_permission {
 
 namespace {
 
-bool QueryVmPermission(dbus::ObjectProxy* proxy,
+bool QueryVmPermission(scoped_refptr<dbus::Bus> bus,
+                       dbus::ObjectProxy* proxy,
                        const std::string& vm_token,
                        vm_permission_service::Permission::Kind permission) {
   // TODO(dtor): remove when we remove Camera/Mic Chrome flags and
@@ -45,8 +47,9 @@ bool QueryVmPermission(dbus::ObjectProxy* proxy,
 
   dbus::ScopedDBusError dbus_error;
   std::unique_ptr<dbus::Response> dbus_response =
-      proxy->CallMethodAndBlockWithErrorDetails(
-          &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT, &dbus_error);
+      brillo::dbus_utils::CallDBusMethodWithErrorResponse(
+          bus, proxy, &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT,
+          &dbus_error);
   if (!dbus_response) {
     if (dbus_error.is_set()) {
       LOG(ERROR) << "Getpermissions call failed: " << dbus_error.name() << " ("
@@ -81,7 +84,8 @@ dbus::ObjectProxy* GetServiceProxy(scoped_refptr<dbus::Bus> bus) {
       dbus::ObjectPath(chromeos::kVmPermissionServicePath));
 }
 
-bool RegisterVm(dbus::ObjectProxy* proxy,
+bool RegisterVm(scoped_refptr<dbus::Bus> bus,
+                dbus::ObjectProxy* proxy,
                 const VmId& vm_id,
                 VmType type,
                 std::string* token) {
@@ -112,8 +116,9 @@ bool RegisterVm(dbus::ObjectProxy* proxy,
 
   dbus::ScopedDBusError dbus_error;
   std::unique_ptr<dbus::Response> dbus_response =
-      proxy->CallMethodAndBlockWithErrorDetails(
-          &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT, &dbus_error);
+      brillo::dbus_utils::CallDBusMethodWithErrorResponse(
+          bus, proxy, &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT,
+          &dbus_error);
   if (!dbus_response) {
     if (!dbus_error.is_set()) {
       LOG(ERROR) << "Failed to send RegisterVm message to permission service";
@@ -145,7 +150,9 @@ bool RegisterVm(dbus::ObjectProxy* proxy,
   return true;
 }
 
-bool UnregisterVm(dbus::ObjectProxy* proxy, const VmId& vm_id) {
+bool UnregisterVm(scoped_refptr<dbus::Bus> bus,
+                  dbus::ObjectProxy* proxy,
+                  const VmId& vm_id) {
   LOG(INFO) << "Unregistering VM " << vm_id << " from permission service";
 
   dbus::MethodCall method_call(
@@ -164,8 +171,9 @@ bool UnregisterVm(dbus::ObjectProxy* proxy, const VmId& vm_id) {
 
   dbus::ScopedDBusError dbus_error;
   std::unique_ptr<dbus::Response> dbus_response =
-      proxy->CallMethodAndBlockWithErrorDetails(
-          &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT, &dbus_error);
+      brillo::dbus_utils::CallDBusMethodWithErrorResponse(
+          bus, proxy, &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT,
+          &dbus_error);
   if (!dbus_response) {
     if (dbus_error.is_set()) {
       LOG(ERROR) << "UnregisterVm call failed: " << dbus_error.name() << " ("
@@ -180,14 +188,17 @@ bool UnregisterVm(dbus::ObjectProxy* proxy, const VmId& vm_id) {
   return true;
 }
 
-bool IsMicrophoneEnabled(dbus::ObjectProxy* proxy,
+bool IsMicrophoneEnabled(scoped_refptr<dbus::Bus> bus,
+                         dbus::ObjectProxy* proxy,
                          const std::string& vm_token) {
-  return QueryVmPermission(proxy, vm_token,
+  return QueryVmPermission(std::move(bus), proxy, vm_token,
                            vm_permission_service::Permission::MICROPHONE);
 }
 
-bool IsCameraEnabled(dbus::ObjectProxy* proxy, const std::string& vm_token) {
-  return QueryVmPermission(proxy, vm_token,
+bool IsCameraEnabled(scoped_refptr<dbus::Bus> bus,
+                     dbus::ObjectProxy* proxy,
+                     const std::string& vm_token) {
+  return QueryVmPermission(std::move(bus), proxy, vm_token,
                            vm_permission_service::Permission::CAMERA);
 }
 }  // namespace vm_permission
