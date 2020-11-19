@@ -35,6 +35,7 @@ struct MakeCredentialSession {
   uint64_t session_id;
   MakeCredentialRequest request;
   std::unique_ptr<MakeCredentialMethodResponse> response;
+  bool canceled = false;
 };
 
 struct GetAssertionSession {
@@ -44,6 +45,7 @@ struct GetAssertionSession {
   // The credential_id to send to the TPM. May be a resident credential.
   std::string credential_id;
   std::unique_ptr<GetAssertionMethodResponse> response;
+  bool canceled = false;
 };
 
 enum class PresenceRequirement {

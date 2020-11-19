@@ -53,6 +53,7 @@ message MakeCredentialResponse {
     // An excluded credential belongs to this device.
     EXCLUDED_CREDENTIAL_ID = 6;
     REQUEST_PENDING = 7;
+    CANCELED = 8;
   }
 
   MakeCredentialStatus status = 1;
@@ -105,6 +106,7 @@ message GetAssertionResponse {
     // No allowed credential belongs to this device.
     UNKNOWN_CREDENTIAL_ID = 6;
     REQUEST_PENDING = 7;
+    CANCELED = 8;
   }
 
   GetAssertionStatus status = 1;

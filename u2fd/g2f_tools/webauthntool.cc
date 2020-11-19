@@ -61,6 +61,10 @@ std::string ResponseStatusToString(
       return "INTERNAL_ERROR";
     case 6:
       return "EXCLUDED_CREDENTIAL_ID";
+    case 7:
+      return "REQUEST_PENDING";
+    case 8:
+      return "CANCELED";
     default:
       return "UNKNOWN";
   }
@@ -81,6 +85,10 @@ std::string ResponseStatusToString(
       return "INTERNAL_ERROR";
     case 6:
       return "UNKNOWN_CREDENTIAL_ID";
+    case 7:
+      return "REQUEST_PENDING";
+    case 8:
+      return "CANCELED";
     default:
       return "UNKNOWN";
   }

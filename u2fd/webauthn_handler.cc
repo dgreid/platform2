@@ -307,9 +307,15 @@ CancelWebAuthnFlowResponse WebAuthnHandler::Cancel(
     return response;
   }
 
-  pending_uv_make_credential_session_.reset();
-  pending_uv_get_assertion_session_.reset();
-  LOG(INFO) << "WebAuthn user verification UI dismissed.";
+  // We do not reset |pending_uv_make_credential_session_| or
+  // |pending_uv_get_assertion_session_| here because UI will still respond
+  // to the cancelled request through these, though the response will be
+  // ignored by Chrome.
+  if (pending_uv_make_credential_session_) {
+    pending_uv_make_credential_session_->canceled = true;
+  } else {
+    pending_uv_get_assertion_session_->canceled = true;
+  }
   response.set_canceled(true);
   return response;
 }
@@ -339,8 +345,13 @@ void WebAuthnHandler::HandleUVFlowResultMakeCredential(
   }
 
   if (!success) {
-    LOG(ERROR) << "User auth flow failed. Aborting MakeCredential.";
-    response.set_status(MakeCredentialResponse::VERIFICATION_FAILED);
+    if (pending_uv_make_credential_session_->canceled) {
+      LOG(INFO) << "WebAuthn MakeCredential operation canceled.";
+      response.set_status(MakeCredentialResponse::CANCELED);
+    } else {
+      LOG(ERROR) << "User auth flow failed. Aborting MakeCredential.";
+      response.set_status(MakeCredentialResponse::VERIFICATION_FAILED);
+    }
     pending_uv_make_credential_session_->response->Return(response);
     pending_uv_make_credential_session_.reset();
     return;
@@ -376,8 +387,13 @@ void WebAuthnHandler::HandleUVFlowResultGetAssertion(
   }
 
   if (!success) {
-    LOG(ERROR) << "User auth flow failed. Aborting GetAssertion.";
-    response.set_status(GetAssertionResponse::VERIFICATION_FAILED);
+    if (pending_uv_get_assertion_session_->canceled) {
+      LOG(INFO) << "WebAuthn GetAssertion operation canceled.";
+      response.set_status(GetAssertionResponse::CANCELED);
+    } else {
+      LOG(ERROR) << "User auth flow failed. Aborting GetAssertion.";
+      response.set_status(GetAssertionResponse::VERIFICATION_FAILED);
+    }
     pending_uv_get_assertion_session_->response->Return(response);
     pending_uv_get_assertion_session_.reset();
     return;
