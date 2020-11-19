@@ -33,7 +33,7 @@ message SerializedVaultKeyset {
   optional bytes tpm_key = 4;
   optional bytes tpm_public_key_hash = 5;
   optional int32 password_rounds = 6;
-  repeated string deprecated_tracked_subdirectories = 7;
+  // A deprecated field was removed.
   optional int64 last_activity_timestamp = 8;
 
   // Metadata that should be defined in one file
@@ -135,4 +135,7 @@ message SerializedVaultKeyset {
 
   // Set if the vault keyset should be used with fscrypt v2 encryption policies.
   optional int32 fscrypt_policy_version = 20;
+
+  // Deprecated fields that were removed.
+  reserved 7;
 }
