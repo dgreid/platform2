@@ -177,8 +177,12 @@ constexpr char kUidPluginvm[] = "pluginvm";
 constexpr char kUidFuseSmbfs[] = "fuse-smbfs";
 
 // The list of all local sources to tag in mangle OUTPUT with the VPN intent
-// bit, or with a source tag, or with both.
-constexpr std::array<LocalSourceSpecs, 8> kLocalSourceTypes{{
+// bit, or with a source tag, or with both. This arrays specifies: 1) the source
+// type, 2) the uid name of the source or empty cstring if none is defined (the
+// cstring must be defined and cannot be null), 3) the cgroup classid of the
+// source (or 0 if none is defined), and 4) if the traffic originated from that
+// source should be routed through VPN connections by default or not.
+constexpr std::array<LocalSourceSpecs, 9> kLocalSourceTypes{{
     {TrafficSource::CHROME, kUidChronos, 0, true},
     {TrafficSource::USER, kUidDebugd, 0, true},
     {TrafficSource::USER, kUidCups, 0, true},
@@ -187,7 +191,9 @@ constexpr std::array<LocalSourceSpecs, 8> kLocalSourceTypes{{
     {TrafficSource::SYSTEM, kUidTlsdate, 0, true},
     {TrafficSource::USER, kUidPluginvm, 0, true},
     {TrafficSource::SYSTEM, kUidFuseSmbfs, 0, true},
-    // TODO(b/167479541) Add an entry for UpdateEngine
+    // The classid value for update engine must stay in sync with
+    // src/aosp/system/update_engine/init/update-engine.conf.
+    {TrafficSource::UPDATE_ENGINE, "", 0x10001, false},
 }};
 
 // All local sources

@@ -20,8 +20,9 @@
 #include <base/files/scoped_file.h>
 #include <base/logging.h>
 #include <base/posix/eintr_wrapper.h>
-#include <base/strings/string_util.h>
 #include <base/strings/string_number_conversions.h>
+#include <base/strings/string_util.h>
+#include <base/strings/stringprintf.h>
 #include <brillo/userdb_utils.h>
 
 #include "patchpanel/adb_proxy.h"
@@ -941,14 +942,16 @@ bool Datapath::ModifyFwmarkRoutingTag(const std::string& chain,
   }
 
   return ModifyFwmark(IpFamily::Dual, chain, op, int_ifname, "" /*uid_name*/,
-                      Fwmark::FromIfIndex(ifindex), kFwmarkRoutingMask);
+                      0 /*classid*/, Fwmark::FromIfIndex(ifindex),
+                      kFwmarkRoutingMask);
 }
 
 bool Datapath::ModifyFwmarkSourceTag(const std::string& op,
                                      const std::string& iif,
                                      TrafficSource source) {
   return ModifyFwmark(IpFamily::Dual, "PREROUTING", op, iif, "" /*uid_name*/,
-                      Fwmark::FromSource(source), kFwmarkAllSourcesMask);
+                      0 /*classid*/, Fwmark::FromSource(source),
+                      kFwmarkAllSourcesMask);
 }
 
 bool Datapath::ModifyFwmarkDefaultLocalSourceTag(const std::string& op,
@@ -970,17 +973,16 @@ bool Datapath::ModifyFwmarkDefaultLocalSourceTag(const std::string& op,
 
 bool Datapath::ModifyFwmarkLocalSourceTag(const std::string& op,
                                           const LocalSourceSpecs& source) {
+  if (std::string(source.uid_name).empty() && source.classid == 0)
+    return false;
+
   Fwmark mark = Fwmark::FromSource(source.source_type);
   if (source.is_on_vpn)
     mark = mark | kFwmarkRouteOnVpn;
 
-  const std::string& uid_name = source.uid_name;
-  if (!uid_name.empty())
-    return ModifyFwmark(IpFamily::Dual, kApplyLocalSourceMarkChain, op,
-                        "" /*iif*/, uid_name, mark, kFwmarkPolicyMask);
-
-  return false;
-  // TODO(b/167479541) Supports entries specifying a cgroup classid value.
+  return ModifyFwmark(IpFamily::Dual, kApplyLocalSourceMarkChain, op,
+                      "" /*iif*/, source.uid_name, source.classid, mark,
+                      kFwmarkPolicyMask);
 }
 
 bool Datapath::ModifyFwmark(IpFamily family,
@@ -988,6 +990,7 @@ bool Datapath::ModifyFwmark(IpFamily family,
                             const std::string& op,
                             const std::string& iif,
                             const std::string& uid_name,
+                            uint32_t classid,
                             Fwmark mark,
                             Fwmark mask,
                             bool log_failures) {
@@ -1001,6 +1004,12 @@ bool Datapath::ModifyFwmark(IpFamily family,
     args.push_back("owner");
     args.push_back("--uid-owner");
     args.push_back(uid_name);
+  }
+  if (classid != 0) {
+    args.push_back("-m");
+    args.push_back("cgroup");
+    args.push_back("--cgroup");
+    args.push_back(base::StringPrintf("0x%08x", classid));
   }
   args.push_back("-j");
   args.push_back("MARK");

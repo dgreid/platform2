@@ -316,6 +316,7 @@ class Datapath {
                     const std::string& op,
                     const std::string& iif,
                     const std::string& uid_name,
+                    uint32_t classid,
                     Fwmark mark,
                     Fwmark mask,
                     bool log_failures = true);
