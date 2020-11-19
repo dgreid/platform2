@@ -424,15 +424,19 @@ void WebAuthnHandler::DoMakeCredential(
   if (ret == HasCredentialsResponse::INTERNAL_ERROR) {
     response.set_status(MakeCredentialResponse::INTERNAL_ERROR);
     session.response->Return(response);
+    return;
   } else if (ret == HasCredentialsResponse::SUCCESS) {
     response.set_status(MakeCredentialResponse::EXCLUDED_CREDENTIAL_ID);
     session.response->Return(response);
+    return;
   }
 
   WebAuthnRecord record;
   AppendToString(credential_id, &record.credential_id);
   record.secret = std::move(credential_secret);
   record.rp_id = session.request.rp_id();
+  record.user_id = session.request.user_id();
+  record.user_display_name = session.request.user_display_name();
   record.timestamp = base::Time::Now().ToDoubleT();
   if (!webauthn_storage_->WriteRecord(std::move(record))) {
     response.set_status(MakeCredentialResponse::INTERNAL_ERROR);

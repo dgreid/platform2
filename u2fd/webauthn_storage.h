@@ -18,10 +18,18 @@ constexpr int kCredentialSecretSize = 32;
 
 // Used to persist credentials as JSON in the user's cryptohome.
 struct WebAuthnRecord {
+  // Credential id in bytes. Will be hex-encoded.
   std::string credential_id;
+  // Secret to use for this credential in bytes. Will be base64-encoded.
   brillo::SecureBlob secret;
+  // The relying party id.
   std::string rp_id;
+  // The PublicKeyCredentialUserEntity.id property in bytes. Will be
+  // hex-encoded.
   std::string user_id;
+  // The PublicKeyCredentialUserEntity.display_name property.
+  std::string user_display_name;
+  // Timestamp of record creation.
   double timestamp;
 };
 

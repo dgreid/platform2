@@ -24,6 +24,7 @@ constexpr char kCredentialId[] = "CredentialId";
 constexpr char kCredentialSecret[65] = {[0 ... 63] = 'E', '\0'};
 constexpr char kRpId[] = "example.com";
 constexpr char kUserId[] = "deadbeef";
+constexpr char kUserDisplayName[] = "example_user";
 constexpr double kCreatedTime = 12345;
 
 brillo::SecureBlob ArrayToSecureBlob(const char* array) {
@@ -60,8 +61,11 @@ class WebAuthnStorageTest : public ::testing::Test {
 
 TEST_F(WebAuthnStorageTest, WriteAndReadRecord) {
   const WebAuthnRecord record{kCredentialId,
-                              ArrayToSecureBlob(kCredentialSecret), kRpId,
-                              kUserId, kCreatedTime};
+                              ArrayToSecureBlob(kCredentialSecret),
+                              kRpId,
+                              kUserId,
+                              kUserDisplayName,
+                              kCreatedTime};
 
   EXPECT_TRUE(webauthn_storage_->WriteRecord(record));
 
@@ -77,6 +81,32 @@ TEST_F(WebAuthnStorageTest, WriteAndReadRecord) {
   EXPECT_EQ(record.secret, record_loaded->secret);
   EXPECT_EQ(record.rp_id, record_loaded->rp_id);
   EXPECT_EQ(record.user_id, record_loaded->user_id);
+  EXPECT_EQ(record.user_display_name, record_loaded->user_display_name);
+  EXPECT_EQ(record.timestamp, record_loaded->timestamp);
+}
+
+TEST_F(WebAuthnStorageTest, WriteAndReadRecordWithEmptyUserIdAndDisplayName) {
+  const WebAuthnRecord record{
+      kCredentialId, ArrayToSecureBlob(kCredentialSecret), kRpId,
+      std::string(),  // user_id
+      std::string(),  // user_display_name
+      kCreatedTime};
+
+  EXPECT_TRUE(webauthn_storage_->WriteRecord(record));
+
+  webauthn_storage_->Reset();
+  webauthn_storage_->set_allow_access(true);
+  webauthn_storage_->set_sanitized_user(kSanitizedUser);
+
+  EXPECT_TRUE(webauthn_storage_->LoadRecords());
+
+  base::Optional<WebAuthnRecord> record_loaded =
+      webauthn_storage_->GetRecordByCredentialId(kCredentialId);
+  EXPECT_TRUE(record_loaded);
+  EXPECT_EQ(record.secret, record_loaded->secret);
+  EXPECT_EQ(record.rp_id, record_loaded->rp_id);
+  EXPECT_TRUE(record_loaded->user_id.empty());
+  EXPECT_TRUE(record_loaded->user_display_name.empty());
   EXPECT_EQ(record.timestamp, record_loaded->timestamp);
 }
 

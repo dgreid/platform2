@@ -33,7 +33,7 @@ constexpr const char kCredentialIdKey[] = "credential_id";
 constexpr const char kSecretKey[] = "secret";
 constexpr const char kRpIdKey[] = "rp_id";
 constexpr const char kUserIdKey[] = "user_id";
-// TODO(yichengli): Add user display name field.
+constexpr const char kUserDisplayNameKey[] = "user_display_name";
 constexpr const char kCreatedTimestampKey[] = "created";
 
 }  // namespace
@@ -56,7 +56,9 @@ bool WebAuthnStorage::WriteRecord(const WebAuthnRecord& record) {
   record_value.SetStringKey(kCredentialIdKey, credential_id_hex);
   record_value.SetStringKey(kSecretKey, base::Base64Encode(record.secret));
   record_value.SetStringKey(kRpIdKey, record.rp_id);
-  record_value.SetStringKey(kUserIdKey, record.user_id);
+  record_value.SetStringKey(kUserIdKey, base::HexEncode(record.user_id.data(),
+                                                        record.user_id.size()));
+  record_value.SetStringKey(kUserDisplayNameKey, record.user_display_name);
   record_value.SetDoubleKey(kCreatedTimestampKey, record.timestamp);
 
   std::string json_string;
@@ -173,9 +175,28 @@ bool WebAuthnStorage::LoadRecords() {
       continue;
     }
 
-    const std::string* user_id = record_dictionary.FindStringKey(kUserIdKey);
-    if (!user_id) {
+    const std::string* user_id_hex =
+        record_dictionary.FindStringKey(kUserIdKey);
+    std::string user_id;
+    if (!user_id_hex) {
       LOG(ERROR) << "Cannot read user_id from " << record_path.value() << ".";
+      read_all_records_successfully = false;
+      continue;
+    }
+    // Empty user_id is allowed:
+    // https://w3c.github.io/webauthn/#dom-publickeycredentialuserentity-id
+    if (!user_id_hex->empty() &&
+        !base::HexStringToString(*user_id_hex, &user_id)) {
+      LOG(ERROR) << "Cannot parse user_id from " << record_path.value() << ".";
+      read_all_records_successfully = false;
+      continue;
+    }
+
+    const std::string* user_display_name =
+        record_dictionary.FindStringKey(kUserDisplayNameKey);
+    if (!user_display_name) {
+      LOG(ERROR) << "Cannot read user_display_name from " << record_path.value()
+                 << ".";
       read_all_records_successfully = false;
       continue;
     }
@@ -189,7 +210,8 @@ bool WebAuthnStorage::LoadRecords() {
     }
 
     records_.emplace_back(WebAuthnRecord{credential_id, secret_blob, *rp_id,
-                                         *user_id, *timestamp});
+                                         user_id, *user_display_name,
+                                         *timestamp});
   }
   LOG(INFO) << "Loaded " << records_.size() << " WebAuthn records to memory.";
   return read_all_records_successfully;
