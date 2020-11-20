@@ -1,7 +1,6 @@
 
 package uim;
 
-const kBufferDataSize = 260;
 const kIccidMaxSize = 20;
 
 struct qmi_result {

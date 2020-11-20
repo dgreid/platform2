@@ -41,6 +41,11 @@ struct is_iterator<T,
 
 namespace hermes {
 
+template <typename E>
+constexpr auto to_underlying(E e) noexcept {
+  return static_cast<std::underlying_type_t<E>>(e);
+}
+
 template <typename T, typename ReturnType>
 using EnableIfArrayOrVector_t =
     std::enable_if_t<hermes_internal::is_vector<T>::value ||

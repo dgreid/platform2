@@ -46,6 +46,7 @@ static_library("libhermes") {
     "apdu.cc",
     "context.cc",
     "daemon.cc",
+    "dms_cmd.cc",
     "euicc.cc",
     "euicc_dbus_adaptor.cc",
     "executor.cc",
@@ -54,11 +55,11 @@ static_library("libhermes") {
     "manager_dbus_adaptor.cc",
     "modem_qrtr.cc",
     "profile.cc",
-    "qmi_uim.cc",
     "sgp_22.cc",
     "smdp.cc",
     "smds.cc",
     "socket_qrtr.cc",
+    "uim_cmd.cc",
   ]
   deps = [ ":hermes_adaptors" ]
 }

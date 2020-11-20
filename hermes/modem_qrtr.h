@@ -7,17 +7,22 @@
 
 #include <deque>
 #include <iostream>
+#include <map>
 #include <memory>
+#include <string>
+#include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include <google-lpa/lpa/card/euicc_card.h>
 #include <libqrtr.h>
 
+#include "hermes/dms_cmd.h"
 #include "hermes/executor.h"
 #include "hermes/logger.h"
 #include "hermes/modem_control_interface.h"
-#include "hermes/qmi_uim.h"
 #include "hermes/socket_qrtr.h"
+#include "hermes/uim_cmd.h"
 
 namespace hermes {
 
@@ -59,6 +64,7 @@ class ModemQrtr : public lpa::card::EuiccCard, public ModemControlInterface {
                  ResponseCallback cb) override;
   bool IsSimValidAfterEnable() override;
   bool IsSimValidAfterDisable() override;
+  std::string GetImei() override { return imei_; };
   lpa::util::EuiccLog* logger() override { return logger_; }
 
  private:
@@ -68,21 +74,26 @@ class ModemQrtr : public lpa::card::EuiccCard, public ModemControlInterface {
   struct TxElement {
     std::unique_ptr<TxInfo> info_;
     uint16_t id_;
-    QmiUimCommand uim_type_;
+    std::unique_ptr<QmiCmdInterface> qmi_msg_;
   };
 
   ModemQrtr(std::unique_ptr<SocketInterface> socket,
             Logger* logger,
             Executor* executor);
+  void InitializeUim();
   void RetryInitialization();
   void FinalizeInitialization();
   void Shutdown();
   uint16_t AllocateId();
 
   // Top-level method to transmit an element from the tx queue. Dispatches to
-  // the proper TransmitQmi* method to perform QMI encoding prior to sending
-  // data to the socket. Will remove elements from the tx queue as needed.
+  // the proper Transmit*CmdFromQueue method based on the service being
+  // transmitted to.
   void TransmitFromQueue();
+  // Transmit*CmdFromQueue methods perform QMI encoding prior to sending
+  // data to the socket. Will remove elements from the tx queue as needed.
+  void TransmitDmsCmdFromQueue();
+  void TransmitUimCmdFromQueue();
   // Creates and sends a SWITCH_SLOT QMI request
   void TransmitQmiSwitchSlot(TxElement* tx_element);
   // Creates and sends OPEN_LOGICAL_CHANNEL QMI request.
@@ -90,7 +101,7 @@ class ModemQrtr : public lpa::card::EuiccCard, public ModemControlInterface {
   // Creates and sends SEND_APDU QMI request.
   void TransmitQmiSendApdu(TxElement* tx_element);
   // Performs QMI encoding and sends data to the QRTR socket.
-  bool SendCommand(QmiUimCommand type,
+  bool SendCommand(QmiCmdInterface* qmi_command,
                    uint16_t id,
                    void* c_struct,
                    qmi_elem_info* ei);
@@ -101,15 +112,20 @@ class ModemQrtr : public lpa::card::EuiccCard, public ModemControlInterface {
   void ProcessQrtrPacket(uint32_t node, uint32_t port, int size);
   // Dispatches to proper ReceiveQmi* method based on QMI type.
   void ProcessQmiPacket(const qrtr_packet& packet);
+  // Performs decoding for UIM RESET QMI response.
+  void ReceiveQmiReset(const qrtr_packet& packet);
   // Performs decoding for SWITCH_SLOT QMI response.
   void ReceiveQmiSwitchSlot(const qrtr_packet& packet);
   // Performs decoding for GET_SLOTS QMI response.
   void ReceiveQmiGetSlots(const qrtr_packet& packet);
   // Performs decoding for OPEN_LOGICAL_CHANNEL QMI response.
   void ReceiveQmiOpenLogicalChannel(const qrtr_packet& packet);
+  void ParseQmiOpenLogicalChannel(const qrtr_packet& packet);
   // Performs decoding for SEND_APDU response and calls |on_recv_| with
   // appropriate parameters.
   void ReceiveQmiSendApdu(const qrtr_packet& packet);
+  // Performs decoding of GET_DEVICE_SERIAL_NUMBERS response. Parses the IMEI.
+  void ReceiveQmiGetSerialNumbers(const qrtr_packet& packet);
   void DisableQmi(base::TimeDelta duration);
   void EnableQmi();
 
@@ -141,24 +157,24 @@ class ModemQrtr : public lpa::card::EuiccCard, public ModemControlInterface {
   //
   //       [Start state]
   //     +---------------+  (FinalizeInitialization() called w/failure)
-  //     | Uninitialized | <--------------------------------------------+
-  //     +---------------+                                              |
-  //             +                                                      |
-  //             | (Initialize() called)                                |
-  //             |                                                      |
-  //             V                                                      |
-  //    +-------------------+     +------------+                        |
-  //    | InitializeStarted | +-> | UimStarted | +---+                  |
-  //    +-------------------+     +------------+     |                  |
-  //                                                 |                  |
-  //              +----------------------------------+                  |
-  //              |                                                     |
-  //              V                                                     |
-  //   +-----------------------+     +----------------------+           |
-  //   | LogicalChannelPending | +-> | LogicalChannelOpened | +---------+
-  //   +-----------------------+     +----------------------+           |
-  //                                                                    |
-  //             +------------------------------------------------------+
+  //     | Uninitialized | <--------------------------------------------------+
+  //     +---------------+                                                    |
+  //             +                                                            |
+  //             | (Initialize() called)                                      |
+  //             |                                                            |
+  //             V                                                            |
+  //    +-------------------+     +------------+     +------------+           |
+  //    | InitializeStarted | +-> | DmsStarted | +-> | UimStarted | +---+     |
+  //    +-------------------+     +------------+     +------------+     |     |
+  //                                                                    |     |
+  //              +-----------------------------------------------------+     |
+  //              |                                                           |
+  //              V                                                           |
+  //   +-----------------------+     +----------------------+                 |
+  //   | LogicalChannelPending | +-> | LogicalChannelOpened | +---------------+
+  //   +-----------------------+     +----------------------+                 |
+  //                                                                          |
+  //             +------------------------------------------------------------+
   //             |     (FinalizeInitialization() called w/success)
   //             V
   //         +---------------+
@@ -169,6 +185,7 @@ class ModemQrtr : public lpa::card::EuiccCard, public ModemControlInterface {
     enum Value : uint8_t {
       kUninitialized,
       kInitializeStarted,
+      kDmsStarted,
       kUimStarted,
       kLogicalChannelPending,
       kLogicalChannelOpened,
@@ -184,7 +201,8 @@ class ModemQrtr : public lpa::card::EuiccCard, public ModemControlInterface {
     // Returns whether or not some QMI packet can be sent out in the state. Note
     // that APDUs in particular may only be sent in the kSendApduReady state.
     bool CanSend() const {
-      return value_ == kUimStarted || value_ == kSendApduReady;
+      return value_ == kDmsStarted || value_ == kUimStarted ||
+             value_ == kSendApduReady;
     }
 
     bool operator==(Value value) const { return value_ == value; }
@@ -205,7 +223,7 @@ class ModemQrtr : public lpa::card::EuiccCard, public ModemControlInterface {
 
   // Indicates that a qmi message has been sent and that a response is expected
   // Set for all known message types except QMI_RESET
-  base::Optional<QmiUimCommand> pending_response_type;
+  std::unique_ptr<QmiCmdInterface> pending_response_type;
 
   bool extended_apdu_supported_;
   uint16_t current_transaction_id_;
@@ -225,7 +243,28 @@ class ModemQrtr : public lpa::card::EuiccCard, public ModemControlInterface {
   ProcedureBytesMode procedure_bytes_mode_;
 
   std::unique_ptr<SocketInterface> socket_;
-  SocketQrtr::PacketMetadata metadata_;
+
+  // A bimap of {node,port} <-> Service .
+  // Stores information similar to output of qrtr-lookup
+  class QrtrTable {
+    std::unordered_map<QmiCmdInterface::Service, SocketQrtr::PacketMetadata>
+        qrtr_metadata_;
+    std::unordered_map<SocketQrtr::PacketMetadata, QmiCmdInterface::Service>
+        service_from_metadata_;
+
+   public:
+    bool ContainsService(QmiCmdInterface::Service service);
+    void Insert(QmiCmdInterface::Service service,
+                SocketQrtr::PacketMetadata metadata);
+    void clear();
+    const SocketQrtr::PacketMetadata& GetMetadata(
+        QmiCmdInterface::Service service);
+    const QmiCmdInterface::Service& GetService(
+        SocketQrtr::PacketMetadata metadata);
+  };
+  QrtrTable qrtr_table_;
+
+  std::string imei_;
 
   // Buffer for storing data from the QRTR socket
   std::vector<uint8_t> buffer_;
@@ -234,6 +273,10 @@ class ModemQrtr : public lpa::card::EuiccCard, public ModemControlInterface {
   std::vector<std::vector<uint8_t>> responses_;
   // Queue of packets to send to the modem
   std::deque<TxElement> tx_queue_;
+
+  std::map<std::pair<QmiCmdInterface::Service, uint16_t>,
+           base::Callback<void(const qrtr_packet&)>>
+      qmi_rx_callbacks_;
 
   // Used to send notifications about eSIM slot changes.
   EuiccManagerInterface* euicc_manager_;

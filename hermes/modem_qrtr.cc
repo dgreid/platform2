@@ -14,15 +14,15 @@
 #include <libqrtr.h>
 
 #include "hermes/apdu.h"
+#include "hermes/dms_cmd.h"
 #include "hermes/euicc_manager_interface.h"
-#include "hermes/qmi_uim.h"
 #include "hermes/sgp_22.h"
 #include "hermes/socket_qrtr.h"
+#include "hermes/type_traits.h"
+#include "hermes/uim_cmd.h"
 
 namespace {
 
-// As per QMI UIM spec section 2.2
-constexpr uint8_t kQmiUimService = 0xB;
 // This represents the default logical slot that we want our eSIM to be
 // assigned. For dual sim - single standby modems, this will always work. For
 // other multi-sim modems, get the first active slot and store it as a ModemQrtr
@@ -38,7 +38,7 @@ constexpr auto kSimRefreshDelay = base::TimeDelta::FromSeconds(2);
 
 constexpr auto kInitRetryDelay = base::TimeDelta::FromSeconds(10);
 
-bool CheckMessageSuccess(QmiUimCommand cmd, const uim_qmi_result& qmi_result) {
+bool CheckMessageSuccess(UimCmd cmd, const uim_qmi_result& qmi_result) {
   if (qmi_result.result == 0) {
     return true;
   }
@@ -106,6 +106,29 @@ ModemQrtr::ModemQrtr(std::unique_ptr<SocketInterface> socket,
   spec_version_.set_major(2);
   spec_version_.set_minor(2);
   spec_version_.set_revision(0);
+
+  // DMS callbacks
+  qmi_rx_callbacks_[{QmiCmdInterface::Service::kDms,
+                     DmsCmd::QmiType::kGetDeviceSerialNumbers}] =
+      base::Bind(&ModemQrtr::ReceiveQmiGetSerialNumbers,
+                 base::Unretained(this));
+
+  // UIM callbacks
+  qmi_rx_callbacks_[{QmiCmdInterface::Service::kUim, UimCmd::QmiType::kReset}] =
+      base::Bind(&ModemQrtr::ReceiveQmiReset, base::Unretained(this));
+  qmi_rx_callbacks_[{QmiCmdInterface::Service::kUim,
+                     UimCmd::QmiType::kSendApdu}] =
+      base::Bind(&ModemQrtr::ReceiveQmiSendApdu, base::Unretained(this));
+  qmi_rx_callbacks_[{QmiCmdInterface::Service::kUim,
+                     UimCmd::QmiType::kSwitchSlot}] =
+      base::Bind(&ModemQrtr::ReceiveQmiSwitchSlot, base::Unretained(this));
+  qmi_rx_callbacks_[{QmiCmdInterface::Service::kUim,
+                     UimCmd::QmiType::kGetSlots}] =
+      base::Bind(&ModemQrtr::ReceiveQmiGetSlots, base::Unretained(this));
+  qmi_rx_callbacks_[{QmiCmdInterface::Service::kUim,
+                     UimCmd::QmiType::kOpenLogicalChannel}] =
+      base::Bind(&ModemQrtr::ReceiveQmiOpenLogicalChannel,
+                 base::Unretained(this));
 }
 
 ModemQrtr::~ModemQrtr() {
@@ -116,21 +139,22 @@ ModemQrtr::~ModemQrtr() {
 void ModemQrtr::SetActiveSlot(const uint32_t physical_slot) {
   tx_queue_.push_back(
       {std::make_unique<SwitchSlotTxInfo>(physical_slot, logical_slot_),
-       AllocateId(), QmiUimCommand::kSwitchSlot});
+       AllocateId(), std::make_unique<UimCmd>(UimCmd::QmiType::kSwitchSlot)});
   ReacquireChannel();
 }
 
 void ModemQrtr::StoreAndSetActiveSlot(const uint32_t physical_slot) {
-  tx_queue_.push_back(
-      {std::make_unique<TxInfo>(), AllocateId(), QmiUimCommand::kGetSlots});
+  tx_queue_.push_back({std::make_unique<TxInfo>(), AllocateId(),
+                       std::make_unique<UimCmd>(UimCmd::QmiType::kGetSlots)});
   SetActiveSlot(physical_slot);
 }
 
 void ModemQrtr::RestoreActiveSlot() {
   if (stored_active_slot_) {
-    tx_queue_.push_back({std::make_unique<SwitchSlotTxInfo>(
-                             stored_active_slot_.value(), logical_slot_),
-                         AllocateId(), QmiUimCommand::kSwitchSlot});
+    tx_queue_.push_back(
+        {std::make_unique<SwitchSlotTxInfo>(stored_active_slot_.value(),
+                                            logical_slot_),
+         AllocateId(), std::make_unique<UimCmd>(UimCmd::QmiType::kSwitchSlot)});
     stored_active_slot_.reset();
   } else {
     LOG(ERROR) << "Attempted to restore active slot when none was stored";
@@ -148,7 +172,7 @@ void ModemQrtr::SendApdus(std::vector<lpa::card::Apdu> apdus,
     apdu.AddData(apdus[i].data());
     tx_queue_.push_back(
         {std::make_unique<ApduTxInfo>(std::move(apdu), std::move(callback)),
-         AllocateId(), QmiUimCommand::kSendApdu});
+         AllocateId(), std::make_unique<UimCmd>(UimCmd::QmiType::kSendApdu)});
   }
   // Begin transmitting if we are not already processing a transaction.
   if (!pending_response_type) {
@@ -169,24 +193,21 @@ bool ModemQrtr::IsSimValidAfterDisable() {
 void ModemQrtr::Initialize(EuiccManagerInterface* euicc_manager) {
   CHECK(current_state_ == State::kUninitialized);
   euicc_manager_ = euicc_manager;
-
+  if (!socket_->StartService(QmiCmdInterface::Service::kDms, 1, 0)) {
+    LOG(ERROR) << "Failed starting DMS service during ModemQrtr initialization";
+    RetryInitialization();
+    return;
+  }
+  current_state_.Transition(State::kInitializeStarted);
+}
+void ModemQrtr::InitializeUim() {
   // StartService should result in a received QRTR_TYPE_NEW_SERVER
   // packet. Don't send other packets until that occurs.
-  if (!socket_->StartService(kQmiUimService, 1, 0)) {
+  if (!socket_->StartService(QmiCmdInterface::Service::kUim, 1, 0)) {
     LOG(ERROR) << "Failed starting UIM service during ModemQrtr initialization";
     RetryInitialization();
     return;
   }
-
-  current_state_.Transition(State::kInitializeStarted);
-
-  // Request initial info about SIM slots.
-  // TODO(crbug.com/1085825) Add support for getting indications so that this
-  // info can get updated.
-  tx_queue_.push_front(
-      {std::make_unique<TxInfo>(), AllocateId(), QmiUimCommand::kGetSlots});
-  tx_queue_.push_front(
-      {std::unique_ptr<TxInfo>(), AllocateId(), QmiUimCommand::kReset});
 }
 
 void ModemQrtr::ReacquireChannel() {
@@ -194,10 +215,11 @@ void ModemQrtr::ReacquireChannel() {
   if (current_state_ != State::kUimStarted)
     current_state_.Transition(State::kUimStarted);
   channel_ = kInvalidChannel;
-  tx_queue_.push_back(
-      {std::unique_ptr<TxInfo>(), AllocateId(), QmiUimCommand::kReset});
   tx_queue_.push_back({std::unique_ptr<TxInfo>(), AllocateId(),
-                       QmiUimCommand::kOpenLogicalChannel});
+                       std::make_unique<UimCmd>(UimCmd::QmiType::kReset)});
+  tx_queue_.push_back(
+      {std::unique_ptr<TxInfo>(), AllocateId(),
+       std::make_unique<UimCmd>(UimCmd::QmiType::kOpenLogicalChannel)});
 }
 
 void ModemQrtr::RetryInitialization() {
@@ -227,8 +249,10 @@ void ModemQrtr::FinalizeInitialization() {
 void ModemQrtr::Shutdown() {
   if (current_state_ != State::kUninitialized &&
       current_state_ != State::kInitializeStarted) {
-    socket_->StopService(kQmiUimService, 1, 0);
+    socket_->StopService(to_underlying(QmiCmdInterface::Service::kUim), 1, 0);
+    socket_->StopService(to_underlying(QmiCmdInterface::Service::kDms), 1, 0);
   }
+  qrtr_table_.clear();
   current_state_.Transition(State::kUninitialized);
 }
 
@@ -250,40 +274,70 @@ void ModemQrtr::TransmitFromQueue() {
     return;
   }
 
+  switch (tx_queue_[0].qmi_msg_->service()) {
+    case QmiCmdInterface::Service::kUim:
+      TransmitUimCmdFromQueue();
+      break;
+    case QmiCmdInterface::Service::kDms:
+      TransmitDmsCmdFromQueue();
+      break;
+  }
+}
+
+void ModemQrtr::TransmitDmsCmdFromQueue() {
+  auto qmi_cmd = tx_queue_[0].qmi_msg_.get();
+  CHECK(qmi_cmd->service() == QmiCmdInterface::Service::kDms)
+      << "Attempted to send non-DMS command in " << __func__;
+  switch (qmi_cmd->qmi_type()) {
+    case DmsCmd::QmiType::kGetDeviceSerialNumbers:
+      dms_get_device_serial_numbers_req imei_request;
+      SendCommand(tx_queue_[0].qmi_msg_.get(), tx_queue_[0].id_, &imei_request,
+                  dms_get_device_serial_numbers_req_ei);
+      break;
+    default:
+      LOG(ERROR) << "Unexpected QMI DMS type in ModemQrtr tx queue";
+  }
+  tx_queue_.pop_front();
+}
+
+void ModemQrtr::TransmitUimCmdFromQueue() {
+  auto qmi_cmd = tx_queue_[0].qmi_msg_.get();
+  CHECK(qmi_cmd->service() == QmiCmdInterface::Service::kUim)
+      << "Attempted to send non-UIM command in " << __func__;
   bool should_pop = true;
-  switch (tx_queue_[0].uim_type_) {
-    case QmiUimCommand::kReset:
+  switch (qmi_cmd->qmi_type()) {
+    case UimCmd::QmiType::kReset:
       uim_reset_req reset_request;
-      SendCommand(QmiUimCommand::kReset, tx_queue_[0].id_, &reset_request,
+      SendCommand(tx_queue_[0].qmi_msg_.get(), tx_queue_[0].id_, &reset_request,
                   uim_reset_req_ei);
       break;
-    case QmiUimCommand::kSwitchSlot:
+    case UimCmd::QmiType::kSwitchSlot:
       // Don't pop since we need to update the inactive euicc if SwitchSlot
       // succeeds
       should_pop = false;
       TransmitQmiSwitchSlot(&tx_queue_[0]);
       break;
-    case QmiUimCommand::kGetSlots:
+    case UimCmd::QmiType::kGetSlots:
       uim_get_slots_req slots_request;
-      SendCommand(QmiUimCommand::kGetSlots, tx_queue_[0].id_, &slots_request,
+      SendCommand(tx_queue_[0].qmi_msg_.get(), tx_queue_[0].id_, &slots_request,
                   uim_get_slots_req_ei);
       break;
-    case QmiUimCommand::kOpenLogicalChannel:
+    case UimCmd::QmiType::kOpenLogicalChannel:
       TransmitQmiOpenLogicalChannel(&tx_queue_[0]);
       current_state_.Transition(State::kLogicalChannelPending);
       break;
-    case QmiUimCommand::kSendApdu:
-      // kSendApdu element will be popped off the queue after the response has
-      // been entirely received. This occurs within |ReceiveQmiSendApdu|.
+    case UimCmd::QmiType::kSendApdu:
+      // kSendApdu element will be popped off the queue after the response
+      // has been entirely received. This occurs within
+      // |ReceiveQmiSendApdu|.
       should_pop = false;
       TransmitQmiSendApdu(&tx_queue_[0]);
       break;
     default:
       LOG(ERROR) << "Unexpected QMI UIM type in ModemQrtr tx queue";
   }
-  if (should_pop) {
+  if (should_pop)
     tx_queue_.pop_front();
-  }
 }
 
 void ModemQrtr::TransmitQmiSwitchSlot(TxElement* tx_element) {
@@ -295,7 +349,7 @@ void ModemQrtr::TransmitQmiSwitchSlot(TxElement* tx_element) {
     uim_switch_slot_req switch_slot_request;
     switch_slot_request.physical_slot = switch_slot_tx_info->physical_slot_;
     switch_slot_request.logical_slot = switch_slot_tx_info->logical_slot_;
-    SendCommand(QmiUimCommand::kSwitchSlot, tx_queue_[0].id_,
+    SendCommand(tx_queue_[0].qmi_msg_.get(), tx_queue_[0].id_,
                 &switch_slot_request, uim_switch_slot_req_ei);
   } else {
     LOG(INFO) << "Requested slot is already active";
@@ -305,8 +359,9 @@ void ModemQrtr::TransmitQmiSwitchSlot(TxElement* tx_element) {
 }
 
 void ModemQrtr::TransmitQmiOpenLogicalChannel(TxElement* tx_element) {
-  DCHECK(tx_element &&
-         tx_element->uim_type_ == QmiUimCommand::kOpenLogicalChannel);
+  DCHECK(tx_element);
+  DCHECK(tx_element->qmi_msg_->qmi_type() ==
+         UimCmd::QmiType::kOpenLogicalChannel);
 
   uim_open_logical_channel_req request;
   request.slot = logical_slot_;
@@ -314,19 +369,20 @@ void ModemQrtr::TransmitQmiOpenLogicalChannel(TxElement* tx_element) {
   request.aid_len = kAidIsdr.size();
   std::copy(kAidIsdr.begin(), kAidIsdr.end(), request.aid);
 
-  SendCommand(QmiUimCommand::kOpenLogicalChannel, tx_element->id_, &request,
+  SendCommand(tx_element->qmi_msg_.get(), tx_element->id_, &request,
               uim_open_logical_channel_req_ei);
 }
 
 void ModemQrtr::TransmitQmiSendApdu(TxElement* tx_element) {
-  DCHECK(tx_element && tx_element->uim_type_ == QmiUimCommand::kSendApdu);
+  DCHECK(tx_element);
+  DCHECK(tx_element->qmi_msg_->qmi_type() == UimCmd::QmiType::kSendApdu);
 
   uim_send_apdu_req request;
   request.slot = logical_slot_;
   request.channel_id_valid = true;
   request.channel_id = channel_;
   request.procedure_bytes_valid = true;
-  request.procedure_bytes = static_cast<uint8_t>(procedure_bytes_mode_);
+  request.procedure_bytes = to_underlying(procedure_bytes_mode_);
 
   uint8_t* fragment;
   ApduTxInfo* apdu = static_cast<ApduTxInfo*>(tx_element->info_.get());
@@ -334,11 +390,11 @@ void ModemQrtr::TransmitQmiSendApdu(TxElement* tx_element) {
   request.apdu_len = fragment_size;
   std::copy(fragment, fragment + fragment_size, request.apdu);
 
-  SendCommand(QmiUimCommand::kSendApdu, tx_element->id_, &request,
+  SendCommand(tx_element->qmi_msg_.get(), tx_element->id_, &request,
               uim_send_apdu_req_ei);
 }
 
-bool ModemQrtr::SendCommand(QmiUimCommand type,
+bool ModemQrtr::SendCommand(QmiCmdInterface* qmi_command,
                             uint16_t id,
                             void* c_struct,
                             qmi_elem_info* ei) {
@@ -355,37 +411,56 @@ bool ModemQrtr::SendCommand(QmiUimCommand type,
                << current_state_;
     return false;
   }
-  if (type == QmiUimCommand::kSendApdu &&
+  if (!qrtr_table_.ContainsService(qmi_command->service())) {
+    LOG(ERROR) << "Tried sending to unknown service:" << qmi_command->service();
+    return false;
+  }
+  if (qmi_command->service() == QmiCmdInterface::Service::kUim &&
+      (qmi_command->qmi_type() == UimCmd::QmiType::kSendApdu) &&
       current_state_ != State::kSendApduReady) {
     LOG(ERROR) << "QRTR tried to send apdu in state: " << current_state_;
     return false;
   }
-
-  // All hermes initiated qmi messages expect a response
-  pending_response_type = type;
 
   std::vector<uint8_t> encoded_buffer(kBufferDataSize * 2, 0);
   qrtr_packet packet;
   packet.data = encoded_buffer.data();
   packet.data_len = encoded_buffer.size();
 
-  size_t len = qmi_encode_message(
-      &packet, QMI_REQUEST, static_cast<uint16_t>(type), id, c_struct, ei);
+  size_t len = qmi_encode_message(&packet, QMI_REQUEST, qmi_command->qmi_type(),
+                                  id, c_struct, ei);
   if (len < 0) {
     LOG(ERROR) << "Failed to encode QMI UIM request: "
-               << static_cast<uint16_t>(type);
+               << qmi_command->qmi_type();
     return false;
   }
 
-  LOG(INFO) << "ModemQrtr sending transaction type "
-            << static_cast<uint16_t>(type)
+  LOG(INFO) << "ModemQrtr sending transaction type " << qmi_command->qmi_type()
             << " with data (size : " << packet.data_len
             << ") : " << base::HexEncode(packet.data, packet.data_len);
-  int success = socket_->Send(packet.data, packet.data_len,
-                              reinterpret_cast<void*>(&metadata_));
+
+  int success = -1;
+  success =
+      socket_->Send(packet.data, packet.data_len,
+                    reinterpret_cast<const void*>(
+                        &qrtr_table_.GetMetadata(qmi_command->service())));
   if (success < 0) {
     LOG(ERROR) << "qrtr_sendto failed";
     return false;
+  }
+
+  switch (qmi_command->service()) {
+    case QmiCmdInterface::Service::kDms:
+      pending_response_type = std::make_unique<DmsCmd>(
+          static_cast<DmsCmd::QmiType>(qmi_command->qmi_type()));
+      break;
+    case QmiCmdInterface::Service::kUim:
+      pending_response_type = std::make_unique<UimCmd>(
+          static_cast<UimCmd::QmiType>(qmi_command->qmi_type()));
+      break;
+    default:
+      CHECK(false) << "Unknown service: " << qmi_command->service();
+      return false;
   }
   return true;
 }
@@ -409,11 +484,31 @@ void ModemQrtr::ProcessQrtrPacket(uint32_t node, uint32_t port, int size) {
 
   switch (pkt.type) {
     case QRTR_TYPE_NEW_SERVER:
-      VLOG(1) << "Received NEW_SERVER QRTR packet";
-      if (pkt.service == kQmiUimService && channel_ == kInvalidChannel) {
+      VLOG(2) << "Received NEW_SERVER QRTR packet";
+      if (pkt.service == QmiCmdInterface::Service::kUim &&
+          channel_ == kInvalidChannel) {
         current_state_.Transition(State::kUimStarted);
-        metadata_.node = pkt.node;
-        metadata_.port = pkt.port;
+        qrtr_table_.Insert(QmiCmdInterface::Service::kUim,
+                           {pkt.port, pkt.node});
+        VLOG(2) << "Stored UIM metadata";
+        // Request initial info about SIM slots.
+        // TODO(crbug.com/1085825) Add support for getting indications so that
+        // this info can get updated.
+        tx_queue_.push_front(
+            {std::make_unique<TxInfo>(), AllocateId(),
+             std::make_unique<UimCmd>(UimCmd::QmiType::kGetSlots)});
+        tx_queue_.push_front(
+            {std::make_unique<TxInfo>(), AllocateId(),
+             std::make_unique<UimCmd>(UimCmd::QmiType::kReset)});
+      }
+      if (pkt.service == QmiCmdInterface::Service::kDms) {
+        current_state_.Transition(State::kDmsStarted);
+        qrtr_table_.Insert(QmiCmdInterface::Service::kDms,
+                           {pkt.port, pkt.node});
+        VLOG(2) << "Stored DMS metadata";
+        tx_queue_.push_front({std::make_unique<TxInfo>(), AllocateId(),
+                              std::make_unique<DmsCmd>(
+                                  DmsCmd::QmiType::kGetDeviceSerialNumbers)});
       }
       break;
     case QRTR_TYPE_DATA:
@@ -449,49 +544,40 @@ void ModemQrtr::ProcessQmiPacket(const qrtr_packet& packet) {
     LOG(ERROR) << "QRTR received invalid QMI packet";
     return;
   }
-
-  VLOG(1) << "Received QMI message of type: " << qmi_type;
-  switch (qmi_type) {
-    case QmiUimCommand::kReset:
-      current_state_.Transition(State::kUimStarted);
-      VLOG(1) << "Ignoring received RESET packet";
-      break;
-    case QmiUimCommand::kSwitchSlot:
-      ReceiveQmiSwitchSlot(packet);
-      break;
-    case QmiUimCommand::kGetSlots:
-      ReceiveQmiGetSlots(packet);
-      break;
-    case QmiUimCommand::kOpenLogicalChannel:
-      ReceiveQmiOpenLogicalChannel(packet);
-      if (!current_state_.IsInitialized()) {
-        FinalizeInitialization();
-      }
-      break;
-    case QmiUimCommand::kSendApdu:
-      ReceiveQmiSendApdu(packet);
-      break;
-    default:
-      LOG(WARNING) << "Received QMI packet of unknown type: " << qmi_type;
-      return;
-  }
+  QmiCmdInterface::Service service =
+      qrtr_table_.GetService({packet.port, packet.node});
+  VLOG(2) << "Received QMI message of type: " << qmi_type
+          << " from service: " << service;
 
   if (!pending_response_type) {
     LOG(ERROR) << "Received unexpected QMI response. No pending response.";
     return;
   }
 
-  if (pending_response_type != qmi_type)
-    LOG(ERROR) << "Received unexpected QMI response. Expected: "
-               << pending_response_type->ToString();
+  if (qmi_rx_callbacks_.find({service, qmi_type}) == qmi_rx_callbacks_.end()) {
+    LOG(WARNING) << "Unknown QMI message of type: " << qmi_type
+                 << " from service: " << service;
+    return;
+  }
+
+  qmi_rx_callbacks_[{service, qmi_type}].Run(packet);
+
+  if (pending_response_type->service() != service)
+    LOG(ERROR) << "Received unexpected QMI response. Expected service: "
+               << pending_response_type->service()
+               << " Actual service: " << service;
+  if (pending_response_type->qmi_type() != qmi_type)
+    LOG(ERROR) << "Received unexpected QMI response. Expected type: "
+               << pending_response_type->qmi_type()
+               << " Actual type:" << qmi_type;
   pending_response_type.reset();
 }
 
 void ModemQrtr::ReceiveQmiGetSlots(const qrtr_packet& packet) {
-  QmiUimCommand cmd(QmiUimCommand::kGetSlots);
+  UimCmd cmd(UimCmd::QmiType::kGetSlots);
   uim_get_slots_resp resp;
   unsigned int id;
-  if (qmi_decode_message(&resp, &id, &packet, QMI_RESPONSE, cmd,
+  if (qmi_decode_message(&resp, &id, &packet, QMI_RESPONSE, cmd.qmi_type(),
                          uim_get_slots_resp_ei) < 0) {
     LOG(ERROR) << "Failed to decode QMI UIM response: " << cmd.ToString();
     return;
@@ -534,11 +620,11 @@ void ModemQrtr::ReceiveQmiGetSlots(const qrtr_packet& packet) {
 }
 
 void ModemQrtr::ReceiveQmiSwitchSlot(const qrtr_packet& packet) {
-  QmiUimCommand cmd(QmiUimCommand::kSwitchSlot);
+  UimCmd cmd(UimCmd::QmiType::kSwitchSlot);
   uim_switch_slot_resp resp;
   unsigned int id;
 
-  if (qmi_decode_message(&resp, &id, &packet, QMI_RESPONSE, cmd,
+  if (qmi_decode_message(&resp, &id, &packet, QMI_RESPONSE, cmd.qmi_type(),
                          uim_switch_slot_resp_ei) < 0) {
     LOG(ERROR) << "Failed to decode QMI UIM response: " << cmd.ToString();
     return;
@@ -564,8 +650,50 @@ void ModemQrtr::ReceiveQmiSwitchSlot(const qrtr_packet& packet) {
   DisableQmi(kSwitchSlotDelay);
 }
 
+void ModemQrtr::ReceiveQmiGetSerialNumbers(const qrtr_packet& packet) {
+  DmsCmd cmd(DmsCmd::QmiType::kGetDeviceSerialNumbers);
+  if (current_state_ != State::kDmsStarted) {
+    LOG(ERROR) << "Received unexpected QMI DMS response: " << cmd.ToString()
+               << " in state " << current_state_;
+    return;
+  }
+
+  dms_get_device_serial_numbers_resp resp;
+  unsigned int id;
+  if (qmi_decode_message(&resp, &id, &packet, QMI_RESPONSE, cmd.qmi_type(),
+                         dms_get_device_serial_numbers_resp_ei) < 0) {
+    LOG(ERROR) << "Failed to decode QMI UIM response: " << cmd.ToString();
+  }
+
+  if (resp.result.result != 0) {
+    LOG(ERROR) << cmd.ToString() << " Could not decode imei"
+               << resp.result.error;
+  }
+
+  if (!resp.imei_valid) {
+    LOG(ERROR) << "QMI UIM response for " << cmd.ToString()
+               << " contained an invalid imei";
+  }
+
+  imei_ = resp.imei;
+  VLOG(2) << "IMEI: " << imei_;
+  InitializeUim();
+}
+
+void ModemQrtr::ReceiveQmiReset(const qrtr_packet& packet) {
+  current_state_.Transition(State::kUimStarted);
+  VLOG(1) << "Ignoring received RESET packet";
+}
+
 void ModemQrtr::ReceiveQmiOpenLogicalChannel(const qrtr_packet& packet) {
-  QmiUimCommand cmd(QmiUimCommand::kOpenLogicalChannel);
+  ParseQmiOpenLogicalChannel(packet);
+  if (!current_state_.IsInitialized()) {
+    FinalizeInitialization();
+  }
+}
+
+void ModemQrtr::ParseQmiOpenLogicalChannel(const qrtr_packet& packet) {
+  UimCmd cmd(UimCmd::QmiType::kOpenLogicalChannel);
   if (current_state_ != State::kLogicalChannelPending) {
     LOG(ERROR) << "Received unexpected QMI UIM response: " << cmd.ToString()
                << " in state " << current_state_;
@@ -574,7 +702,7 @@ void ModemQrtr::ReceiveQmiOpenLogicalChannel(const qrtr_packet& packet) {
 
   uim_open_logical_channel_resp resp;
   unsigned int id;
-  if (qmi_decode_message(&resp, &id, &packet, QMI_RESPONSE, cmd,
+  if (qmi_decode_message(&resp, &id, &packet, QMI_RESPONSE, cmd.qmi_type(),
                          uim_open_logical_channel_resp_ei) < 0) {
     LOG(ERROR) << "Failed to decode QMI UIM response: " << cmd.ToString();
     return;
@@ -599,7 +727,7 @@ void ModemQrtr::ReceiveQmiOpenLogicalChannel(const qrtr_packet& packet) {
 }
 
 void ModemQrtr::ReceiveQmiSendApdu(const qrtr_packet& packet) {
-  QmiUimCommand cmd(QmiUimCommand::kSendApdu);
+  UimCmd cmd(UimCmd::QmiType::kSendApdu);
   CHECK(tx_queue_.size());
   // Ensure that the queued element is for a kSendApdu command
   TxInfo* base_info = tx_queue_[0].info_.get();
@@ -610,7 +738,7 @@ void ModemQrtr::ReceiveQmiSendApdu(const qrtr_packet& packet) {
   uim_send_apdu_resp resp;
   unsigned int id;
   ApduTxInfo* info = static_cast<ApduTxInfo*>(base_info);
-  if (!qmi_decode_message(&resp, &id, &packet, QMI_RESPONSE, cmd,
+  if (!qmi_decode_message(&resp, &id, &packet, QMI_RESPONSE, cmd.qmi_type(),
                           uim_send_apdu_resp_ei)) {
     LOG(ERROR) << "Failed to decode QMI UIM response: " << cmd.ToString();
     return;
@@ -701,8 +829,7 @@ bool ModemQrtr::State::Transition(ModemQrtr::State::Value value) {
       break;
     case kUimStarted:
       // we reacquire the channel from kSendApduReady after profile (en/dis)able
-      valid_transition =
-          (value_ == kSendApduReady || value_ == kInitializeStarted);
+      valid_transition = (value_ == kSendApduReady || value_ == kDmsStarted);
       break;
     default:
       // Most states can only transition from the previous state.
@@ -744,6 +871,34 @@ void ModemQrtr::FinishProfileOp() {
   DisableQmi(kSimRefreshDelay);
   SetProcedureBytes(ProcedureBytesMode::EnableIntermediateBytes);
   ReacquireChannel();
+}
+
+void ModemQrtr::QrtrTable::Insert(QmiCmdInterface::Service service,
+                                  SocketQrtr::PacketMetadata metadata) {
+  qrtr_metadata_[service] = metadata;
+  service_from_metadata_[metadata] = service;
+}
+
+void ModemQrtr::QrtrTable::clear() {
+  qrtr_metadata_.clear();
+  service_from_metadata_.clear();
+}
+
+const SocketQrtr::PacketMetadata& ModemQrtr::QrtrTable::GetMetadata(
+    QmiCmdInterface::Service service) {
+  return qrtr_metadata_[service];
+}
+
+const QmiCmdInterface::Service& ModemQrtr::QrtrTable::GetService(
+    SocketQrtr::PacketMetadata metadata) {
+  auto it = service_from_metadata_.find(metadata);
+  CHECK(it != service_from_metadata_.end())
+      << "Metadata not found in qrtr_table";
+  return it->second;
+}
+
+bool ModemQrtr::QrtrTable::ContainsService(QmiCmdInterface::Service service) {
+  return (qrtr_metadata_.find(service) != qrtr_metadata_.end());
 }
 
 }  // namespace hermes

@@ -101,4 +101,9 @@ void SocketQrtr::OnFileCanReadWithoutBlocking() {
   }
 }
 
+bool SocketQrtr::PacketMetadata::operator==(
+    const SocketQrtr::PacketMetadata& rhs) const {
+  return this->port == rhs.port && this->node == rhs.node;
+}
+
 }  // namespace hermes

@@ -55,13 +55,29 @@ using ::testing::WithoutArgs;
 namespace {
 
 constexpr uint32_t kTestNode = 0;
-constexpr uint32_t kTestPort = 59;
+constexpr uint32_t kUimPort = 49;
+constexpr uint32_t kDmsPort = 56;
 const char* kQrtrFilename = "/tmp/hermes_qrtr_test";
 
 // clang-format off
-constexpr auto kQrtrNewServerResp = brillo::make_array<uint8_t>(
+constexpr auto kQrtrNewUimServerResp = brillo::make_array<uint8_t>(
   0x04, 0x00, 0x00, 0x00, 0x0B, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00,
-  0x00, 0x00, 0x00, 0x3B, 0x00, 0x00, 0x00
+  0x00, 0x00, 0x00, 0x31, 0x00, 0x00, 0x00
+);
+
+constexpr auto kQrtrNewDmsServerResp = brillo::make_array<uint8_t>(
+  0x04, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00,
+  0x00, 0x00, 0x00, 0x38, 0x00, 0x00, 0x00
+);
+
+constexpr auto kQrtrGetSerialNumbersReq = brillo::make_array<uint8_t>(
+  0x00, 0x01, 0x00, 0x25, 0x00, 0x00, 0x00
+);
+
+constexpr auto kQrtrGetSerialNumbersResp = brillo::make_array<uint8_t>(
+  0x02, 0x01, 0x00, 0x25, 0x00, 0x1D, 0x00, 0x02, 0x04, 0x00, 0x00, 0x00, 0x00,
+  0x00, 0x10, 0x01, 0x00, 0x30, 0x11, 0x0F, 0x00, 0x30, 0x31, 0x35, 0x37, 0x36,
+  0x39, 0x30, 0x30, 0x30, 0x30, 0x31, 0x31, 0x37, 0x38, 0x36
 );
 
 constexpr auto kQrtrResetReq = brillo::make_array<uint8_t>(
@@ -223,6 +239,7 @@ class MockExecutor : public Executor {
 class MockSocketQrtr : public SocketInterface {
  public:
   void SetDataAvailableCallback(DataAvailableCallback cb) override { cb_ = cb; }
+  void SetPort(uint32_t port) { port_ = port; }
 
   bool Open() override {
     socket_ = base::ScopedFD(open(kQrtrFilename, O_RDWR));
@@ -251,11 +268,7 @@ class MockSocketQrtr : public SocketInterface {
     if (metadata) {
       auto data = reinterpret_cast<SocketQrtr::PacketMetadata*>(metadata);
       data->node = kTestNode;
-      if (size && *static_cast<uint8_t*>(buf) == QRTR_TYPE_NEW_SERVER) {
-        data->port = QRTR_PORT_CTRL;
-      } else {
-        data->port = kTestPort;
-      }
+      data->port = port_;
     }
     return bytes_read;
   }
@@ -269,6 +282,7 @@ class MockSocketQrtr : public SocketInterface {
   friend class ModemQrtrTest;
 
   base::ScopedFD socket_;
+  uint32_t port_;
   DataAvailableCallback cb_;
 };
 
@@ -293,7 +307,12 @@ class ModemQrtrTest : public testing::Test {
   }
 
   void TearDown() override {
-    EXPECT_CALL(*socket_, StopService(_, _, _));
+    EXPECT_CALL(
+        *socket_,
+        StopService(to_underlying(QmiCmdInterface::Service::kDms), _, _));
+    EXPECT_CALL(
+        *socket_,
+        StopService(to_underlying(QmiCmdInterface::Service::kUim), _, _));
     EXPECT_CALL(*socket_, Close());
     modem_.reset(nullptr);
     fd_.reset();
@@ -316,16 +335,18 @@ class ModemQrtrTest : public testing::Test {
   }
 
   void ModemReceiveInitSlot(uint8_t physical_slot) {
-    ModemReceiveData(kQrtrGetSlotsResp.begin(), kQrtrGetSlotsResp.end());
+    ModemReceiveData(kQrtrGetSlotsResp.begin(), kQrtrGetSlotsResp.end(),
+                     kUimPort);
     if (physical_slot == 1) {
-      ModemReceiveData(kQrtrSwitchSlotResp.begin(), kQrtrSwitchSlotResp.end());
+      ModemReceiveData(kQrtrSwitchSlotResp.begin(), kQrtrSwitchSlotResp.end(),
+                       kUimPort);
       EXPECT_EQ(modem_->qmi_disabled_, true);
       executor_.FastForwardBy(ModemQrtr::kSwitchSlotDelay);
       EXPECT_EQ(modem_->qmi_disabled_, false);
     }
-    ModemReceiveData(kQrtrResetResp.begin(), kQrtrResetResp.end());
+    ModemReceiveData(kQrtrResetResp.begin(), kQrtrResetResp.end(), kUimPort);
     ModemReceiveData(kQrtrOpenLogicalChannelResp.begin(),
-                     kQrtrOpenLogicalChannelResp.end());
+                     kQrtrOpenLogicalChannelResp.end(), kUimPort);
   }
 
   // Wrapper for ModemQrtr::SendApdus. Tests should use this rather than
@@ -338,7 +359,8 @@ class ModemQrtrTest : public testing::Test {
   // Cause |modem_| to receive the provided data.
   template <typename Iterator>
   EnableIfIterator_t<Iterator, void> ModemReceiveData(Iterator first,
-                                                      Iterator last) {
+                                                      Iterator last,
+                                                      uint32_t port) {
     std::vector<uint8_t> receive_data(first, last);
     receive_data[1] = receive_ids_[0];
     receive_ids_.pop_front();
@@ -347,34 +369,49 @@ class ModemQrtrTest : public testing::Test {
     EXPECT_EQ(ret, receive_data.size());
     // Set modem buffer size so that the proper amount of data is read from fd.
     modem_->buffer_.resize(receive_data.size());
+    socket_->SetPort(port);
     socket_->cb_.Run(modem_->socket_.get());
   }
 
   void SimulateInitialization() {
-    EXPECT_CALL(*socket_, StartService(_, _, _))
-        // Add a receive transaction id when new_lookup is called.
+    // Start DMS service and populate IMEI
+    EXPECT_CALL(
+        *socket_,
+        StartService(to_underlying(QmiCmdInterface::Service::kDms), _, _))
         .WillOnce(WithoutArgs(Invoke([this]() {
           this->receive_ids_.push_back(0);
           return true;
         })));
     modem_->Initialize(&euicc_manager_);
     EXPECT_EQ(euicc_manager_.valid_slots().size(), 0);
+    EXPECT_SEND(*socket_, kQrtrGetSerialNumbersReq);
+    ModemReceiveData(kQrtrNewDmsServerResp.begin(), kQrtrNewDmsServerResp.end(),
+                     QRTR_PORT_CTRL);
+
+    EXPECT_CALL(
+        *socket_,
+        StartService(to_underlying(QmiCmdInterface::Service::kUim), _, _))
+        .WillOnce(WithoutArgs(Invoke([this]() {
+          this->receive_ids_.push_back(0);
+          return true;
+        })));
+    ModemReceiveData(kQrtrGetSerialNumbersResp.begin(),
+                     kQrtrGetSerialNumbersResp.end(), kDmsPort);
 
     {
       ::testing::InSequence dummy;
-
-      // Expect RESET, GET_SLOTS and OPEN_LOGICAL_CHANNEL request after
-      // receiving NEW_SERVER.
+      // Expect RESET and GET_SLOTS request after
+      // receiving UIM NEW_SERVER.
       EXPECT_SEND(*socket_, kQrtrResetReq);
       EXPECT_SEND(*socket_, kQrtrGetSlotsReq);
     }
-
-    // Receive NEW_SERVER response from sock_new_lookup
-    ModemReceiveData(kQrtrNewServerResp.begin(), kQrtrNewServerResp.end());
+    ModemReceiveData(kQrtrNewUimServerResp.begin(), kQrtrNewUimServerResp.end(),
+                     QRTR_PORT_CTRL);
     // Receive RESET response from RESET request.
-    ModemReceiveData(kQrtrResetResp.begin(), kQrtrResetResp.end());
+    ModemReceiveData(kQrtrResetResp.begin(), kQrtrResetResp.end(), kUimPort);
     // Receive slot info from GET_SLOTS request.
-    ModemReceiveData(kQrtrGetSlotsResp.begin(), kQrtrGetSlotsResp.end());
+    ModemReceiveData(kQrtrGetSlotsResp.begin(), kQrtrGetSlotsResp.end(),
+                     kUimPort);
     EXPECT_EQ(euicc_manager_.valid_slots().size(), 2);
     EXPECT_EQ(1, modem_->logical_slot_);
   }
@@ -448,7 +485,8 @@ TEST_F(ModemQrtrTest, SendTwoApdus) {
       lpa::card::Apdu::NewStoreData({})};
   SendApdus(std::move(commands), NullResponseCallback);
   ModemReceiveInitSlot(2);
-  ModemReceiveData(kGetChallengeResp.begin(), kGetChallengeResp.end());
+  ModemReceiveData(kGetChallengeResp.begin(), kGetChallengeResp.end(),
+                   kUimPort);
 }
 
 }  // namespace hermes

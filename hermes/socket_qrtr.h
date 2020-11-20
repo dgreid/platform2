@@ -19,6 +19,7 @@ class SocketQrtr : public SocketInterface {
   struct PacketMetadata {
     uint32_t port;
     uint32_t node;
+    bool operator==(const PacketMetadata& rhs) const;
   };
 
   SocketQrtr();
@@ -53,5 +54,16 @@ class SocketQrtr : public SocketInterface {
 };
 
 }  // namespace hermes
+
+namespace std {
+
+template <>
+struct std::hash<hermes::SocketQrtr::PacketMetadata> {
+  std::size_t operator()(const hermes::SocketQrtr::PacketMetadata& key) const {
+    return std::hash<uint32_t>()(key.node) ^ std::hash<uint32_t>()(key.port);
+  }
+};
+
+}  // namespace std
 
 #endif  // HERMES_SOCKET_QRTR_H_
