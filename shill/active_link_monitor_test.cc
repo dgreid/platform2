@@ -352,7 +352,7 @@ TEST_F(ActiveLinkMonitorTest, Constructor) {
 TEST_F(ActiveLinkMonitorTest, StartFailedGetMacAddress) {
   ScopedMockLog log;
   EXPECT_CALL(log, Log(_, _, _)).Times(AnyNumber());
-  EXPECT_CALL(log, Log(logging::LOG_ERROR, _,
+  EXPECT_CALL(log, Log(logging::LOGGING_ERROR, _,
                        HasSubstr("Could not get local MAC address")))
       .Times(1);
   EXPECT_CALL(device_info_, GetMacAddress(0, _)).WillOnce(Return(false));
@@ -368,8 +368,8 @@ TEST_F(ActiveLinkMonitorTest, StartFailedGetMacAddress) {
 TEST_F(ActiveLinkMonitorTest, StartFailedArpClient) {
   ScopedMockLog log;
   EXPECT_CALL(log, Log(_, _, _)).Times(AnyNumber());
-  EXPECT_CALL(
-      log, Log(logging::LOG_ERROR, _, HasSubstr("Failed to start ARP client")))
+  EXPECT_CALL(log, Log(logging::LOGGING_ERROR, _,
+                       HasSubstr("Failed to start ARP client")))
       .Times(1);
   EXPECT_CALL(metrics_,
               SendEnumToUMA(HasSubstr("LinkMonitorFailure"),
@@ -464,7 +464,7 @@ TEST_F(ActiveLinkMonitorTest, TimeoutBroadcast) {
   }
   ScopedMockLog log;
   EXPECT_CALL(log, Log(_, _, _)).Times(AnyNumber());
-  EXPECT_CALL(log, Log(logging::LOG_ERROR, _,
+  EXPECT_CALL(log, Log(logging::LOGGING_ERROR, _,
                        HasSubstr("monitor has reached the failure threshold")))
       .Times(1);
   EXPECT_CALL(observer_,
@@ -491,7 +491,7 @@ TEST_F(ActiveLinkMonitorTest, TimeoutUnicast) {
 
   ScopedMockLog log;
   EXPECT_CALL(log, Log(_, _, _)).Times(AnyNumber());
-  EXPECT_CALL(log, Log(logging::LOG_ERROR, _,
+  EXPECT_CALL(log, Log(logging::LOGGING_ERROR, _,
                        HasSubstr("monitor has reached the failure threshold")))
       .Times(0);
 
@@ -539,7 +539,7 @@ TEST_F(ActiveLinkMonitorTest, TimeoutUnicast) {
 
   EXPECT_CALL(metrics_, SendToUMA(HasSubstr("LinkMonitorResponseTimeSample"),
                                   GetDefaultTestPeriodMilliseconds(), _, _, _));
-  EXPECT_CALL(log, Log(logging::LOG_ERROR, _,
+  EXPECT_CALL(log, Log(logging::LOGGING_ERROR, _,
                        HasSubstr("monitor has reached the failure threshold")))
       .Times(1);
   EXPECT_CALL(observer_,

@@ -1410,7 +1410,7 @@ TEST_F(WiFiMainTest, OnSupplicantVanishedWhileConnected) {
       SetupConnectedService(RpcIdentifier(""), &endpoint, nullptr));
   ScopedMockLog log;
   EXPECT_CALL(log, Log(_, _, _)).Times(AnyNumber());
-  EXPECT_CALL(log, Log(logging::LOG_ERROR, _,
+  EXPECT_CALL(log, Log(logging::LOGGING_ERROR, _,
                        EndsWith("silently resetting current_service_.")));
   EXPECT_CALL(*manager(), DeregisterDevice(_))
       .WillOnce(InvokeWithoutArgs(this, &WiFiObjectTest::StopWiFi));
@@ -2022,7 +2022,7 @@ TEST_F(WiFiMainTest, DisconnectWithWiFiServiceIdle) {
       .Times(1);
   EXPECT_CALL(*service0, IsActive(_)).WillOnce(Return(false));
   EXPECT_CALL(log, Log(_, _, HasSubstr("is not active, no need"))).Times(1);
-  EXPECT_CALL(log, Log(logging::LOG_WARNING, _,
+  EXPECT_CALL(log, Log(logging::LOGGING_WARNING, _,
                        ContainsRegex("In .*DisconnectFrom\\(.*\\):")))
       .Times(0);
   InitiateDisconnectIfActive(service0);
@@ -2047,7 +2047,7 @@ TEST_F(WiFiMainTest, DisconnectWithWiFiServiceConnectedInError) {
   EXPECT_CALL(*service0, IsActive(_)).WillOnce(Return(true));
   EXPECT_CALL(log, Log(_, _, ContainsRegex("DisconnectFrom[^a-zA-Z].*service")))
       .Times(1);
-  EXPECT_CALL(log, Log(logging::LOG_WARNING, _,
+  EXPECT_CALL(log, Log(logging::LOGGING_WARNING, _,
                        ContainsRegex("In .*DisconnectFrom\\(.*\\):")))
       .Times(1);
   InitiateDisconnectIfActive(service0);
@@ -2409,15 +2409,15 @@ TEST_F(WiFiMainTest, DisconnectReasonUpdated) {
   EXPECT_EQ(GetSupplicantDisconnectReason(), IEEE_80211::kReasonCodeInvalid);
   EXPECT_CALL(
       log,
-      Log(logging::LOG_INFO, _,
+      Log(logging::LOGGING_INFO, _,
           EndsWith(
               " DisconnectReason to 4 (Disassociated due to inactivity)")));
   ReportDisconnectReasonChanged(test_reason);
   EXPECT_EQ(GetSupplicantDisconnectReason(), test_reason);
 
   test_reason = IEEE_80211::kReasonCodeReserved0;
-  EXPECT_CALL(
-      log, Log(logging::LOG_INFO, _, EndsWith("Reason from 4 to 0 (Success)")));
+  EXPECT_CALL(log, Log(logging::LOGGING_INFO, _,
+                       EndsWith("Reason from 4 to 0 (Success)")));
   ReportDisconnectReasonChanged(test_reason);
   EXPECT_EQ(GetSupplicantDisconnectReason(), test_reason);
 }
@@ -2823,8 +2823,8 @@ TEST_F(WiFiMainTest, LinkMonitorFailure) {
 
   // We never had an ARP reply during this connection, so we assume
   // the problem is gateway, rather than link.
-  EXPECT_CALL(log,
-              Log(logging::LOG_INFO, _, EndsWith("gateway was never found.")))
+  EXPECT_CALL(
+      log, Log(logging::LOGGING_INFO, _, EndsWith("gateway was never found.")))
       .Times(1);
   EXPECT_CALL(*GetSupplicantInterfaceProxy(), Reattach()).Times(0);
   OnLinkMonitorFailure();
@@ -2832,7 +2832,8 @@ TEST_F(WiFiMainTest, LinkMonitorFailure) {
 
   // No supplicant, so we can't Reattach.
   OnSupplicantVanish();
-  EXPECT_CALL(log, Log(logging::LOG_ERROR, _, EndsWith("Cannot reassociate.")))
+  EXPECT_CALL(log,
+              Log(logging::LOGGING_ERROR, _, EndsWith("Cannot reassociate.")))
       .Times(1);
   EXPECT_CALL(*GetSupplicantInterfaceProxy(), Reattach()).Times(0);
   OnLinkMonitorFailure();
@@ -2842,7 +2843,8 @@ TEST_F(WiFiMainTest, LinkMonitorFailure) {
   MockWiFiServiceRefPtr service = MakeMockService(kSecurityNone);
   SetCurrentService(service);
   OnSupplicantAppear();
-  EXPECT_CALL(log, Log(logging::LOG_INFO, _, EndsWith("Called Reattach().")))
+  EXPECT_CALL(log,
+              Log(logging::LOGGING_INFO, _, EndsWith("Called Reattach().")))
       .Times(1);
   EXPECT_CALL(*GetSupplicantInterfaceProxy(), Reattach())
       .WillOnce(Return(true));
@@ -2851,8 +2853,8 @@ TEST_F(WiFiMainTest, LinkMonitorFailure) {
 
   // Service is unreliable, skip reassociate attempt.
   service->set_unreliable(true);
-  EXPECT_CALL(
-      log, Log(logging::LOG_INFO, _, EndsWith("skipping reassociate attempt.")))
+  EXPECT_CALL(log, Log(logging::LOGGING_INFO, _,
+                       EndsWith("skipping reassociate attempt.")))
       .Times(1);
   EXPECT_CALL(*GetSupplicantInterfaceProxy(), Reattach()).Times(0);
   OnLinkMonitorFailure();
@@ -2972,7 +2974,8 @@ TEST_F(WiFiMainTest, SuspectCredentialsYieldFailurePSK) {
   EXPECT_CALL(*service, SetState(Service::kStateIdle));
   ScopedMockLog log;
   EXPECT_CALL(log, Log(_, _, _)).Times(AnyNumber());
-  EXPECT_CALL(log, Log(logging::LOG_ERROR, _, EndsWith(kErrorBadPassphrase)));
+  EXPECT_CALL(log,
+              Log(logging::LOGGING_ERROR, _, EndsWith(kErrorBadPassphrase)));
   ReportCurrentBSSChanged(RpcIdentifier(WPASupplicant::kCurrentBSSNull));
 }
 
@@ -2989,8 +2992,8 @@ TEST_F(WiFiMainTest, SuspectCredentialsYieldFailureEAP) {
   EXPECT_CALL(*eap_state_handler_, is_eap_in_progress()).WillOnce(Return(true));
   EXPECT_CALL(*service, AddSuspectedCredentialFailure()).WillOnce(Return(true));
   EXPECT_CALL(*service, SetFailure(Service::kFailureEAPAuthentication));
-  EXPECT_CALL(
-      log, Log(logging::LOG_ERROR, _, EndsWith(kErrorEapAuthenticationFailed)));
+  EXPECT_CALL(log, Log(logging::LOGGING_ERROR, _,
+                       EndsWith(kErrorEapAuthenticationFailed)));
   EXPECT_CALL(*eap_state_handler_, Reset());
   ReportCurrentBSSChanged(RpcIdentifier(WPASupplicant::kCurrentBSSNull));
 }
@@ -3370,21 +3373,23 @@ TEST_F(WiFiMainTest, EAPCertification) {
   EXPECT_CALL(*service, AddEAPCertification(_, _)).Times(0);
 
   ScopedMockLog log;
-  EXPECT_CALL(log, Log(logging::LOG_ERROR, _, EndsWith("no current service.")));
+  EXPECT_CALL(log,
+              Log(logging::LOGGING_ERROR, _, EndsWith("no current service.")));
   KeyValueStore args;
   ReportCertification(args);
   Mock::VerifyAndClearExpectations(&log);
 
   SetCurrentService(service);
-  EXPECT_CALL(log, Log(logging::LOG_ERROR, _, EndsWith("no depth parameter.")));
+  EXPECT_CALL(log,
+              Log(logging::LOGGING_ERROR, _, EndsWith("no depth parameter.")));
   ReportCertification(args);
   Mock::VerifyAndClearExpectations(&log);
 
   const uint32_t kDepth = 123;
   args.Set<uint32_t>(WPASupplicant::kInterfacePropertyDepth, kDepth);
 
-  EXPECT_CALL(log,
-              Log(logging::LOG_ERROR, _, EndsWith("no subject parameter.")));
+  EXPECT_CALL(
+      log, Log(logging::LOGGING_ERROR, _, EndsWith("no subject parameter.")));
   ReportCertification(args);
   Mock::VerifyAndClearExpectations(&log);
 
@@ -3412,7 +3417,8 @@ TEST_F(WiFiTimerTest, ScanDoneDispatchesTasks) {
 TEST_F(WiFiMainTest, EAPEvent) {
   StartWiFi();
   ScopedMockLog log;
-  EXPECT_CALL(log, Log(logging::LOG_ERROR, _, EndsWith("no current service.")));
+  EXPECT_CALL(log,
+              Log(logging::LOGGING_ERROR, _, EndsWith("no current service.")));
   EXPECT_CALL(*eap_state_handler_, ParseStatus(_, _, _)).Times(0);
   const string kEAPStatus("eap-status");
   const string kEAPParameter("eap-parameter");
@@ -4100,7 +4106,7 @@ TEST_F(WiFiMainTest, ParseWiphyIndex_Failure) {
   nl80211_attr_wiphy->nla_type = NL80211_ATTR_WIPHY_FREQ;
   msg.InitFromPacket(&packet, NetlinkMessage::MessageContext());
   EXPECT_CALL(log, Log(_, _, _)).Times(AnyNumber());
-  EXPECT_CALL(log, Log(logging::LOG_ERROR, _,
+  EXPECT_CALL(log, Log(logging::LOGGING_ERROR, _,
                        "NL80211_CMD_NEW_WIPHY had no NL80211_ATTR_WIPHY"));
   EXPECT_FALSE(ParseWiphyIndex(msg));
   EXPECT_CALL(*wake_on_wifi_, OnWiphyIndexReceived(_)).Times(0);

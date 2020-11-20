@@ -26,7 +26,7 @@ class Environment {
  public:
   Environment() {
     // Disable logging per instructions.
-    logging::SetMinLogLevel(logging::LOG_FATAL);
+    logging::SetMinLogLevel(logging::LOGGING_FATAL);
   }
 };
 

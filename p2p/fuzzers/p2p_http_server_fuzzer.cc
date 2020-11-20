@@ -23,7 +23,7 @@ using p2p::util::P2PServerMessage;
 
 struct Environment {
   Environment() {
-    logging::SetMinLogLevel(logging::LOG_FATAL);  // Disable logging.
+    logging::SetMinLogLevel(logging::LOGGING_FATAL);  // Disable logging.
   }
 };
 

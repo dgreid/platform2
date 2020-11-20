@@ -17,19 +17,19 @@ bool HandleMessage(int severity,
                    int /* line */,
                    size_t message_start,
                    const std::string& message) {
-  bool skip_header = severity == logging::LOG_INFO;
+  bool skip_header = severity == logging::LOGGING_INFO;
   const char* str = message.c_str();
   if (skip_header) {
     str += message_start;
   }
 
-  if (severity <= logging::LOG_INFO) {
+  if (severity <= logging::LOGGING_INFO) {
     std::cout << str << std::flush;
     return true;
   }
 
   std::cerr << str;
-  return severity != logging::LOG_FATAL;
+  return severity != logging::LOGGING_FATAL;
 }
 
 int main(int argc, char** argv) {

@@ -444,7 +444,7 @@ TEST_F(WiFiEndpointTest, ParseIEs) {
 TEST_F(WiFiEndpointTest, ParseVendorIEs) {
   {
     ScopedMockLog log;
-    EXPECT_CALL(log, Log(logging::LOG_ERROR, _,
+    EXPECT_CALL(log, Log(logging::LOGGING_ERROR, _,
                          HasSubstr("no room in IE for OUI and type field.")))
         .Times(1);
     vector<uint8_t> ies;
@@ -468,7 +468,7 @@ TEST_F(WiFiEndpointTest, ParseVendorIEs) {
   }
   {
     ScopedMockLog log;
-    EXPECT_CALL(log, Log(logging::LOG_ERROR, _,
+    EXPECT_CALL(log, Log(logging::LOGGING_ERROR, _,
                          HasSubstr("IE extends past containing PDU")))
         .Times(1);
     vector<uint8_t> ies;
@@ -512,7 +512,7 @@ TEST_F(WiFiEndpointTest, ParseVendorIEs) {
   }
   {
     ScopedMockLog log;
-    EXPECT_CALL(log, Log(logging::LOG_ERROR, _,
+    EXPECT_CALL(log, Log(logging::LOGGING_ERROR, _,
                          HasSubstr("WPS element extends past containing PDU")))
         .Times(1);
     vector<uint8_t> ies;

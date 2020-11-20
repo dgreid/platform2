@@ -72,19 +72,19 @@ bool LogToKmsg(logging::LogSeverity severity,
 
   const char* priority = nullptr;
   switch (severity) {
-    case logging::LOG_VERBOSE:
+    case logging::LOGGING_VERBOSE:
       priority = "<7>";
       break;
-    case logging::LOG_INFO:
+    case logging::LOGGING_INFO:
       priority = "<6>";
       break;
-    case logging::LOG_WARNING:
+    case logging::LOGGING_WARNING:
       priority = "<4>";
       break;
-    case logging::LOG_ERROR:
+    case logging::LOGGING_ERROR:
       priority = "<3>";
       break;
-    case logging::LOG_FATAL:
+    case logging::LOGGING_FATAL:
       priority = "<2>";
       break;
     default:

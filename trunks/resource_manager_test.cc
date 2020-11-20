@@ -38,7 +38,7 @@ void Assign(std::string* to, const std::string& from) {
 class ScopedDisableLogging {
  public:
   ScopedDisableLogging() : original_severity_(logging::GetMinLogLevel()) {
-    logging::SetMinLogLevel(logging::LOG_FATAL);
+    logging::SetMinLogLevel(logging::LOGGING_FATAL);
   }
   ~ScopedDisableLogging() { logging::SetMinLogLevel(original_severity_); }
 

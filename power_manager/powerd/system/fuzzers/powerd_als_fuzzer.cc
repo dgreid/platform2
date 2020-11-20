@@ -72,7 +72,7 @@ class AmbientLightSensorFuzzer {
 
 // Disable logging.
 struct Environment {
-  Environment() { logging::SetMinLogLevel(logging::LOG_FATAL); }
+  Environment() { logging::SetMinLogLevel(logging::LOGGING_FATAL); }
 };
 
 static void InitAndRunAls(

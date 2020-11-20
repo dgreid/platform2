@@ -19,7 +19,7 @@ const char kTestConsentIdFile[] = "test-consent-id";
 class Environment {
  public:
   Environment() {
-    logging::SetMinLogLevel(logging::LOG_FATAL);  // Disable logging.
+    logging::SetMinLogLevel(logging::LOGGING_FATAL);  // Disable logging.
     CHECK(temp_dir_.CreateUniqueTempDir());
     temp_file_ = temp_dir_.GetPath().Append(kTestConsentIdFile);
   }

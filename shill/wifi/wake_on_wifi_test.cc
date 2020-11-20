@@ -1707,7 +1707,7 @@ TEST_F(WakeOnWiFiTestWithMockDispatcher,
   GetWakeOnWiFiTriggers()->insert(WakeOnWiFi::kWakeTriggerPattern);
   EXPECT_CALL(
       log,
-      Log(logging::LOG_ERROR, _,
+      Log(logging::LOGGING_ERROR, _,
           HasSubstr(" failed: discrepancy between wake-on-packet settings on "
                     "NIC and those in local data structure detected")));
   EXPECT_CALL(metrics_, NotifyVerifyWakeOnWiFiSettingsResult(
@@ -1750,7 +1750,7 @@ TEST_F(WakeOnWiFiTestWithMockDispatcher,
   EXPECT_CALL(log, Log(_, _, _)).Times(AnyNumber());
   EXPECT_CALL(
       log,
-      Log(logging::LOG_ERROR, _,
+      Log(logging::LOGGING_ERROR, _,
           HasSubstr(" failed: discrepancy between wake-on-packet settings on "
                     "NIC and those in local data structure detected")));
   EXPECT_CALL(metrics_, NotifyVerifyWakeOnWiFiSettingsResult(
@@ -1983,7 +1983,7 @@ TEST_F(WakeOnWiFiTestWithMockDispatcher,
               SendNl80211Message(IsDisableWakeOnWiFiMsg(), _, _, _))
       .Times(0);
   EXPECT_CALL(log, Log(_, _, _)).Times(AnyNumber());
-  EXPECT_CALL(log, Log(logging::LOG_ERROR, _,
+  EXPECT_CALL(log, Log(logging::LOGGING_ERROR, _,
                        HasSubstr("Interface index not yet received")));
   ApplyWakeOnWiFiSettings();
 }
@@ -2307,7 +2307,7 @@ TEST_F(WakeOnWiFiTestWithMockDispatcher, OnScanStarted_LogMetrics) {
   ScopedMockLog log;
   EXPECT_CALL(log, Log(_, _, _)).Times(AnyNumber());
   EXPECT_CALL(log,
-              Log(logging::LOG_ERROR, _,
+              Log(logging::LOGGING_ERROR, _,
                   HasSubstr("Unexpected active scan launched in dark resume")));
   EXPECT_CALL(metrics_, NotifyScanStartedInDarkResume(_));
   OnScanStarted(true);

@@ -31,7 +31,7 @@ base::ScopedFD dup_fd_or_die(int fd) {
 class Environment {
  public:
   Environment() {
-    logging::SetMinLogLevel(logging::LOG_FATAL);  // <- DISABLE LOGGING.
+    logging::SetMinLogLevel(logging::LOGGING_FATAL);  // <- DISABLE LOGGING.
   }
 };
 

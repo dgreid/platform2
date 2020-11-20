@@ -1612,13 +1612,13 @@ TEST_F(DeviceInfoDelayedCreationTest, GuestInterface) {
 #if !defined(DISABLE_WIFI)
 TEST_F(DeviceInfoDelayedCreationTest, WiFiDevice) {
   ScopedMockLog log;
-  EXPECT_CALL(log, Log(logging::LOG_ERROR, _,
+  EXPECT_CALL(log, Log(logging::LOGGING_ERROR, _,
                        HasSubstr("Message is not a new interface response")));
   GetInterfaceMessage non_interface_response_message;
   TriggerOnWiFiInterfaceInfoReceived(non_interface_response_message);
   Mock::VerifyAndClearExpectations(&log);
 
-  EXPECT_CALL(log, Log(logging::LOG_ERROR, _,
+  EXPECT_CALL(log, Log(logging::LOGGING_ERROR, _,
                        HasSubstr("Message contains no interface index")));
   NewInterfaceMessage message;
   TriggerOnWiFiInterfaceInfoReceived(message);
@@ -1628,7 +1628,7 @@ TEST_F(DeviceInfoDelayedCreationTest, WiFiDevice) {
       NL80211_ATTR_IFINDEX, NetlinkMessage::MessageContext());
   message.attributes()->SetU32AttributeValue(NL80211_ATTR_IFINDEX,
                                              kTestDeviceIndex);
-  EXPECT_CALL(log, Log(logging::LOG_ERROR, _,
+  EXPECT_CALL(log, Log(logging::LOGGING_ERROR, _,
                        HasSubstr("Message contains no interface type")));
   TriggerOnWiFiInterfaceInfoReceived(message);
   Mock::VerifyAndClearExpectations(&log);
@@ -1637,7 +1637,7 @@ TEST_F(DeviceInfoDelayedCreationTest, WiFiDevice) {
       NL80211_ATTR_IFTYPE, NetlinkMessage::MessageContext());
   message.attributes()->SetU32AttributeValue(NL80211_ATTR_IFTYPE,
                                              NL80211_IFTYPE_AP);
-  EXPECT_CALL(log, Log(logging::LOG_ERROR, _,
+  EXPECT_CALL(log, Log(logging::LOGGING_ERROR, _,
                        HasSubstr("Could not find device info for interface")));
   TriggerOnWiFiInterfaceInfoReceived(message);
   Mock::VerifyAndClearExpectations(&log);
@@ -1646,8 +1646,8 @@ TEST_F(DeviceInfoDelayedCreationTest, WiFiDevice) {
   // associated device.
   AddDelayedDevice(Technology::kNoDeviceSymlink);
 
-  EXPECT_CALL(
-      log, Log(logging::LOG_INFO, _, HasSubstr("it is not in station mode")));
+  EXPECT_CALL(log, Log(logging::LOGGING_INFO, _,
+                       HasSubstr("it is not in station mode")));
   TriggerOnWiFiInterfaceInfoReceived(message);
   Mock::VerifyAndClearExpectations(&log);
   Mock::VerifyAndClearExpectations(&manager_);
@@ -1659,13 +1659,13 @@ TEST_F(DeviceInfoDelayedCreationTest, WiFiDevice) {
       .WillRepeatedly(Return(&test_device_info_));
   EXPECT_CALL(log, Log(_, _, _)).Times(AnyNumber());
   EXPECT_CALL(log,
-              Log(logging::LOG_INFO, _, HasSubstr("Creating WiFi device")));
+              Log(logging::LOGGING_INFO, _, HasSubstr("Creating WiFi device")));
   TriggerOnWiFiInterfaceInfoReceived(message);
   Mock::VerifyAndClearExpectations(&log);
   Mock::VerifyAndClearExpectations(&manager_);
 
   EXPECT_CALL(manager_, RegisterDevice(_)).Times(0);
-  EXPECT_CALL(log, Log(logging::LOG_ERROR, _,
+  EXPECT_CALL(log, Log(logging::LOGGING_ERROR, _,
                        HasSubstr("Device already created for interface")));
   TriggerOnWiFiInterfaceInfoReceived(message);
 }

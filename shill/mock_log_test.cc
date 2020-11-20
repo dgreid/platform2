@@ -45,14 +45,14 @@ TEST_F(MockLogTest, MatchMessageOnly) {
 TEST_F(MockLogTest, MatchSeverityAndMessage) {
   ScopedMockLog log;
   const string kMessage("Something");
-  EXPECT_CALL(log, Log(logging::LOG_INFO, _, kMessage));
+  EXPECT_CALL(log, Log(logging::LOGGING_INFO, _, kMessage));
   LogSomething(kMessage);
 }
 
 TEST_F(MockLogTest, MatchSeverityAndFileAndMessage) {
   ScopedMockLog log;
   const string kMessage("Something");
-  EXPECT_CALL(log, Log(logging::LOG_INFO,
+  EXPECT_CALL(log, Log(logging::LOGGING_INFO,
                        ::testing::EndsWith("mock_log_test.cc"), kMessage));
   LogSomething(kMessage);
 }
@@ -90,9 +90,9 @@ TEST_F(MockLogTest, MatchSlogWithObject) {
 TEST_F(MockLogTest, MatchWithGmockMatchers) {
   ScopedMockLog log;
   const string kMessage("Something");
-  EXPECT_CALL(
-      log, Log(::testing::Lt(::logging::LOG_ERROR), ::testing::EndsWith(".cc"),
-               ::testing::StartsWith("Some")));
+  EXPECT_CALL(log,
+              Log(::testing::Lt(::logging::LOGGING_ERROR),
+                  ::testing::EndsWith(".cc"), ::testing::StartsWith("Some")));
   LogSomething(kMessage);
 }
 

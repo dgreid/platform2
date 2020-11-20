@@ -14,7 +14,7 @@ namespace {
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   // Turn off logging.
-  logging::SetMinLogLevel(logging::LOG_FATAL);
+  logging::SetMinLogLevel(logging::LOGGING_FATAL);
 
   // Copy the input data so that TranslateMdnsIp can mutate it.
   char* payload = new char[size];

@@ -12,7 +12,7 @@ constexpr MacAddress guest_if_mac({0xd2, 0x47, 0xf7, 0xc5, 0x9e, 0x53});
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   // Turn off logging.
-  logging::SetMinLogLevel(logging::LOG_FATAL);
+  logging::SetMinLogLevel(logging::LOGGING_FATAL);
 
   uint8_t* out_buffer_extended = new uint8_t[size + 4];
   uint8_t* out_buffer = NDProxy::AlignFrameBuffer(out_buffer_extended);

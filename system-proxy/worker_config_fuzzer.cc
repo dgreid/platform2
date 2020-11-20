@@ -27,7 +27,7 @@ void NullClosure() {}
 
 struct Environment {
   Environment() {
-    logging::SetMinLogLevel(logging::LOG_FATAL);  // Disable logging.
+    logging::SetMinLogLevel(logging::LOGGING_FATAL);  // Disable logging.
   }
 };
 

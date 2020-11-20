@@ -15,7 +15,7 @@ namespace {
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   // Turn off logging.
-  logging::SetMinLogLevel(logging::LOG_FATAL);
+  logging::SetMinLogLevel(logging::LOGGING_FATAL);
 
   const std::vector<uint8_t> raw_data(data, data + size);
   std::unique_ptr<CellularPco> pco = CellularPco::CreateFromRawData(raw_data);

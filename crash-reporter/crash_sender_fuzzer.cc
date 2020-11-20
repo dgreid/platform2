@@ -27,7 +27,7 @@ class Environment {
  public:
   Environment() {
     // Disable logging per instructions.
-    logging::SetMinLogLevel(logging::LOG_FATAL);
+    logging::SetMinLogLevel(logging::LOGGING_FATAL);
     // Don't ever actually upload anything!
     util::g_force_is_mock = true;
   }

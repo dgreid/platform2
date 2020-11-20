@@ -52,8 +52,8 @@ int GetLogLevel(const std::string& log_level_value) {
   int log_level = 0;
   if (!base::StringToInt(log_level_value, &log_level)) {
     LOG(WARNING) << "Invalid log level '" << log_level_value << "'";
-  } else if (log_level >= logging::LOG_NUM_SEVERITIES) {
-    log_level = logging::LOG_NUM_SEVERITIES;
+  } else if (log_level >= logging::LOGGING_NUM_SEVERITIES) {
+    log_level = logging::LOGGING_NUM_SEVERITIES;
   }
   return log_level;
 }

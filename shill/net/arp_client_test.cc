@@ -149,8 +149,8 @@ TEST_F(ArpClientTest, Constructor) {
 
 TEST_F(ArpClientTest, SocketOpenFail) {
   ScopedMockLog log;
-  EXPECT_CALL(
-      log, Log(logging::LOG_ERROR, _, HasSubstr("Could not create ARP socket")))
+  EXPECT_CALL(log, Log(logging::LOGGING_ERROR, _,
+                       HasSubstr("Could not create ARP socket")))
       .Times(1);
 
   EXPECT_CALL(*sockets_, Socket(PF_PACKET, _, htons(ETHERTYPE_ARP)))
@@ -160,7 +160,7 @@ TEST_F(ArpClientTest, SocketOpenFail) {
 
 TEST_F(ArpClientTest, SocketFilterFail) {
   ScopedMockLog log;
-  EXPECT_CALL(log, Log(logging::LOG_ERROR, _,
+  EXPECT_CALL(log, Log(logging::LOGGING_ERROR, _,
                        HasSubstr("Could not attach packet filter")))
       .Times(1);
 
@@ -171,7 +171,7 @@ TEST_F(ArpClientTest, SocketFilterFail) {
 
 TEST_F(ArpClientTest, SocketNonBlockingFail) {
   ScopedMockLog log;
-  EXPECT_CALL(log, Log(logging::LOG_ERROR, _,
+  EXPECT_CALL(log, Log(logging::LOGGING_ERROR, _,
                        HasSubstr("Could not set socket to be non-blocking")))
       .Times(1);
 
@@ -183,7 +183,7 @@ TEST_F(ArpClientTest, SocketNonBlockingFail) {
 
 TEST_F(ArpClientTest, SocketBindFail) {
   ScopedMockLog log;
-  EXPECT_CALL(log, Log(logging::LOG_ERROR, _,
+  EXPECT_CALL(log, Log(logging::LOGGING_ERROR, _,
                        HasSubstr("Could not bind socket to interface")))
       .Times(1);
 
@@ -220,13 +220,13 @@ TEST_F(ArpClientTest, Receive) {
     InSequence seq;
 
     // RecvFrom returns an error.
-    EXPECT_CALL(log,
-                Log(logging::LOG_ERROR, _, HasSubstr("Socket recvfrom failed")))
+    EXPECT_CALL(log, Log(logging::LOGGING_ERROR, _,
+                         HasSubstr("Socket recvfrom failed")))
         .Times(1);
     EXPECT_FALSE(client_.ReceivePacket(&reply, &sender));
 
     // RecvFrom returns an empty response which fails to parse.
-    EXPECT_CALL(log, Log(logging::LOG_ERROR, _,
+    EXPECT_CALL(log, Log(logging::LOGGING_ERROR, _,
                          HasSubstr("Failed to parse ARP packet")))
         .Times(1);
     EXPECT_FALSE(client_.ReceivePacket(&reply, &sender));
@@ -272,10 +272,10 @@ TEST_F(ArpClientTest, Transmit) {
   {
     InSequence seq;
     ScopedMockLog log;
-    EXPECT_CALL(log,
-                Log(logging::LOG_ERROR, _, HasSubstr("Socket sendto failed")))
+    EXPECT_CALL(
+        log, Log(logging::LOGGING_ERROR, _, HasSubstr("Socket sendto failed")))
         .Times(1);
-    EXPECT_CALL(log, Log(logging::LOG_ERROR, _,
+    EXPECT_CALL(log, Log(logging::LOGGING_ERROR, _,
                          HasSubstr("different from expected result")))
         .Times(2);
 

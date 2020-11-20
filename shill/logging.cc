@@ -25,7 +25,7 @@ void SetLogLevelFromCommandLine(base::CommandLine* cl) {
     std::string log_level = cl->GetSwitchValueASCII(switches::kLogLevel);
     int level = 0;
     if (base::StringToInt(log_level, &level) &&
-        level < logging::LOG_NUM_SEVERITIES) {
+        level < logging::LOGGING_NUM_SEVERITIES) {
       logging::SetMinLogLevel(level);
       // Like VLOG, SLOG uses negative verbose level.
       shill::ScopeLogger::GetInstance()->set_verbose_level(-level);

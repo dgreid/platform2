@@ -33,7 +33,7 @@ constexpr size_t kMaxPlanes = 4;
 class Environment {
  public:
   Environment() {
-    logging::SetMinLogLevel(logging::LOG_FATAL);  // Disable logging.
+    logging::SetMinLogLevel(logging::LOGGING_FATAL);  // Disable logging.
   }
   Environment(const Environment&) = delete;
   Environment& operator=(const Environment&) = delete;

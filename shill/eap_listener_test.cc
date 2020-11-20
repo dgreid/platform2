@@ -141,7 +141,7 @@ TEST_F(EapListenerTest, Constructor) {
 
 TEST_F(EapListenerTest, SocketOpenFail) {
   ScopedMockLog log;
-  EXPECT_CALL(log, Log(logging::LOG_ERROR, _,
+  EXPECT_CALL(log, Log(logging::LOGGING_ERROR, _,
                        HasSubstr("Could not create EAP listener socket")))
       .Times(1);
 
@@ -152,7 +152,7 @@ TEST_F(EapListenerTest, SocketOpenFail) {
 
 TEST_F(EapListenerTest, SocketNonBlockingFail) {
   ScopedMockLog log;
-  EXPECT_CALL(log, Log(logging::LOG_ERROR, _,
+  EXPECT_CALL(log, Log(logging::LOGGING_ERROR, _,
                        HasSubstr("Could not set socket to be non-blocking")))
       .Times(1);
 
@@ -163,7 +163,7 @@ TEST_F(EapListenerTest, SocketNonBlockingFail) {
 
 TEST_F(EapListenerTest, SocketBindFail) {
   ScopedMockLog log;
-  EXPECT_CALL(log, Log(logging::LOG_ERROR, _,
+  EXPECT_CALL(log, Log(logging::LOGGING_ERROR, _,
                        HasSubstr("Could not bind socket to interface")))
       .Times(1);
 
@@ -202,8 +202,8 @@ TEST_F(EapListenerTest, ReceiveFail) {
 
   ScopedMockLog log;
   // RecvFrom returns an error.
-  EXPECT_CALL(log,
-              Log(logging::LOG_ERROR, _, HasSubstr("Socket recvfrom failed")))
+  EXPECT_CALL(
+      log, Log(logging::LOGGING_ERROR, _, HasSubstr("Socket recvfrom failed")))
       .Times(1);
   ReceiveRequest();
 }
@@ -226,8 +226,8 @@ TEST_F(EapListenerTest, ReceiveShort) {
       .WillOnce(Invoke(this, &EapListenerTest::SimulateRecvFrom));
   EXPECT_CALL(*this, ReceiveCallback()).Times(0);
   ScopedMockLog log;
-  EXPECT_CALL(log,
-              Log(logging::LOG_INFO, _, HasSubstr("Short EAP packet received")))
+  EXPECT_CALL(log, Log(logging::LOGGING_INFO, _,
+                       HasSubstr("Short EAP packet received")))
       .Times(1);
   ReceiveRequest();
 }
@@ -244,7 +244,7 @@ TEST_F(EapListenerTest, ReceiveInvalid) {
       .WillOnce(Invoke(this, &EapListenerTest::SimulateRecvFrom));
   EXPECT_CALL(*this, ReceiveCallback()).Times(0);
   ScopedMockLog log;
-  EXPECT_CALL(log, Log(logging::LOG_INFO, _,
+  EXPECT_CALL(log, Log(logging::LOGGING_INFO, _,
                        HasSubstr("Packet is not a valid EAP request")))
       .Times(1);
   ReceiveRequest();

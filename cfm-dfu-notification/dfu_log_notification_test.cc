@@ -104,21 +104,21 @@ DfuLogNotificationTest::DfuLogNotificationTest()
 
 TEST_F(DfuLogNotificationTest, VerifyStartLogTag) {
   ScopedMockLog log;
-  EXPECT_CALL(log, Log(logging::LOG_INFO, testing::_,
+  EXPECT_CALL(log, Log(logging::LOGGING_INFO, testing::_,
                        testing::StartsWith("$#StartUpdate$#")));
   log_notification_.NotifyStartUpdate(300);
 }
 
 TEST_F(DfuLogNotificationTest, VerifyEndLogTag) {
   ScopedMockLog log;
-  EXPECT_CALL(log, Log(logging::LOG_INFO, testing::_,
+  EXPECT_CALL(log, Log(logging::LOGGING_INFO, testing::_,
                        testing::StartsWith("$#EndUpdate$#")));
   log_notification_.NotifyEndUpdate(true);
 }
 
 TEST_F(DfuLogNotificationTest, VerifyPostUpdateLogTag) {
   ScopedMockLog log;
-  EXPECT_CALL(log, Log(logging::LOG_INFO, testing::_,
+  EXPECT_CALL(log, Log(logging::LOGGING_INFO, testing::_,
                        testing::StartsWith("$#UpdateProgress$#")));
   log_notification_.NotifyUpdateProgress(0.3);
 }

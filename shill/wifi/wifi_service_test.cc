@@ -1026,7 +1026,7 @@ TEST_F(WiFiServiceTest, DisconnectWithoutWiFiWhileAssociating) {
   service->SetState(Service::kStateAssociating);
   ScopedMockLog log;
   EXPECT_CALL(log, Log(_, _, _)).Times(AnyNumber());
-  EXPECT_CALL(log, Log(logging::LOG_ERROR, _,
+  EXPECT_CALL(log, Log(logging::LOGGING_ERROR, _,
                        HasSubstr("WiFi endpoints do not (yet) exist.")));
   Error error;
   service->Disconnect(&error, "in test");
@@ -1393,7 +1393,7 @@ TEST_F(WiFiServiceUpdateFromEndpointsTest, WarningOnDisconnect) {
   service->SetState(Service::kStateAssociating);
   ScopedMockLog log;
   EXPECT_CALL(log, Log(_, _, _)).Times(AnyNumber());
-  EXPECT_CALL(log, Log(logging::LOG_WARNING, _,
+  EXPECT_CALL(log, Log(logging::LOGGING_WARNING, _,
                        EndsWith("disconnect due to no remaining endpoints.")));
   service->RemoveEndpoint(ok_endpoint);
 }

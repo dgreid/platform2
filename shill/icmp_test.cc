@@ -101,7 +101,7 @@ TEST_F(IcmpTest, Constructor) {
 
 TEST_F(IcmpTest, SocketOpenFail) {
   ScopedMockLog log;
-  EXPECT_CALL(log, Log(logging::LOG_ERROR, _,
+  EXPECT_CALL(log, Log(logging::LOGGING_ERROR, _,
                        HasSubstr("Could not create ICMP socket")))
       .Times(1);
 
@@ -117,7 +117,7 @@ TEST_F(IcmpTest, SocketOpenFail) {
 
 TEST_F(IcmpTest, SocketNonBlockingFail) {
   ScopedMockLog log;
-  EXPECT_CALL(log, Log(logging::LOG_ERROR, _,
+  EXPECT_CALL(log, Log(logging::LOGGING_ERROR, _,
                        HasSubstr("Could not set socket to be non-blocking")))
       .Times(1);
 
@@ -176,10 +176,10 @@ TEST_F(IcmpTest, TransmitEchoRequest) {
   {
     InSequence seq;
     ScopedMockLog log;
-    EXPECT_CALL(log,
-                Log(logging::LOG_ERROR, _, HasSubstr("Socket sendto failed")))
+    EXPECT_CALL(
+        log, Log(logging::LOGGING_ERROR, _, HasSubstr("Socket sendto failed")))
         .Times(1);
-    EXPECT_CALL(log, Log(logging::LOG_ERROR, _,
+    EXPECT_CALL(log, Log(logging::LOGGING_ERROR, _,
                          HasSubstr("less than the expected result")))
         .Times(2);
 

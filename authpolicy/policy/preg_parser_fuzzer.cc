@@ -24,7 +24,7 @@ namespace preg_parser {
 // Disable logging.
 struct Environment {
   Environment() : root(base::ASCIIToUTF16(kRegistryChromePolicyKey)) {
-    logging::SetMinLogLevel(logging::LOG_FATAL);
+    logging::SetMinLogLevel(logging::LOGGING_FATAL);
   }
 
   const base::string16 root;

@@ -56,10 +56,10 @@ bool HandleLogMessage(int severity,
                       size_t /* message_start */,
                       const std::string& message) {
   switch (severity) {
-    case logging::LOG_INFO:
+    case logging::LOGGING_INFO:
       *g_info_log += message;
       break;
-    case logging::LOG_ERROR:
+    case logging::LOGGING_ERROR:
       *g_error_log += message;
       break;
     default:

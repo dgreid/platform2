@@ -24,8 +24,8 @@ class SupplicantEAPStateHandlerTest : public testing::Test {
 
  protected:
   void StartEAP() {
-    EXPECT_CALL(
-        log_, Log(logging::LOG_INFO, _, EndsWith("Authentication starting.")));
+    EXPECT_CALL(log_, Log(logging::LOGGING_INFO, _,
+                          EndsWith("Authentication starting.")));
     EXPECT_FALSE(
         handler_.ParseStatus(WPASupplicant::kEAPStatusStarted, "", &failure_));
     Mock::VerifyAndClearExpectations(&log_);
@@ -53,7 +53,7 @@ TEST_F(SupplicantEAPStateHandlerTest, AuthenticationStarting) {
 TEST_F(SupplicantEAPStateHandlerTest, AcceptedMethod) {
   StartEAP();
   const string kEAPMethod("EAP-ROCHAMBEAU");
-  EXPECT_CALL(log_, Log(logging::LOG_INFO, _,
+  EXPECT_CALL(log_, Log(logging::LOGGING_INFO, _,
                         EndsWith("accepted method " + kEAPMethod)));
   EXPECT_FALSE(handler_.ParseStatus(
       WPASupplicant::kEAPStatusAcceptProposedMethod, kEAPMethod, &failure_));
@@ -127,7 +127,7 @@ TEST_F(SupplicantEAPStateHandlerTest, BadRemoteCertificateVerification) {
   const string kStrangeParameter("ennui");
   EXPECT_CALL(
       log_,
-      Log(logging::LOG_ERROR, _,
+      Log(logging::LOGGING_ERROR, _,
           EndsWith(string("Unexpected ") +
                    WPASupplicant::kEAPStatusRemoteCertificateVerification +
                    " parameter: " + kStrangeParameter)));
@@ -145,7 +145,7 @@ TEST_F(SupplicantEAPStateHandlerTest, ParameterNeeded) {
   const string kAuthenticationParameter("nudge nudge say no more");
   EXPECT_CALL(
       log_,
-      Log(logging::LOG_ERROR, _,
+      Log(logging::LOGGING_ERROR, _,
           EndsWith(string("aborted due to missing authentication parameter: ") +
                    kAuthenticationParameter)));
   EXPECT_FALSE(handler_.ParseStatus(WPASupplicant::kEAPStatusParameterNeeded,

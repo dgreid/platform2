@@ -49,7 +49,7 @@ constexpr pid_t kTestPID = -2;
 class Environment {
  public:
   Environment() {
-    logging::SetMinLogLevel(logging::LOG_FATAL);  // <- DISABLE LOGGING.
+    logging::SetMinLogLevel(logging::LOGGING_FATAL);  // <- DISABLE LOGGING.
   }
   base::AtExitManager at_exit;
 };

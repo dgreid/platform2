@@ -40,7 +40,7 @@ struct SetupOnce {
   SetupOnce() {
     brillo::InitLog(brillo::kLogToSyslog | brillo::kLogToStderrIfTty);
     // Disable logging, as suggested in fuzzing instructions.
-    logging::SetMinLogLevel(logging::LOG_FATAL);
+    logging::SetMinLogLevel(logging::LOGGING_FATAL);
   }
 
   // Protobuf Mutator will create invalid protos sometimes (with duplicate

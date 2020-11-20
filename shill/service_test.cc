@@ -961,7 +961,7 @@ TEST_F(ServiceTest, AutoConnectLogging) {
 
   ScopeLogger::GetInstance()->EnableScopesByName("-service");
   ScopeLogger::GetInstance()->set_verbose_level(0);
-  EXPECT_CALL(log, Log(logging::LOG_INFO, _,
+  EXPECT_CALL(log, Log(logging::LOGGING_INFO, _,
                        HasSubstr(Service::kAutoConnNotConnectable)));
   service_->SetConnectable(false);
   service_->AutoConnect();
@@ -1514,8 +1514,8 @@ TEST_F(ServiceTest, Certification) {
   EXPECT_TRUE(service_->remote_certification_.empty());
 
   ScopedMockLog log;
-  EXPECT_CALL(log,
-              Log(logging::LOG_WARNING, _, HasSubstr("exceeds our maximum")))
+  EXPECT_CALL(
+      log, Log(logging::LOGGING_WARNING, _, HasSubstr("exceeds our maximum")))
       .Times(2);
   string kSubject("foo");
   EXPECT_FALSE(service_->AddEAPCertification(
@@ -1525,8 +1525,8 @@ TEST_F(ServiceTest, Certification) {
   EXPECT_FALSE(service_->remote_certification_.size());
   Mock::VerifyAndClearExpectations(&log);
 
-  EXPECT_CALL(log,
-              Log(logging::LOG_INFO, _, HasSubstr("Received certification")))
+  EXPECT_CALL(
+      log, Log(logging::LOGGING_INFO, _, HasSubstr("Received certification")))
       .Times(1);
   EXPECT_TRUE(service_->AddEAPCertification(
       kSubject, Service::kEAPMaxCertificationElements - 1));
@@ -1547,8 +1547,8 @@ TEST_F(ServiceTest, Certification) {
       kSubject, Service::kEAPMaxCertificationElements - 1));
 
   // Replacing the item should generate a log message.
-  EXPECT_CALL(log,
-              Log(logging::LOG_INFO, _, HasSubstr("Received certification")))
+  EXPECT_CALL(
+      log, Log(logging::LOGGING_INFO, _, HasSubstr("Received certification")))
       .Times(1);
   EXPECT_TRUE(service_->AddEAPCertification(
       kSubject + "x", Service::kEAPMaxCertificationElements - 1));

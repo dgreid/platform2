@@ -33,7 +33,7 @@ class FakeFirewall : public Firewall {
 }  // namespace patchpanel
 
 struct Environment {
-  Environment() { logging::SetMinLogLevel(logging::LOG_FATAL); }
+  Environment() { logging::SetMinLogLevel(logging::LOGGING_FATAL); }
 };
 
 void FuzzAcceptRules(patchpanel::FakeFirewall* fake_firewall,

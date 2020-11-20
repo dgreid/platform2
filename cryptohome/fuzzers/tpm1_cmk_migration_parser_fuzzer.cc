@@ -81,7 +81,7 @@ Environment::Environment()
       migration_destination_rsa(LoadRsaPrivateKeyFromPemFile(
           base::FilePath(kStaticFilesPath)
               .AppendASCII("cryptohome_fuzzer_key_rsa_2048_2"))) {
-  logging::SetMinLogLevel(logging::LOG_FATAL);
+  logging::SetMinLogLevel(logging::LOGGING_FATAL);
 }
 
 // Returns a mutated RSA-OAEP encrypted blob of the given plaintext.

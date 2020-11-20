@@ -44,7 +44,7 @@ int main(int argc, char* argv[]) {
 
   base::AtExitManager at_exit_manager;
   base::SingleThreadTaskExecutor task_executor(base::MessagePumpType::IO);
-  logging::SetMinLogLevel(logging::LOG_WARNING);
+  logging::SetMinLogLevel(logging::LOGGING_WARNING);
 
   if (FLAGS_ambient_light_sensor + FLAGS_hover_detection +
           FLAGS_internal_backlight_ambient_light_steps +

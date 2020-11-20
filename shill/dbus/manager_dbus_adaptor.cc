@@ -313,7 +313,7 @@ bool ManagerDBusAdaptor::GetDebugLevel(brillo::ErrorPtr* /*error*/,
 bool ManagerDBusAdaptor::SetDebugLevel(brillo::ErrorPtr* /*error*/,
                                        int32_t level) {
   SLOG(this, 2) << __func__ << ": " << level;
-  if (level < logging::LOG_NUM_SEVERITIES) {
+  if (level < logging::LOGGING_NUM_SEVERITIES) {
     logging::SetMinLogLevel(level);
     // Like VLOG, SLOG uses negative verbose level.
     ScopeLogger::GetInstance()->set_verbose_level(-level);

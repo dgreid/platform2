@@ -422,7 +422,7 @@ TEST_F(EthernetTest, TryEapAuthenticationNotConnectableNotAuthenticated) {
   SetService(mock_service_);
   EXPECT_CALL(*mock_eap_service_, Is8021xConnectable()).WillOnce(Return(false));
   NiceScopedMockLog log;
-  EXPECT_CALL(log, Log(logging::LOG_INFO, _,
+  EXPECT_CALL(log, Log(logging::LOGGING_INFO, _,
                        EndsWith("EAP Service lacks 802.1X credentials; "
                                 "not doing EAP authentication.")));
   TriggerTryEapAuthentication();
@@ -435,7 +435,7 @@ TEST_F(EthernetTest, TryEapAuthenticationNotConnectableAuthenticated) {
   EXPECT_CALL(*mock_eap_service_, Is8021xConnectable()).WillOnce(Return(false));
   NiceScopedMockLog log;
   EXPECT_CALL(log, Log(_, _, _)).Times(AnyNumber());
-  EXPECT_CALL(log, Log(logging::LOG_INFO, _,
+  EXPECT_CALL(log, Log(logging::LOGGING_INFO, _,
                        EndsWith("EAP Service lost 802.1X credentials; "
                                 "terminating EAP authentication.")));
   TriggerTryEapAuthentication();
@@ -446,7 +446,7 @@ TEST_F(EthernetTest, TryEapAuthenticationEapNotDetected) {
   SetService(mock_service_);
   EXPECT_CALL(*mock_eap_service_, Is8021xConnectable()).WillOnce(Return(true));
   NiceScopedMockLog log;
-  EXPECT_CALL(log, Log(logging::LOG_WARNING, _,
+  EXPECT_CALL(log, Log(logging::LOGGING_WARNING, _,
                        EndsWith("EAP authenticator not detected; "
                                 "not doing EAP authentication.")));
   TriggerTryEapAuthentication();

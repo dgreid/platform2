@@ -29,7 +29,7 @@
 class Environment {
  public:
   Environment() {
-    logging::SetMinLogLevel(logging::LOG_FATAL);  // Disable logging.
+    logging::SetMinLogLevel(logging::LOGGING_FATAL);  // Disable logging.
   }
 };
 

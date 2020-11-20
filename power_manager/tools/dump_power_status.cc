@@ -46,7 +46,7 @@ int main(int argc, char** argv) {
       "are replaced with spaces.");
   base::AtExitManager at_exit_manager;
   base::SingleThreadTaskExecutor task_executor(base::MessagePumpType::IO);
-  logging::SetMinLogLevel(logging::LOG_WARNING);
+  logging::SetMinLogLevel(logging::LOGGING_WARNING);
 
   power_manager::Prefs prefs;
   CHECK(prefs.Init(power_manager::Prefs::GetDefaultStore(),

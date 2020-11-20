@@ -83,7 +83,7 @@ TEST_F(ArpPacketTest, GettersAndSetters) {
 
 TEST_F(ArpPacketTest, ParseTinyPacket) {
   ScopedMockLog log;
-  EXPECT_CALL(log, Log(logging::LOG_ERROR, _,
+  EXPECT_CALL(log, Log(logging::LOGGING_ERROR, _,
                        HasSubstr("too short to contain ARP header.")))
       .Times(1);
 
@@ -94,7 +94,7 @@ TEST_F(ArpPacketTest, ParseTinyPacket) {
 
 TEST_F(ArpPacketTest, ParseBadHRDType) {
   ScopedMockLog log;
-  EXPECT_CALL(log, Log(logging::LOG_ERROR, _,
+  EXPECT_CALL(log, Log(logging::LOGGING_ERROR, _,
                        HasSubstr("Packet is of unknown ARPHRD type 257")))
       .Times(1);
 
@@ -105,7 +105,7 @@ TEST_F(ArpPacketTest, ParseBadHRDType) {
 
 TEST_F(ArpPacketTest, ParseBadProtocol) {
   ScopedMockLog log;
-  EXPECT_CALL(log, Log(logging::LOG_ERROR, _,
+  EXPECT_CALL(log, Log(logging::LOGGING_ERROR, _,
                        HasSubstr("Packet has unknown protocol 2049")))
       .Times(1);
 
@@ -117,7 +117,7 @@ TEST_F(ArpPacketTest, ParseBadProtocol) {
 TEST_F(ArpPacketTest, ParseBadHardwareLength) {
   ScopedMockLog log;
   EXPECT_CALL(log,
-              Log(logging::LOG_ERROR, _,
+              Log(logging::LOGGING_ERROR, _,
                   HasSubstr("Packet has unexpected hardware address length")))
       .Times(1);
 
@@ -129,7 +129,7 @@ TEST_F(ArpPacketTest, ParseBadHardwareLength) {
 TEST_F(ArpPacketTest, ParseBadProtocolLength) {
   ScopedMockLog log;
   EXPECT_CALL(log,
-              Log(logging::LOG_ERROR, _,
+              Log(logging::LOGGING_ERROR, _,
                   HasSubstr("Packet has unexpected protocol address length")))
       .Times(1);
 
@@ -142,7 +142,7 @@ TEST_F(ArpPacketTest, ParseBadOpCode) {
   ScopedMockLog log;
   EXPECT_CALL(
       log,
-      Log(logging::LOG_ERROR, _,
+      Log(logging::LOGGING_ERROR, _,
           HasSubstr("Packet is not an ARP reply or request but of type 258")))
       .Times(1);
 
@@ -153,7 +153,7 @@ TEST_F(ArpPacketTest, ParseBadOpCode) {
 
 TEST_F(ArpPacketTest, ParseShortPacket) {
   ScopedMockLog log;
-  EXPECT_CALL(log, Log(logging::LOG_ERROR, _,
+  EXPECT_CALL(log, Log(logging::LOGGING_ERROR, _,
                        HasSubstr("is too small to contain entire ARP payload")))
       .Times(1);
 
@@ -214,7 +214,7 @@ TEST_F(ArpPacketTest, ParseRequest) {
 
 TEST_F(ArpPacketTest, FormatRequestInvalidAddress) {
   ScopedMockLog log;
-  EXPECT_CALL(log, Log(logging::LOG_ERROR, _,
+  EXPECT_CALL(log, Log(logging::LOGGING_ERROR, _,
                        HasSubstr("Local or remote IP address is not valid")))
       .Times(3);
 
@@ -229,7 +229,7 @@ TEST_F(ArpPacketTest, FormatRequestInvalidAddress) {
 
 TEST_F(ArpPacketTest, FormatRequestMismatchedAddresses) {
   ScopedMockLog log;
-  EXPECT_CALL(log, Log(logging::LOG_ERROR, _,
+  EXPECT_CALL(log, Log(logging::LOGGING_ERROR, _,
                        HasSubstr("IP address families do not match")))
       .Times(1);
 
@@ -241,7 +241,7 @@ TEST_F(ArpPacketTest, FormatRequestMismatchedAddresses) {
 
 TEST_F(ArpPacketTest, FormatRequestBadMacAddressLength) {
   ScopedMockLog log;
-  EXPECT_CALL(log, Log(logging::LOG_ERROR, _,
+  EXPECT_CALL(log, Log(logging::LOGGING_ERROR, _,
                        HasSubstr("MAC address length is incorrect")))
       .Times(3);
 

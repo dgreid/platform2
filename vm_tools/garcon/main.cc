@@ -64,16 +64,16 @@ bool LogToSyslog(logging::LogSeverity severity,
                  size_t message_start,
                  const std::string& message) {
   switch (severity) {
-    case logging::LOG_INFO:
+    case logging::LOGGING_INFO:
       severity = kSyslogInfo;
       break;
-    case logging::LOG_WARNING:
+    case logging::LOGGING_WARNING:
       severity = kSyslogWarning;
       break;
-    case logging::LOG_ERROR:
+    case logging::LOGGING_ERROR:
       severity = kSyslogError;
       break;
-    case logging::LOG_FATAL:
+    case logging::LOGGING_FATAL:
       severity = kSyslogCritical;
       break;
     default:

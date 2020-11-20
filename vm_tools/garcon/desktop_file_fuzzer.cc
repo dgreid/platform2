@@ -17,7 +17,7 @@ class Environment {
  public:
   Environment() {
     // Disable logging.
-    logging::SetMinLogLevel(logging::LOG_FATAL);
+    logging::SetMinLogLevel(logging::LOGGING_FATAL);
     // Setup temp dir for writing out the desktop file to parse.
     CHECK(temp_dir_.CreateUniqueTempDir());
   }

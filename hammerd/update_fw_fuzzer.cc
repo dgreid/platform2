@@ -13,7 +13,7 @@ namespace hammerd {
 
 class Environment {
  public:
-  Environment() { logging::SetMinLogLevel(logging::LOG_FATAL); }
+  Environment() { logging::SetMinLogLevel(logging::LOGGING_FATAL); }
 };
 
 class FuzzedUsbEndpoint : public UsbEndpointInterface {

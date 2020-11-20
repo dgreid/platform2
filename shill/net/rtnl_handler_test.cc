@@ -343,15 +343,18 @@ TEST_F(RTNLHandlerTest, MaskedError) {
   ScopedMockLog log;
 
   // This error will be not be masked since this sequence number has no mask.
-  EXPECT_CALL(log, Log(logging::LOG_ERROR, _, HasSubstr("error 1"))).Times(1);
+  EXPECT_CALL(log, Log(logging::LOGGING_ERROR, _, HasSubstr("error 1")))
+      .Times(1);
   ReturnError(kSequenceNumber - 1, 1);
 
   // This error will be masked.
-  EXPECT_CALL(log, Log(logging::LOG_ERROR, _, HasSubstr("error 2"))).Times(0);
+  EXPECT_CALL(log, Log(logging::LOGGING_ERROR, _, HasSubstr("error 2")))
+      .Times(0);
   ReturnError(kSequenceNumber, 2);
 
   // This second error will be not be masked since the error mask was removed.
-  EXPECT_CALL(log, Log(logging::LOG_ERROR, _, HasSubstr("error 3"))).Times(1);
+  EXPECT_CALL(log, Log(logging::LOGGING_ERROR, _, HasSubstr("error 3")))
+      .Times(1);
   ReturnError(kSequenceNumber, 3);
 
   StopRTNLHandler();

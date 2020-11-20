@@ -30,16 +30,16 @@ logging::LogSeverity GetLogSeverity(int priority) {
     case 1:  // ALERT
     case 2:  // CRIT
     case 3:  // ERROR
-      return logging::LOG_FATAL;
+      return logging::LOGGING_FATAL;
     case 4:  // WARNING
-      return logging::LOG_ERROR;
+      return logging::LOGGING_ERROR;
     case 5:  // NOTICE
-      return logging::LOG_WARNING;
+      return logging::LOGGING_WARNING;
     case 6:  // INFO
-      return logging::LOG_INFO;
+      return logging::LOGGING_INFO;
     case 7:  // DEBUG
     default:
-      return logging::LOG_VERBOSE;
+      return logging::LOGGING_VERBOSE;
   }
 }
 

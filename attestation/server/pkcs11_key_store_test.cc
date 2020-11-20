@@ -128,7 +128,7 @@ class ScopedDisableVerboseLogging {
  public:
   ScopedDisableVerboseLogging()
       : original_severity_(logging::GetMinLogLevel()) {
-    logging::SetMinLogLevel(logging::LOG_INFO);
+    logging::SetMinLogLevel(logging::LOGGING_INFO);
   }
   ~ScopedDisableVerboseLogging() {
     logging::SetMinLogLevel(original_severity_);

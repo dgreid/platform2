@@ -34,15 +34,15 @@
 //
 //   TEST_F(MockLogTest, MockLogSeverityAndFileAndMessage) {
 //     ScopedMockLog log;
-//     EXPECT_CALL(log, Log(logging::LOG_INFO, "your_file.cc", "your message"));
-//     DoSomething();
+//     EXPECT_CALL(log, Log(logging::LOGGING_INFO, "your_file.cc", "your
+//     message")); DoSomething();
 //   }
 //
 // You can also use gMock matchers for matching arguments to Log():
 //
 //   TEST_F(MockLogTest, MatchWithGmockMatchers) {
 //     ScopedMockLog log;
-//     EXPECT_CALL(log, Log(::testing::Lt(::logging::LOG_ERROR),
+//     EXPECT_CALL(log, Log(::testing::Lt(::logging::LOGGING_ERROR),
 //                          ::testing::EndsWith(".cc"),
 //                          ::testing::StartsWith("Some")));
 //     DoSomething();

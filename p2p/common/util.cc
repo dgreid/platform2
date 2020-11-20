@@ -30,15 +30,15 @@ static bool SyslogFunc(int severity,
                        int line,
                        size_t message_start,
                        const string& str) {
-  int base_severity_to_syslog_priority[logging::LOG_NUM_SEVERITIES] = {
-      LOG_INFO,     // logging::LOG_INFO
-      LOG_WARNING,  // logging::LOG_WARNING
-      LOG_ERR,      // logging::LOG_ERROR
-      LOG_ALERT,    // logging::LOG_FATAL
+  int base_severity_to_syslog_priority[logging::LOGGING_NUM_SEVERITIES] = {
+      LOG_INFO,     // logging::LOGGING_INFO
+      LOG_WARNING,  // logging::LOGGING_WARNING
+      LOG_ERR,      // logging::LOGGING_ERROR
+      LOG_ALERT,    // logging::LOGGING_FATAL
   };
 
   int priority = LOG_NOTICE;
-  if (severity >= 0 && severity < logging::LOG_NUM_SEVERITIES)
+  if (severity >= 0 && severity < logging::LOGGING_NUM_SEVERITIES)
     priority = base_severity_to_syslog_priority[severity];
 
   // The logging infrastructure includes a terminating newline at the

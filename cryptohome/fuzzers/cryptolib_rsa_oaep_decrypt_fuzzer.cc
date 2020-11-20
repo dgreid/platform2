@@ -59,7 +59,7 @@ ScopedRSA LoadRsaPrivateKeyFromPemFile(const base::FilePath& pem_file_path) {
 }
 
 Environment::Environment() {
-  logging::SetMinLogLevel(logging::LOG_FATAL);
+  logging::SetMinLogLevel(logging::LOGGING_FATAL);
 
   int key_index = 0;
   for (int key_size : {512, 1024, 2048, 4096}) {

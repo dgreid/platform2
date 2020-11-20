@@ -138,7 +138,7 @@ bool RemoveRule(FakePortTracker& port_tracker, const FuzzRequest& request) {
 }  // namespace permission_broker
 
 struct Environment {
-  Environment() { logging::SetMinLogLevel(logging::LOG_FATAL); }
+  Environment() { logging::SetMinLogLevel(logging::LOGGING_FATAL); }
 };
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {

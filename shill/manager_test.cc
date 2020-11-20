@@ -2594,7 +2594,7 @@ TEST_F(ManagerTest, UpdateServiceLogging) {
   {
     EXPECT_CALL(*mock_service, state())
         .WillRepeatedly(Return(Service::kStateIdle));
-    EXPECT_CALL(log, Log(logging::LOG_INFO, _, HasSubstr("not online")));
+    EXPECT_CALL(log, Log(logging::LOGGING_INFO, _, HasSubstr("not online")));
     manager()->RegisterService(mock_service);
     CompleteServiceSort();
     manager()->UpdateService(mock_service);
@@ -2605,7 +2605,7 @@ TEST_F(ManagerTest, UpdateServiceLogging) {
   {
     EXPECT_CALL(*mock_service, state())
         .WillRepeatedly(Return(Service::kStateAssociating));
-    EXPECT_CALL(log, Log(logging::LOG_INFO, _, HasSubstr(updated_message)))
+    EXPECT_CALL(log, Log(logging::LOGGING_INFO, _, HasSubstr(updated_message)))
         .Times(1);
     manager()->UpdateService(mock_service.get());
     CompleteServiceSort();
@@ -2614,7 +2614,7 @@ TEST_F(ManagerTest, UpdateServiceLogging) {
   // A service in a non-idle state should not create a log message if its
   // state did not change.
   {
-    EXPECT_CALL(log, Log(logging::LOG_INFO, _, HasSubstr(updated_message)))
+    EXPECT_CALL(log, Log(logging::LOGGING_INFO, _, HasSubstr(updated_message)))
         .Times(0);
     manager()->UpdateService(mock_service);
     CompleteServiceSort();
@@ -2625,7 +2625,7 @@ TEST_F(ManagerTest, UpdateServiceLogging) {
   {
     EXPECT_CALL(*mock_service, state())
         .WillRepeatedly(Return(Service::kStateConnected));
-    EXPECT_CALL(log, Log(logging::LOG_INFO, _, HasSubstr(updated_message)))
+    EXPECT_CALL(log, Log(logging::LOGGING_INFO, _, HasSubstr(updated_message)))
         .Times(1);
     manager()->UpdateService(mock_service.get());
     CompleteServiceSort();
@@ -2636,7 +2636,7 @@ TEST_F(ManagerTest, UpdateServiceLogging) {
   {
     EXPECT_CALL(*mock_service, state())
         .WillRepeatedly(Return(Service::kStateIdle));
-    EXPECT_CALL(log, Log(logging::LOG_INFO, _, HasSubstr(updated_message)))
+    EXPECT_CALL(log, Log(logging::LOGGING_INFO, _, HasSubstr(updated_message)))
         .Times(1);
     manager()->UpdateService(mock_service.get());
     CompleteServiceSort();
@@ -3706,7 +3706,7 @@ TEST_F(ManagerTest, ProfileStackChangeLogging) {
 
   ScopedMockLog log;
   EXPECT_CALL(log, Log(_, _, _)).Times(AnyNumber());
-  EXPECT_CALL(log, Log(logging::LOG_INFO, _, HasSubstr("1 profile(s)")));
+  EXPECT_CALL(log, Log(logging::LOGGING_INFO, _, HasSubstr("1 profile(s)")));
   manager->InitializeProfiles();
 
   const char kProfile0[] = "~user/profile0";
@@ -3717,22 +3717,22 @@ TEST_F(ManagerTest, ProfileStackChangeLogging) {
   TestCreateProfile(manager.get(), kProfile1);
   TestCreateProfile(manager.get(), kProfile2);
 
-  EXPECT_CALL(log, Log(logging::LOG_INFO, _, HasSubstr("2 profile(s)")));
+  EXPECT_CALL(log, Log(logging::LOGGING_INFO, _, HasSubstr("2 profile(s)")));
   TestPushProfile(manager.get(), kProfile0);
 
-  EXPECT_CALL(log, Log(logging::LOG_INFO, _, HasSubstr("3 profile(s)")));
+  EXPECT_CALL(log, Log(logging::LOGGING_INFO, _, HasSubstr("3 profile(s)")));
   TestInsertUserProfile(manager.get(), kProfile1, "not-so-random-string");
 
-  EXPECT_CALL(log, Log(logging::LOG_INFO, _, HasSubstr("4 profile(s)")));
+  EXPECT_CALL(log, Log(logging::LOGGING_INFO, _, HasSubstr("4 profile(s)")));
   TestInsertUserProfile(manager.get(), kProfile2, "very-random-string");
 
-  EXPECT_CALL(log, Log(logging::LOG_INFO, _, HasSubstr("3 profile(s)")));
+  EXPECT_CALL(log, Log(logging::LOGGING_INFO, _, HasSubstr("3 profile(s)")));
   TestPopProfile(manager.get(), kProfile2);
 
-  EXPECT_CALL(log, Log(logging::LOG_INFO, _, HasSubstr("2 profile(s)")));
+  EXPECT_CALL(log, Log(logging::LOGGING_INFO, _, HasSubstr("2 profile(s)")));
   TestPopAnyProfile(manager.get());
 
-  EXPECT_CALL(log, Log(logging::LOG_INFO, _, HasSubstr("1 profile(s)")));
+  EXPECT_CALL(log, Log(logging::LOGGING_INFO, _, HasSubstr("1 profile(s)")));
   TestPopAllUserProfiles(manager.get());
 }
 

@@ -15,7 +15,7 @@ int main(int argc, char** argv) {
   logging::LoggingSettings settings;
   settings.logging_dest = logging::LOG_TO_SYSTEM_DEBUG_LOG;
   logging::InitLogging(settings);
-  logging::SetMinLogLevel(logging::LOG_WARNING);
+  logging::SetMinLogLevel(logging::LOGGING_WARNING);
   base::AtExitManager at_exit_manager;
   TestTimeouts::Initialize();
   // TODO(crbug/1094927): Use SingleThreadkTaskEnvironment.
