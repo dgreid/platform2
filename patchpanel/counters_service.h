@@ -101,6 +101,8 @@ class CountersService {
   base::WeakPtrFactory<CountersService> weak_factory_{this};
 };
 
+TrafficCounter::Source TrafficSourceToProto(TrafficSource source);
+
 }  // namespace patchpanel
 
 #endif  // PATCHPANEL_COUNTERS_SERVICE_H_

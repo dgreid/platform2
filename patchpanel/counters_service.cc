@@ -33,9 +33,9 @@ constexpr LazyRE2 kChainLine = {R"(Chain (rx|tx)_(\w+).*)"};
 
 // The counter line looks like (some spaces are deleted to make it fit in one
 // line):
-//   "    6511 68041668    all  --  any    any     anywhere   anywhere"
+//   "    5374 876172 all -- any any anywhere anywhere mark match 0x2000/0x3f00"
 // The first two counters are captured for pkts and bytes.
-constexpr LazyRE2 kCounterLine = {R"( *(\d+) +(\d+).*)"};
+constexpr LazyRE2 kCounterLine = {R"( *(\d+) +(\d+).*mark match (.*)/0x3f00)"};
 
 // Parses the output of `iptables -L -x -v` (or `ip6tables`) and adds the parsed
 // values into the corresponding counters in |counters|. An example of |output|
@@ -78,25 +78,28 @@ bool ParseOutput(const std::string& output,
     }
     it += 2;
 
-    // The current line should be the accounting rule containing the counters.
-    // Currently we only have one accounting rule (UNKNOWN source) for each
-    // chain.
-    // TODO(jiejiang): The following part will be extended to a loop when we
-    // have more accounting rules.
-    uint64_t pkts, bytes;
-    if (!RE2::FullMatch(*it, *kCounterLine, &pkts, &bytes)) {
-      LOG(ERROR) << "Cannot parse \"" << *it << "\"";
-      return false;
-    }
+    // The next block of lines are the counters lines for individual sources.
+    for (; it != lines.cend() && !it->empty(); it++) {
+      uint64_t pkts, bytes;
+      Fwmark mark;
+      if (!RE2::FullMatch(*it, *kCounterLine, &pkts, &bytes,
+                          RE2::Hex(&mark.fwmark))) {
+        LOG(ERROR) << "Cannot parse counter line \"" << *it << "\"";
+        return false;
+      }
 
-    TrafficCounter::Source source = TrafficCounter::UNKNOWN;
-    auto& counter = (*counters)[std::make_pair(source, ifname)];
-    if (direction == "rx") {
-      counter.rx_packets += pkts;
-      counter.rx_bytes += bytes;
-    } else {
-      counter.tx_packets += pkts;
-      counter.tx_bytes += bytes;
+      if (pkts == 0 && bytes == 0)
+        continue;
+
+      TrafficCounter::Source source = TrafficSourceToProto(mark.Source());
+      auto& counter = (*counters)[std::make_pair(source, ifname)];
+      if (direction == "rx") {
+        counter.rx_packets += pkts;
+        counter.rx_bytes += bytes;
+      } else {
+        counter.tx_packets += pkts;
+        counter.tx_bytes += bytes;
+      }
     }
   }
   return true;
@@ -219,6 +222,34 @@ void CountersService::SetupChainsAndRules(const std::string& ifname) {
   }
   // TODO(b/160112868): add default rules for counting any traffic left as
   // UNKNOWN.
+}
+
+TrafficCounter::Source TrafficSourceToProto(TrafficSource source) {
+  switch (source) {
+    case CHROME:
+      return TrafficCounter::CHROME;
+    case USER:
+      return TrafficCounter::USER;
+    case UPDATE_ENGINE:
+      return TrafficCounter::UPDATE_ENGINE;
+    case SYSTEM:
+      return TrafficCounter::SYSTEM;
+    case HOST_VPN:
+      return TrafficCounter::VPN;
+    case ARC:
+      return TrafficCounter::ARC;
+    case CROSVM:
+      return TrafficCounter::CROSVM;
+    case PLUGINVM:
+      return TrafficCounter::PLUGINVM;
+    case TETHER_DOWNSTREAM:
+      return TrafficCounter::SYSTEM;
+    case ARC_VPN:
+      return TrafficCounter::VPN;
+    case UNKNOWN:
+    default:
+      return TrafficCounter::UNKNOWN;
+  }
 }
 
 }  // namespace patchpanel

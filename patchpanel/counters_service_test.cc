@@ -80,28 +80,56 @@ Chain POSTROUTING (policy ACCEPT 22811 packets, 136518827 bytes)
 
 Chain tx_eth0 (1 references)
     pkts      bytes target     prot opt in     out     source               destination
-  208671 1875591959            all  --  any    any     anywhere             anywhere
+    1366   244427 RETURN     all  --  any    any     anywhere             anywhere             mark match 0x100/0x3f00
+       0        0 RETURN     all  --  any    any     anywhere             anywhere             mark match 0x200/0x3f00
+      20     1670 RETURN     all  --  any    any     anywhere             anywhere             mark match 0x300/0x3f00
+     550   138402 RETURN     all  --  any    any     anywhere             anywhere             mark match 0x400/0x3f00
+       0        0 RETURN     all  --  any    any     anywhere             anywhere             mark match 0x500/0x3f00
+    5374   876172 RETURN     all  --  any    any     anywhere             anywhere             mark match 0x2000/0x3f00
+      39     2690 RETURN     all  --  any    any     anywhere             anywhere             mark match 0x2100/0x3f00
+       0        0 RETURN     all  --  any    any     anywhere             anywhere             mark match 0x2200/0x3f00
+       0        0 RETURN     all  --  any    any     anywhere             anywhere             mark match 0x2300/0x3f00
+       0        0 RETURN     all  --  any    any     anywhere             anywhere             mark match 0x2400/0x3f00
 
 Chain tx_wlan0 (1 references)
     pkts      bytes target     prot opt in     out     source               destination
-       2       96            all  --  any    any     anywhere             anywhere
+     310    57004 RETURN     all  --  any    any     anywhere             anywhere             mark match 0x100/0x3f00
+       0        0 RETURN     all  --  any    any     anywhere             anywhere             mark match 0x200/0x3f00
+       0        0 RETURN     all  --  any    any     anywhere             anywhere             mark match 0x300/0x3f00
+      24     2801 RETURN     all  --  any    any     anywhere             anywhere             mark match 0x400/0x3f00
+       0        0 RETURN     all  --  any    any     anywhere             anywhere             mark match 0x500/0x3f00
+       0        0 RETURN     all  --  any    any     anywhere             anywhere             mark match 0x2000/0x3f00
+       0        0 RETURN     all  --  any    any     anywhere             anywhere             mark match 0x2100/0x3f00
+       0        0 RETURN     all  --  any    any     anywhere             anywhere             mark match 0x2200/0x3f00
+       0        0 RETURN     all  --  any    any     anywhere             anywhere             mark match 0x2300/0x3f00
+       0        0 RETURN     all  --  any    any     anywhere             anywhere             mark match 0x2400/0x3f00
 
 Chain rx_eth0 (2 references)
-    pkts      bytes target     prot opt in     out     source               destination
-  324174 1832718304            all  --  any    any     anywhere             anywhere
+ pkts bytes target     prot opt in     out     source               destination
+   73 11938 RETURN     all  --  any    any     anywhere             anywhere             mark match 0x100/0x3f00
+    0     0 RETURN     all  --  any    any     anywhere             anywhere             mark match 0x200/0x3f00
+    0     0 RETURN     all  --  any    any     anywhere             anywhere             mark match 0x300/0x3f00
+    5   694 RETURN     all  --  any    any     anywhere             anywhere             mark match 0x400/0x3f00
+    0     0 RETURN     all  --  any    any     anywhere             anywhere             mark match 0x500/0x3f00
+    0     0 RETURN     all  --  any    any     anywhere             anywhere             mark match 0x2000/0x3f00
+    0     0 RETURN     all  --  any    any     anywhere             anywhere             mark match 0x2100/0x3f00
+    0     0 RETURN     all  --  any    any     anywhere             anywhere             mark match 0x2200/0x3f00
+    0     0 RETURN     all  --  any    any     anywhere             anywhere             mark match 0x2300/0x3f00
+    0     0 RETURN     all  --  any    any     anywhere             anywhere             mark match 0x2400/0x3f00
 
 Chain rx_wlan0 (2 references)
     pkts      bytes target     prot opt in     out     source               destination
-       0        0            all  --  any    any     anywhere             anywhere
+     153    28098 RETURN     all  --  any    any     anywhere             anywhere             mark match 0x100/0x3f00
+       0        0 RETURN     all  --  any    any     anywhere             anywhere             mark match 0x200/0x3f00
+       0        0 RETURN     all  --  any    any     anywhere             anywhere             mark match 0x300/0x3f00
+       6      840 RETURN     all  --  any    any     anywhere             anywhere             mark match 0x400/0x3f00
+       0        0 RETURN     all  --  any    any     anywhere             anywhere             mark match 0x500/0x3f00
+       0        0 RETURN     all  --  any    any     anywhere             anywhere             mark match 0x2000/0x3f00
+       0        0 RETURN     all  --  any    any     anywhere             anywhere             mark match 0x2100/0x3f00
+       0        0 RETURN     all  --  any    any     anywhere             anywhere             mark match 0x2200/0x3f00
+       0        0 RETURN     all  --  any    any     anywhere             anywhere             mark match 0x2300/0x3f00
+       0        0 RETURN     all  --  any    any     anywhere             anywhere             mark match 0x2400/0x3f00
 )";
-
-// The expected counters for the above output. "* 2" because the same string
-// will be returned for both iptables and ip6tables in the tests.
-const Counter kCounter_eth0{(65571148 + 1767147156ULL) * 2 /*rx_bytes*/,
-                            (11683 + 312491) * 2 /*rx_packets*/,
-                            (68041668 + 1807550291ULL) * 2 /*tx_bytes*/,
-                            (6511 + 202160) * 2 /*tx_packets*/};
-const Counter kCounter_wlan0{0, 0, 96 * 2, 2 * 2};
 
 class MockProcessRunner : public MinijailedProcessRunner {
  public:
@@ -275,10 +303,31 @@ TEST_F(CountersServiceTest, QueryTrafficCounters) {
 
   auto actual = counters_svc_->GetCounters({});
 
+  // The expected counters for eth0 and wlan0. All values are doubled because
+  // the same output will be returned for both iptables and ip6tables in the
+  // tests.
   std::map<SourceDevice, Counter> expected{
-      {{TrafficCounter::UNKNOWN, "eth0"}, kCounter_eth0},
-      {{TrafficCounter::UNKNOWN, "wlan0"}, kCounter_wlan0},
-  };
+      {{TrafficCounter::CHROME, "eth0"},
+       {23876 /*rx_bytes*/, 146 /*rx_packets*/, 488854 /*tx_bytes*/,
+        2732 /*tx_packets*/}},
+      {{TrafficCounter::UPDATE_ENGINE, "eth0"},
+       {0 /*rx_bytes*/, 0 /*rx_packets*/, 3340 /*tx_bytes*/,
+        40 /*tx_packets*/}},
+      {{TrafficCounter::SYSTEM, "eth0"},
+       {1388 /*rx_bytes*/, 10 /*rx_packets*/, 276804 /*tx_bytes*/,
+        1100 /*tx_packets*/}},
+      {{TrafficCounter::ARC, "eth0"},
+       {0 /*rx_bytes*/, 0 /*rx_packets*/, 1752344 /*tx_bytes*/,
+        10748 /*tx_packets*/}},
+      {{TrafficCounter::CROSVM, "eth0"},
+       {0 /*rx_bytes*/, 0 /*rx_packets*/, 5380 /*tx_bytes*/,
+        78 /*tx_packets*/}},
+      {{TrafficCounter::CHROME, "wlan0"},
+       {56196 /*rx_bytes*/, 306 /*rx_packets*/, 114008 /*tx_bytes*/,
+        620 /*tx_packets*/}},
+      {{TrafficCounter::SYSTEM, "wlan0"},
+       {1680 /*rx_bytes*/, 12 /*rx_packets*/, 5602 /*tx_bytes*/,
+        48 /*tx_packets*/}}};
 
   EXPECT_THAT(actual, ContainerEq(expected));
 }
@@ -292,8 +341,25 @@ TEST_F(CountersServiceTest, QueryTrafficCountersWithFilter) {
   // Only counters for eth0 should be returned. eth1 should be ignored.
   auto actual = counters_svc_->GetCounters({"eth0", "eth1"});
 
+  // The expected counters for eth0. All values are doubled because
+  // the same output will be returned for both iptables and ip6tables in the
+  // tests.
   std::map<SourceDevice, Counter> expected{
-      {{TrafficCounter::UNKNOWN, "eth0"}, kCounter_eth0},
+      {{TrafficCounter::CHROME, "eth0"},
+       {23876 /*rx_bytes*/, 146 /*rx_packets*/, 488854 /*tx_bytes*/,
+        2732 /*tx_packets*/}},
+      {{TrafficCounter::UPDATE_ENGINE, "eth0"},
+       {0 /*rx_bytes*/, 0 /*rx_packets*/, 3340 /*tx_bytes*/,
+        40 /*tx_packets*/}},
+      {{TrafficCounter::SYSTEM, "eth0"},
+       {1388 /*rx_bytes*/, 10 /*rx_packets*/, 276804 /*tx_bytes*/,
+        1100 /*tx_packets*/}},
+      {{TrafficCounter::ARC, "eth0"},
+       {0 /*rx_bytes*/, 0 /*rx_packets*/, 1752344 /*tx_bytes*/,
+        10748 /*tx_packets*/}},
+      {{TrafficCounter::CROSVM, "eth0"},
+       {0 /*rx_bytes*/, 0 /*rx_packets*/, 5380 /*tx_bytes*/,
+        78 /*tx_packets*/}},
   };
 
   EXPECT_THAT(actual, ContainerEq(expected));
@@ -311,20 +377,20 @@ TEST_F(CountersServiceTest, QueryTrafficCountersWithEmptyIPv6Output) {
 
 TEST_F(CountersServiceTest, QueryTrafficCountersWithOnlyChainName) {
   const std::string kBadOutput = R"(
-Chain tx_fwd_eth0 (1 references)
+Chain tx_eth0 (1 references)
     pkts      bytes target     prot opt in     out     source               destination
-    6511 68041668            all  --  any    any     anywhere             anywhere
+    6511 68041668 RETURN    all  --  any    any     anywhere             anywhere
 
-Chain tx_fwd_wlan0 (1 references)
+Chain tx_wlan0 (1 references)
 )";
   TestBadIptablesOutput(kBadOutput);
 }
 
 TEST_F(CountersServiceTest, QueryTrafficCountersWithOnlyChainNameAndHeader) {
   const std::string kBadOutput = R"(
-Chain tx_fwd_eth0 (1 references)
+Chain tx_eth0 (1 references)
     pkts      bytes target     prot opt in     out     source               destination
-    6511 68041668            all  --  any    any     anywhere             anywhere
+    6511 68041668 RETURN    all  --  any    any     anywhere             anywhere
 
 Chain tx_fwd_wlan0 (1 references)
     pkts      bytes target     prot opt in     out     source               destination
@@ -334,11 +400,11 @@ Chain tx_fwd_wlan0 (1 references)
 
 TEST_F(CountersServiceTest, QueryTrafficCountersWithNotFinishedCountersLine) {
   const std::string kBadOutput = R"(
-Chain tx_fwd_eth0 (1 references)
+Chain tx_eth0 (1 references)
     pkts      bytes target     prot opt in     out     source               destination
-    6511 68041668            all  --  any    any     anywhere             anywhere
+    6511 68041668 RETURN    all  --  any    any     anywhere             anywhere
 
-Chain tx_fwd_wlan0 (1 references)
+Chain tx_wlan0 (1 references)
     pkts      bytes target     prot opt in     out     source               destination    pkts      bytes target     prot opt in     out     source               destination
        0     )";
   TestBadIptablesOutput(kBadOutput);
