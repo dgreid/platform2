@@ -34,6 +34,7 @@ pkg_config("target_defaults_deps") {
 config("target_defaults") {
   defines = [ "USE_CFM_ENABLED_DEVICE=${use.cfm_enabled_device}" ]
   configs = [ ":target_defaults_deps" ]
+  libs = [ "system_api" ]
 }
 
 generate_dbus_adaptors("permission_broker_adaptors") {

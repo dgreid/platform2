@@ -54,10 +54,8 @@ static_library("libpatchpanel-client_test") {
 
 shared_library("libpatchpanel-client") {
   configs += [ ":target_defaults" ]
-  all_dependent_pkg_deps = [
-    "protobuf",
-    "system_api",
-  ]
+  all_dependent_pkg_deps = [ "protobuf" ]
+  libs = [ "system_api" ]
   sources = libpatchpanel_client_sources
 }
 

@@ -6,6 +6,7 @@ import("//common-mk/proto_library.gni")
 
 group("all") {
   deps = [
+    ":libsystem_api",
     ":system_api-anomaly_detector-protos",
     ":system_api-attestation-goprotos",
     ":system_api-attestation-protos",
@@ -52,6 +53,20 @@ group("all") {
     ":system_api-vm_plugin_dispatcher-goprotos",
     ":system_api-vm_plugin_dispatcher-protos",
   ]
+}
+
+shared_library("libsystem_api") {
+  deps = [
+    ":system_api-attestation-protos",
+    ":system_api-chaps-protos",
+    ":system_api-patchpanel-protos",
+    ":system_api-tpm_manager-protos",
+  ]
+  if (use.fuzzer) {
+    pkg_deps = [ "protobuf" ]
+  } else {
+    pkg_deps = [ "protobuf-lite" ]
+  }
 }
 
 proto_library("system_api-protos") {

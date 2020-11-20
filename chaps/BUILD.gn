@@ -97,6 +97,7 @@ static_library("libchaps_static") {
 }
 
 shared_library("libchaps") {
+  defines = [ "USE_TPM2=${use.tpm2}" ]
   sources = [
     "attributes.cc",
     "chaps.cc",
@@ -108,8 +109,18 @@ shared_library("libchaps") {
     "proto_conversion.cc",
     "token_manager_client.cc",
   ]
-  configs += [ ":target_defaults" ]
   deps = [ ":chaps-protos" ]
+  libs = [ "system_api" ]
+  pkg_deps = [
+    "libbrillo",
+    "libchrome",
+    "openssl",
+  ]
+  if (use.fuzzer) {
+    pkg_deps += [ "protobuf" ]
+  } else {
+    pkg_deps += [ "protobuf-lite" ]
+  }
 }
 
 pkg_config("chapsd_config") {

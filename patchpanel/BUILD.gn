@@ -91,7 +91,24 @@ libpatchpanel_sources = [
 
 shared_library("libpatchpanel-util") {
   sources = util_sources
-  configs += [ ":target_defaults" ]
+  pkg_deps = [
+    "libbrillo",
+    "libchrome",
+    "libshill-client",
+    "libshill-net",
+    "protobuf-lite",
+    "re2",
+  ]
+  libs = [ "system_api" ]
+  if (use.fuzzer) {
+    pkg_deps += [ "protobuf" ]
+  } else {
+    pkg_deps += [ "protobuf-lite" ]
+  }
+  defines = [
+    "USE_ARCVM=${use.arcvm}",
+    "USE_JETSTREAM_ROUTING=${use.jetstream_routing}",
+  ]
 }
 
 static_library("libpatchpanel_test") {

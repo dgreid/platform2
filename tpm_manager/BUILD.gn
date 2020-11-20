@@ -75,6 +75,7 @@ shared_library("libtpm_manager") {
     "client/tpm_nvram_dbus_proxy.cc",
     "client/tpm_ownership_dbus_proxy.cc",
   ]
+  libs = [ "system_api" ]
   deps = [ ":proto_library" ]
 }
 

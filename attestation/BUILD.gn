@@ -147,6 +147,7 @@ shared_library("libattestation") {
     "//common-mk:visibility_default",
     ":target_defaults",
   ]
+  libs = [ "system_api" ]
   deps = [
     ":client_library",
     ":proto_library",
