@@ -26,12 +26,14 @@ class CameraAlgorithmBridgeFixture : public testing::Test,
  public:
   const size_t kShmBufferSize = 2048;
 
-  CameraAlgorithmBridgeFixture() : req_id_(0) {
-    mojo_manager_ = cros::CameraMojoChannelManager::CreateInstance();
+  CameraAlgorithmBridgeFixture()
+      : mojo_manager_token_(
+            cros::CameraMojoChannelManagerToken::CreateInstance()),
+        req_id_(0) {
     CameraAlgorithmBridgeFixture::return_callback =
         CameraAlgorithmBridgeFixture::ReturnCallbackForwarder;
     bridge_ = cros::CameraAlgorithmBridge::CreateInstance(
-        cros::CameraAlgorithmBackend::kTest, mojo_manager_.get());
+        cros::CameraAlgorithmBackend::kTest, mojo_manager_token_.get());
     if (!bridge_ || bridge_->Initialize(this) != 0) {
       ADD_FAILURE() << "Failed to initialize camera algorithm bridge";
       return;
@@ -53,8 +55,8 @@ class CameraAlgorithmBridgeFixture : public testing::Test,
     bridge_->Request(req_id_++, req_header, buffer_handle);
   }
 
-  cros::CameraMojoChannelManager* GetMojoManagerInstance() {
-    return mojo_manager_.get();
+  cros::CameraMojoChannelManagerToken* GetMojoManagerTokenInstance() {
+    return mojo_manager_token_.get();
   }
 
  protected:
@@ -87,7 +89,7 @@ class CameraAlgorithmBridgeFixture : public testing::Test,
 
   // |mojo_manager_| should only be destroyed after any usage of it. So it
   // should be declared first.
-  std::unique_ptr<cros::CameraMojoChannelManager> mojo_manager_;
+  std::unique_ptr<cros::CameraMojoChannelManagerToken> mojo_manager_token_;
 
   std::unique_ptr<cros::CameraAlgorithmBridge> bridge_;
 
@@ -210,7 +212,7 @@ TEST_F(CameraAlgorithmBridgeFixture, DeadLockRecovery) {
   ASSERT_NE(0, sem_timedwait(&return_sem_, &timeout));
   // Reconnect the bridge.
   bridge_ = cros::CameraAlgorithmBridge::CreateInstance(
-      cros::CameraAlgorithmBackend::kTest, GetMojoManagerInstance());
+      cros::CameraAlgorithmBackend::kTest, GetMojoManagerTokenInstance());
   ASSERT_NE(nullptr, bridge_);
   ASSERT_EQ(0, bridge_->Initialize(this));
   base::WritableSharedMemoryRegion shm_region =

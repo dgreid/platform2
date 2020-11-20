@@ -17,7 +17,7 @@
 #include <base/threading/thread_checker.h>
 #include <hardware/camera_common.h>
 
-#include "cros-camera/camera_mojo_channel_manager.h"
+#include "cros-camera/camera_mojo_channel_manager_token.h"
 #include "cros-camera/cros_camera_hal.h"
 #include "cros-camera/future.h"
 #include "cros-camera/udev_watcher.h"
@@ -44,7 +44,7 @@ class CameraHal : public UdevWatcher::Observer {
 
   static CameraHal& GetInstance();
 
-  CameraMojoChannelManager* GetMojoManagerInstance();
+  CameraMojoChannelManagerToken* GetMojoManagerToken();
 
   // Implementations for camera_module_t.
   int OpenDevice(int id, const hw_module_t* module, hw_device_t** hw_device);
@@ -54,7 +54,7 @@ class CameraHal : public UdevWatcher::Observer {
   int Init();
 
   // Implementations for cros_camera_hal_t.
-  void SetUp(CameraMojoChannelManager* mojo_manager);
+  void SetUp(CameraMojoChannelManagerToken* token);
   void TearDown();
   void SetPrivacySwitchCallback(PrivacySwitchStateChangeCallback callback);
 
@@ -121,8 +121,8 @@ class CameraHal : public UdevWatcher::Observer {
   // integer here, and use the smallest free id when the camera is reconnected.
   std::map<std::string, std::set<int>> previous_ids_;
 
-  // Mojo manager which is used for Mojo communication.
-  CameraMojoChannelManager* mojo_manager_;
+  // Mojo manager token which is used for Mojo communication.
+  CameraMojoChannelManagerToken* mojo_manager_token_;
 };
 
 // Callback for camera_device.common.close().

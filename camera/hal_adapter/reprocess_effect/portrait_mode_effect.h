@@ -36,7 +36,7 @@ class PortraitModeEffect final
   int32_t InitializeAndGetVendorTags(
       std::vector<VendorTagInfo>* request_vendor_tags,
       std::vector<VendorTagInfo>* result_vendor_tags,
-      CameraMojoChannelManager* mojo_manager);
+      CameraMojoChannelManagerToken* token);
 
   int32_t SetVendorTags(uint32_t request_vendor_tag_start,
                         uint32_t request_vendor_tag_count,

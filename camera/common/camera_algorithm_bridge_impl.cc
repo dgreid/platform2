@@ -37,9 +37,10 @@ std::unique_ptr<CameraAlgorithmBridge> CameraAlgorithmBridge::CreateInstance(
 
 // static
 std::unique_ptr<CameraAlgorithmBridge> CameraAlgorithmBridge::CreateInstance(
-    CameraAlgorithmBackend backend, CameraMojoChannelManager* mojo_manager) {
+    CameraAlgorithmBackend backend, CameraMojoChannelManagerToken* token) {
   VLOGF_ENTER();
-  return std::make_unique<CameraAlgorithmBridgeImpl>(backend, mojo_manager);
+  return std::make_unique<CameraAlgorithmBridgeImpl>(
+      backend, CameraMojoChannelManager::FromToken(token));
 }
 
 CameraAlgorithmBridgeImpl::CameraAlgorithmBridgeImpl(

@@ -18,6 +18,7 @@
 #include <base/memory/writable_shared_memory_region.h>
 #include <base/timer/elapsed_timer.h>
 #include "cros-camera/camera_buffer_manager.h"
+#include "cros-camera/camera_mojo_channel_manager.h"
 #include "cros-camera/common.h"
 #include "cros-camera/jpeg_encode_accelerator.h"
 
@@ -42,11 +43,11 @@ std::unique_ptr<JpegCompressor> JpegCompressor::GetInstance() {
 
 // static
 std::unique_ptr<JpegCompressor> JpegCompressor::GetInstance(
-    CameraMojoChannelManager* mojo_manager) {
-  return std::make_unique<JpegCompressorImpl>(mojo_manager);
+    CameraMojoChannelManagerToken* token) {
+  return std::make_unique<JpegCompressorImpl>(token);
 }
 
-JpegCompressorImpl::JpegCompressorImpl(CameraMojoChannelManager* mojo_manager)
+JpegCompressorImpl::JpegCompressorImpl(CameraMojoChannelManagerToken* token)
     : camera_metrics_(CameraMetrics::New()),
       hw_encoder_(nullptr),
       hw_encoder_started_(false),
@@ -54,7 +55,7 @@ JpegCompressorImpl::JpegCompressorImpl(CameraMojoChannelManager* mojo_manager)
       out_buffer_size_(0),
       out_data_size_(0),
       is_encode_success_(false),
-      mojo_manager_(mojo_manager) {}
+      mojo_manager_token_(token) {}
 
 JpegCompressorImpl::~JpegCompressorImpl() {}
 
@@ -349,7 +350,8 @@ bool JpegCompressorImpl::EncodeHwLegacy(const uint8_t* input_buffer,
                                         uint32_t* out_data_size) {
   base::ElapsedTimer timer;
   if (!hw_encoder_) {
-    hw_encoder_ = cros::JpegEncodeAccelerator::CreateInstance(mojo_manager_);
+    hw_encoder_ =
+        cros::JpegEncodeAccelerator::CreateInstance(mojo_manager_token_);
     hw_encoder_started_ = hw_encoder_->Start();
   }
 
@@ -523,7 +525,8 @@ bool JpegCompressorImpl::EncodeHw(buffer_handle_t input_handle,
   }
 
   if (!hw_encoder_) {
-    hw_encoder_ = cros::JpegEncodeAccelerator::CreateInstance(mojo_manager_);
+    hw_encoder_ =
+        cros::JpegEncodeAccelerator::CreateInstance(mojo_manager_token_);
     hw_encoder_started_ = hw_encoder_->Start();
   }
 

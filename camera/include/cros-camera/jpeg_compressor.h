@@ -11,7 +11,7 @@
 
 #include <memory>
 
-#include "cros-camera/camera_mojo_channel_manager.h"
+#include "cros-camera/camera_mojo_channel_manager_token.h"
 #include "cros-camera/export.h"
 
 namespace cros {
@@ -39,7 +39,7 @@ class CROS_CAMERA_EXPORT JpegCompressor {
   static std::unique_ptr<JpegCompressor> GetInstance();
 
   static std::unique_ptr<JpegCompressor> GetInstance(
-      CameraMojoChannelManager* mojo_manager);
+      CameraMojoChannelManagerToken* token);
 
   virtual ~JpegCompressor() {}
 

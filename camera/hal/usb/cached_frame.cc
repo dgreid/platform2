@@ -83,13 +83,13 @@ CachedFrame::CachedFrame()
       jda_available_(false),
       force_jpeg_hw_encode_(false),
       force_jpeg_hw_decode_(false) {
-  auto* mojo_manager = CameraHal::GetInstance().GetMojoManagerInstance();
+  auto* mojo_manager_token = CameraHal::GetInstance().GetMojoManagerToken();
 
-  jda_ = JpegDecodeAccelerator::CreateInstance(mojo_manager);
+  jda_ = JpegDecodeAccelerator::CreateInstance(mojo_manager_token);
   jda_available_ = jda_->Start();
   LOGF(INFO) << "JDA available: " << jda_available_;
 
-  jpeg_compressor_ = JpegCompressor::GetInstance(mojo_manager);
+  jpeg_compressor_ = JpegCompressor::GetInstance(mojo_manager_token);
 
   // Read force_jpeg_hw_(enc|dec) configs
   std::unique_ptr<CameraConfig> camera_config =

@@ -16,7 +16,7 @@
 #include <hardware/gralloc.h>
 #include <system/camera_metadata.h>
 
-#include "cros-camera/camera_mojo_channel_manager.h"
+#include "cros-camera/camera_mojo_channel_manager_token.h"
 #include "hal_adapter/scoped_yuv_buffer_handle.h"
 
 struct VendorTagInfo {
@@ -41,13 +41,13 @@ class ReprocessEffect {
   // Args:
   //    |request_vendor_tags|: names and types of request vendor tags
   //    |result_vendor_tags|: names and types of result vendor tags
-  //    |mojo_manager|: the mojo manager instance
+  //    |token|: the mojo manager token
   // Returns:
   //    0 on success; corresponding error code on failure.
   virtual int32_t InitializeAndGetVendorTags(
       std::vector<VendorTagInfo>* request_vendor_tags,
       std::vector<VendorTagInfo>* result_vendor_tags,
-      CameraMojoChannelManager* mojo_manager) = 0;
+      CameraMojoChannelManagerToken* token) = 0;
 
   // Sets the vendor tags that are allocated for the reprocessing effects.
   // Args:

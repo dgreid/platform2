@@ -21,7 +21,7 @@ namespace cros {
 class CameraHalTestAdapter : public CameraHalAdapter {
  public:
   CameraHalTestAdapter(std::vector<camera_module_t*> camera_modules,
-                       CameraMojoChannelManager* mojo_manager,
+                       CameraMojoChannelManagerToken* token,
                        CameraActivityCallback activity_callback,
                        bool enable_front,
                        bool enable_back,

@@ -106,21 +106,21 @@ class JpegDecodeAcceleratorTest : public ::testing::Test {
 class JpegDecodeTestEnvironment : public ::testing::Environment {
  public:
   JpegDecodeTestEnvironment(const char* jpeg_filename1,
-                            const char* jpeg_filename2) {
+                            const char* jpeg_filename2)
+      : mojo_manager_token_(CameraMojoChannelManagerToken::CreateInstance()) {
     jpeg_filename1_ = jpeg_filename1 ? jpeg_filename1 : kDefaultJpegFilename1;
     jpeg_filename2_ = jpeg_filename2 ? jpeg_filename2 : kDefaultJpegFilename2;
-    mojo_manager_ = CameraMojoChannelManager::CreateInstance();
   }
 
   const char* jpeg_filename1_;
   const char* jpeg_filename2_;
-  std::unique_ptr<CameraMojoChannelManager> mojo_manager_;
+  std::unique_ptr<CameraMojoChannelManagerToken> mojo_manager_token_;
 };
 
 void JpegDecodeAcceleratorTest::SetUp() {
   for (size_t i = 0; i < kMaxDecoderNumber; i++) {
-    jpeg_decoder_[i] =
-        std::make_unique<JpegDecodeAcceleratorImpl>(g_env->mojo_manager_.get());
+    jpeg_decoder_[i] = std::make_unique<JpegDecodeAcceleratorImpl>(
+        g_env->mojo_manager_token_.get());
   }
 }
 
@@ -188,8 +188,8 @@ void JpegDecodeAcceleratorTest::PrepareMemory(Frame* frame) {
       output_size > frame->sw_out_shm_mapping.mapped_size()) {
     frame->sw_out_shm_region =
         base::WritableSharedMemoryRegion::Create(output_size);
-    frame->sw_out_shm_mapping = frame->ww_out_shm_region.Map();
-    LOG_ASSERT(frame->ww_out_shm_mapping.IsValid());
+    frame->sw_out_shm_mapping = frame->sw_out_shm_region.Map();
+    LOG_ASSERT(frame->sw_out_shm_mapping.IsValid());
   }
   memset(frame->sw_out_shm_mapping.memory(), 0, output_size);
 }
@@ -230,8 +230,8 @@ void JpegDecodeAcceleratorTest::DecodeTest(Frame* frame, size_t decoder_id) {
   memset(frame->hw_out_shm_mapping.memory(), 0,
          frame->hw_out_shm_mapping.mapped_size());
 
-  input_fd = in_platform_shm.GetPlatformHandle().fd;
-  output_fd = hw_out_platform_shm.GetPlatformHandle().fd;
+  input_fd = frame->in_shm_region.GetPlatformHandle().fd;
+  output_fd = frame->hw_out_shm_region.GetPlatformHandle().fd;
   VLOG(1) << "input fd " << input_fd << " output fd " << output_fd;
 
   // Pretend the shared memory as DMA buffer.

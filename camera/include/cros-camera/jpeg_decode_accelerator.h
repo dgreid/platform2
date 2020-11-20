@@ -14,7 +14,7 @@
 
 #include <system/window.h>
 
-#include "cros-camera/camera_mojo_channel_manager.h"
+#include "cros-camera/camera_mojo_channel_manager_token.h"
 
 namespace cros {
 
@@ -61,7 +61,7 @@ class JpegDecodeAccelerator {
   static std::unique_ptr<JpegDecodeAccelerator> CreateInstance();
 
   static std::unique_ptr<JpegDecodeAccelerator> CreateInstance(
-      CameraMojoChannelManager* mojo_manager);
+      CameraMojoChannelManagerToken* token);
 
   virtual ~JpegDecodeAccelerator() {}
 

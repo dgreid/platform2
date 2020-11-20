@@ -42,7 +42,8 @@
 namespace cros {
 
 CameraHalServerImpl::CameraHalServerImpl()
-    : mojo_manager_(CameraMojoChannelManager::CreateInstance()),
+    : mojo_manager_(CameraMojoChannelManager::FromToken(
+          CameraMojoChannelManagerToken::CreateInstance())),
       ipc_bridge_(new IPCBridge(this, mojo_manager_.get())) {
   VLOGF_ENTER();
 }

@@ -14,7 +14,7 @@
 #include <base/callback_forward.h>
 #include <base/memory/ref_counted.h>
 
-#include "cros-camera/export.h"
+#include "cros-camera/camera_mojo_channel_manager_token.h"
 #include "mojo/algorithm/camera_algorithm.mojom.h"
 #include "mojo/cros_camera_service.mojom.h"
 #include "mojo/gpu/jpeg_encode_accelerator.mojom.h"
@@ -28,11 +28,10 @@ namespace cros {
 
 // There are many places that need to initialize Mojo and use related channels.
 // This class is used to manage them together.
-class CROS_CAMERA_EXPORT CameraMojoChannelManager {
+class CROS_CAMERA_EXPORT CameraMojoChannelManager
+    : public CameraMojoChannelManagerToken {
  public:
   using Callback = base::OnceCallback<void(void)>;
-
-  static std::unique_ptr<CameraMojoChannelManager> CreateInstance();
 
   virtual ~CameraMojoChannelManager() {}
 
@@ -40,6 +39,11 @@ class CROS_CAMERA_EXPORT CameraMojoChannelManager {
   // the CrOS specific interface so that we can pass the mojo manager instance
   // to them.
   static CameraMojoChannelManager* GetInstance();
+
+  static CameraMojoChannelManager* FromToken(
+      CameraMojoChannelManagerToken* token) {
+    return static_cast<CameraMojoChannelManager*>(token);
+  }
 
   // Gets the task runner that the CameraHalDispatcher interface is bound to.
   virtual scoped_refptr<base::SingleThreadTaskRunner> GetIpcTaskRunner() = 0;

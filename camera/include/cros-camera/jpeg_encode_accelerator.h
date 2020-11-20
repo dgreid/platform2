@@ -12,7 +12,7 @@
 #include <vector>
 
 #include <base/bind.h>
-#include "cros-camera/camera_mojo_channel_manager.h"
+#include "cros-camera/camera_mojo_channel_manager_token.h"
 #include "cros-camera/jpeg_compressor.h"
 
 namespace cros {
@@ -65,7 +65,7 @@ class JpegEncodeAccelerator {
   };
 
   static std::unique_ptr<JpegEncodeAccelerator> CreateInstance(
-      CameraMojoChannelManager* mojo_manager);
+      CameraMojoChannelManagerToken* token);
 
   virtual ~JpegEncodeAccelerator() {}
 

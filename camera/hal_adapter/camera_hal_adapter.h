@@ -23,7 +23,7 @@
 #include "common/utils/common_types.h"
 #include "common/vendor_tag_manager.h"
 #include "cros-camera/camera_metrics.h"
-#include "cros-camera/camera_mojo_channel_manager.h"
+#include "cros-camera/camera_mojo_channel_manager_token.h"
 #include "cros-camera/future.h"
 #include "hal_adapter/reprocess_effect/reprocess_effect_manager.h"
 #include "mojo/camera3.mojom.h"
@@ -54,7 +54,7 @@ class CameraHalAdapter {
       int32_t, bool, cros::mojom::CameraClientType)>;
 
   CameraHalAdapter(std::vector<camera_module_t*> camera_modules,
-                   CameraMojoChannelManager* mojo_manager,
+                   CameraMojoChannelManagerToken* token,
                    CameraActivityCallback activity_callback);
 
   virtual ~CameraHalAdapter();
@@ -247,8 +247,8 @@ class CameraHalAdapter {
   // Metrics for camera service.
   std::unique_ptr<CameraMetrics> camera_metrics_;
 
-  // Mojo manager which is used for Mojo communication.
-  CameraMojoChannelManager* mojo_manager_;
+  // Mojo manager token which is used for Mojo communication.
+  CameraMojoChannelManagerToken* mojo_manager_token_;
 
   CameraActivityCallback activity_callback_;
 

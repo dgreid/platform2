@@ -19,6 +19,7 @@
 #include <libyuv.h>
 
 #include "cros-camera/camera_buffer_manager.h"
+#include "cros-camera/camera_mojo_channel_manager_token.h"
 #include "cros-camera/exif_utils.h"
 #include "cros-camera/future.h"
 #include "cros-camera/jpeg_compressor.h"
@@ -119,22 +120,22 @@ class JpegEncodeTestEnvironment : public ::testing::Environment {
  public:
   JpegEncodeTestEnvironment(const char* yuv_filename1,
                             const char* yuv_filename2,
-                            bool save_to_file) {
+                            bool save_to_file)
+      : mojo_manager_token_(CameraMojoChannelManagerToken::CreateInstance()) {
     yuv_filename1_ = yuv_filename1 ? yuv_filename1 : kDefaultJpegFilename1;
     yuv_filename2_ = yuv_filename2 ? yuv_filename2 : kDefaultJpegFilename2;
     save_to_file_ = save_to_file;
-    mojo_manager_ = CameraMojoChannelManager::CreateInstance();
   }
 
   const char* yuv_filename1_;
   const char* yuv_filename2_;
   bool save_to_file_;
-  std::unique_ptr<CameraMojoChannelManager> mojo_manager_;
+  std::unique_ptr<CameraMojoChannelManagerToken> mojo_manager_token_;
 };
 
 void JpegEncodeAcceleratorTest::SetUp() {
   jpeg_encoder_ =
-      JpegEncodeAccelerator::CreateInstance(g_env->mojo_manager_.get());
+      JpegEncodeAccelerator::CreateInstance(g_env->mojo_manager_token_.get());
   buffer_manager_ = CameraBufferManager::GetInstance();
 }
 
@@ -251,7 +252,7 @@ double JpegEncodeAcceleratorTest::GetMeanAbsoluteDifference(
 
 bool JpegEncodeAcceleratorTest::GetSoftwareEncodeResult(Frame* frame) {
   std::unique_ptr<JpegCompressor> compressor(
-      JpegCompressor::GetInstance(g_env->mojo_manager_.get()));
+      JpegCompressor::GetInstance(g_env->mojo_manager_token_.get()));
   if (!compressor->CompressImage(frame->data_str.data(), frame->width,
                                  frame->height, kJpegDefaultQuality, nullptr, 0,
                                  frame->sw_out_shm_mapping.mapped_size(),

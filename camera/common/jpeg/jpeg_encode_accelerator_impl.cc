@@ -43,9 +43,9 @@ STATIC_ASSERT_ENUM(PLATFORM_FAILURE);
 
 // static
 std::unique_ptr<JpegEncodeAccelerator> JpegEncodeAccelerator::CreateInstance(
-    CameraMojoChannelManager* mojo_manager) {
-  return base::WrapUnique<JpegEncodeAccelerator>(
-      new JpegEncodeAcceleratorImpl(mojo_manager));
+    CameraMojoChannelManagerToken* token) {
+  return base::WrapUnique<JpegEncodeAccelerator>(new JpegEncodeAcceleratorImpl(
+      CameraMojoChannelManager::FromToken(token)));
 }
 
 JpegEncodeAcceleratorImpl::JpegEncodeAcceleratorImpl(

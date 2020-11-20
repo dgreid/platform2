@@ -69,9 +69,9 @@ std::unique_ptr<JpegDecodeAccelerator> JpegDecodeAccelerator::CreateInstance() {
 
 // static
 std::unique_ptr<JpegDecodeAccelerator> JpegDecodeAccelerator::CreateInstance(
-    CameraMojoChannelManager* mojo_manager) {
-  return base::WrapUnique<JpegDecodeAccelerator>(
-      new JpegDecodeAcceleratorImpl(mojo_manager));
+    CameraMojoChannelManagerToken* token) {
+  return base::WrapUnique<JpegDecodeAccelerator>(new JpegDecodeAcceleratorImpl(
+      CameraMojoChannelManager::FromToken(token)));
 }
 
 JpegDecodeAcceleratorImpl::JpegDecodeAcceleratorImpl(

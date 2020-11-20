@@ -13,7 +13,7 @@
 #include <vector>
 
 #include "cros-camera/camera_algorithm.h"
-#include "cros-camera/camera_mojo_channel_manager.h"
+#include "cros-camera/camera_mojo_channel_manager_token.h"
 #include "cros-camera/export.h"
 
 namespace cros {
@@ -37,8 +37,8 @@ enum class CameraAlgorithmBackend {
 // Example usage:
 //
 //  #include <cros-camera/camera_algorithm_bridge.h>
-//  auto* mojo_manager = GetMojoChannelManager();
-//  auto algo = CameraAlgorithmBridge::CreateInstance(backend, mojo_manager);
+//  auto* token = GetMojoChannelManagerToken();
+//  auto algo = CameraAlgorithmBridge::CreateInstance(backend, token);
 //  algo->Initialize(this);
 //  std::vector<int32_t> handles(2);
 //  handles[0] = algo->RegisterBuffer(buffer_fd0);
@@ -65,12 +65,12 @@ class CROS_CAMERA_EXPORT CameraAlgorithmBridge {
   // vendor algorithms.
   //
   // Args:
-  //    |mojo_manager|: The camera mojo channel manager instance which is used
-  //                    for mojo communication.
+  //    |token|: The camera mojo channel manager token which is used for mojo
+  //             communication.
   // Returns:
   //    Unique pointer to instance on success; nullptr on failure.
   static std::unique_ptr<CameraAlgorithmBridge> CreateInstance(
-      CameraAlgorithmBackend backend, CameraMojoChannelManager* mojo_manager);
+      CameraAlgorithmBackend backend, CameraMojoChannelManagerToken* token);
 
   virtual ~CameraAlgorithmBridge() {}
 
