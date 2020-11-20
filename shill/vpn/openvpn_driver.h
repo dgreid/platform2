@@ -23,7 +23,6 @@
 namespace shill {
 
 class CertificateFile;
-class DeviceInfo;
 class Error;
 class OpenVPNManagementServer;
 
@@ -98,6 +97,8 @@ class OpenVPNDriver : public VPNDriver, public RpcTaskDelegate {
   std::string GetProviderType() const override;
   IfType GetIfType() const override;
   void OnConnectTimeout() override;
+  void OnDefaultPhysicalServiceEvent(
+      DefaultPhysicalServiceEvent event) override;
 
  private:
   friend class OpenVPNDriverTest;
@@ -123,7 +124,7 @@ class OpenVPNDriver : public VPNDriver, public RpcTaskDelegate {
   FRIEND_TEST(OpenVPNDriverTest, NotifyFail);
   FRIEND_TEST(OpenVPNDriverTest, OnConnectTimeout);
   FRIEND_TEST(OpenVPNDriverTest, OnConnectTimeoutResolve);
-  FRIEND_TEST(OpenVPNDriverTest, OnDefaultServiceChanged);
+  FRIEND_TEST(OpenVPNDriverTest, OnDefaultPhysicalServiceEvent);
   FRIEND_TEST(OpenVPNDriverTest, OnOpenVPNDied);
   FRIEND_TEST(OpenVPNDriverTest, ParseForeignOption);
   FRIEND_TEST(OpenVPNDriverTest, ParseForeignOptions);
@@ -218,9 +219,6 @@ class OpenVPNDriver : public VPNDriver, public RpcTaskDelegate {
   void GetLogin(std::string* user, std::string* password) override;
   void Notify(const std::string& reason,
               const std::map<std::string, std::string>& dict) override;
-
-  void OnDefaultPhysicalServiceEvent(
-      DefaultPhysicalServiceEvent event) override;
 
   void ReportConnectionMetrics();
 

@@ -117,30 +117,30 @@ TEST_F(ThirdPartyVpnDriverTest, ReconnectionEvents) {
   driver_->reconnect_supported_ = true;
 
   // Roam from one Online network to another -> kLinkChanged.
-  scoped_refptr<MockService> mock_service(new NiceMock<MockService>(&manager_));
   EXPECT_CALL(*adaptor_interface_, EmitPlatformMessage(static_cast<uint32_t>(
                                        ThirdPartyVpnDriver::kLinkChanged)));
-  EXPECT_CALL(*mock_service, IsOnline()).WillRepeatedly(Return(true));
-  service_->OnDefaultPhysicalServiceChanged(mock_service);
+  driver_->OnDefaultPhysicalServiceEvent(
+      VPNDriver::kDefaultPhysicalServiceChanged);
 
   // Default physical service is not Online -> kLinkDown.
   EXPECT_CALL(*adaptor_interface_, EmitPlatformMessage(static_cast<uint32_t>(
                                        ThirdPartyVpnDriver::kLinkDown)));
-  service_->OnDefaultPhysicalServiceChanged(nullptr);
+  driver_->OnDefaultPhysicalServiceEvent(
+      VPNDriver::kDefaultPhysicalServiceDown);
 
   // Default physical service comes Online -> kLinkUp.
   EXPECT_CALL(
       *adaptor_interface_,
       EmitPlatformMessage(static_cast<uint32_t>(ThirdPartyVpnDriver::kLinkUp)));
-  EXPECT_CALL(*mock_service, IsOnline()).WillRepeatedly(Return(true));
-  service_->OnDefaultPhysicalServiceChanged(mock_service);
+  driver_->OnDefaultPhysicalServiceEvent(VPNDriver::kDefaultPhysicalServiceUp);
 
   // Default physical service vanishes, but the app doesn't support
   // reconnecting -> kDisconnected.
   driver_->reconnect_supported_ = false;
   EXPECT_CALL(*adaptor_interface_, EmitPlatformMessage(static_cast<uint32_t>(
                                        ThirdPartyVpnDriver::kDisconnected)));
-  service_->OnDefaultPhysicalServiceChanged(nullptr);
+  driver_->OnDefaultPhysicalServiceEvent(
+      VPNDriver::kDefaultPhysicalServiceDown);
 
   driver_->Disconnect();
 }
