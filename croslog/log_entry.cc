@@ -20,9 +20,23 @@ LogEntry::LogEntry(base::Time time,
       entire_line_(std::move(entire_line)) {}
 
 void LogEntry::AppendLinesToMessage(const std::list<std::string>& lines) {
+  // Calculates the size of buffer to expand.
+  size_t lines_size = 0;
   for (const auto& line : lines) {
-    message_ += "\n";
-    message_ += line;
+    lines_size += line.size() + 1;
+  }
+
+  // Pre-reserves buffer for efficiency.
+  message_.reserve(message_.size() + lines_size);
+  entire_line_.reserve(entire_line_.size() + lines_size);
+
+  // Appends lines
+  for (const auto& line : lines) {
+    message_.append("\n", 1);
+    message_.append(line);
+
+    entire_line_.append("\n", 1);
+    entire_line_.append(line);
   }
 }
 

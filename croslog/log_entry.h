@@ -45,7 +45,7 @@ class LogEntry {
   const std::string tag_;
   const int pid_;
   std::string message_;
-  const std::string entire_line_;
+  std::string entire_line_;
 };
 
 }  // namespace croslog
