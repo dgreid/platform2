@@ -28,7 +28,7 @@ namespace cros {
 namespace intel {
 
 ImgEncoder::ImgEncoder(int cameraid) :
-    mJpegCompressor(cros::JpegCompressor::GetInstance(g_mojo_manager))
+    mJpegCompressor(cros::JpegCompressor::GetInstance(g_mojo_manager_token))
 {
     LOG1("@%s", __FUNCTION__);
 }

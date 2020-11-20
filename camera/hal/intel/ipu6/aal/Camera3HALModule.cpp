@@ -246,15 +246,15 @@ static int hal_set_torch_mode(const char* camera_id, bool enabled) {
  *  4. get_number_of_cameras()
  *  ......
  */
-static void hal_set_up(cros::CameraMojoChannelManager* mojoManager) {
+static void hal_set_up(cros::CameraMojoChannelManagerToken* token) {
     LOG1("@%s", __func__);
 
     icamera::Log::setDebugLevel();
     icamera::CameraDump::setDumpLevel();
 
 #ifdef ENABLE_SANDBOXING
-    // Create IntelAlgoClient and set the mojo manager
-    icamera::IntelAlgoClient::getInstance()->setMojoManager(mojoManager);
+    // Create IntelAlgoClient and set the mojo manager token
+    icamera::IntelAlgoClient::getInstance()->setMojoManagerToken(token);
 #endif
 }
 

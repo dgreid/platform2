@@ -60,7 +60,7 @@ IntelAlgoClient::IntelAlgoClient()
         : mErrCb(nullptr),
           mGpuBridge(nullptr),
           mIPCStatus(true),
-          mMojoManager(nullptr),
+          mMojoManagerToken(nullptr),
           mInitialized(false) {
     LOGIPC("@%s", __func__);
 }
@@ -70,8 +70,8 @@ IntelAlgoClient::~IntelAlgoClient() {
 }
 
 int IntelAlgoClient::initialize() {
-    LOGIPC("@%s, mMojoManager: %p", __func__, mMojoManager);
-    CheckError(!mMojoManager, UNKNOWN_ERROR, "@%s, mMojoManager is nullptr", __func__);
+    LOGIPC("@%s, mMojoManagerToken: %p", __func__, mMojoManagerToken);
+    CheckError(!mMojoManagerToken, UNKNOWN_ERROR, "@%s, mMojoManagerToken is nullptr", __func__);
 
     mCallback = base::Bind(&IntelAlgoClient::callbackHandler, base::Unretained(this));
     IntelAlgoClient::return_callback = returnCallback;
@@ -80,14 +80,14 @@ int IntelAlgoClient::initialize() {
     IntelAlgoClient::notify = notifyCallback;
 
     mBridge = cros::CameraAlgorithmBridge::CreateInstance(cros::CameraAlgorithmBackend::kVendorCpu,
-                                                          mMojoManager);
+                                                          mMojoManagerToken);
     CheckError(!mBridge, UNKNOWN_ERROR, "@%s, mBridge is nullptr", __func__);
     CheckError(mBridge->Initialize(this) != 0, UNKNOWN_ERROR, "@%s, mBridge init fails", __func__);
 
     if (PlatformData::isUsingGpuAlgo()) {
         LOGIPC("@%s GPU algo enabled", __func__);
         mGpuBridge = cros::CameraAlgorithmBridge::CreateInstance(
-            cros::CameraAlgorithmBackend::kVendorGpu, mMojoManager);
+            cros::CameraAlgorithmBackend::kVendorGpu, mMojoManagerToken);
         CheckError(!mGpuBridge, UNKNOWN_ERROR, "@%s, mGpuBridge is nullptr", __func__);
         CheckError(mGpuBridge->Initialize(this) != 0, UNKNOWN_ERROR, "@%s, mGpuBridge init fails",
                    __func__);

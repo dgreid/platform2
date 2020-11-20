@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#include <queue>
 #include <utils/Errors.h>
 #include <vector>
 
