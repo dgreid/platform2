@@ -225,70 +225,70 @@ int ippusb_manager_main(int argc, char* argv[]) {
     return 1;
   }
 
-  // Since this program is only started by the upstart-socket-bridge once the
-  // socket is ready to be read from, if the connection fails to open then
-  // something must have gone wrong.
-  if (!ippusb_socket->OpenConnection()) {
-    LOG(ERROR) << "Failed to open connection to socket";
-    return 1;
-  }
-
-  // Attempt to receive the message sent by the client.
-  std::string usb_info;
-  if (!ippusb_socket->GetMessage(&usb_info)) {
-    LOG(ERROR) << "Failed to receive message";
-    return 1;
-  }
-
-  // Use the message sent by the client to create a UsbPrinterInfo object.
-  uint16_t vid;
-  uint16_t pid;
-  if (!GetUsbInfo(usb_info, &vid, &pid)) {
-    LOG(ERROR) << "Failed to parse usb info string: " << usb_info;
-    return 1;
-  }
-
-  auto printer_info = UsbPrinterInfo::Create(vid, pid);
-  LOG(INFO) << "Received usb info: " << static_cast<int>(printer_info->vid())
-            << " " << static_cast<int>(printer_info->pid());
-
-  // Attempt to initialize the default libusb context in order to search for the
-  // printer defined by |printer_info|.
+  // Attempt to initialize the default libusb context in order to search for
+  // the printer defined by |printer_info|.
   if (libusb_init(nullptr)) {
     LOG(ERROR) << "Failed to initialize libusb";
     return 1;
   }
 
-  if (!printer_info->FindDeviceLocation()) {
-    LOG(INFO) << "Couldn't find device";
-    ippusb_socket->SendMessage("Device not found");
+  // Since this program is only started by the upstart-socket-bridge once the
+  // socket is ready to be read from, if the connection fails to open then
+  // something must have gone wrong.
+  while (ippusb_socket->OpenConnection()) {
+    // Attempt to receive the message sent by the client.
+    std::string usb_info;
+    if (!ippusb_socket->GetMessage(&usb_info)) {
+      LOG(ERROR) << "Failed to receive message";
+      ippusb_socket->CloseConnection();
+      continue;
+    }
+
+    // Use the message sent by the client to create a UsbPrinterInfo object.
+    uint16_t vid;
+    uint16_t pid;
+    if (!GetUsbInfo(usb_info, &vid, &pid)) {
+      LOG(ERROR) << "Failed to parse usb info string: " << usb_info;
+      ippusb_socket->CloseConnection();
+      continue;
+    }
+
+    auto printer_info = UsbPrinterInfo::Create(vid, pid);
+    LOG(INFO) << "Received usb info: " << static_cast<int>(printer_info->vid())
+              << " " << static_cast<int>(printer_info->pid());
+
+    if (!printer_info->FindDeviceLocation()) {
+      LOG(INFO) << "Couldn't find device";
+      ippusb_socket->SendMessage("Device not found");
+      ippusb_socket->CloseConnection();
+      continue;
+    }
+
+    LOG(INFO) << "Found device on " << static_cast<int>(printer_info->bus())
+              << " " << static_cast<int>(printer_info->device());
+
+    const IppusbBridgeSocketPaths socket_paths =
+        IppusbBridgeSocketPaths(printer_info.get());
+    if (!CheckOrSpawnIppusbBridge(socket_paths, std::move(printer_info))) {
+      ippusb_socket->CloseConnection();
+      continue;
+    }
+
+    LOG(INFO) << "Waiting until ippusb_bridge has started.";
+    if (!WaitForIppusbBridgeStartup(socket_paths,
+                                    base::TimeDelta::FromSeconds(10))) {
+      LOG(ERROR) << "Failed to wait for ippusb_bridge startup.";
+      ippusb_socket->CloseConnection();
+      continue;
+    }
+
+    LOG(INFO) << "Sending socket path to client.";
+    // Sends the basename of the ippusb_bridge socket to the listener.
+    std::string main_socket_basename =
+        socket_paths.main_socket.BaseName().value();
+    ippusb_socket->SendMessage(main_socket_basename);
     ippusb_socket->CloseConnection();
-    ippusb_socket->CloseSocket();
-    return 0;
   }
-
-  LOG(INFO) << "Found device on " << static_cast<int>(printer_info->bus())
-            << " " << static_cast<int>(printer_info->device());
-
-  const IppusbBridgeSocketPaths socket_paths =
-      IppusbBridgeSocketPaths(printer_info.get());
-  if (!CheckOrSpawnIppusbBridge(socket_paths, std::move(printer_info))) {
-    return 1;
-  }
-
-  LOG(INFO) << "Waiting until ippusb_bridge has started.";
-  if (!WaitForIppusbBridgeStartup(socket_paths,
-                                  base::TimeDelta::FromSeconds(10))) {
-    LOG(ERROR) << "Failed to wait for ippusb_bridge startup.";
-    return 1;
-  }
-
-  LOG(INFO) << "Sending socket path to client.";
-  // Sends the basename of the ippusb_bridge socket to the listener.
-  std::string main_socket_basename =
-      socket_paths.main_socket.BaseName().value();
-  ippusb_socket->SendMessage(main_socket_basename);
-  ippusb_socket->CloseConnection();
   ippusb_socket->CloseSocket();
 
   LOG(INFO) << "Shutting down.";
