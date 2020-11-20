@@ -170,22 +170,8 @@ bool CountersService::MakeAccountingChain(const std::string& chain_name) {
 }
 
 void CountersService::IptablesNewRule(std::vector<std::string> params) {
-  DCHECK_GT(params.size(), 0);
-  const std::string action = params[0];
-  DCHECK(action == "-I" || action == "-A");
-  params.emplace_back("-w");
-
-  params[0] = "-C";
-  if (runner_->iptables(kMangleTable, params, false /*log_failures*/) != 0) {
-    params[0] = action;
-    runner_->iptables(kMangleTable, params);
-  }
-
-  params[0] = "-C";
-  if (runner_->ip6tables(kMangleTable, params, false /*log_failures*/) != 0) {
-    params[0] = action;
-    runner_->ip6tables(kMangleTable, params);
-  }
+  runner_->iptables(kMangleTable, params);
+  runner_->ip6tables(kMangleTable, params);
 }
 
 void CountersService::SetupChainsAndRules(const std::string& ifname) {
@@ -197,24 +183,35 @@ void CountersService::SetupChainsAndRules(const std::string& ifname) {
   // Note that the length of a chain name must less than 29 chars and IFNAMSIZ
   // is 16 so we can only use at most 12 chars for the prefix.
 
-  // Ingress traffic chain.
   const std::string ingress_chain = "rx_" + ifname;
-  MakeAccountingChain(ingress_chain);
-  IptablesNewRule({"-A", "FORWARD", "-i", ifname, "-j", ingress_chain});
-  IptablesNewRule({"-A", "INPUT", "-i", ifname, "-j", ingress_chain});
-  SetupAccountingRules(ingress_chain);
-
-  // Egress traffic chain.
   const std::string egress_chain = "tx_" + ifname;
-  MakeAccountingChain(egress_chain);
-  IptablesNewRule({"-A", "POSTROUTING", "-o", ifname, "-j", egress_chain});
+
+  // Creates egress and ingress traffic chains, or stops if they already exist.
+  if (!MakeAccountingChain(ingress_chain) ||
+      !MakeAccountingChain(egress_chain)) {
+    LOG(INFO) << "Traffic accounting chains already exist for " << ifname;
+    return;
+  }
+
+  // Add jump rules
+  datapath_->ModifyIptables(
+      IpFamily::Dual, kMangleTable,
+      {"-A", "FORWARD", "-i", ifname, "-j", ingress_chain, "-w"});
+  datapath_->ModifyIptables(
+      IpFamily::Dual, kMangleTable,
+      {"-A", "INPUT", "-i", ifname, "-j", ingress_chain, "-w"});
+  datapath_->ModifyIptables(
+      IpFamily::Dual, kMangleTable,
+      {"-A", "POSTROUTING", "-o", ifname, "-j", egress_chain, "-w"});
+
+  SetupAccountingRules(ingress_chain);
   SetupAccountingRules(egress_chain);
 }
 
 void CountersService::SetupAccountingRules(const std::string& chain_name) {
   // TODO(jiejiang): This function will be extended to matching on fwmark for
   // different sources.
-  IptablesNewRule({"-A", chain_name});
+  IptablesNewRule({"-A", chain_name, "-w"});
 }
 
 }  // namespace patchpanel

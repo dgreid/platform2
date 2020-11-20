@@ -247,6 +247,11 @@ class Datapath {
                    const std::string& op,
                    const std::string& chain,
                    bool log_failures = true);
+  // Sends an iptables command for table |table|.
+  bool ModifyIptables(IpFamily family,
+                      const std::string& table,
+                      const std::vector<std::string>& argv,
+                      bool log_failures = true);
 
   MinijailedProcessRunner& runner() const;
 
@@ -342,10 +347,6 @@ class Datapath {
                                const std::string& iif,
                                Fwmark mark,
                                Fwmark mask);
-  bool ModifyIptables(IpFamily family,
-                      const std::string& table,
-                      const std::vector<std::string>& argv,
-                      bool log_failures = true);
   bool ModifyRtentry(ioctl_req_t op, struct rtentry* route);
   int FindIfIndex(const std::string& ifname);
 

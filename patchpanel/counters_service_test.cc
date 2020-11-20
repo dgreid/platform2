@@ -170,12 +170,6 @@ class CountersServiceTest : public testing::Test {
 };
 
 TEST_F(CountersServiceTest, OnNewDevice) {
-  // Makes the check commands return 1 (not found).
-  EXPECT_CALL(runner_, iptables(_, Contains("-C"), _, _))
-      .WillRepeatedly(Return(1));
-  EXPECT_CALL(runner_, ip6tables(_, Contains("-C"), _, _))
-      .WillRepeatedly(Return(1));
-
   // The following commands are expected when eth0 comes up.
   const std::vector<std::vector<std::string>> expected_calls{
       {"-N", "rx_eth0", "-w"},
@@ -199,16 +193,19 @@ TEST_F(CountersServiceTest, OnNewDevice) {
 }
 
 TEST_F(CountersServiceTest, OnSameDeviceAppearAgain) {
-  // Makes the check commands return 0 (we already have these rules).
-  EXPECT_CALL(runner_, iptables(_, Contains("-C"), _, _))
-      .WillRepeatedly(Return(0));
-  EXPECT_CALL(runner_, ip6tables(_, Contains("-C"), _, _))
-      .WillRepeatedly(Return(0));
+  // Makes the chain creation commands return false (we already have these
+  // rules).
+  EXPECT_CALL(runner_, iptables(_, Contains("-N"), _, _))
+      .WillRepeatedly(Return(1));
+  EXPECT_CALL(runner_, ip6tables(_, Contains("-N"), _, _))
+      .WillRepeatedly(Return(1));
 
   // Creating chains commands are expected but no more creating rules command
   // (with "-I" or "-A") should come.
-  EXPECT_CALL(runner_, iptables(_, Contains("-N"), _, _)).Times(AnyNumber());
-  EXPECT_CALL(runner_, ip6tables(_, Contains("-N"), _, _)).Times(AnyNumber());
+  EXPECT_CALL(runner_, iptables(_, Contains("-A"), _, _)).Times(0);
+  EXPECT_CALL(runner_, ip6tables(_, Contains("-A"), _, _)).Times(0);
+  EXPECT_CALL(runner_, iptables(_, Contains("-I"), _, _)).Times(0);
+  EXPECT_CALL(runner_, ip6tables(_, Contains("-I"), _, _)).Times(0);
 
   std::vector<dbus::ObjectPath> devices = {dbus::ObjectPath("/device/eth0")};
   fake_shill_client_->NotifyManagerPropertyChange(shill::kDevicesProperty,
@@ -216,12 +213,6 @@ TEST_F(CountersServiceTest, OnSameDeviceAppearAgain) {
 }
 
 TEST_F(CountersServiceTest, ChainNameLength) {
-  // Makes the check commands return 1 (not found).
-  EXPECT_CALL(runner_, iptables(_, Contains("-C"), _, _))
-      .WillRepeatedly(Return(1));
-  EXPECT_CALL(runner_, ip6tables(_, Contains("-C"), _, _))
-      .WillRepeatedly(Return(1));
-
   // The name of a new chain must be shorter than 29 characters, otherwise
   // iptables will reject the request. Uses Each() here for simplicity since no
   // other params could be longer than 29 for now.
