@@ -18,7 +18,7 @@
 #include <sys/types.h>
 
 #include "camera/camera_metadata.h"
-#include "cros-camera/camera_mojo_channel_manager.h"
+#include "cros-camera/camera_mojo_channel_manager_token.h"
 #include "cros-camera/future.h"
 #include "hal/ip/camera_device.h"
 #include "mojo/ip/ip_camera.mojom.h"
@@ -35,7 +35,7 @@ class CameraHal : public mojom::IpCameraConnectionListener {
 
   static CameraHal& GetInstance();
 
-  CameraMojoChannelManager* GetMojoManagerInstance();
+  CameraMojoChannelManagerToken* GetMojoManagerToken();
 
   // Implementations of camera_module_t
   int OpenDevice(int id, const hw_module_t* module, hw_device_t** hw_device);
@@ -45,7 +45,7 @@ class CameraHal : public mojom::IpCameraConnectionListener {
   int Init();
 
   // Implementations for cros_camera_hal_t.
-  void SetUp(CameraMojoChannelManager* mojo_manager);
+  void SetUp(CameraMojoChannelManagerToken* token);
   void TearDown();
 
  private:
@@ -77,8 +77,8 @@ class CameraHal : public mojom::IpCameraConnectionListener {
   base::WaitableEvent callbacks_set_;
   const camera_module_callbacks_t* callbacks_;
 
-  // Mojo manager which is used for Mojo communication.
-  CameraMojoChannelManager* mojo_manager_;
+  // Mojo manager token which is used for Mojo communication.
+  CameraMojoChannelManagerToken* mojo_manager_token_;
 };
 
 }  // namespace cros
