@@ -128,13 +128,6 @@ TEST_F(CellularPropertyTest, SetProperty) {
     ASSERT_TRUE(error.IsFailure());  // name() may be invalid otherwise
     EXPECT_EQ(Error::kInvalidArguments, error.type());
   }
-  {
-    Error error;
-    EXPECT_FALSE(device_->mutable_store()->SetAnyProperty(
-        kCarrierProperty, PropertyStoreTest::kStringV, &error));
-    ASSERT_TRUE(error.IsFailure());  // name() may be invalid otherwise
-    EXPECT_EQ(Error::kInvalidArguments, error.type());
-  }
 }
 
 class CellularTest : public testing::TestWithParam<Cellular::Type> {

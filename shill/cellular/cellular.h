@@ -278,7 +278,6 @@ class Cellular : public Device,
   const std::string& dbus_service() const { return dbus_service_; }
   const RpcIdentifier& dbus_path() const { return dbus_path_; }
   const Stringmap& home_provider() const { return home_provider_; }
-  const std::string& carrier() const { return carrier_; }
   bool scanning_supported() const { return scanning_supported_; }
   const std::string& eid() const { return eid_; }
   const std::string& esn() const { return esn_; }
@@ -553,7 +552,6 @@ class Cellular : public Device,
   Stringmap home_provider_;
 
   bool scanning_supported_;
-  std::string carrier_;
   std::string eid_;  // SIM eID, aka eUICCID
   std::string equipment_id_;
   std::string esn_;

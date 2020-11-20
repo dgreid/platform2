@@ -1453,7 +1453,6 @@ void Cellular::RegisterProperties() {
   // These properties have setters that should be used to change their values.
   // Events are generated whenever the values change.
   store->RegisterConstStringmap(kHomeProviderProperty, &home_provider_);
-  store->RegisterConstString(kCarrierProperty, &carrier_);
   store->RegisterConstBool(kSupportNetworkScanProperty, &scanning_supported_);
   store->RegisterConstString(kEidProperty, &eid_);
   store->RegisterConstString(kEsnProperty, &esn_);
@@ -1534,14 +1533,6 @@ void Cellular::set_home_provider(const Stringmap& home_provider) {
 
   home_provider_ = home_provider;
   adaptor()->EmitStringmapChanged(kHomeProviderProperty, home_provider_);
-}
-
-void Cellular::set_carrier(const string& carrier) {
-  if (carrier_ == carrier)
-    return;
-
-  carrier_ = carrier;
-  adaptor()->EmitStringChanged(kCarrierProperty, carrier_);
 }
 
 void Cellular::set_scanning_supported(bool scanning_supported) {

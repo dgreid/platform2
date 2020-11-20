@@ -227,11 +227,6 @@ Properties	string Address [readonly]
 
 			By default Cellular.AllowRoaming is false.
 
-		string Cellular.Carrier [readonly]
-
-			(Cellular only) The name of the carrier for
-			which the device is configured.
-
 		string Cellular.DeviceID [readonly]
 
 			(Cellular only) The device ID of the physical

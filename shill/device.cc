@@ -170,7 +170,6 @@ Device::Device(Manager* manager,
   // kBgscanSignalThresholdProperty: Registered in WiFi
 
   // kCellularAllowRoamingProperty: Registered in Cellular
-  // kCarrierProperty: Registered in Cellular
   // kEsnProperty: Registered in Cellular
   // kHomeProviderProperty: Registered in Cellular
   // kImeiProperty: Registered in Cellular
