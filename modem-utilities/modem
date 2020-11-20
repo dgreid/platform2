@@ -139,9 +139,13 @@ usage() {
   echo "  esim set_test_mode <true/false>              Set hermes to test mode"
   echo "  esim refresh_profiles [-euicc <euicc>]       Get list of profiles " \
     "from eSIM"
+  echo "  esim request_pending_profiles [-euicc <euicc>] [smds] " \
+    "Get list of pending profiles from SMDS"
   echo "  esim status                                  Display eSIM status"
   echo "  esim install [-euicc <euicc>] <activation> [<confirmation>]" \
     "Install eSIM profile"
+  echo "  esim install [-euicc <euicc>] <iccid> [<confirmation>]" \
+    "Install an eSIM profile fetched by request_pending_profiles"
   echo "  esim uninstall [-euicc <euicc>] <iccid>      Uninstall eSIM profile"
   echo "  esim enable [-euicc <euicc>] <iccid>         Enable eSIM profile"
   echo "  esim disable [-euicc <euicc>] <iccid>        Disable eSIM profile"

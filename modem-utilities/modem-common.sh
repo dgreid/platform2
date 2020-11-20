@@ -128,6 +128,10 @@ esim() {
       poll_for_dbus_service "${HERMES}"
       esim_refresh_profiles "${euicc}" "$@"
       ;;
+    request_pending_profiles)
+      poll_for_dbus_service "${HERMES}"
+      esim_request_pending_profiles "${euicc}" "$@"
+      ;;
     status)
       poll_for_dbus_service "${HERMES}"
       esim_status "$@"
@@ -135,6 +139,10 @@ esim() {
     install)
       poll_for_dbus_service "${HERMES}"
       esim_install "${euicc}" "$@"
+      ;;
+    install_pending_profile)
+      poll_for_dbus_service "${HERMES}"
+      esim_install_pending_profile "${euicc}" "$@"
       ;;
     uninstall)
       poll_for_dbus_service "${HERMES}"
@@ -150,8 +158,8 @@ esim() {
       ;;
     *)
       error_exit "Expected one of "\
-        "{set_test_mode|refresh_profiles|status|install|uninstall|Enable"\
-        "|disable}"
+        "{set_test_mode|refresh_profiles|request_pending_profiles|status"\
+        "install|install_pending_profile|uninstall|enable|disable}"
       ;;
   esac
 }
@@ -172,21 +180,30 @@ esim_profile_from_iccid() {
   local iccid="$2"
   [ -z "${iccid}" ] && error_exit "No iccid provided."
 
-  local profiles
-  profiles=$(dbus_property "${HERMES}" "${euicc}" \
-    "${HERMES_EUICC_IFACE}" "InstalledProfiles" |
-               sed 's|^/[[:digit:]]* ||')
-  [ -z "${profiles}" ] && error_exit "${euicc} has no installed profiles."
+  local profile_type
+  for profile_type in "InstalledProfiles" "PendingProfiles"; do
+    local profiles
+    profiles="$(dbus_property "${HERMES}" "${euicc}" \
+                              "${HERMES_EUICC_IFACE}" "${profile_type}" |
+                              sed 's|^/[[:digit:]]* ||' | tr '\n' ' ')"
 
-  local profile
-  for profile in ${profiles}; do
-    local current
-    current=$(dbus_property "${HERMES}" "${profile}" \
-                            "${HERMES_PROFILE_IFACE}" Iccid)
-    if [ "${current}" = "${iccid}" ]; then
-      echo "${profile}"
-      return
+    if ! echo "${profiles}" | grep -q -E \
+      '^(/org/chromium/Hermes/profile/[0-9]+ )*$'; then
+
+      error_exit "Invalid profile objects received from hermes"
+
     fi
+
+    local profile
+    for profile in ${profiles}; do
+      local current
+      current="$(dbus_property "${HERMES}" "${profile}" \
+                               "${HERMES_PROFILE_IFACE}" Iccid)"
+      if [ "${current}" = "${iccid}" ]; then
+        echo "${profile}"
+        return
+      fi
+    done
   done
   error_exit "No matching Profile found for iccid ${iccid}."
 }
@@ -239,6 +256,16 @@ esim_install() {
             string:"${activation_code}" string:"${confirmation_code}"
 }
 
+esim_install_pending_profile() {
+  local euicc="$1"
+  local profile
+  profile=$(esim_profile_from_iccid "$@")
+  local confirmation_code="$3"
+  dbus_call "${HERMES}" "${euicc}" \
+            "${HERMES_EUICC_IFACE}.InstallPendingProfile" \
+            objpath:"${profile}" string:"${confirmation_code}"
+}
+
 esim_uninstall() {
   local euicc="$1"
   local profile
@@ -246,6 +273,14 @@ esim_uninstall() {
   [ -z "${profile}" ] && exit 1
   dbus_call "${HERMES}" "${euicc}" \
             "${HERMES_EUICC_IFACE}.UninstallProfile" objpath:"${profile}"
+}
+
+esim_request_pending_profiles() {
+  local euicc="$1"
+  local smds="$2"
+
+  dbus_call "${HERMES}" "${euicc}" \
+            "${HERMES_EUICC_IFACE}.RequestPendingProfiles" string:"${smds}"
 }
 
 esim_enable() {
