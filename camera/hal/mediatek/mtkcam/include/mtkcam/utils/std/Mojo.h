@@ -22,9 +22,10 @@
 namespace NSCam {
 namespace Utils {
 
-cros::CameraMojoChannelManager* VISIBILITY_PUBLIC getMojoManagerInstance();
+cros::CameraMojoChannelManagerToken* VISIBILITY_PUBLIC getMojoManagerToken();
 
-void VISIBILITY_PUBLIC setMojoManagerInstance(cros::CameraMojoChannelManager*);
+void VISIBILITY_PUBLIC
+setMojoManagerToken(cros::CameraMojoChannelManagerToken*);
 
 }  // namespace Utils
 }  // namespace NSCam

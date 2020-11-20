@@ -17,7 +17,7 @@
 /******************************************************************************
  *
  *****************************************************************************/
-#include <cros-camera/camera_mojo_channel_manager.h>
+#include <cros-camera/camera_mojo_channel_manager_token.h>
 #include <mtkcam/utils/std/Mojo.h>
 /******************************************************************************
  *
@@ -25,20 +25,20 @@
 namespace NSCam {
 namespace Utils {
 
-static cros::CameraMojoChannelManager* gMojoManager = nullptr;
+static cros::CameraMojoChannelManagerToken* gMojoManagerToken = nullptr;
 
 /******************************************************************************
  *
  ******************************************************************************/
-cros::CameraMojoChannelManager* getMojoManagerInstance() {
-    return gMojoManager;
+cros::CameraMojoChannelManagerToken* getMojoManagerToken() {
+  return gMojoManagerToken;
 }
 
 /******************************************************************************
  *
  ******************************************************************************/
-void setMojoManagerInstance(cros::CameraMojoChannelManager* mojo_manager) {
-    gMojoManager = mojo_manager;
+void setMojoManagerToken(cros::CameraMojoChannelManagerToken* token) {
+  gMojoManagerToken = token;
 }
 
 };  // namespace Utils

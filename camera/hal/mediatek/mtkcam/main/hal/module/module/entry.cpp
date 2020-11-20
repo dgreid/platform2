@@ -81,12 +81,12 @@ static int hal_init(void) {
     return 0;
 }
 
-static void set_up(cros::CameraMojoChannelManager* mojo_manager) {
-  NSCam::Utils::setMojoManagerInstance(mojo_manager);
+static void set_up(cros::CameraMojoChannelManagerToken* token) {
+  NSCam::Utils::setMojoManagerToken(token);
 }
 
 static void tear_down() {
-  NSCam::Utils::setMojoManagerInstance(nullptr);
+  NSCam::Utils::setMojoManagerToken(nullptr);
 }
 
 static camera_module get_camera_module() {

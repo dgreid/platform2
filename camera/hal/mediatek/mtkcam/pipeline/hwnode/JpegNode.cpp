@@ -551,7 +551,7 @@ JpegNodeImp::JpegNodeImp()
 #endif
       ,
       mJpegCompressor(cros::JpegCompressor::GetInstance(
-          NSCam::Utils::getMojoManagerInstance())) {
+          NSCam::Utils::getMojoManagerToken())) {
   pthread_rwlock_init(&mConfigRWLock, NULL);
   mNodeName = "JpegNode";  // default name
   MINT32 enable = ::property_get_int32("vendor.jpeg.rotation.enable", 1);
