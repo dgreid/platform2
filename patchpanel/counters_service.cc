@@ -29,12 +29,9 @@ constexpr char kMangleTable[] = "mangle";
 //   https://git.netfilter.org/iptables/tree/iptables/iptables.c?h=v1.6.2
 
 // The chain line looks like:
-//   "Chain tx_fwd_eth0 (1 references)".
-// This regex extracts "tx" (direction), "eth0" (ifname) from this example, and
-// "fwd" (prebuilt chain) is matched but not captured because it is not required
-// for counters.
-constexpr LazyRE2 kChainLine = {
-    R"(Chain (rx|tx)_(?:input|fwd|postrt)_(\w+).*)"};
+//   "Chain tx_eth0 (2 references)".
+// This regex extracts "tx" (direction), "eth0" (ifname) from this example.
+constexpr LazyRE2 kChainLine = {R"(Chain (rx|tx)_(\w+).*)"};
 
 // The counter line looks like (some spaces are deleted to make it fit in one
 // line):
@@ -192,42 +189,26 @@ void CountersService::IptablesNewRule(std::vector<std::string> params) {
 }
 
 void CountersService::SetupChainsAndRules(const std::string& ifname) {
-  // For each group, we need to create 1) an accounting chain, 2) a jumping rule
-  // matching |ifname|, and 3) accounting rule(s) in the chain.
+  // For each device and traffic direction, we need to create:
+  //  1) an accounting chain to jump to,
+  //  2) jumping rules in mangle POSTROUTING for egress traffic, and in mangle
+  //     INPUT and FORWARD for ingress traffic.
+  //  3) source accounting rules in the chain.
   // Note that the length of a chain name must less than 29 chars and IFNAMSIZ
   // is 16 so we can only use at most 12 chars for the prefix.
 
-  // Egress traffic in FORWARD chain. Only traffic for interface-type sources
-  // will be counted by these rules.
-  const std::string egress_forward_chain = "tx_fwd_" + ifname;
-  MakeAccountingChain(egress_forward_chain);
-  IptablesNewRule({"-A", "FORWARD", "-o", ifname, "-j", egress_forward_chain});
-  SetupAccountingRules(egress_forward_chain);
+  // Ingress traffic chain.
+  const std::string ingress_chain = "rx_" + ifname;
+  MakeAccountingChain(ingress_chain);
+  IptablesNewRule({"-A", "FORWARD", "-i", ifname, "-j", ingress_chain});
+  IptablesNewRule({"-A", "INPUT", "-i", ifname, "-j", ingress_chain});
+  SetupAccountingRules(ingress_chain);
 
-  // Egress traffic in POSTROUTING chain. Only traffic for host-type sources
-  // will be counted by these rules, by having a "-m owner --socket-exists" in
-  // the jumping rule. Traffic via "FORWARD -> POSTROUTING" does not have a
-  // socket so will only be counted in FORWARD, while traffic from OUTPUT will
-  // always have an associated socket.
-  const std::string egress_postrouting_chain = "tx_postrt_" + ifname;
-  MakeAccountingChain(egress_postrouting_chain);
-  IptablesNewRule({"-A", "POSTROUTING", "-o", ifname, "-m", "owner",
-                   "--socket-exists", "-j", egress_postrouting_chain});
-  SetupAccountingRules(egress_postrouting_chain);
-
-  // Ingress traffic in FORWARD chain. Only traffic for interface-type sources
-  // will be counted by these rules.
-  const std::string ingress_forward_chain = "rx_fwd_" + ifname;
-  MakeAccountingChain(ingress_forward_chain);
-  IptablesNewRule({"-A", "FORWARD", "-i", ifname, "-j", ingress_forward_chain});
-  SetupAccountingRules(ingress_forward_chain);
-
-  // Ingress traffic in INPUT chain. Only traffic for host-type sources will be
-  // counted by these rules.
-  const std::string ingress_input_chain = "rx_input_" + ifname;
-  MakeAccountingChain(ingress_input_chain);
-  IptablesNewRule({"-A", "INPUT", "-i", ifname, "-j", ingress_input_chain});
-  SetupAccountingRules(ingress_input_chain);
+  // Egress traffic chain.
+  const std::string egress_chain = "tx_" + ifname;
+  MakeAccountingChain(egress_chain);
+  IptablesNewRule({"-A", "POSTROUTING", "-o", ifname, "-j", egress_chain});
+  SetupAccountingRules(egress_chain);
 }
 
 void CountersService::SetupAccountingRules(const std::string& chain_name) {

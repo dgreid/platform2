@@ -62,53 +62,35 @@ Chain PREROUTING (policy ACCEPT 22785 packets, 136093545 bytes)
 
 Chain INPUT (policy ACCEPT 4421 packets, 2461233 bytes)
     pkts      bytes target     prot opt in     out     source               destination
-  312491 1767147156 rx_input_eth0  all  --  eth0   any     anywhere             anywhere
-       0        0 rx_input_wlan0  all  --  wlan0  any     anywhere             anywhere
+  312491 1767147156 rx_eth0  all  --  eth0   any     anywhere             anywhere
+       0        0 rx_wlan0  all  --  wlan0  any     anywhere             anywhere
 
 Chain FORWARD (policy ACCEPT 18194 packets, 133612816 bytes)
     pkts      bytes target     prot opt in     out     source               destination
-    6511 68041668 tx_fwd_eth0  all  --  any    eth0    anywhere             anywhere
-   11683 65571148 rx_fwd_eth0  all  --  eth0   any     anywhere             anywhere
-       0        0 tx_fwd_wlan0  all  --  any    wlan0   anywhere             anywhere
-       0        0 rx_fwd_wlan0  all  --  wlan0  any     anywhere             anywhere
+    6511 68041668 tx_eth0  all  --  any    eth0    anywhere             anywhere
+   11683 65571148 rx_eth0  all  --  eth0   any     anywhere             anywhere
 
 Chain OUTPUT (policy ACCEPT 4574 packets, 2900995 bytes)
     pkts      bytes target     prot opt in     out     source               destination
 
 Chain POSTROUTING (policy ACCEPT 22811 packets, 136518827 bytes)
     pkts      bytes target     prot opt in     out     source               destination
-  202160 1807550291 tx_postrt_eth0  all  --  any    eth0    anywhere             anywhere             owner socket exists
-       2       96 tx_postrt_wlan0  all  --  any    wlan0   anywhere             anywhere             owner socket exists
+  202160 1807550291 tx_eth0  all  --  any    eth0    anywhere             anywhere             owner socket exists
+       2       96 tx_wlan0  all  --  any    wlan0   anywhere             anywhere             owner socket exists
 
-Chain tx_fwd_eth0 (1 references)
+Chain tx_eth0 (1 references)
     pkts      bytes target     prot opt in     out     source               destination
-    6511 68041668            all  --  any    any     anywhere             anywhere
+  208671 1875591959            all  --  any    any     anywhere             anywhere
 
-Chain tx_fwd_wlan0 (1 references)
-    pkts      bytes target     prot opt in     out     source               destination
-       0        0            all  --  any    any     anywhere             anywhere
-
-Chain tx_postrt_eth0 (1 references)
-    pkts      bytes target     prot opt in     out     source               destination
-  202160 1807550291            all  --  any    any     anywhere             anywhere
-
-Chain tx_postrt_wlan0 (1 references)
+Chain tx_wlan0 (1 references)
     pkts      bytes target     prot opt in     out     source               destination
        2       96            all  --  any    any     anywhere             anywhere
 
-Chain rx_fwd_eth0 (1 references)
+Chain rx_eth0 (2 references)
     pkts      bytes target     prot opt in     out     source               destination
-   11683 65571148            all  --  any    any     anywhere             anywhere
+  324174 1832718304            all  --  any    any     anywhere             anywhere
 
-Chain rx_fwd_wlan0 (1 references)
-    pkts      bytes target     prot opt in     out     source               destination
-       0        0            all  --  any    any     anywhere             anywhere
-
-Chain rx_input_eth0 (1 references)
-    pkts      bytes target     prot opt in     out     source               destination
-  312491 1767147156            all  --  any    any     anywhere             anywhere
-
-Chain rx_input_wlan0 (1 references)
+Chain rx_wlan0 (2 references)
     pkts      bytes target     prot opt in     out     source               destination
        0        0            all  --  any    any     anywhere             anywhere
 )";
@@ -196,22 +178,14 @@ TEST_F(CountersServiceTest, OnNewDevice) {
 
   // The following commands are expected when eth0 comes up.
   const std::vector<std::vector<std::string>> expected_calls{
-      {"-N", "rx_input_eth0", "-w"},
-      {"-A", "INPUT", "-i", "eth0", "-j", "rx_input_eth0", "-w"},
-      {"-A", "rx_input_eth0", "-w"},
+      {"-N", "rx_eth0", "-w"},
+      {"-A", "INPUT", "-i", "eth0", "-j", "rx_eth0", "-w"},
+      {"-A", "FORWARD", "-i", "eth0", "-j", "rx_eth0", "-w"},
+      {"-A", "rx_eth0", "-w"},
 
-      {"-N", "rx_fwd_eth0", "-w"},
-      {"-A", "FORWARD", "-i", "eth0", "-j", "rx_fwd_eth0", "-w"},
-      {"-A", "rx_fwd_eth0", "-w"},
-
-      {"-N", "tx_postrt_eth0", "-w"},
-      {"-A", "POSTROUTING", "-o", "eth0", "-m", "owner", "--socket-exists",
-       "-j", "tx_postrt_eth0", "-w"},
-      {"-A", "tx_postrt_eth0", "-w"},
-
-      {"-N", "tx_fwd_eth0", "-w"},
-      {"-A", "FORWARD", "-o", "eth0", "-j", "tx_fwd_eth0", "-w"},
-      {"-A", "tx_fwd_eth0", "-w"},
+      {"-N", "tx_eth0", "-w"},
+      {"-A", "POSTROUTING", "-o", "eth0", "-j", "tx_eth0", "-w"},
+      {"-A", "tx_eth0", "-w"},
   };
 
   for (const auto& rule : expected_calls) {
