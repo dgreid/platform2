@@ -42,6 +42,13 @@ class L2TPIPSecDriver : public VPNDriver, public RpcTaskDelegate {
   IfType GetIfType() const override;
   void OnConnectTimeout() override;
 
+  // Disconnects from the VPN service before suspend or when the current default
+  // physical service becomes unavailable. The reconnection behavior relies on
+  // whether the user sets "Automatically connect to this network".
+  void OnBeforeSuspend(const ResultCallback& callback) override;
+  void OnDefaultPhysicalServiceEvent(
+      DefaultPhysicalServiceEvent event) override;
+
  private:
   friend class L2TPIPSecDriverTest;
   FRIEND_TEST(L2TPIPSecDriverTest, AppendFlag);

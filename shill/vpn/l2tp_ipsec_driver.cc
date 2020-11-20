@@ -191,6 +191,24 @@ void L2TPIPSecDriver::Cleanup() {
   interface_name_.clear();
 }
 
+void L2TPIPSecDriver::OnBeforeSuspend(const ResultCallback& callback) {
+  if (service_callback_) {
+    FailService(Service::kFailureDisconnect);
+  }
+  callback.Run(Error(Error::kSuccess));
+}
+
+void L2TPIPSecDriver::OnDefaultPhysicalServiceEvent(
+    DefaultPhysicalServiceEvent event) {
+  if (!service_callback_) {
+    return;
+  }
+  if (event == kDefaultPhysicalServiceUp) {
+    return;
+  }
+  FailService(Service::kFailureDisconnect);
+}
+
 void L2TPIPSecDriver::DeleteTemporaryFile(base::FilePath* temporary_file) {
   if (!temporary_file->empty()) {
     base::DeleteFile(*temporary_file, false);
