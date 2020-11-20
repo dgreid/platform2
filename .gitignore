@@ -16,6 +16,7 @@
 *.exe
 
 *.d
+!**/tmpfiles.d
 *.depends
 .deps
 .libs
