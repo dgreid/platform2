@@ -64,7 +64,7 @@ Rockchip3AClient::Rockchip3AClient():
     Rockchip3AClient::notify = notifyCallback;
 
     mBridge = cros::CameraAlgorithmBridge::CreateInstance(
-        cros::CameraAlgorithmBackend::kVendorCpu, g_mojo_manager);
+        cros::CameraAlgorithmBackend::kVendorCpu, g_mojo_manager_token);
     CheckAndLogError(!mBridge, VOID_VALUE, "@%s, mBridge is nullptr",
                      __FUNCTION__);
     CheckAndLogError((mBridge->Initialize(this) != 0), VOID_VALUE,

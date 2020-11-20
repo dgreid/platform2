@@ -59,7 +59,7 @@ static int sInstanceCount = 0;
  */
 static std::mutex sCameraHalMutex;
 
-cros::CameraMojoChannelManager* android::camera2::g_mojo_manager = nullptr;
+cros::CameraMojoChannelManagerToken* android::camera2::g_mojo_manager_token = nullptr;
 
 int openCameraHardware(int id, const hw_module_t* module, hw_device_t** device)
 {
@@ -238,9 +238,9 @@ static int hal_init()
     return 0;
 }
 
-static void set_up(cros::CameraMojoChannelManager* mojo_manager)
+static void set_up(cros::CameraMojoChannelManagerToken* token)
 {
-    android::camera2::g_mojo_manager = mojo_manager;
+    android::camera2::g_mojo_manager_token = token;
 
     LogHelper::setDebugLevel();
     PerformanceTraces::reset();
@@ -256,7 +256,7 @@ static void tear_down()
 {
     PlatformData::deinit();
 
-    android::camera2::g_mojo_manager = nullptr;
+    android::camera2::g_mojo_manager_token = nullptr;
 }
 
 static struct hw_module_methods_t hal_module_methods = {

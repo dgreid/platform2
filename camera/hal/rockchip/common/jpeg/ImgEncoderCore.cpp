@@ -38,7 +38,7 @@ ImgEncoderCore::ImgEncoderCore() :
     mMainScaled(nullptr),
     mThumbScaled(nullptr),
     mJpegSetting(nullptr),
-    mJpegCompressor(cros::JpegCompressor::GetInstance(g_mojo_manager))
+    mJpegCompressor(cros::JpegCompressor::GetInstance(g_mojo_manager_token))
 {
     LOG1("@%s", __FUNCTION__);
 
