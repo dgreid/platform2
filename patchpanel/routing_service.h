@@ -204,6 +204,11 @@ constexpr std::array<TrafficSource, 5> kLocalSources{
 constexpr std::array<TrafficSource, 5> kForwardedSources{
     {ARC, CROSVM, PLUGINVM, TETHER_DOWNSTREAM, ARC_VPN}};
 
+// All sources
+constexpr std::array<TrafficSource, 10> kAllSources{
+    {CHROME, USER, UPDATE_ENGINE, SYSTEM, HOST_VPN, ARC, CROSVM, PLUGINVM,
+     TETHER_DOWNSTREAM, ARC_VPN}};
+
 // Constant fwmark value for tagging traffic with the "route-on-vpn" intent.
 constexpr const Fwmark kFwmarkRouteOnVpn = {.policy = 0x80};
 // Constant fwmark value for tagging traffic with the "bypass-vpn" intent.

@@ -15,6 +15,7 @@
 
 #include "patchpanel/datapath.h"
 #include "patchpanel/minijailed_process_runner.h"
+#include "patchpanel/routing_service.h"
 #include "patchpanel/shill_client.h"
 
 namespace patchpanel {
@@ -85,23 +86,10 @@ class CountersService {
 
  private:
   bool MakeAccountingChain(const std::string& chain_name);
-
-  // Creates a new rule using both iptables and ip6tables in the mangle table.
-  // The first element in |params| should be "-I" (insert) or "-A" (append), and
-  // this function will replace it with "-C" to do the check before executing
-  // the actual insert or append command. This function will also append "-w" to
-  // |params|. Note that |params| is passed by value because it will be modified
-  // inside the function, and the normal pattern to use this function is passing
-  // an rvalue (e.g., `IptablesNewRule({"-I", "INPUT", ...})`), so no extra copy
-  // should happen in such cases.
-  void IptablesNewRule(std::vector<std::string> params);
+  bool AddAccountingRule(const std::string& chain_name, TrafficSource source);
 
   // Installs the required chains and rules for the given shill device.
   void SetupChainsAndRules(const std::string& ifname);
-  // Installs the accounting rules in the given accounting chain. Currently we
-  // only need one rule to match all the traffic, without distinguishing
-  // different sources.
-  void SetupAccountingRules(const std::string& chain_name);
 
   void OnDeviceChanged(const std::set<std::string>& added,
                        const std::set<std::string>& removed);

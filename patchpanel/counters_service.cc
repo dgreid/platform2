@@ -13,8 +13,6 @@
 #include <base/strings/string_split.h>
 #include <re2/re2.h>
 
-#include "patchpanel/routing_service.h"
-
 namespace patchpanel {
 
 namespace {
@@ -169,9 +167,19 @@ bool CountersService::MakeAccountingChain(const std::string& chain_name) {
                                 false /*log_failures*/);
 }
 
-void CountersService::IptablesNewRule(std::vector<std::string> params) {
-  runner_->iptables(kMangleTable, params);
-  runner_->ip6tables(kMangleTable, params);
+bool CountersService::AddAccountingRule(const std::string& chain_name,
+                                        TrafficSource source) {
+  std::vector<std::string> args = {"-A",
+                                   chain_name,
+                                   "-m",
+                                   "mark",
+                                   "--mark",
+                                   Fwmark::FromSource(source).ToString() + "/" +
+                                       kFwmarkAllSourcesMask.ToString(),
+                                   "-j",
+                                   "RETURN",
+                                   "-w"};
+  return datapath_->ModifyIptables(IpFamily::Dual, kMangleTable, args);
 }
 
 void CountersService::SetupChainsAndRules(const std::string& ifname) {
@@ -204,14 +212,13 @@ void CountersService::SetupChainsAndRules(const std::string& ifname) {
       IpFamily::Dual, kMangleTable,
       {"-A", "POSTROUTING", "-o", ifname, "-j", egress_chain, "-w"});
 
-  SetupAccountingRules(ingress_chain);
-  SetupAccountingRules(egress_chain);
-}
-
-void CountersService::SetupAccountingRules(const std::string& chain_name) {
-  // TODO(jiejiang): This function will be extended to matching on fwmark for
-  // different sources.
-  IptablesNewRule({"-A", chain_name, "-w"});
+  // Add source accounting rules.
+  for (TrafficSource source : kAllSources) {
+    AddAccountingRule(ingress_chain, source);
+    AddAccountingRule(egress_chain, source);
+  }
+  // TODO(b/160112868): add default rules for counting any traffic left as
+  // UNKNOWN.
 }
 
 }  // namespace patchpanel
