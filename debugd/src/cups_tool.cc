@@ -155,9 +155,9 @@ int TestPPD(const std::vector<uint8_t>& ppd_data) {
     }
     ppd_content.assign(out.begin(), out.end());
   }
-  int ret = RunAsUser(kLpadminUser, kLpadminGroup, kTestPPDCommand,
-                      kTestPPDSeccompPolicy, {"-W", "translations", "-"},
-                      &ppd_content, false);
+  int ret = RunAsUser(
+      kLpadminUser, kLpadminGroup, kTestPPDCommand, kTestPPDSeccompPolicy,
+      {"-W", "translations", "-W", "constraints", "-"}, &ppd_content);
   // Check if the foomatic-rip cups filter is present in the PPD file.
   constexpr uint8_t kFoomaticRip[] = "foomatic-rip\"";
   // Subtract 1 to exclude the null terminator.
