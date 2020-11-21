@@ -210,7 +210,7 @@ class FingerWebSocket(WebSocket):
         self.send(json.dumps(req), False)
 
     def finger_worker(self):
-        while not self.client_terminated:
+        while not self.server_terminated and not self.client_terminated:
             self.available_req.acquire()
             while not self.current_req and not self.abort_request:
                 self.available_req.wait()
