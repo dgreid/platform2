@@ -85,9 +85,6 @@ base::Optional<base::Value> BenchmarkResultsToJson(
   base::Value percentiles(base::Value::Type::DICTIONARY);
   for (const auto& latencies : results.percentile_latencies_in_us()) {
     std::string percentile = std::to_string(latencies.first);
-    LOG(INFO) << percentile
-              << "th percentile latency: " << latencies.second / 1000000.0
-              << " seconds";
     percentiles.SetKey(percentile,
                        base::Value(static_cast<int>(latencies.second)));
   }

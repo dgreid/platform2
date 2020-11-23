@@ -16,6 +16,7 @@ pkg_config("target_defaults") {
   pkg_deps = [
     "libbrillo",
     "libchrome",
+    "re2",
   ]
 }
 
@@ -41,6 +42,8 @@ static_library("libmlbenchmark") {
     "shared_library_benchmark.h",
     "shared_library_benchmark_functions.cc",
     "shared_library_benchmark_functions.h",
+    "sysmetrics.cc",
+    "sysmetrics.h",
   ]
   configs += [ ":target_defaults" ]
   deps = [ ":libmlbenchmark_proto" ]
@@ -62,6 +65,7 @@ if (use.test) {
     sources = [
       "json_serializer_test.cc",
       "shared_library_benchmark_test.cc",
+      "sysmetrics_test.cc",
     ]
     configs += [
       "//common-mk:test",

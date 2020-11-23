@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <string>
-
 #include <base/files/file.h>
 #include <base/files/file_util.h>
 #include <base/json/json_writer.h>
@@ -11,9 +9,12 @@
 #include <base/values.h>
 #include <brillo/flag_helper.h>
 
+#include <string>
+
 #include "ml_benchmark/json_serializer.h"
 #include "ml_benchmark/shared_library_benchmark.h"
 #include "ml_benchmark/shared_library_benchmark_functions.h"
+#include "ml_benchmark/sysmetrics.h"
 
 using chrome::ml_benchmark::AccelerationMode;
 using chrome::ml_benchmark::BenchmarkResults;
@@ -24,7 +25,42 @@ using ml_benchmark::SharedLibraryBenchmarkFunctions;
 
 namespace {
 
-void benchmark_and_report_results(
+void AddMemoryMetrics(const int initial_memsize,
+                      const int final_peaksize,
+                      BenchmarkResults* results) {
+  auto& initial_mem = *results->add_metrics();
+  initial_mem.set_name("initial_vmsize");
+  initial_mem.set_units(Metric::BYTES);
+  initial_mem.set_direction(Metric::SMALLER_IS_BETTER);
+  initial_mem.set_cardinality(Metric::SINGLE);
+  initial_mem.add_values(initial_memsize);
+
+  auto& final_mem = *results->add_metrics();
+  final_mem.set_name("final_vmpeak");
+  final_mem.set_units(Metric::BYTES);
+  final_mem.set_direction(Metric::SMALLER_IS_BETTER);
+  final_mem.set_cardinality(Metric::SINGLE);
+  final_mem.add_values(final_peaksize);
+}
+
+void PrintMetrics(const BenchmarkResults& results) {
+  LOG(INFO) << "Accuracy: " << results.total_accuracy();
+
+  for (const auto& latencies : results.percentile_latencies_in_us()) {
+    std::string percentile = std::to_string(latencies.first);
+    LOG(INFO) << percentile
+              << "th percentile latency: " << latencies.second / 1000000.0
+              << " seconds";
+  }
+
+  // Assume single values for now.
+  for (const auto& metric : results.metrics()) {
+    LOG(INFO) << metric.name() << ": " << metric.values()[0] << " ("
+              << chrome::ml_benchmark::Metric_Units_Name(metric.units()) << ")";
+  }
+}
+
+void BenchmarkAndReportResults(
     const std::string& driver_name,
     const base::FilePath& driver_file_path,
     const CrOSBenchmarkConfig& config,
@@ -36,6 +72,8 @@ void benchmark_and_report_results(
     return;
   }
 
+  const int initial_memsize = ml_benchmark::GetVMSizeBytes();
+
   LOG(INFO) << "Starting the " << driver_name << " benchmark";
   SharedLibraryBenchmark benchmark(std::move(functions));
   BenchmarkResults results;
@@ -46,14 +84,11 @@ void benchmark_and_report_results(
 
   if (results.status() == chrome::ml_benchmark::OK) {
     LOG(INFO) << driver_name << " finished";
-    LOG(INFO) << results.results_message();
-    LOG(INFO) << "Accuracy: " << results.total_accuracy();
-    if (results.percentile_latencies_in_us().empty()) {
-      LOG(WARNING) << driver_name << " did not provide any latency "
-                   << "percentiles, the driver might be using "
-                   << "the old interface.";
-      return;
-    }
+
+    const int final_peaksize = ml_benchmark::GetVMPeakBytes();
+    AddMemoryMetrics(initial_memsize, final_peaksize, &results);
+
+    PrintMetrics(results);
 
     if (output_path) {
       ml_benchmark::WriteResultsToPath(results, *output_path);
@@ -101,8 +136,8 @@ int main(int argc, char* argv[]) {
 
   base::FilePath driver_library(FLAGS_driver_library_path);
 
-  benchmark_and_report_results(FLAGS_driver_library_path, driver_library,
-                               benchmark_config, output_file_path);
+  BenchmarkAndReportResults(FLAGS_driver_library_path, driver_library,
+                            benchmark_config, output_file_path);
 
   LOG(INFO) << "Benchmark finished, exiting";
 }
