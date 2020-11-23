@@ -93,9 +93,7 @@ void Port::AddCableAltMode(const base::FilePath& path) {
     return;
   }
 
-  if (!cable_->AddAltMode(path))
-    LOG(ERROR) << "Failed to add alt mode for port " << port_num_ << " at path "
-               << path;
+  cable_->SearchForAltModes(path);
 }
 
 std::string Port::GetDataRole() {

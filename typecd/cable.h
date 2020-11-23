@@ -25,6 +25,14 @@ class Cable : public Peripheral {
   Cable(const Cable&) = delete;
   Cable& operator=(const Cable&) = delete;
 
+  // The Linux Type C connector class framework doesn't generate udev events for
+  // alternate modes added to plugs. Therefore, the alternate mode addition code
+  // needs to be handled a little differently from partners.
+  //
+  // Search |plug_syspath| for directories that follow the SOP' alternate mode
+  // regex, and run the |AddAltMode| for each such path.
+  void SearchForAltModes(const base::FilePath& plug_syspath);
+
   // Add an alternate mode for the plug associated with the cable.
   // NOTE: We currently only process SOP' plugs.
   // TODO(b/159859845): Add support for SOP'' plugs and alternate modes.
