@@ -40,7 +40,7 @@
 #       Path to the mojom_bindings_generator.py script. This is useful if
 #       the script is not yet installed to the system, but the repository
 #       contains it.
-#       If not given, /usr/src/libmojo-${libbase_ver}/mojo/mojom_bindings_generator.py
+#       If not given, /usr/src/libmojo/mojo/mojom_bindings_generator.py
 #       is used.
 #   All flags which can be interpreted by static_library target:
 #       The values are used as if static_library does. Note that some flags
@@ -72,7 +72,7 @@ template("generate_mojom_bindings_gen") {
   if (defined(mojom_bindings_generator)) {
     mojom_bindings_generator = rebase_path(mojom_bindings_generator)
   } else {
-    mojom_bindings_generator = "${sysroot}/usr/src/libmojo-${libbase_ver}/mojo/mojom_bindings_generator.py"
+    mojom_bindings_generator = "${sysroot}/usr/src/libmojo/mojo/mojom_bindings_generator.py"
   }
 
   if (libbase_ver != "679961") {
@@ -80,7 +80,7 @@ template("generate_mojom_bindings_gen") {
       mojom_parser = rebase_path(mojom_parser)
     } else {
       mojom_parser =
-          "${sysroot}/usr/src/libmojo-${libbase_ver}/mojo/mojom_parser.py"
+          "${sysroot}/usr/src/libmojo/mojo/mojom_parser.py"
     }
   }
 
