@@ -2746,7 +2746,9 @@ bool UserDataAuth::InstallAttributesSet(const std::string& name,
 
 bool UserDataAuth::InstallAttributesFinalize() {
   AssertOnMountThread();
-  return install_attrs_->Finalize();
+  bool result = install_attrs_->Finalize();
+  DetectEnterpriseOwnership();
+  return result;
 }
 
 int UserDataAuth::InstallAttributesCount() {
