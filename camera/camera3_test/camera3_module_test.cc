@@ -19,6 +19,7 @@
 #include <base/strings/stringprintf.h>
 #include <base/system/sys_info.h>
 #include <brillo/message_loops/base_message_loop.h>
+#include <chromeos-config/libcros_config/cros_config.h>
 #include <system/camera_metadata_hidden.h>
 
 #include "camera3_test/camera3_device.h"
@@ -392,6 +393,44 @@ static void InitPerfLog() {
   camera3_test::Camera3PerfLog::GetInstance()->SetCameraNameMap(name_map);
 }
 
+struct NumberOfBuiltInCameras {
+  int mipi;
+  int usb;
+};
+
+static base::Optional<NumberOfBuiltInCameras> GetNumberOfBuiltInCameras() {
+  NumberOfBuiltInCameras num_built_in_cams = {0};
+  brillo::CrosConfig cros_config;
+  if (!cros_config.Init()) {
+    ADD_FAILURE() << "Failed to initialize CrOS config";
+    return base::nullopt;
+  }
+
+  std::string count_str;
+  if (cros_config.GetString("/camera", "count", &count_str)) {
+    if (count_str == "0") {
+      return num_built_in_cams;
+    }
+  }
+  std::string interface;
+  for (int i = 0;; ++i) {
+    if (!cros_config.GetString(base::StringPrintf("/camera/devices/%i", i),
+                               "interface", &interface)) {
+      if (i == 0) {
+        return base::nullopt;
+      }
+      break;
+    }
+    if (interface == "mipi") {
+      ++num_built_in_cams.mipi;
+    } else {
+      ++num_built_in_cams.usb;
+    }
+  }
+
+  return num_built_in_cams;
+}
+
 static camera_module_t* GetCameraModule() {
   return g_cam_module;
 }
@@ -562,9 +601,23 @@ int64_t Camera3Module::GetOutputMinFrameDuration(
 // Test cases
 
 TEST_F(Camera3ModuleFixture, NumberOfCameras) {
-  ASSERT_GT(cam_module_.GetNumberOfCameras(), 0) << "No cameras found";
-  ASSERT_LE(cam_module_.GetNumberOfCameras(), kMaxNumCameras)
-      << "Too many cameras found";
+  base::CommandLine* cmd_line = base::CommandLine::ForCurrentProcess();
+  base::FilePath camera_hal_path =
+      cmd_line->GetSwitchValuePath("camera_hal_path");
+  auto num_built_in_cams = GetNumberOfBuiltInCameras();
+  if (num_built_in_cams.has_value()) {
+    if (camera_hal_path.value().find("usb") != std::string::npos) {
+      ASSERT_EQ(cam_module_.GetNumberOfCameras(), num_built_in_cams->usb)
+          << "Incorrect number of cameras";
+    } else {
+      ASSERT_EQ(cam_module_.GetNumberOfCameras(), num_built_in_cams->mipi)
+          << "Incorrect number of cameras";
+    }
+  } else {
+    ASSERT_GT(cam_module_.GetNumberOfCameras(), 0) << "No cameras found";
+    ASSERT_LE(cam_module_.GetNumberOfCameras(), kMaxNumCameras)
+        << "Too many cameras found";
+  }
 }
 
 TEST_F(Camera3ModuleFixture, OpenDeviceOfBadIndices) {
