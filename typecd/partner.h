@@ -32,29 +32,26 @@ class Partner : public Peripheral {
   bool AddAltMode(const base::FilePath& mode_syspath);
   void RemoveAltMode(const base::FilePath& mode_syspath);
 
-  // Update the AltMode information based on Type C connector class sysfs.
-  // A udev event is generated when a new partner altmode is registered; parse
-  // the data at the "known" locations in sysfs and populate the class data
-  // structures accordingly.
-  //
-  // Previously added altmodes should be unaffected by this function.
-  void UpdateAltModesFromSysfs();
+  // In some cases, some of the PD identity info (like number of alternate
+  // modes) is not yet available when the Partner is first created. When these
+  // later get added, a udev event occurs. When this event occurs, read sysfs to
+  // get this data if it is available.
+  void UpdatePDInfoFromSysfs();
 
   // Return the total number of AltModes supported by the partner. If this value
   // hasn't been populated yet, the default value is -1, signifying that
   // discovery is not yet complete.
   int GetNumAltModes() { return num_alt_modes_; }
 
-  // Set the total number of AltModes supported by the partner. This value
-  // should be populated either:
-  // - From the corresponding file in sysfs
-  //   <or>
-  // - When an appropriate signal is received from the kernel about completion
-  //   of partner Discovery.
-  //
-  // Since neither of the above have been implemented yet, we can call this
-  // function explicitly for the sake of unit tests.
+  // Set the total number of alternate modes supported by the partner.
   void SetNumAltModes(int num_alt_modes) { num_alt_modes_ = num_alt_modes; }
+
+  // Parse the number of alternate modes supported by the partner. This value
+  // should be populated from the corresponding file in sysfs.
+  //
+  // Returns the number of supported alternate modes, or -1 if the sysfs file is
+  // unavailable.
+  int ParseNumAltModes();
 
   // Return the AltMode with index |index|, and nullptr if such an AltMode
   // doesn't exist.

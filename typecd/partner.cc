@@ -4,7 +4,11 @@
 
 #include "typecd/partner.h"
 
+#include <string>
+
 #include <base/logging.h>
+#include <base/strings/string_number_conversions.h>
+#include <base/strings/string_util.h>
 #include <re2/re2.h>
 
 namespace {
@@ -16,7 +20,9 @@ constexpr char kPartnerAltModeRegex[] = R"(port(\d+)-partner.(\d+))";
 namespace typecd {
 
 Partner::Partner(const base::FilePath& syspath)
-    : Peripheral(syspath), num_alt_modes_(-1) {}
+    : Peripheral(syspath), num_alt_modes_(-1) {
+  SetNumAltModes(ParseNumAltModes());
+}
 
 bool Partner::AddAltMode(const base::FilePath& mode_syspath) {
   int port, index;
@@ -73,8 +79,28 @@ bool Partner::IsAltModePresent(int index) {
   return false;
 }
 
-void Partner::UpdateAltModesFromSysfs() {
-  NOTIMPLEMENTED();
+void Partner::UpdatePDInfoFromSysfs() {
+  if (GetNumAltModes() == -1)
+    SetNumAltModes(ParseNumAltModes());
+  UpdatePDIdentityVDOs();
+}
+
+int Partner::ParseNumAltModes() {
+  auto path = GetSysPath().Append("number_of_alternate_modes");
+
+  std::string val_str;
+  if (!base::ReadFileToString(path, &val_str))
+    return -1;
+
+  base::TrimWhitespaceASCII(val_str, base::TRIM_TRAILING, &val_str);
+
+  int num_altmodes;
+  if (!base::StringToInt(val_str.c_str(), &num_altmodes)) {
+    LOG(ERROR) << "Couldn't parse num_altmodes from string: " << val_str;
+    return -1;
+  }
+
+  return num_altmodes;
 }
 
 AltMode* Partner::GetAltMode(int index) {

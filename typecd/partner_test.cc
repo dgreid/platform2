@@ -62,6 +62,9 @@ TEST_F(PartnerTest, TestAltModeManualAddition) {
 // Verify that partner PD identity VDOs get scanned and stored correctly.
 // Also check that once PD identity VDOs are scanned, subsequent changes to PD
 // identity aren't considered.
+// Finally, for the case where the "number_of_alternate_modes" attribute gets
+// updated after the initial partner registration, ensure that the attribute
+// gets parsed and stored correctly.
 TEST_F(PartnerTest, TestPDIdentityScan) {
   // Set up fake sysfs paths.
   base::FilePath temp_dir;
@@ -110,6 +113,19 @@ TEST_F(PartnerTest, TestPDIdentityScan) {
   p.UpdatePDIdentityVDOs();
 
   EXPECT_NE(kPartnerPDProductVDO2, p.GetProductVDO());
+
+  // Number of alternate modes is still not set, so it should return -1.
+  EXPECT_EQ(-1, p.GetNumAltModes());
+
+  // Now add the sysfs entry and run the update code (in production, this
+  // will run in response to a udev event, but since we don't have that here,
+  // call it manually).
+  auto num_altmodes = base::StringPrintf("0");
+  ASSERT_TRUE(base::WriteFile(partner_path.Append("number_of_alternate_modes"),
+                              num_altmodes.c_str(), num_altmodes.length()));
+  p.UpdatePDInfoFromSysfs();
+
+  EXPECT_EQ(0, p.GetNumAltModes());
 }
 
 }  // namespace typecd
