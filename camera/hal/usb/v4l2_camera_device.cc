@@ -149,6 +149,9 @@ const std::string CidToString(int cid) {
     case V4L2_CID_EXPOSURE_AUTO:
       return "V4L2_CID_EXPOSURE_AUTO";
 
+    case V4L2_CID_EXPOSURE_AUTO_PRIORITY:
+      return "V4L2_CID_EXPOSURE_AUTO_PRIORITY";
+
     case V4L2_CID_PAN_ABSOLUTE:
       return "V4L2_CID_PAN_ABSOLUTE";
 
