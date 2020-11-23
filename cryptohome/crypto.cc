@@ -366,8 +366,7 @@ bool WrapScryptVaultKeyset(const VaultKeyset& vault_keyset,
 }  // namespace
 
 Crypto::Crypto(Platform* platform)
-    : use_tpm_(false),
-      tpm_(NULL),
+    : tpm_(NULL),
       platform_(platform),
       tpm_init_(NULL),
       disable_logging_for_tests_(false) {}
@@ -375,18 +374,16 @@ Crypto::Crypto(Platform* platform)
 Crypto::~Crypto() {}
 
 bool Crypto::Init(TpmInit* tpm_init) {
-  if (use_tpm_) {
-    CHECK(tpm_init) << "Crypto wanted to use TPM but was not provided a TPM";
-    if (tpm_ == NULL) {
-      tpm_ = tpm_init->get_tpm();
-    }
-    tpm_init_ = tpm_init;
-    tpm_init_->SetupTpm(true);
-    if (tpm_->GetLECredentialBackend() &&
-        tpm_->GetLECredentialBackend()->IsSupported()) {
-      le_manager_ = std::make_unique<LECredentialManagerImpl>(
-          tpm_->GetLECredentialBackend(), base::FilePath(kSignInHashTreeDir));
-    }
+  CHECK(tpm_init) << "Crypto wanted to use TPM but was not provided a TPM";
+  if (tpm_ == NULL) {
+    tpm_ = tpm_init->get_tpm();
+  }
+  tpm_init_ = tpm_init;
+  tpm_init_->SetupTpm(true);
+  if (tpm_->GetLECredentialBackend() &&
+      tpm_->GetLECredentialBackend()->IsSupported()) {
+    le_manager_ = std::make_unique<LECredentialManagerImpl>(
+        tpm_->GetLECredentialBackend(), base::FilePath(kSignInHashTreeDir));
   }
   return true;
 }
@@ -489,7 +486,7 @@ bool Crypto::UnwrapVaultKeyset(const SerializedVaultKeyset& serialized,
     const bool tpm_backed =
         (serialized.flags() & SerializedVaultKeyset::TPM_WRAPPED) ||
         (serialized.flags() & SerializedVaultKeyset::LE_CREDENTIAL);
-    if (use_tpm_ && tpm_backed && tpm_ != nullptr) {
+    if (tpm_backed && tpm_ != nullptr) {
       tpm_->DeclareTpmFirmwareStable();
     }
   }
@@ -735,8 +732,6 @@ bool Crypto::DecryptWithTpm(const std::string& encrypted_data,
 
 bool Crypto::CreateSealedKey(SecureBlob* aes_key,
                              SecureBlob* sealed_key) const {
-  if (!use_tpm_)
-    return false;
   if (!tpm_->GetRandomDataSecureBlob(kDefaultAesKeySize, aes_key)) {
     LOG(ERROR) << "GetRandomDataSecureBlob failed.";
     return false;
@@ -752,8 +747,6 @@ bool Crypto::EncryptData(const SecureBlob& data,
                          const SecureBlob& aes_key,
                          const SecureBlob& sealed_key,
                          std::string* encrypted_data) const {
-  if (!use_tpm_)
-    return false;
   SecureBlob iv;
   if (!tpm_->GetRandomDataSecureBlob(kAesBlockSize, &iv)) {
     LOG(ERROR) << "GetRandomDataSecureBlob failed.";
@@ -783,8 +776,6 @@ bool Crypto::EncryptData(const SecureBlob& data,
 bool Crypto::UnsealKey(const std::string& encrypted_data,
                        SecureBlob* aes_key,
                        SecureBlob* sealed_key) const {
-  if (!use_tpm_)
-    return false;
   EncryptedData encrypted_pb;
   if (!encrypted_pb.ParseFromString(encrypted_data)) {
     LOG(ERROR) << "Could not decrypt data as it was not an EncryptedData "
@@ -835,7 +826,7 @@ bool Crypto::DecryptData(const std::string& encrypted_data,
 bool Crypto::ResetLECredential(const SerializedVaultKeyset& serialized_reset,
                                CryptoError* error,
                                const VaultKeyset& vk) const {
-  if (!use_tpm_ || !tpm_)
+  if (!tpm_)
     return false;
 
   // Bail immediately if we don't have a valid LECredentialManager.
@@ -876,7 +867,7 @@ int Crypto::GetWrongAuthAttempts(
 }
 
 bool Crypto::RemoveLECredential(uint64_t label) const {
-  if (!use_tpm_ || !tpm_) {
+  if (!tpm_) {
     LOG(WARNING) << "No TPM instance for RemoveLECredential.";
     return false;
   }
@@ -925,7 +916,7 @@ std::unique_ptr<AuthBlock> Crypto::CreateAuthBlock(
     return std::make_unique<ChallengeCredentialAuthBlock>();
   }
 
-  bool use_tpm = use_tpm_ && tpm_ && tpm_->IsOwned();
+  bool use_tpm = tpm_ && tpm_->IsOwned();
   bool with_user_auth = CanUnsealWithUserAuth();
   if (use_tpm && with_user_auth) {
     return std::make_unique<TpmBoundToPcrAuthBlock>(tpm_, tpm_init_);

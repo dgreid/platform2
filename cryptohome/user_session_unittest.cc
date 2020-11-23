@@ -50,8 +50,6 @@ class UserSessionTest : public ::testing::Test {
   UserSessionTest& operator=(UserSessionTest&&) = delete;
 
   void SetUp() override {
-    crypto_.set_use_tpm(false);
-
     InitializeFilesystemLayout(&platform_, &crypto_, shadow_root_,
                                &system_salt_);
     homedirs_ = std::make_unique<HomeDirs>(

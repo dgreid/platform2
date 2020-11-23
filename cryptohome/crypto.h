@@ -178,15 +178,6 @@ class Crypto {
   // Returns the number of wrong authentication attempts for the LE keyset.
   int GetWrongAuthAttempts(const SerializedVaultKeyset& le_serialized) const;
 
-  // Sets whether or not to use the TPM (must be called before init, depends
-  // on the presence of a functioning, initialized TPM).  The TPM is merely used
-  // to add a layer of difficulty in a brute-force attack against the user's
-  // credentials.
-  void set_use_tpm(bool value) { use_tpm_ = value; }
-
-  // Whether tpm shall be used.
-  bool use_tpm() const { return has_tpm() && use_tpm_; }
-
   // Sets the TPM implementation
   void set_tpm(Tpm* value) { tpm_ = value; }
 
@@ -268,9 +259,6 @@ class Crypto {
   // |serialized_key_flags| is the flag data stores in the vault keyset which
   // helps determine the type of AuthBlock.
   std::unique_ptr<AuthBlock> DeriveAuthBlock(int serialized_key_flags);
-
-  // If set, the TPM will be used during the encryption of the vault keyset
-  bool use_tpm_;
 
   // The TPM implementation
   Tpm* tpm_;

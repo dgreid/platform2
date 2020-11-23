@@ -575,11 +575,10 @@ class UserDataAuth {
 
  private:
   // Note: In Service class (the class that this class is refactored from),
-  // there is a use_tpm_ member variable, but it is almost unused and always set
-  // to true there, so in this class, if we are migrating any code from Service
-  // class and use_tpm_ is used there, then we'll just assume it's true and not
-  // have a use_tpm_ variable here.
-  // The same is true for initialize_tpm_ variable, it is assumed to be true.
+  // there is a initialize_tpm_ member variable, but it is almost unused and
+  // always set to true there, so in this class, if we are migrating any code
+  // from Service class and initialize_tpm_ is used there, then we'll just
+  // assume it's true and not have a initialize_tpm_ variable here.
 
   // =============== Mount Related Utilities ===============
   // Returns the UserSession object associated with the given username

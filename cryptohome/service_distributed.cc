@@ -340,7 +340,7 @@ bool ServiceDistributed::AttestationGetDelegateCredentials(
     brillo::Blob* blob,
     brillo::Blob* secret,
     bool* has_reset_lock_permissions) {
-  if (!use_tpm_ || !tpm_) {
+  if (!tpm_) {
     LOG(WARNING) << __func__
                  << ": without TPM this function takes effect only to DA reset "
                     "permission flag.";

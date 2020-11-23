@@ -192,7 +192,6 @@ void TestUser::GenerateCredentials(bool force_ecryptfs) {
   NiceMock<MockTpm> tpm;
   NiceMock<MockPlatform> platform;
   Crypto crypto(&platform);
-  crypto.set_use_tpm(false);
   crypto.set_disable_logging_for_testing(/*disable=*/true);
   CryptoLib::SetScryptTestingParams();
   UserOldestActivityTimestampCache timestamp_cache;

@@ -274,8 +274,7 @@ int MountThreadObserver::GetParallelTaskCount() const {
 }
 
 Service::Service()
-    : use_tpm_(true),
-      loop_(NULL),
+    : loop_(NULL),
       cryptohome_(NULL),
       shadow_root_(base::FilePath(kShadowRoot)),
       system_salt_(),
@@ -649,7 +648,7 @@ bool Service::CleanUpHiddenMounts() {
 
 bool Service::Initialize() {
   bool result = true;
-  if (!tpm_ && use_tpm_) {
+  if (!tpm_) {
     tpm_ = Tpm::GetSingleton();
   }
   if (!tpm_init_ && initialize_tpm_) {
@@ -670,7 +669,6 @@ bool Service::Initialize() {
         new FirmwareManagementParameters(tpm_));
     firmware_management_parameters_ = default_firmware_management_params_.get();
   }
-  crypto_->set_use_tpm(use_tpm_);
   if (!crypto_->Init(tpm_init_))
     return false;
 
@@ -965,11 +963,6 @@ bool Service::SeedUrandom() {
 
 void Service::UploadAlertsDataCallback() {
   Tpm::AlertsData alerts;
-
-  if (!use_tpm_) {
-    LOG(WARNING) << "TPM is not enabled. Disabling TPM alert metrics";
-    return;
-  }
 
   if (tpm_) {
     bool supported = tpm_->GetAlertsData(&alerts);
@@ -4004,12 +3997,12 @@ void Service::LowDiskCallback() {
 }
 
 void Service::ResetDictionaryAttackMitigation() {
-  if (!use_tpm_ || !tpm_init_ || !tpm_init_->IsTpmReady()) {
+  if (!tpm_init_ || !tpm_init_->IsTpmReady()) {
     return;
   }
 
   // If tpm_manager exists, the DA reset and UMA reporting should happen there.
-  if (use_tpm_ && tpm_ && tpm_->DoesUseTpmManager()) {
+  if (tpm_ && tpm_->DoesUseTpmManager()) {
     // tpm_manager doesn't take delegate as input.
     brillo::Blob unused_blob;
     if (!tpm_->ResetDictionaryAttackMitigation(unused_blob, unused_blob)) {
@@ -4308,7 +4301,7 @@ void Service::DoGetSupportedKeyPolicies(const std::string& request,
   GetSupportedKeyPoliciesReply* extension =
       reply.MutableExtension(GetSupportedKeyPoliciesReply::reply);
 
-  if (use_tpm_ && tpm_) {
+  if (tpm_) {
     if (tpm_->GetLECredentialBackend() &&
         tpm_->GetLECredentialBackend()->IsSupported()) {
       extension->set_low_entropy_credentials(true);

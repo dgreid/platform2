@@ -200,7 +200,8 @@ class ServiceTestNotInitialized : public ::testing::Test {
     service_.set_homedirs(&homedirs_);
     service_.set_install_attrs(&attrs_);
     service_.set_initialize_tpm(false);
-    service_.set_use_tpm(false);
+    service_.set_tpm(&tpm_);
+    service_.set_tpm_init(&tpm_init_);
     service_.set_platform(&platform_);
     service_.set_chaps_client(&chaps_client_);
     service_.set_boot_lockbox(&lockbox_);
@@ -323,8 +324,6 @@ TEST_F(ServiceTestNotInitialized, CheckAsyncTestCredentials) {
                                         test_helper_.system_salt, &passkey);
   std::string passkey_string = passkey.to_string();
   Crypto real_crypto(&platform_);
-  real_crypto.set_use_tpm(false);
-  real_crypto.Init(nullptr);
   InitializeFilesystemLayout(&platform_, &real_crypto, shadow_root, nullptr);
   HomeDirs real_homedirs(
       &platform_, &real_crypto, kShadowRoot, test_helper_.system_salt, nullptr,
@@ -536,7 +535,6 @@ TEST_F(ServiceTestNotInitialized, UploadAlertsCallback) {
   NiceMock<MockTpmInit> tpm_init;
   tpm_init.set_tpm(&tpm);
 
-  service_.set_use_tpm(true);
   service_.set_tpm(&tpm);
   service_.set_tpm_init(&tpm_init);
   service_.set_initialize_tpm(true);
@@ -552,9 +550,6 @@ TEST_F(ServiceTestNotInitialized, UploadAlertsCallback) {
 
 TEST_F(ServiceTest, NoDeadlocksInInitializeTpmComplete) {
   char user[] = "chromeos-user";
-
-  // OwnershipCallback needs tpm_init_.
-  service_.set_tpm_init(&tpm_init_);
 
   SetupMount(user);
 
@@ -2046,7 +2041,6 @@ TEST_F(ServiceTestNotInitialized, CheckTpmInitRace) {
   // ownership callback from the main thread.
   EXPECT_CALL(tpm_init_, Init(_)).WillOnce(Invoke(ImmediatelySignalOwnership));
   service_.set_tpm(&tpm_);
-  service_.set_tpm_init(&tpm_init_);
   service_.set_initialize_tpm(true);
   service_.Initialize();
 }
@@ -2315,7 +2309,6 @@ TEST_F(ServiceTest, InstallAttributesStatusQueries) {
 }
 
 TEST_F(ServiceTestNotInitialized, OwnershipCallbackRepeated) {
-  service_.set_use_tpm(true);
   service_.set_tpm(&tpm_);
   service_.set_tpm_init(&tpm_init_);
   service_.set_initialize_tpm(true);

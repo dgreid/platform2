@@ -573,9 +573,8 @@ bool HomeDirs::ShouldReSaveKeyset(VaultKeyset* vault_keyset) const {
       (crypt_flags & SerializedVaultKeyset::SCRYPT_DERIVED) != 0;
   bool is_signature_challenge_protected =
       (crypt_flags & SerializedVaultKeyset::SIGNATURE_CHALLENGE_PROTECTED) != 0;
-  bool should_tpm =
-      (crypto_->use_tpm() && crypto_->is_cryptohome_key_loaded() &&
-       !is_signature_challenge_protected);
+  bool should_tpm = (crypto_->is_cryptohome_key_loaded() &&
+                     !is_signature_challenge_protected);
   bool can_unseal_with_user_auth = crypto_->CanUnsealWithUserAuth();
   bool has_tpm_public_key_hash =
       vault_keyset->serialized().has_tpm_public_key_hash();
@@ -655,9 +654,7 @@ bool HomeDirs::ReSaveKeysetIfNeeded(const Credentials& credentials,
   // configured to use the TPM, calling EnsureTpm will try to connect, and
   // if successful, the call to has_tpm() below will succeed, allowing
   // re-wrapping (migration) using the TPM.
-  if (crypto_->use_tpm()) {
-    crypto_->EnsureTpm(false);
-  }
+  crypto_->EnsureTpm(false);
 
   bool force_resave = false;
   if (!keyset->serialized().has_wrapped_chaps_key()) {

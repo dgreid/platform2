@@ -256,7 +256,6 @@ bool UserDataAuth::Initialize() {
     firmware_management_parameters_ = default_firmware_management_params_.get();
   }
 
-  crypto_->set_use_tpm(true);
   if (!crypto_->Init(tpm_init_)) {
     return false;
   }

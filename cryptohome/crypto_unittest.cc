@@ -285,7 +285,6 @@ TEST_F(CryptoTest, TpmStepTest) {
   NiceMock<MockTpmInit> tpm_init;
 
   crypto.set_tpm(&tpm);
-  crypto.set_use_tpm(true);
 
   SecureBlob vkk_key;
   EXPECT_CALL(tpm, GetVersion()).WillRepeatedly(Return(Tpm::TPM_2_0));
@@ -364,7 +363,6 @@ TEST_F(CryptoTest, Tpm1_2_StepTest) {
   NiceMock<MockTpmInit> tpm_init;
 
   crypto.set_tpm(&tpm);
-  crypto.set_use_tpm(true);
 
   SecureBlob vkk_key;
   EXPECT_CALL(tpm, GetVersion()).WillRepeatedly(Return(Tpm::TPM_1_2));
@@ -442,7 +440,6 @@ TEST_F(CryptoTest, TpmDecryptFailureTest) {
   NiceMock<MockTpmInit> tpm_init;
 
   crypto.set_tpm(&tpm);
-  crypto.set_use_tpm(true);
 
   EXPECT_CALL(tpm, SealToPcrWithAuthorization(_, _, _, _, _)).Times(2);
   EXPECT_CALL(tpm_init, HasCryptohomeKey())
@@ -496,8 +493,6 @@ TEST_F(CryptoTest, ScryptStepTest) {
   // Check that the code path changes to support scrypt work
   MockPlatform platform;
   Crypto crypto(&platform);
-
-  crypto.Init(NULL);
 
   VaultKeyset vault_keyset;
   vault_keyset.Initialize(&platform, &crypto);
@@ -595,7 +590,6 @@ TEST_F(CryptoTest, EncryptAndDecryptWithTpm) {
   NiceMock<MockTpm> tpm;
   NiceMock<MockTpmInit> tpm_init;
   crypto.set_tpm(&tpm);
-  crypto.set_use_tpm(true);
   crypto.Init(&tpm_init);
 
   std::string data = "iamsomestufftoencrypt";
@@ -638,7 +632,6 @@ TEST_F(CryptoTest, EncryptAndDecryptWithTpmWithRandomlyFailingTpm) {
   NiceMock<MockTpm> tpm;
   NiceMock<MockTpmInit> tpm_init;
   crypto.set_tpm(&tpm);
-  crypto.set_use_tpm(true);
   crypto.Init(&tpm_init);
 
   std::string data = "iamsomestufftoencrypt";
@@ -711,7 +704,6 @@ class LeCredentialsManagerTest : public ::testing::Test {
  public:
   LeCredentialsManagerTest() : crypto_(&platform_) {
     crypto_.set_tpm(&tpm_);
-    crypto_.set_use_tpm(true);
 
     EXPECT_CALL(tpm_init_, SetupTpm(true))
         .WillOnce(

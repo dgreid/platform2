@@ -125,7 +125,6 @@ class Service : public brillo::dbus::AbstractDbusService,
   virtual void set_mount_factory(cryptohome::MountFactory* mf) {
     mount_factory_ = mf;
   }
-  virtual void set_use_tpm(bool value) { use_tpm_ = value; }
 
   // Overrides the Platform implementation for Service.
   virtual void set_platform(cryptohome::Platform* platform) {
@@ -766,8 +765,6 @@ class Service : public brillo::dbus::AbstractDbusService,
     std::string name;
     base::Time start_time;
   };
-
-  bool use_tpm_;
 
   GMainLoop* loop_;
   // Can't use unique_ptr for cryptohome_ because memory is allocated by glib.

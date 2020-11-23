@@ -140,7 +140,6 @@ class MountTest
     helper_.InjectSystemSalt(&platform_, kImageSaltFile);
 
     crypto_.set_tpm(&tpm_);
-    crypto_.set_use_tpm(false);
 
     mock_device_policy_ = new policy::MockDevicePolicy();
 

@@ -81,7 +81,6 @@ class KeysetManagementTest : public ::testing::Test {
 
   void SetUp() override {
     crypto_.set_tpm(&tpm_);
-    crypto_.set_use_tpm(false);
 
     InitializeFilesystemLayout(&platform_, &crypto_, shadow_root_,
                                &system_salt_);
@@ -1455,7 +1454,6 @@ TEST_F(KeysetManagementTest, ReSaveOnLoadTestRegularCreds) {
   EXPECT_CALL(tpm_, IsEnabled()).WillRepeatedly(Return(true));
   EXPECT_CALL(tpm_, IsOwned()).WillRepeatedly(Return(true));
 
-  crypto_.set_use_tpm(true);
   crypto_.Init(&mock_tpm_init);
 
   // TEST
@@ -1508,7 +1506,6 @@ TEST_F(KeysetManagementTest, ReSaveOnLoadTestLeCreds) {
   crypto_.set_le_manager_for_testing(
       std::unique_ptr<cryptohome::LECredentialManager>(le_cred_manager));
 
-  crypto_.set_use_tpm(true);
   crypto_.Init(&mock_tpm_init);
 
   // TEST

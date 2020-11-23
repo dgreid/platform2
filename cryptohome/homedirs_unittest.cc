@@ -78,7 +78,6 @@ class HomeDirsTest
 
   void SetUp() override {
     PreparePolicy(true, kOwner, false, "");
-    crypto_.set_use_tpm(false);
 
     InitializeFilesystemLayout(&platform_, &crypto_, shadow_root_,
                                &system_salt_);
