@@ -683,6 +683,10 @@ class WiFi : public Device, public SupplicantEventDelegateInterface {
   // implies that a driver-based roam has been initiated.  If this roam
   // succeeds, we should renew our lease.
   bool is_roaming_in_progress_;
+  // In WiFi::EAPEventTask, we infer the specific EAP authentication failure (if
+  // there is one), and store it in |pending_eap_failure_| to be used later when
+  // we actually disconnect from the network.
+  Service::ConnectFailure pending_eap_failure_;
   // Indicates that we are debugging a problematic connection.
   bool is_debugging_connection_;
   // Tracks the process of an EAP negotiation.

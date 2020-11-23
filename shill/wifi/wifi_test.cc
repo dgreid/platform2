@@ -3437,8 +3437,6 @@ TEST_F(WiFiMainTest, EAPEvent) {
   EXPECT_CALL(*eap_state_handler_, ParseStatus(kEAPStatus, kEAPParameter, _))
       .WillOnce(
           DoAll(SetArgPointee<2>(Service::kFailureOutOfRange), Return(false)));
-  EXPECT_CALL(*service, DisconnectWithFailure(Service::kFailureOutOfRange, _,
-                                              HasSubstr("EAPEventTask")));
   ReportEAPEvent(kEAPStatus, kEAPParameter);
 
   MockEapCredentials* eap = new MockEapCredentials();
@@ -3451,8 +3449,6 @@ TEST_F(WiFiMainTest, EAPEvent) {
   // We need a real string object since it will be returned by reference below.
   const string kEmptyPin;
   EXPECT_CALL(*eap, pin()).WillOnce(ReturnRef(kEmptyPin));
-  EXPECT_CALL(*service, DisconnectWithFailure(Service::kFailurePinMissing, _,
-                                              HasSubstr("EAPEventTask")));
   ReportEAPEvent(kEAPStatus, kEAPParameter);
 
   EXPECT_CALL(*eap_state_handler_, ParseStatus(kEAPStatus, kEAPParameter, _))

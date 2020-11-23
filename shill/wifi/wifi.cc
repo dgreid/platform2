@@ -147,6 +147,7 @@ WiFi::WiFi(Manager* manager,
       fast_scans_remaining_(kNumFastScanAttempts),
       has_already_completed_(false),
       is_roaming_in_progress_(false),
+      pending_eap_failure_(Service::kFailureNone),
       is_debugging_connection_(false),
       eap_state_handler_(new SupplicantEAPStateHandler()),
       bgscan_short_interval_seconds_(kDefaultBgscanShortIntervalSeconds),
@@ -841,6 +842,7 @@ void WiFi::CurrentBSSChanged(const RpcIdentifier& new_bss) {
   // Reset the EAP handler only after calling HandleDisconnect() above
   // so our EAP state could be used to detect a failed authentication.
   eap_state_handler_->Reset();
+  pending_eap_failure_ = Service::kFailureNone;
 
   // If we are selecting a new service, or if we're clearing selection
   // of a something other than the pending service, call SelectService.
@@ -1038,6 +1040,10 @@ void WiFi::ServiceDisconnected(WiFiServiceRefPtr affected_service) {
           failure = failure_from_status;
           break;
       }
+    }
+    if (failure == Service::kFailureEAPAuthentication &&
+        pending_eap_failure_ != Service::kFailureNone) {
+      failure = pending_eap_failure_;
     }
     affected_service->SetFailure(failure);
     LOG(ERROR) << "Disconnected due to reason: "
@@ -1608,8 +1614,7 @@ void WiFi::EAPEventTask(const string& status, const string& parameter) {
   if (failure != Service::kFailureNone) {
     // Avoid a reporting failure twice by resetting EAP state handler early.
     eap_state_handler_->Reset();
-    Error unused_error;
-    current_service_->DisconnectWithFailure(failure, &unused_error, __func__);
+    pending_eap_failure_ = failure;
   }
 }
 
