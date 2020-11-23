@@ -68,7 +68,9 @@ class Port {
   FRIEND_TEST(PortTest, TestDPAltModeEntryCheckTrue);
   FRIEND_TEST(PortTest, TestDPAltModeEntryCheckFalseWithDPSID);
   FRIEND_TEST(PortTest, TestDPAltModeEntryCheckFalse);
-  FRIEND_TEST(PortTest, TestTBTCompatibilityModeEntryCheckTrue);
+  FRIEND_TEST(PortTest, TestTBTCompatibilityModeEntryCheckTrueStartech);
+  FRIEND_TEST(PortTest, TestTBTCompatibilityModeEntryCheckFalseStartech);
+  FRIEND_TEST(PortTest, TestTBTCompatibilityModeEntryCheckTrueWD19TB);
 
   bool IsPartnerAltModePresent(uint16_t altmode_sid);
 

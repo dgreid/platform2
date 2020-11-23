@@ -154,6 +154,8 @@ bool Port::CanEnterTBTCompatibilityMode() {
   }
 
   // Check if the Cable meets TBT3 speed requirements.
+  // NOTE: Since we aren't configuring the TBT3 entry speed, we don't
+  // need to check for the existence of TBT3 alt mode in the SOP' discovery.
   if (!cable_->TBT3PDIdentityCheck())
     return false;
 

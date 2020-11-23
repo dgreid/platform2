@@ -6,6 +6,7 @@
 
 #include <string>
 
+#include <base/files/scoped_temp_dir.h>
 #include <base/strings/stringprintf.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -23,7 +24,17 @@ constexpr char kValidDataRole3[] = "host [device]";
 
 namespace typecd {
 
-class PortTest : public ::testing::Test {};
+class PortTest : public ::testing::Test {
+ protected:
+  void SetUp() override {
+    ASSERT_TRUE(scoped_temp_dir_.CreateUniqueTempDir());
+    temp_dir_ = scoped_temp_dir_.GetPath();
+  }
+
+ public:
+  base::FilePath temp_dir_;
+  base::ScopedTempDir scoped_temp_dir_;
+};
 
 // Check that basic Port creation, partner addition/deletion works.
 TEST_F(PortTest, TestBasicAdd) {
@@ -39,10 +50,7 @@ TEST_F(PortTest, TestBasicAdd) {
 // Check GetDataRole() for various sysfs values.
 TEST_F(PortTest, TestGetDataRole) {
   // Set up fake sysfs directory for the port..
-  base::FilePath temp_dir;
-  ASSERT_TRUE(base::CreateNewTempDirectory("", &temp_dir));
-
-  auto port_path = temp_dir.Append("port0");
+  auto port_path = temp_dir_.Append("port0");
   ASSERT_TRUE(base::CreateDirectory(port_path));
 
   auto data_role_path = port_path.Append("data_role");
@@ -79,16 +87,13 @@ TEST_F(PortTest, TestDPAltModeEntryCheckTrue) {
   port->AddPartner(base::FilePath(kFakePort0PartnerSysPath));
 
   // Set up fake sysfs paths for 1 alt mode.
-  base::FilePath temp_dir;
-  ASSERT_TRUE(base::CreateNewTempDirectory("", &temp_dir));
-
   // Set the number of alt modes supported.
   port->partner_->SetNumAltModes(1);
 
   // Add the DP alt mode.
   std::string mode0_dirname =
       base::StringPrintf("port%d-partner.%d", 0, kDPAltModeIndex);
-  auto mode0_path = temp_dir.Append(mode0_dirname);
+  auto mode0_path = temp_dir_.Append(mode0_dirname);
   ASSERT_TRUE(CreateFakeAltMode(mode0_path, kDPSVID, kDPVDO_WD19TB,
                                 kDPVDOIndex_WD19TB));
   port->AddRemovePartnerAltMode(mode0_path, true);
@@ -105,23 +110,20 @@ TEST_F(PortTest, TestDPAltModeEntryCheckFalseWithDPSID) {
   port->AddPartner(base::FilePath(kFakePort0PartnerSysPath));
 
   // Set up fake sysfs paths for 2 alt modes.
-  base::FilePath temp_dir;
-  ASSERT_TRUE(base::CreateNewTempDirectory("", &temp_dir));
-
   // Set the number of alt modes supported.
   port->partner_->SetNumAltModes(2);
 
   // Add the DP alt mode.
   std::string mode0_dirname =
       base::StringPrintf("port%d-partner.%d", 0, kDPAltModeIndex);
-  auto mode0_path = temp_dir.Append(mode0_dirname);
+  auto mode0_path = temp_dir_.Append(mode0_dirname);
   ASSERT_TRUE(CreateFakeAltMode(mode0_path, kDPSVID, kDPVDO, kDPVDOIndex));
   port->AddRemovePartnerAltMode(mode0_path, true);
 
   // Add the TBT alt mode.
   std::string mode1_dirname =
       base::StringPrintf("port%d-partner.%d", 0, kTBTAltModeIndex);
-  auto mode1_path = temp_dir.Append(mode1_dirname);
+  auto mode1_path = temp_dir_.Append(mode1_dirname);
   ASSERT_TRUE(CreateFakeAltMode(mode1_path, kTBTSVID, kTBTVDO, kTBTVDOIndex));
   port->AddRemovePartnerAltMode(mode1_path, true);
 
@@ -141,20 +143,20 @@ TEST_F(PortTest, TestDPAltModeEntryCheckFalse) {
   port->partner_->SetNumAltModes(1);
 
   // Set up fake sysfs paths for 1 alt mode.
-  base::FilePath temp_dir;
-  ASSERT_TRUE(base::CreateNewTempDirectory("", &temp_dir));
-
   // Add the TBT alt mode.
   std::string mode_dirname = base::StringPrintf("port%d-partner.%d", 0, 0);
-  auto mode_path = temp_dir.Append(mode_dirname);
+  auto mode_path = temp_dir_.Append(mode_dirname);
   ASSERT_TRUE(CreateFakeAltMode(mode_path, kTBTSVID, kTBTVDO, kTBTVDOIndex));
   port->AddRemovePartnerAltMode(mode_path, true);
 
   EXPECT_FALSE(port->CanEnterDPAltMode());
 }
 
-// Check that TBT Compat Mode Entry checks work as expected for working cases.
-TEST_F(PortTest, TestTBTCompatibilityModeEntryCheckTrue) {
+// Check that TBT Compat Mode Entry checks work as expected for the following
+// working case:
+// - Startech.com TB3DK2DPW Alpine Ridge Dock.
+// - StarTech Passive Cable 40 Gbps PD 2.0
+TEST_F(PortTest, TestTBTCompatibilityModeEntryCheckTrueStartech) {
   auto port = std::make_unique<Port>(base::FilePath(kFakePort0SysPath), 0);
 
   port->AddPartner(base::FilePath(kFakePort0PartnerSysPath));
@@ -169,12 +171,9 @@ TEST_F(PortTest, TestTBTCompatibilityModeEntryCheckTrue) {
 
   port->partner_->SetNumAltModes(1);
   // Set up fake sysfs paths for 1 alt mode.
-  base::FilePath temp_dir;
-  ASSERT_TRUE(base::CreateNewTempDirectory("", &temp_dir));
-
   // Add the TBT alt mode.
   std::string mode_dirname = base::StringPrintf("port%d-partner.%d", 0, 0);
-  auto mode_path = temp_dir.Append(mode_dirname);
+  auto mode_path = temp_dir_.Append(mode_dirname);
   ASSERT_TRUE(CreateFakeAltMode(mode_path, kTBTSVID, kTBTVDO, 0));
   port->AddRemovePartnerAltMode(mode_path, true);
 
@@ -187,6 +186,105 @@ TEST_F(PortTest, TestTBTCompatibilityModeEntryCheckTrue) {
   port->cable_->SetCertStatVDO(0x000000b6);
   port->cable_->SetProductVDO(0x00010310);
   port->cable_->SetProductTypeVDO1(0x11082052);
+  port->cable_->SetProductTypeVDO2(0x0);
+  port->cable_->SetProductTypeVDO3(0x0);
+
+  EXPECT_TRUE(port->CanEnterTBTCompatibilityMode());
+}
+
+// Check that TBT Compat Mode Entry checks work as expected for the following
+// non-working case:
+// - Startech.com TB3DK2DPW Alpine Ridge Dock.
+// - Nekteck USB 2.0 cable (5A).
+TEST_F(PortTest, TestTBTCompatibilityModeEntryCheckFalseStartech) {
+  auto port = std::make_unique<Port>(base::FilePath(kFakePort0SysPath), 0);
+
+  port->AddPartner(base::FilePath(kFakePort0PartnerSysPath));
+  // PD ID VDOs for the Startech.com TB3DK2DPW Alpine Ridge Dock.
+  port->partner_->SetPDRevision(kPDRevision20);
+  port->partner_->SetIdHeaderVDO(0xd4008087);
+  port->partner_->SetCertStatVDO(0x0);
+  port->partner_->SetProductVDO(0x0);
+  port->partner_->SetProductTypeVDO1(0);
+  port->partner_->SetProductTypeVDO2(0);
+  port->partner_->SetProductTypeVDO3(0);
+
+  port->partner_->SetNumAltModes(1);
+  // Set up fake sysfs paths for 1 alt mode.
+  // Add the TBT alt mode.
+  std::string mode_dirname = base::StringPrintf("port%d-partner.%d", 0, 0);
+  auto mode_path = temp_dir_.Append(mode_dirname);
+  ASSERT_TRUE(CreateFakeAltMode(mode_path, kTBTSVID, kTBTVDO, 0));
+  port->AddRemovePartnerAltMode(mode_path, true);
+
+  // Set up fake sysfs paths and add a cable.
+  port->AddCable(base::FilePath(kFakePort0CableSysPath));
+
+  // Nekteck USB 2.0 cable (5A).
+  port->cable_->SetPDRevision(kPDRevision30);
+  port->cable_->SetIdHeaderVDO(0x18002e98);
+  port->cable_->SetCertStatVDO(0x00001533);
+  port->cable_->SetProductVDO(0x00010200);
+  port->cable_->SetProductTypeVDO1(0xc1082040);
+  port->cable_->SetProductTypeVDO2(0x0);
+  port->cable_->SetProductTypeVDO3(0x0);
+
+  EXPECT_FALSE(port->CanEnterTBTCompatibilityMode());
+}
+
+// Check that TBT Compat Mode Entry checks work as expected for the following
+// working case:
+// - Dell WD19TB dock.
+TEST_F(PortTest, TestTBTCompatibilityModeEntryCheckTrueWD19TB) {
+  auto port = std::make_unique<Port>(base::FilePath(kFakePort0SysPath), 0);
+
+  port->AddPartner(base::FilePath(kFakePort0PartnerSysPath));
+  // PD ID VDOs for the Dell WD19TB Titan Ridge Dock.
+  port->partner_->SetPDRevision(kPDRevision30);
+  port->partner_->SetIdHeaderVDO(0x4c0041c3);
+  port->partner_->SetCertStatVDO(0x0);
+  port->partner_->SetProductVDO(0xb0700712);
+  port->partner_->SetProductTypeVDO1(0x0);
+  port->partner_->SetProductTypeVDO2(0x0);
+  port->partner_->SetProductTypeVDO3(0x0);
+
+  port->partner_->SetNumAltModes(4);
+  // Set up fake sysfs paths for partner alt modes.
+  // Add the TBT alt mode.
+  std::string mode_dirname = base::StringPrintf("port%d-partner.%d", 0, 0);
+  auto mode_path = temp_dir_.Append(mode_dirname);
+  ASSERT_TRUE(CreateFakeAltMode(mode_path, kTBTSVID, kTBTVDO, kTBTVDOIndex));
+  port->AddRemovePartnerAltMode(mode_path, true);
+
+  // Add the DP alt mode.
+  mode_dirname = base::StringPrintf("port%d-partner.%d", 0, 1);
+  mode_path = temp_dir_.Append(mode_dirname);
+  ASSERT_TRUE(CreateFakeAltMode(mode_path, kDPSVID, kDPVDO_WD19TB, 0));
+  port->AddRemovePartnerAltMode(mode_path, true);
+
+  // Add the Dell alt mode 1.
+  mode_dirname = base::StringPrintf("port%d-partner.%d", 0, 2);
+  mode_path = temp_dir_.Append(mode_dirname);
+  ASSERT_TRUE(
+      CreateFakeAltMode(mode_path, kDellSVID_WD19TB, kDell_WD19TB_VDO1, 0));
+  port->AddRemovePartnerAltMode(mode_path, true);
+
+  // Add the Dell alt mode 2.
+  mode_dirname = base::StringPrintf("port%d-partner.%d", 0, 3);
+  mode_path = temp_dir_.Append(mode_dirname);
+  ASSERT_TRUE(
+      CreateFakeAltMode(mode_path, kDellSVID_WD19TB, kDell_WD19TB_VDO2, 1));
+  port->AddRemovePartnerAltMode(mode_path, true);
+
+  // Set up fake sysfs paths and add a cable.
+  port->AddCable(base::FilePath(kFakePort0CableSysPath));
+
+  // Dell's cable is captive.
+  port->cable_->SetPDRevision(kPDRevision30);
+  port->cable_->SetIdHeaderVDO(0x1c00413c);
+  port->cable_->SetCertStatVDO(0x0);
+  port->cable_->SetProductVDO(0xb052000);
+  port->cable_->SetProductTypeVDO1(0x110c2042);
   port->cable_->SetProductTypeVDO2(0x0);
   port->cable_->SetProductTypeVDO3(0x0);
 

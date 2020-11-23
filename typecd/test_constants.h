@@ -17,10 +17,16 @@ const uint32_t kDPVDOIndex = 0;
 const uint32_t kDPVDO_WD19TB = 0x1c05;
 const uint32_t kDPVDOIndex_WD19TB = 0;
 
+// Common responses to DiscoveSVID for TBT Alt mode.
 const int kTBTAltModeIndex = 1;
 const uint16_t kTBTSVID = 0x8087;
 const uint32_t kTBTVDO = 0x1;
 const uint32_t kTBTVDOIndex = 0;
+
+// Dell WD19TB proprietary alt mode responses
+const uint16_t kDellSVID_WD19TB = 0x413c;
+const uint32_t kDell_WD19TB_VDO1 = 0x1;
+const uint32_t kDell_WD19TB_VDO2 = 0x2;
 
 constexpr char kFakePort0SysPath[] = "/sys/class/typec/port0";
 constexpr char kFakePort0PartnerSysPath[] =
