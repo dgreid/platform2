@@ -32,6 +32,8 @@
 #include <chromeos/dbus/service_constants.h>
 #include <dbus/kerberos/dbus-constants.h>
 #include <dbus/system_proxy/dbus-constants.h>
+#include <libpasswordprovider/fake_password_provider.h>
+#include <libpasswordprovider/password_provider_test_utils.h>
 
 #include "bindings/worker_common.pb.h"
 #include "system-proxy/kerberos_client.h"
@@ -83,10 +85,17 @@ class FakeSystemProxyAdaptor : public SystemProxyAdaptor {
  public:
   FakeSystemProxyAdaptor(
       std::unique_ptr<brillo::dbus_utils::DBusObject> dbus_object)
-      : SystemProxyAdaptor(std::move(dbus_object)), weak_ptr_factory_(this) {}
+      : SystemProxyAdaptor(std::move(dbus_object)), weak_ptr_factory_(this) {
+    password_provider_ =
+        std::make_unique<password_provider::FakePasswordProvider>();
+  }
   FakeSystemProxyAdaptor(const FakeSystemProxyAdaptor&) = delete;
   FakeSystemProxyAdaptor& operator=(const FakeSystemProxyAdaptor&) = delete;
   ~FakeSystemProxyAdaptor() override = default;
+
+  password_provider::PasswordProviderInterface* GetPasswordProvider() override {
+    return password_provider_.get();
+  }
 
  protected:
   std::unique_ptr<SandboxedWorker> CreateWorker() override {
@@ -108,6 +117,9 @@ class FakeSystemProxyAdaptor : public SystemProxyAdaptor {
   FRIEND_TEST(SystemProxyAdaptorTest, ClearUserCredentialsRestartService);
 
   int create_worker_count_ = 0;
+
+  std::unique_ptr<password_provider::PasswordProviderInterface>
+      password_provider_;
   base::WeakPtrFactory<FakeSystemProxyAdaptor> weak_ptr_factory_;
 };
 
@@ -566,8 +578,21 @@ TEST_F(SystemProxyAdaptorTest, NtlmAuthMessageRequest) {
   std::vector<uint8_t> proto_blob(network_request.ByteSizeLong());
   network_request.SerializeToArray(proto_blob.data(), proto_blob.size());
   proto_blob = adaptor_->GenerateNetworkAuthMessage(proto_blob);
-
   GenerateNetworkAuthMessageResponse response;
+  network_request.SerializeToArray(proto_blob.data(), proto_blob.size());
+  proto_blob = adaptor_->GenerateNetworkAuthMessage(proto_blob);
+  ASSERT_TRUE(response.ParseFromArray(proto_blob.data(), proto_blob.size()));
+  // Password is missing.
+  EXPECT_FALSE(response.has_auth_message());
+
+  // Set login the password.
+  auto password_ptr = password_provider::test::CreatePassword(
+      base::UTF16ToASCII(net::ntlm::test::kPassword));
+  adaptor_->GetPasswordProvider()->SavePassword(*password_ptr);
+
+  proto_blob.resize(network_request.ByteSizeLong());
+  network_request.SerializeToArray(proto_blob.data(), proto_blob.size());
+  proto_blob = adaptor_->GenerateNetworkAuthMessage(proto_blob);
   ASSERT_TRUE(response.ParseFromArray(proto_blob.data(), proto_blob.size()));
   EXPECT_TRUE(response.has_auth_message());
   std::vector<uint8_t> result(response.auth_message().begin(),

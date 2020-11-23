@@ -25,6 +25,10 @@ class DBusObject;
 
 }  // namespace brillo
 
+namespace password_provider {
+class PasswordProviderInterface;
+}
+
 namespace system_proxy {
 
 class KerberosClient;
@@ -73,6 +77,8 @@ class SystemProxyAdaptor : public org::chromium::SystemProxyAdaptor,
  protected:
   virtual std::unique_ptr<SandboxedWorker> CreateWorker();
   virtual void ConnectNamespace(bool user_traffic);
+  virtual password_provider::PasswordProviderInterface* GetPasswordProvider();
+
   // Triggers the |WorkerActive| signal.
   void OnNamespaceConnected(SandboxedWorker* worker, bool user_traffic);
   // Returns a pointer to the worker process associated with |user_traffic|. Can
@@ -153,6 +159,9 @@ class SystemProxyAdaptor : public org::chromium::SystemProxyAdaptor,
   // coming form ARC++ apps.
   std::unique_ptr<SandboxedWorker> arc_worker_;
   std::unique_ptr<KerberosClient> kerberos_client_;
+
+  std::unique_ptr<password_provider::PasswordProviderInterface>
+      password_provider_;
 
   std::unique_ptr<brillo::dbus_utils::DBusObject> dbus_object_;
   base::WeakPtrFactory<SystemProxyAdaptor> weak_ptr_factory_;

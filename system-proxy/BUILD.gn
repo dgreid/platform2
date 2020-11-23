@@ -46,6 +46,7 @@ pkg_config("target_defaults") {
     "libbrillo",
     "libchrome",
     "libminijail",
+    "libpasswordprovider",
     "libpatchpanel-client",
     "libpatchpanel-util",
     "openssl",

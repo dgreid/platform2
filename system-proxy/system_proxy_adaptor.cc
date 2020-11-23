@@ -17,6 +17,8 @@
 #include <chromeos/dbus/service_constants.h>
 #include <chromeos/patchpanel/dbus/client.h>
 #include <dbus/object_proxy.h>
+#include <libpasswordprovider/password.h>
+#include <libpasswordprovider/password_provider.h>
 
 #include "system-proxy/kerberos_client.h"
 #include "system-proxy/net/ntlm/ntlm_client.h"
@@ -259,9 +261,20 @@ std::vector<uint8_t> SystemProxyAdaptor::GenerateNetworkAuthMessage(
 
   base::string16 domain = base::UTF8ToUTF16(ntlm_request.domain());
   base::string16 username = base::UTF8ToUTF16(ntlm_request.username());
-  // TODO(acostinas) Replace placeholder password with Chrome OS login password
-  // from libpasswordprovider.
-  base::string16 pwd = base::ASCIIToUTF16("Password");
+  // Get login password from |password_provider_|.
+  password_provider::PasswordProviderInterface* password_provider =
+      GetPasswordProvider();
+  std::unique_ptr<password_provider::Password> login_password =
+      password_provider->GetPassword();
+  if (!login_password || login_password->size() == 0) {
+    response.set_error_message(
+        "Failed to retrieve the Chrome OS login password");
+    return SerializeProto(response);
+  }
+  // TODO(acostinas, b/175623932): Instead of creating a UTF-16 password, update
+  // the NTLM code to accept password_provider::Password.
+  std::string password =
+      std::string(login_password->GetRaw(), login_password->size());
 
   if (ntlm_request.client_challenge().size() != net::ntlm::kChallengeLen) {
     response.set_error_message("NTLM client challenge has unexpected length");
@@ -276,7 +289,7 @@ std::vector<uint8_t> SystemProxyAdaptor::GenerateNetworkAuthMessage(
 
   net::ntlm::NtlmClient client(features);
   std::vector<uint8_t> auth_message = client.GenerateAuthenticateMessage(
-      domain, username, pwd, ntlm_request.hostname(),
+      domain, username, base::UTF8ToUTF16(password), ntlm_request.hostname(),
       ntlm_request.channel_bindings(), ntlm_request.spn(),
       (uint64_t)ntlm_request.client_time(), client_challenge,
       server_challenge_message);
@@ -471,6 +484,15 @@ void SystemProxyAdaptor::RequestAuthenticationCredentials(
   *details.mutable_proxy_protection_space() = proxy_protection_space;
   details.set_bad_cached_credentials(bad_cached_credentials);
   SendAuthenticationRequiredSignal(SerializeProto(details));
+}
+
+password_provider::PasswordProviderInterface*
+SystemProxyAdaptor::GetPasswordProvider() {
+  if (!password_provider_) {
+    password_provider_ =
+        std::make_unique<password_provider::PasswordProvider>();
+  }
+  return password_provider_.get();
 }
 
 }  // namespace system_proxy

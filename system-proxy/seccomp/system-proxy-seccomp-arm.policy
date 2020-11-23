@@ -97,3 +97,10 @@ setitimer: 1
 recv: 1
 lstat64: 1
 shutdown: 1
+# Required for System-proxy to read the Chrome OS login password as part of a
+# feature that will allow users to authenticate to a network resource using the
+# Chrome OS password.
+request_key: 1
+keyctl: 1
+mlock: 1
+munlock: 1
