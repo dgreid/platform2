@@ -61,36 +61,16 @@ class Peripheral {
  protected:
   base::FilePath GetSysPath() { return syspath_; }
 
+  // Get the PD Identity VDOs from sysfs. This is called during Peripheral
+  // creation and other times (e.g "change" udev events). We mark this as void
+  // as Peripheral registration should not fail if we are unable to grab the
+  // VDOs.
+  void UpdatePDIdentityVDOs();
+
  private:
   friend class PartnerTest;
   FRIEND_TEST(PartnerTest, TestAltModeManualAddition);
   FRIEND_TEST(PartnerTest, TestPDIdentityScan);
-
-  // Get the PD Identity VDOs from sysfs. This function should be called during
-  // Peripheral creation. We mark this as void, as Peripheral registration
-  // should not fail if we are unable to grab the VDOs.
-  //
-  // This is also an ideal location to report PD identity values to metrics,
-  // since these values are not expected to change for the duration of the
-  // peripheral lifetime.
-  //
-  // TODO(b/152251292): When is the right time to report PD identity metrics?
-  // There is some raciness, whereby the EC might not have parsed peripheral PD
-  // identity information yet. So, the values may still be 0, and will only be
-  // filled in when the EC has obtained this info and made it accessible via a
-  // host command.
-  //
-  // OTOH, some devices don't have any PD identity info, so they will always
-  // report 0.
-  //
-  // Should we:
-  // - Only register peripherals in the kernel when the PD identity information
-  // is valid? <or>
-  // - Update the PD Identity information after peripheral creation, and only
-  // report them when we have some confirmed heuristic (when we've received
-  // number of peripheral alternate modes supported? by then the PD contract has
-  // been established).
-  void UpdatePDIdentityVDOs();
 
   // PD Identity Data objects; expected to be read from the peripheral sysfs.
   uint32_t id_header_vdo_;
