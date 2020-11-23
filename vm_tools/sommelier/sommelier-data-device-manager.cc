@@ -7,13 +7,14 @@
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <linux/virtwl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
 #include <wayland-client.h>
+
+#include "virtualization/linux-headers/virtwl.h"
 
 struct sl_host_data_device_manager {
   struct sl_context* ctx;

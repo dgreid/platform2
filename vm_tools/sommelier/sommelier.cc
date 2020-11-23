@@ -10,7 +10,6 @@
 #include <fcntl.h>
 #include <gbm.h>
 #include <libgen.h>
-#include <linux/virtwl.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -39,6 +38,7 @@
 #include "relative-pointer-unstable-v1-client-protocol.h"  // NOLINT(build/include_directory)
 #include "text-input-unstable-v1-client-protocol.h"  // NOLINT(build/include_directory)
 #include "viewporter-client-protocol.h"  // NOLINT(build/include_directory)
+#include "virtualization/linux-headers/virtwl.h"
 #include "xdg-shell-unstable-v6-client-protocol.h"  // NOLINT(build/include_directory)
 
 #define errno_assert(rv)                                          \

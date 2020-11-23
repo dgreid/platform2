@@ -10,7 +10,6 @@
 #include <gbm.h>
 #include <libdrm/drm_fourcc.h>
 #include <limits.h>
-#include <linux/virtwl.h>
 #include <pixman.h>
 #include <stdlib.h>
 #include <string.h>
@@ -22,6 +21,7 @@
 #include "drm-server-protocol.h"  // NOLINT(build/include_directory)
 #include "linux-dmabuf-unstable-v1-client-protocol.h"  // NOLINT(build/include_directory)
 #include "viewporter-client-protocol.h"  // NOLINT(build/include_directory)
+#include "virtualization/linux-headers/virtwl.h"
 
 #define MIN_SIZE (INT_MIN / 10)
 #define MAX_SIZE (INT_MAX / 10)
