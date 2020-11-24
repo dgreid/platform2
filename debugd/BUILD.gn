@@ -36,6 +36,7 @@ pkg_config("target_defaults") {
     "USE_CELLULAR=${use.cellular}",
     "USE_IWLWIFI_DUMP=${use.iwlwifi_dump}",
     "USE_TPM=${use.tpm}",
+    "USE_ARCVM=${use.arcvm}",
   ]
 
   pkg_deps = [

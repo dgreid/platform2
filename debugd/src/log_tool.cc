@@ -113,6 +113,10 @@ const std::vector<Log> kCommandLogs {
    kRoot, kDebugfsGroup},
   {kFile, "atrus_logs", "/var/log/atrus.log"},
   {kFile, "authpolicy", "/var/log/authpolicy.log"},
+#if USE_ARCVM
+  {kCommand, "arcvm_console_output", "/usr/bin/vm_pstore_dump", "crosvm",
+    "crosvm", Log::kDefaultMaxBytes, LogTool::Encoding::kAutodetect, true},
+#endif  // USE_ARCVM
   {kCommand, "bootstat_summary", "/usr/bin/bootstat_summary",
     SandboxedProcess::kDefaultUser, SandboxedProcess::kDefaultGroup,
     Log::kDefaultMaxBytes, LogTool::Encoding::kAutodetect, true},
