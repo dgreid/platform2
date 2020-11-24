@@ -58,6 +58,9 @@ class Peripheral {
   uint32_t GetProductTypeVDO3() { return product_type_vdo3_; }
   uint8_t GetPDRevision() { return pd_revision_; }
 
+ protected:
+  base::FilePath GetSysPath() { return syspath_; }
+
  private:
   friend class PartnerTest;
   FRIEND_TEST(PartnerTest, TestAltModeManualAddition);
