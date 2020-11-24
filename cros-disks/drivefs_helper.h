@@ -9,26 +9,23 @@
 #include <string>
 #include <vector>
 
-#include "cros-disks/fuse_helper.h"
+#include "cros-disks/fuse_mounter.h"
 
 namespace cros_disks {
 
 class Platform;
 
-// A helper for mounting DriveFS.
+// A mounter for DriveFS.
 //
 // DriveFS URIs are of the form:
 // drivefs://identity
 //
-// The datadir option is required. It is the path DriveFS should use for its
-// data. It must be an absolute path without parent directory references. This
-// is enforced by |GetValidatedDataDir()| as part of |CreateMounter()|. Further,
-// |SetupDirectoryForFUSEAccess()| enforces that datadir either does not exist,
-// or already has the right owner (fuse-drivefs:chronos-access).
-//
 // |identity| is an opaque string. In particular it's a string representation of
 // a base::UnguessableToken, used to lookup a pending DriveFS mount in Chrome.
-class DrivefsHelper : public FUSEHelper {
+//
+// The datadir option is required. It is the path DriveFS should use for its
+// data. It must be an absolute path without parent directory references.
+class DrivefsHelper : public FUSEMounterHelper {
  public:
   DrivefsHelper(const Platform* platform,
                 brillo::ProcessReaper* process_reaper);
@@ -37,27 +34,20 @@ class DrivefsHelper : public FUSEHelper {
 
   ~DrivefsHelper() override;
 
-  // FUSEHelper overrides:
-  std::unique_ptr<FUSEMounter> CreateMounter(
-      const base::FilePath& working_dir,
-      const Uri& source,
-      const base::FilePath& target_path,
-      const std::vector<std::string>& options) const override;
+  bool CanMount(const std::string& source,
+                const std::vector<std::string>& params,
+                base::FilePath* suggested_name) const override;
 
  protected:
-  // Make sure the dir is set up to be used by FUSE's helper user.
-  virtual bool CheckDataDirPermissions(const base::FilePath& dirpath) const;
-
-  // Ensure |path| is accessible by chronos.
-  virtual bool CheckMyFilesPermissions(const base::FilePath& path) const;
+  MountErrorType ConfigureSandbox(const std::string& source,
+                                  const base::FilePath& target_path,
+                                  std::vector<std::string> params,
+                                  SandboxedProcess* sandbox) const override;
 
  private:
-  friend class DrivefsHelperTest;
+  const FUSESandboxedProcessFactory sandbox_factory_;
 
-  // Returns the directory specified by |prefix| from the options if one is
-  // present and valid. Returns an empty path on failure.
-  base::FilePath GetValidatedDirectory(const std::vector<std::string>& options,
-                                       base::StringPiece prefix) const;
+  friend class DrivefsHelperTest;
 };
 
 }  // namespace cros_disks

@@ -245,4 +245,28 @@ int SandboxedProcess::WaitNonBlockingImpl() {
   return SandboxedInit::WStatusToStatus(wstatus);
 }
 
+int FakeSandboxedProcess::OnProcessLaunch(
+    const std::vector<std::string>& argv) {
+  return 0;
+}
+
+pid_t FakeSandboxedProcess::StartImpl(base::ScopedFD,
+                                      base::ScopedFD,
+                                      base::ScopedFD) {
+  DCHECK(!ret_code_);
+  ret_code_ = OnProcessLaunch(arguments());
+  return 42;
+}
+
+int FakeSandboxedProcess::WaitImpl() {
+  DCHECK(ret_code_);
+  return ret_code_.value();
+}
+
+int FakeSandboxedProcess::WaitNonBlockingImpl() {
+  if (ret_code_)
+    return ret_code_.value();
+  return -1;
+}
+
 }  // namespace cros_disks

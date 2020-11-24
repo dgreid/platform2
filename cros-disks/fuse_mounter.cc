@@ -36,6 +36,7 @@
 #include "cros-disks/platform.h"
 #include "cros-disks/quote.h"
 #include "cros-disks/sandboxed_process.h"
+#include "cros-disks/uri.h"
 
 namespace cros_disks {
 
@@ -438,6 +439,32 @@ MountErrorType FUSEMounter::InterpretReturnCode(int return_code) const {
   if (return_code != 0)
     return MOUNT_ERROR_MOUNT_PROGRAM_FAILED;
   return MOUNT_ERROR_NONE;
+}
+
+FUSEMounterHelper::FUSEMounterHelper(
+    const Platform* platform,
+    brillo::ProcessReaper* process_reaper,
+    std::string filesystem_type,
+    bool nosymfollow,
+    const SandboxedProcessFactory* sandbox_factory)
+    : FUSEMounter(
+          platform, process_reaper, std::move(filesystem_type), nosymfollow),
+      sandbox_factory_(sandbox_factory) {}
+
+FUSEMounterHelper::~FUSEMounterHelper() = default;
+
+std::unique_ptr<SandboxedProcess> FUSEMounterHelper::PrepareSandbox(
+    const std::string& source,
+    const base::FilePath& target_path,
+    std::vector<std::string> params,
+    MountErrorType* error) const {
+  auto sandbox = sandbox_factory_->CreateSandboxedProcess();
+  *error =
+      ConfigureSandbox(source, target_path, std::move(params), sandbox.get());
+  if (*error != MOUNT_ERROR_NONE) {
+    return nullptr;
+  }
+  return sandbox;
 }
 
 FUSEMounterLegacy::FUSEMounterLegacy(Params params)

@@ -9,6 +9,7 @@
 #include <base/containers/adapters.h>
 #include <base/stl_util.h>
 #include <base/strings/string_util.h>
+#include <base/strings/strcat.h>
 
 #include "cros-disks/quote.h"
 
@@ -32,6 +33,19 @@ const char kOptionUidPrefix[] = "uid=";
 const char kOptionGidPrefix[] = "gid=";
 const char kOptionShortNamePrefix[] = "shortname=";
 const char kOptionTimeOffsetPrefix[] = "time_offset=";
+
+bool FindLastElementStartingWith(const std::vector<std::string>& container,
+                                 base::StringPiece prefix,
+                                 std::string* result) {
+  for (const auto& element : base::Reversed(container)) {
+    if (base::StartsWith(element, prefix, base::CompareCase::SENSITIVE)) {
+      *result = element;
+      return true;
+    }
+  }
+  return false;
+}
+
 }  // namespace
 
 MountOptions::MountOptions()
@@ -229,6 +243,22 @@ bool IsReadOnlyMount(const std::vector<std::string>& options) {
       return false;
   }
   return false;
+}
+
+bool GetParamValue(const std::vector<std::string>& params,
+                   base::StringPiece name,
+                   std::string* value) {
+  if (!FindLastElementStartingWith(params, base::StrCat({name, "="}), value)) {
+    return false;
+  }
+  *value = value->substr(name.length() + 1);
+  return true;
+}
+
+void SetParamValue(std::vector<std::string>* params,
+                   base::StringPiece name,
+                   base::StringPiece value) {
+  params->emplace_back(base::StrCat({name, "=", value}));
 }
 
 }  // namespace cros_disks

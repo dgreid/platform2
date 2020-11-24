@@ -127,6 +127,19 @@ struct SandboxedExecutable {
   base::Optional<base::FilePath> seccomp_policy = {};
 };
 
+// Fake SandboxedProcess for testing. Doesn't launch any actual process.
+class FakeSandboxedProcess : public SandboxedProcess {
+ public:
+  virtual int OnProcessLaunch(const std::vector<std::string>& argv);
+
+ private:
+  pid_t StartImpl(base::ScopedFD, base::ScopedFD, base::ScopedFD) final;
+  int WaitImpl() final;
+  int WaitNonBlockingImpl() final;
+
+  base::Optional<int> ret_code_;
+};
+
 }  // namespace cros_disks
 
 #endif  // CROS_DISKS_SANDBOXED_PROCESS_H_

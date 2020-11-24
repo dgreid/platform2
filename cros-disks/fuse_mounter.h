@@ -90,6 +90,7 @@ class FUSEMounter : public Mounter {
 
   const Platform* platform() const { return platform_; }
   brillo::ProcessReaper* process_reaper() const { return process_reaper_; }
+  const std::string& filesystem_type() const { return filesystem_type_; }
 
   // Mounter overrides:
   std::unique_ptr<MountPoint> Mount(const std::string& source,
@@ -129,6 +130,39 @@ class FUSEMounter : public Mounter {
   brillo::ProcessReaper* const process_reaper_;
   const std::string filesystem_type_;
   const bool nosymfollow_;
+};
+
+// A convenience class to tie FUSE mounter with a sandbox configuration.
+class FUSEMounterHelper : public FUSEMounter {
+ public:
+  FUSEMounterHelper(const Platform* platform,
+                    brillo::ProcessReaper* process_reaper,
+                    std::string filesystem_type,
+                    bool nosymfollow,
+                    const SandboxedProcessFactory* sandbox_factory);
+  FUSEMounterHelper(const FUSEMounterHelper&) = delete;
+  FUSEMounterHelper& operator=(const FUSEMounterHelper&) = delete;
+  ~FUSEMounterHelper() override;
+
+ protected:
+  const SandboxedProcessFactory* sandbox_factory() const {
+    return sandbox_factory_;
+  }
+
+  // FUSEMounter overrides:
+  std::unique_ptr<SandboxedProcess> PrepareSandbox(
+      const std::string& source,
+      const base::FilePath& target_path,
+      std::vector<std::string> params,
+      MountErrorType* error) const final;
+
+  virtual MountErrorType ConfigureSandbox(const std::string& source,
+                                          const base::FilePath& target_path,
+                                          std::vector<std::string> params,
+                                          SandboxedProcess* sandbox) const = 0;
+
+ private:
+  const SandboxedProcessFactory* const sandbox_factory_;
 };
 
 // A class for mounting something using a FUSE mount program.
