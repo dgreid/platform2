@@ -6,6 +6,7 @@
 
 #include <string>
 
+#include <base/files/file_enumerator.h>
 #include <base/logging.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_util.h>
@@ -21,16 +22,21 @@ namespace typecd {
 
 Partner::Partner(const base::FilePath& syspath)
     : Peripheral(syspath), num_alt_modes_(-1) {
+  // Search for all alt modes which were already registered prior to daemon
+  // init.
+  base::FileEnumerator iter(GetSysPath(), false,
+                            base::FileEnumerator::DIRECTORIES);
+  for (auto path = iter.Next(); !path.empty(); path = iter.Next())
+    AddAltMode(path);
+
   SetNumAltModes(ParseNumAltModes());
 }
 
 bool Partner::AddAltMode(const base::FilePath& mode_syspath) {
   int port, index;
   if (!RE2::FullMatch(mode_syspath.BaseName().value(), kPartnerAltModeRegex,
-                      &port, &index)) {
-    LOG(ERROR) << "Couldn't parse alt mode index from syspath " << mode_syspath;
+                      &port, &index))
     return false;
-  }
 
   if (IsAltModePresent(index)) {
     LOG(ERROR) << "Alt mode already registered for syspath " << mode_syspath;
