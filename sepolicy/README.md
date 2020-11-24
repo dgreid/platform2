@@ -13,9 +13,10 @@ SELinux policy for Chrome OS lives here.
     different filesystems, e.g, devtmpfs -> u:object_r:device:s0, ext4 ->
     u:object_r:labeledfs:s0. genfscon defines file labels from the policy (so no
     need to xattr actual inode), mostly for procfs.
-  - `|- chromeos` All Chrome OS AVCs except for those in chromeos_base live here.
-    Chrome OS file type definitions also live here.
-    - `|- te_macros` Chrome OS-specific macros to write .te files, excluding those in `policy/base` or in `shared`.
+  - `|- chromeos` All Chrome OS AVCs except for those in chromeos_base live
+    here. Chrome OS file type definitions also live here.
+    - `|- te_macros` Chrome OS-specific macros to write .te files, excluding
+    those in `policy/base` or in `shared`.
     - `|- attributes` Chrome OS attributes.
     - `|- file.te` Chrome OS file labels.
     - `|- **.te` AVC rules for different domains.
@@ -30,4 +31,4 @@ SELinux policy for Chrome OS lives here.
 ## Docs
 
 Docs are located at
-[chromiumos/docs/security/selinux.md](https://chromium.googlesource.com/chromiumos/docs/+/master/security/selinux.md)
+[chromiumos/docs/security/selinux.md](https://chromium.googlesource.com/chromiumos/docs/+/HEAD/security/selinux.md)
