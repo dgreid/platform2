@@ -154,6 +154,7 @@ grpc::Status ContainerListenerImpl::UpdateApplicationList(
     app_out->set_startup_wm_class(app_in.startup_wm_class());
     app_out->set_startup_notify(app_in.startup_notify());
     app_out->set_package_id(app_in.package_id());
+    app_out->set_exec(app_in.exec());
     app_out->set_executable_file_name(app_in.executable_file_name());
     // Set the mime types.
     for (const auto& mime_type : app_in.mime_types()) {

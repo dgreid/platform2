@@ -545,6 +545,7 @@ void HostNotifier::SendAppListToHost() {
       app->set_no_display(desktop_file->no_display());
       app->set_startup_wm_class(desktop_file->startup_wm_class());
       app->set_startup_notify(desktop_file->startup_notify());
+      app->set_exec(desktop_file->exec());
       app->set_executable_file_name(desktop_file->GenerateExecutableFileName());
 
       callback_state->desktop_files_for_application.push_back(enum_path);
