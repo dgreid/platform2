@@ -15,7 +15,7 @@ namespace {
 
 constexpr char kGrammarFilesPath[] = "/opt/google/chrome/ml_models/grammar/";
 constexpr char kGrammarLibraryRelativePath[] = "libgrammar.so";
-constexpr char kGrammarModelRelativePath[] = "translation_model.pbtxt";
+constexpr char kGrammarModelRelativePath[] = "translation_model.pb";
 
 }  // namespace
 
