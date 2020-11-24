@@ -145,10 +145,11 @@ TEST_P(DiskCleanupRoutinesTest, DeleteUserCache) {
           std::bind(CreateMockFileEnumeratorWithEntries, entriesToClean)));
 
   // Don't delete anything else.
-  EXPECT_CALL(platform_, DeleteFile(_, _)).Times(0);
+  EXPECT_CALL(platform_, DeleteFile(_)).Times(0);
+  EXPECT_CALL(platform_, DeletePathRecursively(_)).Times(0);
 
   for (const auto& entry : entriesToClean)
-    EXPECT_CALL(platform_, DeleteFile(entry, true)).WillOnce(Return(true));
+    EXPECT_CALL(platform_, DeletePathRecursively(entry)).WillOnce(Return(true));
 
   routines_.DeleteUserCache(kTestUser);
 }
@@ -186,10 +187,11 @@ TEST_P(DiskCleanupRoutinesTest, DeleteUserGCacheV1) {
       .WillRepeatedly(InvokeWithoutArgs(CreateMockFileEnumerator));
 
   // Don't delete anything else.
-  EXPECT_CALL(platform_, DeleteFile(_, _)).Times(0);
+  EXPECT_CALL(platform_, DeleteFile(_)).Times(0);
+  EXPECT_CALL(platform_, DeletePathRecursively(_)).Times(0);
 
   for (const auto& entry : entriesToClean)
-    EXPECT_CALL(platform_, DeleteFile(entry, true)).WillOnce(Return(true));
+    EXPECT_CALL(platform_, DeletePathRecursively(entry)).WillOnce(Return(true));
 
   routines_.DeleteUserGCache(kTestUser);
 }
@@ -248,17 +250,14 @@ TEST_P(DiskCleanupRoutinesTest, DeleteUserGCacheV2) {
       .WillRepeatedly(Return(true));
 
   // Don't delete anything else.
-  EXPECT_CALL(platform_, DeleteFile(_, _)).Times(0);
+  EXPECT_CALL(platform_, DeleteFile(_)).Times(0);
+  EXPECT_CALL(platform_, DeletePathRecursively(_)).Times(0);
 
-  EXPECT_CALL(platform_, DeleteFile(v1Entries[0], false))
-      .WillOnce(Return(true));
-  EXPECT_CALL(platform_, DeleteFile(v1Entries[1], false))
-      .WillOnce(Return(true));
+  EXPECT_CALL(platform_, DeleteFile(v1Entries[0])).WillOnce(Return(true));
+  EXPECT_CALL(platform_, DeleteFile(v1Entries[1])).WillOnce(Return(true));
 
-  EXPECT_CALL(platform_, DeleteFile(v2Entries[0], false))
-      .WillOnce(Return(true));
-  EXPECT_CALL(platform_, DeleteFile(v2Entries[1], false))
-      .WillOnce(Return(true));
+  EXPECT_CALL(platform_, DeleteFile(v2Entries[0])).WillOnce(Return(true));
+  EXPECT_CALL(platform_, DeleteFile(v2Entries[1])).WillOnce(Return(true));
 
   routines_.DeleteUserGCache(kTestUser);
 }
@@ -295,7 +294,8 @@ TEST_P(DiskCleanupRoutinesTest, DeleteAndroidCache) {
             std::bind(CreateMockFileEnumeratorWithEntries, entries)));
 
     for (const auto& entry : entries)
-      EXPECT_CALL(platform_, DeleteFile(entry, true)).WillOnce(Return(true));
+      EXPECT_CALL(platform_, DeletePathRecursively(entry))
+          .WillOnce(Return(true));
   }
 
   auto* enumerator = new NiceMock<cryptohome::MockFileEnumerator>;
@@ -352,7 +352,7 @@ TEST_P(DiskCleanupRoutinesTest, DeleteAndroidCache) {
 
 TEST_P(DiskCleanupRoutinesTest, DeleteUserProfile) {
   EXPECT_CALL(homedirs_, RemoveLECredentials(kTestUser)).Times(1);
-  EXPECT_CALL(platform_, DeleteFile(kTestUserPath, true))
+  EXPECT_CALL(platform_, DeletePathRecursively(kTestUserPath))
       .WillOnce(Return(true));
 
   EXPECT_TRUE(routines_.DeleteUserProfile(kTestUser));
@@ -360,7 +360,7 @@ TEST_P(DiskCleanupRoutinesTest, DeleteUserProfile) {
 
 TEST_P(DiskCleanupRoutinesTest, DeleteUserProfileFail) {
   EXPECT_CALL(homedirs_, RemoveLECredentials(kTestUser)).Times(1);
-  EXPECT_CALL(platform_, DeleteFile(kTestUserPath, true))
+  EXPECT_CALL(platform_, DeletePathRecursively(kTestUserPath))
       .WillOnce(Return(false));
 
   EXPECT_FALSE(routines_.DeleteUserProfile(kTestUser));

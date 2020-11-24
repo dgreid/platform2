@@ -35,8 +35,8 @@ int main(int argc, char** argv) {
   cryptohome::Platform platform;
   bool ok = CacheLockbox(&platform, nvram_path, lockbox_path, cache_path);
   if (cl->HasSwitch(switches::kUnlinkNvram))
-    platform.DeleteFile(nvram_path, false);
+    platform.DeleteFile(nvram_path);
   if (!ok)
-    platform.DeleteFile(cache_path, false);
+    platform.DeleteFile(cache_path);
   return !ok;
 }

@@ -80,9 +80,12 @@ class TpmInitTest : public ::testing::Test {
       return false;
     }
     files_[to] = files_[from];
-    return FileDelete(from, false);
+    return FileDelete(from);
   }
-  bool FileDelete(const base::FilePath& path, bool /* recursive */) {
+  bool FileDeleteDurable(const base::FilePath& path, bool /* recursive */) {
+    return files_.erase(path) == 1;
+  }
+  bool FileDelete(const base::FilePath& path) {
     return files_.erase(path) == 1;
   }
   bool FileTouch(const base::FilePath& path) {
@@ -186,10 +189,12 @@ class TpmInitTest : public ::testing::Test {
         .WillByDefault(Invoke(this, &TpmInitTest::FileExists));
     ON_CALL(platform_, Move(_, _))
         .WillByDefault(Invoke(this, &TpmInitTest::FileMove));
-    ON_CALL(platform_, DeleteFile(_, _))
+    ON_CALL(platform_, DeleteFile(_))
+        .WillByDefault(Invoke(this, &TpmInitTest::FileDelete));
+    ON_CALL(platform_, DeletePathRecursively(_))
         .WillByDefault(Invoke(this, &TpmInitTest::FileDelete));
     ON_CALL(platform_, DeleteFileDurable(_, _))
-        .WillByDefault(Invoke(this, &TpmInitTest::FileDelete));
+        .WillByDefault(Invoke(this, &TpmInitTest::FileDeleteDurable));
     ON_CALL(platform_, TouchFileDurable(_))
         .WillByDefault(Invoke(this, &TpmInitTest::FileTouch));
     ON_CALL(platform_, GetFileSize(_, _))
@@ -477,7 +482,7 @@ TEST_F(TpmInitTest, IsTpmReadyWithOwnedFile) {
 }
 
 TEST_F(TpmInitTest, IsTpmReadyNoOwnedFile) {
-  FileDelete(kTpmOwnedFile, false);
+  FileDelete(kTpmOwnedFile);
   SetIsTpmOwned(true);
   SetIsTpmBeingOwned(false);
 

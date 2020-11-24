@@ -76,8 +76,8 @@ TEST_F(StatefulRecoveryTest, ValidRequestV1) {
   EXPECT_CALL(*platform_,
               ReadFileToString(FilePath(StatefulRecovery::kFlagFile), _))
       .WillOnce(DoAll(SetArgPointee<1>(flag_content), Return(true)));
-  EXPECT_CALL(*platform_,
-              DeleteFile(FilePath(StatefulRecovery::kRecoverDestination), _))
+  EXPECT_CALL(*platform_, DeletePathRecursively(
+                              FilePath(StatefulRecovery::kRecoverDestination)))
       .WillOnce(Return(true));
   EXPECT_CALL(*platform_,
               CreateDirectory(FilePath(StatefulRecovery::kRecoverDestination)))
@@ -109,8 +109,8 @@ TEST_F(StatefulRecoveryTest, ValidRequestV1WriteProtected) {
   EXPECT_CALL(*platform_,
               ReadFileToString(FilePath(StatefulRecovery::kFlagFile), _))
       .WillOnce(DoAll(SetArgPointee<1>(flag_content), Return(true)));
-  EXPECT_CALL(*platform_,
-              DeleteFile(FilePath(StatefulRecovery::kRecoverDestination), _))
+  EXPECT_CALL(*platform_, DeletePathRecursively(
+                              FilePath(StatefulRecovery::kRecoverDestination)))
       .WillOnce(Return(true));
   EXPECT_CALL(*platform_,
               CreateDirectory(FilePath(StatefulRecovery::kRecoverDestination)))
@@ -130,8 +130,8 @@ TEST_F(StatefulRecoveryTest, ValidRequestV2) {
   EXPECT_CALL(*platform_,
               ReadFileToString(FilePath(StatefulRecovery::kFlagFile), _))
       .WillOnce(DoAll(SetArgPointee<1>(flag_content), Return(true)));
-  EXPECT_CALL(*platform_,
-              DeleteFile(FilePath(StatefulRecovery::kRecoverDestination), _))
+  EXPECT_CALL(*platform_, DeletePathRecursively(
+                              FilePath(StatefulRecovery::kRecoverDestination)))
       .WillOnce(Return(true));
   EXPECT_CALL(*platform_,
               CreateDirectory(FilePath(StatefulRecovery::kRecoverDestination)))
@@ -180,8 +180,8 @@ TEST_F(StatefulRecoveryTest, ValidRequestV2NotOwner) {
   EXPECT_CALL(*platform_,
               ReadFileToString(FilePath(StatefulRecovery::kFlagFile), _))
       .WillOnce(DoAll(SetArgPointee<1>(flag_content), Return(true)));
-  EXPECT_CALL(*platform_,
-              DeleteFile(FilePath(StatefulRecovery::kRecoverDestination), _))
+  EXPECT_CALL(*platform_, DeletePathRecursively(
+                              FilePath(StatefulRecovery::kRecoverDestination)))
       .WillOnce(Return(true));
   EXPECT_CALL(*platform_,
               CreateDirectory(FilePath(StatefulRecovery::kRecoverDestination)))
@@ -210,8 +210,8 @@ TEST_F(StatefulRecoveryTest, ValidRequestV2BadUser) {
   EXPECT_CALL(*platform_,
               ReadFileToString(FilePath(StatefulRecovery::kFlagFile), _))
       .WillOnce(DoAll(SetArgPointee<1>(flag_content), Return(true)));
-  EXPECT_CALL(*platform_,
-              DeleteFile(FilePath(StatefulRecovery::kRecoverDestination), _))
+  EXPECT_CALL(*platform_, DeletePathRecursively(
+                              FilePath(StatefulRecovery::kRecoverDestination)))
       .WillOnce(Return(true));
   EXPECT_CALL(*platform_,
               CreateDirectory(FilePath(StatefulRecovery::kRecoverDestination)))
@@ -236,8 +236,8 @@ TEST_F(StatefulRecoveryTest, ValidRequestV2BadUserNotWriteProtected) {
   EXPECT_CALL(*platform_,
               ReadFileToString(FilePath(StatefulRecovery::kFlagFile), _))
       .WillOnce(DoAll(SetArgPointee<1>(flag_content), Return(true)));
-  EXPECT_CALL(*platform_,
-              DeleteFile(FilePath(StatefulRecovery::kRecoverDestination), _))
+  EXPECT_CALL(*platform_, DeletePathRecursively(
+                              FilePath(StatefulRecovery::kRecoverDestination)))
       .WillOnce(Return(true));
   EXPECT_CALL(*platform_,
               CreateDirectory(FilePath(StatefulRecovery::kRecoverDestination)))
@@ -281,8 +281,8 @@ TEST_F(StatefulRecoveryTest, ValidRequestV2NotOwnerNotWriteProtected) {
   EXPECT_CALL(*platform_,
               ReadFileToString(FilePath(StatefulRecovery::kFlagFile), _))
       .WillOnce(DoAll(SetArgPointee<1>(flag_content), Return(true)));
-  EXPECT_CALL(*platform_,
-              DeleteFile(FilePath(StatefulRecovery::kRecoverDestination), _))
+  EXPECT_CALL(*platform_, DeletePathRecursively(
+                              FilePath(StatefulRecovery::kRecoverDestination)))
       .WillOnce(Return(true));
   EXPECT_CALL(*platform_,
               CreateDirectory(FilePath(StatefulRecovery::kRecoverDestination)))
@@ -347,8 +347,8 @@ TEST_F(StatefulRecoveryTest, UncopyableData) {
   EXPECT_CALL(*platform_,
               ReadFileToString(FilePath(StatefulRecovery::kFlagFile), _))
       .WillOnce(DoAll(SetArgPointee<1>(flag_content), Return(true)));
-  EXPECT_CALL(*platform_,
-              DeleteFile(FilePath(StatefulRecovery::kRecoverDestination), _))
+  EXPECT_CALL(*platform_, DeletePathRecursively(
+                              FilePath(StatefulRecovery::kRecoverDestination)))
       .WillOnce(Return(true));
   EXPECT_CALL(*platform_,
               CreateDirectory(FilePath(StatefulRecovery::kRecoverDestination)))
@@ -368,8 +368,8 @@ TEST_F(StatefulRecoveryTest, DirectoryCreationFailure) {
   EXPECT_CALL(*platform_,
               ReadFileToString(FilePath(StatefulRecovery::kFlagFile), _))
       .WillOnce(DoAll(SetArgPointee<1>(flag_content), Return(true)));
-  EXPECT_CALL(*platform_,
-              DeleteFile(FilePath(StatefulRecovery::kRecoverDestination), _))
+  EXPECT_CALL(*platform_, DeletePathRecursively(
+                              FilePath(StatefulRecovery::kRecoverDestination)))
       .WillOnce(Return(true));
   EXPECT_CALL(*platform_,
               CreateDirectory(FilePath(StatefulRecovery::kRecoverDestination)))
@@ -385,8 +385,8 @@ TEST_F(StatefulRecoveryTest, StatVFSFailure) {
   EXPECT_CALL(*platform_,
               ReadFileToString(FilePath(StatefulRecovery::kFlagFile), _))
       .WillOnce(DoAll(SetArgPointee<1>(flag_content), Return(true)));
-  EXPECT_CALL(*platform_,
-              DeleteFile(FilePath(StatefulRecovery::kRecoverDestination), _))
+  EXPECT_CALL(*platform_, DeletePathRecursively(
+                              FilePath(StatefulRecovery::kRecoverDestination)))
       .WillOnce(Return(true));
   EXPECT_CALL(*platform_,
               CreateDirectory(FilePath(StatefulRecovery::kRecoverDestination)))
@@ -409,8 +409,8 @@ TEST_F(StatefulRecoveryTest, FilesystemDetailsFailure) {
   EXPECT_CALL(*platform_,
               ReadFileToString(FilePath(StatefulRecovery::kFlagFile), _))
       .WillOnce(DoAll(SetArgPointee<1>(flag_content), Return(true)));
-  EXPECT_CALL(*platform_,
-              DeleteFile(FilePath(StatefulRecovery::kRecoverDestination), _))
+  EXPECT_CALL(*platform_, DeletePathRecursively(
+                              FilePath(StatefulRecovery::kRecoverDestination)))
       .WillOnce(Return(true));
   EXPECT_CALL(*platform_,
               CreateDirectory(FilePath(StatefulRecovery::kRecoverDestination)))
@@ -490,8 +490,8 @@ TEST_F(StatefulRecoveryTest, DestinationRecreateFailure) {
   EXPECT_CALL(*platform_,
               ReadFileToString(FilePath(StatefulRecovery::kFlagFile), _))
       .WillOnce(DoAll(SetArgPointee<1>(flag_content), Return(true)));
-  EXPECT_CALL(*platform_,
-              DeleteFile(FilePath(StatefulRecovery::kRecoverDestination), _))
+  EXPECT_CALL(*platform_, DeletePathRecursively(
+                              FilePath(StatefulRecovery::kRecoverDestination)))
       .WillOnce(Return(true));
   EXPECT_CALL(*platform_,
               CreateDirectory(FilePath(StatefulRecovery::kRecoverDestination)))

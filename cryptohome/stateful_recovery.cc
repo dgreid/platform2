@@ -158,7 +158,7 @@ bool StatefulRecovery::Recover() {
   // delete takes place but before we manage to recreate. Since the parent
   // directory is root-owned though, this isn't a problem in practice.
   const FilePath kDestinationPath(kRecoverDestination);
-  if (!platform_->DeleteFile(kDestinationPath, true) ||
+  if (!platform_->DeletePathRecursively(kDestinationPath) ||
       !platform_->CreateDirectory(kDestinationPath)) {
     PLOG(ERROR) << "Failed to create fresh " << kDestinationPath.value();
     return false;

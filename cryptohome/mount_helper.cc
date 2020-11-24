@@ -215,7 +215,7 @@ bool MountHelper::EnsureNewUserDirExists(const std::string& username) const {
     // chronos can modify the contents of /home/chronos.
     // Try deleting the file or link at /home/chronos/u-$hash to be robust
     // against malicious code running as chronos.
-    if (!platform_->DeleteFile(dir, /*recursive=*/false)) {
+    if (!platform_->DeleteFile(dir)) {
       LOG(ERROR) << "DeleteFile() failed: " << dir.value();
       return false;
     }
@@ -250,7 +250,7 @@ void MountHelper::CreateHomeSubdirectories(const FilePath& vault_path) const {
   // In any of these cases, it is safe for us to rm root_path, since the only
   // way it could have gotten there is if someone undertook some funny business
   // as root.
-  platform_->DeleteFile(root_path, true);
+  platform_->DeletePathRecursively(root_path);
 
   if (!platform_->CreateDirectory(user_path)) {
     PLOG(ERROR) << "CreateDirectory() failed: " << user_path.value();
@@ -585,7 +585,7 @@ void MountHelper::MigrateDirectory(const base::FilePath& dst,
     if (platform_->FileExists(dst_obj) ||
         !platform_->Rename(src_obj, dst_obj)) {
       LOG(WARNING) << "Failed to migrate " << src_obj << " : deleting";
-      platform_->DeleteFile(src_obj, true);
+      platform_->DeletePathRecursively(src_obj);
     }
   }
 }
@@ -665,14 +665,14 @@ bool MountHelper::CreateTrackedSubdirectories(
       // to prevent duplication.
       if (platform_->DirectoryExists(userside_dir) &&
           !platform_->DirectoryExists(tracked_dir_path)) {
-        platform_->DeleteFile(userside_dir, true);
+        platform_->DeletePathRecursively(userside_dir);
       }
     }
 
     // Create pass-through directory.
     if (!platform_->DirectoryExists(tracked_dir_path)) {
       // Delete the existing file or symbolic link if any.
-      platform_->DeleteFile(tracked_dir_path, false /* recursive */);
+      platform_->DeleteFile(tracked_dir_path);
       VLOG(1) << "Creating pass-through directory " << tracked_dir_path.value();
       platform_->CreateDirectory(tracked_dir_path);
       if (!platform_->SetOwnership(tracked_dir_path, default_uid_, default_gid_,
@@ -680,7 +680,7 @@ bool MountHelper::CreateTrackedSubdirectories(
         PLOG(ERROR) << "Couldn't change owner (" << default_uid_ << ":"
                     << default_gid_ << ") of tracked directory path: "
                     << tracked_dir_path.value();
-        platform_->DeleteFile(tracked_dir_path, true);
+        platform_->DeletePathRecursively(tracked_dir_path);
         result = false;
         continue;
       }
@@ -914,7 +914,7 @@ void MountHelper::UnmountAll() {
     ForceUnmount(src, dest);
     // Clean up destination directory for ephemeral loop device mounts.
     if (ephemeral_mount_path == dest.DirName())
-      platform_->DeleteFile(dest, true /* recursive */);
+      platform_->DeletePathRecursively(dest);
   }
 }
 
@@ -929,7 +929,7 @@ bool MountHelper::CleanUpEphemeral() {
     ephemeral_loop_device_.clear();
   }
   if (!ephemeral_file_path_.empty()) {
-    if (!platform_->DeleteFile(ephemeral_file_path_, false /* recursive */)) {
+    if (!platform_->DeleteFile(ephemeral_file_path_)) {
       PLOG(ERROR) << "Failed to clean up ephemeral sparse file '"
                   << ephemeral_file_path_.value() << "'";
       success = false;

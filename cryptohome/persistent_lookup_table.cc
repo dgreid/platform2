@@ -189,7 +189,7 @@ void PersistentLookupTable::DeleteOldKeyVersions(const uint64_t key,
 
   // Delete the entire directory.
   if (version_to_save == 0) {
-    if (!platform_->DeleteFile(key_dir, true)) {
+    if (!platform_->DeletePathRecursively(key_dir)) {
       LOG(WARNING) << "Failed to delete dir: " << key_dir.value();
     }
     return;
@@ -209,7 +209,7 @@ void PersistentLookupTable::DeleteOldKeyVersions(const uint64_t key,
       continue;
     }
 
-    if (!platform_->DeleteFile(cur_file, false)) {
+    if (!platform_->DeleteFile(cur_file)) {
       LOG(WARNING) << "Failed to delete file: " << cur_file.value();
     }
   }

@@ -220,7 +220,7 @@ bool TpmPersistentState::StoreTpmStatus() {
       platform_->WriteSecureBlobToFile(kTpmStatusFile, random);
       platform_->DataSyncFile(kTpmStatusFile);
     }
-    platform_->DeleteFile(kTpmStatusFile, false);
+    platform_->DeleteFile(kTpmStatusFile);
   }
 
   SecureBlob final_blob(tpm_status_.ByteSizeLong());

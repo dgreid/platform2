@@ -627,7 +627,7 @@ CryptohomeErrorCode HomeDirs::AddKeyset(const Credentials& existing_credentials,
         GetVaultKeyset(obfuscated, new_data->label());
     if (match.get()) {
       LOG(INFO) << "Label already exists.";
-      platform_->DeleteFile(vk_path, false);
+      platform_->DeleteFile(vk_path);
       if (!clobber) {
         return CRYPTOHOME_ERROR_KEY_LABEL_EXISTS;
       }
@@ -649,7 +649,7 @@ CryptohomeErrorCode HomeDirs::AddKeyset(const Credentials& existing_credentials,
     added = CRYPTOHOME_ERROR_BACKING_STORE_FAILURE;
     // If we're clobbering, don't delete on error.
     if (!clobber) {
-      platform_->DeleteFile(vk_path, false);
+      platform_->DeleteFile(vk_path);
     }
   } else {
     *index = new_index;
@@ -732,7 +732,7 @@ bool HomeDirs::ForceRemoveKeyset(const std::string& obfuscated, int index) {
     return true;
 
   // TODO(wad) Add file zeroing here or centralize with other code.
-  return platform_->DeleteFile(path, false);
+  return platform_->DeleteFile(path);
 }
 
 bool HomeDirs::MoveKeyset(const std::string& obfuscated, int src, int dst) {
@@ -778,7 +778,7 @@ void HomeDirs::RemoveNonOwnerCryptohomesCallback(
   // Once we're sure this is not the owner's cryptohome, delete it.
   RemoveLECredentials(obfuscated);
   FilePath shadow_dir = shadow_root_.Append(obfuscated);
-  platform_->DeleteFile(shadow_dir, true);
+  platform_->DeletePathRecursively(shadow_dir);
 }
 
 void HomeDirs::RemoveNonOwnerCryptohomes() {
@@ -874,7 +874,7 @@ void HomeDirs::RemoveNonOwnerDirectories(const FilePath& prefix) {
                  // name.
     if (platform_->IsDirectoryMounted(dirent))
       continue;  // Skip any directory that is currently mounted.
-    platform_->DeleteFile(dirent, true);
+    platform_->DeletePathRecursively(dirent);
   }
 }
 
@@ -1021,9 +1021,9 @@ bool HomeDirs::Remove(const std::string& username) {
   FilePath user_dir = shadow_root_.Append(obfuscated);
   FilePath user_path = brillo::cryptohome::home::GetUserPath(username);
   FilePath root_path = brillo::cryptohome::home::GetRootPath(username);
-  return platform_->DeleteFile(user_dir, true) &&
-         platform_->DeleteFile(user_path, true) &&
-         platform_->DeleteFile(root_path, true);
+  return platform_->DeletePathRecursively(user_dir) &&
+         platform_->DeletePathRecursively(user_path) &&
+         platform_->DeletePathRecursively(root_path);
 }
 
 bool HomeDirs::Rename(const std::string& account_id_from,
@@ -1103,13 +1103,12 @@ bool HomeDirs::Rename(const std::string& account_id_from,
                                 platform_->Rename(user_dir_from, user_dir_to);
 
   if (user_dir_renamed) {
-    constexpr bool kIsRecursive = true;
     const bool user_path_deleted =
-        platform_->DeleteFile(user_path_from, kIsRecursive);
+        platform_->DeletePathRecursively(user_path_from);
     const bool root_path_deleted =
-        platform_->DeleteFile(root_path_from, kIsRecursive);
+        platform_->DeletePathRecursively(root_path_from);
     const bool new_user_path_deleted =
-        platform_->DeleteFile(new_user_path_from, kIsRecursive);
+        platform_->DeletePathRecursively(new_user_path_from);
     if (!user_path_deleted) {
       LOG(WARNING) << "HomeDirs::Rename(from='" << account_id_from << "', to='"
                    << account_id_to << "'): failed to delete user_path.";
@@ -1354,7 +1353,7 @@ void HomeDirs::RemoveLECredentials(const std::string& obfuscated_username) {
 
     // Remove the cryptohome VaultKeyset data.
     base::FilePath vk_path = GetVaultKeysetPath(obfuscated_username, index);
-    platform_->DeleteFile(vk_path, true);
+    platform_->DeletePathRecursively(vk_path);
   }
 }
 

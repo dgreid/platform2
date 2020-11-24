@@ -312,8 +312,7 @@ bool InstallAttributes::SerializeAttributes(brillo::Blob* out_bytes) {
 }
 
 bool InstallAttributes::ClearData() {
-  if (platform_->FileExists(data_file_) &&
-      !platform_->DeleteFile(data_file_, false)) {
+  if (platform_->FileExists(data_file_) && !platform_->DeleteFile(data_file_)) {
     LOG(ERROR) << "Failed to delete install attributes data file!";
     return false;
   }

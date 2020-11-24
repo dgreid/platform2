@@ -74,8 +74,7 @@ void CleanUpGuestDaemonDirectories(cryptohome::Platform* platform) {
     FilePath to_delete = root_home_dir.Append(daemon_path);
     if (platform->DirectoryExists(to_delete)) {
       LOG(INFO) << "Attempting to delete " << to_delete.value();
-      // Platform::DeleteFile() works with directories too.
-      if (!platform->DeleteFile(to_delete, /*recursive=*/true)) {
+      if (!platform->DeletePathRecursively(to_delete)) {
         LOG(WARNING) << "Failed to delete " << to_delete.value();
       }
     }

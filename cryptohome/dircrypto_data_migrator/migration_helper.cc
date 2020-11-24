@@ -605,7 +605,7 @@ bool MigrationHelper::MigrateDir(const base::FilePath& child,
     mode_t mode = entry_info.stat().st_mode;
     if (!ShouldMigrateFile(new_child)) {
       // Delete paths which should be skipped
-      if (!platform_->DeleteFile(entry, true /* recursive */)) {
+      if (!platform_->DeletePathRecursively(entry)) {
         PLOG(ERROR) << "Failed to delete " << entry.value();
         RecordFileErrorWithCurrentErrno(kMigrationFailedAtDelete, entry);
         return false;
@@ -649,7 +649,7 @@ bool MigrationHelper::MigrateLink(const base::FilePath& child,
   }
   // In the case that the link was already created by a previous migration
   // it should be removed to prevent errors recreating it below.
-  if (!platform_->DeleteFile(new_path, false /* recursive */)) {
+  if (!platform_->DeleteFile(new_path)) {
     PLOG(ERROR) << "Failed to delete existing symlink " << new_path.value();
     RecordFileErrorWithCurrentErrno(kMigrationFailedAtDelete, child);
     return false;
@@ -1063,8 +1063,7 @@ bool MigrationHelper::ProcessJob(const Job& job) {
   } else {
     LOG(ERROR) << "Unknown file type: " << job.child.value();
   }
-  if (!platform_->DeleteFile(from_base_path_.Append(job.child),
-                             false /* recursive */)) {
+  if (!platform_->DeleteFile(from_base_path_.Append(job.child))) {
     LOG(ERROR) << "Failed to delete file " << job.child.value();
     RecordFileErrorWithCurrentErrno(kMigrationFailedAtDelete, job.child);
     return false;
@@ -1108,7 +1107,7 @@ bool MigrationHelper::DecrementChildCountAndDeleteIfNecessary(
   if (child.value() == base::FilePath::kCurrentDirectory)
     return true;
 
-  if (!platform_->DeleteFile(from_dir, false /* recursive */)) {
+  if (!platform_->DeleteFile(from_dir)) {
     PLOG(ERROR) << "Failed to delete " << child.value();
     RecordFileErrorWithCurrentErrno(kMigrationFailedAtDelete, child);
     return false;

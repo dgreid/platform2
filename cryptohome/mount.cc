@@ -821,8 +821,8 @@ bool Mount::MigrateToDircrypto(
   // Clean up.
   FilePath vault_path =
       homedirs_->GetEcryptfsUserVaultPath(obfuscated_username);
-  if (!platform_->DeleteFile(temporary_mount, true /* recursive */) ||
-      !platform_->DeleteFile(vault_path, true /* recursive */)) {
+  if (!platform_->DeletePathRecursively(temporary_mount) ||
+      !platform_->DeletePathRecursively(vault_path)) {
     LOG(ERROR) << "Failed to delete the old vault.";
     return false;
   }

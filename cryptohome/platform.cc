@@ -91,7 +91,7 @@ class ScopedPath {
   ScopedPath(cryptohome::Platform* platform, const FilePath& dir)
       : platform_(platform), dir_(dir) {}
   ~ScopedPath() {
-    if (!dir_.empty() && !platform_->DeleteFile(dir_, true)) {
+    if (!dir_.empty() && !platform_->DeletePathRecursively(dir_)) {
       PLOG(WARNING) << "Failed to clean up " << dir_.value();
     }
   }
@@ -771,10 +771,12 @@ bool Platform::SafeCreateDirAndSetOwnership(const base::FilePath& path,
   return path_result.second == brillo::SafeFD::Error::kNoError;
 }
 
-bool Platform::DeleteFile(const FilePath& path, bool is_recursive) {
-  if (is_recursive)
-    return base::DeletePathRecursively(path);
+bool Platform::DeleteFile(const FilePath& path) {
   return base::DeleteFile(path);
+}
+
+bool Platform::DeletePathRecursively(const FilePath& path) {
+  return base::DeletePathRecursively(path);
 }
 
 bool Platform::DeleteFileDurable(const FilePath& path, bool is_recursive) {

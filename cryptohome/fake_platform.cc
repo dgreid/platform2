@@ -59,7 +59,7 @@ FakePlatform::FakePlatform() : Platform() {
 }
 
 FakePlatform::~FakePlatform() {
-  real_platform_.DeleteFile(tmpfs_rootfs_, true /* recursive */);
+  real_platform_.DeletePathRecursively(tmpfs_rootfs_);
 }
 
 // Helpers
@@ -97,8 +97,12 @@ bool FakePlatform::EnumerateDirectoryEntries(
                                                   ent_list);
 }
 
-bool FakePlatform::DeleteFile(const base::FilePath& path, bool recursive) {
-  return real_platform_.DeleteFile(TestFilePath(path), recursive);
+bool FakePlatform::DeleteFile(const base::FilePath& path) {
+  return real_platform_.DeleteFile(TestFilePath(path));
+}
+
+bool FakePlatform::DeletePathRecursively(const base::FilePath& path) {
+  return real_platform_.DeletePathRecursively(TestFilePath(path));
 }
 
 bool FakePlatform::DeleteFileDurable(const base::FilePath& path,

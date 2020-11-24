@@ -287,7 +287,7 @@ EncryptedFs::EncryptedFs(const base::FilePath& rootdir,
 
 bool EncryptedFs::Purge() {
   LOG(INFO) << "Purging block file";
-  return platform_->DeleteFile(block_path_, false);
+  return platform_->DeleteFile(block_path_);
 }
 
 bool EncryptedFs::CreateSparseBackingFile(int64_t file_size) {

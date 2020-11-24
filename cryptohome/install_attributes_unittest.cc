@@ -290,7 +290,8 @@ TEST_F(InstallAttributesTest, NormalBootReadFileError) {
       .WillOnce(
           DoAll(SetArgPointee<0>(LockboxError::kNvramInvalid), Return(false)));
   ExpectNotRemovingOwnerDependency();
-  EXPECT_CALL(platform_, DeleteFile(_, _)).Times(0);
+  EXPECT_CALL(platform_, DeleteFile(_)).Times(0);
+  EXPECT_CALL(platform_, DeletePathRecursively(_)).Times(0);
 
   EXPECT_FALSE(install_attrs_.Init(&tpm_init_));
 
@@ -354,7 +355,7 @@ TEST_F(InstallAttributesTest, ClearPreviousDataFile) {
               FileExists(FilePath(InstallAttributes::kDefaultDataFile)))
       .WillOnce(Return(true));
   EXPECT_CALL(platform_,
-              DeleteFile(FilePath(InstallAttributes::kDefaultDataFile), _))
+              DeleteFile(FilePath(InstallAttributes::kDefaultDataFile)))
       .WillOnce(Return(true));
 
   EXPECT_FALSE(install_attrs_.Init(&tpm_init_));
@@ -383,7 +384,10 @@ TEST_F(InstallAttributesTest, KeepDataFileOnTpmFailure) {
               FileExists(FilePath(InstallAttributes::kDefaultDataFile)))
       .WillRepeatedly(Return(true));
   EXPECT_CALL(platform_,
-              DeleteFile(FilePath(InstallAttributes::kDefaultDataFile), _))
+              DeleteFile(FilePath(InstallAttributes::kDefaultDataFile)))
+      .Times(0);
+  EXPECT_CALL(platform_, DeletePathRecursively(
+                             FilePath(InstallAttributes::kDefaultDataFile)))
       .Times(0);
 
   EXPECT_FALSE(install_attrs_.Init(&tpm_init_));

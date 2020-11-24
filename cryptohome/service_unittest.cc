@@ -686,9 +686,9 @@ TEST_F(ServiceTest, CleanUpStale_NoOpenFiles_Ephemeral) {
   }
   EXPECT_CALL(platform_, DetachLoop(FilePath("/dev/loop7")))
       .WillOnce(Return(true));
-  EXPECT_CALL(platform_, DeleteFile(kSparseFiles[0], _)).WillOnce(Return(true));
-  EXPECT_CALL(platform_, DeleteFile(kSparseFiles[1], _)).WillOnce(Return(true));
-  EXPECT_CALL(platform_, DeleteFile(kLoopDevMounts[0].dst, _))
+  EXPECT_CALL(platform_, DeleteFile(kSparseFiles[0])).WillOnce(Return(true));
+  EXPECT_CALL(platform_, DeleteFile(kSparseFiles[1])).WillOnce(Return(true));
+  EXPECT_CALL(platform_, DeletePathRecursively(kLoopDevMounts[0].dst))
       .WillOnce(Return(true));
   EXPECT_FALSE(service_.CleanUpStaleMounts(false));
 }
@@ -750,9 +750,9 @@ TEST_F(ServiceTest, CleanUpStale_OpenLegacy_Ephemeral_Forced) {
   }
   EXPECT_CALL(platform_, DetachLoop(FilePath("/dev/loop7")))
       .WillOnce(Return(true));
-  EXPECT_CALL(platform_, DeleteFile(kSparseFiles[0], _)).WillOnce(Return(true));
-  EXPECT_CALL(platform_, DeleteFile(kSparseFiles[1], _)).WillOnce(Return(true));
-  EXPECT_CALL(platform_, DeleteFile(kLoopDevMounts[0].dst, _))
+  EXPECT_CALL(platform_, DeleteFile(kSparseFiles[0])).WillOnce(Return(true));
+  EXPECT_CALL(platform_, DeleteFile(kSparseFiles[1])).WillOnce(Return(true));
+  EXPECT_CALL(platform_, DeletePathRecursively(kLoopDevMounts[0].dst))
       .WillOnce(Return(true));
   EXPECT_FALSE(service_.CleanUpStaleMounts(true));
 }

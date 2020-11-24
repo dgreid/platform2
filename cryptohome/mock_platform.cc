@@ -27,8 +27,11 @@ MockPlatform::MockPlatform()
       .WillByDefault(Invoke(fake_platform_.get(), &FakePlatform::Move));
   ON_CALL(*this, Copy(_, _))
       .WillByDefault(Invoke(fake_platform_.get(), &FakePlatform::Copy));
-  ON_CALL(*this, DeleteFile(_, _))
+  ON_CALL(*this, DeleteFile(_))
       .WillByDefault(Invoke(fake_platform_.get(), &FakePlatform::DeleteFile));
+  ON_CALL(*this, DeletePathRecursively(_))
+      .WillByDefault(
+          Invoke(fake_platform_.get(), &FakePlatform::DeletePathRecursively));
   ON_CALL(*this, DeleteFileDurable(_, _))
       .WillByDefault(
           Invoke(fake_platform_.get(), &FakePlatform::DeleteFileDurable));

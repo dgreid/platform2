@@ -503,12 +503,17 @@ class Platform {
   //   path - Path to the file to create
   virtual bool TouchFileDurable(const base::FilePath& path);
 
-  // Delete file(s) at the given path
+  // Delete the given path.
   //
   // Parameters
   //  path - string containing file path to delete
-  //  recursive - whether to perform recursive deletion of the subtree
-  virtual bool DeleteFile(const base::FilePath& path, bool recursive);
+  virtual bool DeleteFile(const base::FilePath& path);
+
+  // Delete the given path and the subtree recursively.
+  //
+  // Parameters
+  //  path - string containing file path to delete
+  virtual bool DeletePathRecursively(const base::FilePath& path);
 
   // Deletes file durably, i.e. ensuring that the directory entry is immediately
   // removed from the on-disk directory structure.

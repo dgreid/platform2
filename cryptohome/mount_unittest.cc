@@ -429,9 +429,11 @@ class MountTest
   }
 
   void ExpectCryptohomeRemoval(const TestUser& user) {
-    EXPECT_CALL(platform_, DeleteFile(user.base_path, true)).Times(1);
-    EXPECT_CALL(platform_, DeleteFile(user.user_mount_path, true)).Times(1);
-    EXPECT_CALL(platform_, DeleteFile(user.root_mount_path, true)).Times(1);
+    EXPECT_CALL(platform_, DeletePathRecursively(user.base_path)).Times(1);
+    EXPECT_CALL(platform_, DeletePathRecursively(user.user_mount_path))
+        .Times(1);
+    EXPECT_CALL(platform_, DeletePathRecursively(user.root_mount_path))
+        .Times(1);
   }
 
  protected:
@@ -625,8 +627,8 @@ TEST_P(MountTest, BindMyFilesDownloadsRemoveExistingFiles) {
       .WillOnce(Return(in_myfiles_download_enumerator));
   EXPECT_CALL(platform_, FileExists(AnyOfArray(existing_files_in_download)))
       .WillRepeatedly(Return(true));
-  EXPECT_CALL(platform_,
-              DeleteFile(AnyOfArray(existing_files_in_myfiles_download), true))
+  EXPECT_CALL(platform_, DeletePathRecursively(
+                             AnyOfArray(existing_files_in_myfiles_download)))
       .WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, Bind(downloads_path, downloads_in_myfiles, _))
       .WillOnce(Return(true));
@@ -998,9 +1000,9 @@ TEST_P(MountTest, CreateTrackedSubdirectoriesReplaceExistingDir) {
       // For ecryptfs, delete and replace the existing directory.
       EXPECT_CALL(platform_, DirectoryExists(userside_dir))
           .WillOnce(Return(true));
-      EXPECT_CALL(platform_, DeleteFile(userside_dir, true))
+      EXPECT_CALL(platform_, DeletePathRecursively(userside_dir))
           .WillOnce(Return(true));
-      EXPECT_CALL(platform_, DeleteFile(tracked_dir_path, false))
+      EXPECT_CALL(platform_, DeleteFile(tracked_dir_path))
           .WillOnce(Return(true));
       EXPECT_CALL(platform_, DirectoryExists(tracked_dir_path))
           .WillOnce(Return(false))
@@ -1292,7 +1294,8 @@ class AltImageTest : public MountTest {
       if (inject_keyset && !mounted_user)
         helper_.users[user].InjectKeyset(&platform_, false);
       if (delete_user) {
-        EXPECT_CALL(platform_, DeleteFile(helper_.users[user].base_path, true))
+        EXPECT_CALL(platform_,
+                    DeletePathRecursively(helper_.users[user].base_path))
             .WillOnce(Return(true));
       }
     }
@@ -1615,7 +1618,7 @@ TEST_P(EphemeralNoUserSystemTest, EnterpriseMountCreateSparseFailure) {
       MountHelper::GetEphemeralSparseFile(user->obfuscated_username);
 
   EXPECT_CALL(platform_, DetachLoop(_)).Times(0);
-  EXPECT_CALL(platform_, DeleteFile(ephemeral_filename, _)).Times(1);
+  EXPECT_CALL(platform_, DeleteFile(ephemeral_filename)).Times(1);
   ExpectCryptohomeRemoval(*user);
 
   EXPECT_CALL(platform_, StatVFS(FilePath(kEphemeralCryptohomeDir), _))
@@ -1639,7 +1642,7 @@ TEST_P(EphemeralNoUserSystemTest, EnterpriseMountAttachLoopFailure) {
       MountHelper::GetEphemeralSparseFile(user->obfuscated_username);
 
   EXPECT_CALL(platform_, DetachLoop(_)).Times(0);
-  EXPECT_CALL(platform_, DeleteFile(ephemeral_filename, _)).Times(1);
+  EXPECT_CALL(platform_, DeleteFile(ephemeral_filename)).Times(1);
   ExpectCryptohomeRemoval(*user);
 
   EXPECT_CALL(platform_, StatVFS(FilePath(kEphemeralCryptohomeDir), _))
@@ -1668,7 +1671,7 @@ TEST_P(EphemeralNoUserSystemTest, EnterpriseMountFormatFailure) {
       MountHelper::GetEphemeralSparseFile(user->obfuscated_username);
 
   EXPECT_CALL(platform_, DetachLoop(_)).Times(0);
-  EXPECT_CALL(platform_, DeleteFile(ephemeral_filename, _)).Times(1);
+  EXPECT_CALL(platform_, DeleteFile(ephemeral_filename)).Times(1);
   ExpectCryptohomeRemoval(*user);
 
   EXPECT_CALL(platform_, StatVFS(FilePath(kEphemeralCryptohomeDir), _))
@@ -1695,7 +1698,7 @@ TEST_P(EphemeralNoUserSystemTest, EnterpriseMountEnsureUserMountFailure) {
       MountHelper::GetEphemeralSparseFile(user->obfuscated_username);
 
   EXPECT_CALL(platform_, DetachLoop(_)).Times(1);
-  EXPECT_CALL(platform_, DeleteFile(ephemeral_filename, _)).Times(1);
+  EXPECT_CALL(platform_, DeleteFile(ephemeral_filename)).Times(1);
   ExpectCryptohomeRemoval(*user);
 
   EXPECT_CALL(platform_, StatVFS(FilePath(kEphemeralCryptohomeDir), _))
@@ -1867,7 +1870,8 @@ TEST_P(EphemeralExistingUserSystemTest, OwnerUnknownMountNoRemoveTest) {
 
   EXPECT_CALL(platform_, SetGroupAccessible(_, _, _))
       .WillRepeatedly(Return(true));
-  EXPECT_CALL(platform_, DeleteFile(_, _)).WillRepeatedly(Return(true));
+  EXPECT_CALL(platform_, DeleteFile(_)).WillRepeatedly(Return(true));
+  EXPECT_CALL(platform_, DeletePathRecursively(_)).WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, FileExists(_)).WillRepeatedly(Return(true));
 
   EXPECT_CALL(platform_,
@@ -1965,15 +1969,13 @@ TEST_P(EphemeralExistingUserSystemTest, EnterpriseMountRemoveTest) {
   EXPECT_CALL(platform_, SetPermissions(_, _)).WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, SetGroupAccessible(_, _, _))
       .WillRepeatedly(Return(true));
-  EXPECT_CALL(
-      platform_,
-      DeleteFile(MountHelper::GetEphemeralSparseFile(user->obfuscated_username),
-                 _))
+  EXPECT_CALL(platform_, DeleteFile(MountHelper::GetEphemeralSparseFile(
+                             user->obfuscated_username)))
       .WillRepeatedly(Return(true));
 
   EXPECT_CALL(platform_, Stat(user->root_ephemeral_mount_path, _))
       .WillOnce(Return(false));
-  EXPECT_CALL(platform_, DeleteFile(user->root_ephemeral_mount_path, true))
+  EXPECT_CALL(platform_, DeletePathRecursively(user->root_ephemeral_mount_path))
       .WillOnce(Return(true));
 
   ExpectEphemeralCryptohomeMount(*user);
@@ -2004,7 +2006,7 @@ TEST_P(EphemeralExistingUserSystemTest, EnterpriseMountRemoveTest) {
       .WillOnce(Return(true));  // user mount
   EXPECT_CALL(platform_, Unmount(FilePath("/home/chronos/user"), _, _))
       .WillOnce(Return(true));  // legacy mount
-  EXPECT_CALL(platform_, DeleteFile(user->ephemeral_mount_path, _))
+  EXPECT_CALL(platform_, DeletePathRecursively(user->ephemeral_mount_path))
       .WillOnce(Return(true));
   EXPECT_CALL(platform_, ClearUserKeyring()).WillRepeatedly(Return(true));
   ExpectDownloadsUnmounts(*user);
@@ -2068,15 +2070,13 @@ TEST_P(EphemeralExistingUserSystemTest, MountRemoveTest) {
   EXPECT_CALL(platform_, SetPermissions(_, _)).WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, SetGroupAccessible(_, _, _))
       .WillRepeatedly(Return(true));
-  EXPECT_CALL(
-      platform_,
-      DeleteFile(MountHelper::GetEphemeralSparseFile(user->obfuscated_username),
-                 _))
+  EXPECT_CALL(platform_, DeleteFile(MountHelper::GetEphemeralSparseFile(
+                             user->obfuscated_username)))
       .WillRepeatedly(Return(true));
 
   EXPECT_CALL(platform_, Stat(user->root_ephemeral_mount_path, _))
       .WillOnce(Return(false));
-  EXPECT_CALL(platform_, DeleteFile(user->root_ephemeral_mount_path, true))
+  EXPECT_CALL(platform_, DeletePathRecursively(user->root_ephemeral_mount_path))
       .WillOnce(Return(true));
 
   ExpectEphemeralCryptohomeMount(*user);
@@ -2108,7 +2108,7 @@ TEST_P(EphemeralExistingUserSystemTest, MountRemoveTest) {
       .WillOnce(Return(true));  // user mount
   EXPECT_CALL(platform_, Unmount(FilePath("/home/chronos/user"), _, _))
       .WillOnce(Return(true));  // legacy mount
-  EXPECT_CALL(platform_, DeleteFile(user->ephemeral_mount_path, _))
+  EXPECT_CALL(platform_, DeletePathRecursively(user->ephemeral_mount_path))
       .WillOnce(Return(true));
   EXPECT_CALL(platform_, ClearUserKeyring()).WillRepeatedly(Return(true));
   ExpectDownloadsUnmounts(*user);

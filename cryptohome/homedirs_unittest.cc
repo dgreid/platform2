@@ -297,7 +297,7 @@ TEST_P(HomeDirsTest, ComputeDiskUsageEphemeral) {
   base::FilePath user_dir = users_[0].user_path;
 
   // Ephemeral users have no vault.
-  EXPECT_TRUE(platform_.DeleteFile(users_[0].homedir_path, true));
+  EXPECT_TRUE(platform_.DeletePathRecursively(users_[0].homedir_path));
 
   constexpr int64_t userdir_bytes = 349857223479;
 

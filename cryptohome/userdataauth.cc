@@ -781,7 +781,7 @@ bool UserDataAuth::CleanUpStaleMounts(bool force) {
     if (base::StartsWith(match.first.value(), kLoopPrefix,
                          base::CompareCase::SENSITIVE) &&
         FilePath(kEphemeralCryptohomeDir).IsParent(match.second)) {
-      platform_->DeleteFile(match.second, true /* recursive */);
+      platform_->DeletePathRecursively(match.second);
     }
   }
 
@@ -832,7 +832,7 @@ bool UserDataAuth::CleanUpStaleMounts(bool force) {
   for (const auto& file : stale_sparse_files) {
     LOG(WARNING) << "Deleting stale ephemeral backing sparse file: "
                  << file.value();
-    if (!platform_->DeleteFile(file, false /* recursive */)) {
+    if (!platform_->DeleteFile(file)) {
       ReportCryptohomeError(kEphemeralCleanUpFailed);
       PLOG(ERROR) << "Failed to clean up ephemeral sparse file: "
                   << file.value();

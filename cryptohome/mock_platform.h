@@ -103,7 +103,8 @@ class MockPlatform : public Platform {
               EnumerateDirectoryEntries,
               (const base::FilePath&, bool, std::vector<base::FilePath>*),
               (override));
-  MOCK_METHOD(bool, DeleteFile, (const base::FilePath&, bool), (override));
+  MOCK_METHOD(bool, DeleteFile, (const base::FilePath&), (override));
+  MOCK_METHOD(bool, DeletePathRecursively, (const base::FilePath&), (override));
   MOCK_METHOD(bool,
               DeleteFileDurable,
               (const base::FilePath&, bool),

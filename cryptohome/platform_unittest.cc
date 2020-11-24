@@ -48,8 +48,8 @@ TEST_F(PlatformTest, DataSyncFileHasValidReturnCodes) {
   EXPECT_FALSE(platform_.DataSyncFile(filename));
   EXPECT_TRUE(platform_.WriteStringToFile(filename, "bla"));
   EXPECT_TRUE(platform_.DataSyncFile(filename));
-  platform_.DeleteFile(filename, false /* recursive */);
-  platform_.DeleteFile(dirname, true /* recursive */);
+  platform_.DeleteFile(filename);
+  platform_.DeletePathRecursively(dirname);
 }
 
 TEST_F(PlatformTest, SyncFileHasValidReturnCodes) {
@@ -60,8 +60,8 @@ TEST_F(PlatformTest, SyncFileHasValidReturnCodes) {
   EXPECT_FALSE(platform_.SyncFile(filename));
   EXPECT_TRUE(platform_.WriteStringToFile(filename, "bla"));
   EXPECT_TRUE(platform_.SyncFile(filename));
-  platform_.DeleteFile(filename, false /* recursive */);
-  platform_.DeleteFile(dirname, true /* recursive */);
+  platform_.DeleteFile(filename);
+  platform_.DeletePathRecursively(dirname);
 }
 
 TEST_F(PlatformTest, SyncDirectoryHasValidReturnCodes) {
@@ -72,8 +72,8 @@ TEST_F(PlatformTest, SyncDirectoryHasValidReturnCodes) {
   EXPECT_FALSE(platform_.SyncDirectory(dirname));
   EXPECT_TRUE(platform_.CreateDirectory(dirname));
   EXPECT_TRUE(platform_.SyncDirectory(dirname));
-  platform_.DeleteFile(filename, false /* recursive */);
-  platform_.DeleteFile(dirname, true /* recursive */);
+  platform_.DeleteFile(filename);
+  platform_.DeletePathRecursively(dirname);
 }
 
 TEST_F(PlatformTest, HasExtendedFileAttribute) {
@@ -92,7 +92,7 @@ TEST_F(PlatformTest, HasExtendedFileAttribute) {
       platform_.HasExtendedFileAttribute(FilePath("file_not_exist"), name));
   EXPECT_FALSE(
       platform_.HasExtendedFileAttribute(filename, "user.name_not_exist"));
-  platform_.DeleteFile(filename, false /* recursive */);
+  platform_.DeleteFile(filename);
 }
 
 TEST_F(PlatformTest, ListExtendedFileAttribute) {
@@ -118,7 +118,7 @@ TEST_F(PlatformTest, ListExtendedFileAttribute) {
   EXPECT_FALSE(
       platform_.ListExtendedFileAttributes(FilePath("file_not_exist"), &attrs));
   EXPECT_TRUE(attrs.empty());
-  platform_.DeleteFile(filename, false /* recursive */);
+  platform_.DeleteFile(filename);
 }
 
 TEST_F(PlatformTest, GetExtendedAttributeAsString) {
@@ -139,7 +139,7 @@ TEST_F(PlatformTest, GetExtendedAttributeAsString) {
       FilePath("file_not_exist"), name, &got));
   EXPECT_FALSE(platform_.GetExtendedFileAttributeAsString(
       filename, "user.name_not_exist", &got));
-  platform_.DeleteFile(filename, false /* recursive */);
+  platform_.DeleteFile(filename);
 }
 
 TEST_F(PlatformTest, GetExtendedAttribute) {
@@ -167,7 +167,7 @@ TEST_F(PlatformTest, GetExtendedAttribute) {
       filename, name, reinterpret_cast<char*>(&got), sizeof(got) - 1));
   EXPECT_FALSE(platform_.GetExtendedFileAttribute(
       filename, name, reinterpret_cast<char*>(&got), sizeof(got) + 1));
-  platform_.DeleteFile(filename, false /* recursive */);
+  platform_.DeleteFile(filename);
 }
 
 TEST_F(PlatformTest, SetExtendedAttribute) {
@@ -187,7 +187,7 @@ TEST_F(PlatformTest, SetExtendedAttribute) {
 
   EXPECT_FALSE(platform_.SetExtendedFileAttribute(
       FilePath("file_not_exist"), name, value.c_str(), sizeof(value)));
-  platform_.DeleteFile(filename, false /* recursive */);
+  platform_.DeleteFile(filename);
 }
 
 TEST_F(PlatformTest, RemoveExtendedAttribute) {
@@ -206,7 +206,7 @@ TEST_F(PlatformTest, RemoveExtendedAttribute) {
       platform_.RemoveExtendedFileAttribute(FilePath("file_not_exist"), name));
   EXPECT_FALSE(
       platform_.RemoveExtendedFileAttribute(filename, "attribute_not_exist"));
-  platform_.DeleteFile(filename, false /* recursive */);
+  platform_.DeleteFile(filename);
 }
 
 TEST_F(PlatformTest, GetExtFileAttributes) {
@@ -223,7 +223,7 @@ TEST_F(PlatformTest, GetExtFileAttributes) {
   EXPECT_TRUE(platform_.GetExtFileAttributes(filename, &got));
   EXPECT_EQ(flags, got & flags);
   close(fd);
-  platform_.DeleteFile(filename, false /* recursive */);
+  platform_.DeleteFile(filename);
 }
 
 TEST_F(PlatformTest, SetExtFileAttributes) {
@@ -241,7 +241,7 @@ TEST_F(PlatformTest, SetExtFileAttributes) {
 
   EXPECT_EQ(flags, new_flags & flags);
   close(fd);
-  platform_.DeleteFile(filename, false /* recursive */);
+  platform_.DeleteFile(filename);
 }
 
 TEST_F(PlatformTest, HasNoDumpFileAttribute) {
@@ -260,7 +260,7 @@ TEST_F(PlatformTest, HasNoDumpFileAttribute) {
 
   EXPECT_TRUE(platform_.HasNoDumpFileAttribute(filename));
   close(fd);
-  platform_.DeleteFile(filename, false /* recursive */);
+  platform_.DeleteFile(filename);
 }
 
 TEST_F(PlatformTest, ReadMountInfoFileGood) {
@@ -490,8 +490,8 @@ TEST_F(PlatformTest, SendFile) {
   EXPECT_FALSE(platform_.SendFile(to_file.GetPlatformFile(),
                                   from_file.GetPlatformFile(), offset,
                                   read_size + 1));
-  platform_.DeleteFile(from, false /* recursive */);
-  platform_.DeleteFile(to, false /* recursive */);
+  platform_.DeleteFile(from);
+  platform_.DeleteFile(to);
 }
 
 TEST_F(PlatformTest, CreateSparseFile) {
@@ -505,7 +505,7 @@ TEST_F(PlatformTest, CreateSparseFile) {
   EXPECT_TRUE(platform_.Stat(sparse_name, &stat));
   // No blocks allocated for a sparse file.
   EXPECT_EQ(0, stat.st_blocks);
-  platform_.DeleteFile(sparse_name, false /* recursive */);
+  platform_.DeleteFile(sparse_name);
 }
 
 }  // namespace cryptohome

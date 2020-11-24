@@ -65,7 +65,8 @@ class FakePlatform final : public Platform {
   bool Rename(const base::FilePath& from, const base::FilePath& to) override;
   bool Move(const base::FilePath& from, const base::FilePath& to) override;
   bool Copy(const base::FilePath& from, const base::FilePath& to) override;
-  bool DeleteFile(const base::FilePath& path, bool recursive) override;
+  bool DeleteFile(const base::FilePath& path) override;
+  bool DeletePathRecursively(const base::FilePath& path) override;
   bool DeleteFileDurable(const base::FilePath& path, bool recursive) override;
   bool FileExists(const base::FilePath& path) override;
   bool DirectoryExists(const base::FilePath& path) override;

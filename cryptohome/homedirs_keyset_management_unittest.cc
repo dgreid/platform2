@@ -823,9 +823,8 @@ TEST_F(KeysetManagementTest, ForceRemoveKeysetFailedDelete) {
   // SETUP
 
   KeysetSetUpWithKeyData(DefaultKeyData());
-  EXPECT_CALL(
-      platform_,
-      DeleteFile(Property(&base::FilePath::value, EndsWith("master.0")), false))
+  EXPECT_CALL(platform_, DeleteFile(Property(&base::FilePath::value,
+                                             EndsWith("master.0"))))
       .WillOnce(Return(false));
 
   // TEST

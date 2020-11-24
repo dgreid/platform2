@@ -157,7 +157,7 @@ bool DiskCleanupRoutines::DeleteUserProfile(const std::string& obfuscated) {
   FilePath shadow_dir = GetShadowDir(obfuscated);
 
   homedirs_->RemoveLECredentials(obfuscated);
-  if (!platform_->DeleteFile(shadow_dir, true)) {
+  if (!platform_->DeletePathRecursively(shadow_dir)) {
     PLOG(WARNING) << "Failed to remove " << shadow_dir.value();
     return false;
   }
@@ -234,7 +234,7 @@ bool DiskCleanupRoutines::DeleteDirectoryContents(const FilePath& dir) {
                                        base::FileEnumerator::SHOW_SYM_LINKS));
   for (FilePath subdir_path = subdir_enumerator->Next(); !subdir_path.empty();
        subdir_path = subdir_enumerator->Next()) {
-    if (!platform_->DeleteFile(subdir_path, true)) {
+    if (!platform_->DeletePathRecursively(subdir_path)) {
       PLOG(WARNING) << "Failed to remove " << subdir_path.value();
       ret = false;
     }
@@ -252,7 +252,7 @@ bool DiskCleanupRoutines::RemoveAllRemovableFiles(const FilePath& dir) {
        file = file_enumerator->Next()) {
     if (platform_->HasNoDumpFileAttribute(file) ||
         platform_->HasExtendedFileAttribute(file, kRemovableFileAttribute)) {
-      if (!platform_->DeleteFile(file, false)) {
+      if (!platform_->DeleteFile(file)) {
         PLOG(WARNING) << "Failed to remove: " << file.value();
         ret = false;
       }

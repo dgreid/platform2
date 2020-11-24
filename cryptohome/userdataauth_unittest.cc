@@ -1410,9 +1410,9 @@ TEST_F(UserDataAuthTest, CleanUpStale_NoOpenFiles_Ephemeral) {
   }
   EXPECT_CALL(platform_, DetachLoop(FilePath("/dev/loop7")))
       .WillOnce(Return(true));
-  EXPECT_CALL(platform_, DeleteFile(kSparseFiles[0], _)).WillOnce(Return(true));
-  EXPECT_CALL(platform_, DeleteFile(kSparseFiles[1], _)).WillOnce(Return(true));
-  EXPECT_CALL(platform_, DeleteFile(kLoopDevMounts[0].dst, _))
+  EXPECT_CALL(platform_, DeleteFile(kSparseFiles[0])).WillOnce(Return(true));
+  EXPECT_CALL(platform_, DeleteFile(kSparseFiles[1])).WillOnce(Return(true));
+  EXPECT_CALL(platform_, DeletePathRecursively(kLoopDevMounts[0].dst))
       .WillOnce(Return(true));
   EXPECT_FALSE(userdataauth_->CleanUpStaleMounts(false));
 }
@@ -1474,9 +1474,9 @@ TEST_F(UserDataAuthTest, CleanUpStale_OpenLegacy_Ephemeral_Forced) {
   }
   EXPECT_CALL(platform_, DetachLoop(FilePath("/dev/loop7")))
       .WillOnce(Return(true));
-  EXPECT_CALL(platform_, DeleteFile(kSparseFiles[0], _)).WillOnce(Return(true));
-  EXPECT_CALL(platform_, DeleteFile(kSparseFiles[1], _)).WillOnce(Return(true));
-  EXPECT_CALL(platform_, DeleteFile(kLoopDevMounts[0].dst, _))
+  EXPECT_CALL(platform_, DeleteFile(kSparseFiles[0])).WillOnce(Return(true));
+  EXPECT_CALL(platform_, DeleteFile(kSparseFiles[1])).WillOnce(Return(true));
+  EXPECT_CALL(platform_, DeletePathRecursively(kLoopDevMounts[0].dst))
       .WillOnce(Return(true));
   EXPECT_FALSE(userdataauth_->CleanUpStaleMounts(true));
 }

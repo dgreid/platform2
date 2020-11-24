@@ -60,8 +60,10 @@ void PassThroughPlatformMethods(MockPlatform* mock_platform,
                                 Platform* real_platform) {
   ON_CALL(*mock_platform, TouchFileDurable(_))
       .WillByDefault(Invoke(real_platform, &Platform::TouchFileDurable));
-  ON_CALL(*mock_platform, DeleteFile(_, _))
+  ON_CALL(*mock_platform, DeleteFile(_))
       .WillByDefault(Invoke(real_platform, &Platform::DeleteFile));
+  ON_CALL(*mock_platform, DeletePathRecursively(_))
+      .WillByDefault(Invoke(real_platform, &Platform::DeletePathRecursively));
   ON_CALL(*mock_platform, SyncDirectory(_))
       .WillByDefault(Invoke(real_platform, &Platform::SyncDirectory));
   ON_CALL(*mock_platform, DataSyncFile(_))
@@ -910,7 +912,7 @@ TEST_F(MigrationHelperTest, AllJobThreadsFailing) {
   }
   // All job threads will stop processing jobs because of errors. Also, set
   // errno to avoid confusing base::File::OSErrorToFileError(). crbug.com/731809
-  EXPECT_CALL(mock_platform, DeleteFile(_, _))
+  EXPECT_CALL(mock_platform, DeleteFile(_))
       .WillRepeatedly(SetErrnoAndReturn(EIO, false));
   // Migrate() still returns the result without deadlocking. crbug.com/731575
   EXPECT_FALSE(helper.Migrate(base::Bind(&MigrationHelperTest::ProgressCaptor,
@@ -947,9 +949,14 @@ TEST_F(MigrationHelperTest, SkipDuppedGCacheTmpDir) {
       .WillOnce(Return(mock_v1));
 
   // Ensure that the inner path is never visited.
-  EXPECT_CALL(mock_platform, DeleteFile(_, _)).WillRepeatedly(DoDefault());
+  EXPECT_CALL(mock_platform, DeleteFile(_)).WillRepeatedly(DoDefault());
+  EXPECT_CALL(mock_platform, DeletePathRecursively(_))
+      .WillRepeatedly(DoDefault());
   EXPECT_CALL(mock_platform,
-              DeleteFile(v1_path.AppendASCII("tmp/foobar/tmp.gdoc"), _))
+              DeleteFile(v1_path.AppendASCII("tmp/foobar/tmp.gdoc")))
+      .Times(0);
+  EXPECT_CALL(mock_platform,
+              DeletePathRecursively(v1_path.AppendASCII("tmp/foobar/tmp.gdoc")))
       .Times(0);
 
   // Test the migration.
