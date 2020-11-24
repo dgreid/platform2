@@ -9,6 +9,7 @@
 
 #include "media_perception/frame_perception.pb.h"
 #include "media_perception/hotword_detection.pb.h"
+#include "media_perception/huddly.pb.h"
 #include "media_perception/occupancy_trigger.pb.h"
 #include "media_perception/presence_perception.pb.h"
 #include "media_perception/proto_mojom_conversion.h"
@@ -403,13 +404,21 @@ void OutputManager::HandleIndexedTransitions(
 
 void OutputManager::HandleFalconPtzTransitionResponse(
     dbus::Response* response) {
-  dbus::MessageReader reader(response);
-  // Return the response to rtanalytics.
-  const uint8_t* bytes = nullptr;
-  size_t size;
-  reader.PopArrayOfBytes(&bytes, &size);
   std::vector<uint8_t> serialized_response;
-  serialized_response.assign(bytes, bytes + size);
+  if (response == nullptr) {
+    LOG(ERROR) << "HandleFalconPtzTransitionResponse ignoring dbus nullptr.";
+    huddly::IndexedTransitionsResponse itr;
+    itr.set_chosen_starting_index(-1);
+    serialized_response =
+        Serialized<huddly::IndexedTransitionsResponse>(itr).GetBytes();
+  } else {
+    dbus::MessageReader reader(response);
+    // Return the response to rtanalytics.
+    const uint8_t* bytes = nullptr;
+    size_t size;
+    reader.PopArrayOfBytes(&bytes, &size);
+    serialized_response.assign(bytes, bytes + size);
+  }
   rtanalytics_->RespondToFalconPtzTransition(configuration_name_,
                                              serialized_response);
 }

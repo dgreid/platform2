@@ -28,6 +28,7 @@ proto_library("media_perception_protos") {
     "${proto_in_dir}/device_management.proto",
     "${proto_in_dir}/frame_perception.proto",
     "${proto_in_dir}/hotword_detection.proto",
+    "${proto_in_dir}/huddly.proto",
     "${proto_in_dir}/media_perception_mojom.proto",
     "${proto_in_dir}/occupancy_trigger.proto",
     "${proto_in_dir}/perception_interface.proto",
