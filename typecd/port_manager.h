@@ -17,7 +17,7 @@
 
 namespace typecd {
 
-// This class is used to manage Type C ports and related state. It's role is to
+// This class is used to manage Type C ports and related state. Its role is to
 // provide the daemon with an accurate view of the Type C state (after reading
 // from the Type C connector class framework sysfs files), as well as provide a
 // means to change this state according to policy defined in the daemon.
@@ -47,6 +47,7 @@ class PortManager : public UdevMonitor::Observer {
                              int port_num,
                              bool added) override;
   void OnCableAltModeAdded(const base::FilePath& path, int port_num) override;
+  void OnPartnerChanged(int port_num) override;
 
   // The central function which contains the main mode entry logic. This decides
   // which partner mode we select, based on partner/cable characteristics as

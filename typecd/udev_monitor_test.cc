@@ -66,16 +66,20 @@ class TestObserver : public UdevMonitor::Observer {
     num_cable_altmodes_++;
   };
 
+  void OnPartnerChanged(int port_num) override { num_partner_change_events_++; }
+
   int GetNumPorts() { return num_ports_; }
   int GetNumPartners() { return num_partners_; }
   int GetNumCables() { return num_cables_; }
   int GetNumCableAltModes() { return num_cable_altmodes_; }
+  int GetNumPartnerChangeEvents() { return num_partner_change_events_; }
 
  private:
   int num_partners_;
   int num_ports_;
   int num_cables_;
   int num_cable_altmodes_;
+  int num_partner_change_events_;
 };
 
 }  // namespace
@@ -285,6 +289,48 @@ TEST_F(UdevMonitorTest, TestCableAndAltModeAddition) {
 
   EXPECT_THAT(1, observer_->GetNumCables());
   EXPECT_THAT(1, observer_->GetNumCableAltModes());
+}
+
+// Check that a basic partner change event gets detected correctly.
+TEST_F(UdevMonitorTest, TestPartnerChanged) {
+  // Create a socket-pair; to help poke the udev monitoring logic.
+  auto fds = std::make_unique<brillo::ScopedSocketPair>();
+
+  // Fake the calls for partner change.
+  auto device_partner_change = std::make_unique<brillo::MockUdevDevice>();
+  EXPECT_CALL(*device_partner_change, GetSysPath())
+      .WillOnce(Return(kFakePort0PartnerSysPath));
+  EXPECT_CALL(*device_partner_change, GetAction()).WillOnce(Return("change"));
+
+  // Create the Mock Udev objects and function invocation expectations.
+  auto monitor = std::make_unique<brillo::MockUdevMonitor>();
+  EXPECT_CALL(*monitor, FilterAddMatchSubsystemDeviceType(
+                            StrEq(kTypeCSubsystem), nullptr))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*monitor, EnableReceiving()).WillOnce(Return(true));
+  EXPECT_CALL(*monitor, GetFileDescriptor()).WillOnce(Return(fds->left));
+  EXPECT_CALL(*monitor, ReceiveDevice())
+      .WillOnce(Return(ByMove(std::move(device_partner_change))));
+
+  auto udev = std::make_unique<brillo::MockUdev>();
+  EXPECT_CALL(*udev, CreateMonitorFromNetlink(StrEq(kUdevMonitorName)))
+      .WillOnce(Return(ByMove(std::move(monitor))));
+
+  monitor_->SetUdev(std::move(udev));
+
+  EXPECT_THAT(0, observer_->GetNumPartnerChangeEvents());
+
+  // Skip initial scanning, since we are only interested in testing the change
+  // event.
+  ASSERT_TRUE(monitor_->BeginMonitoring());
+
+  // It's too tedious to poke the socket pair to actually trigger the
+  // FileDescriptorWatcher without it running repeatedly.
+  //
+  // Instead we manually call HandleUdevEvent. Effectively this is equivalent to
+  // triggering the event handler using the FileDescriptorWatcher.
+  monitor_->HandleUdevEvent();
+  EXPECT_THAT(1, observer_->GetNumPartnerChangeEvents());
 }
 
 }  // namespace typecd

@@ -96,6 +96,16 @@ void Port::AddCableAltMode(const base::FilePath& path) {
   cable_->SearchForAltModes(path);
 }
 
+void Port::PartnerChanged() {
+  if (!partner_) {
+    LOG(WARNING) << "Trying to update a non-existent partner on port "
+                 << port_num_;
+    return;
+  }
+
+  partner_->UpdatePDInfoFromSysfs();
+}
+
 std::string Port::GetDataRole() {
   std::string data_role;
   std::string sysfs_str;

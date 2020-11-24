@@ -35,6 +35,8 @@ class Port {
 
   void AddCableAltMode(const base::FilePath& path);
 
+  void PartnerChanged();
+
   // Read and return the current port data role from sysfs.
   // Returns either "host" or "device" on success, empty string on failure.
   std::string GetDataRole();

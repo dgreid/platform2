@@ -94,6 +94,11 @@ class UdevMonitor {
     // number.
     virtual void OnCableAltModeAdded(const base::FilePath& path,
                                      int port_num) = 0;
+
+    // Callback that is executed when a partner "change" event is received.
+    //
+    // The |port_num| argument refers to the port's index number.
+    virtual void OnPartnerChanged(int port_num) = 0;
   };
 
   void AddObserver(Observer* obs);
@@ -105,6 +110,7 @@ class UdevMonitor {
   FRIEND_TEST(UdevMonitorTest, TestHotplug);
   FRIEND_TEST(UdevMonitorTest, TestInvalidPortSyspath);
   FRIEND_TEST(UdevMonitorTest, TestCableAndAltModeAddition);
+  FRIEND_TEST(UdevMonitorTest, TestPartnerChanged);
 
   // Set the |udev_| pointer to a MockUdev device. *Only* used by unit tests.
   void SetUdev(std::unique_ptr<brillo::MockUdev> udev) {
@@ -113,6 +119,9 @@ class UdevMonitor {
 
   // Handle a udev event which causes a Type C device to be added/removed.
   bool HandleDeviceAddedRemoved(const base::FilePath& path, bool added);
+
+  // Handle a udev "change" event for a Type C device.
+  void HandleDeviceChange(const base::FilePath& path);
 
   // Handle Udev events emanating from |udev_monitor_watcher_|.
   void HandleUdevEvent();

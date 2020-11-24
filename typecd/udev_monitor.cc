@@ -124,6 +124,16 @@ bool UdevMonitor::HandleDeviceAddedRemoved(const base::FilePath& path,
   return true;
 }
 
+void UdevMonitor::HandleDeviceChange(const base::FilePath& path) {
+  auto name = path.BaseName();
+  int port_num;
+
+  for (auto& observer : observer_list_) {
+    if (RE2::FullMatch(name.value(), kPartnerRegex, &port_num))
+      observer.OnPartnerChanged(port_num);
+  }
+}
+
 void UdevMonitor::HandleUdevEvent() {
   auto device = udev_monitor_->ReceiveDevice();
   if (!device) {
@@ -147,6 +157,8 @@ void UdevMonitor::HandleUdevEvent() {
     HandleDeviceAddedRemoved(path, true);
   else if (action == "remove")
     HandleDeviceAddedRemoved(path, false);
+  else if (action == "change")
+    HandleDeviceChange(path);
 }
 
 }  // namespace typecd
