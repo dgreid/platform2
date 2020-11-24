@@ -11,15 +11,15 @@ use std::process::exit;
 
 use getopts::{self, Options};
 use libchromeos::vsock::{SocketAddr as VSocketAddr, VsockCid};
+use libsirenia::transport::{self, TransportType, DEFAULT_SERVER_PORT, LOOPBACK_DEFAULT};
 
 use super::build_info::BUILD_TIMESTAMP;
-use super::transport::{TransportType, DEFAULT_SERVER_PORT, LOOPBACK_DEFAULT};
 
 #[derive(Debug)]
 pub enum Error {
     /// Error parsing command line options.
     CLIParse(getopts::Fail),
-    TransportParse(super::transport::Error),
+    TransportParse(transport::Error),
 }
 
 impl Display for Error {
@@ -105,7 +105,7 @@ pub fn initialize_common_arguments(args: &[String]) -> Result<CommonConfig> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::transport::tests::{get_ip_uri, get_vsock_uri};
+    use libsirenia::transport::{get_test_ip_uri, get_test_vsock_uri};
     use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
     #[test]
@@ -124,7 +124,7 @@ mod tests {
         let exp_result = CommonConfig {
             connection_type: TransportType::IpConnection(exp_socket),
         };
-        let value: [String; 2] = ["-U".to_string(), get_ip_uri().to_string()];
+        let value: [String; 2] = ["-U".to_string(), get_test_ip_uri().to_string()];
         let act_result = initialize_common_arguments(&value).unwrap();
         assert_eq!(act_result, exp_result);
     }
@@ -138,7 +138,7 @@ mod tests {
         let exp_result = CommonConfig {
             connection_type: vsock,
         };
-        let value: [String; 2] = ["-U".to_string(), get_vsock_uri()];
+        let value: [String; 2] = ["-U".to_string(), get_test_vsock_uri()];
         let act_result = initialize_common_arguments(&value).unwrap();
         assert_eq!(act_result, exp_result);
     }

@@ -14,19 +14,20 @@ use std::rc::Rc;
 use std::result::Result as StdResult;
 use std::string::String;
 
-use sirenia::build_info::BUILD_TIMESTAMP;
-use sirenia::cli::initialize_common_arguments;
-use sirenia::communication::{self, get_app_path, read_message, Request};
-use sirenia::linux::events::{
+use libsirenia::communication::{self, read_message};
+use libsirenia::linux::events::{
     AddEventSourceMutator, EventMultiplexer, EventSource, Mutator, RemoveFdMutator,
 };
-use sirenia::linux::syslog::{Syslog, SyslogReceiverMut};
-use sirenia::sandbox::{self, Sandbox};
-use sirenia::to_sys_util;
-use sirenia::transport::{
-    IPServerTransport, ServerTransport, Transport, TransportType, VsockServerTransport,
+use libsirenia::linux::syslog::{Syslog, SyslogReceiverMut};
+use libsirenia::sandbox::{self, Sandbox};
+use libsirenia::to_sys_util;
+use libsirenia::transport::{
+    self, IPServerTransport, ServerTransport, Transport, TransportType, VsockServerTransport,
     DEFAULT_CLIENT_PORT,
 };
+use sirenia::build_info::BUILD_TIMESTAMP;
+use sirenia::cli::initialize_common_arguments;
+use sirenia::communication::Request;
 use sys_util::{self, error, info, syslog};
 
 #[derive(Debug)]
@@ -36,7 +37,7 @@ pub enum Error {
     /// Error opening a pipe.
     OpenPipe(sys_util::Error),
     /// Error creating the transport.
-    NewTransport(sirenia::transport::Error),
+    NewTransport(transport::Error),
     /// Got an unexpected connection type
     UnexpectedConnectionType(TransportType),
     /// Error Creating a new sandbox.
@@ -45,8 +46,8 @@ pub enum Error {
     RunSandbox(sandbox::Error),
     /// Got a request type that wasn't expected by the handler.
     UnexpectedRequest,
-    /// Error getting the path for an app id.
-    AppIdPathError(communication::Error),
+    /// Invalid app id.
+    InvalidAppId(String),
 }
 
 impl Display for Error {
@@ -61,7 +62,7 @@ impl Display for Error {
             NewSandbox(e) => write!(f, "failed to create new sandbox: {}", e),
             RunSandbox(e) => write!(f, "failed to start up sandbox: {}", e),
             UnexpectedRequest => write!(f, "received unexpected request type"),
-            AppIdPathError(e) => write!(f, "failed to get path for the app id: {}", e),
+            InvalidAppId(s) => write!(f, "Invalid app id: {}", s),
         }
     }
 }
@@ -258,9 +259,16 @@ impl EventSource for EventsFromDugong {
     }
 }
 
+fn get_app_path(id: &str) -> Result<&str> {
+    match id {
+        "shell" => Ok("/bin/sh"),
+        id => Err(Error::InvalidAppId(id.to_string())),
+    }
+}
+
 fn spawn_tee_app(app_id: &str, transport: Transport) -> Result<Sandbox> {
     let mut sandbox = Sandbox::new(None).map_err(Error::NewSandbox)?;
-    let process_path = get_app_path(app_id).map_err(Error::AppIdPathError)?;
+    let process_path = get_app_path(app_id)?;
 
     sandbox
         .run(

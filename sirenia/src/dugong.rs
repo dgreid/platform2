@@ -17,14 +17,15 @@ use dbus::tree::{self, Interface, MTFn};
 use sys_util::{error, info, syslog};
 
 use libchromeos::vsock::VMADDR_PORT_ANY;
-use sirenia::build_info::BUILD_TIMESTAMP;
-use sirenia::cli::initialize_common_arguments;
-use sirenia::communication::{read_message, write_message, AppInfo, Request, Response};
-use sirenia::server::{org_chromium_mana_teeinterface_server, OrgChromiumManaTEEInterface};
-use sirenia::transport::{
+use libsirenia::communication::{read_message, write_message};
+use libsirenia::transport::{
     self, ClientTransport, IPClientTransport, Transport, TransportRead, TransportType,
     TransportWrite, VsockClientTransport, DEFAULT_CLIENT_PORT,
 };
+use sirenia::build_info::BUILD_TIMESTAMP;
+use sirenia::cli::initialize_common_arguments;
+use sirenia::communication::{AppInfo, Request, Response};
+use sirenia::server::{org_chromium_mana_teeinterface_server, OrgChromiumManaTEEInterface};
 
 #[derive(Debug)]
 pub enum Error {

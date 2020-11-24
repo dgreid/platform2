@@ -17,6 +17,7 @@ use std::net::{
     Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6, TcpListener, TcpStream,
     ToSocketAddrs,
 };
+use std::os::raw::c_uint;
 use std::os::unix::io::{AsRawFd, IntoRawFd, RawFd};
 use std::str::FromStr;
 
@@ -545,16 +546,29 @@ impl ClientTransport for PipeTransport {
     }
 }
 
+// This code needs to be here to support tests in transport and cli
+const IP_ADDR: &str = "1.1.1.1:1234";
+
+pub fn get_test_ip_uri() -> String {
+    format!("ip://{}", IP_ADDR)
+}
+
+fn get_test_vsock_addr() -> String {
+    let cid: c_uint = VsockCid::Local.into();
+    format!("vsock:{}:1", cid)
+}
+
+pub fn get_test_vsock_uri() -> String {
+    format!("vsock://{}", get_test_vsock_addr())
+}
+
 #[cfg(test)]
-pub(crate) mod tests {
+pub mod tests {
     use super::*;
 
     use libchromeos::vsock::{VsockCid, VMADDR_PORT_ANY};
     use std::net::{IpAddr, Ipv4Addr};
-    use std::os::raw::c_uint;
     use std::thread::spawn;
-
-    const IP_ADDR: &str = "1.1.1.1:1234";
 
     const CLIENT_SEND: [u8; 7] = [1, 2, 3, 4, 5, 6, 7];
     const SERVER_SEND: [u8; 5] = [11, 12, 13, 14, 15];
@@ -586,19 +600,6 @@ pub(crate) mod tests {
         let mut buf: [u8; CLIENT_SEND.len()] = [0; CLIENT_SEND.len()];
         r.read_exact(&mut buf).unwrap();
         assert_eq!(buf, CLIENT_SEND);
-    }
-
-    pub(crate) fn get_ip_uri() -> String {
-        format!("ip://{}", IP_ADDR)
-    }
-
-    fn get_vsock_addr() -> String {
-        let cid: c_uint = VsockCid::Local.into();
-        format!("vsock:{}:1", cid)
-    }
-
-    pub(crate) fn get_vsock_uri() -> String {
-        format!("vsock://{}", get_vsock_addr())
     }
 
     #[test]
@@ -702,7 +703,7 @@ pub(crate) mod tests {
             cid: VsockCid::Local,
             port: 1,
         });
-        let act_result = parse_vsock_connection(&get_vsock_addr()).unwrap();
+        let act_result = parse_vsock_connection(&get_test_vsock_addr()).unwrap();
         assert_eq!(act_result, exp_result);
     }
 
@@ -740,7 +741,7 @@ pub(crate) mod tests {
     fn parse_ip_connection_uri_valid() {
         let exp_socket = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(1, 1, 1, 1)), 1234);
         let exp_result = TransportType::IpConnection(exp_socket);
-        let value = get_ip_uri();
+        let value = get_test_ip_uri();
         let act_result = TransportType::from_str(&value).unwrap();
         assert_eq!(act_result, exp_result);
     }
@@ -751,7 +752,7 @@ pub(crate) mod tests {
             cid: VsockCid::Local,
             port: 1,
         });
-        let value = get_vsock_uri();
+        let value = get_test_vsock_uri();
         let act_result = TransportType::from_str(&value).unwrap();
         assert_eq!(act_result, exp_result);
     }

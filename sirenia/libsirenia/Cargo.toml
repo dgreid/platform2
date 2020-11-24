@@ -1,0 +1,14 @@
+[package]
+name = "libsirenia"
+version = "0.1.0"
+description = "library for the TEE runtime environment"
+authors = ["The Chromium OS Authors"]
+edition = "2018"
+
+[dependencies]
+flexbuffers = "0.1.1"
+libc = "0.2.44"
+libchromeos = { path = "../../libchromeos-rs" } # provided by ebuild
+minijail = { path = "../../../aosp/external/minijail/rust/minijail" } # provided by ebuild
+serde = { version = "1.0.114", features = ["derive"] }
+sys_util = { path = "../../../platform/crosvm/sys_util" } # provided by ebuild
