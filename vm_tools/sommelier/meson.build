@@ -128,6 +128,7 @@ executable('sommelier',
     'sommelier-viewporter.cc',
     'sommelier-xdg-shell.cc',
     'sommelier.cc',
+    'virtualization/virtwl_channel.cc',
   ] + wl_outs + tracing_sources + gamepad_sources,
   dependencies: [
     meson.get_compiler('cpp').find_library('m'),
