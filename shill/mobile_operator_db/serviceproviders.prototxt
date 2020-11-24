@@ -14038,6 +14038,23 @@ mno {
     sid : "2066"
     sid : "2141"
   }
+  mvno {
+    mvno_filter {
+      type : IMSI
+      # 311580712000000-311580716999999
+      # 311589010100000-311589010199999
+      regex : "31158(071[2-6][0-9]{6}|90101[0-9]{5})"
+    }
+    data {
+      uuid : "d5c541c4-5758-4a13-b402-b9e17eaf69e8"
+      localized_name {
+        name : "US Cellular"
+      }
+      mobile_apn {
+        apn : "uscc00000.enterprise0.usc-cdp"
+      }
+    }
+  }
 }
 
 mno {
