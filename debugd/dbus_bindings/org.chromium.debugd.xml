@@ -1119,22 +1119,13 @@
     </method>
     <method name="EvaluateProbeFunction">
       <tp:docstring>
-        Evaluates the statment with runtime_probe_helper with pre-defined
+        Evaluates a probe statement by the runtime_probe helper with pre-defined
         sandbox options in rootfs.
       </tp:docstring>
-      <arg name="sandbox_info" type="s" direction="in">
-        <tp:docstring>
-          Information about how to sandbox the probe_statement. A string is
-          taken to look for multiple files that define different sandbox
-          details in /etc/runtime_probe/sandbox. Unless the OS allows debug
-          feature (i.e. cros_debug=1), failing to read/enforce any sandbox
-          detail will raise a DBus error.
-        </tp:docstring>
-      </arg>
       <arg name="probe_statement" type="s" direction="in">
         <tp:docstring>
-          A JSON string passed as an argument to runtime_probe_helper
-          executable.
+          A JSON string representing a probe function which will be executed by
+          the runtime_probe helper.
         </tp:docstring>
       </arg>
       <arg name="outfd" type="h" direction="out">

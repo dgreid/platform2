@@ -210,7 +210,6 @@ class DebugdDBusAdaptor : public org::chromium::debugdAdaptor,
                                    uint32_t* num_cores_disabled) override;
   bool EvaluateProbeFunction(
       brillo::ErrorPtr* error,
-      const std::string& sandbox_info,
       const std::string& probe_statement,
       brillo::dbus_utils::FileDescriptor* outfd) override;
   bool CollectSmartBatteryMetric(brillo::ErrorPtr* error,

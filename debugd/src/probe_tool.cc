@@ -19,6 +19,7 @@
 #include <base/json/json_reader.h>
 #include <base/json/json_writer.h>
 #include <base/logging.h>
+#include <base/optional.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/stringprintf.h>
 #include <base/strings/string_split.h>
@@ -62,7 +63,7 @@ std::string GetStringFromValue(const base::Value& value) {
 }
 
 bool AppendSandboxArgs(brillo::ErrorPtr* error,
-                       const std::string& sandbox_info,
+                       const std::string& function_name,
                        std::vector<std::string>* parsed_args) {
   std::string minijail_args_str;
   if (!base::ReadFileToString(base::FilePath(kSandboxArgs),
@@ -80,12 +81,12 @@ bool AppendSandboxArgs(brillo::ErrorPtr* error,
                          minijail_args_str.c_str());
     return false;
   }
-  const auto* minijail_args = minijail_args_dict->FindListKey(sandbox_info);
+  const auto* minijail_args = minijail_args_dict->FindListKey(function_name);
   if (!minijail_args) {
     DEBUGD_ADD_ERROR_FMT(error, kErrorPath,
                          "Arguments of \"%s\" is not found in minijail "
                          "arguments file: %s",
-                         sandbox_info.c_str(), kSandboxArgs);
+                         function_name.c_str(), kSandboxArgs);
     return false;
   }
   DVLOG(1) << "Minijail arguments: " << (*minijail_args);
@@ -103,10 +104,36 @@ bool AppendSandboxArgs(brillo::ErrorPtr* error,
   return true;
 }
 
+base::Optional<std::string> GetFunctionNameFromProbeStatement(
+    brillo::ErrorPtr* error, const std::string& probe_statement) {
+  // The name of the probe function is the only key in the dictionary.
+  auto probe_statement_dict = base::JSONReader::Read(probe_statement);
+  if (!probe_statement_dict || !probe_statement_dict->is_dict()) {
+    DEBUGD_ADD_ERROR_FMT(
+        error, kErrorPath,
+        "Failed to parse probe statement. Expected json but got: %s",
+        probe_statement.c_str());
+    return base::nullopt;
+  }
+  if (probe_statement_dict->DictSize() != 1) {
+    DEBUGD_ADD_ERROR_FMT(
+        error, kErrorPath,
+        "Expected only one probe function in probe statement but got: %zu",
+        probe_statement_dict->DictSize());
+    return base::nullopt;
+  }
+  auto it = probe_statement_dict->DictItems().begin();
+  const auto& function_name = it->first;
+  return function_name;
+}
+
 std::unique_ptr<brillo::Process> CreateSandboxedProcess(
-    brillo::ErrorPtr* error,
-    const std::string& sandbox_info,
-    const std::string& probe_statement) {
+    brillo::ErrorPtr* error, const std::string& probe_statement) {
+  const auto function_name =
+      GetFunctionNameFromProbeStatement(error, probe_statement);
+  if (!function_name)
+    return nullptr;
+
   auto sandboxed_process = std::make_unique<SandboxedProcess>();
   // The following is the general minijail set up for runtime_probe in debugd
   // /dev/log needs to be bind mounted before any possible tmpfs mount on run
@@ -123,20 +150,20 @@ std::unique_ptr<brillo::Process> CreateSandboxedProcess(
       "-r",                // Remount /proc readonly
       "-d"                 // Mount /dev with a minimal set of nodes.
   };
-  if (!AppendSandboxArgs(error, sandbox_info, &parsed_args))
+  if (!AppendSandboxArgs(error, *function_name, &parsed_args))
     return nullptr;
 
   sandboxed_process->SandboxAs(kRunAs, kRunAs);
   const auto seccomp_path = base::FilePath{kSandboxInfoDir}.Append(
-      base::StringPrintf("%s-seccomp.policy", sandbox_info.c_str()));
+      base::StringPrintf("%s-seccomp.policy", function_name->c_str()));
   if (!base::PathExists(seccomp_path)) {
     DEBUGD_ADD_ERROR_FMT(error, kErrorPath,
                          "Seccomp policy file of \"%s\" is not found at: %s",
-                         sandbox_info.c_str(), seccomp_path.value().c_str());
+                         function_name->c_str(), seccomp_path.value().c_str());
     return nullptr;
   }
   sandboxed_process->SetSeccompFilterPolicyFile(seccomp_path.MaybeAsASCII());
-  DVLOG(1) << "Sandbox for " << sandbox_info << " is ready";
+  DVLOG(1) << "Sandbox for " << (*function_name) << " is ready";
   if (!sandboxed_process->Init(parsed_args)) {
     DEBUGD_ADD_ERROR(error, kErrorPath,
                      "Sandboxed process initialization failure");
@@ -149,12 +176,11 @@ std::unique_ptr<brillo::Process> CreateSandboxedProcess(
 
 bool ProbeTool::EvaluateProbeFunction(
     brillo::ErrorPtr* error,
-    const std::string& sandbox_info,
     const std::string& probe_statement,
     brillo::dbus_utils::FileDescriptor* outfd) {
   // Details of sandboxing for probing should be centralized in a single
   // directory. Sandboxing is mandatory when we don't allow debug features.
-  auto process = CreateSandboxedProcess(error, sandbox_info, probe_statement);
+  auto process = CreateSandboxedProcess(error, probe_statement);
   if (process == nullptr)
     return false;
 

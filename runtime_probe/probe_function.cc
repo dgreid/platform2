@@ -136,14 +136,13 @@ constexpr auto kDebugdRunProbeHelperMethodName = "EvaluateProbeFunction";
 constexpr auto kDebugdRunProbeHelperDefaultTimeoutMs = 10 * 1000;  // in ms
 
 bool ProbeFunction::InvokeHelper(std::string* result) const {
-  std::string tmp_json_string;
+  std::string probe_statement_str;
   CHECK(raw_value_.has_value());
-  base::JSONWriter::Write(*raw_value_, &tmp_json_string);
+  base::JSONWriter::Write(*raw_value_, &probe_statement_str);
 
   dbus::Bus::Options ops;
   ops.bus_type = dbus::Bus::SYSTEM;
   scoped_refptr<dbus::Bus> bus(new dbus::Bus(std::move(ops)));
-
   if (!bus->Connect()) {
     LOG(ERROR) << "Failed to connect to system D-Bus service.";
     return false;
@@ -155,9 +154,7 @@ bool ProbeFunction::InvokeHelper(std::string* result) const {
   dbus::MethodCall method_call(debugd::kDebugdInterface,
                                kDebugdRunProbeHelperMethodName);
   dbus::MessageWriter writer(&method_call);
-
-  writer.AppendString(GetFunctionName());
-  writer.AppendString(tmp_json_string);
+  writer.AppendString(probe_statement_str);
 
   std::unique_ptr<dbus::Response> response = object_proxy->CallMethodAndBlock(
       &method_call, kDebugdRunProbeHelperDefaultTimeoutMs);
