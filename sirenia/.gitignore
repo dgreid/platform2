@@ -1,2 +1,2 @@
-src/bindings
+**/bindings
 src/build_info.rs
