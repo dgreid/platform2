@@ -348,13 +348,13 @@ result_code Tpm1SystemKeyLoader::SetupTpm() {
         rootdir_.AppendASCII(paths::cryptohome::kShallInitialize);
     base::FilePath attestation_database_path =
         rootdir_.AppendASCII(paths::cryptohome::kAttestationDatabase);
-    if (!base::DeleteFile(tpm_status_path, false /* recursive */) ||
-        !base::DeleteFile(tpm_owned_path, false /* recursive */) ||
+    if (!base::DeleteFile(tpm_status_path) ||
+        !base::DeleteFile(tpm_owned_path) ||
         !brillo::SyncFileOrDirectory(tpm_status_path.DirName(), true, false) ||
         !brillo::WriteToFileAtomic(shall_initialize_path, nullptr, 0, 0644) ||
         !brillo::SyncFileOrDirectory(shall_initialize_path.DirName(), true,
                                      false) ||
-        !base::DeleteFile(attestation_database_path, false /* recursive */)) {
+        !base::DeleteFile(attestation_database_path)) {
       PLOG(ERROR) << "Failed to update cryptohomed state.";
       return RESULT_FAIL_FATAL;
     }

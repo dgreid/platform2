@@ -342,7 +342,7 @@ TEST_F(PlatformTest, GetLoopDeviceMounts) {
   EXPECT_EQ(it->second.value(), "/home/root/uid1");
 
   /* Clean up. */
-  EXPECT_TRUE(base::DeleteFile(mount_info, false));
+  EXPECT_TRUE(base::DeleteFile(mount_info));
 }
 
 TEST_F(PlatformTest, GetMountsBySourcePrefixExt4) {
@@ -376,7 +376,7 @@ TEST_F(PlatformTest, GetMountsBySourcePrefixExt4) {
   EXPECT_EQ(it->second.value(), "/home/user/uid1");
 
   /* Clean up. */
-  EXPECT_TRUE(base::DeleteFile(mount_info, false));
+  EXPECT_TRUE(base::DeleteFile(mount_info));
 }
 
 TEST_F(PlatformTest, GetMountsBySourcePrefixECryptFs) {
@@ -410,7 +410,7 @@ TEST_F(PlatformTest, GetMountsBySourcePrefixECryptFs) {
   EXPECT_EQ(it->second.value(), "/home/user/uid2");
 
   /* Clean up. */
-  EXPECT_TRUE(base::DeleteFile(mount_info, false));
+  EXPECT_TRUE(base::DeleteFile(mount_info));
 }
 
 TEST_F(PlatformTest, CreateSymbolicLink) {

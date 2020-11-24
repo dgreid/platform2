@@ -765,11 +765,15 @@ bool Platform::SafeCreateDirAndSetOwnership(const base::FilePath& path,
 }
 
 bool Platform::DeleteFile(const FilePath& path, bool is_recursive) {
-  return base::DeleteFile(path, is_recursive);
+  if (is_recursive)
+    return base::DeletePathRecursively(path);
+  return base::DeleteFile(path);
 }
 
 bool Platform::DeleteFileDurable(const FilePath& path, bool is_recursive) {
-  if (!base::DeleteFile(path, is_recursive))
+  if (is_recursive && !base::DeletePathRecursively(path))
+    return false;
+  if (!is_recursive && !base::DeleteFile(path))
     return false;
   return SyncDirectory(path.DirName());
 }

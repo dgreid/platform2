@@ -68,7 +68,7 @@ brillo::SecureBlob RetrieveKey() {
     if (store.Load(ramoops_file) && store.GetString(kEncryptionKeyTag, &val)) {
       auto encryption_key =
           brillo::SecureHexToSecureBlob(brillo::SecureBlob(val));
-      base::DeleteFile(ramoops_file, false /* recursive */);
+      base::DeleteFile(ramoops_file);
       // SaveKey stores the key again into pstore-pmsg on every boot since the
       // pstore object isn't persistent. Since the pstore object is always
       // stored in RAM on ChromiumOS, it is cleared the next time the device
@@ -148,7 +148,7 @@ bool EncryptedRebootVault::PurgeVault() {
   if (!dircrypto::RemoveDirectoryKey(key_reference_, vault_path_)) {
     LOG(WARNING) << "Failed to unlink encryption key from keyring.";
   }
-  return base::DeleteFile(vault_path_, true /* recursively */);
+  return base::DeletePathRecursively(vault_path_);
 }
 
 bool EncryptedRebootVault::UnlockVault() {

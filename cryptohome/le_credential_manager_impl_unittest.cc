@@ -136,7 +136,7 @@ class LECredentialManagerImplUnitTest : public testing::Test {
 
   // Fills the on-disk hash tree with the contents of |snapshot_path|.
   void RestoreSnapshot(base::FilePath snapshot_path) {
-    ASSERT_TRUE(base::DeleteFile(CredDirPath(), true));
+    ASSERT_TRUE(base::DeletePathRecursively(CredDirPath()));
     ASSERT_TRUE(base::CopyDirectory(snapshot_path.Append(kCredDirName),
                                     temp_dir_.GetPath(), true));
   }

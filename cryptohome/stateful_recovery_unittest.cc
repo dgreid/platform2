@@ -468,7 +468,7 @@ TEST_F(StatefulRecoveryTest, MountsParseOk) {
   EXPECT_TRUE(device_out == device_in);
 
   /* Clean up. */
-  EXPECT_TRUE(base::DeleteFile(mount_info, false));
+  EXPECT_TRUE(base::DeleteFile(mount_info));
 }
 
 TEST_F(StatefulRecoveryTest, UsageReportOk) {

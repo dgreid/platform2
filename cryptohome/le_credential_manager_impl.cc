@@ -452,7 +452,7 @@ bool LECredentialManagerImpl::ReplayCheck(
 
 bool LECredentialManagerImpl::ReplayResetTree() {
   hash_tree_.reset();
-  if (!base::DeleteFile(basedir_, true)) {
+  if (!base::DeletePathRecursively(basedir_)) {
     PLOG(ERROR) << "Failed to delete disk hash tree during replay.";
     ReportLEResult(kLEOpSync, kLEActionSaveToDisk, LE_CRED_ERROR_HASH_TREE);
     return false;

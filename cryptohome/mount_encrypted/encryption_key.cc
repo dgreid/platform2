@@ -235,9 +235,9 @@ result_code EncryptionKey::LoadChromeOSSystemKey() {
     // while the preservation process is not completed yet (for example due to
     // power loss).
     if (!base::Move(key_path_, preserved_previous_key_path_)) {
-      base::DeleteFile(key_path_, false /* recursive */);
+      base::DeleteFile(key_path_);
     }
-    base::DeleteFile(preservation_request_path_, false /* recursive */);
+    base::DeleteFile(preservation_request_path_);
   }
 
   // Note that we must check for presence of a to-be-preserved key
@@ -250,7 +250,7 @@ result_code EncryptionKey::LoadChromeOSSystemKey() {
 
     // Preservation is done at this point even though it might have bailed or
     // failed. The code below will handle the potentially absent system key.
-    base::DeleteFile(preserved_previous_key_path_, false /* recursive */);
+    base::DeleteFile(preserved_previous_key_path_);
   }
 
   // Attempt to generate a fresh system key if we haven't found one.
@@ -302,7 +302,7 @@ result_code EncryptionKey::LoadEncryptionKey() {
   // Delete any stale encryption key files from disk. This is important because
   // presence of the key file determines whether finalization requests from
   // cryptohome do need to write a key file.
-  base::DeleteFile(key_path_, false /* recursive */);
+  base::DeleteFile(key_path_);
   encryption_key_.clear();
 
   // Check if there's a to-be-finalized key on disk.
@@ -350,7 +350,7 @@ result_code EncryptionKey::LoadEncryptionKey() {
 void EncryptionKey::PersistEncryptionKey(
     const brillo::SecureBlob& encryption_key) {
   encryption_key_ = encryption_key;
-  base::DeleteFile(key_path_, false /* recursive */);
+  base::DeleteFile(key_path_);
   Finalize();
 }
 
@@ -386,7 +386,7 @@ void EncryptionKey::Finalize() {
   // finalization intent file in the long run.
   if (base::PathExists(needs_finalization_path_)) {
     ShredFile(needs_finalization_path_);
-    base::DeleteFile(needs_finalization_path_, false /* recursive */);
+    base::DeleteFile(needs_finalization_path_);
   }
 }
 
@@ -414,7 +414,7 @@ bool EncryptionKey::RewrapPreviousEncryptionKey() {
 
   // We have the previous encryption key at this point, so we're in business.
   // Re-wrap the encryption key under the new system key and store it to disk.
-  base::DeleteFile(key_path_, false /* recursive */);
+  base::DeleteFile(key_path_);
   if (!WriteKeyFile(key_path_, previous_encryption_key, fresh_system_key)) {
     return false;
   }
