@@ -50,8 +50,13 @@ constexpr char kClobberLogPath[] = "/tmp/clobber-state.log";
 constexpr char kBioWashPath[] = "/usr/bin/bio_wash";
 constexpr char kPreservedFilesTarPath[] = "/tmp/preserve.tar";
 constexpr char kStatefulClobberLogPath[] = "unencrypted/clobber.log";
+// Keep file names in sync with update_engine prefs.
+constexpr char kLastPingDate[] = "last-active-ping-day";
+constexpr char kLastRollcallDate[] = "last-roll-call-ping-day";
+constexpr char kUpdateEnginePrefsPath[] = "/var/lib/update_engine/prefs/";
 constexpr char kUpdateEnginePreservePath[] =
     "unencrypted/preserve/update_engine/prefs/";
+
 // The presence of this file indicates that crash report collection across
 // clobber is disabled in developer mode.
 constexpr char kDisableClobberCrashCollectionPath[] =
@@ -820,6 +825,10 @@ std::vector<base::FilePath> ClobberState::GetPreservedFilesList() {
     stateful_paths.push_back(std::string(kUpdateEnginePreservePath) +
                              "rollback-version");
 
+    stateful_paths.push_back(std::string(kUpdateEnginePreservePath) +
+                             std::string(kLastPingDate));
+    stateful_paths.push_back(std::string(kUpdateEnginePreservePath) +
+                             std::string(kLastRollcallDate));
     // Preserve pre-installed demo mode resources for offline Demo Mode.
     std::string demo_mode_resources_dir =
         "unencrypted/cros-components/offline-demo-mode-resources/";
@@ -964,6 +973,12 @@ int ClobberState::Run() {
 
   if (args_.safe_wipe) {
     IncrementFileCounter(stateful_.Append(kPowerWashCountPath));
+    base::FilePath preserve_path = stateful_.Append(kUpdateEnginePreservePath);
+    base::FilePath prefs_path(kUpdateEnginePrefsPath);
+    base::CopyFile(prefs_path.Append(kLastPingDate),
+                   preserve_path.Append(kLastPingDate));
+    base::CopyFile(prefs_path.Append(kLastRollcallDate),
+                   preserve_path.Append(kLastRollcallDate));
   }
 
   // Clear clobber log if needed.

@@ -638,6 +638,8 @@ TEST_F(GetPreservedFilesListTest, SafeWipe) {
       "unencrypted/preserve/tpm_firmware_update_request",
       "unencrypted/preserve/update_engine/prefs/rollback-happened",
       "unencrypted/preserve/update_engine/prefs/rollback-version",
+      "unencrypted/preserve/update_engine/prefs/last-active-ping-day",
+      "unencrypted/preserve/update_engine/prefs/last-roll-call-ping-day",
       "unencrypted/cros-components/offline-demo-mode-resources/image.squash",
       "unencrypted/cros-components/offline-demo-mode-resources/"
       "imageloader.json",
@@ -668,6 +670,8 @@ TEST_F(GetPreservedFilesListTest, SafeAndRollbackWipe) {
       "unencrypted/preserve/tpm_firmware_update_request",
       "unencrypted/preserve/update_engine/prefs/rollback-happened",
       "unencrypted/preserve/update_engine/prefs/rollback-version",
+      "unencrypted/preserve/update_engine/prefs/last-active-ping-day",
+      "unencrypted/preserve/update_engine/prefs/last-roll-call-ping-day",
       "unencrypted/cros-components/offline-demo-mode-resources/image.squash",
       "unencrypted/cros-components/offline-demo-mode-resources/"
       "imageloader.json",
@@ -717,6 +721,8 @@ TEST_F(GetPreservedFilesListTest, SafeRollbackFactoryWipe) {
       "unencrypted/preserve/tpm_firmware_update_request",
       "unencrypted/preserve/update_engine/prefs/rollback-happened",
       "unencrypted/preserve/update_engine/prefs/rollback-version",
+      "unencrypted/preserve/update_engine/prefs/last-active-ping-day",
+      "unencrypted/preserve/update_engine/prefs/last-roll-call-ping-day",
       "unencrypted/cros-components/offline-demo-mode-resources/image.squash",
       "unencrypted/cros-components/offline-demo-mode-resources/"
       "imageloader.json",
