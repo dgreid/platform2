@@ -13,7 +13,7 @@ dbus = "0.8"
 libc = "0.2.44"
 remain = "*"
 regex = "1.0.6"
-rustyline = "5.0.4"
+rustyline = "7.0.0"
 shell-words = "1.0.0"
 sys_util = { path = "../../platform/crosvm/sys_util" } # provided by ebuild
 system_api = { path = "../system_api" } # provided by ebuild

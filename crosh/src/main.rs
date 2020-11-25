@@ -19,6 +19,7 @@ use rustyline::config::Configurer;
 use rustyline::error::ReadlineError;
 use rustyline::highlight::Highlighter;
 use rustyline::hint::Hinter;
+use rustyline::validate::Validator;
 use rustyline::{CompletionType, Config, Context, Editor, Helper};
 use sys_util::{error, syslog};
 
@@ -102,9 +103,13 @@ impl Completer for ReadLineHelper {
     }
 }
 
-impl Hinter for ReadLineHelper {}
+impl Hinter for ReadLineHelper {
+    type Hint = String;
+}
 
 impl Highlighter for ReadLineHelper {}
+
+impl Validator for ReadLineHelper {}
 
 // Forks off a child process which executes the command handler and waits for it to return.
 // COMMAND_RUNNING_PID is updated to have the child process id so SIGINT can be sent.
