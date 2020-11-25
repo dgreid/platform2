@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 # This file lists out the seccomp policy for allowed syscalls on bootlockboxd
-clock_gettime: 1
 gettid: 1
 mmap: arg2 == PROT_READ || arg2 == PROT_READ|PROT_EXEC || arg2 == PROT_READ|PROT_WRITE || arg2 == PROT_NONE
 openat: 1

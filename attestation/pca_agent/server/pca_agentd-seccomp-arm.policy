@@ -95,9 +95,7 @@ getrandom: 1
 sendmmsg: 1
 
 # Used by the http transfer.
-access: 1
 bind: 1
-ARM_set_tls: 1
 # openssl 1.1.1d+ uses these to access the seeded state in shared memory if
 # getrandom() is not implemented, which happens if linux kernel version is too
 # old.
