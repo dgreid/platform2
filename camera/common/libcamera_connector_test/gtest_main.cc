@@ -9,6 +9,7 @@
 #include <vector>
 
 #include <base/command_line.h>
+#include <base/files/file_util.h>
 #include <base/process/launch.h>
 #include <base/posix/safe_strerror.h>
 #include <base/stl_util.h>
@@ -28,6 +29,7 @@
 #include "cros-camera/camera_service_connector.h"
 #include "cros-camera/common.h"
 #include "cros-camera/future.h"
+#include "cros-camera/ipc_util.h"
 
 namespace cros {
 namespace tests {
@@ -77,8 +79,16 @@ cros_cam_format_info_t GetTestFormat() {
 class ConnectorEnvironment : public ::testing::Environment {
  public:
   void SetUp() override {
+    static constexpr char kTestClientTokenPath[] =
+        "/run/camera_tokens/testing/token";
+
+    base::FilePath token_path(kTestClientTokenPath);
+    std::string token_string;
+    ASSERT_TRUE(base::ReadFileToString(token_path, &token_string))
+        << "Failed to read token from " << kTestClientTokenPath;
     const cros_cam_init_option_t option = {
-        .api_version = 0,
+        .api_version = 1,
+        .token = token_string.c_str(),
     };
     ASSERT_EQ(cros_cam_init(&option), 0);
     LOGF(INFO) << "Camera connector initialized";
