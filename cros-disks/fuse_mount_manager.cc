@@ -70,9 +70,10 @@ std::unique_ptr<MountPoint> FUSEMountManager::DoMount(
   Uri uri = Uri::Parse(source);
   CHECK(uri.valid()) << "Source " << quote(source) << " is not a URI";
 
-  const FUSEHelper* selected_helper = nullptr;
+  base::FilePath dir_name;
+  const Mounter* selected_helper = nullptr;
   for (const auto& helper : helpers_) {
-    if (helper->CanMount(uri)) {
+    if (helper->CanMount(source, options, &dir_name)) {
       selected_helper = helper.get();
       break;
     }
@@ -90,35 +91,24 @@ std::unique_ptr<MountPoint> FUSEMountManager::DoMount(
   std::string path;
   if (!platform()->CreateTemporaryDirInDir(working_dirs_root_, ".", &path) ||
       !platform()->SetPermissions(path, 0755)) {
-    LOG(ERROR) << "Cannot create working directory for FUSE module "
-               << quote(selected_helper->type());
+    LOG(ERROR) << "Cannot create working directory for FUSE module mounting "
+               << quote(source);
     *error = MOUNT_ERROR_DIRECTORY_CREATION_FAILED;
     return nullptr;
   }
 
-  auto mounter = selected_helper->CreateMounter(base::FilePath(path), uri,
-                                                mount_path, options);
-  if (!mounter) {
-    LOG(ERROR) << "Invalid options for FUSE module "
-               << quote(selected_helper->type()) << " and source "
-               << quote(source);
-    *error = MOUNT_ERROR_INVALID_MOUNT_OPTIONS;
-    return nullptr;
-  }
-
-  // Note: FUSEMounter::Mount() currently ignores |options| and instead uses the
-  // MountOptions passed in the constructor.
-  return mounter->Mount(source, mount_path, options, error);
+  auto mountpoint =
+      FUSEHelper::MountWithDir(*selected_helper, base::FilePath(path), source,
+                               mount_path, options, error);
+  LOG_IF(ERROR, *error != MOUNT_ERROR_NONE)
+      << "Mounting failed for source " << quote(source) << ": " << *error;
+  return mountpoint;
 }
 
 bool FUSEMountManager::CanMount(const std::string& source) const {
-  Uri uri = Uri::Parse(source);
-  if (!uri.valid()) {
-    return false;
-  }
-
+  base::FilePath dir;
   for (const auto& helper : helpers_) {
-    if (helper->CanMount(uri))
+    if (helper->CanMount(source, {}, &dir))
       return true;
   }
   return false;
@@ -131,15 +121,16 @@ std::string FUSEMountManager::SuggestMountPath(
     return "";
   }
 
+  base::FilePath dir;
   for (const auto& helper : helpers_) {
-    if (helper->CanMount(uri))
-      return mount_root().Append(helper->GetTargetSuffix(uri)).value();
+    if (helper->CanMount(source, {}, &dir))
+      return mount_root().Append(dir).value();
   }
   base::FilePath base_name = base::FilePath(source).BaseName();
   return mount_root().Append(base_name).value();
 }
 
-void FUSEMountManager::RegisterHelper(std::unique_ptr<FUSEHelper> helper) {
+void FUSEMountManager::RegisterHelper(std::unique_ptr<Mounter> helper) {
   helpers_.push_back(std::move(helper));
 }
 

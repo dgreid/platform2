@@ -13,21 +13,17 @@
 #include <chromeos/dbus/service_constants.h>
 #include <gtest/gtest_prod.h>
 
-namespace brillo {
-class ProcessReaper;
-}  // namespace brillo
+#include "cros-disks/fuse_mounter.h"
 
 namespace cros_disks {
 
-class FUSEMounter;
-class Platform;
 class Uri;
 
 // Base class to simplify calling of individual mounters based on
 // specific conventions for a particular userspace FUSE implementation.
 // TODO(dats): Remove this class. This should be in the corresponding
 // instance of FUSEMounter.
-class FUSEHelper {
+class FUSEHelper : public Mounter {
  public:
   // OS user that will access files provided by this module.
   static const char kFilesUser[];
@@ -68,6 +64,27 @@ class FUSEHelper {
   // characters..
   virtual std::string GetTargetSuffix(const Uri& source) const;
 
+  static std::unique_ptr<MountPoint> MountWithDir(
+      const Mounter& mounter,
+      const base::FilePath& working_dir,
+      const std::string& source,
+      const base::FilePath& target_path,
+      std::vector<std::string> params,
+      MountErrorType* error);
+
+  // Mounter overrides:
+  bool CanMount(const std::string& source,
+                const std::vector<std::string>& params,
+                base::FilePath* suggested_dir_name) const override;
+
+ protected:
+  std::unique_ptr<MountPoint> Mount(const std::string& source,
+                                    const base::FilePath& target_path,
+                                    std::vector<std::string> params,
+                                    MountErrorType* error) const override;
+
+  brillo::ProcessReaper* process_reaper() const { return process_reaper_; }
+
   // Does preprocessing and conversion of options and source format to be
   // compatible with the FUSE mount program, and returns resulting Mounter.
   // |working_dir| is a temporary writable directory that may be used by
@@ -78,15 +95,14 @@ class FUSEHelper {
       const base::FilePath& target_path,
       const std::vector<std::string>& options) const;
 
- protected:
-  brillo::ProcessReaper* process_reaper() const { return process_reaper_; }
-
  private:
   const std::string fuse_type_;
   const Platform* const platform_;
   brillo::ProcessReaper* const process_reaper_;
   const base::FilePath mount_program_path_;
   const std::string mount_user_;
+
+  FRIEND_TEST(FUSEHelperTest, PrepareMountOptions);
 };
 
 }  // namespace cros_disks

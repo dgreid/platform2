@@ -9,6 +9,8 @@
 #include <utility>
 
 #include <base/logging.h>
+#include <base/strings/strcat.h>
+#include <base/strings/string_util.h>
 
 #include "cros-disks/fuse_mounter.h"
 #include "cros-disks/mount_options.h"
@@ -22,6 +24,8 @@ const char FUSEHelper::kFilesUser[] = "chronos";
 const char FUSEHelper::kFilesGroup[] = "chronos-access";
 const char FUSEHelper::kOptionAllowOther[] = "allow_other";
 const char FUSEHelper::kOptionDefaultPermissions[] = "default_permissions";
+
+constexpr char kFUSEHelperWorkingDirParam[] = "_fuse_working_dir=";
 
 FUSEHelper::FUSEHelper(const std::string& fuse_type,
                        const Platform* platform,
@@ -47,10 +51,61 @@ std::string FUSEHelper::GetTargetSuffix(const Uri& source) const {
   return path;
 }
 
-std::unique_ptr<FUSEMounter> FUSEHelper::CreateMounter(
+std::unique_ptr<MountPoint> FUSEHelper::MountWithDir(
+    const Mounter& mounter,
     const base::FilePath& working_dir,
-    const Uri& source,
+    const std::string& source,
     const base::FilePath& target_path,
+    std::vector<std::string> params,
+    MountErrorType* error) {
+  params.push_back(
+      base::StrCat({kFUSEHelperWorkingDirParam, working_dir.value()}));
+  return mounter.Mount(source, target_path, std::move(params), error);
+}
+
+std::unique_ptr<MountPoint> FUSEHelper::Mount(const std::string& source,
+                                              const base::FilePath& target_path,
+                                              std::vector<std::string> params,
+                                              MountErrorType* error) const {
+  base::FilePath working_dir;
+  for (auto it = params.begin(); it != params.end(); ++it) {
+    if (base::StartsWith(*it, kFUSEHelperWorkingDirParam,
+                         base::CompareCase::SENSITIVE)) {
+      working_dir =
+          base::FilePath(it->substr(strlen(kFUSEHelperWorkingDirParam)));
+      params.erase(it);
+      break;
+    }
+  }
+  CHECK(!working_dir.empty());
+  CHECK(Uri::IsUri(source));
+  const auto impl =
+      CreateMounter(working_dir, Uri::Parse(source), target_path, params);
+  if (!impl) {
+    *error = MOUNT_ERROR_INVALID_MOUNT_OPTIONS;
+    return nullptr;
+  }
+  return impl->Mount(source, target_path, std::move(params), error);
+}
+
+bool FUSEHelper::CanMount(const std::string& source,
+                          const std::vector<std::string>& params,
+                          base::FilePath* suggested_dir_name) const {
+  const Uri uri = Uri::Parse(source);
+  if (!uri.valid()) {
+    return false;
+  }
+  if (!CanMount(uri)) {
+    return false;
+  }
+  *suggested_dir_name = base::FilePath(GetTargetSuffix(uri));
+  return true;
+}
+
+std::unique_ptr<FUSEMounter> FUSEHelper::CreateMounter(
+    const base::FilePath& /*working_dir*/,
+    const Uri& /*source*/,
+    const base::FilePath& /*target_path*/,
     const std::vector<std::string>& options) const {
   MountOptions mount_options;
   mount_options.Initialize(options, false, "", "");

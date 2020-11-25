@@ -16,7 +16,7 @@
 
 namespace cros_disks {
 
-class FUSEHelper;
+class Mounter;
 
 // Implementation of MountManager for mounting arbitrary FUSE-based filesystems.
 // It essentially does dispatching of mount requests to individual FUSE helpers.
@@ -64,13 +64,13 @@ class FUSEMountManager : public MountManager {
   // Returns a suggested mount path for a source.
   std::string SuggestMountPath(const std::string& source) const override;
 
-  void RegisterHelper(std::unique_ptr<FUSEHelper> helper);
+  void RegisterHelper(std::unique_ptr<Mounter> mounter);
 
  private:
   FRIEND_TEST(FUSEMountManagerTest, SuggestMountPath);
   friend class FUSEMountManagerTest;
 
-  std::vector<std::unique_ptr<FUSEHelper>> helpers_;
+  std::vector<std::unique_ptr<Mounter>> helpers_;
   const std::string working_dirs_root_;
 };
 
