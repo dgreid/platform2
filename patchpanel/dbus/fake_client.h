@@ -23,6 +23,9 @@ class BRILLO_EXPORT FakeClient : public Client {
   ~FakeClient() = default;
 
   // Client overrides.
+  void RegisterOnAvailableCallback(
+      base::RepeatingCallback<void(bool)> callback) override;
+
   bool NotifyArcStartup(pid_t pid) override;
   bool NotifyArcShutdown() override;
 

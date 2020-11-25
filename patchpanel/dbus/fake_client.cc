@@ -6,6 +6,9 @@
 
 namespace patchpanel {
 
+void FakeClient::RegisterOnAvailableCallback(
+    base::RepeatingCallback<void(bool)> callback) {}
+
 bool FakeClient::NotifyArcStartup(pid_t) {
   return true;
 }

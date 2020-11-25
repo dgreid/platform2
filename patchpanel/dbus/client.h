@@ -41,6 +41,9 @@ class BRILLO_EXPORT Client {
 
   virtual ~Client() = default;
 
+  virtual void RegisterOnAvailableCallback(
+      base::RepeatingCallback<void(bool)> callback) = 0;
+
   virtual bool NotifyArcStartup(pid_t pid) = 0;
   virtual bool NotifyArcShutdown() = 0;
 

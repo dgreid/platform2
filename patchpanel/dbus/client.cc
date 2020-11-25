@@ -107,6 +107,9 @@ class ClientImpl : public Client {
 
   ~ClientImpl();
 
+  void RegisterOnAvailableCallback(
+      base::RepeatingCallback<void(bool)> callback) override;
+
   bool NotifyArcStartup(pid_t pid) override;
   bool NotifyArcShutdown() override;
 
@@ -167,6 +170,15 @@ class ClientImpl : public Client {
 ClientImpl::~ClientImpl() {
   if (bus_)
     bus_->ShutdownAndBlock();
+}
+
+void ClientImpl::RegisterOnAvailableCallback(
+    base::RepeatingCallback<void(bool)> callback) {
+  if (!proxy_) {
+    LOG(ERROR) << "Cannot register callback - no proxy";
+    return;
+  }
+  proxy_->WaitForServiceToBeAvailable(callback);
 }
 
 bool ClientImpl::NotifyArcStartup(pid_t pid) {
