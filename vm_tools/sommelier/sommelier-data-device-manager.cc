@@ -14,8 +14,6 @@
 #include <unistd.h>
 #include <wayland-client.h>
 
-#include "virtualization/linux-headers/virtwl.h"
-
 struct sl_host_data_device_manager {
   struct sl_context* ctx;
   struct wl_resource* resource;
@@ -182,30 +180,26 @@ static void sl_data_offer_receive(struct wl_client* client,
 
   switch (host->ctx->data_driver) {
     case DATA_DRIVER_VIRTWL: {
-      struct virtwl_ioctl_new new_pipe = {};
-      new_pipe.type = VIRTWL_IOCTL_NEW_PIPE_READ;
-      new_pipe.fd = -1;
-      new_pipe.flags = 0;
-      new_pipe.size = 0;
-      int rv;
-
-      rv = ioctl(host->ctx->virtwl_fd, VIRTWL_IOCTL_NEW, &new_pipe);
+      int pipe_fd, rv;
+      rv = host->ctx->channel->create_pipe(&pipe_fd);
       if (rv) {
         fprintf(stderr, "error: failed to create virtwl pipe: %s\n",
-                strerror(errno));
+                strerror(-rv));
         close(fd);
         return;
       }
 
       sl_data_transfer_create(
-          wl_display_get_event_loop(host->ctx->host_display), new_pipe.fd, fd);
+          wl_display_get_event_loop(host->ctx->host_display), pipe_fd, fd);
 
-      wl_data_offer_receive(host->proxy, mime_type, new_pipe.fd);
-    } break;
-    case DATA_DRIVER_NOOP:
+      wl_data_offer_receive(host->proxy, mime_type, pipe_fd);
+      break;
+    }
+    case DATA_DRIVER_NOOP: {
       wl_data_offer_receive(host->proxy, mime_type, fd);
       close(fd);
       break;
+    }
   }
 }
 

@@ -11,6 +11,8 @@
 #include <xcb/xcb.h>
 #include <xkbcommon/xkbcommon.h>
 
+#include "virtualization/wayland_channel.h"
+
 #define SOMMELIER_VERSION "0.20"
 
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
@@ -49,6 +51,8 @@ struct sl_gamepad;
 struct sl_gaming_input_manager;
 struct zcr_gaming_input_v2;
 #endif
+
+class WaylandChannel;
 
 enum {
   ATOM_WM_S0,
@@ -126,7 +130,6 @@ struct sl_context {
   int shm_driver;
   int data_driver;
   int wm_fd;
-  int virtwl_fd;
   int virtwl_ctx_fd;
   int virtwl_socket_fd;
   struct wl_event_source* virtwl_ctx_event_source;
@@ -192,6 +195,9 @@ struct sl_context {
   xcb_colormap_t colormaps[256];
   const char* trace_filename;
   bool trace_system;
+  // Never freed after allocation due the fact sommelier doesn't have a
+  // shutdown function yet.
+  WaylandChannel* channel;
 };
 
 struct sl_compositor {
@@ -440,7 +446,7 @@ struct sl_host_registry {
   struct wl_list link;
 };
 
-typedef void (*sl_begin_end_access_func_t)(int fd);
+typedef void (*sl_begin_end_access_func_t)(int fd, struct sl_context* ctx);
 
 struct sl_mmap {
   int refcount;

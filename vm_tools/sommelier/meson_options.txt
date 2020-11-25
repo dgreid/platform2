@@ -26,12 +26,6 @@ option('shm_driver',
   description: 'shm driver to use for wayland clients'
 )
 
-option('virtwl_device',
-  type: 'string',
-  value: '/dev/wl0',
-  description: 'the virtwl device'
-)
-
 option('frame_color',
   type: 'string',
   value: '#f2f2f2',

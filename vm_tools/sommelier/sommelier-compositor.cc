@@ -21,7 +21,6 @@
 #include "drm-server-protocol.h"  // NOLINT(build/include_directory)
 #include "linux-dmabuf-unstable-v1-client-protocol.h"  // NOLINT(build/include_directory)
 #include "viewporter-client-protocol.h"  // NOLINT(build/include_directory)
-#include "virtualization/linux-headers/virtwl.h"
 
 #define MIN_SIZE (INT_MIN / 10)
 #define MAX_SIZE (INT_MAX / 10)
@@ -66,30 +65,27 @@ static void sl_dmabuf_sync(int fd, __u64 flags) {
   } while (rv == -1 && errno == EINTR);
 }
 
-static void sl_dmabuf_begin_write(int fd) {
+static void sl_dmabuf_begin_write(int fd, struct sl_context* ctx) {
   sl_dmabuf_sync(fd, DMA_BUF_SYNC_START | DMA_BUF_SYNC_WRITE);
 }
 
-static void sl_dmabuf_end_write(int fd) {
+static void sl_dmabuf_end_write(int fd, struct sl_context* ctx) {
   sl_dmabuf_sync(fd, DMA_BUF_SYNC_END | DMA_BUF_SYNC_WRITE);
 }
 
-static void sl_virtwl_dmabuf_sync(int fd, __u32 flags) {
-  struct virtwl_ioctl_dmabuf_sync sync = {0};
+static void sl_virtwl_dmabuf_sync(int fd, __u32 flags, struct sl_context* ctx) {
   int rv;
-
-  sync.flags = flags;
-  rv = ioctl(fd, VIRTWL_IOCTL_DMABUF_SYNC, &sync);
+  rv = ctx->channel->sync(fd, flags);
   assert(!rv);
   UNUSED(rv);
 }
 
-static void sl_virtwl_dmabuf_begin_write(int fd) {
-  sl_virtwl_dmabuf_sync(fd, DMA_BUF_SYNC_START | DMA_BUF_SYNC_WRITE);
+static void sl_virtwl_dmabuf_begin_write(int fd, struct sl_context* ctx) {
+  sl_virtwl_dmabuf_sync(fd, DMA_BUF_SYNC_START | DMA_BUF_SYNC_WRITE, ctx);
 }
 
-static void sl_virtwl_dmabuf_end_write(int fd) {
-  sl_virtwl_dmabuf_sync(fd, DMA_BUF_SYNC_END | DMA_BUF_SYNC_WRITE);
+static void sl_virtwl_dmabuf_end_write(int fd, struct sl_context* ctx) {
+  sl_virtwl_dmabuf_sync(fd, DMA_BUF_SYNC_END | DMA_BUF_SYNC_WRITE, ctx);
 }
 
 static uint32_t sl_gbm_format_for_shm_format(uint32_t format) {
@@ -258,27 +254,24 @@ static void sl_host_surface_attach(struct wl_client* client,
         } break;
         case SHM_DRIVER_VIRTWL: {
           size_t size = host_buffer->shm_mmap->size;
-          struct virtwl_ioctl_new ioctl_new = {};
-          ioctl_new.type = VIRTWL_IOCTL_NEW_ALLOC;
-          ioctl_new.fd = -1;
-          ioctl_new.flags = 0;
-          ioctl_new.size = static_cast<__u32>(size);
+          struct WaylandBufferCreateInfo create_info = {0};
+          struct WaylandBufferCreateOutput create_output = {0};
           struct wl_shm_pool* pool;
           int rv;
+          create_info.size = static_cast<__u32>(size);
 
-          rv = ioctl(host->ctx->virtwl_fd, VIRTWL_IOCTL_NEW, &ioctl_new);
-          assert(rv == 0);
+          rv = host->ctx->channel->allocate(create_info, create_output);
           UNUSED(rv);
 
-          pool =
-              wl_shm_create_pool(host->ctx->shm->internal, ioctl_new.fd, size);
+          pool = wl_shm_create_pool(host->ctx->shm->internal, create_output.fd,
+                                    size);
           host->current_buffer->internal = wl_shm_pool_create_buffer(
               pool, 0, width, height, host_buffer->shm_mmap->stride[0],
               shm_format);
           wl_shm_pool_destroy(pool);
 
           host->current_buffer->mmap = sl_mmap_create(
-              ioctl_new.fd, size, bpp, num_planes, 0,
+              create_output.fd, size, bpp, num_planes, 0,
               host_buffer->shm_mmap->stride[0],
               host_buffer->shm_mmap->offset[1] -
                   host_buffer->shm_mmap->offset[0],
@@ -286,48 +279,47 @@ static void sl_host_surface_attach(struct wl_client* client,
               host_buffer->shm_mmap->y_ss[1]);
         } break;
         case SHM_DRIVER_VIRTWL_DMABUF: {
-          uint32_t drm_format = sl_drm_format_for_shm_format(shm_format);
-          struct virtwl_ioctl_new ioctl_new = {};
-          ioctl_new.type = VIRTWL_IOCTL_NEW_DMABUF;
-          ioctl_new.fd = -1;
-          ioctl_new.flags = 0;
-          ioctl_new.dmabuf.width = static_cast<__u32>(width);
-          ioctl_new.dmabuf.height = static_cast<__u32>(height);
-          ioctl_new.dmabuf.format = drm_format;
-          struct zwp_linux_buffer_params_v1* buffer_params;
-          size_t size;
           int rv;
+          size_t size;
+          struct zwp_linux_buffer_params_v1* buffer_params;
+          struct WaylandBufferCreateInfo create_info = {0};
+          struct WaylandBufferCreateOutput create_output = {0};
+          create_info.dmabuf = true;
 
-          rv = ioctl(host->ctx->virtwl_fd, VIRTWL_IOCTL_NEW, &ioctl_new);
+          create_info.width = static_cast<__u32>(width);
+          create_info.height = static_cast<__u32>(height);
+          create_info.drm_format = sl_drm_format_for_shm_format(shm_format);
+
+          rv = host->ctx->channel->allocate(create_info, create_output);
           if (rv) {
             fprintf(stderr, "error: virtwl dmabuf allocation failed: %s\n",
-                    strerror(errno));
+                    strerror(-rv));
             _exit(EXIT_FAILURE);
           }
 
-          size = ioctl_new.dmabuf.stride0 * height;
+          size = create_output.strides[0] * height;
           buffer_params = zwp_linux_dmabuf_v1_create_params(
               host->ctx->linux_dmabuf->internal);
-          zwp_linux_buffer_params_v1_add(buffer_params, ioctl_new.fd, 0,
-                                         ioctl_new.dmabuf.offset0,
-                                         ioctl_new.dmabuf.stride0, 0, 0);
+          zwp_linux_buffer_params_v1_add(buffer_params, create_output.fd, 0,
+                                         create_output.offsets[0],
+                                         create_output.strides[0], 0, 0);
           if (num_planes > 1) {
-            zwp_linux_buffer_params_v1_add(buffer_params, ioctl_new.fd, 1,
-                                           ioctl_new.dmabuf.offset1,
-                                           ioctl_new.dmabuf.stride1, 0, 0);
-            size = MAX(size, ioctl_new.dmabuf.offset1 +
-                                 ioctl_new.dmabuf.stride1 * height /
+            zwp_linux_buffer_params_v1_add(buffer_params, create_output.fd, 1,
+                                           create_output.offsets[1],
+                                           create_output.strides[1], 0, 0);
+            size = MAX(size, create_output.offsets[1] +
+                                 create_output.offsets[1] * height /
                                      host_buffer->shm_mmap->y_ss[1]);
           }
           host->current_buffer->internal =
-              zwp_linux_buffer_params_v1_create_immed(buffer_params, width,
-                                                      height, drm_format, 0);
+              zwp_linux_buffer_params_v1_create_immed(
+                  buffer_params, width, height, create_info.drm_format, 0);
           zwp_linux_buffer_params_v1_destroy(buffer_params);
 
           host->current_buffer->mmap = sl_mmap_create(
-              ioctl_new.fd, size, bpp, num_planes, ioctl_new.dmabuf.offset0,
-              ioctl_new.dmabuf.stride0, ioctl_new.dmabuf.offset1,
-              ioctl_new.dmabuf.stride1, host_buffer->shm_mmap->y_ss[0],
+              create_output.fd, size, bpp, num_planes, create_output.offsets[0],
+              create_output.strides[0], create_output.offsets[1],
+              create_output.strides[1], host_buffer->shm_mmap->y_ss[0],
               host_buffer->shm_mmap->y_ss[1]);
           host->current_buffer->mmap->begin_write =
               sl_virtwl_dmabuf_begin_write;
@@ -539,7 +531,8 @@ static void sl_host_surface_commit(struct wl_client* client,
     }
 
     if (host->current_buffer->mmap->begin_write)
-      host->current_buffer->mmap->begin_write(host->current_buffer->mmap->fd);
+      host->current_buffer->mmap->begin_write(host->current_buffer->mmap->fd,
+                                              host->ctx);
 
     rect = pixman_region32_rectangles(&host->current_buffer->damage, &n);
     while (n--) {
@@ -580,7 +573,8 @@ static void sl_host_surface_commit(struct wl_client* client,
     }
 
     if (host->current_buffer->mmap->end_write)
-      host->current_buffer->mmap->end_write(host->current_buffer->mmap->fd);
+      host->current_buffer->mmap->end_write(host->current_buffer->mmap->fd,
+                                            host->ctx);
 
     pixman_region32_clear(&host->current_buffer->damage);
 
