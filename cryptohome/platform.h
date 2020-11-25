@@ -350,6 +350,15 @@ class Platform {
   virtual int64_t GetQuotaCurrentSpaceForProjectId(const base::FilePath& device,
                                                    int project_id) const;
 
+  // Sets the project ID to the file/directory pointed by path.
+  // Returns true if ioctl syscall succeeds.
+  //
+  // Parameters
+  //   project_id - The project ID
+  //   path - Path of the file/directory to set the project ID
+  virtual bool SetQuotaProjectId(int project_id,
+                                 const base::FilePath& path) const;
+
   // Returns true if the specified file exists.
   //
   // Parameters

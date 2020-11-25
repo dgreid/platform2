@@ -767,6 +767,17 @@ gboolean cryptohome_get_current_space_for_project_id(Cryptohome* self,
                          OUT_cur_space);
 }
 
+gboolean cryptohome_set_project_id(Cryptohome* self,
+                                   guint32 project_id,
+                                   gint32 parent_path,
+                                   gchar* child_path,
+                                   GArray* account_id,
+                                   gboolean* OUT_success,
+                                   GError** error) {
+  CRYPTOHOME_WRAP_METHOD(SetProjectId, project_id, parent_path, child_path,
+                         account_id, OUT_success);
+}
+
 gboolean cryptohome_lock_to_single_user_mount_until_reboot(
     Cryptohome* self, GArray* request, DBusGMethodInvocation* error) {
   CRYPTOHOME_WRAP_METHOD(LockToSingleUserMountUntilReboot, request);

@@ -52,6 +52,7 @@ class ArcDiskQuotaTest : public ::testing::Test {
   static const gid_t kValidAndroidGid = (kAndroidGidStart + kAndroidGidEnd) / 2;
   static const int kValidAndroidProjectId =
       (kProjectIdForAndroidFilesStart + kProjectIdForAndroidFilesEnd) / 2;
+  static constexpr char kObfuscatedUsername[] = "cafef00d";
 };
 
 TEST_F(ArcDiskQuotaTest, QuotaIsSupported) {
@@ -340,6 +341,88 @@ TEST_F(ArcDiskQuotaTest, GetCurrentSpaceForProjectId_QuotactlFails) {
   arc_disk_quota_.Initialize();
   EXPECT_EQ(
       -1, arc_disk_quota_.GetCurrentSpaceForProjectId(kValidAndroidProjectId));
+}
+
+TEST_F(ArcDiskQuotaTest, SetProjectId_Succeeds) {
+  constexpr int kProjectId = kValidAndroidProjectId;
+  const auto kParentPath = SetProjectIdAllowedPathType::PATH_DOWNLOADS;
+  const auto kChildPath = base::FilePath("test.png");
+  const base::FilePath kExpectedPath =
+      base::FilePath("/home/user/cafef00d/Downloads/test.png");
+
+  EXPECT_CALL(homedirs_, CryptohomeExists(kObfuscatedUsername))
+      .WillOnce(Return(true));
+  EXPECT_CALL(platform_, SetQuotaProjectId(kProjectId, kExpectedPath))
+      .WillOnce(Return(true));
+
+  EXPECT_TRUE(arc_disk_quota_.SetProjectId(kProjectId, kParentPath, kChildPath,
+                                           kObfuscatedUsername));
+}
+
+TEST_F(ArcDiskQuotaTest, SetProjectId_IdOutOfAllowedRange) {
+  constexpr int kProjectId = kProjectIdForAndroidFilesEnd + 1;
+  const auto kParentPath = SetProjectIdAllowedPathType::PATH_DOWNLOADS;
+  const auto kChildPath = base::FilePath("test.png");
+
+  EXPECT_CALL(homedirs_, CryptohomeExists(_)).Times(0);
+  EXPECT_CALL(platform_, SetQuotaProjectId(kProjectId, _)).Times(0);
+
+  EXPECT_FALSE(arc_disk_quota_.SetProjectId(kProjectId, kParentPath, kChildPath,
+                                            kObfuscatedUsername));
+}
+
+TEST_F(ArcDiskQuotaTest, SetProjectId_InvalidPath) {
+  constexpr int kProjectId = kValidAndroidProjectId;
+  const auto kParentPath = SetProjectIdAllowedPathType::PATH_DOWNLOADS;
+  // Child path contains ".."
+  const auto kChildPath = base::FilePath("/../test.png");
+
+  EXPECT_CALL(homedirs_, CryptohomeExists(_)).Times(0);
+  EXPECT_CALL(platform_, SetQuotaProjectId(kProjectId, _)).Times(0);
+
+  EXPECT_FALSE(arc_disk_quota_.SetProjectId(kProjectId, kParentPath, kChildPath,
+                                            kObfuscatedUsername));
+}
+
+TEST_F(ArcDiskQuotaTest, SetProjectId_InvalidParentPathType) {
+  constexpr int kProjectId = kValidAndroidProjectId;
+  const auto kInvalidParentPath = static_cast<SetProjectIdAllowedPathType>(3);
+  const auto kChildPath = base::FilePath("test.png");
+
+  EXPECT_CALL(homedirs_, CryptohomeExists(kObfuscatedUsername))
+      .WillOnce(Return(true));
+  EXPECT_CALL(platform_, SetQuotaProjectId(kProjectId, _)).Times(0);
+
+  EXPECT_FALSE(arc_disk_quota_.SetProjectId(kProjectId, kInvalidParentPath,
+                                            kChildPath, kObfuscatedUsername));
+}
+
+TEST_F(ArcDiskQuotaTest, SetProjectId_CryptohomeNotExist) {
+  constexpr int kProjectId = kValidAndroidProjectId;
+  const auto kParentPath = SetProjectIdAllowedPathType::PATH_DOWNLOADS;
+  const auto kChildPath = base::FilePath("test.png");
+  const auto kInvalidObfuscatedUsername = "deadbeef";
+
+  EXPECT_CALL(homedirs_, CryptohomeExists(kInvalidObfuscatedUsername))
+      .WillOnce(Return(false));
+  EXPECT_CALL(platform_, SetQuotaProjectId(kProjectId, _)).Times(0);
+
+  EXPECT_FALSE(arc_disk_quota_.SetProjectId(kProjectId, kParentPath, kChildPath,
+                                            kInvalidObfuscatedUsername));
+}
+
+TEST_F(ArcDiskQuotaTest, SetProjectId_IoctlFails) {
+  constexpr int kProjectId = kValidAndroidProjectId;
+  const auto kParentPath = SetProjectIdAllowedPathType::PATH_DOWNLOADS;
+  const auto kChildPath = base::FilePath("test.png");
+
+  EXPECT_CALL(homedirs_, CryptohomeExists(kObfuscatedUsername))
+      .WillOnce(Return(true));
+  EXPECT_CALL(platform_, SetQuotaProjectId(kProjectId, _))
+      .WillOnce(Return(false));
+
+  EXPECT_FALSE(arc_disk_quota_.SetProjectId(kProjectId, kParentPath, kChildPath,
+                                            kObfuscatedUsername));
 }
 
 }  // namespace cryptohome

@@ -259,6 +259,13 @@ class UserDataAuth {
   // cryptohome/arc_disk_quota.h for more details.
   int64_t GetCurrentSpaceForArcProjectId(int project_id);
 
+  // Sets the project ID to the file/directory pointed by path.
+  // See cryptohome/arc_disk_quota.h for more details.
+  bool SetProjectId(int project_id,
+                    user_data_auth::SetProjectIdAllowedPathType parent_path,
+                    const FilePath& child_path,
+                    const cryptohome::AccountIdentifier& account);
+
   // =============== PKCS#11 Related Public Methods ===============
 
   // This initializes the PKCS#11 for a particular mount. Note that this is

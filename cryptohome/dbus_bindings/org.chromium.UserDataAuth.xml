@@ -377,6 +377,19 @@ do.
                     value="user_data_auth::GetCurrentSpaceForArcProjectIdReply" />
       </arg>
     </method>
+
+    <method name="SetProjectId">
+      <annotation name="org.chromium.DBus.Method.Kind"
+                  value="async"/>
+      <arg name="request" type="ay" direction="in">
+        <annotation name="org.chromium.DBus.Argument.ProtobufClass"
+                    value="user_data_auth::SetProjectIdRequest" />
+      </arg>
+      <arg name="reply" type="ay" direction="out">
+        <annotation name="org.chromium.DBus.Argument.ProtobufClass"
+                    value="user_data_auth::SetProjectIdReply" />
+      </arg>
+    </method>
   </interface>
 
   <interface name="org.chromium.CryptohomePkcs11Interface">

@@ -15,12 +15,17 @@
 
 #include "cryptohome/homedirs.h"
 #include "cryptohome/platform.h"
+#include "cryptohome/rpc.pb.h"
 
 namespace cryptohome {
 
 // This is the constant that is usually fed to the |home| parameter in
 // ArcDiskQuota's constructor.
 constexpr char kArcDiskHome[] = "/home";
+
+// Used for constructing the target path for SetProjectId().
+constexpr char kUserDownloadsDir[] = "Downloads";
+constexpr char kAndroidDataDir[] = "android-data";
 
 // This class handles quota-related query from ARC++, and only designed to be
 // called from within the container. The main reason is that IsQuotaSupported
@@ -92,6 +97,15 @@ class ArcDiskQuota {
   // Get the current disk space usage for a project ID.
   // Returns -1 if quotactl fails.
   virtual int64_t GetCurrentSpaceForProjectId(int project_id) const;
+
+  // Set the project ID to the file/directory pointed by path.
+  // |parent_path|, |child_path| and |obfuscated_username| are used for
+  // constructing the target path.
+  // Returns true if ioctl succeeds.
+  virtual bool SetProjectId(int project_id,
+                            SetProjectIdAllowedPathType parent_path,
+                            const base::FilePath& child_path,
+                            const std::string& obfuscated_username) const;
 
   // The constants below describes the ranges of valid ID to query (based on
   // what is tracked by installd).These numbers are from

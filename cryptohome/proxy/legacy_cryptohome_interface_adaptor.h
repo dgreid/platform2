@@ -556,6 +556,12 @@ class LegacyCryptohomeInterfaceAdaptor
   void GetCurrentSpaceForProjectId(
       std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<int64_t>> response,
       uint32_t in_project_id) override;
+  void SetProjectId(
+      std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<bool>> response,
+      uint32_t in_project_id,
+      int32_t in_parent_path,
+      const std::string& in_child_path,
+      const cryptohome::AccountIdentifier& in_account_id) override;
   void LockToSingleUserMountUntilReboot(
       std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
           cryptohome::BaseReply>> response,
@@ -875,6 +881,9 @@ class LegacyCryptohomeInterfaceAdaptor
   void GetCurrentSpaceForProjectIdOnSuccess(
       std::shared_ptr<SharedDBusMethodResponse<int64_t>> response,
       const user_data_auth::GetCurrentSpaceForArcProjectIdReply& reply);
+  void SetProjectIdOnSuccess(
+      std::shared_ptr<SharedDBusMethodResponse<bool>> response,
+      const user_data_auth::SetProjectIdReply& reply);
   void LockToSingleUserMountUntilRebootOnSuccess(
       std::shared_ptr<SharedDBusMethodResponse<cryptohome::BaseReply>> response,
       const user_data_auth::LockToSingleUserMountUntilRebootReply& reply);

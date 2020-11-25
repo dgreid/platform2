@@ -494,6 +494,14 @@ gboolean cryptohome_get_current_space_for_project_id(Cryptohome* self,
                                                      gint64* OUT_cur_space,
                                                      GError** error);
 
+gboolean cryptohome_set_project_id(Cryptohome* self,
+                                   guint32 project_id,
+                                   gint32 parent_path,
+                                   gchar* child_path,
+                                   GArray* account_id,
+                                   gboolean* OUT_success,
+                                   GError** error);
+
 gboolean cryptohome_lock_to_single_user_mount_until_reboot(
     Cryptohome* self, GArray* request, DBusGMethodInvocation* resp);
 

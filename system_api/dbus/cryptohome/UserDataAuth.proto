@@ -579,6 +579,33 @@ message GetCurrentSpaceForArcProjectIdReply {
   int64 cur_space = 1;
 }
 
+// Type of paths that are allowed for SetProjectId.
+enum SetProjectIdAllowedPathType {
+  // /home/user/<obfuscated_username>/Downloads/
+  PATH_DOWNLOADS = 0;
+  // /home/root/<obfuscated_username>/android-data/
+  PATH_ANDROID_DATA = 1;
+}
+
+// Input parameters to SetProjectId().
+message SetProjectIdRequest {
+  // The project ID.
+  uint32 project_id = 1;
+
+  // |parent_path|, |child_path| and |account_id| are used for constructing the
+  // target path. (e.g. /home/user/<obfuscated_username>/Downloads/<child_path>
+  // for parent_path=PATH_DOWNLOADS)
+  SetProjectIdAllowedPathType parent_path = 2;
+  string child_path = 3;
+  cryptohome.AccountIdentifier account_id = 4;
+}
+
+// Output parameters for SetProjectId().
+message SetProjectIdReply {
+  // Set to true if ioctl syscall for setting the proect ID succeeds.
+  bool success = 1;
+}
+
 // ------------------------- PKCS#11 Interface -------------------------
 
 // Represents the information about a token in PKCS#11, used by

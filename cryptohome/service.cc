@@ -4233,6 +4233,26 @@ gboolean Service::GetCurrentSpaceForProjectId(guint32 project_id,
   return TRUE;
 }
 
+gboolean Service::SetProjectId(guint project_id,
+                               gint parent_path,
+                               gchar* child_path,
+                               GArray* account_id,
+                               gboolean* OUT_success,
+                               GError** error) {
+  std::unique_ptr<AccountIdentifier> identifier(new AccountIdentifier);
+  if (!identifier->ParseFromArray(account_id->data, account_id->len)) {
+    LOG(ERROR) << "Failed to parse identifier.";
+    return FALSE;
+  }
+  const std::string obfuscated_username =
+      SanitizeUserNameWithSalt(GetAccountId(*identifier), system_salt_);
+
+  *OUT_success = arc_disk_quota_->SetProjectId(
+      project_id, static_cast<SetProjectIdAllowedPathType>(parent_path),
+      FilePath(reinterpret_cast<const char*>(child_path)), obfuscated_username);
+  return TRUE;
+}
+
 gboolean Service::LockToSingleUserMountUntilReboot(
     const GArray* request, DBusGMethodInvocation* context) {
   LockToSingleUserMountUntilRebootRequest request_pb;

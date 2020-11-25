@@ -1071,6 +1071,20 @@
       <arg type="u" name="project_id" direction="in" />
       <arg type="x" name="cur_space" direction="out" />
     </method>
+    <!-- Set the project ID to the file/directory pointed by path.
+    -->
+    <method name="SetProjectId">
+      <annotation name="org.chromium.DBus.Method.Kind"
+                  value="async"/>
+      <arg type="u" name="project_id" direction="in" />
+      <arg type="i" name="parent_path" direction="in" />
+      <arg type="s" name="child_path" direction="in" />
+      <arg type="ay" name="account_id" direction="in">
+        <annotation name="org.chromium.DBus.Argument.ProtobufClass"
+                    value="cryptohome::AccountIdentifier" />
+      </arg>
+      <arg type="b" name="success" direction="out" />
+    </method>
 
     <method name="LockToSingleUserMountUntilReboot">
       <annotation name="org.chromium.DBus.Method.Kind"

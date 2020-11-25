@@ -166,6 +166,14 @@ bool GetInstallAttributesIsFirstInstall(Service* service) {
   return result;
 }
 
+GArray* GArrayFromProtoBuf(const google::protobuf::MessageLite& pb) {
+  guint len = pb.ByteSizeLong();
+  GArray* ary = g_array_sized_new(FALSE, FALSE, 1, len);
+  g_array_set_size(ary, len);
+  pb.SerializeToArray(ary->data, len);
+  return ary;
+}
+
 }  // namespace
 
 // We use this subclass to bypass those objects that are lack of proper
@@ -2114,6 +2122,32 @@ TEST_F(ServiceTestNotInitialized, GetCurrentSpaceForProjectId) {
   gint64 cur_space;
   EXPECT_TRUE(service_.GetCurrentSpaceForProjectId(10, &cur_space, &res_err));
   EXPECT_EQ(20, cur_space);
+}
+
+TEST_F(ServiceTest, SetProjectId) {
+  constexpr int kProjectId = 1001;
+  const auto kParentPath = SetProjectIdAllowedPathType::PATH_DOWNLOADS;
+  char kChildPath[] = "/child/path";
+
+  constexpr char kUsername[] = "foo@gmail.com";
+  cryptohome::AccountIdentifier account_id;
+  account_id.set_account_id(kUsername);
+  brillo::glib::ScopedArray account_id_array(GArrayFromProtoBuf(account_id));
+
+  brillo::SecureBlob salt;
+  AssignSalt(CRYPTOHOME_DEFAULT_SALT_LENGTH, &salt);
+  const std::string kObfuscatedUsername =
+      brillo::cryptohome::home::SanitizeUserNameWithSalt(kUsername, salt);
+
+  EXPECT_CALL(arc_disk_quota_,
+              SetProjectId(kProjectId, kParentPath, base::FilePath(kChildPath),
+                           kObfuscatedUsername))
+      .WillOnce(Return(true));
+  GError* res_err;
+  gboolean success;
+  service_.SetProjectId(kProjectId, kParentPath, kChildPath,
+                        account_id_array.get(), &success, &res_err);
+  EXPECT_TRUE(success);
 }
 
 TEST_F(ServiceTest, PostTaskToEventLoop) {

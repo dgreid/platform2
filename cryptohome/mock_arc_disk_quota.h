@@ -7,6 +7,8 @@
 
 #include "cryptohome/arc_disk_quota.h"
 
+#include <string>
+
 #include <gmock/gmock.h>
 
 namespace cryptohome {
@@ -22,6 +24,13 @@ class MockArcDiskQuota : public ArcDiskQuota {
   MOCK_METHOD(int64_t, GetCurrentSpaceForUid, (uid_t), (const, override));
   MOCK_METHOD(int64_t, GetCurrentSpaceForGid, (gid_t), (const, override));
   MOCK_METHOD(int64_t, GetCurrentSpaceForProjectId, (int), (const, override));
+  MOCK_METHOD(bool,
+              SetProjectId,
+              (int,
+               SetProjectIdAllowedPathType,
+               const base::FilePath&,
+               const std::string&),
+              (const, override));
 };
 
 }  // namespace cryptohome

@@ -597,6 +597,17 @@ void ArcQuotaAdaptor::GetCurrentSpaceForArcProjectId(
   response->Return(reply);
 }
 
+void ArcQuotaAdaptor::SetProjectId(
+    std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
+        user_data_auth::SetProjectIdReply>> response,
+    const user_data_auth::SetProjectIdRequest& in_request) {
+  user_data_auth::SetProjectIdReply reply;
+  reply.set_success(service_->SetProjectId(
+      in_request.project_id(), in_request.parent_path(),
+      FilePath(in_request.child_path()), in_request.account_id()));
+  response->Return(reply);
+}
+
 void Pkcs11Adaptor::Pkcs11IsTpmTokenReady(
     std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
         user_data_auth::Pkcs11IsTpmTokenReadyReply>> response,

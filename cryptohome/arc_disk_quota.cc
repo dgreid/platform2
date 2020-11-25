@@ -8,6 +8,7 @@
 #include <base/files/file_path.h>
 #include <base/files/file_util.h>
 #include <base/logging.h>
+#include <brillo/cryptohome.h>
 
 #include "cryptohome/projectid_config.h"
 
@@ -103,6 +104,56 @@ int64_t ArcDiskQuota::GetCurrentSpaceForProjectId(int project_id) const {
     return -1;
   }
   return current_space;
+}
+
+bool ArcDiskQuota::SetProjectId(int project_id,
+                                SetProjectIdAllowedPathType parent_path,
+                                const base::FilePath& child_path,
+                                const std::string& obfuscated_username) const {
+  if ((project_id < kProjectIdForAndroidFilesStart ||
+       project_id > kProjectIdForAndroidFilesEnd) &&
+      (project_id < kProjectIdForAndroidAppsStart ||
+       project_id > kProjectIdForAndroidAppsEnd)) {
+    LOG(ERROR) << "Project id " << project_id
+               << " is outside the allowed query range";
+    return false;
+  }
+
+  if (child_path.ReferencesParent()) {
+    LOG(ERROR) << "child_path contains \"..\" : " << child_path;
+    return false;
+  }
+
+  if (!homedirs_->CryptohomeExists(obfuscated_username)) {
+    LOG(ERROR) << "A cryptohome vault doesn't exist for : "
+               << obfuscated_username;
+    return false;
+  }
+
+  base::FilePath path;
+  switch (parent_path) {
+    case PATH_DOWNLOADS:
+      // /home/user/<obfuscated_username>/Downloads/<child_path>
+      path = brillo::cryptohome::home::GetUserPathPrefix()
+                 .Append(obfuscated_username)
+                 .Append(kUserDownloadsDir)
+                 .Append(child_path);
+      break;
+    case PATH_ANDROID_DATA:
+      // /home/root/<obfuscated_username>/android-data/<child_path>
+      path = brillo::cryptohome::home::GetRootPathPrefix()
+                 .Append(obfuscated_username)
+                 .Append(kAndroidDataDir)
+                 .Append(child_path);
+      break;
+  }
+
+  if (path.empty()) {
+    LOG(ERROR) << "Invalid parent path type : " << parent_path;
+    return false;
+  }
+
+  return platform_->SetQuotaProjectId(project_id, path);
 }
 
 base::FilePath ArcDiskQuota::GetDevice() {

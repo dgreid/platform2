@@ -746,6 +746,14 @@ class Service : public brillo::dbus::AbstractDbusService,
                                                gint64* OUT_cur_space,
                                                GError** error);
 
+  // Sets the project ID to the file/directory pointed by path.
+  virtual gboolean SetProjectId(guint project_id,
+                                gint parent_path,
+                                gchar* child_path,
+                                GArray* account_id,
+                                gboolean* OUT_success,
+                                GError** error);
+
   virtual gboolean LockToSingleUserMountUntilReboot(
       const GArray* request, DBusGMethodInvocation* context);
 

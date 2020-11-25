@@ -598,6 +598,36 @@ int64_t Platform::GetQuotaCurrentSpaceForProjectId(const base::FilePath& device,
   return dq.dqb_curspace;
 }
 
+bool Platform::SetQuotaProjectId(int project_id,
+                                 const base::FilePath& path) const {
+  brillo::SafeFD fd;
+  brillo::SafeFD::Error err;
+  std::tie(fd, err) = brillo::SafeFD::Root().first.OpenExistingFile(path);
+  if (brillo::SafeFD::IsError(err)) {
+    PLOG(ERROR) << "Failed to open " << path.value() << " with error "
+                << static_cast<int>(err);
+    return false;
+  }
+  if (!fd.is_valid()) {
+    PLOG(ERROR) << "Failed to open " << path.value();
+    return false;
+  }
+
+  struct fsxattr fsx = {};
+  if (ioctl(fd.get(), FS_IOC_FSGETXATTR, &fsx) < 0) {
+    PLOG(ERROR) << "ioctl FSGETXATTR: " << path.value();
+    return false;
+  }
+
+  fsx.fsx_projid = project_id;
+  if (ioctl(fd.get(), FS_IOC_FSSETXATTR, &fsx) < 0) {
+    PLOG(ERROR) << "ioctl FSSETXATTR: " << path.value();
+    return false;
+  }
+
+  return true;
+}
+
 bool Platform::FileExists(const FilePath& path) {
   return base::PathExists(path);
 }

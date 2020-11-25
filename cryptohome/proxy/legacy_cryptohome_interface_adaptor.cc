@@ -2863,6 +2863,35 @@ void LegacyCryptohomeInterfaceAdaptor::GetCurrentSpaceForProjectIdOnSuccess(
   response->Return(reply.cur_space());
 }
 
+void LegacyCryptohomeInterfaceAdaptor::SetProjectId(
+    std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<bool>> response,
+    uint32_t in_project_id,
+    int32_t in_parent_path,
+    const std::string& in_child_path,
+    const cryptohome::AccountIdentifier& in_account_id) {
+  auto response_shared =
+      std::make_shared<SharedDBusMethodResponse<bool>>(std::move(response));
+
+  user_data_auth::SetProjectIdRequest request;
+  request.set_project_id(in_project_id);
+  request.set_parent_path(
+      static_cast<user_data_auth::SetProjectIdAllowedPathType>(in_parent_path));
+  request.set_child_path(in_child_path);
+  request.mutable_account_id()->CopyFrom(in_account_id);
+  arc_quota_proxy_->SetProjectIdAsync(
+      request,
+      base::Bind(&LegacyCryptohomeInterfaceAdaptor::SetProjectIdOnSuccess,
+                 base::Unretained(this), response_shared),
+      base::Bind(&LegacyCryptohomeInterfaceAdaptor::ForwardError<bool>,
+                 base::Unretained(this), response_shared));
+}
+
+void LegacyCryptohomeInterfaceAdaptor::SetProjectIdOnSuccess(
+    std::shared_ptr<SharedDBusMethodResponse<bool>> response,
+    const user_data_auth::SetProjectIdReply& reply) {
+  response->Return(reply.success());
+}
+
 void LegacyCryptohomeInterfaceAdaptor::LockToSingleUserMountUntilReboot(
     std::unique_ptr<
         brillo::dbus_utils::DBusMethodResponse<cryptohome::BaseReply>> response,
