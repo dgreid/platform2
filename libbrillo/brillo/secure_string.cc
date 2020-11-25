@@ -4,8 +4,6 @@
 
 #include "brillo/secure_string.h"
 
-#include <cstdint>
-
 #include <openssl/crypto.h>
 
 namespace brillo {
@@ -15,19 +13,7 @@ BRILLO_DISABLE_ASAN void SecureClear(void* v, size_t n) {
 }
 
 int SecureMemcmp(const void* s1, const void* s2, size_t n) {
-  const uint8_t* us1 = reinterpret_cast<const uint8_t*>(s1);
-  const uint8_t* us2 = reinterpret_cast<const uint8_t*>(s2);
-  int result = 0;
-
-  if (0 == n)
-    return 0;
-
-  /* Code snippet without data-dependent branch due to
-   * Nate Lawson (nate@root.org) of Root Labs. */
-  while (n--)
-    result |= *us1++ ^ *us2++;
-
-  return result != 0;
+  return CRYPTO_memcmp(s1, s2, n);
 }
 
 }  // namespace brillo
