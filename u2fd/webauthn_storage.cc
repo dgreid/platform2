@@ -18,6 +18,7 @@
 #include <base/values.h>
 
 #include "brillo/scoped_umask.h"
+#include "u2fd/util.h"
 
 namespace u2f {
 
@@ -71,9 +72,15 @@ bool WebAuthnStorage::WriteRecord(const WebAuthnRecord& record) {
     return false;
   }
 
+  // Use the hash of credential_id for the filename because the hex encode of
+  // credential_id itself is too long and would cause ENAMETOOLONG.
+  const std::vector<uint8_t> credential_id_hash =
+      util::Sha256(record.credential_id);
   std::vector<FilePath> paths = {
       FilePath(sanitized_user_), FilePath(kWebAuthnDirName),
-      FilePath(kRecordFileNamePrefix + credential_id_hex)};
+      FilePath(kRecordFileNamePrefix +
+               base::HexEncode(credential_id_hash.data(),
+                               credential_id_hash.size()))};
 
   FilePath record_storage_filename = root_path_;
   for (const auto& path : paths) {

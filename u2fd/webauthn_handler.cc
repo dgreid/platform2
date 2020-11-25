@@ -620,6 +620,18 @@ void WebAuthnHandler::InsertAuthTimeSecretHashToCredentialId(
       auth_time_secret_hash_->cbegin(), auth_time_secret_hash_->cend());
 }
 
+// TODO(b/172971998): Remove this workaround once cr50 handles this.
+void WebAuthnHandler::RemoveAuthTimeSecretHashFromCredentialId(
+    std::vector<uint8_t>* input) {
+  CHECK_EQ(input->size(),
+           sizeof(u2f_versioned_key_handle) + SHA256_DIGEST_LENGTH);
+  // The auth time secret hash is after the header and the authorization salt,
+  // before the authorization hmac. Remove it so that cr50 recognizes the KH.
+  const std::vector<uint8_t>::const_iterator remove_begin =
+      input->cbegin() + offsetof(u2f_versioned_key_handle, authorization_hmac);
+  input->erase(remove_begin, remove_begin + SHA256_DIGEST_LENGTH);
+}
+
 HasCredentialsResponse::HasCredentialsStatus
 WebAuthnHandler::HasExcludedCredentials(const MakeCredentialRequest& request) {
   std::vector<uint8_t> rp_id_hash = util::Sha256(request.rp_id());
@@ -780,7 +792,8 @@ GetAssertionResponse::GetAssertionStatus WebAuthnHandler::DoU2fSign(
     std::vector<uint8_t>* signature) {
   DCHECK(rp_id_hash.size() == SHA256_DIGEST_LENGTH);
 
-  if (credential_id.size() == sizeof(u2f_versioned_key_handle)) {
+  if (credential_id.size() ==
+      sizeof(u2f_versioned_key_handle) + SHA256_DIGEST_SIZE) {
     // Allow waiving presence if sign_req.authTimeSecret is correct.
     struct u2f_sign_versioned_req sign_req = {};
     if (!util::VectorToObject(rp_id_hash, sign_req.appId,
@@ -791,7 +804,9 @@ GetAssertionResponse::GetAssertionStatus WebAuthnHandler::DoU2fSign(
                               sizeof(sign_req.userSecret))) {
       return GetAssertionResponse::INVALID_REQUEST;
     }
-    if (!util::VectorToObject(credential_id, &sign_req.keyHandle,
+    std::vector<uint8_t> key_handle(credential_id);
+    RemoveAuthTimeSecretHashFromCredentialId(&key_handle);
+    if (!util::VectorToObject(key_handle, &sign_req.keyHandle,
                               sizeof(sign_req.keyHandle))) {
       return GetAssertionResponse::INVALID_REQUEST;
     }
@@ -818,7 +833,7 @@ GetAssertionResponse::GetAssertionStatus WebAuthnHandler::DoU2fSign(
     // Require user presence, consume.
     sign_req.flags |= U2F_AUTH_ENFORCE;
     return SendU2fSignWaitForPresence(&sign_req, &sign_resp, signature);
-  } else {
+  } else if (credential_id.size() == sizeof(u2f_key_handle)) {
     // Non-versioned KH must be signed with power button press.
     if (presence_requirement != PresenceRequirement::kPowerButton)
       return GetAssertionResponse::INTERNAL_ERROR;
@@ -845,6 +860,8 @@ GetAssertionResponse::GetAssertionStatus WebAuthnHandler::DoU2fSign(
 
     struct u2f_sign_resp sign_resp = {};
     return SendU2fSignWaitForPresence(&sign_req, &sign_resp, signature);
+  } else {
+    return GetAssertionResponse::INVALID_REQUEST;
   }
 }
 
@@ -919,7 +936,8 @@ WebAuthnHandler::DoU2fSignCheckOnly(
     const brillo::SecureBlob& credential_secret) {
   uint32_t sign_status;
 
-  if (credential_id.size() == sizeof(u2f_versioned_key_handle)) {
+  if (credential_id.size() ==
+      sizeof(u2f_versioned_key_handle) + SHA256_DIGEST_SIZE) {
     struct u2f_sign_versioned_req sign_req = {.flags = U2F_AUTH_CHECK_ONLY};
     if (!util::VectorToObject(rp_id_hash, sign_req.appId,
                               sizeof(sign_req.appId))) {
@@ -929,7 +947,9 @@ WebAuthnHandler::DoU2fSignCheckOnly(
                               sizeof(sign_req.userSecret))) {
       return HasCredentialsResponse::INVALID_REQUEST;
     }
-    if (!util::VectorToObject(credential_id, &sign_req.keyHandle,
+    std::vector<uint8_t> key_handle(credential_id);
+    RemoveAuthTimeSecretHashFromCredentialId(&key_handle);
+    if (!util::VectorToObject(key_handle, &sign_req.keyHandle,
                               sizeof(sign_req.keyHandle))) {
       return HasCredentialsResponse::INVALID_REQUEST;
     }
@@ -938,7 +958,7 @@ WebAuthnHandler::DoU2fSignCheckOnly(
     base::AutoLock(tpm_proxy_->GetLock());
     sign_status = tpm_proxy_->SendU2fSign(sign_req, &sign_resp);
     brillo::SecureClear(&sign_req.userSecret, sizeof(sign_req.userSecret));
-  } else {
+  } else if (credential_id.size() == sizeof(u2f_key_handle)) {
     struct u2f_sign_req sign_req = {.flags = U2F_AUTH_CHECK_ONLY};
     if (!util::VectorToObject(rp_id_hash, sign_req.appId,
                               sizeof(sign_req.appId))) {
@@ -957,6 +977,8 @@ WebAuthnHandler::DoU2fSignCheckOnly(
     base::AutoLock(tpm_proxy_->GetLock());
     sign_status = tpm_proxy_->SendU2fSign(sign_req, &sign_resp);
     brillo::SecureClear(&sign_req.userSecret, sizeof(sign_req.userSecret));
+  } else {
+    return HasCredentialsResponse::INVALID_REQUEST;
   }
 
   // Return status of 0 indicates the credential is valid.
