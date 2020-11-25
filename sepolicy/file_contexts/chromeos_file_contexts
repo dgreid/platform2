@@ -72,6 +72,7 @@ include(sepolicy/file_contexts/sysfs_contexts)
 /usr/bin/ionice                 u:object_r:cros_ionice_exec:s0
 /usr/bin/ippusb_manager         u:object_r:cros_ippusb_manager_exec:s0
 /usr/bin/logger                 u:object_r:cros_logger_exec:s0
+/usr/bin/lorgnette              u:object_r:cros_lorgnette_exec:s0
 /usr/bin/memd                   u:object_r:cros_memd_exec:s0
 /usr/bin/metrics_client         u:object_r:cros_metrics_client_exec:s0
 /usr/bin/metrics_daemon         u:object_r:cros_metrics_daemon_exec:s0
@@ -157,6 +158,8 @@ include(sepolicy/file_contexts/sysfs_contexts)
 /usr/libexec/bluetooth/bluetoothd u:object_r:cros_bluetoothd_exec:s0
 
 /usr/libexec/cryptohome/update_userdataauth_from_features.sh u:object_r:cros_update_userdataauth_shell_script:s0
+
+/usr/libexec/ipsec/starter      u:object_r:cros_ipsec_starter_exec:s0
 
 /usr/share/policy(/.*)?         u:object_r:cros_seccomp_policy_file:s0
 /usr/share/userfeedback(/.*)?   u:object_r:cros_userfeedback_file:s0

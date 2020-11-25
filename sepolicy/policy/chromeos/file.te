@@ -80,9 +80,11 @@ type cros_huddly_monitor_exec, exec_type, file_type, cros_file_type, cros_system
 type cros_hwclock_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_imageloader_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_ippusb_manager_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
+type cros_ipsec_starter_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_jetstream_update_stats_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_journald_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_logger_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
+type cros_lorgnette_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_machine_id_regen_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_memd_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_metrics_client_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
