@@ -1,0 +1,51 @@
+# Copyright 2020 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//common-mk/pkg_config.gni")
+import("//common-mk/proto_library.gni")
+
+_event_output_dir = "${root_gen_dir}/include/metrics/structured"
+_xml_file = "structured.xml"
+
+static_library("structured") {
+  sources = [
+    "event_base.cc",
+    "event_base.h",
+  ]
+
+  public_deps = [ ":structured_events" ]
+}
+
+action("gen_structured_events") {
+  script = "gen_events.py"
+
+  inputs = [
+    "gen_events.py",
+    "codegen.py",
+    "model.py",
+    "model_util.py",
+    "templates.py",
+  ]
+  sources = [ _xml_file ]
+
+  outputs = [
+    _event_output_dir + "/structured_events.cc",
+    _event_output_dir + "/structured_events.h",
+  ]
+
+  args = [
+    "--input",
+    rebase_path(_xml_file, root_build_dir),
+    "--output",
+    _event_output_dir,
+  ]
+}
+
+static_library("structured_events") {
+  sources = get_target_outputs(":gen_structured_events")
+
+  include_dirs = [ _event_output_dir ]
+
+  deps = [ ":gen_structured_events" ]
+}
