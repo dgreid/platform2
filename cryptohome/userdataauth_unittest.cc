@@ -3213,11 +3213,18 @@ TEST_F(UserDataAuthTestThreaded, CheckUpdateActivityTimestampCalledDaily) {
   // Count the number of times UpdateActivityTimestamp happens.
   EXPECT_CALL(homedirs_, UpdateActivityTimestamp(_, _, 0))
       .Times(AtLeast(kTimesUpdateUserActivityCalled))
-      .WillRepeatedly(Invoke([&lock, &update_user_activity_called, &done](
+      .WillRepeatedly(Invoke([&lock, &update_user_activity_called, &done, this](
                                  const std::string&, int, int) {
         base::AutoLock scoped_lock(lock);
         update_user_activity_called++;
         if (update_user_activity_called == kTimesUpdateUserActivityCalled) {
+          // Currently low disk space callback runs every 1 ms. If that test
+          // callback runs before we finish test teardown but after platform_
+          // object is cleared, then we'll get error. Therefore, we need to set
+          // test callback interval back to 1 minute, so we will not have any
+          // race condition.
+          userdataauth_->set_low_disk_notification_period_ms(
+              kLowDiskNotificationPeriodMS);
           done.Signal();
         }
         return true;
@@ -3251,15 +3258,6 @@ TEST_F(UserDataAuthTestThreaded, CheckUpdateActivityTimestampCalledDaily) {
                 base::TimeDelta::FromHours(kUpdateUserActivityPeriodHours *
                                            kTimesUpdateUserActivityCalled));
 
-  // Currently low disk space callback runs every 1 ms. If that test callback
-  // runs before we finish test teardown but after platform_ object is cleared,
-  // then we'll get error. Therefore, we need to set test callback interval
-  // back to 1 minute, so we will not have any race condition.
-  userdataauth_->set_low_disk_notification_period_ms(
-      kLowDiskNotificationPeriodMS);
-  // Wait for the change to take effect.
-  base::PlatformThread::Sleep(base::TimeDelta::FromMilliseconds(period_ms * 5));
-
   // Cleanup invocable lambdas so they don't capture this test variables
   // anymore. If this is not done then the periodic callbacks might call
   // platform_.GetCurrentTime() between the time local variables here gets
@@ -3288,12 +3286,19 @@ TEST_F(UserDataAuthTestThreaded, CheckAutoCleanupCallback) {
   // These will be invoked from the mount thread.
   EXPECT_CALL(cleanup_, FreeDiskSpace())
       .Times(AtLeast(3))
-      .WillRepeatedly(Invoke([&lock, &free_disk_space_count, &done] {
+      .WillRepeatedly(Invoke([&lock, &free_disk_space_count, &done, this] {
         // The time will move forward enough to trigger the next call every
         // time it's called.
         base::AutoLock scoped_lock(lock);
         free_disk_space_count++;
         if (free_disk_space_count == kTimesFreeDiskSpaceCalled) {
+          // Currently low disk space callback runs every 1 ms. If that test
+          // callback runs before we finish test teardown but after platform_
+          // object is cleared, then we'll get error. Therefore, we need to set
+          // test callback interval back to 1 minute, so we will not have any
+          // race condition.
+          userdataauth_->set_low_disk_notification_period_ms(
+              kLowDiskNotificationPeriodMS);
           done.Signal();
         }
       }));
@@ -3318,16 +3323,6 @@ TEST_F(UserDataAuthTestThreaded, CheckAutoCleanupCallback) {
   // Wait for at most 5 seconds. 5 seconds is most likely enough, a period this
   // long is to avoid flakiness.
   done.TimedWait(base::TimeDelta::FromSeconds(5));
-
-  // Currently low disk space callback runs every 1 ms. If that test callback
-  // runs before we finish test teardown but after platform_ object is cleared,
-  // then we'll get error. Therefore, we need to set test callback interval
-  // back to 1 minute, so we will not have any race condition.
-  userdataauth_->set_low_disk_notification_period_ms(
-      kLowDiskNotificationPeriodMS);
-
-  // Wait for the change to take effect.
-  base::PlatformThread::Sleep(base::TimeDelta::FromMilliseconds(period_ms * 5));
 
   // Check that not too much or too little "time" elapsed.
   EXPECT_LT(current_time,

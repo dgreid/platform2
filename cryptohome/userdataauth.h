@@ -555,7 +555,8 @@ class UserDataAuth {
   }
 
   // Override the time between each LowDiskCallback() for testing. This is so
-  // that we can finish the unit test in a shorter time.
+  // that we can finish the unit test in a shorter time. And we shouldn't call
+  // it on origin thread when mount thread is started.
   void set_low_disk_notification_period_ms(int value) {
     low_disk_notification_period_ms_ = value;
   }
