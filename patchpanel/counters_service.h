@@ -16,7 +16,6 @@
 #include "patchpanel/datapath.h"
 #include "patchpanel/minijailed_process_runner.h"
 #include "patchpanel/routing_service.h"
-#include "patchpanel/shill_client.h"
 
 namespace patchpanel {
 
@@ -69,11 +68,21 @@ class CountersService {
     uint64_t tx_packets = 0;
   };
 
-  CountersService(ShillClient* shill_client,
-                  Datapath* datapath,
-                  MinijailedProcessRunner* runner);
+  CountersService(Datapath* datapath, MinijailedProcessRunner* runner);
   ~CountersService() = default;
 
+  // Installs the initial iptables setup for vpn accounting and for the given
+  // set of devices.
+  void Init(const std::set<std::string>& devices);
+  // Adds accounting rules and jump rules for a new physical device if this is
+  // the first time this device is seen.
+  void OnPhysicalDeviceAdded(const std::string& ifname);
+  // Removes jump rules for a physical device.
+  void OnPhysicalDeviceRemoved(const std::string& ifname);
+  // Adds accounting rules and jump rules for a new VPN device.
+  void OnVpnDeviceAdded(const std::string& ifname);
+  // Removes jump rules for a VPN device.
+  void OnVpnDeviceRemoved(const std::string& ifname);
   // Collects and returns counters from all the existing iptables rules.
   // |devices| is the set of interfaces for which counters should be returned,
   // any unknown interfaces will be ignored. If |devices| is empty, counters for
@@ -85,20 +94,21 @@ class CountersService {
       const std::set<std::string>& devices);
 
  private:
+  // Creates an iptables chain in the mangle table. Returns true if the chain
+  // was created, or false if the chain already existed.
   bool MakeAccountingChain(const std::string& chain_name);
   bool AddAccountingRule(const std::string& chain_name, TrafficSource source);
+  // Installs the required accounting chains and rules for the target
+  // |chain_tag|. Returns false if these chains and rules already existed.
+  bool SetupAccountingRules(const std::string& chain_tag);
+  // Installs jump rules in POSTROUTING to count traffic ingressing and
+  // egressing |ifname| with the accounting target |chain_tag|.
+  void SetupJumpRules(const std::string& op,
+                      const std::string& ifname,
+                      const std::string& chain_tag);
 
-  // Installs the required chains and rules for the given shill device.
-  void SetupChainsAndRules(const std::string& ifname);
-
-  void OnDeviceChanged(const std::set<std::string>& added,
-                       const std::set<std::string>& removed);
-
-  ShillClient* shill_client_;
   Datapath* datapath_;
   MinijailedProcessRunner* runner_;
-
-  base::WeakPtrFactory<CountersService> weak_factory_{this};
 };
 
 TrafficCounter::Source TrafficSourceToProto(TrafficSource source);

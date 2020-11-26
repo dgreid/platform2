@@ -21,6 +21,9 @@ using Counter = CountersService::Counter;
 using SourceDevice = CountersService::SourceDevice;
 
 constexpr char kMangleTable[] = "mangle";
+constexpr char kVpnChainTag[] = "vpn";
+constexpr char kRxTag[] = "rx_";
+constexpr char kTxTag[] = "tx_";
 
 // The following regexs and code is written and tested for iptables v1.6.2.
 // Output code of iptables can be found at:
@@ -116,15 +119,9 @@ Counter::Counter(uint64_t rx_bytes,
       tx_bytes(tx_bytes),
       tx_packets(tx_packets) {}
 
-CountersService::CountersService(ShillClient* shill_client,
-                                 Datapath* datapath,
+CountersService::CountersService(Datapath* datapath,
                                  MinijailedProcessRunner* runner)
-    : shill_client_(shill_client), datapath_(datapath), runner_(runner) {
-  // Triggers the callback manually to make sure no device is missed.
-  OnDeviceChanged(shill_client_->get_devices(), {});
-  shill_client_->RegisterDevicesChangedHandler(base::BindRepeating(
-      &CountersService::OnDeviceChanged, weak_factory_.GetWeakPtr()));
-}
+    : datapath_(datapath), runner_(runner) {}
 
 std::map<SourceDevice, Counter> CountersService::GetCounters(
     const std::set<std::string>& devices) {
@@ -159,10 +156,28 @@ std::map<SourceDevice, Counter> CountersService::GetCounters(
   return counters;
 }
 
-void CountersService::OnDeviceChanged(const std::set<std::string>& added,
-                                      const std::set<std::string>& removed) {
-  for (const auto& ifname : added)
-    SetupChainsAndRules(ifname);
+void CountersService::Init(const std::set<std::string>& devices) {
+  SetupAccountingRules(kVpnChainTag);
+  for (const auto& device : devices) {
+    OnPhysicalDeviceAdded(device);
+  }
+}
+
+void CountersService::OnPhysicalDeviceAdded(const std::string& ifname) {
+  if (SetupAccountingRules(ifname))
+    SetupJumpRules("-A", ifname, ifname);
+}
+
+void CountersService::OnPhysicalDeviceRemoved(const std::string& ifname) {
+  SetupJumpRules("-D", ifname, ifname);
+}
+
+void CountersService::OnVpnDeviceAdded(const std::string& ifname) {
+  SetupJumpRules("-A", ifname, kVpnChainTag);
+}
+
+void CountersService::OnVpnDeviceRemoved(const std::string& ifname) {
+  SetupJumpRules("-D", ifname, kVpnChainTag);
 }
 
 bool CountersService::MakeAccountingChain(const std::string& chain_name) {
@@ -185,35 +200,21 @@ bool CountersService::AddAccountingRule(const std::string& chain_name,
   return datapath_->ModifyIptables(IpFamily::Dual, kMangleTable, args);
 }
 
-void CountersService::SetupChainsAndRules(const std::string& ifname) {
-  // For each device and traffic direction, we need to create:
+bool CountersService::SetupAccountingRules(const std::string& chain_tag) {
+  // For a new target accounting chain, create
   //  1) an accounting chain to jump to,
-  //  2) jumping rules in mangle POSTROUTING for egress traffic, and in mangle
-  //     INPUT and FORWARD for ingress traffic.
-  //  3) source accounting rules in the chain.
+  //  2) source accounting rules in the chain.
   // Note that the length of a chain name must less than 29 chars and IFNAMSIZ
   // is 16 so we can only use at most 12 chars for the prefix.
-
-  const std::string ingress_chain = "rx_" + ifname;
-  const std::string egress_chain = "tx_" + ifname;
+  const std::string ingress_chain = kRxTag + chain_tag;
+  const std::string egress_chain = kTxTag + chain_tag;
 
   // Creates egress and ingress traffic chains, or stops if they already exist.
-  if (!MakeAccountingChain(ingress_chain) ||
-      !MakeAccountingChain(egress_chain)) {
-    LOG(INFO) << "Traffic accounting chains already exist for " << ifname;
-    return;
+  if (!MakeAccountingChain(egress_chain) ||
+      !MakeAccountingChain(ingress_chain)) {
+    LOG(INFO) << "Traffic accounting chains already exist for " << chain_tag;
+    return false;
   }
-
-  // Add jump rules
-  datapath_->ModifyIptables(
-      IpFamily::Dual, kMangleTable,
-      {"-A", "FORWARD", "-i", ifname, "-j", ingress_chain, "-w"});
-  datapath_->ModifyIptables(
-      IpFamily::Dual, kMangleTable,
-      {"-A", "INPUT", "-i", ifname, "-j", ingress_chain, "-w"});
-  datapath_->ModifyIptables(
-      IpFamily::Dual, kMangleTable,
-      {"-A", "POSTROUTING", "-o", ifname, "-j", egress_chain, "-w"});
 
   // Add source accounting rules.
   for (TrafficSource source : kAllSources) {
@@ -222,6 +223,25 @@ void CountersService::SetupChainsAndRules(const std::string& ifname) {
   }
   // TODO(b/160112868): add default rules for counting any traffic left as
   // UNKNOWN.
+
+  return true;
+}
+
+void CountersService::SetupJumpRules(const std::string& op,
+                                     const std::string& ifname,
+                                     const std::string& chain_tag) {
+  // For each device create a jumping rule in mangle POSTROUTING for egress
+  // traffic, and two jumping rules in mangle INPUT and FORWARD for ingress
+  // traffic.
+  datapath_->ModifyIptables(
+      IpFamily::Dual, kMangleTable,
+      {"-A", "FORWARD", "-i", ifname, "-j", kRxTag + chain_tag, "-w"});
+  datapath_->ModifyIptables(
+      IpFamily::Dual, kMangleTable,
+      {"-A", "INPUT", "-i", ifname, "-j", kRxTag + chain_tag, "-w"});
+  datapath_->ModifyIptables(
+      IpFamily::Dual, kMangleTable,
+      {"-A", "POSTROUTING", "-o", ifname, "-j", kTxTag + chain_tag, "-w"});
 }
 
 TrafficCounter::Source TrafficSourceToProto(TrafficSource source) {

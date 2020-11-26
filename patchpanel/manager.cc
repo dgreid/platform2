@@ -216,6 +216,8 @@ void Manager::InitialSetup() {
   LOG(INFO) << "DBus service interface ready";
 
   routing_svc_ = std::make_unique<RoutingService>();
+  counters_svc_ =
+      std::make_unique<CountersService>(datapath_.get(), runner_.get());
 
   // b/162966185: Allow Jetstream to disable:
   //  - the IP forwarding setup used for hosting VMs and containers,
@@ -248,10 +250,7 @@ void Manager::InitialSetup() {
       base::BindRepeating(&Manager::OnNeighborReachabilityEvent,
                           weak_factory_.GetWeakPtr()));
   network_monitor_svc_->Start();
-
-  counters_svc_ = std::make_unique<CountersService>(
-      shill_client_.get(), datapath_.get(), runner_.get());
-
+  counters_svc_->Init(shill_client_->get_devices());
   nd_proxy_->Listen();
 }
 
@@ -313,20 +312,28 @@ void Manager::OnDefaultDeviceChanged(const ShillClient::Device& new_device,
   if (prev_device.ifname == new_device.ifname)
     return;
 
-  if (prev_device.type == ShillClient::Device::Type::kVPN)
+  if (prev_device.type == ShillClient::Device::Type::kVPN) {
     datapath_->StopVpnRouting(prev_device.ifname);
+    counters_svc_->OnVpnDeviceRemoved(prev_device.ifname);
+  }
 
-  if (new_device.type == ShillClient::Device::Type::kVPN)
+  if (new_device.type == ShillClient::Device::Type::kVPN) {
     datapath_->StartVpnRouting(new_device.ifname);
+    counters_svc_->OnVpnDeviceAdded(new_device.ifname);
+  }
 }
 
 void Manager::OnDevicesChanged(const std::set<std::string>& added,
                                const std::set<std::string>& removed) {
-  for (const std::string& ifname : removed)
+  for (const std::string& ifname : removed) {
     datapath_->StopConnectionPinning(ifname);
+    counters_svc_->OnPhysicalDeviceRemoved(ifname);
+  }
 
-  for (const std::string& ifname : added)
+  for (const std::string& ifname : added) {
     datapath_->StartConnectionPinning(ifname);
+    counters_svc_->OnPhysicalDeviceAdded(ifname);
+  }
 }
 
 void Manager::OnDeviceChanged(const Device& device,
