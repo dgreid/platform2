@@ -45,6 +45,12 @@ namespace cryptohome {
 
 class UserDataAuth {
  public:
+  // TestThreadId used to indicate the thread type.
+  enum class TestThreadId {
+    kOriginThread,
+    kMountThread,
+  };
+
   UserDataAuth();
   ~UserDataAuth();
 
@@ -429,16 +435,26 @@ class UserDataAuth {
     // Note that this function should not rely on |origin_task_runner_| because
     // it may be unavailable when this function is first called by
     // UserDataAuth::Initialize()
-    return disable_threading_ ||
-           base::PlatformThread::CurrentId() == origin_thread_id_;
+    if (disable_threading_) {
+      return true;
+    }
+    if (!mount_thread_ && mount_task_runner_) {
+      return current_thread_id_for_test_ == TestThreadId::kOriginThread;
+    }
+    return base::PlatformThread::CurrentId() == origin_thread_id_;
   }
 
   // Returns true if we are currently running on the mount thread
   bool IsOnMountThread() {
+    if (disable_threading_) {
+      return true;
+    }
+    if (!mount_thread_) {
+      return current_thread_id_for_test_ == TestThreadId::kMountThread;
+    }
     // GetThreadId blocks if the thread is not started yet.
-    return disable_threading_ ||
-           (mount_thread_.IsRunning() &&
-            (base::PlatformThread::CurrentId() == mount_thread_.GetThreadId()));
+    return mount_thread_->IsRunning() &&
+           base::PlatformThread::CurrentId() == mount_thread_->GetThreadId();
   }
 
   // DCHECK if we are running on the origin thread. Will have no effect
@@ -544,6 +560,28 @@ class UserDataAuth {
   void set_key_challenge_service_factory(
       KeyChallengeServiceFactory* key_challenge_service_factory) {
     key_challenge_service_factory_ = key_challenge_service_factory;
+  }
+
+  // Override |origin_task_runner_| for testing purpose
+  void set_origin_task_runner(
+      scoped_refptr<base::SingleThreadTaskRunner> origin_task_runner) {
+    origin_task_runner_ = origin_task_runner;
+  }
+
+  // Override |mount_task_runner_| for testing purpose
+  void set_mount_task_runner(
+      scoped_refptr<base::SingleThreadTaskRunner> mount_task_runner) {
+    mount_task_runner_ = mount_task_runner;
+  }
+
+  // Override |current_thread_id_for_test_| for testing purpose
+  void set_current_thread_id_for_test(TestThreadId current_thread_id_for_test) {
+    current_thread_id_for_test_ = current_thread_id_for_test;
+  }
+
+  // Retrieve the current thread id, for testing purpose only.
+  TestThreadId get_current_thread_id_for_test() {
+    return current_thread_id_for_test_;
   }
 
   // Override |boot_lockbox_| for testing purpose
@@ -863,7 +901,10 @@ class UserDataAuth {
   base::PlatformThreadId origin_thread_id_;
 
   // The thread for performing long running, or mount related operations
-  base::Thread mount_thread_;
+  std::unique_ptr<base::Thread> mount_thread_;
+
+  // The task runner that belongs to the mount thread.
+  scoped_refptr<base::SingleThreadTaskRunner> mount_task_runner_;
 
   // This variable is used only for unit testing purpose. If set to true, it'll
   // disable the the threading mechanism in this class so that testing doesn't
@@ -871,6 +912,10 @@ class UserDataAuth {
   // execute immediately, and all checks for whether we are on mount or origin
   // thread will result in true.
   bool disable_threading_;
+
+  // This variable is used only for unit testing purpose. We could use this to
+  // know current task is running on origin thread or mount thread.
+  TestThreadId current_thread_id_for_test_ = TestThreadId::kOriginThread;
 
   // =============== Basic Utilities Related Variables ===============
   // The system salt that is used for obfuscating the username

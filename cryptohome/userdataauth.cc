@@ -154,7 +154,7 @@ MountError AttemptUserMount(const Credentials& credentials,
 
 UserDataAuth::UserDataAuth()
     : origin_thread_id_(base::PlatformThread::CurrentId()),
-      mount_thread_(kMountThreadName),
+      mount_thread_(nullptr),
       disable_threading_(false),
       system_salt_(),
       tpm_(nullptr),
@@ -206,7 +206,9 @@ UserDataAuth::UserDataAuth()
       low_disk_space_callback_(base::Bind([](uint64_t free_disk_space) {})) {}
 
 UserDataAuth::~UserDataAuth() {
-  mount_thread_.Stop();
+  if (mount_thread_) {
+    mount_thread_->Stop();
+  }
 }
 
 bool UserDataAuth::Initialize() {
@@ -217,7 +219,12 @@ bool UserDataAuth::Initialize() {
     // such as unit testing, the current thread Task Runner might not be
     // available, so we should not attempt to retrieve the current thread task
     // runner during the creation of this class.
-    origin_task_runner_ = base::ThreadTaskRunnerHandle::Get();
+    if (!origin_task_runner_) {
+      origin_task_runner_ = base::ThreadTaskRunnerHandle::Get();
+    }
+    if (!mount_task_runner_) {
+      mount_thread_ = std::make_unique<base::Thread>(kMountThreadName);
+    }
   }
 
   // Note that we check to see if |tpm_| is available here because it may have
@@ -290,9 +297,12 @@ bool UserDataAuth::Initialize() {
   disk_cleanup_->set_target_free_space(disk_cleanup_target_free_space_);
 
   if (!disable_threading_) {
-    base::Thread::Options options;
-    options.message_pump_type = base::MessagePumpType::IO;
-    mount_thread_.StartWithOptions(options);
+    if (!mount_task_runner_) {
+      base::Thread::Options options;
+      options.message_pump_type = base::MessagePumpType::IO;
+      mount_thread_->StartWithOptions(options);
+      mount_task_runner_ = mount_thread_->task_runner();
+    }
   }
 
   if (platform_->FileExists(base::FilePath(kNotFirstBootFilePath))) {
@@ -514,11 +524,11 @@ bool UserDataAuth::PostTaskToMountThread(const base::Location& from_here,
     std::move(task).Run();
     return true;
   }
+  CHECK(mount_task_runner_);
   if (delay.is_zero()) {
-    return mount_thread_.task_runner()->PostTask(from_here, std::move(task));
+    return mount_task_runner_->PostTask(from_here, std::move(task));
   }
-  return mount_thread_.task_runner()->PostDelayedTask(from_here,
-                                                      std::move(task), delay);
+  return mount_task_runner_->PostDelayedTask(from_here, std::move(task), delay);
 }
 
 bool UserDataAuth::IsMounted(const std::string& username,

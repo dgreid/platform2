@@ -4,6 +4,7 @@
 
 #include "cryptohome/userdataauth.h"
 
+#include <algorithm>
 #include <memory>
 #include <vector>
 
@@ -12,6 +13,7 @@
 #include <base/location.h>
 #include <base/stl_util.h>
 #include <base/test/task_environment.h>
+#include <base/test/test_mock_time_task_runner.h>
 #include <brillo/cryptohome.h>
 #include <chaps/token_manager_client_mock.h>
 #include <dbus/mock_bus.h>
@@ -3095,6 +3097,133 @@ TEST_F(ChallengeResponseUserDataAuthExTest, FallbackLightweightCheckKey) {
   CallCheckKeyAndVerify(user_data_auth::CRYPTOHOME_ERROR_NOT_SET);
 }
 
+// Test fixture that implements two task runners, which is similar to the task
+// environment in UserDataAuth. Developers could fast forward the time in
+// UserDataAuth, and prevent the flakiness caused by the real time clock. Note
+// that this does not initialize |userdataauth_|. And using WaitableEvent in it
+// may hang the test runner. Because all of the task runner is on the same
+// thread, we would need to set_current_thread_id_for_test for UserDataAuth to
+// let it know which task runner is current task runner.
+class UserDataAuthTestTasked : public UserDataAuthTestNotInitialized {
+ public:
+  UserDataAuthTestTasked() = default;
+  UserDataAuthTestTasked(const UserDataAuthTestTasked&) = delete;
+  UserDataAuthTestTasked& operator=(const UserDataAuthTestTasked&) = delete;
+
+  ~UserDataAuthTestTasked() override = default;
+
+  // Post a task to the origin task runner, then wait for it to finish.
+  void PostToOriginAndBlock(base::OnceClosure task) {
+    origin_task_runner_->PostTask(FROM_HERE, std::move(task));
+    RunUntilIdle();
+  }
+
+  void SetUp() override {
+    ON_CALL(platform_, GetCurrentTime()).WillByDefault(Invoke([this]() {
+      // The time between origin and mount task runner may have a skew when fast
+      // forwarding the time. But current running task runner time must be the
+      // biggest one.
+      return std::max(origin_task_runner_->Now(), mount_task_runner_->Now());
+    }));
+
+    // Setup the usual stuff
+    UserDataAuthTestNotInitialized::SetUp();
+    // We do the task runner stuff for this test fixture.
+    userdataauth_->set_origin_task_runner(origin_task_runner_);
+    userdataauth_->set_mount_task_runner(mount_task_runner_);
+    userdataauth_->set_disable_threading(false);
+  }
+
+  void TearDown() override {
+    RunUntilIdle();
+    // Destruct the |userdataauth_| object.
+    userdataauth_.reset();
+  }
+
+  // Initialize |userdataauth_| in |origin_task_runner_|
+  void InitializeUserDataAuth() {
+    PostToOriginAndBlock(base::BindOnce(
+        [](UserDataAuth* userdataauth) {
+          ASSERT_TRUE(userdataauth->Initialize());
+        },
+        base::Unretained(userdataauth_.get())));
+    userdataauth_->set_dbus(bus_);
+    PostToOriginAndBlock(base::BindOnce(
+        [](UserDataAuth* userdataauth) {
+          ASSERT_TRUE(userdataauth->PostDBusInitialize());
+        },
+        base::Unretained(userdataauth_.get())));
+  }
+
+  // Fast-forwards virtual time by |delta|
+  void FastForwardBy(base::TimeDelta delta) {
+    // Keep running the loop until there is no virtual time remain.
+    while (!delta.is_zero()) {
+      const base::TimeDelta& origin_delay =
+          origin_task_runner_->NextPendingTaskDelay();
+      const base::TimeDelta& mount_delay =
+          mount_task_runner_->NextPendingTaskDelay();
+
+      // Find the earliest task/deadline to forward.
+      const base::TimeDelta& delay =
+          std::min(delta, std::min(origin_delay, mount_delay));
+
+      // Forward and run the origin task runner
+      userdataauth_->set_current_thread_id_for_test(
+          UserDataAuth::TestThreadId::kOriginThread);
+      origin_task_runner_->FastForwardBy(delay);
+
+      // Forward and run the mount task runner
+      userdataauth_->set_current_thread_id_for_test(
+          UserDataAuth::TestThreadId::kMountThread);
+      mount_task_runner_->FastForwardBy(delay);
+
+      // Run remaining zero delay tasks.
+      RunUntilIdle();
+
+      // Decrease the virtual time.
+      delta -= delay;
+    }
+
+    // Make sure there is no zero delay tasks remain.
+    RunUntilIdle();
+  }
+
+  // Run the all of the task runners until they don't find any zero delay tasks
+  // in their queues.
+  void RunUntilIdle() {
+    bool pending = true;
+    while (pending) {
+      pending = false;
+      bool origin_pending =
+          origin_task_runner_->NextPendingTaskDelay().is_zero();
+      pending |= origin_pending;
+      if (origin_pending) {
+        userdataauth_->set_current_thread_id_for_test(
+            UserDataAuth::TestThreadId::kOriginThread);
+        origin_task_runner_->RunUntilIdle();
+      }
+      bool mount_pending = mount_task_runner_->NextPendingTaskDelay().is_zero();
+      pending |= mount_pending;
+      if (mount_pending) {
+        userdataauth_->set_current_thread_id_for_test(
+            UserDataAuth::TestThreadId::kMountThread);
+        mount_task_runner_->RunUntilIdle();
+      }
+    }
+  }
+
+ protected:
+  scoped_refptr<base::TestMockTimeTaskRunner> origin_task_runner_{
+      new base::TestMockTimeTaskRunner()};
+  base::TestMockTimeTaskRunner::ScopedContext scoped_origin_context_{
+      origin_task_runner_};
+  scoped_refptr<base::TestMockTimeTaskRunner> mount_task_runner_{
+      new base::TestMockTimeTaskRunner()};
+  base::TestMockTimeTaskRunner::ScopedContext scoped_mount_context_{
+      mount_task_runner_};
+};
+
 // ================ Tests requiring fully threaded environment ================
 
 // Test fixture that implements fully threaded environment in UserDataAuth.
@@ -3174,172 +3303,45 @@ class UserDataAuthTestThreaded : public UserDataAuthTestNotInitialized {
   base::Thread origin_thread_;
 };
 
-TEST_F(UserDataAuthTestThreaded, CheckUpdateActivityTimestampCalledDaily) {
+TEST_F(UserDataAuthTestTasked, CheckUpdateActivityTimestampCalledDaily) {
   // Note: This test is constructed similar to CheckAutoCleanupCallback test.
-  constexpr int kTimesUpdateUserActivityCalled = 3;
-
+  constexpr int kTimesUpdateUserActivityCalled = 5;
   SetupMount("some-user-to-clean-up");
   EXPECT_CALL(*mount_, IsNonEphemeralMounted()).WillRepeatedly(Return(true));
-
-  // Used to signal that the test is done.
-  base::WaitableEvent done(base::WaitableEvent::ResetPolicy::MANUAL,
-                           base::WaitableEvent::InitialState::NOT_SIGNALED);
-
-  // These are shared between threads, so guard by the lock.
-  base::Time current_time = base::Time::UnixEpoch();
-  base::Lock lock;
-  int update_user_activity_called = 0;
-
-  // These will be invoked from the mount thread.
-  EXPECT_CALL(platform_, GetCurrentTime())
-      .WillRepeatedly(Invoke([&lock, &current_time]() {
-        base::AutoLock scoped_lock(lock);
-        // Note: We aim to have update user actvitity timestamp happens every 5
-        // times GetCurrentTime() is called.
-        current_time += base::TimeDelta::FromMinutes(
-            kUpdateUserActivityPeriodHours * 60 / 5 + 1);
-        return current_time;
-      }));
-
   // Count the number of times UpdateActivityTimestamp happens.
   EXPECT_CALL(homedirs_, UpdateActivityTimestamp(_, _, 0))
-      .Times(AtLeast(kTimesUpdateUserActivityCalled))
-      .WillRepeatedly(Invoke([&lock, &update_user_activity_called, &done, this](
-                                 const std::string&, int, int) {
-        base::ReleasableAutoLock scoped_lock(&lock);
-        update_user_activity_called++;
-        if (update_user_activity_called == kTimesUpdateUserActivityCalled) {
-          // Currently low disk space callback runs every 1 ms. If that test
-          // callback runs before we finish test teardown but after platform_
-          // object is cleared, then we'll get error. Therefore, we need to set
-          // test callback interval back to 1 minute, so we will not have any
-          // race condition.
-          userdataauth_->set_low_disk_notification_period_ms(
-              kLowDiskNotificationPeriodMS);
-          scoped_lock.Release();
-          done.Signal();
-        }
-        return true;
-      }));
-
-  const int period_ms = 1;
-
-  // This will cause the low disk space callback to be called every ms
-  userdataauth_->set_low_disk_notification_period_ms(period_ms);
+      .Times(kTimesUpdateUserActivityCalled)
+      .WillRepeatedly(Return(true));
 
   InitializeUserDataAuth();
 
-  // Advance time once so that the first call gets triggered.
-  {
-    base::AutoLock scoped_lock(lock);
-    current_time +=
-        base::TimeDelta::FromHours(kUpdateUserActivityPeriodHours + 1);
-  }
+  FastForwardBy(base::TimeDelta::FromHours(kUpdateUserActivityPeriodHours) *
+                kTimesUpdateUserActivityCalled);
 
-  // Wait for at most 5 seconds. 5 seconds is most likely enough, a period this
-  // long is to avoid flakiness.
-  done.TimedWait(base::TimeDelta::FromSeconds(5));
-
-  // Check that not too much or too little "time" elapsed.
-  EXPECT_LT(current_time,
-            base::Time::UnixEpoch() +
-                base::TimeDelta::FromHours(kUpdateUserActivityPeriodHours *
-                                           kTimesUpdateUserActivityCalled * 2));
-  EXPECT_GT(current_time,
-            base::Time::UnixEpoch() +
-                base::TimeDelta::FromHours(kUpdateUserActivityPeriodHours *
-                                           kTimesUpdateUserActivityCalled));
-
-  // Cleanup invocable lambdas so they don't capture this test variables
-  // anymore. If this is not done then the periodic callbacks might call
-  // platform_.GetCurrentTime() between the time local variables here gets
-  // destructed and the time |platform_| object gets destructed in test fixture
-  // destructor, thus accessing the already destructed local variable
-  // |current_time|.
-  Mock::VerifyAndClear(mount_.get());
-  Mock::VerifyAndClear(&platform_);
+  Mock::VerifyAndClear(&mount_);
 }
 
-TEST_F(UserDataAuthTestThreaded, CheckAutoCleanupCallback) {
+TEST_F(UserDataAuthTestTasked, CheckAutoCleanupCallback) {
   constexpr int kTimesFreeDiskSpaceCalled = 5;
   // Checks that DoAutoCleanup() is called periodically.
   // Service will schedule periodic clean-ups.
   SetupMount("some-user-to-clean-up");
 
-  // These are shared between threads, so guard by the lock.
-  int free_disk_space_count = 0;
-  base::Time current_time = base::Time::UnixEpoch();
-  base::Lock lock;
-
-  // Used to signal that the test is done.
-  base::WaitableEvent done(base::WaitableEvent::ResetPolicy::MANUAL,
-                           base::WaitableEvent::InitialState::NOT_SIGNALED);
-
   // These will be invoked from the mount thread.
-  EXPECT_CALL(cleanup_, FreeDiskSpace())
-      .Times(AtLeast(3))
-      .WillRepeatedly(Invoke([&lock, &free_disk_space_count, &done, this] {
-        // The time will move forward enough to trigger the next call every
-        // time it's called.
-        base::ReleasableAutoLock scoped_lock(&lock);
-        free_disk_space_count++;
-        if (free_disk_space_count == kTimesFreeDiskSpaceCalled) {
-          // Currently low disk space callback runs every 1 ms. If that test
-          // callback runs before we finish test teardown but after platform_
-          // object is cleared, then we'll get error. Therefore, we need to set
-          // test callback interval back to 1 minute, so we will not have any
-          // race condition.
-          userdataauth_->set_low_disk_notification_period_ms(
-              kLowDiskNotificationPeriodMS);
-          scoped_lock.Release();
-          done.Signal();
-        }
-      }));
+  EXPECT_CALL(cleanup_, FreeDiskSpace()).Times(kTimesFreeDiskSpaceCalled);
   // Silence the GetFreeDiskSpaceState errors.
   EXPECT_CALL(cleanup_, GetFreeDiskSpaceState(_))
       .WillRepeatedly(Return(DiskCleanup::FreeSpaceState::kAboveTarget));
 
-  EXPECT_CALL(platform_, GetCurrentTime())
-      .WillRepeatedly(Invoke([&lock, &current_time]() {
-        base::AutoLock scoped_lock(lock);
-        current_time +=
-            base::TimeDelta::FromMilliseconds(kAutoCleanupPeriodMS / 30 + 1000);
-        return current_time;
-      }));
-  const int period_ms = 1;
-
-  // This will cause the low disk space callback to be called every ms
-  userdataauth_->set_low_disk_notification_period_ms(period_ms);
-
   InitializeUserDataAuth();
 
-  // Wait for at most 5 seconds. 5 seconds is most likely enough, a period this
-  // long is to avoid flakiness.
-  done.TimedWait(base::TimeDelta::FromSeconds(5));
+  FastForwardBy(base::TimeDelta::FromMilliseconds(kAutoCleanupPeriodMS) *
+                kTimesFreeDiskSpaceCalled);
 
-  // Check that not too much or too little "time" elapsed.
-  EXPECT_LT(current_time,
-            base::Time::UnixEpoch() +
-                base::TimeDelta::FromMilliseconds(
-                    kAutoCleanupPeriodMS * (kTimesFreeDiskSpaceCalled + 1)));
-  // Note that the first run happens right after InitializeUserDataAuth(), so
-  // x run only takes x-1 times the period.
-  EXPECT_GT(current_time,
-            base::Time::UnixEpoch() +
-                base::TimeDelta::FromMilliseconds(
-                    kAutoCleanupPeriodMS * (kTimesFreeDiskSpaceCalled - 1)));
-
-  // Cleanup invocable lambdas so they don't capture this test variables
-  // anymore. If this is not done then the periodic callbacks might call
-  // platform_.GetCurrentTime() between the time local variables here gets
-  // destructed and the time |platform_| object gets destructed in test fixture
-  // destructor, thus accessing the already destructed local variable
-  // |current_time|.
   Mock::VerifyAndClear(&cleanup_);
-  Mock::VerifyAndClear(&platform_);
 }
 
-TEST_F(UserDataAuthTestThreaded, CheckAutoCleanupCallbackFirst) {
+TEST_F(UserDataAuthTestTasked, CheckAutoCleanupCallbackFirst) {
   // Checks that DoAutoCleanup() is called first right after init.
   // Service will schedule first cleanup right after its init.
   EXPECT_CALL(cleanup_, FreeDiskSpace()).Times(1);
@@ -3349,14 +3351,9 @@ TEST_F(UserDataAuthTestThreaded, CheckAutoCleanupCallbackFirst) {
       .WillRepeatedly(Return(DiskCleanup::FreeSpaceState::kAboveThreshold));
 
   InitializeUserDataAuth();
-
-  // short delay to see the first invocation. Note that the usual schedule is
-  // once per hour, but we only wait for 10ms here, so a regular schedule can't
-  // be mistaken as the first call by Initialize().
-  base::PlatformThread::Sleep(base::TimeDelta::FromMilliseconds(10));
 }
 
-TEST_F(UserDataAuthTestThreaded, CheckLowDiskCallback) {
+TEST_F(UserDataAuthTestTasked, CheckLowDiskCallback) {
   // Checks that LowDiskCallback is called periodically.
   EXPECT_CALL(cleanup_, AmountOfFreeDiskSpace())
       .Times(AtLeast(3))
@@ -3375,8 +3372,6 @@ TEST_F(UserDataAuthTestThreaded, CheckLowDiskCallback) {
   // shorter), if disk space goes below threshold and recovers back to normal.
   EXPECT_CALL(cleanup_, FreeDiskSpace()).Times(2);
 
-  userdataauth_->set_low_disk_notification_period_ms(2);
-
   int count_signals = 0;
   userdataauth_->SetLowDiskSpaceCallback(
       base::Bind([](int* count_signals_ptr,
@@ -3385,11 +3380,13 @@ TEST_F(UserDataAuthTestThreaded, CheckLowDiskCallback) {
 
   InitializeUserDataAuth();
 
-  base::PlatformThread::Sleep(base::TimeDelta::FromMilliseconds(100));
+  FastForwardBy(
+      base::TimeDelta::FromMilliseconds(kLowDiskNotificationPeriodMS) * 10);
+
   EXPECT_EQ(1, count_signals);
 }
 
-TEST_F(UserDataAuthTestThreaded, CheckLowDiskCallbackFreeDiskSpaceOnce) {
+TEST_F(UserDataAuthTestTasked, CheckLowDiskCallbackFreeDiskSpaceOnce) {
   EXPECT_CALL(cleanup_, AmountOfFreeDiskSpace())
       .Times(AtLeast(4))
       .WillOnce(Return(kFreeSpaceThresholdToTriggerCleanup + 1))
@@ -3405,14 +3402,13 @@ TEST_F(UserDataAuthTestThreaded, CheckLowDiskCallbackFreeDiskSpaceOnce) {
   // CheckLowDiskCallback test.
   EXPECT_CALL(cleanup_, FreeDiskSpace()).Times(2);
 
-  userdataauth_->set_low_disk_notification_period_ms(2);
-
   InitializeUserDataAuth();
 
-  base::PlatformThread::Sleep(base::TimeDelta::FromMilliseconds(100));
+  FastForwardBy(
+      base::TimeDelta::FromMilliseconds(kLowDiskNotificationPeriodMS) * 10);
 }
 
-TEST_F(UserDataAuthTestThreaded, UploadAlertsCallback) {
+TEST_F(UserDataAuthTestTasked, UploadAlertsCallback) {
   MetricsLibraryMock metrics;
   OverrideMetricsLibraryForTesting(&metrics);
 
@@ -3431,27 +3427,18 @@ TEST_F(UserDataAuthTestThreaded, UploadAlertsCallback) {
 
   InitializeUserDataAuth();
 
-  base::PlatformThread::Sleep(base::TimeDelta::FromMilliseconds(100));
-
   ClearMetricsLibraryForTesting();
 }
 
-TEST_F(UserDataAuthTestThreaded, UploadAlertsCallbackPeriodical) {
-  // Set the callback to run once every 2ms.
-  userdataauth_->set_upload_alerts_period_ms(2);
-
+TEST_F(UserDataAuthTestTasked, UploadAlertsCallbackPeriodical) {
   // Checks that GetAlertsData is called periodically.
-  EXPECT_CALL(tpm_, GetAlertsData(_)).Times(AtLeast(5));
+  EXPECT_CALL(tpm_, GetAlertsData(_)).Times(1);
 
   InitializeUserDataAuth();
 
-  // Should be long enough.
-  base::PlatformThread::Sleep(base::TimeDelta::FromMilliseconds(100));
+  EXPECT_CALL(tpm_, GetAlertsData(_)).Times(5);
 
-  // Set it back to a long time so we don't have a race condition when cleaning
-  // up.
-  userdataauth_->set_upload_alerts_period_ms(100 * 1000);
-  base::PlatformThread::Sleep(base::TimeDelta::FromMilliseconds(20));
+  FastForwardBy(base::TimeDelta::FromMilliseconds(kUploadAlertsPeriodMS) * 5);
 }
 
 TEST_F(UserDataAuthTestThreaded, DetectEnterpriseOwnership) {
