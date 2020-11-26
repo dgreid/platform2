@@ -16,10 +16,10 @@ instruction [here][update-localmirror]. Reminder: do NOT delete the old release.
 
 2. Submit a CL to rename the ebuild file from "libhandwriting-0.0.2-rN.ebuild"
 ("N" denotes the existing revision number) to the new version, i.e.,
-"libhandwriting-0.0.3-r0.ebuild". Remember to update the Manifest file too
-(you can run
+"libhandwriting-0.0.3-r1.ebuild" (revision number should start from 1). Remember
+to update the Manifest file too (you can run
 ```
-ebuild "/home/${USER}/trunk/src/third_party/chromiumos-overlay/dev-libs/libhandwriting/libhandwriting-0.0.3-r0.ebuild" manifest
+ebuild "/home/${USER}/trunk/src/third_party/chromiumos-overlay/dev-libs/libhandwriting/libhandwriting-0.0.3-r1.ebuild" manifest
 ```
 to generate the manifest file in the chroot).
 
