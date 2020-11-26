@@ -299,7 +299,7 @@ TEST_F(FutureTest, Collect) {
 
     Future<std::vector<int>> future =
         Collect(base::SequencedTaskRunnerHandle::Get(), std::move(futures));
-    GetResult<std::vector<int>> ret = future.Get();
+    GetResult<std::vector<int>> ret = future.GetWithRunLoop();
     for (int i = 0; i < n; ++i) {
       EXPECT_EQ(ret.val[i], i);
     }
@@ -326,7 +326,7 @@ TEST_F(FutureTest, Collect) {
 
     Future<std::vector<int>> future =
         Collect(base::SequencedTaskRunnerHandle::Get(), std::move(futures));
-    GetResult<std::vector<int>> ret = future.Get();
+    GetResult<std::vector<int>> ret = future.GetWithRunLoop();
     EXPECT_TRUE(ret.rejected);
   }
 }
@@ -343,13 +343,13 @@ TEST_F(FutureTest, Flatten) {
       AsyncNoReject(base::SequencedTaskRunnerHandle::Get(),
                     base::BindOnce([]() { return ResolvedFuture(true); }))
           .Flatten()
-          .Get()
+          .GetWithRunLoop()
           .val);
 
   AsyncNoReject(base::SequencedTaskRunnerHandle::Get(),
                 base::BindOnce([]() { return ResolvedFuture<void>(); }))
       .Flatten()
-      .Get();
+      .GetWithRunLoop();
 
   {
     auto ret = AsyncNoReject(base::SequencedTaskRunnerHandle::Get(),
@@ -360,7 +360,7 @@ TEST_F(FutureTest, Flatten) {
                          base::BindOnce([](int x) { return x * 3; }, x));
                    }))
                    .Flatten()
-                   .Get();
+                   .GetWithRunLoop();
     EXPECT_EQ(ret.val, 6);
     EXPECT_FALSE(ret.rejected);
   }
@@ -374,7 +374,7 @@ TEST_F(FutureTest, Flatten) {
                                       [](int x) { return Reject<int>(); }, x));
                    }))
                    .Flatten()
-                   .Get();
+                   .GetWithRunLoop();
     EXPECT_TRUE(ret.rejected);
   }
 }
@@ -383,8 +383,7 @@ TEST_F(FutureTest, NoDeadlock) {
   // Fulfill promise in another thread
   {
     Promise<bool> promise;
-    Future<bool> future =
-        promise.GetFuture(base::SequencedTaskRunnerHandle::Get());
+    Future<bool> future = promise.GetFuture(task_runner_);
     task_runner_->PostDelayedTask(
         FROM_HERE,
         base::BindOnce([](Promise<bool> promise) { promise.SetValue(true); },
@@ -409,7 +408,7 @@ TEST_F(FutureTest, NoDeadlock) {
                       [](Promise<bool> promise) { promise.SetValue(true); },
                       std::move(promise)),
                   base::TimeDelta::FromMilliseconds(10));
-              EXPECT_TRUE(future.Get().val);
+              EXPECT_TRUE(future.GetWithRunLoop().val);
               closure.Run();
             },
             loop.QuitClosure()));
@@ -433,7 +432,7 @@ TEST_F(FutureTest, NoDeadlock) {
             },
             std::move(promise), base::SequencedTaskRunnerHandle::Get()),
         base::TimeDelta::FromMilliseconds(10));
-    EXPECT_TRUE(future.Get().val);
+    EXPECT_TRUE(future.GetWithRunLoop().val);
   }
 
   {
@@ -454,7 +453,7 @@ TEST_F(FutureTest, NoDeadlock) {
                       std::move(promise)));
             },
             std::move(promise), base::SequencedTaskRunnerHandle::Get()));
-    EXPECT_TRUE(future.Get().val);
+    EXPECT_TRUE(future.GetWithRunLoop().val);
   }
 }
 
@@ -463,13 +462,13 @@ TEST_F(FutureTest, SameThread) {
     auto sum = Async(
         base::SequencedTaskRunnerHandle::Get(),
         base::BindOnce([](int x, int y) { return Resolve<int>(x + y); }, 4, 3));
-    EXPECT_EQ(sum.Get().val, 7);
+    EXPECT_EQ(sum.GetWithRunLoop().val, 7);
   }
 
   {
     auto future = Async(base::SequencedTaskRunnerHandle::Get(),
                         base::BindOnce([]() { return Resolve<void>(); }));
-    future.Get();
+    future.GetWithRunLoop();
   }
 
   {
@@ -477,7 +476,7 @@ TEST_F(FutureTest, SameThread) {
     Future<bool> future =
         promise.GetFuture(base::SequencedTaskRunnerHandle::Get());
     promise.SetValue(true);
-    EXPECT_EQ(future.Get().val, true);
+    EXPECT_EQ(future.GetWithRunLoop().val, true);
   }
 
   {
@@ -488,7 +487,7 @@ TEST_F(FutureTest, SameThread) {
       promise.SetValue(true);
       return future;
     };
-    func().Get();
+    func().GetWithRunLoop();
   }
 
   {
@@ -499,7 +498,7 @@ TEST_F(FutureTest, SameThread) {
         FROM_HERE,
         base::BindOnce([](Promise<void> promise) { promise.SetValue(); },
                        std::move(promise)));
-    future.Get();
+    future.GetWithRunLoop();
   }
 }
 

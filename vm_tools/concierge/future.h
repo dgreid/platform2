@@ -14,6 +14,7 @@
 #include <base/bind.h>
 #include <base/optional.h>
 #include <base/run_loop.h>
+#include <base/synchronization/condition_variable.h>
 #include <base/task_runner.h>
 #include <base/threading/sequenced_task_runner_handle.h>
 
@@ -130,7 +131,9 @@ namespace internal {
 
 template <typename T, typename Error>
 struct SharedState {
+  SharedState() : cv(&mutex) {}
   mutable base::Lock mutex;
+  base::ConditionVariable cv;
   GetResult<T, Error> ret;
   bool done = false;
   scoped_refptr<base::TaskRunner> task_runner;
@@ -192,10 +195,21 @@ class Future {
   Future<T, Error> OnReject(
       base::OnceCallback<GetResult<T, Error>(ErrorOrVoid...)> func);
 
-  // Use a RunLoop to wait for the promise to be fulfilled, return
-  // the result and reset the shared state. In other words, the future becomes
-  // invalid after Get() returns.
-  GetResult<T, Error> Get(
+  // Wait for the promise to be fulfilled, return the result and reset the
+  // shared state. In other words, the future becomes invalid after Get()
+  // returns.
+  //
+  // Use this method if all the tasks in the chain are posted to other threads,
+  // not the current thread. If not, use |GetWithRunLoop|.
+  GetResult<T, Error> Get();
+
+  // This function is the same as |Get|, except that it uses a RunLoop to yield
+  // the current thread to the tasks posted in the chain. It is essentially a
+  // nested run loop because the current thread should already have one.
+  //
+  // WARNING: Use this at your own risk. It is easy to run into deadlocks (non
+  // recursive mutex) and other problems with a nested run loop.
+  GetResult<T, Error> GetWithRunLoop(
       base::RunLoop::Type type = base::RunLoop::Type::kNestableTasksAllowed);
 
   // TODO(woodychow): Implement a wait function with timeout
@@ -224,12 +238,6 @@ class Future {
   }
 
  private:
-  // This function should only be called in the internal Then wrapper, where the
-  // promise is fulfilled and the val is guaranteed to be there.
-  // Wait, this assumes the original func and the Then func are executed in the
-  // same sequence
-  GetResult<T, Error> GetHelper();
-
   template <typename U = T, typename UError = Error>
   static typename std::enable_if_t<std::is_void<UError>::value>
   RejectFuncHelper(base::OnceCallback<GetResult<T, void>()> reject_func,
@@ -331,6 +339,7 @@ template <typename T, typename Error>
 void Promise<T, Error>::SetValueHelperLocked() {
   DCHECK(!state_->done);
   state_->done = true;
+  state_->cv.Signal();
 
   // Handle "then"
   if (!state_->then_func.is_null()) {
@@ -363,6 +372,7 @@ Promise<T, Error>::Reject() {
   base::AutoLock guard(state_->mutex);
   state_->ret = vm_tools::Reject<T, void>();
   state_->done = true;
+  state_->cv.Signal();
 
   if (!state_->then_func.is_null()) {
     std::move(state_->then_func).Run();
@@ -376,6 +386,7 @@ Promise<T, Error>::Reject(UError err) {
   base::AutoLock guard(state_->mutex);
   state_->ret = vm_tools::Reject<T, Error>(std::move(err));
   state_->done = true;
+  state_->cv.Signal();
 
   if (!state_->then_func.is_null()) {
     std::move(state_->then_func).Run();
@@ -507,28 +518,33 @@ Future<T, Error> Future<T, Error>::OnReject(
 }
 
 template <typename T, typename Error>
-GetResult<T, Error> Future<T, Error>::Get(base::RunLoop::Type type) {
-  {
-    base::ReleasableAutoLock lock(&state_->mutex);
-    if (!state_->done) {
-      base::RunLoop loop(type);
-      DCHECK(state_->then_func.is_null());
-      state_->then_func = loop.QuitClosure();
-      lock.Release();
-      loop.Run();
-    }
+GetResult<T, Error> Future<T, Error>::GetWithRunLoop(base::RunLoop::Type type) {
+  state_->mutex.Acquire();
+  if (!state_->done) {
+    base::RunLoop loop(type);
+    DCHECK(state_->then_func.is_null());
+    state_->then_func = loop.QuitClosure();
+    state_->mutex.Release();
+    loop.Run();
+    state_->mutex.Acquire();
   }
-  return GetHelper();
+
+  DCHECK(state_->done);
+  GetResult<T, Error> ret = std::move(state_->ret);
+  state_->mutex.Release();
+  state_.reset();
+
+  return ret;
 }
 
 template <typename T, typename Error>
-GetResult<T, Error> Future<T, Error>::GetHelper() {
-  GetResult<T, Error> ret;
-  {
-    base::AutoLock guard(state_->mutex);
-    DCHECK(state_->done);
-    ret = std::move(state_->ret);
-  }
+GetResult<T, Error> Future<T, Error>::Get() {
+  state_->mutex.Acquire();
+  while (!state_->done)
+    state_->cv.Wait();
+  // There should only be one thread waiting for the cv. No need to signal
+  GetResult<T, Error> ret = std::move(state_->ret);
+  state_->mutex.Release();
   state_.reset();
   return ret;
 }
