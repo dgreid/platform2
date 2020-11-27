@@ -170,6 +170,7 @@ type system_data_file, file_type, android_file_type; # this is Android file labe
 type system_data_root_file, file_type, android_file_type;
 type testharness_file, file_type, android_file_type;
 type cache_file, file_type, cros_file_type, cros_home_file_type;
+type apkcache_file, file_type, android_file_type;
 allow domain cros_home:dir r_dir_perms;
 
 type arc_native_crash_report_file, file_type, android_file_type, vendor_file_type; # this is for /data/vendor/arc_native_crash_reports in ARCVM.

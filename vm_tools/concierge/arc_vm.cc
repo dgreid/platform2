@@ -68,6 +68,9 @@ constexpr char kMediaSharedDirTag[] = "media";
 constexpr char kTestHarnessSharedDir[] = "/run/arcvm/testharness";
 constexpr char kTestHarnessSharedDirTag[] = "testharness";
 
+constexpr char kApkCacheSharedDir[] = "/run/arcvm/apkcache";
+constexpr char kApkCacheSharedDirTag[] = "apkcache";
+
 // For |kOemEtcSharedDir|, map host's chronos to guest's root, also arc-camera
 // (603) to vendor_arc_camera (5003).
 constexpr char kOemEtcUgidMap[] = "0 1000 1, 5000 600 50";
@@ -200,6 +203,9 @@ bool ArcVm::Start(base::FilePath kernel, VmBuilder vm_builder) {
   const base::FilePath testharness_dir(kTestHarnessSharedDir);
   std::string shared_testharness = CreateSharedDataParam(
       testharness_dir, kTestHarnessSharedDirTag, true, false);
+  const base::FilePath apkcache_dir(kApkCacheSharedDir);
+  std::string shared_apkcache =
+      CreateSharedDataParam(apkcache_dir, kApkCacheSharedDirTag, true, false);
 
   vm_builder
       .SetMemory(GetVmMemoryMiB())
@@ -217,6 +223,7 @@ bool ArcVm::Start(base::FilePath kernel, VmBuilder vm_builder) {
       .AppendSharedDir(oem_etc_shared_dir)
       .AppendSharedDir(shared_media)
       .AppendSharedDir(shared_testharness)
+      .AppendSharedDir(shared_apkcache)
       .EnableBattery(true /* enable */);
 
   auto args = vm_builder.BuildVmArgs();
