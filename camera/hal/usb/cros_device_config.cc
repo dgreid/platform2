@@ -20,22 +20,18 @@ constexpr char kCrosConfigLegacyUsbKey[] = "legacy-usb";
 
 }  // namespace
 
-CrosDeviceConfig::CrosDeviceConfig() {}
-
-CrosDeviceConfig::~CrosDeviceConfig() {}
-
-CrosDeviceConfig CrosDeviceConfig::Get() {
+std::unique_ptr<CrosDeviceConfig> CrosDeviceConfig::Create() {
   CrosDeviceConfig res = {};
   brillo::CrosConfig cros_config;
 
   if (!cros_config.Init()) {
     LOGF(ERROR) << "Failed to initialize CrOS config";
-    return res;
+    return nullptr;
   }
 
   if (!cros_config.GetString("/", "name", &res.model_name)) {
     LOGF(ERROR) << "Failed to get model name of CrOS device";
-    return res;
+    return nullptr;
   }
 
   std::string use_legacy_usb;
@@ -80,8 +76,7 @@ CrosDeviceConfig CrosDeviceConfig::Get() {
     return count;
   }();
 
-  res.is_initialized = true;
-  return res;
+  return std::make_unique<CrosDeviceConfig>(res);
 }
 
 }  // namespace cros

@@ -7,6 +7,7 @@
 #ifndef CAMERA_HAL_USB_CROS_DEVICE_CONFIG_H_
 #define CAMERA_HAL_USB_CROS_DEVICE_CONFIG_H_
 
+#include <memory>
 #include <string>
 
 #include <base/optional.h>
@@ -15,16 +16,20 @@
 namespace cros {
 
 // This structs wraps the brillo::CrosConfig and stores the required values.
-struct CrosDeviceConfig {
+class CrosDeviceConfig {
  public:
-  CrosDeviceConfig();
-  CrosDeviceConfig(const CrosDeviceConfig& other) = default;
-  CrosDeviceConfig& operator=(const CrosDeviceConfig& other) = default;
-  ~CrosDeviceConfig();
+  static std::unique_ptr<CrosDeviceConfig> Create();
 
-  static CrosDeviceConfig Get();
+  bool IsV1Device() const { return is_v1_device; }
+  const std::string& GetModelName() const { return model_name; }
+  bool IsUsbCameraCountAvailable() const {
+    return usb_camera_count.has_value();
+  }
+  int GetUsbCameraCount() const { return *usb_camera_count; }
 
-  bool is_initialized;
+ private:
+  CrosDeviceConfig() = default;
+
   bool is_v1_device;
   std::string model_name;
   base::Optional<int> usb_camera_count;

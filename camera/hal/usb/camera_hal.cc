@@ -111,7 +111,7 @@ std::string GetModelId(const DeviceInfo& info) {
 CameraHal::CameraHal()
     : task_runner_(nullptr),
       udev_watcher_(std::make_unique<UdevWatcher>(this, "video4linux")),
-      cros_device_config_(CrosDeviceConfig::Get()) {
+      cros_device_config_(CrosDeviceConfig::Create()) {
   thread_checker_.DetachFromThread();
 }
 
@@ -146,9 +146,11 @@ int CameraHal::OpenDevice(int id,
     LOGF(ERROR) << "Camera " << id << " is already opened";
     return -EBUSY;
   }
-  if (!cameras_.empty() && (cros_device_config_.model_name == "treeya360" ||
-                            cros_device_config_.model_name == "nuwani360" ||
-                            cros_device_config_.model_name == "pompom")) {
+  if (!cameras_.empty() &&
+      (cros_device_config_ != nullptr &&
+       (cros_device_config_->GetModelName() == "treeya360" ||
+        cros_device_config_->GetModelName() == "nuwani360" ||
+        cros_device_config_->GetModelName() == "pompom"))) {
     // It cannot open multiple cameras at the same time due to USB bandwidth
     // limitation (b/147333530, b/171856355).
     // TODO(shik): Use |conflicting_devices| to implement this logic after we
@@ -227,9 +229,9 @@ int CameraHal::SetCallbacks(const camera_module_callbacks_t* callbacks) {
 int CameraHal::Init() {
   DCHECK(thread_checker_.CalledOnValidThread());
 
-  if (!cros_device_config_.is_initialized) {
-    LOGF(ERROR) << "Failed to initialize CrOS device config";
-    return -ENODEV;
+  if (cros_device_config_ == nullptr) {
+    LOGF(WARNING) << "Failed to initialize CrOS device config, camera HAL may "
+                     "function incorrectly";
   }
 
   if (!udev_watcher_->Start(base::ThreadTaskRunnerHandle::Get())) {
@@ -270,9 +272,10 @@ int CameraHal::Init() {
     num_builtin_cameras_ = 1;
   }
 
-  if (cros_device_config_.usb_camera_count.has_value()) {
-    if (num_builtin_cameras_ != *cros_device_config_.usb_camera_count) {
-      LOGF(ERROR) << "Expected " << *cros_device_config_.usb_camera_count
+  if (cros_device_config_ != nullptr &&
+      cros_device_config_->IsUsbCameraCountAvailable()) {
+    if (num_builtin_cameras_ != cros_device_config_->GetUsbCameraCount()) {
+      LOGF(ERROR) << "Expected " << cros_device_config_->GetUsbCameraCount()
                   << " cameras from Chrome OS config, found "
                   << num_builtin_cameras_;
       return -ENODEV;
@@ -429,7 +432,8 @@ void CameraHal::OnDeviceAdded(ScopedUdevDevicePtr dev) {
 
   // Mark the camera as v1 if it is a built-in camera and the CrOS device is
   // marked as a v1 device.
-  if (info_ptr != nullptr && cros_device_config_.is_v1_device) {
+  if (info_ptr != nullptr && cros_device_config_ != nullptr &&
+      cros_device_config_->IsV1Device()) {
     info.quirks |= kQuirkV1Device;
   }
 

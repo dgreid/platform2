@@ -100,7 +100,7 @@ class CameraHal : public UdevWatcher::Observer {
   std::unique_ptr<UdevWatcher> udev_watcher_;
 
   // Used to access to the main configuration for Chrome OS.
-  CrosDeviceConfig cros_device_config_;
+  std::unique_ptr<CrosDeviceConfig> cros_device_config_;
 
   // Map from device path to camera id.
   std::map<std::string, int> path_to_id_;
