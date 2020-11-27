@@ -4,9 +4,14 @@
 
 #include "cros-disks/sshfs_helper.h"
 
+#include <sys/stat.h>
+
 #include <string>
+#include <utility>
 #include <vector>
 
+#include <base/files/file_util.h>
+#include <base/files/scoped_temp_dir.h>
 #include <base/strings/string_split.h>
 #include <base/strings/string_util.h>
 #include <base/strings/stringprintf.h>
@@ -20,10 +25,15 @@
 #include "cros-disks/uri.h"
 
 using testing::_;
+using testing::AllOf;
+using testing::EndsWith;
 using testing::HasSubstr;
+using testing::IsSupersetOf;
 using testing::Not;
 using testing::Return;
+using testing::StartsWith;
 using testing::StrEq;
+using testing::UnorderedElementsAre;
 
 namespace cros_disks {
 
@@ -31,12 +41,18 @@ namespace {
 
 const uid_t kMountUID = 200;
 const gid_t kMountGID = 201;
-const uid_t kFilesUID = 700;
-const uid_t kFilesGID = 701;
-const uid_t kFilesAccessGID = 1501;
 const base::FilePath kWorkingDir("/wkdir");
 const base::FilePath kMountDir("/mnt");
 const Uri kSomeSource("sshfs", "src");
+
+std::vector<std::string> ParseOptions(const SandboxedProcess& sandbox) {
+  CHECK_EQ(3, sandbox.arguments().size());
+  CHECK_EQ("src", sandbox.arguments()[0]);
+  CHECK_EQ("-o", sandbox.arguments()[1]);
+  return base::SplitString(sandbox.arguments()[2], ",",
+                           base::WhitespaceHandling::KEEP_WHITESPACE,
+                           base::SplitResult::SPLIT_WANT_ALL);
+}
 
 // Mock Platform implementation for testing.
 class MockPlatform : public Platform {
@@ -53,22 +69,6 @@ class MockPlatform : public Platform {
         *group_id = kMountGID;
       return true;
     }
-    if (user == FUSEHelper::kFilesUser) {
-      if (user_id)
-        *user_id = kFilesUID;
-      if (group_id)
-        *group_id = kFilesGID;
-      return true;
-    }
-    return false;
-  }
-
-  bool GetGroupId(const std::string& group, gid_t* group_id) const override {
-    if (group == FUSEHelper::kFilesGroup) {
-      if (group_id)
-        *group_id = kFilesAccessGID;
-      return true;
-    }
     return false;
   }
 
@@ -76,98 +76,159 @@ class MockPlatform : public Platform {
               SetOwnership,
               (const std::string&, uid_t, gid_t),
               (const, override));
-  MOCK_METHOD(bool,
-              SetPermissions,
-              (const std::string&, mode_t),
-              (const, override));
-  MOCK_METHOD(int,
-              WriteFile,
-              (const std::string&, const char*, int),
-              (const, override));
 };
 
 }  // namespace
 
 class SshfsHelperTest : public ::testing::Test {
  public:
-  SshfsHelperTest() : helper_(&platform_, &process_reaper_) {
+  SshfsHelperTest() {
     ON_CALL(platform_, SetOwnership(_, kMountUID, getgid()))
         .WillByDefault(Return(true));
-    ON_CALL(platform_, SetPermissions(_, 0770)).WillByDefault(Return(true));
-    ON_CALL(platform_, WriteFile(_, _, _)).WillByDefault(Return(-1));
+    ON_CALL(platform_, SetOwnership(_, kMountUID, kMountGID))
+        .WillByDefault(Return(true));
+  }
+
+  void SetUp() override {
+    CHECK(working_dir_.CreateUniqueTempDir());
+    helper_ = std::make_unique<SshfsHelper>(&platform_, &process_reaper_,
+                                            working_dir_.GetPath());
   }
 
  protected:
+  MountErrorType ConfigureSandbox(const std::string& source,
+                                  std::vector<std::string> params,
+                                  std::vector<std::string>* args) {
+    FakeSandboxedProcess sandbox;
+    MountErrorType error = helper_->ConfigureSandbox(
+        source, kMountDir, std::move(params), &sandbox);
+    if (error == MOUNT_ERROR_NONE) {
+      *args = ParseOptions(sandbox);
+    }
+    return error;
+  }
+
   MockPlatform platform_;
   brillo::ProcessReaper process_reaper_;
-  SshfsHelper helper_;
+  base::ScopedTempDir working_dir_;
+  std::unique_ptr<SshfsHelper> helper_;
 };
 
-// Verifies that CreateMounter creates mounter in a simple case.
-TEST_F(SshfsHelperTest, CreateMounter_SimpleOptions) {
-  auto mounter = helper_.CreateMounter(kWorkingDir, kSomeSource, kMountDir, {});
-  const FUSEMounterLegacy* legacy =
-      static_cast<FUSEMounterLegacy*>(mounter.get());
-  std::string opts = legacy->mount_options().ToString();
-  EXPECT_THAT(opts, HasSubstr("BatchMode=yes"));
-  EXPECT_THAT(opts, HasSubstr("PasswordAuthentication=no"));
-  EXPECT_THAT(opts, HasSubstr("KbdInteractiveAuthentication=no"));
-  EXPECT_THAT(opts, HasSubstr("follow_symlinks"));
-  EXPECT_THAT(opts, HasSubstr("uid=700"));
-  EXPECT_THAT(opts, HasSubstr("gid=1501"));
-}
-
-// Verifies that CreateMounter writes files to the working dir when provided.
-TEST_F(SshfsHelperTest, CreateMounter_WriteFiles) {
-  EXPECT_CALL(platform_, WriteFile("/wkdir/id", StrEq("some key"), 8))
-      .WillOnce(Return(8));
-  EXPECT_CALL(platform_, WriteFile("/wkdir/known_hosts", StrEq("some host"), 9))
-      .WillOnce(Return(9));
-  EXPECT_CALL(platform_, SetPermissions("/wkdir/id", 0600))
-      .WillOnce(Return(true));
-  EXPECT_CALL(platform_, SetPermissions("/wkdir/known_hosts", 0600))
-      .WillOnce(Return(true));
-  EXPECT_CALL(platform_, SetPermissions("/wkdir", 0770)).WillOnce(Return(true));
-  EXPECT_CALL(platform_, SetOwnership("/wkdir/id", kMountUID, kMountGID))
+TEST_F(SshfsHelperTest, ConfigureSandbox) {
+  EXPECT_CALL(platform_, SetOwnership(EndsWith("id"), kMountUID, kMountGID))
       .WillOnce(Return(true));
   EXPECT_CALL(platform_,
-              SetOwnership("/wkdir/known_hosts", kMountUID, kMountGID))
+              SetOwnership(EndsWith("known_hosts"), kMountUID, kMountGID))
       .WillOnce(Return(true));
-  EXPECT_CALL(platform_, SetOwnership("/wkdir", kMountUID, getgid()))
+  EXPECT_CALL(platform_,
+              SetOwnership(StartsWith(working_dir_.GetPath().value()),
+                           kMountUID, getgid()))
       .WillOnce(Return(true));
-  auto mounter = helper_.CreateMounter(
-      kWorkingDir, kSomeSource, kMountDir,
-      {"IdentityBase64=c29tZSBrZXk=", "UserKnownHostsBase64=c29tZSBob3N0",
-       "IdentityFile=/foo/bar", "UserKnownHostsFile=/foo/baz",
-       "HostName=localhost", "Port=2222"});
-  const FUSEMounterLegacy* legacy =
-      static_cast<FUSEMounterLegacy*>(mounter.get());
-  std::string opts = legacy->mount_options().ToString();
-  EXPECT_THAT(opts, HasSubstr("IdentityFile=/wkdir/id"));
-  EXPECT_THAT(opts, HasSubstr("UserKnownHostsFile=/wkdir/known_hosts"));
-  EXPECT_THAT(opts, HasSubstr("HostName=localhost"));
-  EXPECT_THAT(opts, HasSubstr("Port=2222"));
-  EXPECT_THAT(opts, Not(HasSubstr("Base64")));
-  EXPECT_THAT(opts, Not(HasSubstr("c29tZSB")));
-  EXPECT_THAT(opts, Not(HasSubstr("/foo/bar")));
-  EXPECT_THAT(opts, Not(HasSubstr("/foo/baz")));
+
+  std::vector<std::string> args;
+  EXPECT_EQ(
+      MOUNT_ERROR_NONE,
+      ConfigureSandbox(
+          kSomeSource.value(),
+          {"IdentityBase64=YWJjCg==", "UserKnownHostsBase64=MTIzNDUK"}, &args));
+
+  EXPECT_THAT(
+      args,
+      UnorderedElementsAre(
+          "KbdInteractiveAuthentication=no", "PasswordAuthentication=no",
+          "BatchMode=yes", "follow_symlinks", "cache=no", "uid=1000",
+          "gid=1001",
+          AllOf(StartsWith("IdentityFile=" + working_dir_.GetPath().value()),
+                EndsWith("/id")),
+          AllOf(StartsWith("UserKnownHostsFile=" +
+                           working_dir_.GetPath().value()),
+                EndsWith("/known_hosts"))));
+
+  std::string id_path;
+  ASSERT_TRUE(GetParamValue(args, "IdentityFile", &id_path));
+  std::string hosts_path;
+  ASSERT_TRUE(GetParamValue(args, "UserKnownHostsFile", &hosts_path));
+
+  base::stat_wrapper_t stat;
+  EXPECT_EQ(0, base::File::Stat(id_path.c_str(), &stat));
+  EXPECT_EQ(0600, stat.st_mode & 0777);
+  EXPECT_EQ(0, base::File::Stat(hosts_path.c_str(), &stat));
+  EXPECT_EQ(0600, stat.st_mode & 0777);
+  base::FilePath dir = base::FilePath(id_path).DirName();
+  EXPECT_EQ(0, base::File::Stat(dir.value().c_str(), &stat));
+  EXPECT_EQ(0770, stat.st_mode & 0777);
+
+  std::string data;
+  ASSERT_TRUE(base::ReadFileToString(base::FilePath(id_path), &data));
+  EXPECT_EQ("abc\n", data);
+  ASSERT_TRUE(base::ReadFileToString(base::FilePath(hosts_path), &data));
+  EXPECT_EQ("12345\n", data);
+}
+
+TEST_F(SshfsHelperTest, ConfigureSandboxWithHostAndPort) {
+  std::vector<std::string> args;
+  EXPECT_EQ(MOUNT_ERROR_NONE, ConfigureSandbox(kSomeSource.value(),
+                                               {"IdentityBase64=YWJjCg==",
+                                                "UserKnownHostsBase64=MTIzNDUK",
+                                                "HostName=foobar", "Port=1234"},
+                                               &args));
+
+  EXPECT_THAT(args,
+              IsSupersetOf({StrEq("HostName=foobar"), StrEq("Port=1234")}));
+}
+
+TEST_F(SshfsHelperTest, ConfigureSandboxFailsWithInvalidSource) {
+  EXPECT_CALL(platform_, SetOwnership).Times(0);
+  std::vector<std::string> args;
+  EXPECT_NE(
+      MOUNT_ERROR_NONE,
+      ConfigureSandbox(
+          "foo://bar",
+          {"IdentityBase64=YWJjCg==", "UserKnownHostsBase64=MTIzNDUK"}, &args));
+}
+
+TEST_F(SshfsHelperTest, ConfigureSandboxFailsWithoutId) {
+  EXPECT_CALL(platform_, SetOwnership).Times(0);
+  std::vector<std::string> args;
+  EXPECT_NE(MOUNT_ERROR_NONE,
+            ConfigureSandbox(kSomeSource.value(),
+                             {"UserKnownHostsBase64=MTIzNDUK"}, &args));
+}
+
+TEST_F(SshfsHelperTest, ConfigureSandboxFailsWithoutKnownHosts) {
+  EXPECT_CALL(platform_, SetOwnership).Times(0);
+  std::vector<std::string> args;
+  EXPECT_NE(MOUNT_ERROR_NONE,
+            ConfigureSandbox(kSomeSource.value(), {"IdentityBase64=YWJjCg=="},
+                             &args));
+}
+
+TEST_F(SshfsHelperTest, ConfigureSandboxFailsWithoutDir) {
+  EXPECT_CALL(platform_, SetOwnership).Times(0);
+  ASSERT_TRUE(working_dir_.Delete());
+  std::vector<std::string> args;
+  EXPECT_NE(
+      MOUNT_ERROR_NONE,
+      ConfigureSandbox(
+          kSomeSource.value(),
+          {"IdentityBase64=YWJjCg==", "UserKnownHostsBase64=MTIzNDUK"}, &args));
 }
 
 // Verifies that CanMount correctly identifies handleable URIs.
 TEST_F(SshfsHelperTest, CanMount) {
-  EXPECT_TRUE(helper_.CanMount(Uri::Parse("sshfs://foo")));
-  EXPECT_FALSE(helper_.CanMount(Uri::Parse("sshfss://foo")));
-  EXPECT_FALSE(helper_.CanMount(Uri::Parse("ssh://foo")));
-  EXPECT_FALSE(helper_.CanMount(Uri::Parse("sshfs://")));
-}
+  base::FilePath name;
 
-// Verifies that GetTargetSuffix escapes unwanted chars in URI.
-TEST_F(SshfsHelperTest, GetTargetSuffix) {
-  EXPECT_EQ("foo", helper_.GetTargetSuffix(Uri::Parse("sshfs://foo")));
-  EXPECT_EQ("usr@host_com:",
-            helper_.GetTargetSuffix(Uri::Parse("sshfs://usr@host.com:")));
-  EXPECT_EQ("host:$some$path$__",
-            helper_.GetTargetSuffix(Uri::Parse("sshfs://host:/some/path/..")));
+  EXPECT_TRUE(helper_->CanMount("sshfs://foo", {}, &name));
+  EXPECT_EQ("foo", name.value());
+  EXPECT_TRUE(helper_->CanMount("sshfs://", {}, &name));
+  EXPECT_EQ("sshfs", name.value());
+  EXPECT_TRUE(helper_->CanMount("sshfs://usr@host.com:", {}, &name));
+  EXPECT_EQ("usr@host_com:", name.value());
+  EXPECT_TRUE(helper_->CanMount("sshfs://host:/some/path/..", {}, &name));
+  EXPECT_EQ("host:$some$path$__", name.value());
+
+  EXPECT_FALSE(helper_->CanMount("sshfss://foo", {}, &name));
+  EXPECT_FALSE(helper_->CanMount("ssh://foo", {}, &name));
 }
 
 }  // namespace cros_disks
