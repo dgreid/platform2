@@ -209,9 +209,7 @@ bool TerminaVm::Start(VmBuilder vm_builder) {
       .SetMemory(GetVmMemoryMiB())
       .AppendSerialDevice(GetCrosVmSerial("serial", "earlycon"))
       .AppendSerialDevice(GetCrosVmSerial("virtio-console", "console"))
-      .SetSyslogTag(base::StringPrintf("VM(%u)", vsock_cid_))
-      .AppendKernelParam(
-          "snd_intel8x0.inside_vm=1 snd_intel8x0.ac97_clock=48000");
+      .SetSyslogTag(base::StringPrintf("VM(%u)", vsock_cid_));
 
   if (USE_CROSVM_WL_DMABUF)
     vm_builder.EnableWaylandDmaBuf(true /* enable */);
