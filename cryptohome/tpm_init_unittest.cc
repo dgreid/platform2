@@ -82,9 +82,6 @@ class TpmInitTest : public ::testing::Test {
     files_[to] = files_[from];
     return FileDelete(from);
   }
-  bool FileDeleteDurable(const base::FilePath& path, bool /* recursive */) {
-    return files_.erase(path) == 1;
-  }
   bool FileDelete(const base::FilePath& path) {
     return files_.erase(path) == 1;
   }
@@ -193,8 +190,8 @@ class TpmInitTest : public ::testing::Test {
         .WillByDefault(Invoke(this, &TpmInitTest::FileDelete));
     ON_CALL(platform_, DeletePathRecursively(_))
         .WillByDefault(Invoke(this, &TpmInitTest::FileDelete));
-    ON_CALL(platform_, DeleteFileDurable(_, _))
-        .WillByDefault(Invoke(this, &TpmInitTest::FileDeleteDurable));
+    ON_CALL(platform_, DeleteFileDurable(_))
+        .WillByDefault(Invoke(this, &TpmInitTest::FileDelete));
     ON_CALL(platform_, TouchFileDurable(_))
         .WillByDefault(Invoke(this, &TpmInitTest::FileTouch));
     ON_CALL(platform_, GetFileSize(_, _))

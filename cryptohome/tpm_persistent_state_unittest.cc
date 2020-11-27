@@ -36,7 +36,7 @@ class TpmPersistentStateTest : public ::testing::Test {
   bool FileExists(const base::FilePath& path) const {
     return files_.count(path) > 0;
   }
-  bool FileDelete(const base::FilePath& path, bool /* recursive */) {
+  bool FileDelete(const base::FilePath& path) {
     return files_.erase(path) == 1;
   }
   bool FileTouch(const base::FilePath& path) {
@@ -78,7 +78,7 @@ class TpmPersistentStateTest : public ::testing::Test {
   void SetUp() override {
     ON_CALL(platform_, FileExists(_))
         .WillByDefault(Invoke(this, &TpmPersistentStateTest::FileExists));
-    ON_CALL(platform_, DeleteFileDurable(_, _))
+    ON_CALL(platform_, DeleteFileDurable(_))
         .WillByDefault(Invoke(this, &TpmPersistentStateTest::FileDelete));
     ON_CALL(platform_, TouchFileDurable(_))
         .WillByDefault(Invoke(this, &TpmPersistentStateTest::FileTouch));
@@ -256,7 +256,7 @@ TEST_F(TpmPersistentStateTest, ShallInitialize) {
 
   // Two identical calls to SetShallInitialize result in one file operation.
   // FileExists() is not called again.
-  EXPECT_CALL(platform_, DeleteFileDurable(_, _)).Times(1);
+  EXPECT_CALL(platform_, DeleteFileDurable(_)).Times(1);
   EXPECT_TRUE(tpm_persistent_state_.SetShallInitialize(false));
   EXPECT_FALSE(FileExists(kShallInitializeFile));
   EXPECT_FALSE(tpm_persistent_state_.ShallInitialize());

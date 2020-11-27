@@ -136,9 +136,9 @@ bool TpmPersistentState::ClearStatus() {
   base::AutoLock lock(tpm_status_lock_);
 
   // Ignore errors: just a cleanup - kOpenCryptokiPath is not used.
-  platform_->DeleteFileDurable(kOpenCryptokiPath, true);
+  platform_->DeleteFileDurable(kOpenCryptokiPath);
   // Ignore errors: we will overwrite the status later.
-  platform_->DeleteFileDurable(kTpmStatusFile, false);
+  platform_->DeleteFileDurable(kTpmStatusFile);
   tpm_status_.Clear();
   tpm_status_.set_flags(TpmStatus::NONE);
   read_tpm_status_ = true;
@@ -167,7 +167,7 @@ bool TpmPersistentState::SetReady(bool is_ready) {
   // In any case, let's keep the in-memory flag up-to-date ven if it can't
   // be saved in persistent storage.
   return is_ready ? platform_->TouchFileDurable(kTpmOwnedFile)
-                  : platform_->DeleteFileDurable(kTpmOwnedFile, false);
+                  : platform_->DeleteFileDurable(kTpmOwnedFile);
 }
 
 bool TpmPersistentState::ShallInitialize() const {
@@ -184,9 +184,8 @@ bool TpmPersistentState::SetShallInitialize(bool shall_initialize) {
   shall_initialize_ = shall_initialize;
   // See SetReady() above for the decision why we set the cached flag
   // first despite possible filesystem errors later.
-  return shall_initialize
-             ? platform_->TouchFileDurable(kShallInitializeFile)
-             : platform_->DeleteFileDurable(kShallInitializeFile, false);
+  return shall_initialize ? platform_->TouchFileDurable(kShallInitializeFile)
+                          : platform_->DeleteFileDurable(kShallInitializeFile);
 }
 
 bool TpmPersistentState::LoadTpmStatus() {

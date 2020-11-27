@@ -105,9 +105,8 @@ bool FakePlatform::DeletePathRecursively(const base::FilePath& path) {
   return real_platform_.DeletePathRecursively(TestFilePath(path));
 }
 
-bool FakePlatform::DeleteFileDurable(const base::FilePath& path,
-                                     bool recursive) {
-  return real_platform_.DeleteFileDurable(TestFilePath(path), recursive);
+bool FakePlatform::DeleteFileDurable(const base::FilePath& path) {
+  return real_platform_.DeleteFileDurable(TestFilePath(path));
 }
 
 bool FakePlatform::FileExists(const base::FilePath& path) {

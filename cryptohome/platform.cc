@@ -809,10 +809,8 @@ bool Platform::DeletePathRecursively(const FilePath& path) {
   return base::DeletePathRecursively(path);
 }
 
-bool Platform::DeleteFileDurable(const FilePath& path, bool is_recursive) {
-  if (is_recursive && !base::DeletePathRecursively(path))
-    return false;
-  if (!is_recursive && !base::DeleteFile(path))
+bool Platform::DeleteFileDurable(const FilePath& path) {
+  if (!base::DeletePathRecursively(path))
     return false;
   return SyncDirectory(path.DirName());
 }

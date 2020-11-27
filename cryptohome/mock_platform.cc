@@ -32,7 +32,7 @@ MockPlatform::MockPlatform()
   ON_CALL(*this, DeletePathRecursively(_))
       .WillByDefault(
           Invoke(fake_platform_.get(), &FakePlatform::DeletePathRecursively));
-  ON_CALL(*this, DeleteFileDurable(_, _))
+  ON_CALL(*this, DeleteFileDurable(_))
       .WillByDefault(
           Invoke(fake_platform_.get(), &FakePlatform::DeleteFileDurable));
   ON_CALL(*this, EnumerateDirectoryEntries(_, _, _))
