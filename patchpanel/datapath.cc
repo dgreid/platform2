@@ -137,7 +137,8 @@ void Datapath::Start() {
 
   // Applies the routing tag saved in conntrack for any established connection
   // for sockets created in the host network namespace.
-  if (!ModifyConnmarkRestore(IpFamily::Dual, "OUTPUT", "-A", "" /*iif*/))
+  if (!ModifyConnmarkRestore(IpFamily::Dual, "OUTPUT", "-A", "" /*iif*/,
+                             kFwmarkRoutingMask))
     LOG(ERROR) << "Failed to add OUTPUT CONNMARK restore rule";
 
   // Set up a mangle chain used in OUTPUT for applying the fwmark TrafficSource
@@ -223,7 +224,8 @@ void Datapath::Stop() {
 
   // Stops applying routing tags saved in conntrack for sockets created in the
   // host network namespace.
-  if (!ModifyConnmarkRestore(IpFamily::Dual, "OUTPUT", "-D", "" /*iif*/))
+  if (!ModifyConnmarkRestore(IpFamily::Dual, "OUTPUT", "-D", "" /*iif*/,
+                             kFwmarkRoutingMask))
     LOG(ERROR) << "Failed to remove OUTPUT CONNMARK restore rule";
 
   // Delete the mangle chains
@@ -643,7 +645,8 @@ void Datapath::StartRoutingDevice(const std::string& ext_ifname,
     // PREROUTING to apply any fwmark routing tag saved for the current
     // connection, and rely on implicit routing to the default logical network
     // otherwise.
-    if (!ModifyConnmarkRestore(IpFamily::Dual, "PREROUTING", "-A", int_ifname))
+    if (!ModifyConnmarkRestore(IpFamily::Dual, "PREROUTING", "-A", int_ifname,
+                               kFwmarkRoutingMask))
       LOG(ERROR) << "Failed to add PREROUTING CONNMARK restore rule for "
                  << int_ifname;
 
@@ -666,7 +669,8 @@ void Datapath::StopRoutingDevice(const std::string& ext_ifname,
   if (!ext_ifname.empty()) {
     ModifyFwmarkRoutingTag("PREROUTING", "-D", ext_ifname, int_ifname);
   } else {
-    ModifyConnmarkRestore(IpFamily::Dual, "PREROUTING", "-D", int_ifname);
+    ModifyConnmarkRestore(IpFamily::Dual, "PREROUTING", "-D", int_ifname,
+                          kFwmarkRoutingMask);
     ModifyFwmarkVpnJumpRule("PREROUTING", "-D", int_ifname, {}, {});
   }
 }
@@ -808,13 +812,37 @@ void Datapath::RemoveIPv6Address(const std::string& ifname,
 }
 
 void Datapath::StartConnectionPinning(const std::string& ext_ifname) {
+  // Set in CONNMARK the routing tag associated with |ext_ifname|.
   if (!ModifyConnmarkSetPostrouting(IpFamily::Dual, "-A", ext_ifname))
     LOG(ERROR) << "Could not start connection pinning on " << ext_ifname;
+  // Save in CONNMARK the source tag for egress traffic of this connection.
+  if (!ModifyConnmarkSave(IpFamily::Dual, "POSTROUTING", "-A", ext_ifname,
+                          kFwmarkAllSourcesMask))
+    LOG(ERROR) << "Failed to add POSTROUTING CONNMARK rule for saving fwmark "
+                  "source tag on "
+               << ext_ifname;
+  // Restore from CONNMARK the source tag for ingress traffic of this connection
+  // (returned traffic).
+  if (!ModifyConnmarkRestore(IpFamily::Dual, "PREROUTING", "-A", ext_ifname,
+                             kFwmarkAllSourcesMask))
+    LOG(ERROR) << "Could not setup fwmark source tagging rule for return "
+                  "traffic received on "
+               << ext_ifname;
 }
 
 void Datapath::StopConnectionPinning(const std::string& ext_ifname) {
   if (!ModifyConnmarkSetPostrouting(IpFamily::Dual, "-D", ext_ifname))
     LOG(ERROR) << "Could not stop connection pinning on " << ext_ifname;
+  if (!ModifyConnmarkSave(IpFamily::Dual, "POSTROUTING", "-D", ext_ifname,
+                          kFwmarkAllSourcesMask))
+    LOG(ERROR) << "Could not remove POSTROUTING CONNMARK rule for saving "
+                  "fwmark source tag on "
+               << ext_ifname;
+  if (!ModifyConnmarkRestore(IpFamily::Dual, "PREROUTING", "-D", ext_ifname,
+                             kFwmarkAllSourcesMask))
+    LOG(ERROR) << "Could not remove fwmark source tagging rule for return "
+                  "traffic received on "
+               << ext_ifname;
 }
 
 void Datapath::StartVpnRouting(const std::string& vpn_ifname) {
@@ -870,7 +898,8 @@ bool Datapath::ModifyConnmarkSet(IpFamily family,
 bool Datapath::ModifyConnmarkRestore(IpFamily family,
                                      const std::string& chain,
                                      const std::string& op,
-                                     const std::string& iif) {
+                                     const std::string& iif,
+                                     Fwmark mask) {
   if (chain != "OUTPUT" && (chain != "PREROUTING" || iif.empty())) {
     LOG(ERROR) << "Invalid arguments chain=" << chain << " iif=" << iif;
     return false;
@@ -882,8 +911,22 @@ bool Datapath::ModifyConnmarkRestore(IpFamily family,
     args.push_back(iif);
   }
   args.insert(args.end(), {"-j", "CONNMARK", "--restore-mark", "--mask",
-                           kFwmarkRoutingMask.ToString(), "-w"});
+                           mask.ToString(), "-w"});
+  return ModifyIptables(family, "mangle", args);
+}
 
+bool Datapath::ModifyConnmarkSave(IpFamily family,
+                                  const std::string& chain,
+                                  const std::string& op,
+                                  const std::string& oif,
+                                  Fwmark mask) {
+  std::vector<std::string> args = {op, chain};
+  if (!oif.empty()) {
+    args.push_back("-o");
+    args.push_back(oif);
+  }
+  args.insert(args.end(), {"-j", "CONNMARK", "--save-mark", "--mask",
+                           mask.ToString(), "-w"});
   return ModifyIptables(family, "mangle", args);
 }
 

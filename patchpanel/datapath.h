@@ -286,7 +286,13 @@ class Datapath {
   bool ModifyConnmarkRestore(IpFamily family,
                              const std::string& chain,
                              const std::string& op,
-                             const std::string& iif);
+                             const std::string& iif,
+                             Fwmark mask);
+  bool ModifyConnmarkSave(IpFamily family,
+                          const std::string& chain,
+                          const std::string& op,
+                          const std::string& oif,
+                          Fwmark mask);
   bool ModifyFwmarkRoutingTag(const std::string& chain,
                               const std::string& op,
                               const std::string& ext_ifname,
