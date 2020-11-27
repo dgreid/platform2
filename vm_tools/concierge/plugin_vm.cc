@@ -731,11 +731,10 @@ bool PluginVm::Start(base::FilePath stateful_dir,
   if (vm_permission::IsMicrophoneEnabled(vm_permission_service_proxy_,
                                          permission_token_)) {
     LOG(INFO) << "VM " << id_ << ": microphone access enabled";
-    bind_mounts.push_back(
-        "/run/cras/.cras_unified:/run/cras/.cras_socket:true");
+    bind_mounts.push_back("/run/cras/plugin/unified:/run/cras:true");
   } else {
     LOG(INFO) << "VM " << id_ << ": microphone access disabled";
-    bind_mounts.push_back("/run/cras/.cras_socket::true");
+    bind_mounts.push_back("/run/cras/plugin/playback:/run/cras:true");
   }
 
   // TODO(kimjae): This is a temporary hack to have relative files to be found
