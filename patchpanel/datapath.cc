@@ -156,7 +156,7 @@ void Datapath::Start() {
   // Create rules for tagging local sources with the source tag and the vpn
   // policy tag.
   for (const auto& source : kLocalSourceTypes) {
-    if (ModifyFwmarkLocalSourceTag("-A", source))
+    if (!ModifyFwmarkLocalSourceTag("-A", source))
       LOG(ERROR) << "Failed to create fwmark tagging rule for uid " << source
                  << " in " << kApplyLocalSourceMarkChain;
   }
