@@ -7,6 +7,7 @@
 #include <string>
 
 #include <base/files/file_path.h>
+#include <base/strings/string_split.h>
 #include <brillo/process/process_reaper.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -21,30 +22,40 @@ using testing::DoAll;
 using testing::HasSubstr;
 using testing::Return;
 using testing::SetArgPointee;
+using testing::UnorderedElementsAre;
 
 namespace cros_disks {
 
 namespace {
 
-const uid_t kFilesUID = 700;
-const uid_t kFilesAccessGID = 1501;
-const base::FilePath kWorkingDir("/not_accessed_dir");
 const base::FilePath kMountDir("/mount_point");
 const Uri kSomeSource("smbfs", "foobarbaz");
+
+std::vector<std::string> ParseOptions(const SandboxedProcess& sandbox) {
+  CHECK_EQ(2, sandbox.arguments().size());
+  CHECK_EQ("-o", sandbox.arguments()[0]);
+  return base::SplitString(sandbox.arguments()[1], ",",
+                           base::WhitespaceHandling::KEEP_WHITESPACE,
+                           base::SplitResult::SPLIT_WANT_ALL);
+}
 
 // Mock Platform implementation for testing.
 class MockPlatform : public Platform {
  public:
   MockPlatform() = default;
 
-  MOCK_METHOD(bool,
-              GetUserAndGroupId,
-              (const std::string&, uid_t*, gid_t*),
-              (const, override));
-  MOCK_METHOD(bool,
-              GetGroupId,
-              (const std::string&, gid_t*),
-              (const, override));
+  bool GetUserAndGroupId(const std::string& name,
+                         uid_t* uid,
+                         gid_t* gid) const override {
+    if (name == "fuse-smbfs") {
+      if (uid)
+        *uid = 123;
+      if (gid)
+        *gid = 456;
+      return true;
+    }
+    return false;
+  }
 };
 
 }  // namespace
@@ -52,36 +63,38 @@ class MockPlatform : public Platform {
 class SmbfsHelperTest : public ::testing::Test {
  public:
   SmbfsHelperTest() : helper_(&platform_, &process_reaper_) {
-    ON_CALL(platform_, GetGroupId(FUSEHelper::kFilesGroup, _))
-        .WillByDefault(DoAll(SetArgPointee<1>(kFilesAccessGID), Return(true)));
-    ON_CALL(platform_, GetUserAndGroupId(FUSEHelper::kFilesUser, _, _))
-        .WillByDefault(DoAll(SetArgPointee<1>(kFilesUID), Return(true)));
-    ON_CALL(platform_, GetUserAndGroupId("fuse-smbfs", _, _))
-        .WillByDefault(
-            DoAll(SetArgPointee<1>(123), SetArgPointee<2>(456), Return(true)));
   }
 
  protected:
+  MountErrorType ConfigureSandbox(const std::string& source,
+                                  std::vector<std::string>* args) {
+    FakeSandboxedProcess sandbox;
+    MountErrorType error =
+        helper_.ConfigureSandbox(source, kMountDir, {}, &sandbox);
+    if (error == MOUNT_ERROR_NONE) {
+      *args = ParseOptions(sandbox);
+    }
+    return error;
+  }
+
   MockPlatform platform_;
   brillo::ProcessReaper process_reaper_;
   SmbfsHelper helper_;
 };
 
 TEST_F(SmbfsHelperTest, CreateMounter) {
-  auto mounter = helper_.CreateMounter(kWorkingDir, kSomeSource, kMountDir, {});
-  const FUSEMounterLegacy* legacy =
-      static_cast<FUSEMounterLegacy*>(mounter.get());
-  std::string opts = legacy->mount_options().ToString();
-  EXPECT_THAT(opts, HasSubstr("mojo_id=foobarbaz"));
-  EXPECT_THAT(opts, HasSubstr("uid=700"));
-  EXPECT_THAT(opts, HasSubstr("gid=1501"));
+  std::vector<std::string> args;
+  EXPECT_EQ(MOUNT_ERROR_NONE, ConfigureSandbox(kSomeSource.value(), &args));
+  EXPECT_THAT(
+      args, UnorderedElementsAre("uid=1000", "gid=1001", "mojo_id=foobarbaz"));
 }
 
 TEST_F(SmbfsHelperTest, CanMount) {
-  EXPECT_TRUE(helper_.CanMount(Uri::Parse("smbfs://foo")));
-  EXPECT_FALSE(helper_.CanMount(Uri::Parse("smbfss://foo")));
-  EXPECT_FALSE(helper_.CanMount(Uri::Parse("smb://foo")));
-  EXPECT_FALSE(helper_.CanMount(Uri::Parse("smbfs://")));
+  base::FilePath name;
+  EXPECT_TRUE(helper_.CanMount("smbfs://foo", {}, &name));
+  EXPECT_FALSE(helper_.CanMount("smbfss://foo", {}, &name));
+  EXPECT_FALSE(helper_.CanMount("smb://foo", {}, &name));
+  EXPECT_TRUE(helper_.CanMount("smbfs://", {}, &name));
 }
 
 }  // namespace cros_disks

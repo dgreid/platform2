@@ -15,6 +15,7 @@
 #include "cros-disks/mount_options.h"
 #include "cros-disks/mount_point.h"
 #include "cros-disks/platform.h"
+#include "cros-disks/quote.h"
 #include "cros-disks/sandboxed_process.h"
 #include "cros-disks/uri.h"
 
@@ -30,83 +31,76 @@ const char kMojoIdOptionPrefix[] = "mojo_id=";
 const char kDbusSocketPath[] = "/run/dbus";
 const char kDaemonStorePath[] = "/run/daemon-store/smbfs";
 
-class SmbfsMounter : public FUSEMounterLegacy {
- public:
-  SmbfsMounter(std::string filesystem_type,
-               MountOptions mount_options,
-               const Platform* platform,
-               brillo::ProcessReaper* process_reaper,
-               std::string mount_program,
-               std::string mount_user,
-               std::string seccomp_policy,
-               BindPaths bind_paths)
-      : FUSEMounterLegacy({.bind_paths = std::move(bind_paths),
-                           .filesystem_type = std::move(filesystem_type),
-                           .mount_options = std::move(mount_options),
-                           .mount_program = std::move(mount_program),
-                           .mount_user = std::move(mount_user),
-                           .network_access = true,
-                           .platform = platform,
-                           .process_reaper = process_reaper,
-                           .seccomp_policy = seccomp_policy}) {}
-
-  // FUSEMounterLegacy overrides:
-  std::unique_ptr<SandboxedProcess> PrepareSandbox(
-      const std::string& source,
-      const base::FilePath& target_path,
-      std::vector<std::string> params,
-      MountErrorType* error) const override {
-    return FUSEMounterLegacy::PrepareSandbox("", target_path, params, error);
-  }
-};
+OwnerUser ResolveSmbFsUser(const Platform* platform) {
+  OwnerUser user;
+  PCHECK(platform->GetUserAndGroupId(kUserName, &user.uid, &user.gid));
+  return user;
+}
 
 }  // namespace
 
 SmbfsHelper::SmbfsHelper(const Platform* platform,
                          brillo::ProcessReaper* process_reaper)
-    : FUSEHelper(kType,
-                 platform,
-                 process_reaper,
-                 base::FilePath(kHelperTool),
-                 kUserName) {}
+    : FUSEMounterHelper(platform,
+                        process_reaper,
+                        kType,
+                        /* nosymfollow= */ true,
+                        &sandbox_factory_),
+      sandbox_factory_(platform,
+                       SandboxedExecutable{base::FilePath(kHelperTool),
+                                           base::FilePath(kSeccompPolicyFile)},
+                       ResolveSmbFsUser(platform),
+                       /* has_network_access= */ true) {}
 
 SmbfsHelper::~SmbfsHelper() = default;
 
-std::unique_ptr<FUSEMounter> SmbfsHelper::CreateMounter(
-    const base::FilePath& working_dir,
-    const Uri& source,
-    const base::FilePath& target_path,
-    const std::vector<std::string>& options) const {
-  const std::string& mojo_id = source.path();
+bool SmbfsHelper::CanMount(const std::string& source,
+                           const std::vector<std::string>& params,
+                           base::FilePath* suggested_name) const {
+  const Uri uri = Uri::Parse(source);
+  if (!uri.valid() || uri.scheme() != kType)
+    return false;
 
-  // Enforced by FUSEHelper::CanMount().
-  DCHECK(!mojo_id.empty());
+  if (uri.path().empty()) {
+    *suggested_name = base::FilePath(kType);
+  } else {
+    *suggested_name = base::FilePath(uri.path());
+  }
+  return true;
+}
 
-  uid_t files_uid;
-  gid_t files_gid;
-  if (!platform()->GetUserAndGroupId(kFilesUser, &files_uid, nullptr) ||
-      !platform()->GetGroupId(kFilesGroup, &files_gid)) {
-    return nullptr;
+MountErrorType SmbfsHelper::ConfigureSandbox(
+    const std::string& source,
+    const base::FilePath& /*target_path*/,
+    std::vector<std::string> /*params*/,
+    SandboxedProcess* sandbox) const {
+  const Uri uri = Uri::Parse(source);
+  if (!uri.valid() || uri.scheme() != kType || uri.path().empty()) {
+    LOG(ERROR) << "Inavlid source " << quote(source);
+    return MOUNT_ERROR_INVALID_DEVICE_PATH;
   }
 
-  MountOptions mount_options;
-  mount_options.EnforceOption(kMojoIdOptionPrefix + mojo_id);
-  mount_options.Initialize(options, true, base::NumberToString(files_uid),
-                           base::NumberToString(files_gid));
-
   // Bind DBus communication socket and daemon-store into the sandbox.
-  FUSEMounterLegacy::BindPaths paths = {
-      {kDbusSocketPath, true},
-      // Need to use recursive binding because the daemon-store directory in
-      // their cryptohome is bind mounted inside |kDaemonStorePath|.
-      // TODO(crbug.com/1054705): Pass the user account hash as a mount option
-      // and restrict binding to that specific directory.
-      {kDaemonStorePath, true /* writable */, true /* recursive */},
-  };
+  if (!sandbox->BindMount(kDbusSocketPath, kDbusSocketPath,
+                          /* writable= */ true, /* recursive= */ false)) {
+    LOG(ERROR) << "Cannot bind " << quote(kDbusSocketPath);
+    return MOUNT_ERROR_INTERNAL;
+  }
+  // Need to use recursive binding because the daemon-store directory in
+  // their cryptohome is bind mounted inside |kDaemonStorePath|.
+  // TODO(crbug.com/1054705): Pass the user account hash as a mount option
+  // and restrict binding to that specific directory.
+  if (!sandbox->BindMount(kDaemonStorePath, kDaemonStorePath,
+                          /* writable= */ true, /* recursive= */ true)) {
+    LOG(ERROR) << "Cannot bind " << quote(kDaemonStorePath);
+    return MOUNT_ERROR_INTERNAL;
+  }
 
-  return std::make_unique<SmbfsMounter>(
-      type(), mount_options, platform(), process_reaper(),
-      program_path().value(), user(), kSeccompPolicyFile, paths);
+  sandbox->AddArgument("-o");
+  sandbox->AddArgument(base::JoinString(
+      {"uid=1000", "gid=1001", kMojoIdOptionPrefix + uri.path()}, ","));
+
+  return MOUNT_ERROR_NONE;
 }
 
 }  // namespace cros_disks

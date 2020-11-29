@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 
-#include "cros-disks/fuse_helper.h"
+#include "cros-disks/fuse_mounter.h"
 
 namespace cros_disks {
 
@@ -23,7 +23,7 @@ class Platform;
 // |mojo_id| is an opaque string, which is the string representation of a
 // base::UnguessableToken created by calling base::UnguessableToken::ToString().
 // It is used to bootstrap a Mojo IPC connection to Chrome.
-class SmbfsHelper : public FUSEHelper {
+class SmbfsHelper : public FUSEMounterHelper {
  public:
   SmbfsHelper(const Platform* platform, brillo::ProcessReaper* process_reaper);
   SmbfsHelper(const SmbfsHelper&) = delete;
@@ -31,14 +31,19 @@ class SmbfsHelper : public FUSEHelper {
 
   ~SmbfsHelper() override;
 
-  // FUSEHelper overrides:
-  std::unique_ptr<FUSEMounter> CreateMounter(
-      const base::FilePath& working_dir,
-      const Uri& source,
-      const base::FilePath& target_path,
-      const std::vector<std::string>& options) const override;
+  bool CanMount(const std::string& source,
+                const std::vector<std::string>& params,
+                base::FilePath* suggested_name) const override;
+
+ protected:
+  MountErrorType ConfigureSandbox(const std::string& source,
+                                  const base::FilePath& target_path,
+                                  std::vector<std::string> params,
+                                  SandboxedProcess* sandbox) const override;
 
  private:
+  const FUSESandboxedProcessFactory sandbox_factory_;
+
   friend class SmbfsHelperTest;
 };
 
