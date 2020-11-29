@@ -163,6 +163,8 @@ MOUNTDIRS="
 
 # Mount stateful partition for dev packages.
 dev_mount_packages() {
+  # Optionally pass a device to mount the dev-image from.
+  local device=$1
   # Set up the logging dir that ASAN compiled programs will write to.  We want
   # any privileged account to be able to write here so unittests need not worry
   # about settings things up ahead of time.  See crbug.com/453579 for details.
@@ -176,6 +178,11 @@ dev_mount_packages() {
   # Create dev_image directory in base images in developer mode.
   if [ ! -d "${STATEFUL_PARTITION}/dev_image" ]; then
     mkdir -p -m 0755 "${STATEFUL_PARTITION}/dev_image"
+  fi
+
+  # Mount the dev image if there is a separate device available.
+  if [ -n "${device}" ]; then
+    mount -n "${device}" "${STATEFUL_PARTITION}/dev_image"
   fi
 
   # Mount and then remount to enable exec/suid.
@@ -232,6 +239,11 @@ dev_unmount_packages() {
 
   # unmount /usr/local to match dev_mount_package.
   umount -n /usr/local
+
+  # If the dev image is mounted using a logical volume, unmount it.
+  if mountpoint -q /mnt/stateful_partition/dev_image; then
+    umount /mnt/stateful_partition/dev_image
+  fi
 }
 
 # Copy contents in src path to dst path if it exists.

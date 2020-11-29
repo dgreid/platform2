@@ -260,6 +260,7 @@ sanity_check_clock
 # image also uses initramfs but it never reach here). When using initrd+tftpboot
 # (some old netboot factory installer), ROOTDEV_TYPE will be /dev/ram.
 STATE_DEV=""
+DEV_IMAGE=""
 if [ "$ROOTDEV_RET_CODE" = "0" ] && [ "$ROOTDEV_TYPE" != "/dev/ram" ]; then
   # Find our stateful partition mount point.
   # To support multiple volumes on a single UBI device, if the stateful
@@ -286,6 +287,7 @@ if [ "$ROOTDEV_RET_CODE" = "0" ] && [ "$ROOTDEV_TYPE" != "/dev/ram" ]; then
     if [ -n "${vg_name}" ]; then
       vgchange -ay "${vg_name}"
       STATE_DEV="/dev/${vg_name}/unencrypted"
+      DEV_IMAGE="/dev/${vg_name}/dev-image"
     fi
   fi
 
@@ -715,7 +717,7 @@ if [ -f /sys/fs/selinux/enforce ]; then
 fi
 
 # Mount dev packages.
-dev_mount_packages
+dev_mount_packages "${DEV_IMAGE}"
 dev_pop_paths_to_preserve
 
 if [ "${DISABLE_STATEFUL_SECURITY_HARDENING}" = "false" ]; then
