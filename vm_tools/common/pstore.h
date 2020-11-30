@@ -5,9 +5,12 @@
 #ifndef VM_TOOLS_COMMON_PSTORE_H_
 #define VM_TOOLS_COMMON_PSTORE_H_
 
+#include <cstdint>
+
 namespace vm_tools {
 
-constexpr uint32_t kPstoreSize = 1024 * 1024;
+constexpr const char kArcVmPstorePath[] = "/run/arcvm/arcvm.pstore";
+constexpr uint32_t kArcVmPstoreSize = 1024 * 1024;
 
 }  // namespace vm_tools
 

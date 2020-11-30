@@ -20,9 +20,6 @@ namespace {
 // Android data directory.
 constexpr const char kAndroidDataDir[] = "/run/arcvm/android-data";
 
-// ARCVM pstore path.
-constexpr const char kArcVmPstorePath[] = "/run/arcvm/arcvm.pstore";
-
 }  // namespace
 
 std::unique_ptr<dbus::Response> Service::StartArcVm(
@@ -179,9 +176,9 @@ std::unique_ptr<dbus::Response> Service::StartArcVm(
       .SetCpus(request.cpus())
       .AppendKernelParam(base::JoinString(params, " "))
       .AppendCustomParam("--android-fstab", fstab.value())
-      .AppendCustomParam(
-          "--pstore",
-          base::StringPrintf("path=%s,size=%d", kArcVmPstorePath, kPstoreSize))
+      .AppendCustomParam("--pstore",
+                         base::StringPrintf("path=%s,size=%d", kArcVmPstorePath,
+                                            kArcVmPstoreSize))
       .AppendSharedDir(shared_data)
       .AppendSharedDir(shared_data_media)
       .EnableSmt(false /* enable */);

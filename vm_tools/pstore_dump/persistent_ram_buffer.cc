@@ -22,9 +22,11 @@ namespace pstore_dump {
 // kernel. So it's difficult to avoid embedding them as constants. We can see
 // some of these values from /proc/cmdline in ARCVM, but this file is
 // unavailable when ARCVM is not running.
-constexpr int kRamoopsMemSize = kPstoreSize;          // decided by vm_concierge
-constexpr int kRamoopsRecordSize = kPstoreSize / 4;   // calculated at crosvm
-constexpr int kRamoopsConsoleSize = kPstoreSize / 4;  // calculated at crosvm
+constexpr int kRamoopsMemSize = kArcVmPstoreSize;  // decided by vm_concierge
+constexpr int kRamoopsRecordSize =
+    kArcVmPstoreSize / 4;  // calculated at crosvm
+constexpr int kRamoopsConsoleSize =
+    kArcVmPstoreSize / 4;  // calculated at crosvm
 constexpr int kRamoopsFtraceSize =
     0x1000;  // default for kernel module parameter ramoops.ftrace_size
 constexpr int kRamoopsPmsgSize =
