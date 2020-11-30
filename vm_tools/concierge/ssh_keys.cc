@@ -89,8 +89,8 @@ std::string LoadKeyFromPath(const base::FilePath& path) {
 bool GenerateKeyPair(const base::FilePath& path) {
   // First we need to ensure the output paths are empty, there is no option to
   // have ssh-keygen overwrite the targets.
-  if (!base::DeleteFile(path, false) ||
-      !base::DeleteFile(path.AddExtension(kPubKeyExt), false)) {
+  if (!base::DeleteFile(path) ||
+      !base::DeleteFile(path.AddExtension(kPubKeyExt))) {
     PLOG(ERROR) << "Failed ensuring SSH keys don't exist before creation at "
                 << "path: " << path.value();
     return false;
@@ -217,7 +217,7 @@ bool EraseGuestSshKeys(const std::string& cryptohome_id,
     if (base::StartsWith(enum_path.BaseName().value(), target_prefix,
                          base::CompareCase::SENSITIVE)) {
       // Found an ssh key for this VM, delete it.
-      if (!base::DeleteFile(enum_path, false)) {
+      if (!base::DeleteFile(enum_path)) {
         PLOG(ERROR) << "Failed deleting generated SSH key for VM: "
                     << enum_path.value();
         rv = false;

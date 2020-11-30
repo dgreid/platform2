@@ -2208,8 +2208,7 @@ std::unique_ptr<dbus::Response> Service::DestroyDiskImage(
     base::FilePath iso_dir;
     if (GetPluginIsoDirectory(vm_id.name(), vm_id.owner_id(),
                               false /* create */, &iso_dir) &&
-        base::PathExists(iso_dir) &&
-        !base::DeleteFile(iso_dir, true /* recursive */)) {
+        base::PathExists(iso_dir) && !base::DeletePathRecursively(iso_dir)) {
       LOG(ERROR) << "Unable to remove ISO directory for " << vm_id.name();
 
       response.set_status(DISK_STATUS_FAILED);
@@ -2222,13 +2221,15 @@ std::unique_ptr<dbus::Response> Service::DestroyDiskImage(
     // Delete GPU shader disk cache.
     base::FilePath gpu_cache_path =
         GetVmGpuCachePath(request.cryptohome_id(), request.disk_path());
-    if (!base::DeleteFile(gpu_cache_path, true)) {
+    if (!base::DeletePathRecursively(gpu_cache_path)) {
       LOG(ERROR) << "Failed to remove GPU cache for VM: " << gpu_cache_path;
     }
   }
 
-  if (!base::DeleteFile(
-          disk_path, location == STORAGE_CRYPTOHOME_PLUGINVM /* recursive */)) {
+  bool delete_result = (location == STORAGE_CRYPTOHOME_PLUGINVM)
+                           ? base::DeletePathRecursively(disk_path)
+                           : base::DeleteFile(disk_path);
+  if (!delete_result) {
     response.set_status(DISK_STATUS_FAILED);
     response.set_failure_reason("Disk removal failed");
     writer.AppendProtoAsArrayOfBytes(response);
@@ -3444,7 +3445,7 @@ base::FilePath Service::PrepareVmGpuCachePath(const std::string& owner_id,
   // dir during this boot. Otherwise, we erase Base dir to wipe out any
   // previous Boot dir.
   if (!base::DirectoryExists(bootid_path)) {
-    if (!base::DeleteFile(base_path, true)) {
+    if (!base::DeletePathRecursively(base_path)) {
       LOG(ERROR) << "Failed to delete gpu cache directory: " << base_path
                  << " shader caching will be disabled.";
       return base::FilePath();

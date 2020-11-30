@@ -317,8 +317,7 @@ void CleanUpAfterInstall(const VmId& vm_id, const base::FilePath& iso_path) {
 
     if (image_name == "/iso/install.iso") {
       base::FilePath image_path = iso_path.Append("install.iso");
-      if (base::PathExists(image_path) &&
-          !DeleteFile(image_path, false /* recursive */)) {
+      if (base::PathExists(image_path) && !DeleteFile(image_path)) {
         LOG(WARNING) << "Failed to delete " << image_path.value();
       }
     }

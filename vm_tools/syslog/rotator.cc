@@ -74,7 +74,7 @@ void Rotator::RotateLogFiles(const base::FilePath& root_path, int max_index) {
       if (file_index >= max_index) {
         // Delete files with higher indices. To protect a file
         // from deletion, it should use a different suffix from ".log.N"
-        if (!base::DeleteFile(from_path, /*recursive*/ false)) {
+        if (!base::DeleteFile(from_path)) {
           LOG(ERROR) << "Error deleting " << from_path << ": "
                      << base::File::ErrorToString(
                             base::File::GetLastFileError());

@@ -257,7 +257,7 @@ base::ScopedFD PluginVm::CreateUnixSocket(const base::FilePath& path,
   memcpy(sa.sun_path, path.value().data(), path.value().length());
 
   // Delete any old socket instances.
-  if (PathExists(path) && !DeleteFile(path, false)) {
+  if (PathExists(path) && !DeleteFile(path)) {
     PLOG(ERROR) << "failed to delete " << path.value();
     return base::ScopedFD();
   }

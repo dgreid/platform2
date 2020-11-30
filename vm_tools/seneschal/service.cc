@@ -1140,7 +1140,7 @@ std::unique_ptr<dbus::Response> Service::UnsharePath(
   // dirs that were created prior to this path being mounted, and any empty
   // directories that were created for this mount.  Recursive delete is safe
   // since no mounts exist under this directory.
-  if (!base::DeleteFile(path_to_delete, true)) {
+  if (!base::DeletePathRecursively(path_to_delete)) {
     LOG(ERROR) << "Delete path failed";
     response.set_failure_reason("Delete path failed");
     writer.AppendProtoAsArrayOfBytes(response);
