@@ -504,6 +504,12 @@ class SessionManagerImplTest : public ::testing::Test,
       return *this;
     }
 
+    StartArcInstanceExpectationsBuilder& SetDalvikMemoryProfile(
+        StartArcMiniContainerRequest_DalvikMemoryProfile v) {
+      dalvik_memory_profile_ = v;
+      return *this;
+    }
+
     std::vector<std::string> Build() const {
       std::vector<std::string> result({
           "CHROMEOS_DEV_MODE=" + std::to_string(dev_mode_),
@@ -534,6 +540,23 @@ class SessionManagerImplTest : public ::testing::Test,
         result.emplace_back(
             base::StringPrintf("ARC_LCD_DENSITY=%d", arc_lcd_density_));
       }
+
+      switch (dalvik_memory_profile_) {
+        case StartArcMiniContainerRequest::MEMORY_PROFILE_DEFAULT:
+          break;
+        case StartArcMiniContainerRequest::MEMORY_PROFILE_4G:
+          result.emplace_back("DALVIK_MEMORY_PROFILE=4G");
+          break;
+        case StartArcMiniContainerRequest::MEMORY_PROFILE_8G:
+          result.emplace_back("DALVIK_MEMORY_PROFILE=8G");
+          break;
+        case StartArcMiniContainerRequest::MEMORY_PROFILE_16G:
+          result.emplace_back("DALVIK_MEMORY_PROFILE=16G");
+          break;
+        default:
+          NOTREACHED();
+      }
+
       return result;
     }
 
@@ -547,7 +570,8 @@ class SessionManagerImplTest : public ::testing::Test,
     StartArcMiniContainerRequest_PlayStoreAutoUpdate play_store_auto_update_ =
         StartArcMiniContainerRequest_PlayStoreAutoUpdate_AUTO_UPDATE_DEFAULT;
     int arc_lcd_density_ = -1;
-
+    StartArcMiniContainerRequest_DalvikMemoryProfile dalvik_memory_profile_ =
+        StartArcMiniContainerRequest_DalvikMemoryProfile_MEMORY_PROFILE_DEFAULT;
   };
 
   class UpgradeContainerExpectationsBuilder {
@@ -646,7 +670,6 @@ class SessionManagerImplTest : public ::testing::Test,
     std::string preferred_languages_;
     int supervision_transition_ = 0;
     bool enable_adb_sideload_ = false;
-
   };
 #endif
 
@@ -1011,6 +1034,20 @@ class SessionManagerPlayStoreAutoUpdateTest
       const SessionManagerPlayStoreAutoUpdateTest&) = delete;
 
   ~SessionManagerPlayStoreAutoUpdateTest() override = default;
+};
+
+class SessionManagerDalvikMemoryProfileTest
+    : public SessionManagerImplTest,
+      public testing::WithParamInterface<
+          StartArcMiniContainerRequest_DalvikMemoryProfile> {
+ public:
+  SessionManagerDalvikMemoryProfileTest() = default;
+  SessionManagerDalvikMemoryProfileTest(
+      const SessionManagerDalvikMemoryProfileTest&) = delete;
+  SessionManagerDalvikMemoryProfileTest& operator=(
+      const SessionManagerDalvikMemoryProfileTest&) = delete;
+
+  ~SessionManagerDalvikMemoryProfileTest() override = default;
 };
 
 const pid_t SessionManagerImplTest::kFakePid = 4;
@@ -2590,6 +2627,34 @@ INSTANTIATE_TEST_SUITE_P(
         {StartArcMiniContainerRequest_PlayStoreAutoUpdate_AUTO_UPDATE_DEFAULT,
          StartArcMiniContainerRequest_PlayStoreAutoUpdate_AUTO_UPDATE_ON,
          StartArcMiniContainerRequest_PlayStoreAutoUpdate_AUTO_UPDATE_OFF}));
+
+TEST_P(SessionManagerDalvikMemoryProfileTest, DalvikMemoryProfile) {
+  ExpectAndRunStartSession(kSaneEmail);
+
+  StartArcMiniContainerRequest request;
+  request.set_dalvik_memory_profile(GetParam());
+
+  // First, start ARC for login screen.
+  EXPECT_CALL(*init_controller_,
+              TriggerImpulse(SessionManagerImpl::kStartArcInstanceImpulse,
+                             StartArcInstanceExpectationsBuilder()
+                                 .SetDalvikMemoryProfile(GetParam())
+                                 .Build(),
+
+                             InitDaemonController::TriggerMode::ASYNC))
+      .WillOnce(Return(ByMove(dbus::Response::CreateEmpty())));
+
+  brillo::ErrorPtr error;
+  EXPECT_TRUE(impl_->StartArcMiniContainer(&error, SerializeAsBlob(request)));
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    ,
+    SessionManagerDalvikMemoryProfileTest,
+    ::testing::ValuesIn({StartArcMiniContainerRequest::MEMORY_PROFILE_DEFAULT,
+                         StartArcMiniContainerRequest::MEMORY_PROFILE_4G,
+                         StartArcMiniContainerRequest::MEMORY_PROFILE_8G,
+                         StartArcMiniContainerRequest::MEMORY_PROFILE_16G}));
 
 TEST_F(SessionManagerImplTest, UpgradeArcContainerForDemoSession) {
   ExpectAndRunStartSession(kSaneEmail);

@@ -499,6 +499,15 @@ bool IsChromeOSUserAvailable(Mode mode) {
   }
 }
 
+// Converts Dalvik memory profile to androidboot property if applicable.
+std::string GetDalvikMemoryProfileParam(
+    const std::string& dalvik_memory_profile) {
+  if (dalvik_memory_profile.empty())
+    return std::string();
+  return base::StringPrintf("androidboot.arc_dalvik_memory_profile=%s ",
+                            dalvik_memory_profile.c_str());
+}
+
 }  // namespace
 
 // A struct that holds all the FilePaths ArcSetup uses.
@@ -1110,6 +1119,7 @@ void ArcSetup::CreateAndroidCmdlineFile(
     bool is_inside_vm,
     bool is_debuggable,
     PlayStoreAutoUpdate play_store_auto_update,
+    const std::string& dalvik_memory_profile,
     bool disable_system_default_app) {
   const base::FilePath lsb_release_file_path("/etc/lsb-release");
   LOG(INFO) << "Developer mode is " << is_dev_mode;
@@ -1138,6 +1148,10 @@ void ArcSetup::CreateAndroidCmdlineFile(
       break;
   }
   LOG(INFO) << "native_bridge is \"" << native_bridge << "\"";
+  LOG(INFO) << "dalvik memory profile is \""
+            << (dalvik_memory_profile.empty() ? "default"
+                                              : dalvik_memory_profile)
+            << "\"";
 
   // Get the CLOCK_BOOTTIME offset and send it to the container as the at which
   // the container "booted". Given that there is no way to namespace time in
@@ -1171,12 +1185,14 @@ void ArcSetup::CreateAndroidCmdlineFile(
       "androidboot.arc_custom_tabs=%d "
       "androidboot.chromeos_channel=%s "
       "%s" /* Play Store auto-update mode */
+      "%s" /* Dalvik memory profile */
       "androidboot.disable_system_default_app=%d "
       "androidboot.boottime_offset=%" PRId64 "\n" /* in nanoseconds */,
       is_dev_mode, !is_dev_mode, is_inside_vm, is_debuggable, arc_lcd_density,
       native_bridge.c_str(), arc_file_picker, arc_custom_tabs,
       chromeos_channel.c_str(),
       GetPlayStoreAutoUpdateParam(play_store_auto_update).c_str(),
+      GetDalvikMemoryProfileParam(dalvik_memory_profile).c_str(),
       disable_system_default_app,
       ts.tv_sec * base::Time::kNanosecondsPerSecond + ts.tv_nsec);
 
@@ -2060,6 +2076,8 @@ void ArcSetup::OnSetup() {
   }
 
   PlayStoreAutoUpdate play_store_auto_update;
+  std::string dalvik_memory_profile;
+
   bool play_store_auto_update_on;
   // PLAY_AUTO_UPDATE forces Play Store auto-update feature to on or off. If not
   // set, its state is left unchanged.
@@ -2071,13 +2089,16 @@ void ArcSetup::OnSetup() {
     play_store_auto_update = PlayStoreAutoUpdate::kDefault;
   }
 
+  config_.GetString("DALVIK_MEMORY_PROFILE", &dalvik_memory_profile);
+
   SetUpSharedMountPoints();
   CreateContainerFilesAndDirectories();
   ApplyPerBoardConfigurations();
   SetUpSharedTmpfsForExternalStorage();
   SetUpFilesystemForObbMounter();
   CreateAndroidCmdlineFile(is_dev_mode, is_inside_vm, is_debuggable,
-                           play_store_auto_update, disable_system_default_app);
+                           play_store_auto_update, dalvik_memory_profile,
+                           disable_system_default_app);
   CreateFakeProcfsFiles();
   SetUpMountPointForDebugFilesystem(is_dev_mode);
   SetUpMountPointsForMedia();

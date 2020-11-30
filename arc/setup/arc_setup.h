@@ -184,6 +184,7 @@ class ArcSetup {
                                 bool is_inside_vm,
                                 bool is_debuggable,
                                 PlayStoreAutoUpdate play_store_auto_update,
+                                const std::string& dalvik_memory_profile,
                                 bool disable_system_default_app);
 
   // Create fake procfs entries expected by android.

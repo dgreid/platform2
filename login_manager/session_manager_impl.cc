@@ -1268,6 +1268,23 @@ bool SessionManagerImpl::StartArcMiniContainer(
                    << request.play_store_auto_update() << ".";
   }
 
+  switch (request.dalvik_memory_profile()) {
+    case StartArcMiniContainerRequest_DalvikMemoryProfile_MEMORY_PROFILE_DEFAULT:
+      break;
+    case StartArcMiniContainerRequest_DalvikMemoryProfile_MEMORY_PROFILE_4G:
+      env_vars.emplace_back("DALVIK_MEMORY_PROFILE=4G");
+      break;
+    case StartArcMiniContainerRequest_DalvikMemoryProfile_MEMORY_PROFILE_8G:
+      env_vars.emplace_back("DALVIK_MEMORY_PROFILE=8G");
+      break;
+    case StartArcMiniContainerRequest_DalvikMemoryProfile_MEMORY_PROFILE_16G:
+      env_vars.emplace_back("DALVIK_MEMORY_PROFILE=16G");
+      break;
+    default:
+      NOTREACHED() << "Unhandled dalvik_memory_profle: "
+                   << request.dalvik_memory_profile() << ".";
+  }
+
   if (!StartArcContainer(env_vars, error)) {
     DCHECK(*error);
     return false;
