@@ -120,7 +120,7 @@ namespace Log {
 void setDebugLevel(void);
 void print_log(bool enable, const char *module, const int level, const char *format, ...);
 bool isDebugLevelEnable(int level);
-bool isModulePrintAble(const char *module);
+bool isModulePrintable(const char *module);
 bool isDumpMediaTopo(void);
 bool isDumpMediaInfo(void);
 void ccaPrintError(const char *fmt, va_list ap);

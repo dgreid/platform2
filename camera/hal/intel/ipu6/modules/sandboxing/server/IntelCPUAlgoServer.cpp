@@ -18,7 +18,6 @@
 
 #include "modules/sandboxing/server/IntelCPUAlgoServer.h"
 
-#include <base/logging.h>
 #include <ia_log.h>
 #include <stdlib.h>
 #include <sys/mman.h>

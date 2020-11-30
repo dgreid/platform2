@@ -22,6 +22,8 @@
 #include <stdlib.h>
 #include <stdarg.h>
 
+#include <base/logging.h>
+
 #include "iutils/Utils.h"
 
 #include "CameraLog.h"
@@ -36,33 +38,57 @@ int gSlowlyRunRatio = 0;
 bool gIsDumpMediaTopo = false;
 bool gIsDumpMediaInfo = false;
 
-static void getLogTime(char *timeBuf, int bufLen)
-{
-    // The format of time is: 01-22 15:24:53.071
-    struct timeval tv;
-    gettimeofday(&tv, nullptr);
-    time_t nowtime = tv.tv_sec;
-    struct tm* nowtm = localtime(&nowtime);
-    if (nowtm) { // If nowtm is nullptr, simply print nothing for time info
-        char tmbuf[bufLen];
-        CLEAR(tmbuf);
-        strftime(tmbuf, bufLen, "%m-%d %H:%M:%S", nowtm);
-        snprintf(timeBuf, bufLen, "%s.%03ld", tmbuf, tv.tv_usec/1000);
+static const char* cameraDebugLogToString(int level) {
+    switch (level) {
+        case CAMERA_DEBUG_LOG_LEVEL1:
+            return "LV1";
+        case CAMERA_DEBUG_LOG_LEVEL2:
+            return "LV2";
+        case CAMERA_DEBUG_LOG_REQ_STATE:
+            return "REQ";
+        case CAMERA_DEBUG_LOG_AIQ:
+            return "AIQ";
+        case CAMERA_DEBUG_LOG_XML:
+            return "XML";
+        case CAMERA_DEBUG_LOG_DBG:
+            return "DBG";
+        case CAMERA_DEBUG_LOG_INFO:
+            return "INF";
+        case CAMERA_DEBUG_LOG_ERR:
+            return "ERR";
+        case CAMERA_DEBUG_LOG_WARNING:
+            return "WAR";
+        case CAMERA_DEBUG_LOG_VERBOSE:
+            return "VER";
+        case CAMERA_DEBUG_LOG_VC_SYNC:
+            return "VCSYNC";
+        case CAMERA_DEBUG_LOG_GRAPH:
+            return "GRAPH";
+        default:
+            return "UKN";
     }
 }
 
 __attribute__((__format__ (__printf__, 3, 0)))
-static void printLog(const char *module, const char *level, const char *fmt, va_list ap)
+static void printLog(const char *module, int level, const char *fmt, va_list ap)
 {
-    // Add time into beginning of the log.
-    const int BUF_LEN = 64;
-    char timeBuf[BUF_LEN] = {'\0'};
+    char prefix[64] = {};
+    snprintf(prefix, sizeof(prefix), "[%s]: CamHAL_%s:", cameraDebugLogToString(level), module);
 
-    getLogTime(timeBuf, BUF_LEN);
+    char message[256] = {};
+    vsnprintf(message, sizeof(message), fmt, ap);
 
-    fprintf(stdout, "%s: [%s]: CamHAL_%s:", timeBuf, level, module);
-    vfprintf(stdout, fmt, ap);
-    fprintf(stdout, "\n");
+    switch (level) {
+        case CAMERA_DEBUG_LOG_ERR:
+            LOG(ERROR) << prefix << message;
+            break;
+        case CAMERA_DEBUG_LOG_WARNING:
+            LOG(WARNING) << prefix << message;
+            break;
+        default:
+            LOG(INFO) << prefix << message;
+            break;
+    }
 }
 
 namespace Log {
@@ -136,7 +162,7 @@ bool isDebugLevelEnable(int level)
     return gLogLevel & level;
 }
 
-bool isModulePrintAble(const char *module)
+bool isModulePrintable(const char *module)
 {
     if (gLogModules == nullptr) {
         return true;
@@ -163,57 +189,14 @@ void print_log(bool enable, const char *module, const int level, const char *for
     if (!enable && (level != CAMERA_DEBUG_LOG_ERR))
         return;
 
-    if (!isModulePrintAble(module)) {
+    if (!isModulePrintable(module)) {
         return;
     }
 
-    const char *levelStr = nullptr;
     va_list arg;
     va_start(arg, format);
 
-    switch(level) {
-        case CAMERA_DEBUG_LOG_LEVEL1:
-            levelStr = "LV1";
-        break;
-        case CAMERA_DEBUG_LOG_LEVEL2:
-            levelStr = "LV2";
-        break;
-        case CAMERA_DEBUG_LOG_REQ_STATE:
-            levelStr = "REQ";
-        break;
-        case CAMERA_DEBUG_LOG_AIQ:
-            levelStr = "AIQ";
-        break;
-        case CAMERA_DEBUG_LOG_XML:
-            levelStr = "XML";
-        break;
-        case CAMERA_DEBUG_LOG_DBG:
-            levelStr = "DBG";
-        break;
-        case CAMERA_DEBUG_LOG_INFO:
-            levelStr = "INF";
-        break;
-        case CAMERA_DEBUG_LOG_ERR:
-            levelStr = "ERR";
-        break;
-        case CAMERA_DEBUG_LOG_WARNING:
-            levelStr = "WAR";
-        break;
-        case CAMERA_DEBUG_LOG_VERBOSE:
-            levelStr = "VER";
-        break;
-        case CAMERA_DEBUG_LOG_VC_SYNC:
-            levelStr = "VCSYNC";
-        break;
-        case CAMERA_DEBUG_LOG_GRAPH:
-            levelStr = "GRAPH";
-        break;
-        default:
-            levelStr = "UKN";
-        break;
-    }
-
-    printLog(module, levelStr, format, arg);
+    printLog(module, level, format, arg);
 
     va_end(arg);
 }
@@ -222,7 +205,7 @@ __attribute__((__format__ (__printf__, 1, 0)))
 void ccaPrintError(const char *fmt, va_list ap)
 {
     if (gLogLevel & CAMERA_DEBUG_LOG_AIQ) {
-        printLog("CCA_DEBUG", "ERROR", fmt, ap);
+        printLog("CCA_DEBUG", CAMERA_DEBUG_LOG_ERR, fmt, ap);
     }
 }
 
@@ -230,7 +213,7 @@ __attribute__((__format__ (__printf__, 1, 0)))
 void ccaPrintInfo(const char *fmt, va_list ap)
 {
     if (gLogLevel & CAMERA_DEBUG_LOG_AIQ) {
-        printLog("CCA_DEBUG", "INFO", fmt, ap);
+        printLog("CCA_DEBUG", CAMERA_DEBUG_LOG_INFO, fmt, ap);
     }
 }
 
@@ -238,7 +221,7 @@ __attribute__((__format__ (__printf__, 1, 0)))
 void ccaPrintDebug(const char *fmt, va_list ap)
 {
     if (gLogLevel & CAMERA_DEBUG_LOG_AIQ) {
-        printLog("CCA_DEBUG", "DBG", fmt, ap);
+        printLog("CCA_DEBUG", CAMERA_DEBUG_LOG_DBG, fmt, ap);
     }
 }
 
