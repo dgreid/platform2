@@ -84,12 +84,6 @@ PlatformData::~PlatformData() {
     mAiqInitData.clear();
 }
 
-bool PlatformData::isSensorAvailable() {
-    LOG2("@%s", __func__);
-
-    return !getInstance()->mStaticCfg.mCommonConfig.availableSensors.empty();
-}
-
 int PlatformData::init() {
     LOG2("@%s", __func__);
 

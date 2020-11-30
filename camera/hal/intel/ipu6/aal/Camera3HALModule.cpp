@@ -205,20 +205,19 @@ static int hal_init(void) {
                "%s, Connect to algo service fails", __func__);
 #endif
 
-    // Check if sensor is available
-    if (!icamera::PlatformData::isSensorAvailable()) {
-        LOG2("There is no sensor available");
-        return 0;
-    }
-
     int crosCameraNum = camera3::HalV3Utils::getCrosConfigCameraNumber();
     int xmlCameraNum = icamera::PlatformData::getXmlCameraNumber();
     int currentCameraNum = icamera::PlatformData::numberOfCameras();
 
-    sCameraNumber = (xmlCameraNum != -1) ? xmlCameraNum : crosCameraNum;
-    CheckError(currentCameraNum < sCameraNumber, -EINVAL,
-               "@%s, expected cameras number: %d, found: %d", __func__, sCameraNumber,
-               currentCameraNum);
+    if (xmlCameraNum == -1 && crosCameraNum == -1) {
+        LOGW("static camera number is not available");
+        sCameraNumber = currentCameraNum;
+    } else {
+        sCameraNumber = (xmlCameraNum != -1) ? xmlCameraNum : crosCameraNum;
+        CheckError(currentCameraNum < sCameraNumber, -EINVAL,
+                   "@%s, expected cameras number: %d, found: %d", __func__,
+                   sCameraNumber, currentCameraNum);
+    }
 
     if (sCameraNumber != 0) {
         // Initialize PlatformData

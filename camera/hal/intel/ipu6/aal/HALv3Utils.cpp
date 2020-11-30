@@ -176,7 +176,7 @@ int getCrosConfigCameraNumber() {
     int cameraNumber = 0;
     brillo::CrosConfig crosConfig;
     bool status = crosConfig.Init();
-    CheckWarning(!status, 0, "@%s, Failed to initialize CrOS config", __func__);
+    CheckWarning(!status, -1, "@%s, Failed to initialize CrOS config", __func__);
 
     // Get MIPI camera count from "devices" array in Chrome OS config. The structure looks like:
     //     camera - devices + 0 + interface (mipi, usb)
@@ -185,21 +185,16 @@ int getCrosConfigCameraNumber() {
     //                      |   ...
     //                      + 1 + interface
     //                          ...
-    bool isCameraNumberAvailable = false;
     for (int i = 0;; ++i) {
         std::string interface;
         if (!crosConfig.GetString(base::StringPrintf("/camera/devices/%i", i), "interface",
                                   &interface)) {
             break;
         }
-        isCameraNumberAvailable = true;
         if (interface == "mipi") {
             ++cameraNumber;
         }
     }
-    CheckWarning(!isCameraNumberAvailable, 0,
-                 "@%s, Can't get MIPI camera count from CrOS config", __func__);
-
     return cameraNumber;
 }
 }  // namespace HalV3Utils
