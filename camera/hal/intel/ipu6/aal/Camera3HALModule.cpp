@@ -29,6 +29,7 @@
 #include "PlatformData.h"
 #include "Utils.h"
 #include "iutils/CameraDump.h"
+#include "iutils/CameraLog.h"
 
 namespace camera3 {
 
