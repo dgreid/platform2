@@ -28,7 +28,8 @@ class CrostiniService {
   CrostiniService(ShillClient* shill_client,
                   AddressManager* addr_mgr,
                   Datapath* datapath,
-                  TrafficForwarder* forwarder);
+                  TrafficForwarder* forwarder,
+                  Device::ChangeEventHandler device_changed_handler);
   CrostiniService(const CrostiniService&) = delete;
   CrostiniService& operator=(const CrostiniService&) = delete;
 
@@ -71,6 +72,7 @@ class CrostiniService {
   AddressManager* addr_mgr_;
   Datapath* datapath_;
   TrafficForwarder* forwarder_;
+  Device::ChangeEventHandler device_changed_handler_;
 
   // Mapping of VM IDs to TAP devices
   std::map<std::string, std::unique_ptr<Device>> taps_;

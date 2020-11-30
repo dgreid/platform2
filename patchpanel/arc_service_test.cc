@@ -10,6 +10,7 @@
 #include <vector>
 
 #include <base/bind.h>
+#include <base/bind_helpers.h>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -24,6 +25,7 @@
 using testing::_;
 using testing::AnyNumber;
 using testing::Eq;
+using testing::Pair;
 using testing::Pointee;
 using testing::Return;
 using testing::ReturnRef;
@@ -75,11 +77,21 @@ class ArcServiceTest : public testing::Test {
     datapath_ = std::make_unique<MockDatapath>(runner_.get(), &firewall_);
     shill_client_ = shill_helper_.Client();
     addr_mgr_ = std::make_unique<AddressManager>();
+    guest_devices_.clear();
   }
 
   std::unique_ptr<ArcService> NewService(GuestMessage::GuestType guest) {
-    return std::make_unique<ArcService>(shill_client_.get(), datapath_.get(),
-                                        addr_mgr_.get(), &forwarder_, guest);
+    return std::make_unique<ArcService>(
+        shill_client_.get(), datapath_.get(), addr_mgr_.get(), &forwarder_,
+        guest,
+        base::BindRepeating(&ArcServiceTest::DeviceHandler,
+                            base::Unretained(this)));
+  }
+
+  void DeviceHandler(const Device& device,
+                     Device::ChangeEvent event,
+                     GuestMessage::GuestType guest_type) {
+    guest_devices_[device.host_ifname()] = event;
   }
 
   FakeShillClientHelper shill_helper_;
@@ -89,6 +101,7 @@ class ArcServiceTest : public testing::Test {
   std::unique_ptr<MockDatapath> datapath_;
   std::unique_ptr<FakeProcessRunner> runner_;
   MockFirewall firewall_;
+  std::map<std::string, Device::ChangeEvent> guest_devices_;
 };
 
 TEST_F(ArcServiceTest, NotStarted_AddDevice) {
@@ -290,6 +303,36 @@ TEST_F(ArcServiceTest, ContainerImpl_ScanDevices) {
   EXPECT_EQ(devs.size(), 2);
   EXPECT_THAT(devs,
               UnorderedElementsAre(StrEq("arc_eth0"), StrEq("arc_wlan0")));
+}
+
+TEST_F(ArcServiceTest, ContainerImpl_DeviceHandler) {
+  EXPECT_CALL(*datapath_, NetnsAttachName(_, _)).WillRepeatedly(Return(true));
+  EXPECT_CALL(*datapath_, ConnectVethPair(_, _, _, _, _, _, _, _))
+      .WillRepeatedly(Return(true));
+  EXPECT_CALL(*datapath_, AddBridge(_, _, _)).WillRepeatedly(Return(true));
+  EXPECT_CALL(*datapath_, AddToBridge(_, _)).WillRepeatedly(Return(true));
+
+  auto svc = NewService(GuestMessage::ARC);
+  svc->Start(kTestPID);
+
+  svc->OnDevicesChanged({"eth0", "wlan0"}, {});
+  EXPECT_EQ(guest_devices_.size(), 2);
+  EXPECT_THAT(guest_devices_,
+              UnorderedElementsAre(
+                  Pair(StrEq("arc_eth0"), Device::ChangeEvent::ADDED),
+                  Pair(StrEq("arc_wlan0"), Device::ChangeEvent::ADDED)));
+
+  svc->OnDevicesChanged({}, {"wlan0"});
+  EXPECT_THAT(guest_devices_,
+              UnorderedElementsAre(
+                  Pair(StrEq("arc_eth0"), Device::ChangeEvent::ADDED),
+                  Pair(StrEq("arc_wlan0"), Device::ChangeEvent::REMOVED)));
+
+  guest_devices_.clear();
+  svc->OnDevicesChanged({"wlan0"}, {});
+  EXPECT_THAT(guest_devices_,
+              UnorderedElementsAre(
+                  Pair(StrEq("arc_wlan0"), Device::ChangeEvent::ADDED)));
 }
 
 TEST_F(ArcServiceTest, ContainerImpl_StartAfterDevice) {
@@ -583,6 +626,41 @@ TEST_F(ArcServiceTest, VmImpl_ScanDevices) {
   EXPECT_EQ(devs.size(), 3);
   EXPECT_THAT(devs, UnorderedElementsAre(StrEq("arc_eth0"), StrEq("arc_wlan0"),
                                          StrEq("arc_eth1")));
+}
+
+TEST_F(ArcServiceTest, VmImpl_DeviceHandler) {
+  // Expectations for tap devices pre-creation.
+  EXPECT_CALL(*datapath_, AddTAP(StrEq(""), _, nullptr, StrEq("crosvm")))
+      .WillOnce(Return("vmtap0"))
+      .WillOnce(Return("vmtap1"))
+      .WillOnce(Return("vmtap2"))
+      .WillOnce(Return("vmtap3"))
+      .WillOnce(Return("vmtap4"))
+      .WillOnce(Return("vmtap5"));
+  EXPECT_CALL(*datapath_, AddBridge(_, _, _)).WillRepeatedly(Return(true));
+  EXPECT_CALL(*datapath_, AddToBridge(_, _)).WillRepeatedly(Return(true));
+
+  auto svc = NewService(GuestMessage::ARC_VM);
+  svc->Start(kTestPID);
+
+  svc->OnDevicesChanged({"eth0", "wlan0"}, {});
+  EXPECT_EQ(guest_devices_.size(), 2);
+  EXPECT_THAT(guest_devices_,
+              UnorderedElementsAre(
+                  Pair(StrEq("arc_eth0"), Device::ChangeEvent::ADDED),
+                  Pair(StrEq("arc_wlan0"), Device::ChangeEvent::ADDED)));
+
+  svc->OnDevicesChanged({}, {"wlan0"});
+  EXPECT_THAT(guest_devices_,
+              UnorderedElementsAre(
+                  Pair(StrEq("arc_eth0"), Device::ChangeEvent::ADDED),
+                  Pair(StrEq("arc_wlan0"), Device::ChangeEvent::REMOVED)));
+
+  guest_devices_.clear();
+  svc->OnDevicesChanged({"wlan0"}, {});
+  EXPECT_THAT(guest_devices_,
+              UnorderedElementsAre(
+                  Pair(StrEq("arc_wlan0"), Device::ChangeEvent::ADDED)));
 }
 
 }  // namespace patchpanel

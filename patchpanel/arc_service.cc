@@ -246,12 +246,14 @@ ArcService::ArcService(ShillClient* shill_client,
                        Datapath* datapath,
                        AddressManager* addr_mgr,
                        TrafficForwarder* forwarder,
-                       GuestMessage::GuestType guest)
+                       GuestMessage::GuestType guest,
+                       Device::ChangeEventHandler device_changed_handler)
     : shill_client_(shill_client),
       datapath_(datapath),
       addr_mgr_(addr_mgr),
       forwarder_(forwarder),
       guest_(guest),
+      device_changed_handler_(device_changed_handler),
       id_(kInvalidId) {
   arc_device_ = MakeArcDevice(addr_mgr, guest_);
   AllocateAddressConfigs();
@@ -545,6 +547,7 @@ void ArcService::AddDevice(const std::string& ifname) {
   forwarder_->StartForwarding(device->phys_ifname(), device->host_ifname(),
                               device->options().ipv6_enabled,
                               device->options().fwd_multicast);
+  device_changed_handler_.Run(*device, Device::ChangeEvent::ADDED, guest_);
   devices_.emplace(ifname, std::move(device));
 }
 
@@ -560,6 +563,8 @@ void ArcService::RemoveDevice(const std::string& ifname) {
 
   const auto* device = it->second.get();
   LOG(INFO) << "Removing device " << *device;
+
+  device_changed_handler_.Run(*device, Device::ChangeEvent::REMOVED, guest_);
 
   forwarder_->StopForwarding(device->phys_ifname(), device->host_ifname(),
                              device->options().ipv6_enabled,

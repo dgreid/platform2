@@ -92,6 +92,11 @@ class Manager final : public brillo::DBusDaemon, private TrafficForwarder {
                               const ShillClient::Device& prev_device);
   void OnDevicesChanged(const std::set<std::string>& added,
                         const std::set<std::string>& removed);
+
+  void OnDeviceChanged(const Device& device,
+                       Device::ChangeEvent event,
+                       GuestMessage::GuestType guest_type);
+
   void InitialSetup();
 
   bool StartArc(pid_t pid);

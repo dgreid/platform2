@@ -53,14 +53,17 @@ bool IsEthernetOrWifiDevice(const ShillClient::Device& device) {
 
 }  // namespace
 
-CrostiniService::CrostiniService(ShillClient* shill_client,
-                                 AddressManager* addr_mgr,
-                                 Datapath* datapath,
-                                 TrafficForwarder* forwarder)
+CrostiniService::CrostiniService(
+    ShillClient* shill_client,
+    AddressManager* addr_mgr,
+    Datapath* datapath,
+    TrafficForwarder* forwarder,
+    Device::ChangeEventHandler device_changed_handler)
     : shill_client_(shill_client),
       addr_mgr_(addr_mgr),
       datapath_(datapath),
       forwarder_(forwarder),
+      device_changed_handler_(device_changed_handler),
       adb_sideloading_enabled_(false) {
   DCHECK(shill_client_);
   DCHECK(addr_mgr_);
@@ -113,6 +116,10 @@ bool CrostiniService::Start(uint64_t vm_id, bool is_termina, int subnet_index) {
   if (adb_sideloading_enabled_)
     StartAdbPortForwarding(tap->phys_ifname());
 
+  device_changed_handler_.Run(
+      *tap, Device::ChangeEvent::ADDED,
+      is_termina ? GuestMessage::TERMINA_VM : GuestMessage::PLUGIN_VM);
+
   taps_.emplace(key, std::move(tap));
   return true;
 }
@@ -124,6 +131,10 @@ void CrostiniService::Stop(uint64_t vm_id, bool is_termina) {
     LOG(WARNING) << "Unknown {id: " << vm_id << "}";
     return;
   }
+
+  device_changed_handler_.Run(
+      *it->second, Device::ChangeEvent::REMOVED,
+      is_termina ? GuestMessage::TERMINA_VM : GuestMessage::PLUGIN_VM);
 
   const auto& ifname = it->second->host_ifname();
   auto source = is_termina ? TrafficSource::CROSVM : TrafficSource::PLUGINVM;

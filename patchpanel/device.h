@@ -31,6 +31,13 @@ namespace patchpanel {
 // source for configuration events.
 class Device {
  public:
+  enum class ChangeEvent {
+    ADDED,
+    REMOVED,
+  };
+  using ChangeEventHandler = base::RepeatingCallback<void(
+      const Device&, ChangeEvent, GuestMessage::GuestType)>;
+
   class Config {
    public:
     Config(const MacAddress& mac_addr,
@@ -82,7 +89,6 @@ class Device {
     std::unique_ptr<Subnet> lxd_ipv4_subnet_;
     // TAP devices currently associated with the configuration.
     std::string tap_;
-
   };
 
   struct Options {

@@ -38,7 +38,8 @@ class ArcService {
              Datapath* datapath,
              AddressManager* addr_mgr,
              TrafficForwarder* forwarder,
-             GuestMessage::GuestType guest);
+             GuestMessage::GuestType guest,
+             Device::ChangeEventHandler device_changed_handler);
   ArcService(const ArcService&) = delete;
   ArcService& operator=(const ArcService&) = delete;
 
@@ -90,6 +91,8 @@ class ArcService {
   AddressManager* addr_mgr_;
   TrafficForwarder* forwarder_;
   GuestMessage::GuestType guest_;
+  Device::ChangeEventHandler device_changed_handler_;
+
   // A set of preallocated device configurations keyed by technology type and
   // used for setting up ARCVM tap devices at VM booting time.
   std::map<InterfaceType, std::deque<std::unique_ptr<Device::Config>>>

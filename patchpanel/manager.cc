@@ -235,10 +235,14 @@ void Manager::InitialSetup() {
 
   GuestMessage::GuestType arc_guest =
       USE_ARCVM ? GuestMessage::ARC_VM : GuestMessage::ARC;
-  arc_svc_ = std::make_unique<ArcService>(shill_client_.get(), datapath_.get(),
-                                          &addr_mgr_, forwarder, arc_guest);
-  cros_svc_ = std::make_unique<CrostiniService>(shill_client_.get(), &addr_mgr_,
-                                                datapath_.get(), forwarder);
+  arc_svc_ = std::make_unique<ArcService>(
+      shill_client_.get(), datapath_.get(), &addr_mgr_, forwarder, arc_guest,
+      base::BindRepeating(&Manager::OnDeviceChanged,
+                          weak_factory_.GetWeakPtr()));
+  cros_svc_ = std::make_unique<CrostiniService>(
+      shill_client_.get(), &addr_mgr_, datapath_.get(), forwarder,
+      base::BindRepeating(&Manager::OnDeviceChanged,
+                          weak_factory_.GetWeakPtr()));
   network_monitor_svc_ = std::make_unique<NetworkMonitorService>(
       shill_client_.get(),
       base::BindRepeating(&Manager::OnNeighborReachabilityEvent,
@@ -323,6 +327,43 @@ void Manager::OnDevicesChanged(const std::set<std::string>& added,
 
   for (const std::string& ifname : added)
     datapath_->StartConnectionPinning(ifname);
+}
+
+void Manager::OnDeviceChanged(const Device& device,
+                              Device::ChangeEvent event,
+                              GuestMessage::GuestType guest_type) {
+  dbus::Signal signal(kPatchPanelInterface, kNetworkDeviceChangedSignal);
+  NetworkDeviceChangedSignal proto;
+  proto.set_event(event == Device::ChangeEvent::ADDED
+                      ? NetworkDeviceChangedSignal::DEVICE_ADDED
+                      : NetworkDeviceChangedSignal::DEVICE_REMOVED);
+  auto* dev = proto.mutable_device();
+  dev->set_ifname(device.host_ifname());
+  dev->set_ipv4_addr(device.config().guest_ipv4_addr());
+  if (const auto* subnet = device.config().ipv4_subnet()) {
+    auto* sub = dev->mutable_ipv4_subnet();
+    sub->set_base_addr(subnet->BaseAddress());
+    sub->set_prefix_len(subnet->PrefixLength());
+  }
+  switch (guest_type) {
+    case GuestMessage::ARC:
+      dev->set_guest_type(NetworkDevice::ARC);
+      break;
+    case GuestMessage::ARC_VM:
+      dev->set_guest_type(NetworkDevice::ARCVM);
+      break;
+    case GuestMessage::TERMINA_VM:
+      dev->set_guest_type(NetworkDevice::TERMINA_VM);
+      break;
+    case GuestMessage::PLUGIN_VM:
+      dev->set_guest_type(NetworkDevice::PLUGIN_VM);
+      break;
+    default:
+      LOG(ERROR) << "Unknown device type";
+  }
+
+  dbus::MessageWriter(&signal).AppendProtoAsArrayOfBytes(proto);
+  dbus_svc_path_->SendSignal(&signal);
 }
 
 bool Manager::StartArc(pid_t pid) {
