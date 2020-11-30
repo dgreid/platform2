@@ -74,6 +74,7 @@ type cros_disks_exec, exec_type, file_type, cros_file_type, cros_system_file_typ
 type cros_dlcservice_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_easy_unlock_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_esif_ufd_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
+type cros_gdbus_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_healthd_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_hermes_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_huddly_monitor_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
