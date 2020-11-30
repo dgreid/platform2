@@ -112,7 +112,7 @@ class BRILLO_PRIVATE SecureAllocator {
 
     // Lock buffer into physical memory.
     if (mlock(buffer, buffer_size)) {
-      CHECK_NE(errno, ENOMEM) << "It is likely that SecureAllocator have "
+      CHECK_NE(errno, ENOMEM) << "It is likely that SecureAllocator has "
                                  "exceeded the RLIMIT_MEMLOCK limit";
       return nullptr;
     }

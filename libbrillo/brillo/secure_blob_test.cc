@@ -7,6 +7,7 @@
 #include "brillo/asan.h"
 #include "brillo/secure_allocator.h"
 #include "brillo/secure_blob.h"
+#include <sys/resource.h>
 
 #include <algorithm>
 #include <iterator>
@@ -320,6 +321,57 @@ TEST(SecureAllocator, OperatorNotEqual) {
   SecureAllocator<uint8_t> allocator2;
   // SecureAllocators should always be equal.
   EXPECT_FALSE(allocator1 != allocator2);
+}
+
+class SecureAllocatorMemlockTest : public ::testing::Test {
+ public:
+  static constexpr size_t kPageSize = 4096;
+
+  SecureAllocatorMemlockTest() {
+    struct rlimit limit;
+
+    EXPECT_EQ(getrlimit(RLIMIT_MEMLOCK, &limit), 0);
+    orig_limit_ = limit;
+
+    // Using a page size value, since the allocator only allocates in
+    // page-size chunks.
+    limit.rlim_cur = kPageSize;
+    EXPECT_LT(limit.rlim_cur, limit.rlim_max);
+    EXPECT_EQ(setrlimit(RLIMIT_MEMLOCK, &limit), 0);
+
+    EXPECT_EQ(getrlimit(RLIMIT_MEMLOCK, &limit), 0);
+    EXPECT_EQ(limit.rlim_cur, kPageSize);
+  }
+
+  ~SecureAllocatorMemlockTest() override {
+    // Restore original limits.
+    EXPECT_EQ(setrlimit(RLIMIT_MEMLOCK, &orig_limit_), 0);
+  }
+
+ private:
+  struct rlimit orig_limit_;
+};
+
+TEST_F(SecureAllocatorMemlockTest, MemlockLimitValid) {
+  SecureAllocator<uint8_t> allocator;
+  EXPECT_NE(allocator.allocate(kPageSize), nullptr);
+}
+
+// Test fails on ASAN build.
+#if defined(BRILLO_ASAN_BUILD)
+#define MAYBE_MemlockLimitDeathTest DISABLED_MemlockLimitDeathTest
+#else
+#define MAYBE_MemlockLimitDeathTest MemlockLimitDeathTest
+#endif
+TEST_F(SecureAllocatorMemlockTest, MAYBE_MemlockLimitDeathTest) {
+  EXPECT_DEATH(
+      {
+        SecureAllocator<uint8_t> allocator;
+        ASSERT_NE(allocator.allocate(kPageSize), nullptr);
+        allocator.allocate(1);
+      },
+      "It is likely that SecureAllocator has exceeded the RLIMIT_MEMLOCK "
+      "limit");
 }
 
 TEST(SecureVector, CopyAssignment) {
