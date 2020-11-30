@@ -51,8 +51,6 @@ GrammarLibrary::GrammarLibrary()
     return;                                                            \
   }
   // Look up the function pointers.
-  ML_GRAMMAR_LOOKUP_FUNCTION(init_grammar_checker_environment_,
-                             InitGrammarCheckerEnvironment);
   ML_GRAMMAR_LOOKUP_FUNCTION(create_grammar_checker_, CreateGrammarChecker);
   ML_GRAMMAR_LOOKUP_FUNCTION(load_grammar_checker_, LoadGrammarChecker);
   ML_GRAMMAR_LOOKUP_FUNCTION(check_grammar_, CheckGrammar);
@@ -62,11 +60,6 @@ GrammarLibrary::GrammarLibrary()
 #undef ML_GRAMMAR_LOOKUP_FUNCTION
 
   status_ = Status::kOk;
-}
-
-void GrammarLibrary::InitEnvironment() const {
-  DCHECK(status_ == Status::kOk);
-  (*init_grammar_checker_environment_)();
 }
 
 GrammarLibrary::Status GrammarLibrary::GetStatus() const {

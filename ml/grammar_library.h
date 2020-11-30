@@ -61,10 +61,6 @@ class GrammarLibrary {
   // the libgrammar.so library. Function `DeleteGrammarCheckerResultData` do
   // not need interfaces because the client won't call it.
 
-  // Do some environmental setup for Google3 code. Required before doing real
-  // grammar check tasks.
-  void InitEnvironment() const;
-
   // Creates and returns a grammar checker which is needed for using the other
   // interfaces. The memory is owned by the user and should be deleted using
   // `DestroyHandwritingRecognizer` after usage.
@@ -99,7 +95,6 @@ class GrammarLibrary {
   Status status_;
 
   // Store the interface function pointers.
-  InitGrammarCheckerEnvironmentFn init_grammar_checker_environment_;
   CreateGrammarCheckerFn create_grammar_checker_;
   LoadGrammarCheckerFn load_grammar_checker_;
   CheckGrammarFn check_grammar_;

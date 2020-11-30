@@ -32,8 +32,6 @@ TEST(GrammarLibraryTest, ExampleRequest) {
   }
   ASSERT_EQ(instance->GetStatus(), GrammarLibrary::Status::kOk);
 
-  instance->InitEnvironment();
-
   GrammarChecker const checker = instance->CreateGrammarChecker();
   instance->LoadGrammarChecker(checker);
 
