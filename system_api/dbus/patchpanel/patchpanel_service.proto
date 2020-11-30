@@ -59,6 +59,15 @@ message IPv4Subnet {
 // Represents a network device (physical or virtual) managed by the networking
 // daemon.
 message NetworkDevice {
+  // Identifies the guest for which the virtual device is used.
+  enum GuestType {
+    UNKNOWN = 0;
+    ARC = 1;
+    ARCVM = 2;
+    TERMINA_VM = 3;
+    PLUGIN_VM = 4;
+  };
+
   // The name of the host device interface.
   string ifname = 1;
 
@@ -67,6 +76,9 @@ message NetworkDevice {
 
   // The subnet allocated for this device
   IPv4Subnet ipv4_subnet = 3;
+
+  // The guest to which the device is bound, if applicable.
+  GuestType guest_type = 4;
 }
 
 // Information required by Concierge to continue the ARC VM startup process.

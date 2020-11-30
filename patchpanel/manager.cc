@@ -481,6 +481,7 @@ std::unique_ptr<dbus::Response> Manager::OnArcVmStartup(
     auto* dev = response.add_devices();
     dev->set_ifname(config->tap_ifname());
     dev->set_ipv4_addr(config->guest_ipv4_addr());
+    dev->set_guest_type(NetworkDevice::ARCVM);
   }
 
   writer.AppendProtoAsArrayOfBytes(response);
@@ -547,6 +548,7 @@ std::unique_ptr<dbus::Response> Manager::OnTerminaVmStartup(
 
   auto* dev = response.mutable_device();
   dev->set_ifname(tap->host_ifname());
+  dev->set_guest_type(NetworkDevice::TERMINA_VM);
   const auto* subnet = tap->config().ipv4_subnet();
   if (!subnet) {
     LOG(DFATAL) << "Missing required subnet for {cid: " << cid << "}";
@@ -630,6 +632,7 @@ std::unique_ptr<dbus::Response> Manager::OnPluginVmStartup(
 
   auto* dev = response.mutable_device();
   dev->set_ifname(tap->host_ifname());
+  dev->set_guest_type(NetworkDevice::PLUGIN_VM);
   const auto* subnet = tap->config().ipv4_subnet();
   if (!subnet) {
     LOG(DFATAL) << "Missing required subnet for {cid: " << vm_id << "}";
