@@ -50,6 +50,8 @@ constexpr char kClobberLogPath[] = "/tmp/clobber-state.log";
 constexpr char kBioWashPath[] = "/usr/bin/bio_wash";
 constexpr char kPreservedFilesTarPath[] = "/tmp/preserve.tar";
 constexpr char kStatefulClobberLogPath[] = "unencrypted/clobber.log";
+constexpr char kUpdateEnginePreservePath[] =
+    "unencrypted/preserve/update_engine/prefs/";
 // The presence of this file indicates that crash report collection across
 // clobber is disabled in developer mode.
 constexpr char kDisableClobberCrashCollectionPath[] =
@@ -813,10 +815,10 @@ std::vector<base::FilePath> ClobberState::GetPreservedFilesList() {
     stateful_paths.push_back(kPowerWashCountPath);
     stateful_paths.push_back(
         "unencrypted/preserve/tpm_firmware_update_request");
-    stateful_paths.push_back(
-        "unencrypted/preserve/update_engine/prefs/rollback-happened");
-    stateful_paths.push_back(
-        "unencrypted/preserve/update_engine/prefs/rollback-version");
+    stateful_paths.push_back(std::string(kUpdateEnginePreservePath) +
+                             "rollback-happened");
+    stateful_paths.push_back(std::string(kUpdateEnginePreservePath) +
+                             "rollback-version");
 
     // Preserve pre-installed demo mode resources for offline Demo Mode.
     std::string demo_mode_resources_dir =
