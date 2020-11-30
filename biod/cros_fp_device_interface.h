@@ -6,6 +6,7 @@
 #define BIOD_CROS_FP_DEVICE_INTERFACE_H_
 
 #include <bitset>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -58,7 +59,7 @@ class CrosFpDeviceInterface {
   virtual bool SupportsPositiveMatchSecret() = 0;
   virtual base::Optional<brillo::SecureVector> GetPositiveMatchSecret(
       int index) = 0;
-  virtual base::Optional<VendorTemplate> GetTemplate(int index) = 0;
+  virtual std::unique_ptr<VendorTemplate> GetTemplate(int index) = 0;
   virtual bool UploadTemplate(const VendorTemplate& tmpl) = 0;
   virtual bool SetContext(std::string user_id) = 0;
   virtual bool ResetContext() = 0;

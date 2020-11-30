@@ -62,8 +62,8 @@ class FakeCrosFpDevice : public CrosFpDeviceInterface {
               secret.begin());
     return secret;
   }
-  base::Optional<VendorTemplate> GetTemplate(int index) override {
-    return VendorTemplate();
+  std::unique_ptr<VendorTemplate> GetTemplate(int index) override {
+    return nullptr;
   }
   bool UploadTemplate(const VendorTemplate& tmpl) override { return false; }
   bool SetContext(std::string user_id) override { return false; }

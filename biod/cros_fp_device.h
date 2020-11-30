@@ -59,7 +59,7 @@ class CrosFpDevice : public CrosFpDeviceInterface {
   bool SupportsPositiveMatchSecret() override;
   base::Optional<brillo::SecureVector> GetPositiveMatchSecret(
       int index) override;
-  base::Optional<VendorTemplate> GetTemplate(int index) override;
+  std::unique_ptr<VendorTemplate> GetTemplate(int index) override;
   bool UploadTemplate(const VendorTemplate& tmpl) override;
   bool SetContext(std::string user_id) override;
   bool ResetContext() override;

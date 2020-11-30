@@ -42,14 +42,16 @@ class FpFrameCommand
 
   bool Run(int fd) override;
 
-  const brillo::SecureVector& frame() const;
+  // This transfers ownership of |frame_data_|. FpFrameCommand no longer has a
+  // copy of the frame after calling this.
+  std::unique_ptr<brillo::SecureVector> frame();
 
  protected:
   FpFrameCommand(int index, uint32_t frame_size, uint16_t max_read_size)
       : EcCommand(EC_CMD_FP_FRAME),
         frame_index_(index),
         max_read_size_(max_read_size),
-        frame_data_(frame_size) {}
+        frame_data_(std::make_unique<brillo::SecureVector>(frame_size)) {}
   virtual bool EcCommandRun(int fd);
 
  private:
@@ -58,7 +60,7 @@ class FpFrameCommand
 
   int frame_index_ = 0;
   uint16_t max_read_size_ = 0;
-  brillo::SecureVector frame_data_;
+  std::unique_ptr<brillo::SecureVector> frame_data_;
 };
 
 static_assert(!std::is_copy_constructible<FpFrameCommand>::value,

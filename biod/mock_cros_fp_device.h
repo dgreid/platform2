@@ -6,6 +6,7 @@
 #define BIOD_MOCK_CROS_FP_DEVICE_H_
 
 #include <bitset>
+#include <memory>
 #include <string>
 
 #include "biod/cros_fp_device_interface.h"
@@ -23,7 +24,7 @@ class MockCrosFpDevice : public CrosFpDeviceInterface {
   MOCK_METHOD(FpMode, GetFpMode, (), (override));
   MOCK_METHOD(base::Optional<FpStats>, GetFpStats, (), (override));
   MOCK_METHOD(base::Optional<std::bitset<32>>, GetDirtyMap, (), (override));
-  MOCK_METHOD(base::Optional<VendorTemplate>,
+  MOCK_METHOD(std::unique_ptr<VendorTemplate>,
               GetTemplate,
               (int index),
               (override));

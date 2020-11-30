@@ -104,7 +104,7 @@ bool CrosFpBiometricsManager::Record::SetLabel(std::string label) {
   CHECK(index_ < biometrics_manager_->records_.size());
   std::string old_label = biometrics_manager_->records_[index_].label;
 
-  base::Optional<VendorTemplate> tmpl =
+  std::unique_ptr<VendorTemplate> tmpl =
       biometrics_manager_->cros_dev_->GetTemplate(index_);
   // TODO(vpalatin): would be faster to read it from disk
   if (!tmpl) {
@@ -462,7 +462,7 @@ void CrosFpBiometricsManager::DoEnrollImageEvent(InternalRecord record,
   // we are done with captures, save the template.
   OnTaskComplete();
 
-  base::Optional<VendorTemplate> tmpl =
+  std::unique_ptr<VendorTemplate> tmpl =
       cros_dev_->GetTemplate(CrosFpDevice::kLastTemplate);
   if (!tmpl) {
     LOG(ERROR) << "Failed to retrieve enrolled finger";
@@ -751,9 +751,9 @@ void CrosFpBiometricsManager::DoMatchEvent(int attempt, uint32_t event) {
     if (i == match_idx && migration_status == MigrationStatus::kError)
       continue;
 
-    base::Optional<VendorTemplate> templ = cros_dev_->GetTemplate(i);
+    std::unique_ptr<VendorTemplate> templ = cros_dev_->GetTemplate(i);
     LOG(INFO) << "Retrieve updated template " << i << " -> "
-              << templ.has_value();
+              << (templ != nullptr);
     if (!templ) {
       if (i == match_idx && migration_status == MigrationStatus::kSuccess)
         migration_status = MigrationStatus::kError;

@@ -5,6 +5,7 @@
 #include "biod/fp_frame_command.h"
 
 #include <algorithm>
+#include <utility>
 #include <vector>
 
 #include <base/threading/platform_thread.h>
@@ -14,9 +15,9 @@ namespace biod {
 bool FpFrameCommand::Run(int fd) {
   uint32_t offset = frame_index_ << FP_FRAME_INDEX_SHIFT;
   FpFramePacket payload = *Resp();
-  auto pos = frame_data_.begin();
-  while (pos < frame_data_.end()) {
-    uint16_t len = std::min<uint16_t>(max_read_size_, frame_data_.end() - pos);
+  auto pos = frame_data_->begin();
+  while (pos < frame_data_->end()) {
+    uint16_t len = std::min<uint16_t>(max_read_size_, frame_data_->end() - pos);
     SetReq({.offset = offset, .size = len});
     SetRespSize(len);
     int retries = 0;
@@ -42,8 +43,8 @@ bool FpFrameCommand::Run(int fd) {
   return true;
 }
 
-const brillo::SecureVector& FpFrameCommand::frame() const {
-  return frame_data_;
+std::unique_ptr<brillo::SecureVector> FpFrameCommand::frame() {
+  return std::move(frame_data_);
 }
 
 bool FpFrameCommand::EcCommandRun(int fd) {

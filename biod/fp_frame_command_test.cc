@@ -99,8 +99,8 @@ TEST_F(FpFrameCommandTest, Success) {
   // First chunk
   std::vector<uint8_t> packet_vec(packet.begin(),
                                   packet.begin() + kMaxReadSize);
-  auto frame_begin = frame.begin();
-  auto frame_end = frame.begin() + packet_vec.size();
+  auto frame_begin = frame->begin();
+  auto frame_end = frame->begin() + packet_vec.size();
   std::vector<uint8_t> frame_chunk_1(frame_begin, frame_end);
   EXPECT_EQ(packet_vec, frame_chunk_1);
 

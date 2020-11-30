@@ -516,15 +516,15 @@ base::Optional<brillo::SecureVector> CrosFpDevice::GetPositiveMatchSecret(
   return secret;
 }
 
-base::Optional<VendorTemplate> CrosFpDevice::GetTemplate(int index) {
+std::unique_ptr<VendorTemplate> CrosFpDevice::GetTemplate(int index) {
   if (index == kLastTemplate) {
     if (!GetIndexOfLastTemplate(&index)) {
-      return base::nullopt;
+      return nullptr;
     }
     // Is the last one really a new created one ?
     const auto& dirty = info_->template_info()->dirty;
     if (index >= dirty.size() || !dirty.test(index)) {
-      return base::nullopt;
+      return nullptr;
     }
   }
 
@@ -536,7 +536,7 @@ base::Optional<VendorTemplate> CrosFpDevice::GetTemplate(int index) {
       max_read_size_);
   if (!fp_frame_cmd->Run(cros_fd_.get())) {
     LOG(ERROR) << "Failed to get frame, result: " << fp_frame_cmd->Result();
-    return base::nullopt;
+    return nullptr;
   }
   return fp_frame_cmd->frame();
 }
