@@ -6,10 +6,24 @@ import("//common-mk/pkg_config.gni")
 
 group("all") {
   deps = [ ":syslog-cat" ]
+  if (use.test) {
+    deps += [ ":syslogcat_testrunner" ]
+  }
 }
 
 pkg_config("target_defaults") {
-  pkg_deps = [ "libchrome" ]
+  pkg_deps = [
+    "libbrillo",
+    "libchrome",
+  ]
+}
+
+static_library("syslogcat_lib") {
+  configs += [ ":target_defaults" ]
+  sources = [
+    "syslogcat.cc",
+    "syslogcat.h",
+  ]
 }
 
 executable("syslog-cat") {
@@ -17,4 +31,26 @@ executable("syslog-cat") {
 
   sources = [ "main.cc" ]
   install_path = "sbin"
+  deps = [ ":syslogcat_lib" ]
+}
+
+if (use.test) {
+  pkg_config("syslogcat_testrunner_config") {
+    pkg_deps = [ "libchrome-test" ]
+  }
+
+  executable("syslogcat_testrunner") {
+    configs += [
+      "//common-mk:test",
+      ":syslogcat_testrunner_config",
+      ":target_defaults",
+    ]
+    run_test = true
+    defines = [ "UNIT_TEST" ]
+    sources = [ "syslogcat_test.cc" ]
+    deps = [
+      ":syslogcat_lib",
+      "//common-mk/testrunner",
+    ]
+  }
 }
