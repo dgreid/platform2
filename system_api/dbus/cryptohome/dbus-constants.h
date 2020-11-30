@@ -125,7 +125,6 @@ const char kCryptohomeGetKeyDataEx[] = "GetKeyDataEx";
 const char kCryptohomeCheckKeyEx[] = "CheckKeyEx";
 const char kCryptohomeMountEx[] = "MountEx";
 const char kCryptohomeAddKeyEx[] = "AddKeyEx";
-const char kCryptohomeUpdateKeyEx[] = "UpdateKeyEx";
 const char kCryptohomeRemoveKeyEx[] = "RemoveKeyEx";
 const char kCryptohomeAddDataRestoreKey[] = "AddDataRestoreKey";
 const char kCryptohomeMassRemoveKeys[] = "MassRemoveKeys";

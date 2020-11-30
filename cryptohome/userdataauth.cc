@@ -2439,62 +2439,6 @@ user_data_auth::CryptohomeErrorCode UserDataAuth::GetKeyData(
   return user_data_auth::CRYPTOHOME_ERROR_NOT_SET;
 }
 
-user_data_auth::CryptohomeErrorCode UserDataAuth::UpdateKey(
-    const user_data_auth::UpdateKeyRequest& request) {
-  AssertOnMountThread();
-
-  if (!request.has_account_id() || !request.has_authorization_request()) {
-    LOG(ERROR)
-        << "UpdateKeyRequest must have account_id and authorization_request.";
-    return user_data_auth::CRYPTOHOME_ERROR_INVALID_ARGUMENT;
-  }
-
-  std::string account_id = GetAccountId(request.account_id());
-  if (account_id.empty()) {
-    LOG(ERROR) << "UpdateKeyRequest must have vaid account_id.";
-    return user_data_auth::CRYPTOHOME_ERROR_INVALID_ARGUMENT;
-  }
-
-  // Note that there's no check for empty AuthorizationRequest key label because
-  // such a key will test against all VaultKeysets of a compatible
-  // key().data().type(), and thus is valid.
-
-  auto& auth_key = request.authorization_request().key();
-  const std::string& auth_secret = auth_key.secret();
-  if (auth_secret.empty()) {
-    LOG(ERROR) << "No key secret in UpdateKeyRequest.";
-    return user_data_auth::CRYPTOHOME_ERROR_INVALID_ARGUMENT;
-  }
-
-  // Any undefined field in changes() will be left as it is.
-  if (!request.has_changes()) {
-    LOG(ERROR) << "No updates requested in UpdateKeyRequest.";
-    return user_data_auth::CRYPTOHOME_ERROR_INVALID_ARGUMENT;
-  }
-
-  if (KeyHasWrappedAuthorizationSecrets(request.changes())) {
-    LOG(ERROR)
-        << "KeyAuthorizationSecrets may not be wrapped in UpdateKeyRequest.";
-    return user_data_auth::CRYPTOHOME_ERROR_INVALID_ARGUMENT;
-  }
-
-  Credentials credentials(account_id, SecureBlob(auth_secret));
-  credentials.set_key_data(auth_key.data());
-
-  if (!homedirs_->Exists(credentials.GetObfuscatedUsername(system_salt_))) {
-    return user_data_auth::CRYPTOHOME_ERROR_ACCOUNT_NOT_FOUND;
-  }
-
-  cryptohome::CryptohomeErrorCode result = homedirs_->UpdateKeyset(
-      credentials, &request.changes(), request.authorization_signature());
-
-  // Note that cryptohome::CryptohomeErrorCode and
-  // user_data_auth::CryptohomeErrorCode are same in content, and it'll remain
-  // so until the end of the refactor, so we can safely cast from one to
-  // another.
-  return static_cast<user_data_auth::CryptohomeErrorCode>(result);
-}
-
 user_data_auth::CryptohomeErrorCode UserDataAuth::MigrateKey(
     const user_data_auth::MigrateKeyRequest& request) {
   AssertOnMountThread();

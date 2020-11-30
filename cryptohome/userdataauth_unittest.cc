@@ -1952,7 +1952,6 @@ class UserDataAuthExTest : public UserDataAuthTest {
     mass_remove_req_.reset(new user_data_auth::MassRemoveKeysRequest);
     list_keys_req_.reset(new user_data_auth::ListKeysRequest);
     get_key_data_req_.reset(new user_data_auth::GetKeyDataRequest);
-    update_req_.reset(new user_data_auth::UpdateKeyRequest);
     migrate_req_.reset(new user_data_auth::MigrateKeyRequest);
     remove_homedir_req_.reset(new user_data_auth::RemoveRequest);
     rename_homedir_req_.reset(new user_data_auth::RenameRequest);
@@ -1982,7 +1981,6 @@ class UserDataAuthExTest : public UserDataAuthTest {
   std::unique_ptr<user_data_auth::MassRemoveKeysRequest> mass_remove_req_;
   std::unique_ptr<user_data_auth::ListKeysRequest> list_keys_req_;
   std::unique_ptr<user_data_auth::GetKeyDataRequest> get_key_data_req_;
-  std::unique_ptr<user_data_auth::UpdateKeyRequest> update_req_;
   std::unique_ptr<user_data_auth::MigrateKeyRequest> migrate_req_;
   std::unique_ptr<user_data_auth::RemoveRequest> remove_homedir_req_;
   std::unique_ptr<user_data_auth::RenameRequest> rename_homedir_req_;
@@ -2810,76 +2808,6 @@ TEST_F(UserDataAuthExTest, GetKeyDataInvalidArgs) {
   EXPECT_EQ(userdataauth_->GetKeyData(*get_key_data_req_, &keydata_out, &found),
             user_data_auth::CRYPTOHOME_ERROR_INVALID_ARGUMENT);
   EXPECT_FALSE(found);
-}
-
-TEST_F(UserDataAuthExTest, UpdateKeyValidity) {
-  PrepareArguments();
-
-  constexpr char kUsername1[] = "foo@gmail.com";
-
-  update_req_->mutable_account_id()->set_account_id(kUsername1);
-  update_req_->mutable_authorization_request()->mutable_key()->set_secret(
-      "some secret");
-  update_req_->mutable_changes()->mutable_data()->set_label("some label");
-
-  EXPECT_CALL(homedirs_, Exists(GetObfuscatedUsername(kUsername1)))
-      .WillOnce(Return(true));
-  EXPECT_CALL(homedirs_,
-              UpdateKeyset(Property(&Credentials::username, kUsername1),
-                           Pointee(ProtobufEquals(update_req_->changes())),
-                           update_req_->authorization_signature()))
-      .WillOnce(Return(CRYPTOHOME_ERROR_NOT_SET));
-
-  EXPECT_EQ(userdataauth_->UpdateKey(*update_req_),
-            user_data_auth::CRYPTOHOME_ERROR_NOT_SET);
-}
-
-TEST_F(UserDataAuthExTest, UpdateKeyInvalidArguments) {
-  PrepareArguments();
-
-  // No email.
-  EXPECT_EQ(userdataauth_->UpdateKey(*update_req_),
-            user_data_auth::CRYPTOHOME_ERROR_INVALID_ARGUMENT);
-
-  // No authorization request key secret.
-  update_req_->mutable_account_id()->set_account_id("foo@gmail.com");
-  EXPECT_EQ(userdataauth_->UpdateKey(*update_req_),
-            user_data_auth::CRYPTOHOME_ERROR_INVALID_ARGUMENT);
-
-  // No changes field.
-  update_req_->mutable_authorization_request()->mutable_key()->set_secret(
-      "some secret");
-  EXPECT_EQ(userdataauth_->UpdateKey(*update_req_),
-            user_data_auth::CRYPTOHOME_ERROR_INVALID_ARGUMENT);
-}
-
-TEST_F(UserDataAuthExTest, UpdateKeyError) {
-  PrepareArguments();
-
-  constexpr char kUsername1[] = "foo@gmail.com";
-
-  update_req_->mutable_account_id()->set_account_id(kUsername1);
-  update_req_->mutable_authorization_request()->mutable_key()->set_secret(
-      "some secret");
-  update_req_->mutable_changes()->mutable_data()->set_label("some label");
-
-  // Check when the homedir doesn't exist.
-  EXPECT_CALL(homedirs_, Exists(GetObfuscatedUsername(kUsername1)))
-      .WillOnce(Return(false));
-
-  EXPECT_EQ(userdataauth_->UpdateKey(*update_req_),
-            user_data_auth::CRYPTOHOME_ERROR_ACCOUNT_NOT_FOUND);
-
-  // Check when UpdateKeyset returns an error.
-  EXPECT_CALL(homedirs_, Exists(GetObfuscatedUsername(kUsername1)))
-      .WillOnce(Return(true));
-  EXPECT_CALL(homedirs_,
-              UpdateKeyset(_, Pointee(ProtobufEquals(update_req_->changes())),
-                           update_req_->authorization_signature()))
-      .WillOnce(Return(CRYPTOHOME_ERROR_AUTHORIZATION_KEY_FAILED));
-
-  EXPECT_EQ(userdataauth_->UpdateKey(*update_req_),
-            user_data_auth::CRYPTOHOME_ERROR_AUTHORIZATION_KEY_FAILED);
 }
 
 TEST_F(UserDataAuthExTest, MigrateKeyValidity) {

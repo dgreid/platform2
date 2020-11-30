@@ -78,12 +78,6 @@ class MockHomeDirs : public HomeDirs {
               RemoveKeyset,
               (const Credentials&, const KeyData&),
               (override));
-  MOCK_METHOD(CryptohomeErrorCode,
-              UpdateKeyset,
-              (const Credentials& credentials,
-               const Key* changed_data,
-               const std::string& authorization_signature),
-              (override));
   MOCK_METHOD(bool, ForceRemoveKeyset, (const std::string&, int), (override));
   MOCK_METHOD(bool, MoveKeyset, (const std::string&, int, int), (override));
   MOCK_METHOD(void, RemoveLECredentials, (const std::string&), (override));

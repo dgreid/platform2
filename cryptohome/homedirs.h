@@ -225,20 +225,6 @@ class HomeDirs {
   virtual CryptohomeErrorCode RemoveKeyset(const Credentials& credentials,
                                            const KeyData& key_data);
 
-  // Finds and updates the keyset authenticated by |credentials| and
-  // applies |changed_data| to the keyset conditionally on if
-  // |authorization_signature| is needed and is valid.
-  virtual CryptohomeErrorCode UpdateKeyset(
-      const Credentials& credentials,
-      const Key* changed_data,
-      const std::string& authorization_signature);
-
-  // Returns true if the |signature| is valid over the |new_key| given
-  // the AuthorizationData specification from |existing_key_data|.
-  virtual bool CheckAuthorizationSignature(const KeyData& existing_key_data,
-                                           const Key& new_key,
-                                           const std::string& signature);
-
   // Removes the keyset specified by |index| from the list for the user
   // vault identified by its |obfuscated| username.
   // The caller should check credentials if the call is user-sourced.

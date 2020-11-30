@@ -156,19 +156,6 @@ do.
       </arg>
     </method>
 
-    <method name="UpdateKey">
-      <annotation name="org.chromium.DBus.Method.Kind"
-                  value="async"/>
-      <arg name="request" type="ay" direction="in">
-        <annotation name="org.chromium.DBus.Argument.ProtobufClass"
-                    value="user_data_auth::UpdateKeyRequest" />
-      </arg>
-      <arg name="reply" type="ay" direction="out">
-        <annotation name="org.chromium.DBus.Argument.ProtobufClass"
-                    value="user_data_auth::UpdateKeyReply" />
-      </arg>
-    </method>
-
     <method name="RemoveKey">
       <annotation name="org.chromium.DBus.Method.Kind"
                   value="async"/>

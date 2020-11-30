@@ -303,24 +303,6 @@ message AddDataRestoreKeyReply {
   bytes data_restore_key = 2;
 }
 
-// Input parameters to UpdateKey()
-message UpdateKeyRequest {
-  // Whose key to update?
-  cryptohome.AccountIdentifier account_id = 1;
-  // The authentication data from user.
-  cryptohome.AuthorizationRequest authorization_request = 2;
-  // The changes to be made to the key.
-  cryptohome.Key changes = 3;
-  // Signature of the changes object above with the key itself.
-  bytes authorization_signature = 4;
-}
-
-// Output parameters for UpdateKey()
-message UpdateKeyReply {
-  // Indicates an error if error is not empty.
-  CryptohomeErrorCode error = 1;
-}
-
 // Input parameters to RemoveKey()
 message RemoveKeyRequest {
   // The owner of the key to remove

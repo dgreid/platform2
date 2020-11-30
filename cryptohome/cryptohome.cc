@@ -253,7 +253,6 @@ static const char kUserSwitch[] = "user";
 static const char kPasswordSwitch[] = "password";
 static const char kFingerprintSwitch[] = "fingerprint";
 static const char kKeyLabelSwitch[] = "key_label";
-static const char kKeyRevisionSwitch[] = "key_revision";
 static const char kHmacSigningKeySwitch[] = "hmac_signing_key";
 static const char kNewKeyLabelSwitch[] = "new_key_label";
 static const char kRemoveKeyLabelSwitch[] = "remove_key_label";
@@ -1342,83 +1341,6 @@ int main(int argc, char** argv) {
       return reply.error();
     }
     printf("Key added.\n");
-  } else if (!strcmp(switches::kActions[switches::ACTION_UPDATE_KEY_EX],
-                     action.c_str())) {
-    std::string new_password;
-    GetPassword(proxy, cl, switches::kNewPasswordSwitch,
-                "Enter the new password", &new_password);
-    cryptohome::AccountIdentifier id;
-    if (!BuildAccountId(cl, &id))
-      return 1;
-    cryptohome::AuthorizationRequest auth;
-    if (!BuildAuthorization(cl, proxy, true /* need_password */, &auth))
-      return 1;
-
-    cryptohome::UpdateKeyRequest key_req;
-    cryptohome::Key* key = key_req.mutable_changes();
-    key->set_secret(new_password);
-    cryptohome::KeyData* data = key->mutable_data();
-    if (cl->HasSwitch(switches::kNewKeyLabelSwitch))
-      data->set_label(cl->GetSwitchValueASCII(switches::kNewKeyLabelSwitch));
-
-    if (cl->HasSwitch(switches::kKeyRevisionSwitch)) {
-      int int_value = 0;
-      if (!base::StringToInt(
-              cl->GetSwitchValueASCII(switches::kKeyRevisionSwitch),
-              &int_value))
-        LOG(FATAL) << "Cannot parse --key_revision";
-      data->set_revision(int_value);
-    }
-
-    if (cl->HasSwitch(switches::kHmacSigningKeySwitch)) {
-      ac::chrome::managedaccounts::account::Secret new_secret;
-      new_secret.set_revision(data->revision());
-      new_secret.set_secret(key->secret());
-      std::string changes_str;
-      if (!new_secret.SerializeToString(&changes_str)) {
-        LOG(FATAL) << "Failed to serialize Secret";
-      }
-      brillo::SecureBlob hmac_key(
-          cl->GetSwitchValueASCII(switches::kHmacSigningKeySwitch));
-      brillo::SecureBlob hmac_data(changes_str.begin(), changes_str.end());
-      SecureBlob hmac = cryptohome::CryptoLib::HmacSha256(hmac_key, hmac_data);
-      key_req.set_authorization_signature(hmac.to_string());
-    }
-
-    brillo::glib::ScopedArray account_ary(GArrayFromProtoBuf(id));
-    brillo::glib::ScopedArray auth_ary(GArrayFromProtoBuf(auth));
-    brillo::glib::ScopedArray req_ary(GArrayFromProtoBuf(key_req));
-    if (!account_ary.get() || !auth_ary.get() || !req_ary.get())
-      return 1;
-
-    cryptohome::BaseReply reply;
-    brillo::glib::ScopedError error;
-    if (cl->HasSwitch(switches::kAsyncSwitch)) {
-      ClientLoop loop;
-      loop.Initialize(&proxy);
-      DBusGProxyCall* call =
-          org_chromium_CryptohomeInterface_update_key_ex_async(
-              proxy.gproxy(), account_ary.get(), auth_ary.get(), req_ary.get(),
-              &ClientLoop::ParseReplyThunk, static_cast<gpointer>(&loop));
-      if (!call)
-        return 1;
-      loop.Run();
-      reply = loop.reply();
-    } else {
-      GArray* out_reply = NULL;
-      if (!org_chromium_CryptohomeInterface_update_key_ex(
-              proxy.gproxy(), account_ary.get(), auth_ary.get(), req_ary.get(),
-              &out_reply, &brillo::Resetter(&error).lvalue())) {
-        printf("Failed to call UpdateKeyEx!\n");
-        return 1;
-      }
-      ParseBaseReply(out_reply, &reply, true /* print_reply */);
-    }
-    if (reply.has_error()) {
-      printf("Key update failed.\n");
-      return reply.error();
-    }
-    printf("Key updated.\n");
   } else if (!strcmp(switches::kActions[switches::ACTION_REMOVE],
                      action.c_str())) {
     std::string account_id;

@@ -186,11 +186,6 @@ message AddKeyRequest {
   optional bool clobber_if_exists = 2 [default=false];
 }
 
-message UpdateKeyRequest {
-  optional Key changes = 1;
-  optional bytes authorization_signature = 2;
-}
-
 message CheckKeyRequest {
 }
 

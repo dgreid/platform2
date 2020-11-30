@@ -199,30 +199,6 @@
                     value="cryptohome::BaseReply" />
       </arg>
     </method>
-    <!-- This method looks like an AddKeyEx(clobber=true)
-         but it updates the authorizing key exclusively.
-    -->
-    <method name="UpdateKeyEx">
-      <annotation name="org.chromium.DBus.Method.Kind"
-                  value="async"/>
-      <annotation name="org.freedesktop.DBus.GLib.Async" value="true"/>
-      <arg type="ay" name="account_id" direction="in">
-        <annotation name="org.chromium.DBus.Argument.ProtobufClass"
-                    value="cryptohome::AccountIdentifier" />
-      </arg>
-      <arg type="ay" name="authorization_request" direction="in">
-        <annotation name="org.chromium.DBus.Argument.ProtobufClass"
-                    value="cryptohome::AuthorizationRequest" />
-      </arg>
-      <arg type="ay" name="update_key_request" direction="in">
-        <annotation name="org.chromium.DBus.Argument.ProtobufClass"
-                    value="cryptohome::UpdateKeyRequest" />
-      </arg>
-      <arg type="ay" name="update_key_reply" direction="out">
-        <annotation name="org.chromium.DBus.Argument.ProtobufClass"
-                    value="cryptohome::BaseReply" />
-      </arg>
-    </method>
     <method name="RemoveEx">
       <annotation name="org.chromium.DBus.Method.Kind"
                   value="async"/>

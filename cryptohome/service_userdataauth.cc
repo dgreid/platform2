@@ -326,31 +326,6 @@ void UserDataAuthAdaptor::DoAddDataRestoreKey(
   response->Return(reply);
 }
 
-void UserDataAuthAdaptor::UpdateKey(
-    std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
-        user_data_auth::UpdateKeyReply>> response,
-    const user_data_auth::UpdateKeyRequest& in_request) {
-  service_->PostTaskToMountThread(
-      FROM_HERE,
-      base::BindOnce(
-          &UserDataAuthAdaptor::DoUpdateKey, base::Unretained(this),
-          ThreadSafeDBusMethodResponse<user_data_auth::UpdateKeyReply>::
-              MakeThreadSafe(std::move(response)),
-          in_request));
-}
-
-void UserDataAuthAdaptor::DoUpdateKey(
-    std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
-        user_data_auth::UpdateKeyReply>> response,
-    const user_data_auth::UpdateKeyRequest& in_request) {
-  user_data_auth::UpdateKeyReply reply;
-  auto status = service_->UpdateKey(in_request);
-  // Note, if there's no error, then |status| is set to CRYPTOHOME_ERROR_NOT_SET
-  // to indicate that.
-  reply.set_error(status);
-  response->Return(reply);
-}
-
 void UserDataAuthAdaptor::RemoveKey(
     std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
         user_data_auth::RemoveKeyReply>> response,

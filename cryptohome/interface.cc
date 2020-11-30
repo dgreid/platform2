@@ -116,14 +116,6 @@ gboolean cryptohome_add_data_restore_key(Cryptohome* self,
   // Leave the response called error to reuse WRAP.
   CRYPTOHOME_WRAP_METHOD(AddDataRestoreKey, id, auth);
 }
-gboolean cryptohome_update_key_ex(Cryptohome* self,
-                                  GArray* id,
-                                  GArray* auth,
-                                  GArray* params,
-                                  DBusGMethodInvocation* error) {
-  // Leave the response called error to reuse WRAP.
-  CRYPTOHOME_WRAP_METHOD(UpdateKeyEx, id, auth, params);
-}
 gboolean cryptohome_remove_ex(Cryptohome* self,
                               GArray* account,
                               DBusGMethodInvocation* error) {

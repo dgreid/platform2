@@ -325,33 +325,6 @@ void LegacyCryptohomeInterfaceAdaptor::AddDataRestoreKeyOnSuccess(
   response->Return(result);
 }
 
-void LegacyCryptohomeInterfaceAdaptor::UpdateKeyEx(
-    std::unique_ptr<
-        brillo::dbus_utils::DBusMethodResponse<cryptohome::BaseReply>> response,
-    const cryptohome::AccountIdentifier& in_account_id,
-    const cryptohome::AuthorizationRequest& in_authorization_request,
-    const cryptohome::UpdateKeyRequest& in_update_key_request) {
-  auto response_shared =
-      std::make_shared<SharedDBusMethodResponse<cryptohome::BaseReply>>(
-          std::move(response));
-
-  user_data_auth::UpdateKeyRequest request;
-  request.mutable_account_id()->CopyFrom(in_account_id);
-  request.mutable_authorization_request()->CopyFrom(in_authorization_request);
-  request.mutable_changes()->CopyFrom(in_update_key_request.changes());
-  request.set_authorization_signature(
-      in_update_key_request.authorization_signature());
-  userdataauth_proxy_->UpdateKeyAsync(
-      request,
-      base::Bind(&LegacyCryptohomeInterfaceAdaptor::ForwardBaseReplyErrorCode<
-                     user_data_auth::UpdateKeyReply>,
-                 response_shared),
-      base::Bind(&LegacyCryptohomeInterfaceAdaptor::ForwardError<
-                     cryptohome::BaseReply>,
-                 base::Unretained(this), response_shared),
-      kDefaultTimeout.InMilliseconds());
-}
-
 void LegacyCryptohomeInterfaceAdaptor::RemoveEx(
     std::unique_ptr<
         brillo::dbus_utils::DBusMethodResponse<cryptohome::BaseReply>> response,
