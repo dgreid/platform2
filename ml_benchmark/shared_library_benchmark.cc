@@ -38,11 +38,6 @@ bool SharedLibraryBenchmark::ExecuteBenchmark(
   std::unique_ptr<void, decltype(deleter)> managed_results(results_buffer,
                                                            deleter);
 
-  if (ret != chrome::ml_benchmark::OK) {
-    LOG(ERROR) << "Benchmark did not successfully execute";
-    return false;
-  }
-
   if (results_buffer == nullptr || results_size == 0) {
     LOG(ERROR) << "Cannot parse the results from the test driver: "
                << "Driver did not return a buffer or a correct size";
@@ -52,6 +47,11 @@ bool SharedLibraryBenchmark::ExecuteBenchmark(
   if (!results->ParseFromArray(results_buffer, results_size)) {
     LOG(ERROR) << "Cannot parse the results from the test driver: "
                << "Driver did not return a valid result";
+    return false;
+  }
+
+  if (ret != chrome::ml_benchmark::OK) {
+    LOG(ERROR) << "Benchmark did not successfully execute";
     return false;
   }
 

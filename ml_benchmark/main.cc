@@ -79,6 +79,7 @@ void BenchmarkAndReportResults(
   BenchmarkResults results;
   if (!benchmark.ExecuteBenchmark(config, &results)) {
     LOG(ERROR) << "Unable to execute the " << driver_name << " benchmark";
+    LOG(ERROR) << "Reason: " << results.results_message();
     return;
   }
 
