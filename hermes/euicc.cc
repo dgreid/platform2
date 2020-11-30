@@ -19,6 +19,10 @@
 
 using lpa::proto::ProfileInfo;
 
+namespace {
+const char kDefaultRootSmds[] = "lpa.ds.gsma.com";
+}
+
 namespace hermes {
 
 Euicc::Euicc(uint8_t physical_slot, EuiccSlotInfo slot_info)
@@ -88,6 +92,14 @@ void Euicc::UpdateInstalledProfilesProperty() {
     profile_paths.push_back(profile->object_path());
   }
   dbus_adaptor_->SetInstalledProfiles(profile_paths);
+}
+
+void Euicc::UpdatePendingProfilesProperty() {
+  std::vector<dbus::ObjectPath> profile_paths;
+  for (auto& profile : pending_profiles_) {
+    profile_paths.push_back(profile->object_path());
+  }
+  dbus_adaptor_->SetPendingProfiles(profile_paths);
 }
 
 void Euicc::OnProfileInstalled(
@@ -187,6 +199,42 @@ void Euicc::OnInstalledProfilesReceived(
     }
   }
   UpdateInstalledProfilesProperty();
+  result_callback.Success();
+}
+
+void Euicc::RequestPendingProfiles(ResultCallback<> result_callback,
+                                   const std::string& root_smds) {
+  context_->modem_control()->StoreAndSetActiveSlot(physical_slot_);
+  context_->lpa()->GetPendingProfilesFromSmds(
+      root_smds.empty() ? kDefaultRootSmds : root_smds, context_->executor(),
+      [result_callback{std::move(result_callback)}, this](
+          std::vector<lpa::proto::ProfileInfo>& profile_infos,
+          int error) mutable {
+        OnPendingProfilesReceived(profile_infos, error,
+                                  std::move(result_callback));
+      });
+}
+
+void Euicc::OnPendingProfilesReceived(
+    const std::vector<lpa::proto::ProfileInfo>& profile_infos,
+    int error,
+    ResultCallback<> result_callback) {
+  auto decoded_error = LpaErrorToBrillo(FROM_HERE, error);
+  if (decoded_error) {
+    LOG(ERROR) << "Failed to retrieve pending profiles";
+    result_callback.Error(decoded_error);
+    return;
+  }
+
+  pending_profiles_.clear();
+  UpdatePendingProfilesProperty();
+  for (const auto& info : profile_infos) {
+    auto profile = Profile::Create(info, physical_slot_);
+    if (profile) {
+      pending_profiles_.push_back(std::move(profile));
+    }
+  }
+  UpdatePendingProfilesProperty();
   result_callback.Success();
 }
 

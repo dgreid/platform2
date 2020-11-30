@@ -37,7 +37,8 @@ class EuiccDBusAdaptor : public EuiccAdaptorInterface,
   void UninstallProfile(std::unique_ptr<DBusResponse<>> response,
                         const dbus::ObjectPath& in_profile) override;
   // Update the PendingProfiles property.
-  void RequestPendingEvents(std::unique_ptr<DBusResponse<>> response) override;
+  void RequestPendingProfiles(std::unique_ptr<DBusResponse<>> response,
+                              const std::string& in_root_smds) override;
   void RequestInstalledProfiles(
       std::unique_ptr<DBusResponse<>> response) override;
 

@@ -56,12 +56,17 @@
         </tp:docstring>
       </arg>
     </method>
-    <method name="RequestPendingEvents">
+    <method name="RequestPendingProfiles">
       <tp:docstring>
-        Request Events from SM-DS. Will update the PendingProfiles property as
-        needed prior to returning.
+        Request Events/Profiles from SM-DS. Will update the PendingProfiles
+        property as needed prior to returning.
       </tp:docstring>
       <annotation name="org.chromium.DBus.Method.Kind" value="async" />
+      <arg name="root_smds" type="s" direction="in">
+        <tp:docstring>
+          Root smds or "" for lpa.ds.gsma.com
+        </tp:docstring>
+      </arg>
     </method>
 
     <property name="InstalledProfiles" type="ao" access="read" />

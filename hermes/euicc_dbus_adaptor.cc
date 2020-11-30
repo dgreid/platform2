@@ -60,13 +60,10 @@ void EuiccDBusAdaptor::UninstallProfile(
   euicc_->UninstallProfile(in_profile, std::move(result_callback));
 }
 
-void EuiccDBusAdaptor::RequestPendingEvents(
-    std::unique_ptr<DBusResponse<>> response) {
-  // TODO(crbug.com/1071470) This is stubbed until google-lpa supports SM-DS.
-  //
-  // Note that there will need to be some way to store the Event Record info
-  // (SM-DP+ address and event id) for each pending Profile.
-  response->Return();
+void EuiccDBusAdaptor::RequestPendingProfiles(
+    std::unique_ptr<DBusResponse<>> response, const std::string& in_root_smds) {
+  ResultCallback<> result_callback(std::move(response));
+  euicc_->RequestPendingProfiles(std::move(result_callback), in_root_smds);
 }
 
 void EuiccDBusAdaptor::RequestInstalledProfiles(
