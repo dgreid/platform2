@@ -113,6 +113,7 @@ include(sepolicy/file_contexts/sysfs_contexts)
 /usr/sbin/arc-keymasterd        u:object_r:cros_arc_keymasterd_exec:s0
 /usr/sbin/arc-setup             u:object_r:cros_arc_setup_exec:s0
 /usr/sbin/arcvm_boot_notification_server u:object_r:cros_arcvm_boot_notification_server_exec:s0
+/usr/sbin/arcvm-forward-pstore  u:object_r:cros_arcvm_forward_pstore_exec:s0
 /usr/sbin/atrusd                u:object_r:cros_atrusd_exec:s0
 /usr/sbin/attestationd          u:object_r:cros_attestationd_exec:s0
 /usr/sbin/avahi-daemon          u:object_r:cros_avahi_daemon_exec:s0
