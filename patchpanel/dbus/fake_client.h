@@ -62,6 +62,8 @@ class BRILLO_EXPORT FakeClient : public Client {
                       const std::string& dst_ip,
                       uint32_t dst_port) override;
 
+  std::vector<NetworkDevice> GetDevices() override;
+
   void RegisterNeighborReachabilityEventHandler(
       NeighborReachabilityEventHandler handler) override;
 

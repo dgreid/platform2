@@ -90,6 +90,10 @@ bool FakeClient::ModifyPortRule(
   return true;
 }
 
+std::vector<NetworkDevice> FakeClient::GetDevices() {
+  return {};
+}
+
 void FakeClient::RegisterNeighborReachabilityEventHandler(
     NeighborReachabilityEventHandler handler) {
   neighbor_handlers_.push_back(handler);

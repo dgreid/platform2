@@ -133,6 +133,8 @@ class ClientImpl : public Client {
                       const std::string& dst_ip,
                       uint32_t dst_port) override;
 
+  std::vector<NetworkDevice> GetDevices() override;
+
   void RegisterNeighborReachabilityEventHandler(
       NeighborReachabilityEventHandler handler) override;
 
@@ -585,6 +587,37 @@ bool ClientImpl::ModifyPortRule(ModifyPortRuleRequest::Operation op,
     return false;
   }
   return true;
+}
+
+std::vector<NetworkDevice> ClientImpl::GetDevices() {
+  dbus::MethodCall method_call(kPatchPanelInterface, kGetDevicesMethod);
+  dbus::MessageWriter writer(&method_call);
+
+  GetDevicesRequest request;
+  if (!writer.AppendProtoAsArrayOfBytes(request)) {
+    LOG(ERROR) << "Failed to encode GetDevicesRequest proto";
+    return {};
+  }
+
+  std::unique_ptr<dbus::Response> dbus_response = proxy_->CallMethodAndBlock(
+      &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
+  if (!dbus_response) {
+    LOG(ERROR) << "Failed to send dbus message to patchpanel service";
+    return {};
+  }
+
+  dbus::MessageReader reader(dbus_response.get());
+  GetDevicesResponse response;
+  if (!reader.PopArrayOfBytesAsProto(&response)) {
+    LOG(ERROR) << "Failed to parse response proto";
+    return {};
+  }
+
+  std::vector<NetworkDevice> devices;
+  for (const auto& d : response.devices()) {
+    devices.emplace_back(d);
+  }
+  return devices;
 }
 
 void ClientImpl::RegisterNeighborReachabilityEventHandler(

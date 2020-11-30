@@ -97,6 +97,9 @@ class BRILLO_EXPORT Client {
                               const std::string& dst_ip,
                               uint32_t dst_port) = 0;
 
+  // Obtains a list of NetworkDevices currently managed by patchpanel.
+  virtual std::vector<NetworkDevice> GetDevices() = 0;
+
   // Registers a handler that will be called on receiving a neighbor
   // reachability event. Currently these events are generated only for WiFi
   // devices. The handler is registered for as long as this patchpanel::Client
