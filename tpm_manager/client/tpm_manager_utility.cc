@@ -254,7 +254,7 @@ bool TpmManagerUtility::DefineSpace(uint32_t index,
                              request, &reply);
   if (reply.result() != tpm_manager::NVRAM_RESULT_SUCCESS) {
     LOG(ERROR) << __func__
-               << "Failed to define nvram space: " << reply.result();
+               << ": Failed to define nvram space: " << reply.result();
     return false;
   }
   return true;
@@ -268,7 +268,7 @@ bool TpmManagerUtility::DestroySpace(uint32_t index) {
                              request, &reply);
   if (reply.result() != tpm_manager::NVRAM_RESULT_SUCCESS) {
     LOG(ERROR) << __func__
-               << "Failed to destroy nvram space: " << reply.result();
+               << ": Failed to destroy nvram space: " << reply.result();
     return false;
   }
   return true;
@@ -324,7 +324,8 @@ bool TpmManagerUtility::ListSpaces(std::vector<uint32_t>* spaces) {
   SendTpmNvramRequestAndWait(&tpm_manager::TpmNvramInterface::ListSpaces,
                              request, &reply);
   if (reply.result() != tpm_manager::NVRAM_RESULT_SUCCESS) {
-    LOG(ERROR) << __func__ << "Failed to list nvram spaces: " << reply.result();
+    LOG(ERROR) << __func__
+               << ": Failed to list nvram spaces: " << reply.result();
     return false;
   }
   spaces->clear();
@@ -345,7 +346,7 @@ bool TpmManagerUtility::GetSpaceInfo(uint32_t index,
   SendTpmNvramRequestAndWait(&tpm_manager::TpmNvramInterface::GetSpaceInfo,
                              request, &reply);
   if (reply.result() != tpm_manager::NVRAM_RESULT_SUCCESS) {
-    LOG(ERROR) << __func__ << "Failed to get space info for space " << index
+    LOG(ERROR) << __func__ << ": Failed to get space info for space " << index
                << ": " << reply.result();
     return false;
   }
@@ -363,7 +364,8 @@ bool TpmManagerUtility::LockSpace(uint32_t index) {
   SendTpmNvramRequestAndWait(&tpm_manager::TpmNvramInterface::LockSpace,
                              request, &reply);
   if (reply.result() != tpm_manager::NVRAM_RESULT_SUCCESS) {
-    LOG(ERROR) << __func__ << "Failed to lock nvram space: " << reply.result();
+    LOG(ERROR) << __func__
+               << ": Failed to lock nvram space: " << reply.result();
     return false;
   }
   return true;
