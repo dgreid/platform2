@@ -22,7 +22,7 @@ std::unique_ptr<ScopedTempFile> ScopedTempFile::Create() {
 ScopedTempFile::ScopedTempFile(const base::FilePath& path) : path_(path) {}
 
 ScopedTempFile::~ScopedTempFile() {
-  base::DeleteFile(path_, false /* recursive */);
+  base::DeleteFile(path_);
 }
 
 }  // namespace modemfwd

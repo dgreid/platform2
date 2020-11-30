@@ -43,7 +43,7 @@ CertificateFile::CertificateFile() : root_directory_(kDefaultRootDirectory) {
 CertificateFile::~CertificateFile() {
   SLOG(this, 2) << __func__;
   if (!output_file_.empty()) {
-    base::DeleteFile(output_file_, false);
+    base::DeleteFile(output_file_);
   }
 }
 
@@ -112,12 +112,12 @@ FilePath CertificateFile::WriteFile(const string& output_data) {
     if (chmod(root_directory_.value().c_str(),
               S_IRWXU | S_IXGRP | S_IRGRP | S_IXOTH | S_IROTH)) {
       LOG(ERROR) << "Failed to set permissions on " << root_directory_.value();
-      base::DeleteFile(root_directory_, true);
+      base::DeletePathRecursively(root_directory_);
       return FilePath();
     }
   }
   if (!output_file_.empty()) {
-    base::DeleteFile(output_file_, false);
+    base::DeleteFile(output_file_);
     output_file_ = FilePath();
   }
 
@@ -137,7 +137,7 @@ FilePath CertificateFile::WriteFile(const string& output_data) {
   if (chmod(output_file.value().c_str(),
             S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)) {
     LOG(ERROR) << "Failed to set permissions on " << output_file.value();
-    base::DeleteFile(output_file, false);
+    base::DeleteFile(output_file);
     return FilePath();
   }
   output_file_ = output_file;

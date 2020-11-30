@@ -106,7 +106,7 @@ bool Resolver::ClearDNS() {
 
   CHECK(!path_.empty());
 
-  return base::DeleteFile(path_, false);
+  return base::DeleteFile(path_);
 }
 
 }  // namespace shill

@@ -76,7 +76,7 @@ void FeedbackReport::LoadReportsAndQueue(const base::FilePath& user_dir,
     std::string data;
     if (ReadFileToString(name, &data))
       callback.Run(data);
-    base::DeleteFile(name, false);
+    base::DeleteFile(name);
   }
 }
 

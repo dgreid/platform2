@@ -49,8 +49,8 @@ class USBDeviceInfoTest : public ::testing::Test {
   }
 
   void TearDown() override {
-    ASSERT_TRUE(base::DeleteFile(base::FilePath(info_file_), false));
-    ASSERT_TRUE(base::DeleteFile(base::FilePath(ids_file_), false));
+    ASSERT_TRUE(base::DeleteFile(base::FilePath(info_file_)));
+    ASSERT_TRUE(base::DeleteFile(base::FilePath(ids_file_)));
   }
 
  protected:

@@ -229,7 +229,7 @@ void TimberSlide::OnEventReadable() {
 
 void TimberSlide::RotateLogs(const base::FilePath& previous_log,
                              const base::FilePath& current_log) {
-  CHECK(base::DeleteFile(previous_log, /* recursive = */ false));
+  CHECK(base::DeleteFile(previous_log));
 
   if (base::PathExists(current_log))
     CHECK(base::Move(current_log, previous_log));

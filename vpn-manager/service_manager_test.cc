@@ -38,7 +38,7 @@ class ServiceManagerTest : public ::testing::Test {
   void SetUp() override {
     CHECK(temp_dir_.CreateUniqueTempDir());
     test_path_ = temp_dir_.GetPath().Append("service_manager_testdir");
-    base::DeleteFile(test_path_, true);
+    base::DeletePathRecursively(test_path_);
     base::CreateDirectory(test_path_);
     temp_path_ = test_path_.Append("service");
     outer_service_.temp_path_ = temp_path_;

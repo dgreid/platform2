@@ -80,7 +80,7 @@ class PregPolicyEncoderTest : public ::testing::Test {
 
   void TearDown() override {
     // Don't not leave no mess behind.
-    base::DeleteFile(base_path_, true /* recursive */);
+    base::DeletePathRecursively(base_path_);
   }
 
  protected:

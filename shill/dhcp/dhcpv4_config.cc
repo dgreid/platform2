@@ -196,14 +196,11 @@ void DHCPv4Config::CleanupClientState() {
 
   // Delete lease file if it is ephemeral.
   if (IsEphemeralLease()) {
-    base::DeleteFile(
-        root().Append(base::StringPrintf(DHCPProvider::kDHCPCDPathFormatLease,
-                                         device_name().c_str())),
-        false);
+    base::DeleteFile(root().Append(base::StringPrintf(
+        DHCPProvider::kDHCPCDPathFormatLease, device_name().c_str())));
   }
-  base::DeleteFile(root().Append(base::StringPrintf(kDHCPCDPathFormatPID,
-                                                    device_name().c_str())),
-                   false);
+  base::DeleteFile(root().Append(
+      base::StringPrintf(kDHCPCDPathFormatPID, device_name().c_str())));
   is_gateway_arp_active_ = false;
 }
 

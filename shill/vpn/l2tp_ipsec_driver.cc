@@ -210,7 +210,7 @@ void L2TPIPSecDriver::OnDefaultPhysicalServiceEvent(
 
 void L2TPIPSecDriver::DeleteTemporaryFile(base::FilePath* temporary_file) {
   if (!temporary_file->empty()) {
-    base::DeleteFile(*temporary_file, false);
+    base::DeleteFile(*temporary_file);
     temporary_file->clear();
   }
 }

@@ -530,7 +530,7 @@ bool CleanupImpl(const base::FilePath& mount_point,
     return false;
   }
   // Delete mount target folder
-  base::DeleteFile(mount_point, true);
+  base::DeletePathRecursively(mount_point);
 
   // Clear Verity device.
   if (!MapperWipeTable(source_path.value())) {

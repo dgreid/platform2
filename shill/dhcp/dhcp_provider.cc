@@ -135,12 +135,10 @@ bool DHCPProvider::IsRecentlyUnbound(int pid) {
 void DHCPProvider::DestroyLease(const string& name) {
   SLOG(this, 2) << __func__ << " name: " << name;
   base::DeleteFile(
-      root_.Append(base::StringPrintf(kDHCPCDPathFormatLease, name.c_str())),
-      false);
+      root_.Append(base::StringPrintf(kDHCPCDPathFormatLease, name.c_str())));
 #ifndef DISABLE_DHCPV6
   base::DeleteFile(
-      root_.Append(base::StringPrintf(kDHCPCDPathFormatLease6, name.c_str())),
-      false);
+      root_.Append(base::StringPrintf(kDHCPCDPathFormatLease6, name.c_str())));
 #endif  // DISABLE_DHCPV6
 }
 

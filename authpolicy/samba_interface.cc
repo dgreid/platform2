@@ -355,7 +355,7 @@ bool CheckFlagsDefaultLevelValid(const base::FilePath& default_level_path) {
   if (uptime_min < -1 || uptime_min > kMaxDefaultLogLevelUptimeMinutes) {
     LOG(INFO) << "Removing flags default level file and resetting (uptime: "
               << uptime_min << " minutes).";
-    PCHECK(base::DeleteFile(default_level_path, false /* recursive */))
+    PCHECK(base::DeleteFile(default_level_path))
         << "Failed to delete flags default level file '"
         << default_level_path.value() << "'";
     return false;
@@ -627,7 +627,7 @@ bool SambaInterface::CleanState(const PathService* path_service) {
   // doesn't support wildcards, so DeleteFile returns false.
   DCHECK(path_service);
   const base::FilePath state_dir(path_service->Get(Path::STATE_DIR));
-  base::DeleteFile(state_dir, true /* recursive */);
+  base::DeletePathRecursively(state_dir);
   if (!base::IsDirectoryEmpty(state_dir)) {
     LOG(ERROR) << "Failed to clean state dir '" << state_dir.value() << "'";
     return false;
@@ -1935,7 +1935,7 @@ ErrorType SambaInterface::DownloadGpos(
 
     if (!use_cache) {
       // Delete the stale GPO file if it exists.
-      if (!base::DeleteFile(local_path, false /* recursive */)) {
+      if (!base::DeleteFile(local_path)) {
         LOG(ERROR) << "Failed to delete old GPO file '"
                    << anonymizer_->Process(local_path.value()) << "'";
         return ERROR_LOCAL_IO;
@@ -2092,7 +2092,7 @@ void SambaInterface::UpdateDevicePolicyDependencies(
   if (!auth_data_cache_.IsEnabled()) {
     auth_data_cache_.Clear();
     const base::FilePath cache_path(paths_->Get(Path::AUTH_DATA_CACHE));
-    if (!base::DeleteFile(cache_path, false /* recursive */)) {
+    if (!base::DeleteFile(cache_path)) {
       LOG(ERROR) << "Failed delete auth data cache file '" << cache_path.value()
                  << "'";
     }
@@ -2478,7 +2478,7 @@ void SambaInterface::SaveFlagsDefaultLevel() {
   const int size = static_cast<int>(level_str.size());
   if (flags_default_level_ == AuthPolicyFlags::kQuiet) {
     // Remove the file, kQuiet is the default, anyway.
-    if (!base::DeleteFile(default_level_path, false /* recursive */)) {
+    if (!base::DeleteFile(default_level_path)) {
       PLOG(ERROR) << "Failed to delete flags default level file '"
                   << default_level_path.value() << "'";
     }

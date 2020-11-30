@@ -65,7 +65,7 @@ bool EnsureDirectoryExists(const base::FilePath& path,
                            mode_t mode) {
   if (!base::DirectoryExists(path)) {
     // Remove the existing file or link if any.
-    if (!base::DeleteFile(path, /*recursive=*/false)) {
+    if (!base::DeleteFile(path)) {
       PLOG(ERROR) << "Unable to delete " << path.value();
       return false;
     }

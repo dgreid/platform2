@@ -61,7 +61,7 @@ bool PolicyStore::LoadOrCreateFromPath(const base::FilePath& policy_path) {
     case policy::LoadPolicyResult::kEmptyFile:
       return false;
     case policy::LoadPolicyResult::kInvalidPolicyData:
-      base::DeleteFile(policy_path, false);
+      base::DeleteFile(policy_path);
       policy_.Clear();
       return false;
   }
@@ -98,7 +98,7 @@ void PolicyStore::Set(
 }
 
 bool PolicyStore::Delete() {
-  if (!base::DeleteFile(policy_path_, false))
+  if (!base::DeleteFile(policy_path_))
     return false;
   policy_.Clear();
   return true;

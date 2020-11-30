@@ -1166,11 +1166,11 @@ TEST_F(CrashCollectorTest, GetLogContents) {
   const char kConfigContents[] =
       "foobar=echo hello there | \\\n  sed -e \"s/there/world/\"";
   ASSERT_TRUE(test_util::CreateFile(config_file, kConfigContents));
-  base::DeleteFile(FilePath(output_file), false);
+  base::DeleteFile(FilePath(output_file));
   EXPECT_FALSE(collector_.GetLogContents(config_file, "barfoo", output_file));
   EXPECT_FALSE(base::PathExists(output_file));
   EXPECT_EQ(collector_.get_bytes_written(), 0);
-  base::DeleteFile(FilePath(output_file), false);
+  base::DeleteFile(FilePath(output_file));
   EXPECT_TRUE(collector_.GetLogContents(config_file, "foobar", output_file));
   ASSERT_TRUE(base::PathExists(output_file));
   EXPECT_GT(collector_.get_bytes_written(), 0);
@@ -1192,7 +1192,7 @@ TEST_F(CrashCollectorTest, GetMultipleLogContents) {
       "foobaz=echo foobaz\n"
       "bazbar=echo bazbar";
   ASSERT_TRUE(test_util::CreateFile(config_file, kConfigContents));
-  base::DeleteFile(FilePath(output_file), false);
+  base::DeleteFile(FilePath(output_file));
 
   // If both commands fail, expect no output.
   EXPECT_FALSE(collector_.GetMultipleLogContents(
@@ -1208,7 +1208,7 @@ TEST_F(CrashCollectorTest, GetMultipleLogContents) {
   std::string contents;
   EXPECT_TRUE(base::ReadFileToString(output_file, &contents));
   EXPECT_EQ("bazbar\n", contents);
-  base::DeleteFile(FilePath(output_file), false);
+  base::DeleteFile(FilePath(output_file));
 
   // Expect output from both commands.
   EXPECT_TRUE(collector_.GetMultipleLogContents(
@@ -1228,7 +1228,7 @@ TEST_F(CrashCollectorTest, GetProcessTree) {
   EXPECT_TRUE(base::ReadFileToString(output_file, &contents));
   EXPECT_LT(300, contents.size());
   EXPECT_EQ(collector_.get_bytes_written(), contents.size());
-  base::DeleteFile(FilePath(output_file), false);
+  base::DeleteFile(FilePath(output_file));
 
   ASSERT_TRUE(collector_.GetProcessTree(0, output_file));
   ASSERT_TRUE(base::PathExists(output_file));
@@ -1244,7 +1244,7 @@ TEST_F(CrashCollectorTest, TruncatedLog) {
   FilePath output_file = test_dir_.Append("crash_log.gz");
   const char kConfigContents[] = "foobar=echo These are log contents.";
   ASSERT_TRUE(test_util::CreateFile(config_file, kConfigContents));
-  base::DeleteFile(FilePath(output_file), false);
+  base::DeleteFile(FilePath(output_file));
   collector_.max_log_size_ = 10;
   EXPECT_TRUE(collector_.GetLogContents(config_file, "foobar", output_file));
   ASSERT_TRUE(base::PathExists(output_file));

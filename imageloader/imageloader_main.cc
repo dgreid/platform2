@@ -83,8 +83,8 @@ bool CreateComponentsPath() {
   // Check if kComponentsPath does not exist or it is not a folder.
   if (!base::DirectoryExists(base::FilePath(kComponentsPath))) {
     // Remove the file at kComponentsPath.
-    if (!base::DeleteFile(base::FilePath(kComponentsPath), true)) {
-      PLOG(ERROR) << "base::DeleteFile failed: " << kComponentsPath;
+    if (!base::DeletePathRecursively(base::FilePath(kComponentsPath))) {
+      PLOG(ERROR) << "base::DeletePathRecursively failed: " << kComponentsPath;
       return false;
     }
     // Create a folder for kComponentsPath.

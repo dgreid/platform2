@@ -111,7 +111,7 @@ bool Daemon::Terminate() {
   bool result =
       !IsRunning() || process_->Kill(SIGTERM, kTerminationTimeoutSeconds);
   ClearProcess();  // This will send a SIGKILL if we failed above.
-  base::DeleteFile(base::FilePath(pid_file_), false);
+  base::DeleteFile(base::FilePath(pid_file_));
   return result;
 }
 

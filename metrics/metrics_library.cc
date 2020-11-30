@@ -220,7 +220,7 @@ bool MetricsLibrary::EnableMetrics() {
 }
 
 bool MetricsLibrary::DisableMetrics() {
-  return base::DeleteFile(base::FilePath(consent_file_), false);
+  return base::DeleteFile(base::FilePath(consent_file_));
 }
 
 void MetricsLibrary::Init() {

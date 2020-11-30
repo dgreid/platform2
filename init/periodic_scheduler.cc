@@ -28,7 +28,7 @@ bool SanitizePath(const base::FilePath& path) {
   if (lstat(path.value().c_str(), &path_stat) != 0 ||
       !S_ISDIR(path_stat.st_mode)) {
     // Don't recursively delete the directory if we can't stat it.
-    base::DeleteFile(path, false /* recursive */);
+    base::DeleteFile(path);
     if (!base::CreateDirectory(path)) {
       PLOG(ERROR) << "Failed to create new directory " << path.value();
       return false;
@@ -102,7 +102,7 @@ bool PeriodicScheduler::Run(bool start_immediately) {
     auto current_time = base::Time::Now();
 
     if (start_immediately || current_time - file_last_mtime > period_seconds_) {
-      base::DeleteFile(spool_file, false /* recursive */);
+      base::DeleteFile(spool_file);
       base::WriteFile(spool_file, nullptr, 0);
       auto now = base::Time::Now();
       base::TouchFile(spool_file, now, now);

@@ -194,7 +194,7 @@ bool ChromiumCommandBuilder::SetUpChromium() {
   if (!base::PathExists(time_zone_symlink)) {
     // base::PathExists() dereferences symlinks, so make sure that there's not a
     // dangling symlink there before we create a new link.
-    base::DeleteFile(time_zone_symlink, false);
+    base::DeleteFile(time_zone_symlink);
     PCHECK(base::CreateSymbolicLink(base::FilePath(kDefaultZoneinfoPath),
                                     time_zone_symlink));
   }

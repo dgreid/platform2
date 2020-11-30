@@ -268,8 +268,7 @@ TEST_F(BatteryDischargeRoutineTest, DelayedTaskHasMissingFile) {
 
   ASSERT_TRUE(base::DeleteFile(GetTempPath()
                                    .AppendASCII(kBatteryDirectoryPath)
-                                   .AppendASCII(kBatteryChargeNowFileName),
-                               false /* recursive */));
+                                   .AppendASCII(kBatteryChargeNowFileName)));
 
   FastForwardBy(kHalfDuration);
   update = GetUpdate();

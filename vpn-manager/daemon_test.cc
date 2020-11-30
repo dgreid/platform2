@@ -39,7 +39,7 @@ class DaemonTest : public ::testing::Test {
     FilePath cwd;
     CHECK(temp_dir_.CreateUniqueTempDir());
     FilePath test_path = temp_dir_.GetPath().Append("daemon_testdir");
-    base::DeleteFile(test_path, true);
+    base::DeletePathRecursively(test_path);
     base::CreateDirectory(test_path);
     pid_file_path_ = test_path.Append("process.pid");
     daemon_.reset(new Daemon(pid_file_path_.value()));

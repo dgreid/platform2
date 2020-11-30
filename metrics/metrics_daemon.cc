@@ -645,7 +645,7 @@ bool MetricsDaemon::CheckSystemCrash(const string& crash_file) {
 
   // Deletes the crash-detected file so that the daemon doesn't report
   // another kernel crash in case it's restarted.
-  base::DeleteFile(crash_detected, false);  // not recursive
+  base::DeleteFile(crash_detected);  // not recursive
   return true;
 }
 

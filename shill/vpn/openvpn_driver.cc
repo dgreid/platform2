@@ -189,11 +189,11 @@ void OpenVPNDriver::Cleanup() {
   }
   management_server_->Stop();
   if (!tls_auth_file_.empty()) {
-    base::DeleteFile(tls_auth_file_, false);
+    base::DeleteFile(tls_auth_file_);
     tls_auth_file_.clear();
   }
   if (!openvpn_config_file_.empty()) {
-    base::DeleteFile(openvpn_config_file_, false);
+    base::DeleteFile(openvpn_config_file_);
     openvpn_config_file_.clear();
   }
   rpc_task_.reset();
@@ -249,7 +249,7 @@ bool OpenVPNDriver::WriteConfigFile(const vector<vector<string>>& options,
               S_IRWXU | S_IRWXG | S_IROTH)) {
       LOG(ERROR) << "Failed to set permissions on "
                  << openvpn_config_directory_.value();
-      base::DeleteFile(openvpn_config_directory_, true);
+      base::DeletePathRecursively(openvpn_config_directory_);
       return false;
     }
   }

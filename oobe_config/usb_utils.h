@@ -33,7 +33,7 @@ class ScopedPathUnlinker {
   ScopedPathUnlinker& operator=(const ScopedPathUnlinker&) = delete;
 
   ~ScopedPathUnlinker() {
-    if (!base::DeleteFile(file_, false)) {
+    if (!base::DeleteFile(file_)) {
       PLOG(ERROR) << "Unable to unlink path " << file_.value();
     }
   }

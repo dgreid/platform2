@@ -118,7 +118,7 @@ class BiodStorageBaseTest : public ::testing::Test {
   BiodStorageBaseTest& operator=(const BiodStorageBaseTest&) = delete;
 
   ~BiodStorageBaseTest() override {
-    EXPECT_TRUE(base::DeleteFile(temp_dir_.GetPath(), true));
+    EXPECT_TRUE(base::DeletePathRecursively(temp_dir_.GetPath()));
   }
 
   base::Value CreateRecordDictionary(

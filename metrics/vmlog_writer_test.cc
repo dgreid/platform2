@@ -176,8 +176,8 @@ TEST(VmlogWriterTest, VmlogRotation) {
       temp_directory.Append("vmlog.1.PREVIOUS");
 
   // VmlogFile expects to create its output files.
-  base::DeleteFile(log_path, false);
-  base::DeleteFile(rotated_path, false);
+  base::DeleteFile(log_path);
+  base::DeleteFile(rotated_path);
 
   std::string header_string("header\n");
   VmlogFile l(log_path, rotated_path, 500, header_string);

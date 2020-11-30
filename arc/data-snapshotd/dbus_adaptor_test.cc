@@ -84,8 +84,7 @@ class DBusAdaptorTest : public testing::Test {
 
   void TearDown() override {
     dbus_adaptor_.reset();
-    EXPECT_TRUE(
-        base::DeleteFile(root_tempdir_.GetPath(), true /* recursive */));
+    EXPECT_TRUE(base::DeletePathRecursively(root_tempdir_.GetPath()));
   }
 
   DBusAdaptor* dbus_adaptor() { return dbus_adaptor_.get(); }
@@ -398,7 +397,7 @@ TEST_F(DBusAdaptorTest, TakeSnapshotDouble) {
 TEST_F(DBusAdaptorTest, LoadSnapshotNoAndroidDataDir) {
   CreateDir(last_snapshot_dir());
   CreateDir(previous_snapshot_dir());
-  EXPECT_TRUE(base::DeleteFile(user_directory(), true /* recursive */));
+  EXPECT_TRUE(base::DeletePathRecursively(user_directory()));
   EXPECT_FALSE(base::DirectoryExists(user_directory()));
 
   bool last, success;
@@ -544,7 +543,7 @@ TEST_F(DBusAdaptorTest, LoadSnapshotSuccess) {
                          false /* inode_verification_enabled */));
 
   // Remove android-data directory to be able to load a snapshot.
-  EXPECT_TRUE(base::DeleteFile(android_data_dir(), true /* recursive */));
+  EXPECT_TRUE(base::DeletePathRecursively(android_data_dir()));
   EXPECT_FALSE(base::DirectoryExists(android_data_dir()));
 
   EXPECT_CALL(*boot_lockbox_client(), Read(Eq(kLastSnapshotPublicKey), _))
@@ -629,9 +628,9 @@ TEST_F(DBusAdaptorTest, LoadSnapshotPreviousSuccess) {
         return true;
       }));
   // Invalidate the last snapshot.
-  EXPECT_TRUE(base::DeleteFile(last_snapshot_dir(), true /* recursive */));
+  EXPECT_TRUE(base::DeletePathRecursively(last_snapshot_dir()));
   // Remove android-data directory to be able to load a snapshot.
-  EXPECT_TRUE(base::DeleteFile(android_data_dir(), true /* recursive */));
+  EXPECT_TRUE(base::DeletePathRecursively(android_data_dir()));
   // Load the previous snapshot, because the last one is invalid.
   bool last, success;
   dbus_adaptor()->LoadSnapshot(kFakeAccountID, &last, &success);

@@ -57,9 +57,9 @@ class MetricsLibraryTest : public testing::Test {
   }
 
   void TearDown() override {
-    base::DeleteFile(FilePath(kTestMounts), false);
-    base::DeleteFile(kTestUMAEventsFile, false);
-    base::DeleteFile(kTestConsentIdFile, false);
+    base::DeleteFile(FilePath(kTestMounts));
+    base::DeleteFile(kTestUMAEventsFile);
+    base::DeleteFile(kTestConsentIdFile);
   }
 
   void VerifyEnabledCacheHit(bool to_value);
@@ -72,7 +72,7 @@ class MetricsLibraryTest : public testing::Test {
 // Reject symlinks even if they're to normal files.
 TEST_F(MetricsLibraryTest, ConsentIdInvalidSymlinkPath) {
   std::string id;
-  base::DeleteFile(kTestConsentIdFile, false);
+  base::DeleteFile(kTestConsentIdFile);
   ASSERT_EQ(symlink("/bin/sh", kTestConsentIdFile.value().c_str()), 0);
   ASSERT_FALSE(lib_.ConsentId(&id));
 }
@@ -80,7 +80,7 @@ TEST_F(MetricsLibraryTest, ConsentIdInvalidSymlinkPath) {
 // Reject non-files (like directories).
 TEST_F(MetricsLibraryTest, ConsentIdInvalidDirPath) {
   std::string id;
-  base::DeleteFile(kTestConsentIdFile, false);
+  base::DeleteFile(kTestConsentIdFile);
   ASSERT_EQ(mkdir(kTestConsentIdFile.value().c_str(), 0755), 0);
   ASSERT_FALSE(lib_.ConsentId(&id));
 }
@@ -88,7 +88,7 @@ TEST_F(MetricsLibraryTest, ConsentIdInvalidDirPath) {
 // Reject valid files full of invalid uuids.
 TEST_F(MetricsLibraryTest, ConsentIdInvalidContent) {
   std::string id;
-  base::DeleteFile(kTestConsentIdFile, false);
+  base::DeleteFile(kTestConsentIdFile);
 
   ASSERT_EQ(base::WriteFile(kTestConsentIdFile, "", 0), 0);
   ASSERT_FALSE(lib_.ConsentId(&id));
@@ -111,7 +111,7 @@ TEST_F(MetricsLibraryTest, ConsentIdInvalidContent) {
 // Accept old consent ids.
 TEST_F(MetricsLibraryTest, ConsentIdValidContentOld) {
   std::string id;
-  base::DeleteFile(kTestConsentIdFile, false);
+  base::DeleteFile(kTestConsentIdFile);
   ASSERT_GT(
       base::WriteFile(kTestConsentIdFile, kValidGuidOld, strlen(kValidGuidOld)),
       0);
@@ -122,7 +122,7 @@ TEST_F(MetricsLibraryTest, ConsentIdValidContentOld) {
 // Accept current consent ids.
 TEST_F(MetricsLibraryTest, ConsentIdValidContent) {
   std::string id;
-  base::DeleteFile(kTestConsentIdFile, false);
+  base::DeleteFile(kTestConsentIdFile);
   ASSERT_GT(base::WriteFile(kTestConsentIdFile, kValidGuid, strlen(kValidGuid)),
             0);
   ASSERT_TRUE(lib_.ConsentId(&id));
@@ -133,7 +133,7 @@ TEST_F(MetricsLibraryTest, ConsentIdValidContent) {
 TEST_F(MetricsLibraryTest, ConsentIdValidContentNewline) {
   std::string id;
   std::string outid = std::string(kValidGuid) + "\n";
-  base::DeleteFile(kTestConsentIdFile, false);
+  base::DeleteFile(kTestConsentIdFile);
   ASSERT_GT(base::WriteFile(kTestConsentIdFile, outid.c_str(), outid.size()),
             0);
   ASSERT_TRUE(lib_.ConsentId(&id));
@@ -234,7 +234,7 @@ class CMetricsLibraryTest : public testing::Test {
 
   void TearDown() override {
     CMetricsLibraryDelete(lib_);
-    base::DeleteFile(kTestUMAEventsFile, false);
+    base::DeleteFile(kTestUMAEventsFile);
   }
 
   CMetricsLibrary lib_;

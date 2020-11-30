@@ -177,7 +177,7 @@ bool ObjectStoreImpl::Init(const FilePath& database_path) {
     LOG(WARNING) << "Recreating database from scratch. Moving current database "
                  << "to " << kCorruptDatabaseDirectory;
     FilePath corrupt_db_path = database_path.Append(kCorruptDatabaseDirectory);
-    base::DeleteFile(corrupt_db_path, true);
+    base::DeletePathRecursively(corrupt_db_path);
     if (!base::Move(database_name, corrupt_db_path)) {
       LOG(ERROR) << "Failed to move database." << status.ToString();
       return false;

@@ -70,7 +70,7 @@ TEST_F(FileSourceTest, FilePathInvalid) {
   int64_t output = -1;
   const std::string kInputStr = std::to_string(kInput);
   base::FilePath old_location = file_;
-  ASSERT_TRUE(base::DeleteFile(file_, false));
+  ASSERT_TRUE(base::DeleteFile(file_));
   ASSERT_FALSE(source_->ReadValue(&output));
   file_ = old_location;
   ASSERT_EQ(kInputStr.length(),

@@ -123,7 +123,7 @@ TEST_F(WakeupDeviceTest, TestWakeupCountReadFailAfterResume) {
   CreateDirectoryAndWriteFile(event_count_attr_path_,
                               kEventCountBeforeSuspendStr);
   wakeup_device_->PrepareForSuspend();
-  ASSERT_TRUE(base::DeleteFile(event_count_attr_path_, false));
+  ASSERT_TRUE(base::DeleteFile(event_count_attr_path_));
   wakeup_device_->HandleResume();
   EXPECT_FALSE(wakeup_device_->CausedLastWake());
 }

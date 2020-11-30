@@ -317,7 +317,7 @@ TEST_F(PrefsTest, WatchPrefs) {
   EXPECT_EQ(kPrefName, observer.RunUntilPrefChanged());
 
   // Remove the file.
-  EXPECT_TRUE(base::DeleteFile(kFilePath, false));
+  EXPECT_TRUE(base::DeleteFile(kFilePath));
   EXPECT_EQ(kPrefName, observer.RunUntilPrefChanged());
 }
 

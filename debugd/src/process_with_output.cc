@@ -33,9 +33,9 @@ ProcessWithOutput::~ProcessWithOutput() {
   errfile_.reset();
 
   if (!outfile_path_.empty())
-    base::DeleteFile(outfile_path_, false);  // not recursive
+    base::DeleteFile(outfile_path_);  // not recursive
   if (!errfile_path_.empty())
-    base::DeleteFile(errfile_path_, false);
+    base::DeleteFile(errfile_path_);
 }
 
 bool ProcessWithOutput::Init() {

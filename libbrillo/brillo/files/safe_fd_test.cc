@@ -653,8 +653,7 @@ TEST_F(SafeFDTest, Rmdir_Recursive_KeepGoing) {
   EXPECT_EQ(rmdir_errno, ENOTEMPTY);
 
   // The deep directory must still exist.
-  ASSERT_TRUE(
-      base::DeleteFile(sub_dir_path_.Append(kSubdirName), false /*recursive*/));
+  ASSERT_TRUE(base::DeleteFile(sub_dir_path_.Append(kSubdirName)));
 
   // We cannot control the iteration order so even if we incorrectly
   // stopped early the directory might still be empty if the deep
@@ -691,8 +690,7 @@ TEST_F(SafeFDTest, Rmdir_Recursive_StopOnError) {
   EXPECT_EQ(rmdir_errno, 0);
 
   // The deep directory must still exist.
-  ASSERT_TRUE(
-      base::DeleteFile(sub_dir_path_.Append(kSubdirName), false /*recursive*/));
+  ASSERT_TRUE(base::DeleteFile(sub_dir_path_.Append(kSubdirName)));
 }
 
 }  // namespace brillo

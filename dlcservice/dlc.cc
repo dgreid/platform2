@@ -530,7 +530,7 @@ bool DlcBase::DeleteInternal(ErrorPtr* err) {
   vector<string> undeleted_paths;
   for (const auto& path : GetPathsToDelete(id_)) {
     if (base::PathExists(path)) {
-      if (!base::DeleteFile(path, true)) {
+      if (!base::DeletePathRecursively(path)) {
         PLOG(ERROR) << "Failed to delete path=" << path;
         undeleted_paths.push_back(path.value());
       } else {

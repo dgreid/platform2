@@ -114,7 +114,7 @@ class OpenVPNDriverTest
     driver_->pid_ = 0;
     SetService(nullptr);
     if (!lsb_release_file_.empty()) {
-      EXPECT_TRUE(base::DeleteFile(lsb_release_file_, false));
+      EXPECT_TRUE(base::DeleteFile(lsb_release_file_));
       lsb_release_file_.clear();
     }
   }

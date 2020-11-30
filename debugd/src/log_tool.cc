@@ -857,7 +857,7 @@ void LogTool::DeleteArcBugReportBackup(const std::string& username) {
 
   const base::FilePath reportPath = GetArcBugReportBackupFilePath(userhash);
   arc_bug_report_backups_.erase(userhash);
-  if (!base::DeleteFile(reportPath, false)) {
+  if (!base::DeleteFile(reportPath)) {
     PLOG(ERROR) << "Failed to delete ARC bug report backup";
   }
 }

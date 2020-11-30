@@ -442,15 +442,13 @@ TEST_F(CrashReporterParserTest, PendingAndRecentMissCount) {
 TEST_F(CrashReporterParserTest, CaptureFilesDontExist) {
   auto metrics = std::make_unique<MetricsLibraryMock>();
   auto parser = MakeParser(std::move(metrics));
-  EXPECT_TRUE(base::DeleteFile(paths::Get(paths::kProcFileNr), false));
-  EXPECT_TRUE(base::DeleteFile(paths::Get(paths::kProcMeminfo), false));
-  EXPECT_TRUE(base::DeleteFile(paths::Get(paths::kMessageLogPath), false));
+  EXPECT_TRUE(base::DeleteFile(paths::Get(paths::kProcFileNr)));
+  EXPECT_TRUE(base::DeleteFile(paths::Get(paths::kProcMeminfo)));
+  EXPECT_TRUE(base::DeleteFile(paths::Get(paths::kMessageLogPath)));
   EXPECT_TRUE(base::DeleteFile(paths::Get(paths::kSystemChromeLogDirectory)
-                                   .Append("chrome_20190720-150000"),
-                               false));
+                                   .Append("chrome_20190720-150000")));
   EXPECT_TRUE(base::DeleteFile(paths::Get(paths::kSystemChromeLogDirectory)
-                                   .Append("chrome_20190720-153000"),
-                               false));
+                                   .Append("chrome_20190720-153000")));
   expected_text_ =
       R"(===/proc/sys/fs/file-nr===
 <read failed>
@@ -472,8 +470,7 @@ TEST_F(CrashReporterParserTest, OneChromeLog) {
   auto metrics = std::make_unique<MetricsLibraryMock>();
   auto parser = MakeParser(std::move(metrics));
   EXPECT_TRUE(base::DeleteFile(paths::Get(paths::kSystemChromeLogDirectory)
-                                   .Append("chrome_20190720-150000"),
-                               false));
+                                   .Append("chrome_20190720-150000")));
   expected_text_ =
       R"(===/proc/sys/fs/file-nr===
 1 2 3
@@ -761,12 +758,10 @@ TEST_F(CrashReporterParserTest, LogsAreCapturedAtMissTime) {
 
   EXPECT_TRUE(base::AppendToFile(paths::Get(paths::kProcFileNr), "more", 4));
   EXPECT_TRUE(base::AppendToFile(paths::Get(paths::kProcMeminfo), "more", 4));
-  EXPECT_TRUE(base::DeleteFile(paths::Get(paths::kMessageLogPath), false));
+  EXPECT_TRUE(base::DeleteFile(paths::Get(paths::kMessageLogPath)));
   EXPECT_TRUE(base::DeleteFile(paths::Get(paths::kSystemChromeLogDirectory)
-                                   .Append("chrome_20190720-150000"),
-                               false));
+                                   .Append("chrome_20190720-150000")));
   EXPECT_TRUE(base::DeleteFile(paths::Get(paths::kSystemChromeLogDirectory)
-                                   .Append("chrome_20190720-153000"),
-                               false));
+                                   .Append("chrome_20190720-153000")));
   RunCrashReporterPeriodicUpdate(parser.get(), kExpectOneCrashReport);
 }

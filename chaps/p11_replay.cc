@@ -1000,7 +1000,7 @@ int ReplayCloseAllSessionsCheck(CK_SESSION_HANDLE session,
       [](const std::string& ipc_file_path) {
         base::FilePath path(ipc_file_path);
 
-        CHECK(base::DeleteFile(path, false))
+        CHECK(base::DeleteFile(path))
             << "Failed to delete ipc_file after ReplayCloseAllSessionsCheck()";
         CHECK(brillo::SyncFileOrDirectory(
             path.DirName(), true /* is directory? */,

@@ -50,8 +50,7 @@ int main(int argc, const char** argv) {
     return -1;
 
   // Delete host socket path if it exists.
-  if (!base::DeleteFile(base::FilePath(kHostSocketPath),
-                        /*recursive*/ false)) {
+  if (!base::DeleteFile(base::FilePath(kHostSocketPath))) {
     LOG(FATAL) << "Unable to delete pre-existing socket at " << kHostSocketPath;
   }
 

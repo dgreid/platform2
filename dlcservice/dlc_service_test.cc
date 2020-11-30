@@ -540,7 +540,7 @@ TEST_F(DlcServiceTest, InstallAlreadyInstalledThatGotUnmountedTest) {
   CheckDlcState(kFirstDlc, DlcState::INSTALLED);
   const auto mount_path_root = JoinPaths(mount_path_, "root");
   EXPECT_TRUE(base::PathExists(mount_path_root));
-  EXPECT_TRUE(base::DeleteFile(mount_path_root, true));
+  EXPECT_TRUE(base::DeletePathRecursively(mount_path_root));
 
   EXPECT_CALL(*mock_image_loader_proxy_ptr_, LoadDlcImage(_, _, _, _, _, _))
       .WillOnce(DoAll(SetArgPointee<3>(mount_path_.value()), Return(true)));

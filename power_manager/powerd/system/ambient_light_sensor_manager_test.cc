@@ -73,7 +73,7 @@ class AmbientLightSensorManagerTest : public ::testing::Test {
   }
 
   void TearDown() override {
-    CHECK(base::DeleteFile(temp_dir_.GetPath(), true));
+    CHECK(base::DeletePathRecursively(temp_dir_.GetPath()));
   };
 
  protected:

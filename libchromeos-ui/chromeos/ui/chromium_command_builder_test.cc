@@ -146,7 +146,7 @@ TEST_F(ChromiumCommandBuilderTest, TimeZone) {
 
   // Delete the old symlink and create a new one with a different target.
   // Arbitrarily use |base_path_| (we need a path that exists).
-  ASSERT_TRUE(base::DeleteFile(kSymlink, false));
+  ASSERT_TRUE(base::DeleteFile(kSymlink));
   const base::FilePath kNewTarget(base_path_);
   ASSERT_TRUE(base::CreateSymbolicLink(kNewTarget, kSymlink));
 

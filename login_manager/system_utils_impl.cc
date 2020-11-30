@@ -287,7 +287,7 @@ bool SystemUtilsImpl::RemoveFile(const base::FilePath& filename) {
   const base::FilePath filename_in_base_dir = PutInsideBaseDir(filename);
   if (base::DirectoryExists(filename_in_base_dir))
     return false;
-  return base::DeleteFile(filename_in_base_dir, false);
+  return base::DeleteFile(filename_in_base_dir);
 }
 
 bool SystemUtilsImpl::AtomicFileWrite(const base::FilePath& filename,

@@ -32,7 +32,7 @@ class SerializationUtilsTest : public testing::Test {
   SerializationUtilsTest(const SerializationUtilsTest&) = delete;
   SerializationUtilsTest& operator=(const SerializationUtilsTest&) = delete;
 
-  void SetUp() override { base::DeleteFile(filepath_, false); }
+  void SetUp() override { base::DeleteFile(filepath_); }
 
   void TestSerialization(const MetricSample& sample) {
     std::string serialized(sample.ToString());

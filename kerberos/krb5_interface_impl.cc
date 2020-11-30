@@ -334,7 +334,7 @@ ErrorType ValidateConfigViaKrb5(const std::string& krb5conf) {
   ScopedKrb5Context ctx;
   krb5_error_code ret = krb5_init_context(ctx.get_mutable_ptr());
   unsetenv(kKrb5ConfigEnvVar);
-  base::DeleteFile(krb5conf_path, false /* recursive */);
+  base::DeleteFile(krb5conf_path);
 
   if (ret) {
     LOG(ERROR) << ctx.GetErrorMessage(ret) << " while initializing context";

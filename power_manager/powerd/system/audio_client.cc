@@ -102,7 +102,7 @@ void AudioClient::SetSuspended(bool suspended) {
     if (base::WriteFile(audio_suspended_path_, nullptr, 0) < 0)
       PLOG(ERROR) << "Couldn't create " << audio_suspended_path_.value();
   } else {
-    if (!base::DeleteFile(audio_suspended_path_, false))
+    if (!base::DeleteFile(audio_suspended_path_))
       PLOG(ERROR) << "Couldn't delete " << audio_suspended_path_.value();
   }
 }

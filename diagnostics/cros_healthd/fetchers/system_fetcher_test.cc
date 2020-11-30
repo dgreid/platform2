@@ -190,8 +190,8 @@ TEST_F(SystemUtilsTest, TestFetchSystemInfo) {
 // not found.
 TEST_F(SystemUtilsTest, TestNoFirstPowerDate) {
   // Delete the file containing first power date.
-  ASSERT_TRUE(base::DeleteFile(
-      relative_vpd_rw_dir().Append(kFirstPowerDateFileName), false));
+  ASSERT_TRUE(
+      base::DeleteFile(relative_vpd_rw_dir().Append(kFirstPowerDateFileName)));
 
   auto system_result = FetchSystemInfo(GetTempDirPath());
   ASSERT_TRUE(system_result->is_system_info());
@@ -215,8 +215,8 @@ TEST_F(SystemUtilsTest, TestNoFirstPowerDate) {
 // not found.
 TEST_F(SystemUtilsTest, TestNoManufactureDate) {
   // Delete the file containing manufacture date.
-  ASSERT_TRUE(base::DeleteFile(
-      relative_vpd_ro_dir().Append(kManufactureDateFileName), false));
+  ASSERT_TRUE(
+      base::DeleteFile(relative_vpd_ro_dir().Append(kManufactureDateFileName)));
 
   auto system_result = FetchSystemInfo(GetTempDirPath());
   ASSERT_TRUE(system_result->is_system_info());
@@ -240,8 +240,8 @@ TEST_F(SystemUtilsTest, TestNoManufactureDate) {
 // it should) reports an error.
 TEST_F(SystemUtilsTest, TestSkuNumberError) {
   // Delete the file containing sku number.
-  ASSERT_TRUE(base::DeleteFile(relative_vpd_ro_dir().Append(kSkuNumberFileName),
-                               false));
+  ASSERT_TRUE(
+      base::DeleteFile(relative_vpd_ro_dir().Append(kSkuNumberFileName)));
 
   // Confirm that an error is obtained.
   auto system_result = FetchSystemInfo(GetTempDirPath());
@@ -254,8 +254,8 @@ TEST_F(SystemUtilsTest, TestSkuNumberError) {
 // |kSkuNumberFileName|.
 TEST_F(SystemUtilsTest, TestNoSkuNumber) {
   // Delete the file containing sku number.
-  ASSERT_TRUE(base::DeleteFile(relative_vpd_ro_dir().Append(kSkuNumberFileName),
-                               false));
+  ASSERT_TRUE(
+      base::DeleteFile(relative_vpd_ro_dir().Append(kSkuNumberFileName)));
   // Ensure that there is no sku number.
   SetHasSkuNumber(false);
 
@@ -282,7 +282,7 @@ TEST_F(SystemUtilsTest, TestNoSkuNumber) {
 TEST_F(SystemUtilsTest, TestNoProductSerialNumber) {
   // Delete the file containing serial number.
   ASSERT_TRUE(base::DeleteFile(
-      relative_vpd_ro_dir().Append(kProductSerialNumberFileName), false));
+      relative_vpd_ro_dir().Append(kProductSerialNumberFileName)));
 
   auto system_result = FetchSystemInfo(GetTempDirPath());
   ASSERT_TRUE(system_result->is_system_info());
@@ -305,7 +305,7 @@ TEST_F(SystemUtilsTest, TestNoProductSerialNumber) {
 // exist.
 TEST_F(SystemUtilsTest, TestNoSysDevicesVirtualDmiId) {
   // Delete the directory |kRelativeDmiInfoPath|.
-  ASSERT_TRUE(base::DeleteFile(relative_dmi_info_path(), true));
+  ASSERT_TRUE(base::DeletePathRecursively(relative_dmi_info_path()));
 
   auto system_result = FetchSystemInfo(GetTempDirPath());
   ASSERT_TRUE(system_result->is_system_info());
@@ -326,8 +326,8 @@ TEST_F(SystemUtilsTest, TestNoSysDevicesVirtualDmiId) {
 // Test that there is no bios_version when |kBiosVersionFileName| is missing.
 TEST_F(SystemUtilsTest, TestNoBiosVersion) {
   // Delete the file containing bios version.
-  ASSERT_TRUE(base::DeleteFile(
-      relative_dmi_info_path().Append(kBiosVersionFileName), false));
+  ASSERT_TRUE(
+      base::DeleteFile(relative_dmi_info_path().Append(kBiosVersionFileName)));
 
   auto system_result = FetchSystemInfo(GetTempDirPath());
   ASSERT_TRUE(system_result->is_system_info());
@@ -352,8 +352,8 @@ TEST_F(SystemUtilsTest, TestNoBiosVersion) {
 // Test that there is no board_name when |kBoardNameFileName| is missing.
 TEST_F(SystemUtilsTest, TestNoBoardName) {
   // Delete the file containing board name.
-  ASSERT_TRUE(base::DeleteFile(
-      relative_dmi_info_path().Append(kBoardNameFileName), false));
+  ASSERT_TRUE(
+      base::DeleteFile(relative_dmi_info_path().Append(kBoardNameFileName)));
 
   auto system_result = FetchSystemInfo(GetTempDirPath());
   ASSERT_TRUE(system_result->is_system_info());
@@ -378,8 +378,8 @@ TEST_F(SystemUtilsTest, TestNoBoardName) {
 // Test that there is no board_version when |kBoardVersionFileName| is missing.
 TEST_F(SystemUtilsTest, TestNoBoardVersion) {
   // Delete the file containing board version.
-  ASSERT_TRUE(base::DeleteFile(
-      relative_dmi_info_path().Append(kBoardVersionFileName), false));
+  ASSERT_TRUE(
+      base::DeleteFile(relative_dmi_info_path().Append(kBoardVersionFileName)));
 
   auto system_result = FetchSystemInfo(GetTempDirPath());
   ASSERT_TRUE(system_result->is_system_info());
@@ -404,8 +404,8 @@ TEST_F(SystemUtilsTest, TestNoBoardVersion) {
 // Test that there is no chassis_type when |kChassisTypeFileName| is missing.
 TEST_F(SystemUtilsTest, TestNoChassisType) {
   // Delete the file containing chassis type.
-  ASSERT_TRUE(base::DeleteFile(
-      relative_dmi_info_path().Append(kChassisTypeFileName), false));
+  ASSERT_TRUE(
+      base::DeleteFile(relative_dmi_info_path().Append(kChassisTypeFileName)));
 
   auto system_result = FetchSystemInfo(GetTempDirPath());
   ASSERT_TRUE(system_result->is_system_info());
@@ -446,8 +446,8 @@ TEST_F(SystemUtilsTest, TestBadChassisType) {
 // Test that there is no product_name when |kProductNameFileName| is missing.
 TEST_F(SystemUtilsTest, TestNoProductName) {
   // Delete the file containing product name.
-  ASSERT_TRUE(base::DeleteFile(
-      relative_dmi_info_path().Append(kProductNameFileName), false));
+  ASSERT_TRUE(
+      base::DeleteFile(relative_dmi_info_path().Append(kProductNameFileName)));
 
   auto system_result = FetchSystemInfo(GetTempDirPath());
   ASSERT_TRUE(system_result->is_system_info());

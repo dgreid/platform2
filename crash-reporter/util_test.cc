@@ -381,7 +381,7 @@ TEST_F(CrashCommonUtilTest, GzipStream) {
   base::FilePath compressed_file_name;
   ASSERT_TRUE(base::CreateTemporaryFileInDir(test_dir_, &compressed_file_name));
   // Remove the file we will decompress to or gzip will fail on decompression.
-  ASSERT_TRUE(base::DeleteFile(compressed_file_name, false));
+  ASSERT_TRUE(base::DeleteFile(compressed_file_name));
   compressed_file_name = compressed_file_name.AddExtension(".gz");
   ASSERT_EQ(base::WriteFile(raw_file, content.c_str(), content.length()),
             content.length());

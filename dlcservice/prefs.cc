@@ -58,7 +58,7 @@ bool Prefs::Exists(const string& key) {
 }
 
 bool Prefs::Delete(const string& key) {
-  return base::DeleteFile(JoinPaths(prefs_root_, key), true);
+  return base::DeletePathRecursively(JoinPaths(prefs_root_, key));
 }
 
 }  // namespace dlcservice

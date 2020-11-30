@@ -112,14 +112,11 @@ void DHCPv6Config::CleanupClientState() {
 
   // Delete lease file if it is ephemeral.
   if (IsEphemeralLease()) {
-    base::DeleteFile(
-        root().Append(base::StringPrintf(DHCPProvider::kDHCPCDPathFormatLease6,
-                                         device_name().c_str())),
-        false);
+    base::DeleteFile(root().Append(base::StringPrintf(
+        DHCPProvider::kDHCPCDPathFormatLease6, device_name().c_str())));
   }
-  base::DeleteFile(root().Append(base::StringPrintf(kDHCPCDPathFormatPID,
-                                                    device_name().c_str())),
-                   false);
+  base::DeleteFile(root().Append(
+      base::StringPrintf(kDHCPCDPathFormatPID, device_name().c_str())));
 
   // Reset configuration data.
   properties_ = IPConfig::Properties();

@@ -178,7 +178,7 @@ class MetricsDaemonTest : public testing::Test {
   // Creates or overwrites the file in |path| so that it contains the printable
   // representation of |value|.
   void CreateUint64ValueFile(const base::FilePath& path, uint64_t value) {
-    base::DeleteFile(path, false);
+    base::DeleteFile(path);
     std::string value_string = base::NumberToString(value) + "\n";
     ASSERT_EQ(value_string.length(), base::WriteFile(path, value_string.c_str(),
                                                      value_string.length()));
@@ -232,7 +232,7 @@ TEST_F(MetricsDaemonTest, CheckSystemCrash) {
   EXPECT_FALSE(base::PathExists(crash_detected));
   EXPECT_FALSE(daemon_.CheckSystemCrash(kKernelCrashDetected));
   EXPECT_FALSE(base::PathExists(crash_detected));
-  base::DeleteFile(crash_detected, false);
+  base::DeleteFile(crash_detected);
 }
 
 TEST_F(MetricsDaemonTest, MessageFilter) {
@@ -362,11 +362,11 @@ TEST_F(MetricsDaemonTest, SendTemperatureSamplesReadError) {
   // Break zones 0 and 1 by deleting input files.
   base::FilePath value_path_zero =
       zone_path_zero.Append(MetricsDaemon::kSysfsTemperatureValueFile);
-  base::DeleteFile(value_path_zero, false);
+  base::DeleteFile(value_path_zero);
 
   base::FilePath type_path_one =
       zone_path_one.Append(MetricsDaemon::kSysfsTemperatureTypeFile);
-  base::DeleteFile(type_path_one, false);
+  base::DeleteFile(type_path_one);
 
   // Zone 2 metric should still be reported despite breakages.
   EXPECT_CALL(metrics_lib_,
@@ -556,7 +556,7 @@ TEST_F(MetricsDaemonTest, SendZramMetricsOld) {
   const uint64_t page_size = 4096;
   const uint64_t zero_pages = 20 * 1000 * 1000 / page_size;
 
-  base::DeleteFile(base::FilePath(MetricsDaemon::kMMStatName), false);
+  base::DeleteFile(base::FilePath(MetricsDaemon::kMMStatName));
   CreateUint64ValueFile(base::FilePath(MetricsDaemon::kComprDataSizeName),
                         compr_data_size);
   CreateUint64ValueFile(base::FilePath(MetricsDaemon::kOrigDataSizeName),

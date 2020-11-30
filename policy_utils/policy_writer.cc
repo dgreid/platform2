@@ -73,7 +73,7 @@ bool DeletePolicyFile(const base::FilePath& dir_path, const char* file_name) {
   if (!file_name) {
     return false;
   }
-  return base::DeleteFile(dir_path.Append(file_name), false);
+  return base::DeleteFile(dir_path.Append(file_name));
 }
 
 }  // anonymous namespace

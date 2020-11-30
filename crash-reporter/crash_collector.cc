@@ -529,7 +529,7 @@ bool CrashCollector::RemoveNewFile(const base::FilePath& file_name) {
       if (base::GetFileSize(file_name, &file_size)) {
         bytes_written_ -= file_size;
       }
-      return base::DeleteFile(file_name, false /*recursive*/);
+      return base::DeleteFile(file_name);
     }
     case kCrashLoopSendingMode: {
       base::FilePath base_name = file_name.BaseName();
@@ -1002,7 +1002,7 @@ bool CrashCollector::GetMultipleLogContents(
     std::string log_contents;
     const bool fully_read = base::ReadFileToStringWithMaxSize(
         raw_output_file, &log_contents, max_log_size_);
-    base::DeleteFile(raw_output_file, false);
+    base::DeleteFile(raw_output_file);
 
     if (!fully_read) {
       if (log_contents.empty()) {

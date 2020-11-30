@@ -86,7 +86,7 @@ std::unique_ptr<DiagnosticRoutine> CreateDiskReadRoutine(
   auto test_file_deletion = base::BindOnce([]() {
     auto test_file = base::FilePath(kTmpPath).Append(kTestFileName);
     if (base::PathExists(test_file)) {
-      base::DeleteFile(test_file, false);
+      base::DeleteFile(test_file);
     }
   });
 

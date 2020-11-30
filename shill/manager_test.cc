@@ -1198,7 +1198,7 @@ TEST_F(ManagerTest, CreateDuplicateProfileWithMissingKeyfile) {
 
   // Ensure that even if the backing filestore is removed, we still can't
   // create a profile twice.
-  ASSERT_TRUE(base::DeleteFile(profile_path, false));
+  ASSERT_TRUE(base::DeleteFile(profile_path));
   EXPECT_EQ(Error::kAlreadyExists, TestCreateProfile(&manager, kProfile0));
 }
 

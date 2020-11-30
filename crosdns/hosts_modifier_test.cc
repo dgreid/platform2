@@ -63,7 +63,7 @@ TEST_F(HostsModifierTest, InitSucceeds) {
 }
 
 TEST_F(HostsModifierTest, InitFailsNonExistentFile) {
-  EXPECT_TRUE(base::DeleteFile(hosts_file(), false));
+  EXPECT_TRUE(base::DeleteFile(hosts_file()));
   EXPECT_FALSE(hosts_modifier()->Init(hosts_file()));
 }
 

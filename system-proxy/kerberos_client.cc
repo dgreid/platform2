@@ -179,12 +179,12 @@ bool KerberosClient::WriteFile(const base::FilePath& path,
 
 void KerberosClient::DeleteFiles() {
   if (base::PathExists(krb5_conf_path_)) {
-    if (!base::DeleteFile(krb5_conf_path_, false /*recursive*/)) {
+    if (!base::DeleteFile(krb5_conf_path_)) {
       PLOG(ERROR) << "Failed to clean up the kerberos config file";
     }
   }
   if (base::PathExists(krb5_ccache_path_)) {
-    if (!base::DeleteFile(krb5_ccache_path_, false /*recursive*/)) {
+    if (!base::DeleteFile(krb5_ccache_path_)) {
       PLOG(ERROR) << "Failed to clean up the kerberos tickets cache";
     }
   }

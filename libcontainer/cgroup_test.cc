@@ -263,7 +263,7 @@ TEST_F(BasicCgroupManipulationTest, set_cpu_rt_period) {
 TEST_F(BasicCgroupManipulationTest, OpenCgroupFileRefusesToWriteToSymlink) {
   base::FilePath cpu_rt_period_us_path = cpu_cg_.Append("cpu.rt_period_us");
   base::FilePath target_path = cpu_cg_.Append("symlink_target");
-  ASSERT_TRUE(base::DeleteFile(cpu_rt_period_us_path, false));
+  ASSERT_TRUE(base::DeleteFile(cpu_rt_period_us_path));
   ASSERT_TRUE(base::CreateSymbolicLink(target_path, cpu_rt_period_us_path));
 
   // This should fail since we are trying to write to a symlink.
@@ -272,7 +272,7 @@ TEST_F(BasicCgroupManipulationTest, OpenCgroupFileRefusesToWriteToSymlink) {
 
 TEST_F(BasicCgroupManipulationTest, OpenCgroupFileRefusesToWriteToNonOpenFIFO) {
   base::FilePath cpu_rt_period_us_path = cpu_cg_.Append("cpu.rt_period_us");
-  ASSERT_TRUE(base::DeleteFile(cpu_rt_period_us_path, false));
+  ASSERT_TRUE(base::DeleteFile(cpu_rt_period_us_path));
   ASSERT_NE(mkfifo(cpu_rt_period_us_path.value().c_str(), 0664), -1);
 
   // This should fail since we are trying to write to a FIFO.
@@ -281,7 +281,7 @@ TEST_F(BasicCgroupManipulationTest, OpenCgroupFileRefusesToWriteToNonOpenFIFO) {
 
 TEST_F(BasicCgroupManipulationTest, OpenCgroupFileRefusesToWriteToOpenFIFO) {
   base::FilePath cpu_rt_period_us_path = cpu_cg_.Append("cpu.rt_period_us");
-  ASSERT_TRUE(base::DeleteFile(cpu_rt_period_us_path, false));
+  ASSERT_TRUE(base::DeleteFile(cpu_rt_period_us_path));
   ASSERT_NE(mkfifo(cpu_rt_period_us_path.value().c_str(), 0664), -1);
   base::ScopedFD fd(
       open(cpu_rt_period_us_path.value().c_str(), O_RDONLY | O_NONBLOCK));

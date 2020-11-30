@@ -177,7 +177,7 @@ bool UserCollector::SetUpInternal(bool enabled, bool early) {
 
   // First nuke all existing content.  This will take care of deleting any
   // existing paths (files, symlinks, dirs, etc...) for us.
-  if (!base::DeleteFile(dir, true))
+  if (!base::DeletePathRecursively(dir))
     PLOG(WARNING) << "Cleanup of directory failed: " << dir.value();
 
   // This will create the directory with 0700 mode.  Since init is run as root,
@@ -276,7 +276,7 @@ bool UserCollector::CopyStdinToCoreFile(const FilePath& core_path) {
 
   PLOG(ERROR) << "Could not write core file";
   // If the file system was full, make sure we remove any remnants.
-  base::DeleteFile(core_path, false);
+  base::DeleteFile(core_path);
   return false;
 }
 

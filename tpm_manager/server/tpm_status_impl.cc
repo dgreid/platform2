@@ -65,8 +65,7 @@ bool TpmStatusImpl::GetTpmOwned(TpmStatus::TpmOwnershipStatus* status) {
   }
 
   if (!is_owned_) {
-    if (!base::DeleteFile(base::FilePath(kTpmFullyInitializedPath),
-                          /*recursive=*/false)) {
+    if (!base::DeleteFile(base::FilePath(kTpmFullyInitializedPath))) {
       LOG(WARNING) << __func__ << ": Failed to delete "
                    << kTpmFullyInitializedPath;
     }

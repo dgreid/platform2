@@ -43,7 +43,7 @@ class ECCollectorTest : public ::testing::Test {
       ASSERT_EQ(base::WriteFile(panicinfo_path, data, sizeof(data)),
                 static_cast<int>(sizeof(data)));
     } else {
-      base::DeleteFile(panicinfo_path, false);
+      base::DeleteFile(panicinfo_path);
     }
   }
 

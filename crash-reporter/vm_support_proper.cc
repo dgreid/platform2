@@ -37,7 +37,7 @@ class ScopedFileDeleter {
  public:
   explicit ScopedFileDeleter(base::FilePath path) : path_(path) {}
   ~ScopedFileDeleter() {
-    if (!base::DeleteFile(path_, false)) {
+    if (!base::DeleteFile(path_)) {
       LOG(ERROR) << "Failed to delete file " << path_.value();
     }
   }

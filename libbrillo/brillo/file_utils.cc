@@ -89,7 +89,7 @@ RegularFileOrDeleteResult RegularFileOrDelete(const base::FilePath& path,
   // If we get here and anything was at |path|, try to delete it so we can put
   // our file there.
   if (path_not_empty) {
-    if (!base::DeleteFile(path, true)) {
+    if (!base::DeletePathRecursively(path)) {
       PLOG(WARNING) << "Failed to delete entity at \"" << path.value() << '"';
       return kFailure;
     }
@@ -252,7 +252,7 @@ bool TouchFile(const base::FilePath& path,
   if (scoped_fd != -1 &&
       HANDLE_EINTR(fchmod(scoped_fd.get(), new_file_permissions)) == -1) {
     PLOG(WARNING) << "Failed to set permissions for \"" << path.value() << '"';
-    base::DeleteFile(path, false);
+    base::DeleteFile(path);
     return false;
   }
 

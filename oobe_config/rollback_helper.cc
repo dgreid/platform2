@@ -30,7 +30,7 @@ bool PrepareSave(const base::FilePath& root_path,
   LOG(INFO) << "Delete and recreate path to save rollback data";
   // Make sure we have an empty folder where only we can write, otherwise exit.
   base::FilePath save_path = PrefixAbsolutePath(root_path, kSaveTempPath);
-  if (!base::DeleteFile(save_path, true)) {
+  if (!base::DeletePathRecursively(save_path)) {
     PLOG(ERROR) << "Couldn't delete directory " << save_path.value();
     return false;
   }
@@ -250,7 +250,7 @@ void CleanupRestoreFiles(const base::FilePath& root_path,
   for (auto file = folder_enumerator.Next(); !file.empty();
        file = folder_enumerator.Next()) {
     if (excluded_files.count(file.value()) == 0) {
-      if (!base::DeleteFile(file, true)) {
+      if (!base::DeletePathRecursively(file)) {
         PLOG(ERROR) << "Couldn't delete " << file.value();
       } else {
         LOG(INFO) << "Deleted rollback data file: " << file.value();
@@ -263,7 +263,7 @@ void CleanupRestoreFiles(const base::FilePath& root_path,
   // Delete the original preserved data.
   base::FilePath rollback_data_file =
       PrefixAbsolutePath(root_path, kUnencryptedStatefulRollbackDataPath);
-  if (!base::DeleteFile(rollback_data_file, true)) {
+  if (!base::DeletePathRecursively(rollback_data_file)) {
     PLOG(ERROR) << "Couldn't delete " << rollback_data_file.value();
   } else {
     LOG(INFO) << "Deleted encrypted rollback data.";

@@ -456,7 +456,7 @@ TEST_F(CpuFetcherTest, NoPhysicalIdCpuinfoFile) {
 
 // Test that we handle a missing cpuinfo file.
 TEST_F(CpuFetcherTest, MissingCpuinfoFile) {
-  ASSERT_TRUE(base::DeleteFile(GetProcCpuInfoPath(temp_dir_path()), false));
+  ASSERT_TRUE(base::DeleteFile(GetProcCpuInfoPath(temp_dir_path())));
 
   auto cpu_result = FetchCpuInfo();
 
@@ -496,7 +496,7 @@ TEST_F(CpuFetcherTest, NoModelNameCpuinfoFile) {
 
 // Test that we handle a missing stat file.
 TEST_F(CpuFetcherTest, MissingStatFile) {
-  ASSERT_TRUE(base::DeleteFile(GetProcStatPath(temp_dir_path()), false));
+  ASSERT_TRUE(base::DeleteFile(GetProcStatPath(temp_dir_path())));
 
   auto cpu_result = FetchCpuInfo();
 
@@ -530,7 +530,7 @@ TEST_F(CpuFetcherTest, StatFileMissingLogicalCpuEntry) {
 // Test that we handle a missing present file.
 TEST_F(CpuFetcherTest, MissingPresentFile) {
   ASSERT_TRUE(base::DeleteFile(
-      GetCpuDirectoryPath(temp_dir_path()).Append(kCpuPresentFile), false));
+      GetCpuDirectoryPath(temp_dir_path()).Append(kCpuPresentFile)));
 
   auto cpu_result = FetchCpuInfo();
 
@@ -554,8 +554,7 @@ TEST_F(CpuFetcherTest, IncorrectlyFormattedPresentFile) {
 TEST_F(CpuFetcherTest, MissingCpuinfoMaxFreqFile) {
   ASSERT_TRUE(
       base::DeleteFile(GetCpuFreqDirectoryPath(temp_dir_path(), kFirstLogicalId)
-                           .Append(kCpuinfoMaxFreqFile),
-                       false));
+                           .Append(kCpuinfoMaxFreqFile)));
 
   auto cpu_result = FetchCpuInfo();
 
@@ -580,8 +579,7 @@ TEST_F(CpuFetcherTest, IncorrectlyFormattedCpuinfoMaxFreqFile) {
 TEST_F(CpuFetcherTest, MissingScalingMaxFreqFile) {
   ASSERT_TRUE(
       base::DeleteFile(GetCpuFreqDirectoryPath(temp_dir_path(), kFirstLogicalId)
-                           .Append(kCpuScalingMaxFreqFile),
-                       false));
+                           .Append(kCpuScalingMaxFreqFile)));
 
   auto cpu_result = FetchCpuInfo();
 
@@ -606,8 +604,7 @@ TEST_F(CpuFetcherTest, IncorrectlyFormattedScalingMaxFreqFile) {
 TEST_F(CpuFetcherTest, MissingScalingCurFreqFile) {
   ASSERT_TRUE(
       base::DeleteFile(GetCpuFreqDirectoryPath(temp_dir_path(), kFirstLogicalId)
-                           .Append(kCpuScalingCurFreqFile),
-                       false));
+                           .Append(kCpuScalingCurFreqFile)));
 
   auto cpu_result = FetchCpuInfo();
 
@@ -633,8 +630,7 @@ TEST_F(CpuFetcherTest, MissingCStateNameFile) {
   ASSERT_TRUE(
       base::DeleteFile(GetCStateDirectoryPath(temp_dir_path(), kFirstLogicalId)
                            .Append(kFirstCStateDir)
-                           .Append(kCStateNameFile),
-                       false));
+                           .Append(kCStateNameFile)));
 
   auto cpu_result = FetchCpuInfo();
 
@@ -647,8 +643,7 @@ TEST_F(CpuFetcherTest, MissingCStateTimeFile) {
   ASSERT_TRUE(
       base::DeleteFile(GetCStateDirectoryPath(temp_dir_path(), kFirstLogicalId)
                            .Append(kFirstCStateDir)
-                           .Append(kCStateTimeFile),
-                       false));
+                           .Append(kCStateTimeFile)));
 
   auto cpu_result = FetchCpuInfo();
 
@@ -675,8 +670,7 @@ TEST_F(CpuFetcherTest, CpuTemperatureWithoutLabel) {
   ASSERT_TRUE(
       base::DeleteFile(temp_dir_path()
                            .AppendASCII(kFirstFakeCpuTemperatureDir)
-                           .AppendASCII(kFirstFakeCpuTemperatureLabelFile),
-                       false));
+                           .AppendASCII(kFirstFakeCpuTemperatureLabelFile)));
 
   auto cpu_result = FetchCpuInfo();
 

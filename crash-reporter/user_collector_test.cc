@@ -107,7 +107,7 @@ class UserCollectorTest : public ::testing::Test {
     if (!CreateTemporaryFileInDir(base::FilePath("/"), &temp_file_path)) {
       return false;
     }
-    base::DeleteFile(temp_file_path, false);
+    base::DeleteFile(temp_file_path);
     return true;
   }
 

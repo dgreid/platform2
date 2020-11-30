@@ -769,7 +769,7 @@ class ClobberStateMock : public ClobberState {
   }
 
   bool SecureErase(const base::FilePath& path) override {
-    return secure_erase_supported_ && base::DeleteFile(path, false);
+    return secure_erase_supported_ && base::DeleteFile(path);
   }
 
   bool DropCaches() override { return secure_erase_supported_; }

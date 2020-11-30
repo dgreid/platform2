@@ -182,7 +182,7 @@ void RemoveOrphanedCrashFiles(const base::FilePath& crash_dir) {
 
     if (!base::PathExists(meta_file) && delta.InHours() >= 24) {
       LOG(INFO) << "Removing old orphaned file: " << file.value();
-      if (!base::DeleteFile(file, false /* recursive */))
+      if (!base::DeleteFile(file))
         PLOG(WARNING) << "Failed to remove " << file.value();
     }
   }
@@ -291,7 +291,7 @@ bool IsBelowRate(const base::FilePath& timestamps_dir,
       }
       current_bytes += previous_send.size();
     } else {
-      if (!base::DeleteFile(file, false /* recursive */))
+      if (!base::DeleteFile(file))
         PLOG(WARNING) << "Failed to remove old report " << file.value();
     }
   }
@@ -639,7 +639,7 @@ void Sender::RemoveReportFiles(const base::FilePath& meta_file) {
   base::FileEnumerator iter(meta_file.DirName(), false /* recursive */,
                             base::FileEnumerator::FILES, pattern);
   for (base::FilePath file = iter.Next(); !file.empty(); file = iter.Next()) {
-    if (!base::DeleteFile(file, false /* recursive */)) {
+    if (!base::DeleteFile(file)) {
       PLOG(WARNING) << "Failed to remove " << file.value();
       // We may have failed to remove the file due to incorrect selinux config
       // on the directory. However, we may still be able to add files to it,

@@ -120,8 +120,8 @@ class KerberosClientTest : public ::testing::Test {
 
 // Test that the kerberos files are written and deleted correctly.
 TEST_F(KerberosClientTest, KerberosEnabled) {
-  base::DeleteFile(base::FilePath(kKrb5ConfFile), false /*recursive*/);
-  base::DeleteFile(base::FilePath(kCCacheFile), false /*recursive*/);
+  base::DeleteFile(base::FilePath(kKrb5ConfFile));
+  base::DeleteFile(base::FilePath(kCCacheFile));
   std::string actual_krb5config;
   std::string actual_ccache;
 

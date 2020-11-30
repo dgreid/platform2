@@ -41,8 +41,8 @@ bool ZipString(const base::FilePath& filename,
   bool succeeded = base::CreateTemporaryFile(&zip_file) && !zipprocess.Run() &&
                    base::ReadFileToString(zip_file, compressed_logs);
 
-  base::DeleteFile(temp_path, true);
-  base::DeleteFile(zip_file, false);
+  base::DeletePathRecursively(temp_path);
+  base::DeleteFile(zip_file);
 
   return succeeded;
 }

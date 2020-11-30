@@ -73,7 +73,7 @@ EntryManager* EntryManagerTestUtil::Get() {
 
 void EntryManagerTestUtil::RefreshDB(bool include_user_db, bool new_db) {
   if (new_db && entry_manager_) {
-    if (!base::DeleteFile(entry_manager_->global_db_.path(), true)) {
+    if (!base::DeletePathRecursively(entry_manager_->global_db_.path())) {
       LOG(FATAL) << "Unable to delete \""
                  << entry_manager_->global_db_.path().value() << "\"!";
     }
@@ -143,7 +143,7 @@ base::FilePath EntryManagerTestUtil::CreateTestDir(const std::string& dir,
     result = temp_dir_.Append(dir);
   }
   if (force_empty) {
-    if (!base::DeleteFile(result, true)) {
+    if (!base::DeletePathRecursively(result)) {
       LOG(FATAL) << "Unable to clear directory \"" << result.value() << "\"!";
     }
   }

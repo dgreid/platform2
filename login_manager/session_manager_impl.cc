@@ -1538,7 +1538,7 @@ void SessionManagerImpl::ImportValidateAndStoreGeneratedKey(
     ns_mnt = brillo::ScopedMountNamespace::CreateFromPath(ns_mnt_path.value());
   }
   base::ReadFileToString(temp_key_file, &key);
-  PLOG_IF(WARNING, !base::DeleteFile(temp_key_file, false))
+  PLOG_IF(WARNING, !base::DeleteFile(temp_key_file))
       << "Can't delete " << temp_key_file.value();
   ns_mnt.reset();
 

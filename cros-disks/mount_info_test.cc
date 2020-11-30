@@ -30,7 +30,7 @@ class MountInfoTest : public ::testing::Test {
   }
 
   void TearDown() override {
-    ASSERT_TRUE(base::DeleteFile(base::FilePath(mount_file_), false));
+    ASSERT_TRUE(base::DeleteFile(base::FilePath(mount_file_)));
   }
 
  protected:

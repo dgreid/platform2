@@ -88,7 +88,7 @@ TEST_F(KeyFileStoreTest, OpenClose) {
 
   ASSERT_TRUE(store_->Open());
   // Replace file with directory, to force Flush() to fail.
-  ASSERT_TRUE(base::DeleteFile(test_file_, false));
+  ASSERT_TRUE(base::DeleteFile(test_file_));
   ASSERT_TRUE(base::CreateDirectory(test_file_));
   ASSERT_FALSE(store_->Close());
   EXPECT_FALSE(store_->key_file_);

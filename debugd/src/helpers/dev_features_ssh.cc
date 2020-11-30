@@ -142,7 +142,7 @@ bool ConfigureSsh(const std::vector<InstallFile>& install_files) {
   bool install_success = true;
   for (const auto& install_file : install_files) {
     // We need to overwrite anything that might be at the install location.
-    base::DeleteFile(install_file.install_path(), true);
+    base::DeletePathRecursively(install_file.install_path());
     if (!base::CreateSymbolicLink(install_file.source_path(),
                                   install_file.install_path())) {
       install_success = false;

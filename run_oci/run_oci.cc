@@ -532,7 +532,7 @@ void CleanUpContainer(const base::FilePath& container_dir) {
       PLOG(ERROR) << "Failed to unmount " << mountpoint.path.value();
   }
 
-  if (!base::DeleteFile(container_dir, true /*recursive*/)) {
+  if (!base::DeletePathRecursively(container_dir)) {
     PLOG(ERROR) << "Failed to clean up the container directory "
                 << container_dir.value();
   }

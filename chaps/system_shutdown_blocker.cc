@@ -86,7 +86,7 @@ bool SystemShutdownBlocker::PerformUnblock(int slot_id) {
                  << lock_path.value();
     return true;
   }
-  if (!base::DeleteFile(lock_path, false /* recursive */)) {
+  if (!base::DeleteFile(lock_path)) {
     PLOG(ERROR) << "Couldn't delete lock file: " << lock_path.value();
     return false;
   }

@@ -219,8 +219,8 @@ TEST_F(FanUtilsTest, BadValue) {
 // Test that no fan info is fetched for a device that does not have a Google EC.
 TEST_F(FanUtilsTest, NoGoogleEc) {
   base::FilePath root_dir = GetTempDirPath();
-  ASSERT_TRUE(base::DeleteFile(root_dir.Append(kRelativeCrosEcPath),
-                               true /* recursive */));
+  ASSERT_TRUE(
+      base::DeletePathRecursively(root_dir.Append(kRelativeCrosEcPath)));
 
   auto fan_result = FetchFanInfo();
 

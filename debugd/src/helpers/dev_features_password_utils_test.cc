@@ -62,7 +62,7 @@ class DevFeaturesPasswordHelperTest : public Test {
   }
 
   // Deletes the password file if it exists.
-  void DeletePasswordFile() { base::DeleteFile(file_path_, false); }
+  void DeletePasswordFile() { base::DeleteFile(file_path_); }
 
   // Creates a password file with valid entries for chronos and root users.
   bool MakeValidPasswordFile() {

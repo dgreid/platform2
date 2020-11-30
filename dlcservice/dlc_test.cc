@@ -200,7 +200,7 @@ TEST_F(DlcBaseTest, MakeReadyForUpdate) {
   // Make sure the function recreates the inactive image.
   auto inactive_image_path =
       dlc.GetImagePath(SystemState::Get()->inactive_boot_slot());
-  base::DeleteFile(inactive_image_path, /*recursive=*/false);
+  base::DeleteFile(inactive_image_path);
   EXPECT_FALSE(base::PathExists(inactive_image_path));
 
   Prefs prefs(dlc, SystemState::Get()->inactive_boot_slot());

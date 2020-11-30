@@ -633,7 +633,7 @@ void Daemon::SetSuspendAnnounced(bool announced) {
     if (base::WriteFile(suspend_announced_path_, nullptr, 0) < 0)
       PLOG(ERROR) << "Couldn't create " << suspend_announced_path_.value();
   } else {
-    if (!base::DeleteFile(suspend_announced_path_, false))
+    if (!base::DeleteFile(suspend_announced_path_))
       PLOG(ERROR) << "Couldn't delete " << suspend_announced_path_.value();
   }
 }
@@ -708,7 +708,7 @@ policy::Suspender::Delegate::SuspendResult Daemon::DoSuspend(
     RunSetuidHelper("mosys_eventlog", "--mosys_eventlog_code=0xa8", false);
 
   if (created_suspended_state_file_) {
-    if (!base::DeleteFile(base::FilePath(suspended_state_path_), false))
+    if (!base::DeleteFile(base::FilePath(suspended_state_path_)))
       PLOG(ERROR) << "Failed to delete " << suspended_state_path_.value();
   }
 

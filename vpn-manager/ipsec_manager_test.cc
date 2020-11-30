@@ -50,7 +50,7 @@ class IpsecManagerTest : public ::testing::Test {
   void SetUp() override {
     CHECK(temp_dir_.CreateUniqueTempDir());
     test_path_ = temp_dir_.GetPath().Append("ipsec_manager_testdir");
-    base::DeleteFile(test_path_, true);
+    base::DeletePathRecursively(test_path_);
     base::CreateDirectory(test_path_);
     persistent_path_ = test_path_.Append("persistent");
     base::CreateDirectory(persistent_path_);

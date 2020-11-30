@@ -209,7 +209,7 @@ bool UserCollectorBase::ClobberContainerDirectory(
   // Delete a pre-existing directory from crash reporter that may have
   // been left around for diagnostics from a failed conversion attempt.
   // If we don't, existing files can cause forking to fail.
-  if (!base::DeleteFile(container_dir, true)) {
+  if (!base::DeletePathRecursively(container_dir)) {
     PLOG(ERROR) << "Could not delete " << container_dir.value();
     return false;
   }
@@ -303,13 +303,13 @@ UserCollectorBase::ErrorType UserCollectorBase::ConvertAndEnqueueCrash(
   FinishCrash(meta_path, exec, minidump_path.BaseName().value());
 
   if (!util::IsDeveloperImage()) {
-    base::DeleteFile(core_path, false);
+    base::DeleteFile(core_path);
   } else {
     LOG(INFO) << "Leaving core file at " << core_path.value()
               << " due to developer image";
   }
 
-  base::DeleteFile(container_dir, true);
+  base::DeletePathRecursively(container_dir);
   return kErrorNone;
 }
 

@@ -103,7 +103,7 @@ TEST_F(SaveOobeConfigUsbTest, Save) {
 }
 
 TEST_F(SaveOobeConfigUsbTest, SaveWithoutEnrollmentDomainFile) {
-  EXPECT_TRUE(base::DeleteFile(enrollment_domain_file_, false));
+  EXPECT_TRUE(base::DeleteFile(enrollment_domain_file_));
   EXPECT_TRUE(save_config_->Save());
   EXPECT_TRUE(base::PathExists(
       device_oobe_config_dir_.Append(kConfigFile).AddExtension("sig")));
@@ -115,29 +115,29 @@ TEST_F(SaveOobeConfigUsbTest, SaveWithoutEnrollmentDomainFile) {
 }
 
 TEST_F(SaveOobeConfigUsbTest, SaveFailNoConfig) {
-  EXPECT_TRUE(base::DeleteFile(config_file_, false));
+  EXPECT_TRUE(base::DeleteFile(config_file_));
   EXPECT_FALSE(save_config_->Save());
 }
 
 TEST_F(SaveOobeConfigUsbTest, SaveFailNoDeviceId) {
-  EXPECT_TRUE(base::DeleteFile(
-      fake_device_ids_dir_.GetPath().Append("dev_id2_sym"), false));
+  EXPECT_TRUE(
+      base::DeleteFile(fake_device_ids_dir_.GetPath().Append("dev_id2_sym")));
   EXPECT_FALSE(save_config_->Save());
 }
 
 TEST_F(SaveOobeConfigUsbTest, SaveFailNoDeviceStateful) {
-  EXPECT_TRUE(base::DeleteFile(fake_device_stateful_.GetPath(), false));
+  EXPECT_TRUE(base::DeleteFile(fake_device_stateful_.GetPath()));
   EXPECT_FALSE(save_config_->Save());
 }
 
 TEST_F(SaveOobeConfigUsbTest, SaveFailNoUsbStateful) {
-  EXPECT_TRUE(base::DeleteFile(fake_usb_stateful_.GetPath(), true));
+  EXPECT_TRUE(base::DeletePathRecursively(fake_usb_stateful_.GetPath()));
   EXPECT_FALSE(save_config_->Save());
 }
 
 TEST_F(SaveOobeConfigUsbTest, SaveFailNoUsbUnencrypted) {
-  EXPECT_TRUE(base::DeleteFile(
-      fake_usb_stateful_.GetPath().Append(kUnencryptedOobeConfigDir), true));
+  EXPECT_TRUE(base::DeletePathRecursively(
+      fake_usb_stateful_.GetPath().Append(kUnencryptedOobeConfigDir)));
   EXPECT_FALSE(save_config_->Save());
 }
 

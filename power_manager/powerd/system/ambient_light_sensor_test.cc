@@ -117,7 +117,7 @@ TEST_F(AmbientLightSensorTest, Basic) {
 
 TEST_F(AmbientLightSensorTest, GiveUpAfterTooManyFailures) {
   // Test that the timer is eventually stopped after many failures.
-  base::DeleteFile(data_file_, false);
+  base::DeleteFile(data_file_);
   for (int i = 0; i < AmbientLightSensor::kNumInitAttemptsBeforeGivingUp; ++i) {
     EXPECT_TRUE(sensor_->TriggerPollTimerForTesting());
     EXPECT_LT(sensor_->GetAmbientLightLux(), 0);

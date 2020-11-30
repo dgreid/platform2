@@ -297,10 +297,8 @@ TgtManager::TgtManager(const PathService* path_service,
 
 TgtManager::~TgtManager() {
   // Do a best-effort cleanup.
-  base::DeleteFile(base::FilePath(paths_->Get(config_path_)),
-                   false /* recursive */);
-  base::DeleteFile(base::FilePath(paths_->Get(credential_cache_path_)),
-                   false /* recursive */);
+  base::DeleteFile(base::FilePath(paths_->Get(config_path_)));
+  base::DeleteFile(base::FilePath(paths_->Get(credential_cache_path_)));
 
   // Note that the destuctor of |tgt_renewal_callback_| does not cancel.
   tgt_renewal_callback_.Cancel();
@@ -659,7 +657,7 @@ void TgtManager::SetupKrb5Trace(ProcessExecutor* krb5_cmd) const {
   {
     // Delete krb5 trace file (must be done as authpolicyd-exec).
     ScopedSwitchToSavedUid switch_scope;
-    if (!base::DeleteFile(base::FilePath(trace_path), false /* recursive */)) {
+    if (!base::DeleteFile(base::FilePath(trace_path))) {
       LOG(WARNING) << "Failed to delete krb5 trace file";
     }
   }

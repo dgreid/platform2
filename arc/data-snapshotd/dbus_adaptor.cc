@@ -170,7 +170,7 @@ bool DBusAdaptor::ClearSnapshot(bool last) {
     LOG(WARNING) << "Snapshot directory is already empty: " << dir.value();
     return true;
   }
-  if (!base::DeleteFile(dir, true /* recursive */)) {
+  if (!base::DeletePathRecursively(dir)) {
     LOG(ERROR) << "Failed to delete snapshot directory: " << dir.value();
     return false;
   }

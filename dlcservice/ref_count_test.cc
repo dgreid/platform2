@@ -152,7 +152,7 @@ TEST_F(RefCountTest, DeleteNotExistingUsers) {
 
   // Now delete one user of the system. Only remaining is "user-1".
   auto path = JoinPaths(SystemState::Get()->users_dir(), "user-1");
-  EXPECT_TRUE(base::DeleteFile(path, /*recursive=*/true));
+  EXPECT_TRUE(base::DeletePathRecursively(path));
   UserRefCount::SessionChanged(kSessionStarted);
 
   // Uninstall should remove both users after a reboot.

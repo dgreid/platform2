@@ -291,7 +291,7 @@ bool MountManager::ErasePasswordFile(int32_t mount_id) {
     // No password file exists.
     return true;
   }
-  if (!base::DeleteFile(credential.password_file, false /* recursive */)) {
+  if (!base::DeleteFile(credential.password_file)) {
     PLOG(ERROR) << "Unable to erase password file";
     return false;
   }

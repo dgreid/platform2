@@ -125,7 +125,7 @@ class FlashMode {
     }
 
     if (!RunHelperProcess(helper_info, {kPrepareToFlash}, nullptr)) {
-      base::DeleteFile(lock_path, false /* recursive */);
+      base::DeleteFile(lock_path);
       return nullptr;
     }
 

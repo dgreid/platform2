@@ -235,7 +235,7 @@ ScopedProcessingFile::ScopedProcessingFile(const base::FilePath& meta_file)
 }
 
 ScopedProcessingFile::~ScopedProcessingFile() {
-  if (!base::DeleteFile(processing_file_, /*recursive=*/false)) {
+  if (!base::DeleteFile(processing_file_)) {
     LOG(ERROR) << "Failed to remove .processing file. Crash will be deleted.";
   }
 }

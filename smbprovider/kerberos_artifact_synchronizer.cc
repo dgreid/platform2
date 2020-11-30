@@ -184,7 +184,7 @@ void KerberosArtifactSynchronizer::RemoveFiles(SetupKerberosCallback callback) {
 }
 
 bool KerberosArtifactSynchronizer::RemoveFile(const std::string& path) {
-  if (!base::DeleteFile(base::FilePath(path), false /* recursive */)) {
+  if (!base::DeleteFile(base::FilePath(path))) {
     LOG(ERROR) << "Failed to delete file " << path;
     return false;
   }

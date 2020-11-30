@@ -43,13 +43,13 @@ bool UncleanShutdownCollector::Enable() {
 }
 
 bool UncleanShutdownCollector::DeleteUncleanShutdownFiles() {
-  if (!base::DeleteFile(FilePath(unclean_shutdown_file_), false)) {
+  if (!base::DeleteFile(FilePath(unclean_shutdown_file_))) {
     PLOG(ERROR) << "Failed to delete unclean shutdown file "
                 << unclean_shutdown_file_;
     return false;
   }
   // Delete power manager state file if it exists.
-  base::DeleteFile(powerd_suspended_file_, false);
+  base::DeleteFile(powerd_suspended_file_);
   return true;
 }
 

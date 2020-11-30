@@ -151,7 +151,7 @@ bool ChromeCollector::HandleCrashWithDumpData(
     base::TrimWhitespaceASCII(pid_data, base::TRIM_TRAILING, &pid_data);
     if (pid_data == base::NumberToString(pid)) {
       AddCrashMetaUploadData("browser_hang", "true");
-      base::DeleteFile(aborted_path, false);
+      base::DeleteFile(aborted_path);
     }
   }
 
@@ -160,7 +160,7 @@ bool ChromeCollector::HandleCrashWithDumpData(
     base::TrimWhitespaceASCII(pid_data, base::TRIM_TRAILING, &pid_data);
     if (pid_data == base::NumberToString(pid)) {
       AddCrashMetaUploadData("browser_shutdown_hang", "true");
-      base::DeleteFile(shutdown_path, false);
+      base::DeleteFile(shutdown_path);
     }
   }
 
@@ -453,7 +453,7 @@ bool ChromeCollector::GetDriErrorState(const FilePath& error_state_path) {
     PLOG(ERROR) << "Could not write file " << error_state_path.value()
                 << " Written: " << written
                 << " Len: " << decoded_error_state.length();
-    base::DeleteFile(error_state_path, false);
+    base::DeleteFile(error_state_path);
     return false;
   }
 

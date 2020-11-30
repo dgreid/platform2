@@ -221,7 +221,7 @@ void LogManager::PerformLogMaintenance() {
   // Now, if we have more files than we want to keep, purge the old files.
   while (log_files.size() > kLogFilesToKeep) {
     auto front_it = log_files.begin();
-    PLOG_IF(WARNING, !base::DeleteFile(*front_it, false))
+    PLOG_IF(WARNING, !base::DeleteFile(*front_it))
         << "Failed to delete an old log file: " << front_it->value();
     log_files.erase(front_it);
   }

@@ -95,7 +95,7 @@ class CrosFpUpdaterFindFirmwareTest : public ::testing::Test {
   }
 
   bool RemoveFile(const base::FilePath& abspath) const {
-    return base::DeleteFile(abspath, true);
+    return base::DeletePathRecursively(abspath);
   }
 
   CrosFpUpdaterFindFirmwareTest() = default;

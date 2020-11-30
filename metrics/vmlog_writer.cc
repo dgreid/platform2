@@ -487,7 +487,7 @@ void VmlogWriter::Init(const base::FilePath& vmlog_dir,
                             vmlog_dir.Append("vmlog.PREVIOUS"),
                             vmlog_current_path);
 
-  base::DeleteFile(vmlog_dir.Append("vmlog.1.PREVIOUS"), false);
+  base::DeleteFile(vmlog_dir.Append("vmlog.1.PREVIOUS"));
   if (base::PathExists(vmlog_dir.Append("vmlog.1.LATEST"))) {
     base::Move(vmlog_dir.Append("vmlog.1.LATEST"),
                vmlog_dir.Append("vmlog.1.PREVIOUS"));

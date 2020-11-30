@@ -152,7 +152,7 @@ bool OpaqueFilesCleaner::DeleteCache() const {
 }
 
 bool OpaqueFilesCleaner::DeleteFiles() const {
-  if (base::PathExists(files_path_) && base::DeleteFile(files_path_, true))
+  if (base::PathExists(files_path_) && base::DeletePathRecursively(files_path_))
     return true;
 
   LOG(ERROR) << "Failed to delete files directory";

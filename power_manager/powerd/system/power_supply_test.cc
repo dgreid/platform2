@@ -382,7 +382,7 @@ TEST_F(PowerSupplyTest, NoPowerSupplySysfs) {
 // Test line power without battery.
 TEST_F(PowerSupplyTest, NoBattery) {
   WriteDefaultValues(PowerSource::AC);
-  base::DeleteFile(battery_dir_, true);
+  base::DeletePathRecursively(battery_dir_);
   Init();
   PowerStatus power_status;
   ASSERT_TRUE(UpdateStatus(&power_status));
@@ -499,7 +499,7 @@ TEST_F(PowerSupplyTest, DualRolePowerSources) {
   // Delete the AC power supply and report two line power sources, both
   // initially offline.
   WriteDefaultValues(PowerSource::BATTERY);
-  base::DeleteFile(ac_dir_, true);
+  base::DeletePathRecursively(ac_dir_);
 
   const char kLine1Id[] = "line1";
   const char kLine1Manufacturer[] = "04fe";
@@ -805,11 +805,11 @@ TEST_F(PowerSupplyTest, IgnorePeripherals) {
 // Test battery reporting energy instead of charge.
 TEST_F(PowerSupplyTest, EnergyDischarging) {
   WriteDefaultValues(PowerSource::BATTERY);
-  base::DeleteFile(battery_dir_.Append("charge_full"), false);
-  base::DeleteFile(battery_dir_.Append("charge_full_design"), false);
-  base::DeleteFile(battery_dir_.Append("charge_now"), false);
-  base::DeleteFile(battery_dir_.Append("current_now"), false);
-  base::DeleteFile(battery_dir_.Append("voltage_min_design"), false);
+  base::DeleteFile(battery_dir_.Append("charge_full"));
+  base::DeleteFile(battery_dir_.Append("charge_full_design"));
+  base::DeleteFile(battery_dir_.Append("charge_now"));
+  base::DeleteFile(battery_dir_.Append("current_now"));
+  base::DeleteFile(battery_dir_.Append("voltage_min_design"));
 
   const double kNominalVoltage = kVoltage + 1.0;
   const double kChargeFull = 2.40;
@@ -1931,7 +1931,7 @@ TEST_F(PowerSupplyTest, NoNominalVoltage) {
   UpdateChargeAndCurrent(kCharge, kCurrent);
 
   // Remove the default min voltage attribute from the battery
-  base::DeleteFile(battery_dir_.Append("voltage_min_design"), false);
+  base::DeleteFile(battery_dir_.Append("voltage_min_design"));
   Init();
 
   // The battery should use the current voltage if there is no
@@ -1964,22 +1964,22 @@ TEST_F(PowerSupplyTest, NoCurrentOrVoltage) {
 
   // PowerSupply should report the lack of a current_now file:
   // https://crbug.com/807753
-  base::DeleteFile(ac_dir_.Append("current_now"), false);
+  base::DeleteFile(ac_dir_.Append("current_now"));
   ASSERT_TRUE(UpdateStatus(&status));
   EXPECT_FALSE(status.has_line_power_current);
 
   // Ditto for voltage_now.
-  base::DeleteFile(ac_dir_.Append("voltage_now"), false);
+  base::DeleteFile(ac_dir_.Append("voltage_now"));
   ASSERT_TRUE(UpdateStatus(&status));
   EXPECT_FALSE(status.has_line_power_voltage);
 
   // Ditto for current_max.
-  base::DeleteFile(ac_dir_.Append("current_max"), false);
+  base::DeleteFile(ac_dir_.Append("current_max"));
   ASSERT_TRUE(UpdateStatus(&status));
   EXPECT_FALSE(status.has_line_power_max_current);
 
   // Ditto for voltage_max_design.
-  base::DeleteFile(ac_dir_.Append("voltage_max_design"), false);
+  base::DeleteFile(ac_dir_.Append("voltage_max_design"));
   ASSERT_TRUE(UpdateStatus(&status));
   EXPECT_FALSE(status.has_line_power_max_voltage);
 }
@@ -2101,7 +2101,7 @@ TEST_F(PowerSupplyTest, NotifyForUdevWithMultipleBatteries) {
   EXPECT_EQ(1, observer.num_updates());
 
   // The same thing should happen when the second battery is removed.
-  ASSERT_TRUE(base::DeleteFile(second_battery_dir_, true /* recursive */));
+  ASSERT_TRUE(base::DeletePathRecursively(second_battery_dir_));
   SendUdevEvent();
   EXPECT_EQ(2, observer.num_updates());
   SendUdevEvent();

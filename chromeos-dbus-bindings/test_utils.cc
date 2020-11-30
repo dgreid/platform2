@@ -53,8 +53,8 @@ string GetUnifiedDiff(const string& a, const string& b) {
   }
   proc.Wait();
 
-  base::DeleteFile(path_a, false);
-  base::DeleteFile(path_b, false);
+  base::DeleteFile(path_a);
+  base::DeleteFile(path_b);
   return output;
 }
 

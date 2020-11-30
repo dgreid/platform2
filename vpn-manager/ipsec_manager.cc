@@ -213,7 +213,7 @@ bool IpsecManager::Initialize(int ike_version,
   }
   ike_version_ = ike_version;
 
-  base::DeleteFile(FilePath(kIpsecUpFile), false);
+  base::DeleteFile(FilePath(kIpsecUpFile));
 
   return true;
 }
@@ -473,7 +473,7 @@ bool IpsecManager::SetIpsecGroup(const FilePath& file_path) {
 bool IpsecManager::WriteConfigFile(const std::string& output_name,
                                    const std::string& contents) {
   FilePath temp_file = temp_path().Append(output_name);
-  base::DeleteFile(temp_file, false);
+  base::DeleteFile(temp_file);
   if (base::PathExists(temp_file)) {
     LOG(ERROR) << "Unable to remove existing file " << temp_file.value();
     return false;

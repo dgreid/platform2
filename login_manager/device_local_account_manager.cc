@@ -63,7 +63,7 @@ void DeviceLocalAccountManager::UpdateDeviceSettings(
     if (IsValidAccountKey(subdir.BaseName().value()) &&
         policy_map_.find(subdir.BaseName().value()) == policy_map_.end()) {
       LOG(INFO) << "Purging " << subdir.value();
-      if (!base::DeleteFile(subdir, true))
+      if (!base::DeletePathRecursively(subdir))
         LOG(ERROR) << "Failed to delete " << subdir.value();
     }
   }

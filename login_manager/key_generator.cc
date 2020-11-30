@@ -39,7 +39,7 @@ bool KeyGenerator::Start(const string& username,
   base::FilePath user_path(brillo::cryptohome::home::GetUserPath(username));
   base::FilePath temporary_key_path(
       user_path.AppendASCII(kTemporaryKeyFilename));
-  if (!base::DeleteFile(temporary_key_path, false)) {
+  if (!base::DeleteFile(temporary_key_path)) {
     PLOG(ERROR) << "Old keygen state still present; can't generate keys: ";
     return false;
   }

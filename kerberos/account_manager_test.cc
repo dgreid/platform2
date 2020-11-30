@@ -247,7 +247,7 @@ TEST_F(AccountManagerTest, AddAccountSuccess) {
 TEST_F(AccountManagerTest, AddDuplicateAccountFail) {
   ignore_result(AddAccount());
 
-  EXPECT_TRUE(base::DeleteFile(accounts_path_, false /* recursive */));
+  EXPECT_TRUE(base::DeleteFile(accounts_path_));
   EXPECT_EQ(ERROR_DUPLICATE_PRINCIPAL_NAME, AddAccount());
   EXPECT_FALSE(base::PathExists(accounts_path_));
 }
@@ -286,7 +286,7 @@ TEST_F(AccountManagerTest, UnmanagedDoesNotOverrideManaged) {
 TEST_F(AccountManagerTest, RemoveAccountSuccess) {
   ignore_result(AddAccount());
 
-  EXPECT_TRUE(base::DeleteFile(accounts_path_, false /* recursive */));
+  EXPECT_TRUE(base::DeleteFile(accounts_path_));
   EXPECT_EQ(ERROR_NONE, manager_->RemoveAccount(kUser));
   EXPECT_TRUE(base::PathExists(accounts_path_));
 }

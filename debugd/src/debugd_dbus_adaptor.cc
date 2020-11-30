@@ -383,8 +383,8 @@ bool DebugdDBusAdaptor::DisableDevCoredumpUpload(brillo::ErrorPtr* error) {
     VLOG(1) << "Device coredump upload already disabled";
     return true;
   }
-  if (!base::DeleteFile(base::FilePath(debugd::kDeviceCoredumpUploadFlagPath),
-                        false)) {
+  if (!base::DeleteFile(
+          base::FilePath(debugd::kDeviceCoredumpUploadFlagPath))) {
     DEBUGD_ADD_ERROR(error, kDevCoredumpDBusErrorString,
                      "Failed to delete flag file.");
     PLOG(ERROR) << "Failed to delete flag file.";

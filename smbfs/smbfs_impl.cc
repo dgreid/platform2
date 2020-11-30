@@ -32,7 +32,7 @@ void SmbFsImpl::RemoveSavedCredentials(
     return;
   }
 
-  bool success = base::DeleteFile(password_file_path_, false /* recursive */);
+  bool success = base::DeleteFile(password_file_path_);
   LOG_IF(WARNING, !success) << "Unable to erase credential file";
   std::move(callback).Run(success);
 }

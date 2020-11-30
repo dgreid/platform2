@@ -118,7 +118,7 @@ TEST_F(PluggableInternalBacklightTest, ChangeDevice) {
   EXPECT_EQ(1, observer.num_changes());
 
   // Remove the device.
-  ASSERT_TRUE(base::DeleteFile(dir, true));
+  ASSERT_TRUE(base::DeletePathRecursively(dir));
   udev_.NotifySubsystemObservers(
       {{kSubsystem, "", kDevice, ""}, UdevEvent::Action::REMOVE});
   EXPECT_FALSE(backlight_.DeviceExists());

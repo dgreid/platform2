@@ -60,7 +60,7 @@ std::string U2fTool::SetFlags(const std::string& flags) {
     all_flags.insert(cur);
 
     // Clean-up existing flag.
-    base::DeleteFile(FlagFile(cur), false);
+    base::DeleteFile(FlagFile(cur));
   }
 
   // Iterate over the new flags.

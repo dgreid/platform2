@@ -43,7 +43,7 @@ void TempFileManager::DeleteFiles(const std::vector<base::FilePath>& files) {
 }
 
 bool FileDeleter::DeleteFile(const base::FilePath& path) {
-  return base::DeleteFile(path, false);
+  return base::DeleteFile(path);
 }
 
 }  // namespace webservd

@@ -178,7 +178,7 @@ bool KernelCollector::ReadRecordToString(std::string* contents,
 
   // Remove the record from pstore after it's found.
   if (*record_found)
-    base::DeleteFile(record_path, false);
+    base::DeleteFile(record_path);
 
   return true;
 }
@@ -645,7 +645,7 @@ void KernelCollector::EfiCrash::Remove() const {
   // Part can be deleted in any order, start from Part1 since Part0 is
   // never generated.
   for (uint32_t part = 1; part <= max_part_; part++) {
-    base::DeleteFile(GetFilePath(part), false);
+    base::DeleteFile(GetFilePath(part));
   }
 }
 

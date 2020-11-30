@@ -255,7 +255,7 @@ void OobeConfig::CleanupEncryptedStatefulDirectory() const {
       GetPrefixedFilePath(kEncryptedStatefulRollbackDataPath), false,
       base::FileEnumerator::FILES);
   for (auto file = iter.Next(); !file.empty(); file = iter.Next()) {
-    if (!base::DeleteFile(file, false)) {
+    if (!base::DeleteFile(file)) {
       LOG(ERROR) << "Couldn't delete " << file.value();
     }
   }
@@ -355,7 +355,7 @@ bool OobeConfig::ShouldSaveRollbackData() const {
 }
 
 bool OobeConfig::DeleteRollbackSaveFlagFile() const {
-  return base::DeleteFile(GetPrefixedFilePath(kRollbackSaveMarkerFile), false);
+  return base::DeleteFile(GetPrefixedFilePath(kRollbackSaveMarkerFile));
 }
 
 }  // namespace oobe_config

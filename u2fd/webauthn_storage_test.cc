@@ -50,7 +50,7 @@ class WebAuthnStorageTest : public ::testing::Test {
   }
 
   ~WebAuthnStorageTest() override {
-    EXPECT_TRUE(base::DeleteFile(temp_dir_.GetPath(), true));
+    EXPECT_TRUE(base::DeletePathRecursively(temp_dir_.GetPath()));
   }
 
  protected:

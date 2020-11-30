@@ -298,7 +298,7 @@ bool L2tpManager::Start() {
     return false;
   }
   l2tpd_control_path_ = temp_path().Append("l2tpd.control");
-  base::DeleteFile(l2tpd_control_path_, false);
+  base::DeleteFile(l2tpd_control_path_);
 
   if (!pppd_plugin_.empty()) {
     // Pass the resolved LNS address to the plugin.

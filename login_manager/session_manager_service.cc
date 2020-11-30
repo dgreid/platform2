@@ -633,7 +633,7 @@ void SessionManagerService::WriteBrowserPidFile(base::FilePath path) {
   // This is safe from symlink attacks because /run/chrome is guaranteed to be a
   // root-owned directory (/run is in the rootfs, /run/chrome is created by
   // session_manager as a directory).
-  if (!base::DeleteFile(path, false /* recursive */)) {
+  if (!base::DeleteFile(path)) {
     PLOG(ERROR) << "Failed to delete " << path.value();
     return;
   }

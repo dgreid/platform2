@@ -367,10 +367,10 @@ bool ChromeosChrootPostinst(const InstallConfig& install_config,
           fprintf(stderr, "Unable to write to file %s - failure reason %s\n",
                   slow_boot_req_file.value().c_str(), strerror(errno));
       }
-      base::DeleteFile(fspm_main, false);
-      base::DeleteFile(fspm_next, false);
+      base::DeleteFile(fspm_main);
+      base::DeleteFile(fspm_next);
     } else {
-      base::DeleteFile(fspm_main, false);
+      base::DeleteFile(fspm_main);
       // Note: This will only rollback the ChromeOS verified boot target.
       // The assumption is that systems running firmware autoupdate
       // are not running legacy (non-ChromeOS) firmware. If the firmware

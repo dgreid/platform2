@@ -189,7 +189,7 @@ ErrorType AccountManager::AddAccount(const std::string& principal_name,
   // kerberosd-exec user and wants to write krbcc into that directory.
   ErrorType error = SetFilePermissions(account_dir, kFileMode_rwxrwx);
   if (error != ERROR_NONE) {
-    base::DeleteFile(account_dir, true /* recursive */);
+    base::DeletePathRecursively(account_dir);
     return error;
   }
 
@@ -216,7 +216,7 @@ ErrorType AccountManager::RemoveAccount(const std::string& principal_name) {
 
 void AccountManager::DeleteAllFilesFor(const std::string& principal_name) {
   const bool krb5cc_existed = base::PathExists(GetKrb5CCPath(principal_name));
-  CHECK(base::DeleteFile(GetAccountDir(principal_name), true /* recursive */));
+  CHECK(base::DeletePathRecursively(GetAccountDir(principal_name)));
   if (krb5cc_existed)
     TriggerKerberosFilesChanged(principal_name);
 }
@@ -239,8 +239,7 @@ ErrorType AccountManager::ClearAccounts(
         continue;
 
       case WhatToRemove::kPassword:
-        CHECK(base::DeleteFile(GetPasswordPath(it->data.principal_name()),
-                               false /* recursive */));
+        CHECK(base::DeleteFile(GetPasswordPath(it->data.principal_name())));
         ++it;
         continue;
 
@@ -545,7 +544,7 @@ base::FilePath AccountManager::GetPasswordPath(
 ErrorType AccountManager::UpdatePasswordFromLogin(
     const std::string& principal_name, std::string* password) {
   // Erase a previously remembered password.
-  base::DeleteFile(GetPasswordPath(principal_name), false /* recursive */);
+  base::DeleteFile(GetPasswordPath(principal_name));
 
   // Get login password from |password_provider_|.
   std::unique_ptr<password_provider::Password> login_password =
@@ -581,7 +580,7 @@ ErrorType AccountManager::UpdatePasswordFromSaved(
     error = SetFilePermissions(password_path, kFileMode_rw);
     if (error != ERROR_NONE) {
       // Do a best effort removing the password.
-      base::DeleteFile(password_path, false /* recursive */);
+      base::DeleteFile(password_path);
       return error;
     }
   }
@@ -595,7 +594,7 @@ ErrorType AccountManager::UpdatePasswordFromSaved(
 
   // Erase a previously remembered password.
   if (!remember_password)
-    base::DeleteFile(password_path, false /* recursive */);
+    base::DeleteFile(password_path);
 
   return ERROR_NONE;
 }

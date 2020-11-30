@@ -743,7 +743,7 @@ bool DeleteFilesInDir(const base::FilePath& directory) {
       base::FileEnumerator::FILES | base::FileEnumerator::SHOW_SYM_LINKS);
   bool retval = true;
   for (base::FilePath file = files.Next(); !file.empty(); file = files.Next()) {
-    if (!DeleteFile(file, false /*recursive*/)) {
+    if (!DeleteFile(file)) {
       LOG(ERROR) << "Failed to delete file " << file.value();
       retval = false;
     }

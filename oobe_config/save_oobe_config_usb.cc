@@ -122,7 +122,7 @@ bool SaveOobeConfigUsb::FindPersistentMountDevice(FilePath* device) const {
 
 void SaveOobeConfigUsb::Cleanup() const {
   auto device_config_dir = device_stateful_.Append(kUnencryptedOobeConfigDir);
-  if (!DeleteFile(device_config_dir, true)) {
+  if (!base::DeletePathRecursively(device_config_dir)) {
     PLOG(ERROR) << "Failed to delete directory: " << device_config_dir.value()
                 << "; Just giving up!";
   }

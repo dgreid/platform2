@@ -130,7 +130,7 @@ bool Profile::RemoveStorage(Error* error) {
   CHECK(!storage_.get());
   CHECK(!persistent_profile_path_.empty());
 
-  if (!base::DeleteFile(persistent_profile_path_, false)) {
+  if (!base::DeleteFile(persistent_profile_path_)) {
     Error::PopulateAndLog(
         FROM_HERE, error, Error::kOperationFailed,
         base::StringPrintf("Could not remove path %s",

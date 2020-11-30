@@ -222,7 +222,7 @@ TEST_F(LoginScreenStorageTestPersistent, StoreOverridesPersistentKey) {
 }
 
 TEST_F(LoginScreenStorageTestPersistent, StoreCreatesDirectoryIfNotExistant) {
-  base::DeleteFile(storage_path_, /*recursive=*/true);
+  base::DeletePathRecursively(storage_path_);
 
   base::ScopedFD value_fd = MakeValueFD(test_value_);
   brillo::ErrorPtr error;
@@ -237,7 +237,7 @@ TEST_F(LoginScreenStorageTestPersistent, StoreCreatesDirectoryIfNotExistant) {
 
 TEST_F(LoginScreenStorageTestPersistent, OnlyStoredKeysAreListedInIndex) {
   const std::string kDifferentTestKey = "different_test_key";
-  base::DeleteFile(storage_path_, /*recursive=*/true);
+  base::DeletePathRecursively(storage_path_);
   brillo::ErrorPtr error;
 
   {

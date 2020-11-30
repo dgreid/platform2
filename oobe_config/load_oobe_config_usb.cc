@@ -354,7 +354,7 @@ void LoadOobeConfigUsb::CleanupFilesOnDevice() {
     return;
   }
 
-  if (!base::DeleteFile(unencrypted_oobe_config_dir_, true)) {
+  if (!base::DeletePathRecursively(unencrypted_oobe_config_dir_)) {
     LOG(ERROR) << "Failed to delete directory "
                << unencrypted_oobe_config_dir_.value();
   }

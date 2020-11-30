@@ -205,7 +205,7 @@ TEST_F(DisplayWatcherTest, I2CDevices) {
   EXPECT_EQ(i2c_path.value(), watcher_.GetDisplays()[0].i2c_path.value());
 
   // If the I2C device doesn't actually exist, the path shouldn't be set.
-  ASSERT_TRUE(base::DeleteFile(i2c_path, false));
+  ASSERT_TRUE(base::DeleteFile(i2c_path));
   NotifyAboutUdevEvent();
   ASSERT_EQ(static_cast<size_t>(1), watcher_.GetDisplays().size());
   EXPECT_EQ("", watcher_.GetDisplays()[0].i2c_path.value());
@@ -214,7 +214,7 @@ TEST_F(DisplayWatcherTest, I2CDevices) {
   const char kBogusName[] = "i3c-1";
   base::FilePath bogus_path = CreateI2CDevice(kBogusName);
   ASSERT_TRUE(base::CreateDirectory(device_path.Append(kBogusName)));
-  ASSERT_TRUE(base::DeleteFile(drm_i2c_path, false));
+  ASSERT_TRUE(base::DeleteFile(drm_i2c_path));
   NotifyAboutUdevEvent();
   ASSERT_EQ(static_cast<size_t>(1), watcher_.GetDisplays().size());
   EXPECT_EQ("", watcher_.GetDisplays()[0].i2c_path.value());
@@ -252,7 +252,7 @@ TEST_F(DisplayWatcherTest, Observer) {
 
   // After the device is disconnected, the observer should be notified one more
   // time.
-  ASSERT_TRUE(base::DeleteFile(status_path, false));
+  ASSERT_TRUE(base::DeleteFile(status_path));
   NotifyAboutUdevEvent();
   EXPECT_TRUE(watcher_.trigger_debounce_timeout_for_testing());
   EXPECT_EQ(2, observer.num_display_changes());

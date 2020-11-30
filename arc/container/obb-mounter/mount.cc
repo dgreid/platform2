@@ -115,7 +115,7 @@ bool UnmountObb(const std::string& mount_path) {
     PLOG(ERROR) << "umount failed";
     return false;
   }
-  if (!base::DeleteFile(base::FilePath(mount_path), true /* recursive */)) {
+  if (!base::DeletePathRecursively(base::FilePath(mount_path))) {
     LOG(ERROR) << "Failed to delete the destination directory.";
     return false;
   }

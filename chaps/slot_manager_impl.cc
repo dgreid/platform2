@@ -185,7 +185,7 @@ void LogTokenReinitializedFromFlagFile() {
                 << flag_file_path.value();
     return;
   }
-  if (!base::DeleteFile(flag_file_path, false /* recursive */)) {
+  if (!base::DeleteFile(flag_file_path)) {
     PLOG(ERROR) << "Could not delete flag file " << flag_file_path.value();
   }
   LOG(WARNING) << "Flag file with timestamp " << flag_file_info.last_modified

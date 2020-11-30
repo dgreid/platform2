@@ -28,7 +28,7 @@ bool CreateFile(const base::FilePath& file_path) {
 }
 
 bool DeleteFile(const base::FilePath& file_path) {
-  return base::DeleteFile(file_path, false /* recursive */);
+  return base::DeleteFile(file_path);
 }
 
 bool CreateDir(const base::FilePath& dir_path) {

@@ -79,14 +79,14 @@ bool ResilientPolicyStore::LoadOrCreate() {
       break;
     }
     number_of_invalid_files++;
-    base::DeleteFile(policy_path, false);
+    base::DeleteFile(policy_path);
   }
 
   if (number_of_invalid_files > 0) {
     // If at least one policy file has been deleted, we need to delete the
     // |kCleanupDoneFileName| to make sure the next persist doesn't overwrite
     // the data in a good file saved in a previous session.
-    base::DeleteFile(GetCleanupDoneFilePath(policy_path_), false);
+    base::DeleteFile(GetCleanupDoneFilePath(policy_path_));
   }
 
   ReportInvalidDevicePolicyFilesStatus(
@@ -137,7 +137,7 @@ void ResilientPolicyStore::CleanupPolicyFiles(
   for (const auto& map_pair : base::Reversed(sorted_policy_file_paths)) {
     const base::FilePath& policy_path = map_pair.second;
     if (number_of_good_files >= max_allowed_files) {
-      base::DeleteFile(policy_path, false);
+      base::DeleteFile(policy_path);
       continue;
     }
 
@@ -155,7 +155,7 @@ void ResilientPolicyStore::CleanupPolicyFiles(
       case policy::LoadPolicyResult::kEmptyFile:
       case policy::LoadPolicyResult::kInvalidPolicyData:
         number_of_invalid_files++;
-        base::DeleteFile(policy_path, false);
+        base::DeleteFile(policy_path);
         break;
     }
   }

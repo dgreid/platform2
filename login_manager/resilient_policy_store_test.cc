@@ -32,7 +32,7 @@ class ResilientPolicyStoreTest : public ::testing::Test {
     // Create a temporary filename that's guaranteed to not exist, but is
     // inside our scoped directory so it'll get deleted later.
     ASSERT_TRUE(base::CreateTemporaryFileInDir(tmpdir_.GetPath(), &tmpfile_));
-    ASSERT_TRUE(base::DeleteFile(tmpfile_, false));
+    ASSERT_TRUE(base::DeleteFile(tmpfile_));
   }
 
   virtual void TearDown() {}

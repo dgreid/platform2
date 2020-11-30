@@ -765,7 +765,7 @@ TEST_F(CrashSenderUtilTest, ChooseAction) {
                     Sender::kProcessingFileExists, Sender::kSendReasonCount));
   EXPECT_EQ(Sender::kRemove, sender.ChooseAction(good_meta_, &reason, &info));
   EXPECT_THAT(reason, HasSubstr(".processing file already exists"));
-  ASSERT_TRUE(base::DeleteFile(processing, /*recursive=*/false));
+  ASSERT_TRUE(base::DeleteFile(processing));
 
   // The following file should be removed.
   EXPECT_CALL(
@@ -1129,7 +1129,7 @@ TEST_F(CrashSenderUtilTest, FailRemoveReportFilesSendsMetric) {
 
   // Clean up after ourselves
   EXPECT_EQ(chmod(crash_directory.value().c_str(), 0700), 0);
-  EXPECT_TRUE(base::DeleteFile(crash_directory, true));
+  EXPECT_TRUE(base::DeletePathRecursively(crash_directory));
 }
 
 TEST_F(CrashSenderUtilTest, GetMetaFiles) {

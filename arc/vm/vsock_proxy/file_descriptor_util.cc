@@ -79,7 +79,7 @@ base::ScopedFD CreateUnixDomainSocket(const base::FilePath& path) {
   }
 
   // Remove stale file first. Ignore the error intentionally.
-  base::DeleteFile(path, false /* recursive */);
+  base::DeleteFile(path);
 
   if (bind(fd.get(), reinterpret_cast<const struct sockaddr*>(&sa),
            sizeof(sa)) == -1) {

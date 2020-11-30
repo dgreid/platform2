@@ -101,8 +101,8 @@ class AnomalyDetectorFileReaderConcurrentTest : public ::testing::Test {
   }
 
   void TearDown() override {
-    CHECK(base::DeleteFile(path_, false));
-    CHECK(base::DeleteFile(path_.AddExtension("old"), false));
+    CHECK(base::DeleteFile(path_));
+    CHECK(base::DeleteFile(path_.AddExtension("old")));
   };
 
   // Use this method to append lines to file_.

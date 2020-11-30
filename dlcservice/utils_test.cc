@@ -123,7 +123,7 @@ TEST_F(FixtureUtilsTest, CreateFile) {
     CheckPerms(path, kDlcFilePerms);
     EXPECT_FALSE(IsFileSparse(path));
     EXPECT_EQ(GetFileSize(path), size);
-    EXPECT_TRUE(base::DeleteFile(path, true));
+    EXPECT_TRUE(base::DeletePathRecursively(path));
   }
 }
 

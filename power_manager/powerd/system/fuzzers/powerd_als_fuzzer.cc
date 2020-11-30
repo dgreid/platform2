@@ -26,7 +26,7 @@ class AmbientLightSensorFuzzer {
   AmbientLightSensorFuzzer& operator=(const AmbientLightSensorFuzzer&) = delete;
 
   ~AmbientLightSensorFuzzer() {
-    CHECK(base::DeleteFile(temp_dir_.GetPath(), true));
+    CHECK(base::DeletePathRecursively(temp_dir_.GetPath()));
   }
 
   void SetUp(FuzzedDataProvider& data_provider, bool is_color) {

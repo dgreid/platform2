@@ -231,10 +231,10 @@ TEST_F(UploadServiceTest, PersistentGUID) {
   // The GUID are cached.
   EXPECT_EQ(first_guid, second_guid);
 
-  base::DeleteFile(base::FilePath(tmp_file), false);
+  base::DeleteFile(base::FilePath(tmp_file));
 
   first_guid = SystemProfileCache::GetPersistentGUID(tmp_file);
-  base::DeleteFile(base::FilePath(tmp_file), false);
+  base::DeleteFile(base::FilePath(tmp_file));
   second_guid = SystemProfileCache::GetPersistentGUID(tmp_file);
 
   // Random GUIDs are generated (not all the same).

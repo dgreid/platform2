@@ -244,8 +244,7 @@ int main(int argc, char** argv) {
       int log_level_int;
       if (base::StringToInt(log_level, &log_level_int))
         logging::SetMinLogLevel(log_level_int);
-      int delete_success =
-          base::DeleteFile(FilePath(kPersistentLogLevelPath), false);
+      int delete_success = base::DeleteFile(FilePath(kPersistentLogLevelPath));
       VLOG_IF(2, !delete_success) << "Failed to delete log level file.";
     }
   }

@@ -120,7 +120,7 @@ void Daemon::OnEventLoopStartedTask() {
 void UpdateLogSymlinks(const base::FilePath& latest_log_symlink,
                        const base::FilePath& previous_log_symlink,
                        const base::FilePath& log_file) {
-  base::DeleteFile(previous_log_symlink, false);
+  base::DeleteFile(previous_log_symlink);
   base::Move(latest_log_symlink, previous_log_symlink);
   if (!base::CreateSymbolicLink(log_file.BaseName(), latest_log_symlink)) {
     PLOG(ERROR) << "Unable to create symbolic link from "

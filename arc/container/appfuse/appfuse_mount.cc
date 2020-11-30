@@ -75,7 +75,7 @@ bool AppfuseMount::Unmount() {
     PLOG(ERROR) << "Failed to unmount " << mount_point_.value();
     return false;
   }
-  if (!base::DeleteFile(mount_point_, true)) {
+  if (!base::DeletePathRecursively(mount_point_)) {
     PLOG(ERROR) << "Failed to delete " << mount_point_.value();
     return false;
   }

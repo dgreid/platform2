@@ -34,7 +34,7 @@ bool BioCryptoInit::NukeFile(const base::FilePath& filepath) {
     ret = false;
   }
 
-  if (!base::DeleteFile(filepath, false)) {
+  if (!base::DeleteFile(filepath)) {
     PLOG(ERROR) << "Failed to delete TPM seed file: " << filepath.value();
     ret = false;
   }

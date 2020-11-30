@@ -130,36 +130,35 @@ TEST_F(LoadOobeConfigUsbTest, Simple) {
 }
 
 TEST_F(LoadOobeConfigUsbTest, FailNoConfig) {
-  EXPECT_TRUE(base::DeleteFile(config_file_, false));
+  EXPECT_TRUE(base::DeleteFile(config_file_));
   EXPECT_FALSE(TestGetOobeConfigJson());
 }
 
 TEST_F(LoadOobeConfigUsbTest, FailNoConfigSignature) {
   EXPECT_TRUE(base::DeleteFile(
-      device_oobe_config_dir_.Append(kConfigFile).AddExtension("sig"), false));
+      device_oobe_config_dir_.Append(kConfigFile).AddExtension("sig")));
   EXPECT_FALSE(TestGetOobeConfigJson());
 }
 
 TEST_F(LoadOobeConfigUsbTest, FailNoEnrollment) {
-  EXPECT_TRUE(base::DeleteFile(enrollment_domain_file_, false));
+  EXPECT_TRUE(base::DeleteFile(enrollment_domain_file_));
   EXPECT_FALSE(TestGetOobeConfigJson());
 }
 
 TEST_F(LoadOobeConfigUsbTest, FailNoEnrollmentDomainSignature) {
   EXPECT_TRUE(base::DeleteFile(
-      device_oobe_config_dir_.Append(kDomainFile).AddExtension("sig"), false));
+      device_oobe_config_dir_.Append(kDomainFile).AddExtension("sig")));
   EXPECT_FALSE(TestGetOobeConfigJson());
 }
 
 TEST_F(LoadOobeConfigUsbTest, FailNoUsbDevicePathSignature) {
-  EXPECT_TRUE(base::DeleteFile(
-      device_oobe_config_dir_.Append(kUsbDevicePathSigFile), false));
+  EXPECT_TRUE(
+      base::DeleteFile(device_oobe_config_dir_.Append(kUsbDevicePathSigFile)));
   EXPECT_FALSE(TestGetOobeConfigJson());
 }
 
 TEST_F(LoadOobeConfigUsbTest, FailNoPublicKey) {
-  EXPECT_TRUE(
-      base::DeleteFile(device_oobe_config_dir_.Append(kKeyFile), false));
+  EXPECT_TRUE(base::DeleteFile(device_oobe_config_dir_.Append(kKeyFile)));
   EXPECT_FALSE(TestGetOobeConfigJson());
 }
 
@@ -169,8 +168,8 @@ TEST_F(LoadOobeConfigUsbTest, FailVerifyPublicKey) {
 }
 
 TEST_F(LoadOobeConfigUsbTest, FailLocateUsbDevice) {
-  EXPECT_TRUE(base::DeleteFile(
-      fake_device_ids_dir_.GetPath().Append("dev_id2_sym"), false));
+  EXPECT_TRUE(
+      base::DeleteFile(fake_device_ids_dir_.GetPath().Append("dev_id2_sym")));
   EXPECT_FALSE(TestGetOobeConfigJson());
 }
 

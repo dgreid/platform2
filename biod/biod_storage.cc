@@ -275,7 +275,7 @@ bool BiodStorage::DeleteRecord(const std::string& user_id,
               << " which does not exist on disk.";
     return true;
   }
-  if (!base::DeleteFile(record_storage_filename, false)) {
+  if (!base::DeleteFile(record_storage_filename)) {
     LOG(ERROR) << "Fail to delete record " << record_id << " from disk.";
     return false;
   }

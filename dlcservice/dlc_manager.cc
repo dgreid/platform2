@@ -70,7 +70,7 @@ void DlcManager::CleanupUnsupportedDlcs() {
       continue;
     for (const auto& path : DlcBase::GetPathsToDelete(id))
       if (base::PathExists(path)) {
-        if (!base::DeleteFile(path, /*recursive=*/true))
+        if (!base::DeletePathRecursively(path))
           PLOG(ERROR) << "Failed to delete path=" << path;
         else
           LOG(INFO) << "Deleted path=" << path << " for deprecated DLC=" << id;
@@ -88,7 +88,7 @@ void DlcManager::CleanupUnsupportedDlcs() {
 
     // Preloading is not allowed for this image so it will be deleted.
     auto path = JoinPaths(preloaded_content_dir, id);
-    if (!base::DeleteFile(path, /*recursive=*/true))
+    if (!base::DeletePathRecursively(path))
       PLOG(ERROR) << "Failed to delete path=" << path;
     else
       LOG(INFO) << "Deleted path=" << path

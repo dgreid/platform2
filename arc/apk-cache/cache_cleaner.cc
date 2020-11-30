@@ -191,7 +191,7 @@ bool Clean(const base::FilePath& cache_path) {
       continue;
 
     if (!IsPackageValid(package_path)) {
-      if (!base::DeleteFile(package_path, true /* recursive */)) {
+      if (!base::DeletePathRecursively(package_path)) {
         LOG(ERROR) << "Error deletion path " << package_path.value();
         success = false;
       }

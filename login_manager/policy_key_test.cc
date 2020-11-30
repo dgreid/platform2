@@ -42,7 +42,7 @@ class PolicyKeyTest : public ::testing::Test {
 
   void TearDown() override {}
 
-  void StartUnowned() { base::DeleteFile(tmpfile_, false); }
+  void StartUnowned() { base::DeleteFile(tmpfile_); }
 
   static std::unique_ptr<crypto::RSAPrivateKey> CreateRSAPrivateKey(
       PK11SlotInfo* slot, uint16_t num_bits) {

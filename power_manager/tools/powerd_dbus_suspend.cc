@@ -107,7 +107,7 @@ class DarkResumeConfigurator {
   ~DarkResumeConfigurator() {
     // Restore dark resume state.
     if (!dark_resume_pref_exist_before_) {
-      if (!base::DeleteFile(base::FilePath(kDisableDarkResumePath), false))
+      if (!base::DeleteFile(base::FilePath(kDisableDarkResumePath)))
         PLOG(ERROR) << "Failed to restore dark resume state.";
     } else if (!SetDarkResumeState(prev_dark_resume_pref_state_)) {
       PLOG(ERROR) << "Failed to restore dark resume state.";

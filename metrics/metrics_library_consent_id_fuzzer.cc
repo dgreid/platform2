@@ -43,7 +43,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 
   std::string id;
   lib.ConsentId(&id);
-  base::DeleteFile(env.temp_file(), false);
+  base::DeleteFile(env.temp_file());
 
   return 0;
 }

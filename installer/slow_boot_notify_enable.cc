@@ -36,7 +36,7 @@ void ExtractFspm(const string& partition, const base::FilePath& fspm_path) {
   if ((result = RunCommand(cmd))) {
     printf("%s: Error reading FW_MAIN_%s %d\n", __func__, partition.c_str(),
            result);
-    base::DeleteFile(fw_bin_path, false);
+    base::DeleteFile(fw_bin_path);
     return;
   }
 
@@ -48,7 +48,7 @@ void ExtractFspm(const string& partition, const base::FilePath& fspm_path) {
     printf("%s: Error extracting FSPM from FW_MAIN_%s - %d\n", __func__,
            partition.c_str(), result);
 
-  base::DeleteFile(fw_bin_path, false);
+  base::DeleteFile(fw_bin_path);
 }
 
 void SlowBootNotifyPreFwUpdate(const base::FilePath& fspm_main) {

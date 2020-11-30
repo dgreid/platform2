@@ -283,13 +283,13 @@ void CreateDirectories(ChromiumCommandBuilder* builder) {
   CHECK(EnsureDirectoryExists(data_dir.Append("Default"), uid, gid, 0755));
 
   const base::FilePath state_dir("/run/state");
-  CHECK(base::DeleteFile(state_dir, true));
+  CHECK(base::DeletePathRecursively(state_dir));
   CHECK(EnsureDirectoryExists(state_dir, kRootUid, kRootGid, 0710));
 
   // Create a directory where the session manager can store a copy of the user
   // policy key, that will be readable by the chrome process as chronos.
   const base::FilePath policy_dir("/run/user_policy");
-  CHECK(base::DeleteFile(policy_dir, true));
+  CHECK(base::DeletePathRecursively(policy_dir));
   CHECK(EnsureDirectoryExists(policy_dir, kRootUid, gid, 0710));
 
   // Create a directory where the chrome process can store a reboot request so
@@ -425,8 +425,8 @@ void AddSystemFlags(ChromiumCommandBuilder* builder) {
 
   // We need to delete these files as Chrome may have left them around from its
   // prior run (if it crashed).
-  base::DeleteFile(data_dir.Append("SingletonLock"), false);
-  base::DeleteFile(data_dir.Append("SingletonSocket"), false);
+  base::DeleteFile(data_dir.Append("SingletonLock"));
+  base::DeleteFile(data_dir.Append("SingletonSocket"));
 
   // Some targets (embedded, VMs) do not need component updates.
   if (!builder->UseFlagIsSet("compupdates"))
@@ -472,8 +472,8 @@ void AddUiFlags(ChromiumCommandBuilder* builder,
 
   // Force OOBE on test images that have requested it.
   if (base::PathExists(base::FilePath("/root/.test_repeat_oobe"))) {
-    base::DeleteFile(data_dir.Append(".oobe_completed"), false);
-    base::DeleteFile(data_dir.Append("Local State"), false);
+    base::DeleteFile(data_dir.Append(".oobe_completed"));
+    base::DeleteFile(data_dir.Append("Local State"));
   }
 
   // Disable logging redirection on test images to make debugging easier.

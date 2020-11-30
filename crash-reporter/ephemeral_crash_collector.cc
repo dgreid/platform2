@@ -84,7 +84,7 @@ bool EphemeralCrashCollector::Collect() {
 
   // Cleanup crash directory.
   for (auto& dir : source_directories_)
-    base::DeleteFile(dir, true /* recursive */);
+    base::DeletePathRecursively(dir);
 
   return true;
 }

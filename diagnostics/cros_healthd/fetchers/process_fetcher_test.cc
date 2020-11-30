@@ -185,7 +185,7 @@ TEST_F(ProcessFetcherTest, FetchProcessInfo) {
 
 // Test that we handle a missing /proc/uptime file.
 TEST_F(ProcessFetcherTest, MissingProcUptimeFile) {
-  ASSERT_TRUE(base::DeleteFile(GetProcUptimePath(temp_dir_path()), false));
+  ASSERT_TRUE(base::DeleteFile(GetProcUptimePath(temp_dir_path())));
 
   auto process_result = FetchProcessInfo();
 
@@ -210,8 +210,7 @@ TEST_F(ProcessFetcherTest, IncorrectlyFormattedProcUptimeFile) {
 TEST_F(ProcessFetcherTest, MissingProcPidCmdlineFile) {
   ASSERT_TRUE(
       base::DeleteFile(GetProcProcessDirectoryPath(temp_dir_path(), kPid)
-                           .Append(kProcessCmdlineFile),
-                       false));
+                           .Append(kProcessCmdlineFile)));
 
   auto process_result = FetchProcessInfo();
 
@@ -224,8 +223,7 @@ TEST_F(ProcessFetcherTest, MissingProcPidCmdlineFile) {
 TEST_F(ProcessFetcherTest, MissingProcPidStatFile) {
   ASSERT_TRUE(
       base::DeleteFile(GetProcProcessDirectoryPath(temp_dir_path(), kPid)
-                           .Append(kProcessStatFile),
-                       false));
+                           .Append(kProcessStatFile)));
 
   auto process_result = FetchProcessInfo();
 
@@ -238,8 +236,7 @@ TEST_F(ProcessFetcherTest, MissingProcPidStatFile) {
 TEST_F(ProcessFetcherTest, MissingProcPidStatmFile) {
   ASSERT_TRUE(
       base::DeleteFile(GetProcProcessDirectoryPath(temp_dir_path(), kPid)
-                           .Append(kProcessStatmFile),
-                       false));
+                           .Append(kProcessStatmFile)));
 
   auto process_result = FetchProcessInfo();
 
@@ -387,8 +384,7 @@ TEST_F(ProcessFetcherTest, ProcPidStatmFileExcessiveResidentMemory) {
 TEST_F(ProcessFetcherTest, MissingProcPidStatusFile) {
   ASSERT_TRUE(
       base::DeleteFile(GetProcProcessDirectoryPath(temp_dir_path(), kPid)
-                           .Append(kProcessStatusFile),
-                       false));
+                           .Append(kProcessStatusFile)));
 
   auto process_result = FetchProcessInfo();
 

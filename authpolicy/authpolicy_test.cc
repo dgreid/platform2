@@ -610,7 +610,7 @@ class AuthPolicyTest : public testing::Test {
 
     EXPECT_CALL(*mock_exported_object_, Unregister()).Times(1);
     // Don't not leave no mess behind.
-    base::DeleteFile(base_path_, true /* recursive */);
+    base::DeletePathRecursively(base_path_);
   }
 
  protected:
@@ -2212,7 +2212,7 @@ TEST_F(AuthPolicyTest, CachesDevicePolicyWhenDeviceIsNotLocked) {
   EXPECT_EQ(ERROR_NONE,
             Join(kOneGpoMachineName, kUserPrincipal, MakePasswordFd()));
   FetchAndValidateDevicePolicy(ERROR_DEVICE_POLICY_CACHED_BUT_NOT_SENT);
-  EXPECT_TRUE(base::DeleteFile(stub_gpo1_path_, /* recursive */ false));
+  EXPECT_TRUE(base::DeleteFile(stub_gpo1_path_));
   MarkDeviceAsLocked();
   FetchAndValidateDevicePolicy(ERROR_NONE);
 }
@@ -2636,13 +2636,13 @@ TEST_F(AuthPolicyTest, AuthDataCacheWrittenOnJoinAndAuth) {
   EXPECT_TRUE(base::PathExists(cache_path));
 
   // Cache file should be written by user auth as well.
-  EXPECT_TRUE(base::DeleteFile(cache_path, false /* recursive */));
+  EXPECT_TRUE(base::DeleteFile(cache_path));
   EXPECT_EQ(ERROR_NONE, Auth(kUserPrincipal, "", MakePasswordFd()));
   EXPECT_TRUE(base::PathExists(cache_path));
 
   // The file should NOT be written on failed auth (because at the point of
   // failure we don't know yet whether the realm is affiliated or not).
-  EXPECT_TRUE(base::DeleteFile(cache_path, false /* recursive */));
+  EXPECT_TRUE(base::DeleteFile(cache_path));
   EXPECT_EQ(ERROR_PARSE_UPN_FAILED,
             Auth(kInvalidUserPrincipal, "", MakePasswordFd()));
   EXPECT_FALSE(base::PathExists(cache_path));

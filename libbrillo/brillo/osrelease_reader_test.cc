@@ -32,7 +32,7 @@ TEST_F(OsReleaseReaderTest, MissingOsReleaseTest) {
 }
 
 TEST_F(OsReleaseReaderTest, MissingOsReleaseDTest) {
-  base::DeleteFile(osreleased_, true);
+  base::DeletePathRecursively(osreleased_);
   store_.LoadTestingOnly(temp_dir_.GetPath());
 }
 

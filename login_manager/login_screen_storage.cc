@@ -133,7 +133,7 @@ void LoginScreenStorage::RemoveKeyFromLoginScreenStorage(
     // Deleting the file first and then updating the index. So if a crash
     // happens in between, we don't have an incorrect state (a key is present,
     // but not listed by |ListKeys()|).
-    base::DeleteFile(GetPersistentStoragePathForKey(key), /*recursive=*/false);
+    base::DeleteFile(GetPersistentStoragePathForKey(key));
     WriteIndexToFile(*index);
   }
 }

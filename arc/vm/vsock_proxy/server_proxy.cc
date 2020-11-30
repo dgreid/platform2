@@ -74,8 +74,7 @@ base::ScopedFD CreateVSock() {
 // Sets up a socket to accept virtwl connections.
 base::ScopedFD SetupVirtwlSocket() {
   // Delete the socket created by a previous run if any.
-  if (!base::DeleteFile(base::FilePath(kVirtwlSocketPath),
-                        false /* recursive */)) {
+  if (!base::DeleteFile(base::FilePath(kVirtwlSocketPath))) {
     PLOG(ERROR) << "DeleteFile() failed " << kVirtwlSocketPath;
     return {};
   }
