@@ -203,6 +203,10 @@ bool DBusService::MaybeSendOwnershipTakenSignal() {
     return false;
   }
 
+  // Currently we just keep the entirety of local data sent with the signal, but
+  // ideally the sercrets should not be exposed unless it's necessary.
+  // TODO(b/168852740): Wipe out the unnecessarily visible auth values before
+  // sending the signal.
   OwnershipTakenSignal payload;
   *payload.mutable_local_data() = local_data;
 
