@@ -493,9 +493,10 @@ void FUSEMounterLegacy::CopyPassword(const std::vector<std::string>& options,
 
   // Is there a password available in options?
   const base::StringPiece prefix = "password=";
-  const auto it = std::find_if(
-      options.cbegin(), options.cend(),
-      [prefix](const base::StringPiece s) { return s.starts_with(prefix); });
+  const auto it = std::find_if(options.cbegin(), options.cend(),
+                               [prefix](const base::StringPiece s) {
+                                 return base::StartsWith(s, prefix);
+                               });
   if (it == options.cend())
     return;
 

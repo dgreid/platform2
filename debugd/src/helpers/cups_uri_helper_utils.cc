@@ -141,7 +141,8 @@ bool AuthoritySeemsReasonable(base::StringPiece authority_view) {
   if (port_view.find('@') != base::StringPiece::npos) {
     // This colon is inside user info - punt.
     return true;
-  } else if (authority_view.starts_with("[") && authority_view.ends_with("]")) {
+  } else if (base::StartsWith(authority_view, "[") &&
+             base::EndsWith(authority_view, "]")) {
     // This colon is part of an IPv6 literal without a port number - punt.
     return true;
   }

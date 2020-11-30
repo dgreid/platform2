@@ -10,6 +10,7 @@
 #include <base/files/file_enumerator.h>
 #include <base/files/file_util.h>
 #include <base/strings/string_number_conversions.h>
+#include <base/strings/string_util.h>
 
 namespace vm_tools {
 namespace syslog {
@@ -21,7 +22,7 @@ int FileIndexFromName(const base::FilePath& file_path) {
   int index = 0;
   std::string s = file_path.FinalExtension();
   base::StringPiece final_extension(s);
-  if (final_extension.starts_with(".")) {
+  if (base::StartsWith(final_extension, ".")) {
     final_extension.remove_prefix(1);
     if (!base::StringToInt(final_extension, &index)) {
       index = 0;

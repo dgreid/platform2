@@ -85,7 +85,7 @@ bool IsTestBuild(const std::string& lsb_data) {
     std::vector<base::StringPiece> tokens = base::SplitStringPiece(
         field, "=", base::TRIM_WHITESPACE, base::SPLIT_WANT_NONEMPTY);
     if (tokens.size() == 2 && tokens[0] == kChromeosReleaseTrack)
-      return tokens[1].starts_with(kTestPrefix);
+      return base::StartsWith(tokens[1], kTestPrefix);
   }
   return false;
 }

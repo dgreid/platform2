@@ -529,7 +529,7 @@ bool ShouldKillProcess(pid_t process, const base::FilePath& path) {
 
   for (const auto& line : base::SplitStringPiece(
            status, "\n", base::TRIM_WHITESPACE, base::SPLIT_WANT_NONEMPTY)) {
-    if (!line.starts_with("Uid:")) {
+    if (!base::StartsWith(line, "Uid:")) {
       continue;
     }
 

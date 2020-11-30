@@ -23,6 +23,7 @@
 #include <base/stl_util.h>
 #include <base/strings/safe_sprintf.h>
 #include <base/strings/string_number_conversions.h>
+#include <base/strings/string_util.h>
 #include <base/strings/stringprintf.h>
 #include <base/system/sys_info.h>
 #include <brillo/process/process.h>
@@ -46,7 +47,7 @@ bool ParseUsbControlResponse(base::StringPiece s,
                              UsbControlResponse* response) {
   s = base::TrimString(s, base::kWhitespaceASCII, base::TRIM_ALL);
 
-  if (s.starts_with("ok ")) {
+  if (base::StartsWith(s, "ok ")) {
     response->type = OK;
     unsigned port;
     if (!base::StringToUint(s.substr(3), &port))
@@ -58,27 +59,27 @@ bool ParseUsbControlResponse(base::StringPiece s,
     return true;
   }
 
-  if (s.starts_with("no_available_port")) {
+  if (base::StartsWith(s, "no_available_port")) {
     response->type = NO_AVAILABLE_PORT;
     response->reason = "No available ports in guest's host controller.";
     return true;
   }
-  if (s.starts_with("no_such_device")) {
+  if (base::StartsWith(s, "no_such_device")) {
     response->type = NO_SUCH_DEVICE;
     response->reason = "No such host device.";
     return true;
   }
-  if (s.starts_with("no_such_port")) {
+  if (base::StartsWith(s, "no_such_port")) {
     response->type = NO_SUCH_PORT;
     response->reason = "No such port in guest's host controller.";
     return true;
   }
-  if (s.starts_with("fail_to_open_device")) {
+  if (base::StartsWith(s, "fail_to_open_device")) {
     response->type = FAIL_TO_OPEN_DEVICE;
     response->reason = "Failed to open host device.";
     return true;
   }
-  if (s.starts_with("devices")) {
+  if (base::StartsWith(s, "devices")) {
     std::vector<base::StringPiece> device_parts = base::SplitStringPiece(
         s.substr(7), " \t", base::TRIM_WHITESPACE, base::SPLIT_WANT_NONEMPTY);
     if ((device_parts.size() % 3) != 0) {
@@ -105,7 +106,7 @@ bool ParseUsbControlResponse(base::StringPiece s,
     }
     return true;
   }
-  if (s.starts_with("error ")) {
+  if (base::StartsWith(s, "error ")) {
     response->type = ERROR;
     response->reason = s.substr(6).as_string();
     return true;
@@ -378,7 +379,7 @@ void LoadCustomParameters(const std::string& data, base::StringPairs* args) {
     if (line[0] == '!' && line.size() > 1) {
       const base::StringPiece prefix = line.substr(1, line.size() - 1);
       base::EraseIf(*args, [&prefix](const auto& pair) {
-        return base::StringPiece(pair.first).starts_with(prefix);
+        return base::StartsWith(pair.first, prefix);
       });
       continue;
     }

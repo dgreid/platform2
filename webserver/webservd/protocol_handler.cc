@@ -18,6 +18,7 @@
 #include <base/files/file_descriptor_watcher_posix.h>
 #include <base/guid.h>
 #include <base/logging.h>
+#include <base/strings/string_util.h>
 #include <base/threading/thread_task_runner_handle.h>
 
 #include "webservd/request.h"
@@ -116,7 +117,7 @@ std::string ProtocolHandler::FindRequestHandler(
     // the better the match is...
     size_t current_score = 0;
     if (!url_match && !handler_url.empty() && handler_url.back() == '/') {
-      if (url.starts_with(handler_url)) {
+      if (base::StartsWith(url, handler_url)) {
         url_match = true;
         // Use the difference in URL length as URL match quality proxy.
         // The longer URL, the more specific (better) match is.

@@ -16,6 +16,7 @@
 #include <base/files/file_util.h>
 #include <base/json/json_reader.h>
 #include <base/strings/string_piece.h>
+#include <base/strings/string_util.h>
 #include <base/strings/stringprintf.h>
 #include <base/logging.h>
 #include <base/values.h>
@@ -287,7 +288,7 @@ void CleanUpAfterInstall(const VmId& vm_id, const base::FilePath& iso_path) {
 
   base::DictionaryValue::Iterator it(*hardware);
   for (; !it.IsAtEnd(); it.Advance()) {
-    if (!base::StringPiece(it.key()).starts_with("cdrom"))
+    if (!base::StartsWith(it.key(), "cdrom"))
       continue;
 
     const base::DictionaryValue* cdrom;

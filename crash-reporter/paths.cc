@@ -4,6 +4,8 @@
 
 #include "crash-reporter/paths.h"
 
+#include <base/strings/string_util.h>
+
 namespace paths {
 
 namespace {
@@ -24,7 +26,7 @@ void SetPrefixForTesting(const base::FilePath& prefix) {
 
 base::FilePath Get(base::StringPiece file_path) {
   if (g_test_prefix) {
-    if (file_path.starts_with("/"))
+    if (base::StartsWith(file_path, "/"))
       file_path.remove_prefix(1);
     return g_test_prefix->Append(file_path);
   }
