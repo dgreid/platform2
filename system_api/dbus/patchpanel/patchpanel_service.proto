@@ -81,6 +81,16 @@ message NetworkDevice {
   GuestType guest_type = 4;
 }
 
+// Request to obtain the list of virtual network devices that patchpanel
+// manages for guest OSes. This does not include physical or virtual (e.g. VPN)
+// devices managed by shill or virtual devices in connected namespaces.
+message GetDevicesRequest {}
+
+message GetDevicesResponse {
+  // The list of devices under patchpanel's management/control.
+  repeated NetworkDevice devices = 1;
+}
+
 // Information required by Concierge to continue the ARC VM startup process.
 message ArcVmStartupResponse {
   // The list of TAP devices to be used in the VM.

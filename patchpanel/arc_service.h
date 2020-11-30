@@ -52,6 +52,10 @@ class ArcService {
   // configurations, if any, are currently associated to TAP devices.
   std::vector<const Device::Config*> GetDeviceConfigs() const;
 
+  // Walks the current list of devices managed by the service invoking the
+  // callback for each, allowing for safe inspection/evaluation.
+  void ScanDevices(base::RepeatingCallback<void(const Device&)> callback) const;
+
   // Callback from ShillClient, invoked whenever the device list changes.
   // |shill_devices_| will contain all devices currently connected to shill
   // (e.g. "eth0", "wlan0", etc).

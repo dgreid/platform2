@@ -196,6 +196,7 @@ void Manager::InitialSetup() {
       {patchpanel::kConnectNamespaceMethod, &Manager::OnConnectNamespace},
       {patchpanel::kGetTrafficCountersMethod, &Manager::OnGetTrafficCounters},
       {patchpanel::kModifyPortRuleMethod, &Manager::OnModifyPortRule},
+      {patchpanel::kGetDevicesMethod, &Manager::OnGetDevices},
   };
 
   for (const auto& kv : kServiceMethods) {
@@ -395,6 +396,60 @@ void Manager::StopCrosVm(uint64_t vm_id, GuestMessage::GuestType vm_type) {
   SendGuestMessage(msg);
 
   cros_svc_->Stop(vm_id, vm_type == GuestMessage::TERMINA_VM);
+}
+
+std::unique_ptr<dbus::Response> Manager::OnGetDevices(
+    dbus::MethodCall* method_call) {
+  std::unique_ptr<dbus::Response> dbus_response(
+      dbus::Response::FromMethodCall(method_call));
+
+  dbus::MessageReader reader(method_call);
+  dbus::MessageWriter writer(dbus_response.get());
+
+  patchpanel::GetDevicesRequest request;
+  patchpanel::GetDevicesResponse response;
+
+  if (!reader.PopArrayOfBytesAsProto(&request)) {
+    LOG(ERROR) << "Unable to parse request";
+    writer.AppendProtoAsArrayOfBytes(response);
+    return dbus_response;
+  }
+
+  static const auto arc_guest_type =
+      USE_ARCVM ? NetworkDevice::ARCVM : NetworkDevice::ARC;
+
+  arc_svc_->ScanDevices(base::BindRepeating(
+      [](patchpanel::GetDevicesResponse* resp, const Device& device) {
+        auto* dev = resp->add_devices();
+        dev->set_ifname(device.host_ifname());
+        dev->set_ipv4_addr(device.config().guest_ipv4_addr());
+        dev->set_guest_type(arc_guest_type);
+        if (const auto* subnet = device.config().ipv4_subnet()) {
+          auto* sub = dev->mutable_ipv4_subnet();
+          sub->set_base_addr(subnet->BaseAddress());
+          sub->set_prefix_len(subnet->PrefixLength());
+        }
+      },
+      &response));
+
+  cros_svc_->ScanDevices(base::BindRepeating(
+      [](patchpanel::GetDevicesResponse* resp, uint64_t vm_id, bool is_termina,
+         const Device& device) {
+        auto* dev = resp->add_devices();
+        dev->set_ifname(device.host_ifname());
+        dev->set_ipv4_addr(device.config().guest_ipv4_addr());
+        dev->set_guest_type(is_termina ? NetworkDevice::TERMINA_VM
+                                       : NetworkDevice::PLUGIN_VM);
+        if (const auto* subnet = device.config().ipv4_subnet()) {
+          auto* sub = dev->mutable_ipv4_subnet();
+          sub->set_base_addr(subnet->BaseAddress());
+          sub->set_prefix_len(subnet->PrefixLength());
+        }
+      },
+      &response));
+
+  writer.AppendProtoAsArrayOfBytes(response);
+  return dbus_response;
 }
 
 std::unique_ptr<dbus::Response> Manager::OnArcStartup(

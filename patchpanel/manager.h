@@ -116,6 +116,9 @@ class Manager final : public brillo::DBusDaemon, private TrafficForwarder {
   // address to guest-facing interface.
   void OnNDProxyMessage(const NDProxyMessage& msg);
 
+  // Handles DBus request for managed device list.
+  std::unique_ptr<dbus::Response> OnGetDevices(dbus::MethodCall* method_call);
+
   // Handles DBus notification indicating ARC++ is booting up.
   std::unique_ptr<dbus::Response> OnArcStartup(dbus::MethodCall* method_call);
 

@@ -24,6 +24,7 @@ const char kSetVpnIntentMethod[] = "SetVpnIntent";
 const char kConnectNamespaceMethod[] = "ConnectNamespace";
 const char kGetTrafficCountersMethod[] = "GetTrafficCounters";
 const char kModifyPortRuleMethod[] = "ModifyPortRule";
+const char kGetDevicesMethod[] = "GetDevices";
 
 // Signals.
 const char kNeighborReachabilityEventSignal[] = "NeighborReachabilityEvent";

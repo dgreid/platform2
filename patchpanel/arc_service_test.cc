@@ -28,6 +28,7 @@ using testing::Pointee;
 using testing::Return;
 using testing::ReturnRef;
 using testing::StrEq;
+using testing::UnorderedElementsAre;
 
 namespace patchpanel {
 namespace {
@@ -266,6 +267,29 @@ TEST_F(ArcServiceTest, ContainerImpl_OnStartDevice) {
   auto svc = NewService(GuestMessage::ARC);
   svc->Start(kTestPID);
   svc->OnDevicesChanged({"eth0"}, {});
+}
+
+TEST_F(ArcServiceTest, ContainerImpl_ScanDevices) {
+  EXPECT_CALL(*datapath_, NetnsAttachName(_, _)).WillRepeatedly(Return(true));
+  EXPECT_CALL(*datapath_, ConnectVethPair(_, _, _, _, _, _, _, _))
+      .WillRepeatedly(Return(true));
+  EXPECT_CALL(*datapath_, AddBridge(_, _, _)).WillRepeatedly(Return(true));
+  EXPECT_CALL(*datapath_, AddToBridge(_, _)).WillRepeatedly(Return(true));
+
+  auto svc = NewService(GuestMessage::ARC);
+  svc->Start(kTestPID);
+  svc->OnDevicesChanged({"eth0", "wlan0"}, {});
+
+  std::vector<std::string> devs;
+  svc->ScanDevices(base::BindRepeating(
+      [](std::vector<std::string>* list, const Device& device) {
+        list->push_back(device.host_ifname());
+      },
+      &devs));
+
+  EXPECT_EQ(devs.size(), 2);
+  EXPECT_THAT(devs,
+              UnorderedElementsAre(StrEq("arc_eth0"), StrEq("arc_wlan0")));
 }
 
 TEST_F(ArcServiceTest, ContainerImpl_StartAfterDevice) {
@@ -531,6 +555,34 @@ TEST_F(ArcServiceTest, VmImpl_StopDevice) {
   svc->Start(kTestPID);
   svc->OnDevicesChanged({"eth0"}, {});
   svc->OnDevicesChanged({}, {"eth0"});
+}
+
+TEST_F(ArcServiceTest, VmImpl_ScanDevices) {
+  // Expectations for tap devices pre-creation.
+  EXPECT_CALL(*datapath_, AddTAP(StrEq(""), _, nullptr, StrEq("crosvm")))
+      .WillOnce(Return("vmtap0"))
+      .WillOnce(Return("vmtap1"))
+      .WillOnce(Return("vmtap2"))
+      .WillOnce(Return("vmtap3"))
+      .WillOnce(Return("vmtap4"))
+      .WillOnce(Return("vmtap5"));
+  EXPECT_CALL(*datapath_, AddBridge(_, _, _)).WillRepeatedly(Return(true));
+  EXPECT_CALL(*datapath_, AddToBridge(_, _)).WillRepeatedly(Return(true));
+
+  auto svc = NewService(GuestMessage::ARC_VM);
+  svc->Start(kTestPID);
+  svc->OnDevicesChanged({"eth0", "wlan0", "eth1"}, {});
+
+  std::vector<std::string> devs;
+  svc->ScanDevices(base::BindRepeating(
+      [](std::vector<std::string>* list, const Device& device) {
+        list->push_back(device.host_ifname());
+      },
+      &devs));
+
+  EXPECT_EQ(devs.size(), 3);
+  EXPECT_THAT(devs, UnorderedElementsAre(StrEq("arc_eth0"), StrEq("arc_wlan0"),
+                                         StrEq("arc_eth1")));
 }
 
 }  // namespace patchpanel

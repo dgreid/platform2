@@ -39,6 +39,13 @@ class CrostiniService {
 
   const Device* const TAP(uint64_t vm_id, bool is_termina) const;
 
+  // Walks the current list of devices managed by the service invoking the
+  // callback for each, allowing for safe inspection/evaluation.
+  // The first two callback args correspond to the vm_id and is_termina values
+  // originally provided to the TAP() function that created the device.
+  void ScanDevices(base::RepeatingCallback<void(uint64_t, bool, const Device&)>
+                       callback) const;
+
  private:
   std::unique_ptr<Device> AddTAP(bool is_termina, int subnet_index);
   void OnDefaultDeviceChanged(const ShillClient::Device& new_device,
