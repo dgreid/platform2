@@ -20,6 +20,12 @@ int main(int argc, char* argv[]) {
   brillo::InitLog(brillo::kLogToSyslog | brillo::kLogHeader |
                   brillo::kLogToStderrIfTty);
 
+  // Set realtime priority. 10 is the same value as vm_concierge.
+  const struct sched_param param = {
+      .sched_priority = 10,
+  };
+  PCHECK(sched_setscheduler(0, SCHED_RR, &param) == 0);
+
   base::ScopedFD listen_fd(socket(AF_VSOCK, SOCK_STREAM | SOCK_CLOEXEC, 0));
   PCHECK(listen_fd.is_valid());
 
