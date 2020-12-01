@@ -211,19 +211,16 @@ base::ScopedFILE SetupOutputFile(brillo::ErrorPtr* error,
   return file;
 }
 
-// Uses |firwewall_manager| to request port access if |device_name| corresponds
+// Uses |firewall_manager| to request port access if |device_name| corresponds
 // to a SANE backend that needs the access when connecting to a device. The
 // caller should keep the returned object alive as long as port access is
 // needed.
-base::ScopedClosureRunner RequestPortAccessIfNeeded(
+base::Optional<PortToken> RequestPortAccessIfNeeded(
     const std::string& device_name, FirewallManager* firewall_manager) {
   if (BackendFromDeviceName(device_name) != kPixma)
-    return base::ScopedClosureRunner();
+    return base::nullopt;
 
-  firewall_manager->RequestScannerPortAccess();
-  return base::ScopedClosureRunner(
-      base::BindOnce([](FirewallManager* fm) { fm->ReleaseAllPortsAccess(); },
-                     firewall_manager));
+  return firewall_manager->RequestPixmaPortAccess();
 }
 
 std::string GenerateUUID() {
@@ -301,10 +298,7 @@ bool Manager::ListScanners(brillo::ErrorPtr* error,
   }
 
   LOG(INFO) << "Requesting port access";
-  firewall_manager_->RequestScannerPortAccess();
-  base::ScopedClosureRunner release_ports(
-      base::BindOnce([](FirewallManager* fm) { fm->ReleaseAllPortsAccess(); },
-                     firewall_manager_.get()));
+  PortToken token = firewall_manager_->RequestPixmaPortAccess();
 
   LOG(INFO) << "Initializing libusb";
   libusb_context* context;
@@ -434,7 +428,7 @@ bool Manager::GetScannerCapabilities(brillo::ErrorPtr* error,
     return false;
   }
 
-  base::ScopedClosureRunner release_ports =
+  base::Optional<PortToken> token =
       RequestPortAccessIfNeeded(device_name, firewall_manager_.get());
   std::unique_ptr<SaneDevice> device =
       sane_client_->ConnectToDevice(error, device_name);
@@ -720,7 +714,7 @@ bool Manager::StartScanInternal(brillo::ErrorPtr* error,
 
   LOG(INFO) << "Scanning image from device " << request.device_name();
 
-  base::ScopedClosureRunner release_ports =
+  base::Optional<PortToken> token =
       RequestPortAccessIfNeeded(request.device_name(), firewall_manager_.get());
   std::unique_ptr<SaneDevice> device =
       sane_client_->ConnectToDevice(error, request.device_name());

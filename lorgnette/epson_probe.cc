@@ -193,9 +193,8 @@ std::vector<ScannerInfo> ProbeForScanners(FirewallManager* firewall_manager) {
     return std::vector<ScannerInfo>();
   }
   base::ScopedFD scoped_socket(probe_socket);
-  firewall_manager->RequestUdpPortAccess(local_port);
+  PortToken token = firewall_manager->RequestUdpPortAccess(local_port);
   std::vector<ScannerInfo> scanners = SendProbeAndListen(probe_socket);
-  firewall_manager->ReleaseUdpPortAccess(local_port);
   return scanners;
 }
 

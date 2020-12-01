@@ -14,9 +14,23 @@
 
 #include "permission_broker/dbus-proxies.h"
 
-// Class for managing required firewall rules for lorgnette.
 namespace lorgnette {
 
+class FirewallManager;
+
+// Class representing access to an open port. When it goes out of scope,
+// it will release the port.
+class PortToken {
+ public:
+  PortToken(base::WeakPtr<FirewallManager> firewall_manager, uint16_t port);
+  ~PortToken();
+
+ private:
+  base::WeakPtr<FirewallManager> firewall_manager_;
+  uint16_t port_;
+};
+
+// Class for managing required firewall rules for lorgnette.
 class FirewallManager final {
  public:
   explicit FirewallManager(const std::string& interface);
@@ -26,17 +40,17 @@ class FirewallManager final {
 
   void Init(const scoped_refptr<dbus::Bus>& bus);
 
-  // Request port access for all well-known scanner ports.
-  void RequestScannerPortAccess();
+  // Request port access for all well-known Canon scanner port.
+  PortToken RequestPixmaPortAccess();
 
-  // Request/release UDP port access for the specified port.
-  void RequestUdpPortAccess(uint16_t port);
-  void ReleaseUdpPortAccess(uint16_t port);
-
-  // Release port access for all requested ports.
-  void ReleaseAllPortsAccess();
+  // Request UDP port access for the specified port.
+  PortToken RequestUdpPortAccess(uint16_t port);
 
  private:
+  // ReleaseUdpPortAccess() should be private so that users don't free ports
+  // they didn't request, but PortToken's destructor needs access to it.
+  friend PortToken::~PortToken();
+
   // Setup lifeline pipe to allow the remote firewall server
   // (permission_broker) to monitor this process, so it can remove the firewall
   // rules in case this process crashes.
@@ -46,10 +60,14 @@ class FirewallManager final {
   void OnServiceNameChanged(const std::string& old_owner,
                             const std::string& new_owner);
 
+  void SendPortAccessRequest(uint16_t port);
+
   // This is called when a new instance of permission_broker is detected. Since
   // the new instance doesn't have any knowledge of previously port access
   // requests, re-issue those requests to permission_broker to get in sync.
   void RequestAllPortsAccess();
+
+  void ReleaseUdpPortAccess(uint16_t port);
 
   // DBus proxy for permission_broker.
   std::unique_ptr<org::chromium::PermissionBrokerProxy>

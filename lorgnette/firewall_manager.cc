@@ -20,6 +20,15 @@ const uint16_t kCanonBjnpPort = 8612;
 
 }  // namespace
 
+PortToken::PortToken(base::WeakPtr<FirewallManager> firewall_manager,
+                     uint16_t port)
+    : firewall_manager_(firewall_manager), port_(port) {}
+
+PortToken::~PortToken() {
+  if (firewall_manager_)
+    firewall_manager_->ReleaseUdpPortAccess(port_);
+}
+
 FirewallManager::FirewallManager(const std::string& interface)
     : interface_(interface) {}
 
@@ -55,10 +64,9 @@ void FirewallManager::Init(const scoped_refptr<dbus::Bus>& bus) {
                  weak_factory_.GetWeakPtr()));
 }
 
-void FirewallManager::RequestScannerPortAccess() {
-  // Request access for all well-known ports that the scanimage process will
-  // listen to.
-  RequestUdpPortAccess(kCanonBjnpPort);
+PortToken FirewallManager::RequestPixmaPortAccess() {
+  // Request access for the well-known port used by the Pixma backend.
+  return RequestUdpPortAccess(kCanonBjnpPort);
 }
 
 bool FirewallManager::SetupLifelinePipe() {
@@ -103,22 +111,11 @@ void FirewallManager::RequestAllPortsAccess() {
   std::set<uint16_t> attempted_ports;
   attempted_ports.swap(requested_ports_);
   for (const auto& port : attempted_ports) {
-    RequestUdpPortAccess(port);
+    SendPortAccessRequest(port);
   }
 }
 
-void FirewallManager::ReleaseAllPortsAccess() {
-  auto release_ports = std::vector<decltype(requested_ports_)::value_type>(
-      requested_ports_.size());
-  std::copy(requested_ports_.begin(), requested_ports_.end(),
-            release_ports.begin());
-
-  for (const auto& port : release_ports) {
-    ReleaseUdpPortAccess(port);
-  }
-}
-
-void FirewallManager::RequestUdpPortAccess(uint16_t port) {
+void FirewallManager::SendPortAccessRequest(uint16_t port) {
   if (!permission_broker_proxy_) {
     LOG(INFO) << "Permission broker does not exist (yet); adding request for "
               << "port " << port << " to queue.";
@@ -144,6 +141,11 @@ void FirewallManager::RequestUdpPortAccess(uint16_t port) {
   LOG(INFO) << "Access granted for UDP port " << port << " on interface "
             << interface_;
   requested_ports_.insert(port);
+}
+
+PortToken FirewallManager::RequestUdpPortAccess(uint16_t port) {
+  SendPortAccessRequest(port);
+  return PortToken(weak_factory_.GetWeakPtr(), port);
 }
 
 void FirewallManager::ReleaseUdpPortAccess(uint16_t port) {
