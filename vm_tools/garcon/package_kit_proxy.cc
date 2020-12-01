@@ -230,17 +230,18 @@ class PackageKitTransaction : PackageKitProxy::PackageKitDeathObserver {
     // of this yet, but it seems like a good idea to set it if it does occur.
     // Set locale with UTF-8 to support unicode in control files.  This is
     // what 'pkcon get-details-local <file>' does.
+    dbus::ScopedDBusError error;
     dbus::MethodCall sethints_call(kPackageKitTransactionInterface,
                                    kSetHintsMethod);
     dbus::MessageWriter sethints_writer(&sethints_call);
     sethints_writer.AppendArrayOfStrings(
         {"locale=en_US.UTF-8", "interactive=false"});
     dbus_response = transaction_proxy_->CallMethodAndBlockWithErrorDetails(
-        &sethints_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT, &dbus_error_);
+        &sethints_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT, &error);
     if (!dbus_response) {
       // Don't propagate a failure, this was just a hint.
-      LOG(WARNING) << "Failure calling SetHints - " << dbus_error_.name()
-                   << ": " << dbus_error_.message();
+      LOG(WARNING) << "Failure calling SetHints - " << error.name() << ": "
+                   << error.message();
     }
 
     // Hook up all the necessary signals to PackageKit for monitoring the
