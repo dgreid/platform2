@@ -36,7 +36,7 @@ int main(int argc, char** argv) {
     return -2;
   }
 
-  auto result = lock_file.Lock();
+  auto result = lock_file.Lock(base::File::LockMode::kExclusive);
   if (result != base::File::FILE_OK) {
     LOG(ERROR) << "Error locking " << lock_file_path.value() << ": "
                << base::File::ErrorToString(result);

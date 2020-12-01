@@ -36,7 +36,7 @@ int main(int argc, char* argv[]) {
     exit(-2);
   }
 
-  if (lock_file.Lock() == base::File::FILE_OK) {
+  if (lock_file.Lock(base::File::LockMode::kExclusive) == base::File::FILE_OK) {
     // We could lock the file, therefore no one else had locked it.
     exit(1);
   }

@@ -267,7 +267,8 @@ base::File SenderBase::AcquireLockFileOrDie() {
 
   base::Time stop_time = clock_->Now() + wait_for_lock_file;
   while (clock_->Now() < stop_time) {
-    if (lock_file.Lock() == base::File::FILE_OK) {
+    if (lock_file.Lock(base::File::LockMode::kExclusive) ==
+        base::File::FILE_OK) {
       return lock_file;
     }
     const base::TimeDelta kSleepTime = base::TimeDelta::FromSeconds(1);
@@ -279,7 +280,7 @@ base::File SenderBase::AcquireLockFileOrDie() {
   }
 
   // Last try. Exit if this one doesn't succeed.
-  auto result = lock_file.Lock();
+  auto result = lock_file.Lock(base::File::LockMode::kExclusive);
   if (result != base::File::FILE_OK) {
     // Note: If another process is holding the lock, this will just say
     // something unhelpful like "FILE_ERROR_FAILED"; File::Lock doesn't have a
