@@ -111,6 +111,10 @@ bool DelegateImpl::ProbeKernelModule(const std::string& module) {
   return exit_code == 0;
 }
 
+bool DelegateImpl::CreateDirectory(const base::FilePath& fp) {
+  return base::CreateDirectory(fp);
+}
+
 bool DelegateImpl::Exists(const base::FilePath& fp) {
   return base::PathExists(fp);
 }

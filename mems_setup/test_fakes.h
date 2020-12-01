@@ -15,6 +15,7 @@
 #include <utility>
 #include <vector>
 
+#include "libmems/test_fakes.h"
 #include "mems_setup/delegate.h"
 
 namespace mems_setup {
@@ -34,6 +35,7 @@ class FakeDelegate : public Delegate {
 
   size_t GetNumModulesProbed() const { return probed_modules_.size(); }
 
+  bool CreateDirectory(const base::FilePath&) override;
   bool Exists(const base::FilePath&) override;
 
   void CreateFile(const base::FilePath&);
@@ -52,6 +54,10 @@ class FakeDelegate : public Delegate {
                     uid_t user,
                     gid_t group) override;
 
+  void SetMockContext(libmems::fakes::FakeIioContext* mock_context) {
+    mock_context_ = mock_context;
+  }
+
  private:
   std::vector<std::string> probed_modules_;
   std::map<std::string, std::string> vpd_;
@@ -59,6 +65,8 @@ class FakeDelegate : public Delegate {
   std::map<std::string, int> permissions_;
   std::map<std::string, std::pair<uid_t, gid_t>> ownerships_;
   std::set<base::FilePath> existing_files_;
+
+  libmems::fakes::FakeIioContext* mock_context_ = nullptr;
 };
 
 }  // namespace fakes

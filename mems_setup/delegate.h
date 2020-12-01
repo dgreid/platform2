@@ -22,6 +22,7 @@ class Delegate {
   virtual base::Optional<std::string> ReadVpdValue(const std::string& key) = 0;
   virtual bool ProbeKernelModule(const std::string& module) = 0;
 
+  virtual bool CreateDirectory(const base::FilePath&) = 0;
   virtual bool Exists(const base::FilePath&) = 0;
 
   virtual base::Optional<gid_t> FindGroupId(const char* group) = 0;

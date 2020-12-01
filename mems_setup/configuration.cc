@@ -92,6 +92,8 @@ constexpr char kFilesToSetWriteAndOwnership[][24] = {"sampling_frequency",
 constexpr char kScanElementsString[] = "scan_elements";
 constexpr char kChnEnableFormatString[] = "in_%s_en";
 
+constexpr char kAcpiAlsTriggerName[] = "iioservice-acpi-als";
+
 }  // namespace
 
 // static
@@ -527,6 +529,41 @@ bool Configuration::ConfigAccelerometer() {
 }
 
 bool Configuration::ConfigIlluminance() {
+  if (USE_IIOSERVICE && strcmp(sensor_->GetName(), "acpi-als") == 0) {
+    if (context_->GetTriggersByName(kAcpiAlsTriggerName).empty()) {
+      base::FilePath hrtimer_path("/sys/kernel/config/iio/triggers/hrtimer");
+      hrtimer_path = hrtimer_path.Append(kAcpiAlsTriggerName);
+
+      if (!delegate_->Exists(hrtimer_path) &&
+          !delegate_->ProbeKernelModule("iio-trig-hrtimer")) {
+        LOG(ERROR) << "cannot load iio-trig-hrtimer module";
+        return false;
+      }
+
+      if (!delegate_->CreateDirectory(hrtimer_path)) {
+        LOG(ERROR) << "cannot mkdir " << hrtimer_path.value()
+                   << " to create the hrtimer device";
+        return false;
+      }
+    }
+
+    context_->Reload();
+    auto triggers = context_->GetTriggersByName(kAcpiAlsTriggerName);
+    if (triggers.empty()) {
+      LOG(ERROR) << "cannot find acpi-als's trigger";
+      return false;
+    }
+
+    auto trigger = triggers.front();
+    // /sys/bus/iio/devices/triggerX
+    base::FilePath sys_trg_path =
+        trigger->GetPath().Append(libmems::kSamplingFrequencyAttr);
+    SetReadPermissionAndOwnership(sys_trg_path);
+    SetWritePermissionAndOwnership(sys_trg_path);
+
+    sensor_->SetTrigger(trigger);
+  }
+
   if (!CopyLightCalibrationFromVpd())
     return false;
 

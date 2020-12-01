@@ -9,6 +9,12 @@
 namespace mems_setup {
 namespace fakes {
 
+namespace {
+
+constexpr char kAcpiAlsTriggerName[] = "iioservice-acpi-als";
+
+}  // namespace
+
 base::Optional<std::string> FakeDelegate::ReadVpdValue(
     const std::string& name) {
   auto k = vpd_.find(name);
@@ -19,6 +25,18 @@ base::Optional<std::string> FakeDelegate::ReadVpdValue(
 
 bool FakeDelegate::ProbeKernelModule(const std::string& module) {
   probed_modules_.push_back(module);
+  return true;
+}
+
+bool FakeDelegate::CreateDirectory(const base::FilePath& fp) {
+  existing_files_.emplace(fp);
+
+  base::FilePath hrtimer_path("/sys/kernel/config/iio/triggers/hrtimer");
+  hrtimer_path = hrtimer_path.Append(kAcpiAlsTriggerName);
+  if (mock_context_ && fp == hrtimer_path) {
+    mock_context_->AddTrigger(std::make_unique<libmems::fakes::FakeIioDevice>(
+        mock_context_, kAcpiAlsTriggerName, 1));
+  }
   return true;
 }
 

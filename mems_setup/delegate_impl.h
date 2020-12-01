@@ -24,6 +24,7 @@ class DelegateImpl : public Delegate {
   base::Optional<std::string> ReadVpdValue(const std::string& key) override;
   bool ProbeKernelModule(const std::string& module) override;
 
+  bool CreateDirectory(const base::FilePath&) override;
   bool Exists(const base::FilePath&) override;
 
   base::Optional<gid_t> FindGroupId(const char* group) override;
