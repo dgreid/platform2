@@ -162,13 +162,13 @@ int U2fDaemon::OnInit() {
       base::Bind(&U2fDaemon::TryStartU2fHidService, base::Unretained(this)),
       base::Bind(&OnPolicySignalConnected));
 
-  LOG(INFO) << "Initializing WebAuthn handler.";
-  InitializeWebAuthnHandler();
-
   bool policy_ready = U2fPolicyReady();
 
   if (policy_ready) {
     int status = StartU2fHidService();
+
+    LOG(INFO) << "Initializing WebAuthn handler.";
+    InitializeWebAuthnHandler();
 
     // If U2F is not currently enabled, we'll wait for policy updates
     // that may enable it. We don't ever disable U2F on policy updates.
