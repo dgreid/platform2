@@ -144,6 +144,7 @@ class CellularService : public Service {
   FRIEND_TEST(CellularServiceTest, IsAutoConnectable);
   FRIEND_TEST(CellularServiceTest, LoadResetsPPPAuthFailure);
   FRIEND_TEST(CellularServiceTest, SaveAndLoadApn);
+  FRIEND_TEST(CellularServiceTest, MergeDetailsFromApnList);
   FRIEND_TEST(CellularServiceTest, CustomSetterNoopChange);
 
   static const char kAutoConnActivating[];
@@ -179,6 +180,7 @@ class CellularService : public Service {
   static void LoadApn(const StoreInterface* storage,
                       const std::string& storage_group,
                       const std::string& keytag,
+                      const Stringmaps& apn_list,
                       Stringmap* apn_info);
   static bool LoadApnField(const StoreInterface* storage,
                            const std::string& storage_group,
@@ -194,6 +196,8 @@ class CellularService : public Service {
                            const Stringmap* apn_info,
                            const std::string& keytag,
                            const std::string& apntag);
+  static void FetchDetailsFromApnList(const Stringmaps& apn_list,
+                                      Stringmap* apn_info);
   bool IsOutOfCredits(Error* /*error*/);
 
   // IMSI was previously used as a unique identifuer for CellularService,

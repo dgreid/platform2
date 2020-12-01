@@ -219,8 +219,10 @@ bool CellularService::Load(const StoreInterface* storage) {
   //     saved one.
 
   storage->GetString(id, kStorageImsi, &imsi_);
-  LoadApn(storage, id, kStorageAPN, &apn_info_);
-  LoadApn(storage, id, kStorageLastGoodAPN, &last_good_apn_info_);
+  const Stringmaps& apn_list =
+      cellular() ? cellular()->apn_list() : Stringmaps();
+  LoadApn(storage, id, kStorageAPN, apn_list, &apn_info_);
+  LoadApn(storage, id, kStorageLastGoodAPN, apn_list, &last_good_apn_info_);
 
   const string old_username = ppp_username_;
   const string old_password = ppp_password_;
@@ -510,10 +512,17 @@ Stringmap CellularService::GetApn(Error* /*error*/) {
 bool CellularService::SetApn(const Stringmap& value, Error* error) {
   // Only copy in the fields we care about, and validate the contents.
   // If the "apn" field is missing or empty, the APN is cleared.
-  string str;
+  string new_apn;
   Stringmap new_apn_info;
-  if (GetNonEmptyField(value, kApnProperty, &str)) {
-    new_apn_info[kApnProperty] = str;
+  if (GetNonEmptyField(value, kApnProperty, &new_apn)) {
+    new_apn_info[kApnProperty] = new_apn;
+
+    // Fetch details from the APN database first.
+    FetchDetailsFromApnList(cellular()->apn_list(), &new_apn_info);
+
+    // If this is a user-entered APN, the one or more of the following
+    // details should exist, even if they are empty.
+    string str;
     if (GetNonEmptyField(value, kApnUsernameProperty, &str))
       new_apn_info[kApnUsernameProperty] = str;
     if (GetNonEmptyField(value, kApnPasswordProperty, &str))
@@ -545,6 +554,7 @@ bool CellularService::SetApn(const Stringmap& value, Error* error) {
 void CellularService::LoadApn(const StoreInterface* storage,
                               const string& storage_group,
                               const string& keytag,
+                              const Stringmaps& apn_list,
                               Stringmap* apn_info) {
   if (keytag == kStorageLastGoodAPN) {
     // Ignore LastGoodAPN that is too old.
@@ -559,6 +569,8 @@ void CellularService::LoadApn(const StoreInterface* storage,
 
   if (!LoadApnField(storage, storage_group, keytag, kApnProperty, apn_info))
     return;
+  if (keytag == kStorageAPN)
+    FetchDetailsFromApnList(apn_list, apn_info);
   LoadApnField(storage, storage_group, keytag, kApnUsernameProperty, apn_info);
   LoadApnField(storage, storage_group, keytag, kApnPasswordProperty, apn_info);
   LoadApnField(storage, storage_group, keytag, kApnAuthenticationProperty,
@@ -602,6 +614,19 @@ void CellularService::SaveApnField(StoreInterface* storage,
     storage->SetString(storage_group, key, str);
   else
     storage->DeleteKey(storage_group, key);
+}
+
+void CellularService::FetchDetailsFromApnList(const Stringmaps& apn_list,
+                                              Stringmap* apn_info) {
+  DCHECK(apn_info);
+  string apn;
+  for (const Stringmap& list_apn_info : apn_list) {
+    if (GetNonEmptyField(list_apn_info, kApnProperty, &apn) &&
+        (*apn_info)[kApnProperty] == apn) {
+      *apn_info = list_apn_info;
+      return;
+    }
+  }
 }
 
 KeyValueStore CellularService::GetStorageProperties() const {

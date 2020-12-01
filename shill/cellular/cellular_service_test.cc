@@ -441,6 +441,34 @@ TEST_F(CellularServiceTest, IgnoreUnversionedLastGoodApn) {
   EXPECT_EQ(nullptr, resultapn);
 }
 
+TEST_F(CellularServiceTest, MergeDetailsFromApnList) {
+  static const char kApn[] = "petal.net";
+  static const char kUsername[] = "orekid";
+  static const char kPassword[] = "arlet";
+  static const char kAuthentication[] = "chap";
+  Stringmap fullapn;
+  fullapn[kApnProperty] = kApn;
+  fullapn[kApnUsernameProperty] = kUsername;
+  fullapn[kApnPasswordProperty] = kPassword;
+  fullapn[kApnAuthenticationProperty] = kAuthentication;
+  Stringmaps apn_list{fullapn};
+  device_->set_apn_list(apn_list);
+
+  // Just set an APN with only the name. Check that we are using
+  // the rest of the details.
+  Error error;
+  Stringmap testapn;
+  testapn[kApnProperty] = kApn;
+  service_->SetApn(testapn, &error);
+
+  Stringmap resultapn = service_->GetApn(&error);
+  EXPECT_TRUE(error.IsSuccess());
+  EXPECT_EQ(kApn, resultapn[kApnProperty]);
+  EXPECT_EQ(kUsername, resultapn[kApnUsernameProperty]);
+  EXPECT_EQ(kPassword, resultapn[kApnPasswordProperty]);
+  EXPECT_EQ(kAuthentication, resultapn[kApnAuthenticationProperty]);
+}
+
 // Some of these tests duplicate signals tested above. However, it's
 // convenient to have all the property change notifications documented
 // (and tested) in one place.
