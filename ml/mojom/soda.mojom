@@ -137,7 +137,7 @@ interface SodaClient {
 // The mojom interface for performing the recognition of handwritten text.
 interface SodaRecognizer {
   // Add Audio for speech recognition.
-  AddAudio@0(string audio);
+  AddAudio@0(array<uint8> audio);
   //
   Stop@1();
   //

@@ -6,6 +6,7 @@
 
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "chrome/knowledge/soda/extended_soda_api.pb.h"
 #include "ml/request_metrics.h"
@@ -62,7 +63,7 @@ bool SodaRecognizerImpl::Create(
   return recognizer_impl->successfully_loaded_;
 }
 
-void SodaRecognizerImpl::AddAudio(const std::string& audio) {
+void SodaRecognizerImpl::AddAudio(const std::vector<uint8_t>& audio) {
   DCHECK(soda_library_->GetStatus() == ml::SodaLibrary::Status::kOk);
   soda_library_->ExtendedAddAudio(recognizer_, audio);
 }

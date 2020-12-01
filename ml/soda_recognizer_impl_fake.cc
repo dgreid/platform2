@@ -52,7 +52,7 @@ bool SodaRecognizerImpl::Create(
   return recognizer_impl->successfully_loaded_;
 }
 
-void SodaRecognizerImpl::AddAudio(const std::string& audio) {
+void SodaRecognizerImpl::AddAudio(const std::vector<uint8_t>& audio) {
   // Immediately sends the error message to client.
   SodaCallback(nullptr, 0, this);
 }

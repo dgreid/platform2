@@ -6,6 +6,7 @@
 #define ML_SODA_H_
 
 #include <string>
+#include <vector>
 
 #include <base/no_destructor.h>
 #include <base/optional.h>
@@ -75,7 +76,7 @@ class SodaLibrary {
   void* CreateExtendedSodaAsync(const ExtendedSodaConfig& config) const;
   void DeleteExtendedSodaAsync(void* extended_soda_async_handle) const;
   void ExtendedAddAudio(void* extended_soda_async_handle,
-                        const std::string& audio) const;
+                        const std::vector<uint8_t>& audio) const;
   void ExtendedSodaStop(void* extended_soda_async_handle) const;
   void ExtendedSodaStart(void* extended_soda_async_handle) const;
   void ExtendedSodaMarkDone(void* extended_soda_async_handle) const;

@@ -6,6 +6,7 @@
 #define ML_SODA_RECOGNIZER_IMPL_H_
 
 #include <string>
+#include <vector>
 
 #include <base/callback_forward.h>
 #include <base/macros.h>
@@ -40,7 +41,7 @@ class SodaRecognizerImpl
   ~SodaRecognizerImpl();
 
   // mojom::SodaRecognizer::AddAudio:
-  void AddAudio(const std::string& audio) override;
+  void AddAudio(const std::vector<uint8_t>& audio) override;
 
   // mojom::SodaRecognizer::Stop:
   void Stop() override;

@@ -4,6 +4,7 @@
 
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 #include "ml/soda.h"
 
@@ -122,9 +123,12 @@ void SodaLibrary::DeleteExtendedSodaAsync(
 }
 
 void SodaLibrary::ExtendedAddAudio(void* extended_soda_async_handle,
-                                   const std::string& audio) const {
+                                   const std::vector<uint8_t>& audio) const {
   DCHECK(status_ == Status::kOk);
-  (*extended_add_audio_)(extended_soda_async_handle, audio.c_str(),
+  // audio.data() returns const unsigned char* which is not quite the
+  // same. reinterpret_cast for convenience.
+  (*extended_add_audio_)(extended_soda_async_handle,
+                         reinterpret_cast<const char*>(audio.data()),
                          audio.size());
 }
 
