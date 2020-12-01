@@ -46,6 +46,10 @@ pkg_config("sealed_storage_dependent_config") {
 }
 
 static_library("sealed_storage") {
+  sources = [
+    "sealed_storage.cc",
+    "wrapper.cc",
+  ]
   configs += [
     ":target_defaults",
     "//common-mk:nouse_thin_archive",
@@ -54,10 +58,6 @@ static_library("sealed_storage") {
   configs -= [
     "//common-mk:pie",
     "//common-mk:use_thin_archive",
-  ]
-  sources = [
-    "sealed_storage.cc",
-    "wrapper.cc",
   ]
   libs = [
     "trunks",
@@ -71,24 +71,24 @@ shared_library("sealed_storage_wrapper") {
 }
 
 executable("sealed_storage_tool") {
+  sources = [ "sealed_storage_tool.cc" ]
   configs += [
     ":cli_defaults",
     ":target_defaults",
   ]
-  sources = [ "sealed_storage_tool.cc" ]
   deps = [ ":sealed_storage" ]
 }
 
 if (use.test) {
   executable("sealed_storage_testrunner") {
+    sources = [
+      "sealed_storage_testrunner.cc",
+      "sealed_storage_unittests.cc",
+    ]
     configs += [
       "//common-mk:test",
       ":target_defaults",
       ":test_defaults",
-    ]
-    sources = [
-      "sealed_storage_testrunner.cc",
-      "sealed_storage_unittests.cc",
     ]
     libs = [
       "tpm_manager_test",

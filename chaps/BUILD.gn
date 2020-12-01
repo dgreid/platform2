@@ -297,14 +297,14 @@ if (use.test) {
       ":chapsd_config",
       ":target_defaults",
     ]
-    deps = [
-      ":libchaps_static",
-      ":libchaps_test",
-    ]
     libs = [
       "dl",
       "leveldb",
       "memenv",
+    ]
+    deps = [
+      ":libchaps_static",
+      ":libchaps_test",
     ]
   }
 
