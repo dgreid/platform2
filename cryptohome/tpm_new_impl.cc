@@ -121,21 +121,30 @@ bool TpmNewImpl::IsOwned() {
   return is_owned_;
 }
 
-bool TpmNewImpl::HasResetLockPermissions() {
-  if (!UpdateLocalDataFromTpmManager()) {
-    LOG(ERROR) << __func__ << ": Failed to call |UpdateTpmStatus|.";
+bool TpmNewImpl::IsOwnerPasswordPresent() {
+  if (!InitializeTpmManagerUtility()) {
+    LOG(ERROR) << __func__ << ": failed to initialize |TpmManagerUtility|.";
     return false;
   }
-  bool has_reset_lock_permissions = true;
-  if (last_tpm_manager_data_.owner_password().empty()) {
-    if (last_tpm_manager_data_.lockout_password().empty() &&
-        !last_tpm_manager_data_.has_owner_delegate()) {
-      has_reset_lock_permissions = false;
-    } else if (last_tpm_manager_data_.has_owner_delegate() &&
-               !last_tpm_manager_data_.owner_delegate()
-                    .has_reset_lock_permissions()) {
-      has_reset_lock_permissions = false;
-    }
+  bool is_owner_password_present = false;
+  if (!tpm_manager_utility_->GetTpmNonsensitiveStatus(
+          nullptr, nullptr, &is_owner_password_present, nullptr)) {
+    LOG(ERROR) << __func__ << ": Failed to get |is_owner_password_present|.";
+    return false;
+  }
+  return is_owner_password_present;
+}
+
+bool TpmNewImpl::HasResetLockPermissions() {
+  if (!InitializeTpmManagerUtility()) {
+    LOG(ERROR) << __func__ << ": failed to initialize |TpmManagerUtility|.";
+    return false;
+  }
+  bool has_reset_lock_permissions = false;
+  if (!tpm_manager_utility_->GetTpmNonsensitiveStatus(
+          nullptr, nullptr, nullptr, &has_reset_lock_permissions)) {
+    LOG(ERROR) << __func__ << ": Failed to get |has_reset_lock_permissions|.";
+    return false;
   }
   return has_reset_lock_permissions;
 }

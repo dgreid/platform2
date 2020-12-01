@@ -583,4 +583,34 @@ TEST_F(TpmNewImplTest, GetNvramSizeFailure) {
       .WillOnce(Return(false));
   EXPECT_EQ(GetTpm()->GetNvramSize(0), 0);
 }
+
+TEST_F(TpmNewImplTest, IsOwnerPasswordPresentSuccess) {
+  EXPECT_CALL(mock_tpm_manager_utility_, GetTpmNonsensitiveStatus(_, _, _, _))
+      .WillOnce(DoAll(SetArgPointee<2>(true), Return(true)));
+  EXPECT_TRUE(GetTpm()->IsOwnerPasswordPresent());
+  EXPECT_CALL(mock_tpm_manager_utility_, GetTpmNonsensitiveStatus(_, _, _, _))
+      .WillOnce(DoAll(SetArgPointee<2>(false), Return(true)));
+  EXPECT_FALSE(GetTpm()->IsOwnerPasswordPresent());
+}
+
+TEST_F(TpmNewImplTest, IsOwnerPasswordPresentFailure) {
+  EXPECT_CALL(mock_tpm_manager_utility_, GetTpmNonsensitiveStatus(_, _, _, _))
+      .WillOnce(Return(false));
+  EXPECT_FALSE(GetTpm()->IsOwnerPasswordPresent());
+}
+
+TEST_F(TpmNewImplTest, HasResetLockPermissionsSuccess) {
+  EXPECT_CALL(mock_tpm_manager_utility_, GetTpmNonsensitiveStatus(_, _, _, _))
+      .WillOnce(DoAll(SetArgPointee<3>(true), Return(true)));
+  EXPECT_TRUE(GetTpm()->HasResetLockPermissions());
+  EXPECT_CALL(mock_tpm_manager_utility_, GetTpmNonsensitiveStatus(_, _, _, _))
+      .WillOnce(DoAll(SetArgPointee<3>(false), Return(true)));
+  EXPECT_FALSE(GetTpm()->HasResetLockPermissions());
+}
+
+TEST_F(TpmNewImplTest, HasResetLockPermissionsFailure) {
+  EXPECT_CALL(mock_tpm_manager_utility_, GetTpmNonsensitiveStatus(_, _, _, _))
+      .WillOnce(Return(false));
+  EXPECT_FALSE(GetTpm()->HasResetLockPermissions());
+}
 }  // namespace cryptohome

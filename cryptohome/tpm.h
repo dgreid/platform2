@@ -287,6 +287,9 @@ class Tpm {
   virtual bool IsOwned() = 0;
   virtual void SetIsOwned(bool owned) = 0;
 
+  // Returns whether or not the owner password is still retained.
+  virtual bool IsOwnerPasswordPresent() = 0;
+
   // Returns whether or not the TPM has the permission to reset lock.
   virtual bool HasResetLockPermissions() = 0;
 

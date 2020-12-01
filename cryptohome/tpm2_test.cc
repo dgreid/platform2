@@ -1480,6 +1480,36 @@ TEST_F(Tpm2Test, ClearStoredPasswordFailure) {
   EXPECT_FALSE(tpm_->ClearStoredPassword());
 }
 
+TEST_F(Tpm2Test, IsOwnerPasswordPresentSuccess) {
+  EXPECT_CALL(mock_tpm_manager_utility_, GetTpmNonsensitiveStatus(_, _, _, _))
+      .WillOnce(DoAll(SetArgPointee<2>(true), Return(true)));
+  EXPECT_TRUE(tpm_->IsOwnerPasswordPresent());
+  EXPECT_CALL(mock_tpm_manager_utility_, GetTpmNonsensitiveStatus(_, _, _, _))
+      .WillOnce(DoAll(SetArgPointee<2>(false), Return(true)));
+  EXPECT_FALSE(tpm_->IsOwnerPasswordPresent());
+}
+
+TEST_F(Tpm2Test, IsOwnerPasswordPresentFailure) {
+  EXPECT_CALL(mock_tpm_manager_utility_, GetTpmNonsensitiveStatus(_, _, _, _))
+      .WillOnce(Return(false));
+  EXPECT_FALSE(tpm_->IsOwnerPasswordPresent());
+}
+
+TEST_F(Tpm2Test, HasResetLockPermissionsSuccess) {
+  EXPECT_CALL(mock_tpm_manager_utility_, GetTpmNonsensitiveStatus(_, _, _, _))
+      .WillOnce(DoAll(SetArgPointee<3>(true), Return(true)));
+  EXPECT_TRUE(tpm_->HasResetLockPermissions());
+  EXPECT_CALL(mock_tpm_manager_utility_, GetTpmNonsensitiveStatus(_, _, _, _))
+      .WillOnce(DoAll(SetArgPointee<3>(false), Return(true)));
+  EXPECT_FALSE(tpm_->HasResetLockPermissions());
+}
+
+TEST_F(Tpm2Test, HasResetLockPermissionsFailure) {
+  EXPECT_CALL(mock_tpm_manager_utility_, GetTpmNonsensitiveStatus(_, _, _, _))
+      .WillOnce(Return(false));
+  EXPECT_FALSE(tpm_->HasResetLockPermissions());
+}
+
 namespace {
 
 struct Tpm2RsaSignatureSecretSealingTestParam {
