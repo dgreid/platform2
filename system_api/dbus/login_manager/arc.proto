@@ -20,6 +20,17 @@ message StartArcMiniContainerRequest {
     AUTO_UPDATE_OFF = 2;
   }
 
+  enum DalvikMemoryProfile {
+    // Default dalvik memory profile suitable for all devices.
+    MEMORY_PROFILE_DEFAULT = 0;
+    // Dalvik memory profile suitable for 4G devices.
+    MEMORY_PROFILE_4G = 1;
+    // Dalvik memory profile suitable for 8G devices.
+    MEMORY_PROFILE_8G = 2;
+    // Dalvik memory profile suitable for 16G devices.
+    MEMORY_PROFILE_16G = 3;
+  }
+
   optional bool native_bridge_experiment = 1 [default = false];
 
   // The density value passed to "ro.sf.lcd_density" property.
@@ -47,7 +58,11 @@ message StartArcMiniContainerRequest {
   optional bool arc_print_spooler_experiment = 6
       [default = false, deprecated = true];
 
-  // Next ID to use: 9
+  // Optional mode for dalvik memory profile.
+  optional DalvikMemoryProfile dalvik_memory_profile = 9
+      [default = MEMORY_PROFILE_DEFAULT];
+
+  // Next ID to use: 10
 }
 
 // ARC upgrade options sent from Chrome to session manager. This message is used
