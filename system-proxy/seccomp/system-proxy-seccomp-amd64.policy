@@ -12,10 +12,8 @@ close: 1
 epoll_wait: 1
 fstat: 1
 stat: 1
-poll: 1
 rt_sigprocmask: 1
 sendto: 1
-recvmsg: 1
 gettimeofday: 1
 geteuid: 1
 sendmsg: 1
@@ -72,7 +70,6 @@ bind: 1
 listen: 1
 accept: 1
 recvfrom: 1
-sendto: 1
 getsockopt: arg1 == SOL_SOCKET
 socketpair: 1
 poll: 1
@@ -80,7 +77,6 @@ alarm: 1
 setsockopt: 1
 sendmmsg: 1
 getpeername: 1
-getsockname: 1
 setpriority: 1
 madvise: 1
 creat: 1
@@ -90,5 +86,4 @@ lstat: 1
 getrandom: 1
 getdents: 1
 recvmsg: 1
-writev: 1
 shutdown: 1

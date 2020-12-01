@@ -75,7 +75,6 @@ recvfrom: 1
 getpeername: 1
 mkdir: 1
 _newselect: 1
-clock_gettime: 1
 wait4: 1
 nanosleep: 1
 chmod: 1

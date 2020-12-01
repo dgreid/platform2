@@ -75,11 +75,9 @@ recvfrom: 1
 sendto: 1
 getsockopt: arg1 == SOL_SOCKET
 socketpair: 1
-poll: 1
 setsockopt: 1
 sendmmsg: 1
 getpeername: 1
-getsockname: 1
 setpriority: 1
 madvise: 1
 creat: 1
@@ -88,8 +86,6 @@ unlink: 1
 lstat: 1
 getrandom: 1
 getdents: 1
-recvmsg: 1
-writev: 1
 getuid32: 1
 geteuid32: 1
 getgid32: 1

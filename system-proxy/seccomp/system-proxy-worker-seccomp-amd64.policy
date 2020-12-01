@@ -48,7 +48,6 @@ listen: 1
 bind: 1
 accept: 1
 recvfrom: 1
-sendto: 1
 getsockopt: arg1 == SOL_SOCKET
 socketpair: 1
 poll: 1
