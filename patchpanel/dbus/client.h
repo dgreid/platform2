@@ -30,6 +30,8 @@ class BRILLO_EXPORT Client {
       base::OnceCallback<void(const std::vector<TrafficCounter>&)>;
   using NeighborReachabilityEventHandler =
       base::RepeatingCallback<void(const NeighborReachabilityEventSignal&)>;
+  using NetworkDeviceChangedSignalHandler =
+      base::RepeatingCallback<void(const NetworkDeviceChangedSignal&)>;
 
   static std::unique_ptr<Client> New();
 
@@ -99,6 +101,11 @@ class BRILLO_EXPORT Client {
 
   // Obtains a list of NetworkDevices currently managed by patchpanel.
   virtual std::vector<NetworkDevice> GetDevices() = 0;
+
+  // Registers a handler that will be called upon receiving a signal indicating
+  // that a network device managed by patchpanel was added or removed.
+  virtual void RegisterNetworkDeviceChangedSignalHandler(
+      NetworkDeviceChangedSignalHandler handler) = 0;
 
   // Registers a handler that will be called on receiving a neighbor
   // reachability event. Currently these events are generated only for WiFi

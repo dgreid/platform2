@@ -65,6 +65,19 @@ void OnGetTrafficCountersDBusResponse(
       {response.counters().begin(), response.counters().end()});
 }
 
+void OnNetworkDeviceChangedSignal(
+    const Client::NetworkDeviceChangedSignalHandler& handler,
+    dbus::Signal* signal) {
+  dbus::MessageReader reader(signal);
+  NetworkDeviceChangedSignal proto;
+  if (!reader.PopArrayOfBytesAsProto(&proto)) {
+    LOG(ERROR) << "Failed to parse NetworkDeviceChangedSignal proto";
+    return;
+  }
+
+  handler.Run(proto);
+}
+
 void OnNeighborReachabilityEventSignal(
     const Client::NeighborReachabilityEventHandler& handler,
     dbus::Signal* signal) {
@@ -134,6 +147,9 @@ class ClientImpl : public Client {
                       uint32_t dst_port) override;
 
   std::vector<NetworkDevice> GetDevices() override;
+
+  void RegisterNetworkDeviceChangedSignalHandler(
+      NetworkDeviceChangedSignalHandler handler) override;
 
   void RegisterNeighborReachabilityEventHandler(
       NeighborReachabilityEventHandler handler) override;
@@ -618,6 +634,14 @@ std::vector<NetworkDevice> ClientImpl::GetDevices() {
     devices.emplace_back(d);
   }
   return devices;
+}
+
+void ClientImpl::RegisterNetworkDeviceChangedSignalHandler(
+    NetworkDeviceChangedSignalHandler handler) {
+  proxy_->ConnectToSignal(
+      kPatchPanelInterface, kNetworkDeviceChangedSignal,
+      base::BindRepeating(OnNetworkDeviceChangedSignal, handler),
+      base::BindOnce(OnSignalConnectedCallback));
 }
 
 void ClientImpl::RegisterNeighborReachabilityEventHandler(

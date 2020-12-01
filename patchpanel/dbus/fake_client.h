@@ -64,6 +64,9 @@ class BRILLO_EXPORT FakeClient : public Client {
 
   std::vector<NetworkDevice> GetDevices() override;
 
+  void RegisterNetworkDeviceChangedSignalHandler(
+      NetworkDeviceChangedSignalHandler handler) override;
+
   void RegisterNeighborReachabilityEventHandler(
       NeighborReachabilityEventHandler handler) override;
 
@@ -79,6 +82,7 @@ class BRILLO_EXPORT FakeClient : public Client {
  private:
   std::vector<TrafficCounter> stored_traffic_counters_;
   std::vector<NeighborReachabilityEventHandler> neighbor_handlers_;
+  NetworkDeviceChangedSignalHandler network_device_changed_handler_;
 };
 
 }  // namespace patchpanel
