@@ -16,7 +16,7 @@ executable("arcvm-forward-pstore") {
   deps = [ "//vm_tools:libvm_tools_common" ]
   pkg_deps = [
     "libbrillo",
-    "libchrome-${libbase_ver}",
+    "libchrome",
     "protobuf",
     "system_api",
   ]
