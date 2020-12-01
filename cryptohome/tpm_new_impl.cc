@@ -5,6 +5,7 @@
 #include "cryptohome/tpm_new_impl.h"
 
 #include <string>
+#include <vector>
 
 #include <tpm_manager-client/tpm_manager/dbus-constants.h>
 
@@ -284,6 +285,105 @@ bool TpmNewImpl::DelegateCanResetDACounter() {
                  << ": failed to call |SetDelegateDataFromTpmManager|.";
   }
   return TpmImpl::DelegateCanResetDACounter();
+}
+
+bool TpmNewImpl::DefineNvram(uint32_t index, size_t length, uint32_t flags) {
+  if (!InitializeTpmManagerUtility()) {
+    LOG(ERROR) << __func__ << ": Failed to initialize |TpmManagerUtility|.";
+    return false;
+  }
+  const bool write_define = flags & Tpm::kTpmNvramWriteDefine;
+  const bool bind_to_pcr0 = flags & Tpm::kTpmNvramBindToPCR0;
+  const bool firmware_readable = flags & Tpm::kTpmNvramFirmwareReadable;
+
+  return tpm_manager_utility_->DefineSpace(index, length, write_define,
+                                           bind_to_pcr0, firmware_readable);
+}
+
+bool TpmNewImpl::DestroyNvram(uint32_t index) {
+  if (!InitializeTpmManagerUtility()) {
+    LOG(ERROR) << __func__ << ": Failed to initialize |TpmManagerUtility|.";
+    return false;
+  }
+  return tpm_manager_utility_->DestroySpace(index);
+}
+
+bool TpmNewImpl::WriteNvram(uint32_t index, const brillo::SecureBlob& blob) {
+  if (!InitializeTpmManagerUtility()) {
+    LOG(ERROR) << __func__ << ": Failed to initialize |TpmManagerUtility|.";
+    return false;
+  }
+  tpm_manager::WriteSpaceRequest request;
+  request.set_index(index);
+  request.set_data(blob.to_string());
+  return tpm_manager_utility_->WriteSpace(index, blob.to_string(), false);
+}
+
+bool TpmNewImpl::ReadNvram(uint32_t index, brillo::SecureBlob* blob) {
+  if (!InitializeTpmManagerUtility()) {
+    return false;
+  }
+
+  std::string output;
+  const bool result = tpm_manager_utility_->ReadSpace(index, false, &output);
+  brillo::SecureBlob tmp(output);
+  blob->swap(tmp);
+  return result;
+}
+
+bool TpmNewImpl::IsNvramDefined(uint32_t index) {
+  if (!InitializeTpmManagerUtility()) {
+    LOG(ERROR) << __func__ << ": Failed to initialize |TpmManagerUtility|.";
+    return false;
+  }
+  std::vector<uint32_t> spaces;
+  if (!tpm_manager_utility_->ListSpaces(&spaces)) {
+    return false;
+  }
+  for (uint32_t space : spaces) {
+    if (index == space) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool TpmNewImpl::IsNvramLocked(uint32_t index) {
+  if (!InitializeTpmManagerUtility()) {
+    LOG(ERROR) << __func__ << ": Failed to initialize |TpmManagerUtility|.";
+    return false;
+  }
+  uint32_t size;
+  bool is_read_locked;
+  bool is_write_locked;
+  if (!tpm_manager_utility_->GetSpaceInfo(index, &size, &is_read_locked,
+                                          &is_write_locked)) {
+    return false;
+  }
+  return is_write_locked;
+}
+
+bool TpmNewImpl::WriteLockNvram(uint32_t index) {
+  if (!InitializeTpmManagerUtility()) {
+    LOG(ERROR) << __func__ << ": Failed to initialize |TpmManagerUtility|.";
+    return false;
+  }
+  return tpm_manager_utility_->LockSpace(index);
+}
+
+unsigned int TpmNewImpl::GetNvramSize(uint32_t index) {
+  if (!InitializeTpmManagerUtility()) {
+    LOG(ERROR) << __func__ << ": Failed to initialize |TpmManagerUtility|.";
+    return false;
+  }
+  uint32_t size;
+  bool is_read_locked;
+  bool is_write_locked;
+  if (!tpm_manager_utility_->GetSpaceInfo(index, &size, &is_read_locked,
+                                          &is_write_locked)) {
+    return 0;
+  }
+  return size;
 }
 
 }  // namespace cryptohome

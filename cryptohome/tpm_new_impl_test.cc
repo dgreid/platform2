@@ -4,6 +4,9 @@
 
 #include "cryptohome/tpm_new_impl.h"
 
+#include <string>
+#include <vector>
+
 #include <brillo/secure_blob.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -20,6 +23,7 @@ using ::testing::DoAll;
 using ::testing::ElementsAreArray;
 using ::testing::NiceMock;
 using ::testing::Return;
+using ::testing::SaveArg;
 using ::testing::SetArgPointee;
 
 using brillo::Blob;
@@ -358,4 +362,225 @@ TEST_F(TpmNewImplTest, BadTpmManagerUtility) {
                                      &result_has_reset_lock_permissions));
 }
 
+TEST_F(TpmNewImplTest, DefineNvramSuccess) {
+  constexpr uint32_t kIndex = 2;
+  constexpr size_t kLength = 5;
+  uint32_t index = 0;
+  size_t length = 0;
+  bool write_define = false;
+  bool bind_to_pcr0 = false;
+  bool firmware_readable = false;
+  EXPECT_CALL(mock_tpm_manager_utility_, DefineSpace(_, _, _, _, _))
+      .WillOnce(DoAll(SaveArg<0>(&index), SaveArg<1>(&length),
+                      SaveArg<2>(&write_define), SaveArg<3>(&bind_to_pcr0),
+                      SaveArg<4>(&firmware_readable), Return(true)));
+  EXPECT_TRUE(
+      GetTpm()->DefineNvram(kIndex, kLength, Tpm::kTpmNvramWriteDefine));
+  EXPECT_EQ(kIndex, index);
+  EXPECT_EQ(kLength, length);
+  ASSERT_TRUE(write_define);
+  ASSERT_FALSE(bind_to_pcr0);
+  ASSERT_FALSE(firmware_readable);
+}
+
+TEST_F(TpmNewImplTest, DefineNvramSuccessWithPolicy) {
+  constexpr uint32_t kIndex = 2;
+  constexpr size_t kLength = 5;
+  uint32_t index = 0;
+  size_t length = 0;
+  bool write_define = false;
+  bool bind_to_pcr0 = false;
+  bool firmware_readable = false;
+  EXPECT_CALL(mock_tpm_manager_utility_, DefineSpace(_, _, _, _, _))
+      .WillOnce(DoAll(SaveArg<0>(&index), SaveArg<1>(&length),
+                      SaveArg<2>(&write_define), SaveArg<3>(&bind_to_pcr0),
+                      SaveArg<4>(&firmware_readable), Return(true)));
+  EXPECT_TRUE(GetTpm()->DefineNvram(
+      kIndex, kLength, Tpm::kTpmNvramWriteDefine | Tpm::kTpmNvramBindToPCR0));
+  EXPECT_EQ(kIndex, index);
+  EXPECT_EQ(kLength, length);
+  ASSERT_TRUE(write_define);
+  ASSERT_TRUE(bind_to_pcr0);
+  ASSERT_FALSE(firmware_readable);
+}
+
+TEST_F(TpmNewImplTest, DefineNvramSuccessFirmwareReadable) {
+  constexpr uint32_t kIndex = 2;
+  constexpr size_t kLength = 5;
+  uint32_t index = 0;
+  size_t length = 0;
+  bool write_define = false;
+  bool bind_to_pcr0 = false;
+  bool firmware_readable = false;
+  EXPECT_CALL(mock_tpm_manager_utility_, DefineSpace(_, _, _, _, _))
+      .WillOnce(DoAll(SaveArg<0>(&index), SaveArg<1>(&length),
+                      SaveArg<2>(&write_define), SaveArg<3>(&bind_to_pcr0),
+                      SaveArg<4>(&firmware_readable), Return(true)));
+  EXPECT_TRUE(GetTpm()->DefineNvram(
+      kIndex, kLength,
+      Tpm::kTpmNvramWriteDefine | Tpm::kTpmNvramFirmwareReadable));
+  EXPECT_EQ(kIndex, index);
+  EXPECT_EQ(kLength, length);
+  ASSERT_TRUE(write_define);
+  ASSERT_FALSE(bind_to_pcr0);
+  ASSERT_TRUE(firmware_readable);
+}
+
+TEST_F(TpmNewImplTest, DefineNvramFailure) {
+  EXPECT_CALL(mock_tpm_manager_utility_, DefineSpace(_, _, _, _, _))
+      .WillOnce(Return(false));
+  EXPECT_FALSE(GetTpm()->DefineNvram(0, 0, 0));
+}
+
+TEST_F(TpmNewImplTest, DestroyNvramSuccess) {
+  constexpr uint32_t kIndex = 2;
+  uint32_t index = 0;
+  EXPECT_CALL(mock_tpm_manager_utility_, DestroySpace(_))
+      .WillOnce(DoAll(SaveArg<0>(&index), Return(true)));
+  EXPECT_TRUE(GetTpm()->DestroyNvram(kIndex));
+  EXPECT_EQ(kIndex, index);
+}
+
+TEST_F(TpmNewImplTest, DestroyNvramFailure) {
+  EXPECT_CALL(mock_tpm_manager_utility_, DestroySpace(_))
+      .WillOnce(Return(false));
+  EXPECT_FALSE(GetTpm()->DestroyNvram(0));
+}
+
+TEST_F(TpmNewImplTest, WriteNvramSuccess) {
+  constexpr uint32_t kIndex = 2;
+  const std::string kData("nvram_data");
+  constexpr bool kUserOwnerAuth = false;
+  uint32_t index = 0;
+  std::string data = "";
+  bool user_owner_auth = false;
+  EXPECT_CALL(mock_tpm_manager_utility_, WriteSpace(_, _, _))
+      .WillOnce(DoAll(SaveArg<0>(&index), SaveArg<1>(&data),
+                      SaveArg<2>(&user_owner_auth), Return(true)));
+  EXPECT_TRUE(GetTpm()->WriteNvram(kIndex, SecureBlob(kData)));
+  EXPECT_EQ(index, kIndex);
+  EXPECT_EQ(data, kData);
+  EXPECT_EQ(user_owner_auth, kUserOwnerAuth);
+}
+
+TEST_F(TpmNewImplTest, WriteNvramFailure) {
+  EXPECT_CALL(mock_tpm_manager_utility_, WriteSpace(_, _, _))
+      .WillOnce(Return(false));
+  EXPECT_FALSE(GetTpm()->WriteNvram(0, SecureBlob()));
+}
+
+TEST_F(TpmNewImplTest, WriteLockNvramSuccess) {
+  constexpr uint32_t kIndex = 2;
+  uint32_t index = 0;
+  EXPECT_CALL(mock_tpm_manager_utility_, LockSpace(_))
+      .WillOnce(DoAll(SaveArg<0>(&index), Return(true)));
+  EXPECT_TRUE(GetTpm()->WriteLockNvram(kIndex));
+  EXPECT_EQ(kIndex, index);
+}
+
+TEST_F(TpmNewImplTest, WriteLockNvramFailure) {
+  EXPECT_CALL(mock_tpm_manager_utility_, LockSpace(_)).WillOnce(Return(false));
+  EXPECT_FALSE(GetTpm()->WriteLockNvram(0));
+}
+
+TEST_F(TpmNewImplTest, ReadNvramSuccess) {
+  constexpr uint32_t kIndex = 2;
+  constexpr bool kUserOwnerAuth = false;
+  const std::string nvram_data("nvram_data");
+  uint32_t index = 0;
+  bool user_owner_auth = false;
+  SecureBlob read_data;
+  EXPECT_CALL(mock_tpm_manager_utility_, ReadSpace(_, _, _))
+      .WillOnce(DoAll(SaveArg<0>(&index), SaveArg<1>(&user_owner_auth),
+                      SetArgPointee<2>(nvram_data), Return(true)));
+  EXPECT_TRUE(GetTpm()->ReadNvram(kIndex, &read_data));
+  EXPECT_EQ(index, kIndex);
+  EXPECT_EQ(user_owner_auth, kUserOwnerAuth);
+  EXPECT_EQ(nvram_data, read_data.to_string());
+}
+
+TEST_F(TpmNewImplTest, ReadNvramFailure) {
+  EXPECT_CALL(mock_tpm_manager_utility_, ReadSpace(_, _, _))
+      .WillOnce(Return(false));
+  SecureBlob read_data;
+  EXPECT_FALSE(GetTpm()->ReadNvram(0, &read_data));
+}
+
+TEST_F(TpmNewImplTest, IsNvramDefinedSuccess) {
+  constexpr uint32_t kIndex = 2;
+  std::vector<uint32_t> spaces;
+  spaces.push_back(kIndex);
+  EXPECT_CALL(mock_tpm_manager_utility_, ListSpaces(_))
+      .WillOnce(DoAll(SetArgPointee<0>(spaces), Return(true)));
+  EXPECT_TRUE(GetTpm()->IsNvramDefined(kIndex));
+}
+
+TEST_F(TpmNewImplTest, IsNvramDefinedFailure) {
+  constexpr uint32_t kIndex = 2;
+  EXPECT_CALL(mock_tpm_manager_utility_, ListSpaces(_)).WillOnce(Return(false));
+  EXPECT_FALSE(GetTpm()->IsNvramDefined(kIndex));
+}
+
+TEST_F(TpmNewImplTest, IsNvramDefinedUnknownHandle) {
+  constexpr uint32_t kIndex = 2;
+  std::vector<uint32_t> spaces;
+  spaces.push_back(kIndex);
+  EXPECT_CALL(mock_tpm_manager_utility_, ListSpaces(_))
+      .WillOnce(DoAll(SetArgPointee<0>(spaces), Return(true)));
+  EXPECT_FALSE(GetTpm()->IsNvramDefined(kIndex + 1));
+}
+
+TEST_F(TpmNewImplTest, IsNvramLockedSuccess) {
+  constexpr uint32_t kIndex = 2;
+  constexpr uint32_t kSize = 5;
+  constexpr uint32_t kIsReadLocked = false;
+  constexpr uint32_t kIsWriteLocked = true;
+  uint32_t index = 0;
+  EXPECT_CALL(mock_tpm_manager_utility_, GetSpaceInfo(_, _, _, _))
+      .WillOnce(DoAll(SaveArg<0>(&index), SetArgPointee<1>(kSize),
+                      SetArgPointee<2>(kIsReadLocked),
+                      SetArgPointee<3>(kIsWriteLocked), Return(true)));
+  EXPECT_TRUE(GetTpm()->IsNvramLocked(kIndex));
+  EXPECT_EQ(kIndex, index);
+}
+
+TEST_F(TpmNewImplTest, IsNvramLockedNotLocked) {
+  constexpr uint32_t kIndex = 2;
+  constexpr uint32_t kSize = 5;
+  constexpr uint32_t kIsReadLocked = false;
+  constexpr uint32_t kIsWriteLocked = false;
+  uint32_t index = 0;
+  EXPECT_CALL(mock_tpm_manager_utility_, GetSpaceInfo(_, _, _, _))
+      .WillOnce(DoAll(SaveArg<0>(&index), SetArgPointee<1>(kSize),
+                      SetArgPointee<2>(kIsReadLocked),
+                      SetArgPointee<3>(kIsWriteLocked), Return(true)));
+  EXPECT_FALSE(GetTpm()->IsNvramLocked(kIndex));
+  EXPECT_EQ(kIndex, index);
+}
+
+TEST_F(TpmNewImplTest, IsNvramLockedFailure) {
+  EXPECT_CALL(mock_tpm_manager_utility_, GetSpaceInfo(_, _, _, _))
+      .WillOnce(Return(false));
+  EXPECT_FALSE(GetTpm()->IsNvramLocked(0));
+}
+
+TEST_F(TpmNewImplTest, GetNvramSizeSuccess) {
+  constexpr uint32_t kIndex = 2;
+  constexpr uint32_t kSize = 5;
+  constexpr uint32_t kIsReadLocked = false;
+  constexpr uint32_t kIsWriteLocked = true;
+  uint32_t index = 0;
+  EXPECT_CALL(mock_tpm_manager_utility_, GetSpaceInfo(_, _, _, _))
+      .WillOnce(DoAll(SaveArg<0>(&index), SetArgPointee<1>(kSize),
+                      SetArgPointee<2>(kIsReadLocked),
+                      SetArgPointee<3>(kIsWriteLocked), Return(true)));
+  EXPECT_EQ(GetTpm()->GetNvramSize(kIndex), kSize);
+  EXPECT_EQ(kIndex, index);
+}
+
+TEST_F(TpmNewImplTest, GetNvramSizeFailure) {
+  EXPECT_CALL(mock_tpm_manager_utility_, GetSpaceInfo(_, _, _, _))
+      .WillOnce(Return(false));
+  EXPECT_EQ(GetTpm()->GetNvramSize(0), 0);
+}
 }  // namespace cryptohome

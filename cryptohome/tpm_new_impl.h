@@ -56,6 +56,14 @@ class TpmNewImpl : public TpmImpl {
   bool GetVersionInfo(TpmVersionInfo* version_info) override;
   base::Optional<bool> IsDelegateBoundToPcr() override;
   bool DelegateCanResetDACounter() override;
+  bool DefineNvram(uint32_t index, size_t length, uint32_t flags) override;
+  bool DestroyNvram(uint32_t index) override;
+  bool WriteNvram(uint32_t index, const brillo::SecureBlob& blob) override;
+  bool ReadNvram(uint32_t index, brillo::SecureBlob* blob) override;
+  bool IsNvramDefined(uint32_t index) override;
+  bool IsNvramLocked(uint32_t index) override;
+  bool WriteLockNvram(uint32_t index) override;
+  unsigned int GetNvramSize(uint32_t index) override;
 
  private:
   // Initializes |tpm_manager_utility_|; returns |true| iff successful.
