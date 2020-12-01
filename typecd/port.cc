@@ -9,6 +9,8 @@
 #include <base/strings/string_util.h>
 #include <re2/re2.h>
 
+#include "typecd/pd_vdo_constants.h"
+
 namespace {
 
 constexpr char kDataRoleDRPRegex[] = R"(.*\[(\w+)\].*)";
@@ -18,8 +20,6 @@ constexpr uint16_t kTBTAltModeVID = 0x8087;
 // DP altmode VDO capabilities.
 // NOTE: We only include the bit fields we are interested in.
 constexpr uint32_t kDPModeSnk = 0x1;
-
-constexpr uint32_t kIDHeaderVDOModalOperationBitField = (1 << 26);
 
 }  // namespace
 
