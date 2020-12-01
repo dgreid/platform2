@@ -44,6 +44,12 @@
           Confirmation code of the profile to install, or "" if none.
         </tp:docstring>
       </arg>
+      <arg name="profile" type="o" direction="out">
+        <tp:docstring>
+          Profile object representing the newly-installed profile.
+          Same as the input "pending_profile"
+        </tp:docstring>
+      </arg>
     </method>
     <method name="UninstallProfile">
       <tp:docstring>

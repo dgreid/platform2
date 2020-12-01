@@ -39,6 +39,9 @@ class Euicc {
   // Request the eUICC to provide all installed profiles.
   void RequestInstalledProfiles(ResultCallback<> result_callback);
 
+  void InstallPendingProfile(const dbus::ObjectPath& profile_path,
+                             const std::string& confirmation_code,
+                             ResultCallback<dbus::ObjectPath> result_callback);
   void RequestPendingProfiles(ResultCallback<> result_callback,
                               const std::string& root_smds);
 

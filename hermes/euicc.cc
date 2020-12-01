@@ -46,6 +46,7 @@ void Euicc::InstallProfileFromActivationCode(
                         lpa::proto::ProfileInfo& info, int error) mutable {
     OnProfileInstalled(info, error, std::move(result_callback));
   };
+  context_->modem_control()->StoreAndSetActiveSlot(physical_slot_);
   if (activation_code.empty()) {
     context_->lpa()->GetDefaultProfileFromSmdp("", context_->executor(),
                                                std::move(profile_cb));
@@ -56,9 +57,29 @@ void Euicc::InstallProfileFromActivationCode(
   options.enable_profile = false;
   options.allow_policy_rules = false;
   options.confirmation_code = confirmation_code;
-  context_->modem_control()->StoreAndSetActiveSlot(physical_slot_);
   context_->lpa()->DownloadProfile(activation_code, std::move(options),
                                    context_->executor(), std::move(profile_cb));
+}
+
+void Euicc::InstallPendingProfile(
+    const dbus::ObjectPath& profile_path,
+    const std::string& confirmation_code,
+    ResultCallback<dbus::ObjectPath> result_callback) {
+  auto iter = find_if(pending_profiles_.begin(), pending_profiles_.end(),
+                      [&profile_path](const std::unique_ptr<Profile>& profile) {
+                        return profile->object_path() == profile_path;
+                      });
+
+  if (iter == pending_profiles_.end()) {
+    result_callback.Error(brillo::Error::Create(
+        FROM_HERE, brillo::errors::dbus::kDomain, kErrorInvalidParameter,
+        "Could not find Profile " + profile_path.value()));
+    return;
+  }
+
+  std::string activation_code = iter->get()->GetActivationCode();
+  InstallProfileFromActivationCode(activation_code, confirmation_code,
+                                   std::move(result_callback));
 }
 
 void Euicc::UninstallProfile(const dbus::ObjectPath& profile_path,
@@ -112,7 +133,22 @@ void Euicc::OnProfileInstalled(
     return;
   }
 
-  auto profile = Profile::Create(profile_info, physical_slot_);
+  auto iter = find_if(pending_profiles_.begin(), pending_profiles_.end(),
+                      [&profile_info](const std::unique_ptr<Profile>& profile) {
+                        return profile->GetIccid() == profile_info.iccid();
+                      });
+
+  std::unique_ptr<Profile> profile;
+  if (iter != pending_profiles_.end()) {
+    // Remove the profile from pending_profiles_ so that it can become an
+    // installed profile
+    profile = std::move(*iter);
+    pending_profiles_.erase(iter);
+    UpdatePendingProfilesProperty();
+  } else {
+    profile = Profile::Create(profile_info, physical_slot_);
+  }
+
   if (!profile) {
     result_callback.Error(brillo::Error::Create(
         FROM_HERE, brillo::errors::dbus::kDomain, kErrorInternalLpaFailure,

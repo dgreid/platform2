@@ -45,12 +45,12 @@ void EuiccDBusAdaptor::InstallProfileFromActivationCode(
 }
 
 void EuiccDBusAdaptor::InstallPendingProfile(
-    std::unique_ptr<DBusResponse<>> response,
-    const dbus::ObjectPath& /*in_pending_profile*/,
-    const std::string& /*in_confirmation_code*/) {
-  response->ReplyWithError(
-      FROM_HERE, brillo::errors::dbus::kDomain, kErrorUnsupported,
-      "This method is not supported until crbug.com/1071470 is implemented");
+    std::unique_ptr<DBusResponse<dbus::ObjectPath>> response,
+    const dbus::ObjectPath& in_pending_profile,
+    const std::string& in_confirmation_code) {
+  ResultCallback<dbus::ObjectPath> result_callback(std::move(response));
+  euicc_->InstallPendingProfile(in_pending_profile, in_confirmation_code,
+                                std::move(result_callback));
 }
 
 void EuiccDBusAdaptor::UninstallProfile(
