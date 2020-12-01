@@ -9,6 +9,7 @@
 #include <set>
 #include <string>
 
+#include <base/files/scoped_file.h>
 #include <base/memory/weak_ptr.h>
 
 #include "permission_broker/dbus-proxies.h"
@@ -21,7 +22,7 @@ class FirewallManager final {
   explicit FirewallManager(const std::string& interface);
   FirewallManager(const FirewallManager&) = delete;
   FirewallManager& operator=(const FirewallManager&) = delete;
-  ~FirewallManager();
+  ~FirewallManager() = default;
 
   void Init(const scoped_refptr<dbus::Bus>& bus);
 
@@ -56,8 +57,8 @@ class FirewallManager final {
   // File descriptors for the two end of the pipe use for communicating with
   // remote firewall server (permission_broker), where the remote firewall
   // server will use the read end of the pipe to detect when this process exits.
-  int lifeline_read_fd_;
-  int lifeline_write_fd_;
+  base::ScopedFD lifeline_read_;
+  base::ScopedFD lifeline_write_;
 
   // The interface on which to request network access.
   std::string interface_;

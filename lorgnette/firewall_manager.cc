@@ -17,21 +17,11 @@ namespace lorgnette {
 namespace {
 
 const uint16_t kCanonBjnpPort = 8612;
-const int kInvalidFd = -1;
 
 }  // namespace
 
 FirewallManager::FirewallManager(const std::string& interface)
-    : lifeline_read_fd_(kInvalidFd),
-      lifeline_write_fd_(kInvalidFd),
-      interface_(interface) {}
-
-FirewallManager::~FirewallManager() {
-  if (lifeline_read_fd_ != kInvalidFd) {
-    close(lifeline_read_fd_);
-    close(lifeline_write_fd_);
-  }
-}
+    : interface_(interface) {}
 
 void FirewallManager::Init(const scoped_refptr<dbus::Bus>& bus) {
   CHECK(!permission_broker_proxy_) << "Already started";
@@ -72,7 +62,7 @@ void FirewallManager::RequestScannerPortAccess() {
 }
 
 bool FirewallManager::SetupLifelinePipe() {
-  if (lifeline_read_fd_ != kInvalidFd) {
+  if (lifeline_read_.is_valid()) {
     LOG(ERROR) << "Lifeline pipe already created";
     return false;
   }
@@ -83,8 +73,8 @@ bool FirewallManager::SetupLifelinePipe() {
     PLOG(ERROR) << "Failed to create lifeline pipe";
     return false;
   }
-  lifeline_read_fd_ = fds[0];
-  lifeline_write_fd_ = fds[1];
+  lifeline_read_ = base::ScopedFD(fds[0]);
+  lifeline_write_ = base::ScopedFD(fds[1]);
 
   return true;
 }
@@ -141,7 +131,7 @@ void FirewallManager::RequestUdpPortAccess(uint16_t port) {
   // process.
   brillo::ErrorPtr error;
   if (!permission_broker_proxy_->RequestUdpPortAccess(
-          port, interface_, lifeline_read_fd_, &allowed, &error)) {
+          port, interface_, lifeline_read_.get(), &allowed, &error)) {
     LOG(ERROR) << "Failed to request UDP port access: " << error->GetCode()
                << " " << error->GetMessage();
     return;
