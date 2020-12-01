@@ -158,6 +158,14 @@ NvramResult TpmNvramImpl::DefineSpace(
   TpmConnection owner_connection(owner_password);
   TSS_HCONTEXT connection_context = owner_connection.GetContext();
 
+  // Bind to PCR0.
+  ScopedTssPcrs scoped_pcr_handle(connection_context);
+  if (policy == NVRAM_POLICY_PCR0) {
+    if (!SetCompositePcr0(&scoped_pcr_handle, &owner_connection)) {
+      return NVRAM_RESULT_DEVICE_ERROR;
+    }
+  }
+
   ScopedTssNvStore nv_handle(connection_context);
   trousers::ScopedTssPolicy policy_handle(connection_context);
 
@@ -184,17 +192,8 @@ NvramResult TpmNvramImpl::DefineSpace(
     return NVRAM_RESULT_DEVICE_ERROR;
   }
 
-  // Bind to PCR0.
-  TSS_HPCRS pcr_handle = 0;
-  ScopedTssPcrs scoped_pcr_handle(connection_context);
-  if (policy == NVRAM_POLICY_PCR0) {
-    if (!SetCompositePcr0(&scoped_pcr_handle, &owner_connection)) {
-      return NVRAM_RESULT_DEVICE_ERROR;
-    }
-    pcr_handle = scoped_pcr_handle;
-  }
-  result = Tspi_NV_DefineSpace(nv_handle, pcr_handle, /*Read*/
-                               pcr_handle /*Write*/);
+  result = Tspi_NV_DefineSpace(nv_handle, scoped_pcr_handle, /*Read*/
+                               scoped_pcr_handle /*Write*/);
   if (TPM_ERROR(result)) {
     TPM_LOG(ERROR, result) << "Could not define NVRAM space: " << index;
     return MapTpmError(result);
@@ -208,6 +207,16 @@ NvramResult TpmNvramImpl::DestroySpace(uint32_t index) {
     return NVRAM_RESULT_OPERATION_DISABLED;
   }
   TpmConnection owner_connection(owner_password);
+
+  NvramResult nvram_result =
+      GetSpaceInfo(index, nullptr, nullptr, nullptr, nullptr, nullptr);
+  if (nvram_result == NVRAM_RESULT_SPACE_DOES_NOT_EXIST) {
+    LOG(INFO) << "NVRAM index is already undefined.";
+    return NVRAM_RESULT_SUCCESS;
+  } else if (nvram_result != NVRAM_RESULT_SUCCESS) {
+    return nvram_result;
+  }
+
   ScopedTssNvStore nv_handle(owner_connection.GetContext());
   if (!InitializeNvramHandle(index, &nv_handle, &owner_connection)) {
     return NVRAM_RESULT_DEVICE_ERROR;
@@ -385,6 +394,11 @@ NvramResult TpmNvramImpl::ReadSpaceInternal(
       GetSpaceInfo(index, &nvram_size, nullptr, nullptr, &attributes, nullptr);
   if (result != NVRAM_RESULT_SUCCESS) {
     return result;
+  }
+
+  if (nvram_size == 0) {
+    LOG(ERROR) << "NvramSize is too small.";
+    return NVRAM_RESULT_INSUFFICIENT_SPACE;
   }
 
   TSS_HCONTEXT connection_context = tpm_connection_.GetContext();
