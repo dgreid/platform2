@@ -57,6 +57,17 @@ class TPM_MANAGER_EXPORT TpmManagerUtility
                             bool* is_owned,
                             LocalData* local_data);
 
+  // Blocking call of |TpmOwnershipDBusProxy::GetTpmNonsensitiveStatus|.
+  // Returns |true| iff the operation succeeds. Once returning |true|,
+  // |is_enabled| indicates if TPM is enabled, |is_owned| indicates if TPM is
+  // owned, |is_owner_password_present| indicates if the owner password is still
+  // retained, and |has_reset_lock_permissions| indicates if the tpm manager is
+  // capable of reset DA.
+  virtual bool GetTpmNonsensitiveStatus(bool* is_enabled,
+                                        bool* is_owned,
+                                        bool* is_owner_password_present,
+                                        bool* has_reset_lock_permissions);
+
   // Blocking call of |TpmOwnershipDBusProxy::GetVersionInfo|.
   // Returns true iff the operation succeeds. On success, various parts of
   // version info are stored in the output args respectively.
@@ -183,7 +194,6 @@ class TPM_MANAGER_EXPORT TpmManagerUtility
     void CleanUp() override { utility_->ShutdownTask(); }
 
     TpmManagerUtility* const utility_;
-
   };
 
   // Initialization operation that must be performed on the tpm_manager

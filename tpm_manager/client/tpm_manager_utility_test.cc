@@ -48,6 +48,9 @@ class TpmManagerUtilityTest : public Test {
         .WillByDefault(InvokeCallbackArgument<1>(ByRef(take_ownership_reply_)));
     ON_CALL(mock_tpm_owner_, GetTpmStatus(_, _))
         .WillByDefault(InvokeCallbackArgument<1>(ByRef(get_tpm_status_reply_)));
+    ON_CALL(mock_tpm_owner_, GetTpmNonsensitiveStatus(_, _))
+        .WillByDefault(InvokeCallbackArgument<1>(
+            ByRef(get_tpm_nonsensitive_status_reply_)));
     ON_CALL(mock_tpm_owner_, GetVersionInfo(_, _))
         .WillByDefault(
             InvokeCallbackArgument<1>(ByRef(get_version_info_reply_)));
@@ -96,6 +99,7 @@ class TpmManagerUtilityTest : public Test {
   // fake replies from TpmManager
   tpm_manager::TakeOwnershipReply take_ownership_reply_;
   tpm_manager::GetTpmStatusReply get_tpm_status_reply_;
+  tpm_manager::GetTpmNonsensitiveStatusReply get_tpm_nonsensitive_status_reply_;
   tpm_manager::GetVersionInfoReply get_version_info_reply_;
   tpm_manager::RemoveOwnerDependencyReply remove_owner_dependency_reply_;
   tpm_manager::ClearStoredOwnerPasswordReply clear_stored_owner_password_reply_;
@@ -162,6 +166,78 @@ TEST_F(TpmManagerUtilityTest, GetTpmStatusFail) {
   get_tpm_status_reply_.set_status(tpm_manager::STATUS_NOT_AVAILABLE);
   EXPECT_FALSE(
       tpm_manager_utility_.GetTpmStatus(&is_enabled, &is_owned, &local_data));
+}
+
+TEST_F(TpmManagerUtilityTest, GetTpmNonsensitiveStatus) {
+  bool is_enabled = false;
+  bool is_owned = false;
+  bool is_owner_password_present = true;
+  bool has_reset_lock_permissions = false;
+  get_tpm_nonsensitive_status_reply_.set_status(tpm_manager::STATUS_SUCCESS);
+
+  get_tpm_nonsensitive_status_reply_.set_is_owner_password_present(false);
+  // We allow to set nullptr for unused field.
+  EXPECT_TRUE(tpm_manager_utility_.GetTpmNonsensitiveStatus(
+      nullptr, nullptr, &is_owner_password_present, nullptr));
+  EXPECT_EQ(is_owner_password_present,
+            get_tpm_nonsensitive_status_reply_.is_owner_password_present());
+
+  get_tpm_nonsensitive_status_reply_.set_is_enabled(true);
+  get_tpm_nonsensitive_status_reply_.set_is_owned(false);
+  get_tpm_nonsensitive_status_reply_.set_is_owner_password_present(true);
+  get_tpm_nonsensitive_status_reply_.set_has_reset_lock_permissions(false);
+  EXPECT_TRUE(tpm_manager_utility_.GetTpmNonsensitiveStatus(
+      &is_enabled, &is_owned, &is_owner_password_present,
+      &has_reset_lock_permissions));
+  EXPECT_EQ(is_enabled, get_tpm_nonsensitive_status_reply_.is_enabled());
+  EXPECT_EQ(is_owned, get_tpm_nonsensitive_status_reply_.is_owned());
+  EXPECT_EQ(is_owner_password_present,
+            get_tpm_nonsensitive_status_reply_.is_owner_password_present());
+  EXPECT_EQ(has_reset_lock_permissions,
+            get_tpm_nonsensitive_status_reply_.has_reset_lock_permissions());
+
+  get_tpm_nonsensitive_status_reply_.set_is_enabled(false);
+  get_tpm_nonsensitive_status_reply_.set_is_owned(true);
+  get_tpm_nonsensitive_status_reply_.set_is_owner_password_present(false);
+  get_tpm_nonsensitive_status_reply_.set_has_reset_lock_permissions(true);
+  EXPECT_TRUE(tpm_manager_utility_.GetTpmNonsensitiveStatus(
+      &is_enabled, &is_owned, &is_owner_password_present,
+      &has_reset_lock_permissions));
+  EXPECT_EQ(is_enabled, get_tpm_nonsensitive_status_reply_.is_enabled());
+  EXPECT_EQ(is_owned, get_tpm_nonsensitive_status_reply_.is_owned());
+  EXPECT_EQ(is_owner_password_present,
+            get_tpm_nonsensitive_status_reply_.is_owner_password_present());
+  EXPECT_EQ(has_reset_lock_permissions,
+            get_tpm_nonsensitive_status_reply_.has_reset_lock_permissions());
+
+  get_tpm_nonsensitive_status_reply_.set_is_enabled(true);
+  get_tpm_nonsensitive_status_reply_.set_is_owned(false);
+  get_tpm_nonsensitive_status_reply_.set_has_reset_lock_permissions(false);
+  EXPECT_TRUE(tpm_manager_utility_.GetTpmNonsensitiveStatus(
+      &is_enabled, &is_owned, nullptr, &has_reset_lock_permissions));
+  EXPECT_EQ(is_enabled, get_tpm_nonsensitive_status_reply_.is_enabled());
+  EXPECT_EQ(is_owned, get_tpm_nonsensitive_status_reply_.is_owned());
+  EXPECT_EQ(has_reset_lock_permissions,
+            get_tpm_nonsensitive_status_reply_.has_reset_lock_permissions());
+}
+
+TEST_F(TpmManagerUtilityTest, GetTpmNonsensitiveStatusFail) {
+  bool is_enabled = false;
+  bool is_owned = false;
+  bool is_owner_password_present = false;
+  bool has_reset_lock_permissions = false;
+
+  get_tpm_nonsensitive_status_reply_.set_status(
+      tpm_manager::STATUS_DEVICE_ERROR);
+  EXPECT_FALSE(tpm_manager_utility_.GetTpmNonsensitiveStatus(
+      &is_enabled, &is_owned, &is_owner_password_present,
+      &has_reset_lock_permissions));
+
+  get_tpm_nonsensitive_status_reply_.set_status(
+      tpm_manager::STATUS_NOT_AVAILABLE);
+  EXPECT_FALSE(tpm_manager_utility_.GetTpmNonsensitiveStatus(
+      &is_enabled, &is_owned, &is_owner_password_present,
+      &has_reset_lock_permissions));
 }
 
 TEST_F(TpmManagerUtilityTest, GetVersionInfo) {

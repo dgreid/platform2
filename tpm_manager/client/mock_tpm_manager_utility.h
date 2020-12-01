@@ -23,6 +23,8 @@ class TPM_MANAGER_EXPORT MockTpmManagerUtility : public TpmManagerUtility {
     ON_CALL(*this, Initialize()).WillByDefault(Return(true));
     ON_CALL(*this, TakeOwnership()).WillByDefault(Return(true));
     ON_CALL(*this, GetTpmStatus(_, _, _)).WillByDefault(Return(true));
+    ON_CALL(*this, GetTpmNonsensitiveStatus(_, _, _, _))
+        .WillByDefault(Return(true));
     ON_CALL(*this, GetVersionInfo(_, _, _, _, _, _))
         .WillByDefault(Return(true));
     ON_CALL(*this, RemoveOwnerDependency(_)).WillByDefault(Return(true));
@@ -45,6 +47,10 @@ class TPM_MANAGER_EXPORT MockTpmManagerUtility : public TpmManagerUtility {
   MOCK_METHOD(bool, Initialize, (), (override));
   MOCK_METHOD(bool, TakeOwnership, (), (override));
   MOCK_METHOD(bool, GetTpmStatus, (bool*, bool*, LocalData*), (override));
+  MOCK_METHOD(bool,
+              GetTpmNonsensitiveStatus,
+              (bool*, bool*, bool*, bool*),
+              (override));
   MOCK_METHOD(
       bool,
       GetVersionInfo,

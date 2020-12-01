@@ -74,6 +74,35 @@ bool TpmManagerUtility::GetTpmStatus(bool* is_enabled,
   return true;
 }
 
+bool TpmManagerUtility::GetTpmNonsensitiveStatus(
+    bool* is_enabled,
+    bool* is_owned,
+    bool* is_owner_password_present,
+    bool* has_reset_lock_permissions) {
+  tpm_manager::GetTpmNonsensitiveStatusReply tpm_status;
+  SendTpmOwnerRequestAndWait(
+      &tpm_manager::TpmOwnershipInterface::GetTpmNonsensitiveStatus,
+      tpm_manager::GetTpmNonsensitiveStatusRequest(), &tpm_status);
+  if (tpm_status.status() != tpm_manager::STATUS_SUCCESS) {
+    LOG(ERROR) << __func__
+               << ": Failed to read TPM nonsensitive state from tpm_managerd.";
+    return false;
+  }
+  if (is_enabled) {
+    *is_enabled = tpm_status.is_enabled();
+  }
+  if (is_owned) {
+    *is_owned = tpm_status.is_owned();
+  }
+  if (is_owner_password_present) {
+    *is_owner_password_present = tpm_status.is_owner_password_present();
+  }
+  if (has_reset_lock_permissions) {
+    *has_reset_lock_permissions = tpm_status.has_reset_lock_permissions();
+  }
+  return true;
+}
+
 bool TpmManagerUtility::GetVersionInfo(uint32_t* family,
                                        uint64_t* spec_level,
                                        uint32_t* manufacturer,
