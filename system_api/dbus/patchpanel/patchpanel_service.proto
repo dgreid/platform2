@@ -347,6 +347,19 @@ message ModifyPortRuleResponse {
   bool success = 1;
 }
 
+// Signal that is emitted when a device managed by patchpanel is added or
+// removed.
+message NetworkDeviceChangedSignal {
+  enum Event {
+    UNKNOWN_CHANGE = 0;
+    DEVICE_ADDED = 1;
+    DEVICE_REMOVED = 2;
+  };
+
+  NetworkDevice device = 1;
+  Event event = 2;
+}
+
 // Signal for notifying an event about the layer 2 reachability of a neighbor
 // monitored by NeighborLinkMonitor.
 message NeighborReachabilityEventSignal {

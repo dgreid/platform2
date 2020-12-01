@@ -27,6 +27,7 @@ const char kModifyPortRuleMethod[] = "ModifyPortRule";
 const char kGetDevicesMethod[] = "GetDevices";
 
 // Signals.
+const char kNetworkDeviceChangedSignal[] = "NetworkDeviceChanged";
 const char kNeighborReachabilityEventSignal[] = "NeighborReachabilityEvent";
 
 }  // namespace patchpanel
