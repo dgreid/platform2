@@ -198,8 +198,8 @@ void GetInsertLeafDefaults(uint64_t* label,
 base::Value SetupBaseOutcome(uint32_t result_code, const std::string& root) {
   // This is exported as a string because the API handles integers as signed.
   base::Value outcome(base::Value::Type::DICTIONARY);
-  outcome.SetStringKey("result_code.value", std::to_string(result_code));
-  outcome.SetStringKey("result_code.name", PwErrorStr(result_code));
+  outcome.SetStringPath("result_code.value", std::to_string(result_code));
+  outcome.SetStringPath("result_code.name", PwErrorStr(result_code));
   outcome.SetStringKey("root_hash", HexEncode(root));
   return outcome;
 }
@@ -499,9 +499,9 @@ int HandleGetLog(base::CommandLine::StringVector::const_iterator begin,
         out_entry.SetStringKey(
             "timestamp.timer_value",
             std::to_string(entry.auth().timestamp().timer_value()));
-        out_entry.SetStringKey("return_code.value",
-                               std::to_string(entry.auth().return_code()));
-        out_entry.SetStringKey(
+        out_entry.SetStringPath("return_code.value",
+                                std::to_string(entry.auth().return_code()));
+        out_entry.SetStringPath(
             "return_code.name",
             trunks::GetErrorString(entry.auth().return_code()));
         break;
