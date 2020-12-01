@@ -9,6 +9,7 @@
 
 #include <cstdint>
 
+#include <base/callback.h>
 #include <base/files/file_path.h>
 #include <base/optional.h>
 
@@ -30,7 +31,9 @@ class ProcessFetcher final {
 
   // Returns information about a particular process on the device, or the error
   // that occurred retrieving the information.
-  chromeos::cros_healthd::mojom::ProcessResultPtr FetchProcessInfo();
+  void FetchProcessInfo(
+      base::OnceCallback<void(chromeos::cros_healthd::mojom::ProcessResultPtr)>
+          callback);
 
  private:
   // Parses relevant fields from /proc/|process_id_|/stat. Returns the first

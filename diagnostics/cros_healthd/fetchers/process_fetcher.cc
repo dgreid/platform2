@@ -12,6 +12,7 @@
 #include <utility>
 #include <vector>
 
+#include <base/bind.h>
 #include <base/numerics/safe_conversions.h>
 #include <base/optional.h>
 #include <base/strings/string_number_conversions.h>
@@ -102,40 +103,59 @@ ProcessFetcher::ProcessFetcher(pid_t process_id, const base::FilePath& root_dir)
 
 ProcessFetcher::~ProcessFetcher() = default;
 
-mojo_ipc::ProcessResultPtr ProcessFetcher::FetchProcessInfo() {
+void ProcessFetcher::FetchProcessInfo(
+    base::OnceCallback<void(mojo_ipc::ProcessResultPtr)> callback) {
   mojo_ipc::ProcessInfo process_info;
 
   // Number of ticks after system boot that the process started.
   uint64_t start_time_ticks;
   auto error = ParseProcPidStat(&process_info.state, &process_info.priority,
                                 &process_info.nice, &start_time_ticks);
-  if (error.has_value())
-    return mojo_ipc::ProcessResult::NewError(std::move(error.value()));
+  if (error.has_value()) {
+    std::move(callback).Run(
+        mojo_ipc::ProcessResult::NewError(std::move(error.value())));
+    return;
+  }
 
   error = CalculateProcessUptime(start_time_ticks, &process_info.uptime_ticks);
-  if (error.has_value())
-    return mojo_ipc::ProcessResult::NewError(std::move(error.value()));
+  if (error.has_value()) {
+    std::move(callback).Run(
+        mojo_ipc::ProcessResult::NewError(std::move(error.value())));
+    return;
+  }
 
   error = ParseProcPidStatm(&process_info.total_memory_kib,
                             &process_info.resident_memory_kib,
                             &process_info.free_memory_kib);
-  if (error.has_value())
-    return mojo_ipc::ProcessResult::NewError(std::move(error.value()));
+  if (error.has_value()) {
+    std::move(callback).Run(
+        mojo_ipc::ProcessResult::NewError(std::move(error.value())));
+    return;
+  }
 
   uid_t user_id;
   error = GetProcessUid(&user_id);
-  if (error.has_value())
-    return mojo_ipc::ProcessResult::NewError(std::move(error.value()));
+  if (error.has_value()) {
+    std::move(callback).Run(
+        mojo_ipc::ProcessResult::NewError(std::move(error.value())));
+    return;
+  }
+
   process_info.user_id = static_cast<uint32_t>(user_id);
 
   if (!ReadAndTrimString(proc_pid_dir_, kProcessCmdlineFile,
                          &process_info.command)) {
-    return mojo_ipc::ProcessResult::NewError(CreateAndLogProbeError(
-        mojo_ipc::ErrorType::kFileReadError,
-        "Failed to read " + proc_pid_dir_.Append(kProcessCmdlineFile).value()));
+    std::move(callback).Run(
+        mojo_ipc::ProcessResult::NewError(CreateAndLogProbeError(
+            mojo_ipc::ErrorType::kFileReadError,
+            "Failed to read " +
+                proc_pid_dir_.Append(kProcessCmdlineFile).value())));
+    return;
   }
 
-  return mojo_ipc::ProcessResult::NewProcessInfo(process_info.Clone());
+  std::move(callback).Run(
+      mojo_ipc::ProcessResult::NewProcessInfo(process_info.Clone()));
+  return;
 }
 
 base::Optional<mojo_ipc::ProbeErrorPtr> ProcessFetcher::ParseProcPidStat(

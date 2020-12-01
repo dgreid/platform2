@@ -50,8 +50,8 @@ void CrosHealthdMojoService::AddPowerObserver(
 
 void CrosHealthdMojoService::ProbeProcessInfo(
     uint32_t process_id, ProbeProcessInfoCallback callback) {
-  std::move(callback).Run(
-      ProcessFetcher(static_cast<pid_t>(process_id)).FetchProcessInfo());
+  ProcessFetcher(static_cast<pid_t>(process_id))
+      .FetchProcessInfo(std::move(callback));
 }
 
 void CrosHealthdMojoService::ProbeTelemetryInfo(

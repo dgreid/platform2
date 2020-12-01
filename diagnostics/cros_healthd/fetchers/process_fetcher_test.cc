@@ -6,12 +6,15 @@
 
 #include <cstdint>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <base/files/file_path.h>
 #include <base/files/file_util.h>
 #include <base/files/scoped_temp_dir.h>
+#include <base/run_loop.h>
 #include <base/strings/string_split.h>
+#include <base/test/task_environment.h>
 #include <gtest/gtest.h>
 
 #include "diagnostics/common/file_test_utils.h"
@@ -99,6 +102,15 @@ constexpr char kProcPidStatusContentsNegativeUidValue[] =
 // string, so there is no invalid data for this file.
 constexpr char kFakeProcPidCmdlineContents[] = "/usr/bin/fake_exe --arg=yes";
 
+// Saves |response| to |response_destination|.
+void OnMojoResponseReceived(mojo_ipc::ProcessResultPtr* response_destination,
+                            base::Closure quit_closure,
+                            mojo_ipc::ProcessResultPtr response) {
+  DCHECK(response_destination);
+  *response_destination = std::move(response);
+  quit_closure.Run();
+}
+
 }  // namespace
 
 class ProcessFetcherTest : public testing::Test {
@@ -137,7 +149,15 @@ class ProcessFetcherTest : public testing::Test {
   }
 
   mojo_ipc::ProcessResultPtr FetchProcessInfo() {
-    return ProcessFetcher(kPid, temp_dir_path()).FetchProcessInfo();
+    mojo_ipc::ProcessResultPtr result;
+    base::RunLoop run_loop;
+    ProcessFetcher(kPid, temp_dir_path())
+        .FetchProcessInfo(base::BindOnce(&OnMojoResponseReceived, &result,
+                                         run_loop.QuitClosure()));
+
+    run_loop.Run();
+
+    return result;
   }
 
   bool WriteProcPidStatData(const std::string& new_data,
@@ -165,6 +185,8 @@ class ProcessFetcherTest : public testing::Test {
   const base::FilePath& temp_dir_path() const { return temp_dir_.GetPath(); }
 
  private:
+  base::test::TaskEnvironment task_environment_{
+      base::test::TaskEnvironment::ThreadingMode::MAIN_THREAD_ONLY};
   base::ScopedTempDir temp_dir_;
 };
 
