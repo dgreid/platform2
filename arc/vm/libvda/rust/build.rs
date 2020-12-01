@@ -11,4 +11,6 @@ fn main() {
             if command == r#""pkg-config" "--libs" "--cflags" "libvda""# => {}
         Err(e) => panic!("{}", e),
     };
+
+    println!("cargo:rustc-link-lib=dylib=vda");
 }
