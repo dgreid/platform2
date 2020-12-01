@@ -200,14 +200,24 @@ bool WebAuthnHandler::GetWebAuthnSecret(const std::string& account_id) {
     return false;
   }
 
+  if (reply.has_error()) {
+    LOG(ERROR) << "GetWebAuthnSecret reply has error " << reply.error();
+    return false;
+  }
+
   if (!reply.HasExtension(cryptohome::GetWebAuthnSecretReply::reply)) {
-    LOG(ERROR) << "GetWebAuthnSecret doesn't have the correct extension.";
+    LOG(ERROR) << "GetWebAuthnSecret reply doesn't have the correct extension.";
     return false;
   }
 
   brillo::SecureBlob secret(
       reply.GetExtension(cryptohome::GetWebAuthnSecretReply::reply)
           .webauthn_secret());
+  if (secret.size() != SHA256_DIGEST_LENGTH) {
+    LOG(ERROR) << "WebAuthn auth time secret size is wrong.";
+    return false;
+  }
+
   auth_time_secret_hash_ = std::make_unique<brillo::Blob>(util::Sha256(secret));
   return true;
 }
@@ -1052,6 +1062,11 @@ bool WebAuthnHandler::HasPin(const std::string& account_id) {
                                        kCryptohomeTimeout.InMilliseconds())) {
     LOG(ERROR) << "Cannot query PIN availability from cryptohome, error: "
                << error->GetMessage();
+    return false;
+  }
+
+  if (reply.has_error()) {
+    LOG(ERROR) << "GetKeyData response has error " << reply.error();
     return false;
   }
 
