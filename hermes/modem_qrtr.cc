@@ -175,7 +175,7 @@ void ModemQrtr::SendApdus(std::vector<lpa::card::Apdu> apdus,
          AllocateId(), std::make_unique<UimCmd>(UimCmd::QmiType::kSendApdu)});
   }
   // Begin transmitting if we are not already processing a transaction.
-  if (!pending_response_type) {
+  if (!pending_response_type_) {
     TransmitFromQueue();
   }
 }
@@ -270,7 +270,7 @@ uint16_t ModemQrtr::AllocateId() {
 /////////////////////////////////////
 
 void ModemQrtr::TransmitFromQueue() {
-  if (tx_queue_.empty() || pending_response_type || qmi_disabled_) {
+  if (tx_queue_.empty() || pending_response_type_ || qmi_disabled_) {
     return;
   }
 
@@ -402,7 +402,7 @@ bool ModemQrtr::SendCommand(QmiCmdInterface* qmi_command,
     LOG(ERROR) << "ModemQrtr socket is invalid!";
     return false;
   }
-  if (pending_response_type) {
+  if (pending_response_type_) {
     LOG(ERROR) << "QRTR tried to send buffer while awaiting a qmi response";
     return false;
   }
@@ -451,11 +451,11 @@ bool ModemQrtr::SendCommand(QmiCmdInterface* qmi_command,
 
   switch (qmi_command->service()) {
     case QmiCmdInterface::Service::kDms:
-      pending_response_type = std::make_unique<DmsCmd>(
+      pending_response_type_ = std::make_unique<DmsCmd>(
           static_cast<DmsCmd::QmiType>(qmi_command->qmi_type()));
       break;
     case QmiCmdInterface::Service::kUim:
-      pending_response_type = std::make_unique<UimCmd>(
+      pending_response_type_ = std::make_unique<UimCmd>(
           static_cast<UimCmd::QmiType>(qmi_command->qmi_type()));
       break;
     default:
@@ -533,7 +533,7 @@ void ModemQrtr::ProcessQrtrPacket(uint32_t node, uint32_t port, int size) {
   // If we cannot yet send another request, it is because we are waiting for a
   // response. After the response is received and processed, the next request
   // will be sent.
-  if (!pending_response_type) {
+  if (!pending_response_type_) {
     TransmitFromQueue();
   }
 }
@@ -549,7 +549,7 @@ void ModemQrtr::ProcessQmiPacket(const qrtr_packet& packet) {
   VLOG(2) << "Received QMI message of type: " << qmi_type
           << " from service: " << service;
 
-  if (!pending_response_type) {
+  if (!pending_response_type_) {
     LOG(ERROR) << "Received unexpected QMI response. No pending response.";
     return;
   }
@@ -562,15 +562,15 @@ void ModemQrtr::ProcessQmiPacket(const qrtr_packet& packet) {
 
   qmi_rx_callbacks_[{service, qmi_type}].Run(packet);
 
-  if (pending_response_type->service() != service)
+  if (pending_response_type_->service() != service)
     LOG(ERROR) << "Received unexpected QMI response. Expected service: "
-               << pending_response_type->service()
+               << pending_response_type_->service()
                << " Actual service: " << service;
-  if (pending_response_type->qmi_type() != qmi_type)
+  if (pending_response_type_->qmi_type() != qmi_type)
     LOG(ERROR) << "Received unexpected QMI response. Expected type: "
-               << pending_response_type->qmi_type()
+               << pending_response_type_->qmi_type()
                << " Actual type:" << qmi_type;
-  pending_response_type.reset();
+  pending_response_type_.reset();
 }
 
 void ModemQrtr::ReceiveQmiGetSlots(const qrtr_packet& packet) {

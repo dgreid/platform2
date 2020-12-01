@@ -223,7 +223,7 @@ class ModemQrtr : public lpa::card::EuiccCard, public ModemControlInterface {
 
   // Indicates that a qmi message has been sent and that a response is expected
   // Set for all known message types except QMI_RESET
-  std::unique_ptr<QmiCmdInterface> pending_response_type;
+  std::unique_ptr<QmiCmdInterface> pending_response_type_;
 
   bool extended_apdu_supported_;
   uint16_t current_transaction_id_;
