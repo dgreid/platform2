@@ -169,7 +169,14 @@ void SensorServiceImpl::OnDeviceAdded(int iio_device_id) {
 
   // Reload to check if there are new devices available.
   context_->Reload();
-  SetDeviceTypes();
+  auto device = context_->GetDeviceById(iio_device_id);
+  if (!device) {
+    LOG(ERROR) << "Failed to load device with id: " << iio_device_id;
+    return;
+  }
+
+  iio_device_permission_trials_[iio_device_id] = 0;
+  AddDevice(device);
 }
 
 SensorServiceImpl::SensorServiceImpl(
@@ -181,17 +188,13 @@ SensorServiceImpl::SensorServiceImpl(
       context_(std::move(context)),
       udev_watcher_(UdevWatcher::Create(this, std::move(udev))),
       sensor_device_(std::move(sensor_device)) {
+  DCHECK(ipc_task_runner_->RunsTasksInCurrentSequence());
+
   if (!sensor_device_)
     LOGF(ERROR) << "Failed to get SensorDevice";
 
   if (!udev_watcher_.get())
     LOGF(ERROR) << "Late-present sensors won't be tracked.";
-
-  SetDeviceTypes();
-}
-
-void SensorServiceImpl::SetDeviceTypes() {
-  DCHECK(ipc_task_runner_->RunsTasksInCurrentSequence());
 
   for (auto device : context_->GetAllDevices()) {
     if (device_types_map_.find(device->GetId()) != device_types_map_.end())
@@ -204,7 +207,7 @@ void SensorServiceImpl::SetDeviceTypes() {
 void SensorServiceImpl::AddDevice(libmems::IioDevice* device) {
   DCHECK(ipc_task_runner_->RunsTasksInCurrentSequence());
 
-  int32_t id = device->GetId();
+  const int32_t id = device->GetId();
   if (!device->DisableBuffer()) {
     if (++iio_device_permission_trials_[id] >=
         kNumFailedPermTrialsBeforeGivingUp) {
