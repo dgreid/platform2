@@ -4,8 +4,8 @@
 
 typecd is a system daemon for tracking the state of various USB Type C ports and connected
 peripherals on a Chromebook. It interfaces with the Linux Type C connector class framework
-to obtain notifications about Type C events, and to pull updated information about port and
-port-partner state.
+to obtain notifications about Type C events, and to pull updated information about ports and
+port-partners state.
 
 ## CLASS ORGANIZATION
 
@@ -29,7 +29,7 @@ The general structure of the classes is best illustrated by a few diagrams:
 All communication and event notification between the Linux Kernel Type C connector class framework
 and typecd occurs through the udev mechanism. This class watches for any events of the `typec` subsystem.
 Other classes (in this case, `PortManager`) can register `Observer`s with `UdevMonitor`. When any notification
-occurs, `UdevMonitor` calls the relevant function callback from the registered observers.
+occurs, `UdevMonitor` calls the relevant function callback from the registered `Observer`s.
 
 This class has basic parsing to determine which `Observer` should be called (is this a port/partner/cable notification?
 is it add/remove/change?)
@@ -65,10 +65,10 @@ A `Port` can be detailed as follows:
                       Port
                        |
                        |
-        ----------------------------------
-        |                                 |
-        |                                 |
-  (sysfs path info)                    Partner
+        -----------------------------------------------------------
+        |                                 |                        |
+        |                                 |                        |
+  (sysfs path info)                    Partner                   Cable
 ```
 
 ##### Partner
@@ -91,3 +91,32 @@ to the index ascribed to it by the kernel.
 ```
 
 There are getters and setters to access the PD identity information (for example, `{Get,Set}ProductVDO()`).
+There are also functions to retrieve information associated with partner altmodes, like getting a pointer to an altmode (`GetAltMode()`).
+
+##### Cable
+
+This class represents a cable that connects a `Port` to a `Partner`. There can only be 1 cable for each `Port`. Each `Cable` has
+a sysfs path associated with it of the form `/sys/class/typec/portX-cable` where the PD identity data is exposed by the kernel.
+
+This class also stores a list of Alternate Modes which are supported by the cable. Each Alternate mode is given an index according
+to the index ascribed to it by the kernel. At present only SOP' cable plug alt modes are supported.
+Even though each cable plug (i.e SOP' and SOP'') has its own device and sysfs path (of the form `/sys/class/typec/portX-plug.{0|1}`),
+since the Chrome OS Embedded Controller (EC) only enumerates SOP' alt modes, we don't create a separate class and instead just list
+the Alternate Modes of SOP' as belonging to the associated `Cable`.
+
+When `UdevMonitor` receives an `add` event for a SOP' plug device, the `Cable` code searches through the corresponding sysfs file and adds all
+the Alternate Modes associated with that file. We do this because the Type C connector class doesn't generate udev events for individual
+SOP' cable plug alternate mode additions. TODO(b/174703000): Investigate why this is happening and fix it in the kernel.
+
+```
+                     Cable
+                       |
+                       |
+        ------------------------------------------------------------------------------------
+        |                        |                    |                |                    |
+        |                        |                    |                |                    |
+  (sysfs path info)      PD Identity info        SOP' AltMode0    SOP' AltMode1  ...   SOP' AltModeN
+```
+
+There are getters and setters to access the PD identity information (for example, `{Get,Set}ProductVDO()`).
+There are also functions to retrieve information associated with partner altmodes, like getting a pointer to an altmode (`GetAltMode()`).
