@@ -151,6 +151,12 @@ void ShillClient::OnServicePropertyChange(const std::string& property_name,
     return;
   }
 
+  if (default_ipconfig_proxy_ &&
+      default_ipconfig_proxy_->GetObjectPath() == ipconfig_path) {
+    // ipconfig path didn't change. Don't need to replace the proxy
+    return;
+  }
+
   std::unique_ptr<IPConfigProxy> ipconfig_proxy{
       new IPConfigProxy(bus_, ipconfig_path)};
   brillo::VariantDictionary properties;
