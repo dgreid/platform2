@@ -186,14 +186,14 @@ mkdir -p "${POWER_OVERRIDE_DIR}"
 chmod 1777 "${POWER_OVERRIDE_DIR}"
 
 # Create a directory where we can keep persistent references to namespaces.
-mkdir /run/namespaces
+mkdir -p /run/namespaces
 mount --bind /run/namespaces /run/namespaces
 mount --make-private /run/namespaces
 # Create a file where we can bind-mount the Chrome mount namespace.
 touch /run/namespaces/mnt_chrome
 
 # Create a directory for mount-encrypted related logs and metrics.
-mkdir /run/mount_encrypted
+mkdir -p /run/mount_encrypted
 
 # Prepare to mount stateful partition
 ROOT_DEV="$(rootdev -s)"
@@ -490,6 +490,12 @@ force_clean_file_attrs /mnt/stateful_partition/unencrypted
 # Checks and updates stateful partition.
 dev_update_stateful_partition
 
+# Apply /var and /home specific tmpfiles.d configurations.
+/bin/systemd-tmpfiles --create --remove --boot \
+  --prefix /home \
+  --prefix /var \
+  --prefix /mnt/stateful_partition || :
+
 # Make sure unencrypted stateful partition has the needed common directories.
 # Any non-common directories should be created in the device implementation of
 # "mount_var_and_home_chronos".
@@ -606,14 +612,14 @@ remember_mount /var/lock
 
 # Create daemon store folders.
 # See https://chromium.googlesource.com/chromiumos/docs/+/master/sandboxing.md#securely-mounting-cryptohome-daemon-store-folders.
-mkdir -m 0755 /run/daemon-store
+mkdir -p -m 0755 /run/daemon-store
 for etc_daemon_store in /etc/daemon-store/*; do
   # If /etc/daemon-store is empty, $etc_daemon_store is /etc/daemon-store/*.
   # This if statement filters that out.
   if [ -d "$etc_daemon_store" ]; then
     daemon_name="${etc_daemon_store##*/}"
     run_daemon_store="/run/daemon-store/${daemon_name}"
-    mkdir -m 0755 "${run_daemon_store}"
+    mkdir -p -m 0755 "${run_daemon_store}"
     mount -o bind --make-shared "${run_daemon_store}" "${run_daemon_store}"
   fi
 done
@@ -675,6 +681,7 @@ chmod 0755 /var/cache /var/db /var/spool /var/lib /var/lib/misc
 
 # "--make-shared" to let ARC container access mount points under /media.
 mount --make-shared -n -t tmpfs -o nodev,noexec,nosuid media /media
+/bin/systemd-tmpfiles --create --remove --boot --prefix /media || :
 
 # Restore file contexts for /var.
 # TODO(fqj): use type_transition to correctly label directories at creation so
