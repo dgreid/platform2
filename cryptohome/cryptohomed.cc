@@ -115,28 +115,24 @@ int main(int argc, char** argv) {
   if (use_new_dbus_interface) {
     // Note that there's an AtExitManager in the constructor of
     // UserDataAuthDaemon
-    // TODO(b/171533643): Fix the AutomaticCleanup test and no longer leak this
-    // object.
-    cryptohome::UserDataAuthDaemon* user_data_auth_daemon =
-        new cryptohome::UserDataAuthDaemon();
+    cryptohome::UserDataAuthDaemon user_data_auth_daemon;
 
     // Set options on whether we are going to use legacy mount. See comments on
     // Mount::MountLegacyHome() for more information.
-    user_data_auth_daemon->GetUserDataAuth()->set_legacy_mount(!nolegacymount);
-    user_data_auth_daemon->GetUserDataAuth()->set_bind_mount_downloads(
+    user_data_auth_daemon.GetUserDataAuth()->set_legacy_mount(!nolegacymount);
+    user_data_auth_daemon.GetUserDataAuth()->set_bind_mount_downloads(
         !nodownloadsbind);
 
     // Set options on whether we are going to use ext4 directory encryption or
     // eCryptfs.
-    user_data_auth_daemon->GetUserDataAuth()->set_force_ecryptfs(
-        !direncryption);
+    user_data_auth_daemon.GetUserDataAuth()->set_force_ecryptfs(!direncryption);
 
     // Set automatic cleanup thresholds.
-    user_data_auth_daemon->GetUserDataAuth()->set_cleanup_threshold(
+    user_data_auth_daemon.GetUserDataAuth()->set_cleanup_threshold(
         cleanup_threshold);
-    user_data_auth_daemon->GetUserDataAuth()->set_aggressive_cleanup_threshold(
+    user_data_auth_daemon.GetUserDataAuth()->set_aggressive_cleanup_threshold(
         aggressive_cleanup_threshold);
-    user_data_auth_daemon->GetUserDataAuth()->set_target_free_space(
+    user_data_auth_daemon.GetUserDataAuth()->set_target_free_space(
         target_free_space);
 
     // Note the startup sequence is as following:
@@ -150,7 +146,7 @@ int main(int argc, char** argv) {
     // AsynchronousSignalHandler.
 
     // Start UserDataAuth daemon if the option is selected
-    user_data_auth_daemon->Run();
+    user_data_auth_daemon.Run();
   } else {
     // Start the old interface if nothing is selected
 
