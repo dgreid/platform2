@@ -110,6 +110,16 @@ TEST_F(AccelerometerTest, FrequencyReset) {
 }
 #endif  // USE_IIOSERVICE
 
+TEST_F(AccelerometerTest, CheckClock) {
+  SetSingleSensor(kBaseSensorLocation);
+  ConfigureVpd({{"in_accel_x_base_calibbias", "100"}});
+
+  EXPECT_TRUE(GetConfiguration()->Configure());
+  auto attr_opt = mock_device_->ReadStringAttribute("current_timestamp_clock");
+  EXPECT_TRUE(attr_opt.has_value());
+  EXPECT_EQ(attr_opt.value(), "boottime");
+}
+
 TEST_F(AccelerometerTest, MissingVpd) {
   SetSingleSensor(kBaseSensorLocation);
   ConfigureVpd({{"in_accel_x_base_calibbias", "100"}});

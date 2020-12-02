@@ -121,6 +121,9 @@ bool Configuration::Configure() {
     sensor_->WriteDoubleAttribute(libmems::kSamplingFrequencyAttr, 0.0);
 #endif  // USE_IIOSERVICE
 
+  // Ignores the error as it may fail on kernel 4.4.
+  sensor_->WriteStringAttribute("current_timestamp_clock", "boottime");
+
   switch (kind_) {
     case SensorKind::ACCELEROMETER:
       return ConfigAccelerometer();
