@@ -466,9 +466,10 @@ class Cellular : public Device,
   void OnConnectReply(const Error& error);
   void OnDisconnectReply(const Error& error);
 
-  // DBUS accessors to read/modify the allow roaming property
-  bool GetAllowRoaming(Error* /*error*/) { return allow_roaming_; }
+  // DBus accessors
+  bool GetAllowRoaming(Error* /*error*/);
   bool SetAllowRoaming(const bool& value, Error* error);
+  KeyValueStore GetSimLockStatus(Error* error);
 
   // When shill terminates or ChromeOS suspends, this function is called to
   // disconnect from the cellular network.

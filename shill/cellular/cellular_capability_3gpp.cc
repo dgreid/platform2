@@ -203,8 +203,6 @@ CellularCapability3gpp::CellularCapability3gpp(Cellular* cellular,
       weak_ptr_factory_(this) {
   SLOG(this, 2) << "Cellular capability constructed: 3GPP";
   mobile_operator_info_->Init();
-  HelpRegisterConstDerivedKeyValueStore(
-      kSIMLockStatusProperty, &CellularCapability3gpp::SimLockStatusToProperty);
 }
 
 CellularCapability3gpp::~CellularCapability3gpp() = default;
@@ -229,15 +227,6 @@ KeyValueStore CellularCapability3gpp::SimLockStatusToProperty(
   status.Set<int32_t>(kSIMLockRetriesLeftProperty,
                       sim_lock_status_.retries_left);
   return status;
-}
-
-void CellularCapability3gpp::HelpRegisterConstDerivedKeyValueStore(
-    const string& name,
-    KeyValueStore (CellularCapability3gpp::*get)(Error* error)) {
-  cellular()->mutable_store()->RegisterDerivedKeyValueStore(
-      name, KeyValueStoreAccessor(
-                new CustomAccessor<CellularCapability3gpp, KeyValueStore>(
-                    this, get, nullptr)));
 }
 
 void CellularCapability3gpp::InitProxies() {

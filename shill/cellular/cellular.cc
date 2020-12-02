@@ -1121,6 +1121,10 @@ bool Cellular::IsRoamingAllowedOrRequired() const {
   return allow_roaming_ || provider_requires_roaming_;
 }
 
+bool Cellular::GetAllowRoaming(Error* /*error*/) {
+  return allow_roaming_;
+}
+
 bool Cellular::SetAllowRoaming(const bool& value, Error* error) {
   SLOG(this, 2) << __func__ << "(" << allow_roaming_ << "->" << value << ")";
   if (allow_roaming_ == value) {
@@ -1146,6 +1150,15 @@ bool Cellular::SetAllowRoaming(const bool& value, Error* error) {
   }
   adaptor()->EmitBoolChanged(kCellularAllowRoamingProperty, value);
   return true;
+}
+
+KeyValueStore Cellular::GetSimLockStatus(Error* error) {
+  if (!capability_) {
+    // modemmanager might be inhibited or restarting.
+    LOG(ERROR) << __func__ << " called with null capability.";
+    return KeyValueStore();
+  }
+  return capability_->SimLockStatusToProperty(error);
 }
 
 void Cellular::StartTermination() {
@@ -1383,6 +1396,11 @@ void Cellular::RegisterProperties() {
   HelpRegisterDerivedBool(kCellularAllowRoamingProperty,
                           &Cellular::GetAllowRoaming,
                           &Cellular::SetAllowRoaming);
+
+  store->RegisterDerivedKeyValueStore(
+      kSIMLockStatusProperty,
+      KeyValueStoreAccessor(new CustomAccessor<Cellular, KeyValueStore>(
+          this, &Cellular::GetSimLockStatus, /*error=*/nullptr)));
 }
 
 void Cellular::UpdateModemProperties(const RpcIdentifier& dbus_path,

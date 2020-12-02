@@ -117,6 +117,7 @@ class CellularCapability3gpp : public CellularCapability {
                  const std::string& new_pin,
                  Error* error,
                  const ResultCallback& callback) override;
+  KeyValueStore SimLockStatusToProperty(Error* error) override;
 
   virtual void GetProperties();
 
@@ -260,15 +261,9 @@ class CellularCapability3gpp : public CellularCapability {
 
   Stringmap ParseScanResult(const ScanResult& result);
 
-  KeyValueStore SimLockStatusToProperty(Error* error);
-
   void FillConnectPropertyMap(KeyValueStore* properties);
 
   void FillInitialEpsBearerPropertyMap(KeyValueStore* properties);
-
-  void HelpRegisterConstDerivedKeyValueStore(
-      const std::string& name,
-      KeyValueStore (CellularCapability3gpp::*get)(Error* error));
 
   // Returns true if a connect error should be retried.  This function
   // abstracts modem specific behavior for modems which do a lousy job

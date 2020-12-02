@@ -194,7 +194,7 @@ class CellularCapability {
   GetProfiles() const = 0;
 
   // -------------------------------------------------------------------------
-  // SIM PIN management
+  // SIM lock management
   // -------------------------------------------------------------------------
 
   virtual void RequirePin(const std::string& pin,
@@ -215,6 +215,10 @@ class CellularCapability {
                          const std::string& new_pin,
                          Error* error,
                          const ResultCallback& callback) = 0;
+
+  // Returns a KeyValueStore with kSIMLock* properties set if available, or
+  // an empty KeyValueStore if not (e.g. for CDMA).
+  virtual KeyValueStore SimLockStatusToProperty(Error* error) = 0;
 
   // -------------------------------------------------------------------------
 
