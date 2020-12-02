@@ -85,15 +85,6 @@ void VPNService::OnConnect(Error* error) {
       // Flow continues in OnLinkReady().
       break;
     case VPNDriver::kArcBridge:
-      device_ = manager()->vpn_provider()->arc_device();
-      if (!device_) {
-        Error::PopulateAndLog(FROM_HERE, error, Error::kNotFound,
-                              "arc_device is not found");
-        SetFailure(Service::kFailureInternal);
-        SetErrorDetails(Service::kErrorDetailsNone);
-        return;
-      }
-      FALLTHROUGH;
     case VPNDriver::kPPP:
       driver_->ConnectAsync(base::BindRepeating(&VPNService::OnDriverEvent,
                                                 weak_factory_.GetWeakPtr()));
@@ -116,8 +107,7 @@ void VPNService::OnLinkReady(const string& link_name, int interface_index) {
   switch (driver_->GetIfType()) {
     case VPNDriver::kTunnel:
       CHECK(!device_);
-      device_ = new VirtualDevice(manager(), link_name, interface_index,
-                                  Technology::kVPN);
+      CreateDevice(link_name, interface_index);
       driver_->set_interface_name(link_name);
       driver_->ConnectAsync(base::BindRepeating(&VPNService::OnDriverEvent,
                                                 weak_factory_.GetWeakPtr()));
@@ -125,9 +115,8 @@ void VPNService::OnLinkReady(const string& link_name, int interface_index) {
       break;
     case VPNDriver::kPPP:
       // Only get called when driver notification arrives earlier than RTNL
-      // notification - continues flow from
-      // OnDriverEvent(kEventConnectionSuccess).
-      device_ = new PPPDevice(manager(), link_name, interface_index);
+      // notification - continues from OnDriverEvent(kEventConnectionSuccess).
+      CreateDevice(link_name, interface_index);
       SetState(ConnectState::kStateConfiguring);
       ConfigureDevice();
       SetState(ConnectState::kStateConnected);
@@ -144,9 +133,8 @@ void VPNService::OnDriverEvent(DriverEvent event,
   switch (event) {
     case kEventConnectionSuccess:
       if (driver_->GetIfType() == VPNDriver::kPPP) {
-        string link_name = driver_->interface_name();
-        int interface_index = manager()->device_info()->GetIndex(link_name);
-        if (interface_index < 0) {
+        std::string link_name = driver_->interface_name();
+        if (!CreateDevice(link_name)) {
           // To handle the potential race when the RTNL notification about the
           // new PPP device has not been received yet. Register a callback where
           // the remaining steps can be continued.
@@ -155,8 +143,16 @@ void VPNService::OnDriverEvent(DriverEvent event,
                                         weak_factory_.GetWeakPtr()));
           return;
         }
-        device_ = new PPPDevice(manager(), link_name, interface_index);
+      } else if (driver_->GetIfType() == VPNDriver::kArcBridge) {
+        if (!CreateDevice(VPNProvider::kArcBridgeIfName)) {
+          LOG(ERROR) << "ARC bridge is missing";
+          SetFailure(Service::kFailureInternal);
+          SetErrorDetails(Service::kErrorDetailsNone);
+          return;
+        }
+        device_->SetFixedIpParams(true);
       }
+
       SetState(ConnectState::kStateConfiguring);
       ConfigureDevice();
       SetState(ConnectState::kStateConnected);
@@ -175,6 +171,17 @@ void VPNService::OnDriverEvent(DriverEvent event,
       // Await further OnDriverEvent(kEventConnectionSuccess).
       break;
   }
+}
+
+bool VPNService::CreateDevice(const std::string& if_name, int if_index) {
+  if (if_index < 0) {
+    if_index = manager()->device_info()->GetIndex(if_name);
+  }
+  if (if_index < 0) {
+    return false;
+  }
+  device_ = new VirtualDevice(manager(), if_name, if_index, Technology::kVPN);
+  return device_ != nullptr;
 }
 
 void VPNService::CleanupDevice() {

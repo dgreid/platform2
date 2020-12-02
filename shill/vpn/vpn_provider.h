@@ -25,6 +25,9 @@ class Manager;
 
 class VPNProvider : public ProviderInterface {
  public:
+  // Interface name of the ARC bridge.
+  static const char kArcBridgeIfName[];
+
   explicit VPNProvider(Manager* manager);
   VPNProvider(const VPNProvider&) = delete;
   VPNProvider& operator=(const VPNProvider&) = delete;
@@ -46,13 +49,6 @@ class VPNProvider : public ProviderInterface {
   void Start() override;
   void Stop() override;
 
-  // Offers an unclaimed interface to VPN services.  Returns true if this
-  // device has been accepted by a service.
-  // TODO(crbug.com/1026648) Remove this and VPNDriver::ClaimInterface.
-  virtual bool OnDeviceInfoAvailable(const std::string& link_name,
-                                     int interface_index,
-                                     Technology technology);
-
   // Clean up a VPN services that has been unloaded and will be deregistered.
   // This removes the VPN provider's reference to this service in its
   // services_ vector.
@@ -63,8 +59,6 @@ class VPNProvider : public ProviderInterface {
 
   // Disconnect any other active VPN services.
   virtual void DisconnectAll();
-
-  VirtualDeviceRefPtr arc_device() const { return arc_device_; }
 
  private:
   friend class ArcVpnDriverTest;
@@ -105,7 +99,6 @@ class VPNProvider : public ProviderInterface {
 
   Manager* manager_;
   std::vector<VPNServiceRefPtr> services_;
-  VirtualDeviceRefPtr arc_device_;
 };
 
 }  // namespace shill

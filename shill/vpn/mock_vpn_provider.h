@@ -24,10 +24,6 @@ class MockVPNProvider : public VPNProvider {
 
   MOCK_METHOD(void, Start, (), (override));
   MOCK_METHOD(void, Stop, (), (override));
-  MOCK_METHOD(bool,
-              OnDeviceInfoAvailable,
-              (const std::string&, int, Technology),
-              (override));
   MOCK_METHOD(bool, HasActiveService, (), (const, override));
 };
 

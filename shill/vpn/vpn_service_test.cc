@@ -68,14 +68,11 @@ class VPNServiceTest : public testing::Test {
     manager_.set_mock_device_info(&device_info_);
     manager_.vpn_provider_ = std::make_unique<MockVPNProvider>();
     manager_.vpn_provider_->manager_ = &manager_;
-    manager_.vpn_provider_->arc_device_ = new MockVirtualDevice(
-        &manager_, kInterfaceName, kInterfaceIndex, Technology::kVPN);
     manager_.user_traffic_uids_.push_back(1000);
     manager_.UpdateProviderMapping();
   }
 
   void TearDown() override {
-    manager_.vpn_provider_->arc_device_ = nullptr;
     manager_.vpn_provider_.reset();
     EXPECT_CALL(device_info_, FlushAddresses(0));
   }
@@ -461,13 +458,13 @@ TEST_F(VPNServiceTest, ArcConnectFlow) {
 
   EXPECT_CALL(*driver_, ConnectAsync(_));
   service_->Connect(&error, "in test");
-  EXPECT_TRUE(service_->device_);
   EXPECT_EQ(Service::kStateAssociating, service_->state());
 
   EXPECT_CALL(*driver_, GetIPProperties())
       .WillOnce(Return(IPConfig::Properties()));
   service_->OnDriverEvent(VPNService::kEventConnectionSuccess,
                           Service::kFailureNone, Service::kErrorDetailsNone);
+  EXPECT_TRUE(service_->device_);
   EXPECT_EQ(Service::kStateOnline, service_->state());
 
   EXPECT_CALL(*driver_, Disconnect());

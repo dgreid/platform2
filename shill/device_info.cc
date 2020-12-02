@@ -155,9 +155,6 @@ constexpr char kKindRmnet[] = "rmnet";
 // Modem drivers that we support.
 const char* const kModemDrivers[] = {"cdc_mbim", "qmi_wwan"};
 
-// Name of the ARC bridge.
-constexpr char kArcBridge[] = "arcbr0";
-
 // Path to the tun device.
 constexpr char kTunDeviceName[] = "/dev/net/tun";
 
@@ -604,11 +601,6 @@ DeviceRefPtr DeviceInfo::CreateDevice(const string& link_name,
     case Technology::kArcBridge:
       // Shill doesn't touch the IP configuration for the ARC bridge.
       flush = false;
-      // Notify VPNProvider of the interface's presence.
-      // TODO(crbug/1026648): After cleanup of VirtualDevice ownership
-      // vpn_provider()->OnDeviceInfoAvailable should no longer be needed.
-      manager_->vpn_provider()->OnDeviceInfoAvailable(
-          link_name, interface_index, technology);
       break;
     case Technology::kPPP:
     case Technology::kTunnel:
@@ -748,7 +740,7 @@ void DeviceInfo::AddLinkMsgHandler(const RTNLMessage& msg) {
     indices_[link_name] = dev_index;
 
     if (!link_name.empty()) {
-      if (link_name == kArcBridge) {
+      if (link_name == VPNProvider::kArcBridgeIfName) {
         technology = Technology::kArcBridge;
       } else if (IsDeviceBlocked(link_name)) {
         technology = Technology::kBlocked;

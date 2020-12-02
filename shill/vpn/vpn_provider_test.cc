@@ -170,14 +170,6 @@ TEST_F(VPNProviderTest, GetService) {
   }
 }
 
-TEST_F(VPNProviderTest, ArcDeviceFound) {
-  const string kInterfaceName("arcbr0");
-  const int kInterfaceIndex = 1;
-
-  EXPECT_TRUE(provider_.OnDeviceInfoAvailable(kInterfaceName, kInterfaceIndex,
-                                              Technology::kArcBridge));
-}
-
 TEST_F(VPNProviderTest, RemoveService) {
   scoped_refptr<MockVPNService> service0(
       new MockVPNService(&manager_, nullptr));

@@ -99,6 +99,10 @@ class VPNService : public Service, public DefaultServiceObserver {
 
   ConnectionConstRefPtr GetUnderlyingConnection() const;
 
+  // Create a VPN VirtualDevice as device_. If if_index is unspecified, then
+  // query the index from DeviceInfo first and return false if the link is not
+  // available.
+  bool CreateDevice(const std::string& if_name, int if_index = -1);
   void ConfigureDevice();
   void CleanupDevice();
 

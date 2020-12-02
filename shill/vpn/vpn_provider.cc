@@ -113,6 +113,8 @@ bool GetServiceParametersFromStorage(const StoreInterface* storage,
 
 }  // namespace
 
+const char VPNProvider::kArcBridgeIfName[] = "arcbr0";
+
 VPNProvider::VPNProvider(Manager* manager) : manager_(manager) {}
 
 VPNProvider::~VPNProvider() = default;
@@ -162,18 +164,6 @@ ServiceRefPtr VPNProvider::FindSimilarService(const KeyValueStore& args,
   }
 
   return service;
-}
-
-bool VPNProvider::OnDeviceInfoAvailable(const string& link_name,
-                                        int interface_index,
-                                        Technology technology) {
-  if (technology == Technology::kArcBridge) {
-    arc_device_ = base::MakeRefCounted<VirtualDevice>(
-        manager_, link_name, interface_index, Technology::kArcBridge);
-    arc_device_->SetFixedIpParams(true);
-    return true;
-  }
-  return false;
 }
 
 void VPNProvider::RemoveService(VPNServiceRefPtr service) {
