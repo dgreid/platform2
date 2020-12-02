@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "screenshot/capture.h"
+#include "screen-capture-utils/capture.h"
 
 #include <sys/mman.h>
 
@@ -13,7 +13,7 @@
 #include <xf86drm.h>
 #include <xf86drmMode.h>
 
-#include "screenshot/crtc.h"
+#include "screen-capture-utils/crtc.h"
 
 namespace screenshot {
 

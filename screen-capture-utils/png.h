@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SCREENSHOT_PNG_H_
-#define SCREENSHOT_PNG_H_
+#ifndef SCREEN_CAPTURE_UTILS_PNG_H_
+#define SCREEN_CAPTURE_UTILS_PNG_H_
 
 #include <stdint.h>
 
@@ -18,4 +18,4 @@ void SaveAsPng(const char* path,
 
 }  // namespace screenshot
 
-#endif  // SCREENSHOT_PNG_H_
+#endif  // SCREEN_CAPTURE_UTILS_PNG_H_

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "screenshot/egl_capture.h"
+#include "screen-capture-utils/egl_capture.h"
 
 #include <sys/mman.h>
 
@@ -22,7 +22,7 @@
 #include <vector>
 
 #include "base/strings/string_split.h"
-#include "screenshot/crtc.h"
+#include "screen-capture-utils/crtc.h"
 
 namespace screenshot {
 namespace {

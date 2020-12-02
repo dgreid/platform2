@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SCREENSHOT_PTR_UTIL_H_
-#define SCREENSHOT_PTR_UTIL_H_
+#ifndef SCREEN_CAPTURE_UTILS_PTR_UTIL_H_
+#define SCREEN_CAPTURE_UTILS_PTR_UTIL_H_
 
 #include <gbm.h>
 #include <xf86drm.h>
@@ -84,4 +84,4 @@ using ScopedGbmBoPtr = std::unique_ptr<gbm_bo, GbmBoDeleter>;
 
 }  // namespace screenshot
 
-#endif  // SCREENSHOT_PTR_UTIL_H_
+#endif  // SCREEN_CAPTURE_UTILS_PTR_UTIL_H_

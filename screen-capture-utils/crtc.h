@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SCREENSHOT_CRTC_H_
-#define SCREENSHOT_CRTC_H_
+#ifndef SCREEN_CAPTURE_UTILS_CRTC_H_
+#define SCREEN_CAPTURE_UTILS_CRTC_H_
 
 #include <memory>
 #include <utility>
@@ -14,7 +14,7 @@
 #include <xf86drm.h>
 #include <xf86drmMode.h>
 
-#include "screenshot/ptr_util.h"
+#include "screen-capture-utils/ptr_util.h"
 
 namespace screenshot {
 
@@ -82,4 +82,4 @@ class CrtcFinder {
 
 }  // namespace screenshot
 
-#endif  // SCREENSHOT_CRTC_H_
+#endif  // SCREEN_CAPTURE_UTILS_CRTC_H_

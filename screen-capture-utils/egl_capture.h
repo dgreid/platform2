@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SCREENSHOT_EGL_CAPTURE_H_
-#define SCREENSHOT_EGL_CAPTURE_H_
+#ifndef SCREEN_CAPTURE_UTILS_EGL_CAPTURE_H_
+#define SCREEN_CAPTURE_UTILS_EGL_CAPTURE_H_
 
 #include <stdint.h>
 
@@ -13,7 +13,7 @@
 #include <base/macros.h>
 #include <gbm.h>
 
-#include "screenshot/ptr_util.h"
+#include "screen-capture-utils/ptr_util.h"
 
 namespace screenshot {
 
@@ -51,4 +51,4 @@ std::unique_ptr<EglPixelBuf> EglCapture(
 
 }  // namespace screenshot
 
-#endif  // SCREENSHOT_EGL_CAPTURE_H_
+#endif  // SCREEN_CAPTURE_UTILS_EGL_CAPTURE_H_

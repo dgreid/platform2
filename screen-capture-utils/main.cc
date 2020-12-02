@@ -11,10 +11,10 @@
 #include <base/command_line.h>
 #include <base/strings/string_number_conversions.h>
 
-#include "screenshot/capture.h"
-#include "screenshot/crtc.h"
-#include "screenshot/egl_capture.h"
-#include "screenshot/png.h"
+#include "screen-capture-utils/capture.h"
+#include "screen-capture-utils/crtc.h"
+#include "screen-capture-utils/egl_capture.h"
+#include "screen-capture-utils/png.h"
 
 namespace screenshot {
 namespace {
