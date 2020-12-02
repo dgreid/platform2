@@ -100,7 +100,7 @@ bool LoadConfigFromString(const std::string& config_json,
   auto result = base::JSONReader::ReadAndReturnValueWithError(
       config_json, base::JSON_ALLOW_TRAILING_COMMAS);
 
-  if (result.error_code != base::JSONReader::JSON_NO_ERROR) {
+  if (!result.value) {
     brillo::Error::AddToPrintf(error, FROM_HERE, brillo::errors::json::kDomain,
                                brillo::errors::json::kParseError,
                                "Error parsing server configuration: %s",
