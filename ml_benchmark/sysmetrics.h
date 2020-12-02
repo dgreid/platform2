@@ -5,15 +5,17 @@
 #ifndef ML_BENCHMARK_SYSMETRICS_H_
 #define ML_BENCHMARK_SYSMETRICS_H_
 
+#include <cstdint>
+
 namespace ml_benchmark {
 
 // Reads the 'VmSize:' value from /proc/self/status
 // returns:            The virtual memory size of the current process in bytes.
-int GetVMSizeBytes();
+int64_t GetVMSizeBytes();
 
 // Reads the 'VmPeak:' value from /proc/self/status
 // returns:            The highest virtual memory size of the current process.
-int GetVMPeakBytes();
+int64_t GetVMPeakBytes();
 
 }  // namespace ml_benchmark
 

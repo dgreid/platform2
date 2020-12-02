@@ -14,10 +14,10 @@
 namespace {
 static const char* kProcFile = "/proc/self/status";
 
-int GetStatusField(const std::string field_name) {
+int64_t GetStatusField(const std::string field_name) {
   const std::string field_matcher = field_name + ":\\s+(\\d+)\\s+kB";
   std::string status;
-  int value;
+  int64_t value;
 
   CHECK(base::ReadFileToString(base::FilePath(kProcFile), &status))
       << "Could not read " << kProcFile;
@@ -32,11 +32,11 @@ int GetStatusField(const std::string field_name) {
 
 namespace ml_benchmark {
 
-int GetVMSizeBytes() {
+int64_t GetVMSizeBytes() {
   return GetStatusField("VmSize") * 1024;
 }
 
-int GetVMPeakBytes() {
+int64_t GetVMPeakBytes() {
   return GetStatusField("VmPeak") * 1024;
 }
 

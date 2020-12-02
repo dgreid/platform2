@@ -25,8 +25,8 @@ using ml_benchmark::SharedLibraryBenchmarkFunctions;
 
 namespace {
 
-void AddMemoryMetrics(const int initial_memsize,
-                      const int final_peaksize,
+void AddMemoryMetrics(const int64_t initial_memsize,
+                      const int64_t final_peaksize,
                       BenchmarkResults* results) {
   auto& initial_mem = *results->add_metrics();
   initial_mem.set_name("initial_vmsize");
@@ -72,7 +72,7 @@ void BenchmarkAndReportResults(
     return;
   }
 
-  const int initial_memsize = ml_benchmark::GetVMSizeBytes();
+  const int64_t initial_memsize = ml_benchmark::GetVMSizeBytes();
 
   LOG(INFO) << "Starting the " << driver_name << " benchmark";
   SharedLibraryBenchmark benchmark(std::move(functions));
@@ -85,7 +85,7 @@ void BenchmarkAndReportResults(
   if (results.status() == chrome::ml_benchmark::OK) {
     LOG(INFO) << driver_name << " finished";
 
-    const int final_peaksize = ml_benchmark::GetVMPeakBytes();
+    const int64_t final_peaksize = ml_benchmark::GetVMPeakBytes();
     AddMemoryMetrics(initial_memsize, final_peaksize, &results);
 
     PrintMetrics(results);
