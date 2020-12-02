@@ -116,6 +116,7 @@ class Service final {
   std::unique_ptr<dbus::Response> ResumeVm(dbus::MethodCall* method_call);
 
   // Handles a request to stop all running VMs.
+  void StopAllVmsImpl();
   std::unique_ptr<dbus::Response> StopAllVms(dbus::MethodCall* method_call);
 
   // Handles a request to get VM info.

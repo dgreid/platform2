@@ -1019,6 +1019,7 @@ void Service::HandleChildExit() {
 void Service::HandleSigterm() {
   LOG(INFO) << "Shutting down due to SIGTERM";
 
+  StopAllVmsImpl();
   base::ThreadTaskRunnerHandle::Get()->PostTask(FROM_HERE, quit_closure_);
 }
 
@@ -1555,32 +1556,72 @@ std::unique_ptr<dbus::Response> Service::StopVm(dbus::MethodCall* method_call) {
   return dbus_response;
 }
 
+// Wrapper to destroy VM in another thread
+class VMDelegate : public base::PlatformThread::Delegate {
+ public:
+  VMDelegate() = default;
+  ~VMDelegate() override = default;
+  VMDelegate& operator=(VMDelegate&& other) = default;
+  explicit VMDelegate(const Service&) = delete;
+  VMDelegate& operator=(const Service&) = delete;
+  explicit VMDelegate(std::unique_ptr<VmInterface> vm) : vm_(std::move(vm)) {}
+  void ThreadMain() override { vm_.reset(); }
+
+ private:
+  std::unique_ptr<VmInterface> vm_;
+};
+
 std::unique_ptr<dbus::Response> Service::StopAllVms(
     dbus::MethodCall* method_call) {
+  StopAllVmsImpl();
+  return nullptr;
+}
+
+void Service::StopAllVmsImpl() {
   DCHECK(sequence_checker_.CalledOnValidSequence());
   LOG(INFO) << "Received StopAllVms request";
 
+  struct ThreadContext {
+    base::PlatformThreadHandle handle;
+    uint32_t cid;
+    VMDelegate delegate;
+  };
+  std::vector<ThreadContext> ctxs(vms_.size());
+
   // Spawn a thread for each VM to shut it down.
+  int i = 0;
   for (auto& iter : vms_) {
+    ThreadContext& ctx = ctxs[i++];
+
     // Copy out cid from the VM object, as we will need it after the VM has been
-    // destructed.
-    auto cid = iter.second->GetInfo().cid;
+    // destroyed.
+    ctx.cid = iter.second->GetInfo().cid;
 
     // Notify that we are about to stop a VM.
-    NotifyVmStopping(iter.first, cid);
+    NotifyVmStopping(iter.first, ctx.cid);
 
-    // Resetting the unique_ptr will call the destructor for that VM,
-    // which will try stopping it normally (and then forcibly) it if
-    // it hasn't stopped yet.
-    iter.second.reset();
+    // The VM will be destructred in the new thread, stopping it normally (and
+    // then forcibly) it if it hasn't stopped yet.
+    //
+    // Would you just take a lambda function? Why do we need the Delegate?...
+    ctx.delegate = VMDelegate(std::move(iter.second));
+    base::PlatformThread::Create(0, &ctx.delegate, &ctx.handle);
+  }
+
+  i = 0;
+  for (auto& iter : vms_) {
+    ThreadContext& ctx = ctxs[i++];
+    base::PlatformThread::Join(ctx.handle);
 
     // Notify that we have stopped a VM.
-    NotifyVmStopped(iter.first, cid);
+    NotifyVmStopped(iter.first, ctx.cid);
   }
 
   vms_.clear();
 
-  return nullptr;
+  if (!ctxs.empty()) {
+    LOG(INFO) << "Stopped all Vms";
+  }
 }
 
 std::unique_ptr<dbus::Response> Service::SuspendVm(
