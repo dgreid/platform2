@@ -220,6 +220,18 @@ message ConnectNamespaceRequest {
   // from Chrome can be routed to this namespace, and traffic originated from
   // this namespace can be routed to these other privilege domains.
   bool allow_user_traffic = 3;
+
+  // This field specifies the routing behavior to use when (1)
+  // |outbound_physical_device| is empty and (2) the system's highest priority
+  // network interface is a VPN. If true, egress traffic will be routed to the
+  // VPN; if false, it will be left on the underlying physical interface.
+  bool route_on_vpn = 4;
+
+  // Specifies how the traffic flowing over the new virtual network should be
+  // accounted, if applicable.
+  // This field is required. The default behavior will be to treat unspecified
+  // and UNKNOWN sources as SYSTEM traffic for accounting purposes.
+  TrafficCounter.Source traffic_source = 5;
 }
 
 // Response to a ConnectNamespaceRequest. If the operation failed then all
