@@ -2,9 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <string>
 #include <utility>
 #include <vector>
 
+#include <base/optional.h>
 #include <base/run_loop.h>
 #include <base/test/bind_test_util.h>
 #include <base/test/task_environment.h>
@@ -91,6 +93,12 @@ class MockNetworkDiagnosticsRoutines final
               HttpsLatency,
               (network_diagnostics_ipc::NetworkDiagnosticsRoutines::
                    HttpsLatencyCallback),
+              (override));
+  MOCK_METHOD(void,
+              VideoConferencing,
+              (const base::Optional<std::string>&,
+               network_diagnostics_ipc::NetworkDiagnosticsRoutines::
+                   VideoConferencingCallback),
               (override));
 
   mojo::PendingRemote<network_diagnostics_ipc::NetworkDiagnosticsRoutines>
