@@ -23,7 +23,6 @@ namespace mount_encrypted {
 namespace {
 
 // TPM2 NVRAM area and related constants.
-const uint32_t kNvramAreaTpm2Index = 0x800005;
 const uint32_t kNvramAreaTpm2Magic = 0x54504D32;
 const uint32_t kNvramAreaTpm2VersionMask = 0x000000FF;
 const uint32_t kNvramAreaTpm2CurrentVersion = 1;
@@ -121,7 +120,7 @@ class Tpm2SystemKeyLoader : public SystemKeyLoader {
 // In case of failure: (NVRAM missing or error)
 //  - *system_key untouched.
 result_code Tpm2SystemKeyLoader::Load(brillo::SecureBlob* system_key) {
-  LOG(INFO) << "Getting key from TPM2 NVRAM index " << kNvramAreaTpm2Index;
+  LOG(INFO) << "Getting key from TPM2 NVRAM index " << kEncStatefulIndex;
 
   if (!tpm_->available()) {
     return RESULT_FAIL_FATAL;
