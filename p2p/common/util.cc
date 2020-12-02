@@ -30,6 +30,11 @@ static bool SyslogFunc(int severity,
                        int line,
                        size_t message_start,
                        const string& str) {
+  static_assert(logging::LOGGING_INFO == 0);
+  static_assert(logging::LOGGING_WARNING == 1);
+  static_assert(logging::LOGGING_ERROR == 2);
+  static_assert(logging::LOGGING_FATAL == 3);
+  static_assert(logging::LOGGING_NUM_SEVERITIES == 4);
   int base_severity_to_syslog_priority[logging::LOGGING_NUM_SEVERITIES] = {
       LOG_INFO,     // logging::LOGGING_INFO
       LOG_WARNING,  // logging::LOGGING_WARNING
