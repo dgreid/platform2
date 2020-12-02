@@ -259,82 +259,9 @@ RAPLInfo::RAPLInfo(std::unique_ptr<std::vector<PowerDomain>> power_domains,
     : power_domains_(std::move(power_domains)), cpu_type_(cpu_type) {}
 
 std::unique_ptr<RAPLInfo> RAPLInfo::Get() {
-  // Path to the powercap driver sysfs interface, if it doesn't exist,
-  // either the kernel is old w/o powercap driver, or it is not configured.
-  constexpr const char kPowercapPath[] = "/sys/class/powercap";
-
-  // Kernel v3.13+ supports powercap, it also requires a proper configuration
-  // enabling it; leave a verbose footprint of the kernel string, and examine
-  // whether or not the system supports the powercap driver.
-  base::FilePath powercap_file_path(kPowercapPath);
-
-  // No RAPL on this system.
-  if (!base::PathExists(powercap_file_path)) {
-    PLOG(ERROR) << "No powercap driver sysfs interface, couldn't find "
-                << powercap_file_path.value();
-
-    return base::WrapUnique(new RAPLInfo(0, RAPLInfo::CpuType::kUnknown));
-  }
-
-  std::unique_ptr<std::vector<PowerDomain>> power_domains =
-      std::make_unique<std::vector<PowerDomain>>();
-
-  std::string domain_name;
-
-  // Probe the power domains and sub-domains.
-  base::FilePath powercap_path(kPowercapPath);
-  base::FileEnumerator dirs(powercap_path, false,
-                            base::FileEnumerator::DIRECTORIES, "intel-rapl:*");
-  for (base::FilePath dir = dirs.Next(); !dir.empty(); dir = dirs.Next()) {
-    base::FilePath domain_file_path = dir.Append("name");
-    base::FilePath energy_file_path = dir.Append("energy_uj");
-    base::FilePath maxeng_file_path = dir.Append("max_energy_range_uj");
-    uint64_t max_energy_uj;
-
-    if (!base::PathExists(domain_file_path)) {
-      PLOG(ERROR) << "Unable to find " << domain_file_path.value();
-      continue;
-    }
-    if (!base::PathExists(energy_file_path)) {
-      PLOG(ERROR) << "Unable to find " << energy_file_path.value();
-      continue;
-    }
-    if (!base::PathExists(maxeng_file_path)) {
-      PLOG(ERROR) << "Unable to find " << maxeng_file_path.value();
-      continue;
-    }
-
-    base::ReadFileToString(domain_file_path, &domain_name);
-    base::TrimWhitespaceASCII(domain_name, base::TRIM_ALL, &domain_name);
-
-    ReadUint64File(maxeng_file_path, &max_energy_uj);
-    power_domains->push_back({energy_file_path, domain_name, max_energy_uj});
-  }
-
-  if (power_domains->empty()) {
-    PLOG(ERROR) << "No power domain found at " << powercap_file_path.value();
-    return base::WrapUnique(new RAPLInfo(0, RAPLInfo::CpuType::kUnknown));
-  }
-
-  // As the enumeration above does not guarantee the order, transform the
-  // paths in lexicographical order, make the collecting data in a style
-  // of domain follows by sub-domain, it can be done by sorting.
-  // e.g., package-0 psys core ... -> package-0 core ... psys
-  std::sort(power_domains->begin(), power_domains->end());
-
-  // Initialize base state for calculating delta later. RAPL works by
-  // checking the delta between energy used to calculate power over time.
-  // So we need to seed the state prior to the initial printout.
-  const base::TimeTicks ticks_before = base::TimeTicks::Now();
-  uint32_t num_domains = power_domains->size();
-  for (int i = 0; i < num_domains; ++i) {
-    ReadUint64File(power_domains->at(i).file_path,
-                   &(power_domains->at(i).energy_before));
-    power_domains->at(i).ticks_before = ticks_before;
-  }
-
-  return base::WrapUnique(
-      new RAPLInfo(std::move(power_domains), RAPLInfo::CpuType::kIntel));
+  // TODO(b/168594119) Restore RAPL once access can be made secure.
+  PLOG(ERROR) << "RAPL info disabled (b/168594119).";
+  return base::WrapUnique(new RAPLInfo(0, RAPLInfo::CpuType::kUnknown));
 }
 
 bool RAPLInfo::GetHeader(std::ostream& header) {
