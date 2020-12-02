@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "sommelier.h"  // NOLINT(build/include_directory)
+#include "sommelier-tracing.h"  // NOLINT(build/include_directory)
 
 #include <assert.h>
 #include <stdlib.h>
@@ -165,6 +166,7 @@ static void sl_shell_surface_configure(void* data,
                                        uint32_t edges,
                                        int32_t width,
                                        int32_t height) {
+  TRACE_EVENT("shell", "sl_shell_surface_configure");
   struct sl_host_shell_surface* host = static_cast<sl_host_shell_surface*>(
       wl_shell_surface_get_user_data(shell_surface));
 

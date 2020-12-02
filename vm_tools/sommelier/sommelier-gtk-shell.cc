@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "sommelier.h"  // NOLINT(build/include_directory)
+#include "sommelier-tracing.h"  // NOLINT(build/include_directory)
 
 #include <assert.h>
 #include <stdlib.h>
@@ -126,6 +127,7 @@ static void sl_destroy_host_gtk_shell(struct wl_resource* resource) {
 static void sl_gtk_shell_callback_done(void* data,
                                        struct wl_callback* callback,
                                        uint32_t serial) {
+  TRACE_EVENT("shell", "sl_gtk_shell_callback_done");
   struct sl_host_gtk_shell* host =
       static_cast<sl_host_gtk_shell*>(wl_callback_get_user_data(callback));
 

@@ -8,10 +8,19 @@
 #if defined(PERFETTO_TRACING)
 #include <perfetto.h>
 
-PERFETTO_DEFINE_CATEGORIES(perfetto::Category("surface").SetDescription(
-    "Events for Wayland surface management"));
+PERFETTO_DEFINE_CATEGORIES(
+    perfetto::Category("surface").SetDescription(
+        "Events for Wayland surface management"),
+    perfetto::Category("display").SetDescription("Events for Wayland display"),
+    perfetto::Category("shell").SetDescription("Events for Wayland shell"),
+    perfetto::Category("shm").SetDescription(
+        "Events for Wayland shared memory"),
+    perfetto::Category("viewport")
+        .SetDescription("Events for Wayland viewport"),
+    perfetto::Category("sync").SetDescription("Events for Wayland sync points"),
+    perfetto::Category("other").SetDescription("Uncategorized Wayland calls."));
 #else
-#define TRACE_EVENT(category, name)
+#define TRACE_EVENT(category, name, ...)
 #endif
 
 void initialize_tracing(bool in_process_backend, bool system_backend);

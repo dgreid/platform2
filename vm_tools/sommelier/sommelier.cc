@@ -237,6 +237,7 @@ struct sl_mmap* sl_mmap_create(int fd,
                                size_t stride1,
                                size_t y_ss0,
                                size_t y_ss1) {
+  TRACE_EVENT("shm", "sl_mmap_create");
   struct sl_mmap* map = static_cast<sl_mmap*>(malloc(sizeof(*map)));
   assert(map);
   map->refcount = 1;
@@ -261,11 +262,13 @@ struct sl_mmap* sl_mmap_create(int fd,
 }
 
 struct sl_mmap* sl_mmap_ref(struct sl_mmap* map) {
+  TRACE_EVENT("shm", "sl_mmap_ref");
   map->refcount++;
   return map;
 }
 
 void sl_mmap_unref(struct sl_mmap* map) {
+  TRACE_EVENT("shm", "sl_mmap_unref");
   if (map->refcount-- == 1) {
     munmap(map->addr, map->size + map->offset[0]);
     if (map->fd != -1)
@@ -275,6 +278,7 @@ void sl_mmap_unref(struct sl_mmap* map) {
 }
 
 struct sl_sync_point* sl_sync_point_create(int fd) {
+  TRACE_EVENT("sync", "sl_sync_point_create");
   struct sl_sync_point* sync_point =
       static_cast<sl_sync_point*>(malloc(sizeof(*sync_point)));
   assert(sync_point);
@@ -285,6 +289,7 @@ struct sl_sync_point* sl_sync_point_create(int fd) {
 }
 
 void sl_sync_point_destroy(struct sl_sync_point* sync_point) {
+  TRACE_EVENT("sync", "sl_sync_point_destroy");
   close(sync_point->fd);
   free(sync_point);
 }
@@ -292,6 +297,7 @@ void sl_sync_point_destroy(struct sl_sync_point* sync_point) {
 static void sl_internal_xdg_shell_ping(void* data,
                                        struct zxdg_shell_v6* xdg_shell,
                                        uint32_t serial) {
+  TRACE_EVENT("shell", "sl_internal_xdg_shell_ping");
   zxdg_shell_v6_pong(xdg_shell, serial);
 }
 
@@ -319,6 +325,8 @@ static void sl_send_configure_notify(struct sl_window* window) {
 }
 
 static void sl_adjust_window_size_for_screen_size(struct sl_window* window) {
+  TRACE_EVENT("surface", "sl_adjust_window_size_for_screen_size", "id",
+              window->id);
   struct sl_context* ctx = window->ctx;
 
   // Clamp size to screen.
@@ -336,6 +344,7 @@ static void sl_adjust_window_position_for_screen_size(
 }
 
 static void sl_configure_window(struct sl_window* window) {
+  TRACE_EVENT("surface", "sl_configure_window", "id", window->id);
   assert(!window->pending_config.serial);
 
   if (window->next_config.mask) {
@@ -436,6 +445,7 @@ void sl_restack_windows(struct sl_context* ctx, uint32_t focus_resource_id) {
 }
 
 void sl_roundtrip(struct sl_context* ctx) {
+  TRACE_EVENT("other", "sl_roundtrip", "id", ctx->application_id);
   free(xcb_get_input_focus_reply(ctx->connection,
                                  xcb_get_input_focus(ctx->connection), NULL));
 }
@@ -470,6 +480,7 @@ int sl_process_pending_configure_acks(struct sl_window* window,
 
 static void sl_internal_xdg_surface_configure(
     void* data, struct zxdg_surface_v6* xdg_surface, uint32_t serial) {
+  TRACE_EVENT("surface", "sl_internal_xdg_surface_configure");
   struct sl_window* window =
       static_cast<sl_window*>(zxdg_surface_v6_get_user_data(xdg_surface));
 
@@ -502,6 +513,7 @@ static void sl_internal_xdg_toplevel_configure(
     int32_t width,
     int32_t height,
     struct wl_array* states) {
+  TRACE_EVENT("other", "sl_internal_xdg_toplevel_configure");
   struct sl_window* window =
       static_cast<sl_window*>(zxdg_toplevel_v6_get_user_data(xdg_toplevel));
   int activated = 0;
@@ -564,6 +576,7 @@ static void sl_internal_xdg_toplevel_configure(
 
 static void sl_internal_xdg_toplevel_close(
     void* data, struct zxdg_toplevel_v6* xdg_toplevel) {
+  TRACE_EVENT("other", "sl_internal_xdg_toplevel_close");
   struct sl_window* window =
       static_cast<sl_window*>(zxdg_toplevel_v6_get_user_data(xdg_toplevel));
   xcb_client_message_event_t event = {};
@@ -596,6 +609,7 @@ static const struct zxdg_popup_v6_listener sl_internal_xdg_popup_listener = {
     sl_internal_xdg_popup_configure, sl_internal_xdg_popup_done};
 
 static void sl_window_set_wm_state(struct sl_window* window, int state) {
+  TRACE_EVENT("surface", "sl_window_set_wm_state", "id", window->id);
   struct sl_context* ctx = window->ctx;
   uint32_t values[2];
 
@@ -609,6 +623,7 @@ static void sl_window_set_wm_state(struct sl_window* window, int state) {
 
 void sl_update_application_id(struct sl_context* ctx,
                               struct sl_window* window) {
+  TRACE_EVENT("other", "sl_update_application_id");
   if (!window->aura_surface)
     return;
   if (ctx->application_id) {
@@ -637,6 +652,7 @@ void sl_update_application_id(struct sl_context* ctx,
 }
 
 void sl_window_update(struct sl_window* window) {
+  TRACE_EVENT("surface", "sl_window_update", "id", window->id);
   struct wl_resource* host_resource = NULL;
   struct sl_host_surface* host_surface;
   struct sl_context* ctx = window->ctx;
@@ -844,6 +860,7 @@ void sl_window_update(struct sl_window* window) {
 
 static void sl_host_buffer_destroy(struct wl_client* client,
                                    struct wl_resource* resource) {
+  TRACE_EVENT("surface", "sl_host_buffer_destroy");
   wl_resource_destroy(resource);
 }
 
@@ -851,10 +868,11 @@ static const struct wl_buffer_interface sl_buffer_implementation = {
     sl_host_buffer_destroy};
 
 static void sl_buffer_release(void* data, struct wl_buffer* buffer) {
-  TRACE_EVENT("surface", "sl_buffer_release");
-
   struct sl_host_buffer* host =
       static_cast<sl_host_buffer*>(wl_buffer_get_user_data(buffer));
+
+  TRACE_EVENT("surface", "sl_buffer_release", "resource_id",
+              wl_resource_get_id(host->resource));
 
   wl_buffer_send_release(host->resource);
 }
@@ -862,6 +880,8 @@ static void sl_buffer_release(void* data, struct wl_buffer* buffer) {
 static const struct wl_buffer_listener sl_buffer_listener = {sl_buffer_release};
 
 static void sl_destroy_host_buffer(struct wl_resource* resource) {
+  TRACE_EVENT("surface", "sl_destroy_host_buffer", "resource_id",
+              wl_resource_get_id(resource));
   struct sl_host_buffer* host =
       static_cast<sl_host_buffer*>(wl_resource_get_user_data(resource));
 
@@ -883,6 +903,7 @@ struct sl_host_buffer* sl_create_host_buffer(struct wl_client* client,
                                              struct wl_buffer* proxy,
                                              int32_t width,
                                              int32_t height) {
+  TRACE_EVENT("surface", "sl_create_host_buffer", "id", id);
   struct sl_host_buffer* host_buffer =
       static_cast<sl_host_buffer*>(malloc(sizeof(*host_buffer)));
   assert(host_buffer);
@@ -908,6 +929,7 @@ struct sl_host_buffer* sl_create_host_buffer(struct wl_client* client,
 }
 
 static void sl_internal_data_offer_destroy(struct sl_data_offer* host) {
+  TRACE_EVENT("other", "sl_internal_data_offer_destroy");
   wl_data_offer_destroy(host->internal);
   wl_array_release(&host->atoms);
   wl_array_release(&host->cookies);
@@ -916,6 +938,7 @@ static void sl_internal_data_offer_destroy(struct sl_data_offer* host) {
 
 static void sl_set_selection(struct sl_context* ctx,
                              struct sl_data_offer* data_offer) {
+  TRACE_EVENT("other", "sl_set_selection");
   if (ctx->selection_data_offer) {
     sl_internal_data_offer_destroy(ctx->selection_data_offer);
     ctx->selection_data_offer = NULL;
@@ -959,6 +982,7 @@ static void sl_set_selection(struct sl_context* ctx,
 static void sl_internal_data_offer_offer(void* data,
                                          struct wl_data_offer* data_offer,
                                          const char* type) {
+  TRACE_EVENT("other", "sl_internal_data_offer_offer");
   struct sl_data_offer* host = static_cast<sl_data_offer*>(data);
   xcb_intern_atom_cookie_t* cookie = static_cast<xcb_intern_atom_cookie_t*>(
       wl_array_add(&host->cookies, sizeof(xcb_intern_atom_cookie_t)));
@@ -966,11 +990,15 @@ static void sl_internal_data_offer_offer(void* data,
 }
 
 static void sl_internal_data_offer_source_actions(
-    void* data, struct wl_data_offer* data_offer, uint32_t source_actions) {}
+    void* data, struct wl_data_offer* data_offer, uint32_t source_actions) {
+  TRACE_EVENT("other", "sl_internal_data_offer_source_actions");
+}
 
 static void sl_internal_data_offer_action(void* data,
                                           struct wl_data_offer* data_offer,
-                                          uint32_t dnd_action) {}
+                                          uint32_t dnd_action) {
+  TRACE_EVENT("other", "sl_internal_data_offer_action");
+}
 
 static const struct wl_data_offer_listener sl_internal_data_offer_listener = {
     sl_internal_data_offer_offer, sl_internal_data_offer_source_actions,
@@ -1054,6 +1082,7 @@ void sl_host_seat_added(struct sl_host_seat* host) {
 }
 
 void sl_host_seat_removed(struct sl_host_seat* host) {
+  TRACE_EVENT("other", "sl_host_seat_removed");
   if (host->seat->ctx->default_seat == host)
     host->seat->ctx->default_seat = NULL;
 }
@@ -1063,6 +1092,7 @@ struct sl_global* sl_global_create(struct sl_context* ctx,
                                    int version,
                                    void* data,
                                    wl_global_bind_func_t bind) {
+  TRACE_EVENT("other", "sl_global_create");
   struct sl_host_registry* registry;
 
   assert(version > 0);
@@ -1088,6 +1118,7 @@ struct sl_global* sl_global_create(struct sl_context* ctx,
 }
 
 static void sl_global_destroy(struct sl_global* global) {
+  TRACE_EVENT("other", "sl_global_destroy");
   struct sl_host_registry* registry;
 
   wl_list_for_each(registry, &global->ctx->registries, link)
@@ -1104,6 +1135,7 @@ static void sl_registry_handler(void* data,
                                 uint32_t version) {
   struct sl_context* ctx = (struct sl_context*)data;
 
+  TRACE_EVENT("other", "sl_registry_handler", "id", id);
   if (strcmp(interface, "wl_compositor") == 0) {
     struct sl_compositor* compositor =
         static_cast<sl_compositor*>(malloc(sizeof(struct sl_compositor)));
@@ -1315,6 +1347,7 @@ static void sl_registry_handler(void* data,
 static void sl_registry_remover(void* data,
                                 struct wl_registry* registry,
                                 uint32_t id) {
+  TRACE_EVENT("other", "sl_registry_remover");
   struct sl_context* ctx = (struct sl_context*)data;
   struct sl_output* output;
   struct sl_seat* seat;
@@ -1445,6 +1478,7 @@ static const struct wl_registry_listener sl_registry_listener = {
     sl_registry_handler, sl_registry_remover};
 
 static int sl_handle_event(int fd, uint32_t mask, void* data) {
+  TRACE_EVENT("other", "sl_handle_event");
   struct sl_context* ctx = (struct sl_context*)data;
   int count = 0;
 
@@ -1473,6 +1507,7 @@ static void sl_create_window(struct sl_context* ctx,
                              int width,
                              int height,
                              int border_width) {
+  TRACE_EVENT("surface", "sl_create_window");
   struct sl_window* window =
       static_cast<sl_window*>(malloc(sizeof(struct sl_window)));
   uint32_t values[1];
@@ -1523,6 +1558,7 @@ static void sl_create_window(struct sl_context* ctx,
 }
 
 static void sl_destroy_window(struct sl_window* window) {
+  TRACE_EVENT("surface", "sl_destroy_window");
   if (window->frame_id != XCB_WINDOW_NONE)
     xcb_destroy_window(window->ctx->connection, window->frame_id);
 
@@ -1663,6 +1699,7 @@ static void sl_decode_wm_class(struct sl_window* window,
 
 static void sl_handle_map_request(struct sl_context* ctx,
                                   xcb_map_request_event_t* event) {
+  TRACE_EVENT("shm", "sl_handle_map_request");
   struct sl_window* window = sl_lookup_window(ctx, event->window);
   struct {
     int type;
@@ -2356,6 +2393,7 @@ static void sl_write_selection_property(struct sl_context* ctx,
 
 static void sl_send_selection_notify(struct sl_context* ctx,
                                      xcb_atom_t property) {
+  TRACE_EVENT("other", "sl_send_selection_notify");
   xcb_selection_notify_event_t event = {
       .response_type = XCB_SELECTION_NOTIFY,
       .pad0 = 0,
@@ -2439,6 +2477,7 @@ static int sl_handle_selection_fd_readable(int fd, uint32_t mask, void* data) {
 
 static void sl_handle_property_notify(struct sl_context* ctx,
                                       xcb_property_notify_event_t* event) {
+  TRACE_EVENT("other", "sl_handle_property_notify");
   if (event->atom == XCB_ATOM_WM_NAME) {
     struct sl_window* window = sl_lookup_window(ctx, event->window);
     if (!window)
@@ -2690,6 +2729,7 @@ static void sl_internal_data_source_send(void* data,
                                          struct wl_data_source* data_source,
                                          const char* mime_type,
                                          int32_t fd) {
+  TRACE_EVENT("other", "sl_internal_data_source_send");
   struct sl_data_source* host = static_cast<sl_data_source*>(data);
   struct sl_context* ctx = host->ctx;
 
@@ -2712,6 +2752,7 @@ static void sl_internal_data_source_send(void* data,
 
 static void sl_internal_data_source_cancelled(
     void* data, struct wl_data_source* data_source) {
+  TRACE_EVENT("other", "sl_internal_data_source_cancelled");
   struct sl_data_source* host = static_cast<sl_data_source*>(data);
 
   if (host->ctx->selection_data_source == host)
@@ -2737,6 +2778,7 @@ char* sl_copy_atom_name(xcb_get_atom_name_reply_t* reply) {
 }
 
 static void sl_get_selection_targets(struct sl_context* ctx) {
+  TRACE_EVENT("other", "sl_get_selection_targets");
   struct sl_data_source* data_source = NULL;
   xcb_get_property_reply_t* reply;
   xcb_atom_t* value;
@@ -2809,6 +2851,7 @@ static void sl_get_selection_targets(struct sl_context* ctx) {
 }
 
 static void sl_get_selection_data(struct sl_context* ctx) {
+  TRACE_EVENT("other", "sl_get_selection_data");
   xcb_get_property_reply_t* reply = xcb_get_property_reply(
       ctx->connection,
       xcb_get_property(ctx->connection, 1, ctx->selection_window,
@@ -2858,6 +2901,7 @@ static void sl_send_timestamp(struct sl_context* ctx) {
 }
 
 static void sl_send_data(struct sl_context* ctx, xcb_atom_t data_type) {
+  TRACE_EVENT("other", "sl_send_data");
   int rv, fd_to_receive, fd_to_wayland;
 
   if (!ctx->selection_data_offer) {
@@ -3005,6 +3049,7 @@ static void sl_handle_xfixes_selection_notify(
 }
 
 static int sl_handle_x_connection_event(int fd, uint32_t mask, void* data) {
+  TRACE_EVENT("other", "sl_handle_x_connection_event");
   struct sl_context* ctx = (struct sl_context*)data;
   xcb_generic_event_t* event;
   uint32_t count = 0;
@@ -3111,6 +3156,7 @@ static void sl_set_supported(struct sl_context* ctx) {
 }
 
 static void sl_connect(struct sl_context* ctx) {
+  TRACE_EVENT("other", "sl_connect");
   const char wm_name[] = "Sommelier";
   const xcb_setup_t* setup;
   xcb_screen_iterator_t screen_iterator;
@@ -3379,6 +3425,7 @@ static void sl_calculate_scale_for_xwayland(struct sl_context* ctx) {
 }
 
 static int sl_handle_display_ready_event(int fd, uint32_t mask, void* data) {
+  TRACE_EVENT("surface", "sl_handle_display_ready_event");
   struct sl_context* ctx = (struct sl_context*)data;
   char display_name[9];
   int bytes_read = 0;
@@ -3447,6 +3494,7 @@ static void sl_client_destroy_notify(struct wl_listener* listener, void* data) {
 }
 
 static int sl_handle_virtwl_ctx_event(int fd, uint32_t mask, void* data) {
+  TRACE_EVENT("surface", "sl_handle_virtwl_ctx_event");
   struct sl_context* ctx = (struct sl_context*)data;
   uint8_t ioctl_buffer[4096];
   struct virtwl_ioctl_txn* ioctl_recv = (struct virtwl_ioctl_txn*)ioctl_buffer;
@@ -3512,6 +3560,7 @@ static int sl_handle_virtwl_ctx_event(int fd, uint32_t mask, void* data) {
 }
 
 static int sl_handle_virtwl_socket_event(int fd, uint32_t mask, void* data) {
+  TRACE_EVENT("surface", "sl_handle_virtwl_socket_event");
   struct sl_context* ctx = (struct sl_context*)data;
   uint8_t ioctl_buffer[4096];
   struct virtwl_ioctl_txn* ioctl_send = (struct virtwl_ioctl_txn*)ioctl_buffer;

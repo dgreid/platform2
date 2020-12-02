@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "sommelier.h"  // NOLINT(build/include_directory)
+#include "sommelier-tracing.h"  // NOLINT(build/include_directory)
 
 #include <assert.h>
 #include <stdlib.h>
@@ -45,6 +46,8 @@ static void sl_viewport_set_destination(struct wl_client* client,
                                         struct wl_resource* resource,
                                         int32_t width,
                                         int32_t height) {
+  TRACE_EVENT("viewport", "sl_viewport_set_destination", "resource_id",
+              wl_resource_get_id(resource));
   struct sl_host_viewport* host =
       static_cast<sl_host_viewport*>(wl_resource_get_user_data(resource));
 

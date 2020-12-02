@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "sommelier.h"  // NOLINT(build/include_directory)
+#include "sommelier-tracing.h"  // NOLINT(build/include_directory)
 
 #include <assert.h>
 #include <stdlib.h>
@@ -15,6 +16,7 @@ static void sl_registry_bind(struct wl_client* client,
                              const char* interface,
                              uint32_t version,
                              uint32_t id) {
+  TRACE_EVENT("display", "sl_registry_bind");
   struct sl_host_registry* host =
       static_cast<sl_host_registry*>(wl_resource_get_user_data(resource));
   struct sl_global* global;
@@ -37,6 +39,7 @@ static const struct wl_registry_interface sl_registry_implementation = {
 static void sl_sync_callback_done(void* data,
                                   struct wl_callback* callback,
                                   uint32_t serial) {
+  TRACE_EVENT("display", "sl_sync_callback_done");
   struct sl_host_callback* host =
       static_cast<sl_host_callback*>(wl_callback_get_user_data(callback));
 

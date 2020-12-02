@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "sommelier.h"  // NOLINT(build/include_directory)
+#include "sommelier-tracing.h"  // NOLINT(build/include_directory)
 
 #include <assert.h>
 #include <stdlib.h>
@@ -230,6 +231,7 @@ static const struct wl_shm_interface sl_shm_implementation = {
     sl_shm_create_host_pool};
 
 static void sl_shm_format(void* data, struct wl_shm* shm, uint32_t format) {
+  TRACE_EVENT("shm", "sl_shm_format");
   struct sl_host_shm* host =
       static_cast<sl_host_shm*>(wl_shm_get_user_data(shm));
 

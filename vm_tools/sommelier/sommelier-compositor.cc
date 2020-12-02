@@ -139,9 +139,10 @@ static void sl_output_buffer_destroy(struct sl_output_buffer* buffer) {
 }
 
 static void sl_output_buffer_release(void* data, struct wl_buffer* buffer) {
-  TRACE_EVENT("surface", "sl_output_buffer_release");
   struct sl_output_buffer* output_buffer =
       static_cast<sl_output_buffer*>(wl_buffer_get_user_data(buffer));
+  TRACE_EVENT("surface", "sl_output_buffer_release", "resource_id",
+              wl_resource_get_id(output_buffer->surface->resource));
   struct sl_host_surface* host_surface = output_buffer->surface;
 
   wl_list_remove(&output_buffer->link);
@@ -153,6 +154,8 @@ static const struct wl_buffer_listener sl_output_buffer_listener = {
 
 static void sl_host_surface_destroy(struct wl_client* client,
                                     struct wl_resource* resource) {
+  TRACE_EVENT("surface", "sl_host_surface_destroy", "resource_id",
+              wl_resource_get_id(resource));
   wl_resource_destroy(resource);
 }
 
@@ -161,6 +164,9 @@ static void sl_host_surface_attach(struct wl_client* client,
                                    struct wl_resource* buffer_resource,
                                    int32_t x,
                                    int32_t y) {
+  TRACE_EVENT("surface", "sl_host_surface_attach", "resource_id",
+              wl_resource_get_id(resource), "buffer_id",
+              wl_resource_get_id(buffer_resource));
   struct sl_host_surface* host =
       static_cast<sl_host_surface*>(wl_resource_get_user_data(resource));
   struct sl_host_buffer* host_buffer =
@@ -370,6 +376,8 @@ static void sl_host_surface_damage(struct wl_client* client,
                                    int32_t y,
                                    int32_t width,
                                    int32_t height) {
+  TRACE_EVENT("surface", "sl_host_surface_damage", "resource_id",
+              wl_resource_get_id(resource));
   struct sl_host_surface* host =
       static_cast<sl_host_surface*>(wl_resource_get_user_data(resource));
   double scale = host->ctx->scale;
@@ -403,6 +411,7 @@ static void sl_host_surface_damage(struct wl_client* client,
 static void sl_frame_callback_done(void* data,
                                    struct wl_callback* callback,
                                    uint32_t time) {
+  TRACE_EVENT("surface", "sl_frame_callback_done");
   struct sl_host_callback* host =
       static_cast<sl_host_callback*>(wl_callback_get_user_data(callback));
 
@@ -414,6 +423,7 @@ static const struct wl_callback_listener sl_frame_callback_listener = {
     sl_frame_callback_done};
 
 static void sl_host_callback_destroy(struct wl_resource* resource) {
+  TRACE_EVENT("surface", "sl_host_callback_destroy");
   struct sl_host_callback* host =
       static_cast<sl_host_callback*>(wl_resource_get_user_data(resource));
 
@@ -425,6 +435,8 @@ static void sl_host_callback_destroy(struct wl_resource* resource) {
 static void sl_host_surface_frame(struct wl_client* client,
                                   struct wl_resource* resource,
                                   uint32_t callback) {
+  TRACE_EVENT("surface", "sl_host_surface_frame", "resource_id",
+              wl_resource_get_id(resource));
   struct sl_host_surface* host =
       static_cast<sl_host_surface*>(wl_resource_get_user_data(resource));
   struct sl_host_callback* host_callback =
@@ -473,12 +485,12 @@ static void sl_host_surface_set_input_region(
 
 static void sl_host_surface_commit(struct wl_client* client,
                                    struct wl_resource* resource) {
+  TRACE_EVENT("surface", "sl_host_surface_commit", "resource_id",
+              wl_resource_get_id(resource));
   struct sl_host_surface* host =
       static_cast<sl_host_surface*>(wl_resource_get_user_data(resource));
   struct sl_viewport* viewport = NULL;
   struct sl_window* window;
-
-  TRACE_EVENT("surface", "sl_host_surface_commit");
 
   if (!wl_list_empty(&host->contents_viewport))
     viewport = wl_container_of(host->contents_viewport.next, viewport, link);
@@ -650,7 +662,6 @@ static void sl_host_surface_commit(struct wl_client* client,
 
   if (host->contents_shm_mmap) {
     if (host->contents_shm_mmap->buffer_resource) {
-      TRACE_EVENT("surface", "sl_host_surface_commit wl_buffer_send_release");
       wl_buffer_send_release(host->contents_shm_mmap->buffer_resource);
     }
     sl_mmap_unref(host->contents_shm_mmap);
@@ -698,6 +709,8 @@ static const struct wl_surface_interface sl_surface_implementation = {
     sl_host_surface_damage_buffer};
 
 static void sl_destroy_host_surface(struct wl_resource* resource) {
+  TRACE_EVENT("surface", "sl_destroy_host_surface", "resource_id",
+              wl_resource_get_id(resource));
   struct sl_host_surface* host =
       static_cast<sl_host_surface*>(wl_resource_get_user_data(resource));
   struct sl_window *window, *surface_window = NULL;
@@ -739,6 +752,7 @@ static void sl_destroy_host_surface(struct wl_resource* resource) {
 static void sl_surface_enter(void* data,
                              struct wl_surface* surface,
                              struct wl_output* output) {
+  TRACE_EVENT("surface", "sl_surface_enter");
   struct sl_host_surface* host =
       static_cast<sl_host_surface*>(wl_surface_get_user_data(surface));
   struct sl_host_output* host_output =
@@ -751,6 +765,7 @@ static void sl_surface_enter(void* data,
 static void sl_surface_leave(void* data,
                              struct wl_surface* surface,
                              struct wl_output* output) {
+  TRACE_EVENT("surface", "sl_surface_leave");
   struct sl_host_surface* host =
       static_cast<sl_host_surface*>(wl_surface_get_user_data(surface));
   struct sl_host_output* host_output =
@@ -820,6 +835,7 @@ static void sl_destroy_host_region(struct wl_resource* resource) {
 static void sl_compositor_create_host_surface(struct wl_client* client,
                                               struct wl_resource* resource,
                                               uint32_t id) {
+  TRACE_EVENT("surface", "sl_compositor_create_host_surface");
   struct sl_host_compositor* host =
       static_cast<sl_host_compositor*>(wl_resource_get_user_data(resource));
   struct sl_window *window, *unpaired_window = NULL;
