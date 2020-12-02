@@ -316,7 +316,7 @@ class Daemon final : public brillo::DBusDaemon {
     ErrorPtr error;
     auto json = base::JSONReader::ReadAndReturnValueWithError(
         value, base::JSON_PARSE_RFC);
-    if (json.error_code != base::JSONReader::JSON_NO_ERROR) {
+    if (!json.value) {
       Error::AddTo(&error, FROM_HERE, brillo::errors::json::kDomain,
                    brillo::errors::json::kParseError, json.error_message);
       return ReportError(error.get());

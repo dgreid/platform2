@@ -260,8 +260,7 @@ void Manager::AddCommand(DBusMethodResponsePtr<std::string> response,
   auto value = base::JSONReader::ReadAndReturnValueWithError(
       json_command, base::JSON_PARSE_RFC);
   const base::DictionaryValue* command{nullptr};
-  if (value.error_code != base::JSONReader::JSON_NO_ERROR ||
-      !value.value->GetAsDictionary(&command)) {
+  if (!value.value || !value.value->GetAsDictionary(&command)) {
     return response->ReplyWithError(FROM_HERE, brillo::errors::json::kDomain,
                                     brillo::errors::json::kParseError,
                                     value.error_message);
