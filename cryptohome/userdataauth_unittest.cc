@@ -3237,7 +3237,7 @@ TEST_F(UserDataAuthTestThreaded, CheckUpdateActivityTimestampCalledDaily) {
       .Times(AtLeast(kTimesUpdateUserActivityCalled))
       .WillRepeatedly(Invoke([&lock, &update_user_activity_called, &done, this](
                                  const std::string&, int, int) {
-        base::AutoLock scoped_lock(lock);
+        base::ReleasableAutoLock scoped_lock(&lock);
         update_user_activity_called++;
         if (update_user_activity_called == kTimesUpdateUserActivityCalled) {
           // Currently low disk space callback runs every 1 ms. If that test
@@ -3247,6 +3247,7 @@ TEST_F(UserDataAuthTestThreaded, CheckUpdateActivityTimestampCalledDaily) {
           // race condition.
           userdataauth_->set_low_disk_notification_period_ms(
               kLowDiskNotificationPeriodMS);
+          scoped_lock.Release();
           done.Signal();
         }
         return true;
@@ -3311,7 +3312,7 @@ TEST_F(UserDataAuthTestThreaded, CheckAutoCleanupCallback) {
       .WillRepeatedly(Invoke([&lock, &free_disk_space_count, &done, this] {
         // The time will move forward enough to trigger the next call every
         // time it's called.
-        base::AutoLock scoped_lock(lock);
+        base::ReleasableAutoLock scoped_lock(&lock);
         free_disk_space_count++;
         if (free_disk_space_count == kTimesFreeDiskSpaceCalled) {
           // Currently low disk space callback runs every 1 ms. If that test
@@ -3321,6 +3322,7 @@ TEST_F(UserDataAuthTestThreaded, CheckAutoCleanupCallback) {
           // race condition.
           userdataauth_->set_low_disk_notification_period_ms(
               kLowDiskNotificationPeriodMS);
+          scoped_lock.Release();
           done.Signal();
         }
       }));
