@@ -274,6 +274,8 @@ void TestUser::InjectKeyset(MockPlatform* platform, bool enumerate) {
       .WillRepeatedly(Return(true));
   EXPECT_CALL(*platform, ReadFile(keyset_path, _))
       .WillRepeatedly(DoAll(SetArgPointee<1>(credentials), Return(true)));
+  EXPECT_CALL(*platform, ReadFile(timestamp_path, _))
+      .WillRepeatedly(Return(false));
   if (enumerate) {
     EXPECT_CALL(*platform, GetFileEnumerator(base_path, false, _))
         .WillRepeatedly(Invoke([&](base::FilePath path, bool rec, int type) {

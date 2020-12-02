@@ -142,7 +142,8 @@ TEST_F(UserSessionTest, MountVaultOk) {
       .WillOnce(Return(true));
   EXPECT_CALL(*mount_, IsNonEphemeralMounted()).WillOnce(Return(true));
   EXPECT_CALL(platform_, GetCurrentTime())
-      .WillOnce(Return(base::Time::FromInternalValue(kTs1)));
+      .Times(2)  // Initial set and update on mount.
+      .WillRepeatedly(Return(base::Time::FromInternalValue(kTs1)));
 
   // TEST
 
@@ -233,7 +234,8 @@ TEST_F(UserSessionTest, MountVaultWrongCreds) {
       .WillOnce(Return(true));
   EXPECT_CALL(*mount_, IsNonEphemeralMounted()).WillOnce(Return(true));
   EXPECT_CALL(platform_, GetCurrentTime())
-      .WillOnce(Return(base::Time::FromInternalValue(kTs1)));
+      .Times(2)  // Initial set and update on mount.
+      .WillRepeatedly(Return(base::Time::FromInternalValue(kTs1)));
 
   ASSERT_EQ(MOUNT_ERROR_NONE,
             session_->MountVault(users_[0].credentials, mount_args_create));

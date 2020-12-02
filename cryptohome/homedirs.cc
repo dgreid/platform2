@@ -368,6 +368,7 @@ bool HomeDirs::AddInitialKeyset(const Credentials& credentials) {
     LOG(ERROR) << "Failed to encrypt and write keyset for the new user.";
     return false;
   }
+  UpdateActivityTimestamp(obfuscated_username, kInitialKeysetIndex, 0);
 
   return true;
 }
@@ -522,11 +523,6 @@ std::unique_ptr<VaultKeyset> HomeDirs::LoadUnwrappedKeyset(
 bool HomeDirs::UpdateActivityTimestamp(const std::string& obfuscated,
                                        int index,
                                        int time_shift_sec) {
-  std::unique_ptr<VaultKeyset> keyset(
-      LoadVaultKeysetForUser(obfuscated, index));
-  if (!keyset) {
-    return false;
-  }
   base::Time timestamp = platform_->GetCurrentTime();
   if (time_shift_sec > 0) {
     timestamp -= base::TimeDelta::FromSeconds(time_shift_sec);
@@ -544,19 +540,6 @@ bool HomeDirs::UpdateActivityTimestamp(const std::string& obfuscated,
                                                  kKeyFilePermissions)) {
     LOG(ERROR) << "Failed writing to timestamp file: " << ts_file;
     return false;
-  }
-
-  // The first time we write to a timestamp file we need to update the
-  // vault_keyset to indicate that the timestamp is stored separately.
-  // The initial 0 timestamp is also written to the vault_keyset which
-  // means a timestamp will exist and can be read in case of a rollback.
-  if (!keyset->serialized().timestamp_file_exists()) {
-    keyset->mutable_serialized()->set_timestamp_file_exists(true);
-    if (!keyset->Save(keyset->source_file())) {
-      LOG(ERROR) << "Failed updating ts marker in keyset: "
-                 << keyset->source_file();
-      return false;
-    }
   }
 
   if (timestamp_cache_ && timestamp_cache_->initialized()) {
@@ -658,8 +641,6 @@ CryptohomeErrorCode HomeDirs::AddKeyset(const Credentials& existing_credentials,
   if (new_data) {
     *(vk->mutable_serialized()->mutable_key_data()) = *new_data;
   }
-  // The new keyset doesn't have an associated timestamp file.
-  vk->mutable_serialized()->set_timestamp_file_exists(false);
 
   // Repersist the VK with the new creds.
   CryptohomeErrorCode added = CRYPTOHOME_ERROR_NOT_SET;

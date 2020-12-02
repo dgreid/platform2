@@ -445,7 +445,6 @@ TEST_P(HomeDirsTest, AddUserTimestampToCache) {
       users_[2].homedir_path.Append(kKeyFile).AddExtension(
           kKeyFileTimestampSuffix),
       timestamp_str, 0600));
-  vk.mutable_serialized()->set_timestamp_file_exists(true);
   ASSERT_TRUE(vk.Encrypt(brillo::SecureBlob("random"), users_[2].obfuscated));
   ASSERT_TRUE(vk.Save(users_[2].homedir_path.Append(kKeyFile).AddExtension(
       kKeyFileIndexSuffix)));

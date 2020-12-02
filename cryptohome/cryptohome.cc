@@ -1538,28 +1538,26 @@ int main(int argc, char** argv) {
       printf("  Password rounds:\n");
       printf("    %d\n", serialized.password_rounds());
     }
-    if (serialized.has_timestamp_file_exists()) {
-      FilePath timestamp_path = vault_path.AddExtension("timestamp");
-      brillo::Blob tcontents;
-      if (!platform.ReadFile(timestamp_path, &tcontents)) {
-        printf("Couldn't load timestamp contents: %s.\n",
-               timestamp_path.value().c_str());
-      }
+
+    base::Time last_activity =
+        base::Time::FromInternalValue(serialized.last_activity_timestamp());
+    FilePath timestamp_path = vault_path.AddExtension("timestamp");
+    brillo::Blob tcontents;
+    if (platform.ReadFile(timestamp_path, &tcontents)) {
       cryptohome::Timestamp timestamp;
       if (!timestamp.ParseFromArray(tcontents.data(), tcontents.size())) {
         printf("Couldn't parse timestamp contents: %s.\n",
                timestamp_path.value().c_str());
       }
-      const base::Time last_activity =
-          base::Time::FromInternalValue(timestamp.timestamp());
-      printf("  Last activity (days ago):\n");
-      printf("    %d\n", (base::Time::Now() - last_activity).InDays());
-    } else if (serialized.has_last_activity_timestamp()) {
-      const base::Time last_activity =
-          base::Time::FromInternalValue(serialized.last_activity_timestamp());
-      printf("  Last activity (days ago):\n");
-      printf("    %d\n", (base::Time::Now() - last_activity).InDays());
+      last_activity = base::Time::FromInternalValue(timestamp.timestamp());
+    } else {
+      printf("Couldn't load timestamp contents: %s.\n",
+             timestamp_path.value().c_str());
     }
+
+    printf("  Last activity (days ago):\n");
+    printf("    %d\n", (base::Time::Now() - last_activity).InDays());
+
   } else if (!strcmp(switches::kActions[switches::ACTION_DUMP_LAST_ACTIVITY],
                      action.c_str())) {
     std::vector<FilePath> user_dirs;
@@ -1584,7 +1582,7 @@ int main(int argc, char** argv) {
         if (file_name.value() != cryptohome::kKeyFile)
           continue;
         brillo::Blob contents;
-        if (!platform.ReadFile(next_path, &contents)) {
+        if (platform.ReadFile(next_path, &contents)) {
           LOG(ERROR) << "Couldn't load keyset: " << next_path.value();
           continue;
         }
@@ -1593,28 +1591,25 @@ int main(int argc, char** argv) {
           LOG(ERROR) << "Couldn't parse keyset: " << next_path.value();
           continue;
         }
-        if (keyset.has_timestamp_file_exists()) {
-          FilePath timestamp_path = next_path.AddExtension("timestamp");
-          brillo::Blob tcontents;
-          if (!platform.ReadFile(timestamp_path, &tcontents)) {
-            printf("Couldn't load timestamp contents: %s.\n",
-                   timestamp_path.value().c_str());
-          }
+        base::Time last_activity =
+            base::Time::FromInternalValue(keyset.last_activity_timestamp());
+
+        FilePath timestamp_path = next_path.AddExtension("timestamp");
+        brillo::Blob tcontents;
+        if (platform.ReadFile(timestamp_path, &tcontents)) {
           cryptohome::Timestamp timestamp;
           if (!timestamp.ParseFromArray(tcontents.data(), tcontents.size())) {
             printf("Couldn't parse timestamp contents: %s.\n",
                    timestamp_path.value().c_str());
           }
-          const base::Time last_activity =
-              base::Time::FromInternalValue(timestamp.timestamp());
-          if (last_activity > max_activity) {
-            max_activity = last_activity;
-          }
-        } else if (keyset.has_last_activity_timestamp()) {
-          const base::Time last_activity =
-              base::Time::FromInternalValue(keyset.last_activity_timestamp());
-          if (last_activity > max_activity)
-            max_activity = last_activity;
+          last_activity = base::Time::FromInternalValue(timestamp.timestamp());
+        } else {
+          printf("Couldn't load timestamp contents: %s.\n",
+                 timestamp_path.value().c_str());
+        }
+
+        if (last_activity > max_activity) {
+          max_activity = last_activity;
         }
       }
       if (max_activity > base::Time::UnixEpoch()) {

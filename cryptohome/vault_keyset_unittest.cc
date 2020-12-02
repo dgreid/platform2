@@ -155,7 +155,6 @@ TEST_F(VaultKeysetTest, LoadSaveTest) {
       static_cast<google::protobuf::uint8*>(tbytes.data());
   timestamp.SerializeWithCachedSizesToArray(buf);
 
-  keyset.mutable_serialized()->set_timestamp_file_exists(true);
   keyset.SetFscryptPolicyVersion(kFscryptPolicyVersion);
 
   EXPECT_CALL(platform, WriteFileAtomicDurable(FilePath("foo"), _, _))

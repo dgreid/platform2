@@ -130,12 +130,9 @@ message SerializedVaultKeyset {
   // the case when PCR is extended with user specific value.
   optional bytes extended_tpm_key = 18;
 
-  // Set if the timestamp has been moved to its own file.
-  optional bool timestamp_file_exists = 19;
-
   // Set if the vault keyset should be used with fscrypt v2 encryption policies.
   optional int32 fscrypt_policy_version = 20;
 
   // Deprecated fields that were removed.
-  reserved 7;
+  reserved 7, 19;
 }
