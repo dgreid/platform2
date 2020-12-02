@@ -148,13 +148,14 @@ int CameraHal::OpenDevice(int id,
     return -EBUSY;
   }
   if (!cameras_.empty() && (cros_device_config_.model_name == "treeya360" ||
-                            cros_device_config_.model_name == "nuwani360")) {
+                            cros_device_config_.model_name == "nuwani360" ||
+                            cros_device_config_.model_name == "pompom")) {
     // It cannot open multiple cameras at the same time due to USB bandwidth
-    // limitation (b/147333530).
+    // limitation (b/147333530, b/171856355).
     // TODO(shik): Use |conflicting_devices| to implement this logic after we
     // hook that in the ARC++ camera HAL shim.
-    // TODO(shik): Add a new field in the unibuild schema instead of checking
-    // model name here.
+    // TODO(b/163436311): Add a new field in the unibuild schema instead of
+    // checking model name here.
     LOGF(WARNING) << "Can't open Camera " << id << " because Camera "
                   << cameras_.begin()->first << " is already opened.";
     return -EUSERS;
