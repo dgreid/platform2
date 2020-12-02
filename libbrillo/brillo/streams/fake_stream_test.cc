@@ -20,6 +20,10 @@ using testing::InSequence;
 
 namespace brillo {
 
+namespace {
+constexpr base::TimeDelta kZeroDelay;
+}
+
 class FakeStreamTest : public testing::Test {
  public:
   void SetUp() override {
@@ -63,7 +67,6 @@ class FakeStreamTest : public testing::Test {
   base::SimpleTestClock clock_;
   MockMessageLoop mock_loop_{&clock_};
   std::unique_ptr<FakeStream> stream_;
-  const base::TimeDelta zero_delay;
 };
 
 TEST_F(FakeStreamTest, InitReadOnly) {
@@ -234,7 +237,7 @@ TEST_F(FakeStreamTest, ReadPacketsWithError) {
 TEST_F(FakeStreamTest, WaitForDataRead) {
   CreateStream(Stream::AccessMode::READ);
 
-  EXPECT_CALL(mock_loop_, PostDelayedTask(_, _, zero_delay)).Times(2);
+  EXPECT_CALL(mock_loop_, PostDelayedTask(_, _, kZeroDelay)).Times(2);
 
   int call_count = 0;
   auto callback = base::Bind(
@@ -277,7 +280,7 @@ TEST_F(FakeStreamTest, ReadAsync) {
 
   {
     InSequence seq;
-    EXPECT_CALL(mock_loop_, PostDelayedTask(_, _, zero_delay)).Times(1);
+    EXPECT_CALL(mock_loop_, PostDelayedTask(_, _, kZeroDelay)).Times(1);
     EXPECT_CALL(mock_loop_, PostDelayedTask(_, _, one_sec_delay)).Times(1);
   }
 
@@ -392,7 +395,7 @@ TEST_F(FakeStreamTest, WriteWithError) {
 TEST_F(FakeStreamTest, WaitForDataWrite) {
   CreateStream(Stream::AccessMode::WRITE);
 
-  EXPECT_CALL(mock_loop_, PostDelayedTask(_, _, zero_delay)).Times(2);
+  EXPECT_CALL(mock_loop_, PostDelayedTask(_, _, kZeroDelay)).Times(2);
 
   int call_count = 0;
   auto callback = base::Bind(
@@ -436,7 +439,7 @@ TEST_F(FakeStreamTest, WriteAsync) {
 
   {
     InSequence seq;
-    EXPECT_CALL(mock_loop_, PostDelayedTask(_, _, zero_delay)).Times(1);
+    EXPECT_CALL(mock_loop_, PostDelayedTask(_, _, kZeroDelay)).Times(1);
     EXPECT_CALL(mock_loop_, PostDelayedTask(_, _, one_sec_delay)).Times(1);
   }
 
@@ -493,7 +496,7 @@ TEST_F(FakeStreamTest, WaitForDataReadWrite) {
 
   clock_.Advance(one_sec_delay);
 
-  EXPECT_CALL(mock_loop_, PostDelayedTask(_, _, zero_delay)).Times(1);
+  EXPECT_CALL(mock_loop_, PostDelayedTask(_, _, kZeroDelay)).Times(1);
   EXPECT_TRUE(stream_->WaitForData(
       Stream::AccessMode::READ_WRITE,
       base::Bind(callback, Stream::AccessMode::READ_WRITE), nullptr));
