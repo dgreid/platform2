@@ -929,29 +929,31 @@ ScanState Manager::RunScanLoop(brillo::ErrorPtr* error,
   // We maintain the invariant at the start of each loop iteration that indices
   // [0, buffer_offset) hold previously read data.
   size_t buffer_offset = 0;
-  while (rows_written < params->lines) {
+  while (true) {
     // Get next chunk of scan data from the device.
     size_t read = 0;
     SANE_Status result =
         device->ReadScanData(error, image_buffer.data() + buffer_offset,
                              image_buffer.size() - buffer_offset, &read);
-    switch (result) {
-      case SANE_STATUS_GOOD:
-      case SANE_STATUS_EOF:
-        // Do nothing.
-        break;
-      case SANE_STATUS_CANCELLED:
-        LOG(INFO) << "Scan job has been cancelled.";
-        return SCAN_STATE_CANCELLED;
-      default:
-        brillo::Error::AddToPrintf(
-            error, FROM_HERE, kDbusDomain, kManagerServiceError,
-            "Reading scan data failed: %s", sane_strstatus(result));
-        return SCAN_STATE_FAILED;
-    }
 
-    if (read == 0) {
+    // Handle non-standard results.
+    if (result == SANE_STATUS_GOOD) {
+      if (rows_written >= params->lines) {
+        brillo::Error::AddTo(
+            error, FROM_HERE, kDbusDomain, kManagerServiceError,
+            "Whole image has been written, but scanner is still sending data.");
+        return SCAN_STATE_FAILED;
+      }
+    } else if (result == SANE_STATUS_EOF) {
       break;
+    } else if (result == SANE_STATUS_CANCELLED) {
+      LOG(INFO) << "Scan job has been cancelled.";
+      return SCAN_STATE_CANCELLED;
+    } else {
+      brillo::Error::AddToPrintf(
+          error, FROM_HERE, kDbusDomain, kManagerServiceError,
+          "Reading scan data failed: %s", sane_strstatus(result));
+      return SCAN_STATE_FAILED;
     }
 
     // Write as many lines of the image as we can with the data we've received.
@@ -988,11 +990,12 @@ ScanState Manager::RunScanLoop(brillo::ErrorPtr* error,
     buffer_offset = remaining_bytes;
   }
 
-  if (buffer_offset != 0) {
-    brillo::Error::AddToPrintf(
-        error, FROM_HERE, kDbusDomain, kManagerServiceError,
-        "Received incomplete scan data, %zu unused bytes remaining",
-        buffer_offset);
+  if (rows_written < params->lines || buffer_offset != 0) {
+    brillo::Error::AddToPrintf(error, FROM_HERE, kDbusDomain,
+                               kManagerServiceError,
+                               "Received incomplete scan data, %zu unused "
+                               "bytes, %zu of %d rows written",
+                               buffer_offset, rows_written, params->lines);
     return SCAN_STATE_FAILED;
   }
 

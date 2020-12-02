@@ -332,7 +332,10 @@ bool SaneDeviceImpl::SetScanRegion(brillo::ErrorPtr* error,
 }
 
 SANE_Status SaneDeviceImpl::StartScan(brillo::ErrorPtr* error) {
-  if (scan_running_ && !reached_eof_) {
+  if (scan_running_) {
+    // If we haven't already reached EOF for the current image frame and we
+    // try to start acquiring a new frame, SANE will fail with an unhelpful
+    // error. This error message makes it a little clearer what's happening.
     brillo::Error::AddTo(error, FROM_HERE, kDbusDomain, kManagerServiceError,
                          "Scan is already in progress");
     return SANE_STATUS_DEVICE_BUSY;
@@ -407,18 +410,10 @@ SANE_Status SaneDeviceImpl::ReadScanData(brillo::ErrorPtr* error,
   }
   SANE_Int read = 0;
   SANE_Status status = sane_read(handle_, buf, count, &read);
-  switch (status) {
-    case SANE_STATUS_GOOD:
-      *read_out = read;
-      break;
-    case SANE_STATUS_EOF:
-      *read_out = 0;
-      reached_eof_ = true;
-      break;
-    case SANE_STATUS_CANCELLED:
-      break;
-    default:
-      break;
+  // The SANE API requires that a non GOOD status will return 0 bytes read.
+  *read_out = read;
+  if (status != SANE_STATUS_GOOD) {
+    scan_running_ = false;
   }
   return status;
 }
@@ -430,6 +425,7 @@ bool SaneDeviceImpl::CancelScan(brillo::ErrorPtr* error) {
     return false;
   }
 
+  scan_running_ = false;
   sane_cancel(handle_);
   return true;
 }
@@ -620,8 +616,7 @@ SaneDeviceImpl::SaneDeviceImpl(SANE_Handle handle,
     : handle_(handle),
       name_(name),
       open_devices_(open_devices),
-      scan_running_(false),
-      reached_eof_(false) {}
+      scan_running_(false) {}
 
 bool SaneDeviceImpl::LoadOptions(brillo::ErrorPtr* error) {
   LOG(INFO) << "Loading device options";
