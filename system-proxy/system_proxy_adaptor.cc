@@ -383,7 +383,7 @@ void SystemProxyAdaptor::ConnectNamespaceTask(SandboxedWorker* worker,
   }
 
   worker->SetNetNamespaceLifelineFd(std::move(result.first));
-  if (!worker->SetListeningAddress(result.second.host_ipv4_address(),
+  if (!worker->SetListeningAddress(result.second.peer_ipv4_address(),
                                    kProxyPort)) {
     return;
   }

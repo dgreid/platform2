@@ -991,12 +991,11 @@ std::unique_ptr<patchpanel::ConnectNamespaceResponse> Manager::ConnectNamespace(
     return response;
   }
 
-  // TODO(hugobenichi) The peer and host addresses are swapped in the response
   // Prepare the response before storing ConnectNamespaceInfo.
   response->set_peer_ifname(client_ifname);
-  response->set_peer_ipv4_address(subnet->AddressAtOffset(0));
+  response->set_peer_ipv4_address(subnet->AddressAtOffset(1));
   response->set_host_ifname(host_ifname);
-  response->set_host_ipv4_address(subnet->AddressAtOffset(1));
+  response->set_host_ipv4_address(subnet->AddressAtOffset(0));
   auto* response_subnet = response->mutable_ipv4_subnet();
   response_subnet->set_base_addr(subnet->BaseAddress());
   response_subnet->set_prefix_len(subnet->PrefixLength());
