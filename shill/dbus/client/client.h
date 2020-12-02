@@ -92,7 +92,8 @@ class BRILLO_EXPORT Client {
     IPConfig ipconfig;
   };
 
-  using DefaultServiceChangedHandler = base::Callback<void()>;
+  using DefaultServiceChangedHandler =
+      base::Callback<void(const std::string& type)>;
   using DeviceChangedHandler = base::Callback<void(const Device* const)>;
 
   explicit Client(scoped_refptr<dbus::Bus> bus);

@@ -149,7 +149,10 @@ class ClientTest : public testing::Test {
     client_->Init();
   }
 
-  void DefaultServiceHandler() { default_service_changed_ = true; }
+  void DefaultServiceHandler(const std::string& type) {
+    default_service_type_ = type;
+    default_service_changed_ = true;
+  }
   void DeviceAddedHandler(const Client::Device* const device) {
     ASSERT_TRUE(device);
     EXPECT_TRUE(devices_.find(device->ifname) == devices_.end());
@@ -180,6 +183,7 @@ class ClientTest : public testing::Test {
   std::unique_ptr<FakeClient> client_;
 
   bool default_service_changed_;
+  std::string default_service_type_;
   bool default_device_connected_;
   Client::Device default_device_;
   std::map<std::string, Client::Device> devices_;
@@ -207,11 +211,21 @@ TEST_F(ClientTest, ShillLostDoesNotCreateNewManagerProxy) {
 TEST_F(ClientTest, DefaultServiceHandlerCalledForValidServicePath) {
   // When the default service changes, the client will start listening for
   // property changes on that proxy.
+  dbus::ObjectProxy::OnConnectedCallback callback;
   EXPECT_CALL(*client_->default_service(),
-              DoRegisterPropertyChangedSignalHandler(_, _));
+              DoRegisterPropertyChangedSignalHandler(_, _))
+      .WillOnce(MovePointee<1>(&callback));
   client_->NotifyManagerPropertyChange(kDefaultServiceProperty,
                                        dbus::ObjectPath("/service/0"));
+
+  brillo::VariantDictionary props;
+  props[kTypeProperty] = std::string("eth");
+  EXPECT_CALL(*client_->default_service(), GetProperties(_, _, _))
+      .WillOnce(DoAll(testing::SetArgPointee<0>(props), Return(true)));
+
+  std::move(callback).Run(kFlimflamServiceName, kMonitorPropertyChanged, true);
   EXPECT_TRUE(default_service_changed_);
+  EXPECT_EQ(default_service_type_, "eth");
 }
 
 TEST_F(ClientTest, DefaultServiceHandlerCalledForValidNoServicePath) {

@@ -75,9 +75,6 @@ void Client::NewDefaultServiceProxy(const dbus::ObjectPath& service_path) {
 }
 
 void Client::SetupDefaultServiceProxy(const dbus::ObjectPath& service_path) {
-  if (!service_path.IsValid() || service_path.value() == "/")
-    return;
-
   NewDefaultServiceProxy(service_path);
   default_service_proxy_->RegisterPropertyChangedSignalHandler(
       base::Bind(&Client::OnDefaultServicePropertyChange,
@@ -212,12 +209,17 @@ void Client::HandleDefaultServiceChanged(const brillo::Any& property_value) {
               << "] to [" << service_path.value() << "]";
   }
   ReleaseDefaultServiceProxy();
-  SetupDefaultServiceProxy(service_path);
 
-  // Notify that the default service has changed.
-  for (auto& handler : default_service_handlers_) {
-    handler.Run();
+  // If the service is disconnected, run the handlers here since the normal flow
+  // of doing so on property callback registration won't run.
+  if (!service_path.IsValid() || service_path.value() == "/") {
+    for (auto& handler : default_service_handlers_) {
+      handler.Run("");
+    }
+    return;
   }
+
+  SetupDefaultServiceProxy(service_path);
 }
 
 void Client::AddDevice(const dbus::ObjectPath& device_path) {
@@ -277,6 +279,14 @@ void Client::OnDefaultServicePropertyChangeRegistration(
                << service_path << "]";
     return;
   }
+
+  // Notify that the default service has changed.
+  const auto type =
+      brillo::GetVariantValueOrDefault<std::string>(properties, kTypeProperty);
+  for (auto& handler : default_service_handlers_) {
+    handler.Run(type);
+  }
+
   OnDefaultServicePropertyChange(
       kIsConnectedProperty,
       brillo::GetVariantValueOrDefault<bool>(properties, kIsConnectedProperty));
