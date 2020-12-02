@@ -22,8 +22,8 @@ base::Optional<base::Value> ParseValue(std::string json) {
   std::replace(json.begin(), json.end(), '\'', '"');
   auto result =
       base::JSONReader::ReadAndReturnValueWithError(json, base::JSON_PARSE_RFC);
-  CHECK_EQ(result.error_code, base::JSONReader::JSON_NO_ERROR)
-      << "Failed to load JSON: " << result.error_message << ", " << json;
+  CHECK(result.value) << "Failed to load JSON: " << result.error_message << ", "
+                      << json;
   return std::move(result.value);
 }
 

@@ -162,7 +162,7 @@ base::Optional<base::Value> DecodeListValueFromJSON(
     const std::string& json_string) {
   auto decoded_json = base::JSONReader::ReadAndReturnValueWithError(
       json_string, base::JSON_ALLOW_TRAILING_COMMAS);
-  if (decoded_json.error_code != base::JSONReader::JSON_NO_ERROR) {
+  if (!decoded_json.value) {
     LOG(ERROR) << "Invalid JSON string: " << decoded_json.error_message;
     return base::nullopt;
   }
@@ -179,7 +179,7 @@ base::Optional<base::Value> DecodeDictValueFromJSON(
     const std::string& json_string, const std::string& entry_name) {
   auto decoded_json = base::JSONReader::ReadAndReturnValueWithError(
       json_string, base::JSON_ALLOW_TRAILING_COMMAS);
-  if (decoded_json.error_code != base::JSONReader::JSON_NO_ERROR) {
+  if (!decoded_json.value) {
     LOG(ERROR) << "Invalid JSON string in " << entry_name << ": "
                << decoded_json.error_message;
     return base::nullopt;

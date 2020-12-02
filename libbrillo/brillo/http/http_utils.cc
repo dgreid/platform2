@@ -330,7 +330,7 @@ std::unique_ptr<base::DictionaryValue> ParseJsonResponse(
   std::string json = response->ExtractDataAsString();
   auto json_result =
       base::JSONReader::ReadAndReturnValueWithError(json, base::JSON_PARSE_RFC);
-  if (json_result.error_code != base::JSONReader::JSON_NO_ERROR) {
+  if (!json_result.value) {
     brillo::Error::AddToPrintf(error, FROM_HERE, brillo::errors::json::kDomain,
                                brillo::errors::json::kParseError,
                                "Error '%s' occurred parsing JSON string '%s'",
