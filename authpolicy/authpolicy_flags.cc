@@ -199,8 +199,7 @@ void AuthPolicyFlags::LoadFromJsonString(const std::string& flags_json) {
   auto root = base::JSONReader::ReadAndReturnValueWithError(
       flags_json, base::JSON_ALLOW_TRAILING_COMMAS);
   base::DictionaryValue* dict = nullptr;
-  if (root.error_code != base::JSONReader::JSON_NO_ERROR ||
-      !root.value->GetAsDictionary(&dict)) {
+  if (!root.value || !root.value->GetAsDictionary(&dict)) {
     LOG(ERROR) << "Fail to parse flags: "
                << (root.error_message.empty() ? "Invalid JSON"
                                               : root.error_message);
