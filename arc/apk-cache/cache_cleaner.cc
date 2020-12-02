@@ -59,9 +59,8 @@ bool IsAccessTimeValid(const base::StringPiece& json_message) {
   auto root = base::JSONReader::ReadAndReturnValueWithError(
       json_message, base::JSON_PARSE_RFC);
   if (!root.value) {
-    LOG(ERROR) << "Reading attributes JSON failed (error code: "
-               << root.error_code << "; error message: " << root.error_message
-               << ").";
+    LOG(ERROR) << "Reading attributes JSON failed (error message: "
+               << root.error_message << ").";
     return false;
   }
 
