@@ -60,7 +60,7 @@ TEST(AddressManager, SubnetsPerPool) {
       {AddressManager::Guest::VM_TERMINA, 26},
       {AddressManager::Guest::VM_PLUGIN, 32},
       {AddressManager::Guest::CONTAINER, 4},
-      {AddressManager::Guest::MINIJAIL_NETNS, 8},
+      {AddressManager::Guest::MINIJAIL_NETNS, 16},
   };
   AddressManager mgr;
   for (const auto a : addrs) {

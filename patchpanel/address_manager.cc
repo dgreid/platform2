@@ -18,8 +18,7 @@ namespace {
 // | 0       (/30) | ARC        | Used for ARC management interface            |
 // | 4-20    (/30) | ARC        | Used to expose multiple host networks to ARC |
 // | 24-124  (/30) | Termina VM | Used by Crostini                             |
-// | 128-160 (/30) | Host netns | Used for netns hosting minijailed services   |
-// | 164-192       | Reserved   |                                              |
+// | 128-188 (/30) | Host netns | Used for netns hosting minijailed services   |
 // | 192-252 (/28) | Containers | Used by Crostini                             |
 // +---------------+------------+----------------------------------------------+
 //
@@ -48,7 +47,7 @@ AddressManager::AddressManager() {
       case Guest::MINIJAIL_NETNS:
         base_addr = Ipv4Addr(100, 115, 92, 128);
         prefix_length = 30;
-        subnets = 8;
+        subnets = 16;
         break;
       case Guest::CONTAINER:
         base_addr = Ipv4Addr(100, 115, 92, 192);
