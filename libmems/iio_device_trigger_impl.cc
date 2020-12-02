@@ -94,14 +94,44 @@ base::Optional<int64_t> IioDeviceTriggerImpl::ReadNumberAttribute(
   return val;
 }
 
+base::Optional<double> IioDeviceTriggerImpl::ReadDoubleAttribute(
+    const std::string& name) const {
+  double val = 0;
+  int error = iio_device_attr_read_double(trigger_, name.c_str(), &val);
+  if (error) {
+    LOG(WARNING) << "Attempting to read attribute " << name
+                 << " failed: " << error;
+    return base::nullopt;
+  }
+  return val;
+}
+
 bool IioDeviceTriggerImpl::WriteNumberAttribute(const std::string& name,
                                                 int64_t value) {
   int id = GetId();
   if ((id == -1 && name.compare(kAddTrigger) != 0) ||
-      (id != -1 && name.compare(kSamplingFrequencyAttr) != 0))
+      (id != -1 && name.compare(kSamplingFrequencyAttr) != 0)) {
     return false;
+  }
 
   int error = iio_device_attr_write_longlong(trigger_, name.c_str(), value);
+  if (error) {
+    LOG(WARNING) << "Attempting to write attribute " << name
+                 << " failed: " << error;
+    return false;
+  }
+  return true;
+}
+
+bool IioDeviceTriggerImpl::WriteDoubleAttribute(const std::string& name,
+                                                double value) {
+  int id = GetId();
+  if ((id == -1 && name.compare(kAddTrigger) != 0) ||
+      (id != -1 && name.compare(kSamplingFrequencyAttr) != 0)) {
+    return false;
+  }
+
+  int error = iio_device_attr_write_double(trigger_, name.c_str(), value);
   if (error) {
     LOG(WARNING) << "Attempting to write attribute " << name
                  << " failed: " << error;

@@ -48,18 +48,14 @@ class LIBMEMS_EXPORT IioDeviceTriggerImpl : public IioDevice {
   base::Optional<int64_t> ReadNumberAttribute(
       const std::string& name) const override;
   base::Optional<double> ReadDoubleAttribute(
-      const std::string& name) const override {
-    return base::nullopt;
-  }
+      const std::string& name) const override;
 
   bool WriteStringAttribute(const std::string& name,
                             const std::string& value) override {
     return false;
   }
   bool WriteNumberAttribute(const std::string& name, int64_t value) override;
-  bool WriteDoubleAttribute(const std::string& name, double value) override {
-    return false;
-  }
+  bool WriteDoubleAttribute(const std::string& name, double value) override;
   iio_device* GetUnderlyingIioDevice() const override { return nullptr; }
 
   bool SetTrigger(IioDevice* trigger_device) override { return false; }
