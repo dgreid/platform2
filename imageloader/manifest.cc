@@ -84,8 +84,7 @@ bool Manifest::ParseManifest(const std::string& manifest_raw) {
   auto manifest_value = base::JSONReader::ReadAndReturnValueWithError(
       manifest_raw, base::JSON_PARSE_RFC);
   if (!manifest_value.value) {
-    LOG(ERROR) << "Could not parse the manifest file as JSON. Error "
-               << manifest_value.error_code << ": "
+    LOG(ERROR) << "Could not parse the manifest file as JSON. Error: "
                << manifest_value.error_message;
     return false;
   }
