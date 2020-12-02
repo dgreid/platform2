@@ -213,7 +213,8 @@ bool ArcVm::Start(base::FilePath kernel, VmBuilder vm_builder) {
       .AppendAudioDevice("backend=cras,capture=true")
       .AppendSharedDir(oem_etc_shared_dir)
       .AppendSharedDir(shared_media)
-      .AppendSharedDir(shared_testharness);
+      .AppendSharedDir(shared_testharness)
+      .EnableBattery(true /* enable */);
 
   auto args = vm_builder.BuildVmArgs();
 

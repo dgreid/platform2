@@ -60,6 +60,7 @@ class VmBuilder {
   VmBuilder& EnableSoftwareTpm(bool enable);
   VmBuilder& EnableVideoDecoder(bool enable);
   VmBuilder& EnableVideoEncoder(bool enable);
+  VmBuilder& EnableBattery(bool enable);
   VmBuilder& EnableSmt(bool enable);
 
   // Builds the command line required to start a VM.
@@ -81,6 +82,7 @@ class VmBuilder {
   bool enable_software_tpm_ = false;
   bool enable_video_decoder_ = false;
   bool enable_video_encoder_ = false;
+  bool enable_battery_ = false;
   base::Optional<bool> enable_smt_ = false;
 
   std::vector<Disk> disks_;

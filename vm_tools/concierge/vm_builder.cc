@@ -131,6 +131,11 @@ VmBuilder& VmBuilder::EnableVideoEncoder(bool enable) {
   return *this;
 }
 
+VmBuilder& VmBuilder::EnableBattery(bool enable) {
+  enable_battery_ = enable;
+  return *this;
+}
+
 VmBuilder& VmBuilder::EnableSmt(bool enable) {
   enable_smt_ = enable;
   return *this;
@@ -216,6 +221,9 @@ base::StringPairs VmBuilder::BuildVmArgs() const {
 
   if (enable_video_encoder_)
     args.emplace_back("--video-encoder", "");
+
+  if (enable_battery_)
+    args.emplace_back("--battery", "");
 
   for (const auto& shared_dir : shared_dirs_)
     args.emplace_back("--shared-dir", shared_dir);
