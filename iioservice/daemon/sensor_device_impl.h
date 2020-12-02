@@ -63,8 +63,7 @@ class SensorDeviceImpl final : public cros::mojom::SensorDevice {
  private:
   SensorDeviceImpl(scoped_refptr<base::SequencedTaskRunner> ipc_task_runner,
                    libmems::IioContext* context,
-                   std::unique_ptr<base::Thread> thread,
-                   bool use_fifo);
+                   std::unique_ptr<base::Thread> thread);
 
   void AddReceiverOnThread(
       int32_t iio_device_id,
@@ -87,7 +86,6 @@ class SensorDeviceImpl final : public cros::mojom::SensorDevice {
   libmems::IioContext* context_;  // non-owned
   mojo::ReceiverSet<cros::mojom::SensorDevice> receiver_set_;
   std::unique_ptr<base::Thread> sample_thread_;
-  bool use_fifo_ = true;
 
   std::map<mojo::ReceiverId, ClientData> clients_;
 

@@ -201,26 +201,43 @@ SensorServiceImpl::SensorServiceImpl(
   }
 }
 
+void SensorServiceImpl::FailedToLoadDevice(libmems::IioDevice* device) {
+  DCHECK(ipc_task_runner_->RunsTasksInCurrentSequence());
+
+  const int32_t id = device->GetId();
+  if (++iio_device_permission_trials_[id] >=
+      kNumFailedPermTrialsBeforeGivingUp) {
+    LOGF(ERROR) << "Too many failed permission trials. Giving up on device: "
+                << id;
+    return;
+  }
+
+  LOGF(WARNING) << "Permissions and ownerships may not be set yet for device: "
+                << id;
+  ipc_task_runner_->PostDelayedTask(
+      FROM_HERE,
+      base::BindOnce(&SensorServiceImpl::AddDevice, weak_factory_.GetWeakPtr(),
+                     device),
+      base::TimeDelta::FromMilliseconds(kPermTrialDelayInMilliseconds));
+}
+
 void SensorServiceImpl::AddDevice(libmems::IioDevice* device) {
   DCHECK(ipc_task_runner_->RunsTasksInCurrentSequence());
 
   const int32_t id = device->GetId();
   if (!device->DisableBuffer()) {
-    if (++iio_device_permission_trials_[id] >=
-        kNumFailedPermTrialsBeforeGivingUp) {
-      LOGF(ERROR) << "Too many failed permission trials. Giving up on device: "
-                  << id;
+    FailedToLoadDevice(device);
+    return;
+  }
+
+  if (strcmp(device->GetName(), "acpi-als") == 0 && !device->GetTrigger()) {
+    // Reloads context for the hrtimer, as it'd be added after mems_setup.
+    context_->Reload();
+
+    if (!device->GetTrigger()) {
+      FailedToLoadDevice(device);
       return;
     }
-
-    LOGF(WARNING)
-        << "Permissions and ownerships may not be set yet for device: " << id;
-    ipc_task_runner_->PostDelayedTask(
-        FROM_HERE,
-        base::BindOnce(&SensorServiceImpl::AddDevice,
-                       weak_factory_.GetWeakPtr(), device),
-        base::TimeDelta::FromMilliseconds(kPermTrialDelayInMilliseconds));
-    return;
   }
 
   std::vector<cros::mojom::DeviceType> types;

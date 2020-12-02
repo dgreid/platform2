@@ -46,9 +46,8 @@ SensorDeviceImpl::ScopedSensorDeviceImpl SensorDeviceImpl::Create(
     return device;
   }
 
-  // TODO(chenghaoyang): Check how to detect it's Samus, which doesn't use fifo.
   device.reset(new SensorDeviceImpl(std::move(ipc_task_runner), context,
-                                    std::move(thread), true));
+                                    std::move(thread)));
 
   return device;
 }
@@ -265,12 +264,10 @@ void SensorDeviceImpl::GetChannelsAttributes(
 SensorDeviceImpl::SensorDeviceImpl(
     scoped_refptr<base::SequencedTaskRunner> ipc_task_runner,
     libmems::IioContext* context,
-    std::unique_ptr<base::Thread> thread,
-    bool use_fifo)
+    std::unique_ptr<base::Thread> thread)
     : ipc_task_runner_(std::move(ipc_task_runner)),
       context_(std::move(context)),
-      sample_thread_(std::move(thread)),
-      use_fifo_(use_fifo) {
+      sample_thread_(std::move(thread)) {
   DCHECK(ipc_task_runner_->RunsTasksInCurrentSequence());
 
   receiver_set_.set_disconnect_handler(base::BindRepeating(
@@ -353,15 +350,9 @@ bool SensorDeviceImpl::AddSamplesHandlerIfNotSet(
   auto error_cb = base::BindRepeating(
       &SensorDeviceImpl::OnErrorOccurredCallback, weak_factory_.GetWeakPtr());
 
-  if (use_fifo_) {
-    handler = SamplesHandler::CreateWithFifo(
-        ipc_task_runner_, sample_thread_->task_runner(), iio_device,
-        std::move(sample_cb), std::move(error_cb));
-  } else {
-    handler = SamplesHandler::CreateWithoutFifo(
-        ipc_task_runner_, sample_thread_->task_runner(), context_, iio_device,
-        std::move(sample_cb), std::move(error_cb));
-  }
+  handler = SamplesHandler::Create(ipc_task_runner_,
+                                   sample_thread_->task_runner(), iio_device,
+                                   std::move(sample_cb), std::move(error_cb));
 
   if (!handler) {
     LOGF(ERROR) << "Failed to create the samples handler for device: "

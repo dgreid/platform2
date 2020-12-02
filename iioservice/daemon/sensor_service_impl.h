@@ -62,6 +62,7 @@ class SensorServiceImpl : public cros::mojom::SensorService,
  private:
   static const uint32_t kNumFailedPermTrialsBeforeGivingUp = 10;
 
+  void FailedToLoadDevice(libmems::IioDevice* device);
   void AddDevice(libmems::IioDevice* device);
 
   scoped_refptr<base::SequencedTaskRunner> ipc_task_runner_;

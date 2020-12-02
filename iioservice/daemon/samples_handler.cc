@@ -27,6 +27,9 @@ namespace {
 constexpr char kNoBatchChannels[][10] = {"timestamp", "count"};
 constexpr char kHWFifoFlushPath[] = "buffer/hwfifo_flush";
 
+constexpr double kAcpiAlsMinFrequency = 0.1;
+constexpr double kAcpiAlsMaxFrequency = 2.0;
+
 }  // namespace
 
 // static
@@ -56,7 +59,7 @@ bool SamplesHandler::DisableBufferAndEnableChannels(
 }
 
 // static
-SamplesHandler::ScopedSamplesHandler SamplesHandler::CreateWithFifo(
+SamplesHandler::ScopedSamplesHandler SamplesHandler::Create(
     scoped_refptr<base::SequencedTaskRunner> ipc_task_runner,
     scoped_refptr<base::SingleThreadTaskRunner> sample_task_runner,
     libmems::IioDevice* iio_device,
@@ -68,46 +71,16 @@ SamplesHandler::ScopedSamplesHandler SamplesHandler::CreateWithFifo(
     return handler;
 
   double min_freq, max_freq;
-  if (!iio_device->GetMinMaxFrequency(&min_freq, &max_freq))
+  if (strcmp(iio_device->GetName(), "acpi-als") == 0) {
+    min_freq = kAcpiAlsMinFrequency;
+    max_freq = kAcpiAlsMaxFrequency;
+  } else if (!iio_device->GetMinMaxFrequency(&min_freq, &max_freq)) {
     return handler;
-
-  handler.reset(new SamplesHandler(
-      std::move(ipc_task_runner), std::move(sample_task_runner), iio_device,
-      min_freq, max_freq, std::move(on_sample_updated_callback),
-      std::move(on_error_occurred_callback)));
-  return handler;
-}
-
-// static
-SamplesHandler::ScopedSamplesHandler SamplesHandler::CreateWithoutFifo(
-    scoped_refptr<base::SequencedTaskRunner> ipc_task_runner,
-    scoped_refptr<base::SingleThreadTaskRunner> sample_task_runner,
-    libmems::IioContext* iio_context,
-    libmems::IioDevice* iio_device,
-    OnSampleUpdatedCallback on_sample_updated_callback,
-    OnErrorOccurredCallback on_error_occurred_callback) {
-  ScopedSamplesHandler handler(nullptr, SamplesHandlerDeleter);
-
-  if (!DisableBufferAndEnableChannels(iio_device))
-    return handler;
-
-  double min_freq, max_freq;
-  if (!iio_device->GetMinMaxFrequency(&min_freq, &max_freq))
-    return handler;
-
-  auto trigger_device = iio_device->GetTrigger();
-  if (!trigger_device) {
-    trigger_device = iio_context->GetTriggerById(iio_device->GetId() + 1);
-    if (!trigger_device) {
-      LOGF(ERROR) << "Failed to find trigger with id: " << iio_device->GetId();
-
-      return handler;
-    }
   }
 
   handler.reset(new SamplesHandler(
       std::move(ipc_task_runner), std::move(sample_task_runner), iio_device,
-      trigger_device, min_freq, max_freq, std::move(on_sample_updated_callback),
+      min_freq, max_freq, std::move(on_sample_updated_callback),
       std::move(on_error_occurred_callback)));
   return handler;
 }
@@ -181,40 +154,7 @@ SamplesHandler::SamplesHandler(
     OnErrorOccurredCallback on_error_occurred_callback)
     : ipc_task_runner_(std::move(ipc_task_runner)),
       sample_task_runner_(std::move(sample_task_runner)),
-      use_fifo_(true),
       iio_device_(iio_device),
-      trigger_device_(nullptr),
-      dev_min_frequency_(min_freq),
-      dev_max_frequency_(max_freq),
-      on_sample_updated_callback_(std::move(on_sample_updated_callback)),
-      on_error_occurred_callback_(std::move(on_error_occurred_callback)) {
-  DCHECK_GE(dev_max_frequency_, dev_min_frequency_);
-
-  auto channels = iio_device_->GetAllChannels();
-  for (size_t i = 0; i < channels.size(); ++i) {
-    for (size_t j = 0; j < base::size(kNoBatchChannels); ++j) {
-      if (strcmp(channels[i]->GetId(), kNoBatchChannels[j]) == 0) {
-        no_batch_chn_indices.emplace(i);
-        break;
-      }
-    }
-  }
-}
-
-SamplesHandler::SamplesHandler(
-    scoped_refptr<base::SequencedTaskRunner> ipc_task_runner,
-    scoped_refptr<base::SingleThreadTaskRunner> sample_task_runner,
-    libmems::IioDevice* iio_device,
-    libmems::IioDevice* trigger_device,
-    double min_freq,
-    double max_freq,
-    OnSampleUpdatedCallback on_sample_updated_callback,
-    OnErrorOccurredCallback on_error_occurred_callback)
-    : ipc_task_runner_(std::move(ipc_task_runner)),
-      sample_task_runner_(std::move(sample_task_runner)),
-      use_fifo_(false),
-      iio_device_(iio_device),
-      trigger_device_(trigger_device),
       dev_min_frequency_(min_freq),
       dev_max_frequency_(max_freq),
       on_sample_updated_callback_(std::move(on_sample_updated_callback)),
@@ -236,8 +176,10 @@ void SamplesHandler::SetSampleWatcherOnThread() {
   DCHECK(sample_task_runner_->BelongsToCurrentThread());
 
   // Flush the old samples in EC FIFO.
-  if (!iio_device_->WriteStringAttribute(kHWFifoFlushPath, "1\n"))
+  if (!iio_device_->GetTrigger() &&
+      !iio_device_->WriteStringAttribute(kHWFifoFlushPath, "1\n")) {
     LOGF(ERROR) << "Failed to flush the old samples in EC FIFO";
+  }
 
   auto fd = iio_device_->GetBufferFd();
   if (!fd.has_value()) {
@@ -472,22 +414,20 @@ bool SamplesHandler::UpdateRequestedFrequencyOnThread(double frequency) {
     return true;
 
   requested_frequency_ = frequency;
-  if (!iio_device_->WriteDoubleAttribute(libmems::kSamplingFrequencyAttr,
-                                         frequency)) {
-    LOGF(ERROR) << "Failed to set frequency";
-    if (use_fifo_)  // ignore this error if no fifo
+  if (!iio_device_->GetTrigger()) {
+    if (!iio_device_->WriteDoubleAttribute(libmems::kSamplingFrequencyAttr,
+                                           frequency)) {
+      LOGF(ERROR) << "Failed to set frequency";
+    }
+
+    auto freq_opt =
+        iio_device_->ReadDoubleAttribute(libmems::kSamplingFrequencyAttr);
+    if (!freq_opt.has_value()) {
+      LOGF(ERROR) << "Failed to get frequency";
       return false;
-  }
+    }
+    dev_frequency_ = freq_opt.value();
 
-  auto freq_opt =
-      iio_device_->ReadDoubleAttribute(libmems::kSamplingFrequencyAttr);
-  if (!freq_opt.has_value()) {
-    LOGF(ERROR) << "Failed to get frequency";
-    return false;
-  }
-  dev_frequency_ = freq_opt.value();
-
-  if (use_fifo_) {
     if (dev_frequency_ < libmems::kFrequencyEpsilon)
       return true;
 
@@ -500,14 +440,19 @@ bool SamplesHandler::UpdateRequestedFrequencyOnThread(double frequency) {
     return true;
   }
 
-  // no fifo
-  DCHECK(trigger_device_);
-
-  if (!trigger_device_->WriteDoubleAttribute(libmems::kSamplingFrequencyAttr,
-                                             frequency)) {
+  iio_device_->WriteDoubleAttribute(libmems::kSamplingFrequencyAttr, frequency);
+  if (!iio_device_->GetTrigger()->WriteDoubleAttribute(
+          libmems::kSamplingFrequencyAttr, frequency)) {
     LOGF(ERROR) << "Failed to set trigger's frequency";
     return false;
   }
+  auto freq_opt = iio_device_->GetTrigger()->ReadDoubleAttribute(
+      libmems::kSamplingFrequencyAttr);
+  if (!freq_opt.has_value()) {
+    LOGF(ERROR) << "Failed to get frequency";
+    return false;
+  }
+  dev_frequency_ = freq_opt.value();
 
   return true;
 }

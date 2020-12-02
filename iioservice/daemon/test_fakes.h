@@ -37,7 +37,7 @@ class FakeSamplesHandler : public SamplesHandler {
   using ScopedFakeSamplesHandler =
       std::unique_ptr<FakeSamplesHandler, decltype(&SamplesHandlerDeleter)>;
 
-  static ScopedFakeSamplesHandler CreateWithFifo(
+  static ScopedFakeSamplesHandler Create(
       scoped_refptr<base::SingleThreadTaskRunner> ipc_task_runner,
       scoped_refptr<base::SingleThreadTaskRunner> task_runner,
       libmems::fakes::FakeIioDevice* fake_iio_device,

@@ -41,18 +41,9 @@ class SamplesHandler {
       mojo::ReceiverId, cros::mojom::ObserverErrorType)>;
 
   static bool DisableBufferAndEnableChannels(libmems::IioDevice* iio_device);
-  // use fifo
-  static ScopedSamplesHandler CreateWithFifo(
+  static ScopedSamplesHandler Create(
       scoped_refptr<base::SequencedTaskRunner> ipc_task_runner,
       scoped_refptr<base::SingleThreadTaskRunner> sample_task_runner,
-      libmems::IioDevice* iio_device,
-      OnSampleUpdatedCallback on_sample_updated_callback,
-      OnErrorOccurredCallback on_error_occurred_callback);
-  // no fifo
-  static ScopedSamplesHandler CreateWithoutFifo(
-      scoped_refptr<base::SequencedTaskRunner> ipc_task_runner,
-      scoped_refptr<base::SingleThreadTaskRunner> sample_task_runner,
-      libmems::IioContext* iio_context,
       libmems::IioDevice* iio_device,
       OnSampleUpdatedCallback on_sample_updated_callback,
       OnErrorOccurredCallback on_error_occurred_callback);
@@ -99,15 +90,6 @@ class SamplesHandler {
                  double max_freq,
                  OnSampleUpdatedCallback on_sample_updated_callback,
                  OnErrorOccurredCallback on_error_occurred_callback);
-  // no fifo
-  SamplesHandler(scoped_refptr<base::SequencedTaskRunner> ipc_task_runner,
-                 scoped_refptr<base::SingleThreadTaskRunner> sample_task_runner,
-                 libmems::IioDevice* iio_device,
-                 libmems::IioDevice* trigger_device,
-                 double in_freq,
-                 double ax_freq,
-                 OnSampleUpdatedCallback on_sample_updated_callback,
-                 OnErrorOccurredCallback on_error_occurred_callback);
 
   void SetSampleWatcherOnThread();
   void StartAcceptingSamples(
@@ -151,9 +133,7 @@ class SamplesHandler {
 
   scoped_refptr<base::SequencedTaskRunner> ipc_task_runner_;
   scoped_refptr<base::SingleThreadTaskRunner> sample_task_runner_;
-  bool use_fifo_ = true;
   libmems::IioDevice* iio_device_;
-  libmems::IioDevice* trigger_device_ = nullptr;
 
   // Clients that either have invalid frequency or no enabled channels.
   std::set<ClientData*> inactive_clients_;

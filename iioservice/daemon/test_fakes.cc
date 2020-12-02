@@ -30,7 +30,7 @@ int64_t CalcMovingAverage(const std::vector<int64_t>& values) {
 }  // namespace
 
 // static
-FakeSamplesHandler::ScopedFakeSamplesHandler FakeSamplesHandler::CreateWithFifo(
+FakeSamplesHandler::ScopedFakeSamplesHandler FakeSamplesHandler::Create(
     scoped_refptr<base::SingleThreadTaskRunner> ipc_task_runner,
     scoped_refptr<base::SingleThreadTaskRunner> task_runner,
     libmems::fakes::FakeIioDevice* fake_iio_device,

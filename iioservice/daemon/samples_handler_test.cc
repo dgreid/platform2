@@ -32,6 +32,9 @@ constexpr double kMaxFrequency = 40.0;
 constexpr double kFooFrequency = 20.0;
 constexpr int kNumFailures = 10;
 
+constexpr char kFakeTriggerName[] = "FakeTrigger";
+constexpr int kFakeTriggerId = 1;
+
 double FixFrequency(double frequency) {
   if (frequency < libmems::kFrequencyEpsilon)
     return 0.0;
@@ -51,7 +54,9 @@ class SamplesHandlerTestBase {
                                libmems::IioDevice::IioSample sample) {
     CHECK(
         task_environment_.GetMainThreadTaskRunner()->BelongsToCurrentThread());
-    CHECK_LT(id, observers_.size());
+
+    if (id >= observers_.size())
+      return;
 
     observers_[id]->OnSampleUpdated(std::move(sample));
   }
@@ -67,9 +72,15 @@ class SamplesHandlerTestBase {
     observers_[id]->OnErrorOccurred(type);
   }
 
-  void SetUpBase() {
+  void SetUpBase(bool with_trigger) {
     device_ = std::make_unique<libmems::fakes::FakeIioDevice>(
         nullptr, fakes::kAccelDeviceName, fakes::kAccelDeviceId);
+    if (with_trigger) {
+      trigger_ = std::make_unique<libmems::fakes::FakeIioDevice>(
+          nullptr, kFakeTriggerName, kFakeTriggerId);
+      device_->SetTrigger(trigger_.get());
+    }
+
     EXPECT_TRUE(
         device_->WriteStringAttribute(libmems::kSamplingFrequencyAvailable,
                                       fakes::kFakeSamplingFrequencyAvailable));
@@ -82,7 +93,7 @@ class SamplesHandlerTestBase {
     EXPECT_TRUE(
         device_->WriteDoubleAttribute(libmems::kSamplingFrequencyAttr, 0.0));
 
-    handler_ = fakes::FakeSamplesHandler::CreateWithFifo(
+    handler_ = fakes::FakeSamplesHandler::Create(
         task_environment_.GetMainThreadTaskRunner(),
         task_environment_.GetMainThreadTaskRunner(), device_.get(),
         base::BindRepeating(&SamplesHandlerTestBase::OnSampleUpdatedCallback,
@@ -108,6 +119,7 @@ class SamplesHandlerTestBase {
       base::test::TaskEnvironment::MainThreadType::IO};
 
   std::unique_ptr<libmems::fakes::FakeIioDevice> device_;
+  std::unique_ptr<libmems::fakes::FakeIioDevice> trigger_;
 
   fakes::FakeSamplesHandler::ScopedFakeSamplesHandler handler_ = {
       nullptr, SamplesHandler::SamplesHandlerDeleter};
@@ -118,7 +130,7 @@ class SamplesHandlerTestBase {
 class SamplesHandlerTest : public ::testing::Test,
                            public SamplesHandlerTestBase {
  protected:
-  void SetUp() override { SetUpBase(); }
+  void SetUp() override { SetUpBase(/*with_trigger=*/false); }
 
   void TearDown() override { TearDownBase(); }
 };
@@ -233,7 +245,7 @@ class SamplesHandlerTestWithParam
     : public ::testing::TestWithParam<std::vector<std::pair<double, double>>>,
       public SamplesHandlerTestBase {
  protected:
-  void SetUp() override { SetUpBase(); }
+  void SetUp() override { SetUpBase(/*with_trigger=*/false); }
 
   void TearDown() override { TearDownBase(); }
 };
@@ -364,6 +376,13 @@ TEST_P(SamplesHandlerTestWithParam, ReadSamplesWithFrequency) {
 
   base::RunLoop().RunUntilIdle();
 
+  EXPECT_EQ(device_->ReadDoubleAttribute(libmems::kSamplingFrequencyAttr)
+                .value_or(-1),
+            max_freq);
+  EXPECT_EQ(
+      device_->ReadDoubleAttribute(libmems::kHWFifoTimeoutAttr).value_or(-1),
+      1.0 / max_freq);
+
   device_->SetPauseCallbackAtKthSamples(
       fakes::kPauseIndex,
       base::BindOnce(
@@ -400,6 +419,13 @@ TEST_P(SamplesHandlerTestWithParam, ReadSamplesWithFrequency) {
   // Wait until all observers receive all samples
   base::RunLoop().RunUntilIdle();
 
+  EXPECT_EQ(device_->ReadDoubleAttribute(libmems::kSamplingFrequencyAttr)
+                .value_or(-1),
+            max_freq2);
+  EXPECT_EQ(
+      device_->ReadDoubleAttribute(libmems::kHWFifoTimeoutAttr).value_or(-1),
+      1.0 / max_freq2);
+
   for (const auto& observer : observers_)
     EXPECT_TRUE(observer->FinishedObserving());
 
@@ -428,6 +454,36 @@ INSTANTIATE_TEST_SUITE_P(
                           {2.0, 10.0}, {50.0, 30.0}, {80.0, 60.0}},
                       std::vector<std::pair<double, double>>{{20.0, 30.0},
                                                              {10.0, 10.0}}));
+
+class SamplesHandlerWithTriggerTest : public ::testing::Test,
+                                      public SamplesHandlerTestBase {
+ protected:
+  void SetUp() override { SetUpBase(/*with_trigger=*/true); }
+
+  void TearDown() override { TearDownBase(); }
+};
+
+TEST_F(SamplesHandlerWithTriggerTest, CheckFrequenciesSet) {
+  ClientData client_data;
+
+  double frequency = kMaxFrequency;
+
+  client_data.id = 0;
+  client_data.iio_device = device_.get();
+  client_data.enabled_chn_indices.emplace(0);  // accel_x
+  client_data.frequency = frequency;
+
+  handler_->AddClient(&client_data);
+
+  base::RunLoop().RunUntilIdle();
+
+  EXPECT_EQ(device_->ReadDoubleAttribute(libmems::kSamplingFrequencyAttr)
+                .value_or(-1),
+            frequency);
+  EXPECT_EQ(trigger_->ReadDoubleAttribute(libmems::kSamplingFrequencyAttr)
+                .value_or(-1),
+            frequency);
+}
 
 }  // namespace
 
