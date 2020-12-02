@@ -39,7 +39,10 @@ message MakeCredentialRequest {
   uint64 request_id = 6;
   // User display name for listing credentials to the user.
   string user_display_name = 7;
-  // Next ID: 8
+  // The appIdExclude extension. If set, values in |excluded_credential_id|
+  // will be tested against this AppID in addition to |rp_id|.
+  string app_id_exclude = 8;
+  // Next ID: 9
 }
 
 message MakeCredentialResponse {
@@ -84,7 +87,9 @@ message GetAssertionRequest {
   repeated bytes allowed_credential_id = 4;
   // Id used to identify the window that initiated the request.
   uint64 request_id = 5;
-  // Next ID: 6
+  // App id extension. Used in place of rp id for legacy u2f credentials.
+  string app_id = 6;
+  // Next ID: 7
 }
 
 message Assertion {
@@ -120,6 +125,8 @@ message HasCredentialsRequest {
   // String representing a valid domain name.
   string rp_id = 1;
   repeated bytes credential_id = 2;
+  // App id extension. Used in place of rp id for legacy u2f credentials.
+  string app_id = 3;
 }
 
 message HasCredentialsResponse {
