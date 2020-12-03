@@ -907,6 +907,9 @@ bool SetXattr(const base::FilePath& path,
 
 bool ShouldDeleteAndroidData(AndroidSdkVersion system_sdk_version,
                              AndroidSdkVersion data_sdk_version) {
+  // Initial launch with clean data.
+  if (data_sdk_version == AndroidSdkVersion::UNKNOWN)
+    return false;
   // Downgraded. (b/80113276)
   if (data_sdk_version > system_sdk_version) {
     LOG(INFO) << "Clearing /data dir because ARC was downgraded from "
@@ -914,12 +917,19 @@ bool ShouldDeleteAndroidData(AndroidSdkVersion system_sdk_version,
               << static_cast<int>(system_sdk_version) << ".";
     return true;
   }
-  // Upgraded from pre-M to post-P. (b/77591360)
-  if (data_sdk_version > AndroidSdkVersion::UNKNOWN &&
-      data_sdk_version <= AndroidSdkVersion::ANDROID_M &&
+  // Skip-upgraded from M to post-P. (b/77591360)
+  if (data_sdk_version == AndroidSdkVersion::ANDROID_M &&
       system_sdk_version >= AndroidSdkVersion::ANDROID_P) {
-    LOG(INFO) << "Clearing /data dir because ARC was upgraded from pre-M("
+    LOG(INFO) << "Clearing /data dir because ARC was skip-upgraded from M("
               << static_cast<int>(data_sdk_version) << ") to post-P("
+              << static_cast<int>(system_sdk_version) << ").";
+    return true;
+  }
+  // Skip-upgraded from N to post-R. (b/167635130)
+  if (data_sdk_version == AndroidSdkVersion::ANDROID_N_MR1 &&
+      system_sdk_version >= AndroidSdkVersion::ANDROID_R) {
+    LOG(INFO) << "Clearing /data dir because ARC was skip-upgraded from N("
+              << static_cast<int>(data_sdk_version) << ") to post-R("
               << static_cast<int>(system_sdk_version) << ").";
     return true;
   }
