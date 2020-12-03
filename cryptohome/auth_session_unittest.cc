@@ -7,10 +7,31 @@
 #include "cryptohome/auth_session.h"
 
 #include <string>
+#include <utility>
 
+#include <base/test/task_environment.h>
+#include <base/timer/mock_timer.h>
 #include <gtest/gtest.h>
 
 namespace cryptohome {
+
+// Fake username to be used in this test suite.
+const char fake_username[] = "test_username";
+
+TEST(AuthSessionTest, TimeoutTest) {
+  base::test::SingleThreadTaskEnvironment task_environment;
+  bool called = false;
+  auto on_timeout = base::BindOnce(
+      [](bool* called, const base::UnguessableToken&) { *called = true; },
+      base::Unretained(&called));
+  AuthSession auth_session(fake_username, std::move(on_timeout));
+  EXPECT_EQ(auth_session.GetStatus(),
+            AuthStatus::kAuthStatusFurtherFactorRequired);
+  ASSERT_TRUE(auth_session.timer_.IsRunning());
+  auth_session.timer_.FireNow();
+  EXPECT_EQ(auth_session.GetStatus(), AuthStatus::kAuthStatusTimedOut);
+  EXPECT_TRUE(called);
+}
 
 TEST(AuthSessionTest, SerializedStringFromNullToken) {
   base::UnguessableToken token = base::UnguessableToken::Null();

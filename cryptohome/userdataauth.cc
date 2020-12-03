@@ -3057,9 +3057,12 @@ bool UserDataAuth::StartAuthSession(
     user_data_auth::StartAuthSessionRequest request,
     base::OnceCallback<void(const user_data_auth::StartAuthSessionReply&)>
         on_done) {
-  std::unique_ptr<AuthSession> auth_session =
-      std::make_unique<AuthSession>(request.account_id().account_id());
-
+  // The lifetime of UserDataAuth instance will outlast AuthSession which is why
+  // usage of |Unretained| is safe.
+  auto on_timeout = base::BindOnce(&UserDataAuth::RemoveAuthSessionWithToken,
+                                   base::Unretained(this));
+  std::unique_ptr<AuthSession> auth_session = std::make_unique<AuthSession>(
+      request.account_id().account_id(), std::move(on_timeout));
   user_data_auth::StartAuthSessionReply reply;
   base::Optional<std::string> serialized_string =
       AuthSession::GetSerializedStringFromToken(auth_session->token());
@@ -3075,6 +3078,11 @@ bool UserDataAuth::StartAuthSession(
   std::move(on_done).Run(reply);
 
   return true;
+}
+
+void UserDataAuth::RemoveAuthSessionWithToken(
+    const base::UnguessableToken& token) {
+  auth_sessions_.erase(token);
 }
 
 }  // namespace cryptohome

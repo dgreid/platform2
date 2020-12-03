@@ -846,6 +846,10 @@ class UserDataAuth {
   // Ensures BootLockbox is finalized;
   void EnsureBootLockboxFinalized();
 
+  // =============== Auth Session Related Helpers ===============
+
+  void RemoveAuthSessionWithToken(const base::UnguessableToken& token);
+
   // =============== Threading Related Variables ===============
 
   // The task runner that belongs to the thread that created this UserDataAuth

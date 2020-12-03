@@ -5,6 +5,7 @@
 #include "cryptohome/auth_session.h"
 
 #include <string>
+#include <utility>
 
 namespace cryptohome {
 
@@ -16,12 +17,27 @@ constexpr int kNumberOfSerializedValuesInToken = 2;
 constexpr int kHighTokenOffset = 0;
 // Offset where the low value is used in Serialized string.
 constexpr int kLowTokenOffset = kSizeOfSerializedValueInToken;
+// AuthSession will time out if it is active after this time interval.
+constexpr base::TimeDelta kAuthSessionTimeoutInMinutes =
+    base::TimeDelta::FromMinutes(5);
 
-AuthSession::AuthSession(std::string username) : username_(username) {
+AuthSession::AuthSession(
+    std::string username,
+    base::OnceCallback<void(const base::UnguessableToken&)> on_timeout)
+    : username_(username), on_timeout_(std::move(on_timeout)) {
   token_ = base::UnguessableToken::Create();
+  timer_.Start(
+      FROM_HERE, kAuthSessionTimeoutInMinutes,
+      base::Bind(&AuthSession::AuthSessionTimedOut, base::Unretained(this)));
 }
 
 AuthSession::~AuthSession() = default;
+
+void AuthSession::AuthSessionTimedOut() {
+  status_ = AuthStatus::kAuthStatusTimedOut;
+  // After this call back to |UserDataAuth|, |this| object will be deleted.
+  std::move(on_timeout_).Run(token_);
+}
 
 // static
 base::Optional<std::string> AuthSession::GetSerializedStringFromToken(

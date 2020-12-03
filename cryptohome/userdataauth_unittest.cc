@@ -11,6 +11,7 @@
 #include <base/files/file_util.h>
 #include <base/location.h>
 #include <base/stl_util.h>
+#include <base/test/task_environment.h>
 #include <brillo/cryptohome.h>
 #include <chaps/token_manager_client_mock.h>
 #include <dbus/mock_bus.h>
@@ -2960,6 +2961,7 @@ TEST_F(UserDataAuthExTest, RenameInvalidArguments) {
 }
 
 TEST_F(UserDataAuthExTest, StartAuthSession) {
+  base::test::SingleThreadTaskEnvironment task_environment;
   PrepareArguments();
   start_auth_session_req_->mutable_account_id()->set_account_id(
       "foo@example.com");
@@ -2979,6 +2981,9 @@ TEST_F(UserDataAuthExTest, StartAuthSession) {
           auth_session_reply.auth_session_id());
   EXPECT_TRUE(auth_session_id.has_value());
   EXPECT_NE(userdataauth_->auth_sessions_.find(auth_session_id.value()),
+            userdataauth_->auth_sessions_.end());
+  userdataauth_->auth_sessions_[auth_session_id.value()]->timer_.FireNow();
+  EXPECT_EQ(userdataauth_->auth_sessions_.find(auth_session_id.value()),
             userdataauth_->auth_sessions_.end());
 }
 
