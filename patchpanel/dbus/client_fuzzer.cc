@@ -96,7 +96,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     //    client->BypassVpn(provider.ConsumeIntegral<int>());
     client->ConnectNamespace(provider.ConsumeIntegral<pid_t>(),
                              provider.ConsumeRandomLengthString(100),
-                             provider.ConsumeBool());
+                             provider.ConsumeBool(), provider.ConsumeBool(),
+                             TrafficCounter::SYSTEM);
     std::set<std::string> devices_for_counters;
     for (int i = 0; i < 10; i++) {
       if (provider.ConsumeBool()) {

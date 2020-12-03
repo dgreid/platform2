@@ -48,7 +48,9 @@ class BRILLO_EXPORT FakeClient : public Client {
   std::pair<base::ScopedFD, patchpanel::ConnectNamespaceResponse>
   ConnectNamespace(pid_t pid,
                    const std::string& outbound_ifname,
-                   bool forward_user_traffic) override;
+                   bool forward_user_traffic,
+                   bool route_on_vpn,
+                   TrafficCounter::Source traffic_source) override;
 
   void GetTrafficCounters(const std::set<std::string>& devices,
                           GetTrafficCountersCallback callback) override;

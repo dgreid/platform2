@@ -77,7 +77,9 @@ class BRILLO_EXPORT Client {
   virtual std::pair<base::ScopedFD, patchpanel::ConnectNamespaceResponse>
   ConnectNamespace(pid_t pid,
                    const std::string& outbound_ifname,
-                   bool forward_user_traffic) = 0;
+                   bool forward_user_traffic,
+                   bool route_on_vpn,
+                   TrafficCounter::Source traffic_source) = 0;
 
   // Gets the traffic counters kept by patchpanel asynchronously, |callback|
   // will be called with the counters once they are ready, or with an empty

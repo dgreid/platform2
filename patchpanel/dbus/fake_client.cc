@@ -57,7 +57,9 @@ bool FakeClient::BypassVpn(int socket) {
 std::pair<base::ScopedFD, patchpanel::ConnectNamespaceResponse>
 FakeClient::ConnectNamespace(pid_t pid,
                              const std::string& outbound_ifname,
-                             bool forward_user_traffic) {
+                             bool forward_user_traffic,
+                             bool route_on_vpn,
+                             TrafficCounter::Source traffic_source) {
   return {};
 }
 

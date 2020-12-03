@@ -132,7 +132,9 @@ class ClientImpl : public Client {
   std::pair<base::ScopedFD, patchpanel::ConnectNamespaceResponse>
   ConnectNamespace(pid_t pid,
                    const std::string& outbound_ifname,
-                   bool forward_user_traffic) override;
+                   bool forward_user_traffic,
+                   bool route_on_vpn,
+                   TrafficCounter::Source traffic_source) override;
 
   void GetTrafficCounters(const std::set<std::string>& devices,
                           GetTrafficCountersCallback callback) override;
@@ -475,12 +477,16 @@ bool ClientImpl::SendSetVpnIntentRequest(
 std::pair<base::ScopedFD, patchpanel::ConnectNamespaceResponse>
 ClientImpl::ConnectNamespace(pid_t pid,
                              const std::string& outbound_ifname,
-                             bool forward_user_traffic) {
+                             bool forward_user_traffic,
+                             bool route_on_vpn,
+                             TrafficCounter::Source traffic_source) {
   // Prepare and serialize the request proto.
   ConnectNamespaceRequest request;
   request.set_pid(static_cast<int32_t>(pid));
   request.set_outbound_physical_device(outbound_ifname);
   request.set_allow_user_traffic(forward_user_traffic);
+  request.set_route_on_vpn(route_on_vpn);
+  request.set_traffic_source(traffic_source);
 
   dbus::MethodCall method_call(kPatchPanelInterface, kConnectNamespaceMethod);
   dbus::MessageWriter writer(&method_call);

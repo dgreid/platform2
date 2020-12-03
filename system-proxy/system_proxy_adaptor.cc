@@ -424,9 +424,14 @@ void SystemProxyAdaptor::ConnectNamespaceTask(SandboxedWorker* worker,
     return;
   }
 
+  // TODO(acostinas): The source will need to be updated to accommodate Crostini
+  // when proxy support is added.
+  auto traffic_source = user_traffic ? patchpanel::TrafficCounter::ARC
+                                     : patchpanel::TrafficCounter::SYSTEM;
   std::pair<base::ScopedFD, patchpanel::ConnectNamespaceResponse> result =
       patchpanel_client->ConnectNamespace(
-          worker->pid(), "" /* outbound_ifname */, user_traffic);
+          worker->pid(), "" /* outbound_ifname */, user_traffic,
+          true /* route_on_vpn */, traffic_source);
 
   if (!result.first.is_valid()) {
     LOG(ERROR) << "Failed to setup network namespace on attempt "
