@@ -73,7 +73,7 @@ def _ReapUntilProcessExits(monitored_pid):
       # There may be some more child processes still running, but none of them
       # have exited/finished.  Don't wait for those as we'll throw an error in
       # the caller.
-      if pid_status != None and pid == 0 and status == 0:
+      if pid_status is not None and pid == 0 and status == 0:
         break
     except OSError as e:
       if e.errno == errno.ECHILD:
@@ -120,12 +120,13 @@ class Platform2Test(object):
 
   def __init__(self, test_bin, board, host, framework,
                user, gtest_filter, user_gtest_filter,
-               sysroot, test_bin_args):
+               sysroot, env_vars, test_bin_args):
     if not test_bin_args:
       test_bin_args = [test_bin]
     if not test_bin:
       test_bin = test_bin_args[0]
     self.bin = test_bin
+    self.env_vars = env_vars
     self.args = test_bin_args
     self.board = board
     self.host = host
@@ -376,6 +377,9 @@ class Platform2Test(object):
     if child == 0:
       print('chroot: %s' % self.sysroot)
       print('cwd: %s' % cwd)
+      if self.env_vars:
+        print('extra_env: %s' % (', '.join('%s=%s' %
+                                           x for x in self.env_vars.items())))
       print('cmd: {%s} %s' % (cmd, ' '.join(repr(x) for x in argv)))
       os.chroot(self.sysroot)
       os.chdir(cwd)
@@ -401,6 +405,9 @@ class Platform2Test(object):
         os.setuid(uid)
         os.environ['HOME'] = home
         os.environ['USER'] = user
+
+      for name, value in self.env_vars.items():
+        os.environ[name] = value
       sys.exit(os.execvp(cmd, argv))
 
     if sys.stdin.isatty():
@@ -453,7 +460,7 @@ class Platform2Test(object):
               ' killed)' % (p.name(), p.pid), file=sys.stderr)
       # TODO(vapier): Make this an error.  We need to track down some scenarios
       # where processes do leak though before we can make this fatal :(.
-      #sys.exit(100)
+      # sys.exit(100)
 
     process_util.ExitAsStatus(status)
 
@@ -529,6 +536,8 @@ def GetParser():
                       help='should the test be run as root')
   parser.add_argument('--user_gtest_filter', default='',
                       help=argparse.SUPPRESS)
+  parser.add_argument('--env', action='append', default=[],
+                      help='environmental variable(s) to set: <name>=<value>')
   parser.add_argument('cmdline', nargs='*')
 
   return parser
@@ -540,28 +549,35 @@ def main(argv):
 
   if options.action == 'run' and ((not options.bin or len(options.bin) == 0)
                                   and not options.cmdline):
-    raise AssertionError('You must specify a binary for the "run" action')
+    parser.error(message='You must specify a binary for the "run" action')
 
   if options.host and options.board:
-    raise AssertionError('You must provide only one of --board or --host')
+    parser.error(message='You must provide only one of --board or --host')
   elif not options.host and not options.board and not options.sysroot:
-    raise AssertionError('You must provide --board or --host or --sysroot')
+    parser.error(message='You must provide --board or --host or --sysroot')
 
   if options.sysroot:
     # Normalize the value so we can assume certain aspects.
     options.sysroot = osutils.ExpandPath(options.sysroot)
     if not os.path.isdir(options.sysroot):
-      raise AssertionError('Sysroot does not exist: %s' % options.sysroot)
+      parser.error(message='Sysroot does not exist: %s' % options.sysroot)
 
   # Once we've finished sanity checking args, make sure we're root.
   _ReExecuteIfNeeded([sys.argv[0]] + argv, ns_net=options.ns_net,
                      ns_pid=options.ns_pid)
 
+  env_vars = {}
+  for env_entry in options.env:
+    try:
+      name, value = env_entry.split('=', 1)
+      env_vars[name] = value
+    except ValueError:
+      parser.error(message='--env expects <name>=<value>; got: %s' % env_entry)
+
   p2test = Platform2Test(options.bin, options.board, options.host,
-                         options.framework,
-                         options.user, options.gtest_filter,
-                         options.user_gtest_filter,
-                         options.sysroot, options.cmdline)
+                         options.framework, options.user, options.gtest_filter,
+                         options.user_gtest_filter, options.sysroot, env_vars,
+                         options.cmdline)
   getattr(p2test, options.action)()
 
 
