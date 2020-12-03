@@ -55,4 +55,5 @@ else
   # Dynamic information.
   echo "customization_id=\"$(cros_config /ui help-content-id)\""
   echo "rlz_brand_code=\"$(cros_config / brand-code)\""
+  echo "wpsw_cur=\"$(crossystem wpsw_cur)\""
 fi >> "${MACHINE_INFO}"
