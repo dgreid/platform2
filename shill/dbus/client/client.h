@@ -97,6 +97,7 @@ class BRILLO_EXPORT Client {
   using DeviceChangedHandler = base::Callback<void(const Device* const)>;
 
   explicit Client(scoped_refptr<dbus::Bus> bus);
+  virtual ~Client() = default;
   Client(const Client&) = delete;
   Client& operator=(const Client&) = delete;
 
