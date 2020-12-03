@@ -1368,6 +1368,7 @@ void Cellular::RegisterProperties() {
   store->RegisterConstStringmap(kHomeProviderProperty, &home_provider_);
   store->RegisterConstString(kCarrierProperty, &carrier_);
   store->RegisterConstBool(kSupportNetworkScanProperty, &scanning_supported_);
+  store->RegisterConstString(kEidProperty, &eid_);
   store->RegisterConstString(kEsnProperty, &esn_);
   store->RegisterConstString(kFirmwareRevisionProperty, &firmware_revision_);
   store->RegisterConstString(kHardwareRevisionProperty, &hardware_revision_);
@@ -1414,7 +1415,9 @@ void Cellular::UpdateModemProperties(const RpcIdentifier& dbus_path,
 }
 
 const std::string& Cellular::GetSimCardId() const {
-  return sim_card_id_;
+  if (!eid_.empty())
+    return eid_;
+  return iccid_;
 }
 
 std::deque<Stringmap> Cellular::BuildApnTryList() const {
@@ -1462,6 +1465,14 @@ void Cellular::set_scanning_supported(bool scanning_supported) {
     SLOG(this, 2) << "Could not emit signal for property |"
                   << kSupportNetworkScanProperty
                   << "| change. DBus adaptor is NULL!";
+}
+
+void Cellular::set_eid(const string& eid) {
+  if (eid_ == eid)
+    return;
+
+  eid_ = eid;
+  adaptor()->EmitStringChanged(kEidProperty, eid_);
 }
 
 void Cellular::set_equipment_id(const string& equipment_id) {
@@ -1682,8 +1693,6 @@ void Cellular::set_iccid(const string& iccid) {
     return;
 
   iccid_ = iccid;
-  // TODO(b/154014577): Support eSIM eId.
-  sim_card_id_ = iccid_;
   adaptor()->EmitStringChanged(kIccidProperty, iccid_);
 }
 

@@ -1298,6 +1298,7 @@ void CellularCapability3gpp::OnSimPathChanged(const RpcIdentifier& sim_path) {
     spn_ = "";
     cellular()->set_sim_present(false);
     OnSimIdentifierChanged("");
+    cellular()->set_eid("");
     OnOperatorIdChanged("");
     cellular()->home_provider_info()->Reset();
   } else {
@@ -1697,6 +1698,8 @@ void CellularCapability3gpp::OnSimPropertiesChanged(
   SLOG(this, 3) << __func__;
   if (props.Contains<string>(MM_SIM_PROPERTY_SIMIDENTIFIER))
     OnSimIdentifierChanged(props.Get<string>(MM_SIM_PROPERTY_SIMIDENTIFIER));
+  if (props.Contains<string>(MM_SIM_PROPERTY_EID))
+    cellular()->set_eid(props.Get<string>(MM_SIM_PROPERTY_EID));
   if (props.Contains<string>(MM_SIM_PROPERTY_OPERATORIDENTIFIER))
     OnOperatorIdChanged(props.Get<string>(MM_SIM_PROPERTY_OPERATORIDENTIFIER));
   if (props.Contains<string>(MM_SIM_PROPERTY_OPERATORNAME))

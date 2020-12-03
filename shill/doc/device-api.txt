@@ -245,6 +245,13 @@ Properties	string Address [readonly]
 
 			Examples: "pci:0123:fedc", "usb:dead:beef"
 
+		string Cellular.EID [readonly]
+
+			(Cellular only) For GSM / LTE modems, the EUICCID
+			(Embedded Universal Integrated Circuit Card Identifier)
+			of an eSIM card installed in the device, commonly
+			abbreviated as eID. Blank otherwise.
+
 		dict Cellular.HomeProvider [readonly] [GSM only]
 
 			(Cellular only) Description of the operator that

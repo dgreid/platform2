@@ -280,6 +280,7 @@ class Cellular : public Device,
   const Stringmap& home_provider() const { return home_provider_; }
   const std::string& carrier() const { return carrier_; }
   bool scanning_supported() const { return scanning_supported_; }
+  const std::string& eid() const { return eid_; }
   const std::string& esn() const { return esn_; }
   const std::string& firmware_revision() const { return firmware_revision_; }
   const std::string& hardware_revision() const { return hardware_revision_; }
@@ -313,6 +314,7 @@ class Cellular : public Device,
   void set_home_provider(const Stringmap& home_provider);
   void set_carrier(const std::string& carrier);
   void set_scanning_supported(bool scanning_supported);
+  void set_eid(const std::string& eid);
   void set_equipment_id(const std::string& equipment_id);
   void set_esn(const std::string& esn);
   void set_firmware_revision(const std::string& firmware_revision);
@@ -505,9 +507,7 @@ class Cellular : public Device,
 
   void SetCapabilityState(CapabilityState capability_state);
 
-  void set_sim_card_id_for_testing(const std::string& sim_card_id) {
-    sim_card_id_ = sim_card_id;
-  }
+  void set_eid_for_testing(const std::string& eid) { eid_ = eid; }
 
   State state_;
   ModemState modem_state_;
@@ -540,6 +540,7 @@ class Cellular : public Device,
 
   bool scanning_supported_;
   std::string carrier_;
+  std::string eid_;  // SIM eID, aka eUICCID
   std::string equipment_id_;
   std::string esn_;
   std::string firmware_revision_;
@@ -566,7 +567,6 @@ class Cellular : public Device,
   bool sim_present_;
   Stringmaps apn_list_;
   std::string iccid_;
-  std::string sim_card_id_;
 
   // End of DBus properties.
   // ///////////////////////////////////////////////////////////////////////////

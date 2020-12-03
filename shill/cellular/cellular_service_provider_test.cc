@@ -67,7 +67,7 @@ class CellularServiceProviderTest : public testing::Test {
                                      const std::string& iccid,
                                      const std::string& eid) {
     CellularRefPtr cellular = CreateDevice(imsi, iccid);
-    cellular->set_sim_card_id_for_testing(eid);
+    cellular->set_eid_for_testing(eid);
     return cellular;
   }
 

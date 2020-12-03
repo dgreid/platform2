@@ -1131,8 +1131,10 @@ TEST_F(CellularCapability3gppMainTest, SimPropertiesChanged) {
 
   // Set up mock modem sim properties
   const char kImsi[] = "310100000001";
+  const char kEid[] = "310100000002";
   KeyValueStore sim_properties;
   sim_properties.Set<string>(MM_SIM_PROPERTY_IMSI, kImsi);
+  sim_properties.Set<string>(MM_SIM_PROPERTY_EID, kEid);
 
   EXPECT_CALL(*properties_proxy_, GetAll(MM_DBUS_INTERFACE_SIM))
       .WillOnce(Return(sim_properties));
@@ -1148,6 +1150,7 @@ TEST_F(CellularCapability3gppMainTest, SimPropertiesChanged) {
   EXPECT_EQ(kSimPath, capability_->sim_path_);
   EXPECT_NE(nullptr, capability_->sim_proxy_);
   EXPECT_EQ(kImsi, cellular_->imsi());
+  EXPECT_EQ(kEid, cellular_->eid());
   Mock::VerifyAndClearExpectations(modem_info_.mock_pending_activation_store());
 
   // Updating the SIM
