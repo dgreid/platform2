@@ -72,6 +72,7 @@ _IUSE = [
     'houdini64',
     'hwid_override',
     'iioservice',
+    'ipu6ep',
     'ipu6se',
     'iwlwifi_dump',
     'jetstream_routing',
