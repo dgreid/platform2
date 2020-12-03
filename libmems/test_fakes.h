@@ -241,7 +241,7 @@ class LIBMEMS_EXPORT FakeIioDevice : public IioDevice {
  private:
   struct ChannelData {
     std::string chn_id;
-    FakeIioChannel* chn;
+    FakeIioChannel* chn = nullptr;
   };
 
   bool CreateBuffer();
@@ -250,13 +250,13 @@ class LIBMEMS_EXPORT FakeIioDevice : public IioDevice {
   void ClosePipe();
   void SetPause();
 
-  FakeIioContext* context_;
+  FakeIioContext* context_ = nullptr;
   std::string name_;
   int id_;
   std::map<std::string, std::string> text_attributes_;
   std::map<std::string, int64_t> numeric_attributes_;
   std::map<std::string, double> double_attributes_;
-  IioDevice* trigger_;
+  IioDevice* trigger_ = nullptr;
 
   // For |EnableBuffer|, |DisableBuffer|, and |IsBufferEnabled|.
   size_t buffer_length_ = 0;
