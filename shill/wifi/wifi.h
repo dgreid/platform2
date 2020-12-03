@@ -687,6 +687,10 @@ class WiFi : public Device, public SupplicantEventDelegateInterface {
   // there is one), and store it in |pending_eap_failure_| to be used later when
   // we actually disconnect from the network.
   Service::ConnectFailure pending_eap_failure_;
+  // Indicates that the current BSS has attempted to restart EAP authentication.
+  // We optimistically assume that this succeeds and don't perform any state
+  // transitions to avoid disrupting connectivity.
+  bool is_rekey_in_progress_;
   // Indicates that we are debugging a problematic connection.
   bool is_debugging_connection_;
   // Tracks the process of an EAP negotiation.

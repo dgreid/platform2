@@ -1031,6 +1031,7 @@ class WiFiObjectTest : public ::testing::TestWithParam<string> {
   }
   bool GetSupplicantPresent() { return wifi_->supplicant_present_; }
   bool GetIsRoamingInProgress() { return wifi_->is_roaming_in_progress_; }
+  bool GetIsRekeyInProgress() { return wifi_->is_rekey_in_progress_; }
   void SetIsRoamingInProgress(bool is_roaming_in_progress) {
     wifi_->is_roaming_in_progress_ = is_roaming_in_progress;
   }
@@ -3463,6 +3464,19 @@ TEST_F(WiFiMainTest, EAPEvent) {
       NetworkReply(kNetworkRpcId,
                    StrEq(WPASupplicant::kEAPRequestedParameterPin), Ref(kPin)));
   ReportEAPEvent(kEAPStatus, kEAPParameter);
+}
+
+TEST_F(WiFiMainTest, EAPRekey) {
+  StartWiFi();
+  MockWiFiServiceRefPtr service =
+      SetupConnectedService(RpcIdentifier(""), nullptr, nullptr);
+  EXPECT_CALL(*service, IsConnected(nullptr)).WillRepeatedly(Return(true));
+  EXPECT_CALL(*service, SetState(_)).Times(0);
+  ReportEAPEvent(WPASupplicant::kEAPStatusStarted, string());
+  ASSERT_TRUE(GetIsRekeyInProgress());
+  ReportStateChanged(WPASupplicant::kInterfaceState4WayHandshake);
+  ReportStateChanged(WPASupplicant::kInterfaceStateCompleted);
+  Mock::VerifyAndClearExpectations(service.get());
 }
 
 TEST_F(WiFiMainTest, PendingScanDoesNotCrashAfterStop) {
