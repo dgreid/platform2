@@ -1023,6 +1023,14 @@ void WebAuthnHandler::IsUvpaa(
 
   IsUvpaaResponse response;
 
+  if (!Initialized()) {
+    LOG(INFO) << "IsUvpaa called but WebAuthnHandler not initialized. Maybe "
+                 "U2F is on.";
+    response.set_available(false);
+    method_response->Return(response);
+    return;
+  }
+
   base::Optional<std::string> account_id = user_state_->GetUser();
   if (!account_id) {
     LOG(ERROR) << "IsUvpaa called but no user.";
