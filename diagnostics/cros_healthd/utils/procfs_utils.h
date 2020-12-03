@@ -27,6 +27,7 @@ extern const char kProcessCmdlineFile[];
 extern const char kProcessStatFile[];
 extern const char kProcessStatmFile[];
 extern const char kProcessStatusFile[];
+extern const char kProcessIOFile[];
 
 // Returns an absolute path to the procfs subdirectory containing files related
 // to the process with ID |pid|. On a real device, this will be /proc/|pid|.

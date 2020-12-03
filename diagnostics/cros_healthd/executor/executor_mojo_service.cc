@@ -19,6 +19,7 @@
 #include <base/system/sys_info.h>
 
 #include "diagnostics/cros_healthd/process/process_with_output.h"
+#include "diagnostics/cros_healthd/utils/file_utils.h"
 #include "mojo/cros_healthd_executor.mojom.h"
 
 namespace diagnostics {
@@ -152,6 +153,18 @@ void ExecutorMojoService::RunMemtester(RunMemtesterCallback callback) {
                 base::FilePath(kMemtesterBinary), memtester_args, &result);
 
   std::move(callback).Run(result.Clone());
+}
+
+void ExecutorMojoService::GetProcessIOContents(
+    const uint32_t pid, GetProcessIOContentsCallback callback) {
+  std::string result;
+
+  ReadAndTrimString(base::FilePath("/proc/")
+                        .Append(base::StringPrintf("%" PRId32, pid))
+                        .AppendASCII("io"),
+                    &result);
+
+  std::move(callback).Run(result);
 }
 
 }  // namespace diagnostics

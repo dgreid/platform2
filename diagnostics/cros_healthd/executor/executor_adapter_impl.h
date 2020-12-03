@@ -22,6 +22,9 @@ class ExecutorAdapterImpl final : public ExecutorAdapter {
   void Connect(mojo::PlatformChannelEndpoint endpoint) override;
   void GetFanSpeed(Executor::GetFanSpeedCallback callback) override;
   void RunMemtester(Executor::RunMemtesterCallback callback) override;
+  void GetProcessIOContents(
+      const pid_t pid,
+      Executor::GetProcessIOContentsCallback callback) override;
 
  private:
   // Mojo endpoint to call the executor's methods.

@@ -30,7 +30,8 @@ class CrosHealthdMojoService final
   // |bluetooth_events| - BluetoothEvents implementation.
   // |lid_events| - LidEvents implementation.
   // |power_events| - PowerEvents implementation.
-  CrosHealthdMojoService(FetchAggregator* fetch_aggregator,
+  CrosHealthdMojoService(Context* context,
+                         FetchAggregator* fetch_aggregator,
                          BluetoothEvents* bluetooth_events,
                          LidEvents* lid_events,
                          PowerEvents* power_events);
@@ -68,6 +69,8 @@ class CrosHealthdMojoService final
   mojo::BindingSet<chromeos::cros_healthd::mojom::CrosHealthdEventService>
       event_binding_set_;
 
+  // Unowned. The Context instance should outlive this instance.
+  Context* const context_ = nullptr;
   // Unowned. The FetchAggregator instance should outlive this instance.
   FetchAggregator* fetch_aggregator_;
   // Unowned. The BluetoothEvents instance should outlive this instance.

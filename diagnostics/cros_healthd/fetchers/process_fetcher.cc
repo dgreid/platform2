@@ -39,6 +39,10 @@ constexpr char kProcessStatmFileRegex[] =
 constexpr char kUptimeFileRegex[] = R"(([.\d]+)\s+[.\d]+)";
 // Regex used to parse the process's Uid field in the status file.
 constexpr char kUidStatusRegex[] = R"(\s*(\d+)\s+\d+\s+\d+\s+\d+)";
+// Regex used to parse a process's I/O file.
+constexpr char kProcessIOFileRegex[] =
+    R"(rchar:\s+(\d+)\nwchar:\s+(\d+)\nsyscr:\s+(\d+)\nsyscw:\s+(\d+)\nread)"
+    R"(_bytes:\s+(\d+)\nwrite_bytes:\s+(\d+)\ncancelled_write_bytes:\s+(\d+))";
 
 // Converts the raw process state read from procfs to a mojo_ipc::ProcessState.
 // If the conversion is successful, returns base::nullopt and sets
@@ -95,11 +99,117 @@ base::Optional<mojo_ipc::ProbeErrorPtr> GetInt8FromString(
   return base::nullopt;
 }
 
+void FinishFetchingProcessInfo(
+    base::OnceCallback<void(mojo_ipc::ProcessResultPtr)> callback,
+    mojo_ipc::ProcessInfo process_info,
+    const std::string& io_contents) {
+  if (io_contents.empty()) {
+    std::move(callback).Run(mojo_ipc::ProcessResult::NewError(
+        CreateAndLogProbeError(mojo_ipc::ErrorType::kFileReadError,
+                               "Failed to read process IO file")));
+    return;
+  }
+
+  std::string bytes_read_str;
+  std::string bytes_written_str;
+  std::string read_system_calls_str;
+  std::string write_system_calls_str;
+  std::string physical_bytes_read_str;
+  std::string physical_bytes_written_str;
+  std::string cancelled_bytes_written_str;
+  if (!RE2::FullMatch(io_contents, kProcessIOFileRegex, &bytes_read_str,
+                      &bytes_written_str, &read_system_calls_str,
+                      &write_system_calls_str, &physical_bytes_read_str,
+                      &physical_bytes_written_str,
+                      &cancelled_bytes_written_str)) {
+    std::move(callback).Run(mojo_ipc::ProcessResult::NewError(
+        CreateAndLogProbeError(mojo_ipc::ErrorType::kParseError,
+                               "Failed to parse process IO file")));
+    return;
+  }
+
+  if (!base::StringToUint64(bytes_read_str, &process_info.bytes_read)) {
+    std::move(callback).Run(
+        mojo_ipc::ProcessResult::NewError(CreateAndLogProbeError(
+            mojo_ipc::ErrorType::kParseError,
+            "Failed to convert bytes_read to uint64_t: " + bytes_read_str)));
+    return;
+  }
+
+  if (!base::StringToUint64(bytes_written_str, &process_info.bytes_written)) {
+    std::move(callback).Run(mojo_ipc::ProcessResult::NewError(
+        CreateAndLogProbeError(mojo_ipc::ErrorType::kParseError,
+                               "Failed to convert bytes_written to uint64_t: " +
+                                   bytes_written_str)));
+    return;
+  }
+
+  if (!base::StringToUint64(read_system_calls_str,
+                            &process_info.read_system_calls)) {
+    std::move(callback).Run(
+        mojo_ipc::ProcessResult::NewError(CreateAndLogProbeError(
+            mojo_ipc::ErrorType::kParseError,
+            "Failed to convert read_system_calls to uint32_t: " +
+                read_system_calls_str)));
+    return;
+  }
+
+  if (!base::StringToUint64(write_system_calls_str,
+                            &process_info.write_system_calls)) {
+    std::move(callback).Run(
+        mojo_ipc::ProcessResult::NewError(CreateAndLogProbeError(
+            mojo_ipc::ErrorType::kParseError,
+            "Failed to convert write_system_calls to uint32_t: " +
+                write_system_calls_str)));
+    return;
+  }
+
+  if (!base::StringToUint64(physical_bytes_read_str,
+                            &process_info.physical_bytes_read)) {
+    std::move(callback).Run(
+        mojo_ipc::ProcessResult::NewError(CreateAndLogProbeError(
+            mojo_ipc::ErrorType::kParseError,
+            "Failed to convert physical_bytes_read to uint64_t: " +
+                physical_bytes_read_str)));
+    return;
+  }
+
+  if (!base::StringToUint64(physical_bytes_written_str,
+                            &process_info.physical_bytes_written)) {
+    std::move(callback).Run(
+        mojo_ipc::ProcessResult::NewError(CreateAndLogProbeError(
+            mojo_ipc::ErrorType::kParseError,
+            "Failed to convert physical_bytes_written to uint64_t: " +
+                physical_bytes_written_str)));
+    return;
+  }
+
+  if (!base::StringToUint64(cancelled_bytes_written_str,
+                            &process_info.cancelled_bytes_written)) {
+    std::move(callback).Run(
+        mojo_ipc::ProcessResult::NewError(CreateAndLogProbeError(
+            mojo_ipc::ErrorType::kParseError,
+            "Failed to convert cancelled_bytes_written to uint64_t: " +
+                cancelled_bytes_written_str)));
+    return;
+  }
+
+  std::move(callback).Run(
+      mojo_ipc::ProcessResult::NewProcessInfo(process_info.Clone()));
+  return;
+}
+
 }  // namespace
 
-ProcessFetcher::ProcessFetcher(pid_t process_id, const base::FilePath& root_dir)
-    : root_dir_(root_dir),
-      proc_pid_dir_(GetProcProcessDirectoryPath(root_dir, process_id)) {}
+ProcessFetcher::ProcessFetcher(Context* context,
+                               pid_t process_id,
+                               const base::FilePath& root_dir)
+    : context_(context),
+      root_dir_(root_dir),
+      proc_pid_dir_(GetProcProcessDirectoryPath(root_dir, process_id)),
+      process_id_(process_id) {
+  DCHECK(context_);
+}
 
 ProcessFetcher::~ProcessFetcher() = default;
 
@@ -153,9 +263,10 @@ void ProcessFetcher::FetchProcessInfo(
     return;
   }
 
-  std::move(callback).Run(
-      mojo_ipc::ProcessResult::NewProcessInfo(process_info.Clone()));
-  return;
+  context_->executor()->GetProcessIOContents(
+      process_id_,
+      base::BindOnce(&FinishFetchingProcessInfo, std::move(callback),
+                     std::move(process_info)));
 }
 
 base::Optional<mojo_ipc::ProbeErrorPtr> ProcessFetcher::ParseProcPidStat(

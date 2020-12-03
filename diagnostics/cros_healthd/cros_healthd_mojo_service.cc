@@ -17,14 +17,17 @@ namespace diagnostics {
 namespace mojo_ipc = ::chromeos::cros_healthd::mojom;
 
 CrosHealthdMojoService::CrosHealthdMojoService(
+    Context* context,
     FetchAggregator* fetch_aggregator,
     BluetoothEvents* bluetooth_events,
     LidEvents* lid_events,
     PowerEvents* power_events)
-    : fetch_aggregator_(fetch_aggregator),
+    : context_(context),
+      fetch_aggregator_(fetch_aggregator),
       bluetooth_events_(bluetooth_events),
       lid_events_(lid_events),
       power_events_(power_events) {
+  DCHECK(context_);
   DCHECK(fetch_aggregator_);
   DCHECK(bluetooth_events_);
   DCHECK(lid_events_);
@@ -50,7 +53,7 @@ void CrosHealthdMojoService::AddPowerObserver(
 
 void CrosHealthdMojoService::ProbeProcessInfo(
     uint32_t process_id, ProbeProcessInfoCallback callback) {
-  ProcessFetcher(static_cast<pid_t>(process_id))
+  ProcessFetcher(context_, static_cast<pid_t>(process_id))
       .FetchProcessInfo(std::move(callback));
 }
 

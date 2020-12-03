@@ -14,6 +14,7 @@ const char kProcessCmdlineFile[] = "cmdline";
 const char kProcessStatFile[] = "stat";
 const char kProcessStatmFile[] = "statm";
 const char kProcessStatusFile[] = "status";
+const char kProcessIOFile[] = "io";
 
 base::FilePath GetProcProcessDirectoryPath(const base::FilePath& root_dir,
                                            pid_t pid) {

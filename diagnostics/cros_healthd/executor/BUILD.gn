@@ -17,6 +17,7 @@ source_set("libcros_healthd_executor") {
   configs += [ ":libcros_healthd_executor_pkg_deps" ]
   deps = [
     "//diagnostics/cros_healthd/process:libcros_healthd_process",
+    "//diagnostics/cros_healthd/utils:libcros_healthd_utils",
     "//diagnostics/mojo:cros_healthd_executor_mojo_bindings",
   ]
   sources = [

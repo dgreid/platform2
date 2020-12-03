@@ -7,6 +7,7 @@
 #include <utility>
 
 #include <base/logging.h>
+#include <base/numerics/safe_conversions.h>
 #include <mojo/public/cpp/system/invitation.h>
 #include <mojo/public/cpp/system/message_pipe.h>
 
@@ -50,6 +51,14 @@ void ExecutorAdapterImpl::RunMemtester(
   DCHECK(executor_.is_bound());
 
   executor_->RunMemtester(std::move(callback));
+}
+
+void ExecutorAdapterImpl::GetProcessIOContents(
+    const pid_t pid, Executor::GetProcessIOContentsCallback callback) {
+  DCHECK(executor_.is_bound());
+
+  executor_->GetProcessIOContents(base::checked_cast<uint32_t>(pid),
+                                  std::move(callback));
 }
 
 }  // namespace diagnostics

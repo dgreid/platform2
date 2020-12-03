@@ -34,4 +34,11 @@ interface Executor {
   // The response:
   // * |result| - contains information received from running memtester.
   RunMemtester() => (ProcessResult result);
+
+  // Reads the I/O file of a process and returns the raw, trimmed contents with
+  // no parsing.
+  //
+  // The response:
+  // * |contents| - contains contents of the I/O file
+  GetProcessIOContents(uint32 pid) => (string contents);
 };

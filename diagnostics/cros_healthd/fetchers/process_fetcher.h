@@ -13,6 +13,7 @@
 #include <base/files/file_path.h>
 #include <base/optional.h>
 
+#include "diagnostics/cros_healthd/system/context.h"
 #include "mojo/cros_healthd_probe.mojom.h"
 
 namespace diagnostics {
@@ -23,7 +24,8 @@ class ProcessFetcher final {
  public:
   // |process_id| is the PID for the process whose information will be fetched.
   // Only override |root_dir| for testing.
-  ProcessFetcher(pid_t process_id,
+  ProcessFetcher(Context* context,
+                 pid_t process_id,
                  const base::FilePath& root_dir = base::FilePath("/"));
   ProcessFetcher(const ProcessFetcher&) = delete;
   ProcessFetcher& operator=(const ProcessFetcher&) = delete;
@@ -68,11 +70,16 @@ class ProcessFetcher final {
   base::Optional<chromeos::cros_healthd::mojom::ProbeErrorPtr> GetProcessUid(
       uid_t* user_id);
 
+  // Unowned. Should outlive this instance.
+  Context* const context_ = nullptr;
+
   // File paths read will be relative to |root_dir_|. In production, this should
   // be "/", but it can be overridden for testing.
   const base::FilePath root_dir_;
   // Procfs subdirectory with files specific to the process.
   const base::FilePath proc_pid_dir_;
+  // The process ID.
+  const pid_t process_id_;
 };
 
 }  // namespace diagnostics

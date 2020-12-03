@@ -53,8 +53,8 @@ CrosHealthd::CrosHealthd(Context* context)
       context_, routine_factory_.get());
 
   mojo_service_ = std::make_unique<CrosHealthdMojoService>(
-      fetch_aggregator_.get(), bluetooth_events_.get(), lid_events_.get(),
-      power_events_.get());
+      context_, fetch_aggregator_.get(), bluetooth_events_.get(),
+      lid_events_.get(), power_events_.get());
 
   service_factory_binding_set_.set_connection_error_handler(
       base::Bind(&CrosHealthd::OnDisconnect, base::Unretained(this)));

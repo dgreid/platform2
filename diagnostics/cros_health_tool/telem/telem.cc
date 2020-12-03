@@ -168,7 +168,9 @@ void DisplayProcessInfo(
   const auto& process = process_result->get_process_info();
 
   std::cout << "command,user_id,priority,nice,uptime_ticks,state,total_memory_"
-               "kib,resident_memory_kib,free_memory_kib"
+               "kib,resident_memory_kib,free_memory_kib,bytes_read,bytes_"
+               "written,read_system_calls,write_system_calls,physical_bytes_"
+               "read,physical_bytes_written,cancelled_bytes_written"
             << std::endl;
 
   // The int8_t fields need to be cast to a larger int type, otherwise they will
@@ -180,7 +182,12 @@ void DisplayProcessInfo(
             << static_cast<int>(process->nice) << "," << process->uptime_ticks
             << "," << ProcessStateToString(process->state) << ","
             << process->total_memory_kib << "," << process->resident_memory_kib
-            << "," << process->free_memory_kib << std::endl;
+            << "," << process->free_memory_kib << "," << process->bytes_read
+            << "," << process->bytes_written << ","
+            << process->read_system_calls << "," << process->write_system_calls
+            << "," << process->physical_bytes_read << ","
+            << process->physical_bytes_written << ","
+            << process->cancelled_bytes_written << std::endl;
 }
 
 void DisplayBatteryInfo(

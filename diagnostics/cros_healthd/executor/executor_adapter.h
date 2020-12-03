@@ -26,6 +26,10 @@ class ExecutorAdapter {
 
   // Instructs the executor to run the memtester executable.
   virtual void RunMemtester(Executor::RunMemtesterCallback callback) = 0;
+
+  // Retrieves the contents of a process-specific I/O file.
+  virtual void GetProcessIOContents(
+      const pid_t pid, Executor::GetProcessIOContentsCallback callback) = 0;
 };
 
 }  // namespace diagnostics

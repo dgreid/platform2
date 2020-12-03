@@ -19,13 +19,20 @@
 
 #include "diagnostics/common/file_test_utils.h"
 #include "diagnostics/cros_healthd/fetchers/process_fetcher.h"
+#include "diagnostics/cros_healthd/system/mock_context.h"
 #include "diagnostics/cros_healthd/utils/procfs_utils.h"
+#include "mojo/cros_healthd_executor.mojom.h"
 #include "mojo/cros_healthd_probe.mojom.h"
+
+using testing::_;
+using ::testing::Invoke;
+using ::testing::WithArg;
 
 namespace diagnostics {
 
 namespace {
 
+namespace executor_ipc = ::chromeos::cros_healthd_executor::mojom;
 namespace mojo_ipc = ::chromeos::cros_healthd::mojom;
 
 // POD struct for ParseProcessStateTest.
@@ -80,6 +87,34 @@ constexpr char kProcPidStatmContentsOverflowingTotalMemory[] =
 constexpr char kProcPidStatmContentsOverflowingResidentMemory[] =
     "25648 4294967296 2357 151 0 18632 0";
 
+// Valid fake data for /proc/|kPid|/io.
+constexpr char kFakeProcPidIOContents[] =
+    "rchar: 44846\n"
+    "wchar: 10617\n"
+    "syscr: 248\n"
+    "syscw: 317\n"
+    "read_bytes: 56799232\n"
+    "write_bytes: 32768\n"
+    "cancelled_write_bytes: 0";
+
+// Data parsed from kFakeProcPidIOContents.
+constexpr uint32_t kExpectedBytesRead = 44846;
+constexpr uint32_t kExpectedBytesWritten = 10617;
+constexpr uint32_t kExpectedReadSystemCalls = 248;
+constexpr uint32_t kExpectedWriteSystemCalls = 317;
+constexpr uint32_t kExpectedPhysicalBytesRead = 56799232;
+constexpr uint32_t kExpectedPhysicalBytesWritten = 32768;
+constexpr uint32_t kExpectedCancelledBytesWritten = 0;
+
+// Invalid /proc/|kPid|/io: not enough fields.
+constexpr char kFakeProcPidIOContentsInsufficientFields[] =
+    "rchar: 44846\n"
+    "wchar: 10617\n"
+    "syscr: 248\n"
+    "read_bytes: 56799232\n"
+    "write_bytes: 32768\n"
+    "cancelled_write_bytes: 0";
+
 // Valid fake data for /proc/|kPid|/status.
 constexpr char kFakeProcPidStatusContents[] =
     "Name:\tfake_exe\nState:\tS (sleeping)\nUid:\t20104 20104 20104 20104\n";
@@ -118,6 +153,7 @@ class ProcessFetcherTest : public testing::Test {
   ProcessFetcherTest() = default;
 
   void SetUp() override {
+    ASSERT_TRUE(mock_context_.Initialize());
     ASSERT_TRUE(temp_dir_.CreateUniqueTempDir());
 
     // Set up valid files for the process with PID |kPid|. Individual tests are
@@ -136,6 +172,11 @@ class ProcessFetcherTest : public testing::Test {
         GetProcProcessDirectoryPath(temp_dir_path(), kPid)
             .Append(kProcessStatmFile),
         kFakeProcPidStatmContents));
+    // Write /proc/|kPid|/io.
+    ASSERT_TRUE(WriteFileAndCreateParentDirs(
+        GetProcProcessDirectoryPath(temp_dir_path(), kPid)
+            .Append(kProcessIOFile),
+        kFakeProcPidIOContents));
     // Write /proc/|kPid|/status.
     ASSERT_TRUE(WriteFileAndCreateParentDirs(
         GetProcProcessDirectoryPath(temp_dir_path(), kPid)
@@ -148,13 +189,14 @@ class ProcessFetcherTest : public testing::Test {
         kFakeProcPidCmdlineContents));
   }
 
+  MockExecutorAdapter* mock_executor() { return mock_context_.mock_executor(); }
+
   mojo_ipc::ProcessResultPtr FetchProcessInfo() {
     mojo_ipc::ProcessResultPtr result;
     base::RunLoop run_loop;
-    ProcessFetcher(kPid, temp_dir_path())
+    ProcessFetcher(&mock_context_, kPid, temp_dir_path())
         .FetchProcessInfo(base::BindOnce(&OnMojoResponseReceived, &result,
                                          run_loop.QuitClosure()));
-
     run_loop.Run();
 
     return result;
@@ -182,16 +224,30 @@ class ProcessFetcherTest : public testing::Test {
         new_fake_data);
   }
 
+  void ExpectAndSetExecutorGetProcessIOContentsResponse(
+      const std::string& io_contents) {
+    // Set the mock executor response.
+    EXPECT_CALL(*mock_context_.mock_executor(), GetProcessIOContents(_, _))
+        .WillOnce(WithArg<1>(Invoke(
+            [=](executor_ipc::Executor::GetProcessIOContentsCallback callback) {
+              std::string content;
+              content = io_contents;
+              std::move(callback).Run(content);
+            })));
+  }
+
   const base::FilePath& temp_dir_path() const { return temp_dir_.GetPath(); }
 
  private:
   base::test::TaskEnvironment task_environment_{
       base::test::TaskEnvironment::ThreadingMode::MAIN_THREAD_ONLY};
   base::ScopedTempDir temp_dir_;
+  MockContext mock_context_;
 };
 
 // Test that process info can be read when it exists.
 TEST_F(ProcessFetcherTest, FetchProcessInfo) {
+  ExpectAndSetExecutorGetProcessIOContentsResponse(kFakeProcPidIOContents);
   auto process_result = FetchProcessInfo();
 
   ASSERT_TRUE(process_result->is_process_info());
@@ -203,6 +259,15 @@ TEST_F(ProcessFetcherTest, FetchProcessInfo) {
   // TODO(crbug/1105605): Test the expected uptime, once it no longer depends on
   // sysconf.
   EXPECT_EQ(process_info->state, kExpectedMojoState);
+  EXPECT_EQ(process_info->bytes_read, kExpectedBytesRead);
+  EXPECT_EQ(process_info->bytes_written, kExpectedBytesWritten);
+  EXPECT_EQ(process_info->read_system_calls, kExpectedReadSystemCalls);
+  EXPECT_EQ(process_info->write_system_calls, kExpectedWriteSystemCalls);
+  EXPECT_EQ(process_info->physical_bytes_read, kExpectedPhysicalBytesRead);
+  EXPECT_EQ(process_info->physical_bytes_written,
+            kExpectedPhysicalBytesWritten);
+  EXPECT_EQ(process_info->cancelled_bytes_written,
+            kExpectedCancelledBytesWritten);
 }
 
 // Test that we handle a missing /proc/uptime file.
@@ -259,6 +324,20 @@ TEST_F(ProcessFetcherTest, MissingProcPidStatmFile) {
   ASSERT_TRUE(
       base::DeleteFile(GetProcProcessDirectoryPath(temp_dir_path(), kPid)
                            .Append(kProcessStatmFile)));
+
+  auto process_result = FetchProcessInfo();
+
+  ASSERT_TRUE(process_result->is_error());
+  EXPECT_EQ(process_result->get_error()->type,
+            mojo_ipc::ErrorType::kFileReadError);
+}
+
+// Test that we handle a missing /proc/|kPid|/io file.
+TEST_F(ProcessFetcherTest, MissingProcPidIOFile) {
+  ASSERT_TRUE(base::DeleteFile(
+      GetProcProcessDirectoryPath(temp_dir_path(), kPid).Append(kProcessIOFile),
+      false));
+  ExpectAndSetExecutorGetProcessIOContentsResponse("");
 
   auto process_result = FetchProcessInfo();
 
@@ -387,6 +466,21 @@ TEST_F(ProcessFetcherTest, ProcPidStatmFileInvalidResidentMemory) {
             mojo_ipc::ErrorType::kParseError);
 }
 
+// Test that we handle a /proc/|kPid|/io file with insufficient fields.
+TEST_F(ProcessFetcherTest, ProcPidIOFileInsufficientTokens) {
+  ASSERT_TRUE(WriteFileAndCreateParentDirs(
+      GetProcProcessDirectoryPath(temp_dir_path(), kPid).Append(kProcessIOFile),
+      kFakeProcPidIOContentsInsufficientFields));
+  ExpectAndSetExecutorGetProcessIOContentsResponse(
+      kFakeProcPidIOContentsInsufficientFields);
+
+  auto process_result = FetchProcessInfo();
+
+  ASSERT_TRUE(process_result->is_error());
+  EXPECT_EQ(process_result->get_error()->type,
+            mojo_ipc::ErrorType::kParseError);
+}
+
 // Test that we handle a /proc/|kPid|/statm file with resident memory value
 // higher than the total memory value.
 TEST_F(ProcessFetcherTest, ProcPidStatmFileExcessiveResidentMemory) {
@@ -493,6 +587,7 @@ class ParseProcessStateTest
 TEST_P(ParseProcessStateTest, ParseState) {
   ASSERT_TRUE(
       WriteProcPidStatData(params().raw_state, ProcPidStatIndices::kState));
+  ExpectAndSetExecutorGetProcessIOContentsResponse(kFakeProcPidIOContents);
 
   auto process_result = FetchProcessInfo();
 
