@@ -9,25 +9,30 @@
 #include <base/logging.h>
 #include <base/task/single_thread_task_executor.h>
 
+#include <brillo/flag_helper.h>
 #include <brillo/syslog_logging.h>
 
 #include "croslog/config.h"
 #include "croslog/viewer_journal.h"
 #include "croslog/viewer_plaintext.h"
 
-namespace {
-
-void ShowUsage() {
-  // TODO(yoshiki): Implement the usage.
-  LOG(WARNING) << "Usage is not implemented yet.";
-}
-
-}  // anonymous namespace
-
 int main(int argc, char* argv[]) {
-  base::CommandLine::Init(argc, argv);
-  const base::CommandLine* const command_line =
+  // The following method defines the command line arguments and initializes
+  // the brillo's command line parser. See the code for detail.
+  croslog::Config config;
+  bool parse_result = config.ParseCommandLineArgs(argc, argv);
+
+  // The method above (|croslog::Config::ParseCommandLineArgs|) initializes the
+  // command line, so this code needs to be placed after that.
+  base::CommandLine* const command_line =
       base::CommandLine::ForCurrentProcess();
+
+  if (!parse_result) {
+    command_line->AppendSwitch("help");
+    // Calling this method shows the command line usage.
+    brillo::FlagHelper::GetInstance()->UpdateFlagValues();
+    return 1;
+  }
 
   // Configure the log destination. This should be placed before any code which
   // potentially write logs.
@@ -36,13 +41,6 @@ int main(int argc, char* argv[]) {
   if (!isatty(0) || command_line->HasSwitch("send-syslog"))
     log_flags |= brillo::kLogToSyslog;
   brillo::InitLog(log_flags);
-
-  croslog::Config config;
-  bool parse_result = config.ParseCommandLineArgs(command_line);
-  if (!parse_result || config.show_help) {
-    ShowUsage();
-    return parse_result ? 0 : 1;
-  }
 
   switch (config.source) {
     case croslog::SourceMode::JOURNAL_LOG:

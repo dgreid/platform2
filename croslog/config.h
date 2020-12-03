@@ -18,7 +18,7 @@ enum class SourceMode { JOURNAL_LOG, PLAINTEXT_LOG };
 enum class OutputMode { SHORT, EXPORT, JSON };
 
 struct Config {
-  bool ParseCommandLineArgs(const base::CommandLine* command_line);
+  bool ParseCommandLineArgs(int argc, const char* const argv[]);
 
   // Source of logs: see |SourceMode| enum class.
   SourceMode source = SourceMode::PLAINTEXT_LOG;

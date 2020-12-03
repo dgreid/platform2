@@ -72,7 +72,6 @@ class FileMapReader {
     const uint64_t buffer_length_ = 0;
 
     base::WeakPtrFactory<MappedBuffer> weak_factory_{this};
-
   };
 
   // Creates an instance and returns it.
