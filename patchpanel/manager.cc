@@ -824,6 +824,11 @@ std::unique_ptr<dbus::Response> Manager::OnConnectNamespace(
   }
 
   pid_t pid = request.pid();
+  if (pid == 1 || pid == getpid()) {
+    LOG(ERROR) << "ConnectNamespaceRequest: privileged namespace pid " << pid;
+    writer.AppendProtoAsArrayOfBytes(patchpanel::ConnectNamespaceResponse());
+    return dbus_response;
+  }
   {
     ScopedNS ns(pid);
     if (!ns.IsValid()) {

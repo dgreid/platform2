@@ -40,10 +40,10 @@ class ClientTest : public testing::Test {
 
 TEST_F(ClientTest, ConnectNamespace) {
   pid_t pid = 3456;
-  std::string outboud_ifname = "";
+  std::string outbound_ifname = "";
 
-  // Failure case
-  auto result = client_->ConnectNamespace(pid, outboud_ifname, false);
+  // Failure case - invalid pid
+  auto result = client_->ConnectNamespace(pid, outbound_ifname, false);
   EXPECT_FALSE(result.first.is_valid());
   EXPECT_TRUE(result.second.peer_ifname().empty());
   EXPECT_TRUE(result.second.host_ifname().empty());
@@ -51,6 +51,10 @@ TEST_F(ClientTest, ConnectNamespace) {
   EXPECT_EQ(0, result.second.host_ipv4_address());
   EXPECT_EQ(0, result.second.ipv4_subnet().base_addr());
   EXPECT_EQ(0, result.second.ipv4_subnet().prefix_len());
+
+  // Failure case - prohibited pid
+  result = client_->ConnectNamespace(1, outbound_ifname, false);
+  EXPECT_FALSE(result.first.is_valid());
 
   // Success case
   patchpanel::ConnectNamespaceResponse response_proto;
@@ -67,7 +71,7 @@ TEST_F(ClientTest, ConnectNamespace) {
   EXPECT_CALL(*proxy_, CallMethodAndBlock(_, _))
       .WillOnce(Return(ByMove(std::move(response))));
 
-  result = client_->ConnectNamespace(pid, outboud_ifname, false);
+  result = client_->ConnectNamespace(pid, outbound_ifname, false);
   EXPECT_TRUE(result.first.is_valid());
   EXPECT_EQ("arc_ns0", result.second.host_ifname());
   EXPECT_EQ("veth0", result.second.peer_ifname());
