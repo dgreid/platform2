@@ -1139,11 +1139,11 @@ scoped_refptr<Mount> UserDataAuth::CreateMount(const std::string& username) {
   // TODO(dlunev): Decide if finalization should be moved to MountFactory.
   EnsureBootLockboxFinalized();
   m = mount_factory_->New(platform_, homedirs_);
+  m->set_legacy_mount(legacy_mount_);
+  m->set_bind_mount_downloads(bind_mount_downloads_);
   if (!m->Init()) {
     return nullptr;
   }
-  m->set_legacy_mount(legacy_mount_);
-  m->set_bind_mount_downloads(bind_mount_downloads_);
   return m;
 }
 
