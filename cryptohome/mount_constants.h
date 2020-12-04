@@ -20,9 +20,6 @@ extern const char kSparseFileDir[];
 
 extern const char kDefaultSharedUser[];
 
-extern const char kDefaultShadowRoot[];
-extern const char kDefaultSkeletonSource[];
-
 // Directories that we intend to track (make pass-through in cryptohome vault)
 extern const char kCacheDir[];
 extern const char kDownloadsDir[];

@@ -12,6 +12,7 @@
 #include <base/files/file_path.h>
 #include <base/logging.h>
 
+#include "cryptohome/filesystem_layout.h"
 #include "cryptohome/homedirs.h"
 #include "cryptohome/mount_constants.h"
 #include "cryptohome/platform.h"
@@ -167,7 +168,7 @@ bool DiskCleanupRoutines::DeleteUserProfile(const std::string& obfuscated) {
 
 base::FilePath DiskCleanupRoutines::GetShadowDir(
     const std::string& obfuscated) const {
-  return homedirs_->shadow_root().Append(obfuscated);
+  return ShadowRoot().Append(obfuscated);
 }
 
 bool DiskCleanupRoutines::GetTrackedDirectory(const FilePath& user_dir,

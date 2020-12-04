@@ -766,8 +766,6 @@ class Service : public brillo::dbus::AbstractDbusService,
   GMainLoop* loop_;
   // Can't use unique_ptr for cryptohome_ because memory is allocated by glib.
   gobject::Cryptohome* cryptohome_;
-  // Root of user vaults.
-  base::FilePath shadow_root_;
   brillo::SecureBlob system_salt_;
   std::unique_ptr<cryptohome::Platform> default_platform_;
   cryptohome::Platform* platform_;

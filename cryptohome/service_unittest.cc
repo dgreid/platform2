@@ -214,7 +214,6 @@ class ServiceTestNotInitialized : public ::testing::Test {
     service_.set_key_challenge_service_factory(&key_challenge_service_factory_);
     test_helper_.SetUpSystemSalt();
     tpm_init_.set_tpm(&tpm_);
-    ON_CALL(homedirs_, shadow_root()).WillByDefault(ReturnRef(kShadowRoot));
     // Return valid values for the amount of free space.
     ON_CALL(cleanup_, AmountOfFreeDiskSpace())
         .WillByDefault(Return(kFreeSpaceThresholdToTriggerCleanup));
@@ -281,7 +280,6 @@ class ServiceTestNotInitialized : public ::testing::Test {
   FakeEventSourceSink event_sink_;
   scoped_refptr<MockMount> mount_;
   scoped_refptr<UserSession> session_;
-  base::FilePath kShadowRoot = base::FilePath("/home/.shadow");
   // Declare service_ last so it gets destroyed before all the mocks. This is
   // important because otherwise the background thread may call into mocks that
   // have already been destroyed.
@@ -304,11 +302,8 @@ class ServiceTest : public ServiceTestNotInitialized {
 
 TEST_F(ServiceTestNotInitialized, CheckAsyncTestCredentials) {
   // Setup a real homedirs instance (making this a pseudo-integration test).
-  base::FilePath shadow_root(kShadowRoot);
-  test_helper_.InjectSystemSalt(&platform_,
-                                shadow_root.Append(kSystemSaltFile));
-  test_helper_.InitTestData(shadow_root, kDefaultUsers, 1,
-                            false /* force_ecryptfs */);
+  test_helper_.InjectSystemSalt(&platform_);
+  test_helper_.InitTestData(kDefaultUsers, 1, false /* force_ecryptfs */);
   TestUser* user = &test_helper_.users[0];
   user->InjectKeyset(&platform_);
   // Inject the dirs because InitTestData uses its own platform
@@ -324,9 +319,9 @@ TEST_F(ServiceTestNotInitialized, CheckAsyncTestCredentials) {
                                         test_helper_.system_salt, &passkey);
   std::string passkey_string = passkey.to_string();
   Crypto real_crypto(&platform_);
-  InitializeFilesystemLayout(&platform_, &real_crypto, shadow_root, nullptr);
+  InitializeFilesystemLayout(&platform_, &real_crypto, nullptr);
   HomeDirs real_homedirs(
-      &platform_, &real_crypto, kShadowRoot, test_helper_.system_salt, nullptr,
+      &platform_, &real_crypto, test_helper_.system_salt, nullptr,
       std::make_unique<policy::PolicyProvider>(
           std::unique_ptr<NiceMock<policy::MockDevicePolicy>>(
               new NiceMock<policy::MockDevicePolicy>)),
@@ -666,8 +661,7 @@ TEST_F(ServiceTest, CleanUpStale_NoOpenFiles_Ephemeral) {
   // and no open filehandles, all stale mounts are unmounted, loop device is
   // detached and sparse file is deleted.
 
-  EXPECT_CALL(platform_, GetMountsBySourcePrefix(homedirs_.shadow_root(), _))
-      .WillOnce(Return(false));
+  EXPECT_CALL(platform_, GetMountsBySourcePrefix(_, _)).WillOnce(Return(false));
   EXPECT_CALL(platform_, GetAttachedLoopDevices())
       .WillRepeatedly(Return(kLoopDevices));
   EXPECT_CALL(platform_, GetLoopDeviceMounts(_))
@@ -697,8 +691,7 @@ TEST_F(ServiceTest, CleanUpStale_OpenLegacy_Ephemeral) {
   // Check that when we have ephemeral mounts, no active mounts,
   // and some open filehandles to the legacy homedir, everything is kept.
 
-  EXPECT_CALL(platform_, GetMountsBySourcePrefix(homedirs_.shadow_root(), _))
-      .WillOnce(Return(false));
+  EXPECT_CALL(platform_, GetMountsBySourcePrefix(_, _)).WillOnce(Return(false));
   EXPECT_CALL(platform_, GetAttachedLoopDevices())
       .WillRepeatedly(Return(kLoopDevices));
   EXPECT_CALL(platform_, GetLoopDeviceMounts(_))
@@ -731,8 +724,7 @@ TEST_F(ServiceTest, CleanUpStale_OpenLegacy_Ephemeral_Forced) {
   // and some open filehandles to the legacy homedir, but cleanup is forced,
   // all mounts are unmounted, loop device is detached and file is deleted.
 
-  EXPECT_CALL(platform_, GetMountsBySourcePrefix(homedirs_.shadow_root(), _))
-      .WillOnce(Return(false));
+  EXPECT_CALL(platform_, GetMountsBySourcePrefix(_, _)).WillOnce(Return(false));
   EXPECT_CALL(platform_, GetAttachedLoopDevices())
       .WillRepeatedly(Return(kLoopDevices));
   EXPECT_CALL(platform_, GetLoopDeviceMounts(_))

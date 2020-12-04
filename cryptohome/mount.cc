@@ -40,6 +40,7 @@
 #include "cryptohome/cryptolib.h"
 #include "cryptohome/dircrypto_data_migrator/migration_helper.h"
 #include "cryptohome/dircrypto_util.h"
+#include "cryptohome/filesystem_layout.h"
 #include "cryptohome/homedirs.h"
 #include "cryptohome/mount_utils.h"
 #include "cryptohome/pkcs11_init.h"
@@ -97,8 +98,6 @@ Mount::Mount(Platform* platform, HomeDirs* homedirs)
       chaps_user_(-1),
       default_group_(-1),
       default_access_group_(-1),
-      shadow_root_(kDefaultShadowRoot),
-      skel_source_(kDefaultSkeletonSource),
       system_salt_(),
       platform_(platform),
       homedirs_(homedirs),
@@ -150,10 +149,9 @@ bool Mount::Init() {
     result = false;
   }
 
-  mounter_.reset(new MountHelper(default_user_, default_group_,
-                                 default_access_group_, shadow_root_,
-                                 skel_source_, system_salt_, legacy_mount_,
-                                 bind_mount_downloads_, platform_));
+  mounter_.reset(new MountHelper(
+      default_user_, default_group_, default_access_group_, system_salt_,
+      legacy_mount_, bind_mount_downloads_, platform_));
 
   std::unique_ptr<MountNamespace> chrome_mnt_ns;
   if (mount_guest_session_non_root_namespace_ || IsolateUserSession()) {
@@ -185,8 +183,7 @@ bool Mount::Init() {
 
 MountType Mount::DeriveVaultMountType(const std::string& obfuscated_username,
                                       bool shall_migrate) const {
-  FilePath ecryptfs_vault_path =
-      homedirs_->GetEcryptfsUserVaultPath(obfuscated_username);
+  FilePath ecryptfs_vault_path = GetEcryptfsUserVaultPath(obfuscated_username);
   bool ecryptfs_vault_exists = platform_->DirectoryExists(ecryptfs_vault_path);
 
   if (ecryptfs_vault_exists) {
@@ -207,7 +204,7 @@ MountType Mount::ChooseVaultMountType(bool force_ecryptfs) const {
     return MountType::ECRYPTFS;
   }
 
-  dircrypto::KeyState state = platform_->GetDirCryptoKeyState(shadow_root_);
+  dircrypto::KeyState state = platform_->GetDirCryptoKeyState(ShadowRoot());
   switch (state) {
     case dircrypto::KeyState::NOT_SUPPORTED:
       return MountType::ECRYPTFS;
@@ -276,8 +273,7 @@ bool Mount::PrepareCryptohome(const std::string& obfuscated_username,
   MountType mount_type = ChooseVaultMountType(force_ecryptfs);
   if (mount_type == MountType::ECRYPTFS) {
     // Create the user's vault.
-    FilePath vault_path =
-        homedirs_->GetEcryptfsUserVaultPath(obfuscated_username);
+    FilePath vault_path = GetEcryptfsUserVaultPath(obfuscated_username);
     if (!platform_->CreateDirectory(vault_path)) {
       LOG(ERROR) << "Couldn't create vault path: " << vault_path.value();
       return false;
@@ -382,7 +378,7 @@ bool Mount::MountCryptohome(const std::string& username,
   if (should_mount_dircrypto) {
     dircrypto_key_reference_.policy_version =
         dircrypto::GetDirectoryPolicyVersion(
-            homedirs_->GetUserMountDirectory(obfuscated_username));
+            GetUserMountDirectory(obfuscated_username));
     if (dircrypto_key_reference_.policy_version < 0) {
       dircrypto_key_reference_.policy_version =
           dircrypto::CheckFscryptKeyIoctlSupport() ? FSCRYPT_POLICY_V2
@@ -409,7 +405,7 @@ bool Mount::MountCryptohome(const std::string& username,
   // /home/user/$hash: owned by chronos
   // /home/root/$hash: owned by root
 
-  mount_point_ = homedirs_->GetUserMountDirectory(obfuscated_username);
+  mount_point_ = GetUserMountDirectory(obfuscated_username);
   if (!platform_->CreateDirectory(mount_point_)) {
     PLOG(ERROR) << "User mount directory creation failed for "
                 << mount_point_.value();
@@ -484,8 +480,8 @@ bool Mount::MountCryptohome(const std::string& username,
 
   // TODO(fqj,b/116072767) Ignore errors since unlabeled files are currently
   // still okay during current development progress.
-  platform_->RestoreSELinuxContexts(
-      homedirs_->GetUserMountDirectory(obfuscated_username), true);
+  platform_->RestoreSELinuxContexts(GetUserMountDirectory(obfuscated_username),
+                                    true);
 
   return true;
 }
@@ -545,7 +541,7 @@ void Mount::UnmountAndDropKeys(base::OnceClosure unmounter) {
   // Invalidate dircrypto key to make directory contents inaccessible.
   if (!dircrypto_key_reference_.reference.empty()) {
     bool result = platform_->InvalidateDirCryptoKey(dircrypto_key_reference_,
-                                                    shadow_root_);
+                                                    ShadowRoot());
     if (!result) {
       // TODO(crbug.com/1116109): We should think about what to do after this
       // operation failed.
@@ -627,7 +623,7 @@ bool Mount::MountGuestCryptohome() {
 
 FilePath Mount::GetUserDirectoryForUser(
     const std::string& obfuscated_username) const {
-  return shadow_root_.Append(obfuscated_username);
+  return ShadowRoot().Append(obfuscated_username);
 }
 
 FilePath Mount::GetUserTemporaryMountDirectory(
@@ -819,8 +815,7 @@ bool Mount::MigrateToDircrypto(
     return false;
   }
   // Clean up.
-  FilePath vault_path =
-      homedirs_->GetEcryptfsUserVaultPath(obfuscated_username);
+  FilePath vault_path = GetEcryptfsUserVaultPath(obfuscated_username);
   if (!platform_->DeletePathRecursively(temporary_mount) ||
       !platform_->DeletePathRecursively(vault_path)) {
     LOG(ERROR) << "Failed to delete the old vault.";

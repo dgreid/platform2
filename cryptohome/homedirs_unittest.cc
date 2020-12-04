@@ -66,7 +66,6 @@ class HomeDirsTest
  public:
   HomeDirsTest()
       : crypto_(&platform_),
-        shadow_root_(kShadowRoot),
         mock_device_policy_(new policy::MockDevicePolicy()) {}
   ~HomeDirsTest() override {}
 
@@ -79,10 +78,9 @@ class HomeDirsTest
   void SetUp() override {
     PreparePolicy(true, kOwner, false, "");
 
-    InitializeFilesystemLayout(&platform_, &crypto_, shadow_root_,
-                               &system_salt_);
+    InitializeFilesystemLayout(&platform_, &crypto_, &system_salt_);
     homedirs_ = std::make_unique<HomeDirs>(
-        &platform_, &crypto_, shadow_root_, system_salt_, &timestamp_cache_,
+        &platform_, &crypto_, system_salt_, &timestamp_cache_,
         std::make_unique<policy::PolicyProvider>(
             std::unique_ptr<policy::MockDevicePolicy>(mock_device_policy_)),
         std::make_unique<VaultKeysetFactory>());
@@ -114,7 +112,7 @@ class HomeDirsTest
                      obfuscated,
                      passkey,
                      credentials,
-                     homedirs_->shadow_root().Append(obfuscated),
+                     ShadowRoot().Append(obfuscated),
                      brillo::cryptohome::home::GetHashedUserPath(obfuscated)};
     users_.push_back(info);
   }
@@ -138,7 +136,6 @@ class HomeDirsTest
   NiceMock<MockPlatform> platform_;
   NiceMock<MockUserOldestActivityTimestampCache> timestamp_cache_;
   Crypto crypto_;
-  base::FilePath shadow_root_;
   brillo::SecureBlob system_salt_;
   policy::MockDevicePolicy* mock_device_policy_;  // owned by homedirs_
   std::unique_ptr<HomeDirs> homedirs_;
@@ -200,8 +197,7 @@ TEST_P(HomeDirsTest, RenameCryptohome) {
   const std::string kHashedNewUserId =
       brillo::cryptohome::home::SanitizeUserNameWithSalt(kNewUserId,
                                                          system_salt_);
-  const base::FilePath kNewUserPath =
-      homedirs_->shadow_root().Append(kHashedNewUserId);
+  const base::FilePath kNewUserPath = ShadowRoot().Append(kHashedNewUserId);
 
   // Original state - pregenerated users' vaults exist, kNewUserId's vault
   // doesn't exist
@@ -259,8 +255,7 @@ TEST_P(HomeDirsTest, CreateCryptohome) {
   const std::string kHashedNewUserId =
       brillo::cryptohome::home::SanitizeUserNameWithSalt(kNewUserId,
                                                          system_salt_);
-  const base::FilePath kNewUserPath =
-      homedirs_->shadow_root().Append(kHashedNewUserId);
+  const base::FilePath kNewUserPath = ShadowRoot().Append(kHashedNewUserId);
 
   EXPECT_TRUE(homedirs_->Create(kNewUserId));
   EXPECT_TRUE(platform_.DirectoryExists(kNewUserPath));

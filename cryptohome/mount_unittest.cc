@@ -75,9 +75,6 @@ using ::testing::WithArgs;
 
 namespace {
 
-const FilePath kImageDir("/home/.shadow");
-const FilePath kImageSaltFile = kImageDir.Append("salt");
-const FilePath kSkelDir = kImageDir.Append("skel");
 const FilePath kLoopDevice("/dev/loop7");
 
 const gid_t kDaemonGid = 400;  // TODO(wad): expose this in mount.h
@@ -137,17 +134,15 @@ class MountTest
   void SetUp() {
     // Populate the system salt
     helper_.SetUpSystemSalt();
-    helper_.InjectSystemSalt(&platform_, kImageSaltFile);
+    helper_.InjectSystemSalt(&platform_);
 
     crypto_.set_tpm(&tpm_);
 
     mock_device_policy_ = new policy::MockDevicePolicy();
 
-    InitializeFilesystemLayout(&platform_, &crypto_,
-                               base::FilePath(kShadowRoot), nullptr);
+    InitializeFilesystemLayout(&platform_, &crypto_, nullptr);
     homedirs_ = std::make_unique<HomeDirs>(
-        &platform_, &crypto_, base::FilePath(kShadowRoot), helper_.system_salt,
-        nullptr,
+        &platform_, &crypto_, helper_.system_salt, nullptr,
         std::make_unique<policy::PolicyProvider>(
             std::unique_ptr<policy::MockDevicePolicy>(mock_device_policy_)),
         nullptr);
@@ -156,8 +151,6 @@ class MountTest
 
     mount_ = new Mount(&platform_, homedirs_.get());
 
-    mount_->set_shadow_root(kImageDir);
-    mount_->set_skel_source(kSkelDir);
     mount_->set_chaps_client_factory(&chaps_client_factory_);
     // Perform mounts in-process.
     mount_->set_mount_guest_session_out_of_process(false);
@@ -172,7 +165,7 @@ class MountTest
   }
 
   void InsertTestUsers(const TestUserInfo* user_info_list, int count) {
-    helper_.InitTestData(kImageDir, user_info_list, static_cast<size_t>(count),
+    helper_.InitTestData(user_info_list, static_cast<size_t>(count),
                          ShouldTestEcryptfs());
   }
 
@@ -243,7 +236,7 @@ class MountTest
         .WillOnce(Return(true));
     EXPECT_CALL(platform_, SetDirCryptoKey(user.vault_mount_path, _))
         .WillOnce(Return(true));
-    EXPECT_CALL(platform_, InvalidateDirCryptoKey(_, kImageDir))
+    EXPECT_CALL(platform_, InvalidateDirCryptoKey(_, ShadowRoot()))
         .WillRepeatedly(Return(true));
   }
 
@@ -359,7 +352,7 @@ class MountTest
         .WillOnce(Return(true));
     EXPECT_CALL(platform_, Bind(_, _, _)).WillRepeatedly(Return(true));
 
-    EXPECT_CALL(platform_, GetFileEnumerator(kSkelDir, _, _))
+    EXPECT_CALL(platform_, GetFileEnumerator(SkelDir(), _, _))
         .WillOnce(Return(new NiceMock<MockFileEnumerator>()))
         .WillOnce(Return(new NiceMock<MockFileEnumerator>()));
     EXPECT_CALL(
@@ -455,9 +448,6 @@ INSTANTIATE_TEST_SUITE_P(WithEcryptfs, MountTest, ::testing::Values(true));
 INSTANTIATE_TEST_SUITE_P(WithDircrypto, MountTest, ::testing::Values(false));
 
 TEST_P(MountTest, BadInitTest) {
-  // Create a Mount instance that points to a bad shadow root.
-  mount_->set_shadow_root(FilePath("/dev/null"));
-
   SecureBlob passkey;
   cryptohome::Crypto::PasswordToPasskey(kDefaultUsers[0].password,
                                         helper_.system_salt, &passkey);
@@ -485,7 +475,7 @@ TEST_P(MountTest, NamespaceCreationFail) {
 TEST_P(MountTest, MountCryptohomeHasPrivileges) {
   // Check that Mount only works if the mount permission is given.
   InsertTestUsers(&kDefaultUsers[10], 1);
-  EXPECT_CALL(platform_, DirectoryExists(kImageDir))
+  EXPECT_CALL(platform_, DirectoryExists(ShadowRoot()))
       .WillRepeatedly(Return(true));
   EXPECT_TRUE(DoMountInit());
 
@@ -536,9 +526,9 @@ TEST_P(MountTest, BindMyFilesDownloadsSuccess) {
       .WillOnce(Return(true));
 
   MountHelper mnt_helper(fake_platform::kChronosUID, fake_platform::kChronosGID,
-                         fake_platform::kSharedGID, kImageDir, kSkelDir,
-                         helper_.system_salt, true /*legacy_mount*/,
-                         true /* bind_mount_downloads */, &platform_);
+                         fake_platform::kSharedGID, helper_.system_salt,
+                         true /*legacy_mount*/, true /* bind_mount_downloads */,
+                         &platform_);
 
   EXPECT_TRUE(mnt_helper.BindMyFilesDownloads(dest_dir));
 }
@@ -550,9 +540,9 @@ TEST_P(MountTest, BindMyFilesDownloadsMissingUserHome) {
   EXPECT_CALL(platform_, DirectoryExists(dest_dir)).WillOnce(Return(false));
 
   MountHelper mnt_helper(fake_platform::kChronosUID, fake_platform::kChronosGID,
-                         fake_platform::kSharedGID, kImageDir, kSkelDir,
-                         helper_.system_salt, true /*legacy_mount*/,
-                         true /* bind_mount_downloads */, &platform_);
+                         fake_platform::kSharedGID, helper_.system_salt,
+                         true /*legacy_mount*/, true /* bind_mount_downloads */,
+                         &platform_);
 
   EXPECT_FALSE(mnt_helper.BindMyFilesDownloads(dest_dir));
 }
@@ -567,9 +557,9 @@ TEST_P(MountTest, BindMyFilesDownloadsMissingDownloads) {
       .WillOnce(Return(false));
 
   MountHelper mnt_helper(fake_platform::kChronosUID, fake_platform::kChronosGID,
-                         fake_platform::kSharedGID, kImageDir, kSkelDir,
-                         helper_.system_salt, true /*legacy_mount*/,
-                         true /* bind_mount_downloads */, &platform_);
+                         fake_platform::kSharedGID, helper_.system_salt,
+                         true /*legacy_mount*/, true /* bind_mount_downloads */,
+                         &platform_);
 
   EXPECT_FALSE(mnt_helper.BindMyFilesDownloads(dest_dir));
 }
@@ -587,9 +577,9 @@ TEST_P(MountTest, BindMyFilesDownloadsMissingMyFilesDownloads) {
       .WillOnce(Return(false));
 
   MountHelper mnt_helper(fake_platform::kChronosUID, fake_platform::kChronosGID,
-                         fake_platform::kSharedGID, kImageDir, kSkelDir,
-                         helper_.system_salt, true /*legacy_mount*/,
-                         true /* bind_mount_downloads */, &platform_);
+                         fake_platform::kSharedGID, helper_.system_salt,
+                         true /*legacy_mount*/, true /* bind_mount_downloads */,
+                         &platform_);
 
   EXPECT_FALSE(mnt_helper.BindMyFilesDownloads(dest_dir));
 }
@@ -634,9 +624,9 @@ TEST_P(MountTest, BindMyFilesDownloadsRemoveExistingFiles) {
       .WillOnce(Return(true));
 
   MountHelper mnt_helper(fake_platform::kChronosUID, fake_platform::kChronosGID,
-                         fake_platform::kSharedGID, kImageDir, kSkelDir,
-                         helper_.system_salt, true /*legacy_mount*/,
-                         true /* bind_mount_downloads */, &platform_);
+                         fake_platform::kSharedGID, helper_.system_salt,
+                         true /*legacy_mount*/, true /* bind_mount_downloads */,
+                         &platform_);
 
   EXPECT_TRUE(mnt_helper.BindMyFilesDownloads(dest_dir));
 }
@@ -681,9 +671,9 @@ TEST_P(MountTest, BindMyFilesDownloadsMoveForgottenFiles) {
       .WillOnce(Return(true));
 
   MountHelper mnt_helper(fake_platform::kChronosUID, fake_platform::kChronosGID,
-                         fake_platform::kSharedGID, kImageDir, kSkelDir,
-                         helper_.system_salt, true /*legacy_mount*/,
-                         true /* bind_mount_downloads */, &platform_);
+                         fake_platform::kSharedGID, helper_.system_salt,
+                         true /*legacy_mount*/, true /* bind_mount_downloads */,
+                         &platform_);
 
   EXPECT_TRUE(mnt_helper.BindMyFilesDownloads(dest_dir));
 }
@@ -700,11 +690,9 @@ class ChapsDirectoryTest : public ::testing::Test {
     platform_.GetFake()->SetStandardUsersAndGroups();
 
     brillo::SecureBlob salt;
-    InitializeFilesystemLayout(&platform_, &crypto_,
-                               base::FilePath(kShadowRoot), &salt);
-    homedirs_ = std::make_unique<HomeDirs>(&platform_, &crypto_,
-                                           base::FilePath(kShadowRoot), salt,
-                                           nullptr, nullptr, nullptr);
+    InitializeFilesystemLayout(&platform_, &crypto_, &salt);
+    homedirs_ = std::make_unique<HomeDirs>(&platform_, &crypto_, salt, nullptr,
+                                           nullptr, nullptr);
 
     mount_ = new Mount(&platform_, homedirs_.get());
     mount_->Init();
@@ -876,7 +864,7 @@ TEST_P(MountTest, MountCryptohome) {
   // checks that cryptohome tries to mount successfully, and tests that the
   // tracked directories are created/replaced as expected
   InsertTestUsers(&kDefaultUsers[10], 1);
-  EXPECT_CALL(platform_, DirectoryExists(kImageDir))
+  EXPECT_CALL(platform_, DirectoryExists(ShadowRoot()))
       .WillRepeatedly(Return(true));
   EXPECT_TRUE(DoMountInit());
 
@@ -917,7 +905,7 @@ TEST_P(MountTest, MountPristineCryptohome) {
   EXPECT_CALL(platform_, FileExists(base::FilePath(kLockedToSingleUserFile)))
       .WillRepeatedly(Return(false));
 
-  EXPECT_CALL(platform_, GetFileEnumerator(kSkelDir, _, _))
+  EXPECT_CALL(platform_, GetFileEnumerator(SkelDir(), _, _))
       .WillOnce(Return(new NiceMock<MockFileEnumerator>()))
       .WillOnce(Return(new NiceMock<MockFileEnumerator>()));
 
@@ -950,9 +938,9 @@ TEST_P(MountTest, RememberMountOrderingTest) {
   // Checks that mounts made with MountAndPush/BindAndPush are undone in the
   // right order.
   MountHelper mnt_helper(fake_platform::kChronosUID, fake_platform::kChronosGID,
-                         fake_platform::kSharedGID, kImageDir, kSkelDir,
-                         helper_.system_salt, true /*legacy_mount*/,
-                         true /* bind_mount_downloads */, &platform_);
+                         fake_platform::kSharedGID, helper_.system_salt,
+                         true /*legacy_mount*/, true /* bind_mount_downloads */,
+                         &platform_);
 
   FilePath src("/src");
   FilePath dest0("/dest/foo");
@@ -1032,7 +1020,7 @@ TEST_P(MountTest, CreateTrackedSubdirectoriesReplaceExistingDir) {
 TEST_P(MountTest, MountCryptohomePreviousMigrationIncomplete) {
   // Checks that if both ecryptfs and dircrypto home directories
   // exist, fails with an error.
-  EXPECT_CALL(platform_, DirectoryExists(kImageDir))
+  EXPECT_CALL(platform_, DirectoryExists(ShadowRoot()))
       .WillRepeatedly(Return(true));
   EXPECT_TRUE(DoMountInit());
 
@@ -1065,7 +1053,7 @@ TEST_P(MountTest, MountCryptohomeToMigrateFromEcryptfs) {
   // setting up a new dircrypto directory.
   // When the existing vault is dircrypto, just fail.
   InsertTestUsers(&kDefaultUsers[10], 1);
-  EXPECT_CALL(platform_, DirectoryExists(kImageDir))
+  EXPECT_CALL(platform_, DirectoryExists(ShadowRoot()))
       .WillRepeatedly(Return(true));
   EXPECT_TRUE(DoMountInit());
 
@@ -1128,7 +1116,7 @@ TEST_P(MountTest, MountCryptohomeToMigrateFromEcryptfs) {
 TEST_P(MountTest, MountCryptohomeShadowOnly) {
   // Checks that the shadow_only option is handled correctly.
   InsertTestUsers(&kDefaultUsers[10], 1);
-  EXPECT_CALL(platform_, DirectoryExists(kImageDir))
+  EXPECT_CALL(platform_, DirectoryExists(ShadowRoot()))
       .WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, FileExists(base::FilePath(kLockedToSingleUserFile)))
       .WillRepeatedly(Return(false));
@@ -1153,7 +1141,7 @@ TEST_P(MountTest, MountCryptohomeShadowOnly) {
 
 TEST_P(MountTest, MountCryptohomeForceDircrypto) {
   // Checks that the force-dircrypto flag correctly rejects to mount ecryptfs.
-  EXPECT_CALL(platform_, DirectoryExists(kImageDir))
+  EXPECT_CALL(platform_, DirectoryExists(ShadowRoot()))
       .WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, FileExists(base::FilePath(kLockedToSingleUserFile)))
       .WillRepeatedly(Return(false));
@@ -1255,7 +1243,7 @@ class AltImageTest : public MountTest {
     MountTest::SetUp();
     InsertTestUsers(users, user_count);
 
-    EXPECT_CALL(platform_, DirectoryExists(kImageDir))
+    EXPECT_CALL(platform_, DirectoryExists(ShadowRoot()))
         .WillRepeatedly(Return(true));
     EXPECT_TRUE(DoMountInit());
   }
@@ -1396,9 +1384,9 @@ TEST_P(EphemeralNoUserSystemTest, CreateMyFilesDownloads) {
       .WillRepeatedly(Return(true));
 
   MountHelper mnt_helper(fake_platform::kChronosUID, fake_platform::kChronosGID,
-                         fake_platform::kSharedGID, kImageDir, kSkelDir,
-                         helper_.system_salt, true /*legacy_mount*/,
-                         true /* bind_mount_downloads */, &platform_);
+                         fake_platform::kSharedGID, helper_.system_salt,
+                         true /*legacy_mount*/, true /* bind_mount_downloads */,
+                         &platform_);
 
   ASSERT_TRUE(mnt_helper.SetUpEphemeralCryptohome(base_path));
 }
@@ -1430,9 +1418,9 @@ TEST_P(EphemeralNoUserSystemTest, CreateMyFilesDownloadsAlreadyExists) {
       .WillRepeatedly(Return(true));
 
   MountHelper mnt_helper(fake_platform::kChronosUID, fake_platform::kChronosGID,
-                         fake_platform::kSharedGID, kImageDir, kSkelDir,
-                         helper_.system_salt, true /*legacy_mount*/,
-                         true /* bind_mount_downloads */, &platform_);
+                         fake_platform::kSharedGID, helper_.system_salt,
+                         true /*legacy_mount*/, true /* bind_mount_downloads */,
+                         &platform_);
 
   ASSERT_TRUE(mnt_helper.SetUpEphemeralCryptohome(base_path));
 }
@@ -1476,7 +1464,7 @@ TEST_P(EphemeralNoUserSystemTest, OwnerUnknownMountCreateTest) {
   ExpectDownloadsBindMounts(*user);
   ExpectDaemonStoreMounts(*user, false /* is_ephemeral */);
 
-  EXPECT_CALL(platform_, GetFileEnumerator(kSkelDir, _, _))
+  EXPECT_CALL(platform_, GetFileEnumerator(SkelDir(), _, _))
       .WillOnce(Return(new NiceMock<MockFileEnumerator>()))
       .WillOnce(Return(new NiceMock<MockFileEnumerator>()));
 
@@ -1930,7 +1918,7 @@ TEST_P(EphemeralExistingUserSystemTest, EnterpriseMountRemoveTest) {
 
   // Let Mount know how many vaults there are.
   std::vector<FilePath> no_vaults;
-  EXPECT_CALL(platform_, EnumerateDirectoryEntries(kImageDir, false, _))
+  EXPECT_CALL(platform_, EnumerateDirectoryEntries(ShadowRoot(), false, _))
       .WillOnce(DoAll(SetArgPointee<2>(vaults_), Return(true)))
       // Don't re-delete on Unmount.
       .WillRepeatedly(DoAll(SetArgPointee<2>(no_vaults), Return(true)));
@@ -1983,9 +1971,9 @@ TEST_P(EphemeralExistingUserSystemTest, EnterpriseMountRemoveTest) {
   // Deleting users will cause each user's shadow root subdir to be
   // searched for LE credentials.
   for (const auto& user : helper_.users) {
-    EXPECT_CALL(
-        platform_,
-        GetFileEnumerator(kImageDir.Append(user.obfuscated_username), false, _))
+    EXPECT_CALL(platform_,
+                GetFileEnumerator(ShadowRoot().Append(user.obfuscated_username),
+                                  false, _))
         .WillOnce(Return(new NiceMock<MockFileEnumerator>()));
   }
 
@@ -2031,7 +2019,7 @@ TEST_P(EphemeralExistingUserSystemTest, MountRemoveTest) {
 
   // Let Mount know how many vaults there are.
   std::vector<FilePath> no_vaults;
-  EXPECT_CALL(platform_, EnumerateDirectoryEntries(kImageDir, false, _))
+  EXPECT_CALL(platform_, EnumerateDirectoryEntries(ShadowRoot(), false, _))
       .WillOnce(DoAll(SetArgPointee<2>(vaults_), Return(true)))
       // Don't re-delete on Unmount.
       .WillRepeatedly(DoAll(SetArgPointee<2>(no_vaults), Return(true)));
@@ -2085,9 +2073,10 @@ TEST_P(EphemeralExistingUserSystemTest, MountRemoveTest) {
   // subdir to be searched for LE credentials.
   for (int i = 0; i < helper_.users.size() - 1; i++) {
     TestUser* cur_user = &helper_.users[i];
-    EXPECT_CALL(platform_,
-                GetFileEnumerator(
-                    kImageDir.Append(cur_user->obfuscated_username), false, _))
+    EXPECT_CALL(
+        platform_,
+        GetFileEnumerator(ShadowRoot().Append(cur_user->obfuscated_username),
+                          false, _))
         .WillOnce(Return(new NiceMock<MockFileEnumerator>()));
   }
 
@@ -2141,7 +2130,7 @@ TEST_P(EphemeralExistingUserSystemTest, EnterpriseUnmountRemoveTest) {
   PrepareHomedirs(false, &expect_deletion, NULL);
 
   // Let Mount know how many vaults there are.
-  EXPECT_CALL(platform_, EnumerateDirectoryEntries(kImageDir, false, _))
+  EXPECT_CALL(platform_, EnumerateDirectoryEntries(ShadowRoot(), false, _))
       .WillRepeatedly(DoAll(SetArgPointee<2>(vaults_), Return(true)));
 
   // Don't say any cryptohomes are mounted
@@ -2174,7 +2163,7 @@ TEST_P(EphemeralExistingUserSystemTest, UnmountRemoveTest) {
   PrepareHomedirs(false, &expect_deletion, NULL);
 
   // Let Mount know how many vaults there are.
-  EXPECT_CALL(platform_, EnumerateDirectoryEntries(kImageDir, false, _))
+  EXPECT_CALL(platform_, EnumerateDirectoryEntries(ShadowRoot(), false, _))
       .WillRepeatedly(DoAll(SetArgPointee<2>(vaults_), Return(true)));
 
   // Don't say any cryptohomes are mounted
@@ -2206,7 +2195,7 @@ TEST_P(EphemeralExistingUserSystemTest, NonOwnerMountIsEphemeralTest) {
   PrepareHomedirs(true, NULL, NULL);
 
   // Let Mount know how many vaults there are.
-  EXPECT_CALL(platform_, EnumerateDirectoryEntries(kImageDir, false, _))
+  EXPECT_CALL(platform_, EnumerateDirectoryEntries(ShadowRoot(), false, _))
       .WillRepeatedly(DoAll(SetArgPointee<2>(vaults_), Return(true)));
   // Don't say any cryptohomes are mounted
   EXPECT_CALL(platform_, IsDirectoryMounted(_)).WillRepeatedly(Return(false));
@@ -2272,7 +2261,7 @@ TEST_P(EphemeralExistingUserSystemTest, EnterpriseMountIsEphemeralTest) {
   PrepareHomedirs(true, NULL, NULL);
 
   // Let Mount know how many vaults there are.
-  EXPECT_CALL(platform_, EnumerateDirectoryEntries(kImageDir, false, _))
+  EXPECT_CALL(platform_, EnumerateDirectoryEntries(ShadowRoot(), false, _))
       .WillRepeatedly(DoAll(SetArgPointee<2>(vaults_), Return(true)));
   // Don't say any cryptohomes are mounted.
   EXPECT_CALL(platform_, IsDirectoryMounted(_)).WillRepeatedly(Return(false));

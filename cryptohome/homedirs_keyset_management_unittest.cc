@@ -70,7 +70,7 @@ void GetKeysetBlob(const SerializedVaultKeyset& serialized,
 
 class KeysetManagementTest : public ::testing::Test {
  public:
-  KeysetManagementTest() : crypto_(&platform_), shadow_root_(kShadowRoot) {}
+  KeysetManagementTest() : crypto_(&platform_) {}
   ~KeysetManagementTest() override {}
 
   // Not copyable or movable
@@ -82,15 +82,14 @@ class KeysetManagementTest : public ::testing::Test {
   void SetUp() override {
     crypto_.set_tpm(&tpm_);
 
-    InitializeFilesystemLayout(&platform_, &crypto_, shadow_root_,
-                               &system_salt_);
-    homedirs_ = std::make_unique<HomeDirs>(
-        &platform_, &crypto_, shadow_root_, system_salt_, nullptr,
-        std::make_unique<policy::PolicyProvider>(),
-        std::make_unique<VaultKeysetFactory>());
+    InitializeFilesystemLayout(&platform_, &crypto_, &system_salt_);
+    homedirs_ =
+        std::make_unique<HomeDirs>(&platform_, &crypto_, system_salt_, nullptr,
+                                   std::make_unique<policy::PolicyProvider>(),
+                                   std::make_unique<VaultKeysetFactory>());
     mock_vault_keyset_factory_ = new MockVaultKeysetFactory();
     homedirs_mock_vk_ = std::make_unique<HomeDirs>(
-        &platform_, &crypto_, shadow_root_, system_salt_, nullptr,
+        &platform_, &crypto_, system_salt_, nullptr,
         std::make_unique<policy::PolicyProvider>(),
         std::unique_ptr<VaultKeysetFactory>(mock_vault_keyset_factory_));
 
@@ -109,7 +108,6 @@ class KeysetManagementTest : public ::testing::Test {
   NiceMock<MockPlatform> platform_;
   NiceMock<MockTpm> tpm_;
   Crypto crypto_;
-  base::FilePath shadow_root_;
   brillo::SecureBlob system_salt_;
   std::unique_ptr<HomeDirs> homedirs_;
   MockVaultKeysetFactory* mock_vault_keyset_factory_;
@@ -140,13 +138,13 @@ class KeysetManagementTest : public ::testing::Test {
                      obfuscated,
                      passkey,
                      credentials,
-                     homedirs_->shadow_root().Append(obfuscated),
+                     ShadowRoot().Append(obfuscated),
                      brillo::cryptohome::home::GetHashedUserPath(obfuscated)};
     users_.push_back(info);
   }
 
   void PrepareDirectoryStructure() {
-    ASSERT_TRUE(platform_.CreateDirectory(homedirs_->shadow_root()));
+    ASSERT_TRUE(platform_.CreateDirectory(ShadowRoot()));
     ASSERT_TRUE(platform_.CreateDirectory(
         brillo::cryptohome::home::GetUserPathPrefix()));
     // We only need the homedir path, not the vault/mount paths.

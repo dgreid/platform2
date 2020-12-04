@@ -17,6 +17,7 @@
 
 #include "cryptohome/cryptohome_metrics.h"
 #include "cryptohome/disk_cleanup_routines.h"
+#include "cryptohome/filesystem_layout.h"
 #include "cryptohome/homedirs.h"
 #include "cryptohome/platform.h"
 #include "cryptohome/user_oldest_activity_timestamp_cache.h"
@@ -32,8 +33,7 @@ DiskCleanup::DiskCleanup(Platform* platform,
       routines_(std::make_unique<DiskCleanupRoutines>(homedirs_, platform_)) {}
 
 base::Optional<int64_t> DiskCleanup::AmountOfFreeDiskSpace() const {
-  int64_t free_space =
-      platform_->AmountOfFreeDiskSpace(homedirs_->shadow_root());
+  int64_t free_space = platform_->AmountOfFreeDiskSpace(ShadowRoot());
 
   if (free_space < 0) {
     return base::nullopt;

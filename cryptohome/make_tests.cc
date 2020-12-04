@@ -83,8 +83,7 @@ const size_t kDefaultUserCount = base::size(kDefaultUsers);
 
 MakeTests::MakeTests() {}
 
-void MakeTests::InitTestData(const FilePath& image_dir,
-                             const TestUserInfo* test_users,
+void MakeTests::InitTestData(const TestUserInfo* test_users,
                              size_t test_user_count,
                              bool force_ecryptfs) {
   CHECK(system_salt.size()) << "Call SetUpSystemSalt() first";
@@ -93,7 +92,7 @@ void MakeTests::InitTestData(const FilePath& image_dir,
   const TestUserInfo* user_info = test_users;
   for (size_t id = 0; id < test_user_count; ++id, ++user_info) {
     TestUser* user = &users[id];
-    user->FromInfo(user_info, image_dir);
+    user->FromInfo(user_info);
     user->GenerateCredentials(force_ecryptfs);
   }
 }
@@ -111,14 +110,14 @@ void MakeTests::TearDownSystemSalt() {
   delete salt;
 }
 
-void MakeTests::InjectSystemSalt(MockPlatform* platform, const FilePath& path) {
+void MakeTests::InjectSystemSalt(MockPlatform* platform) {
   CHECK(brillo::cryptohome::home::GetSystemSalt());
-  EXPECT_CALL(*platform, FileExists(path)).WillRepeatedly(Return(true));
-  EXPECT_CALL(*platform, GetFileSize(path, _))
+  EXPECT_CALL(*platform, FileExists(SaltFile())).WillRepeatedly(Return(true));
+  EXPECT_CALL(*platform, GetFileSize(SaltFile(), _))
       .WillRepeatedly(
           DoAll(SetArgPointee<1>(system_salt.size()), Return(true)));
 
-  EXPECT_CALL(*platform, ReadFileToSecureBlob(path, _))
+  EXPECT_CALL(*platform, ReadFileToSecureBlob(SaltFile(), _))
       .WillRepeatedly(DoAll(SetArgPointee<1>(system_salt), Return(true)));
 }
 
@@ -140,8 +139,7 @@ void MakeTests::InjectEphemeralSkeleton(MockPlatform* platform,
       .WillRepeatedly(Return(true));
 }
 
-void TestUser::FromInfo(const struct TestUserInfo* info,
-                        const FilePath& image_dir) {
+void TestUser::FromInfo(const struct TestUserInfo* info) {
   username = info->username;
   password = info->password;
   create = info->create;
@@ -156,9 +154,7 @@ void TestUser::FromInfo(const struct TestUserInfo* info,
                  obfuscated_username.begin(), ::tolower);
   // Both pass this check though.
   DCHECK(brillo::cryptohome::home::IsSanitizedUserName(obfuscated_username));
-  shadow_root = image_dir;
-  skel_dir = image_dir.Append("skel");
-  base_path = image_dir.Append(obfuscated_username);
+  base_path = ShadowRoot().Append(obfuscated_username);
   vault_path = base_path.Append("vault");
   vault_mount_path = base_path.Append("mount");
   ephemeral_mount_path = FilePath(kEphemeralCryptohomeDir)
@@ -199,18 +195,17 @@ void TestUser::GenerateCredentials(bool force_ecryptfs) {
       new NiceMock<policy::MockDevicePolicy>;
   EXPECT_CALL(*device_policy, LoadPolicy()).WillRepeatedly(Return(true));
 
-  InitializeFilesystemLayout(&platform, &crypto, shadow_root, nullptr);
+  InitializeFilesystemLayout(&platform, &crypto, nullptr);
   HomeDirs homedirs(
-      &platform, &crypto, shadow_root, sec_salt, &timestamp_cache,
+      &platform, &crypto, sec_salt, &timestamp_cache,
       std::make_unique<policy::PolicyProvider>(
           std::unique_ptr<policy::MockDevicePolicy>(device_policy)),
       std::make_unique<VaultKeysetFactory>());
 
   scoped_refptr<Mount> mount = new Mount(&platform, &homedirs);
-  mount->set_skel_source(skel_dir);
   FilePath keyset_path =
-      shadow_root.Append(obfuscated_username).Append("master.0");
-  FilePath salt_path = shadow_root.Append("salt");
+      ShadowRoot().Append(obfuscated_username).Append("master.0");
+  FilePath salt_path = SaltFile();
   int64_t salt_size = salt.size();
   EXPECT_CALL(platform, FileExists(salt_path)).WillRepeatedly(Return(true));
   EXPECT_CALL(platform, GetFileSize(salt_path, _))
@@ -219,7 +214,7 @@ void TestUser::GenerateCredentials(bool force_ecryptfs) {
       .WillRepeatedly(DoAll(SetArgPointee<1>(salt), Return(true)));
   EXPECT_CALL(platform, ReadFileToSecureBlob(salt_path, _))
       .WillRepeatedly(DoAll(SetArgPointee<1>(sec_salt), Return(true)));
-  EXPECT_CALL(platform, DirectoryExists(shadow_root))
+  EXPECT_CALL(platform, DirectoryExists(ShadowRoot()))
       .WillRepeatedly(Return(true));
   platform.GetFake()->SetStandardUsersAndGroups();
   mount->Init();
@@ -336,7 +331,7 @@ void TestUser::InjectUserPaths(MockPlatform* platform,
       .WillRepeatedly(DoAll(SetArgPointee<1>(chronos_dir), Return(true)));
   EXPECT_CALL(*platform, DirectoryExists(Property(
                              &FilePath::value,
-                             AnyOf(shadow_root.value(), mount_prefix.value(),
+                             AnyOf(ShadowRoot().value(), mount_prefix.value(),
                                    StartsWith(legacy_user_mount_path.value()),
                                    StartsWith(vault_mount_path.value())))))
       .WillRepeatedly(Return(true));

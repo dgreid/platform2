@@ -78,8 +78,6 @@ class MountHelper : public MountHelperInterface {
   MountHelper(uid_t uid,
               gid_t gid,
               gid_t access_gid,
-              const base::FilePath& shadow_root,
-              const base::FilePath& skel_source,
               const brillo::SecureBlob& system_salt,
               bool legacy_mount,
               bool bind_mount_downloads,
@@ -87,8 +85,6 @@ class MountHelper : public MountHelperInterface {
       : default_uid_(uid),
         default_gid_(gid),
         default_access_gid_(access_gid),
-        shadow_root_(shadow_root),
-        skeleton_source_(skel_source),
         system_salt_(system_salt),
         legacy_mount_(legacy_mount),
         bind_mount_downloads_(bind_mount_downloads),
@@ -324,13 +320,6 @@ class MountHelper : public MountHelperInterface {
   uid_t default_uid_;
   uid_t default_gid_;
   uid_t default_access_gid_;
-
-  // Where to store the system salt and user salt/key/vault. Defaults to
-  // /home/.shadow
-  base::FilePath shadow_root_;
-
-  // Where the skeleton for the user's cryptohome is copied from.
-  base::FilePath skeleton_source_;
 
   // Stores the global system salt.
   brillo::SecureBlob system_salt_;

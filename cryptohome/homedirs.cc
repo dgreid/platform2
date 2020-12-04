@@ -56,21 +56,15 @@ const char kAndroidCacheInodeAttribute[] = "user.inode_cache";
 const char kAndroidCodeCacheInodeAttribute[] = "user.inode_code_cache";
 const char kTrackedDirectoryNameAttribute[] = "user.TrackedDirectoryName";
 const char kRemovableFileAttribute[] = "user.GCacheRemovable";
-// Name of the vault directory which is used with eCryptfs cryptohome.
-const char kEcryptfsVaultDir[] = "vault";
-// Name of the mount directory.
-const char kMountDir[] = "mount";
 
 HomeDirs::HomeDirs(Platform* platform,
                    Crypto* crypto,
-                   const base::FilePath& shadow_root,
                    const brillo::SecureBlob& system_salt,
                    UserOldestActivityTimestampCache* timestamp_cache,
                    std::unique_ptr<policy::PolicyProvider> policy_provider,
                    std::unique_ptr<VaultKeysetFactory> vault_keyset_factory)
     : platform_(platform),
       crypto_(crypto),
-      shadow_root_(shadow_root),
       system_salt_(system_salt),
       timestamp_cache_(timestamp_cache),
       policy_provider_(std::move(policy_provider)),
@@ -78,18 +72,6 @@ HomeDirs::HomeDirs(Platform* platform,
       enterprise_owned_(false) {}
 
 HomeDirs::~HomeDirs() {}
-
-// static
-FilePath HomeDirs::GetEcryptfsUserVaultPath(
-    const FilePath& shadow_root, const std::string& obfuscated_username) {
-  return shadow_root.Append(obfuscated_username).Append(kEcryptfsVaultDir);
-}
-
-// static
-FilePath HomeDirs::GetUserMountDirectory(
-    const FilePath& shadow_root, const std::string& obfuscated_username) {
-  return shadow_root.Append(obfuscated_username).Append(kMountDir);
-}
 
 void HomeDirs::LoadDevicePolicy() {
   policy_provider_->Reload();
@@ -208,7 +190,7 @@ bool HomeDirs::SetLockedToSingleUser() const {
 }
 
 bool HomeDirs::Exists(const std::string& obfuscated_username) const {
-  FilePath user_dir = shadow_root_.Append(obfuscated_username);
+  FilePath user_dir = ShadowRoot().Append(obfuscated_username);
   return platform_->DirectoryExists(user_dir);
 }
 
@@ -231,16 +213,6 @@ bool HomeDirs::DircryptoCryptohomeExists(
   return platform_->DirectoryExists(mount_path) &&
          platform_->GetDirCryptoKeyState(mount_path) ==
              dircrypto::KeyState::ENCRYPTED;
-}
-
-FilePath HomeDirs::GetEcryptfsUserVaultPath(
-    const std::string& obfuscated_username) const {
-  return GetEcryptfsUserVaultPath(shadow_root_, obfuscated_username);
-}
-
-FilePath HomeDirs::GetUserMountDirectory(
-    const std::string& obfuscated_username) const {
-  return GetUserMountDirectory(shadow_root_, obfuscated_username);
 }
 
 std::unique_ptr<VaultKeyset> HomeDirs::GetVaultKeyset(
@@ -272,7 +244,7 @@ std::unique_ptr<VaultKeyset> HomeDirs::GetVaultKeyset(
 bool HomeDirs::GetVaultKeysets(const std::string& obfuscated,
                                std::vector<int>* keysets) const {
   CHECK(keysets);
-  FilePath user_dir = shadow_root_.Append(obfuscated);
+  FilePath user_dir = ShadowRoot().Append(obfuscated);
 
   std::unique_ptr<FileEnumerator> file_enumerator(platform_->GetFileEnumerator(
       user_dir, false, base::FileEnumerator::FILES));
@@ -305,7 +277,7 @@ bool HomeDirs::GetVaultKeysets(const std::string& obfuscated,
 bool HomeDirs::GetVaultKeysetLabels(const std::string& obfuscated_username,
                                     std::vector<std::string>* labels) const {
   CHECK(labels);
-  FilePath user_dir = shadow_root_.Append(obfuscated_username);
+  FilePath user_dir = ShadowRoot().Append(obfuscated_username);
 
   std::unique_ptr<FileEnumerator> file_enumerator(platform_->GetFileEnumerator(
       user_dir, false /* Not recursive. */, base::FileEnumerator::FILES));
@@ -758,7 +730,8 @@ bool HomeDirs::MoveKeyset(const std::string& obfuscated, int src, int dst) {
 
 FilePath HomeDirs::GetVaultKeysetPath(const std::string& obfuscated,
                                       int index) const {
-  return shadow_root_.Append(obfuscated)
+  return ShadowRoot()
+      .Append(obfuscated)
       .Append(kKeyFile)
       .AddExtension(base::NumberToString(index));
 }
@@ -777,7 +750,7 @@ void HomeDirs::RemoveNonOwnerCryptohomesCallback(
   }
   // Once we're sure this is not the owner's cryptohome, delete it.
   RemoveLECredentials(obfuscated);
-  FilePath shadow_dir = shadow_root_.Append(obfuscated);
+  FilePath shadow_dir = ShadowRoot().Append(obfuscated);
   platform_->DeletePathRecursively(shadow_dir);
 }
 
@@ -811,7 +784,7 @@ void HomeDirs::RemoveNonOwnerCryptohomesInternal(
 std::vector<HomeDirs::HomeDir> HomeDirs::GetHomeDirs() {
   std::vector<HomeDirs::HomeDir> ret;
   std::vector<FilePath> entries;
-  if (!platform_->EnumerateDirectoryEntries(shadow_root_, false, &entries)) {
+  if (!platform_->EnumerateDirectoryEntries(ShadowRoot(), false, &entries)) {
     return ret;
   }
 
@@ -1006,7 +979,7 @@ bool HomeDirs::Create(const std::string& username) {
       SanitizeUserNameWithSalt(username, system_salt_);
 
   // Create the user's entry in the shadow root
-  FilePath user_dir = shadow_root_.Append(obfuscated_username);
+  FilePath user_dir = ShadowRoot().Append(obfuscated_username);
   if (!platform_->CreateDirectory(user_dir)) {
     return false;
   }
@@ -1018,7 +991,7 @@ bool HomeDirs::Remove(const std::string& username) {
   std::string obfuscated = SanitizeUserNameWithSalt(username, system_salt_);
   RemoveLECredentials(obfuscated);
 
-  FilePath user_dir = shadow_root_.Append(obfuscated);
+  FilePath user_dir = ShadowRoot().Append(obfuscated);
   FilePath user_path = brillo::cryptohome::home::GetUserPath(username);
   FilePath root_path = brillo::cryptohome::home::GetRootPath(username);
   return platform_->DeletePathRecursively(user_dir) &&
@@ -1037,7 +1010,7 @@ bool HomeDirs::Rename(const std::string& account_id_from,
   const std::string obfuscated_to =
       SanitizeUserNameWithSalt(account_id_to, system_salt_);
 
-  const FilePath user_dir_from = shadow_root_.Append(obfuscated_from);
+  const FilePath user_dir_from = ShadowRoot().Append(obfuscated_from);
   const FilePath user_path_from =
       brillo::cryptohome::home::GetUserPath(account_id_from);
   const FilePath root_path_from =
@@ -1045,7 +1018,7 @@ bool HomeDirs::Rename(const std::string& account_id_from,
   const FilePath new_user_path_from =
       FilePath(MountHelper::GetNewUserPath(account_id_from));
 
-  const FilePath user_dir_to = shadow_root_.Append(obfuscated_to);
+  const FilePath user_dir_to = ShadowRoot().Append(obfuscated_to);
   const FilePath user_path_to =
       brillo::cryptohome::home::GetUserPath(account_id_to);
   const FilePath root_path_to =
@@ -1140,7 +1113,7 @@ int64_t HomeDirs::ComputeDiskUsage(const std::string& account_id) {
   // ephemeral, but the current mount is ephemeral. In this case,
   // ComputeDiskUsage() return the non ephemeral on disk vault's size.
   std::string obfuscated = SanitizeUserNameWithSalt(account_id, system_salt_);
-  FilePath user_dir = FilePath(shadow_root_).Append(obfuscated);
+  FilePath user_dir = ShadowRoot().Append(obfuscated);
 
   int64_t size = 0;
   if (!platform_->DirectoryExists(user_dir)) {
@@ -1271,7 +1244,7 @@ bool HomeDirs::NeedsDircryptoMigration(
     const std::string& obfuscated_username) const {
   // Bail if dircrypto is not supported.
   const dircrypto::KeyState state =
-      platform_->GetDirCryptoKeyState(shadow_root_);
+      platform_->GetDirCryptoKeyState(ShadowRoot());
   if (state == dircrypto::KeyState::UNKNOWN ||
       state == dircrypto::KeyState::NOT_SUPPORTED) {
     return false;
@@ -1281,7 +1254,7 @@ bool HomeDirs::NeedsDircryptoMigration(
   // dircrypto migration. eCryptfs test is adapted from
   // Mount::DoesEcryptfsCryptohomeExist.
   const FilePath user_ecryptfs_vault_dir =
-      shadow_root_.Append(obfuscated_username).Append(kEcryptfsVaultDir);
+      ShadowRoot().Append(obfuscated_username).Append(kEcryptfsVaultDir);
   return platform_->DirectoryExists(user_ecryptfs_vault_dir);
 }
 
@@ -1368,7 +1341,7 @@ int32_t HomeDirs::GetUnmountedAndroidDataCount() {
         if (EcryptfsCryptohomeExists(dir.obfuscated))
           return false;
 
-        FilePath shadow_dir = shadow_root_.Append(dir.obfuscated);
+        FilePath shadow_dir = ShadowRoot().Append(dir.obfuscated);
         FilePath root_home_dir;
         return GetTrackedDirectory(shadow_dir, FilePath(kRootHomeSuffix),
                                    &root_home_dir) &&

@@ -156,7 +156,6 @@ UserDataAuth::UserDataAuth()
     : origin_thread_id_(base::PlatformThread::CurrentId()),
       mount_thread_(kMountThreadName),
       disable_threading_(false),
-      shadow_root_(base::FilePath(kShadowRoot)),
       system_salt_(),
       tpm_(nullptr),
       default_tpm_init_(nullptr),
@@ -250,16 +249,15 @@ bool UserDataAuth::Initialize() {
     return false;
   }
 
-  if (!InitializeFilesystemLayout(platform_, crypto_, shadow_root_,
-                                  &system_salt_)) {
+  if (!InitializeFilesystemLayout(platform_, crypto_, &system_salt_)) {
     LOG(ERROR) << "Failed to initialize filesystem layout.";
     return false;
   }
 
   if (!homedirs_) {
     default_homedirs_ = std::make_unique<HomeDirs>(
-        platform_, crypto_, shadow_root_, system_salt_,
-        user_timestamp_cache_.get(), std::make_unique<policy::PolicyProvider>(),
+        platform_, crypto_, system_salt_, user_timestamp_cache_.get(),
+        std::make_unique<policy::PolicyProvider>(),
         std::make_unique<VaultKeysetFactory>());
     homedirs_ = default_homedirs_.get();
   }
@@ -728,7 +726,7 @@ bool UserDataAuth::CleanUpStaleMounts(bool force) {
 
   // Retrieve all the mounts that's currently mounted by the kernel and concerns
   // us
-  platform_->GetMountsBySourcePrefix(shadow_root_, &shadow_mounts);
+  platform_->GetMountsBySourcePrefix(ShadowRoot(), &shadow_mounts);
   GetEphemeralLoopDevicesMounts(&ephemeral_mounts);
 
   // Remove mounts that we've a record of or have open files on them

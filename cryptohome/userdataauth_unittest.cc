@@ -129,7 +129,6 @@ class UserDataAuthTestNotInitialized : public ::testing::Test {
     userdataauth_->set_key_challenge_service_factory(
         &key_challenge_service_factory_);
     userdataauth_->set_disable_threading(true);
-    ON_CALL(homedirs_, shadow_root()).WillByDefault(ReturnRef(kShadowRoot));
     // Return valid values for the amount of free space.
     ON_CALL(cleanup_, AmountOfFreeDiskSpace())
         .WillByDefault(Return(kFreeSpaceThresholdToTriggerCleanup));
@@ -252,9 +251,6 @@ class UserDataAuthTestNotInitialized : public ::testing::Test {
   // This is important because otherwise the background thread may call into
   // mocks that have already been destroyed.
   std::unique_ptr<UserDataAuth> userdataauth_;
-
-  // Passed to homedirs_.
-  base::FilePath kShadowRoot = base::FilePath("/home/.shadow");
 };
 
 // Variant of UserDataAuthTestNotInitialized for DeathTest. We should be careful
@@ -1390,8 +1386,7 @@ TEST_F(UserDataAuthTest, CleanUpStale_NoOpenFiles_Ephemeral) {
   // and no open filehandles, all stale mounts are unmounted, loop device is
   // detached and sparse file is deleted.
 
-  EXPECT_CALL(platform_, GetMountsBySourcePrefix(homedirs_.shadow_root(), _))
-      .WillOnce(Return(false));
+  EXPECT_CALL(platform_, GetMountsBySourcePrefix(_, _)).WillOnce(Return(false));
   EXPECT_CALL(platform_, GetAttachedLoopDevices())
       .WillRepeatedly(Return(kLoopDevices));
   EXPECT_CALL(platform_, GetLoopDeviceMounts(_))
@@ -1421,8 +1416,7 @@ TEST_F(UserDataAuthTest, CleanUpStale_OpenLegacy_Ephemeral) {
   // Check that when we have ephemeral mounts, no active mounts,
   // and some open filehandles to the legacy homedir, everything is kept.
 
-  EXPECT_CALL(platform_, GetMountsBySourcePrefix(homedirs_.shadow_root(), _))
-      .WillOnce(Return(false));
+  EXPECT_CALL(platform_, GetMountsBySourcePrefix(_, _)).WillOnce(Return(false));
   EXPECT_CALL(platform_, GetAttachedLoopDevices())
       .WillRepeatedly(Return(kLoopDevices));
   EXPECT_CALL(platform_, GetLoopDeviceMounts(_))
@@ -1455,8 +1449,7 @@ TEST_F(UserDataAuthTest, CleanUpStale_OpenLegacy_Ephemeral_Forced) {
   // and some open filehandles to the legacy homedir, but cleanup is forced,
   // all mounts are unmounted, loop device is detached and file is deleted.
 
-  EXPECT_CALL(platform_, GetMountsBySourcePrefix(homedirs_.shadow_root(), _))
-      .WillOnce(Return(false));
+  EXPECT_CALL(platform_, GetMountsBySourcePrefix(_, _)).WillOnce(Return(false));
   EXPECT_CALL(platform_, GetAttachedLoopDevices())
       .WillRepeatedly(Return(kLoopDevices));
   EXPECT_CALL(platform_, GetLoopDeviceMounts(_))

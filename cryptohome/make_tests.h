@@ -45,11 +45,10 @@ class MakeTests {
   virtual ~MakeTests() {}
 
   void SetUpSystemSalt();
-  void InitTestData(const base::FilePath& image_dir,
-                    const TestUserInfo* test_users,
+  void InitTestData(const TestUserInfo* test_users,
                     size_t test_user_count,
                     bool force_ecryptfs);
-  void InjectSystemSalt(MockPlatform* platform, const base::FilePath& path);
+  void InjectSystemSalt(MockPlatform* platform);
   // Inject mocks needed for skeleton population.
   void InjectEphemeralSkeleton(MockPlatform* platform,
                                const base::FilePath& root);
@@ -64,8 +63,7 @@ class TestUser {
   TestUser() {}
   virtual ~TestUser() {}
   // Populate from struct TestUserInfo.
-  void FromInfo(const struct TestUserInfo* info,
-                const base::FilePath& image_dir);
+  void FromInfo(const struct TestUserInfo* info);
   // Generate a valid vault keyset using scrypt.
   void GenerateCredentials(bool force_ecryptfs);
   // Inject the keyset so it can be accessed via platform.
@@ -84,8 +82,6 @@ class TestUser {
   bool is_le_credential;
   std::string obfuscated_username;
   std::string sanitized_username;
-  base::FilePath shadow_root;
-  base::FilePath skel_dir;
   base::FilePath base_path;
   base::FilePath vault_path;
   base::FilePath vault_mount_path;

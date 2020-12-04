@@ -20,6 +20,7 @@
 #include <brillo/secure_blob.h>
 
 #include "cryptohome/cryptohome_common.h"
+#include "cryptohome/filesystem_layout.h"
 #include "cryptohome/homedirs.h"
 #include "cryptohome/mount_constants.h"
 
@@ -126,19 +127,17 @@ FilePath MountHelper::GetEphemeralSparseFile(
 
 FilePath MountHelper::GetUserTemporaryMountDirectory(
     const std::string& obfuscated_username) const {
-  return shadow_root_.Append(obfuscated_username).Append(kTemporaryMountDir);
+  return ShadowRoot().Append(obfuscated_username).Append(kTemporaryMountDir);
 }
 
 FilePath MountHelper::GetMountedUserHomePath(
     const std::string& obfuscated_username) const {
-  return HomeDirs::GetUserMountDirectory(shadow_root_, obfuscated_username)
-      .Append(kUserHomeSuffix);
+  return GetUserMountDirectory(obfuscated_username).Append(kUserHomeSuffix);
 }
 
 FilePath MountHelper::GetMountedRootHomePath(
     const std::string& obfuscated_username) const {
-  return HomeDirs::GetUserMountDirectory(shadow_root_, obfuscated_username)
-      .Append(kRootHomeSuffix);
+  return GetUserMountDirectory(obfuscated_username).Append(kRootHomeSuffix);
 }
 
 bool MountHelper::EnsurePathComponent(const FilePath& path,
@@ -376,7 +375,7 @@ void MountHelper::RecursiveCopy(const FilePath& source,
 }
 
 void MountHelper::CopySkeleton(const FilePath& destination) const {
-  RecursiveCopy(FilePath(skeleton_source_), destination);
+  RecursiveCopy(SkelDir(), destination);
 }
 
 bool MountHelper::SetUpEphemeralCryptohome(const FilePath& source_path) {
@@ -640,18 +639,15 @@ bool MountHelper::CreateTrackedSubdirectories(
   brillo::ScopedUmask scoped_umask(kDefaultUmask);
 
   // Add the subdirectories if they do not exist.
-  const FilePath dest_dir(
-      mount_type == MountType::ECRYPTFS
-          ? HomeDirs::GetEcryptfsUserVaultPath(shadow_root_,
-                                               obfuscated_username)
-          : HomeDirs::GetUserMountDirectory(shadow_root_, obfuscated_username));
+  const FilePath dest_dir(mount_type == MountType::ECRYPTFS
+                              ? GetEcryptfsUserVaultPath(obfuscated_username)
+                              : GetUserMountDirectory(obfuscated_username));
   if (!platform_->DirectoryExists(dest_dir)) {
     LOG(ERROR) << "Can't create tracked subdirectories for a missing user.";
     return false;
   }
 
-  const FilePath mount_dir(
-      HomeDirs::GetUserMountDirectory(shadow_root_, obfuscated_username));
+  const FilePath mount_dir(GetUserMountDirectory(obfuscated_username));
 
   // The call is allowed to partially fail if directory creation fails, but we
   // want to have as many of the specified tracked directories created as
@@ -718,12 +714,10 @@ bool MountHelper::SetUpEcryptfsMount(const std::string& obfuscated_username,
                                      const std::string& fek_signature,
                                      const std::string& fnek_signature,
                                      bool should_migrate) {
-  const FilePath vault_path =
-      HomeDirs::GetEcryptfsUserVaultPath(shadow_root_, obfuscated_username);
+  const FilePath vault_path = GetEcryptfsUserVaultPath(obfuscated_username);
   const FilePath mount_point =
-      should_migrate
-          ? GetUserTemporaryMountDirectory(obfuscated_username)
-          : HomeDirs::GetUserMountDirectory(shadow_root_, obfuscated_username);
+      should_migrate ? GetUserTemporaryMountDirectory(obfuscated_username)
+                     : GetUserMountDirectory(obfuscated_username);
 
   // Specify the ecryptfs options for mounting the user's cryptohome.
   std::string ecryptfs_options = StringPrintf(
@@ -749,8 +743,7 @@ bool MountHelper::SetUpEcryptfsMount(const std::string& obfuscated_username,
 }
 
 void MountHelper::SetUpDircryptoMount(const std::string& obfuscated_username) {
-  const FilePath mount_point =
-      HomeDirs::GetUserMountDirectory(shadow_root_, obfuscated_username);
+  const FilePath mount_point = GetUserMountDirectory(obfuscated_username);
 
   CreateHomeSubdirectories(mount_point);
   CreateTrackedSubdirectories(obfuscated_username, MountType::DIR_CRYPTO);

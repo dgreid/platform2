@@ -17,6 +17,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "cryptohome/filesystem_layout.h"
 #include "cryptohome/homedirs.h"
 #include "cryptohome/mock_homedirs.h"
 #include "cryptohome/mock_platform.h"
@@ -36,9 +37,7 @@ using ::testing::StrictMock;
 
 namespace {
 
-const base::FilePath kTestShadowRoot = base::FilePath("/test/routines/root");
 const char* kTestUser = "d5510a8dda6d743c46dadd979a61ae5603529742";
-const base::FilePath kTestUserPath = kTestShadowRoot.Append(kTestUser);
 
 NiceMock<cryptohome::MockFileEnumerator>* CreateMockFileEnumerator() {
   return new NiceMock<cryptohome::MockFileEnumerator>;
@@ -72,9 +71,6 @@ class DiskCleanupRoutinesTest
   virtual ~DiskCleanupRoutinesTest() = default;
 
   void SetUp() {
-    EXPECT_CALL(homedirs_, shadow_root())
-        .WillRepeatedly(ReturnRef(kTestShadowRoot));
-
     EXPECT_CALL(platform_, DirectoryExists(Property(
                                &FilePath::value, EndsWith(kEcryptfsVaultDir))))
         .WillRepeatedly(Return(ShouldTestEcryptfs()));
@@ -128,7 +124,7 @@ INSTANTIATE_TEST_SUITE_P(WithDircrypto,
                          ::testing::Values(false));
 
 TEST_P(DiskCleanupRoutinesTest, DeleteUserCache) {
-  base::FilePath mount = kTestUserPath.Append(kMountDir);
+  base::FilePath mount = ShadowRoot().Append(kTestUser).Append(kMountDir);
   base::FilePath user = mount.Append(kUserHomeSuffix);
   base::FilePath cache = user.Append(kCacheDir);
 
@@ -155,7 +151,7 @@ TEST_P(DiskCleanupRoutinesTest, DeleteUserCache) {
 }
 
 TEST_P(DiskCleanupRoutinesTest, DeleteUserGCacheV1) {
-  base::FilePath mount = kTestUserPath.Append(kMountDir);
+  base::FilePath mount = ShadowRoot().Append(kTestUser).Append(kMountDir);
   base::FilePath user = mount.Append(kUserHomeSuffix);
   base::FilePath gcache = user.Append(kGCacheDir);
   base::FilePath gcache_version1 = gcache.Append(kGCacheVersion1Dir);
@@ -197,7 +193,7 @@ TEST_P(DiskCleanupRoutinesTest, DeleteUserGCacheV1) {
 }
 
 TEST_P(DiskCleanupRoutinesTest, DeleteUserGCacheV2) {
-  base::FilePath mount = kTestUserPath.Append(kMountDir);
+  base::FilePath mount = ShadowRoot().Append(kTestUser).Append(kMountDir);
   base::FilePath user = mount.Append(kUserHomeSuffix);
   base::FilePath gcache = user.Append(kGCacheDir);
   base::FilePath gcache_version1 = gcache.Append(kGCacheVersion1Dir);
@@ -263,7 +259,7 @@ TEST_P(DiskCleanupRoutinesTest, DeleteUserGCacheV2) {
 }
 
 TEST_P(DiskCleanupRoutinesTest, DeleteAndroidCache) {
-  base::FilePath mount = kTestUserPath.Append(kMountDir);
+  base::FilePath mount = ShadowRoot().Append(kTestUser).Append(kMountDir);
   base::FilePath root = mount.Append(kRootHomeSuffix);
 
   ExpectTrackedDirectoryEnumeration({root});
@@ -352,7 +348,7 @@ TEST_P(DiskCleanupRoutinesTest, DeleteAndroidCache) {
 
 TEST_P(DiskCleanupRoutinesTest, DeleteUserProfile) {
   EXPECT_CALL(homedirs_, RemoveLECredentials(kTestUser)).Times(1);
-  EXPECT_CALL(platform_, DeletePathRecursively(kTestUserPath))
+  EXPECT_CALL(platform_, DeletePathRecursively(ShadowRoot().Append(kTestUser)))
       .WillOnce(Return(true));
 
   EXPECT_TRUE(routines_.DeleteUserProfile(kTestUser));
@@ -360,7 +356,7 @@ TEST_P(DiskCleanupRoutinesTest, DeleteUserProfile) {
 
 TEST_P(DiskCleanupRoutinesTest, DeleteUserProfileFail) {
   EXPECT_CALL(homedirs_, RemoveLECredentials(kTestUser)).Times(1);
-  EXPECT_CALL(platform_, DeletePathRecursively(kTestUserPath))
+  EXPECT_CALL(platform_, DeletePathRecursively(ShadowRoot().Append(kTestUser)))
       .WillOnce(Return(false));
 
   EXPECT_FALSE(routines_.DeleteUserProfile(kTestUser));

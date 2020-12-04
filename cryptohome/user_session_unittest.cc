@@ -40,7 +40,7 @@ constexpr char kUserPassword0[] = "user0_pass";
 
 class UserSessionTest : public ::testing::Test {
  public:
-  UserSessionTest() : crypto_(&platform_), shadow_root_(kShadowRoot) {}
+  UserSessionTest() : crypto_(&platform_) {}
   ~UserSessionTest() override {}
 
   // Not copyable or movable
@@ -50,12 +50,11 @@ class UserSessionTest : public ::testing::Test {
   UserSessionTest& operator=(UserSessionTest&&) = delete;
 
   void SetUp() override {
-    InitializeFilesystemLayout(&platform_, &crypto_, shadow_root_,
-                               &system_salt_);
-    homedirs_ = std::make_unique<HomeDirs>(
-        &platform_, &crypto_, shadow_root_, system_salt_, nullptr,
-        std::make_unique<policy::PolicyProvider>(),
-        std::make_unique<VaultKeysetFactory>());
+    InitializeFilesystemLayout(&platform_, &crypto_, &system_salt_);
+    homedirs_ =
+        std::make_unique<HomeDirs>(&platform_, &crypto_, system_salt_, nullptr,
+                                   std::make_unique<policy::PolicyProvider>(),
+                                   std::make_unique<VaultKeysetFactory>());
 
     platform_.GetFake()->SetSystemSaltForLibbrillo(system_salt_);
 
@@ -85,7 +84,6 @@ class UserSessionTest : public ::testing::Test {
   std::vector<UserInfo> users_;
   NiceMock<MockPlatform> platform_;
   Crypto crypto_;
-  base::FilePath shadow_root_;
   brillo::SecureBlob system_salt_;
   std::unique_ptr<HomeDirs> homedirs_;
   scoped_refptr<UserSession> session_;
@@ -104,13 +102,13 @@ class UserSessionTest : public ::testing::Test {
                      obfuscated,
                      passkey,
                      credentials,
-                     homedirs_->shadow_root().Append(obfuscated),
+                     ShadowRoot().Append(obfuscated),
                      brillo::cryptohome::home::GetHashedUserPath(obfuscated)};
     users_.push_back(info);
   }
 
   void PrepareDirectoryStructure() {
-    ASSERT_TRUE(platform_.CreateDirectory(homedirs_->shadow_root()));
+    ASSERT_TRUE(platform_.CreateDirectory(ShadowRoot()));
     ASSERT_TRUE(platform_.CreateDirectory(
         brillo::cryptohome::home::GetUserPathPrefix()));
   }
@@ -166,8 +164,7 @@ TEST_F(UserSessionTest, MountVaultOk) {
 
   // TODO(dlunev): this is required to mimic a real Mount::PrepareCryptohome
   // call. Remove it when we are not mocking mount.
-  platform_.CreateDirectory(
-      homedirs_->GetEcryptfsUserVaultPath(users_[0].obfuscated));
+  platform_.CreateDirectory(GetEcryptfsUserVaultPath(users_[0].obfuscated));
 
   Mount::MountArgs mount_args_no_create;
   mount_args_no_create.create_if_missing = false;
@@ -247,8 +244,7 @@ TEST_F(UserSessionTest, MountVaultWrongCreds) {
 
   // TODO(dlunev): this is required to mimic a real Mount::PrepareCryptohome
   // call. Remove it when we are not mocking mount.
-  platform_.CreateDirectory(
-      homedirs_->GetEcryptfsUserVaultPath(users_[0].obfuscated));
+  platform_.CreateDirectory(GetEcryptfsUserVaultPath(users_[0].obfuscated));
 
   Mount::MountArgs mount_args_no_create;
   mount_args_no_create.create_if_missing = false;

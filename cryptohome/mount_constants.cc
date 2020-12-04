@@ -11,9 +11,6 @@ constexpr char kSparseFileDir[] = "ephemeral_data";
 
 constexpr char kDefaultSharedUser[] = "chronos";
 
-constexpr char kDefaultShadowRoot[] = "/home/.shadow";
-constexpr char kDefaultSkeletonSource[] = "/etc/skel";
-
 constexpr char kCacheDir[] = "Cache";
 constexpr char kDownloadsDir[] = "Downloads";
 constexpr char kMyFilesDir[] = "MyFiles";

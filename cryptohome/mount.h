@@ -125,12 +125,6 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   //
   virtual bool IsNonEphemeralMounted() const;
 
-  // Used to override the default shadow root
-  void set_shadow_root(const base::FilePath& value) { shadow_root_ = value; }
-
-  // Used to override the default skeleton directory
-  void set_skel_source(const base::FilePath& value) { skel_source_ = value; }
-
   // Get the HomeDirs instance
   virtual HomeDirs* homedirs() { return homedirs_; }
 
@@ -347,13 +341,6 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
 
   // The file path to mount cryptohome at.  Defaults to /home/chronos/user
   base::FilePath mount_point_;
-
-  // Where to store the system salt and user salt/key/vault.  Defaults to
-  // /home/.shadow
-  base::FilePath shadow_root_;
-
-  // Where the skeleton for the user's cryptohome is copied from
-  base::FilePath skel_source_;
 
   // Stores the global system salt
   brillo::SecureBlob system_salt_;

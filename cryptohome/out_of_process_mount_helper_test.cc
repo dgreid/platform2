@@ -38,8 +38,6 @@ using ::testing::Return;
 namespace {
 
 const FilePath kChromeMountNamespace("/run/namespace/mnt_chrome");
-const FilePath kImageDir("test_image_dir");
-const FilePath kImageSaltFile = kImageDir.Append("salt");
 
 constexpr pid_t kOOPHelperPid = 2;
 
@@ -61,7 +59,7 @@ class OutOfProcessMountHelperTest : public ::testing::Test {
   void SetUp() {
     // Populate the system salt.
     helper_.SetUpSystemSalt();
-    helper_.InjectSystemSalt(&platform_, kImageSaltFile);
+    helper_.InjectSystemSalt(&platform_);
 
     out_of_process_mounter_.reset(new OutOfProcessMountHelper(
         helper_.system_salt, std::unique_ptr<MountNamespace>(),

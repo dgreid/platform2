@@ -14,6 +14,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "cryptohome/filesystem_layout.h"
 #include "cryptohome/mock_disk_cleanup_routines.h"
 #include "cryptohome/mock_homedirs.h"
 #include "cryptohome/mock_platform.h"
@@ -34,7 +35,6 @@ struct test_homedir {
   base::Time::Exploded time;
 };
 
-const base::FilePath kTestShadowRoot = base::FilePath("/test/cleanup/root");
 // Note, the order is important. These should be oldest to newest.
 const struct test_homedir kHomedirs[] = {
     {"d5510a8dda6d743c46dadd979a61ae5603529742", {2011, 1, 6, 1}},
@@ -72,8 +72,6 @@ class DiskCleanupTest : public ::testing::Test {
 
     EXPECT_CALL(platform_, GetCurrentTime).WillRepeatedly(Return(base::Time()));
 
-    EXPECT_CALL(homedirs_, shadow_root())
-        .WillRepeatedly(ReturnRef(kTestShadowRoot));
     EXPECT_CALL(homedirs_, AreEphemeralUsersEnabled())
         .WillRepeatedly(Return(false));
     EXPECT_CALL(homedirs_, GetOwner(_)).WillRepeatedly(Return(false));
@@ -130,7 +128,7 @@ class DiskCleanupTest : public ::testing::Test {
 };
 
 TEST_F(DiskCleanupTest, AmountOfFreeDiskSpace) {
-  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(kTestShadowRoot))
+  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(ShadowRoot()))
       .WillOnce(Return(5));
 
   auto val = cleanup_->AmountOfFreeDiskSpace();
@@ -140,7 +138,7 @@ TEST_F(DiskCleanupTest, AmountOfFreeDiskSpace) {
 }
 
 TEST_F(DiskCleanupTest, AmountOfFreeDiskSpaceError) {
-  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(kTestShadowRoot))
+  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(ShadowRoot()))
       .WillOnce(Return(-1));
 
   auto val = cleanup_->AmountOfFreeDiskSpace();
@@ -182,7 +180,7 @@ TEST_F(DiskCleanupTest, GetFreeDiskSpaceStatePlatform) {
   cleanup_->set_cleanup_threshold(10);
   cleanup_->set_aggressive_cleanup_threshold(5);
 
-  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(kTestShadowRoot))
+  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(ShadowRoot()))
       .WillOnce(Return(-1))
       .WillOnce(Return(0))
       .WillOnce(Return(4))
@@ -216,7 +214,7 @@ TEST_F(DiskCleanupTest, GetFreeDiskSpaceStatePlatform) {
 TEST_F(DiskCleanupTest, HasTargetFreeSpace) {
   cleanup_->set_target_free_space(10);
 
-  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(kTestShadowRoot))
+  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(ShadowRoot()))
       .WillOnce(Return(-1))
       .WillOnce(Return(0))
       .WillOnce(Return(9))
@@ -253,7 +251,7 @@ TEST_F(DiskCleanupTest, IsFreeableDiskSpaceAvailable) {
 }
 
 TEST_F(DiskCleanupTest, EphemeralUsers) {
-  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(kTestShadowRoot))
+  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(ShadowRoot()))
       .WillRepeatedly(Return(kFreeSpaceThresholdToTriggerCleanup - 1));
 
   EXPECT_CALL(homedirs_, AreEphemeralUsersEnabled()).WillOnce(Return(true));
@@ -264,7 +262,7 @@ TEST_F(DiskCleanupTest, EphemeralUsers) {
 }
 
 TEST_F(DiskCleanupTest, CacheInitialization) {
-  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(kTestShadowRoot))
+  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(ShadowRoot()))
       .WillRepeatedly(Return(kFreeSpaceThresholdToTriggerCleanup - 1));
 
   EXPECT_CALL(homedirs_, AreEphemeralUsersEnabled())
@@ -288,7 +286,7 @@ TEST_F(DiskCleanupTest, CacheInitialization) {
 }
 
 TEST_F(DiskCleanupTest, AllMounted) {
-  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(kTestShadowRoot))
+  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(ShadowRoot()))
       .WillRepeatedly(
           Return(kFreeSpaceThresholdToTriggerAggressiveCleanup - 1));
 
@@ -308,7 +306,7 @@ TEST_F(DiskCleanupTest, AllMounted) {
 }
 
 TEST_F(DiskCleanupTest, OneMounted) {
-  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(kTestShadowRoot))
+  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(ShadowRoot()))
       .WillRepeatedly(
           Return(kFreeSpaceThresholdToTriggerAggressiveCleanup - 1));
 
@@ -343,7 +341,7 @@ TEST_F(DiskCleanupTest, OneMounted) {
 }
 
 TEST_F(DiskCleanupTest, CacheCleanupStopAfterOneUser) {
-  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(kTestShadowRoot))
+  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(ShadowRoot()))
       .WillOnce(Return(kFreeSpaceThresholdToTriggerCleanup - 1))
       .WillRepeatedly(Return(kTargetFreeSpaceAfterCleanup + 1));
 
@@ -361,10 +359,10 @@ TEST_F(DiskCleanupTest, CacheCleanupStopAfterOneUser) {
 }
 
 TEST_F(DiskCleanupTest, CacheCleanup) {
-  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(kTestShadowRoot))
+  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(ShadowRoot()))
       .WillRepeatedly(Return(kTargetFreeSpaceAfterCleanup + 1));
 
-  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(kTestShadowRoot))
+  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(ShadowRoot()))
       .Times(disk_space_queries(1) - 1)
       .WillRepeatedly(Return(kFreeSpaceThresholdToTriggerCleanup - 1))
       .RetiresOnSaturation();
@@ -388,10 +386,10 @@ TEST_F(DiskCleanupTest, CacheCleanup) {
 }
 
 TEST_F(DiskCleanupTest, GCacheCleanupStopAfterOneUser) {
-  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(kTestShadowRoot))
+  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(ShadowRoot()))
       .WillRepeatedly(Return(kTargetFreeSpaceAfterCleanup + 1));
 
-  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(kTestShadowRoot))
+  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(ShadowRoot()))
       .Times(disk_space_queries(1) + 1)
       .WillRepeatedly(Return(kFreeSpaceThresholdToTriggerCleanup - 1))
       .RetiresOnSaturation();
@@ -411,7 +409,7 @@ TEST_F(DiskCleanupTest, GCacheCleanupStopAfterOneUser) {
 }
 
 TEST_F(DiskCleanupTest, GCacheCleanup) {
-  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(kTestShadowRoot))
+  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(ShadowRoot()))
       .WillRepeatedly(Return(kFreeSpaceThresholdToTriggerCleanup - 1));
 
   EXPECT_CALL(homedirs_, GetHomeDirs())
@@ -434,10 +432,10 @@ TEST_F(DiskCleanupTest, GCacheCleanup) {
 }
 
 TEST_F(DiskCleanupTest, AndroidCacheStopAfterOneUser) {
-  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(kTestShadowRoot))
+  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(ShadowRoot()))
       .WillRepeatedly(Return(kTargetFreeSpaceAfterCleanup + 1));
 
-  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(kTestShadowRoot))
+  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(ShadowRoot()))
       .Times(disk_space_queries(2) + 1)
       .WillRepeatedly(Return(kFreeSpaceThresholdToTriggerAggressiveCleanup - 1))
       .RetiresOnSaturation();
@@ -458,10 +456,10 @@ TEST_F(DiskCleanupTest, AndroidCacheStopAfterOneUser) {
 }
 
 TEST_F(DiskCleanupTest, AndroidCache) {
-  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(kTestShadowRoot))
+  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(ShadowRoot()))
       .WillRepeatedly(Return(kTargetFreeSpaceAfterCleanup + 1));
 
-  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(kTestShadowRoot))
+  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(ShadowRoot()))
       .Times(disk_space_queries(3))
       .WillRepeatedly(Return(kFreeSpaceThresholdToTriggerAggressiveCleanup - 1))
       .RetiresOnSaturation();
@@ -486,7 +484,7 @@ TEST_F(DiskCleanupTest, AndroidCache) {
 }
 
 TEST_F(DiskCleanupTest, NoOwner) {
-  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(kTestShadowRoot))
+  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(ShadowRoot()))
       .WillRepeatedly(
           Return(kFreeSpaceThresholdToTriggerAggressiveCleanup - 1));
 
@@ -506,10 +504,10 @@ TEST_F(DiskCleanupTest, NoOwner) {
 }
 
 TEST_F(DiskCleanupTest, RemoveOneProfile) {
-  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(kTestShadowRoot))
+  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(ShadowRoot()))
       .WillRepeatedly(Return(kTargetFreeSpaceAfterCleanup + 1));
 
-  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(kTestShadowRoot))
+  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(ShadowRoot()))
       .Times(disk_space_queries(3) + 1)
       .WillRepeatedly(Return(kFreeSpaceThresholdToTriggerAggressiveCleanup - 1))
       .RetiresOnSaturation();
@@ -535,7 +533,7 @@ TEST_F(DiskCleanupTest, RemoveOneProfile) {
 }
 
 TEST_F(DiskCleanupTest, KeepOwner) {
-  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(kTestShadowRoot))
+  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(ShadowRoot()))
       .WillRepeatedly(
           Return(kFreeSpaceThresholdToTriggerAggressiveCleanup - 1));
 
@@ -571,7 +569,7 @@ TEST_F(DiskCleanupTest, KeepOwner) {
 }
 
 TEST_F(DiskCleanupTest, KeepLatest) {
-  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(kTestShadowRoot))
+  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(ShadowRoot()))
       .WillRepeatedly(
           Return(kFreeSpaceThresholdToTriggerAggressiveCleanup - 1));
 
@@ -604,7 +602,7 @@ TEST_F(DiskCleanupTest, KeepLatest) {
 }
 
 TEST_F(DiskCleanupTest, NoRepeatedCacheCleanup) {
-  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(kTestShadowRoot))
+  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(ShadowRoot()))
       .WillRepeatedly(
           Return(kFreeSpaceThresholdToTriggerAggressiveCleanup - 1));
 
@@ -638,7 +636,7 @@ TEST_F(DiskCleanupTest, NoRepeatedCacheCleanup) {
 }
 
 TEST_F(DiskCleanupTest, RepeatNormalCleanup) {
-  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(kTestShadowRoot))
+  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(ShadowRoot()))
       .WillRepeatedly(Return(kFreeSpaceThresholdToTriggerCleanup - 1));
 
   EXPECT_CALL(homedirs_, GetHomeDirs())
@@ -674,7 +672,7 @@ TEST_F(DiskCleanupTest, RepeatNormalCleanup) {
 }
 
 TEST_F(DiskCleanupTest, RepeatAggressiveCleanup) {
-  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(kTestShadowRoot))
+  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(ShadowRoot()))
       .WillRepeatedly(
           Return(kFreeSpaceThresholdToTriggerAggressiveCleanup - 1));
 
@@ -714,7 +712,7 @@ TEST_F(DiskCleanupTest, RepeatAggressiveCleanup) {
 }
 
 TEST_F(DiskCleanupTest, FullAggressiveCleanupAfterNormal) {
-  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(kTestShadowRoot))
+  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(ShadowRoot()))
       .WillRepeatedly(Return(kFreeSpaceThresholdToTriggerCleanup - 1));
 
   EXPECT_CALL(homedirs_, GetHomeDirs())
@@ -734,7 +732,7 @@ TEST_F(DiskCleanupTest, FullAggressiveCleanupAfterNormal) {
 
   cleanup_->FreeDiskSpace();
 
-  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(kTestShadowRoot))
+  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(ShadowRoot()))
       .WillRepeatedly(
           Return(kFreeSpaceThresholdToTriggerAggressiveCleanup - 1));
 
@@ -757,9 +755,9 @@ TEST_F(DiskCleanupTest, FullAggressiveCleanupAfterNormal) {
 }
 
 TEST_F(DiskCleanupTest, RepeatNormalCleanupAfterEarlyStop) {
-  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(kTestShadowRoot))
+  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(ShadowRoot()))
       .WillRepeatedly(Return(kTargetFreeSpaceAfterCleanup + 1));
-  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(kTestShadowRoot))
+  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(ShadowRoot()))
       .Times(disk_space_queries(1) + 2)
       .WillRepeatedly(Return(kFreeSpaceThresholdToTriggerCleanup - 1))
       .RetiresOnSaturation();
@@ -781,7 +779,7 @@ TEST_F(DiskCleanupTest, RepeatNormalCleanupAfterEarlyStop) {
 
   cleanup_->FreeDiskSpace();
 
-  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(kTestShadowRoot))
+  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(ShadowRoot()))
       .WillRepeatedly(Return(kFreeSpaceThresholdToTriggerCleanup - 1));
 
   EXPECT_CALL(*cleanup_routines_, DeleteUserCache(_)).Times(kHomedirsCount);
@@ -794,9 +792,9 @@ TEST_F(DiskCleanupTest, RepeatNormalCleanupAfterEarlyStop) {
 }
 
 TEST_F(DiskCleanupTest, RepeatAggressiveCleanupAfterEarlyStop) {
-  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(kTestShadowRoot))
+  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(ShadowRoot()))
       .WillRepeatedly(Return(kTargetFreeSpaceAfterCleanup + 1));
-  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(kTestShadowRoot))
+  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(ShadowRoot()))
       .Times(disk_space_queries(2) + 2)
       .WillRepeatedly(Return(kFreeSpaceThresholdToTriggerAggressiveCleanup - 1))
       .RetiresOnSaturation();
@@ -818,7 +816,7 @@ TEST_F(DiskCleanupTest, RepeatAggressiveCleanupAfterEarlyStop) {
 
   cleanup_->FreeDiskSpace();
 
-  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(kTestShadowRoot))
+  EXPECT_CALL(platform_, AmountOfFreeDiskSpace(ShadowRoot()))
       .WillRepeatedly(
           Return(kFreeSpaceThresholdToTriggerAggressiveCleanup - 1));
 

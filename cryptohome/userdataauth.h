@@ -854,9 +854,6 @@ class UserDataAuth {
   bool disable_threading_;
 
   // =============== Basic Utilities Related Variables ===============
-  // Root of user vaults.
-  base::FilePath shadow_root_;
-
   // The system salt that is used for obfuscating the username
   brillo::SecureBlob system_salt_;
 

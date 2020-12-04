@@ -44,8 +44,6 @@ extern const char kAndroidCacheInodeAttribute[];
 extern const char kAndroidCodeCacheInodeAttribute[];
 extern const char kTrackedDirectoryNameAttribute[];
 extern const char kRemovableFileAttribute[];
-extern const char kEcryptfsVaultDir[];
-extern const char kMountDir[];
 
 constexpr mode_t kKeyFilePermissions = 0600;
 constexpr int kKeyFileMax = 100;  // master.0 ... master.99
@@ -63,7 +61,6 @@ class HomeDirs {
   HomeDirs() = default;
   HomeDirs(Platform* platform,
            Crypto* crypto,
-           const base::FilePath& shadow_root,
            const brillo::SecureBlob& system_salt,
            UserOldestActivityTimestampCache* timestamp_cache,
            std::unique_ptr<policy::PolicyProvider> policy_provider,
@@ -72,18 +69,6 @@ class HomeDirs {
   HomeDirs& operator=(const HomeDirs&) = delete;
 
   virtual ~HomeDirs();
-
-  // Gets the user's eCryptfs vault directory for the given shadow root path and
-  // obfuscated username.
-  static base::FilePath GetEcryptfsUserVaultPath(
-      const base::FilePath& shadow_root,
-      const std::string& obfuscated_username);
-
-  // Gets the directory to mount the user's cryptohome at given the shadow root
-  // path and obfuscated username.
-  static base::FilePath GetUserMountDirectory(
-      const base::FilePath& shadow_root,
-      const std::string& obfuscated_username);
 
   // Removes all cryptohomes owned by anyone other than the owner user (if set),
   // regardless of free disk space.
@@ -161,15 +146,6 @@ class HomeDirs {
   // Checks if a dircrypto cryptohome vault exists for the given obfuscated
   // username.
   virtual bool DircryptoCryptohomeExists(
-      const std::string& obfuscated_username) const;
-
-  // Gets the user's eCryptfs vault directory for the given obfuscated username.
-  base::FilePath GetEcryptfsUserVaultPath(
-      const std::string& obfuscated_username) const;
-
-  // Gets the directory to mount the user's cryptohome at. The user is specified
-  // by its obfuscated username.
-  base::FilePath GetUserMountDirectory(
       const std::string& obfuscated_username) const;
 
   // Returns decrypted with |creds| keyset, or nullptr if none decryptable
@@ -284,7 +260,6 @@ class HomeDirs {
 
   // Accessors. Mostly used for unit testing. These do not take ownership of
   // passed-in pointers.
-  virtual const base::FilePath& shadow_root() const { return shadow_root_; }
   virtual void set_enterprise_owned(bool value) { enterprise_owned_ = value; }
   virtual bool enterprise_owned() const { return enterprise_owned_; }
 
@@ -352,7 +327,6 @@ class HomeDirs {
 
   Platform* platform_;
   Crypto* crypto_;
-  base::FilePath shadow_root_;
   brillo::SecureBlob system_salt_;
   UserOldestActivityTimestampCache* timestamp_cache_;
   std::unique_ptr<policy::PolicyProvider> policy_provider_;

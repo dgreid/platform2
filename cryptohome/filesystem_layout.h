@@ -5,6 +5,8 @@
 #ifndef CRYPTOHOME_FILESYSTEM_LAYOUT_H_
 #define CRYPTOHOME_FILESYSTEM_LAYOUT_H_
 
+#include <string>
+
 #include <base/files/file_path.h>
 #include <brillo/secure_blob.h>
 
@@ -13,12 +15,20 @@
 
 namespace cryptohome {
 
-constexpr char kShadowRoot[] = "/home/.shadow";
-constexpr char kSystemSaltFile[] = "salt";
+// Name of the vault directory which is used with eCryptfs cryptohome.
+constexpr char kEcryptfsVaultDir[] = "vault";
+// Name of the mount directory.
+constexpr char kMountDir[] = "mount";
+
+base::FilePath ShadowRoot();
+base::FilePath SaltFile();
+base::FilePath SkelDir();
+
+base::FilePath GetEcryptfsUserVaultPath(const std::string& obfuscated_username);
+base::FilePath GetUserMountDirectory(const std::string& obfuscated_username);
 
 bool InitializeFilesystemLayout(Platform* platform,
                                 Crypto* crypto,
-                                const base::FilePath& shadow_root,
                                 brillo::SecureBlob* salt);
 
 }  // namespace cryptohome

@@ -265,7 +265,6 @@ int MountThreadObserver::GetParallelTaskCount() const {
 Service::Service()
     : loop_(NULL),
       cryptohome_(NULL),
-      shadow_root_(base::FilePath(kShadowRoot)),
       system_salt_(),
       default_platform_(new Platform()),
       platform_(default_platform_.get()),
@@ -532,7 +531,7 @@ bool Service::CleanUpStaleMounts(bool force) {
   // (*) Relies on the expectation that all processes have been killed off.
   std::multimap<const FilePath, const FilePath> shadow_mounts;
   std::multimap<const FilePath, const FilePath> ephemeral_mounts;
-  platform_->GetMountsBySourcePrefix(shadow_root_, &shadow_mounts);
+  platform_->GetMountsBySourcePrefix(ShadowRoot(), &shadow_mounts);
   GetEphemeralLoopDevicesMounts(&ephemeral_mounts);
 
   std::multimap<const FilePath, const FilePath> excluded;
@@ -664,16 +663,15 @@ bool Service::Initialize() {
   if (!crypto_->Init(tpm_init_))
     return false;
 
-  if (!InitializeFilesystemLayout(platform_, crypto_, shadow_root_,
-                                  &system_salt_)) {
+  if (!InitializeFilesystemLayout(platform_, crypto_, &system_salt_)) {
     LOG(ERROR) << "Failed to initialize filesystem layout.";
     return false;
   }
 
   if (!homedirs_) {
     default_homedirs_ = std::make_unique<HomeDirs>(
-        platform_, crypto_, shadow_root_, system_salt_,
-        user_timestamp_cache_.get(), std::make_unique<policy::PolicyProvider>(),
+        platform_, crypto_, system_salt_, user_timestamp_cache_.get(),
+        std::make_unique<policy::PolicyProvider>(),
         std::make_unique<VaultKeysetFactory>());
     homedirs_ = default_homedirs_.get();
   }

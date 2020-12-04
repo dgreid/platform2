@@ -138,10 +138,9 @@ int main(int argc, char** argv) {
         base::FilePath(request.mount_namespace_path()));
   }
 
-  cryptohome::MountHelper mounter(
-      uid, gid, access_gid, FilePath(cryptohome::kDefaultShadowRoot),
-      FilePath(cryptohome::kDefaultSkeletonSource), system_salt,
-      request.legacy_home(), request.bind_mount_downloads(), &platform);
+  cryptohome::MountHelper mounter(uid, gid, access_gid, system_salt,
+                                  request.legacy_home(),
+                                  request.bind_mount_downloads(), &platform);
 
   cryptohome::MountError error = cryptohome::MOUNT_ERROR_NONE;
   // Link the user keyring into session keyring to allow request_key() search
