@@ -33,7 +33,9 @@ class BRILLO_EXPORT Client {
   using NetworkDeviceChangedSignalHandler =
       base::RepeatingCallback<void(const NetworkDeviceChangedSignal&)>;
 
+  // This variation creates a dbus object internally
   static std::unique_ptr<Client> New();
+  static std::unique_ptr<Client> New(const scoped_refptr<dbus::Bus>& bus);
 
   // Only used in tests.
   static std::unique_ptr<Client> New(const scoped_refptr<dbus::Bus>& bus,

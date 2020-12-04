@@ -105,6 +105,7 @@ libbrillo_sublibs = [
         "brillo/dbus/dbus_method_invoker.cc",
         "brillo/dbus/dbus_method_response.cc",
         "brillo/dbus/dbus_object.cc",
+        "brillo/dbus/dbus_proxy_util.cc",
         "brillo/dbus/dbus_service_watcher.cc",
         "brillo/dbus/dbus_signal.cc",
         "brillo/dbus/exported_object_manager.cc",

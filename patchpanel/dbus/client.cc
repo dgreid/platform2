@@ -8,6 +8,7 @@
 
 #include <base/bind.h>
 #include <base/logging.h>
+#include <brillo/dbus/dbus_proxy_util.h>
 #include <chromeos/dbus/service_constants.h>
 #include <dbus/message.h>
 #include <dbus/object_path.h>
@@ -100,8 +101,10 @@ void OnSignalConnectedCallback(const std::string& interface_name,
 
 class ClientImpl : public Client {
  public:
-  ClientImpl(const scoped_refptr<dbus::Bus>& bus, dbus::ObjectProxy* proxy)
-      : bus_(std::move(bus)), proxy_(proxy) {}
+  ClientImpl(const scoped_refptr<dbus::Bus>& bus,
+             dbus::ObjectProxy* proxy,
+             bool owns_bus)
+      : bus_(std::move(bus)), proxy_(proxy), owns_bus_(owns_bus) {}
   ClientImpl(const ClientImpl&) = delete;
   ClientImpl& operator=(const ClientImpl&) = delete;
 
@@ -161,14 +164,15 @@ class ClientImpl : public Client {
 
  private:
   scoped_refptr<dbus::Bus> bus_;
-  dbus::ObjectProxy* proxy_ = nullptr;  // owned by bus_
+  dbus::ObjectProxy* proxy_ = nullptr;  // owned by |bus_|
+  bool owns_bus_;  // Yes if |bus_| is created by Client::New
 
   bool SendSetVpnIntentRequest(int socket,
                                SetVpnIntentRequest::VpnRoutingPolicy policy);
 };
 
 ClientImpl::~ClientImpl() {
-  if (bus_)
+  if (bus_ && owns_bus_)
     bus_->ShutdownAndBlock();
 }
 
@@ -193,8 +197,9 @@ bool ClientImpl::NotifyArcStartup(pid_t pid) {
     return false;
   }
 
-  std::unique_ptr<dbus::Response> dbus_response = proxy_->CallMethodAndBlock(
-      &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
+  std::unique_ptr<dbus::Response> dbus_response =
+      brillo::dbus_utils::CallDBusMethod(
+          bus_, proxy_, &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
   if (!dbus_response) {
     LOG(ERROR) << "Failed to send dbus message to patchpanel service";
     return false;
@@ -220,8 +225,9 @@ bool ClientImpl::NotifyArcShutdown() {
     return false;
   }
 
-  std::unique_ptr<dbus::Response> dbus_response = proxy_->CallMethodAndBlock(
-      &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
+  std::unique_ptr<dbus::Response> dbus_response =
+      brillo::dbus_utils::CallDBusMethod(
+          bus_, proxy_, &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
   if (!dbus_response) {
     LOG(ERROR) << "Failed to send dbus message to patchpanel service";
     return false;
@@ -249,8 +255,9 @@ std::vector<NetworkDevice> ClientImpl::NotifyArcVmStartup(uint32_t cid) {
     return {};
   }
 
-  std::unique_ptr<dbus::Response> dbus_response = proxy_->CallMethodAndBlock(
-      &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
+  std::unique_ptr<dbus::Response> dbus_response =
+      brillo::dbus_utils::CallDBusMethod(
+          bus_, proxy_, &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
   if (!dbus_response) {
     LOG(ERROR) << "Failed to send dbus message to patchpanel service";
     return {};
@@ -282,8 +289,9 @@ bool ClientImpl::NotifyArcVmShutdown(uint32_t cid) {
     return false;
   }
 
-  std::unique_ptr<dbus::Response> dbus_response = proxy_->CallMethodAndBlock(
-      &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
+  std::unique_ptr<dbus::Response> dbus_response =
+      brillo::dbus_utils::CallDBusMethod(
+          bus_, proxy_, &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
   if (!dbus_response) {
     LOG(ERROR) << "Failed to send dbus message to patchpanel service";
     return false;
@@ -313,8 +321,9 @@ bool ClientImpl::NotifyTerminaVmStartup(uint32_t cid,
     return false;
   }
 
-  std::unique_ptr<dbus::Response> dbus_response = proxy_->CallMethodAndBlock(
-      &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
+  std::unique_ptr<dbus::Response> dbus_response =
+      brillo::dbus_utils::CallDBusMethod(
+          bus_, proxy_, &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
   if (!dbus_response) {
     LOG(ERROR) << "Failed to send dbus message to patchpanel service";
     return false;
@@ -354,8 +363,9 @@ bool ClientImpl::NotifyTerminaVmShutdown(uint32_t cid) {
     return false;
   }
 
-  std::unique_ptr<dbus::Response> dbus_response = proxy_->CallMethodAndBlock(
-      &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
+  std::unique_ptr<dbus::Response> dbus_response =
+      brillo::dbus_utils::CallDBusMethod(
+          bus_, proxy_, &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
   if (!dbus_response) {
     LOG(ERROR) << "Failed to send dbus message to patchpanel service";
     return false;
@@ -386,8 +396,9 @@ bool ClientImpl::NotifyPluginVmStartup(uint64_t vm_id,
     return false;
   }
 
-  std::unique_ptr<dbus::Response> dbus_response = proxy_->CallMethodAndBlock(
-      &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
+  std::unique_ptr<dbus::Response> dbus_response =
+      brillo::dbus_utils::CallDBusMethod(
+          bus_, proxy_, &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
   if (!dbus_response) {
     LOG(ERROR) << "Failed to send dbus message to patchpanel service";
     return false;
@@ -421,8 +432,9 @@ bool ClientImpl::NotifyPluginVmShutdown(uint64_t vm_id) {
     return false;
   }
 
-  std::unique_ptr<dbus::Response> dbus_response = proxy_->CallMethodAndBlock(
-      &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
+  std::unique_ptr<dbus::Response> dbus_response =
+      brillo::dbus_utils::CallDBusMethod(
+          bus_, proxy_, &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
   if (!dbus_response) {
     LOG(ERROR) << "Failed to send dbus message to patchpanel service";
     return false;
@@ -465,8 +477,9 @@ bool ClientImpl::SendSetVpnIntentRequest(
   }
   writer.AppendFileDescriptor(socket);
 
-  std::unique_ptr<dbus::Response> dbus_response = proxy_->CallMethodAndBlock(
-      &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
+  std::unique_ptr<dbus::Response> dbus_response =
+      brillo::dbus_utils::CallDBusMethod(
+          bus_, proxy_, &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
   if (!dbus_response) {
     LOG(ERROR)
         << "Failed to send SetVpnIntentRequest message to patchpanel service";
@@ -519,8 +532,9 @@ ClientImpl::ConnectNamespace(pid_t pid,
   base::ScopedFD fd_remote(pipe_fds[1]);
   writer.AppendFileDescriptor(pipe_fds[1]);
 
-  std::unique_ptr<dbus::Response> dbus_response = proxy_->CallMethodAndBlock(
-      &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
+  std::unique_ptr<dbus::Response> dbus_response =
+      brillo::dbus_utils::CallDBusMethod(
+          bus_, proxy_, &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
   if (!dbus_response) {
     LOG(ERROR) << "Failed to send ConnectNamespace message to patchpanel";
     return {};
@@ -601,8 +615,9 @@ bool ClientImpl::ModifyPortRule(ModifyPortRuleRequest::Operation op,
     return false;
   }
 
-  std::unique_ptr<dbus::Response> dbus_response = proxy_->CallMethodAndBlock(
-      &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
+  std::unique_ptr<dbus::Response> dbus_response =
+      brillo::dbus_utils::CallDBusMethod(
+          bus_, proxy_, &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
   if (!dbus_response) {
     LOG(ERROR)
         << "Failed to send ModifyPortRuleRequest message to patchpanel service "
@@ -633,8 +648,9 @@ std::vector<NetworkDevice> ClientImpl::GetDevices() {
     return {};
   }
 
-  std::unique_ptr<dbus::Response> dbus_response = proxy_->CallMethodAndBlock(
-      &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
+  std::unique_ptr<dbus::Response> dbus_response =
+      brillo::dbus_utils::CallDBusMethod(
+          bus_, proxy_, &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
   if (!dbus_response) {
     LOG(ERROR) << "Failed to send dbus message to patchpanel service";
     return {};
@@ -670,6 +686,15 @@ void ClientImpl::RegisterNeighborReachabilityEventHandler(
       base::BindOnce(OnSignalConnectedCallback));
 }
 
+dbus::ObjectProxy* GetProxy(const scoped_refptr<dbus::Bus>& bus) {
+  dbus::ObjectProxy* proxy = bus->GetObjectProxy(
+      kPatchPanelServiceName, dbus::ObjectPath(kPatchPanelServicePath));
+  if (!proxy) {
+    LOG(ERROR) << "Unable to get dbus proxy for " << kPatchPanelServiceName;
+  }
+  return proxy;
+}
+
 }  // namespace
 
 // static
@@ -683,19 +708,27 @@ std::unique_ptr<Client> Client::New() {
     return nullptr;
   }
 
-  dbus::ObjectProxy* proxy = bus->GetObjectProxy(
-      kPatchPanelServiceName, dbus::ObjectPath(kPatchPanelServicePath));
-  if (!proxy) {
-    LOG(ERROR) << "Unable to get dbus proxy for " << kPatchPanelServiceName;
+  dbus::ObjectProxy* proxy = GetProxy(bus);
+  if (!proxy)
     return nullptr;
-  }
 
-  return std::make_unique<ClientImpl>(std::move(bus), proxy);
+  return std::make_unique<ClientImpl>(std::move(bus), proxy,
+                                      true /* owns_bus */);
+}
+
+std::unique_ptr<Client> Client::New(const scoped_refptr<dbus::Bus>& bus) {
+  dbus::ObjectProxy* proxy = GetProxy(bus);
+  if (!proxy)
+    return nullptr;
+
+  return std::make_unique<ClientImpl>(std::move(bus), proxy,
+                                      false /* owns_bus */);
 }
 
 std::unique_ptr<Client> Client::New(const scoped_refptr<dbus::Bus>& bus,
                                     dbus::ObjectProxy* proxy) {
-  return std::make_unique<ClientImpl>(std::move(bus), proxy);
+  return std::make_unique<ClientImpl>(std::move(bus), proxy,
+                                      false /* owns_bus */);
 }
 
 }  // namespace patchpanel

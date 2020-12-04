@@ -5,6 +5,8 @@
 #include "patchpanel/dbus/client.h"
 
 #include <base/bind.h>
+#include <base/test/task_environment.h>
+#include <base/threading/sequenced_task_runner_handle.h>
 #include <chromeos/dbus/service_constants.h>
 #include <dbus/message.h>
 #include <dbus/mock_bus.h>
@@ -32,7 +34,14 @@ class ClientTest : public testing::Test {
             kPatchPanelServiceName,
             dbus::ObjectPath(kPatchPanelServicePath))),
         client_(Client::New(dbus_, proxy_.get())) {}
+  ~ClientTest() { dbus_->ShutdownAndBlock(); }
 
+  void SetUp() override {
+    EXPECT_CALL(*dbus_, GetDBusTaskRunner())
+        .WillRepeatedly(Return(base::SequencedTaskRunnerHandle::Get().get()));
+  }
+
+  base::test::TaskEnvironment task_environment_;
   scoped_refptr<dbus::MockBus> dbus_;
   scoped_refptr<dbus::MockObjectProxy> proxy_;
   std::unique_ptr<Client> client_;
