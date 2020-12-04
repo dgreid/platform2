@@ -34,6 +34,7 @@ mojom::Camera3DeviceOpsRequest CameraClientOps::Init(
   ops_runner_ = base::SequencedTaskRunnerHandle::Get();
   capturing_ = false;
   result_callback_ = std::move(result_callback);
+  frame_number_ = 0;
   return mojo::MakeRequest(&device_ops_);
 }
 
@@ -75,6 +76,9 @@ void CameraClientOps::ProcessCaptureResult(
   VLOGF_ENTER();
   DCHECK(ops_runner_->RunsTasksInCurrentSequence());
 
+  if (!capturing_) {
+    return;
+  }
   if (result->output_buffers) {
     CHECK_EQ(result->output_buffers->size(), 1u);
     const auto& output_buffer = result->output_buffers->front();
