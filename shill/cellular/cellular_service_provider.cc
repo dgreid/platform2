@@ -212,6 +212,13 @@ CellularServiceRefPtr CellularServiceProvider::LoadServicesForDevice(
   }
   for (CellularServiceRefPtr& service : services_to_remove)
     RemoveService(service);
+
+  // Set Connectable=false for visible services not matching |iccid|.
+  for (CellularServiceRefPtr& service : services_) {
+    if (service->iccid() != device->iccid())
+      service->SetConnectable(false);
+  }
+
   return active_service;
 }
 

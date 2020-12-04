@@ -161,11 +161,20 @@ TEST_F(CellularServiceProviderTest, LoadMultipleServicesFromProfile) {
   CellularServiceRefPtr service =
       provider()->LoadServicesForDevice(device.get());
   ASSERT_TRUE(service);
-  // Both cellular_1a and cellular_1b services should be created.
-  EXPECT_EQ(2u, GetProviderServices().size());
   // cellular_1a should be returned.
   EXPECT_EQ("imsi1a", service->imsi());
   EXPECT_EQ("iccid1a", service->iccid());
+
+  // Both cellular_1a and cellular_1b services should be created.
+  const std::vector<CellularServiceRefPtr>& provider_services =
+      GetProviderServices();
+  ASSERT_EQ(2u, provider_services.size());
+  CellularServiceRefPtr service1a = provider_services[0];
+  EXPECT_EQ("iccid1a", service1a->iccid());
+  EXPECT_TRUE(service1a->connectable());
+  CellularServiceRefPtr service1b = provider_services[1];
+  EXPECT_EQ("iccid1b", service1b->iccid());
+  EXPECT_FALSE(service1b->connectable());
 }
 
 // When a SIM or eSIM is switched the Cellular Device will be rebuilt,
