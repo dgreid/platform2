@@ -9,6 +9,7 @@
 #include <utility>
 
 #include <base/bind.h>
+#include <base/files/file.h>
 #include <base/stl_util.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_util.h>
@@ -85,6 +86,11 @@ const char kTelitMMPlugin[] = "Telit";
 // This identifier is specified in the serviceproviders.prototxt file.
 const char kVzwIdentifier[] = "c83d6597-dc91-4d48-a3a7-d86b80123751";
 const size_t kVzwMdnLength = 10;
+
+// Used to distinguish trogdor from other boards for signal quality indicators
+const char kFilePathPlatformName[] =
+    "/run/chromeos-config/v1/identity/platform-name";
+const char kPlatformTrogdor[] = "Trogdor";
 
 // Keys for the entries of Profiles.
 const char kProfileApn[] = "apn";
@@ -195,6 +201,7 @@ CellularCapability3gpp::CellularCapability3gpp(Cellular* cellular,
       registration_state_(MM_MODEM_3GPP_REGISTRATION_STATE_UNKNOWN),
       current_capabilities_(MM_MODEM_CAPABILITY_NONE),
       access_technologies_(MM_MODEM_ACCESS_TECHNOLOGY_UNKNOWN),
+      mm_reports_wideband_rssi_(false),
       resetting_(false),
       subscription_state_(SubscriptionState::kUnknown),
       reset_done_(false),
@@ -203,6 +210,30 @@ CellularCapability3gpp::CellularCapability3gpp(Cellular* cellular,
       weak_ptr_factory_(this) {
   SLOG(this, 2) << "Cellular capability constructed: 3GPP";
   mobile_operator_info_->Init();
+  InitMmReportsWidebandRssi();
+}
+
+void CellularCapability3gpp::InitMmReportsWidebandRssi() {
+  const base::FilePath path(kFilePathPlatformName);
+  base::File file(path, base::File::FLAG_OPEN | base::File::FLAG_READ);
+  std::string contents;
+
+  mm_reports_wideband_rssi_ = false;
+  if (!file.IsValid()) {
+    LOG(ERROR) << "Invalid file " << path.value();
+    return;
+  }
+
+  std::vector<char> buf(file.GetLength());
+  int read = file.ReadAtCurrentPos(buf.data(), buf.size());
+  if (read < 0) {
+    LOG(ERROR) << "Could not read from file " << path.value();
+    return;
+  }
+
+  contents = std::string(buf.begin(), buf.begin() + read);
+  if (contents == kPlatformTrogdor)
+    mm_reports_wideband_rssi_ = true;
 }
 
 CellularCapability3gpp::~CellularCapability3gpp() = default;
@@ -1627,32 +1658,50 @@ void CellularCapability3gpp::OnModemStateChangedSignal(int32_t old_state,
 void CellularCapability3gpp::OnSignalQualityChanged(uint32_t quality) {
   // Shill does not query RSRP or RSRQ from ModemManager yet. For now, we will
   // rely on RSSI.
-  // TODO(pholla): Report RSRQ instead of RSSI b/173016943
-  // Reference from android:
-  // https://android.googlesource.com/platform/frameworks/base.git/+/master/telephony/java/android/telephony/CarrierConfigManager.java
-  // RSSI thresholds = Androids RSRP thresholds + 25dB (assuming no noise and
-  // 5Mhz channel).
-  // RSSI(dBm) -> UI bars mapping
-  // >-73   GREAT (4 bars)
-  // >-83   GOOD (3 bars)
-  // >-93   MODERATE (2 bars)
-  // >-inf  POOR (1 bar)
+  // TODO(pholla): Report RSRP instead of RSSI b/173016943
+  double scaled_quality = 0.0;
+  SLOG(this, 3) << __func__
+                << "mm_reports_wideband_rssi : " << mm_reports_wideband_rssi_;
+  if (mm_reports_wideband_rssi_) {
+    // Reference from android:
+    // https://android.googlesource.com/platform/frameworks/base.git/+/master/telephony/java/android/telephony/CarrierConfigManager.java
+    // RSSI thresholds = Androids RSRP thresholds + 25dB (assuming no noise and
+    // 5Mhz channel).
+    // RSSI(dBm) -> UI bars mapping
+    // >-73   GREAT (4 bars)
+    // >-83   GOOD (3 bars)
+    // >-93   MODERATE (2 bars)
+    // >-inf  POOR (1 bar)
 
-  // Modem manager measures signal strength in RSSI and maps it to a value in
-  // the range of [0-100].
-  double rssi =
-      kModemManagerRssiMin + static_cast<double>(quality) / 100.0 *
-                                 (kModemManagerRssiMax - kModemManagerRssiMin);
-  double clamped_rssi =
-      std::min(std::max(rssi, kChromeRssiMin), kChromeRssiMax);
+    // Modem manager measures signal strength in RSSI and maps it to a value in
+    // the range of [0-100].
+    double rssi = kModemManagerRssiMin +
+                  static_cast<double>(quality) / 100.0 *
+                      (kModemManagerRssiMax - kModemManagerRssiMin);
+    double clamped_rssi =
+        std::min(std::max(rssi, kChromeRssiMin), kChromeRssiMax);
 
-  // Chrome OS UI uses signal quality values set by this method to draw
-  // network icons. UI code maps |quality| to number of bars as follows: [1-25]
-  // 1 bar, [26-50] 2 bars, [51-75] 3 bars and [76-100] 4 bars.
-  // -103->-63 rssi scales to UI quality of 0->100
-  // i.e. UI scaled_quality = min(max(rssi,-103),-63) / 40 * 100
-  double scaled_quality =
-      (clamped_rssi - kChromeRssiMin) * 100 / (kChromeRssiMax - kChromeRssiMin);
+    // Chrome OS UI uses signal quality values set by this method to draw
+    // network icons. UI code maps |quality| to number of bars as follows:
+    // [1-25] 1 bar, [26-50] 2 bars, [51-75] 3 bars and [76-100] 4 bars.
+    // -103->-63 rssi scales to UI quality of 0->100
+    // i.e. UI scaled_quality = min(max(rssi,-103),-63) / 40 * 100
+    scaled_quality = (clamped_rssi - kChromeRssiMin) * 100 /
+                     (kChromeRssiMax - kChromeRssiMin);
+  } else {
+    // This code path is used when we are not certain about the bandwidth for
+    // which RSSI is being reported. Fibocom modems may choose to return
+    // RSSI over 180kHz(RSRP) as RSSI.
+
+    // The mappings we desire are: [1-12] 1 bar, [13-24] 2 bars, [25-37] 3 bars
+    // and [38-100] 4 bars.
+    // A simple way to accomplish the desired mappings is to scale signal
+    // strength measurements by 2*x+1. For example: modem manager reports a
+    // signal strength of 25. After applying our scaling function chrome OS UI
+    // will receive a reading of 51. 51 maps to an icon with 3 bars on Chrome OS
+    // UI.
+    scaled_quality = std::min(100u, 2 * quality + 1);
+  }
   cellular()->HandleNewSignalQuality(static_cast<uint32_t>(scaled_quality));
 }
 

@@ -238,6 +238,8 @@ class CellularCapability3gpp : public CellularCapability {
     int32_t retries_left;
   };
 
+  void InitMmReportsWidebandRssi();
+
   // Methods used in starting a modem
   void EnableModem(bool deferralbe,
                    Error* error,
@@ -373,6 +375,11 @@ class CellularCapability3gpp : public CellularCapability {
   // Bits based on MMModemCapabilities
   uint32_t current_capabilities_;  // Technologies supported without a reload
   uint32_t access_technologies_;   // Bits based on MMModemAccessTechnology
+
+  // MM reports wideband rssi as signal quality on Trogdor
+  // and RSRP as signal quality on other cellular platforms
+  // TODO(pholla): Report RSRP instead of RSSI b/173016943
+  bool mm_reports_wideband_rssi_;
 
   Stringmap serving_operator_;
   std::string spn_;
