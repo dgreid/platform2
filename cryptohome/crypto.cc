@@ -92,38 +92,6 @@ bool GenerateResetSecret(const VaultKeyset& vault_keyset,
   return false;
 }
 
-void DecryptAuthorizationData(const SerializedVaultKeyset& serialized,
-                              VaultKeyset* keyset,
-                              const SecureBlob& vkk_key,
-                              const SecureBlob& vkk_iv) {
-  // Use the same key to unwrap the wrapped authorization data.
-  if (serialized.key_data().authorization_data_size() > 0) {
-    KeyData* key_data = keyset->mutable_serialized()->mutable_key_data();
-    for (int auth_data_i = 0; auth_data_i < key_data->authorization_data_size();
-         ++auth_data_i) {
-      KeyAuthorizationData* auth_data =
-          key_data->mutable_authorization_data(auth_data_i);
-      for (int secret_i = 0; secret_i < auth_data->secrets_size(); ++secret_i) {
-        KeyAuthorizationSecret* secret = auth_data->mutable_secrets(secret_i);
-        if (!secret->wrapped() || !secret->has_symmetric_key())
-          continue;
-        SecureBlob encrypted_auth_key(secret->symmetric_key());
-        SecureBlob clear_key;
-        // Is it reasonable to use this key here as well?
-        if (!CryptoLib::AesDecryptDeprecated(encrypted_auth_key, vkk_key,
-                                             vkk_iv, &clear_key)) {
-          LOG(ERROR) << "Failed to unwrap a symmetric authorization key:"
-                     << " (" << auth_data_i << "," << secret_i << ")";
-          // This does not force a failure to use the keyset.
-          continue;
-        }
-        secret->set_symmetric_key(clear_key.to_string());
-        secret->set_wrapped(false);
-      }
-    }
-  }
-}
-
 bool UnwrapVKKVaultKeyset(const SerializedVaultKeyset& serialized,
                           const KeyBlobs& vkk_data,
                           VaultKeyset* keyset,
@@ -131,7 +99,6 @@ bool UnwrapVKKVaultKeyset(const SerializedVaultKeyset& serialized,
   const SecureBlob& vkk_key = vkk_data.vkk_key.value();
   const SecureBlob& vkk_iv = vkk_data.vkk_iv.value();
   const SecureBlob& chaps_iv = vkk_data.chaps_iv.value();
-  const SecureBlob& auth_data_iv = vkk_data.authorization_data_iv.value();
 
   // Decrypt the keyset protobuf.
   SecureBlob local_encrypted_keyset(serialized.wrapped_keyset().begin(),
@@ -183,9 +150,6 @@ bool UnwrapVKKVaultKeyset(const SerializedVaultKeyset& serialized,
 
     keyset->set_reset_seed(unwrapped_reset_seed);
   }
-
-  // TODO(kerrnel): Audit if authorization data is used anywhere.
-  DecryptAuthorizationData(serialized, keyset, vkk_key, auth_data_iv);
 
   return true;
 }
@@ -461,8 +425,7 @@ bool Crypto::UnwrapVaultKeyset(const SerializedVaultKeyset& serialized,
                                CryptoError* error) {
   bool has_vkk_key = vkk_data.vkk_key != base::nullopt &&
                      vkk_data.vkk_iv != base::nullopt &&
-                     vkk_data.chaps_iv != base::nullopt &&
-                     vkk_data.authorization_data_iv != base::nullopt;
+                     vkk_data.chaps_iv != base::nullopt;
   bool has_scrypt_key = vkk_data.scrypt_key != nullptr;
   bool successfully_unwrapped = false;
 
@@ -593,50 +556,8 @@ bool Crypto::GenerateAndWrapKeys(const VaultKeyset& vault_keyset,
     return WrapScryptVaultKeyset(vault_keyset, blobs, serialized);
   }
 
-  if (!WrapVaultKeysetWithAesDeprecated(vault_keyset, blobs, store_reset_seed,
-                                        serialized)) {
-    return false;
-  }
-
-  return EncryptAuthorizationData(serialized, blobs.vkk_key.value(),
-                                  blobs.auth_iv.value());
-}
-
-bool Crypto::EncryptAuthorizationData(SerializedVaultKeyset* serialized,
-                                      const SecureBlob& vkk_key,
-                                      const SecureBlob& vkk_iv) const {
-  if (serialized->key_data().authorization_data_size() <= 0)
-    return true;
-
-  // Handle AuthorizationData secrets if provided.
-  KeyData* key_data = serialized->mutable_key_data();
-  for (int auth_data_i = 0; auth_data_i < key_data->authorization_data_size();
-       ++auth_data_i) {
-    KeyAuthorizationData* auth_data =
-        key_data->mutable_authorization_data(auth_data_i);
-    for (int secret_i = 0; secret_i < auth_data->secrets_size(); ++secret_i) {
-      KeyAuthorizationSecret* secret = auth_data->mutable_secrets(secret_i);
-      // Secrets that are externally provided should not be wrapped when
-      // this is called.  However, calling Encrypt() again should be
-      // idempotent.  External callers should be filtered at the API layer.
-      if (secret->wrapped() || !secret->has_symmetric_key())
-        continue;
-      SecureBlob clear_auth_key(secret->symmetric_key());
-      SecureBlob encrypted_auth_key;
-
-      if (!CryptoLib::AesEncryptDeprecated(clear_auth_key, vkk_key, vkk_iv,
-                                           &encrypted_auth_key)) {
-        LOG(ERROR) << "Failed to wrap a symmetric authorization key:"
-                   << " (" << auth_data_i << "," << secret_i << ")";
-        // This forces a failure.
-        return false;
-      }
-      secret->set_symmetric_key(encrypted_auth_key.to_string());
-      secret->set_wrapped(true);
-    }
-  }
-
-  return true;
+  return WrapVaultKeysetWithAesDeprecated(vault_keyset, blobs, store_reset_seed,
+                                          serialized);
 }
 
 bool Crypto::EncryptVaultKeyset(const VaultKeyset& vault_keyset,

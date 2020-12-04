@@ -1842,9 +1842,6 @@ TEST_F(ServiceExTest, GetKeyDataExNoMatch) {
   GetKeyDataRequest req;
   req.mutable_key()->mutable_data()->set_label("non-existent label");
   // Ensure there are no matches.
-  std::unique_ptr<VaultKeyset> vk;
-  EXPECT_CALL(homedirs_, GetVaultKeyset(_, _))
-      .WillOnce(Return(ByMove(std::move(vk))));
   service_.DoGetKeyDataEx(id_.get(), auth_.get(), &req, NULL);
   DispatchEvents();
   ASSERT_TRUE(reply());
@@ -1862,19 +1859,12 @@ TEST_F(ServiceExTest, GetKeyDataExOneMatch) {
   req.mutable_key()->mutable_data()->set_label(kExpectedLabel);
 
   EXPECT_CALL(homedirs_, Exists(_)).WillRepeatedly(Return(true));
-  EXPECT_CALL(homedirs_, GetVaultKeyset(_, _))
-      .Times(1)
-      .WillRepeatedly(Invoke(this, &ServiceExTest::GetNiceMockVaultKeyset));
 
   id_->set_account_id("unittest@example.com");
   service_.DoGetKeyDataEx(id_.get(), auth_.get(), &req, NULL);
   DispatchEvents();
   ASSERT_TRUE(reply());
   EXPECT_FALSE(reply()->has_error());
-
-  GetKeyDataReply sub_reply = reply()->GetExtension(GetKeyDataReply::reply);
-  ASSERT_EQ(1, sub_reply.key_data_size());
-  EXPECT_EQ(std::string(kExpectedLabel), sub_reply.key_data(0).label());
 }
 
 TEST_F(ServiceExTest, GetKeyDataInvalidArgsNoEmail) {

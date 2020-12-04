@@ -59,19 +59,6 @@ const std::string& GetAccountId(const AccountIdentifier& id) {
   return id.email();
 }
 
-// If any of the authorization data contained in the key have a secret that is
-// wrapped, then return true. Otherwise, false is returned.
-bool KeyHasWrappedAuthorizationSecrets(const Key& k) {
-  for (const KeyAuthorizationData& auth_data : k.data().authorization_data()) {
-    for (const KeyAuthorizationSecret& secret : auth_data.secrets()) {
-      // If wrapping becomes richer in the future, this may change.
-      if (secret.wrapped())
-        return true;
-    }
-  }
-  return false;
-}
-
 // Convert MountError used by mount.cc to CryptohomeErrorCode defined in the
 // protos.
 user_data_auth::CryptohomeErrorCode MountErrorToCryptohomeError(
@@ -1377,13 +1364,6 @@ void UserDataAuth::DoMount(
         std::move(on_done).Run(reply);
         return;
       }
-      if (KeyHasWrappedAuthorizationSecrets(key)) {
-        LOG(ERROR) << "KeyAuthorizationSecrets may not be wrapped";
-        reply.set_error(user_data_auth::CryptohomeErrorCode::
-                            CRYPTOHOME_ERROR_INVALID_ARGUMENT);
-        std::move(on_done).Run(reply);
-        return;
-      }
     }
   }
 
@@ -1858,13 +1838,6 @@ user_data_auth::CryptohomeErrorCode UserDataAuth::AddKey(
 
   if (request.key().data().label().empty()) {
     LOG(ERROR) << "No new key label in AddKeyRequest.";
-    return user_data_auth::CRYPTOHOME_ERROR_INVALID_ARGUMENT;
-  }
-
-  // Ensure any new keys do not contain a wrapped authorization key.
-  if (KeyHasWrappedAuthorizationSecrets(request.key())) {
-    LOG(ERROR)
-        << "KeyAuthorizationSecrets may not be wrapped in AddKeyRequest.";
     return user_data_auth::CRYPTOHOME_ERROR_INVALID_ARGUMENT;
   }
 
@@ -2418,22 +2391,9 @@ user_data_auth::CryptohomeErrorCode UserDataAuth::GetKeyData(
   // Requests only support using the key label at present.
   std::unique_ptr<VaultKeyset> vk(homedirs_->GetVaultKeyset(
       obfuscated_username, request.key().data().label()));
-  if (vk) {
+  *found = (vk != nullptr);
+  if (*found) {
     *data_out = vk->serialized().key_data();
-
-    // Clear any symmetric KeyAuthorizationSecrets even if they are wrapped.
-    for (int a = 0; a < data_out->authorization_data_size(); ++a) {
-      KeyAuthorizationData* auth_data = data_out->mutable_authorization_data(a);
-      for (int s = 0; s < auth_data->secrets_size(); ++s) {
-        auth_data->mutable_secrets(s)->clear_symmetric_key();
-        auth_data->mutable_secrets(s)->set_wrapped(false);
-      }
-    }
-
-    *found = true;
-  } else {
-    // No error is thrown if there is no match.
-    *found = false;
   }
 
   return user_data_auth::CRYPTOHOME_ERROR_NOT_SET;

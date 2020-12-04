@@ -226,7 +226,6 @@ bool PinWeaverAuthBlock::Derive(const AuthInput& auth_input,
   }
 
   key_blobs->reset_secret = brillo::SecureBlob();
-  key_blobs->authorization_data_iv = le_iv;
   key_blobs->chaps_iv = brillo::SecureBlob(serialized.le_chaps_iv().begin(),
                                            serialized.le_chaps_iv().end());
 

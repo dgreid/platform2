@@ -79,8 +79,6 @@ struct KeyBlobs {
   base::Optional<brillo::SecureBlob> auth_iv;
   // The wrapped reset seet, if it should be unwrapped.
   base::Optional<brillo::SecureBlob> wrapped_reset_seed;
-  // The IV used to decrypt the authorization data.
-  base::Optional<brillo::SecureBlob> authorization_data_iv;
   // The reset secret used for LE credentials.
   base::Optional<brillo::SecureBlob> reset_secret;
 

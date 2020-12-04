@@ -253,7 +253,6 @@ static const char kUserSwitch[] = "user";
 static const char kPasswordSwitch[] = "password";
 static const char kFingerprintSwitch[] = "fingerprint";
 static const char kKeyLabelSwitch[] = "key_label";
-static const char kHmacSigningKeySwitch[] = "hmac_signing_key";
 static const char kNewKeyLabelSwitch[] = "new_key_label";
 static const char kRemoveKeyLabelSwitch[] = "remove_key_label";
 static const char kOldPasswordSwitch[] = "old_password";
@@ -790,9 +789,6 @@ int main(int argc, char** argv) {
       if (cl->HasSwitch(switches::kPublicMount)) {
         cryptohome::Key* key = create->add_keys();
         key->mutable_data()->set_label(auth.key().data().label());
-        // The proto definition defaults all privileges to true but we only want
-        // mount, add, remove, and update.
-        key->mutable_data()->mutable_privileges()->set_authorized_update(false);
       } else {
         create->set_copy_authorization_key(true);
       }
@@ -1276,25 +1272,6 @@ int main(int argc, char** argv) {
     key->set_secret(new_password);
     cryptohome::KeyData* data = key->mutable_data();
     data->set_label(cl->GetSwitchValueASCII(switches::kNewKeyLabelSwitch));
-
-    if (cl->HasSwitch(switches::kHmacSigningKeySwitch)) {
-      cryptohome::KeyAuthorizationData* auth_data =
-          data->add_authorization_data();
-      auth_data->set_type(
-          cryptohome::KeyAuthorizationData::KEY_AUTHORIZATION_TYPE_HMACSHA256);
-      cryptohome::KeyAuthorizationSecret* auth_secret =
-          auth_data->add_secrets();
-      auth_secret->mutable_usage()->set_sign(true);
-      auth_secret->set_symmetric_key(
-          cl->GetSwitchValueASCII(switches::kHmacSigningKeySwitch));
-
-      LOG(INFO) << "Adding restricted key";
-      cryptohome::KeyPrivileges* privs = data->mutable_privileges();
-      privs->set_authorized_update(true);
-      privs->set_update(false);
-      privs->set_add(false);
-      privs->set_remove(false);
-    }
 
     if (cl->HasSwitch(switches::kKeyPolicySwitch)) {
       if (cl->GetSwitchValueASCII(switches::kKeyPolicySwitch) ==

@@ -247,13 +247,11 @@ TEST(PinWeaverAuthBlockTest, DeriveTest) {
 
   // Set expectations of the key blobs.
   EXPECT_NE(key_blobs.reset_secret, base::nullopt);
-  EXPECT_NE(key_blobs.authorization_data_iv, base::nullopt);
   EXPECT_NE(key_blobs.chaps_iv, base::nullopt);
   EXPECT_NE(key_blobs.vkk_iv, base::nullopt);
 
   // PinWeaver should always use unique IVs.
   EXPECT_NE(key_blobs.chaps_iv.value(), key_blobs.vkk_iv.value());
-  EXPECT_NE(key_blobs.authorization_data_iv.value(), key_blobs.vkk_iv.value());
 }
 
 TEST(PinWeaverAuthBlockTest, CheckCredentialFailureTest) {
@@ -379,8 +377,6 @@ TEST(TpmAuthBlockTest, DeriveTest) {
   EXPECT_NE(key_out_data.vkk_iv, base::nullopt);
   EXPECT_NE(key_out_data.vkk_key, base::nullopt);
   EXPECT_EQ(key_out_data.vkk_iv.value(), key_out_data.chaps_iv.value());
-  EXPECT_EQ(key_out_data.vkk_iv.value(),
-            key_out_data.authorization_data_iv.value());
 }
 
 TEST(DoubleWrappedCompatAuthBlockTest, DeriveTest) {

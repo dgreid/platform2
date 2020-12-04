@@ -50,7 +50,6 @@ bool TpmNotBoundToPcrAuthBlock::Derive(const AuthInput& auth_input,
   }
 
   key_out_data->chaps_iv = key_out_data->vkk_iv;
-  key_out_data->authorization_data_iv = key_out_data->vkk_iv;
   key_out_data->wrapped_reset_seed = brillo::SecureBlob();
   key_out_data->wrapped_reset_seed.value().assign(
       serialized.wrapped_reset_seed().begin(),

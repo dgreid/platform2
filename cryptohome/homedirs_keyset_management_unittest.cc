@@ -161,33 +161,6 @@ class KeysetManagementTest : public ::testing::Test {
     return key_data;
   }
 
-  KeyData SignedKeyData(const std::string& cipher_key,
-                        const std::string& signing_key,
-                        int revision) {
-    KeyData key_data;
-    key_data.set_label(kPasswordLabel);
-    key_data.set_revision(revision);
-    key_data.mutable_privileges()->set_update(false);
-    key_data.mutable_privileges()->set_authorized_update(true);
-    KeyAuthorizationData* auth_data = key_data.add_authorization_data();
-    // Allow the default override on the revision.
-    auth_data->set_type(
-        KeyAuthorizationData::KEY_AUTHORIZATION_TYPE_HMACSHA256);
-
-    // Add cipher.
-    if (!cipher_key.empty()) {
-      KeyAuthorizationSecret* auth_secret = auth_data->add_secrets();
-      auth_secret->mutable_usage()->set_encrypt(true);
-      auth_secret->set_symmetric_key(cipher_key);
-    }
-    // Add signing.
-    KeyAuthorizationSecret* auth_secret = auth_data->add_secrets();
-    auth_secret->mutable_usage()->set_sign(true);
-    auth_secret->set_symmetric_key(signing_key);
-
-    return key_data;
-  }
-
   Credentials CredsForUpdate(const brillo::SecureBlob& passkey) {
     Credentials credentials(users_[0].name, passkey);
     KeyData key_data;

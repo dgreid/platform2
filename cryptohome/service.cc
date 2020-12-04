@@ -109,17 +109,6 @@ const std::string& GetAccountId(const AccountIdentifier& id) {
   return id.email();
 }
 
-bool KeyHasWrappedAuthorizationSecrets(const Key& k) {
-  for (const KeyAuthorizationData& auth_data : k.data().authorization_data()) {
-    for (const KeyAuthorizationSecret& secret : auth_data.secrets()) {
-      // If wrapping becomes richer in the future, this may change.
-      if (secret.wrapped())
-        return true;
-    }
-  }
-  return false;
-}
-
 void AddTaskObserverToThread(base::Thread* thread,
                              MountThreadObserver* task_observer) {
   // Since MessageLoopCurrent::AddTaskObserver need to be executed in the same
@@ -1563,22 +1552,6 @@ void Service::DoGetKeyDataEx(AccountIdentifier* identifier,
     return;
   }
 
-  GetKeyDataReply* sub_reply = reply.MutableExtension(GetKeyDataReply::reply);
-  // Requests only support using the key label at present.
-  std::unique_ptr<VaultKeyset> vk(homedirs_->GetVaultKeyset(
-      obfuscated_username, get_key_data_request->key().data().label()));
-  if (vk) {
-    KeyData* new_kd = sub_reply->add_key_data();
-    *new_kd = vk->serialized().key_data();
-    // Clear any symmetric KeyAuthorizationSecrets even if they are wrapped.
-    for (int a = 0; a < new_kd->authorization_data_size(); ++a) {
-      KeyAuthorizationData* auth_data = new_kd->mutable_authorization_data(a);
-      for (int s = 0; s < auth_data->secrets_size(); ++s) {
-        auth_data->mutable_secrets(s)->clear_symmetric_key();
-        auth_data->mutable_secrets(s)->set_wrapped(false);
-      }
-    }
-  }
   // No error is thrown if there is no match.
   reply.clear_error();
   SendReply(context, reply);
@@ -1714,12 +1687,6 @@ void Service::DoAddKeyEx(AccountIdentifier* identifier,
 
   if (add_key_request->key().data().label().empty()) {
     SendInvalidArgsReply(context, "No new key label supplied");
-    return;
-  }
-
-  // Ensure any new keys do not contain a wrapped authorization key.
-  if (KeyHasWrappedAuthorizationSecrets(add_key_request->key())) {
-    SendInvalidArgsReply(context, "KeyAuthorizationSecrets may not be wrapped");
     return;
   }
 
@@ -2281,11 +2248,6 @@ void Service::DoMountEx(std::unique_ptr<AccountIdentifier> identifier,
            key.data().type() != KeyData::KEY_TYPE_CHALLENGE_RESPONSE)) {
         SendInvalidArgsReply(context,
                              "CreateRequest Keys are not fully specified");
-        return;
-      }
-      if (KeyHasWrappedAuthorizationSecrets(key)) {
-        SendInvalidArgsReply(context,
-                             "KeyAuthorizationSecrets may not be wrapped");
         return;
       }
     }
