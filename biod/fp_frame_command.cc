@@ -14,7 +14,6 @@ namespace biod {
 
 bool FpFrameCommand::Run(int fd) {
   uint32_t offset = frame_index_ << FP_FRAME_INDEX_SHIFT;
-  FpFramePacket payload = *Resp();
   auto pos = frame_data_->begin();
   while (pos < frame_data_->end()) {
     uint16_t len = std::min<uint16_t>(max_read_size_, frame_data_->end() - pos);
@@ -36,7 +35,7 @@ bool FpFrameCommand::Run(int fd) {
       LOG(ERROR) << "FP_FRAME command failed @ 0x" << std::hex << offset;
       return false;
     }
-    std::copy(payload.begin(), payload.begin() + len, pos);
+    std::copy(Resp()->cbegin(), Resp()->cbegin() + len, pos);
     offset += len;
     pos += len;
   }

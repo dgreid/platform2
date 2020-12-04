@@ -76,6 +76,8 @@ class FpFrameCommandTest : public testing::Test {
 TEST_F(FpFrameCommandTest, Success) {
   FpFramePacket packet = {1, 2, 3, 4, 5};
   EXPECT_EQ(packet.size(), 544);
+  // Ec command payload is empty until EcCommandRun is called.
+  FpFramePacket payload = {0};
 
   constexpr int kMaxReadSize = 536;  // SPI max packet size is 544. Subtract
                                      // the sizeof(struct ec_host_response)
@@ -89,10 +91,15 @@ TEST_F(FpFrameCommandTest, Success) {
   auto mock_fp_frame_command =
       FpFrameCommand::Create<MockFpFrameCommand>(0, kFrameSize, kMaxReadSize);
 
-  EXPECT_CALL(*mock_fp_frame_command, Resp).WillOnce(Return(&packet));
+  EXPECT_CALL(*mock_fp_frame_command, Resp).WillRepeatedly(Return(&payload));
 
   EXPECT_CALL(*mock_fp_frame_command, EcCommandRun)
-      .WillRepeatedly(Return(true));
+      .WillRepeatedly(
+          // Command is run, so start returning actual packet.
+          [&payload, &packet](int fd) {
+            payload = packet;
+            return true;
+          });
   EXPECT_TRUE(mock_fp_frame_command->Run(-1));
   const auto& frame = mock_fp_frame_command->frame();
 
