@@ -5,7 +5,10 @@
 import("//common-mk/pkg_config.gni")
 
 group("all") {
-  deps = [ ":screenshot" ]
+  deps = [
+    ":kmsvnc",
+    ":screenshot",
+  ]
 }
 
 pkg_config("target_defaults") {
@@ -19,13 +22,33 @@ pkg_config("target_defaults") {
   ]
 }
 
-executable("screenshot") {
-  configs += [ ":target_defaults" ]
+static_library("libscreen-capture") {
   sources = [
     "bo_import_capture.cc",
     "crtc.cc",
     "egl_capture.cc",
-    "main.cc",
-    "png.cc",
   ]
+  configs += [ ":target_defaults" ]
+}
+
+pkg_config("libvncserver") {
+  pkg_deps = [ "libvncserver" ]
+}
+
+executable("screenshot") {
+  configs += [ ":target_defaults" ]
+  sources = [
+    "png.cc",
+    "screenshot.cc",
+  ]
+  deps = [ ":libscreen-capture" ]
+}
+
+executable("kmsvnc") {
+  configs += [
+    ":target_defaults",
+    ":libvncserver",
+  ]
+  sources = [ "kmsvnc.cc" ]
+  deps = [ ":libscreen-capture" ]
 }
