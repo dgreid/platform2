@@ -79,6 +79,8 @@ class LIBMEMS_EXPORT IioDeviceTriggerImpl : public IioDevice {
  private:
   IioContextImpl* context_;    // non-owned
   iio_device* const trigger_;  // non-owned
+
+  std::string log_prefix_;
 };
 
 }  // namespace libmems

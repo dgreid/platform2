@@ -40,6 +40,9 @@ IioDeviceTriggerImpl::IioDeviceTriggerImpl(IioContextImpl* ctx, iio_device* dev)
     : IioDevice(), context_(ctx), trigger_(dev) {
   CHECK(context_);
   CHECK(trigger_);
+
+  log_prefix_ = base::StringPrintf("Trigger with id: %d and name: %s. ",
+                                   GetId(), (GetName() ? GetName() : "null"));
 }
 
 IioContext* IioDeviceTriggerImpl::GetContext() const {
@@ -75,8 +78,8 @@ base::Optional<std::string> IioDeviceTriggerImpl::ReadStringAttribute(
   ssize_t len =
       iio_device_attr_read(trigger_, name.c_str(), data, sizeof(data));
   if (len < 0) {
-    LOG(WARNING) << "Attempting to read attribute " << name
-                 << " failed: " << len;
+    LOG(WARNING) << log_prefix_ << "Attempting to read string attribute "
+                 << name << " failed: " << len;
     return base::nullopt;
   }
   return std::string(data, len);
@@ -87,8 +90,8 @@ base::Optional<int64_t> IioDeviceTriggerImpl::ReadNumberAttribute(
   long long val = 0;  // NOLINT(runtime/int)
   int error = iio_device_attr_read_longlong(trigger_, name.c_str(), &val);
   if (error) {
-    LOG(WARNING) << "Attempting to read attribute " << name
-                 << " failed: " << error;
+    LOG(WARNING) << log_prefix_ << "Attempting to read number attribute "
+                 << name << " failed: " << error;
     return base::nullopt;
   }
   return val;
@@ -99,8 +102,8 @@ base::Optional<double> IioDeviceTriggerImpl::ReadDoubleAttribute(
   double val = 0;
   int error = iio_device_attr_read_double(trigger_, name.c_str(), &val);
   if (error) {
-    LOG(WARNING) << "Attempting to read attribute " << name
-                 << " failed: " << error;
+    LOG(WARNING) << log_prefix_ << "Attempting to read double attribute "
+                 << name << " failed: " << error;
     return base::nullopt;
   }
   return val;
@@ -116,8 +119,8 @@ bool IioDeviceTriggerImpl::WriteNumberAttribute(const std::string& name,
 
   int error = iio_device_attr_write_longlong(trigger_, name.c_str(), value);
   if (error) {
-    LOG(WARNING) << "Attempting to write attribute " << name
-                 << " failed: " << error;
+    LOG(WARNING) << log_prefix_ << "Attempting to write number attribute "
+                 << name << " failed: " << error;
     return false;
   }
   return true;
@@ -133,8 +136,8 @@ bool IioDeviceTriggerImpl::WriteDoubleAttribute(const std::string& name,
 
   int error = iio_device_attr_write_double(trigger_, name.c_str(), value);
   if (error) {
-    LOG(WARNING) << "Attempting to write attribute " << name
-                 << " failed: " << error;
+    LOG(WARNING) << log_prefix_ << "Attempting to write double attribute "
+                 << name << " failed: " << error;
     return false;
   }
   return true;

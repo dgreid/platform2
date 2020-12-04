@@ -63,8 +63,8 @@ base::Optional<std::string> IioChannelImpl::ReadStringAttribute(
   ssize_t len =
       iio_channel_attr_read(channel_, name.c_str(), data, sizeof(data));
   if (len < 0) {
-    LOG(WARNING) << log_prefix_ << "Attempting to read attribute " << name
-                 << " failed: " << len;
+    LOG(WARNING) << log_prefix_ << "Attempting to read string attribute "
+                 << name << " failed: " << len;
     return base::nullopt;
   }
   return std::string(data, len);
@@ -75,8 +75,8 @@ base::Optional<int64_t> IioChannelImpl::ReadNumberAttribute(
   long long val = 0;  // NOLINT(runtime/int)
   int error = iio_channel_attr_read_longlong(channel_, name.c_str(), &val);
   if (error) {
-    LOG(WARNING) << log_prefix_ << "Attempting to read attribute " << name
-                 << " failed: " << error;
+    LOG(WARNING) << log_prefix_ << "Attempting to read number attribute "
+                 << name << " failed: " << error;
     return base::nullopt;
   }
   return val;
@@ -87,8 +87,8 @@ base::Optional<double> IioChannelImpl::ReadDoubleAttribute(
   double val = 0;
   int error = iio_channel_attr_read_double(channel_, name.c_str(), &val);
   if (error) {
-    LOG(WARNING) << log_prefix_ << "Attempting to read attribute " << name
-                 << " failed: " << error;
+    LOG(WARNING) << log_prefix_ << "Attempting to read double attribute "
+                 << name << " failed: " << error;
     return base::nullopt;
   }
   return val;
@@ -100,8 +100,8 @@ bool IioChannelImpl::WriteStringAttribute(const std::string& name,
       channel_, name.size() > 0 ? name.c_str() : nullptr, value.data(),
       value.size());
   if (error) {
-    LOG(WARNING) << log_prefix_ << "Attempting to write attribute " << name
-                 << " failed: " << error;
+    LOG(WARNING) << log_prefix_ << "Attempting to write string attribute "
+                 << name << " failed: " << error;
     return false;
   }
   return true;
@@ -111,8 +111,8 @@ bool IioChannelImpl::WriteNumberAttribute(const std::string& name,
                                           int64_t value) {
   int error = iio_channel_attr_write_longlong(channel_, name.c_str(), value);
   if (error) {
-    LOG(WARNING) << log_prefix_ << "Attempting to write attribute " << name
-                 << " failed: " << error;
+    LOG(WARNING) << log_prefix_ << "Attempting to write number attribute "
+                 << name << " failed: " << error;
     return false;
   }
   return true;
@@ -122,8 +122,8 @@ bool IioChannelImpl::WriteDoubleAttribute(const std::string& name,
                                           double value) {
   int error = iio_channel_attr_write_double(channel_, name.c_str(), value);
   if (error) {
-    LOG(WARNING) << log_prefix_ << "Attempting to write attribute " << name
-                 << " failed: " << error;
+    LOG(WARNING) << log_prefix_ << "Attempting to write double attribute "
+                 << name << " failed: " << error;
     return false;
   }
   return true;
