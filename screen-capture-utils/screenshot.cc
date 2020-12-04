@@ -105,6 +105,11 @@ int Main() {
     crtc = screenshot::CrtcFinder::FindAnyDisplay();
   }
 
+  if (!crtc) {
+    LOG(ERROR) << "CRTC not found. Is the screen on?";
+    return 1;
+  }
+
   CaptureMethod method = CaptureMethod::AUTODETECT;
   if (cmdline->HasSwitch(kMethodSwitch)) {
     std::string method_str = cmdline->GetSwitchValueASCII(kMethodSwitch);
@@ -116,11 +121,6 @@ int Main() {
       LOG(ERROR) << "Invalid --method specification";
       return 1;
     }
-  }
-
-  if (!crtc) {
-    LOG(ERROR) << "CRTC not found. Is the screen on?";
-    return 1;
   }
 
   uint32_t crtc_width;
