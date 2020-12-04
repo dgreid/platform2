@@ -188,7 +188,7 @@ void Service::ForwardContents(const std::string& owner_id) {
   // Read pstore.
   std::vector<char> content;
   brillo::SafeFD::Error err;
-  std::tie(content, err) = pstore_fd_.ReadContents(vm_tools::kPstoreSize);
+  std::tie(content, err) = pstore_fd_.ReadContents(vm_tools::kArcVmPstoreSize);
   if (brillo::SafeFD::IsError(err)) {
     LOG(ERROR) << "Failed to read pstore source fd, error:"
                << static_cast<int>(err);
