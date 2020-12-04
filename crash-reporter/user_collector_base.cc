@@ -4,13 +4,13 @@
 
 #include "crash-reporter/user_collector_base.h"
 
-#include <pcrecpp.h>
 #include "crash-reporter/vm_support.h"
 
 #include <base/files/file_util.h>
 #include <base/strings/string_split.h>
 #include <base/strings/stringprintf.h>
 #include <brillo/process/process.h>
+#include <re2/re2.h>
 
 #include "crash-reporter/constants.h"
 #include "crash-reporter/util.h"
@@ -124,10 +124,10 @@ bool UserCollectorBase::HandleCrash(
 
 base::Optional<UserCollectorBase::CrashAttributes>
 UserCollectorBase::ParseCrashAttributes(const std::string& crash_attributes) {
-  pcrecpp::RE re("(\\d+):(\\d+):(\\d+):(\\d+):(.*)");
+  RE2 re("(\\d+):(\\d+):(\\d+):(\\d+):(.*)");
   UserCollectorBase::CrashAttributes attrs;
-  if (!re.FullMatch(crash_attributes, &attrs.pid, &attrs.signal, &attrs.uid,
-                    &attrs.gid, &attrs.exec_name)) {
+  if (!RE2::FullMatch(crash_attributes, re, &attrs.pid, &attrs.signal,
+                      &attrs.uid, &attrs.gid, &attrs.exec_name)) {
     return base::nullopt;
   }
   return attrs;
