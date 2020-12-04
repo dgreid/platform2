@@ -779,4 +779,7 @@ int main(int argc, char* argv[]) {
       ret = 1;
     return ret;
   }
+
+  LOG(ERROR) << "Nothing to do! (Bad arguments?)";
+  return 1;
 }
