@@ -256,25 +256,23 @@ void WebAuthnHandler::MakeCredential(
       static_cast<uint64_t>(base::Time::Now().ToTimeT()), request,
       std::move(method_response)};
 
-  if (request.verification_type() ==
-      VerificationType::VERIFICATION_USER_VERIFICATION) {
-    dbus::MethodCall call(
-        chromeos::kUserAuthenticationServiceInterface,
-        chromeos::kUserAuthenticationServiceShowAuthDialogMethod);
-    dbus::MessageWriter writer(&call);
-    writer.AppendString(request.rp_id());
-    writer.AppendInt32(request.verification_type());
-    writer.AppendUint64(request.request_id());
+  // Upgrade UP requests to UV.
+  session.request.set_verification_type(
+      VerificationType::VERIFICATION_USER_VERIFICATION);
 
-    pending_uv_make_credential_session_ = std::move(session);
-    auth_dialog_dbus_proxy_->CallMethod(
-        &call, dbus::ObjectProxy::TIMEOUT_INFINITE,
-        base::Bind(&WebAuthnHandler::HandleUVFlowResultMakeCredential,
-                   base::Unretained(this)));
-    return;
-  }
+  dbus::MethodCall call(
+      chromeos::kUserAuthenticationServiceInterface,
+      chromeos::kUserAuthenticationServiceShowAuthDialogMethod);
+  dbus::MessageWriter writer(&call);
+  writer.AppendString(request.rp_id());
+  writer.AppendInt32(request.verification_type());
+  writer.AppendUint64(request.request_id());
 
-  DoMakeCredential(std::move(session), PresenceRequirement::kPowerButton);
+  pending_uv_make_credential_session_ = std::move(session);
+  auth_dialog_dbus_proxy_->CallMethod(
+      &call, dbus::ObjectProxy::TIMEOUT_INFINITE,
+      base::Bind(&WebAuthnHandler::HandleUVFlowResultMakeCredential,
+                 base::Unretained(this)));
 }
 
 CancelWebAuthnFlowResponse WebAuthnHandler::Cancel(
@@ -748,25 +746,23 @@ void WebAuthnHandler::GetAssertion(
       static_cast<uint64_t>(base::Time::Now().ToTimeT()), request,
       request.allowed_credential_id(matched_index), std::move(method_response)};
 
-  if (request.verification_type() ==
-      VerificationType::VERIFICATION_USER_VERIFICATION) {
-    dbus::MethodCall call(
-        chromeos::kUserAuthenticationServiceInterface,
-        chromeos::kUserAuthenticationServiceShowAuthDialogMethod);
-    dbus::MessageWriter writer(&call);
-    writer.AppendString(request.rp_id());
-    writer.AppendInt32(request.verification_type());
-    writer.AppendUint64(request.request_id());
+  // Upgrade UP requests to UV.
+  session.request.set_verification_type(
+      VerificationType::VERIFICATION_USER_VERIFICATION);
 
-    pending_uv_get_assertion_session_ = std::move(session);
-    auth_dialog_dbus_proxy_->CallMethod(
-        &call, dbus::ObjectProxy::TIMEOUT_INFINITE,
-        base::Bind(&WebAuthnHandler::HandleUVFlowResultGetAssertion,
-                   base::Unretained(this)));
-    return;
-  }
+  dbus::MethodCall call(
+      chromeos::kUserAuthenticationServiceInterface,
+      chromeos::kUserAuthenticationServiceShowAuthDialogMethod);
+  dbus::MessageWriter writer(&call);
+  writer.AppendString(request.rp_id());
+  writer.AppendInt32(request.verification_type());
+  writer.AppendUint64(request.request_id());
 
-  DoGetAssertion(std::move(session), PresenceRequirement::kPowerButton);
+  pending_uv_get_assertion_session_ = std::move(session);
+  auth_dialog_dbus_proxy_->CallMethod(
+      &call, dbus::ObjectProxy::TIMEOUT_INFINITE,
+      base::Bind(&WebAuthnHandler::HandleUVFlowResultGetAssertion,
+                 base::Unretained(this)));
 }
 
 // If already seeing failure, then no need to get user secret. This means
