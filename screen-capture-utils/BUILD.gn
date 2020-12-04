@@ -22,7 +22,7 @@ pkg_config("target_defaults") {
 executable("screenshot") {
   configs += [ ":target_defaults" ]
   sources = [
-    "capture.cc",
+    "bo_import_capture.cc",
     "crtc.cc",
     "egl_capture.cc",
     "main.cc",

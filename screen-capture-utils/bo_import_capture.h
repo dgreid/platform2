@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SCREEN_CAPTURE_UTILS_CAPTURE_H_
-#define SCREEN_CAPTURE_UTILS_CAPTURE_H_
+#ifndef SCREEN_CAPTURE_UTILS_BO_IMPORT_CAPTURE_H_
+#define SCREEN_CAPTURE_UTILS_BO_IMPORT_CAPTURE_H_
 
 #include <stdint.h>
 
@@ -53,4 +53,4 @@ std::unique_ptr<GbmBoMap> Capture(
 
 }  // namespace screenshot
 
-#endif  // SCREEN_CAPTURE_UTILS_CAPTURE_H_
+#endif  // SCREEN_CAPTURE_UTILS_BO_IMPORT_CAPTURE_H_

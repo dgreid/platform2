@@ -11,7 +11,7 @@
 #include <base/command_line.h>
 #include <base/strings/string_number_conversions.h>
 
-#include "screen-capture-utils/capture.h"
+#include "screen-capture-utils/bo_import_capture.h"
 #include "screen-capture-utils/crtc.h"
 #include "screen-capture-utils/egl_capture.h"
 #include "screen-capture-utils/png.h"
