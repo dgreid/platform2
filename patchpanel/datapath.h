@@ -8,6 +8,7 @@
 #include <net/route.h>
 #include <sys/types.h>
 
+#include <iostream>
 #include <set>
 #include <string>
 #include <vector>
@@ -22,6 +23,29 @@
 #include "patchpanel/subnet.h"
 
 namespace patchpanel {
+
+// Struct holding parameters for Datapath::StartRoutingNamespace requests.
+struct ConnectedNamespace {
+  // The pid of the client network namespace.
+  pid_t pid;
+  // The name attached to the client network namespace.
+  std::string netns_name;
+  // Name of the shill device for routing outbound traffic from the client
+  // namespace. Empty if outbound traffic should be forwarded to the highest
+  // priority network (physical or virtual).
+  std::string outbound_ifname;
+  // Name of the "local" veth device visible on the host namespace.
+  std::string host_ifname;
+  // Name of the "remote" veth device moved into the client namespace.
+  std::string peer_ifname;
+  // IPv4 subnet assigned to the client namespace.
+  std::unique_ptr<Subnet> peer_subnet;
+  // MAC address of the "remote" veth device.
+  MacAddress peer_mac_addr;
+};
+
+std::ostream& operator<<(std::ostream& stream,
+                         const ConnectedNamespace& nsinfo);
 
 // Simple enum of bitmasks used for specifying a set of IP family values.
 enum IpFamily {
@@ -125,26 +149,14 @@ class Datapath {
                                         const std::string& src_ip);
 
   // Creates a virtual ethernet interface pair shared with the client namespace
-  // of |pid| and sets up routing outside and inside the client namespace for
-  // connecting the client namespace to the network.
-  bool StartRoutingNamespace(pid_t pid,
-                             const std::string& netns_name,
-                             const std::string& host_ifname,
-                             const std::string& peer_ifname,
-                             uint32_t subnet_ipv4_addr,
-                             uint32_t subnet_prefixlen,
-                             uint32_t host_ipv4_addr,
-                             uint32_t peer_ipv4_addr,
-                             const MacAddress& peer_mac_addr);
+  // of |nsinfo.pid| and sets up routing outside and inside the client namespace
+  // for connecting the client namespace to the network.
+  bool StartRoutingNamespace(const ConnectedNamespace& nsinfo);
   // Destroys the virtual ethernet interface, routing, and network namespace
-  // name set for |netns_name| by StartRoutingNamespace. The default route set
-  // inside the |netns_name| by patchpanel is not destroyed and it is assumed
-  // the client will teardown the namespace.
-  void StopRoutingNamespace(const std::string& netns_name,
-                            const std::string& host_ifname,
-                            uint32_t subnet_ipv4_addr,
-                            uint32_t subnet_prefixlen,
-                            uint32_t host_ipv4_addr);
+  // name set for |nsinfo.netns_name| by StartRoutingNamespace. The default
+  // route set inside the |nsinfo.netns_name| by patchpanel is not destroyed and
+  // it is assumed the client will teardown the namespace.
+  void StopRoutingNamespace(const ConnectedNamespace& nsinfo);
 
   // Sets up IPv4 SNAT, IP forwarding, and traffic marking for the given
   // virtual device |int_ifname| associated to |source|. if |ext_ifname| is

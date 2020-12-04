@@ -499,60 +499,55 @@ bool Datapath::RemoveSourceIPv4DropRule(const std::string& oif,
                                               src_ip, "-j", "DROP", "-w"}) == 0;
 }
 
-bool Datapath::StartRoutingNamespace(pid_t pid,
-                                     const std::string& netns_name,
-                                     const std::string& host_ifname,
-                                     const std::string& peer_ifname,
-                                     uint32_t subnet_ipv4_addr,
-                                     uint32_t subnet_prefixlen,
-                                     uint32_t host_ipv4_addr,
-                                     uint32_t peer_ipv4_addr,
-                                     const MacAddress& peer_mac_addr) {
+bool Datapath::StartRoutingNamespace(const ConnectedNamespace& nsinfo) {
   // Veth interface configuration and client routing configuration:
   //  - attach a name to the client namespace.
   //  - create veth pair across the current namespace and the client namespace.
   //  - configure IPv4 address on remote veth inside client namespace.
   //  - configure IPv4 address on local veth inside host namespace.
   //  - add a default IPv4 /0 route sending traffic to that remote veth.
-  if (!NetnsAttachName(netns_name, pid)) {
-    LOG(ERROR) << "Failed to attach name " << netns_name << " to namespace pid "
-               << pid;
+  if (!NetnsAttachName(nsinfo.netns_name, nsinfo.pid)) {
+    LOG(ERROR) << "Failed to attach name " << nsinfo.netns_name
+               << " to namespace pid " << nsinfo.pid;
     return false;
   }
 
-  if (!ConnectVethPair(pid, netns_name, host_ifname, peer_ifname, peer_mac_addr,
-                       peer_ipv4_addr, subnet_prefixlen,
-                       false /* enable_multicast */)) {
+  if (!ConnectVethPair(
+          nsinfo.pid, nsinfo.netns_name, nsinfo.host_ifname, nsinfo.peer_ifname,
+          nsinfo.peer_mac_addr, nsinfo.peer_subnet->AddressAtOffset(1),
+          nsinfo.peer_subnet->PrefixLength(), false /* enable_multicast */)) {
     LOG(ERROR) << "Failed to create veth pair for"
                   " namespace pid "
-               << pid;
-    NetnsDeleteName(netns_name);
+               << nsinfo.pid;
+    NetnsDeleteName(nsinfo.netns_name);
     return false;
   }
 
-  if (!ConfigureInterface(host_ifname, peer_mac_addr, host_ipv4_addr,
-                          subnet_prefixlen, true /* link up */,
-                          false /* enable_multicast */)) {
-    LOG(ERROR) << "Cannot configure host interface " << host_ifname;
-    RemoveInterface(host_ifname);
-    NetnsDeleteName(netns_name);
+  if (!ConfigureInterface(nsinfo.host_ifname, nsinfo.peer_mac_addr,
+                          nsinfo.peer_subnet->AddressAtOffset(0),
+                          nsinfo.peer_subnet->PrefixLength(),
+                          true /* link up */, false /* enable_multicast */)) {
+    LOG(ERROR) << "Cannot configure host interface " << nsinfo.host_ifname;
+    RemoveInterface(nsinfo.host_ifname);
+    NetnsDeleteName(nsinfo.netns_name);
     return false;
   }
 
   {
-    ScopedNS ns(pid);
-    if (!ns.IsValid() && pid != kTestPID) {
-      LOG(ERROR) << "Invalid namespace pid " << pid;
-      RemoveInterface(host_ifname);
-      NetnsDeleteName(netns_name);
+    ScopedNS ns(nsinfo.pid);
+    if (!ns.IsValid() && nsinfo.pid != kTestPID) {
+      LOG(ERROR) << "Invalid namespace pid " << nsinfo.pid;
+      RemoveInterface(nsinfo.host_ifname);
+      NetnsDeleteName(nsinfo.netns_name);
       return false;
     }
 
-    if (!AddIPv4Route(host_ipv4_addr, INADDR_ANY, INADDR_ANY)) {
-      LOG(ERROR) << "Failed to add default /0 route to " << host_ifname
-                 << " inside namespace pid " << pid;
-      RemoveInterface(host_ifname);
-      NetnsDeleteName(netns_name);
+    if (!AddIPv4Route(nsinfo.peer_subnet->AddressAtOffset(0), INADDR_ANY,
+                      INADDR_ANY)) {
+      LOG(ERROR) << "Failed to add default /0 route to " << nsinfo.host_ifname
+                 << " inside namespace pid " << nsinfo.pid;
+      RemoveInterface(nsinfo.host_ifname);
+      NetnsDeleteName(nsinfo.netns_name);
       return false;
     }
   }
@@ -568,50 +563,50 @@ bool Datapath::StartRoutingNamespace(pid_t pid,
   // both ways between client namespace and other guest containers and VMs.
   // TODO(b/161507671) If outbound_physical_device is defined, then set strong
   // routing to that interface routing table.
-  uint32_t netmask = Ipv4Netmask(subnet_prefixlen);
-  if (!AddIPv4Route(host_ipv4_addr, subnet_ipv4_addr, netmask)) {
+  uint32_t netmask = Ipv4Netmask(nsinfo.peer_subnet->PrefixLength());
+  if (!AddIPv4Route(nsinfo.peer_subnet->AddressAtOffset(0),
+                    nsinfo.peer_subnet->BaseAddress(), netmask)) {
     LOG(ERROR) << "Failed to set route to client namespace";
-    RemoveInterface(host_ifname);
-    NetnsDeleteName(netns_name);
+    RemoveInterface(nsinfo.host_ifname);
+    NetnsDeleteName(nsinfo.netns_name);
     return false;
   }
 
-  if (!StartIpForwarding(IpFamily::IPv4, "", host_ifname)) {
+  if (!StartIpForwarding(IpFamily::IPv4, "", nsinfo.host_ifname)) {
     LOG(ERROR) << "Failed to allow FORWARD for ingress traffic into "
-               << host_ifname;
-    RemoveInterface(host_ifname);
-    DeleteIPv4Route(host_ipv4_addr, subnet_ipv4_addr, netmask);
-    NetnsDeleteName(netns_name);
+               << nsinfo.host_ifname;
+    RemoveInterface(nsinfo.host_ifname);
+    DeleteIPv4Route(nsinfo.peer_subnet->AddressAtOffset(0),
+                    nsinfo.peer_subnet->BaseAddress(), netmask);
+    NetnsDeleteName(nsinfo.netns_name);
     return false;
   }
 
   // TODO(b/161508179) Add fwmark source tagging based on client usage.
   // TODO(b/161508179) Do not rely on legacy fwmark 1 for SNAT.
-  if (!AddOutboundIPv4SNATMark(host_ifname)) {
+  if (!AddOutboundIPv4SNATMark(nsinfo.host_ifname)) {
     LOG(ERROR) << "Failed to set SNAT for traffic"
                   " outgoing from "
-               << host_ifname;
-    RemoveInterface(host_ifname);
-    DeleteIPv4Route(host_ipv4_addr, subnet_ipv4_addr, netmask);
-    StopIpForwarding(IpFamily::IPv4, "", host_ifname);
-    NetnsDeleteName(netns_name);
+               << nsinfo.host_ifname;
+    RemoveInterface(nsinfo.host_ifname);
+    DeleteIPv4Route(nsinfo.peer_subnet->AddressAtOffset(0),
+                    nsinfo.peer_subnet->BaseAddress(), netmask);
+    StopIpForwarding(IpFamily::IPv4, "", nsinfo.host_ifname);
+    NetnsDeleteName(nsinfo.netns_name);
     return false;
   }
 
   return true;
 }
 
-void Datapath::StopRoutingNamespace(const std::string& netns_name,
-                                    const std::string& host_ifname,
-                                    uint32_t subnet_ipv4_addr,
-                                    uint32_t subnet_prefixlen,
-                                    uint32_t host_ipv4_addr) {
-  RemoveInterface(host_ifname);
-  StopIpForwarding(IpFamily::IPv4, "", host_ifname);
-  RemoveOutboundIPv4SNATMark(host_ifname);
-  DeleteIPv4Route(host_ipv4_addr, subnet_ipv4_addr,
-                  Ipv4Netmask(subnet_prefixlen));
-  NetnsDeleteName(netns_name);
+void Datapath::StopRoutingNamespace(const ConnectedNamespace& nsinfo) {
+  RemoveInterface(nsinfo.host_ifname);
+  StopIpForwarding(IpFamily::IPv4, "", nsinfo.host_ifname);
+  RemoveOutboundIPv4SNATMark(nsinfo.host_ifname);
+  DeleteIPv4Route(nsinfo.peer_subnet->AddressAtOffset(0),
+                  nsinfo.peer_subnet->BaseAddress(),
+                  Ipv4Netmask(nsinfo.peer_subnet->PrefixLength()));
+  NetnsDeleteName(nsinfo.netns_name);
 }
 
 void Datapath::StartRoutingDevice(const std::string& ext_ifname,
@@ -1248,6 +1243,18 @@ int Datapath::FindIfIndex(const std::string& ifname) {
     return it->second;
 
   return 0;
+}
+
+std::ostream& operator<<(std::ostream& stream,
+                         const ConnectedNamespace& nsinfo) {
+  stream << "{ pid: " << nsinfo.pid;
+  if (!nsinfo.outbound_ifname.empty()) {
+    stream << ", outbound_ifname: " << nsinfo.outbound_ifname;
+  }
+  stream << ", host_ifname: " << nsinfo.host_ifname
+         << ", peer_ifname: " << nsinfo.peer_ifname
+         << ", peer_subnet: " << nsinfo.peer_subnet->ToCidrString() << '}';
+  return stream;
 }
 
 }  // namespace patchpanel

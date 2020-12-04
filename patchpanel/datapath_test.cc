@@ -772,10 +772,17 @@ TEST(DatapathTest, StartRoutingNamespace) {
                                    "MARK", "--set-mark", "1/1", "-w"),
                        true, nullptr));
 
+  ConnectedNamespace nsinfo = {};
+  nsinfo.pid = kTestPID;
+  nsinfo.netns_name = "netns_foo";
+  nsinfo.outbound_ifname = "";
+  nsinfo.host_ifname = "arc_ns0";
+  nsinfo.peer_ifname = "veth0";
+  nsinfo.peer_subnet = std::make_unique<Subnet>(Ipv4Addr(100, 115, 92, 128), 30,
+                                                base::DoNothing());
+  nsinfo.peer_mac_addr = mac;
   Datapath datapath(&runner, &firewall, (ioctl_t)ioctl_rtentry_cap);
-  datapath.StartRoutingNamespace(
-      kTestPID, "netns_foo", "arc_ns0", "veth0", Ipv4Addr(100, 115, 92, 128),
-      30, Ipv4Addr(100, 115, 92, 129), Ipv4Addr(100, 115, 92, 130), mac);
+  datapath.StartRoutingNamespace(nsinfo);
   ioctl_reqs.clear();
   ioctl_rtentry_args.clear();
 }
@@ -797,10 +804,16 @@ TEST(DatapathTest, StopRoutingNamespace) {
   EXPECT_CALL(runner, ip(StrEq("link"), StrEq("delete"), ElementsAre("arc_ns0"),
                          false));
 
+  ConnectedNamespace nsinfo = {};
+  nsinfo.pid = kTestPID;
+  nsinfo.netns_name = "netns_foo";
+  nsinfo.outbound_ifname = "";
+  nsinfo.host_ifname = "arc_ns0";
+  nsinfo.peer_ifname = "veth0";
+  nsinfo.peer_subnet = std::make_unique<Subnet>(Ipv4Addr(100, 115, 92, 128), 30,
+                                                base::DoNothing());
   Datapath datapath(&runner, &firewall);
-  datapath.StopRoutingNamespace("netns_foo", "arc_ns0",
-                                Ipv4Addr(100, 115, 92, 128), 30,
-                                Ipv4Addr(100, 115, 92, 129));
+  datapath.StopRoutingNamespace(nsinfo);
 }
 
 TEST(DatapathTest, StartRoutingDevice_Arc) {

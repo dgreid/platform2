@@ -981,14 +981,16 @@ std::unique_ptr<patchpanel::ConnectNamespaceResponse> Manager::ConnectNamespace(
   }
 
   const std::string ifname_id = std::to_string(connected_namespaces_next_id_);
-  const std::string netns_name = "connected_netns_" + ifname_id;
-  const std::string host_ifname = "arc_ns" + ifname_id;
-  const std::string client_ifname = "veth" + ifname_id;
-  if (!datapath_->StartRoutingNamespace(
-          request.pid(), netns_name, host_ifname, client_ifname,
-          subnet->BaseAddress(), subnet->PrefixLength(),
-          subnet->AddressAtOffset(0), subnet->AddressAtOffset(1),
-          addr_mgr_.GenerateMacAddress())) {
+  ConnectedNamespace nsinfo = {};
+  nsinfo.pid = request.pid();
+  nsinfo.netns_name = "connected_netns_" + ifname_id;
+  nsinfo.outbound_ifname = request.outbound_physical_device();
+  nsinfo.host_ifname = "arc_ns" + ifname_id;
+  nsinfo.peer_ifname = "veth" + ifname_id;
+  nsinfo.peer_subnet = std::move(subnet);
+  nsinfo.peer_mac_addr = addr_mgr_.GenerateMacAddress();
+
+  if (!datapath_->StartRoutingNamespace(nsinfo)) {
     LOG(ERROR) << "ConnectNamespace: failed to setup datapath";
     if (epoll_ctl(connected_namespaces_epollfd_, EPOLL_CTL_DEL,
                   local_client_fd.get(), nullptr) != 0)
@@ -996,28 +998,21 @@ std::unique_ptr<patchpanel::ConnectNamespaceResponse> Manager::ConnectNamespace(
     return response;
   }
 
-  // Prepare the response before storing ConnectNamespaceInfo.
-  response->set_peer_ifname(client_ifname);
-  response->set_peer_ipv4_address(subnet->AddressAtOffset(1));
-  response->set_host_ifname(host_ifname);
-  response->set_host_ipv4_address(subnet->AddressAtOffset(0));
+  // Prepare the response before storing ConnectedNamespace.
+  response->set_peer_ifname(nsinfo.peer_ifname);
+  response->set_peer_ipv4_address(nsinfo.peer_subnet->AddressAtOffset(1));
+  response->set_host_ifname(nsinfo.host_ifname);
+  response->set_host_ipv4_address(nsinfo.peer_subnet->AddressAtOffset(0));
   auto* response_subnet = response->mutable_ipv4_subnet();
-  response_subnet->set_base_addr(subnet->BaseAddress());
-  response_subnet->set_prefix_len(subnet->PrefixLength());
+  response_subnet->set_base_addr(nsinfo.peer_subnet->BaseAddress());
+  response_subnet->set_prefix_len(nsinfo.peer_subnet->PrefixLength());
 
-  // Store ConnectNamespaceInfo
+  LOG(INFO) << "Connected network namespace " << nsinfo;
+
+  // Store ConnectedNamespace
   connected_namespaces_next_id_++;
   int fdkey = local_client_fd.release();
-  connected_namespaces_[fdkey] = {};
-  ConnectNamespaceInfo& ns_info = connected_namespaces_[fdkey];
-  ns_info.pid = request.pid();
-  ns_info.netns_name = std::move(netns_name);
-  ns_info.outbound_ifname = request.outbound_physical_device();
-  ns_info.host_ifname = std::move(host_ifname);
-  ns_info.client_ifname = std::move(client_ifname);
-  ns_info.client_subnet = std::move(subnet);
-
-  LOG(INFO) << "Connected network namespace " << ns_info;
+  connected_namespaces_.insert(std::make_pair(fdkey, std::move(nsinfo)));
 
   if (connected_namespaces_.size() == 1) {
     LOG(INFO) << "Starting ConnectNamespace client fds monitoring";
@@ -1030,7 +1025,7 @@ std::unique_ptr<patchpanel::ConnectNamespaceResponse> Manager::ConnectNamespace(
 void Manager::DisconnectNamespace(int client_fd) {
   auto it = connected_namespaces_.find(client_fd);
   if (it == connected_namespaces_.end()) {
-    LOG(ERROR) << "No ConnectNamespaceInfo found for client_fd " << client_fd;
+    LOG(ERROR) << "No ConnectedNamespace found for client_fd " << client_fd;
     return;
   }
 
@@ -1041,13 +1036,8 @@ void Manager::DisconnectNamespace(int client_fd) {
   if (close(client_fd) < 0)
     PLOG(ERROR) << "DisconnectNamespace: close(client_fd) failed";
 
-  datapath_->StopRoutingNamespace(it->second.netns_name, it->second.host_ifname,
-                                  it->second.client_subnet->BaseAddress(),
-                                  it->second.client_subnet->PrefixLength(),
-                                  it->second.client_subnet->AddressAtOffset(0));
-
+  datapath_->StopRoutingNamespace(it->second);
   LOG(INFO) << "Disconnected network namespace " << it->second;
-
   // This release the allocated IPv4 subnet.
   connected_namespaces_.erase(it);
 }
@@ -1235,18 +1225,6 @@ void Manager::OnNDProxyMessage(const NDProxyMessage& msg) {
       LOG(ERROR) << "Unknown NDProxy event " << msg.type();
       NOTREACHED();
   }
-}
-
-std::ostream& operator<<(std::ostream& stream,
-                         const Manager::ConnectNamespaceInfo& ns_info) {
-  stream << "{ pid: " << ns_info.pid;
-  if (!ns_info.outbound_ifname.empty()) {
-    stream << ", outbound_ifname: " << ns_info.outbound_ifname;
-  }
-  stream << ", host_ifname: " << ns_info.host_ifname
-         << ", client_ifname: " << ns_info.client_ifname
-         << ", subnet: " << ns_info.client_subnet->ToCidrString() << '}';
-  return stream;
 }
 
 }  // namespace patchpanel

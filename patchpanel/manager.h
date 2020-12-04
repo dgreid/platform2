@@ -22,6 +22,7 @@
 #include "patchpanel/arc_service.h"
 #include "patchpanel/counters_service.h"
 #include "patchpanel/crostini_service.h"
+#include "patchpanel/datapath.h"
 #include "patchpanel/firewall.h"
 #include "patchpanel/helper_process.h"
 #include "patchpanel/network_monitor_service.h"
@@ -36,24 +37,6 @@ namespace patchpanel {
 // Main class that runs the mainloop and responds to LAN interface changes.
 class Manager final : public brillo::DBusDaemon, private TrafficForwarder {
  public:
-  // Metadata for tracking state associated with a connected namespace.
-  struct ConnectNamespaceInfo {
-    // The pid of the client network namespace.
-    pid_t pid;
-    // The name attached to the client network namespace.
-    std::string netns_name;
-    // Name of the shill device for routing outbound traffic from the client
-    // namespace. Empty if outbound traffic should be forwarded to the highest
-    // priority network (physical or virtual).
-    std::string outbound_ifname;
-    // Name of the "local" veth device visible on the host namespace.
-    std::string host_ifname;
-    // Name of the "remote" veth device moved into the client namespace.
-    std::string client_ifname;
-    // IPv4 subnet assigned to the client namespace.
-    std::unique_ptr<Subnet> client_subnet;
-  };
-
   Manager(std::unique_ptr<HelperProcess> adb_proxy,
           std::unique_ptr<HelperProcess> mcast_proxy,
           std::unique_ptr<HelperProcess> nd_proxy);
@@ -225,7 +208,7 @@ class Manager final : public brillo::DBusDaemon, private TrafficForwarder {
   // All namespaces currently connected through patchpanel ConnectNamespace
   // API, keyed by file descriptors committed by clients when calling
   // ConnectNamespace.
-  std::map<int, ConnectNamespaceInfo> connected_namespaces_;
+  std::map<int, ConnectedNamespace> connected_namespaces_;
   int connected_namespaces_next_id_{0};
   // epoll file descriptor for watching client fds committed with the
   // ConnectNamespace DBus API.
@@ -233,9 +216,6 @@ class Manager final : public brillo::DBusDaemon, private TrafficForwarder {
 
   base::WeakPtrFactory<Manager> weak_factory_{this};
 };
-
-std::ostream& operator<<(std::ostream& stream,
-                         const Manager::ConnectNamespaceInfo& ns_info);
 
 }  // namespace patchpanel
 
