@@ -7,6 +7,8 @@
 //! trichechus.
 //!
 
+pub mod storage;
+
 use std::fmt::{self, Debug, Display};
 use std::io::{self, BufWriter, Read, Write};
 

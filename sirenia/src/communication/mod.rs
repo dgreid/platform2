@@ -9,6 +9,8 @@ use std::fmt::Debug;
 
 use serde::{Deserialize, Serialize};
 
+pub mod storage;
+
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub enum Request {
     StartSession(AppInfo), // TODO: Add source port
