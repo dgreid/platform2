@@ -306,4 +306,28 @@ TrafficCounter::Source TrafficSourceToProto(TrafficSource source) {
   }
 }
 
+TrafficSource ProtoToTrafficSource(TrafficCounter::Source source) {
+  switch (source) {
+    case TrafficCounter::CHROME:
+      return CHROME;
+    case TrafficCounter::USER:
+      return USER;
+    case TrafficCounter::UPDATE_ENGINE:
+      return UPDATE_ENGINE;
+    case TrafficCounter::SYSTEM:
+      return SYSTEM;
+    case TrafficCounter::VPN:
+      return HOST_VPN;
+    case TrafficCounter::ARC:
+      return ARC;
+    case TrafficCounter::CROSVM:
+      return CROSVM;
+    case TrafficCounter::PLUGINVM:
+      return PLUGINVM;
+    default:
+    case TrafficCounter::UNKNOWN:
+      return UNKNOWN;
+  }
+}
+
 }  // namespace patchpanel

@@ -995,7 +995,11 @@ std::unique_ptr<patchpanel::ConnectNamespaceResponse> Manager::ConnectNamespace(
   ConnectedNamespace nsinfo = {};
   nsinfo.pid = request.pid();
   nsinfo.netns_name = "connected_netns_" + ifname_id;
+  nsinfo.source = ProtoToTrafficSource(request.traffic_source());
+  if (nsinfo.source == TrafficSource::UNKNOWN)
+    nsinfo.source = TrafficSource::SYSTEM;
   nsinfo.outbound_ifname = request.outbound_physical_device();
+  nsinfo.route_on_vpn = request.route_on_vpn();
   nsinfo.host_ifname = "arc_ns" + ifname_id;
   nsinfo.peer_ifname = "veth" + ifname_id;
   nsinfo.peer_subnet = std::move(subnet);

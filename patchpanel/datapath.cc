@@ -561,8 +561,6 @@ bool Datapath::StartRoutingNamespace(const ConnectedNamespace& nsinfo) {
   //  through permission_broker DBus APIs.
   // TODO(hugobenichi) If allow_user_traffic is false, then prevent forwarding
   // both ways between client namespace and other guest containers and VMs.
-  // TODO(b/161507671) If outbound_physical_device is defined, then set strong
-  // routing to that interface routing table.
   uint32_t netmask = Ipv4Netmask(nsinfo.peer_subnet->PrefixLength());
   if (!AddIPv4Route(nsinfo.peer_subnet->AddressAtOffset(0),
                     nsinfo.peer_subnet->BaseAddress(), netmask)) {
@@ -572,17 +570,6 @@ bool Datapath::StartRoutingNamespace(const ConnectedNamespace& nsinfo) {
     return false;
   }
 
-  if (!StartIpForwarding(IpFamily::IPv4, "", nsinfo.host_ifname)) {
-    LOG(ERROR) << "Failed to allow FORWARD for ingress traffic into "
-               << nsinfo.host_ifname;
-    RemoveInterface(nsinfo.host_ifname);
-    DeleteIPv4Route(nsinfo.peer_subnet->AddressAtOffset(0),
-                    nsinfo.peer_subnet->BaseAddress(), netmask);
-    NetnsDeleteName(nsinfo.netns_name);
-    return false;
-  }
-
-  // TODO(b/161508179) Add fwmark source tagging based on client usage.
   // TODO(b/161508179) Do not rely on legacy fwmark 1 for SNAT.
   if (!AddOutboundIPv4SNATMark(nsinfo.host_ifname)) {
     LOG(ERROR) << "Failed to set SNAT for traffic"
@@ -596,12 +583,18 @@ bool Datapath::StartRoutingNamespace(const ConnectedNamespace& nsinfo) {
     return false;
   }
 
+  StartRoutingDevice(nsinfo.outbound_ifname, nsinfo.host_ifname,
+                     nsinfo.peer_subnet->AddressAtOffset(0), nsinfo.source,
+                     nsinfo.route_on_vpn);
+
   return true;
 }
 
 void Datapath::StopRoutingNamespace(const ConnectedNamespace& nsinfo) {
+  StopRoutingDevice(nsinfo.outbound_ifname, nsinfo.host_ifname,
+                    nsinfo.peer_subnet->AddressAtOffset(0), nsinfo.source,
+                    nsinfo.route_on_vpn);
   RemoveInterface(nsinfo.host_ifname);
-  StopIpForwarding(IpFamily::IPv4, "", nsinfo.host_ifname);
   RemoveOutboundIPv4SNATMark(nsinfo.host_ifname);
   DeleteIPv4Route(nsinfo.peer_subnet->AddressAtOffset(0),
                   nsinfo.peer_subnet->BaseAddress(),
@@ -612,8 +605,9 @@ void Datapath::StopRoutingNamespace(const ConnectedNamespace& nsinfo) {
 void Datapath::StartRoutingDevice(const std::string& ext_ifname,
                                   const std::string& int_ifname,
                                   uint32_t int_ipv4_addr,
-                                  TrafficSource source) {
-  if (!ext_ifname.empty() &&
+                                  TrafficSource source,
+                                  bool route_on_vpn) {
+  if (source == TrafficSource::ARC && !ext_ifname.empty() &&
       !AddInboundIPv4DNAT(ext_ifname, IPv4AddressToString(int_ipv4_addr)))
     LOG(ERROR) << "Failed to configure ingress traffic rules for " << ext_ifname
                << "->" << int_ifname;
@@ -647,8 +641,10 @@ void Datapath::StartRoutingDevice(const std::string& ext_ifname,
                  << int_ifname;
 
     // Forwarded traffic from downstream virtual devices routed to the system
-    // logical default network is always eligible to be routed through a VPN.
-    if (!ModifyFwmarkVpnJumpRule("PREROUTING", "-A", int_ifname, {}, {}))
+    // default network is eligible to be routed through a VPN if |route_on_vpn|
+    // is true.
+    if (route_on_vpn &&
+        !ModifyFwmarkVpnJumpRule("PREROUTING", "-A", int_ifname, {}, {}))
       LOG(ERROR) << "Failed to add jump rule to VPN chain for " << int_ifname;
   }
 }
@@ -656,8 +652,9 @@ void Datapath::StartRoutingDevice(const std::string& ext_ifname,
 void Datapath::StopRoutingDevice(const std::string& ext_ifname,
                                  const std::string& int_ifname,
                                  uint32_t int_ipv4_addr,
-                                 TrafficSource source) {
-  if (!ext_ifname.empty())
+                                 TrafficSource source,
+                                 bool route_on_vpn) {
+  if (source == TrafficSource::ARC && !ext_ifname.empty())
     RemoveInboundIPv4DNAT(ext_ifname, IPv4AddressToString(int_ipv4_addr));
   StopIpForwarding(IpFamily::IPv4, ext_ifname, int_ifname);
   StopIpForwarding(IpFamily::IPv4, int_ifname, ext_ifname);
@@ -667,7 +664,8 @@ void Datapath::StopRoutingDevice(const std::string& ext_ifname,
   } else {
     ModifyConnmarkRestore(IpFamily::Dual, "PREROUTING", "-D", int_ifname,
                           kFwmarkRoutingMask);
-    ModifyFwmarkVpnJumpRule("PREROUTING", "-D", int_ifname, {}, {});
+    if (route_on_vpn)
+      ModifyFwmarkVpnJumpRule("PREROUTING", "-D", int_ifname, {}, {});
   }
 }
 
@@ -1247,11 +1245,13 @@ int Datapath::FindIfIndex(const std::string& ifname) {
 
 std::ostream& operator<<(std::ostream& stream,
                          const ConnectedNamespace& nsinfo) {
-  stream << "{ pid: " << nsinfo.pid;
+  stream << "{ pid: " << nsinfo.pid
+         << ", source: " << TrafficSourceName(nsinfo.source);
   if (!nsinfo.outbound_ifname.empty()) {
     stream << ", outbound_ifname: " << nsinfo.outbound_ifname;
   }
-  stream << ", host_ifname: " << nsinfo.host_ifname
+  stream << ", route_on_vpn: " << nsinfo.route_on_vpn
+         << ", host_ifname: " << nsinfo.host_ifname
          << ", peer_ifname: " << nsinfo.peer_ifname
          << ", peer_subnet: " << nsinfo.peer_subnet->ToCidrString() << '}';
   return stream;

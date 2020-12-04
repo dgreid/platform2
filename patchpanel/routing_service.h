@@ -66,6 +66,8 @@ enum TrafficSource {
   ARC_VPN = 0x24,
 };
 
+const std::string& TrafficSourceName(TrafficSource source);
+
 // A representation of how fwmark bits are split and used for tagging and
 // routing traffic. The 32 bits of the fwmark are currently organized as such:
 //    0                   1                   2                   3

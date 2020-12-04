@@ -509,7 +509,7 @@ void ArcService::AddDevice(const std::string& ifname) {
 
   datapath_->StartRoutingDevice(device->phys_ifname(), device->host_ifname(),
                                 device->config().guest_ipv4_addr(),
-                                TrafficSource::ARC);
+                                TrafficSource::ARC, false /*route_on_vpn*/);
 
   std::string virtual_device_ifname;
   if (guest_ == GuestMessage::ARC_VM) {
@@ -576,7 +576,7 @@ void ArcService::RemoveDevice(const std::string& ifname) {
 
   datapath_->StopRoutingDevice(device->phys_ifname(), device->host_ifname(),
                                device->config().guest_ipv4_addr(),
-                               TrafficSource::ARC);
+                               TrafficSource::ARC, false /*route_on_vpn*/);
   datapath_->RemoveBridge(device->host_ifname());
   if (device->options().adb_allowed)
     datapath_->DeleteAdbPortAccessRule(ifname);

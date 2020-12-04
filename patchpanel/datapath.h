@@ -30,10 +30,18 @@ struct ConnectedNamespace {
   pid_t pid;
   // The name attached to the client network namespace.
   std::string netns_name;
+  // Source to which traffic from |host_ifname| will be attributed.
+  TrafficSource source;
   // Name of the shill device for routing outbound traffic from the client
   // namespace. Empty if outbound traffic should be forwarded to the highest
   // priority network (physical or virtual).
   std::string outbound_ifname;
+  // If |outbound_ifname| is empty and |route_on_vpn| is false, the traffic from
+  // the client namespace will be routed to the highest priority physical
+  // device. If |outbound_ifname| is empty and |route_on_vpn| is true, the
+  // traffic will be routed through VPN connections. If |outbound_ifname|
+  // specifies a valid physical device, |route_on_vpn| is ignored.
+  bool route_on_vpn;
   // Name of the "local" veth device visible on the host namespace.
   std::string host_ifname;
   // Name of the "remote" veth device moved into the client namespace.
@@ -165,14 +173,16 @@ class Datapath {
   virtual void StartRoutingDevice(const std::string& ext_ifname,
                                   const std::string& int_ifname,
                                   uint32_t int_ipv4_addr,
-                                  TrafficSource source);
+                                  TrafficSource source,
+                                  bool route_on_vpn);
 
   // Removes IPv4 iptables, IP forwarding, and traffic marking for the given
   // virtual device |int_ifname|.
   virtual void StopRoutingDevice(const std::string& ext_ifname,
                                  const std::string& int_ifname,
                                  uint32_t int_ipv4_addr,
-                                 TrafficSource source);
+                                 TrafficSource source,
+                                 bool route_on_vpn);
 
   // Starts or stops marking conntrack entries routed to |ext_ifname| with its
   // associated fwmark routing tag. Once a conntrack entry is marked with the

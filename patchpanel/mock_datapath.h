@@ -54,16 +54,18 @@ class MockDatapath : public Datapath {
                     uint32_t remote_ipv4_prefix_len,
                     bool remote_multicast_flag));
   MOCK_METHOD1(RemoveInterface, void(const std::string& ifname));
-  MOCK_METHOD4(StartRoutingDevice,
+  MOCK_METHOD5(StartRoutingDevice,
                void(const std::string& ext_ifname,
                     const std::string& int_ifname,
                     uint32_t int_ipv4_addr,
-                    TrafficSource source));
-  MOCK_METHOD4(StopRoutingDevice,
+                    TrafficSource source,
+                    bool route_on_vpn));
+  MOCK_METHOD5(StopRoutingDevice,
                void(const std::string& ext_ifname,
                     const std::string& int_ifname,
                     uint32_t int_ipv4_addr,
-                    TrafficSource source));
+                    TrafficSource source,
+                    bool route_on_vpn));
   MOCK_METHOD3(MaskInterfaceFlags,
                bool(const std::string& ifname, uint16_t on, uint16_t off));
   MOCK_METHOD2(AddIPv6Forwarding,

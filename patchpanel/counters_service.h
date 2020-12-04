@@ -109,6 +109,7 @@ class CountersService {
 };
 
 TrafficCounter::Source TrafficSourceToProto(TrafficSource source);
+TrafficSource ProtoToTrafficSource(TrafficCounter::Source source);
 
 }  // namespace patchpanel
 

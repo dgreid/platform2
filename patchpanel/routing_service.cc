@@ -67,32 +67,25 @@ bool RoutingService::SetVpnFwmark(
   return SetFwmark(sockfd, mark, kFwmarkVpnMask);
 }
 
-const char* TrafficSourceName(TrafficSource source) {
-  switch (source) {
-    case CHROME:
-      return "CHROME";
-    case USER:
-      return "USER";
-    case UPDATE_ENGINE:
-      return "UPDATE_ENGINE";
-    case SYSTEM:
-      return "SYSTEM";
-    case HOST_VPN:
-      return "HOST_VPN";
-    case ARC:
-      return "ARC";
-    case CROSVM:
-      return "CROSVM";
-    case PLUGINVM:
-      return "PLUGINVM";
-    case TETHER_DOWNSTREAM:
-      return "TETHER_DOWNSTREAM";
-    case ARC_VPN:
-      return "ARC_VPN";
-    case UNKNOWN:
-    default:
-      return "UNKNOWN";
+const std::string& TrafficSourceName(TrafficSource source) {
+  static std::map<TrafficSource, std::string> kTrafficSourceNames = {
+      {CHROME, "CHROME"},
+      {USER, "USER"},
+      {UPDATE_ENGINE, "UPDATE_ENGINE"},
+      {SYSTEM, "SYSTEM"},
+      {HOST_VPN, "HOST_VPN"},
+      {ARC, "ARC"},
+      {CROSVM, "CROSVM"},
+      {PLUGINVM, "PLUGINVM"},
+      {TETHER_DOWNSTREAM, "TETHER_DOWNSTREAM"},
+      {ARC_VPN, "ARC_VPN"},
+      {UNKNOWN, "UNKNOWN"},
+  };
+  const auto& it = kTrafficSourceNames.find(source);
+  if (it == kTrafficSourceNames.end()) {
+    return kTrafficSourceNames.find(UNKNOWN)->second;
   }
+  return it->second;
 }
 
 std::ostream& operator<<(std::ostream& stream, const LocalSourceSpecs& source) {

@@ -107,7 +107,7 @@ class ArcServiceTest : public testing::Test {
 TEST_F(ArcServiceTest, NotStarted_AddDevice) {
   EXPECT_CALL(*datapath_, AddBridge(StrEq("arc_eth0"), _, _)).Times(0);
   EXPECT_CALL(*datapath_,
-              StartRoutingDevice(StrEq("eth0"), StrEq("arc_eth0"), _, _))
+              StartRoutingDevice(StrEq("eth0"), StrEq("arc_eth0"), _, _, false))
       .Times(0);
 
   auto svc = NewService(GuestMessage::ARC);
@@ -119,10 +119,10 @@ TEST_F(ArcServiceTest, NotStarted_AddDevice) {
 TEST_F(ArcServiceTest, NotStarted_AddRemoveDevice) {
   EXPECT_CALL(*datapath_, AddBridge(StrEq("arc_eth0"), _, _)).Times(0);
   EXPECT_CALL(*datapath_,
-              StartRoutingDevice(StrEq("eth0"), StrEq("arc_eth0"), _, _))
+              StartRoutingDevice(StrEq("eth0"), StrEq("arc_eth0"), _, _, false))
       .Times(0);
   EXPECT_CALL(*datapath_,
-              StopRoutingDevice(StrEq("eth0"), StrEq("arc_eth0"), _, _))
+              StopRoutingDevice(StrEq("eth0"), StrEq("arc_eth0"), _, _, false))
       .Times(0);
   EXPECT_CALL(*datapath_, RemoveBridge(StrEq("arc_eth0"))).Times(0);
 
@@ -275,7 +275,7 @@ TEST_F(ArcServiceTest, ContainerImpl_OnStartDevice) {
               StartForwarding(StrEq("eth0"), StrEq("arc_eth0"), _, _));
   EXPECT_CALL(*datapath_,
               StartRoutingDevice(StrEq("eth0"), StrEq("arc_eth0"),
-                                 kFirstEthGuestIP, TrafficSource::ARC));
+                                 kFirstEthGuestIP, TrafficSource::ARC, false));
 
   auto svc = NewService(GuestMessage::ARC);
   svc->Start(kTestPID);
@@ -360,7 +360,7 @@ TEST_F(ArcServiceTest, ContainerImpl_StartAfterDevice) {
               StartForwarding(StrEq("eth0"), StrEq("arc_eth0"), _, _));
   EXPECT_CALL(*datapath_,
               StartRoutingDevice(StrEq("eth0"), StrEq("arc_eth0"),
-                                 kFirstEthGuestIP, TrafficSource::ARC));
+                                 kFirstEthGuestIP, TrafficSource::ARC, false));
 
   auto svc = NewService(GuestMessage::ARC);
   svc->OnDevicesChanged({"eth0"}, {});
@@ -417,9 +417,9 @@ TEST_F(ArcServiceTest, ContainerImpl_OnStopDevice) {
   // Expectations for eth0 teardown.
   EXPECT_CALL(forwarder_,
               StopForwarding(StrEq("eth0"), StrEq("arc_eth0"), _, _));
-  EXPECT_CALL(*datapath_,
-              StopRoutingDevice(StrEq("eth0"), StrEq("arc_eth0"),
-                                Ipv4Addr(100, 115, 92, 6), TrafficSource::ARC));
+  EXPECT_CALL(*datapath_, StopRoutingDevice(StrEq("eth0"), StrEq("arc_eth0"),
+                                            Ipv4Addr(100, 115, 92, 6),
+                                            TrafficSource::ARC, false));
   EXPECT_CALL(*datapath_, RemoveBridge(StrEq("arc_eth0")));
 
   auto svc = NewService(GuestMessage::ARC);
@@ -470,7 +470,7 @@ TEST_F(ArcServiceTest, VmImpl_StartDevice) {
       .WillOnce(Return(true));
   EXPECT_CALL(*datapath_, StartRoutingDevice(StrEq("eth0"), StrEq("arc_eth0"),
                                              Ipv4Addr(100, 115, 92, 6),
-                                             TrafficSource::ARC));
+                                             TrafficSource::ARC, false));
   EXPECT_CALL(forwarder_,
               StartForwarding(StrEq("eth0"), StrEq("arc_eth0"), _, _));
 
@@ -500,7 +500,7 @@ TEST_F(ArcServiceTest, VmImpl_StartMultipleDevices) {
       .WillOnce(Return(true));
   EXPECT_CALL(*datapath_, StartRoutingDevice(StrEq("eth0"), StrEq("arc_eth0"),
                                              Ipv4Addr(100, 115, 92, 6),
-                                             TrafficSource::ARC));
+                                             TrafficSource::ARC, false));
   EXPECT_CALL(forwarder_,
               StartForwarding(StrEq("eth0"), StrEq("arc_eth0"), _, _));
   // Expectations for wlan0 setup.
@@ -510,7 +510,7 @@ TEST_F(ArcServiceTest, VmImpl_StartMultipleDevices) {
       .WillOnce(Return(true));
   EXPECT_CALL(*datapath_, StartRoutingDevice(StrEq("wlan0"), StrEq("arc_wlan0"),
                                              Ipv4Addr(100, 115, 92, 14),
-                                             TrafficSource::ARC));
+                                             TrafficSource::ARC, false));
   EXPECT_CALL(forwarder_,
               StartForwarding(StrEq("wlan0"), StrEq("arc_wlan0"), _, _));
   // Expectations for eth1 setup.
@@ -520,7 +520,7 @@ TEST_F(ArcServiceTest, VmImpl_StartMultipleDevices) {
       .WillOnce(Return(true));
   EXPECT_CALL(*datapath_, StartRoutingDevice(StrEq("eth1"), StrEq("arc_eth1"),
                                              Ipv4Addr(100, 115, 92, 10),
-                                             TrafficSource::ARC));
+                                             TrafficSource::ARC, false));
   EXPECT_CALL(forwarder_,
               StartForwarding(StrEq("eth1"), StrEq("arc_eth1"), _, _));
 
@@ -583,15 +583,15 @@ TEST_F(ArcServiceTest, VmImpl_StopDevice) {
       .WillOnce(Return(true));
   EXPECT_CALL(*datapath_, StartRoutingDevice(StrEq("eth0"), StrEq("arc_eth0"),
                                              Ipv4Addr(100, 115, 92, 6),
-                                             TrafficSource::ARC));
+                                             TrafficSource::ARC, false));
   EXPECT_CALL(forwarder_,
               StartForwarding(StrEq("eth0"), StrEq("arc_eth0"), _, _));
   // Expectations for eth0 teardown.
   EXPECT_CALL(forwarder_,
               StopForwarding(StrEq("eth0"), StrEq("arc_eth0"), _, _));
-  EXPECT_CALL(*datapath_,
-              StopRoutingDevice(StrEq("eth0"), StrEq("arc_eth0"),
-                                Ipv4Addr(100, 115, 92, 6), TrafficSource::ARC));
+  EXPECT_CALL(*datapath_, StopRoutingDevice(StrEq("eth0"), StrEq("arc_eth0"),
+                                            Ipv4Addr(100, 115, 92, 6),
+                                            TrafficSource::ARC, false));
   EXPECT_CALL(*datapath_, RemoveBridge(StrEq("arc_eth0")));
 
   auto svc = NewService(GuestMessage::ARC_VM);

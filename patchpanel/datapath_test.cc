@@ -766,16 +766,50 @@ TEST(DatapathTest, StartRoutingNamespace) {
                                ElementsAre("-A", "FORWARD", "-o", "arc_ns0",
                                            "-j", "ACCEPT", "-w"),
                                true, nullptr));
+  EXPECT_CALL(runner, iptables(StrEq("filter"),
+                               ElementsAre("-A", "FORWARD", "-i", "arc_ns0",
+                                           "-j", "ACCEPT", "-w"),
+                               true, nullptr));
   EXPECT_CALL(runner,
               iptables(StrEq("mangle"),
                        ElementsAre("-A", "PREROUTING", "-i", "arc_ns0", "-j",
                                    "MARK", "--set-mark", "1/1", "-w"),
                        true, nullptr));
+  EXPECT_CALL(runner, iptables(StrEq("mangle"),
+                               ElementsAre("-A", "PREROUTING", "-i", "arc_ns0",
+                                           "-j", "MARK", "--set-mark",
+                                           "0x00000200/0x00003f00", "-w"),
+                               true, nullptr));
+  EXPECT_CALL(runner, iptables(StrEq("mangle"),
+                               ElementsAre("-A", "PREROUTING", "-i", "arc_ns0",
+                                           "-j", "CONNMARK", "--restore-mark",
+                                           "--mask", "0xffff0000", "-w"),
+                               true, nullptr));
+  EXPECT_CALL(runner, ip6tables(StrEq("mangle"),
+                                ElementsAre("-A", "PREROUTING", "-i", "arc_ns0",
+                                            "-j", "MARK", "--set-mark",
+                                            "0x00000200/0x00003f00", "-w"),
+                                true, nullptr));
+  EXPECT_CALL(runner, ip6tables(StrEq("mangle"),
+                                ElementsAre("-A", "PREROUTING", "-i", "arc_ns0",
+                                            "-j", "CONNMARK", "--restore-mark",
+                                            "--mask", "0xffff0000", "-w"),
+                                true, nullptr));
+  EXPECT_CALL(runner, iptables(StrEq("mangle"),
+                               ElementsAre("-A", "PREROUTING", "-i", "arc_ns0",
+                                           "-j", "apply_vpn_mark", "-w"),
+                               true, nullptr));
+  EXPECT_CALL(runner, ip6tables(StrEq("mangle"),
+                                ElementsAre("-A", "PREROUTING", "-i", "arc_ns0",
+                                            "-j", "apply_vpn_mark", "-w"),
+                                true, nullptr));
 
   ConnectedNamespace nsinfo = {};
   nsinfo.pid = kTestPID;
   nsinfo.netns_name = "netns_foo";
+  nsinfo.source = TrafficSource::USER;
   nsinfo.outbound_ifname = "";
+  nsinfo.route_on_vpn = true;
   nsinfo.host_ifname = "arc_ns0";
   nsinfo.peer_ifname = "veth0";
   nsinfo.peer_subnet = std::make_unique<Subnet>(Ipv4Addr(100, 115, 92, 128), 30,
@@ -795,11 +829,43 @@ TEST(DatapathTest, StopRoutingNamespace) {
                                ElementsAre("-D", "FORWARD", "-o", "arc_ns0",
                                            "-j", "ACCEPT", "-w"),
                                true, nullptr));
+  EXPECT_CALL(runner, iptables(StrEq("filter"),
+                               ElementsAre("-D", "FORWARD", "-i", "arc_ns0",
+                                           "-j", "ACCEPT", "-w"),
+                               true, nullptr));
   EXPECT_CALL(runner,
               iptables(StrEq("mangle"),
                        ElementsAre("-D", "PREROUTING", "-i", "arc_ns0", "-j",
                                    "MARK", "--set-mark", "1/1", "-w"),
                        true, nullptr));
+  EXPECT_CALL(runner, iptables(StrEq("mangle"),
+                               ElementsAre("-D", "PREROUTING", "-i", "arc_ns0",
+                                           "-j", "MARK", "--set-mark",
+                                           "0x00000200/0x00003f00", "-w"),
+                               true, nullptr));
+  EXPECT_CALL(runner, iptables(StrEq("mangle"),
+                               ElementsAre("-D", "PREROUTING", "-i", "arc_ns0",
+                                           "-j", "CONNMARK", "--restore-mark",
+                                           "--mask", "0xffff0000", "-w"),
+                               true, nullptr));
+  EXPECT_CALL(runner, ip6tables(StrEq("mangle"),
+                                ElementsAre("-D", "PREROUTING", "-i", "arc_ns0",
+                                            "-j", "MARK", "--set-mark",
+                                            "0x00000200/0x00003f00", "-w"),
+                                true, nullptr));
+  EXPECT_CALL(runner, ip6tables(StrEq("mangle"),
+                                ElementsAre("-D", "PREROUTING", "-i", "arc_ns0",
+                                            "-j", "CONNMARK", "--restore-mark",
+                                            "--mask", "0xffff0000", "-w"),
+                                true, nullptr));
+  EXPECT_CALL(runner, iptables(StrEq("mangle"),
+                               ElementsAre("-D", "PREROUTING", "-i", "arc_ns0",
+                                           "-j", "apply_vpn_mark", "-w"),
+                               true, nullptr));
+  EXPECT_CALL(runner, ip6tables(StrEq("mangle"),
+                                ElementsAre("-D", "PREROUTING", "-i", "arc_ns0",
+                                            "-j", "apply_vpn_mark", "-w"),
+                                true, nullptr));
   EXPECT_CALL(runner, ip_netns_delete(StrEq("netns_foo"), true));
   EXPECT_CALL(runner, ip(StrEq("link"), StrEq("delete"), ElementsAre("arc_ns0"),
                          false));
@@ -807,7 +873,9 @@ TEST(DatapathTest, StopRoutingNamespace) {
   ConnectedNamespace nsinfo = {};
   nsinfo.pid = kTestPID;
   nsinfo.netns_name = "netns_foo";
+  nsinfo.source = TrafficSource::USER;
   nsinfo.outbound_ifname = "";
+  nsinfo.route_on_vpn = true;
   nsinfo.host_ifname = "arc_ns0";
   nsinfo.peer_ifname = "veth0";
   nsinfo.peer_subnet = std::make_unique<Subnet>(Ipv4Addr(100, 115, 92, 128), 30,
@@ -868,7 +936,7 @@ TEST(DatapathTest, StartRoutingDevice_Arc) {
   Datapath datapath(&runner, &firewall);
   datapath.SetIfnameIndex("eth0", 2);
   datapath.StartRoutingDevice("eth0", "arc_eth0", Ipv4Addr(1, 2, 3, 4),
-                              TrafficSource::ARC);
+                              TrafficSource::ARC, false);
 }
 
 TEST(DatapathTest, StartRoutingDevice_CrosVM) {
@@ -913,7 +981,7 @@ TEST(DatapathTest, StartRoutingDevice_CrosVM) {
 
   Datapath datapath(&runner, &firewall);
   datapath.StartRoutingDevice("", "vmtap0", Ipv4Addr(1, 2, 3, 4),
-                              TrafficSource::CROSVM);
+                              TrafficSource::CROSVM, true);
 }
 
 TEST(DatapathTest, StopRoutingDevice_Arc) {
@@ -968,7 +1036,7 @@ TEST(DatapathTest, StopRoutingDevice_Arc) {
   Datapath datapath(&runner, &firewall);
   datapath.SetIfnameIndex("eth0", 2);
   datapath.StopRoutingDevice("eth0", "arc_eth0", Ipv4Addr(1, 2, 3, 4),
-                             TrafficSource::ARC);
+                             TrafficSource::ARC, true);
 }
 
 TEST(DatapathTest, StopRoutingDevice_CrosVM) {
@@ -1013,7 +1081,7 @@ TEST(DatapathTest, StopRoutingDevice_CrosVM) {
 
   Datapath datapath(&runner, &firewall);
   datapath.StopRoutingDevice("", "vmtap0", Ipv4Addr(1, 2, 3, 4),
-                             TrafficSource::CROSVM);
+                             TrafficSource::CROSVM, true);
 }
 
 TEST(DatapathTest, StartStopIpForwarding) {
