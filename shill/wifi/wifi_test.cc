@@ -3466,16 +3466,18 @@ TEST_F(WiFiMainTest, EAPEvent) {
   ReportEAPEvent(kEAPStatus, kEAPParameter);
 }
 
-TEST_F(WiFiMainTest, EAPRekey) {
+TEST_F(WiFiMainTest, RekeyDoesNotTriggerStateChange) {
   StartWiFi();
   MockWiFiServiceRefPtr service =
       SetupConnectedService(RpcIdentifier(""), nullptr, nullptr);
   EXPECT_CALL(*service, IsConnected(nullptr)).WillRepeatedly(Return(true));
   EXPECT_CALL(*service, SetState(_)).Times(0);
-  ReportEAPEvent(WPASupplicant::kEAPStatusStarted, string());
-  ASSERT_TRUE(GetIsRekeyInProgress());
   ReportStateChanged(WPASupplicant::kInterfaceState4WayHandshake);
+  ASSERT_TRUE(GetIsRekeyInProgress());
+  ReportStateChanged(WPASupplicant::kInterfaceStateGroupHandshake);
+  ASSERT_TRUE(GetIsRekeyInProgress());
   ReportStateChanged(WPASupplicant::kInterfaceStateCompleted);
+  ASSERT_FALSE(GetIsRekeyInProgress());
   Mock::VerifyAndClearExpectations(service.get());
 }
 

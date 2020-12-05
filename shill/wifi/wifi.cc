@@ -1206,11 +1206,6 @@ void WiFi::HandleRoam(const RpcIdentifier& new_bss) {
   // event so we can refresh our IPConfig if it succeeds.
   is_roaming_in_progress_ = true;
 
-  // If we're roaming, we're definitely not re-keying. Reset this in case EAP
-  // started before we received the BSS update (this may or may not actually be
-  // possible).
-  is_rekey_in_progress_ = false;
-
   return;
 }
 
@@ -1602,11 +1597,6 @@ void WiFi::EAPEventTask(const string& status, const string& parameter) {
                << " with no current service.";
     return;
   }
-  if (status == WPASupplicant::kEAPStatusStarted &&
-      current_service_->IsConnected() && !is_roaming_in_progress_) {
-    is_rekey_in_progress_ = true;
-    return;
-  }
   Service::ConnectFailure failure = Service::kFailureNone;
   eap_state_handler_->ParseStatus(status, parameter, &failure);
   if (failure == Service::kFailurePinMissing) {
@@ -1958,7 +1948,15 @@ void WiFi::StateChanged(const string& new_state) {
     // Ignore transitions into these states when roaming is in progress, to
     // avoid bothering the user when roaming, or re-keying.
     if (!is_roaming_in_progress_ && !is_rekey_in_progress_) {
-      affected_service->SetState(Service::kStateAssociating);
+      // Shill gets EAP events when a re-key happens in an 802.1X network, but
+      // nothing when it happens in a PSK network. Unless roaming is in
+      // progress, we assume supplicant state transitions from completed to an
+      // auth/assoc state are a result of a re-key.
+      if (old_state == WPASupplicant::kInterfaceStateCompleted) {
+        is_rekey_in_progress_ = true;
+      } else {
+        affected_service->SetState(Service::kStateAssociating);
+      }
     }
     // TODO(quiche): On backwards transitions, we should probably set
     // a timeout for getting back into the completed state. At present,
