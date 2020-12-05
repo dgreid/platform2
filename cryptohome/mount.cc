@@ -452,6 +452,8 @@ bool Mount::MountCryptohome(const std::string& username,
 
   cryptohome::ReportTimerStop(cryptohome::kPerformMountTimer);
 
+  // TODO(chromium:1147601): Move this into user_session.cc and add unittests
+  // when service.cc is gone.
   PrepareWebAuthnSecret(obfuscated_username, file_system_keys.fek(),
                         file_system_keys.fnek());
 
