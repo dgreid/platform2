@@ -1582,7 +1582,7 @@ int main(int argc, char** argv) {
         if (file_name.value() != cryptohome::kKeyFile)
           continue;
         brillo::Blob contents;
-        if (platform.ReadFile(next_path, &contents)) {
+        if (!platform.ReadFile(next_path, &contents)) {
           LOG(ERROR) << "Couldn't load keyset: " << next_path.value();
           continue;
         }
