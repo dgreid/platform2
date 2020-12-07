@@ -21,9 +21,16 @@ See [Typography conventions] to understand what `(outside)`, `(inside)`,
     (inside) $ cros deploy $DUT fingerprint_study
     ```
 
-2.  Reboot the device.
+2.  Configure `FINGER_COUNT`, `ENROLLMENT_COUNT`, and `VERIFICATION_COUNT` in
+    [/etc/init/fingerprint_study.conf](init/fingerprint_study.conf) with the
+    proper fingerprint study parameters.
 
-3.  Navigate to http://127.0.0.1:9000 in a web browser.
+3.  Reboot the device.
+
+4.  Navigate to http://127.0.0.1:9000 in a web browser.
+
+5.  Output fingerprint captures are stored by default in `/var/lib/fingers`. See
+    [/etc/init/fingerprint_study.conf](init/fingerprint_study.conf).
 
 ## Test on Host Using Mock ectool
 
