@@ -40,6 +40,56 @@ Client::Device::Type ParseDeviceType(const std::string& type_str) {
   return it != str2enum.end() ? it->second : Client::Device::Type::kUnknown;
 }
 
+Client::Device::ConnectionState ParseConnectionState(const std::string& s) {
+  static const std::map<std::string, Client::Device::ConnectionState> m{
+      {shill::kStateIdle, Client::Device::ConnectionState::kIdle},
+      {shill::kStateCarrier, Client::Device::ConnectionState::kCarrier},
+      {shill::kStateAssociation, Client::Device::ConnectionState::kAssociation},
+      {shill::kStateConfiguration,
+       Client::Device::ConnectionState::kConfiguration},
+      {shill::kStateReady, Client::Device::ConnectionState::kReady},
+      {shill::kStateNoConnectivity,
+       Client::Device::ConnectionState::kNoConnectivity},
+      {shill::kStateRedirectFound,
+       Client::Device::ConnectionState::kRedirectFound},
+      {shill::kStatePortalSuspected,
+       Client::Device::ConnectionState::kPortalSuspected},
+      {shill::kStateOnline, Client::Device::ConnectionState::kOnline},
+      {shill::kStateOffline, Client::Device::ConnectionState::kOffline},
+      {shill::kStateFailure, Client::Device::ConnectionState::kFailure},
+      {shill::kStateDisconnect, Client::Device::ConnectionState::kDisconnect},
+      {shill::kStateActivationFailure,
+       Client::Device::ConnectionState::kActivationFailure},
+  };
+  const auto it = m.find(s);
+  return it != m.end() ? it->second : Client::Device::ConnectionState::kUnknown;
+}
+
+const char* ToString(Client::Device::ConnectionState state) {
+  static const std::map<Client::Device::ConnectionState, const char*> m{
+      {Client::Device::ConnectionState::kIdle, shill::kStateIdle},
+      {Client::Device::ConnectionState::kCarrier, shill::kStateCarrier},
+      {Client::Device::ConnectionState::kAssociation, shill::kStateAssociation},
+      {Client::Device::ConnectionState::kConfiguration,
+       shill::kStateConfiguration},
+      {Client::Device::ConnectionState::kReady, shill::kStateReady},
+      {Client::Device::ConnectionState::kNoConnectivity,
+       shill::kStateNoConnectivity},
+      {Client::Device::ConnectionState::kRedirectFound,
+       shill::kStateRedirectFound},
+      {Client::Device::ConnectionState::kPortalSuspected,
+       shill::kStatePortalSuspected},
+      {Client::Device::ConnectionState::kOnline, shill::kStateOnline},
+      {Client::Device::ConnectionState::kOffline, shill::kStateOffline},
+      {Client::Device::ConnectionState::kFailure, shill::kStateFailure},
+      {Client::Device::ConnectionState::kDisconnect, shill::kStateDisconnect},
+      {Client::Device::ConnectionState::kActivationFailure,
+       shill::kStateActivationFailure},
+  };
+  const auto it = m.find(state);
+  return it != m.end() ? it->second : "unknown";
+}
+
 }  // namespace
 
 Client::Client(scoped_refptr<dbus::Bus> bus) : bus_(bus) {}
@@ -109,6 +159,29 @@ void Client::SetupDeviceProxy(const dbus::ObjectPath& device_path) {
       base::Bind(&Client::OnDevicePropertyChange, weak_factory_.GetWeakPtr(),
                  false /*device_added*/, device_path.value()),
       base::Bind(&Client::OnDevicePropertyChangeRegistration,
+                 weak_factory_.GetWeakPtr(), device_path.value()));
+}
+
+std::unique_ptr<ServiceProxyInterface> Client::NewServiceProxy(
+    const dbus::ObjectPath& service_path) {
+  return std::make_unique<ServiceProxy>(bus_, service_path);
+}
+
+void Client::SetupSelectedServiceProxy(const dbus::ObjectPath& service_path,
+                                       const dbus::ObjectPath& device_path) {
+  const auto it = devices_.find(device_path.value());
+  if (it == devices_.end()) {
+    LOG(DFATAL) << "Cannot find device [" << device_path.value() << "]";
+    return;
+  }
+
+  auto proxy = NewServiceProxy(service_path);
+  auto* ptr = proxy.get();
+  it->second->set_service_proxy(std::move(proxy));
+  ptr->RegisterPropertyChangedSignalHandler(
+      base::Bind(&Client::OnServicePropertyChange, weak_factory_.GetWeakPtr(),
+                 device_path.value()),
+      base::Bind(&Client::OnServicePropertyChangeRegistration,
                  weak_factory_.GetWeakPtr(), device_path.value()));
 }
 
@@ -379,6 +452,14 @@ void Client::OnDevicePropertyChangeRegistration(const std::string& device_path,
     LOG(ERROR) << "Device [" << device_path << "] has no interface";
     return;
   }
+
+  // Obtain and monitor properties on this device's selected service and treat
+  // them as if they are instrinsically characteristic of the device itself.
+  const auto service_path = brillo::GetVariantValueOrDefault<dbus::ObjectPath>(
+      properties, kSelectedServiceProperty);
+  LOG(INFO) << "New device - doing selected svc";
+  HandleSelectedServiceChanged(device_path, service_path);
+
   // Set |device_added| to true here so it invokes the corresponding handler, if
   // applicable - this will occur only once (per device).
   OnDevicePropertyChange(
@@ -391,17 +472,23 @@ void Client::OnDevicePropertyChange(bool device_added,
                                     const std::string& device_path,
                                     const std::string& property_name,
                                     const brillo::Any& property_value) {
-  if (property_name != kIPConfigsProperty)
-    return;
-
-  auto it = devices_.find(device_path);
-  if (it == devices_.end()) {
-    LOG(ERROR) << "Device [" << device_path << "] not found";
+  Device* device = nullptr;
+  if (property_name == kIPConfigsProperty) {
+    auto it = devices_.find(device_path);
+    if (it == devices_.end()) {
+      LOG(ERROR) << "Device [" << device_path << "] not found";
+      return;
+    }
+    device = it->second->device();
+    device->ipconfig = ParseIPConfigsProperty(device_path, property_value);
+  } else if (property_name == kSelectedServiceProperty) {
+    LOG(INFO) << "Selected svc prop change";
+    device = HandleSelectedServiceChanged(device_path, property_value);
+    if (!device)
+      return;
+  } else {
     return;
   }
-
-  auto* device = it->second->device();
-  device->ipconfig = ParseIPConfigsProperty(device_path, property_value);
 
   // |device_added| will only be true if this method is called from the
   // registration callback, which in turn will only ever be called once per
@@ -423,6 +510,37 @@ void Client::OnDevicePropertyChange(bool device_added,
   for (auto& handler : device_handlers_) {
     handler.Run(device);
   }
+}
+
+Client::Device* Client::HandleSelectedServiceChanged(
+    const std::string& device_path, const brillo::Any& property_value) {
+  auto it = devices_.find(device_path);
+  if (it == devices_.end()) {
+    LOG(ERROR) << "Device [" << device_path << "] not found";
+    return nullptr;
+  }
+  auto* device = it->second->device();
+
+  auto service_path = property_value.TryGet<dbus::ObjectPath>();
+  SetupSelectedServiceProxy(service_path, dbus::ObjectPath(device_path));
+  brillo::VariantDictionary properties;
+  if (auto* proxy = it->second->service_proxy()) {
+    if (!proxy->GetProperties(&properties, nullptr))
+      LOG(ERROR) << "Unable to get properties for device service ["
+                 << service_path.value() << "]";
+  } else {
+    LOG(DFATAL) << "Device [" << device_path
+                << "] has no selected service proxy";
+  }
+
+  device->state =
+      ParseConnectionState(brillo::GetVariantValueOrDefault<std::string>(
+          properties, kStateProperty));
+  if (device->state == Device::ConnectionState::kUnknown)
+    LOG(ERROR) << "Device [" << device_path << "] connection state for ["
+               << service_path.value() << "] is unknown";
+
+  return device;
 }
 
 Client::IPConfig Client::ParseIPConfigsProperty(
@@ -538,6 +656,73 @@ Client::IPConfig Client::ParseIPConfigsProperty(
   reset_proxy(dbus::ObjectPath());
 
   return ipconfig;
+}
+void Client::OnServicePropertyChangeRegistration(const std::string& device_path,
+                                                 const std::string& interface,
+                                                 const std::string& signal_name,
+                                                 bool success) {
+  if (!success) {
+    LOG(ERROR) << "Unable to register for Device [" << device_path
+               << "] connected service change events "
+               << " for " << signal_name << " on " << interface;
+    return;
+  }
+
+  // This is OK for now since this signal handler is only used for device
+  // connected services. If this changes in the future, then we need to
+  // accommodate device_path being empty.
+  const auto it = devices_.find(device_path);
+  if (it == devices_.end()) {
+    LOG(ERROR) << "Cannot find device [" << device_path << "]";
+    return;
+  }
+
+  // This should really exist at this point...
+  auto* service_proxy = it->second->service_proxy();
+  if (!service_proxy) {
+    LOG(DFATAL) << "Missing service proxy for device [" << device_path << "]";
+    return;
+  }
+
+  brillo::VariantDictionary properties;
+  if (!service_proxy->GetProperties(&properties, nullptr)) {
+    LOG(ERROR) << "Unable to get connected service properties for device ["
+               << device_path << "]";
+    return;
+  }
+
+  OnServicePropertyChange(device_path, kStateProperty,
+                          brillo::GetVariantValueOrDefault<std::string>(
+                              properties, kStateProperty));
+}
+
+void Client::OnServicePropertyChange(const std::string& device_path,
+                                     const std::string& property_name,
+                                     const brillo::Any& property_value) {
+  if (property_name != kStateProperty)
+    return;
+
+  const auto it = devices_.find(device_path);
+  if (it == devices_.end()) {
+    LOG(ERROR) << "Cannot find device [" << device_path << "]";
+    return;
+  }
+
+  auto* device = it->second->device();
+  const auto state = ParseConnectionState(property_value.TryGet<std::string>());
+  if (device->state == state)
+    return;
+
+  LOG(INFO) << "Device [" << device_path << "] connection state changed from ["
+            << ToString(device->state) << "] to [" << ToString(state) << "]";
+  device->state = state;
+
+  for (auto& handler : device_handlers_)
+    handler.Run(device);
+
+  if (device_path == default_device_path_)
+    for (auto& handler : default_device_handlers_)
+      handler.Run(device);
 }
 
 }  // namespace shill

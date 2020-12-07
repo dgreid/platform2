@@ -82,12 +82,31 @@ class BRILLO_EXPORT Client {
       kWifi,
     };
 
+    // From shill::ConnectState.
+    enum class ConnectionState {
+      kUnknown,
+      kIdle,
+      kCarrier,
+      kAssociation,
+      kConfiguration,
+      kReady,
+      kNoConnectivity,
+      kRedirectFound,
+      kPortalSuspected,
+      kOnline,
+      kOffline,
+      kFailure,
+      kDisconnect,
+      kActivationFailure,
+    };
+
     bool operator==(const Device& that) {
       return this->type == that.type && this->ifname == that.ifname &&
              this->ipconfig == that.ipconfig;
     }
 
     Type type;
+    ConnectionState state;
     std::string ifname;
     IPConfig ipconfig;
   };
@@ -122,9 +141,10 @@ class BRILLO_EXPORT Client {
   // Multiple handlers may be registered.
   void RegisterDefaultDeviceChangedHandler(const DeviceChangedHandler& handler);
 
-  // |handler| will be invoked whenever there is a change to a tracked property
-  // within the configuration of a device; currently only IPConfig properties
-  // are tracked.
+  // |handler| will be invoked whenever there is a change to tracked properties
+  // which currently include:
+  // * The device's IPConfigs,
+  // * The state of the device's connected service.
   // Multiple handlers may be registered.
   void RegisterDeviceChangedHandler(const DeviceChangedHandler& handler);
 
@@ -169,6 +189,15 @@ class BRILLO_EXPORT Client {
                               const std::string& property_name,
                               const brillo::Any& property_value);
 
+  // This callback is invoked whenever a service property change signal is
+  // received for a service that is connected to a particular device. In this
+  // case |device_path| will be non-empty. Note that if the service in question
+  // is also the default service, this handler will be called as well as the
+  // default service change handler.
+  void OnServicePropertyChange(const std::string& device_path,
+                               const std::string& property_name,
+                               const brillo::Any& property_value);
+
   // Methods for managing proxy objects. These are overridden in tests to ensure
   // registration hooks, callbacks and properties can be plumbed back through
   // the interfaces as needed.
@@ -178,6 +207,8 @@ class BRILLO_EXPORT Client {
   virtual void ReleaseDefaultServiceProxy();
   virtual std::unique_ptr<org::chromium::flimflam::DeviceProxyInterface>
   NewDeviceProxy(const dbus::ObjectPath& device_path);
+  virtual std::unique_ptr<org::chromium::flimflam::ServiceProxyInterface>
+  NewServiceProxy(const dbus::ObjectPath& service_path);
 
   std::unique_ptr<org::chromium::flimflam::ManagerProxyInterface>
       manager_proxy_;
@@ -193,6 +224,10 @@ class BRILLO_EXPORT Client {
   // This callback is invoked whenever the (physical) device list provided by
   // shill changes.
   void HandleDevicesChanged(const brillo::Any& property_value);
+
+  // Invoked whenever a device's selected service changes.
+  Device* HandleSelectedServiceChanged(const std::string& device_path,
+                                       const brillo::Any& property_value);
 
   // This callback is invoked whenever a new manager proxy is created. It will
   // trigger the discovery of the default service.
@@ -216,8 +251,18 @@ class BRILLO_EXPORT Client {
                                           const std::string& signal_name,
                                           bool success);
 
+  // This callback is invoked whenever a new selected service proxy is created.
+  // It will trigger the discovery of service properties we care about including
+  // the connected state.
+  void OnServicePropertyChangeRegistration(const std::string& device_path,
+                                           const std::string& interface,
+                                           const std::string& signal_name,
+                                           bool success);
+
   void SetupManagerProxy();
   void SetupDefaultServiceProxy(const dbus::ObjectPath& service_path);
+  void SetupSelectedServiceProxy(const dbus::ObjectPath& service_path,
+                                 const dbus::ObjectPath& device_path);
   void SetupDeviceProxy(const dbus::ObjectPath& device_path);
 
   // Wraps a device with its DBus proxy on which property change signals are
@@ -231,6 +276,9 @@ class BRILLO_EXPORT Client {
     ~DeviceWrapper() {
       bus_->RemoveObjectProxy(kFlimflamServiceName, proxy_->GetObjectPath(),
                               base::DoNothing());
+      if (svc_proxy_)
+        bus_->RemoveObjectProxy(kFlimflamServiceName,
+                                svc_proxy_->GetObjectPath(), base::DoNothing());
     }
     DeviceWrapper(const DeviceWrapper&) = delete;
     DeviceWrapper& operator=(const DeviceWrapper&) = delete;
@@ -239,11 +287,21 @@ class BRILLO_EXPORT Client {
     org::chromium::flimflam::DeviceProxyInterface* proxy() {
       return proxy_.get();
     }
+    void set_service_proxy(
+        std::unique_ptr<org::chromium::flimflam::ServiceProxyInterface> proxy) {
+      // Note - expect this to be called once - if that ever changes, call
+      // RemoveObjectProxy first.
+      svc_proxy_ = std::move(proxy);
+    }
+    org::chromium::flimflam::ServiceProxyInterface* service_proxy() {
+      return svc_proxy_.get();
+    }
 
    private:
     scoped_refptr<dbus::Bus> bus_;
     Device device_;
     std::unique_ptr<org::chromium::flimflam::DeviceProxyInterface> proxy_;
+    std::unique_ptr<org::chromium::flimflam::ServiceProxyInterface> svc_proxy_;
   };
 
   void AddDevice(const dbus::ObjectPath& path);
