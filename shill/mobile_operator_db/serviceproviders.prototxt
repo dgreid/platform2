@@ -4511,6 +4511,26 @@ mno {
       }
     }
   }
+  mvno {
+    mvno_filter {
+      type : ICCID
+      regex : "8981090[0-9]+"
+    }
+    mvno_filter {
+      type : MCCMNC
+      regex : "20801"
+    }
+    data {
+      uuid : "e2a459cb-1e35-4228-91aa-14561c855a1f"
+      localized_name {
+        name : "楽天(rakuten.jp)"
+      }
+      mobile_apn {
+        apn : "rakuten.jp"
+        is_attach_apn : true
+      }
+    }
+  }
 }
 
 mno {
