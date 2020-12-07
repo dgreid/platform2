@@ -1699,6 +1699,7 @@ impl Methods {
         user_id_hash: &str,
         features: VmFeatures,
         user_disks: UserDisks,
+        start_lxd: bool,
     ) -> Result<(), Box<dyn Error>> {
         self.notify_vm_starting()?;
         self.start_vm_infrastructure(user_id_hash)?;
@@ -1719,7 +1720,10 @@ impl Methods {
 
             let disk_image_path = self.create_disk_image(name, user_id_hash)?;
             self.start_vm_with_disk(name, user_id_hash, features, disk_image_path, user_disks)?;
-            self.start_lxd(name, user_id_hash)
+            if start_lxd {
+                self.start_lxd(name, user_id_hash)?;
+            }
+            Ok(())
         }
     }
 

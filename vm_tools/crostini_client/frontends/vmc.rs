@@ -212,6 +212,11 @@ impl<'a, 'b, 'c> Command<'a, 'b, 'c> {
             "path to a custom rootfs image. Only valid on untrusted VMs.",
             "PATH",
         );
+        opts.optflag(
+            "",
+            "no-start-lxd",
+            "Don't start LXD (the container manager)",
+        );
 
         let matches = opts.parse(self.args)?;
 
@@ -235,9 +240,13 @@ impl<'a, 'b, 'c> Command<'a, 'b, 'c> {
         };
 
         self.metrics_send_sample("Vm.VmcStart");
-        try_command!(self
-            .methods
-            .vm_start(vm_name, &user_id_hash, features, user_disks));
+        try_command!(self.methods.vm_start(
+            vm_name,
+            &user_id_hash,
+            features,
+            user_disks,
+            !matches.opt_present("no-start-lxd"),
+        ));
         self.metrics_send_sample("Vm.VmcStartSuccess");
         try_command!(self.methods.vsh_exec(vm_name, &user_id_hash));
 
@@ -903,6 +912,7 @@ mod tests {
                 "--enable-audio-capture",
                 "--enable-gpu",
             ],
+            &["vmc", "start", "termina", "--no-start-lxd"],
             &["vmc", "stop", "termina"],
             &["vmc", "create", "termina"],
             &["vmc", "create", "-p", "termina"],
