@@ -13,7 +13,6 @@
 #include <brillo/process/process_reaper.h>
 
 #include "cros-disks/drivefs_helper.h"
-#include "cros-disks/fuse_helper.h"
 #include "cros-disks/fuse_mounter.h"
 #include "cros-disks/platform.h"
 #include "cros-disks/quote.h"
@@ -87,20 +86,7 @@ std::unique_ptr<MountPoint> FUSEMountManager::DoMount(
     return nullptr;
   }
 
-  // Make a temporary dir where the helper may keep stuff needed by the mounter
-  // process.
-  std::string path;
-  if (!platform()->CreateTemporaryDirInDir(working_dirs_root_, ".", &path) ||
-      !platform()->SetPermissions(path, 0755)) {
-    LOG(ERROR) << "Cannot create working directory for FUSE module mounting "
-               << quote(source);
-    *error = MOUNT_ERROR_DIRECTORY_CREATION_FAILED;
-    return nullptr;
-  }
-
-  auto mountpoint =
-      FUSEHelper::MountWithDir(*selected_helper, base::FilePath(path), source,
-                               mount_path, options, error);
+  auto mountpoint = selected_helper->Mount(source, mount_path, options, error);
   LOG_IF(ERROR, *error != MOUNT_ERROR_NONE)
       << "Mounting failed for source " << quote(source) << ": " << *error;
   return mountpoint;

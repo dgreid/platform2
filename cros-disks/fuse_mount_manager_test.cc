@@ -15,7 +15,6 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "cros-disks/fuse_helper.h"
 #include "cros-disks/fuse_mounter.h"
 #include "cros-disks/metrics.h"
 #include "cros-disks/mount_options.h"
@@ -70,26 +69,21 @@ class MockPlatform : public Platform {
               (const, override));
 };
 
-// Mock implementation of FUSEHelper.
-class MockHelper : public FUSEHelper {
+// Mock implementation of a Mounter.
+class MockMounter : public Mounter {
  public:
-  MockHelper(const std::string& tag,
-             const Platform* platform,
-             brillo::ProcessReaper* process_reaper)
-      : FUSEHelper(tag,
-                   platform,
-                   process_reaper,
-                   base::FilePath("/sbin/" + tag),
-                   "fuse-" + tag) {}
-
-  MOCK_METHOD(bool, CanMount, (const Uri&), (const, override));
-  MOCK_METHOD(std::string, GetTargetSuffix, (const Uri&), (const, override));
-  MOCK_METHOD(std::unique_ptr<FUSEMounter>,
-              CreateMounter,
-              (const base::FilePath&,
-               const Uri&,
-               const base::FilePath&,
-               const std::vector<std::string>&),
+  MOCK_METHOD(std::unique_ptr<MountPoint>,
+              Mount,
+              (const std::string& source,
+               const base::FilePath& target_path,
+               std::vector<std::string> params,
+               MountErrorType* error),
+              (const, override));
+  MOCK_METHOD(bool,
+              CanMount,
+              (const std::string& source,
+               const std::vector<std::string>& params,
+               base::FilePath* suggested_dir_name),
               (const, override));
 };
 
@@ -103,24 +97,6 @@ class MockSandboxedProcess : public SandboxedProcess {
   MOCK_METHOD(int, WaitNonBlockingImpl, (), (override));
 };
 
-class MockMounter : public FUSEMounterLegacy {
- public:
-  MockMounter(const Platform* platform, brillo::ProcessReaper* process_reaper)
-      : FUSEMounterLegacy({.filesystem_type = "fuse",
-                           .mount_program = "/bin/sh",
-                           .mount_user = "root",
-                           .platform = platform,
-                           .process_reaper = process_reaper}) {}
-
-  MOCK_METHOD(std::unique_ptr<SandboxedProcess>,
-              PrepareSandbox,
-              (const std::string&,
-               const base::FilePath&,
-               std::vector<std::string>,
-               MountErrorType*),
-              (const, override));
-};
-
 }  // namespace
 
 class FUSEMountManagerTest : public ::testing::Test {
@@ -131,16 +107,16 @@ class FUSEMountManagerTest : public ::testing::Test {
                  &platform_,
                  &metrics_,
                  &process_reaper_),
-        foo_(new MockHelper("foo", &platform_, &process_reaper_)),
-        bar_(new MockHelper("bar", &platform_, &process_reaper_)),
-        baz_(new MockHelper("baz", &platform_, &process_reaper_)) {
+        foo_(new MockMounter()),
+        bar_(new MockMounter()),
+        baz_(new MockMounter()) {
     ON_CALL(platform_, Unmount(_, _))
         .WillByDefault(Return(MOUNT_ERROR_INVALID_ARGUMENT));
     ON_CALL(platform_, DirectoryExists(_)).WillByDefault(Return(true));
   }
 
  protected:
-  void RegisterHelper(std::unique_ptr<FUSEHelper> helper) {
+  void RegisterHelper(std::unique_ptr<Mounter> helper) {
     manager_.RegisterHelper(std::move(helper));
   }
 
@@ -162,9 +138,9 @@ class FUSEMountManagerTest : public ::testing::Test {
   MockPlatform platform_;
   brillo::ProcessReaper process_reaper_;
   FUSEMountManager manager_;
-  std::unique_ptr<MockHelper> foo_;
-  std::unique_ptr<MockHelper> bar_;
-  std::unique_ptr<MockHelper> baz_;
+  std::unique_ptr<MockMounter> foo_;
+  std::unique_ptr<MockMounter> bar_;
+  std::unique_ptr<MockMounter> baz_;
 };
 
 // Verifies that CanMount returns false when there are no handlers registered.
@@ -174,9 +150,9 @@ TEST_F(FUSEMountManagerTest, CanMount_NoHandlers) {
 
 // Verifies that CanMount returns false when known helpers can't handle that.
 TEST_F(FUSEMountManagerTest, CanMount_NotHandled) {
-  EXPECT_CALL(*foo_, CanMount(_)).WillOnce(Return(false));
-  EXPECT_CALL(*bar_, CanMount(_)).WillOnce(Return(false));
-  EXPECT_CALL(*baz_, CanMount(_)).WillOnce(Return(false));
+  EXPECT_CALL(*foo_, CanMount).WillOnce(Return(false));
+  EXPECT_CALL(*bar_, CanMount).WillOnce(Return(false));
+  EXPECT_CALL(*baz_, CanMount).WillOnce(Return(false));
   RegisterHelper(std::move(foo_));
   RegisterHelper(std::move(bar_));
   RegisterHelper(std::move(baz_));
@@ -186,9 +162,9 @@ TEST_F(FUSEMountManagerTest, CanMount_NotHandled) {
 // Verify that CanMount returns true when there is a helper that can handle
 // this source.
 TEST_F(FUSEMountManagerTest, CanMount) {
-  EXPECT_CALL(*foo_, CanMount(_)).WillOnce(Return(false));
-  EXPECT_CALL(*bar_, CanMount(_)).WillOnce(Return(true));
-  EXPECT_CALL(*baz_, CanMount(_)).Times(0);
+  EXPECT_CALL(*foo_, CanMount).WillOnce(Return(false));
+  EXPECT_CALL(*bar_, CanMount).WillOnce(Return(true));
+  EXPECT_CALL(*baz_, CanMount).Times(0);
   RegisterHelper(std::move(foo_));
   RegisterHelper(std::move(bar_));
   RegisterHelper(std::move(baz_));
@@ -197,19 +173,18 @@ TEST_F(FUSEMountManagerTest, CanMount) {
 
 // Verify that SuggestMountPath dispatches query for name to the correct helper.
 TEST_F(FUSEMountManagerTest, SuggestMountPath) {
-  EXPECT_CALL(*foo_, CanMount(_)).WillOnce(Return(false));
-  EXPECT_CALL(*foo_, GetTargetSuffix(_)).Times(0);
-  EXPECT_CALL(*bar_, CanMount(_)).WillOnce(Return(true));
-  EXPECT_CALL(*bar_, GetTargetSuffix(kSomeSource)).WillOnce(Return("suffix"));
-  EXPECT_CALL(*baz_, CanMount(_)).Times(0);
-  EXPECT_CALL(*baz_, GetTargetSuffix(_)).Times(0);
+  EXPECT_CALL(*foo_, CanMount).WillOnce(Return(false));
+  EXPECT_CALL(*bar_, CanMount)
+      .WillOnce(
+          DoAll(SetArgPointee<2>(base::FilePath("suffix")), Return(true)));
+  EXPECT_CALL(*baz_, CanMount).Times(0);
   RegisterHelper(std::move(foo_));
   RegisterHelper(std::move(bar_));
   RegisterHelper(std::move(baz_));
   EXPECT_EQ("/mntroot/suffix", manager_.SuggestMountPath(kSomeSource.value()));
 }
 
-// Verify that DoMount fails when there are not helpers.
+// Verify that DoMount fails when there are no helpers.
 TEST_F(FUSEMountManagerTest, DoMount_NoHandlers) {
   MountErrorType mount_error;
   std::unique_ptr<MountPoint> mount_point =
@@ -219,9 +194,9 @@ TEST_F(FUSEMountManagerTest, DoMount_NoHandlers) {
 
 // Verify that DoMount fails when helpers don't handle this source.
 TEST_F(FUSEMountManagerTest, DoMount_NotHandled) {
-  EXPECT_CALL(*foo_, CanMount(_)).WillOnce(Return(false));
-  EXPECT_CALL(*bar_, CanMount(_)).WillOnce(Return(false));
-  EXPECT_CALL(*baz_, CanMount(_)).WillOnce(Return(false));
+  EXPECT_CALL(*foo_, CanMount).WillOnce(Return(false));
+  EXPECT_CALL(*bar_, CanMount).WillOnce(Return(false));
+  EXPECT_CALL(*baz_, CanMount).WillOnce(Return(false));
   RegisterHelper(std::move(foo_));
   RegisterHelper(std::move(bar_));
   RegisterHelper(std::move(baz_));
@@ -234,26 +209,20 @@ TEST_F(FUSEMountManagerTest, DoMount_NotHandled) {
 // Verify that DoMount delegates mounting to the correct helpers when
 // dispatching by source description.
 TEST_F(FUSEMountManagerTest, DoMount_BySource) {
-  EXPECT_CALL(*foo_, CanMount(_)).WillOnce(Return(false));
-  EXPECT_CALL(*bar_, CanMount(_)).WillRepeatedly(Return(true));
-  EXPECT_CALL(*baz_, CanMount(_)).Times(0);
-  EXPECT_CALL(*foo_, CreateMounter(_, _, _, _)).Times(0);
-  EXPECT_CALL(platform_, Mount(_, kSomeMountpoint, _, _, _))
-      .WillOnce(Return(MOUNT_ERROR_NONE));
-  EXPECT_CALL(platform_, CreateTemporaryDirInDir(kWorkingDirRoot, _, _))
-      .WillOnce(DoAll(SetArgPointee<2>("/blah"), Return(true)));
-  EXPECT_CALL(platform_, SetPermissions("/blah", 0755)).WillOnce(Return(true));
-  MockMounter* mounter = new MockMounter(&platform_, &process_reaper_);
-  EXPECT_CALL(*mounter, PrepareSandbox(kSomeSource.value(),
-                                       base::FilePath(kSomeMountpoint), _, _))
+  EXPECT_CALL(*foo_, CanMount).WillOnce(Return(false));
+  EXPECT_CALL(*bar_, CanMount)
       .WillOnce(
-          DoAll(SetArgPointee<3>(MOUNT_ERROR_NONE),
-                Return(ByMove(std::make_unique<MockSandboxedProcess>()))));
-  std::unique_ptr<FUSEMounter> ptr(mounter);
-  EXPECT_CALL(*bar_, CreateMounter(base::FilePath("/blah"), kSomeSource,
-                                   base::FilePath(kSomeMountpoint), _))
-      .WillOnce(Return(ByMove(std::move(ptr))));
-  EXPECT_CALL(*baz_, CreateMounter(_, _, _, _)).Times(0);
+          DoAll(SetArgPointee<2>(base::FilePath("suffix")), Return(true)));
+  EXPECT_CALL(*baz_, CanMount).Times(0);
+
+  EXPECT_CALL(*foo_, Mount).Times(0);
+  EXPECT_CALL(*baz_, Mount).Times(0);
+
+  EXPECT_CALL(*bar_, Mount(kSomeSource.value(), _, _, _))
+      .WillOnce(DoAll(SetArgPointee<3>(MOUNT_ERROR_NONE),
+                      Return(ByMove(MountPoint::CreateLeaking(
+                          base::FilePath(kSomeMountpoint))))));
+
   RegisterHelper(std::move(foo_));
   RegisterHelper(std::move(bar_));
   RegisterHelper(std::move(baz_));

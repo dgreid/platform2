@@ -12,7 +12,6 @@
 #include <base/strings/string_util.h>
 
 #include "cros-disks/error_logger.h"
-#include "cros-disks/fuse_helper.h"
 #include "cros-disks/fuse_mounter.h"
 #include "cros-disks/metrics.h"
 #include "cros-disks/platform.h"
@@ -48,7 +47,6 @@ std::unique_ptr<MountPoint> ZipManager::DoMount(
       .filesystem_type = "zipfs",
       .metrics = metrics(),
       .metrics_name = "FuseZip",
-      .mount_group = FUSEHelper::kFilesGroup,
       .mount_namespace = GetMountNamespaceFor(source_path).name,
       .mount_program = "/usr/bin/fuse-zip",
       .mount_user = "fuse-zip",

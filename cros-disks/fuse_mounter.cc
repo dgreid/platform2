@@ -54,14 +54,10 @@ base::Optional<T> UnsetIfEmpty(T value) {
 }
 
 // TODO(dats): Remove when it's done beforehead by the caller.
-OwnerUser ResolveUserOrDie(const Platform* platform,
-                           const std::string& user,
-                           const std::string& group) {
+OwnerUser ResolveUserOrDie(const Platform* platform, const std::string& user) {
   OwnerUser result;
   PCHECK(platform->GetUserAndGroupId(user, &result.uid, &result.gid));
-  if (!group.empty()) {
-    PCHECK(platform->GetGroupId(group, &result.gid));
-  }
+  result.gid = kChronosAccessGID;
   return result;
 }
 
@@ -482,7 +478,7 @@ FUSEMounterLegacy::FUSEMounterLegacy(Params params)
           platform(),
           {base::FilePath(std::move(params.mount_program)),
            UnsetIfEmpty(base::FilePath(std::move(params.seccomp_policy)))},
-          ResolveUserOrDie(platform(), params.mount_user, params.mount_group),
+          ResolveUserOrDie(platform(), params.mount_user),
           params.network_access,
           std::move(params.supplementary_groups),
           UnsetIfEmpty(base::FilePath(std::move(params.mount_namespace)))) {}

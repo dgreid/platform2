@@ -195,9 +195,6 @@ class FUSEMounterLegacy : public FUSEMounter {
     // Not recorded if empty or if metrics is null.
     std::string metrics_name;
 
-    // Optional group to run the FUSE mount program as.
-    std::string mount_group;
-
     // Optional mount namespace where the source path exists.
     std::string mount_namespace;
 

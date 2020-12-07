@@ -480,7 +480,8 @@ class FUSEMounterLegacyTest : public ::testing::Test {
                               kMountProgram, "-o", MountOptions().ToString(),
                               kSomeSource, StartsWith("/dev/fd/"))))
         .WillOnce(Return(0));
-    EXPECT_CALL(platform_, SetOwnership(kSomeSource, getuid(), kMountGID))
+    EXPECT_CALL(platform_,
+                SetOwnership(kSomeSource, getuid(), kChronosAccessGID))
         .WillOnce(Return(true));
     EXPECT_CALL(platform_, SetPermissions(kSomeSource, S_IRUSR | S_IWUSR |
                                                            S_IRGRP | S_IWGRP))

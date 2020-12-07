@@ -14,7 +14,6 @@
 #include <base/strings/string_util.h>
 
 #include "cros-disks/error_logger.h"
-#include "cros-disks/fuse_helper.h"
 #include "cros-disks/fuse_mounter.h"
 #include "cros-disks/metrics.h"
 #include "cros-disks/platform.h"
@@ -57,7 +56,6 @@ std::unique_ptr<MountPoint> RarManager::DoMount(
       .filesystem_type = "rarfs",
       .metrics = metrics(),
       .metrics_name = "Rar2fs",
-      .mount_group = FUSEHelper::kFilesGroup,
       .mount_namespace = std::move(mount_namespace.name),
       .mount_program = "/usr/bin/rar2fs",
       .mount_user = "fuse-rar2fs",

@@ -10,8 +10,8 @@
 #include <base/strings/string_util.h>
 #include <brillo/cryptohome.h>
 
-#include "cros-disks/fuse_helper.h"
 #include "cros-disks/platform.h"
+#include "cros-disks/user.h"
 
 namespace cros_disks {
 
@@ -67,17 +67,11 @@ MountErrorType ArchiveManager::GetMountOptions(
     MountOptions* const options) const {
   DCHECK(options);
 
-  uid_t uid;
-  gid_t gid;
-  if (!platform()->GetUserAndGroupId(FUSEHelper::kFilesUser, &uid, nullptr) ||
-      !platform()->GetGroupId(FUSEHelper::kFilesGroup, &gid))
-    return MOUNT_ERROR_INTERNAL;
-
   options->SetReadOnlyOption();
   options->EnforceOption("umask=0222");
   options->EnforceOption(MountOptions::kOptionNoSymFollow);
-  options->Initialize({}, true, base::NumberToString(uid),
-                      base::NumberToString(gid));
+  options->Initialize({}, true, base::NumberToString(kChronosUID),
+                      base::NumberToString(kChronosAccessGID));
 
   return MOUNT_ERROR_NONE;
 }

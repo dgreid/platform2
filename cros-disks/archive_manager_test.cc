@@ -162,37 +162,10 @@ TEST_F(ArchiveManagerTest, GetSupplementaryGroupsCannotGetGroupId) {
 }
 
 TEST_F(ArchiveManagerTest, GetMountOptions) {
-  const uid_t uid = 687123;
-  const gid_t gid = 932648;
-  EXPECT_CALL(platform_, GetUserAndGroupId("chronos", _, nullptr))
-      .WillOnce(DoAll(SetArgPointee<1>(uid), Return(true)));
-  EXPECT_CALL(platform_, GetGroupId("chronos-access", _))
-      .WillOnce(DoAll(SetArgPointee<1>(gid), Return(true)));
-
   MountOptions options;
   EXPECT_EQ(manager_.GetMountOptions(&options), MOUNT_ERROR_NONE);
-  EXPECT_EQ(
-      options.ToString(),
-      "ro,uid=687123,gid=932648,nodev,noexec,nosuid,umask=0222,nosymfollow");
-}
-
-TEST_F(ArchiveManagerTest, GetMountOptionsCannotGetGroupId) {
-  const uid_t uid = 687123;
-  EXPECT_CALL(platform_, GetUserAndGroupId("chronos", _, nullptr))
-      .WillOnce(DoAll(SetArgPointee<1>(uid), Return(true)));
-  EXPECT_CALL(platform_, GetGroupId("chronos-access", _))
-      .WillOnce(Return(false));
-
-  MountOptions options;
-  EXPECT_EQ(manager_.GetMountOptions(&options), MOUNT_ERROR_INTERNAL);
-}
-
-TEST_F(ArchiveManagerTest, GetMountOptionsCannotGetUserId) {
-  EXPECT_CALL(platform_, GetUserAndGroupId("chronos", _, nullptr))
-      .WillOnce(Return(false));
-
-  MountOptions options;
-  EXPECT_EQ(manager_.GetMountOptions(&options), MOUNT_ERROR_INTERNAL);
+  EXPECT_EQ(options.ToString(),
+            "ro,uid=1000,gid=1001,nodev,noexec,nosuid,umask=0222,nosymfollow");
 }
 
 }  // namespace cros_disks
