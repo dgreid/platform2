@@ -91,6 +91,10 @@ void CameraClientOps::ProcessCaptureResult(
         LOGF(ERROR) << "Failed to wait for release fence on buffer";
       }
     }
+    if (output_buffer->status ==
+        mojom::Camera3BufferStatus::CAMERA3_BUFFER_STATUS_ERROR) {
+      return;
+    }
 
     int64_t page_size = sysconf(_SC_PAGE_SIZE);
     const auto* buffer_handle_ptr = buffer_manager_.GetBufferHandle(
