@@ -9,8 +9,14 @@
 #include <vector>
 
 #include <base/callback.h>
+#include <brillo/any.h>
 
+#include "shill/error.h"
 #include "shill/key_value_store.h"
+
+namespace brillo {
+class Error;
+}
 
 namespace shill {
 
@@ -33,9 +39,20 @@ class DBusPropertiesProxyInterface {
 
   virtual ~DBusPropertiesProxyInterface() = default;
 
+  // These wrap org::freedesktop::DBus::PropertiesProxy calls in the real
+  // implementation. Async calls should be preferred over synchronous calls.
   virtual KeyValueStore GetAll(const std::string& interface_name) = 0;
+  virtual void GetAllAsync(
+      const std::string& interface_name,
+      const base::Callback<void(const KeyValueStore&)>& success_callback,
+      const base::Callback<void(const Error&)>& error_callback) = 0;
   virtual brillo::Any Get(const std::string& interface_name,
                           const std::string& property) = 0;
+  virtual void GetAsync(
+      const std::string& interface_name,
+      const std::string& property,
+      const base::Callback<void(const brillo::Any&)>& success_callback,
+      const base::Callback<void(const Error&)>& error_callback) = 0;
 
   virtual void set_properties_changed_callback(
       const PropertiesChangedCallback& callback) = 0;

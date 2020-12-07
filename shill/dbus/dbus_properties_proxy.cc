@@ -18,6 +18,21 @@ static string ObjectID(const dbus::ObjectPath* p) {
 }
 }  // namespace Logging
 
+namespace {
+
+void RunSuccessCallback(
+    const base::Callback<void(const KeyValueStore&)>& success_callback,
+    const brillo::VariantDictionary& properties) {
+  success_callback.Run(KeyValueStore::ConvertFromVariantDictionary(properties));
+}
+
+void RunErrorCallback(const base::Callback<void(const Error&)>& error_callback,
+                      brillo::Error* dbus_error) {
+  error_callback.Run(Error(Error::kOperationFailed, dbus_error->GetMessage()));
+}
+
+}  // namespace
+
 DBusPropertiesProxy::DBusPropertiesProxy(const scoped_refptr<dbus::Bus>& bus,
                                          const RpcIdentifier& path,
                                          const string& service)
@@ -52,6 +67,16 @@ KeyValueStore DBusPropertiesProxy::GetAll(const string& interface_name) {
   return properties_store;
 }
 
+void DBusPropertiesProxy::GetAllAsync(
+    const std::string& interface_name,
+    const base::Callback<void(const KeyValueStore&)>& success_callback,
+    const base::Callback<void(const Error&)>& error_callback) {
+  SLOG(&proxy_->GetObjectPath(), 2) << __func__ << "(" << interface_name << ")";
+  proxy_->GetAllAsync(interface_name,
+                      base::Bind(RunSuccessCallback, success_callback),
+                      base::Bind(RunErrorCallback, error_callback));
+}
+
 brillo::Any DBusPropertiesProxy::Get(const string& interface_name,
                                      const string& property) {
   SLOG(&proxy_->GetObjectPath(), 2)
@@ -64,6 +89,17 @@ brillo::Any DBusPropertiesProxy::Get(const string& interface_name,
                << error->GetMessage();
   }
   return value;
+}
+
+void DBusPropertiesProxy::GetAsync(
+    const std::string& interface_name,
+    const std::string& property,
+    const base::Callback<void(const brillo::Any&)>& success_callback,
+    const base::Callback<void(const Error&)>& error_callback) {
+  SLOG(&proxy_->GetObjectPath(), 2)
+      << __func__ << "(" << interface_name << ", " << property << ")";
+  proxy_->GetAsync(interface_name, property, success_callback,
+                   base::Bind(RunErrorCallback, error_callback));
 }
 
 void DBusPropertiesProxy::MmPropertiesChanged(

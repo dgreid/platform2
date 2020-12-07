@@ -23,9 +23,22 @@ class MockDBusPropertiesProxy : public DBusPropertiesProxyInterface {
   ~MockDBusPropertiesProxy() override;
 
   MOCK_METHOD(KeyValueStore, GetAll, (const std::string&), (override));
+  MOCK_METHOD(void,
+              GetAllAsync,
+              (const std::string&,
+               const base::Callback<void(const KeyValueStore&)>&,
+               const base::Callback<void(const Error&)>&),
+              (override));
   MOCK_METHOD(brillo::Any,
               Get,
               (const std::string&, const std::string&),
+              (override));
+  MOCK_METHOD(void,
+              GetAsync,
+              (const std::string&,
+               const std::string&,
+               const base::Callback<void(const brillo::Any&)>&,
+               const base::Callback<void(const Error&)>&),
               (override));
   MOCK_METHOD(void,
               set_properties_changed_callback,

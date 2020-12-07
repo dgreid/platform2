@@ -30,8 +30,17 @@ class DBusPropertiesProxy : public DBusPropertiesProxyInterface {
 
   // Inherited from DBusPropertiesProxyInterface.
   KeyValueStore GetAll(const std::string& interface_name) override;
+  void GetAllAsync(
+      const std::string& interface_name,
+      const base::Callback<void(const KeyValueStore&)>& success_callback,
+      const base::Callback<void(const Error&)>& error_callback) override;
   brillo::Any Get(const std::string& interface_name,
                   const std::string& property) override;
+  void GetAsync(
+      const std::string& interface_name,
+      const std::string& property,
+      const base::Callback<void(const brillo::Any&)>& success_callback,
+      const base::Callback<void(const Error&)>& error_callback) override;
 
   void set_properties_changed_callback(
       const PropertiesChangedCallback& callback) override {
