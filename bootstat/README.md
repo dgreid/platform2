@@ -71,4 +71,4 @@ In areas where the code is C specific, use your best judgment (note
 that Google also has Objective-C coding conventions that may be
 useful).
 
-[platform_BootPerf]: https://chromium.googlesource.com/chromiumos/third_party/autotest/+/master/client/site_tests/platform_BootPerf
+[platform_BootPerf]: https://chromium.googlesource.com/chromiumos/third_party/autotest/+/HEAD/client/site_tests/platform_BootPerf

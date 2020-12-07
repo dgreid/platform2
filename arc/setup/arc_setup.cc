@@ -157,13 +157,13 @@ constexpr const char* kBinFmtMiscEntryNames[] = {"arm_dyn", "arm_exe",
 // These are board-specific configuration settings, which are managed through
 // the chromeos-config architecture.
 // For details, see:
-// https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/chromeos-config/#arc
+// https://chromium.googlesource.com/chromiumos/platform2/+/HEAD/chromeos-config/#arc
 //
 // Board-specific config files are automatically managed/generated via project
 // config repos. For details, see:
 // https://chromium.googlesource.com/chromiumos/config/
 // For an example, see:
-// https://chromium.googlesource.com/chromiumos/config/+/refs/heads/master/test/project/fake/fake/sw_build_config/platform/chromeos-config/generated/arc/
+// https://chromium.googlesource.com/chromiumos/config/+/HEAD/test/project/fake/fake/sw_build_config/platform/chromeos-config/generated/arc/
 constexpr char kHardwareFeaturesSetting[] = "/arc/hardware-features";
 constexpr char kMediaProfilesSetting[] = "/arc/media-profiles";
 constexpr char kSystemPath[] = "system-path";

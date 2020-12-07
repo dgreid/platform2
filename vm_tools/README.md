@@ -21,7 +21,7 @@ will connect back to `chunneld`.
 
 `vm_concierge` is a system daemon that runs in Chrome OS userspace and is
 responsible for managing the lifetime of all VMs.  It exposes a [D-Bus
-API](https://chromium.googlesource.com/chromiumos/platform/system_api/+/master/dbus/vm_concierge/)
+API](https://chromium.googlesource.com/chromiumos/platform/system_api/+/HEAD/dbus/vm_concierge/)
 for starting and stopping VMs.
 
 When `vm_concierge` receives a request to start a VM it allocates various
@@ -37,7 +37,7 @@ network and mounting disk images.
 
 `vm_cicerone` is a system daemon that runs in Chrome OS userspace and is
 responsible for all communication directly with the container in a VM. It
-exposes a [D-Bus API](https://chromium.googlesource.com/chromiumos/platform/system_api/+/master/dbus/vm_cicerone)
+exposes a [D-Bus API](https://chromium.googlesource.com/chromiumos/platform/system_api/+/HEAD/dbus/vm_cicerone)
 for doing things such as launching applications in containers, getting icons
 from containers and other container related functionality as it is extended. It
 also sends out signals for starting/stopping of containers.

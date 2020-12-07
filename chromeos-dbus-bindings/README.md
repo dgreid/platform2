@@ -348,14 +348,14 @@ To use this tool:
 
 
 [D-Bus]: https://www.freedesktop.org/wiki/Software/dbus/
-[libbrillo]: https://chromium.googlesource.com/aosp/platform/external/libbrillo/+/master/brillo/dbus/
+[libbrillo]: https://chromium.googlesource.com/aosp/platform/external/libbrillo/+/HEAD/brillo/dbus/
 [the introspection API]: https://dbus.freedesktop.org/doc/dbus-specification.html#introspection-format
-[best practices]: https://chromium.googlesource.com/chromiumos/docs/+/master/dbus_best_practices.md
+[best practices]: https://chromium.googlesource.com/chromiumos/docs/+/HEAD/dbus_best_practices.md
 [type signatures]: https://dbus.freedesktop.org/doc/dbus-specification.html#type-system
-[brillo::dbus_utils::FileDescriptor]: https://chromium.googlesource.com/aosp/platform/external/libbrillo/+/master/brillo/dbus/file_descriptor.h
-[base::ScopedFD]: https://chromium.googlesource.com/aosp/platform/external/libchrome/+/master/base/files/scoped_file.h
-[dbus::ObjectPath]: https://chromium.googlesource.com/aosp/platform/external/libchrome/+/master/dbus/object_path.h
-[brillo::Any]: https://chromium.googlesource.com/aosp/platform/external/libbrillo/+/master/brillo/any.h
-[brillo::VariantDictionary]: https://chromium.googlesource.com/aosp/platform/external/libbrillo/+/master/brillo/variant_dictionary.h
-[DBusMethodResponse]: https://chromium.googlesource.com/aosp/platform/external/libbrillo/+/master/brillo/dbus/dbus_method_response.h
-[brillo::DBusServiceDaemon]: https://chromium.googlesource.com/aosp/platform/external/libbrillo/+/master/brillo/daemons/dbus_daemon.h
+[brillo::dbus_utils::FileDescriptor]: https://chromium.googlesource.com/aosp/platform/external/libbrillo/+/HEAD/brillo/dbus/file_descriptor.h
+[base::ScopedFD]: https://chromium.googlesource.com/aosp/platform/external/libchrome/+/HEAD/base/files/scoped_file.h
+[dbus::ObjectPath]: https://chromium.googlesource.com/aosp/platform/external/libchrome/+/HEAD/dbus/object_path.h
+[brillo::Any]: https://chromium.googlesource.com/aosp/platform/external/libbrillo/+/HEAD/brillo/any.h
+[brillo::VariantDictionary]: https://chromium.googlesource.com/aosp/platform/external/libbrillo/+/HEAD/brillo/variant_dictionary.h
+[DBusMethodResponse]: https://chromium.googlesource.com/aosp/platform/external/libbrillo/+/HEAD/brillo/dbus/dbus_method_response.h
+[brillo::DBusServiceDaemon]: https://chromium.googlesource.com/aosp/platform/external/libbrillo/+/HEAD/brillo/daemons/dbus_daemon.h

@@ -130,7 +130,7 @@ std::string OwnerDependencyEnumClassToString(
 }  // namespace
 
 // Keep it with sync to UMA enum list
-// https://chromium.googlesource.com/chromium/src/+/master/tools/metrics/histograms/enums.xml
+// https://chromium.googlesource.com/chromium/src/+/HEAD/tools/metrics/histograms/enums.xml
 // These values are persisted to logs, and should therefore never be renumbered
 // nor reused.
 enum TpmAlerts {

@@ -2,7 +2,7 @@
 
 To keep the shill source code consistent, please follow the conventions below:
 
-*   Follow the [Chromium C++ style guide](https://chromium.googlesource.com/chromium/src/+/master/styleguide/c++/c++.md)
+*   Follow the [Chromium C++ style guide](https://chromium.googlesource.com/chromium/src/+/HEAD/styleguide/c++/c++.md)
 
     If you use Emacs, the Google C Style mode will help you with the formatting
     aspects of style. (Chromium Style generally follows Google Style). Get the

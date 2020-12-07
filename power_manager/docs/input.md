@@ -19,6 +19,6 @@ animations.
 See the [Power Buttons] document for more information about power button
 behavior.
 
-[UserActivityType]: https://chromium.googlesource.com/chromiumos/platform/system_api/+/master/dbus/power_manager/dbus-constants.h
-[InputEvent]: https://chromium.googlesource.com/chromiumos/platform/system_api/+/master/dbus/power_manager/input_event.proto
+[UserActivityType]: https://chromium.googlesource.com/chromiumos/platform/system_api/+/HEAD/dbus/power_manager/dbus-constants.h
+[InputEvent]: https://chromium.googlesource.com/chromiumos/platform/system_api/+/HEAD/dbus/power_manager/input_event.proto
 [Power Buttons]: power_buttons.md

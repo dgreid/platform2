@@ -394,8 +394,8 @@ MachineLearningService.**MetricModelName**.LoadModelResult.TotalMemoryDeltaKb
 [go/cros-model-update]: http://go/cros-model-update
 [go/finch-best-practices]: http://go/finch-best-practices
 [go/ml-abc]: http://go/ml-abc
-[hist-one-pager]: https://chromium.googlesource.com/chromium/src/tools/+/refs/heads/master/metrics/histograms/one-pager.md
-[hist-readme]: https://chromium.googlesource.com/chromium/src/tools/+/refs/heads/master/metrics/histograms/README.md
+[hist-one-pager]: https://chromium.googlesource.com/chromium/src/tools/+/HEAD/metrics/histograms/one-pager.md
+[hist-readme]: https://chromium.googlesource.com/chromium/src/tools/+/HEAD/metrics/histograms/README.md
 [histograms.xml]: https://cs.chromium.org/chromium/src/tools/metrics/histograms/histograms.xml?q=histograms.xml&sq=package:chromium&dr
 [loading & inference test]: https://cs.corp.google.com/chromeos_public/src/platform2/ml/machine_learning_service_impl_test.cc
 [metrics-owner]: https://cs.chromium.org/chromium/src/base/metrics/OWNERS?q=base/metrics/OWNERS&sq=package:chromium&dr

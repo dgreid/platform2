@@ -263,14 +263,14 @@ non-use by proactively shutting down.
 [per device wakeup count]: https://www.kernel.org/doc/Documentation/ABI/testing/sysfs-devices-power
 [i8042 driver]: https://github.com/torvalds/linux/blob/master/drivers/input/serio/i8042.c#L577
 [cros\_ec\_keyb.c]: https://chromium.googlesource.com/chromiumos/third_party/kernel/+/chromeos-4.4/drivers/input/keyboard/cros_ec_keyb.c#278
-[input devices that powerd polls]: https://chromium.googlesource.com/chromiumos/platform2/+/master/power_manager/powerd/system/input_watcher.cc#394
-[`HandleUserActivity`]: https://chromium.googlesource.com/chromiumos/platform2/+/master/power_manager/dbus_bindings/org.chromium.PowerManager.xml#61
-[`SuspendDone`]: https://chromium.googlesource.com/chromiumos/platform2/+/master/power_manager/dbus_bindings/org.chromium.PowerManager.xml#205
-[wake-capable parent]: https://chromium.googlesource.com/chromiumos/platform2/+/master/power_manager/powerd/system/udev.cc#257
+[input devices that powerd polls]: https://chromium.googlesource.com/chromiumos/platform2/+/HEAD/power_manager/powerd/system/input_watcher.cc#394
+[`HandleUserActivity`]: https://chromium.googlesource.com/chromiumos/platform2/+/HEAD/power_manager/dbus_bindings/org.chromium.PowerManager.xml#61
+[`SuspendDone`]: https://chromium.googlesource.com/chromiumos/platform2/+/HEAD/power_manager/dbus_bindings/org.chromium.PowerManager.xml#205
+[wake-capable parent]: https://chromium.googlesource.com/chromiumos/platform2/+/HEAD/power_manager/powerd/system/udev.cc#257
 [mfd devices]: https://www.kernel.org/doc/Documentation/devicetree/bindings/mfd/mfd.txt
-[monitors the wakeup-count]: https://chromium.googlesource.com/chromiumos/platform2/+/master/power_manager/powerd/system/wakeup_device.cc
-[checks the wakeup count]: https://chromium.googlesource.com/chromiumos/platform2/+/master/power_manager/powerd/system/dark_resume.cc#54
-[snapshot of wakeup count]: https://chromium.googlesource.com/chromiumos/platform2/+/master/power_manager/powerd/system/input_watcher.cc#241
+[monitors the wakeup-count]: https://chromium.googlesource.com/chromiumos/platform2/+/HEAD/power_manager/powerd/system/wakeup_device.cc
+[checks the wakeup count]: https://chromium.googlesource.com/chromiumos/platform2/+/HEAD/power_manager/powerd/system/dark_resume.cc#54
+[snapshot of wakeup count]: https://chromium.googlesource.com/chromiumos/platform2/+/HEAD/power_manager/powerd/system/input_watcher.cc#241
 [mfd/cros\_ec.c]: https://chromium.googlesource.com/chromiumos/third_party/kernel/+/chromeos-4.14/drivers/mfd/cros_ec.c
 [notifies all the interested drivers]: https://chromium.googlesource.com/chromiumos/third_party/kernel/+/chromeos-4.14/drivers/mfd/cros_ec.c#71
 [increment the wakeup count]: https://chromium.googlesource.com/chromiumos/third_party/kernel/+/chromeos-4.14/drivers/input/keyboard/cros_ec_keyb.c#278
@@ -278,10 +278,10 @@ non-use by proactively shutting down.
 [combined_event_count]: https://chromium.googlesource.com/chromiumos/third_party/kernel/+/chromeos-4.14/drivers/base/power/wakeup.c#39
 [per-device wakeup count has been fixed]: https://github.com/torvalds/linux/commit/2d5ed61ce9820a1fe7b076cc45c169524d767746
 [patchset by alan]: https://chromium-review.googlesource.com/c/chromiumos/third_party/kernel/+/1121663/2
-[`DarkSuspendImminent`]: https://chromium.googlesource.com/chromiumos/platform2/+/master/power_manager/dbus_bindings/org.chromium.PowerManager.xml#219
-[`HandleDarkSuspendReadiness`]: https://chromium.googlesource.com/chromiumos/platform2/+/master/power_manager/dbus_bindings/org.chromium.PowerManager.xml#145
+[`DarkSuspendImminent`]: https://chromium.googlesource.com/chromiumos/platform2/+/HEAD/power_manager/dbus_bindings/org.chromium.PowerManager.xml#219
+[`HandleDarkSuspendReadiness`]: https://chromium.googlesource.com/chromiumos/platform2/+/HEAD/power_manager/dbus_bindings/org.chromium.PowerManager.xml#145
 [input devices]: https://www.kernel.org/doc/Documentation/input/input.txt
-[monitoring this specific input device]: https://chromium.googlesource.com/chromiumos/platform2/+/master/power_manager/powerd/system/input_watcher.cc#479
-[power_WakeSources]: https://chromium.googlesource.com/chromiumos/third_party/autotest/+/master/server/site_tests/power_WakeSources/README.md
+[monitoring this specific input device]: https://chromium.googlesource.com/chromiumos/platform2/+/HEAD/power_manager/powerd/system/input_watcher.cc#479
+[power_WakeSources]: https://chromium.googlesource.com/chromiumos/third_party/autotest/+/HEAD/server/site_tests/power_WakeSources/README.md
 [chromium bug]: https://bugs.chromium.org/p/chromium/issues/list
 [shutdown-from-suspend]: ./shutdown_from_suspend.md

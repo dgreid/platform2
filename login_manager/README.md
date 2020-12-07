@@ -104,10 +104,10 @@ continue, it stops rebooting the system with the hope that it'll eventually be
 autoupdated to a new version that doesn't crash. See the
 [`ui-respawn`](init/scripts/ui-respawn) script for specifics.
 
-[D-Bus]: https://chromium.googlesource.com/chromiumos/docs/+/master/dbus_best_practices.md
-[chromeos-login]: https://chromium.googlesource.com/chromiumos/overlays/chromiumos-overlay/+/master/chromeos-base/chromeos-login/
-[ChromiumCommandBuilder]: https://chromium.googlesource.com/chromiumos/overlays/chromiumos-overlay/+/master/chromeos-base/libchromeos-use-flags/
+[D-Bus]: https://chromium.googlesource.com/chromiumos/docs/+/HEAD/dbus_best_practices.md
+[chromeos-login]: https://chromium.googlesource.com/chromiumos/overlays/chromiumos-overlay/+/HEAD/chromeos-base/chromeos-login/
+[ChromiumCommandBuilder]: https://chromium.googlesource.com/chromiumos/overlays/chromiumos-overlay/+/HEAD/chromeos-base/libchromeos-use-flags/
 [USE flags]: https://www.chromium.org/chromium-os/how-tos-and-troubleshooting/portage-build-faq
-[libchromeos-use-flags]: https://chromium.googlesource.com/chromiumos/overlays/chromiumos-overlay/+/master/chromeos-base/libchromeos-use-flags/
+[libchromeos-use-flags]: https://chromium.googlesource.com/chromiumos/overlays/chromiumos-overlay/+/HEAD/chromeos-base/libchromeos-use-flags/
 [powerd]: ../power_manager/
 [user inactivity]: ../power_manager/docs/inactivity_delays.md

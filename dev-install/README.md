@@ -265,7 +265,7 @@ Developers may also use other `cros` helpers as makes sense e.g. `cros flash`.
 
 
 [Crouton]: https://github.com/dnschneid/crouton
-[Crostini]: https://chromium.googlesource.com/chromiumos/docs/+/master/containers_and_vms.md
+[Crostini]: https://chromium.googlesource.com/chromiumos/docs/+/HEAD/containers_and_vms.md
 [Environments]: #Environments
 [GPT layout]: https://dev.chromium.org/chromium-os/chromiumos-design-docs/disk-format
-[lsb-release]: https://chromium.googlesource.com/chromiumos/docs/+/master/os_config.md#LSB
+[lsb-release]: https://chromium.googlesource.com/chromiumos/docs/+/HEAD/os_config.md#LSB

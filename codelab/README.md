@@ -35,7 +35,7 @@ $ repo start codelab
 ## Build your code
 
 Build commands must be run [inside the
-chroot](https://chromium.googlesource.com/chromiumos/docs/+/master/developer_guide.md#Enter-the-chroot).
+chroot](https://chromium.googlesource.com/chromiumos/docs/+/HEAD/developer_guide.md#Enter-the-chroot).
 Like the developer guide, we annotate commands that run inside the chroot
 with (inside).
 
@@ -119,8 +119,8 @@ gerrit UI.
 
 To clean up your local changes, please see [Chromium OS Contributing Guide].
 
-[Building Chromium OS]: https://chromium.googlesource.com/chromiumos/docs/+/master/developer_guide.md#Building-Chromium-OS
+[Building Chromium OS]: https://chromium.googlesource.com/chromiumos/docs/+/HEAD/developer_guide.md#Building-Chromium-OS
 
-[Installing Chromium OS on your Device]: https://chromium.googlesource.com/chromiumos/docs/+/master/developer_guide.md#Installing-Chromium-OS-on-your-Device
+[Installing Chromium OS on your Device]: https://chromium.googlesource.com/chromiumos/docs/+/HEAD/developer_guide.md#Installing-Chromium-OS-on-your-Device
 
 [Chromium OS Contributing Guide]: https://chromium.googlesource.com/chromiumos/docs/+/HEAD/contributing.md#clean-up

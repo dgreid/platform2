@@ -27,5 +27,5 @@ When the code in ml-service also needs update, you can submit the ml-serivce
 CL with the CL in Step 2 above together using [cq-depend].
 
 
-[cq-depend]: https://chromium.googlesource.com/chromiumos/docs/+/master/contributing.md#cq-depend
-[update-localmirror]: https://chromium.googlesource.com/chromiumos/docs/+/master/archive_mirrors.md#Updating-localmirror-localmirror_private
+[cq-depend]: https://chromium.googlesource.com/chromiumos/docs/+/HEAD/contributing.md#cq-depend
+[update-localmirror]: https://chromium.googlesource.com/chromiumos/docs/+/HEAD/archive_mirrors.md#Updating-localmirror-localmirror_private

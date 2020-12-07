@@ -48,7 +48,7 @@ cros_healthd and cherry-picking a test CL is no longer necessary.
     `status_uploader.cc`.
 
 *   Build and deploy Chrome to the DUT using simple Chrome:
-    https://chromium.googlesource.com/chromiumos/docs/+/master/simple_chrome_workflow.md
+    https://chromium.googlesource.com/chromiumos/docs/+/HEAD/simple_chrome_workflow.md
 
 *   Restart the DUT, and check that the fields are being reported properly:
     ```bash

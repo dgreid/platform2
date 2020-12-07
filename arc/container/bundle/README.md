@@ -8,7 +8,7 @@ This document explains how the container for Android P works.
 ## config.json
 
 `config.json` is used by
-[`run_oci`](https://chromium.googlesource.com/chromiumos/platform2/+/master/run_oci/),
+[`run_oci`](https://chromium.googlesource.com/chromiumos/platform2/+/HEAD/run_oci/),
 to describe how the container is set up. This file describes the mount
 structure, namespaces, device nodes that are to be created, cgroups
 configuration, and capabilities that are inherited.
@@ -138,7 +138,7 @@ subtree. Given that `run_oci` does not modify the init mount namespace, any
 mounts that span user sessions (such as the `system.raw.img` loop mount) should
 have already been performed before `run_oci` starts. This is typically handled
 by
-[`arc-setup`](https://chromium.googlesource.com/chromiumos/platform2/+/master/arc/setup/).
+[`arc-setup`](https://chromium.googlesource.com/chromiumos/platform2/+/HEAD/arc/setup/).
 
 The flags to the `mounts` section are the ones understood by
 [`mount(8)`](http://man7.org/linux/man-pages/man8/mount.8.html). Note that one
@@ -292,12 +292,12 @@ time when done naïvely), we have consolidated all of the hook execution to two
 hooks: pre-create and pre-chroot.
 
 The pre-create hook invokes
-[`arc-setup`](https://chromium.googlesource.com/chromiumos/platform2/+/master/arc/setup/)
+[`arc-setup`](https://chromium.googlesource.com/chromiumos/platform2/+/HEAD/arc/setup/)
 with the `--mode=setup` flag and creates host-side files and directories that
 will be bind-mounted to the container via `config.json`.
 
 The pre-chroot hook invokes
-[`arc-setup`](https://chromium.googlesource.com/chromiumos/platform2/+/master/arc/setup/)
+[`arc-setup`](https://chromium.googlesource.com/chromiumos/platform2/+/HEAD/arc/setup/)
 with the `--mode=pre-chroot` flag and performs several operations:
 
 * Set up

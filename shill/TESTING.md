@@ -82,7 +82,7 @@ Note that integration tests may adjust logging verbosity automatically,
 depending on their needs.
 ***
 
-[platform2 unittest docs]: https://chromium.googlesource.com/chromiumos/docs/+/master/platform2_primer.md#running-unit-tests
+[platform2 unittest docs]: https://chromium.googlesource.com/chromiumos/docs/+/HEAD/platform2_primer.md#running-unit-tests
 [Tast]: https://chromium.googlesource.com/chromiumos/platform/tast/
 [Autotest]: https://dev.chromium.org/chromium-os/testing/autotest-developer-faq
-[Autotest wificell documentation]: https://chromium.googlesource.com/chromiumos/third_party/autotest/+/master/docs/wificell.md
+[Autotest wificell documentation]: https://chromium.googlesource.com/chromiumos/third_party/autotest/+/HEAD/docs/wificell.md

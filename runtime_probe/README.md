@@ -1,9 +1,9 @@
 # Overview
 
 Runtime Probe is essentially a command line tool that consumes the
-[probe syntax](https://chromium.googlesource.com/chromiumos/platform/factory/+/master/py/probe/README.md#detail-usage-the-syntax-of-a-probe-config-file)
+[probe syntax](https://chromium.googlesource.com/chromiumos/platform/factory/+/HEAD/py/probe/README.md#detail-usage-the-syntax-of-a-probe-config-file)
 and outputs the
-[probe result](https://chromium.googlesource.com/chromiumos/platform/factory/+/master/py/probe/README.md#output-format).
+[probe result](https://chromium.googlesource.com/chromiumos/platform/factory/+/HEAD/py/probe/README.md#output-format).
 
 This command line tool will gradually replace fields in HWID (i.e. less fields
 will be encoded into HWID) as it reflects the status of a device in a more
@@ -18,7 +18,7 @@ model of storage, the remaining capacity of battery, the screen resolution..etc.
 To serve clients that are not able to call the command line directly, we offer a
 simple, restricted D-Bus interface with only one method
 `org.chromium.RuntimeProbe.ProbeCategories`. This D-Bus method follows the
-[Chrome OS D-Bus Best Practices](https://chromium.googlesource.com/chromiumos/docs/+/master/dbus_best_practices.md#limit-use-of-d_bus-to-start-services-on_demand),
+[Chrome OS D-Bus Best Practices](https://chromium.googlesource.com/chromiumos/docs/+/HEAD/dbus_best_practices.md#limit-use-of-d_bus-to-start-services-on_demand),
 proper `minijail0`, `secomp policy` are applied inside
 `dbus/org.chromium.RuntimeProbe.conf`.
 
@@ -27,7 +27,7 @@ proper `minijail0`, `secomp policy` are applied inside
 To better reflect hardware configuration on users’ system, we need a tool in
 release image that is able to reflect the truth of the moment in the field.
 Traditionally, this need has been satisfied by
-[factory's probe framework](https://chromium.googlesource.com/chromiumos/platform/factory/+/master/py/probe/README.md),
+[factory's probe framework](https://chromium.googlesource.com/chromiumos/platform/factory/+/HEAD/py/probe/README.md),
 because we assume rare components replacement after mass production. However, we
 have seen more and more requests from partners to switch components after
 devices left the factory process.
@@ -69,7 +69,7 @@ device like the following:
 
     Besides the
     [developer
-    doc](https://chromium.googlesource.com/chromiumos/docs/+/master/developer_mode.md)
+    doc](https://chromium.googlesource.com/chromiumos/docs/+/HEAD/developer_mode.md)
     describing how to enter/leave developer mode, following is another useful
     hack to prevent some long running check while switching mode for the first
     time.
@@ -257,11 +257,11 @@ array:byte:"$PROTO_BYTES"
 
 ### Via Tast
 
-[Tast](https://chromium.googlesource.com/chromiumos/platform/tast/+/refs/heads/master/README.md)
+[Tast](https://chromium.googlesource.com/chromiumos/platform/tast/+/HEAD/README.md)
 is a golang-based test framework.  Currently tast-tests for Runtime Probe check
 if the probe result matches the cros labels we decoded from the HWID of DUT.
 Please refer to `cros_runtime_probe_*.go` under [platform
-tests](https://chromium.googlesource.com/chromiumos/platform/tast-tests/+/refs/heads/master/src/chromiumos/tast/local/bundles/cros/platform/).
+tests](https://chromium.googlesource.com/chromiumos/platform/tast-tests/+/HEAD/src/chromiumos/tast/local/bundles/cros/platform/).
 
 Note that Runtime Probe uses the probe statements at
 `/etc/runtime_probe/$MODEL/probe_config.json` on DUT.  The names of probed
@@ -328,8 +328,8 @@ Results saved to /tmp/tast/results/20200220-172233
 # Useful Reference
 
 * minijail0 manpage (`man 1 minijail0` in cros\_sdk)
-* [docs/sandboxing.md](https://chromium.googlesource.com/chromiumos/docs/+/master/sandboxing.md)
-* [debugd/src/](https://chromium.googlesource.com/chromiumos/platform2/+/master/debugd/src/)
+* [docs/sandboxing.md](https://chromium.googlesource.com/chromiumos/docs/+/HEAD/sandboxing.md)
+* [debugd/src/](https://chromium.googlesource.com/chromiumos/platform2/+/HEAD/debugd/src/)
 
 <!-- Footnotes themselves at the bottom. -->
 

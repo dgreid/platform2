@@ -116,7 +116,7 @@ class BRILLO_EXPORT Transport : public std::enable_shared_from_this<Transport> {
   // of services than it can otherwise. However, setting a custom certificate
   // should be done only when necessary, and should be done with careful control
   // over the certificates that are contained in the relevant path. See
-  // https://chromium.googlesource.com/chromiumos/docs/+/master/ca_certs.md for
+  // https://chromium.googlesource.com/chromiumos/docs/+/HEAD/ca_certs.md for
   // more information on certificates in Chrome OS.
   virtual void UseCustomCertificate(Transport::Certificate cert) {}
 

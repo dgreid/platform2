@@ -139,7 +139,7 @@ std::unique_ptr<brillo::Process> CreateSandboxedProcess(
   // /dev/log needs to be bind mounted before any possible tmpfs mount on run
   // See:
   //   minijail0 manpage (`man 1 minijail0` in cros\_sdk)
-  //   https://chromium.googlesource.com/chromiumos/docs/+/master/sandboxing.md
+  //   https://chromium.googlesource.com/chromiumos/docs/+/HEAD/sandboxing.md
   std::vector<std::string> parsed_args{
       "-G",                // Inherit all the supplementary groups
       "-P", "/mnt/empty",  // Set /mnt/empty as the root fs using pivot_root

@@ -67,7 +67,7 @@ between updates) when the power load is also changing dramatically. This
 behavior can be reduced by increasing the values in the above prefs, but doing
 so makes the estimates slower to adjust when the load has actually changed.
 
-[PowerSupplyProperties]: https://chromium.googlesource.com/chromiumos/platform/system_api/+/master/dbus/power_manager/power_supply_properties.proto
-[PowerSupply]: https://chromium.googlesource.com/chromiumos/platform2/+/master/power_manager/powerd/system/power_supply.h
+[PowerSupplyProperties]: https://chromium.googlesource.com/chromiumos/platform/system_api/+/HEAD/dbus/power_manager/power_supply_properties.proto
+[PowerSupply]: https://chromium.googlesource.com/chromiumos/platform2/+/HEAD/power_manager/powerd/system/power_supply.h
 [Power Supplies]: power_supplies.md
-[ash::TrayPower]: https://chromium.googlesource.com/chromium/src/+/master/ash/system/power/tray_power.cc
+[ash::TrayPower]: https://chromium.googlesource.com/chromium/src/+/HEAD/ash/system/power/tray_power.cc

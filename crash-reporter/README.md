@@ -252,10 +252,10 @@ This is used by Chrome itself in its internal `chrome://crashes` page to provide
 crash information to the user.
 The exact format of this file is controlled by Chrome.
 Here are just some of the files involved:
-* [chrome/browser/ui/webui/crashes_ui.cc](https://chromium.googlesource.com/chromium/src/+/master/chrome/browser/ui/webui/crashes_ui.cc)
-* [components/crash/core/browser/crashes_ui_util.cc](https://chromium.googlesource.com/chromium/src/+/master/components/crash/core/browser/crashes_ui_util.cc)
-* [chrome/browser/crash_upload_list/](https://chromium.googlesource.com/chromium/src/+/master/chrome/browser/crash_upload_list/)
-* [components/upload_list/](https://chromium.googlesource.com/chromium/src/+/master/components/upload_list/)
+* [chrome/browser/ui/webui/crashes_ui.cc](https://chromium.googlesource.com/chromium/src/+/HEAD/chrome/browser/ui/webui/crashes_ui.cc)
+* [components/crash/core/browser/crashes_ui_util.cc](https://chromium.googlesource.com/chromium/src/+/HEAD/components/crash/core/browser/crashes_ui_util.cc)
+* [chrome/browser/crash_upload_list/](https://chromium.googlesource.com/chromium/src/+/HEAD/chrome/browser/crash_upload_list/)
+* [components/upload_list/](https://chromium.googlesource.com/chromium/src/+/HEAD/components/upload_list/)
 
 *** aside
 Our management of `uploads.log` lags behind other platforms.
@@ -462,7 +462,7 @@ For tips for hacking on this project, check out [hacking.md](./docs/hacking.md).
 We use a bunch of tools from [Google Breakpad].
 Check out the their [docs][1] for more details (especially on minidumps).
 
-[1]: https://chromium.googlesource.com/breakpad/breakpad/+/master/docs/
+[1]: https://chromium.googlesource.com/breakpad/breakpad/+/HEAD/docs/
 
 [core(5)]: http://man7.org/linux/man-pages/man5/core.5.html
 [crosh]: ../crosh/

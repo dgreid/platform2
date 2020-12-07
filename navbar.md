@@ -5,6 +5,6 @@
 
 *   [Home][home]
 *   [Source Code](https://chromium.googlesource.com/chromiumos/platform2)
-*   [Contact](https://chromium.googlesource.com/chromiumos/docs/+/master/contact.md)
-*   [Security](https://chromium.googlesource.com/chromiumos/docs/+/master/reporting_bugs.md#security)
-*   [Chromium OS Docs](https://chromium.googlesource.com/chromiumos/docs/+/master/README.md)
+*   [Contact](https://chromium.googlesource.com/chromiumos/docs/+/HEAD/contact.md)
+*   [Security](https://chromium.googlesource.com/chromiumos/docs/+/HEAD/reporting_bugs.md#security)
+*   [Chromium OS Docs](https://chromium.googlesource.com/chromiumos/docs/+/HEAD/README.md)

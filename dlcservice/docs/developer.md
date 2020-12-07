@@ -172,7 +172,7 @@ A DLC is updated at the same time the device itself is updated.
 [Write platform code to request DLC]: #Write-platform-code-to-request-DLC
 [Install a DLC for dev/test]: #install-a-dlc-for-devtest
 [Write tests for a DLC]: #Write-tests-for-a-DLC
-[dlc.eclass]: https://chromium.googlesource.com/chromiumos/overlays/chromiumos-overlay/+/master/eclass/dlc.eclass
+[dlc.eclass]: https://chromium.googlesource.com/chromiumos/overlays/chromiumos-overlay/+/HEAD/eclass/dlc.eclass
 [sandboxing]: https://chromium.googlesource.com/chromiumos/docs/+/HEAD/sandboxing.md
 [system_api]: https://chromium.googlesource.com/chromiumos/platform2/+/HEAD/system_api
 [imageloader_impl.cc]: https://chromium.googlesource.com/chromiumos/platform2/+/HEAD/imageloader/imageloader_impl.cc

@@ -134,7 +134,7 @@ and reduced CFI data from [DWARF].
 [Crashpad] uses the same output format here.
 
 See the
-[symbol files documentation](https://chromium.googlesource.com/breakpad/breakpad/+/master/docs/symbol_files.md)
+[symbol files documentation](https://chromium.googlesource.com/breakpad/breakpad/+/HEAD/docs/symbol_files.md)
 for more details.
 
 ### Generation
@@ -179,8 +179,8 @@ If the symbol addresses don't line up, then symbolizing will fail.
 
 [chromite]: https://chromium.googlesource.com/chromiumos/chromite/
 [Crashpad]: https://chromium.googlesource.com/crashpad/crashpad/
-[cros_generate_breakpad_symbols]: https://chromium.googlesource.com/chromiumos/chromite/+/master/scripts/cros_generate_breakpad_symbols.py
+[cros_generate_breakpad_symbols]: https://chromium.googlesource.com/chromiumos/chromite/+/HEAD/scripts/cros_generate_breakpad_symbols.py
 [DWARF]: https://en.wikipedia.org/wiki/DWARF
 [estrip]: https://chromium.googlesource.com/chromiumos/third_party/portage_tool/+/refs/tags/portage-2.3.49/bin/estrip#192
 [Google Breakpad]: https://chromium.googlesource.com/breakpad/breakpad/
-[upload_symbols]: https://chromium.googlesource.com/chromiumos/chromite/+/master/scripts/upload_symbols.py
+[upload_symbols]: https://chromium.googlesource.com/chromiumos/chromite/+/HEAD/scripts/upload_symbols.py

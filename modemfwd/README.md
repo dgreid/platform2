@@ -51,4 +51,4 @@ define manifests that should be provided in the helper and firmware directories
 so modemfwd can figure out what devices, carriers, etc. the contents can be
 used with.
 
-[system API]: https://chromium.googlesource.com/chromiumos/platform/system_api/+/master/switches/modemfwd_switches.h
+[system API]: https://chromium.googlesource.com/chromiumos/platform/system_api/+/HEAD/switches/modemfwd_switches.h

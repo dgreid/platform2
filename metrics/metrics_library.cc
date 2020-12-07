@@ -43,7 +43,7 @@ const int kCrosEventHistogramMax = 100;
 //
 // Note: All updates here must also update Chrome's enums.xml database.
 // Please see this document for more details:
-// https://chromium.googlesource.com/chromium/src/+/master/tools/metrics/histograms/
+// https://chromium.googlesource.com/chromium/src/+/HEAD/tools/metrics/histograms/
 //
 // You can view them live here:
 // https://uma.googleplex.com/histograms/?histograms=Platform.CrOSEvent

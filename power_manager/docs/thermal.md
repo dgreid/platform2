@@ -22,4 +22,4 @@ When there are multiple thermal devices, the system overall thermal state is the
 highest state of all devices.
 
 [NSProcessInfoThermalState]: https://developer.apple.com/library/archive/documentation/Performance/Conceptual/power_efficiency_guidelines_osx/RespondToThermalStateChanges.html
-[ThermalEvent]: https://chromium.googlesource.com/chromiumos/platform/system_api/+/master/dbus/power_manager/thermal.proto
+[ThermalEvent]: https://chromium.googlesource.com/chromiumos/platform/system_api/+/HEAD/dbus/power_manager/thermal.proto

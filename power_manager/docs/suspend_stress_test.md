@@ -82,4 +82,4 @@ memory does not get corrupted during suspend/resume process.
 ```
 
 [go/suspend-stress-test]: http:/go/suspend-stress-test]
-[flash a test image]: https://chromium.googlesource.com/chromiumos/docs/+/master/developer_guide.md#Installing-Chromium-OS-on-your-Device
+[flash a test image]: https://chromium.googlesource.com/chromiumos/docs/+/HEAD/developer_guide.md#Installing-Chromium-OS-on-your-Device

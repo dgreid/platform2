@@ -5,7 +5,7 @@ found in the LICENSE file.
 
 This directory contains the protocol buffers used by the standalone metrics
 uploader. Those protobuffers are copied from the chromium protobuffers from
-https://chromium.googlesource.com/chromium/src/+/master/components/metrics/proto/
+https://chromium.googlesource.com/chromium/src/+/HEAD/components/metrics/proto/
 at 3bfe5f2b4c03d2cac718d137ed14cd2c6354bfed.
 
 Any change to this protobuf must first be made to the backend's protobuf and be

@@ -611,7 +611,7 @@ mount -o bind /run/lock /var/lock
 remember_mount /var/lock
 
 # Create daemon store folders.
-# See https://chromium.googlesource.com/chromiumos/docs/+/master/sandboxing.md#securely-mounting-cryptohome-daemon-store-folders.
+# See https://chromium.googlesource.com/chromiumos/docs/+/HEAD/sandboxing.md#securely-mounting-cryptohome-daemon-store-folders.
 mkdir -p -m 0755 /run/daemon-store
 for etc_daemon_store in /etc/daemon-store/*; do
   # If /etc/daemon-store is empty, $etc_daemon_store is /etc/daemon-store/*.

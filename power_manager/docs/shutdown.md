@@ -98,14 +98,14 @@ After other jobs have completed, the `halt` or `reboot` job executes the
 Finally, the `halt` or `reboot` job executes the `halt` or `reboot` command with
 `--force` to instruct the kernel to immediately halt or reboot the system.
 
-[powerd constants file]: https://chromium.googlesource.com/chromiumos/platform/system_api/+/master/dbus/power_manager/dbus-constants.h
+[powerd constants file]: https://chromium.googlesource.com/chromiumos/platform/system_api/+/HEAD/dbus/power_manager/dbus-constants.h
 [current log file]: logging.md
 [Daemon]: ../powerd/daemon.cc
 [powerd_setuid_helper]: ../powerd/powerd_setuid_helper.cc
 [Upstart]: http://upstart.ubuntu.com/
-[halt job]: https://chromium.googlesource.com/chromiumos/platform2/+/master/init/upstart/halt/halt.conf
-[reboot job]: https://chromium.googlesource.com/chromiumos/platform2/+/master/init/upstart/reboot.conf
-[pre-shutdown job]: https://chromium.googlesource.com/chromiumos/platform2/+/master/init/upstart/pre-shutdown.conf
-[chromeos_shutdown]: https://chromium.googlesource.com/chromiumos/platform2/+/master/init/chromeos_shutdown
-[display_low_battery_alert]: https://chromium.googlesource.com/chromiumos/platform2/+/master/init/display_low_battery_alert
+[halt job]: https://chromium.googlesource.com/chromiumos/platform2/+/HEAD/init/upstart/halt/halt.conf
+[reboot job]: https://chromium.googlesource.com/chromiumos/platform2/+/HEAD/init/upstart/reboot.conf
+[pre-shutdown job]: https://chromium.googlesource.com/chromiumos/platform2/+/HEAD/init/upstart/pre-shutdown.conf
+[chromeos_shutdown]: https://chromium.googlesource.com/chromiumos/platform2/+/HEAD/init/chromeos_shutdown
+[display_low_battery_alert]: https://chromium.googlesource.com/chromiumos/platform2/+/HEAD/init/display_low_battery_alert
 [frecon]: https://chromium.googlesource.com/chromiumos/platform/frecon/

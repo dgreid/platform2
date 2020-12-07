@@ -78,4 +78,4 @@ accessible via `chrome://system` or by browsing to `file://var/log`.
 [issue 190499]: https://crbug.com/190499
 [enterprise policies]: https://cloud.google.com/docs/chrome-enterprise/policies
 [chrome.power extension API]: https://developer.chrome.com/extensions/power.html
-[Smart Dim]: https://chromium.googlesource.com/chromium/src/+/master/chrome/browser/chromeos/power/ml/smart_dim
+[Smart Dim]: https://chromium.googlesource.com/chromium/src/+/HEAD/chrome/browser/chromeos/power/ml/smart_dim

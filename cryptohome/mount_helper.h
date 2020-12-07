@@ -272,7 +272,7 @@ class MountHelper : public MountHelperInterface {
   //
   // This can be used to make the Cryptohome mount propagate into the daemon's
   // mount namespace. See
-  // https://chromium.googlesource.com/chromiumos/docs/+/master/sandboxing.md#securely-mounting-cryptohome-daemon-store-folders
+  // https://chromium.googlesource.com/chromiumos/docs/+/HEAD/sandboxing.md#securely-mounting-cryptohome-daemon-store-folders
   // for details.
   //
   // (*) Path for a regular mount. The path is different for an ephemeral mount.

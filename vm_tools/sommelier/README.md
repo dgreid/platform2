@@ -195,7 +195,7 @@ If the host compositor support dynamic handling of keyboard events, then
 keyboard shortcuts are forwarded to the Linux program by default. A small set
 of shortcuts are expected to be reserved by the host compositor. A list of
 reserved shortcuts on Chrome OS can be found
-[here](https://chromium.googlesource.com/chromium/src/+/master/ash/accelerators/accelerator_table.h#22).
+[here](https://chromium.googlesource.com/chromium/src/+/HEAD/ash/accelerators/accelerator_table.h#22).
 
 There’s unfortunately no reliable way to detect if a Linux program handled a
 key event or not. This means that all non-reserved shortcuts that the user

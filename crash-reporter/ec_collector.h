@@ -5,7 +5,7 @@
 // The EC collector runs just after boot and grabs information about crashes in
 // the Embedded Controller from /sys/kernel/debug/cros_ec/panicinfo.
 // For details on this controller, see:
-// https://chromium.googlesource.com/chromiumos/platform/ec/+/refs/heads/master/README.md
+// https://chromium.googlesource.com/chromiumos/platform/ec/+/HEAD/README.md
 // The EC collector runs via the crash-boot-collect service.
 
 #ifndef CRASH_REPORTER_EC_COLLECTOR_H_

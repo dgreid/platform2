@@ -1937,7 +1937,7 @@ HELP_gesture_prop='
   work.
 
   For more details, see:
-  https://chromium.googlesource.com/chromiumos/platform/gestures/+/master/docs/gesture_properties.md
+  https://chromium.googlesource.com/chromiumos/platform/gestures/+/HEAD/docs/gesture_properties.md
 
   Subcommands:
     devices, devs:

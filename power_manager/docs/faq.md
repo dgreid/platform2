@@ -101,10 +101,10 @@ usage.
 
 [Keep Awake extension]: https://chrome.google.com/webstore/detail/keep-awake-extension/bijihlabcfdnabacffofojgmehjdielb
 [chrome.power API]: https://developer.chrome.com/extensions/power
-[PowerPrefChanger]: https://chromium.googlesource.com/chromiumos/third_party/autotest/+/master/client/cros/power_utils.py
-[suspend.proto]: https://chromium.googlesource.com/chromiumos/platform/system_api/+/master/dbus/power_manager/suspend.proto
-[suspend_delay_sample]: https://chromium.googlesource.com/chromiumos/platform2/+/master/power_manager/tools/suspend_delay_sample.cc
-[chromeos-config]: https://chromium.googlesource.com/chromiumos/platform2/+/master/chromeos-config/
+[PowerPrefChanger]: https://chromium.googlesource.com/chromiumos/third_party/autotest/+/HEAD/client/cros/power_utils.py
+[suspend.proto]: https://chromium.googlesource.com/chromiumos/platform/system_api/+/HEAD/dbus/power_manager/suspend.proto
+[suspend_delay_sample]: https://chromium.googlesource.com/chromiumos/platform2/+/HEAD/power_manager/tools/suspend_delay_sample.cc
+[chromeos-config]: https://chromium.googlesource.com/chromiumos/platform2/+/HEAD/chromeos-config/
 
 ## How do I prevent the system from suspending or shutting down while my code is running?
 

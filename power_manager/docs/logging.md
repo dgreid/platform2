@@ -125,5 +125,5 @@ Please use logging macros as follows within powerd:
 
 [inactivity delays]: inactivity_delays.md
 [CRAS]: https://www.chromium.org/chromium-os/chromiumos-design-docs/cras-chromeos-audio-server
-[policy.proto]: https://chromium.googlesource.com/chromiumos/platform/system_api/+/master/dbus/power_manager/policy.proto
+[policy.proto]: https://chromium.googlesource.com/chromiumos/platform/system_api/+/HEAD/dbus/power_manager/policy.proto
 [StateController]: ../powerd/policy/state_controller.h

@@ -74,8 +74,8 @@ line or modify Chrome's environment. The file contains documentation about its
 format.
 
 [chrome_setup.cc]: ../chrome_setup.cc
-[ChromiumCommandBuilder]: https://chromium.googlesource.com/chromiumos/platform2/+/master/libchromeos-ui/chromeos/ui/chromium_command_builder.h
-[libchromeos-use-flags]: https://chromium.googlesource.com/chromiumos/overlays/chromiumos-overlay/+/master/chromeos-base/libchromeos-use-flags/libchromeos-use-flags-0.0.1.ebuild
-[board overlays]: https://chromium.googlesource.com/chromiumos/overlays/board-overlays/+/master
-[chromeos-config]: https://chromium.googlesource.com/chromiumos/platform2/+/master/chromeos-config/
+[ChromiumCommandBuilder]: https://chromium.googlesource.com/chromiumos/platform2/+/HEAD/libchromeos-ui/chromeos/ui/chromium_command_builder.h
+[libchromeos-use-flags]: https://chromium.googlesource.com/chromiumos/overlays/chromiumos-overlay/+/HEAD/chromeos-base/libchromeos-use-flags/libchromeos-use-flags-0.0.1.ebuild
+[board overlays]: https://chromium.googlesource.com/chromiumos/overlays/board-overlays/+/HEAD
+[chromeos-config]: https://chromium.googlesource.com/chromiumos/platform2/+/HEAD/chromeos-config/
 [/etc/chrome_dev.conf]: ../chrome_dev.conf

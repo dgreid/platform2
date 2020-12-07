@@ -120,7 +120,7 @@ retry it later. Files in this directory are created by various programs
 including `flashrom` and `battery_tool`. There are additional details on the
 [flashrom] page.
 
-[suspend delays]: https://chromium.googlesource.com/chromiumos/platform/system_api/+/master/dbus/power_manager/suspend.proto
+[suspend delays]: https://chromium.googlesource.com/chromiumos/platform/system_api/+/HEAD/dbus/power_manager/suspend.proto
 [/sys/power/wakeup_count]: https://lwn.net/Articles/393314/
 [flashrom]: https://dev.chromium.org/chromium-os/packages/cros-flashrom
 [power states]: https://www.kernel.org/doc/Documentation/power/states.txt

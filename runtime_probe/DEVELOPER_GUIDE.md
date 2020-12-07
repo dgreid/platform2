@@ -52,7 +52,7 @@ You can use the commands above to test it on your device.  If there are
 permission / policy errors, you can add `-L` to get more details about the
 violation (the blocked system call will be printed to syslog).
 
-Checkout [Sandboxing Chrome OS system services](https://chromium.googlesource.com/chromiumos/docs/+/master/sandboxing.md)
+Checkout [Sandboxing Chrome OS system services](https://chromium.googlesource.com/chromiumos/docs/+/HEAD/sandboxing.md)
 to learn more about minijail options.
 
 The helper process starts in the created sandbox, and the
