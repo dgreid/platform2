@@ -397,8 +397,11 @@ bool TpmUtilityV1::GetEndorsementPublicKey(KeyType key_type,
   TSS_HTPM tpm_handle;
   bool is_ready = IsTpmReady();
   if (is_ready) {
-    if (!ConnectContextAsOwner(owner_password_, &context_handle, &tpm_handle)) {
-      LOG(ERROR) << __func__ << ": Could not connect to the TPM as owner.";
+    if (!ConnectContextAsOwner(owner_password_, &context_handle, &tpm_handle) &&
+        !ConnectContextAsDelegate(delegate_blob_, delegate_secret_,
+                                  &context_handle, &tpm_handle)) {
+      LOG(ERROR) << __func__
+                 << ": Could not connect to the TPM as onwer or delegate.";
       return false;
     }
   } else {
