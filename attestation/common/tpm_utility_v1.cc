@@ -88,6 +88,46 @@ std::string buildPcrComposite(uint32_t pcr_index,
          quoted_pcr_value;
 }
 
+// Checks if `delegate_blob`'s flag `TPM_DELEGATE_OwnerReadInternalPub` is set.
+// In case of empty input or failed parsing, returns `false`; otherwise, set
+// `can_read` and returns `true`.
+bool CanDelegateReadInternalPub(const std::string& delegate_blob,
+                                bool* can_read) {
+  if (delegate_blob.empty()) {
+    LOG(ERROR) << __func__ << ": Empty blob.";
+    return false;
+  }
+  UINT64 offset = 0;
+  // Make sure the parsing will be successful first.
+  TSS_RESULT result = Trspi_UnloadBlob_TPM_DELEGATE_OWNER_BLOB(
+      &offset,
+      const_cast<BYTE*>(reinterpret_cast<const BYTE*>(delegate_blob.data())),
+      nullptr);
+  if (offset != delegate_blob.size()) {
+    TPM_LOG(ERROR, result) << __func__ << ": Bad delegate blob.";
+    return false;
+  }
+  offset = 0;
+
+  TPM_DELEGATE_OWNER_BLOB ownerBlob = {};
+
+  // TODO(b/169392230): Fix the potential memory leak while migrating to tpm
+  // manager.
+  result = Trspi_UnloadBlob_TPM_DELEGATE_OWNER_BLOB(
+      &offset,
+      const_cast<BYTE*>(reinterpret_cast<const BYTE*>(delegate_blob.data())),
+      &ownerBlob);
+
+  if (result != TSS_SUCCESS) {
+    TPM_LOG(ERROR, result) << __func__ << ": Failed to unload delegate blob.";
+    return false;
+  }
+
+  *can_read =
+      ownerBlob.pub.permissions.per1 & TPM_DELEGATE_OwnerReadInternalPub;
+  return true;
+}
+
 }  // namespace
 
 namespace attestation {
@@ -396,19 +436,38 @@ bool TpmUtilityV1::GetEndorsementPublicKey(KeyType key_type,
   ScopedTssContext context_handle;
   TSS_HTPM tpm_handle;
   bool is_ready = IsTpmReady();
-  if (is_ready) {
-    if (!ConnectContextAsOwner(owner_password_, &context_handle, &tpm_handle) &&
-        !ConnectContextAsDelegate(delegate_blob_, delegate_secret_,
-                                  &context_handle, &tpm_handle)) {
-      LOG(ERROR) << __func__
-                 << ": Could not connect to the TPM as onwer or delegate.";
-      return false;
-    }
-  } else {
+  bool can_read_ek = false;
+  if (!CanDelegateReadInternalPub(delegate_blob_, &can_read_ek)) {
+    LOG(ERROR) << __func__ << ": Cannot check permission.";
+  }
+  LOG_IF(WARNING, !can_read_ek)
+      << __func__ << ": owner delegate cannot read ek.";
+
+  // Rationality check of auth values, if necessary.
+  if (is_ready && !can_read_ek && owner_password_.empty()) {
+    LOG(ERROR) << __func__ << ": No valid auth.";
+    return false;
+  }
+
+  if (!is_ready) {
     if (!ConnectContextAsUser(&context_handle, &tpm_handle)) {
       LOG(ERROR) << __func__ << ": Could not connect to the TPM as user.";
       return false;
     }
+  } else if (can_read_ek) {
+    if (!ConnectContextAsDelegate(delegate_blob_, delegate_secret_,
+                                  &context_handle, &tpm_handle)) {
+      LOG(ERROR) << __func__ << ": Could not connect to the TPM as delegate.";
+      return false;
+    }
+  } else if (!owner_password_.empty()) {
+    if (!ConnectContextAsOwner(owner_password_, &context_handle, &tpm_handle)) {
+      LOG(ERROR) << __func__ << ": Could not connect to the TPM as owner.";
+      return false;
+    }
+  } else {
+    NOTREACHED();
+    return false;
   }
 
   // Get a handle to the EK public key.
