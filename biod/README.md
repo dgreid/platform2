@@ -443,11 +443,11 @@ The symbol **`->`** is either a response or a signal from
 
 11. Lock screen lets user in
 
-[Chromium OS Developer Guide]: https://chromium.googlesource.com/chromiumos/docs/+/master/developer_guide.md#Making-changes-to-packages-whose-source-code-is-checked-into-Chromium-OS-git-repositories
+[Chromium OS Developer Guide]: https://chromium.googlesource.com/chromiumos/docs/+/HEAD/developer_guide.md#Making-changes-to-packages-whose-source-code-is-checked-into-Chromium-OS-git-repositories
 [SanitizeUserName]: ../libbrillo/brillo/cryptohome.h
 [`bio_fw_updater`]: ./tools/bio_fw_updater.cc
-[FPMCU firmware]: https://chromium.googlesource.com/chromiumos/platform/ec/+/master/docs/fingerprint/fingerprint.md
-[hardware write protect]: https://chromium.googlesource.com/chromiumos/platform/ec/+/master/docs/write_protection.md#hw_wp
-[software write protect]: https://chromium.googlesource.com/chromiumos/platform/ec/+/master/docs/write_protection.md#software-write-protect
+[FPMCU firmware]: https://chromium.googlesource.com/chromiumos/platform/ec/+/HEAD/docs/fingerprint/fingerprint.md
+[hardware write protect]: https://chromium.googlesource.com/chromiumos/platform/ec/+/HEAD/docs/write_protection.md#hw_wp
+[software write protect]: https://chromium.googlesource.com/chromiumos/platform/ec/+/HEAD/docs/write_protection.md#software-write-protect
 [automatically on boot]: ../init/upstart/boot-update-firmware.conf
-[Firmware Write Protection]: https://chromium.googlesource.com/chromiumos/platform/ec/+/master/docs/write_protection.md
+[Firmware Write Protection]: https://chromium.googlesource.com/chromiumos/platform/ec/+/HEAD/docs/write_protection.md
