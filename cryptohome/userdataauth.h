@@ -31,6 +31,7 @@
 #include "cryptohome/install_attributes.h"
 #include "cryptohome/key_challenge_service_factory.h"
 #include "cryptohome/key_challenge_service_factory_impl.h"
+#include "cryptohome/keyset_management.h"
 #include "cryptohome/mount.h"
 #include "cryptohome/mount_factory.h"
 #include "cryptohome/pkcs11_init.h"
@@ -463,6 +464,11 @@ class UserDataAuth {
 
   // Override |crypto_| for testing purpose
   void set_crypto(cryptohome::Crypto* crypto) { crypto_ = crypto; }
+
+  // Override |keyset_management_| for testing purpose
+  void set_keyset_management(KeysetManagement* value) {
+    keyset_management_ = value;
+  }
 
   // Override |homedirs_| for testing purpose
   void set_homedirs(cryptohome::HomeDirs* homedirs) { homedirs_ = homedirs; }
@@ -982,6 +988,14 @@ class UserDataAuth {
   // here for the purpose of keeping the code in userdatauth.h/.cc as close as
   // possible to the version in service.cc.
   bool reported_pkcs11_init_fail_;
+
+  // The keyset_management_ object in normal operation
+  std::unique_ptr<KeysetManagement> default_keyset_management_;
+  // This holds the object that records information about the
+  // keyset_management. This is usually set to default_keyset_management_, but
+  // can be overridden for testing. This is to be accessed from the mount thread
+  // only because there's no guarantee on thread safety of the HomeDirs object.
+  KeysetManagement* keyset_management_;
 
   // The homedirs_ object in normal operation
   std::unique_ptr<HomeDirs> default_homedirs_;

@@ -25,14 +25,11 @@
 #include <policy/device_policy.h>
 #include <policy/libpolicy.h>
 
-#include "cryptohome/credentials.h"
 #include "cryptohome/crypto.h"
+#include "cryptohome/keyset_management.h"
 #include "cryptohome/platform.h"
 #include "cryptohome/rpc.pb.h"
 #include "cryptohome/user_oldest_activity_timestamp_cache.h"
-#include "cryptohome/vault_keyset.h"
-#include "cryptohome/vault_keyset.pb.h"
-#include "cryptohome/vault_keyset_factory.h"
 
 namespace cryptohome {
 
@@ -45,11 +42,6 @@ extern const char kAndroidCodeCacheInodeAttribute[];
 extern const char kTrackedDirectoryNameAttribute[];
 extern const char kRemovableFileAttribute[];
 
-constexpr mode_t kKeyFilePermissions = 0600;
-constexpr int kKeyFileMax = 100;  // master.0 ... master.99
-constexpr char kKeyFile[] = "master";
-constexpr char kKeyLegacyPrefix[] = "legacy-";
-
 class HomeDirs {
  public:
   // HomeDir contains lists the current user profiles.
@@ -60,11 +52,10 @@ class HomeDirs {
 
   HomeDirs() = default;
   HomeDirs(Platform* platform,
-           Crypto* crypto,
+           KeysetManagement* keyset_management,
            const brillo::SecureBlob& system_salt,
            UserOldestActivityTimestampCache* timestamp_cache,
-           std::unique_ptr<policy::PolicyProvider> policy_provider,
-           std::unique_ptr<VaultKeysetFactory> vault_keyset_factory);
+           std::unique_ptr<policy::PolicyProvider> policy_provider);
   HomeDirs(const HomeDirs&) = delete;
   HomeDirs& operator=(const HomeDirs&) = delete;
 
@@ -87,28 +78,6 @@ class HomeDirs {
 
   // Returns whether the ephemeral users policy is enabled.
   virtual bool AreEphemeralUsersEnabled();
-
-  // Returns a list of present keyset indices for an obfuscated username.
-  // There is no guarantee the keysets are valid.
-  virtual bool GetVaultKeysets(const std::string& obfuscated,
-                               std::vector<int>* keysets) const;
-
-  // Outputs a list of present keysets by label for a given obfuscated username.
-  // There is no guarantee the keysets are valid nor is the ordering guaranteed.
-  // Returns true on success, false if no keysets are found.
-  virtual bool GetVaultKeysetLabels(const std::string& obfuscated_username,
-                                    std::vector<std::string>* labels) const;
-
-  // Returns a VaultKeyset that matches the given obfuscated username and the
-  // key label. If the label is empty or if no matching keyset is found, NULL
-  // will be returned.
-  //
-  // The caller DOES take ownership of the returned VaultKeyset pointer.
-  // There is no guarantee the keyset is valid.
-  virtual std::unique_ptr<VaultKeyset> GetVaultKeyset(
-      const std::string& obfuscated_username,
-      const std::string& key_label) const;
-
   // Creates the cryptohome for the named user.
   virtual bool Create(const std::string& username);
 
@@ -128,10 +97,6 @@ class HomeDirs {
   // Note that this method calculates the disk usage instead of apparent size.
   virtual int64_t ComputeDiskUsage(const std::string& account_id);
 
-  // Returns true if the supplied Credentials are a valid (username, passkey)
-  // pair.
-  virtual bool AreCredentialsValid(const Credentials& credentials);
-
   // Returns true if a path exists for the given obfuscated username.
   virtual bool Exists(const std::string& obfuscated_username) const;
 
@@ -148,75 +113,9 @@ class HomeDirs {
   virtual bool DircryptoCryptohomeExists(
       const std::string& obfuscated_username) const;
 
-  // Returns decrypted with |creds| keyset, or nullptr if none decryptable
-  // with the provided |creds| found and |error| will be populated with the
-  // partucular failure reason.
-  // NOTE: The LE Credential Keysets are only considered when the key label
-  // provided via |creds| is non-empty.
-  std::unique_ptr<VaultKeyset> GetValidKeyset(const Credentials& creds,
-                                              MountError* error);
-
-  // Loads the vault keyset for the supplied obfuscated username and index.
-  // Returns true for success, false for failure.
-  std::unique_ptr<VaultKeyset> LoadVaultKeysetForUser(
-      const std::string& obfuscated_user, int index) const;
-
-  // Looks for a keyset which matches the credentals and returns it decrypted.
-  // TODO(dlunev): replace MountError with CryptohomeErrorCode.
-  virtual std::unique_ptr<VaultKeyset> LoadUnwrappedKeyset(
-      const Credentials& credentials, MountError* error);
-
-  // Returns the vault keyset path for the supplied obfuscated username.
-  virtual base::FilePath GetVaultKeysetPath(const std::string& obfuscated,
-                                            int index) const;
-
-  base::FilePath GetUserActivityTimestampPath(const std::string& obfuscated,
-                                              int index) const;
-
   virtual bool UpdateActivityTimestamp(const std::string& obfuscted,
                                        int index,
                                        int time_shift_sec);
-
-  // Adds initial keyset for the credentials.
-  virtual bool AddInitialKeyset(const Credentials& credentials);
-
-  // Adds a new vault keyset for the user using the |existing_credentials| to
-  // unwrap the homedir key and the |new_credentials| to rewrap and persist to
-  // disk.  The key index is return in the |index| pointer if the function
-  // returns true.  |index| is not modified if the function returns false.
-  // |new_data|, when provided, is copied to the key_data of the new keyset.
-  // If |new_data| is provided, a best-effort attempt will be made at ensuring
-  // key_data().label() is unique.
-  // If |clobber| is true and there are no matching, labeled keys, then it does
-  // nothing.  If there is an identically labeled key, it will overwrite it.
-  virtual CryptohomeErrorCode AddKeyset(const Credentials& existing_credentials,
-                                        const brillo::SecureBlob& new_passkey,
-                                        const KeyData* new_data,
-                                        bool clobber,
-                                        int* index);
-
-  // Removes the keyset identified by |key_data| if |credentials|
-  // has the remove() KeyPrivilege.  The VaultKeyset backing
-  // |credentials| may be the same that |key_data| identifies.
-  virtual CryptohomeErrorCode RemoveKeyset(const Credentials& credentials,
-                                           const KeyData& key_data);
-
-  // Removes the keyset specified by |index| from the list for the user
-  // vault identified by its |obfuscated| username.
-  // The caller should check credentials if the call is user-sourced.
-  // TODO(wad,ellyjones) Determine a better keyset priotization and management
-  //                     scheme than just integer indices, like fingerprints.
-  virtual bool ForceRemoveKeyset(const std::string& obfuscated, int index);
-
-  // Allows a keyset to be moved to a different index assuming the index can be
-  // claimed for a given |obfuscated| username.
-  virtual bool MoveKeyset(const std::string& obfuscated, int src, int dst);
-
-  // Migrates the cryptohome for the supplied obfuscated username from the
-  // supplied old key to the supplied new key.
-  virtual bool Migrate(const Credentials& newcreds,
-                       const brillo::SecureBlob& oldkey,
-                       int* migrated_key_index);
 
   // Returns the path to the user's chaps token directory.
   virtual base::FilePath GetChapsTokenDir(const std::string& username) const;
@@ -233,13 +132,6 @@ class HomeDirs {
   // migrate to dircrypto.
   virtual bool NeedsDircryptoMigration(
       const std::string& obfuscated_username) const;
-
-  // Attempts to reset all LE credentials associated with a username, given
-  // a credential |cred|.
-  virtual void ResetLECredentials(const Credentials& creds);
-
-  // Removes all LE credentials for a user with |obfuscated_username|.
-  virtual void RemoveLECredentials(const std::string& obfuscated_username);
 
   // Get the number of unmounted android-data directory. Each android users
   // that is not currently logged in should have exactly one android-data
@@ -262,6 +154,11 @@ class HomeDirs {
   // passed-in pointers.
   virtual void set_enterprise_owned(bool value) { enterprise_owned_ = value; }
   virtual bool enterprise_owned() const { return enterprise_owned_; }
+
+  // TODO(dlunev, b/172344610): this is a temporary accessor to simplify the
+  // split patch. Remove it once all clients using it are either get it
+  // directly or not use it.
+  virtual KeysetManagement* keyset_management() { return keyset_management_; }
 
  private:
   base::TimeDelta GetUserInactivityThresholdForRemoval();
@@ -313,24 +210,11 @@ class HomeDirs {
   // UID.
   bool IsOwnedByAndroidSystem(const base::FilePath& directory) const;
 
-  // Check if the vault keyset needs re-encryption.
-  bool ShouldReSaveKeyset(VaultKeyset* vault_keyset) const;
-
-  // Resaves the vault keyset, restoring on failure.
-  bool ReSaveKeyset(const Credentials& credentials, VaultKeyset* keyset) const;
-
-  // Checks whether the keyset is up to date (e.g. has correct encryption
-  // parameters, has all required fields populated etc.) and if not, updates
-  // and resaves the keyset.
-  bool ReSaveKeysetIfNeeded(const Credentials& credentials,
-                            VaultKeyset* keyset) const;
-
   Platform* platform_;
-  Crypto* crypto_;
+  KeysetManagement* keyset_management_;
   brillo::SecureBlob system_salt_;
   UserOldestActivityTimestampCache* timestamp_cache_;
   std::unique_ptr<policy::PolicyProvider> policy_provider_;
-  std::unique_ptr<VaultKeysetFactory> vault_keyset_factory_;
   bool enterprise_owned_;
   chaps::TokenManagerClient chaps_client_;
 
@@ -339,10 +223,6 @@ class HomeDirs {
 
   friend class HomeDirsTest;
   FRIEND_TEST(HomeDirsTest, GetTrackedDirectoryForDirCrypto);
-
-  FRIEND_TEST(KeysetManagementTest, ReSaveOnLoadNoReSave);
-  FRIEND_TEST(KeysetManagementTest, ReSaveOnLoadTestRegularCreds);
-  FRIEND_TEST(KeysetManagementTest, ReSaveOnLoadTestLeCreds);
 };
 
 }  // namespace cryptohome

@@ -19,6 +19,7 @@
 #include "cryptohome/cryptolib.h"
 #include "cryptohome/filesystem_layout.h"
 #include "cryptohome/homedirs.h"
+#include "cryptohome/keyset_management.h"
 #include "cryptohome/mock_mount.h"
 #include "cryptohome/mock_platform.h"
 
@@ -51,10 +52,12 @@ class UserSessionTest : public ::testing::Test {
 
   void SetUp() override {
     InitializeFilesystemLayout(&platform_, &crypto_, &system_salt_);
-    homedirs_ =
-        std::make_unique<HomeDirs>(&platform_, &crypto_, system_salt_, nullptr,
-                                   std::make_unique<policy::PolicyProvider>(),
-                                   std::make_unique<VaultKeysetFactory>());
+    keyset_management_ = std::make_unique<KeysetManagement>(
+        &platform_, &crypto_, system_salt_,
+        std::make_unique<VaultKeysetFactory>());
+    homedirs_ = std::make_unique<HomeDirs>(
+        &platform_, keyset_management_.get(), system_salt_, nullptr,
+        std::make_unique<policy::PolicyProvider>());
 
     platform_.GetFake()->SetSystemSaltForLibbrillo(system_salt_);
 
@@ -85,6 +88,7 @@ class UserSessionTest : public ::testing::Test {
   NiceMock<MockPlatform> platform_;
   Crypto crypto_;
   brillo::SecureBlob system_salt_;
+  std::unique_ptr<KeysetManagement> keyset_management_;
   std::unique_ptr<HomeDirs> homedirs_;
   scoped_refptr<UserSession> session_;
   // TODO(dlunev): Replace with real mount when FakePlatform is mature enough
@@ -153,10 +157,10 @@ TEST_F(UserSessionTest, MountVaultOk) {
 
   EXPECT_TRUE(platform_.DirectoryExists(users_[0].homedir_path));
   EXPECT_TRUE(session_->VerifyCredentials(users_[0].credentials));
-  EXPECT_TRUE(homedirs_->AreCredentialsValid(users_[0].credentials));
+  EXPECT_TRUE(keyset_management_->AreCredentialsValid(users_[0].credentials));
 
   std::unique_ptr<VaultKeyset> vk0 =
-      homedirs_->LoadVaultKeysetForUser(users_[0].obfuscated, 0);
+      keyset_management_->LoadVaultKeysetForUser(users_[0].obfuscated, 0);
   const int64_t ts1 = vk0->serialized().last_activity_timestamp();
   EXPECT_EQ(ts1, kTs1);
 
@@ -188,9 +192,9 @@ TEST_F(UserSessionTest, MountVaultOk) {
 
   EXPECT_TRUE(platform_.DirectoryExists(users_[0].homedir_path));
   EXPECT_TRUE(session_->VerifyCredentials(users_[0].credentials));
-  EXPECT_TRUE(homedirs_->AreCredentialsValid(users_[0].credentials));
+  EXPECT_TRUE(keyset_management_->AreCredentialsValid(users_[0].credentials));
 
-  vk0 = homedirs_->LoadVaultKeysetForUser(users_[0].obfuscated, 0);
+  vk0 = keyset_management_->LoadVaultKeysetForUser(users_[0].obfuscated, 0);
   const int64_t ts2 = vk0->serialized().last_activity_timestamp();
   EXPECT_EQ(ts2, kTs2);
 
@@ -208,7 +212,7 @@ TEST_F(UserSessionTest, MountVaultOk) {
   // VERIFY
   // ts updated on unmount
 
-  vk0 = homedirs_->LoadVaultKeysetForUser(users_[0].obfuscated, 0);
+  vk0 = keyset_management_->LoadVaultKeysetForUser(users_[0].obfuscated, 0);
   const int64_t ts3 = vk0->serialized().last_activity_timestamp();
   EXPECT_EQ(ts3, kTs3);
 }
@@ -238,7 +242,7 @@ TEST_F(UserSessionTest, MountVaultWrongCreds) {
             session_->MountVault(users_[0].credentials, mount_args_create));
 
   std::unique_ptr<VaultKeyset> vk0 =
-      homedirs_->LoadVaultKeysetForUser(users_[0].obfuscated, 0);
+      keyset_management_->LoadVaultKeysetForUser(users_[0].obfuscated, 0);
   const int64_t ts1 = vk0->serialized().last_activity_timestamp();
   EXPECT_EQ(ts1, kTs1);
 
@@ -266,10 +270,10 @@ TEST_F(UserSessionTest, MountVaultWrongCreds) {
 
   EXPECT_TRUE(platform_.DirectoryExists(users_[0].homedir_path));
   EXPECT_TRUE(session_->VerifyCredentials(users_[0].credentials));
-  EXPECT_TRUE(homedirs_->AreCredentialsValid(users_[0].credentials));
+  EXPECT_TRUE(keyset_management_->AreCredentialsValid(users_[0].credentials));
 
   // No mount, no ts update.
-  vk0 = homedirs_->LoadVaultKeysetForUser(users_[0].obfuscated, 0);
+  vk0 = keyset_management_->LoadVaultKeysetForUser(users_[0].obfuscated, 0);
   const int64_t ts2 = vk0->serialized().last_activity_timestamp();
   EXPECT_EQ(ts2, ts1);
 
@@ -285,7 +289,7 @@ TEST_F(UserSessionTest, MountVaultWrongCreds) {
   // VERIFY
   // No unmount, no ts update.
 
-  vk0 = homedirs_->LoadVaultKeysetForUser(users_[0].obfuscated, 0);
+  vk0 = keyset_management_->LoadVaultKeysetForUser(users_[0].obfuscated, 0);
   const int64_t ts3 = vk0->serialized().last_activity_timestamp();
   EXPECT_EQ(ts3, ts2);
 }
@@ -306,7 +310,7 @@ TEST_F(UserSessionTest, MountVaultNoExistNoCreate) {
 
   EXPECT_FALSE(platform_.DirectoryExists(users_[0].homedir_path));
   EXPECT_FALSE(session_->VerifyCredentials(users_[0].credentials));
-  EXPECT_FALSE(homedirs_->AreCredentialsValid(users_[0].credentials));
+  EXPECT_FALSE(keyset_management_->AreCredentialsValid(users_[0].credentials));
 }
 
 class UserSessionReAuthTest : public ::testing::Test {

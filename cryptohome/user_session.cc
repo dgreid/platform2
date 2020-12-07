@@ -11,6 +11,7 @@
 
 #include <cryptohome/aes_deprecated_password_verifier.h>
 #include "cryptohome/credentials.h"
+#include "cryptohome/filesystem_layout.h"
 #include "cryptohome/mount.h"
 
 namespace cryptohome {
@@ -39,10 +40,12 @@ MountError UserSession::MountVault(const Credentials& credentials,
     if (!homedirs_->Create(credentials.username()) ||
         !mount_->PrepareCryptohome(obfuscated_username,
                                    mount_args.create_as_ecryptfs) ||
-        !homedirs_->AddInitialKeyset(credentials)) {
+        !homedirs_->keyset_management()->AddInitialKeyset(credentials)) {
       LOG(ERROR) << "Error creating cryptohome.";
       return MOUNT_ERROR_CREATE_CRYPTOHOME_FAILED;
     }
+    homedirs_->UpdateActivityTimestamp(obfuscated_username, kInitialKeysetIndex,
+                                       0);
     created = true;
   }
 
@@ -50,7 +53,7 @@ MountError UserSession::MountVault(const Credentials& credentials,
   // keys.
   MountError code = MOUNT_ERROR_NONE;
   std::unique_ptr<VaultKeyset> vk =
-      homedirs_->LoadUnwrappedKeyset(credentials, &code);
+      homedirs_->keyset_management()->LoadUnwrappedKeyset(credentials, &code);
   if (code != MOUNT_ERROR_NONE) {
     return code;
   }

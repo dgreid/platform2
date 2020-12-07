@@ -37,6 +37,7 @@
 #include "cryptohome/attestation.pb.h"
 #include "cryptohome/crypto.h"
 #include "cryptohome/cryptolib.h"
+#include "cryptohome/filesystem_layout.h"
 #include "cryptohome/homedirs.h"
 #include "cryptohome/key.pb.h"
 #include "cryptohome/pkcs11_init.h"

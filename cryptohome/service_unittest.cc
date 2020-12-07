@@ -52,6 +52,7 @@
 #include "cryptohome/mock_install_attributes.h"
 #include "cryptohome/mock_key_challenge_service.h"
 #include "cryptohome/mock_key_challenge_service_factory.h"
+#include "cryptohome/mock_keyset_management.h"
 #include "cryptohome/mock_mount.h"
 #include "cryptohome/mock_mount_factory.h"
 #include "cryptohome/mock_platform.h"
@@ -197,6 +198,7 @@ class ServiceTestNotInitialized : public ::testing::Test {
 
   void SetUp() override {
     service_.set_crypto(&crypto_);
+    service_.set_keyset_management(&keyset_management_);
     service_.set_homedirs(&homedirs_);
     service_.set_install_attrs(&attrs_);
     service_.set_initialize_tpm(false);
@@ -214,6 +216,8 @@ class ServiceTestNotInitialized : public ::testing::Test {
     service_.set_key_challenge_service_factory(&key_challenge_service_factory_);
     test_helper_.SetUpSystemSalt();
     tpm_init_.set_tpm(&tpm_);
+    ON_CALL(homedirs_, keyset_management())
+        .WillByDefault(Return(&keyset_management_));
     // Return valid values for the amount of free space.
     ON_CALL(cleanup_, AmountOfFreeDiskSpace())
         .WillByDefault(Return(kFreeSpaceThresholdToTriggerCleanup));
@@ -266,6 +270,7 @@ class ServiceTestNotInitialized : public ::testing::Test {
   NiceMock<MockTpm> tpm_;
   NiceMock<MockTpmInit> tpm_init_;
   NiceMock<MockCrypto> crypto_;
+  NiceMock<MockKeysetManagement> keyset_management_;
   NiceMock<MockHomeDirs> homedirs_;
   NiceMock<MockDiskCleanup> cleanup_;
   NiceMock<MockInstallAttributes> attrs_;
@@ -320,13 +325,16 @@ TEST_F(ServiceTestNotInitialized, CheckAsyncTestCredentials) {
   std::string passkey_string = passkey.to_string();
   Crypto real_crypto(&platform_);
   InitializeFilesystemLayout(&platform_, &real_crypto, nullptr);
+  KeysetManagement real_keyset_management(
+      &platform_, &real_crypto, test_helper_.system_salt,
+      std::make_unique<VaultKeysetFactory>());
   HomeDirs real_homedirs(
-      &platform_, &real_crypto, test_helper_.system_salt, nullptr,
+      &platform_, &real_keyset_management, test_helper_.system_salt, nullptr,
       std::make_unique<policy::PolicyProvider>(
           std::unique_ptr<NiceMock<policy::MockDevicePolicy>>(
-              new NiceMock<policy::MockDevicePolicy>)),
-      std::make_unique<VaultKeysetFactory>());
+              new NiceMock<policy::MockDevicePolicy>)));
   service_.set_disk_cleanup(&cleanup_);
+  service_.set_keyset_management(&real_keyset_management);
   service_.set_homedirs(&real_homedirs);
   service_.set_crypto(&real_crypto);
   service_.Initialize();
@@ -862,7 +870,7 @@ TEST_F(ServiceTestNotInitialized,
   EXPECT_CALL(*mount, Init()).WillOnce(Return(true));
   EXPECT_CALL(homedirs_, CryptohomeExists(_)).WillOnce(Return(true));
   auto vk = std::make_unique<VaultKeyset>();
-  EXPECT_CALL(homedirs_, LoadUnwrappedKeyset(_, _))
+  EXPECT_CALL(keyset_management_, LoadUnwrappedKeyset(_, _))
       .WillOnce(Return(ByMove(std::move(vk))));
   EXPECT_CALL(*mount, MountCryptohome(_, _, _, _, _)).WillOnce(Return(true));
   EXPECT_CALL(platform_, GetMountsBySourcePrefix(_, _)).WillOnce(Return(false));
@@ -1011,7 +1019,7 @@ TEST_F(ServiceExTest, AddDataRestoreKeyAccountExistAddFail) {
   id_->set_account_id("foo@gmail.com");
   auth_->mutable_key()->set_secret("blerg");
   EXPECT_CALL(homedirs_, Exists(_)).WillRepeatedly(Return(true));
-  EXPECT_CALL(homedirs_, AddKeyset(_, _, _, _, _))
+  EXPECT_CALL(keyset_management_, AddKeyset(_, _, _, _, _))
       .WillRepeatedly(Return(CRYPTOHOME_ERROR_BACKING_STORE_FAILURE));
   service_.DoAddDataRestoreKey(id_.get(), auth_.get(), NULL);
   DispatchEvents();
@@ -1025,7 +1033,7 @@ TEST_F(ServiceExTest, AddDataRestoreKeyAccountExistAddSuccess) {
   id_->set_account_id("foo@gmail.com");
   auth_->mutable_key()->set_secret("blerg");
   EXPECT_CALL(homedirs_, Exists(_)).WillRepeatedly(Return(true));
-  EXPECT_CALL(homedirs_, AddKeyset(_, _, _, _, _))
+  EXPECT_CALL(keyset_management_, AddKeyset(_, _, _, _, _))
       .WillRepeatedly(Return(CRYPTOHOME_ERROR_NOT_SET));
   service_.DoAddDataRestoreKey(id_.get(), auth_.get(), NULL);
   DispatchEvents();
@@ -1077,7 +1085,8 @@ TEST_F(ServiceExTest, MassRemoveKeysAuthFailed) {
   id_->set_account_id("foo@gmail.com");
   auth_->mutable_key()->set_secret("blerg");
   EXPECT_CALL(homedirs_, Exists(_)).WillRepeatedly(Return(true));
-  EXPECT_CALL(homedirs_, AreCredentialsValid(_)).WillRepeatedly(Return(false));
+  EXPECT_CALL(keyset_management_, AreCredentialsValid(_))
+      .WillRepeatedly(Return(false));
   std::unique_ptr<MassRemoveKeysRequest> mrk_req(new MassRemoveKeysRequest);
   service_.DoMassRemoveKeys(id_.get(), auth_.get(), mrk_req.get(), NULL);
   DispatchEvents();
@@ -1091,8 +1100,9 @@ TEST_F(ServiceExTest, MassRemoveKeysGetLabelsFailed) {
   id_->set_account_id("foo@gmail.com");
   auth_->mutable_key()->set_secret("blerg");
   EXPECT_CALL(homedirs_, Exists(_)).WillRepeatedly(Return(true));
-  EXPECT_CALL(homedirs_, AreCredentialsValid(_)).WillRepeatedly(Return(true));
-  EXPECT_CALL(homedirs_, GetVaultKeysetLabels(_, _))
+  EXPECT_CALL(keyset_management_, AreCredentialsValid(_))
+      .WillRepeatedly(Return(true));
+  EXPECT_CALL(keyset_management_, GetVaultKeysetLabels(_, _))
       .WillRepeatedly(Return(false));
   std::unique_ptr<MassRemoveKeysRequest> mrk_req(new MassRemoveKeysRequest);
   service_.DoMassRemoveKeys(id_.get(), auth_.get(), mrk_req.get(), NULL);
@@ -1107,8 +1117,9 @@ TEST_F(ServiceExTest, MassRemoveKeysForceSuccess) {
   id_->set_account_id("foo@gmail.com");
   auth_->mutable_key()->set_secret("blerg");
   EXPECT_CALL(homedirs_, Exists(_)).WillRepeatedly(Return(true));
-  EXPECT_CALL(homedirs_, AreCredentialsValid(_)).WillRepeatedly(Return(true));
-  EXPECT_CALL(homedirs_, GetVaultKeysetLabels(_, _))
+  EXPECT_CALL(keyset_management_, AreCredentialsValid(_))
+      .WillRepeatedly(Return(true));
+  EXPECT_CALL(keyset_management_, GetVaultKeysetLabels(_, _))
       .WillRepeatedly(Return(true));
   std::unique_ptr<MassRemoveKeysRequest> mrk_req(new MassRemoveKeysRequest);
   service_.DoMassRemoveKeys(id_.get(), auth_.get(), mrk_req.get(), NULL);
@@ -1201,7 +1212,7 @@ TEST_F(ServiceExTest, MountPublicUsesPublicMountPasskey) {
     SetupMount(kUser);
     EXPECT_CALL(homedirs_, CryptohomeExists(_)).WillOnce(Return(true));
     auto vk = std::make_unique<VaultKeyset>();
-    EXPECT_CALL(homedirs_, LoadUnwrappedKeyset(_, _))
+    EXPECT_CALL(keyset_management_, LoadUnwrappedKeyset(_, _))
         .WillOnce(Return(ByMove(std::move(vk))));
     EXPECT_CALL(*mount_, MountCryptohome(_, _, _, _, _)).WillOnce(Return(true));
     return true;
@@ -1282,7 +1293,8 @@ TEST_F(ServiceExTest, CheckKeySuccessTest) {
   session_->SetCredentials(credentials, 0);
 
   EXPECT_CALL(homedirs_, Exists(_)).WillOnce(Return(true));
-  EXPECT_CALL(homedirs_, AreCredentialsValid(_)).WillOnce(Return(true));
+  EXPECT_CALL(keyset_management_, AreCredentialsValid(_))
+      .WillOnce(Return(true));
   service_.DoCheckKeyEx(std::move(id_), std::move(auth_), std::move(check_req_),
                         nullptr);
 
@@ -1320,7 +1332,8 @@ TEST_F(ServiceExTest, CheckKeyMountTest) {
   // Rinse and repeat but fail.
   ClearReplies();
   EXPECT_CALL(homedirs_, Exists(_)).WillRepeatedly(Return(true));
-  EXPECT_CALL(homedirs_, AreCredentialsValid(_)).WillOnce(Return(false));
+  EXPECT_CALL(keyset_management_, AreCredentialsValid(_))
+      .WillOnce(Return(false));
   service_.DoCheckKeyEx(std::make_unique<AccountIdentifier>(*id_),
                         std::make_unique<AuthorizationRequest>(*auth_),
                         std::make_unique<CheckKeyRequest>(*check_req_),
@@ -1392,7 +1405,7 @@ class ChallengeResponseServiceExTest : public ServiceExTest {
 
   void SetUpActiveUserSession() {
     EXPECT_CALL(homedirs_, Exists(_)).WillRepeatedly(Return(true));
-    EXPECT_CALL(homedirs_, GetVaultKeyset(_, kKeyLabel))
+    EXPECT_CALL(keyset_management_, GetVaultKeyset(_, kKeyLabel))
         .WillRepeatedly(Invoke(this, &ServiceExTest::GetNiceMockVaultKeyset));
 
     SetupMount(kUser);
@@ -1470,8 +1483,9 @@ TEST_F(ServiceExTest, MigrateKeyTest) {
 
   Credentials credentials(kUser, SecureBlob(kNewKey));
 
-  EXPECT_CALL(homedirs_, Migrate(CredentialsEqual(testing::ByRef(credentials)),
-                                 SecureBlob(kOldKey), _))
+  EXPECT_CALL(keyset_management_,
+              Migrate(CredentialsEqual(testing::ByRef(credentials)),
+                      SecureBlob(kOldKey), _))
       .WillRepeatedly(Return(true));
   service_.DoMigrateKeyEx(id_.get(), auth_.get(), migrate_req_.get(), nullptr);
 
@@ -1495,7 +1509,8 @@ TEST_F(ServiceExTest, CheckKeyHomedirsTest) {
   session_->SetCredentials(credentials, 0);
 
   EXPECT_CALL(homedirs_, Exists(_)).WillRepeatedly(Return(true));
-  EXPECT_CALL(homedirs_, AreCredentialsValid(_)).WillOnce(Return(true));
+  EXPECT_CALL(keyset_management_, AreCredentialsValid(_))
+      .WillOnce(Return(true));
   service_.DoCheckKeyEx(std::make_unique<AccountIdentifier>(*id_),
                         std::make_unique<AuthorizationRequest>(*auth_),
                         std::make_unique<CheckKeyRequest>(*check_req_),
@@ -1509,7 +1524,8 @@ TEST_F(ServiceExTest, CheckKeyHomedirsTest) {
   // Ensure failure
   ClearReplies();
   EXPECT_CALL(homedirs_, Exists(_)).WillRepeatedly(Return(true));
-  EXPECT_CALL(homedirs_, AreCredentialsValid(_)).WillOnce(Return(false));
+  EXPECT_CALL(keyset_management_, AreCredentialsValid(_))
+      .WillOnce(Return(false));
   service_.DoCheckKeyEx(std::make_unique<AccountIdentifier>(*id_),
                         std::make_unique<AuthorizationRequest>(*auth_),
                         std::make_unique<CheckKeyRequest>(*check_req_),

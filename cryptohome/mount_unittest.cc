@@ -141,11 +141,12 @@ class MountTest
     mock_device_policy_ = new policy::MockDevicePolicy();
 
     InitializeFilesystemLayout(&platform_, &crypto_, nullptr);
+    keyset_management_ = std::make_unique<KeysetManagement>(
+        &platform_, &crypto_, helper_.system_salt, nullptr);
     homedirs_ = std::make_unique<HomeDirs>(
-        &platform_, &crypto_, helper_.system_salt, nullptr,
+        &platform_, keyset_management_.get(), helper_.system_salt, nullptr,
         std::make_unique<policy::PolicyProvider>(
-            std::unique_ptr<policy::MockDevicePolicy>(mock_device_policy_)),
-        nullptr);
+            std::unique_ptr<policy::MockDevicePolicy>(mock_device_policy_)));
 
     platform_.GetFake()->SetStandardUsersAndGroups();
 
@@ -437,6 +438,7 @@ class MountTest
   NiceMock<MockTpmInit> tpm_init_;
   Crypto crypto_;
   policy::MockDevicePolicy* mock_device_policy_;  // owned by homedirs_
+  std::unique_ptr<KeysetManagement> keyset_management_;
   std::unique_ptr<HomeDirs> homedirs_;
   MockChapsClientFactory chaps_client_factory_;
   scoped_refptr<Mount> mount_;
@@ -691,8 +693,10 @@ class ChapsDirectoryTest : public ::testing::Test {
 
     brillo::SecureBlob salt;
     InitializeFilesystemLayout(&platform_, &crypto_, &salt);
-    homedirs_ = std::make_unique<HomeDirs>(&platform_, &crypto_, salt, nullptr,
-                                           nullptr, nullptr);
+    keyset_management_ =
+        std::make_unique<KeysetManagement>(&platform_, &crypto_, salt, nullptr);
+    homedirs_ = std::make_unique<HomeDirs>(&platform_, keyset_management_.get(),
+                                           salt, nullptr, nullptr);
 
     mount_ = new Mount(&platform_, homedirs_.get());
     mount_->Init();
@@ -758,6 +762,7 @@ class ChapsDirectoryTest : public ::testing::Test {
   scoped_refptr<Mount> mount_;
   NiceMock<MockPlatform> platform_;
   NiceMock<MockCrypto> crypto_;
+  std::unique_ptr<KeysetManagement> keyset_management_;
   std::unique_ptr<HomeDirs> homedirs_;
 
  private:

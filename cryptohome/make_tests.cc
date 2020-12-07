@@ -196,11 +196,12 @@ void TestUser::GenerateCredentials(bool force_ecryptfs) {
   EXPECT_CALL(*device_policy, LoadPolicy()).WillRepeatedly(Return(true));
 
   InitializeFilesystemLayout(&platform, &crypto, nullptr);
+  KeysetManagement keyset_management(&platform, &crypto, sec_salt,
+                                     std::make_unique<VaultKeysetFactory>());
   HomeDirs homedirs(
-      &platform, &crypto, sec_salt, &timestamp_cache,
+      &platform, &keyset_management, sec_salt, &timestamp_cache,
       std::make_unique<policy::PolicyProvider>(
-          std::unique_ptr<policy::MockDevicePolicy>(device_policy)),
-      std::make_unique<VaultKeysetFactory>());
+          std::unique_ptr<policy::MockDevicePolicy>(device_policy)));
 
   scoped_refptr<Mount> mount = new Mount(&platform, &homedirs);
   FilePath keyset_path =
@@ -255,7 +256,7 @@ void TestUser::GenerateCredentials(bool force_ecryptfs) {
       .WillOnce(DoAll(SaveArg<1>(&credentials), Return(true)));
   ASSERT_TRUE(homedirs.Create(local_credentials.username()));
   ASSERT_TRUE(mount->PrepareCryptohome(obfuscated_username, force_ecryptfs));
-  ASSERT_TRUE(homedirs.AddInitialKeyset(local_credentials));
+  ASSERT_TRUE(keyset_management.AddInitialKeyset(local_credentials));
   DCHECK(credentials.size());
 
   // Unmount succeeds. This is called when |mount| is destroyed.

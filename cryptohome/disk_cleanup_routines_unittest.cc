@@ -20,6 +20,7 @@
 #include "cryptohome/filesystem_layout.h"
 #include "cryptohome/homedirs.h"
 #include "cryptohome/mock_homedirs.h"
+#include "cryptohome/mock_keyset_management.h"
 #include "cryptohome/mock_platform.h"
 #include "cryptohome/platform.h"
 
@@ -77,6 +78,9 @@ class DiskCleanupRoutinesTest
 
     EXPECT_CALL(platform_, HasExtendedFileAttribute(_, _))
         .WillRepeatedly(Return(false));
+
+    EXPECT_CALL(homedirs_, keyset_management())
+        .WillRepeatedly(Return(&keyset_management_));
   }
 
  protected:
@@ -111,6 +115,7 @@ class DiskCleanupRoutinesTest
   }
 
   StrictMock<MockPlatform> platform_;
+  StrictMock<MockKeysetManagement> keyset_management_;
   StrictMock<MockHomeDirs> homedirs_;
 
   DiskCleanupRoutines routines_;
@@ -347,7 +352,7 @@ TEST_P(DiskCleanupRoutinesTest, DeleteAndroidCache) {
 }
 
 TEST_P(DiskCleanupRoutinesTest, DeleteUserProfile) {
-  EXPECT_CALL(homedirs_, RemoveLECredentials(kTestUser)).Times(1);
+  EXPECT_CALL(keyset_management_, RemoveLECredentials(kTestUser)).Times(1);
   EXPECT_CALL(platform_, DeletePathRecursively(ShadowRoot().Append(kTestUser)))
       .WillOnce(Return(true));
 
@@ -355,7 +360,7 @@ TEST_P(DiskCleanupRoutinesTest, DeleteUserProfile) {
 }
 
 TEST_P(DiskCleanupRoutinesTest, DeleteUserProfileFail) {
-  EXPECT_CALL(homedirs_, RemoveLECredentials(kTestUser)).Times(1);
+  EXPECT_CALL(keyset_management_, RemoveLECredentials(kTestUser)).Times(1);
   EXPECT_CALL(platform_, DeletePathRecursively(ShadowRoot().Append(kTestUser)))
       .WillOnce(Return(false));
 

@@ -37,6 +37,7 @@
 #include "cryptohome/install_attributes.h"
 #include "cryptohome/key_challenge_service_factory.h"
 #include "cryptohome/key_challenge_service_factory_impl.h"
+#include "cryptohome/keyset_management.h"
 #include "cryptohome/migration_type.h"
 #include "cryptohome/mount.h"
 #include "cryptohome/mount_factory.h"
@@ -136,6 +137,12 @@ class Service : public brillo::dbus::AbstractDbusService,
   }
 
   virtual cryptohome::Crypto* crypto() { return crypto_; }
+
+  virtual void set_keyset_management(KeysetManagement* value) {
+    keyset_management_ = value;
+  }
+
+  virtual KeysetManagement* keyset_management() { return keyset_management_; }
 
   virtual void set_homedirs(cryptohome::HomeDirs* value) { homedirs_ = value; }
 
@@ -1068,6 +1075,8 @@ class Service : public brillo::dbus::AbstractDbusService,
   std::unique_ptr<cryptohome::MountFactory> default_mount_factory_;
   cryptohome::MountFactory* mount_factory_;
 
+  std::unique_ptr<KeysetManagement> default_keyset_management_;
+  KeysetManagement* keyset_management_;
   std::unique_ptr<HomeDirs> default_homedirs_;
   HomeDirs* homedirs_;
   std::unique_ptr<ArcDiskQuota> default_arc_disk_quota_;

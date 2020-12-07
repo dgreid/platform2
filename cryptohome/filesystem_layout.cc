@@ -8,6 +8,7 @@
 
 #include <base/files/file_path.h>
 #include <base/logging.h>
+#include <base/strings/string_number_conversions.h>
 #include <brillo/secure_blob.h>
 
 #include "cryptohome/crypto.h"
@@ -34,9 +35,20 @@ base::FilePath SkelDir() {
   return base::FilePath(kSkelPath);
 }
 
-base::FilePath GetEcryptfsUserVaultPath(
-    const std::string& obfuscated_username) {
-  return ShadowRoot().Append(obfuscated_username).Append(kEcryptfsVaultDir);
+base::FilePath VaultKeysetPath(const std::string& obfuscated, int index) {
+  return ShadowRoot()
+      .Append(obfuscated)
+      .Append(kKeyFile)
+      .AddExtension(base::NumberToString(index));
+}
+
+base::FilePath UserActivityTimestampPath(const std::string& obfuscated,
+                                         int index) {
+  return VaultKeysetPath(obfuscated, index).AddExtension(kTsFile);
+}
+
+base::FilePath GetEcryptfsUserVaultPath(const std::string& obfuscated) {
+  return ShadowRoot().Append(obfuscated).Append(kEcryptfsVaultDir);
 }
 
 base::FilePath GetUserMountDirectory(const std::string& obfuscated_username) {

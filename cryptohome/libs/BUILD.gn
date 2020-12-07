@@ -296,6 +296,7 @@ static_library("libcryptohome") {
     "../interface.cc",
     "../key_challenge_service_factory_impl.cc",
     "../key_challenge_service_impl.cc",
+    "../keyset_management.cc",
     "../lockbox-cache.cc",
     "../mount.cc",
     "../mount_constants.cc",

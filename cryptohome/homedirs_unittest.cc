@@ -20,6 +20,7 @@
 #include "cryptohome/crypto.h"
 #include "cryptohome/cryptolib.h"
 #include "cryptohome/filesystem_layout.h"
+#include "cryptohome/keyset_management.h"
 #include "cryptohome/mock_platform.h"
 #include "cryptohome/mock_user_oldest_activity_timestamp_cache.h"
 #include "cryptohome/mount_constants.h"
@@ -79,11 +80,13 @@ class HomeDirsTest
     PreparePolicy(true, kOwner, false, "");
 
     InitializeFilesystemLayout(&platform_, &crypto_, &system_salt_);
-    homedirs_ = std::make_unique<HomeDirs>(
-        &platform_, &crypto_, system_salt_, &timestamp_cache_,
-        std::make_unique<policy::PolicyProvider>(
-            std::unique_ptr<policy::MockDevicePolicy>(mock_device_policy_)),
+    keyset_management_ = std::make_unique<KeysetManagement>(
+        &platform_, &crypto_, system_salt_,
         std::make_unique<VaultKeysetFactory>());
+    homedirs_ = std::make_unique<HomeDirs>(
+        &platform_, keyset_management_.get(), system_salt_, &timestamp_cache_,
+        std::make_unique<policy::PolicyProvider>(
+            std::unique_ptr<policy::MockDevicePolicy>(mock_device_policy_)));
 
     platform_.GetFake()->SetSystemSaltForLibbrillo(system_salt_);
 
@@ -138,6 +141,7 @@ class HomeDirsTest
   Crypto crypto_;
   brillo::SecureBlob system_salt_;
   policy::MockDevicePolicy* mock_device_policy_;  // owned by homedirs_
+  std::unique_ptr<KeysetManagement> keyset_management_;
   std::unique_ptr<HomeDirs> homedirs_;
 
   struct UserInfo {
@@ -486,12 +490,6 @@ TEST_P(HomeDirsTest, GetHomedirsSomeMounted) {
     got_hashes.insert(dirs[i].obfuscated);
   }
   EXPECT_EQ(hashes, got_hashes);
-}
-
-TEST_P(HomeDirsTest, RemoveLECredentials) {
-  // TODO(dlunev): this tests nothing really, re-write the test to actually do
-  // functionality test.
-  homedirs_->RemoveLECredentials(users_[0].obfuscated);
 }
 
 }  // namespace cryptohome

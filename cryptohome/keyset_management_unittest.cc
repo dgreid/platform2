@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "cryptohome/homedirs.h"
+#include "cryptohome/keyset_management.h"
 
 #include <set>
 #include <string>
@@ -56,8 +56,6 @@ constexpr char kUserPassword0[] = "user0_pass";
 constexpr char kPasswordLabel[] = "password";
 constexpr char kAltPasswordLabel[] = "alt_password";
 
-constexpr int kInitialKeysetIndex = 0;
-
 void GetKeysetBlob(const SerializedVaultKeyset& serialized,
                    brillo::SecureBlob* blob) {
   brillo::SecureBlob local_wrapped_keyset(serialized.wrapped_keyset().length());
@@ -83,14 +81,12 @@ class KeysetManagementTest : public ::testing::Test {
     crypto_.set_tpm(&tpm_);
 
     InitializeFilesystemLayout(&platform_, &crypto_, &system_salt_);
-    homedirs_ =
-        std::make_unique<HomeDirs>(&platform_, &crypto_, system_salt_, nullptr,
-                                   std::make_unique<policy::PolicyProvider>(),
-                                   std::make_unique<VaultKeysetFactory>());
+    keyset_management_ = std::make_unique<KeysetManagement>(
+        &platform_, &crypto_, system_salt_,
+        std::make_unique<VaultKeysetFactory>());
     mock_vault_keyset_factory_ = new MockVaultKeysetFactory();
-    homedirs_mock_vk_ = std::make_unique<HomeDirs>(
-        &platform_, &crypto_, system_salt_, nullptr,
-        std::make_unique<policy::PolicyProvider>(),
+    keyset_management_mock_vk_ = std::make_unique<KeysetManagement>(
+        &platform_, &crypto_, system_salt_,
         std::unique_ptr<VaultKeysetFactory>(mock_vault_keyset_factory_));
 
     platform_.GetFake()->SetSystemSaltForLibbrillo(system_salt_);
@@ -109,9 +105,9 @@ class KeysetManagementTest : public ::testing::Test {
   NiceMock<MockTpm> tpm_;
   Crypto crypto_;
   brillo::SecureBlob system_salt_;
-  std::unique_ptr<HomeDirs> homedirs_;
+  std::unique_ptr<KeysetManagement> keyset_management_;
   MockVaultKeysetFactory* mock_vault_keyset_factory_;
-  std::unique_ptr<HomeDirs> homedirs_mock_vk_;
+  std::unique_ptr<KeysetManagement> keyset_management_mock_vk_;
 
   struct UserInfo {
     std::string name;
@@ -124,7 +120,8 @@ class KeysetManagementTest : public ::testing::Test {
 
   // SETUPers
 
-  // Information about users' homedirs. The order of users is equal to kUsers.
+  // Information about users' keyset_management. The order of users is equal to
+  // kUsers.
   std::vector<UserInfo> users_;
 
   void AddUser(const char* name, const char* password) {
@@ -223,20 +220,21 @@ class KeysetManagementTest : public ::testing::Test {
 
   void VerifyKeysetIndicies(const std::vector<int>& expected) {
     std::vector<int> indicies;
-    ASSERT_TRUE(homedirs_->GetVaultKeysets(users_[0].obfuscated, &indicies));
+    ASSERT_TRUE(
+        keyset_management_->GetVaultKeysets(users_[0].obfuscated, &indicies));
     EXPECT_THAT(indicies, ContainerEq(expected));
   }
 
   void VerifyKeysetNotPresentWithCreds(const Credentials& creds) {
     std::unique_ptr<VaultKeyset> vk =
-        homedirs_->GetValidKeyset(creds, /* error */ nullptr);
+        keyset_management_->GetValidKeyset(creds, /* error */ nullptr);
     ASSERT_EQ(vk.get(), nullptr);
   }
 
   void VerifyKeysetPresentWithCredsAtIndex(const Credentials& creds,
                                            int index) {
     std::unique_ptr<VaultKeyset> vk =
-        homedirs_->GetValidKeyset(creds, /* error */ nullptr);
+        keyset_management_->GetValidKeyset(creds, /* error */ nullptr);
     ASSERT_NE(vk.get(), nullptr);
     EXPECT_EQ(vk->legacy_index(), index);
     EXPECT_TRUE(vk->serialized().has_wrapped_chaps_key());
@@ -247,7 +245,7 @@ class KeysetManagementTest : public ::testing::Test {
                                                       int index,
                                                       int revision) {
     std::unique_ptr<VaultKeyset> vk =
-        homedirs_->GetValidKeyset(creds, /* error */ nullptr);
+        keyset_management_->GetValidKeyset(creds, /* error */ nullptr);
     ASSERT_NE(vk.get(), nullptr);
     EXPECT_EQ(vk->legacy_index(), index);
     EXPECT_EQ(vk->serialized().key_data().revision(), revision);
@@ -263,8 +261,8 @@ TEST_F(KeysetManagementTest, AreCredentialsValid) {
   Credentials wrong_credentials(users_[0].name, brillo::SecureBlob("wrong"));
 
   // TEST
-  ASSERT_TRUE(homedirs_->AreCredentialsValid(users_[0].credentials));
-  ASSERT_FALSE(homedirs_->AreCredentialsValid(wrong_credentials));
+  ASSERT_TRUE(keyset_management_->AreCredentialsValid(users_[0].credentials));
+  ASSERT_FALSE(keyset_management_->AreCredentialsValid(wrong_credentials));
 }
 
 // Successfully adds initial keyset
@@ -275,7 +273,7 @@ TEST_F(KeysetManagementTest, AddInitialKeyset) {
 
   // TEST
 
-  EXPECT_TRUE(homedirs_->AddInitialKeyset(users_[0].credentials));
+  EXPECT_TRUE(keyset_management_->AddInitialKeyset(users_[0].credentials));
 
   // VERIFY
   // Initial keyset is added, readable, has "new-er" fields correctly
@@ -298,8 +296,8 @@ TEST_F(KeysetManagementTest, AddKeysetSuccess) {
 
   int index = -1;
   EXPECT_EQ(CRYPTOHOME_ERROR_NOT_SET,
-            homedirs_->AddKeyset(users_[0].credentials, new_passkey, nullptr,
-                                 false, &index));
+            keyset_management_->AddKeyset(users_[0].credentials, new_passkey,
+                                          nullptr, false, &index));
   EXPECT_NE(index, -1);
 
   // VERIFY
@@ -328,8 +326,8 @@ TEST_F(KeysetManagementTest, AddKeysetClobberSuccess) {
 
   int index = -1;
   EXPECT_EQ(CRYPTOHOME_ERROR_NOT_SET,
-            homedirs_->AddKeyset(users_[0].credentials, new_passkey, &key_data,
-                                 true, &index));
+            keyset_management_->AddKeyset(users_[0].credentials, new_passkey,
+                                          &key_data, true, &index));
   EXPECT_EQ(index, 0);
 
   // VERIFY
@@ -360,8 +358,8 @@ TEST_F(KeysetManagementTest, AddKeysetNoClobber) {
 
   int index = -1;
   EXPECT_EQ(CRYPTOHOME_ERROR_KEY_LABEL_EXISTS,
-            homedirs_->AddKeyset(users_[0].credentials, new_passkey, &key_data,
-                                 false, &index));
+            keyset_management_->AddKeyset(users_[0].credentials, new_passkey,
+                                          &key_data, false, &index));
   EXPECT_EQ(index, -1);
 
   // VERIFY
@@ -394,8 +392,8 @@ TEST_F(KeysetManagementTest, AddKeysetNonExistentLabel) {
 
   int index = -1;
   ASSERT_EQ(CRYPTOHOME_ERROR_AUTHORIZATION_KEY_NOT_FOUND,
-            homedirs_->AddKeyset(not_existing_label_credentials, new_passkey,
-                                 nullptr, false, &index));
+            keyset_management_->AddKeyset(not_existing_label_credentials,
+                                          new_passkey, nullptr, false, &index));
   EXPECT_EQ(index, -1);
 
   // VERIFY
@@ -425,8 +423,8 @@ TEST_F(KeysetManagementTest, AddKeysetInvalidCreds) {
 
   int index = -1;
   ASSERT_EQ(CRYPTOHOME_ERROR_AUTHORIZATION_KEY_FAILED,
-            homedirs_->AddKeyset(wrong_credentials, new_passkey, nullptr, false,
-                                 &index));
+            keyset_management_->AddKeyset(wrong_credentials, new_passkey,
+                                          nullptr, false, &index));
   EXPECT_EQ(index, -1);
 
   // VERIFY
@@ -456,8 +454,8 @@ TEST_F(KeysetManagementTest, AddKeysetInvalidPrivileges) {
 
   int index = -1;
   ASSERT_EQ(CRYPTOHOME_ERROR_AUTHORIZATION_KEY_DENIED,
-            homedirs_->AddKeyset(users_[0].credentials, new_passkey, nullptr,
-                                 false, &index));
+            keyset_management_->AddKeyset(users_[0].credentials, new_passkey,
+                                          nullptr, false, &index));
   EXPECT_EQ(index, -1);
 
   // VERIFY
@@ -490,8 +488,8 @@ TEST_F(KeysetManagementTest, AddKeysetNoFreeIndices) {
 
   int index = -1;
   EXPECT_EQ(CRYPTOHOME_ERROR_KEY_QUOTA_EXCEEDED,
-            homedirs_->AddKeyset(users_[0].credentials, new_passkey, nullptr,
-                                 false, &index));
+            keyset_management_->AddKeyset(users_[0].credentials, new_passkey,
+                                          nullptr, false, &index));
   EXPECT_EQ(index, -1);
 
   // VERIFY
@@ -527,8 +525,8 @@ TEST_F(KeysetManagementTest, AddKeysetEncryptFail) {
 
   int index = -1;
   ASSERT_EQ(CRYPTOHOME_ERROR_BACKING_STORE_FAILURE,
-            homedirs_mock_vk_->AddKeyset(users_[0].credentials, new_passkey,
-                                         nullptr, false, &index));
+            keyset_management_mock_vk_->AddKeyset(
+                users_[0].credentials, new_passkey, nullptr, false, &index));
   EXPECT_EQ(index, -1);
 
   // VERIFY
@@ -564,8 +562,8 @@ TEST_F(KeysetManagementTest, AddKeysetSaveFail) {
 
   int index = -1;
   ASSERT_EQ(CRYPTOHOME_ERROR_BACKING_STORE_FAILURE,
-            homedirs_mock_vk_->AddKeyset(users_[0].credentials, new_passkey,
-                                         nullptr, false, &index));
+            keyset_management_mock_vk_->AddKeyset(
+                users_[0].credentials, new_passkey, nullptr, false, &index));
   EXPECT_EQ(index, -1);
 
   // VERIFY
@@ -590,14 +588,14 @@ TEST_F(KeysetManagementTest, RemoveKeysetSuccess) {
 
   int index = -1;
   EXPECT_EQ(CRYPTOHOME_ERROR_NOT_SET,
-            homedirs_->AddKeyset(users_[0].credentials, new_passkey, nullptr,
-                                 false, &index));
+            keyset_management_->AddKeyset(users_[0].credentials, new_passkey,
+                                          nullptr, false, &index));
 
   // TEST
 
   EXPECT_EQ(CRYPTOHOME_ERROR_NOT_SET,
-            homedirs_->RemoveKeyset(users_[0].credentials,
-                                    users_[0].credentials.key_data()));
+            keyset_management_->RemoveKeyset(users_[0].credentials,
+                                             users_[0].credentials.key_data()));
 
   // VERIFY
   // We had one initial keyset and one added one. After deleting the initial
@@ -621,7 +619,7 @@ TEST_F(KeysetManagementTest, RemoveKeysetNotFound) {
   // TEST
 
   EXPECT_EQ(CRYPTOHOME_ERROR_KEY_NOT_FOUND,
-            homedirs_->RemoveKeyset(users_[0].credentials, key_data));
+            keyset_management_->RemoveKeyset(users_[0].credentials, key_data));
 
   // VERIFY
   // Trying to delete keyset with non-existing label. Nothing changes, initial
@@ -647,8 +645,8 @@ TEST_F(KeysetManagementTest, RemoveKeysetNonExistentLabel) {
   // TEST
 
   EXPECT_EQ(CRYPTOHOME_ERROR_AUTHORIZATION_KEY_NOT_FOUND,
-            homedirs_->RemoveKeyset(not_existing_label_credentials,
-                                    users_[0].credentials.key_data()));
+            keyset_management_->RemoveKeyset(not_existing_label_credentials,
+                                             users_[0].credentials.key_data()));
 
   // VERIFY
   // Wrong label on authorization credentials. Nothing changes, initial
@@ -672,8 +670,8 @@ TEST_F(KeysetManagementTest, RemoveKeysetInvalidCreds) {
   // TEST
 
   EXPECT_EQ(CRYPTOHOME_ERROR_AUTHORIZATION_KEY_FAILED,
-            homedirs_->RemoveKeyset(wrong_credentials,
-                                    users_[0].credentials.key_data()));
+            keyset_management_->RemoveKeyset(wrong_credentials,
+                                             users_[0].credentials.key_data()));
 
   // VERIFY
   // Wrong credentials. Nothing changes, initial keyset still available
@@ -698,8 +696,8 @@ TEST_F(KeysetManagementTest, RemoveKeysetInvalidPrivileges) {
   // TEST
 
   EXPECT_EQ(CRYPTOHOME_ERROR_AUTHORIZATION_KEY_DENIED,
-            homedirs_->RemoveKeyset(users_[0].credentials,
-                                    users_[0].credentials.key_data()));
+            keyset_management_->RemoveKeyset(users_[0].credentials,
+                                             users_[0].credentials.key_data()));
 
   // VERIFY
   // Wrong permission on the keyset. Nothing changes, initial keyset still
@@ -723,13 +721,14 @@ TEST_F(KeysetManagementTest, GetVaultKeysetLabels) {
 
   int index = -1;
   EXPECT_EQ(CRYPTOHOME_ERROR_NOT_SET,
-            homedirs_->AddKeyset(users_[0].credentials, new_passkey, &key_data,
-                                 false, &index));
+            keyset_management_->AddKeyset(users_[0].credentials, new_passkey,
+                                          &key_data, false, &index));
 
   // TEST
 
   std::vector<std::string> labels;
-  EXPECT_TRUE(homedirs_->GetVaultKeysetLabels(users_[0].obfuscated, &labels));
+  EXPECT_TRUE(
+      keyset_management_->GetVaultKeysetLabels(users_[0].obfuscated, &labels));
 
   // VERIFY
   // Labels of the initial and newly added keysets are returned.
@@ -747,7 +746,8 @@ TEST_F(KeysetManagementTest, GetVaultKeysetLabelsOneLegacyLabeled) {
 
   // TEST
 
-  EXPECT_TRUE(homedirs_->GetVaultKeysetLabels(users_[0].obfuscated, &labels));
+  EXPECT_TRUE(
+      keyset_management_->GetVaultKeysetLabels(users_[0].obfuscated, &labels));
 
   // VERIFY
   // Initial keyset has no key data thus shall provide "legacy" label.
@@ -770,18 +770,20 @@ TEST_F(KeysetManagementTest, ForceRemoveKeysetSuccess) {
 
   int index = -1;
   EXPECT_EQ(CRYPTOHOME_ERROR_NOT_SET,
-            homedirs_->AddKeyset(users_[0].credentials, new_passkey, nullptr,
-                                 false, &index));
+            keyset_management_->AddKeyset(users_[0].credentials, new_passkey,
+                                          nullptr, false, &index));
   int index2 = -1;
   EXPECT_EQ(CRYPTOHOME_ERROR_NOT_SET,
-            homedirs_->AddKeyset(users_[0].credentials, new_passkey2, nullptr,
-                                 false, &index2));
+            keyset_management_->AddKeyset(users_[0].credentials, new_passkey2,
+                                          nullptr, false, &index2));
 
   // TEST
 
-  EXPECT_TRUE(homedirs_->ForceRemoveKeyset(users_[0].obfuscated, index));
+  EXPECT_TRUE(
+      keyset_management_->ForceRemoveKeyset(users_[0].obfuscated, index));
   // Remove a non-existing keyset is a success.
-  EXPECT_TRUE(homedirs_->ForceRemoveKeyset(users_[0].obfuscated, index));
+  EXPECT_TRUE(
+      keyset_management_->ForceRemoveKeyset(users_[0].obfuscated, index));
 
   // VERIFY
   // We added two new keysets and force removed on of them. Only initial and the
@@ -803,8 +805,9 @@ TEST_F(KeysetManagementTest, ForceRemoveKeysetInvalidIndex) {
 
   // TEST
 
-  ASSERT_FALSE(homedirs_->ForceRemoveKeyset(users_[0].obfuscated, -1));
-  ASSERT_FALSE(homedirs_->ForceRemoveKeyset(users_[0].obfuscated, kKeyFileMax));
+  ASSERT_FALSE(keyset_management_->ForceRemoveKeyset(users_[0].obfuscated, -1));
+  ASSERT_FALSE(
+      keyset_management_->ForceRemoveKeyset(users_[0].obfuscated, kKeyFileMax));
 
   // VERIFY
   // Trying to delete keyset with out-of-bound index id. Nothing changes,
@@ -827,7 +830,7 @@ TEST_F(KeysetManagementTest, ForceRemoveKeysetFailedDelete) {
 
   // TEST
 
-  ASSERT_FALSE(homedirs_->ForceRemoveKeyset(users_[0].obfuscated, 0));
+  ASSERT_FALSE(keyset_management_->ForceRemoveKeyset(users_[0].obfuscated, 0));
 
   // VERIFY
   // Deletion fails, Nothing changes, initial keyset still available with old
@@ -852,10 +855,10 @@ TEST_F(KeysetManagementTest, MoveKeysetSuccess) {
 
   // Move twice to test move from the initial position and from a non-initial
   // position.
-  ASSERT_TRUE(homedirs_->MoveKeyset(users_[0].obfuscated, kInitialKeysetIndex,
-                                    kFirstMoveIndex));
-  ASSERT_TRUE(homedirs_->MoveKeyset(users_[0].obfuscated, kFirstMoveIndex,
-                                    kSecondMoveIndex));
+  ASSERT_TRUE(keyset_management_->MoveKeyset(
+      users_[0].obfuscated, kInitialKeysetIndex, kFirstMoveIndex));
+  ASSERT_TRUE(keyset_management_->MoveKeyset(
+      users_[0].obfuscated, kFirstMoveIndex, kSecondMoveIndex));
 
   // VERIFY
   // Move initial keyset twice, expect it to be accessible with old creds on the
@@ -877,8 +880,8 @@ TEST_F(KeysetManagementTest, MoveKeysetFail) {
 
   int index = -1;
   EXPECT_EQ(CRYPTOHOME_ERROR_NOT_SET,
-            homedirs_->AddKeyset(users_[0].credentials, new_passkey, nullptr,
-                                 false, &index));
+            keyset_management_->AddKeyset(users_[0].credentials, new_passkey,
+                                          nullptr, false, &index));
 
   const std::string kInitialFile =
       base::StringPrintf("master.%d", kInitialKeysetIndex);
@@ -902,26 +905,27 @@ TEST_F(KeysetManagementTest, MoveKeysetFail) {
   // TEST
 
   // Out of bound indexes
-  ASSERT_FALSE(homedirs_->MoveKeyset(users_[0].obfuscated, -1, index));
+  ASSERT_FALSE(keyset_management_->MoveKeyset(users_[0].obfuscated, -1, index));
+  ASSERT_FALSE(keyset_management_->MoveKeyset(users_[0].obfuscated,
+                                              kInitialKeysetIndex, -1));
   ASSERT_FALSE(
-      homedirs_->MoveKeyset(users_[0].obfuscated, kInitialKeysetIndex, -1));
-  ASSERT_FALSE(homedirs_->MoveKeyset(users_[0].obfuscated, kKeyFileMax, index));
-  ASSERT_FALSE(homedirs_->MoveKeyset(users_[0].obfuscated, kInitialKeysetIndex,
-                                     kKeyFileMax));
+      keyset_management_->MoveKeyset(users_[0].obfuscated, kKeyFileMax, index));
+  ASSERT_FALSE(keyset_management_->MoveKeyset(
+      users_[0].obfuscated, kInitialKeysetIndex, kKeyFileMax));
 
   // Not existing source
-  ASSERT_FALSE(
-      homedirs_->MoveKeyset(users_[0].obfuscated, index + 4, index + 5));
+  ASSERT_FALSE(keyset_management_->MoveKeyset(users_[0].obfuscated, index + 4,
+                                              index + 5));
 
   // Destination exists
-  ASSERT_FALSE(
-      homedirs_->MoveKeyset(users_[0].obfuscated, kInitialKeysetIndex, index));
+  ASSERT_FALSE(keyset_management_->MoveKeyset(users_[0].obfuscated,
+                                              kInitialKeysetIndex, index));
 
   // Destination file error-injected.
-  ASSERT_FALSE(homedirs_->MoveKeyset(users_[0].obfuscated, kInitialKeysetIndex,
-                                     index + 2));
-  ASSERT_FALSE(homedirs_->MoveKeyset(users_[0].obfuscated, kInitialKeysetIndex,
-                                     index + 3));
+  ASSERT_FALSE(keyset_management_->MoveKeyset(users_[0].obfuscated,
+                                              kInitialKeysetIndex, index + 2));
+  ASSERT_FALSE(keyset_management_->MoveKeyset(users_[0].obfuscated,
+                                              kInitialKeysetIndex, index + 3));
 
   // VERIFY
 
@@ -940,21 +944,21 @@ TEST_F(KeysetManagementTest, ReSaveKeysetNoReSave) {
 
   KeysetSetUpWithKeyData(DefaultKeyData());
 
-  std::unique_ptr<VaultKeyset> vk0 =
-      homedirs_->GetValidKeyset(users_[0].credentials, /* error */ nullptr);
+  std::unique_ptr<VaultKeyset> vk0 = keyset_management_->GetValidKeyset(
+      users_[0].credentials, /* error */ nullptr);
   ASSERT_NE(vk0.get(), nullptr);
 
   // TEST
 
   MountError code;
   std::unique_ptr<VaultKeyset> vk_load =
-      homedirs_->LoadUnwrappedKeyset(users_[0].credentials, &code);
+      keyset_management_->LoadUnwrappedKeyset(users_[0].credentials, &code);
   EXPECT_EQ(MOUNT_ERROR_NONE, code);
 
   // VERIFY
 
-  std::unique_ptr<VaultKeyset> vk0_new(
-      homedirs_->GetValidKeyset(users_[0].credentials, /* error */ nullptr));
+  std::unique_ptr<VaultKeyset> vk0_new(keyset_management_->GetValidKeyset(
+      users_[0].credentials, /* error */ nullptr));
   ASSERT_NE(vk0_new.get(), nullptr);
 
   brillo::SecureBlob lhs, rhs;
@@ -970,7 +974,7 @@ TEST_F(KeysetManagementTest, ReSaveKeysetChapsRepopulation) {
   KeysetSetUpWithKeyData(DefaultKeyData());
 
   std::unique_ptr<VaultKeyset> vk0 =
-      homedirs_->LoadVaultKeysetForUser(users_[0].obfuscated, 0);
+      keyset_management_->LoadVaultKeysetForUser(users_[0].obfuscated, 0);
   ASSERT_NE(vk0.get(), nullptr);
   vk0->mutable_serialized()->clear_wrapped_chaps_key();
   EXPECT_FALSE(vk0->serialized().has_wrapped_chaps_key());
@@ -980,14 +984,14 @@ TEST_F(KeysetManagementTest, ReSaveKeysetChapsRepopulation) {
 
   MountError code;
   std::unique_ptr<VaultKeyset> vk_load =
-      homedirs_->LoadUnwrappedKeyset(users_[0].credentials, &code);
+      keyset_management_->LoadUnwrappedKeyset(users_[0].credentials, &code);
   EXPECT_EQ(MOUNT_ERROR_NONE, code);
   EXPECT_TRUE(vk_load->serialized().has_wrapped_chaps_key());
 
   // VERIFY
 
-  std::unique_ptr<VaultKeyset> vk0_new =
-      homedirs_->GetValidKeyset(users_[0].credentials, /* error */ nullptr);
+  std::unique_ptr<VaultKeyset> vk0_new = keyset_management_->GetValidKeyset(
+      users_[0].credentials, /* error */ nullptr);
   ASSERT_NE(vk0_new.get(), nullptr);
   EXPECT_TRUE(vk0_new->serialized().has_wrapped_chaps_key());
 
@@ -1002,13 +1006,13 @@ TEST_F(KeysetManagementTest, ReSaveOnLoadNoReSave) {
 
   KeysetSetUpWithKeyData(DefaultKeyData());
 
-  std::unique_ptr<VaultKeyset> vk0 =
-      homedirs_->GetValidKeyset(users_[0].credentials, /* error */ nullptr);
+  std::unique_ptr<VaultKeyset> vk0 = keyset_management_->GetValidKeyset(
+      users_[0].credentials, /* error */ nullptr);
   ASSERT_NE(vk0.get(), nullptr);
 
   // TEST
 
-  EXPECT_FALSE(homedirs_->ShouldReSaveKeyset(vk0.get()));
+  EXPECT_FALSE(keyset_management_->ShouldReSaveKeyset(vk0.get()));
 }
 
 // The following tests use MOCKs for TpmState and hand-crafted vault keyset
@@ -1019,8 +1023,8 @@ TEST_F(KeysetManagementTest, ReSaveOnLoadTestRegularCreds) {
 
   KeysetSetUpWithKeyData(DefaultKeyData());
 
-  std::unique_ptr<VaultKeyset> vk0 =
-      homedirs_->GetValidKeyset(users_[0].credentials, /* error */ nullptr);
+  std::unique_ptr<VaultKeyset> vk0 = keyset_management_->GetValidKeyset(
+      users_[0].credentials, /* error */ nullptr);
   ASSERT_NE(vk0.get(), nullptr);
 
   NiceMock<MockTpmInit> mock_tpm_init;
@@ -1035,31 +1039,31 @@ TEST_F(KeysetManagementTest, ReSaveOnLoadTestRegularCreds) {
   // TEST
 
   // Scrypt wrapped shall be resaved when tpm present.
-  EXPECT_TRUE(homedirs_->ShouldReSaveKeyset(vk0.get()));
+  EXPECT_TRUE(keyset_management_->ShouldReSaveKeyset(vk0.get()));
 
   // Tpm wrapped not pcr bound, but no public hash - resave.
   vk0->mutable_serialized()->set_flags(SerializedVaultKeyset::TPM_WRAPPED |
                                        SerializedVaultKeyset::SCRYPT_DERIVED);
-  EXPECT_TRUE(homedirs_->ShouldReSaveKeyset(vk0.get()));
+  EXPECT_TRUE(keyset_management_->ShouldReSaveKeyset(vk0.get()));
 
   // Tpm wrapped pcr bound, but no public hash - resave.
   vk0->mutable_serialized()->set_flags(SerializedVaultKeyset::TPM_WRAPPED |
                                        SerializedVaultKeyset::SCRYPT_DERIVED |
                                        SerializedVaultKeyset::PCR_BOUND);
-  EXPECT_TRUE(homedirs_->ShouldReSaveKeyset(vk0.get()));
+  EXPECT_TRUE(keyset_management_->ShouldReSaveKeyset(vk0.get()));
 
   // Tpm wrapped not pcr bound, public hash - resave.
   vk0->mutable_serialized()->set_tpm_public_key_hash("public hash");
   vk0->mutable_serialized()->set_flags(SerializedVaultKeyset::TPM_WRAPPED |
                                        SerializedVaultKeyset::SCRYPT_DERIVED);
-  EXPECT_TRUE(homedirs_->ShouldReSaveKeyset(vk0.get()));
+  EXPECT_TRUE(keyset_management_->ShouldReSaveKeyset(vk0.get()));
 
   // Tpm wrapped pcr bound, public hash - no resave.
   vk0->mutable_serialized()->set_tpm_public_key_hash("public hash");
   vk0->mutable_serialized()->set_flags(SerializedVaultKeyset::TPM_WRAPPED |
                                        SerializedVaultKeyset::SCRYPT_DERIVED |
                                        SerializedVaultKeyset::PCR_BOUND);
-  EXPECT_FALSE(homedirs_->ShouldReSaveKeyset(vk0.get()));
+  EXPECT_FALSE(keyset_management_->ShouldReSaveKeyset(vk0.get()));
 }
 
 TEST_F(KeysetManagementTest, ReSaveOnLoadTestLeCreds) {
@@ -1067,8 +1071,8 @@ TEST_F(KeysetManagementTest, ReSaveOnLoadTestLeCreds) {
 
   KeysetSetUpWithKeyData(DefaultKeyData());
 
-  std::unique_ptr<VaultKeyset> vk0 =
-      homedirs_->GetValidKeyset(users_[0].credentials, /* error */ nullptr);
+  std::unique_ptr<VaultKeyset> vk0 = keyset_management_->GetValidKeyset(
+      users_[0].credentials, /* error */ nullptr);
   ASSERT_NE(vk0.get(), nullptr);
 
   NiceMock<MockTpmInit> mock_tpm_init;
@@ -1090,13 +1094,19 @@ TEST_F(KeysetManagementTest, ReSaveOnLoadTestLeCreds) {
   EXPECT_CALL(*le_cred_manager, NeedsPcrBinding(_))
       .WillRepeatedly(Return(false));
   vk0->mutable_serialized()->set_flags(SerializedVaultKeyset::LE_CREDENTIAL);
-  EXPECT_FALSE(homedirs_->ShouldReSaveKeyset(vk0.get()));
+  EXPECT_FALSE(keyset_management_->ShouldReSaveKeyset(vk0.get()));
 
   // le credentials which needs pcr binding - no resave.
   EXPECT_CALL(*le_cred_manager, NeedsPcrBinding(_))
       .WillRepeatedly(Return(true));
   vk0->mutable_serialized()->set_flags(SerializedVaultKeyset::LE_CREDENTIAL);
-  EXPECT_TRUE(homedirs_->ShouldReSaveKeyset(vk0.get()));
+  EXPECT_TRUE(keyset_management_->ShouldReSaveKeyset(vk0.get()));
+}
+
+TEST_F(KeysetManagementTest, RemoveLECredentials) {
+  // TODO(dlunev): this tests nothing really, re-write the test to actually do
+  // functionality test.
+  keyset_management_->RemoveLECredentials(users_[0].obfuscated);
 }
 
 }  // namespace cryptohome

@@ -717,11 +717,13 @@ base::Value Mount::GetStatus(int active_key_index) {
   std::string user = SanitizeUserNameWithSalt(username_, system_salt_);
   base::Value keysets(base::Value::Type::LIST);
   std::vector<int> key_indices;
-  if (user.length() && homedirs_->GetVaultKeysets(user, &key_indices)) {
+  if (user.length() &&
+      homedirs_->keyset_management()->GetVaultKeysets(user, &key_indices)) {
     for (auto key_index : key_indices) {
       base::Value keyset_dict(base::Value::Type::DICTIONARY);
       std::unique_ptr<VaultKeyset> keyset(
-          homedirs_->LoadVaultKeysetForUser(user, key_index));
+          homedirs_->keyset_management()->LoadVaultKeysetForUser(user,
+                                                                 key_index));
       if (keyset.get()) {
         bool tpm =
             keyset->serialized().flags() & SerializedVaultKeyset::TPM_WRAPPED;

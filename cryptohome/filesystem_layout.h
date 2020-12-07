@@ -20,9 +20,20 @@ constexpr char kEcryptfsVaultDir[] = "vault";
 // Name of the mount directory.
 constexpr char kMountDir[] = "mount";
 
+constexpr mode_t kKeyFilePermissions = 0600;
+constexpr int kKeyFileMax = 100;  // master.0 ... master.99
+constexpr char kKeyFile[] = "master";
+constexpr char kKeyLegacyPrefix[] = "legacy-";
+
+constexpr int kInitialKeysetIndex = 0;
+constexpr char kTsFile[] = "timestamp";
+
 base::FilePath ShadowRoot();
 base::FilePath SaltFile();
 base::FilePath SkelDir();
+base::FilePath VaultKeysetPath(const std::string& obfuscated, int index);
+base::FilePath UserActivityTimestampPath(const std::string& obfuscated,
+                                         int index);
 
 base::FilePath GetEcryptfsUserVaultPath(const std::string& obfuscated_username);
 base::FilePath GetUserMountDirectory(const std::string& obfuscated_username);

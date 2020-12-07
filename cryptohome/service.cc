@@ -292,6 +292,8 @@ Service::Service()
       user_timestamp_cache_(new UserOldestActivityTimestampCache()),
       default_mount_factory_(new cryptohome::MountFactory()),
       mount_factory_(default_mount_factory_.get()),
+      default_keyset_management_(nullptr),
+      keyset_management_(nullptr),
       default_homedirs_(nullptr),
       homedirs_(nullptr),
       default_arc_disk_quota_(nullptr),
@@ -668,11 +670,18 @@ bool Service::Initialize() {
     return false;
   }
 
-  if (!homedirs_) {
-    default_homedirs_ = std::make_unique<HomeDirs>(
-        platform_, crypto_, system_salt_, user_timestamp_cache_.get(),
-        std::make_unique<policy::PolicyProvider>(),
+  if (!keyset_management_) {
+    default_keyset_management_ = std::make_unique<KeysetManagement>(
+        platform_, crypto_, system_salt_,
         std::make_unique<VaultKeysetFactory>());
+    keyset_management_ = default_keyset_management_.get();
+  }
+
+  if (!homedirs_) {
+    default_homedirs_ =
+        std::make_unique<HomeDirs>(platform_, keyset_management_, system_salt_,
+                                   user_timestamp_cache_.get(),
+                                   std::make_unique<policy::PolicyProvider>());
     homedirs_ = default_homedirs_.get();
   }
 
@@ -1250,15 +1259,15 @@ void Service::DoCheckKeyEx(std::unique_ptr<AccountIdentifier> identifier,
   }
   if (found_valid_credentials) {
     // Entered the right creds, so reset LE credentials.
-    homedirs_->ResetLECredentials(credentials);
+    keyset_management_->ResetLECredentials(credentials);
     SendReply(context, reply);
     return;
   }
   // Fallthrough to HomeDirs to cover different keys for the same user.
 
   if (homedirs_->Exists(obfuscated_username)) {
-    if (homedirs_->AreCredentialsValid(credentials)) {
-      homedirs_->ResetLECredentials(credentials);
+    if (keyset_management_->AreCredentialsValid(credentials)) {
+      keyset_management_->ResetLECredentials(credentials);
     } else {
       // TODO(wad) Should this pass along KEY_NOT_FOUND too?
       reply.set_error(CRYPTOHOME_ERROR_AUTHORIZATION_KEY_FAILED);
@@ -1334,8 +1343,8 @@ void Service::DoRemoveKeyEx(AccountIdentifier* identifier,
     return;
   }
 
-  reply.set_error(
-      homedirs_->RemoveKeyset(credentials, remove_key_request->key().data()));
+  reply.set_error(keyset_management_->RemoveKeyset(
+      credentials, remove_key_request->key().data()));
   if (reply.error() == CRYPTOHOME_ERROR_NOT_SET) {
     // Don't set the error if there wasn't one.
     reply.clear_error();
@@ -1400,14 +1409,14 @@ void Service::DoMassRemoveKeys(AccountIdentifier* account_id,
     SendReply(context, reply);
     return;
   }
-  if (!homedirs_->AreCredentialsValid(credentials)) {
+  if (!keyset_management_->AreCredentialsValid(credentials)) {
     reply.set_error(CRYPTOHOME_ERROR_AUTHORIZATION_KEY_FAILED);
     SendReply(context, reply);
     return;
   }
   // get all labels under the username
   std::vector<std::string> labels;
-  if (!homedirs_->GetVaultKeysetLabels(obfuscated_username, &labels)) {
+  if (!keyset_management_->GetVaultKeysetLabels(obfuscated_username, &labels)) {
     reply.set_error(CRYPTOHOME_ERROR_KEY_NOT_FOUND);
     SendReply(context, reply);
     return;
@@ -1421,9 +1430,9 @@ void Service::DoMassRemoveKeys(AccountIdentifier* account_id,
     if (exempt_labels.find(label) == exempt_labels.end()) {
       // non-exempt label, should be removed
       std::unique_ptr<VaultKeyset> remove_vk(
-          homedirs_->GetVaultKeyset(obfuscated_username, label));
-      if (!homedirs_->ForceRemoveKeyset(obfuscated_username,
-                                        remove_vk->legacy_index())) {
+          keyset_management_->GetVaultKeyset(obfuscated_username, label));
+      if (!keyset_management_->ForceRemoveKeyset(obfuscated_username,
+                                                 remove_vk->legacy_index())) {
         LOG(ERROR) << "MassRemoveKeys: failed to remove keyset " << label;
         reply.set_error(CRYPTOHOME_ERROR_BACKING_STORE_FAILURE);
         SendReply(context, reply);
@@ -1485,7 +1494,7 @@ void Service::DoListKeysEx(AccountIdentifier* identifier,
     return;
   }
   std::vector<std::string> labels;
-  if (!homedirs_->GetVaultKeysetLabels(obfuscated_username, &labels)) {
+  if (!keyset_management_->GetVaultKeysetLabels(obfuscated_username, &labels)) {
     reply.set_error(CRYPTOHOME_ERROR_KEY_NOT_FOUND);
   }
   ListKeysReply* list_keys_reply = reply.MutableExtension(ListKeysReply::reply);
@@ -1607,8 +1616,8 @@ void Service::DoMigrateKeyEx(AccountIdentifier* account,
                           SecureBlob(migrate_request->secret()));
 
   int key_index = -1;
-  if (!homedirs_->Migrate(credentials, SecureBlob(auth_request->key().secret()),
-                          &key_index)) {
+  if (!keyset_management_->Migrate(
+          credentials, SecureBlob(auth_request->key().secret()), &key_index)) {
     reply.set_error(CRYPTOHOME_ERROR_MIGRATE_KEY_FAILED);
   } else {
     scoped_refptr<UserSession> session = GetUserSession(GetAccountId(*account));
@@ -1702,7 +1711,7 @@ void Service::DoAddKeyEx(AccountIdentifier* identifier,
   int index = -1;
   SecureBlob new_secret(add_key_request->key().secret().begin(),
                         add_key_request->key().secret().end());
-  reply.set_error(homedirs_->AddKeyset(
+  reply.set_error(keyset_management_->AddKeyset(
       credentials, new_secret, &add_key_request->key().data(),
       add_key_request->clobber_if_exists(), &index));
   if (reply.error() == CRYPTOHOME_ERROR_NOT_SET) {
@@ -1768,8 +1777,8 @@ void Service::DoAddDataRestoreKey(AccountIdentifier* identifier,
     return;
   }
   int index = -1;
-  reply.set_error(homedirs_->AddKeyset(credentials, data_restore_key,
-                                       &new_key_data, true, &index));
+  reply.set_error(keyset_management_->AddKeyset(credentials, data_restore_key,
+                                                &new_key_data, true, &index));
   if (reply.error() == CRYPTOHOME_ERROR_NOT_SET) {
     // Don't set the error if there wasn't one.
     reply.clear_error();
@@ -2107,7 +2116,7 @@ gboolean Service::Mount(const gchar* userid,
     LOG(INFO) << "Mount exists. Rechecking credentials.";
     if (!user_session->VerifyCredentials(credentials)) {
       // Need to take a trip through the TPM.
-      if (!homedirs_->AreCredentialsValid(credentials)) {
+      if (!keyset_management_->AreCredentialsValid(credentials)) {
         LOG(ERROR) << "Failed to reauthenticate against the existing mount!";
         // TODO(wad) Should we teardown all the mounts if this happens?
         // RemoveAllMounts();
@@ -2495,7 +2504,7 @@ void Service::DoFullChallengeResponseCheckKeyEx(
     return;
   }
 
-  std::unique_ptr<VaultKeyset> vault_keyset(homedirs_->GetVaultKeyset(
+  std::unique_ptr<VaultKeyset> vault_keyset(keyset_management_->GetVaultKeyset(
       obfuscated_username, authorization->key().data().label()));
   if (!vault_keyset) {
     LOG(ERROR) << "No existing challenge-response vault keyset found";
@@ -2523,7 +2532,7 @@ void Service::OnFullChallengeResponseCheckKeyExDone(
   }
 
   // Entered the right creds, so reset LE credentials.
-  homedirs_->ResetLECredentials(*credentials);
+  keyset_management_->ResetLECredentials(*credentials);
 
   SendReply(context, BaseReply());
 }
@@ -2580,7 +2589,7 @@ void Service::DoChallengeResponseMountEx(
     return;
   }
 
-  std::unique_ptr<VaultKeyset> vault_keyset(homedirs_->GetVaultKeyset(
+  std::unique_ptr<VaultKeyset> vault_keyset(keyset_management_->GetVaultKeyset(
       obfuscated_username, authorization->key().data().label()));
   const bool use_existing_credentials =
       vault_keyset && !mount_args.is_ephemeral;
@@ -2750,18 +2759,18 @@ void Service::ContinueMountExWithCredentials(
     // Attempt a short-circuited credential test.
     if (user_session->VerifyCredentials(*credentials)) {
       SendReply(context, reply);
-      homedirs_->ResetLECredentials(*credentials);
+      keyset_management_->ResetLECredentials(*credentials);
       return;
     }
     // If the Mount has invalid credentials (repopulated from system state)
     // this will ensure a user can still sign-in with the right ones.
     // TODO(wad) Should we unmount on a failed re-mount attempt?
     if (!user_session->VerifyCredentials(*credentials) &&
-        !homedirs_->AreCredentialsValid(*credentials)) {
+        !keyset_management_->AreCredentialsValid(*credentials)) {
       LOG(ERROR) << "Credentials are invalid";
       reply.set_error(CRYPTOHOME_ERROR_AUTHORIZATION_KEY_FAILED);
     } else {
-      homedirs_->ResetLECredentials(*credentials);
+      keyset_management_->ResetLECredentials(*credentials);
     }
     SendReply(context, reply);
     return;
@@ -2815,7 +2824,7 @@ void Service::ContinueMountExWithCredentials(
     return;
   }
 
-  homedirs_->ResetLECredentials(*credentials);
+  keyset_management_->ResetLECredentials(*credentials);
   SendReply(context, reply);
 
   if (!request->hidden_mount()) {

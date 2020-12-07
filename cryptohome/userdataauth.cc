@@ -181,6 +181,8 @@ UserDataAuth::UserDataAuth()
       install_attrs_(default_install_attrs_.get()),
       enterprise_owned_(false),
       reported_pkcs11_init_fail_(false),
+      default_keyset_management_(nullptr),
+      keyset_management_(nullptr),
       default_homedirs_(nullptr),
       homedirs_(nullptr),
       user_timestamp_cache_(new UserOldestActivityTimestampCache()),
@@ -254,11 +256,18 @@ bool UserDataAuth::Initialize() {
     return false;
   }
 
-  if (!homedirs_) {
-    default_homedirs_ = std::make_unique<HomeDirs>(
-        platform_, crypto_, system_salt_, user_timestamp_cache_.get(),
-        std::make_unique<policy::PolicyProvider>(),
+  if (!keyset_management_) {
+    default_keyset_management_ = std::make_unique<KeysetManagement>(
+        platform_, crypto_, system_salt_,
         std::make_unique<VaultKeysetFactory>());
+    keyset_management_ = default_keyset_management_.get();
+  }
+
+  if (!homedirs_) {
+    default_homedirs_ =
+        std::make_unique<HomeDirs>(platform_, keyset_management_, system_salt_,
+                                   user_timestamp_cache_.get(),
+                                   std::make_unique<policy::PolicyProvider>());
     homedirs_ = default_homedirs_.get();
   }
 
@@ -1530,7 +1539,7 @@ void UserDataAuth::DoChallengeResponseMount(
     return;
   }
 
-  std::unique_ptr<VaultKeyset> vault_keyset(homedirs_->GetVaultKeyset(
+  std::unique_ptr<VaultKeyset> vault_keyset(keyset_management_->GetVaultKeyset(
       obfuscated_username, request.authorization().key().data().label()));
   const bool use_existing_credentials =
       vault_keyset && !mount_args.is_ephemeral;
@@ -1722,19 +1731,19 @@ void UserDataAuth::ContinueMountWithCredentials(
     // Attempt a short-circuited credential test.
     if (user_session->VerifyCredentials(*credentials)) {
       std::move(on_done).Run(reply);
-      homedirs_->ResetLECredentials(*credentials);
+      keyset_management_->ResetLECredentials(*credentials);
       return;
     }
     // If the Mount has invalid credentials (repopulated from system state)
     // this will ensure a user can still sign-in with the right ones.
     // TODO(wad) Should we unmount on a failed re-mount attempt?
     if (!user_session->VerifyCredentials(*credentials) &&
-        !homedirs_->AreCredentialsValid(*credentials)) {
+        !keyset_management_->AreCredentialsValid(*credentials)) {
       LOG(ERROR) << "Credentials are invalid";
       reply.set_error(
           user_data_auth::CRYPTOHOME_ERROR_AUTHORIZATION_KEY_FAILED);
     } else {
-      homedirs_->ResetLECredentials(*credentials);
+      keyset_management_->ResetLECredentials(*credentials);
     }
     std::move(on_done).Run(reply);
     return;
@@ -1791,7 +1800,7 @@ void UserDataAuth::ContinueMountWithCredentials(
     return;
   }
 
-  homedirs_->ResetLECredentials(*credentials);
+  keyset_management_->ResetLECredentials(*credentials);
   std::move(on_done).Run(reply);
 
   // Update user timestamp and kick off PKCS#11 initialization for non-hidden
@@ -1856,9 +1865,9 @@ user_data_auth::CryptohomeErrorCode UserDataAuth::AddKey(
   const std::string& new_key_secret = request.key().secret();
   SecureBlob new_secret(new_key_secret);
   CryptohomeErrorCode result;
-  result =
-      homedirs_->AddKeyset(credentials, new_secret, &request.key().data(),
-                           request.clobber_if_exists(), &unused_keyset_index);
+  result = keyset_management_->AddKeyset(
+      credentials, new_secret, &request.key().data(),
+      request.clobber_if_exists(), &unused_keyset_index);
 
   // Note that cryptohome::CryptohomeErrorCode and
   // user_data_auth::CryptohomeErrorCode are same in content, and it'll remain
@@ -1909,8 +1918,8 @@ user_data_auth::CryptohomeErrorCode UserDataAuth::AddDataRestoreKey(
   int unused_keyset_index;
 
   CryptohomeErrorCode result;
-  result = homedirs_->AddKeyset(credentials, data_restore_key, &new_key_data,
-                                true, &unused_keyset_index);
+  result = keyset_management_->AddKeyset(
+      credentials, data_restore_key, &new_key_data, true, &unused_keyset_index);
 
   // We need to respond with the data restore key if the operation is
   // successful.
@@ -2001,7 +2010,7 @@ void UserDataAuth::CheckKey(
 
   if (found_valid_credentials) {
     // Entered the right creds, so reset LE credentials.
-    homedirs_->ResetLECredentials(credentials);
+    keyset_management_->ResetLECredentials(credentials);
     std::move(on_done).Run(user_data_auth::CRYPTOHOME_ERROR_NOT_SET);
     return;
   }
@@ -2012,7 +2021,7 @@ void UserDataAuth::CheckKey(
     return;
   }
 
-  if (!homedirs_->AreCredentialsValid(credentials)) {
+  if (!keyset_management_->AreCredentialsValid(credentials)) {
     // TODO(wad) Should this pass along KEY_NOT_FOUND too?
     std::move(on_done).Run(
         user_data_auth::CRYPTOHOME_ERROR_AUTHORIZATION_KEY_FAILED);
@@ -2020,7 +2029,7 @@ void UserDataAuth::CheckKey(
     return;
   }
 
-  homedirs_->ResetLECredentials(credentials);
+  keyset_management_->ResetLECredentials(credentials);
   std::move(on_done).Run(user_data_auth::CRYPTOHOME_ERROR_NOT_SET);
   return;
 }
@@ -2181,7 +2190,7 @@ void UserDataAuth::DoFullChallengeResponseCheckKey(
     return;
   }
 
-  std::unique_ptr<VaultKeyset> vault_keyset(homedirs_->GetVaultKeyset(
+  std::unique_ptr<VaultKeyset> vault_keyset(keyset_management_->GetVaultKeyset(
       obfuscated_username, authorization.key().data().label()));
   if (!vault_keyset) {
     LOG(ERROR) << "No existing challenge-response vault keyset found";
@@ -2207,7 +2216,7 @@ void UserDataAuth::OnFullChallengeResponseCheckKeyDone(
   }
 
   // Entered the right creds, so reset LE credentials.
-  homedirs_->ResetLECredentials(*credentials);
+  keyset_management_->ResetLECredentials(*credentials);
 
   std::move(on_done).Run(user_data_auth::CRYPTOHOME_ERROR_NOT_SET);
 }
@@ -2253,7 +2262,7 @@ user_data_auth::CryptohomeErrorCode UserDataAuth::RemoveKey(
   }
 
   CryptohomeErrorCode result;
-  result = homedirs_->RemoveKeyset(credentials, request.key().data());
+  result = keyset_management_->RemoveKeyset(credentials, request.key().data());
 
   // Note that cryptohome::CryptohomeErrorCode and
   // user_data_auth::CryptohomeErrorCode are same in content, and it'll remain
@@ -2299,13 +2308,13 @@ user_data_auth::CryptohomeErrorCode UserDataAuth::MassRemoveKeys(
     return user_data_auth::CRYPTOHOME_ERROR_ACCOUNT_NOT_FOUND;
   }
 
-  if (!homedirs_->AreCredentialsValid(credentials)) {
+  if (!keyset_management_->AreCredentialsValid(credentials)) {
     return user_data_auth::CRYPTOHOME_ERROR_AUTHORIZATION_KEY_FAILED;
   }
 
   // get all labels under the username
   std::vector<std::string> labels;
-  if (!homedirs_->GetVaultKeysetLabels(obfuscated_username, &labels)) {
+  if (!keyset_management_->GetVaultKeysetLabels(obfuscated_username, &labels)) {
     return user_data_auth::CRYPTOHOME_ERROR_KEY_NOT_FOUND;
   }
 
@@ -2318,9 +2327,9 @@ user_data_auth::CryptohomeErrorCode UserDataAuth::MassRemoveKeys(
     if (exempt_labels.find(label) == exempt_labels.end()) {
       // non-exempt label, should be removed
       std::unique_ptr<VaultKeyset> remove_vk(
-          homedirs_->GetVaultKeyset(obfuscated_username, label));
-      if (!homedirs_->ForceRemoveKeyset(obfuscated_username,
-                                        remove_vk->legacy_index())) {
+          keyset_management_->GetVaultKeyset(obfuscated_username, label));
+      if (!keyset_management_->ForceRemoveKeyset(obfuscated_username,
+                                                 remove_vk->legacy_index())) {
         LOG(ERROR) << "MassRemoveKeys: failed to remove keyset " << label;
         return user_data_auth::CRYPTOHOME_ERROR_BACKING_STORE_FAILURE;
       }
@@ -2353,7 +2362,8 @@ user_data_auth::CryptohomeErrorCode UserDataAuth::ListKeys(
     return user_data_auth::CRYPTOHOME_ERROR_ACCOUNT_NOT_FOUND;
   }
 
-  if (!homedirs_->GetVaultKeysetLabels(obfuscated_username, labels_out)) {
+  if (!keyset_management_->GetVaultKeysetLabels(obfuscated_username,
+                                                labels_out)) {
     return user_data_auth::CRYPTOHOME_ERROR_KEY_NOT_FOUND;
   }
   return user_data_auth::CRYPTOHOME_ERROR_NOT_SET;
@@ -2387,7 +2397,7 @@ user_data_auth::CryptohomeErrorCode UserDataAuth::GetKeyData(
   }
 
   // Requests only support using the key label at present.
-  std::unique_ptr<VaultKeyset> vk(homedirs_->GetVaultKeyset(
+  std::unique_ptr<VaultKeyset> vk(keyset_management_->GetVaultKeyset(
       obfuscated_username, request.key().data().label()));
   *found = (vk != nullptr);
   if (*found) {
@@ -2416,7 +2426,7 @@ user_data_auth::CryptohomeErrorCode UserDataAuth::MigrateKey(
   Credentials credentials(account_id, SecureBlob(request.secret()));
 
   int key_index = -1;
-  if (!homedirs_->Migrate(
+  if (!keyset_management_->Migrate(
           credentials,
           SecureBlob(request.authorization_request().key().secret()),
           &key_index)) {
