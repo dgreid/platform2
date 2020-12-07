@@ -51,16 +51,6 @@ std::map<BuiltinModelId, BuiltinModelMetadata> GetBuiltinModelMetadata() {
           },
       },
       {
-          BuiltinModelId::TOP_CAT_20190722,
-          {
-              BuiltinModelId::TOP_CAT_20190722,
-              "mlservice-model-top_cat-20190722.tflite",
-              {{"input", 3}},
-              {{"output", 4}},
-              "TopCatModel",
-          },
-      },
-      {
           BuiltinModelId::SEARCH_RANKER_20190923,
           {
               BuiltinModelId::SEARCH_RANKER_20190923,

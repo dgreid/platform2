@@ -145,35 +145,6 @@ constexpr double kSmartDim20200206TestInput[] = {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 };
 
-constexpr double kTopCat20190722TestInput[] = {
-    1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0};
-
 // Points that are used to generate a stroke for handwriting.
 constexpr float kHandwritingTestPoints[23][2] = {
     {1.928, 0.827}, {1.828, 0.826}, {1.73, 0.858},  {1.667, 0.901},
@@ -662,42 +633,6 @@ TEST(BuiltinModelInferenceTest, SmartDim20190521) {
   graph_executor->Execute(std::move(inputs), std::move(outputs),
                           base::Bind(&CheckOutputTensor, expected_shape,
                                      0.66962254, &infer_callback_done));
-  base::RunLoop().RunUntilIdle();
-  ASSERT_TRUE(infer_callback_done);
-}
-
-// Tests that the Top Cat (20190722) model file loads correctly and produces
-// the expected inference result.
-TEST(BuiltinModelInferenceTest, TopCat20190722) {
-  mojo::Remote<MachineLearningService> ml_service;
-  const MachineLearningServiceImplForTesting ml_service_impl(
-      ml_service.BindNewPipeAndPassReceiver().PassPipe());
-
-  // Load model and create graph executor.
-  mojo::Remote<Model> model;
-  ASSERT_TRUE(LoadBuiltinModelForTesting(
-      ml_service, BuiltinModelId::TOP_CAT_20190722, &model));
-  ASSERT_TRUE(model.is_bound());
-
-  mojo::Remote<GraphExecutor> graph_executor;
-  ASSERT_TRUE(CreateGraphExecutorForTesting(model, &graph_executor));
-  ASSERT_TRUE(graph_executor.is_bound());
-
-  // Construct input.
-  base::flat_map<std::string, TensorPtr> inputs;
-  inputs.emplace("input",
-                 NewTensor<double>(
-                     {1, base::size(kTopCat20190722TestInput)},
-                     std::vector<double>(std::begin(kTopCat20190722TestInput),
-                                         std::end(kTopCat20190722TestInput))));
-  std::vector<std::string> outputs({"output"});
-  std::vector<int64_t> expected_shape{1L, 1L};
-
-  // Perform inference.
-  bool infer_callback_done = false;
-  graph_executor->Execute(std::move(inputs), std::move(outputs),
-                          base::Bind(&CheckOutputTensor, expected_shape,
-                                     -3.02972, &infer_callback_done));
   base::RunLoop().RunUntilIdle();
   ASSERT_TRUE(infer_callback_done);
 }
