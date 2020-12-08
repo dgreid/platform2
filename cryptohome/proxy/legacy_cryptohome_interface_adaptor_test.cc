@@ -963,6 +963,47 @@ TEST_F(LegacyCryptohomeInterfaceAdaptorTest, GetVersionInfo) {
   EXPECT_EQ(*vendor_specific, base::HexEncode("ab", 2));
 }
 
+// --------- CryptohomeMiscInterfaceProxyInterface Related Tests ---------------
+TEST_F(LegacyCryptohomeInterfaceAdaptorTest, GetLoginStatus) {
+  EXPECT_CALL(misc_, GetLoginStatusAsync(_, _, _, _))
+      .WillOnce(
+          Invoke([](const user_data_auth::GetLoginStatusRequest& request,
+                    const base::Callback<void(
+                        const user_data_auth::GetLoginStatusReply& /*reply*/)>&
+                        success_callback,
+                    const base::Callback<void(brillo::Error*)>&
+                    /* error_callback */,
+                    int /* timeout_ms */) {
+            user_data_auth::GetLoginStatusReply reply;
+            reply.set_owner_user_exists(true);
+            reply.set_is_locked_to_single_user(true);
+            success_callback.Run(reply);
+          }));
+
+  base::Optional<cryptohome::BaseReply> final_reply;
+
+  std::unique_ptr<MockDBusMethodResponse<cryptohome::BaseReply>> response(
+      new MockDBusMethodResponse<cryptohome::BaseReply>(nullptr));
+  EXPECT_CALL(*response, ReplyWithError(_)).Times(0);
+  EXPECT_CALL(*response, ReplyWithError(_, _, _, _)).Times(0);
+  response->save_return_args(&final_reply);
+
+  const cryptohome::GetLoginStatusRequest in_request;
+  adaptor_->GetLoginStatus(std::move(response), in_request);
+
+  ASSERT_TRUE(final_reply.has_value());
+  ASSERT_TRUE(
+      final_reply->HasExtension(cryptohome::GetLoginStatusReply::reply));
+  const auto& ext =
+      final_reply->GetExtension(cryptohome::GetLoginStatusReply::reply);
+
+  // These are the default values when call to retrieve attestation status
+  // failed.
+  EXPECT_TRUE(ext.owner_user_exists());
+  EXPECT_TRUE(ext.is_locked_to_single_user());
+  EXPECT_FALSE(ext.boot_lockbox_finalized());
+}
+
 // This class holds the various extra setups to facilitate testing GetTpmStatus
 class LegacyCryptohomeInterfaceAdaptorTestForGetTpmStatus
     : public LegacyCryptohomeInterfaceAdaptorTest {

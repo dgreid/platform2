@@ -1827,6 +1827,8 @@ TEST_F(ServiceExTest, FlushAndSignBootAttributesError) {
 TEST_F(ServiceExTest, GetLoginStatusSuccess) {
   EXPECT_CALL(homedirs_, GetPlainOwner(_)).WillOnce(Return(true));
   EXPECT_CALL(lockbox_, IsFinalized()).WillOnce(Return(false));
+  EXPECT_CALL(platform_, FileExists(base::FilePath(kLockedToSingleUserFile)))
+      .WillOnce(Return(true));
 
   GetLoginStatusRequest request;
   service_.DoGetLoginStatus(SecureBlobFromProtobuf(request), NULL);
@@ -1839,6 +1841,9 @@ TEST_F(ServiceExTest, GetLoginStatusSuccess) {
   EXPECT_FALSE(reply()
                    ->GetExtension(GetLoginStatusReply::reply)
                    .boot_lockbox_finalized());
+  EXPECT_TRUE(reply()
+                  ->GetExtension(GetLoginStatusReply::reply)
+                  .is_locked_to_single_user());
 }
 
 TEST_F(ServiceExTest, GetLoginStatusBadArgs) {

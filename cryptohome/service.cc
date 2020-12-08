@@ -3403,6 +3403,9 @@ void Service::DoGetLoginStatus(const brillo::SecureBlob& request,
       ->set_owner_user_exists(homedirs_->GetPlainOwner(&owner));
   reply.MutableExtension(GetLoginStatusReply::reply)
       ->set_boot_lockbox_finalized(boot_lockbox_->IsFinalized());
+  reply.MutableExtension(GetLoginStatusReply::reply)
+      ->set_is_locked_to_single_user(
+          platform_->FileExists(base::FilePath(kLockedToSingleUserFile)));
   SendReply(context, reply);
 }
 

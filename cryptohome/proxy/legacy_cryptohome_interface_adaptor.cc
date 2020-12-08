@@ -2257,6 +2257,7 @@ void LegacyCryptohomeInterfaceAdaptor::GetLoginStatusOnSuccess(
   auto* extension =
       result.MutableExtension(cryptohome::GetLoginStatusReply::reply);
   extension->set_owner_user_exists(reply.owner_user_exists());
+  extension->set_is_locked_to_single_user(reply.is_locked_to_single_user());
 
   // See definition of user_data_auth::GetLoginStatusReply for more information
   // on why |boot_lockbox_finalized| is deprecated.

@@ -8,7 +8,9 @@
 
 #include <base/bind.h>
 #include <base/callback.h>
+#include <base/files/file_path.h>
 #include <brillo/cryptohome.h>
+#include <chromeos/constants/cryptohome.h>
 #include <chromeos/libhwsec/task_dispatching_framework.h>
 
 #include "cryptohome/service_userdataauth.h"
@@ -874,6 +876,8 @@ void CryptohomeMiscAdaptor::GetLoginStatus(
     const user_data_auth::GetLoginStatusRequest& in_request) {
   user_data_auth::GetLoginStatusReply reply;
   reply.set_owner_user_exists(service_->OwnerUserExists());
+  reply.set_is_locked_to_single_user(
+      base::PathExists(base::FilePath(kLockedToSingleUserFile)));
   response->Return(reply);
 }
 
