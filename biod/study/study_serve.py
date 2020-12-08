@@ -138,6 +138,11 @@ class FingerWebSocket(WebSocket):
             data = enc.data
 
         cherrypy.log("Saving file '%s' size %d" % (file_path, len(data)))
+        if not data:
+            cherrypy.log('Error - Attempted to save empty file',
+                         severity=logging.ERROR)
+            return
+
         with open(file_path, 'wb') as f:
             f.write(data)
 
