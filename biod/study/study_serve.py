@@ -92,6 +92,38 @@ class FingerWebSocket(WebSocket):
                 '--trust-model', 'always',
             ])
             self.gpg_recipients = arg.gpg_recipients.split()
+            if not self.gpg_recipients:
+                cherrypy.log('Error - GPG Recipients is Empty',
+                             severity=logging.FATAL)
+                cherrypy.engine.exit()
+                return
+            cherrypy.log(f'GPG Recipients: {self.gpg_recipients}')
+
+            keyring_list = self.gpg.list_keys()
+            if not keyring_list:
+                cherrypy.log('Error - GPG Keyring is Empty',
+                             severity=logging.FATAL)
+                cherrypy.engine.exit()
+                return
+            for k in keyring_list:
+                cherrypy.log(f'GPG Keyring Key {k["fingerprint"]}:')
+                for dk, dv in k.items():
+                    if dv:
+                        cherrypy.log(f'\t{dk}: {dv}')
+
+            # Check if recipients are in the keyring and perfectly
+            # match one to one. There could be a mismatch if a generic search
+            # specifier is used for the recipient that matches more than one
+            # key in the keyring.
+            for recipients in self.gpg_recipients:
+                keyring_list = self.gpg.list_keys(keys=recipients)
+                if not (keyring_list and len(keyring_list) == 1):
+                    cherrypy.log(
+                        'Error - GPG Recipients do not match specific keys.',
+                        severity=logging.FATAL)
+                    cherrypy.engine.exit()
+                    return
+
         self.worker = threading.Thread(target=self.finger_worker)
         self.worker.start()
 
