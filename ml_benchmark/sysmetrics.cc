@@ -40,4 +40,8 @@ int64_t GetVMPeakBytes() {
   return GetStatusField("VmPeak") * 1024;
 }
 
+int64_t GetSwapAndRSSBytes() {
+  return GetStatusField("VmRSS") * 1024 + GetStatusField("VmSwap") * 1024;
+}
+
 }  // namespace ml_benchmark

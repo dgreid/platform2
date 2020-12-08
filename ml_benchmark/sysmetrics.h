@@ -17,6 +17,10 @@ int64_t GetVMSizeBytes();
 // returns:            The highest virtual memory size of the current process.
 int64_t GetVMPeakBytes();
 
+// Reads the 'VmRSS' added to 'VmSwap' value from /proc/self/status
+// returns:            The RSS and Swap usage of the current process.
+int64_t GetSwapAndRSSBytes();
+
 }  // namespace ml_benchmark
 
 #endif  // ML_BENCHMARK_SYSMETRICS_H_
