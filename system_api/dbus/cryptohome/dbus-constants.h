@@ -122,6 +122,7 @@ const char kCryptohomeTpmAttestationGetEnrollmentId[] =
     "TpmAttestationGetEnrollmentId";
 const char kCryptohomeTpmGetVersionStructured[] = "TpmGetVersionStructured";
 const char kCryptohomeGetKeyDataEx[] = "GetKeyDataEx";
+const char kCryptohomeListKeysEx[] = "ListKeysEx";
 const char kCryptohomeCheckKeyEx[] = "CheckKeyEx";
 const char kCryptohomeMountEx[] = "MountEx";
 const char kCryptohomeAddKeyEx[] = "AddKeyEx";
