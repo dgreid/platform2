@@ -38,12 +38,12 @@
 #include "cryptohome/crypto.h"
 #include "cryptohome/cryptolib.h"
 #include "cryptohome/filesystem_layout.h"
-#include "cryptohome/homedirs.h"
 #include "cryptohome/key.pb.h"
 #include "cryptohome/pkcs11_init.h"
 #include "cryptohome/platform.h"
 #include "cryptohome/rpc.pb.h"
 #include "cryptohome/signed_secret.pb.h"
+#include "cryptohome/storage/homedirs.h"
 #include "cryptohome/vault_keyset.pb.h"
 
 #include "bindings/cryptohome.dbusclient.h"

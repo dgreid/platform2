@@ -18,10 +18,10 @@
 #include "cryptohome/crypto.h"
 #include "cryptohome/cryptolib.h"
 #include "cryptohome/filesystem_layout.h"
-#include "cryptohome/homedirs.h"
 #include "cryptohome/keyset_management.h"
-#include "cryptohome/mock_mount.h"
 #include "cryptohome/mock_platform.h"
+#include "cryptohome/storage/homedirs.h"
+#include "cryptohome/storage/mock_mount.h"
 
 using brillo::SecureBlob;
 

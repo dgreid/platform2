@@ -34,9 +34,9 @@
 #include "cryptohome/mock_crypto.h"
 #include "cryptohome/mock_platform.h"
 #include "cryptohome/mock_tpm.h"
-#include "cryptohome/mount.h"
-#include "cryptohome/mount_helper.h"
-#include "cryptohome/user_oldest_activity_timestamp_cache.h"
+#include "cryptohome/storage/mount.h"
+#include "cryptohome/storage/mount_helper.h"
+#include "cryptohome/storage/user_oldest_activity_timestamp_cache.h"
 #include "cryptohome/vault_keyset.h"
 
 using base::FilePath;

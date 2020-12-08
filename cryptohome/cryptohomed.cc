@@ -23,7 +23,6 @@
 
 #include "cryptohome/cryptohome_metrics.h"
 #include "cryptohome/cryptolib.h"
-#include "cryptohome/homedirs.h"
 #include "cryptohome/platform.h"
 #include "cryptohome/userdataauth.h"
 

@@ -12,14 +12,14 @@ per-file *homedirs*=hashimoto@chromium.org
 per-file platform*=gwendal@chromium.org
 per-file platform*=hashimoto@chromium.org
 
-per-file disk_cleanup*=gwendal@chromium.org
-per-file disk_cleanup*=hashimoto@chromium.org
+per-file storage/disk_cleanup*=gwendal@chromium.org
+per-file storage/disk_cleanup*=hashimoto@chromium.org
 per-file dircrypto_util*=gwendal@chromium.org
 per-file dircrypto_util*=hashimoto@chromium.org
 
 # Files related to mount/unmount operations, including out-of-process mounts.
-per-file mount*=jorgelo@chromium.org
-per-file mount*=gwendal@chromium.org
-per-file mount*=hashimoto@chromium.org
-per-file out_of_process*=jorgelo@chromium.org
+per-file storage/mount*=jorgelo@chromium.org
+per-file storage/mount*=gwendal@chromium.org
+per-file storage/mount*=hashimoto@chromium.org
+per-file storage/out_of_process*=jorgelo@chromium.org
 per-file user_session*=dlunev@chromium.org

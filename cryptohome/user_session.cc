@@ -12,7 +12,7 @@
 #include <cryptohome/aes_deprecated_password_verifier.h>
 #include "cryptohome/credentials.h"
 #include "cryptohome/filesystem_layout.h"
-#include "cryptohome/mount.h"
+#include "cryptohome/storage/mount.h"
 
 namespace cryptohome {
 

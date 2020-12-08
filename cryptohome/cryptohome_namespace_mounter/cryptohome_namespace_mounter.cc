@@ -33,9 +33,9 @@
 
 #include "cryptohome/cryptohome_common.h"
 #include "cryptohome/cryptohome_metrics.h"
-#include "cryptohome/mount_constants.h"
-#include "cryptohome/mount_helper.h"
-#include "cryptohome/mount_utils.h"
+#include "cryptohome/storage/mount_constants.h"
+#include "cryptohome/storage/mount_helper.h"
+#include "cryptohome/storage/mount_utils.h"
 
 #include "cryptohome/namespace_mounter_ipc.pb.h"
 

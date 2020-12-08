@@ -27,11 +27,9 @@
 #include <chromeos/dbus/service_constants.h>
 #include <dbus/dbus-glib.h>
 
-#include "cryptohome/arc_disk_quota.h"
 #include "cryptohome/challenge_credentials/challenge_credentials_helper.h"
 #include "cryptohome/cryptohome_event_source.h"
 #include "cryptohome/dbus_transition.h"
-#include "cryptohome/disk_cleanup.h"
 #include "cryptohome/fingerprint_manager.h"
 #include "cryptohome/firmware_management_parameters.h"
 #include "cryptohome/install_attributes.h"
@@ -39,11 +37,13 @@
 #include "cryptohome/key_challenge_service_factory_impl.h"
 #include "cryptohome/keyset_management.h"
 #include "cryptohome/migration_type.h"
-#include "cryptohome/mount.h"
-#include "cryptohome/mount_factory.h"
-#include "cryptohome/mount_task.h"
 #include "cryptohome/pkcs11_init.h"
 #include "cryptohome/rpc.pb.h"
+#include "cryptohome/storage/arc_disk_quota.h"
+#include "cryptohome/storage/disk_cleanup.h"
+#include "cryptohome/storage/mount.h"
+#include "cryptohome/storage/mount_factory.h"
+#include "cryptohome/storage/mount_task.h"
 #include "cryptohome/tpm_init.h"
 #include "cryptohome/user_session.h"
 

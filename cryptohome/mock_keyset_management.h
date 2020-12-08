@@ -16,7 +16,7 @@
 #include <gmock/gmock.h>
 
 #include "cryptohome/credentials.h"
-#include "cryptohome/mount.h"
+#include "cryptohome/storage/mount.h"
 
 namespace cryptohome {
 class VaultKeyset;

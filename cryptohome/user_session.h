@@ -12,9 +12,9 @@
 #include <brillo/secure_blob.h>
 
 #include "cryptohome/credentials.h"
-#include "cryptohome/homedirs.h"
-#include "cryptohome/mount.h"
 #include "cryptohome/password_verifier.h"
+#include "cryptohome/storage/homedirs.h"
+#include "cryptohome/storage/mount.h"
 
 namespace cryptohome {
 

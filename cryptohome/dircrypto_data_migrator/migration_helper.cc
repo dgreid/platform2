@@ -28,7 +28,7 @@
 #include <chromeos/dbus/service_constants.h>
 
 #include "cryptohome/cryptohome_metrics.h"
-#include "cryptohome/mount.h"
+#include "cryptohome/storage/mount.h"
 
 extern "C" {
 #include <linux/fs.h>
