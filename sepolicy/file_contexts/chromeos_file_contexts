@@ -151,6 +151,7 @@ include(sepolicy/file_contexts/sysfs_contexts)
 /usr/sbin/tpm_managerd          u:object_r:cros_tpm_managerd_exec:s0
 /usr/sbin/trunksd               u:object_r:cros_trunksd_exec:s0
 /usr/sbin/update_engine         u:object_r:cros_update_engine_exec:s0
+/usr/sbin/usbguard-daemon       u:object_r:cros_usbguard_exec:s0
 /usr/sbin/wpa_supplicant        u:object_r:cros_wpa_supplicant_exec:s0
 # USR_SBIN_END_HERE
 

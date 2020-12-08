@@ -137,6 +137,7 @@ type cros_update_engine_exec, exec_type, file_type, cros_file_type, cros_system_
 type cros_update_userdataauth_shell_script, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_ureadahead_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_userfeedback_file, exec_type, file_type, cros_file_type, cros_system_file_type;
+type cros_usbguard_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_vm_cicerone_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_vm_concierge_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_vmlog_forwarder_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
