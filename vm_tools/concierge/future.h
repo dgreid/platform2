@@ -203,6 +203,13 @@ class Future {
   // not the current thread. If not, use |GetWithRunLoop|.
   GetResult<T, Error> Get();
 
+  // Wait for the result. Returns true if the result is ready before the
+  // timeout, and false otherwise.
+  //
+  // Same as |Get|, this method can only be used if all the tasks in the chain
+  // are posted to other threads, not the current thread.
+  bool WaitFor(base::TimeDelta duration);
+
   // This function is the same as |Get|, except that it uses a RunLoop to yield
   // the current thread to the tasks posted in the chain. It is essentially a
   // nested run loop because the current thread should already have one.
@@ -211,8 +218,6 @@ class Future {
   // recursive mutex) and other problems with a nested run loop.
   GetResult<T, Error> GetWithRunLoop(
       base::RunLoop::Type type = base::RunLoop::Type::kNestableTasksAllowed);
-
-  // TODO(woodychow): Implement a wait function with timeout
 
   // Update the |task_runner|. |Then|/|OnReject| functions will be posted to
   // this task_runner
@@ -535,6 +540,15 @@ GetResult<T, Error> Future<T, Error>::GetWithRunLoop(base::RunLoop::Type type) {
   state_.reset();
 
   return ret;
+}
+
+template <typename T, typename Error>
+bool Future<T, Error>::WaitFor(base::TimeDelta duration) {
+  base::AutoLock guard(state_->mutex);
+  if (!state_->done)
+    state_->cv.TimedWait(duration);
+
+  return state_->done;
 }
 
 template <typename T, typename Error>

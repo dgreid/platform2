@@ -502,4 +502,20 @@ TEST_F(FutureTest, SameThread) {
   }
 }
 
+TEST_F(FutureTest, WaitFor) {
+  {
+    Promise<bool> promise;
+    Future<bool> future = promise.GetFuture(task_runner_);
+    task_runner_->PostDelayedTask(
+        FROM_HERE,
+        base::BindOnce([](Promise<bool> promise) { promise.SetValue(true); },
+                       std::move(promise)),
+        base::TimeDelta::FromMilliseconds(1000));
+    EXPECT_FALSE(future.WaitFor(base::TimeDelta::FromMilliseconds(200)));
+    EXPECT_FALSE(future.WaitFor(base::TimeDelta::FromMilliseconds(400)));
+    EXPECT_TRUE(future.WaitFor(base::TimeDelta::FromMilliseconds(600)));
+    EXPECT_TRUE(future.Get().val);
+  }
+}
+
 }  // namespace vm_tools
