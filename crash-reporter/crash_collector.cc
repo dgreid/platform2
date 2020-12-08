@@ -19,8 +19,6 @@
 #include <set>
 #include <vector>
 
-#include <pcrecpp.h>
-
 #include <base/bind.h>
 #include <base/files/file_enumerator.h>
 #include <base/files/file_util.h>
@@ -41,6 +39,7 @@
 #include <brillo/syslog_logging.h>
 #include <brillo/userdb_utils.h>
 #include <debugd/dbus-constants.h>
+#include <re2/re2.h>
 #include <zlib.h>
 
 #include "crash-reporter/constants.h"
@@ -578,7 +577,7 @@ void CrashCollector::StripSensitiveData(std::string* contents) {
 
 void CrashCollector::StripMacAddresses(std::string* contents) {
   std::ostringstream result;
-  pcrecpp::StringPiece input(*contents);
+  re2::StringPiece input(*contents);
   std::string pre_re_str;
   std::string re_str;
 
@@ -595,7 +594,10 @@ void CrashCollector::StripMacAddresses(std::string* contents) {
 
   // This RE will find the next MAC address and can return us the data preceding
   // the MAC and the MAC itself.
-  pcrecpp::RE mac_re(
+  RE2::Options opt;
+  opt.set_dot_nl(true);
+
+  RE2 mac_re(
       "(.*?)("
       "[0-9a-fA-F][0-9a-fA-F]:"
       "[0-9a-fA-F][0-9a-fA-F]:"
@@ -603,18 +605,16 @@ void CrashCollector::StripMacAddresses(std::string* contents) {
       "[0-9a-fA-F][0-9a-fA-F]:"
       "[0-9a-fA-F][0-9a-fA-F]:"
       "[0-9a-fA-F][0-9a-fA-F])",
-      pcrecpp::RE_Options().set_multiline(true).set_dotall(true));
+      opt);
 
   // This RE will identify when the 'pre_mac_str' shows that the MAC address
   // was really an ACPI cmd.  The full string looks like this:
   //   ata1.00: ACPI cmd ef/10:03:00:00:00:a0 (SET FEATURES) filtered out
-  pcrecpp::RE acpi_re(
-      "ACPI cmd ef/$",
-      pcrecpp::RE_Options().set_multiline(true).set_dotall(true));
+  RE2 acpi_re("(?m)ACPI cmd ef/$", opt);
 
   // Keep consuming, building up a result string as we go.
-  while (mac_re.Consume(&input, &pre_re_str, &re_str)) {
-    if (acpi_re.PartialMatch(pre_re_str)) {
+  while (RE2::Consume(&input, mac_re, &pre_re_str, &re_str)) {
+    if (RE2::PartialMatch(pre_re_str, acpi_re)) {
       // We really saw an ACPI command; add to result w/ no stripping.
       result << pre_re_str << re_str;
     } else {
@@ -647,32 +647,32 @@ void CrashCollector::StripMacAddresses(std::string* contents) {
 void CrashCollector::StripEmailAddresses(std::string* contents) {
   // Simplified email-matching regex based on
   // https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input/email#Validation
-  pcrecpp::RE email_re(R"(\b)"
-                       R"([a-zA-Z0-9.!#$%&’*+/=?^_`{|}~-]{1,256})"
-                       "@"
-                       R"([a-zA-Z0-9-\.]{1,256}[^\.])"
-                       R"(\b)",
-                       pcrecpp::RE_Options().set_multiline(true));
+  RE2 email_re(R"(\b)"
+               R"([a-zA-Z0-9.!#$%&’*+/=?^_`{|}~-]{1,256})"
+               "@"
+               R"([a-zA-Z0-9-\.]{1,256}[^\.])"
+               R"(\b)");
   CHECK_EQ("", email_re.error());
 
-  email_re.GlobalReplace("<redacted email address>", contents);
+  RE2::GlobalReplace(contents, email_re, "<redacted email address>");
 }
 
 void CrashCollector::StripSerialNumbers(std::string* contents) {
   std::ostringstream result;
-  pcrecpp::StringPiece input(*contents);
+  re2::StringPiece input(*contents);
   std::string pre_re_str;
   std::string re_str;
   // Adapted from chromium:components/feedback/anonymizer_tool.cc
-  pcrecpp::RE serialnumber_re(
-      R"((.*?)(\bserial\s*_?(?:number)?['"]?\s*[:=]\s*['"]?))"
-      R"(([0-9a-zA-Z\-.:\/\\\x00-\x09\x0B-\x1F]+)(\b))",
-      pcrecpp::RE_Options().set_multiline(false).set_dotall(true).set_caseless(
-          true));
+  RE2::Options opt;
+  opt.set_dot_nl(true);
+  opt.set_case_sensitive(false);
+  RE2 serialnumber_re(R"((.*?)(\bserial\s*_?(?:number)?['"]?\s*[:=]\s*['"]?))"
+                      R"(([0-9a-zA-Z\-.:\/\\\x00-\x09\x0B-\x1F]+)(\b))",
+                      opt);
 
   CHECK_EQ("", serialnumber_re.error());
 
-  while (serialnumber_re.Consume(&input, &pre_re_str, &re_str)) {
+  while (RE2::Consume(&input, serialnumber_re, &pre_re_str, &re_str)) {
     result << pre_re_str << "<redacted serial number>";
   }
   result << input;
