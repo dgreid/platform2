@@ -43,6 +43,7 @@ generate_dbus_adaptors("libdisks-adaptors") {
 static_library("libdisks") {
   sources = [
     "archive_manager.cc",
+    "archive_mounter.cc",
     "cros_disks_server.cc",
     "daemon.cc",
     "device_ejector.cc",
@@ -124,6 +125,7 @@ if (use.test) {
   executable("disks_testrunner") {
     sources = [
       "archive_manager_test.cc",
+      "archive_mounter_test.cc",
       "device_event_moderator_test.cc",
       "device_event_queue_test.cc",
       "disk_manager_test.cc",

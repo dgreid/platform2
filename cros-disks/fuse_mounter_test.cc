@@ -44,10 +44,8 @@ const uid_t kMountUID = 200;
 const gid_t kMountGID = 201;
 const char kMountUser[] = "fuse-fuse";
 const char kFUSEType[] = "fusefs";
-const char kMountProgram[] = "/bin/dummy";
 const char kSomeSource[] = "/dev/dummy";
 const char kMountDir[] = "/mnt";
-const int kPasswordNeededCode = 42;
 
 // Mock Platform implementation for testing.
 class MockFUSEPlatform : public Platform {
@@ -133,8 +131,7 @@ class FUSEMounterForTesting : public FUSEMounter {
  public:
   FUSEMounterForTesting(const Platform* platform,
                         brillo::ProcessReaper* process_reaper)
-      : FUSEMounter(
-            platform, process_reaper, kFUSEType, true /* nosymfollow */) {}
+      : FUSEMounter(platform, process_reaper, kFUSEType, {}) {}
 
   MOCK_METHOD(std::unique_ptr<SandboxedProcess>,
               PrepareSandbox,
@@ -426,169 +423,6 @@ TEST_F(FUSEMounterTest, MountPoint_UnmountBusy) {
   EXPECT_EQ(MOUNT_ERROR_NONE, error);
 
   EXPECT_EQ(MOUNT_ERROR_NONE, mount_point->Unmount());
-}
-
-namespace {
-
-class FUSEMounterLegacyForTesting : public FUSEMounterLegacy {
- public:
-  FUSEMounterLegacyForTesting(const Platform* platform,
-                              brillo::ProcessReaper* process_reaper)
-      : FUSEMounterLegacy({.filesystem_type = kFUSEType,
-                           .mount_program = kMountProgram,
-                           .mount_user = kMountUser,
-                           .password_needed_codes = {kPasswordNeededCode},
-                           .platform = platform,
-                           .process_reaper = process_reaper}) {}
-
-  MOCK_METHOD(int, OnInput, (const std::string&), (const));
-  MOCK_METHOD(int, InvokeMountTool, (const std::vector<std::string>&), (const));
-
-  mutable std::vector<std::string> environment;
-
- private:
-  std::unique_ptr<SandboxedProcess> CreateSandboxedProcess() const override {
-    auto mock = std::make_unique<MockSandboxedProcess>();
-    const SandboxedProcess* const process = mock.get();
-    mock->AddArgument(kMountProgram);
-    ON_CALL(*mock, StartImpl(_, _, _)).WillByDefault(Return(123));
-    ON_CALL(*mock, WaitNonBlockingImpl())
-        .WillByDefault(Invoke([this, process]() {
-          const std::string& input = process->input();
-          if (!input.empty())
-            OnInput(input);
-
-          return InvokeMountTool(process->arguments());
-        }));
-    return mock;
-  }
-};
-
-}  // namespace
-
-class FUSEMounterLegacyTest : public ::testing::Test {
- public:
-  FUSEMounterLegacyTest() : mounter_(&platform_, &process_reaper_) {
-    ON_CALL(platform_, Mount(kSomeSource, kMountDir, _, _, _))
-        .WillByDefault(Return(MOUNT_ERROR_NONE));
-  }
-
- protected:
-  // Sets up mock expectations for a successful mount.
-  void SetupMountExpectations() {
-    EXPECT_CALL(mounter_, InvokeMountTool(ElementsAre(
-                              kMountProgram, "-o", MountOptions().ToString(),
-                              kSomeSource, StartsWith("/dev/fd/"))))
-        .WillOnce(Return(0));
-    EXPECT_CALL(platform_,
-                SetOwnership(kSomeSource, getuid(), kChronosAccessGID))
-        .WillOnce(Return(true));
-    EXPECT_CALL(platform_, SetPermissions(kSomeSource, S_IRUSR | S_IWUSR |
-                                                           S_IRGRP | S_IWGRP))
-        .WillOnce(Return(true));
-    EXPECT_CALL(platform_, SetOwnership(kMountDir, _, _)).Times(0);
-    EXPECT_CALL(platform_, SetPermissions(kMountDir, _)).Times(0);
-  }
-
-  MockFUSEPlatform platform_;
-  brillo::ProcessReaper process_reaper_;
-  FUSEMounterLegacyForTesting mounter_;
-};
-
-TEST_F(FUSEMounterLegacyTest, AppNeedsPassword) {
-  EXPECT_CALL(platform_, Unmount(_, _)).WillOnce(Return(MOUNT_ERROR_NONE));
-  EXPECT_CALL(mounter_, InvokeMountTool(_))
-      .WillOnce(Return(kPasswordNeededCode));
-
-  MountErrorType error = MOUNT_ERROR_UNKNOWN;
-  auto mount_point =
-      mounter_.Mount(kSomeSource, base::FilePath(kMountDir), {}, &error);
-  EXPECT_FALSE(mount_point);
-  EXPECT_EQ(MOUNT_ERROR_NEED_PASSWORD, error);
-}
-
-TEST_F(FUSEMounterLegacyTest, WithPassword) {
-  const std::string password = "My Password";
-
-  SetupMountExpectations();
-  EXPECT_CALL(mounter_, OnInput(password)).Times(1);
-  // The MountPoint returned by Mount() will unmount when it is destructed.
-  EXPECT_CALL(platform_, Unmount(kMountDir, 0))
-      .WillOnce(Return(MOUNT_ERROR_NONE));
-
-  MountErrorType error = MOUNT_ERROR_UNKNOWN;
-  auto mount_point = mounter_.Mount(kSomeSource, base::FilePath(kMountDir),
-                                    {"password=" + password}, &error);
-  EXPECT_TRUE(mount_point);
-  EXPECT_EQ(MOUNT_ERROR_NONE, error);
-}
-
-TEST(FUSEMounterPasswordTest, NoPassword) {
-  MockFUSEPlatform platform;
-  const FUSEMounterLegacy mounter({
-      .mount_program = kMountProgram,
-      .mount_user = kMountUser,
-      .password_needed_codes = {kPasswordNeededCode},
-      .platform = &platform,
-  });
-  SandboxedProcess process;
-  mounter.CopyPassword(
-      {
-          "Password=1",   // Options are case sensitive
-          "password =2",  // Space is significant
-          " password=3",  // Space is significant
-          "password",     // Not a valid option
-      },
-      &process);
-  EXPECT_EQ(process.input(), "");
-}
-
-TEST(FUSEMounterPasswordTest, CopiesPassword) {
-  MockFUSEPlatform platform;
-  const FUSEMounterLegacy mounter({
-      .mount_program = kMountProgram,
-      .mount_user = kMountUser,
-      .password_needed_codes = {kPasswordNeededCode},
-      .platform = &platform,
-  });
-  for (const std::string password : {
-           "",
-           " ",
-           "=",
-           "simple",
-           R"( !@#$%^&*()_-+={[}]|\:;"'<,>.?/ )",
-       }) {
-    SandboxedProcess process;
-    mounter.CopyPassword({"password=" + password}, &process);
-    EXPECT_EQ(process.input(), password);
-  }
-}
-
-TEST(FUSEMounterPasswordTest, FirstPassword) {
-  MockFUSEPlatform platform;
-  const FUSEMounterLegacy mounter({
-      .mount_program = kMountProgram,
-      .mount_user = kMountUser,
-      .password_needed_codes = {kPasswordNeededCode},
-      .platform = &platform,
-  });
-  SandboxedProcess process;
-  mounter.CopyPassword({"other1=value1", "password=1", "password=2",
-                        "other2=value2", "password=3"},
-                       &process);
-  EXPECT_EQ(process.input(), "1");
-}
-
-TEST(FUSEMounterPasswordTest, IgnoredIfNotNeeded) {
-  MockFUSEPlatform platform;
-  const FUSEMounterLegacy mounter({
-      .mount_program = kMountProgram,
-      .mount_user = kMountUser,
-      .platform = &platform,
-  });
-  SandboxedProcess process;
-  mounter.CopyPassword({"password=dummy"}, &process);
-  EXPECT_EQ(process.input(), "");
 }
 
 }  // namespace cros_disks

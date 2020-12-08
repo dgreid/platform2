@@ -47,10 +47,7 @@ class DiskFUSEMounter : public FUSEMounter {
                   SandboxedExecutable executable,
                   OwnerUser run_as,
                   std::vector<std::string> options)
-      : FUSEMounter(platform,
-                    reaper,
-                    std::move(filesystem_type),
-                    /* nosymfollow= */ true),
+      : FUSEMounter(platform, reaper, std::move(filesystem_type), {}),
         upstream_factory_(upstream_factory),
         sandbox_factory_(platform,
                          std::move(executable),

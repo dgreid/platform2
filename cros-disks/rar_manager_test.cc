@@ -14,18 +14,6 @@
 
 namespace cros_disks {
 
-std::ostream& operator<<(std::ostream& out,
-                         const FUSEMounterLegacy::BindPath& x) {
-  return out << "{ path: " << quote(x.path) << ", writable: " << x.writable
-             << ", recursive: " << x.recursive << " }";
-}
-
-bool operator==(const FUSEMounterLegacy::BindPath& a,
-                const FUSEMounterLegacy::BindPath& b) {
-  return a.path == b.path && a.writable == b.writable &&
-         a.recursive == b.recursive;
-}
-
 namespace {
 
 using ::testing::_;
@@ -221,26 +209,23 @@ TEST_F(RarManagerTest, ParseDigits) {
 
 TEST_F(RarManagerTest, GetBindPathsWithOldNamingScheme) {
   const RarManager& m = manager_;
-  EXPECT_THAT(m.GetBindPaths("poi"),
-              ElementsAreArray<FUSEMounterLegacy::BindPath>({{"poi"}}));
+  EXPECT_THAT(m.GetBindPaths("poi"), ElementsAreArray<std::string>({"poi"}));
 
   EXPECT_CALL(platform_, PathExists("poi.r00")).WillOnce(Return(false));
   EXPECT_THAT(m.GetBindPaths("poi.rar"),
-              ElementsAreArray<FUSEMounterLegacy::BindPath>({{"poi.rar"}}));
+              ElementsAreArray<std::string>({"poi.rar"}));
 
   EXPECT_CALL(platform_, PathExists("poi.r00")).WillOnce(Return(true));
   EXPECT_CALL(platform_, PathExists("poi.r01")).WillOnce(Return(true));
   EXPECT_CALL(platform_, PathExists("poi.r02")).WillOnce(Return(false));
   EXPECT_THAT(m.GetBindPaths("poi.rar"),
-              ElementsAreArray<FUSEMounterLegacy::BindPath>(
-                  {{"poi.rar"}, {"poi.r00"}, {"poi.r01"}}));
+              ElementsAreArray<std::string>({"poi.rar", "poi.r00", "poi.r01"}));
 
   EXPECT_CALL(platform_, PathExists("POI.R00")).WillOnce(Return(true));
   EXPECT_CALL(platform_, PathExists("POI.R01")).WillOnce(Return(true));
   EXPECT_CALL(platform_, PathExists("POI.R02")).WillOnce(Return(false));
   EXPECT_THAT(m.GetBindPaths("POI.RAR"),
-              ElementsAreArray<FUSEMounterLegacy::BindPath>(
-                  {{"POI.RAR"}, {"POI.R00"}, {"POI.R01"}}));
+              ElementsAreArray<std::string>({"POI.RAR", "POI.R00", "POI.R01"}));
 }
 
 TEST_F(RarManagerTest, GetBindPathsWithNewNamingScheme) {
@@ -248,7 +233,7 @@ TEST_F(RarManagerTest, GetBindPathsWithNewNamingScheme) {
 
   EXPECT_CALL(platform_, PathExists("poi1.rar")).WillOnce(Return(false));
   EXPECT_THAT(m.GetBindPaths("poi2.rar"),
-              ElementsAreArray<FUSEMounterLegacy::BindPath>({{"poi2.rar"}}));
+              ElementsAreArray<std::string>({"poi2.rar"}));
 
   EXPECT_CALL(platform_, PathExists("poi1.rar")).WillOnce(Return(true));
   EXPECT_CALL(platform_, PathExists("poi2.rar")).WillOnce(Return(true));
@@ -256,8 +241,8 @@ TEST_F(RarManagerTest, GetBindPathsWithNewNamingScheme) {
   EXPECT_CALL(platform_, PathExists("poi4.rar")).WillOnce(Return(true));
   EXPECT_CALL(platform_, PathExists("poi5.rar")).WillOnce(Return(false));
   EXPECT_THAT(m.GetBindPaths("poi2.rar"),
-              ElementsAreArray<FUSEMounterLegacy::BindPath>(
-                  {{"poi2.rar"}, {"poi1.rar"}, {"poi3.rar"}, {"poi4.rar"}}));
+              ElementsAreArray<std::string>(
+                  {"poi2.rar", "poi1.rar", "poi3.rar", "poi4.rar"}));
 
   EXPECT_CALL(platform_, PathExists("POI1.RAR")).WillOnce(Return(true));
   EXPECT_CALL(platform_, PathExists("POI2.RAR")).WillOnce(Return(true));
@@ -265,8 +250,8 @@ TEST_F(RarManagerTest, GetBindPathsWithNewNamingScheme) {
   EXPECT_CALL(platform_, PathExists("POI4.RAR")).WillOnce(Return(true));
   EXPECT_CALL(platform_, PathExists("POI5.RAR")).WillOnce(Return(false));
   EXPECT_THAT(m.GetBindPaths("POI2.RAR"),
-              ElementsAreArray<FUSEMounterLegacy::BindPath>(
-                  {{"POI2.RAR"}, {"POI1.RAR"}, {"POI3.RAR"}, {"POI4.RAR"}}));
+              ElementsAreArray<std::string>(
+                  {"POI2.RAR", "POI1.RAR", "POI3.RAR", "POI4.RAR"}));
 }
 
 TEST_F(RarManagerTest, GetBindPathsStopsOnOverflow) {

@@ -17,10 +17,17 @@
 
 namespace cros_disks {
 
+class ArchiveMounter;
+
 // A MountManager mounting RAR archives as virtual filesystems using rar2fs.
 class RarManager : public ArchiveManager {
  public:
-  using ArchiveManager::ArchiveManager;
+  RarManager(const std::string& mount_root,
+             Platform* platform,
+             Metrics* metrics,
+             brillo::ProcessReaper* process_reaper);
+  RarManager(const RarManager&) = delete;
+  RarManager& operator=(const RarManager&) = delete;
 
   ~RarManager() override;
 
@@ -63,11 +70,11 @@ class RarManager : public ArchiveManager {
   static IndexRange ParseDigits(base::StringPiece path);
 
   // Adds bind paths using old naming scheme.
-  void AddPathsWithOldNamingScheme(FUSEMounterLegacy::BindPaths* bind_paths,
+  void AddPathsWithOldNamingScheme(std::vector<std::string>* bind_paths,
                                    base::StringPiece original_path) const;
 
   // Adds bind paths using new naming scheme.
-  void AddPathsWithNewNamingScheme(FUSEMounterLegacy::BindPaths* bind_paths,
+  void AddPathsWithNewNamingScheme(std::vector<std::string>* bind_paths,
                                    base::StringPiece original_path,
                                    const IndexRange& digits) const;
 
@@ -111,8 +118,10 @@ class RarManager : public ArchiveManager {
   // ...
   // basename999.rar
   // etc.
-  FUSEMounterLegacy::BindPaths GetBindPaths(
-      base::StringPiece original_path) const;
+  std::vector<std::string> GetBindPaths(base::StringPiece original_path) const;
+
+  class RarMounter;
+  const std::unique_ptr<ArchiveMounter> mounter_;
 
   FRIEND_TEST(RarManagerTest, CanMount);
   FRIEND_TEST(RarManagerTest, SuggestMountPath);

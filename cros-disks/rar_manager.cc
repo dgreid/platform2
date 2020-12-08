@@ -12,7 +12,9 @@
 #include <base/files/file_util.h>
 #include <base/logging.h>
 #include <base/strings/string_util.h>
+#include <base/strings/stringprintf.h>
 
+#include "cros-disks/archive_mounter.h"
 #include "cros-disks/error_logger.h"
 #include "cros-disks/fuse_mounter.h"
 #include "cros-disks/metrics.h"
@@ -24,7 +26,76 @@ namespace {
 
 const char kExtension[] = ".rar";
 
+OwnerUser GetRarUserOrDie(const Platform* platform) {
+  OwnerUser run_as;
+  PCHECK(platform->GetUserAndGroupId("fuse-rar2fs", &run_as.uid, &run_as.gid))
+      << "Cannot resolve required user fuse-rar2fs";
+  return run_as;
+}
+
 }  // namespace
+
+class RarManager::RarMounter : public ArchiveMounter {
+ public:
+  RarMounter(const Platform* platform,
+             brillo::ProcessReaper* process_reaper,
+             Metrics* metrics,
+             const RarManager* rar_manager)
+      : ArchiveMounter(
+            platform,
+            process_reaper,
+            "rar",
+            metrics,
+            "Rar2fs",
+            {12,   // ERAR_BAD_DATA
+             22,   // ERAR_MISSING_PASSWORD
+             24},  // ERAR_BAD_PASSWORD
+            std::make_unique<FUSESandboxedProcessFactory>(
+                platform,
+                SandboxedExecutable{
+                    base::FilePath("/usr/bin/rar2fs"),
+                    base::FilePath("/usr/share/policy/rar2fs-seccomp.policy")},
+                GetRarUserOrDie(platform),
+                /* has_network_access= */ false,
+                rar_manager->GetSupplementaryGroups())),
+        rar_manager_(rar_manager) {}
+
+ protected:
+  MountErrorType FormatInvocationCommand(
+      const base::FilePath& archive,
+      std::vector<std::string> params,
+      SandboxedProcess* sandbox) const override {
+    // Bind-mount parts of a multipart archive if any.
+    for (const auto& path : rar_manager_->GetBindPaths(archive.value())) {
+      if (!sandbox->BindMount(path, path, /* writeable= */ false,
+                              /* recursive= */ false)) {
+        PLOG(ERROR) << "Could not bind " << quote(path);
+        return MOUNT_ERROR_INTERNAL;
+      }
+    }
+
+    std::vector<std::string> opts = {
+        MountOptions::kOptionReadOnly, "umask=0222", "locale=en_US.UTF8",
+        base::StringPrintf("uid=%d", kChronosUID),
+        base::StringPrintf("gid=%d", kChronosAccessGID)};
+
+    sandbox->AddArgument("-o");
+    sandbox->AddArgument(base::JoinString(opts, ","));
+    sandbox->AddArgument(archive.value());
+
+    return MOUNT_ERROR_NONE;
+  }
+
+  const RarManager* rar_manager_;
+};
+
+RarManager::RarManager(const std::string& mount_root,
+                       Platform* platform,
+                       Metrics* metrics,
+                       brillo::ProcessReaper* process_reaper)
+    : ArchiveManager(mount_root, platform, metrics, process_reaper),
+      mounter_(std::make_unique<RarMounter>(
+          platform, process_reaper, metrics, this)) {}
 
 RarManager::~RarManager() {
   UnmountAll();
@@ -44,11 +115,7 @@ std::unique_ptr<MountPoint> RarManager::DoMount(
     const base::FilePath& mount_path,
     MountOptions* const applied_options,
     MountErrorType* const error) {
-  DCHECK(applied_options);
   DCHECK(error);
-
-  metrics()->RecordArchiveType("rar");
-
   // MountManager resolves source path to real path before calling DoMount,
   // so no symlinks or '..' will be here.
   if (!IsInAllowedFolder(source_path)) {
@@ -56,39 +123,7 @@ std::unique_ptr<MountPoint> RarManager::DoMount(
     *error = MOUNT_ERROR_INVALID_DEVICE_PATH;
     return nullptr;
   }
-
-  MountNamespace mount_namespace = GetMountNamespaceFor(source_path);
-
-  FUSEMounterLegacy::Params params{
-      .bind_paths = GetBindPaths(source_path),
-      .filesystem_type = "rarfs",
-      .metrics = metrics(),
-      .metrics_name = "Rar2fs",
-      .mount_namespace = std::move(mount_namespace.name),
-      .mount_program = "/usr/bin/rar2fs",
-      .mount_user = "fuse-rar2fs",
-      .password_needed_codes = {12,   // ERAR_BAD_DATA
-                                22,   // ERAR_MISSING_PASSWORD
-                                24},  // ERAR_BAD_PASSWORD
-      .platform = platform(),
-      .process_reaper = process_reaper(),
-      .seccomp_policy = "/usr/share/policy/rar2fs-seccomp.policy",
-      .supplementary_groups = GetSupplementaryGroups(),
-  };
-
-  mount_namespace.guard.reset();
-
-  // Prepare FUSE mount options.
-  params.mount_options.EnforceOption("locale=en_US.UTF8");
-  *error = GetMountOptions(&params.mount_options);
-  if (*error != MOUNT_ERROR_NONE)
-    return nullptr;
-
-  *applied_options = params.mount_options;
-
-  // Run rar2fs.
-  const FUSEMounterLegacy mounter(std::move(params));
-  return mounter.Mount(source_path, mount_path, options, error);
+  return mounter_->Mount(source_path, mount_path, options, error);
 }
 
 bool RarManager::Increment(const std::string::iterator begin,
@@ -134,7 +169,7 @@ RarManager::IndexRange RarManager::ParseDigits(base::StringPiece path) {
 }
 
 void RarManager::AddPathsWithOldNamingScheme(
-    FUSEMounterLegacy::BindPaths* const bind_paths,
+    std::vector<std::string>* const bind_paths,
     const base::StringPiece original_path) const {
   DCHECK(bind_paths);
 
@@ -155,18 +190,18 @@ void RarManager::AddPathsWithOldNamingScheme(
   if (!platform()->PathExists(candidate_path))
     return;
 
-  bind_paths->push_back({candidate_path});
+  bind_paths->push_back(candidate_path);
 
   // Iterate by incrementing the last 3 characters of the extension:
   // '.r00' -> '.r01' -> ... -> '.r99' -> '.s00' -> ... -> '.z99'
   // or
   // '.R00' -> '.R01' -> ... -> '.R99' -> '.S00' -> ... -> '.Z99'
   while (Increment(end - 3, end) && platform()->PathExists(candidate_path))
-    bind_paths->push_back({candidate_path});
+    bind_paths->push_back(candidate_path);
 }
 
 void RarManager::AddPathsWithNewNamingScheme(
-    FUSEMounterLegacy::BindPaths* const bind_paths,
+    std::vector<std::string>* const bind_paths,
     const base::StringPiece original_path,
     const IndexRange& digits) const {
   DCHECK(bind_paths);
@@ -186,13 +221,13 @@ void RarManager::AddPathsWithNewNamingScheme(
   // Find all the files making the multipart archive.
   while (Increment(begin, end) && platform()->PathExists(candidate_path)) {
     if (candidate_path != original_path)
-      bind_paths->push_back({candidate_path});
+      bind_paths->push_back(candidate_path);
   }
 }
 
-FUSEMounterLegacy::BindPaths RarManager::GetBindPaths(
+std::vector<std::string> RarManager::GetBindPaths(
     const base::StringPiece original_path) const {
-  FUSEMounterLegacy::BindPaths bind_paths = {{std::string(original_path)}};
+  std::vector<std::string> bind_paths = {std::string(original_path)};
 
   // Delimit the digit range assuming original_path uses the new naming scheme.
   const IndexRange digits = ParseDigits(original_path);

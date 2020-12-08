@@ -15,12 +15,28 @@ namespace {
 
 const char kMountRootDirectory[] = "/my_mount_point";
 
+class MockPlatform : public Platform {
+ public:
+  bool GetUserAndGroupId(const std::string& name,
+                         uid_t* uid,
+                         gid_t* gid) const override {
+    if (name == "fuse-zip") {
+      if (uid)
+        *uid = 200;
+      if (gid)
+        *gid = 300;
+      return true;
+    }
+    return false;
+  }
+};
+
 }  // namespace
 
 class ZipManagerTest : public testing::Test {
  protected:
   Metrics metrics_;
-  Platform platform_;
+  MockPlatform platform_;
   brillo::ProcessReaper reaper_;
   const ZipManager manager_{kMountRootDirectory, &platform_, &metrics_,
                             &reaper_};

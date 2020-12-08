@@ -11,6 +11,7 @@
 #include <base/logging.h>
 #include <base/strings/string_util.h>
 
+#include "cros-disks/archive_mounter.h"
 #include "cros-disks/error_logger.h"
 #include "cros-disks/fuse_mounter.h"
 #include "cros-disks/metrics.h"
@@ -19,15 +20,53 @@
 
 namespace cros_disks {
 
+namespace {
+
+std::unique_ptr<ArchiveMounter> CreateZipMounter(
+    Platform* platform,
+    Metrics* metrics,
+    brillo::ProcessReaper* process_reaper,
+    std::vector<gid_t> supplementary_groups) {
+  OwnerUser run_as;
+  PCHECK(platform->GetUserAndGroupId("fuse-zip", &run_as.uid, &run_as.gid))
+      << "Cannot resolve required user fuse-zip";
+
+  const SandboxedExecutable executable = {
+      base::FilePath("/usr/bin/fuse-zip"),
+      base::FilePath("/usr/share/policy/fuse-zip-seccomp.policy")};
+
+  auto sandbox_factory = std::make_unique<FUSESandboxedProcessFactory>(
+      platform, std::move(executable), std::move(run_as),
+      /* has_network_access= */ false, std::move(supplementary_groups));
+
+  std::vector<int> password_needed_codes = {
+      23,   // ZIP_ER_BASE + ZIP_ER_ZLIB
+      36,   // ZIP_ER_BASE + ZIP_ER_NOPASSWD
+      37};  // ZIP_ER_BASE + ZIP_ER_WRONGPASSWD
+
+  return std::make_unique<ArchiveMounter>(
+      platform, process_reaper, "zip", metrics, "FuseZip",
+      std::move(password_needed_codes), std::move(sandbox_factory));
+}
+
+}  // namespace
+
+ZipManager::ZipManager(const std::string& mount_root,
+                       Platform* platform,
+                       Metrics* metrics,
+                       brillo::ProcessReaper* process_reaper)
+    : ArchiveManager(mount_root, platform, metrics, process_reaper),
+      mounter_(CreateZipMounter(
+          platform, metrics, process_reaper, GetSupplementaryGroups())) {}
+
 ZipManager::~ZipManager() {
   UnmountAll();
 }
 
 bool ZipManager::CanMount(const std::string& source_path) const {
-  // Check for expected file extension.
-  return base::EndsWith(source_path, ".zip",
-                        base::CompareCase::INSENSITIVE_ASCII) &&
-         IsInAllowedFolder(source_path);
+  base::FilePath name;
+  return IsInAllowedFolder(source_path) &&
+         mounter_->CanMount(source_path, {}, &name);
 }
 
 std::unique_ptr<MountPoint> ZipManager::DoMount(
@@ -37,11 +76,7 @@ std::unique_ptr<MountPoint> ZipManager::DoMount(
     const base::FilePath& mount_path,
     MountOptions* const applied_options,
     MountErrorType* const error) {
-  DCHECK(applied_options);
   DCHECK(error);
-
-  metrics()->RecordArchiveType("zip");
-
   // MountManager resolves source path to real path before calling DoMount,
   // so no symlinks or '..' will be here.
   if (!IsInAllowedFolder(source_path)) {
@@ -49,34 +84,7 @@ std::unique_ptr<MountPoint> ZipManager::DoMount(
     *error = MOUNT_ERROR_INVALID_DEVICE_PATH;
     return nullptr;
   }
-
-  FUSEMounterLegacy::Params params{
-      .bind_paths = {{source_path}},
-      .filesystem_type = "zipfs",
-      .metrics = metrics(),
-      .metrics_name = "FuseZip",
-      .mount_namespace = GetMountNamespaceFor(source_path).name,
-      .mount_program = "/usr/bin/fuse-zip",
-      .mount_user = "fuse-zip",
-      .password_needed_codes = {23,   // ZIP_ER_BASE + ZIP_ER_ZLIB
-                                36,   // ZIP_ER_BASE + ZIP_ER_NOPASSWD
-                                37},  // ZIP_ER_BASE + ZIP_ER_WRONGPASSWD
-      .platform = platform(),
-      .process_reaper = process_reaper(),
-      .seccomp_policy = "/usr/share/policy/fuse-zip-seccomp.policy",
-      .supplementary_groups = GetSupplementaryGroups(),
-  };
-
-  // Prepare FUSE mount options.
-  *error = GetMountOptions(&params.mount_options);
-  if (*error != MOUNT_ERROR_NONE)
-    return nullptr;
-
-  *applied_options = params.mount_options;
-
-  // Run fuse-zip.
-  const FUSEMounterLegacy mounter(std::move(params));
-  return mounter.Mount(source_path, mount_path, options, error);
+  return mounter_->Mount(source_path, mount_path, options, error);
 }
 
 }  // namespace cros_disks

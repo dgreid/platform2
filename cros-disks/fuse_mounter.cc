@@ -42,24 +42,7 @@ namespace cros_disks {
 
 namespace {
 
-const mode_t kSourcePathPermissions = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP;
-
 const char kFuseDeviceFile[] = "/dev/fuse";
-
-template <typename T>
-base::Optional<T> UnsetIfEmpty(T value) {
-  if (value.empty())
-    return base::Optional<T>();
-  return base::Optional<T>(std::move(value));
-}
-
-// TODO(dats): Remove when it's done beforehead by the caller.
-OwnerUser ResolveUserOrDie(const Platform* platform, const std::string& user) {
-  OwnerUser result;
-  PCHECK(platform->GetUserAndGroupId(user, &result.uid, &result.gid));
-  result.gid = kChronosAccessGID;
-  return result;
-}
 
 class FUSEMountPoint : public MountPoint {
  public:
@@ -286,11 +269,11 @@ bool FUSESandboxedProcessFactory::ConfigureSandbox(
 FUSEMounter::FUSEMounter(const Platform* platform,
                          brillo::ProcessReaper* process_reaper,
                          std::string filesystem_type,
-                         bool nosymfollow)
+                         Config config)
     : platform_(platform),
       process_reaper_(process_reaper),
       filesystem_type_(std::move(filesystem_type)),
-      nosymfollow_(nosymfollow) {}
+      config_(std::move(config)) {}
 
 FUSEMounter::~FUSEMounter() = default;
 
@@ -300,7 +283,7 @@ std::unique_ptr<MountPoint> FUSEMounter::Mount(
     std::vector<std::string> params,
     MountErrorType* error) const {
   // Read-only is the only parameter that has any effect at this layer.
-  const bool read_only = IsReadOnlyMount(params);
+  const bool read_only = config_.read_only || IsReadOnlyMount(params);
 
   const base::File fuse_file = base::File(
       base::FilePath(kFuseDeviceFile),
@@ -358,7 +341,7 @@ std::unique_ptr<MountPoint> FUSEMounter::Mount(
   *error = platform_->Mount(source_descr, target_path.value(), fuse_type,
                             MountOptions::kMountFlags | MS_DIRSYNC |
                                 (read_only ? MS_RDONLY : 0) |
-                                (nosymfollow_ ? MS_NOSYMFOLLOW : 0),
+                                (config_.nosymfollow ? MS_NOSYMFOLLOW : 0),
                             fuse_mount_options);
 
   if (*error != MOUNT_ERROR_NONE) {
@@ -443,8 +426,10 @@ FUSEMounterHelper::FUSEMounterHelper(
     std::string filesystem_type,
     bool nosymfollow,
     const SandboxedProcessFactory* sandbox_factory)
-    : FUSEMounter(
-          platform, process_reaper, std::move(filesystem_type), nosymfollow),
+    : FUSEMounter(platform,
+                  process_reaper,
+                  std::move(filesystem_type),
+                  {.nosymfollow = nosymfollow}),
       sandbox_factory_(sandbox_factory) {}
 
 FUSEMounterHelper::~FUSEMounterHelper() = default;
@@ -461,136 +446,6 @@ std::unique_ptr<SandboxedProcess> FUSEMounterHelper::PrepareSandbox(
     return nullptr;
   }
   return sandbox;
-}
-
-FUSEMounterLegacy::FUSEMounterLegacy(Params params)
-    : FUSEMounter(params.platform,
-                  params.process_reaper,
-                  std::move(params.filesystem_type),
-                  params.nosymfollow),
-      metrics_(params.metrics),
-      metrics_name_(std::move(params.metrics_name)),
-      seccomp_policy_(),
-      bind_paths_(std::move(params.bind_paths)),
-      password_needed_codes_(std::move(params.password_needed_codes)),
-      mount_options_(std::move(params.mount_options)),
-      sandbox_factory_(
-          platform(),
-          {base::FilePath(std::move(params.mount_program)),
-           UnsetIfEmpty(base::FilePath(std::move(params.seccomp_policy)))},
-          ResolveUserOrDie(platform(), params.mount_user),
-          params.network_access,
-          std::move(params.supplementary_groups),
-          UnsetIfEmpty(base::FilePath(std::move(params.mount_namespace)))) {}
-
-void FUSEMounterLegacy::CopyPassword(const std::vector<std::string>& options,
-                                     Process* const process) const {
-  DCHECK(process);
-
-  // Is the process "password-aware"?
-  if (password_needed_codes_.empty())
-    return;
-
-  // Is there a password available in options?
-  const base::StringPiece prefix = "password=";
-  const auto it = std::find_if(options.cbegin(), options.cend(),
-                               [prefix](const base::StringPiece s) {
-                                 return base::StartsWith(s, prefix);
-                               });
-  if (it == options.cend())
-    return;
-
-  // Pass the password via stdin.
-  process->SetStdIn(it->substr(prefix.size()));
-}
-
-std::unique_ptr<SandboxedProcess> FUSEMounterLegacy::PrepareSandbox(
-    const std::string& source,
-    const base::FilePath& target_path,
-    std::vector<std::string> params,
-    MountErrorType* error) const {
-  std::unique_ptr<SandboxedProcess> mount_process = CreateSandboxedProcess();
-
-  // TODO(crbug.com/1053778) Only create the necessary tmpfs filesystems.
-  for (const char* const dir : {"/home", "/media"}) {
-    if (!mount_process->Mount("tmpfs", dir, "tmpfs", "mode=0755,size=10M")) {
-      LOG(ERROR) << "Cannot mount " << quote(dir);
-      *error = MOUNT_ERROR_INTERNAL;
-      return nullptr;
-    }
-  }
-
-  // Data dirs if any are mounted inside /run/fuse.
-  if (!mount_process->BindMount("/run/fuse", "/run/fuse", false, false)) {
-    LOG(ERROR) << "Can't bind /run/fuse";
-    return nullptr;
-  }
-
-  // If a block device is being mounted, bind mount it into the sandbox.
-  if (base::StartsWith(source, "/dev/", base::CompareCase::SENSITIVE)) {
-    // Re-own source.
-    if (!platform()->SetOwnership(source, getuid(),
-                                  sandbox_factory_.run_as().gid) ||
-        !platform()->SetPermissions(source, kSourcePathPermissions)) {
-      LOG(ERROR) << "Can't set up permissions on " << quote(source);
-      *error = MOUNT_ERROR_INSUFFICIENT_PERMISSIONS;
-      return nullptr;
-    }
-
-    if (!mount_process->BindMount(source, source, true, false)) {
-      LOG(ERROR) << "Cannot bind mount device " << quote(source);
-      *error = MOUNT_ERROR_INVALID_ARGUMENT;
-      return nullptr;
-    }
-  }
-
-  // This is for additional data dirs.
-  for (const BindPath& bind_path : bind_paths_) {
-    if (!mount_process->BindMount(bind_path.path, bind_path.path,
-                                  bind_path.writable, bind_path.recursive)) {
-      LOG(ERROR) << "Cannot bind-mount " << quote(bind_path.path);
-      *error = MOUNT_ERROR_INVALID_ARGUMENT;
-      return nullptr;
-    }
-  }
-
-  {
-    // TODO(dats): This it leaking legacy options implementation. Remove it.
-    std::string options_string = mount_options_.ToFuseMounterOptions();
-    DCHECK(!options_string.empty());
-    mount_process->AddArgument("-o");
-    mount_process->AddArgument(std::move(options_string));
-  }
-
-  if (!source.empty()) {
-    mount_process->AddArgument(source);
-  }
-
-  CopyPassword(params, mount_process.get());
-
-  return mount_process;
-}
-
-MountErrorType FUSEMounterLegacy::InterpretReturnCode(int return_code) const {
-  if (metrics_ && !metrics_name_.empty())
-    metrics_->RecordFuseMounterErrorCode(metrics_name_, return_code);
-
-  if (base::Contains(password_needed_codes_, return_code))
-    return MOUNT_ERROR_NEED_PASSWORD;
-
-  return FUSEMounter::InterpretReturnCode(return_code);
-}
-
-bool FUSEMounterLegacy::CanMount(const std::string& source,
-                                 const std::vector<std::string>& params,
-                                 base::FilePath* suggested_name) const {
-  NOTREACHED();
-  return true;
-}
-
-std::unique_ptr<SandboxedProcess> FUSEMounterLegacy::CreateSandboxedProcess()
-    const {
-  return sandbox_factory_.CreateSandboxedProcess();
 }
 
 }  // namespace cros_disks

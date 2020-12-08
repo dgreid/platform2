@@ -13,10 +13,17 @@
 
 namespace cros_disks {
 
+class ArchiveMounter;
+
 // A MountManager mounting ZIP archives as virtual filesystems using fuse-zip.
 class ZipManager : public ArchiveManager {
  public:
-  using ArchiveManager::ArchiveManager;
+  ZipManager(const std::string& mount_root,
+             Platform* platform,
+             Metrics* metrics,
+             brillo::ProcessReaper* process_reaper);
+  ZipManager(const ZipManager&) = delete;
+  ZipManager& operator=(const ZipManager&) = delete;
 
   ~ZipManager() override;
 
@@ -30,6 +37,8 @@ class ZipManager : public ArchiveManager {
                                       const base::FilePath& mount_path,
                                       MountOptions* applied_options,
                                       MountErrorType* error) override;
+
+  const std::unique_ptr<ArchiveMounter> mounter_;
 };
 
 }  // namespace cros_disks
