@@ -16,10 +16,11 @@
 #include "shill/cellular/cellular.h"
 #include "shill/cellular/dbus_objectmanager_proxy_interface.h"
 #include "shill/cellular/modem_info.h"
-#include "shill/dbus_properties_proxy_interface.h"
 #include "shill/refptr_types.h"
 
 namespace shill {
+
+class DBusPropertiesProxy;
 
 // Handles an instance of ModemManager.Modem and an instance of a Cellular
 // device.
@@ -90,7 +91,7 @@ class Modem {
 
   // A proxy to the org.freedesktop.DBusProperties interface used to obtain
   // ModemManager.Modem properties and watch for property changes
-  std::unique_ptr<DBusPropertiesProxyInterface> dbus_properties_proxy_;
+  std::unique_ptr<DBusPropertiesProxy> dbus_properties_proxy_;
 
   InterfaceToProperties initial_properties_;
 

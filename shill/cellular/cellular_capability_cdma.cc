@@ -13,7 +13,7 @@
 #include "shill/cellular/modem_info.h"
 #include "shill/cellular/pending_activation_store.h"
 #include "shill/control_interface.h"
-#include "shill/dbus_properties_proxy_interface.h"
+#include "shill/dbus/dbus_properties_proxy.h"
 #include "shill/error.h"
 #include "shill/logging.h"
 
@@ -255,7 +255,7 @@ void CellularCapabilityCdma::GetProperties() {
   SLOG(this, 2) << __func__;
   CellularCapability3gpp::GetProperties();
 
-  std::unique_ptr<DBusPropertiesProxyInterface> properties_proxy =
+  std::unique_ptr<DBusPropertiesProxy> properties_proxy =
       control_interface()->CreateDBusPropertiesProxy(
           cellular()->dbus_path(), cellular()->dbus_service());
 

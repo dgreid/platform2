@@ -426,7 +426,7 @@ class CellularTest : public testing::TestWithParam<Cellular::Type> {
    public:
     explicit TestControl(CellularTest* test) : test_(test) {}
 
-    std::unique_ptr<DBusPropertiesProxyInterface> CreateDBusPropertiesProxy(
+    std::unique_ptr<DBusPropertiesProxy> CreateDBusPropertiesProxy(
         const RpcIdentifier& path, const std::string& service) override {
       CHECK(test_->dbus_properties_proxy_);
       return std::move(test_->dbus_properties_proxy_);

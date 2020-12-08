@@ -204,9 +204,8 @@ std::unique_ptr<UpstartProxyInterface> DBusControl::CreateUpstartProxy() {
 }
 
 #if !defined(DISABLE_CELLULAR)
-std::unique_ptr<DBusPropertiesProxyInterface>
-DBusControl::CreateDBusPropertiesProxy(const RpcIdentifier& path,
-                                       const string& service) {
+std::unique_ptr<DBusPropertiesProxy> DBusControl::CreateDBusPropertiesProxy(
+    const RpcIdentifier& path, const string& service) {
   return std::make_unique<DBusPropertiesProxy>(proxy_bus_, path, service);
 }
 

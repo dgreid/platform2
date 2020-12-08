@@ -26,7 +26,7 @@
 #include "shill/cellular/mm1_modem_proxy_interface.h"
 #include "shill/cellular/mm1_modem_simple_proxy_interface.h"
 #include "shill/cellular/mm1_sim_proxy_interface.h"
-#include "shill/dbus_properties_proxy_interface.h"
+#include "shill/dbus/dbus_properties_proxy.h"
 #endif  // DISABLE_CELLULAR
 
 #if !defined(DISABLE_WIFI)
@@ -116,7 +116,7 @@ class MockControl : public ControlInterface {
               (override));
 
 #if !defined(DISABLE_CELLULAR)
-  MOCK_METHOD(std::unique_ptr<DBusPropertiesProxyInterface>,
+  MOCK_METHOD(std::unique_ptr<DBusPropertiesProxy>,
               CreateDBusPropertiesProxy,
               (const RpcIdentifier&, const std::string&),
               (override));

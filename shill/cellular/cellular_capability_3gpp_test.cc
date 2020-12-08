@@ -30,10 +30,11 @@
 #include "shill/cellular/mock_mobile_operator_info.h"
 #include "shill/cellular/mock_modem_info.h"
 #include "shill/cellular/mock_pending_activation_store.h"
+#include "shill/dbus/dbus_properties_proxy.h"
+#include "shill/dbus/fake_properties_proxy.h"
 #include "shill/error.h"
 #include "shill/mock_adaptors.h"
 #include "shill/mock_control.h"
-#include "shill/mock_dbus_properties_proxy.h"
 #include "shill/mock_event_dispatcher.h"
 #include "shill/mock_manager.h"
 #include "shill/mock_metrics.h"
@@ -122,7 +123,6 @@ class CellularCapability3gppTest : public testing::TestWithParam<string> {
         modem_proxy_(new mm1::MockModemProxy()),
         modem_simple_proxy_(new mm1::MockModemSimpleProxy()),
         sim_proxy_(new mm1::MockSimProxy()),
-        properties_proxy_(new MockDBusPropertiesProxy()),
         capability_(nullptr),
         device_adaptor_(nullptr),
         cellular_(new Cellular(&modem_info_,
@@ -137,6 +137,8 @@ class CellularCapability3gppTest : public testing::TestWithParam<string> {
         mock_serving_operator_info_(nullptr) {
     metrics_.RegisterDevice(cellular_->interface_index(),
                             Technology::kCellular);
+    // The initially created properties_proxy_ will be provided to Cellular.
+    CreatePropertiesProxy();
   }
 
   ~CellularCapability3gppTest() override {
@@ -173,6 +175,17 @@ class CellularCapability3gppTest : public testing::TestWithParam<string> {
   void TearDown() override {
     cellular_->DestroyCapability();
     capability_ = nullptr;
+  }
+
+  void CreatePropertiesProxy() {
+    properties_proxy_ =
+        DBusPropertiesProxy::CreateDBusPropertiesProxyForTesting();
+  }
+
+  void SetSimProperties(const KeyValueStore& sim_properties) {
+    properties_proxy_->GetFakePropertiesProxyForTesting()
+        ->SetDictionaryForTesting(MM_DBUS_INTERFACE_SIM,
+                                  sim_properties.properties());
   }
 
   void CreateService() {
@@ -215,10 +228,12 @@ class CellularCapability3gppTest : public testing::TestWithParam<string> {
         MM_MODEM_MODEM3GPP_PROPERTY_ENABLEDFACILITYLOCKS, 0);
     modem3gpp_properties.Set<string>(MM_MODEM_MODEM3GPP_PROPERTY_IMEI, kImei);
 
-    EXPECT_CALL(*properties_proxy_, GetAll(MM_DBUS_INTERFACE_MODEM))
-        .WillOnce(Return(modem_properties));
-    EXPECT_CALL(*properties_proxy_, GetAll(MM_DBUS_INTERFACE_MODEM_MODEM3GPP))
-        .WillOnce(Return(modem3gpp_properties));
+    FakePropertiesProxy* fake_properties =
+        properties_proxy_->GetFakePropertiesProxyForTesting();
+    fake_properties->SetDictionaryForTesting(MM_DBUS_INTERFACE_MODEM,
+                                             modem_properties.properties());
+    fake_properties->SetDictionaryForTesting(MM_DBUS_INTERFACE_MODEM_MODEM3GPP,
+                                             modem3gpp_properties.properties());
   }
 
   void InvokeEnable(bool enable,
@@ -353,23 +368,21 @@ class CellularCapability3gppTest : public testing::TestWithParam<string> {
       return sim_proxy;
     }
 
-    std::unique_ptr<DBusPropertiesProxyInterface> CreateDBusPropertiesProxy(
+    std::unique_ptr<DBusPropertiesProxy> CreateDBusPropertiesProxy(
         const RpcIdentifier& path, const std::string& /*service*/) override {
-      std::unique_ptr<MockDBusPropertiesProxy> properties_proxy =
+      std::unique_ptr<DBusPropertiesProxy> properties_proxy =
           std::move(test_->properties_proxy_);
+      FakePropertiesProxy* fake_properties =
+          properties_proxy->GetFakePropertiesProxyForTesting();
       if (path.value().find(kActiveBearerPathPrefix) != std::string::npos) {
-        EXPECT_CALL(*properties_proxy, GetAll(MM_DBUS_INTERFACE_BEARER))
-            .Times(AnyNumber())
-            .WillRepeatedly(Return(active_bearer_properties_));
+        fake_properties->SetDictionaryForTesting(
+            MM_DBUS_INTERFACE_BEARER, active_bearer_properties_.properties());
       } else {
-        EXPECT_CALL(*properties_proxy, GetAll(MM_DBUS_INTERFACE_BEARER))
-            .Times(AnyNumber())
-            .WillRepeatedly(Return(inactive_bearer_properties_));
+        fake_properties->SetDictionaryForTesting(
+            MM_DBUS_INTERFACE_BEARER, inactive_bearer_properties_.properties());
       }
-      EXPECT_CALL(*properties_proxy, set_properties_changed_callback(_))
-          .Times(AnyNumber());
-
-      test_->properties_proxy_ = std::make_unique<MockDBusPropertiesProxy>();
+      // Replace properties_proxy for CellularCapability3gpp.
+      test_->CreatePropertiesProxy();
       return properties_proxy;
     }
 
@@ -389,7 +402,7 @@ class CellularCapability3gppTest : public testing::TestWithParam<string> {
   std::unique_ptr<mm1::MockModemProxy> modem_proxy_;
   std::unique_ptr<mm1::MockModemSimpleProxy> modem_simple_proxy_;
   std::unique_ptr<mm1::MockSimProxy> sim_proxy_;
-  std::unique_ptr<MockDBusPropertiesProxy> properties_proxy_;
+  std::unique_ptr<DBusPropertiesProxy> properties_proxy_;
   CellularCapability3gpp* capability_;  // Owned by |cellular_|.
   DeviceMockAdaptor* device_adaptor_;   // Owned by |cellular_|.
   CellularRefPtr cellular_;
@@ -458,9 +471,6 @@ TEST_F(CellularCapability3gppMainTest, StartModemFailure) {
   EXPECT_CALL(*modem_proxy_,
               Enable(true, _, _, CellularCapability::kTimeoutEnable))
       .WillOnce(Invoke(this, &CellularCapability3gppTest::InvokeEnableFail));
-  EXPECT_CALL(*properties_proxy_, GetAll(MM_DBUS_INTERFACE_MODEM)).Times(0);
-  EXPECT_CALL(*properties_proxy_, GetAll(MM_DBUS_INTERFACE_MODEM_MODEM3GPP))
-      .Times(0);
 
   Error error;
   EXPECT_CALL(*this, TestCallback(IsFailure()));
@@ -519,9 +529,6 @@ TEST_F(CellularCapability3gppMainTest, StartModemWithDeferredEnableFailure) {
       .Times(2)
       .WillRepeatedly(
           Invoke(this, &CellularCapability3gppTest::InvokeEnableInWrongState));
-  EXPECT_CALL(*properties_proxy_, GetAll(MM_DBUS_INTERFACE_MODEM)).Times(0);
-  EXPECT_CALL(*properties_proxy_, GetAll(MM_DBUS_INTERFACE_MODEM_MODEM3GPP))
-      .Times(0);
 
   Error error;
   EXPECT_CALL(*this, TestCallback(_)).Times(0);
@@ -703,8 +710,8 @@ TEST_F(CellularCapability3gppMainTest, SimLockStatusChanged) {
                              kOperatorIdentifier);
   sim_properties.Set<string>(MM_SIM_PROPERTY_OPERATORNAME, kOperatorName);
 
-  EXPECT_CALL(*properties_proxy_, GetAll(MM_DBUS_INTERFACE_SIM))
-      .WillOnce(Return(sim_properties));
+  SetSimProperties(sim_properties);
+
   EXPECT_CALL(*modem_info_.mock_pending_activation_store(),
               GetActivationState(PendingActivationStore::kIdentifierICCID, _))
       .Times(3);
@@ -733,9 +740,9 @@ TEST_F(CellularCapability3gppMainTest, SimLockStatusChanged) {
   EXPECT_EQ("", capability_->spn_);
 
   // SIM is unlocked.
-  properties_proxy_.reset(new MockDBusPropertiesProxy());
-  EXPECT_CALL(*properties_proxy_, GetAll(MM_DBUS_INTERFACE_SIM))
-      .WillOnce(Return(sim_properties));
+  // When the SIM becomes unlocked, a new capability will be created, so we
+  // need to provide the SIM properties for the new properties_proxy_.
+  SetSimProperties(sim_properties);
   EXPECT_CALL(*modem_info_.mock_pending_activation_store(),
               GetActivationState(PendingActivationStore::kIdentifierICCID, _))
       .Times(3);
@@ -808,10 +815,7 @@ TEST_F(CellularCapability3gppMainTest, PropertiesChanged) {
   modem3gpp_properties.Set<string>(MM_MODEM_MODEM3GPP_PROPERTY_IMEI, kImei);
 
   // Set up mock modem sim properties
-  KeyValueStore sim_properties;
-
-  EXPECT_CALL(*properties_proxy_, GetAll(MM_DBUS_INTERFACE_SIM))
-      .WillOnce(Return(sim_properties));
+  SetSimProperties(KeyValueStore());
 
   EXPECT_EQ("", cellular_->imei());
   EXPECT_EQ(MM_MODEM_ACCESS_TECHNOLOGY_UNKNOWN,
@@ -1054,10 +1058,8 @@ TEST_F(CellularCapability3gppMainTest, SimPathChanged) {
   sim_properties.Set<string>(MM_SIM_PROPERTY_OPERATORIDENTIFIER,
                              kOperatorIdentifier);
   sim_properties.Set<string>(MM_SIM_PROPERTY_OPERATORNAME, kOperatorName);
+  SetSimProperties(sim_properties);
 
-  EXPECT_CALL(*properties_proxy_, GetAll(MM_DBUS_INTERFACE_SIM))
-      .Times(1)
-      .WillOnce(Return(sim_properties));
   EXPECT_CALL(*modem_info_.mock_pending_activation_store(),
               GetActivationState(PendingActivationStore::kIdentifierICCID, _))
       .Times(4);
@@ -1088,9 +1090,9 @@ TEST_F(CellularCapability3gppMainTest, SimPathChanged) {
   EXPECT_EQ(kSimIdentifier, cellular_->iccid());
   EXPECT_EQ(kOperatorName, capability_->spn_);
 
+  // SIM is removed.
   capability_->OnSimPathChanged(RpcIdentifier(""));
   Mock::VerifyAndClearExpectations(modem_info_.mock_pending_activation_store());
-  Mock::VerifyAndClearExpectations(properties_proxy_.get());
   EXPECT_FALSE(cellular_->sim_present());
   EXPECT_EQ(nullptr, capability_->sim_proxy_);
   EXPECT_EQ(RpcIdentifier(""), capability_->sim_path_);
@@ -1098,9 +1100,9 @@ TEST_F(CellularCapability3gppMainTest, SimPathChanged) {
   EXPECT_EQ("", cellular_->iccid());
   EXPECT_EQ("", capability_->spn_);
 
-  EXPECT_CALL(*properties_proxy_, GetAll(MM_DBUS_INTERFACE_SIM))
-      .Times(1)
-      .WillOnce(Return(sim_properties));
+  // When a SIM is changed to a valid path, a new capability will be created, so
+  // we need to provide the SIM properties for the new properties_proxy_.
+  SetSimProperties(sim_properties);
   EXPECT_CALL(*modem_info_.mock_pending_activation_store(),
               GetActivationState(PendingActivationStore::kIdentifierICCID, _))
       .Times(4);
@@ -1135,9 +1137,8 @@ TEST_F(CellularCapability3gppMainTest, SimPropertiesChanged) {
   KeyValueStore sim_properties;
   sim_properties.Set<string>(MM_SIM_PROPERTY_IMSI, kImsi);
   sim_properties.Set<string>(MM_SIM_PROPERTY_EID, kEid);
+  SetSimProperties(sim_properties);
 
-  EXPECT_CALL(*properties_proxy_, GetAll(MM_DBUS_INTERFACE_SIM))
-      .WillOnce(Return(sim_properties));
   EXPECT_CALL(*modem_info_.mock_pending_activation_store(),
               GetActivationState(PendingActivationStore::kIdentifierICCID, _))
       .Times(0);

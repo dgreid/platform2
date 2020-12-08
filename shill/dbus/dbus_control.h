@@ -79,7 +79,7 @@ class DBusControl : public ControlInterface {
       const std::string& service) override;
 
 #if !defined(DISABLE_CELLULAR)
-  std::unique_ptr<DBusPropertiesProxyInterface> CreateDBusPropertiesProxy(
+  std::unique_ptr<DBusPropertiesProxy> CreateDBusPropertiesProxy(
       const RpcIdentifier& path, const std::string& service) override;
 
   std::unique_ptr<DBusObjectManagerProxyInterface> CreateDBusObjectManagerProxy(

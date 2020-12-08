@@ -28,7 +28,7 @@
 #include "shill/cellular/pending_activation_store.h"
 #include "shill/cellular/verizon_subscription_state.h"
 #include "shill/control_interface.h"
-#include "shill/dbus_properties_proxy_interface.h"
+#include "shill/dbus/dbus_properties_proxy.h"
 #include "shill/device_id.h"
 #include "shill/error.h"
 #include "shill/logging.h"
@@ -758,7 +758,7 @@ void CellularCapability3gpp::FillInitialEpsBearerPropertyMap(
 void CellularCapability3gpp::GetProperties() {
   SLOG(this, 3) << __func__;
 
-  std::unique_ptr<DBusPropertiesProxyInterface> properties_proxy =
+  std::unique_ptr<DBusPropertiesProxy> properties_proxy =
       control_interface()->CreateDBusPropertiesProxy(
           cellular()->dbus_path(), cellular()->dbus_service());
 
@@ -1334,7 +1334,7 @@ void CellularCapability3gpp::OnSimPathChanged(const RpcIdentifier& sim_path) {
     cellular()->home_provider_info()->Reset();
   } else {
     cellular()->set_sim_present(true);
-    std::unique_ptr<DBusPropertiesProxyInterface> properties_proxy =
+    std::unique_ptr<DBusPropertiesProxy> properties_proxy =
         control_interface()->CreateDBusPropertiesProxy(
             sim_path, cellular()->dbus_service());
     // TODO(jglasgow): convert to async interface
@@ -1463,7 +1463,7 @@ void CellularCapability3gpp::OnSimLockStatusChanged() {
   if (IsValidSimPath(sim_path_) &&
       (sim_lock_status_.lock_type == MM_MODEM_LOCK_NONE ||
        sim_lock_status_.lock_type == MM_MODEM_LOCK_UNKNOWN)) {
-    std::unique_ptr<DBusPropertiesProxyInterface> properties_proxy =
+    std::unique_ptr<DBusPropertiesProxy> properties_proxy =
         control_interface()->CreateDBusPropertiesProxy(
             sim_path_, cellular()->dbus_service());
     KeyValueStore properties(properties_proxy->GetAll(MM_DBUS_INTERFACE_SIM));

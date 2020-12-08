@@ -17,7 +17,7 @@
 
 namespace shill {
 
-class DBusPropertiesProxyInterface;
+class DBusPropertiesProxy;
 class ControlInterface;
 
 // A class for observing property changes of a bearer object exposed by
@@ -111,7 +111,7 @@ class CellularBearer {
   ControlInterface* control_interface_;
   RpcIdentifier dbus_path_;
   std::string dbus_service_;
-  std::unique_ptr<DBusPropertiesProxyInterface> dbus_properties_proxy_;
+  std::unique_ptr<DBusPropertiesProxy> dbus_properties_proxy_;
   bool connected_;
   std::string data_interface_;
 

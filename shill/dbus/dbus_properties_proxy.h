@@ -9,48 +9,61 @@
 #include <string>
 #include <vector>
 
-#include <base/macros.h>
+#include <base/callback.h>
+#include <brillo/any.h>
 
 #include "cellular/dbus-proxies.h"
-#include "shill/dbus_properties_proxy_interface.h"
+#include "shill/error.h"
+#include "shill/key_value_store.h"
 
 namespace shill {
 
 class FakePropertiesProxy;
 
-// DBusPropertiesProxyInterface is a cellular-specific interface, refer to its
-// header for more info.
-class DBusPropertiesProxy : public DBusPropertiesProxyInterface {
+// This is a cellular-specific DBus Properties interface, as it supports
+// cellular-specific signal (ModemManagerPropertiesChanged).
+// These are the methods that a DBusProperties proxy must support.
+class DBusPropertiesProxy {
  public:
+  // Callback invoked when an object sends a DBus property change signal.
+  using PropertiesChangedCallback = base::Callback<void(
+      const std::string& interface,
+      const KeyValueStore& changed_properties,
+      const std::vector<std::string>& invalidated_properties)>;
+
+  // Callback invoked when the classic modem manager sends a DBus
+  // property change signal.
+  using ModemManagerPropertiesChangedCallback = base::Callback<void(
+      const std::string& interface, const KeyValueStore& properties)>;
+
   DBusPropertiesProxy(const scoped_refptr<dbus::Bus>& bus,
                       const RpcIdentifier& path,
                       const std::string& service);
   DBusPropertiesProxy(const DBusPropertiesProxy&) = delete;
   DBusPropertiesProxy& operator=(const DBusPropertiesProxy&) = delete;
 
-  ~DBusPropertiesProxy() override;
+  ~DBusPropertiesProxy();
 
-  // Inherited from DBusPropertiesProxyInterface.
-  KeyValueStore GetAll(const std::string& interface_name) override;
+  KeyValueStore GetAll(const std::string& interface_name);
   void GetAllAsync(
       const std::string& interface_name,
       const base::Callback<void(const KeyValueStore&)>& success_callback,
-      const base::Callback<void(const Error&)>& error_callback) override;
+      const base::Callback<void(const Error&)>& error_callback);
   brillo::Any Get(const std::string& interface_name,
-                  const std::string& property) override;
+                  const std::string& property);
   void GetAsync(
       const std::string& interface_name,
       const std::string& property,
       const base::Callback<void(const brillo::Any&)>& success_callback,
-      const base::Callback<void(const Error&)>& error_callback) override;
+      const base::Callback<void(const Error&)>& error_callback);
 
   void set_properties_changed_callback(
-      const PropertiesChangedCallback& callback) override {
+      const PropertiesChangedCallback& callback) {
     properties_changed_callback_ = callback;
   }
 
   void set_modem_manager_properties_changed_callback(
-      const ModemManagerPropertiesChangedCallback& callback) override {
+      const ModemManagerPropertiesChangedCallback& callback) {
     mm_properties_changed_callback_ = callback;
   }
 

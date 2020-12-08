@@ -10,7 +10,7 @@
 #include <chromeos/dbus/service_constants.h>
 
 #include "shill/control_interface.h"
-#include "shill/dbus_properties_proxy_interface.h"
+#include "shill/dbus/dbus_properties_proxy.h"
 #include "shill/logging.h"
 
 using std::string;

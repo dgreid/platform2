@@ -14,6 +14,7 @@
 
 #include "shill/cellular/cellular.h"
 #include "shill/control_interface.h"
+#include "shill/dbus/dbus_properties_proxy.h"
 #include "shill/device_info.h"
 #include "shill/logging.h"
 #include "shill/manager.h"

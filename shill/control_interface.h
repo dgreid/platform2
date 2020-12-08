@@ -32,7 +32,7 @@ class ThirdPartyVpnDriver;
 class ThirdPartyVpnAdaptorInterface;
 
 class DBusObjectManagerProxyInterface;
-class DBusPropertiesProxyInterface;
+class DBusPropertiesProxy;
 class DHCPCDListenerInterface;
 class DHCPProvider;
 class DHCPProxyInterface;
@@ -125,9 +125,8 @@ class ControlInterface {
       const std::string& service) = 0;
 
 #if !defined(DISABLE_CELLULAR)
-  virtual std::unique_ptr<DBusPropertiesProxyInterface>
-  CreateDBusPropertiesProxy(const RpcIdentifier& path,
-                            const std::string& service) = 0;
+  virtual std::unique_ptr<DBusPropertiesProxy> CreateDBusPropertiesProxy(
+      const RpcIdentifier& path, const std::string& service) = 0;
 
   virtual std::unique_ptr<DBusObjectManagerProxyInterface>
   CreateDBusObjectManagerProxy(

@@ -25,9 +25,10 @@
 #include "shill/cellular/mock_mobile_operator_info.h"
 #include "shill/cellular/mock_modem_info.h"
 #include "shill/cellular/mock_pending_activation_store.h"
+#include "shill/dbus/dbus_properties_proxy.h"
+#include "shill/dbus/fake_properties_proxy.h"
 #include "shill/mock_adaptors.h"
 #include "shill/mock_control.h"
-#include "shill/mock_dbus_properties_proxy.h"
 #include "shill/mock_event_dispatcher.h"
 #include "shill/mock_manager.h"
 #include "shill/mock_metrics.h"
@@ -58,7 +59,8 @@ class CellularCapabilityCdmaTest : public testing::Test {
         modem_proxy_(new mm1::MockModemProxy()),
         modem_simple_proxy_(new mm1::MockModemSimpleProxy()),
         sim_proxy_(new mm1::MockSimProxy()),
-        properties_proxy_(new MockDBusPropertiesProxy()),
+        properties_proxy_(
+            DBusPropertiesProxy::CreateDBusPropertiesProxyForTesting()),
         cellular_(new Cellular(&modem_info_,
                                "",
                                kMachineAddress,
@@ -145,7 +147,7 @@ class CellularCapabilityCdmaTest : public testing::Test {
       return std::move(test_->sim_proxy_);
     }
 
-    std::unique_ptr<DBusPropertiesProxyInterface> CreateDBusPropertiesProxy(
+    std::unique_ptr<DBusPropertiesProxy> CreateDBusPropertiesProxy(
         const RpcIdentifier& /*path*/,
         const std::string& /*service*/) override {
       return std::move(test_->properties_proxy_);
@@ -168,7 +170,7 @@ class CellularCapabilityCdmaTest : public testing::Test {
   unique_ptr<mm1::MockModemProxy> modem_proxy_;
   unique_ptr<mm1::MockModemSimpleProxy> modem_simple_proxy_;
   unique_ptr<mm1::MockSimProxy> sim_proxy_;
-  unique_ptr<MockDBusPropertiesProxy> properties_proxy_;
+  unique_ptr<DBusPropertiesProxy> properties_proxy_;
   CellularRefPtr cellular_;
   MockCellularService* service_;
 
