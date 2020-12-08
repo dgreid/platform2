@@ -7261,17 +7261,17 @@ mno {
     mccmnc : "44087"
     mccmnc : "44099"
     mobile_apn {
-      apn : "mopera.net"
-      localized_name {
-        name : "mopera U"
-      }
-    }
-    mobile_apn {
       apn : "spmode.ne.jp"
       localized_name {
         name : "SPモード"
       }
       authentication : CHAP
+    }
+    mobile_apn {
+      apn : "mopera.net"
+      localized_name {
+        name : "mopera U"
+      }
     }
     mobile_apn {
       apn : "lte-d.ocn.ne.jp"
