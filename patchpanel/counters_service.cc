@@ -34,11 +34,34 @@ constexpr char kTxTag[] = "tx_";
 // This regex extracts "tx" (direction), "eth0" (ifname) from this example.
 constexpr LazyRE2 kChainLine = {R"(Chain (rx|tx)_(\w+).*)"};
 
-// The counter line looks like (some spaces are deleted to make it fit in one
-// line):
-//   "    5374 876172 all -- any any anywhere anywhere mark match 0x2000/0x3f00"
-// The first two counters are captured for pkts and bytes.
+// The counter line for a defined source looks like (some spaces are deleted to
+// make it fit in one line):
+// " 5374 6172 RETURN all -- any any anywhere anywhere mark match 0x2000/0x3f00"
+// The final counter line for catching untagged traffic looks like:
+// " 5374 6172 all -- any any anywhere anywhere"
+// The first two counters are captured for pkts and bytes. For lines with a mark
+// matcher, the source is also captured.
 constexpr LazyRE2 kCounterLine = {R"( *(\d+) +(\d+).*mark match (.*)/0x3f00)"};
+constexpr LazyRE2 kFinalCounterLine = {R"( *(\d+) +(\d+).*anywhere\s*)"};
+
+bool MatchCounterLine(const std::string& line,
+                      uint64_t* pkts,
+                      uint64_t* bytes,
+                      TrafficSource* source) {
+  Fwmark mark;
+  if (RE2::FullMatch(line, *kCounterLine, pkts, bytes,
+                     RE2::Hex(&mark.fwmark))) {
+    *source = mark.Source();
+    return true;
+  }
+
+  if (RE2::FullMatch(line, *kFinalCounterLine, pkts, bytes)) {
+    *source = TrafficSource::UNKNOWN;
+    return true;
+  }
+
+  return false;
+}
 
 // Parses the output of `iptables -L -x -v` (or `ip6tables`) and adds the parsed
 // values into the corresponding counters in |counters|. An example of |output|
@@ -76,32 +99,40 @@ bool ParseOutput(const std::string& output,
 
     // Skips the chain name line and the header line.
     if (lines.cend() - it <= 2) {
-      LOG(ERROR) << "Invalid iptables output";
+      LOG(ERROR) << "Invalid iptables output for " << direction << "_"
+                 << ifname;
       return false;
     }
     it += 2;
 
+    // Checks that there are some counter rules defined.
+    if (it == lines.cend() || it->empty()) {
+      LOG(ERROR) << "No counter rule defined for " << direction << "_"
+                 << ifname;
+      return false;
+    }
+
     // The next block of lines are the counters lines for individual sources.
     for (; it != lines.cend() && !it->empty(); it++) {
       uint64_t pkts, bytes;
-      Fwmark mark;
-      if (!RE2::FullMatch(*it, *kCounterLine, &pkts, &bytes,
-                          RE2::Hex(&mark.fwmark))) {
-        LOG(ERROR) << "Cannot parse counter line \"" << *it << "\"";
+      TrafficSource source;
+      if (!MatchCounterLine(*it, &pkts, &bytes, &source)) {
+        LOG(ERROR) << "Cannot parse counter line \"" << *it << "\" for "
+                   << direction << "_" << ifname;
         return false;
       }
 
       if (pkts == 0 && bytes == 0)
         continue;
 
-      TrafficCounter::Source source = TrafficSourceToProto(mark.Source());
-      auto& counter = (*counters)[std::make_pair(source, ifname)];
+      auto& counter =
+          (*counters)[std::make_pair(TrafficSourceToProto(source), ifname)];
       if (direction == "rx") {
-        counter.rx_packets += pkts;
         counter.rx_bytes += bytes;
+        counter.rx_packets += pkts;
       } else {
-        counter.tx_packets += pkts;
         counter.tx_bytes += bytes;
+        counter.tx_packets += pkts;
       }
     }
   }
@@ -221,8 +252,11 @@ bool CountersService::SetupAccountingRules(const std::string& chain_tag) {
     AddAccountingRule(ingress_chain, source);
     AddAccountingRule(egress_chain, source);
   }
-  // TODO(b/160112868): add default rules for counting any traffic left as
-  // UNKNOWN.
+  // Add catch-all accounting rule for any remaining and untagged traffic.
+  datapath_->ModifyIptables(IpFamily::Dual, kMangleTable,
+                            {"-A", ingress_chain, "-w"});
+  datapath_->ModifyIptables(IpFamily::Dual, kMangleTable,
+                            {"-A", egress_chain, "-w"});
 
   return true;
 }

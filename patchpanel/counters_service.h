@@ -33,20 +33,17 @@ namespace patchpanel {
 // and will not change the fate of a packet. When a new interface comes up, we
 // will create the following new rules/chains (using both iptables and
 // ip6tables):
-// - Four accounting chains:
-//   - For rx packets, `ingress_input_{ifname}` and `ingress_forward_{ifname}`
-//     for INPUT and FORWARD chain, respectively;
-//   - For tx packets, `egress_postrouting_{ifname}` and
-//     `egress_forward_{ifname}` for POSTROUTING and FORWARD chain,
-//     respectively. Note that we use `--socket-exists` in POSTROUTING chain to
-//     avoid packets from FORWARD being matched again here.
-// - One accounting rule in each accounting chain, which provides the actual
-//   counter for accounting. We will extend this to several rules when source
-//   marking is ready.
-// - One jumping rule for each accounting chain in the corresponding prebuilt
+// - Two accounting chains:
+//   - For rx packets, `rx_{ifname}` for INPUT and FORWARD chains;
+//   - For tx packets, `tx_{ifname}` for POSTROUTING chain.
+// - One accounting rule in each accounting chain for every source defined in
+//   RoutingService plus one final accounting rule for untagged traffic.
+// - Jumping rules for each accounting chain in the corresponding prebuilt
 //   chain, which matches packets with this new interface.
-// The above rules and chains will never be removed once created, so we will
-// check if one rule exists before creating it.
+// The above accounting rules and chains will never be removed once created, so
+// we will check if one rule exists before creating it. Jumping rules are added
+// and removed dynamically based on physical device and vpn device creation and
+// removal events.
 //
 // Query: Two commands (iptables and ip6tables) will be executed in the mangle
 // table to get all the chains and rules. And then we perform a text parsing on

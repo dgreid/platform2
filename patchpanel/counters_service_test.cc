@@ -92,6 +92,7 @@ Chain tx_eth0 (1 references)
        0        0 RETURN     all  --  any    any     anywhere             anywhere             mark match 0x2200/0x3f00
        0        0 RETURN     all  --  any    any     anywhere             anywhere             mark match 0x2300/0x3f00
        0        0 RETURN     all  --  any    any     anywhere             anywhere             mark match 0x2400/0x3f00
+       4      123            all  --  any    any     anywhere             anywhere            
 
 Chain tx_wlan0 (1 references)
     pkts      bytes target     prot opt in     out     source               destination
@@ -105,6 +106,7 @@ Chain tx_wlan0 (1 references)
        0        0 RETURN     all  --  any    any     anywhere             anywhere             mark match 0x2200/0x3f00
        0        0 RETURN     all  --  any    any     anywhere             anywhere             mark match 0x2300/0x3f00
        0        0 RETURN     all  --  any    any     anywhere             anywhere             mark match 0x2400/0x3f00
+       0        0            all  --  any    any     anywhere             anywhere            
 
 Chain rx_eth0 (2 references)
  pkts bytes target     prot opt in     out     source               destination
@@ -118,6 +120,7 @@ Chain rx_eth0 (2 references)
     0     0 RETURN     all  --  any    any     anywhere             anywhere             mark match 0x2200/0x3f00
     0     0 RETURN     all  --  any    any     anywhere             anywhere             mark match 0x2300/0x3f00
     0     0 RETURN     all  --  any    any     anywhere             anywhere             mark match 0x2400/0x3f00
+    6   345            all  --  any    any     anywhere             anywhere            
 
 Chain rx_wlan0 (2 references)
     pkts      bytes target     prot opt in     out     source               destination
@@ -131,6 +134,7 @@ Chain rx_wlan0 (2 references)
        0        0 RETURN     all  --  any    any     anywhere             anywhere             mark match 0x2200/0x3f00
        0        0 RETURN     all  --  any    any     anywhere             anywhere             mark match 0x2300/0x3f00
        0        0 RETURN     all  --  any    any     anywhere             anywhere             mark match 0x2400/0x3f00
+       0        0            all  --  any    any     anywhere             anywhere            
 )";
 
 class MockProcessRunner : public MinijailedProcessRunner {
@@ -162,27 +166,14 @@ class CountersServiceTest : public testing::Test {
         std::make_unique<CountersService>(datapath_.get(), &runner_);
   }
 
-  // Makes `iptables` returning a bad |output|. Expects an empty map from
-  // GetCounters().
-  void TestBadIptablesOutput(const std::string& output) {
+  // Makes `iptables` and `ip6tables` returning |ipv4_output| and
+  // |ipv6_output|, respectively. Expects an empty map from GetCounters().
+  void TestBadIptablesOutput(const std::string& ipv4_output,
+                             const std::string& ipv6_output) {
     EXPECT_CALL(runner_, iptables(_, _, _, _))
-        .WillRepeatedly(DoAll(SetArgPointee<3>(output), Return(0)));
+        .WillRepeatedly(DoAll(SetArgPointee<3>(ipv4_output), Return(0)));
     EXPECT_CALL(runner_, ip6tables(_, _, _, _))
-        .WillRepeatedly(DoAll(SetArgPointee<3>(kIptablesOutput), Return(0)));
-
-    auto actual = counters_svc_->GetCounters({});
-    std::map<SourceDevice, Counter> expected;
-
-    EXPECT_THAT(actual, ContainerEq(expected));
-  }
-
-  // Makes `ip6tables` returning a bad |output|. Expects an empty map from
-  // GetCounters().
-  void TestBadIp6tablesOutput(const std::string& output) {
-    EXPECT_CALL(runner_, iptables(_, _, _, _))
-        .WillRepeatedly(DoAll(SetArgPointee<3>(kIptablesOutput), Return(0)));
-    EXPECT_CALL(runner_, ip6tables(_, _, _, _))
-        .WillRepeatedly(DoAll(SetArgPointee<3>(output), Return(0)));
+        .WillRepeatedly(DoAll(SetArgPointee<3>(ipv6_output), Return(0)));
 
     auto actual = counters_svc_->GetCounters({});
     std::map<SourceDevice, Counter> expected;
@@ -241,6 +232,8 @@ TEST_F(CountersServiceTest, OnCreation_WithNoDevices) {
        "RETURN", "-w"},
       {"-A", "rx_vpn", "-m", "mark", "--mark", "0x00002400/0x00003f00", "-j",
        "RETURN", "-w"},
+      {"-A", "tx_vpn", "-w"},
+      {"-A", "rx_vpn", "-w"},
   };
 
   for (const auto& rule : expected_calls) {
@@ -296,6 +289,8 @@ TEST_F(CountersServiceTest, OnCreation_WithDevices) {
        "RETURN", "-w"},
       {"-A", "rx_vpn", "-m", "mark", "--mark", "0x00002400/0x00003f00", "-j",
        "RETURN", "-w"},
+      {"-A", "tx_vpn", "-w"},
+      {"-A", "rx_vpn", "-w"},
       {"-N", "rx_wlan0", "-w"},
       {"-N", "tx_wlan0", "-w"},
       {"-A", "INPUT", "-i", "wlan0", "-j", "rx_wlan0", "-w"},
@@ -341,6 +336,8 @@ TEST_F(CountersServiceTest, OnCreation_WithDevices) {
        "RETURN", "-w"},
       {"-A", "rx_wlan0", "-m", "mark", "--mark", "0x00002400/0x00003f00", "-j",
        "RETURN", "-w"},
+      {"-A", "tx_wlan0", "-w"},
+      {"-A", "rx_wlan0", "-w"},
   };
 
   for (const auto& rule : expected_calls) {
@@ -399,6 +396,8 @@ TEST_F(CountersServiceTest, OnPhysicalDeviceAdded) {
        "RETURN", "-w"},
       {"-A", "rx_eth0", "-m", "mark", "--mark", "0x00002400/0x00003f00", "-j",
        "RETURN", "-w"},
+      {"-A", "tx_eth0", "-w"},
+      {"-A", "rx_eth0", "-w"},
   };
 
   for (const auto& rule : expected_calls) {
@@ -454,6 +453,8 @@ TEST_F(CountersServiceTest, OnVpnDeviceAdded) {
        "RETURN", "-w"},
       {"-A", "rx_vpn", "-m", "mark", "--mark", "0x00002400/0x00003f00", "-j",
        "RETURN", "-w"},
+      {"-A", "tx_vpn", "-w"},
+      {"-A", "rx_vpn", "-w"},
       {"-A", "FORWARD", "-i", "tun0", "-j", "rx_vpn", "-w"},
       {"-A", "INPUT", "-i", "tun0", "-j", "rx_vpn", "-w"},
       {"-A", "POSTROUTING", "-o", "tun0", "-j", "tx_vpn", "-w"},
@@ -528,12 +529,16 @@ TEST_F(CountersServiceTest, QueryTrafficCounters) {
       {{TrafficCounter::CROSVM, "eth0"},
        {0 /*rx_bytes*/, 0 /*rx_packets*/, 5380 /*tx_bytes*/,
         78 /*tx_packets*/}},
+      {{TrafficCounter::UNKNOWN, "eth0"},
+       {690 /*rx_bytes*/, 12 /*rx_packets*/, 246 /*tx_bytes*/,
+        8 /*tx_packets*/}},
       {{TrafficCounter::CHROME, "wlan0"},
        {56196 /*rx_bytes*/, 306 /*rx_packets*/, 114008 /*tx_bytes*/,
         620 /*tx_packets*/}},
       {{TrafficCounter::SYSTEM, "wlan0"},
        {1680 /*rx_bytes*/, 12 /*rx_packets*/, 5602 /*tx_bytes*/,
-        48 /*tx_packets*/}}};
+        48 /*tx_packets*/}},
+  };
 
   EXPECT_THAT(actual, ContainerEq(expected));
 }
@@ -566,19 +571,43 @@ TEST_F(CountersServiceTest, QueryTrafficCountersWithFilter) {
       {{TrafficCounter::CROSVM, "eth0"},
        {0 /*rx_bytes*/, 0 /*rx_packets*/, 5380 /*tx_bytes*/,
         78 /*tx_packets*/}},
+      {{TrafficCounter::UNKNOWN, "eth0"},
+       {690 /*rx_bytes*/, 12 /*rx_packets*/, 246 /*tx_bytes*/,
+        8 /*tx_packets*/}},
+  };
+
+  EXPECT_THAT(actual, ContainerEq(expected));
+}
+
+TEST_F(CountersServiceTest, QueryTraffic_UnknownTrafficOnly) {
+  const std::string unkwown_traffic_only = R"(
+Chain tx_eth0 (1 references)
+    pkts      bytes target     prot opt in     out     source               destination
+    6511 68041668            all  --  any    any     anywhere             anywhere
+)";
+
+  EXPECT_CALL(runner_, iptables(_, _, _, _))
+      .WillRepeatedly(DoAll(SetArgPointee<3>(unkwown_traffic_only), Return(0)));
+  EXPECT_CALL(runner_, ip6tables(_, _, _, _))
+      .WillRepeatedly(DoAll(SetArgPointee<3>(unkwown_traffic_only), Return(0)));
+
+  auto actual = counters_svc_->GetCounters({});
+
+  std::map<SourceDevice, Counter> expected{
+      {{TrafficCounter::UNKNOWN, "eth0"},
+       {0 /*rx_bytes*/, 0 /*rx_packets*/, 136083336 /*tx_bytes*/,
+        13022 /*tx_packets*/}},
   };
 
   EXPECT_THAT(actual, ContainerEq(expected));
 }
 
 TEST_F(CountersServiceTest, QueryTrafficCountersWithEmptyIPv4Output) {
-  const std::string kEmptyOutput = "";
-  TestBadIptablesOutput(kEmptyOutput);
+  TestBadIptablesOutput("", kIptablesOutput);
 }
 
 TEST_F(CountersServiceTest, QueryTrafficCountersWithEmptyIPv6Output) {
-  const std::string kEmptyOutput = "";
-  TestBadIp6tablesOutput(kEmptyOutput);
+  TestBadIptablesOutput(kIptablesOutput, "");
 }
 
 TEST_F(CountersServiceTest, QueryTrafficCountersWithOnlyChainName) {
@@ -589,7 +618,7 @@ Chain tx_eth0 (1 references)
 
 Chain tx_wlan0 (1 references)
 )";
-  TestBadIptablesOutput(kBadOutput);
+  TestBadIptablesOutput(kBadOutput, kIptablesOutput);
 }
 
 TEST_F(CountersServiceTest, QueryTrafficCountersWithOnlyChainNameAndHeader) {
@@ -598,10 +627,10 @@ Chain tx_eth0 (1 references)
     pkts      bytes target     prot opt in     out     source               destination
     6511 68041668 RETURN    all  --  any    any     anywhere             anywhere
 
-Chain tx_fwd_wlan0 (1 references)
+Chain tx_wlan0 (1 references)
     pkts      bytes target     prot opt in     out     source               destination
 )";
-  TestBadIptablesOutput(kBadOutput);
+  TestBadIptablesOutput(kBadOutput, kIptablesOutput);
 }
 
 TEST_F(CountersServiceTest, QueryTrafficCountersWithNotFinishedCountersLine) {
@@ -613,7 +642,7 @@ Chain tx_eth0 (1 references)
 Chain tx_wlan0 (1 references)
     pkts      bytes target     prot opt in     out     source               destination    pkts      bytes target     prot opt in     out     source               destination
        0     )";
-  TestBadIptablesOutput(kBadOutput);
+  TestBadIptablesOutput(kBadOutput, kIptablesOutput);
 }
 
 }  // namespace
