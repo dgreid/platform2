@@ -104,7 +104,7 @@ bool Lockbox::Reset(LockboxError* error) {
   }
 
   if (tpm_->IsNvramLocked(nvram_index_)) {
-    LOG(ERROR) << "NVRAM space not locked when resetting LockBox.";
+    LOG(ERROR) << "NVRAM space locked after resetting LockBox.";
     *error = LockboxError::kNvramInvalid;
     return false;
   }
