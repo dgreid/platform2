@@ -721,6 +721,8 @@ if (use.test) {
         "cellular/modem_test.cc",
         "cellular/pending_activation_store_test.cc",
         "cellular/verizon_subscription_state_test.cc",
+        "dbus/dbus_properties_proxy_test.cc",
+        "dbus/fake_properties_proxy.cc",
         "mock_dbus_properties_proxy.cc",
       ]
       deps += [ ":mobile_operator_db-test-db" ]

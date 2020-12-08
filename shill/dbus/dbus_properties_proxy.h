@@ -16,6 +16,8 @@
 
 namespace shill {
 
+class FakePropertiesProxy;
+
 // DBusPropertiesProxyInterface is a cellular-specific interface, refer to its
 // header for more info.
 class DBusPropertiesProxy : public DBusPropertiesProxyInterface {
@@ -52,7 +54,17 @@ class DBusPropertiesProxy : public DBusPropertiesProxyInterface {
     mm_properties_changed_callback_ = callback;
   }
 
+  static std::unique_ptr<DBusPropertiesProxy>
+  CreateDBusPropertiesProxyForTesting();
+
+  // Only use this with CreateDBusPropertiesProxyForTesting().
+  FakePropertiesProxy* GetFakePropertiesProxyForTesting();
+
  private:
+  // Test only constructor.
+  explicit DBusPropertiesProxy(
+      std::unique_ptr<org::freedesktop::DBus::PropertiesProxyInterface> proxy);
+
   // Signal handlers.
   void MmPropertiesChanged(const std::string& interface,
                            const brillo::VariantDictionary& properties);
@@ -69,7 +81,7 @@ class DBusPropertiesProxy : public DBusPropertiesProxyInterface {
   PropertiesChangedCallback properties_changed_callback_;
   ModemManagerPropertiesChangedCallback mm_properties_changed_callback_;
 
-  std::unique_ptr<org::freedesktop::DBus::PropertiesProxy> proxy_;
+  std::unique_ptr<org::freedesktop::DBus::PropertiesProxyInterface> proxy_;
 
   base::WeakPtrFactory<DBusPropertiesProxy> weak_factory_{this};
 };

@@ -39,13 +39,14 @@ extern "C" {
 #include "shill/cellular/mock_mm1_modem_simple_proxy.h"
 #include "shill/cellular/mock_mobile_operator_info.h"
 #include "shill/cellular/mock_modem_info.h"
+#include "shill/dbus/dbus_properties_proxy.h"
+#include "shill/dbus/fake_properties_proxy.h"
 #include "shill/dhcp/mock_dhcp_config.h"
 #include "shill/dhcp/mock_dhcp_provider.h"
 #include "shill/error.h"
 #include "shill/fake_store.h"
 #include "shill/mock_adaptors.h"
 #include "shill/mock_control.h"
-#include "shill/mock_dbus_properties_proxy.h"
 #include "shill/mock_device_info.h"
 #include "shill/mock_external_task.h"
 #include "shill/mock_manager.h"
@@ -205,7 +206,16 @@ class CellularTest : public testing::TestWithParam<Cellular::Type> {
   }
 
   void PopulateProxies() {
-    dbus_properties_proxy_.reset(new NiceMock<MockDBusPropertiesProxy>());
+    dbus_properties_proxy_ =
+        DBusPropertiesProxy::CreateDBusPropertiesProxyForTesting();
+    // Ensure that GetAll calls to MM_DBUS_INTERFACE_MODEM and
+    // MM_DBUS_INTERFACE_MODEM_MODEM3GPP succeed and return a valid dictionary.
+    dbus_properties_proxy_->GetFakePropertiesProxyForTesting()
+        ->SetDictionaryForTesting(MM_DBUS_INTERFACE_MODEM,
+                                  brillo::VariantDictionary());
+    dbus_properties_proxy_->GetFakePropertiesProxyForTesting()
+        ->SetDictionaryForTesting(MM_DBUS_INTERFACE_MODEM_MODEM3GPP,
+                                  brillo::VariantDictionary());
     mm1_modem_location_proxy_.reset(new mm1::MockModemLocationProxy());
     mm1_modem_3gpp_proxy_.reset(new mm1::MockModemModem3gppProxy());
     mm1_modem_cdma_proxy_.reset(new mm1::MockModemModemCdmaProxy());
@@ -345,8 +355,6 @@ class CellularTest : public testing::TestWithParam<Cellular::Type> {
   }
 
   void SetCommonOnAfterResumeExpectations() {
-    EXPECT_CALL(*dbus_properties_proxy_, GetAll(_))
-        .WillRepeatedly(Return(KeyValueStore()));
     EXPECT_CALL(*mm1_proxy_, set_state_changed_callback(_)).Times(AnyNumber());
     EXPECT_CALL(manager_, UpdateEnabledTechnologies()).Times(AnyNumber());
     EXPECT_CALL(*static_cast<DeviceMockAdaptor*>(device_->adaptor()),
@@ -504,7 +512,7 @@ class CellularTest : public testing::TestWithParam<Cellular::Type> {
   scoped_refptr<MockDHCPConfig> dhcp_config_;
 
   bool create_gsm_card_proxy_from_factory_;
-  unique_ptr<NiceMock<MockDBusPropertiesProxy>> dbus_properties_proxy_;
+  unique_ptr<DBusPropertiesProxy> dbus_properties_proxy_;
   unique_ptr<mm1::MockModemModem3gppProxy> mm1_modem_3gpp_proxy_;
   unique_ptr<mm1::MockModemModemCdmaProxy> mm1_modem_cdma_proxy_;
   unique_ptr<mm1::MockModemLocationProxy> mm1_modem_location_proxy_;
@@ -1792,8 +1800,9 @@ TEST_P(CellularTest, OnAfterResumeDisableQueuedWantEnabled) {
       .WillOnce(Invoke(this, &CellularTest::InvokeEnable));
   EXPECT_CALL(*mm1_proxy, SetPowerState(_, _, _, _))
       .WillOnce(Invoke(this, &CellularTest::InvokeSetPowerState));
-  EXPECT_CALL(*dbus_properties_proxy, GetAll(_))
-      .WillRepeatedly(Return(modem_properties));
+  dbus_properties_proxy->GetFakePropertiesProxyForTesting()
+      ->SetDictionaryForTesting(MM_DBUS_INTERFACE_MODEM,
+                                modem_properties.properties());
   dispatcher_.DispatchPendingEvents();
   EXPECT_TRUE(device_->running());             // last changed by OnAfterResume
   EXPECT_TRUE(device_->enabled_persistent());  // last changed by OnAfterResume
@@ -1893,8 +1902,9 @@ TEST_P(CellularTest, OnAfterResumePowerDownInProgressWantEnabled) {
 
   // Let the enable complete.
   ASSERT_TRUE(error.IsSuccess());
-  EXPECT_CALL(*dbus_properties_proxy, GetAll(_))
-      .WillRepeatedly(Return(modem_properties));
+  dbus_properties_proxy->GetFakePropertiesProxyForTesting()
+      ->SetDictionaryForTesting(MM_DBUS_INTERFACE_MODEM,
+                                modem_properties.properties());
   ASSERT_TRUE(!modem_proxy_enable_callback.is_null());
   modem_proxy_enable_callback.Run(error);
   EXPECT_TRUE(device_->running());

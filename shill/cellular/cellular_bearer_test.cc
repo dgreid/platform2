@@ -8,8 +8,9 @@
 
 #include <memory>
 
+#include "shill/dbus/dbus_properties_proxy.h"
+#include "shill/dbus/fake_properties_proxy.h"
 #include "shill/mock_control.h"
-#include "shill/mock_dbus_properties_proxy.h"
 #include "shill/testing.h"
 
 using std::string;
@@ -92,22 +93,24 @@ class CellularBearerTest : public testing::Test {
     return ipconfig_properties;
   }
 
-  static KeyValueStore ConstructBearerProperties(
-      bool connected,
-      const string& data_interface,
-      MMBearerIpMethod ipv4_config_method,
-      MMBearerIpMethod ipv6_config_method) {
-    KeyValueStore properties;
-    properties.Set<bool>(MM_BEARER_PROPERTY_CONNECTED, connected);
-    properties.Set<string>(MM_BEARER_PROPERTY_INTERFACE, data_interface);
+  static void SetBearerProperties(FakePropertiesProxy* fake_properties_proxy) {
+    bool connected = true;
+    const std::string interface_name = MM_DBUS_INTERFACE_BEARER;
+    const std::string data_interface = kDataInterface;
+    MMBearerIpMethod ipv4_config_method = MM_BEARER_IP_METHOD_STATIC;
+    MMBearerIpMethod ipv6_config_method = MM_BEARER_IP_METHOD_STATIC;
 
-    properties.Set<KeyValueStore>(
-        MM_BEARER_PROPERTY_IP4CONFIG,
-        ConstructIPv4ConfigProperties(ipv4_config_method));
-    properties.Set<KeyValueStore>(
-        MM_BEARER_PROPERTY_IP6CONFIG,
-        ConstructIPv6ConfigProperties(ipv6_config_method));
-    return properties;
+    fake_properties_proxy->SetForTesting(
+        interface_name, MM_BEARER_PROPERTY_CONNECTED, brillo::Any(connected));
+    fake_properties_proxy->SetForTesting(interface_name,
+                                         MM_BEARER_PROPERTY_INTERFACE,
+                                         brillo::Any(data_interface));
+    fake_properties_proxy->SetForTesting(
+        interface_name, MM_BEARER_PROPERTY_IP4CONFIG,
+        brillo::Any(ConstructIPv4ConfigProperties(ipv4_config_method)));
+    fake_properties_proxy->SetForTesting(
+        interface_name, MM_BEARER_PROPERTY_IP6CONFIG,
+        brillo::Any(ConstructIPv6ConfigProperties(ipv6_config_method)));
   }
 
   void VerifyStaticIPv4ConfigMethodAndProperties() {
@@ -151,15 +154,13 @@ TEST_F(CellularBearerTest, Constructor) {
 }
 
 TEST_F(CellularBearerTest, Init) {
-  auto properties_proxy = std::make_unique<MockDBusPropertiesProxy>();
-  EXPECT_CALL(*properties_proxy, set_properties_changed_callback(_)).Times(1);
-  EXPECT_CALL(*properties_proxy, GetAll(MM_DBUS_INTERFACE_BEARER))
-      .WillOnce(Return(ConstructBearerProperties(true, kDataInterface,
-                                                 MM_BEARER_IP_METHOD_STATIC,
-                                                 MM_BEARER_IP_METHOD_STATIC)));
+  std::unique_ptr<DBusPropertiesProxy> dbus_properties_proxy =
+      DBusPropertiesProxy::CreateDBusPropertiesProxyForTesting();
+  SetBearerProperties(
+      dbus_properties_proxy->GetFakePropertiesProxyForTesting());
   EXPECT_CALL(*control_,
               CreateDBusPropertiesProxy(kBearerDBusPath, kBearerDBusService))
-      .WillOnce(Return(ByMove(std::move(properties_proxy))));
+      .WillOnce(Return(ByMove(std::move(dbus_properties_proxy))));
 
   bearer_.Init();
   EXPECT_TRUE(bearer_.connected());

@@ -5,6 +5,7 @@
 #include "shill/cellular/modem.h"
 
 #include <tuple>
+#include <utility>
 
 #include <ModemManager/ModemManager.h>
 #include <net/if.h>
@@ -20,8 +21,8 @@
 #include "shill/cellular/cellular_capability.h"
 #include "shill/cellular/mock_cellular.h"
 #include "shill/cellular/mock_modem_info.h"
+#include "shill/dbus/dbus_properties_proxy.h"
 #include "shill/mock_control.h"
-#include "shill/mock_dbus_properties_proxy.h"
 #include "shill/mock_device_info.h"
 #include "shill/mock_manager.h"
 #include "shill/mock_metrics.h"
@@ -274,9 +275,11 @@ TEST_F(ModemTest, CreateDeviceMM1) {
       MM_MODEM_3GPP_REGISTRATION_STATE_HOME);
   properties[MM_DBUS_INTERFACE_MODEM_MODEM3GPP] = modem3gpp_properties;
 
+  std::unique_ptr<DBusPropertiesProxy> dbus_properties_proxy =
+      DBusPropertiesProxy::CreateDBusPropertiesProxyForTesting();
   EXPECT_CALL(control_, CreateDBusPropertiesProxy(kPath, kService))
-      .WillOnce(Return(
-          ByMove(std::make_unique<NiceMock<MockDBusPropertiesProxy>>())));
+      .WillOnce(Return(ByMove(std::move(dbus_properties_proxy))));
+
   modem_->CreateDeviceMM1(properties);
   Cellular* device = modem_->device_for_testing();
   ASSERT_TRUE(device);
