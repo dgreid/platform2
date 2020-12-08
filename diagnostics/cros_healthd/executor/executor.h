@@ -7,6 +7,8 @@
 
 #include <memory>
 
+#include <base/memory/scoped_refptr.h>
+#include <base/single_thread_task_runner.h>
 #include <brillo/daemons/daemon.h>
 #include <mojo/core/embedder/scoped_ipc_support.h>
 #include <mojo/public/cpp/platform/platform_channel_endpoint.h>
@@ -24,6 +26,8 @@ class Executor final : public brillo::Daemon {
   ~Executor() override;
 
  private:
+  // Used as the task runner for all Mojo IPCs.
+  const scoped_refptr<base::SingleThreadTaskRunner> mojo_task_runner_;
   // Necessary to establish Mojo communication with cros_healthd.
   std::unique_ptr<mojo::core::ScopedIPCSupport> ipc_support_;
   // Implements the executor's Mojo methods.

@@ -8,6 +8,7 @@ namespace diagnostics {
 
 const char kMemoryRoutineSucceededMessage[] = "Memory routine passed.";
 const char kMemoryRoutineRunningMessage[] = "Memory routine running";
+const char kMemoryRoutineCancelledMessage[] = "Memory routine cancelled.";
 const char kMemoryRoutineAllocatingLockingInvokingFailureMessage[] =
     "Error allocating or locking memory, or invoking the memtester binary.\n";
 const char kMemoryRoutineStuckAddressTestFailureMessage[] =

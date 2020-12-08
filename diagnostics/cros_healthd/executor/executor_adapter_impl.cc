@@ -53,6 +53,12 @@ void ExecutorAdapterImpl::RunMemtester(
   executor_->RunMemtester(std::move(callback));
 }
 
+void ExecutorAdapterImpl::KillMemtester() {
+  DCHECK(executor_.is_bound());
+
+  executor_->KillMemtester();
+}
+
 void ExecutorAdapterImpl::GetProcessIOContents(
     const pid_t pid, Executor::GetProcessIOContentsCallback callback) {
   DCHECK(executor_.is_bound());

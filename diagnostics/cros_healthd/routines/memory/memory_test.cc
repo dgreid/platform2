@@ -95,6 +95,8 @@ class MemoryRoutineTest : public testing::Test {
 
   mojo_ipc::RoutineUpdate* update() { return &update_; }
 
+  MockExecutorAdapter* mock_executor() { return mock_context_.mock_executor(); }
+
   void FastForwardBy(base::TimeDelta time) {
     task_environment_.FastForwardBy(time);
   }
@@ -119,7 +121,7 @@ class MemoryRoutineTest : public testing::Test {
   void SetExecutorResponse(int32_t exit_code,
                            const base::Optional<std::string>& outfile_name,
                            const base::Optional<base::TimeDelta>& delay) {
-    EXPECT_CALL(*mock_context_.mock_executor(), RunMemtester(_))
+    EXPECT_CALL(*mock_executor(), RunMemtester(_))
         .WillOnce(WithArg<0>(
             Invoke([=](executor_ipc::Executor::RunMemtesterCallback callback) {
               executor_ipc::ProcessResult result;
@@ -227,9 +229,32 @@ TEST_F(MemoryRoutineTest, Resume) {
   routine()->Resume();
 }
 
-// Test that calling cancel doesn't crash.
+// Test that the memory routine can be cancelled.
 TEST_F(MemoryRoutineTest, Cancel) {
+  base::TimeDelta time_delay = base::TimeDelta::FromSeconds(10);
+  SetExecutorResponse(EXIT_FAILURE, base::nullopt /* outfile_name */,
+                      time_delay);
+
+  routine()->Start();
+
+  EXPECT_CALL(*mock_executor(), KillMemtester());
+
   routine()->Cancel();
+
+  routine()->PopulateStatusUpdate(update(), false /* include_output */);
+
+  VerifyNonInteractiveUpdate(update()->routine_update_union,
+                             mojo_ipc::DiagnosticRoutineStatusEnum::kCancelled,
+                             kMemoryRoutineCancelledMessage);
+
+  // Make sure the original callback can't overwrite the cancelled status.
+  FastForwardBy(time_delay);
+
+  routine()->PopulateStatusUpdate(update(), false /* include_output */);
+
+  VerifyNonInteractiveUpdate(update()->routine_update_union,
+                             mojo_ipc::DiagnosticRoutineStatusEnum::kCancelled,
+                             kMemoryRoutineCancelledMessage);
 }
 
 }  // namespace diagnostics

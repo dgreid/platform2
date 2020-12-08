@@ -7,6 +7,7 @@
 #include <memory>
 #include <utility>
 
+#include <base/task/thread_pool/thread_pool_instance.h>
 #include <base/threading/thread_task_runner_handle.h>
 #include <mojo/public/cpp/system/invitation.h>
 #include <mojo/public/cpp/system/message_pipe.h>
@@ -22,13 +23,19 @@ namespace executor_ipc = ::chromeos::cros_healthd_executor::mojom;
 
 }  // namespace
 
-Executor::Executor(mojo::PlatformChannelEndpoint endpoint) {
+Executor::Executor(mojo::PlatformChannelEndpoint endpoint)
+    : mojo_task_runner_(base::ThreadTaskRunnerHandle::Get()) {
   DCHECK(endpoint.is_valid());
 
+  // We'll use the thread pool to run tasks that can be cancelled. Otherwise,
+  // cancel requests will be queued and only run after the task finishes, which
+  // defeats the purpose of the cancel request.
+  base::ThreadPoolInstance::CreateAndStartWithDefaultParams(
+      "cros_healthd executor");
+
   ipc_support_ = std::make_unique<mojo::core::ScopedIPCSupport>(
-      base::ThreadTaskRunnerHandle::Get() /* io_thread_task_runner */,
-      mojo::core::ScopedIPCSupport::ShutdownPolicy::
-          CLEAN /* blocking shutdown */);
+      mojo_task_runner_, mojo::core::ScopedIPCSupport::ShutdownPolicy::
+                             CLEAN /* blocking shutdown */);
 
   mojo::IncomingInvitation invitation =
       mojo::IncomingInvitation::Accept(std::move(endpoint));
@@ -36,7 +43,7 @@ Executor::Executor(mojo::PlatformChannelEndpoint endpoint) {
       invitation.ExtractMessagePipe(kExecutorPipeName);
 
   mojo_service_ = std::make_unique<ExecutorMojoService>(
-      executor_ipc::ExecutorRequest(std::move(pipe)));
+      mojo_task_runner_, executor_ipc::ExecutorRequest(std::move(pipe)));
 }
 
 Executor::~Executor() = default;

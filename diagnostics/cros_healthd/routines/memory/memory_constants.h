@@ -24,6 +24,7 @@ enum MemtesterErrorCodes {
 // Status messages the memory routine can report.
 extern const char kMemoryRoutineSucceededMessage[];
 extern const char kMemoryRoutineRunningMessage[];
+extern const char kMemoryRoutineCancelledMessage[];
 extern const char kMemoryRoutineAllocatingLockingInvokingFailureMessage[];
 extern const char kMemoryRoutineStuckAddressTestFailureMessage[];
 extern const char kMemoryRoutineOtherTestFailureMessage[];

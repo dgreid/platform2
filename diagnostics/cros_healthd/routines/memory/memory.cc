@@ -100,9 +100,22 @@ void MemoryRoutine::Start() {
       &MemoryRoutine::DetermineRoutineResult, weak_ptr_factory_.GetWeakPtr()));
 }
 
-// The memory routine can only be started.
+// The memory routine cannot be resumed.
 void MemoryRoutine::Resume() {}
-void MemoryRoutine::Cancel() {}
+
+void MemoryRoutine::Cancel() {
+  // Only cancel if the routine is running.
+  if (status_ != mojo_ipc::DiagnosticRoutineStatusEnum::kRunning)
+    return;
+
+  // Make sure any other callbacks won't run - they would override the state
+  // and status message.
+  weak_ptr_factory_.InvalidateWeakPtrs();
+
+  context_->executor()->KillMemtester();
+  status_ = mojo_ipc::DiagnosticRoutineStatusEnum::kCancelled;
+  status_message_ = kMemoryRoutineCancelledMessage;
+}
 
 void MemoryRoutine::PopulateStatusUpdate(mojo_ipc::RoutineUpdate* response,
                                          bool include_output) {
