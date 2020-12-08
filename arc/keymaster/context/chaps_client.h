@@ -106,6 +106,13 @@ class ChapsClient {
                           CK_ATTRIBUTE_TYPE attribute_type,
                           brillo::SecureBlob* attribute_value);
 
+  // Verifies ARC has permissions to access the chaps key identified by
+  // |key_handle|.
+  //
+  // ARC permissions are managed by Chrome based on whether the KeyPermissions
+  // policy includes ARC applications.
+  bool VerifyArcPermissionForKey(CK_OBJECT_HANDLE key_handle);
+
   std::unique_ptr<internal::ScopedSession> session_;
 
   base::WeakPtr<ContextAdaptor> context_adaptor_;

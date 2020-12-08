@@ -45,6 +45,9 @@ const std::vector<uint8_t> kSignatureBlob(32, 55);
 // Arbitrary blob of data.
 const std::vector<uint8_t> kDataBlob(42, 77);
 
+// Valid serialized KeyPermissions protobuf.
+const std::vector<uint8_t> kArcKeyPermissionTrue = {10, 4, 8, 1, 16, 1};
+
 constexpr char kLabel[] = "object_label";
 
 const brillo::Blob kId(10, 10);
@@ -67,9 +70,12 @@ class ChapsCryptoOperationTest : public ::testing::Test {
                           std::vector<uint8_t>* attributes_out) {
     chaps::Attributes parsed;
     parsed.Parse(attributes_in);
-    parsed.attributes()[0].ulValueLen = kKeyBlob.size();
+    std::vector<uint8_t> out_blob = parsed.attributes()[0].type == CKA_VALUE
+                                        ? kKeyBlob
+                                        : kArcKeyPermissionTrue;
+    parsed.attributes()[0].ulValueLen = out_blob.size();
     if (parsed.attributes()[0].pValue) {
-      memcpy(parsed.attributes()[0].pValue, kKeyBlob.data(), kKeyBlob.size());
+      memcpy(parsed.attributes()[0].pValue, out_blob.data(), out_blob.size());
     }
     parsed.Serialize(attributes_out);
     return CKR_OK;

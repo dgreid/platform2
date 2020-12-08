@@ -84,7 +84,14 @@ shared_library("libarckeymaster_context") {
     "//common-mk:visibility_default",
     ":boringssl_config",
   ]
-  pkg_deps = [ "libchrome" ]
+  # NOSORT
+  pkg_deps = [
+    "libchrome",
+    # system_api depends on protobuf. It must appear before protobuf here so the
+    # linker flags are in the right order.
+    "system_api",
+    "protobuf",
+  ]
   deps = [
     ":context_proto",
     ":libkeymaster",

@@ -129,6 +129,10 @@ const std::vector<uint8_t> kSignatureBlob(32, 55);
 // Arbitrary blob of data.
 const std::vector<uint8_t> kDataBlob(42, 77);
 
+// Valid serialized KeyPermissions protobuf.
+const std::vector<uint8_t> kArcKeyPermissionTrue = {10, 4, 8, 1, 16, 1};
+const std::vector<uint8_t> kArcKeyPermissionFalse = {10, 2, 8, 1};
+
 constexpr char kLabel[] = "object_label";
 const brillo::Blob kId(10, 10);
 
@@ -149,12 +153,30 @@ class ChapsClientTest : public ::testing::Test {
     return ParseAttribute(kCertificateDer, attributes_in, attributes_out);
   }
 
-  uint32_t FakeGetKeyBlob(const brillo::SecureBlob& isolate_credential,
-                          uint64_t session_id,
-                          uint64_t object_handle,
-                          const std::vector<uint8_t>& attributes_in,
-                          std::vector<uint8_t>* attributes_out) {
-    return ParseAttribute(kKeyBlob, attributes_in, attributes_out);
+  uint32_t FakeGetAttribute(const brillo::SecureBlob& isolate_credential,
+                            uint64_t session_id,
+                            uint64_t object_handle,
+                            const std::vector<uint8_t>& attributes_in,
+                            std::vector<uint8_t>* attributes_out) {
+    chaps::Attributes input;
+    input.Parse(attributes_in);
+    if (input.attributes()[0].type == CKA_VALUE)
+      return ParseAttribute(kKeyBlob, attributes_in, attributes_out);
+    return ParseAttribute(kArcKeyPermissionTrue, attributes_in, attributes_out);
+  }
+
+  uint32_t FakeGetAttributeWithoutArcPermission(
+      const brillo::SecureBlob& isolate_credential,
+      uint64_t session_id,
+      uint64_t object_handle,
+      const std::vector<uint8_t>& attributes_in,
+      std::vector<uint8_t>* attributes_out) {
+    chaps::Attributes input;
+    input.Parse(attributes_in);
+    if (input.attributes()[0].type == CKA_VALUE)
+      return ParseAttribute(kKeyBlob, attributes_in, attributes_out);
+    return ParseAttribute(kArcKeyPermissionFalse, attributes_in,
+                          attributes_out);
   }
 
  protected:
@@ -171,7 +193,7 @@ class ChapsClientTest : public ::testing::Test {
     ON_CALL(chaps_mock_, FindObjectsFinal(_, _)).WillByDefault(Return(CKR_OK));
     ON_CALL(chaps_mock_, GetAttributeValue(_, _, _, _, _))
         .WillByDefault(
-            Invoke(/* obj_ptr */ this, &ChapsClientTest::FakeGetKeyBlob));
+            Invoke(/* obj_ptr */ this, &ChapsClientTest::FakeGetAttribute));
   }
 
   ::testing::NiceMock<::chaps::ChapsProxyMock> chaps_mock_;
@@ -284,6 +306,27 @@ TEST_F(ChapsClientTest, InitializeSignature) {
   ASSERT_TRUE(result);
 }
 
+TEST_F(ChapsClientTest, InitializeSignatureObeysKeyPermissions) {
+  CK_MECHANISM_TYPE mechanism = CKM_RSA_PKCS;
+  CK_OBJECT_HANDLE handle = 42;
+
+  EXPECT_CALL(chaps_mock_, GetAttributeValue(_, _, _, _, _))
+      .WillOnce(Invoke(/* obj_ptr */ this,
+                       &ChapsClientTest::FakeGetAttributeWithoutArcPermission))
+      .WillOnce(Invoke(/* obj_ptr */ this,
+                       &ChapsClientTest::FakeGetAttributeWithoutArcPermission))
+      .WillRepeatedly(
+          Invoke(/* obj_ptr */ this, &ChapsClientTest::FakeGetAttribute));
+
+  // The first call receives kArcKeyPermissionFalse and should fail.
+  bool result = chaps_client_.InitializeSignature(mechanism, handle);
+  ASSERT_FALSE(result);
+
+  // Following calls receive kArcKeyPermissionTrue and should work.
+  bool new_result = chaps_client_.InitializeSignature(mechanism, handle);
+  ASSERT_TRUE(new_result);
+}
+
 TEST_F(ChapsClientTest, UpdateSignature) {
   // Expect the correct parameters are forwarded to chaps.
   EXPECT_CALL(chaps_mock_, SignUpdate(_, _, Eq(kDataBlob)));
@@ -380,7 +423,7 @@ TEST_F(ChapsClientTest, GetAttributeHandlesInvalidSession) {
       .WillOnce(Return(CKR_SESSION_HANDLE_INVALID))
       .WillOnce(Return(CKR_SESSION_HANDLE_INVALID))
       .WillRepeatedly(
-          Invoke(/* obj_ptr */ this, &ChapsClientTest::FakeGetKeyBlob));
+          Invoke(/* obj_ptr */ this, &ChapsClientTest::FakeGetAttribute));
 
   // Call export key.
   base::Optional<brillo::SecureBlob> encryption_key =

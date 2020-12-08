@@ -9,6 +9,8 @@
 #include <base/logging.h>
 #include <base/stl_util.h>
 #include <chaps/pkcs11/pkcs11t.h>
+#include <chaps/proto_bindings/key_permissions.pb.h>
+#include <chromeos/constants/pkcs11_custom_attributes.h>
 #include <crypto/scoped_openssl_types.h>
 #include <openssl/x509.h>
 
@@ -142,7 +144,7 @@ base::Optional<CK_SESSION_HANDLE> ChapsClient::session_handle() {
 
 bool ChapsClient::InitializeSignature(CK_MECHANISM_TYPE mechanism_type,
                                       CK_OBJECT_HANDLE key_handle) {
-  if (!session_handle().has_value())
+  if (!session_handle().has_value() || !VerifyArcPermissionForKey(key_handle))
     return false;
 
   CK_MECHANISM mechanism = {mechanism_type, /*pParameter=*/NULL_PTR,
@@ -446,6 +448,25 @@ CK_RV ChapsClient::GetBytesAttribute(CK_OBJECT_HANDLE object_handle,
     return rv;
   }
   return CKR_OK;
+}
+
+bool ChapsClient::VerifyArcPermissionForKey(CK_OBJECT_HANDLE key_handle) {
+  brillo::SecureBlob key_permissions_blob;
+  if (CKR_OK !=
+      GetBytesAttribute(key_handle,
+                        pkcs11_custom_attributes::kCkaChromeOsKeyPermissions,
+                        &key_permissions_blob)) {
+    LOG(INFO) << "Could not retrieve key permissions, will deny key access.";
+    return false;
+  }
+
+  std::string serialized_key_permissions(key_permissions_blob.begin(),
+                                         key_permissions_blob.end());
+  chaps::KeyPermissions key_permissions;
+  bool parse_did_work = key_permissions.ParseFromArray(
+      key_permissions_blob.data(), key_permissions_blob.size());
+
+  return parse_did_work && key_permissions.key_usages().arc();
 }
 
 }  // namespace context
