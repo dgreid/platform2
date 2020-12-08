@@ -7403,8 +7403,21 @@ mno {
     mccmnc : "44170"
     mobile_apn {
       apn : "au.au-net.ne.jp"
+      localized_name {
+        name : "LTE NET for DATA"
+      }
       username : "user@au.au-net.ne.jp"
       password : "au"
+      authentication : CHAP
+    }
+    mobile_apn {
+      apn : "uno.au-net.ne.jp"
+      localized_name {
+        name : "LTE NET"
+      }
+      username : "685840734641020@uno.au-net.ne.jp"
+      password : "KpyrR6BP"
+      authentication : CHAP
     }
   }
 }
