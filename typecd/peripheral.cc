@@ -27,10 +27,16 @@ void Peripheral::UpdatePDIdentityVDOs() {
   auto cert_stat = syspath_.Append("identity").Append("cert_stat");
   auto product = syspath_.Append("identity").Append("product");
   auto id_header = syspath_.Append("identity").Append("id_header");
+  auto product_type1 = syspath_.Append("identity").Append("product_type_vdo1");
+  auto product_type2 = syspath_.Append("identity").Append("product_type_vdo2");
+  auto product_type3 = syspath_.Append("identity").Append("product_type_vdo3");
 
   uint32_t product_vdo;
   uint32_t cert_stat_vdo;
   uint32_t id_header_vdo;
+  uint32_t product_type_vdo1;
+  uint32_t product_type_vdo2;
+  uint32_t product_type_vdo3;
 
   if (!ReadHexFromPath(product, &product_vdo))
     return;
@@ -44,9 +50,24 @@ void Peripheral::UpdatePDIdentityVDOs() {
     return;
   LOG(INFO) << "Peripheral Id Header VDO: " << id_header_vdo;
 
+  if (!ReadHexFromPath(product_type1, &product_type_vdo1))
+    return;
+  LOG(INFO) << "Peripheral Product Type VDO 1: " << product_type_vdo1;
+
+  if (!ReadHexFromPath(product_type2, &product_type_vdo2))
+    return;
+  LOG(INFO) << "Peripheral Product Type VDO 2: " << product_type_vdo2;
+
+  if (!ReadHexFromPath(product_type3, &product_type_vdo3))
+    return;
+  LOG(INFO) << "Peripheral Product Type VDO 3: " << product_type_vdo3;
+
   SetIdHeaderVDO(id_header_vdo);
   SetProductVDO(product_vdo);
   SetCertStatVDO(cert_stat_vdo);
+  SetProductTypeVDO1(product_type_vdo1);
+  SetProductTypeVDO2(product_type_vdo2);
+  SetProductTypeVDO3(product_type_vdo3);
 }
 
 }  // namespace typecd

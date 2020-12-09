@@ -91,6 +91,18 @@ TEST_F(PartnerTest, TestPDIdentityScan) {
   auto product_vdo = base::StringPrintf("0x0");
   ASSERT_TRUE(base::WriteFile(identity_path.Append("product"),
                               product_vdo.c_str(), product_vdo.length()));
+  auto product_type_vdo1 = base::StringPrintf("0x0");
+  ASSERT_TRUE(base::WriteFile(identity_path.Append("product_type_vdo1"),
+                              product_type_vdo1.c_str(),
+                              product_type_vdo1.length()));
+  auto product_type_vdo2 = base::StringPrintf("0x0");
+  ASSERT_TRUE(base::WriteFile(identity_path.Append("product_type_vdo2"),
+                              product_type_vdo2.c_str(),
+                              product_type_vdo2.length()));
+  auto product_type_vdo3 = base::StringPrintf("0x0");
+  ASSERT_TRUE(base::WriteFile(identity_path.Append("product_type_vdo3"),
+                              product_type_vdo3.c_str(),
+                              product_type_vdo3.length()));
 
   Partner p(partner_path);
 
