@@ -9,13 +9,11 @@
 #include <vector>
 
 #include <base/files/file_path.h>
-#include <base/files/file_util.h>
 #include <base/process/launch.h>
 #include <base/strings/stringprintf.h>
-#include <base/strings/string_util.h>
 
+#include "debugd/src/ectool_util.h"
 #include "debugd/src/error_utils.h"
-#include "debugd/src/process_with_output.h"
 
 namespace debugd {
 
@@ -27,7 +25,6 @@ constexpr char kRunAs[] = "healthd_ec";
 // The ectool i2cread command below follows the format:
 // ectool i2cread [NUM_BITS] [PORT] [BATTERY_I2C_ADDRESS (addr8)] [OFFSET]
 // Note that [NUM_BITS] can either be 8 or 16.
-constexpr char kEctoolBinary[] = "/usr/sbin/ectool";
 constexpr char kI2cReadCommand[] = "i2cread";
 // The specification for smart battery can be found at:
 // http://sbs-forum.org/specs/sbdat110.pdf. This states
@@ -54,50 +51,6 @@ const std::map<std::string, std::string> kMetricNameToOffset = {
 // |ectool_command|.
 std::string GetEctoolPolicyFile(const std::string& ectool_command) {
   return base::StringPrintf("ectool_%s-seccomp.policy", ectool_command.c_str());
-}
-
-// Runs ectool with the provided |ectool_args| in a sandboxed process. Returns
-// true on success.
-bool RunEctoolWithArgs(brillo::ErrorPtr* error,
-                       const base::FilePath& seccomp_policy_path,
-                       const std::vector<std::string> ectool_args,
-                       std::string* output) {
-  if (!base::PathExists(seccomp_policy_path)) {
-    DEBUGD_ADD_ERROR(error, kErrorPath,
-                     "Sandbox info is missing for this architecture.");
-    return false;
-  }
-
-  // Minijail setup for ectool.
-  std::vector<std::string> parsed_args;
-  parsed_args.push_back("-c");
-  parsed_args.push_back("cap_sys_rawio=e");
-  parsed_args.push_back("-b");
-  parsed_args.push_back("/dev/cros_ec");
-
-  ProcessWithOutput process;
-  process.SandboxAs(kRunAs, kRunAs);
-  process.SetSeccompFilterPolicyFile(seccomp_policy_path.MaybeAsASCII());
-  process.InheritUsergroups();
-  if (!process.Init(parsed_args)) {
-    DEBUGD_ADD_ERROR(error, kErrorPath, "Process initialization failure.");
-    return false;
-  }
-
-  process.AddArg(kEctoolBinary);
-  for (const auto& arg : ectool_args)
-    process.AddArg(arg);
-  if (process.Run() != EXIT_SUCCESS) {
-    DEBUGD_ADD_ERROR(error, kErrorPath, "Failed to run process.");
-    return false;
-  }
-
-  if (!process.GetOutput(output)) {
-    DEBUGD_ADD_ERROR(error, kErrorPath, "Failed to get output from process.");
-    return false;
-  }
-
-  return true;
 }
 
 }  // namespace
@@ -140,7 +93,8 @@ bool CrosHealthdTool::CollectSmartBatteryMetric(brillo::ErrorPtr* error,
   const auto seccomp_policy_path =
       base::FilePath(kSandboxDirPath)
           .Append(GetEctoolPolicyFile(kI2cReadCommand));
-  if (!RunEctoolWithArgs(error, seccomp_policy_path, ectool_args, output))
+  if (!RunEctoolWithArgs(error, seccomp_policy_path, ectool_args, kRunAs,
+                         output))
     return false;
 
   return true;
