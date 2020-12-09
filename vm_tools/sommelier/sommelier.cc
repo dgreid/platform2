@@ -3597,7 +3597,7 @@ static void sl_print_usage() {
       "options:\n"
       "  -h, --help\t\t\tPrint this help\n"
       "  -X\t\t\t\tEnable X11 forwarding\n"
-      "  --master\t\t\tRun as master and spawn child processes\n"
+      "  --parent\t\t\tRun as parent and spawn child processes\n"
       "  --socket=SOCKET\t\tName of socket to listen on\n"
       "  --display=DISPLAY\t\tWayland display to connect to\n"
       "  --vm-identifier=NAME\t\tName of the VM, used to identify X11 windows\n"
@@ -3766,7 +3766,7 @@ int main(int argc, char** argv) {
   pid_t pid;
   int virtwl_display_fd = -1;
   int xdisplay = -1;
-  int master = 0;
+  int parent = 0;
   int client_fd = -1;
   int rv;
   int i;
@@ -3785,8 +3785,11 @@ int main(int argc, char** argv) {
       printf("Version: %s\n", SOMMELIER_VERSION);
       return EXIT_SUCCESS;
     }
-    if (strstr(arg, "--master") == arg) {
-      master = 1;
+    if (strstr(arg, "--parent") == arg) {
+      parent = 1;
+    } else if (strstr(arg, "--master") == arg) {
+      // TODO(b/172846445): deprecate the --master option.
+      parent = 1;
     } else if (strstr(arg, "--socket") == arg) {
       socket_name = sl_arg_value(arg);
     } else if (strstr(arg, "--display") == arg) {
@@ -3869,7 +3872,7 @@ int main(int argc, char** argv) {
     return EXIT_FAILURE;
   }
 
-  if (master) {
+  if (parent) {
     char* lock_addr;
     struct sockaddr_un addr;
     struct sigaction sa;

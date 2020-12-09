@@ -5,14 +5,14 @@ compositing to a 'host' compositor. Sommelier includes a set of features that
 allows it to run inside a tight jail or virtual machine.
 
 Sommelier can run as service or as a wrapper around the execution of a
-program. As a service, it spawns new processes as needed to service clients.
-The parent process is called the master sommelier.
+program. As a service, called the parent sommelier, it spawns new processes as
+needed to service clients.
 
 ## Sommeliers
 
-### Master Sommelier
+### Parent Sommelier
 
-The master sommelier instance will create a wayland socket in XDG_RUNTIME_DIR
+The parent sommelier instance will create a wayland socket in XDG_RUNTIME_DIR
 and accept connections from regular wayland clients. Each connection will be
 serviced by spawning a child sommelier process.
 
@@ -220,10 +220,10 @@ be used as an alternative to the command line flag.
 
 ## Examples
 
-Start master sommelier and use wayland-1 as name of socket to listen on:
+Start parent sommelier and use wayland-1 as name of socket to listen on:
 
 ```
-sommelier --master --socket=wayland-1
+sommelier --parent --socket=wayland-1
 ```
 
 Start sommelier that runs weston-terminal with density scale multiplier 1.5:

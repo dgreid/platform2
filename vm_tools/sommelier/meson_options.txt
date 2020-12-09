@@ -47,7 +47,7 @@ option('dark_frame_color',
 option('peer_cmd_prefix',
   type: 'string',
   value: '',
-  description: 'command-line needed to spwan non-master sommeliers'
+  description: 'command-line needed to spwan non-parent sommeliers'
 )
 
 option('tracing',
