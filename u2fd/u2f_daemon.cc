@@ -159,19 +159,13 @@ int U2fDaemon::OnInit() {
       sm_proxy_.get(), legacy_kh_fallback_ ? kLegacyKhCounterMin : 0);
 
   sm_proxy_->RegisterPropertyChangeCompleteSignalHandler(
-      base::Bind(&U2fDaemon::TryStartU2fHidService, base::Unretained(this)),
+      base::Bind(&U2fDaemon::TryStartService, base::Unretained(this)),
       base::Bind(&OnPolicySignalConnected));
 
   bool policy_ready = U2fPolicyReady();
 
   if (policy_ready) {
-    int status = StartU2fHidService();
-
-    U2fMode u2f_mode = GetU2fMode(force_u2f_, force_g2f_);
-    if (u2f_mode != U2fMode::kU2f && u2f_mode != U2fMode::kU2fExtended) {
-      LOG(INFO) << "Initializing WebAuthn handler.";
-      InitializeWebAuthnHandler();
-    }
+    int status = StartService();
 
     // If U2F is not currently enabled, we'll wait for policy updates
     // that may enable it. We don't ever disable U2F on policy updates.
@@ -189,14 +183,35 @@ int U2fDaemon::OnInit() {
   return EX_OK;
 }
 
-void U2fDaemon::TryStartU2fHidService(
+void U2fDaemon::TryStartService(
     const std::string& /* unused dbus signal status */) {
-  if (!u2fhid_ && U2fPolicyReady()) {
-    int status = StartU2fHidService();
-    if (status != EX_OK && status != EX_CONFIG) {
-      exit(status);
-    }
+  // If there's u2fhid_ then we have already started service.
+  if (u2fhid_)
+    return;
+
+  if (!U2fPolicyReady())
+    return;
+
+  int status = StartService();
+
+  if (status != EX_OK && status != EX_CONFIG) {
+    // Something went wrong.
+    exit(status);
   }
+}
+
+int U2fDaemon::StartService() {
+  // Start U2fHid service before WebAuthn because WebAuthn initialization can
+  // be slow.
+  int status = StartU2fHidService();
+
+  U2fMode u2f_mode = GetU2fMode(force_u2f_, force_g2f_);
+  if (u2f_mode != U2fMode::kU2f && u2f_mode != U2fMode::kU2fExtended) {
+    LOG(INFO) << "Initializing WebAuthn handler.";
+    InitializeWebAuthnHandler();
+  }
+
+  return status;
 }
 
 int U2fDaemon::StartU2fHidService() {

@@ -50,10 +50,12 @@ class U2fDaemon : public brillo::DBusServiceDaemon {
       brillo::dbus_utils::AsyncEventSequencer* sequencer) override;
 
  private:
-  // Checks if the device policy is available, and if so, starts the U2F
-  // service.
-  void TryStartU2fHidService(
-      const std::string& /* unused dbus signal status */);
+  // Callback for device policy status change. Checks if the device policy is
+  // available, and if so, starts the U2F service and the WebAuthn handler.
+  void TryStartService(const std::string& /* unused dbus signal status */);
+
+  // Starts the U2F service and the WebAuthn handler.
+  int StartService();
 
   // Starts the U2F service, and creates the virtual USB HID device. Calling
   // after the service is started is a no-op. Returns:
