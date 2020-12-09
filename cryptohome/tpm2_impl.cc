@@ -1445,7 +1445,7 @@ bool Tpm2Impl::GetAuthValue(TpmKeyHandle key_handle,
   std::string decrypted_value;
   std::unique_ptr<trunks::AuthorizationDelegate> delegate =
       trunks->factory->GetPasswordAuthorization("");
-  TPM_RC result = result = trunks->tpm_utility->AsymmetricDecrypt(
+  TPM_RC result = trunks->tpm_utility->AsymmetricDecrypt(
       key_handle, trunks::TPM_ALG_NULL, trunks::TPM_ALG_NULL, value_to_decrypt,
       delegate.get(), &decrypted_value);
   if (result != TPM_RC_SUCCESS) {
