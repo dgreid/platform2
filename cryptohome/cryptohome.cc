@@ -1853,8 +1853,7 @@ int main(int argc, char** argv) {
     }
 
     brillo::glib::ScopedError error;
-    auto deadline = base::Time::Now() + base::TimeDelta::FromSeconds(
-                                            kWaitOwnershipTimeoutInSeconds);
+    auto deadline = base::Time::Now() + base::TimeDelta::FromSeconds(timeout);
     while (base::Time::Now() < deadline) {
       base::PlatformThread::Sleep(
           base::TimeDelta::FromMilliseconds(kWaitOwnershipPollIntervalInMs));
