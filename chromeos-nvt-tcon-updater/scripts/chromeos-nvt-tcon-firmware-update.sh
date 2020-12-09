@@ -114,7 +114,7 @@ get_display_res() {
 # to care about battery charge state.
 get_battery_percent() {
   # Use of battery_display_percent based on:
-  # https://chromium.googlesource.com/chromiumos/overlays/chromiumos-overlay/+/master/chromeos-base/infineon-firmware-updater/files/tpm-firmware-updater
+  # https://chromium.googlesource.com/chromiumos/overlays/chromiumos-overlay/+/HEAD/chromeos-base/infineon-firmware-updater/files/tpm-firmware-updater
   # (latest revision 1f9212ce3222e59aa221cccb97b2ce709c5614da)
   dump_power_status \
       | grep -E '^battery_display_percent [1-9][0-9]*(\.[0-9]+)?$' \
