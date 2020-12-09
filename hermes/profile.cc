@@ -12,6 +12,7 @@
 #include <chromeos/dbus/service_constants.h>
 
 #include "hermes/executor.h"
+#include "hermes/hermes_constants.h"
 #include "hermes/lpa_util.h"
 
 namespace hermes {
@@ -99,6 +100,14 @@ Profile::Profile(dbus::ObjectPath object_path, const uint32_t physical_slot)
       weak_factory_(this) {}
 
 void Profile::Enable(std::unique_ptr<DBusResponse<>> response) {
+  if (!context_->lpa()->IsLpaIdle()) {
+    context_->executor()->PostDelayedTask(
+        FROM_HERE,
+        base::BindOnce(&Profile::Enable, weak_factory_.GetWeakPtr(),
+                       std::move(response)),
+        kLpaRetryDelay);
+    return;
+  }
   if (GetState() == profile::kPending) {
     response->ReplyWithError(FROM_HERE, brillo::errors::dbus::kDomain,
                              kErrorPendingProfile,
@@ -120,6 +129,14 @@ void Profile::Enable(std::unique_ptr<DBusResponse<>> response) {
 }
 
 void Profile::Disable(std::unique_ptr<DBusResponse<>> response) {
+  if (!context_->lpa()->IsLpaIdle()) {
+    context_->executor()->PostDelayedTask(
+        FROM_HERE,
+        base::BindOnce(&Profile::Disable, weak_factory_.GetWeakPtr(),
+                       std::move(response)),
+        kLpaRetryDelay);
+    return;
+  }
   if (GetState() == profile::kPending) {
     response->ReplyWithError(FROM_HERE, brillo::errors::dbus::kDomain,
                              kErrorPendingProfile,
@@ -166,11 +183,18 @@ void Profile::OnDisabled(int error, std::shared_ptr<DBusResponse<>> response) {
   response->Return();
 }
 
-bool Profile::ValidateNickname(brillo::ErrorPtr* /*error*/,
-                               const std::string& value) {
+void Profile::SetProfileNickname(std::string nickname) {
+  if (!context_->lpa()->IsLpaIdle()) {
+    context_->executor()->PostDelayedTask(
+        FROM_HERE,
+        base::BindOnce(&Profile::SetProfileNickname, weak_factory_.GetWeakPtr(),
+                       std::move(nickname)),
+        kLpaRetryDelay);
+    return;
+  }
   context_->modem_control()->StoreAndSetActiveSlot(physical_slot_);
   context_->lpa()->SetProfileNickname(
-      GetIccid(), value, context_->executor(), [this](int error) {
+      GetIccid(), nickname, context_->executor(), [this](int error) {
         auto decoded_error = LpaErrorToBrillo(FROM_HERE, error);
         if (decoded_error) {
           LOG(ERROR) << "Failed to set profile nickname: "
@@ -178,6 +202,11 @@ bool Profile::ValidateNickname(brillo::ErrorPtr* /*error*/,
         }
         context_->modem_control()->RestoreActiveSlot();
       });
+}
+
+bool Profile::ValidateNickname(brillo::ErrorPtr* /*error*/,
+                               const std::string& value) {
+  SetProfileNickname(value);
   return true;
 }
 

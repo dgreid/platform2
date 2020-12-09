@@ -41,6 +41,7 @@ class Profile : public org::chromium::Hermes::ProfileInterface,
   // org::chromium::Hermes::ProfileAdaptor override.
   bool ValidateNickname(brillo::ErrorPtr* error,
                         const std::string& value) override;
+  void SetProfileNickname(std::string nickname);
 
   Context* context_;
   dbus::ObjectPath object_path_;

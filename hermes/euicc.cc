@@ -15,6 +15,7 @@
 #include <google-lpa/lpa/core/lpa.h>
 
 #include "hermes/executor.h"
+#include "hermes/hermes_constants.h"
 #include "hermes/lpa_util.h"
 
 using lpa::proto::ProfileInfo;
@@ -29,7 +30,8 @@ Euicc::Euicc(uint8_t physical_slot, EuiccSlotInfo slot_info)
     : physical_slot_(physical_slot),
       slot_info_(std::move(slot_info)),
       context_(Context::Get()),
-      dbus_adaptor_(context_->adaptor_factory()->CreateEuiccAdaptor(this)) {
+      dbus_adaptor_(context_->adaptor_factory()->CreateEuiccAdaptor(this)),
+      weak_factory_(this) {
   dbus_adaptor_->SetPendingProfiles({});
   UpdateSlotInfo(slot_info_);
 }
@@ -46,9 +48,23 @@ void Euicc::UpdateLogicalSlot(base::Optional<uint8_t> logical_slot) {
 }
 
 void Euicc::InstallProfileFromActivationCode(
-    const std::string& activation_code,
-    const std::string& confirmation_code,
+    std::string activation_code,
+    std::string confirmation_code,
     ResultCallback<dbus::ObjectPath> result_callback) {
+  if (!context_->lpa()->IsLpaIdle()) {
+    // The LPA performs background tasks even after a dbus call is returned.
+    // During this period(about 2 seconds), we must not perform any operations
+    // that could disrupt the state of the transmit queue (slot-switching,
+    // acquiring a new channel etc.).
+    context_->executor()->PostDelayedTask(
+        FROM_HERE,
+        base::BindOnce(&Euicc::InstallProfileFromActivationCode,
+                       weak_factory_.GetWeakPtr(), std::move(activation_code),
+                       std::move(confirmation_code),
+                       std::move(result_callback)),
+        kLpaRetryDelay);
+    return;
+  }
   auto profile_cb = [result_callback{std::move(result_callback)}, this](
                         lpa::proto::ProfileInfo& info, int error) mutable {
     OnProfileInstalled(info, error, std::move(result_callback));
@@ -69,9 +85,19 @@ void Euicc::InstallProfileFromActivationCode(
 }
 
 void Euicc::InstallPendingProfile(
-    const dbus::ObjectPath& profile_path,
-    const std::string& confirmation_code,
+    dbus::ObjectPath profile_path,
+    std::string confirmation_code,
     ResultCallback<dbus::ObjectPath> result_callback) {
+  if (!context_->lpa()->IsLpaIdle()) {
+    context_->executor()->PostDelayedTask(
+        FROM_HERE,
+        base::BindOnce(&Euicc::InstallPendingProfile,
+                       weak_factory_.GetWeakPtr(), std::move(profile_path),
+                       std::move(confirmation_code),
+                       std::move(result_callback)),
+        kLpaRetryDelay);
+    return;
+  }
   auto iter = find_if(pending_profiles_.begin(), pending_profiles_.end(),
                       [&profile_path](const std::unique_ptr<Profile>& profile) {
                         return profile->object_path() == profile_path;
@@ -85,12 +111,21 @@ void Euicc::InstallPendingProfile(
   }
 
   std::string activation_code = iter->get()->GetActivationCode();
-  InstallProfileFromActivationCode(activation_code, confirmation_code,
+  InstallProfileFromActivationCode(std::move(activation_code),
+                                   std::move(confirmation_code),
                                    std::move(result_callback));
 }
 
-void Euicc::UninstallProfile(const dbus::ObjectPath& profile_path,
+void Euicc::UninstallProfile(dbus::ObjectPath profile_path,
                              ResultCallback<> result_callback) {
+  if (!context_->lpa()->IsLpaIdle()) {
+    context_->executor()->PostDelayedTask(
+        FROM_HERE,
+        base::BindOnce(&Euicc::UninstallProfile, weak_factory_.GetWeakPtr(),
+                       std::move(profile_path), std::move(result_callback)),
+        kLpaRetryDelay);
+    return;
+  }
   const Profile* matching_profile = nullptr;
   for (auto& profile : installed_profiles_) {
     if (profile->object_path() == profile_path) {
@@ -212,6 +247,14 @@ void Euicc::OnProfileUninstalled(const dbus::ObjectPath& profile_path,
 }
 
 void Euicc::RequestInstalledProfiles(ResultCallback<> result_callback) {
+  if (!context_->lpa()->IsLpaIdle()) {
+    context_->executor()->PostDelayedTask(
+        FROM_HERE,
+        base::BindOnce(&Euicc::RequestInstalledProfiles,
+                       weak_factory_.GetWeakPtr(), std::move(result_callback)),
+        kLpaRetryDelay);
+    return;
+  }
   context_->modem_control()->StoreAndSetActiveSlot(physical_slot_);
   context_->lpa()->GetInstalledProfiles(
       context_->executor(),
@@ -246,7 +289,16 @@ void Euicc::OnInstalledProfilesReceived(
 }
 
 void Euicc::RequestPendingProfiles(ResultCallback<> result_callback,
-                                   const std::string& root_smds) {
+                                   std::string root_smds) {
+  if (!context_->lpa()->IsLpaIdle()) {
+    context_->executor()->PostDelayedTask(
+        FROM_HERE,
+        base::BindOnce(&Euicc::RequestPendingProfiles,
+                       weak_factory_.GetWeakPtr(), std::move(result_callback),
+                       std::move(root_smds)),
+        kLpaRetryDelay);
+    return;
+  }
   context_->modem_control()->StoreAndSetActiveSlot(physical_slot_);
   context_->lpa()->GetPendingProfilesFromSmds(
       root_smds.empty() ? kDefaultRootSmds : root_smds, context_->executor(),

@@ -32,19 +32,19 @@ class Euicc {
   // Install a profile. An empty activation code will cause the default profile
   // to be installed.
   void InstallProfileFromActivationCode(
-      const std::string& activation_code,
-      const std::string& confirmation_code,
+      std::string activation_code,
+      std::string confirmation_code,
       ResultCallback<dbus::ObjectPath> result_callback);
-  void UninstallProfile(const dbus::ObjectPath& profile_path,
+  void UninstallProfile(dbus::ObjectPath profile_path,
                         ResultCallback<> result_callback);
   // Request the eUICC to provide all installed profiles.
   void RequestInstalledProfiles(ResultCallback<> result_callback);
 
-  void InstallPendingProfile(const dbus::ObjectPath& profile_path,
-                             const std::string& confirmation_code,
+  void InstallPendingProfile(dbus::ObjectPath profile_path,
+                             std::string confirmation_code,
                              ResultCallback<dbus::ObjectPath> result_callback);
   void RequestPendingProfiles(ResultCallback<> result_callback,
-                              const std::string& root_smds);
+                              std::string root_smds);
 
   uint8_t physical_slot() const { return physical_slot_; }
   dbus::ObjectPath object_path() const { return dbus_adaptor_->object_path(); }
@@ -80,6 +80,8 @@ class Euicc {
 
   std::vector<std::unique_ptr<Profile>> installed_profiles_;
   std::vector<std::unique_ptr<Profile>> pending_profiles_;
+
+  base::WeakPtrFactory<Euicc> weak_factory_;
 };
 
 }  // namespace hermes
