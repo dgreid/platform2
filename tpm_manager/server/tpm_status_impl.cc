@@ -271,6 +271,9 @@ bool TpmStatusImpl::GetCapability(uint32_t capability,
   CHECK(data);
   TSS_HTPM tpm_handle = tpm_connection_.GetTpm();
   if (tpm_handle == 0) {
+    if (tpm_result) {
+      *tpm_result = TSS_E_COMM_FAILURE;
+    }
     return false;
   }
   uint32_t length = 0;
