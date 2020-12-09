@@ -223,6 +223,56 @@ class TestSession : public ::testing::Test {
     return h;
   }
 
+  void TestSignVerify(const Object* pub,
+                      const Object* priv,
+                      size_t input_size,
+                      CK_MECHANISM_TYPE mech,
+                      const string& mechanism_parameter) {
+    string in(input_size, 'A');
+    int len = 0;
+    string sig;
+
+    // Sign / verify with OperationSinglePart().
+    EXPECT_EQ(CKR_OK,
+              session_->OperationInit(kSign, mech, mechanism_parameter, priv));
+    EXPECT_EQ(CKR_BUFFER_TOO_SMALL,
+              session_->OperationSinglePart(kSign, in, &len, &sig));
+    EXPECT_EQ(CKR_OK, session_->OperationSinglePart(kSign, in, &len, &sig));
+    EXPECT_EQ(CKR_OK,
+              session_->OperationInit(kVerify, mech, mechanism_parameter, pub));
+    EXPECT_EQ(CKR_OK, session_->OperationUpdate(kVerify, in, NULL, NULL));
+    EXPECT_EQ(CKR_OK, session_->VerifyFinal(sig));
+
+    // Same stuff with OperationUpdate().
+    in = string(input_size, 'B');
+    string sig2;
+    len = 0;
+    size_t first_divide = input_size / 2;
+    size_t second_divide = input_size / 5 * 2;
+    EXPECT_EQ(CKR_OK,
+              session_->OperationInit(kSign, mech, mechanism_parameter, priv));
+    EXPECT_EQ(CKR_OK, session_->OperationUpdate(
+                          kSign, in.substr(0, first_divide), NULL, NULL));
+    EXPECT_EQ(CKR_OK,
+              session_->OperationUpdate(
+                  kSign, in.substr(first_divide, input_size - first_divide),
+                  NULL, NULL));
+    EXPECT_EQ(CKR_BUFFER_TOO_SMALL,
+              session_->OperationFinal(kSign, &len, &sig2));
+    EXPECT_EQ(CKR_OK, session_->OperationFinal(kSign, &len, &sig2));
+
+    // Test verification with OperationUpdate().
+    EXPECT_EQ(CKR_OK,
+              session_->OperationInit(kVerify, mech, mechanism_parameter, pub));
+    EXPECT_EQ(CKR_OK, session_->OperationUpdate(
+                          kVerify, in.substr(0, second_divide), NULL, NULL));
+    EXPECT_EQ(CKR_OK,
+              session_->OperationUpdate(
+                  kVerify, in.substr(second_divide, input_size - second_divide),
+                  NULL, NULL));
+    EXPECT_EQ(CKR_OK, session_->VerifyFinal(sig2));
+  }
+
  protected:
   ObjectPoolMock token_pool_;
   ChapsFactoryMock factory_;
@@ -581,35 +631,12 @@ TEST_F(TestSession, RsaSign) {
   const Object* pub = NULL;
   const Object* priv = NULL;
   GenerateRSAKeyPair(true, 1024, &pub, &priv);
-  // Sign / verify without a built-in hash.
-  EXPECT_EQ(CKR_OK, session_->OperationInit(kSign, CKM_RSA_PKCS, "", priv));
-  string in(100, 'A');
-  int len = 0;
-  string sig;
-  EXPECT_EQ(CKR_BUFFER_TOO_SMALL,
-            session_->OperationSinglePart(kSign, in, &len, &sig));
-  EXPECT_EQ(CKR_OK, session_->OperationSinglePart(kSign, in, &len, &sig));
-  EXPECT_EQ(CKR_OK, session_->OperationInit(kVerify, CKM_RSA_PKCS, "", pub));
-  EXPECT_EQ(CKR_OK, session_->OperationUpdate(kVerify, in, NULL, NULL));
-  EXPECT_EQ(CKR_OK, session_->VerifyFinal(sig));
-  // Sign / verify with a built-in SHA-256 hash.
-  EXPECT_EQ(CKR_OK,
-            session_->OperationInit(kSign, CKM_SHA256_RSA_PKCS, "", priv));
-  EXPECT_EQ(CKR_OK,
-            session_->OperationUpdate(kSign, in.substr(0, 50), NULL, NULL));
-  EXPECT_EQ(CKR_OK,
-            session_->OperationUpdate(kSign, in.substr(50, 50), NULL, NULL));
-  string sig2;
-  len = 0;
-  EXPECT_EQ(CKR_BUFFER_TOO_SMALL, session_->OperationFinal(kSign, &len, &sig2));
-  EXPECT_EQ(CKR_OK, session_->OperationFinal(kSign, &len, &sig2));
-  EXPECT_EQ(CKR_OK,
-            session_->OperationInit(kVerify, CKM_SHA256_RSA_PKCS, "", pub));
-  EXPECT_EQ(CKR_OK,
-            session_->OperationUpdate(kVerify, in.substr(0, 20), NULL, NULL));
-  EXPECT_EQ(CKR_OK,
-            session_->OperationUpdate(kVerify, in.substr(20, 80), NULL, NULL));
-  EXPECT_EQ(CKR_OK, session_->VerifyFinal(sig2));
+
+  // Test the generic RSA mechanism.
+  TestSignVerify(pub, priv, 100, CKM_RSA_PKCS, "");
+
+  // Test RSA mechanism with built-in hash.
+  TestSignVerify(pub, priv, 100, CKM_SHA256_RSA_PKCS, "");
 }
 
 // Test RSA PSS sign / verify.
@@ -617,43 +644,14 @@ TEST_F(TestSession, RsaPSSSign) {
   const Object* pub = NULL;
   const Object* priv = NULL;
   GenerateRSAKeyPair(true, 1024, &pub, &priv);
-  // Sign / verify without a built-in hash.
-  EXPECT_EQ(CKR_OK, session_->OperationInit(
-                        kSign, CKM_RSA_PKCS_PSS,
-                        GetRSAPSSParam(CKM_SHA_1, CKG_MGF1_SHA1, 20), priv));
-  string in(20, 'A');
-  int len = 0;
-  string sig;
-  EXPECT_EQ(CKR_BUFFER_TOO_SMALL,
-            session_->OperationSinglePart(kSign, in, &len, &sig));
-  EXPECT_EQ(CKR_OK, session_->OperationSinglePart(kSign, in, &len, &sig));
-  EXPECT_EQ(CKR_OK, session_->OperationInit(
-                        kVerify, CKM_RSA_PKCS_PSS,
-                        GetRSAPSSParam(CKM_SHA_1, CKG_MGF1_SHA1, 20), pub));
-  EXPECT_EQ(CKR_OK, session_->OperationUpdate(kVerify, in, NULL, NULL));
-  EXPECT_EQ(CKR_OK, session_->VerifyFinal(sig));
 
-  // Sign / verify with a built-in SHA-256 hash.
-  in = string(100, 'B');
-  EXPECT_EQ(CKR_OK, session_->OperationInit(
-                        kSign, CKM_SHA256_RSA_PKCS_PSS,
-                        GetRSAPSSParam(CKM_SHA256, CKG_MGF1_SHA256, 20), priv));
-  EXPECT_EQ(CKR_OK,
-            session_->OperationUpdate(kSign, in.substr(0, 50), NULL, NULL));
-  EXPECT_EQ(CKR_OK,
-            session_->OperationUpdate(kSign, in.substr(50, 50), NULL, NULL));
-  string sig2;
-  len = 0;
-  EXPECT_EQ(CKR_BUFFER_TOO_SMALL, session_->OperationFinal(kSign, &len, &sig2));
-  EXPECT_EQ(CKR_OK, session_->OperationFinal(kSign, &len, &sig2));
-  EXPECT_EQ(CKR_OK, session_->OperationInit(
-                        kVerify, CKM_SHA256_RSA_PKCS_PSS,
-                        GetRSAPSSParam(CKM_SHA256, CKG_MGF1_SHA256, 20), pub));
-  EXPECT_EQ(CKR_OK,
-            session_->OperationUpdate(kVerify, in.substr(0, 20), NULL, NULL));
-  EXPECT_EQ(CKR_OK,
-            session_->OperationUpdate(kVerify, in.substr(20, 80), NULL, NULL));
-  EXPECT_EQ(CKR_OK, session_->VerifyFinal(sig2));
+  // Test the generic RSA PSS mechanism.
+  TestSignVerify(pub, priv, 20, CKM_RSA_PKCS_PSS,
+                 GetRSAPSSParam(CKM_SHA_1, CKG_MGF1_SHA1, 20));
+
+  // Test the version with built-in hash.
+  TestSignVerify(pub, priv, 100, CKM_SHA256_RSA_PKCS_PSS,
+                 GetRSAPSSParam(CKM_SHA_1, CKG_MGF1_SHA1, 20));
 }
 
 // Test ECC ECDSA sign / verify.
@@ -662,35 +660,11 @@ TEST_F(TestSession, EcdsaSign) {
   const Object* priv = NULL;
   GenerateECCKeyPair(false, false, &pub, &priv);
 
-  // Sign / verify with SHA1 hash (ECDSA_SHA1), also test SignlePart operation
-  EXPECT_EQ(CKR_OK, session_->OperationInit(kSign, CKM_ECDSA_SHA1, "", priv));
-  string in(100, 'A');
-  int len = 0;
-  string sig;
-  EXPECT_EQ(CKR_BUFFER_TOO_SMALL,
-            session_->OperationSinglePart(kSign, in, &len, &sig));
-  EXPECT_EQ(CKR_OK, session_->OperationSinglePart(kSign, in, &len, &sig));
-  EXPECT_EQ(CKR_OK, session_->OperationInit(kVerify, CKM_ECDSA_SHA1, "", pub));
-  EXPECT_EQ(CKR_OK, session_->OperationUpdate(kVerify, in, NULL, NULL));
-  EXPECT_EQ(CKR_OK, session_->VerifyFinal(sig));
+  // Test the generic ECDSA.
+  TestSignVerify(pub, priv, 100, CKM_ECDSA, "");
 
-  // test OperationUpdate()
-  EXPECT_EQ(CKR_OK, session_->OperationInit(kSign, CKM_ECDSA_SHA1, "", priv));
-  EXPECT_EQ(CKR_OK,
-            session_->OperationUpdate(kSign, in.substr(0, 50), NULL, NULL));
-  EXPECT_EQ(CKR_OK,
-            session_->OperationUpdate(kSign, in.substr(50, 50), NULL, NULL));
-  string sig2;
-  len = 0;
-  EXPECT_EQ(CKR_BUFFER_TOO_SMALL, session_->OperationFinal(kSign, &len, &sig2));
-  EXPECT_EQ(CKR_OK, session_->OperationFinal(kSign, &len, &sig2));
-
-  EXPECT_EQ(CKR_OK, session_->OperationInit(kVerify, CKM_ECDSA_SHA1, "", pub));
-  EXPECT_EQ(CKR_OK,
-            session_->OperationUpdate(kVerify, in.substr(0, 20), NULL, NULL));
-  EXPECT_EQ(CKR_OK,
-            session_->OperationUpdate(kVerify, in.substr(20, 80), NULL, NULL));
-  EXPECT_EQ(CKR_OK, session_->VerifyFinal(sig2));
+  // Test ECDSA with built-in hash.
+  TestSignVerify(pub, priv, 100, CKM_ECDSA_SHA1, "");
 }
 
 // Test that requests for unsupported mechanisms are handled correctly.
