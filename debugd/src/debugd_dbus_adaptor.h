@@ -29,6 +29,7 @@
 #include "debugd/src/debug_logs_tool.h"
 #include "debugd/src/debug_mode_tool.h"
 #include "debugd/src/dev_features_tool.h"
+#include "debugd/src/ec_typec_tool.h"
 #include "debugd/src/example_tool.h"
 #include "debugd/src/icmp_tool.h"
 #include "debugd/src/ipaddrs_tool.h"
@@ -215,6 +216,7 @@ class DebugdDBusAdaptor : public org::chromium::debugdAdaptor,
   bool CollectSmartBatteryMetric(brillo::ErrorPtr* error,
                                  const std::string& metric_name,
                                  std::string* output) override;
+  std::string EcGetInventory() override;
 
  private:
   brillo::dbus_utils::DBusObject dbus_object_;
@@ -230,6 +232,7 @@ class DebugdDBusAdaptor : public org::chromium::debugdAdaptor,
   std::unique_ptr<DebugModeTool> debug_mode_tool_;
   std::unique_ptr<RestrictedToolWrapper<DevFeaturesTool>>
       dev_features_tool_wrapper_;
+  std::unique_ptr<EcTypeCTool> ec_typec_tool_;
   std::unique_ptr<ExampleTool> example_tool_;
   std::unique_ptr<ICMPTool> icmp_tool_;
   std::unique_ptr<IpAddrsTool> ipaddrs_tool_;

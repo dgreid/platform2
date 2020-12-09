@@ -46,6 +46,7 @@ DebugdDBusAdaptor::DebugdDBusAdaptor(scoped_refptr<dbus::Bus> bus)
   debug_mode_tool_ = std::make_unique<DebugModeTool>(bus);
   dev_features_tool_wrapper_ =
       std::make_unique<RestrictedToolWrapper<DevFeaturesTool>>(bus);
+  ec_typec_tool_ = std::make_unique<EcTypeCTool>();
   example_tool_ = std::make_unique<ExampleTool>();
   icmp_tool_ = std::make_unique<ICMPTool>();
   ipaddrs_tool_ = std::make_unique<IpAddrsTool>();
@@ -603,6 +604,10 @@ bool DebugdDBusAdaptor::CollectSmartBatteryMetric(
     std::string* output) {
   return cros_healthd_tool_->CollectSmartBatteryMetric(error, metric_name,
                                                        output);
+}
+
+std::string DebugdDBusAdaptor::EcGetInventory() {
+  return ec_typec_tool_->GetInventory();
 }
 
 }  // namespace debugd

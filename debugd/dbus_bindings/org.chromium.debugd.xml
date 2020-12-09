@@ -1195,5 +1195,15 @@
       </arg>
       <annotation name="org.chromium.DBus.Method.Kind" value="normal"/>
     </method>
+    <method name="EcGetInventory">
+      <tp:docstring>
+        Runs the 'ectool inventory' command with pre-defined
+        sandbox options in rootfs and returns the output.
+      </tp:docstring>
+      <arg name="output" type="s" direction="out">
+        Returns the output of the 'ectool inventory' command.
+      </arg>
+      <annotation name="org.chromium.DBus.Method.Kind" value="simple"/>
+    </method>
   </interface>
 </node>
