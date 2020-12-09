@@ -773,10 +773,11 @@ bool TPM2UtilityImpl::Sign(int key_handle,
   // Parse the various parameters for this method.
   DigestAlgorithm digest_algorithm = GetDigestAlgorithm(signing_mechanism);
   // Parse RSA PSS Parameters if applicable.
+  const RsaPaddingScheme padding_scheme =
+      GetSigningSchemeForMechanism(signing_mechanism);
   const CK_RSA_PKCS_PSS_PARAMS* pss_params = nullptr;
   const EVP_MD* mgf1_hash = nullptr;
-  if (GetSigningSchemeForMechanism(signing_mechanism) ==
-      RsaPaddingScheme::RSASSA_PSS) {
+  if (padding_scheme == RsaPaddingScheme::RSASSA_PSS) {
     // Check the parameters
     if (!ParseRSAPSSParams(signing_mechanism, mechanism_parameter, &pss_params,
                            &mgf1_hash, &digest_algorithm)) {
@@ -819,15 +820,13 @@ bool TPM2UtilityImpl::Sign(int key_handle,
     if (public_area.object_attributes & trunks::kDecrypt) {
       // We can handle the padding here in software.
       std::string padded_data;
-      if (GetSigningSchemeForMechanism(signing_mechanism) ==
-          RsaPaddingScheme::RSASSA_PKCS1_V1_5) {
+      if (padding_scheme == RsaPaddingScheme::RSASSA_PKCS1_V1_5) {
         if (!AddPKCS1Padding(
                 GetDigestAlgorithmEncoding(digest_algorithm) + input,
                 public_area.unique.rsa.size, &padded_data)) {
           return false;
         }
-      } else if (GetSigningSchemeForMechanism(signing_mechanism) ==
-                 RsaPaddingScheme::RSASSA_PSS) {
+      } else if (padding_scheme == RsaPaddingScheme::RSASSA_PSS) {
         // Add padding with openssl
         DCHECK(pss_params);
         DCHECK(mgf1_hash);
@@ -856,8 +855,7 @@ bool TPM2UtilityImpl::Sign(int key_handle,
       std::string data_to_sign;
 
       // We are using TPM_ALG_RSASSA, and only the mechanisms below match.
-      if (GetSigningSchemeForMechanism(signing_mechanism) ==
-          RsaPaddingScheme::RSASSA_PKCS1_V1_5) {
+      if (padding_scheme == RsaPaddingScheme::RSASSA_PKCS1_V1_5) {
         if (digest_algorithm == DigestAlgorithm::NoDigest) {
           // 2-1. For CKM_RSA_PKCS, digest type is NoDigest, but PKCS11 API
           //      caller may pass the input with prepended DigestInfo. If it
@@ -888,8 +886,7 @@ bool TPM2UtilityImpl::Sign(int key_handle,
                                            digest_alg_id, data_to_sign,
                                            false /* don't generate hash */,
                                            session_->GetDelegate(), signature);
-      } else if (GetSigningSchemeForMechanism(signing_mechanism) ==
-                 RsaPaddingScheme::RSASSA_PSS) {
+      } else if (padding_scheme == RsaPaddingScheme::RSASSA_PSS) {
         if (digest_alg_id == trunks::TPM_ALG_NULL) {
           // If the TPM doesn't support the hash algorithm, then it's going to
           // fail. RSA PSS doesn't work with TPM_ALG_NULL.
