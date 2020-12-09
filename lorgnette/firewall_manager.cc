@@ -24,6 +24,14 @@ PortToken::PortToken(base::WeakPtr<FirewallManager> firewall_manager,
                      uint16_t port)
     : firewall_manager_(firewall_manager), port_(port) {}
 
+PortToken::PortToken(PortToken&& token) : firewall_manager_(nullptr), port_(0) {
+  firewall_manager_ = token.firewall_manager_;
+  port_ = token.port_;
+
+  token.firewall_manager_ = nullptr;
+  token.port_ = 0;
+}
+
 PortToken::~PortToken() {
   if (firewall_manager_)
     firewall_manager_->ReleaseUdpPortAccess(port_);

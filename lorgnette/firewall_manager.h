@@ -23,6 +23,9 @@ class FirewallManager;
 class PortToken {
  public:
   PortToken(base::WeakPtr<FirewallManager> firewall_manager, uint16_t port);
+  PortToken(const PortToken&) = delete;
+  PortToken& operator=(const PortToken&) = delete;
+  PortToken(PortToken&&);
   ~PortToken();
 
  private:
