@@ -970,7 +970,7 @@ bool CryptoUtilityImpl::GetCertificatePublicKey(const std::string& certificate,
   public_key->resize(der_length);
   unsigned char* der_buffer =
       reinterpret_cast<unsigned char*>(base::data(*public_key));
-  if ((der_length = i2d_RSAPublicKey(rsa.get(), &der_buffer)) < 0) {
+  if (i2d_RSAPublicKey(rsa.get(), &der_buffer) < 0) {
     LOG(ERROR) << __func__
                << ": Bad length of der-encoded output: " << GetOpenSSLError();
     return false;
