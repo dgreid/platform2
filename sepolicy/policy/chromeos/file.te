@@ -243,6 +243,7 @@ type cros_syslog, file_type, cros_log_type, cros_file_type, cros_var_file_type, 
 type cros_tlsdate_log, file_type, cros_log_type, cros_file_type, cros_var_file_type, cros_rotate_by_cleanup_logs_file_type;
 type cros_typecd_log, file_type, cros_log_type, cros_file_type, cros_var_file_type, cros_rotate_by_cleanup_logs_file_type;
 type cros_var_log_atrus, file_type, cros_log_type, cros_file_type, cros_var_file_type, cros_rotate_by_cleanup_logs_file_type;
+type cros_var_log_bluetooth, file_type, cros_log_type, cros_file_type, cros_var_file_type, cros_rotate_by_cleanup_logs_file_type;
 type cros_var_log_chrome, file_type, cros_log_type, cros_file_type, cros_var_file_type;
 type cros_var_log_audit, file_type, cros_log_type, cros_file_type, cros_var_file_type;
 type cros_var_log_eventlog, file_type, cros_log_type, cros_file_type, cros_var_file_type;

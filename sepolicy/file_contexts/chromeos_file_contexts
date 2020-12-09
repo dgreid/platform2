@@ -213,6 +213,7 @@ include(sepolicy/file_contexts/sysfs_contexts)
 /var/log/atrus.log              u:object_r:cros_var_log_atrus:s0
 /var/log/audit(/.*)?            u:object_r:cros_var_log_audit:s0
 /var/log/authpolicy.log         u:object_r:cros_authpolicy_log:s0
+/var/log/bluetooth.log          u:object_r:cros_var_log_bluetooth:s0
 /var/log/boot.log               u:object_r:cros_boot_log:s0
 /var/log/chrome(/.*)?           u:object_r:cros_var_log_chrome:s0
 /var/log/eventlog.txt           u:object_r:cros_var_log_eventlog:s0
