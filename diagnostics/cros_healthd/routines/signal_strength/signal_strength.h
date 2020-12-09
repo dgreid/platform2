@@ -14,7 +14,6 @@ namespace diagnostics {
 
 // Status messages reported by the signal strength routine.
 extern const char kSignalStrengthRoutineNoProblemMessage[];
-extern const char kSignalStrengthRoutineSignalNotFoundProblemMessage[];
 extern const char kSignalStrengthRoutineWeakSignalProblemMessage[];
 extern const char kSignalStrengthRoutineNotRunMessage[];
 

@@ -41,9 +41,6 @@ void ParseSignalStrengthResult(
       *status = mojo_ipc::DiagnosticRoutineStatusEnum::kFailed;
       DCHECK(!problems.empty());
       switch (problems[0]) {
-        case network_diagnostics_ipc::SignalStrengthProblem::kSignalNotFound:
-          *status_message = kSignalStrengthRoutineSignalNotFoundProblemMessage;
-          break;
         case network_diagnostics_ipc::SignalStrengthProblem::kWeakSignal:
           *status_message = kSignalStrengthRoutineWeakSignalProblemMessage;
           break;
@@ -76,8 +73,6 @@ void RunSignalStrengthRoutine(
 
 const char kSignalStrengthRoutineNoProblemMessage[] =
     "Signal strength routine passed with no problems.";
-const char kSignalStrengthRoutineSignalNotFoundProblemMessage[] =
-    "Signal not found.";
 const char kSignalStrengthRoutineWeakSignalProblemMessage[] =
     "Weak signal detected.";
 const char kSignalStrengthRoutineNotRunMessage[] =

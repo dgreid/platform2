@@ -140,12 +140,8 @@ TEST_P(SignalStrengthProblemTest, HandleSignalStrengthProblem) {
 INSTANTIATE_TEST_SUITE_P(
     ,
     SignalStrengthProblemTest,
-    Values(
-        SignalStrengthProblemTestParams{
-            network_diagnostics_ipc::SignalStrengthProblem::kSignalNotFound,
-            kSignalStrengthRoutineSignalNotFoundProblemMessage},
-        SignalStrengthProblemTestParams{
-            network_diagnostics_ipc::SignalStrengthProblem::kWeakSignal,
-            kSignalStrengthRoutineWeakSignalProblemMessage}));
+    Values(SignalStrengthProblemTestParams{
+        network_diagnostics_ipc::SignalStrengthProblem::kWeakSignal,
+        kSignalStrengthRoutineWeakSignalProblemMessage}));
 
 }  // namespace diagnostics
