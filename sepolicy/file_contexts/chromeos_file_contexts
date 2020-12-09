@@ -161,6 +161,7 @@ include(sepolicy/file_contexts/sysfs_contexts)
 
 /usr/libexec/cryptohome/update_userdataauth_from_features.sh u:object_r:cros_update_userdataauth_shell_script:s0
 
+/usr/libexec/ipsec/charon       u:object_r:cros_ipsec_charon_exec:s0
 /usr/libexec/ipsec/starter      u:object_r:cros_ipsec_starter_exec:s0
 
 /usr/share/policy(/.*)?         u:object_r:cros_seccomp_policy_file:s0
