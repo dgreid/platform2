@@ -157,12 +157,21 @@ int getStride(int cssFmt, int width) {
 #define PG_BB_TERMINAL_ID_TNR_SIM_REF_OUT 7  // spetial_terminal
 
 // the below terminals belong to PG_PSYS_IPU6_ISA_LB
+#ifdef IPU_SYSVER_ipu6v5
+#define ISA_LB_TERMINAL_ID_DVS_FE_IN_L0 20 // program_terminal
+#define ISA_LB_TERMINAL_ID_DVS_FE_IN_L1 21 // program_terminal
+#define ISA_LB_TERMINAL_ID_DVS_FE_IN_L2 22 // program_terminal
+#define ISA_LB_TERMINAL_ID_DVS_FE_OUT_L0 23 // param_terminal
+#define ISA_LB_TERMINAL_ID_DVS_FE_OUT_L1 24 // param_terminal
+#define ISA_LB_TERMINAL_ID_DVS_FE_OUT_L2 25 // param_terminal
+#else
 #define ISA_LB_TERMINAL_ID_DVS_FE_IN_L0 21 // program_terminal
 #define ISA_LB_TERMINAL_ID_DVS_FE_IN_L1 22 // program_terminal
 #define ISA_LB_TERMINAL_ID_DVS_FE_IN_L2 23 // program_terminal
 #define ISA_LB_TERMINAL_ID_DVS_FE_OUT_L0 24 // param_terminal
 #define ISA_LB_TERMINAL_ID_DVS_FE_OUT_L1 25 // param_terminal
 #define ISA_LB_TERMINAL_ID_DVS_FE_OUT_L2 26 // param_terminal
+#endif
 
 bool getTerminalPairs(int pgId, TERMINAL_PAIR_TYPE type, std::vector<TerminalPair>* pairs) {
     LOG2("@%s, pgId:%d, type:%d, pairs:%p", __func__, pgId, type, pairs);

@@ -789,6 +789,14 @@ int IspParamAdaptor::runIspAdaptL(ia_isp_bxt_program_group programGroup,
                 programGroup.run_kernels[i].metadata[0] = aiqResults->mSequence;
                 LOG2("ia_pal_uuid_isp_tnr5_2x frame count = %d", programGroup.run_kernels[i].metadata[0]);
                 break;
+#ifdef IPU_SYSVER_ipu6v5
+            case ia_pal_uuid_isp_ofa_2_mp:
+            case ia_pal_uuid_isp_ofa_2_dp:
+            case ia_pal_uuid_isp_ofa_2_ppp:
+                // These metadata options map to ofa_format_nv12 defined in ofa_format_t
+                programGroup.run_kernels[i].metadata[1] = 2;
+                break;
+#endif
             case ia_pal_uuid_isp_bxt_ofa_dp:
             case ia_pal_uuid_isp_bxt_ofa_mp:
             case ia_pal_uuid_isp_bxt_ofa_ppp:

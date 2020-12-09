@@ -251,6 +251,29 @@ shared_library("libcamhal") {
       "IPU_SYSVER_ipu6v3",
       "TNR7_CM",
     ]
+  } else if (use.ipu6ep) {
+    sources += [
+      "modules/ia_css/ipu6ep/src/ia_css_program_group_param.c",
+      "modules/ia_css/ipu6ep/src/ia_css_psys_process_group.c",
+      "modules/ia_css/ipu6ep/src/ia_css_psys_program_group_manifest.c",
+      "modules/ia_css/ipu6ep/src/ia_css_psys_terminal_manifest.c",
+      "modules/ia_css/ipu6ep/src/ia_css_kernel_bitmap.c",
+      "modules/ia_css/ipu6ep/src/ia_css_terminal_manifest.c",
+      "modules/ia_css/ipu6ep/src/ia_css_psys_program_manifest.c",
+      "modules/ia_css/ipu6ep/src/ia_css_psys_process.c",
+      "modules/ia_css/ipu6ep/src/ia_css_psys_terminal.c",
+      "modules/ia_css/ipu6ep/src/ia_css_psys_process_group_cmd_impl.c",
+      "modules/ia_css/ipu6ep/src/vied_nci_psys_system.c",
+      "modules/ia_css/ipu6ep/src/ia_css_terminal.c",
+      "modules/ia_css/ipu6ep/src/ia_css_program_group_data.c",
+      "modules/ia_css/ipu6ep/src/ia_css_rbm.c",
+    ]
+    include_dirs += [
+      "modules/ia_css/ipu6ep/include",
+    ]
+    defines += [
+      "IPU_SYSVER_ipu6v5",
+    ]
   } else {
     sources += [
       "modules/ia_css/ipu6/src/ia_css_program_group_param.c",
@@ -403,6 +426,17 @@ shared_library("libcam_algo") {
     ]
     include_dirs += [
       "modules/ia_css/ipu6se/include",
+    ]
+  } else if (use.ipu6ep) {
+    libs += [
+      "ipu6ep",
+      "ia_p2p_ipu6ep",
+    ]
+    defines += [
+      "IPU_SYSVER_ipu6v5",
+    ]
+    include_dirs += [
+      "modules/ia_css/ipu6ep/include",
     ]
   } else {
     libs += [
