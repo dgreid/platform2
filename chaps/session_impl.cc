@@ -586,21 +586,20 @@ class RSASignerVerifierImplPSS : public RSASignerVerifier {
       return CKR_SIGNATURE_INVALID;
     }
 
-    CK_RV result = CKR_OK;
     int length = RSA_public_decrypt(signature.length(),
                                     ConvertStringToByteBuffer(signature.data()),
                                     buffer, rsa.get(), RSA_NO_PADDING);
     if (length == -1) {
       LOG(ERROR) << __func__
                  << ": RSA_public_decrypt failed: " << GetOpenSSLError();
-      result = CKR_SIGNATURE_INVALID;
+      return CKR_SIGNATURE_INVALID;
     }
     if (RSA_verify_PKCS1_PSS_mgf1(
             rsa.get(), reinterpret_cast<const unsigned char*>(digest.data()),
             GetOpenSSLDigest(digest_algorithm), mgf1_hash, buffer,
             pss_params->sLen) != 1) {
       LOG(ERROR) << __func__ << ": Incorrect PSS padding.";
-      result = CKR_SIGNATURE_INVALID;
+      return CKR_SIGNATURE_INVALID;
     }
     return CKR_OK;
   };
