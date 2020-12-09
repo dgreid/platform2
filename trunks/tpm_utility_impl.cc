@@ -369,6 +369,9 @@ TPM_RC TpmUtilityImpl::TakeOwnership(const std::string& owner_password,
   }
   std::unique_ptr<TpmState> tpm_state(factory_.GetTpmState());
   result = tpm_state->Initialize();
+  if (result != TPM_RC_SUCCESS) {
+    return result;
+  }
 
   session->SetEntityAuthorizationValue("");
   if (!tpm_state->IsEndorsementPasswordSet()) {
