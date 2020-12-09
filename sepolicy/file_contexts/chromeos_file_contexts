@@ -269,6 +269,7 @@ include(sepolicy/file_contexts/sysfs_contexts)
 /run/dbus/system_bus_socket     u:object_r:cros_system_bus_socket:s0
 /run/metrics                    u:object_r:cros_run_metrics:s0
 /run/metrics/external           u:object_r:cros_run_metrics_external:s0
+/run/rsyslogd                   u:object_r:cros_run_rsyslogd:s0
 
 
 has_arc(`
