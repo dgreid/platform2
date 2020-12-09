@@ -263,7 +263,8 @@ bool VaultKeyset::Decrypt(const SecureBlob& key,
     *crypto_error = CryptoError::CE_NONE;
 
   if (!loaded_) {
-    *crypto_error = CryptoError::CE_OTHER_FATAL;
+    if (crypto_error)
+      *crypto_error = CryptoError::CE_OTHER_FATAL;
     return false;
   }
 
