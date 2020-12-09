@@ -4,10 +4,10 @@
 
 #include "ml_benchmark/json_serializer.h"
 
+#include <gtest/gtest.h>
+
 #include <string>
 #include <utility>
-
-#include <gtest/gtest.h>
 
 using chrome::ml_benchmark::BenchmarkResults;
 using chrome::ml_benchmark::Metric;

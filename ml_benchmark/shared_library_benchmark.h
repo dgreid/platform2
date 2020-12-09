@@ -5,11 +5,11 @@
 #ifndef ML_BENCHMARK_SHARED_LIBRARY_BENCHMARK_H_
 #define ML_BENCHMARK_SHARED_LIBRARY_BENCHMARK_H_
 
-#include <memory>
-#include <utility>
-
 #include <base/macros.h>
 #include <base/scoped_native_library.h>
+
+#include <memory>
+#include <utility>
 
 #include "ml_benchmark/benchmark.h"
 #include "ml_benchmark/benchmark_functions.h"

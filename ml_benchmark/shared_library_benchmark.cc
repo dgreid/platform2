@@ -4,10 +4,10 @@
 
 #include "ml_benchmark/shared_library_benchmark.h"
 
+#include <base/logging.h>
+
 #include <memory>
 #include <string>
-
-#include <base/logging.h>
 
 namespace ml_benchmark {
 

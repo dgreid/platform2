@@ -2,15 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <functional>
-#include <string>
+#include "ml_benchmark/shared_library_benchmark.h"
 
 #include <gmock/gmock.h>
 #include <google/protobuf/util/message_differencer.h>
 #include <gtest/gtest.h>
 
+#include <functional>
+#include <string>
+
 #include "ml_benchmark/benchmark_functions.h"
-#include "ml_benchmark/shared_library_benchmark.h"
 #include "proto/benchmark_config.pb.h"
 
 namespace ml_benchmark {

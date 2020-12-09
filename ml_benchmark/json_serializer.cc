@@ -4,13 +4,13 @@
 
 #include "ml_benchmark/json_serializer.h"
 
-#include <string>
-#include <utility>
-
 #include <base/json/json_writer.h>
 #include <base/logging.h>
 #include <base/values.h>
 #include <brillo/file_utils.h>
+
+#include <string>
+#include <utility>
 
 using chrome::ml_benchmark::BenchmarkResults;
 using chrome::ml_benchmark::Metric;
