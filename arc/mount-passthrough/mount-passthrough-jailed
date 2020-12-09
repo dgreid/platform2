@@ -41,10 +41,6 @@ main() {
   # Enter a new network namespace.
   set -- "$@" -e
 
-  # Exit minijail after forking mount-passthrough. Upstart will expect this
-  # fork and track the mount-passthrough process directly.
-  set -- "$@" -i
-
   # Enter a new IPC namespace.
   set -- "$@" -l
 
