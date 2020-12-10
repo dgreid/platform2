@@ -50,7 +50,7 @@ constexpr uid_t kShellUgid = 657360;
 
 // The blob that is sent to FunctionFS to setup the adb gadget. This works for
 // newer kernels (>=3.18). This and the following blobs were created by
-// https://android.googlesource.com/platform/system/core/+/master/adb/daemon/usb.cpp
+// https://android.googlesource.com/platform/system/core/+/HEAD/adb/daemon/usb.cpp
 constexpr const uint8_t kControlPayloadV2[] = {
     0x03, 0x00, 0x00, 0x00, 0x90, 0x00, 0x00, 0x00, 0x0F, 0x00, 0x00, 0x00,
     0x03, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00,

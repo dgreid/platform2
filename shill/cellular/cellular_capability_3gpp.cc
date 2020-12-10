@@ -1683,7 +1683,7 @@ void CellularCapability3gpp::OnSignalQualityChanged(uint32_t quality) {
                 << "mm_reports_wideband_rssi : " << mm_reports_wideband_rssi_;
   if (mm_reports_wideband_rssi_) {
     // Reference from android:
-    // https://android.googlesource.com/platform/frameworks/base.git/+/master/telephony/java/android/telephony/CarrierConfigManager.java
+    // https://android.googlesource.com/platform/frameworks/base.git/+/HEAD/telephony/java/android/telephony/CarrierConfigManager.java
     // RSSI thresholds = Androids RSRP thresholds + 25dB (assuming no noise and
     // 5Mhz channel).
     // RSSI(dBm) -> UI bars mapping

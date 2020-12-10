@@ -92,7 +92,7 @@ def PopulateTypeDef(
     for attr in attrs:
       attr_name = attr
 
-      # https://github.com/google/gitiles/blob/master/Documentation/markdown.md#named-anchors
+      # https://github.com/google/gitiles/blob/HEAD/Documentation/markdown.md#named-anchors
       attr_anchor = ''
       for c in attr_name:
         if c.isalnum():

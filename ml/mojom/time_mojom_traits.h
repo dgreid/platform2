@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 // This file is copied and modified from,
-// https://chrome-internal.googlesource.com/chromeos/platform/drivefs/+/master/mojom/time_mojom_traits.h
+// https://chrome-internal.googlesource.com/chromeos/platform/drivefs/+/HEAD/mojom/time_mojom_traits.h
 
 #ifndef ML_MOJOM_TIME_MOJOM_TRAITS_H_
 #define ML_MOJOM_TIME_MOJOM_TRAITS_H_

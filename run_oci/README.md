@@ -8,7 +8,7 @@ the [OCI runtime spec](https://github.com/opencontainers/runtime-spec).
 ## Chrome OS extensions
 
 The OCI runtime spec allows implementations to add additional properties for
-[extensibility](https://github.com/opencontainers/runtime-spec/blob/master/config.md#extensibility).
+[extensibility](https://github.com/opencontainers/runtime-spec/blob/HEAD/config.md#extensibility).
 
 Chrome OS adds the following extensions:
 
@@ -25,7 +25,7 @@ the container's mount namespace is completely set up, but
 called, so bind mounts that cross the chroot boundary can still be performed.
 
 The
-[**`hooks`**](https://github.com/opencontainers/runtime-spec/blob/master/config.md#posix-platform-hooks)
+[**`hooks`**](https://github.com/opencontainers/runtime-spec/blob/HEAD/config.md#posix-platform-hooks)
 object has been extended to also contain the following:
 
 * **`precreate`**: *(array of objects, OPTIONAL)* - is an array of pre-create
@@ -34,7 +34,7 @@ object has been extended to also contain the following:
 
 * **`prechroot`**: *(array of objects, OPTIONAL)* - is an array of pre-chroot
   hooks. Entries in the array have the same schema as pre-start entries, and are
-  run in the outer namespace after all the entries in [**`mounts`**](https://github.com/opencontainers/runtime-spec/blob/master/config.md#mounts)
+  run in the outer namespace after all the entries in [**`mounts`**](https://github.com/opencontainers/runtime-spec/blob/HEAD/config.md#mounts)
   have been mounted, but before chroot(2) has been invoked.
 
 #### Example (Chrome OS)
@@ -59,7 +59,7 @@ object has been extended to also contain the following:
 ### Linux device node dynamic major/minor numbers
 
 Device nodes that have well-known major/minor numbers are normally added to the
-[**`devices`**](https://github.com/opencontainers/runtime-spec/blob/master/config-linux.md#devices)
+[**`devices`**](https://github.com/opencontainers/runtime-spec/blob/HEAD/config-linux.md#devices)
 array, whereas device nodes that have dynamic major/minor numbers are typically
 bind-mounted. Android running in Chrome OS needs to have device node files
 created in the container rather than bind-mounted, since Android expects the
@@ -110,7 +110,7 @@ not allow root to perform a remount since the user namespace associated with the
 namespace to be entered does not match the outer namespace.
 
 In order to overcome the above restriction, a new flag is added to objects in
-[**`mounts`**](https://github.com/opencontainers/runtime-spec/blob/master/config.md#mounts),
+[**`mounts`**](https://github.com/opencontainers/runtime-spec/blob/HEAD/config.md#mounts),
 that will cause `run_oci` to create an intermediate mount namespace that has the
 init user namespace associated with it. This way, privileged operations that
 require being in the init user namespace can still be carried out, and the
@@ -158,7 +158,7 @@ using [seccomp(2)](http://man7.org/linux/man-pages/man2/seccomp.2.html) BPF
 filters.
 
 The
-[**`linux`**](https://github.com/opencontainers/runtime-spec/blob/master/config-linux.md)
+[**`linux`**](https://github.com/opencontainers/runtime-spec/blob/HEAD/config-linux.md)
 object has been extended to also contain the following:
 
 * **`altSyscall`**: *(string, OPTIONAL)* - changes the system call table for the
@@ -186,7 +186,7 @@ the container.  Some containers might want to leave more securebits not set
 non-root user).
 
 The
-[**`linux`**](https://github.com/opencontainers/runtime-spec/blob/master/config-linux.md)
+[**`linux`**](https://github.com/opencontainers/runtime-spec/blob/HEAD/config-linux.md)
 object has been extended to also contain the following:
 
 * **`skipSecurebits`**: *(array of strings, OPTIONAL)* - adds additional securebits
@@ -213,7 +213,7 @@ default value for this is `18` (or `0022` in octal), but some containers need it
 to be `0`.
 
 The
-[**`process`**](https://github.com/opencontainers/runtime-spec/blob/master/config.md#posix-process)
+[**`process`**](https://github.com/opencontainers/runtime-spec/blob/HEAD/config.md#posix-process)
 object has been extended to also contain the following:
 
 * **`umask`**: *(uint32, OPTIONAL)* - sets the initial file mode creation mask

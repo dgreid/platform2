@@ -78,6 +78,6 @@ The FIDO Alliance specifications:
 
 [FIDO U2F HID Protocol Specification]: https://fidoalliance.org/specs/fido-u2f-v1.1-id-20160915/fido-u2f-hid-protocol-v1.1-id-20160915.html
 [FIDO U2F Raw Message Formats]: https://fidoalliance.org/specs/fido-u2f-v1.1-id-20160915/fido-u2f-raw-message-formats-v1.1-id-20160915.html
-[reference test programs]: https://github.com/fido-alliance/google-u2f-ref-code/blob/master/u2f-tests/
-[HIDTest]: https://github.com/fido-alliance/google-u2f-ref-code/blob/master/u2f-tests/HID/HIDTest.cc
-[U2FTest]: https://github.com/fido-alliance/google-u2f-ref-code/blob/master/u2f-tests/HID/U2FTest.cc
+[reference test programs]: https://github.com/fido-alliance/google-u2f-ref-code/blob/HEAD/u2f-tests/
+[HIDTest]: https://github.com/fido-alliance/google-u2f-ref-code/blob/HEAD/u2f-tests/HID/HIDTest.cc
+[U2FTest]: https://github.com/fido-alliance/google-u2f-ref-code/blob/HEAD/u2f-tests/HID/U2FTest.cc

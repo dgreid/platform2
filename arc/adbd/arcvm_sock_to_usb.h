@@ -12,12 +12,12 @@
 namespace adbd {
 
 // Reference:
-// https://android.googlesource.com/platform/system/core/+/refs/heads/master/adb/adb.h
+// https://android.googlesource.com/platform/system/core/+/HEAD/adb/adb.h
 // We take the bigger value of macro MAX_PAYLOAD from AOSP ADB code for the size
 // of the buffer to USB.
 constexpr size_t kAdbPayloadMaxSize = 1024 * 1024;
 // Reference:
-// https://android.googlesource.com/platform/system/core/+/refs/heads/master/adb/types.h
+// https://android.googlesource.com/platform/system/core/+/HEAD/adb/types.h
 // The offset is derived from the data_length field in struct amessage in
 // types.h.
 constexpr uint8_t kAmessageDataLenOffset = 12;

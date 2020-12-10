@@ -275,7 +275,7 @@ device files. They can only access the ones that are explcitly allowed in the
 
 The hooks used by `run_oci` follow the [Open Container Initiative spec for
 POSIX-platform
-Hooks](https://github.com/opencontainers/runtime-spec/blob/master/config.md#posix-platform-hooks),
+Hooks](https://github.com/opencontainers/runtime-spec/blob/HEAD/config.md#posix-platform-hooks),
 with a Chrome OS-specific extension that allows a hook to be installed after all
 the mounts have been processed, but prior to calling
 [`chroot(2)`](http://man7.org/linux/man-pages/man2/chroot.2.html).

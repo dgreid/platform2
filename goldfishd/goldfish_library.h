@@ -16,7 +16,7 @@ constexpr char kAutoLogin[] = "autologin=1";
 }  // namespace message
 
 // Get one message from goldfish pipe, the message format is defined
-// https://android.googlesource.com/platform/external/qemu/+/master/docs/ANDROID-QEMUD.TXT#158
+// https://android.googlesource.com/platform/external/qemu/+/HEAD/docs/ANDROID-QEMUD.TXT#158
 bool ReadOneMessage(int fd, std::string* message_out);
 
 }  //  namespace goldfishd

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 // This file is copied and modified from,
-// https://chrome-internal.googlesource.com/chromeos/platform/drivefs/+/master/mojom/type_mappings.json
+// https://chrome-internal.googlesource.com/chromeos/platform/drivefs/+/HEAD/mojom/type_mappings.json
 
 {
   "c++": {

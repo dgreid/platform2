@@ -822,7 +822,7 @@ bool GetOciContainerState(const base::FilePath& path,
                           pid_t* out_container_pid,
                           base::FilePath* out_rootfs) {
   // Read the OCI container state from |path|. Its format is documented in
-  // https://github.com/opencontainers/runtime-spec/blob/master/runtime.md#state
+  // https://github.com/opencontainers/runtime-spec/blob/HEAD/runtime.md#state
   std::string json_str;
   if (!base::ReadFileToString(path, &json_str)) {
     PLOG(ERROR) << "Failed to read json string from " << path.value();

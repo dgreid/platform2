@@ -135,7 +135,7 @@ class DpslRpcServerImplBaseDeathTest : public DpslRpcServerImplBaseTest {
   DpslRpcServerImplBaseDeathTest() {
     // Using EXPECT_DEATH, gtest creates child process, which re-executes the
     // unit test binary just as it was originally invoked.
-    // https://github.com/google/googletest/blob/master/googletest/docs/advanced.md#how-it-works
+    // https://github.com/google/googletest/blob/HEAD/googletest/docs/advanced.md#how-it-works
     //
     // Otherwise, EXPECT_DEATH statement will be called in forked child
     // immediately. It means that at least

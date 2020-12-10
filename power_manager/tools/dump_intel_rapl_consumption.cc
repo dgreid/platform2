@@ -16,7 +16,7 @@
 // [1]
 // https://www.intel.com/content/www/us/en/architecture-and-technology/64-ia-32-architectures-software-developer-vol-3b-part-2-manual.html
 // [2]
-// https://github.com/torvalds/linux/blob/master/Documentation/power/powercap/powercap.rst
+// https://github.com/torvalds/linux/blob/HEAD/Documentation/power/powercap/powercap.rst
 
 #include <inttypes.h>
 #include <math.h>

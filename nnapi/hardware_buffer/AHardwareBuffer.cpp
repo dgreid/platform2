@@ -5,7 +5,7 @@
 // An implementation of the subset of hardware buffers functionality required by
 // NNAPI. The upstream implementation of hardware buffers can be found in the
 // AOSP source file frameworks/native/libs/nativewindow/AHardwareBuffer.cpp. See
-// https://android.googlesource.com/platform/frameworks/native/+/refs/heads/master/libs/nativewindow/AHardwareBuffer.cpp
+// https://android.googlesource.com/platform/frameworks/native/+/HEAD/libs/nativewindow/AHardwareBuffer.cpp
 
 // Unused functions are left without any implementations. Should a future
 // version of NNAPI need a new function, we will be notified through a link

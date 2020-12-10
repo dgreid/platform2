@@ -76,7 +76,7 @@ class MockPolicyService : public PolicyService {
 
     // Proxy to HandleInternal() to support a passed-by-value move-only-type
     // param. See also
-    // https://github.com/google/googlemock/blob/master/googlemock/docs/CookBook.md#mocking-methods-that-use-move-only-types
+    // https://github.com/google/googlemock/blob/HEAD/googlemock/docs/CookBook.md#mocking-methods-that-use-move-only-types
     void HandleError(brillo::ErrorPtr error) {
       HandleErrorInternal(error.get());
     }

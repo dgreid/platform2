@@ -171,6 +171,6 @@ device requests. See [this documentation][version-control-oob].
 
 
 [add-component-doc]: https://g3doc.corp.google.com/company/teams/chrome/component_updater.md#adding-new-components
-[omaha-protocol]: https://github.com/google/omaha/blob/master/doc/ServerProtocolV3.md
+[omaha-protocol]: https://github.com/google/omaha/blob/HEAD/doc/ServerProtocolV3.md
 [version-control-oob]: https://docs.google.com/document/d/11erwhc0Ppul4SPXE7DtvW9wz-0CQmKK4b9dFTloByos
 [Upload files to a remote storage]: #Upload-files-to-a-remote-storage

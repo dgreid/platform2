@@ -36,7 +36,7 @@ constexpr char kManagedPackageIdSuffix[] = ";google-stable-main";
 
 // Constants for the PackageKit D-Bus service.
 // See:
-// https://github.com/hughsie/PackageKit/blob/master/src/org.freedesktop.PackageKit.Transaction.xml
+// https://github.com/hughsie/PackageKit/blob/HEAD/src/org.freedesktop.PackageKit.Transaction.xml
 constexpr char kPackageKitInterface[] = "org.freedesktop.PackageKit";
 constexpr char kPackageKitServicePath[] = "/org/freedesktop/PackageKit";
 constexpr char kPackageKitServiceName[] = "org.freedesktop.PackageKit";

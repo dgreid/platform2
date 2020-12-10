@@ -64,7 +64,7 @@ class MockCrosFpBiometricsManager : public CrosFpBiometricsManager {
   MOCK_METHOD(void, OnMaintenanceTimerFired, (), (override));
 
   // Delegate to the real implementation in the base class:
-  // https://github.com/google/googletest/blob/master/googlemock/docs/cook_book.md#delegating-calls-to-a-parent-class
+  // https://github.com/google/googletest/blob/HEAD/googlemock/docs/cook_book.md#delegating-calls-to-a-parent-class
   void OnMaintenanceTimerFiredDelegate() {
     CrosFpBiometricsManager::OnMaintenanceTimerFired();
   }

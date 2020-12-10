@@ -261,7 +261,7 @@ non-use by proactively shutting down.
 [sleep states]: https://www.kernel.org/doc/Documentation/power/states.txt
 [power/wakeup]: https://www.kernel.org/doc/Documentation/ABI/testing/sysfs-devices-power
 [per device wakeup count]: https://www.kernel.org/doc/Documentation/ABI/testing/sysfs-devices-power
-[i8042 driver]: https://github.com/torvalds/linux/blob/master/drivers/input/serio/i8042.c#L577
+[i8042 driver]: https://github.com/torvalds/linux/blob/HEAD/drivers/input/serio/i8042.c#L577
 [cros\_ec\_keyb.c]: https://chromium.googlesource.com/chromiumos/third_party/kernel/+/chromeos-4.4/drivers/input/keyboard/cros_ec_keyb.c#278
 [input devices that powerd polls]: https://chromium.googlesource.com/chromiumos/platform2/+/HEAD/power_manager/powerd/system/input_watcher.cc#394
 [`HandleUserActivity`]: https://chromium.googlesource.com/chromiumos/platform2/+/HEAD/power_manager/dbus_bindings/org.chromium.PowerManager.xml#61

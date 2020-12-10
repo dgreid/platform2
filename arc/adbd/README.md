@@ -5,7 +5,7 @@ hardware / kernel support to be able to use ADB over USB. This avoids exposing
 ConfigFS into the container.
 
 See
-https://android.googlesource.com/platform/system/core/+/master/adb/daemon/usb.cpp
+https://android.googlesource.com/platform/system/core/+/HEAD/adb/daemon/usb.cpp
 for more information.
 
 ## Configuration

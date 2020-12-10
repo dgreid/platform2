@@ -4,7 +4,7 @@
 
 We test shill using unit tests and integration tests. The unit tests are built
 using [Google Test](https://github.com/google/googletest) and [Google
-Mock](https://github.com/google/googletest/tree/master/googlemock). The
+Mock](https://github.com/google/googletest/tree/HEAD/googlemock). The
 integration tests use [Tast] and [Autotest].
 
 ### Running unit tests for Chrome OS

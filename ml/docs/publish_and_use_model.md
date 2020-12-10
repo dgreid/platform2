@@ -403,10 +403,10 @@ MachineLearningService.**MetricModelName**.LoadModelResult.TotalMemoryDeltaKb
 [model.mojom]: https://cs.corp.google.com/chromeos_public/src/platform2/ml/mojom/model.mojom
 [model_metadata.cc]: https://chromium.googlesource.com/chromiumos/platform2/+/HEAD/ml/model_metadata.cc
 [pretty_print.py]: https://cs.chromium.org/chromium/src/tools/metrics/histograms/pretty_print.py?sq=package:chromium&dr&g=0
-[toco]: https://github.com/tensorflow/tensorflow/tree/master/tensorflow/lite/toco
+[toco]: https://github.com/tensorflow/tensorflow/tree/HEAD/tensorflow/lite/toco
 [validate_format.py]: https://cs.chromium.org/chromium/src/tools/metrics/histograms/validate_format.py?sq=package:chromium&dr&g=0
-[ml-service-client-library]: https://source.chromium.org/chromium/chromium/src/+/master:chromeos/services/machine_learning/public/cpp/service_connection.h
-[example-load-buitin-model]: https://source.chromium.org/chromium/chromium/src/+/master:chrome/browser/chromeos/power/ml/smart_dim/builtin_worker.cc;l=92
-[example-load-flatbuffer-model]: https://source.chromium.org/chromium/chromium/src/+/master:chrome/browser/chromeos/power/ml/smart_dim/download_worker.cc;l=93
+[ml-service-client-library]: https://source.chromium.org/chromium/chromium/src/+/HEAD:chromeos/services/machine_learning/public/cpp/service_connection.h
+[example-load-buitin-model]: https://source.chromium.org/chromium/chromium/src/+/HEAD:chrome/browser/chromeos/power/ml/smart_dim/builtin_worker.cc;l=92
+[example-load-flatbuffer-model]: https://source.chromium.org/chromium/chromium/src/+/HEAD:chrome/browser/chromeos/power/ml/smart_dim/download_worker.cc;l=93
 [version-control-doc]: http://doc/11erwhc0Ppul4SPXE7DtvW9wz-0CQmKK4b9dFTloByos#heading=h.urp1fskeo868
 [cs-component-installer-policy]: https://source.chromium.org/search?q=%22public%20ComponentInstallerPolicy%22

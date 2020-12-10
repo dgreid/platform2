@@ -93,7 +93,7 @@ struct BuildPipelineContextInputParams {
    * size could only be one of only be 1, 2, 5, or 10.
    *
    * See static_android.control.availableHighSpeedVideoConfigurations under
-   * https://android.googlesource.com/platform/system/media/+/master/camera/docs/docs.html
+   * https://android.googlesource.com/platform/system/media/+/HEAD/camera/docs/docs.html
    */
   uint32_t batchSize = 0;
 
