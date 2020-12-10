@@ -38,6 +38,8 @@ static_library("libmlbenchmark") {
     "benchmark_functions.h",
     "json_serializer.cc",
     "json_serializer.h",
+    "memory_sampler.cc",
+    "memory_sampler.h",
     "shared_library_benchmark.cc",
     "shared_library_benchmark.h",
     "shared_library_benchmark_functions.cc",
@@ -64,6 +66,7 @@ if (use.test) {
   executable("ml_benchmark_test") {
     sources = [
       "json_serializer_test.cc",
+      "memory_sampler_test.cc",
       "shared_library_benchmark_test.cc",
       "sysmetrics_test.cc",
     ]

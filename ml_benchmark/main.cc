@@ -6,12 +6,14 @@
 #include <base/files/file_util.h>
 #include <base/json/json_writer.h>
 #include <base/logging.h>
+#include <base/task/thread_pool/thread_pool_instance.h>
 #include <base/values.h>
 #include <brillo/flag_helper.h>
 
 #include <string>
 
 #include "ml_benchmark/json_serializer.h"
+#include "ml_benchmark/memory_sampler.h"
 #include "ml_benchmark/shared_library_benchmark.h"
 #include "ml_benchmark/shared_library_benchmark_functions.h"
 #include "ml_benchmark/sysmetrics.h"
@@ -20,27 +22,21 @@ using chrome::ml_benchmark::AccelerationMode;
 using chrome::ml_benchmark::BenchmarkResults;
 using chrome::ml_benchmark::CrOSBenchmarkConfig;
 using chrome::ml_benchmark::Metric;
+using ml_benchmark::PeakMemorySampler;
 using ml_benchmark::SharedLibraryBenchmark;
 using ml_benchmark::SharedLibraryBenchmarkFunctions;
 
 namespace {
 
-void AddMemoryMetrics(const int64_t initial_memsize,
-                      const int64_t final_peaksize,
-                      BenchmarkResults* results) {
-  auto& initial_mem = *results->add_metrics();
-  initial_mem.set_name("initial_vmsize");
-  initial_mem.set_units(Metric::BYTES);
-  initial_mem.set_direction(Metric::SMALLER_IS_BETTER);
-  initial_mem.set_cardinality(Metric::SINGLE);
-  initial_mem.add_values(initial_memsize);
-
-  auto& final_mem = *results->add_metrics();
-  final_mem.set_name("final_vmpeak");
-  final_mem.set_units(Metric::BYTES);
-  final_mem.set_direction(Metric::SMALLER_IS_BETTER);
-  final_mem.set_cardinality(Metric::SINGLE);
-  final_mem.add_values(final_peaksize);
+void AddMemoryMetric(const std::string& metric_name,
+                     const int64_t value,
+                     BenchmarkResults* results) {
+  auto& metric = *results->add_metrics();
+  metric.set_name(metric_name);
+  metric.set_units(Metric::BYTES);
+  metric.set_direction(Metric::SMALLER_IS_BETTER);
+  metric.set_cardinality(Metric::SINGLE);
+  metric.add_values(value);
 }
 
 void PrintMetrics(const BenchmarkResults& results) {
@@ -73,6 +69,10 @@ void BenchmarkAndReportResults(
   }
 
   const int64_t initial_memsize = ml_benchmark::GetVMSizeBytes();
+  const int64_t initial_rss_swap = ml_benchmark::GetSwapAndRSSBytes();
+
+  scoped_refptr<PeakMemorySampler> mem_sampler = new PeakMemorySampler();
+  PeakMemorySampler::StartSampling(mem_sampler);
 
   LOG(INFO) << "Starting the " << driver_name << " benchmark";
   SharedLibraryBenchmark benchmark(std::move(functions));
@@ -83,11 +83,18 @@ void BenchmarkAndReportResults(
     return;
   }
 
+  PeakMemorySampler::StopSampling(mem_sampler);
+
   if (results.status() == chrome::ml_benchmark::OK) {
     LOG(INFO) << driver_name << " finished";
 
-    const int64_t final_peaksize = ml_benchmark::GetVMPeakBytes();
-    AddMemoryMetrics(initial_memsize, final_peaksize, &results);
+    const int64_t final_vmpeaksize = ml_benchmark::GetVMPeakBytes();
+    const int64_t peak_rss_swap = mem_sampler->GetMaxSample();
+
+    AddMemoryMetric("initial_vmsize", initial_memsize, &results);
+    AddMemoryMetric("final_vmpeak", final_vmpeaksize, &results);
+    AddMemoryMetric("initial_rss_swap", initial_rss_swap, &results);
+    AddMemoryMetric("peak_rss_swap", peak_rss_swap, &results);
 
     PrintMetrics(results);
 
@@ -135,8 +142,9 @@ int main(int argc, char* argv[]) {
     }
   }
 
-  base::FilePath driver_library(FLAGS_driver_library_path);
+  base::ThreadPoolInstance::CreateAndStartWithDefaultParams("ml_benchmark");
 
+  base::FilePath driver_library(FLAGS_driver_library_path);
   BenchmarkAndReportResults(FLAGS_driver_library_path, driver_library,
                             benchmark_config, output_file_path);
 
