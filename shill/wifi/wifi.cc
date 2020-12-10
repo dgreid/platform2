@@ -1890,6 +1890,7 @@ void WiFi::StateChanged(const string& new_state) {
         if (ipconfig()) {
           LOG(INFO) << link_name() << " renewing L3 configuration after roam.";
           ipconfig()->RenewIP();
+          affected_service->SetRoamState(Service::kRoamStateConfiguring);
         }
       } else if (is_rekey_in_progress_) {
         is_rekey_in_progress_ = false;
@@ -1930,14 +1931,20 @@ void WiFi::StateChanged(const string& new_state) {
       // messages, but we know at this point that 802.11 association succeeded
       supplicant_assoc_status_ = IEEE_80211::kStatusCodeSuccessful;
     }
-    // Ignore transitions into these states when roaming is in progress, to
-    // avoid bothering the user when roaming, or re-keying.
-    if (!is_roaming_in_progress_ && !is_rekey_in_progress_) {
-      // Shill gets EAP events when a re-key happens in an 802.1X network, but
-      // nothing when it happens in a PSK network. Unless roaming is in
-      // progress, we assume supplicant state transitions from completed to an
-      // auth/assoc state are a result of a re-key.
+
+    if (is_roaming_in_progress_) {
+      // Instead of transitioning into the associating state and potentially
+      // reordering the service list, set the roam state to keep track of the
+      // actual state.
+      affected_service->SetRoamState(Service::kRoamStateAssociating);
+    } else if (!is_rekey_in_progress_) {
+      // Ignore transitions into these states when roaming is in progress, to
+      // avoid bothering the user when roaming, or re-keying.
       if (old_state == WPASupplicant::kInterfaceStateCompleted) {
+        // Shill gets EAP events when a re-key happens in an 802.1X network, but
+        // nothing when it happens in a PSK network. Unless roaming is in
+        // progress, we assume supplicant state transitions from completed to an
+        // auth/assoc state are a result of a re-key.
         is_rekey_in_progress_ = true;
       } else {
         affected_service->SetState(Service::kStateAssociating);

@@ -162,6 +162,18 @@ class Service : public base::RefCounted<Service> {
     // In the process of disconnecting.
     kStateDisconnecting
   };
+
+  enum RoamState {
+    // Service is not roaming.
+    kRoamStateIdle,
+    // Service has begun within-ESS reassociation.
+    kRoamStateAssociating,
+    // IP renewal after reassociation.
+    kRoamStateConfiguring,
+    // Successfully reassociated and renewed IP.
+    kRoamStateConnected,
+  };
+
   enum CryptoAlgorithm { kCryptoNone, kCryptoRc4, kCryptoAes };
 
   enum UpdateCredentialsReason {
@@ -218,6 +230,10 @@ class Service : public base::RefCounted<Service> {
   // clears |failure_| if the new state isn't a failure.
   virtual void SetState(ConnectState state);
   std::string GetStateString() const;
+
+  // Implemented by WiFiService to set the roam state. Other types of services
+  // may call this as a result of DHCP renewal, but it's ignored.
+  virtual void SetRoamState(RoamState roam_state) {}
 
   // Set probe URL hint. This function is called when a redirect URL is found
   // during portal detection.

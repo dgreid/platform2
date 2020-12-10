@@ -217,6 +217,7 @@ const char kWifiFrequency[] = "WiFi.Frequency";
 const char kWifiHexSsid[] = "WiFi.HexSSID";
 const char kWifiHiddenSsid[] = "WiFi.HiddenSSID";
 const char kWifiPhyMode[] = "WiFi.PhyMode";
+const char kWifiRoamStateProperty[] = "RoamState";
 const char kWifiVendorInformationProperty[] = "WiFi.VendorInformation";
 
 // Base VPN Service property names.
@@ -415,6 +416,12 @@ const char kStateOnline[] = "online";
 const char kStateDisconnect[] = "disconnecting";
 const char kStateFailure[] = "failure";
 const char kStateActivationFailure[] = "activation-failure";
+
+// Shill WiFi roam state options.
+const char kRoamStateIdle[] = "idle";
+const char kRoamStateAssociation[] = "association";
+const char kRoamStateConfiguration[] = "configuration";
+const char kRoamStateReady[] = "ready";
 
 // Flimflam portal phase and status.
 const char kPortalDetectionPhaseConnection[] = "Connection";

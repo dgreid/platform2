@@ -1008,6 +1008,14 @@ TEST_F(WiFiServiceTest, ConfigureRedundantProperties) {
   EXPECT_EQ(kGUID, service->guid());
 }
 
+TEST_F(WiFiServiceTest, SetRoamState) {
+  WiFiServiceRefPtr service = MakeServiceWithWiFi(kSecurityNone);
+  service->SetRoamState(Service::kRoamStateConnected);
+  EXPECT_EQ(Service::kRoamStateConnected, service->roam_state());
+  service->SetState(Service::kStateConnected);
+  EXPECT_EQ(Service::kRoamStateIdle, service->roam_state());
+}
+
 TEST_F(WiFiServiceTest, DisconnectWithWiFi) {
   WiFiServiceRefPtr service = MakeServiceWithWiFi(kSecurityWep);
   // An inactive Service will not have OnDisconnected triggered.

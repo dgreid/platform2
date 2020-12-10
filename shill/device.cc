@@ -1060,8 +1060,16 @@ void Device::SetupConnection(const IPConfigRefPtr& ipconfig) {
     // from Connected->Online->Connected because that can affect the service
     // sort order.  In this case, perform portal detection "optimistically"
     // in the Online state, and transition from Online->Portal if it fails.
-    if (!selected_service_->IsOnline())
+    if (!selected_service_->IsOnline()) {
+      // Setting Service.State to Connected resets RoamState.
       SetServiceState(Service::kStateConnected);
+    } else {
+      // We set the roam state here since Service.State is kept at Online to
+      // preserve the service sort order. Note that this can be triggered by a
+      // DHCP renewal that's not a result of a roam as well, but it won't do
+      // anything in non-WiFi Services.
+      selected_service_->SetRoamState(Service::kRoamStateConnected);
+    }
     OnConnected();
 
     // Subtle: Start portal detection after transitioning the service

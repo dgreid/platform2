@@ -82,7 +82,8 @@ WiFiService::WiFiService(Manager* manager,
       ssid_(ssid),
       expecting_disconnect_(false),
       certificate_file_(new CertificateFile()),
-      provider_(provider) {
+      provider_(provider),
+      roam_state_(kRoamStateIdle) {
   // Must be constructed with a SecurityClass. We only detect (for internal and
   // informational purposes) the specific mode in use later.
   CHECK(IsValidSecurityClass(security_)) << base::StringPrintf(
@@ -108,6 +109,8 @@ WiFiService::WiFiService(Manager* manager,
   store->RegisterConstString(kCountryProperty, &country_code_);
   store->RegisterConstStringmap(kWifiVendorInformationProperty,
                                 &vendor_information_);
+  HelpRegisterConstDerivedString(kWifiRoamStateProperty,
+                                 &WiFiService::CalculateRoamState);
 
   hex_ssid_ = base::HexEncode(ssid_.data(), ssid_.size());
   store->RegisterConstString(kWifiHexSsid, &hex_ssid_);
@@ -426,6 +429,7 @@ bool WiFiService::Unload() {
 
 void WiFiService::SetState(ConnectState state) {
   Service::SetState(state);
+  SetRoamState(Service::kRoamStateIdle);
   NotifyIfVisibilityChanged();
 }
 
@@ -1153,6 +1157,33 @@ void WiFiService::SetWiFi(const WiFiRefPtr& new_wifi) {
         kDeviceProperty, control_interface()->NullRpcIdentifier());
   }
   wifi_ = new_wifi;
+}
+
+string WiFiService::CalculateRoamState(Error* /*error*/) {
+  return GetRoamStateString();
+}
+
+void WiFiService::SetRoamState(RoamState roam_state) {
+  if (roam_state == roam_state_) {
+    return;
+  }
+  roam_state_ = roam_state;
+  adaptor()->EmitStringChanged(kWifiRoamStateProperty, GetRoamStateString());
+}
+
+string WiFiService::GetRoamStateString() const {
+  switch (roam_state_) {
+    case Service::kRoamStateIdle:
+      return shill::kRoamStateIdle;
+    case Service::kRoamStateAssociating:
+      return shill::kRoamStateAssociation;
+    case Service::kRoamStateConfiguring:
+      return shill::kRoamStateConfiguration;
+    case Service::kRoamStateConnected:
+      return shill::kRoamStateReady;
+    default:
+      return "";
+  }
 }
 
 }  // namespace shill

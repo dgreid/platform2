@@ -98,8 +98,15 @@ class WiFiService : public Service {
   bool Unload() override;
 
   // Override SetState from parent Service class.  We will call the
-  // parent method.
+  // parent method. We also reset roam_state_ here since a state change
+  // means we are no longer roaming.
   void SetState(ConnectState state) override;
+
+  // Updates |roam_state_|.
+  void SetRoamState(RoamState state) override;
+  RoamState roam_state() const { return roam_state_; }
+  std::string GetRoamStateString() const;
+  std::string CalculateRoamState(Error* error);
 
   virtual bool HasEndpoints() const { return !endpoints_.empty(); }
   bool IsVisible() const override;
@@ -345,6 +352,10 @@ class WiFiService : public Service {
   // the WiFiProvider and are guaranteed to be deallocated by the time
   // the WiFiProvider is.
   WiFiProvider* provider_;
+  // The State property will remain Online during a roam or DHCP renewal to
+  // preserve the service sort order. |roam_state_| is valid during this process
+  // (while the Service is Online but reassociation is happening) only.
+  RoamState roam_state_;
 };
 
 }  // namespace shill

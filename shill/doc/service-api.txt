@@ -1757,6 +1757,26 @@ Properties	string ArcVpn.TunnelChrome [writeonly]
 			See also the Name property. (Note that there is
 			no SSID property for reasons explained above.)
 
+		string WiFi.RoamState [readonly]
+
+			The state of the service during a within-ESS roam. The
+			normal State property remains Online during a roam, to
+			prevent any reordering of Services but it's still
+			useful to know the actual state the Service is in.
+			RoamState can be one of:
+
+			"idle"		The service is not roaming.
+
+			"association"	The service is currently reassociating
+					with another AP in the same network.
+
+			"configuration"	The reassociation is complete and the
+					IP configuration is being renewed.
+
+			"ready"		IP has been renewed, and the service
+					is awaiting portal detection results.
+
+
 		string WiFi.SSID [readonly]
 
 			(WiFi only) The service's SSID. Must have a non-zero

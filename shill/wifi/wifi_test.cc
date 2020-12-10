@@ -2285,6 +2285,29 @@ TEST_F(WiFiMainTest, StateChangeBackwardsWithService) {
   EXPECT_CALL(*service, SetState(_)).Times(AnyNumber());
 }
 
+TEST_F(WiFiMainTest, RoamStateChange) {
+  // Forward transition should trigger a Service state change.
+  StartWiFi();
+  event_dispatcher_->DispatchPendingEvents();
+  MockWiFiServiceRefPtr service = MakeMockService(kSecurityNone);
+  InitiateConnect(service);
+  ReportStateChanged(WPASupplicant::kInterfaceStateCompleted);
+  SetIsRoamingInProgress(true);
+  EXPECT_CALL(*service, SetState(_)).Times(0);
+  EXPECT_EQ(Service::kRoamStateIdle, service->roam_state());
+  ReportStateChanged(WPASupplicant::kInterfaceStateAuthenticating);
+  EXPECT_EQ(Service::kRoamStateAssociating, service->roam_state());
+  ReportStateChanged(WPASupplicant::kInterfaceStateAssociating);
+  EXPECT_EQ(Service::kRoamStateAssociating, service->roam_state());
+  EXPECT_CALL(*service, IsConnected(nullptr)).WillOnce(Return(true));
+  ReportStateChanged(WPASupplicant::kInterfaceStateCompleted);
+  EXPECT_EQ(Service::kRoamStateConfiguring, service->roam_state());
+  // Verify expectations now, because WiFi may report other state changes
+  // when WiFi is Stop()-ed (during TearDown()).
+  Mock::VerifyAndClearExpectations(service.get());
+  EXPECT_CALL(*service, SetState(_)).Times(AnyNumber());
+}
+
 TEST_F(WiFiMainTest, ConnectToServiceWithoutRecentIssues) {
   StartWiFi();
   event_dispatcher_->DispatchPendingEvents();
