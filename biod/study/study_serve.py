@@ -324,25 +324,32 @@ def main(argv: list):
     cherrypy.config.update({'server.socket_port': args.port})
 
     # Configure logging
-    logger_cherrypy_access = logging.getLogger('cherrypy.access')
-    logger_cherrypy_access.setLevel(logging.DEBUG)
-    logger_cherrypy_error = logging.getLogger('cherrypy.error')
-    logger_cherrypy_error.setLevel(logging.DEBUG)
+    cherrypy.config.update({'log.screen': False})
+
+    loggers = []
+    l = logging.getLogger('cherrypy.access')
+    l.setLevel(logging.DEBUG)
+    loggers.append(l)
+    l = logging.getLogger('cherrypy.error')
+    l.setLevel(logging.DEBUG)
+    loggers.append(l)
 
     if args.log_dir:
         log_name = 'server-%s.log' % (datetime.now().strftime('%Y%m%d_%H%M%S'))
         h = logging.handlers.RotatingFileHandler(
             filename=os.path.join(args.log_dir, log_name))
-        logger_cherrypy_access.addHandler(h)
-        logger_cherrypy_error.addHandler(h)
-        cherrypy.config.update({'log.screen': False})
+        for l in loggers:
+            l.addHandler(h)
     if args.syslog:
         h = logging.handlers.SysLogHandler(
             address='/dev/log',
             facility=logging.handlers.SysLogHandler.LOG_LOCAL1)
-        logger_cherrypy_access.addHandler(h)
-        logger_cherrypy_error.addHandler(h)
-        cherrypy.config.update({'log.screen': False})
+        for l in loggers:
+            l.addHandler(h)
+    if not args.log_dir and not args.syslog:
+        h = logging.StreamHandler()
+        for l in loggers:
+            l.addHandler(h)
 
     WebSocketPlugin(cherrypy.engine).subscribe()
     cherrypy.tools.websocket = WebSocketTool()
