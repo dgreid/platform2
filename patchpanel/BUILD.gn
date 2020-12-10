@@ -33,6 +33,7 @@ pkg_config("target_defaults") {
     "protobuf-lite",
     "re2",
     "system_api",
+    "vboot_host",
   ]
   if (use.fuzzer) {
     pkg_deps += [ "protobuf" ]

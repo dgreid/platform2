@@ -19,7 +19,12 @@
 #include <base/logging.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/stringprintf.h>
+#include <base/threading/thread_task_runner_handle.h>
 #include <brillo/key_value_store.h>
+#include <chromeos/dbus/service_constants.h>
+#include <dbus/message.h>
+#include <dbus/object_path.h>
+#include <vboot/crossystem.h>
 
 #include "patchpanel/manager.h"
 #include "patchpanel/minijailed_process_runner.h"
@@ -34,9 +39,18 @@ constexpr uint32_t kVsockPort = 5555;
 constexpr int kMaxConn = 16;
 // Reference: "device/google/cheets2/init.usb.rc".
 constexpr char kUnixConnectAddr[] = "/run/arc/adb/adb.sock";
+constexpr int kDbusTimeoutMs = 200;
+// The maximum number of ADB sideloading query failures before stopping.
+constexpr int kAdbSideloadMaxTry = 5;
+constexpr base::TimeDelta kAdbSideloadUpdateDelay =
+    base::TimeDelta::FromMilliseconds(5000);
 
 const std::set<GuestMessage::GuestType> kArcGuestTypes{GuestMessage::ARC,
                                                        GuestMessage::ARC_VM};
+
+bool IsDevModeEnabled() {
+  return VbGetSystemPropertyInt("cros_debug") == 1;
+}
 }  // namespace
 
 AdbProxy::AdbProxy(base::ScopedFD control_fd)
@@ -59,7 +73,19 @@ int AdbProxy::OnInit() {
     return EX_OSERR;
   }
   EnterChildProcessJail();
-  return Daemon::OnInit();
+  // Run after DBusDaemon::OnInit().
+  base::ThreadTaskRunnerHandle::Get()->PostTask(
+      FROM_HERE,
+      base::Bind(&AdbProxy::InitialSetup, weak_factory_.GetWeakPtr()));
+  return DBusDaemon::OnInit();
+}
+
+void AdbProxy::InitialSetup() {
+  dev_mode_enabled_ = IsDevModeEnabled();
+  if (dev_mode_enabled_) {
+    return;
+  }
+  CheckAdbSideloadingStatus(0 /*num_try*/);
 }
 
 void AdbProxy::Reset() {
@@ -153,47 +179,100 @@ void AdbProxy::OnGuestMessage(const GuestMessage& msg) {
     return;
   }
 
+  // On ARC down, cull any open connections and stop listening.
+  if (msg.event() == GuestMessage::STOP) {
+    Reset();
+    return;
+  }
+
   arc_type_ = msg.type();
   arcvm_vsock_cid_ = msg.arcvm_vsock_cid();
 
   // On ARC up, start accepting connections.
   if (msg.event() == GuestMessage::START) {
-    // Listen on IPv4 and IPv6. Listening on AF_INET explicitly is not needed
-    // because net.ipv6.bindv6only sysctl is defaulted to 0 and is not
-    // explicitly turned on in the codebase.
-    src_ = std::make_unique<Socket>(AF_INET6, SOCK_STREAM | SOCK_NONBLOCK);
-    // Need to set this to reuse the port.
-    int on = 1;
-    if (setsockopt(src_->fd(), SOL_SOCKET, SO_REUSEADDR, &on, sizeof(int)) <
-        0) {
-      PLOG(ERROR) << "setsockopt(SO_REUSEADDR) failed";
-      return;
-    }
-    struct sockaddr_in6 addr = {0};
-    addr.sin6_family = AF_INET6;
-    addr.sin6_port = htons(kAdbProxyTcpListenPort);
-    addr.sin6_addr = in6addr_any;
-    if (!src_->Bind((const struct sockaddr*)&addr, sizeof(addr))) {
-      LOG(ERROR) << "Cannot bind source socket to " << addr;
-      return;
-    }
+    Listen();
+  }
+}
 
-    if (!src_->Listen(kMaxConn)) {
-      LOG(ERROR) << "Cannot listen on " << addr;
-      return;
-    }
-
-    // Run the accept loop.
-    LOG(INFO) << "Accepting connections on " << addr;
-    src_watcher_ = base::FileDescriptorWatcher::WatchReadable(
-        src_->fd(), base::BindRepeating(&AdbProxy::OnFileCanReadWithoutBlocking,
-                                        base::Unretained(this)));
+void AdbProxy::Listen() {
+  // Only start listening on either developer mode or sideloading on.
+  if (!dev_mode_enabled_ && !adb_sideloading_enabled_) {
+    return;
+  }
+  // ADB proxy is already listening.
+  if (src_) {
+    return;
+  }
+  // Listen on IPv4 and IPv6. Listening on AF_INET explicitly is not needed
+  // because net.ipv6.bindv6only sysctl is defaulted to 0 and is not
+  // explicitly turned on in the codebase.
+  std::unique_ptr<Socket> src =
+      std::make_unique<Socket>(AF_INET6, SOCK_STREAM | SOCK_NONBLOCK);
+  // Need to set this to reuse the port.
+  int on = 1;
+  if (setsockopt(src->fd(), SOL_SOCKET, SO_REUSEADDR, &on, sizeof(int)) < 0) {
+    PLOG(ERROR) << "setsockopt(SO_REUSEADDR) failed";
+    return;
+  }
+  struct sockaddr_in6 addr = {0};
+  addr.sin6_family = AF_INET6;
+  addr.sin6_port = htons(kAdbProxyTcpListenPort);
+  addr.sin6_addr = in6addr_any;
+  if (!src->Bind((const struct sockaddr*)&addr, sizeof(addr))) {
+    LOG(ERROR) << "Cannot bind source socket to " << addr;
     return;
   }
 
-  // On ARC down, cull any open connections and stop listening.
-  if (msg.event() == GuestMessage::STOP) {
-    Reset();
+  if (!src->Listen(kMaxConn)) {
+    LOG(ERROR) << "Cannot listen on " << addr;
+    return;
+  }
+
+  src_ = std::move(src);
+
+  // Run the accept loop.
+  LOG(INFO) << "Accepting connections on " << addr;
+  src_watcher_ = base::FileDescriptorWatcher::WatchReadable(
+      src_->fd(), base::BindRepeating(&AdbProxy::OnFileCanReadWithoutBlocking,
+                                      base::Unretained(this)));
+  return;
+}
+
+void AdbProxy::CheckAdbSideloadingStatus(int num_try) {
+  if (num_try >= kAdbSideloadMaxTry) {
+    LOG(WARNING) << "Failed to get ADB sideloading status after " << num_try
+                 << " tries. ADB sideloading will not work";
+    return;
+  }
+
+  dbus::ObjectProxy* proxy = bus_->GetObjectProxy(
+      login_manager::kSessionManagerServiceName,
+      dbus::ObjectPath(login_manager::kSessionManagerServicePath));
+  dbus::MethodCall method_call(login_manager::kSessionManagerInterface,
+                               login_manager::kSessionManagerQueryAdbSideload);
+  std::unique_ptr<dbus::Response> dbus_response =
+      proxy->CallMethodAndBlock(&method_call, kDbusTimeoutMs);
+
+  if (!dbus_response) {
+    base::ThreadTaskRunnerHandle::Get()->PostDelayedTask(
+        FROM_HERE,
+        base::BindOnce(&AdbProxy::CheckAdbSideloadingStatus,
+                       weak_factory_.GetWeakPtr(), num_try + 1),
+        kAdbSideloadUpdateDelay);
+    return;
+  }
+
+  dbus::MessageReader reader(dbus_response.get());
+  reader.PopBool(&adb_sideloading_enabled_);
+  if (!adb_sideloading_enabled_) {
+    LOG(INFO) << "Chrome OS is not in developer mode and ADB sideloading is "
+                 "not enabled. ADB proxy is not listening";
+    return;
+  }
+
+  // If ADB sideloading is enabled and ARC guest is started, start listening.
+  if (arc_type_ != GuestMessage::UNKNOWN_GUEST) {
+    Listen();
   }
 }
 

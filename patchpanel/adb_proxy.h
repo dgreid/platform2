@@ -11,7 +11,8 @@
 #include <base/files/file_descriptor_watcher_posix.h>
 #include <base/files/scoped_file.h>
 #include <base/memory/weak_ptr.h>
-#include <brillo/daemons/daemon.h>
+#include <brillo/daemons/dbus_daemon.h>
+#include <dbus/bus.h>
 
 #include "patchpanel/message_dispatcher.h"
 #include "patchpanel/socket.h"
@@ -28,7 +29,7 @@ namespace patchpanel {
 constexpr uint16_t kAdbProxyTcpListenPort = 5555;
 
 // Subprocess for proxying ADB traffic.
-class AdbProxy : public brillo::Daemon {
+class AdbProxy : public brillo::DBusDaemon {
  public:
   explicit AdbProxy(base::ScopedFD control_fd);
   AdbProxy(const AdbProxy&) = delete;
@@ -43,11 +44,22 @@ class AdbProxy : public brillo::Daemon {
   void OnGuestMessage(const GuestMessage& msg);
 
  private:
+  void InitialSetup();
   void Reset();
   void OnFileCanReadWithoutBlocking();
 
   // Attempts to establish a connection to ADB at well-known destinations.
   std::unique_ptr<Socket> Connect() const;
+
+  // Start listening for ADB connection. Only listen when ARC guest is started
+  // and either Chrome OS is in developer mode or ADB sideloading is turned on.
+  void Listen();
+
+  // Checks ADB sideloading status and set it to |adb_sideloading_enabled_|.
+  // This function will call itself again if ADB sideloading status is not
+  // known yet. If ADB sideloading status is enabled and guest is started,
+  // start listening for connections.
+  void CheckAdbSideloadingStatus(int num_try);
 
   MessageDispatcher msg_dispatcher_;
   std::unique_ptr<Socket> src_;
@@ -56,6 +68,9 @@ class AdbProxy : public brillo::Daemon {
 
   GuestMessage::GuestType arc_type_;
   uint32_t arcvm_vsock_cid_;
+
+  bool dev_mode_enabled_;
+  bool adb_sideloading_enabled_;
 
   base::WeakPtrFactory<AdbProxy> weak_factory_{this};
 };
