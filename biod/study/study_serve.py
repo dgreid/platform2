@@ -86,11 +86,14 @@ class FingerWebSocket(WebSocket):
         if fputils:
             self.utils = fputils.FpUtils()
         if arg.gpg_keyring:
-            self.gpg = gnupg.GPG(keyring=arg.gpg_keyring, options=[
-                '--no-options',
-                '--no-default-recipient',
-                '--trust-model', 'always',
-            ])
+            # The verbose flag prints a lot of info to console using print
+            # directly. We use the logging interface instead.
+            self.gpg = gnupg.GPG(keyring=arg.gpg_keyring, verbose=False,
+                                 options=[
+                                     '--no-options',
+                                     '--no-default-recipient',
+                                     '--trust-model', 'always',
+                                 ])
             self.gpg_recipients = arg.gpg_recipients.split()
             if not self.gpg_recipients:
                 cherrypy.log('Error - GPG Recipients is Empty',
@@ -332,6 +335,9 @@ def main(argv: list):
     loggers.append(l)
     l = logging.getLogger('cherrypy.error')
     l.setLevel(logging.DEBUG)
+    loggers.append(l)
+    l = logging.getLogger('gnupg')
+    l.setLevel(logging.INFO)
     loggers.append(l)
 
     if args.log_dir:
