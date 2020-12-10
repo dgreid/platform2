@@ -342,8 +342,6 @@ def main(argv: list):
         h = logging.handlers.SysLogHandler(
             address='/dev/log',
             facility=logging.handlers.SysLogHandler.LOG_LOCAL1)
-        h.setLevel(logging.DEBUG)
-        h.setFormatter(cherrypy._cplogging.logfmt)
         logger_cherrypy_access.addHandler(h)
         logger_cherrypy_error.addHandler(h)
         cherrypy.config.update({'log.screen': False})
