@@ -69,7 +69,7 @@ void VideoFrameHandlerImpl::OnNewBuffer(
     int32_t buffer_id, media::mojom::VideoBufferHandlePtr buffer_handle) {
   LOG(INFO) << "On new buffer";
   CHECK(buffer_handle->is_shared_memory_via_raw_file_descriptor());
-  base::PlatformFile platform_file;
+  base::ScopedPlatformFile platform_file;
   MojoResult mojo_result = mojo::UnwrapPlatformFile(
       std::move(buffer_handle->get_shared_memory_via_raw_file_descriptor()
                     ->file_descriptor_handle),
@@ -81,7 +81,7 @@ void VideoFrameHandlerImpl::OnNewBuffer(
   base::UnsafeSharedMemoryRegion shm_region =
       base::UnsafeSharedMemoryRegion::Deserialize(
           base::subtle::PlatformSharedMemoryRegion::Take(
-              base::ScopedFD(platform_file),
+              base::ScopedFD(std::move(platform_file)),
               base::subtle::PlatformSharedMemoryRegion::Mode::kUnsafe,
               buffer_handle->get_shared_memory_via_raw_file_descriptor()
                   ->shared_memory_size_in_bytes,
