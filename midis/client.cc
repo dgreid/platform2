@@ -101,7 +101,7 @@ mojo::ScopedHandle Client::CreateRequestPortFD(uint32_t card,
     return mojo::ScopedHandle();
   }
 
-  return mojo::WrapPlatformFile(clientfd.release());
+  return mojo::WrapPlatformFile(std::move(clientfd));
 }
 
 }  // namespace midis
