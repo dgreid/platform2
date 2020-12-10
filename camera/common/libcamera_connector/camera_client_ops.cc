@@ -83,11 +83,11 @@ void CameraClientOps::ProcessCaptureResult(
     CHECK_EQ(result->output_buffers->size(), 1u);
     const auto& output_buffer = result->output_buffers->front();
     if (output_buffer->release_fence.is_valid()) {
-      base::PlatformFile fence;
+      base::ScopedPlatformFile fence;
       CHECK_EQ(mojo::UnwrapPlatformFile(std::move(output_buffer->release_fence),
                                         &fence),
                MOJO_RESULT_OK);
-      if (sync_wait(fence, 1000) != 0) {
+      if (sync_wait(fence.release(), 1000) != 0) {
         LOGF(ERROR) << "Failed to wait for release fence on buffer";
       }
     }

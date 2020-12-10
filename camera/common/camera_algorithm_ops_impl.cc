@@ -91,14 +91,14 @@ void CameraAlgorithmOpsImpl::RegisterBuffer(mojo::ScopedHandle buffer_fd,
   DCHECK(cam_algo_);
   DCHECK(ipc_task_runner_->BelongsToCurrentThread());
   VLOGF_ENTER();
-  base::PlatformFile fd;
+  base::ScopedPlatformFile fd;
   MojoResult mojo_result = mojo::UnwrapPlatformFile(std::move(buffer_fd), &fd);
   if (mojo_result != MOJO_RESULT_OK) {
     LOGF(ERROR) << "Failed to unwrap handle: " << mojo_result;
     std::move(callback).Run(-EBADF);
     return;
   }
-  int32_t result = cam_algo_->register_buffer(fd);
+  int32_t result = cam_algo_->register_buffer(fd.release());
   std::move(callback).Run(result);
   VLOGF_EXIT();
 }

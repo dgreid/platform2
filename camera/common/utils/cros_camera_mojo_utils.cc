@@ -57,7 +57,8 @@ cros::mojom::Camera3StreamBufferPtr SerializeStreamBuffer(
   ret->status = static_cast<cros::mojom::Camera3BufferStatus>(buffer->status);
 
   if (buffer->acquire_fence != -1) {
-    ret->acquire_fence = mojo::WrapPlatformFile(buffer->acquire_fence);
+    ret->acquire_fence =
+        mojo::WrapPlatformFile(base::ScopedPlatformFile(buffer->acquire_fence));
     if (!ret->acquire_fence.is_valid()) {
       LOGF(ERROR) << "Failed to wrap acquire_fence";
       ret.reset();
@@ -66,7 +67,8 @@ cros::mojom::Camera3StreamBufferPtr SerializeStreamBuffer(
   }
 
   if (buffer->release_fence != -1) {
-    ret->release_fence = mojo::WrapPlatformFile(buffer->release_fence);
+    ret->release_fence =
+        mojo::WrapPlatformFile(base::ScopedPlatformFile(buffer->release_fence));
     if (!ret->release_fence.is_valid()) {
       LOGF(ERROR) << "Failed to wrap release_fence";
       ret.reset();

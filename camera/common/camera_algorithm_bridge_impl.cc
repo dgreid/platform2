@@ -229,7 +229,8 @@ void CameraAlgorithmBridgeImpl::IPCBridge::RegisterBuffer(
     cb.Run(-errno);
     return;
   }
-  interface_ptr_->RegisterBuffer(mojo::WrapPlatformFile(dup_fd), cb);
+  interface_ptr_->RegisterBuffer(
+      mojo::WrapPlatformFile(base::ScopedPlatformFile(dup_fd)), cb);
 }
 
 void CameraAlgorithmBridgeImpl::IPCBridge::Request(

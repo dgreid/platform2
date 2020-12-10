@@ -59,8 +59,9 @@ mojom::Camera3StreamBufferPtr StreamBufferManager::AllocateBuffer() {
   buffer_handle->height = pool_buffer_handle->height;
   buffer_handle->sizes = std::vector<uint32_t>();
   for (size_t i = 0; i < pool_buffer_handle->fds.size(); ++i) {
-    buffer_handle->fds.push_back(mojo::WrapPlatformFile(
-        HANDLE_EINTR(dup(fd_map_[pool_buffer_handle->buffer_id][i].get()))));
+    buffer_handle->fds.push_back(
+        mojo::WrapPlatformFile(base::ScopedPlatformFile(HANDLE_EINTR(
+            dup(fd_map_[pool_buffer_handle->buffer_id][i].get())))));
     buffer_handle->strides.push_back(pool_buffer_handle->strides[i]);
     buffer_handle->offsets.push_back(pool_buffer_handle->offsets[i]);
     buffer_handle->sizes->push_back(pool_buffer_handle->sizes->at(i));

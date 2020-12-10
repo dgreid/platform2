@@ -415,7 +415,7 @@ ClientDeviceConnector::PrepareStreamBufferPtr(
   std::vector<mojo::ScopedHandle> fds;
   for (uint32_t i = 0; i < num_planes; i++) {
     int dup_fd = HANDLE_EINTR(dup((*native_handle)->data[i]));
-    fds.emplace_back(mojo::WrapPlatformFile(dup_fd));
+    fds.emplace_back(mojo::WrapPlatformFile(base::ScopedPlatformFile(dup_fd)));
   }
   uint64_t buffer_id = reinterpret_cast<uint64_t>(native_handle);
   base::AutoLock bufferLock(buffer_handle_map_lock_);

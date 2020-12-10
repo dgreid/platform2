@@ -175,7 +175,7 @@ void ArcCameraServiceImpl::StreamOn(uint32_t width,
 
   std::vector<mojo::ScopedHandle> handles;
   for (const auto& fd : fds) {
-    handles.push_back(mojo::WrapPlatformFile(fd));
+    handles.push_back(mojo::WrapPlatformFile(base::ScopedPlatformFile(fd)));
   }
   if (ret) {
     handles.clear();

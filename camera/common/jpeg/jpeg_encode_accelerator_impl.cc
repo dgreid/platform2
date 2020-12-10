@@ -284,10 +284,11 @@ void JpegEncodeAcceleratorImpl::IPCBridge::EncodeLegacy(
   int dup_output_fd = HANDLE_EINTR(dup(output_fd));
 
   mojo::ScopedHandle input_handle = mojo::WrapPlatformFile(
-      input_platform_shm.PassPlatformHandle().fd.release());
+      std::move(input_platform_shm.PassPlatformHandle().fd));
   mojo::ScopedHandle exif_handle = mojo::WrapPlatformFile(
-      exif_platform_shm.PassPlatformHandle().fd.release());
-  mojo::ScopedHandle output_handle = mojo::WrapPlatformFile(dup_output_fd);
+      std::move(exif_platform_shm.PassPlatformHandle().fd));
+  mojo::ScopedHandle output_handle =
+      mojo::WrapPlatformFile(base::ScopedPlatformFile(dup_output_fd));
 
   jea_ptr_->EncodeWithFD(
       task_id, std::move(input_handle), input_buffer_size, coded_size_width,
@@ -339,15 +340,15 @@ void JpegEncodeAcceleratorImpl::IPCBridge::Encode(
           std::move(exif_shm_region));
 
   mojo::ScopedHandle exif_handle = mojo::WrapPlatformFile(
-      exif_platform_shm.PassPlatformHandle().fd.release());
+      std::move(exif_platform_shm.PassPlatformHandle().fd));
 
   auto WrapToMojoPlanes =
       [](const std::vector<JpegCompressor::DmaBufPlane>& planes) {
         std::vector<cros::mojom::DmaBufPlanePtr> mojo_planes;
         for (auto plane : planes) {
           auto mojo_plane = cros::mojom::DmaBufPlane::New();
-          mojo_plane->fd_handle =
-              mojo::WrapPlatformFile(HANDLE_EINTR(dup(plane.fd)));
+          mojo_plane->fd_handle = mojo::WrapPlatformFile(
+              base::ScopedPlatformFile(HANDLE_EINTR(dup(plane.fd))));
           mojo_plane->stride = plane.stride;
           mojo_plane->offset = plane.offset;
           mojo_plane->size = plane.size;

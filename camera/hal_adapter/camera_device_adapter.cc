@@ -698,7 +698,7 @@ bool CameraDeviceAdapter::AllocateBuffersForStreams(
       mojo_buffer_handle->sizes = std::vector<uint32_t>();
       for (size_t plane = 0; plane < num_planes; plane++) {
         mojo_buffer_handle->fds.push_back(
-            mojo::WrapPlatformFile(buffer_handle->data[plane]));
+            mojo::WrapPlatformFile(base::ScopedFD(buffer_handle->data[plane])));
         mojo_buffer_handle->strides.push_back(
             CameraBufferManager::GetPlaneStride(buffer_handle, plane));
         mojo_buffer_handle->offsets.push_back(
