@@ -6,9 +6,13 @@
 # See repohooks/README.md for more details.
 
 dummy
-master
+keymaster
 native
 sane
 sanity
 slave
 white.?list
+
+# We still use "master" in a few places, but block its usage in URIs as people
+# can use HEAD instead. That's the only time "master/" shows up.
+master($|[^/])
