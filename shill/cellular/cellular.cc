@@ -1045,13 +1045,10 @@ void Cellular::LinkEvent(unsigned int flags, unsigned int change) {
   }
 }
 
-void Cellular::OnPropertiesChanged(
-    const string& interface,
-    const KeyValueStore& changed_properties,
-    const vector<string>& invalidated_properties) {
+void Cellular::OnPropertiesChanged(const string& interface,
+                                   const KeyValueStore& changed_properties) {
   CHECK(capability_);
-  capability_->OnPropertiesChanged(interface, changed_properties,
-                                   invalidated_properties);
+  capability_->OnPropertiesChanged(interface, changed_properties);
 }
 
 string Cellular::CreateDefaultFriendlyServiceName() {

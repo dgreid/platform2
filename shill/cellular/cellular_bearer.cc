@@ -56,10 +56,7 @@ CellularBearer::CellularBearer(ControlInterface* control_interface,
                                const string& dbus_service)
     : control_interface_(control_interface),
       dbus_path_(dbus_path),
-      dbus_service_(dbus_service),
-      connected_(false),
-      ipv4_config_method_(IPConfig::kMethodUnknown),
-      ipv6_config_method_(IPConfig::kMethodUnknown) {
+      dbus_service_(dbus_service) {
   CHECK(control_interface_);
 }
 
@@ -175,21 +172,18 @@ void CellularBearer::UpdateProperties() {
   if (!dbus_properties_proxy_)
     return;
 
-  KeyValueStore properties =
-      dbus_properties_proxy_->GetAll(MM_DBUS_INTERFACE_BEARER);
-  if (properties.IsEmpty()) {
-    LOG(WARNING) << "Could not get properties of bearer '" << dbus_path_.value()
-                 << "'. Bearer is likely gone and thus ignored.";
-    return;
-  }
-
-  OnPropertiesChanged(MM_DBUS_INTERFACE_BEARER, properties, vector<string>());
+  dbus_properties_proxy_->GetAllAsync(
+      MM_DBUS_INTERFACE_BEARER,
+      base::Bind(&CellularBearer::OnPropertiesChanged,
+                 weak_ptr_factory_.GetWeakPtr(), MM_DBUS_INTERFACE_BEARER),
+      base::Bind([](const Error& error) {
+        LOG(WARNING) << "Error fetching modem bearer properties: " << error
+                     << ". Bearer is likely gone and thus ignored.";
+      }));
 }
 
 void CellularBearer::OnPropertiesChanged(
-    const string& interface,
-    const KeyValueStore& changed_properties,
-    const vector<string>& /*invalidated_properties*/) {
+    const string& interface, const KeyValueStore& changed_properties) {
   SLOG(this, 3) << __func__ << ": path=" << dbus_path_.value()
                 << ", interface=" << interface;
 

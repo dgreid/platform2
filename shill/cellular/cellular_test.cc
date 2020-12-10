@@ -1183,7 +1183,7 @@ TEST_P(CellularTest, ModemStateChangeEnable) {
 
   KeyValueStore props;
   props.Set<bool>(CellularCapabilityClassic::kModemPropertyEnabled, true);
-  device_->OnPropertiesChanged(MM_MODEM_INTERFACE, props, vector<string>());
+  device_->OnPropertiesChanged(MM_MODEM_INTERFACE, props);
   dispatcher_.DispatchPendingEvents();
 
   EXPECT_EQ(Cellular::kModemStateEnabled, device_->modem_state());

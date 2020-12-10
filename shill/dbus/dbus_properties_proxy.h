@@ -27,9 +27,7 @@ class DBusPropertiesProxy {
  public:
   // Callback invoked when an object sends a DBus property change signal.
   using PropertiesChangedCallback = base::Callback<void(
-      const std::string& interface,
-      const KeyValueStore& changed_properties,
-      const std::vector<std::string>& invalidated_properties)>;
+      const std::string& interface, const KeyValueStore& changed_properties)>;
 
   // Callback invoked when the classic modem manager sends a DBus
   // property change signal.

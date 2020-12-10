@@ -135,12 +135,11 @@ void DBusPropertiesProxy::MmPropertiesChanged(
 void DBusPropertiesProxy::PropertiesChanged(
     const string& interface,
     const brillo::VariantDictionary& changed_properties,
-    const vector<string>& invalidated_properties) {
+    const vector<string>& /*invalidated_properties*/) {
   SLOG(&proxy_->GetObjectPath(), 2) << __func__ << "(" << interface << ")";
   KeyValueStore properties_store =
       KeyValueStore::ConvertFromVariantDictionary(changed_properties);
-  properties_changed_callback_.Run(interface, properties_store,
-                                   invalidated_properties);
+  properties_changed_callback_.Run(interface, properties_store);
 }
 
 void DBusPropertiesProxy::OnSignalConnected(const string& interface_name,

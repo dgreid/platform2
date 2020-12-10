@@ -11,6 +11,7 @@
 #include <vector>
 
 #include <base/macros.h>
+#include <base/memory/weak_ptr.h>
 #include <gtest/gtest_prod.h>
 
 #include "shill/ipconfig.h"
@@ -46,10 +47,8 @@ class CellularBearer {
   bool Init();
 
   // Callback upon property changes of the bearer.
-  void OnPropertiesChanged(
-      const std::string& interface,
-      const KeyValueStore& changed_properties,
-      const std::vector<std::string>& invalidated_properties);
+  void OnPropertiesChanged(const std::string& interface,
+                           const KeyValueStore& changed_properties);
 
   const RpcIdentifier& dbus_path() const { return dbus_path_; }
   const std::string& dbus_service() const { return dbus_service_; }
@@ -112,17 +111,19 @@ class CellularBearer {
   RpcIdentifier dbus_path_;
   std::string dbus_service_;
   std::unique_ptr<DBusPropertiesProxy> dbus_properties_proxy_;
-  bool connected_;
+  bool connected_ = false;
   std::string data_interface_;
 
   // If |ipv4_config_method_| is set to |IPConfig::kMethodStatic|,
   // |ipv4_config_properties_| is guaranteed to contain valid IP configuration
   // properties. Otherwise, |ipv4_config_properties_| is set to nullptr.
   // |ipv6_config_properties_| is handled similarly.
-  IPConfig::Method ipv4_config_method_;
+  IPConfig::Method ipv4_config_method_ = IPConfig::kMethodUnknown;
   std::unique_ptr<IPConfig::Properties> ipv4_config_properties_;
-  IPConfig::Method ipv6_config_method_;
+  IPConfig::Method ipv6_config_method_ = IPConfig::kMethodUnknown;
   std::unique_ptr<IPConfig::Properties> ipv6_config_properties_;
+
+  base::WeakPtrFactory<CellularBearer> weak_ptr_factory_{this};
 };
 
 }  // namespace shill

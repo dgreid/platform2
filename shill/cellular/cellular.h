@@ -20,6 +20,7 @@
 #include "shill/device_id.h"
 #include "shill/event_dispatcher.h"
 #include "shill/metrics.h"
+#include "shill/mockable.h"
 #include "shill/refptr_types.h"
 #include "shill/rpc_task.h"
 
@@ -189,10 +190,8 @@ class Cellular : public Device,
   void StartLocationPolling();
   void StopLocationPolling();
 
-  virtual void OnPropertiesChanged(
-      const std::string& interface,
-      const KeyValueStore& changed_properties,
-      const std::vector<std::string>& invalidated_properties);
+  mockable void OnPropertiesChanged(const std::string& interface,
+                                    const KeyValueStore& changed_properties);
 
   // Inherited from Device.
   void Start(Error* error,

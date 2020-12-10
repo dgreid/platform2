@@ -67,10 +67,9 @@ class CellularCapability3gpp : public CellularCapability {
 
   // Inherited from CellularCapability.
   std::string GetTypeString() const override;
-  void OnPropertiesChanged(
-      const std::string& interface,
-      const KeyValueStore& changed_properties,
-      const std::vector<std::string>& invalidated_properties) override;
+  void OnPropertiesChanged(const std::string& interface,
+                           const KeyValueStore& changed_properties) override;
+
   // Checks the modem state.  If the state is kModemStateDisabled, then the
   // modem is enabled.  Otherwise, the enable command is buffered until the
   // modem becomes disabled.  ModemManager rejects the enable command if the
@@ -278,9 +277,7 @@ class CellularCapability3gpp : public CellularCapability {
                                  uint32_t reason);
 
   // Property Change notification handlers
-  void OnModemPropertiesChanged(
-      const KeyValueStore& properties,
-      const std::vector<std::string>& invalidated_properties);
+  void OnModemPropertiesChanged(const KeyValueStore& properties);
 
   void OnSignalQualityChanged(uint32_t quality);
 
@@ -300,9 +297,7 @@ class CellularCapability3gpp : public CellularCapability {
   bool IsMdnValid() const;
 
   // 3GPP property change handlers
-  virtual void OnModem3gppPropertiesChanged(
-      const KeyValueStore& properties,
-      const std::vector<std::string>& invalidated_properties);
+  virtual void OnModem3gppPropertiesChanged(const KeyValueStore& properties);
   void On3gppRegistrationChanged(MMModem3gppRegistrationState state,
                                  const std::string& operator_code,
                                  const std::string& operator_name);
@@ -316,9 +311,7 @@ class CellularCapability3gpp : public CellularCapability {
 
   // SIM property change handlers
   // TODO(armansito): Put these methods in a 3GPP-only subclass.
-  void OnSimPropertiesChanged(
-      const KeyValueStore& props,
-      const std::vector<std::string>& invalidated_properties);
+  void OnSimPropertiesChanged(const KeyValueStore& properties);
   void OnSpnChanged(const std::string& spn);
   void OnSimIdentifierChanged(const std::string& id);
   void OnOperatorIdChanged(const std::string& operator_id);

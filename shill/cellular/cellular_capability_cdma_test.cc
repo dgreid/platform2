@@ -206,14 +206,14 @@ TEST_F(CellularCapabilityCdmaMainTest, PropertiesChanged) {
 
   // Changing properties on wrong interface will not have an effect
   capability_->OnPropertiesChanged(MM_DBUS_INTERFACE_MODEM,
-                                   modem_cdma_properties, vector<string>());
+                                   modem_cdma_properties);
   EXPECT_TRUE(cellular_->meid().empty());
   EXPECT_TRUE(cellular_->esn().empty());
 
   // Changing properties on the right interface gets reflected in the
   // capabilities object
   capability_->OnPropertiesChanged(MM_DBUS_INTERFACE_MODEM_MODEMCDMA,
-                                   modem_cdma_properties, vector<string>());
+                                   modem_cdma_properties);
   EXPECT_EQ(kMeid, cellular_->meid());
   EXPECT_EQ(kEsn, cellular_->esn());
 }

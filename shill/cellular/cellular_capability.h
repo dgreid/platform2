@@ -61,10 +61,8 @@ class CellularCapability {
 
   // Called when the modem manager has sent a property change notification
   // signal.
-  virtual void OnPropertiesChanged(
-      const std::string& interface,
-      const KeyValueStore& changed_properties,
-      const std::vector<std::string>& invalidated_properties) = 0;
+  virtual void OnPropertiesChanged(const std::string& interface,
+                                   const KeyValueStore& changed_properties) = 0;
 
   // -------------------------------------------------------------------------
   // Modem management

@@ -81,10 +81,8 @@ class Modem {
   // |interface_index| even on failure.
   bool GetDeviceParams(std::string* mac_address, int* interface_index);
 
-  void OnPropertiesChanged(
-      const std::string& interface,
-      const KeyValueStore& changed_properties,
-      const std::vector<std::string>& invalidated_properties);
+  void OnPropertiesChanged(const std::string& interface,
+                           const KeyValueStore& changed_properties);
 
   void OnModemManagerPropertiesChanged(const std::string& interface,
                                        const KeyValueStore& properties);

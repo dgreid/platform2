@@ -258,10 +258,13 @@ void CellularCapabilityCdma::GetProperties() {
   std::unique_ptr<DBusPropertiesProxy> properties_proxy =
       control_interface()->CreateDBusPropertiesProxy(
           cellular()->dbus_path(), cellular()->dbus_service());
-
-  KeyValueStore properties(
-      properties_proxy->GetAll(MM_DBUS_INTERFACE_MODEM_MODEMCDMA));
-  OnModemCdmaPropertiesChanged(properties, vector<string>());
+  properties_proxy->GetAllAsync(
+      MM_DBUS_INTERFACE_MODEM_MODEMCDMA,
+      base::Bind(&CellularCapabilityCdma::OnModemCdmaPropertiesChanged,
+                 weak_cdma_ptr_factory_.GetWeakPtr()),
+      base::Bind([](const Error& error) {
+        LOG(ERROR) << "Error fetching modem CDMA properties: " << error;
+      }));
 }
 
 void CellularCapabilityCdma::OnActivationStateChangedSignal(
@@ -414,21 +417,17 @@ string CellularCapabilityCdma::GetRoamingStateString() const {
 }
 
 void CellularCapabilityCdma::OnPropertiesChanged(
-    const string& interface,
-    const KeyValueStore& changed_properties,
-    const vector<string>& invalidated_properties) {
+    const string& interface, const KeyValueStore& changed_properties) {
   SLOG(this, 2) << __func__ << "(" << interface << ")";
   if (interface == MM_DBUS_INTERFACE_MODEM_MODEMCDMA) {
-    OnModemCdmaPropertiesChanged(changed_properties, invalidated_properties);
+    OnModemCdmaPropertiesChanged(changed_properties);
   } else {
-    CellularCapability3gpp::OnPropertiesChanged(interface, changed_properties,
-                                                invalidated_properties);
+    CellularCapability3gpp::OnPropertiesChanged(interface, changed_properties);
   }
 }
 
 void CellularCapabilityCdma::OnModemCdmaPropertiesChanged(
-    const KeyValueStore& properties,
-    const std::vector<std::string>& /*invalidated_properties*/) {
+    const KeyValueStore& properties) {
   SLOG(this, 2) << __func__;
   string str_value;
   if (properties.Contains<string>(MM_MODEM_MODEMCDMA_PROPERTY_MEID)) {

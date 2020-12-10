@@ -762,11 +762,21 @@ void CellularCapability3gpp::GetProperties() {
       control_interface()->CreateDBusPropertiesProxy(
           cellular()->dbus_path(), cellular()->dbus_service());
 
-  KeyValueStore properties(properties_proxy->GetAll(MM_DBUS_INTERFACE_MODEM));
-  OnModemPropertiesChanged(properties, vector<string>());
+  properties_proxy->GetAllAsync(
+      MM_DBUS_INTERFACE_MODEM,
+      base::Bind(&CellularCapability3gpp::OnModemPropertiesChanged,
+                 weak_ptr_factory_.GetWeakPtr()),
+      base::Bind([](const Error& error) {
+        LOG(ERROR) << "Error fetching modem properties: " << error;
+      }));
 
-  properties = properties_proxy->GetAll(MM_DBUS_INTERFACE_MODEM_MODEM3GPP);
-  OnModem3gppPropertiesChanged(properties, vector<string>());
+  properties_proxy->GetAllAsync(
+      MM_DBUS_INTERFACE_MODEM_MODEM3GPP,
+      base::Bind(&CellularCapability3gpp::OnModem3gppPropertiesChanged,
+                 weak_ptr_factory_.GetWeakPtr()),
+      base::Bind([](const Error& error) {
+        LOG(ERROR) << "Error fetching modem 3GPP properties: " << error;
+      }));
 }
 
 void CellularCapability3gpp::UpdateServiceOLP() {
@@ -1178,8 +1188,7 @@ string CellularCapability3gpp::GetTypeString() const {
 }
 
 void CellularCapability3gpp::OnModemPropertiesChanged(
-    const KeyValueStore& properties,
-    const vector<string>& /* invalidated_properties */) {
+    const KeyValueStore& properties) {
   // Update the bearers property before the modem state property as
   // OnModemStateChanged may call UpdateActiveBearer, which reads the bearers
   // property.
@@ -1279,18 +1288,16 @@ void CellularCapability3gpp::OnModemPropertiesChanged(
 }
 
 void CellularCapability3gpp::OnPropertiesChanged(
-    const string& interface,
-    const KeyValueStore& changed_properties,
-    const vector<string>& invalidated_properties) {
+    const string& interface, const KeyValueStore& changed_properties) {
   SLOG(this, 3) << __func__ << "(" << interface << ")";
   if (interface == MM_DBUS_INTERFACE_MODEM) {
-    OnModemPropertiesChanged(changed_properties, invalidated_properties);
+    OnModemPropertiesChanged(changed_properties);
   }
   if (interface == MM_DBUS_INTERFACE_MODEM_MODEM3GPP) {
-    OnModem3gppPropertiesChanged(changed_properties, invalidated_properties);
+    OnModem3gppPropertiesChanged(changed_properties);
   }
   if (interface == MM_DBUS_INTERFACE_SIM) {
-    OnSimPropertiesChanged(changed_properties, invalidated_properties);
+    OnSimPropertiesChanged(changed_properties);
   }
 }
 
@@ -1332,15 +1339,21 @@ void CellularCapability3gpp::OnSimPathChanged(const RpcIdentifier& sim_path) {
     cellular()->set_eid("");
     OnOperatorIdChanged("");
     cellular()->home_provider_info()->Reset();
-  } else {
-    cellular()->set_sim_present(true);
-    std::unique_ptr<DBusPropertiesProxy> properties_proxy =
-        control_interface()->CreateDBusPropertiesProxy(
-            sim_path, cellular()->dbus_service());
-    // TODO(jglasgow): convert to async interface
-    KeyValueStore properties(properties_proxy->GetAll(MM_DBUS_INTERFACE_SIM));
-    OnSimPropertiesChanged(properties, vector<string>());
+    return;
   }
+
+  cellular()->set_sim_present(true);
+
+  std::unique_ptr<DBusPropertiesProxy> properties_proxy =
+      control_interface()->CreateDBusPropertiesProxy(
+          sim_path, cellular()->dbus_service());
+  properties_proxy->GetAllAsync(
+      MM_DBUS_INTERFACE_SIM,
+      base::Bind(&CellularCapability3gpp::OnSimPropertiesChanged,
+                 weak_ptr_factory_.GetWeakPtr()),
+      base::Bind([](const Error& error) {
+        LOG(ERROR) << "Error fetching SIM properties: " << error;
+      }));
 }
 
 void CellularCapability3gpp::OnModemCurrentCapabilitiesChanged(
@@ -1457,23 +1470,29 @@ void CellularCapability3gpp::OnSimLockStatusChanged() {
   cellular()->adaptor()->EmitKeyValueStoreChanged(
       kSIMLockStatusProperty, SimLockStatusToProperty(nullptr));
 
+  if (!IsValidSimPath(sim_path_) ||
+      (sim_lock_status_.lock_type != MM_MODEM_LOCK_NONE &&
+       sim_lock_status_.lock_type != MM_MODEM_LOCK_UNKNOWN)) {
+    return;
+  }
+
   // If the SIM is currently unlocked, assume that we need to refresh
   // carrier information, since a locked SIM prevents shill from obtaining
   // the necessary data to establish a connection later (e.g. IMSI).
-  if (IsValidSimPath(sim_path_) &&
-      (sim_lock_status_.lock_type == MM_MODEM_LOCK_NONE ||
-       sim_lock_status_.lock_type == MM_MODEM_LOCK_UNKNOWN)) {
-    std::unique_ptr<DBusPropertiesProxy> properties_proxy =
-        control_interface()->CreateDBusPropertiesProxy(
-            sim_path_, cellular()->dbus_service());
-    KeyValueStore properties(properties_proxy->GetAll(MM_DBUS_INTERFACE_SIM));
-    OnSimPropertiesChanged(properties, vector<string>());
-  }
+  std::unique_ptr<DBusPropertiesProxy> properties_proxy =
+      control_interface()->CreateDBusPropertiesProxy(
+          sim_path_, cellular()->dbus_service());
+  properties_proxy->GetAllAsync(
+      MM_DBUS_INTERFACE_SIM,
+      base::Bind(&CellularCapability3gpp::OnSimPropertiesChanged,
+                 weak_ptr_factory_.GetWeakPtr()),
+      base::Bind([](const Error& error) {
+        LOG(ERROR) << "Error fetching SIM properties: " << error;
+      }));
 }
 
 void CellularCapability3gpp::OnModem3gppPropertiesChanged(
-    const KeyValueStore& properties,
-    const vector<string>& /* invalidated_properties */) {
+    const KeyValueStore& properties) {
   SLOG(this, 3) << __func__;
   if (properties.Contains<string>(MM_MODEM_MODEM3GPP_PROPERTY_IMEI))
     cellular()->set_imei(
@@ -1742,19 +1761,24 @@ void CellularCapability3gpp::OnPcoChanged(const PcoList& pco_list) {
 }
 
 void CellularCapability3gpp::OnSimPropertiesChanged(
-    const KeyValueStore& props,
-    const vector<string>& /* invalidated_properties */) {
+    const KeyValueStore& properties) {
   SLOG(this, 3) << __func__;
-  if (props.Contains<string>(MM_SIM_PROPERTY_SIMIDENTIFIER))
-    OnSimIdentifierChanged(props.Get<string>(MM_SIM_PROPERTY_SIMIDENTIFIER));
-  if (props.Contains<string>(MM_SIM_PROPERTY_EID))
-    cellular()->set_eid(props.Get<string>(MM_SIM_PROPERTY_EID));
-  if (props.Contains<string>(MM_SIM_PROPERTY_OPERATORIDENTIFIER))
-    OnOperatorIdChanged(props.Get<string>(MM_SIM_PROPERTY_OPERATORIDENTIFIER));
-  if (props.Contains<string>(MM_SIM_PROPERTY_OPERATORNAME))
-    OnSpnChanged(props.Get<string>(MM_SIM_PROPERTY_OPERATORNAME));
-  if (props.Contains<string>(MM_SIM_PROPERTY_IMSI)) {
-    string imsi = props.Get<string>(MM_SIM_PROPERTY_IMSI);
+  if (properties.Contains<string>(MM_SIM_PROPERTY_SIMIDENTIFIER)) {
+    OnSimIdentifierChanged(
+        properties.Get<string>(MM_SIM_PROPERTY_SIMIDENTIFIER));
+  }
+  if (properties.Contains<string>(MM_SIM_PROPERTY_EID)) {
+    cellular()->set_eid(properties.Get<string>(MM_SIM_PROPERTY_EID));
+  }
+  if (properties.Contains<string>(MM_SIM_PROPERTY_OPERATORIDENTIFIER)) {
+    OnOperatorIdChanged(
+        properties.Get<string>(MM_SIM_PROPERTY_OPERATORIDENTIFIER));
+  }
+  if (properties.Contains<string>(MM_SIM_PROPERTY_OPERATORNAME)) {
+    OnSpnChanged(properties.Get<string>(MM_SIM_PROPERTY_OPERATORNAME));
+  }
+  if (properties.Contains<string>(MM_SIM_PROPERTY_IMSI)) {
+    string imsi = properties.Get<string>(MM_SIM_PROPERTY_IMSI);
     cellular()->set_imsi(imsi);
     cellular()->home_provider_info()->UpdateIMSI(imsi);
     // We do not obtain IMSI OTA right now. Provide the value from the SIM to

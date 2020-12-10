@@ -30,10 +30,8 @@ class CellularCapabilityCdma : public CellularCapability3gpp {
   bool IsActivated() const;
 
   // Inherited from CellularCapability.
-  void OnPropertiesChanged(
-      const std::string& interface,
-      const KeyValueStore& changed_properties,
-      const std::vector<std::string>& invalidated_properties) override;
+  void OnPropertiesChanged(const std::string& interface,
+                           const KeyValueStore& changed_properties) override;
   bool AreProxiesInitialized() const override;
   bool IsServiceActivationRequired() const override;
   bool IsActivating() const override;
@@ -93,9 +91,7 @@ class CellularCapabilityCdma : public CellularCapability3gpp {
               UpdateServiceActivationStateProperty);
 
   // CDMA property change handlers
-  void OnModemCdmaPropertiesChanged(
-      const KeyValueStore& properties,
-      const std::vector<std::string>& invalidated_properties);
+  void OnModemCdmaPropertiesChanged(const KeyValueStore& properties);
   void OnCdmaRegistrationChanged(MMModemCdmaRegistrationState state_1x,
                                  MMModemCdmaRegistrationState state_evdo,
                                  uint32_t sid,

@@ -824,21 +824,20 @@ TEST_F(CellularCapability3gppMainTest, PropertiesChanged) {
   EXPECT_CALL(*device_adaptor_, EmitStringChanged(kTechnologyFamilyProperty,
                                                   kTechnologyFamilyGsm));
   EXPECT_CALL(*device_adaptor_, EmitStringChanged(kImeiProperty, kImei));
-  capability_->OnPropertiesChanged(MM_DBUS_INTERFACE_MODEM, modem_properties,
-                                   vector<string>());
+  capability_->OnPropertiesChanged(MM_DBUS_INTERFACE_MODEM, modem_properties);
   EXPECT_EQ(kAccessTechnologies, capability_->access_technologies_);
   EXPECT_EQ(kSimPath, capability_->sim_path_);
   EXPECT_NE(nullptr, capability_->sim_proxy_);
 
   // Changing properties on wrong interface will not have an effect
   capability_->OnPropertiesChanged(MM_DBUS_INTERFACE_MODEM,
-                                   modem3gpp_properties, vector<string>());
+                                   modem3gpp_properties);
   EXPECT_EQ("", cellular_->imei());
 
   // Changing properties on the right interface gets reflected in the
   // capabilities object
   capability_->OnPropertiesChanged(MM_DBUS_INTERFACE_MODEM_MODEM3GPP,
-                                   modem3gpp_properties, vector<string>());
+                                   modem3gpp_properties);
   EXPECT_EQ(kImei, cellular_->imei());
   Mock::VerifyAndClearExpectations(device_adaptor_);
 
@@ -849,8 +848,7 @@ TEST_F(CellularCapability3gppMainTest, PropertiesChanged) {
   EXPECT_CALL(*device_adaptor_, EmitStringChanged(kTechnologyFamilyProperty,
                                                   kTechnologyFamilyCdma))
       .Times(1);
-  capability_->OnPropertiesChanged(MM_DBUS_INTERFACE_MODEM, modem_properties,
-                                   vector<string>());
+  capability_->OnPropertiesChanged(MM_DBUS_INTERFACE_MODEM, modem_properties);
   Mock::VerifyAndClearExpectations(device_adaptor_);
 
   // Back to LTE
@@ -860,8 +858,7 @@ TEST_F(CellularCapability3gppMainTest, PropertiesChanged) {
   EXPECT_CALL(*device_adaptor_, EmitStringChanged(kTechnologyFamilyProperty,
                                                   kTechnologyFamilyGsm))
       .Times(1);
-  capability_->OnPropertiesChanged(MM_DBUS_INTERFACE_MODEM, modem_properties,
-                                   vector<string>());
+  capability_->OnPropertiesChanged(MM_DBUS_INTERFACE_MODEM, modem_properties);
   Mock::VerifyAndClearExpectations(device_adaptor_);
 
   // LTE & CDMA - the device adaptor should not be called!
@@ -870,8 +867,7 @@ TEST_F(CellularCapability3gppMainTest, PropertiesChanged) {
       MM_MODEM_PROPERTY_ACCESSTECHNOLOGIES,
       MM_MODEM_ACCESS_TECHNOLOGY_LTE | MM_MODEM_ACCESS_TECHNOLOGY_1XRTT);
   EXPECT_CALL(*device_adaptor_, EmitStringChanged(_, _)).Times(0);
-  capability_->OnPropertiesChanged(MM_DBUS_INTERFACE_MODEM, modem_properties,
-                                   vector<string>());
+  capability_->OnPropertiesChanged(MM_DBUS_INTERFACE_MODEM, modem_properties);
 }
 
 TEST_F(CellularCapability3gppMainTest, UpdateRegistrationState) {
@@ -1146,8 +1142,7 @@ TEST_F(CellularCapability3gppMainTest, SimPropertiesChanged) {
       .Times(2);
 
   EXPECT_EQ(nullptr, capability_->sim_proxy_);
-  capability_->OnPropertiesChanged(MM_DBUS_INTERFACE_MODEM, modem_properties,
-                                   vector<string>());
+  capability_->OnPropertiesChanged(MM_DBUS_INTERFACE_MODEM, modem_properties);
   EXPECT_EQ(kSimPath, capability_->sim_path_);
   EXPECT_NE(nullptr, capability_->sim_proxy_);
   EXPECT_EQ(kImsi, cellular_->imsi());
@@ -1168,15 +1163,13 @@ TEST_F(CellularCapability3gppMainTest, SimPropertiesChanged) {
   new_properties.Set<string>(MM_SIM_PROPERTY_SIMIDENTIFIER, kSimIdentifier);
   new_properties.Set<string>(MM_SIM_PROPERTY_OPERATORIDENTIFIER,
                              kOperatorIdentifier);
-  capability_->OnPropertiesChanged(MM_DBUS_INTERFACE_SIM, new_properties,
-                                   vector<string>());
+  capability_->OnPropertiesChanged(MM_DBUS_INTERFACE_SIM, new_properties);
   EXPECT_EQ(kNewImsi, cellular_->imsi());
   EXPECT_EQ(kSimIdentifier, cellular_->iccid());
   EXPECT_EQ("", capability_->spn_);
 
   new_properties.Set<string>(MM_SIM_PROPERTY_OPERATORNAME, kOperatorName);
-  capability_->OnPropertiesChanged(MM_DBUS_INTERFACE_SIM, new_properties,
-                                   vector<string>());
+  capability_->OnPropertiesChanged(MM_DBUS_INTERFACE_SIM, new_properties);
   EXPECT_EQ(kOperatorName, capability_->spn_);
 }
 
@@ -1934,9 +1927,8 @@ TEST_F(CellularCapability3gppMainTest, OnSimLockPropertiesChanged) {
   EXPECT_EQ(0, capability_->sim_lock_status_.retries_left);
 
   KeyValueStore changed;
-  vector<string> invalidated;
 
-  capability_->OnModemPropertiesChanged(changed, invalidated);
+  capability_->OnModemPropertiesChanged(changed);
   EXPECT_EQ(MM_MODEM_LOCK_UNKNOWN, capability_->sim_lock_status_.lock_type);
   EXPECT_EQ(0, capability_->sim_lock_status_.retries_left);
 
@@ -1945,14 +1937,14 @@ TEST_F(CellularCapability3gppMainTest, OnSimLockPropertiesChanged) {
   retry_data[MM_MODEM_LOCK_SIM_PIN] = 3;
   changed.SetVariant(MM_MODEM_PROPERTY_UNLOCKRETRIES, brillo::Any(retry_data));
 
-  capability_->OnModemPropertiesChanged(changed, invalidated);
+  capability_->OnModemPropertiesChanged(changed);
   EXPECT_EQ(MM_MODEM_LOCK_UNKNOWN, capability_->sim_lock_status_.lock_type);
   EXPECT_EQ(3, capability_->sim_lock_status_.retries_left);
 
   // Unlock retries changed and the SIM got locked.
   changed.Set<uint32_t>(MM_MODEM_PROPERTY_UNLOCKREQUIRED,
                         static_cast<uint32_t>(MM_MODEM_LOCK_SIM_PIN));
-  capability_->OnModemPropertiesChanged(changed, invalidated);
+  capability_->OnModemPropertiesChanged(changed);
   EXPECT_EQ(MM_MODEM_LOCK_SIM_PIN, capability_->sim_lock_status_.lock_type);
   EXPECT_EQ(3, capability_->sim_lock_status_.retries_left);
 
@@ -1960,7 +1952,7 @@ TEST_F(CellularCapability3gppMainTest, OnSimLockPropertiesChanged) {
   changed.Remove(MM_MODEM_PROPERTY_UNLOCKREQUIRED);
   retry_data[MM_MODEM_LOCK_SIM_PIN] = 2;
   changed.SetVariant(MM_MODEM_PROPERTY_UNLOCKRETRIES, brillo::Any(retry_data));
-  capability_->OnModemPropertiesChanged(changed, invalidated);
+  capability_->OnModemPropertiesChanged(changed);
   EXPECT_EQ(MM_MODEM_LOCK_SIM_PIN, capability_->sim_lock_status_.lock_type);
   EXPECT_EQ(2, capability_->sim_lock_status_.retries_left);
 
@@ -1969,7 +1961,7 @@ TEST_F(CellularCapability3gppMainTest, OnSimLockPropertiesChanged) {
   retry_data.clear();
   retry_data[MM_MODEM_LOCK_SIM_PIN2] = 2;
   changed.SetVariant(MM_MODEM_PROPERTY_UNLOCKRETRIES, brillo::Any(retry_data));
-  capability_->OnModemPropertiesChanged(changed, invalidated);
+  capability_->OnModemPropertiesChanged(changed);
   EXPECT_EQ(MM_MODEM_LOCK_SIM_PIN, capability_->sim_lock_status_.lock_type);
   EXPECT_EQ(CellularCapability3gpp::kUnknownLockRetriesLeft,
             capability_->sim_lock_status_.retries_left);

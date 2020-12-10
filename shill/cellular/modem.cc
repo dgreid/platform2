@@ -216,8 +216,7 @@ void Modem::CreateDeviceFromModemProperties(
   // Give the device a chance to extract any capability-specific properties.
   for (properties_it = properties.begin(); properties_it != properties.end();
        ++properties_it) {
-    device_->OnPropertiesChanged(properties_it->first, properties_it->second,
-                                 vector<string>());
+    device_->OnPropertiesChanged(properties_it->first, properties_it->second);
   }
 
   SLOG(this, 1) << "Cellular device created: " << device_->link_name()
@@ -243,20 +242,17 @@ bool Modem::GetDeviceParams(string* mac_address, int* interface_index) {
 }
 
 void Modem::OnPropertiesChanged(const string& interface,
-                                const KeyValueStore& changed_properties,
-                                const vector<string>& invalidated_properties) {
+                                const KeyValueStore& changed_properties) {
   SLOG(this, 2) << __func__;
   SLOG(this, 3) << "PropertiesChanged signal received.";
   if (device_) {
-    device_->OnPropertiesChanged(interface, changed_properties,
-                                 invalidated_properties);
+    device_->OnPropertiesChanged(interface, changed_properties);
   }
 }
 
 void Modem::OnModemManagerPropertiesChanged(const string& interface,
                                             const KeyValueStore& properties) {
-  vector<string> invalidated_properties;
-  OnPropertiesChanged(interface, properties, invalidated_properties);
+  OnPropertiesChanged(interface, properties);
 }
 
 }  // namespace shill
