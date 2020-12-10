@@ -603,6 +603,9 @@ bool Platform::SetQuotaProjectId(int project_id,
   brillo::SafeFD fd;
   brillo::SafeFD::Error err;
   std::tie(fd, err) = brillo::SafeFD::Root().first.OpenExistingFile(path);
+  if (err == brillo::SafeFD::Error::kWrongType) {
+    std::tie(fd, err) = brillo::SafeFD::Root().first.OpenExistingDir(path);
+  }
   if (brillo::SafeFD::IsError(err)) {
     PLOG(ERROR) << "Failed to open " << path.value() << " with error "
                 << static_cast<int>(err);
