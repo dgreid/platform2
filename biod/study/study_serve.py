@@ -331,12 +331,10 @@ def main(argv: list):
 
     if args.log_dir:
         log_name = 'server-%s.log' % (datetime.now().strftime('%Y%m%d_%H%M%S'))
-        h_access = logging.handlers.RotatingFileHandler(
-            filename=os.path.join(args.log_dir, 'access.log'))
-        h_error = logging.handlers.RotatingFileHandler(
+        h = logging.handlers.RotatingFileHandler(
             filename=os.path.join(args.log_dir, log_name))
-        logger_cherrypy_access.addHandler(h_access)
-        logger_cherrypy_error.addHandler(h_error)
+        logger_cherrypy_access.addHandler(h)
+        logger_cherrypy_error.addHandler(h)
         cherrypy.config.update({'log.screen': False})
     if args.syslog:
         h = logging.handlers.SysLogHandler(
