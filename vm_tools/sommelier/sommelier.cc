@@ -3620,6 +3620,7 @@ static void sl_print_usage() {
       "  --glamor\t\t\tUse glamor to accelerate X11 clients\n"
 #ifdef PERFETTO_TRACING
       "  --trace-filename=PATH\t\tPath to Perfetto trace filename\n"
+      "  --trace-system\t\tPerfetto trace to system daemon\n"
 #endif
       "  --fullscreen-mode=MODE\tDefault fullscreen behavior (immersive,"
       " plain)\n");
@@ -3737,6 +3738,7 @@ int main(int argc, char** argv) {
   ctx.atoms[ATOM_WL_SELECTION] = {"_WL_SELECTION"};
   ctx.atoms[ATOM_GTK_THEME_VARIANT] = {"_GTK_THEME_VARIANT"};
   ctx.trace_filename = NULL;
+  ctx.trace_system = false;
   const char* display = getenv("SOMMELIER_DISPLAY");
   const char* scale = getenv("SOMMELIER_SCALE");
   const char* dpi = getenv("SOMMELIER_DPI");
@@ -3851,6 +3853,8 @@ int main(int argc, char** argv) {
 #ifdef PERFETTO_TRACING
     } else if (strstr(arg, "--trace-filename") == arg) {
       ctx.trace_filename = sl_arg_value(arg);
+    } else if (strstr(arg, "--trace-system") == arg) {
+      ctx.trace_system = true;
 #endif
     } else if (arg[0] == '-') {
       if (strcmp(arg, "--") == 0) {
@@ -4426,9 +4430,9 @@ int main(int argc, char** argv) {
 
   // Attempt to enable tracing.  This could be called earlier but would rather
   // spawn all children first.
-  if (ctx.trace_filename) {
-    initialize_tracing();
-    enable_tracing();
+  if (ctx.trace_filename || ctx.trace_system) {
+    initialize_tracing(ctx.trace_filename, ctx.trace_system);
+    enable_tracing(!ctx.trace_system);
     ctx.sigusr1_event_source =
         wl_event_loop_add_signal(event_loop, SIGUSR1, sl_handle_sigusr1, &ctx);
   }

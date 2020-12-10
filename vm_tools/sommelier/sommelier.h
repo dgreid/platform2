@@ -179,6 +179,7 @@ struct sl_context {
   xcb_visualid_t visual_ids[256];
   xcb_colormap_t colormaps[256];
   const char* trace_filename;
+  bool trace_system;
 };
 
 struct sl_compositor {

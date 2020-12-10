@@ -14,8 +14,8 @@ PERFETTO_DEFINE_CATEGORIES(perfetto::Category("surface").SetDescription(
 #define TRACE_EVENT(category, name)
 #endif
 
-void initialize_tracing();
-void enable_tracing();
+void initialize_tracing(bool in_process_backend, bool system_backend);
+void enable_tracing(bool create_session);
 void dump_trace(char const* filename);
 
 #endif  // VM_TOOLS_SOMMELIER_SOMMELIER_TRACING_H_

@@ -16,27 +16,34 @@ PERFETTO_TRACK_EVENT_STATIC_STORAGE();
 
 std::unique_ptr<perfetto::TracingSession> tracing_session;
 
-void initialize_tracing() {
+void initialize_tracing(bool in_process_backend, bool system_backend) {
   perfetto::TracingInitArgs args;
-  args.backends |= perfetto::kInProcessBackend;
+  if (in_process_backend) {
+    args.backends |= perfetto::kInProcessBackend;
+  }
+  if (system_backend) {
+    args.backends |= perfetto::kSystemBackend;
+  }
 
   perfetto::Tracing::Initialize(args);
   perfetto::TrackEvent::Register();
 }
 
-void enable_tracing() {
+void enable_tracing(bool create_session) {
   perfetto::TraceConfig cfg;
   cfg.add_buffers()->set_size_kb(1024);  // Record up to 1 MiB.
   auto* ds_cfg = cfg.add_data_sources()->mutable_config();
   ds_cfg->set_name("track_event");
 
-  tracing_session = perfetto::Tracing::NewTrace();
-  tracing_session->Setup(cfg);
-  tracing_session->StartBlocking();
+  if (create_session) {
+    tracing_session = perfetto::Tracing::NewTrace();
+    tracing_session->Setup(cfg);
+    tracing_session->StartBlocking();
+  }
 }
 
 void dump_trace(const char* trace_filename) {
-  if (!trace_filename || !*trace_filename) {
+  if (!trace_filename || !*trace_filename || !tracing_session) {
     return;
   }
 
@@ -70,9 +77,9 @@ void dump_trace(const char* trace_filename) {
 
 // Stubs.
 
-void initialize_tracing() {}
+void initialize_tracing(bool in_process_backend, bool system_backend) {}
 
-void enable_tracing() {}
+void enable_tracing(bool create_session) {}
 
 void dump_trace(const char* trace_filename) {}
 
