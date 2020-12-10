@@ -159,9 +159,9 @@ constexpr int kSignatureCounterBytes = 4;
 constexpr int kAaguidBytes = 16;
 constexpr int kCredentialIdLengthBytes = 2;
 
-brillo::SecureBlob ArrayToSecureBlob(const char* array) {
-  brillo::SecureBlob blob;
-  CHECK(brillo::SecureBlob::HexStringToSecureBlob(array, &blob));
+brillo::Blob HexArrayToBlob(const char* array) {
+  brillo::Blob blob;
+  CHECK(base::HexStringToBytes(array, &blob));
   return blob;
 }
 
@@ -265,7 +265,7 @@ class WebAuthnHandlerTest : public ::testing::Test {
       std::vector<uint8_t>* credential_id,
       std::vector<uint8_t>* credential_pubkey) {
     return handler_->DoU2fGenerate(
-        kRpIdHash, ArrayToSecureBlob(kCredentialSecret), presence_requirement,
+        kRpIdHash, HexArrayToBlob(kCredentialSecret), presence_requirement,
         /* uv_compatible = */ true, credential_id, credential_pubkey);
   }
 
@@ -275,7 +275,7 @@ class WebAuthnHandlerTest : public ::testing::Test {
       PresenceRequirement presence_requirement,
       std::vector<uint8_t>* signature) {
     return handler_->DoU2fSign(kRpIdHash, hash_to_sign, credential_id,
-                               ArrayToSecureBlob(kCredentialSecret),
+                               HexArrayToBlob(kCredentialSecret),
                                presence_requirement, signature);
   }
 
@@ -708,7 +708,7 @@ TEST_F(WebAuthnHandlerTest, GetAssertionInvalidKeyHandle) {
   request.set_verification_type(VerificationType::VERIFICATION_USER_PRESENCE);
 
   EXPECT_CALL(*mock_webauthn_storage_, GetSecretByCredentialId(credential_id))
-      .WillOnce(Return(ArrayToSecureBlob(kCredentialSecret)));
+      .WillOnce(Return(HexArrayToBlob(kCredentialSecret)));
   EXPECT_CALL(mock_tpm_proxy_,
               SendU2fSign(Matcher<const u2f_sign_req&>(StructMatchesRegex(
                               ExpectedU2fSignCheckOnlyRequestRegex())),
@@ -738,7 +738,7 @@ TEST_F(WebAuthnHandlerTest, DISABLED_GetAssertionPresenceNoPresence) {
   request.set_verification_type(VerificationType::VERIFICATION_USER_PRESENCE);
 
   EXPECT_CALL(*mock_webauthn_storage_, GetSecretByCredentialId(credential_id))
-      .WillRepeatedly(Return(ArrayToSecureBlob(kCredentialSecret)));
+      .WillRepeatedly(Return(HexArrayToBlob(kCredentialSecret)));
   EXPECT_CALL(mock_tpm_proxy_,
               SendU2fSign(Matcher<const u2f_sign_req&>(StructMatchesRegex(
                               ExpectedU2fSignCheckOnlyRequestRegex())),
@@ -774,7 +774,7 @@ TEST_F(WebAuthnHandlerTest, DISABLED_GetAssertionPresenceSuccess) {
   request.set_verification_type(VerificationType::VERIFICATION_USER_PRESENCE);
 
   EXPECT_CALL(*mock_webauthn_storage_, GetSecretByCredentialId(credential_id))
-      .WillRepeatedly(Return(ArrayToSecureBlob(kCredentialSecret)));
+      .WillRepeatedly(Return(HexArrayToBlob(kCredentialSecret)));
   EXPECT_CALL(mock_tpm_proxy_,
               SendU2fSign(Matcher<const u2f_sign_req&>(StructMatchesRegex(
                               ExpectedU2fSignCheckOnlyRequestRegex())),
@@ -837,7 +837,7 @@ TEST_F(WebAuthnHandlerTest, GetAssertionVerificationSuccess) {
   ExpectUVFlowSuccess();
 
   EXPECT_CALL(*mock_webauthn_storage_, GetSecretByCredentialId(credential_id))
-      .WillRepeatedly(Return(ArrayToSecureBlob(kCredentialSecret)));
+      .WillRepeatedly(Return(HexArrayToBlob(kCredentialSecret)));
   EXPECT_CALL(
       mock_tpm_proxy_,
       SendU2fSign(Matcher<const u2f_sign_versioned_req&>(StructMatchesRegex(
@@ -888,7 +888,7 @@ TEST_F(WebAuthnHandlerTest, HasCredentialsNoMatch) {
   request.add_credential_id(credential_id);
 
   EXPECT_CALL(*mock_webauthn_storage_, GetSecretByCredentialId(credential_id))
-      .WillRepeatedly(Return(ArrayToSecureBlob(kCredentialSecret)));
+      .WillRepeatedly(Return(HexArrayToBlob(kCredentialSecret)));
   EXPECT_CALL(mock_tpm_proxy_,
               SendU2fSign(Matcher<const u2f_sign_req&>(StructMatchesRegex(
                               ExpectedU2fSignCheckOnlyRequestRegex())),
@@ -906,7 +906,7 @@ TEST_F(WebAuthnHandlerTest, HasCredentialsOneMatch) {
   request.add_credential_id(credential_id);
 
   EXPECT_CALL(*mock_webauthn_storage_, GetSecretByCredentialId(credential_id))
-      .WillRepeatedly(Return(ArrayToSecureBlob(kCredentialSecret)));
+      .WillRepeatedly(Return(HexArrayToBlob(kCredentialSecret)));
   EXPECT_CALL(mock_tpm_proxy_,
               SendU2fSign(Matcher<const u2f_sign_req&>(StructMatchesRegex(
                               ExpectedU2fSignCheckOnlyRequestRegex())),

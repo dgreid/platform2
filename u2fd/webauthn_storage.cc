@@ -175,7 +175,6 @@ bool WebAuthnStorage::LoadRecords() {
       read_all_records_successfully = false;
       continue;
     }
-    const brillo::SecureBlob secret_blob(secret);
 
     const std::string* rp_id = record_dictionary.FindStringKey(kRpIdKey);
     if (!rp_id) {
@@ -218,15 +217,15 @@ bool WebAuthnStorage::LoadRecords() {
       continue;
     }
 
-    records_.emplace_back(WebAuthnRecord{credential_id, secret_blob, *rp_id,
-                                         user_id, *user_display_name,
-                                         *timestamp});
+    records_.emplace_back(WebAuthnRecord{
+        credential_id, brillo::Blob(secret.begin(), secret.end()), *rp_id,
+        user_id, *user_display_name, *timestamp});
   }
   LOG(INFO) << "Loaded " << records_.size() << " WebAuthn records to memory.";
   return read_all_records_successfully;
 }
 
-base::Optional<brillo::SecureBlob> WebAuthnStorage::GetSecretByCredentialId(
+base::Optional<brillo::Blob> WebAuthnStorage::GetSecretByCredentialId(
     const std::string& credential_id) {
   for (const WebAuthnRecord& record : records_) {
     if (record.credential_id == credential_id) {

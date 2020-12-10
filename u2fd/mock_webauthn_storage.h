@@ -26,7 +26,7 @@ class MockWebAuthnStorage : public WebAuthnStorage {
 
   MOCK_METHOD(void, Reset, (), (override));
 
-  MOCK_METHOD(base::Optional<brillo::SecureBlob>,
+  MOCK_METHOD(base::Optional<brillo::Blob>,
               GetSecretByCredentialId,
               (const std::string& credential_id),
               (override));

@@ -27,9 +27,9 @@ constexpr char kUserId[] = "deadbeef";
 constexpr char kUserDisplayName[] = "example_user";
 constexpr double kCreatedTime = 12345;
 
-brillo::SecureBlob ArrayToSecureBlob(const char* array) {
-  brillo::SecureBlob blob;
-  CHECK(brillo::SecureBlob::HexStringToSecureBlob(array, &blob));
+brillo::Blob HexArrayToBlob(const char* array) {
+  brillo::Blob blob;
+  CHECK(base::HexStringToBytes(array, &blob));
   return blob;
 }
 
@@ -61,7 +61,7 @@ class WebAuthnStorageTest : public ::testing::Test {
 
 TEST_F(WebAuthnStorageTest, WriteAndReadRecord) {
   const WebAuthnRecord record{kCredentialId,
-                              ArrayToSecureBlob(kCredentialSecret),
+                              HexArrayToBlob(kCredentialSecret),
                               kRpId,
                               kUserId,
                               kUserDisplayName,
@@ -86,11 +86,11 @@ TEST_F(WebAuthnStorageTest, WriteAndReadRecord) {
 }
 
 TEST_F(WebAuthnStorageTest, WriteAndReadRecordWithEmptyUserIdAndDisplayName) {
-  const WebAuthnRecord record{
-      kCredentialId, ArrayToSecureBlob(kCredentialSecret), kRpId,
-      std::string(),  // user_id
-      std::string(),  // user_display_name
-      kCreatedTime};
+  const WebAuthnRecord record{kCredentialId, HexArrayToBlob(kCredentialSecret),
+                              kRpId,
+                              std::string(),  // user_id
+                              std::string(),  // user_display_name
+                              kCreatedTime};
 
   EXPECT_TRUE(webauthn_storage_->WriteRecord(record));
 
@@ -108,6 +108,25 @@ TEST_F(WebAuthnStorageTest, WriteAndReadRecordWithEmptyUserIdAndDisplayName) {
   EXPECT_TRUE(record_loaded->user_id.empty());
   EXPECT_TRUE(record_loaded->user_display_name.empty());
   EXPECT_EQ(record.timestamp, record_loaded->timestamp);
+}
+
+TEST_F(WebAuthnStorageTest, LoadManyRecords) {
+  for (int i = 0; i < 30; i++) {
+    const WebAuthnRecord record{std::string(kCredentialId) + std::to_string(i),
+                                HexArrayToBlob(kCredentialSecret),
+                                kRpId,
+                                kUserId,
+                                kUserDisplayName,
+                                kCreatedTime};
+
+    EXPECT_TRUE(webauthn_storage_->WriteRecord(record));
+  }
+
+  webauthn_storage_->Reset();
+  webauthn_storage_->set_allow_access(true);
+  webauthn_storage_->set_sanitized_user(kSanitizedUser);
+
+  EXPECT_TRUE(webauthn_storage_->LoadRecords());
 }
 
 }  // namespace

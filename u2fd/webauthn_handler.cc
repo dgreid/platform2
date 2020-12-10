@@ -124,6 +124,11 @@ void WebAuthnHandler::Initialize(dbus::Bus* bus,
                                  TpmVendorCommandProxy* tpm_proxy,
                                  UserState* user_state,
                                  std::function<void()> request_presence) {
+  if (Initialized()) {
+    LOG(INFO) << "WebAuthn handler already initialized, doing nothing.";
+    return;
+  }
+
   tpm_proxy_ = tpm_proxy;
   user_state_ = user_state;
   user_state_->SetSessionStartedCallback(
@@ -426,7 +431,7 @@ void WebAuthnHandler::DoMakeCredential(
   // PIN.
   bool uv_compatible = true;
 
-  brillo::SecureBlob credential_secret(kCredentialSecretSize);
+  brillo::Blob credential_secret(kCredentialSecretSize);
   if (RAND_bytes(&credential_secret.front(), credential_secret.size()) != 1) {
     LOG(ERROR) << "Failed to generate secret for new credential.";
     response.set_status(MakeCredentialResponse::INTERNAL_ERROR);
@@ -553,7 +558,7 @@ void WebAuthnHandler::CallAndWaitForPresence(std::function<uint32_t()> fn,
 
 MakeCredentialResponse::MakeCredentialStatus WebAuthnHandler::DoU2fGenerate(
     const std::vector<uint8_t>& rp_id_hash,
-    const brillo::SecureBlob& credential_secret,
+    const std::vector<uint8_t>& credential_secret,
     PresenceRequirement presence_requirement,
     bool uv_compatible,
     std::vector<uint8_t>* credential_id,
@@ -660,7 +665,7 @@ HasCredentialsResponse::HasCredentialsStatus
 WebAuthnHandler::HasExcludedCredentials(const MakeCredentialRequest& request) {
   std::vector<uint8_t> rp_id_hash = util::Sha256(request.rp_id());
   for (auto credential : request.excluded_credential_id()) {
-    base::Optional<brillo::SecureBlob> credential_secret =
+    base::Optional<std::vector<uint8_t>> credential_secret =
         webauthn_storage_->GetSecretByCredentialId(credential);
     if (!credential_secret)
       continue;
@@ -712,7 +717,7 @@ void WebAuthnHandler::GetAssertion(
   int matched_index = -1;
 
   for (int index = 0; index < request.allowed_credential_id_size(); index++) {
-    base::Optional<brillo::SecureBlob> credential_secret =
+    base::Optional<std::vector<uint8_t>> credential_secret =
         webauthn_storage_->GetSecretByCredentialId(
             request.allowed_credential_id(index));
     if (!credential_secret)
@@ -781,7 +786,7 @@ void WebAuthnHandler::DoGetAssertion(struct GetAssertionSession session,
   util::AppendToVector(session.request.client_data_hash(), &data_to_sign);
   std::vector<uint8_t> hash_to_sign = util::Sha256(data_to_sign);
 
-  base::Optional<brillo::SecureBlob> credential_secret =
+  base::Optional<std::vector<uint8_t>> credential_secret =
       webauthn_storage_->GetSecretByCredentialId(session.credential_id);
   if (!credential_secret) {
     LOG(ERROR) << "No credential secret for credential id "
@@ -809,7 +814,7 @@ GetAssertionResponse::GetAssertionStatus WebAuthnHandler::DoU2fSign(
     const std::vector<uint8_t>& rp_id_hash,
     const std::vector<uint8_t>& hash_to_sign,
     const std::vector<uint8_t>& credential_id,
-    const brillo::SecureBlob& credential_secret,
+    const std::vector<uint8_t>& credential_secret,
     PresenceRequirement presence_requirement,
     std::vector<uint8_t>* signature) {
   DCHECK(rp_id_hash.size() == SHA256_DIGEST_LENGTH);
@@ -930,7 +935,7 @@ HasCredentialsResponse WebAuthnHandler::HasCredentials(
 
   std::vector<uint8_t> rp_id_hash = util::Sha256(request.rp_id());
   for (const auto& credential_id : request.credential_id()) {
-    base::Optional<brillo::SecureBlob> credential_secret =
+    base::Optional<std::vector<uint8_t>> credential_secret =
         webauthn_storage_->GetSecretByCredentialId(credential_id);
     if (!credential_secret)
       continue;
@@ -955,7 +960,7 @@ HasCredentialsResponse::HasCredentialsStatus
 WebAuthnHandler::DoU2fSignCheckOnly(
     const std::vector<uint8_t>& rp_id_hash,
     const std::vector<uint8_t>& credential_id,
-    const brillo::SecureBlob& credential_secret) {
+    const std::vector<uint8_t>& credential_secret) {
   uint32_t sign_status;
 
   if (credential_id.size() ==

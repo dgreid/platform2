@@ -148,7 +148,7 @@ class WebAuthnHandler {
   // |rp_id_hash| must be exactly 32 bytes.
   MakeCredentialResponse::MakeCredentialStatus DoU2fGenerate(
       const std::vector<uint8_t>& rp_id_hash,
-      const brillo::SecureBlob& credential_secret,
+      const std::vector<uint8_t>& credential_secret,
       PresenceRequirement presence_requirement,
       bool uv_compatible,
       std::vector<uint8_t>* credential_id,
@@ -171,7 +171,7 @@ class WebAuthnHandler {
       const std::vector<uint8_t>& rp_id_hash,
       const std::vector<uint8_t>& hash_to_sign,
       const std::vector<uint8_t>& credential_id,
-      const brillo::SecureBlob& credential_secret,
+      const std::vector<uint8_t>& credential_secret,
       PresenceRequirement presence_requirement,
       std::vector<uint8_t>* signature);
 
@@ -187,7 +187,7 @@ class WebAuthnHandler {
   HasCredentialsResponse::HasCredentialsStatus DoU2fSignCheckOnly(
       const std::vector<uint8_t>& rp_id_hash,
       const std::vector<uint8_t>& credential_id,
-      const brillo::SecureBlob& credential_secret);
+      const std::vector<uint8_t>& credential_secret);
 
   // Prompts the user for presence through |request_presence_| and calls |fn|
   // repeatedly until success or timeout.
