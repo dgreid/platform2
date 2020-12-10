@@ -629,6 +629,11 @@ class UserDataAuth {
       base::OnceCallback<void(const user_data_auth::StartAuthSessionReply&)>
           on_done);
 
+  bool AuthenticateAuthSession(
+      user_data_auth::AuthenticateAuthSessionRequest request,
+      base::OnceCallback<
+          void(const user_data_auth::AuthenticateAuthSessionReply&)> on_done);
+
  private:
   // Note: In Service class (the class that this class is refactored from),
   // there is a initialize_tpm_ member variable, but it is almost unused and

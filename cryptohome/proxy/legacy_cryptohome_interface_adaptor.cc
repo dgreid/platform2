@@ -3111,4 +3111,37 @@ void LegacyCryptohomeInterfaceAdaptor::StartAuthSessionOnStarted(
   response->Return(result);
 }
 
+void LegacyCryptohomeInterfaceAdaptor::AuthenticateAuthSession(
+    std::unique_ptr<
+        brillo::dbus_utils::DBusMethodResponse<cryptohome::BaseReply>> response,
+    const cryptohome::AuthenticateAuthSessionRequest& in_request) {
+  auto response_shared =
+      std::make_shared<SharedDBusMethodResponse<cryptohome::BaseReply>>(
+          std::move(response));
+
+  user_data_auth::AuthenticateAuthSessionRequest request;
+  request.set_auth_session_id(in_request.auth_session_id());
+  userdataauth_proxy_->AuthenticateAuthSessionAsync(
+      request,
+      base::Bind(
+          &LegacyCryptohomeInterfaceAdaptor::AuthenticateAuthSessionOnDone,
+          base::Unretained(this), response_shared),
+      base::Bind(&LegacyCryptohomeInterfaceAdaptor::ForwardError<
+                     cryptohome::BaseReply>,
+                 base::Unretained(this), response_shared),
+      kDefaultTimeout.InMilliseconds());
+}
+
+void LegacyCryptohomeInterfaceAdaptor::AuthenticateAuthSessionOnDone(
+    std::shared_ptr<SharedDBusMethodResponse<cryptohome::BaseReply>> response,
+    const user_data_auth::AuthenticateAuthSessionReply& reply) {
+  cryptohome::BaseReply result;
+  result.set_error(static_cast<cryptohome::CryptohomeErrorCode>(reply.error()));
+  cryptohome::AuthenticateAuthSessionReply* result_extension =
+      result.MutableExtension(cryptohome::AuthenticateAuthSessionReply::reply);
+  result_extension->set_authenticated(reply.authenticated());
+  ClearErrorIfNotSet(&result);
+  response->Return(result);
+}
+
 }  // namespace cryptohome

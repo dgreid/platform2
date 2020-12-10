@@ -314,6 +314,19 @@ do.
       </arg>
     </method>
 
+    <method name="AuthenticateAuthSession">
+      <annotation name="org.chromium.DBus.Method.Kind"
+                  value="async"/>
+      <arg name="request" type="ay" direction="in">
+        <annotation name="org.chromium.DBus.Argument.ProtobufClass"
+                    value="user_data_auth::AuthenticateAuthSessionRequest" />
+      </arg>
+      <arg name="reply" type="ay" direction="out">
+        <annotation name="org.chromium.DBus.Argument.ProtobufClass"
+                    value="user_data_auth::AuthenticateAuthSessionReply" />
+      </arg>
+    </method>
+
     <!-- LowDiskSpace: Emitted when the system is running low on disk space
                        for home directories. -->
     <signal name="LowDiskSpace">

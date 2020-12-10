@@ -169,6 +169,7 @@ static const char* kActions[] = {"mount_ex",
                                  "start_fingerprint_auth_session",
                                  "end_fingerprint_auth_session",
                                  "start_auth_session",
+                                 "authenticate_auth_session",
                                  NULL};
 enum ActionEnum {
   ACTION_MOUNT_EX,
@@ -252,6 +253,7 @@ enum ActionEnum {
   ACTION_START_FINGERPRINT_AUTH_SESSION,
   ACTION_END_FINGERPRINT_AUTH_SESSION,
   ACTION_START_AUTH_SESSION,
+  ACTION_AUTHENTICATE_AUTH_SESSION
 };
 static const char kUserSwitch[] = "user";
 static const char kPasswordSwitch[] = "password";
@@ -288,6 +290,7 @@ static const char kRestoreKeyInHexSwitch[] = "restore_key_in_hex";
 static const char kMassRemoveExemptLabelsSwitch[] = "exempt_key_labels";
 static const char kEnrollSwitch[] = "enroll";
 static const char kUseDBus[] = "use_dbus";
+static const char kAuthSessionId[] = "auth_session_id";
 }  // namespace switches
 
 #define DBUS_METHOD(method_name) org_chromium_CryptohomeInterface_##method_name
@@ -347,6 +350,18 @@ bool GetAccountId(const base::CommandLine* cl, std::string* user_out) {
 
   if (user_out->length() == 0) {
     printf("No user specified (--user=<account_id>)\n");
+    return false;
+  }
+  return true;
+}
+
+bool GetAuthSessionId(const base::CommandLine* cl,
+                      std::string* session_id_out) {
+  *session_id_out = cl->GetSwitchValueASCII(switches::kAuthSessionId);
+
+  if (session_id_out->length() == 0) {
+    printf(
+        "No auth_session_id specified (--auth_session_id=<auth_session_id>)\n");
     return false;
   }
   return true;
@@ -3104,6 +3119,36 @@ int main(int argc, char** argv) {
       return reply.error();
     }
     printf("Auth session start succeeded.\n");
+  } else if (!strcmp(
+                 switches::kActions[switches::ACTION_AUTHENTICATE_AUTH_SESSION],
+                 action.c_str())) {
+    std::string auth_session_id;
+    if (!GetAuthSessionId(cl, &auth_session_id))
+      return 1;
+
+    cryptohome::AuthenticateAuthSessionRequest req;
+    req.set_auth_session_id(auth_session_id);
+
+    brillo::glib::ScopedArray req_ary(GArrayFromProtoBuf(req));
+    if (!req_ary.get())
+      return 1;
+
+    cryptohome::BaseReply reply;
+    brillo::glib::ScopedError error;
+
+    GArray* out_reply = NULL;
+    if (!org_chromium_CryptohomeInterface_authenticate_auth_session(
+            proxy.gproxy(), req_ary.get(), &out_reply,
+            &brillo::Resetter(&error).lvalue())) {
+      return 1;
+    }
+    // TODO(crbug.com/1157622): Complete the API with actual authentication.
+    ParseBaseReply(out_reply, &reply, true /* print_reply */);
+    if (reply.has_error()) {
+      printf("Auth session failed to authenticate.\n");
+      return reply.error();
+    }
+    printf("Auth session authentication succeeded.\n");
   } else {
     printf("Unknown action or no action given.  Available actions:\n");
     for (int i = 0; switches::kActions[i]; i++)

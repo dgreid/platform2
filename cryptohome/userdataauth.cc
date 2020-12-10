@@ -3086,4 +3086,24 @@ void UserDataAuth::RemoveAuthSessionWithToken(
   auth_sessions_.erase(token);
 }
 
+bool UserDataAuth::AuthenticateAuthSession(
+    user_data_auth::AuthenticateAuthSessionRequest request,
+    base::OnceCallback<
+        void(const user_data_auth::AuthenticateAuthSessionReply&)> on_done) {
+  base::Optional<base::UnguessableToken> token =
+      AuthSession::GetTokenFromSerializedString(request.auth_session_id());
+  user_data_auth::AuthenticateAuthSessionReply reply;
+  if (!token.has_value() ||
+      auth_sessions_.find(token.value()) == auth_sessions_.end()) {
+    reply.set_error(user_data_auth::CRYPTOHOME_INVALID_AUTH_SESSION_TOKEN);
+    std::move(on_done).Run(reply);
+    return false;
+  }
+  // TODO(crbug.com/1157622) : Complete the API with actual authentication.
+  reply.set_error(user_data_auth::CRYPTOHOME_ERROR_AUTHORIZATION_KEY_FAILED);
+  reply.set_authenticated(false);
+  std::move(on_done).Run(reply);
+  return false;
+}
+
 }  // namespace cryptohome

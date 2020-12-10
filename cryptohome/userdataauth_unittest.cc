@@ -543,9 +543,15 @@ static_assert(
     "user_data_auth:: and cryptohome::");
 
 static_assert(
-    user_data_auth::CryptohomeErrorCode_MAX == 48,
+    static_cast<int>(user_data_auth::CRYPTOHOME_INVALID_AUTH_SESSION_TOKEN) ==
+        static_cast<int>(cryptohome::CRYPTOHOME_INVALID_AUTH_SESSION_TOKEN),
+    "Enum member CRYPTOHOME_INVALID_AUTH_SESSION_TOKEN differs between "
+    "user_data_auth:: and cryptohome::");
+
+static_assert(
+    user_data_auth::CryptohomeErrorCode_MAX == 49,
     "user_data_auth::CrytpohomeErrorCode's element count is incorrect");
-static_assert(cryptohome::CryptohomeErrorCode_MAX == 48,
+static_assert(cryptohome::CryptohomeErrorCode_MAX == 49,
               "cryptohome::CrytpohomeErrorCode's element count is incorrect");
 }  // namespace CryptohomeErrorCodeEquivalenceTest
 
@@ -2007,6 +2013,8 @@ class UserDataAuthExTest : public UserDataAuthTest {
     remove_homedir_req_.reset(new user_data_auth::RemoveRequest);
     rename_homedir_req_.reset(new user_data_auth::RenameRequest);
     start_auth_session_req_.reset(new user_data_auth::StartAuthSessionRequest);
+    authenticate_auth_session_req_.reset(
+        new user_data_auth::AuthenticateAuthSessionRequest);
   }
 
   template <class ProtoBuf>
@@ -2037,6 +2045,8 @@ class UserDataAuthExTest : public UserDataAuthTest {
   std::unique_ptr<user_data_auth::RenameRequest> rename_homedir_req_;
   std::unique_ptr<user_data_auth::StartAuthSessionRequest>
       start_auth_session_req_;
+  std::unique_ptr<user_data_auth::AuthenticateAuthSessionRequest>
+      authenticate_auth_session_req_;
 
   static constexpr char kUser[] = "chromeos-user";
   static constexpr char kKey[] = "274146c6e8886a843ddfea373e2dc71b";
@@ -3011,6 +3021,24 @@ TEST_F(UserDataAuthExTest, StartAuthSession) {
   userdataauth_->auth_sessions_[auth_session_id.value()]->timer_.FireNow();
   EXPECT_EQ(userdataauth_->auth_sessions_.find(auth_session_id.value()),
             userdataauth_->auth_sessions_.end());
+}
+
+TEST_F(UserDataAuthExTest, AuthenticateAuthSessionInvalidToken) {
+  PrepareArguments();
+  std::string invalid_token = "invalid_token_16";
+  authenticate_auth_session_req_->set_auth_session_id(invalid_token);
+  user_data_auth::AuthenticateAuthSessionReply auth_session_reply;
+  userdataauth_->AuthenticateAuthSession(
+      *authenticate_auth_session_req_,
+      base::BindOnce(
+          [](user_data_auth::AuthenticateAuthSessionReply* auth_reply_ptr,
+             const user_data_auth::AuthenticateAuthSessionReply& reply) {
+            *auth_reply_ptr = reply;
+          },
+          base::Unretained(&auth_session_reply)));
+  EXPECT_EQ(auth_session_reply.error(),
+            user_data_auth::CRYPTOHOME_INVALID_AUTH_SESSION_TOKEN);
+  EXPECT_FALSE(auth_session_reply.authenticated());
 }
 
 class ChallengeResponseUserDataAuthExTest : public UserDataAuthExTest {

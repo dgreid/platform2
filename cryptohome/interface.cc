@@ -802,6 +802,11 @@ gboolean cryptohome_start_auth_session(Cryptohome* self,
   CRYPTOHOME_WRAP_METHOD(StartAuthSession, id, request);
 }
 
+gboolean cryptohome_authenticate_auth_session(Cryptohome* self,
+                                              GArray* request,
+                                              DBusGMethodInvocation* error) {
+  CRYPTOHOME_WRAP_METHOD(AuthenticateAuthSession, request);
+}
 #undef CRYPTOHOME_WRAP_METHOD
 
 }  // namespace gobject

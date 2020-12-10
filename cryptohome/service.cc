@@ -4397,4 +4397,10 @@ gboolean Service::StartAuthSession(const GArray* account_id,
   return FALSE;
 }
 
+gboolean Service::AuthenticateAuthSession(
+    const GArray* start_auth_session_request, DBusGMethodInvocation* context) {
+  SendInvalidArgsReply(context, "Auth sessions is only used in UserDataAuth");
+  return FALSE;
+}
+
 }  // namespace cryptohome

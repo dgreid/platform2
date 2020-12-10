@@ -579,6 +579,10 @@ class LegacyCryptohomeInterfaceAdaptor
           cryptohome::BaseReply>> response,
       const cryptohome::AccountIdentifier& in_account_id,
       const cryptohome::StartAuthSessionRequest& in_request) override;
+  void AuthenticateAuthSession(
+      std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
+          cryptohome::BaseReply>> response,
+      const cryptohome::AuthenticateAuthSessionRequest& in_request) override;
 
   // This is a public version of OnDircryptoMigrationProgressSignal() that
   // simply calls the protected version. This is only used for testing because
@@ -899,6 +903,9 @@ class LegacyCryptohomeInterfaceAdaptor
   void StartAuthSessionOnStarted(
       std::shared_ptr<SharedDBusMethodResponse<cryptohome::BaseReply>> response,
       const user_data_auth::StartAuthSessionReply& reply);
+  void AuthenticateAuthSessionOnDone(
+      std::shared_ptr<SharedDBusMethodResponse<cryptohome::BaseReply>> response,
+      const user_data_auth::AuthenticateAuthSessionReply& reply);
 
   // This method forwards the error received from calling the new interface back
   // to the old interface

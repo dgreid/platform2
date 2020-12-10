@@ -129,6 +129,35 @@ void UserDataAuthAdaptor::DoStartAuthSession(
           std::move(response)));
 }
 
+void UserDataAuthAdaptor::AuthenticateAuthSession(
+    std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
+        user_data_auth::AuthenticateAuthSessionReply>> response,
+    const user_data_auth::AuthenticateAuthSessionRequest& in_request) {
+  service_->PostTaskToMountThread(
+      FROM_HERE,
+      base::BindOnce(&UserDataAuthAdaptor::DoAuthenticateAuthSession,
+                     base::Unretained(this),
+                     ThreadSafeDBusMethodResponse<
+                         user_data_auth::AuthenticateAuthSessionReply>::
+                         MakeThreadSafe(std::move(response)),
+                     in_request));
+}
+
+void UserDataAuthAdaptor::DoAuthenticateAuthSession(
+    std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
+        user_data_auth::AuthenticateAuthSessionReply>> response,
+    const user_data_auth::AuthenticateAuthSessionRequest& in_request) {
+  service_->AuthenticateAuthSession(
+      in_request,
+      base::BindOnce(
+          [](std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
+                 user_data_auth::AuthenticateAuthSessionReply>> local_response,
+             const user_data_auth::AuthenticateAuthSessionReply& reply) {
+            local_response->Return(reply);
+          },
+          std::move(response)));
+}
+
 void UserDataAuthAdaptor::Remove(
     std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
         user_data_auth::RemoveReply>> response,

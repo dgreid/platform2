@@ -80,6 +80,7 @@ enum CryptohomeErrorCode {
   CRYPTOHOME_ERROR_FIDO_MAKE_CREDENTIAL_FAILED = 46;
   CRYPTOHOME_ERROR_FIDO_GET_ASSERTION_FAILED = 47;
   CRYPTOHOME_TOKEN_SERIALIZATION_FAILED = 48;
+  CRYPTOHOME_INVALID_AUTH_SESSION_TOKEN = 49;
 }
 
 message AccountIdentifier {
@@ -574,4 +575,16 @@ message StartAuthSessionReply {
   extend BaseReply { optional StartAuthSessionReply reply = 1017; }
 
   optional bytes auth_session_id = 1;
+}
+
+message AuthenticateAuthSessionRequest {
+  // Serialized form of token that is used to identify Auth Session that needs
+  // to be authenticated.
+  optional bytes auth_session_id = 1;
+}
+
+message AuthenticateAuthSessionReply {
+  extend BaseReply { optional AuthenticateAuthSessionReply reply = 1018; }
+  // Returns if the Auth Session is authenticated.
+  optional bool authenticated = 1;
 }

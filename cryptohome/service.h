@@ -769,6 +769,9 @@ class Service : public brillo::dbus::AbstractDbusService,
                                     const GArray* request,
                                     DBusGMethodInvocation* context);
 
+  virtual gboolean AuthenticateAuthSession(const GArray* request,
+                                           DBusGMethodInvocation* context);
+
  protected:
   FRIEND_TEST(ServiceTest, NoDeadlocksInInitializeTpmComplete);
 
