@@ -49,6 +49,9 @@ executable("kmsvnc") {
     ":target_defaults",
     ":libvncserver",
   ]
-  sources = [ "kmsvnc.cc" ]
+  sources = [
+    "kmsvnc.cc",
+    "uinput.cc",
+  ]
   deps = [ ":libscreen-capture" ]
 }

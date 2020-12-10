@@ -18,6 +18,7 @@
 #include "screen-capture-utils/capture.h"
 #include "screen-capture-utils/crtc.h"
 #include "screen-capture-utils/egl_capture.h"
+#include "screen-capture-utils/uinput.h"
 
 namespace screenshot {
 namespace {
@@ -226,7 +227,8 @@ int VncMain() {
   server->serverFormat.greenShift = 8;
   server->serverFormat.blueShift = 0;
 
-  // TODO(shaochuan) add input handling.
+  // Create uinput devices and hook up input events.
+  const std::unique_ptr<Uinput> uinput = Uinput::Create(server);
 
   rfbInitServer(server);
 
