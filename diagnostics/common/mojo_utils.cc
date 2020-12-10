@@ -4,13 +4,10 @@
 
 #include "diagnostics/common/mojo_utils.h"
 
-#include <unistd.h>
-
 #include <cstring>
 #include <utility>
 
 #include <base/files/file.h>
-#include <base/posix/eintr_wrapper.h>
 #include <mojo/public/c/system/types.h>
 #include <mojo/public/cpp/system/platform_handle.h>
 
@@ -18,18 +15,14 @@ namespace diagnostics {
 
 base::ReadOnlySharedMemoryMapping GetReadOnlySharedMemoryMappingFromMojoHandle(
     mojo::ScopedHandle handle) {
-  base::PlatformFile platform_file;
+  base::ScopedPlatformFile platform_file;
   auto result = mojo::UnwrapPlatformFile(std::move(handle), &platform_file);
   if (result != MOJO_RESULT_OK) {
     return base::ReadOnlySharedMemoryMapping();
   }
 
-  const int fd(HANDLE_EINTR(dup(platform_file)));
-  if (fd < 0) {
-    return base::ReadOnlySharedMemoryMapping();
-  }
-
-  const int64_t file_size = base::File(fd).GetLength();
+  base::File file(std::move(platform_file));
+  const int64_t file_size = file.GetLength();
   if (file_size <= 0) {
     return base::ReadOnlySharedMemoryMapping();
   }
@@ -39,8 +32,7 @@ base::ReadOnlySharedMemoryMapping GetReadOnlySharedMemoryMappingFromMojoHandle(
   base::ReadOnlySharedMemoryRegion shm_region =
       base::ReadOnlySharedMemoryRegion::Deserialize(
           base::subtle::PlatformSharedMemoryRegion::Take(
-              base::subtle::ScopedFDPair(base::ScopedFD(platform_file),
-                                         base::ScopedFD()),
+              base::ScopedFD(file.TakePlatformFile()),
               base::subtle::PlatformSharedMemoryRegion::Mode::kReadOnly,
               file_size, base::UnguessableToken::Create()));
   return shm_region.Map();
@@ -67,7 +59,7 @@ mojo::ScopedHandle CreateReadOnlySharedMemoryRegionMojoHandle(
   base::subtle::PlatformSharedMemoryRegion platform_shm =
       base::ReadOnlySharedMemoryRegion::TakeHandleForSerialization(
           std::move(read_only_region));
-  return mojo::WrapPlatformFile(platform_shm.PassPlatformHandle().fd.release());
+  return mojo::WrapPlatformFile(platform_shm.PassPlatformHandle().fd);
 }
 
 }  // namespace diagnostics
