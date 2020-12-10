@@ -12,6 +12,8 @@
 #include <base/macros.h>
 #include <base/files/file_descriptor_watcher_posix.h>
 #include <base/files/scoped_file.h>
+#include <brillo/daemons/dbus_daemon.h>
+#include <upstart/dbus-proxies.h>
 
 #include "power_manager/common/power_constants.h"
 #include "power_manager/powerd/policy/user_proximity_handler.h"
@@ -58,6 +60,7 @@ class CellularControllerTrogdor : public UserProximityHandler::Delegate {
   // Called when the tablet mode changes.
   void HandleTabletModeChange(TabletMode mode);
   void HandleModemStateChange(ModemState state);
+  void EmitEvent(const char* event);
   // UserProximityHandler::Delegate overrides:
   void ProximitySensorDetected(UserProximity proximity) override;
   void HandleProximityChange(UserProximity proximity) override;
@@ -96,6 +99,7 @@ class CellularControllerTrogdor : public UserProximityHandler::Delegate {
   base::ScopedFD socket_;
   std::unique_ptr<base::FileDescriptorWatcher::Controller> watcher_;
   std::vector<uint8_t> buffer_;
+  std::unique_ptr<com::ubuntu::Upstart0_6Proxy> upstart_proxy_;
 };
 
 }  // namespace policy

@@ -51,7 +51,18 @@ group("all") {
     ]
   }
   if (use.trogdor_sar_hack) {
-    deps += [ ":set_cellular_transmit_power_trogdor" ]
+    deps += [
+      ":set_cellular_transmit_power_trogdor",
+      ":upstart_proxies",
+    ]
+  }
+}
+
+if (use.trogdor_sar_hack) {
+  generate_dbus_proxies("upstart_proxies") {
+    upstart_in_dir = "${sysroot}/usr/share/dbus-1/interfaces/"
+    proxy_output_file = "include/upstart/dbus-proxies.h"
+    sources = [ "${upstart_in_dir}/com.ubuntu.Upstart.xml" ]
   }
 }
 
@@ -211,6 +222,8 @@ static_library("libpolicy") {
   ]
   if (use.trogdor_sar_hack) {
     sources += [ "powerd/policy/cellular_controller_trogdor.cc" ]
+
+    deps = [ ":upstart_proxies" ]
   }
   libs = [ "m" ]
 }

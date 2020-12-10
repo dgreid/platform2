@@ -16,6 +16,11 @@
 #define TROGDOR_MODEM_NODE_ID (0x0)
 #define TROGDOR_WDS_SERVICE_ID (0x1)
 
+namespace {
+const char kUpstartServiceName[] = "com.ubuntu.Upstart";
+const char kNodeAddedEvent[] = "qrtr-service-added";
+const char kNodeRemovedEvent[] = "qrtr-service-removed";
+}  // namespace
 namespace power_manager {
 namespace policy {
 
@@ -48,6 +53,14 @@ void CellularControllerTrogdor::Init(Delegate* delegate,
       << set_transmit_power_for_tablet_mode_;
   if (set_transmit_power_for_proximity_ || set_transmit_power_for_tablet_mode_)
     CHECK(InitQrtrSocket());
+}
+
+void CellularControllerTrogdor::EmitEvent(const char* event) {
+  brillo::ErrorPtr error;
+  LOG(INFO) << "In EmitEvent sending = " << event;
+  if (!upstart_proxy_->EmitEvent(event, {}, false /* wait */, &error)) {
+    LOG(ERROR) << "Could not emit upstart event: " << error->GetMessage();
+  }
 }
 
 void CellularControllerTrogdor::ProximitySensorDetected(UserProximity value) {
@@ -179,6 +192,7 @@ void CellularControllerTrogdor::ProcessQrtrPacket(uint32_t node,
               << " port = " << pkt.port << " service = " << pkt.service;
       if (pkt.node == TROGDOR_MODEM_NODE_ID &&
           pkt.service == TROGDOR_WDS_SERVICE_ID) {
+        EmitEvent(kNodeAddedEvent);
         HandleModemStateChange(ModemState::ONLINE);
       }
       break;
@@ -187,6 +201,7 @@ void CellularControllerTrogdor::ProcessQrtrPacket(uint32_t node,
               << " port = " << pkt.port << " service = " << pkt.service;
       if (pkt.node == TROGDOR_MODEM_NODE_ID &&
           pkt.service == TROGDOR_WDS_SERVICE_ID) {
+        EmitEvent(kNodeRemovedEvent);
         HandleModemStateChange(ModemState::OFFLINE);
       }
       break;
@@ -242,6 +257,13 @@ inline void CellularControllerTrogdor::OnDataAvailable(
 
 bool CellularControllerTrogdor::InitQrtrSocket() {
   uint8_t kQrtrPort = 0;
+  dbus::Bus::Options options;
+  options.bus_type = dbus::Bus::SYSTEM;
+  scoped_refptr<dbus::Bus> bus(new dbus::Bus(options));
+  CHECK(bus->Connect());
+  upstart_proxy_ =
+      std::make_unique<com::ubuntu::Upstart0_6Proxy>(bus, kUpstartServiceName);
+
   socket_.reset(qrtr_open(kQrtrPort));
   if (!socket_.is_valid()) {
     LOG(ERROR) << "Failed to open QRTR socket with port " << kQrtrPort;
