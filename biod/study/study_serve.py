@@ -312,7 +312,7 @@ def main(argv: list):
     parser.add_argument('-k', '--gpg-keyring', type=str,
                         help='Path to the GPG keyring')
     parser.add_argument('-r', '--gpg-recipients', type=str,
-                        help='User IDs of GPG recipients')
+                        help='User IDs of GPG recipients separated by space')
     args = parser.parse_args(argv)
 
     # GPG can only be used when both gpg-keyring and gpg-recipient are specified
