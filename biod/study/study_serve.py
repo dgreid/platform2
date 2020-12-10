@@ -132,7 +132,7 @@ class FingerWebSocket(WebSocket):
 
     def closed(self, code, reason=''):
         self.abort_request = True
-        cherrypy.log('Websocket closed with code %d / %s' % (code, reason))
+        cherrypy.log(f'Websocket closed with code {code} / {reason}')
         if not self.worker:
             cherrypy.log("Worker thread wasn't running.")
             return
@@ -172,7 +172,7 @@ class FingerWebSocket(WebSocket):
             enc = self.gpg.encrypt(data, self.gpg_recipients)
             data = enc.data
 
-        cherrypy.log("Saving file '%s' size %d" % (file_path, len(data)))
+        cherrypy.log(f"Saving file '{file_path}' size {len(data)}")
         if not data:
             cherrypy.log('Error - Attempted to save empty file',
                          severity=logging.ERROR)
@@ -191,8 +191,7 @@ class FingerWebSocket(WebSocket):
                 stdout = subprocess.check_output(cmdline)
                 break
             except subprocess.CalledProcessError as e:
-                cherrypy.log("command '%s' failed with %d" %
-                             (e.cmd, e.returncode))
+                cherrypy.log(f"command '{e.cmd}' failed with {e.returncode}")
                 stdout = b''
                 # try again
         return stdout
@@ -224,7 +223,7 @@ class FingerWebSocket(WebSocket):
             if rc == 0:
                 self.save_to_file(fmi, fmi_file)
             else:
-                cherrypy.log('FMI conversion failed %d' % (rc))
+                cherrypy.log(f'FMI conversion failed {rc}')
 
     def finger_process(self, req):
         # Ensure the user has removed the finger between 2 captures
@@ -240,9 +239,9 @@ class FingerWebSocket(WebSocket):
         # detect the finger removal before the next capture
         self.ectool_fpmode('fingerup')
         # record the outcome of the capture
-        cherrypy.log('Captured finger %02d:%02d in %.2fs' % (req['finger'],
-                                                             req['picture'],
-                                                             t1 - t0))
+        cherrypy.log(
+            f'Captured finger {req["finger"]:02d}:{req["picture"]:02d}'
+            f' in {t1 - t0:.2f}s')
         req['result'] = 'ok'  # ODER req['result'] = errors[ERRNUM_TBD]
         # retrieve the finger image
         self.finger_save_image(req)
@@ -321,7 +320,7 @@ def main(argv: list):
     if args.gpg_recipients and not args.gpg_keyring:
         parser.error('gpg-keyring must be specified with gpg-recipients')
     if args.gpg_keyring and not os.access(args.gpg_keyring, os.R_OK):
-        parser.error('cannot read gpg-keyring file %s' % args.gpg_keyring)
+        parser.error(f'cannot read gpg-keyring file {args.gpg_keyring}')
 
     # Configure cherrypy server
     cherrypy.config.update({'server.socket_port': args.port})
@@ -341,7 +340,8 @@ def main(argv: list):
     loggers.append(l)
 
     if args.log_dir:
-        log_name = 'server-%s.log' % (datetime.now().strftime('%Y%m%d_%H%M%S'))
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        log_name = f'server-{timestamp}.log'
         h = logging.handlers.RotatingFileHandler(
             filename=os.path.join(args.log_dir, log_name))
         for l in loggers:
