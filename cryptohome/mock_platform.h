@@ -374,6 +374,10 @@ class MockPlatform : public Platform {
                uint64_t),
               (override));
   MOCK_METHOD(bool,
+              Tune2Fs,
+              (const base::FilePath&, const std::vector<std::string>&),
+              (override));
+  MOCK_METHOD(bool,
               ResizeFilesystem,
               (const base::FilePath&, uint64_t),
               (override));

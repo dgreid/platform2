@@ -872,6 +872,15 @@ class Platform {
                           const std::vector<std::string>& opts,
                           uint64_t blocks);
 
+  // Tunes ext4 filesystem, adding features if needed.
+  // Returns true if formatting succeeded.
+  //
+  // Paratemers
+  //   file - Path to the file or device to be formatted.
+  //   opts - format opts.
+  virtual bool Tune2Fs(const base::FilePath& file,
+                       const std::vector<std::string>& opts);
+
   // Resizes the file to blocks.
   // Returns true if resize succeeded.
   //

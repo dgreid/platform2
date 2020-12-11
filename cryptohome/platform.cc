@@ -1365,14 +1365,19 @@ bool Platform::FormatExt4(const base::FilePath& file,
     return false;
   }
 
+  // Tune the formatted filesystem:
+  // -c 0: Disable max mount count checking.
+  // -i 0: Disable filesystem checking.
+  return Tune2Fs(file, {"-c", "0", "-i", "0"});
+}
+
+bool Platform::Tune2Fs(const base::FilePath& file,
+                       const std::vector<std::string>& opts) {
   brillo::ProcessImpl tune_process;
   tune_process.AddArg("/sbin/tune2fs");
-  // Disable max mount count checking.
-  tune_process.AddArg("-c");
-  tune_process.AddArg("0");
-  // Disable filesystem checking.
-  tune_process.AddArg("-i");
-  tune_process.AddArg("0");
+  for (const auto& arg : opts)
+    tune_process.AddArg(arg);
+
   tune_process.AddArg(file.value());
 
   // Close unused file descriptors in child process.
@@ -1381,7 +1386,7 @@ bool Platform::FormatExt4(const base::FilePath& file,
   // Avoid polluting the parent process' stdout.
   tune_process.RedirectOutput("/dev/null");
 
-  rc = tune_process.Run();
+  int rc = tune_process.Run();
   if (rc != 0) {
     LOG(ERROR) << "Can't tune ext4: " << file.value() << ", error: " << rc;
     return false;
