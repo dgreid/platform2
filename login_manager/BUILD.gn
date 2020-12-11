@@ -30,7 +30,7 @@ pkg_config("target_defaults") {
     "dbus-1",
     "libbrillo",
     "libchrome",
-    "libchromeos-ui-${libbase_ver}",
+    "libchromeos-ui",
     "libcontainer",
     "libcros_config",
     "libmetrics",

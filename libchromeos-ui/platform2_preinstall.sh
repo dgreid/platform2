@@ -7,8 +7,6 @@
 set -e
 
 OUT=$1
-shift
-for v; do
-  sed -e "s/@BSLOT@/${v}/g" \
-    libchromeos-ui.pc.in > "${OUT}/lib/libchromeos-ui-${v}.pc"
-done
+VER=$2
+sed -e "s/@BSLOT@/${VER}/g" \
+  libchromeos-ui.pc.in > "${OUT}/lib/libchromeos-ui.pc"

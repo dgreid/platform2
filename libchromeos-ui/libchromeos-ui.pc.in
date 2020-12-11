@@ -4,4 +4,4 @@ Name: libchromeos-ui
 Description: Chrome OS ui library
 Version: ${bslot}
 Requires.private: libbrillo
-Libs: -lchromeos-ui-${bslot}
+Libs: -lchromeos-ui
