@@ -32,6 +32,7 @@ extern const char kFirstPowerDateFileName[];
 extern const char kManufactureDateFileName[];
 extern const char kSkuNumberFileName[];
 extern const char kProductSerialNumberFileName[];
+extern const char kProductModelNameFileName[];
 
 class SystemFetcher final {
  public:

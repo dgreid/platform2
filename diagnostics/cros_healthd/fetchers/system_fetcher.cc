@@ -33,6 +33,7 @@ constexpr char kBoardNameFileName[] = "board_name";
 constexpr char kBoardVersionFileName[] = "board_version";
 constexpr char kChassisTypeFileName[] = "chassis_type";
 constexpr char kProductNameFileName[] = "product_name";
+constexpr char kProductModelNameFileName[] = "model_name";
 
 namespace {
 
@@ -128,6 +129,12 @@ base::Optional<mojo_ipc::ProbeErrorPtr> SystemFetcher::FetchCachedVpdInfo(
   if (ReadAndTrimString(relative_vpd_ro_dir, kProductSerialNumberFileName,
                         &product_serial_number)) {
     output_info->product_serial_number = product_serial_number;
+  }
+
+  std::string product_model_name;
+  if (ReadAndTrimString(relative_vpd_ro_dir, kProductModelNameFileName,
+                        &product_model_name)) {
+    output_info->product_model_name = product_model_name;
   }
 
   return base::nullopt;
