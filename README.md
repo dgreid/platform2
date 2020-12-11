@@ -91,6 +91,7 @@ copies.
 | [mems_setup](./mems_setup/) | Boot-time initializer tool for sensors |
 | [metrics](./metrics/) | Client side user metrics collection |
 | [midis](./midis/) | [MIDI](https://en.wikipedia.org/wiki/MIDI) service |
+| [minios](./minios/) | A minimal OS used during recovery |
 | [mist](./mist/) | Modem USB Interface Switching Tool |
 | [ml](./ml/) | Machine learning service |
 | [ml_benchmark](./ml_benchmark/) | ML performance benchmark for Chrome OS |
