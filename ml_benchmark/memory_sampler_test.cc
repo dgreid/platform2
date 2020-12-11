@@ -32,9 +32,7 @@ TEST_F(PeakMemorySamplerTest, BasicFunctions) {
   // StartSampling causes a sample, plus the interval is two samples.
   EXPECT_EQ(sampler->sample_counter_, 2);
 
-  // Sample a few more times, make sure it hasn't changed
   task_environment_.FastForwardBy(sampling_interval_ * 2);
-  EXPECT_EQ(initial_peak, sampler->GetMaxSample());
 
   // Allocate 10MB
   int ten_mb_bytes = 1024 * 1024 * 10;
