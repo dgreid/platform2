@@ -185,6 +185,7 @@ WiFi::WiFi(Manager* manager,
   HelpRegisterDerivedBool(store, kMacAddressRandomizationEnabledProperty,
                           &WiFi::GetRandomMacEnabled,
                           &WiFi::SetRandomMacEnabled);
+  store->RegisterConstBool(kRekeyInProgressProperty, &is_rekey_in_progress_);
 
   store->RegisterDerivedKeyValueStore(
       kLinkStatisticsProperty,
@@ -802,7 +803,7 @@ void WiFi::CurrentBSSChanged(const RpcIdentifier& new_bss) {
   supplicant_bss_ = new_bss;
   has_already_completed_ = false;
   is_roaming_in_progress_ = false;
-  is_rekey_in_progress_ = false;
+  SetIsRekeyInProgress(false);
 
   // Any change in CurrentBSS means supplicant is actively changing our
   // connectivity.  We no longer need to track any previously pending
@@ -1893,7 +1894,7 @@ void WiFi::StateChanged(const string& new_state) {
           affected_service->SetRoamState(Service::kRoamStateConfiguring);
         }
       } else if (is_rekey_in_progress_) {
-        is_rekey_in_progress_ = false;
+        SetIsRekeyInProgress(false);
         LOG(INFO) << link_name()
                   << " EAP re-key complete. No need to renew L3 configuration.";
       }
@@ -1945,7 +1946,7 @@ void WiFi::StateChanged(const string& new_state) {
         // nothing when it happens in a PSK network. Unless roaming is in
         // progress, we assume supplicant state transitions from completed to an
         // auth/assoc state are a result of a re-key.
-        is_rekey_in_progress_ = true;
+        SetIsRekeyInProgress(true);
       } else {
         affected_service->SetState(Service::kStateAssociating);
       }
@@ -3267,6 +3268,14 @@ bool WiFi::RequestRoam(const std::string& addr, Error* error) {
     return false;
   }
   return true;
+}
+
+void WiFi::SetIsRekeyInProgress(bool is_rekey_in_progress) {
+  if (is_rekey_in_progress == is_rekey_in_progress_) {
+    return;
+  }
+  is_rekey_in_progress_ = is_rekey_in_progress;
+  adaptor()->EmitBoolChanged(kRekeyInProgressProperty, is_rekey_in_progress_);
 }
 
 }  // namespace shill

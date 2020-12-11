@@ -609,6 +609,8 @@ class WiFi : public Device, public SupplicantEventDelegateInterface {
   void SetSupplicantInterfaceProxy(
       std::unique_ptr<SupplicantInterfaceProxyInterface> proxy);
 
+  void SetIsRekeyInProgress(bool is_rekey_in_progress);
+
   // Pointer to the provider object that maintains WiFiService objects.
   WiFiProvider* provider_;
 

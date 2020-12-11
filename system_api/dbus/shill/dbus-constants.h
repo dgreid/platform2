@@ -384,6 +384,7 @@ const char kMacAddressRandomizationEnabledProperty[] =
 const char kMacAddressRandomizationSupportedProperty[] =
     "MACAddressRandomizationSupported";
 const char kNetDetectScanPeriodSecondsProperty[] = "NetDetectScanPeriodSeconds";
+const char kRekeyInProgressProperty[] = "RekeyInProgress";
 const char kWakeOnWiFiFeaturesEnabledProperty[] = "WakeOnWiFiFeaturesEnabled";
 const char kWakeToScanPeriodSecondsProperty[] = "WakeToScanPeriodSeconds";
 const char kWifiSupportedFrequenciesProperty[] = "WiFi.SupportedFrequencies";
