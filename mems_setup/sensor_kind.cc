@@ -15,6 +15,7 @@ constexpr char kGyroName[] = "anglvel";
 constexpr char kLightName[] = "illuminance";
 constexpr char kSyncName[] = "count";
 constexpr char kMagnName[] = "magn";
+constexpr char kLidAngleName[] = "angl";
 constexpr char kBaroName[] = "baro";
 }  // namespace
 
@@ -30,6 +31,8 @@ std::string SensorKindToString(SensorKind kind) {
       return kSyncName;
     case SensorKind::MAGNETOMETER:
       return kAccelName;
+    case SensorKind::LID_ANGLE:
+      return kLidAngleName;
     case SensorKind::BAROMETER:
       return kBaroName;
   }
@@ -48,6 +51,8 @@ base::Optional<SensorKind> SensorKindFromString(const std::string& name) {
     return SensorKind::SYNC;
   if (name == kMagnName)
     return SensorKind::MAGNETOMETER;
+  if (name == kLidAngleName)
+    return SensorKind::LID_ANGLE;
   if (name == kBaroName)
     return SensorKind::BAROMETER;
 

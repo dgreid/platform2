@@ -139,6 +139,9 @@ bool Configuration::Configure() {
     case SensorKind::MAGNETOMETER:
       // No other configs needed.
       return true;
+    case SensorKind::LID_ANGLE:
+      // No other configs needed.
+      return true;
     case SensorKind::BAROMETER:
       // TODO(chenghaoyang): Setup calibrations for the barometer.
       return true;

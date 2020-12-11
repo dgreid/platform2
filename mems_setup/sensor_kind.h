@@ -17,6 +17,7 @@ enum class SensorKind {
   LIGHT,
   SYNC,
   MAGNETOMETER,
+  LID_ANGLE,
   BAROMETER
 };
 
