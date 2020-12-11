@@ -9,7 +9,7 @@ import("//common-mk/pkg_config.gni")
 
 group("all") {
   deps = [
-    ":libwebserv-${libbase_ver}",
+    ":libwebserv",
     ":libwebserv_common",
     ":webservd",
     ":webservd_common",
@@ -138,10 +138,10 @@ static_library("webservd_common") {
 
 write_deps("write_libwebserv_deps") {
   pkg_deps = default_pkg_deps
-  target = "libwebserv-${libbase_ver}"
+  target = "libwebserv"
 }
 
-shared_library("libwebserv-${libbase_ver}") {
+shared_library("libwebserv") {
   configs += [ ":target_defaults" ]
   deps = [
     ":libwebserv_common",
