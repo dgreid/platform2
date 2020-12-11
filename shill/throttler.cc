@@ -33,8 +33,8 @@ const char* const Throttler::kTCCleanUpCmds[] = {
 const char* const Throttler::kTCThrottleUplinkCmds[] = {
     "qdisc add dev ${INTERFACE} root handle 1: htb default 11\n",
     "class add dev ${INTERFACE} parent 1: classid 1:1 htb rate ${ULRATE}\n",
-    "class add dev ${INTERFACE} parent 1:1 classid 1:11 htb rate "
-    "${ULRATE} prio 0 quantum 300\n"};
+    ("class add dev ${INTERFACE} parent 1:1 classid 1:11 htb rate ${ULRATE} "
+     "prio 0 quantum 300\n")};
 
 const char* const Throttler::kTCThrottleDownlinkCmds[] = {
     "qdisc add dev ${INTERFACE} handle ffff: ingress\n",

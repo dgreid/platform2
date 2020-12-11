@@ -509,8 +509,8 @@ base::Optional<string> EapCredentials::TranslateSubjectAlternativeNameMatch(
 
     if (!json_value.value || !json_value.value->is_dict()) {
       LOG(ERROR)
-          << "Could not deserialize a subject alternative name match. Error "
-          << json_value.error_code << ": " << json_value.error_message;
+          << "Could not deserialize a subject alternative name match. Error: "
+          << json_value.error_message;
       return base::nullopt;
     }
     base::Value deserialized_value = std::move(*json_value.value);
