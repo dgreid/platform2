@@ -30,7 +30,7 @@ pkg_config("target_defaults") {
 pkg_config("buffet_common_config") {
   pkg_deps = [
     "libshill-client",
-    "libweave-${libbase_ver}",
+    "libweave",
   ]
 }
 
@@ -89,7 +89,7 @@ if (use.test) {
     pkg_deps = [
       "libbrillo-test",
       "libchrome-test",
-      "libweave-test-${libbase_ver}",
+      "libweave-test",
     ]
   }
 
