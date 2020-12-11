@@ -18,13 +18,24 @@
 
 namespace cros_disks {
 
+class ArchiveMounter;
+
 // A derived class of MountManager for mounting archive files as a virtual
 // filesystem.
 class ArchiveManager : public MountManager {
  public:
-  using MountManager::MountManager;
+  ArchiveManager(const std::string& mount_root,
+                 Platform* platform,
+                 Metrics* metrics,
+                 brillo::ProcessReaper* process_reaper);
+  ArchiveManager(const ArchiveManager&) = delete;
+  ArchiveManager& operator=(const ArchiveManager&) = delete;
+
+  ~ArchiveManager() override;
 
   // MountManager overrides
+  bool Initialize() override;
+
   MountSourceType GetMountSourceType() const final {
     return MOUNT_SOURCE_ARCHIVE;
   }
@@ -47,13 +58,18 @@ class ArchiveManager : public MountManager {
   // with in order to access files in all the required locations.
   std::vector<gid_t> GetSupplementaryGroups() const;
 
- protected:
-  struct MountNamespace {
-    std::unique_ptr<brillo::ScopedMountNamespace> guard;
-    std::string name;
-  };
+  bool CanMount(const std::string& source_path) const override;
 
-  static MountNamespace GetMountNamespaceFor(const std::string& path);
+ protected:
+  std::unique_ptr<MountPoint> DoMount(const std::string& source_path,
+                                      const std::string& filesystem_type,
+                                      const std::vector<std::string>& options,
+                                      const base::FilePath& mount_path,
+                                      bool* mounted_as_read_only,
+                                      MountErrorType* error) override;
+
+ private:
+  std::vector<std::unique_ptr<ArchiveMounter>> mounters_;
 };
 
 }  // namespace cros_disks

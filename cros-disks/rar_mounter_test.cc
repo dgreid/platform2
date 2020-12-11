@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "cros-disks/rar_manager.h"
+#include "cros-disks/rar_mounter.h"
 
 #include <brillo/process/process_reaper.h>
 #include <gmock/gmock.h>
@@ -23,44 +23,33 @@ using ::testing::IsEmpty;
 using ::testing::Return;
 using ::testing::SizeIs;
 
-const char kMountRootDirectory[] = "/my_mount_point";
-
 // Mock Platform implementation for testing.
 class MockPlatform : public Platform {
  public:
   MOCK_METHOD(bool, PathExists, (const std::string&), (const, override));
 };
 
+class FakeSandboxedProcessFactory : public SandboxedProcessFactory {
+ public:
+  std::unique_ptr<SandboxedProcess> CreateSandboxedProcess() const {
+    return std::make_unique<FakeSandboxedProcess>();
+  }
+};
+
 }  // namespace
 
-class RarManagerTest : public testing::Test {
+class RarMounterTest : public testing::Test {
  protected:
   Metrics metrics_;
   MockPlatform platform_;
   brillo::ProcessReaper reaper_;
-  const RarManager manager_{kMountRootDirectory, &platform_, &metrics_,
-                            &reaper_};
+  const RarMounter mounter_{&platform_, &reaper_, &metrics_,
+                            std::make_unique<FakeSandboxedProcessFactory>()};
 };
 
-TEST_F(RarManagerTest, CanMount) {
-  const MountManager& m = manager_;
-  EXPECT_FALSE(m.CanMount(""));
-  EXPECT_FALSE(m.CanMount(".rar"));
-  EXPECT_FALSE(m.CanMount("blah.rar"));
-  EXPECT_FALSE(m.CanMount("/blah.rar"));
-  EXPECT_TRUE(
-      m.CanMount("/home/chronos/u-0123456789abcdef0123456789abcdef01234567"
-                 "/MyFiles/blah.rar"));
-  EXPECT_TRUE(m.CanMount("/media/fuse/y/blah.rar"));
-  EXPECT_TRUE(m.CanMount("/media/removable/y/blah.rar"));
-  EXPECT_TRUE(m.CanMount("/media/fuse/y/Blah.Rar"));
-  EXPECT_TRUE(m.CanMount("/media/fuse/y/BLAH.RAR"));
-  EXPECT_FALSE(m.CanMount("/media/fuse/y/blah.rarx"));
-}
-
-TEST_F(RarManagerTest, Increment) {
+TEST_F(RarMounterTest, Increment) {
   std::string s;
-  const auto inc = [&s] { return RarManager::Increment(s.begin(), s.end()); };
+  const auto inc = [&s] { return RarMounter::Increment(s.begin(), s.end()); };
 
   EXPECT_FALSE(inc());
   EXPECT_EQ(s, "");
@@ -174,41 +163,41 @@ TEST_F(RarManagerTest, Increment) {
   EXPECT_EQ(s, "A00");
 }
 
-TEST_F(RarManagerTest, ParseDigits) {
+TEST_F(RarMounterTest, ParseDigits) {
   const auto ir = [](const size_t begin, const size_t end) {
-    return RarManager::IndexRange{begin, end};
+    return RarMounter::IndexRange{begin, end};
   };
 
-  EXPECT_THAT(RarManager::ParseDigits(""), IsEmpty());
-  EXPECT_THAT(RarManager::ParseDigits("0"), IsEmpty());
-  EXPECT_THAT(RarManager::ParseDigits("rar"), IsEmpty());
-  EXPECT_THAT(RarManager::ParseDigits(".rar"), IsEmpty());
-  EXPECT_THAT(RarManager::ParseDigits("part.rar"), IsEmpty());
-  EXPECT_THAT(RarManager::ParseDigits(".part.rar"), IsEmpty());
-  EXPECT_THAT(RarManager::ParseDigits("blah.part.rar"), IsEmpty());
-  EXPECT_THAT(RarManager::ParseDigits("blah0.part.rar"), IsEmpty());
-  EXPECT_THAT(RarManager::ParseDigits("/blah.part.rar"), IsEmpty());
-  EXPECT_THAT(RarManager::ParseDigits("0.rar"), ir(0, 1));
-  EXPECT_THAT(RarManager::ParseDigits("part0.rar"), ir(4, 5));
-  EXPECT_EQ(RarManager::ParseDigits(".part0.rar"), ir(5, 6));
-  EXPECT_EQ(RarManager::ParseDigits("blah.part0.rar"), ir(9, 10));
-  EXPECT_EQ(RarManager::ParseDigits("/blah.part0.rar"), ir(10, 11));
-  EXPECT_EQ(RarManager::ParseDigits("/some/path/blah.part0.rar"), ir(20, 21));
-  EXPECT_EQ(RarManager::ParseDigits(".part9.rar"), ir(5, 6));
-  EXPECT_EQ(RarManager::ParseDigits("blah.part9.rar"), ir(9, 10));
-  EXPECT_EQ(RarManager::ParseDigits("/blah.part9.rar"), ir(10, 11));
-  EXPECT_EQ(RarManager::ParseDigits("/some/path/blah.part9.rar"), ir(20, 21));
-  EXPECT_EQ(RarManager::ParseDigits(".part2468097531.rar"), ir(5, 15));
-  EXPECT_EQ(RarManager::ParseDigits("blah.part2468097531.rar"), ir(9, 19));
-  EXPECT_EQ(RarManager::ParseDigits("/blah.part2468097531.rar"), ir(10, 20));
-  EXPECT_EQ(RarManager::ParseDigits("/some/path/blah.part2468097531.rar"),
+  EXPECT_THAT(RarMounter::ParseDigits(""), IsEmpty());
+  EXPECT_THAT(RarMounter::ParseDigits("0"), IsEmpty());
+  EXPECT_THAT(RarMounter::ParseDigits("rar"), IsEmpty());
+  EXPECT_THAT(RarMounter::ParseDigits(".rar"), IsEmpty());
+  EXPECT_THAT(RarMounter::ParseDigits("part.rar"), IsEmpty());
+  EXPECT_THAT(RarMounter::ParseDigits(".part.rar"), IsEmpty());
+  EXPECT_THAT(RarMounter::ParseDigits("blah.part.rar"), IsEmpty());
+  EXPECT_THAT(RarMounter::ParseDigits("blah0.part.rar"), IsEmpty());
+  EXPECT_THAT(RarMounter::ParseDigits("/blah.part.rar"), IsEmpty());
+  EXPECT_THAT(RarMounter::ParseDigits("0.rar"), ir(0, 1));
+  EXPECT_THAT(RarMounter::ParseDigits("part0.rar"), ir(4, 5));
+  EXPECT_EQ(RarMounter::ParseDigits(".part0.rar"), ir(5, 6));
+  EXPECT_EQ(RarMounter::ParseDigits("blah.part0.rar"), ir(9, 10));
+  EXPECT_EQ(RarMounter::ParseDigits("/blah.part0.rar"), ir(10, 11));
+  EXPECT_EQ(RarMounter::ParseDigits("/some/path/blah.part0.rar"), ir(20, 21));
+  EXPECT_EQ(RarMounter::ParseDigits(".part9.rar"), ir(5, 6));
+  EXPECT_EQ(RarMounter::ParseDigits("blah.part9.rar"), ir(9, 10));
+  EXPECT_EQ(RarMounter::ParseDigits("/blah.part9.rar"), ir(10, 11));
+  EXPECT_EQ(RarMounter::ParseDigits("/some/path/blah.part9.rar"), ir(20, 21));
+  EXPECT_EQ(RarMounter::ParseDigits(".part2468097531.rar"), ir(5, 15));
+  EXPECT_EQ(RarMounter::ParseDigits("blah.part2468097531.rar"), ir(9, 19));
+  EXPECT_EQ(RarMounter::ParseDigits("/blah.part2468097531.rar"), ir(10, 20));
+  EXPECT_EQ(RarMounter::ParseDigits("/some/path/blah.part2468097531.rar"),
             ir(20, 30));
-  EXPECT_EQ(RarManager::ParseDigits("Blah.Part0.Rar"), ir(9, 10));
-  EXPECT_EQ(RarManager::ParseDigits("BLAH.PART0.RAR"), ir(9, 10));
+  EXPECT_EQ(RarMounter::ParseDigits("Blah.Part0.Rar"), ir(9, 10));
+  EXPECT_EQ(RarMounter::ParseDigits("BLAH.PART0.RAR"), ir(9, 10));
 }
 
-TEST_F(RarManagerTest, GetBindPathsWithOldNamingScheme) {
-  const RarManager& m = manager_;
+TEST_F(RarMounterTest, GetBindPathsWithOldNamingScheme) {
+  const RarMounter& m = mounter_;
   EXPECT_THAT(m.GetBindPaths("poi"), ElementsAreArray<std::string>({"poi"}));
 
   EXPECT_CALL(platform_, PathExists("poi.r00")).WillOnce(Return(false));
@@ -228,8 +217,8 @@ TEST_F(RarManagerTest, GetBindPathsWithOldNamingScheme) {
               ElementsAreArray<std::string>({"POI.RAR", "POI.R00", "POI.R01"}));
 }
 
-TEST_F(RarManagerTest, GetBindPathsWithNewNamingScheme) {
-  const RarManager& m = manager_;
+TEST_F(RarMounterTest, GetBindPathsWithNewNamingScheme) {
+  const RarMounter& m = mounter_;
 
   EXPECT_CALL(platform_, PathExists("poi1.rar")).WillOnce(Return(false));
   EXPECT_THAT(m.GetBindPaths("poi2.rar"),
@@ -254,8 +243,8 @@ TEST_F(RarManagerTest, GetBindPathsWithNewNamingScheme) {
                   {"POI2.RAR", "POI1.RAR", "POI3.RAR", "POI4.RAR"}));
 }
 
-TEST_F(RarManagerTest, GetBindPathsStopsOnOverflow) {
-  const RarManager& m = manager_;
+TEST_F(RarMounterTest, GetBindPathsStopsOnOverflow) {
+  const RarMounter& m = mounter_;
 
   EXPECT_CALL(platform_, PathExists(_)).WillRepeatedly(Return(true));
 

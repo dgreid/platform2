@@ -88,6 +88,9 @@ TEST_F(ArchiveMounterTest, CanMount) {
   EXPECT_TRUE(mounter->CanMount("/foo/bar/baz.archive", {}, &name));
   EXPECT_EQ("baz.archive", name.value());
   EXPECT_FALSE(mounter->CanMount("/foo/bar/baz.something", {}, &name));
+  EXPECT_FALSE(mounter->CanMount("baz.archive", {}, &name));
+  EXPECT_FALSE(mounter->CanMount(".archive", {}, &name));
+  EXPECT_FALSE(mounter->CanMount("", {}, &name));
 }
 
 TEST_F(ArchiveMounterTest, InvalidPathsRejected) {

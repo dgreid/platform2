@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "cros-disks/rar_manager.h"
+#include "cros-disks/rar_mounter.h"
 
 #include <algorithm>
 #include <memory>
@@ -14,7 +14,6 @@
 #include <base/strings/string_util.h>
 #include <base/strings/stringprintf.h>
 
-#include "cros-disks/archive_mounter.h"
 #include "cros-disks/error_logger.h"
 #include "cros-disks/fuse_mounter.h"
 #include "cros-disks/metrics.h"
@@ -23,112 +22,51 @@
 
 namespace cros_disks {
 namespace {
-
 const char kExtension[] = ".rar";
-
-OwnerUser GetRarUserOrDie(const Platform* platform) {
-  OwnerUser run_as;
-  PCHECK(platform->GetUserAndGroupId("fuse-rar2fs", &run_as.uid, &run_as.gid))
-      << "Cannot resolve required user fuse-rar2fs";
-  run_as.gid = kChronosAccessGID;
-  return run_as;
-}
-
 }  // namespace
 
-class RarManager::RarMounter : public ArchiveMounter {
- public:
-  RarMounter(const Platform* platform,
-             brillo::ProcessReaper* process_reaper,
-             Metrics* metrics,
-             const RarManager* rar_manager)
-      : ArchiveMounter(
-            platform,
-            process_reaper,
-            "rar",
-            metrics,
-            "Rar2fs",
-            {12,   // ERAR_BAD_DATA
-             22,   // ERAR_MISSING_PASSWORD
-             24},  // ERAR_BAD_PASSWORD
-            std::make_unique<FUSESandboxedProcessFactory>(
-                platform,
-                SandboxedExecutable{
-                    base::FilePath("/usr/bin/rar2fs"),
-                    base::FilePath("/usr/share/policy/rar2fs-seccomp.policy")},
-                GetRarUserOrDie(platform),
-                /* has_network_access= */ false,
-                rar_manager->GetSupplementaryGroups())),
-        rar_manager_(rar_manager) {}
-
- protected:
-  MountErrorType FormatInvocationCommand(
-      const base::FilePath& archive,
-      std::vector<std::string> params,
-      SandboxedProcess* sandbox) const override {
-    // Bind-mount parts of a multipart archive if any.
-    for (const auto& path : rar_manager_->GetBindPaths(archive.value())) {
-      if (!sandbox->BindMount(path, path, /* writeable= */ false,
-                              /* recursive= */ false)) {
-        PLOG(ERROR) << "Could not bind " << quote(path);
-        return MOUNT_ERROR_INTERNAL;
-      }
-    }
-
-    std::vector<std::string> opts = {
-        "ro", "umask=0222", "locale=en_US.UTF8",
-        base::StringPrintf("uid=%d", kChronosUID),
-        base::StringPrintf("gid=%d", kChronosAccessGID)};
-
-    sandbox->AddArgument("-o");
-    sandbox->AddArgument(base::JoinString(opts, ","));
-    sandbox->AddArgument(archive.value());
-
-    return MOUNT_ERROR_NONE;
-  }
-
-  const RarManager* rar_manager_;
-};
-
-RarManager::RarManager(const std::string& mount_root,
-                       Platform* platform,
+RarMounter::RarMounter(const Platform* platform,
+                       brillo::ProcessReaper* process_reaper,
                        Metrics* metrics,
-                       brillo::ProcessReaper* process_reaper)
-    : ArchiveManager(mount_root, platform, metrics, process_reaper),
-      mounter_(std::make_unique<RarMounter>(
-          platform, process_reaper, metrics, this)) {}
+                       std::unique_ptr<SandboxedProcessFactory> sandbox_factory)
+    : ArchiveMounter(platform,
+                     process_reaper,
+                     "rar",
+                     metrics,
+                     "Rar2fs",
+                     {12,   // ERAR_BAD_DATA
+                      22,   // ERAR_MISSING_PASSWORD
+                      24},  // ERAR_BAD_PASSWORD
+                     std::move(sandbox_factory)) {}
 
-RarManager::~RarManager() {
-  UnmountAll();
-}
+RarMounter::~RarMounter() = default;
 
-bool RarManager::CanMount(const std::string& source_path) const {
-  // Check for expected file extension.
-  return base::EndsWith(source_path, kExtension,
-                        base::CompareCase::INSENSITIVE_ASCII) &&
-         IsInAllowedFolder(source_path);
-}
-
-std::unique_ptr<MountPoint> RarManager::DoMount(
-    const std::string& source_path,
-    const std::string& /*filesystem_type*/,
-    const std::vector<std::string>& options,
-    const base::FilePath& mount_path,
-    bool* mounted_as_read_only,
-    MountErrorType* const error) {
-  DCHECK(error);
-  // MountManager resolves source path to real path before calling DoMount,
-  // so no symlinks or '..' will be here.
-  if (!IsInAllowedFolder(source_path)) {
-    LOG(ERROR) << "Source path " << quote(source_path) << " is not allowed";
-    *error = MOUNT_ERROR_INVALID_DEVICE_PATH;
-    return nullptr;
+MountErrorType RarMounter::FormatInvocationCommand(
+    const base::FilePath& archive,
+    std::vector<std::string> params,
+    SandboxedProcess* sandbox) const {
+  // Bind-mount parts of a multipart archive if any.
+  for (const auto& path : GetBindPaths(archive.value())) {
+    if (!sandbox->BindMount(path, path, /* writeable= */ false,
+                            /* recursive= */ false)) {
+      PLOG(ERROR) << "Could not bind " << quote(path);
+      return MOUNT_ERROR_INTERNAL;
+    }
   }
-  *mounted_as_read_only = true;
-  return mounter_->Mount(source_path, mount_path, options, error);
+
+  std::vector<std::string> opts = {
+      "ro", "umask=0222", "locale=en_US.UTF8",
+      base::StringPrintf("uid=%d", kChronosUID),
+      base::StringPrintf("gid=%d", kChronosAccessGID)};
+
+  sandbox->AddArgument("-o");
+  sandbox->AddArgument(base::JoinString(opts, ","));
+  sandbox->AddArgument(archive.value());
+
+  return MOUNT_ERROR_NONE;
 }
 
-bool RarManager::Increment(const std::string::iterator begin,
+bool RarMounter::Increment(const std::string::iterator begin,
                            std::string::iterator end) {
   while (true) {
     if (begin == end) {
@@ -155,7 +93,7 @@ bool RarManager::Increment(const std::string::iterator begin,
   }
 }
 
-RarManager::IndexRange RarManager::ParseDigits(base::StringPiece path) {
+RarMounter::IndexRange RarMounter::ParseDigits(base::StringPiece path) {
   const base::StringPiece extension = kExtension;
 
   if (!base::EndsWith(path, extension, base::CompareCase::INSENSITIVE_ASCII))
@@ -170,7 +108,7 @@ RarManager::IndexRange RarManager::ParseDigits(base::StringPiece path) {
   return {path.size(), end};
 }
 
-void RarManager::AddPathsWithOldNamingScheme(
+void RarMounter::AddPathsWithOldNamingScheme(
     std::vector<std::string>* const bind_paths,
     const base::StringPiece original_path) const {
   DCHECK(bind_paths);
@@ -202,7 +140,7 @@ void RarManager::AddPathsWithOldNamingScheme(
     bind_paths->push_back(candidate_path);
 }
 
-void RarManager::AddPathsWithNewNamingScheme(
+void RarMounter::AddPathsWithNewNamingScheme(
     std::vector<std::string>* const bind_paths,
     const base::StringPiece original_path,
     const IndexRange& digits) const {
@@ -227,7 +165,7 @@ void RarManager::AddPathsWithNewNamingScheme(
   }
 }
 
-std::vector<std::string> RarManager::GetBindPaths(
+std::vector<std::string> RarMounter::GetBindPaths(
     const base::StringPiece original_path) const {
   std::vector<std::string> bind_paths = {std::string(original_path)};
 

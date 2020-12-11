@@ -11,6 +11,7 @@
 #include <brillo/daemons/dbus_daemon.h>
 #include <brillo/process/process_reaper.h>
 
+#include "cros-disks/archive_manager.h"
 #include "cros-disks/cros_disks_server.h"
 #include "cros-disks/device_ejector.h"
 #include "cros-disks/device_event_moderator.h"
@@ -21,10 +22,8 @@
 #include "cros-disks/metrics.h"
 #include "cros-disks/partition_manager.h"
 #include "cros-disks/platform.h"
-#include "cros-disks/rar_manager.h"
 #include "cros-disks/rename_manager.h"
 #include "cros-disks/session_manager_proxy.h"
-#include "cros-disks/zip_manager.h"
 
 namespace cros_disks {
 
@@ -50,8 +49,7 @@ class Daemon : public brillo::DBusServiceDaemon {
   Platform platform_;
   brillo::ProcessReaper process_reaper_;
   DeviceEjector device_ejector_;
-  RarManager rar_manager_;
-  ZipManager zip_manager_;
+  ArchiveManager archive_manager_;
   DiskMonitor disk_monitor_;
   DiskManager disk_manager_;
   FormatManager format_manager_;

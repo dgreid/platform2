@@ -67,7 +67,7 @@ static_library("libdisks") {
     "platform.cc",
     "process.cc",
     "quote.cc",
-    "rar_manager.cc",
+    "rar_mounter.cc",
     "rename_manager.cc",
     "sandboxed_init.cc",
     "sandboxed_process.cc",
@@ -78,7 +78,6 @@ static_library("libdisks") {
     "udev_device.cc",
     "uri.cc",
     "usb_device_info.cc",
-    "zip_manager.cc",
   ]
   configs += [ ":target_defaults" ]
   deps = [ ":libdisks-adaptors" ]
@@ -132,7 +131,7 @@ if (use.test) {
       "platform_test.cc",
       "process_test.cc",
       "quote_test.cc",
-      "rar_manager_test.cc",
+      "rar_mounter_test.cc",
       "rename_manager_test.cc",
       "sandboxed_init_test.cc",
       "smbfs_helper_test.cc",
@@ -141,7 +140,6 @@ if (use.test) {
       "udev_device_test.cc",
       "uri_test.cc",
       "usb_device_info_test.cc",
-      "zip_manager_test.cc",
     ]
     configs += [
       "//common-mk:test",

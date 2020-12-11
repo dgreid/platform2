@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef CROS_DISKS_RAR_MANAGER_H_
-#define CROS_DISKS_RAR_MANAGER_H_
+#ifndef CROS_DISKS_RAR_MOUNTER_H_
+#define CROS_DISKS_RAR_MOUNTER_H_
 
 #include <memory>
 #include <string>
@@ -12,36 +12,30 @@
 #include <base/strings/string_piece.h>
 #include <gtest/gtest_prod.h>
 
-#include "cros-disks/archive_manager.h"
+#include "cros-disks/archive_mounter.h"
 #include "cros-disks/fuse_mounter.h"
 
 namespace cros_disks {
 
-class ArchiveMounter;
-
-// A MountManager mounting RAR archives as virtual filesystems using rar2fs.
-class RarManager : public ArchiveManager {
+// An ArchiveMounter with handling of RAR multipart archives.
+class RarMounter : public ArchiveMounter {
  public:
-  RarManager(const std::string& mount_root,
-             Platform* platform,
+  RarMounter(const Platform* platform,
+             brillo::ProcessReaper* process_reaper,
              Metrics* metrics,
-             brillo::ProcessReaper* process_reaper);
-  RarManager(const RarManager&) = delete;
-  RarManager& operator=(const RarManager&) = delete;
+             std::unique_ptr<SandboxedProcessFactory> sandbox_factory);
+  RarMounter(const RarMounter&) = delete;
+  RarMounter& operator=(const RarMounter&) = delete;
 
-  ~RarManager() override;
+  ~RarMounter() override;
+
+ protected:
+  MountErrorType FormatInvocationCommand(
+      const base::FilePath& archive,
+      std::vector<std::string> params,
+      SandboxedProcess* sandbox) const override;
 
  private:
-  // ArchiveManager overrides
-  bool CanMount(const std::string& source_path) const override;
-
-  std::unique_ptr<MountPoint> DoMount(const std::string& source_path,
-                                      const std::string& filesystem_type,
-                                      const std::vector<std::string>& options,
-                                      const base::FilePath& mount_path,
-                                      bool* mounted_as_read_only,
-                                      MountErrorType* error) override;
-
   // Increments a sequence of digits or letters [begin, end). Returns true if
   // success, and false in case of overflow.
   static bool Increment(std::string::iterator begin, std::string::iterator end);
@@ -120,18 +114,13 @@ class RarManager : public ArchiveManager {
   // etc.
   std::vector<std::string> GetBindPaths(base::StringPiece original_path) const;
 
-  class RarMounter;
-  const std::unique_ptr<ArchiveMounter> mounter_;
-
-  FRIEND_TEST(RarManagerTest, CanMount);
-  FRIEND_TEST(RarManagerTest, SuggestMountPath);
-  FRIEND_TEST(RarManagerTest, Increment);
-  FRIEND_TEST(RarManagerTest, ParseDigits);
-  FRIEND_TEST(RarManagerTest, GetBindPathsWithOldNamingScheme);
-  FRIEND_TEST(RarManagerTest, GetBindPathsWithNewNamingScheme);
-  FRIEND_TEST(RarManagerTest, GetBindPathsStopsOnOverflow);
+  FRIEND_TEST(RarMounterTest, Increment);
+  FRIEND_TEST(RarMounterTest, ParseDigits);
+  FRIEND_TEST(RarMounterTest, GetBindPathsWithOldNamingScheme);
+  FRIEND_TEST(RarMounterTest, GetBindPathsWithNewNamingScheme);
+  FRIEND_TEST(RarMounterTest, GetBindPathsStopsOnOverflow);
 };
 
 }  // namespace cros_disks
 
-#endif  // CROS_DISKS_RAR_MANAGER_H_
+#endif  // CROS_DISKS_RAR_MOUNTER_H_
