@@ -39,6 +39,13 @@ class RandomProcessRunner : public MinijailedProcessRunner {
     return data_provider_->ConsumeBool();
   }
 
+  int RunSync(const std::vector<std::string>& argv,
+              brillo::Minijail* mj,
+              bool log_failures,
+              int* fd_stdout) override {
+    return data_provider_->ConsumeBool();
+  }
+
  private:
   FuzzedDataProvider* data_provider_;
 };
