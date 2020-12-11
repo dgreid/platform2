@@ -70,6 +70,7 @@ using std::unique_ptr;
 using std::vector;
 using testing::_;
 using testing::AnyNumber;
+using testing::AtLeast;
 using testing::DoAll;
 using testing::Invoke;
 using testing::Mock;
@@ -1331,6 +1332,19 @@ TEST_P(CellularTest, SetAllowRoaming) {
   device_->SetAllowRoaming(true, &error);
   EXPECT_TRUE(error.IsSuccess());
   EXPECT_TRUE(device_->allow_roaming_);
+}
+
+TEST_P(CellularTest, SetUseAttachApn) {
+  EXPECT_FALSE(device_->use_attach_apn_);
+  InitProxies();
+  // It's going to process again the mobile network information for the APN
+  SetMockMobileOperatorInfoObjects();
+  EXPECT_CALL(*mock_home_provider_info_, IsMobileNetworkOperatorKnown())
+      .Times(AtLeast(1));
+  Error error;
+  device_->SetUseAttachApn(true, &error);
+  EXPECT_TRUE(error.IsSuccess());
+  EXPECT_TRUE(device_->use_attach_apn_);
 }
 
 TEST_P(CellularTest, SetInhibited) {

@@ -361,6 +361,7 @@ const char kProviderRequiresRoamingProperty[] =
 const char kSelectedNetworkProperty[] = "Cellular.SelectedNetwork";
 const char kSIMPresentProperty[] = "Cellular.SIMPresent";
 const char kSupportNetworkScanProperty[] = "Cellular.SupportNetworkScan";
+const char kUseAttachAPNProperty[] = "Cellular.UseAttachAPN";
 const char kDBusObjectProperty[] = "DBus.Object";
 const char kDBusServiceProperty[] = "DBus.Service";
 

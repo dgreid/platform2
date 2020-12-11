@@ -393,6 +393,21 @@ Properties	string Address [readonly]
 			(Cellular only) For GSM or LTE modems, indicates
 			whether a SIM card is present or not.
 
+		boolean Cellular.UseAttachAPN [readwrite]
+
+			(Cellular only) Whether shill should explicitly
+			set in the modem the desired 'attach APN' before
+			registering to the network by using the data from
+			the mobile operator database. When this property is
+			false, the modem will use its own internal database
+			or get the value from the network.
+
+			If the property is set true, and a data connection was
+			already established, the connection will be first
+			terminated.
+
+			By default Cellular.UseAttachAPN is false.
+
 		array{dict} Cellular.FoundNetworks [readonly] [GSM only]
 
 			(Cellular only) The result of the most recent

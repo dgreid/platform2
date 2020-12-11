@@ -1549,6 +1549,10 @@ void CellularCapability3gpp::OnProfilesChanged(const Profiles& profiles) {
   // The cellular object may need to update the APN list now.
   cellular()->OnOperatorChanged();
 
+  // Bail-out early if we don't want to setup the attach APN
+  if (!cellular()->use_attach_apn())
+    return;
+
   // Set the new parameters for the initial EPS bearer (e.g. LTE Attach APN)
   KeyValueStore properties;
   Error error;

@@ -128,6 +128,7 @@ class ApnList {
 
 // static
 const char Cellular::kAllowRoaming[] = "AllowRoaming";
+const char Cellular::kUseAttachApn[] = "UseAttachAPN";
 const int64_t Cellular::kDefaultScanningTimeoutMilliseconds = 60000;
 const int64_t Cellular::kPollLocationIntervalMilliseconds = 300000;  // 5 mins
 const char Cellular::kGenericServiceNamePrefix[] = "MobileNetwork";
@@ -164,6 +165,7 @@ Cellular::Cellular(ModemInfo* modem_info,
       ppp_device_factory_(PPPDeviceFactory::GetInstance()),
       process_manager_(ProcessManager::GetInstance()),
       allow_roaming_(false),
+      use_attach_apn_(false),
       inhibited_(false),
       proposed_scan_in_progress_(false),
       explicit_disconnect_(false),
@@ -230,12 +232,14 @@ bool Cellular::Load(const StoreInterface* storage) {
     return false;
   }
   storage->GetBool(id, kAllowRoaming, &allow_roaming_);
+  storage->GetBool(id, kUseAttachApn, &use_attach_apn_);
   return Device::Load(storage);
 }
 
 bool Cellular::Save(StoreInterface* storage) {
   const string id = GetStorageIdentifier();
   storage->SetBool(id, kAllowRoaming, allow_roaming_);
+  storage->SetBool(id, kUseAttachApn, use_attach_apn_);
   return Device::Save(storage);
 }
 
@@ -1188,6 +1192,25 @@ bool Cellular::SetAllowRoaming(const bool& value, Error* error) {
   return true;
 }
 
+bool Cellular::SetUseAttachApn(const bool& value, Error* error) {
+  SLOG(this, 2) << __func__ << "(" << use_attach_apn_ << "->" << value << ")";
+  if (use_attach_apn_ == value) {
+    return false;
+  }
+
+  use_attach_apn_ = value;
+
+  if (capability_) {
+    // Re-creating the service will set again the attach APN
+    // and eventually re-attach if needed.
+    DestroyService();
+    CreateService();
+  }
+
+  adaptor()->EmitBoolChanged(kUseAttachAPNProperty, value);
+  return true;
+}
+
 bool Cellular::GetInhibited(Error* error) {
   return inhibited_;
 }
@@ -1461,6 +1484,8 @@ void Cellular::RegisterProperties() {
   HelpRegisterDerivedBool(kCellularAllowRoamingProperty,
                           &Cellular::GetAllowRoaming,
                           &Cellular::SetAllowRoaming);
+  HelpRegisterDerivedBool(kUseAttachAPNProperty, &Cellular::GetUseAttachApn,
+                          &Cellular::SetUseAttachApn);
   HelpRegisterDerivedBool(kInhibited, &Cellular::GetInhibited,
                           &Cellular::SetInhibited);
 

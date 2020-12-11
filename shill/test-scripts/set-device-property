@@ -22,7 +22,8 @@ if property_key in ['BgscanShortInterval', 'ScanInterval']:
     device.SetProperty(property_key, dbus.UInt16(value))
 elif property_key in ['BgscanSignalThreshold', ]:
     device.SetProperty(property_key, dbus.Int32(value))
-elif property_key in ['Cellular.AllowRoaming', 'Powered']:
+elif property_key in ['Cellular.AllowRoaming', 'Cellular.UseAttachAPN',
+                      'Powered']:
     device.SetProperty(property_key,
                        dbus.Boolean(value.lower() in ('true', '1')))
 else:

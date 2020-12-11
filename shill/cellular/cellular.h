@@ -301,6 +301,7 @@ class Cellular : public Device,
   bool sim_present() const { return sim_present_; }
   const Stringmaps& apn_list() const { return apn_list_; }
   const std::string& iccid() const { return iccid_; }
+  bool use_attach_apn() const { return use_attach_apn_; }
 
   Type type() const { return type_; }
   bool inhibited() const { return inhibited_; }
@@ -339,6 +340,8 @@ class Cellular : public Device,
   void set_apn_list(const Stringmaps& apn_list);
   void set_iccid(const std::string& iccid);
 
+  void set_use_attach_apn_for_testing(bool on) { use_attach_apn_ = on; }
+
   // Takes ownership.
   void set_home_provider_info(MobileOperatorInfo* home_provider_info);
   // Takes ownership.
@@ -359,6 +362,7 @@ class Cellular : public Device,
   friend class ModemTest;
   FRIEND_TEST(CellularCapability3gppMainTest, Connect);
   FRIEND_TEST(CellularCapability3gppMainTest, IsServiceActivationRequired);
+  FRIEND_TEST(CellularCapability3gppMainTest, SetInitialEpsBearer);
   FRIEND_TEST(CellularCapability3gppMainTest, UpdatePendingActivationState);
   FRIEND_TEST(CellularCapability3gppMainTest, UpdateRegistrationState);
   FRIEND_TEST(CellularCapability3gppMainTest,
@@ -404,6 +408,7 @@ class Cellular : public Device,
   FRIEND_TEST(CellularTest, ScanSuccess);
   FRIEND_TEST(CellularTest, SetAllowRoaming);
   FRIEND_TEST(CellularTest, SetInhibited);
+  FRIEND_TEST(CellularTest, SetUseAttachApn);
   FRIEND_TEST(CellularTest, StopPPPOnDisconnect);
   FRIEND_TEST(CellularTest, StorageIdentifier);
   FRIEND_TEST(CellularTest, StartConnected);
@@ -417,6 +422,7 @@ class Cellular : public Device,
 
   // Names of properties in storage
   static const char kAllowRoaming[];
+  static const char kUseAttachApn[];
 
   // the |kScanningProperty| exposed by Cellular device is sticky false. Every
   // time it is set to true, it must be reset to false after a time equal to
@@ -476,6 +482,10 @@ class Cellular : public Device,
   bool SetInhibited(const bool& inhibited, Error* error);
   void OnInhibitDevice(bool inhibited, const Error& error);
   KeyValueStore GetSimLockStatus(Error* error);
+
+  // DBUS accessors to read/modify the use of an Attach APN
+  bool GetUseAttachApn(Error* /*error*/) { return use_attach_apn_; }
+  bool SetUseAttachApn(const bool& value, Error* error);
 
   // When shill terminates or ChromeOS suspends, this function is called to
   // disconnect from the cellular network.
@@ -592,6 +602,9 @@ class Cellular : public Device,
 
   // User preference to allow or disallow roaming
   bool allow_roaming_;
+
+  // Chrome flags to enable setting the attach APN from the host
+  bool use_attach_apn_;
 
   // Reflects the Device property indicating that the modem is inhibted. The
   // property is not persisted and is reset to false when the modem starts.

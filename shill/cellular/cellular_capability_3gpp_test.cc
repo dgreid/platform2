@@ -1258,6 +1258,8 @@ TEST_F(CellularCapability3gppMainTest, SetInitialEpsBearer) {
       .WillOnce(SaveArg<2>(&set_callback));
   EXPECT_CALL(*this, TestCallback(IsSuccess()));
   properties.Set<string>(CellularCapability3gpp::kConnectApn, kTestApn);
+
+  cellular_->set_use_attach_apn_for_testing(true);
   capability_->InitProxies();
   capability_->SetInitialEpsBearer(properties, &error, callback);
   set_callback.Run(Error(Error::kSuccess));
