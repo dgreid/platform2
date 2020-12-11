@@ -1249,8 +1249,8 @@ bool Platform::CreateSparseFile(const base::FilePath& path, int64_t size) {
 }
 
 bool Platform::GetBlkSize(const base::FilePath& device, uint64_t* size) {
-  base::ScopedFD fd(HANDLE_EINTR(
-      open(device.value().c_str(), O_RDONLY | O_NOFOLLOW | O_CLOEXEC)));
+  base::ScopedFD fd(
+      HANDLE_EINTR(open(device.value().c_str(), O_RDONLY | O_CLOEXEC)));
   if (!fd.is_valid()) {
     PLOG(ERROR) << "open " << device.value();
     return false;
