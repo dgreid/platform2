@@ -11,6 +11,7 @@
 #include <unistd.h>
 
 #include <utility>
+#include <vector>
 
 #include <base/files/file_enumerator.h>
 #include <base/files/scoped_file.h>
@@ -183,8 +184,8 @@ bool KeyReader::GetChar(const struct input_event& ev) {
 
     // Put char representation in buffer.
     int size = xkb_state_key_get_utf8(state_, keycode, nullptr, 0) + 1;
-    char buff[size];
-    xkb_state_key_get_utf8(state_, keycode, buff, size);
+    std::vector<char> buff(size);
+    xkb_state_key_get_utf8(state_, keycode, buff.data(), size);
 
     if (sym == XKB_KEY_BackSpace && !user_input_.empty()) {
       user_input_.pop_back();
