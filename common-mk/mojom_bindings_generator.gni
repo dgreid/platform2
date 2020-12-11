@@ -72,16 +72,14 @@ template("generate_mojom_bindings_gen") {
   if (defined(mojom_bindings_generator)) {
     mojom_bindings_generator = rebase_path(mojom_bindings_generator)
   } else {
-    mojom_bindings_generator = "${sysroot}/usr/src/libmojo/mojo/mojom_bindings_generator.py"
+    mojom_bindings_generator =
+        "${sysroot}/usr/src/libmojo/mojo/mojom_bindings_generator.py"
   }
 
-  if (libbase_ver != "679961") {
-    if (defined(mojom_parser)) {
-      mojom_parser = rebase_path(mojom_parser)
-    } else {
-      mojom_parser =
-          "${sysroot}/usr/src/libmojo/mojo/mojom_parser.py"
-    }
+  if (defined(mojom_parser)) {
+    mojom_parser = rebase_path(mojom_parser)
+  } else {
+    mojom_parser = "${sysroot}/usr/src/libmojo/mojo/mojom_parser.py"
   }
 
   if (!defined(mojo_extra_args)) {
@@ -115,87 +113,44 @@ template("generate_mojom_bindings_gen") {
     outputs = [ "${mojo_templates_dir}/cpp_templates.zip" ]
     print("Generating mojo C++ templates")
     script = mojom_bindings_generator
-    if (libbase_ver == "679961") {
-      args = [
-        "--use_bundled_pylibs",
-        "precompile",
-        "-o",
-        mojo_templates_dir,
-      ]
-    } else {
-      args = [
-        "--use_bundled_pylibs",
-        "-o",
-        mojo_templates_dir,
-        "precompile",
-      ]
-    }
+    args = [
+      "--use_bundled_pylibs",
+      "-o",
+      mojo_templates_dir,
+      "precompile",
+    ]
     deps = [ ":${mojo_templates_dir_action_name}" ]
   }
 
   mojo_parse_action_name = "${target_name}_parse"
-  if (libbase_ver == "679961") {
-    action(mojo_parse_action_name) {
-      inputs = [ mojom_bindings_generator ]
-      sources = invoker.sources
-      outputs = []
-      filelist = []
-      foreach(source, invoker.sources) {
-        filename = get_path_info("$source", "name")
-        dirname = get_path_info("$source", "gen_dir")
-        outputs += [ "$dirname/$filename.p" ]
-        filelist += [ rebase_path("$source", root_build_dir) ]
-      }
-
-      response_file_contents = filelist
-
-      script = mojom_bindings_generator
-      args = [
-        "--use_bundled_pylibs",
-        "parse",
-        "--filelist={{response_file_name}}",
-        "--output_dir",
-        _mojo_output_base,
-        "-d",
-        mojo_root,  # Mojo depth.
-      ]
-      # This is not necessary for r679961 since the parser doesn't read pickle
-      # for imported mojom. But gn will complain about unused invoker.deps, Add
-      # add deps anyway to avoid unused invoker.deps.
-      if (defined(invoker.deps)) {
-        deps = invoker.deps
-      }
+  action(mojo_parse_action_name) {
+    inputs = [ mojom_parser ]
+    sources = invoker.sources
+    outputs = []
+    filelist = []
+    foreach(source, invoker.sources) {
+      filename = get_path_info("$source", "file")
+      dirname = get_path_info("$source", "gen_dir")
+      relative_dir = rebase_path(".", mojo_root) + "/" +
+                     rebase_path(dirname, target_gen_dir)
+      outputs += [ "${_mojo_output_base}/${relative_dir}/${filename}-module" ]
+      filelist += [ rebase_path("$source") ]
     }
-  } else {
-    action(mojo_parse_action_name) {
-      inputs = [ mojom_parser ]
-      sources = invoker.sources
-      outputs = []
-      filelist = []
-      foreach(source, invoker.sources) {
-        filename = get_path_info("$source", "file")
-        dirname = get_path_info("$source", "gen_dir")
-        relative_dir = rebase_path(".", mojo_root) + "/" +
-                       rebase_path(dirname, target_gen_dir)
-        outputs += [ "${_mojo_output_base}/${relative_dir}/${filename}-module" ]
-        filelist += [ rebase_path("$source") ]
-      }
 
-      response_file_contents = filelist
+    response_file_contents = filelist
 
-      script = mojom_parser
-      args = [
-        "--mojom-file-list={{response_file_name}}",
-        "--output-root",
-        _mojo_output_base,
-        "--input-root",
-        mojo_root,  # Mojo depth.
-        "--input-root",
-        ".",
-      ]
-      if (defined(invoker.deps)) {
-        deps = invoker.deps
-      }
+    script = mojom_parser
+    args = [
+      "--mojom-file-list={{response_file_name}}",
+      "--output-root",
+      _mojo_output_base,
+      "--input-root",
+      mojo_root,  # Mojo depth.
+      "--input-root",
+      ".",
+    ]
+    if (defined(invoker.deps)) {
+      deps = invoker.deps
     }
   }
 
@@ -228,43 +183,23 @@ template("generate_mojom_bindings_gen") {
 
     print("Generating mojo C++ bindings")
     script = _mojom_bindings_generator_wrapper
-    if (libbase_ver == "679961") {
-      args = [
-               "${libbase_ver}",
-               mojom_bindings_generator,
-               "generate",
-               "--use_bundled_pylibs",
-               "--output_dir",
-               _mojo_output_base,
-               "--filelist={{response_file_name}}",
-               "--bytecode_path",
-               mojo_templates_dir,
-               "-I",
-               mojo_root,  # Mojo include path.
-               "-d",
-               mojo_root,  # Mojo depth.
-               "--generators",
-               "c++",
-             ] + mojo_extra_args
-    } else {
-      args = [
-               "${libbase_ver}",
-               mojom_bindings_generator,
-               "--use_bundled_pylibs",
-               "--output_dir",
-               _mojo_output_base,
-               "generate",
-               "--filelist={{response_file_name}}",
-               "--bytecode_path",
-               mojo_templates_dir,
-               "-I",
-               mojo_root,  # Mojo include path.
-               "-d",
-               mojo_root,  # Mojo depth.
-               "--generators",
-               "c++",
-             ] + mojo_extra_args
-    }
+    args = [
+             "${libbase_ver}",
+             mojom_bindings_generator,
+             "--use_bundled_pylibs",
+             "--output_dir",
+             _mojo_output_base,
+             "generate",
+             "--filelist={{response_file_name}}",
+             "--bytecode_path",
+             mojo_templates_dir,
+             "-I",
+             mojo_root,  # Mojo include path.
+             "-d",
+             mojo_root,  # Mojo depth.
+             "--generators",
+             "c++",
+           ] + mojo_extra_args
     if (defined(invoker.disallow_native_types) &&
         invoker.disallow_native_types) {
       args += [ "--disallow_native_types" ]
