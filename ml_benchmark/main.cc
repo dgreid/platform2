@@ -70,6 +70,7 @@ void BenchmarkAndReportResults(
 
   const int64_t initial_memsize = ml_benchmark::GetVMSizeBytes();
   const int64_t initial_rss_swap = ml_benchmark::GetSwapAndRSSBytes();
+  const auto start_time = base::Time::Now();
 
   scoped_refptr<PeakMemorySampler> mem_sampler = new PeakMemorySampler();
   PeakMemorySampler::StartSampling(mem_sampler);
@@ -95,6 +96,14 @@ void BenchmarkAndReportResults(
     AddMemoryMetric("final_vmpeak", final_vmpeaksize, &results);
     AddMemoryMetric("initial_rss_swap", initial_rss_swap, &results);
     AddMemoryMetric("peak_rss_swap", peak_rss_swap, &results);
+
+    auto* benchmark_duration = results.add_metrics();
+    benchmark_duration->set_name("benchmark_duration");
+    benchmark_duration->set_units(Metric::MS);
+    benchmark_duration->set_direction(Metric::SMALLER_IS_BETTER);
+    benchmark_duration->set_cardinality(Metric::SINGLE);
+    benchmark_duration->add_values(
+        (base::Time::Now() - start_time).InMillisecondsF());
 
     PrintMetrics(results);
 
