@@ -139,9 +139,8 @@ bool WebAuthnStorage::LoadRecords() {
         json_string, base::JSON_ALLOW_TRAILING_COMMAS);
 
     if (!record_value.value) {
-      LOG_IF(ERROR, record_value.error_code)
-          << "Error in deserializing JSON from path " << record_path.value()
-          << " with code " << record_value.error_code << ".";
+      LOG(ERROR) << "Error in deserializing JSON from path "
+                 << record_path.value();
       LOG_IF(ERROR, !record_value.error_message.empty())
           << "JSON error message: " << record_value.error_message << ".";
       read_all_records_successfully = false;
