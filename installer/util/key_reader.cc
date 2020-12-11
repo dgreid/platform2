@@ -216,11 +216,11 @@ bool KeyReader::GetChar(const struct input_event& ev) {
       // Remove characters until empty.
       user_input_.pop_back();
       backspace_counter_ = 0;
-      if (print_length_) {
-        printf("%zu\n", user_input_.size());
-        // Flush input so it can be read before program exits.
-        fflush(stdout);
-      }
+    }
+    if (print_length_) {
+      printf("%zu\n", user_input_.size());
+      // Flush input so it can be read before program exits.
+      fflush(stdout);
     }
   }
   return true;
