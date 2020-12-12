@@ -42,19 +42,7 @@ DBusPropertiesProxy::DBusPropertiesProxy(const scoped_refptr<dbus::Bus>& bus,
                                          const RpcIdentifier& path,
                                          const string& service)
     : proxy_(new org::freedesktop::DBus::PropertiesProxy(
-          bus, service, dbus::ObjectPath(path))) {
-  // Register signal handlers.
-  proxy_->RegisterPropertiesChangedSignalHandler(
-      base::Bind(&DBusPropertiesProxy::PropertiesChanged,
-                 weak_factory_.GetWeakPtr()),
-      base::Bind(&DBusPropertiesProxy::OnSignalConnected,
-                 weak_factory_.GetWeakPtr()));
-  proxy_->RegisterMmPropertiesChangedSignalHandler(
-      base::Bind(&DBusPropertiesProxy::MmPropertiesChanged,
-                 weak_factory_.GetWeakPtr()),
-      base::Bind(&DBusPropertiesProxy::OnSignalConnected,
-                 weak_factory_.GetWeakPtr()));
-}
+          bus, service, dbus::ObjectPath(path))) {}
 
 DBusPropertiesProxy::~DBusPropertiesProxy() = default;
 
@@ -122,6 +110,28 @@ void DBusPropertiesProxy::GetAsync(
       << __func__ << "(" << interface_name << ", " << property << ")";
   proxy_->GetAsync(interface_name, property, success_callback,
                    base::Bind(RunErrorCallback, error_callback));
+}
+
+void DBusPropertiesProxy::SetPropertiesChangedCallback(
+    const PropertiesChangedCallback& callback) {
+  CHECK(properties_changed_callback_.is_null());
+  properties_changed_callback_ = callback;
+  proxy_->RegisterPropertiesChangedSignalHandler(
+      base::Bind(&DBusPropertiesProxy::PropertiesChanged,
+                 weak_factory_.GetWeakPtr()),
+      base::Bind(&DBusPropertiesProxy::OnSignalConnected,
+                 weak_factory_.GetWeakPtr()));
+}
+
+void DBusPropertiesProxy::SetModemManagerPropertiesChangedCallback(
+    const ModemManagerPropertiesChangedCallback& callback) {
+  CHECK(mm_properties_changed_callback_.is_null());
+  mm_properties_changed_callback_ = callback;
+  proxy_->RegisterMmPropertiesChangedSignalHandler(
+      base::Bind(&DBusPropertiesProxy::MmPropertiesChanged,
+                 weak_factory_.GetWeakPtr()),
+      base::Bind(&DBusPropertiesProxy::OnSignalConnected,
+                 weak_factory_.GetWeakPtr()));
 }
 
 void DBusPropertiesProxy::MmPropertiesChanged(

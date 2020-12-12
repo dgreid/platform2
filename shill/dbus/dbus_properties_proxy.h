@@ -55,15 +55,10 @@ class DBusPropertiesProxy {
       const base::Callback<void(const brillo::Any&)>& success_callback,
       const base::Callback<void(const Error&)>& error_callback);
 
-  void set_properties_changed_callback(
-      const PropertiesChangedCallback& callback) {
-    properties_changed_callback_ = callback;
-  }
+  void SetPropertiesChangedCallback(const PropertiesChangedCallback& callback);
 
-  void set_modem_manager_properties_changed_callback(
-      const ModemManagerPropertiesChangedCallback& callback) {
-    mm_properties_changed_callback_ = callback;
-  }
+  void SetModemManagerPropertiesChangedCallback(
+      const ModemManagerPropertiesChangedCallback& callback);
 
   static std::unique_ptr<DBusPropertiesProxy>
   CreateDBusPropertiesProxyForTesting();

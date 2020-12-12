@@ -90,9 +90,9 @@ void Modem::CreateDeviceMM1(const InterfaceToProperties& properties) {
   dbus_properties_proxy_ =
       modem_info_->control_interface()->CreateDBusPropertiesProxy(path(),
                                                                   service());
-  dbus_properties_proxy_->set_modem_manager_properties_changed_callback(
+  dbus_properties_proxy_->SetModemManagerPropertiesChangedCallback(
       Bind(&Modem::OnModemManagerPropertiesChanged, Unretained(this)));
-  dbus_properties_proxy_->set_properties_changed_callback(
+  dbus_properties_proxy_->SetPropertiesChangedCallback(
       Bind(&Modem::OnPropertiesChanged, Unretained(this)));
 
   uint32_t capabilities = std::numeric_limits<uint32_t>::max();
