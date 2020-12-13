@@ -376,6 +376,7 @@ ClientDeviceConnector::PrepareStreamBufferPtr(
   uint32_t drm_format = 0;
   switch (cros::CameraBufferManager::GetV4L2PixelFormat(*buffer->buffer)) {
     case V4L2_PIX_FMT_JPEG:
+    case V4L2_PIX_FMT_MJPEG:
       drm_format = DRM_FORMAT_R8;
       break;
     case V4L2_PIX_FMT_NV12:

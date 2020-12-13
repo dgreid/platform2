@@ -309,6 +309,11 @@ void Camera3DeviceImpl::AddStreamOnThread(int format,
     stream.width = width;
     stream.height = height;
     stream.format = format;
+    if (type == CAMERA3_STREAM_OUTPUT &&
+        format == HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED) {
+      // This is a preview stream. Add the usage flag for preview.
+      stream.usage |= GRALLOC_USAGE_HW_COMPOSER;
+    }
     stream.crop_rotate_scale_degrees = crop_rotate_scale_degrees;
     cur_stream.push_back(stream);
   }
@@ -404,8 +409,7 @@ void Camera3DeviceImpl::AllocateOutputBuffersByStreamsOnThread(
     ScopedBufferHandle buffer = gralloc_->Allocate(
         (it->format == HAL_PIXEL_FORMAT_BLOB) ? jpeg_max_size : it->width,
         (it->format == HAL_PIXEL_FORMAT_BLOB) ? 1 : it->height, it->format,
-        it->usage | GRALLOC_USAGE_SW_WRITE_OFTEN |
-            GRALLOC_USAGE_HW_CAMERA_WRITE);
+        it->usage);
     if (!buffer) {
       LOG(ERROR) << "Gralloc allocation fails";
       *result = -ENOMEM;
