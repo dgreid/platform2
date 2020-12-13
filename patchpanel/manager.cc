@@ -877,6 +877,9 @@ std::unique_ptr<dbus::Response> Manager::OnGetTrafficCounters(
 
   const std::set<std::string> devices{request.devices().begin(),
                                       request.devices().end()};
+  // TODO(b/175364240) Find why iptables -L -x -v -w can freeze on
+  // writing to stdout and in turn block patchpanel.
+  /*
   const auto counters = counters_svc_->GetCounters(devices);
   for (const auto& kv : counters) {
     auto* traffic_counter = response.add_counters();
@@ -889,6 +892,7 @@ std::unique_ptr<dbus::Response> Manager::OnGetTrafficCounters(
     traffic_counter->set_tx_bytes(counter.tx_bytes);
     traffic_counter->set_tx_packets(counter.tx_packets);
   }
+  */
 
   writer.AppendProtoAsArrayOfBytes(response);
   return dbus_response;
