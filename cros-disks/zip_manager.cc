@@ -42,6 +42,14 @@ std::unique_ptr<MountPoint> ZipManager::DoMount(
 
   metrics()->RecordArchiveType("zip");
 
+  // MountManager resolves source path to real path before calling DoMount,
+  // so no symlinks or '..' will be here.
+  if (!IsInAllowedFolder(source_path)) {
+    LOG(ERROR) << "Source path " << quote(source_path) << " is not allowed";
+    *error = MOUNT_ERROR_INVALID_DEVICE_PATH;
+    return nullptr;
+  }
+
   FUSEMounterLegacy::Params params{
       .bind_paths = {{source_path}},
       .filesystem_type = "zipfs",

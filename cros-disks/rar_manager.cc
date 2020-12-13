@@ -49,6 +49,14 @@ std::unique_ptr<MountPoint> RarManager::DoMount(
 
   metrics()->RecordArchiveType("rar");
 
+  // MountManager resolves source path to real path before calling DoMount,
+  // so no symlinks or '..' will be here.
+  if (!IsInAllowedFolder(source_path)) {
+    LOG(ERROR) << "Source path " << quote(source_path) << " is not allowed";
+    *error = MOUNT_ERROR_INVALID_DEVICE_PATH;
+    return nullptr;
+  }
+
   MountNamespace mount_namespace = GetMountNamespaceFor(source_path);
 
   FUSEMounterLegacy::Params params{
