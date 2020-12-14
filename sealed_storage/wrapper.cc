@@ -7,7 +7,7 @@
 #include <memory>
 #include <vector>
 
-#include <base/message_loop/message_loop_current.h>
+#include <base/task/current_thread.h>
 #include <base/task/single_thread_task_executor.h>
 
 #include "sealed_storage/sealed_storage.h"
@@ -28,7 +28,7 @@ bool Unseal(bool verified_boot_mode,
   DCHECK(plain_size);
 
   std::unique_ptr<base::SingleThreadTaskExecutor> task_executor;
-  if (!base::MessageLoopCurrent::IsSet()) {
+  if (!base::CurrentThread::IsSet()) {
     VLOG(2) << "Creating local SingleThreadTaskExector";
     task_executor.reset(
         new base::SingleThreadTaskExecutor(base::MessagePumpType::IO));
