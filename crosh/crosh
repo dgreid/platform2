@@ -1762,25 +1762,30 @@ check_enterprise_mode() {
   fi
 }
 
+# Set the vars to pass the unittests ...
 USAGE_tpm_status=''
-HELP_tpm_status='
-  Prints TPM (Trusted Platform Module) status information.
-'
+HELP_tpm_status=''
+# ... then unset them to hide the command from "help" output.
+unset USAGE_tpm_status HELP_tpm_status
 cmd_tpm_status() (
-  /usr/sbin/cryptohome --action=tpm_more_status
+  # TODO: Delete this after the R91 release branch.
+  cat <<EOF
+This command has been removed. Please use the Chrome page instead:
+chrome://cryptohome
+EOF
 )
 
+# Set the vars to pass the unittests ...
 USAGE_cryptohome_status=''
-HELP_cryptohome_status='
-  Get human-readable status information from cryptohomed.
-'
+HELP_cryptohome_status=''
+# ... then unset them to hide the command from "help" output.
+unset USAGE_cryptohome_status HELP_cryptohome_status
 cmd_cryptohome_status() (
-  if [ $# -eq 0 ]; then
-    /usr/sbin/cryptohome --action=status
-  else
-    help "too many arguments"
-    return 1
-  fi
+  # TODO: Delete this after the R91 release branch.
+  cat <<EOF
+This command has been removed. Please use the Chrome page instead:
+chrome://cryptohome
+EOF
 )
 
 USAGE_dmesg='[-d|-H|-k|-L|-P|-p|-r|-T|-t|-u|-w|-x]'
