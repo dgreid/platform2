@@ -99,7 +99,6 @@
 namespace shill {
 
 class Error;
-class Mac80211Monitor;
 class Metrics;
 class NetlinkManager;
 class NetlinkMessage;
@@ -326,7 +325,6 @@ class WiFi : public Device, public SupplicantEventDelegateInterface {
   static const int kFastScanIntervalSeconds;
   static const int kReconnectTimeoutSeconds;
   static const int kRequestStationInfoPeriodSeconds;
-  static const size_t kStuckQueueLengthThreshold;
   // Number of milliseconds to wait after waking from suspend to report the
   // connection status to metrics.
   static const int kPostWakeConnectivityReportDelayMilliseconds;
@@ -655,7 +653,6 @@ class WiFi : public Device, public SupplicantEventDelegateInterface {
 
   // The auth mode of the last successful connection.
   std::string supplicant_auth_mode_;
-  std::string phy_name_;
   // Indicates that we should flush supplicant's BSS cache after the
   // next scan completes.
   bool need_bss_flush_;
@@ -695,8 +692,6 @@ class WiFi : public Device, public SupplicantEventDelegateInterface {
   bool is_debugging_connection_;
   // Tracks the process of an EAP negotiation.
   std::unique_ptr<SupplicantEAPStateHandler> eap_state_handler_;
-  // Tracks mac80211 state, to diagnose problems such as queue stalls.
-  std::unique_ptr<Mac80211Monitor> mac80211_monitor_;
 
   // Properties
   std::string bgscan_method_;

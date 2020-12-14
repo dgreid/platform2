@@ -52,7 +52,6 @@
 #include "shill/supplicant/supplicant_process_proxy_interface.h"
 #include "shill/supplicant/wpa_supplicant.h"
 #include "shill/technology.h"
-#include "shill/wifi/mac80211_monitor.h"
 #include "shill/wifi/wake_on_wifi.h"
 #include "shill/wifi/wifi_endpoint.h"
 #include "shill/wifi/wifi_provider.h"
@@ -93,7 +92,6 @@ const int WiFi::kNumFastScanAttempts = 3;
 const int WiFi::kFastScanIntervalSeconds = 10;
 const int WiFi::kReconnectTimeoutSeconds = 10;
 const int WiFi::kRequestStationInfoPeriodSeconds = 20;
-const size_t WiFi::kStuckQueueLengthThreshold = 40;  // ~1 full-channel scan
 // 1 second is less than the time it takes to scan and establish a new
 // connection after waking, but should be enough time for supplicant to update
 // its state.
@@ -169,11 +167,6 @@ WiFi::WiFi(Manager* manager,
       new SupplicantManager::ScopedSupplicantListener(
           manager->supplicant_manager(),
           Bind(&WiFi::OnSupplicantPresence, weak_ptr_factory_.GetWeakPtr())));
-  mac80211_monitor_.reset(
-      new Mac80211Monitor(dispatcher(), link, kStuckQueueLengthThreshold,
-                          base::Bind(&WiFi::RestartFastScanAttempts,
-                                     weak_ptr_factory_.GetWeakPtr()),
-                          metrics()));
 
   PropertyStore* store = this->mutable_store();
   store->RegisterDerivedString(
@@ -278,7 +271,6 @@ void WiFi::Stop(Error* error, const EnabledStateChangedCallback& /*callback*/) {
   StopPendingTimer();
   StopReconnectTimer();
   StopRequestingStationInfo();
-  mac80211_monitor_->Stop();
 
   OnEnabledStateChanged(EnabledStateChangedCallback(), Error());
   if (error)
@@ -1861,13 +1853,6 @@ void WiFi::StateChanged(const string& new_state) {
   LOG(INFO) << "WiFi " << link_name() << " " << __func__ << " " << old_state
             << " -> " << new_state;
 
-  if (new_state == WPASupplicant::kInterfaceStateCompleted ||
-      new_state == WPASupplicant::kInterfaceState4WayHandshake) {
-    mac80211_monitor_->UpdateConnectedState(true);
-  } else {
-    mac80211_monitor_->UpdateConnectedState(false);
-  }
-
   if (old_state == WPASupplicant::kInterfaceStateDisconnected &&
       new_state != WPASupplicant::kInterfaceStateDisconnected) {
     // The state has been changed from disconnect to something else, clearing
@@ -2734,13 +2719,6 @@ void WiFi::OnNewWiphy(const Nl80211Message& nl80211_message) {
     LOG(ERROR) << "Received unexpected command:" << nl80211_message.command();
     return;
   }
-
-  if (!nl80211_message.const_attributes()->GetStringAttributeValue(
-          NL80211_ATTR_WIPHY_NAME, &phy_name_)) {
-    LOG(ERROR) << "NL80211_CMD_NEW_WIPHY had no NL80211_ATTR_WIPHY_NAME";
-    return;
-  }
-  mac80211_monitor_->Start(phy_name_);
 
   wake_on_wifi_->ParseWakeOnWiFiCapabilities(nl80211_message);
   if (ParseWiphyIndex(nl80211_message)) {

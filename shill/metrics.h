@@ -867,15 +867,6 @@ class Metrics : public DefaultServiceObserver {
   static const int kMetricWifiAvailableBSSesMin;
   static const int kMetricWifiAvailableBSSesNumBuckets;
 
-  // Reason that the mac80211 TX queue is stopped.
-  static const char kMetricWifiStoppedTxQueueReason[];
-
-  // Maximal queue length amongst all stopped mac80211 TX queues.
-  static const char kMetricWifiStoppedTxQueueLength[];
-  static const int kMetricWifiStoppedTxQueueLengthMax;
-  static const int kMetricWifiStoppedTxQueueLengthMin;
-  static const int kMetricWifiStoppedTxQueueLengthNumBuckets;
-
   // Number of services associated with currently connected network.
   static const char kMetricServicesOnSameNetwork[];
   static const int kMetricServicesOnSameNetworkMax;

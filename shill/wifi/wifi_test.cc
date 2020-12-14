@@ -65,7 +65,6 @@
 #include "shill/technology.h"
 #include "shill/test_event_dispatcher.h"
 #include "shill/testing.h"
-#include "shill/wifi/mock_mac80211_monitor.h"
 #include "shill/wifi/mock_wake_on_wifi.h"
 #include "shill/wifi/mock_wifi_provider.h"
 #include "shill/wifi/mock_wifi_service.h"
@@ -553,12 +552,6 @@ class WiFiObjectTest : public ::testing::TestWithParam<string> {
                        kInterfaceIndex,
                        std::make_unique<MockWakeOnWiFi>())),
         bss_counter_(0),
-        mac80211_monitor_(new StrictMock<MockMac80211Monitor>(
-            event_dispatcher_.get(),
-            kDeviceName,
-            WiFi::kStuckQueueLengthThreshold,
-            base::Closure(),
-            &metrics_)),
         supplicant_process_proxy_(new NiceMock<MockSupplicantProcessProxy>()),
         supplicant_bss_proxy_(new NiceMock<MockSupplicantBSSProxy>()),
         dhcp_config_(new MockDHCPConfig(&control_interface_, kDeviceName)),
@@ -567,7 +560,6 @@ class WiFiObjectTest : public ::testing::TestWithParam<string> {
         supplicant_interface_proxy_(
             new NiceMock<MockSupplicantInterfaceProxy>()),
         supplicant_network_proxy_(new NiceMock<MockSupplicantNetworkProxy>()) {
-    wifi_->mac80211_monitor_.reset(mac80211_monitor_);
     manager_.supplicant_manager()->set_proxy(supplicant_process_proxy_);
     ON_CALL(*supplicant_process_proxy_, CreateInterface(_, _))
         .WillByDefault(DoAll(SetArgPointee<1>(RpcIdentifier("/default/path")),
@@ -589,8 +581,6 @@ class WiFiObjectTest : public ::testing::TestWithParam<string> {
         .WillByDefault(Return(true));
     ON_CALL(*supplicant_network_proxy_, SetEnabled(_))
         .WillByDefault(Return(true));
-
-    EXPECT_CALL(*mac80211_monitor_, UpdateConnectedState(_)).Times(AnyNumber());
 
     ON_CALL(dhcp_provider_, CreateIPv4Config(_, _, _, _))
         .WillByDefault(Return(dhcp_config_));
@@ -644,7 +634,6 @@ class WiFiObjectTest : public ::testing::TestWithParam<string> {
     if (supplicant_bss_proxy_) {
       EXPECT_CALL(*supplicant_bss_proxy_, Die());
     }
-    EXPECT_CALL(*mac80211_monitor_, Stop());
     // must Stop WiFi instance, to clear its list of services.
     // otherwise, the WiFi instance will not be deleted. (because
     // services reference a WiFi instance, creating a cycle.)
@@ -657,7 +646,6 @@ class WiFiObjectTest : public ::testing::TestWithParam<string> {
 
   // Needs to be public since it is called via Invoke().
   void StopWiFi() {
-    EXPECT_CALL(*mac80211_monitor_, Stop());
     wifi_->SetEnabled(false);  // Stop(nullptr, ResultCallback());
   }
 
@@ -1109,8 +1097,6 @@ class WiFiObjectTest : public ::testing::TestWithParam<string> {
 
   MockWiFiProvider* wifi_provider() { return &wifi_provider_; }
 
-  MockMac80211Monitor* mac80211_monitor() { return mac80211_monitor_; }
-
   void ReportConnectedToServiceAfterWake() {
     wifi_->ReportConnectedToServiceAfterWake();
   }
@@ -1177,7 +1163,6 @@ class WiFiObjectTest : public ::testing::TestWithParam<string> {
   WiFiRefPtr wifi_;
   NiceMock<MockWiFiProvider> wifi_provider_;
   int bss_counter_;
-  MockMac80211Monitor* mac80211_monitor_;  // Owned by |wifi_|.
 
   // protected fields interspersed between private fields, due to
   // initialization order
@@ -3866,7 +3851,6 @@ TEST_F(WiFiMainTest, OnNewWiphy) {
   NewWiphyMessage new_wiphy_message;
   NetlinkPacket packet(kNewWiphyNlMsg, sizeof(kNewWiphyNlMsg));
   new_wiphy_message.InitFromPacket(&packet, NetlinkMessage::MessageContext());
-  EXPECT_CALL(*mac80211_monitor(), Start(_));
   EXPECT_CALL(*wake_on_wifi_, ParseWakeOnWiFiCapabilities(_));
   EXPECT_CALL(*wake_on_wifi_, OnWiphyIndexReceived(kNewWiphyNlMsg_WiphyIndex));
   GetAllScanFrequencies()->clear();
@@ -3877,15 +3861,6 @@ TEST_F(WiFiMainTest, OnNewWiphy) {
     EXPECT_TRUE(GetAllScanFrequencies()->find(freq) !=
                 GetAllScanFrequencies()->end());
   }
-}
-
-TEST_F(WiFiMainTest, StateChangedUpdatesMac80211Monitor) {
-  EXPECT_CALL(*mac80211_monitor(), UpdateConnectedState(true)).Times(2);
-  ReportStateChanged(WPASupplicant::kInterfaceStateCompleted);
-  ReportStateChanged(WPASupplicant::kInterfaceState4WayHandshake);
-
-  EXPECT_CALL(*mac80211_monitor(), UpdateConnectedState(false));
-  ReportStateChanged(WPASupplicant::kInterfaceStateAssociating);
 }
 
 TEST_F(WiFiMainTest, OnIPConfigUpdated_InvokesOnConnectedAndReachable) {

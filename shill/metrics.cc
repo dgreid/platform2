@@ -441,18 +441,6 @@ const int Metrics::kMetricWifiAvailableBSSesMax = 50;
 const int Metrics::kMetricWifiAvailableBSSesMin = 1;
 const int Metrics::kMetricWifiAvailableBSSesNumBuckets = 10;
 
-// static
-const char Metrics::kMetricWifiStoppedTxQueueReason[] =
-    "Network.Shill.WiFi.StoppedTxQueueReason";
-// Values are defined in mac80211_monitor.h.
-
-// static
-const char Metrics::kMetricWifiStoppedTxQueueLength[] =
-    "Network.Shill.WiFi.StoppedTxQueueLength";
-const int Metrics::kMetricWifiStoppedTxQueueLengthMax = 10000;
-const int Metrics::kMetricWifiStoppedTxQueueLengthMin = 1;
-const int Metrics::kMetricWifiStoppedTxQueueLengthNumBuckets = 50;
-
 // Number of services associated with currently connected network.
 const char Metrics::kMetricServicesOnSameNetwork[] =
     "Network.Shill.ServicesOnSameNetwork";
