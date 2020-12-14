@@ -75,6 +75,7 @@ namespace {
 GetTpmNonsensitiveStatusReply ToGetTpmNonSensitiveStatusReply(
     const GetTpmStatusReply& from) {
   GetTpmNonsensitiveStatusReply to;
+  to.set_status(from.status());
   to.set_is_owned(from.owned());
   to.set_is_enabled(from.enabled());
   const LocalData& sensitive = from.local_data();

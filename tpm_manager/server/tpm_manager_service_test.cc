@@ -334,6 +334,7 @@ TEST_F(TpmManagerServiceTest_Preinit, GetTpmStatusSuccess) {
 
   auto callback_nonsensitive = [](TpmManagerServiceTestBase* self,
                                   const GetTpmNonsensitiveStatusReply& reply) {
+    EXPECT_TRUE(reply.has_status());
     EXPECT_EQ(STATUS_SUCCESS, reply.status());
     EXPECT_TRUE(reply.is_enabled());
     EXPECT_TRUE(reply.is_owned());
@@ -343,6 +344,7 @@ TEST_F(TpmManagerServiceTest_Preinit, GetTpmStatusSuccess) {
   };
   auto callback = [](TpmManagerServiceTestBase* self,
                      const GetTpmStatusReply& reply) {
+    EXPECT_TRUE(reply.has_status());
     EXPECT_EQ(STATUS_SUCCESS, reply.status());
     EXPECT_TRUE(reply.enabled());
     EXPECT_TRUE(reply.owned());
