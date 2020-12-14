@@ -22,7 +22,10 @@ class FakePropertiesProxy;
 
 // This is a cellular-specific DBus Properties interface, as it supports
 // cellular-specific signal (ModemManagerPropertiesChanged).
-// These are the methods that a DBusProperties proxy must support.
+// For asynchronous calls, the class instance should outlive the success
+// callback invocation since it owns the org::freedesktop::DBus::PropertiesProxy
+// object which has an opaque implementation that does not guarantee callback
+// completion after destruction.
 class DBusPropertiesProxy {
  public:
   // Callback invoked when an object sends a DBus property change signal.

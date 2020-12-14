@@ -530,6 +530,8 @@ class CellularTest : public testing::TestWithParam<Cellular::Type> {
     capability->active_bearer_ = std::move(bearer);
   }
 
+  void InitProxies() { GetCapability3gpp()->InitProxies(); }
+
   EventDispatcherForTest dispatcher_;
   TestControl control_interface_;
   NiceMock<MockManager> manager_;
@@ -935,6 +937,8 @@ TEST_P(CellularTest, HomeProviderServingOperator) {
   Stringmap home_provider;
   Stringmap serving_operator;
 
+  InitProxies();
+
   // (1) Neither home provider nor serving operator known.
   EXPECT_CALL(*mock_home_provider_info_, IsMobileNetworkOperatorKnown())
       .WillRepeatedly(Return(false));
@@ -950,8 +954,6 @@ TEST_P(CellularTest, HomeProviderServingOperator) {
   Mock::VerifyAndClearExpectations(mock_home_provider_info_);
   Mock::VerifyAndClearExpectations(mock_serving_operator_info_);
   device_->DestroyService();
-
-  PopulateProxies();
 
   // (2) serving operator known.
   // When home provider is not known, serving operator proxies in.
@@ -978,8 +980,6 @@ TEST_P(CellularTest, HomeProviderServingOperator) {
   Mock::VerifyAndClearExpectations(mock_serving_operator_info_);
   device_->DestroyService();
 
-  PopulateProxies();
-
   // (3) home provider known.
   // When serving operator is not known, home provider proxies in.
   EXPECT_CALL(*mock_serving_operator_info_, IsMobileNetworkOperatorKnown())
@@ -1004,8 +1004,6 @@ TEST_P(CellularTest, HomeProviderServingOperator) {
   Mock::VerifyAndClearExpectations(mock_home_provider_info_);
   Mock::VerifyAndClearExpectations(mock_serving_operator_info_);
   device_->DestroyService();
-
-  PopulateProxies();
 
   // (4) Serving operator known, home provider known.
   EXPECT_CALL(*mock_home_provider_info_, IsMobileNetworkOperatorKnown())
@@ -1037,6 +1035,7 @@ TEST_P(CellularTest, HomeProviderServingOperator) {
 
 TEST_P(CellularTest, StorageIdentifier) {
   // The default storage identifier should always be cellular_{iccid}
+  InitProxies();
   device_->set_iccid("test_iccid");
   device_->CreateService();
   EXPECT_EQ("cellular_test_iccid", device_->service()->GetStorageIdentifier());

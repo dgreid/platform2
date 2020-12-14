@@ -311,6 +311,11 @@ class CellularCapability3gpp : public CellularCapability {
 
   // SIM property change handlers
   // TODO(armansito): Put these methods in a 3GPP-only subclass.
+  void RequestSimProperties(RpcIdentifier sim_path);
+  void OnGetSimProperties(
+      RpcIdentifier sim_path,
+      std::unique_ptr<DBusPropertiesProxy> sim_properties_proxy,
+      const KeyValueStore& properties);
   void OnSimPropertiesChanged(const KeyValueStore& properties);
   void OnSpnChanged(const std::string& spn);
   void OnSimIdentifierChanged(const std::string& id);
@@ -358,6 +363,8 @@ class CellularCapability3gpp : public CellularCapability {
   std::unique_ptr<mm1::ModemSimpleProxyInterface> modem_simple_proxy_;
   std::unique_ptr<mm1::SimProxyInterface> sim_proxy_;
   std::unique_ptr<mm1::ModemLocationProxyInterface> modem_location_proxy_;
+  std::unique_ptr<DBusPropertiesProxy> dbus_properties_proxy_;
+
   // Used to enrich information about the network operator in |ParseScanResult|.
   // TODO(pprabhu) Instead instantiate a local |MobileOperatorInfo| instance
   // once the context has been separated out. (crbug.com/363874)

@@ -270,6 +270,8 @@ void CellularCapability3gpp::InitProxies() {
 
   modem_location_proxy_ = control_interface()->CreateMM1ModemLocationProxy(
       cellular()->dbus_path(), cellular()->dbus_service());
+  dbus_properties_proxy_ = control_interface()->CreateDBusPropertiesProxy(
+      cellular()->dbus_path(), cellular()->dbus_service());
 
   modem_proxy_->set_state_changed_callback(
       Bind(&CellularCapability3gpp::OnModemStateChangedSignal,
@@ -601,6 +603,7 @@ void CellularCapability3gpp::ReleaseProxies() {
   modem_proxy_.reset();
   modem_location_proxy_.reset();
   modem_simple_proxy_.reset();
+  dbus_properties_proxy_.reset();
 
   // |sim_proxy_| is managed through OnSimPathChanged() and thus shouldn't be
   // cleared here in order to keep it in sync with |sim_path_|.
@@ -609,7 +612,7 @@ void CellularCapability3gpp::ReleaseProxies() {
 bool CellularCapability3gpp::AreProxiesInitialized() const {
   return (modem_3gpp_proxy_.get() && modem_proxy_.get() &&
           modem_simple_proxy_.get() && sim_proxy_.get() &&
-          modem_location_proxy_.get());
+          modem_location_proxy_.get() && dbus_properties_proxy_.get());
 }
 
 void CellularCapability3gpp::UpdateServiceActivationState() {
@@ -757,12 +760,9 @@ void CellularCapability3gpp::FillInitialEpsBearerPropertyMap(
 
 void CellularCapability3gpp::GetProperties() {
   SLOG(this, 3) << __func__;
+  CHECK(dbus_properties_proxy_);
 
-  std::unique_ptr<DBusPropertiesProxy> properties_proxy =
-      control_interface()->CreateDBusPropertiesProxy(
-          cellular()->dbus_path(), cellular()->dbus_service());
-
-  properties_proxy->GetAllAsync(
+  dbus_properties_proxy_->GetAllAsync(
       MM_DBUS_INTERFACE_MODEM,
       base::Bind(&CellularCapability3gpp::OnModemPropertiesChanged,
                  weak_ptr_factory_.GetWeakPtr()),
@@ -770,7 +770,7 @@ void CellularCapability3gpp::GetProperties() {
         LOG(ERROR) << "Error fetching modem properties: " << error;
       }));
 
-  properties_proxy->GetAllAsync(
+  dbus_properties_proxy_->GetAllAsync(
       MM_DBUS_INTERFACE_MODEM_MODEM3GPP,
       base::Bind(&CellularCapability3gpp::OnModem3gppPropertiesChanged,
                  weak_ptr_factory_.GetWeakPtr()),
@@ -1344,16 +1344,7 @@ void CellularCapability3gpp::OnSimPathChanged(const RpcIdentifier& sim_path) {
 
   cellular()->set_sim_present(true);
 
-  std::unique_ptr<DBusPropertiesProxy> properties_proxy =
-      control_interface()->CreateDBusPropertiesProxy(
-          sim_path, cellular()->dbus_service());
-  properties_proxy->GetAllAsync(
-      MM_DBUS_INTERFACE_SIM,
-      base::Bind(&CellularCapability3gpp::OnSimPropertiesChanged,
-                 weak_ptr_factory_.GetWeakPtr()),
-      base::Bind([](const Error& error) {
-        LOG(ERROR) << "Error fetching SIM properties: " << error;
-      }));
+  RequestSimProperties(sim_path_);
 }
 
 void CellularCapability3gpp::OnModemCurrentCapabilitiesChanged(
@@ -1479,16 +1470,7 @@ void CellularCapability3gpp::OnSimLockStatusChanged() {
   // If the SIM is currently unlocked, assume that we need to refresh
   // carrier information, since a locked SIM prevents shill from obtaining
   // the necessary data to establish a connection later (e.g. IMSI).
-  std::unique_ptr<DBusPropertiesProxy> properties_proxy =
-      control_interface()->CreateDBusPropertiesProxy(
-          sim_path_, cellular()->dbus_service());
-  properties_proxy->GetAllAsync(
-      MM_DBUS_INTERFACE_SIM,
-      base::Bind(&CellularCapability3gpp::OnSimPropertiesChanged,
-                 weak_ptr_factory_.GetWeakPtr()),
-      base::Bind([](const Error& error) {
-        LOG(ERROR) << "Error fetching SIM properties: " << error;
-      }));
+  RequestSimProperties(sim_path_);
 }
 
 void CellularCapability3gpp::OnModem3gppPropertiesChanged(
@@ -1758,6 +1740,32 @@ void CellularCapability3gpp::OnPcoChanged(const PcoList& pco_list) {
     if (subscription_state != SubscriptionState::kUnknown)
       OnSubscriptionStateChanged(subscription_state);
   }
+}
+
+void CellularCapability3gpp::RequestSimProperties(RpcIdentifier sim_path) {
+  // Ownership if this proxy will be passed to the success callback so that the
+  // proxy is not destroyed before the asynchronous call completes.
+  std::unique_ptr<DBusPropertiesProxy> sim_properties_proxy =
+      control_interface()->CreateDBusPropertiesProxy(
+          sim_path, cellular()->dbus_service());
+  DBusPropertiesProxy* sim_properties_proxy_ptr = sim_properties_proxy.get();
+  sim_properties_proxy_ptr->GetAllAsync(
+      MM_DBUS_INTERFACE_SIM,
+      base::Bind(&CellularCapability3gpp::OnGetSimProperties,
+                 weak_ptr_factory_.GetWeakPtr(), sim_path,
+                 base::Passed(&sim_properties_proxy)),
+      base::Bind([](const Error& error) {
+        LOG(ERROR) << "Error fetching SIM properties: " << error;
+      }));
+}
+
+void CellularCapability3gpp::OnGetSimProperties(
+    RpcIdentifier sim_path,
+    std::unique_ptr<DBusPropertiesProxy> sim_properties_proxy,
+    const KeyValueStore& properties) {
+  if (sim_path == sim_path_)
+    OnSimPropertiesChanged(properties);
+  // |sim_properties_proxy| will be safely released here.
 }
 
 void CellularCapability3gpp::OnSimPropertiesChanged(
