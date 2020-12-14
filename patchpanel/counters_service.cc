@@ -269,13 +269,13 @@ void CountersService::SetupJumpRules(const std::string& op,
   // traffic.
   datapath_->ModifyIptables(
       IpFamily::Dual, kMangleTable,
-      {"-A", "FORWARD", "-i", ifname, "-j", kRxTag + chain_tag, "-w"});
+      {op, "FORWARD", "-i", ifname, "-j", kRxTag + chain_tag, "-w"});
   datapath_->ModifyIptables(
       IpFamily::Dual, kMangleTable,
-      {"-A", "INPUT", "-i", ifname, "-j", kRxTag + chain_tag, "-w"});
+      {op, "INPUT", "-i", ifname, "-j", kRxTag + chain_tag, "-w"});
   datapath_->ModifyIptables(
       IpFamily::Dual, kMangleTable,
-      {"-A", "POSTROUTING", "-o", ifname, "-j", kTxTag + chain_tag, "-w"});
+      {op, "POSTROUTING", "-o", ifname, "-j", kTxTag + chain_tag, "-w"});
 }
 
 TrafficCounter::Source TrafficSourceToProto(TrafficSource source) {

@@ -469,6 +469,21 @@ TEST_F(CountersServiceTest, OnVpnDeviceAdded) {
   counters_svc_->OnVpnDeviceAdded("tun0");
 }
 
+TEST_F(CountersServiceTest, OnVpnDeviceRemoved) {
+  const std::vector<std::vector<std::string>> expected_calls{
+      {"-D", "FORWARD", "-i", "ppp0", "-j", "rx_vpn", "-w"},
+      {"-D", "INPUT", "-i", "ppp0", "-j", "rx_vpn", "-w"},
+      {"-D", "POSTROUTING", "-o", "ppp0", "-j", "tx_vpn", "-w"},
+  };
+
+  for (const auto& rule : expected_calls) {
+    EXPECT_CALL(runner_, iptables("mangle", ElementsAreArray(rule), _, _));
+    EXPECT_CALL(runner_, ip6tables("mangle", ElementsAreArray(rule), _, _));
+  }
+
+  counters_svc_->OnVpnDeviceRemoved("ppp0");
+}
+
 TEST_F(CountersServiceTest, OnSameDeviceAppearAgain) {
   // Makes the chain creation commands return false (we already have these
   // rules).
