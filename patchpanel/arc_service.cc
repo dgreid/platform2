@@ -40,7 +40,6 @@ const int32_t kAndroidRootUid = 655360;
 constexpr uint32_t kInvalidId = 0;
 constexpr char kArcNetnsName[] = "arc_netns";
 constexpr char kArcIfname[] = "arc0";
-constexpr char kArcBridge[] = "arcbr0";
 constexpr std::array<const char*, 2> kEthernetInterfacePrefixes{{"eth", "usb"}};
 constexpr std::array<const char*, 2> kWifiInterfacePrefixes{{"wlan", "mlan"}};
 constexpr std::array<const char*, 2> kCellInterfacePrefixes{{"wwan", "rmnet"}};

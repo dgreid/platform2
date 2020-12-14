@@ -169,7 +169,10 @@ class Datapath {
   // Sets up IPv4 SNAT, IP forwarding, and traffic marking for the given
   // virtual device |int_ifname| associated to |source|. if |ext_ifname| is
   // empty, the device is implicitly routed through the highest priority
-  // network.
+  // physical network when |route_on_vpn| is false, or through the highest
+  // priority logical network when |route_on_vpn| is true. If |ext_ifname| is
+  // defined, the device is routed to |ext_ifname| and |route_on_vpn| is
+  // ignored.
   virtual void StartRoutingDevice(const std::string& ext_ifname,
                                   const std::string& int_ifname,
                                   uint32_t int_ipv4_addr,

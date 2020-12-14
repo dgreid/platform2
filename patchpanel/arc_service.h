@@ -24,6 +24,8 @@
 
 namespace patchpanel {
 
+constexpr char kArcBridge[] = "arcbr0";
+
 class ArcService {
  public:
   enum class InterfaceType {

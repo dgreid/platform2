@@ -26,6 +26,7 @@
 #include <brillo/userdb_utils.h>
 
 #include "patchpanel/adb_proxy.h"
+#include "patchpanel/arc_service.h"
 #include "patchpanel/net_util.h"
 #include "patchpanel/scoped_ns.h"
 
@@ -619,6 +620,7 @@ void Datapath::StartRoutingDevice(const std::string& ext_ifname,
                                   TrafficSource source,
                                   bool route_on_vpn) {
   if (source == TrafficSource::ARC && !ext_ifname.empty() &&
+      int_ipv4_addr != 0 &&
       !AddInboundIPv4DNAT(ext_ifname, IPv4AddressToString(int_ipv4_addr)))
     LOG(ERROR) << "Failed to configure ingress traffic rules for " << ext_ifname
                << "->" << int_ifname;
@@ -665,7 +667,7 @@ void Datapath::StopRoutingDevice(const std::string& ext_ifname,
                                  uint32_t int_ipv4_addr,
                                  TrafficSource source,
                                  bool route_on_vpn) {
-  if (source == TrafficSource::ARC && !ext_ifname.empty())
+  if (source == TrafficSource::ARC && !ext_ifname.empty() && int_ipv4_addr != 0)
     RemoveInboundIPv4DNAT(ext_ifname, IPv4AddressToString(int_ipv4_addr));
   StopIpForwarding(IpFamily::IPv4, ext_ifname, int_ifname);
   StopIpForwarding(IpFamily::IPv4, int_ifname, ext_ifname);
@@ -854,9 +856,15 @@ void Datapath::StartVpnRouting(const std::string& vpn_ifname) {
   StartConnectionPinning(vpn_ifname);
   if (!ModifyFwmarkRoutingTag(kApplyVpnMarkChain, "-A", vpn_ifname, ""))
     LOG(ERROR) << "Failed to set up VPN set-mark rule for " << vpn_ifname;
+  if (vpn_ifname != kArcBridge)
+    StartRoutingDevice(vpn_ifname, kArcBridge, 0 /*no inbound DNAT */,
+                       TrafficSource::ARC, true /* route_on_vpn */);
 }
 
 void Datapath::StopVpnRouting(const std::string& vpn_ifname) {
+  if (vpn_ifname != kArcBridge)
+    StopRoutingDevice(vpn_ifname, kArcBridge, 0 /* no inbound DNAT */,
+                      TrafficSource::ARC, false /* route_on_vpn */);
   if (!ModifyFwmarkRoutingTag(kApplyVpnMarkChain, "-D", vpn_ifname, ""))
     LOG(ERROR) << "Failed to remove VPN set-mark rule for " << vpn_ifname;
   StopConnectionPinning(vpn_ifname);
