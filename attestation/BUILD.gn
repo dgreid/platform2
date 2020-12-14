@@ -157,16 +157,10 @@ shared_library("libattestation") {
 
 # A client command line utility.
 executable("attestation_client") {
+  sources = [ "client/main.cc" ]
   configs += [
     ":target_defaults",
     ":local_proto_include",
-  ]
-  sources = [ "client/main.cc" ]
-  deps = [
-    ":client_library",
-    ":common_library",
-    ":proto_library",
-    ":proto_library_proto",
   ]
 
   # NOSORT
@@ -176,6 +170,12 @@ executable("attestation_client") {
     # order.
     "system_api",
     "protobuf",
+  ]
+  deps = [
+    ":client_library",
+    ":common_library",
+    ":proto_library",
+    ":proto_library_proto",
   ]
 }
 
@@ -226,12 +226,6 @@ executable("attestationd") {
     ":target_defaults",
   ]
   libs = [ "policy" ]
-  deps = [
-    ":common_library",
-    ":proto_library",
-    ":proto_library_proto",
-    ":server_library",
-  ]
 
   # NOSORT
   pkg_deps = [
@@ -240,6 +234,12 @@ executable("attestationd") {
     # order.
     "system_api",
     "protobuf",
+  ]
+  deps = [
+    ":common_library",
+    ":proto_library",
+    ":proto_library_proto",
+    ":server_library",
   ]
 }
 
@@ -268,10 +268,6 @@ source_set("pca_agent_server_library") {
 
 executable("pca_agentd") {
   sources = [ "pca_agent/server/main.cc" ]
-  deps = [
-    ":pca-agent-adaptors",
-    ":pca_agent_server_library",
-  ]
   configs += [
     ":attestationd_config",
     ":target_defaults",
@@ -285,15 +281,15 @@ executable("pca_agentd") {
     "system_api",
     "protobuf",
   ]
+  deps = [
+    ":pca-agent-adaptors",
+    ":pca_agent_server_library",
+  ]
 }
 
 executable("pca_agent_client") {
   sources = [ "pca_agent/client/main.cc" ]
   configs += [ ":target_defaults" ]
-  deps = [
-    ":pca-agent-proxies",
-    ":proto_library",
-  ]
 
   # NOSORT
   pkg_deps = [
@@ -302,6 +298,10 @@ executable("pca_agent_client") {
     # order.
     "system_api",
     "protobuf",
+  ]
+  deps = [
+    ":pca-agent-proxies",
+    ":proto_library",
   ]
 }
 
@@ -314,12 +314,6 @@ if (use.test) {
     ]
   }
   executable("attestation_testrunner") {
-    configs += [
-      "//common-mk:test",
-      ":attestation_testrunner_config",
-      ":local_proto_include",
-      ":target_defaults",
-    ]
     sources = [
       "attestation_testrunner.cc",
       "client/dbus_proxy_test.cc",
@@ -351,13 +345,11 @@ if (use.test) {
         "policy",
       ]
     }
-    deps = [
-      ":client_library",
-      ":common_library",
-      ":pca_agent_server_library",
-      ":proto_library",
-      ":proto_library_proto",
-      ":server_library",
+    configs += [
+      "//common-mk:test",
+      ":attestation_testrunner_config",
+      ":local_proto_include",
+      ":target_defaults",
     ]
 
     # NOSORT
@@ -367,6 +359,14 @@ if (use.test) {
       # order.
       "system_api",
       "protobuf-lite",
+    ]
+    deps = [
+      ":client_library",
+      ":common_library",
+      ":pca_agent_server_library",
+      ":proto_library",
+      ":proto_library_proto",
+      ":server_library",
     ]
   }
 }
