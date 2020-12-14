@@ -37,10 +37,14 @@ MountError UserSession::MountVault(const Credentials& credentials,
       return MOUNT_ERROR_USER_DOES_NOT_EXIST;
     }
 
+    bool dircrypto_v2 = !mount_args.create_as_ecryptfs &&
+                        dircrypto::CheckFscryptKeyIoctlSupport();
+
     if (!homedirs_->Create(credentials.username()) ||
         !mount_->PrepareCryptohome(obfuscated_username,
                                    mount_args.create_as_ecryptfs) ||
-        !homedirs_->keyset_management()->AddInitialKeyset(credentials)) {
+        !homedirs_->keyset_management()->AddInitialKeyset(credentials,
+                                                          dircrypto_v2)) {
       LOG(ERROR) << "Error creating cryptohome.";
       return MOUNT_ERROR_CREATE_CRYPTOHOME_FAILED;
     }
