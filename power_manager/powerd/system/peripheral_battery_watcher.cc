@@ -66,6 +66,7 @@ PeripheralBatteryWatcher::PeripheralBatteryWatcher()
     : dbus_wrapper_(nullptr),
       peripheral_battery_path_(kDefaultPeripheralBatteryPath),
       poll_interval_ms_(kDefaultPollIntervalMs),
+      bluez_battery_provider_(std::make_unique<BluezBatteryProvider>()),
       weak_ptr_factory_(this) {}
 
 PeripheralBatteryWatcher::~PeripheralBatteryWatcher() {
@@ -86,6 +87,8 @@ void PeripheralBatteryWatcher::Init(DBusWrapperInterface* dbus_wrapper,
       base::BindRepeating(
           &PeripheralBatteryWatcher::OnRefreshBluetoothBatteryMethodCall,
           weak_ptr_factory_.GetWeakPtr()));
+
+  bluez_battery_provider_->Init(dbus_wrapper_->GetBus());
 }
 
 void PeripheralBatteryWatcher::OnUdevEvent(const UdevEvent& event) {
@@ -170,6 +173,14 @@ void PeripheralBatteryWatcher::ReadBatteryStatuses() {
 void PeripheralBatteryWatcher::SendBatteryStatus(const base::FilePath& path,
                                                  const std::string& model_name,
                                                  int level) {
+  std::string address;
+  RE2::FullMatch(path.value(), ".*hid-(.+)-battery", &address);
+  if (RE2::FullMatch(address, kBluetoothAddressRegex)) {
+    // Bluetooth batteries is reported separately to BlueZ.
+    bluez_battery_provider_->UpdateDeviceBattery(address, level);
+    return;
+  }
+
   PeripheralBatteryStatus proto;
   proto.set_path(path.value());
   proto.set_name(model_name);

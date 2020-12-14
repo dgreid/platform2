@@ -269,14 +269,10 @@ TEST_F(PeripheralBatteryWatcherTest, RefreshBluetoothBattery) {
       test_wrapper_.CallExportedMethodSync(&method_call);
   ASSERT_TRUE(response);
   ASSERT_EQ(dbus::Message::MESSAGE_METHOD_RETURN, response->GetMessageType());
-  // Check that powerd reads the battery information and sends an update signal.
-  ASSERT_TRUE(test_wrapper_.RunUntilSignalSent(kUpdateTimeout));
-  ASSERT_EQ(1, test_wrapper_.num_sent_signals());
-  PeripheralBatteryStatus proto;
-  EXPECT_TRUE(test_wrapper_.GetSentSignal(0, kPeripheralBatteryStatusSignal,
-                                          &proto, nullptr));
-  EXPECT_EQ(80, proto.level());
-  EXPECT_EQ(kDeviceModelName, proto.name());
+  // Check that powerd does not send the signal because Bluetooth batteries are
+  // reported separately to BlueZ.
+  ASSERT_FALSE(test_wrapper_.RunUntilSignalSent(kShortUpdateTimeout));
+  ASSERT_EQ(0, test_wrapper_.num_sent_signals());
 
   // RefreshBluetoothBattery is called for non-Bluetooth device.
   dbus::MethodCall method_call2(kPowerManagerInterface,

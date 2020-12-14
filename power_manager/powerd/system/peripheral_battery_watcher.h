@@ -17,6 +17,7 @@
 #include <dbus/message.h>
 
 #include "power_manager/powerd/system/async_file_reader.h"
+#include "power_manager/powerd/system/bluez_battery_provider.h"
 #include "power_manager/powerd/system/udev_subsystem_observer.h"
 
 namespace power_manager {
@@ -74,7 +75,11 @@ class PeripheralBatteryWatcher : public UdevSubsystemObserver {
   // peripheral batteries.
   void GetBatteryList(std::vector<base::FilePath>* battery_list);
 
-  // Sends the battery status through D-Bus.
+  // Sends the battery status through D-Bus using powerd's
+  // PeripheralBatteryStatus signal.
+  // Note: Battery status of Bluetooth devices is not advertised using powerd's
+  // PeripheralBatteryStatus signal, but communicated to BlueZ using BlueZ's
+  // Battery provider API.
   void SendBatteryStatus(const base::FilePath& path,
                          const std::string& model_name,
                          int level);
@@ -107,6 +112,8 @@ class PeripheralBatteryWatcher : public UdevSubsystemObserver {
 
   // AsyncFileReaders for different peripheral batteries.
   std::vector<std::unique_ptr<AsyncFileReader>> battery_readers_;
+
+  std::unique_ptr<BluezBatteryProvider> bluez_battery_provider_;
 
   base::WeakPtrFactory<PeripheralBatteryWatcher> weak_ptr_factory_;
 };
