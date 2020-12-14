@@ -16,9 +16,9 @@
 #include <base/files/file_path.h>
 #include <base/files/file_util.h>
 #include <base/run_loop.h>
+#include <base/task/current_thread.h>
 #include <base/threading/thread_task_runner_handle.h>
 #include <brillo/message_loops/base_message_loop.h>
-#include <base/message_loop/message_loop_current.h>
 #include <google/protobuf/text_format.h>
 #include <mojo/core/core.h>
 #include <mojo/core/embedder/embedder.h>
@@ -88,7 +88,7 @@ int32_t SerializeResults(const BenchmarkResults& results,
 }
 
 void InitializeOnce() {
-  if (!base::MessageLoopCurrent::IsSet()) {
+  if (!base::CurrentThread::IsSet()) {
     (new brillo::BaseMessageLoop())->SetAsCurrent();
   }
   if (!mojo::core::Core::Get()) {
