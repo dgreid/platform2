@@ -182,21 +182,21 @@ if (use.test) {
 }
 
 if (use.fuzzer) {
+  sources = [ "arc_setup_util_find_all_properties_fuzzer.cc" ]
   executable("arc_setup_util_find_all_properties_fuzzer") {
     configs += [
       "//common-mk/common_fuzzer",
       ":target_defaults",
     ]
-    sources = [ "arc_setup_util_find_all_properties_fuzzer.cc" ]
     deps = [ ":libarc_setup" ]
   }
 
   executable("arc_setup_util_find_fingerprint_and_sdk_version_fuzzer") {
+    sources = [ "arc_setup_util_find_fingerprint_and_sdk_version_fuzzer.cc" ]
     configs += [
       "//common-mk/common_fuzzer",
       ":target_defaults",
     ]
-    sources = [ "arc_setup_util_find_fingerprint_and_sdk_version_fuzzer.cc" ]
     deps = [ ":libarc_setup" ]
   }
 }

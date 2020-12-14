@@ -84,9 +84,11 @@ shared_library("libarckeymaster_context") {
     "//common-mk:visibility_default",
     ":boringssl_config",
   ]
+
   # NOSORT
   pkg_deps = [
     "libchrome",
+
     # system_api depends on protobuf. It must appear before protobuf here so the
     # linker flags are in the right order.
     "system_api",
@@ -217,13 +219,13 @@ if (use.fuzzer) {
     pkg_deps = [ "libchrome" ]
   }
   executable("arc_keymasterd_fuzzer") {
-    configs += [
-      "//common-mk/common_fuzzer:common_fuzzer",
-      ":arc_keymasterd_fuzzer_config",
-    ]
     sources = [
       "conversion.cc",
       "conversion_fuzzer.cc",
+    ]
+    configs += [
+      "//common-mk/common_fuzzer:common_fuzzer",
+      ":arc_keymasterd_fuzzer_config",
     ]
     deps = [
       ":keymaster_mojo_bindings",

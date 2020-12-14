@@ -37,36 +37,36 @@ pkg_config("common_pkg_deps") {
 
 # Generates proto definitions.
 proto_library("arc-data-snapshotd-protos") {
+  sources = [ "proto/directory.proto" ]
   proto_in_dir = "proto/"
   proto_out_dir = "include/proto"
-  sources = [ "proto/directory.proto" ]
   standalone = true
 }
 
 source_set("libarc-data-snapshotd") {
-  configs += [ ":common_pkg_deps" ]
   sources = [
     "dbus_adaptor.cc",
     "file_utils.cc",
   ]
+  configs += [ ":common_pkg_deps" ]
   deps = [ ":arc-data-snapshotd-protos" ]
 }
 
 generate_dbus_adaptors("data_snapshotd_adaptors") {
+  sources = [ "dbus_bindings/org.chromium.ArcDataSnapshotd.xml" ]
   dbus_service_config = "dbus_bindings/dbus-service-config.json"
   dbus_adaptors_out_dir = "include/dbus_adaptors"
-  sources = [ "dbus_bindings/org.chromium.ArcDataSnapshotd.xml" ]
 }
 
 executable("arc-data-snapshotd") {
+  sources = [
+    "daemon.cc",
+    "main.cc",
+  ]
   configs += [ ":common_pkg_deps" ]
   deps = [
     ":data_snapshotd_adaptors",
     ":libarc-data-snapshotd",
-  ]
-  sources = [
-    "daemon.cc",
-    "main.cc",
   ]
 }
 
@@ -87,6 +87,7 @@ if (use.test) {
     ]
   }
   executable("arc-data-snapshotd_test") {
+    sources = [ "dbus_adaptor_test.cc" ]
     configs += [
       ":test_pkg_deps",
       "//common-mk:test",
@@ -96,6 +97,5 @@ if (use.test) {
       ":libarc-data-snapshotd",
       "//common-mk/testrunner:testrunner",
     ]
-    sources = [ "dbus_adaptor_test.cc" ]
   }
 }

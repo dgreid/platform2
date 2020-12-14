@@ -43,9 +43,8 @@ static_library("libarcadbd") {
 
 executable("arc-adbd") {
   sources = [ "adbd_main.cc" ]
-
-  deps = [ ":libarcadbd" ]
   configs += [ ":config" ]
+  deps = [ ":libarcadbd" ]
 }
 
 # Fuzzer only.
@@ -90,6 +89,7 @@ if (use.fuzzer) {
 
 if (use.test) {
   executable("arcvm_sock_to_usb_test") {
+    sources = [ "arcvm_sock_to_usb_test.cc" ]
     configs += [
       "//common-mk:test",
       ":config",
@@ -98,10 +98,10 @@ if (use.test) {
       ":libarcadbd",
       "//common-mk/testrunner:testrunner",
     ]
-    sources = [ "arcvm_sock_to_usb_test.cc" ]
     run_test = true
   }
   executable("arcvm_usb_to_sock_test") {
+    sources = [ "arcvm_usb_to_sock_test.cc" ]
     configs += [
       "//common-mk:test",
       ":config",
@@ -110,7 +110,6 @@ if (use.test) {
       ":libarcadbd",
       "//common-mk/testrunner:testrunner",
     ]
-    sources = [ "arcvm_usb_to_sock_test.cc" ]
     run_test = true
   }
 }

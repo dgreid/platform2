@@ -131,11 +131,11 @@ if (use.test) {
 
 if (use.fuzzer) {
   executable("mount-obb_fuzzer") {
+    sources = [ "mount_obb_fuzzer.cc" ]
     configs += [
       "//common-mk/common_fuzzer",
       ":target_defaults",
     ]
-    sources = [ "mount_obb_fuzzer.cc" ]
     deps = [ ":libmount_obb" ]
   }
 }
