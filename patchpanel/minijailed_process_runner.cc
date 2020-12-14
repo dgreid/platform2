@@ -185,10 +185,13 @@ int MinijailedProcessRunner::iptables(const std::string& table,
     return RunSync(args, mj_, log_failures, nullptr);
   }
 
-  int fd_stdout;
+  int fd_stdout = -1;
   int ret = RunSync(args, mj_, log_failures, &fd_stdout);
-  if (ret == 0) {
+  if (ret == 0 && fd_stdout > 0) {
     *output = ReadBlockingFDToString(fd_stdout);
+  }
+  if (fd_stdout > 0) {
+    close(fd_stdout);
   }
   return ret;
 }
@@ -203,10 +206,13 @@ int MinijailedProcessRunner::ip6tables(const std::string& table,
     return RunSync(args, mj_, log_failures, nullptr);
   }
 
-  int fd_stdout;
+  int fd_stdout = -1;
   int ret = RunSync(args, mj_, log_failures, &fd_stdout);
-  if (ret == 0) {
+  if (ret == 0 && fd_stdout > 0) {
     *output = ReadBlockingFDToString(fd_stdout);
+  }
+  if (fd_stdout > 0) {
+    close(fd_stdout);
   }
   return ret;
 }
