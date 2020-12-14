@@ -102,10 +102,21 @@ int MinijailedProcessRunner::RunSyncDestroy(
 }
 
 int MinijailedProcessRunner::RunSync(const std::vector<std::string>& argv,
-                                     brillo::Minijail* mj,
                                      bool log_failures,
-                                     int* fd_stdout) {
-  return RunSyncDestroy(argv, mj, mj->New(), log_failures, fd_stdout);
+                                     std::string* output) {
+  if (!output) {
+    return RunSyncDestroy(argv, mj_, mj_->New(), log_failures, nullptr);
+  }
+
+  int fd_stdout = -1;
+  int ret = RunSyncDestroy(argv, mj_, mj_->New(), log_failures, &fd_stdout);
+  if (ret == 0 && fd_stdout > 0) {
+    *output = ReadBlockingFDToString(fd_stdout);
+  }
+  if (fd_stdout > 0) {
+    close(fd_stdout);
+  }
+  return ret;
 }
 
 void EnterChildProcessJail() {
@@ -181,19 +192,7 @@ int MinijailedProcessRunner::iptables(const std::string& table,
                                       std::string* output) {
   std::vector<std::string> args = {kIptablesPath, "-t", table};
   args.insert(args.end(), argv.begin(), argv.end());
-  if (!output) {
-    return RunSync(args, mj_, log_failures, nullptr);
-  }
-
-  int fd_stdout = -1;
-  int ret = RunSync(args, mj_, log_failures, &fd_stdout);
-  if (ret == 0 && fd_stdout > 0) {
-    *output = ReadBlockingFDToString(fd_stdout);
-  }
-  if (fd_stdout > 0) {
-    close(fd_stdout);
-  }
-  return ret;
+  return RunSync(args, log_failures, output);
 }
 
 int MinijailedProcessRunner::ip6tables(const std::string& table,
@@ -202,19 +201,7 @@ int MinijailedProcessRunner::ip6tables(const std::string& table,
                                        std::string* output) {
   std::vector<std::string> args = {kIp6tablesPath, "-t", table};
   args.insert(args.end(), argv.begin(), argv.end());
-  if (!output) {
-    return RunSync(args, mj_, log_failures, nullptr);
-  }
-
-  int fd_stdout = -1;
-  int ret = RunSync(args, mj_, log_failures, &fd_stdout);
-  if (ret == 0 && fd_stdout > 0) {
-    *output = ReadBlockingFDToString(fd_stdout);
-  }
-  if (fd_stdout > 0) {
-    close(fd_stdout);
-  }
-  return ret;
+  return RunSync(args, log_failures, output);
 }
 
 int MinijailedProcessRunner::modprobe_all(
@@ -231,7 +218,7 @@ int MinijailedProcessRunner::sysctl_w(const std::string& key,
                                       const std::string& value,
                                       bool log_failures) {
   std::vector<std::string> args = {kSysctlPath, "-w", key + "=" + value};
-  return RunSync(args, mj_, log_failures, nullptr);
+  return RunSync(args, log_failures, nullptr);
 }
 
 int MinijailedProcessRunner::ip_netns_attach(const std::string& netns_name,
@@ -239,13 +226,13 @@ int MinijailedProcessRunner::ip_netns_attach(const std::string& netns_name,
                                              bool log_failures) {
   std::vector<std::string> args = {kIpPath, "netns", "attach", netns_name,
                                    std::to_string(netns_pid)};
-  return RunSync(args, mj_, log_failures, nullptr);
+  return RunSync(args, log_failures, nullptr);
 }
 
 int MinijailedProcessRunner::ip_netns_delete(const std::string& netns_name,
                                              bool log_failures) {
   std::vector<std::string> args = {kIpPath, "netns", "delete", netns_name};
-  return RunSync(args, mj_, log_failures, nullptr);
+  return RunSync(args, log_failures, nullptr);
 }
 
 }  // namespace patchpanel

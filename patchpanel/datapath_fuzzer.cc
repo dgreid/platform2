@@ -40,9 +40,8 @@ class RandomProcessRunner : public MinijailedProcessRunner {
   }
 
   int RunSync(const std::vector<std::string>& argv,
-              brillo::Minijail* mj,
               bool log_failures,
-              int* fd_stdout) override {
+              std::string* output) override {
     return data_provider_->ConsumeBool();
   }
 

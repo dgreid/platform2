@@ -99,10 +99,12 @@ class MinijailedProcessRunner {
   // CAP_NET_RAW capabilities.
   virtual int Run(const std::vector<std::string>& argv,
                   bool log_failures = true);
+
+  // Invokes RunSyncDestroy() with |mj_|. If |output| is not nullptr, it will be
+  // filled with the result from stdout of the execution.
   virtual int RunSync(const std::vector<std::string>& argv,
-                      brillo::Minijail* mj,
                       bool log_failures,
-                      int* fd_stdout);
+                      std::string* output);
 
  private:
   int RunSyncDestroy(const std::vector<std::string>& argv,
