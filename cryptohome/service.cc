@@ -15,7 +15,6 @@
 #include <base/files/file_util.h>
 #include <base/json/json_writer.h>
 #include <base/logging.h>
-#include <base/message_loop/message_loop_current.h>
 #include <base/message_loop/message_pump_type.h>
 #include <base/optional.h>
 #include <base/stl_util.h>
@@ -24,6 +23,7 @@
 #include <base/strings/stringprintf.h>
 #include <base/strings/sys_string_conversions.h>
 #include <base/system/sys_info.h>
+#include <base/task/current_thread.h>
 #include <base/time/time.h>
 #include <base/values.h>
 #include <brillo/cryptohome.h>
@@ -111,7 +111,7 @@ const std::string& GetAccountId(const AccountIdentifier& id) {
 
 void AddTaskObserverToThread(base::Thread* thread,
                              MountThreadObserver* task_observer) {
-  // Since MessageLoopCurrent::AddTaskObserver need to be executed in the same
+  // Since CurrentThread::AddTaskObserver need to be executed in the same
   // thread of that message loop. So we need to wrap it and post as a task.
 
   scoped_refptr<base::SingleThreadTaskRunner> task_runner =
@@ -126,7 +126,7 @@ void AddTaskObserverToThread(base::Thread* thread,
       FROM_HERE,
       base::BindOnce(
           [](MountThreadObserver* task_observer) {
-            base::MessageLoopCurrent::Get().AddTaskObserver(task_observer);
+            base::CurrentThread::Get().AddTaskObserver(task_observer);
           },
           base::Unretained(task_observer)));
 }
