@@ -26,6 +26,7 @@ bool Tpm2StatusImpl::IsTpmEnabled() {
 }
 
 bool Tpm2StatusImpl::GetTpmOwned(TpmStatus::TpmOwnershipStatus* status) {
+  CHECK(status);
   if (kTpmOwned == ownership_status_) {
     *status = kTpmOwned;
     return true;
@@ -49,22 +50,20 @@ bool Tpm2StatusImpl::GetDictionaryAttackInfo(uint32_t* counter,
                                              uint32_t* threshold,
                                              bool* lockout,
                                              uint32_t* seconds_remaining) {
+  CHECK(counter);
+  CHECK(threshold);
+  CHECK(lockout);
+  CHECK(seconds_remaining);
+
   if (!Refresh()) {
     return false;
   }
-  if (counter) {
-    *counter = trunks_tpm_state_->GetLockoutCounter();
-  }
-  if (threshold) {
-    *threshold = trunks_tpm_state_->GetLockoutThreshold();
-  }
-  if (lockout) {
-    *lockout = trunks_tpm_state_->IsInLockout();
-  }
-  if (seconds_remaining) {
-    *seconds_remaining = trunks_tpm_state_->GetLockoutCounter() *
-                         trunks_tpm_state_->GetLockoutInterval();
-  }
+
+  *counter = trunks_tpm_state_->GetLockoutCounter();
+  *threshold = trunks_tpm_state_->GetLockoutThreshold();
+  *lockout = trunks_tpm_state_->IsInLockout();
+  *seconds_remaining = trunks_tpm_state_->GetLockoutCounter() *
+                       trunks_tpm_state_->GetLockoutInterval();
   return true;
 }
 
@@ -74,33 +73,31 @@ bool Tpm2StatusImpl::GetVersionInfo(uint32_t* family,
                                     uint32_t* tpm_model,
                                     uint64_t* firmware_version,
                                     std::vector<uint8_t>* vendor_specific) {
+  CHECK(family);
+  CHECK(spec_level);
+  CHECK(manufacturer);
+  CHECK(tpm_model);
+  CHECK(firmware_version);
+  CHECK(vendor_specific);
+
   if (!Refresh()) {
     return false;
   }
 
-  if (family) {
-    *family = trunks_tpm_state_->GetTpmFamily();
-  }
-  if (spec_level) {
-    uint64_t level = trunks_tpm_state_->GetSpecificationLevel();
-    uint64_t revision = trunks_tpm_state_->GetSpecificationRevision();
-    *spec_level = (level << 32) | revision;
-  }
-  if (manufacturer) {
-    *manufacturer = trunks_tpm_state_->GetManufacturer();
-  }
-  if (tpm_model) {
-    *tpm_model = trunks_tpm_state_->GetTpmModel();
-  }
-  if (firmware_version) {
-    *firmware_version = trunks_tpm_state_->GetFirmwareVersion();
-  }
-  if (vendor_specific) {
-    std::string vendor_id_string = trunks_tpm_state_->GetVendorIDString();
-    const uint8_t* data =
-        reinterpret_cast<const uint8_t*>(vendor_id_string.data());
-    vendor_specific->assign(data, data + vendor_id_string.size());
-  }
+  *family = trunks_tpm_state_->GetTpmFamily();
+
+  uint64_t level = trunks_tpm_state_->GetSpecificationLevel();
+  uint64_t revision = trunks_tpm_state_->GetSpecificationRevision();
+  *spec_level = (level << 32) | revision;
+
+  *manufacturer = trunks_tpm_state_->GetManufacturer();
+  *tpm_model = trunks_tpm_state_->GetTpmModel();
+  *firmware_version = trunks_tpm_state_->GetFirmwareVersion();
+
+  std::string vendor_id_string = trunks_tpm_state_->GetVendorIDString();
+  const uint8_t* data =
+      reinterpret_cast<const uint8_t*>(vendor_id_string.data());
+  vendor_specific->assign(data, data + vendor_id_string.size());
   return true;
 }
 
