@@ -635,8 +635,10 @@ In the tables below,
 | retry-suspend-attempts | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/HEAD/power_manager/ |
 | retry-suspend-ms | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/HEAD/power_manager/ |
 | set-cellular-transmit-power-dpr-gpio | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/HEAD/power_manager/ |
+| set-cellular-transmit-power-for-activity-proximity | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/HEAD/power_manager/ |
 | set-cellular-transmit-power-for-proximity | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/HEAD/power_manager/ |
 | set-cellular-transmit-power-for-tablet-mode | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/HEAD/power_manager/ |
+| set-wifi-transmit-power-for-activity-proximity | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/HEAD/power_manager/ |
 | set-wifi-transmit-power-for-proximity | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/HEAD/power_manager/ |
 | set-wifi-transmit-power-for-tablet-mode | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/HEAD/power_manager/ |
 | shutdown-from-suspend-sec | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/HEAD/power_manager/ |

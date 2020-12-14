@@ -144,8 +144,10 @@ powerd_prefs: &powerd_prefs
   suspend-to-idle: *powerd_prefs_default
   set-wifi-transmit-power-for-tablet-mode: *powerd_prefs_default
   set-wifi-transmit-power-for-proximity: *powerd_prefs_default
+  set-wifi-transmit-power-for-activity-proximity: *powerd_prefs_default
   set-cellular-transmit-power-for-tablet-mode: *powerd_prefs_default
   set-cellular-transmit-power-for-proximity: *powerd_prefs_default
+  set-cellular-transmit-power-for-activity-proximity: *powerd_prefs_default
   set-cellular-transmit-power-dpr-gpio: *powerd_prefs_default
   enable-console-during-suspend: *powerd_prefs_default
   max-dark-suspend-delay-timeout-ms: *powerd_prefs_default
