@@ -25,7 +25,7 @@ import gnupg
 from ws4py.server.cherrypyserver import WebSocketPlugin, WebSocketTool
 from ws4py.websocket import WebSocket
 
-# use the image conversion library if available
+# Use the image conversion library if available.
 sys.path.extend(['/usr/local/opt/fpc', '/opt/fpc'])
 try:
     import fputils
@@ -45,11 +45,11 @@ SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 HTML_DIR = os.path.join(SCRIPT_DIR, 'html')
 
 ECTOOL = 'ectool'
-# Wait to see a finger on the sensor
+# Wait to see a finger on the sensor.
 FP_MODE_FINGER_DOWN = 2
-# Poll until the finger has left the sensor
+# Poll until the finger has left the sensor.
 FP_MODE_FINGER_UP = 4
-# Capture the current finger image
+# Capture the current finger image.
 FP_MODE_CAPTURE = 8
 
 
@@ -64,7 +64,7 @@ class FingerWebSocket(WebSocket):
     pict_dir = '/tmp'
     # FpUtils class to process images through the external library.
     utils = None
-    # Optional GNUGPG instance used for encryption
+    # The optional GNUGPG instance used for encryption.
     gpg = None
     gpg_recipients: list = None
     # The worker thread processing the images.
@@ -159,7 +159,6 @@ class FingerWebSocket(WebSocket):
             self.config_request(j)
 
     def make_dirs(self, path):
-        # Ensure the image directory exists
         if not os.path.exists(path):
             os.makedirs(path)
 
@@ -193,7 +192,6 @@ class FingerWebSocket(WebSocket):
             except subprocess.CalledProcessError as e:
                 cherrypy.log(f"command '{e.cmd}' failed with {e.returncode}")
                 stdout = b''
-                # try again
         return stdout
 
     def ectool_fpmode(self, *params) -> int:
@@ -202,7 +200,7 @@ class FingerWebSocket(WebSocket):
         return int(match_mode.group(1), 16) if match_mode else -1
 
     def finger_wait_done(self, mode):
-        # Poll until the mode bit has disappeared
+        # Poll until the mode bit has disappeared.
         while not self.abort_request and self.ectool_fpmode() & mode:
             time.sleep(0.050)
         return not self.abort_request
@@ -226,26 +224,26 @@ class FingerWebSocket(WebSocket):
                 cherrypy.log(f'FMI conversion failed {rc}')
 
     def finger_process(self, req):
-        # Ensure the user has removed the finger between 2 captures
+        # Ensure the user has removed the finger between 2 captures.
         if not self.finger_wait_done(FP_MODE_FINGER_UP):
             return
-        # Capture the finger image when the finger is on the sensor
+        # Capture the finger image when the finger is on the sensor.
         self.ectool_fpmode('capture', 'vendor')
         t0 = time.time()
-        # Wait for the image being available
+        # Wait for the image being available.
         if not self.finger_wait_done(FP_MODE_CAPTURE):
             return
         t1 = time.time()
-        # detect the finger removal before the next capture
+        # Detect the finger removal before the next capture.
         self.ectool_fpmode('fingerup')
-        # record the outcome of the capture
+        # Record the outcome of the capture.
         cherrypy.log(
             f'Captured finger {req["finger"]:02d}:{req["picture"]:02d}'
             f' in {t1 - t0:.2f}s')
         req['result'] = 'ok'  # ODER req['result'] = errors[ERRNUM_TBD]
-        # retrieve the finger image
+        # Retrieve the finger image.
         self.finger_save_image(req)
-        # tell the page about the acquisition result
+        # Tell the page about the acquisition result.
         self.send(json.dumps(req), False)
 
     def finger_worker(self):
@@ -258,10 +256,10 @@ class FingerWebSocket(WebSocket):
             self.available_req.release()
 
     def finger_request(self, req):
-        # ask the thread to exit the waiting loops
-        # it will wait on the acquire() below if needed
+        # Ask the thread to exit the waiting loops
+        # it will wait on the acquire() below if needed.
         self.abort_request = True
-        # ask the thread to process the new request
+        # Ask the thread to process the new request.
         self.available_req.acquire()
         self.abort_request = False
         self.current_req = req
@@ -269,7 +267,7 @@ class FingerWebSocket(WebSocket):
         self.available_req.release()
 
     def config_request(self, req):
-        # Populate configuration.
+        # Populate the configuration.
         req['config'] = self.config
         self.send(json.dumps(req), False)
 
@@ -292,7 +290,7 @@ class Root(object):
 
 
 def main(argv: list):
-    # Get study parameters from the command-line
+    # Get study parameters from the command-line.
     parser = argparse.ArgumentParser()
     parser.add_argument('-f', '--finger_count', type=int, default=2,
                         help='Number of fingers acquired per user')
@@ -314,7 +312,7 @@ def main(argv: list):
                         help='User IDs of GPG recipients separated by space')
     args = parser.parse_args(argv)
 
-    # GPG can only be used when both gpg-keyring and gpg-recipient are specified
+    # GPG can only be used when both gpg-keyring and gpg-recipient are specified.
     if args.gpg_keyring and not args.gpg_recipients:
         parser.error('gpg-recipients must be specified with gpg-keyring')
     if args.gpg_recipients and not args.gpg_keyring:
@@ -322,10 +320,10 @@ def main(argv: list):
     if args.gpg_keyring and not os.access(args.gpg_keyring, os.R_OK):
         parser.error(f'cannot read gpg-keyring file {args.gpg_keyring}')
 
-    # Configure cherrypy server
+    # Configure cherrypy server.
     cherrypy.config.update({'server.socket_port': args.port})
 
-    # Configure logging
+    # Configure logging.
     cherrypy.config.update({'log.screen': False})
 
     loggers = []
