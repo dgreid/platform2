@@ -8,8 +8,8 @@
 #include <base/files/file_util.h>
 #include <base/files/scoped_temp_dir.h>
 #include <base/logging.h>
-#include <base/message_loop/message_loop_current.h>
 #include <base/strings/string_number_conversions.h>
+#include <base/task/current_thread.h>
 #include <base/task/single_thread_task_executor.h>
 #include <base/test/test_mock_time_task_runner.h>
 #include <brillo/file_utils.h>
@@ -99,7 +99,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   base::SingleThreadTaskExecutor task_executor(base::MessagePumpType::IO);
 
   // Add a TaskRunner where we can control time.
-  base::MessageLoopCurrentForIO::Get()->SetTaskRunner(task_runner);
+  base::CurrentIOThread::Get()->SetTaskRunner(task_runner);
 
   // Initialize brillo::BaseMessageLoop
   brillo::BaseMessageLoop brillo_loop(task_runner);
