@@ -316,6 +316,12 @@ int main(int argc, char* argv[]) {
   auto loader = mount_encrypted::SystemKeyLoader::Create(&tpm, rootdir);
   mount_encrypted::EncryptionKey key(loader.get(), rootdir);
   if (has_chromefw()) {
+    if (!tpm.available()) {
+      // The TPM should be available before we load the system_key.
+      LOG(ERROR) << "TPM not available.";
+      // We shouldn't continue to load the system_key.
+      return RESULT_FAIL_FATAL;
+    }
     rc = key.LoadChromeOSSystemKey();
   } else {
     rc = key.SetInsecureFallbackSystemKey();

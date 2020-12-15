@@ -273,16 +273,20 @@ class EncryptionKeyTest : public testing::Test {
     EXPECT_TRUE(base::PathExists(key_->key_path()));
   }
 
+  void ExpectSystemKeyFailed() {
+    EXPECT_EQ(key_->LoadChromeOSSystemKey(), RESULT_FAIL_FATAL);
+  }
+
   void ExpectFreshKey() {
-    key_->LoadChromeOSSystemKey();
-    key_->LoadEncryptionKey();
+    EXPECT_EQ(key_->LoadChromeOSSystemKey(), RESULT_SUCCESS);
+    EXPECT_EQ(key_->LoadEncryptionKey(), RESULT_SUCCESS);
     EXPECT_EQ(key_->encryption_key().size(), kEncryptionKeySize);
     EXPECT_TRUE(key_->is_fresh());
   }
 
   void ExpectExistingKey(const uint8_t* expected_key) {
-    key_->LoadChromeOSSystemKey();
-    key_->LoadEncryptionKey();
+    EXPECT_EQ(key_->LoadChromeOSSystemKey(), RESULT_SUCCESS);
+    EXPECT_EQ(key_->LoadEncryptionKey(), RESULT_SUCCESS);
     EXPECT_EQ(key_->encryption_key().size(), kEncryptionKeySize);
     if (expected_key) {
       EXPECT_EQ(
@@ -343,10 +347,8 @@ TEST_F(EncryptionKeyTest, TpmClearNoSpaces) {
 TEST_F(EncryptionKeyTest, TpmOwnedNoSpaces) {
   SetOwned();
 
-  ExpectFreshKey();
-  EXPECT_EQ(EncryptionKeyStatus::kFresh, key_->encryption_key_status());
-  ExpectNeedsFinalization();
-  EXPECT_EQ(SystemKeyStatus::kFinalizationPending, key_->system_key_status());
+  ExpectSystemKeyFailed();
+  EXPECT_EQ(SystemKeyStatus::kUnknown, key_->system_key_status());
 }
 
 TEST_F(EncryptionKeyTest, TpmExistingSpaceNoKeyFile) {
@@ -379,10 +381,8 @@ TEST_F(EncryptionKeyTest, TpmExistingSpaceBadAttributes) {
              sizeof(kEncStatefulTpm2Contents));
   WriteWrappedKey(key_->key_path(), kWrappedKeyEncStatefulTpm2);
 
-  ExpectFreshKey();
-  EXPECT_EQ(EncryptionKeyStatus::kFresh, key_->encryption_key_status());
-  ExpectNeedsFinalization();
-  EXPECT_EQ(SystemKeyStatus::kFinalizationPending, key_->system_key_status());
+  ExpectSystemKeyFailed();
+  EXPECT_EQ(SystemKeyStatus::kUnknown, key_->system_key_status());
 }
 
 TEST_F(EncryptionKeyTest, TpmExistingSpaceNotYetWritten) {

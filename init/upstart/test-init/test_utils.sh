@@ -5,6 +5,12 @@
 # Utility functions for chromeos_startup to run for test images (loaded by
 # dev_utils.sh).
 
+# Flag file indicating that mount encrypted stateful failed last time.
+# If the file is present and mount_encrypted failed again, machine would enter
+# self-repair mode.
+# It should be the same as MOUNT_ENCRYPTED_FAILED_FILE in chromeos_startup.
+MOUNT_ENCRYPTED_FAILED_FILE="/mnt/stateful_partition/mount_encrypted_failed"
+
 # Load factory utilities.
 . /usr/share/cros/factory_utils.sh
 
@@ -38,6 +44,13 @@ do_mount_var_and_home_chronos() {
     # For devices that have no TPM 2.0 chip or don't encrypted stateful, this
     # call is no-op.
     create_system_key
+
+    if [ ! -O "${MOUNT_ENCRYPTED_FAILED_FILE}" ]; then
+      # Try to use the original handler in chromeos_startup.
+      # It should not wipe whole stateful partition in this case.
+      mount_var_and_home_chronos
+      return $?
+    fi
 
     if ! mount_var_and_home_chronos; then
       # Try to re-construct encrypted folders, otherwise such failure will lead

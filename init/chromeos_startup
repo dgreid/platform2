@@ -16,6 +16,11 @@ UNDO_MOUNTS=
 # encrypted stateful partition.
 ENCRYPTED_STATEFUL_MNT="/mnt/stateful_partition/encrypted"
 
+# Flag file indicating that mount encrypted stateful failed last time.
+# If the file is present and mount_encrypted failed again, machine would enter
+# self-repair mode.
+MOUNT_ENCRYPTED_FAILED_FILE="/mnt/stateful_partition/mount_encrypted_failed"
+
 # USE_ENCRYPTED_REBOOT_VAULT determines whether the encrypted reboot vault
 # should be created/mounted.
 USE_ENCRYPTED_REBOOT_VAULT=1
@@ -526,9 +531,15 @@ done
 mount_or_fail --bind /mnt/stateful_partition/home /home
 
 if ! do_mount_var_and_home_chronos; then
-  add_clobber_crash_report "encstateful"
-  cleanup_mounts "var and home"
+  if [ ! -O "${MOUNT_ENCRYPTED_FAILED_FILE}" ]; then
+    touch "${MOUNT_ENCRYPTED_FAILED_FILE}"
+  else
+    crossystem recovery_request=1
+  fi
+  reboot
+  exit 0
 fi
+rm -f "${MOUNT_ENCRYPTED_FAILED_FILE}"
 remember_mount "${ENCRYPTED_STATEFUL_MNT}"
 
 # Setup the encrypted reboot vault once the encrypted stateful partition
