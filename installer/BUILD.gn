@@ -5,12 +5,14 @@
 import("//common-mk/pkg_config.gni")
 
 group("all") {
-  deps = [
-    ":cros_installer",
-    ":cros_oobe_crypto",
-    ":evwaitkey",
-    ":key_reader",
-  ]
+  deps = [ ":cros_installer" ]
+  if (!use.cros_host) {
+    deps += [
+      ":cros_oobe_crypto",
+      ":evwaitkey",
+      ":key_reader",
+    ]
+  }
   if (use.mtd) {
     deps += [ ":nand_partition" ]
   }
@@ -113,7 +115,7 @@ if (use.mtd) {
   }
 }
 
-if (use.test) {
+if (!use.cros_host && use.test) {
   pkg_config("cros_installer_test_config") {
     pkg_deps = [
       "libchrome",
