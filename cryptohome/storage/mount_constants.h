@@ -11,6 +11,7 @@ enum class MountType {
   NONE,        // Not mounted.
   ECRYPTFS,    // Encrypted with ecryptfs.
   DIR_CRYPTO,  // Encrypted with dircrypto.
+  DMCRYPT,     // Encrypted with dmcrypt over a logical volume.
   EPHEMERAL,   // Ephemeral mount.
 };
 

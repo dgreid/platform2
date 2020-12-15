@@ -86,6 +86,9 @@ std::map<cryptohome::MountType, cryptohome::OutOfProcessMountRequest_MountType>
         // Ephemeral mount.
         {cryptohome::MountType::EPHEMERAL,
          cryptohome::OutOfProcessMountRequest_MountType_EPHEMERAL},
+        // Encrypted with dmcrpyt.
+        {cryptohome::MountType::DMCRYPT,
+         cryptohome::OutOfProcessMountRequest_MountType_DMCRYPT},
 };
 
 }  // namespace

@@ -605,6 +605,9 @@ base::Value Mount::GetStatus(int active_key_index) {
     case MountType::EPHEMERAL:
       mount_type_string = "ephemeral";
       break;
+    case MountType::DMCRYPT:
+      mount_type_string = "dmcrypt";
+      break;
   }
   dv.SetStringKey("type", mount_type_string);
 

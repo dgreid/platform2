@@ -18,8 +18,10 @@ message OutOfProcessMountRequest {
     ECRYPTFS = 1;
     // Encrypted with dircrypto.
     DIR_CRYPTO = 2;
+    // Encrypted with dmcrypt.
+    DMCRYPT = 3;
     // Ephemeral mount.
-    EPHEMERAL = 3;
+    EPHEMERAL = 4;
   }
   // Username used in login.
   string username = 1;

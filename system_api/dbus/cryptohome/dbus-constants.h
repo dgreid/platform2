@@ -199,6 +199,7 @@ enum MountError {
   // destruction. Only use it if the vault destruction is the
   // acceptable/expected behaviour upon returning error.
   MOUNT_ERROR_VAULT_UNRECOVERABLE = 20,
+  MOUNT_ERROR_MOUNT_DMCRYPT_FAILED = 21,
   MOUNT_ERROR_USER_DOES_NOT_EXIST = 32,
   MOUNT_ERROR_TPM_NEEDS_REBOOT = 64,
   // Encrypted in old method, need migration before mounting.

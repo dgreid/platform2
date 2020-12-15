@@ -190,6 +190,7 @@ enum DircryptoMigrationFailedPathType {
 enum class HomedirEncryptionType {
   kEcryptfs = 1,
   kDircrypto = 2,
+  kDmcrypt = 3,
   kHomedirEncryptionTypeNumBuckets
 };
 

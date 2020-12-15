@@ -57,7 +57,9 @@ std::map<cryptohome::MountType, cryptohome::OutOfProcessMountRequest_MountType>
         // Ephemeral mount.
         {cryptohome::MountType::EPHEMERAL,
          cryptohome::OutOfProcessMountRequest_MountType_EPHEMERAL},
-};
+        // Encrypted with dm-crypt.
+        {cryptohome::MountType::DMCRYPT,
+         cryptohome::OutOfProcessMountRequest_MountType_DMCRYPT}};
 
 const std::vector<FilePath> kDaemonDirPaths = {
     FilePath("session_manager"), FilePath("shill"), FilePath("shill_logs")};
