@@ -40,7 +40,7 @@ The workflow of a DLC developer involves following few tasks:
 
 ## Enable DLC for your board
 
-To enable DLCs for your board, you have to add the `USE flags` `dlc` and
+To enable DLCs for your board, you have to add the `USE` flags `dlc` and
 `dlc_test` to the overlay of the board you are building for.
 If DLC was not previously enabled for your board, you will have to build and
 flash a new image to your DUT before deploying your first DLC, since the
@@ -170,7 +170,7 @@ A DLC is updated at the same time the device itself is updated.
 [Enable DLC for your board]: #Enable-DLC-for-your-board
 [Create a DLC]: #Create-a-DLC
 [Write platform code to request DLC]: #Write-platform-code-to-request-DLC
-[Install a DLC for dev/test]: #install-a-dlc-for-devtest
+[Install a DLC for dev/test]: #install-a-dlc-for-dev_test
 [Write tests for a DLC]: #Write-tests-for-a-DLC
 [dlc.eclass]: https://chromium.googlesource.com/chromiumos/overlays/chromiumos-overlay/+/HEAD/eclass/dlc.eclass
 [sandboxing]: https://chromium.googlesource.com/chromiumos/docs/+/HEAD/sandboxing.md
