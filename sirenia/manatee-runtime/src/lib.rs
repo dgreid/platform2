@@ -8,7 +8,7 @@ use std::borrow::{Borrow, BorrowMut};
 use std::collections::HashMap;
 use std::fmt::{self, Debug, Display};
 
-use libsirenia::communication::storage::{self, Storable, Storage};
+use libsirenia::communication::storage::{self, Storable, StorableMember, Storage};
 
 #[derive(Debug)]
 pub enum Error {
@@ -122,4 +122,4 @@ impl<S: Storable, T: Storage> ScopedData<S, T> {
 }
 
 /// Represents an entire key value store for one identifier.
-pub type ScopedKeyValueStore<S, T> = ScopedData<HashMap<String, S>, T>;
+pub type ScopedKeyValueStore<T> = ScopedData<HashMap<String, StorableMember>, T>;
