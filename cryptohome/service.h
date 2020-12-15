@@ -203,13 +203,6 @@ class Service : public brillo::dbus::AbstractDbusService,
   //          if false, unmounts shadows mounts with no open files.
   virtual bool CleanUpStaleMounts(bool force);
 
-  // Called during mount requests to ensure old hidden mounts are unmount.
-  // Note that this only cleans up |mounts_| entries which were mounted with
-  // the hidden_mount=true parameter, as these are supposed to be temporary.
-  // Old mounts from another cryptohomed run (e.g. after a crash) are cleaned up
-  // in CleanUpStaleMounts.
-  virtual bool CleanUpHiddenMounts();
-
   void set_legacy_mount(bool legacy) { legacy_mount_ = legacy; }
   void set_bind_mount_downloads(bool bind) { bind_mount_downloads_ = bind; }
   void set_force_ecryptfs(bool force_ecryptfs) {

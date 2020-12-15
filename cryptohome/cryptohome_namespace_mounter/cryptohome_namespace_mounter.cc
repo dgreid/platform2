@@ -178,7 +178,6 @@ int main(int argc, char** argv) {
     cryptohome::MountHelperInterface::Options mount_options;
     mount_options.type = static_cast<cryptohome::MountType>(request.type());
     mount_options.to_migrate_from_ecryptfs = request.to_migrate_from_ecryptfs();
-    mount_options.shadow_only = request.shadow_only();
 
     cryptohome::ReportTimerStart(cryptohome::kPerformMountTimer);
     if (!mounter.PerformMount(mount_options, request.username(),

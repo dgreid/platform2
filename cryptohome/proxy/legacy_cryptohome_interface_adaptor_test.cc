@@ -127,7 +127,6 @@ TEST_F(LegacyCryptohomeInterfaceAdaptorTest, MountExSuccess) {
   req.set_force_dircrypto_if_available(true);
   req.set_to_migrate_from_ecryptfs(false);
   req.set_public_mount(false);
-  req.set_hidden_mount(false);
 
   EXPECT_CALL(userdataauth_, MountAsync(_, _, _, _))
       .WillOnce(DoAll(
@@ -167,7 +166,6 @@ TEST_F(LegacyCryptohomeInterfaceAdaptorTest, MountExSuccess) {
   EXPECT_TRUE(proxied_request.force_dircrypto_if_available());
   EXPECT_FALSE(proxied_request.to_migrate_from_ecryptfs());
   EXPECT_FALSE(proxied_request.public_mount());
-  EXPECT_FALSE(proxied_request.hidden_mount());
   EXPECT_FALSE(proxied_request.guest_mount());
   EXPECT_FALSE(proxied_request.has_create());
 }
@@ -180,7 +178,6 @@ TEST_F(LegacyCryptohomeInterfaceAdaptorTest, MountExSuccessWithCreate) {
   req.set_force_dircrypto_if_available(true);
   req.set_to_migrate_from_ecryptfs(false);
   req.set_public_mount(false);
-  req.set_hidden_mount(false);
   req.mutable_create()->set_force_ecryptfs(true);
   req.mutable_create()->set_copy_authorization_key(true);
   auto key = req.mutable_create()->add_keys();
@@ -225,7 +222,6 @@ TEST_F(LegacyCryptohomeInterfaceAdaptorTest, MountExSuccessWithCreate) {
   EXPECT_TRUE(proxied_request.force_dircrypto_if_available());
   EXPECT_FALSE(proxied_request.to_migrate_from_ecryptfs());
   EXPECT_FALSE(proxied_request.public_mount());
-  EXPECT_FALSE(proxied_request.hidden_mount());
   EXPECT_FALSE(proxied_request.guest_mount());
   EXPECT_TRUE(proxied_request.has_create());
   EXPECT_TRUE(proxied_request.create().force_ecryptfs());
@@ -242,7 +238,6 @@ TEST_F(LegacyCryptohomeInterfaceAdaptorTest, MountExFail) {
   req.set_force_dircrypto_if_available(false);
   req.set_to_migrate_from_ecryptfs(true);
   req.set_public_mount(true);
-  req.set_hidden_mount(true);
 
   EXPECT_CALL(userdataauth_, MountAsync(_, _, _, _))
       .WillOnce(DoAll(
@@ -282,7 +277,6 @@ TEST_F(LegacyCryptohomeInterfaceAdaptorTest, MountExFail) {
   EXPECT_FALSE(proxied_request.force_dircrypto_if_available());
   EXPECT_TRUE(proxied_request.to_migrate_from_ecryptfs());
   EXPECT_TRUE(proxied_request.public_mount());
-  EXPECT_TRUE(proxied_request.hidden_mount());
   EXPECT_FALSE(proxied_request.guest_mount());
 }
 

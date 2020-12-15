@@ -702,13 +702,6 @@ class UserDataAuth {
   scoped_refptr<UserSession> GetOrCreateUserSession(
       const std::string& username);
 
-  // Called during mount requests to ensure old hidden mounts are unmounted.
-  // Note that this only cleans up |mounts_| entries which were mounted with the
-  // hidden_mount=true parameter, as these are supposed to be temporary. Old
-  // mounts from another cryptohomed run (e.g. after a crash) are cleaned up in
-  // CleanUpStaleMounts().
-  bool CleanUpHiddenMounts();
-
   // Builds the PCR restrictions to be applied to the challenge-protected vault
   // keyset.
   void GetChallengeCredentialsPcrRestrictions(

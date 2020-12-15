@@ -1177,23 +1177,6 @@ scoped_refptr<UserSession> UserDataAuth::GetOrCreateUserSession(
   return sessions_[username];
 }
 
-bool UserDataAuth::CleanUpHiddenMounts() {
-  AssertOnMountThread();
-
-  bool ok = true;
-  for (auto it = sessions_.begin(); it != sessions_.end();) {
-    scoped_refptr<UserSession> session = it->second;
-    if (session->GetMount()->IsMounted() &&
-        session->GetMount()->IsShadowOnly()) {
-      ok = ok && session->Unmount();
-      it = sessions_.erase(it);
-    } else {
-      ++it;
-    }
-  }
-  return ok;
-}
-
 void UserDataAuth::GetChallengeCredentialsPcrRestrictions(
     const std::string& obfuscated_username,
     std::vector<std::map<uint32_t, brillo::Blob>>* pcr_restrictions) {
@@ -1399,7 +1382,6 @@ void UserDataAuth::DoMount(
   // Force_ecryptfs_ wins.
   mount_args.force_dircrypto =
       !force_ecryptfs_ && request.force_dircrypto_if_available();
-  mount_args.shadow_only = request.hidden_mount();
 
   // Process challenge-response credentials asynchronously.
   if (request.authorization().key().data().type() ==
@@ -1616,10 +1598,6 @@ void UserDataAuth::ContinueMountWithCredentials(
     std::unique_ptr<Credentials> credentials,
     const Mount::MountArgs& mount_args,
     base::OnceCallback<void(const user_data_auth::MountReply&)> on_done) {
-  if (!CleanUpHiddenMounts()) {
-    LOG(WARNING) << "Failed to clean up hidden mounts";
-  }
-
   // Setup a reply for use during error handling.
   user_data_auth::MountReply reply;
 
@@ -1680,13 +1658,6 @@ void UserDataAuth::ContinueMountWithCredentials(
     LOG(ERROR) << "Could not initialize user session.";
     reply.set_error(
         user_data_auth::CryptohomeErrorCode::CRYPTOHOME_ERROR_MOUNT_FATAL);
-    std::move(on_done).Run(reply);
-    return;
-  }
-
-  if (request.hidden_mount() && user_session->GetMount()->IsMounted()) {
-    LOG(ERROR) << "Hidden mount requested, but mount already exists.";
-    reply.set_error(user_data_auth::CRYPTOHOME_ERROR_MOUNT_MOUNT_POINT_BUSY);
     std::move(on_done).Run(reply);
     return;
   }
@@ -1804,14 +1775,11 @@ void UserDataAuth::ContinueMountWithCredentials(
   keyset_management_->ResetLECredentials(*credentials);
   std::move(on_done).Run(reply);
 
-  // Update user timestamp and kick off PKCS#11 initialization for non-hidden
-  // mount.
-  if (!request.hidden_mount()) {
-    // Time to push the task for PKCS#11 initialization.
-    // TODO(wad) This call will PostTask back to the same thread. It is safe,
-    //           but it seems pointless.
-    InitializePkcs11(user_session.get());
-  }
+  // Update user timestamp and kick off PKCS#11 initialization.
+  // Time to push the task for PKCS#11 initialization.
+  // TODO(wad) This call will PostTask back to the same thread. It is safe,
+  //           but it seems pointless.
+  InitializePkcs11(user_session.get());
 }
 
 user_data_auth::CryptohomeErrorCode UserDataAuth::AddKey(

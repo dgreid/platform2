@@ -623,22 +623,6 @@ bool Service::CleanUpStaleMounts(bool force) {
   return skipped;
 }
 
-bool Service::CleanUpHiddenMounts() {
-  bool ok = true;
-  base::AutoLock _lock(sessions_lock_);
-  for (auto it = sessions_.begin(); it != sessions_.end();) {
-    scoped_refptr<UserSession> session = it->second;
-    if (session->GetMount()->IsMounted() &&
-        session->GetMount()->IsShadowOnly()) {
-      ok = ok && session->Unmount();
-      it = sessions_.erase(it);
-    } else {
-      ++it;
-    }
-  }
-  return ok;
-}
-
 bool Service::Initialize() {
   bool result = true;
   if (!tpm_) {
@@ -2028,8 +2012,6 @@ gboolean Service::Mount(const gchar* userid,
                         gint* OUT_error_code,
                         gboolean* OUT_result,
                         GError** error) {
-  CleanUpHiddenMounts();
-
   // This is safe even if cryptohomed restarts during a multi-mount
   // session and a new mount is added because cleanup is not forced.
   // An existing process will keep the mount alive.  On the next
@@ -2281,7 +2263,6 @@ void Service::DoMountEx(std::unique_ptr<AccountIdentifier> identifier,
   // Force_ecryptfs_ wins.
   mount_args.force_dircrypto =
       !force_ecryptfs_ && request->force_dircrypto_if_available();
-  mount_args.shadow_only = request->hidden_mount();
 
   // Process challenge-response credentials asynchronously.
   if (authorization->key().data().type() ==
@@ -2658,10 +2639,6 @@ void Service::ContinueMountExWithCredentials(
     std::unique_ptr<Credentials> credentials,
     const Mount::MountArgs& mount_args,
     DBusGMethodInvocation* context) {
-  if (!CleanUpHiddenMounts()) {
-    LOG(WARNING) << "Failed to clean up hidden mounts";
-  }
-
   // Setup a reply for use during error handling.
   BaseReply reply;
 
@@ -2710,13 +2687,6 @@ void Service::ContinueMountExWithCredentials(
   if (!user_session) {
     LOG(ERROR) << "Could not initialize user session.";
     reply.set_error(CRYPTOHOME_ERROR_MOUNT_FATAL);
-    SendReply(context, reply);
-    return;
-  }
-
-  if (request->hidden_mount() && user_session->GetMount()->IsMounted()) {
-    LOG(ERROR) << "Hidden mount requested, but mount already exists.";
-    reply.set_error(CRYPTOHOME_ERROR_MOUNT_MOUNT_POINT_BUSY);
     SendReply(context, reply);
     return;
   }
@@ -2827,12 +2797,10 @@ void Service::ContinueMountExWithCredentials(
   keyset_management_->ResetLECredentials(*credentials);
   SendReply(context, reply);
 
-  if (!request->hidden_mount()) {
-    // Time to push the task for PKCS#11 initialization.
-    // TODO(wad) This call will PostTask back to the same thread. It is safe,
-    //           but it seems pointless.
-    InitializePkcs11(user_session.get());
-  }
+  // Time to push the task for PKCS#11 initialization.
+  // TODO(wad) This call will PostTask back to the same thread. It is safe,
+  //           but it seems pointless.
+  InitializePkcs11(user_session.get());
 }
 
 void Service::GetChallengeCredentialsPcrRestrictions(

@@ -64,9 +64,6 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
     // Mount the existing ecryptfs vault to a temporary location while setting
     // up a new dircrypto directory.
     bool to_migrate_from_ecryptfs = false;
-    // Only mount in shadow tree, don't expose the usual /home/(user)
-    // directories.
-    bool shadow_only = false;
   };
 
   // Sets up Mount with the default locations, username, etc., as defined above.
@@ -174,10 +171,6 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   // Cancels the active dircrypto migration if there is, and wait for it to
   // stop.
   void MaybeCancelActiveDircryptoMigrationAndWait();
-
-  // Returns true if this Mount was mounted with |shadow_only|=true. This is
-  // only valid when IsMounted() is true.
-  bool IsShadowOnly() const;
 
   // Returns the WebAuthn secret and clears it from memory.
   std::unique_ptr<brillo::SecureBlob> GetWebAuthnSecret();
@@ -372,10 +365,6 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   // Indicates the type of the current mount.
   // This is only valid when IsMounted() is true.
   MountType mount_type_;
-
-  // true if mounted with |shadow_only|=true. This is only valid when
-  // IsMounted() is true.
-  bool shadow_only_;
 
   std::unique_ptr<ChapsClientFactory> default_chaps_client_factory_;
   ChapsClientFactory* chaps_client_factory_;

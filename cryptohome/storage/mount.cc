@@ -106,7 +106,6 @@ Mount::Mount(Platform* platform, HomeDirs* homedirs)
       legacy_mount_(true),
       bind_mount_downloads_(true),
       mount_type_(MountType::NONE),
-      shadow_only_(false),
       default_chaps_client_factory_(new ChapsClientFactory()),
       chaps_client_factory_(default_chaps_client_factory_.get()),
       dircrypto_migration_stopped_condition_(&active_dircrypto_migrator_lock_),
@@ -293,12 +292,10 @@ bool Mount::MountCryptohome(const std::string& username,
   std::string obfuscated_username =
       SanitizeUserNameWithSalt(username_, system_salt_);
 
-  if (!mount_args.shadow_only) {
-    if (!mounter_->EnsureUserMountPoints(username_)) {
-      LOG(ERROR) << "Error creating mountpoint.";
-      *mount_error = MOUNT_ERROR_CREATE_CRYPTOHOME_FAILED;
-      return false;
-    }
+  if (!mounter_->EnsureUserMountPoints(username_)) {
+    LOG(ERROR) << "Error creating mountpoint.";
+    *mount_error = MOUNT_ERROR_CREATE_CRYPTOHOME_FAILED;
+    return false;
   }
 
   mount_type_ = DeriveVaultMountType(obfuscated_username,
@@ -443,8 +440,8 @@ bool Mount::MountCryptohome(const std::string& username,
     }
   }
 
-  MountHelper::Options mount_opts = {
-      mount_type_, mount_args.to_migrate_from_ecryptfs, mount_args.shadow_only};
+  MountHelper::Options mount_opts = {mount_type_,
+                                     mount_args.to_migrate_from_ecryptfs};
 
   cryptohome::ReportTimerStart(cryptohome::kPerformMountTimer);
   if (!helper->PerformMount(mount_opts, username_, key_signature,
@@ -840,9 +837,5 @@ void Mount::MaybeCancelActiveDircryptoMigrationAndWait() {
     dircrypto_migration_stopped_condition_.Wait();
     LOG(INFO) << "Dircrypto migration stopped.";
   }
-}
-
-bool Mount::IsShadowOnly() const {
-  return shadow_only_;
 }
 }  // namespace cryptohome

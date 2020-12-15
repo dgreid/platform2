@@ -279,7 +279,6 @@ static const char kFlagsSwitch[] = "flags";
 static const char kDevKeyHashSwitch[] = "developer_key_hash";
 static const char kEcryptfsSwitch[] = "ecryptfs";
 static const char kToMigrateFromEcryptfsSwitch[] = "to_migrate_from_ecryptfs";
-static const char kHiddenMount[] = "hidden_mount";
 static const char kMinimalMigration[] = "minimal_migration";
 static const char kPublicMount[] = "public_mount";
 static const char kKeyPolicySwitch[] = "key_policy";
@@ -801,7 +800,6 @@ int main(int argc, char** argv) {
         cl->HasSwitch(switches::kEnsureEphemeralSwitch));
     mount_req.set_to_migrate_from_ecryptfs(
         cl->HasSwitch(switches::kToMigrateFromEcryptfsSwitch));
-    mount_req.set_hidden_mount(cl->HasSwitch(switches::kHiddenMount));
     mount_req.set_public_mount(is_public_mount);
     if (cl->HasSwitch(switches::kCreateSwitch)) {
       cryptohome::CreateRequest* create = mount_req.mutable_create();

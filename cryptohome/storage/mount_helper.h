@@ -42,7 +42,6 @@ class MountHelperInterface {
   struct Options {
     MountType type = MountType::NONE;
     bool to_migrate_from_ecryptfs = false;
-    bool shadow_only = false;
   };
 
   // Ephemeral mounts cannot be performed twice, so cryptohome needs to be able

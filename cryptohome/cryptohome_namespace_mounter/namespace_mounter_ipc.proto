@@ -35,18 +35,16 @@ message OutOfProcessMountRequest {
   MountType type = 5;
   // Whether migration from eCryptfs to dircrypto is needed.
   bool to_migrate_from_ecryptfs = 6;
-  // Only mount in shadow tree, don't expose the usual /home/(user) directories.
-  bool shadow_only = 7;
   // File encryption key (FEK) used to encrypt the file contents when the file
   // is persisted to the lower filesystem by eCryptfs.
-  string fek_signature = 8;
+  string fek_signature = 7;
   // File name encryption key (FNEK) used to encrypt the file name when the file
   // is persisted to the lower filesystem by eCryptfs.
-  string fnek_signature = 9;
+  string fnek_signature = 8;
   // True, if the cryptohome is being created.
-  bool is_pristine = 10;
+  bool is_pristine = 9;
   // True, if the Cryptohomed should bind mount Downloads/.
-  bool bind_mount_downloads = 11;
+  bool bind_mount_downloads = 10;
 }
 
 message OutOfProcessMountResponse {

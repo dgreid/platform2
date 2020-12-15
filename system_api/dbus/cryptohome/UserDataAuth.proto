@@ -169,11 +169,8 @@ message MountRequest {
   // Credentials are not needed in the request; they are synthesized by
   // cryptohomed from id.
   bool public_mount = 7;
-  // If set to true, mounts the vault to a temporary location. The mount is not
-  // exposed to the usual locations (/home/user, /home/root).
-  bool hidden_mount = 8;
   // If set to true, the mount will be for a guest session.
-  bool guest_mount = 9;
+  bool guest_mount = 8;
 }
 
 // Output parameters for Mount()

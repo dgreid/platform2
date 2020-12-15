@@ -783,8 +783,7 @@ bool MountHelper::PerformMount(const Options& mount_opts,
   }
 
   // When migrating, it's better to avoid exposing the new ext4 crypto dir.
-  // Also don't expose the home directory if a shadow-only mount was requested.
-  if (!mount_opts.to_migrate_from_ecryptfs && !mount_opts.shadow_only &&
+  if (!mount_opts.to_migrate_from_ecryptfs &&
       !MountHomesAndDaemonStores(username, obfuscated_username, user_home,
                                  root_home)) {
     *error = MOUNT_ERROR_MOUNT_HOMES_AND_DAEMON_STORES_FAILED;

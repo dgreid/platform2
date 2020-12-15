@@ -263,7 +263,6 @@ bool OutOfProcessMountHelper::PerformMount(const Options& mount_opts,
                                        : "");
   request.set_type(mount_type[mount_opts.type]);
   request.set_to_migrate_from_ecryptfs(mount_opts.to_migrate_from_ecryptfs);
-  request.set_shadow_only(mount_opts.shadow_only);
   request.set_fek_signature(fek_signature);
   request.set_fnek_signature(fnek_signature);
   request.set_is_pristine(is_pristine);

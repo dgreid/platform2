@@ -1118,32 +1118,6 @@ TEST_P(MountTest, MountCryptohomeToMigrateFromEcryptfs) {
   }
 }
 
-TEST_P(MountTest, MountCryptohomeShadowOnly) {
-  // Checks that the shadow_only option is handled correctly.
-  InsertTestUsers(&kDefaultUsers[10], 1);
-  EXPECT_CALL(platform_, DirectoryExists(ShadowRoot()))
-      .WillRepeatedly(Return(true));
-  EXPECT_CALL(platform_, FileExists(base::FilePath(kLockedToSingleUserFile)))
-      .WillRepeatedly(Return(false));
-  EXPECT_TRUE(DoMountInit());
-
-  TestUser* user = &helper_.users[0];
-
-  // Inject dircrypto user paths.
-  user->InjectUserPaths(&platform_, fake_platform::kChronosUID,
-                        fake_platform::kChronosGID, fake_platform::kSharedGID,
-                        kDaemonGid, ShouldTestEcryptfs());
-
-  ExpectCryptohomeMountShadowOnly(*user);
-
-  MountError error = MOUNT_ERROR_NONE;
-  Mount::MountArgs mount_args = GetDefaultMountArgs();
-  mount_args.shadow_only = true;
-  EXPECT_TRUE(mount_->MountCryptohome(user->username, FileSystemKeyset(),
-                                      mount_args,
-                                      /* is_pristine */ false, &error));
-}
-
 TEST_P(MountTest, MountCryptohomeForceDircrypto) {
   // Checks that the force-dircrypto flag correctly rejects to mount ecryptfs.
   EXPECT_CALL(platform_, DirectoryExists(ShadowRoot()))

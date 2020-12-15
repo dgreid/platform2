@@ -426,7 +426,6 @@ void LegacyCryptohomeInterfaceAdaptor::MountEx(
   request.set_to_migrate_from_ecryptfs(
       in_mount_request.to_migrate_from_ecryptfs());
   request.set_public_mount(in_mount_request.public_mount());
-  request.set_hidden_mount(in_mount_request.hidden_mount());
   request.set_guest_mount(false);
   // There's another MountGuestEx to handle guest mount. This method only
   // deal with non-guest mount so guest_mount is false here.
