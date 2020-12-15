@@ -49,9 +49,6 @@ class CellularCapability3gpp : public CellularCapability {
   using Profiles = std::vector<brillo::VariantDictionary>;
 
   // Constants used in connect method call.  Make available to test matchers.
-  // TODO(jglasgow): Generate from modem manager into
-  // ModemManager-names.h.
-  // See http://crbug.com/212909.
   static const char kConnectApn[];
   static const char kConnectUser[];
   static const char kConnectPassword[];
@@ -129,6 +126,27 @@ class CellularCapability3gpp : public CellularCapability {
 
   bool IsLocationUpdateSupported() const override;
 
+  uint32_t access_technologies_for_testing() const {
+    return access_technologies_;
+  }
+
+  // Constants used in scan results.  Make available to unit tests.
+  static const char kStatusProperty[];
+  static const char kOperatorLongProperty[];
+  static const char kOperatorShortProperty[];
+  static const char kOperatorCodeProperty[];
+  static const char kOperatorAccessTechnologyProperty[];
+
+  static const int64_t kEnterPinTimeoutMilliseconds;
+  static const int64_t kRegistrationDroppedUpdateTimeoutMilliseconds;
+  static const int kSetPowerStateTimeoutMilliseconds;
+
+  static const int kUnknownLockRetriesLeft;
+
+  // Root path. The SIM path is reported by ModemManager to be the root path
+  // when no SIM is present.
+  static const RpcIdentifier kRootPath;
+
  protected:
   virtual void InitProxies();
   void ReleaseProxies() override;
@@ -150,33 +168,11 @@ class CellularCapability3gpp : public CellularCapability {
   std::string GetMdnForOLP(const MobileOperatorInfo* operator_info) const;
 
  private:
-  // Constants used in scan results.  Make available to unit tests.
-  // TODO(jglasgow): Generate from modem manager into ModemManager-names.h.
-  // See http://crbug.com/212909.
-  static const char kStatusProperty[];
-  static const char kOperatorLongProperty[];
-  static const char kOperatorShortProperty[];
-  static const char kOperatorCodeProperty[];
-  static const char kOperatorAccessTechnologyProperty[];
-
-  static const int64_t kEnterPinTimeoutMilliseconds;
-  static const int64_t kRegistrationDroppedUpdateTimeoutMilliseconds;
-  static const int kSetPowerStateTimeoutMilliseconds;
-
-  static const int kUnknownLockRetriesLeft;
-
-  // Root path. The SIM path is reported by ModemManager to be the root path
-  // when no SIM is present.
-  static const RpcIdentifier kRootPath;
-
   friend class CellularTest;
   friend class CellularCapability3gppTest;
   friend class CellularCapabilityCdmaTest;
+  // CellularCapability3gppTimerTest
   FRIEND_TEST(CellularCapabilityCdmaMainTest, PropertiesChanged);
-  FRIEND_TEST(CellularCapability3gppMainTest, Connect);
-  FRIEND_TEST(CellularCapability3gppMainTest, ConnectApns);
-  FRIEND_TEST(CellularCapability3gppMainTest, DisconnectNoProxy);
-  FRIEND_TEST(CellularCapability3gppMainTest, FillConnectPropertyMap);
   FRIEND_TEST(CellularCapability3gppMainTest, GetMdnForOLP);
   FRIEND_TEST(CellularCapability3gppMainTest, GetTypeString);
   FRIEND_TEST(CellularCapability3gppMainTest, IsMdnValid);
@@ -196,15 +192,9 @@ class CellularCapability3gpp : public CellularCapability {
   FRIEND_TEST(CellularCapability3gppMainTest, SimLockStatusToProperty);
   FRIEND_TEST(CellularCapability3gppMainTest, SimPathChanged);
   FRIEND_TEST(CellularCapability3gppMainTest, SimPropertiesChanged);
-  FRIEND_TEST(CellularCapability3gppMainTest, StartModem);
-  FRIEND_TEST(CellularCapability3gppMainTest, StartModemFailure);
   FRIEND_TEST(CellularCapability3gppMainTest, StartModemInWrongState);
   FRIEND_TEST(CellularCapability3gppMainTest,
               StartModemWithDeferredEnableFailure);
-  FRIEND_TEST(CellularCapability3gppMainTest, StopModem);
-  FRIEND_TEST(CellularCapability3gppMainTest, TerminationAction);
-  FRIEND_TEST(CellularCapability3gppMainTest,
-              TerminationActionRemovedByStopModem);
   FRIEND_TEST(CellularCapability3gppMainTest, UpdateActiveBearer);
   FRIEND_TEST(CellularCapability3gppMainTest, UpdatePendingActivationState);
   FRIEND_TEST(CellularCapability3gppMainTest, UpdateRegistrationState);
@@ -213,17 +203,8 @@ class CellularCapability3gpp : public CellularCapability {
   FRIEND_TEST(CellularCapability3gppMainTest, UpdateServiceActivationState);
   FRIEND_TEST(CellularCapability3gppMainTest, UpdateServiceOLP);
   FRIEND_TEST(CellularCapability3gppTimerTest, CompleteActivation);
-  FRIEND_TEST(CellularTest, Connect);
-  FRIEND_TEST(CellularTest, ConnectFailure);
-  FRIEND_TEST(CellularTest, ConnectFailureNoService);
-  FRIEND_TEST(CellularTest, ConnectSuccessNoService);
-  FRIEND_TEST(CellularTest, Disconnect);
-  FRIEND_TEST(CellularTest, DisconnectFailure);
+  // CellularTest
   FRIEND_TEST(CellularTest, ModemStateChangeLostRegistration);
-  FRIEND_TEST(CellularTest, OnPPPDied);
-  FRIEND_TEST(CellularTest, ProfilesApnList);
-  FRIEND_TEST(CellularTest, MergeProfileAndOperatorApn);
-  FRIEND_TEST(CellularTest, DontMergeProfileAndOperatorApn);
 
   // SimLockStatus represents the fields in the Cellular.SIMLockStatus
   // DBUS property of the shill device.
@@ -348,10 +329,6 @@ class CellularCapability3gpp : public CellularCapability {
   void ResetAfterActivation();
   void UpdateServiceActivationState();
   void OnResetAfterActivationReply(const Error& error);
-
-  void set_active_bearer_for_test(std::unique_ptr<CellularBearer> bearer) {
-    active_bearer_ = std::move(bearer);
-  }
 
   // Convenience pointer to modem_info()->manager()->metrics().
   Metrics* metrics_;

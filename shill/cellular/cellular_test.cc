@@ -527,11 +527,19 @@ class CellularTest : public testing::TestWithParam<Cellular::Type> {
   }
 
   void SetCapability3gppActiveBearer(unique_ptr<CellularBearer> bearer) {
-    CellularCapability3gpp* capability = GetCapability3gpp();
-    capability->active_bearer_ = std::move(bearer);
+    GetCapability3gpp()->active_bearer_ = std::move(bearer);
   }
 
-  void InitProxies() { GetCapability3gpp()->InitProxies(); }
+  void SetCapability3gppModemSimpleProxy() {
+    GetCapability3gpp()->modem_simple_proxy_ = std::move(mm1_simple_proxy_);
+  }
+
+  void Capability3gppCallOnProfilesChanged(
+      const CellularCapability3gpp::Profiles& profiles) {
+    GetCapability3gpp()->OnProfilesChanged(profiles);
+  }
+
+  void InitCapability3gppProxies() { GetCapability3gpp()->InitProxies(); }
 
   EventDispatcherForTest dispatcher_;
   TestControl control_interface_;
@@ -938,7 +946,7 @@ TEST_P(CellularTest, HomeProviderServingOperator) {
   Stringmap home_provider;
   Stringmap serving_operator;
 
-  InitProxies();
+  InitCapability3gppProxies();
 
   // (1) Neither home provider nor serving operator known.
   EXPECT_CALL(*mock_home_provider_info_, IsMobileNetworkOperatorKnown())
@@ -1036,7 +1044,7 @@ TEST_P(CellularTest, HomeProviderServingOperator) {
 
 TEST_P(CellularTest, StorageIdentifier) {
   // The default storage identifier should always be cellular_{iccid}
-  InitProxies();
+  InitCapability3gppProxies();
   device_->set_iccid("test_iccid");
   device_->CreateService();
   EXPECT_EQ("cellular_test_iccid", device_->service()->GetStorageIdentifier());
@@ -1079,7 +1087,7 @@ TEST_P(CellularTest, Connect) {
               Connect(_, _, _, CellularCapability::kTimeoutConnect))
       .Times(2)
       .WillRepeatedly(Invoke(this, &CellularTest::InvokeConnect));
-  GetCapability3gpp()->modem_simple_proxy_ = std::move(mm1_simple_proxy_);
+  SetCapability3gppModemSimpleProxy();
   device_->service_->roaming_state_ = kRoamingStateHome;
   device_->state_ = Cellular::kStateRegistered;
   device_->Connect(&error);
@@ -1107,7 +1115,7 @@ TEST_P(CellularTest, Disconnect) {
   EXPECT_CALL(*mm1_simple_proxy_,
               Disconnect(_, _, _, CellularCapability::kTimeoutDisconnect))
       .WillOnce(Invoke(this, &CellularTest::InvokeDisconnect));
-  GetCapability3gpp()->modem_simple_proxy_ = std::move(mm1_simple_proxy_);
+  SetCapability3gppModemSimpleProxy();
   device_->Disconnect(&error, "in test");
   EXPECT_TRUE(error.IsSuccess());
   EXPECT_EQ(Cellular::kStateRegistered, device_->state_);
@@ -1122,7 +1130,7 @@ TEST_P(CellularTest, DisconnectFailure) {
               Disconnect(_, _, _, CellularCapability::kTimeoutDisconnect))
       .Times(2)
       .WillRepeatedly(Invoke(this, &CellularTest::InvokeDisconnectFail));
-  GetCapability3gpp()->modem_simple_proxy_ = std::move(mm1_simple_proxy_);
+  SetCapability3gppModemSimpleProxy();
   device_->modem_state_ = Cellular::kModemStateDisconnecting;
   device_->Disconnect(&error, "in test");
   EXPECT_TRUE(error.IsFailure());
@@ -1141,7 +1149,7 @@ TEST_P(CellularTest, ConnectFailure) {
   EXPECT_CALL(*mm1_simple_proxy_,
               Connect(_, _, _, CellularCapability::kTimeoutConnect))
       .WillOnce(Invoke(this, &CellularTest::InvokeConnectFail));
-  GetCapability3gpp()->modem_simple_proxy_ = std::move(mm1_simple_proxy_);
+  SetCapability3gppModemSimpleProxy();
   Error error;
   device_->Connect(&error);
   EXPECT_EQ(Service::kStateFailure, device_->service_->state());
@@ -1157,7 +1165,7 @@ TEST_P(CellularTest, ConnectFailureNoService) {
               Connect(_, _, _, CellularCapability::kTimeoutConnect))
       .WillOnce(Invoke(this, &CellularTest::InvokeConnectFailNoService));
   EXPECT_CALL(manager_, UpdateService(_));
-  GetCapability3gpp()->modem_simple_proxy_ = std::move(mm1_simple_proxy_);
+  SetCapability3gppModemSimpleProxy();
   Error error;
   device_->Connect(&error);
 }
@@ -1171,7 +1179,7 @@ TEST_P(CellularTest, ConnectSuccessNoService) {
               Connect(_, _, _, CellularCapability::kTimeoutConnect))
       .WillOnce(Invoke(this, &CellularTest::InvokeConnectSuccessNoService));
   EXPECT_CALL(manager_, UpdateService(_));
-  GetCapability3gpp()->modem_simple_proxy_ = std::move(mm1_simple_proxy_);
+  SetCapability3gppModemSimpleProxy();
   Error error;
   device_->Connect(&error);
 }
@@ -1336,7 +1344,7 @@ TEST_P(CellularTest, SetAllowRoaming) {
 
 TEST_P(CellularTest, SetUseAttachApn) {
   EXPECT_FALSE(device_->use_attach_apn_);
-  InitProxies();
+  InitCapability3gppProxies();
   // It's going to process again the mobile network information for the APN
   SetMockMobileOperatorInfoObjects();
   EXPECT_CALL(*mock_home_provider_info_, IsMobileNetworkOperatorKnown())
@@ -2271,7 +2279,7 @@ TEST_P(CellularTest, ProfilesApnList) {
   constexpr char kApn1[] = "ota.apn";
   brillo::VariantDictionary profile;
   profile["apn"] = std::string(kApn1);
-  GetCapability3gpp()->OnProfilesChanged({profile});
+  Capability3gppCallOnProfilesChanged({profile});
 
   constexpr char kApn2[] = "normal.apn";
   std::vector<std::unique_ptr<MobileOperatorInfo::MobileAPN>> apn_list;
@@ -2298,7 +2306,7 @@ TEST_P(CellularTest, MergeProfileAndOperatorApn) {
   constexpr char kApnName[] = "Normal APN";
   brillo::VariantDictionary profile;
   profile["apn"] = std::string(kApn);
-  GetCapability3gpp()->OnProfilesChanged({profile});
+  Capability3gppCallOnProfilesChanged({profile});
 
   std::vector<std::unique_ptr<MobileOperatorInfo::MobileAPN>> apn_list;
   auto mobile_apn = std::make_unique<MobileOperatorInfo::MobileAPN>();
@@ -2324,7 +2332,7 @@ TEST_P(CellularTest, DontMergeProfileAndOperatorApn) {
   brillo::VariantDictionary profile;
   profile["apn"] = std::string(kApn);
   profile["username"] = std::string(kUsernameFromProfile);
-  GetCapability3gpp()->OnProfilesChanged({profile});
+  Capability3gppCallOnProfilesChanged({profile});
 
   constexpr char kUsernameFromOperator[] = "user2";
   std::vector<std::unique_ptr<MobileOperatorInfo::MobileAPN>> apn_list;
