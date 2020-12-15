@@ -30,8 +30,8 @@ pkg_config("target_defaults") {
 
 # A shared library for clients
 shared_library("libbiod_proxy") {
-  configs += [ ":target_defaults" ]
   sources = [ "biometrics_manager_proxy_base.cc" ]
+  configs += [ ":target_defaults" ]
 }
 
 if (use.test) {
