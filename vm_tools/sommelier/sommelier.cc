@@ -13,6 +13,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string>
 #include <string.h>
 #include <sys/file.h>
 #include <sys/ioctl.h>
@@ -174,6 +175,18 @@ struct sl_mwm_hints {
 #define NET_WM_STATE_ADD 1
 #define NET_WM_STATE_TOGGLE 2
 
+const char* net_wm_state_to_string(int i) {
+  switch (i) {
+    case NET_WM_STATE_REMOVE:
+      return "NET_WM_STATE_REMOVE";
+    case NET_WM_STATE_ADD:
+      return "NET_WM_STATE_ADD";
+    case NET_WM_STATE_TOGGLE:
+      return "NET_WM_STATE_TOGGLE";
+  }
+  return "<unknown NET_WM_STATE>";
+}
+
 #define WM_STATE_WITHDRAWN 0
 #define WM_STATE_NORMAL 1
 #define WM_STATE_ICONIC 3
@@ -221,6 +234,78 @@ __attribute__((__format__(__printf__, 1, 0))) static char* sl_xasprintf(
   UNUSED(rv);
   va_end(args);
   return str;
+}
+
+// Returns the string mapped to the given ATOM_ enum value.
+//
+// Note this is NOT the atom value sent via the X protocol, despite both being
+// ints. Use |sl_context::atoms| to map between X protocol atoms and ATOM_ enum
+// values: If `atoms[i].value = j`, i is the ATOM_ enum value and j is the
+// X protocol atom.
+//
+// If the given value is out of range of the ATOM_ enum, returns NULL.
+static const char* sl_context_atom_name(int atom_enum) {
+  switch (atom_enum) {
+    case ATOM_WM_S0:
+      return "WM_S0";
+    case ATOM_WM_PROTOCOLS:
+      return "WM_PROTOCOLS";
+    case ATOM_WM_STATE:
+      return "WM_STATE";
+    case ATOM_WM_CHANGE_STATE:
+      return "WM_CHANGE_STATE";
+    case ATOM_WM_DELETE_WINDOW:
+      return "WM_DELETE_WINDOW";
+    case ATOM_WM_TAKE_FOCUS:
+      return "WM_TAKE_FOCUS";
+    case ATOM_WM_CLIENT_LEADER:
+      return "WM_CLIENT_LEADER";
+    case ATOM_WL_SURFACE_ID:
+      return "WL_SURFACE_ID";
+    case ATOM_UTF8_STRING:
+      return "UTF8_STRING";
+    case ATOM_MOTIF_WM_HINTS:
+      return "_MOTIF_WM_HINTS";
+    case ATOM_NET_ACTIVE_WINDOW:
+      return "_NET_ACTIVE_WINDOW";
+    case ATOM_NET_FRAME_EXTENTS:
+      return "_NET_FRAME_EXTENTS";
+    case ATOM_NET_STARTUP_ID:
+      return "_NET_STARTUP_ID";
+    case ATOM_NET_SUPPORTED:
+      return "_NET_SUPPORTED";
+    case ATOM_NET_SUPPORTING_WM_CHECK:
+      return "_NET_SUPPORTING_WM_CHECK";
+    case ATOM_NET_WM_NAME:
+      return "_NET_WM_NAME";
+    case ATOM_NET_WM_MOVERESIZE:
+      return "_NET_WM_MOVERESIZE";
+    case ATOM_NET_WM_STATE:
+      return "_NET_WM_STATE";
+    case ATOM_NET_WM_STATE_FULLSCREEN:
+      return "_NET_WM_STATE_FULLSCREEN";
+    case ATOM_NET_WM_STATE_MAXIMIZED_VERT:
+      return "_NET_WM_STATE_MAXIMIZED_VERT";
+    case ATOM_NET_WM_STATE_MAXIMIZED_HORZ:
+      return "_NET_WM_STATE_MAXIMIZED_HORZ";
+    case ATOM_CLIPBOARD:
+      return "CLIPBOARD";
+    case ATOM_CLIPBOARD_MANAGER:
+      return "CLIPBOARD_MANAGER";
+    case ATOM_TARGETS:
+      return "TARGETS";
+    case ATOM_TIMESTAMP:
+      return "TIMESTAMP";
+    case ATOM_TEXT:
+      return "TEXT";
+    case ATOM_INCR:
+      return "INCR";
+    case ATOM_WL_SELECTION:
+      return "_WL_SELECTION";
+    case ATOM_GTK_THEME_VARIANT:
+      return "_GTK_THEME_VARIANT";
+  }
+  return NULL;
 }
 
 struct sl_mmap* sl_mmap_create(int fd,
@@ -2195,8 +2280,60 @@ static void sl_request_attention(struct sl_context* ctx,
   }
 }
 
+#if defined(PERFETTO_TRACING)
+// Annotate the given Perfetto EventContext with the name of the given window.
+//
+// Slow (iterates a linked list); only intended to be called if tracing is
+// enabled.
+static void perfetto_annotate_window(struct sl_context* ctx,
+                                     const perfetto::EventContext& perfetto,
+                                     const char* event_name,
+                                     xcb_window_t window_id) {
+  auto* dbg = perfetto.event()->add_debug_annotations();
+  dbg->set_name(event_name);
+  struct sl_window* window = sl_lookup_window(ctx, window_id);
+  if (window != NULL && window->name != NULL) {
+    dbg->set_string_value(window->name, strlen(window->name));
+  } else {
+    std::string unknown("<unknown window #");
+    unknown += std::to_string(window_id);
+    unknown += '>';
+    dbg->set_string_value(unknown);
+  }
+}
+
+static void perfetto_annotate_sl_context_atom(
+    struct sl_context* ctx,
+    const perfetto::EventContext& perfetto,
+    const char* event_name,
+    xcb_atom_t atom) {
+  auto* dbg = perfetto.event()->add_debug_annotations();
+  dbg->set_name(event_name);
+  for (unsigned i = 0; i < ARRAY_SIZE(ctx->atoms); ++i) {
+    if (atom == ctx->atoms[i].value) {
+      const char* name = sl_context_atom_name(i);
+      if (name != nullptr) {
+        dbg->set_string_value(name, strlen(name));
+        return;
+      }
+    }
+  }
+
+  // If we reach here, we didn't find the atom name.
+  // We could ask the X server but that would require a round-trip.
+  std::string unknown("<unknown atom #");
+  unknown += std::to_string(atom);
+  unknown += '>';
+  dbg->set_string_value(unknown);
+}
+#endif
+
 static void sl_handle_client_message(struct sl_context* ctx,
                                      xcb_client_message_event_t* event) {
+  TRACE_EVENT("x11wm", "XCB_CLIENT_MESSAGE", [&](perfetto::EventContext p) {
+    perfetto_annotate_sl_context_atom(ctx, p, "event->type", event->type);
+    perfetto_annotate_window(ctx, p, "event->window", event->window);
+  });
   if (event->type == ctx->atoms[ATOM_WL_SURFACE_ID].value) {
     struct sl_window *window, *unpaired_window = NULL;
 
@@ -2251,6 +2388,9 @@ static void sl_handle_client_message(struct sl_context* ctx,
       }
 
       if (changed[ATOM_NET_WM_STATE_FULLSCREEN]) {
+        TRACE_EVENT("x11wm", "XCB_CLIENT_MESSAGE: ATOM_NET_WM_STATE_FULLSCREEN",
+                    "action", net_wm_state_to_string(action), "window->name",
+                    window->name);
         if (action == NET_WM_STATE_ADD)
           zxdg_toplevel_v6_set_fullscreen(window->xdg_toplevel, NULL);
         else if (action == NET_WM_STATE_REMOVE)
@@ -2259,6 +2399,11 @@ static void sl_handle_client_message(struct sl_context* ctx,
 
       if (changed[ATOM_NET_WM_STATE_MAXIMIZED_VERT] &&
           changed[ATOM_NET_WM_STATE_MAXIMIZED_HORZ]) {
+        TRACE_EVENT(
+            "x11wm",
+            "XCB_CLIENT_MESSAGE: ATOM_NET_WM_STATE_MAXIMIZED_VERT && HORZ",
+            "action", net_wm_state_to_string(action), "window->name",
+            window->name);
         if (action == NET_WM_STATE_ADD)
           zxdg_toplevel_v6_set_maximized(window->xdg_toplevel);
         else if (action == NET_WM_STATE_REMOVE)
@@ -2268,6 +2413,8 @@ static void sl_handle_client_message(struct sl_context* ctx,
   } else if (event->type == ctx->atoms[ATOM_WM_CHANGE_STATE].value &&
              event->data.data32[0] == WM_STATE_ICONIC) {
     struct sl_window* window = sl_lookup_window(ctx, event->window);
+    TRACE_EVENT("x11wm", "XCB_CLIENT_MESSAGE: WM_STATE_ICONIC (minimize)",
+                "window->name", window ? window->name : "<unknown>");
     if (window && window->xdg_toplevel) {
       zxdg_toplevel_v6_set_minimized(window->xdg_toplevel);
     }
@@ -2472,9 +2619,97 @@ static int sl_handle_selection_fd_readable(int fd, uint32_t mask, void* data) {
   return 1;
 }
 
+#if defined(PERFETTO_TRACING)
+static void perfetto_annotate_size_hints(const perfetto::EventContext& perfetto,
+                                         const sl_wm_size_hints& size_hints) {
+  auto* dbg = perfetto.event()->add_debug_annotations();
+  dbg->set_name("size_hints.flags");
+  std::string flags;
+  if (size_hints.flags & US_POSITION)
+    flags += "US_POSITION|";
+  if (size_hints.flags & US_SIZE)
+    flags += "US_SIZE|";
+  if (size_hints.flags & P_POSITION)
+    flags += "P_POSITION|";
+  if (size_hints.flags & P_SIZE)
+    flags += "P_SIZE|";
+  if (size_hints.flags & P_MIN_SIZE)
+    flags += "P_MIN_SIZE|";
+  if (size_hints.flags & P_MAX_SIZE)
+    flags += "P_MAX_SIZE|";
+  if (size_hints.flags & P_RESIZE_INC)
+    flags += "P_RESIZE_INC|";
+  if (size_hints.flags & P_ASPECT)
+    flags += "P_ASPECT|";
+  if (size_hints.flags & P_BASE_SIZE)
+    flags += "P_BASE_SIZE|";
+  if (size_hints.flags & P_WIN_GRAVITY)
+    flags += "P_WIN_GRAVITY|";
+  if (!flags.empty())
+    flags.pop_back();  // remove trailing '|'
+  dbg->set_string_value(flags);
+
+  dbg = perfetto.event()->add_debug_annotations();
+  dbg->set_name("size_hints.x");
+  dbg->set_int_value(size_hints.x);
+  dbg = perfetto.event()->add_debug_annotations();
+  dbg->set_name("size_hints.y");
+  dbg->set_int_value(size_hints.y);
+  dbg = perfetto.event()->add_debug_annotations();
+  dbg->set_name("size_hints.width");
+  dbg->set_int_value(size_hints.width);
+  dbg = perfetto.event()->add_debug_annotations();
+  dbg->set_name("size_hints.height");
+  dbg->set_int_value(size_hints.height);
+  dbg = perfetto.event()->add_debug_annotations();
+  dbg->set_name("size_hints.min_width");
+  dbg->set_int_value(size_hints.min_width);
+  dbg = perfetto.event()->add_debug_annotations();
+  dbg->set_name("size_hints.min_height");
+  dbg->set_int_value(size_hints.min_height);
+  dbg = perfetto.event()->add_debug_annotations();
+  dbg->set_name("size_hints.max_width");
+  dbg->set_int_value(size_hints.max_width);
+  dbg = perfetto.event()->add_debug_annotations();
+  dbg->set_name("size_hints.max_height");
+  dbg->set_int_value(size_hints.max_height);
+  dbg = perfetto.event()->add_debug_annotations();
+  dbg->set_name("size_hints.width_inc");
+  dbg->set_int_value(size_hints.width_inc);
+  dbg = perfetto.event()->add_debug_annotations();
+  dbg->set_name("size_hints.height_inc");
+  dbg->set_int_value(size_hints.height_inc);
+  dbg = perfetto.event()->add_debug_annotations();
+  dbg->set_name("size_hints.min_aspect.x");
+  dbg->set_int_value(size_hints.min_aspect.x);
+  dbg = perfetto.event()->add_debug_annotations();
+  dbg->set_name("size_hints.min_aspect.y");
+  dbg->set_int_value(size_hints.min_aspect.y);
+  dbg = perfetto.event()->add_debug_annotations();
+  dbg->set_name("size_hints.max_aspect.x");
+  dbg->set_int_value(size_hints.max_aspect.x);
+  dbg = perfetto.event()->add_debug_annotations();
+  dbg->set_name("size_hints.max_aspect.y");
+  dbg->set_int_value(size_hints.max_aspect.y);
+  dbg = perfetto.event()->add_debug_annotations();
+  dbg->set_name("size_hints.base_width");
+  dbg->set_int_value(size_hints.base_width);
+  dbg = perfetto.event()->add_debug_annotations();
+  dbg->set_name("size_hints.base_height");
+  dbg->set_int_value(size_hints.base_height);
+  dbg = perfetto.event()->add_debug_annotations();
+  dbg->set_name("size_hints.win_gravity");
+  dbg->set_int_value(size_hints.win_gravity);
+}
+#endif
+
 static void sl_handle_property_notify(struct sl_context* ctx,
                                       xcb_property_notify_event_t* event) {
-  TRACE_EVENT("other", "sl_handle_property_notify");
+  TRACE_EVENT("x11wm", "XCB_PROPERTY_NOTIFY", [&](perfetto::EventContext p) {
+    perfetto_annotate_xcb_atom(p, "event->atom", event->atom);
+    perfetto_annotate_xcb_property_state(p, "event->state", event->state);
+    perfetto_annotate_window(ctx, p, "event->window", event->window);
+  });
   if (event->atom == XCB_ATOM_WM_NAME) {
     struct sl_window* window = sl_lookup_window(ctx, event->window);
     if (!window)
@@ -2541,6 +2776,10 @@ static void sl_handle_property_notify(struct sl_context* ctx,
         memcpy(&size_hints, xcb_get_property_value(reply), sizeof(size_hints));
         free(reply);
       }
+      TRACE_EVENT("x11wm", "XCB_PROPERTY_NOTIFY: XCB_ATOM_WM_NORMAL_HINTS",
+                  [&](perfetto::EventContext p) {
+                    perfetto_annotate_size_hints(p, size_hints);
+                  });
 
       window->size_flags |= size_hints.flags & (P_MIN_SIZE | P_MAX_SIZE);
       if (window->size_flags & P_MIN_SIZE) {
@@ -3766,37 +4005,11 @@ int main(int argc, char** argv) {
   ctx.selection_event_source = NULL;
   ctx.selection_data_offer_receive_fd = -1;
   ctx.selection_data_ack_pending = 0;
-  ctx.atoms[ATOM_WM_S0] = {"WM_S0"};
-  ctx.atoms[ATOM_WM_PROTOCOLS] = {"WM_PROTOCOLS"};
-  ctx.atoms[ATOM_WM_STATE] = {"WM_STATE"};
-  ctx.atoms[ATOM_WM_CHANGE_STATE] = {"WM_CHANGE_STATE"};
-  ctx.atoms[ATOM_WM_DELETE_WINDOW] = {"WM_DELETE_WINDOW"};
-  ctx.atoms[ATOM_WM_TAKE_FOCUS] = {"WM_TAKE_FOCUS"};
-  ctx.atoms[ATOM_WM_CLIENT_LEADER] = {"WM_CLIENT_LEADER"};
-  ctx.atoms[ATOM_WL_SURFACE_ID] = {"WL_SURFACE_ID"};
-  ctx.atoms[ATOM_UTF8_STRING] = {"UTF8_STRING"};
-  ctx.atoms[ATOM_MOTIF_WM_HINTS] = {"_MOTIF_WM_HINTS"};
-  ctx.atoms[ATOM_NET_ACTIVE_WINDOW] = {"_NET_ACTIVE_WINDOW"};
-  ctx.atoms[ATOM_NET_FRAME_EXTENTS] = {"_NET_FRAME_EXTENTS"};
-  ctx.atoms[ATOM_NET_STARTUP_ID] = {"_NET_STARTUP_ID"};
-  ctx.atoms[ATOM_NET_SUPPORTED] = {"_NET_SUPPORTED"};
-  ctx.atoms[ATOM_NET_SUPPORTING_WM_CHECK] = {"_NET_SUPPORTING_WM_CHECK"};
-  ctx.atoms[ATOM_NET_WM_NAME] = {"_NET_WM_NAME"};
-  ctx.atoms[ATOM_NET_WM_MOVERESIZE] = {"_NET_WM_MOVERESIZE"};
-  ctx.atoms[ATOM_NET_WM_STATE] = {"_NET_WM_STATE"};
-  ctx.atoms[ATOM_NET_WM_STATE_FULLSCREEN] = {"_NET_WM_STATE_FULLSCREEN"};
-  ctx.atoms[ATOM_NET_WM_STATE_MAXIMIZED_VERT] = {
-      "_NET_WM_STATE_MAXIMIZED_VERT"};
-  ctx.atoms[ATOM_NET_WM_STATE_MAXIMIZED_HORZ] = {
-      "_NET_WM_STATE_MAXIMIZED_HORZ"};
-  ctx.atoms[ATOM_CLIPBOARD] = {"CLIPBOARD"};
-  ctx.atoms[ATOM_CLIPBOARD_MANAGER] = {"CLIPBOARD_MANAGER"};
-  ctx.atoms[ATOM_TARGETS] = {"TARGETS"};
-  ctx.atoms[ATOM_TIMESTAMP] = {"TIMESTAMP"};
-  ctx.atoms[ATOM_TEXT] = {"TEXT"};
-  ctx.atoms[ATOM_INCR] = {"INCR"};
-  ctx.atoms[ATOM_WL_SELECTION] = {"_WL_SELECTION"};
-  ctx.atoms[ATOM_GTK_THEME_VARIANT] = {"_GTK_THEME_VARIANT"};
+  for (unsigned i = 0; i < ARRAY_SIZE(ctx.atoms); i++) {
+    const char* name = sl_context_atom_name(i);
+    assert(name != NULL);
+    ctx.atoms[i].name = name;
+  }
   ctx.trace_filename = NULL;
   ctx.trace_system = false;
   const char* display = getenv("SOMMELIER_DISPLAY");

@@ -18,7 +18,17 @@ PERFETTO_DEFINE_CATEGORIES(
     perfetto::Category("viewport")
         .SetDescription("Events for Wayland viewport"),
     perfetto::Category("sync").SetDescription("Events for Wayland sync points"),
+    perfetto::Category("x11wm").SetDescription(
+        "Events for X11 window management"),
     perfetto::Category("other").SetDescription("Uncategorized Wayland calls."));
+
+void perfetto_annotate_xcb_atom(const perfetto::EventContext& event,
+                                const char* name,
+                                uint32_t atom);
+void perfetto_annotate_xcb_property_state(const perfetto::EventContext& event,
+                                          const char* name,
+                                          uint32_t state);
+
 #else
 #define TRACE_EVENT(category, name, ...)
 #endif
@@ -26,5 +36,4 @@ PERFETTO_DEFINE_CATEGORIES(
 void initialize_tracing(bool in_process_backend, bool system_backend);
 void enable_tracing(bool create_session);
 void dump_trace(char const* filename);
-
 #endif  // VM_TOOLS_SOMMELIER_SOMMELIER_TRACING_H_
