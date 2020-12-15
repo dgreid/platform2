@@ -33,17 +33,17 @@ config("target_defaults") {
 
 # D-Bus code generator.
 generate_dbus_adaptors("dbus_code_generator") {
+  sources = [ "dbus_bindings/org.chromium.Kerberos.xml" ]
   dbus_service_config = "dbus_bindings/dbus-service-config.json"
   dbus_adaptors_out_dir = "include/kerberos"
-  sources = [ "dbus_bindings/org.chromium.Kerberos.xml" ]
 }
 
 # Container protos.
 proto_library("container-protos") {
-  configs = [ ":target_defaults" ]
   proto_in_dir = "proto"
   proto_out_dir = "include/bindings"
   sources = [ "${proto_in_dir}/kerberos_containers.proto" ]
+  configs = [ ":target_defaults" ]
 }
 
 pkg_config("libkerberos_config") {
@@ -60,10 +60,6 @@ pkg_config("libkerberos_config") {
 
 # Kerberos library (shared between executables and tests).
 static_library("libkerberos") {
-  configs += [
-    ":libkerberos_config",
-    ":target_defaults",
-  ]
   sources = [
     "account_manager.cc",
     "config_parser.cc",
@@ -76,6 +72,10 @@ static_library("libkerberos") {
     "krb5_jail_wrapper.cc",
     "platform_helper.cc",
     "tgt_renewal_scheduler.cc",
+  ]
+  configs += [
+    ":libkerberos_config",
+    ":target_defaults",
   ]
   deps = [
     ":container-protos",
@@ -105,11 +105,11 @@ pkg_config("kerberosd_config") {
 
 # Kerberos daemon executable.
 executable("kerberosd") {
+  sources = [ "kerberosd_main.cc" ]
   configs += [
     ":kerberosd_config",
     ":target_defaults",
   ]
-  sources = [ "kerberosd_main.cc" ]
   deps = [ ":libkerberos" ]
 }
 
@@ -137,11 +137,6 @@ if (use.test) {
   }
 
   executable("kerberos_test") {
-    configs += [
-      "//common-mk:test",
-      ":kerberos_test_config",
-      ":target_defaults",
-    ]
     sources = [
       "account_manager_test.cc",
       "config_parser_test.cc",
@@ -150,6 +145,11 @@ if (use.test) {
       "krb5_interface_impl_test.cc",
       "krb5_jail_wrapper_test.cc",
       "tgt_renewal_scheduler_test.cc",
+    ]
+    configs += [
+      "//common-mk:test",
+      ":kerberos_test_config",
+      ":target_defaults",
     ]
     defines = [ "UNIT_TEST" ]
     deps = [
@@ -181,12 +181,12 @@ if (use.fuzzer) {
   #  pkg_deps = [ "libchrome-test" ]
   #}
   executable("config_parser_fuzzer") {
+    sources = [ "config_parser_fuzzer.cc" ]
     configs += [
       "//common-mk/common_fuzzer",
       ":fuzzer_config",
       ":target_defaults",
     ]
-    sources = [ "config_parser_fuzzer.cc" ]
     deps = [ ":libkerberos" ]
   }
 }
