@@ -260,9 +260,9 @@ bool TerminaVm::Shutdown() {
     LOG(WARNING) << "Unable to notify networking services";
   }
 
-  // Do a sanity check here to make sure the process is still around.  It may
-  // have crashed and we don't want to be waiting around for an RPC response
-  // that's never going to come.  kill with a signal value of 0 is explicitly
+  // Do a check here to make sure the process is still around.  It may have
+  // crashed and we don't want to be waiting around for an RPC response that's
+  // never going to come.  kill with a signal value of 0 is explicitly
   // documented as a way to check for the existence of a process.
   if (!CheckProcessExists(process_.pid())) {
     // The process is already gone.

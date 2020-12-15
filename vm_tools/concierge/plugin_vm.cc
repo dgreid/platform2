@@ -157,7 +157,7 @@ bool PluginVm::StopVm() {
     vm_permission::UnregisterVm(vm_permission_service_proxy_, id_);
   }
 
-  // Do a sanity check here to make sure the process is still around.
+  // Do a check here to make sure the process is still around.
   if (!CheckProcessExists(process_.pid())) {
     // The process is already gone.
     process_.Release();
