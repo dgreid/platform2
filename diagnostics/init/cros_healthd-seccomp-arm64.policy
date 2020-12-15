@@ -18,10 +18,12 @@ execve: 1
 exit_group: 1
 exit: 1
 faccessat: 1
+fallocate: 1
 fchdir: 1
 fchownat: 1
 fcntl: 1
 fstat: 1
+ftruncate: 1
 futex: 1
 getcpu: 1
 getdents64: 1
