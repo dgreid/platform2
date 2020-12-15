@@ -30,6 +30,9 @@ namespace {
 constexpr uint8_t kDefaultLogicalSlot = 0x01;
 constexpr uint8_t kInvalidChannel = -1;
 
+constexpr int kEidLen = 16;
+constexpr char bcd_chars[] = "0123456789\0\0\0\0\0\0";
+
 // A profile enable/disable results in an automatic refresh.
 // Put Hermes to sleep during this refresh. If the refresh
 // takes any longer, Hermes will retry channel acquisition
@@ -585,7 +588,7 @@ void ModemQrtr::ReceiveQmiGetSlots(const qrtr_packet& packet) {
     return;
   }
 
-  if (!resp.status_valid || !resp.info_valid) {
+  if (!resp.status_valid || !resp.slot_info_valid) {
     LOG(ERROR) << "QMI UIM response for " << cmd.ToString()
                << " contained invalid slot info";
     return;
@@ -593,15 +596,25 @@ void ModemQrtr::ReceiveQmiGetSlots(const qrtr_packet& packet) {
 
   CHECK(euicc_manager_);
   bool logical_slot_found = false;
-  uint8_t max_len = std::max(resp.status_len, resp.info_len);
-  for (uint8_t i = 0; i < max_len; ++i) {
+  uint8_t min_len = std::min(std::min(resp.status_len, resp.slot_info_len),
+                             resp.eid_info_len);
+  if (resp.status_len != resp.slot_info_len ||
+      resp.status_len != resp.eid_info_len) {
+    LOG(ERROR) << "Lengths of status, slot_info and eid_info differ,"
+               << " slot_info_len:" << resp.slot_info_len
+               << " status_len:" << resp.status_len
+               << " eid_info_len:" << resp.eid_info_len;
+  }
+  for (uint8_t i = 0; i < min_len; ++i) {
     bool is_present = (resp.status[i].physical_card_status ==
                        uim_physical_slot_status::kCardPresent);
-    bool is_euicc = resp.info[i].is_euicc;
+    bool is_euicc = resp.slot_info[i].is_euicc;
 
     bool is_active = (resp.status[i].physical_slot_state ==
                       uim_physical_slot_status::kSlotActive);
 
+    VLOG(2) << "Slot:" << i + 1 << " is_present:" << is_present
+            << " is_euicc:" << is_euicc << " is_active:" << is_active;
     if (is_active) {
       stored_active_slot_ = i + 1;
       if (!logical_slot_found) {
@@ -610,12 +623,29 @@ void ModemQrtr::ReceiveQmiGetSlots(const qrtr_packet& packet) {
         logical_slot_found = true;
       }
     }
-    if (!is_present || !is_euicc)
+    if (!is_present || !is_euicc) {
       euicc_manager_->OnEuiccRemoved(i + 1);
-    else
-      euicc_manager_->OnEuiccUpdated(
-          i + 1, is_active ? EuiccSlotInfo(resp.status[i].logical_slot)
-                           : EuiccSlotInfo());
+      continue;
+    }
+
+    std::string eid;
+    if (resp.eid_info[i].eid_len != kEidLen)
+      LOG(ERROR) << "Expected eid_len=" << kEidLen << ", eid_len is "
+                 << resp.eid_info[i].eid_len;
+    for (int j = 0; j < resp.eid_info[i].eid_len; j++) {
+      eid += bcd_chars[(resp.eid_info[i].eid[j] >> 4) & 0xF];
+      eid += bcd_chars[resp.eid_info[i].eid[j] & 0xF];
+      if (j == 0) {
+        CHECK(eid == "89") << "Expected eid to begin with 89, eid begins with "
+                           << eid;
+      }
+    }
+
+    VLOG(2) << "EID for slot " << i + 1 << " is " << eid;
+    euicc_manager_->OnEuiccUpdated(
+        i + 1, is_active
+                   ? EuiccSlotInfo(resp.status[i].logical_slot, std::move(eid))
+                   : EuiccSlotInfo(std::move(eid)));
   }
 }
 
@@ -636,12 +666,11 @@ void ModemQrtr::ReceiveQmiSwitchSlot(const qrtr_packet& packet) {
 
   auto switch_slot_tx_info =
       dynamic_cast<SwitchSlotTxInfo*>(tx_queue_.front().info_.get());
-  euicc_manager_->OnEuiccUpdated(
-      switch_slot_tx_info->physical_slot_,
-      EuiccSlotInfo(switch_slot_tx_info->logical_slot_));
+  euicc_manager_->OnEuiccLogicalSlotUpdated(switch_slot_tx_info->physical_slot_,
+                                            switch_slot_tx_info->logical_slot_);
   if (stored_active_slot_)
-    euicc_manager_->OnEuiccUpdated(stored_active_slot_.value(),
-                                   EuiccSlotInfo());
+    euicc_manager_->OnEuiccLogicalSlotUpdated(stored_active_slot_.value(),
+                                              base::nullopt);
 
   tx_queue_.pop_front();
   // Sending QMI messages immediately after switch slot leads to QMI errors

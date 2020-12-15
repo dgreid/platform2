@@ -125,6 +125,11 @@ struct uim_physical_slot_status {
   uint8_t iccid[kIccidMaxSize];
 };
 
+struct uim_slot_eid_info {
+  uint8_t eid_len;
+  uint8_t eid[255];
+};
+
 struct uim_physical_slot_info {
   uint32_t card_protocol;
   uint8_t num_app;
@@ -140,9 +145,12 @@ struct uim_get_slots_resp {
   bool status_valid;
   uint8_t status_len;
   uim_physical_slot_status status[10];
-  bool info_valid;
-  uint8_t info_len;
-  uim_physical_slot_info info[10];
+  bool slot_info_valid;
+  uint8_t slot_info_len;
+  uim_physical_slot_info slot_info[10];
+  bool eid_info_valid;
+  uint8_t eid_info_len;
+  uim_slot_eid_info eid_info[10];
 };
 
 struct uim_switch_slot_req {

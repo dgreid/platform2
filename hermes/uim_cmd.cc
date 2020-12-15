@@ -270,6 +270,22 @@ struct qmi_elem_info uim_physical_slot_status_ei[] = {
     },
     {}};
 
+struct qmi_elem_info uim_slot_eid_info_ei[] = {
+    {
+        .data_type = QMI_DATA_LEN,
+        .elem_len = 1,
+        .elem_size = sizeof(uint8_t),
+        .offset = offsetof(struct uim_slot_eid_info, eid_len),
+    },
+    {
+        .data_type = QMI_UNSIGNED_1_BYTE,
+        .elem_len = 255,
+        .elem_size = sizeof(uint8_t),
+        .array_type = VAR_LEN_ARRAY,
+        .offset = offsetof(struct uim_slot_eid_info, eid),
+    },
+    {}};
+
 struct qmi_elem_info uim_physical_slot_info_ei[] = {
     {
         .data_type = QMI_UNSIGNED_4_BYTE,
@@ -343,14 +359,14 @@ struct qmi_elem_info uim_get_slots_resp_ei[] = {
         .elem_len = 1,
         .elem_size = sizeof(bool),
         .tlv_type = 0x11,
-        .offset = offsetof(struct uim_get_slots_resp, info_valid),
+        .offset = offsetof(struct uim_get_slots_resp, slot_info_valid),
     },
     {
         .data_type = QMI_DATA_LEN,
         .elem_len = 1,
         .elem_size = sizeof(uint8_t),
         .tlv_type = 0x11,
-        .offset = offsetof(struct uim_get_slots_resp, info_len),
+        .offset = offsetof(struct uim_get_slots_resp, slot_info_len),
     },
     {
         .data_type = QMI_STRUCT,
@@ -358,8 +374,31 @@ struct qmi_elem_info uim_get_slots_resp_ei[] = {
         .elem_size = sizeof(uim_physical_slot_info),
         .array_type = VAR_LEN_ARRAY,
         .tlv_type = 0x11,
-        .offset = offsetof(struct uim_get_slots_resp, info),
+        .offset = offsetof(struct uim_get_slots_resp, slot_info),
         .ei_array = uim_physical_slot_info_ei,
+    },
+    {
+        .data_type = QMI_OPT_FLAG,
+        .elem_len = 1,
+        .elem_size = sizeof(bool),
+        .tlv_type = 0x12,
+        .offset = offsetof(struct uim_get_slots_resp, eid_info_valid),
+    },
+    {
+        .data_type = QMI_DATA_LEN,
+        .elem_len = 1,
+        .elem_size = sizeof(uint8_t),
+        .tlv_type = 0x12,
+        .offset = offsetof(struct uim_get_slots_resp, eid_info_len),
+    },
+    {
+        .data_type = QMI_STRUCT,
+        .elem_len = 10,
+        .elem_size = sizeof(uim_slot_eid_info),
+        .array_type = VAR_LEN_ARRAY,
+        .tlv_type = 0x12,
+        .offset = offsetof(struct uim_get_slots_resp, eid_info),
+        .ei_array = uim_slot_eid_info_ei,
     },
     {}};
 

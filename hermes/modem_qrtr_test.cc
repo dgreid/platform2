@@ -413,6 +413,10 @@ class ModemQrtrTest : public testing::Test {
     ModemReceiveData(kQrtrGetSlotsResp.begin(), kQrtrGetSlotsResp.end(),
                      kUimPort);
     EXPECT_EQ(euicc_manager_.valid_slots().size(), 2);
+    EXPECT_EQ(euicc_manager_.valid_slots().at(1),
+              EuiccSlotInfo("89033023425120000000000971041704"));
+    EXPECT_EQ(euicc_manager_.valid_slots().at(2),
+              EuiccSlotInfo(1, "89033023425120000000000011646811"));
     EXPECT_EQ(1, modem_->logical_slot_);
   }
 

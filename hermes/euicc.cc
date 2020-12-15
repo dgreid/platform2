@@ -27,14 +27,21 @@ namespace hermes {
 
 Euicc::Euicc(uint8_t physical_slot, EuiccSlotInfo slot_info)
     : physical_slot_(physical_slot),
+      slot_info_(std::move(slot_info)),
       context_(Context::Get()),
       dbus_adaptor_(context_->adaptor_factory()->CreateEuiccAdaptor(this)) {
   dbus_adaptor_->SetPendingProfiles({});
-  UpdateSlotInfo(std::move(slot_info));
+  UpdateSlotInfo(slot_info_);
 }
 
 void Euicc::UpdateSlotInfo(EuiccSlotInfo slot_info) {
   slot_info_ = std::move(slot_info);
+  dbus_adaptor_->SetEid(slot_info_.eid());
+  dbus_adaptor_->SetIsActive(slot_info_.IsActive());
+}
+
+void Euicc::UpdateLogicalSlot(base::Optional<uint8_t> logical_slot) {
+  slot_info_.SetLogicalSlot(std::move(logical_slot));
   dbus_adaptor_->SetIsActive(slot_info_.IsActive());
 }
 

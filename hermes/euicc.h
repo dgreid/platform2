@@ -27,6 +27,7 @@ class Euicc {
   Euicc& operator=(const Euicc&) = delete;
 
   void UpdateSlotInfo(EuiccSlotInfo slot_info);
+  void UpdateLogicalSlot(base::Optional<uint8_t> logical_slot);
 
   // Install a profile. An empty activation code will cause the default profile
   // to be installed.

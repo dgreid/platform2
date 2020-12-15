@@ -19,6 +19,9 @@ class EuiccManagerInterface {
   // Remove the Euicc at the corresponding physical slot. Calling this when no
   // Euicc exists for |physical_slot| is a noop.
   virtual void OnEuiccRemoved(uint8_t physical_slot) = 0;
+
+  virtual void OnEuiccLogicalSlotUpdated(
+      uint8_t physical_slot, base::Optional<uint8_t> logical_slot) = 0;
 };
 
 }  // namespace hermes

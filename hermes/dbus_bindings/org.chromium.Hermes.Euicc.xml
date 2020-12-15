@@ -75,6 +75,7 @@
       </arg>
     </method>
 
+    <property name="Eid" type="s" access="read" />
     <property name="InstalledProfiles" type="ao" access="read" />
     <property name="IsActive" type="b" access="read" />
     <property name="PendingProfiles" type="ao" access="read" />

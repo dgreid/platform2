@@ -62,6 +62,10 @@ struct physical_slot_status {
   u8 iccid(u8 : kIccidMaxSize);
 };
 
+struct slot_eid_info {
+  u8 eid(u8 : 255);
+};
+
 struct physical_slot_info {
   u32 card_protocol;
   u8 num_app;
@@ -75,7 +79,8 @@ request get_slots_req {
 response get_slots_resp {
   required qmi_result result = 0x2;
   optional physical_slot_status status(u8 : 10) = 0x10;
-  optional physical_slot_info info(u8 : 10) = 0x11;
+  optional physical_slot_info slot_info(u8 : 10) = 0x11;
+  optional slot_eid_info eid_info(u8 : 10) = 0x12;
 } = 0x47;
 
 

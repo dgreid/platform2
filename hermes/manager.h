@@ -28,6 +28,8 @@ class Manager final : public EuiccManagerInterface {
   // EuiccManagerInterface overrides.
   void OnEuiccUpdated(uint8_t physical_slot, EuiccSlotInfo slot_info) override;
   void OnEuiccRemoved(uint8_t physical_slot) override;
+  void OnEuiccLogicalSlotUpdated(uint8_t physical_slot,
+                                 base::Optional<uint8_t> logical_slot) override;
 
  private:
   void UpdateAvailableEuiccsProperty();

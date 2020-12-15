@@ -20,11 +20,15 @@ class FakeEuiccManager : public EuiccManagerInterface {
 
   // EuiccManagerInterface overrides.
   void OnEuiccUpdated(uint8_t physical_slot, EuiccSlotInfo slot_info) override {
-    valid_slots_[physical_slot] = std::move(slot_info);
+    valid_slots_.insert(std::make_pair(physical_slot, std::move(slot_info)));
   }
   void OnEuiccRemoved(uint8_t physical_slot) override {
     valid_slots_.erase(physical_slot);
   }
+  void OnEuiccLogicalSlotUpdated(
+      uint8_t physical_slot, base::Optional<uint8_t> logical_slot) override {
+    valid_slots_.at(physical_slot).SetLogicalSlot(std::move(logical_slot));
+  };
 
  private:
   // Map of physical slot number -> eUICC slot info.

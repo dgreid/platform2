@@ -54,4 +54,12 @@ void Manager::UpdateAvailableEuiccsProperty() {
   dbus_adaptor_->SetAvailableEuiccs(euicc_paths);
 }
 
+void Manager::OnEuiccLogicalSlotUpdated(uint8_t physical_slot,
+                                        base::Optional<uint8_t> logical_slot) {
+  auto iter = available_euiccs_.find(physical_slot);
+  CHECK(iter != available_euiccs_.end()) << "Cannot update logical slot";
+
+  iter->second->UpdateLogicalSlot(std::move(logical_slot));
+}
+
 }  // namespace hermes
