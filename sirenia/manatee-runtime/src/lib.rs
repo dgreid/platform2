@@ -8,7 +8,7 @@ use std::borrow::{Borrow, BorrowMut};
 use std::collections::HashMap;
 use std::fmt::{self, Debug, Display};
 
-use libsirenia::communication::storage::{self, Storable, StorableMember, Storage};
+use libsirenia::storage::{self, Storable, StorableMember, Storage};
 
 #[derive(Debug)]
 pub enum Error {

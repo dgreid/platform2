@@ -5,7 +5,7 @@
 //! Defines the messages and abstracts out communication for storage between
 //! TEE apps, Trichechus, and Dugong.
 
-use libsirenia::communication::storage::{self, Error, Result, Storable, Storage};
+use libsirenia::storage::{Error, Result, Storable, Storage};
 use libsirenia::transport::Transport;
 
 pub struct TrichechusStorage {
@@ -13,16 +13,18 @@ pub struct TrichechusStorage {
     connection: Transport,
 }
 
-impl Storage for TrichechusStorage {
+impl TrichechusStorage {
     fn new() -> Self {
         panic!()
     }
+}
 
+impl Storage for TrichechusStorage {
     fn read_data<S: Storable>(&mut self, id: &str) -> Result<S> {
-        Err(Error::ReadData)
+        Err(Error::ReadData(None))
     }
 
     fn write_data<S: Storable>(&mut self, id: &str, data: &S) -> Result<()> {
-        Err(Error::WriteData)
+        Err(Error::WriteData(None))
     }
 }

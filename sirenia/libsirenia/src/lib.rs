@@ -8,5 +8,6 @@
 pub mod communication;
 pub mod linux;
 pub mod sandbox;
+pub mod storage;
 pub mod to_sys_util;
 pub mod transport;
