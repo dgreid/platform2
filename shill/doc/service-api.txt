@@ -1757,6 +1757,15 @@ Properties	string ArcVpn.TunnelChrome [writeonly]
 			See also the Name property. (Note that there is
 			no SSID property for reasons explained above.)
 
+		boolean WiFi.RekeyInProgress [readonly]
+
+			True when the connected network is attempting to
+			rekey. PSK networks can periodically change pairwise
+			or group keys for increased protection against attacks.
+			This flag guards against state changes in shill that
+			would otherwise change the service sort order and
+			potentially disrupt connectivity.
+
 		string WiFi.RoamState [readonly]
 
 			The state of the service during a within-ESS roam. The
@@ -1775,7 +1784,6 @@ Properties	string ArcVpn.TunnelChrome [writeonly]
 
 			"ready"		IP has been renewed, and the service
 					is awaiting portal detection results.
-
 
 		string WiFi.SSID [readonly]
 

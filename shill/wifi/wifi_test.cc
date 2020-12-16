@@ -1019,7 +1019,6 @@ class WiFiObjectTest : public ::testing::TestWithParam<string> {
   }
   bool GetSupplicantPresent() { return wifi_->supplicant_present_; }
   bool GetIsRoamingInProgress() { return wifi_->is_roaming_in_progress_; }
-  bool GetIsRekeyInProgress() { return wifi_->is_rekey_in_progress_; }
   void SetIsRoamingInProgress(bool is_roaming_in_progress) {
     wifi_->is_roaming_in_progress_ = is_roaming_in_progress;
   }
@@ -3481,11 +3480,11 @@ TEST_F(WiFiMainTest, RekeyDoesNotTriggerStateChange) {
   EXPECT_CALL(*service, IsConnected(nullptr)).WillRepeatedly(Return(true));
   EXPECT_CALL(*service, SetState(_)).Times(0);
   ReportStateChanged(WPASupplicant::kInterfaceState4WayHandshake);
-  ASSERT_TRUE(GetIsRekeyInProgress());
+  ASSERT_TRUE(GetCurrentService()->is_rekey_in_progress());
   ReportStateChanged(WPASupplicant::kInterfaceStateGroupHandshake);
-  ASSERT_TRUE(GetIsRekeyInProgress());
+  ASSERT_TRUE(GetCurrentService()->is_rekey_in_progress());
   ReportStateChanged(WPASupplicant::kInterfaceStateCompleted);
-  ASSERT_FALSE(GetIsRekeyInProgress());
+  ASSERT_FALSE(GetCurrentService()->is_rekey_in_progress());
   Mock::VerifyAndClearExpectations(service.get());
 }
 

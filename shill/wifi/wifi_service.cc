@@ -83,7 +83,8 @@ WiFiService::WiFiService(Manager* manager,
       expecting_disconnect_(false),
       certificate_file_(new CertificateFile()),
       provider_(provider),
-      roam_state_(kRoamStateIdle) {
+      roam_state_(kRoamStateIdle),
+      is_rekey_in_progress_(false) {
   // Must be constructed with a SecurityClass. We only detect (for internal and
   // informational purposes) the specific mode in use later.
   CHECK(IsValidSecurityClass(security_)) << base::StringPrintf(
@@ -111,6 +112,8 @@ WiFiService::WiFiService(Manager* manager,
                                 &vendor_information_);
   HelpRegisterConstDerivedString(kWifiRoamStateProperty,
                                  &WiFiService::CalculateRoamState);
+  store->RegisterConstBool(kWifiRekeyInProgressProperty,
+                           &is_rekey_in_progress_);
 
   hex_ssid_ = base::HexEncode(ssid_.data(), ssid_.size());
   store->RegisterConstString(kWifiHexSsid, &hex_ssid_);
@@ -1184,6 +1187,15 @@ string WiFiService::GetRoamStateString() const {
     default:
       return "";
   }
+}
+
+void WiFiService::SetIsRekeyInProgress(bool is_rekey_in_progress) {
+  if (is_rekey_in_progress == is_rekey_in_progress_) {
+    return;
+  }
+  is_rekey_in_progress_ = is_rekey_in_progress;
+  adaptor()->EmitBoolChanged(kWifiRekeyInProgressProperty,
+                             is_rekey_in_progress_);
 }
 
 }  // namespace shill

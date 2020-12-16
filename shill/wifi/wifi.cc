@@ -146,7 +146,6 @@ WiFi::WiFi(Manager* manager,
       has_already_completed_(false),
       is_roaming_in_progress_(false),
       pending_eap_failure_(Service::kFailureNone),
-      is_rekey_in_progress_(false),
       is_debugging_connection_(false),
       eap_state_handler_(new SupplicantEAPStateHandler()),
       bgscan_short_interval_seconds_(kDefaultBgscanShortIntervalSeconds),
@@ -185,7 +184,6 @@ WiFi::WiFi(Manager* manager,
   HelpRegisterDerivedBool(store, kMacAddressRandomizationEnabledProperty,
                           &WiFi::GetRandomMacEnabled,
                           &WiFi::SetRandomMacEnabled);
-  store->RegisterConstBool(kRekeyInProgressProperty, &is_rekey_in_progress_);
 
   store->RegisterDerivedKeyValueStore(
       kLinkStatisticsProperty,
@@ -803,7 +801,9 @@ void WiFi::CurrentBSSChanged(const RpcIdentifier& new_bss) {
   supplicant_bss_ = new_bss;
   has_already_completed_ = false;
   is_roaming_in_progress_ = false;
-  SetIsRekeyInProgress(false);
+  if (current_service_) {
+    current_service_->SetIsRekeyInProgress(false);
+  }
 
   // Any change in CurrentBSS means supplicant is actively changing our
   // connectivity.  We no longer need to track any previously pending
@@ -1893,8 +1893,8 @@ void WiFi::StateChanged(const string& new_state) {
           ipconfig()->RenewIP();
           affected_service->SetRoamState(Service::kRoamStateConfiguring);
         }
-      } else if (is_rekey_in_progress_) {
-        SetIsRekeyInProgress(false);
+      } else if (affected_service->is_rekey_in_progress()) {
+        affected_service->SetIsRekeyInProgress(false);
         LOG(INFO) << link_name()
                   << " EAP re-key complete. No need to renew L3 configuration.";
       }
@@ -1938,7 +1938,7 @@ void WiFi::StateChanged(const string& new_state) {
       // reordering the service list, set the roam state to keep track of the
       // actual state.
       affected_service->SetRoamState(Service::kRoamStateAssociating);
-    } else if (!is_rekey_in_progress_) {
+    } else if (!affected_service->is_rekey_in_progress()) {
       // Ignore transitions into these states when roaming is in progress, to
       // avoid bothering the user when roaming, or re-keying.
       if (old_state == WPASupplicant::kInterfaceStateCompleted) {
@@ -1946,7 +1946,7 @@ void WiFi::StateChanged(const string& new_state) {
         // nothing when it happens in a PSK network. Unless roaming is in
         // progress, we assume supplicant state transitions from completed to an
         // auth/assoc state are a result of a re-key.
-        SetIsRekeyInProgress(true);
+        affected_service->SetIsRekeyInProgress(true);
       } else {
         affected_service->SetState(Service::kStateAssociating);
       }
@@ -3268,14 +3268,6 @@ bool WiFi::RequestRoam(const std::string& addr, Error* error) {
     return false;
   }
   return true;
-}
-
-void WiFi::SetIsRekeyInProgress(bool is_rekey_in_progress) {
-  if (is_rekey_in_progress == is_rekey_in_progress_) {
-    return;
-  }
-  is_rekey_in_progress_ = is_rekey_in_progress;
-  adaptor()->EmitBoolChanged(kRekeyInProgressProperty, is_rekey_in_progress_);
 }
 
 }  // namespace shill

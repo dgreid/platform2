@@ -639,17 +639,6 @@ Properties	string Address [readonly]
 			these counters from all interfaces every 60 seconds
 			so this value returned might be slightly old.
 
-		boolean RekeyInProgress [readonly]
-
-			(Defined in WiFi)
-
-			True when the connected network is attempting to
-			rekey. PSK networks can periodically change pairwise
-			or group keys for increased protection against attacks.
-			This flag guards against state changes in shill that
-			would otherwise change the service sort order and
-			potentially disrupt connectivity.
-
 		uint16 ScanInterval [readwrite]
 
 			(Defined in WiFi and Cellular)

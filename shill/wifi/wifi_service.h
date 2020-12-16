@@ -108,6 +108,9 @@ class WiFiService : public Service {
   std::string GetRoamStateString() const;
   std::string CalculateRoamState(Error* error);
 
+  void SetIsRekeyInProgress(bool is_rekey_in_progress);
+  bool is_rekey_in_progress() const { return is_rekey_in_progress_; }
+
   virtual bool HasEndpoints() const { return !endpoints_.empty(); }
   bool IsVisible() const override;
   bool IsSecurityMatch(const std::string& security) const;
@@ -356,6 +359,10 @@ class WiFiService : public Service {
   // preserve the service sort order. |roam_state_| is valid during this process
   // (while the Service is Online but reassociation is happening) only.
   RoamState roam_state_;
+  // Indicates that the current BSS has attempted to "re-key". We optimistically
+  // assume that this succeeds and don't perform any state transitions to avoid
+  // disrupting connectivity.
+  bool is_rekey_in_progress_;
 };
 
 }  // namespace shill
