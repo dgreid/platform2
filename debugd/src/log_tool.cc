@@ -568,6 +568,7 @@ std::string Log::GetLogData() const {
       output = GetFileLogData();
       break;
     default:
+      DCHECK(false) << "unknown log type";
       return "<unknown log type>";
   }
 
@@ -579,6 +580,7 @@ std::string Log::GetLogData() const {
 
 // TODO(ellyjones): sandbox. crosbug.com/35122
 std::string Log::GetCommandLogData() const {
+  DCHECK_EQ(type_, kCommand);
   if (type_ != kCommand)
     return "<log type mismatch>";
   std::string tailed_cmdline =
@@ -602,6 +604,7 @@ std::string Log::GetCommandLogData() const {
 }
 
 std::string Log::GetFileLogData() const {
+  DCHECK_EQ(type_, kFile);
   if (type_ != kFile)
     return "<log type mismatch>";
 
