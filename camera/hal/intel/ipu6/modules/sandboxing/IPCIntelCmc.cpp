@@ -30,8 +30,10 @@ IPCIntelCmc::~IPCIntelCmc() {
     LOGIPC("@%s", __func__);
 }
 
-bool IPCIntelCmc::clientFlattenInit(const ia_binary_data& aiqb, cmc_init_params* params) {
-    LOGIPC("@%s, aiqb: data:%p, size:%d, params:%p", __func__, aiqb.data, aiqb.size, params);
+bool IPCIntelCmc::clientFlattenInit(const ia_binary_data& aiqb, const ia_binary_data* nvmData,
+                                    cmc_init_params* params) {
+    LOGIPC("@%s, aiqb: data:%p, size:%d, nvmData %p, params:%p", __func__, aiqb.data, aiqb.size,
+           nvmData, params);
 
     CheckError(!params, false, "@%s, params is nullptr", __func__);
     CheckError(!aiqb.data, false, "@%s, aiqb.data is nullptr", __func__);
@@ -40,8 +42,17 @@ bool IPCIntelCmc::clientFlattenInit(const ia_binary_data& aiqb, cmc_init_params*
                aiqb.size);
 
     ia_binary_data_mod* input = &params->input;
-    MEMCPY_S(input->data, sizeof(input->data), aiqb.data, aiqb.size);
-    input->size = aiqb.size;
+    char* ptr = input->data;
+
+    MEMCPY_S(ptr, sizeof(input->data), aiqb.data, aiqb.size);
+    params->aiqb_size = aiqb.size;
+
+    params->nvm_size = 0;
+    ptr += aiqb.size;
+    if (nvmData) {
+        MEMCPY_S(ptr, sizeof(input->data) - aiqb.size, nvmData->data, nvmData->size);
+        params->nvm_size = nvmData->size;
+    }
 
     return true;
 }
@@ -60,13 +71,20 @@ bool IPCIntelCmc::clientUnflattenInit(const cmc_init_params& params, ia_cmc_t** 
     return true;
 }
 
-bool IPCIntelCmc::serverUnflattenInit(const cmc_init_params& params, ia_binary_data* aiqb) {
-    LOGIPC("@%s, aiqb:%p", __func__, aiqb);
+bool IPCIntelCmc::serverUnflattenInit(const cmc_init_params& params, ia_binary_data* aiqb,
+                                     ia_binary_data* nvmData) {
+    LOGIPC("@%s, aiqb:%p, nvmData:%p", __func__, aiqb, nvmData);
     CheckError(aiqb == nullptr, false, "@%s, aiqb is nullptr", __func__);
+    CheckError(nvmData == nullptr, false, "@%s, nvmData is nullptr", __func__);
 
     ia_binary_data_mod* input = const_cast<ia_binary_data_mod*>(&params.input);
     aiqb->data = input->data;
-    aiqb->size = input->size;
+    aiqb->size = params.aiqb_size;
+
+    if (params.nvm_size > 0) {
+        nvmData->data = input->data + aiqb->size;
+        nvmData->size = params.nvm_size;
+    }
 
     return true;
 }

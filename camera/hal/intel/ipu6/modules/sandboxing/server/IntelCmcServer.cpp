@@ -45,13 +45,14 @@ status_t IntelCmcServer::init(void* pData, int dataSize) {
 
     cmc_init_params* params = static_cast<cmc_init_params*>(pData);
     ia_binary_data aiqbData = {nullptr, 0};
+    ia_binary_data nvmData = {nullptr, 0};
 
-    bool ret = mIpc.serverUnflattenInit(*params, &aiqbData);
+    bool ret = mIpc.serverUnflattenInit(*params, &aiqbData, &nvmData);
     CheckError(ret == false, UNKNOWN_ERROR, "@%s, serverUnflattenInit fails", __func__);
 
     std::unique_ptr<IntelCmc> intelCmc = std::make_unique<IntelCmc>();
 
-    ret = intelCmc->init(&aiqbData, nullptr);
+    ret = intelCmc->init(&aiqbData, nvmData.size > 0 ? &nvmData : nullptr);
     CheckError(ret == false, UNKNOWN_ERROR, "@%s, intelCmc->init fails", __func__);
 
     ia_cmc_t* cmc = intelCmc->getCmc();

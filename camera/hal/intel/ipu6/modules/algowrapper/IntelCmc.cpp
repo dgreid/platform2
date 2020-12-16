@@ -33,7 +33,6 @@ IntelCmc::~IntelCmc() {
 bool IntelCmc::init(const ia_binary_data* aiqbData, const ia_binary_data* nvmData) {
     LOG1("@%s, aiqbData:%p, nvmData:%p", __func__, aiqbData, nvmData);
     CheckError(!aiqbData, false, "aiqbData is nullptr");
-    CheckError(nvmData, false, "nvmData is not nullptr");  // it doesn't support nvmData currently.
 
     mHandle = ia_cmc_parser_init_v1(aiqbData, nvmData);
     LOG1("@%s, mHandle:%p", __func__, mHandle);

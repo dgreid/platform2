@@ -54,7 +54,6 @@ IntelCmc::~IntelCmc() {
 
 bool IntelCmc::init(const ia_binary_data* aiqbData, const ia_binary_data* nvmData) {
     LOGIPC("@%s, aiqbData:%p, nvmData:%p", __func__, aiqbData, nvmData);
-    CheckError(nvmData, false, "@%s, nvmData should be nullptr", __func__);
 
     CheckError(mInitialized == false, false, "@%s, mInitialized is false", __func__);
     CheckError(!aiqbData, false, "@%s, aiqbData is nullptr", __func__);
@@ -63,7 +62,7 @@ bool IntelCmc::init(const ia_binary_data* aiqbData, const ia_binary_data* nvmDat
 
     cmc_init_params* params = static_cast<cmc_init_params*>(mMemInit.mAddr);
 
-    bool ret = mIpc.clientFlattenInit(*aiqbData, params);
+    bool ret = mIpc.clientFlattenInit(*aiqbData, nvmData, params);
     CheckError(ret == false, false, "@%s, clientFlattenInit fails", __func__);
 
     ret = mCommon.requestSync(IPC_CMC_INIT, mMemInit.mHandle);

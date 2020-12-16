@@ -70,6 +70,8 @@ struct ia_cmc_data {
 
 struct cmc_init_params {
     ia_binary_data_mod input;
+    unsigned int aiqb_size;
+    unsigned int nvm_size;
     ia_cmc_data results;
 };
 
@@ -83,11 +85,13 @@ class IPCIntelCmc {
     virtual ~IPCIntelCmc();
 
     // for init
-    bool clientFlattenInit(const ia_binary_data& aiqb, cmc_init_params* params);
+    bool clientFlattenInit(const ia_binary_data& aiqb, const ia_binary_data* nvmData,
+                           cmc_init_params* params);
     bool clientUnflattenInit(const cmc_init_params& params, ia_cmc_t** cmc,
                              uintptr_t* cmcRemoteHandle);
     bool serverFlattenInit(const ia_cmc_t& cmc, cmc_init_params* params);
-    bool serverUnflattenInit(const cmc_init_params& pData, ia_binary_data* aiqb);
+    bool serverUnflattenInit(const cmc_init_params& pData, ia_binary_data* aiqb,
+                             ia_binary_data* nvmData);
 
     bool flattenCmcData(const ia_cmc_t* cmc, ia_cmc_data* results);
     bool unflattenCmcData(ia_cmc_data* results);

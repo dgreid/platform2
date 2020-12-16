@@ -125,7 +125,7 @@ void AiqdData::saveAiqdToFile()
     LOG1("%s, aiqd file %s, size %d", __func__, mAiqdFileName.c_str(), mBinaryData.size);
 }
 
-CpfConf::CpfConf()
+CpfConf::CpfConf(ia_binary_data* nvmData) : mNvmData(nvmData)
 {
     mLard = new IntelLard();
     mCmc = std::unique_ptr<IntelCmc>(new IntelCmc());
@@ -159,7 +159,7 @@ int CpfConf::init(const ia_binary_data& cpfData, const LardTagConfig* lardTagCfg
         ia_err iaErr = mLard->run(iaLard, &lardInputParams, &lardResults);
         if (lardResults != nullptr) {
             LOG1("ia_lard_run success, using lard to get cmc mode and tuning.");
-            cmcRet = mCmc->init(&lardResults->aiqb_cmc_data, nullptr);
+            cmcRet = mCmc->init(&lardResults->aiqb_cmc_data, mNvmData);
             mAiq = lardResults->aiqb_aiq_data;
             mIsp = lardResults->aiqb_isp_data;
             mOthers = lardResults->aiqb_other_data;
@@ -169,7 +169,7 @@ int CpfConf::init(const ia_binary_data& cpfData, const LardTagConfig* lardTagCfg
         mLard->deinit(iaLard);
     } else {
         LOG1("Lard not supported. The AIQB file may be in old CPF format");
-        cmcRet = mCmc->init(&cpfData, nullptr);
+        cmcRet = mCmc->init(&cpfData, mNvmData);
         mAiq = cpfData;
         mIsp = cpfData;
         mOthers = cpfData;
@@ -263,7 +263,8 @@ CpfStore::CpfStore(const std::string& sensorName, const std::string& camCfgDir,
                    const std::vector<TuningConfig>& tuningCfg,
                    const std::vector<LardTagConfig>& lardTagCfg,
                    const std::string& nvmPath,
-                   std::unordered_map<std::string, std::string> camModuleToAiqbMap)
+                   std::unordered_map<std::string, std::string> camModuleToAiqbMap,
+                   ia_binary_data* nvmData)
 {
     LOG1("@%s:Sensor Name = %s", __func__, sensorName.c_str());
 
@@ -308,7 +309,7 @@ CpfStore::CpfStore(const std::string& sensorName, const std::string& camCfgDir,
             }
         }
 
-        CpfConf* cpfConf = new CpfConf();
+        CpfConf* cpfConf = new CpfConf(nvmData);
 
         cpfConf->init(mCpfData[aiqbName], oneLardTagCfg);
         mCpfConfig[cfg.tuningMode] = cpfConf;
@@ -549,8 +550,9 @@ int AiqInitData::getCpfAndCmc(ia_binary_data* ispData,
                               ia_cmc_t** cmcData)
 {
     if (!mCpfStore) {
+        ia_binary_data* nvmData = getNvm();
         mCpfStore = new CpfStore(mSensorName, mCamCfgDir, mTuningCfg, mLardTagCfg,
-                                 mNvmPath, mCameraModuleToAiqbMap);
+                                 mNvmPath, mCameraModuleToAiqbMap, nvmData);
     }
     return mCpfStore->getCpfAndCmc(ispData, aiqData, otherData, cmcHandle, mode, cmcData);
 }
