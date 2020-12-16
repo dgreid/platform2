@@ -49,6 +49,9 @@ MockPlatform::MockPlatform()
   ON_CALL(*this, CreateDirectory(_))
       .WillByDefault(
           Invoke(fake_platform_.get(), &FakePlatform::CreateDirectory));
+  ON_CALL(*this, CreateSparseFile(_, _))
+      .WillByDefault(
+          Invoke(fake_platform_.get(), &FakePlatform::CreateSparseFile));
 
   ON_CALL(*this, ReadFile(_, _))
       .WillByDefault(Invoke(fake_platform_.get(), &FakePlatform::ReadFile));

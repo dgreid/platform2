@@ -71,6 +71,7 @@ class FakePlatform final : public Platform {
   bool FileExists(const base::FilePath& path) override;
   bool DirectoryExists(const base::FilePath& path) override;
   bool CreateDirectory(const base::FilePath& path) override;
+  bool CreateSparseFile(const base::FilePath& path, int64_t size) override;
 
   bool ReadFile(const base::FilePath& path, brillo::Blob* blob) override;
   bool ReadFileToString(const base::FilePath& path, std::string* str) override;

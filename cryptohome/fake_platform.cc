@@ -121,6 +121,10 @@ bool FakePlatform::CreateDirectory(const base::FilePath& path) {
   return real_platform_.CreateDirectory(TestFilePath(path));
 }
 
+bool FakePlatform::CreateSparseFile(const base::FilePath& path, int64_t size) {
+  return real_platform_.CreateSparseFile(TestFilePath(path), size);
+}
+
 bool FakePlatform::ReadFile(const base::FilePath& path, brillo::Blob* blob) {
   return real_platform_.ReadFile(TestFilePath(path), blob);
 }
