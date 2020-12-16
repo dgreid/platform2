@@ -20,6 +20,7 @@ namespace cryptohome {
 enum class BackingDeviceType {
   kUnknown = 0,
   kLoopbackDevice,
+  kLogicalVolumeBackingDevice,
 };
 
 // Configuration for backing devices.
@@ -30,6 +31,10 @@ struct BackingDeviceConfig {
   struct {
     base::FilePath backing_file_path;
   } loopback;
+  struct {
+    std::string thinpool_name;
+    base::FilePath physical_volume;
+  } logical_volume;
 };
 
 // `BackingDevice` represents a backing block device that can be used as a

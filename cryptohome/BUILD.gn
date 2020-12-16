@@ -551,6 +551,12 @@ if (use.test) {
       deps += [ ":cert_provision-static" ]
     }
 
+    if (use.lvm_stateful_partition) {
+      sources += [
+        "storage/encrypted_container/logical_volume_backing_device_test.cc",
+      ]
+    }
+
     # TODO(crbug.com/1082873): Remove after fixing usage of deprecated
     # declarations.
     cflags_cc = [ "-Wno-error=deprecated-declarations" ]

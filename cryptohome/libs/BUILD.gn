@@ -13,6 +13,7 @@ import("//common-mk/proto_library.gni")
 
 config("target_defaults") {
   defines = [
+    "USE_LVM_STATEFUL_PARTITION=${use.lvm_stateful_partition}",
     "USE_PINWEAVER=${use.pinweaver}",
     "USE_SELINUX=${use.selinux}",
     "USE_TPM2=${use.tpm2}",
@@ -157,6 +158,13 @@ static_library("libcrosplatform") {
   if (use.selinux) {
     libs += [ "selinux" ]
   }
+
+  defines = [ "USE_LVM_STATEFUL_PARTIITON=${use.lvm_stateful_partition}" ]
+  if (use.lvm_stateful_partition) {
+    sources +=
+        [ "../storage/encrypted_container/logical_volume_backing_device.cc" ]
+  }
+
   all_dependent_configs = [ ":libcrosplatform_dependent_config" ]
 
   deps = [ ":cryptohome-proto" ]
