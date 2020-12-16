@@ -108,7 +108,7 @@ void SensorDeviceImpl::OpenBuffer(OpenBufferCallback callback) {
   device_fd_ = std::move(device_fd);
   pipe_write_end_ = std::move(pipe_write_end);
   // Return the pipe read end to the caller.
-  std::move(callback).Run(mojo::WrapPlatformFile(pipe_read_end.release()));
+  std::move(callback).Run(mojo::WrapPlatformFile(std::move(pipe_read_end)));
 }
 
 void SensorDeviceImpl::OnDeviceFdReadReady() {
