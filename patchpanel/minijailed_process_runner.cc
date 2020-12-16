@@ -8,6 +8,7 @@
 #include <sys/wait.h>
 #include <utility>
 
+#include <base/files/scoped_file.h>
 #include <base/logging.h>
 #include <base/posix/eintr_wrapper.h>
 #include <base/strings/string_number_conversions.h>
@@ -38,19 +39,25 @@ constexpr char kModprobePath[] = "/sbin/modprobe";
 constexpr char kSysctlPath[] = "/usr/sbin/sysctl";
 
 // An empty string will be returned if read fails.
-std::string ReadBlockingFDToString(int fd) {
+std::string ReadBlockingFDToStringAndClose(base::ScopedFD fd) {
+  if (!fd.is_valid()) {
+    LOG(ERROR) << "Invalid fd";
+    return "";
+  }
+
   static constexpr int kBufSize = 2048;
   char buf[kBufSize] = {0};
   std::string output;
   while (true) {
-    ssize_t cnt = HANDLE_EINTR(read(fd, buf, kBufSize));
+    ssize_t cnt = HANDLE_EINTR(read(fd.get(), buf, kBufSize));
     if (cnt == -1) {
       PLOG(ERROR) << __func__ << " failed";
-      return {};
+      return "";
     }
 
-    if (cnt == 0)
+    if (cnt == 0) {
       return output;
+    }
 
     output.append({buf, static_cast<size_t>(cnt)});
   }
@@ -69,7 +76,7 @@ int MinijailedProcessRunner::RunSyncDestroy(
     brillo::Minijail* mj,
     minijail* jail,
     bool log_failures,
-    int* fd_stdout) {
+    std::string* output) {
   std::vector<char*> args;
   for (const auto& arg : argv) {
     args.push_back(const_cast<char*>(arg.c_str()));
@@ -77,9 +84,15 @@ int MinijailedProcessRunner::RunSyncDestroy(
   args.push_back(nullptr);
 
   pid_t pid;
-  int status = 0;
+  int fd_stdout = -1;
+  int* stdout_p = output ? &fd_stdout : nullptr;
   bool ran = mj->RunPipesAndDestroy(jail, args, &pid, nullptr /*stdin*/,
-                                    fd_stdout, nullptr /*stderr*/);
+                                    stdout_p, nullptr /*stderr*/);
+  if (output) {
+    *output = ReadBlockingFDToStringAndClose(base::ScopedFD(fd_stdout));
+  }
+
+  int status = 0;
   if (ran) {
     ran = syscall_->WaitPID(pid, &status) == pid;
   }
@@ -104,19 +117,7 @@ int MinijailedProcessRunner::RunSyncDestroy(
 int MinijailedProcessRunner::RunSync(const std::vector<std::string>& argv,
                                      bool log_failures,
                                      std::string* output) {
-  if (!output) {
-    return RunSyncDestroy(argv, mj_, mj_->New(), log_failures, nullptr);
-  }
-
-  int fd_stdout = -1;
-  int ret = RunSyncDestroy(argv, mj_, mj_->New(), log_failures, &fd_stdout);
-  if (ret == 0 && fd_stdout > 0) {
-    *output = ReadBlockingFDToString(fd_stdout);
-  }
-  if (fd_stdout > 0) {
-    close(fd_stdout);
-  }
-  return ret;
+  return RunSyncDestroy(argv, mj_, mj_->New(), log_failures, output);
 }
 
 void EnterChildProcessJail() {

@@ -111,7 +111,7 @@ class MinijailedProcessRunner {
                      brillo::Minijail* mj,
                      minijail* jail,
                      bool log_failures,
-                     int* fd_stdout);
+                     std::string* output);
 
   brillo::Minijail* mj_;
 
