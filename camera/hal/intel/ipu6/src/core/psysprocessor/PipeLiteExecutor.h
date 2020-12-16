@@ -49,6 +49,7 @@ public:
     void notifyStop();
 
     virtual bool fetchTnrOutBuffer(int64_t seq, std::shared_ptr<CameraBuffer> buf) { return false; }
+    virtual bool isBypassStillTnr(int64_t seq) { return true; }
     int releaseStatsBuffer(const std::shared_ptr<CameraBuffer> &statsBuf);
 
     void setStreamId(int streamId) { mStreamId = streamId; }

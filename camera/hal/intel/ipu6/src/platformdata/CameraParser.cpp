@@ -483,6 +483,9 @@ void CameraParser::handleSensor(CameraParser *profiles, const char *name, const 
     } else if (strcmp(name, "tnrExtraFrameNum") == 0) {
         int val = atoi(atts[1]);
         pCurrentCam->mTnrExtraFrameNum = val > 0 ? val : DEFAULT_TNR_EXTRA_FRAME_NUM;
+    } else if (strcmp(name, "tnrThresholdGain") == 0) {
+        float val = atof(atts[1]);
+        pCurrentCam->mTnrThresholdGain = val > 0 ? val : DEFAULT_TNR_THRESHOLD_GAIN;
     }
 }
 

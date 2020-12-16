@@ -95,6 +95,7 @@ public:
     int prepareIpuParams(long sequence, bool forceUpdate = false, TaskInfo *task = nullptr);
 
     bool fetchTnrOutBuffer(int64_t seq, std::shared_ptr<CameraBuffer> buf);
+    bool isBypassStillTnr(int64_t seq);
 
     /**
      * Use to handle the frame done event from the executors.
@@ -140,6 +141,7 @@ private:
     std::unordered_map<PipeExecutor*, int32_t> mExecutorStreamId;
     std::map<Port, std::vector<int32_t> > mOutputPortToStreamIds;
     PipeExecutor* mVideoTnrExecutor;
+    PipeExecutor* mStillTnrExecutor;
 
     // A lock for protecting task data from being accessed by different threads.
     Mutex mTaskLock;

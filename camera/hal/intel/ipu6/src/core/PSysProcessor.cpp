@@ -793,7 +793,8 @@ void PSysProcessor::handleStillPipeForTnr(long sequence, CameraBufferPortMap *ds
     LOG2("@%s, seq %ld, hold raw %d, last still seq %ld, still %d", __func__, sequence,
          mHoldRawBuffers, mLastStillTnrSequence, hasStill);
 
-    if (hasStill && sequence != (mLastStillTnrSequence + 1) && mHoldRawBuffers) {
+    bool bypass = mPSysDAGs[mCurConfigMode]->isBypassStillTnr(sequence);
+    if (!bypass && hasStill && sequence != (mLastStillTnrSequence + 1) && mHoldRawBuffers) {
         CameraBufferPortMap fakeTaskBuffers = *dstBuffers;
         for (const auto& item : fakeTaskBuffers) {
             if (item.second && item.second->getStreamUsage() != CAMERA_STREAM_STILL_CAPTURE) {

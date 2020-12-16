@@ -53,6 +53,8 @@ namespace icamera {
 #define FACE_ENGINE_DEFAULT_RUNNING_INTERVAL 1
 
 #define DEFAULT_TNR_EXTRA_FRAME_NUM 2
+#define DEFAULT_TNR_THRESHOLD_GAIN 2.0f
+
 /* Max number of the RAW buffer number is 32.
  * Max number size of the pipeline depth is 6.
  * Max setting count should be larger than raw buffer number + pipeline depth.
@@ -142,7 +144,8 @@ public:
                 mSwProcessingAlignWithIsp(false),
                 mMaxNvmDataSize(0),
                 mVideoStreamNum(DEFAULT_VIDEO_STREAM_NUM),
-                mTnrExtraFrameNum(DEFAULT_TNR_EXTRA_FRAME_NUM)
+                mTnrExtraFrameNum(DEFAULT_TNR_EXTRA_FRAME_NUM),
+                mTnrThresholdGain(DEFAULT_TNR_THRESHOLD_GAIN)
             {
             }
 
@@ -232,6 +235,7 @@ public:
             std::vector<IGraphType::ScalerInfo> mScalerInfo;
             int mVideoStreamNum;
             int mTnrExtraFrameNum;
+            float mTnrThresholdGain;
         };
 
         std::vector<CameraInfo> mCameras;
@@ -1194,5 +1198,9 @@ public:
      * the extra frame count for still stream
      */
      static int getTnrExtraFrameCount(int cameraId);
+     /**
+     * the threshold gain to trigger still tnr
+     */
+     static float getTnrThresholdGain(int cameraId);
 };
 } /* namespace icamera */
