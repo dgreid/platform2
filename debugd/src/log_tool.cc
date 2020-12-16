@@ -4,6 +4,7 @@
 
 #include "debugd/src/log_tool.h"
 
+#include <glob.h>
 #include <grp.h>
 #include <inttypes.h>
 #include <lzma.h>
@@ -76,6 +77,7 @@ constexpr const char kPerfDataDescription[] =
 using Log = LogTool::Log;
 constexpr Log::LogType kCommand = Log::kCommand;
 constexpr Log::LogType kFile = Log::kFile;
+constexpr Log::LogType kGlob = Log::kGlob;
 
 class ArcBugReportLog : public LogTool::Log {
  public:
@@ -148,8 +150,7 @@ const std::vector<Log> kCommandLogs {
   // There might be more than one record, so grab them all.
   // Plus, for <linux-3.19, it's named "console-ramoops", but for newer
   // versions, it's named "console-ramoops-#".
-  {kCommand, "console-ramoops",
-    "cat /sys/fs/pstore/console-ramoops* 2>/dev/null"},
+  {kGlob, "console-ramoops", "/sys/fs/pstore/console-ramoops*"},
   {kFile, "cpuinfo", "/proc/cpuinfo"},
   {kFile, "cr50_version", "/var/cache/cr50-version"},
   {kFile, "cros_ec.log", "/var/log/cros_ec.log",
@@ -190,9 +191,9 @@ const std::vector<Log> kCommandLogs {
     " /run/daemon-store/crosvm/*/log/*.log'", kRoot, kRoot},
   // 'dmesg' needs CAP_SYSLOG.
   {kCommand, "dmesg", "/bin/dmesg", kRoot, kRoot},
-  {kCommand, "drm_gem_objects", "cat /sys/kernel/debug/dri/?/gem",
+  {kGlob, "drm_gem_objects", "/sys/kernel/debug/dri/?/gem",
     SandboxedProcess::kDefaultUser, kDebugfsGroup},
-  {kCommand, "drm_state", "cat /sys/kernel/debug/dri/?/state",
+  {kGlob, "drm_state", "/sys/kernel/debug/dri/?/state",
     SandboxedProcess::kDefaultUser, kDebugfsGroup},
   {kFile, "ec_info", "/var/log/ec_info.txt"},
   {kCommand, "edid-decode",
@@ -203,7 +204,7 @@ const std::vector<Log> kCommandLogs {
     "done"},
   {kFile, "eventlog", "/var/log/eventlog.txt"},
   {kCommand, "font_info", "/usr/share/userfeedback/scripts/font_info"},
-  {kCommand, "framebuffer", "cat /sys/kernel/debug/dri/?/framebuffer",
+  {kGlob, "framebuffer", "/sys/kernel/debug/dri/?/framebuffer",
     SandboxedProcess::kDefaultUser, kDebugfsGroup},
   {kCommand, "fwupd_state", "/sbin/initctl emit fwupdtool-getdevices;"
     "cat /var/lib/fwupd/state.json", kRoot, kRoot},
@@ -230,8 +231,7 @@ const std::vector<Log> kCommandLogs {
   {kCommand, "iwlmvm_module_params", CMD_KERNEL_MODULE_PARAMS(iwlmvm)},
   {kCommand, "iwlwifi_module_params", CMD_KERNEL_MODULE_PARAMS(iwlwifi)},
 #endif  // USE_IWLWIFI_DUMP
-  {kCommand, "kernel-crashes",
-    "cat /var/spool/crash/kernel.*.kcrash 2>/dev/null",
+  {kGlob, "kernel-crashes", "/var/spool/crash/kernel.*.kcrash",
     SandboxedProcess::kDefaultUser, "crash-access"},
   {kCommand, "lsblk", "timeout -s KILL 5s lsblk -a", kRoot, kRoot,
     Log::kDefaultMaxBytes, LogTool::Encoding::kAutodetect, true},
@@ -241,7 +241,7 @@ const std::vector<Log> kCommandLogs {
   {kFile, "mali_memory", "/sys/kernel/debug/mali0/gpu_memory",
     SandboxedProcess::kDefaultUser, kDebugfsGroup},
   {kFile, "memd.parameters", "/var/log/memd/memd.parameters"},
-  {kCommand, "memd clips", "cat /var/log/memd/memd.clip* 2>/dev/null"},
+  {kGlob, "memd clips", "/var/log/memd/memd.clip*"},
   {kFile, "meminfo", "/proc/meminfo"},
   {kCommand, "memory_spd_info",
     // mosys may use 'i2c-dev', which may not be loaded yet.
@@ -292,7 +292,7 @@ const std::vector<Log> kCommandLogs {
   {kFile, "powerd.out", "/var/log/powerd.out"},
   {kFile, "powerwash_count", "/var/log/powerwash_count"},
   {kCommand, "ps", "/bin/ps auxZ"},
-  {kCommand, "qcom_fw_info", "grep ^ /sys/kernel/debug/qcom_socinfo/*/*",
+  {kGlob, "qcom_fw_info", "/sys/kernel/debug/qcom_socinfo/*/*",
     SandboxedProcess::kDefaultUser, kDebugfsGroup},
   // /proc/slabinfo is owned by root and has 0400 permission.
   {kFile, "slabinfo", "/proc/slabinfo", kRoot, kRoot},
@@ -570,6 +570,9 @@ std::string Log::GetLogData() const {
     case kFile:
       output = GetFileLogData();
       break;
+    case kGlob:
+      output = GetGlobLogData();
+      break;
     default:
       DCHECK(false) << "unknown log type";
       return "<unknown log type>";
@@ -606,15 +609,15 @@ std::string Log::GetCommandLogData() const {
   return output;
 }
 
-std::string Log::GetFileLogData() const {
-  DCHECK_EQ(type_, kFile);
-  if (type_ != kFile)
-    return "<log type mismatch>";
-
+// static
+std::string Log::GetFileData(const base::FilePath& path,
+                             int64_t max_bytes,
+                             const std::string& user,
+                             const std::string& group) {
   uid_t old_euid = geteuid();
-  uid_t new_euid = UidForUser(user_);
+  uid_t new_euid = UidForUser(user);
   gid_t old_egid = getegid();
-  gid_t new_egid = GidForGroup(group_);
+  gid_t new_egid = GidForGroup(group);
 
   if (new_euid == -1 || new_egid == -1) {
     return "<not available>";
@@ -634,24 +637,23 @@ std::string Log::GetFileLogData() const {
   }
 
   std::string contents;
-  const base::FilePath path(data_);
   // Handle special files that don't properly report length/allow lseek.
   if (base::FilePath("/dev").IsParent(path) ||
       base::FilePath("/proc").IsParent(path) ||
       base::FilePath("/sys").IsParent(path)) {
     if (!base::ReadFileToString(path, &contents))
       contents = "<not available>";
-    if (contents.size() > max_bytes_)
-      contents.erase(0, contents.size() - max_bytes_);
+    if (contents.size() > max_bytes)
+      contents.erase(0, contents.size() - max_bytes);
   } else {
     base::File file(path, base::File::FLAG_OPEN | base::File::FLAG_READ);
     if (!file.IsValid()) {
       contents = "<not available>";
     } else {
       int64_t length = file.GetLength();
-      if (length > max_bytes_) {
-        file.Seek(base::File::FROM_END, -max_bytes_);
-        length = max_bytes_;
+      if (length > max_bytes) {
+        file.Seek(base::File::FROM_END, -max_bytes);
+        length = max_bytes;
       }
       std::vector<char> buf(length);
       int read = file.ReadAtCurrentPos(buf.data(), buf.size());
@@ -671,6 +673,62 @@ std::string Log::GetFileLogData() const {
     PLOG(ERROR) << "Failed to restore effective group id to " << old_egid;
 
   return contents;
+}
+
+std::string Log::GetFileLogData() const {
+  DCHECK_EQ(type_, kFile);
+  if (type_ != kFile)
+    return "<log type mismatch>";
+
+  return GetFileData(base::FilePath(data_), max_bytes_, user_, group_);
+}
+
+std::string Log::GetGlobLogData() const {
+  DCHECK_EQ(type_, kGlob);
+  if (type_ != kGlob)
+    return "<log type mismatch>";
+
+  // NB: base::FileEnumerator requires a directory to walk, and a pattern to
+  // match against each result.  Here we accept full paths with globs in them.
+  glob_t g;
+  // NB: Feel free to add GLOB_BRACE if a user comes up.
+  int gret = glob(data_.c_str(), 0, nullptr, &g);
+  if (gret == GLOB_NOMATCH) {
+    globfree(&g);
+    return "<no matches>";
+  } else if (gret) {
+    globfree(&g);
+    PLOG(ERROR) << "glob " << data_ << " failed";
+    return "<not available>";
+  }
+
+  // The results array will hold 2 entries per file: the filename, and the
+  // results of reading that file.
+  size_t output_size = 0;
+  std::vector<std::string> results;
+  results.reserve(g.gl_pathc * 2);
+
+  for (size_t pathc = 0; pathc < g.gl_pathc; ++pathc) {
+    const base::FilePath path(g.gl_pathv[pathc]);
+    std::string contents = GetFileData(path, max_bytes_, user_, group_);
+    // NB: The 3 represents the bytes we add in the output string below.
+    output_size += path.value().size() + contents.size() + 3;
+    results.push_back(path.value());
+    results.push_back(contents);
+  }
+  globfree(&g);
+
+  // Combine the results into a single string.  We have a header with the
+  // filename followed by that file's contents.  Very basic format.
+  std::string output;
+  output.reserve(output_size);
+  for (auto iter = results.begin(); iter != results.end(); ++iter) {
+    output += *iter + ":\n";
+    ++iter;
+    output += *iter + "\n";
+  }
+
+  return output;
 }
 
 void Log::DisableMinijailForTest() {

@@ -43,7 +43,7 @@ class LogTool {
 
   class Log {
    public:
-    enum LogType { kCommand, kFile };
+    enum LogType { kCommand, kFile, kGlob };
 
     static constexpr int64_t kDefaultMaxBytes = 512 * 1024;
 
@@ -63,6 +63,7 @@ class LogTool {
 
     std::string GetCommandLogData() const;
     std::string GetFileLogData() const;
+    std::string GetGlobLogData() const;
 
     void DisableMinijailForTest();
 
@@ -72,6 +73,10 @@ class LogTool {
    private:
     static uid_t UidForUser(const std::string& name);
     static gid_t GidForGroup(const std::string& group);
+    static std::string GetFileData(const base::FilePath& path,
+                                   int64_t max_bytes,
+                                   const std::string& user,
+                                   const std::string& group);
 
     LogType type_;
     std::string name_;

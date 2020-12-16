@@ -224,11 +224,79 @@ TEST_F(LogTest, GetFileLogData) {
                              file_two.value(), user_name_, group_name_);
   EXPECT_EQ(log_two.GetLogData(), "<empty>");
 
+  // Test truncation.
   base::FilePath file_three = temp.GetPath().Append("test/file_three");
   ASSERT_TRUE(CreateDirectoryAndWriteFile(file_three, "long input value"));
   const LogTool::Log log_three(LogTool::Log::kFile, "test_log_three",
                                file_three.value(), user_name_, group_name_, 5);
   EXPECT_EQ(log_three.GetLogData(), "value");
+
+  // /proc pseudo file.
+  const LogTool::Log log_proc(LogTool::Log::kFile, "asdf", "/proc/cpuinfo",
+                              user_name_, group_name_);
+  // Should be something large.
+  EXPECT_GE(log_proc.GetLogData().size(), 100);
+
+  // Unknown user.
+  const LogTool::Log log_bad_user(LogTool::Log::kFile, "asdf",
+                                  file_three.value(), "!!@@##", group_name_);
+  EXPECT_EQ(log_bad_user.GetLogData(), "<not available>");
+
+  // Unknown group.
+  const LogTool::Log log_bad_group(LogTool::Log::kFile, "asdf",
+                                   file_three.value(), user_name_, "!!@@##");
+  EXPECT_EQ(log_bad_group.GetLogData(), "<not available>");
+
+  // Missing files.
+  const LogTool::Log log_missing(LogTool::Log::kFile, "asdf", "asdf",
+                                 user_name_, group_name_);
+  EXPECT_EQ(log_missing.GetLogData(), "<not available>");
+}
+
+TEST_F(LogTest, GetGlobLogData) {
+  base::ScopedTempDir temp;
+  ASSERT_TRUE(temp.CreateUniqueTempDir());
+
+  // No matches.
+  base::FilePath file_missing = temp.GetPath().Append("*");
+  const LogTool::Log log_missing(LogTool::Log::kGlob, "missing",
+                                 file_missing.value(), user_name_, group_name_);
+  EXPECT_EQ(log_missing.GetLogData(), "<no matches>");
+
+  // Glob a dir.
+  // NB: We write the files in one order, but globbing should sort the results.
+  base::FilePath test_dir = temp.GetPath().Append("test");
+  base::FilePath file_one = test_dir.Append("file_one");
+  ASSERT_TRUE(CreateDirectoryAndWriteFile(file_one, "test_one_contents"));
+  base::FilePath file_two = test_dir.Append("file_two");
+  ASSERT_TRUE(CreateDirectoryAndWriteFile(file_two, ""));
+  base::FilePath file_three = test_dir.Append("file_three");
+  ASSERT_TRUE(CreateDirectoryAndWriteFile(file_three, "long input value"));
+
+  const LogTool::Log log_dir(LogTool::Log::kGlob, "test_log_dir",
+                             test_dir.Append("*").value(), user_name_,
+                             group_name_);
+  EXPECT_EQ(log_dir.GetLogData(),
+            file_one.value() + ":\ntest_one_contents\n" + file_three.value() +
+                ":\nlong input value\n" + file_two.value() + ":\n\n");
+
+  // /proc pseudo file.
+  const LogTool::Log log_proc(LogTool::Log::kGlob, "asdf", "/proc/cpuinf?",
+                              user_name_, group_name_);
+  // Should be something large.
+  EXPECT_GE(log_proc.GetLogData().size(), 100);
+
+  // Unknown user.
+  const LogTool::Log log_bad_user(LogTool::Log::kGlob, "asdf",
+                                  file_three.value(), "!!@@##", group_name_);
+  EXPECT_EQ(log_bad_user.GetLogData(),
+            file_three.value() + ":\n<not available>\n");
+
+  // Unknown group.
+  const LogTool::Log log_bad_group(LogTool::Log::kGlob, "asdf",
+                                   file_three.value(), user_name_, "!!@@##");
+  EXPECT_EQ(log_bad_group.GetLogData(),
+            file_three.value() + ":\n<not available>\n");
 }
 
 TEST_F(LogTest, GetCommandLogData) {
