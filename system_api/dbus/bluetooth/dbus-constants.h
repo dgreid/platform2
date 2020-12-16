@@ -137,7 +137,18 @@ namespace bluetooth_battery {
 constexpr char kBluetoothBatteryServiceName[] = "org.bluez";
 constexpr char kBluetoothBatteryInterface[] = "org.bluez.Battery1";
 
+// Bluetooth Battery Provider API identifiers.
+constexpr char kBluetoothBatteryProviderManagerServiceName[] = "org.bluez";
+constexpr char kBluetoothBatteryProviderManagerInterface[] =
+    "org.bluez.BatteryProviderManager1";
+constexpr char kBluetoothBatteryProviderInterface[] =
+    "org.bluez.BatteryProvider1";
+
+// Bluetooth Battery Provider Manager methods.
+constexpr char kRegisterBatteryProvider[] = "RegisterBatteryProvider";
+
 // Bluetooth Battery properties.
+constexpr char kDeviceProperty[] = "Device";
 constexpr char kPercentageProperty[] = "Percentage";
 }  // namespace bluetooth_battery
 
