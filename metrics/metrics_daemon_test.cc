@@ -32,6 +32,7 @@ using std::vector;
 using ::testing::_;
 using ::testing::AnyNumber;
 using ::testing::AtLeast;
+using ::testing::Le;
 using ::testing::Return;
 using ::testing::StrictMock;
 
@@ -72,6 +73,8 @@ class MetricsDaemonTest : public testing::Test {
     CHECK(persistent_integer_backing_dir_.CreateUniqueTempDir());
     base::FilePath backing_dir_path = persistent_integer_backing_dir_.GetPath();
 
+    test_start_ = base::TimeTicks::Now();
+
     daemon_.Init(true, false, &metrics_lib_, kFakeDiskStatsName,
                  kFakeVmStatsName, kFakeScalingMaxFreqPath,
                  kFakeCpuinfoMaxFreqPath, base::TimeDelta::FromMinutes(30),
@@ -104,16 +107,16 @@ class MetricsDaemonTest : public testing::Test {
     EXPECT_EQ(0, unlink(kFakeCpuinfoMaxFreqPath));
   }
 
-  // Adds active use aggregation counters update expectations that the
-  // specified count will be added.
-  void ExpectActiveUseUpdate(int count) {
-    EXPECT_CALL(*daily_active_use_mock_, Add(count))
+  // Adds active use aggregation counters update expectations that a count no
+  // larger than the specified upper bound will be added.
+  void ExpectActiveUseUpdate(int upper_bound) {
+    EXPECT_CALL(*daily_active_use_mock_, Add(Le(upper_bound)))
         .Times(1)
         .RetiresOnSaturation();
-    EXPECT_CALL(*kernel_crash_interval_mock_, Add(count))
+    EXPECT_CALL(*kernel_crash_interval_mock_, Add(Le(upper_bound)))
         .Times(1)
         .RetiresOnSaturation();
-    EXPECT_CALL(*user_crash_interval_mock_, Add(count))
+    EXPECT_CALL(*user_crash_interval_mock_, Add(Le(upper_bound)))
         .Times(1)
         .RetiresOnSaturation();
   }
@@ -208,6 +211,8 @@ class MetricsDaemonTest : public testing::Test {
 
   // The MetricsDaemon under test.
   MetricsDaemon daemon_;
+  // The system time just before the daemon was initialized.
+  base::TimeTicks test_start_;
   // The temporary directory for backing files.
   base::ScopedTempDir persistent_integer_backing_dir_;
 
@@ -660,6 +665,21 @@ TEST_F(MetricsDaemonTest, GetDetachableBaseTimes) {
                                              &suspended_time));
   EXPECT_EQ(active_time, 10);
   EXPECT_EQ(suspended_time, 20);
+}
+
+TEST_F(MetricsDaemonTest, UpdateUsageStats) {
+  // Ignore calls to SendToUMA.
+  EXPECT_CALL(metrics_lib_, SendToUMA(_, _, _, _, _)).Times(AnyNumber());
+
+  // Add an arbitrary amount to the test start.
+  const int elapsed_seconds = 42;
+  base::TimeTicks end =
+      test_start_ + base::TimeDelta::FromSeconds(elapsed_seconds);
+  ASSERT_EQ(elapsed_seconds, (end - test_start_).InSeconds());
+
+  ExpectActiveUseUpdate(elapsed_seconds);
+
+  daemon_.UpdateStats(end, base::Time::Now());
 }
 
 }  // namespace chromeos_metrics

@@ -403,6 +403,20 @@ void MetricsDaemon::Init(bool testing,
 
   vmstats_daily_success = VmStatsReadStats(&vmstats_daily_start);
 
+  // Start the "last update" time at the time of metrics daemon starting.
+  // This isn't entirely accurate -- in general, the tick counter will start
+  // counting when the kernel starts executing, while metrics_daemon will only
+  // start up once boot has mostly completed.
+  // However, we need to initialize because:
+  // 1. metrics_daemon might crash and restart. In this case, if we did not
+  // initialize last_update_stats_time_, the first values we calculate based on
+  // it will be based on the overall uptime of the device, rather than the
+  // actual interval between updates.
+  // 2. TimeTicks doesn't guarantee anything about when the value it returns
+  // will be zero -- only that the value is monotonically nondecreasing. In
+  // principle, on some platforms, it could start at a large number on boot.
+  last_update_stats_time_ = TimeTicks::Now();
+
   // If testing, initialize Stats Reporter without connecting DBus
   if (testing_)
     StatsReporterInit();
