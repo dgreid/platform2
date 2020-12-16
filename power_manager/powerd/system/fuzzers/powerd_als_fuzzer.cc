@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "power_manager/powerd/system/ambient_light_sensor.h"
+#include "power_manager/powerd/system/ambient_light_sensor_file.h"
 
 #include <base/files/file_path.h>
 #include <base/files/file_util.h>
@@ -57,11 +58,18 @@ class AmbientLightSensorFuzzer {
     base::FilePath loc0_file_ = device0_dir.Append("location");
     CHECK(brillo::WriteStringToFile(loc0_file_, "lid"));
 
-    sensor_ = std::make_unique<system::AmbientLightSensor>(SensorLocation::LID);
-    sensor_->set_device_list_path_for_testing(temp_dir_.GetPath());
+    sensor_ = std::make_unique<system::AmbientLightSensor>();
+
+    auto als = std::make_unique<system::AmbientLightSensorFile>(
+        SensorLocation::LID, false);
+    als_ = als.get();
+
+    sensor_->SetDelegate(std::move(als));
+    als_->set_device_list_path_for_testing(temp_dir_.GetPath());
   }
 
   std::unique_ptr<AmbientLightSensor> sensor_;
+  AmbientLightSensorFile* als_;
 
  protected:
   base::ScopedTempDir temp_dir_;
@@ -84,7 +92,7 @@ static void InitAndRunAls(
 
   base::TestMockTimeTaskRunner::ScopedContext scoped_context(task_runner.get());
   als_fuzzer->SetUp(fuzz_dp, is_color);
-  als_fuzzer->sensor_->Init(false /* read immediately */);
+  als_fuzzer->als_->Init(false /* read immediately */);
 
   // Move time ahead enough so that async file reads occur.
   task_runner->FastForwardBy(base::TimeDelta::FromMilliseconds(4000));
