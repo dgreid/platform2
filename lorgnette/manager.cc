@@ -4,6 +4,7 @@
 
 #include "lorgnette/manager.h"
 
+#include <inttypes.h>
 #include <setjmp.h>
 
 #include <algorithm>
@@ -39,6 +40,19 @@ namespace {
 constexpr base::TimeDelta kDefaultProgressSignalInterval =
     base::TimeDelta::FromMilliseconds(20);
 constexpr size_t kUUIDStringLength = 37;
+
+// The maximum memory size allowed to be allocated for an image.  At the current
+// maximum resolution and color depth that the frontend will request, this gives
+// 388 sq in, which is more than enough for an 11x17 ledger page or an 8.5x40
+// ADF scan.  This limit will need to be reconsidered if we want to enable 1200
+// dpi scanning.
+constexpr size_t kMaximumImageSize = 400 * 1024 * 1024;
+
+// The default libpng config limits images to 1 million pixels in width and
+// height.  Update these constants to match if you add a call to
+// png_set_user_limits that changes the defaults.
+constexpr size_t kMaximiumImageWidth = 1000000;
+constexpr size_t kMaximiumImageHeight = 1000000;
 
 std::string SerializeError(const brillo::ErrorPtr& error_ptr) {
   std::string message;
@@ -82,6 +96,50 @@ bool ValidateParams(brillo::ErrorPtr* error, const ScanParameters& params) {
                          "Cannot scan an image with 0 lines");
     return false;
   }
+
+  // PNG IHDR allows a max height of 2^31, but libpng imposes a default limit of
+  // 1 million.  We'll impose the same limit here, since that represents 800+
+  // inches at 1200 dpi.
+  if (params.lines > kMaximiumImageHeight) {
+    brillo::Error::AddToPrintf(
+        error, FROM_HERE, kDbusDomain, kManagerServiceError,
+        "Cannot scan an image with invalid height (%d)", params.lines);
+    return false;
+  }
+
+  // PNG IHDR allows a max width of 2^31 and requires a non-zero width.
+  // We follow the default libpng limit of 1 million rather than the true max
+  // because no real scanner can produce an image that wide.
+  if (params.pixels_per_line <= 0 ||
+      params.pixels_per_line > kMaximiumImageWidth) {
+    brillo::Error::AddToPrintf(
+        error, FROM_HERE, kDbusDomain, kManagerServiceError,
+        "Cannot scan an image with invalid width (%d)", params.pixels_per_line);
+    return false;
+  }
+
+  // Make sure bytes_per_line is large enough to be plausible for
+  // pixels_per_line.  It is allowed to be bigger in case the device pads up to
+  // a multiple of some internal size.
+  size_t colors_per_pixel = params.format == kRGB ? 3 : 1;
+  uint64_t min_bytes_per_line =
+      (params.pixels_per_line * params.depth * colors_per_pixel + 7) / 8;
+  if (params.bytes_per_line < min_bytes_per_line) {
+    brillo::Error::AddToPrintf(
+        error, FROM_HERE, kDbusDomain, kManagerServiceError,
+        "bytes_per_line (%d) is too small to hold %d pixels with depth %d",
+        params.bytes_per_line, params.pixels_per_line, params.depth);
+    return false;
+  }
+
+  uint64_t needed = params.lines * params.bytes_per_line;
+  if (needed > kMaximumImageSize) {
+    brillo::Error::AddToPrintf(
+        error, FROM_HERE, kDbusDomain, kManagerServiceError,
+        "Needed scan buffer size of %" PRIu64 " is too large", needed);
+    return false;
+  }
+
   return true;
 }
 

@@ -31,6 +31,7 @@
 #include "lorgnette/test_util.h"
 
 using brillo::dbus_utils::MockDBusMethodResponse;
+using ::testing::ContainsRegex;
 using ::testing::ElementsAre;
 
 namespace lorgnette {
@@ -529,6 +530,153 @@ TEST_F(ManagerTest, GetNextImageScanAlreadyComplete) {
   EXPECT_FALSE(get_next_image_response.success());
 
   ValidateSignals(signals_, response.scan_uuid());
+}
+
+TEST_F(ManagerTest, GetNextImageNegativeWidth) {
+  ScanParameters parameters;
+  parameters.format = kRGB;
+  parameters.bytes_per_line = 100;
+  parameters.pixels_per_line = -1;
+  parameters.lines = 11;
+  parameters.depth = 16;
+  SetUpTestDevice("TestDevice", {base::FilePath("./test_images/color.pnm")},
+                  parameters);
+
+  ExpectScanRequest(kOtherBackend);
+  ExpectScanFailure(kOtherBackend);
+  StartScanResponse response = StartScan("TestDevice", MODE_COLOR, "Flatbed");
+
+  EXPECT_EQ(response.state(), SCAN_STATE_IN_PROGRESS);
+  EXPECT_EQ(response.failure_reason(), "");
+  EXPECT_NE(response.scan_uuid(), "");
+
+  GetNextImageResponse get_next_image_response =
+      GetNextImage(response.scan_uuid(), scan_fd_);
+  EXPECT_TRUE(get_next_image_response.success());
+  EXPECT_EQ(get_next_image_response.failure_reason(), "");
+
+  EXPECT_EQ(signals_.size(), 1);
+  EXPECT_EQ(signals_[0].scan_uuid(), response.scan_uuid());
+  EXPECT_EQ(signals_[0].state(), SCAN_STATE_FAILED);
+  EXPECT_THAT(signals_[0].failure_reason(), ContainsRegex("invalid width"));
+}
+
+TEST_F(ManagerTest, GetNextImageExcessWidth) {
+  ScanParameters parameters;
+  parameters.format = kRGB;
+  parameters.bytes_per_line = 3000003;
+  parameters.pixels_per_line = 1000001;
+  parameters.lines = 100;
+  parameters.depth = 8;
+  SetUpTestDevice("TestDevice", {base::FilePath("./test_images/color.pnm")},
+                  parameters);
+
+  ExpectScanRequest(kOtherBackend);
+  ExpectScanFailure(kOtherBackend);
+  StartScanResponse response = StartScan("TestDevice", MODE_COLOR, "Flatbed");
+
+  EXPECT_EQ(response.state(), SCAN_STATE_IN_PROGRESS);
+  EXPECT_EQ(response.failure_reason(), "");
+  EXPECT_NE(response.scan_uuid(), "");
+
+  GetNextImageResponse get_next_image_response =
+      GetNextImage(response.scan_uuid(), scan_fd_);
+  EXPECT_TRUE(get_next_image_response.success());
+  EXPECT_EQ(get_next_image_response.failure_reason(), "");
+
+  EXPECT_EQ(signals_.size(), 1);
+  EXPECT_EQ(signals_[0].scan_uuid(), response.scan_uuid());
+  EXPECT_EQ(signals_[0].state(), SCAN_STATE_FAILED);
+  EXPECT_THAT(signals_[0].failure_reason(), ContainsRegex("invalid width"));
+}
+
+TEST_F(ManagerTest, GetNextImageInvalidHeight) {
+  ScanParameters parameters;
+  parameters.format = kRGB;
+  parameters.bytes_per_line = 0x40000000 + (0x10 * 0x08);
+  parameters.pixels_per_line = 0x10;
+  parameters.lines = 0x02000000;
+  parameters.depth = 8;
+  SetUpTestDevice("TestDevice", {base::FilePath("./test_images/color.pnm")},
+                  parameters);
+
+  ExpectScanRequest(kOtherBackend);
+  ExpectScanFailure(kOtherBackend);
+  StartScanResponse response = StartScan("TestDevice", MODE_COLOR, "Flatbed");
+
+  EXPECT_EQ(response.state(), SCAN_STATE_IN_PROGRESS);
+  EXPECT_EQ(response.failure_reason(), "");
+  EXPECT_NE(response.scan_uuid(), "");
+
+  GetNextImageResponse get_next_image_response =
+      GetNextImage(response.scan_uuid(), scan_fd_);
+  EXPECT_TRUE(get_next_image_response.success());
+  EXPECT_EQ(get_next_image_response.failure_reason(), "");
+
+  EXPECT_EQ(signals_.size(), 1);
+  EXPECT_EQ(signals_[0].scan_uuid(), response.scan_uuid());
+  EXPECT_EQ(signals_[0].state(), SCAN_STATE_FAILED);
+  EXPECT_THAT(signals_[0].failure_reason(), ContainsRegex("invalid height"));
+}
+
+TEST_F(ManagerTest, GetNextImageMismatchedSizes) {
+  ScanParameters parameters;
+  parameters.format = kRGB;
+  parameters.bytes_per_line = 8.5 * 1200;
+  parameters.pixels_per_line = 8.5 * 1200;
+  parameters.lines = 11 * 1200;
+  parameters.depth = 8;
+  SetUpTestDevice("TestDevice", {base::FilePath("./test_images/color.pnm")},
+                  parameters);
+
+  ExpectScanRequest(kOtherBackend);
+  ExpectScanFailure(kOtherBackend);
+  StartScanResponse response = StartScan("TestDevice", MODE_COLOR, "Flatbed");
+
+  EXPECT_EQ(response.state(), SCAN_STATE_IN_PROGRESS);
+  EXPECT_EQ(response.failure_reason(), "");
+  EXPECT_NE(response.scan_uuid(), "");
+
+  GetNextImageResponse get_next_image_response =
+      GetNextImage(response.scan_uuid(), scan_fd_);
+  EXPECT_TRUE(get_next_image_response.success());
+  EXPECT_EQ(get_next_image_response.failure_reason(), "");
+
+  EXPECT_EQ(signals_.size(), 1);
+  EXPECT_EQ(signals_[0].scan_uuid(), response.scan_uuid());
+  EXPECT_EQ(signals_[0].state(), SCAN_STATE_FAILED);
+  EXPECT_THAT(signals_[0].failure_reason(),
+              ContainsRegex("bytes_per_line.*too small"));
+}
+
+TEST_F(ManagerTest, GetNextImageTooLarge) {
+  ScanParameters parameters;
+  parameters.format = kRGB;
+  parameters.bytes_per_line = 8.5 * 1200 * 6;
+  parameters.pixels_per_line = 8.5 * 1200;
+  parameters.lines = 11 * 1200;
+  parameters.depth = 16;
+  SetUpTestDevice("TestDevice", {base::FilePath("./test_images/color.pnm")},
+                  parameters);
+
+  ExpectScanRequest(kOtherBackend);
+  ExpectScanFailure(kOtherBackend);
+  StartScanResponse response = StartScan("TestDevice", MODE_COLOR, "Flatbed");
+
+  EXPECT_EQ(response.state(), SCAN_STATE_IN_PROGRESS);
+  EXPECT_EQ(response.failure_reason(), "");
+  EXPECT_NE(response.scan_uuid(), "");
+
+  GetNextImageResponse get_next_image_response =
+      GetNextImage(response.scan_uuid(), scan_fd_);
+  EXPECT_TRUE(get_next_image_response.success());
+  EXPECT_EQ(get_next_image_response.failure_reason(), "");
+
+  EXPECT_EQ(signals_.size(), 1);
+  EXPECT_EQ(signals_[0].scan_uuid(), response.scan_uuid());
+  EXPECT_EQ(signals_[0].state(), SCAN_STATE_FAILED);
+  EXPECT_THAT(signals_[0].failure_reason(),
+              ContainsRegex("scan buffer.*too large"));
 }
 
 TEST_F(ManagerTest, RemoveDupNoRepeats) {
