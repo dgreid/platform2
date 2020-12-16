@@ -560,8 +560,9 @@ int GPUExecutor::runTnrFrame(const std::shared_ptr<CameraBuffer>& inBuf,
         // when use internal tnr buffer, we don't need to use fd map buffer
         dstFd = -1;
     }
+    bool isTnrParamSyncUpdate = mStreamId == STILL_STREAM_ID ? true : false;
     ret = mIntelTNR->runTnrFrame(inBuf->getBufferAddr(), dstBuf, inBuf->getBufferSize(), dstSize,
-                                 mTnr7usParam, dstFd);
+                                 mTnr7usParam, isTnrParamSyncUpdate, dstFd);
 
     if (ret == OK) {
         if (useInternalBuffer) {
@@ -589,7 +590,7 @@ int GPUExecutor::runTnrFrame(const std::shared_ptr<CameraBuffer>& inBuf,
     CheckError(ret != OK, UNKNOWN_ERROR, " %s tnr7us run frame failed", __func__);
     mLastSequence = sequence;
 
-    if (mStreamId != STILL_STREAM_ID) {
+    if (!isTnrParamSyncUpdate) {
         // still stream will update params in tnr7us, skip async update
         float totalGain = 0.0f;
         ret = getTotalGain(sequence, &totalGain);
