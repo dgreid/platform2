@@ -231,7 +231,8 @@ const std::vector<Log> kCommandLogs {
   {kCommand, "iwlwifi_module_params", CMD_KERNEL_MODULE_PARAMS(iwlwifi)},
 #endif  // USE_IWLWIFI_DUMP
   {kCommand, "kernel-crashes",
-    "cat /var/spool/crash/kernel.*.kcrash 2>/dev/null"},
+    "cat /var/spool/crash/kernel.*.kcrash 2>/dev/null",
+    SandboxedProcess::kDefaultUser, "crash-access"},
   {kCommand, "lsblk", "timeout -s KILL 5s lsblk -a", kRoot, kRoot,
     Log::kDefaultMaxBytes, LogTool::Encoding::kAutodetect, true},
   {kCommand, "lsmod", "lsmod"},
