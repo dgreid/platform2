@@ -837,10 +837,12 @@ int IspParamAdaptor::runIspAdaptL(ia_isp_bxt_program_group programGroup,
     }
     LOG2("%s, media format: 0x%x", __func__, inputParams.media_format);
 
-    if (VIDEO_STREAM_ID == streamId)
+    if (VIDEO_STREAM_ID == streamId) {
         inputParams.call_rate_control.mode = ia_isp_call_rate_never_on_converged;
-    else
+    } else {
         inputParams.call_rate_control.mode = ia_isp_call_rate_always;
+        inputParams.sa_results->lsc_update = true;
+    }
 
     if (aiqResults->mCustomControls.count > 0) {
         inputParams.custom_controls = &aiqResults->mCustomControls;

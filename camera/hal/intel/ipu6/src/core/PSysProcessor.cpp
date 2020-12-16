@@ -877,11 +877,11 @@ void PSysProcessor::dispatchTask(CameraBufferPortMap &inBuf, CameraBufferPortMap
         if (mParameterGenerator->getParameters(currentSequence, &params, false) == OK) {
             setParameters(params);
 
-            // Dump raw image if makernote mode is MAKERNOTE_MODE_JPEG for IQ tune
+            // Dump raw image if makernote mode is MAKERNOTE_MODE_JPEG or fake task for IQ tune
             camera_makernote_mode_t makernoteMode = MAKERNOTE_MODE_OFF;
             int ret = params.getMakernoteMode(makernoteMode);
-            if (ret == OK && makernoteMode == MAKERNOTE_MODE_JPEG &&
-                !fakeTask && CameraDump::isDumpTypeEnable(DUMP_JPEG_BUFFER)) {
+            if (((ret == OK && makernoteMode == MAKERNOTE_MODE_JPEG) || fakeTask) &&
+                CameraDump::isDumpTypeEnable(DUMP_JPEG_BUFFER)) {
                 CameraDump::dumpImage(mCameraId, inBuf[MAIN_PORT], M_PSYS, MAIN_PORT);
             }
         }
