@@ -35,6 +35,7 @@ mmap: arg2 in 0xfffffffb || arg2 in 0xfffffffd
 mprotect: arg2 in 0xfffffffb || arg2 in 0xfffffffd
 munlock: 1
 munmap: 1
+nanosleep: 1
 openat: 1
 poll: 1
 prlimit64: arg2 == 0 && arg3 != 0
