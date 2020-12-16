@@ -37,8 +37,6 @@
  */
 #define SOF_EVENT_MARGIN (5000000)  // 5ms
 #define SOF_EVENT_MAX_MARGIN (60000000)  // 60ms
-// GPU TNR needs to run extra 2 iterators to converge
-#define TNR_CONVERGE_COUNT 2
 
 #define EXTREME_NEGATIVE_STRENGTH (-60)
 #define EXTREME_POSITIVE_STRENGTH (20)
@@ -802,7 +800,7 @@ void PSysProcessor::handleStillPipeForTnr(long sequence, CameraBufferPortMap *ds
                 fakeTaskBuffers[item.first] = nullptr;
             }
         }
-        for (int i = TNR_CONVERGE_COUNT; i > 0; i--) {
+        for (int i = PlatformData::getTnrExtraFrameCount(mCameraId); i > 0; i--) {
             CameraBufferPortMap srcBuf;
             {
             AutoMutex lock(mBufferMapLock);

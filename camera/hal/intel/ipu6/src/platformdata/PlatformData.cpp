@@ -1390,4 +1390,8 @@ bool PlatformData::isTnrParamForceUpdate()
     return getInstance()->mStaticCfg.mCommonConfig.isTnrParamForceUpdate;
 }
 
+int PlatformData::getTnrExtraFrameCount(int cameraId)
+{
+    return getInstance()->mStaticCfg.mCameras[cameraId].mTnrExtraFrameNum;
+}
 } // namespace icamera

@@ -52,6 +52,7 @@ namespace icamera {
 
 #define FACE_ENGINE_DEFAULT_RUNNING_INTERVAL 1
 
+#define DEFAULT_TNR_EXTRA_FRAME_NUM 2
 /* Max number of the RAW buffer number is 32.
  * Max number size of the pipeline depth is 6.
  * Max setting count should be larger than raw buffer number + pipeline depth.
@@ -140,7 +141,8 @@ public:
                 mPsysBundleWithAic(false),
                 mSwProcessingAlignWithIsp(false),
                 mMaxNvmDataSize(0),
-                mVideoStreamNum(DEFAULT_VIDEO_STREAM_NUM)
+                mVideoStreamNum(DEFAULT_VIDEO_STREAM_NUM),
+                mTnrExtraFrameNum(DEFAULT_TNR_EXTRA_FRAME_NUM)
             {
             }
 
@@ -229,6 +231,7 @@ public:
             std::unordered_map<std::string, std::string> mCameraModuleToAiqbMap;
             std::vector<IGraphType::ScalerInfo> mScalerInfo;
             int mVideoStreamNum;
+            int mTnrExtraFrameNum;
         };
 
         std::vector<CameraInfo> mCameras;
@@ -1187,5 +1190,9 @@ public:
      * Check if update tnr7us params every frame
      */
      static bool isTnrParamForceUpdate();
+     /**
+     * the extra frame count for still stream
+     */
+     static int getTnrExtraFrameCount(int cameraId);
 };
 } /* namespace icamera */
