@@ -6,47 +6,14 @@ import("//common-mk/pkg_config.gni")
 
 group("all") {
   deps = [ ":bootid-logger" ]
-  if (use.test) {
-    deps += [ ":bootid-logger-testrunner" ]
-  }
 }
 
 pkg_config("target_defaults") {
   pkg_deps = [ "libchrome" ]
 }
 
-static_library("bootid_logger_lib") {
-  configs += [ ":target_defaults" ]
-  sources = [
-    "bootid_logger.cc",
-    "bootid_logger.h",
-  ]
-}
-
 executable("bootid-logger") {
   configs += [ ":target_defaults" ]
   sources = [ "main.cc" ]
-  deps = [ ":bootid_logger_lib" ]
   install_path = "sbin"
-}
-
-if (use.test) {
-  pkg_config("bootid_logger_testrunner_config") {
-    pkg_deps = [ "libchrome-test" ]
-  }
-
-  executable("bootid-logger-testrunner") {
-    sources = [ "bootid_logger_test.cc" ]
-    run_test = true
-    defines = [ "UNIT_TEST" ]
-    configs += [
-      "//common-mk:test",
-      ":bootid_logger_testrunner_config",
-      ":target_defaults",
-    ]
-    deps = [
-      ":bootid_logger_lib",
-      "//common-mk/testrunner",
-    ]
-  }
 }
