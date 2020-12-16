@@ -290,7 +290,7 @@ void GpuVdaContext::DecodeOnIpcThread(int32_t bitstream_id,
                                       uint32_t bytes_used) {
   DCHECK(ipc_thread_checker_.CalledOnValidThread());
 
-  mojo::ScopedHandle handle_fd = mojo::WrapPlatformFile(fd.release());
+  mojo::ScopedHandle handle_fd = mojo::WrapPlatformFile(std::move(fd));
   if (!handle_fd.is_valid()) {
     LOG(ERROR) << "Invalid bitstream handle.";
     return;
@@ -332,7 +332,7 @@ void GpuVdaContext::UseOutputBufferOnIpcThread(
     vda_pixel_format_t format,
     base::ScopedFD fd,
     std::vector<video_frame_plane_t> planes) {
-  mojo::ScopedHandle handle_fd = mojo::WrapPlatformFile(fd.release());
+  mojo::ScopedHandle handle_fd = mojo::WrapPlatformFile(std::move(fd));
   if (!handle_fd.is_valid()) {
     LOG(ERROR) << "Invalid output buffer handle.";
     return;

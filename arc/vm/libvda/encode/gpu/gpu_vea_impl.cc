@@ -218,7 +218,7 @@ void GpuVeaContext::EncodeOnIpcThread(vea_input_buffer_id_t input_buffer_id,
                                       std::vector<video_frame_plane_t> planes,
                                       uint64_t timestamp,
                                       bool force_keyframe) {
-  mojo::ScopedHandle handle_fd = mojo::WrapPlatformFile(fd.release());
+  mojo::ScopedHandle handle_fd = mojo::WrapPlatformFile(std::move(fd));
   if (!handle_fd.is_valid()) {
     LOG(ERROR) << "Invalid input buffer handle.";
     return;
@@ -261,7 +261,7 @@ void GpuVeaContext::UseOutputBufferOnIpcThread(
     base::ScopedFD fd,
     uint32_t offset,
     uint32_t size) {
-  mojo::ScopedHandle handle_fd = mojo::WrapPlatformFile(fd.release());
+  mojo::ScopedHandle handle_fd = mojo::WrapPlatformFile(std::move(fd));
   if (!handle_fd.is_valid()) {
     LOG(ERROR) << "Invalid output buffer handle.";
     return;
