@@ -1394,9 +1394,4 @@ int PlatformData::getTnrExtraFrameCount(int cameraId)
 {
     return getInstance()->mStaticCfg.mCameras[cameraId].mTnrExtraFrameNum;
 }
-
-float PlatformData::getTnrThresholdGain(int cameraId)
-{
-    return getInstance()->mStaticCfg.mCameras[cameraId].mTnrThresholdGain;
-}
 } // namespace icamera

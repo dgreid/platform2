@@ -30,6 +30,7 @@ extern "C" {
 
 #include "3a/AiqResult.h"
 #include "3a/AiqResultStorage.h"
+#include "AiqInitData.h"
 #include "FormatUtils.h"
 #include "PSysDAG.h"
 #include "SyncManager.h"
@@ -45,6 +46,9 @@ using std::vector;
 
 namespace icamera {
 
+#define STILL_TNR_THRESHOLD_GAIN_ID 722
+#define DEFAULT_TNR_THRESHOLD_GAIN 2.0f
+
 std::mutex GPUExecutor::mGPULock;
 
 GPUExecutor::GPUExecutor(int cameraId, const ExecutorPolicy& policy, vector<string> exclusivePGs,
@@ -54,8 +58,8 @@ GPUExecutor::GPUExecutor(int cameraId, const ExecutorPolicy& policy, vector<stri
           mIntelTNR(nullptr),
           mLastSequence(UINT32_MAX),
           mUseInternalTnrBuffer(useTnrOutBuffer),
-          mOutBufferSize(0) {
-    mStillTnrTG = PlatformData::getTnrThresholdGain(mCameraId);
+          mOutBufferSize(0),
+          mStillTnrTG(DEFAULT_TNR_THRESHOLD_GAIN) {
     LOG1("@%s %s", __func__, mName.c_str());
 }
 
@@ -103,6 +107,11 @@ int GPUExecutor::createPGs() {
 
 int GPUExecutor::start() {
     LOG1("%s executor:%s", __func__, mName.c_str());
+    if (mStreamId == STILL_STREAM_ID &&
+        getStillTnrTG(mPSysDag->getTuningMode(0), &mStillTnrTG) != OK) {
+        mStillTnrTG = DEFAULT_TNR_THRESHOLD_GAIN;
+        LOGW("%s can't get threshold gain from aiqb, use default", __func__);
+    }
 
     mProcessThread = new ProcessThread(this);
 
@@ -224,6 +233,32 @@ bool GPUExecutor::fetchTnrOutBuffer(int64_t seq, std::shared_ptr<CameraBuffer> b
     }
 
     return false;
+}
+
+int GPUExecutor::getStillTnrTG(TuningMode mode, float* tg) {
+    CheckError(!tg, UNKNOWN_ERROR, "invalid input");
+    ia_binary_data otherData = {nullptr, 0};
+    int ret =
+        PlatformData::getCpfAndCmc(mCameraId, nullptr, nullptr, &otherData, nullptr, mode, nullptr);
+    CheckError(ret || !otherData.data || otherData.size == 0, UNKNOWN_ERROR,
+               "Failed to get tunning data");
+
+    uint32_t offset = sizeof(ia_mkn_header);
+    ia_mkn_header* header_ptr = static_cast<ia_mkn_header*>(otherData.data);
+
+    while (offset < header_ptr->size) {
+        ia_mkn_record_header* record =
+            reinterpret_cast<ia_mkn_record_header*>(static_cast<char*>(otherData.data) + offset);
+        if (STILL_TNR_THRESHOLD_GAIN_ID == record->data_name_id) {
+            void* pStillTnr7Tigger = reinterpret_cast<char*>(record) + sizeof(ia_mkn_record_header);
+            MEMCPY_S(tg, sizeof(float), static_cast<char*>(pStillTnr7Tigger), sizeof(float));
+            return OK;
+        } else {
+            offset += record->size;
+        }
+    }
+
+    return UNKNOWN_ERROR;
 }
 
 int GPUExecutor::getTotalGain(int64_t seq, float* totalGain) {

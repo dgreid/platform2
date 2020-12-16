@@ -54,7 +54,8 @@ class GPUExecutor : public PipeLiteExecutor {
     int updateTnrISPConfig(Tnr7Param* pbuffer, uint32_t sequence);
     int allocTnrOutBufs(uint32_t bufSize);
     int dumpTnrParameters(uint32_t sequence);
-    int getTotalGain(int64_t seq, float *totalGain);
+    int getTotalGain(int64_t seq, float* totalGain);
+    int getStillTnrTG(TuningMode mode, float* tg);
     int runTnrFrame(const std::shared_ptr<CameraBuffer>& inBuf,
                     std::shared_ptr<CameraBuffer> outbuf);
 
