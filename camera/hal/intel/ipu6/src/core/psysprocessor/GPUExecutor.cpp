@@ -265,8 +265,12 @@ int GPUExecutor::getTotalGain(int64_t seq, float* totalGain) {
     CheckError(!totalGain, UNKNOWN_ERROR, "Invalid input");
     AiqResult* aiqResults =
         const_cast<AiqResult*>(AiqResultStorage::getInstance(mCameraId)->getAiqResult(seq));
-    CheckError(!aiqResults, UNKNOWN_ERROR, "Cannot find available aiq result.");
-
+    if (aiqResults == nullptr) {
+        LOGW("%s: no result for sequence %ld! use the latest instead", __func__, seq);
+        aiqResults =
+            const_cast<AiqResult*>(AiqResultStorage::getInstance(mCameraId)->getAiqResult());
+        CheckError((aiqResults == nullptr), INVALID_OPERATION, "Cannot find available aiq result.");
+    }
     *totalGain = (aiqResults->mAeResults.exposures[0].exposure->analog_gain *
                   aiqResults->mAeResults.exposures[0].exposure->digital_gain);
     return OK;
