@@ -291,6 +291,8 @@ const std::vector<Log> kCommandLogs {
   {kFile, "powerd.out", "/var/log/powerd.out"},
   {kFile, "powerwash_count", "/var/log/powerwash_count"},
   {kCommand, "ps", "/bin/ps auxZ"},
+  {kCommand, "qcom_fw_info", "grep ^ /sys/kernel/debug/qcom_socinfo/*/*",
+    SandboxedProcess::kDefaultUser, kDebugfsGroup},
   // /proc/slabinfo is owned by root and has 0400 permission.
   {kFile, "slabinfo", "/proc/slabinfo", kRoot, kRoot},
   {kFile, "storage_info", "/var/log/storage_info.txt"},
