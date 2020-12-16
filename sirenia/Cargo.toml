@@ -5,6 +5,17 @@ description = "a TEE runtime environment."
 authors = ["The Chromium OS Authors"]
 edition = "2018"
 
+# This is here to absorb the workspace entries in the ebuild, since cros-rust
+# doesn't patch the Cargo.toml files in the sub directories yet.
+[workspace.metadata]
+[workspace] # ignored by ebuild
+# Enables the use of cargo test --workspace to check everything at once.
+members = [
+    "libsirenia",
+    "manatee-client",
+    "manatee-runtime",
+]
+
 [[bin]]
 name = "dugong"
 path = "src/dugong.rs"
