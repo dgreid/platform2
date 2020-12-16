@@ -258,13 +258,8 @@ void CellularCapabilityCdma::GetProperties() {
   std::unique_ptr<DBusPropertiesProxy> properties_proxy =
       control_interface()->CreateDBusPropertiesProxy(
           cellular()->dbus_path(), cellular()->dbus_service());
-  properties_proxy->GetAllAsync(
-      MM_DBUS_INTERFACE_MODEM_MODEMCDMA,
-      base::Bind(&CellularCapabilityCdma::OnModemCdmaPropertiesChanged,
-                 weak_cdma_ptr_factory_.GetWeakPtr()),
-      base::Bind([](const Error& error) {
-        LOG(ERROR) << "Error fetching modem CDMA properties: " << error;
-      }));
+  auto properties = properties_proxy->GetAll(MM_DBUS_INTERFACE_MODEM_MODEMCDMA);
+  OnModemCdmaPropertiesChanged(properties);
 }
 
 void CellularCapabilityCdma::OnActivationStateChangedSignal(

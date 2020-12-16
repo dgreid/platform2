@@ -762,21 +762,12 @@ void CellularCapability3gpp::GetProperties() {
   SLOG(this, 3) << __func__;
   CHECK(dbus_properties_proxy_);
 
-  dbus_properties_proxy_->GetAllAsync(
-      MM_DBUS_INTERFACE_MODEM,
-      base::Bind(&CellularCapability3gpp::OnModemPropertiesChanged,
-                 weak_ptr_factory_.GetWeakPtr()),
-      base::Bind([](const Error& error) {
-        LOG(ERROR) << "Error fetching modem properties: " << error;
-      }));
+  auto properties = dbus_properties_proxy_->GetAll(MM_DBUS_INTERFACE_MODEM);
+  OnModemPropertiesChanged(properties);
 
-  dbus_properties_proxy_->GetAllAsync(
-      MM_DBUS_INTERFACE_MODEM_MODEM3GPP,
-      base::Bind(&CellularCapability3gpp::OnModem3gppPropertiesChanged,
-                 weak_ptr_factory_.GetWeakPtr()),
-      base::Bind([](const Error& error) {
-        LOG(ERROR) << "Error fetching modem 3GPP properties: " << error;
-      }));
+  auto properties_3gpp =
+      dbus_properties_proxy_->GetAll(MM_DBUS_INTERFACE_MODEM_MODEM3GPP);
+  OnModem3gppPropertiesChanged(properties_3gpp);
 }
 
 void CellularCapability3gpp::UpdateServiceOLP() {
@@ -1752,21 +1743,12 @@ void CellularCapability3gpp::RequestSimProperties(RpcIdentifier sim_path) {
   std::unique_ptr<DBusPropertiesProxy> sim_properties_proxy =
       control_interface()->CreateDBusPropertiesProxy(
           sim_path, cellular()->dbus_service());
-  DBusPropertiesProxy* sim_properties_proxy_ptr = sim_properties_proxy.get();
-  sim_properties_proxy_ptr->GetAllAsync(
-      MM_DBUS_INTERFACE_SIM,
-      base::Bind(&CellularCapability3gpp::OnGetSimProperties,
-                 weak_ptr_factory_.GetWeakPtr(), sim_path,
-                 base::Passed(&sim_properties_proxy)),
-      base::Bind([](const Error& error) {
-        LOG(ERROR) << "Error fetching SIM properties: " << error;
-      }));
+  auto sim_properties = sim_properties_proxy->GetAll(MM_DBUS_INTERFACE_SIM);
+  OnGetSimProperties(sim_path, sim_properties);
 }
 
 void CellularCapability3gpp::OnGetSimProperties(
-    RpcIdentifier sim_path,
-    std::unique_ptr<DBusPropertiesProxy> sim_properties_proxy,
-    const KeyValueStore& properties) {
+    RpcIdentifier sim_path, const KeyValueStore& properties) {
   if (sim_path == sim_path_)
     OnSimPropertiesChanged(properties);
   // |sim_properties_proxy| will be safely released here.

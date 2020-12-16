@@ -312,10 +312,8 @@ class CellularCapability3gpp : public CellularCapability {
   // SIM property change handlers
   // TODO(armansito): Put these methods in a 3GPP-only subclass.
   void RequestSimProperties(RpcIdentifier sim_path);
-  void OnGetSimProperties(
-      RpcIdentifier sim_path,
-      std::unique_ptr<DBusPropertiesProxy> sim_properties_proxy,
-      const KeyValueStore& properties);
+  void OnGetSimProperties(RpcIdentifier sim_path,
+                          const KeyValueStore& properties);
   void OnSimPropertiesChanged(const KeyValueStore& properties);
   void OnSpnChanged(const std::string& spn);
   void OnSimIdentifierChanged(const std::string& id);

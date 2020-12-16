@@ -172,14 +172,8 @@ void CellularBearer::UpdateProperties() {
   if (!dbus_properties_proxy_)
     return;
 
-  dbus_properties_proxy_->GetAllAsync(
-      MM_DBUS_INTERFACE_BEARER,
-      base::Bind(&CellularBearer::OnPropertiesChanged,
-                 weak_ptr_factory_.GetWeakPtr(), MM_DBUS_INTERFACE_BEARER),
-      base::Bind([](const Error& error) {
-        LOG(WARNING) << "Error fetching modem bearer properties: " << error
-                     << ". Bearer is likely gone and thus ignored.";
-      }));
+  auto properties = dbus_properties_proxy_->GetAll(MM_DBUS_INTERFACE_BEARER);
+  OnPropertiesChanged(MM_DBUS_INTERFACE_BEARER, properties);
 }
 
 void CellularBearer::OnPropertiesChanged(
