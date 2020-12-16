@@ -9,6 +9,7 @@
 #include <base/files/file_path.h>
 
 #include "cryptohome/platform.h"
+#include "cryptohome/storage/encrypted_container/ecryptfs_container.h"
 #include "cryptohome/storage/encrypted_container/filesystem_key.h"
 #include "cryptohome/storage/encrypted_container/fscrypt_container.h"
 
@@ -24,6 +25,9 @@ std::unique_ptr<EncryptedContainer> EncryptedContainer::Generate(
     case EncryptedContainerType::kFscrypt:
       return std::make_unique<FscryptContainer>(backing_dir, key_reference,
                                                 platform);
+    case EncryptedContainerType::kEcryptfs:
+      return std::make_unique<EcryptfsContainer>(backing_dir, key_reference,
+                                                 platform);
     default:
       return nullptr;
   }

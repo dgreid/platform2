@@ -18,6 +18,7 @@ namespace cryptohome {
 enum class EncryptedContainerType {
   kUnknown = 0,
   kFscrypt,
+  kEcryptfs,
 };
 
 // An encrypted container is an abstract class that represents an encrypted

@@ -144,6 +144,7 @@ static_library("libcrosplatform") {
     "../dircrypto_util.cc",
     "../libscrypt_compat.cc",
     "../platform.cc",
+    "../storage/encrypted_container/ecryptfs_container.cc",
     "../storage/encrypted_container/encrypted_container.cc",
     "../storage/encrypted_container/fscrypt_container.cc",
   ]
