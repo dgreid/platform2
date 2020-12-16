@@ -853,6 +853,9 @@ void Datapath::StopConnectionPinning(const std::string& ext_ifname) {
 }
 
 void Datapath::StartVpnRouting(const std::string& vpn_ifname) {
+  if (process_runner_->iptables("nat", {"-A", "POSTROUTING", "-o", vpn_ifname,
+                                        "-j", "MASQUERADE", "-w"}) != 0)
+    LOG(ERROR) << "Could not set up SNAT for traffic outgoing " << vpn_ifname;
   StartConnectionPinning(vpn_ifname);
   if (!ModifyFwmarkRoutingTag(kApplyVpnMarkChain, "-A", vpn_ifname, ""))
     LOG(ERROR) << "Failed to set up VPN set-mark rule for " << vpn_ifname;
@@ -868,6 +871,9 @@ void Datapath::StopVpnRouting(const std::string& vpn_ifname) {
   if (!ModifyFwmarkRoutingTag(kApplyVpnMarkChain, "-D", vpn_ifname, ""))
     LOG(ERROR) << "Failed to remove VPN set-mark rule for " << vpn_ifname;
   StopConnectionPinning(vpn_ifname);
+  if (process_runner_->iptables("nat", {"-D", "POSTROUTING", "-o", vpn_ifname,
+                                        "-j", "MASQUERADE", "-w"}) != 0)
+    LOG(ERROR) << "Could not stop SNAT for traffic outgoing " << vpn_ifname;
 }
 
 bool Datapath::ModifyConnmarkSetPostrouting(IpFamily family,

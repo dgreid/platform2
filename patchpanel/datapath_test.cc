@@ -1322,6 +1322,10 @@ TEST(DatapathTest, StartStopVpnRouting_ArcVpn) {
                                             "-j", "CONNMARK", "--restore-mark",
                                             "--mask", "0x00003f00", "-w"),
                                 true, nullptr));
+  EXPECT_CALL(runner, iptables(StrEq("nat"),
+                               ElementsAre("-A", "POSTROUTING", "-o", "arcbr0",
+                                           "-j", "MASQUERADE", "-w"),
+                               true, nullptr));
   // Teardown
   EXPECT_CALL(runner, iptables(StrEq("mangle"),
                                ElementsAre("-D", "POSTROUTING", "-o", "arcbr0",
@@ -1363,6 +1367,10 @@ TEST(DatapathTest, StartStopVpnRouting_ArcVpn) {
                                             "-j", "CONNMARK", "--restore-mark",
                                             "--mask", "0x00003f00", "-w"),
                                 true, nullptr));
+  EXPECT_CALL(runner, iptables(StrEq("nat"),
+                               ElementsAre("-D", "POSTROUTING", "-o", "arcbr0",
+                                           "-j", "MASQUERADE", "-w"),
+                               true, nullptr));
 
   Datapath datapath(&runner, &firewall);
   datapath.SetIfnameIndex("arcbr0", 5);
@@ -1415,6 +1423,10 @@ TEST(DatapathTest, StartStopVpnRouting_HostVpn) {
                                             "-j", "CONNMARK", "--restore-mark",
                                             "--mask", "0x00003f00", "-w"),
                                 true, nullptr));
+  EXPECT_CALL(runner, iptables(StrEq("nat"),
+                               ElementsAre("-A", "POSTROUTING", "-o", "tun0",
+                                           "-j", "MASQUERADE", "-w"),
+                               true, nullptr));
   // Teardown
   EXPECT_CALL(runner, iptables(StrEq("mangle"),
                                ElementsAre("-D", "POSTROUTING", "-o", "tun0",
@@ -1456,6 +1468,10 @@ TEST(DatapathTest, StartStopVpnRouting_HostVpn) {
                                             "-j", "CONNMARK", "--restore-mark",
                                             "--mask", "0x00003f00", "-w"),
                                 true, nullptr));
+  EXPECT_CALL(runner, iptables(StrEq("nat"),
+                               ElementsAre("-D", "POSTROUTING", "-o", "tun0",
+                                           "-j", "MASQUERADE", "-w"),
+                               true, nullptr));
   // Start tun0 <-> arcbr0 routing
   EXPECT_CALL(runner, iptables(StrEq("filter"),
                                ElementsAre("-A", "FORWARD", "-i", "tun0", "-o",
