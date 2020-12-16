@@ -77,8 +77,8 @@ void DBusWrapper::RemoveObserver(Observer* observer) {
   observers_.RemoveObserver(observer);
 }
 
-dbus::Bus* DBusWrapper::GetBus() {
-  return bus_.get();
+scoped_refptr<dbus::Bus> DBusWrapper::GetBus() {
+  return bus_;
 }
 
 dbus::ObjectProxy* DBusWrapper::GetObjectProxy(const std::string& service_name,

@@ -938,7 +938,7 @@ void Daemon::InitDBus() {
 
 #if USE_BUFFET
   // There's no underlying dbus::Bus object when we're being tested.
-  dbus::Bus* bus = dbus_wrapper_->GetBus();
+  const scoped_refptr<dbus::Bus>& bus = dbus_wrapper_->GetBus();
   if (bus) {
     buffet::InitCommandHandlers(
         bus, base::Bind(&Daemon::ShutDown, weak_ptr_factory_.GetWeakPtr(),

@@ -172,7 +172,7 @@ void DBusWrapperStub::RemoveObserver(Observer* observer) {
   observers_.RemoveObserver(observer);
 }
 
-dbus::Bus* DBusWrapperStub::GetBus() {
+scoped_refptr<dbus::Bus> DBusWrapperStub::GetBus() {
   return nullptr;
 }
 

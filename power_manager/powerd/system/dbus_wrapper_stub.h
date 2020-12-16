@@ -94,7 +94,7 @@ class DBusWrapperStub : public DBusWrapperInterface {
   // DBusWrapperInterface overrides:
   void AddObserver(Observer* observer) override;
   void RemoveObserver(Observer* observer) override;
-  dbus::Bus* GetBus() override;
+  scoped_refptr<dbus::Bus> GetBus() override;
   dbus::ObjectProxy* GetObjectProxy(const std::string& service_name,
                                     const std::string& object_path) override;
   void RegisterForServiceAvailability(

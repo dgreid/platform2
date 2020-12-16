@@ -56,7 +56,7 @@ class DBusWrapperInterface {
 
   // Returns the underlying object representing the bus. This will be null in
   // test situations.
-  virtual dbus::Bus* GetBus() = 0;
+  virtual scoped_refptr<dbus::Bus> GetBus() = 0;
 
   // Returns a proxy for making calls to another service. |service_name| is a
   // D-Bus service name like "org.chromium.cras" while |object_path| is the
@@ -131,7 +131,7 @@ class DBusWrapper : public DBusWrapperInterface {
   // DBusWrapperInterface overrides:
   void AddObserver(Observer* observer) override;
   void RemoveObserver(Observer* observer) override;
-  dbus::Bus* GetBus() override;
+  scoped_refptr<dbus::Bus> GetBus() override;
   dbus::ObjectProxy* GetObjectProxy(const std::string& service_name,
                                     const std::string& object_path) override;
   void RegisterForServiceAvailability(
