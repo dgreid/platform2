@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include "power_manager/powerd/system/ambient_light_sensor.h"
-#include "power_manager/powerd/system/ambient_light_sensor_file.h"
+#include "power_manager/powerd/system/ambient_light_sensor_delegate_file.h"
 
 #include <base/files/file_path.h>
 #include <base/files/file_util.h>
@@ -60,7 +60,7 @@ class AmbientLightSensorFuzzer {
 
     sensor_ = std::make_unique<system::AmbientLightSensor>();
 
-    auto als = std::make_unique<system::AmbientLightSensorFile>(
+    auto als = std::make_unique<system::AmbientLightSensorDelegateFile>(
         SensorLocation::LID, false);
     als_ = als.get();
 
@@ -69,7 +69,7 @@ class AmbientLightSensorFuzzer {
   }
 
   std::unique_ptr<AmbientLightSensor> sensor_;
-  AmbientLightSensorFile* als_;
+  AmbientLightSensorDelegateFile* als_;
 
  protected:
   base::ScopedTempDir temp_dir_;

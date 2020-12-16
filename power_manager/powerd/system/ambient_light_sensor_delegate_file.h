@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef POWER_MANAGER_POWERD_SYSTEM_AMBIENT_LIGHT_SENSOR_FILE_H_
-#define POWER_MANAGER_POWERD_SYSTEM_AMBIENT_LIGHT_SENSOR_FILE_H_
+#ifndef POWER_MANAGER_POWERD_SYSTEM_AMBIENT_LIGHT_SENSOR_DELEGATE_FILE_H_
+#define POWER_MANAGER_POWERD_SYSTEM_AMBIENT_LIGHT_SENSOR_DELEGATE_FILE_H_
 
 #include <list>
 #include <map>
@@ -30,18 +30,20 @@ enum class SensorLocation {
   LID,
 };
 
-class AmbientLightSensorFile : public AmbientLightSensorDelegate {
+class AmbientLightSensorDelegateFile : public AmbientLightSensorDelegate {
  public:
-  // Number of failed init attempts before AmbientLightSensorFile will start
-  // logging warnings or stop trying entirely.
+  // Number of failed init attempts before AmbientLightSensorDelegateFile will
+  // start logging warnings or stop trying entirely.
   static const int kNumInitAttemptsBeforeLogging;
   static const int kNumInitAttemptsBeforeGivingUp;
 
-  AmbientLightSensorFile(SensorLocation expected_sensor_location,
-                         bool allow_ambient_eq);
-  AmbientLightSensorFile(const AmbientLightSensorFile&) = delete;
-  AmbientLightSensorFile& operator=(const AmbientLightSensorFile&) = delete;
-  ~AmbientLightSensorFile() override;
+  AmbientLightSensorDelegateFile(SensorLocation expected_sensor_location,
+                                 bool allow_ambient_eq);
+  AmbientLightSensorDelegateFile(const AmbientLightSensorDelegateFile&) =
+      delete;
+  AmbientLightSensorDelegateFile& operator=(
+      const AmbientLightSensorDelegateFile&) = delete;
+  ~AmbientLightSensorDelegateFile() override;
 
   void set_device_list_path_for_testing(const base::FilePath& path) {
     device_list_path_ = path;
@@ -125,4 +127,4 @@ class AmbientLightSensorFile : public AmbientLightSensorDelegate {
 }  // namespace system
 }  // namespace power_manager
 
-#endif  // POWER_MANAGER_POWERD_SYSTEM_AMBIENT_LIGHT_SENSOR_FILE_H_
+#endif  // POWER_MANAGER_POWERD_SYSTEM_AMBIENT_LIGHT_SENSOR_DELEGATE_FILE_H_

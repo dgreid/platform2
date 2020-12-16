@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "power_manager/powerd/system/ambient_light_sensor_file.h"
+#include "power_manager/powerd/system/ambient_light_sensor_delegate_file.h"
 
 #include <memory>
 #include <utility>
@@ -56,13 +56,14 @@ class TestObserver : public AmbientLightObserver {
 
 }  // namespace
 
-class AmbientLightSensorFileTest : public ::testing::Test {
+class AmbientLightSensorDelegateFileTest : public ::testing::Test {
  public:
-  AmbientLightSensorFileTest() {}
-  AmbientLightSensorFileTest(const AmbientLightSensorFileTest&) = delete;
-  AmbientLightSensorFileTest& operator=(const AmbientLightSensorFileTest&) =
-      delete;
-  ~AmbientLightSensorFileTest() override {}
+  AmbientLightSensorDelegateFileTest() {}
+  AmbientLightSensorDelegateFileTest(
+      const AmbientLightSensorDelegateFileTest&) = delete;
+  AmbientLightSensorDelegateFileTest& operator=(
+      const AmbientLightSensorDelegateFileTest&) = delete;
+  ~AmbientLightSensorDelegateFileTest() override {}
 
  protected:
   void SetUp() override {
@@ -78,7 +79,7 @@ class AmbientLightSensorFileTest : public ::testing::Test {
   void TearDown() override { sensor_->RemoveObserver(&observer_); }
 
   void CreateSensor(SensorLocation location, bool allow_ambient_eq) {
-    auto als = std::make_unique<system::AmbientLightSensorFile>(
+    auto als = std::make_unique<system::AmbientLightSensorDelegateFile>(
         location, allow_ambient_eq);
     als_ = als.get();
     sensor_->SetDelegate(std::move(als));
@@ -106,10 +107,10 @@ class AmbientLightSensorFileTest : public ::testing::Test {
   TestObserver observer_;
 
   std::unique_ptr<AmbientLightSensor> sensor_;
-  AmbientLightSensorFile* als_;
+  AmbientLightSensorDelegateFile* als_;
 };
 
-TEST_F(AmbientLightSensorFileTest, Basic) {
+TEST_F(AmbientLightSensorDelegateFileTest, Basic) {
   CreateSensor(SensorLocation::UNKNOWN, false);
 
   WriteLux(100);
@@ -126,12 +127,13 @@ TEST_F(AmbientLightSensorFileTest, Basic) {
   EXPECT_EQ(200, sensor_->GetAmbientLightLux());
 }
 
-TEST_F(AmbientLightSensorFileTest, GiveUpAfterTooManyFailures) {
+TEST_F(AmbientLightSensorDelegateFileTest, GiveUpAfterTooManyFailures) {
   CreateSensor(SensorLocation::UNKNOWN, false);
 
   // Test that the timer is eventually stopped after many failures.
   base::DeleteFile(data_file_, false);
-  for (int i = 0; i < AmbientLightSensorFile::kNumInitAttemptsBeforeGivingUp;
+  for (int i = 0;
+       i < AmbientLightSensorDelegateFile::kNumInitAttemptsBeforeGivingUp;
        ++i) {
     EXPECT_TRUE(als_->TriggerPollTimerForTesting());
     EXPECT_LT(sensor_->GetAmbientLightLux(), 0);
@@ -141,12 +143,13 @@ TEST_F(AmbientLightSensorFileTest, GiveUpAfterTooManyFailures) {
   EXPECT_LT(sensor_->GetAmbientLightLux(), 0);
 }
 
-TEST_F(AmbientLightSensorFileTest, FailToFindSensorAtLid) {
+TEST_F(AmbientLightSensorDelegateFileTest, FailToFindSensorAtLid) {
   // Test that the timer is eventually stopped after many failures if |sensor_|
   // is unable to find the sensor at the expected location.
   CreateSensor(SensorLocation::LID, false);
 
-  for (int i = 0; i < AmbientLightSensorFile::kNumInitAttemptsBeforeGivingUp;
+  for (int i = 0;
+       i < AmbientLightSensorDelegateFile::kNumInitAttemptsBeforeGivingUp;
        ++i) {
     EXPECT_TRUE(als_->TriggerPollTimerForTesting());
     EXPECT_LT(sensor_->GetAmbientLightLux(), 0);
@@ -156,7 +159,7 @@ TEST_F(AmbientLightSensorFileTest, FailToFindSensorAtLid) {
   EXPECT_LT(sensor_->GetAmbientLightLux(), 0);
 }
 
-TEST_F(AmbientLightSensorFileTest, FindSensorAtBase) {
+TEST_F(AmbientLightSensorDelegateFileTest, FindSensorAtBase) {
   // Test that |sensor_| is able to find the correct sensor at the expected
   // location.
   base::FilePath loc_file = device_dir_.Append("location");
@@ -169,7 +172,7 @@ TEST_F(AmbientLightSensorFileTest, FindSensorAtBase) {
   EXPECT_EQ(100, sensor_->GetAmbientLightLux());
 }
 
-TEST_F(AmbientLightSensorFileTest, IsColorSensor) {
+TEST_F(AmbientLightSensorDelegateFileTest, IsColorSensor) {
   CreateSensor(SensorLocation::UNKNOWN, false);
 
   // Default sensor does not have color support.

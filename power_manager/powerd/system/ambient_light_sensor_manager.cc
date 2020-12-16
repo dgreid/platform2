@@ -78,8 +78,8 @@ AmbientLightSensorManager::GetSensorForKeyboardBacklight() {
 std::unique_ptr<AmbientLightSensor> AmbientLightSensorManager::CreateSensor(
     SensorLocation location, bool allow_ambient_eq) {
   auto sensor = std::make_unique<system::AmbientLightSensor>();
-  auto als = std::make_unique<system::AmbientLightSensorFile>(location,
-                                                              allow_ambient_eq);
+  auto als = std::make_unique<system::AmbientLightSensorDelegateFile>(
+      location, allow_ambient_eq);
 
   als_list_.push_back(als.get());
   sensor->SetDelegate(std::move(als));

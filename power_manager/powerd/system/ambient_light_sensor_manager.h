@@ -10,7 +10,7 @@
 
 #include "power_manager/common/power_constants.h"
 #include "power_manager/powerd/system/ambient_light_sensor.h"
-#include "power_manager/powerd/system/ambient_light_sensor_file.h"
+#include "power_manager/powerd/system/ambient_light_sensor_delegate_file.h"
 #include "power_manager/powerd/system/ambient_light_sensor_manager_interface.h"
 
 namespace power_manager {
@@ -52,7 +52,7 @@ class AmbientLightSensorManager : public AmbientLightSensorManagerInterface {
   system::AmbientLightSensor* lid_sensor_ = nullptr;
   system::AmbientLightSensor* base_sensor_ = nullptr;
 
-  std::vector<AmbientLightSensorFile*> als_list_;
+  std::vector<AmbientLightSensorDelegateFile*> als_list_;
 };
 
 }  // namespace system

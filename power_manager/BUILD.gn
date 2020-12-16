@@ -132,7 +132,7 @@ static_library("libsystem") {
   sources = [
     "powerd/system/acpi_wakeup_helper.cc",
     "powerd/system/ambient_light_sensor.cc",
-    "powerd/system/ambient_light_sensor_file.cc",
+    "powerd/system/ambient_light_sensor_delegate_file.cc",
     "powerd/system/ambient_light_sensor_manager.cc",
     "powerd/system/arc_timer_manager.cc",
     "powerd/system/async_file_reader.cc",
@@ -421,7 +421,7 @@ if (use.test) {
     sources = [
       "common/testrunner.cc",
       "powerd/system/acpi_wakeup_helper_test.cc",
-      "powerd/system/ambient_light_sensor_file_test.cc",
+      "powerd/system/ambient_light_sensor_delegate_file_test.cc",
       "powerd/system/ambient_light_sensor_manager_test.cc",
       "powerd/system/ambient_light_sensor_test.cc",
       "powerd/system/arc_timer_manager_test.cc",

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "power_manager/powerd/system/ambient_light_sensor_file.h"
+#include "power_manager/powerd/system/ambient_light_sensor_delegate_file.h"
 
 #include <fcntl.h>
 
@@ -87,10 +87,10 @@ const struct ColorChannelInfo {
     {ChannelType::Z, "blue", "z", false},
 };
 
-const int AmbientLightSensorFile::kNumInitAttemptsBeforeLogging = 5;
-const int AmbientLightSensorFile::kNumInitAttemptsBeforeGivingUp = 20;
+const int AmbientLightSensorDelegateFile::kNumInitAttemptsBeforeLogging = 5;
+const int AmbientLightSensorDelegateFile::kNumInitAttemptsBeforeGivingUp = 20;
 
-AmbientLightSensorFile::AmbientLightSensorFile(
+AmbientLightSensorDelegateFile::AmbientLightSensorDelegateFile(
     SensorLocation expected_sensor_location, bool enable_color_support)
     : device_list_path_(kDefaultDeviceListPath),
       poll_interval_ms_(kDefaultPollIntervalMs),
@@ -98,15 +98,15 @@ AmbientLightSensorFile::AmbientLightSensorFile(
       num_init_attempts_(0),
       expected_sensor_location_(expected_sensor_location) {}
 
-AmbientLightSensorFile::~AmbientLightSensorFile() {}
+AmbientLightSensorDelegateFile::~AmbientLightSensorDelegateFile() {}
 
-void AmbientLightSensorFile::Init(bool read_immediately) {
+void AmbientLightSensorDelegateFile::Init(bool read_immediately) {
   if (read_immediately)
     ReadAls();
   StartTimer();
 }
 
-bool AmbientLightSensorFile::TriggerPollTimerForTesting() {
+bool AmbientLightSensorDelegateFile::TriggerPollTimerForTesting() {
   if (!poll_timer_.IsRunning())
     return false;
 
@@ -114,11 +114,11 @@ bool AmbientLightSensorFile::TriggerPollTimerForTesting() {
   return true;
 }
 
-bool AmbientLightSensorFile::IsColorSensor() const {
+bool AmbientLightSensorDelegateFile::IsColorSensor() const {
   return !color_als_files_.empty();
 }
 
-base::FilePath AmbientLightSensorFile::GetIlluminancePath() const {
+base::FilePath AmbientLightSensorDelegateFile::GetIlluminancePath() const {
   if (IsColorSensor()) {
     for (const ColorChannelInfo& channel : kColorChannelConfig) {
       if (!channel.is_lux_channel)
@@ -133,13 +133,13 @@ base::FilePath AmbientLightSensorFile::GetIlluminancePath() const {
   return base::FilePath();
 }
 
-void AmbientLightSensorFile::StartTimer() {
+void AmbientLightSensorDelegateFile::StartTimer() {
   poll_timer_.Start(FROM_HERE,
                     base::TimeDelta::FromMilliseconds(poll_interval_ms_), this,
-                    &AmbientLightSensorFile::ReadAls);
+                    &AmbientLightSensorDelegateFile::ReadAls);
 }
 
-void AmbientLightSensorFile::ReadAls() {
+void AmbientLightSensorDelegateFile::ReadAls() {
   // We really want to read the ambient light level.
   // Complete the deferred lux file open if necessary.
   if (!als_file_.HasOpenedFile() && !InitAlsFile()) {
@@ -153,24 +153,25 @@ void AmbientLightSensorFile::ReadAls() {
   // The timer will be restarted after the read finishes.
   poll_timer_.Stop();
   if (!IsColorSensor()) {
-    als_file_.StartRead(base::Bind(&AmbientLightSensorFile::ReadCallback,
-                                   base::Unretained(this)),
-                        base::Bind(&AmbientLightSensorFile::ErrorCallback,
-                                   base::Unretained(this)));
+    als_file_.StartRead(
+        base::Bind(&AmbientLightSensorDelegateFile::ReadCallback,
+                   base::Unretained(this)),
+        base::Bind(&AmbientLightSensorDelegateFile::ErrorCallback,
+                   base::Unretained(this)));
     return;
   }
 
   color_readings_.clear();
   for (const ColorChannelInfo& channel : kColorChannelConfig) {
     color_als_files_[&channel].StartRead(
-        base::Bind(&AmbientLightSensorFile::ReadColorChannelCallback,
+        base::Bind(&AmbientLightSensorDelegateFile::ReadColorChannelCallback,
                    base::Unretained(this), &channel),
-        base::Bind(&AmbientLightSensorFile::ErrorColorChannelCallback,
+        base::Bind(&AmbientLightSensorDelegateFile::ErrorColorChannelCallback,
                    base::Unretained(this), &channel));
   }
 }
 
-void AmbientLightSensorFile::ReadCallback(const std::string& data) {
+void AmbientLightSensorDelegateFile::ReadCallback(const std::string& data) {
   if (!set_lux_callback_)
     return;
 
@@ -181,12 +182,12 @@ void AmbientLightSensorFile::ReadCallback(const std::string& data) {
   StartTimer();
 }
 
-void AmbientLightSensorFile::ErrorCallback() {
+void AmbientLightSensorDelegateFile::ErrorCallback() {
   LOG(ERROR) << "Error reading ALS file";
   StartTimer();
 }
 
-void AmbientLightSensorFile::ReadColorChannelCallback(
+void AmbientLightSensorDelegateFile::ReadColorChannelCallback(
     const ColorChannelInfo* channel, const std::string& data) {
   int value = -1;
   ParseLuxData(data, &value);
@@ -194,14 +195,14 @@ void AmbientLightSensorFile::ReadColorChannelCallback(
   CollectChannelReadings();
 }
 
-void AmbientLightSensorFile::ErrorColorChannelCallback(
+void AmbientLightSensorDelegateFile::ErrorColorChannelCallback(
     const ColorChannelInfo* channel) {
   LOG(ERROR) << "Error reading ALS file for " << channel->xyz_name << "channel";
   color_readings_[channel] = -1;
   CollectChannelReadings();
 }
 
-void AmbientLightSensorFile::CollectChannelReadings() {
+void AmbientLightSensorDelegateFile::CollectChannelReadings() {
   if (!set_lux_callback_ ||
       color_readings_.size() != base::size(kColorChannelConfig)) {
     return;
@@ -251,7 +252,7 @@ void AmbientLightSensorFile::CollectChannelReadings() {
   StartTimer();
 }
 
-void AmbientLightSensorFile::InitColorAlsFiles(
+void AmbientLightSensorDelegateFile::InitColorAlsFiles(
     const base::FilePath& device_dir) {
   color_als_files_.clear();
   std::map<const ColorChannelInfo*, AsyncFileReader> channel_map;
@@ -271,7 +272,7 @@ void AmbientLightSensorFile::InitColorAlsFiles(
   LOG(INFO) << "ALS at path " << device_dir.value() << " has color support";
 }
 
-bool AmbientLightSensorFile::InitAlsFile() {
+bool AmbientLightSensorDelegateFile::InitAlsFile() {
   CHECK(!als_file_.HasOpenedFile());
 
   // Search the iio/devices directory for a subdirectory (eg "device0" or
