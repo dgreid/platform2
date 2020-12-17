@@ -273,8 +273,7 @@ TEST_F(KeysetManagementTest, AddInitialKeyset) {
 
   // TEST
 
-  EXPECT_TRUE(keyset_management_->AddInitialKeyset(users_[0].credentials,
-                                                   /*dircrypto_v2=*/true));
+  EXPECT_TRUE(keyset_management_->AddInitialKeyset(users_[0].credentials));
 
   // VERIFY
   // Initial keyset is added, readable, has "new-er" fields correctly

@@ -47,7 +47,7 @@ class MockKeysetManagement : public KeysetManagement {
               GetVaultKeysetLabels,
               (const std::string&, std::vector<std::string>*),
               (const, override));
-  MOCK_METHOD(bool, AddInitialKeyset, (const Credentials&, bool), (override));
+  MOCK_METHOD(bool, AddInitialKeyset, (const Credentials&), (override));
   MOCK_METHOD(CryptohomeErrorCode,
               AddKeyset,
               (const Credentials&,

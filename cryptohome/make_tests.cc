@@ -256,8 +256,7 @@ void TestUser::GenerateCredentials(bool force_ecryptfs) {
       .WillOnce(DoAll(SaveArg<1>(&credentials), Return(true)));
   ASSERT_TRUE(homedirs.Create(local_credentials.username()));
   ASSERT_TRUE(mount->PrepareCryptohome(obfuscated_username, force_ecryptfs));
-  ASSERT_TRUE(keyset_management.AddInitialKeyset(local_credentials,
-                                                 /*dircrypto_v2=*/false));
+  ASSERT_TRUE(keyset_management.AddInitialKeyset(local_credentials));
   DCHECK(credentials.size());
 
   // Unmount succeeds. This is called when |mount| is destroyed.

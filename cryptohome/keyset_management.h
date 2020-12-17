@@ -76,8 +76,7 @@ class KeysetManagement {
       const Credentials& credentials, MountError* error);
 
   // Adds initial keyset for the credentials.
-  virtual bool AddInitialKeyset(const Credentials& credentials,
-                                bool dircrypto_v2);
+  virtual bool AddInitialKeyset(const Credentials& credentials);
 
   // Adds a new vault keyset for the user using the |existing_credentials| to
   // unwrap the homedir key and the |new_credentials| to rewrap and persist to
