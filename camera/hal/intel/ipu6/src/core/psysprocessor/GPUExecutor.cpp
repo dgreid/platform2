@@ -370,6 +370,11 @@ int GPUExecutor::processNewFrame() {
     ret = runTnrFrame(inBuf, outBuf);
     CheckError(ret != OK, ret, "@%s: run tnr failed", __func__);
 
+    if (CameraDump::isDumpTypeEnable(DUMP_GPU_TNR) && mStreamId == STILL_STREAM_ID) {
+        CameraDump::dumpImage(mCameraId, inBuf, M_GPUTNR, inBuffers.begin()->first);
+        CameraDump::dumpImage(mCameraId, outBuf, M_GPUTNR, outBuffers.begin()->first);
+    }
+
     // Remove internal output buffers
     for (auto& item : outBuffers) {
         if (item.second.get() == mInternalOutputBuffers[item.first].get()) {
@@ -507,7 +512,7 @@ int GPUExecutor::runTnrFrame(const std::shared_ptr<CameraBuffer>& inBuf,
 
     uint32_t sequence = inBuf->getSequence();
     int ret = OK;
-    if (mIntelTNR && !isBypassStillTnr(sequence)) {
+    if (mIntelTNR) {
         ret = updateTnrISPConfig(mTnr7usParam, sequence);
         CheckError(ret != OK, UNKNOWN_ERROR, " %s Failed to update TNR parameters", __func__);
     }
@@ -520,7 +525,8 @@ int GPUExecutor::runTnrFrame(const std::shared_ptr<CameraBuffer>& inBuf,
                        : outBuf->getBufferAddr();
     if (!outPtr) return UNKNOWN_ERROR;
 
-    if (!mIntelTNR || isBypassStillTnr(sequence)) {
+    outBuf->setSequence(sequence);
+    if (!mIntelTNR) {
         MEMCPY_S(outPtr, bufferSize, inBuf->getBufferAddr(), inBuf->getBufferSize());
         if (memoryType == V4L2_MEMORY_DMABUF) {
             CameraBuffer::unmapDmaBufferAddr(outPtr, bufferSize);
