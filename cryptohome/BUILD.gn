@@ -469,6 +469,7 @@ if (use.test) {
       "storage/disk_cleanup_unittest.cc",
       "storage/encrypted_container/ecryptfs_container_test.cc",
       "storage/encrypted_container/fscrypt_container_test.cc",
+      "storage/encrypted_container/loopback_device_test.cc",
       "storage/homedirs_unittest.cc",
       "storage/mock_disk_cleanup.cc",
       "storage/mock_disk_cleanup_routines.cc",
