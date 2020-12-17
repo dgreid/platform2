@@ -950,7 +950,7 @@ bool ParseContainerConfig(const std::string& config_json_data,
                           OciConfigPtr const& config_out) {
   auto result = base::JSONReader::ReadAndReturnValueWithError(
       config_json_data, base::JSON_PARSE_RFC);
-  if (result.error_code != base::JSONReader::JSON_NO_ERROR) {
+  if (!result.value) {
     LOG(ERROR) << "Fail to parse config.json: " << result.error_message;
     return false;
   }
