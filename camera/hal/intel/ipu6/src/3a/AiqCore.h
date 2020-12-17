@@ -172,6 +172,7 @@ private:
     ia_aiq_ae_results *mLastAeResult;
     ia_aiq_awb_results *mLastAwbResult;
     ia_aiq_af_results *mLastAfResult;
+    ia_aiq_gbce_results *mLastGbceResults;
 
     int mAeRunTime;
     int mAwbRunTime;

@@ -42,6 +42,7 @@ AiqCore::AiqCore(int cameraId) :
     mLastAeResult(nullptr),
     mLastAwbResult(nullptr),
     mLastAfResult(nullptr),
+    mLastGbceResults(nullptr),
     mAeRunTime(0),
     mAwbRunTime(0),
     mAiqState(AIQ_NOT_INIT),
@@ -126,6 +127,7 @@ int AiqCore::init() {
     mLastAeResult = nullptr;
     mLastAwbResult = nullptr;
     mLastAfResult = nullptr;
+    mLastGbceResults = nullptr;
     mAeRunTime = 0;
     mAwbRunTime = 0;
 
@@ -596,23 +598,31 @@ int AiqCore::runGbce(ia_aiq_gbce_results *gbceResults) {
     LOG3A("%s, gbceResults:%p", __func__, gbceResults);
     CheckError(!gbceResults, BAD_VALUE, "@%s, gbceResults is nullptr", __func__);
 
-    // Don't run gbce if AE lock and ev shift isn't changed
-    if (mAeForceLock && mGbceParams.ev_shift == mLastEvShift) return OK;
+    //reuse the last gbce results when gbceForceRun is false
+    bool gbceForceRun = !mAeForceLock || (mGbceParams.ev_shift != mLastEvShift);
+    int ret = OK;
 
     PERF_CAMERA_ATRACE();
-    ia_aiq_gbce_results *newGbceResults = nullptr;
+    ia_aiq_gbce_results *newGbceResults = mLastGbceResults;
 
-    IntelAiq* intelAiq = mIntelAiqHandle[mTuningMode];
-    CheckError(!intelAiq, UNKNOWN_ERROR, "%s, aiq is nullptr, mode:%d", __func__, mTuningMode);
-    {
-        PERF_CAMERA_ATRACE_PARAM1_IMAGING("intelAiq->gbceRun", 1);
-        ia_err iaErr = intelAiq->gbceRun(&mGbceParams, &newGbceResults);
-        int ret = AiqUtils::convertError(iaErr);
-        CheckError(ret != OK || !newGbceResults, ret, "@%s, gbceRun fails, ret: %d",
-                   __func__, ret);
+    if (gbceForceRun) {
+        IntelAiq* intelAiq = mIntelAiqHandle[mTuningMode];
+        CheckError(!intelAiq, UNKNOWN_ERROR, "%s, aiq is nullptr, mode:%d", __func__, mTuningMode);
+        {
+            PERF_CAMERA_ATRACE_PARAM1_IMAGING("intelAiq->gbceRun", 1);
+            ia_err iaErr = intelAiq->gbceRun(&mGbceParams, &newGbceResults);
+            ret = AiqUtils::convertError(iaErr);
+            CheckError(ret != OK || !newGbceResults, ret, "@%s, gbceRun fails, ret: %d",
+                       __func__, ret);
+        }
     }
 
-    return AiqUtils::deepCopyGbceResults(*newGbceResults, gbceResults);
+    if (newGbceResults) {
+        ret = AiqUtils::deepCopyGbceResults(*newGbceResults, gbceResults);
+    }
+    mLastGbceResults = gbceResults;
+
+    return ret;
 }
 
 int AiqCore::runPa(ia_aiq_pa_results_v1 *paResults,
