@@ -131,7 +131,7 @@ TEST_F(AmbientLightSensorDelegateFileTest, GiveUpAfterTooManyFailures) {
   CreateSensor(SensorLocation::UNKNOWN, false);
 
   // Test that the timer is eventually stopped after many failures.
-  base::DeleteFile(data_file_, false);
+  base::DeleteFile(data_file_);
   for (int i = 0;
        i < AmbientLightSensorDelegateFile::kNumInitAttemptsBeforeGivingUp;
        ++i) {
