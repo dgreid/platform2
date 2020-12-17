@@ -323,7 +323,7 @@ const char kDhcpv6PreferredLeaseDurationSecondsProperty[] =
 
 // Base Device property names.
 const char kAddressProperty[] = "Address";  // Also used for IPConfig.
-const char kInhibited[] = "Inhibited";
+const char kInhibitedProperty[] = "Inhibited";
 const char kIPConfigsProperty[] = "IPConfigs";
 const char kIPv6DisabledProperty[] = "IPv6Disabled";
 const char kInterfaceProperty[] = "Interface";  // Network interface name.

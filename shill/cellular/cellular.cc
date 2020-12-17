@@ -448,7 +448,7 @@ void Cellular::StartModemCallback(const EnabledStateChangedCallback& callback,
 
   if (inhibited_) {
     inhibited_ = false;
-    adaptor()->EmitBoolChanged(kInhibited, inhibited_);
+    adaptor()->EmitBoolChanged(kInhibitedProperty, inhibited_);
   }
 
   if (!error.IsSuccess()) {
@@ -1236,7 +1236,7 @@ void Cellular::OnInhibitDevice(bool inhibited, const Error& error) {
   }
   LOG(INFO) << __func__ << " Succeeded. Inhibited= " << inhibited;
   inhibited_ = inhibited;
-  adaptor()->EmitBoolChanged(kInhibited, inhibited_);
+  adaptor()->EmitBoolChanged(kInhibitedProperty, inhibited_);
 }
 
 KeyValueStore Cellular::GetSimLockStatus(Error* error) {
@@ -1486,7 +1486,7 @@ void Cellular::RegisterProperties() {
                           &Cellular::SetAllowRoaming);
   HelpRegisterDerivedBool(kUseAttachAPNProperty, &Cellular::GetUseAttachApn,
                           &Cellular::SetUseAttachApn);
-  HelpRegisterDerivedBool(kInhibited, &Cellular::GetInhibited,
+  HelpRegisterDerivedBool(kInhibitedProperty, &Cellular::GetInhibited,
                           &Cellular::SetInhibited);
 
   store->RegisterDerivedKeyValueStore(
