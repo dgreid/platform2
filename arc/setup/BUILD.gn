@@ -182,8 +182,8 @@ if (use.test) {
 }
 
 if (use.fuzzer) {
-  sources = [ "arc_setup_util_find_all_properties_fuzzer.cc" ]
   executable("arc_setup_util_find_all_properties_fuzzer") {
+    sources = [ "arc_setup_util_find_all_properties_fuzzer.cc" ]
     configs += [
       "//common-mk/common_fuzzer",
       ":target_defaults",
