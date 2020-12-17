@@ -3415,7 +3415,16 @@ base::FilePath Service::GetVmImagePath(const std::string& dlc_id,
   }
 
   base::Optional<std::string> dlc_root =
-      dlcservice_client_->GetRootPath(dlc_id, failure_reason);
+      AsyncNoReject(bus_->GetDBusTaskRunner(),
+                    base::BindOnce(
+                        [](DlcHelper* dlc_helper, const std::string& dlc_id,
+                           std::string* out_failure_reason) {
+                          return dlc_helper->GetRootPath(dlc_id,
+                                                         out_failure_reason);
+                        },
+                        dlcservice_client_.get(), dlc_id, failure_reason))
+          .Get()
+          .val;
   if (!dlc_root.has_value()) {
     // On an error, failure_reason will be set by GetRootPath().
     return {};
