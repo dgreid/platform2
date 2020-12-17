@@ -116,14 +116,14 @@ reports them to Chrome via D-Bus as described in the [Input](input.md) document.
 User-facing behavior power button behavior is spread across multiple classes in
 Chrome:
 
-*   `chromeos::PowerManagerClient` receives D-Bus notifications about power
+*   [`chromeos::PowerManagerClient`] receives D-Bus notifications about power
     button events from powerd.
-*   `ash::PowerButtonController` initiates action in response to power button
+*   [`ash::PowerButtonController`] initiates action in response to power button
     events received from powerd.
-*   `ash::LockStateController` contains the high-level logic for transitioning
+*   [`ash::LockStateController`] contains the high-level logic for transitioning
     between different animations and performing actions when they complete.
-*   `ash::SessionStateAnimator` displays animations and contains durations.
-*   `ash::PowerButtonDisplayController` contains logic related to forcing the
+*   [`ash::SessionStateAnimator`] displays animations and contains durations.
+*   [`ash::PowerButtonDisplayController`] contains logic related to forcing the
     display off in response to power button events.
 
 The always-tablet-like power button behavior used on touch-centric devices is
@@ -135,3 +135,9 @@ Chromebox- and Chromebase-style behavior is enabled by setting the
 `legacy_power_button` USE flag in a Portage overlay, which causes powerd's
 `legacy_power_button` pref to be set and the `--aura-legacy-power-button` flag
 to be passed to Chrome.
+
+[`chromeos::PowerManagerClient`]: https://source.chromium.org/chromium/chromium/src/+/HEAD:chromeos/dbus/power/power_manager_client.h
+[`ash::PowerButtonController`]: https://source.chromium.org/chromium/chromium/src/+/HEAD:ash/system/power/power_button_controller.h
+[`ash::LockStateController`]: https://source.chromium.org/chromium/chromium/src/+/HEAD:ash/wm/lock_state_controller.h
+[`ash::SessionStateAnimator`]: https://source.chromium.org/chromium/chromium/src/+/HEAD:ash/wm/session_state_animator.h
+[`ash::PowerButtonDisplayController`]: https://source.chromium.org/chromium/chromium/src/+/HEAD:ash/system/power/power_button_display_controller.h
