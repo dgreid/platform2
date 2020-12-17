@@ -98,15 +98,17 @@ TEST_F(SensorDeviceImplTest, GetAttributes) {
   base::RunLoop loop;
   remote_->GetAttributes(
       std::vector<std::string>{kDummyChnAttrName1, kDeviceAttrName,
-                               kDummyChnAttrName2},
+                               cros::mojom::kDeviceName, kDummyChnAttrName2},
       base::BindOnce(
           [](base::Closure closure,
              const std::vector<base::Optional<std::string>>& values) {
-            EXPECT_EQ(values.size(), 3u);
+            EXPECT_EQ(values.size(), 4u);
             EXPECT_FALSE(values.front().has_value());
             EXPECT_FALSE(values.back().has_value());
             EXPECT_TRUE(values[1].has_value());
             EXPECT_EQ(values[1].value().compare(kParsedDeviceAttrValue), 0);
+            EXPECT_TRUE(values[2].has_value());
+            EXPECT_EQ(values[2].value().compare(fakes::kAccelDeviceName), 0);
             closure.Run();
           },
           loop.QuitClosure()));
