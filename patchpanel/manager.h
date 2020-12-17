@@ -43,7 +43,7 @@ class Manager final : public brillo::DBusDaemon, private TrafficForwarder {
   Manager(const Manager&) = delete;
   Manager& operator=(const Manager&) = delete;
 
-  ~Manager();
+  ~Manager() = default;
 
   // TrafficForwarder methods.
 
@@ -96,8 +96,8 @@ class Manager final : public brillo::DBusDaemon, private TrafficForwarder {
   void OnSubprocessExited(pid_t pid, const siginfo_t& info);
   void RestartSubprocess(HelperProcess* subproc);
 
-  // Callback from Daemon to notify that SIGTERM or SIGINT was received and
-  // the daemon should clean up in preparation to exit.
+  // Callback from Daemon to notify that the message loop exits and before
+  // Daemon::Run() returns.
   void OnShutdown(int* exit_code) override;
 
   // Callback from NDProxy telling us to add a new IPv6 route to guest or IPv6

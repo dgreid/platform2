@@ -67,10 +67,6 @@ Manager::Manager(std::unique_ptr<HelperProcess> adb_proxy,
   connected_namespaces_epollfd_ = epoll_create(1 /* size */);
 }
 
-Manager::~Manager() {
-  OnShutdown(nullptr);
-}
-
 std::map<const std::string, bool> Manager::cached_feature_enabled_ = {};
 
 bool Manager::ShouldEnableFeature(
@@ -268,6 +264,8 @@ void Manager::OnShutdown(int* exit_code) {
     DisconnectNamespace(fdkey);
   if (!USE_JETSTREAM_ROUTING)
     datapath_->Stop();
+
+  brillo::DBusDaemon::OnShutdown(exit_code);
 }
 
 void Manager::OnSubprocessExited(pid_t pid, const siginfo_t&) {
