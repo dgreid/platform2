@@ -54,6 +54,11 @@ VmBuilder& VmBuilder::SetMemory(const std::string& memory_in_mb) {
   return *this;
 }
 
+VmBuilder& VmBuilder::SetBalloonBias(const std::string& balloon_bias_mib) {
+  balloon_bias_mib_ = balloon_bias_mib;
+  return *this;
+}
+
 VmBuilder& VmBuilder::SetSyslogTag(const std::string& syslog_tag) {
   syslog_tag_ = syslog_tag;
   return *this;
@@ -148,6 +153,9 @@ base::StringPairs VmBuilder::BuildVmArgs() const {
 
   if (!memory_in_mib_.empty())
     args.emplace_back("--mem", memory_in_mib_);
+
+  if (!balloon_bias_mib_.empty())
+    args.emplace_back("--balloon_bias_mib", balloon_bias_mib_);
 
   for (const auto& tap_fd : tap_fds_)
     args.emplace_back("--tap-fd", std::to_string(tap_fd.get()));

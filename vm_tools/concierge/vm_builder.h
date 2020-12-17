@@ -42,6 +42,7 @@ class VmBuilder {
   VmBuilder& SetVsockCid(uint32_t vsock_cid);
   VmBuilder& AppendDisks(std::vector<Disk> disks);
   VmBuilder& SetMemory(const std::string& memory_in_mb);
+  VmBuilder& SetBalloonBias(const std::string& balloon_bias_mib);
 
   VmBuilder& SetSyslogTag(const std::string& syslog_tag);
   VmBuilder& SetSocketPath(const std::string& socket_path);
@@ -73,6 +74,7 @@ class VmBuilder {
   int32_t cpus_ = 0;
   base::Optional<uint32_t> vsock_cid_;
   std::string memory_in_mib_;
+  std::string balloon_bias_mib_;
 
   std::string syslog_tag_;
   std::string vm_socket_path_;

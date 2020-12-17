@@ -201,7 +201,10 @@ bool ArcVm::Start(base::FilePath kernel, VmBuilder vm_builder) {
   std::string shared_testharness = CreateSharedDataParam(
       testharness_dir, kTestHarnessSharedDirTag, true, false);
 
-  vm_builder.SetMemory(GetVmMemoryMiB())
+  vm_builder
+      .SetMemory(GetVmMemoryMiB())
+      // Bias tuned on 4/8G hatch devices with multivm.Lifecycle tests.
+      .SetBalloonBias("48")
       .SetVsockCid(vsock_cid_)
       .SetSocketPath(GetVmSocketPath())
       .AppendWaylandSocket(kWaylandSocket)
