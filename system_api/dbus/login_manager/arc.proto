@@ -39,8 +39,8 @@ message StartArcMiniContainerRequest {
   // Experiment flag for go/arc-file-picker.
   optional bool arc_file_picker_experiment = 3 [default = false];
 
-  // Option to disable ureadahead, emulated ureadahead, and tracing. Used in specialized tests that
-  // generate precise ureadahead packs.
+  // Option to disable ureadahead, emulated ureadahead, and tracing. Used in
+  // specialized tests that generate precise ureadahead packs.
   optional bool disable_ureadahead = 7 [default = false];
 
   // Option to disable by hiding default apps shipped on the system image.
@@ -62,7 +62,11 @@ message StartArcMiniContainerRequest {
   optional DalvikMemoryProfile dalvik_memory_profile = 9
       [default = MEMORY_PROFILE_DEFAULT];
 
-  // Next ID to use: 10
+  // Option to disable media store maintenance task scheduling. Used in tests
+  // to prevent unreliable performance measurements and CPU not idle failures.
+  optional bool disable_media_store_maintenance = 10 [default = false];
+
+  // Next ID to use: 11
 }
 
 // ARC upgrade options sent from Chrome to session manager. This message is used
