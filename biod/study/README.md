@@ -12,14 +12,37 @@ See [Typography conventions] to understand what `(outside)`, `(inside)`,
 
 ## Install/Run Fingerprint Study
 
-1.  On the host, run the following commands:
+1.  You can either install the fingerprint_study package on a chromebook in dev
+    mode (**Option 1**) or build+flash a custom chrome os image with the
+    fingerprint_study package preinstalled (**Options 2**).
 
-    ```bash
-    (inside) $ BOARD=hatch
-    (inside) $ DUT=dut1
-    (inside) $ emerge-$BOARD fingerprint_study
-    (inside) $ cros deploy $DUT fingerprint_study
-    ```
+    On the host, run the following commands:
+
+    -   **Option 1**
+
+        ```bash
+        (inside) $ BOARD=hatch
+        (inside) $ DUT=dut1
+        (inside) $ emerge-$BOARD fingerprint_study
+        (inside) $ cros deploy $DUT fingerprint_study
+        ```
+
+    -   **Option 2**
+
+        ```bash
+        (inside) $ BOARD=hatch
+        (inside) $ USE=fpstudy ./build_packages --board=$BOARD
+        (inside) $ ./build_image --board=$BOARD --noenable_rootfs_verification \
+                   base
+        # TODO(b/175894362): If the following line errors out, you may
+        # need to specify ../build/images/hatch/latest/chromiumos_base_image.bin
+        # instead of $BOARD/latest. Remove this comment when the bug is fixed.
+        (inside) $ cros flash usb:// $BOARD/latest
+        ```
+
+        Insert the USB flash drive into the chromebook
+        [boot from USB][boot-from-usb] and then
+        [install the image][install-from-usb].
 
 2.  Configure `FINGER_COUNT`, `ENROLLMENT_COUNT`, and `VERIFICATION_COUNT` in
     [/etc/init/fingerprint_study.conf](init/fingerprint_study.conf) with the
@@ -31,6 +54,11 @@ See [Typography conventions] to understand what `(outside)`, `(inside)`,
 
 5.  Output fingerprint captures are stored by default in `/var/lib/fingers`. See
     [/etc/init/fingerprint_study.conf](init/fingerprint_study.conf).
+
+[boot-from-usb]:
+https://chromium.googlesource.com/chromiumos/docs/+/master/developer_guide.md#boot-from-your-usb-disk
+[install-from-usb]:
+https://chromium.googlesource.com/chromiumos/docs/+/master/developer_guide.md#installing-your-chromium-os-image-to-your-hard-disk
 
 ## Test on Host Using Mock ectool
 
@@ -257,18 +285,6 @@ expected by the fingerprint study tool, please modify
 ### 5) Test
 
 Navigate to http://127.0.0.1:9000 in a web browser.
-
-## Build Fingerprint Study Image
-
-This is an **untested** method of building an entire Chrome OS image with the
-fingerprint_study package included.
-
-```bash
-(inside) $ BOARD=hatch
-(inside) $ USE=fpstudy ./build_packages --board=$BOARD
-(inside) $ ./build_image --board=$BOARD
-(inside) $ cros flash usb:// $BOARD/latest
-```
 
 [Enable Developer Mode]: https://chromium.googlesource.com/chromiumos/docs/+/HEAD/developer_mode.md#dev-mode
 [Typography conventions]: https://chromium.googlesource.com/chromiumos/docs/+/HEAD/developer_guide.md#typography-conventions
