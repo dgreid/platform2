@@ -46,8 +46,8 @@ pub fn to_write_data_error<E: StdError + 'static>(err: E) -> Error {
 /// The result of an operation in this crate.
 pub type Result<T> = std::result::Result<T, Error>;
 
-pub trait Storable: Any + Serialize + DeserializeOwned {}
-impl<S: Any + Serialize + DeserializeOwned> Storable for S {}
+pub trait Storable: Any + Clone + Serialize + DeserializeOwned {}
+impl<S: Any + Clone + Serialize + DeserializeOwned> Storable for S {}
 
 pub trait Storage {
     fn read_data<S: Storable>(&mut self, id: &str) -> Result<S>;
