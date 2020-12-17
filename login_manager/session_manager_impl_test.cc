@@ -493,6 +493,12 @@ class SessionManagerImplTest : public ::testing::Test,
       return *this;
     }
 
+    StartArcInstanceExpectationsBuilder& SetDisableMediaStoreMaintenance(
+        bool v) {
+      disable_media_store_maintenance_ = v;
+      return *this;
+    }
+
     StartArcInstanceExpectationsBuilder& SetPlayStoreAutoUpdate(
         StartArcMiniContainerRequest_PlayStoreAutoUpdate v) {
       play_store_auto_update_ = v;
@@ -524,6 +530,14 @@ class SessionManagerImplTest : public ::testing::Test,
               std::to_string(disable_system_default_app_),
       });
 
+      if (disable_media_store_maintenance_)
+        result.emplace_back("DISABLE_MEDIA_STORE_MAINTENANCE=1");
+
+      if (arc_lcd_density_ >= 0) {
+        result.emplace_back(
+            base::StringPrintf("ARC_LCD_DENSITY=%d", arc_lcd_density_));
+      }
+
       switch (play_store_auto_update_) {
         case StartArcMiniContainerRequest::AUTO_UPDATE_DEFAULT:
           break;
@@ -535,10 +549,6 @@ class SessionManagerImplTest : public ::testing::Test,
           break;
         default:
           NOTREACHED();
-      }
-      if (arc_lcd_density_ >= 0) {
-        result.emplace_back(
-            base::StringPrintf("ARC_LCD_DENSITY=%d", arc_lcd_density_));
       }
 
       switch (dalvik_memory_profile_) {
@@ -567,6 +577,7 @@ class SessionManagerImplTest : public ::testing::Test,
     bool arc_custom_tab_experiment_ = false;
 
     bool disable_system_default_app_ = false;
+    bool disable_media_store_maintenance_ = false;
     StartArcMiniContainerRequest_PlayStoreAutoUpdate play_store_auto_update_ =
         StartArcMiniContainerRequest_PlayStoreAutoUpdate_AUTO_UPDATE_DEFAULT;
     int arc_lcd_density_ = -1;
@@ -2525,6 +2536,25 @@ TEST_F(SessionManagerImplTest, DisableSystemDefaultApp) {
               TriggerImpulse(SessionManagerImpl::kStartArcInstanceImpulse,
                              StartArcInstanceExpectationsBuilder()
                                  .SetDisableSystemDefaultApp(true)
+                                 .Build(),
+                             InitDaemonController::TriggerMode::ASYNC))
+      .WillOnce(Return(ByMove(dbus::Response::CreateEmpty())));
+
+  brillo::ErrorPtr error;
+  EXPECT_TRUE(impl_->StartArcMiniContainer(&error, SerializeAsBlob(request)));
+}
+
+TEST_F(SessionManagerImplTest, DisableMediaStoreMaintenance) {
+  ExpectAndRunStartSession(kSaneEmail);
+
+  StartArcMiniContainerRequest request;
+  request.set_disable_media_store_maintenance(true);
+
+  // First, start ARC for login screen.
+  EXPECT_CALL(*init_controller_,
+              TriggerImpulse(SessionManagerImpl::kStartArcInstanceImpulse,
+                             StartArcInstanceExpectationsBuilder()
+                                 .SetDisableMediaStoreMaintenance(true)
                                  .Build(),
                              InitDaemonController::TriggerMode::ASYNC))
       .WillOnce(Return(ByMove(dbus::Response::CreateEmpty())));

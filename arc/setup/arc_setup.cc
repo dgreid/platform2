@@ -508,6 +508,14 @@ std::string GetDalvikMemoryProfileParam(
                             dalvik_memory_profile.c_str());
 }
 
+// Converts MediaStore maintenance bool to androidboot property if applicable.
+std::string GetDisableMediaStoreMaintenance(
+    bool disable_media_store_maintenance) {
+  if (!disable_media_store_maintenance)
+    return std::string();
+  return "androidboot.disable_media_store_maintenance=1 ";
+}
+
 }  // namespace
 
 // A struct that holds all the FilePaths ArcSetup uses.
@@ -1120,7 +1128,8 @@ void ArcSetup::CreateAndroidCmdlineFile(
     bool is_debuggable,
     PlayStoreAutoUpdate play_store_auto_update,
     const std::string& dalvik_memory_profile,
-    bool disable_system_default_app) {
+    bool disable_system_default_app,
+    bool disable_media_store_maintenance) {
   const base::FilePath lsb_release_file_path("/etc/lsb-release");
   LOG(INFO) << "Developer mode is " << is_dev_mode;
   LOG(INFO) << "Inside VM is " << is_inside_vm;
@@ -1134,6 +1143,8 @@ void ArcSetup::CreateAndroidCmdlineFile(
   LOG(INFO) << "arc_file_picker is " << arc_file_picker;
   const int arc_custom_tabs = config_.GetIntOrDie("ARC_CUSTOM_TABS_EXPERIMENT");
   LOG(INFO) << "arc_custom_tabs is " << arc_custom_tabs;
+  LOG(INFO) << "System default app is " << !disable_system_default_app;
+  LOG(INFO) << "MediaStore maintenance is " << !disable_media_store_maintenance;
 
   std::string native_bridge;
   switch (IdentifyBinaryTranslationType()) {
@@ -1186,6 +1197,7 @@ void ArcSetup::CreateAndroidCmdlineFile(
       "androidboot.chromeos_channel=%s "
       "%s" /* Play Store auto-update mode */
       "%s" /* Dalvik memory profile */
+      "%s" /* Disable MediaStore maintenance */
       "androidboot.disable_system_default_app=%d "
       "androidboot.boottime_offset=%" PRId64 "\n" /* in nanoseconds */,
       is_dev_mode, !is_dev_mode, is_inside_vm, is_debuggable, arc_lcd_density,
@@ -1193,6 +1205,7 @@ void ArcSetup::CreateAndroidCmdlineFile(
       chromeos_channel.c_str(),
       GetPlayStoreAutoUpdateParam(play_store_auto_update).c_str(),
       GetDalvikMemoryProfileParam(dalvik_memory_profile).c_str(),
+      GetDisableMediaStoreMaintenance(disable_media_store_maintenance).c_str(),
       disable_system_default_app,
       ts.tv_sec * base::Time::kNanosecondsPerSecond + ts.tv_nsec);
 
@@ -2043,6 +2056,12 @@ void ArcSetup::OnSetup() {
   const bool disable_system_default_app =
       config_.GetBoolOrDie("DISABLE_SYSTEM_DEFAULT_APP");
 
+  bool disable_media_store_maintenance;
+  if (!config_.GetBool("DISABLE_MEDIA_STORE_MAINTENANCE",
+                       &disable_media_store_maintenance)) {
+    disable_media_store_maintenance = false;
+  }
+
   // The host-side dalvik-cache directory is mounted into the container
   // via the json file. Create it regardless of whether the code integrity
   // feature is enabled.
@@ -2098,7 +2117,8 @@ void ArcSetup::OnSetup() {
   SetUpFilesystemForObbMounter();
   CreateAndroidCmdlineFile(is_dev_mode, is_inside_vm, is_debuggable,
                            play_store_auto_update, dalvik_memory_profile,
-                           disable_system_default_app);
+                           disable_system_default_app,
+                           disable_media_store_maintenance);
   CreateFakeProcfsFiles();
   SetUpMountPointForDebugFilesystem(is_dev_mode);
   SetUpMountPointsForMedia();
