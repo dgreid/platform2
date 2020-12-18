@@ -1788,11 +1788,15 @@ void Cellular::set_provider_requires_roaming(bool provider_requires_roaming) {
                              provider_requires_roaming_);
 }
 
-void Cellular::set_sim_present(bool sim_present) {
+void Cellular::SetSimPresent(bool sim_present) {
   if (sim_present_ == sim_present)
     return;
 
   sim_present_ = sim_present;
+  if (!sim_present) {
+    SetImsi("");
+    SetEid("");
+  }
   adaptor()->EmitBoolChanged(kSIMPresentProperty, sim_present_);
 }
 

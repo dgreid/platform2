@@ -13,9 +13,11 @@
 #include <utility>
 #include <vector>
 
+#include <ModemManager/ModemManager.h>
+#include <base/containers/flat_map.h>
+#include <base/containers/flat_set.h>
 #include <base/memory/weak_ptr.h>
 #include <gtest/gtest_prod.h>  // for FRIEND_TEST
-#include <ModemManager/ModemManager.h>
 
 #include "shill/cellular/cellular.h"
 #include "shill/cellular/cellular_bearer.h"
@@ -55,6 +57,15 @@ class CellularCapability3gpp : public CellularCapability {
   static const char kConnectAllowedAuth[];
   static const char kConnectAllowRoaming[];
   static const char kConnectIpType[];
+
+  // Cached SIM properties for multi-SIM support.
+  struct SimProperties {
+    std::string iccid;
+    std::string eid;
+    std::string operator_id;
+    std::string spn;
+    std::string imsi;
+  };
 
   CellularCapability3gpp(Cellular* cellular, ModemInfo* modem_info);
   CellularCapability3gpp(const CellularCapability3gpp&) = delete;
@@ -129,6 +140,11 @@ class CellularCapability3gpp : public CellularCapability {
   uint32_t access_technologies_for_testing() const {
     return access_technologies_;
   }
+  const RpcIdentifier& sim_path_for_testing() const { return sim_path_; }
+  const base::flat_map<RpcIdentifier, SimProperties>&
+  sim_properties_for_testing() const {
+    return sim_properties_;
+  }
 
   // Constants used in scan results.  Make available to unit tests.
   static const char kStatusProperty[];
@@ -150,11 +166,6 @@ class CellularCapability3gpp : public CellularCapability {
  protected:
   virtual void InitProxies();
   void ReleaseProxies() override;
-
-  // Updates the |sim_path_| variable and creates a new proxy to the
-  // DBUS ModemManager1.Sim interface.
-  // TODO(armansito): Put this method in a 3GPP-only subclass.
-  virtual void OnSimPathChanged(const RpcIdentifier& sim_path);
 
   // Updates the online payment portal information, if any, for the cellular
   // provider.
@@ -209,7 +220,6 @@ class CellularCapability3gpp : public CellularCapability {
   // SimLockStatus represents the fields in the Cellular.SIMLockStatus
   // DBUS property of the shill device.
   struct SimLockStatus {
-   public:
     SimLockStatus()
         : enabled(false), lock_type(MM_MODEM_LOCK_UNKNOWN), retries_left(0) {}
 
@@ -291,15 +301,13 @@ class CellularCapability3gpp : public CellularCapability {
   void OnProfilesChanged(const Profiles& profiles);
 
   // SIM property change handlers
-  // TODO(armansito): Put these methods in a 3GPP-only subclass.
   void RequestSimProperties(RpcIdentifier sim_path);
-  void OnGetSimProperties(RpcIdentifier sim_path,
-                          const KeyValueStore& properties);
-  void OnSimPropertiesChanged(const KeyValueStore& properties);
-  void OnSpnChanged(const std::string& spn);
-  void OnSimIdentifierChanged(const std::string& id);
-  void OnOperatorIdChanged(const std::string& operator_id);
-  void OnOperatorNameChanged(const std::string& operator_name);
+  void OnGetSimProperties(
+      RpcIdentifier sim_path,
+      std::unique_ptr<DBusPropertiesProxy> sim_properties_proxy,
+      const KeyValueStore& properties);
+  void OnSimPropertiesChanged(RpcIdentifier sim_path,
+                              const KeyValueStore& properties);
 
   // Method callbacks
   void OnRegisterReply(const ResultCallback& callback, const Error& error);
@@ -316,19 +324,26 @@ class CellularCapability3gpp : public CellularCapability {
                           const Error& error);
   void OnSetInitialEpsBearerReply(const Error& error);
 
+  // Returns the normalized version of |mdn| by keeping only digits in |mdn|
+  // and removing other non-digit characters.
+  std::string NormalizeMdn(const std::string& mdn) const;
+
   // Returns true, if |sim_path| constitutes a valid SIM path. Currently, a
   // path is accepted to be valid, as long as it is not equal to one of ""
   // and "/".
   bool IsValidSimPath(const RpcIdentifier& sim_path) const;
 
-  // Returns the normalized version of |mdn| by keeping only digits in |mdn|
-  // and removing other non-digit characters.
-  std::string NormalizeMdn(const std::string& mdn) const;
+  void UpdateSims();
+  void OnAllSimPropertiesReceived();
+  void SetPrimarySimProperties(const SimProperties& sim_properties);
 
   // Post-payment activation handlers.
   void ResetAfterActivation();
   void UpdateServiceActivationState();
   void OnResetAfterActivationReply(const Error& error);
+
+  void SetSimPathForTesting(const RpcIdentifier& sim_path);
+  void SetSimSlotsForTesting(const RpcIdentifiers& sim_slots);
 
   // Convenience pointer to modem_info()->manager()->metrics().
   Metrics* metrics_;
@@ -357,7 +372,7 @@ class CellularCapability3gpp : public CellularCapability {
   bool mm_reports_wideband_rssi_;
 
   Stringmap serving_operator_;
-  std::string spn_;
+  std::string spn_;  // For testing only.
   std::string desired_network_;
 
   // Properties.
@@ -365,11 +380,16 @@ class CellularCapability3gpp : public CellularCapability {
   bool resetting_;
   SimLockStatus sim_lock_status_;
   SubscriptionState subscription_state_;
-  RpcIdentifier sim_path_;
   std::unique_ptr<CellularBearer> active_bearer_;
   RpcIdentifiers bearer_paths_;
   bool reset_done_;
   std::vector<std::unique_ptr<MobileOperatorInfo::MobileAPN>> profiles_;
+
+  // SIM properties
+  RpcIdentifier sim_path_;
+  RpcIdentifiers sim_slots_;
+  base::flat_set<RpcIdentifier> pending_slot_requests_;
+  base::flat_map<RpcIdentifier, SimProperties> sim_properties_;
 
   // If the modem is not in a state to be enabled when StartModem is called,
   // enabling is deferred using this callback.

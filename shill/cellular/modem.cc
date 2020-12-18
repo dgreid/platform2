@@ -244,7 +244,6 @@ bool Modem::GetDeviceParams(string* mac_address, int* interface_index) {
 void Modem::OnPropertiesChanged(const string& interface,
                                 const KeyValueStore& changed_properties) {
   SLOG(this, 2) << __func__;
-  SLOG(this, 3) << "PropertiesChanged signal received.";
   if (device_) {
     device_->OnPropertiesChanged(interface, changed_properties);
   }
@@ -252,6 +251,7 @@ void Modem::OnPropertiesChanged(const string& interface,
 
 void Modem::OnModemManagerPropertiesChanged(const string& interface,
                                             const KeyValueStore& properties) {
+  SLOG(this, 2) << __func__;
   OnPropertiesChanged(interface, properties);
 }
 

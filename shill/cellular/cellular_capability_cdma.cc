@@ -388,10 +388,6 @@ void CellularCapabilityCdma::Scan(Error* error,
   OnUnsupportedOperation(__func__, error);
 }
 
-void CellularCapabilityCdma::OnSimPathChanged(const RpcIdentifier& sim_path) {
-  // TODO(armansito): Remove once 3GPP is implemented in its own class.
-}
-
 string CellularCapabilityCdma::GetRoamingStateString() const {
   uint32_t state = cdma_evdo_registration_state_;
   if (state == MM_MODEM_CDMA_REGISTRATION_STATE_UNKNOWN) {

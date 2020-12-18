@@ -4,6 +4,7 @@
 
 #include "shill/cellular/cellular_capability_3gpp.h"
 
+#include <map>
 #include <memory>
 #include <string>
 #include <tuple>
@@ -65,7 +66,9 @@ const char kActiveBearerPathPrefix[] = "/bearer/active";
 constexpr char kDeviceId[] = "<device_id>";
 const char kImei[] = "999911110000";
 const char kInactiveBearerPathPrefix[] = "/bearer/inactive";
-const RpcIdentifier kSimPath("/foo/sim");
+const char kSimPathPrefix[] = "/foo/sim";
+const RpcIdentifier kSimPath1("/foo/sim/1");
+const RpcIdentifier kSimPath2("/foo/sim/2");
 
 }  // namespace
 
@@ -168,11 +171,8 @@ class CellularCapability3gppTest : public testing::TestWithParam<string> {
     EXPECT_CALL(*service_, activation_state())
         .WillRepeatedly(ReturnRef(kActivationStateUnknown));
 
-    // kStateUnknown leads to minimal extra work in maintaining
-    // activation state.
-    ON_CALL(*modem_info_.mock_pending_activation_store(),
-            GetActivationState(PendingActivationStore::kIdentifierICCID, _))
-        .WillByDefault(Return(PendingActivationStore::kStateUnknown));
+    VerifyAndSetActivationExpectations();
+
     EXPECT_CALL(manager_, cellular_service_provider())
         .WillRepeatedly(Return(&cellular_service_provider_));
 
@@ -184,8 +184,36 @@ class CellularCapability3gppTest : public testing::TestWithParam<string> {
     capability_ = nullptr;
   }
 
-  void SetSimProperties(const KeyValueStore& sim_properties) {
-    sim_properties_ = sim_properties;
+  void VerifyAndSetActivationExpectations() {
+    Mock::VerifyAndClearExpectations(
+        modem_info_.mock_pending_activation_store());
+
+    // kStateUnknown leads to minimal extra work in maintaining
+    // activation state.
+    ON_CALL(*modem_info_.mock_pending_activation_store(),
+            GetActivationState(PendingActivationStore::kIdentifierICCID, _))
+        .WillByDefault(Return(PendingActivationStore::kStateUnknown));
+    EXPECT_CALL(*modem_info_.mock_pending_activation_store(),
+                GetActivationState(PendingActivationStore::kIdentifierICCID, _))
+        .Times(AnyNumber());
+    EXPECT_CALL(*service_, SetActivationState(kActivationStateActivated))
+        .Times(AnyNumber());
+  }
+
+  void SetSimProperties(const RpcIdentifier& path,
+                        const KeyValueStore& sim_properties) {
+    sim_path_ = path;
+    sim_properties_[path] = sim_properties;
+    RpcIdentifiers slots;
+    for (auto iter : sim_properties_)
+      slots.push_back(iter.first);
+    capability_->SetSimSlotsForTesting(slots);
+    capability_->SetSimPathForTesting(path);
+    dispatcher_->DispatchPendingEvents();
+  }
+
+  void SetSimPath(const RpcIdentifier& path) {
+    capability_->SetSimPathForTesting(path);
   }
 
   void CreateService() {
@@ -309,6 +337,10 @@ class CellularCapability3gppTest : public testing::TestWithParam<string> {
   MOCK_METHOD(void, DummyCallback, ());
 
  protected:
+  brillo::VariantDictionary GetSimProperties(const RpcIdentifier& sim_path) {
+    return sim_properties_[sim_path].properties();
+  }
+
   class TestControl : public MockControl {
    public:
     explicit TestControl(CellularCapability3gppTest* test) : test_(test) {
@@ -374,9 +406,9 @@ class CellularCapability3gppTest : public testing::TestWithParam<string> {
           DBusPropertiesProxy::CreateDBusPropertiesProxyForTesting();
       FakePropertiesProxy* fake_properties =
           properties_proxy->GetFakePropertiesProxyForTesting();
-      if (path == kSimPath) {
-        fake_properties->SetDictionaryForTesting(
-            MM_DBUS_INTERFACE_SIM, test_->sim_properties_.properties());
+      if (path.value().find(kSimPathPrefix) != std::string::npos) {
+        fake_properties->SetDictionaryForTesting(MM_DBUS_INTERFACE_SIM,
+                                                 test_->GetSimProperties(path));
       } else if (path.value().find(kActiveBearerPathPrefix) !=
                  std::string::npos) {
         fake_properties->SetDictionaryForTesting(
@@ -421,7 +453,8 @@ class CellularCapability3gppTest : public testing::TestWithParam<string> {
   // Properties provided by TestControl::CreateDBusPropertiesProxy()
   KeyValueStore modem_properties_;
   KeyValueStore modem_3gpp_properties_;
-  KeyValueStore sim_properties_;
+  RpcIdentifier sim_path_;
+  std::map<RpcIdentifier, KeyValueStore> sim_properties_;
 
   // saved for testing connect operations.
   RpcIdentifierCallback connect_callback_;
@@ -704,21 +737,14 @@ TEST_F(CellularCapability3gppMainTest, SimLockStatusChanged) {
                              kOperatorIdentifier);
   sim_properties.Set<string>(MM_SIM_PROPERTY_OPERATORNAME, kOperatorName);
 
-  SetSimProperties(sim_properties);
-
-  EXPECT_CALL(*modem_info_.mock_pending_activation_store(),
-              GetActivationState(PendingActivationStore::kIdentifierICCID, _))
-      .Times(3);
-  EXPECT_CALL(*service_, SetActivationState(kActivationStateActivated))
-      .Times(1);
-
   EXPECT_FALSE(cellular_->sim_present());
   EXPECT_EQ(nullptr, capability_->sim_proxy_);
 
-  capability_->OnSimPathChanged(kSimPath);
+  SetSimProperties(kSimPath1, sim_properties);
+
   EXPECT_TRUE(cellular_->sim_present());
   EXPECT_NE(nullptr, capability_->sim_proxy_);
-  EXPECT_EQ(kSimPath, capability_->sim_path_);
+  EXPECT_EQ(kSimPath1, capability_->sim_path_for_testing());
 
   cellular_->SetImsi("");
   cellular_->SetIccid("");
@@ -727,66 +753,52 @@ TEST_F(CellularCapability3gppMainTest, SimLockStatusChanged) {
   // SIM is locked.
   capability_->sim_lock_status_.lock_type = MM_MODEM_LOCK_SIM_PIN;
   capability_->OnSimLockStatusChanged();
-  Mock::VerifyAndClearExpectations(modem_info_.mock_pending_activation_store());
+  VerifyAndSetActivationExpectations();
 
   EXPECT_EQ("", cellular_->imsi());
   EXPECT_EQ("", cellular_->iccid());
   EXPECT_EQ("", capability_->spn_);
 
   // SIM is unlocked.
-  SetSimProperties(sim_properties);
-  EXPECT_CALL(*modem_info_.mock_pending_activation_store(),
-              GetActivationState(PendingActivationStore::kIdentifierICCID, _))
-      .Times(3);
-  EXPECT_CALL(*service_, SetActivationState(kActivationStateActivated))
-      .Times(1);
+  SetSimProperties(kSimPath1, sim_properties);
 
   capability_->sim_lock_status_.lock_type = MM_MODEM_LOCK_NONE;
   capability_->OnSimLockStatusChanged();
-  Mock::VerifyAndClearExpectations(modem_info_.mock_pending_activation_store());
+  VerifyAndSetActivationExpectations();
 
   EXPECT_EQ(kImsi, cellular_->imsi());
   EXPECT_EQ(kSimIdentifier, cellular_->iccid());
   EXPECT_EQ(kOperatorName, capability_->spn_);
 
   // SIM is missing and SIM path is "/".
-  EXPECT_CALL(*modem_info_.mock_pending_activation_store(),
-              GetActivationState(PendingActivationStore::kIdentifierICCID, _))
-      .Times(1);
-  EXPECT_CALL(*service_, SetActivationState(kActivationStateActivated))
-      .Times(1);
-  capability_->OnSimPathChanged(CellularCapability3gpp::kRootPath);
+  SetSimProperties(CellularCapability3gpp::kRootPath, {});
   EXPECT_FALSE(cellular_->sim_present());
   EXPECT_EQ(nullptr, capability_->sim_proxy_);
-  EXPECT_EQ(CellularCapability3gpp::kRootPath, capability_->sim_path_);
+  EXPECT_EQ(CellularCapability3gpp::kRootPath,
+            capability_->sim_path_for_testing());
 
   EXPECT_CALL(*modem_info_.mock_pending_activation_store(),
               GetActivationState(_, _))
       .Times(0);
 
   capability_->OnSimLockStatusChanged();
-  Mock::VerifyAndClearExpectations(modem_info_.mock_pending_activation_store());
+  VerifyAndSetActivationExpectations();
 
   EXPECT_EQ("", cellular_->imsi());
   EXPECT_EQ("", cellular_->iccid());
   EXPECT_EQ("", capability_->spn_);
 
   // SIM is missing and SIM path is empty.
-  EXPECT_CALL(*modem_info_.mock_pending_activation_store(),
-              GetActivationState(PendingActivationStore::kIdentifierICCID, _))
-      .Times(1);
-  EXPECT_CALL(*service_, SetActivationState(kActivationStateActivated))
-      .Times(1);
-  capability_->OnSimPathChanged(RpcIdentifier(""));
+  SetSimProperties(RpcIdentifier(), {});
   EXPECT_FALSE(cellular_->sim_present());
   EXPECT_EQ(nullptr, capability_->sim_proxy_);
-  EXPECT_EQ(RpcIdentifier(""), capability_->sim_path_);
+  EXPECT_EQ(RpcIdentifier(""), capability_->sim_path_for_testing());
 
   EXPECT_CALL(*modem_info_.mock_pending_activation_store(),
               GetActivationState(_, _))
       .Times(0);
   capability_->OnSimLockStatusChanged();
-  Mock::VerifyAndClearExpectations(modem_info_.mock_pending_activation_store());
+  VerifyAndSetActivationExpectations();
 
   EXPECT_EQ("", cellular_->imsi());
   EXPECT_EQ("", cellular_->iccid());
@@ -798,7 +810,7 @@ TEST_F(CellularCapability3gppMainTest, PropertiesChanged) {
   KeyValueStore modem_properties;
   modem_properties.Set<uint32_t>(MM_MODEM_PROPERTY_ACCESSTECHNOLOGIES,
                                  kAccessTechnologies);
-  modem_properties.Set<RpcIdentifier>(MM_MODEM_PROPERTY_SIM, kSimPath);
+  modem_properties.Set<RpcIdentifier>(MM_MODEM_PROPERTY_SIM, kSimPath1);
 
   // Set up mock modem 3gpp properties
   KeyValueStore modem3gpp_properties;
@@ -807,7 +819,7 @@ TEST_F(CellularCapability3gppMainTest, PropertiesChanged) {
   modem3gpp_properties.Set<string>(MM_MODEM_MODEM3GPP_PROPERTY_IMEI, kImei);
 
   // Set up mock modem sim properties
-  SetSimProperties(KeyValueStore());
+  SetSimProperties(CellularCapability3gpp::kRootPath, {});
 
   EXPECT_EQ("", cellular_->imei());
   EXPECT_EQ(MM_MODEM_ACCESS_TECHNOLOGY_UNKNOWN,
@@ -816,10 +828,14 @@ TEST_F(CellularCapability3gppMainTest, PropertiesChanged) {
   EXPECT_CALL(*device_adaptor_, EmitStringChanged(kTechnologyFamilyProperty,
                                                   kTechnologyFamilyGsm));
   EXPECT_CALL(*device_adaptor_, EmitStringChanged(kImeiProperty, kImei));
+
+  SetSimProperties(kSimPath1, {});
   capability_->OnPropertiesChanged(MM_DBUS_INTERFACE_MODEM, modem_properties);
+  dispatcher_.DispatchPendingEvents();
+
   EXPECT_EQ(kAccessTechnologies,
             capability_->access_technologies_for_testing());
-  EXPECT_EQ(kSimPath, capability_->sim_path_);
+  EXPECT_EQ(kSimPath1, capability_->sim_path_for_testing());
   EXPECT_NE(nullptr, capability_->sim_proxy_);
 
   // Changing properties on wrong interface will not have an effect
@@ -1047,67 +1063,56 @@ TEST_F(CellularCapability3gppMainTest, SimPathChanged) {
   sim_properties.Set<string>(MM_SIM_PROPERTY_OPERATORIDENTIFIER,
                              kOperatorIdentifier);
   sim_properties.Set<string>(MM_SIM_PROPERTY_OPERATORNAME, kOperatorName);
-  SetSimProperties(sim_properties);
-
-  EXPECT_CALL(*modem_info_.mock_pending_activation_store(),
-              GetActivationState(PendingActivationStore::kIdentifierICCID, _))
-      .Times(4);
-  EXPECT_CALL(*service_, SetActivationState(kActivationStateActivated))
-      .Times(2);
 
   EXPECT_FALSE(cellular_->sim_present());
   EXPECT_EQ(nullptr, capability_->sim_proxy_);
-  EXPECT_EQ(RpcIdentifier(""), capability_->sim_path_);
+  EXPECT_EQ(RpcIdentifier(""), capability_->sim_path_for_testing());
   EXPECT_EQ("", cellular_->imsi());
   EXPECT_EQ("", cellular_->iccid());
   EXPECT_EQ("", capability_->spn_);
 
-  capability_->OnSimPathChanged(kSimPath);
+  SetSimProperties(kSimPath1, sim_properties);
   EXPECT_TRUE(cellular_->sim_present());
   EXPECT_NE(nullptr, capability_->sim_proxy_);
-  EXPECT_EQ(kSimPath, capability_->sim_path_);
+  EXPECT_EQ(kSimPath1, capability_->sim_path_for_testing());
   EXPECT_EQ(kImsi, cellular_->imsi());
   EXPECT_EQ(kSimIdentifier, cellular_->iccid());
   EXPECT_EQ(kOperatorName, capability_->spn_);
 
   // Changing to the same SIM path should be a no-op.
-  capability_->OnSimPathChanged(kSimPath);
+  SetSimPath(kSimPath1);
   EXPECT_TRUE(cellular_->sim_present());
   EXPECT_NE(nullptr, capability_->sim_proxy_);
-  EXPECT_EQ(kSimPath, capability_->sim_path_);
+  EXPECT_EQ(kSimPath1, capability_->sim_path_for_testing());
   EXPECT_EQ(kImsi, cellular_->imsi());
   EXPECT_EQ(kSimIdentifier, cellular_->iccid());
   EXPECT_EQ(kOperatorName, capability_->spn_);
 
-  // SIM is removed.
-  capability_->OnSimPathChanged(RpcIdentifier(""));
-  Mock::VerifyAndClearExpectations(modem_info_.mock_pending_activation_store());
+  // SIM is removed, Modem.Sim path is empty.
+  SetSimPath(RpcIdentifier());
+  VerifyAndSetActivationExpectations();
   EXPECT_FALSE(cellular_->sim_present());
   EXPECT_EQ(nullptr, capability_->sim_proxy_);
-  EXPECT_EQ(RpcIdentifier(""), capability_->sim_path_);
+  EXPECT_EQ(RpcIdentifier(""), capability_->sim_path_for_testing());
   EXPECT_EQ("", cellular_->imsi());
   EXPECT_EQ("", cellular_->iccid());
   EXPECT_EQ("", capability_->spn_);
 
-  SetSimProperties(sim_properties);
-  EXPECT_CALL(*modem_info_.mock_pending_activation_store(),
-              GetActivationState(PendingActivationStore::kIdentifierICCID, _))
-      .Times(4);
-  EXPECT_CALL(*service_, SetActivationState(kActivationStateActivated))
-      .Times(2);
-
-  capability_->OnSimPathChanged(kSimPath);
+  // SIM is replaced.
+  SetSimProperties(kSimPath1, sim_properties);
   EXPECT_TRUE(cellular_->sim_present());
   EXPECT_NE(nullptr, capability_->sim_proxy_);
-  EXPECT_EQ(kSimPath, capability_->sim_path_);
+  EXPECT_EQ(kSimPath1, capability_->sim_path_for_testing());
   EXPECT_EQ(kImsi, cellular_->imsi());
   EXPECT_EQ(kSimIdentifier, cellular_->iccid());
   EXPECT_EQ(kOperatorName, capability_->spn_);
 
-  capability_->OnSimPathChanged(RpcIdentifier("/"));
+  // SIM is removed, Modem.Sim path is ".".
+  SetSimPath(CellularCapability3gpp::kRootPath);
   EXPECT_FALSE(cellular_->sim_present());
   EXPECT_EQ(nullptr, capability_->sim_proxy_);
-  EXPECT_EQ(RpcIdentifier("/"), capability_->sim_path_);
+  EXPECT_EQ(CellularCapability3gpp::kRootPath,
+            capability_->sim_path_for_testing());
   EXPECT_EQ("", cellular_->imsi());
   EXPECT_EQ("", cellular_->iccid());
   EXPECT_EQ("", capability_->spn_);
@@ -1116,7 +1121,7 @@ TEST_F(CellularCapability3gppMainTest, SimPathChanged) {
 TEST_F(CellularCapability3gppMainTest, SimPropertiesChanged) {
   // Set up mock modem properties
   KeyValueStore modem_properties;
-  modem_properties.Set<RpcIdentifier>(MM_MODEM_PROPERTY_SIM, kSimPath);
+  modem_properties.Set<RpcIdentifier>(MM_MODEM_PROPERTY_SIM, kSimPath1);
 
   // Set up mock modem sim properties
   const char kImsi[] = "310100000001";
@@ -1124,21 +1129,14 @@ TEST_F(CellularCapability3gppMainTest, SimPropertiesChanged) {
   KeyValueStore sim_properties;
   sim_properties.Set<string>(MM_SIM_PROPERTY_IMSI, kImsi);
   sim_properties.Set<string>(MM_SIM_PROPERTY_EID, kEid);
-  SetSimProperties(sim_properties);
+  SetSimProperties(kSimPath1, sim_properties);
 
-  EXPECT_CALL(*modem_info_.mock_pending_activation_store(),
-              GetActivationState(PendingActivationStore::kIdentifierICCID, _))
-      .Times(0);
-  EXPECT_CALL(*service_, SetActivationState(kActivationStateActivated))
-      .Times(2);
-
-  EXPECT_EQ(nullptr, capability_->sim_proxy_);
   capability_->OnPropertiesChanged(MM_DBUS_INTERFACE_MODEM, modem_properties);
-  EXPECT_EQ(kSimPath, capability_->sim_path_);
+  EXPECT_EQ(kSimPath1, capability_->sim_path_for_testing());
   EXPECT_NE(nullptr, capability_->sim_proxy_);
   EXPECT_EQ(kImsi, cellular_->imsi());
   EXPECT_EQ(kEid, cellular_->eid());
-  Mock::VerifyAndClearExpectations(modem_info_.mock_pending_activation_store());
+  VerifyAndSetActivationExpectations();
 
   // Updating the SIM
   KeyValueStore new_properties;
@@ -1146,10 +1144,6 @@ TEST_F(CellularCapability3gppMainTest, SimPropertiesChanged) {
   const char kSimIdentifier[] = "9999888";
   const char kOperatorIdentifier[] = "310240";
   const char kOperatorName[] = "Custom SPN";
-  EXPECT_CALL(*modem_info_.mock_pending_activation_store(),
-              GetActivationState(PendingActivationStore::kIdentifierICCID, _))
-      .Times(6);
-  EXPECT_CALL(*mock_home_provider_info_, UpdateIMSI(kNewImsi)).Times(1);
   new_properties.Set<string>(MM_SIM_PROPERTY_IMSI, kNewImsi);
   new_properties.Set<string>(MM_SIM_PROPERTY_SIMIDENTIFIER, kSimIdentifier);
   new_properties.Set<string>(MM_SIM_PROPERTY_OPERATORIDENTIFIER,
@@ -1577,7 +1571,7 @@ TEST_F(CellularCapability3gppTimerTest, CompleteActivation) {
   Error error;
   InitProxies();
   capability_->CompleteActivation(&error);
-  Mock::VerifyAndClearExpectations(modem_info_.mock_pending_activation_store());
+  VerifyAndSetActivationExpectations();
   Mock::VerifyAndClearExpectations(service_);
   Mock::VerifyAndClearExpectations(&mock_dispatcher_);
 }
@@ -1622,7 +1616,7 @@ TEST_F(CellularCapability3gppMainTest, UpdateServiceActivationState) {
       .Times(1);
   capability_->UpdateServiceActivationState();
   Mock::VerifyAndClearExpectations(service_);
-  Mock::VerifyAndClearExpectations(modem_info_.mock_pending_activation_store());
+  VerifyAndSetActivationExpectations();
 
   EXPECT_CALL(
       *modem_info_.mock_pending_activation_store(),
@@ -1633,7 +1627,7 @@ TEST_F(CellularCapability3gppMainTest, UpdateServiceActivationState) {
       .Times(1);
   capability_->UpdateServiceActivationState();
   Mock::VerifyAndClearExpectations(service_);
-  Mock::VerifyAndClearExpectations(modem_info_.mock_pending_activation_store());
+  VerifyAndSetActivationExpectations();
 
   EXPECT_CALL(*modem_info_.mock_pending_activation_store(),
               GetActivationState(PendingActivationStore::kIdentifierICCID, _))
@@ -1672,7 +1666,7 @@ TEST_F(CellularCapability3gppMainTest, UpdatePendingActivationState) {
               GetActivationState(PendingActivationStore::kIdentifierICCID, _))
       .Times(0);
   capability_->UpdatePendingActivationState();
-  Mock::VerifyAndClearExpectations(modem_info_.mock_pending_activation_store());
+  VerifyAndSetActivationExpectations();
 
   // Valid MDN, but subsciption_state_ Unprovisioned
   cellular_->set_mdn("1234567");
@@ -1682,7 +1676,7 @@ TEST_F(CellularCapability3gppMainTest, UpdatePendingActivationState) {
               GetActivationState(PendingActivationStore::kIdentifierICCID, _))
       .Times(0);
   capability_->UpdatePendingActivationState();
-  Mock::VerifyAndClearExpectations(modem_info_.mock_pending_activation_store());
+  VerifyAndSetActivationExpectations();
 
   // ICCID known.
   cellular_->SetIccid(kIccid);
@@ -1705,7 +1699,7 @@ TEST_F(CellularCapability3gppMainTest, UpdatePendingActivationState) {
       .Times(2)
       .WillRepeatedly(ReturnRef(kActivationStateUnknown));
   capability_->UpdatePendingActivationState();
-  Mock::VerifyAndClearExpectations(modem_info_.mock_pending_activation_store());
+  VerifyAndSetActivationExpectations();
 
   // Not registered.
   capability_->registration_state_ = MM_MODEM_3GPP_REGISTRATION_STATE_SEARCHING;
@@ -1728,7 +1722,7 @@ TEST_F(CellularCapability3gppMainTest, UpdatePendingActivationState) {
   cellular_->service_->activation_state_ = kActivationStateNotActivated;
 
   Mock::VerifyAndClearExpectations(service_);
-  Mock::VerifyAndClearExpectations(modem_info_.mock_pending_activation_store());
+  VerifyAndSetActivationExpectations();
 
   EXPECT_CALL(*service_, activation_state())
       .WillRepeatedly(ReturnRef(kActivationStateUnknown));
@@ -1752,7 +1746,7 @@ TEST_F(CellularCapability3gppMainTest, UpdatePendingActivationState) {
   cellular_->set_mdn("1020304");
   capability_->subscription_state_ = SubscriptionState::kUnknown;
   capability_->UpdatePendingActivationState();
-  Mock::VerifyAndClearExpectations(modem_info_.mock_pending_activation_store());
+  VerifyAndSetActivationExpectations();
 
   EXPECT_CALL(*service_, activation_state())
       .WillRepeatedly(ReturnRef(kActivationStateUnknown));
@@ -1768,7 +1762,7 @@ TEST_F(CellularCapability3gppMainTest, UpdatePendingActivationState) {
   cellular_->set_mdn("0000000");
   capability_->subscription_state_ = SubscriptionState::kProvisioned;
   capability_->UpdatePendingActivationState();
-  Mock::VerifyAndClearExpectations(modem_info_.mock_pending_activation_store());
+  VerifyAndSetActivationExpectations();
 }
 
 TEST_F(CellularCapability3gppMainTest, IsServiceActivationRequired) {
@@ -1822,7 +1816,7 @@ TEST_F(CellularCapability3gppMainTest, IsServiceActivationRequired) {
   EXPECT_FALSE(capability_->IsServiceActivationRequired());
   EXPECT_FALSE(capability_->IsServiceActivationRequired());
   EXPECT_TRUE(capability_->IsServiceActivationRequired());
-  Mock::VerifyAndClearExpectations(modem_info_.mock_pending_activation_store());
+  VerifyAndSetActivationExpectations();
 }
 
 TEST_F(CellularCapability3gppMainTest, OnModemCurrentCapabilitiesChanged) {
@@ -1959,6 +1953,47 @@ TEST_F(CellularCapability3gppMainTest, OnSimLockPropertiesChanged) {
   EXPECT_EQ(MM_MODEM_LOCK_SIM_PIN, capability_->sim_lock_status_.lock_type);
   EXPECT_EQ(CellularCapability3gpp::kUnknownLockRetriesLeft,
             capability_->sim_lock_status_.retries_left);
+}
+
+TEST_F(CellularCapability3gppMainTest, MultiSimProperties) {
+  const char kImsi1[] = "110100000001";
+  const char kEid1[] = "110100000002";
+  KeyValueStore sim_properties1;
+  sim_properties1.Set<string>(MM_SIM_PROPERTY_IMSI, kImsi1);
+  sim_properties1.Set<string>(MM_SIM_PROPERTY_EID, kEid1);
+
+  const char kImsi2[] = "210100000001";
+  const char kEid2[] = "210100000002";
+  KeyValueStore sim_properties2;
+  sim_properties2.Set<string>(MM_SIM_PROPERTY_IMSI, kImsi2);
+  sim_properties2.Set<string>(MM_SIM_PROPERTY_EID, kEid2);
+
+  SetSimProperties(kSimPath2, sim_properties2);
+  SetSimProperties(kSimPath1, sim_properties1);
+
+  KeyValueStore modem_properties;
+  modem_properties.Set<RpcIdentifier>(MM_MODEM_PROPERTY_SIM, kSimPath1);
+  modem_properties.Set<RpcIdentifiers>(MM_MODEM_PROPERTY_SIMSLOTS,
+                                       {kSimPath1, kSimPath2});
+  capability_->OnPropertiesChanged(MM_DBUS_INTERFACE_MODEM, modem_properties);
+  dispatcher_.DispatchPendingEvents();
+
+  EXPECT_EQ(kSimPath1, capability_->sim_path_for_testing());
+  EXPECT_TRUE(cellular_->sim_present());
+  EXPECT_EQ(kImsi1, cellular_->imsi());
+  EXPECT_EQ(kEid1, cellular_->eid());
+  VerifyAndSetActivationExpectations();
+
+  // Switch active slot to 2.
+  modem_properties.Set<RpcIdentifier>(MM_MODEM_PROPERTY_SIM, kSimPath2);
+  capability_->OnPropertiesChanged(MM_DBUS_INTERFACE_MODEM, modem_properties);
+  dispatcher_.DispatchPendingEvents();
+
+  EXPECT_EQ(kSimPath2, capability_->sim_path_for_testing());
+  EXPECT_TRUE(cellular_->sim_present());
+  EXPECT_EQ(kImsi2, cellular_->imsi());
+  EXPECT_EQ(kEid2, cellular_->eid());
+  VerifyAndSetActivationExpectations();
 }
 
 }  // namespace shill

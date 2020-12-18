@@ -312,7 +312,7 @@ class Cellular : public Device,
   // associated with the card.
   const std::string& GetSimCardId() const;
 
-  // setters
+  // Property setters. TODO(b/176904580): Rename SetFoo and alphabetize.
   void set_home_provider(const Stringmap& home_provider);
   void set_carrier(const std::string& carrier);
   void set_scanning_supported(bool scanning_supported);
@@ -337,7 +337,7 @@ class Cellular : public Device,
   void clear_found_networks();
   void set_found_networks(const Stringmaps& found_networks);
   void set_provider_requires_roaming(bool provider_requires_roaming);
-  void set_sim_present(bool sim_present);
+  void SetSimPresent(bool sim_present);
   void set_apn_list(const Stringmaps& apn_list);
 
   void set_use_attach_apn_for_testing(bool on) { use_attach_apn_ = on; }

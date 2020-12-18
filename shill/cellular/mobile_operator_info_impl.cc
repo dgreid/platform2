@@ -359,8 +359,12 @@ void MobileOperatorInfoImpl::UpdateOperatorName(const string& operator_name) {
   if (user_operator_name_ == operator_name) {
     return;
   }
-
   user_operator_name_ = operator_name;
+  if (operator_name.empty()) {
+    Reset();
+    return;
+  }
+
   HandleOperatorNameUpdate();
 
   // We must update the candidates by name anyway.

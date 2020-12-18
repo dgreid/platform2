@@ -605,8 +605,8 @@ void CellularCapability3gpp::ReleaseProxies() {
   modem_simple_proxy_.reset();
   dbus_properties_proxy_.reset();
 
-  // |sim_proxy_| is managed through OnSimPathChanged() and thus shouldn't be
-  // cleared here in order to keep it in sync with |sim_path_|.
+  // |sim_proxy_| is managed through OnAllSimPropertiesReceived() and thus
+  // shouldn't be cleared here in order to keep it in sync with |sim_path_|.
 }
 
 bool CellularCapability3gpp::AreProxiesInitialized() const {
@@ -1185,6 +1185,8 @@ string CellularCapability3gpp::GetTypeString() const {
 
 void CellularCapability3gpp::OnModemPropertiesChanged(
     const KeyValueStore& properties) {
+  SLOG(this, 1) << __func__;
+
   // Update the bearers property before the modem state property as
   // OnModemStateChanged may call UpdateActiveBearer, which reads the bearers
   // property.
@@ -1210,8 +1212,20 @@ void CellularCapability3gpp::OnModemPropertiesChanged(
     Cellular::ModemState state = static_cast<Cellular::ModemState>(istate);
     OnModemStateChanged(state);
   }
-  if (properties.Contains<RpcIdentifier>(MM_MODEM_PROPERTY_SIM))
-    OnSimPathChanged(properties.Get<RpcIdentifier>(MM_MODEM_PROPERTY_SIM));
+
+  // dbus_properties_proxy_->GetAll(MM_DBUS_INTERFACE_MODEM) may not return all
+  // properties, so only update SIM properties if SIM or SIMSLOTS was provided.
+  bool sim_changed = false;
+  if (properties.Contains<RpcIdentifier>(MM_MODEM_PROPERTY_SIM)) {
+    sim_path_ = properties.Get<RpcIdentifier>(MM_MODEM_PROPERTY_SIM);
+    sim_changed = true;
+  }
+  if (properties.Contains<RpcIdentifiers>(MM_MODEM_PROPERTY_SIMSLOTS)) {
+    sim_slots_ = properties.Get<RpcIdentifiers>(MM_MODEM_PROPERTY_SIMSLOTS);
+    sim_changed = true;
+  }
+  if (sim_changed)
+    UpdateSims();
 
   if (properties.Contains<uint32_t>(MM_MODEM_PROPERTY_CURRENTCAPABILITIES)) {
     OnModemCurrentCapabilitiesChanged(
@@ -1285,7 +1299,7 @@ void CellularCapability3gpp::OnModemPropertiesChanged(
 
 void CellularCapability3gpp::OnPropertiesChanged(
     const string& interface, const KeyValueStore& changed_properties) {
-  SLOG(this, 3) << __func__ << "(" << interface << ")";
+  SLOG(this, 2) << __func__ << "(" << interface << ")";
   if (interface == MM_DBUS_INTERFACE_MODEM) {
     OnModemPropertiesChanged(changed_properties);
   }
@@ -1293,17 +1307,12 @@ void CellularCapability3gpp::OnPropertiesChanged(
     OnModem3gppPropertiesChanged(changed_properties);
   }
   if (interface == MM_DBUS_INTERFACE_SIM) {
-    OnSimPropertiesChanged(changed_properties);
+    OnSimPropertiesChanged(sim_path_, changed_properties);
   }
 }
 
 bool CellularCapability3gpp::RetriableConnectError(const Error& error) const {
   return error.type() == Error::kInvalidApn;
-}
-
-bool CellularCapability3gpp::IsValidSimPath(
-    const RpcIdentifier& sim_path) const {
-  return !sim_path.value().empty() && sim_path != kRootPath;
 }
 
 string CellularCapability3gpp::NormalizeMdn(const string& mdn) const {
@@ -1315,32 +1324,76 @@ string CellularCapability3gpp::NormalizeMdn(const string& mdn) const {
   return normalized_mdn;
 }
 
-void CellularCapability3gpp::OnSimPathChanged(const RpcIdentifier& sim_path) {
-  if (sim_path == sim_path_)
-    return;
+bool CellularCapability3gpp::IsValidSimPath(
+    const RpcIdentifier& sim_path) const {
+  return !sim_path.value().empty() && sim_path != kRootPath;
+}
 
-  sim_proxy_ = nullptr;
-  if (IsValidSimPath(sim_path)) {
+void CellularCapability3gpp::UpdateSims() {
+  pending_slot_requests_.clear();
+
+  if (sim_slots_.empty()) {
+    if (!IsValidSimPath(sim_path_)) {
+      SLOG(this, 2) << "No SIMSLOTS or SIM path.";
+      OnAllSimPropertiesReceived();
+      return;
+    }
+    SLOG(this, 2) << "No SIMSLOTS, requesting SIM path.";
+    pending_slot_requests_.insert(sim_path_);
+    RequestSimProperties(sim_path_);
+    return;
+  }
+
+  for (const auto& slot : sim_slots_) {
+    if (!IsValidSimPath(slot)) {
+      SLOG(this, 2) << "Invalid slot path: " << slot.value();
+      continue;
+    }
+    SLOG(this, 2) << "Requeting SIM properties: " << slot.value();
+    pending_slot_requests_.insert(slot);
+    RequestSimProperties(slot);
+  }
+  if (pending_slot_requests_.empty()) {
+    SLOG(this, 2) << "No valid SIM slots.";
+    OnAllSimPropertiesReceived();
+  }
+}
+
+void CellularCapability3gpp::OnAllSimPropertiesReceived() {
+  SLOG(this, 2) << __func__ << " SIM path=" << sim_path_.value();
+  if (IsValidSimPath(sim_path_)) {
     sim_proxy_ = control_interface()->CreateMM1SimProxy(
-        sim_path, cellular()->dbus_service());
-  }
-  sim_path_ = sim_path;
-
-  if (!IsValidSimPath(sim_path)) {
-    // Clear all data about the sim
-    cellular()->SetImsi("");
-    spn_ = "";
-    cellular()->set_sim_present(false);
-    OnSimIdentifierChanged("");
-    cellular()->SetEid("");
-    OnOperatorIdChanged("");
-    cellular()->home_provider_info()->Reset();
-    return;
+        sim_path_, cellular()->dbus_service());
+  } else {
+    sim_proxy_ = nullptr;
   }
 
-  cellular()->set_sim_present(true);
+  if (base::Contains(sim_properties_, sim_path_)) {
+    SetPrimarySimProperties(sim_properties_[sim_path_]);
+    cellular()->SetSimPresent(true);
+  } else {
+    // TODO(b/169581681): Set the primary SIM slot if valid properties exist.
+    SetPrimarySimProperties(SimProperties());
+    cellular()->SetSimPresent(false);
+  }
+  // TODO(b/169581681): Update Cellular Services for secondary SIMs.
+}
 
-  RequestSimProperties(sim_path_);
+void CellularCapability3gpp::SetPrimarySimProperties(
+    const SimProperties& sim_properties) {
+  const std::string& iccid = sim_properties.iccid;
+  SLOG(this, 2) << __func__ << " ICCID: " << iccid;
+  cellular()->SetIccid(iccid);
+
+  UpdateServiceActivationState();
+  UpdatePendingActivationState();
+
+  cellular()->SetEid(sim_properties.eid);
+  cellular()->SetImsi(sim_properties.imsi);
+
+  cellular()->home_provider_info()->UpdateMCCMNC(sim_properties.operator_id);
+  spn_ = sim_properties.spn;
+  cellular()->home_provider_info()->UpdateOperatorName(spn_);
 }
 
 void CellularCapability3gpp::OnModemCurrentCapabilitiesChanged(
@@ -1466,7 +1519,7 @@ void CellularCapability3gpp::OnSimLockStatusChanged() {
   // If the SIM is currently unlocked, assume that we need to refresh
   // carrier information, since a locked SIM prevents shill from obtaining
   // the necessary data to establish a connection later (e.g. IMSI).
-  RequestSimProperties(sim_path_);
+  UpdateSims();
 }
 
 void CellularCapability3gpp::OnModem3gppPropertiesChanged(
@@ -1743,58 +1796,72 @@ void CellularCapability3gpp::OnPcoChanged(const PcoList& pco_list) {
 }
 
 void CellularCapability3gpp::RequestSimProperties(RpcIdentifier sim_path) {
+  SLOG(this, 2) << __func__ << ": " << sim_path.value();
   // Ownership if this proxy will be passed to the success callback so that the
   // proxy is not destroyed before the asynchronous call completes.
   std::unique_ptr<DBusPropertiesProxy> sim_properties_proxy =
       control_interface()->CreateDBusPropertiesProxy(
           sim_path, cellular()->dbus_service());
-  auto sim_properties = sim_properties_proxy->GetAll(MM_DBUS_INTERFACE_SIM);
-  OnGetSimProperties(sim_path, sim_properties);
+  DBusPropertiesProxy* sim_properties_proxy_ptr = sim_properties_proxy.get();
+  sim_properties_proxy_ptr->GetAllAsync(
+      MM_DBUS_INTERFACE_SIM,
+      base::Bind(&CellularCapability3gpp::OnGetSimProperties,
+                 weak_ptr_factory_.GetWeakPtr(), sim_path,
+                 base::Passed(&sim_properties_proxy)),
+      base::Bind([](const Error& error) {
+        LOG(ERROR) << "Error fetching SIM properties: " << error;
+      }));
 }
 
 void CellularCapability3gpp::OnGetSimProperties(
-    RpcIdentifier sim_path, const KeyValueStore& properties) {
-  if (sim_path == sim_path_)
-    OnSimPropertiesChanged(properties);
+    RpcIdentifier sim_path,
+    std::unique_ptr<DBusPropertiesProxy> sim_properties_proxy,
+    const KeyValueStore& properties) {
+  OnSimPropertiesChanged(sim_path, properties);
   // |sim_properties_proxy| will be safely released here.
 }
 
 void CellularCapability3gpp::OnSimPropertiesChanged(
-    const KeyValueStore& properties) {
-  SLOG(this, 3) << __func__;
+    RpcIdentifier sim_path, const KeyValueStore& properties) {
+  SLOG(this, 2) << __func__;
+  SimProperties sim_properties;
   if (properties.Contains<string>(MM_SIM_PROPERTY_SIMIDENTIFIER)) {
-    OnSimIdentifierChanged(
-        properties.Get<string>(MM_SIM_PROPERTY_SIMIDENTIFIER));
+    sim_properties.iccid =
+        properties.Get<string>(MM_SIM_PROPERTY_SIMIDENTIFIER);
   }
   if (properties.Contains<string>(MM_SIM_PROPERTY_EID)) {
-    cellular()->SetEid(properties.Get<string>(MM_SIM_PROPERTY_EID));
+    sim_properties.eid = properties.Get<string>(MM_SIM_PROPERTY_EID);
   }
   if (properties.Contains<string>(MM_SIM_PROPERTY_OPERATORIDENTIFIER)) {
-    OnOperatorIdChanged(
-        properties.Get<string>(MM_SIM_PROPERTY_OPERATORIDENTIFIER));
+    sim_properties.operator_id =
+        properties.Get<string>(MM_SIM_PROPERTY_OPERATORIDENTIFIER);
   }
   if (properties.Contains<string>(MM_SIM_PROPERTY_OPERATORNAME)) {
-    OnSpnChanged(properties.Get<string>(MM_SIM_PROPERTY_OPERATORNAME));
+    sim_properties.spn = (properties.Get<string>(MM_SIM_PROPERTY_OPERATORNAME));
   }
   if (properties.Contains<string>(MM_SIM_PROPERTY_IMSI)) {
-    cellular()->SetImsi(properties.Get<string>(MM_SIM_PROPERTY_IMSI));
+    sim_properties.imsi = properties.Get<string>(MM_SIM_PROPERTY_IMSI);
   }
+  sim_properties_[sim_path] = sim_properties;
+  pending_slot_requests_.erase(sim_path);
+  if (pending_slot_requests_.empty())
+    OnAllSimPropertiesReceived();
 }
 
-void CellularCapability3gpp::OnSpnChanged(const std::string& spn) {
-  spn_ = spn;
-  cellular()->home_provider_info()->UpdateOperatorName(spn);
+void CellularCapability3gpp::SetSimPathForTesting(
+    const RpcIdentifier& sim_path) {
+  if (sim_path == sim_path_)
+    return;
+  sim_path_ = sim_path;
+  UpdateSims();
 }
 
-void CellularCapability3gpp::OnSimIdentifierChanged(const string& id) {
-  cellular()->SetIccid(id);
-  UpdateServiceActivationState();
-  UpdatePendingActivationState();
-}
-
-void CellularCapability3gpp::OnOperatorIdChanged(const string& operator_id) {
-  SLOG(this, 2) << "Operator ID = '" << operator_id << "'";
-  cellular()->home_provider_info()->UpdateMCCMNC(operator_id);
+void CellularCapability3gpp::SetSimSlotsForTesting(
+    const RpcIdentifiers& sim_slots) {
+  if (sim_slots == sim_slots_)
+    return;
+  sim_slots_ = sim_slots;
+  UpdateSims();
 }
 
 }  // namespace shill
