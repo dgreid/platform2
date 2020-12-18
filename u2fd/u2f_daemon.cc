@@ -206,10 +206,12 @@ int U2fDaemon::StartService() {
   int status = StartU2fHidService();
 
   U2fMode u2f_mode = GetU2fMode(force_u2f_, force_g2f_);
-  if (u2f_mode != U2fMode::kU2f && u2f_mode != U2fMode::kU2fExtended) {
-    LOG(INFO) << "Initializing WebAuthn handler.";
-    InitializeWebAuthnHandler();
-  }
+  // If u2f or g2f is enabled, this is an enterprise user who has used the
+  // power button u2f, so allow that in WebAuthn.
+  bool webauthn_allow_presence_mode =
+      u2f_mode == U2fMode::kU2f || u2f_mode == U2fMode::kU2fExtended;
+  LOG(INFO) << "Initializing WebAuthn handler.";
+  InitializeWebAuthnHandler(webauthn_allow_presence_mode);
 
   return status;
 }
@@ -328,14 +330,14 @@ void U2fDaemon::CreateU2fHid() {
       u2f_msg_handler_.get());
 }
 
-void U2fDaemon::InitializeWebAuthnHandler() {
+void U2fDaemon::InitializeWebAuthnHandler(bool allow_presence_mode) {
   std::function<void()> request_presence = [this]() {
     IgnorePowerButtonPress();
     SendWinkSignal();
   };
 
   webauthn_handler_.Initialize(bus_.get(), &tpm_proxy_, user_state_.get(),
-                               request_presence);
+                               allow_presence_mode, request_presence);
 }
 
 void U2fDaemon::SendWinkSignal() {

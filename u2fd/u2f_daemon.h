@@ -72,7 +72,7 @@ class U2fDaemon : public brillo::DBusServiceDaemon {
   void CreateU2fMsgHandler(bool allow_g2f_attestation,
                            bool include_g2f_allowlisting_data);
   void CreateU2fHid();
-  void InitializeWebAuthnHandler();
+  void InitializeWebAuthnHandler(bool allow_presence_mode);
 
   // Sends a DBus signal that indicates to Chrome a 'Press Power Button'
   // notification should be displayed.

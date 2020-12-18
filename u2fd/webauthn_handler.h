@@ -68,11 +68,14 @@ class WebAuthnHandler {
   // outlive WebAuthnHandler.
   // |user_state| - pointer to a UserState instance, for requesting user secret.
   // Owned by U2fDaemon and should outlive WebAuthnHandler.
+  // |allow_presence_mode| - whether power-button mode should be allowed. If
+  // false, all requests will be upgraded to user-verifying.
   // |request_presence| - callback for performing other platform tasks when
   // expecting the user to press the power button.
   void Initialize(dbus::Bus* bus,
                   TpmVendorCommandProxy* tpm_proxy,
                   UserState* user_state,
+                  bool allow_presence_mode,
                   std::function<void()> request_presence);
 
   // Called when session state changed. Loads/clears state for primary user.
@@ -107,7 +110,8 @@ class WebAuthnHandler {
           cryptohome_proxy);
 
  private:
-  friend class WebAuthnHandlerTest;
+  friend class WebAuthnHandlerTestBase;
+  friend class WebAuthnHandlerTestAllowUP;
 
   bool Initialized();
 
@@ -225,6 +229,10 @@ class WebAuthnHandler {
 
   std::unique_ptr<org::chromium::CryptohomeInterfaceProxyInterface>
       cryptohome_proxy_;
+
+  // Presence-only mode (power button mode) should only be allowed if u2f or
+  // g2f is enabled for the device (it's a per-device policy).
+  bool allow_presence_mode_;
 
   // The MakeCredential session that's waiting on UI. There can only be one
   // such session. UP sessions should not use this since there can be multiple.
