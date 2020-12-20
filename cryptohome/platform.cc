@@ -804,6 +804,29 @@ bool Platform::SafeCreateDirAndSetOwnership(const base::FilePath& path,
   return path_result.second == brillo::SafeFD::Error::kNoError;
 }
 
+bool Platform::UdevAdmSettle(const base::FilePath& device_path,
+                             bool wait_for_device) {
+  brillo::ProcessImpl udevadm_process;
+  udevadm_process.AddArg("/bin/udevadm");
+  udevadm_process.AddArg("settle");
+
+  if (wait_for_device) {
+    udevadm_process.AddArg("-t");
+    udevadm_process.AddArg("10");
+    udevadm_process.AddArg("-E");
+    udevadm_process.AddArg(device_path.value());
+  }
+  // Close unused file descriptors in child process.
+  udevadm_process.SetCloseUnusedFileDescriptors(true);
+
+  // Start the process and return.
+  int rc = udevadm_process.Run();
+  if (rc != 0)
+    return false;
+
+  return true;
+}
+
 bool Platform::DeleteFile(const FilePath& path) {
   return base::DeleteFile(path);
 }
@@ -1650,10 +1673,8 @@ FileEnumerator::FileInfo::FileInfo(
 }
 
 FileEnumerator::FileInfo::FileInfo(const FilePath& name,
-                                   const base::stat_wrapper_t& stat
-                                   )
-    : name_(name), stat_(stat) {
-}
+                                   const base::stat_wrapper_t& stat)
+    : name_(name), stat_(stat) {}
 
 FileEnumerator::FileInfo::FileInfo(const FileEnumerator::FileInfo& other) {
   if (other.info_.get()) {

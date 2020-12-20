@@ -917,6 +917,10 @@ class Platform {
                                             uid_t user_id,
                                             gid_t gid);
 
+  // Calls "udevadm settle", optionally waiting for the device path to appear.
+  virtual bool UdevAdmSettle(const base::FilePath& device_path,
+                             bool wait_for_device);
+
  private:
   // Returns the process and open file information for the specified process id
   // with files open on the given path

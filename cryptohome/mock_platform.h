@@ -393,6 +393,7 @@ class MockPlatform : public Platform {
               SafeCreateDirAndSetOwnership,
               (const base::FilePath&, uid_t, gid_t),
               (override));
+  MOCK_METHOD(bool, UdevAdmSettle, (const base::FilePath&, bool), (override));
 
   brillo::ProcessMock* mock_process() { return mock_process_.get(); }
 
