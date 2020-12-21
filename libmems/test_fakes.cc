@@ -95,6 +95,8 @@ base::FilePath FakeIioDevice::GetPath() const {
 
 base::Optional<std::string> FakeIioDevice::ReadStringAttribute(
     const std::string& name) const {
+  if (name.compare(kDeviceName) == 0)
+    return name_;
   return FakeReadAttributes<>(name, text_attributes_);
 }
 base::Optional<int64_t> FakeIioDevice::ReadNumberAttribute(
