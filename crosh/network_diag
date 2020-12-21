@@ -514,6 +514,7 @@ diag_wifi () {
 }
 
 diag_wifi_internal () {
+  local ifc
   for ifc in $(get_iflist); do
     if is_wifi "${ifc}" ; then
       echo "iw dev ${ifc} survey dump:"
@@ -526,6 +527,8 @@ diag_wifi_internal () {
       "${IW}" dev "${ifc}" link | output_anonymize | grep -v SSID
     fi
   done
+  echo "iw reg get:"
+  "${IW}" reg get
 }
 
 # Perform diagnostics on a WAN interface
