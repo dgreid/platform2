@@ -4,7 +4,11 @@
 
 #include "typecd/cable.h"
 
+#include <string>
+
 #include <base/files/file_enumerator.h>
+#include <base/strings/string_number_conversions.h>
+#include <base/strings/string_util.h>
 #include <re2/re2.h>
 
 #include "typecd/pd_vdo_constants.h"
@@ -23,6 +27,28 @@ void Cable::RegisterCablePlug(const base::FilePath& syspath) {
   base::FileEnumerator iter(syspath, false, base::FileEnumerator::DIRECTORIES);
   for (auto path = iter.Next(); !path.empty(); path = iter.Next())
     AddAltMode(path);
+
+  if (GetNumAltModes() != -1)
+    return;
+
+  auto num_altmodes_path = syspath.Append("number_of_alternate_modes");
+
+  std::string val_str;
+  if (!base::ReadFileToString(num_altmodes_path, &val_str)) {
+    LOG(WARNING) << "Number of alternate modes not available for syspath "
+                 << syspath;
+    return;
+  }
+
+  base::TrimWhitespaceASCII(val_str, base::TRIM_TRAILING, &val_str);
+
+  int num_altmodes;
+  if (!base::StringToInt(val_str, &num_altmodes)) {
+    LOG(ERROR) << "Couldn't parse num_altmodes from string: " << val_str;
+    return;
+  }
+
+  SetNumAltModes(num_altmodes);
 }
 
 bool Cable::AddAltMode(const base::FilePath& mode_syspath) {
