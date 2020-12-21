@@ -21,17 +21,17 @@ namespace typecd {
 // cable.
 class Cable : public Peripheral {
  public:
-  explicit Cable(const base::FilePath& syspath) : Peripheral(syspath) {}
+  explicit Cable(const base::FilePath& syspath)
+      : Peripheral(syspath), num_alt_modes_(-1) {}
   Cable(const Cable&) = delete;
   Cable& operator=(const Cable&) = delete;
 
-  // The Linux Type C connector class framework doesn't generate udev events for
-  // alternate modes added to plugs. Therefore, the alternate mode addition code
-  // needs to be handled a little differently from partners.
-  //
-  // Search |plug_syspath| for directories that follow the SOP' alternate mode
-  // regex, and run the |AddAltMode| for each such path.
-  void SearchForAltModes(const base::FilePath& plug_syspath);
+  // Register the contents of a cable plug (SOP') for this cable. The Linux
+  // kernel Type C connector class creates two devices for the two types of
+  // cable plugs (SOP' & SOP''). Since the Chrome OS Embedded Controller only
+  // parses SOP', we don't create a separate object for the plug and instead
+  // fold its contents into the Cable object itself.
+  void RegisterCablePlug(const base::FilePath& syspath);
 
   // Add an alternate mode for the plug associated with the cable.
   // NOTE: We currently only process SOP' plugs.

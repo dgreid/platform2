@@ -81,6 +81,18 @@ void PortManager::OnCableAddedOrRemoved(const base::FilePath& path,
   }
 }
 
+void PortManager::OnCablePlugAdded(const base::FilePath& path, int port_num) {
+  auto it = ports_.find(port_num);
+  if (it == ports_.end()) {
+    LOG(WARNING) << "Cable plug (SOP') add attempted for non-existent port "
+                 << port_num;
+    return;
+  }
+
+  auto port = it->second.get();
+  port->AddCablePlug(path);
+}
+
 void PortManager::OnCableAltModeAdded(const base::FilePath& path,
                                       int port_num) {
   auto it = ports_.find(port_num);

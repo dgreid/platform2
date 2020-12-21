@@ -30,6 +30,8 @@ class Port {
 
   void AddCable(const base::FilePath& path);
   void RemoveCable();
+  void AddCablePlug(const base::FilePath& path);
+
   // Add/remove an alternate mode for the partner.
   void AddRemovePartnerAltMode(const base::FilePath& path, bool added);
 

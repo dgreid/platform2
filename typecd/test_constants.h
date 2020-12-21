@@ -39,9 +39,9 @@ constexpr char kFakePort0PartnerSysPath[] =
     "/sys/class/typec/port0/port0-partner";
 constexpr char kFakePort0CableSysPath[] = "/sys/class/typec/port0/port0-cable";
 constexpr char kFakePort0SOPPrimeAltModeSysPath[] =
-    "/sys/class/typec/port0/port0-cable/port0-plug0";
+    "/sys/class/typec/port0/port0-cable/port0-plug0/port0-plug0.0";
 constexpr char kFakePort0SOPDoublePrimeAltModeSysPath[] =
-    "/sys/class/typec/port0/port0-cable/port0-plug1";
+    "/sys/class/typec/port0/port0-cable/port0-plug1/port0-plug1.0";
 
 }  // namespace typecd
 

@@ -62,6 +62,8 @@ class TestObserver : public UdevMonitor::Observer {
       num_cables_--;
   };
 
+  void OnCablePlugAdded(const base::FilePath& path, int port_num) override {}
+
   void OnCableAltModeAdded(const base::FilePath& path, int port_num) override {
     num_cable_altmodes_++;
   };

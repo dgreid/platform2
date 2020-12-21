@@ -86,6 +86,12 @@ class UdevMonitor {
                                        int port_num,
                                        bool added) = 0;
 
+    // Callback that is executed when a cable plug (SOP') device is registered.
+    //
+    // The |path| argument refers to the sysfs device path of the cable plug
+    // (SOP'). The |port_num| argument refers to the port's index number.
+    virtual void OnCablePlugAdded(const base::FilePath& path, int port_num) = 0;
+
     // Callback that is executed when a cable (SOP') alternate mode is
     // registered.
     //

@@ -50,6 +50,15 @@ void Port::RemoveCable() {
   LOG(INFO) << "Cable removed for port " << port_num_;
 }
 
+void Port::AddCablePlug(const base::FilePath& syspath) {
+  if (!cable_) {
+    LOG(WARNING) << "No cable present for port " << port_num_;
+    return;
+  }
+
+  cable_->RegisterCablePlug(syspath);
+}
+
 void Port::AddPartner(const base::FilePath& path) {
   if (partner_) {
     LOG(WARNING) << "Partner already exists for port " << port_num_;
@@ -93,7 +102,10 @@ void Port::AddCableAltMode(const base::FilePath& path) {
     return;
   }
 
-  cable_->SearchForAltModes(path);
+  if (!cable_->AddAltMode(path)) {
+    LOG(ERROR) << "Failed to add SOP' alt mode for port " << port_num_
+               << " at path " << path;
+  }
 }
 
 void Port::PartnerChanged() {

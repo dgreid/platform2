@@ -17,9 +17,10 @@ constexpr char kSOPPrimeAltModeRegex[] = R"(port(\d+)-plug0.(\d+))";
 
 namespace typecd {
 
-void Cable::SearchForAltModes(const base::FilePath& plug_syspath) {
-  base::FileEnumerator iter(plug_syspath, false,
-                            base::FileEnumerator::DIRECTORIES);
+void Cable::RegisterCablePlug(const base::FilePath& syspath) {
+  // Search for all alt modes which were already registered prior to daemon
+  // init.
+  base::FileEnumerator iter(syspath, false, base::FileEnumerator::DIRECTORIES);
   for (auto path = iter.Next(); !path.empty(); path = iter.Next())
     AddAltMode(path);
 }
@@ -31,7 +32,7 @@ bool Cable::AddAltMode(const base::FilePath& mode_syspath) {
     return false;
 
   if (IsAltModePresent(index)) {
-    LOG(ERROR) << "Alt mode already registered for syspath " << mode_syspath;
+    LOG(INFO) << "Alt mode already registered for syspath " << mode_syspath;
     return false;
   }
 

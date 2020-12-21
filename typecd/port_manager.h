@@ -46,6 +46,7 @@ class PortManager : public UdevMonitor::Observer {
   void OnCableAddedOrRemoved(const base::FilePath& path,
                              int port_num,
                              bool added) override;
+  void OnCablePlugAdded(const base::FilePath& path, int port_num) override;
   void OnCableAltModeAdded(const base::FilePath& path, int port_num) override;
   void OnPartnerChanged(int port_num) override;
 
