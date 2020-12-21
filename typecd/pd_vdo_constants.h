@@ -25,8 +25,14 @@ constexpr uint8_t kIDHeaderVDOProductTypeCableActive = 0x4;
 constexpr uint32_t kDeviceCapabilityBitOffset = 24;
 constexpr uint8_t kDeviceCapabilityMask = 0xF;
 constexpr uint8_t kDeviceCapabilityUSB4 = 0x8;
-constexpr uint32_t kUSBSpeed20 = 0x0;
 constexpr uint32_t kUSBSpeedBitMask = 0x3;
+constexpr uint32_t kUSBSpeed20 = 0x0;
+constexpr uint32_t kUSBSuperSpeed32Gen1 = 0x1;
+constexpr uint32_t kUSBSuperSpeed32Or40Gen2 = 0x2;
+constexpr uint32_t kUSB40SuperSpeedGen3 = 0x3;
+// Speed values for PD rev 2.0
+constexpr uint32_t kUSBSuperSpeed31Gen1 = 0x1;
+constexpr uint32_t kUSBSuperSpeed31Gen2 = 0x2;
 
 // Bit Masks for Active Cable VDO1
 // USB PD spec rev 3.0, v 2.0.

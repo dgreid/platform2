@@ -7,22 +7,9 @@
 #include <base/files/file_enumerator.h>
 #include <re2/re2.h>
 
+#include "typecd/pd_vdo_constants.h"
+
 namespace {
-
-// Ref:
-//   USB PD Spec rev 3.0, v2.0
-//   Table 6-29: ID Header VDO
-//   Table 6-38: Passive Cable VDO
-constexpr uint32_t kActiveCableBitMask = (0x4 << 27);
-constexpr uint32_t kPassiveCableBitMask = (0x3 << 27);
-
-constexpr uint32_t kUSBSpeedBitMask = 0x3;
-constexpr uint32_t kUSBSuperSpeed32Gen1 = 0x1;
-constexpr uint32_t kUSBSuperSpeed32Or40Gen2 = 0x2;
-constexpr uint32_t kUSB40SuperSpeedGen3 = 0x3;
-// Speed values for PD rev 2.0
-constexpr uint32_t kUSBSuperSpeed31Gen1 = 0x1;
-constexpr uint32_t kUSBSuperSpeed31Gen2 = 0x2;
 
 constexpr char kSOPPrimeAltModeRegex[] = R"(port(\d+)-plug0.(\d+))";
 
@@ -101,12 +88,14 @@ AltMode* Cable::GetAltMode(int index) {
 //   Figure F-1.
 bool Cable::TBT3PDIdentityCheck() {
   // If the cable is active, we don't need to check for speed.
-  if (GetIdHeaderVDO() & kActiveCableBitMask) {
+  auto product_type = GetIdHeaderVDO() >> kIDHeaderVDOProductTypeBitOffset &
+                      kIDHeaderVDOProductTypeMask;
+  if (product_type & kIDHeaderVDOProductTypeCableActive) {
     LOG(INFO) << "Active cable detected, TBT3 supported.";
     return true;
   }
 
-  if (!(GetIdHeaderVDO() & kPassiveCableBitMask)) {
+  if (!(product_type & kIDHeaderVDOProductTypeCablePassive)) {
     LOG(ERROR) << "Cable has unsupported product type.";
     return false;
   }
