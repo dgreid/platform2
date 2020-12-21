@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#[cfg(feature = "chromeos-module")]
+pub mod chromeos;
+
 pub mod linux;
 pub mod net;
 mod read_dir;

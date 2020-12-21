@@ -6,14 +6,20 @@ edition = "2018"
 
 [dependencies]
 data_model = { path = "../../platform/crosvm/data_model" } # provided by ebuild
+dbus = { version = "0.8", optional = true}
 libc = "0.2"
 log = "0.4"
 protobuf = "2.1"
 intrusive-collections = "0.9"
 futures = { version = "0.3", default-features = false, features = ["alloc"] }
+system_api = { path = "../system_api", optional = true } # provided by ebuild
+thiserror = "1.0.20"
+
+[features]
+default = []
+chromeos-module = ["dbus", "system_api"]
 
 [dev-dependencies]
 futures = { version = "0.3", features = ["async-await"] }
 futures-executor = { version = "0.3", features = ["thread-pool"] }
 futures-util = "0.3"
-

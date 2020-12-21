@@ -23,7 +23,7 @@ thread_local!(static PER_THREAD_WAKER: Arc<Waker> = Arc::new(Waker(AtomicI32::ne
 #[repr(transparent)]
 struct Waker(AtomicI32);
 
-extern {
+extern "C" {
     #[cfg_attr(target_os = "android", link_name = "__errno")]
     #[cfg_attr(target_os = "linux", link_name = "__errno_location")]
     fn errno_location() -> *mut libc::c_int;
