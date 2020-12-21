@@ -514,11 +514,6 @@ diag_wifi () {
 }
 
 diag_wifi_internal () {
-  # Only callable by debugd or root, since debugfs is locked down.
-  for dir in /sys/kernel/debug/ieee80211/phy*/ath9k; do
-    [ -d "${dir}" ] && head -1000 "${dir}"/{dma,interrupt,recv,xmit,samples} | \
-      output_anonymize
-  done
   for ifc in $(get_iflist); do
     if is_wifi "${ifc}" ; then
       echo "iw dev ${ifc} survey dump:"
@@ -952,126 +947,6 @@ diag_run () {
   diag_gateway_latency "${host}"
 }
 
-
-monitor_get_stats () {
-  local tmp_file="$(mktemp /tmp/iwlink.XXXXX)"
-  local err_file="$(mktemp /tmp/iwlink.XXXXX)"
-  "${IW}" dev "${mon_wlan_device}" link > "${tmp_file}"
-  if ! grep -q 'Connected to' "${tmp_file}"; then
-    values_reset=0
-    unlink "${tmp_file}"
-    unlink "${err_file}"
-    return
-  fi
-  for param in ${mon_link_params[@]}; do
-    val="$(grep "${param}" "${tmp_file}" | \
-          sed -e "s/.*${param}:*[ 	]*\([^ 	]*\).*/\1/")"
-    mon_current["${param}"]="${val}"
-  done
-  "${IW}" dev "${mon_wlan_device}" station dump 2>"${err_file}" > "${tmp_file}"
-  if [ "$?" -ne 0 -o -s "${err_file}" ] ; then
-    values_reset=0
-    unlink "${tmp_file}"
-    unlink "${err_file}"
-    return
-  fi
-  for param in ${mon_station_params[@]}; do
-    val="$(grep "${param}" "${tmp_file}" | \
-          sed -e "s/.*${param}:*[ 	]*\([^ 	]*\).*/\1/")"
-    mon_current["${param}"]="${val}"
-  done
-  "${IW}" dev "${mon_wlan_device}" survey dump 2>"${err_file}" | \
-    grep -A6 "${mon_current[freq]}" > "${tmp_file}"
-  if [ "$?" -ne 0 -o -s "${err_file}" ] ; then
-    values_reset=0
-    unlink "${tmp_file}"
-    unlink "${err_file}"
-    return
-  fi
-  for param in ${mon_survey_params[@]}; do
-    val="$(grep "${param}" "${tmp_file}" | \
-          sed -e "s/.*${param}:*[ 	]*\([^ 	]*\).*/\1/")"
-    mon_current["${param}"]="${val}"
-  done
-  echo -n "$(date +%s)"
-  for param in ${mon_delta_params[@]}; do
-    if [ -n "${values_reset}" ] ; then
-      prev=0
-    else
-      prev="${mon_last["${param}"]-0}"
-    fi
-    val="$((mon_current[${param}] - $prev))"
-    mon_last["${param}"]="${mon_current["${param}"]}"
-    echo -n " ${param}:${val}"
-  done
-  for param in ${mon_static_params[@]}; do
-    echo -n " ${param}:${mon_current[${param}]}"
-  done
-  echo
-  values_reset=
-  unlink "${tmp_file}"
-  unlink "${err_file}"
-}
-
-monitor_cleanup () {
-  kill "${mon_event_proc}"
-  [ -n "${mon_msgs_proc}" ] && kill "${mon_msgs_proc}"
-  echo -n TOTALS:
-  for param in ${mon_delta_params[@]} ${mon_static_params[@]}; do
-    echo -n " ${param}:${mon_current[${param}]}"
-  done
-  exit 0
-}
-
-diag_wifi_monitor () {
-  if ! [ -d /sys/bus/pci/drivers/ath9k ] ; then
-    echo "Unfortunately this script only spports ath9k at the moment."
-    return
-  fi
-  declare -A mon_last
-  declare -A mon_current
-  mon_wlan_device=wlan0
-
-  declare -a mon_link_params
-  mon_link_params=( freq signal 'tx.bitrate' 'dtim.period' 'beacon.int' SSID \
-                    Connected.to )
-  declare -a mon_delta_station_params
-  declare -a mon_static_station_params
-  declare -a mon_station_params
-  mon_delta_station_params=( 'rx.bytes' 'tx.bytes' 'rx.packets' \
-                             'tx.packets' 'tx.retries' 'tx.failed' )
-  mon_static_station_params=( 'inactive.time' 'signal.avg' )
-  mon_station_params=("${mon_static_station_params[@]}" \
-                      "${mon_delta_station_params[@]}")
-  declare -a mon_delta_survey_params
-  declare -a mon_static_survey_params
-  declare -a mon_survey_params
-  mon_delta_survey_params=( 'channel.active.time' 'channel.busy.time' \
-                            'channel.receive.time' 'channel.transmit.time' )
-  mon_static_survey_params=( noise )
-  mon_survey_params=("${mon_static_survey_params[@]}" \
-                     "${mon_delta_survey_params[@]}")
-  mon_static_params=("${mon_static_survey_params[@]}" "${mon_link_params[@]}" \
-                     "${mon_static_station_params[@]}")
-  mon_delta_params=("${mon_delta_survey_params[@]}" \
-                    "${mon_delta_station_params[@]}")
-  values_reset=0
-
-  trap monitor_cleanup SIGINT SIGTERM
-  "${IW}" event -t &
-  mon_event_proc="$!"
-  mon_debug_file=/sys/kernel/debug/ieee80211/phy0/ath9k/debug
-  if [ -f "${mon_debug_file}" -a -r /proc/kmsg ] ; then
-    [ -w "${mon_debug_file}" ] && echo 0x440 > "${mon_debug_file}"
-    # NB: Even if we can't write to the flag, debug might already enabled
-    egrep 'ath:.*(cal|ANI)' /proc/kmsg &
-    mon_msgs_proc="$!"
-  fi
-  while sleep 1; do
-    monitor_get_stats
-  done
-}
-
 diag_gateway_latency () {
   local ff="org.chromium.flimflam"
   local services=($(dbus_get_object_list "${ff}" Manager Services /))
@@ -1112,8 +987,7 @@ valid_host () {
 }
 
 usage () {
-  echo "Usage: $0 [--date|--flimflam|--link|--wifi|--help|"
-  echo "           --wifi-mon] [host]"
+  echo "Usage: $0 [--date|--flimflam|--link|--wifi|--help] [host]"
   echo "    --date:      Diagnose time-of-day"
   echo "                 ([host] must support SSL)"
   echo "    --dhcp:      Display DHCP information"
@@ -1126,7 +1000,6 @@ usage () {
   echo "    --proxy:     Specify proxy to use with tests"
   echo "    --route:     Diagnose routes to each host"
   echo "    --wifi:      Display driver-specific debugging information"
-  echo "    --wifi-mon:  Monitor WiFi performance metrics"
   echo "    --help:      Display this message"
   echo "    [host]       Hostname to perform web access test on " \
                          "(default: clients3.google.com)"
@@ -1246,10 +1119,6 @@ main () {
         check_no_arg "${option}" "${option_and_arg_provided}"
         diag_wifi_internal
         exit 0
-        ;;
-      --wifi-mon)
-        check_no_arg "${option}" "${option_and_arg_provided}"
-        diag_wifi_monitor
         ;;
       --help|-help|-h)
         check_no_arg "${option}" "${option_and_arg_provided}"
