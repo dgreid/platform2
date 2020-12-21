@@ -7,6 +7,7 @@
 use std::borrow::{Borrow, BorrowMut};
 use std::collections::HashMap;
 use std::fmt::{self, Debug, Display};
+use std::marker::PhantomData;
 
 use libsirenia::storage::{self, Storable, Storage};
 
@@ -33,26 +34,27 @@ impl Display for Error {
 pub type Result<T> = std::result::Result<T, storage::Error>;
 
 /// Represents some scoped data temporarily loaded from the backing store.
-pub struct ScopedData<'a, S: Storable, T: Storage> {
+pub struct ScopedData<S: Storable, T: Storage, R: BorrowMut<T>> {
     identifier: String,
     data: S,
-    storage: &'a mut T,
+    storage: R,
+    storage_phantom: PhantomData<*const T>,
 }
 
-impl<'a, S: Storable, T: Storage> AsRef<S> for ScopedData<'a, S, T> {
+impl<S: Storable, T: Storage, R: BorrowMut<T>> AsRef<S> for ScopedData<S, T, R> {
     fn as_ref(&self) -> &S {
         self.borrow()
     }
 }
 
-impl<'a, S: Storable, T: Storage> AsMut<S> for ScopedData<'a, S, T> {
+impl<S: Storable, T: Storage, R: BorrowMut<T>> AsMut<S> for ScopedData<S, T, R> {
     fn as_mut(&mut self) -> &mut S {
         self.borrow_mut()
     }
 }
 
 /// Borrows the data read-only.
-impl<'a, S: Storable, T: Storage> Borrow<S> for ScopedData<'a, S, T> {
+impl<S: Storable, T: Storage, R: BorrowMut<T>> Borrow<S> for ScopedData<S, T, R> {
     fn borrow(&self) -> &S {
         &self.data
     }
@@ -60,13 +62,13 @@ impl<'a, S: Storable, T: Storage> Borrow<S> for ScopedData<'a, S, T> {
 
 /// Borrows a mutable reference to the data (the ScopedData must be
 /// constructed read-write).
-impl<'a, S: Storable, T: Storage> BorrowMut<S> for ScopedData<'a, S, T> {
+impl<S: Storable, T: Storage, R: BorrowMut<T>> BorrowMut<S> for ScopedData<S, T, R> {
     fn borrow_mut(&mut self) -> &mut S {
         &mut self.data
     }
 }
 
-impl<'a, S: Storable, T: Storage> Drop for ScopedData<'a, S, T> {
+impl<S: Storable, T: Storage, R: BorrowMut<T>> Drop for ScopedData<S, T, R> {
     fn drop(&mut self) {
         // TODO: Figure out how we want to handle errors on storing.
         // We might want to log failures, but not necessarily crash. This will
@@ -76,24 +78,26 @@ impl<'a, S: Storable, T: Storage> Drop for ScopedData<'a, S, T> {
         // One option would be set a callback. We could provide some standard
         // callbacks like unwrap and log.
         self.storage
+            .borrow_mut()
             .write_data(&self.identifier, &self.data)
             .unwrap();
     }
 }
 
 /// Reads the data into itself then writes back on a flush.
-impl<'a, S: Storable, T: Storage> ScopedData<'a, S, T> {
+impl<S: Storable, T: Storage, R: BorrowMut<T>> ScopedData<S, T, R> {
     /// Creates and returns a new scoped data. Attempts to read the value of
     /// the id from the backing store and uses the passed in closure to
     /// determine the default value if the id is not found.
-    pub fn new(storage: &'a mut T, identifier: &str, f: fn(&str) -> S) -> Result<Self> {
-        match storage.read_data(identifier) {
+    pub fn new(mut storage: R, identifier: &str, f: fn(&str) -> S) -> Result<Self> {
+        match storage.borrow_mut().read_data(identifier) {
             Ok(data) => {
                 let id = identifier.to_string();
                 Ok(ScopedData {
                     identifier: id,
                     data,
                     storage,
+                    storage_phantom: PhantomData,
                 })
             }
             Err(storage::Error::IdNotFound(_)) => {
@@ -103,6 +107,7 @@ impl<'a, S: Storable, T: Storage> ScopedData<'a, S, T> {
                     identifier: id,
                     data,
                     storage,
+                    storage_phantom: PhantomData,
                 })
             }
             Err(e) => Err(e),
@@ -112,14 +117,22 @@ impl<'a, S: Storable, T: Storage> ScopedData<'a, S, T> {
     /// Write the data back out to the backing store.
     pub fn flush(&mut self) -> Result<()> {
         self.storage
+            .borrow_mut()
             .write_data(&self.identifier, &self.data)
             .unwrap();
         Ok(())
     }
 }
 
+/// A helper type for when the storage implementation doesn't need to be shared. See ScopedData.
+pub type ExclusiveScopedData<'a, S, T> = ScopedData<S, T, &'a mut T>;
+
 /// Represents an entire key value store for one identifier.
-pub type ScopedKeyValueStore<'a, S, T> = ScopedData<'a, HashMap<String, S>, T>;
+pub type ScopedKeyValueStore<S, T, R> = ScopedData<HashMap<String, S>, T, R>;
+
+/// A helper type for when the storage implementation doesn't need to be shared.
+/// See ScopedKeyValueStore.
+pub type ExclusiveScopedKeyValueStore<'a, S, T> = ScopedKeyValueStore<S, T, &'a mut T>;
 
 #[cfg(test)]
 mod tests {
@@ -203,8 +216,8 @@ mod tests {
     #[test]
     fn make_new_scoped_data() {
         let (mut store, id, _s) = setup_test_case(/* write back */ false);
-        let data: ScopedData<String, MockStorage> =
-            ScopedData::<String, MockStorage>::new(&mut store, &id, callback_id_not_found).unwrap();
+        let data: ExclusiveScopedData<String, MockStorage> =
+            ScopedData::new(&mut store, &id, callback_id_not_found).unwrap();
         let res: &String = data.borrow();
         assert_eq!("Could not find id", res);
     }
@@ -213,8 +226,8 @@ mod tests {
     fn make_existing_scoped_data() {
         let (mut store, id, s) = setup_test_case(/* write back */ true);
 
-        let data: ScopedData<String, MockStorage> =
-            ScopedData::<String, MockStorage>::new(&mut store, &id, callback_id_found).unwrap();
+        let data: ExclusiveScopedData<String, MockStorage> =
+            ScopedData::new(&mut store, &id, callback_id_found).unwrap();
         let res: &String = data.borrow();
         assert_eq!(&s, res);
     }
@@ -224,8 +237,8 @@ mod tests {
         let (mut store, id, mut s) = setup_test_case(/* write back */ true);
 
         {
-            let mut data: ScopedData<String, MockStorage> =
-                ScopedData::<String, MockStorage>::new(&mut store, &id, callback_id_found).unwrap();
+            let mut data: ExclusiveScopedData<String, MockStorage> =
+                ScopedData::new(&mut store, &id, callback_id_found).unwrap();
             let res: &mut String = data.borrow_mut();
             res.push_str(" New");
         }
@@ -239,8 +252,8 @@ mod tests {
         let (mut store, id, mut s) = setup_test_case(/* write back */ true);
 
         {
-            let mut data: ScopedData<String, MockStorage> =
-                ScopedData::<String, MockStorage>::new(&mut store, &id, callback_id_found).unwrap();
+            let mut data: ExclusiveScopedData<String, MockStorage> =
+                ScopedData::new(&mut store, &id, callback_id_found).unwrap();
             let res: &mut String = data.borrow_mut();
             res.push_str(" New");
             data.flush().unwrap();
@@ -263,8 +276,8 @@ mod tests {
             let fun = |_h: &str| panic!();
             let key = "key";
             let value = "value";
-            let mut kvstore =
-                ScopedKeyValueStore::<String, MockStorage>::new(&mut store, &id, fun).unwrap();
+            let mut kvstore: ExclusiveScopedKeyValueStore<String, MockStorage> =
+                ScopedKeyValueStore::new(&mut store, &id, fun).unwrap();
             kvstore.as_mut().insert(key.to_string(), value.to_string());
             assert!(kvstore.as_mut().contains_key(key));
         }
