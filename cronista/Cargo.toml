@@ -1,0 +1,21 @@
+[package]
+name = "cronista"
+version = "0.24.52"
+description = "a authenticated log for Chrome OS."
+authors = ["The Chromium OS Authors"]
+edition = "2018"
+
+[profile.release]
+panic = "abort"
+overflow-checks = true
+
+[dependencies]
+getopts = "0.2"
+libchromeos = { path = "../libchromeos-rs", features = ['chromeos-module'] } # provided by ebuild
+libsirenia = { path = "../sirenia/libsirenia" } # provided by ebuild
+sys_util = { path = "../../platform/crosvm/sys_util" } # provided by ebuild
+thiserror = "1.0.20"
+
+# These can be removed when the chromeos module is moved out.
+dbus = "0.8"
+system_api = { path = "../system_api" } # provided by ebuild
