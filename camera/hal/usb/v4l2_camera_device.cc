@@ -382,10 +382,12 @@ int V4L2CameraDevice::Connect(const std::string& device_path) {
     }
   }
 
-  ret = SubscribePrivacySwitchEvent();
-  if (ret != 0) {
-    LOGF(WARNING) << "Failed to subscribe privacy switch event: "
-                  << base::safe_strerror(-ret);
+  if (IsControlSupported(kControlPrivacy)) {
+    ret = SubscribePrivacySwitchEvent();
+    if (ret != 0) {
+      LOGF(WARNING) << "Failed to subscribe privacy switch event: "
+                    << base::safe_strerror(-ret);
+    }
   }
 
   // Initialize the capabilities.
@@ -406,12 +408,14 @@ void V4L2CameraDevice::Disconnect() {
   base::AutoLock l(lock_);
   stream_on_ = false;
 
-  int ret = UnsubscribePrivacySwitchEvent();
-  if (ret != 0) {
-    LOGF(WARNING) << "Failed to unsubscribe privacy switch event: "
-                  << base::safe_strerror(-ret);
+  if (IsControlSupported(kControlPrivacy)) {
+    int ret = UnsubscribePrivacySwitchEvent();
+    if (ret != 0) {
+      LOGF(WARNING) << "Failed to unsubscribe privacy switch event: "
+                    << base::safe_strerror(-ret);
+    }
+    privacy_switch_monitor_->OnStatusChanged(PrivacySwitchState::kUnknown);
   }
-  privacy_switch_monitor_->OnStatusChanged(PrivacySwitchState::kUnknown);
 
   device_fd_.reset();
   buffers_at_client_.clear();
@@ -1485,9 +1489,10 @@ int V4L2CameraDevice::SubscribePrivacySwitchEvent() {
 }
 
 int V4L2CameraDevice::UnsubscribePrivacySwitchEvent() {
-  DCHECK(event_thread_.IsRunning());
   cancel_pipe_.reset();
-  event_thread_.Stop();
+  if (event_thread_.IsRunning()) {
+    event_thread_.Stop();
+  }
 
   struct v4l2_event_subscription sub = {.type = V4L2_EVENT_CTRL,
                                         .id = V4L2_CID_PRIVACY};
