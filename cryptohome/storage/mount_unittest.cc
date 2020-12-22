@@ -10,6 +10,7 @@
 #include <openssl/evp.h>
 #include <openssl/sha.h>
 #include <pwd.h>
+#include <regex>  // NOLINT(build/c++11)
 #include <stdlib.h>
 #include <string.h>  // For memset(), memcpy()
 #include <sys/types.h>
@@ -44,6 +45,9 @@
 #include "cryptohome/mock_tpm.h"
 #include "cryptohome/mock_tpm_init.h"
 #include "cryptohome/mock_vault_keyset.h"
+#include "cryptohome/storage/encrypted_container/encrypted_container.h"
+#include "cryptohome/storage/encrypted_container/encrypted_container_factory.h"
+#include "cryptohome/storage/encrypted_container/fake_backing_device.h"
 #include "cryptohome/storage/homedirs.h"
 #include "cryptohome/storage/mock_homedirs.h"
 #include "cryptohome/storage/mount_helper.h"
@@ -78,6 +82,17 @@ namespace {
 const FilePath kLoopDevice("/dev/loop7");
 
 const gid_t kDaemonGid = 400;  // TODO(wad): expose this in mount.h
+
+MATCHER_P(FilePathMatchesRegex, pattern, "") {
+  std::string arg_string = arg.value();
+
+  if (std::regex_match(arg_string, std::regex(pattern)))
+    return true;
+
+  *result_listener << arg_string << " did not match regex: " << pattern;
+
+  return false;
+}
 
 }  // namespace
 
@@ -146,7 +161,10 @@ class MountTest
     homedirs_ = std::make_unique<HomeDirs>(
         &platform_, keyset_management_.get(), helper_.system_salt, nullptr,
         std::make_unique<policy::PolicyProvider>(
-            std::unique_ptr<policy::MockDevicePolicy>(mock_device_policy_)));
+            std::unique_ptr<policy::MockDevicePolicy>(mock_device_policy_)),
+        std::make_unique<EncryptedContainerFactory>(
+            &platform_,
+            std::make_unique<FakeBackingDeviceFactory>(&platform_)));
 
     platform_.GetFake()->SetStandardUsersAndGroups();
 
@@ -233,11 +251,15 @@ class MountTest
 
   // Sets expectations for cryptohome key setup for dircrypto.
   void ExpectCryptohomeKeySetupForDircrypto(const TestUser& user) {
+    std::string dircrypto_shadow_mount_regex(ShadowRoot().value() +
+                                             "/[0-9a-f]{40}/mount");
     EXPECT_CALL(platform_, AddDirCryptoKeyToKeyring(_, _))
         .WillOnce(Return(true));
     EXPECT_CALL(platform_, SetDirCryptoKey(user.vault_mount_path, _))
         .WillOnce(Return(true));
-    EXPECT_CALL(platform_, InvalidateDirCryptoKey(_, ShadowRoot()))
+    EXPECT_CALL(platform_,
+                InvalidateDirCryptoKey(
+                    _, FilePathMatchesRegex(dircrypto_shadow_mount_regex)))
         .WillRepeatedly(Return(true));
   }
 
@@ -505,7 +527,8 @@ TEST_P(MountTest, MountCryptohomeHasPrivileges) {
                                       /* is_pristine */ false, &error));
 
   EXPECT_CALL(platform_, Unmount(_, _, _)).WillRepeatedly(Return(true));
-  EXPECT_CALL(platform_, ClearUserKeyring()).WillOnce(Return(true));
+  if (ShouldTestEcryptfs())
+    EXPECT_CALL(platform_, ClearUserKeyring()).WillOnce(Return(true));
   EXPECT_TRUE(mount_->UnmountCryptohome());
 }
 
@@ -903,9 +926,8 @@ TEST_P(MountTest, MountPristineCryptohome) {
   EXPECT_CALL(platform_,
               DirectoryExists(AnyOf(user->vault_path, user->vault_mount_path,
                                     user->user_vault_path)))
-      .WillOnce(Return(ShouldTestEcryptfs()))
-      .WillOnce(Return(false))
-      .WillOnce(Return(false));
+      .Times(1)
+      .WillRepeatedly(Return(false));
 
   EXPECT_CALL(platform_, FileExists(base::FilePath(kLockedToSingleUserFile)))
       .WillRepeatedly(Return(false));
@@ -1412,7 +1434,6 @@ TEST_P(EphemeralNoUserSystemTest, OwnerUnknownMountCreateTest) {
 
   EXPECT_CALL(platform_, FileExists(_)).WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, DirectoryExists(user->vault_path))
-      .WillOnce(Return(ShouldTestEcryptfs()))
       .WillRepeatedly(Return(false));
   EXPECT_CALL(platform_, DirectoryExists(user->vault_mount_path))
       .WillRepeatedly(Return(false));
@@ -1448,7 +1469,7 @@ TEST_P(EphemeralNoUserSystemTest, OwnerUnknownMountCreateTest) {
 
   Mount::MountArgs mount_args = GetDefaultMountArgs();
   mount_args.create_if_missing = true;
-  MountError error;
+  MountError error = MOUNT_ERROR_NONE;
   ASSERT_TRUE(mount_->MountCryptohome(user->username, FileSystemKeyset(),
                                       mount_args,
                                       /* is_pristine */ true, &error));
@@ -1845,7 +1866,7 @@ TEST_P(EphemeralExistingUserSystemTest, OwnerUnknownMountNoRemoveTest) {
 
   Mount::MountArgs mount_args = GetDefaultMountArgs();
   mount_args.create_if_missing = true;
-  MountError error;
+  MountError error = MOUNT_ERROR_NONE;
   ASSERT_TRUE(mount_->MountCryptohome(user->username, FileSystemKeyset(),
                                       mount_args,
                                       /* is_pristine */ false, &error));
@@ -2087,7 +2108,6 @@ TEST_P(EphemeralExistingUserSystemTest, OwnerUnknownUnmountNoRemoveTest) {
   // Checks that when a device is not enterprise enrolled and does not have a
   // known owner, no stale cryptohomes are removed while unmounting.
   set_policy(false, "", true);
-  EXPECT_CALL(platform_, ClearUserKeyring()).WillOnce(Return(true));
   ASSERT_TRUE(mount_->UnmountCryptohome());
 }
 
@@ -2119,8 +2139,6 @@ TEST_P(EphemeralExistingUserSystemTest, EnterpriseUnmountRemoveTest) {
           AnyOf(FilePath("/home/root/"), FilePath("/home/user/")), _, _))
       .WillRepeatedly(DoAll(SetArgPointee<2>(empty), Return(true)));
 
-  EXPECT_CALL(platform_, ClearUserKeyring()).WillOnce(Return(true));
-
   ASSERT_TRUE(mount_->UnmountCryptohome());
 }
 
@@ -2151,8 +2169,6 @@ TEST_P(EphemeralExistingUserSystemTest, UnmountRemoveTest) {
       EnumerateDirectoryEntries(
           AnyOf(FilePath("/home/root/"), FilePath("/home/user/")), _, _))
       .WillRepeatedly(DoAll(SetArgPointee<2>(empty), Return(true)));
-
-  EXPECT_CALL(platform_, ClearUserKeyring()).WillOnce(Return(true));
 
   ASSERT_TRUE(mount_->UnmountCryptohome());
 }

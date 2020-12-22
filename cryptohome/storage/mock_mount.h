@@ -20,7 +20,6 @@ class MockMount : public Mount {
   MockMount();
   ~MockMount();
   MOCK_METHOD(bool, Init, (), (override));
-  MOCK_METHOD(bool, PrepareCryptohome, (const std::string&, bool), (override));
   MOCK_METHOD(bool,
               MountCryptohome,
               (const std::string&,

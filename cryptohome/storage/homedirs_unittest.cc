@@ -22,6 +22,9 @@
 #include "cryptohome/filesystem_layout.h"
 #include "cryptohome/keyset_management.h"
 #include "cryptohome/mock_platform.h"
+#include "cryptohome/storage/encrypted_container/encrypted_container.h"
+#include "cryptohome/storage/encrypted_container/encrypted_container_factory.h"
+#include "cryptohome/storage/encrypted_container/fake_backing_device.h"
 #include "cryptohome/storage/mock_user_oldest_activity_timestamp_cache.h"
 #include "cryptohome/storage/mount_constants.h"
 #include "cryptohome/timestamp.pb.h"
@@ -60,6 +63,15 @@ ACTION_P(SetEphemeralUsersEnabled, ephemeral_users_enabled) {
   return true;
 }
 
+struct UserInfo {
+  std::string name;
+  std::string obfuscated;
+  brillo::SecureBlob passkey;
+  Credentials credentials;
+  base::FilePath homedir_path;
+  base::FilePath user_path;
+};
+
 }  // namespace
 
 class HomeDirsTest
@@ -86,7 +98,10 @@ class HomeDirsTest
     homedirs_ = std::make_unique<HomeDirs>(
         &platform_, keyset_management_.get(), system_salt_, &timestamp_cache_,
         std::make_unique<policy::PolicyProvider>(
-            std::unique_ptr<policy::MockDevicePolicy>(mock_device_policy_)));
+            std::unique_ptr<policy::MockDevicePolicy>(mock_device_policy_)),
+        std::make_unique<EncryptedContainerFactory>(
+            &platform_,
+            std::make_unique<FakeBackingDeviceFactory>(&platform_)));
 
     platform_.GetFake()->SetSystemSaltForLibbrillo(system_salt_);
 
@@ -143,15 +158,6 @@ class HomeDirsTest
   policy::MockDevicePolicy* mock_device_policy_;  // owned by homedirs_
   std::unique_ptr<KeysetManagement> keyset_management_;
   std::unique_ptr<HomeDirs> homedirs_;
-
-  struct UserInfo {
-    std::string name;
-    std::string obfuscated;
-    brillo::SecureBlob passkey;
-    Credentials credentials;
-    base::FilePath homedir_path;
-    base::FilePath user_path;
-  };
 
   // Information about users' homedirs. The order of users is equal to kUsers.
   std::vector<UserInfo> users_;
@@ -490,6 +496,194 @@ TEST_P(HomeDirsTest, GetHomedirsSomeMounted) {
     got_hashes.insert(dirs[i].obfuscated);
   }
   EXPECT_EQ(hashes, got_hashes);
+}
+
+class HomeDirsVaultTest : public ::testing::Test {
+ public:
+  HomeDirsVaultTest()
+      : user_({.obfuscated = "foo",
+               .homedir_path = base::FilePath(ShadowRoot().Append("foo"))}),
+        key_reference_({.fek_sig = brillo::SecureBlob("random keyref")}),
+        crypto_(&platform_),
+        mock_device_policy_(new policy::MockDevicePolicy()) {}
+  ~HomeDirsVaultTest() override = default;
+
+  void SetUp() override {
+    keyset_management_ = std::make_unique<KeysetManagement>(
+        &platform_, &crypto_, system_salt_,
+        std::make_unique<VaultKeysetFactory>());
+    homedirs_ = std::make_unique<HomeDirs>(
+        &platform_, keyset_management_.get(), system_salt_, &timestamp_cache_,
+        std::make_unique<policy::PolicyProvider>(
+            std::unique_ptr<policy::MockDevicePolicy>(mock_device_policy_)));
+  }
+
+ protected:
+  const UserInfo user_;
+  const FileSystemKeyReference key_reference_;
+
+  NiceMock<MockPlatform> platform_;
+  NiceMock<MockUserOldestActivityTimestampCache> timestamp_cache_;
+  Crypto crypto_;
+  brillo::SecureBlob system_salt_;
+  policy::MockDevicePolicy* mock_device_policy_;  // owned by homedirs_
+  std::unique_ptr<KeysetManagement> keyset_management_;
+  std::unique_ptr<HomeDirs> homedirs_;
+};
+
+// Tests cryptohome vault generation with fscrypt support.
+TEST_F(HomeDirsVaultTest, PristineVault) {
+  EXPECT_CALL(platform_, GetDirCryptoKeyState(_))
+      .WillOnce(Return(dircrypto::KeyState::NO_KEY));
+
+  CryptohomeVault::Options options;
+  MountError mount_error = MOUNT_ERROR_NONE;
+
+  auto vault = homedirs_->GenerateCryptohomeVault(
+      user_.obfuscated, key_reference_, options, /*is_pristine=*/true,
+      &mount_error);
+  EXPECT_EQ(vault->GetContainerType(), EncryptedContainerType::kFscrypt);
+  EXPECT_EQ(vault->GetMigratingContainerType(),
+            EncryptedContainerType::kUnknown);
+  EXPECT_EQ(mount_error, MOUNT_ERROR_NONE);
+}
+
+// Tests cryptohome vault generation in absence of fscrypt support.
+TEST_F(HomeDirsVaultTest, PristineVaultNoFscrypt) {
+  EXPECT_CALL(platform_, GetDirCryptoKeyState(_))
+      .WillOnce(Return(dircrypto::KeyState::NOT_SUPPORTED));
+
+  CryptohomeVault::Options options;
+  MountError mount_error = MOUNT_ERROR_NONE;
+
+  auto vault = homedirs_->GenerateCryptohomeVault(
+      user_.obfuscated, key_reference_, options, /*is_pristine=*/true,
+      &mount_error);
+  EXPECT_EQ(vault->GetContainerType(), EncryptedContainerType::kEcryptfs);
+  EXPECT_EQ(vault->GetMigratingContainerType(),
+            EncryptedContainerType::kUnknown);
+  EXPECT_EQ(mount_error, MOUNT_ERROR_NONE);
+}
+
+// Tests cryptohome vault generation with forced eCryptfs usage.
+TEST_F(HomeDirsVaultTest, PristineVaultForceEcryptfs) {
+  CryptohomeVault::Options options;
+  options.force_type = EncryptedContainerType::kEcryptfs;
+  MountError mount_error = MOUNT_ERROR_NONE;
+
+  auto vault = homedirs_->GenerateCryptohomeVault(
+      user_.obfuscated, key_reference_, options, /*is_pristine=*/true,
+      &mount_error);
+  EXPECT_EQ(vault->GetContainerType(), EncryptedContainerType::kEcryptfs);
+  EXPECT_EQ(vault->GetMigratingContainerType(),
+            EncryptedContainerType::kUnknown);
+  EXPECT_EQ(mount_error, MOUNT_ERROR_NONE);
+}
+
+// Tests cryptohome vault generation for an existing eCryptfs container with
+// forced fscrypt usage.
+TEST_F(HomeDirsVaultTest, PristineForceFscrypt) {
+  CryptohomeVault::Options options;
+  options.force_type = EncryptedContainerType::kFscrypt;
+  MountError mount_error = MOUNT_ERROR_NONE;
+
+  auto vault = homedirs_->GenerateCryptohomeVault(
+      user_.obfuscated, key_reference_, options, /*is_pristine=*/true,
+      &mount_error);
+  EXPECT_EQ(vault->GetContainerType(), EncryptedContainerType::kFscrypt);
+  EXPECT_EQ(vault->GetMigratingContainerType(),
+            EncryptedContainerType::kUnknown);
+  EXPECT_EQ(mount_error, MOUNT_ERROR_NONE);
+}
+
+// Tests cryptohome vault generation for an existing eCryptfs container with no
+// migration.
+TEST_F(HomeDirsVaultTest, ExistingEcryptfsContainerNoMigrate) {
+  ASSERT_TRUE(
+      platform_.CreateDirectory(user_.homedir_path.Append(kEcryptfsVaultDir)));
+
+  CryptohomeVault::Options options;
+  MountError mount_error = MOUNT_ERROR_NONE;
+
+  auto vault = homedirs_->GenerateCryptohomeVault(
+      user_.obfuscated, key_reference_, options, /*is_pristine=*/false,
+      &mount_error);
+  EXPECT_EQ(vault->GetContainerType(), EncryptedContainerType::kEcryptfs);
+  EXPECT_EQ(vault->GetMigratingContainerType(),
+            EncryptedContainerType::kUnknown);
+  EXPECT_EQ(mount_error, MOUNT_ERROR_NONE);
+}
+
+// Tests cryptohome vault generation for an existing eCryptfs container with
+// migration.
+TEST_F(HomeDirsVaultTest, ExistingEcryptfsContainerMigrate) {
+  ASSERT_TRUE(
+      platform_.CreateDirectory(user_.homedir_path.Append(kEcryptfsVaultDir)));
+
+  CryptohomeVault::Options options;
+  options.migrate = true;
+  MountError mount_error = MOUNT_ERROR_NONE;
+
+  auto vault = homedirs_->GenerateCryptohomeVault(
+      user_.obfuscated, key_reference_, options, /*is_pristine*/ false,
+      &mount_error);
+  EXPECT_EQ(vault->GetContainerType(), EncryptedContainerType::kEcryptfs);
+  EXPECT_EQ(vault->GetMigratingContainerType(),
+            EncryptedContainerType::kFscrypt);
+  EXPECT_EQ(mount_error, MOUNT_ERROR_NONE);
+}
+
+// Tests cryptohome vault generation if there is an existing eCryptfs container
+// and a fscrypt container but migration is not enabled.
+TEST_F(HomeDirsVaultTest, ExistingEcryptfsContainerNoMigrateFscryptExists) {
+  ASSERT_TRUE(platform_.CreateDirectory(user_.homedir_path.Append(kMountDir)));
+  ASSERT_TRUE(
+      platform_.CreateDirectory(user_.homedir_path.Append(kEcryptfsVaultDir)));
+  EXPECT_CALL(platform_, GetDirCryptoKeyState(_))
+      .WillOnce(Return(dircrypto::KeyState::ENCRYPTED));
+
+  CryptohomeVault::Options options;
+  MountError mount_error = MOUNT_ERROR_NONE;
+
+  auto vault = homedirs_->GenerateCryptohomeVault(
+      user_.obfuscated, key_reference_, options, /*is_pristine=*/false,
+      &mount_error);
+  EXPECT_EQ(vault, nullptr);
+  EXPECT_EQ(mount_error, MOUNT_ERROR_PREVIOUS_MIGRATION_INCOMPLETE);
+}
+
+// Tests cryptohome vault generation if there is an existing eCryptfs container,
+// but migration is not enabled and dircrypto is forced.
+TEST_F(HomeDirsVaultTest, ExistingEcryptfsContainerNoMigrateForceFscrypt) {
+  ASSERT_TRUE(
+      platform_.CreateDirectory(user_.homedir_path.Append(kEcryptfsVaultDir)));
+
+  CryptohomeVault::Options options;
+  options.block_ecryptfs = true;
+  MountError mount_error = MOUNT_ERROR_NONE;
+
+  auto vault = homedirs_->GenerateCryptohomeVault(
+      user_.obfuscated, key_reference_, options, /*is_pristine=*/false,
+      &mount_error);
+  EXPECT_EQ(vault, nullptr);
+  EXPECT_EQ(mount_error, MOUNT_ERROR_OLD_ENCRYPTION);
+}
+
+// Tests cryptohome vault generation if there is an existing fscrypt container.
+TEST_F(HomeDirsVaultTest, ExistingFscryptContainer) {
+  ASSERT_TRUE(platform_.CreateDirectory(user_.homedir_path.Append(kMountDir)));
+  EXPECT_CALL(platform_, GetDirCryptoKeyState(_))
+      .WillRepeatedly(Return(dircrypto::KeyState::ENCRYPTED));
+
+  CryptohomeVault::Options options;
+  MountError mount_error = MOUNT_ERROR_NONE;
+  auto vault = homedirs_->GenerateCryptohomeVault(
+      user_.obfuscated, key_reference_, options, /*is_pristine=*/false,
+      &mount_error);
+  EXPECT_EQ(vault->GetContainerType(), EncryptedContainerType::kFscrypt);
+  EXPECT_EQ(vault->GetMigratingContainerType(),
+            EncryptedContainerType::kUnknown);
+  EXPECT_EQ(mount_error, MOUNT_ERROR_NONE);
 }
 
 }  // namespace cryptohome

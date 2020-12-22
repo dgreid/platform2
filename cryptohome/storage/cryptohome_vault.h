@@ -33,6 +33,9 @@ class CryptohomeVault {
     // Checks if migration should be allowed for the current vault. Currently,
     // this is only used for ecryptfs.
     bool migrate = false;
+    // Checks if mount requests for ecryptfs mounts should be blocked without
+    // migration.
+    bool block_ecryptfs = false;
   };
   CryptohomeVault(const std::string& obfuscated_username,
                   std::unique_ptr<EncryptedContainer> container,
@@ -50,6 +53,15 @@ class CryptohomeVault {
   MountType GetMountType();
 
   void ReportVaultEncryptionType();
+
+  EncryptedContainerType GetContainerType() {
+    return container_ ? container_->GetType()
+                      : EncryptedContainerType::kUnknown;
+  }
+  EncryptedContainerType GetMigratingContainerType() {
+    return migrating_container_ ? migrating_container_->GetType()
+                                : EncryptedContainerType::kUnknown;
+  }
 
  private:
   friend class CryptohomeVaultTest;

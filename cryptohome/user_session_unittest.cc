@@ -136,8 +136,6 @@ TEST_F(UserSessionTest, MountVaultOk) {
   mount_args_create.create_as_ecryptfs = true;
   mount_args_create.create_if_missing = true;
 
-  EXPECT_CALL(*mount_, PrepareCryptohome(users_[0].obfuscated, true))
-      .WillOnce(Return(true));
   EXPECT_CALL(*mount_,
               MountCryptohome(users_[0].name, _,
                               MountArgsEqual(mount_args_create), true, _))
@@ -227,8 +225,6 @@ TEST_F(UserSessionTest, MountVaultWrongCreds) {
   mount_args_create.create_as_ecryptfs = true;
   mount_args_create.create_if_missing = true;
 
-  EXPECT_CALL(*mount_, PrepareCryptohome(users_[0].obfuscated, true))
-      .WillOnce(Return(true));
   EXPECT_CALL(*mount_,
               MountCryptohome(users_[0].name, _,
                               MountArgsEqual(mount_args_create), true, _))

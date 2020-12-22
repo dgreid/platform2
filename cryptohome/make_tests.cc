@@ -255,7 +255,6 @@ void TestUser::GenerateCredentials(bool force_ecryptfs) {
   EXPECT_CALL(platform, WriteFileAtomicDurable(keyset_path, _, _))
       .WillOnce(DoAll(SaveArg<1>(&credentials), Return(true)));
   ASSERT_TRUE(homedirs.Create(local_credentials.username()));
-  ASSERT_TRUE(mount->PrepareCryptohome(obfuscated_username, force_ecryptfs));
   ASSERT_TRUE(keyset_management.AddInitialKeyset(local_credentials));
   DCHECK(credentials.size());
 

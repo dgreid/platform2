@@ -34,6 +34,7 @@
 #include "cryptohome/dircrypto_data_migrator/migration_helper.h"
 #include "cryptohome/migration_type.h"
 #include "cryptohome/platform.h"
+#include "cryptohome/storage/cryptohome_vault.h"
 #include "cryptohome/storage/file_system_keyset.h"
 #include "cryptohome/storage/homedirs.h"
 #include "cryptohome/storage/mount_constants.h"
@@ -76,14 +77,6 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
 
   // Gets the uid/gid of the default user and loads the system salt
   virtual bool Init();
-
-  // Makes mount type-specific preparation.
-  //
-  // Parameters
-  //   obfuscated_username - salted hash of the username
-  //   force_ecryptfs - force ECRYPTFS
-  virtual bool PrepareCryptohome(const std::string& obfuscated_username,
-                                 bool force_ecryptfs);
 
   // Attempts to mount the cryptohome for the given username
   //
@@ -210,17 +203,6 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   //   username - name of the user to create directories for
   virtual bool CreateTrackedSubdirectories(const std::string& username) const;
 
-  // Determine the mount type of the existing vault.
-  MountType DeriveVaultMountType(const std::string& obfuscated_username,
-                                 bool shall_migrate) const;
-
-  // Choose the mount type for the new vault.
-  MountType ChooseVaultMountType(bool force_ecryptfs) const;
-
-  virtual bool AddEcryptfsAuthToken(const FileSystemKeyset& file_system_keyset,
-                                    std::string* key_signature,
-                                    std::string* filename_key_signature) const;
-
   // Gets the directory in the shadow root where the user's salt, key, and vault
   // are stored.
   //
@@ -346,9 +328,6 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   // clears this value.
   brillo::SecureBlob pkcs11_token_auth_data_;
 
-  // Dircrypto key reference.
-  dircrypto::KeyReference dircrypto_key_reference_;
-
   // Whether to mount the legacy homedir or not (see MountLegacyHome)
   bool legacy_mount_;
 
@@ -385,6 +364,9 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   std::unique_ptr<brillo::SecureBlob> webauthn_secret_;
   // Timer for clearing the |webauthn_secret_| if not read.
   base::OneShotTimer clear_webauthn_secret_timer_;
+
+  // Represents the user's cryptohome vault.
+  std::unique_ptr<CryptohomeVault> user_cryptohome_vault_;
 
   // This closure will be run in UnmountCryptohome().
   base::OnceClosure mount_cleanup_;

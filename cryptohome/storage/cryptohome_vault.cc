@@ -11,6 +11,7 @@
 #include <dbus/cryptohome/dbus-constants.h>
 
 #include "cryptohome/cryptohome_metrics.h"
+#include "cryptohome/filesystem_layout.h"
 #include "cryptohome/platform.h"
 #include "cryptohome/storage/encrypted_container/encrypted_container.h"
 #include "cryptohome/storage/encrypted_container/filesystem_key.h"
@@ -62,6 +63,25 @@ MountError CryptohomeVault::Setup(const FileSystemKey& filesystem_key,
     // TODO(sarthakkukreti): MOUNT_ERROR_KEYRING_FAILED should be replaced
     //  with a more specific type.
     return MOUNT_ERROR_KEYRING_FAILED;
+  }
+
+  base::FilePath mount_point = GetUserMountDirectory(obfuscated_username_);
+  if (!platform_->CreateDirectory(mount_point)) {
+    PLOG(ERROR) << "User mount directory creation failed for "
+                << mount_point.value();
+    return MOUNT_ERROR_DIR_CREATION_FAILED;
+  }
+
+  // During migration, the existing ecryptfs container is mounted at
+  // |temporary_mount_point|.
+  if (migrating_container_) {
+    base::FilePath temporary_mount_point =
+        GetUserTemporaryMountDirectory(obfuscated_username_);
+    if (!platform_->CreateDirectory(temporary_mount_point)) {
+      PLOG(ERROR) << "User temporary mount directory creation failed for "
+                  << temporary_mount_point.value();
+      return MOUNT_ERROR_DIR_CREATION_FAILED;
+    }
   }
 
   return MOUNT_ERROR_NONE;

@@ -38,8 +38,6 @@ MountError UserSession::MountVault(const Credentials& credentials,
     }
 
     if (!homedirs_->Create(credentials.username()) ||
-        !mount_->PrepareCryptohome(obfuscated_username,
-                                   mount_args.create_as_ecryptfs) ||
         !homedirs_->keyset_management()->AddInitialKeyset(credentials)) {
       LOG(ERROR) << "Error creating cryptohome.";
       return MOUNT_ERROR_CREATE_CRYPTOHOME_FAILED;
