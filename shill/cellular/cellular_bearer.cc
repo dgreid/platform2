@@ -188,7 +188,6 @@ void CellularBearer::OnPropertiesChanged(
     connected_ = changed_properties.Get<bool>(MM_BEARER_PROPERTY_CONNECTED);
   }
 
-  string data_interface;
   if (changed_properties.Contains<string>(MM_BEARER_PROPERTY_INTERFACE)) {
     data_interface_ =
         changed_properties.Get<string>(MM_BEARER_PROPERTY_INTERFACE);
