@@ -83,7 +83,7 @@ void IntelCPUAlgoServer::handleRequest(const MsgReq& msg) {
             break;
         }
         case IPC_FD_DEINIT:
-            status = mFaceDetection.deinit();
+            status = mFaceDetection.deinit(addr, requestSize);
             break;
         case IPC_GRAPH_ADD_KEY:
             mGraph.addCustomKeyMap();

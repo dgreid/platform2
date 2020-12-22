@@ -91,15 +91,23 @@ int PlatformData::init() {
 
     StaticCfg *staticCfg = &(getInstance()->mStaticCfg);
     for (size_t i = 0; i < staticCfg->mCameras.size(); i++) {
+        std::string camModuleName;
         AiqInitData* aiqInitData =
             new AiqInitData(staticCfg->mCameras[i].sensorName,
                             getCameraCfgPath(),
                             staticCfg->mCameras[i].mSupportedTuningConfig,
                             staticCfg->mCameras[i].mLardTagsConfig,
                             staticCfg->mCameras[i].mNvmDirectory,
-                            staticCfg->mCameras[i].mMaxNvmDataSize,
+                            staticCfg->mCameras[i].mMaxNvmDataSize, &camModuleName,
                             staticCfg->mCameras[i].mCameraModuleToAiqbMap);
         getInstance()->mAiqInitData.push_back(aiqInitData);
+
+        if (!camModuleName.empty() &&
+            staticCfg->mCameras[i].mCameraModuleInfoMap.find(camModuleName) !=
+            staticCfg->mCameras[i].mCameraModuleInfoMap.end()) {
+            ParameterHelper::merge(staticCfg->mCameras[i].mCameraModuleInfoMap[camModuleName],
+                                  &staticCfg->mCameras[i].mCapability);
+        }
     }
 
     return OK;

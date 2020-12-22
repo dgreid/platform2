@@ -228,8 +228,10 @@ public:
             std::vector<UserToPslOutputMap> mOutputMap;
             int mMaxNvmDataSize;
             std::string mNvmDirectory;
-            /* key: camera module info, value: aiqb name */
+            /* key: camera module name, value: aiqb name */
             std::unordered_map<std::string, std::string> mCameraModuleToAiqbMap;
+            /* key: camera module name, value: camera module info */
+            std::unordered_map<std::string, CameraMetadata> mCameraModuleInfoMap;
             std::vector<IGraphType::ScalerInfo> mScalerInfo;
             int mVideoStreamNum;
             int mTnrExtraFrameNum;
