@@ -19,4 +19,17 @@ bool AddIntOption(SandboxedProcess* process,
   return result != ParseResult::PARSE_ERROR;
 }
 
+bool AddBoolOption(SandboxedProcess* process,
+                   const brillo::VariantDictionary& options,
+                   const std::string& key,
+                   const std::string& flag_name,
+                   brillo::ErrorPtr* error) {
+  int value;
+  ParseResult result = GetOption(options, key, &value, error);
+  if (result == ParseResult::PARSED && value)
+    process->AddArg(flag_name);
+
+  return result != ParseResult::PARSE_ERROR;
+}
+
 }  // namespace debugd

@@ -10,6 +10,7 @@ overflow-checks = true
 
 [dependencies]
 dbus = "0.8"
+getopts = "0.2"
 libc = "0.2.44"
 remain = "*"
 regex = "1.0.6"

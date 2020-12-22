@@ -24,7 +24,7 @@ bool DmesgTool::CallDmesg(const brillo::VariantDictionary& options,
                           std::string* output) {
   ProcessWithOutput process;
 
-  process.SetCapabilities(CAP_TO_MASK(CAP_SYSLOG));
+  process.SetCapabilities(CAP_TO_MASK(CAP_SYS_ADMIN));
   if (!process.Init()) {
     *output = "<process init failed>";
     return false;
@@ -32,15 +32,16 @@ bool DmesgTool::CallDmesg(const brillo::VariantDictionary& options,
 
   process.AddArg(kDmesgPath);
 
-  if (!AddIntOption(&process, options, "show-delta", "-d", error) ||
-      !AddIntOption(&process, options, "human", "-H", error) ||
-      !AddIntOption(&process, options, "kernel", "-k", error) ||
-      !AddIntOption(&process, options, "force-prefix", "-p", error) ||
-      !AddIntOption(&process, options, "raw", "-r", error) ||
-      !AddIntOption(&process, options, "ctime", "-T", error) ||
-      !AddIntOption(&process, options, "notime", "-t", error) ||
-      !AddIntOption(&process, options, "userspace", "-u", error) ||
-      !AddIntOption(&process, options, "decode", "-x", error)) {
+  if (!AddBoolOption(&process, options, "show-delta", "-d", error) ||
+      !AddBoolOption(&process, options, "human", "--human", error) ||
+      !AddBoolOption(&process, options, "kernel", "-k", error) ||
+      !AddBoolOption(&process, options, "color", "--color=always", error) ||
+      !AddBoolOption(&process, options, "force-prefix", "-p", error) ||
+      !AddBoolOption(&process, options, "raw", "-r", error) ||
+      !AddBoolOption(&process, options, "ctime", "-T", error) ||
+      !AddBoolOption(&process, options, "notime", "-t", error) ||
+      !AddBoolOption(&process, options, "userspace", "-u", error) ||
+      !AddBoolOption(&process, options, "decode", "-x", error)) {
     *output = "<invalid option>";
     return false;
   }

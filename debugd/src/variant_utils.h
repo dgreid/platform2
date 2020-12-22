@@ -64,6 +64,15 @@ bool AddIntOption(SandboxedProcess* process,
                   const std::string& flag_name,
                   brillo::ErrorPtr* error);
 
+// Looks up an option in the |options| dictionary. If it exists and
+// isn't a boolean, returns false. Otherwise, returns true, and if it
+// exists in the dictionary adds it to the command line for |process|.
+bool AddBoolOption(SandboxedProcess* process,
+                   const brillo::VariantDictionary& options,
+                   const std::string& key,
+                   const std::string& flag_name,
+                   brillo::ErrorPtr* error);
+
 }  // namespace debugd
 
 #endif  // DEBUGD_SRC_VARIANT_UTILS_H_

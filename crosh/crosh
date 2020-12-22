@@ -1788,22 +1788,6 @@ chrome://cryptohome
 EOF
 )
 
-USAGE_dmesg='[-d|-H|-k|-L|-P|-p|-r|-T|-t|-u|-w|-x]'
-HELP_dmesg='
-  Display kernel log buffer
-'
-cmd_dmesg() (
-  # We allow only a few options.
-  local opt
-  for opt in "$@"; do
-    if ! printf '%s' "${opt}" | grep -sqE '^-[dHkLPprTtuwx]+$'; then
-      help "unknown option: $*"
-      return 1
-    fi
-  done
-  dmesg "$@"
-)
-
 USAGE_free='[options]'
 HELP_free='
   Display free/used memory info
