@@ -19,13 +19,15 @@
 #include <vector>
 
 #include <base/optional.h>
-#include <tpm_manager/common/tpm_ownership_interface.h>
+#include <tpm_manager/proto_bindings/tpm_manager.pb.h>
+#include <tpm_manager-client/tpm_manager/dbus-proxies.h>
 #include <trunks/trunks_factory.h>
 
 namespace sealed_storage {
 
 using ScopedTrunksFactory = std::unique_ptr<trunks::TrunksFactory>;
-using ScopedTpmOwnership = std::unique_ptr<tpm_manager::TpmOwnershipInterface>;
+using ScopedTpmOwnership =
+    std::unique_ptr<org::chromium::TpmManagerProxyInterface>;
 using BootMode = char[3];
 
 constexpr BootMode kVerifiedBootMode = {0, 0, 1};
@@ -75,7 +77,7 @@ class SealedStorage {
   // TpmOwnershipInterface, useful for mocking when testing.
   SealedStorage(const Policy& policy,
                 trunks::TrunksFactory* trunks_factory,
-                tpm_manager::TpmOwnershipInterface* tpm_ownership);
+                org::chromium::TpmManagerProxyInterface* tpm_ownership);
   // The constructor that uses the default TrunksFactory and
   // TpmOwnershipInterface, which connect to the corresponding daemons over
   // dbus.
@@ -91,7 +93,7 @@ class SealedStorage {
 
   trunks::TrunksFactory* trunks_factory() const { return trunks_factory_; }
 
-  tpm_manager::TpmOwnershipInterface* tpm_ownership() const {
+  org::chromium::TpmManagerProxyInterface* tpm_ownership() const {
     return tpm_ownership_;
   }
 
@@ -196,7 +198,7 @@ class SealedStorage {
   ScopedTrunksFactory dft_trunks_factory_;
   ScopedTpmOwnership dft_tpm_ownership_;
   trunks::TrunksFactory* trunks_factory_;
-  tpm_manager::TpmOwnershipInterface* tpm_ownership_;
+  org::chromium::TpmManagerProxyInterface* tpm_ownership_;
 };
 
 }  // namespace sealed_storage

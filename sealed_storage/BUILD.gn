@@ -29,6 +29,8 @@ pkg_config("test_defaults") {
   pkg_deps = [
     "libbrillo-test",
     "libchrome-test",
+    "libtpm_manager-client",
+    "libtpm_manager-client-test",
   ]
 }
 

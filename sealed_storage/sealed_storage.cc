@@ -16,13 +16,14 @@
 #include <openssl/err.h>
 #include <openssl/evp.h>
 #include <openssl/sha.h>
-#include <tpm_manager/client/tpm_ownership_dbus_proxy.h>
 #include <trunks/error_codes.h>
 #include <trunks/trunks_factory_impl.h>
 
 #include "sealed_storage/sealed_storage.h"
 
 namespace {
+// Default D-Bus call Timeout
+constexpr base::TimeDelta kDefaultTimeout = base::TimeDelta::FromMinutes(2);
 
 // Version tag at the start of serialized sealed blob.
 enum SerializedVer : char {
@@ -96,23 +97,6 @@ bool CheckTpmResult(trunks::TPM_RC result, std::string op) {
 
   LOG(ERROR) << "Failed to " << op << ": " << trunks::GetErrorString(result);
   return false;
-}
-
-// Sends a request to the tpm_managerd, waits for a response (or an error)
-// and fills it into the provides reply protobuf (only the error fields in
-// case of error).
-template <typename MethodType, typename ReplyProtoType>
-void SendRequestAndWait(const MethodType& method, ReplyProtoType* reply_proto) {
-  auto handler = [](ReplyProtoType* target, base::RunLoop* loop,
-                    const ReplyProtoType& reply) {
-    *target = reply;
-    loop->Quit();
-  };
-
-  base::RunLoop loop;
-  auto callback = base::Bind(handler, reply_proto, &loop);
-  method.Run(callback);
-  loop.Run();
 }
 
 // Returns the string representing the openssl error.
@@ -199,9 +183,10 @@ Policy::PcrMap::value_type Policy::UnchangedPCR(uint32_t pcr_num) {
   return {pcr_num, GetInitialPCRValue()};
 }
 
-SealedStorage::SealedStorage(const Policy& policy,
-                             trunks::TrunksFactory* trunks_factory,
-                             tpm_manager::TpmOwnershipInterface* tpm_ownership)
+SealedStorage::SealedStorage(
+    const Policy& policy,
+    trunks::TrunksFactory* trunks_factory,
+    org::chromium::TpmManagerProxyInterface* tpm_ownership)
     : policy_(policy),
       trunks_factory_(trunks_factory),
       tpm_ownership_(tpm_ownership) {
@@ -229,11 +214,14 @@ ScopedTrunksFactory SealedStorage::CreateTrunksFactory() {
 }
 
 ScopedTpmOwnership SealedStorage::CreateTpmOwnershipInterface() {
-  auto proxy = std::make_unique<tpm_manager::TpmOwnershipDBusProxy>();
-  if (!proxy->Initialize()) {
-    LOG(ERROR) << "Failed to initialize TpmOwnershipDBusProxy";
-    proxy.reset(nullptr);
+  static scoped_refptr<dbus::Bus> bus;
+  if (!bus) {
+    dbus::Bus::Options options;
+    options.bus_type = dbus::Bus::SYSTEM;
+    bus = base::MakeRefCounted<dbus::Bus>(options);
+    CHECK(bus->Connect()) << "Failed to connect to system D-Bus";
   }
+  auto proxy = std::make_unique<org::chromium::TpmManagerProxy>(bus);
   return proxy;
 }
 
@@ -401,10 +389,13 @@ bool SealedStorage::GetEndorsementPassword(std::string* password) const {
   }
 
   tpm_manager::GetTpmStatusRequest request;
-  auto method = base::Bind(&tpm_manager::TpmOwnershipInterface::GetTpmStatus,
-                           base::Unretained(tpm_ownership_), request);
   tpm_manager::GetTpmStatusReply tpm_status;
-  SendRequestAndWait(method, &tpm_status);
+  brillo::ErrorPtr error;
+  if (!tpm_ownership_->GetTpmStatus(request, &tpm_status, &error,
+                                    kDefaultTimeout.InMilliseconds())) {
+    LOG(ERROR) << "Failed to call DefineSpace: " << error->GetMessage();
+    return false;
+  }
   if (tpm_status.status() != tpm_manager::STATUS_SUCCESS) {
     LOG(ERROR) << "Failed to get TpmStatus: " << tpm_status.status();
     return false;

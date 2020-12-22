@@ -7,7 +7,8 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include <tpm_manager/common/mock_tpm_ownership_interface.h>
+#include <tpm_manager/proto_bindings/tpm_manager.pb.h>
+#include <tpm_manager-client-test/tpm_manager/dbus-proxy-mocks.h>
 #include <trunks/mock_authorization_delegate.h>
 #include <trunks/mock_policy_session.h>
 #include <trunks/mock_tpm.h>
@@ -21,10 +22,10 @@ using testing::AtLeast;
 using testing::Expectation;
 using testing::ExpectationSet;
 using testing::InSequence;
+using testing::Invoke;
 using testing::Mock;
 using testing::Return;
 using testing::WithArgs;
-using tpm_manager::TpmOwnershipInterface;
 
 constexpr uint8_t kRandomByte = 0x12;
 constexpr uint16_t kExpectedIVSize = 16; /* AES IV size */
@@ -136,9 +137,16 @@ class SealedStorageTest : public ::testing::Test {
     trunks_factory_.set_tpm_utility(&tpm_utility_);
     trunks_factory_.set_policy_session(&policy_session_);
 
-    ON_CALL(tpm_ownership_, GetTpmStatus(_, _))
+    ON_CALL(tpm_ownership_, GetTpmStatus(_, _, _, _))
         .WillByDefault(
-            WithArgs<1>(Invoke(this, &SealedStorageTest::GetTpmStatus)));
+            Invoke([this](const tpm_manager::GetTpmStatusRequest& request,
+                          tpm_manager::GetTpmStatusReply* reply,
+                          brillo::ErrorPtr*, int) {
+              reply->set_status(tpm_manager_result_);
+              reply->mutable_local_data()->set_endorsement_password(
+                  endorsement_password_);
+              return true;
+            }));
 
     ON_CALL(tpm_, CreatePrimarySyncShort(_, _, _, _, _, _, _, _, _, _))
         .WillByDefault(
@@ -156,14 +164,6 @@ class SealedStorageTest : public ::testing::Test {
         .WillByDefault(Invoke(this, &SealedStorageTest::PolicyPCR));
     ON_CALL(policy_session_, GetDelegate())
         .WillByDefault(Return(&auth_delegate_));
-  }
-
-  void GetTpmStatus(
-      const TpmOwnershipInterface::GetTpmStatusCallback& callback) {
-    tpm_manager::GetTpmStatusReply reply;
-    reply.set_status(tpm_manager_result_);
-    reply.mutable_local_data()->set_endorsement_password(endorsement_password_);
-    callback.Run(reply);
   }
 
   trunks::TPM_RC CreatePrimarySyncShort(
@@ -244,7 +244,8 @@ class SealedStorageTest : public ::testing::Test {
 
     if (do_seal) {
       /* Seal: Create sealing key */
-      Expectation status1 = EXPECT_CALL(tpm_ownership_, GetTpmStatus(_, _));
+      Expectation status1 =
+          EXPECT_CALL(tpm_ownership_, GetTpmStatus(_, _, _, _));
       seal_commands += status1;
       if (tpm_manager_result_ != tpm_manager::STATUS_SUCCESS) {
         /* In case of GetTpmStatus error... */
@@ -277,7 +278,8 @@ class SealedStorageTest : public ::testing::Test {
     if (do_unseal) {
       /* Unseal: Create sealing key */
       Expectation status2 =
-          EXPECT_CALL(tpm_ownership_, GetTpmStatus(_, _)).After(seal_commands);
+          EXPECT_CALL(tpm_ownership_, GetTpmStatus(_, _, _, _))
+              .After(seal_commands);
       if (tpm_manager_result_ != tpm_manager::STATUS_SUCCESS) {
         /* In case of GetTpmStatus error... */
         EXPECT_CALL(tpm_, CreatePrimarySyncShort(_, _, _, _, _, _, _, _, _, _))
@@ -352,7 +354,7 @@ class SealedStorageTest : public ::testing::Test {
   trunks::MockAuthorizationDelegate auth_delegate_;
   trunks::MockPolicySession policy_session_;
   trunks::TrunksFactoryForTest trunks_factory_;
-  testing::StrictMock<tpm_manager::MockTpmOwnershipInterface> tpm_ownership_;
+  testing::StrictMock<org::chromium::TpmManagerProxyMock> tpm_ownership_;
   SealedStorage sealed_storage_{policy_, &trunks_factory_, &tpm_ownership_};
 
   tpm_manager::TpmManagerStatus tpm_manager_result_ =
@@ -434,7 +436,7 @@ TEST_F(SealedStorageTest, WrongPolicy) {
 
   // Try unsealing with a different policy, resulting in a different digest.
   policy_digest_ = WrongPolicyDigest();
-  EXPECT_CALL(tpm_ownership_, GetTpmStatus(_, _)).Times(AtLeast(0));
+  EXPECT_CALL(tpm_ownership_, GetTpmStatus(_, _, _, _)).Times(AtLeast(0));
   EXPECT_CALL(tpm_utility_, GetPolicyDigestForPcrValues(_, _, _)).Times(1);
   EXPECT_CALL(tpm_, CreatePrimarySyncShort(_, _, _, _, _, _, _, _, _, _))
       .Times(0);
@@ -458,7 +460,7 @@ TEST_F(SealedStorageTest, NonEmptySealEmptyUnsealPolicy) {
   // Try unsealing with an empty policy.
   policy_ = ConstructEmptyPolicy();
   sealed_storage_.reset_policy(policy_);
-  EXPECT_CALL(tpm_ownership_, GetTpmStatus(_, _)).Times(AtLeast(0));
+  EXPECT_CALL(tpm_ownership_, GetTpmStatus(_, _, _, _)).Times(AtLeast(0));
   EXPECT_CALL(tpm_utility_, GetPolicyDigestForPcrValues(_, _, _)).Times(0);
   EXPECT_CALL(tpm_, CreatePrimarySyncShort(_, _, _, _, _, _, _, _, _, _))
       .Times(0);
@@ -481,7 +483,7 @@ TEST_F(SealedStorageTest, EmptySealNonEmptyUnsealPolicy) {
   // Try unsealing with some non-empty policy.
   policy_ = ConstructPcrBoundPolicy();
   sealed_storage_.reset_policy(policy_);
-  EXPECT_CALL(tpm_ownership_, GetTpmStatus(_, _)).Times(AtLeast(0));
+  EXPECT_CALL(tpm_ownership_, GetTpmStatus(_, _, _, _)).Times(AtLeast(0));
   EXPECT_CALL(tpm_utility_, GetPolicyDigestForPcrValues(_, _, _)).Times(1);
   EXPECT_CALL(tpm_, CreatePrimarySyncShort(_, _, _, _, _, _, _, _, _, _))
       .Times(0);
