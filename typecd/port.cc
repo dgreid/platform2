@@ -274,9 +274,13 @@ bool Port::IsPartnerAltModePresent(uint16_t altmode_sid) {
 }
 
 bool Port::IsPartnerDiscoveryComplete() {
-  // TODO(b/152251292) needs to be implemented.
-  NOTIMPLEMENTED();
-  return true;
+  if (!partner_) {
+    LOG(INFO)
+        << "Trying to check discovery complete for a non-existent partner.";
+    return false;
+  }
+
+  return partner_->DiscoveryComplete();
 }
 
 bool Port::IsCableAltModePresent(uint16_t altmode_sid) {

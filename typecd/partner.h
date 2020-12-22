@@ -57,6 +57,12 @@ class Partner : public Peripheral {
   // doesn't exist.
   AltMode* GetAltMode(int index);
 
+  // Checks whether partner PD discovery is complete (and we have all the PD
+  // information that the kernel can provide). To determine this, we check
+  // whether the number of registered altmodes equals the |num_alt_modes_| value
+  // which is read from sysfs.
+  bool DiscoveryComplete();
+
  private:
   // A map representing all the alternate modes supported by the partner.
   // The key is the index of the alternate mode as determined by the connector

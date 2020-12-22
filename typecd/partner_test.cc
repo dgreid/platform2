@@ -38,22 +38,40 @@ class PartnerTest : public ::testing::Test {
   base::ScopedTempDir scoped_temp_dir_;
 };
 
-// Check that calls of AddAltMode() done explicitly function correctly. Also
-// check that trying to Add the same alt mode twice fails.
+// Check that calls of AddAltMode() which are done explicitly function
+// correctly. Also check that trying to add the same alt mode twice fails. While
+// we are here, also check that calls to DiscoveryComplete return the right
+// responses at various times of the discovery process.
 TEST_F(PartnerTest, TestAltModeManualAddition) {
-  Partner p((base::FilePath(kFakePort0PartnerSysPath)));
+  auto partner_path = temp_dir_.Append(std::string("port0-partner"));
+  ASSERT_TRUE(base::CreateDirectory(partner_path));
+
+  Partner p(partner_path);
 
   // Set up fake sysfs paths.
+
+  // Add the sysfs entry and run the update code (in production, this
+  // will run in response to a udev event, but since we don't have that here,
+  // call it manually).
+  std::string num_altmodes("2");
+  ASSERT_TRUE(base::WriteFile(partner_path.Append("number_of_alternate_modes"),
+                              num_altmodes.c_str(), num_altmodes.length()));
+  p.UpdatePDInfoFromSysfs();
+
+  // Add the 1st alt mode sysfs directory.
   std::string mode0_dirname =
       base::StringPrintf("port%d-partner.%d", 0, kDPAltModeIndex);
-  auto mode0_path = temp_dir_.Append(mode0_dirname);
+  auto mode0_path = partner_path.Append(mode0_dirname);
   ASSERT_TRUE(CreateFakeAltMode(mode0_path, kDPSVID, kDPVDO, kDPVDOIndex));
-
   EXPECT_TRUE(p.AddAltMode(mode0_path));
 
+  // We still have 1 more alt mode to register.
+  EXPECT_FALSE(p.DiscoveryComplete());
+
+  // Add the 2nd alt mode sysfs directory.
   std::string mode1_dirname =
       base::StringPrintf("port%d-partner.%d", 0, kTBTAltModeIndex);
-  auto mode1_path = temp_dir_.Append(mode1_dirname);
+  auto mode1_path = partner_path.Append(mode1_dirname);
   ASSERT_TRUE(CreateFakeAltMode(mode1_path, kTBTSVID, kTBTVDO, kTBTVDOIndex));
 
   // Add extra white spaces to ensure malformed strings can be parsed. We can do
@@ -61,8 +79,11 @@ TEST_F(PartnerTest, TestAltModeManualAddition) {
   auto mode1_svid = base::StringPrintf("%x    ", kTBTSVID);
   ASSERT_TRUE(base::WriteFile(mode1_path.Append("svid"), mode1_svid.c_str(),
                               mode1_svid.length()));
-
   EXPECT_TRUE(p.AddAltMode(mode1_path));
+
+  // Discovery can now be considered complete.
+  EXPECT_TRUE(p.DiscoveryComplete());
+
   // Trying to add an existing alt mode again should fail.
   EXPECT_FALSE(p.AddAltMode(mode1_path));
 }

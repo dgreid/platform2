@@ -116,4 +116,8 @@ AltMode* Partner::GetAltMode(int index) {
   return alt_modes_.find(index)->second.get();
 }
 
+bool Partner::DiscoveryComplete() {
+  return num_alt_modes_ == alt_modes_.size();
+}
+
 }  // namespace typecd
