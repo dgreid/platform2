@@ -590,6 +590,11 @@ void AddVmodulePatterns(ChromiumCommandBuilder* builder) {
   builder->AddVmodulePattern("*/browser/chromeos/login/enrollment/*=1");
   builder->AddVmodulePattern("enrollment_screen_handler=1");
 
+  // Turn on OOBE/Login logs.
+  builder->AddVmodulePattern("*/browser/chromeos/login/screens/*=1");
+  builder->AddVmodulePattern("*/webui/chromeos/login/*=1");
+  builder->AddVmodulePattern("wizard_controller=1");
+
   // TODO(https://crbug.com/907158): Needed for investigating issues with tablet
   // mode detection and internal input device event blocking logic.
   builder->AddVmodulePattern("*/ash/wm/tablet_mode/*=1");
