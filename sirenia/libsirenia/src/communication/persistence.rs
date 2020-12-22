@@ -9,16 +9,35 @@ use serde::{Deserialize, Serialize};
 
 use crate::storage::StorableMember;
 
+/// Represents the possible status codes from an RPC.
+/// Values are assigned to make it easier to interface with D-Bus.
+#[derive(Debug, Deserialize, Serialize)]
+pub enum Status {
+    Success = 0,
+    Failure = 1,
+}
+
+/// Should the data be globally available or only available within the users' sessions.
+/// Values are assigned to make it easier to interface with D-Bus.
+#[derive(Debug, Deserialize, Serialize)]
+pub enum Scope {
+    System = 0,
+    Session = 1,
+    Test = -1,
+}
+
 //TODO These messages also need to carry enough information to prove the entry was recorded in the
 //log.
 #[derive(Deserialize, Serialize)]
 pub enum Request {
     Persist {
+        scope: Scope,
         domain: String,
         identifier: String,
         data: StorableMember,
     },
     Retrieve {
+        scope: Scope,
         domain: String,
         identifier: String,
     },
@@ -26,6 +45,11 @@ pub enum Request {
 
 #[derive(Deserialize, Serialize)]
 pub enum Response {
-    Persist { status: i32 },
-    Retrieve { status: i32, data: StorableMember },
+    Persist {
+        status: Status,
+    },
+    Retrieve {
+        status: Status,
+        data: StorableMember,
+    },
 }

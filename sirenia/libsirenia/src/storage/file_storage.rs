@@ -33,7 +33,7 @@ impl FileStorage {
     }
 
     /// Validity checks on the id performed before touching the file-system.
-    fn validate_id(&self, id: &str) -> Result<PathBuf> {
+    pub fn validate_id(id: &str) -> Result<PathBuf> {
         let path = Path::new(id);
 
         // Get first component.
@@ -49,13 +49,12 @@ impl FileStorage {
             return Err(Error::InvalidIdForStorage(id.to_string()));
         }
 
-        Ok(self.root.join(first))
+        Ok(first)
     }
-}
 
-impl Storage for FileStorage {
-    fn read_data<S: Storable>(&mut self, id: &str) -> Result<S> {
-        let filepath = self.validate_id(id)?;
+    /// Read without deserializing.
+    pub fn read_raw(&mut self, id: &str) -> Result<Vec<u8>> {
+        let filepath = self.root.join(Self::validate_id(id)?);
 
         if !filepath.exists() {
             return Err(Error::EmptyRead);
@@ -67,19 +66,28 @@ impl Storage for FileStorage {
             .read_to_end(&mut contents)
             .map_err(to_read_data_error)?;
 
+        Ok(contents)
+    }
+
+    /// Write without serializing.
+    pub fn write_raw(&mut self, id: &str, data: &[u8]) -> Result<()> {
+        let filepath = self.root.join(Self::validate_id(id)?);
+        let mut destination = File::create(filepath).map_err(to_write_data_error)?;
+
+        destination.write_all(data).map_err(to_write_data_error)
+    }
+}
+
+impl Storage for FileStorage {
+    fn read_data<S: Storable>(&mut self, id: &str) -> Result<S> {
+        let contents = self.read_raw(id)?;
         from_slice(&contents).map_err(to_read_data_error)
     }
 
     fn write_data<S: Storable>(&mut self, id: &str, data: &S) -> Result<()> {
-        let filename = self.validate_id(id)?;
-        let mut destination = File::create(filename).map_err(to_write_data_error)?;
-
         let mut ser = FlexbufferSerializer::new();
         data.serialize(&mut ser).map_err(to_write_data_error)?;
-
-        destination
-            .write_all(&ser.take_buffer())
-            .map_err(to_write_data_error)
+        self.write_raw(id, &ser.take_buffer())
     }
 }
 
@@ -165,7 +173,7 @@ mod test {
     fn storage_write_ioerror() {
         let mut storage = TestFileStorage::new();
 
-        let path = storage.as_mut().validate_id(VALID_TEST_ID).unwrap();
+        let path = storage.storage_root.join(VALID_TEST_ID);
         create_dir(path).unwrap();
 
         assert!(storage
@@ -178,7 +186,7 @@ mod test {
     fn storage_read_ioerror() {
         let mut storage = TestFileStorage::new();
 
-        let path = storage.as_mut().validate_id(VALID_TEST_ID).unwrap();
+        let path = storage.storage_root.join(VALID_TEST_ID);
         create_dir(path).unwrap();
 
         assert!(storage.as_mut().read_data::<u64>(VALID_TEST_ID).is_err());

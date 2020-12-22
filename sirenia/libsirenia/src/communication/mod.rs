@@ -79,7 +79,7 @@ pub fn read_message<R: Read, D: DeserializeOwned>(r: &mut R) -> Result<D> {
 
 // Writes the given message to the given Write. First writes the length of the
 // serialized message then the serialized message itself.
-pub fn write_message<W: Write, S: Serialize + Debug>(w: &mut W, m: S) -> Result<()> {
+pub fn write_message<W: Write, S: Serialize>(w: &mut W, m: S) -> Result<()> {
     let mut writer = BufWriter::new(w);
 
     // Serialize the message and calculate the length
