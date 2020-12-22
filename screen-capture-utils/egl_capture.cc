@@ -27,8 +27,6 @@
 namespace screenshot {
 namespace {
 
-constexpr int kBytesPerPixel = 4;
-
 GLuint LoadShader(const GLenum type, const char* const src) {
   GLuint shader = 0;
   shader = glCreateShader(type);
@@ -44,8 +42,7 @@ GLuint LoadShader(const GLenum type, const char* const src) {
     glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &log_length);
     std::vector<char> shader_log(log_length);
     glGetShaderInfoLog(shader, log_length, nullptr, shader_log.data());
-    CHECK(false) << "Shader failed to compile: " << shader_log.data()
-                 << ": program: " << src;
+    CHECK(false) << "Shader failed to compile: " << shader_log.data();
   }
 
   return shader;
@@ -145,21 +142,28 @@ EGLImageKHR CreateImage(PFNEGLCREATEIMAGEKHRPROC CreateImageKHR,
 
 }  // namespace
 
-EglDisplayBuffer::EglDisplayBuffer(
-    const Crtc* crtc, uint32_t x, uint32_t y, uint32_t width, uint32_t height)
-    : crtc_(*crtc),
-      x_(x),
-      y_(y),
+EglPixelBuf::EglPixelBuf(ScopedGbmDevicePtr device,
+                         std::vector<char> buffer,
+                         uint32_t x,
+                         uint32_t y,
+                         uint32_t width,
+                         uint32_t height,
+                         uint32_t stride)
+    : device_(std::move(device)),
       width_(width),
       height_(height),
-      device_(gbm_create_device(crtc_.file().GetPlatformFile())),
-      display_(eglGetDisplay(EGL_DEFAULT_DISPLAY)),
-      buffer_(width_ * height_ * kBytesPerPixel) {
-  CHECK(device_) << "gbm_create_device failed";
+      stride_(stride),
+      buffer_(buffer) {}
 
-  CHECK(display_ != EGL_NO_DISPLAY) << "Could not get EGLDisplay";
+std::unique_ptr<EglPixelBuf> EglCapture(
+    const Crtc& crtc, uint32_t x, uint32_t y, uint32_t width, uint32_t height) {
+  ScopedGbmDevicePtr device(gbm_create_device(crtc.file().GetPlatformFile()));
+  CHECK(device) << "gbm_create_device failed";
 
-  EGLBoolean egl_ret = eglInitialize(display_, NULL, NULL);
+  EGLDisplay display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+  CHECK(display != EGL_NO_DISPLAY) << "Could not get EGLDisplay";
+
+  EGLBoolean egl_ret = eglInitialize(display, NULL, NULL);
   CHECK(egl_ret) << "Could not initialize EGLDisplay";
 
   const EGLint config_attribs[] = {EGL_SURFACE_TYPE, EGL_DONT_CARE,
@@ -171,17 +175,17 @@ EglDisplayBuffer::EglDisplayBuffer(
   EGLint num_configs;
   EGLConfig config;
 
-  egl_ret = eglChooseConfig(display_, config_attribs, &config, 1, &num_configs);
+  egl_ret = eglChooseConfig(display, config_attribs, &config, 1, &num_configs);
   CHECK(egl_ret) << "Could not choose EGLConfig";
   CHECK(num_configs != 0) << "Could not choose an EGL configuration";
 
-  ctx_ = eglCreateContext(display_, config, EGL_NO_CONTEXT, GLES2);
-  CHECK(ctx_ != EGL_NO_CONTEXT) << "Could not create EGLContext";
+  EGLContext ctx = eglCreateContext(display, config, EGL_NO_CONTEXT, GLES2);
+  CHECK(ctx != EGL_NO_CONTEXT) << "Could not create EGLContext";
 
-  egl_ret = eglMakeCurrent(display_, EGL_NO_SURFACE, EGL_NO_SURFACE, ctx_);
+  egl_ret = eglMakeCurrent(display, EGL_NO_SURFACE, EGL_NO_SURFACE, ctx);
   CHECK(egl_ret) << "Could not bind context";
 
-  std::string egl_extensions = eglQueryString(display_, EGL_EXTENSIONS);
+  std::string egl_extensions = eglQueryString(display, EGL_EXTENSIONS);
   CHECK(egl_extensions.find("EGL_KHR_image_base") != std::string::npos)
       << "Missing EGL extension: EGL_KHR_image_base";
   CHECK(egl_extensions.find("EGL_EXT_image_dma_buf_import") !=
@@ -193,111 +197,103 @@ EglDisplayBuffer::EglDisplayBuffer(
       << "Missing GL extension: GL_OES_EGL_image";
   CHECK(gl_extensions.find("GL_OES_EGL_image_external") != std::string::npos)
       << "Missing GL extension: GL_OES_EGL_image_external";
-  createImageKHR_ =
-      (PFNEGLCREATEIMAGEKHRPROC)eglGetProcAddress("eglCreateImageKHR");
-  CHECK(createImageKHR_) << "CreateImageKHR not supported";
-  destroyImageKHR_ =
-      (PFNEGLDESTROYIMAGEKHRPROC)eglGetProcAddress("eglDestroyImageKHR");
-  CHECK(destroyImageKHR_) << "DestroyImageKHR not supported";
 
-  const char* extensions = eglQueryString(display_, EGL_EXTENSIONS);
+  PFNEGLCREATEIMAGEKHRPROC CreateImageKHR =
+      (PFNEGLCREATEIMAGEKHRPROC)eglGetProcAddress("eglCreateImageKHR");
+  CHECK(CreateImageKHR) << "CreateImageKHR not supported";
+  PFNEGLDESTROYIMAGEKHRPROC DestroyImageKHR =
+      (PFNEGLDESTROYIMAGEKHRPROC)eglGetProcAddress("eglDestroyImageKHR");
+  CHECK(DestroyImageKHR) << "DestroyImageKHR not supported";
+
+  const char* extensions = eglQueryString(display, EGL_EXTENSIONS);
   CHECK(extensions) << "eglQueryString() failed to get egl extensions";
-  import_modifiers_exist_ =
+  const bool import_modifiers_exist =
       DoesExtensionExist(extensions, "EGL_EXT_image_dma_buf_import_modifiers");
 
-  glGenTextures(1, &output_texture_);
-  glBindTexture(GL_TEXTURE_2D, output_texture_);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width_, height_, 0, GL_RGBA,
+  GLuint output_texture;
+  glGenTextures(1, &output_texture);
+  glBindTexture(GL_TEXTURE_2D, output_texture);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA,
                GL_UNSIGNED_BYTE, NULL);
 
-  glGenTextures(1, &input_texture_);
-  glBindTexture(GL_TEXTURE_EXTERNAL_OES, input_texture_);
+  GLuint input_texture;
+  glGenTextures(1, &input_texture);
+  glBindTexture(GL_TEXTURE_EXTERNAL_OES, input_texture);
 
-  glEGLImageTargetTexture2DOES_ =
+  PFNGLEGLIMAGETARGETTEXTURE2DOESPROC glEGLImageTargetTexture2DOES =
       (PFNGLEGLIMAGETARGETTEXTURE2DOESPROC)eglGetProcAddress(
           "glEGLImageTargetTexture2DOES");
-  CHECK(glEGLImageTargetTexture2DOES_)
+  CHECK(glEGLImageTargetTexture2DOES)
       << "glEGLImageTargetTexture2DOES not supported";
 
-  glGenFramebuffers(1, &fbo_);
-  glBindFramebuffer(GL_FRAMEBUFFER, fbo_);
+  unsigned int fbo;
+  glGenFramebuffers(1, &fbo);
+  glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 
-  const GLchar* vert = R"(#version 300 es
-out vec2 tex_pos;
-void main() {
-  vec2 pos[4];
-  pos[0] = vec2(-1.0, -1.0);
-  pos[1] = vec2(1.0, -1.0);
-  pos[2] = vec2(-1.0, 1.0);
-  pos[3] = vec2(1.0, 1.0);
-  gl_Position.xy = pos[gl_VertexID];
-  gl_Position.zw = vec2(0.0, 1.0);
-  vec2 uvs[4];
-  uvs[0] = vec2(0.0, 0.0);
-  uvs[1] = vec2(1.0, 0.0);
-  uvs[2] = vec2(0.0, 1.0);
-  uvs[3] = vec2(1.0, 1.0);
-  tex_pos = uvs[gl_VertexID];
-}
-)";
+  const GLchar* vert =
+      "#version 300 es\n"
+      "out vec2 tex_pos;\n"
+      "void main() {\n"
+      " vec2 pos[4];\n"
+      " pos[0] = vec2(-1.0, -1.0);\n"
+      " pos[1] = vec2(1.0, -1.0);\n"
+      " pos[2] = vec2(-1.0, 1.0);\n"
+      " pos[3] = vec2(1.0, 1.0);\n"
+      " gl_Position.xy = pos[gl_VertexID];\n"
+      " gl_Position.zw = vec2(0.0, 1.0);\n"
+      " vec2 uvs[4];\n"
+      " uvs[0] = vec2(0.0, 0.0);\n"
+      " uvs[1] = vec2(1.0, 0.0);\n"
+      " uvs[2] = vec2(0.0, 1.0);\n"
+      " uvs[3] = vec2(1.0, 1.0);\n"
+      " tex_pos = uvs[gl_VertexID];\n"
+      "}\n";
 
-  const GLchar* frag = R"(#version 300 es
-#extension GL_OES_EGL_image_external_essl3 : require
-precision highp float;
-uniform samplerExternalOES tex;
-in vec2 tex_pos;
-out vec4 fragColor;
-void main() {
-  fragColor = texture(tex, tex_pos);
-}
-)";
+  const GLchar* frag =
+      "#version 300 es\n"
+      "#extension GL_OES_EGL_image_external_essl3 : require\n"
+      "precision highp float;\n"
+      "uniform samplerExternalOES tex;\n"
+      "in vec2 tex_pos;\n"
+      "out vec4 fragColor;\n"
+      "void main() {\n"
+      "  fragColor = texture(tex, tex_pos);\n"
+      "}\n";
 
   LoadProgram(vert, frag);
 
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                         output_texture_, 0);
+                         output_texture, 0);
 
   GLenum fb_status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
   CHECK(fb_status == GL_FRAMEBUFFER_COMPLETE) << "fb did not complete";
 
+  GLuint indices[4] = {0, 1, 2, 3};
 
   glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
   glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
   glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-}
 
-EglDisplayBuffer::~EglDisplayBuffer() {
-  eglMakeCurrent(display_, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
-  glDeleteTextures(1, &input_texture_);
-  glDeleteTextures(1, &output_texture_);
-  glDeleteFramebuffers(1, &fbo_);
-  eglDestroyContext(display_, ctx_);
-  eglTerminate(display_);
-}
-
-DisplayBuffer::Result EglDisplayBuffer::Capture() {
-  const GLuint indices[4] = {0, 1, 2, 3};
-
-  if (crtc_.planes().empty()) {
+  if (crtc.planes().empty()) {
     EGLImageKHR image =
-        CreateImage(createImageKHR_, import_modifiers_exist_,
-                    crtc_.file().GetPlatformFile(), display_, crtc_.fb2());
+        CreateImage(CreateImageKHR, import_modifiers_exist,
+                    crtc.file().GetPlatformFile(), display, crtc.fb2());
     CHECK(image != EGL_NO_IMAGE_KHR) << "Failed to create image";
 
-    glViewport(0, 0, width_, height_);
-    glEGLImageTargetTexture2DOES_(GL_TEXTURE_EXTERNAL_OES, image);
+    glViewport(0, 0, width, height);
+    glEGLImageTargetTexture2DOES(GL_TEXTURE_EXTERNAL_OES, image);
 
     glDrawElements(GL_TRIANGLE_STRIP, 4, GL_UNSIGNED_INT, indices);
 
-    destroyImageKHR_(display_, image);
+    DestroyImageKHR(display, image);
   } else {
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    for (auto& plane : crtc_.planes()) {
-      EGLImageKHR image = CreateImage(createImageKHR_, import_modifiers_exist_,
-                                      crtc_.file().GetPlatformFile(), display_,
+    for (auto& plane : crtc.planes()) {
+      EGLImageKHR image = CreateImage(CreateImageKHR, import_modifiers_exist,
+                                      crtc.file().GetPlatformFile(), display,
                                       plane.first.get());
       CHECK(image != EGL_NO_IMAGE_KHR) << "Failed to create image";
 
@@ -305,25 +301,29 @@ DisplayBuffer::Result EglDisplayBuffer::Capture() {
       glViewport(plane.second.x, plane.second.y, plane.second.w,
                  plane.second.h);
 
-      glEGLImageTargetTexture2DOES_(GL_TEXTURE_EXTERNAL_OES, image);
+      glEGLImageTargetTexture2DOES(GL_TEXTURE_EXTERNAL_OES, image);
 
       glDrawElements(GL_TRIANGLE_STRIP, 4, GL_UNSIGNED_INT, indices);
 
-      destroyImageKHR_(display_, image);
+      DestroyImageKHR(display, image);
     }
   }
 
+  std::vector<char> buffer(width * height * 4);
   glPixelStorei(GL_PACK_ALIGNMENT, 1);
-  // TODO(uekawa): potentially improve speed by creating a bo and writing to it
-  // instead of reading out.
-  glReadPixels(x_, y_, width_, height_, GL_BGRA_EXT, GL_UNSIGNED_BYTE,
-               buffer_.data());
+  glReadPixels(x, y, width, height, GL_BGRA_EXT, GL_UNSIGNED_BYTE,
+               buffer.data());
 
-  return {
-      width_, height_,
-      width_ * kBytesPerPixel,            // stride
-      static_cast<void*>(buffer_.data())  // buffer
-  };
+  eglMakeCurrent(display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+
+  glDeleteTextures(1, &input_texture);
+  glDeleteTextures(1, &output_texture);
+  glDeleteFramebuffers(1, &fbo);
+  eglDestroyContext(display, ctx);
+  eglTerminate(display);
+
+  return std::make_unique<EglPixelBuf>(std::move(device), buffer, x, y, width,
+                                       height, width * 4);
 }
 
 }  // namespace screenshot

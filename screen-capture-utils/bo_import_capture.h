@@ -1,4 +1,4 @@
-// Copyright 2020 The Chromium OS Authors. All rights reserved.
+// Copyright 2018 The Chromium OS Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -9,11 +9,9 @@
 
 #include <memory>
 
-#include <base/files/scoped_file.h>
 #include <base/macros.h>
 #include <gbm.h>
 
-#include "screen-capture-utils/capture.h"
 #include "screen-capture-utils/ptr_util.h"
 
 namespace screenshot {
@@ -21,34 +19,37 @@ namespace screenshot {
 class Crtc;
 
 // Utility class to map/unmap GBM buffer with RAII.
-class GbmBoDisplayBuffer : public DisplayBuffer {
+class GbmBoMap {
  public:
-  GbmBoDisplayBuffer(const Crtc* crtc,
-                     uint32_t x,
-                     uint32_t y,
-                     uint32_t width,
-                     uint32_t height);
-  GbmBoDisplayBuffer(const GbmBoDisplayBuffer&) = delete;
-  GbmBoDisplayBuffer& operator=(const GbmBoDisplayBuffer&) = delete;
+  GbmBoMap(ScopedGbmDevicePtr device,
+           ScopedGbmBoPtr bo,
+           uint32_t x,
+           uint32_t y,
+           uint32_t width,
+           uint32_t height);
+  GbmBoMap(const GbmBoMap&) = delete;
+  GbmBoMap& operator=(const GbmBoMap&) = delete;
 
-  ~GbmBoDisplayBuffer() override;
+  ~GbmBoMap();
 
-  DisplayBuffer::Result Capture() override;
+  uint32_t width() const { return width_; }
+  uint32_t height() const { return height_; }
+  uint32_t stride() const { return stride_; }
+  void* buffer() const { return buffer_; }
 
  private:
-  const Crtc& crtc_;
   const ScopedGbmDevicePtr device_;
-  const uint32_t x_;
-  const uint32_t y_;
+  const ScopedGbmBoPtr bo_;
   const uint32_t width_;
   const uint32_t height_;
-
-  ScopedGbmBoPtr bo_{nullptr};
-  uint32_t stride_{0};
-  void* map_data_{nullptr};
-  void* buffer_{nullptr};
-  base::ScopedFD buffer_fd_{0};
+  uint32_t stride_ = 0;
+  void* map_data_ = nullptr;
+  void* buffer_ = nullptr;
 };
+
+// Captures a screenshot from the specified CRTC.
+std::unique_ptr<GbmBoMap> Capture(
+    const Crtc& crtc, uint32_t x, uint32_t y, uint32_t width, uint32_t height);
 
 }  // namespace screenshot
 
