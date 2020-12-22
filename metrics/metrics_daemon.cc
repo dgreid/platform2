@@ -69,8 +69,12 @@ const int kSecondsPerDay = kSecondsPerMinute * kMinutesPerDay;
 const int kDaysPerWeek = 7;
 const int kSecondsPerWeek = kSecondsPerDay * kDaysPerWeek;
 
+// Initial interval until the first call to UpdateStats(), The initial update
+// happens sooner than subsequent updates to capture short usage times. (e.g.
+// situations where a user uses their device for 1-2 minutes only).
+const uint32_t kInitialUpdateStatsIntervalMs = 60'000;  // one minute
 // Interval between calls to UpdateStats().
-const uint32_t kUpdateStatsIntervalMs = 300000;
+const uint32_t kUpdateStatsIntervalMs = 300'000;  // five minutes
 
 // Maximum amount of system memory that will be reported without overflow.
 const int kMaximumMemorySizeInKB = 128 * 1024 * 1024;
@@ -491,7 +495,7 @@ int MetricsDaemon::OnInit() {
       FROM_HERE,
       base::Bind(&MetricsDaemon::HandleUpdateStatsTimeout,
                  GET_THIS_FOR_POSTTASK()),
-      base::TimeDelta::FromMilliseconds(kUpdateStatsIntervalMs));
+      base::TimeDelta::FromMilliseconds(kInitialUpdateStatsIntervalMs));
 
   // Emit a "0" value on start, to provide a baseline for this metric.
   SendLinearSample(kMetricCroutonStarted, 0, 2, 3);
