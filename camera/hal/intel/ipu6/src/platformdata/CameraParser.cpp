@@ -45,8 +45,12 @@ CameraParser::CameraParser(MediaControl *mc, PlatformData::StaticCfg *cfg) :
     mMC(mc),
     mMetadataCache(nullptr) {
     LOGXML("@%s", __func__);
-    CheckError(mc == nullptr || cfg == nullptr, VOID_VALUE,
-               "@%s, passed parameters are wrong, mc:%p, data:%p", __func__, mc, cfg);
+    CheckError(cfg == nullptr, VOID_VALUE, "@%s, cfg is nullptr", __func__);
+
+    // Get common data from libcamhal_profile.xml
+    int ret = getDataFromXmlFile(LIBCAMHAL_PROFILE_NAME);
+    CheckError(ret != OK, VOID_VALUE, "Failed to get libcamhal profile data frome %s",
+               LIBCAMHAL_PROFILE_NAME);
 
     mGenericStaticMetadataToTag = {
         {"ae.lockAvailable", CAMERA_AE_LOCK_AVAILABLE},
@@ -95,13 +99,9 @@ CameraParser::CameraParser(MediaControl *mc, PlatformData::StaticCfg *cfg) :
         {"sync.maxLatency", CAMERA_SYNC_MAX_LATENCY},
     };
 
+    // Get sensor data from sensor xml.
+    CheckError(mc == nullptr, VOID_VALUE, "@%s, mc is nullptr", __func__);
     mMetadataCache = new long[mMetadataCacheSize];
-
-    // Get common data from libcamhal_profile.xml
-    int ret = getDataFromXmlFile(LIBCAMHAL_PROFILE_NAME);
-    CheckError(ret != OK, VOID_VALUE, "Failed to get libcamhal profile data frome %s",
-               LIBCAMHAL_PROFILE_NAME);
-
     getSensorDataFromXmlFile();
 
     if(gLogLevel & CAMERA_DEBUG_LOG_LEVEL2) {
