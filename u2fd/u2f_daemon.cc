@@ -288,6 +288,10 @@ void U2fDaemon::RegisterDBusObjectsAsync(
                                         base::Unretained(&webauthn_handler_),
                                         &WebAuthnHandler::HasCredentials);
 
+  u2f_interface->AddSimpleMethodHandler(kU2FHasLegacyCredentials,
+                                        base::Unretained(&webauthn_handler_),
+                                        &WebAuthnHandler::HasLegacyCredentials);
+
   u2f_interface->AddSimpleMethodHandler(kU2FCancelWebAuthnFlow,
                                         base::Unretained(&webauthn_handler_),
                                         &WebAuthnHandler::Cancel);

@@ -47,9 +47,12 @@ constexpr uint32_t kCr50StatusNotAllowed = 0x507;
 constexpr uint32_t kCr50StatusPasswordRequired = 0x50a;
 
 // Dummy User State.
+constexpr char kUserSecret[65] = {[0 ... 63] = 'E', '\0'};
 constexpr char kCredentialSecret[65] = {[0 ... 63] = 'E', '\0'};
 // Dummy RP id.
 constexpr char kRpId[] = "example.com";
+// Wrong RP id is used to test app id extension path.
+constexpr char kWrongRpId[] = "wrong.com";
 const std::vector<uint8_t> kRpIdHash = util::Sha256(std::string(kRpId));
 // Dummy key handle (credential ID).
 const std::vector<uint8_t> kKeyHandle(sizeof(struct u2f_key_handle), 0xab);
@@ -125,6 +128,18 @@ const std::string ExpectedU2fSignCheckOnlyRequestRegex() {
   return request_regex;
 }
 
+const std::string ExpectedU2fSignCheckOnlyRequestRegexWrongRpId() {
+  // See U2F_SIGN_REQ in //platform/ec/include/u2f.h
+  const std::vector<uint8_t> rp_id_hash = util::Sha256(std::string(kWrongRpId));
+  static const std::string request_regex =
+      base::HexEncode(rp_id_hash.data(), rp_id_hash.size()) +  // AppId
+      std::string("(EE){32}") +                                // User Secret
+      std::string("(AB){64}") +                                // Key handle
+      std::string("(00){32}") +  // Hash to sign (empty)
+      std::string("07");         // U2F_AUTH_CHECK_ONLY
+  return request_regex;
+}
+
 // User-verification flow version
 const std::string ExpectedUVU2fSignCheckOnlyRequestRegex() {
   // See U2F_SIGN_REQ in //platform/ec/include/u2f.h
@@ -159,6 +174,12 @@ constexpr int kAuthenticatorDataFlagBytes = 1;
 constexpr int kSignatureCounterBytes = 4;
 constexpr int kAaguidBytes = 16;
 constexpr int kCredentialIdLengthBytes = 2;
+
+brillo::SecureBlob ArrayToSecureBlob(const char* array) {
+  brillo::SecureBlob blob;
+  CHECK(brillo::SecureBlob::HexStringToSecureBlob(array, &blob));
+  return blob;
+}
 
 brillo::Blob HexArrayToBlob(const char* array) {
   brillo::Blob blob;
@@ -257,6 +278,14 @@ class WebAuthnHandlerTestBase : public ::testing::Test {
 
   void ExpectNoGetUserSecret() {
     EXPECT_CALL(mock_user_state_, GetUserSecret()).Times(0);
+  }
+
+  void ExpectGetUserSecret() { ExpectGetUserSecretForTimes(1); }
+
+  void ExpectGetUserSecretForTimes(int times) {
+    EXPECT_CALL(mock_user_state_, GetUserSecret())
+        .Times(times)
+        .WillRepeatedly(Return(ArrayToSecureBlob(kUserSecret)));
   }
 
   void CallAndWaitForPresence(std::function<uint32_t()> fn, uint32_t* status) {
@@ -794,30 +823,61 @@ TEST_F(WebAuthnHandlerTestBase, GetAssertionVerificationSuccess) {
 
 TEST_F(WebAuthnHandlerTestBase, HasCredentialsNoMatch) {
   HasCredentialsRequest request;
-  request.set_rp_id(kRpId);
+  request.set_rp_id(kWrongRpId);
+  request.set_app_id(kWrongRpId);
   const std::string credential_id(sizeof(struct u2f_key_handle), 0xab);
   request.add_credential_id(credential_id);
 
   EXPECT_CALL(*mock_webauthn_storage_, GetSecretByCredentialId(credential_id))
-      .WillRepeatedly(Return(HexArrayToBlob(kCredentialSecret)));
+      .WillRepeatedly(Return(base::nullopt));
+  ExpectGetUserSecret();
+  EXPECT_CALL(mock_tpm_proxy_,
+              SendU2fSign(Matcher<const u2f_sign_req&>(StructMatchesRegex(
+                              ExpectedU2fSignCheckOnlyRequestRegexWrongRpId())),
+                          _))
+      .Times(2)
+      .WillRepeatedly(Return(kCr50StatusPasswordRequired));
+
+  auto resp = handler_->HasCredentials(request);
+  EXPECT_EQ(resp.credential_id_size(), 0);
+  EXPECT_EQ(resp.status(), HasCredentialsResponse::UNKNOWN_CREDENTIAL_ID);
+}
+
+// Match first of the 3 types of credentials.
+TEST_F(WebAuthnHandlerTestBase, HasCredentialsMatchPlatformAuthenticator) {
+  HasCredentialsRequest request;
+  request.set_rp_id(kRpId);
+  request.set_app_id(kRpId);
+  const std::string credential_id(sizeof(struct u2f_key_handle), 0xab);
+  request.add_credential_id(credential_id);
+
+  EXPECT_CALL(*mock_webauthn_storage_, GetSecretByCredentialId(credential_id))
+      .WillOnce(Return(HexArrayToBlob(kCredentialSecret)));
+  ExpectGetUserSecret();
   EXPECT_CALL(mock_tpm_proxy_,
               SendU2fSign(Matcher<const u2f_sign_req&>(StructMatchesRegex(
                               ExpectedU2fSignCheckOnlyRequestRegex())),
                           _))
-      .WillOnce(Return(kCr50StatusPasswordRequired));
+      // Checking for platform authenticator credential succeeds.
+      .WillOnce(Return(kCr50StatusSuccess))
+      // Checking for legacy credentials fails.
+      .WillRepeatedly(Return(kCr50StatusPasswordRequired));
 
   auto resp = handler_->HasCredentials(request);
-  EXPECT_EQ(resp.credential_id_size(), 0);
+  EXPECT_EQ(resp.credential_id_size(), 1);
+  EXPECT_EQ(resp.status(), HasCredentialsResponse::SUCCESS);
 }
 
-TEST_F(WebAuthnHandlerTestBase, HasCredentialsOneMatch) {
+// Match second of the 3 types of credentials.
+TEST_F(WebAuthnHandlerTestBase, HasCredentialsMatchU2fhidWebAuthn) {
   HasCredentialsRequest request;
   request.set_rp_id(kRpId);
   const std::string credential_id(sizeof(struct u2f_key_handle), 0xab);
   request.add_credential_id(credential_id);
 
   EXPECT_CALL(*mock_webauthn_storage_, GetSecretByCredentialId(credential_id))
-      .WillRepeatedly(Return(HexArrayToBlob(kCredentialSecret)));
+      .WillOnce(Return(base::nullopt));
+  ExpectGetUserSecret();
   EXPECT_CALL(mock_tpm_proxy_,
               SendU2fSign(Matcher<const u2f_sign_req&>(StructMatchesRegex(
                               ExpectedU2fSignCheckOnlyRequestRegex())),
@@ -826,6 +886,103 @@ TEST_F(WebAuthnHandlerTestBase, HasCredentialsOneMatch) {
 
   auto resp = handler_->HasCredentials(request);
   EXPECT_EQ(resp.credential_id_size(), 1);
+  EXPECT_EQ(resp.status(), HasCredentialsResponse::SUCCESS);
+}
+
+// Match third of the 3 types of credentials.
+TEST_F(WebAuthnHandlerTestBase, HasCredentialsMatchAppId) {
+  HasCredentialsRequest request;
+  request.set_rp_id(kWrongRpId);
+  request.set_app_id(kRpId);
+  const std::string credential_id(sizeof(struct u2f_key_handle), 0xab);
+  request.add_credential_id(credential_id);
+
+  EXPECT_CALL(*mock_webauthn_storage_, GetSecretByCredentialId(credential_id))
+      .WillOnce(Return(base::nullopt));
+  ExpectGetUserSecret();
+  // Matching rp_id fails.
+  EXPECT_CALL(mock_tpm_proxy_,
+              SendU2fSign(Matcher<const u2f_sign_req&>(StructMatchesRegex(
+                              ExpectedU2fSignCheckOnlyRequestRegexWrongRpId())),
+                          _))
+      .WillOnce(Return(kCr50StatusPasswordRequired));
+  // Matching app_id succeeds.
+  EXPECT_CALL(mock_tpm_proxy_,
+              SendU2fSign(Matcher<const u2f_sign_req&>(StructMatchesRegex(
+                              ExpectedU2fSignCheckOnlyRequestRegex())),
+                          _))
+      .WillOnce(Return(kCr50StatusSuccess));
+
+  auto resp = handler_->HasCredentials(request);
+  EXPECT_EQ(resp.credential_id_size(), 1);
+  EXPECT_EQ(resp.status(), HasCredentialsResponse::SUCCESS);
+}
+
+TEST_F(WebAuthnHandlerTestBase, HasLegacyCredentialsNoMatch) {
+  HasCredentialsRequest request;
+  request.set_rp_id(kWrongRpId);
+  request.set_app_id(kWrongRpId);
+  const std::string credential_id(sizeof(struct u2f_key_handle), 0xab);
+  request.add_credential_id(credential_id);
+
+  ExpectGetUserSecret();
+  EXPECT_CALL(mock_tpm_proxy_,
+              SendU2fSign(Matcher<const u2f_sign_req&>(StructMatchesRegex(
+                              ExpectedU2fSignCheckOnlyRequestRegexWrongRpId())),
+                          _))
+      .Times(2)
+      .WillRepeatedly(Return(kCr50StatusPasswordRequired));
+
+  auto resp = handler_->HasLegacyCredentials(request);
+  EXPECT_EQ(resp.credential_id_size(), 0);
+  EXPECT_EQ(resp.status(), HasCredentialsResponse::UNKNOWN_CREDENTIAL_ID);
+}
+
+// Match second of the 3 types of credentials.
+// If rp_id matches, it's a legacy credential registered with u2fhid on WebAuthn
+// API.
+TEST_F(WebAuthnHandlerTestBase, HasLegacyCredentialsMatchU2fhidWebAuthn) {
+  HasCredentialsRequest request;
+  request.set_rp_id(kRpId);
+  const std::string credential_id(sizeof(struct u2f_key_handle), 0xab);
+  request.add_credential_id(credential_id);
+
+  ExpectGetUserSecret();
+  EXPECT_CALL(mock_tpm_proxy_,
+              SendU2fSign(Matcher<const u2f_sign_req&>(StructMatchesRegex(
+                              ExpectedU2fSignCheckOnlyRequestRegex())),
+                          _))
+      .WillOnce(Return(kCr50StatusSuccess));
+
+  auto resp = handler_->HasLegacyCredentials(request);
+  EXPECT_EQ(resp.credential_id_size(), 1);
+  EXPECT_EQ(resp.status(), HasCredentialsResponse::SUCCESS);
+}
+
+// Match third of the 3 types of credentials.
+// If app_id matches, it's a legacy credential registered with U2F API.
+TEST_F(WebAuthnHandlerTestBase, HasLegacyCredentialsMatchAppId) {
+  HasCredentialsRequest request;
+  request.set_rp_id(kWrongRpId);
+  request.set_app_id(kRpId);
+  const std::string credential_id(sizeof(struct u2f_key_handle), 0xab);
+  request.add_credential_id(credential_id);
+
+  ExpectGetUserSecret();
+  EXPECT_CALL(mock_tpm_proxy_,
+              SendU2fSign(Matcher<const u2f_sign_req&>(StructMatchesRegex(
+                              ExpectedU2fSignCheckOnlyRequestRegexWrongRpId())),
+                          _))
+      .WillOnce(Return(kCr50StatusPasswordRequired));
+  EXPECT_CALL(mock_tpm_proxy_,
+              SendU2fSign(Matcher<const u2f_sign_req&>(StructMatchesRegex(
+                              ExpectedU2fSignCheckOnlyRequestRegex())),
+                          _))
+      .WillOnce(Return(kCr50StatusSuccess));
+
+  auto resp = handler_->HasLegacyCredentials(request);
+  EXPECT_EQ(resp.credential_id_size(), 1);
+  EXPECT_EQ(resp.status(), HasCredentialsResponse::SUCCESS);
 }
 
 TEST_F(WebAuthnHandlerTestBase, MakeAuthenticatorDataWithAttestedCredData) {

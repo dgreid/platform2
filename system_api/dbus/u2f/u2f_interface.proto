@@ -118,14 +118,19 @@ message GetAssertionResponse {
   repeated Assertion assertion = 2;
 }
 
-// Check whether the specified |credential_id|s are valid given |rp_id|. Invalid
+// Check whether the specified |credential_id|s are valid. Invalid
 // credentials will not be present in the response. If no |credential_id|s are
 // specified, returns any resident credentials for |rp_id|.
+// There are types of valid credentials:
+// 1. Credentials registered with platform authenticator (webauthn_handler).
+// 2. Credentials registered via u2fhid on WebAuthn API. Those will be scoped
+// to rp_id.
+// 3. Credentials registered via U2F API. Those will be scoped to app_id.
 message HasCredentialsRequest {
   // String representing a valid domain name.
   string rp_id = 1;
   repeated bytes credential_id = 2;
-  // App id extension. Used in place of rp id for legacy u2f credentials.
+  // App id extension. Used in place of rp id for U2F API credentials.
   string app_id = 3;
 }
 

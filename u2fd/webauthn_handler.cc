@@ -951,6 +951,7 @@ HasCredentialsResponse WebAuthnHandler::HasCredentials(
     return response;
   }
 
+  // First consider WebAuthn credentials registered with platform authenticator.
   std::vector<uint8_t> rp_id_hash = util::Sha256(request.rp_id());
   for (const auto& credential_id : request.credential_id()) {
     base::Optional<std::vector<uint8_t>> credential_secret =
@@ -965,6 +966,99 @@ HasCredentialsResponse WebAuthnHandler::HasCredentials(
       return response;
     } else if (ret == HasCredentialsResponse::SUCCESS) {
       *response.add_credential_id() = credential_id;
+    }
+  }
+
+  // Then consider legacy u2fhid credentials, which may be registered with
+  // WebAuthn API or U2F API.
+  HasCredentialsResponse legacy_response = HasLegacyCredentials(request);
+  if (legacy_response.status() == HasCredentialsResponse::SUCCESS) {
+    for (const auto& credential_id : legacy_response.credential_id()) {
+      *response.add_credential_id() = credential_id;
+    }
+  }
+
+  response.set_status((response.credential_id_size() > 0)
+                          ? HasCredentialsResponse::SUCCESS
+                          : HasCredentialsResponse::UNKNOWN_CREDENTIAL_ID);
+  return response;
+}
+
+HasCredentialsResponse WebAuthnHandler::HasLegacyCredentials(
+    const HasCredentialsRequest& request) {
+  HasCredentialsResponse response;
+
+  if (!Initialized()) {
+    response.set_status(HasCredentialsResponse::INTERNAL_ERROR);
+    return response;
+  }
+
+  if (request.credential_id().empty()) {
+    response.set_status(HasCredentialsResponse::INVALID_REQUEST);
+    return response;
+  }
+
+  const base::Optional<brillo::SecureBlob> user_secret =
+      user_state_->GetUserSecret();
+  if (!user_secret) {
+    response.set_status(HasCredentialsResponse::INTERNAL_ERROR);
+    return response;
+  }
+  const std::vector<uint8_t> rp_id_hash = util::Sha256(request.rp_id());
+  const std::vector<uint8_t> app_id_hash = util::Sha256(request.app_id());
+
+  // A credential_id will be in |response| if either rp_id or app_id matches
+  // it. The ordering of credentials should not affect the number of matched
+  // entries.
+  for (const auto& credential_id : request.credential_id()) {
+    // First try matching rp_id.
+    HasCredentialsResponse::HasCredentialsStatus ret = DoU2fSignCheckOnly(
+        rp_id_hash, util::ToVector(credential_id),
+        std::vector<uint8_t>(user_secret->begin(), user_secret->end()));
+    DCHECK(HasCredentialsResponse::HasCredentialsStatus_IsValid(ret));
+    switch (ret) {
+      case HasCredentialsResponse::INVALID_REQUEST:
+        response.set_status(ret);
+        return response;
+      case HasCredentialsResponse::SUCCESS:
+        // rp_id matched, it's a credential registered with u2fhid on WebAuthn
+        // API.
+        *response.add_credential_id() = credential_id;
+        continue;
+      case HasCredentialsResponse::UNKNOWN_CREDENTIAL_ID:
+        break;
+      case HasCredentialsResponse::UNKNOWN:
+      case HasCredentialsResponse::INTERNAL_ERROR:
+        response.set_status(HasCredentialsResponse::INTERNAL_ERROR);
+        return response;
+      case google::protobuf::kint32min:
+      case google::protobuf::kint32max:
+        NOTREACHED();
+    }
+
+    // Try matching app_id.
+    ret = DoU2fSignCheckOnly(
+        app_id_hash, util::ToVector(credential_id),
+        std::vector<uint8_t>(user_secret->begin(), user_secret->end()));
+    DCHECK(HasCredentialsResponse::HasCredentialsStatus_IsValid(ret));
+    switch (ret) {
+      case HasCredentialsResponse::INVALID_REQUEST:
+        response.set_status(ret);
+        return response;
+      case HasCredentialsResponse::SUCCESS:
+        // App id extension matched. It's a legacy credential registered with
+        // the U2F interface.
+        *response.add_credential_id() = credential_id;
+        continue;
+      case HasCredentialsResponse::UNKNOWN_CREDENTIAL_ID:
+        break;
+      case HasCredentialsResponse::UNKNOWN:
+      case HasCredentialsResponse::INTERNAL_ERROR:
+        response.set_status(HasCredentialsResponse::INTERNAL_ERROR);
+        return response;
+      case google::protobuf::kint32min:
+      case google::protobuf::kint32max:
+        NOTREACHED();
     }
   }
 

@@ -91,8 +91,14 @@ class WebAuthnHandler {
   void GetAssertion(std::unique_ptr<GetAssertionMethodResponse> method_response,
                     const GetAssertionRequest& request);
 
-  // Tests validity and/or presence of specified credentials.
+  // Tests validity and/or presence of specified credentials, including u2fhid
+  // credentials.
   HasCredentialsResponse HasCredentials(const HasCredentialsRequest& request);
+
+  // Tests whether any credential were registered using the u2fhid (on either
+  // WebAuthn API or U2F API).
+  HasCredentialsResponse HasLegacyCredentials(
+      const HasCredentialsRequest& request);
 
   // Dismisses user verification UI and abort the operation. This is expected to
   // be called by the browser only in UV operations, because UP operations
