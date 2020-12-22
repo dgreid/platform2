@@ -313,6 +313,7 @@ static_library("libcryptohome") {
     "../service_userdataauth.cc",
     "../stateful_recovery.cc",
     "../storage/arc_disk_quota.cc",
+    "../storage/cryptohome_vault.cc",
     "../storage/disk_cleanup.cc",
     "../storage/disk_cleanup_routines.cc",
     "../storage/file_system_keyset.cc",

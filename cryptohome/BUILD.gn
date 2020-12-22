@@ -466,6 +466,7 @@ if (use.test) {
       "signature_sealing_backend_test_utils.cc",
       "stateful_recovery_unittest.cc",
       "storage/arc_disk_quota_unittest.cc",
+      "storage/cryptohome_vault_test.cc",
       "storage/disk_cleanup_routines_unittest.cc",
       "storage/disk_cleanup_unittest.cc",
       "storage/encrypted_container/dmcrypt_container_test.cc",
