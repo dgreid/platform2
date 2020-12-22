@@ -6,6 +6,9 @@ import("//common-mk/pkg_config.gni")
 
 group("all") {
   deps = [ ":minios" ]
+  if (use.test) {
+    deps += [ ":screens_test" ]
+  }
 }
 
 pkg_config("target_defaults") {
@@ -20,6 +23,7 @@ static_library("libminios") {
   sources = [
     "minios.cc",
     "process_manager.cc",
+    "screens.cc",
   ]
 }
 
@@ -27,4 +31,22 @@ executable("minios") {
   configs += [ ":target_defaults" ]
   sources = [ "main.cc" ]
   deps = [ ":libminios" ]
+}
+
+if (use.test) {
+  pkg_config("test_config") {
+    pkg_deps = [ "libchrome-test" ]
+  }
+  executable("screens_test") {
+    configs += [
+      "//common-mk:test",
+      ":test_config",
+      ":target_defaults",
+    ]
+    deps = [
+      ":libminios",
+      "//common-mk/testrunner:testrunner",
+    ]
+    sources = [ "screens_test.cc" ]
+  }
 }

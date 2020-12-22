@@ -12,6 +12,11 @@ constexpr char kDebugConsole[] = "/dev/pts/2";
 
 int MiniOs::Run() {
   LOG(INFO) << "Starting miniOS.";
+  if (!screens_.Init()) {
+    LOG(ERROR) << "Screens init failed. Exiting.";
+    return 1;
+  }
+  screens_.InstructionsWithTitle("MiniOS_welcome");
 
   // Start the shell on DEBUG console.
   return ProcessManager().RunCommand({"/bin/sh"}, kDebugConsole, kDebugConsole);

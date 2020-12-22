@@ -6,6 +6,7 @@
 #define MINIOS_MINIOS_H_
 
 #include "minios/process_manager.h"
+#include "minios/screens.h"
 
 class MiniOs {
  public:
@@ -18,6 +19,7 @@ class MiniOs {
  private:
   MiniOs(const MiniOs&) = delete;
   MiniOs& operator=(const MiniOs&) = delete;
+  screens::Screens screens_;
 };
 
 #endif  // MINIOS_MINIOS_H__
