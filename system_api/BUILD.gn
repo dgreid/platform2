@@ -41,6 +41,7 @@ group("all") {
     ":system_api-seneschal-protos",
     ":system_api-smbprovider-protos",
     ":system_api-system_proxy-protos",
+    ":system_api-tpm_manager-goprotos",
     ":system_api-tpm_manager-protos",
     ":system_api-u2f-protos",
     ":system_api-update_engine-protos",
@@ -252,6 +253,12 @@ proto_library("system_api-tpm_manager-protos") {
   # system_api-tpm_manager-protos is used by a shared_library
   # object, so we need to build it with "-fPIC" instead of "-fPIE".
   use_pic = true
+}
+
+goproto_library("system_api-tpm_manager-goprotos") {
+  proto_in_dir = "dbus/tpm_manager"
+  proto_out_dir = "go/src/chromiumos/system_api/tpm_manager_proto"
+  sources = [ "${proto_in_dir}/tpm_manager.proto" ]
 }
 
 proto_library("system_api-metrics_event-protos") {
