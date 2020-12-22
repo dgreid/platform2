@@ -143,8 +143,8 @@ void PortManager::RunModeEntry(int port_num) {
     return;
   }
 
-  // TODO(b/152251292): Check for Cable Discovery complete too.
-  if (!port->IsPartnerDiscoveryComplete()) {
+  if (!port->IsPartnerDiscoveryComplete() ||
+      !port->IsCableDiscoveryComplete()) {
     LOG(WARNING)
         << "Can't switch modes Partner/Cable discovery not complete for port "
         << port_num;

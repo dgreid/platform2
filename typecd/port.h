@@ -66,6 +66,13 @@ class Port {
   // returns true.
   bool IsPartnerDiscoveryComplete();
 
+  // Return true when all PD discovery information (PD Identity VDOs, all
+  // Discover Mode data) for a cable has been processed.
+  //
+  // NOTE: Any mode entry decision logic should only run if this function
+  // returns true.
+  bool IsCableDiscoveryComplete();
+
  private:
   friend class PortTest;
   FRIEND_TEST(PortTest, TestBasicAdd);

@@ -6,6 +6,7 @@
 
 #include <string>
 
+#include <base/files/scoped_temp_dir.h>
 #include <base/strings/stringprintf.h>
 #include <gtest/gtest.h>
 
@@ -76,24 +77,33 @@ TEST_F(CableTest, TestTBT3PDIdentityCheck) {
 // Check that calls of AddAltMode() done explicitly function correctly. Also
 // check that trying to add the same alt mode twice fails.
 TEST_F(CableTest, TestAltModeManualAddition) {
+  // Set up a temp dir.
+  base::ScopedTempDir scoped_temp_dir;
+  ASSERT_TRUE(scoped_temp_dir.CreateUniqueTempDir());
+  base::FilePath temp_dir = scoped_temp_dir.GetPath();
+
+  // Create the sysfs path for the cable and plug.
+  auto cable_path = temp_dir.Append(std::string("port0-cable"));
+  ASSERT_TRUE(base::CreateDirectory(cable_path));
   Cable cable((base::FilePath(kFakePort0CableSysPath)));
 
-  // Set up fake sysfs paths.
-  base::FilePath temp_dir;
-  ASSERT_TRUE(base::CreateNewTempDirectory("", &temp_dir));
+  // Create sysfs path for SOP' plug.
+  auto sop_plug_path = temp_dir.Append(std::string("port0-plug0"));
+  ASSERT_TRUE(base::CreateDirectory(sop_plug_path));
 
+  // TODO(b/172097194): Modify the test to check for DiscoveryComplete().
+
+  // Set up fake sysfs paths for alternate modes.
   std::string mode0_dirname =
       base::StringPrintf("port%d-plug0.%d", 0, kDPAltModeIndex);
-  auto mode0_path = temp_dir.Append(mode0_dirname);
+  auto mode0_path = sop_plug_path.Append(mode0_dirname);
   ASSERT_TRUE(CreateFakeAltMode(mode0_path, kDPSVID, kDPVDO, kDPVDOIndex));
-
   EXPECT_TRUE(cable.AddAltMode(mode0_path));
 
   std::string mode1_dirname =
       base::StringPrintf("port%d-plug0.%d", 0, kTBTAltModeIndex);
-  auto mode1_path = temp_dir.Append(mode1_dirname);
+  auto mode1_path = sop_plug_path.Append(mode1_dirname);
   ASSERT_TRUE(CreateFakeAltMode(mode1_path, kTBTSVID, kTBTVDO, kTBTVDOIndex));
-
   EXPECT_TRUE(cable.AddAltMode(mode1_path));
   // Trying to add an existing alt mode again should fail.
   EXPECT_FALSE(cable.AddAltMode(mode1_path));

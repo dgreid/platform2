@@ -66,6 +66,12 @@ class Cable : public Peripheral {
   // Check whether the cable supports Thunderbolt3 speed requirements.
   bool TBT3PDIdentityCheck();
 
+  // Check whether SOP' PD discovery is complete (and we have all the PD
+  // information that the kernel can provide). To determine this, we check
+  // whether the number of registered altmodes equals the |num_alt_modes_| value
+  // which is read from sysfs.
+  bool DiscoveryComplete();
+
  private:
   // Map representing all SOP' alternate modes.
   // The key is the index of the alternate mode as determined

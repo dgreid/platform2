@@ -308,4 +308,13 @@ bool Port::IsCableAltModePresent(uint16_t altmode_sid) {
   return false;
 }
 
+bool Port::IsCableDiscoveryComplete() {
+  if (!cable_) {
+    LOG(INFO) << "Trying to check discovery complete for a non-existent cable.";
+    return false;
+  }
+
+  return cable_->DiscoveryComplete();
+}
+
 }  // namespace typecd

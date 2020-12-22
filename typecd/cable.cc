@@ -138,4 +138,8 @@ bool Cable::TBT3PDIdentityCheck() {
   return usb_speed == kUSBSuperSpeed31Gen1 || usb_speed == kUSBSuperSpeed31Gen2;
 }
 
+bool Cable::DiscoveryComplete() {
+  return num_alt_modes_ == alt_modes_.size();
+}
+
 }  // namespace typecd
