@@ -46,6 +46,7 @@ DebugdDBusAdaptor::DebugdDBusAdaptor(scoped_refptr<dbus::Bus> bus)
   debug_mode_tool_ = std::make_unique<DebugModeTool>(bus);
   dev_features_tool_wrapper_ =
       std::make_unique<RestrictedToolWrapper<DevFeaturesTool>>(bus);
+  dmesg_tool_ = std::make_unique<DmesgTool>();
   ec_typec_tool_ = std::make_unique<EcTypeCTool>();
   example_tool_ = std::make_unique<ExampleTool>();
   icmp_tool_ = std::make_unique<ICMPTool>();
@@ -608,6 +609,12 @@ bool DebugdDBusAdaptor::CollectSmartBatteryMetric(
 
 std::string DebugdDBusAdaptor::EcGetInventory() {
   return ec_typec_tool_->GetInventory();
+}
+
+bool DebugdDBusAdaptor::CallDmesg(brillo::ErrorPtr* error,
+                                  const brillo::VariantDictionary& options,
+                                  std::string* output) {
+  return dmesg_tool_->CallDmesg(options, error, output);
 }
 
 }  // namespace debugd

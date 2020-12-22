@@ -6,7 +6,7 @@
 
 namespace debugd {
 
-bool AddIntOption(ProcessWithId* process,
+bool AddIntOption(SandboxedProcess* process,
                   const brillo::VariantDictionary& options,
                   const std::string& key,
                   const std::string& flag_name,

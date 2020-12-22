@@ -58,7 +58,7 @@ ParseResult GetOption(const brillo::VariantDictionary& options,
 // isn't an integer, returns false. Otherwise, returns true, and if it
 // exists in the dictionary adds it to the command line for |process|
 // as the value for key |flag_name|.
-bool AddIntOption(ProcessWithId* process,
+bool AddIntOption(SandboxedProcess* process,
                   const brillo::VariantDictionary& options,
                   const std::string& key,
                   const std::string& flag_name,

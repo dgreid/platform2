@@ -1205,5 +1205,31 @@
       </arg>
       <annotation name="org.chromium.DBus.Method.Kind" value="simple"/>
     </method>
+    <method name="CallDmesg">
+      <tp:docstring>
+        Runs the command 'dmesg' with the given inputs.
+      </tp:docstring>
+      <arg name="options" type="a{sv}" direction="in">
+        <tp:docstring>
+          Options to pass to the dmesg command:
+          show-delta (bool): Display the timestamp and the time delta
+            spent between messages.
+          human (bool): Enable human-readable output.
+          kernel (bool): Print kernel messages.
+          force-prefix (bool): Add facility, level or timestamp
+            information to each line of a multi-line message.
+          raw (bool): Print the raw message buffer.
+          ctime (bool): Print human-readable timestamps.
+          notime (bool): Do not print kernel's timestamps.
+          userspace (bool): Print userspace messages.
+          decode (bool): Decode facility and level (priority) numbers
+            to human-readable prefixes.
+        </tp:docstring>
+      </arg>
+      <arg name="output" type="s" direction="out">
+        Returns the output of the 'dmesg' command.
+      </arg>
+      <annotation name="org.chromium.DBus.Method.Kind" value="normal"/>
+    </method>
   </interface>
 </node>

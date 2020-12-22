@@ -84,6 +84,7 @@ static_library("libdebugd") {
     "src/debugd_dbus_adaptor.cc",
     "src/dev_features_tool.cc",
     "src/dev_mode_no_owner_restriction.cc",
+    "src/dmesg_tool.cc",
     "src/ec_typec_tool.cc",
     "src/ectool_util.cc",
     "src/example_tool.cc",
