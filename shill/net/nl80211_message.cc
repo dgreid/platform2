@@ -281,6 +281,9 @@ const uint8_t MichaelMicFailureMessage::kCommand =
 const char MichaelMicFailureMessage::kCommandString[] =
     "NL80211_CMD_MICHAEL_MIC_FAILURE";
 
+const uint8_t NewMeshPathMessage::kCommand = NL80211_CMD_NEW_MPATH;
+const char NewMeshPathMessage::kCommandString[] = "NL80211_CMD_NEW_MPATH";
+
 const uint8_t NewScanResultsMessage::kCommand = NL80211_CMD_NEW_SCAN_RESULTS;
 const char NewScanResultsMessage::kCommandString[] =
     "NL80211_CMD_NEW_SCAN_RESULTS";
@@ -479,6 +482,8 @@ std::unique_ptr<NetlinkMessage> Nl80211Message::CreateMessage(
       return std::make_unique<MichaelMicFailureMessage>();
     case NewInterfaceMessage::kCommand:
       return std::make_unique<NewInterfaceMessage>();
+    case NewMeshPathMessage::kCommand:
+      return std::make_unique<NewMeshPathMessage>();
     case NewScanResultsMessage::kCommand:
       return std::make_unique<NewScanResultsMessage>();
     case NewStationMessage::kCommand:

@@ -266,6 +266,16 @@ class SHILL_EXPORT MichaelMicFailureMessage : public Nl80211Message {
   MichaelMicFailureMessage& operator=(const MichaelMicFailureMessage&) = delete;
 };
 
+class SHILL_EXPORT NewMeshPathMessage : public Nl80211Message {
+ public:
+  static const uint8_t kCommand;
+  static const char kCommandString[];
+
+  NewMeshPathMessage() : Nl80211Message(kCommand, kCommandString) {}
+  NewMeshPathMessage(const NewMeshPathMessage&) = delete;
+  NewMeshPathMessage& operator=(const NewMeshPathMessage&) = delete;
+};
+
 class SHILL_EXPORT NewScanResultsMessage : public Nl80211Message {
  public:
   static const uint8_t kCommand;
