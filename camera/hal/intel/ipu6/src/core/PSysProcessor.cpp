@@ -475,17 +475,17 @@ int PSysProcessor::processNewFrame() {
         ret = prepareTask(&srcBuffers, &dstBuffers);
         CheckError(ret != OK, UNKNOWN_ERROR, "%s, Failed to process frame", __func__);
     } else {
+        timeval curTime;
+        int64_t sofInterval = 0;
         {
             ConditionLock lock(mSofLock);
 
-            timeval curTime;
             gettimeofday(&curTime, nullptr);
-            int64_t sofInterval = TIMEVAL2NSECS(curTime) - TIMEVAL2NSECS(mSofTimestamp);
-
+            sofInterval = TIMEVAL2NSECS(curTime) - TIMEVAL2NSECS(mSofTimestamp);
             // Wait next sof event when missing last one for a long time
             if (sofInterval > SOF_EVENT_MARGIN && sofInterval < SOF_EVENT_MAX_MARGIN) {
                 LOG2("%s, need to wait next sof event. sofInterval: %ld", __func__, sofInterval);
-                ret = mSofCondition.waitRelative(lock, kWaitDuration * SLOWLY_MULTIPLIER);
+                ret = mSofCondition.waitRelative(lock, SOF_EVENT_MAX_MARGIN * SLOWLY_MULTIPLIER);
 
                 // Already stopped
                 if (!mThreadRunning) return -1;
@@ -504,20 +504,25 @@ int PSysProcessor::processNewFrame() {
                 ConditionLock lock(mBufferQueueLock);
                 ret = waitFreeBuffersInQueue(lock, srcBuffers, dstBuffers, SOF_EVENT_MARGIN);
 
+                // Already stopped
+                if (!mThreadRunning) return -1;
+
                 // Return to wait next sof event if there isn't pending buffer.
-                if (ret != OK) {
-                    LOG1("%s, cameraId: %d, there isn't pending buffer, recovery",
-                         __func__, mCameraId);
-                    return OK;
-                }
+                if (ret != OK) return OK;
             }
 
             {
                 AutoMutex l(mSofLock);
                 if (srcBuffers.begin()->second->getSequence() >= mSofSequence) {
-                    LOG2("%s, run the frame in next sof: buffer sequence: %ld, sof sequence: %ld",
-                         __func__, srcBuffers.begin()->second->getSequence(), mSofSequence);
-                    return OK;
+                    gettimeofday(&curTime, nullptr);
+                    sofInterval = TIMEVAL2NSECS(curTime) - TIMEVAL2NSECS(mSofTimestamp);
+
+                    // Handle the frame of sof(N) on sof(N + 1) when the sof event is continuously
+                    if (sofInterval < SOF_EVENT_MAX_MARGIN) {
+                        return OK;
+                    }
+                    LOG2("%s, sof event lost for long time, skip wating. sofInterval: %ld",
+                         __func__, sofInterval);
                 }
             }
 

@@ -398,6 +398,12 @@ void PipeLiteExecutor::stop()
     // Thread is not running. It is safe to clear the Queue
     clearBufferQueues();
     delete mProcessThread;
+
+    // Clear the buffer pool of pg Uint
+    for (auto& unit : mPGExecutors) {
+        unit.inputBuffers.clear();
+        unit.outputBuffers.clear();
+    }
 }
 
 void PipeLiteExecutor::notifyStop()
