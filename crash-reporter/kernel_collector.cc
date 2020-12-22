@@ -70,7 +70,9 @@ constexpr size_t kMaxHumanStringLength = 40;
 // to count towards the signature of the kcrash.
 constexpr int kSignatureTimestampWindow = 2;
 // Kernel log timestamp regular expression.
-constexpr char kTimestampRegex[] = "^<.*>\\[\\s*(\\d+\\.\\d+)\\]";
+// Specify the multiline option so that ^ matches the start of lines, not just
+// the start of the text.
+constexpr char kTimestampRegex[] = "(?m)^<.*>\\[\\s*(\\d+\\.\\d+)\\]";
 
 //
 // These regular expressions enable to us capture the function name of
@@ -104,7 +106,7 @@ const char* const kPCFuncNameRegex[] = {
 static_assert(base::size(kPCFuncNameRegex) == KernelCollector::kArchCount,
               "Missing Arch PC func_name RegExp");
 
-pcrecpp::RE kSanityCheckRe("\n(<\\d+>)?\\[\\s*(\\d+\\.\\d+)\\]");
+static LazyRE2 kSanityCheckRe = {"\n(<\\d+>)?\\[\\s*(\\d+\\.\\d+)\\]"};
 
 }  // namespace
 
@@ -141,9 +143,9 @@ bool KernelCollector::ReadRecordToString(std::string* contents,
 
   // Ramoops appends a header to a crash which contains ==== followed by a
   // timestamp. Ignore the header.
-  pcrecpp::RE record_re(
-      "====\\d+\\.\\d+\n(.*)",
-      pcrecpp::RE_Options().set_multiline(true).set_dotall(true));
+  RE2::Options opt;
+  opt.set_dot_nl(true);  // match \n with '.'
+  RE2 record_re("====\\d+\\.\\d+\n(.*)", opt);
 
   FilePath record_path = GetDumpRecordPath(
       kDumpRecordDmesgName, kDumpDriverRamoopsName, current_record);
@@ -159,11 +161,11 @@ bool KernelCollector::ReadRecordToString(std::string* contents,
   }
 
   *record_found = false;
-  if (record_re.FullMatch(record, &captured)) {
+  if (RE2::FullMatch(record, record_re, &captured)) {
     // Found a ramoops header, so strip the header and append the rest.
     contents->append(captured);
     *record_found = true;
-  } else if (kSanityCheckRe.PartialMatch(record.substr(0, 1024))) {
+  } else if (RE2::PartialMatch(record.substr(0, 1024), *kSanityCheckRe)) {
     // pstore compression has been added since kernel 3.12. In order to
     // decompress dmesg correctly, ramoops driver has to strip the header
     // before handing over the record to the pstore driver, so we don't
@@ -252,24 +254,26 @@ bool KernelCollector::LoadLastBootBiosLog(std::string* contents) {
     return false;
   }
 
+  RE2::Options opt;
+  opt.set_dot_nl(true);  // match \n with '.'
   // Different platforms start their BIOS log at different stages. Look for
   // banner strings of all stages in order until we find one that works.
   for (auto stage : kBiosStageNames) {
-    pcrecpp::RE banner_re(
-        StringPrintf("(.*?)(?="
-                     "\n\\*\\*\\* Pre-CBMEM %s console overflow"
-                     "|"
-                     "\n\ncoreboot-[^\n]* %s starting.*\\.\\.\\.\n"
-                     ")",
-                     stage, stage),
-        pcrecpp::RE_Options().set_multiline(true).set_dotall(true));
-    pcrecpp::StringPiece remaining_log(full_log);
-    pcrecpp::StringPiece previous_boot;
+    // use the "^" to anchor to the start of the string
+    RE2 banner_re(StringPrintf("(^.*?)(?:"
+                               "\n\\*\\*\\* Pre-CBMEM %s console overflow"
+                               "|"
+                               "\n\ncoreboot-[^\n]* %s starting.*\\.\\.\\.\n"
+                               ")",
+                               stage, stage),
+                  opt);
+    re2::StringPiece remaining_log(full_log);
+    re2::StringPiece previous_boot;
     bool found = false;
 
     // Keep iterating until last previous_boot before current one.
-    while (banner_re.Consume(&remaining_log, &previous_boot)) {
-      remaining_log.remove_prefix(1);
+    while (RE2::PartialMatch(remaining_log, banner_re, &previous_boot)) {
+      remaining_log.remove_prefix(previous_boot.size() + 1);
       found = true;
     }
 
@@ -298,8 +302,8 @@ bool KernelCollector::LastRebootWasBiosCrash(const std::string& dump) {
   if (dump.empty())
     return false;
 
-  return pcrecpp::RE("(PANIC|Unhandled( Interrupt)? Exception) in EL3")
-      .PartialMatch(dump);
+  return RE2::PartialMatch(
+      dump, RE2("(PANIC|Unhandled( Interrupt)? Exception) in EL3"));
 }
 
 // We can't always trust kernel watchdog drivers to correctly report the boot
@@ -351,7 +355,7 @@ bool KernelCollector::LoadConsoleRamoops(std::string* contents) {
     return false;
   }
 
-  if (!kSanityCheckRe.PartialMatch(contents->substr(0, 1024))) {
+  if (!RE2::PartialMatch(contents->substr(0, 1024), *kSanityCheckRe)) {
     LOG(WARNING) << "Found invalid console-ramoops file";
     return false;
   }
@@ -399,14 +403,16 @@ bool KernelCollector::Enable() {
   return true;
 }
 
-void KernelCollector::ProcessStackTrace(pcrecpp::StringPiece kernel_dump,
+void KernelCollector::ProcessStackTrace(re2::StringPiece kernel_dump,
                                         unsigned* hash,
                                         float* last_stack_timestamp,
                                         bool* is_watchdog_crash) {
-  pcrecpp::RE line_re("(.+)", pcrecpp::MULTILINE());
-  pcrecpp::RE stack_trace_start_re(
-      std::string(kTimestampRegex) + " (Call Trace|Backtrace):$",
-      pcrecpp::CASELESS());
+  RE2 line_re("(.+)");
+
+  RE2::Options opt;
+  opt.set_case_sensitive(false);
+  RE2 stack_trace_start_re(
+      std::string(kTimestampRegex) + " (Call Trace|Backtrace):$", opt);
 
   // Match lines such as the following and grab out "function_name".
   // The ? may or may not be present.
@@ -423,7 +429,7 @@ void KernelCollector::ProcessStackTrace(pcrecpp::StringPiece kernel_dump,
   // <4>[ 6066.849504]  [<7937bcee>] ? function_name+0x66/0x6c
   // <4>[ 2358.194379]  __schedule+0x83f/0xf92 (newer) like arm64 above
   //
-  pcrecpp::RE stack_entry_re(
+  RE2 stack_entry_re(
       std::string(kTimestampRegex) +
       R"(\s+(?:\[<[[:xdigit:]]+>\])?)"  // Matches "  [<7937bcee>]" (if any)
       R"(([\s?(]+))"                    // Matches " ? (" (ARM) or " ? " (X86)
@@ -438,15 +444,15 @@ void KernelCollector::ProcessStackTrace(pcrecpp::StringPiece kernel_dump,
 
   // Find the last and second-to-last stack traces.  The latter is used when
   // the panic is from a watchdog timeout.
-  while (line_re.FindAndConsume(&kernel_dump, &line)) {
+  while (RE2::FindAndConsume(&kernel_dump, line_re, &line)) {
     std::string certainty;
     std::string function_name;
-    if (stack_trace_start_re.PartialMatch(line, last_stack_timestamp)) {
+    if (RE2::PartialMatch(line, stack_trace_start_re, last_stack_timestamp)) {
       previous_hashable = hashable;
       hashable.clear();
       is_watchdog = false;
-    } else if (stack_entry_re.PartialMatch(line, last_stack_timestamp,
-                                           &certainty, &function_name)) {
+    } else if (RE2::PartialMatch(line, stack_entry_re, last_stack_timestamp,
+                                 &certainty, &function_name)) {
       bool is_certain = certainty.find('?') == std::string::npos;
       // Do not include any uncertain (prefixed by '?') frames in our hash.
       if (!is_certain)
@@ -491,16 +497,16 @@ KernelCollector::ArchKind KernelCollector::GetCompilerArch() {
 #endif
 }
 
-bool KernelCollector::FindCrashingFunction(pcrecpp::StringPiece kernel_dump,
+bool KernelCollector::FindCrashingFunction(re2::StringPiece kernel_dump,
                                            float stack_trace_timestamp,
                                            std::string* crashing_function) {
   float timestamp = 0;
 
   // Use the correct regex for this architecture.
-  pcrecpp::RE func_re(std::string(kTimestampRegex) + kPCFuncNameRegex[arch_],
-                      pcrecpp::MULTILINE());
+  RE2 func_re(std::string(kTimestampRegex) + kPCFuncNameRegex[arch_]);
 
-  while (func_re.FindAndConsume(&kernel_dump, &timestamp, crashing_function)) {
+  while (RE2::FindAndConsume(&kernel_dump, func_re, &timestamp,
+                             crashing_function)) {
   }
   if (timestamp == 0) {
     LOG(WARNING) << "Found no crashing function";
@@ -515,16 +521,15 @@ bool KernelCollector::FindCrashingFunction(pcrecpp::StringPiece kernel_dump,
   return true;
 }
 
-bool KernelCollector::FindPanicMessage(pcrecpp::StringPiece kernel_dump,
+bool KernelCollector::FindPanicMessage(re2::StringPiece kernel_dump,
                                        std::string* panic_message) {
   // Match lines such as the following and grab out "Fatal exception"
   // <0>[  342.841135] Kernel panic - not syncing: Fatal exception
-  pcrecpp::RE kernel_panic_re(
-      std::string(kTimestampRegex) + " Kernel panic[^\\:]*\\:\\s*(.*)",
-      pcrecpp::MULTILINE());
+  RE2 kernel_panic_re(std::string(kTimestampRegex) +
+                      " Kernel panic[^\\:]*\\:\\s*(.*)");
   float timestamp = 0;
-  while (
-      kernel_panic_re.FindAndConsume(&kernel_dump, &timestamp, panic_message)) {
+  while (RE2::FindAndConsume(&kernel_dump, kernel_panic_re, &timestamp,
+                             panic_message)) {
   }
   if (timestamp == 0) {
     LOG(WARNING) << "Found no panic message";
@@ -564,15 +569,15 @@ std::string KernelCollector::ComputeKernelStackSignature(
 std::string KernelCollector::BiosCrashSignature(const std::string& dump) {
   const char* type = "";
 
-  if (pcrecpp::RE("PANIC in EL3").PartialMatch(dump))
+  if (RE2::PartialMatch(dump, RE2("PANIC in EL3")))
     type = "PANIC";
-  else if (pcrecpp::RE("Unhandled Exception in EL3").PartialMatch(dump))
+  else if (RE2::PartialMatch(dump, RE2("Unhandled Exception in EL3")))
     type = "EXCPT";
-  else if (pcrecpp::RE("Unhandled Interrupt Exception in").PartialMatch(dump))
+  else if (RE2::PartialMatch(dump, RE2("Unhandled Interrupt Exception in")))
     type = "INTR";
 
   std::string elr;
-  pcrecpp::RE("x30 =\\s+(0x[0-9a-fA-F]+)").PartialMatch(dump, &elr);
+  RE2::PartialMatch(dump, RE2("x30 =\\s+(0x[0-9a-fA-F]+)"), &elr);
 
   return StringPrintf("bios-(%s)-%s", type, elr.c_str());
 }

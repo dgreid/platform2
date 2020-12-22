@@ -9,14 +9,13 @@
 #ifndef CRASH_REPORTER_KERNEL_COLLECTOR_H_
 #define CRASH_REPORTER_KERNEL_COLLECTOR_H_
 
-#include <pcrecpp.h>
-
 #include <string>
 #include <vector>
 
 #include <base/files/file_path.h>
 #include <base/macros.h>
 #include <gtest/gtest_prod.h>  // for FRIEND_TEST
+#include <re2/re2.h>
 
 #include "crash-reporter/crash_collector.h"
 
@@ -170,14 +169,14 @@ class KernelCollector : public CrashCollector {
                           size_t current_record,
                           bool* record_found);
 
-  void ProcessStackTrace(pcrecpp::StringPiece kernel_dump,
+  void ProcessStackTrace(re2::StringPiece kernel_dump,
                          unsigned* hash,
                          float* last_stack_timestamp,
                          bool* is_watchdog_crash);
-  bool FindCrashingFunction(pcrecpp::StringPiece kernel_dump,
+  bool FindCrashingFunction(re2::StringPiece kernel_dump,
                             float stack_trace_timestamp,
                             std::string* crashing_function);
-  bool FindPanicMessage(pcrecpp::StringPiece kernel_dump,
+  bool FindPanicMessage(re2::StringPiece kernel_dump,
                         std::string* panic_message);
 
   // Returns the architecture kind for which we are built.
