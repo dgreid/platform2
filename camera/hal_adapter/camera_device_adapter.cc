@@ -425,11 +425,11 @@ int32_t CameraDeviceAdapter::ProcessCaptureRequest(
   int ret_split;
   bool is_request_split = still_req.num_output_buffers > 0;
   if (is_request_split) {
-    // Swap frame numbers to send the split still capture request first.
+    // If the request is split, we'll submit the first still capture request
+    // first followed by the second preview capture request.
     // When merging the capture results, the shutter message and result metadata
     // of the second preview capture request will be trimmed, which is safe
     // because we don't reprocess preview frames.
-    std::swap(req.frame_number, still_req.frame_number);
     frame_number_mapper_.RegisterCaptureRequest(&still_req, is_request_split,
                                                 /*is_request_added=*/false);
     ret_split = camera_device_->ops->process_capture_request(camera_device_,
@@ -814,6 +814,7 @@ mojom::Camera3CaptureResultPtr CameraDeviceAdapter::PrepareCaptureResult(
   r->frame_number =
       frame_number_mapper_.GetFrameworkFrameNumber(result->frame_number);
 
+  bool is_added = frame_number_mapper_.IsAddedFrame(result->frame_number);
   frame_number_mapper_.RegisterCaptureResult(result, partial_result_count_);
 
   const camera3_stream_buffer_t* attached_output = nullptr;
@@ -825,7 +826,7 @@ mojom::Camera3CaptureResultPtr CameraDeviceAdapter::PrepareCaptureResult(
                                         &transformed_input);
   }
 
-  if (frame_number_mapper_.IsAddedFrame(result->frame_number)) {
+  if (is_added) {
     // We use the metadata from the sister frame.
     LOGF(INFO) << "Trimming metadata for " << result->frame_number
                << " (framework frame number = " << r->frame_number << ")";

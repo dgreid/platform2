@@ -329,7 +329,9 @@ void ZslHelper::ProcessZslCaptureRequest(
           TransformRequest(still_request, &zsl_settings,
                            GetJpegOrientation(settings->get()), strategy);
       if (transformed) {
-        still_request->frame_number =
+        // Swap the frame numbers to submit the still capture request first.
+        still_request->frame_number = request->frame_number;
+        request->frame_number =
             frame_number_mapper_->GetHalFrameNumber(framework_frame_number);
         still_request->settings = zsl_settings;
       } else {
