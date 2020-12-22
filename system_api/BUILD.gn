@@ -59,6 +59,7 @@ group("all") {
 shared_library("libsystem_api") {
   deps = [
     ":system_api-attestation-protos",
+    ":system_api-bootlockbox-protos",
     ":system_api-chaps-protos",
     ":system_api-patchpanel-protos",
     ":system_api-tpm_manager-protos",
@@ -212,7 +213,7 @@ proto_library("system_api-chaps-protos") {
   ]
   standalone = true
 
-  # system_api-chaps-protos" is used by a shared_library
+  # system_api-chaps-protos is used by a shared_library
   # object, so we need to build it with "-fPIC" instead of "-fPIE".
   use_pic = true
 }
@@ -365,6 +366,10 @@ proto_library("system_api-bootlockbox-protos") {
   proto_out_dir = "include/bootlockbox/proto_bindings"
   sources = [ "${proto_in_dir}/boot_lockbox_rpc.proto" ]
   standalone = true
+
+  # system_api-bootlockbox-protos is used by a shared_library
+  # object, so we need to build it with "-fPIC" instead of "-fPIE".
+  use_pic = true
 }
 
 goproto_library("system_api-bootlockbox-goprotos") {

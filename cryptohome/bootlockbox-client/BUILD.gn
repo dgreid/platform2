@@ -55,6 +55,7 @@ shared_library("libbootlockbox-client") {
     ":bootlockbox-proto",
     ":bootlockbox-proxies",
   ]
+  libs = [ "system_api" ]
 }
 
 group("all") {
