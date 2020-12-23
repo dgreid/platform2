@@ -164,7 +164,7 @@ class TPM_MANAGER_EXPORT TpmManagerUtility
                                              LocalData* local_data);
 
   // Add callback which would be trigger after got tpm ownership.
-  void AddOwnershipCallback(OwnershipCallback ownership_callback);
+  virtual void AddOwnershipCallback(OwnershipCallback ownership_callback);
 
   // Get a singleton of tpm_manager utility. It would return nullptr when
   // initialize failed.

@@ -83,6 +83,7 @@ class TPM_MANAGER_EXPORT MockTpmManagerUtility : public TpmManagerUtility {
               GetOwnershipTakenSignalStatus,
               (bool*, bool*, LocalData*),
               (override));
+  MOCK_METHOD(void, AddOwnershipCallback, (OwnershipCallback), (override));
   MOCK_METHOD(void,
               OnOwnershipTaken,
               (const OwnershipTakenSignal&),

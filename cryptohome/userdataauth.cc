@@ -19,7 +19,6 @@
 #include <chaps/isolate.h>
 #include <chaps/token_manager_client.h>
 #include <dbus/cryptohome/dbus-constants.h>
-#include <tpm_manager/client/tpm_manager_utility.h>
 
 #include "cryptohome/bootlockbox/boot_lockbox.h"
 #include "cryptohome/bootlockbox/boot_lockbox_client.h"
@@ -160,6 +159,7 @@ UserDataAuth::UserDataAuth()
       tpm_(nullptr),
       default_tpm_init_(nullptr),
       tpm_init_(nullptr),
+      tpm_manager_util_(nullptr),
       default_platform_(new Platform()),
       platform_(default_platform_.get()),
       default_crypto_(new Crypto(platform_)),
@@ -449,10 +449,12 @@ bool UserDataAuth::PostDBusInitialize() {
   AssertOnOriginThread();
   CHECK(bus_);
 
-  tpm_manager::TpmManagerUtility* tpm_manager_util =
-      tpm_manager::TpmManagerUtility::GetSingleton();
-  if (tpm_manager_util) {
-    tpm_manager_util->AddOwnershipCallback(base::Bind(
+  if (!tpm_manager_util_) {
+    tpm_manager_util_ = tpm_manager::TpmManagerUtility::GetSingleton();
+  }
+
+  if (tpm_manager_util_) {
+    tpm_manager_util_->AddOwnershipCallback(base::Bind(
         &UserDataAuth::OnOwnershipTakenSignal, base::Unretained(this)));
   } else {
     LOG(ERROR) << __func__ << ": Failed to get TpmManagerUtility singleton!";

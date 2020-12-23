@@ -18,6 +18,7 @@
 #include <chaps/token_manager_client_mock.h>
 #include <dbus/mock_bus.h>
 #include <metrics/metrics_library_mock.h>
+#include <tpm_manager/client/mock_tpm_manager_utility.h>
 #include <tpm_manager-client-test/tpm_manager/dbus-proxy-mocks.h>
 
 #include "cryptohome/bootlockbox/mock_boot_lockbox.h"
@@ -68,6 +69,7 @@ using ::testing::Pointee;
 using ::testing::Property;
 using ::testing::Return;
 using ::testing::ReturnRef;
+using ::testing::SaveArg;
 using ::testing::SaveArgPointee;
 using ::testing::SetArgPointee;
 using ::testing::WithArgs;
@@ -119,6 +121,7 @@ class UserDataAuthTestNotInitialized : public ::testing::Test {
     userdataauth_->set_install_attrs(&attrs_);
     userdataauth_->set_tpm(&tpm_);
     userdataauth_->set_tpm_init(&tpm_init_);
+    userdataauth_->set_tpm_manager_util_(&tpm_manager_utility_);
     userdataauth_->set_platform(&platform_);
     userdataauth_->set_chaps_client(&chaps_client_);
     userdataauth_->set_boot_lockbox(&lockbox_);
@@ -210,6 +213,10 @@ class UserDataAuthTestNotInitialized : public ::testing::Test {
 
   // Mock TPM Init object, will be passed to UserDataAuth for its internal use.
   NiceMock<MockTpmInit> tpm_init_;
+
+  // Mock TPM Manager utility object, will be passed to UserDataAuth for its
+  // internal use.
+  NiceMock<tpm_manager::MockTpmManagerUtility> tpm_manager_utility_;
 
   // Mock ARC Disk Quota object, will be passed to UserDataAuth for its internal
   // use.
@@ -1255,7 +1262,18 @@ TEST_F(UserDataAuthTestNotInitializedDeathTest, GetSystemSaltUninitialized) {
                      "Cannot call GetSystemSalt before initialization");
 }
 
-TEST_F(UserDataAuthTest, OwnershipCallbackValidity) {
+TEST_F(UserDataAuthTest, OwnershipCallbackRegisterValidity) {
+  base::RepeatingCallback<void()> callback;
+
+  // Called by PostDBusInitialize().
+  EXPECT_CALL(tpm_manager_utility_, AddOwnershipCallback)
+      .WillOnce(SaveArg<0>(&callback));
+
+  userdataauth_->set_dbus(bus_);
+  userdataauth_->PostDBusInitialize();
+
+  EXPECT_FALSE(callback.is_null());
+
   SetupMount("foo@gmail.com");
 
   // Called by OwnershipCallback().
@@ -1265,10 +1283,21 @@ TEST_F(UserDataAuthTest, OwnershipCallbackValidity) {
   // Called by InitializeInstallAttributes()
   EXPECT_CALL(attrs_, Init(_)).WillOnce(Return(true));
 
-  userdataauth_->OwnershipCallback(true, true);
+  callback.Run();
 }
 
-TEST_F(UserDataAuthTest, OwnershipCallbackRepeated) {
+TEST_F(UserDataAuthTest, OwnershipCallbackRegisterRepeated) {
+  base::RepeatingCallback<void()> callback;
+
+  // Called by PostDBusInitialize().
+  EXPECT_CALL(tpm_manager_utility_, AddOwnershipCallback)
+      .WillOnce(SaveArg<0>(&callback));
+
+  userdataauth_->set_dbus(bus_);
+  userdataauth_->PostDBusInitialize();
+
+  EXPECT_FALSE(callback.is_null());
+
   SetupMount("foo@gmail.com");
 
   // Called by OwnershipCallback().
@@ -1280,8 +1309,8 @@ TEST_F(UserDataAuthTest, OwnershipCallbackRepeated) {
 
   // Call OwnershipCallback twice and see if any of the above gets called more
   // than once.
-  userdataauth_->OwnershipCallback(true, true);
-  userdataauth_->OwnershipCallback(true, true);
+  callback.Run();
+  callback.Run();
 }
 
 TEST_F(UserDataAuthTest, UpdateCurrentUserActivityTimestampSuccess) {

@@ -17,6 +17,7 @@
 #include <base/unguessable_token.h>
 #include <brillo/secure_blob.h>
 #include <dbus/bus.h>
+#include <tpm_manager/client/tpm_manager_utility.h>
 #include <tpm_manager/proto_bindings/tpm_manager.pb.h>
 #include <tpm_manager-client/tpm_manager/dbus-proxies.h>
 
@@ -504,6 +505,11 @@ class UserDataAuth {
   // Override |tpm_init_| for testing purpose
   void set_tpm_init(TpmInit* tpm_init) { tpm_init_ = tpm_init; }
 
+  // Override |tpm_manager_util_| for testing purpose
+  void set_tpm_manager_util_(tpm_manager::TpmManagerUtility* tpm_manager_util) {
+    tpm_manager_util_ = tpm_manager_util;
+  }
+
   // Override |platform_| for testing purpose
   void set_platform(cryptohome::Platform* platform) { platform_ = platform; }
 
@@ -928,6 +934,8 @@ class UserDataAuth {
   // removed at the end of the refactoring that's happening in cryptohome
   // (b/123679223).
   TpmInit* tpm_init_;
+
+  tpm_manager::TpmManagerUtility* tpm_manager_util_;
 
   // The default platform object for accessing platform related functionalities
   std::unique_ptr<cryptohome::Platform> default_platform_;
