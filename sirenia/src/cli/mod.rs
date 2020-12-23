@@ -6,31 +6,19 @@
 //! Trichechus and Dugong daemons.
 
 use std::env::current_exe;
-use std::fmt::{self, Display};
-use std::process::exit;
 
 use getopts::{self, Options};
 use libchromeos::vsock::{SocketAddr as VSocketAddr, VsockCid};
-use libsirenia::transport::{self, TransportType, DEFAULT_SERVER_PORT, LOOPBACK_DEFAULT};
+use libsirenia::cli::{self, HelpOption, TransportTypeOption};
+use libsirenia::transport::{TransportType, DEFAULT_SERVER_PORT};
+use thiserror::Error as ThisError;
 
 use super::build_info::BUILD_TIMESTAMP;
 
-#[derive(Debug)]
+#[derive(ThisError, Debug)]
 pub enum Error {
-    /// Error parsing command line options.
-    CLIParse(getopts::Fail),
-    TransportParse(transport::Error),
-}
-
-impl Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        use self::Error::*;
-
-        match self {
-            CLIParse(e) => write!(f, "failed to parse the command line options: {}", e),
-            TransportParse(e) => write!(f, "failed to parse transport type: {}", e),
-        }
-    }
+    #[error("failed to get transport type option: {0}")]
+    FromMatches(cli::Error),
 }
 
 /// The result of an operation in this crate.
@@ -74,30 +62,17 @@ pub fn initialize_common_arguments(args: &[String]) -> Result<CommonConfig> {
         connection_type: default_connection,
     };
 
-    let url_name = "U";
-
     let mut opts = Options::new();
-    opts.optflagopt(
-        url_name,
-        "server-url",
-        "URL to the server",
-        LOOPBACK_DEFAULT,
-    );
-    opts.optflag("h", "help", "Show this help string.");
-    let matches = opts.parse(&args[..]).map_err(|e| {
-        println!("{}", opts.usage(&get_name_and_version_string()));
-        Error::CLIParse(e)
-    })?;
+    let help_option = HelpOption::new(&mut opts);
+    let url_option = TransportTypeOption::default(&mut opts);
 
-    if matches.opt_present("h") {
-        println!("{}", opts.usage(&get_name_and_version_string()));
-        exit(0);
-    }
+    let matches = help_option.parse_and_check_self(&opts, &args[..], get_name_and_version_string);
 
-    if let Some(value) = matches.opt_str(url_name) {
-        config.connection_type = value
-            .parse::<TransportType>()
-            .map_err(Error::TransportParse)?
+    if let Some(value) = url_option
+        .from_matches(&matches)
+        .map_err(Error::FromMatches)?
+    {
+        config.connection_type = value;
     };
     Ok(config)
 }
@@ -107,16 +82,6 @@ mod tests {
     use super::*;
     use libsirenia::transport::{get_test_ip_uri, get_test_vsock_uri};
     use std::net::{IpAddr, Ipv4Addr, SocketAddr};
-
-    #[test]
-    fn initialize_common_arguments_invalid_args() {
-        let value: [String; 1] = ["-foo".to_string()];
-        let act_result = initialize_common_arguments(&value);
-        match &act_result {
-            Err(Error::CLIParse(_)) => (),
-            _ => panic!("Got unexpected result: {:?}", &act_result),
-        }
-    }
 
     #[test]
     fn initialize_common_arguments_ip_valid() {

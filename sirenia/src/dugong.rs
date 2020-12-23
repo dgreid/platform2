@@ -215,9 +215,6 @@ fn start_logger(mut r: Box<dyn TransportRead>) {
                 error!("{}", s);
                 println!("{}", s);
             }
-            _ => {
-                panic!("unexpected message received: {:?}", message);
-            }
         }
     }
 }

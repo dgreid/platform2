@@ -5,6 +5,7 @@
 //! Ties together the various modules that make up the Sirenia library used by
 //! both Trichechus and Dugong.
 
+pub mod cli;
 pub mod communication;
 pub mod linux;
 pub mod sandbox;
