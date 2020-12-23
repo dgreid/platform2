@@ -39,8 +39,6 @@
 #include "attestation/server/google_keys.h"
 #include "attestation/server/key_store.h"
 #include "attestation/server/pkcs11_key_store.h"
-#include "tpm_manager/client/tpm_nvram_dbus_proxy.h"
-#include "tpm_manager/client/tpm_ownership_dbus_proxy.h"
 #include "tpm_manager/common/tpm_nvram_interface.h"
 #include "tpm_manager/common/tpm_ownership_interface.h"
 
@@ -220,7 +218,6 @@ class AttestationService : public AttestationInterface {
     void CleanUp() override { service_->ShutdownTask(); }
 
     AttestationService* const service_;
-
   };
 
   // A relay callback which allows the use of weak pointer semantics for a reply

@@ -16,8 +16,6 @@
 #include <base/macros.h>
 #include <base/threading/thread.h>
 
-#include "tpm_manager/client/tpm_nvram_dbus_proxy.h"
-#include "tpm_manager/client/tpm_ownership_dbus_proxy.h"
 #include "trunks/trunks_factory_impl.h"
 
 namespace attestation {
