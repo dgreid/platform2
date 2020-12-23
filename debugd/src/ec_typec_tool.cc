@@ -8,7 +8,6 @@
 
 #include <base/files/file_path.h>
 #include <base/strings/stringprintf.h>
-#include <brillo/errors/error.h>
 
 #include "debugd/src/ectool_util.h"
 
@@ -39,6 +38,26 @@ std::string EcTypeCTool::GetInventory() {
     output.clear();
 
   return output;
+}
+
+bool EcTypeCTool::EnterMode(brillo::ErrorPtr* error,
+                            uint32_t port_num,
+                            uint32_t mode,
+                            std::string* output) {
+  const auto seccomp_policy_path =
+      base::FilePath(kSandboxDirPath).Append(GetEctoolPolicyFile("typec"));
+
+  std::vector<std::string> ectool_args = {"typeccontrol"};
+  ectool_args.push_back(base::StringPrintf("%u", port_num));
+  // 2nd argument is '2' for enter mode.
+  ectool_args.push_back("2");
+  ectool_args.push_back(base::StringPrintf("%u", mode));
+
+  if (!RunEctoolWithArgs(error, seccomp_policy_path, ectool_args, kRunAs,
+                         output))
+    return false;
+
+  return true;
 }
 
 }  // namespace debugd

@@ -221,6 +221,10 @@ class DebugdDBusAdaptor : public org::chromium::debugdAdaptor,
   bool CallDmesg(brillo::ErrorPtr* error,
                  const brillo::VariantDictionary& options,
                  std::string* output) override;
+  bool EcTypeCEnterMode(brillo::ErrorPtr* error,
+                        uint32_t port_num,
+                        uint32_t mode,
+                        std::string* output) override;
 
  private:
   brillo::dbus_utils::DBusObject dbus_object_;

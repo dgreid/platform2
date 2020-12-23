@@ -8,6 +8,7 @@
 #include <string>
 
 #include <base/macros.h>
+#include <brillo/errors/error.h>
 
 namespace debugd {
 
@@ -20,6 +21,10 @@ class EcTypeCTool {
   ~EcTypeCTool() = default;
 
   std::string GetInventory();
+  bool EnterMode(brillo::ErrorPtr* error,
+                 uint32_t port_num,
+                 uint32_t mode,
+                 std::string* output);
 };
 
 }  // namespace debugd
