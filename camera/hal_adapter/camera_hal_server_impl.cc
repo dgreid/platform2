@@ -109,7 +109,7 @@ void CameraHalServerImpl::IPCBridge::Start(
 
   mojom::CameraHalServerPtr server_ptr;
   binding_.Bind(mojo::MakeRequest(&server_ptr));
-  server_ptr.set_connection_error_handler(
+  binding_.set_connection_error_handler(
       base::Bind(&CameraHalServerImpl::IPCBridge::OnServiceMojoChannelError,
                  GetWeakPtr()));
   mojo_manager_->RegisterServer(
