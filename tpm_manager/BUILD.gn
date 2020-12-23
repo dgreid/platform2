@@ -70,11 +70,7 @@ static_library("proto_library") {
 # A shared library for clients.
 shared_library("libtpm_manager") {
   configs += [ ":target_defaults" ]
-  sources = [
-    "client/tpm_manager_utility.cc",
-    "client/tpm_nvram_dbus_proxy.cc",
-    "client/tpm_ownership_dbus_proxy.cc",
-  ]
+  sources = [ "client/tpm_manager_utility.cc" ]
   libs = [ "system_api" ]
   deps = [ ":proto_library" ]
 }
@@ -236,8 +232,6 @@ if (use.test) {
     ]
     sources = [
       "client/tpm_manager_utility_test.cc",
-      "client/tpm_nvram_dbus_proxy_test.cc",
-      "client/tpm_ownership_dbus_proxy_test.cc",
 
       # "server/dbus_service_test.cc",
       "server/local_data_migration_test.cc",
