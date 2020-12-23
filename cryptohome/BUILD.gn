@@ -609,6 +609,8 @@ if (use.test) {
       "libbrillo-test",
       "libchrome",
       "libchrome-test",
+      "libtpm_manager-client",
+      "libtpm_manager-client-test",
       "openssl",
 
       # system_api depends on protobuf (or protobuf-lite). It must appear

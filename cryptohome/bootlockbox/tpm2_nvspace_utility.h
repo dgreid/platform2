@@ -10,9 +10,8 @@
 
 #include <openssl/sha.h>
 
-#include <base/threading/thread.h>
-#include <tpm_manager/client/tpm_nvram_dbus_proxy.h>
-#include <tpm_manager/common/tpm_nvram_interface.h>
+#include <tpm_manager/proto_bindings/tpm_manager.pb.h>
+#include <tpm_manager-client/tpm_manager/dbus-proxies.h>
 #include <trunks/tpm_constants.h>
 #include <trunks/tpm_utility.h>
 #include <trunks/trunks_factory_impl.h>
@@ -33,9 +32,6 @@ constexpr uint32_t kNVSpaceSize = sizeof(BootLockboxNVSpace);
 // for how the index is selected.
 constexpr uint32_t kBootLockboxNVRamIndex = 0x800006;
 
-// Thread name of the thread that communicates with tpm_managerd.
-constexpr char kTpmManagerThreadName[] = "tpm_manager_thread";
-
 // Empty password is used for bootlockbox nvspace. Confidentiality
 // is not required and the nvspace is write locked after user logs in.
 constexpr char kWellKnownPassword[] = "";
@@ -55,15 +51,15 @@ class TPM2NVSpaceUtility : public TPMNVSpaceUtilityInterface {
   TPM2NVSpaceUtility() = default;
 
   // Constructor that does not take ownership of tpm_nvram and trunks_factory.
-  TPM2NVSpaceUtility(tpm_manager::TpmNvramInterface* tpm_nvram,
+  TPM2NVSpaceUtility(org::chromium::TpmNvramProxyInterface* tpm_nvram,
                      trunks::TrunksFactory* trunks_factory);
   TPM2NVSpaceUtility(const TPM2NVSpaceUtility&) = delete;
   TPM2NVSpaceUtility& operator=(const TPM2NVSpaceUtility&) = delete;
 
   ~TPM2NVSpaceUtility() {}
 
-  // Starts tpm_manager_thread_ and initializes tpm_nvram and trunks_factory
-  // if necessary. Must be called before issuing and calls to this utility.
+  // Initializes tpm_nvram if necessary.
+  // Must be called before issuing and calls to this utility.
   bool Initialize() override;
 
   // This method defines a non-volatile storage area in TPM for bootlockboxd
@@ -84,41 +80,13 @@ class TPM2NVSpaceUtility : public TPMNVSpaceUtilityInterface {
   bool LockNVSpace() override;
 
  private:
-  // Tpm_manager communication thread class that cleans up after stopping.
-  class TpmManagerThread : public base::Thread {
-   public:
-    explicit TpmManagerThread(TPM2NVSpaceUtility* tpm_utility)
-        : base::Thread("tpm_manager_thread"), tpm_utility_(tpm_utility) {
-      DCHECK(tpm_utility_);
-    }
-    TpmManagerThread(const TpmManagerThread&) = delete;
-    TpmManagerThread& operator=(const TpmManagerThread&) = delete;
-
-    ~TpmManagerThread() override { Stop(); }
-
-   private:
-    void CleanUp() override { tpm_utility_->ShutdownTask(); }
-
-    TPM2NVSpaceUtility* const tpm_utility_;
-
-  };
-
-  void InitializationTask(base::WaitableEvent* completion, bool* result);
-  void ShutdownTask();
-
-  // Handles tpm_manager async calls.
-  template <typename ReplyProtoType, typename MethodType>
-  void SendTpmManagerRequestAndWait(const MethodType& method,
-                                    ReplyProtoType* reply_proto);
+  scoped_refptr<dbus::Bus> bus_;
 
   // Tpm manager interface that relays relays tpm request to tpm_managerd over
   // DBus. It is used for defining nvspace on the first boot. This object is
-  // created in tpm_manager_thread_ and should only be used in
-  // tpm_manager_thread_.
-  std::unique_ptr<tpm_manager::TpmNvramDBusProxy> default_tpm_nvram_;
-  tpm_manager::TpmNvramInterface* tpm_nvram_;
-  // A thread that handles async calls to tpm_manager.
-  TpmManagerThread tpm_manager_thread_{this};
+  // created in Initialize and should only be used in the same thread.
+  std::unique_ptr<org::chromium::TpmNvramProxyInterface> default_tpm_nvram_;
+  org::chromium::TpmNvramProxyInterface* tpm_nvram_;
 
   // Trunks interface.
   std::unique_ptr<trunks::TrunksFactoryImpl> default_trunks_factory_;

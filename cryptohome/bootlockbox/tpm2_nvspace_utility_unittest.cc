@@ -6,7 +6,7 @@
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
-#include <tpm_manager/common/mock_tpm_nvram_interface.h>
+#include <tpm_manager-client-test/tpm_manager/dbus-proxy-mocks.h>
 #include <trunks/mock_tpm_utility.h>
 #include <trunks/trunks_factory_for_test.h>
 
@@ -31,45 +31,41 @@ class TPM2NVSpaceUtilityTest : public testing::Test {
  public:
   void SetUp() override {
     factory_.set_tpm_utility(&mock_trunks_tpm_utility_);
-    nvspace_utility_ = std::make_unique<TPM2NVSpaceUtility>(
-        &mock_tpm_manager_nvram_, &factory_);
+    nvspace_utility_ =
+        std::make_unique<TPM2NVSpaceUtility>(&mock_tpm_nvram_, &factory_);
     nvspace_utility_->Initialize();
   }
 
  protected:
-  NiceMock<tpm_manager::MockTpmNvramInterface> mock_tpm_manager_nvram_;
+  NiceMock<org::chromium::TpmNvramProxyMock> mock_tpm_nvram_;
   trunks::TrunksFactoryForTest factory_;
   NiceMock<trunks::MockTpmUtility> mock_trunks_tpm_utility_;
   std::unique_ptr<TPM2NVSpaceUtility> nvspace_utility_;
 };
 
 TEST_F(TPM2NVSpaceUtilityTest, DefineNVSpaceSuccess) {
-  EXPECT_CALL(mock_tpm_manager_nvram_, DefineSpace(_, _))
-      .WillOnce(
-          Invoke([](const tpm_manager::DefineSpaceRequest& request,
-                    const tpm_manager::TpmNvramInterface::DefineSpaceCallback&
-                        callback) {
-            EXPECT_TRUE(request.has_index());
-            EXPECT_EQ(kBootLockboxNVRamIndex, request.index());
-            EXPECT_TRUE(request.has_size());
-            EXPECT_EQ(kNVSpaceSize, request.size());
-            tpm_manager::DefineSpaceReply reply;
-            reply.set_result(tpm_manager::NVRAM_RESULT_SUCCESS);
-            callback.Run(reply);
-          }));
+  EXPECT_CALL(mock_tpm_nvram_, DefineSpace(_, _, _, _))
+      .WillOnce(Invoke([](const tpm_manager::DefineSpaceRequest& request,
+                          tpm_manager::DefineSpaceReply* reply,
+                          brillo::ErrorPtr*, int) {
+        EXPECT_TRUE(request.has_index());
+        EXPECT_EQ(kBootLockboxNVRamIndex, request.index());
+        EXPECT_TRUE(request.has_size());
+        EXPECT_EQ(kNVSpaceSize, request.size());
+        reply->set_result(tpm_manager::NVRAM_RESULT_SUCCESS);
+        return true;
+      }));
   EXPECT_TRUE(nvspace_utility_->DefineNVSpace());
 }
 
 TEST_F(TPM2NVSpaceUtilityTest, DefineNVSpaceFail) {
-  EXPECT_CALL(mock_tpm_manager_nvram_, DefineSpace(_, _))
-      .WillOnce(
-          Invoke([](const tpm_manager::DefineSpaceRequest& request,
-                    const tpm_manager::TpmNvramInterface::DefineSpaceCallback&
-                        callback) {
-            tpm_manager::DefineSpaceReply reply;
-            reply.set_result(tpm_manager::NVRAM_RESULT_IPC_ERROR);
-            callback.Run(reply);
-          }));
+  EXPECT_CALL(mock_tpm_nvram_, DefineSpace(_, _, _, _))
+      .WillOnce(Invoke([](const tpm_manager::DefineSpaceRequest& request,
+                          tpm_manager::DefineSpaceReply* reply,
+                          brillo::ErrorPtr*, int) {
+        reply->set_result(tpm_manager::NVRAM_RESULT_IPC_ERROR);
+        return true;
+      }));
   EXPECT_FALSE(nvspace_utility_->DefineNVSpace());
 }
 
