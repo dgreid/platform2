@@ -18,14 +18,17 @@
 #include <brillo/syslog_logging.h>
 #include <crypto/sha2.h>
 #include <tpm_manager/proto_bindings/tpm_manager.pb.h>
+#include <tpm_manager-client/tpm_manager/dbus-proxies.h>
 
-#include "tpm_manager/client/tpm_nvram_dbus_proxy.h"
-#include "tpm_manager/client/tpm_ownership_dbus_proxy.h"
 #include "tpm_manager/common/print_tpm_manager_proto.h"
 
 #if USE_TPM2
 #include "trunks/tpm_generated.h"
 #endif
+
+namespace {
+constexpr base::TimeDelta kDefaultTimeout = base::TimeDelta::FromMinutes(2);
+}  // namespace
 
 namespace tpm_manager {
 
@@ -180,18 +183,16 @@ class ClientLoop : public ClientLoopBase {
       LOG(ERROR) << "Error initializing tpm_manager_client.";
       return exit_code;
     }
-    std::unique_ptr<TpmNvramDBusProxy> nvram_proxy =
-        std::make_unique<TpmNvramDBusProxy>();
-    std::unique_ptr<TpmOwnershipDBusProxy> ownership_proxy =
-        std::make_unique<TpmOwnershipDBusProxy>();
-    if (!nvram_proxy->Initialize()) {
-      LOG(ERROR) << "Error initializing nvram proxy.";
-      return EX_UNAVAILABLE;
-    }
-    if (!ownership_proxy->Initialize()) {
-      LOG(ERROR) << "Error initializing ownership proxy.";
-      return EX_UNAVAILABLE;
-    }
+
+    dbus::Bus::Options options;
+    options.bus_type = dbus::Bus::SYSTEM;
+    bus_ = base::MakeRefCounted<dbus::Bus>(options);
+    CHECK(bus_->Connect()) << "Failed to connect to system D-Bus";
+
+    std::unique_ptr<org::chromium::TpmNvramProxy> nvram_proxy =
+        std::make_unique<org::chromium::TpmNvramProxy>(bus_);
+    std::unique_ptr<org::chromium::TpmManagerProxy> ownership_proxy =
+        std::make_unique<org::chromium::TpmManagerProxy>(bus_);
     tpm_nvram_ = std::move(nvram_proxy);
     tpm_ownership_ = std::move(ownership_proxy);
     exit_code = ScheduleCommand();
@@ -325,69 +326,93 @@ class ClientLoop : public ClientLoopBase {
     Quit();
   }
 
+  void PrintErrorAndQuit(brillo::Error* error) {
+    printf("Error: %s\n", error->GetMessage().c_str());
+    Quit();
+  }
+
   void HandleGetTpmStatus() {
     GetTpmStatusRequest request;
-    tpm_ownership_->GetTpmStatus(
-        request, base::Bind(&ClientLoop::PrintReplyAndQuit<GetTpmStatusReply>,
-                            weak_factory_.GetWeakPtr()));
+    tpm_ownership_->GetTpmStatusAsync(
+        request,
+        base::Bind(&ClientLoop::PrintReplyAndQuit<GetTpmStatusReply>,
+                   weak_factory_.GetWeakPtr()),
+        base::Bind(&ClientLoop::PrintErrorAndQuit, weak_factory_.GetWeakPtr()),
+        kDefaultTimeout.InMilliseconds());
   }
 
   void HandleGetTpmNonsensitiveStatus() {
     GetTpmNonsensitiveStatusRequest request;
-    tpm_ownership_->GetTpmNonsensitiveStatus(
+    tpm_ownership_->GetTpmNonsensitiveStatusAsync(
         request,
         base::Bind(
             &ClientLoop::PrintReplyAndQuit<GetTpmNonsensitiveStatusReply>,
-            weak_factory_.GetWeakPtr()));
+            weak_factory_.GetWeakPtr()),
+        base::Bind(&ClientLoop::PrintErrorAndQuit, weak_factory_.GetWeakPtr()),
+        kDefaultTimeout.InMilliseconds());
   }
 
   void HandleGetVersionInfo() {
     GetVersionInfoRequest request;
-    tpm_ownership_->GetVersionInfo(
-        request, base::Bind(&ClientLoop::PrintReplyAndQuit<GetVersionInfoReply>,
-                            weak_factory_.GetWeakPtr()));
+    tpm_ownership_->GetVersionInfoAsync(
+        request,
+        base::Bind(&ClientLoop::PrintReplyAndQuit<GetVersionInfoReply>,
+                   weak_factory_.GetWeakPtr()),
+        base::Bind(&ClientLoop::PrintErrorAndQuit, weak_factory_.GetWeakPtr()),
+        kDefaultTimeout.InMilliseconds());
   }
 
   void HandleGetDictionaryAttackInfo() {
     GetDictionaryAttackInfoRequest request;
-    tpm_ownership_->GetDictionaryAttackInfo(
+    tpm_ownership_->GetDictionaryAttackInfoAsync(
         request,
         base::Bind(&ClientLoop::PrintReplyAndQuit<GetDictionaryAttackInfoReply>,
-                   weak_factory_.GetWeakPtr()));
+                   weak_factory_.GetWeakPtr()),
+        base::Bind(&ClientLoop::PrintErrorAndQuit, weak_factory_.GetWeakPtr()),
+        kDefaultTimeout.InMilliseconds());
   }
 
   void HandleResetDictionaryAttackLock() {
     ResetDictionaryAttackLockRequest request;
-    tpm_ownership_->ResetDictionaryAttackLock(
+    tpm_ownership_->ResetDictionaryAttackLockAsync(
         request,
         base::Bind(
             &ClientLoop::PrintReplyAndQuit<ResetDictionaryAttackLockReply>,
-            weak_factory_.GetWeakPtr()));
+            weak_factory_.GetWeakPtr()),
+        base::Bind(&ClientLoop::PrintErrorAndQuit, weak_factory_.GetWeakPtr()),
+        kDefaultTimeout.InMilliseconds());
   }
 
   void HandleTakeOwnership() {
     TakeOwnershipRequest request;
-    tpm_ownership_->TakeOwnership(
-        request, base::Bind(&ClientLoop::PrintReplyAndQuit<TakeOwnershipReply>,
-                            weak_factory_.GetWeakPtr()));
+    tpm_ownership_->TakeOwnershipAsync(
+        request,
+        base::Bind(&ClientLoop::PrintReplyAndQuit<TakeOwnershipReply>,
+                   weak_factory_.GetWeakPtr()),
+        base::Bind(&ClientLoop::PrintErrorAndQuit, weak_factory_.GetWeakPtr()),
+        kDefaultTimeout.InMilliseconds());
   }
 
   void HandleRemoveOwnerDependency(const std::string& owner_dependency) {
     RemoveOwnerDependencyRequest request;
     request.set_owner_dependency(owner_dependency);
-    tpm_ownership_->RemoveOwnerDependency(
+    tpm_ownership_->RemoveOwnerDependencyAsync(
         request,
         base::Bind(&ClientLoop::PrintReplyAndQuit<RemoveOwnerDependencyReply>,
-                   weak_factory_.GetWeakPtr()));
+                   weak_factory_.GetWeakPtr()),
+        base::Bind(&ClientLoop::PrintErrorAndQuit, weak_factory_.GetWeakPtr()),
+        kDefaultTimeout.InMilliseconds());
   }
 
   void HandleClearStoredOwnerPassword() {
     ClearStoredOwnerPasswordRequest request;
-    tpm_ownership_->ClearStoredOwnerPassword(
+    tpm_ownership_->ClearStoredOwnerPasswordAsync(
         request,
         base::Bind(
             &ClientLoop::PrintReplyAndQuit<ClearStoredOwnerPasswordReply>,
-            weak_factory_.GetWeakPtr()));
+            weak_factory_.GetWeakPtr()),
+        base::Bind(&ClientLoop::PrintErrorAndQuit, weak_factory_.GetWeakPtr()),
+        kDefaultTimeout.InMilliseconds());
   }
 
   bool DecodeAttribute(const std::string& attribute_str,
@@ -470,17 +495,23 @@ class ClientLoop : public ClientLoopBase {
     }
     request.set_authorization_value(GetAuthValueFromPassword(password));
     request.set_policy(bind_to_pcr0 ? NVRAM_POLICY_PCR0 : NVRAM_POLICY_NONE);
-    tpm_nvram_->DefineSpace(
-        request, base::Bind(&ClientLoop::PrintReplyAndQuit<DefineSpaceReply>,
-                            weak_factory_.GetWeakPtr()));
+    tpm_nvram_->DefineSpaceAsync(
+        request,
+        base::Bind(&ClientLoop::PrintReplyAndQuit<DefineSpaceReply>,
+                   weak_factory_.GetWeakPtr()),
+        base::Bind(&ClientLoop::PrintErrorAndQuit, weak_factory_.GetWeakPtr()),
+        kDefaultTimeout.InMilliseconds());
   }
 
   void HandleDestroySpace(uint32_t index) {
     DestroySpaceRequest request;
     request.set_index(index);
-    tpm_nvram_->DestroySpace(
-        request, base::Bind(&ClientLoop::PrintReplyAndQuit<DestroySpaceReply>,
-                            weak_factory_.GetWeakPtr()));
+    tpm_nvram_->DestroySpaceAsync(
+        request,
+        base::Bind(&ClientLoop::PrintReplyAndQuit<DestroySpaceReply>,
+                   weak_factory_.GetWeakPtr()),
+        base::Bind(&ClientLoop::PrintErrorAndQuit, weak_factory_.GetWeakPtr()),
+        kDefaultTimeout.InMilliseconds());
   }
 
   void HandleWriteSpace(uint32_t index,
@@ -498,9 +529,12 @@ class ClientLoop : public ClientLoopBase {
     request.set_data(data);
     request.set_authorization_value(GetAuthValueFromPassword(password));
     request.set_use_owner_authorization(use_owner_authorization);
-    tpm_nvram_->WriteSpace(
-        request, base::Bind(&ClientLoop::PrintReplyAndQuit<WriteSpaceReply>,
-                            weak_factory_.GetWeakPtr()));
+    tpm_nvram_->WriteSpaceAsync(
+        request,
+        base::Bind(&ClientLoop::PrintReplyAndQuit<WriteSpaceReply>,
+                   weak_factory_.GetWeakPtr()),
+        base::Bind(&ClientLoop::PrintErrorAndQuit, weak_factory_.GetWeakPtr()),
+        kDefaultTimeout.InMilliseconds());
   }
 
   void HandleReadSpaceReply(const std::string& output_file,
@@ -520,9 +554,12 @@ class ClientLoop : public ClientLoopBase {
     request.set_index(index);
     request.set_authorization_value(GetAuthValueFromPassword(password));
     request.set_use_owner_authorization(use_owner_authorization);
-    tpm_nvram_->ReadSpace(request,
-                          base::Bind(&ClientLoop::HandleReadSpaceReply,
-                                     weak_factory_.GetWeakPtr(), output_file));
+    tpm_nvram_->ReadSpaceAsync(
+        request,
+        base::Bind(&ClientLoop::HandleReadSpaceReply,
+                   weak_factory_.GetWeakPtr(), output_file),
+        base::Bind(&ClientLoop::PrintErrorAndQuit, weak_factory_.GetWeakPtr()),
+        kDefaultTimeout.InMilliseconds());
   }
 
   void HandleLockSpace(uint32_t index,
@@ -536,30 +573,41 @@ class ClientLoop : public ClientLoopBase {
     request.set_lock_write(lock_write);
     request.set_authorization_value(GetAuthValueFromPassword(password));
     request.set_use_owner_authorization(use_owner_authorization);
-    tpm_nvram_->LockSpace(
-        request, base::Bind(&ClientLoop::PrintReplyAndQuit<LockSpaceReply>,
-                            weak_factory_.GetWeakPtr()));
+    tpm_nvram_->LockSpaceAsync(
+        request,
+        base::Bind(&ClientLoop::PrintReplyAndQuit<LockSpaceReply>,
+                   weak_factory_.GetWeakPtr()),
+        base::Bind(&ClientLoop::PrintErrorAndQuit, weak_factory_.GetWeakPtr()),
+        kDefaultTimeout.InMilliseconds());
   }
 
   void HandleListSpaces() {
     printf("%s\n", kKnownNVRAMSpaces);
     ListSpacesRequest request;
-    tpm_nvram_->ListSpaces(
-        request, base::Bind(&ClientLoop::PrintReplyAndQuit<ListSpacesReply>,
-                            weak_factory_.GetWeakPtr()));
+    tpm_nvram_->ListSpacesAsync(
+        request,
+        base::Bind(&ClientLoop::PrintReplyAndQuit<ListSpacesReply>,
+                   weak_factory_.GetWeakPtr()),
+        base::Bind(&ClientLoop::PrintErrorAndQuit, weak_factory_.GetWeakPtr()),
+        kDefaultTimeout.InMilliseconds());
   }
 
   void HandleGetSpaceInfo(uint32_t index) {
     GetSpaceInfoRequest request;
     request.set_index(index);
-    tpm_nvram_->GetSpaceInfo(
-        request, base::Bind(&ClientLoop::PrintReplyAndQuit<GetSpaceInfoReply>,
-                            weak_factory_.GetWeakPtr()));
+    tpm_nvram_->GetSpaceInfoAsync(
+        request,
+        base::Bind(&ClientLoop::PrintReplyAndQuit<GetSpaceInfoReply>,
+                   weak_factory_.GetWeakPtr()),
+        base::Bind(&ClientLoop::PrintErrorAndQuit, weak_factory_.GetWeakPtr()),
+        kDefaultTimeout.InMilliseconds());
   }
 
+  scoped_refptr<dbus::Bus> bus_;
+
   // IPC proxy interfaces.
-  std::unique_ptr<tpm_manager::TpmNvramInterface> tpm_nvram_;
-  std::unique_ptr<tpm_manager::TpmOwnershipInterface> tpm_ownership_;
+  std::unique_ptr<org::chromium::TpmNvramProxyInterface> tpm_nvram_;
+  std::unique_ptr<org::chromium::TpmManagerProxyInterface> tpm_ownership_;
 
   // Declared last so that weak pointers will be destroyed first.
   base::WeakPtrFactory<ClientLoop> weak_factory_{this};
