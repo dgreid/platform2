@@ -3111,11 +3111,17 @@ int main(int argc, char** argv) {
     }
     // TODO(crbug.com/1152474): Print Auth Session token here for the developer
     // to easily access token.
-    ParseBaseReply(out_reply, &reply, true /* print_reply */);
+    ParseBaseReply(out_reply, &reply, false /* print_reply */);
     if (reply.has_error()) {
       printf("Auth session failed to start.\n");
       return reply.error();
     }
+    cryptohome::StartAuthSessionReply auth_session_reply =
+        reply.GetExtension(cryptohome::StartAuthSessionReply::reply);
+    printf("auth_session_id:%s\n",
+           base::HexEncode(auth_session_reply.auth_session_id().c_str(),
+                           auth_session_reply.auth_session_id().size())
+               .c_str());
     printf("Auth session start succeeded.\n");
   } else if (!strcmp(
                  switches::kActions[switches::ACTION_AUTHENTICATE_AUTH_SESSION],
@@ -3123,6 +3129,7 @@ int main(int argc, char** argv) {
     std::string auth_session_id;
     if (!GetAuthSessionId(cl, &auth_session_id))
       return 1;
+    base::HexStringToString(auth_session_id.c_str(), &auth_session_id);
 
     cryptohome::AuthenticateAuthSessionRequest req;
     req.set_auth_session_id(auth_session_id);
