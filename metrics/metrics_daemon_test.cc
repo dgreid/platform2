@@ -110,6 +110,9 @@ class MetricsDaemonTest : public testing::Test {
   // Adds active use aggregation counters update expectations that a count no
   // larger than the specified upper bound will be added.
   void ExpectActiveUseUpdate(int upper_bound) {
+    EXPECT_CALL(*daily_active_use_mock_, GetAndClear())
+        .Times(1)
+        .RetiresOnSaturation();
     EXPECT_CALL(*daily_active_use_mock_, Add(Le(upper_bound)))
         .Times(1)
         .RetiresOnSaturation();
@@ -124,6 +127,9 @@ class MetricsDaemonTest : public testing::Test {
   // As above, but ignore values of counter updates.
   void IgnoreActiveUseUpdate() {
     EXPECT_CALL(*daily_active_use_mock_, Add(_)).Times(1).RetiresOnSaturation();
+    EXPECT_CALL(*daily_active_use_mock_, GetAndClear())
+        .Times(1)
+        .RetiresOnSaturation();
     EXPECT_CALL(*kernel_crash_interval_mock_, Add(_))
         .Times(1)
         .RetiresOnSaturation();
@@ -251,6 +257,10 @@ TEST_F(MetricsDaemonTest, MessageFilter) {
   DeleteDBusMessage(msg);
 
   IgnoreActiveUseUpdate();
+  EXPECT_CALL(*user_crash_interval_mock_, GetAndClear())
+      .Times(1)
+      .RetiresOnSaturation();
+
   vector<string> signal_args;
   msg = NewDBusSignalString("/", "org.chromium.CrashReporter", "UserCrash",
                             signal_args);
@@ -680,6 +690,29 @@ TEST_F(MetricsDaemonTest, UpdateUsageStats) {
   ExpectActiveUseUpdate(elapsed_seconds);
 
   daemon_.UpdateStats(end, base::Time::Now());
+}
+
+TEST_F(MetricsDaemonTest, RoundsDailyUseIfJustOverOneDay) {
+  // Should round down daily use within 5 minutes of 24 hours...
+  const int kSecondsPerDay = 24 * 60 * 60;
+  const int kFiveMinutes = 5 * 60;
+  EXPECT_CALL(*daily_active_use_mock_, GetAndClear())
+      .WillOnce(Return(kSecondsPerDay + kFiveMinutes));
+  EXPECT_CALL(*daily_active_use_mock_, Add(kFiveMinutes)).Times(1);
+  ExpectSample("Platform.DailyUseTime", kSecondsPerDay);
+  daemon_.SendAndResetDailyUseSample();
+
+  // ... but not round down daily use above that...
+  EXPECT_CALL(*daily_active_use_mock_, GetAndClear())
+      .WillOnce(Return(kSecondsPerDay + kFiveMinutes + 1));
+  ExpectSample("Platform.DailyUseTime", kSecondsPerDay + kFiveMinutes + 1);
+  daemon_.SendAndResetDailyUseSample();
+
+  // .. and not change times below that.
+  EXPECT_CALL(*daily_active_use_mock_, GetAndClear())
+      .WillOnce(Return(kSecondsPerDay - 1));
+  ExpectSample("Platform.DailyUseTime", kSecondsPerDay - 1);
+  daemon_.SendAndResetDailyUseSample();
 }
 
 }  // namespace chromeos_metrics

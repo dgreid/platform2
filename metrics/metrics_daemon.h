@@ -136,6 +136,7 @@ class MetricsDaemon : public brillo::DBusDaemon {
   FRIEND_TEST(MetricsDaemonTest, SendZramMetricsWithIncompressiblePageStats);
   FRIEND_TEST(MetricsDaemonTest, GetDetachableBaseTimes);
   FRIEND_TEST(MetricsDaemonTest, UpdateUsageStats);
+  FRIEND_TEST(MetricsDaemonTest, RoundsDailyUseIfJustOverOneDay);
 
   // State for disk stats collector callback.
   enum StatsState {

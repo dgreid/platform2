@@ -19,6 +19,7 @@ class PersistentIntegerMock : public PersistentInteger {
   explicit PersistentIntegerMock(const base::FilePath& backing_file_path)
       : PersistentInteger(backing_file_path) {}
   MOCK_METHOD(void, Add, (int64_t), (override));
+  MOCK_METHOD(int64_t, GetAndClear, (), (override));
 };
 
 }  // namespace chromeos_metrics

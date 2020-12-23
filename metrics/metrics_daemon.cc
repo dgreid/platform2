@@ -61,6 +61,7 @@ const char kCrashReporterMatchRule[] =
 // See chromite/scripts/cros_set_lsb_release.py.
 const char kOfficialBuild[] = "Official Build";
 
+const int kMillisPerSecond = 1000;
 const int kSecondsPerMinute = 60;
 const int kMinutesPerHour = 60;
 const int kHoursPerDay = 24;
@@ -1532,7 +1533,23 @@ void MetricsDaemon::SendKernelCrashesCumulativeCountStats() {
 }
 
 void MetricsDaemon::SendAndResetDailyUseSample() {
-  SendSample(kDailyUseTimeName, daily_active_use_->GetAndClear(),
+  // Since metrics_daemon only updates statistics every kUpdateStatsIntervalMs,
+  // we will often report devices that are active for exactly 24 hours as being
+  // active for slightly more than 24 hours. Round down in such cases to exactly
+  // 24 hours, since we cannot be active for more than 24 hours in a day.  Do
+  // *not* round down times more than that, because they could be due to
+  // unrelated bugs that we don't want to mask.
+  int64_t dau_seconds = daily_active_use_->GetAndClear();
+  if (dau_seconds > kSecondsPerDay &&
+      dau_seconds <=
+          kSecondsPerDay + (kUpdateStatsIntervalMs / kMillisPerSecond)) {
+    // Shift the extra over to the current day.
+    daily_active_use_->Add(dau_seconds - kSecondsPerDay);
+
+    // Then record only the maximum daily amount today.
+    dau_seconds = kSecondsPerDay;
+  }
+  SendSample(kDailyUseTimeName, dau_seconds,
              1,               // value of first bucket
              kSecondsPerDay,  // value of last bucket
              50);             // number of buckets

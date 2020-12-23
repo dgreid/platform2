@@ -38,7 +38,8 @@ class PersistentInteger {
   int64_t Get();
 
   // Convenience function for Get() followed by Set(0).
-  int64_t GetAndClear();
+  // Virtual only because of mock.
+  virtual int64_t GetAndClear();
 
   // Convenience function for v = Get, Set(v + x).
   // Virtual only because of mock.
