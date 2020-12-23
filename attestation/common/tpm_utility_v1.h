@@ -22,6 +22,8 @@ namespace attestation {
 class TpmUtilityV1 : public TpmUtilityCommon {
  public:
   TpmUtilityV1() = default;
+  // Testing constructor.
+  explicit TpmUtilityV1(tpm_manager::TpmManagerUtility* tpm_manager_utility);
   TpmUtilityV1(const TpmUtilityV1&) = delete;
   TpmUtilityV1& operator=(const TpmUtilityV1&) = delete;
 

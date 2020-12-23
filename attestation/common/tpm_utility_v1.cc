@@ -132,6 +132,9 @@ bool CanDelegateReadInternalPub(const std::string& delegate_blob,
 
 namespace attestation {
 
+TpmUtilityV1::TpmUtilityV1(tpm_manager::TpmManagerUtility* tpm_manager_utility)
+    : TpmUtilityCommon(tpm_manager_utility) {}
+
 TpmUtilityV1::~TpmUtilityV1() {}
 
 bool TpmUtilityV1::Initialize() {

@@ -320,6 +320,7 @@ if (use.test) {
       "common/crypto_utility_impl_test.cc",
       "common/mock_crypto_utility.cc",
       "common/mock_tpm_utility.cc",
+      "common/tpm_utility_common_test.cc",
       "pca_agent/server/pca_request_test.cc",
       "server/attestation_service_test.cc",
       "server/certificate_queue_test.cc",
@@ -339,7 +340,6 @@ if (use.test) {
         "trunks_test",
       ]
     } else {
-      sources += [ "common/tpm_utility_common_test.cc" ]
       libs = [
         "hwsec_test",
         "policy",
