@@ -11,8 +11,7 @@
 #include <string>
 #include <tuple>
 
-#include "tpm_manager/common/mock_tpm_nvram_interface.h"
-#include "tpm_manager/common/mock_tpm_ownership_interface.h"
+#include <tpm_manager-client-test/tpm_manager/dbus-proxy-mocks.h>
 
 namespace {
 
@@ -20,7 +19,9 @@ using ::testing::_;
 using ::testing::ByRef;
 using ::testing::DoAll;
 using ::testing::NiceMock;
+using ::testing::Return;
 using ::testing::SaveArg;
+using ::testing::SetArgPointee;
 using ::testing::Test;
 using ::testing::WithArg;
 
@@ -44,35 +45,35 @@ class TpmManagerUtilityTest : public Test {
       : tpm_manager_utility_(&mock_tpm_owner_, &mock_tpm_nvram_) {
     // for the following ON_CALL setup, pass the fake replies by reference so we
     // can change the contained data dynamically in a test item.
-    ON_CALL(mock_tpm_owner_, TakeOwnership(_, _))
+    ON_CALL(mock_tpm_owner_, TakeOwnershipAsync(_, _, _, _))
         .WillByDefault(InvokeCallbackArgument<1>(ByRef(take_ownership_reply_)));
-    ON_CALL(mock_tpm_owner_, GetTpmStatus(_, _))
+    ON_CALL(mock_tpm_owner_, GetTpmStatusAsync(_, _, _, _))
         .WillByDefault(InvokeCallbackArgument<1>(ByRef(get_tpm_status_reply_)));
-    ON_CALL(mock_tpm_owner_, GetTpmNonsensitiveStatus(_, _))
+    ON_CALL(mock_tpm_owner_, GetTpmNonsensitiveStatusAsync(_, _, _, _))
         .WillByDefault(InvokeCallbackArgument<1>(
             ByRef(get_tpm_nonsensitive_status_reply_)));
-    ON_CALL(mock_tpm_owner_, GetVersionInfo(_, _))
+    ON_CALL(mock_tpm_owner_, GetVersionInfoAsync(_, _, _, _))
         .WillByDefault(
             InvokeCallbackArgument<1>(ByRef(get_version_info_reply_)));
-    ON_CALL(mock_tpm_owner_, RemoveOwnerDependency(_, _))
+    ON_CALL(mock_tpm_owner_, RemoveOwnerDependencyAsync(_, _, _, _))
         .WillByDefault(
             InvokeCallbackArgument<1>(ByRef(remove_owner_dependency_reply_)));
-    ON_CALL(mock_tpm_owner_, ClearStoredOwnerPassword(_, _))
+    ON_CALL(mock_tpm_owner_, ClearStoredOwnerPasswordAsync(_, _, _, _))
         .WillByDefault(InvokeCallbackArgument<1>(
             ByRef(clear_stored_owner_password_reply_)));
-    ON_CALL(mock_tpm_owner_, GetDictionaryAttackInfo(_, _))
+    ON_CALL(mock_tpm_owner_, GetDictionaryAttackInfoAsync(_, _, _, _))
         .WillByDefault(InvokeCallbackArgument<1>(
             ByRef(get_dictionary_attack_info_reply_)));
-    ON_CALL(mock_tpm_owner_, ResetDictionaryAttackLock(_, _))
+    ON_CALL(mock_tpm_owner_, ResetDictionaryAttackLockAsync(_, _, _, _))
         .WillByDefault(InvokeCallbackArgument<1>(
             ByRef(reset_dictionary_attack_lock_reply_)));
-    ON_CALL(mock_tpm_nvram_, DestroySpace(_, _))
+    ON_CALL(mock_tpm_nvram_, DestroySpaceAsync(_, _, _, _))
         .WillByDefault(InvokeCallbackArgument<1>(ByRef(destroy_space_reply_)));
-    ON_CALL(mock_tpm_nvram_, ListSpaces(_, _))
+    ON_CALL(mock_tpm_nvram_, ListSpacesAsync(_, _, _, _))
         .WillByDefault(InvokeCallbackArgument<1>(ByRef(list_spaces_reply_)));
-    ON_CALL(mock_tpm_nvram_, GetSpaceInfo(_, _))
+    ON_CALL(mock_tpm_nvram_, GetSpaceInfoAsync(_, _, _, _))
         .WillByDefault(InvokeCallbackArgument<1>(ByRef(get_space_info_reply_)));
-    ON_CALL(mock_tpm_nvram_, LockSpace(_, _))
+    ON_CALL(mock_tpm_nvram_, LockSpaceAsync(_, _, _, _))
         .WillByDefault(InvokeCallbackArgument<1>(ByRef(lock_space_reply_)));
   }
   void SetUp() override { ASSERT_TRUE(tpm_manager_utility_.Initialize()); }
@@ -92,8 +93,8 @@ class TpmManagerUtilityTest : public Test {
                          tpm_manager::NvramResult result,
                          bool expect_success);
 
-  NiceMock<tpm_manager::MockTpmOwnershipInterface> mock_tpm_owner_;
-  NiceMock<tpm_manager::MockTpmNvramInterface> mock_tpm_nvram_;
+  NiceMock<org::chromium::TpmManagerProxyMock> mock_tpm_owner_;
+  NiceMock<org::chromium::TpmNvramProxyMock> mock_tpm_nvram_;
   TpmManagerUtility tpm_manager_utility_;
 
   // fake replies from TpmManager
@@ -430,7 +431,7 @@ void TpmManagerUtilityTest::RunDefineSpaceTest(bool write_define,
   tpm_manager::DefineSpaceReply reply;
   reply.set_result(result);
 
-  EXPECT_CALL(mock_tpm_nvram_, DefineSpace(_, _))
+  EXPECT_CALL(mock_tpm_nvram_, DefineSpaceAsync(_, _, _, _))
       .WillOnce(
           DoAll(SaveArg<0>(&request), InvokeCallbackArgument<1>(ByRef(reply))));
 
@@ -498,7 +499,7 @@ void TpmManagerUtilityTest::RunReadSpaceTest(bool use_owner_auth,
     reply.set_data(*value);
   }
 
-  EXPECT_CALL(mock_tpm_nvram_, ReadSpace(_, _))
+  EXPECT_CALL(mock_tpm_nvram_, ReadSpaceAsync(_, _, _, _))
       .WillOnce(
           DoAll(SaveArg<0>(&request), InvokeCallbackArgument<1>(ByRef(reply))));
 
@@ -546,7 +547,7 @@ void TpmManagerUtilityTest::RunWriteSpaceTest(bool use_owner_auth,
   tpm_manager::WriteSpaceReply reply;
   reply.set_result(result);
 
-  EXPECT_CALL(mock_tpm_nvram_, WriteSpace(_, _))
+  EXPECT_CALL(mock_tpm_nvram_, WriteSpaceAsync(_, _, _, _))
       .WillOnce(
           DoAll(SaveArg<0>(&request), InvokeCallbackArgument<1>(ByRef(reply))));
 
@@ -631,7 +632,7 @@ TEST_F(TpmManagerUtilityTest, GetSpaceInfoFail) {
 TEST_F(TpmManagerUtilityTest, LockSpace) {
   tpm_manager::LockSpaceRequest request;
   lock_space_reply_.set_result(tpm_manager::NVRAM_RESULT_SUCCESS);
-  EXPECT_CALL(mock_tpm_nvram_, LockSpace(_, _))
+  EXPECT_CALL(mock_tpm_nvram_, LockSpaceAsync(_, _, _, _))
       .WillOnce(DoAll(SaveArg<0>(&request),
                       InvokeCallbackArgument<1>(ByRef(lock_space_reply_))));
   EXPECT_TRUE(tpm_manager_utility_.LockSpace(0x123456));

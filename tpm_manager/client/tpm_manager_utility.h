@@ -14,8 +14,9 @@
 #include <base/optional.h>
 #include <base/synchronization/lock.h>
 #include <base/threading/thread.h>
-#include "tpm_manager/client/tpm_nvram_dbus_proxy.h"
-#include "tpm_manager/client/tpm_ownership_dbus_proxy.h"
+#include <tpm_manager/proto_bindings/tpm_manager.pb.h>
+#include <tpm_manager-client/tpm_manager/dbus-proxies.h>
+
 #include "tpm_manager/client/tpm_ownership_signal_handler.h"
 #include "tpm_manager/common/export.h"
 
@@ -29,8 +30,8 @@ class TPM_MANAGER_EXPORT TpmManagerUtility
 
   TpmManagerUtility() = default;
   // a constructor which enables injection of mock interfaces.
-  TpmManagerUtility(tpm_manager::TpmOwnershipInterface* tpm_owner,
-                    tpm_manager::TpmNvramInterface* tpm_nvram);
+  TpmManagerUtility(org::chromium::TpmManagerProxyInterface* tpm_owner,
+                    org::chromium::TpmNvramProxyInterface* tpm_nvram);
   TpmManagerUtility(const TpmManagerUtility&) = delete;
   TpmManagerUtility& operator=(const TpmManagerUtility&) = delete;
 
@@ -240,18 +241,20 @@ class TPM_MANAGER_EXPORT TpmManagerUtility
                                   const RequestProtoType& request_proto,
                                   ReplyProtoType* reply_proto);
 
+  scoped_refptr<dbus::Bus> bus_;
+
   // |tpm_owner_| and |tpm_nvram_| typically point to |default_tpm_owner_| and
   // |default_tpm_nvram_| respectively, created/destroyed on the
   // |tpm_manager_thread_|. As such, should not be accessed after that thread
   // is stopped/destroyed.
-  tpm_manager::TpmOwnershipInterface* tpm_owner_{nullptr};
-  tpm_manager::TpmNvramInterface* tpm_nvram_{nullptr};
+  org::chromium::TpmManagerProxyInterface* tpm_owner_{nullptr};
+  org::chromium::TpmNvramProxyInterface* tpm_nvram_{nullptr};
 
   // |default_tpm_owner_| and |default_tpm_nvram_| are created and destroyed
   // on the |tpm_manager_thread_|, and are not available after the thread is
   // stopped/destroyed.
-  std::unique_ptr<tpm_manager::TpmOwnershipDBusProxy> default_tpm_owner_;
-  std::unique_ptr<tpm_manager::TpmNvramDBusProxy> default_tpm_nvram_;
+  std::unique_ptr<org::chromium::TpmManagerProxy> default_tpm_owner_;
+  std::unique_ptr<org::chromium::TpmNvramProxy> default_tpm_nvram_;
 
   // A message loop thread dedicated for asynchronous communication with
   // tpm_managerd. Declared last, so that it is destroyed before the

@@ -223,6 +223,8 @@ if (use.test) {
       "libbrillo-test",
       "libchrome-test",
       "libmetrics",
+      "libtpm_manager-client",
+      "libtpm_manager-client-test",
     ]
   }
 
