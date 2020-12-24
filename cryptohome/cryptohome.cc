@@ -44,6 +44,7 @@
 #include "cryptohome/rpc.pb.h"
 #include "cryptohome/signed_secret.pb.h"
 #include "cryptohome/storage/homedirs.h"
+#include "cryptohome/UserDataAuth.pb.h"
 #include "cryptohome/vault_keyset.pb.h"
 
 #include "bindings/cryptohome.dbusclient.h"
@@ -116,6 +117,7 @@ static const char* kActions[] = {"mount_ex",
                                  "install_attributes_get",
                                  "install_attributes_finalize",
                                  "install_attributes_count",
+                                 "install_attributes_get_status",
                                  "install_attributes_is_ready",
                                  "install_attributes_is_secure",
                                  "install_attributes_is_invalid",
@@ -198,6 +200,7 @@ enum ActionEnum {
   ACTION_INSTALL_ATTRIBUTES_GET,
   ACTION_INSTALL_ATTRIBUTES_FINALIZE,
   ACTION_INSTALL_ATTRIBUTES_COUNT,
+  ACTION_INSTALL_ATTRIBUTES_GET_STATUS,
   ACTION_INSTALL_ATTRIBUTES_IS_READY,
   ACTION_INSTALL_ATTRIBUTES_IS_SECURE,
   ACTION_INSTALL_ATTRIBUTES_IS_INVALID,
@@ -1792,6 +1795,55 @@ int main(int argc, char** argv) {
       return 1;
     }
     printf("InstallAttributesCount(): %d\n", result);
+  } else if (!strcmp(switches::kActions
+                         [switches::ACTION_INSTALL_ATTRIBUTES_GET_STATUS],
+                     action.c_str())) {
+    user_data_auth::InstallAttributesState result =
+        user_data_auth::InstallAttributesState::UNKNOWN;
+    do {
+      brillo::glib::ScopedError error;
+      gboolean is_invalid;
+      if (!org_chromium_CryptohomeInterface_install_attributes_is_invalid(
+              proxy.gproxy(), &is_invalid,
+              &brillo::Resetter(&error).lvalue())) {
+        printf("InstallAttributesIsInvalid() call failed: %s.\n",
+               error->message);
+        return 1;
+      }
+
+      if (is_invalid) {
+        result = user_data_auth::InstallAttributesState::INVALID;
+        break;
+      }
+
+      gboolean is_first_install;
+      if (!org_chromium_CryptohomeInterface_install_attributes_is_first_install(
+              proxy.gproxy(), &is_first_install,
+              &brillo::Resetter(&error).lvalue())) {
+        printf("InstallAttributesIsFirstInstall() call failed: %s.\n",
+               error->message);
+        return 1;
+      }
+
+      if (is_first_install) {
+        result = user_data_auth::InstallAttributesState::FIRST_INSTALL;
+        break;
+      }
+
+      gboolean is_ready;
+      if (!org_chromium_CryptohomeInterface_install_attributes_is_ready(
+              proxy.gproxy(), &is_ready, &brillo::Resetter(&error).lvalue())) {
+        printf("InstallAttributesIsReady() call failed: %s.\n", error->message);
+        return 1;
+      }
+
+      if (is_ready) {
+        result = user_data_auth::InstallAttributesState::VALID;
+      } else {
+        result = user_data_auth::InstallAttributesState::TPM_NOT_OWNED;
+      }
+    } while (false);
+    printf("%s\n", InstallAttributesState_Name(result).c_str());
   } else if (!strcmp(switches::kActions
                          [switches::ACTION_INSTALL_ATTRIBUTES_IS_READY],
                      action.c_str())) {
