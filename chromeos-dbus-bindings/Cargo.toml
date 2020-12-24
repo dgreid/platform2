@@ -1,5 +1,5 @@
 [package]
-name = "chromeos_dbus_bindings"
+name = "chromeos-dbus-bindings"
 version = "0.24.52"
 authors = ["The Chromium OS Authors"]
 edition = "2018"
