@@ -65,6 +65,7 @@ bool DeviceHasType(libmems::IioDevice* iio_device,
       return false;
 
     default:
+      // TODO(chenghaogyang): Support the uncalibrated devices.
       return false;
   }
 }
