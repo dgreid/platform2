@@ -136,6 +136,17 @@ void Datapath::Start() {
     LOG(ERROR) << "Failed to set up NAT for TAP devices."
                << " Guest connectivity may be broken.";
 
+  // b/176260499: on 4.4 kernel, the following connmark rules are observed to
+  // wrongly cause neighbor discovery icmpv6 packets to be dropped. Add these
+  // rules to bypass connmark rule for those packets.
+  for (const auto& type : kNeighborDiscoveryTypes) {
+    if (!ModifyIptables(IpFamily::IPv6, "mangle",
+                        {"-A", "OUTPUT", "-p", "icmpv6", "--icmpv6-type", type,
+                         "-j", "ACCEPT", "-w"}))
+      LOG(ERROR) << "Failed to set up connmark bypass rule for " << type
+                 << " packets";
+  }
+
   // Applies the routing tag saved in conntrack for any established connection
   // for sockets created in the host network namespace.
   if (!ModifyConnmarkRestore(IpFamily::Dual, "OUTPUT", "-A", "" /*iif*/,

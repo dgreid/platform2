@@ -211,6 +211,11 @@ constexpr std::array<TrafficSource, 10> kAllSources{
     {CHROME, USER, UPDATE_ENGINE, SYSTEM, HOST_VPN, ARC, CROSVM, PLUGINVM,
      TETHER_DOWNSTREAM, ARC_VPN}};
 
+// iptables type keywords for neighbor discovery packets
+constexpr std::array<char[32], 4> kNeighborDiscoveryTypes{
+    {"router-solicitation", "router-advertisement", "neighbour-solicitation",
+     "neighbour-advertisement"}};
+
 // Constant fwmark value for tagging traffic with the "route-on-vpn" intent.
 constexpr const Fwmark kFwmarkRouteOnVpn = {.policy = 0x80};
 // Constant fwmark value for tagging traffic with the "bypass-vpn" intent.

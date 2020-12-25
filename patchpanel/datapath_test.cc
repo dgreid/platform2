@@ -183,6 +183,31 @@ TEST(DatapathTest, Start) {
                        ElementsAre("-A", "PREROUTING", "-i", "vmtap+", "-j",
                                    "MARK", "--set-mark", "1/1", "-w"),
                        true, nullptr));
+  // Asserts for OUTPUT ndp connmark bypass rule
+  EXPECT_CALL(
+      runner,
+      ip6tables(StrEq("mangle"),
+                ElementsAre("-A", "OUTPUT", "-p", "icmpv6", "--icmpv6-type",
+                            "router-solicitation", "-j", "ACCEPT", "-w"),
+                true, nullptr));
+  EXPECT_CALL(
+      runner,
+      ip6tables(StrEq("mangle"),
+                ElementsAre("-A", "OUTPUT", "-p", "icmpv6", "--icmpv6-type",
+                            "router-advertisement", "-j", "ACCEPT", "-w"),
+                true, nullptr));
+  EXPECT_CALL(
+      runner,
+      ip6tables(StrEq("mangle"),
+                ElementsAre("-A", "OUTPUT", "-p", "icmpv6", "--icmpv6-type",
+                            "neighbour-solicitation", "-j", "ACCEPT", "-w"),
+                true, nullptr));
+  EXPECT_CALL(
+      runner,
+      ip6tables(StrEq("mangle"),
+                ElementsAre("-A", "OUTPUT", "-p", "icmpv6", "--icmpv6-type",
+                            "neighbour-advertisement", "-j", "ACCEPT", "-w"),
+                true, nullptr));
   // Asserts for OUTPUT CONNMARK restore rule
   EXPECT_CALL(runner, iptables(StrEq("mangle"),
                                ElementsAre("-A", "OUTPUT", "-j", "CONNMARK",
