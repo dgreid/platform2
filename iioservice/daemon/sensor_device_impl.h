@@ -65,10 +65,6 @@ class SensorDeviceImpl final : public cros::mojom::SensorDevice {
                    libmems::IioContext* context,
                    std::unique_ptr<base::Thread> thread);
 
-  void AddReceiverOnThread(
-      int32_t iio_device_id,
-      mojo::PendingReceiver<cros::mojom::SensorDevice> request);
-
   void OnSensorDeviceDisconnect();
   void RemoveClient(mojo::ReceiverId id);
 

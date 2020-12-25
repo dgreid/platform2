@@ -64,10 +64,18 @@ SensorDeviceImpl::~SensorDeviceImpl() {
 void SensorDeviceImpl::AddReceiver(
     int32_t iio_device_id,
     mojo::PendingReceiver<cros::mojom::SensorDevice> request) {
-  ipc_task_runner_->PostTask(
-      FROM_HERE, base::BindOnce(&SensorDeviceImpl::AddReceiverOnThread,
-                                weak_factory_.GetWeakPtr(), iio_device_id,
-                                std::move(request)));
+  DCHECK(ipc_task_runner_->RunsTasksInCurrentSequence());
+
+  auto iio_device = context_->GetDeviceById(iio_device_id);
+  if (!iio_device) {
+    LOGF(ERROR) << "Invalid iio_device_id: " << iio_device_id;
+    return;
+  }
+
+  mojo::ReceiverId id =
+      receiver_set_.Add(this, std::move(request), ipc_task_runner_);
+  clients_[id].id = id;
+  clients_[id].iio_device = iio_device;
 }
 
 void SensorDeviceImpl::SetTimeout(uint32_t timeout) {
@@ -272,23 +280,6 @@ SensorDeviceImpl::SensorDeviceImpl(
 
   receiver_set_.set_disconnect_handler(base::BindRepeating(
       &SensorDeviceImpl::OnSensorDeviceDisconnect, weak_factory_.GetWeakPtr()));
-}
-
-void SensorDeviceImpl::AddReceiverOnThread(
-    int32_t iio_device_id,
-    mojo::PendingReceiver<cros::mojom::SensorDevice> request) {
-  DCHECK(ipc_task_runner_->RunsTasksInCurrentSequence());
-
-  auto iio_device = context_->GetDeviceById(iio_device_id);
-  if (!iio_device) {
-    LOGF(ERROR) << "Invalid iio_device_id: " << iio_device_id;
-    return;
-  }
-
-  mojo::ReceiverId id =
-      receiver_set_.Add(this, std::move(request), ipc_task_runner_);
-  clients_[id].id = id;
-  clients_[id].iio_device = iio_device;
 }
 
 void SensorDeviceImpl::OnSensorDeviceDisconnect() {
