@@ -58,13 +58,6 @@ bool Service::Initialize() {
     LOG(ERROR) << "Failed to export GenerateVirtualFileId method.";
     return false;
   }
-  // TODO(b/170695541): Remove this method export (OpenFile).
-  if (!exported_object_->ExportMethodAndBlock(
-          kVirtualFileProviderInterface, kOpenFileMethod,
-          base::Bind(&Service::OpenFile, weak_ptr_factory_.GetWeakPtr()))) {
-    LOG(ERROR) << "Failed to export OpenFile method.";
-    return false;
-  }
   if (!exported_object_->ExportMethodAndBlock(
           kVirtualFileProviderInterface, kOpenFileByIdMethod,
           base::Bind(&Service::OpenFileById, weak_ptr_factory_.GetWeakPtr()))) {
@@ -138,51 +131,6 @@ void Service::GenerateVirtualFileId(
       dbus::Response::FromMethodCall(method_call);
   dbus::MessageWriter writer(response.get());
   writer.AppendString(std::move(id));
-  std::move(response_sender).Run(std::move(response));
-}
-
-// TODO(b/170695541): Remove this function.
-void Service::OpenFile(dbus::MethodCall* method_call,
-                       dbus::ExportedObject::ResponseSender response_sender) {
-  DCHECK(thread_checker_.CalledOnValidThread());
-
-  dbus::MessageReader reader(method_call);
-  int64_t size = 0;
-  if (!reader.PopInt64(&size)) {
-    std::move(response_sender)
-        .Run(dbus::ErrorResponse::FromMethodCall(
-            method_call, DBUS_ERROR_INVALID_ARGS, "Size must be provided."));
-    return;
-  }
-  // Generate a new ID.
-  std::string id = base::GenerateGUID();
-
-  // Set the size of the ID.
-  // NOTE: Currently, updating the size value is not supported. If the virtual
-  // file gets modified later, the size map's value can contradict with the real
-  // value and it can result in read errors.
-  CHECK_EQ(-1, size_map_->GetSize(id));
-  size_map_->SetSize(id, size);
-
-  // An ID corresponds to a file name in the FUSE file system.
-  base::FilePath path = fuse_mount_path_.AppendASCII(id);
-
-  // Create a new FD associated with the ID.
-  base::ScopedFD fd(
-      HANDLE_EINTR(open(path.value().c_str(), O_RDONLY | O_CLOEXEC)));
-  if (!fd.is_valid()) {
-    std::move(response_sender)
-        .Run(dbus::ErrorResponse::FromMethodCall(
-            method_call, DBUS_ERROR_INVALID_ARGS, "Invalid Id."));
-    return;
-  }
-
-  // Send response.
-  std::unique_ptr<dbus::Response> response =
-      dbus::Response::FromMethodCall(method_call);
-  dbus::MessageWriter writer(response.get());
-  writer.AppendString(id);
-  writer.AppendFileDescriptor(fd.get());
   std::move(response_sender).Run(std::move(response));
 }
 

@@ -11,9 +11,17 @@ To forward access requests on file descriptors, this service implements a FUSE
 file system which is only accessible to this service itself.
 
 ## D-Bus interface
-This service provides only one D-Bus method, OpenFile().
-When OpenFile() is called, it generates a new unique ID, opens a file descriptor
-on the private FUSE file system, and returns the ID and the FD to the caller.
-The caller should remember the ID to handle access requests later.
-When the FD is being accessed, this service sends signal to forward the access
-request to chrome.
+This service provides two D-Bus methods, GenerateVirtualFileId() and
+OpenFileById().
+
+GenerateVirtualFileId() generates and returns a new unique ID, to be used for
+file descriptor (FD) creation on the private FUSE file system at a later stage.
+For ARCVM, this is achieved by directly issuing open() on the FUSE file system
+with the returned ID, whereas for ARC++ container, the FD is created by calling
+OpenFileById() below.
+
+When OpenFileById() is called with a unique ID, in the ARC++ container flow, it
+creates and returns a seekable FD backed by the FUSE file system.
+
+When the file descriptor created above is being accessed, Virtual File Provider
+will send signal to forward the access request to chrome.

@@ -56,13 +56,6 @@ class Service {
       dbus::MethodCall* method_call,
       dbus::ExportedObject::ResponseSender response_sender);
 
-  // TODO(b/170695541): Remove this function.
-  // Handles OpenFile D-Bus method call.
-  // Returns a seekable FD backed by the FUSE file system, and an ID associated
-  // with the FD.
-  void OpenFile(dbus::MethodCall* method_call,
-                dbus::ExportedObject::ResponseSender response_sender);
-
   // Handles OpenFileById D-Bus method call.
   // Given an ID, creates and returns a seekable FD backed by the FUSE file
   // system.
