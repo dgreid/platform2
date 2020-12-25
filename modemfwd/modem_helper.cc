@@ -134,8 +134,7 @@ class FlashMode {
 
   ~FlashMode() {
     RunHelperProcess(helper_info_, {kReboot}, nullptr);
-    base::DeleteFile(base::FilePath(kPowerOverrideLockFilePath),
-                     false /* recursive */);
+    base::DeleteFile(base::FilePath(kPowerOverrideLockFilePath));
   }
 
  private:
