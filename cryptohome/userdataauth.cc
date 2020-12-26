@@ -221,7 +221,7 @@ bool UserDataAuth::Initialize() {
       origin_task_runner_ = base::ThreadTaskRunnerHandle::Get();
     }
     if (!mount_task_runner_) {
-      mount_thread_ = std::make_unique<base::Thread>(kMountThreadName);
+      mount_thread_ = std::make_unique<MountThread>(kMountThreadName, this);
     }
   }
 
@@ -445,6 +445,25 @@ bool UserDataAuth::StatefulRecoveryIsOwner(const std::string& username) {
   return false;
 }
 
+void UserDataAuth::CreateMountThreadDBus() {
+  AssertOnMountThread();
+  if (!mount_thread_bus_) {
+    // Setup the D-Bus.
+    dbus::Bus::Options options;
+    options.bus_type = dbus::Bus::SYSTEM;
+    mount_thread_bus_ = base::MakeRefCounted<dbus::Bus>(options);
+    CHECK(mount_thread_bus_->Connect())
+        << "Failed to connect to system D-Bus on mount thread";
+  }
+}
+
+void UserDataAuth::ShutdownTask() {
+  if (mount_thread_bus_) {
+    mount_thread_bus_->ShutdownAndBlock();
+    mount_thread_bus_.reset();
+  }
+}
+
 bool UserDataAuth::PostDBusInitialize() {
   AssertOnOriginThread();
   CHECK(bus_);
@@ -459,6 +478,11 @@ bool UserDataAuth::PostDBusInitialize() {
   } else {
     LOG(ERROR) << __func__ << ": Failed to get TpmManagerUtility singleton!";
   }
+
+  // Create a dbus connection on mount thread.
+  PostTaskToMountThread(
+      FROM_HERE,
+      base::Bind(&UserDataAuth::CreateMountThreadDBus, base::Unretained(this)));
 
   // If the TPM is unowned or doesn't exist, it's safe for
   // this function to be called again. However, it shouldn't

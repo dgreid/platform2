@@ -635,11 +635,36 @@ class UserDataAuth {
           void(const user_data_auth::AuthenticateAuthSessionReply&)> on_done);
 
  private:
+  // base::Thread subclass so we can implement CleanUp.
+  class MountThread : public base::Thread {
+   public:
+    explicit MountThread(const std::string& name, UserDataAuth* uda)
+        : base::Thread(name), uda_(uda) {
+      CHECK(uda_);
+    }
+    MountThread(const MountThread&) = delete;
+    MountThread& operator=(const MountThread&) = delete;
+
+    ~MountThread() override { Stop(); }
+
+   private:
+    void CleanUp() override { uda_->ShutdownTask(); }
+
+    UserDataAuth* const uda_;
+  };
+
+  // Shutdown to be run on the worker thread.
+  void ShutdownTask();
+
   // Note: In Service class (the class that this class is refactored from),
   // there is a initialize_tpm_ member variable, but it is almost unused and
   // always set to true there, so in this class, if we are migrating any code
   // from Service class and initialize_tpm_ is used there, then we'll just
   // assume it's true and not have a initialize_tpm_ variable here.
+
+  // This create a dbus connection whose origin thread is UserDataAuth's mount
+  // thread.
+  void CreateMountThreadDBus();
 
   // =============== Mount Related Utilities ===============
   // Returns the UserSession object associated with the given username
@@ -900,7 +925,7 @@ class UserDataAuth {
   base::PlatformThreadId origin_thread_id_;
 
   // The thread for performing long running, or mount related operations
-  std::unique_ptr<base::Thread> mount_thread_;
+  std::unique_ptr<MountThread> mount_thread_;
 
   // The task runner that belongs to the mount thread.
   scoped_refptr<base::SingleThreadTaskRunner> mount_task_runner_;

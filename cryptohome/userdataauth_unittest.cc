@@ -12,6 +12,7 @@
 #include <base/files/file_util.h>
 #include <base/location.h>
 #include <base/stl_util.h>
+#include <base/test/bind_test_util.h>
 #include <base/test/task_environment.h>
 #include <base/test/test_mock_time_task_runner.h>
 #include <brillo/cryptohome.h>
@@ -106,7 +107,8 @@ class UserDataAuthTestNotInitialized : public ::testing::Test {
     tpm_init_.set_tpm(&tpm_);
     dbus::Bus::Options options;
     options.bus_type = dbus::Bus::SYSTEM;
-    bus_ = new NiceMock<dbus::MockBus>(options);
+    bus_ = base::MakeRefCounted<NiceMock<dbus::MockBus>>(options);
+    mount_bus_ = base::MakeRefCounted<NiceMock<dbus::MockBus>>(options);
 
     if (!userdataauth_) {
       // Note that this branch is usually taken as |userdataauth_| is usually
@@ -253,6 +255,10 @@ class UserDataAuthTestNotInitialized : public ::testing::Test {
 
   // Mock DBus object, will be passed to UserDataAuth for its internal use.
   scoped_refptr<NiceMock<dbus::MockBus>> bus_;
+
+  // Mock DBus object on mount thread, will be passed to UserDataAuth for its
+  // internal use.
+  scoped_refptr<NiceMock<dbus::MockBus>> mount_bus_;
 
   // Session object
   scoped_refptr<UserSession> session_;
@@ -837,6 +843,7 @@ TEST_F(UserDataAuthTestNotInitialized, InstallAttributesEnterpriseOwned) {
       .WillOnce(DoAll(SetArgPointee<1>(blob_true), Return(true)));
   userdataauth_->Initialize();
   userdataauth_->set_dbus(bus_);
+  userdataauth_->set_mount_thread_dbus(mount_bus_);
   userdataauth_->PostDBusInitialize();
 
   EXPECT_TRUE(userdataauth_->IsEnterpriseOwned());
@@ -853,6 +860,7 @@ TEST_F(UserDataAuthTestNotInitialized, InstallAttributesNotEnterpriseOwned) {
       .WillOnce(DoAll(SetArgPointee<1>(blob_true), Return(true)));
   userdataauth_->Initialize();
   userdataauth_->set_dbus(bus_);
+  userdataauth_->set_mount_thread_dbus(mount_bus_);
   userdataauth_->PostDBusInitialize();
 
   EXPECT_FALSE(userdataauth_->IsEnterpriseOwned());
@@ -1277,6 +1285,7 @@ TEST_F(UserDataAuthTest, OwnershipCallbackRegisterValidity) {
       .WillOnce(SaveArg<0>(&callback));
 
   userdataauth_->set_dbus(bus_);
+  userdataauth_->set_mount_thread_dbus(mount_bus_);
   userdataauth_->PostDBusInitialize();
 
   EXPECT_FALSE(callback.is_null());
@@ -1301,6 +1310,7 @@ TEST_F(UserDataAuthTest, OwnershipCallbackRegisterRepeated) {
       .WillOnce(SaveArg<0>(&callback));
 
   userdataauth_->set_dbus(bus_);
+  userdataauth_->set_mount_thread_dbus(mount_bus_);
   userdataauth_->PostDBusInitialize();
 
   EXPECT_FALSE(callback.is_null());
@@ -3201,6 +3211,7 @@ class UserDataAuthTestTasked : public UserDataAuthTestNotInitialized {
         },
         base::Unretained(userdataauth_.get())));
     userdataauth_->set_dbus(bus_);
+    userdataauth_->set_mount_thread_dbus(mount_bus_);
     PostToOriginAndBlock(base::BindOnce(
         [](UserDataAuth* userdataauth) {
           ASSERT_TRUE(userdataauth->PostDBusInitialize());
@@ -3343,6 +3354,7 @@ class UserDataAuthTestThreaded : public UserDataAuthTestNotInitialized {
         },
         base::Unretained(userdataauth_.get())));
     userdataauth_->set_dbus(bus_);
+    userdataauth_->set_mount_thread_dbus(mount_bus_);
     PostToOriginAndBlock(base::BindOnce(
         [](UserDataAuth* userdataauth) {
           ASSERT_TRUE(userdataauth->PostDBusInitialize());
@@ -3505,6 +3517,15 @@ TEST_F(UserDataAuthTestThreaded, DetectEnterpriseOwnership) {
   EXPECT_CALL(homedirs_, set_enterprise_owned(true)).WillOnce(Return());
 
   InitializeUserDataAuth();
+}
+
+TEST_F(UserDataAuthTestThreaded, ShutdownTask) {
+  InitializeUserDataAuth();
+  EXPECT_CALL(*mount_bus_, ShutdownAndBlock()).Times(1);
+  PostToOriginAndBlock(base::BindLambdaForTesting([this]() {
+    // Destruct the |userdataauth_| object.
+    userdataauth_.reset();
+  }));
 }
 
 }  // namespace cryptohome

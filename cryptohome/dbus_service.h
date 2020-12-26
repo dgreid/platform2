@@ -28,14 +28,6 @@ class UserDataAuthDaemon : public brillo::DBusServiceDaemon {
 
  protected:
   void OnShutdown(int* exit_code) override {
-    // We need to cleanup the mount thread dbus, if any.
-    base::WaitableEvent on_cleanup_done;
-    service_->PostTaskToMountThread(
-        FROM_HERE,
-        base::Bind(&UserDataAuthDaemon::CleanupMountThreadDBus,
-                   base::Unretained(this), base::Unretained(&on_cleanup_done)));
-    on_cleanup_done.Wait();
-
     brillo::DBusServiceDaemon::OnShutdown(exit_code);
   }
 
@@ -46,14 +38,6 @@ class UserDataAuthDaemon : public brillo::DBusServiceDaemon {
     CHECK(service_->Initialize());
 
     service_->set_dbus(bus_);
-
-    service_->PostTaskToMountThread(
-        FROM_HERE,
-        base::Bind(&UserDataAuthDaemon::CreateMountThreadDBus,
-                   base::Unretained(this),
-                   sequencer->GetHandler("Failed to create dbus connection for "
-                                         "UserDataAuth's mount thread",
-                                         true)));
 
     DCHECK(!dbus_object_);
     dbus_object_ = std::make_unique<brillo::dbus_utils::DBusObject>(
@@ -95,63 +79,6 @@ class UserDataAuthDaemon : public brillo::DBusServiceDaemon {
   std::unique_ptr<UserDataAuth> service_;
 
   std::unique_ptr<brillo::dbus_utils::DBusObject> dbus_object_;
-
-  // The dbus connection whose origin thread is UserDataAuth's mount thread.
-  std::unique_ptr<brillo::DBusConnection> mount_thread_bus_connection_;
-  scoped_refptr<::dbus::Bus> mount_thread_bus_;
-
-  // This create a dbus connection whose origin thread is UserDataAuth's mount
-  // thread.
-  void CreateMountThreadDBus(
-      brillo::dbus_utils::AsyncEventSequencer::Handler on_done) {
-    // This should be run on UserDataAuth's Mount Thread.
-    service_->AssertOnMountThread();
-
-    // This shouldn't be called twice.
-    DCHECK(!mount_thread_bus_connection_);
-    DCHECK(!mount_thread_bus_);
-
-    // Setup the connection.
-    mount_thread_bus_connection_.reset(new brillo::DBusConnection);
-    mount_thread_bus_ = mount_thread_bus_connection_->Connect();
-    if (!mount_thread_bus_) {
-      // Failed to create the mount thread dbus.
-      LOG(WARNING) << "Failed to connect to dbus on UserDataAuth mount thread.";
-
-      // Run the handler back on origin thread.
-      service_->PostTaskToOriginThread(
-          FROM_HERE,
-          base::Bind(
-              [](brillo::dbus_utils::AsyncEventSequencer::Handler on_done) {
-                on_done.Run(false);
-              },
-              on_done));
-      return;
-    }
-
-    service_->set_mount_thread_dbus(mount_thread_bus_);
-
-    // Run the handler back on origin thread.
-    service_->PostTaskToOriginThread(
-        FROM_HERE,
-        base::Bind(
-            [](brillo::dbus_utils::AsyncEventSequencer::Handler on_done) {
-              on_done.Run(true);
-            },
-            on_done));
-  }
-
-  void CleanupMountThreadDBus(base::WaitableEvent* on_done) {
-    if (mount_thread_bus_) {
-      mount_thread_bus_->ShutdownAndBlock();
-      service_->set_mount_thread_dbus(nullptr);
-      mount_thread_bus_.reset();
-    }
-    if (mount_thread_bus_connection_) {
-      mount_thread_bus_connection_.reset();
-    }
-    on_done->Signal();
-  }
 };
 
 }  // namespace cryptohome
