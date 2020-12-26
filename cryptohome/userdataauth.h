@@ -411,8 +411,9 @@ class UserDataAuth {
 
   // =============== Miscellaneous ===============
 
-  // This is called by tpm_init_ when there's any update on ownership status
-  // of the TPM.
+  // This is called by OwnershipCallback when there's any update on ownership
+  // status of the TPM.
+  // Note: This can only be called on mount thread.
   void OwnershipCallback(bool status, bool took_ownership);
 
   // Set the current dbus connection, this is usually used by the dbus daemon
@@ -877,6 +878,7 @@ class UserDataAuth {
 
   // This is called whenever the OwnershipTaken signal is emitted by
   // tpm_manager. This will notify |tpm_| about the emitted signal.
+  // Note: The caller of it may neither origin thread nor mount thread.
   void OnOwnershipTakenSignal();
 
   // =============== Stateful Recovery related Helpers ===============

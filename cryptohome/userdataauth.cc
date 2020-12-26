@@ -513,7 +513,9 @@ void UserDataAuth::CreateFingerprintManager() {
 
 void UserDataAuth::OnOwnershipTakenSignal() {
   // Use the same code path as when ownership is taken through tpm_init_.
-  OwnershipCallback(true, true);
+  PostTaskToMountThread(FROM_HERE,
+                        base::BindOnce(&UserDataAuth::OwnershipCallback,
+                                       base::Unretained(this), true, true));
 }
 
 bool UserDataAuth::PostTaskToOriginThread(const base::Location& from_here,
@@ -1003,6 +1005,8 @@ void UserDataAuth::set_target_free_space(uint64_t target_free_space) {
 }
 
 void UserDataAuth::OwnershipCallback(bool status, bool took_ownership) {
+  AssertOnMountThread();
+
   // Note that this function should only be called once during the lifetime of
   // this process, extra calls will be dropped.
   if (ownership_callback_has_run_) {
@@ -1016,39 +1020,26 @@ void UserDataAuth::OwnershipCallback(bool status, bool took_ownership) {
     tpm_init_->SetTpmBeingOwned(false);
 
     // Let the |tpm_| object know as well.
-    PostTaskToOriginThread(
-        FROM_HERE, base::BindOnce(
-                       [](UserDataAuth* userdataauth) {
-                         if (userdataauth->tpm_)
-                           userdataauth->tpm_->HandleOwnershipTakenEvent();
-                       },
-                       base::Unretained(this)));
+    if (tpm_) {
+      tpm_->HandleOwnershipTakenEvent();
+    }
 
     // Reset the TPM context of all mounts, that is, force a reload of
     // cryptohome keys, and make sure it is loaded and ready for every mount.
-    PostTaskToMountThread(FROM_HERE,
-                          base::BindOnce(&UserDataAuth::ResetAllTPMContext,
-                                         base::Unretained(this)));
+    ResetAllTPMContext();
 
     // There might be some mounts that is half way through the PKCS#11
     // initialization, let's resume them.
-    PostTaskToMountThread(
-        FROM_HERE, base::BindOnce(&UserDataAuth::ResumeAllPkcs11Initialization,
-                                  base::Unretained(this)));
+    ResumeAllPkcs11Initialization();
 
     // Initialize the install-time locked attributes since we can't do it prior
     // to ownership.
-    PostTaskToMountThread(
-        FROM_HERE, base::BindOnce(&UserDataAuth::InitializeInstallAttributes,
-                                  base::Unretained(this)));
+    InitializeInstallAttributes();
 
     // If we mounted before the TPM finished initialization, we must finalize
     // the install attributes now too, otherwise it takes a full re-login cycle
     // to finalize.
-    PostTaskToMountThread(
-        FROM_HERE,
-        base::BindOnce(&UserDataAuth::FinalizeInstallAttributesIfMounted,
-                       base::Unretained(this)));
+    FinalizeInstallAttributesIfMounted();
   }
 }
 
