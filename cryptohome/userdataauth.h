@@ -540,11 +540,6 @@ class UserDataAuth {
     fingerprint_manager_ = fingerprint_manager;
   }
 
-  void set_tpm_ownership_proxy(
-      org::chromium::TpmManagerProxyInterface* tpm_ownership_proxy) {
-    tpm_ownership_proxy_ = tpm_ownership_proxy;
-  }
-
   // Override |mount_factory_| for testing purpose
   void set_mount_factory(MountFactory* mount_factory) {
     mount_factory_ = mount_factory;
@@ -987,15 +982,6 @@ class UserDataAuth {
   // The actual Fingerprint Manager object that is used by this class, but
   // can be overridden for testing.
   FingerprintManager* fingerprint_manager_;
-
-  // The default D-Bus proxy for invoking any ownership related methods in
-  // tpm_manager.
-  std::unique_ptr<org::chromium::TpmManagerProxyInterface>
-      default_tpm_ownership_proxy_;
-
-  // The actual D-Bus proxy for invoking any ownership related methods in
-  // tpm_manager, but can be overridden for testing.
-  org::chromium::TpmManagerProxyInterface* tpm_ownership_proxy_;
 
   // The default BootLockbox object for finalizing it.
   std::unique_ptr<BootLockbox> default_boot_lockbox_;

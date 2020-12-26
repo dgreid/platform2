@@ -171,8 +171,6 @@ UserDataAuth::UserDataAuth()
       firmware_management_parameters_(nullptr),
       default_fingerprint_manager_(),
       fingerprint_manager_(nullptr),
-      default_tpm_ownership_proxy_(),
-      tpm_ownership_proxy_(nullptr),
       default_boot_lockbox_(),
       boot_lockbox_(nullptr),
       upload_alerts_period_ms_(kUploadAlertsPeriodMS),
@@ -451,15 +449,6 @@ bool UserDataAuth::PostDBusInitialize() {
   AssertOnOriginThread();
   CHECK(bus_);
 
-  // Initialize the tpm_ownership_proxy_ and register the signals.
-  if (!default_tpm_ownership_proxy_) {
-    default_tpm_ownership_proxy_.reset(
-        new org::chromium::TpmManagerProxy(bus_));
-  }
-
-  if (!tpm_ownership_proxy_) {
-    tpm_ownership_proxy_ = default_tpm_ownership_proxy_.get();
-  }
   tpm_manager::TpmManagerUtility* tpm_manager_util =
       tpm_manager::TpmManagerUtility::GetSingleton();
   if (tpm_manager_util) {

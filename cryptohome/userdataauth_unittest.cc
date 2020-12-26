@@ -128,7 +128,6 @@ class UserDataAuthTestNotInitialized : public ::testing::Test {
     userdataauth_->set_disk_cleanup(&cleanup_);
     userdataauth_->set_pkcs11_init(&pkcs11_init_);
     userdataauth_->set_mount_factory(&mount_factory_);
-    userdataauth_->set_tpm_ownership_proxy(&tpm_ownership_proxy_);
     userdataauth_->set_challenge_credentials_helper(
         &challenge_credentials_helper_);
     userdataauth_->set_key_challenge_service_factory(
@@ -231,10 +230,6 @@ class UserDataAuthTestNotInitialized : public ::testing::Test {
   // Mock Fingerprint Manager object, will be passed to UserDataAuth for its
   // internal use.
   NiceMock<MockFingerprintManager> fingerprint_manager_;
-
-  // Mock tpm ownership proxy object, will be passed to UserDataAuth for its
-  // internal use.
-  NiceMock<org::chromium::TpmManagerProxyMock> tpm_ownership_proxy_;
 
   // Mock challenge credential helper utility object, will be passed to
   // UserDataAuth for its internal use.
