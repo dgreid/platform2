@@ -88,28 +88,6 @@ proto_library("ml_soda_proto") {
 }
 
 static_library("ml_common") {
-  include_dirs = [
-    "${sysroot}/usr/include/icu-chrome/common",
-    "${sysroot}/usr/include/icu-chrome/i18n",
-    "${sysroot}/usr/include/libtextclassifier",
-    "${sysroot}/usr/include/marisa-aosp",
-    "${sysroot}/usr/include/tensorflow",
-  ]
-  libs = [
-    "icui18n-chrome",
-    "icuuc-chrome",
-    "marisa-aosp",
-    "tensorflowlite",
-    "textclassifier",
-    "utf",
-  ]
-  pkg_deps = [ "protobuf" ]
-  deps = [
-    ":ml_grammar_proto",
-    ":ml_handwriting_proto",
-  ]
-  public_deps = [ ":ml_mojo_bindings_lib" ]
-  all_dependent_configs = [ ":ml_common_pkg_deps" ]
   sources = [
     "daemon.cc",
     "dlcservice_client.cc",
@@ -129,6 +107,34 @@ static_library("ml_common") {
     "text_classifier_impl.cc",
     "util.cc",
   ]
+  include_dirs = [
+    "${sysroot}/usr/include/icu-chrome/common",
+    "${sysroot}/usr/include/icu-chrome/i18n",
+    "${sysroot}/usr/include/libtextclassifier",
+    "${sysroot}/usr/include/marisa-aosp",
+    "${sysroot}/usr/include/tensorflow",
+  ]
+  libs = [
+    "icui18n-chrome",
+    "icuuc-chrome",
+    "marisa-aosp",
+    "tensorflowlite",
+    "textclassifier",
+    "utf",
+  ]
+  pkg_deps = [ "protobuf" ]
+  all_dependent_configs = [ ":ml_common_pkg_deps" ]
+  defines = [
+    "USE_ONDEVICE_GRAMMAR=${use.ondevice_grammar}",
+    "USE_ONDEVICE_HANDWRITING=${use.ondevice_handwriting}",
+    "USE_ONDEVICE_HANDWRITING_DLC=${use.ondevice_handwriting_dlc}",
+    "TC3_VOCAB_ANNOTATOR_IMPL",
+  ]
+  public_deps = [ ":ml_mojo_bindings_lib" ]
+  deps = [
+    ":ml_grammar_proto",
+    ":ml_handwriting_proto",
+  ]
   if (use.ondevice_speech) {
     sources += [
       "soda.cc",
@@ -139,12 +145,6 @@ static_library("ml_common") {
   } else {
     sources += [ "soda_recognizer_impl_fake.cc" ]
   }
-  defines = [
-    "USE_ONDEVICE_GRAMMAR=${use.ondevice_grammar}",
-    "USE_ONDEVICE_HANDWRITING=${use.ondevice_handwriting}",
-    "USE_ONDEVICE_HANDWRITING_DLC=${use.ondevice_handwriting_dlc}",
-    "TC3_VOCAB_ANNOTATOR_IMPL",
-  ]
 }
 
 proto_library("benchmark_proto") {
@@ -156,7 +156,16 @@ proto_library("benchmark_proto") {
 }
 
 shared_library("libml_for_benchmark") {
-  deps = [ ":ml_mojo_bindings_lib" ]
+  sources = [
+    "benchmark.cc",
+    "graph_executor_impl.cc",
+    "metrics.cc",
+    "model_impl.cc",
+    "model_metadata.cc",
+    "request_metrics.cc",
+    "tensor_view.cc",
+    "util.cc",
+  ]
   include_dirs = [ "${sysroot}/usr/include/tensorflow" ]
   libs = [ "tensorflowlite" ]
   pkg_deps = [
@@ -170,44 +179,27 @@ shared_library("libml_for_benchmark") {
     ":benchmark_proto",
     "//ml_benchmark:libmlbenchmark_proto",
   ]
-  sources = [
-    "benchmark.cc",
-    "graph_executor_impl.cc",
-    "metrics.cc",
-    "model_impl.cc",
-    "model_metadata.cc",
-    "request_metrics.cc",
-    "tensor_view.cc",
-    "util.cc",
-  ]
+  deps = [ ":ml_mojo_bindings_lib" ]
 }
 
 static_library("ml_cmdline_common") {
-  deps = [ ":ml_common" ]
   sources = [ "simple.cc" ]
+  deps = [ ":ml_common" ]
 }
 
 executable("ml_service") {
-  deps = [ ":ml_common" ]
   sources = [ "main.cc" ]
+  deps = [ ":ml_common" ]
 }
 
 executable("ml_cmdline") {
+  sources = [ "command_line.cc" ]
   include_dirs = [ "${sysroot}/usr/include/tensorflow" ]
   deps = [ ":ml_cmdline_common" ]
-  sources = [ "command_line.cc" ]
 }
 
 if (use.test) {
   executable("ml_service_test") {
-    configs += [ "//common-mk:test" ]
-    include_dirs = [ "${sysroot}/usr/include/tensorflow" ]
-    deps = [
-      ":ml_common",
-      ":ml_grammar_proto",
-      ":ml_handwriting_proto",
-      "//common-mk/testrunner:testrunner",
-    ]
     sources = [
       "dlcservice_client_test.cc",
       "grammar_library_test.cc",
@@ -221,44 +213,52 @@ if (use.test) {
       "testrunner.cc",
       "util_test.cc",
     ]
-    if (use.ml_benchmark_drivers) {
-      deps += [ ":libml_for_benchmark" ]
-      sources += [ "benchmark_test.cc" ]
-    }
+    configs += [ "//common-mk:test" ]
+    include_dirs = [ "${sysroot}/usr/include/tensorflow" ]
     defines = [
       "USE_ONDEVICE_GRAMMAR=${use.ondevice_grammar}",
       "USE_ONDEVICE_HANDWRITING=${use.ondevice_handwriting}",
       "USE_ONDEVICE_HANDWRITING_DLC=${use.ondevice_handwriting_dlc}",
     ]
+    deps = [
+      ":ml_common",
+      ":ml_grammar_proto",
+      ":ml_handwriting_proto",
+      "//common-mk/testrunner:testrunner",
+    ]
     if (use.ondevice_speech && !use.asan) {
-      defines += [ "USE_ONDEVICE_SPEECH" ]
       sources += [
         "soda_proto_mojom_conversion_test.cc",
         "soda_test.cc",
       ]
+      defines += [ "USE_ONDEVICE_SPEECH" ]
+    }
+    if (use.ml_benchmark_drivers) {
+      sources += [ "benchmark_test.cc" ]
+      deps += [ ":libml_for_benchmark" ]
     }
   }
   executable("ml_cmdline_test") {
-    configs += [ "//common-mk:test" ]
-    include_dirs = [ "${sysroot}/usr/include/tensorflow" ]
-    deps = [ ":ml_cmdline_common" ]
     sources = [
       "simple_test.cc",
       "testrunner.cc",
     ]
+    configs += [ "//common-mk:test" ]
+    include_dirs = [ "${sysroot}/usr/include/tensorflow" ]
+    deps = [ ":ml_cmdline_common" ]
   }
 }
 
 # Fuzzer target.
 if (use.fuzzer) {
   executable("ml_service_impl_fuzzer") {
+    sources = [ "fuzzers/ml_service_impl_fuzzer.cc" ]
     configs += [ "//common-mk/common_fuzzer:common_fuzzer" ]
     deps = [ ":ml_common" ]
-    sources = [ "fuzzers/ml_service_impl_fuzzer.cc" ]
   }
   executable("ml_service_load_flatbuffer_fuzzer") {
+    sources = [ "fuzzers/ml_service_load_flatbuffer_fuzzer.cc" ]
     configs += [ "//common-mk/common_fuzzer" ]
     deps = [ ":ml_common" ]
-    sources = [ "fuzzers/ml_service_load_flatbuffer_fuzzer.cc" ]
   }
 }
