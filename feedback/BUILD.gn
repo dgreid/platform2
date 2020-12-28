@@ -28,9 +28,6 @@ pkg_config("libfeedback_daemon_config") {
 }
 
 static_library("libfeedback_daemon") {
-  all_dependent_configs = [ ":libfeedback_daemon_config" ]
-  configs += [ ":target_defaults" ]
-  deps = [ ":feedback_proto" ]
   sources = [
     "components/feedback/feedback_report.cc",
     "components/feedback/feedback_uploader.cc",
@@ -38,13 +35,16 @@ static_library("libfeedback_daemon") {
     "feedback_uploader_http.cc",
     "feedback_util.cc",
   ]
+  all_dependent_configs = [ ":libfeedback_daemon_config" ]
+  configs += [ ":target_defaults" ]
   include_dirs = [ "." ]
+  deps = [ ":feedback_proto" ]
 }
 
 executable("feedback_daemon") {
+  sources = [ "feedback_daemon.cc" ]
   configs += [ ":target_defaults" ]
   deps = [ ":libfeedback_daemon" ]
-  sources = [ "feedback_daemon.cc" ]
 }
 
 pkg_config("libfeedback_client_config") {
@@ -52,24 +52,24 @@ pkg_config("libfeedback_client_config") {
 }
 
 static_library("libfeedback_client") {
-  all_dependent_configs = [ ":libfeedback_client_config" ]
-  configs += [ ":target_defaults" ]
-  deps = [ ":feedback_proto" ]
   sources = [
     "components/feedback/feedback_common.cc",
     "feedback_service_interface.cc",
     "feedback_util.cc",
   ]
+  all_dependent_configs = [ ":libfeedback_client_config" ]
+  configs += [ ":target_defaults" ]
   include_dirs = [ "." ]
+  deps = [ ":feedback_proto" ]
 }
 
 executable("feedback_client") {
+  sources = [ "feedback_client.cc" ]
   configs += [ ":target_defaults" ]
   deps = [
     ":libfeedback_client",
     ":libfeedback_daemon",
   ]
-  sources = [ "feedback_client.cc" ]
 }
 
 proto_library("feedback_proto") {
@@ -89,6 +89,7 @@ proto_library("feedback_proto") {
 
 if (use.test) {
   executable("feedback_daemon_test") {
+    sources = [ "feedback_service_test.cc" ]
     configs += [
       "//common-mk:test",
       ":target_defaults",
@@ -98,6 +99,5 @@ if (use.test) {
       ":libfeedback_daemon",
       "//common-mk/testrunner",
     ]
-    sources = [ "feedback_service_test.cc" ]
   }
 }

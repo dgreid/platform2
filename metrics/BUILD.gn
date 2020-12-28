@@ -47,9 +47,6 @@ shared_library("libmetrics") {
     "libchrome",
     "libsession_manager-client",
   ]
-  configs += [ "//common-mk:visibility_default" ]
-  cflags_cc = [ "-fno-exceptions" ]
-  libs = [ "policy" ]
   sources = [
     "c_metrics_library.cc",
     "cumulative_metrics.cc",
@@ -59,6 +56,9 @@ shared_library("libmetrics") {
     "serialization/serialization_utils.cc",
     "timer.cc",
   ]
+  configs += [ "//common-mk:visibility_default" ]
+  cflags_cc = [ "-fno-exceptions" ]
+  libs = [ "policy" ]
   include_dirs = [ "." ]
   if (use.metrics_uploader) {
     defines = [ "USE_METRICS_UPLOADER=1" ]
@@ -80,42 +80,51 @@ config("target_defaults") {
 }
 
 static_library("libmetrics_daemon") {
-  configs += [ ":target_defaults" ]
-  deps = [
-    ":libmetrics",
-    ":libupload_service",
-    ":metrics_proto",
-  ]
-  libs = [
-    "rootdev",
-    "system_api-power_manager-protos",
-  ]
   sources = [
     "metrics_daemon.cc",
     "metrics_daemon_main.cc",
     "process_meter.cc",
     "vmlog_writer.cc",
   ]
+  configs += [ ":target_defaults" ]
+  libs = [
+    "rootdev",
+    "system_api-power_manager-protos",
+  ]
   include_dirs = [ "." ]
+  deps = [
+    ":libmetrics",
+    ":libupload_service",
+    ":metrics_proto",
+  ]
 }
 
 executable("metrics_client") {
+  sources = [ "metrics_client.cc" ]
   configs += [ ":target_defaults" ]
   deps = [ ":libmetrics" ]
-  sources = [ "metrics_client.cc" ]
 }
 
 executable("chromeos-pgmem") {
-  configs += [ ":target_defaults" ]
-  deps = []
   sources = [
     "pgmem.cc",
     "process_meter.cc",
   ]
+  configs += [ ":target_defaults" ]
+  deps = []
 }
 
 static_library("libupload_service") {
+  sources = [
+    "uploader/metrics_hashes.cc",
+    "uploader/metrics_log.cc",
+    "uploader/metrics_log_base.cc",
+    "uploader/sender_http.cc",
+    "uploader/system_profile_cache.cc",
+    "uploader/upload_service.cc",
+  ]
   configs += [ ":target_defaults" ]
+  include_dirs = [ "." ]
   deps = [
     ":libmetrics",
     ":metrics_proto",
@@ -126,15 +135,6 @@ static_library("libupload_service") {
   } else {
     all_dependent_pkg_deps += [ "protobuf-lite" ]
   }
-  sources = [
-    "uploader/metrics_hashes.cc",
-    "uploader/metrics_log.cc",
-    "uploader/metrics_log_base.cc",
-    "uploader/sender_http.cc",
-    "uploader/system_profile_cache.cc",
-    "uploader/upload_service.cc",
-  ]
-  include_dirs = [ "." ]
 }
 
 proto_library("metrics_proto") {
@@ -157,70 +157,66 @@ if (use.passive_metrics) {
 
 if (use.test) {
   executable("persistent_integer_test") {
+    sources = [
+      "persistent_integer.cc",
+      "persistent_integer_test.cc",
+    ]
     configs += [
       "//common-mk:test",
       ":target_defaults",
     ]
     deps = [ "//common-mk/testrunner:testrunner" ]
-    sources = [
-      "persistent_integer.cc",
-      "persistent_integer_test.cc",
-    ]
   }
   executable("cumulative_metrics_test") {
-    configs += [
-      "//common-mk:test",
-      ":target_defaults",
-    ]
-    deps = [ "../common-mk/testrunner:testrunner" ]
     sources = [
       "cumulative_metrics.cc",
       "cumulative_metrics_test.cc",
       "persistent_integer.cc",
     ]
-  }
-  executable("metrics_library_test") {
-    deps = [
-      ":libmetrics",
-      "../common-mk/testrunner:testrunner",
-    ]
-    configs += [
-      "//common-mk:test",
-      ":target_defaults",
-    ]
-    sources = [
-      "metrics_library_test.cc",
-      "serialization/serialization_utils_test.cc",
-    ]
-    libs = [ "policy" ]
-  }
-  executable("process_meter_test") {
-    configs += [
-      "//common-mk:test",
-      ":target_defaults",
-    ]
-    deps = [ "//common-mk/testrunner:testrunner" ]
-    sources = [
-      "process_meter.cc",
-      "process_meter_test.cc",
-    ]
-  }
-  executable("timer_test") {
     configs += [
       "//common-mk:test",
       ":target_defaults",
     ]
     deps = [ "../common-mk/testrunner:testrunner" ]
-    sources = [
-      "timer.cc",
-      "timer_test.cc",
-    ]
   }
-  executable("upload_service_test") {
+  executable("metrics_library_test") {
+    sources = [
+      "metrics_library_test.cc",
+      "serialization/serialization_utils_test.cc",
+    ]
     configs += [
       "//common-mk:test",
       ":target_defaults",
     ]
+    libs = [ "policy" ]
+    deps = [
+      ":libmetrics",
+      "../common-mk/testrunner:testrunner",
+    ]
+  }
+  executable("process_meter_test") {
+    sources = [
+      "process_meter.cc",
+      "process_meter_test.cc",
+    ]
+    configs += [
+      "//common-mk:test",
+      ":target_defaults",
+    ]
+    deps = [ "//common-mk/testrunner:testrunner" ]
+  }
+  executable("timer_test") {
+    sources = [
+      "timer.cc",
+      "timer_test.cc",
+    ]
+    configs += [
+      "//common-mk:test",
+      ":target_defaults",
+    ]
+    deps = [ "../common-mk/testrunner:testrunner" ]
+  }
+  executable("upload_service_test") {
     sources = [
       "persistent_integer.cc",
       "uploader/metrics_hashes_test.cc",
@@ -228,44 +224,48 @@ if (use.test) {
       "uploader/mock/sender_mock.cc",
       "uploader/upload_service_test.cc",
     ]
+    configs += [
+      "//common-mk:test",
+      ":target_defaults",
+    ]
+    include_dirs = [ "." ]
     deps = [
       ":libupload_service",
       "../common-mk/testrunner:testrunner",
     ]
-    include_dirs = [ "." ]
   }
 }
 
 if (use.passive_metrics && use.test) {
   executable("metrics_daemon_test") {
-    deps = [ ":libmetrics_daemon" ]
-    configs += [
-      "//common-mk:test",
-      ":target_defaults",
-    ]
     sources = [
       "metrics_daemon_test.cc",
       "vmlog_writer_test.cc",
     ]
+    configs += [
+      "//common-mk:test",
+      ":target_defaults",
+    ]
     include_dirs = [ "." ]
+    deps = [ ":libmetrics_daemon" ]
   }
 }
 
 if (use.fuzzer) {
   executable("metrics_library_consent_id_fuzzer") {
-    deps = [ ":libmetrics" ]
+    sources = [ "metrics_library_consent_id_fuzzer.cc" ]
     configs += [
       "//common-mk/common_fuzzer:common_fuzzer",
       ":target_defaults",
     ]
-    sources = [ "metrics_library_consent_id_fuzzer.cc" ]
+    deps = [ ":libmetrics" ]
   }
   executable("metrics_serialization_utils_fuzzer") {
+    sources = [ "serialization/metrics_serialization_utils_fuzzer.cc" ]
     configs += [
       "//common-mk/common_fuzzer:common_fuzzer",
       ":target_defaults",
     ]
     deps = [ ":libmetrics" ]
-    sources = [ "serialization/metrics_serialization_utils_fuzzer.cc" ]
   }
 }
