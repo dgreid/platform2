@@ -136,21 +136,6 @@ static const ValuePair<uint8_t> lensShadingMapModeTable[] = {
     {icamera::LENS_SHADING_MAP_MODE_ON, ANDROID_STATISTICS_LENS_SHADING_MAP_MODE_ON},
 };
 
-static const ValuePair<uint8_t> edgeModesTable[] = {
-    {icamera::EDGE_MODE_OFF, ANDROID_EDGE_MODE_OFF},
-    {icamera::EDGE_MODE_FAST, ANDROID_EDGE_MODE_FAST},
-    {icamera::EDGE_MODE_HIGH_QUALITY, ANDROID_EDGE_MODE_HIGH_QUALITY},
-    {icamera::EDGE_MODE_ZERO_SHUTTER_LAGE, ANDROID_EDGE_MODE_ZERO_SHUTTER_LAG},
-};
-
-static const ValuePair<uint8_t> noiseReductionModesTable[] = {
-    {icamera::NR_MODE_OFF, ANDROID_NOISE_REDUCTION_MODE_OFF},
-    {icamera::NR_MODE_AUTO, ANDROID_NOISE_REDUCTION_MODE_MINIMAL},
-    {icamera::NR_MODE_MANUAL_NORMAL, ANDROID_NOISE_REDUCTION_MODE_ZERO_SHUTTER_LAG},
-    {icamera::NR_MODE_MANUAL_EXPERT, ANDROID_NOISE_REDUCTION_MODE_FAST},
-    {icamera::NR_MODE_HIGH_QUALITY, ANDROID_NOISE_REDUCTION_MODE_HIGH_QUALITY},
-};
-
 static const ValuePair<uint8_t> tonemapModesTable[] = {
     {icamera::TONEMAP_MODE_CONTRAST_CURVE, ANDROID_TONEMAP_MODE_CONTRAST_CURVE},
     {icamera::TONEMAP_MODE_FAST, ANDROID_TONEMAP_MODE_FAST},
@@ -484,6 +469,12 @@ int MetadataConvert::requestMetadataToHALMetadata(const android::CameraMetadata&
     LOG1("@%s: settings entry count %d", __func__, settings.entryCount());
     CheckError(parameter == nullptr, icamera::BAD_VALUE, "%s, parameter is nullptr", __func__);
 
+    uint8_t intent = ANDROID_CONTROL_CAPTURE_INTENT_PREVIEW;
+    camera_metadata_ro_entry entry = settings.find(ANDROID_CONTROL_CAPTURE_INTENT);
+    if (entry.count == 1) {
+        intent = entry.data.u8[0];
+    }
+
     // ANDROID_COLOR_CORRECTION
     convertColorCorrectionMetadata(settings, parameter);
 
@@ -492,11 +483,11 @@ int MetadataConvert::requestMetadataToHALMetadata(const android::CameraMetadata&
 
     // ANDROID_DEMOSAIC
     // ANDROID_EDGE
-    convertEdgeMetadata(settings, parameter);
+    convertEdgeMetadata(settings, parameter, intent);
 
     // ANDROID_HOT_PIXEL
     // ANDROID_NOISE_REDUCTION
-    convertNoiseReductionMetadata(settings, parameter);
+    convertNoiseReductionMetadata(settings, parameter, intent);
 
     // ANDROID_SHADING
     // ANDROID_TONEMAP
@@ -1041,33 +1032,59 @@ int MetadataConvert::convertJpegMetadata(const android::CameraMetadata& settings
 }
 
 int MetadataConvert::convertEdgeMetadata(const android::CameraMetadata& settings,
-                                         icamera::Parameters* parameter) {
-    int ret = icamera::OK;
-
+                                         icamera::Parameters* parameter, int intent) {
     camera_metadata_ro_entry entry = settings.find(ANDROID_EDGE_MODE);
-    if (entry.count == 1) {
-        int32_t mode = 0;
-        ret = getHalValue(entry.data.u8[0], edgeModesTable, ARRAY_SIZE(edgeModesTable), &mode);
-        if (ret == icamera::OK) {
-            parameter->setEdgeMode((icamera::camera_edge_mode_t)mode);
-        }
+    if (entry.count != 1) return icamera::OK;
+
+    int32_t mode = entry.data.u8[0];
+    /* When intent is still capture, the edgeMode default value should be HQ. In other case,
+       the edgeMode default value should be FAST. The default value corresponds to
+       EDGE_MODE_LEVEL_2.
+       In addition, we use the same level for OFF and ZSL.
+    */
+    icamera::camera_edge_mode_t edgeMode = icamera::EDGE_MODE_LEVEL_2;
+
+    if ((mode == ANDROID_EDGE_MODE_OFF) ||
+        (mode == ANDROID_EDGE_MODE_ZERO_SHUTTER_LAG)) {
+        edgeMode = icamera::EDGE_MODE_LEVEL_4;
+    } else if ((intent == ANDROID_CONTROL_CAPTURE_INTENT_STILL_CAPTURE) &&
+        (mode == ANDROID_EDGE_MODE_FAST)) {
+        edgeMode = icamera::EDGE_MODE_LEVEL_3;
+    } else if ((intent != ANDROID_CONTROL_CAPTURE_INTENT_STILL_CAPTURE) &&
+       (mode == ANDROID_EDGE_MODE_HIGH_QUALITY)) {
+        edgeMode = icamera::EDGE_MODE_LEVEL_1;
     }
+
+    parameter->setEdgeMode(edgeMode);
+
     return icamera::OK;
 }
 
 int MetadataConvert::convertNoiseReductionMetadata(const android::CameraMetadata& settings,
-                                                   icamera::Parameters* parameter) {
-    int ret = icamera::OK;
-    int32_t mode = 0;
-
+                                                   icamera::Parameters* parameter, int intent) {
     camera_metadata_ro_entry entry = settings.find(ANDROID_NOISE_REDUCTION_MODE);
-    if (entry.count == 1) {
-        ret = getHalValue(entry.data.u8[0], noiseReductionModesTable,
-                          ARRAY_SIZE(noiseReductionModesTable), &mode);
-        if (ret == icamera::OK) {
-            parameter->setNrMode((icamera::camera_nr_mode_t)mode);
-        }
+    if (entry.count != 1) return icamera::OK;
+
+    uint8_t mode = entry.data.u8[0];
+    /* When intent is still capture, the nrMode default value should be HQ. In other case,
+       the nrMode default value should be FAST. The default value corresponds to
+       NR_MODE_LEVEL_2.
+       In addition, we use the same level for OFF and ZSL.
+    */
+    icamera::camera_nr_mode_t nrMode = icamera::NR_MODE_LEVEL_2;
+
+    if ((mode == ANDROID_NOISE_REDUCTION_MODE_OFF) ||
+        (mode == ANDROID_NOISE_REDUCTION_MODE_ZERO_SHUTTER_LAG)) {
+        nrMode = icamera::NR_MODE_LEVEL_4;
+    } else if ((intent == ANDROID_CONTROL_CAPTURE_INTENT_STILL_CAPTURE) &&
+        (mode == ANDROID_NOISE_REDUCTION_MODE_FAST)) {
+        nrMode = icamera::NR_MODE_LEVEL_3;
+    } else if ((intent != ANDROID_CONTROL_CAPTURE_INTENT_STILL_CAPTURE) &&
+       (mode == ANDROID_NOISE_REDUCTION_MODE_HIGH_QUALITY)) {
+        nrMode = icamera::NR_MODE_LEVEL_1;
     }
+
+    parameter->setNrMode(nrMode);
 
     return icamera::OK;
 }

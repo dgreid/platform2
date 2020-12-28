@@ -38,10 +38,10 @@
 #define SOF_EVENT_MARGIN (5000000)  // 5ms
 #define SOF_EVENT_MAX_MARGIN (60000000)  // 60ms
 
-#define EXTREME_NEGATIVE_STRENGTH (-60)
-#define EXTREME_POSITIVE_STRENGTH (20)
-
-#define DEFAULT_STRENGTH 0
+#define EXTREME_STRENGTH_LEVEL4 (-120)
+#define EXTREME_STRENGTH_LEVEL3 (-60)
+#define EXTREME_STRENGTH_LEVEL2 (0)
+#define EXTREME_STRENGTH_LEVEL1 (20)
 
 using std::shared_ptr;
 using std::unique_ptr;
@@ -230,33 +230,32 @@ int PSysProcessor::setParameters(const Parameters& param)
         mIspSettings.manualSettings.manualSaturation = (char)enhancement.saturation;
         mIspSettings.eeSetting.strength = enhancement.sharpness;
     } else {
-        mIspSettings.eeSetting.strength = static_cast<char>(DEFAULT_STRENGTH);
+        mIspSettings.eeSetting.strength = static_cast<char>(EXTREME_STRENGTH_LEVEL2);
     }
 
+    mIspSettings.eeSetting.feature_level = ia_isp_feature_level_high;
     camera_edge_mode_t manualEdgeMode;
     ret = param.getEdgeMode(manualEdgeMode);
     if (ret == OK) {
         LOG2("%s: manual edge mode set: %d", __func__, manualEdgeMode);
         switch (manualEdgeMode) {
-            case EDGE_MODE_OFF:
-            case EDGE_MODE_ZERO_SHUTTER_LAGE:
-                mIspSettings.eeSetting.feature_level = ia_isp_feature_level_high;
-                mIspSettings.eeSetting.strength = static_cast<char>(EXTREME_NEGATIVE_STRENGTH);
+            case EDGE_MODE_LEVEL_4:
+                mIspSettings.eeSetting.strength = static_cast<char>(EXTREME_STRENGTH_LEVEL4);
                 break;
-            case EDGE_MODE_FAST:
-                mIspSettings.eeSetting.feature_level = ia_isp_feature_level_high;
+            case EDGE_MODE_LEVEL_3:
+                mIspSettings.eeSetting.strength = static_cast<char>(EXTREME_STRENGTH_LEVEL3);
                 break;
-            case EDGE_MODE_HIGH_QUALITY:
-                mIspSettings.eeSetting.feature_level = ia_isp_feature_level_high;
-                mIspSettings.eeSetting.strength = static_cast<char>(EXTREME_POSITIVE_STRENGTH);
+            case EDGE_MODE_LEVEL_2:
+                mIspSettings.eeSetting.strength = static_cast<char>(EXTREME_STRENGTH_LEVEL2);
+                break;
+            case EDGE_MODE_LEVEL_1:
+                mIspSettings.eeSetting.strength = static_cast<char>(EXTREME_STRENGTH_LEVEL1);
                 break;
             default:
-                mIspSettings.eeSetting.feature_level = ia_isp_feature_level_high;
+                mIspSettings.eeSetting.strength = static_cast<char>(EXTREME_STRENGTH_LEVEL2);
         }
-    } else {
-        LOG2("%s: manual edge mode not set, default enabled", __func__);
-        mIspSettings.eeSetting.feature_level = ia_isp_feature_level_high;
     }
+
     LOG2("%s: ISP EE setting, level: %d, strength: %d",
          __func__, static_cast<int>(mIspSettings.eeSetting.feature_level),
          static_cast<int>(mIspSettings.eeSetting.strength));
@@ -265,37 +264,33 @@ int PSysProcessor::setParameters(const Parameters& param)
     camera_nr_level_t manualNrLevel;
 
     int manualNrModeSet = param.getNrMode(manualNrMode);
-    int manualNrLevelSet = param.getNrLevel(manualNrLevel);
-
-    if (manualNrLevelSet == OK) {
-        mIspSettings.nrSetting.strength = static_cast<char>(manualNrLevel.overall);
-    } else {
-        mIspSettings.nrSetting.strength = static_cast<char>(DEFAULT_STRENGTH);
-    }
-
+    mIspSettings.nrSetting.feature_level = ia_isp_feature_level_high;
+    mIspSettings.nrSetting.strength = static_cast<char>(EXTREME_STRENGTH_LEVEL2);
     if (manualNrModeSet == OK) {
         LOG2("%s: manual NR mode set: %d", __func__, manualNrMode);
         switch (manualNrMode) {
-            case NR_MODE_OFF:
-            case NR_MODE_AUTO:
-            case NR_MODE_MANUAL_NORMAL:
-                mIspSettings.nrSetting.feature_level = ia_isp_feature_level_high;
-                mIspSettings.nrSetting.strength = static_cast<char>(EXTREME_NEGATIVE_STRENGTH);
+            case NR_MODE_LEVEL_4:
+                mIspSettings.nrSetting.strength = static_cast<char>(EXTREME_STRENGTH_LEVEL4);
                 break;
-            case NR_MODE_MANUAL_EXPERT:
-                mIspSettings.nrSetting.feature_level = ia_isp_feature_level_high;
+            case NR_MODE_LEVEL_3:
+                mIspSettings.nrSetting.strength = static_cast<char>(EXTREME_STRENGTH_LEVEL3);
                 break;
-            case NR_MODE_HIGH_QUALITY:
-                mIspSettings.nrSetting.feature_level = ia_isp_feature_level_high;
-                mIspSettings.nrSetting.strength = static_cast<char>(EXTREME_POSITIVE_STRENGTH);
+            case NR_MODE_LEVEL_2:
+                mIspSettings.nrSetting.strength = static_cast<char>(EXTREME_STRENGTH_LEVEL2);
+                break;
+            case NR_MODE_LEVEL_1:
+                mIspSettings.nrSetting.strength = static_cast<char>(EXTREME_STRENGTH_LEVEL1);
                 break;
             default:
-                mIspSettings.nrSetting.feature_level = ia_isp_feature_level_high;
+                mIspSettings.nrSetting.strength = static_cast<char>(EXTREME_STRENGTH_LEVEL2);
         }
-    } else {
-        LOG2("%s: manual NR mode not set, default enabled", __func__);
-        mIspSettings.nrSetting.feature_level = ia_isp_feature_level_high;
     }
+
+    int manualNrLevelSet = param.getNrLevel(manualNrLevel);
+    if (manualNrLevelSet == OK) {
+        mIspSettings.nrSetting.strength = static_cast<char>(manualNrLevel.overall);
+    }
+
     LOG2("%s: ISP NR setting, level: %d, strength: %d",
          __func__, static_cast<int>(mIspSettings.nrSetting.feature_level),
          static_cast<int>(mIspSettings.nrSetting.strength));
