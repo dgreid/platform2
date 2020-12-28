@@ -30,7 +30,7 @@ namespace debugd {
 std::string EcTypeCTool::GetInventory() {
   std::string output;
   const auto seccomp_policy_path =
-      base::FilePath(kSandboxDirPath).Append(GetEctoolPolicyFile("inventory"));
+      base::FilePath(kSandboxDirPath).Append(GetEctoolPolicyFile("typec"));
   std::vector<std::string> ectool_args = {"inventory"};
 
   brillo::ErrorPtr error;
