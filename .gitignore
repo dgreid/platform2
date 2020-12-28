@@ -17,6 +17,7 @@
 
 *.d
 !**/tmpfiles.d
+!crosh/dev.d
 *.depends
 .deps
 .libs

@@ -322,58 +322,6 @@ cmd_exit()
   exit='y'
 }
 
-USAGE_set_time='[<time string>]'
-HELP_set_time='
-  Sets the system time if the the system has been unable to get it from the
-  network.  The <time string> uses the format of the GNU coreutils date command.
-'
-cmd_set_time() (
-  local spec="$*"
-  if [ -z "${spec}" ]; then
-    echo "A date/time specification is required."
-    echo "E.g., set_time 10 February 2012 11:21am"
-    echo "(Remember to set your timezone in Settings first.)"
-    return
-  fi
-  local sec status
-  sec="$(date +%s --date="${spec}" 2>&1)"
-  status="$?"
-  if [ ${status} -ne 0 -o -z "${sec}" ]; then
-    echo "Unable to understand the specified time:"
-    echo "${sec}"
-    return
-  fi
-  local reply
-  reply="$(dbus-send --system --type=method_call --print-reply \
-    --dest=org.torproject.tlsdate /org/torproject/tlsdate \
-    org.torproject.tlsdate.SetTime "int64:$((sec))" 2>/dev/null)"
-  status="$?"
-  if [ ${status} -ne 0 ]; then
-    echo "Time not set. Unable to communicate with the time service."
-    return
-  fi
-  # Reply format: <dbus response header>\n    uint32 <code>\n
-  local code
-  code="$(echo "${reply}" | sed -n -E '$s/.*uint32 ([0-9]).*/\1/p')"
-  case "${code}" in
-  0)
-    echo "Time has been set."
-    ;;
-  1)
-    echo "Requested time was invalid (too large or too small): ${sec}"
-    ;;
-  2)
-    echo "Time not set. Network time cannot be overriden."
-    ;;
-  3)
-    echo "Time not set. There was a communication error."
-    ;;
-  *)
-    echo "An unexpected response was received: ${code}"
-    echo "Details: ${reply}"
-  esac
-)
-
 # Check if a particular Chrome feature is enabled.
 # Use the DBus method name as the parameter.
 is_chrome_feature_enabled() {
@@ -403,27 +351,6 @@ imageloader() {
     "org.chromium.ComponentUpdaterService.${method}" "$@" \
     2>&1 >/dev/null
 }
-
-HELP_vmc=''
-EXEC_vmc='/usr/bin/vmc'
-cmd_vmc() (
-  if ! is_chrome_feature_enabled "IsCrostiniEnabled"; then
-    if ! is_chrome_feature_enabled "IsPluginVmEnabled"; then
-      echo "This command is not available."
-      return 1
-    fi
-  fi
-
-  if ! is_chrome_feature_enabled "IsVmManagementCliAllowed"; then
-    echo "This command is disabled by your system administrator."
-    return 1
-  fi
-
-  vmc "$@"
-)
-help_vmc() (
-  vmc --help
-)
 
 USAGE_vsh='<vm_name> [<container_name>]'
 HELP_vsh='
@@ -1866,39 +1793,6 @@ cmd_vmstat() (
     fi
   done
   vmstat "$@"
-)
-
-EXEC_ccd_pass='/usr/sbin/gsctool'
-HELP_ccd_pass="
-  When prompted, set or clear CCD password (use the word 'clear' to clear
-  the password).
-"
-USAGE_ccd_pass=''
-cmd_ccd_pass() (
-  "${EXEC_ccd_pass}" -t -P
-)
-
-EXEC_verify_ro='/usr/share/cros/cr50-verify-ro.sh'
-HELP_verify_ro="
-  Verify AP and EC RO firmware on a Chrome OS device connected over SuzyQ
-  cable, if supported by the device.
-"
-USAGE_verify_ro=''
-cmd_verify_ro() (
-  local cr50_image="/opt/google/cr50/firmware/cr50.bin.prod"
-  local ro_db="/opt/google/cr50/ro_db"
-
-  if [ $# -ne 0 ]; then
-    help "too many arguments"
-    return 1
-  fi
-  if [ ! -f "${cr50_image}" -o ! -d "${ro_db}" ]; then
-    echo "This device can not be used for RO verification"
-    return 1
-  fi
-
-  debugd_poll UpdateAndVerifyFWOnUsb \
-    "fd:1" "string:${cr50_image}" "string:${ro_db}"
 )
 
 USAGE_evtest=''

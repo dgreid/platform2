@@ -60,30 +60,6 @@ cmd_packet_capture() (
   fi
 )
 
-USAGE_shell=''
-HELP_shell='
-  Open a command line shell.
-'
-cmd_shell() (
-  # Verify the permissions of the dev mode password db.
-  local passwd="/mnt/stateful_partition/etc/devmode.passwd"
-  if [ -e "${passwd}" ]; then
-    local perms="$(stat -c %a "${passwd}")"
-    if [ "${perms}" != "600" ]; then
-      echo "WARNING: Permission on ${passwd} is not 0600."
-      echo "WARNING: Please fix by running: sudo chmod 600 ${passwd}"
-      echo "WARNING: You might also consider changing your password."
-      sleep 3
-    fi
-  fi
-
-  local shell="/bin/sh"
-  if [ -x /bin/bash ]; then
-    shell="/bin/bash"
-  fi
-  SHELL=${shell} ${shell} -l
-)
-
 USAGE_systrace='[<start | stop | status>]'
 HELP_systrace='
   Start/stop system tracing.  Turning tracing off will generate a trace
