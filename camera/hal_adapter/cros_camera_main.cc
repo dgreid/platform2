@@ -43,39 +43,19 @@ int main(int argc, char* argv[]) {
     LOGF(WARNING) << "Failed to set process priority";
   }
 
-  pid_t pid = fork();
+  // Create the daemon instance first to properly set up MessageLoop and
+  // AtExitManager.
+  brillo::Daemon daemon;
 
-  // Start the CameraHalServerImpl on the child process.  The process
-  // will exit on error.
-  if (!pid) {
-    // Child process: Starts Chrome OS camera service provider which will host
-    // the camera HAL adapter.
-
-    // Create the daemon instance first to properly set up MessageLoop and
-    // AtExitManager.
-    brillo::Daemon daemon;
-
-    cros::CameraHalServerImpl service_provider;
-    if (!service_provider.Start()) {
-      LOGF(ERROR) << "Failed to start camera HAL v3 adapter";
-      return ECANCELED;
-    }
-
-    // The child process runs until an error happens which will terminate the
-    // process.
-    LOGF(INFO) << "Started camera HAL v3 adapter";
-    daemon.Run();
-    LOGF(ERROR) << "daemon stopped";
-    return 0;
-  } else if (pid > 0) {
-    // Parent process: Waits until child process exits and report exit status.
-
-    // Blocks until child process exits.
-    int wstatus;
-    wait(&wstatus);
-    LOGF(INFO) << "Child exited: status=" << WEXITSTATUS(wstatus);
-  } else {
-    PLOGF(ERROR) << "fork() failed";
-    return pid;
+  cros::CameraHalServerImpl service_provider;
+  if (!service_provider.Start()) {
+    LOGF(ERROR) << "Failed to start camera HAL v3 adapter";
+    return ECANCELED;
   }
+
+  // The process runs until an error happens which will terminate the process.
+  LOGF(INFO) << "Started camera HAL v3 adapter";
+  daemon.Run();
+  LOGF(ERROR) << "cros-camera daemon stopped";
+  return 0;
 }
