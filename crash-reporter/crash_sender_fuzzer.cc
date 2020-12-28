@@ -121,8 +121,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   sender.RemoveAndPickCrashFiles(test_dir, &reports_to_send);
   util::SortReports(&reports_to_send);
 
-  base::TimeDelta sleep;
-  sender.SendCrashes(reports_to_send, &sleep);
+  sender.SendCrashes(reports_to_send);
 
   return 0;
 }

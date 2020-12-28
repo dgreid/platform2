@@ -180,9 +180,7 @@ class Sender : public SenderBase {
   // - Checks if the device enters guest mode, and stops if entered.
   // - Enforces the rate limit per 24 hours.
   // - Removes crash files that are successfully uploaded.
-  // |total_sleep_time|: if nonnull, set to the total amount of time sleeping.
-  void SendCrashes(const std::vector<MetaFile>& crash_meta_files,
-                   base::TimeDelta* total_sleep_time);
+  void SendCrashes(const std::vector<MetaFile>& crash_meta_files);
 
   // Given the |details| for a crash, creates a brillo::http::FormData object
   // which will have all of the fields for submission to the crash server

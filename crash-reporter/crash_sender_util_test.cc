@@ -1609,8 +1609,8 @@ TEST_F(CrashSenderUtilTest, SendCrashes) {
       SendEnumToUMA("Platform.CrOS.CrashSenderRemoveReason",
                     Sender::kFinishedUploading, Sender::kSendReasonCount))
       .Times(0);
-  base::TimeDelta total_sleep_time;
-  sender.SendCrashes(crashes_to_send, &total_sleep_time);
+
+  sender.SendCrashes(crashes_to_send);
   testing::Mock::VerifyAndClearExpectations(raw_metrics_lib);
 
   // We shouldn't be processing any crashes still.
@@ -1622,9 +1622,6 @@ TEST_F(CrashSenderUtilTest, SendCrashes) {
   // doing uploads.
   EXPECT_FALSE(base::PathExists(paths::Get(paths::kChromeCrashLog)));
   EXPECT_EQ(1, sleep_times.size());
-  EXPECT_EQ(total_sleep_time,
-            std::accumulate(sleep_times.begin(), sleep_times.end(),
-                            base::TimeDelta()));
   sleep_times.clear();
 
   // Exit from guest mode/re-enable metrics, and send crashes again.
@@ -1640,7 +1637,7 @@ TEST_F(CrashSenderUtilTest, SendCrashes) {
               SendEnumToUMA("Platform.CrOS.CrashSenderRemoveReason",
                             Sender::kTotalRemoval, Sender::kSendReasonCount))
       .Times(2);
-  sender.SendCrashes(crashes_to_send, &total_sleep_time);
+  sender.SendCrashes(crashes_to_send);
 
   // We shouldn't be processing any crashes still.
   EXPECT_FALSE(base::PathExists(system_processing));
@@ -1657,9 +1654,6 @@ TEST_F(CrashSenderUtilTest, SendCrashes) {
   // crash rate.
   ASSERT_EQ(2, rows.size());
   EXPECT_EQ(3, sleep_times.size());
-  EXPECT_EQ(total_sleep_time,
-            std::accumulate(sleep_times.begin(), sleep_times.end(),
-                            base::TimeDelta()));
 
   // Each line of the uploads.log file is "{"upload_time":<value>,"upload_id":
   // <value>,"local_id":<value>,"capture_time":<value>,"state":<value>,"source":
@@ -1739,7 +1733,7 @@ TEST_F(CrashSenderUtilTest, SendCrashes_Fail) {
   Sender sender(std::move(metrics_lib_),
                 std::make_unique<test_util::AdvancingClock>(), options);
 
-  sender.SendCrashes(crashes_to_send, nullptr);
+  sender.SendCrashes(crashes_to_send);
 
   // We shouldn't be processing the crash still -- sending failed, but didn't
   // crash.
@@ -1795,8 +1789,7 @@ TEST_F(CrashSenderUtilDeathTest, SendCrashes_Crash) {
 
   ASSERT_TRUE(SetMockCrashSending(true));
   sender.SetCrashDuringSendForTesting(true);
-  EXPECT_DEATH(sender.SendCrashes(crashes_to_send, nullptr),
-               "crashing as requested");
+  EXPECT_DEATH(sender.SendCrashes(crashes_to_send), "crashing as requested");
 
   // We crashed, so the ".processing" file should still exist.
   EXPECT_TRUE(base::PathExists(system_processing));
