@@ -79,6 +79,14 @@ int AiqSetting::configure(const stream_config_t *streamList)
         }
     }
 
+    // Use pixel array as resolution to calculate region if it is set.
+    camera_coordinate_system_t activePixelArray = PlatformData::getActivePixelArray(mCameraId);
+    if ((activePixelArray.right > activePixelArray.left) &&
+        (activePixelArray.bottom > activePixelArray.top)) {
+        resolution.width = activePixelArray.right - activePixelArray.left;
+        resolution.height = activePixelArray.bottom - activePixelArray.top;
+    }
+
     updateFrameUsage(streamList);
 
     mAiqParam.tuningMode = TUNING_MODE_MAX;

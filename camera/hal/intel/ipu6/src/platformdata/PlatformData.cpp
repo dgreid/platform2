@@ -1240,7 +1240,10 @@ camera_coordinate_system_t PlatformData::getActivePixelArray(int cameraId)
     camera_coordinate_system_t arraySize;
     CLEAR(arraySize);
 
-    getInstance()->mStaticCfg.mCameras[cameraId].mCapability.getSensorActiveArraySize(arraySize);
+    Parameters* param = &getInstance()->mStaticCfg.mCameras[cameraId].mCapability;
+    if (param->getSensorActiveArraySize(arraySize) != OK) {
+        return { 0, 0, 0, 0 };
+    }
 
     return {arraySize.left, arraySize.top, arraySize.right, arraySize.bottom};
 }
