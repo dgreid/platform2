@@ -134,6 +134,10 @@ get_s2idle_count() {
   fi
 }
 
+get_firmware_error_counts() {
+  echo $(cbmem -1 | grep ERROR | wc -l)
+}
+
 FLAGS "$@" || exit 1
 
 # Some environment variables (USER/EUID) are not set in the factory, so use
@@ -221,6 +225,7 @@ cur_ignore_count=0
 last_ignore_count=0
 premature_wake_count=0
 late_wake_count=0
+last_firmware_errors=$(get_firmware_error_counts)
 
 while true; do
   : $(( cur += 1 ))
@@ -285,8 +290,11 @@ while true; do
   fi
 
   # Look for errors in firmware log.
-  if cbmem -1 | grep ERROR; then
+  cur_firmware_errors=$(get_firmware_error_counts)
+  number_of_new_errors=$(( ${cur_firmware_errors} - ${last_firmware_errors} ))
+  if [ ${number_of_new_errors} -gt 0 ]; then
     : $(( firmware_errors += 1 ))
+    cbmem -1 | grep ERROR | tail -n ${number_of_new_errors}
     if [ ${FLAGS_errors_fatal} -eq ${FLAGS_TRUE} -a \
          ${FLAGS_fw_errors_fatal} -eq ${FLAGS_TRUE} ]; then
       exit_loop=1
@@ -295,6 +303,7 @@ while true; do
       echo "Firmware error found (ignoring)."
     fi
   fi
+  last_firmware_errors=${cur_firmware_errors}
   # Make sure suspend succeeded
   cur_successes=$(get_success_count)
   cur_ignore_count=$(get_wakeup_source_event_count \
