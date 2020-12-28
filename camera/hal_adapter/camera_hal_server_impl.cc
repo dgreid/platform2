@@ -54,10 +54,13 @@ CameraHalServerImpl::~CameraHalServerImpl() {
   ExitOnMainThread(0);
 }
 
-bool CameraHalServerImpl::Start() {
+void CameraHalServerImpl::Start() {
   VLOGF_ENTER();
 
-  LoadCameraHal();
+  int result = LoadCameraHal();
+  if (result != 0) {
+    ExitOnMainThread(result);
+  }
 
   // We assume that |camera_hal_adapter_| will only be set once. If the
   // assumption changed, we should consider another way to provide
@@ -77,7 +80,6 @@ bool CameraHalServerImpl::Start() {
                        }
                      },
                      cros_camera_hals_)));
-  return true;
 }
 
 CameraHalServerImpl::IPCBridge::IPCBridge(
@@ -199,7 +201,7 @@ void CameraHalServerImpl::IPCBridge::OnPrivacySwitchStatusChanged(
   callbacks_->CameraPrivacySwitchStateChange(state_in_mojo);
 }
 
-void CameraHalServerImpl::LoadCameraHal() {
+int CameraHalServerImpl::LoadCameraHal() {
   VLOGF_ENTER();
   DCHECK(!camera_hal_adapter_);
   DCHECK_EQ(cros_camera_hals_.size(), 0);
@@ -220,7 +222,7 @@ void CameraHalServerImpl::LoadCameraHal() {
     void* handle = dlopen(dll.value().c_str(), RTLD_NOW | RTLD_LOCAL);
     if (!handle) {
       LOGF(INFO) << "Failed to dlopen: " << dlerror();
-      ExitOnMainThread(ENOENT);
+      return ENOENT;
     }
 
     cros_camera_hal_t* cros_camera_hal = static_cast<cros_camera_hal_t*>(
@@ -238,7 +240,7 @@ void CameraHalServerImpl::LoadCameraHal() {
     if (!module) {
       LOGF(ERROR) << "Failed to get camera_module_t pointer with symbol name "
                   << HAL_MODULE_INFO_SYM_AS_STR << " from " << dll.value();
-      ExitOnMainThread(ELIBBAD);
+      return ELIBBAD;
     }
 
     camera_modules.push_back(module);
@@ -259,8 +261,10 @@ void CameraHalServerImpl::LoadCameraHal() {
 
   if (!camera_hal_adapter_->Start()) {
     LOGF(ERROR) << "Failed to start camera HAL adapter";
-    ExitOnMainThread(ENODEV);
+    return ENODEV;
   }
+
+  return 0;
 }
 
 void CameraHalServerImpl::ExitOnMainThread(int exit_status) {

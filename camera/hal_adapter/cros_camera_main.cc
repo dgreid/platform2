@@ -48,10 +48,7 @@ int main(int argc, char* argv[]) {
   brillo::Daemon daemon;
 
   cros::CameraHalServerImpl service_provider;
-  if (!service_provider.Start()) {
-    LOGF(ERROR) << "Failed to start camera HAL v3 adapter";
-    return ECANCELED;
-  }
+  service_provider.Start();
 
   // The process runs until an error happens which will terminate the process.
   LOGF(INFO) << "Started camera HAL v3 adapter";

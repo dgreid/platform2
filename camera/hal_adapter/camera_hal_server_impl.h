@@ -39,7 +39,7 @@ class CameraHalServerImpl final {
 
   // Initializes the threads and start monitoring the unix domain socket file
   // created by Chrome.
-  bool Start();
+  void Start();
 
  private:
   using SetPrivacySwitchCallback =
@@ -105,8 +105,9 @@ class CameraHalServerImpl final {
     base::WeakPtrFactory<IPCBridge> weak_ptr_factory_{this};
   };
 
-  // Loads all the camera HAL implementations.
-  void LoadCameraHal();
+  // Loads all the camera HAL implementations.  Returns 0 on success;
+  // corresponding error code on failure.
+  int LoadCameraHal();
 
   void ExitOnMainThread(int exit_status);
 
