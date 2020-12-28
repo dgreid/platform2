@@ -262,7 +262,9 @@ bool SendSecretToBiodTmpFile(const mount_encrypted::EncryptionKey& key) {
 }
 
 static result_code mount_encrypted_partition(
-    mount_encrypted::EncryptedFs* encrypted_fs, const base::FilePath& rootdir) {
+    mount_encrypted::EncryptedFs* encrypted_fs,
+    const base::FilePath& rootdir,
+    bool safe_mount) {
   result_code rc;
 
   mount_encrypted::ScopedMountEncryptedMetricsSingleton scoped_metrics(
@@ -277,7 +279,7 @@ static result_code mount_encrypted_partition(
   mount_encrypted::Tpm tpm;
   auto loader = mount_encrypted::SystemKeyLoader::Create(&tpm, rootdir);
   mount_encrypted::EncryptionKey key(loader.get(), rootdir);
-  if (has_chromefw()) {
+  if (has_chromefw() && safe_mount) {
     if (!tpm.available()) {
       // The TPM should be available before we load the system_key.
       LOG(ERROR) << "TPM not available.";
@@ -335,6 +337,7 @@ static void print_usage(const char process_name[]) {
 }
 
 int main(int argc, const char* argv[]) {
+  DEFINE_bool(unsafe, false, "mount encrypt partition with well known secret.");
   brillo::FlagHelper::Init(argc, argv, "mount-encrypted");
 
   auto commandline = base::CommandLine::ForCurrentProcess();
@@ -363,7 +366,7 @@ int main(int argc, const char* argv[]) {
       return set_system_key(rootdir, args.size() >= 2 ? args[1].c_str() : NULL,
                             &platform);
     } else if (args[0] == "mount") {
-      return mount_encrypted_partition(&encrypted_fs, rootdir);
+      return mount_encrypted_partition(&encrypted_fs, rootdir, !FLAGS_unsafe);
     } else {
       print_usage(argv[0]);
       return RESULT_FAIL_FATAL;
@@ -371,5 +374,5 @@ int main(int argc, const char* argv[]) {
   }
 
   // default operation is mount encrypted partition.
-  return mount_encrypted_partition(&encrypted_fs, rootdir);
+  return mount_encrypted_partition(&encrypted_fs, rootdir, !FLAGS_unsafe);
 }
