@@ -48,7 +48,7 @@ bool ReadGptFromNor(string* file_name) {
     return false;
   }
   // Keep the temp file.
-  remover.release();
+  remover.Release();
   *file_name = tmp_name;
   return true;
 }

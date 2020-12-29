@@ -24,6 +24,7 @@ extern "C" {
 #include <vboot/vboot_host.h>
 }
 
+#include <base/files/file_util.h>
 #include <base/files/scoped_file.h>
 #include <base/strings/string_util.h>
 #include <brillo/process/process.h>
@@ -54,38 +55,17 @@ string MakeNandPartitionDevForMounting(int partition) {
   return "/dev/ubi" + std::to_string(partition) + "_0";
 }
 
-// Callback used by nftw().
-int RemoveFileOrDir(const char* fpath,
-                    const struct stat* /* sb */,
-                    int /* typeflag */,
-                    struct FTW* /*ftwbuf */) {
-  return remove(fpath);
-}
-
 }  // namespace
 
 ScopedPathRemover::~ScopedPathRemover() {
   if (root_.empty()) {
     return;
   }
-  struct stat stat_buf;
-  if (stat(root_.c_str(), &stat_buf) != 0) {
-    warn("Cannot stat %s", root_.c_str());
-    return;
-  }
-  if (S_ISDIR(stat_buf.st_mode)) {
-    if (nftw(root_.c_str(), RemoveFileOrDir, 20,
-             FTW_DEPTH | FTW_MOUNT | FTW_PHYS) != 0) {
-      warn("Cannot remove directory %s", root_.c_str());
-    }
-  } else {
-    if (unlink(root_.c_str()) != 0) {
-      warn("Cannot unlink %s", root_.c_str());
-    }
-  }
+  if (!base::DeletePathRecursively(base::FilePath(root_)))
+    warn("Cannot remove path %s", root_.c_str());
 }
 
-string ScopedPathRemover::release() {
+string ScopedPathRemover::Release() {
   string r = root_;
   root_.clear();
   return r;

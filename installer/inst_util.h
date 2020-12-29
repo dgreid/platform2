@@ -28,14 +28,14 @@ class ScopedPathRemover {
   explicit ScopedPathRemover(const std::string& root) : root_(root) {}
   virtual ~ScopedPathRemover();
 
+  ScopedPathRemover(const ScopedPathRemover& other) = delete;
+  void operator=(const ScopedPathRemover& other) = delete;
+
   // Return the root path and no longer remove it.
-  std::string release();
+  std::string Release();
 
  private:
   std::string root_;
-
-  ScopedPathRemover(const ScopedPathRemover& other) {}
-  void operator=(const ScopedPathRemover& other) {}
 };
 
 // Find a pointer to the first element of a statically sized array.

@@ -461,7 +461,7 @@ TEST(UtilTest, ScopedPathRemoverWithFile) {
   // Release early to prevent removal.
   {
     ScopedPathRemover remover(filename);
-    remover.release();
+    remover.Release();
   }
   EXPECT_EQ(access(filename.c_str(), F_OK), 0);
 
