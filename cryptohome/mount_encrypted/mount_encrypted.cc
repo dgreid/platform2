@@ -24,9 +24,9 @@
 #include <cryptohome/mount_encrypted/encrypted_fs.h>
 #include <cryptohome/mount_encrypted/encryption_key.h>
 #include <cryptohome/mount_encrypted/mount_encrypted.h>
+#include <cryptohome/mount_encrypted/mount_encrypted_metrics.h>
 #include <cryptohome/mount_encrypted/tpm.h>
 #include <cryptohome/platform.h>
-#include <metrics/metrics_library.h>
 #include <vboot/crossystem.h>
 #include <vboot/tlcl.h>
 
@@ -49,12 +49,6 @@ constexpr char kNvramExport[] = "/tmp/lockbox.nvram";
 constexpr char kMountEncryptedMetricsPath[] =
     "/run/mount_encrypted/metrics.mount-encrypted";
 }  // namespace
-
-namespace metrics {
-const char kSystemKeyStatus[] = "Platform.MountEncrypted.SystemKeyStatus";
-const char kEncryptionKeyStatus[] =
-    "Platform.MountEncrypted.EncryptionKeyStatus";
-}  // namespace metrics
 
 static result_code get_system_property(const char* prop,
                                        char* buf,
@@ -224,14 +218,6 @@ void nvram_export(const brillo::SecureBlob& contents) {
   close(fd);
 }
 
-template <typename Enum>
-void RecordEnumeratedHistogram(MetricsLibrary* metrics,
-                               const char* name,
-                               Enum val) {
-  metrics->SendEnumToUMA(name, static_cast<int>(val),
-                         static_cast<int>(Enum::kCount));
-}
-
 // Send a secret derived from the system key to the biometric managers, if
 // available, via a tmpfs file which will be read by bio_crypto_init.
 bool SendSecretToBiodTmpFile(const mount_encrypted::EncryptionKey& key) {
@@ -284,8 +270,8 @@ int main(int argc, char* argv[]) {
   mount_encrypted::EncryptedFs encrypted_fs(rootdir, &platform,
                                             &loopdev_manager, &device_mapper);
 
-  MetricsLibrary metrics;
-  metrics.SetOutputFile(kMountEncryptedMetricsPath);
+  mount_encrypted::ScopedMountEncryptedMetricsSingleton scoped_metrics(
+      kMountEncryptedMetricsPath);
 
   LOG(INFO) << "Starting.";
 
@@ -326,15 +312,15 @@ int main(int argc, char* argv[]) {
   } else {
     rc = key.SetInsecureFallbackSystemKey();
   }
-  RecordEnumeratedHistogram(&metrics, metrics::kSystemKeyStatus,
-                            key.system_key_status());
+  mount_encrypted::MountEncryptedMetrics::Get()->ReportSystemKeyStatus(
+      key.system_key_status());
   if (rc != RESULT_SUCCESS) {
     return rc;
   }
 
   rc = key.LoadEncryptionKey();
-  RecordEnumeratedHistogram(&metrics, metrics::kEncryptionKeyStatus,
-                            key.encryption_key_status());
+  mount_encrypted::MountEncryptedMetrics::Get()->ReportEncryptionKeyStatus(
+      key.encryption_key_status());
   if (rc != RESULT_SUCCESS) {
     return rc;
   }
