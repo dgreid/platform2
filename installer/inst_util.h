@@ -68,9 +68,6 @@ bool WriteStringToFile(const std::string& contents, const std::string& path);
 // as needed to ensure that |content| is fully written. Return false on error.
 bool WriteFullyToFileDescriptor(const std::string& content, int fd);
 
-// Copies a single file.
-bool CopyFile(const std::string& from_path, const std::string& to_path);
-
 bool LsbReleaseValue(const std::string& file,
                      const std::string& key,
                      std::string* result);

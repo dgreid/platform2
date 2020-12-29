@@ -93,48 +93,6 @@ TEST(UtilTest, WriteStringToFileTest) {
   unlink(file.c_str());
 }
 
-TEST(UtilTest, CopyFileTest) {
-  const string file1 = "/tmp/fuzzy";
-  const string file2 = "/tmp/wuzzy";
-  const string contents = "file contents";
-
-  string data_contents;
-  string read_contents;
-
-  WriteStringToFile("file contents", file1);
-  unlink(file2.c_str());
-
-  // Copy directory to file
-  EXPECT_EQ(CopyFile("/tmp", file2), false);
-
-  // Copy nonexistent file
-  EXPECT_EQ(CopyFile("/tmp/nonexistent_file", file2), false);
-
-  // Copy existent file to diretory
-  EXPECT_EQ(CopyFile(file1, "/tmp"), false);
-
-  // Copy existent to non-existent
-  EXPECT_EQ(CopyFile(file1, file2), true);
-  EXPECT_EQ(ReadFileToString(file2, &read_contents), true);
-  EXPECT_EQ(contents, read_contents);
-
-  // Copy existent to existent
-  WriteStringToFile("different file contents", file2);
-  EXPECT_EQ(CopyFile(file1, file2), true);
-  EXPECT_EQ(ReadFileToString(file2, &read_contents), true);
-  EXPECT_EQ(contents, read_contents);
-
-  // Copy larger file to existent
-  string data_file = GetSourceFile("inst_util_test.cc");
-  EXPECT_EQ(CopyFile(data_file, file2), true);
-  EXPECT_EQ(ReadFileToString(data_file, &data_contents), true);
-  EXPECT_EQ(ReadFileToString(file2, &read_contents), true);
-  EXPECT_EQ(data_contents, read_contents);
-
-  unlink(file1.c_str());
-  unlink(file2.c_str());
-}
-
 TEST(UtilTest, LsbReleaseValueTest) {
   string result_string;
   string lsb_file = GetSourceFile("lsb-release-test.txt");

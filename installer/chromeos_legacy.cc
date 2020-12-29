@@ -30,7 +30,7 @@ bool UpdateLegacyKernel(const InstallConfig& install_config) {
   const base::FilePath kernel_to =
       boot_mount.Append("syslinux").Append("vmlinuz." + install_config.slot);
 
-  return CopyFile(kernel_from.value(), kernel_to.value());
+  return base::CopyFile(kernel_from, kernel_to);
 }
 
 string ExplandVerityArguments(const string& kernel_config,
@@ -87,7 +87,7 @@ bool RunLegacyPostInstall(const InstallConfig& install_config) {
       boot_syslinux.Append(old_root_cfg_file.BaseName());
 
   // Copy over the unmodified version for this release...
-  if (!CopyFile(old_root_cfg_file.value(), new_root_cfg_file.value()))
+  if (!base::CopyFile(old_root_cfg_file, new_root_cfg_file))
     return false;
 
   // Insert the proper root device for non-verity boots
@@ -125,7 +125,7 @@ bool CopyBootFile(const InstallConfig& install_config,
   if (base::PathExists(src_path)) {
     printf("Copying '%s' to '%s'\n", src_path.value().c_str(),
            dst_path.value().c_str());
-    result = CopyFile(src_path.value(), dst_path.value());
+    result = base::CopyFile(src_path, dst_path);
   } else {
     printf("Not present to install: '%s'\n", src_path.value().c_str());
   }

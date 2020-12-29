@@ -176,46 +176,6 @@ bool WriteFullyToFileDescriptor(const string& content, int fd) {
   return true;
 }
 
-bool CopyFile(const string& from_path, const string& to_path) {
-  int fd_from = open(from_path.c_str(), O_RDONLY);
-
-  if (fd_from == -1) {
-    printf("CopyFile failed to open %s\n", from_path.c_str());
-    return false;
-  }
-
-  bool success = true;
-
-  int fd_to = open(to_path.c_str(), O_WRONLY | O_CREAT | O_TRUNC,
-                   S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
-
-  if (fd_to == -1) {
-    printf("CopyFile failed to open %s\n", to_path.c_str());
-    success = false;
-  }
-
-  ssize_t buff_in = 1;
-  char buff[512];
-
-  while (success && (buff_in > 0)) {
-    buff_in = read(fd_from, buff, sizeof(buff));
-    success = (buff_in >= 0);
-
-    if (success) {
-      ssize_t buff_out = write(fd_to, buff, buff_in);
-      success = (buff_out == buff_in);
-    }
-  }
-
-  if (close(fd_from) != 0)
-    success = false;
-
-  if (close(fd_to) != 0)
-    success = false;
-
-  return success;
-}
-
 // Look up a keyed value from a /etc/lsb-release formatted file.
 // TODO(dgarrett): If we ever call this more than once, cache
 // file contents to avoid reparsing.
