@@ -457,8 +457,8 @@ TEST_F(EncryptionKeyTest, TpmExistingSpaceValid) {
 TEST_F(EncryptionKeyTest, TpmClearNoSpaces) {
   ExpectFreshKey();
   EXPECT_EQ(EncryptionKeyStatus::kFresh, key_->encryption_key_status());
-  ExpectNeedsFinalization();
-  EXPECT_EQ(SystemKeyStatus::kFinalizationPending, key_->system_key_status());
+  ExpectFinalized(true);
+  EXPECT_EQ(SystemKeyStatus::kNVRAMEncstateful, key_->system_key_status());
 }
 
 TEST_F(EncryptionKeyTest, TpmOwnedNoSpaces) {
@@ -476,8 +476,8 @@ TEST_F(EncryptionKeyTest, TpmClearExistingLockboxV2Unowned) {
 
   ExpectFreshKey();
   EXPECT_EQ(EncryptionKeyStatus::kFresh, key_->encryption_key_status());
-  ExpectNeedsFinalization();
-  EXPECT_EQ(SystemKeyStatus::kFinalizationPending, key_->system_key_status());
+  ExpectFinalized(true);
+  EXPECT_EQ(SystemKeyStatus::kNVRAMEncstateful, key_->system_key_status());
 }
 
 TEST_F(EncryptionKeyTest, TpmOwnedExistingLockboxV2Finalize) {
@@ -523,8 +523,8 @@ TEST_F(EncryptionKeyTest, TpmClearNeedsFinalization) {
   ExpectExistingKey(kEncryptionKeyNeedsFinalization);
   EXPECT_EQ(EncryptionKeyStatus::kNeedsFinalization,
             key_->encryption_key_status());
-  ExpectNeedsFinalization();
-  EXPECT_EQ(SystemKeyStatus::kFinalizationPending, key_->system_key_status());
+  ExpectFinalized(true);
+  EXPECT_EQ(SystemKeyStatus::kNVRAMEncstateful, key_->system_key_status());
 }
 
 TEST_F(EncryptionKeyTest, TpmOwnedNeedsFinalization) {
@@ -648,8 +648,8 @@ TEST_F(EncryptionKeyTest, EncStatefulTpmClearBadPCRBinding) {
 
   ExpectFreshKey();
   EXPECT_EQ(EncryptionKeyStatus::kFresh, key_->encryption_key_status());
-  ExpectNeedsFinalization();
-  EXPECT_EQ(SystemKeyStatus::kFinalizationPending, key_->system_key_status());
+  ExpectFinalized(true);
+  EXPECT_EQ(SystemKeyStatus::kNVRAMEncstateful, key_->system_key_status());
 }
 
 TEST_F(EncryptionKeyTest, EncStatefulTpmClearBadSize) {
@@ -658,8 +658,8 @@ TEST_F(EncryptionKeyTest, EncStatefulTpmClearBadSize) {
 
   ExpectFreshKey();
   EXPECT_EQ(EncryptionKeyStatus::kFresh, key_->encryption_key_status());
-  ExpectNeedsFinalization();
-  EXPECT_EQ(SystemKeyStatus::kFinalizationPending, key_->system_key_status());
+  ExpectFinalized(true);
+  EXPECT_EQ(SystemKeyStatus::kNVRAMEncstateful, key_->system_key_status());
 }
 
 TEST_F(EncryptionKeyTest, EncStatefulTpmClearBadAttributes) {
@@ -668,8 +668,8 @@ TEST_F(EncryptionKeyTest, EncStatefulTpmClearBadAttributes) {
 
   ExpectFreshKey();
   EXPECT_EQ(EncryptionKeyStatus::kFresh, key_->encryption_key_status());
-  ExpectNeedsFinalization();
-  EXPECT_EQ(SystemKeyStatus::kFinalizationPending, key_->system_key_status());
+  ExpectFinalized(true);
+  EXPECT_EQ(SystemKeyStatus::kNVRAMEncstateful, key_->system_key_status());
 }
 
 TEST_F(EncryptionKeyTest, EncStatefulTpmClearBadContents) {
@@ -774,8 +774,8 @@ TEST_F(EncryptionKeyTest, StatefulPreservationErrorNotEligible) {
 
   ExpectFreshKey();
   EXPECT_EQ(EncryptionKeyStatus::kFresh, key_->encryption_key_status());
-  ExpectNeedsFinalization();
-  EXPECT_EQ(SystemKeyStatus::kFinalizationPending, key_->system_key_status());
+  ExpectFinalized(true);
+  EXPECT_EQ(SystemKeyStatus::kNVRAMEncstateful, key_->system_key_status());
   EXPECT_FALSE(base::PathExists(key_->preservation_request_path()));
   ExpectLockboxValid(false);
 }
@@ -789,9 +789,10 @@ TEST_F(EncryptionKeyTest, StatefulPreservationErrorUpdateLocatorFailure) {
 
   ExpectFreshKey();
   EXPECT_EQ(EncryptionKeyStatus::kFresh, key_->encryption_key_status());
-  ExpectNeedsFinalization();
-  EXPECT_EQ(SystemKeyStatus::kFinalizationPending, key_->system_key_status());
+  ExpectFinalized(true);
+  EXPECT_EQ(SystemKeyStatus::kNVRAMEncstateful, key_->system_key_status());
   EXPECT_FALSE(base::PathExists(key_->preservation_request_path()));
+  ExpectLockboxValid(false);
 }
 
 TEST_F(EncryptionKeyTest, StatefulPreservationNoPreviousKey) {
@@ -802,8 +803,8 @@ TEST_F(EncryptionKeyTest, StatefulPreservationNoPreviousKey) {
 
   ExpectFreshKey();
   EXPECT_EQ(EncryptionKeyStatus::kFresh, key_->encryption_key_status());
-  ExpectNeedsFinalization();
-  EXPECT_EQ(SystemKeyStatus::kFinalizationPending, key_->system_key_status());
+  ExpectFinalized(true);
+  EXPECT_EQ(SystemKeyStatus::kNVRAMEncstateful, key_->system_key_status());
   EXPECT_FALSE(base::PathExists(key_->preservation_request_path()));
 }
 

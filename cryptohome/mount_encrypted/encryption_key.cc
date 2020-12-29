@@ -257,9 +257,6 @@ result_code EncryptionKey::LoadChromeOSSystemKey() {
   if (system_key_.empty()) {
     LOG(INFO) << "Attempting to generate fresh NVRAM system key.";
 
-    // TODO(mnissler): Gather data on how costly it is to take TPM 1.2 ownership
-    // in practice and decide whether we can just take ownership to create the
-    // NVRAM space if it isn't valid by calling SetupTpm here.
     const auto key_material =
         cryptohome::CryptoLib::CreateSecureRandomBlob(DIGEST_LENGTH);
     result_code rc = loader_->Initialize(key_material, &system_key_);
@@ -424,8 +421,7 @@ bool EncryptionKey::RewrapPreviousEncryptionKey() {
   // encryption key has been re-wrapped). Otherwise, a crash would lead to a
   // situation where the new system key has already replaced the old one,
   // leaving us with no way to recover the preserved encryption key.
-  if (loader_->SetupTpm() != RESULT_SUCCESS ||
-      loader_->Persist() != RESULT_SUCCESS) {
+  if (loader_->Persist() != RESULT_SUCCESS) {
     return false;
   }
 

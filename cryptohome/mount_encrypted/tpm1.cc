@@ -159,6 +159,11 @@ class Tpm1SystemKeyLoader : public SystemKeyLoader {
   // Loads the key from the lockbox NVRAM space.
   result_code LoadLockboxKey(brillo::SecureBlob* key);
 
+  // Define the encstateful space if it is not defined yet, or re-define it if
+  // its attributes are bad, or the PCR binding is not correct. If necessary,
+  // takes TPM ownership, which is necessary for defining the space.
+  result_code PrepareEncStatefulSpace();
+
   enum class EncStatefulSpaceValidity {
     // The space is not defined, too short, or attributes are bad.
     kInvalid,
@@ -285,19 +290,11 @@ result_code Tpm1SystemKeyLoader::Initialize(
 result_code Tpm1SystemKeyLoader::Persist() {
   CHECK(provisional_contents_);
 
-  EncStatefulSpaceValidity space_validity = EncStatefulSpaceValidity::kInvalid;
-  result_code rc = IsEncStatefulSpaceProperlyDefined(&space_validity);
+  result_code rc = PrepareEncStatefulSpace();
   if (rc != RESULT_SUCCESS) {
+    LOG(ERROR) << "Failed to preapare encstateful space.";
     return rc;
   }
-
-  if (space_validity == EncStatefulSpaceValidity::kInvalid) {
-    return RESULT_FAIL_FATAL;
-  }
-
-  // This verbosity log is useful to tell if the space is (re-)created.
-  LOG_IF(INFO, space_validity == EncStatefulSpaceValidity::kWritable)
-      << "Writing contents to fresh cncstateful space.";
 
   NvramSpace* encstateful_space = tpm_->GetEncStatefulSpace();
   rc = encstateful_space->Write(*provisional_contents_);
@@ -331,6 +328,10 @@ void Tpm1SystemKeyLoader::Lock() {
 }
 
 result_code Tpm1SystemKeyLoader::SetupTpm() {
+  return PrepareEncStatefulSpace();
+}
+
+result_code Tpm1SystemKeyLoader::PrepareEncStatefulSpace() {
   EncStatefulSpaceValidity space_validity = EncStatefulSpaceValidity::kInvalid;
   result_code rc = IsEncStatefulSpaceProperlyDefined(&space_validity);
   if (rc != RESULT_SUCCESS) {
