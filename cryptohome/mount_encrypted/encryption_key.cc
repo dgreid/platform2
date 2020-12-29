@@ -269,14 +269,6 @@ result_code EncryptionKey::LoadChromeOSSystemKey() {
     }
 
     if (!system_key_.empty() && loader_->Persist() != RESULT_SUCCESS) {
-      if (USE_TPM2) {
-        // The system_key shouldn't fail to persist in TPM2 case, it would only
-        // happen when we had some TPM errors.
-        LOG(ERROR) << "Failed to persist the system key.";
-        // We shouldn't continue to regenerate the existing encryption key.
-        system_key_status_ = SystemKeyStatus::kUnknown;
-        return RESULT_FAIL_FATAL;
-      }
       system_key_.clear();
     }
   }

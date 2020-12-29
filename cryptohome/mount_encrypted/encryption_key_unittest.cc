@@ -347,8 +347,10 @@ TEST_F(EncryptionKeyTest, TpmClearNoSpaces) {
 TEST_F(EncryptionKeyTest, TpmOwnedNoSpaces) {
   SetOwned();
 
-  ExpectSystemKeyFailed();
-  EXPECT_EQ(SystemKeyStatus::kUnknown, key_->system_key_status());
+  ExpectFreshKey();
+  EXPECT_EQ(EncryptionKeyStatus::kFresh, key_->encryption_key_status());
+  ExpectNeedsFinalization();
+  EXPECT_EQ(SystemKeyStatus::kFinalizationPending, key_->system_key_status());
 }
 
 TEST_F(EncryptionKeyTest, TpmExistingSpaceNoKeyFile) {
@@ -381,8 +383,10 @@ TEST_F(EncryptionKeyTest, TpmExistingSpaceBadAttributes) {
              sizeof(kEncStatefulTpm2Contents));
   WriteWrappedKey(key_->key_path(), kWrappedKeyEncStatefulTpm2);
 
-  ExpectSystemKeyFailed();
-  EXPECT_EQ(SystemKeyStatus::kUnknown, key_->system_key_status());
+  ExpectFreshKey();
+  EXPECT_EQ(EncryptionKeyStatus::kFresh, key_->encryption_key_status());
+  ExpectNeedsFinalization();
+  EXPECT_EQ(SystemKeyStatus::kFinalizationPending, key_->system_key_status());
 }
 
 TEST_F(EncryptionKeyTest, TpmExistingSpaceNotYetWritten) {
