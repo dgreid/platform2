@@ -155,6 +155,14 @@ mod tests {
     }
 
     impl Storage for MockStorage {
+        fn read_raw(&mut self, id: &str) -> Result<Vec<u8>> {
+            Err(storage::Error::ReadData(None))
+        }
+
+        fn write_raw(&mut self, id: &str, data: &[u8]) -> Result<()> {
+            Err(storage::Error::WriteData(None))
+        }
+
         fn read_data<S: Storable>(&mut self, id: &str) -> Result<S> {
             match self.map.get(id) {
                 Some(val) => {

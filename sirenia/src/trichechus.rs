@@ -8,6 +8,7 @@ use std::cell::RefCell;
 use std::collections::{HashMap, VecDeque};
 use std::env;
 use std::fmt::Debug;
+use std::os::unix::io::RawFd;
 use std::path::Path;
 use std::rc::Rc;
 use std::result::Result as StdResult;
@@ -18,7 +19,11 @@ use libsirenia::linux::syslog::{Syslog, SyslogReceiverMut};
 use libsirenia::rpc::{ConnectionHandler, RpcDispatcher, TransportServer};
 use libsirenia::sandbox::{self, Sandbox};
 use libsirenia::to_sys_util;
-use libsirenia::transport::{self, Transport, TransportType, DEFAULT_CLIENT_PORT};
+use libsirenia::transport::{
+    self, create_transport_from_pipes, IPServerTransport, ServerTransport, Transport,
+    TransportType, VsockServerTransport, CROS_CONNECTION_ERR_FD, CROS_CONNECTION_R_FD,
+    CROS_CONNECTION_W_FD, DEFAULT_CLIENT_PORT, DEFAULT_CONNECTION_R_FD, DEFAULT_CONNECTION_W_FD,
+};
 use sirenia::build_info::BUILD_TIMESTAMP;
 use sirenia::cli::initialize_common_arguments;
 use sirenia::communication::{AppInfo, Trichechus, TrichechusServer};
@@ -56,12 +61,23 @@ pub enum Error {
 /// The result of an operation in this crate.
 pub type Result<T> = StdResult<T, Error>;
 
+fn get_port_from_transport(t: &TransportType) -> Result<u32> {
+    match t {
+        TransportType::IpConnection(addr) => Ok(addr.port() as u32),
+        TransportType::VsockConnection(addr) => Ok(addr.port),
+        _ => Err(Error::UnexpectedConnectionType(t.to_owned())),
+    }
+}
+
+/* Holds the trichechus-relevant information for a TEEApp. */
+struct TEEApp {
+    sandbox: Sandbox,
+    transport: Transport,
+}
+
 struct TrichechusState {
     pending_apps: HashMap<TransportType, String>,
-    // TODO figure out if we actually need to hold onto the running apps or not. We already reap the
-    // processes, but this might be useful for killing apps that get into a bad state. As is, this
-    // is never cleaned up so it has a memory leak.
-    running_apps: HashMap<TransportType, Sandbox>,
+    running_apps: HashMap<TransportType, TEEApp>,
     log_queue: VecDeque<String>,
 }
 
@@ -184,21 +200,27 @@ fn get_app_path(id: &str) -> Result<&str> {
     }
 }
 
-fn spawn_tee_app(app_id: &str, transport: Transport) -> Result<Sandbox> {
+fn spawn_tee_app(app_id: &str, transport: Transport) -> Result<TEEApp> {
     let mut sandbox = Sandbox::new(None).map_err(Error::NewSandbox)?;
+    let (trichechus_transport, tee_transport) =
+        create_transport_from_pipes().map_err(Error::NewTransport)?;
+    let keep_fds: [(RawFd, RawFd); 5] = [
+        (transport.r.as_raw_fd(), CROS_CONNECTION_R_FD),
+        (transport.w.as_raw_fd(), CROS_CONNECTION_W_FD),
+        (transport.w.as_raw_fd(), CROS_CONNECTION_ERR_FD),
+        (tee_transport.r.as_raw_fd(), DEFAULT_CONNECTION_R_FD),
+        (tee_transport.w.as_raw_fd(), DEFAULT_CONNECTION_W_FD),
+    ];
     let process_path = get_app_path(app_id)?;
 
     sandbox
-        .run(
-            Path::new(process_path),
-            &[process_path],
-            transport.r.as_raw_fd(),
-            transport.w.as_raw_fd(),
-            transport.w.as_raw_fd(),
-        )
+        .run(Path::new(process_path), &[process_path], &keep_fds)
         .map_err(Error::RunSandbox)?;
 
-    Ok(sandbox)
+    Ok(TEEApp {
+        sandbox,
+        transport: trichechus_transport,
+    })
 }
 
 // TODO: Figure out how to clean up TEEs that are no longer in use

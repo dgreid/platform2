@@ -11,6 +11,7 @@
 use std::boxed::Box;
 use std::convert::TryInto;
 use std::fmt::{self, Debug, Display};
+use std::fs::File;
 use std::io::{self, Read, Write};
 use std::iter::Iterator;
 use std::marker::Send;
@@ -19,7 +20,7 @@ use std::net::{
     ToSocketAddrs,
 };
 use std::os::raw::c_uint;
-use std::os::unix::io::{AsRawFd, IntoRawFd, RawFd};
+use std::os::unix::io::{AsRawFd, FromRawFd, IntoRawFd, RawFd};
 use std::str::FromStr;
 
 use core::mem::replace;
@@ -32,6 +33,11 @@ use sys_util::{handle_eintr, pipe};
 
 pub const DEFAULT_SERVER_PORT: u32 = 5552;
 pub const DEFAULT_CLIENT_PORT: u32 = 5553;
+pub const DEFAULT_CONNECTION_R_FD: i32 = 555;
+pub const DEFAULT_CONNECTION_W_FD: i32 = 556;
+pub const CROS_CONNECTION_R_FD: i32 = 0;
+pub const CROS_CONNECTION_W_FD: i32 = 1;
+pub const CROS_CONNECTION_ERR_FD: i32 = 2;
 
 #[derive(Debug)]
 pub enum Error {
@@ -475,6 +481,16 @@ impl PartialEq for PipeTransportState {
             PipeTransportState::UnBound => matches!(other, PipeTransportState::UnBound),
         }
     }
+}
+
+pub unsafe fn create_transport_from_default_fds() -> Result<Transport> {
+    let (r, w): (RawFd, RawFd) = (DEFAULT_CONNECTION_R_FD, DEFAULT_CONNECTION_W_FD);
+    let id = (r, w);
+    Ok(Transport {
+        r: Box::new(File::from_raw_fd(DEFAULT_CONNECTION_R_FD)),
+        w: Box::new(File::from_raw_fd(DEFAULT_CONNECTION_W_FD)),
+        id: TransportType::from(id),
+    })
 }
 
 // Returns two `Transport` structs connected to each other.

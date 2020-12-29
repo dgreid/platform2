@@ -9,9 +9,7 @@ use std::io::{Error as IoError, ErrorKind, Read, Write};
 use std::path::{Path, PathBuf};
 use std::result::Result as StdResult;
 
-use flexbuffers::{from_slice, FlexbufferSerializer};
-
-use super::{to_read_data_error, to_write_data_error, Error, Result, Storable, Storage};
+use super::{to_read_data_error, to_write_data_error, Error, Result, Storage};
 
 pub struct FileStorage {
     root: PathBuf,
@@ -51,9 +49,11 @@ impl FileStorage {
 
         Ok(first)
     }
+}
 
+impl Storage for FileStorage {
     /// Read without deserializing.
-    pub fn read_raw(&mut self, id: &str) -> Result<Vec<u8>> {
+    fn read_raw(&mut self, id: &str) -> Result<Vec<u8>> {
         let filepath = self.root.join(Self::validate_id(id)?);
 
         if !filepath.exists() {
@@ -70,24 +70,11 @@ impl FileStorage {
     }
 
     /// Write without serializing.
-    pub fn write_raw(&mut self, id: &str, data: &[u8]) -> Result<()> {
+    fn write_raw(&mut self, id: &str, data: &[u8]) -> Result<()> {
         let filepath = self.root.join(Self::validate_id(id)?);
         let mut destination = File::create(filepath).map_err(to_write_data_error)?;
 
         destination.write_all(data).map_err(to_write_data_error)
-    }
-}
-
-impl Storage for FileStorage {
-    fn read_data<S: Storable>(&mut self, id: &str) -> Result<S> {
-        let contents = self.read_raw(id)?;
-        from_slice(&contents).map_err(to_read_data_error)
-    }
-
-    fn write_data<S: Storable>(&mut self, id: &str, data: &S) -> Result<()> {
-        let mut ser = FlexbufferSerializer::new();
-        data.serialize(&mut ser).map_err(to_write_data_error)?;
-        self.write_raw(id, &ser.take_buffer())
     }
 }
 

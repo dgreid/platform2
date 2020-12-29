@@ -101,20 +101,10 @@ impl Sandbox {
 
     /// Execute `cmd` with the specified arguments `args`. The specified file
     /// descriptors are connected to stdio for the child process.
-    pub fn run(
-        &mut self,
-        cmd: &Path,
-        args: &[&str],
-        stdin: RawFd,
-        stdout: RawFd,
-        stderr: RawFd,
-    ) -> Result<pid_t> {
-        // Execute child process with stdin and stdout hooked up to communication and stderr to logging.
-        let keep_fds: [(RawFd, RawFd); 3] = [(stdin, 0), (stdout, 1), (stderr, 2)];
-
+    pub fn run(&mut self, cmd: &Path, args: &[&str], keep_fds: &[(RawFd, RawFd)]) -> Result<pid_t> {
         let pid = match self
             .0
-            .run_remap(cmd, &keep_fds, args)
+            .run_remap(cmd, keep_fds, args)
             .map_err(Error::ForkingJail)?
         {
             0 => {
@@ -142,6 +132,8 @@ mod tests {
 
     use sys_util::pipe;
 
+    use crate::transport::{CROS_CONNECTION_ERR_FD, CROS_CONNECTION_R_FD, CROS_CONNECTION_W_FD};
+
     fn do_test(mut s: Sandbox) {
         const STDOUT_TEST: &str = "stdout test";
         const STDERR_TEST: &str = "stderr test";
@@ -150,14 +142,14 @@ mod tests {
         let (mut r_stdout, w_stdout) = pipe(true).unwrap();
         let (mut r_stderr, w_stderr) = pipe(true).unwrap();
 
-        s.run(
-            Path::new("/bin/sh"),
-            &["/bin/sh"],
-            r_stdin.as_raw_fd(),
-            w_stdout.as_raw_fd(),
-            w_stderr.as_raw_fd(),
-        )
-        .unwrap();
+        let keep_fds: [(RawFd, RawFd); 3] = [
+            (r_stdin.as_raw_fd(), CROS_CONNECTION_R_FD),
+            (w_stdout.as_raw_fd(), CROS_CONNECTION_W_FD),
+            (w_stderr.as_raw_fd(), CROS_CONNECTION_ERR_FD),
+        ];
+
+        s.run(Path::new("/bin/sh"), &["/bin/sh"], &keep_fds)
+            .unwrap();
         std::mem::drop(r_stdin);
         std::mem::drop(w_stdout);
         std::mem::drop(w_stderr);

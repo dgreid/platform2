@@ -5,26 +5,53 @@
 //! Defines the messages and abstracts out communication for storage between
 //! TEE apps, Trichechus, and Dugong.
 
-use libsirenia::storage::{Error, Result, Storable, Storage};
-use libsirenia::transport::Transport;
+use std::sync::{Arc, Once};
+
+use sync::Mutex;
+
+use libsirenia::storage::{Error, Result, Storage};
+use libsirenia::transport::{create_transport_from_default_fds, Transport};
 
 pub struct TrichechusStorage {
-    // TODO: This will have to store some state to communicate with Trichechus?
-    connection: Transport,
+    transport: Arc<Mutex<Transport>>,
 }
 
 impl TrichechusStorage {
+    /*
+     * Initialize the Transport between TEE App and Trichechus.
+     *
+     * Note: This can only be called once as it will create a file from the
+     * connection file descriptor which is unsafe if done more than once. Every
+     * call made after the first will simply return the storage object.
+     */
     fn new() -> Self {
-        panic!()
+        static INIT: Once = Once::new();
+        static mut TRANSPORT: Option<Arc<Mutex<Transport>>> = None;
+        // Safe because it is protected by Once
+        INIT.call_once(|| unsafe {
+            let transport = Some(Arc::new(Mutex::new(
+                create_transport_from_default_fds().unwrap(),
+            )));
+            TRANSPORT = transport;
+        });
+
+        // Safe because TRANSPORT is only written inside the Once
+        unsafe {
+            TrichechusStorage {
+                transport: TRANSPORT.as_ref().unwrap().clone(),
+            }
+        }
     }
 }
 
 impl Storage for TrichechusStorage {
-    fn read_data<S: Storable>(&mut self, id: &str) -> Result<S> {
-        Err(Error::ReadData(None))
+    /// Read without deserializing.
+    fn read_raw(&mut self, id: &str) -> Result<Vec<u8>> {
+        Err(Error::WriteData(None))
     }
 
-    fn write_data<S: Storable>(&mut self, id: &str, data: &S) -> Result<()> {
+    /// Write without serializing.
+    fn write_raw(&mut self, id: &str, data: &[u8]) -> Result<()> {
         Err(Error::WriteData(None))
     }
 }

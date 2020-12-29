@@ -13,7 +13,7 @@ use std::error::Error as StdError;
 use std::fmt::{self, Debug};
 use std::result::Result as StdResult;
 
-use flexbuffers::FlexbufferSerializer;
+use flexbuffers::{from_slice, FlexbufferSerializer};
 use serde::de::{Deserialize, DeserializeOwned, Visitor};
 use serde::export::Formatter;
 use serde::{Deserializer, Serialize, Serializer};
@@ -50,8 +50,18 @@ pub trait Storable: Any + Clone + Serialize + DeserializeOwned {}
 impl<S: Any + Clone + Serialize + DeserializeOwned> Storable for S {}
 
 pub trait Storage {
-    fn read_data<S: Storable>(&mut self, id: &str) -> Result<S>;
-    fn write_data<S: Storable>(&mut self, id: &str, data: &S) -> Result<()>;
+    fn read_raw(&mut self, id: &str) -> Result<Vec<u8>>;
+    fn write_raw(&mut self, id: &str, data: &[u8]) -> Result<()>;
+    fn read_data<S: Storable>(&mut self, id: &str) -> Result<S> {
+        let contents = self.read_raw(id)?;
+        from_slice(&contents).map_err(to_read_data_error)
+    }
+
+    fn write_data<S: Storable>(&mut self, id: &str, data: &S) -> Result<()> {
+        let mut ser = FlexbufferSerializer::new();
+        data.serialize(&mut ser).map_err(to_write_data_error)?;
+        self.write_raw(id, &ser.take_buffer())
+    }
 }
 
 /// A flexible type that can be used in storable data structures. This should be used sparingly
