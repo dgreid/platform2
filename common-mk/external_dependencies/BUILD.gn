@@ -79,6 +79,9 @@ proto_library("policy-protos") {
     "${proto_in_dir}/chrome_device_policy.proto",
     "${proto_in_dir}/chrome_extension_policy.proto",
     "${proto_in_dir}/device_management_backend.proto",
+    "${proto_in_dir}/private_membership.proto",
+    "${proto_in_dir}/private_membership_rlwe.proto",
+    "${proto_in_dir}/serialization.proto",
   ]
   public_deps = [ ":policy_common_definitions-protos" ]
 
@@ -87,17 +90,63 @@ proto_library("policy-protos") {
   configs = [ "//common-mk:pic" ]
 }
 
-goproto_library("policy-goprotos") {
+group("policy-goprotos") {
+  # TODO(https://crbug.com/1164401) The protos compiled below are missing
+  # |option go_package| statements. We currently fix this by adding
+  # |import_mapping| to the build rules. The goproto libraries will need to be # updated once the packages are added.
+  deps = [
+    ":enterprise_management_goprotos",
+    ":private_membership_goprotos",
+    ":private_membership_rlwe_goprotos",
+    ":rlwe_goprotos",
+  ]
+}
+
+goproto_library("enterprise_management_goprotos") {
   proto_in_dir = "${sysroot}/usr/share/protofiles"
 
   # Package name needs to match with the one declared in .proto files.
   proto_out_dir = "go/src/chromiumos/policy/enterprise_management"
+  import_mapping = [
+    "private_membership_rlwe.proto=chromiumos/policy/private_membership.rlwe",
+  ]
+
   sources = [
     "${proto_in_dir}/chrome_device_policy.proto",
     "${proto_in_dir}/chrome_extension_policy.proto",
     "${proto_in_dir}/device_management_backend.proto",
     "${proto_in_dir}/policy_common_definitions.proto",
   ]
+}
+
+goproto_library("private_membership_rlwe_goprotos") {
+  proto_in_dir = "${sysroot}/usr/share/protofiles"
+
+  # Package name needs to match with the one declared in .proto files.
+  proto_out_dir = "go/src/chromiumos/policy/private_membership.rlwe"
+
+  import_mapping = [
+    "private_membership.proto=chromiumos/policy/private_membership",
+    "serialization.proto=chromiumos/policy/rlwe",
+  ]
+
+  sources = [ "${proto_in_dir}/private_membership_rlwe.proto" ]
+}
+
+goproto_library("private_membership_goprotos") {
+  proto_in_dir = "${sysroot}/usr/share/protofiles"
+
+  # Package name needs to match with the one declared in .proto files.
+  proto_out_dir = "go/src/chromiumos/policy/private_membership"
+  sources = [ "${proto_in_dir}/private_membership.proto" ]
+}
+
+goproto_library("rlwe_goprotos") {
+  proto_in_dir = "${sysroot}/usr/share/protofiles"
+
+  # Package name needs to match with the one declared in .proto files.
+  proto_out_dir = "go/src/chromiumos/policy/rlwe"
+  sources = [ "${proto_in_dir}/serialization.proto" ]
 }
 
 proto_library("user_policy-protos") {
