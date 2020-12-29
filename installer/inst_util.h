@@ -92,9 +92,6 @@ int GetPartitionFromPartitionDev(const std::string& partition_dev);
 //   * Stateful and OEM partitions ubiX_0
 std::string MakePartitionDev(const std::string& partition_dev, int partition);
 
-// Convert /blah/file to /blah
-std::string Dirname(const std::string& filename);
-
 // rm *pack from /dirname
 bool RemovePackFiles(const std::string& dirname);
 

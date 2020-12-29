@@ -209,14 +209,6 @@ TEST(UtilTest, MakePartitionDevTest) {
   EXPECT_EQ(MakePartitionDev("/dev/nvme0n1", 12), "/dev/nvme0n1p12");
 }
 
-TEST(UtilTest, DirnameTest) {
-  EXPECT_EQ(Dirname("/mnt/dir/postinst"), "/mnt/dir");
-  EXPECT_EQ(Dirname("/mnt/dir/"), "/mnt/dir");
-  EXPECT_EQ(Dirname("file"), "");
-  EXPECT_EQ(Dirname("/"), "");
-  EXPECT_EQ(Dirname(""), "");
-}
-
 TEST(UtilTest, RemovePackFileTest) {
   // Setup
   EXPECT_EQ(RunCommand({"rm", "-rf", "/tmp/PackFileTest"}), 0);

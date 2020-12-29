@@ -322,16 +322,6 @@ string MakePartitionDev(const string& block_dev, int partition) {
   return block_dev + std::to_string(partition);
 }
 
-// Convert /blah/file to /blah
-string Dirname(const string& filename) {
-  size_t last_slash = filename.rfind('/');
-
-  if (last_slash == string::npos)
-    return "";
-
-  return filename.substr(0, last_slash);
-}
-
 // rm *pack from /dirname
 bool RemovePackFiles(const string& dirname) {
   DIR* dp;
