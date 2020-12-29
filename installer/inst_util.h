@@ -8,6 +8,8 @@
 #include <string>
 #include <vector>
 
+#include <base/files/file_path.h>
+
 enum partition_nums_t {
   PART_NUM_KERN_A = 2,
   PART_NUM_ROOT_A = 3,
@@ -60,10 +62,6 @@ void LoggingTimerFinish();
 // been rewritten as library calls this command should be deleted.
 int RunCommand(const std::vector<std::string>& cmdline);
 
-bool ReadFileToString(const std::string& path, std::string* contents);
-
-bool WriteStringToFile(const std::string& contents, const std::string& path);
-
 // Write |content| to |fd| fully. This function will call write() as many times
 // as needed to ensure that |content| is fully written. Return false on error.
 bool WriteFullyToFileDescriptor(const std::string& content, int fd);
@@ -98,7 +96,7 @@ bool Touch(const std::string& filename);
 // Replace the first instance of pattern in the file with value.
 bool ReplaceInFile(const std::string& pattern,
                    const std::string& value,
-                   const std::string& path);
+                   const base::FilePath& path);
 
 // Replace all instances of pattern in target with value
 void ReplaceAll(std::string* target,

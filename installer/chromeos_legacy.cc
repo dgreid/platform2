@@ -76,7 +76,7 @@ bool RunLegacyPostInstall(const InstallConfig& install_config) {
       "DEFAULT %s.%s\n", verity_enabled.c_str(), install_config.slot.c_str());
 
   const base::FilePath syslinux_cfg = boot_syslinux.Append("default.cfg");
-  if (!WriteStringToFile(default_syslinux_cfg, syslinux_cfg.value()))
+  if (!base::WriteFile(syslinux_cfg, default_syslinux_cfg))
     return false;
 
   // Prepare the new root.A/B.cfg
@@ -92,7 +92,7 @@ bool RunLegacyPostInstall(const InstallConfig& install_config) {
 
   // Insert the proper root device for non-verity boots
   if (!ReplaceInFile("HDROOT" + install_config.slot,
-                     install_config.root.device(), new_root_cfg_file.value()))
+                     install_config.root.device(), new_root_cfg_file))
     return false;
 
   string kernel_config_dm =
@@ -105,7 +105,7 @@ bool RunLegacyPostInstall(const InstallConfig& install_config) {
 
   // Insert the proper verity options for verity boots
   if (!ReplaceInFile("DMTABLE" + install_config.slot, kernel_config_dm,
-                     new_root_cfg_file.value()))
+                     new_root_cfg_file))
     return false;
 
   return true;
@@ -178,12 +178,13 @@ bool RunEfiPostInstall(const InstallConfig& install_config) {
   string root_uuid = install_config.root.uuid();
   string kernel_config_dm = ExplandVerityArguments(kernel_config, root_uuid);
 
-  string grub_filename = install_config.boot.mount() + "/efi/boot/grub.cfg";
+  base::FilePath grub_path =
+      base::FilePath(install_config.boot.mount()).Append("efi/boot/grub.cfg");
 
   // Read in the grub.cfg to be updated.
   string grub_src;
-  if (!ReadFileToString(grub_filename, &grub_src)) {
-    printf("Unable to read grub template file %s\n", grub_filename.c_str());
+  if (!base::ReadFileToString(grub_path, &grub_src)) {
+    printf("Unable to read grub template file %s\n", grub_path.value().c_str());
     return false;
   }
 
@@ -194,8 +195,8 @@ bool RunEfiPostInstall(const InstallConfig& install_config) {
   }
 
   // Write out the new grub.cfg.
-  if (!WriteStringToFile(output, grub_filename)) {
-    printf("Unable to write boot menu file %s\n", grub_filename.c_str());
+  if (!base::WriteFile(grub_path, output)) {
+    printf("Unable to write boot menu file %s\n", grub_path.value().c_str());
     return false;
   }
 

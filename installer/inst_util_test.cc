@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#include <base/files/file_util.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -34,63 +35,6 @@ TEST(UtilTest, RunCommandTest) {
   EXPECT_EQ(RunCommand({"/bin/bash", "-c", "exit 2"}), 2);
   EXPECT_EQ(RunCommand({"/bin/echo", "RunCommand*Test"}), 0);
   EXPECT_EQ(RunCommand({"kill", "-INT", "$$"}), 1);
-}
-
-TEST(UtilTest, ReadFileToStringTest) {
-  string result;
-
-  // This constant should match the contents of lsb-release-test.txt exactly.
-  const char* LSB_CONTENTS =
-      "CHROMEOS_RELEASE_BOARD=x86-mario\n"
-      "CHROMEOS_RELEASE=1568.0.2012_01_19_1424\n"
-      "CHROMEOS_AUSERVER=http://blah.blah:8080/update\n";
-
-  // Non-existent file
-  EXPECT_EQ(ReadFileToString("/foo", &result), false);
-
-  // A directory, not file
-  EXPECT_EQ(ReadFileToString("/tmp", &result), false);
-
-  // A file with known contents
-  EXPECT_EQ(ReadFileToString(GetSourceFile("lsb-release-test.txt"), &result),
-            true);
-  EXPECT_EQ(result, LSB_CONTENTS);
-
-  // A larger file, but without known contents
-  EXPECT_EQ(ReadFileToString(GetSourceFile("inst_util_test.cc"), &result),
-            true);
-}
-
-TEST(UtilTest, WriteStringToFileTest) {
-  const string file = "/tmp/fuzzy";
-  string read_contents;
-
-  // rm it, if it exists, ignore error if it doesn't
-  unlink(file.c_str());
-
-  // Attempt to write to a directory, not file
-  EXPECT_EQ(WriteStringToFile("fuzzy", "/tmp"), false);
-
-  // Attempt to create file in non-existant directory
-  EXPECT_EQ(WriteStringToFile("fuzzy", "/fuzzy/wuzzy"), false);
-
-  // Attempt to create file in /tmp
-  EXPECT_EQ(WriteStringToFile("fuzzy", file), true);
-  EXPECT_EQ(ReadFileToString(file, &read_contents), true);
-  EXPECT_EQ("fuzzy", read_contents);
-
-  // Attempt to overwrite a file in /tmp
-  EXPECT_EQ(WriteStringToFile("foobar", file), true);
-  EXPECT_EQ(ReadFileToString(file, &read_contents), true);
-  EXPECT_EQ("foobar", read_contents);
-
-  // Attempt to (over)write with string containing quotes.
-  EXPECT_EQ(WriteStringToFile("\"fuzzy\"", file), true);
-  EXPECT_EQ(ReadFileToString(file, &read_contents), true);
-  EXPECT_EQ("\"fuzzy\"", read_contents);
-
-  // Cleanup
-  unlink(file.c_str());
 }
 
 TEST(UtilTest, LsbReleaseValueTest) {
@@ -213,47 +157,47 @@ TEST(UtilTest, TouchTest) {
 }
 
 TEST(UtilTest, ReplaceInFileTest) {
-  const string file = "/tmp/fuzzy";
+  const base::FilePath file("/tmp/fuzzy");
   const string start = "Fuzzy Wuzzy was a lamb";
   string finish;
 
   // File doesn't exist
-  EXPECT_EQ(ReplaceInFile("was", "wuz", "/fuzzy/wuzzy"), false);
+  EXPECT_EQ(ReplaceInFile("was", "wuz", base::FilePath("/fuzzy/wuzzy")), false);
 
   // Change middle, same length
-  EXPECT_EQ(WriteStringToFile(start, file), true);
+  EXPECT_EQ(base::WriteFile(file, start), true);
   EXPECT_EQ(ReplaceInFile("was", "wuz", file), true);
-  EXPECT_EQ(ReadFileToString(file, &finish), true);
+  EXPECT_EQ(base::ReadFileToString(file, &finish), true);
   EXPECT_EQ(finish, "Fuzzy Wuzzy wuz a lamb");
 
   // Change middle, longer
-  EXPECT_EQ(WriteStringToFile(start, file), true);
+  EXPECT_EQ(base::WriteFile(file, start), true);
   EXPECT_EQ(ReplaceInFile("was", "wasn't", file), true);
-  EXPECT_EQ(ReadFileToString(file, &finish), true);
+  EXPECT_EQ(base::ReadFileToString(file, &finish), true);
   EXPECT_EQ(finish, "Fuzzy Wuzzy wasn't a lamb");
 
   // Change middle, longer, could match again
-  EXPECT_EQ(WriteStringToFile(start, file), true);
+  EXPECT_EQ(base::WriteFile(file, start), true);
   EXPECT_EQ(ReplaceInFile("was", "was was", file), true);
-  EXPECT_EQ(ReadFileToString(file, &finish), true);
+  EXPECT_EQ(base::ReadFileToString(file, &finish), true);
   EXPECT_EQ(finish, "Fuzzy Wuzzy was was a lamb");
 
   // Change middle, shorter
-  EXPECT_EQ(WriteStringToFile(start, file), true);
+  EXPECT_EQ(base::WriteFile(file, start), true);
   EXPECT_EQ(ReplaceInFile("Wuzzy", "Wuz", file), true);
   EXPECT_EQ(ReadFileToString(file, &finish), true);
   EXPECT_EQ(finish, "Fuzzy Wuz was a lamb");
 
   // Change beginning, longer
-  EXPECT_EQ(WriteStringToFile(start, file), true);
+  EXPECT_EQ(base::WriteFile(file, start), true);
   EXPECT_EQ(ReplaceInFile("Fuzzy", "AFuzzy", file), true);
-  EXPECT_EQ(ReadFileToString(file, &finish), true);
+  EXPECT_EQ(base::ReadFileToString(file, &finish), true);
   EXPECT_EQ(finish, "AFuzzy Wuzzy was a lamb");
 
   // Change end, shorter
-  EXPECT_EQ(WriteStringToFile(start, file), true);
+  EXPECT_EQ(base::WriteFile(file, start), true);
   EXPECT_EQ(ReplaceInFile("lamb", "la", file), true);
-  EXPECT_EQ(ReadFileToString(file, &finish), true);
+  EXPECT_EQ(base::ReadFileToString(file, &finish), true);
   EXPECT_EQ(finish, "Fuzzy Wuzzy was a la");
 }
 
@@ -352,7 +296,7 @@ TEST(UtilTest, ReplaceAllTest) {
 
 TEST(UtilTest, ScopedPathRemoverWithFile) {
   const string filename = tmpnam(NULL);
-  EXPECT_EQ(WriteStringToFile("abc", filename), true);
+  EXPECT_EQ(base::WriteFile(base::FilePath(filename), "abc"), true);
   ASSERT_EQ(access(filename.c_str(), F_OK), 0);
 
   // Release early to prevent removal.
@@ -372,7 +316,7 @@ TEST(UtilTest, ScopedPathRemoverWithDirectory) {
   const string filename = dirname + "/abc";
   ASSERT_EQ(mkdir(dirname.c_str(), 0700), 0);
   ASSERT_EQ(access(dirname.c_str(), F_OK), 0);
-  EXPECT_EQ(WriteStringToFile("abc", filename), true);
+  EXPECT_EQ(base::WriteFile(base::FilePath(filename), "abc"), true);
   ASSERT_EQ(access(filename.c_str(), F_OK), 0);
   { ScopedPathRemover remover(dirname); }
   EXPECT_EQ(access(filename.c_str(), F_OK), -1);

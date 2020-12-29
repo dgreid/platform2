@@ -73,7 +73,8 @@ bool ConfigureInstall(const string& install_dev,
 bool DetectBiosType(BiosType* bios_type) {
   // Look up the current kernel command line
   string kernel_cmd_line;
-  if (!ReadFileToString("/proc/cmdline", &kernel_cmd_line)) {
+  if (!base::ReadFileToString(base::FilePath("/proc/cmdline"),
+                              &kernel_cmd_line)) {
     printf("Can't read kernel commandline options\n");
     return false;
   }
@@ -475,8 +476,9 @@ bool RunPostInstall(const string& install_dev,
 
   string lsb_contents;
   // If we can read the lsb-release we are updating TO, log it
-  if (ReadFileToString(install_config.root.mount() + "/etc/lsb-release",
-                       &lsb_contents)) {
+  if (base::ReadFileToString(
+          base::FilePath(install_config.root.mount()).Append("etc/lsb-release"),
+          &lsb_contents)) {
     printf("\nlsb-release inside the new rootfs:\n%s\n", lsb_contents.c_str());
   }
 

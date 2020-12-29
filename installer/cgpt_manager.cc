@@ -17,6 +17,7 @@
 #include <string>
 #include <vector>
 
+#include <base/files/file_util.h>
 #include <base/files/scoped_file.h>
 #include <base/strings/stringprintf.h>
 
@@ -89,7 +90,7 @@ bool WriteToNor(const string& data, const string& region) {
 // from one failure.
 int WriteGptToNor(const string& file_name) {
   string gpt_data;
-  if (!ReadFileToString(file_name, &gpt_data)) {
+  if (!base::ReadFileToString(base::FilePath(file_name), &gpt_data)) {
     warnx("Cannot read from %s.\n", file_name.c_str());
     return -1;
   }
@@ -136,11 +137,12 @@ bool IsMtd(const string& block_dev, bool* is_mtd) {
 
 // Return the size of MTD device |block_dev| in |ret|.
 bool GetMtdSize(const string& block_dev, uint64_t* ret) {
-  string size_file =
-      base::StringPrintf("/sys/class/mtd/%s/size", basename(block_dev.c_str()));
+  base::FilePath size_file = base::FilePath("/sys/class/mtd/")
+                                 .Append(basename(block_dev.c_str()))
+                                 .Append("size");
   string size_string;
-  if (!ReadFileToString(size_file, &size_string)) {
-    warnx("Cannot read MTD size from %s.\n", size_file.c_str());
+  if (!base::ReadFileToString(size_file, &size_string)) {
+    warnx("Cannot read MTD size from %s.\n", size_file.value().c_str());
     return false;
   }
 

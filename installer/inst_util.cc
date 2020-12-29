@@ -113,54 +113,6 @@ int RunCommand(const vector<string>& cmdline) {
   return exit_code;
 }
 
-// Open a file and read it's contents into a string.
-// return "" on error.
-bool ReadFileToString(const string& path, string* contents) {
-  string result;
-
-  int fd = open(path.c_str(), O_RDONLY);
-
-  if (fd == -1) {
-    printf("ReadFileToString failed to open %s\n", path.c_str());
-    return false;
-  }
-
-  ssize_t buff_in;
-  char buff[512];
-
-  while ((buff_in = read(fd, buff, sizeof(buff))) > 0)
-    result.append(buff, buff_in);
-
-  if (close(fd) != 0)
-    return false;
-
-  // If our last read failed, return an empty string, not a partial result.
-  if (buff_in < 0)
-    return false;
-
-  *contents = result;
-  return true;
-}
-
-// Open a file and write the contents of an ASCII string into it.
-// return "" on error.
-bool WriteStringToFile(const string& contents, const string& path) {
-  int fd = open(path.c_str(), O_WRONLY | O_CREAT | O_TRUNC,
-                S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
-
-  if (fd == -1) {
-    printf("WriteFileToString failed to open %s\n", path.c_str());
-    return false;
-  }
-
-  bool success = WriteFullyToFileDescriptor(contents, fd);
-
-  if (close(fd) != 0)
-    return false;
-
-  return success;
-}
-
 bool WriteFullyToFileDescriptor(const string& content, int fd) {
   const char* buf = content.data();
   size_t nr_written = 0;
@@ -183,7 +135,7 @@ bool LsbReleaseValue(const string& file, const string& key, string* result) {
   string preamble = key + "=";
 
   string file_contents;
-  if (!ReadFileToString(file, &file_contents))
+  if (!base::ReadFileToString(base::FilePath(file), &file_contents))
     return false;
 
   vector<string> file_lines = base::SplitString(
@@ -327,10 +279,9 @@ bool Touch(const string& filename) {
 // Replace the first instance of pattern in the file with value.
 bool ReplaceInFile(const string& pattern,
                    const string& value,
-                   const string& path) {
+                   const base::FilePath& path) {
   string contents;
-
-  if (!ReadFileToString(path, &contents))
+  if (!base::ReadFileToString(path, &contents))
     return false;
 
   // Modify contents
@@ -338,13 +289,13 @@ bool ReplaceInFile(const string& pattern,
 
   if (offset == string::npos) {
     printf("ReplaceInFile failed to find '%s' in %s\n", pattern.c_str(),
-           path.c_str());
+           path.value().c_str());
     return false;
   }
 
   contents.replace(offset, pattern.length(), value);
 
-  if (!WriteStringToFile(contents, path))
+  if (!base::WriteFile(path, contents))
     return false;
 
   return true;
