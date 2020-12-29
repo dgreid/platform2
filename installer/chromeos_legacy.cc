@@ -14,6 +14,7 @@
 #include <base/files/file_path.h>
 #include <base/files/file_util.h>
 #include <base/strings/stringprintf.h>
+#include <base/strings/string_split.h>
 #include <base/strings/string_util.h>
 
 #include "installer/inst_util.h"
@@ -208,8 +209,8 @@ bool EfiGrubUpdate(const string& input,
                    const string& verity_args,
                    string* output) {
   // Split the file contents into lines.
-  vector<string> file_lines;
-  SplitString(input, '\n', &file_lines);
+  vector<string> file_lines = base::SplitString(
+      input, "\n", base::KEEP_WHITESPACE, base::SPLIT_WANT_ALL);
 
   // Search pattern for lines are related to our slot.
   string kernel_pattern = "/syslinux/vmlinuz." + slot;
@@ -234,7 +235,7 @@ bool EfiGrubUpdate(const string& input,
   }
 
   // Join the lines back into file contents.
-  JoinStrings(file_lines, "\n", output);
+  *output = base::JoinString(file_lines, "\n");
 
   // Other EFI post-install actions, if any, go here.
   return true;

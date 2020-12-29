@@ -26,6 +26,7 @@ extern "C" {
 
 #include <base/files/file_util.h>
 #include <base/files/scoped_file.h>
+#include <base/strings/string_split.h>
 #include <base/strings/string_util.h>
 #include <brillo/process/process.h>
 
@@ -80,39 +81,6 @@ void LoggingTimerStart() {
 void LoggingTimerFinish() {
   time_t finish_time = time(NULL);
   printf("Finished after %.f seconds.\n", difftime(finish_time, START_TIME));
-}
-
-void SplitString(const string& str, char split, vector<string>* output) {
-  output->clear();
-
-  size_t i = 0;
-  while (true) {
-    size_t split_at = str.find(split, i);
-    if (split_at == str.npos)
-      break;
-    output->push_back(str.substr(i, split_at - i));
-    i = split_at + 1;
-  }
-
-  output->push_back(str.substr(i));
-}
-
-void JoinStrings(const vector<string>& strs,
-                 const string& split,
-                 string* output) {
-  output->clear();
-
-  bool first_line = true;
-
-  for (vector<string>::const_iterator line = strs.begin(); line != strs.end();
-       line++) {
-    if (first_line)
-      first_line = false;
-    else
-      output->append(split);
-
-    output->append(*line);
-  }
 }
 
 // This is a place holder to invoke the backing scripts. Once all scripts have
@@ -258,8 +226,8 @@ bool LsbReleaseValue(const string& file, const string& key, string* result) {
   if (!ReadFileToString(file, &file_contents))
     return false;
 
-  vector<string> file_lines;
-  SplitString(file_contents, '\n', &file_lines);
+  vector<string> file_lines = base::SplitString(
+      file_contents, "\n", base::TRIM_WHITESPACE, base::SPLIT_WANT_ALL);
 
   vector<string>::iterator line;
   for (line = file_lines.begin(); line < file_lines.end(); line++) {

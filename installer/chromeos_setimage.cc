@@ -10,6 +10,9 @@
 
 #include <vector>
 
+#include <base/strings/string_split.h>
+#include <base/strings/string_util.h>
+
 #include "installer/chromeos_install_config.h"
 #include "installer/chromeos_verity.h"
 #include "installer/inst_util.h"
@@ -73,8 +76,8 @@ bool SetImage(const InstallConfig& install_config) {
 
   string kernel_config_root = ExtractKernelArg(kernel_config, "root");
   string dm_config = ExtractKernelArg(kernel_config, "dm");
-  std::vector<string> dm_parts;
-  SplitString(dm_config, ',', &dm_parts);
+  std::vector<string> dm_parts = base::SplitString(
+      dm_config, ",", base::KEEP_WHITESPACE, base::SPLIT_WANT_ALL);
 
   // Extract verity specific options
   string verity_args;

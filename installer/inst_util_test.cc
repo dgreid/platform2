@@ -25,59 +25,6 @@ const string GetSourceFile(const string& file) {
   return srcdir ? string(srcdir) + "/" + file : file;
 }
 
-TEST(UtilTest, SplitStringTest) {
-  vector<string> result;
-
-  SplitString("My Stuff", ',', &result);
-  ASSERT_THAT(result, testing::ElementsAre("My Stuff"));
-
-  SplitString("My,Stuff,Is", ',', &result);
-  ASSERT_THAT(result, testing::ElementsAre("My", "Stuff", "Is"));
-
-  SplitString(",My,Stuff", ',', &result);
-  ASSERT_THAT(result, testing::ElementsAre("", "My", "Stuff"));
-
-  SplitString("My,Stuff,", ',', &result);
-  ASSERT_THAT(result, testing::ElementsAre("My", "Stuff", ""));
-}
-
-TEST(UtilTest, JoinStringsTest) {
-  string result;
-
-  vector<string> empty;
-  JoinStrings(empty, " ", &result);
-  EXPECT_EQ(result, "");
-
-  vector<string> one;
-  one.push_back("One");
-  JoinStrings(one, " ", &result);
-  EXPECT_EQ(result, "One");
-
-  vector<string> three;
-  three.push_back("One");
-  three.push_back("Two");
-  three.push_back("Three");
-
-  JoinStrings(three, " ", &result);
-  EXPECT_EQ(result, "One Two Three");
-
-  JoinStrings(three, ", ", &result);
-  EXPECT_EQ(result, "One, Two, Three");
-
-  string initial;
-  vector<string> intermediate;
-
-  initial = "One Two Three";
-  SplitString(initial, ' ', &intermediate);
-  JoinStrings(intermediate, " ", &result);
-  EXPECT_EQ(initial, result);
-
-  initial = "One Two Three ";
-  SplitString(initial, ' ', &intermediate);
-  JoinStrings(intermediate, " ", &result);
-  EXPECT_EQ(initial, result);
-}
-
 TEST(UtilTest, RunCommandTest) {
   // Note that RunCommand returns the raw system() result, including signal
   // values. WEXITSTATUS would be needed to check clean result codes.
