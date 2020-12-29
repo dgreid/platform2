@@ -103,7 +103,10 @@ result_code NvramSpace::Read(uint32_t size) {
       bytes_anded &= byte;
     }
     if (bytes_ored == 0x0 || bytes_anded == 0xff) {
-      status_ = Status::kAbsent;
+      // Still records the contents so the caller can judge if the size is
+      // good  before writing.
+      contents_.swap(buffer);
+      status_ = Status::kWritable;
       LOG(INFO) << "NVRAM area has been defined but not written.";
       return RESULT_FAIL_FATAL;
     }
@@ -190,7 +193,18 @@ result_code NvramSpace::Define(uint32_t attributes,
     return RESULT_FAIL_FATAL;
   }
 
-  status_ = Status::kValid;
+  // `kWritable` is not included in the state machine for TPM2.0 by design.
+  // Ideally the status should always be consistent with the value of `status_`
+  // and it should be TPM-independent. However, for TPM2.0 we don't have to
+  // have `kWritable`; once stopping support for TPM1.2, it could be
+  // over-complicated for TPM2.0 and hard to clean up. Thus, pursuing the
+  // consistency doesn't seem to be a good idea.
+  if (USE_TPM2) {
+    status_ = Status::kValid;
+  } else {
+    status_ = Status::kWritable;
+  }
+
   contents_.clear();
   contents_.resize(size);
   attributes_ = attributes;

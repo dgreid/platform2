@@ -70,12 +70,14 @@ class NvramSpace {
   enum class Status {
     kUnknown,   // Not accessed yet.
     kAbsent,    // Not defined.
+    kWritable,  // Defined but the content is not written (TPM1.2 only).
     kValid,     // Present and read was successful.
     kTpmError,  // Error accessing the space.
   };
 
   Status status() const { return status_; }
   bool is_valid() const { return status() == Status::kValid; }
+  bool is_writable() const { return status() == Status::kWritable; }
   const brillo::SecureBlob& contents() const { return contents_; }
 
   // Resets the space so that it appears invalid. Doesn't update the TPM.

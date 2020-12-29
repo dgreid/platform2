@@ -139,6 +139,28 @@ const uint8_t kEncStatefulTpm1Contents[] = {
     0x0e, 0xcb, 0xcd, 0x4b, 0x44, 0xf9, 0x20, 0x49, 0x42, 0x4d, 0x22, 0x96,
 };
 
+// Contents of the encstateful TPM NVRAM space used in tests that set up
+// existing writable NVRAM space contents.
+const uint8_t kEncStatefulTpm1ContentsAllZeros[] = {
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+};
+
+// Contents of the encstateful TPM NVRAM space used in tests that set up
+// existing writable NVRAM space contents.
+const uint8_t kEncStatefulTpm1ContentsAllOnes[] = {
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+};
+
 // A random encryption key used in tests that exercise the situation where the
 // encstateful NVRAM space already exists.
 const uint8_t kEncryptionKeyEncStatefulTpm1[] = {
@@ -532,6 +554,54 @@ TEST_F(EncryptionKeyTest, EncStatefulTpmClearExisting) {
             std::vector<uint8_t>(
                 kEncStatefulTpm1Contents,
                 kEncStatefulTpm1Contents + sizeof(kEncStatefulTpm1Contents)));
+}
+
+TEST_F(EncryptionKeyTest, EncStatefulTpmClearWritableAllZeros) {
+  SetupSpace(kEncStatefulIndex, kEncStatefulAttributesTpm1, true,
+             kEncStatefulTpm1ContentsAllZeros,
+             sizeof(kEncStatefulTpm1ContentsAllZeros));
+  SetupSpace(kLockboxIndex, kLockboxAttributesTpm1, true, kLockboxV2Contents,
+             sizeof(kLockboxV2Contents));
+
+  ExpectFreshKey();
+  EXPECT_EQ(EncryptionKeyStatus::kFresh, key_->encryption_key_status());
+  ExpectFinalized(true);
+  EXPECT_EQ(SystemKeyStatus::kNVRAMEncstateful, key_->system_key_status());
+  bool initialized = false;
+  EXPECT_EQ(RESULT_SUCCESS, tpm_->HasSystemKeyInitializedFlag(&initialized));
+  EXPECT_TRUE(initialized);
+  CheckSpace(kEncStatefulIndex, kEncStatefulAttributesTpm1, kEncStatefulSize);
+  ExpectLockboxValid(false);
+
+  TlclStub::NvramSpaceData* space = tlcl_.GetSpace(kEncStatefulIndex);
+  EXPECT_NE(space->contents,
+            std::vector<uint8_t>(kEncStatefulTpm1ContentsAllZeros,
+                                 kEncStatefulTpm1ContentsAllZeros +
+                                     sizeof(kEncStatefulTpm1ContentsAllZeros)));
+}
+
+TEST_F(EncryptionKeyTest, EncStatefulTpmClearWritableAllOnes) {
+  SetupSpace(kEncStatefulIndex, kEncStatefulAttributesTpm1, true,
+             kEncStatefulTpm1ContentsAllOnes,
+             sizeof(kEncStatefulTpm1ContentsAllOnes));
+  SetupSpace(kLockboxIndex, kLockboxAttributesTpm1, true, kLockboxV2Contents,
+             sizeof(kLockboxV2Contents));
+
+  ExpectFreshKey();
+  EXPECT_EQ(EncryptionKeyStatus::kFresh, key_->encryption_key_status());
+  ExpectFinalized(true);
+  EXPECT_EQ(SystemKeyStatus::kNVRAMEncstateful, key_->system_key_status());
+  bool initialized = false;
+  EXPECT_EQ(RESULT_SUCCESS, tpm_->HasSystemKeyInitializedFlag(&initialized));
+  EXPECT_TRUE(initialized);
+  CheckSpace(kEncStatefulIndex, kEncStatefulAttributesTpm1, kEncStatefulSize);
+  ExpectLockboxValid(false);
+
+  TlclStub::NvramSpaceData* space = tlcl_.GetSpace(kEncStatefulIndex);
+  EXPECT_NE(space->contents,
+            std::vector<uint8_t>(kEncStatefulTpm1ContentsAllOnes,
+                                 kEncStatefulTpm1ContentsAllOnes +
+                                     sizeof(kEncStatefulTpm1ContentsAllOnes)));
 }
 
 TEST_F(EncryptionKeyTest, EncStatefulTpmClearInitialized) {
