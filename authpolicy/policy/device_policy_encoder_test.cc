@@ -690,6 +690,44 @@ TEST_F(DevicePolicyEncoderTest, TestEncoding) {
   EXPECT_EQ(kBool, policy.device_show_low_disk_space_notification()
                        .device_show_low_disk_space_notification());
 
+  EncodeBoolean(&policy, key::kDeviceFamilyLinkAccountsAllowed, kBool);
+  EXPECT_EQ(
+      kBool,
+      policy.family_link_accounts_allowed().family_link_accounts_allowed());
+
+  EncodeString(&policy, key::kDeviceArcDataSnapshotHours, kString);
+  EXPECT_FALSE(policy.has_arc_data_snapshot_hours());
+
+  EncodeString(&policy, key::kDeviceArcDataSnapshotHours,
+               R"!!!(
+               {
+                 "intervals":
+                 [
+                   {
+                     "start": {
+                       "day_of_week": "MONDAY",
+                       "time": 12840000
+                     },
+                     "end": {
+                       "day_of_week": "MONDAY",
+                       "time": 21720000
+                     }
+                   },
+                   {
+                     "start": {
+                       "day_of_week": "FRIDAY",
+                       "time": 38640000
+                     },
+                     "end": {
+                       "day_of_week": "FRIDAY",
+                       "time": 57600000
+                     }
+                   }
+                 ],
+                 "timezone": "GMT",
+               })!!!");
+  EXPECT_TRUE(policy.has_arc_data_snapshot_hours());
+
   //
   // Check whether all device policies have been handled.
   //

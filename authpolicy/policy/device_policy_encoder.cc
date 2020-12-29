@@ -1072,6 +1072,27 @@ void DevicePolicyEncoder::EncodeGenericPolicies(
           EncodeBoolean(key::kDeviceShowLowDiskSpaceNotification))
     policy->mutable_device_show_low_disk_space_notification()
         ->set_device_show_low_disk_space_notification(value.value());
+
+  if (base::Optional<bool> value =
+          EncodeBoolean(key::kDeviceFamilyLinkAccountsAllowed)) {
+    policy->mutable_family_link_accounts_allowed()
+        ->set_family_link_accounts_allowed(value.value());
+  }
+
+  if (base::Optional<std::string> value =
+          EncodeString(key::kDeviceArcDataSnapshotHours)) {
+    std::string error;
+    base::Optional<base::Value> dict_value =
+        JsonToDictionary(value.value(), &error);
+    if (!dict_value) {
+      LOG(ERROR) << "Failed to parse string as dictionary: '"
+                 << (!error.empty() ? error : value.value()) << "' for policy '"
+                 << key::kDeviceArcDataSnapshotHours << "', ignoring.";
+    } else {
+      policy->mutable_arc_data_snapshot_hours()->set_arc_data_snapshot_hours(
+          value.value());
+    }
+  }
 }
 
 base::Optional<bool> DevicePolicyEncoder::EncodeBoolean(
