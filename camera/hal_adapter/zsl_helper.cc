@@ -298,6 +298,15 @@ void ZslHelper::ProcessZslCaptureRequest(
     camera3_capture_request_t* still_request,
     std::vector<camera3_stream_buffer_t>* still_output_buffers,
     SelectionStrategy strategy) {
+  auto GetJpegOrientation = [&](const camera_metadata_t* settings) {
+    camera_metadata_ro_entry_t entry;
+    if (find_camera_metadata_ro_entry(settings, ANDROID_JPEG_ORIENTATION,
+                                      &entry) != 0) {
+      LOGF(ERROR) << "Failed to find JPEG orientation, defaulting to 0";
+      return 0;
+    }
+    return *entry.data.i32;
+  };
   if (request->input_buffer != nullptr) {
     return;
   }
@@ -317,7 +326,8 @@ void ZslHelper::ProcessZslCaptureRequest(
     } else {
       camera_metadata_t* zsl_settings;
       bool transformed =
-          TransformRequest(still_request, &zsl_settings, strategy);
+          TransformRequest(still_request, &zsl_settings,
+                           GetJpegOrientation(settings->get()), strategy);
       if (transformed) {
         still_request->frame_number =
             frame_number_mapper_->GetHalFrameNumber(framework_frame_number);
@@ -384,6 +394,7 @@ void ZslHelper::AttachRequest(
 
 bool ZslHelper::TransformRequest(camera3_capture_request_t* request,
                                  camera_metadata_t** settings,
+                                 int32_t jpeg_orientation,
                                  SelectionStrategy strategy) {
   VLOGF_ENTER();
   if (!enabled_) {
@@ -406,6 +417,13 @@ bool ZslHelper::TransformRequest(camera3_capture_request_t* request,
   request->input_buffer->acquire_fence = -1;
   request->input_buffer->release_fence = -1;
 
+  // The result metadata for the RAW buffers come from the preview frames. We
+  // need to add JPEG orientation back so that the resulting JPEG is of the
+  // correct orientation.
+  if (selected_buffer->metadata.update(ANDROID_JPEG_ORIENTATION,
+                                       &jpeg_orientation, 1) != 0) {
+    LOGF(ERROR) << "Failed to update JPEG_ORIENTATION";
+  }
   // Note that camera device adapter would take ownership of this pointer.
   *settings = selected_buffer->metadata.release();
   return true;

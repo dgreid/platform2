@@ -181,6 +181,7 @@ class ZslHelper {
   // Transforms a simple capture request into a reprocessing request.
   bool TransformRequest(camera3_capture_request_t* request,
                         camera_metadata_t** settings,
+                        int32_t jpeg_orientation,
                         SelectionStrategy strategy = CLOSEST_3A);
 
   // Wait for the release fence on an attached ZSL output buffer. This function
