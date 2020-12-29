@@ -212,7 +212,13 @@ class EncryptionKeyTest : public testing::Test {
     ResetTPM();
   }
 
-  void SetOwned() { tlcl_.SetOwned({0x5e, 0xc2, 0xe7}); }
+  void SetOwned() {
+    tlcl_.SetOwned({0x5e, 0xc2, 0xe7});
+    if (!USE_TPM2) {
+      ASSERT_TRUE(base::WriteFile(
+          tmpdir_.GetPath().AppendASCII(paths::cryptohome::kTpmOwned), ""));
+    }
+  }
 
   void SetupSpace(uint32_t index,
                   uint32_t attributes,

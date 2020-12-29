@@ -720,8 +720,10 @@ result_code Tpm1SystemKeyLoader::CheckLockbox(bool* valid) {
   }
 
   // In case there is no encstateful space, the lockbox space is only valid once
-  // cryptohomed has taken TPM ownership and recreated the space.
-  return tpm_->IsOwned(valid);
+  // tpm manager has initialized TPM with random password and recreated the
+  // space.
+  *valid = base::PathExists(rootdir_.AppendASCII(paths::cryptohome::kTpmOwned));
+  return RESULT_SUCCESS;
 }
 
 bool Tpm1SystemKeyLoader::UsingLockboxKey() {
