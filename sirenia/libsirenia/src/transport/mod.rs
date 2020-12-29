@@ -9,6 +9,7 @@
 //! appropriate.
 
 use std::boxed::Box;
+use std::convert::TryInto;
 use std::fmt::{self, Debug, Display};
 use std::io::{self, Read, Write};
 use std::iter::Iterator;
@@ -25,7 +26,7 @@ use core::mem::replace;
 use libchromeos::net::{InetVersion, TcpSocket};
 use libchromeos::vsock::{
     AddrParseError, SocketAddr as VSocketAddr, ToSocketAddr, VsockCid, VsockListener, VsockSocket,
-    VsockStream,
+    VsockStream, VMADDR_PORT_ANY,
 };
 use sys_util::{handle_eintr, pipe};
 
@@ -118,6 +119,30 @@ pub enum TransportType {
     Pipe(RawFd, RawFd),
 }
 
+impl TransportType {
+    pub fn try_into_client(&self, bind_port: Option<u32>) -> Result<Box<dyn ClientTransport>> {
+        match self {
+            TransportType::IpConnection(url) => Ok(Box::new(IPClientTransport::new(
+                &url,
+                bind_port.unwrap_or(0) as u16,
+            )?)),
+            TransportType::VsockConnection(url) => Ok(Box::new(VsockClientTransport::new(
+                &url,
+                bind_port.unwrap_or(VMADDR_PORT_ANY),
+            )?)),
+            _ => Err(Error::UnknownTransportType),
+        }
+    }
+
+    pub fn get_port(&self) -> Result<u32> {
+        match self {
+            TransportType::IpConnection(addr) => Ok(addr.port() as u32),
+            TransportType::VsockConnection(addr) => Ok(addr.port),
+            _ => Err(Error::UnknownTransportType),
+        }
+    }
+}
+
 impl From<VSocketAddr> for TransportType {
     fn from(a: VSocketAddr) -> Self {
         TransportType::VsockConnection(a)
@@ -168,6 +193,18 @@ impl FromStr for TransportType {
             // TODO: Should this still be the default?
             1 => parse_ip_connection(value),
             _ => Err(Error::URIParse),
+        }
+    }
+}
+
+impl TryInto<Box<dyn ServerTransport>> for &TransportType {
+    type Error = Error;
+
+    fn try_into(self) -> Result<Box<dyn ServerTransport>> {
+        match self {
+            TransportType::IpConnection(url) => Ok(Box::new(IPServerTransport::new(&url)?)),
+            TransportType::VsockConnection(url) => Ok(Box::new(VsockServerTransport::new(&url)?)),
+            _ => Err(Error::UnknownTransportType),
         }
     }
 }

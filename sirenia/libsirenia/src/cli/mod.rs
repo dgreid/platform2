@@ -99,7 +99,7 @@ impl HelpOption {
     }
 
     /// Mocks process::exit for testability. See: parse_and_check_self
-    fn parse_and_check_self_impl<F: Fn(i32) -> ()>(
+    fn parse_and_check_self_impl<F: Fn(i32)>(
         &self,
         opts: &Options,
         args: &[String],

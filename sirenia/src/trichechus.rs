@@ -8,26 +8,20 @@ use std::cell::RefCell;
 use std::collections::{HashMap, VecDeque};
 use std::env;
 use std::fmt::Debug;
-use std::os::unix::io::{AsRawFd, RawFd};
 use std::path::Path;
 use std::rc::Rc;
 use std::result::Result as StdResult;
 use std::string::String;
 
-use libsirenia::communication::{self, read_message};
-use libsirenia::linux::events::{
-    AddEventSourceMutator, EventMultiplexer, EventSource, Mutator, RemoveFdMutator,
-};
+use libsirenia::linux::events::{AddEventSourceMutator, EventMultiplexer, Mutator};
 use libsirenia::linux::syslog::{Syslog, SyslogReceiverMut};
+use libsirenia::rpc::{ConnectionHandler, RpcDispatcher, TransportServer};
 use libsirenia::sandbox::{self, Sandbox};
 use libsirenia::to_sys_util;
-use libsirenia::transport::{
-    self, IPServerTransport, ServerTransport, Transport, TransportType, VsockServerTransport,
-    DEFAULT_CLIENT_PORT,
-};
+use libsirenia::transport::{self, Transport, TransportType, DEFAULT_CLIENT_PORT};
 use sirenia::build_info::BUILD_TIMESTAMP;
 use sirenia::cli::initialize_common_arguments;
-use sirenia::communication::Request;
+use sirenia::communication::{AppInfo, Trichechus, TrichechusServer};
 use sys_util::{self, error, info, syslog};
 use thiserror::Error as ThisError;
 
@@ -62,14 +56,6 @@ pub enum Error {
 /// The result of an operation in this crate.
 pub type Result<T> = StdResult<T, Error>;
 
-fn get_port_from_transport(t: &TransportType) -> Result<u32> {
-    match t {
-        TransportType::IpConnection(addr) => Ok(addr.port() as u32),
-        TransportType::VsockConnection(addr) => Ok(addr.port),
-        _ => Err(Error::UnexpectedConnectionType(t.to_owned())),
-    }
-}
-
 struct TrichechusState {
     pending_apps: HashMap<TransportType, String>,
     // TODO figure out if we actually need to hold onto the running apps or not. We already reap the
@@ -95,14 +81,22 @@ impl SyslogReceiverMut for TrichechusState {
     }
 }
 
-struct ControlConnection {
-    transport: Transport,
+#[derive(Clone)]
+struct TrichechusServerImpl {
     state: Rc<RefCell<TrichechusState>>,
+    transport_type: TransportType,
 }
 
-impl ControlConnection {
+impl TrichechusServerImpl {
+    fn new(state: Rc<RefCell<TrichechusState>>, transport_type: TransportType) -> Self {
+        TrichechusServerImpl {
+            state,
+            transport_type,
+        }
+    }
+
     fn port_to_transport_type(&self, port: u32) -> TransportType {
-        let mut result = self.transport.id.clone();
+        let mut result = self.transport_type.clone();
         match &mut result {
             TransportType::IpConnection(addr) => addr.set_port(port as u16),
             TransportType::VsockConnection(addr) => {
@@ -112,80 +106,32 @@ impl ControlConnection {
         }
         result
     }
+}
 
-    /// Handles an incoming message from dugong.
-    fn handle_message(&mut self, message: Request) -> Result<()> {
-        match message {
-            Request::StartSession(app_info) => {
-                info!(
-                    "Received start session message with app_id: {}",
-                    app_info.app_id
-                );
-                // The TEE app isn't started until its socket connection is accepted.
-                self.state.borrow_mut().pending_apps.insert(
-                    self.port_to_transport_type(app_info.port_number),
-                    app_info.app_id,
-                );
-                Ok(())
-            }
-            _ => Err(Error::UnexpectedRequest),
-        }
+impl Trichechus for TrichechusServerImpl {
+    type Error = ();
+
+    fn start_session(&self, app_info: AppInfo) -> StdResult<(), ()> {
+        info!(
+            "Received start session message with app_id: {}",
+            app_info.app_id
+        );
+        // The TEE app isn't started until its socket connection is accepted.
+        self.state.borrow_mut().pending_apps.insert(
+            self.port_to_transport_type(app_info.port_number),
+            app_info.app_id,
+        );
+        Ok(())
     }
 }
 
-impl AsRawFd for ControlConnection {
-    fn as_raw_fd(&self) -> RawFd {
-        self.transport.as_raw_fd()
-    }
-}
-
-impl EventSource for ControlConnection {
-    fn on_event(&mut self) -> StdResult<Option<Box<dyn Mutator>>, String> {
-        //TODO: Fix this. It is a DoS risk because it is a blocking read on an epoll.
-        Ok(match read_message(&mut self.transport.r) {
-            Ok(Option::<Request>::Some(r)) => match self.handle_message(r) {
-                Ok(()) => None,
-                Err(_) => Some(()),
-            },
-            Ok(Option::<Request>::None) => {
-                error!("control connection got empty message");
-                None
-            }
-            Err(communication::Error::Read(e)) => {
-                error!("control connection error: {:?}", e);
-                panic!(e)
-            }
-            Err(e) => {
-                error!("control connection error: {:?}", e);
-                //log_error(&mut w, e.to_string()),
-                Some(())
-            }
-        }
-        // Some errors result in a transport that is no longer valid and should be removed. Rather
-        // than created the removal mutator in each case map () to the removal mutator.
-        .map(|()| -> Box<dyn Mutator> { Box::new(RemoveFdMutator(self.transport.as_raw_fd())) }))
-    }
-}
-
-struct EventsFromDugong {
-    transport: Box<dyn ServerTransport>,
+struct DugongConnectionHandler {
     state: Rc<RefCell<TrichechusState>>,
 }
 
-impl EventsFromDugong {
-    fn new(bind_addr: &TransportType, state: Rc<RefCell<TrichechusState>>) -> Result<Self> {
-        Ok(EventsFromDugong {
-            transport: match bind_addr {
-                TransportType::IpConnection(url) => {
-                    Box::new(IPServerTransport::new(&url).map_err(Error::NewTransport)?)
-                }
-                TransportType::VsockConnection(url) => {
-                    Box::new(VsockServerTransport::new(&url).map_err(Error::NewTransport)?)
-                }
-                _ => return Err(Error::UnexpectedConnectionType(bind_addr.to_owned())),
-            },
-            state,
-        })
+impl DugongConnectionHandler {
+    fn new(state: Rc<RefCell<TrichechusState>>) -> Self {
+        DugongConnectionHandler { state }
     }
 
     fn connect_tee_app(&mut self, app_id: &str, connection: Transport) {
@@ -199,7 +145,9 @@ impl EventsFromDugong {
             }
         }
     }
+}
 
+impl ConnectionHandler for DugongConnectionHandler {
     fn handle_incoming_connection(&mut self, connection: Transport) -> Option<Box<dyn Mutator>> {
         // Check if the incoming connection is expected and associated with a TEE
         // application.
@@ -213,41 +161,19 @@ impl EventsFromDugong {
             }
             None => {
                 // Check if it is a control connection.
-                if matches!(
-                    get_port_from_transport(&connection.id),
-                    Ok(DEFAULT_CLIENT_PORT)
-                ) {
+                if matches!(connection.id.get_port(), Ok(DEFAULT_CLIENT_PORT)) {
                     Some(Box::new(AddEventSourceMutator(Some(Box::new(
-                        ControlConnection {
-                            transport: connection,
-                            state: self.state.clone(),
-                        },
+                        RpcDispatcher::new(
+                            TrichechusServerImpl::new(self.state.clone(), connection.id.clone())
+                                .box_clone(),
+                            connection,
+                        ),
                     )))))
                 } else {
                     None
                 }
             }
         }
-    }
-}
-
-impl AsRawFd for EventsFromDugong {
-    fn as_raw_fd(&self) -> RawFd {
-        self.transport.as_raw_fd()
-    }
-}
-
-/// Creates a EventSource that adds any accept connections and returns a Mutator that will add the
-/// client connection to the EventMultiplexer when applied.
-impl EventSource for EventsFromDugong {
-    fn on_event(&mut self) -> StdResult<Option<Box<dyn Mutator>>, String> {
-        Ok(match self.transport.accept() {
-            Ok(t) => self.handle_incoming_connection(t),
-            Err(e) => {
-                error!("transport source error: {:?}", e);
-                Some(Box::new(RemoveFdMutator(self.transport.as_raw_fd())))
-            }
-        })
     }
 }
 
@@ -325,7 +251,7 @@ fn main() -> Result<()> {
     }
 
     ctx.add_event(Box::new(
-        EventsFromDugong::new(&config.connection_type, state).unwrap(),
+        TransportServer::new(&config.connection_type, DugongConnectionHandler::new(state)).unwrap(),
     ))
     .unwrap();
 

@@ -8,6 +8,7 @@
 pub mod cli;
 pub mod communication;
 pub mod linux;
+pub mod rpc;
 pub mod sandbox;
 pub mod storage;
 pub mod to_sys_util;
