@@ -352,6 +352,12 @@ class EncryptionKeyTest : public testing::Test {
     key_->LoadEncryptionKey();
     ExpectLockboxValid(false);
   }
+
+  void SetStaleOwnershipFlag() {
+    ASSERT_TRUE(base::WriteFile(
+        tmpdir_.GetPath().AppendASCII(paths::cryptohome::kTpmOwned), ""));
+  }
+
 #endif
 
   base::ScopedTempDir tmpdir_;
@@ -540,6 +546,30 @@ TEST_F(EncryptionKeyTest, TpmOwnedNeedsFinalization) {
 }
 
 TEST_F(EncryptionKeyTest, EncStatefulTpmClearExisting) {
+  SetupSpace(kEncStatefulIndex, kEncStatefulAttributesTpm1, true,
+             kEncStatefulTpm1Contents, sizeof(kEncStatefulTpm1Contents));
+  SetupSpace(kLockboxIndex, kLockboxAttributesTpm1, true, kLockboxV2Contents,
+             sizeof(kLockboxV2Contents));
+
+  ExpectFreshKey();
+  EXPECT_EQ(EncryptionKeyStatus::kFresh, key_->encryption_key_status());
+  ExpectFinalized(true);
+  EXPECT_EQ(SystemKeyStatus::kNVRAMEncstateful, key_->system_key_status());
+  bool initialized = false;
+  EXPECT_EQ(RESULT_SUCCESS, tpm_->HasSystemKeyInitializedFlag(&initialized));
+  EXPECT_TRUE(initialized);
+  CheckSpace(kEncStatefulIndex, kEncStatefulAttributesTpm1, kEncStatefulSize);
+  ExpectLockboxValid(false);
+
+  TlclStub::NvramSpaceData* space = tlcl_.GetSpace(kEncStatefulIndex);
+  EXPECT_NE(space->contents,
+            std::vector<uint8_t>(
+                kEncStatefulTpm1Contents,
+                kEncStatefulTpm1Contents + sizeof(kEncStatefulTpm1Contents)));
+}
+
+TEST_F(EncryptionKeyTest, TpmClearExistingLockboxV2UnownedStaleOwnershipFlag) {
+  SetStaleOwnershipFlag();
   SetupSpace(kEncStatefulIndex, kEncStatefulAttributesTpm1, true,
              kEncStatefulTpm1Contents, sizeof(kEncStatefulTpm1Contents));
   SetupSpace(kLockboxIndex, kLockboxAttributesTpm1, true, kLockboxV2Contents,

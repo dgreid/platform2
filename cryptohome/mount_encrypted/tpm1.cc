@@ -164,6 +164,9 @@ class Tpm1SystemKeyLoader : public SystemKeyLoader {
   // takes TPM ownership, which is necessary for defining the space.
   result_code PrepareEncStatefulSpace();
 
+  // Prunes the stale files from the last TPM ownership.
+  result_code PruneOwnershipStateFilesIfNotOwned();
+
   enum class EncStatefulSpaceValidity {
     // The space is not defined, too short, or attributes are bad.
     kInvalid,
@@ -353,27 +356,13 @@ result_code Tpm1SystemKeyLoader::PrepareEncStatefulSpace() {
   }
 
   if (!owned) {
-    // Reset cryptohomed state so it re-initializes the TPM.
-    base::FilePath tpm_status_path =
-        rootdir_.AppendASCII(paths::cryptohome::kTpmStatus);
-    base::FilePath tpm_owned_path =
-        rootdir_.AppendASCII(paths::cryptohome::kTpmOwned);
-    base::FilePath shall_initialize_path =
-        rootdir_.AppendASCII(paths::cryptohome::kShallInitialize);
-    base::FilePath attestation_database_path =
-        rootdir_.AppendASCII(paths::cryptohome::kAttestationDatabase);
-    if (!base::DeleteFile(tpm_status_path) ||
-        !base::DeleteFile(tpm_owned_path) ||
-        !brillo::SyncFileOrDirectory(tpm_status_path.DirName(), true, false) ||
-        !brillo::WriteToFileAtomic(shall_initialize_path, nullptr, 0, 0644) ||
-        !brillo::SyncFileOrDirectory(shall_initialize_path.DirName(), true,
-                                     false) ||
-        !base::DeleteFile(attestation_database_path)) {
-      PLOG(ERROR) << "Failed to update cryptohomed state.";
-      return RESULT_FAIL_FATAL;
+    result_code rc = PruneOwnershipStateFilesIfNotOwned();
+    if (rc != RESULT_SUCCESS) {
+      LOG(ERROR) << "Failed to prune ownership state files.";
+      return rc;
     }
 
-    result_code rc = tpm_->TakeOwnership();
+    rc = tpm_->TakeOwnership();
     if (rc != RESULT_SUCCESS) {
       LOG(ERROR) << "Failed to ensure TPM ownership.";
       return rc;
@@ -386,6 +375,41 @@ result_code Tpm1SystemKeyLoader::PrepareEncStatefulSpace() {
   if (rc != RESULT_SUCCESS) {
     LOG(ERROR) << "Failed to define encrypted stateful NVRAM space.";
     return rc;
+  }
+
+  return RESULT_SUCCESS;
+}
+
+result_code Tpm1SystemKeyLoader::PruneOwnershipStateFilesIfNotOwned() {
+  bool owned = false;
+  result_code rc = tpm_->IsOwned(&owned);
+  if (rc != RESULT_SUCCESS) {
+    LOG(ERROR) << "Can't determine TPM ownership.";
+    return RESULT_FAIL_FATAL;
+  }
+
+  // If it's owned already, it is not necessary to clean up the files.
+  if (owned) {
+    return RESULT_SUCCESS;
+  }
+
+  // Reset ownership state files to make them consistent with TPM ownership.
+  base::FilePath tpm_status_path =
+      rootdir_.AppendASCII(paths::cryptohome::kTpmStatus);
+  base::FilePath tpm_owned_path =
+      rootdir_.AppendASCII(paths::cryptohome::kTpmOwned);
+  base::FilePath shall_initialize_path =
+      rootdir_.AppendASCII(paths::cryptohome::kShallInitialize);
+  base::FilePath attestation_database_path =
+      rootdir_.AppendASCII(paths::cryptohome::kAttestationDatabase);
+  if (!base::DeleteFile(tpm_status_path) || !base::DeleteFile(tpm_owned_path) ||
+      !brillo::SyncFileOrDirectory(tpm_status_path.DirName(), true, false) ||
+      !brillo::WriteToFileAtomic(shall_initialize_path, nullptr, 0, 0644) ||
+      !brillo::SyncFileOrDirectory(shall_initialize_path.DirName(), true,
+                                   false) ||
+      !base::DeleteFile(attestation_database_path)) {
+    PLOG(ERROR) << "Failed to update ownership state files.";
+    return RESULT_FAIL_FATAL;
   }
 
   return RESULT_SUCCESS;
@@ -674,8 +698,13 @@ bool Tpm1SystemKeyLoader::IsTPMFirmwareUpdatePending() {
 result_code Tpm1SystemKeyLoader::CheckLockbox(bool* valid) {
   *valid = false;
 
+  result_code rc = PruneOwnershipStateFilesIfNotOwned();
+  if (rc != RESULT_SUCCESS) {
+    return rc;
+  }
+
   EncStatefulSpaceValidity space_validity = EncStatefulSpaceValidity::kInvalid;
-  result_code rc = IsEncStatefulSpaceProperlyDefined(&space_validity);
+  rc = IsEncStatefulSpaceProperlyDefined(&space_validity);
   if (rc != RESULT_SUCCESS) {
     return rc;
   }
