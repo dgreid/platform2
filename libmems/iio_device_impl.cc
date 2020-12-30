@@ -201,10 +201,8 @@ bool IioDeviceImpl::SetTrigger(IioDevice* trigger_device) {
 IioDevice* IioDeviceImpl::GetTrigger() {
   const iio_device* trigger;
   int error = iio_device_get_trigger(device_, &trigger);
-  if (error) {
-    LOG(WARNING) << log_prefix_ << "Unable to get trigger";
+  if (error)
     return nullptr;
-  }
 
   if (trigger == nullptr)
     return nullptr;
