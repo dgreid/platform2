@@ -54,10 +54,14 @@ void Manager::UpdateAvailableEuiccsProperty() {
   dbus_adaptor_->SetAvailableEuiccs(euicc_paths);
 }
 
-void Manager::OnEuiccLogicalSlotUpdated(uint8_t physical_slot,
-                                        base::Optional<uint8_t> logical_slot) {
+void Manager::OnLogicalSlotUpdated(uint8_t physical_slot,
+                                   base::Optional<uint8_t> logical_slot) {
   auto iter = available_euiccs_.find(physical_slot);
-  CHECK(iter != available_euiccs_.end()) << "Cannot update logical slot";
+  if (iter == available_euiccs_.end()) {
+    VLOG(2) << "Ignoring logical slot change for non-eUICC physical slot:"
+            << physical_slot;
+    return;
+  }
 
   iter->second->UpdateLogicalSlot(std::move(logical_slot));
 }

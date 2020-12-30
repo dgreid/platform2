@@ -666,11 +666,11 @@ void ModemQrtr::ReceiveQmiSwitchSlot(const qrtr_packet& packet) {
 
   auto switch_slot_tx_info =
       dynamic_cast<SwitchSlotTxInfo*>(tx_queue_.front().info_.get());
-  euicc_manager_->OnEuiccLogicalSlotUpdated(switch_slot_tx_info->physical_slot_,
-                                            switch_slot_tx_info->logical_slot_);
+  euicc_manager_->OnLogicalSlotUpdated(switch_slot_tx_info->physical_slot_,
+                                       switch_slot_tx_info->logical_slot_);
   if (stored_active_slot_)
-    euicc_manager_->OnEuiccLogicalSlotUpdated(stored_active_slot_.value(),
-                                              base::nullopt);
+    euicc_manager_->OnLogicalSlotUpdated(stored_active_slot_.value(),
+                                         base::nullopt);
 
   tx_queue_.pop_front();
   // Sending QMI messages immediately after switch slot leads to QMI errors

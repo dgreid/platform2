@@ -25,9 +25,16 @@ class FakeEuiccManager : public EuiccManagerInterface {
   void OnEuiccRemoved(uint8_t physical_slot) override {
     valid_slots_.erase(physical_slot);
   }
-  void OnEuiccLogicalSlotUpdated(
-      uint8_t physical_slot, base::Optional<uint8_t> logical_slot) override {
-    valid_slots_.at(physical_slot).SetLogicalSlot(std::move(logical_slot));
+  void OnLogicalSlotUpdated(uint8_t physical_slot,
+                            base::Optional<uint8_t> logical_slot) override {
+    auto iter = valid_slots_.find(physical_slot);
+    if (iter == valid_slots_.end()) {
+      VLOG(2) << "Ignoring logical slot change for non-eUICC physical slot:"
+              << physical_slot;
+      return;
+    }
+
+    iter->second.SetLogicalSlot(std::move(logical_slot));
   };
 
  private:
