@@ -6,7 +6,7 @@
 
 use std::cell::RefCell;
 use std::env;
-use std::fmt::{self, Debug, Display};
+use std::fmt::Debug;
 use std::rc::Rc;
 use std::thread::spawn;
 use std::time::Duration;
@@ -14,8 +14,6 @@ use std::time::Duration;
 use dbus::arg::OwnedFd;
 use dbus::blocking::LocalConnection;
 use dbus::tree::{self, Interface, MTFn};
-use sys_util::{error, info, syslog};
-
 use libchromeos::vsock::VMADDR_PORT_ANY;
 use libsirenia::communication::{read_message, write_message};
 use libsirenia::transport::{
@@ -26,33 +24,21 @@ use sirenia::build_info::BUILD_TIMESTAMP;
 use sirenia::cli::initialize_common_arguments;
 use sirenia::communication::{AppInfo, Request, Response};
 use sirenia::server::{org_chromium_mana_teeinterface_server, OrgChromiumManaTEEInterface};
+use sys_util::{error, info, syslog};
+use thiserror::Error as ThisError;
 
-#[derive(Debug)]
+#[derive(ThisError, Debug)]
 pub enum Error {
-    /// Failed to start D-Bus connection.
+    #[error("failed to open D-Bus connection: {0}")]
     ConnectionRequest(dbus::Error),
-    /// Error registering D-Bus connection
+    #[error("failed to register D-Bus handler: {0}")]
     DbusRegister(dbus::Error),
-    /// Error processing a D-Bus message.
+    #[error("failed to process the D-Bus message: {0}")]
     ProcessMessage(dbus::Error),
-    /// Failed to start up the syslog.
+    #[error("failed to start up the syslog: {0}")]
     SysLog(sys_util::syslog::Error),
-    /// Failed to connect to the socket
+    #[error("failed to connect to socket: {0}")]
     TransportConnection(transport::Error),
-}
-
-impl Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        use self::Error::*;
-
-        match self {
-            ConnectionRequest(e) => write!(f, "failed to open D-Bus connection: {}", e),
-            DbusRegister(e) => write!(f, "failed to register D-Bus handler: {}", e),
-            ProcessMessage(e) => write!(f, "failed to process the D-Bus message: {}", e),
-            SysLog(e) => write!(f, "failed to start up the syslog: {}", e),
-            TransportConnection(e) => write!(f, "failed to connect to socket: {}", e),
-        }
-    }
 }
 
 /// The result of an operation in this crate.

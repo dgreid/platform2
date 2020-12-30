@@ -7,7 +7,7 @@
 use std::cell::RefCell;
 use std::collections::{HashMap, VecDeque};
 use std::env;
-use std::fmt::{self, Debug, Display};
+use std::fmt::Debug;
 use std::os::unix::io::{AsRawFd, RawFd};
 use std::path::Path;
 use std::rc::Rc;
@@ -29,42 +29,34 @@ use sirenia::build_info::BUILD_TIMESTAMP;
 use sirenia::cli::initialize_common_arguments;
 use sirenia::communication::Request;
 use sys_util::{self, error, info, syslog};
+use thiserror::Error as ThisError;
 
-#[derive(Debug)]
+#[derive(ThisError, Debug)]
 pub enum Error {
     /// Error initializing the syslog.
+    #[error("failed to initialize the syslog: {0}")]
     InitSyslog(sys_util::syslog::Error),
     /// Error opening a pipe.
+    #[error("failed to open pipe: {0}")]
     OpenPipe(sys_util::Error),
     /// Error creating the transport.
+    #[error("failed create transport: {0}")]
     NewTransport(transport::Error),
     /// Got an unexpected connection type
+    #[error("got unexpected transport type: {0:?}")]
     UnexpectedConnectionType(TransportType),
     /// Error Creating a new sandbox.
+    #[error("failed to create new sandbox: {0}")]
     NewSandbox(sandbox::Error),
     /// Error starting up a sandbox.
+    #[error("failed to start up sandbox: {0}")]
     RunSandbox(sandbox::Error),
     /// Got a request type that wasn't expected by the handler.
+    #[error("received unexpected request type")]
     UnexpectedRequest,
     /// Invalid app id.
+    #[error("invalid app id: {0}")]
     InvalidAppId(String),
-}
-
-impl Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        use self::Error::*;
-
-        match self {
-            InitSyslog(e) => write!(f, "failed to initialize the syslog: {}", e),
-            OpenPipe(e) => write!(f, "failed to open pipe: {}", e),
-            NewTransport(e) => write!(f, "failed create transport: {}", e),
-            UnexpectedConnectionType(t) => write!(f, "got unexpected transport type: {:?}", t),
-            NewSandbox(e) => write!(f, "failed to create new sandbox: {}", e),
-            RunSandbox(e) => write!(f, "failed to start up sandbox: {}", e),
-            UnexpectedRequest => write!(f, "received unexpected request type"),
-            InvalidAppId(s) => write!(f, "Invalid app id: {}", s),
-        }
-    }
 }
 
 /// The result of an operation in this crate.
