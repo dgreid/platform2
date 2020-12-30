@@ -140,8 +140,7 @@ MountErrorType ArchiveMounter::FormatInvocationCommand(
   }
 
   std::vector<std::string> opts = {
-      MountOptions::kOptionReadOnly, "umask=0222",
-      base::StringPrintf("uid=%d", kChronosUID),
+      "ro", "umask=0222", base::StringPrintf("uid=%d", kChronosUID),
       base::StringPrintf("gid=%d", kChronosAccessGID)};
 
   sandbox->AddArgument("-o");

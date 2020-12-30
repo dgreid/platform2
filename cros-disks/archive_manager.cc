@@ -63,19 +63,6 @@ std::vector<gid_t> ArchiveManager::GetSupplementaryGroups() const {
   return groups;
 }
 
-MountErrorType ArchiveManager::GetMountOptions(
-    MountOptions* const options) const {
-  DCHECK(options);
-
-  options->SetReadOnlyOption();
-  options->EnforceOption("umask=0222");
-  options->EnforceOption(MountOptions::kOptionNoSymFollow);
-  options->Initialize({}, true, base::NumberToString(kChronosUID),
-                      base::NumberToString(kChronosAccessGID));
-
-  return MOUNT_ERROR_NONE;
-}
-
 ArchiveManager::MountNamespace ArchiveManager::GetMountNamespaceFor(
     const std::string& path) {
   const char* const chrome_namespace = "/run/namespaces/mnt_chrome";

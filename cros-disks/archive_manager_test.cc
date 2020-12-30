@@ -49,7 +49,7 @@ class ArchiveManagerUnderTest : public ArchiveManager {
                const std::string&,
                const std::vector<std::string>&,
                const base::FilePath&,
-               MountOptions*,
+               bool*,
                MountErrorType*),
               (override));
 };
@@ -159,13 +159,6 @@ TEST_F(ArchiveManagerTest, GetSupplementaryGroupsCannotGetGroupId) {
   EXPECT_CALL(platform_, GetGroupId("android-everybody", _))
       .WillOnce(Return(false));
   EXPECT_THAT(manager_.GetSupplementaryGroups(), IsEmpty());
-}
-
-TEST_F(ArchiveManagerTest, GetMountOptions) {
-  MountOptions options;
-  EXPECT_EQ(manager_.GetMountOptions(&options), MOUNT_ERROR_NONE);
-  EXPECT_EQ(options.ToString(),
-            "ro,uid=1000,gid=1001,nodev,noexec,nosuid,umask=0222,nosymfollow");
 }
 
 }  // namespace cros_disks

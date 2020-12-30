@@ -43,6 +43,7 @@ namespace cros_disks {
 namespace {
 
 const char kFuseDeviceFile[] = "/dev/fuse";
+const int kFUSEMountFlags = MS_NODEV | MS_NOSUID | MS_NOEXEC | MS_DIRSYNC;
 
 class FUSEMountPoint : public MountPoint {
  public:
@@ -339,8 +340,7 @@ std::unique_ptr<MountPoint> FUSEMounter::Mount(
     fuse_type += filesystem_type_;
   }
   *error = platform_->Mount(source_descr, target_path.value(), fuse_type,
-                            MountOptions::kMountFlags | MS_DIRSYNC |
-                                (read_only ? MS_RDONLY : 0) |
+                            kFUSEMountFlags | (read_only ? MS_RDONLY : 0) |
                                 (config_.nosymfollow ? MS_NOSYMFOLLOW : 0),
                             fuse_mount_options);
 

@@ -46,6 +46,7 @@ const char kMountUser[] = "fuse-fuse";
 const char kFUSEType[] = "fusefs";
 const char kSomeSource[] = "/dev/dummy";
 const char kMountDir[] = "/mnt";
+const int kFUSEMountFlags = MS_NODEV | MS_NOEXEC | MS_NOSUID | MS_DIRSYNC;
 
 // Mock Platform implementation for testing.
 class MockFUSEPlatform : public Platform {
@@ -248,7 +249,7 @@ class FUSEMounterTest : public ::testing::Test {
 TEST_F(FUSEMounterTest, MountingUnprivileged) {
   EXPECT_CALL(platform_,
               Mount("fuse:source", kMountDir, "fuse.fusefs",
-                    MountOptions::kMountFlags | MS_DIRSYNC | MS_NOSYMFOLLOW,
+                    kFUSEMountFlags | MS_NOSYMFOLLOW,
                     EndsWith(",user_id=1000,group_id=1001,allow_other,default_"
                              "permissions,rootmode=40000")))
       .WillOnce(Return(MOUNT_ERROR_NONE));
@@ -270,9 +271,7 @@ TEST_F(FUSEMounterTest, MountingUnprivileged) {
 
 TEST_F(FUSEMounterTest, MountingUnprivileged_ReadOnly) {
   EXPECT_CALL(platform_, Mount(_, kMountDir, _,
-                               MountOptions::kMountFlags | MS_DIRSYNC |
-                                   MS_NOSYMFOLLOW | MS_RDONLY,
-                               _))
+                               kFUSEMountFlags | MS_NOSYMFOLLOW | MS_RDONLY, _))
       .WillOnce(Return(MOUNT_ERROR_NONE));
   auto process_ptr = std::make_unique<MockSandboxedProcess>();
   EXPECT_CALL(*process_ptr, StartImpl).WillOnce(Return(123));
@@ -293,7 +292,7 @@ TEST_F(FUSEMounterTest, MountingUnprivileged_ReadOnly) {
 TEST_F(FUSEMounterTest, MountingUnprivileged_BlockDevice) {
   EXPECT_CALL(platform_,
               Mount("/dev/foobar", kMountDir, "fuseblk.fusefs",
-                    MountOptions::kMountFlags | MS_DIRSYNC | MS_NOSYMFOLLOW,
+                    kFUSEMountFlags | MS_NOSYMFOLLOW,
                     EndsWith(",user_id=1000,group_id=1001,allow_other,default_"
                              "permissions,rootmode=40000")))
       .WillOnce(Return(MOUNT_ERROR_NONE));

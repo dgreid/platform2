@@ -93,7 +93,7 @@ bool SandboxedProcess::BindMount(const std::string& from,
                                  const std::string& to,
                                  bool writeable,
                                  bool recursive) {
-  MountOptions::Flags flags = MS_BIND;
+  int flags = MS_BIND;
   if (!writeable) {
     flags |= MS_RDONLY;
   }

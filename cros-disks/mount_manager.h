@@ -22,7 +22,6 @@
 #include <gtest/gtest_prod.h>
 
 #include "cros-disks/mount_entry.h"
-#include "cros-disks/mount_options.h"
 #include "cros-disks/mount_point.h"
 
 namespace brillo {
@@ -203,7 +202,7 @@ class MountManager {
       const std::string& filesystem_type,
       const std::vector<std::string>& options,
       const base::FilePath& mount_path,
-      MountOptions* applied_options,
+      bool* mounted_as_read_only,
       MountErrorType* error) = 0;
 
   // Returns a suggested mount path for |source_path|.

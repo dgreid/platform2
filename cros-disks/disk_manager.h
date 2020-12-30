@@ -66,7 +66,7 @@ class DiskManager : public MountManager {
                                       const std::string& filesystem_type,
                                       const std::vector<std::string>& options,
                                       const base::FilePath& mount_path,
-                                      MountOptions* applied_options,
+                                      bool* mounted_as_read_only,
                                       MountErrorType* error) override;
 
   // Returns a suggested mount path for a source path.

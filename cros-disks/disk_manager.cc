@@ -36,6 +36,10 @@ namespace cros_disks {
 
 namespace {
 
+constexpr char kOptionDirSync[] = "dirsync";
+constexpr char kOptionFlush[] = "flush";
+constexpr char kOptionUtf8[] = "utf8";
+
 // Implementation of FUSEMounter aimed at removable storage with
 // exFAT or NTFS filesystems.
 class DiskFUSEMounter : public FUSEMounter {
@@ -252,32 +256,29 @@ bool DiskManager::Initialize() {
 
   // FAT32 - typical USB stick/SD card filesystem.
   mounters_["vfat"] = std::make_unique<FATMounter>(
-      platform(),
-      std::vector<std::string>{MountOptions::kOptionFlush, "shortname=mixed",
-                               MountOptions::kOptionUtf8, uid, gid});
+      platform(), std::vector<std::string>{kOptionFlush, "shortname=mixed",
+                                           kOptionUtf8, uid, gid});
 
   // Fancier newer version of FAT used for new big SD cards and USB sticks.
   mounters_["exfat"] = std::make_unique<DiskFUSEMounter>(
       platform(), process_reaper(), "exfat", test_sandbox_factory_,
       SandboxedExecutable{base::FilePath("/usr/sbin/mount.exfat-fuse")},
-      run_as_exfat,
-      std::vector<std::string>{MountOptions::kOptionDirSync, uid, gid});
+      run_as_exfat, std::vector<std::string>{kOptionDirSync, uid, gid});
 
   // External drives and some big USB sticks would likely have NTFS.
   mounters_["ntfs"] = std::make_unique<DiskFUSEMounter>(
       platform(), process_reaper(), "ntfs", test_sandbox_factory_,
       SandboxedExecutable{base::FilePath("/usr/bin/ntfs-3g")}, run_as_ntfs,
-      std::vector<std::string>{MountOptions::kOptionDirSync, uid, gid});
+      std::vector<std::string>{kOptionDirSync, uid, gid});
 
   // Typical CD/DVD filesystem. Inherently read-only.
   mounters_["iso9660"] = std::make_unique<SystemMounter>(
       platform(), "iso9660", true,
-      std::vector<std::string>{MountOptions::kOptionUtf8, uid, gid});
+      std::vector<std::string>{kOptionUtf8, uid, gid});
 
   // Newer DVD filesystem. Inherently read-only.
   mounters_["udf"] = std::make_unique<SystemMounter>(
-      platform(), "udf", true,
-      std::vector<std::string>{MountOptions::kOptionUtf8, uid, gid});
+      platform(), "udf", true, std::vector<std::string>{kOptionUtf8, uid, gid});
 
   // MacOS's HFS+ is not properly/officially supported, but sort of works,
   // although with severe limitaions.
@@ -314,7 +315,7 @@ std::unique_ptr<MountPoint> DiskManager::DoMount(
     const std::string& filesystem_type,
     const std::vector<std::string>& options,
     const base::FilePath& mount_path,
-    MountOptions*,
+    bool* mounted_as_read_only,
     MountErrorType* error) {
   CHECK(!source_path.empty()) << "Invalid source path argument";
   CHECK(!mount_path.empty()) << "Invalid mount path argument";
@@ -371,7 +372,8 @@ std::unique_ptr<MountPoint> DiskManager::DoMount(
   auto applied_options = options;
   bool media_read_only = disk.is_read_only || disk.IsOpticalDisk();
   if (media_read_only && !IsReadOnlyMount(applied_options)) {
-    applied_options.push_back(MountOptions::kOptionReadOnly);
+    applied_options.push_back("ro");
+    *mounted_as_read_only = true;
   }
 
   std::unique_ptr<MountPoint> mount_point =
@@ -381,7 +383,8 @@ std::unique_ptr<MountPoint> DiskManager::DoMount(
     // Try to mount the filesystem read-only if mounting it read-write failed.
     if (!IsReadOnlyMount(applied_options)) {
       LOG(INFO) << "Trying to mount " << quote(source_path) << " read-only";
-      applied_options.push_back(MountOptions::kOptionReadOnly);
+      applied_options.push_back("ro");
+      *mounted_as_read_only = true;
       mount_point =
           mounter->Mount(disk.device_file, mount_path, applied_options, error);
     }

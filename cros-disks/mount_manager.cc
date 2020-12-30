@@ -122,11 +122,11 @@ MountErrorType MountManager::Remount(const std::string& source_path,
   ExtractMountLabelFromOptions(&updated_options, &mount_label);
 
   // Perform the underlying mount operation.
-  MountOptions applied_options;
   MountErrorType error_type = MOUNT_ERROR_UNKNOWN;
+  bool mounted_as_read_only = false;
   std::unique_ptr<MountPoint> mount_point =
       DoMount(source_path, filesystem_type, updated_options,
-              base::FilePath(*mount_path), &applied_options, &error_type);
+              base::FilePath(*mount_path), &mounted_as_read_only, &error_type);
   if (error_type != MOUNT_ERROR_NONE) {
     LOG(ERROR) << "Cannot remount path " << quote(source_path)
                << "': " << error_type;
@@ -135,10 +135,9 @@ MountErrorType MountManager::Remount(const std::string& source_path,
 
   DCHECK(mount_point);
   LOG(INFO) << "Path " << quote(source_path) << " on " << quote(*mount_path)
-            << " is remounted with read_only="
-            << applied_options.IsReadOnlyOptionSet();
+            << " is remounted";
   AddOrUpdateMountStateCache(source_path, std::move(mount_point),
-                             applied_options.IsReadOnlyOptionSet());
+                             mounted_as_read_only);
 
   return error_type;
 }
@@ -222,11 +221,11 @@ MountErrorType MountManager::MountNewSource(
   // Perform the underlying mount operation. If an error occurs,
   // ShouldReserveMountPathOnError() is called to check if the mount path
   // should be reserved.
-  MountOptions applied_options;
+  bool mounted_as_read_only = false;
   MountErrorType error_type = MOUNT_ERROR_UNKNOWN;
-  std::unique_ptr<MountPoint> mount_point =
-      DoMount(source_path, filesystem_type, updated_options,
-              base::FilePath(actual_mount_path), &applied_options, &error_type);
+  std::unique_ptr<MountPoint> mount_point = DoMount(
+      source_path, filesystem_type, updated_options,
+      base::FilePath(actual_mount_path), &mounted_as_read_only, &error_type);
   if (error_type == MOUNT_ERROR_NONE) {
     LOG(INFO) << "Path " << quote(source_path) << " is mounted to "
               << quote(actual_mount_path);
@@ -244,7 +243,7 @@ MountErrorType MountManager::MountNewSource(
   }
 
   AddOrUpdateMountStateCache(source_path, std::move(mount_point),
-                             applied_options.IsReadOnlyOptionSet());
+                             mounted_as_read_only);
   *mount_path = actual_mount_path;
   return error_type;
 }

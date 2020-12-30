@@ -63,7 +63,7 @@ std::unique_ptr<MountPoint> FUSEMountManager::DoMount(
     const std::string& fuse_type,
     const std::vector<std::string>& options,
     const base::FilePath& mount_path,
-    MountOptions* applied_options,
+    bool* mounted_as_read_only,
     MountErrorType* error) {
   CHECK(!mount_path.empty()) << "Invalid mount path argument";
 
@@ -86,6 +86,7 @@ std::unique_ptr<MountPoint> FUSEMountManager::DoMount(
     return nullptr;
   }
 
+  *mounted_as_read_only = IsReadOnlyMount(options);
   auto mountpoint = selected_helper->Mount(source, mount_path, options, error);
   LOG_IF(ERROR, *error != MOUNT_ERROR_NONE)
       << "Mounting failed for source " << quote(source) << ": " << *error;

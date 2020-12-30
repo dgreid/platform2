@@ -22,8 +22,8 @@ namespace cros_disks {
 
 namespace {
 
-constexpr MountOptions::Flags kExternalDiskMountFlags =
-    MountOptions::kMountFlags | MS_NOSYMFOLLOW | MS_DIRSYNC;
+constexpr int kExternalDiskMountFlags =
+    MS_NODEV | MS_NOSUID | MS_NOEXEC | MS_NOSYMFOLLOW | MS_DIRSYNC;
 
 // A MountPoint that uses the umount() syscall for unmounting.
 class SystemMountPoint : public MountPoint {

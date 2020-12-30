@@ -74,7 +74,7 @@ std::unique_ptr<MountPoint> ZipManager::DoMount(
     const std::string& /*filesystem_type*/,
     const std::vector<std::string>& options,
     const base::FilePath& mount_path,
-    MountOptions* const applied_options,
+    bool* mounted_as_read_only,
     MountErrorType* const error) {
   DCHECK(error);
   // MountManager resolves source path to real path before calling DoMount,
@@ -84,6 +84,7 @@ std::unique_ptr<MountPoint> ZipManager::DoMount(
     *error = MOUNT_ERROR_INVALID_DEVICE_PATH;
     return nullptr;
   }
+  *mounted_as_read_only = true;
   return mounter_->Mount(source_path, mount_path, options, error);
 }
 

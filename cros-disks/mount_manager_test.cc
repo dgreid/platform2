@@ -120,7 +120,7 @@ class MountManagerUnderTest : public MountManager {
                const std::string&,
                const std::vector<std::string>&,
                const base::FilePath&,
-               MountOptions*,
+               bool*,
                MountErrorType*),
               (override));
   MOCK_METHOD(bool,
@@ -161,10 +161,9 @@ std::unique_ptr<MountPoint> DoMountSuccessReadOnly(
     const std::string& filesystem_type,
     const std::vector<std::string>& options,
     const base::FilePath& mount_path,
-    MountOptions* applied_options,
+    bool* mounted_as_read_only,
     MountErrorType* error) {
-  applied_options->Initialize(options, false, "", "");
-  applied_options->SetReadOnlyOption();
+  *mounted_as_read_only = true;
   *error = MOUNT_ERROR_NONE;
   return std::make_unique<FakeMountPoint>(mount_path, MOUNT_ERROR_NONE);
 }
@@ -175,9 +174,9 @@ std::unique_ptr<MountPoint> DoMountSuccess(
     const std::string& filesystem_type,
     const std::vector<std::string>& options,
     const base::FilePath& mount_path,
-    MountOptions* applied_options,
+    bool* mounted_as_read_only,
     MountErrorType* error) {
-  applied_options->Initialize(options, false, "", "");
+  *mounted_as_read_only = IsReadOnlyMount(options);
   *error = MOUNT_ERROR_NONE;
   return std::make_unique<FakeMountPoint>(mount_path, MOUNT_ERROR_NONE);
 }
@@ -188,8 +187,9 @@ decltype(auto) DoMountSuccessWithUnmountError(MountErrorType unmount_error) {
   return [unmount_error](
              const std::string& source_path, const std::string& filesystem_type,
              const std::vector<std::string>& options,
-             const base::FilePath& mount_path, MountOptions* applied_options,
+             const base::FilePath& mount_path, bool* mounted_as_read_only,
              MountErrorType* error) -> std::unique_ptr<MountPoint> {
+    *mounted_as_read_only = IsReadOnlyMount(options);
     *error = MOUNT_ERROR_NONE;
     return std::make_unique<FakeMountPoint>(mount_path, unmount_error);
   };
@@ -200,7 +200,7 @@ decltype(auto) DoMountFailure(MountErrorType mount_error) {
   return [mount_error](
              const std::string& source_path, const std::string& filesystem_type,
              const std::vector<std::string>& options,
-             const base::FilePath& mount_path, MountOptions* applied_options,
+             const base::FilePath& mount_path, bool* mounted_as_read_only,
              MountErrorType* error) -> std::unique_ptr<MountPoint> {
     *error = mount_error;
     return nullptr;
@@ -476,7 +476,7 @@ TEST_F(MountManagerTest, MountSucceededWithGivenMountPath) {
   source_path_ = kTestSourcePath;
   mount_path_ = kTestMountPath;
 
-  options_.push_back(MountOptions::kOptionReadWrite);
+  options_.push_back("rw");
   EXPECT_CALL(platform_, CreateOrReuseEmptyDirectory(mount_path_))
       .WillOnce(Return(true));
   EXPECT_CALL(platform_, CreateOrReuseEmptyDirectoryWithFallback(_, _, _))
@@ -519,7 +519,7 @@ TEST_F(MountManagerTest, MountCachesStatusWithReadOnlyOption) {
       .WillOnce(Return(true));
   EXPECT_CALL(platform_, SetPermissions(mount_path_, _)).WillOnce(Return(true));
   // Add read-only mount option.
-  options_.push_back(MountOptions::kOptionReadOnly);
+  options_.push_back("ro");
   EXPECT_CALL(manager_, DoMount(source_path_, filesystem_type_, options_,
                                 base::FilePath(mount_path_), _, _))
       .WillOnce(Invoke(DoMountSuccess));
@@ -550,7 +550,7 @@ TEST_F(MountManagerTest, MountSuccededWithReadOnlyFallback) {
   EXPECT_CALL(platform_, SetOwnership(mount_path_, _, _))
       .WillOnce(Return(true));
   EXPECT_CALL(platform_, SetPermissions(mount_path_, _)).WillOnce(Return(true));
-  options_.push_back(MountOptions::kOptionReadWrite);
+  options_.push_back("rw");
   // Emulate Mounter added read-only option as a fallback.
   EXPECT_CALL(manager_, DoMount(source_path_, filesystem_type_, options_,
                                 base::FilePath(mount_path_), _, _))
@@ -1334,13 +1334,11 @@ TEST_F(MountManagerTest, RemountSucceededWithGivenSourcePath) {
               DoMount(kTestSourcePath, filesystem_type_,
                       std::vector<std::string>({kMountOptionReadWrite}),
                       base::FilePath(kTestMountPath), _, _))
-      .WillOnce(WithArgs<4, 5>(
-          [](MountOptions* applied_options, MountErrorType* error) {
-            applied_options->Initialize({kMountOptionReadWrite}, false, "", "");
-            *error = MOUNT_ERROR_NONE;
-            return std::make_unique<NeverUnmountedMountPoint>(
-                base::FilePath(kTestMountPath));
-          }));
+      .WillOnce(WithArgs<5>([](MountErrorType* error) {
+        *error = MOUNT_ERROR_NONE;
+        return std::make_unique<NeverUnmountedMountPoint>(
+            base::FilePath(kTestMountPath));
+      }));
   mount_path_ = "";
   EXPECT_EQ(MOUNT_ERROR_NONE,
             manager_.Mount(kTestSourcePath, filesystem_type_,

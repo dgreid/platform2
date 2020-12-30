@@ -47,9 +47,6 @@ class ArchiveManager : public MountManager {
   // with in order to access files in all the required locations.
   std::vector<gid_t> GetSupplementaryGroups() const;
 
-  // Gets FUSE mount options.
-  MountErrorType GetMountOptions(MountOptions* options) const;
-
  protected:
   struct MountNamespace {
     std::unique_ptr<brillo::ScopedMountNamespace> guard;
