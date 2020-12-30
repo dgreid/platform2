@@ -65,6 +65,9 @@ class SuspendConfigurator : public SuspendConfiguratorInterface {
   // Configures whether console should be enabled/disabled during suspend.
   void ConfigureConsoleForSuspend();
 
+  // Returns true if the serial console is enabled.
+  bool IsSerialConsoleEnabled();
+
   // Reads preferences and sets |suspend_mode_|.
   void ReadSuspendMode();
 

@@ -4,8 +4,12 @@
 
 #include "power_manager/powerd/system/suspend_configurator.h"
 
+#include <vector>
+
 #include <base/files/file_util.h>
 #include <base/logging.h>
+#include <base/strings/string_split.h>
+#include <base/strings/string_util.h>
 
 #include "power_manager/common/power_constants.h"
 #include "power_manager/common/prefs.h"
@@ -94,9 +98,14 @@ void SuspendConfigurator::ConfigureConsoleForSuspend() {
   bool pref_val = true;
   bool enable_console = true;
 
-  // If S0iX is enabled, default to disabling console (b/63737106).
-  if (prefs_->GetBool(kSuspendToIdlePref, &pref_val) && pref_val)
-    enable_console = false;
+// Limit disabling console for S0iX to x86 (b/175428322).
+#if defined(__x86_64__)
+  if (IsSerialConsoleEnabled()) {
+    // If S0iX is enabled, default to disabling console (b/63737106).
+    if (prefs_->GetBool(kSuspendToIdlePref, &pref_val) && pref_val)
+      enable_console = false;
+  }
+#endif
 
   // Overwrite the default if the pref is set.
   if (prefs_->GetBool(kEnableConsoleDuringSuspendPref, &pref_val))
@@ -138,6 +147,28 @@ base::FilePath SuspendConfigurator::GetPrefixedFilePath(
     return file_path;
   DCHECK(file_path.IsAbsolute());
   return prefix_path_for_testing_.Append(file_path.value().substr(1));
+}
+
+bool SuspendConfigurator::IsSerialConsoleEnabled() {
+  std::string contents;
+
+  if (!base::ReadFileToString(base::FilePath("/proc/consoles"), &contents)) {
+    return false;
+  }
+
+  std::vector<std::string> consoles = base::SplitString(
+      contents, "\n", base::TRIM_WHITESPACE, base::SPLIT_WANT_NONEMPTY);
+
+  bool rc = false;
+
+  for (const std::string& con : consoles) {
+    if (base::StartsWith(con, "tty", base::CompareCase::SENSITIVE)) {
+      rc = true;
+      break;
+    }
+  }
+
+  return rc;
 }
 
 }  // namespace system
