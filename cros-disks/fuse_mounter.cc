@@ -440,6 +440,10 @@ std::unique_ptr<SandboxedProcess> FUSEMounterHelper::PrepareSandbox(
     std::vector<std::string> params,
     MountErrorType* error) const {
   auto sandbox = sandbox_factory_->CreateSandboxedProcess();
+  if (!sandbox) {
+    *error = MOUNT_ERROR_INTERNAL;
+    return nullptr;
+  }
   *error =
       ConfigureSandbox(source, target_path, std::move(params), sandbox.get());
   if (*error != MOUNT_ERROR_NONE) {
