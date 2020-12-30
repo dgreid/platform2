@@ -72,17 +72,18 @@ int main(int argc, char** argv) {
       case 'p':
         // This is an outdated argument. When we receive it, we just
         // exit with success right away.
-        printf("Received --postcommit. This is a successful no-op.\n");
+        LOG(INFO) << "Received --postcommit. This is a successful no-op.";
         return 0;
 
       default:
-        printf("Unknown argument %d - switch and struct out of sync\n\n", c);
+        LOG(INFO) << "Unknown argument " << c
+                  << " - switch and struct out of sync.";
         return showHelp();
     }
   }
 
   if (argc - optind < 1) {
-    printf("No command type present (postinst, etc)\n\n");
+    LOG(INFO) << "No command type present (postinst, etc).";
     return showHelp();
   }
 
@@ -105,6 +106,6 @@ int main(int argc, char** argv) {
     return exit_code;
   }
 
-  printf("Unknown command: '%s'\n\n", command.c_str());
+  LOG(INFO) << "Unknown command: " << command;
   return showHelp();
 }

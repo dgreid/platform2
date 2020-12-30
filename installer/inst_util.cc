@@ -80,7 +80,8 @@ void LoggingTimerStart() {
 // Log how long since the last call to LoggingTimerStart()
 void LoggingTimerFinish() {
   time_t finish_time = time(NULL);
-  printf("Finished after %.f seconds.\n", difftime(finish_time, START_TIME));
+  LOG(INFO) << "Finished after " << difftime(finish_time, START_TIME)
+            << " seconds.";
 }
 
 // This is a place holder to invoke the backing scripts. Once all scripts have
@@ -88,7 +89,7 @@ void LoggingTimerFinish() {
 // Takes a vector of args and returns error code.
 int RunCommand(const vector<string>& cmdline) {
   string command = base::JoinString(cmdline, " ");
-  printf("Command: %s\n", command.c_str());
+  LOG(INFO) << "Running command: " << command;
 
   fflush(stdout);
   fflush(stderr);
@@ -105,10 +106,11 @@ int RunCommand(const vector<string>& cmdline) {
   LoggingTimerFinish();
 
   if (exit_code == -1) {
-    printf("Failed Command - invalid process: %s\n", command.c_str());
+    LOG(ERROR) << "Failed command - invalid process: " << command;
     return 1;
   } else if (exit_code != 0) {
-    printf("Failed Command: %s - Exit Code %d\n", command.c_str(), exit_code);
+    LOG(ERROR) << "Failed command: " << command
+               << " - exit code: " << exit_code;
   }
   return exit_code;
 }
@@ -213,7 +215,7 @@ int GetPartitionFromPartitionDev(const string& partition_dev) {
   int result = atoi(partition_str.c_str());
 
   if (result == 0)
-    printf("Bad partition number from '%s'\n", partition_dev.c_str());
+    LOG(ERROR) << "Bad partition number from " << partition_dev;
 
   return result;
 }
@@ -257,7 +259,7 @@ bool RemovePackFiles(const string& dirname) {
 
     string full_filename = dirname + '/' + filename;
 
-    printf("Unlinked file %s\n", full_filename.c_str());
+    LOG(INFO) << "Unlinked file: " << full_filename;
     unlink(full_filename.c_str());
   }
 
@@ -288,8 +290,8 @@ bool ReplaceInFile(const string& pattern,
   size_t offset = contents.find(pattern);
 
   if (offset == string::npos) {
-    printf("ReplaceInFile failed to find '%s' in %s\n", pattern.c_str(),
-           path.value().c_str());
+    LOG(ERROR) << "ReplaceInFile failed to find '" << pattern << "' in "
+               << path;
     return false;
   }
 
@@ -316,38 +318,38 @@ bool MakeFileSystemRw(const string& dev_name) {
 
   base::ScopedFD fd(open(dev_name.c_str(), O_RDWR));
   if (!fd.is_valid()) {
-    printf("Failed to open %s\n", dev_name.c_str());
+    PLOG(ERROR) << "Failed to open: " << dev_name;
     return false;
   }
 
   const off_t magic_offset = 0x438;
   if (lseek(fd.get(), magic_offset, SEEK_SET) != magic_offset) {
-    printf("Failed to seek\n");
+    PLOG(ERROR) << "Failed to seek.";
     return false;
   }
 
   uint16_t fs_id;
   if (read(fd.get(), &fs_id, sizeof(fs_id)) != sizeof(fs_id)) {
-    printf("Can't read the filesystem identifier\n");
+    PLOG(ERROR) << "Can't read the filesystem identifier.";
     return false;
   }
 
   if (fs_id != 0xef53) {
-    printf("Non-EXT filesystem with magic 0x%04x can't be made writable.\n",
-           fs_id);
+    LOG(ERROR) << "Non-EXT filesystem with magic " << fs_id
+               << " can't be made writable.";
     return false;
   }
 
   // Write out stuff
   if (lseek(fd.get(), offset, SEEK_SET) != offset) {
-    printf("Failed to seek\n");
+    PLOG(ERROR) << "Failed to seek.";
     return false;
   }
 
   unsigned char buff = 0;  // rw enabled.  0xFF for disable_rw_mount
 
   if (write(fd.get(), &buff, 1) != 1) {
-    printf("Failed to write\n");
+    PLOG(ERROR) << "Failed to write.";
     return false;
   }
 
@@ -375,7 +377,7 @@ string DumpKernelConfig(const string& kernel_dev) {
 
   char* config = FindKernelConfig(kernel_dev.c_str(), USE_PREAMBLE_LOAD_ADDR);
   if (!config) {
-    printf("Error retrieving kernel config from '%s'\n", kernel_dev.c_str());
+    LOG(ERROR) << "Error retrieving kernel config from " << kernel_dev;
     return result;
   }
 
@@ -487,7 +489,7 @@ bool GetKernelInfo(std::string* result) {
 
   struct utsname buf;
   if (uname(&buf)) {
-    fprintf(stderr, "ERROR: uname() failed with errno: %s", strerror(errno));
+    PLOG(ERROR) << "uname() failed";
     return false;
   }
 

@@ -54,7 +54,7 @@ bool RunLegacyPostInstall(const InstallConfig& install_config) {
   const base::FilePath root_syslinux = root_mount.Append("boot/syslinux");
   const base::FilePath boot_mount(install_config.boot.mount());
   const base::FilePath boot_syslinux = boot_mount.Append("syslinux");
-  printf("Running LegacyPostInstall\n");
+  LOG(INFO) << "Running LegacyPostInstall.";
 
   if (RunCommand({"cp", "-nR", root_syslinux.value(), boot_mount.value()}) !=
       0) {
@@ -99,7 +99,7 @@ bool RunLegacyPostInstall(const InstallConfig& install_config) {
       ExplandVerityArguments(kernel_config, install_config.root.uuid());
 
   if (kernel_config_dm.empty()) {
-    printf("Failed to extract Verity arguments.");
+    LOG(ERROR) << "Failed to extract Verity arguments.";
     return false;
   }
 
@@ -123,18 +123,17 @@ bool CopyBootFile(const InstallConfig& install_config,
 
   // If the source file file exists, copy it into place, else do nothing.
   if (base::PathExists(src_path)) {
-    printf("Copying '%s' to '%s'\n", src_path.value().c_str(),
-           dst_path.value().c_str());
+    LOG(INFO) << "Copying " << src_path << " to " << dst_path;
     result = base::CopyFile(src_path, dst_path);
   } else {
-    printf("Not present to install: '%s'\n", src_path.value().c_str());
+    LOG(INFO) << "Not present to install: " << src_path;
   }
   return result;
 }
 
 bool RunLegacyUBootPostInstall(const InstallConfig& install_config) {
   bool result = true;
-  printf("Running LegacyUBootPostInstall\n");
+  LOG(INFO) << "Running LegacyUBootPostInstall.";
 
   result &= CopyBootFile(install_config,
                          "boot/boot-" + install_config.slot + ".scr.uimg",
@@ -164,7 +163,7 @@ bool UpdateEfiBootloaders(const InstallConfig& install_config) {
 }
 
 bool RunEfiPostInstall(const InstallConfig& install_config) {
-  printf("Running EfiPostInstall\n");
+  LOG(INFO) << "Running EfiPostInstall.";
 
   // Update the kernel we are about to use.
   if (!UpdateLegacyKernel(install_config))
@@ -184,7 +183,7 @@ bool RunEfiPostInstall(const InstallConfig& install_config) {
   // Read in the grub.cfg to be updated.
   string grub_src;
   if (!base::ReadFileToString(grub_path, &grub_src)) {
-    printf("Unable to read grub template file %s\n", grub_path.value().c_str());
+    PLOG(ERROR) << "Unable to read grub template file: " << grub_path.value();
     return false;
   }
 
@@ -196,7 +195,7 @@ bool RunEfiPostInstall(const InstallConfig& install_config) {
 
   // Write out the new grub.cfg.
   if (!base::WriteFile(grub_path, output)) {
-    printf("Unable to write boot menu file %s\n", grub_path.value().c_str());
+    PLOG(ERROR) << "Unable to write boot menu file: " << grub_path;
     return false;
   }
 
@@ -222,13 +221,12 @@ bool EfiGrubUpdate(const string& input,
       if (ExtractKernelArg(*line, "dm").empty()) {
         // If it's an unverified boot line, just set the root partition to boot.
         if (!SetKernelArg("root", "PARTUUID=" + root_uuid, &(*line))) {
-          printf("Unable to update unverified root flag in %s.\n",
-                 line->c_str());
+          LOG(ERROR) << "Unable to update unverified root flag in " << *line;
           return false;
         }
       } else {
         if (!SetKernelArg("dm", verity_args, &(*line))) {
-          printf("Unable to update verified dm flag.\n");
+          LOG(INFO) << "Unable to update verified dm flag.";
           return false;
         }
       }

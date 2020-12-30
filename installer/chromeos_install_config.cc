@@ -20,8 +20,8 @@ bool StrToBiosType(string name, BiosType* bios_type) {
   } else if (name == "efi") {
     *bios_type = kBiosTypeEFI;
   } else {
-    printf("Bios type %s is not one of secure, legacy, efi, or uboot\n",
-           name.c_str());
+    LOG(INFO) << "Bios type " << name
+              << " is not one of secure, legacy, efi, or uboot.";
     return false;
   }
 
@@ -50,14 +50,14 @@ string Partition::uuid() const {
   CgptManager cgpt;
 
   if (cgpt.Initialize(base_device()) != kCgptSuccess) {
-    printf("CgptManager failed to initialize for %s", base_device().c_str());
+    LOG(ERROR) << "CgptManager failed to initialize for " << base_device();
     return "";
   }
 
   Guid guid;
 
   if (cgpt.GetPartitionUniqueId(number(), &guid) != kCgptSuccess) {
-    printf("CgptManager failed to get guid for %d", number());
+    LOG(ERROR) << "CgptManager failed to get guid for " << number();
     return "";
   }
 

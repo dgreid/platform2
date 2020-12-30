@@ -18,7 +18,7 @@ using std::vector;
 
 void ExtractFspm(const string& partition, const base::FilePath& fspm_path) {
   if (partition != "A" && partition != "B") {
-    printf("%s - unsupported partition %s\n", __func__, partition.c_str());
+    LOG(ERROR) << "unsupported partition: " << partition;
     return;
   }
 
@@ -34,8 +34,8 @@ void ExtractFspm(const string& partition, const base::FilePath& fspm_path) {
                         "FW_MAIN_" + partition + ":" + fw_bin_path.value()};
   int result;
   if ((result = RunCommand(cmd))) {
-    printf("%s: Error reading FW_MAIN_%s %d\n", __func__, partition.c_str(),
-           result);
+    LOG(ERROR) << "Error reading FW_MAIN_" << partition
+               << " result: " << result;
     base::DeleteFile(fw_bin_path);
     return;
   }
@@ -45,8 +45,8 @@ void ExtractFspm(const string& partition, const base::FilePath& fspm_path) {
          "fspm.bin",          "-f",
          fspm_path.value()};
   if ((result = RunCommand(cmd)))
-    printf("%s: Error extracting FSPM from FW_MAIN_%s - %d\n", __func__,
-           partition.c_str(), result);
+    LOG(ERROR) << "Error extracting FSPM from FW_MAIN_" << partition
+               << " result: " << result;
 
   base::DeleteFile(fw_bin_path);
 }
@@ -75,10 +75,10 @@ bool SlowBootNotifyRequired(const base::FilePath& fspm_main,
   // errors).
   if (base::PathExists(fspm_main) && base::PathExists(fspm_next) &&
       !ContentsEqual(fspm_main, fspm_next)) {
-    printf("%s: Slow boot notification enabled\n", __func__);
+    LOG(INFO) << "Slow boot notification enabled.";
     return true;
   }
 
-  printf("%s: Slow boot notification disabled\n", __func__);
+  LOG(INFO) << "Slow boot notification disabled.";
   return false;
 }

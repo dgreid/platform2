@@ -45,8 +45,7 @@ bool ConfigureInstall(const string& install_dev,
       slot = "B";
       break;
     default:
-      fprintf(stderr, "Not a valid target partition number: %i\n",
-              root.number());
+      LOG(ERROR) << "Not a valid target partition number: " << root.number();
       return false;
   }
 
@@ -75,7 +74,7 @@ bool DetectBiosType(BiosType* bios_type) {
   string kernel_cmd_line;
   if (!base::ReadFileToString(base::FilePath("/proc/cmdline"),
                               &kernel_cmd_line)) {
-    printf("Can't read kernel commandline options\n");
+    LOG(ERROR) << "Can't read kernel commandline options";
     return false;
   }
 
@@ -105,7 +104,7 @@ bool KernelConfigToBiosType(const string& kernel_config, BiosType* type) {
   }
 
   // No recognized bios type was found
-  printf("No recognized cros_XXX bios option on kernel command line\n");
+  LOG(ERROR) << "No recognized cros_XXX bios option on kernel command line.";
   return false;
 }
 
@@ -137,7 +136,7 @@ int FirmwareUpdate(const string& install_dir, bool is_update) {
   int result;
   string command = install_dir + "/usr/sbin/chromeos-firmwareupdate";
   if (access(command.c_str(), X_OK) != 0) {
-    printf("No firmware updates available.\n");
+    LOG(INFO) << "No firmware updates available.";
     return true;
   }
 
@@ -156,19 +155,17 @@ int FirmwareUpdate(const string& install_dir, bool is_update) {
   // and people may confuse that as 'firmware update takes a long wait',
   // we explicitly prompt here.
   if (result == 0) {
-    printf("Firmware update completed.\n");
+    LOG(INFO) << "Firmware update completed.";
   } else if (result == 3) {
-    printf(
-        "Firmware can't be updated. Booted from RW Firmware B"
-        " (error code: %d)\n",
-        result);
+    LOG(INFO) << "Firmware can't be updated. Booted from RW Firmware B"
+                 " with error code: "
+              << result;
   } else if (result == 4) {
-    printf(
-        "RO Firmware needs update, but is really marked RO."
-        " (error code: %d)\n",
-        result);
+    LOG(INFO) << "RO Firmware needs update, but is really marked RO."
+                 " with error code: "
+              << result;
   } else {
-    printf("Firmware update failed (error code: %d).\n", result);
+    LOG(INFO) << "Firmware update failed with error code: " << result;
   }
 
   return result;
@@ -179,28 +176,28 @@ int FirmwareUpdate(const string& install_dir, bool is_update) {
 // uid:gid.
 void FixUnencryptedPermission() {
   string unencrypted_dir = string(kStatefulMount) + "/unencrypted";
-  printf("Checking %s permission.\n", unencrypted_dir.c_str());
+  LOG(INFO) << "Checking permission of " << unencrypted_dir;
   struct stat unencrypted_stat;
   const mode_t target_mode =
       S_IFDIR | S_IRWXU | (S_IRGRP | S_IXGRP) | (S_IROTH | S_IXOTH);  // 040755
   if (stat(unencrypted_dir.c_str(), &unencrypted_stat) != 0) {
-    perror("Couldn't check the current permission, ignored");
+    PLOG(ERROR) << "Couldn't check the current permission, ignored";
   } else if (unencrypted_stat.st_uid == 0 && unencrypted_stat.st_gid == 0 &&
              unencrypted_stat.st_mode == target_mode) {
-    printf("Permission is ok.\n");
+    LOG(INFO) << "Permission is ok.";
   } else {
     bool ok = true;
     // chmod(2) only takes the last four octal digits, so we flip the IFDIR bit.
     if (chmod(unencrypted_dir.c_str(), target_mode ^ S_IFDIR) != 0) {
-      perror("chmod");
+      PLOG(ERROR) << "chmod failed";
       ok = false;
     }
     if (chown(unencrypted_dir.c_str(), 0, 0) != 0) {
-      perror("chown");
+      PLOG(ERROR) << "chown failed";
       ok = false;
     }
     if (ok)
-      printf("Permission changed successfully.\n");
+      LOG(INFO) << "Permission changed successfully.";
   }
 }
 
@@ -216,9 +213,9 @@ bool RunBoardPostInstall(const string& install_dir) {
   result = RunCommand({script, install_dir});
 
   if (result)
-    fprintf(stderr, "Board post install failed (%d).\n", result);
+    LOG(ERROR) << "Board post install failed, result: " << result;
   else
-    printf("Board post install succeeded\n");
+    LOG(INFO) << "Board post install succeeded.";
 
   return result == 0;
 }
@@ -243,41 +240,40 @@ bool ChromeosChrootPostinst(const InstallConfig& install_config,
   // FS as such
   Touch(install_config.root.mount() + "/.nodelta");  // Ignore Error on purpse
 
-  printf("Set boot target to %s: Partition %d, Slot %s\n",
-         install_config.root.device().c_str(), install_config.root.number(),
-         install_config.slot.c_str());
+  LOG(INFO) << "Set boot target to " << install_config.root.device()
+            << ": Partition " << install_config.root.number() << ", Slot "
+            << install_config.slot;
 
   if (!SetImage(install_config)) {
-    printf("SetImage failed.\n");
+    LOG(ERROR) << "SetImage failed.";
     return false;
   }
 
   // This cache file might be invalidated, and will be recreated on next boot.
   // Error ignored, since we don't care if it didn't exist to start with.
   string network_driver_cache = "/var/lib/preload-network-drivers";
-  printf("Clearing network driver boot cache: %s.\n",
-         network_driver_cache.c_str());
+  LOG(INFO) << "Clearing network driver boot cache: " << network_driver_cache;
   unlink(network_driver_cache.c_str());
 
-  printf("Syncing filesystems before changing boot order...\n");
+  LOG(INFO) << "Syncing filesystems before changing boot order...";
   LoggingTimerStart();
   sync();
   LoggingTimerFinish();
 
-  printf("Updating Partition Table Attributes using CgptManager...\n");
+  LOG(INFO) << "Updating Partition Table Attributes using CgptManager...";
 
   CgptManager cgpt_manager;
 
   int result = cgpt_manager.Initialize(install_config.root.base_device());
   if (result != kCgptSuccess) {
-    printf("Unable to initialize CgptManager\n");
+    LOG(ERROR) << "Unable to initialize CgptManager().";
     return false;
   }
 
   result = cgpt_manager.SetHighestPriority(install_config.kernel.number());
   if (result != kCgptSuccess) {
-    printf("Unable to set highest priority for kernel %d\n",
-           install_config.kernel.number());
+    LOG(ERROR) << "Unable to set highest priority for kernel: "
+               << install_config.kernel.number();
     return false;
   }
 
@@ -287,8 +283,8 @@ bool ChromeosChrootPostinst(const InstallConfig& install_config,
   result = cgpt_manager.SetSuccessful(install_config.kernel.number(),
                                       new_kern_successful);
   if (result != kCgptSuccess) {
-    printf("Unable to set successful to %d for kernel %d\n",
-           new_kern_successful, install_config.kernel.number());
+    LOG(ERROR) << "Unable to set successful to " << new_kern_successful
+               << " for kernel: " << install_config.kernel.number();
     return false;
   }
 
@@ -296,13 +292,14 @@ bool ChromeosChrootPostinst(const InstallConfig& install_config,
   result =
       cgpt_manager.SetNumTriesLeft(install_config.kernel.number(), numTries);
   if (result != kCgptSuccess) {
-    printf("Unable to set NumTriesLeft to %d for kernel %d\n", numTries,
-           install_config.kernel.number());
+    LOG(ERROR) << "Unable to set NumTriesLeft to " << numTries
+               << " for kernel: " << install_config.kernel.number();
     return false;
   }
 
-  printf("Updated kernel %d with Successful = %d and NumTriesLeft = %d\n",
-         install_config.kernel.number(), new_kern_successful, numTries);
+  LOG(INFO) << "Updated kernel " << install_config.kernel.number()
+            << " with Successful: " << new_kern_successful
+            << " and NumTriesLeft: " << numTries;
 
   // At this point in the script, the new partition has been marked bootable
   // and a reboot will boot into it. Thus, it's important that any future
@@ -317,7 +314,7 @@ bool ChromeosChrootPostinst(const InstallConfig& install_config,
   // install/recovery. We don't have support for it as it'll increase the
   // complexity here, and only developers do upgrade from USB.
   if (!RemovePackFiles("/var/lib/ureadahead")) {
-    printf("RemovePackFiles Failed\n");
+    LOG(ERROR) << "RemovePackFiles Failed.";
   }
 
   // Create a file indicating that the install is completed. The file
@@ -325,7 +322,7 @@ bool ChromeosChrootPostinst(const InstallConfig& install_config,
   // See comments above about removing ureadahead files.
   string install_completed = string(kStatefulMount) + "/.install_completed";
   if (!Touch(install_completed)) {
-    printf("Touch(%s) FAILED\n", install_completed.c_str());
+    PLOG(ERROR) << "Touch(" << install_completed.c_str() << ") failed.";
   }
 
   // If present, remove firmware checking completion file to force a disk
@@ -337,7 +334,7 @@ bool ChromeosChrootPostinst(const InstallConfig& install_config,
 
   if (!is_factory_install &&
       !RunBoardPostInstall(install_config.root.mount())) {
-    fprintf(stderr, "Failed to perform board specific post install script.");
+    LOG(ERROR) << "Failed to perform board specific post install script.";
     return false;
   }
 
@@ -365,8 +362,8 @@ bool ChromeosChrootPostinst(const InstallConfig& install_config,
         base::FilePath slow_boot_req_file(string(kStatefulMount) +
                                           "/etc/slow_boot_required");
         if (WriteFile(slow_boot_req_file, "1", 1) != 1)
-          fprintf(stderr, "Unable to write to file %s - failure reason %s\n",
-                  slow_boot_req_file.value().c_str(), strerror(errno));
+          PLOG(ERROR) << "Unable to write to file:"
+                      << slow_boot_req_file.value();
       }
       base::DeleteFile(fspm_main);
       base::DeleteFile(fspm_next);
@@ -377,9 +374,8 @@ bool ChromeosChrootPostinst(const InstallConfig& install_config,
       // are not running legacy (non-ChromeOS) firmware. If the firmware
       // updater crashes or writes corrupt data rather than gracefully
       // failing, we'll probably need to recover with a recovery image.
-      printf(
-          "Rolling back update due to failure installing required "
-          "firmware.\n");
+      LOG(INFO) << "Rolling back update due to failure installing required "
+                << "firmware.";
 
       // In all these checks below, we continue even if there's a failure
       // so as to cleanup as much as possible.
@@ -389,8 +385,8 @@ bool ChromeosChrootPostinst(const InstallConfig& install_config,
                                           new_kern_successful);
       if (result != kCgptSuccess) {
         rollback_successful = false;
-        printf("Unable to set successful to %d for kernel %d\n",
-               new_kern_successful, install_config.kernel.number());
+        LOG(ERROR) << "Unable to set successful to " << new_kern_successful
+                   << " for kernel: " << install_config.kernel.number();
       }
 
       numTries = 0;
@@ -398,8 +394,8 @@ bool ChromeosChrootPostinst(const InstallConfig& install_config,
                                             numTries);
       if (result != kCgptSuccess) {
         rollback_successful = false;
-        printf("Unable to set NumTriesLeft to %d for kernel %d\n", numTries,
-               install_config.kernel.number());
+        LOG(ERROR) << "Unable to set NumTriesLeft to " << numTries
+                   << " for kernel: " << install_config.kernel.number();
       }
 
       int priority = 0;
@@ -407,12 +403,12 @@ bool ChromeosChrootPostinst(const InstallConfig& install_config,
           cgpt_manager.SetPriority(install_config.kernel.number(), priority);
       if (result != kCgptSuccess) {
         rollback_successful = false;
-        printf("Unable to set Priority to %d for kernel %d\n", priority,
-               install_config.kernel.number());
+        LOG(ERROR) << "Unable to set Priority to " << priority
+                   << " for kernel: " << install_config.kernel.number();
       }
 
       if (rollback_successful)
-        printf("Successfully updated GPT with all settings to rollback.\n");
+        LOG(INFO) << "Successfully updated GPT with all settings to rollback.";
 
       return false;
     }
@@ -423,26 +419,26 @@ bool ChromeosChrootPostinst(const InstallConfig& install_config,
     // Check the device state to determine if the board id should be set.
     if (RunCr50Script(install_config.root.mount(), "cr50-set-board-id.sh",
                       "check_device")) {
-      printf("Skip setting board id.\n");
+      LOG(INFO) << "Skip setting board id";
     } else {
       // Set the board id with unknown phase.
       result = RunCr50Script(install_config.root.mount(),
                              "cr50-set-board-id.sh", "unknown");
       // cr50 set board id failure is not a reason to interrupt installation.
       if (result)
-        fprintf(stderr, "ignored: cr50-set-board-id failure (%d).\n", result);
+        LOG(ERROR) << "ignored: cr50-set-board-id failure: " << result;
     }
 
     result = RunCr50Script(install_config.root.mount(), "cr50-update.sh",
                            install_config.root.mount());
     // cr50 update failure is not a reason for interrupting installation.
     if (result)
-      fprintf(stderr, "ignored: cr50-update failure (%d).\n", result);
-    printf("cr50 setup complete.\n");
+      LOG(WARNING) << "ignored: cr50-update failure: " << result;
+    LOG(INFO) << "cr50 setup complete.";
   }
 
   if (cgpt_manager.Finalize()) {
-    fprintf(stderr, "Failed to write GPT changes back.\n");
+    LOG(ERROR) << "Failed to write GPT changes back.";
     return false;
   }
 
@@ -459,19 +455,19 @@ bool RunPostInstall(const string& install_dev,
   InstallConfig install_config;
 
   if (!ConfigureInstall(install_dev, install_dir, bios_type, &install_config)) {
-    printf("Configure failed.\n");
+    LOG(ERROR) << "Configure failed.";
     return false;
   }
 
   // Log how we are configured.
-  printf("PostInstall Configured: (%s, %s, %s, %s)\n",
-         install_config.slot.c_str(), install_config.root.device().c_str(),
-         install_config.kernel.device().c_str(),
-         install_config.boot.device().c_str());
+  LOG(INFO) << "PostInstall Configured: " << install_config.slot.c_str() << ", "
+            << install_config.root.device() << ", "
+            << install_config.kernel.device() << ", "
+            << install_config.boot.device();
 
   string uname;
   if (GetKernelInfo(&uname)) {
-    printf("\n Current Kernel Info: %s\n", uname.c_str());
+    LOG(INFO) << "Current Kernel Info: " << uname.c_str();
   }
 
   string lsb_contents;
@@ -479,15 +475,15 @@ bool RunPostInstall(const string& install_dev,
   if (base::ReadFileToString(
           base::FilePath(install_config.root.mount()).Append("etc/lsb-release"),
           &lsb_contents)) {
-    printf("\nlsb-release inside the new rootfs:\n%s\n", lsb_contents.c_str());
+    LOG(INFO) << "lsb-release inside the new rootfs:\n" << lsb_contents.c_str();
   }
 
   if (!ChromeosChrootPostinst(install_config, exit_code)) {
-    printf("PostInstall Failed\n");
+    LOG(ERROR) << "PostInstall Failed.";
     return false;
   }
 
-  printf("Syncing filesystem at end of postinst...\n");
+  LOG(INFO) << "Syncing filesystem at end of postinst...";
   sync();
 
   // Sync doesn't appear to sync out cgpt changes, so
@@ -514,7 +510,7 @@ bool RunPostInstall(const string& install_dev,
   switch (install_config.bios_type) {
     case kBiosTypeUnknown:
     case kBiosTypeSecure:
-      printf("Unexpected BiosType %d.\n", install_config.bios_type);
+      LOG(ERROR) << "Unexpected BiosType: " << install_config.bios_type;
       success = false;
       break;
 
@@ -522,21 +518,21 @@ bool RunPostInstall(const string& install_dev,
       // The Arm platform only uses U-Boot, but may set cros_legacy to mean
       // U-Boot without secure boot modifications. This may need handling.
       if (!RunLegacyUBootPostInstall(install_config)) {
-        printf("Legacy PostInstall failed.\n");
+        LOG(ERROR) << "Legacy PostInstall failed.";
         success = false;
       }
       break;
 
     case kBiosTypeLegacy:
       if (!RunLegacyPostInstall(install_config)) {
-        printf("Legacy PostInstall failed.\n");
+        LOG(ERROR) << "Legacy PostInstall failed.";
         success = false;
       }
       break;
 
     case kBiosTypeEFI:
       if (!RunEfiPostInstall(install_config)) {
-        printf("EFI PostInstall failed.\n");
+        LOG(ERROR) << "EFI PostInstall failed.";
         success = false;
       }
       break;

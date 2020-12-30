@@ -50,7 +50,7 @@ using std::string;
 // Don't know if we can make the code parse both types of arguments.
 
 bool SetImage(const InstallConfig& install_config) {
-  printf("SetImage\n");
+  LOG(INFO) << "SetImage";
 
   // Re-hash the root filesystem and use the table for dm-verity.
   // We extract the parameters for verification from the kernel
@@ -61,7 +61,7 @@ bool SetImage(const InstallConfig& install_config) {
 
   string kernel_config = DumpKernelConfig(install_config.kernel.device());
 
-  printf("KERNEL_CONFIG: %s\n", kernel_config.c_str());
+  LOG(INFO) << "KERNEL_CONFIG: " << kernel_config;
 
   // An example value: <root_hexdigest and salt values shortened>
   //
@@ -88,8 +88,8 @@ bool SetImage(const InstallConfig& install_config) {
     }
   }
   if (verity_args.empty()) {
-    printf("Didn't find verity args in the dm command line: '%s'\n",
-           dm_config.c_str());
+    LOG(ERROR) << "Didn't find verity args in the dm command line: "
+               << dm_config;
     return false;
   }
 
@@ -104,7 +104,7 @@ bool SetImage(const InstallConfig& install_config) {
   if (!enable_rootfs_verification)
     MakeFileSystemRw(install_config.root.device());
 
-  printf("Setting up verity.\n");
+  LOG(INFO) << "Setting up verity.";
   LoggingTimerStart();
   int result = chromeos_verity(verity_algorithm, install_config.root.device(),
                                getpagesize(),
