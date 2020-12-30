@@ -14,6 +14,7 @@ namespace cros {
 class CROS_CAMERA_EXPORT CameraMojoChannelManagerToken {
  public:
   static CameraMojoChannelManagerToken* CreateInstance();
+  virtual ~CameraMojoChannelManagerToken() {}
 };
 
 }  // namespace cros
