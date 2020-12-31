@@ -699,11 +699,6 @@ class UserDataAuth {
   // Note: This must only be called on mount thread
   bool RemoveAllMounts(bool unmount);
 
-  // Returns true if any of the path in |prefixes| starts with |path|
-  // Note that this function is case insensitive
-  static bool PrefixPresent(const std::vector<base::FilePath>& prefixes,
-                            const std::string path);
-
   // Calling this function will try to ensure that |public_mount_salt_| is ready
   // to use. If it's not ready, we'll generate it. Returns true if
   // |public_mount_salt_| is ready.

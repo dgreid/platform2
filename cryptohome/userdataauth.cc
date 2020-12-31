@@ -149,6 +149,17 @@ MountError AttemptUserMount(const Credentials& credentials,
   return user_session->MountVault(credentials, mount_args);
 }
 
+// Returns true if any of the path in |prefixes| starts with |path|
+// Note that this function is case insensitive
+bool PrefixPresent(const std::vector<FilePath>& prefixes,
+                   const std::string path) {
+  return std::any_of(
+      prefixes.begin(), prefixes.end(), [&path](const FilePath& prefix) {
+        return base::StartsWith(path, prefix.value(),
+                                base::CompareCase::INSENSITIVE_ASCII);
+      });
+}
+
 }  // namespace
 
 UserDataAuth::UserDataAuth()
@@ -879,15 +890,6 @@ bool UserDataAuth::CleanUpStaleMounts(bool force) {
   DCHECK(!(force && skipped));
 
   return skipped;
-}
-
-bool UserDataAuth::PrefixPresent(const std::vector<FilePath>& prefixes,
-                                 const std::string path) {
-  return std::any_of(
-      prefixes.begin(), prefixes.end(), [&path](const FilePath& prefix) {
-        return base::StartsWith(path, prefix.value(),
-                                base::CompareCase::INSENSITIVE_ASCII);
-      });
 }
 
 bool UserDataAuth::Unmount() {
