@@ -25,6 +25,11 @@ use std::convert::TryInto;
 pub enum Error {
     #[error("failed to create the transport: {0:?}")]
     NewTransport(transport::Error),
+    // This is used by sirenia-rpc-macros
+    #[error("communication failed: {0:?}")]
+    Communication(communication::Error),
+    #[error("got the wrong response")]
+    ResponseMismatch,
 }
 
 type Result<T> = StdResult<T, Error>;

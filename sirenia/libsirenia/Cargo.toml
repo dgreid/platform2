@@ -11,6 +11,7 @@ getopts = "0.2"
 libc = "0.2.44"
 libchromeos = { path = "../../libchromeos-rs" } # provided by ebuild
 minijail = { path = "../../../aosp/external/minijail/rust/minijail" } # provided by ebuild
+sirenia-rpc-macros = { path = "sirenia-rpc-macros" } # provided by ebuild
 serde = { version = "1.0.114", features = ["derive"] }
 sys_util = { path = "../../../platform/crosvm/sys_util" } # provided by ebuild
 thiserror = "1.0.20"

@@ -478,7 +478,7 @@ impl PartialEq for PipeTransportState {
 }
 
 // Returns two `Transport` structs connected to each other.
-fn create_transport_from_pipes() -> Result<(Transport, Transport)> {
+pub fn create_transport_from_pipes() -> Result<(Transport, Transport)> {
     let (r1, w1) = pipe(true).map_err(Error::Pipe)?;
     let id1 = (r1.as_raw_fd(), w1.as_raw_fd());
     let (r2, w2) = pipe(true).map_err(Error::Pipe)?;

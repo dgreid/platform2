@@ -6,6 +6,7 @@
 //! retrieving persistent data.
 
 use serde::{Deserialize, Serialize};
+use sirenia_rpc_macros::sirenia_rpc;
 
 use crate::storage::StorableMember;
 
@@ -26,30 +27,22 @@ pub enum Scope {
     Test = -1,
 }
 
-//TODO These messages also need to carry enough information to prove the entry was recorded in the
-//log.
-#[derive(Deserialize, Serialize)]
-pub enum Request {
-    Persist {
-        scope: Scope,
-        domain: String,
-        identifier: String,
-        data: StorableMember,
-    },
-    Retrieve {
-        scope: Scope,
-        domain: String,
-        identifier: String,
-    },
-}
+#[sirenia_rpc]
+pub trait Cronista {
+    type Error;
 
-#[derive(Deserialize, Serialize)]
-pub enum Response {
-    Persist {
-        status: Status,
-    },
-    Retrieve {
-        status: Status,
+    //TODO These need to carry enough information to prove the entry was recorded in the log.
+    fn persist(
+        &self,
+        scope: Scope,
+        domain: String,
+        identifier: String,
         data: StorableMember,
-    },
+    ) -> std::result::Result<Status, Self::Error>;
+    fn retrieve(
+        &self,
+        scope: Scope,
+        domain: String,
+        identifier: String,
+    ) -> std::result::Result<(Status, StorableMember), Self::Error>;
 }
