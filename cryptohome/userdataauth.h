@@ -335,7 +335,10 @@ class UserDataAuth {
   // =============== Install Attributes Related Utilities ===============
 
   // Return true if this device is enterprise owned.
-  bool IsEnterpriseOwned() { return enterprise_owned_; }
+  bool IsEnterpriseOwned() {
+    AssertOnMountThread();
+    return enterprise_owned_;
+  }
 
   // ============= Fingerprint Auth Related Public Methods ==============
 
@@ -433,7 +436,7 @@ class UserDataAuth {
   // ================= Threading Utilities ==================
 
   // Returns true if we are currently running on the origin thread
-  bool IsOnOriginThread() {
+  bool IsOnOriginThread() const {
     // Note that this function should not rely on |origin_task_runner_| because
     // it may be unavailable when this function is first called by
     // UserDataAuth::Initialize()
@@ -447,7 +450,7 @@ class UserDataAuth {
   }
 
   // Returns true if we are currently running on the mount thread
-  bool IsOnMountThread() {
+  bool IsOnMountThread() const {
     if (disable_threading_) {
       return true;
     }
@@ -461,11 +464,11 @@ class UserDataAuth {
 
   // DCHECK if we are running on the origin thread. Will have no effect
   // in production.
-  void AssertOnOriginThread() { DCHECK(IsOnOriginThread()); }
+  void AssertOnOriginThread() const { DCHECK(IsOnOriginThread()); }
 
   // DCHECK if we are running on the mount thread. Will have no effect
   // in production.
-  void AssertOnMountThread() { DCHECK(IsOnMountThread()); }
+  void AssertOnMountThread() const { DCHECK(IsOnMountThread()); }
 
   // Post Task to origin thread. For the caller, from_here is usually FROM_HERE
   // macro, while task is a callback function to be posted. Will return true if

@@ -375,6 +375,8 @@ bool UserDataAuth::Initialize() {
 bool UserDataAuth::StatefulRecoveryMount(const std::string& username,
                                          const std::string& passkey,
                                          FilePath* out_home_path) {
+  AssertOnOriginThread();
+
   user_data_auth::MountRequest mount_req;
   mount_req.mutable_account()->set_account_id(username);
   mount_req.mutable_authorization()->mutable_key()->set_secret(passkey);
@@ -428,6 +430,8 @@ bool UserDataAuth::StatefulRecoveryMount(const std::string& username,
 }
 
 bool UserDataAuth::StatefulRecoveryUnmount() {
+  AssertOnOriginThread();
+
   bool result;
   base::WaitableEvent done_event(
       base::WaitableEvent::ResetPolicy::MANUAL,
@@ -448,6 +452,8 @@ bool UserDataAuth::StatefulRecoveryUnmount() {
 }
 
 bool UserDataAuth::StatefulRecoveryIsOwner(const std::string& username) {
+  AssertOnOriginThread();
+
   std::string owner;
   if (homedirs_->GetPlainOwner(&owner) && username.length() &&
       username == owner) {
@@ -511,6 +517,7 @@ bool UserDataAuth::PostDBusInitialize() {
 }
 
 void UserDataAuth::CreateFingerprintManager() {
+  AssertOnMountThread();
   if (!fingerprint_manager_) {
     if (!default_fingerprint_manager_) {
       default_fingerprint_manager_ = FingerprintManager::Create(
@@ -712,6 +719,7 @@ bool UserDataAuth::FilterActiveMounts(
 
 void UserDataAuth::GetEphemeralLoopDevicesMounts(
     std::multimap<const FilePath, const FilePath>* mounts) {
+  AssertOnMountThread();
   std::multimap<const FilePath, const FilePath> loop_mounts;
   platform_->GetLoopDeviceMounts(&loop_mounts);
 
@@ -728,6 +736,8 @@ void UserDataAuth::GetEphemeralLoopDevicesMounts(
 }
 
 bool UserDataAuth::UnloadPkcs11Tokens(const std::vector<FilePath>& exclude) {
+  AssertOnMountThread();
+
   SecureBlob isolate =
       chaps::IsolateCredentialManager::GetDefaultIsolateCredential();
   std::vector<std::string> tokens;
@@ -745,6 +755,8 @@ bool UserDataAuth::UnloadPkcs11Tokens(const std::vector<FilePath>& exclude) {
 }
 
 bool UserDataAuth::CleanUpStaleMounts(bool force) {
+  AssertOnMountThread();
+
   // This function is meant to aid in a clean recovery from a crashed or
   // manually restarted cryptohomed.  Cryptohomed may restart:
   // 1. Before any mounts occur
@@ -893,6 +905,8 @@ bool UserDataAuth::CleanUpStaleMounts(bool force) {
 }
 
 bool UserDataAuth::Unmount() {
+  AssertOnMountThread();
+
   bool unmount_ok = RemoveAllMounts(true);
 
   // If there are any unexpected mounts lingering from a crash/restart,
@@ -972,6 +986,8 @@ void UserDataAuth::ResumeAllPkcs11Initialization() {
     return;
   }
 
+  AssertOnMountThread();
+
   for (auto& session_pair : sessions_) {
     scoped_refptr<UserSession> session = session_pair.second;
     if (session->GetMount()->pkcs11_state() == Mount::kIsWaitingOnTPM) {
@@ -989,6 +1005,8 @@ void UserDataAuth::ResetAllTPMContext() {
                                          base::Unretained(this)));
     return;
   }
+
+  AssertOnMountThread();
 
   crypto_->EnsureTpm(true);
 }
@@ -1102,6 +1120,8 @@ void UserDataAuth::FinalizeInstallAttributesIfMounted() {
 }
 
 bool UserDataAuth::CreatePublicMountSaltIfNeeded() {
+  AssertOnMountThread();
+
   if (!public_mount_salt_.empty())
     return true;
   FilePath saltfile(kPublicMountSaltFilePath);
@@ -1111,6 +1131,8 @@ bool UserDataAuth::CreatePublicMountSaltIfNeeded() {
 
 bool UserDataAuth::GetPublicMountPassKey(const std::string& public_mount_id,
                                          std::string* public_mount_passkey) {
+  AssertOnMountThread();
+
   if (!CreatePublicMountSaltIfNeeded())
     return false;
   SecureBlob passkey;
@@ -1126,6 +1148,7 @@ bool UserDataAuth::GetShouldMountAsEphemeral(
     bool has_create_request,
     bool* is_ephemeral,
     user_data_auth::CryptohomeErrorCode* error) const {
+  AssertOnMountThread();
   const bool is_or_will_be_owner = homedirs_->IsOrWillBeOwner(account_id);
   if (is_ephemeral_mount_requested && is_or_will_be_owner) {
     LOG(ERROR) << "An ephemeral cryptohome can only be mounted when the user "
@@ -1147,6 +1170,7 @@ bool UserDataAuth::GetShouldMountAsEphemeral(
 }
 
 scoped_refptr<Mount> UserDataAuth::CreateMount(const std::string& username) {
+  AssertOnMountThread();
   scoped_refptr<Mount> m;
   // TODO(dlunev): Decide if finalization should be moved to MountFactory.
   EnsureBootLockboxFinalized();
@@ -1160,6 +1184,7 @@ scoped_refptr<Mount> UserDataAuth::CreateMount(const std::string& username) {
 }
 
 void UserDataAuth::EnsureBootLockboxFinalized() {
+  AssertOnMountThread();
   if (boot_lockbox_ && !boot_lockbox_->FinalizeBoot()) {
     LOG(WARNING) << "Failed to finalize boot lockbox when mounting guest "
                     "cryptohome";
@@ -1197,6 +1222,7 @@ scoped_refptr<UserSession> UserDataAuth::GetOrCreateUserSession(
 void UserDataAuth::GetChallengeCredentialsPcrRestrictions(
     const std::string& obfuscated_username,
     std::vector<std::map<uint32_t, brillo::Blob>>* pcr_restrictions) {
+  AssertOnMountThread();
   {
     std::map<uint32_t, brillo::Blob> pcrs_1;
     for (const auto& pcr :
@@ -1419,6 +1445,7 @@ void UserDataAuth::DoMount(
 
 bool UserDataAuth::InitForChallengeResponseAuth(
     user_data_auth::CryptohomeErrorCode* error_code) {
+  AssertOnMountThread();
   if (challenge_credentials_helper_) {
     // Already successfully initialized.
     return true;
@@ -1490,6 +1517,7 @@ void UserDataAuth::DoChallengeResponseMount(
     const user_data_auth::MountRequest& request,
     const Mount::MountArgs& mount_args,
     base::OnceCallback<void(const user_data_auth::MountReply&)> on_done) {
+  AssertOnMountThread();
   DCHECK_EQ(request.authorization().key().data().type(),
             KeyData::KEY_TYPE_CHALLENGE_RESPONSE);
 
@@ -1584,6 +1612,7 @@ void UserDataAuth::OnChallengeResponseMountCredentialsObtained(
     const Mount::MountArgs mount_args,
     base::OnceCallback<void(const user_data_auth::MountReply&)> on_done,
     std::unique_ptr<Credentials> credentials) {
+  AssertOnMountThread();
   // If we get here, that means the ChallengeCredentialsHelper have finished the
   // process of doing challenge response authentication, either successful or
   // otherwise.
@@ -1615,6 +1644,7 @@ void UserDataAuth::ContinueMountWithCredentials(
     std::unique_ptr<Credentials> credentials,
     const Mount::MountArgs& mount_args,
     base::OnceCallback<void(const user_data_auth::MountReply&)> on_done) {
+  AssertOnMountThread();
   // Setup a reply for use during error handling.
   user_data_auth::MountReply reply;
 
@@ -2023,6 +2053,7 @@ void UserDataAuth::CheckKey(
 void UserDataAuth::CompleteFingerprintCheckKey(
     base::OnceCallback<void(user_data_auth::CryptohomeErrorCode)> on_done,
     FingerprintScanStatus status) {
+  AssertOnMountThread();
   if (status == FingerprintScanStatus::FAILED_RETRY_ALLOWED) {
     std::move(on_done).Run(user_data_auth::CryptohomeErrorCode::
                                CRYPTOHOME_ERROR_FINGERPRINT_RETRY_REQUIRED);
@@ -2194,6 +2225,7 @@ void UserDataAuth::DoFullChallengeResponseCheckKey(
 void UserDataAuth::OnFullChallengeResponseCheckKeyDone(
     base::OnceCallback<void(user_data_auth::CryptohomeErrorCode)> on_done,
     std::unique_ptr<Credentials> credentials) {
+  AssertOnMountThread();
   if (!credentials) {
     LOG(ERROR) << "Key checking failed due to failure to obtain "
                   "challenge-response credentials";
@@ -2359,6 +2391,8 @@ user_data_auth::CryptohomeErrorCode UserDataAuth::GetKeyData(
     const user_data_auth::GetKeyDataRequest& request,
     cryptohome::KeyData* data_out,
     bool* found) {
+  AssertOnMountThread();
+
   if (!request.has_account_id()) {
     // Note that authorization request is currently not required.
     LOG(ERROR) << "GetKeyDataRequest must have account_id.";
@@ -2518,6 +2552,7 @@ void UserDataAuth::StartMigrateToDircrypto(
 
 user_data_auth::CryptohomeErrorCode UserDataAuth::NeedsDircryptoMigration(
     const cryptohome::AccountIdentifier& account, bool* result) {
+  AssertOnMountThread();
   const std::string obfuscated_username =
       SanitizeUserNameWithSalt(GetAccountId(account), system_salt_);
   if (!homedirs_->Exists(obfuscated_username)) {
@@ -2531,30 +2566,36 @@ user_data_auth::CryptohomeErrorCode UserDataAuth::NeedsDircryptoMigration(
 }
 
 bool UserDataAuth::IsLowEntropyCredentialSupported() {
+  AssertOnOriginThread();
   return tpm_->GetLECredentialBackend() &&
          tpm_->GetLECredentialBackend()->IsSupported();
 }
 
 int64_t UserDataAuth::GetAccountDiskUsage(
     const cryptohome::AccountIdentifier& account) {
+  AssertOnMountThread();
   // Note that if the given |account| is invalid or non-existent, then HomeDirs'
   // implementation of ComputeDiskUsage is specified to return 0.
   return homedirs_->ComputeDiskUsage(GetAccountId(account));
 }
 
 bool UserDataAuth::IsArcQuotaSupported() {
+  AssertOnOriginThread();
   return arc_disk_quota_->IsQuotaSupported();
 }
 
 int64_t UserDataAuth::GetCurrentSpaceForArcUid(uid_t android_uid) {
+  AssertOnOriginThread();
   return arc_disk_quota_->GetCurrentSpaceForUid(android_uid);
 }
 
 int64_t UserDataAuth::GetCurrentSpaceForArcGid(uid_t android_gid) {
+  AssertOnOriginThread();
   return arc_disk_quota_->GetCurrentSpaceForGid(android_gid);
 }
 
 int64_t UserDataAuth::GetCurrentSpaceForArcProjectId(int project_id) {
+  AssertOnOriginThread();
   return arc_disk_quota_->GetCurrentSpaceForProjectId(project_id);
 }
 
@@ -2563,6 +2604,7 @@ bool UserDataAuth::SetProjectId(
     user_data_auth::SetProjectIdAllowedPathType parent_path,
     const FilePath& child_path,
     const cryptohome::AccountIdentifier& account) {
+  AssertOnOriginThread();
   const std::string& account_id = GetAccountId(account);
   const std::string obfuscated_username =
       SanitizeUserNameWithSalt(account_id, system_salt_);
@@ -2589,6 +2631,7 @@ bool UserDataAuth::Pkcs11IsTpmTokenReady() {
 
 user_data_auth::TpmTokenInfo UserDataAuth::Pkcs11GetTpmTokenInfo(
     const std::string& username) {
+  AssertOnOriginThread();
   user_data_auth::TpmTokenInfo result;
   std::string label, pin;
   CK_SLOT_ID slot;
@@ -2664,6 +2707,7 @@ InstallAttributes::Status UserDataAuth::InstallAttributesGetStatus() {
   return install_attrs_->status();
 }
 
+// static
 user_data_auth::InstallAttributesState
 UserDataAuth::InstallAttributesStatusToProtoEnum(
     InstallAttributes::Status status) {
@@ -2692,6 +2736,7 @@ void UserDataAuth::OnFingerprintStartAuthSessionResp(
     base::OnceCallback<
         void(const user_data_auth::StartFingerprintAuthSessionReply&)> on_done,
     bool success) {
+  AssertOnMountThread();
   VLOG(1) << "Start fingerprint auth session result: " << success;
   user_data_auth::StartFingerprintAuthSessionReply reply;
   if (!success) {
@@ -2739,6 +2784,7 @@ void UserDataAuth::StartFingerprintAuthSession(
 }
 
 void UserDataAuth::EndFingerprintAuthSession() {
+  AssertOnMountThread();
   fingerprint_manager_->EndAuthSession();
 }
 
@@ -2778,6 +2824,7 @@ user_data_auth::GetWebAuthnSecretReply UserDataAuth::GetWebAuthnSecret(
 user_data_auth::CryptohomeErrorCode
 UserDataAuth::GetFirmwareManagementParameters(
     user_data_auth::FirmwareManagementParameters* fwmp) {
+  AssertOnOriginThread();
   if (!firmware_management_parameters_->Load()) {
     return user_data_auth::
         CRYPTOHOME_ERROR_FIRMWARE_MANAGEMENT_PARAMETERS_INVALID;
@@ -2809,6 +2856,8 @@ UserDataAuth::GetFirmwareManagementParameters(
 user_data_auth::CryptohomeErrorCode
 UserDataAuth::SetFirmwareManagementParameters(
     const user_data_auth::FirmwareManagementParameters& fwmp) {
+  AssertOnOriginThread();
+
   if (!firmware_management_parameters_->Create()) {
     return user_data_auth::
         CRYPTOHOME_ERROR_FIRMWARE_MANAGEMENT_PARAMETERS_CANNOT_STORE;
@@ -2831,10 +2880,12 @@ UserDataAuth::SetFirmwareManagementParameters(
 }
 
 bool UserDataAuth::RemoveFirmwareManagementParameters() {
+  AssertOnOriginThread();
   return firmware_management_parameters_->Destroy();
 }
 
 const brillo::SecureBlob& UserDataAuth::GetSystemSalt() {
+  AssertOnOriginThread();
   DCHECK_NE(system_salt_.size(), 0)
       << "Cannot call GetSystemSalt before initialization";
   return system_salt_;
@@ -2853,10 +2904,12 @@ bool UserDataAuth::UpdateCurrentUserActivityTimestamp(int time_shift_sec) {
 }
 
 bool UserDataAuth::GetRsuDeviceId(std::string* rsu_device_id) {
+  AssertOnOriginThread();
   return tpm_->GetRsuDeviceId(rsu_device_id);
 }
 
 bool UserDataAuth::RequiresPowerwash() {
+  AssertOnOriginThread();
   const bool is_powerwash_required = !crypto_->CanUnsealWithUserAuth();
   return is_powerwash_required;
 }
@@ -2864,6 +2917,7 @@ bool UserDataAuth::RequiresPowerwash() {
 user_data_auth::CryptohomeErrorCode
 UserDataAuth::LockToSingleUserMountUntilReboot(
     const cryptohome::AccountIdentifier& account_id) {
+  AssertOnOriginThread();
   const std::string obfuscated_username =
       SanitizeUserNameWithSalt(GetAccountId(account_id), system_salt_);
 
@@ -2894,6 +2948,7 @@ UserDataAuth::LockToSingleUserMountUntilReboot(
 }
 
 bool UserDataAuth::OwnerUserExists() {
+  AssertOnOriginThread();
   std::string owner;
   return homedirs_->GetPlainOwner(&owner);
 }
@@ -2939,6 +2994,8 @@ std::string UserDataAuth::GetStatusString() {
 }
 
 void UserDataAuth::ResetDictionaryAttackMitigation() {
+  AssertOnMountThread();
+
   // The delegate information is not used.
   brillo::Blob unused_blob;
   if (!tpm_->ResetDictionaryAttackMitigation(unused_blob, unused_blob)) {
@@ -2947,6 +3004,7 @@ void UserDataAuth::ResetDictionaryAttackMitigation() {
 }
 
 void UserDataAuth::DoAutoCleanup() {
+  AssertOnMountThread();
   disk_cleanup_->FreeDiskSpace();
   last_auto_cleanup_time_ = platform_->GetCurrentTime();
 }
@@ -3030,6 +3088,8 @@ void UserDataAuth::UploadAlertsDataCallback() {
 }
 
 void UserDataAuth::SeedUrandom() {
+  AssertOnOriginThread();
+
   brillo::Blob random;
   if (!tpm_->GetRandomDataBlob(kDefaultRandomSeedLength, &random)) {
     LOG(ERROR) << "Could not get random data from the TPM";
@@ -3043,6 +3103,7 @@ bool UserDataAuth::StartAuthSession(
     user_data_auth::StartAuthSessionRequest request,
     base::OnceCallback<void(const user_data_auth::StartAuthSessionReply&)>
         on_done) {
+  AssertOnMountThread();
   // The lifetime of UserDataAuth instance will outlast AuthSession which is why
   // usage of |Unretained| is safe.
   auto on_timeout = base::BindOnce(&UserDataAuth::RemoveAuthSessionWithToken,
@@ -3068,6 +3129,7 @@ bool UserDataAuth::StartAuthSession(
 
 void UserDataAuth::RemoveAuthSessionWithToken(
     const base::UnguessableToken& token) {
+  AssertOnMountThread();
   auth_sessions_.erase(token);
 }
 
@@ -3075,6 +3137,7 @@ bool UserDataAuth::AuthenticateAuthSession(
     user_data_auth::AuthenticateAuthSessionRequest request,
     base::OnceCallback<
         void(const user_data_auth::AuthenticateAuthSessionReply&)> on_done) {
+  AssertOnMountThread();
   base::Optional<base::UnguessableToken> token =
       AuthSession::GetTokenFromSerializedString(request.auth_session_id());
   user_data_auth::AuthenticateAuthSessionReply reply;
