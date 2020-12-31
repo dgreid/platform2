@@ -296,8 +296,6 @@ int V4L2CameraDevice::Connect(const std::string& device_path) {
       IsControlSupported(kControlAutoWhiteBalance) &&
       IsControlSupported(kControlWhiteBalanceTemperature);
   if (white_balance_control_supported_) {
-    LOGF(INFO) << "Device " << device_info_.camera_id
-               << " supports white balance control";
     if (GetControlValue(kControlAutoWhiteBalance, &value) == 0) {
       if (value) {
         LOGF(INFO) << "Current white balance control is Auto";
@@ -832,14 +830,18 @@ int V4L2CameraDevice::SetControlValue(ControlType type, int32_t value) {
   int ret = SetControlValue(device_fd_.get(), type, value);
   if (ret != 0)
     return ret;
-  LOGF(INFO) << "Set " << ControlTypeToString(type) << " to " << value;
 
   int32_t current_value;
 
   ret = GetControlValue(type, &current_value);
   if (ret != 0)
     return ret;
-  LOGF(INFO) << "Get " << ControlTypeToString(type) << " " << current_value;
+  if (value == current_value) {
+    LOGF(INFO) << "Set " << ControlTypeToString(type) << " to " << value;
+  } else {
+    LOGF(WARNING) << "Set " << ControlTypeToString(type) << " to " << value
+                  << " but got " << current_value;
+  }
 
   return 0;
 }
@@ -1210,15 +1212,15 @@ int V4L2CameraDevice::QueryControl(const std::string& device_path,
     return ret;
   }
 
-  LOGF(INFO) << ControlTypeToString(type) << "(min,max,step,default) = "
-             << "(" << info->range.minimum << "," << info->range.maximum << ","
-             << info->range.step << "," << info->range.default_value << ")";
+  VLOGF(1) << ControlTypeToString(type) << "(min,max,step,default) = "
+           << "(" << info->range.minimum << "," << info->range.maximum << ","
+           << info->range.step << "," << info->range.default_value << ")";
 
   if (!info->menu_items.empty()) {
-    LOGF(INFO) << ControlTypeToString(type) << " " << info->menu_items.size()
-               << " menu items:";
+    VLOGF(1) << ControlTypeToString(type) << " " << info->menu_items.size()
+             << " menu items:";
     for (const auto& item : info->menu_items)
-      LOGF(INFO) << "    " << item;
+      VLOGF(1) << "    " << item;
   }
 
   return 0;

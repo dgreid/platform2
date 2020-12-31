@@ -131,7 +131,7 @@ int32_t CameraHalAdapter::OpenDevice(
   std::tie(camera_module, internal_camera_id) =
       GetInternalModuleAndId(camera_id);
 
-  LOGF(INFO) << "camera_id = " << camera_id
+  LOGF(INFO) << camera_client_type << ", camera_id = " << camera_id
              << ", camera_module = " << camera_module->common.name
              << ", internal_camera_id = " << internal_camera_id;
 
@@ -153,7 +153,6 @@ int32_t CameraHalAdapter::OpenDevice(
     LOGF(ERROR) << "Failed to open camera device " << camera_id;
     return ret;
   }
-  LOG(INFO) << "Camera opened for " << camera_client_type;
   activity_callback_.Run(camera_id, /*opened=*/true, camera_client_type);
 
   camera_info_t info;
@@ -665,7 +664,7 @@ void CameraHalAdapter::CloseDevice(int32_t camera_id,
   VLOGF_ENTER();
   DCHECK(camera_module_thread_.task_runner()->BelongsToCurrentThread());
   TRACE_CAMERA_SCOPED("camera_id", camera_id);
-  LOGF(INFO) << "camera_id = " << camera_id;
+  LOGF(INFO) << camera_client_type << ", camera_id = " << camera_id;
   if (device_adapters_.find(camera_id) == device_adapters_.end()) {
     LOGF(ERROR) << "Failed to close camera device " << camera_id
                 << ": device is not opened";
@@ -673,7 +672,6 @@ void CameraHalAdapter::CloseDevice(int32_t camera_id,
   }
   device_adapters_.erase(camera_id);
 
-  LOGF(INFO) << "Camera closed for " << camera_client_type;
   activity_callback_.Run(camera_id, /*opened=*/false, camera_client_type);
 
   camera_metrics_->SendSessionDuration(session_timer_map_[camera_id].Elapsed());

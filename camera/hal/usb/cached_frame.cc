@@ -87,7 +87,9 @@ CachedFrame::CachedFrame()
 
   jda_ = JpegDecodeAccelerator::CreateInstance(mojo_manager_token);
   jda_available_ = jda_->Start();
-  LOGF(INFO) << "JDA available: " << jda_available_;
+  if (!jda_available_) {
+    LOGF(INFO) << "No JDA available";
+  }
 
   jpeg_compressor_ = JpegCompressor::GetInstance(mojo_manager_token);
 
@@ -98,8 +100,12 @@ CachedFrame::CachedFrame()
       constants::kCrosForceJpegHardwareEncodeOption, false);
   force_jpeg_hw_decode_ = camera_config->GetBoolean(
       constants::kCrosForceJpegHardwareDecodeOption, false);
-  LOGF(INFO) << "Force JPEG hardware encode: " << force_jpeg_hw_encode_;
-  LOGF(INFO) << "Force JPEG hardware decode: " << force_jpeg_hw_decode_;
+  if (force_jpeg_hw_encode_) {
+    LOGF(INFO) << "Force JPEG hardware encode";
+  }
+  if (force_jpeg_hw_decode_) {
+    LOGF(INFO) << "Force JPEG hardware decode";
+  }
 }
 
 int CachedFrame::Convert(
