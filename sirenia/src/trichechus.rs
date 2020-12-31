@@ -20,9 +20,9 @@ use libsirenia::rpc::{ConnectionHandler, RpcDispatcher, TransportServer};
 use libsirenia::sandbox::{self, Sandbox};
 use libsirenia::to_sys_util;
 use libsirenia::transport::{
-    self, create_transport_from_pipes, IPServerTransport, ServerTransport, Transport,
-    TransportType, VsockServerTransport, CROS_CONNECTION_ERR_FD, CROS_CONNECTION_R_FD,
-    CROS_CONNECTION_W_FD, DEFAULT_CLIENT_PORT, DEFAULT_CONNECTION_R_FD, DEFAULT_CONNECTION_W_FD,
+    self, create_transport_from_pipes, Transport, TransportType, CROS_CONNECTION_ERR_FD,
+    CROS_CONNECTION_R_FD, CROS_CONNECTION_W_FD, DEFAULT_CLIENT_PORT, DEFAULT_CONNECTION_R_FD,
+    DEFAULT_CONNECTION_W_FD,
 };
 use sirenia::build_info::BUILD_TIMESTAMP;
 use sirenia::cli::initialize_common_arguments;
@@ -60,14 +60,6 @@ pub enum Error {
 
 /// The result of an operation in this crate.
 pub type Result<T> = StdResult<T, Error>;
-
-fn get_port_from_transport(t: &TransportType) -> Result<u32> {
-    match t {
-        TransportType::IpConnection(addr) => Ok(addr.port() as u32),
-        TransportType::VsockConnection(addr) => Ok(addr.port),
-        _ => Err(Error::UnexpectedConnectionType(t.to_owned())),
-    }
-}
 
 /* Holds the trichechus-relevant information for a TEEApp. */
 struct TEEApp {

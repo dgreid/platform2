@@ -13,7 +13,7 @@ use std::time::Duration;
 use dbus::arg::OwnedFd;
 use dbus::blocking::LocalConnection;
 use dbus::tree::{self, Interface, MTFn};
-use libsirenia::communication;
+use libsirenia::rpc;
 use libsirenia::transport::{self, Transport, TransportType, DEFAULT_CLIENT_PORT};
 use serde::export::Formatter;
 use sirenia::build_info::BUILD_TIMESTAMP;
@@ -32,7 +32,7 @@ pub enum Error {
     #[error("failed to process the D-Bus message: {0}")]
     ProcessMessage(dbus::Error),
     #[error("failed to call rpc: {0}")]
-    Rpc(communication::Error),
+    Rpc(rpc::Error),
     #[error("failed to start up the syslog: {0}")]
     SysLog(sys_util::syslog::Error),
     #[error("failed to bind to socket: {0}")]
