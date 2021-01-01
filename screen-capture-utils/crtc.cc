@@ -154,7 +154,7 @@ std::vector<std::unique_ptr<Crtc>> GetConnectedCrtcs() {
         if (!planes.empty()) {
           res_crtc = std::make_unique<Crtc>(
               file.Duplicate(), std::move(connector), std::move(encoder),
-              std::move(crtc), std::move(planes));
+              std::move(crtc), std::move(fb), std::move(planes));
         }
       }
 
@@ -190,11 +190,13 @@ Crtc::Crtc(base::File file,
            ScopedDrmModeConnectorPtr connector,
            ScopedDrmModeEncoderPtr encoder,
            ScopedDrmModeCrtcPtr crtc,
+           ScopedDrmModeFBPtr fb,
            std::vector<PlaneInfo> planes)
     : file_(std::move(file)),
       connector_(std::move(connector)),
       encoder_(std::move(encoder)),
       crtc_(std::move(crtc)),
+      fb_(std::move(fb)),
       planes_(std::move(planes)) {}
 
 bool Crtc::IsInternalDisplay() const {

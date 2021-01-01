@@ -40,6 +40,7 @@ class Crtc {
        ScopedDrmModeConnectorPtr connector,
        ScopedDrmModeEncoderPtr encoder,
        ScopedDrmModeCrtcPtr crtc,
+       ScopedDrmModeFBPtr fb,
        std::vector<PlaneInfo> planes);
   Crtc(const Crtc&) = delete;
   Crtc& operator=(const Crtc&) = delete;

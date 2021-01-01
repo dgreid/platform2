@@ -24,6 +24,7 @@ constexpr const char kInternalSwitch[] = "internal";
 constexpr const char kExternalSwitch[] = "external";
 constexpr const char kCrtcIdSwitch[] = "crtc-id";
 constexpr const char kCropSwitch[] = "crop";
+constexpr const char kMethodSwitch[] = "method";
 
 constexpr const char kHelp[] =
     "Usage: screenshot [options...] path/to/output.png\n"
@@ -35,7 +36,14 @@ constexpr const char kHelp[] =
     "  --internal: Capture from internal display.\n"
     "  --external: Capture from external display.\n"
     "  --crtc-id=ID: Capture from the specified display.\n"
-    "  --crop=WxH+X+Y: Specify a subregion to capture.\n";
+    "  --crop=WxH+X+Y: Specify a subregion to capture.\n"
+    "  --method=[egl|bo]: Force capture method to EGL or bo.\n";
+
+enum class CaptureMethod {
+  AUTODETECT,
+  EGL,
+  BO,
+};
 
 void PrintHelp() {
   std::cerr << kHelp;
@@ -96,6 +104,19 @@ int Main() {
     crtc = screenshot::CrtcFinder::FindAnyDisplay();
   }
 
+  CaptureMethod method = CaptureMethod::AUTODETECT;
+  if (cmdline->HasSwitch(kMethodSwitch)) {
+    std::string method_str = cmdline->GetSwitchValueASCII(kMethodSwitch);
+    if (method_str == "egl") {
+      method = CaptureMethod::EGL;
+    } else if (method_str == "bo") {
+      method = CaptureMethod::BO;
+    } else {
+      LOG(ERROR) << "Invalid --method specification";
+      return 1;
+    }
+  }
+
   if (!crtc) {
     LOG(ERROR) << "CRTC not found. Is the screen on?";
     return 1;
@@ -122,7 +143,14 @@ int Main() {
     LOG(INFO) << "Capturing primary plane only\n";
   }
 
-  if (crtc->fb2() || !crtc->planes().empty()) {
+  if (method == CaptureMethod::AUTODETECT) {
+    if (crtc->fb2() || !crtc->planes().empty())
+      method = CaptureMethod::EGL;
+    else
+      method = CaptureMethod::BO;
+  }
+
+  if (method == CaptureMethod::EGL) {
     auto map = screenshot::EglCapture(*crtc, x, y, width, height);
     screenshot::SaveAsPng(cmdline->GetArgs()[0].c_str(), map->buffer().data(),
                           map->width(), map->height(), map->stride());
