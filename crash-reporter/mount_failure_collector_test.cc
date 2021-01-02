@@ -25,7 +25,8 @@ const char kLogConfigFileContents[] =
     "console-ramoops=echo ramoops\n"
     "mount-encrypted=echo mount-encrypted\n"
     "shutdown_umount_failure_state=echo umount_failure_state\n"
-    "umount-encrypted=echo umount-encrypted-logs";
+    "umount-encrypted=echo umount-encrypted-logs\n"
+    "cryptohome=echo cryptohome";
 
 void Initialize(MountFailureCollector* collector,
                 base::ScopedTempDir* scoped_tmp_dir) {
@@ -103,4 +104,46 @@ TEST(MountFailureCollectorTest, TestUmountFailure) {
   // Check report contents.
   EXPECT_TRUE(base::ReadFileToString(report_path, &report_contents));
   EXPECT_EQ("umount_failure_state\numount-encrypted-logs\n", report_contents);
+}
+
+TEST(MountFailureCollectorTest, TestCryptohomeMountFailure) {
+  MountFailureCollector collector(StorageDeviceType::kCryptohome);
+  base::ScopedTempDir tmp_dir;
+  base::FilePath report_path;
+  std::string report_contents;
+
+  Initialize(&collector, &tmp_dir);
+
+  EXPECT_TRUE(collector.Collect(true /* is_mount_failure */));
+
+  // Check report collection.
+  EXPECT_TRUE(test_util::DirectoryHasFileWithPattern(
+      tmp_dir.GetPath(), "mount_failure_cryptohome.*.meta", NULL));
+  EXPECT_TRUE(test_util::DirectoryHasFileWithPattern(
+      tmp_dir.GetPath(), "mount_failure_cryptohome.*.log", &report_path));
+
+  // Check report contents.
+  EXPECT_TRUE(base::ReadFileToString(report_path, &report_contents));
+  EXPECT_EQ("cryptohome\ndmesg\n", report_contents);
+}
+
+TEST(MountFailureCollectorTest, TestCryptohomeUmountFailure) {
+  MountFailureCollector collector(StorageDeviceType::kCryptohome);
+  base::ScopedTempDir tmp_dir;
+  base::FilePath report_path;
+  std::string report_contents;
+
+  Initialize(&collector, &tmp_dir);
+
+  EXPECT_TRUE(collector.Collect(false /* is_mount_failure */));
+
+  // Check report collection.
+  EXPECT_TRUE(test_util::DirectoryHasFileWithPattern(
+      tmp_dir.GetPath(), "umount_failure_cryptohome.*.meta", NULL));
+  EXPECT_TRUE(test_util::DirectoryHasFileWithPattern(
+      tmp_dir.GetPath(), "umount_failure_cryptohome.*.log", &report_path));
+
+  // Check report contents.
+  EXPECT_TRUE(base::ReadFileToString(report_path, &report_contents));
+  EXPECT_EQ("cryptohome\ndmesg\n", report_contents);
 }

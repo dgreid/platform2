@@ -16,25 +16,28 @@
 namespace {
 const char kEncryptedStatefulDeviceLabel[] = "encstateful";
 const char kStatefulDeviceLabel[] = "stateful";
+const char kCryptohomeDeviceLabel[] = "cryptohome";
 const char kInvalidDeviceLabel[] = "invalid";
 
 std::vector<std::string> ConstructLoggingCommands(StorageDeviceType device_type,
                                                   bool is_mount_failure) {
   std::vector<std::string> cmds;
-  if (is_mount_failure) {
-    // Common logging for mount failure cases:
-    // - dumpe2fs.
-    // - dmesg for current run.
-    // - ramoops, if any.
-    cmds = {"dumpe2fs_" +
-                MountFailureCollector::StorageDeviceTypeToString(device_type),
-            "kernel-warning", "console-ramoops"};
-
-    // For encrypted stateful mount failure, add logs from mount-encrypted.
-    if (device_type == StorageDeviceType::kEncryptedStateful)
-      cmds.push_back("mount-encrypted");
-  } else {
-    cmds = {"shutdown_umount_failure_state", "umount-encrypted"};
+  switch (device_type) {
+    case StorageDeviceType::kStateful:
+      if (is_mount_failure)
+        cmds = {"dumpe2fs_stateful", "kernel-warning", "console-ramoops"};
+      else
+        cmds = {"shutdown_umount_failure_state", "umount-encrypted"};
+      break;
+    case StorageDeviceType::kEncryptedStateful:
+      cmds = {"dumpe2fs_encstateful", "kernel-warning", "console-ramoops",
+              "mount-encrypted"};
+      break;
+    case StorageDeviceType::kCryptohome:
+      cmds = {"cryptohome", "kernel-warning"};
+      break;
+    default:
+      break;
   }
   return cmds;
 }
@@ -51,6 +54,8 @@ StorageDeviceType MountFailureCollector::ValidateStorageDeviceType(
     return StorageDeviceType::kStateful;
   else if (device_label == kEncryptedStatefulDeviceLabel)
     return StorageDeviceType::kEncryptedStateful;
+  else if (device_label == kCryptohomeDeviceLabel)
+    return StorageDeviceType::kCryptohome;
   else
     return StorageDeviceType::kInvalidDevice;
 }
@@ -63,6 +68,8 @@ std::string MountFailureCollector::StorageDeviceTypeToString(
       return kStatefulDeviceLabel;
     case StorageDeviceType::kEncryptedStateful:
       return kEncryptedStatefulDeviceLabel;
+    case StorageDeviceType::kCryptohome:
+      return kCryptohomeDeviceLabel;
     default:
       return kInvalidDeviceLabel;
   }

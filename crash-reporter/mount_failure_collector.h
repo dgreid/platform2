@@ -13,9 +13,10 @@
 
 // Block device type for collecting mount failure data from.
 enum class StorageDeviceType {
-  kStateful = 0,
+  kStateful,
   kEncryptedStateful,
-  kInvalidDevice
+  kCryptohome,
+  kInvalidDevice,
 };
 
 // Collect mount failure information from a given device. At the moment, only
