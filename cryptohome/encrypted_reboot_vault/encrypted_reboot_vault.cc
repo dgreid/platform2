@@ -7,8 +7,8 @@
 #include <cryptohome/cryptolib.h>
 #include <cryptohome/dircrypto_util.h>
 #include <cryptohome/platform.h>
-#include <cryptohome/storage/encrypted_container/encrypted_container.h>
 #include <cryptohome/storage/encrypted_container/filesystem_key.h>
+#include <cryptohome/storage/encrypted_container/fscrypt_container.h>
 
 #include <base/files/file_enumerator.h>
 #include <base/files/file_path.h>
@@ -91,9 +91,8 @@ EncryptedRebootVault::EncryptedRebootVault()
   cryptohome::FileSystemKeyReference key_reference;
   key_reference.fek_sig = brillo::SecureBlob(kEncryptionKeyTag);
 
-  encrypted_container_ = cryptohome::EncryptedContainer::Generate(
-      cryptohome::EncryptedContainerType::kFscrypt, vault_path_, key_reference,
-      &platform_);
+  encrypted_container_ = std::make_unique<cryptohome::FscryptContainer>(
+      vault_path_, key_reference, &platform_);
 }
 
 bool EncryptedRebootVault::CreateVault() {

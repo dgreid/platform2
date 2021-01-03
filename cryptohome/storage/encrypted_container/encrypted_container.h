@@ -29,12 +29,6 @@ class EncryptedContainer {
  public:
   virtual ~EncryptedContainer() {}
 
-  static std::unique_ptr<EncryptedContainer> Generate(
-      EncryptedContainerType type,
-      const base::FilePath& backing_dir,
-      const FileSystemKeyReference& key_reference,
-      Platform* platform);
-
   // Removes the encrypted container's backing storage.
   virtual bool Purge() = 0;
   // Sets up the encrypted container, including creating the container if

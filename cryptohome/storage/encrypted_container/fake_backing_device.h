@@ -5,9 +5,13 @@
 #ifndef CRYPTOHOME_STORAGE_ENCRYPTED_CONTAINER_FAKE_BACKING_DEVICE_H_
 #define CRYPTOHOME_STORAGE_ENCRYPTED_CONTAINER_FAKE_BACKING_DEVICE_H_
 
+#include "cryptohome/storage/encrypted_container/backing_device.h"
+
+#include <memory>
+
 #include <gmock/gmock.h>
 
-#include <cryptohome/storage/encrypted_container/backing_device.h>
+#include "cryptohome/storage/encrypted_container/backing_device_factory.h"
 
 namespace cryptohome {
 
@@ -68,6 +72,19 @@ class FakeBackingDevice : public BackingDevice {
   bool attached_;
   BackingDeviceType type_;
   base::FilePath backing_device_path_;
+};
+
+class FakeBackingDeviceFactory : public BackingDeviceFactory {
+ public:
+  explicit FakeBackingDeviceFactory(Platform* platform)
+      : BackingDeviceFactory(platform) {}
+  ~FakeBackingDeviceFactory() {}
+
+  std::unique_ptr<BackingDevice> Generate(
+      const BackingDeviceConfig& config) override {
+    return std::make_unique<FakeBackingDevice>(
+        config.type, base::FilePath("/dev").Append(config.name));
+  }
 };
 
 }  // namespace cryptohome

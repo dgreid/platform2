@@ -12,6 +12,7 @@
 #include <gtest/gtest.h>
 
 #include "cryptohome/mock_platform.h"
+#include "cryptohome/storage/encrypted_container/encrypted_container.h"
 #include "cryptohome/storage/encrypted_container/filesystem_key.h"
 
 using ::testing::_;
@@ -29,11 +30,8 @@ class EcryptfsContainerTest : public ::testing::Test {
               .fnek = brillo::SecureBlob("random_fnek"),
               .fek_salt = brillo::SecureBlob("random_fek_salt"),
               .fnek_salt = brillo::SecureBlob("random_fnek_salt")}),
-        container_(
-            EncryptedContainer::Generate(EncryptedContainerType::kEcryptfs,
-                                         backing_dir_,
-                                         key_reference_,
-                                         &platform_)) {}
+        container_(std::make_unique<EcryptfsContainer>(
+            backing_dir_, key_reference_, &platform_)) {}
   ~EcryptfsContainerTest() override = default;
 
  protected:

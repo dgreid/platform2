@@ -12,6 +12,7 @@
 #include <gtest/gtest.h>
 
 #include "cryptohome/mock_platform.h"
+#include "cryptohome/storage/encrypted_container/encrypted_container.h"
 #include "cryptohome/storage/encrypted_container/filesystem_key.h"
 
 using ::testing::_;
@@ -25,11 +26,8 @@ class FscryptContainerTest : public ::testing::Test {
       : backing_dir_(base::FilePath("/a/b/c")),
         key_reference_({.fek_sig = brillo::SecureBlob("random_keysig")}),
         key_({.fek = brillo::SecureBlob("random key")}),
-        container_(
-            EncryptedContainer::Generate(EncryptedContainerType::kFscrypt,
-                                         backing_dir_,
-                                         key_reference_,
-                                         &platform_)) {}
+        container_(std::make_unique<FscryptContainer>(
+            backing_dir_, key_reference_, &platform_)) {}
   ~FscryptContainerTest() override = default;
 
  protected:

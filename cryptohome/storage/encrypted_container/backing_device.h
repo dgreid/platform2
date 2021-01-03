@@ -43,9 +43,6 @@ class BackingDevice {
  public:
   virtual ~BackingDevice() {}
 
-  static std::unique_ptr<BackingDevice> Generate(
-      const BackingDeviceConfig& config, Platform* platform);
-
   virtual bool Create() = 0;
   virtual bool Purge() = 0;
   virtual bool Setup() = 0;
