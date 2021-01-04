@@ -30,6 +30,7 @@ using brillo::SecureBlob;
 using std::string;
 using ::testing::_;
 using ::testing::AnyNumber;
+using ::testing::DoAll;
 using ::testing::InvokeWithoutArgs;
 using ::testing::Return;
 using ::testing::SetArgPointee;

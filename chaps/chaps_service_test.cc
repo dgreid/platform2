@@ -21,6 +21,7 @@ using std::string;
 using std::vector;
 using ::testing::_;
 using ::testing::AnyNumber;
+using ::testing::DoAll;
 using ::testing::Return;
 using ::testing::SetArgPointee;
 
