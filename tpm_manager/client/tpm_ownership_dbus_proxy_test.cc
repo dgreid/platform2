@@ -16,6 +16,7 @@
 #include "tpm_manager-client/tpm_manager/dbus-constants.h"
 
 using testing::_;
+using testing::DoAll;
 using testing::Invoke;
 using testing::SaveArg;
 using testing::StrictMock;

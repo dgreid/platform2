@@ -25,6 +25,7 @@
 using testing::_;
 using testing::AtLeast;
 using testing::AtMost;
+using testing::DoAll;
 using testing::Ge;
 using testing::Invoke;
 using testing::Le;

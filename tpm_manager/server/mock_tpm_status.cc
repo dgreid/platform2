@@ -5,6 +5,7 @@
 #include "tpm_manager/server/mock_tpm_status.h"
 
 using testing::_;
+using testing::DoAll;
 using testing::Invoke;
 using testing::Return;
 using testing::SetArgPointee;
