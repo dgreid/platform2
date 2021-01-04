@@ -24,6 +24,7 @@
 using base::Bind;
 using base::Unretained;
 using testing::_;
+using testing::DoAll;
 using testing::HasSubstr;
 using testing::Mock;
 using testing::NiceMock;

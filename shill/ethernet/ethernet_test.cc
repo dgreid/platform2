@@ -50,6 +50,7 @@ using std::vector;
 using testing::_;
 using testing::AnyNumber;
 using testing::ByMove;
+using testing::DoAll;
 using testing::EndsWith;
 using testing::Eq;
 using testing::InSequence;

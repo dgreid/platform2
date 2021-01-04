@@ -34,6 +34,7 @@ using base::Unretained;
 using std::string;
 using testing::_;
 using testing::AnyNumber;
+using testing::DoAll;
 using testing::HasSubstr;
 using testing::Mock;
 using testing::NiceMock;
