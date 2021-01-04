@@ -27,6 +27,7 @@ using dlcservice::metrics::UninstallResult;
 using std::string;
 using std::vector;
 using testing::_;
+using testing::DoAll;
 using testing::ElementsAre;
 using testing::Invoke;
 using testing::Return;

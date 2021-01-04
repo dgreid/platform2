@@ -16,6 +16,7 @@
 
 using dlcservice::metrics::InstallResult;
 using testing::_;
+using testing::DoAll;
 using testing::ElementsAre;
 using testing::Return;
 using testing::SetArgPointee;

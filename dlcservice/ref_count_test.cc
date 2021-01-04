@@ -18,6 +18,7 @@ using base::FilePath;
 using std::string;
 using std::vector;
 using testing::_;
+using testing::DoAll;
 using testing::Return;
 using testing::SetArgPointee;
 
