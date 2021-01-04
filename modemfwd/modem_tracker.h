@@ -5,8 +5,8 @@
 #ifndef MODEMFWD_MODEM_TRACKER_H_
 #define MODEMFWD_MODEM_TRACKER_H_
 
+#include <map>
 #include <memory>
-#include <set>
 #include <string>
 #include <vector>
 
@@ -36,8 +36,13 @@ class ModemTracker {
   void OnServiceAvailable(bool available);
 
   // Called when a property on the shill manager changes.
-  void OnPropertyChanged(const std::string& property_name,
-                         const brillo::Any& property_value);
+  void OnManagerPropertyChanged(const std::string& property_name,
+                                const brillo::Any& property_value);
+
+  // Called when a property on a registered shill cellular device changes.
+  void OnDevicePropertyChanged(dbus::ObjectPath device_path,
+                               const std::string& property_name,
+                               const brillo::Any& property_value);
 
   // Called when the device list changes.
   void OnDeviceListChanged(const std::vector<dbus::ObjectPath>& new_list);
@@ -46,7 +51,8 @@ class ModemTracker {
   std::unique_ptr<org::chromium::flimflam::ManagerProxy> shill_proxy_;
   OnModemAppearedCallback on_modem_appeared_callback_;
 
-  std::set<dbus::ObjectPath> modem_objects_;
+  // Store the SIM ICCID for each modem Device.
+  std::map<dbus::ObjectPath, std::string> modem_objects_;
 
   base::WeakPtrFactory<ModemTracker> weak_ptr_factory_;
 };

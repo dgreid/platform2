@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "modemfwd/logging.h"
 #include "modemfwd/modem_tracker.h"
 
 #include <memory>
@@ -45,7 +46,7 @@ void ModemTracker::OnServiceAvailable(bool available) {
   }
 
   shill_proxy_->RegisterPropertyChangedSignalHandler(
-      base::Bind(&ModemTracker::OnPropertyChanged,
+      base::Bind(&ModemTracker::OnManagerPropertyChanged,
                  weak_ptr_factory_.GetWeakPtr()),
       base::Bind(&OnSignalConnected));
 
@@ -61,18 +62,51 @@ void ModemTracker::OnServiceAvailable(bool available) {
                           .TryGet<std::vector<dbus::ObjectPath>>());
 }
 
-void ModemTracker::OnPropertyChanged(const std::string& property_name,
-                                     const brillo::Any& property_value) {
+void ModemTracker::OnManagerPropertyChanged(const std::string& property_name,
+                                            const brillo::Any& property_value) {
   if (property_name == shill::kDevicesProperty)
     OnDeviceListChanged(property_value.TryGet<std::vector<dbus::ObjectPath>>());
 }
 
+void ModemTracker::OnDevicePropertyChanged(dbus::ObjectPath device_path,
+                                           const std::string& property_name,
+                                           const brillo::Any& property_value) {
+  // Listen only for the ICCID change triggered by a SIM change
+  if (property_name != shill::kIccidProperty)
+    return;
+
+  auto current_iccid = modem_objects_.find(device_path);
+  if (current_iccid == modem_objects_.end())
+    return;
+
+  std::string iccid(property_value.TryGet<std::string>());
+  if (iccid == current_iccid->second)
+    return;
+
+  current_iccid->second = iccid;
+
+  ELOG(INFO) << "SIM ICCID changed to [" << iccid.substr(0, 9)
+             << "...] for device " << device_path.value();
+
+  // SIM removed, wait for a real one to update
+  if (iccid.empty())
+    return;
+
+  // trigger the firmware update
+  auto device =
+      std::make_unique<org::chromium::flimflam::DeviceProxy>(bus_, device_path);
+  on_modem_appeared_callback_.Run(std::move(device));
+}
+
 void ModemTracker::OnDeviceListChanged(
     const std::vector<dbus::ObjectPath>& new_list) {
-  std::set<dbus::ObjectPath> new_modems;
+  std::map<dbus::ObjectPath, std::string> new_modems;
   for (const auto& device_path : new_list) {
-    if (modem_objects_.find(device_path) != modem_objects_.end())
+    if (modem_objects_.find(device_path) != modem_objects_.end()) {
+      // Keep existing devices in the new list.
+      new_modems[device_path] = modem_objects_[device_path];
       continue;
+    }
 
     // See if the modem object is of cellular type.
     auto device = std::make_unique<org::chromium::flimflam::DeviceProxy>(
@@ -92,7 +126,16 @@ void ModemTracker::OnDeviceListChanged(
       continue;
     }
 
-    new_modems.insert(device_path);
+    // Record the modem device with its current ICCID
+    new_modems[device_path] =
+        properties[shill::kIccidProperty].TryGet<std::string>();
+
+    // Listen to the Device ICCID property in order to detect future SIM swaps.
+    device->RegisterPropertyChangedSignalHandler(
+        base::Bind(&ModemTracker::OnDevicePropertyChanged,
+                   weak_ptr_factory_.GetWeakPtr(), device_path),
+        base::Bind(&OnSignalConnected));
+
     on_modem_appeared_callback_.Run(std::move(device));
   }
   modem_objects_ = new_modems;
