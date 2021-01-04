@@ -85,6 +85,17 @@ class Camera3FrameFixture : public Camera3StreamFixture {
                  {0x00, 0x00, 0xFF, 5.0f / 8},  // Blue
                  {0xFF, 0x00, 0x00, 6.0f / 8},  // Red
                  {0x00, 0x00, 0x00, 7.0f / 8},  // Black
+             },
+             {
+                 // OV5675 color bars
+                 {0xFF, 0xFF, 0xFF, 0.0f},     // White
+                 {0x00, 0xFF, 0xFF, 0.1226f},  // Cyan
+                 {0xFF, 0xFF, 0x00, 0.2471f},  // Yellow
+                 {0x00, 0xFF, 0x00, 0.3679f},  // Green
+                 {0xFF, 0x00, 0xFF, 0.4906f},  // Magenta
+                 {0x00, 0x00, 0xFF, 0.6132f},  // Blue
+                 {0xFF, 0x00, 0x00, 0.7358f},  // Red
+                 {0x00, 0x00, 0x00, 0.8585f},  // Black
              }}),
         supported_color_bars_test_pattern_modes_(
             {ANDROID_SENSOR_TEST_PATTERN_MODE_COLOR_BARS_FADE_TO_GRAY,
