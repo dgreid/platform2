@@ -39,14 +39,14 @@ class ModemTracker {
   void OnPropertyChanged(const std::string& property_name,
                          const brillo::Any& property_value);
 
-  // Called when the device list changes.
-  void OnDeviceListChanged(const std::vector<dbus::ObjectPath>& new_list);
+  // Called when the service list changes.
+  void OnServiceListChanged(const std::vector<dbus::ObjectPath>& new_list);
 
   scoped_refptr<dbus::Bus> bus_;
   std::unique_ptr<org::chromium::flimflam::ManagerProxy> shill_proxy_;
   OnModemAppearedCallback on_modem_appeared_callback_;
 
-  std::set<dbus::ObjectPath> modem_objects_;
+  std::set<dbus::ObjectPath> service_objects_;
 
   base::WeakPtrFactory<ModemTracker> weak_ptr_factory_;
 };

@@ -40,7 +40,7 @@ ModemTracker::ModemTracker(
 void ModemTracker::OnServiceAvailable(bool available) {
   if (!available) {
     LOG(WARNING) << "shill disappeared";
-    modem_objects_.clear();
+    service_objects_.clear();
     return;
   }
 
@@ -57,45 +57,61 @@ void ModemTracker::OnServiceAvailable(bool available) {
     return;
   }
 
-  OnDeviceListChanged(properties[shill::kDevicesProperty]
-                          .TryGet<std::vector<dbus::ObjectPath>>());
+  OnServiceListChanged(properties[shill::kServicesProperty]
+                           .TryGet<std::vector<dbus::ObjectPath>>());
 }
 
 void ModemTracker::OnPropertyChanged(const std::string& property_name,
                                      const brillo::Any& property_value) {
-  if (property_name == shill::kDevicesProperty)
-    OnDeviceListChanged(property_value.TryGet<std::vector<dbus::ObjectPath>>());
+  if (property_name == shill::kServicesProperty) {
+    OnServiceListChanged(
+        property_value.TryGet<std::vector<dbus::ObjectPath>>());
+  }
 }
 
-void ModemTracker::OnDeviceListChanged(
+void ModemTracker::OnServiceListChanged(
     const std::vector<dbus::ObjectPath>& new_list) {
-  std::set<dbus::ObjectPath> new_modems;
-  for (const auto& device_path : new_list) {
-    if (modem_objects_.find(device_path) != modem_objects_.end())
+  std::set<dbus::ObjectPath> new_services;
+  for (const auto& service_path : new_list) {
+    if (service_objects_.find(service_path) != service_objects_.end()) {
+      new_services.insert(service_path);
       continue;
+    }
 
-    // See if the modem object is of cellular type.
-    auto device = std::make_unique<org::chromium::flimflam::DeviceProxy>(
-        bus_, device_path);
+    // See if the service object is of cellular type.
+    auto service = std::make_unique<org::chromium::flimflam::ServiceProxy>(
+        bus_, service_path);
     brillo::ErrorPtr error;
     brillo::VariantDictionary properties;
-    if (!device->GetProperties(&properties, &error)) {
-      LOG(ERROR) << "Could not get property list for device "
-                 << device_path.value() << ": " << error->GetMessage();
+    if (!service->GetProperties(&properties, &error)) {
+      LOG(ERROR) << "Could not get property list for service "
+                 << service_path.value() << ": " << error->GetMessage();
       continue;
     }
 
     if (properties[shill::kTypeProperty].TryGet<std::string>() !=
         shill::kTypeCellular) {
-      DVLOG(1) << "Device " << device_path.value()
+      DVLOG(1) << "Service " << service_path.value()
                << " is not cellular type, ignoring";
       continue;
     }
 
-    new_modems.insert(device_path);
+    dbus::ObjectPath device_path =
+        brillo::GetVariantValueOrDefault<dbus::ObjectPath>(
+            properties, shill::kDeviceProperty);
+    if (!device_path.IsValid() || device_path == dbus::ObjectPath("/")) {
+      DVLOG(1) << "Service " << service_path.value()
+               << " is missing device path";
+      continue;
+    }
+
+    auto device = std::make_unique<org::chromium::flimflam::DeviceProxy>(
+        bus_, device_path);
+
+    new_services.insert(service_path);
     on_modem_appeared_callback_.Run(std::move(device));
   }
-  modem_objects_ = new_modems;
+  service_objects_ = new_services;
 }
 
 }  // namespace modemfwd
