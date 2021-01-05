@@ -645,6 +645,11 @@ void CellularCapability3gpp::OnServiceCreated() {
   // properties here.
   GetProperties();
 
+  // GetProperties() could trigger a call to Handle3gppRegistrationChange which
+  // could destroy the service.
+  if (!cellular()->service())
+    return;
+
   cellular()->service()->SetActivationType(CellularService::kActivationTypeOTA);
   UpdateServiceActivationState();
 
