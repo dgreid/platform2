@@ -17,9 +17,10 @@ TEST(SysMetrics, Memory) {
   EXPECT_GT(original_size, 0);
   EXPECT_GE(original_peak_size, original_size);
 
-  // Allocate 10MB more than the known peak value.
-  int ten_mb_bytes = 1024 * 1024 * 10;
-  int mem_growth_bytes = (original_peak_size - original_size) + ten_mb_bytes;
+  // Allocate 100MB more than the known peak value.
+  const int hundred_mb_bytes = 1024 * 1024 * 100;
+  const int mem_growth_bytes =
+      (original_peak_size - original_size) + hundred_mb_bytes;
   char* allocate = new char[mem_growth_bytes];
   // Zero it out and read so the compiler doesn't optimize the variable away.
   memset(allocate, 0, mem_growth_bytes);

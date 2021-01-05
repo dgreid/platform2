@@ -34,12 +34,12 @@ TEST_F(PeakMemorySamplerTest, BasicFunctions) {
 
   task_environment_.FastForwardBy(sampling_interval_ * 2);
 
-  // Allocate 10MB
-  int ten_mb_bytes = 1024 * 1024 * 10;
-  char* allocate = new char[ten_mb_bytes];
+  // Allocate 100MB
+  const int hundred_mb_bytes = 1024 * 1024 * 100;
+  char* allocate = new char[hundred_mb_bytes];
   // Zero it out and read so the compiler doesn't optimize the variable away.
-  memset(allocate, 0, ten_mb_bytes);
-  EXPECT_EQ(allocate[ten_mb_bytes - 1], 0);
+  memset(allocate, 0, hundred_mb_bytes);
+  EXPECT_EQ(allocate[hundred_mb_bytes - 1], 0);
 
   task_environment_.FastForwardBy(sampling_interval_);
   const int64_t higher_peak = sampler->GetMaxSample();
@@ -54,12 +54,12 @@ TEST_F(PeakMemorySamplerTest, BasicFunctions) {
   PeakMemorySampler::StopSampling(sampler);
   EXPECT_EQ(sampler->sample_counter_, 6);
 
-  // Allocate 20MB
-  int twenty_mb_bytes = 1024 * 1024 * 20;
-  allocate = new char[twenty_mb_bytes];
+  // Allocate 200MB
+  const int two_hundred_mb_bytes = 1024 * 1024 * 200;
+  allocate = new char[two_hundred_mb_bytes];
   // Zero it out and read so the compiler doesn't optimize the variable away.
-  memset(allocate, 0, twenty_mb_bytes);
-  EXPECT_EQ(allocate[twenty_mb_bytes - 1], 0);
+  memset(allocate, 0, two_hundred_mb_bytes);
+  EXPECT_EQ(allocate[two_hundred_mb_bytes - 1], 0);
 
   // We're not sampling so the peak should stay the same.
   task_environment_.FastForwardBy(sampling_interval_ * 2);
