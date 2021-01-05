@@ -48,7 +48,7 @@ const int kFUSEMountFlags = MS_NODEV | MS_NOSUID | MS_NOEXEC | MS_DIRSYNC;
 class FUSEMountPoint : public MountPoint {
  public:
   FUSEMountPoint(const base::FilePath& path, const Platform* platform)
-      : MountPoint(path), platform_(platform) {}
+      : MountPoint({path}), platform_(platform) {}
 
   FUSEMountPoint(const FUSEMountPoint&) = delete;
   FUSEMountPoint& operator=(const FUSEMountPoint&) = delete;

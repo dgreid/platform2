@@ -12,6 +12,8 @@
 
 namespace cros_disks {
 
+struct MountPointData;
+
 // A class for querying information about mount points.
 class MountInfo {
  public:
@@ -36,6 +38,7 @@ class MountInfo {
   // the same format as /proc/self/mountinfo. Returns true on success.
   // Refer to <linux source>/Documentation/filesystems/proc.txt for details
   // about /proc/self/mountinfo.
+  // TODO(crbug.com/1163081): This should be replaced with using libmount.
   bool RetrieveFromFile(const std::string& path);
 
   // Retrieves the list of mount points of the current process by reading
@@ -43,8 +46,6 @@ class MountInfo {
   bool RetrieveFromCurrentProcess();
 
  private:
-  struct MountPointData;
-
   // Converts a 3-character octal string into a decimal integer.
   // Returns -1 if the conversion fails.
   int ConvertOctalStringToInt(const std::string& octal) const;

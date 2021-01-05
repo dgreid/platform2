@@ -77,7 +77,7 @@ class MockPlatform : public Platform {
 class FakeMountPoint : public MountPoint {
  public:
   explicit FakeMountPoint(const base::FilePath& path, MountErrorType error)
-      : MountPoint(path) {
+      : MountPoint({path}) {
     if (error == MOUNT_ERROR_NONE) {
       EXPECT_CALL(*this, UnmountImpl()).WillOnce(Return(error));
     } else {
@@ -94,7 +94,7 @@ class FakeMountPoint : public MountPoint {
 class NeverUnmountedMountPoint : public MountPoint {
  public:
   explicit NeverUnmountedMountPoint(const base::FilePath& path)
-      : MountPoint(path) {
+      : MountPoint({path}) {
     EXPECT_CALL(*this, UnmountImpl()).Times(0);
   }
   ~NeverUnmountedMountPoint() override { DestructorUnmount(); }

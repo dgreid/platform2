@@ -144,7 +144,7 @@ class MockPlatform : public Platform {
 
 class MockMountPoint : public MountPoint {
  public:
-  explicit MockMountPoint(const base::FilePath& path) : MountPoint(path) {}
+  explicit MockMountPoint(const base::FilePath& path) : MountPoint({path}) {}
   ~MockMountPoint() override { DestructorUnmount(); }
 
   MOCK_METHOD(MountErrorType, UnmountImpl, (), (override));

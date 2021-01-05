@@ -183,7 +183,7 @@ class DiskManager::EjectingMountPoint : public MountPoint {
   EjectingMountPoint(std::unique_ptr<MountPoint> mount_point,
                      DiskManager* disk_manager,
                      const std::string& device_file)
-      : MountPoint(mount_point->path()),
+      : MountPoint({mount_point->path()}),
         mount_point_(std::move(mount_point)),
         disk_manager_(disk_manager),
         device_file_(device_file) {

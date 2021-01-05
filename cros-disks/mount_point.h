@@ -6,13 +6,26 @@
 #define CROS_DISKS_MOUNT_POINT_H_
 
 #include <memory>
+#include <string>
 
 #include <base/files/file_path.h>
 #include <chromeos/dbus/service_constants.h>
 
 namespace cros_disks {
 
-class Unmounter;
+// Holds information about a mount point.
+struct MountPointData {
+  // Mount point path.
+  base::FilePath mount_path;
+  // Source description used to mount.
+  std::string source = {};
+  // Filesystem type of the mount.
+  std::string filesystem_type = {};
+  // Flags of the mount point.
+  int flags = 0;
+  // Additional data passed during mount.
+  std::string data = {};
+};
 
 // Class representing a mount created by a mounter.
 class MountPoint {
@@ -35,11 +48,11 @@ class MountPoint {
   // Unmounts right now using the unmounter.
   MountErrorType Unmount();
 
-  const base::FilePath& path() const { return path_; }
+  const base::FilePath& path() const { return data_.mount_path; }
 
  protected:
   // Protected constructor for subclasses.
-  explicit MountPoint(const base::FilePath& path);
+  explicit MountPoint(MountPointData data);
 
   // Unmounts the point point and logs errors as appropriate. MUST be called in
   // the destructor.
@@ -51,7 +64,7 @@ class MountPoint {
   virtual MountErrorType UnmountImpl() = 0;
 
  private:
-  const base::FilePath path_;
+  const MountPointData data_;
   bool released_ = false;
   bool unmounted_on_destruction_ = false;
 };

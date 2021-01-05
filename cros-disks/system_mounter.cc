@@ -29,7 +29,7 @@ constexpr int kExternalDiskMountFlags =
 class SystemMountPoint : public MountPoint {
  public:
   SystemMountPoint(const base::FilePath& path, const Platform* platform)
-      : MountPoint(path), platform_(platform) {}
+      : MountPoint({path}), platform_(platform) {}
 
   SystemMountPoint(const SystemMountPoint&) = delete;
   SystemMountPoint& operator=(const SystemMountPoint&) = delete;

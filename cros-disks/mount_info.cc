@@ -8,6 +8,7 @@
 #include <base/strings/string_split.h>
 
 #include "cros-disks/file_reader.h"
+#include "cros-disks/mount_point.h"
 #include "cros-disks/quote.h"
 
 namespace cros_disks {
@@ -18,13 +19,6 @@ bool IsOctalDigit(char digit) {
 }
 
 }  // namespace
-
-// A data structure for holding information of a mount point.
-struct MountInfo::MountPointData {
-  std::string source_path;
-  std::string mount_path;
-  std::string filesystem_type;
-};
 
 MountInfo::MountInfo() = default;
 
@@ -61,15 +55,15 @@ std::vector<std::string> MountInfo::GetMountPaths(
     const std::string& source_path) const {
   std::vector<std::string> mount_paths;
   for (const auto& mount_point : mount_points_) {
-    if (mount_point.source_path == source_path)
-      mount_paths.push_back(mount_point.mount_path);
+    if (mount_point.source == source_path)
+      mount_paths.push_back(mount_point.mount_path.value());
   }
   return mount_paths;
 }
 
 bool MountInfo::HasMountPath(const std::string& mount_path) const {
   for (const auto& mount_point : mount_points_) {
-    if (mount_point.mount_path == mount_path)
+    if (mount_point.mount_path.value() == mount_path)
       return true;
   }
   return false;
@@ -90,8 +84,8 @@ bool MountInfo::RetrieveFromFile(const std::string& path) {
     size_t num_tokens = tokens.size();
     if (num_tokens >= 10 && tokens[num_tokens - 4] == "-") {
       MountPointData mount_point;
-      mount_point.source_path = DecodePath(tokens[num_tokens - 2]);
-      mount_point.mount_path = DecodePath(tokens[4]);
+      mount_point.source = DecodePath(tokens[num_tokens - 2]);
+      mount_point.mount_path = base::FilePath(DecodePath(tokens[4]));
       mount_point.filesystem_type = tokens[num_tokens - 3];
       mount_points_.push_back(mount_point);
     }

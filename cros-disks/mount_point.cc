@@ -18,7 +18,7 @@ namespace {
 
 class LeakingMountPoint : public MountPoint {
  public:
-  explicit LeakingMountPoint(const base::FilePath& path) : MountPoint(path) {}
+  explicit LeakingMountPoint(const base::FilePath& path) : MountPoint({path}) {}
   LeakingMountPoint(const LeakingMountPoint&) = delete;
   LeakingMountPoint& operator=(const LeakingMountPoint&) = delete;
   ~LeakingMountPoint() override { DestructorUnmount(); }
@@ -36,8 +36,8 @@ std::unique_ptr<MountPoint> MountPoint::CreateLeaking(
   return std::make_unique<LeakingMountPoint>(path);
 }
 
-MountPoint::MountPoint(const base::FilePath& path) : path_(path) {
-  DCHECK(!path_.empty());
+MountPoint::MountPoint(MountPointData data) : data_(std::move(data)) {
+  DCHECK(!path().empty());
 }
 
 MountPoint::~MountPoint() {
