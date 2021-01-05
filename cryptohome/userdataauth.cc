@@ -902,10 +902,10 @@ void UserDataAuth::InitializePkcs11(UserSession* session) {
 
   bool still_mounted = false;
 
-  // The mount have be mounted, that is, still tracked by cryptohome. Otherwise
-  // there's no point in initializing PKCS#11 for it. The reason for this check
-  // is because it might be possible for Unmount() to be called after mounting
-  // and before getting here.
+  // The mount has to be mounted, that is, still tracked by cryptohome.
+  // Otherwise there's no point in initializing PKCS#11 for it. The reason for
+  // this check is because it might be possible for Unmount() to be called after
+  // mounting and before getting here.
   for (const auto& session_pair : sessions_) {
     if (session_pair.second.get() == session &&
         session->GetMount()->IsMounted()) {
