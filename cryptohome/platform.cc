@@ -64,6 +64,7 @@
 #include <brillo/process/process.h>
 #include <brillo/secure_blob.h>
 #include <openssl/rand.h>
+#include <rootdev/rootdev.h>
 #include <secure_erase_file/secure_erase_file.h>
 
 extern "C" {
@@ -825,6 +826,27 @@ bool Platform::UdevAdmSettle(const base::FilePath& device_path,
     return false;
 
   return true;
+}
+
+base::FilePath Platform::GetStatefulDevice() {
+  char root_device[PATH_MAX];
+  int ret = rootdev(root_device, sizeof(root_device),
+                    true,   // Do full resolution.
+                    true);  // Remove partition number.
+  if (ret != 0) {
+    LOG(WARNING) << "rootdev failed with error code " << ret;
+    return base::FilePath();
+  }
+
+  // For some storage devices (eg. eMMC), the path ends in a digit
+  // (eg. /dev/mmcblk0). Use 'p' as the partition separator while generating
+  // the partition's block device path. For other types of paths (/dev/sda), we
+  // directly append the partition number.
+  std::string root_dev(root_device);
+  if (base::IsAsciiDigit(root_dev[root_dev.size() - 1]))
+    root_dev += 'p';
+  root_dev += '1';
+  return base::FilePath(root_dev);
 }
 
 bool Platform::DeleteFile(const FilePath& path) {

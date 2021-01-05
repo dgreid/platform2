@@ -19,6 +19,9 @@
 #include <base/strings/stringprintf.h>
 #include <base/timer/elapsed_timer.h>
 #include <brillo/cryptohome.h>
+#if USE_LVM_STATEFUL_PARTITION
+#include <brillo/blkdev_utils/lvm.h>
+#endif  // USE_LVM_STATEFUL_PARTITION
 #include <brillo/scoped_umask.h>
 #include <brillo/secure_blob.h>
 #include <chromeos/constants/cryptohome.h>
@@ -81,7 +84,11 @@ HomeDirs::HomeDirs(
       timestamp_cache_(timestamp_cache),
       policy_provider_(std::move(policy_provider)),
       enterprise_owned_(false),
-      encrypted_container_factory_(std::move(encrypted_container_factory)) {}
+      encrypted_container_factory_(std::move(encrypted_container_factory)) {
+#if USE_LVM_STATEFUL_PARTITION
+  lvm_ = std::make_unique<brillo::LogicalVolumeManager>();
+#endif
+}
 
 HomeDirs::~HomeDirs() {}
 
@@ -110,7 +117,8 @@ bool HomeDirs::Exists(const std::string& obfuscated_username) const {
 
 bool HomeDirs::CryptohomeExists(const std::string& obfuscated_username) const {
   return EcryptfsCryptohomeExists(obfuscated_username) ||
-         DircryptoCryptohomeExists(obfuscated_username);
+         DircryptoCryptohomeExists(obfuscated_username) ||
+         DmcryptCryptohomeExists(obfuscated_username);
 }
 
 bool HomeDirs::EcryptfsCryptohomeExists(
@@ -127,6 +135,46 @@ bool HomeDirs::DircryptoCryptohomeExists(
   return platform_->DirectoryExists(mount_path) &&
          platform_->GetDirCryptoKeyState(mount_path) ==
              dircrypto::KeyState::ENCRYPTED;
+}
+
+bool HomeDirs::DmcryptContainerExists(
+    const std::string& obfuscated_username,
+    const std::string& container_suffix) const {
+#if USE_LVM_STATEFUL_PARTITION
+  // Check for the presence of the logical volume for the user's data container.
+  std::string logical_volume_container =
+      LogicalVolumePrefix(obfuscated_username).append(container_suffix);
+
+  // Attempt to check if the stateful partition is setup with a valid physical
+  // volume.
+  base::FilePath physical_volume = platform_->GetStatefulDevice();
+  if (physical_volume.empty())
+    return false;
+
+  auto pv = lvm_->GetPhysicalVolume(physical_volume);
+  if (!pv || !pv->IsValid())
+    return false;
+
+  auto vg = lvm_->GetVolumeGroup(*pv);
+  if (!vg || !vg->IsValid())
+    return false;
+
+  return lvm_->GetLogicalVolume(*vg, logical_volume_container) != base::nullopt;
+#else
+  return false;
+#endif
+}
+
+bool HomeDirs::DmcryptCryptohomeExists(
+    const std::string& obfuscated_username) const {
+  return DmcryptContainerExists(obfuscated_username,
+                                kDmcryptDataContainerSuffix);
+}
+
+bool HomeDirs::DmcryptCacheContainerExists(
+    const std::string& obfuscated_username) const {
+  return DmcryptContainerExists(obfuscated_username,
+                                kDmcryptCacheContainerSuffix);
 }
 
 bool HomeDirs::UpdateActivityTimestamp(const std::string& obfuscated,

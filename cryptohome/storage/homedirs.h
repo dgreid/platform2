@@ -12,12 +12,16 @@
 
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <base/callback.h>
 #include <base/files/file_path.h>
 #include <base/files/file_util.h>
 #include <base/time/time.h>
+#if USE_LVM_STATEFUL_PARTITION
+#include <brillo/blkdev_utils/lvm.h>
+#endif  // USE_LVM_STATEFUL_PARTITION
 #include <brillo/secure_blob.h>
 #include <chaps/token_manager_client.h>
 #include <dbus/cryptohome/dbus-constants.h>
@@ -122,6 +126,21 @@ class HomeDirs {
   virtual bool DircryptoCryptohomeExists(
       const std::string& obfuscated_username) const;
 
+  // Check if a dm-crypt container exists for the given obfuscated username.
+  virtual bool DmcryptContainerExists(
+      const std::string& obfuscated_username,
+      const std::string& container_suffix) const;
+
+  // Checks if a dm-crypt cryptohome vault exists for the given obfuscated
+  // username.
+  virtual bool DmcryptCryptohomeExists(
+      const std::string& obfuscated_username) const;
+
+  // Checks if the dm-crypt cryptohome's cache container exists for the given
+  // obfuscated username.
+  virtual bool DmcryptCacheContainerExists(
+      const std::string& obfuscated_username) const;
+
   virtual bool UpdateActivityTimestamp(const std::string& obfuscted,
                                        int index,
                                        int time_shift_sec);
@@ -218,6 +237,13 @@ class HomeDirs {
   // directly or not use it.
   virtual KeysetManagement* keyset_management() { return keyset_management_; }
 
+#if USE_LVM_STATEFUL_PARTITION
+  void SetLogicalVolumeManagerForTesting(
+      std::unique_ptr<brillo::LogicalVolumeManager> lvm) {
+    lvm_ = std::move(lvm);
+  }
+#endif  // USE_LVM_STATEFUL_PARTITION
+
  private:
   base::TimeDelta GetUserInactivityThresholdForRemoval();
   // Loads the device policy, either by initializing it or reloading the
@@ -279,6 +305,10 @@ class HomeDirs {
 
   // The container a not-shifted system UID in ARC++ container (AID_SYSTEM).
   static constexpr uid_t kAndroidSystemUid = 1000;
+
+#if USE_LVM_STATEFUL_PARTITION
+  std::unique_ptr<brillo::LogicalVolumeManager> lvm_;
+#endif  // USE_LVM_STATEFUL_PARTITION
 
   friend class HomeDirsTest;
   FRIEND_TEST(HomeDirsTest, GetTrackedDirectoryForDirCrypto);

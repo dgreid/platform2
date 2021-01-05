@@ -21,6 +21,8 @@ namespace {
 constexpr char kShadowRoot[] = "/home/.shadow";
 constexpr char kSystemSaltFile[] = "salt";
 constexpr char kSkelPath[] = "/etc/skel";
+constexpr char kLogicalVolumePrefix[] = "cryptohome";
+constexpr char kDmcryptVolumePrefix[] = "dmcrypt";
 }  // namespace
 
 base::FilePath ShadowRoot() {
@@ -58,6 +60,33 @@ base::FilePath GetUserMountDirectory(const std::string& obfuscated_username) {
 base::FilePath GetUserTemporaryMountDirectory(
     const std::string& obfuscated_username) {
   return ShadowRoot().Append(obfuscated_username).Append(kTemporaryMountDir);
+}
+
+base::FilePath GetDmcryptUserCacheDirectory(
+    const std::string& obfuscated_username) {
+  return ShadowRoot().Append(obfuscated_username).Append(kDmcryptCacheDir);
+}
+
+std::string LogicalVolumePrefix(const std::string& obfuscated_username) {
+  return std::string(kLogicalVolumePrefix) + "-" +
+         obfuscated_username.substr(0, 8) + "-";
+}
+
+std::string DmcryptVolumePrefix(const std::string& obfuscated_username) {
+  return std::string(kDmcryptVolumePrefix) + "-" +
+         obfuscated_username.substr(0, 8) + "-";
+}
+
+base::FilePath GetDmcryptDataVolume(const std::string& obfuscated_username) {
+  return base::FilePath(kDeviceMapperDir)
+      .Append(DmcryptVolumePrefix(obfuscated_username)
+                  .append(kDmcryptDataContainerSuffix));
+}
+
+base::FilePath GetDmcryptCacheVolume(const std::string& obfuscated_username) {
+  return base::FilePath(kDeviceMapperDir)
+      .Append(DmcryptVolumePrefix(obfuscated_username)
+                  .append(kDmcryptCacheContainerSuffix));
 }
 
 bool InitializeFilesystemLayout(Platform* platform,

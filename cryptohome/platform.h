@@ -921,6 +921,9 @@ class Platform {
   virtual bool UdevAdmSettle(const base::FilePath& device_path,
                              bool wait_for_device);
 
+  // Gets the block device for the underlying stateful partition.
+  virtual base::FilePath GetStatefulDevice();
+
  private:
   // Returns the process and open file information for the specified process id
   // with files open on the given path
