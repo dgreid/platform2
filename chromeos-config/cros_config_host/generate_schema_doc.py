@@ -165,7 +165,7 @@ def Main(schema, output):
     output: Output file.
   """
   schema_yaml = yaml.load(
-      libcros_schema.ApplyImports(schema), Loader=yaml.SafeLoader)
+      libcros_schema.ApplyImports(schema), Loader=yaml.CLoader)
   ref_types = {}
   for type_def in schema_yaml.get('typeDefs', []):
     ref_types['#/typeDefs/%s' % type_def] = schema_yaml['typeDefs'][type_def]

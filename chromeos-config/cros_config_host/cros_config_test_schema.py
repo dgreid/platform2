@@ -78,7 +78,7 @@ def TransformConfig(config, device_filter=None):
   Returns:
     Resulting JSON output from the transform.
   """
-  config_yaml = yaml.load(config, Loader=yaml.SafeLoader)
+  config_yaml = yaml.load(config, Loader=yaml.CLoader)
   json_from_yaml = json.dumps(config_yaml, sort_keys=True, indent=2)
   json_config = json.loads(json_from_yaml)
   configs = []

@@ -660,7 +660,7 @@ class MainTests(cros_test_lib.TempDirTestCase):
     with open(os.path.join(
         this_dir, 'cros_config_schema.yaml')) as schema_stream:
       schema_contents = schema_stream.read()
-      return yaml.load(schema_contents, Loader=yaml.SafeLoader)
+      return yaml.load(schema_contents, Loader=yaml.CLoader)
 
   def assertFileEqual(self, file_expected, file_actual, regen_cmd=''):
     self.assertTrue(os.path.isfile(file_expected),

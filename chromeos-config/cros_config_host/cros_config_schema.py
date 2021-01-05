@@ -267,7 +267,7 @@ def TransformConfig(config, model_filter_regex=None):
   Returns:
     Resulting JSON output from the transform.
   """
-  config_yaml = yaml.load(config, Loader=yaml.SafeLoader)
+  config_yaml = yaml.load(config, Loader=yaml.CLoader)
   configs = []
   if DEVICES in config_yaml[CHROMEOS]:
     for device in config_yaml[CHROMEOS][DEVICES]:
@@ -487,7 +487,7 @@ def GetValidSchemaProperties(
   """
   schema_yaml = ReadSchema(schema)
   root_path = 'properties/chromeos/properties/configs/items/properties'
-  schema_node = yaml.load(schema_yaml, Loader=yaml.SafeLoader)
+  schema_node = yaml.load(schema_yaml, Loader=yaml.CLoader)
   for element in root_path.split('/'):
     schema_node = schema_node[element]
 
@@ -817,7 +817,7 @@ def Main(schema,
   libcros_schema.ValidateConfigSchema(schema_contents, json_transform)
   ValidateConfig(json_transform)
   schema_attrs = libcros_schema.GetSchemaPropertyAttrs(
-      yaml.load(schema_contents, Loader=yaml.SafeLoader))
+      yaml.load(schema_contents, Loader=yaml.CLoader))
 
   if filter_build_details:
     build_only_elements = []

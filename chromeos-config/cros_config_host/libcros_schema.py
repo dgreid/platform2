@@ -60,7 +60,7 @@ def ValidateConfigSchema(schema, config):
     config: Config (transformed) that will be verified.
   """
   json_config = json.loads(config)
-  schema_yaml = yaml.load(schema, Loader=yaml.SafeLoader)
+  schema_yaml = yaml.load(schema, Loader=yaml.CLoader)
   schema_json_from_yaml = json.dumps(schema_yaml, sort_keys=True, indent=2)
   schema_json = json.loads(schema_json_from_yaml)
   validate(json_config, schema_json)
@@ -93,7 +93,7 @@ def FindImports(config_file, includes):
 
     if yaml_import_lines:
       yaml_import = yaml.load(
-          '\n'.join(yaml_import_lines), Loader=yaml.SafeLoader)
+          '\n'.join(yaml_import_lines), Loader=yaml.CLoader)
 
       for import_file in yaml_import.get('imports', []):
         full_path = os.path.join(working_dir, import_file)
