@@ -14,6 +14,7 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicI32, Ordering};
 
 use libc::{c_int, fork, kill, pid_t, waitpid, SIGHUP, SIGINT, SIGKILL, WIFSTOPPED};
+use libchromeos::chromeos::is_dev_mode;
 use rustyline::completion::Completer;
 use rustyline::config::Configurer;
 use rustyline::error::ReadlineError;
@@ -352,7 +353,7 @@ fn main() -> Result<(), ()> {
 
     let mut command_args: Vec<String> = Vec::new();
 
-    util::set_dev_commands_included(util::is_dev_mode().unwrap_or_else(|_| {
+    util::set_dev_commands_included(is_dev_mode().unwrap_or_else(|_| {
         error!("Could not locate 'crossystem'; assuming devmode is off.");
         false
     }));

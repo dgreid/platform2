@@ -17,9 +17,9 @@ use std::time::Duration;
 
 use dbus::blocking::Connection;
 use libc::{c_int, sigaction, SA_RESTART, SIG_DFL};
+use libchromeos::chromeos;
 use regex::Regex;
 use sys_util::error;
-use system_api::client::OrgChromiumSessionManagerInterface;
 
 // 25 seconds is the default timeout for dbus-send.
 pub const TIMEOUT_MILLIS: u64 = 25000;
@@ -60,17 +60,8 @@ pub fn get_user_id_hash() -> Result<String, ()> {
         return Ok(lookup);
     }
 
-    let connection = Connection::new_system().map_err(|err| {
-        error!("ERROR: Failed to get D-Bus connection: {}", err);
-    })?;
-    let conn_path = connection.with_proxy(
-        "org.chromium.SessionManager",
-        "/org/chromium/SessionManager",
-        Duration::from_millis(TIMEOUT_MILLIS),
-    );
-
-    let (_, user_id_hash) = conn_path.retrieve_primary_session().map_err(|err| {
-        println!("ERROR: Got unexpected result: {}", err);
+    let user_id_hash = chromeos::get_user_id_hash().map_err(|err| {
+        error!("ERROR: D-Bus call failed: {}", err);
     })?;
 
     env::set_var(CROS_USER_ID_HASH, &user_id_hash);
@@ -101,11 +92,6 @@ pub fn is_chrome_feature_enabled(method_name: &str) -> Result<bool, ()> {
         })?;
 
     Ok(reply)
-}
-
-pub fn is_dev_mode() -> Result<bool, Error> {
-    let output = Command::new("crossystem").arg("cros_debug?1").output()?;
-    Ok(output.status.success())
 }
 
 pub fn is_removable() -> Result<bool, Error> {
