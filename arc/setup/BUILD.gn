@@ -19,6 +19,7 @@ group("all") {
   }
   if (use.fuzzer) {
     deps += [
+      ":arc_property_util_expand_property_contents_fuzzer",
       ":arc_setup_util_find_all_properties_fuzzer",
       ":arc_setup_util_find_fingerprint_and_sdk_version_fuzzer",
     ]
@@ -62,6 +63,7 @@ config("target_defaults") {
 
 static_library("libarc_setup") {
   sources = [
+    "arc_property_util.cc",
     "arc_setup.cc",
     "arc_setup_metrics.cc",
     "arc_setup_util.cc",
@@ -162,6 +164,7 @@ if (use.test) {
   }
   executable("arc-setup_testrunner") {
     sources = [
+      "arc_property_util_test.cc",
       "arc_setup_metrics_test.cc",
       "arc_setup_test.cc",
       "arc_setup_util_test.cc",
@@ -193,6 +196,15 @@ if (use.fuzzer) {
 
   executable("arc_setup_util_find_fingerprint_and_sdk_version_fuzzer") {
     sources = [ "arc_setup_util_find_fingerprint_and_sdk_version_fuzzer.cc" ]
+    configs += [
+      "//common-mk/common_fuzzer",
+      ":target_defaults",
+    ]
+    deps = [ ":libarc_setup" ]
+  }
+
+  executable("arc_property_util_expand_property_contents_fuzzer") {
+    sources = [ "arc_property_util_expand_property_contents_fuzzer.cc" ]
     configs += [
       "//common-mk/common_fuzzer",
       ":target_defaults",
