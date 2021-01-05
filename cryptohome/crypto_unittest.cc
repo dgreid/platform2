@@ -756,13 +756,12 @@ TEST_F(LeCredentialsManagerTest, Encrypt) {
       ->mutable_policy()
       ->set_low_entropy_credential(true);
 
+  SerializedVaultKeyset serialized;
   EXPECT_TRUE(crypto_.EncryptVaultKeyset(
       pin_vault_keyset_, brillo::SecureBlob(HexDecode(kHexVaultKey)),
-      brillo::SecureBlob(HexDecode(kHexSalt)), "unused",
-      pin_vault_keyset_.mutable_serialized()));
+      brillo::SecureBlob(HexDecode(kHexSalt)), "unused", &serialized));
 
-  EXPECT_EQ(pin_vault_keyset_.serialized().flags(),
-            SerializedVaultKeyset::LE_CREDENTIAL);
+  EXPECT_EQ(serialized.flags(), SerializedVaultKeyset::LE_CREDENTIAL);
 }
 
 TEST_F(LeCredentialsManagerTest, EncryptFail) {
@@ -775,28 +774,24 @@ TEST_F(LeCredentialsManagerTest, EncryptFail) {
       ->mutable_policy()
       ->set_low_entropy_credential(true);
 
+  SerializedVaultKeyset serialized;
   EXPECT_FALSE(crypto_.EncryptVaultKeyset(
       pin_vault_keyset_, brillo::SecureBlob(HexDecode(kHexVaultKey)),
-      brillo::SecureBlob(HexDecode(kHexSalt)), "unused",
-      pin_vault_keyset_.mutable_serialized()));
+      brillo::SecureBlob(HexDecode(kHexSalt)), "unused", &serialized));
 }
 
 TEST_F(LeCredentialsManagerTest, Decrypt) {
-  pin_vault_keyset_.mutable_serialized()->set_flags(
-      SerializedVaultKeyset::LE_CREDENTIAL);
-  pin_vault_keyset_.mutable_serialized()->set_le_fek_iv(HexDecode(kHexFekIv));
-  pin_vault_keyset_.mutable_serialized()->set_le_chaps_iv(
-      HexDecode(kHexChapsIv));
-  pin_vault_keyset_.mutable_serialized()->set_wrapped_keyset(
-      HexDecode(kHexWrappedKeyset));
-  pin_vault_keyset_.mutable_serialized()->set_wrapped_chaps_key(
-      HexDecode(kHexWrappedChapsKey));
-  pin_vault_keyset_.mutable_serialized()->set_salt(HexDecode(kHexSalt));
+  SerializedVaultKeyset serialized;
+  serialized.set_flags(SerializedVaultKeyset::LE_CREDENTIAL);
+  serialized.set_le_fek_iv(HexDecode(kHexFekIv));
+  serialized.set_le_chaps_iv(HexDecode(kHexChapsIv));
+  serialized.set_wrapped_keyset(HexDecode(kHexWrappedKeyset));
+  serialized.set_wrapped_chaps_key(HexDecode(kHexWrappedChapsKey));
+  serialized.set_salt(HexDecode(kHexSalt));
 
   CryptoError crypto_error = CryptoError::CE_NONE;
   EXPECT_TRUE(crypto_.DecryptVaultKeyset(
-      pin_vault_keyset_.serialized(),
-      brillo::SecureBlob(HexDecode(kHexVaultKey)), false, nullptr,
+      serialized, brillo::SecureBlob(HexDecode(kHexVaultKey)), false, nullptr,
       &crypto_error, &pin_vault_keyset_));
   EXPECT_EQ(CryptoError::CE_NONE, crypto_error);
 }
