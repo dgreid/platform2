@@ -365,6 +365,8 @@ bool LECredentialManagerImpl::Sync() {
     return true;
   }
 
+  LOG(WARNING) << "LE sync loss between OS and GSC, attempting log replay.";
+
   // Get the log again, since |disk_root_hash| may have changed.
   log.clear();
   if (!le_tpm_backend_->GetLog(disk_root_hash, &root_hash_, &log)) {
@@ -390,6 +392,8 @@ bool LECredentialManagerImpl::Sync() {
 bool LECredentialManagerImpl::ReplayInsert(uint64_t label,
                                            const std::vector<uint8_t>& log_root,
                                            const std::vector<uint8_t>& mac) {
+  LOG(INFO) << "Replaying insert for label " << label;
+
   // Fill cred_metadata with some random data since LECredentialManager
   // considers empty cred_metadata as a non-existent label.
   std::vector<uint8_t> cred_metadata(mac.size());
@@ -410,6 +414,8 @@ bool LECredentialManagerImpl::ReplayInsert(uint64_t label,
 
 bool LECredentialManagerImpl::ReplayCheck(
     uint64_t label, const std::vector<uint8_t>& log_root) {
+  LOG(INFO) << "Replaying check for label " << label;
+
   SignInHashTree::Label label_obj(label, kLengthLabels, kBitsPerLevel);
   std::vector<uint8_t> orig_cred, orig_mac;
   std::vector<std::vector<uint8_t>> h_aux;
@@ -451,6 +457,8 @@ bool LECredentialManagerImpl::ReplayCheck(
 }
 
 bool LECredentialManagerImpl::ReplayResetTree() {
+  LOG(INFO) << "Replaying tree reset";
+
   hash_tree_.reset();
   if (!base::DeletePathRecursively(basedir_)) {
     PLOG(ERROR) << "Failed to delete disk hash tree during replay.";
@@ -467,6 +475,8 @@ bool LECredentialManagerImpl::ReplayResetTree() {
 }
 
 bool LECredentialManagerImpl::ReplayRemove(uint64_t label) {
+  LOG(INFO) << "Replaying remove for label " << label;
+
   SignInHashTree::Label label_obj(label, kLengthLabels, kBitsPerLevel);
   if (!hash_tree_->RemoveLabel(label_obj)) {
     ReportLEResult(kLEOpSync, kLEActionSaveToDisk, LE_CRED_ERROR_HASH_TREE);
@@ -492,12 +502,14 @@ bool LECredentialManagerImpl::ReplayLogEntries(
   for (; it != log.rend(); ++it) {
     const LELogEntry& log_entry = *it;
     if (log_entry.root == disk_root_hash) {
+      LOG(INFO) << "Starting replay at log entry #" << it - log.rbegin() + 1;
       ++it;
       break;
     }
   }
 
   if (it == log.rend()) {
+    LOG(WARNING) << "No matching root hash, starting replay at oldest entry";
     it = log.rbegin();
   }
 
@@ -523,8 +535,8 @@ bool LECredentialManagerImpl::ReplayLogEntries(
         ret = ReplayResetTree();
         break;
       case LE_LOG_INVALID:
-        ret = false;
-        break;
+        LOG(ERROR) << "Invalid log entry.";
+        return false;
     }
     if (!ret) {
       LOG(ERROR) << "Failure to replay LE Cred log entries.";
