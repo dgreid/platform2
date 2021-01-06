@@ -124,6 +124,11 @@ bool ArcDiskQuota::SetProjectId(int project_id,
     return false;
   }
 
+  if (child_path.IsAbsolute()) {
+    LOG(ERROR) << "child_path is an absolute path : " << child_path;
+    return false;
+  }
+
   if (!homedirs_->CryptohomeExists(obfuscated_username)) {
     LOG(ERROR) << "A cryptohome vault doesn't exist for : "
                << obfuscated_username;

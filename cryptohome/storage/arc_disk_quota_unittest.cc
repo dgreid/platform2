@@ -371,11 +371,24 @@ TEST_F(ArcDiskQuotaTest, SetProjectId_IdOutOfAllowedRange) {
                                             kObfuscatedUsername));
 }
 
-TEST_F(ArcDiskQuotaTest, SetProjectId_InvalidPath) {
+TEST_F(ArcDiskQuotaTest, SetProjectId_ChildPathReferencesParent) {
   constexpr int kProjectId = kValidAndroidProjectId;
   const auto kParentPath = SetProjectIdAllowedPathType::PATH_DOWNLOADS;
   // Child path contains ".."
-  const auto kChildPath = base::FilePath("/../test.png");
+  const auto kChildPath = base::FilePath("../test.png");
+
+  EXPECT_CALL(homedirs_, CryptohomeExists(_)).Times(0);
+  EXPECT_CALL(platform_, SetQuotaProjectId(kProjectId, _)).Times(0);
+
+  EXPECT_FALSE(arc_disk_quota_.SetProjectId(kProjectId, kParentPath, kChildPath,
+                                            kObfuscatedUsername));
+}
+
+TEST_F(ArcDiskQuotaTest, SetProjectId_ChildPathIsAbsolutePath) {
+  constexpr int kProjectId = kValidAndroidProjectId;
+  const auto kParentPath = SetProjectIdAllowedPathType::PATH_DOWNLOADS;
+  // Child path is an absolute path.
+  const auto kChildPath = base::FilePath("/test.png");
 
   EXPECT_CALL(homedirs_, CryptohomeExists(_)).Times(0);
   EXPECT_CALL(platform_, SetQuotaProjectId(kProjectId, _)).Times(0);
