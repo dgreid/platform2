@@ -36,6 +36,7 @@ using ::testing::_;
 using ::testing::AnyNumber;
 using ::testing::AnyOf;
 using ::testing::Contains;
+using ::testing::DoAll;
 using ::testing::ElementsAre;
 using ::testing::HasSubstr;
 using ::testing::InSequence;
