@@ -39,6 +39,8 @@ class DmcryptContainer : public EncryptedContainer {
 
   ~DmcryptContainer() {}
 
+  bool Exists() override;
+
   bool Purge() override;
 
   bool Setup(const FileSystemKey& encryption_key, bool create) override;

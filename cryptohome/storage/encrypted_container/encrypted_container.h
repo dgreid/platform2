@@ -55,6 +55,8 @@ class EncryptedContainer {
   virtual bool Setup(const FileSystemKey& encryption_key, bool create) = 0;
   // Tears down the container, removing the encryption key if it was added.
   virtual bool Teardown() = 0;
+  // Checks if the container exists on disk.
+  virtual bool Exists() = 0;
   // Gets the type of the encrypted container.
   virtual EncryptedContainerType GetType() = 0;
 };

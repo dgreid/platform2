@@ -56,6 +56,10 @@ bool DmcryptContainer::Purge() {
   return backing_device_->Purge();
 }
 
+bool DmcryptContainer::Exists() {
+  return backing_device_->Exists();
+}
+
 bool DmcryptContainer::Setup(const FileSystemKey& encryption_key, bool create) {
   if (create && !backing_device_->Create()) {
     LOG(ERROR) << "Failed to create backing device";

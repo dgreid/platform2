@@ -22,6 +22,12 @@ bool FscryptContainer::Purge() {
   return platform_->DeletePathRecursively(backing_dir_);
 }
 
+bool FscryptContainer::Exists() {
+  return platform_->DirectoryExists(backing_dir_) &&
+         platform_->GetDirCryptoKeyState(backing_dir_) ==
+             dircrypto::KeyState::ENCRYPTED;
+}
+
 bool FscryptContainer::Setup(const FileSystemKey& encryption_key, bool create) {
   if (create) {
     if (!platform_->CreateDirectory(backing_dir_)) {

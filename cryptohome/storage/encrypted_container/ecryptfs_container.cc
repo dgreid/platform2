@@ -24,6 +24,10 @@ bool EcryptfsContainer::Purge() {
   return platform_->DeletePathRecursively(backing_dir_);
 }
 
+bool EcryptfsContainer::Exists() {
+  return platform_->DirectoryExists(backing_dir_);
+}
+
 bool EcryptfsContainer::Setup(const FileSystemKey& encryption_key,
                               bool create) {
   if (create) {
