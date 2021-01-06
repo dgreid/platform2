@@ -30,6 +30,7 @@ namespace {
 using ::brillo::dbus_utils::MockDBusMethodResponse;
 
 using ::testing::_;
+using ::testing::DoAll;
 using ::testing::Matcher;
 using ::testing::MatchesRegex;
 using ::testing::Return;

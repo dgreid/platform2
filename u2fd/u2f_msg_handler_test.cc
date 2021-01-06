@@ -23,6 +23,7 @@ namespace {
 
 using ::testing::_;
 using ::testing::ContainsRegex;
+using ::testing::DoAll;
 using ::testing::Matcher;
 using ::testing::MatchesRegex;
 using ::testing::NiceMock;
