@@ -56,6 +56,7 @@ CameraHalServerImpl::~CameraHalServerImpl() {
 
 void CameraHalServerImpl::Start() {
   VLOGF_ENTER();
+  base::AutoLock l(ipc_bridge_lock_);
 
   int result = LoadCameraHal();
   if (result != 0) {
@@ -270,6 +271,7 @@ int CameraHalServerImpl::LoadCameraHal() {
 void CameraHalServerImpl::ExitOnMainThread(int exit_status) {
   VLOGF_ENTER();
   DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
+  base::AutoLock l(ipc_bridge_lock_);
 
   for (auto* cros_camera_hal : cros_camera_hals_) {
     cros_camera_hal->tear_down();
@@ -290,6 +292,7 @@ void CameraHalServerImpl::ExitOnMainThread(int exit_status) {
 void CameraHalServerImpl::OnCameraActivityChange(int32_t camera_id,
                                                  bool opened,
                                                  mojom::CameraClientType type) {
+  base::AutoLock l(ipc_bridge_lock_);
   mojo_manager_->GetIpcTaskRunner()->PostTask(
       FROM_HERE,
       base::BindOnce(

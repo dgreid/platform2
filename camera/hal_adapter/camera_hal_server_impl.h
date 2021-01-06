@@ -12,6 +12,8 @@
 
 #include <base/files/file_path.h>
 #include <base/single_thread_task_runner.h>
+#include <base/synchronization/lock.h>
+#include <base/thread_annotations.h>
 #include <base/threading/thread_checker.h>
 #include <mojo/public/cpp/bindings/binding.h>
 
@@ -119,7 +121,8 @@ class CameraHalServerImpl final {
 
   // The instance which deals with the IPC-related calls. It should always run
   // and be deleted on IPC thread.
-  std::unique_ptr<IPCBridge> ipc_bridge_;
+  base::Lock ipc_bridge_lock_;
+  std::unique_ptr<IPCBridge> ipc_bridge_ GUARDED_BY(ipc_bridge_lock_);
 
   // Interfaces of Camera HALs.
   std::vector<cros_camera_hal_t*> cros_camera_hals_;
