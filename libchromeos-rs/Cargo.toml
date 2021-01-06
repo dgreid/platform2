@@ -4,6 +4,9 @@ version = "0.1.0"
 authors = ["The Chromium OS Authors"]
 edition = "2018"
 
+[build-dependencies]
+pkg-config = { version = "0.3.11", optional = true}
+
 [dependencies]
 data_model = { path = "../../platform/crosvm/data_model" } # provided by ebuild
 dbus = { version = "0.8", optional = true}
@@ -17,7 +20,7 @@ thiserror = "1.0.20"
 
 [features]
 default = []
-chromeos-module = ["dbus", "system_api"]
+chromeos-module = ["dbus", "pkg-config", "system_api"]
 
 [dev-dependencies]
 futures = { version = "0.3", features = ["async-await"] }
