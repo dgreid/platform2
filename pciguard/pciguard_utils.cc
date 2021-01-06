@@ -36,7 +36,8 @@ const char* kAllowlist[] = {
     "pcieport",  // PCI Core services - AER, Hotplug etc.
     "xhci_hcd",  // XHCI host controller driver.
     "nvme",      // PCI Express NVME host controller driver.
-    "ahci",      // AHCI driver
+    "ahci",      // AHCI driver.
+    "igb",       // Intel Giga Bit Ethernet driver on TBT devices.
 };
 
 int SetAuthorizedAttribute(base::FilePath devpath, bool enable) {
