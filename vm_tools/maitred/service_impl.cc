@@ -926,8 +926,8 @@ grpc::Status ServiceImpl::Mount9P(grpc::ServerContext* ctx,
   string data = base::StringPrintf(
       "trans=fd,rfdno=%d,wfdno=%d,cache=none,access=any,version=9p2000.L",
       server.get(), server.get());
-  if (mount("9p", request->target().c_str(), "9p",
-            MS_NOSUID | MS_NODEV | MS_NOEXEC, data.c_str()) != 0) {
+  if (mount("9p", request->target().c_str(), "9p", MS_NOSUID | MS_NODEV,
+            data.c_str()) != 0) {
     response->set_error(errno);
     PLOG(ERROR) << "Failed to mount 9p file system";
     return grpc::Status(grpc::INTERNAL, "failed to mount file system");
