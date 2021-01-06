@@ -1282,7 +1282,7 @@ TEST(GrammarCheckerTest, LoadModelAndInference) {
   ASSERT_TRUE(checker.is_bound());
 
   chrome_knowledge::GrammarCheckerRequest request;
-  request.set_text("They are student.");
+  request.set_text("They is student.");
   request.set_language("en-US");
 
   bool infer_callback_done = false;
@@ -1291,7 +1291,15 @@ TEST(GrammarCheckerTest, LoadModelAndInference) {
       base::Bind(
           [](bool* infer_callback_done, const GrammarCheckerResultPtr result) {
             EXPECT_EQ(result->status, GrammarCheckerResult::Status::OK);
+            ASSERT_GE(result->candidates.size(), 1);
             EXPECT_EQ(result->candidates.at(0)->text, "They are students.");
+
+            ASSERT_EQ(result->candidates.at(0)->fragments.size(), 1);
+            EXPECT_EQ(result->candidates.at(0)->fragments.at(0)->offset, 5);
+            EXPECT_EQ(result->candidates.at(0)->fragments.at(0)->length, 10);
+            EXPECT_EQ(result->candidates.at(0)->fragments.at(0)->replacement,
+                      "are students");
+
             *infer_callback_done = true;
           },
           &infer_callback_done));

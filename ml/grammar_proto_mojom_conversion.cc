@@ -15,6 +15,8 @@ using ::chromeos::machine_learning::mojom::GrammarCheckerQuery;
 using ::chromeos::machine_learning::mojom::GrammarCheckerQueryPtr;
 using ::chromeos::machine_learning::mojom::GrammarCheckerResult;
 using ::chromeos::machine_learning::mojom::GrammarCheckerResultPtr;
+using ::chromeos::machine_learning::mojom::GrammarCorrectionFragment;
+using ::chromeos::machine_learning::mojom::GrammarCorrectionFragmentPtr;
 
 }  // namespace
 
@@ -49,6 +51,15 @@ GrammarCheckerResultPtr GrammarCheckerResultFromProto(
     GrammarCheckerCandidatePtr candidate = GrammarCheckerCandidate::New();
     candidate->text = candidate_proto.text();
     candidate->score = candidate_proto.score();
+
+    for (const auto& fragment_proto : candidate_proto.fragments()) {
+      GrammarCorrectionFragmentPtr fragment = GrammarCorrectionFragment::New();
+      fragment->offset = fragment_proto.offset();
+      fragment->length = fragment_proto.length();
+      fragment->replacement = fragment_proto.replacement();
+
+      candidate->fragments.push_back(std::move(fragment));
+    }
 
     result->candidates.push_back(std::move(candidate));
   }

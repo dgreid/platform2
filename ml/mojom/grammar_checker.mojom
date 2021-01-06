@@ -25,6 +25,18 @@ struct GrammarCheckerQuery {
   string language;
 };
 
+// A span with suggested corrections.
+struct GrammarCorrectionFragment {
+  // The start offset in the original text.
+  uint32 offset;
+
+  // The length of the fragment in the original text.
+  uint32 length;
+
+  // The replacement string.
+  string replacement;
+};
+
 // One possible candidate returned from the grammar checker model.
 struct GrammarCheckerCandidate {
   // Corrected text.
@@ -32,6 +44,9 @@ struct GrammarCheckerCandidate {
 
   // Score of the text. Log of conditional probability.
   float score;
+
+  // The list of individual corrections.
+  array<GrammarCorrectionFragment> fragments;
 };
 
 // The grammar check response.
