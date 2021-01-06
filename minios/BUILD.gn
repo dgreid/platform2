@@ -7,7 +7,7 @@ import("//common-mk/pkg_config.gni")
 group("all") {
   deps = [ ":minios" ]
   if (use.test) {
-    deps += [ ":screens_test" ]
+    deps += [ ":minios_test" ]
   }
 }
 
@@ -37,7 +37,7 @@ if (use.test) {
   pkg_config("test_config") {
     pkg_deps = [ "libchrome-test" ]
   }
-  executable("screens_test") {
+  executable("minios_test") {
     configs += [
       "//common-mk:test",
       ":test_config",
