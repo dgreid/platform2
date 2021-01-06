@@ -8,7 +8,6 @@ use std::ffi::CStr;
 use std::fmt;
 use std::fs::File;
 use std::io;
-use std::mem;
 use std::net::{Ipv4Addr, Ipv6Addr, TcpListener};
 use std::os::raw::c_int;
 use std::os::unix::io::{AsRawFd, IntoRawFd};
@@ -17,9 +16,9 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
 
-use dbus::{
-    self, tree, Connection as DBusConnection, Error as DBusError, Message as DBusMessage, OwnedFd,
-};
+use dbus::arg::OwnedFd;
+use dbus::blocking::LocalConnection as DBusConnection;
+use dbus::{self, tree, Error as DBusError};
 use libchromeos::syslog;
 use libchromeos::vsock::{VsockCid, VsockListener, VMADDR_PORT_ANY};
 use log::{error, warn};
@@ -52,7 +51,7 @@ const RELEASE_LOOPBACK_TCP_PORT_METHOD: &str = "ReleaseLoopbackTcpPort";
 const UPDATE_LISTENING_PORTS_METHOD: &str = "UpdateListeningPorts";
 
 const CHUNNEL_CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
-const DBUS_TIMEOUT_MS: i32 = 30 * 1000;
+const DBUS_TIMEOUT: Duration = Duration::from_secs(30);
 
 // Program name.
 const IDENT: &[u8] = b"chunneld\0";
@@ -64,11 +63,9 @@ enum Error {
     BlockSigpipe(sys_util::signal::Error),
     ConnectChunnelFailure(String),
     CreateProtobusService(dbus::Error),
-    DBusCreateMethodCall(String),
     DBusGetSystemBus(DBusError),
-    DBusMessageRead(dbus::arg::TypeMismatchError),
     DBusMessageSend(DBusError),
-    DBusRegisterTree(DBusError),
+    DBusProcessMessage(DBusError),
     EventFdClone(sys_util::Error),
     EventFdNew(sys_util::Error),
     IncorrectCid(VsockCid),
@@ -104,11 +101,9 @@ impl fmt::Display for Error {
             BlockSigpipe(e) => write!(f, "failed to block SIGPIPE: {}", e),
             ConnectChunnelFailure(e) => write!(f, "failed to connect chunnel: {}", e),
             CreateProtobusService(e) => write!(f, "failed to create D-Bus service: {}", e),
-            DBusCreateMethodCall(e) => write!(f, "failed to create D-Bus method call: {}", e),
             DBusGetSystemBus(e) => write!(f, "failed to get D-Bus system bus: {}", e),
-            DBusMessageRead(e) => write!(f, "failed to read D-Bus message: {}", e),
             DBusMessageSend(e) => write!(f, "failed to send D-Bus message: {}", e),
-            DBusRegisterTree(e) => write!(f, "failed to register D-Bus tree: {}", e),
+            DBusProcessMessage(e) => write!(f, "failed to process D-Bus message: {}", e),
             EventFdClone(e) => write!(f, "failed to clone eventfd: {}", e),
             EventFdNew(e) => write!(f, "failed to create eventfd: {}", e),
             IncorrectCid(cid) => write!(f, "chunnel connection from unexpected cid {}", cid),
@@ -193,8 +188,7 @@ impl ForwarderSessions {
             tcp4_forwarders: HashMap::new(),
             update_evt,
             update_queue,
-            dbus_conn: DBusConnection::get_private(dbus::BusType::System)
-                .map_err(Error::DBusGetSystemBus)?,
+            dbus_conn: DBusConnection::new_system().map_err(Error::DBusGetSystemBus)?,
         })
     }
 
@@ -214,19 +208,20 @@ impl ForwarderSessions {
             if let BTreeMapEntry::Vacant(o) = self.listening_ports.entry(port) {
                 // Lock down the port to allow only Chrome to connect to it.
                 let (firewall_lifeline, dbus_fd) = pipe(true).map_err(Error::LifelinePipe)?;
-                let dbus_request = DBusMessage::new_method_call(
-                    PERMISSION_BROKER_SERVICE_NAME,
-                    PERMISSION_BROKER_SERVICE_PATH,
-                    PERMISSION_BROKER_INTERFACE,
-                    REQUEST_LOOPBACK_TCP_PORT_LOCKDOWN_METHOD,
-                )
-                .map_err(Error::DBusCreateMethodCall)?
-                .append2(port, OwnedFd::new(dbus_fd.into_raw_fd()));
-                let dbus_reply = self
+                let (allowed,): (bool,) = self
                     .dbus_conn
-                    .send_with_reply_and_block(dbus_request, DBUS_TIMEOUT_MS)
+                    .with_proxy(
+                        PERMISSION_BROKER_SERVICE_NAME,
+                        PERMISSION_BROKER_SERVICE_PATH,
+                        DBUS_TIMEOUT,
+                    )
+                    .method_call(
+                        PERMISSION_BROKER_INTERFACE,
+                        REQUEST_LOOPBACK_TCP_PORT_LOCKDOWN_METHOD,
+                        // Safe because ownership of dbus_fd is transferred.
+                        (port, unsafe { OwnedFd::new(dbus_fd.into_raw_fd()) }),
+                    )
                     .map_err(Error::DBusMessageSend)?;
-                let allowed: bool = dbus_reply.read1().map_err(Error::DBusMessageRead)?;
                 if !allowed {
                     warn!("failed to lock down loopback TCP port {}", port);
                     continue;
@@ -274,19 +269,19 @@ impl ForwarderSessions {
                 // fds it contains.
                 let _listening_port = self.listening_ports.remove(&port);
                 // Release the locked down port.
-                let dbus_request = DBusMessage::new_method_call(
-                    PERMISSION_BROKER_SERVICE_NAME,
-                    PERMISSION_BROKER_SERVICE_PATH,
-                    PERMISSION_BROKER_INTERFACE,
-                    RELEASE_LOOPBACK_TCP_PORT_METHOD,
-                )
-                .map_err(Error::DBusCreateMethodCall)?
-                .append1(port);
-                let dbus_reply = self
+                let (allowed,): (bool,) = self
                     .dbus_conn
-                    .send_with_reply_and_block(dbus_request, DBUS_TIMEOUT_MS)
+                    .with_proxy(
+                        PERMISSION_BROKER_SERVICE_NAME,
+                        PERMISSION_BROKER_SERVICE_PATH,
+                        DBUS_TIMEOUT,
+                    )
+                    .method_call(
+                        PERMISSION_BROKER_INTERFACE,
+                        RELEASE_LOOPBACK_TCP_PORT_METHOD,
+                        (port,),
+                    )
                     .map_err(Error::DBusMessageSend)?;
-                let allowed: bool = dbus_reply.read1().map_err(Error::DBusMessageRead)?;
                 if !allowed {
                     warn!("failed to release loopback TCP port {}", port);
                 }
@@ -435,18 +430,18 @@ fn launch_chunnel(
     request.chunneld_port = vsock_port;
     request.target_tcp4_port = u32::from(tcp4_port);
 
-    let dbus_request = DBusMessage::new_method_call(
-        VM_CICERONE_SERVICE_NAME,
-        VM_CICERONE_SERVICE_PATH,
-        VM_CICERONE_INTERFACE,
-        CONNECT_CHUNNEL_METHOD,
-    )
-    .map_err(Error::DBusCreateMethodCall)?
-    .append1(request.write_to_bytes().map_err(Error::ProtobufSerialize)?);
-    let dbus_reply = dbus_conn
-        .send_with_reply_and_block(dbus_request, DBUS_TIMEOUT_MS)
+    let (raw_buffer,): (Vec<u8>,) = dbus_conn
+        .with_proxy(
+            VM_CICERONE_SERVICE_NAME,
+            VM_CICERONE_SERVICE_PATH,
+            DBUS_TIMEOUT,
+        )
+        .method_call(
+            VM_CICERONE_INTERFACE,
+            CONNECT_CHUNNEL_METHOD,
+            (request.write_to_bytes().map_err(Error::ProtobufSerialize)?,),
+        )
         .map_err(Error::DBusMessageSend)?;
-    let raw_buffer: Vec<u8> = dbus_reply.read1().map_err(Error::DBusMessageRead)?;
     let response: cicerone_service::ConnectChunnelResponse =
         protobuf::parse_from_bytes(&raw_buffer).map_err(Error::ProtobufDeserialize)?;
 
@@ -553,11 +548,10 @@ fn dbus_thread(
     update_queue: Arc<Mutex<VecDeque<TcpForwardTarget>>>,
     update_evt: EventFd,
 ) -> Result<()> {
-    let connection = dbus::Connection::get_private(dbus::BusType::System)
-        .map_err(Error::CreateProtobusService)?;
+    let connection = DBusConnection::new_system().map_err(Error::CreateProtobusService)?;
 
     connection
-        .register_name(CHUNNELD_SERVICE_NAME, 0)
+        .request_name(CHUNNELD_SERVICE_NAME, false, false, false)
         .map_err(Error::CreateProtobusService)?;
 
     let f = tree::Factory::new_fnmut::<()>();
@@ -584,20 +578,13 @@ fn dbus_thread(
             .add(dbus_interface.add_m(dbus_method)),
     );
 
-    t.set_registered(&connection, true)
-        .map_err(Error::DBusRegisterTree)?;
-    connection.add_handler(t);
+    t.start_receive(&connection);
 
-    // The D-Bus crate uses a u32 for the timeout, but D-Bus internally uses c_int with -1 being
-    // infinite. We don't want chunneld waking frequently, so use -1 if c_int is the same size
-    // as u32, and a big value otherwise.
-    let timeout: u32 = if mem::size_of::<u32>() == mem::size_of::<c_int>() {
-        -1i32 as u32
-    } else {
-        c_int::max_value() as u32
-    };
+    // We don't want chunneld waking frequently, so use a big value.
     loop {
-        connection.incoming(timeout).next();
+        connection
+            .process(Duration::from_millis(c_int::max_value() as u64))
+            .map_err(Error::DBusProcessMessage)?;
     }
 }
 
