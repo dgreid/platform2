@@ -591,13 +591,13 @@ const int CellularTest::kStrength = 90;
 
 TEST_P(CellularTest, GetStorageIdentifier) {
   // IMEI should be used if IMEI, MEID, and equipment ID are available.
-  device_->set_imei(kIMEI);
+  device_->SetImei(kIMEI);
   device_->set_meid(kMEID);
   device_->set_equipment_id("1234ABCD");
   EXPECT_EQ("device_987654321098765", device_->GetStorageIdentifier());
 
   // MEID should be used if IMEI is not available.
-  device_->set_imei("");
+  device_->SetImei("");
   EXPECT_EQ("device_01234567EF8901", device_->GetStorageIdentifier());
 
   // Equipment ID should be used if neither IMEI nor MEID is available.
@@ -1045,7 +1045,7 @@ TEST_P(CellularTest, HomeProviderServingOperator) {
 TEST_P(CellularTest, StorageIdentifier) {
   // The default storage identifier should always be cellular_{iccid}
   InitCapability3gppProxies();
-  device_->set_iccid("test_iccid");
+  device_->SetIccid("test_iccid");
   device_->CreateService();
   EXPECT_EQ("cellular_test_iccid", device_->service()->GetStorageIdentifier());
   device_->DestroyService();

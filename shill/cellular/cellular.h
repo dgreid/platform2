@@ -316,14 +316,15 @@ class Cellular : public Device,
   void set_home_provider(const Stringmap& home_provider);
   void set_carrier(const std::string& carrier);
   void set_scanning_supported(bool scanning_supported);
-  void set_eid(const std::string& eid);
+  void SetEid(const std::string& eid);
   void set_equipment_id(const std::string& equipment_id);
   void set_esn(const std::string& esn);
   void set_firmware_revision(const std::string& firmware_revision);
   void set_hardware_revision(const std::string& hardware_revision);
   void set_device_id(std::unique_ptr<DeviceId> device_id);
-  void set_imei(const std::string& imei);
-  void set_imsi(const std::string& imsi);
+  void SetIccid(const std::string& iccid);
+  void SetImei(const std::string& imei);
+  void SetImsi(const std::string& imsi);
   void set_mdn(const std::string& mdn);
   void set_meid(const std::string& meid);
   void set_min(const std::string& min);
@@ -338,7 +339,6 @@ class Cellular : public Device,
   void set_provider_requires_roaming(bool provider_requires_roaming);
   void set_sim_present(bool sim_present);
   void set_apn_list(const Stringmaps& apn_list);
-  void set_iccid(const std::string& iccid);
 
   void set_use_attach_apn_for_testing(bool on) { use_attach_apn_ = on; }
 

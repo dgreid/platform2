@@ -1328,11 +1328,11 @@ void CellularCapability3gpp::OnSimPathChanged(const RpcIdentifier& sim_path) {
 
   if (!IsValidSimPath(sim_path)) {
     // Clear all data about the sim
-    cellular()->set_imsi("");
+    cellular()->SetImsi("");
     spn_ = "";
     cellular()->set_sim_present(false);
     OnSimIdentifierChanged("");
-    cellular()->set_eid("");
+    cellular()->SetEid("");
     OnOperatorIdChanged("");
     cellular()->home_provider_info()->Reset();
     return;
@@ -1472,10 +1472,10 @@ void CellularCapability3gpp::OnSimLockStatusChanged() {
 void CellularCapability3gpp::OnModem3gppPropertiesChanged(
     const KeyValueStore& properties) {
   SLOG(this, 3) << __func__;
-  if (properties.Contains<string>(MM_MODEM_MODEM3GPP_PROPERTY_IMEI))
-    cellular()->set_imei(
+  if (properties.Contains<string>(MM_MODEM_MODEM3GPP_PROPERTY_IMEI)) {
+    cellular()->SetImei(
         properties.Get<string>(MM_MODEM_MODEM3GPP_PROPERTY_IMEI));
-
+  }
   // Handle registration state changes as a single change
   Stringmap::const_iterator it;
   string operator_code;
@@ -1767,7 +1767,7 @@ void CellularCapability3gpp::OnSimPropertiesChanged(
         properties.Get<string>(MM_SIM_PROPERTY_SIMIDENTIFIER));
   }
   if (properties.Contains<string>(MM_SIM_PROPERTY_EID)) {
-    cellular()->set_eid(properties.Get<string>(MM_SIM_PROPERTY_EID));
+    cellular()->SetEid(properties.Get<string>(MM_SIM_PROPERTY_EID));
   }
   if (properties.Contains<string>(MM_SIM_PROPERTY_OPERATORIDENTIFIER)) {
     OnOperatorIdChanged(
@@ -1777,12 +1777,7 @@ void CellularCapability3gpp::OnSimPropertiesChanged(
     OnSpnChanged(properties.Get<string>(MM_SIM_PROPERTY_OPERATORNAME));
   }
   if (properties.Contains<string>(MM_SIM_PROPERTY_IMSI)) {
-    string imsi = properties.Get<string>(MM_SIM_PROPERTY_IMSI);
-    cellular()->set_imsi(imsi);
-    cellular()->home_provider_info()->UpdateIMSI(imsi);
-    // We do not obtain IMSI OTA right now. Provide the value from the SIM to
-    // serving operator as well, to aid in MVNO identification.
-    cellular()->serving_operator_info()->UpdateIMSI(imsi);
+    cellular()->SetImsi(properties.Get<string>(MM_SIM_PROPERTY_IMSI));
   }
 }
 
@@ -1792,10 +1787,7 @@ void CellularCapability3gpp::OnSpnChanged(const std::string& spn) {
 }
 
 void CellularCapability3gpp::OnSimIdentifierChanged(const string& id) {
-  cellular()->set_iccid(id);
-  cellular()->home_provider_info()->UpdateICCID(id);
-  // Provide ICCID to serving operator as well to aid in MVNO identification.
-  cellular()->serving_operator_info()->UpdateICCID(id);
+  cellular()->SetIccid(id);
   UpdateServiceActivationState();
   UpdatePendingActivationState();
 }

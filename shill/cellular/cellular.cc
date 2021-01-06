@@ -1558,7 +1558,7 @@ void Cellular::set_scanning_supported(bool scanning_supported) {
                   << "| change. DBus adaptor is NULL!";
 }
 
-void Cellular::set_eid(const string& eid) {
+void Cellular::SetEid(const string& eid) {
   if (eid_ == eid)
     return;
 
@@ -1602,9 +1602,19 @@ void Cellular::set_device_id(std::unique_ptr<DeviceId> device_id) {
   device_id_ = std::move(device_id);
 }
 
-// TODO(armansito): The following methods should probably log their argument
-// values. Need to learn if any of them need to be scrubbed.
-void Cellular::set_imei(const string& imei) {
+void Cellular::SetIccid(const string& iccid) {
+  if (iccid_ == iccid)
+    return;
+
+  iccid_ = iccid;
+  adaptor()->EmitStringChanged(kIccidProperty, iccid_);
+
+  home_provider_info()->UpdateICCID(iccid);
+  // Provide ICCID to serving operator as well to aid in MVNO identification.
+  serving_operator_info()->UpdateICCID(iccid);
+}
+
+void Cellular::SetImei(const string& imei) {
   if (imei_ == imei)
     return;
 
@@ -1612,12 +1622,17 @@ void Cellular::set_imei(const string& imei) {
   adaptor()->EmitStringChanged(kImeiProperty, imei_);
 }
 
-void Cellular::set_imsi(const string& imsi) {
+void Cellular::SetImsi(const string& imsi) {
   if (imsi_ == imsi)
     return;
 
   imsi_ = imsi;
   adaptor()->EmitStringChanged(kImsiProperty, imsi_);
+
+  home_provider_info()->UpdateIMSI(imsi);
+  // We do not obtain IMSI OTA right now. Provide the value to serving
+  // operator as well, to aid in MVNO identification.
+  serving_operator_info()->UpdateIMSI(imsi);
 }
 
 void Cellular::set_mdn(const string& mdn) {
@@ -1777,14 +1792,6 @@ void Cellular::set_apn_list(const Stringmaps& apn_list) {
     SLOG(this, 2) << "Could not emit signal for property |"
                   << kCellularApnListProperty
                   << "| change. DBus adaptor is NULL!";
-}
-
-void Cellular::set_iccid(const string& iccid) {
-  if (iccid_ == iccid)
-    return;
-
-  iccid_ = iccid;
-  adaptor()->EmitStringChanged(kIccidProperty, iccid_);
 }
 
 void Cellular::set_home_provider_info(MobileOperatorInfo* home_provider_info) {
