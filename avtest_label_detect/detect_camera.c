@@ -82,22 +82,28 @@ static bool is_builtin_usb_camera(const char* dev_path, int fd) {
     return false;
 
   /*
-   * Check if the camera is not an external one.
-   * We assume that all external cameras in the lab are made by Logitech.
+   * Check if the camera is not an external one. The vendor IDs of external
+   * cameras used in the lab need to be listed here.
    *
-   * TODO(keiichiw): If non-Logitech external cameras are used in the lab,
-   * we need to add more vendor IDs here.
    * If there are many kinds of external cameras, we might want to have a list
    * of vid:pid of builtin cameras instead.
    */
-  const char kLogitechVendorId[] = "046d";
+  const char* kExternalCameraVendorIds[] = {
+      "046d",  // Logitech
+      "2bd9",  // Huddly GO
+  };
   char vendor_id[5];
   if (!get_vendor_id(dev_path, vendor_id)) {
     TRACE("failed to get vendor ID\n");
     return false;
   }
-
-  return strcmp(vendor_id, kLogitechVendorId) != 0;
+  for (size_t i = 0; i < sizeof(kExternalCameraVendorIds) /
+                             sizeof(kExternalCameraVendorIds[0]);
+       ++i) {
+    if (strcmp(vendor_id, kExternalCameraVendorIds[i]) == 0)
+      return false;
+  }
+  return true;
 }
 
 /* Checks if the device is a builtin MIPI camera. */
