@@ -12,6 +12,7 @@
 #include <base/strings/string_number_conversions.h>
 
 #include "screen-capture-utils/bo_import_capture.h"
+#include "screen-capture-utils/capture.h"
 #include "screen-capture-utils/crtc.h"
 #include "screen-capture-utils/egl_capture.h"
 #include "screen-capture-utils/png.h"
@@ -150,15 +151,19 @@ int Main() {
       method = CaptureMethod::BO;
   }
 
+  std::unique_ptr<screenshot::DisplayBuffer> display_buffer;
+
   if (method == CaptureMethod::EGL) {
-    auto map = screenshot::EglCapture(*crtc, x, y, width, height);
-    screenshot::SaveAsPng(cmdline->GetArgs()[0].c_str(), map->buffer().data(),
-                          map->width(), map->height(), map->stride());
+    display_buffer.reset(
+        new screenshot::EglDisplayBuffer(crtc.get(), x, y, width, height));
   } else {
-    auto map = screenshot::Capture(*crtc, x, y, width, height);
-    screenshot::SaveAsPng(cmdline->GetArgs()[0].c_str(), map->buffer(),
-                          map->width(), map->height(), map->stride());
+    display_buffer.reset(
+        new screenshot::GbmBoDisplayBuffer(crtc.get(), x, y, width, height));
   }
+
+  screenshot::DisplayBuffer::Result result = display_buffer->Capture();
+  screenshot::SaveAsPng(cmdline->GetArgs()[0].c_str(), result.buffer,
+                        result.width, result.height, result.stride);
   return 0;
 }
 

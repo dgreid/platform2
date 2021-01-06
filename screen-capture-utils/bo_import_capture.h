@@ -1,4 +1,4 @@
-// Copyright 2018 The Chromium OS Authors. All rights reserved.
+// Copyright 2020 The Chromium OS Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -9,47 +9,46 @@
 
 #include <memory>
 
+#include <base/files/scoped_file.h>
 #include <base/macros.h>
 #include <gbm.h>
 
+#include "screen-capture-utils/capture.h"
 #include "screen-capture-utils/ptr_util.h"
 
 namespace screenshot {
 
 class Crtc;
+class ScopedMapData;
 
 // Utility class to map/unmap GBM buffer with RAII.
-class GbmBoMap {
+class GbmBoDisplayBuffer : public DisplayBuffer {
  public:
-  GbmBoMap(ScopedGbmDevicePtr device,
-           ScopedGbmBoPtr bo,
-           uint32_t x,
-           uint32_t y,
-           uint32_t width,
-           uint32_t height);
-  GbmBoMap(const GbmBoMap&) = delete;
-  GbmBoMap& operator=(const GbmBoMap&) = delete;
+  GbmBoDisplayBuffer(const Crtc* crtc,
+                     uint32_t x,
+                     uint32_t y,
+                     uint32_t width,
+                     uint32_t height);
+  GbmBoDisplayBuffer(const GbmBoDisplayBuffer&) = delete;
+  GbmBoDisplayBuffer& operator=(const GbmBoDisplayBuffer&) = delete;
 
-  ~GbmBoMap();
+  ~GbmBoDisplayBuffer() override;
 
-  uint32_t width() const { return width_; }
-  uint32_t height() const { return height_; }
-  uint32_t stride() const { return stride_; }
-  void* buffer() const { return buffer_; }
+  DisplayBuffer::Result Capture() override;
 
  private:
+  const Crtc& crtc_;
   const ScopedGbmDevicePtr device_;
-  const ScopedGbmBoPtr bo_;
+  const uint32_t x_;
+  const uint32_t y_;
   const uint32_t width_;
   const uint32_t height_;
-  uint32_t stride_ = 0;
-  void* map_data_ = nullptr;
-  void* buffer_ = nullptr;
-};
 
-// Captures a screenshot from the specified CRTC.
-std::unique_ptr<GbmBoMap> Capture(
-    const Crtc& crtc, uint32_t x, uint32_t y, uint32_t width, uint32_t height);
+  ScopedGbmBoPtr bo_{nullptr};
+  uint32_t stride_{0};
+  std::unique_ptr<ScopedMapData> map_data_{nullptr};
+  base::ScopedFD buffer_fd_{0};
+};
 
 }  // namespace screenshot
 

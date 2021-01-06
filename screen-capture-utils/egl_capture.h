@@ -13,41 +13,51 @@
 #include <base/macros.h>
 #include <gbm.h>
 
+#include <EGL/egl.h>
+#include <EGL/eglext.h>
+#include <EGL/eglplatform.h>
+#include <GLES2/gl2.h>
+#include <GLES2/gl2ext.h>
+
+#include "screen-capture-utils/capture.h"
 #include "screen-capture-utils/ptr_util.h"
 
 namespace screenshot {
 
 class Crtc;
 
-// Utility class to fill pixel buffer with RAII.
-class EglPixelBuf {
+class EglDisplayBuffer : public DisplayBuffer {
  public:
-  EglPixelBuf(ScopedGbmDevicePtr device,
-              std::vector<char> buffer,
-              uint32_t x,
-              uint32_t y,
-              uint32_t width,
-              uint32_t height,
-              uint32_t stride);
-  EglPixelBuf(const EglPixelBuf&) = delete;
-  EglPixelBuf& operator=(const EglPixelBuf&) = delete;
-
-  uint32_t width() const { return width_; }
-  uint32_t height() const { return height_; }
-  uint32_t stride() const { return stride_; }
-  std::vector<char>& buffer() { return buffer_; }
+  EglDisplayBuffer(const Crtc* crtc,
+                   uint32_t x,
+                   uint32_t y,
+                   uint32_t width,
+                   uint32_t height);
+  EglDisplayBuffer(const EglDisplayBuffer&) = delete;
+  EglDisplayBuffer& operator=(const EglDisplayBuffer&) = delete;
+  ~EglDisplayBuffer() override;
+  // Captures a screenshot from the specified CRTC.
+  DisplayBuffer::Result Capture() override;
 
  private:
-  const ScopedGbmDevicePtr device_;
+  const Crtc& crtc_;
+  const uint32_t x_;
+  const uint32_t y_;
   const uint32_t width_;
   const uint32_t height_;
-  uint32_t stride_ = 0;
+  const ScopedGbmDevicePtr device_;
+  const EGLDisplay display_;
+
+  GLuint input_texture_;
+  GLuint output_texture_;
+  unsigned int fbo_;
+  EGLContext ctx_;
+  PFNEGLCREATEIMAGEKHRPROC createImageKHR_;
+  PFNEGLDESTROYIMAGEKHRPROC destroyImageKHR_;
+  PFNGLEGLIMAGETARGETTEXTURE2DOESPROC glEGLImageTargetTexture2DOES_;
+  bool import_modifiers_exist_;
   std::vector<char> buffer_;
 };
-
-// Captures a screenshot from the specified CRTC.
-std::unique_ptr<EglPixelBuf> EglCapture(
-    const Crtc& crtc, uint32_t x, uint32_t y, uint32_t width, uint32_t height);
 
 }  // namespace screenshot
 
