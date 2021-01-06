@@ -7,6 +7,9 @@
 #include <base/files/file_util.h>
 #include <gtest/gtest.h>
 
+using testing::_;
+using testing::DoAll;
+
 namespace brillo {
 namespace {
 // LogicalVolumeManager is a glorified json parser. Use the following templates

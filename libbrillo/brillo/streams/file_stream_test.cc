@@ -26,6 +26,7 @@
 #include <gtest/gtest.h>
 
 using testing::_;
+using testing::DoAll;
 using testing::InSequence;
 using testing::Return;
 using testing::ReturnArg;
