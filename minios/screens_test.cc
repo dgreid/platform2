@@ -4,9 +4,13 @@
 
 #include <base/files/file_util.h>
 #include <base/files/scoped_temp_dir.h>
+#include <brillo/file_utils.h>
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include "minios/screens.h"
+
+using testing::_;
 
 namespace screens {
 
@@ -43,18 +47,6 @@ class ScreensTest : public ::testing::Test {
   }
 
  protected:
-  // Creates file in temp directory given relative path.
-  void CreateFile(const base::FilePath& directory,
-                  const std::string& file_name) {
-    base::FilePath dir_path = base::FilePath(test_root_).Append(directory);
-    if (!base::PathExists(dir_path))
-      ASSERT_TRUE(CreateDirectory(dir_path));
-
-    base::File file(dir_path.Append(file_name),
-                    base::File::FLAG_CREATE_ALWAYS | base::File::FLAG_WRITE);
-    ASSERT_TRUE(file.IsValid());
-  }
-
   // Test directory.
   base::ScopedTempDir temp_dir_;
   // Path to output pts.
@@ -134,7 +126,7 @@ TEST_F(ScreensTest, ShowBoxRtl) {
 }
 
 TEST_F(ScreensTest, ShowMessage) {
-  CreateFile(base::FilePath(kScreens).Append("fr"), "minios_token.png");
+  brillo::TouchFile(screens_path_.Append("fr").Append("minios_token.png"));
 
   // Override language to french.
   screens_.SetLanguageForTest("fr");
@@ -149,8 +141,8 @@ TEST_F(ScreensTest, ShowMessage) {
 
 TEST_F(ScreensTest, ShowMessageFallback) {
   // Create french and english image files.
-  CreateFile(base::FilePath(kScreens).Append("fr"), "not_minios_token.png");
-  CreateFile(base::FilePath(kScreens).Append("en-US"), "minios_token.png");
+  brillo::TouchFile(screens_path_.Append("fr").Append("not_minios_token.png"));
+  brillo::TouchFile(screens_path_.Append("en-US").Append("minios_token.png"));
 
   // Override language to french.
   screens_.SetLanguageForTest("fr");
@@ -166,9 +158,10 @@ TEST_F(ScreensTest, ShowMessageFallback) {
 
 TEST_F(ScreensTest, InstructionsWithTitle) {
   // Create english title and description tokens.
-  CreateFile(base::FilePath(kScreens).Append("en-US"),
-             "title_minios_token.png");
-  CreateFile(base::FilePath(kScreens).Append("en-US"), "desc_minios_token.png");
+  brillo::TouchFile(
+      screens_path_.Append("en-US").Append("title_minios_token.png"));
+  brillo::TouchFile(
+      screens_path_.Append("en-US").Append("desc_minios_token.png"));
 
   screens_.InstructionsWithTitle("minios_token");
 
@@ -208,6 +201,174 @@ TEST_F(ScreensTest, GetDimension) {
 
   // Correctly returns the dimension.
   EXPECT_EQ(38, screens_.GetDimension("TITLE_minios_token_HEIGHT"));
+}
+
+class MockScreens : public Screens {
+ public:
+  MockScreens() = default;
+  MOCK_METHOD(bool,
+              ShowBox,
+              (int offset_x,
+               int offset_y,
+               int size_x,
+               int size_y,
+               const std::string& color));
+  MOCK_METHOD(bool,
+              ShowImage,
+              (const base::FilePath& image_name, int offset_x, int offset_y));
+  MOCK_METHOD(bool,
+              ShowMessage,
+              (const std::string& message_token, int offset_x, int offset_y));
+};
+
+class ScreensTestMocks : public ::testing::Test {
+ public:
+  void SetUp() override {
+    base::ScopedTempDir temp_dir_;
+    ASSERT_TRUE(temp_dir_.CreateUniqueTempDir());
+    screens_path_ = base::FilePath(temp_dir_.GetPath()).Append(kScreens);
+    brillo::TouchFile(screens_path_.Append("en-US").Append("constants.sh"));
+    mock_screens_.SetRootForTest(temp_dir_.GetPath().value());
+    mock_screens_.Init();
+  }
+
+ protected:
+  base::FilePath screens_path_;
+  MockScreens mock_screens_;
+};
+
+TEST_F(ScreensTestMocks, ShowButtonFocused) {
+  const int offset_y = 50;
+  const int inner_width = 45;
+  std::string message = "btn_enter";
+
+  // Clear the button area.
+  EXPECT_CALL(mock_screens_, ShowBox(_, offset_y, _, _, kMenuBlack))
+      .WillRepeatedly(testing::Return(true));
+
+  // Show button.
+  EXPECT_CALL(mock_screens_,
+              ShowImage(screens_path_.Append("btn_bg_left_focused.png"), _, _))
+      .WillOnce(testing::Return(true));
+  EXPECT_CALL(mock_screens_,
+              ShowImage(screens_path_.Append("btn_bg_right_focused.png"), _, _))
+      .WillOnce(testing::Return(true));
+  EXPECT_CALL(mock_screens_, ShowBox(_, offset_y, inner_width, _, kMenuBlue))
+      .WillOnce(testing::Return(true));
+  EXPECT_CALL(mock_screens_, ShowMessage(message + "_focused", _, offset_y))
+      .WillOnce(testing::Return(true));
+
+  brillo::TouchFile(
+      screens_path_.Append("en-US").Append(message + "_focused.png"));
+  mock_screens_.ShowButton(message, offset_y, /* focus=*/true, inner_width);
+}
+
+TEST_F(ScreensTestMocks, ShowButton) {
+  const int offset_y = 50;
+  const int inner_width = 45;
+  const std::string message = "btn_enter";
+
+  // Clear the button area.
+  EXPECT_CALL(mock_screens_, ShowBox(_, offset_y, _, _, kMenuBlack))
+      .WillRepeatedly(testing::Return(true));
+
+  // Show button.
+  EXPECT_CALL(mock_screens_,
+              ShowImage(screens_path_.Append("btn_bg_left.png"), _, _))
+      .WillOnce(testing::Return(true));
+  EXPECT_CALL(mock_screens_,
+              ShowImage(screens_path_.Append("btn_bg_right.png"), _, _))
+      .WillOnce(testing::Return(true));
+  EXPECT_CALL(mock_screens_, ShowMessage(message, _, offset_y))
+      .WillOnce(testing::Return(true));
+  EXPECT_CALL(mock_screens_, ShowBox(_, _, _, _, kMenuButtonFrameGrey))
+      .Times(2)
+      .WillRepeatedly(testing::Return(true));
+
+  brillo::TouchFile(screens_path_.Append("en-US").Append(message + ".png"));
+  mock_screens_.ShowButton(message, offset_y, /* focus=*/false, inner_width);
+}
+
+TEST_F(ScreensTestMocks, ShowStepper) {
+  const std::string step1 = "done";
+  const std::string step2 = "2";
+  const std::string step3 = "error";
+
+  // Create icons.
+  brillo::TouchFile(screens_path_.Append("ic_" + step1 + ".png"));
+  brillo::TouchFile(screens_path_.Append("ic_" + step2 + ".png"));
+  brillo::TouchFile(screens_path_.Append("ic_" + step3 + ".png"));
+
+  EXPECT_CALL(mock_screens_,
+              ShowImage(screens_path_.Append("ic_" + step1 + ".png"), _, _))
+      .WillOnce(testing::Return(true));
+  EXPECT_CALL(mock_screens_,
+              ShowImage(screens_path_.Append("ic_" + step2 + ".png"), _, _))
+      .WillOnce(testing::Return(true));
+  EXPECT_CALL(mock_screens_,
+              ShowImage(screens_path_.Append("ic_" + step3 + ".png"), _, _))
+      .WillOnce(testing::Return(true));
+  EXPECT_CALL(mock_screens_, ShowBox(_, _, _, _, kMenuGrey))
+      .Times(2)
+      .WillRepeatedly(testing::Return(true));
+
+  mock_screens_.ShowStepper({step1, step2, step3});
+}
+
+TEST_F(ScreensTestMocks, ShowStepperError) {
+  brillo::TouchFile(screens_path_.Append("ic_done.png"));
+
+  const std::string step1 = "done";
+  const std::string step2 = "2";
+  const std::string step3 = "error";
+
+  // Stepper icons not found. Default to done.
+  EXPECT_CALL(mock_screens_,
+              ShowImage(screens_path_.Append("ic_done.png"), _, _))
+      .Times(3)
+      .WillRepeatedly(testing::Return(true));
+  EXPECT_CALL(mock_screens_, ShowBox(_, _, _, _, kMenuGrey))
+      .Times(2)
+      .WillRepeatedly(testing::Return(true));
+  mock_screens_.ShowStepper({step1, step2, step3});
+}
+
+TEST_F(ScreensTestMocks, ShowLanguageMenu) {
+  EXPECT_CALL(
+      mock_screens_,
+      ShowImage(screens_path_.Append("language_menu_bg_focused.png"), _, _))
+      .WillOnce(testing::Return(true));
+  EXPECT_CALL(mock_screens_,
+              ShowImage(screens_path_.Append("ic_language-globe.png"), _, _))
+      .WillOnce(testing::Return(true));
+  EXPECT_CALL(mock_screens_,
+              ShowImage(screens_path_.Append("ic_dropdown.png"), _, _))
+      .WillOnce(testing::Return(true));
+  EXPECT_CALL(mock_screens_, ShowMessage("language_folded", _, _))
+      .WillOnce(testing::Return(true));
+
+  mock_screens_.ShowLanguageMenu(/* focus=*/true);
+}
+
+TEST_F(ScreensTestMocks, ShowFooter) {
+  // Show left and right footer components.
+  EXPECT_CALL(mock_screens_,
+              ShowMessage(testing::StartsWith("footer_left"), _, _))
+      .Times(3)
+      .WillRepeatedly(testing::Return(true));
+  EXPECT_CALL(mock_screens_,
+              ShowMessage(testing::StartsWith("footer_right"), _, _))
+      .Times(2)
+      .WillRepeatedly(testing::Return(true));
+
+  // Show key icons and QR code and HWID text glyphs.
+  EXPECT_CALL(mock_screens_, ShowImage(_, _, _))
+      .Times(testing::AnyNumber())
+      .WillRepeatedly(testing::Return(true));
+  EXPECT_CALL(mock_screens_, ShowBox(_, _, _, _, kMenuGrey))
+      .WillOnce(testing::Return(true));
+
+  mock_screens_.ShowFooter();
 }
 
 }  // namespace screens

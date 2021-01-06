@@ -6,6 +6,7 @@
 #define MINIOS_SCREENS_H_
 
 #include <string>
+#include <vector>
 
 #include <base/files/file.h>
 #include <base/strings/string_split.h>
@@ -14,6 +15,12 @@
 namespace screens {
 
 extern const char kScreens[];
+
+// Colors.
+extern const char kMenuBlack[];
+extern const char kMenuBlue[];
+extern const char kMenuGrey[];
+extern const char kMenuButtonFrameGrey[];
 
 class Screens {
  public:
@@ -35,21 +42,23 @@ class Screens {
                 const std::string& color);
 
   // Uses frecon to show image given a full file path. Returns true on success.
-  bool ShowImage(const base::FilePath& image_name, int offset_x, int offset_y);
+  virtual bool ShowImage(const base::FilePath& image_name,
+                         int offset_x,
+                         int offset_y);
 
   // Uses frecon to show a box. Color should be given as a hex string. Returns
   // true on success.
-  bool ShowBox(int offset_x,
-               int offset_y,
-               int size_x,
-               int size_y,
-               const std::string& color);
+  virtual bool ShowBox(int offset_x,
+                       int offset_y,
+                       int size_x,
+                       int size_y,
+                       const std::string& color);
 
   // Shows message image at the given offset. All message tokens are in
   // `/etc/screens`. Falls back to English if chosen locale is not available.
-  bool ShowMessage(const std::string& message_token,
-                   int offset_x,
-                   int offset_y);
+  virtual bool ShowMessage(const std::string& message_token,
+                           int offset_x,
+                           int offset_y);
 
   // Shows title and uses title offsets.
   void Instructions(const std::string& message_token);
@@ -58,8 +67,32 @@ class Screens {
   // `constants` to place.
   void InstructionsWithTitle(const std::string& message_token);
 
-  // Override the root directory for testing. Default is '/'. Updates screens
-  // path.
+  // Clears full screen except the footer.
+  void ClearMainArea();
+
+  // Clears screen including the footer.
+  void ClearScreen();
+
+  // Show button, focus changes the button color to indicate selection. Returns
+  // false on error.
+  void ShowButton(const std::string& message_token,
+                  int offset_y,
+                  bool is_selected,
+                  int inner_width);
+
+  // Shows stepper icons given a list of steps. Currently icons available in
+  // 'kScreens' only go up to 3. Steps can be a number '1', 'error', or 'done'.
+  // Defaults to done if requested icon not found.
+  void ShowStepper(const std::vector<std::string>& steps);
+
+  // Shows language menu drop down button on base screen. Button is highlighted
+  // if it is currently selected.
+  void ShowLanguageMenu(bool is_selected);
+
+  // Shows footer with basic instructions and chromebook model.
+  void ShowFooter();
+
+  // Override the root directory for testing. Default is '/'.
   void SetRootForTest(const std::string& test_root);
 
   // Override the current locale without using the language menu.
@@ -82,6 +115,9 @@ class Screens {
 
   // Whether the locale is read from right to left.
   bool right_to_left_{false};
+
+  // Whether the device has a detachable keyboard.
+  bool is_detachable_{false};
 
   // Key value pairs that store token name and measurements.
   base::StringPairs image_dimensions_;

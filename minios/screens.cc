@@ -8,19 +8,28 @@
 #include <stdlib.h>
 
 #include <algorithm>
+#include <utility>
 
 #include <base/files/file_util.h>
 #include <base/logging.h>
 #include <base/strings/string_number_conversions.h>
+#include <base/strings/string_util.h>
 #include <base/strings/stringprintf.h>
 
 namespace screens {
 
 const char kScreens[] = "etc/screens";
 
+// Colors.
+const char kMenuBlack[] = "0x202124";
+const char kMenuBlue[] = "0x8AB4F8";
+const char kMenuGrey[] = "0x3F4042";
+const char kMenuButtonFrameGrey[] = "0x9AA0A6";
+
 namespace {
 constexpr char kConsole0[] = "dev/pts/0";
 
+// Dimensions.
 // TODO(vyshu): Get this from frecon.
 constexpr int kFreconScalingFactor = 1;
 // TODO(vyshu): Get this from frecon print-resolution.
@@ -28,6 +37,7 @@ constexpr int kCanvasSize = 1080;
 constexpr int kMonospaceGlyphHeight = 20;
 constexpr int kMonospaceGlyphWidth = 10;
 constexpr int kDefaultMessageWidth = 720;
+constexpr int kButtonHeight = 32;
 
 constexpr int kNewLineChar = 10;
 }  // namespace
@@ -158,6 +168,177 @@ void Screens::InstructionsWithTitle(const std::string& message_token) {
     LOG(WARNING) << "Unable to show title " << message_token;
   if (!ShowMessage("desc_" + message_token, kXOffset, desc_y))
     LOG(WARNING) << "Unable to show description " << message_token;
+}
+
+void Screens::ClearMainArea() {
+  constexpr int kFooterHeight = 142;
+  if (!ShowBox(0, -kFooterHeight / 2, kCanvasSize + 100,
+               (kCanvasSize - kFooterHeight), kMenuBlack))
+    LOG(WARNING) << "Could not clear main area.";
+}
+
+void Screens::ClearScreen() {
+  if (!ShowBox(0, 0, kCanvasSize + 100, kCanvasSize, kMenuBlack))
+    LOG(WARNING) << "Could not clear screen.";
+}
+
+void Screens::ShowButton(const std::string& message_token,
+                         int offset_y,
+                         bool is_selected,
+                         int inner_width) {
+  const int btn_padding = 32;  // Left and right padding.
+  int left_padding_x = (-kCanvasSize / 2) + (btn_padding / 2);
+  const int offset_x = left_padding_x + (btn_padding / 2) + (inner_width / 2);
+  int right_padding_x = offset_x + (btn_padding / 2) + (inner_width / 2);
+  // Clear previous state.
+  if (!ShowBox(offset_x, offset_y, (btn_padding * 2 + inner_width),
+               kButtonHeight, kMenuBlack)) {
+    LOG(WARNING) << "Could not clear button area.";
+  }
+
+  if (right_to_left_) {
+    std::swap(left_padding_x, right_padding_x);
+  }
+
+  if (is_selected) {
+    ShowImage(screens_path_.Append("btn_bg_left_focused.png"), left_padding_x,
+              offset_y);
+    ShowImage(screens_path_.Append("btn_bg_right_focused.png"), right_padding_x,
+              offset_y);
+
+    ShowBox(offset_x, offset_y, inner_width, kButtonHeight, kMenuBlue);
+
+    ShowMessage(message_token + "_focused", offset_x, offset_y);
+  } else {
+    ShowImage(screens_path_.Append("btn_bg_left.png"), left_padding_x,
+              offset_y);
+    ShowImage(screens_path_.Append("btn_bg_right.png"), right_padding_x,
+              offset_y);
+    ShowMessage(message_token, offset_x, offset_y);
+    ShowBox(offset_x, offset_y - (kButtonHeight / 2) + 1, inner_width, 1,
+            kMenuButtonFrameGrey);
+    ShowBox(offset_x, offset_y + (kButtonHeight / 2), inner_width, 1,
+            kMenuButtonFrameGrey);
+  }
+}
+
+void Screens::ShowStepper(const std::vector<std::string>& steps) {
+  // The icon real size is 24x24, but it occupies a 36x36 block. Use 36 here for
+  // simplicity.
+  constexpr int kIconSize = 36;
+  constexpr int kSeparatorLength = 46;
+  constexpr int kPadding = 6;
+
+  int stepper_x = (-kCanvasSize / 2) + (kIconSize / 2);
+  constexpr int kStepperXStep = kIconSize + kSeparatorLength + (kPadding * 2);
+  constexpr int kStepperY = 144 - (kCanvasSize / 2);
+  int separator_x =
+      (-kCanvasSize / 2) + kIconSize + kPadding + (kSeparatorLength / 2);
+
+  for (const auto& step : steps) {
+    base::FilePath stepper_image = screens_path_.Append("ic_" + step + ".png");
+    if (!base::PathExists(stepper_image)) {
+      stepper_image = screens_path_.Append("ic_done.png");
+      // TODO(vyshu): Create a new generic icon to be used instead of done.
+      LOG(WARNING) << "Stepper icon " << stepper_image
+                   << " not found. Defaulting to the done icon.";
+      if (!base::PathExists(stepper_image)) {
+        LOG(ERROR) << "Could not find stepper icon done. Cannot show stepper.";
+        return;
+      }
+    }
+    ShowImage(stepper_image, stepper_x, kStepperY);
+    stepper_x += kStepperXStep;
+  }
+
+  for (int i = 0; i < steps.size() - 1; ++i) {
+    ShowBox(separator_x, kStepperY, kSeparatorLength, 1, kMenuGrey);
+    separator_x += kStepperXStep;
+  }
+}
+
+void Screens::ShowLanguageMenu(bool is_selected) {
+  constexpr int kOffsetY = -kCanvasSize / 2 + 40;
+  constexpr int kBgX = -kCanvasSize / 2 + 145;
+  constexpr int kGlobeX = -kCanvasSize / 2 + 20;
+  constexpr int kArrowX = -kCanvasSize / 2 + 268;
+  // TODO(vyshu): Find declaration of language_width.
+  constexpr int kLanguageWidth = 57;
+  constexpr int kTextX = -kCanvasSize / 2 + 40 + kLanguageWidth / 2;
+
+  base::FilePath menu_background =
+      is_selected ? screens_path_.Append("language_menu_bg_focused.png")
+                  : screens_path_.Append("language_menu_bg.png");
+
+  ShowImage(menu_background, kBgX, kOffsetY);
+  ShowImage(screens_path_.Append("ic_language-globe.png"), kGlobeX, kOffsetY);
+
+  ShowImage(screens_path_.Append("ic_dropdown.png"), kArrowX, kOffsetY);
+  ShowMessage("language_folded", kTextX, kOffsetY);
+}
+
+void Screens::ShowFooter() {
+  constexpr int kQrCodeSize = 86;
+  constexpr int kQrCodeX = (-kCanvasSize / 2) + (kQrCodeSize / 2);
+  constexpr int kQrCodeY = (kCanvasSize / 2) - (kQrCodeSize / 2) - 56;
+
+  constexpr int kSeparatorX = 410 - (kCanvasSize / 2);
+  constexpr int kSeparatorY = kQrCodeY;
+  constexpr int kFooterLineHeight = 18;
+
+  constexpr int kFooterY = (kCanvasSize / 2) - kQrCodeSize + 9 - 56;
+  constexpr int kFooterLeftX =
+      kQrCodeX + (kQrCodeSize / 2) + 16 + (kDefaultMessageWidth / 2);
+  constexpr int kFooterRightX = kSeparatorX + 32 + (kDefaultMessageWidth / 2);
+
+  ShowMessage("footer_left_1", kFooterLeftX, kFooterY);
+  ShowMessage("footer_left_2", kFooterLeftX,
+              kFooterY + kFooterLineHeight * 2 + 14);
+  ShowMessage("footer_left_3", kFooterLeftX,
+              kFooterY + kFooterLineHeight * 3 + 14);
+
+  constexpr int kNavButtonHeight = 24;
+  constexpr int kNavButtonY = (kCanvasSize / 2) - (kNavButtonHeight / 2) - 56;
+  int nav_btn_x = kSeparatorX + 32;
+  // Navigation key icons.
+  const std::string footer_type = is_detachable_ ? "tablet" : "clamshell";
+  const std::string nav_key_enter =
+      is_detachable_ ? "button_power" : "key_enter";
+  const std::string nav_key_up = is_detachable_ ? "button_volume_up" : "key_up";
+  const std::string nav_key_down =
+      is_detachable_ ? "button_volume_down" : "key_down";
+
+  constexpr int kUpDownIconWidth = 24;
+  constexpr int kIconPadding = 8;
+  const int enter_icon_width = is_detachable_ ? 40 : 66;
+
+  ShowMessage("footer_right_1_" + footer_type, kFooterRightX, kFooterY);
+  ShowMessage("footer_right_2_" + footer_type, kFooterRightX,
+              kFooterY + kFooterLineHeight + 8);
+
+  nav_btn_x += enter_icon_width / 2;
+  ShowImage(screens_path_.Append("nav-" + nav_key_enter + ".png"), nav_btn_x,
+            kNavButtonY);
+  nav_btn_x += enter_icon_width / 2 + kIconPadding + kUpDownIconWidth / 2;
+  ShowImage(screens_path_.Append("nav-" + nav_key_up + ".png"), nav_btn_x,
+            kNavButtonY);
+  nav_btn_x += kIconPadding + kUpDownIconWidth;
+  ShowImage(screens_path_.Append("nav-" + nav_key_down + ".png"), nav_btn_x,
+            kNavButtonY);
+
+  ShowImage(screens_path_.Append("qr_code.png"), kQrCodeX, kQrCodeY);
+  // TODO(vyshu): Get hardware from "crossystem hwid".
+  std::string hwid = "CHROMEBOOK";
+  int hwid_len = hwid.size();
+  int hwid_x = kQrCodeX + (kQrCodeSize / 2) + 16 + 5;
+  const int hwid_y = kFooterY + kFooterLineHeight;
+
+  if (right_to_left_) {
+    hwid_x = -hwid_x - kMonospaceGlyphWidth * (hwid_len - 2);
+  }
+
+  ShowText(hwid, hwid_x, hwid_y, "grey");
+  ShowBox(kSeparatorX, kSeparatorY, 1, kQrCodeSize, kMenuGrey);
 }
 
 void Screens::ReadDimensionConstants() {
