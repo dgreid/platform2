@@ -23,6 +23,7 @@ using testing::_;
 using testing::AnyNumber;
 using testing::Assign;
 using testing::AtLeast;
+using testing::DoAll;
 using testing::InSequence;
 using testing::Invoke;
 using testing::Return;
