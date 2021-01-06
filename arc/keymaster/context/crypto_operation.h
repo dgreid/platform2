@@ -29,7 +29,11 @@ enum class Algorithm {
 
 // Comprehensive list of digests supported for Chrome OS keys.
 enum class Digest {
+  kMd5,
+  kSha1,
   kSha256,
+  kSha384,
+  kSha512,
   kNone,
   kUnsupported,
 };

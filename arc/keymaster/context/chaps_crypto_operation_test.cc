@@ -129,8 +129,20 @@ TEST_F(ChapsCryptoOperationTest, BeginUsesCorrectMechanism) {
   EXPECT_CALL(chaps_mock_, SignInit(_, _, Eq(CKM_RSA_PKCS), _, _));
   operation_.Begin(kCkmRsaPkcsSign);
 
+  EXPECT_CALL(chaps_mock_, SignInit(_, _, Eq(CKM_MD5_RSA_PKCS), _, _));
+  operation_.Begin(kCkmMd5RsaPkcsSign);
+
+  EXPECT_CALL(chaps_mock_, SignInit(_, _, Eq(CKM_SHA1_RSA_PKCS), _, _));
+  operation_.Begin(kCkmSha1RsaPkcsSign);
+
   EXPECT_CALL(chaps_mock_, SignInit(_, _, Eq(CKM_SHA256_RSA_PKCS), _, _));
   operation_.Begin(kCkmSha256RsaPkcsSign);
+
+  EXPECT_CALL(chaps_mock_, SignInit(_, _, Eq(CKM_SHA384_RSA_PKCS), _, _));
+  operation_.Begin(kCkmSha384RsaPkcsSign);
+
+  EXPECT_CALL(chaps_mock_, SignInit(_, _, Eq(CKM_SHA512_RSA_PKCS), _, _));
+  operation_.Begin(kCkmSha512RsaPkcsSign);
 }
 
 TEST_F(ChapsCryptoOperationTest, Update) {

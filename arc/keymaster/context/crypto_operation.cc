@@ -61,8 +61,20 @@ std::ostream& operator<<(std::ostream& os,
 
   os << ", digest=";
   switch (description.digest) {
+    case Digest::kMd5:
+      os << "MD5";
+      break;
+    case Digest::kSha1:
+      os << "SHA1";
+      break;
     case Digest::kSha256:
       os << "SHA256";
+      break;
+    case Digest::kSha384:
+      os << "SHA384";
+      break;
+    case Digest::kSha512:
+      os << "SHA512";
       break;
     case Digest::kNone:
       os << kNone;

@@ -22,8 +22,11 @@ class ChapsClient;
 class ContextAdaptor;
 
 extern const MechanismDescription kCkmRsaPkcsSign;
-
+extern const MechanismDescription kCkmMd5RsaPkcsSign;
+extern const MechanismDescription kCkmSha1RsaPkcsSign;
 extern const MechanismDescription kCkmSha256RsaPkcsSign;
+extern const MechanismDescription kCkmSha384RsaPkcsSign;
+extern const MechanismDescription kCkmSha512RsaPkcsSign;
 
 // Implement operations by forwarding them to Chaps via |ChapsClient|.
 class ChapsCryptoOperation : public CryptoOperation {

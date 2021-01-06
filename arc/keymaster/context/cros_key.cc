@@ -63,13 +63,17 @@ Digest FindOperationDigest(const ::keymaster::Operation& operation) {
   switch (digest) {
     case KM_DIGEST_NONE:
       return Digest::kNone;
+    case KM_DIGEST_MD5:
+      return Digest::kMd5;
+    case KM_DIGEST_SHA1:
+      return Digest::kSha1;
     case KM_DIGEST_SHA_2_256:
       return Digest::kSha256;
-    case KM_DIGEST_MD5:
-    case KM_DIGEST_SHA1:
-    case KM_DIGEST_SHA_2_224:
     case KM_DIGEST_SHA_2_384:
+      return Digest::kSha384;
     case KM_DIGEST_SHA_2_512:
+      return Digest::kSha512;
+    case KM_DIGEST_SHA_2_224:
       return Digest::kUnsupported;
   }
 }

@@ -17,8 +17,24 @@ constexpr MechanismDescription kCkmRsaPkcsSign = {
     OperationType::kSign, Algorithm::kRsa, Digest::kNone, Padding ::kPkcs1,
     BlockMode::kNone};
 
+constexpr MechanismDescription kCkmMd5RsaPkcsSign = {
+    OperationType::kSign, Algorithm::kRsa, Digest::kMd5, Padding ::kPkcs1,
+    BlockMode::kNone};
+
+constexpr MechanismDescription kCkmSha1RsaPkcsSign = {
+    OperationType::kSign, Algorithm::kRsa, Digest::kSha1, Padding ::kPkcs1,
+    BlockMode::kNone};
+
 constexpr MechanismDescription kCkmSha256RsaPkcsSign = {
     OperationType::kSign, Algorithm::kRsa, Digest::kSha256, Padding ::kPkcs1,
+    BlockMode::kNone};
+
+constexpr MechanismDescription kCkmSha384RsaPkcsSign = {
+    OperationType::kSign, Algorithm::kRsa, Digest::kSha384, Padding ::kPkcs1,
+    BlockMode::kNone};
+
+constexpr MechanismDescription kCkmSha512RsaPkcsSign = {
+    OperationType::kSign, Algorithm::kRsa, Digest::kSha512, Padding ::kPkcs1,
     BlockMode::kNone};
 
 ChapsCryptoOperation::ChapsCryptoOperation(
@@ -31,7 +47,11 @@ ChapsCryptoOperation::~ChapsCryptoOperation() = default;
 
 bool ChapsCryptoOperation::IsSupportedMechanism(
     MechanismDescription description) const {
-  return kCkmRsaPkcsSign == description || kCkmSha256RsaPkcsSign == description;
+  return kCkmRsaPkcsSign == description || kCkmMd5RsaPkcsSign == description ||
+         kCkmSha1RsaPkcsSign == description ||
+         kCkmSha256RsaPkcsSign == description ||
+         kCkmSha384RsaPkcsSign == description ||
+         kCkmSha512RsaPkcsSign == description;
 }
 
 base::Optional<uint64_t> ChapsCryptoOperation::Begin(
@@ -52,10 +72,18 @@ base::Optional<uint64_t> ChapsCryptoOperation::Begin(
 
   bool success = false;
 
-  if (description() == kCkmSha256RsaPkcsSign) {
-    success = chaps_->InitializeSignature(CKM_SHA256_RSA_PKCS, key_handle);
-  } else if (description() == kCkmRsaPkcsSign) {
+  if (description() == kCkmRsaPkcsSign) {
     success = chaps_->InitializeSignature(CKM_RSA_PKCS, key_handle);
+  } else if (description() == kCkmMd5RsaPkcsSign) {
+    success = chaps_->InitializeSignature(CKM_MD5_RSA_PKCS, key_handle);
+  } else if (description() == kCkmSha1RsaPkcsSign) {
+    success = chaps_->InitializeSignature(CKM_SHA1_RSA_PKCS, key_handle);
+  } else if (description() == kCkmSha256RsaPkcsSign) {
+    success = chaps_->InitializeSignature(CKM_SHA256_RSA_PKCS, key_handle);
+  } else if (description() == kCkmSha384RsaPkcsSign) {
+    success = chaps_->InitializeSignature(CKM_SHA384_RSA_PKCS, key_handle);
+  } else if (description() == kCkmSha512RsaPkcsSign) {
+    success = chaps_->InitializeSignature(CKM_SHA512_RSA_PKCS, key_handle);
   } else {
     LOG(ERROR) << "Unsupported operation " << description();
   }
