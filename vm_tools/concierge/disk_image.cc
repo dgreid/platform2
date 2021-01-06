@@ -268,8 +268,9 @@ bool VmExportOperation::PrepareOutput() {
       ret = archive_write_set_format_zip(out_.get());
       if (ret != ARCHIVE_OK) {
         set_failure_reason(base::StringPrintf(
-            "libarchive: failed to initialize zip format: %s",
-            archive_error_string(out_.get())));
+            "libarchive: failed to initialize zip format: %s, %s",
+            archive_error_string(out_.get()),
+            strerror(archive_errno(out_.get()))));
         return false;
       }
       break;
@@ -277,16 +278,18 @@ bool VmExportOperation::PrepareOutput() {
       ret = archive_write_add_filter_gzip(out_.get());
       if (ret != ARCHIVE_OK) {
         set_failure_reason(base::StringPrintf(
-            "libarchive: failed to initialize gzip filter: %s",
-            archive_error_string(out_.get())));
+            "libarchive: failed to initialize gzip filter: %s, %s",
+            archive_error_string(out_.get()),
+            strerror(archive_errno(out_.get()))));
         return false;
       }
 
       ret = archive_write_set_format_pax_restricted(out_.get());
       if (ret != ARCHIVE_OK) {
         set_failure_reason(base::StringPrintf(
-            "libarchive: failed to initialize pax format: %s",
-            archive_error_string(out_.get())));
+            "libarchive: failed to initialize pax format: %s, %s",
+            archive_error_string(out_.get()),
+            strerror(archive_errno(out_.get()))));
         return false;
       }
       break;
@@ -336,8 +339,9 @@ void VmExportOperation::MarkFailed(const char* msg, struct archive* a) {
   set_status(DISK_STATUS_FAILED);
 
   if (a) {
-    set_failure_reason(
-        base::StringPrintf("%s: %s", msg, archive_error_string(a)));
+    set_failure_reason(base::StringPrintf("%s: %s, %s", msg,
+                                          archive_error_string(a),
+                                          strerror(archive_errno(a))));
   } else {
     set_failure_reason(msg);
   }
@@ -596,8 +600,9 @@ void PluginVmImportOperation::MarkFailed(const char* msg, struct archive* a) {
   set_status(DISK_STATUS_FAILED);
 
   if (a) {
-    set_failure_reason(
-        base::StringPrintf("%s: %s", msg, archive_error_string(a)));
+    set_failure_reason(base::StringPrintf("%s: %s, %s", msg,
+                                          archive_error_string(a),
+                                          strerror(archive_errno(a))));
   } else {
     set_failure_reason(msg);
   }
