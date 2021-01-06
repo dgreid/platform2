@@ -41,7 +41,7 @@ class BRILLO_EXPORT Daemon : public AsynchronousSignalHandlerInterface {
   virtual int Run();
 
   // Can be used by call-backs to trigger shut-down of a running message loop.
-  // Calls QuiteWithExitCode(EX_OK);
+  // Calls QuitWithExitCode(EX_OK);
   // WARNING: This method (as well as QuitWithExitCode) can only be called when
   // the message loop is running (that is, during Daemon::Run() call). Calling
   // these methods before (e.g. during OnInit()) or after (e.g in OnShutdown())
