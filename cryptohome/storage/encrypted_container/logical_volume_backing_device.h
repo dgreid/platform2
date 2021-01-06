@@ -43,6 +43,9 @@ class LogicalVolumeBackingDevice : public BackingDevice {
   // Deactivates the logical volume.
   bool Teardown() override;
 
+  // Checks if the logical volume exists.
+  bool Exists() override;
+
   // Gets the device type for reporting.
   BackingDeviceType GetType() override {
     return BackingDeviceType::kLogicalVolumeBackingDevice;

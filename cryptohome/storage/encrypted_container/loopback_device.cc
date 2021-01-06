@@ -77,6 +77,10 @@ bool LoopbackDevice::Teardown() {
   return loopdev->Detach();
 }
 
+bool LoopbackDevice::Exists() {
+  return platform_->FileExists(backing_file_path_);
+}
+
 base::Optional<base::FilePath> LoopbackDevice::GetPath() {
   std::unique_ptr<brillo::LoopDevice> loopdev =
       loop_device_manager_->GetAttachedDeviceByName(name_);

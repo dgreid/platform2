@@ -41,7 +41,7 @@ TEST_F(LoopbackDeviceTest, LoopbackDeviceCreate) {
   EXPECT_TRUE(backing_device_->Create());
 
   // Check that the sparse file was created with the correct mode.
-  EXPECT_TRUE(platform_.FileExists(config_.loopback.backing_file_path));
+  EXPECT_TRUE(backing_device_->Exists());
   mode_t mode;
   ASSERT_TRUE(
       platform_.GetPermissions(config_.loopback.backing_file_path, &mode));
@@ -53,7 +53,7 @@ TEST_F(LoopbackDeviceTest, LoopbackPurge) {
   EXPECT_TRUE(platform_.WriteFile(config_.loopback.backing_file_path,
                                   brillo::Blob(32, 0)));
   EXPECT_TRUE(backing_device_->Purge());
-  EXPECT_FALSE(platform_.FileExists(config_.loopback.backing_file_path));
+  EXPECT_FALSE(backing_device_->Exists());
 }
 
 // Tests setup for a loopback device succeeded.

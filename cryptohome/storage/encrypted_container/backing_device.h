@@ -47,6 +47,7 @@ class BackingDevice {
   virtual bool Purge() = 0;
   virtual bool Setup() = 0;
   virtual bool Teardown() = 0;
+  virtual bool Exists() = 0;
   virtual BackingDeviceType GetType() = 0;
   virtual base::Optional<base::FilePath> GetPath() = 0;
 };

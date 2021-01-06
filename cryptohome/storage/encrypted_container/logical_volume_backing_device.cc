@@ -115,6 +115,12 @@ bool LogicalVolumeBackingDevice::Teardown() {
   return lv->Deactivate();
 }
 
+bool LogicalVolumeBackingDevice::Exists() {
+  base::Optional<brillo::LogicalVolume> lv = GetLogicalVolume();
+
+  return !lv || !lv->IsValid();
+}
+
 base::Optional<base::FilePath> LogicalVolumeBackingDevice::GetPath() {
   base::Optional<brillo::LogicalVolume> lv = GetLogicalVolume();
 

@@ -49,6 +49,9 @@ class LoopbackDevice : public BackingDevice {
   // Detaches the loopback device by name.
   bool Teardown() override;
 
+  // Checks if the backing device exists.
+  bool Exists() override;
+
   // Gets the device type for reporting.
   BackingDeviceType GetType() override {
     return BackingDeviceType::kLoopbackDevice;

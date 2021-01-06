@@ -58,6 +58,8 @@ class FakeBackingDevice : public BackingDevice {
     return true;
   }
 
+  bool Exists() override { return exists_; }
+
   BackingDeviceType GetType() override { return type_; }
 
   base::Optional<base::FilePath> GetPath() override {
