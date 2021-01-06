@@ -5,12 +5,17 @@
 #include "arc/keymaster/cert_store_instance.h"
 
 #include <utility>
+#include <vector>
 
 #include <base/bind.h>
 #include <base/callback.h>
 
 namespace arc {
 namespace keymaster {
+
+CertStoreInstance::CertStoreInstance(
+    base::WeakPtr<KeymasterServer> keymaster_server)
+    : keymaster_server_(keymaster_server) {}
 
 void CertStoreInstance::Init(mojom::CertStoreHostPtr host_ptr,
                              InitCallback callback) {
@@ -19,6 +24,17 @@ void CertStoreInstance::Init(mojom::CertStoreHostPtr host_ptr,
   std::move(callback).Run();
 
   RequestSecurityTokenOperation();
+}
+
+void CertStoreInstance::UpdatePlaceholderKeys(
+    std::vector<mojom::ChromeOsKeyPtr> keys,
+    UpdatePlaceholderKeysCallback callback) {
+  if (keymaster_server_) {
+    keymaster_server_->UpdateContextPlaceholderKeys(std::move(keys),
+                                                    std::move(callback));
+  } else {
+    std::move(callback).Run(/*success=*/false);
+  }
 }
 
 void CertStoreInstance::RequestSecurityTokenOperation() {

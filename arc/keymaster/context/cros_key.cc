@@ -9,6 +9,7 @@
 
 #include <base/logging.h>
 #include <base/optional.h>
+#include <keymaster/authorization_set.h>
 #include <keymaster/keymaster_tags.h>
 
 #include "arc/keymaster/context/chaps_crypto_operation.h"
@@ -33,11 +34,10 @@ OperationType ConvertKeymasterPurposeToOperationType(
   }
 }
 
-Algorithm FindOperationAlgorithm(const ::keymaster::Operation& operation) {
+Algorithm FindAlgorithm(const ::keymaster::AuthorizationSet& params) {
   keymaster_algorithm_t algorithm;
 
-  if (!operation.authorizations().GetTagValue(::keymaster::TAG_ALGORITHM,
-                                              &algorithm)) {
+  if (!params.GetTagValue(::keymaster::TAG_ALGORITHM, &algorithm)) {
     return Algorithm::kUnsupported;
   }
 
@@ -52,11 +52,10 @@ Algorithm FindOperationAlgorithm(const ::keymaster::Operation& operation) {
   }
 }
 
-Digest FindOperationDigest(const ::keymaster::Operation& operation) {
+Digest FindDigest(const ::keymaster::AuthorizationSet& params) {
   keymaster_digest_t digest;
 
-  if (!operation.authorizations().GetTagValue(::keymaster::TAG_DIGEST,
-                                              &digest)) {
+  if (!params.GetTagValue(::keymaster::TAG_DIGEST, &digest)) {
     return Digest::kNone;
   }
 
@@ -78,11 +77,10 @@ Digest FindOperationDigest(const ::keymaster::Operation& operation) {
   }
 }
 
-Padding FindOperationPadding(const ::keymaster::Operation& operation) {
+Padding FindPadding(const ::keymaster::AuthorizationSet& params) {
   keymaster_padding_t padding;
 
-  if (!operation.authorizations().GetTagValue(::keymaster::TAG_PADDING,
-                                              &padding)) {
+  if (!params.GetTagValue(::keymaster::TAG_PADDING, &padding)) {
     return Padding ::kNone;
   }
 
@@ -100,11 +98,10 @@ Padding FindOperationPadding(const ::keymaster::Operation& operation) {
   }
 }
 
-BlockMode FindOperationBlockMode(const ::keymaster::Operation& operation) {
+BlockMode FindBlockMode(const ::keymaster::AuthorizationSet& params) {
   keymaster_block_mode_t block_mode;
 
-  if (!operation.authorizations().GetTagValue(::keymaster::TAG_BLOCK_MODE,
-                                              &block_mode)) {
+  if (!params.GetTagValue(::keymaster::TAG_BLOCK_MODE, &block_mode)) {
     return BlockMode::kNone;
   }
 
@@ -118,12 +115,13 @@ BlockMode FindOperationBlockMode(const ::keymaster::Operation& operation) {
   }
 }
 
-MechanismDescription CreateOperationDescriptionFromOperation(
-    const ::keymaster::Operation& operation) {
+MechanismDescription CreateOperationDescription(
+    const ::keymaster::Operation& operation,
+    const ::keymaster::AuthorizationSet& params) {
   return MechanismDescription(
       ConvertKeymasterPurposeToOperationType(operation.purpose()),
-      FindOperationAlgorithm(operation), FindOperationDigest(operation),
-      FindOperationPadding(operation), FindOperationBlockMode(operation));
+      FindAlgorithm(params), FindDigest(params), FindPadding(params),
+      FindBlockMode(params));
 }
 
 }  // anonymous namespace
@@ -309,9 +307,9 @@ CrosOperation::CrosOperation(keymaster_purpose_t purpose, ChapsKey&& key)
 CrosOperation::~CrosOperation() = default;
 
 keymaster_error_t CrosOperation::Begin(
-    const ::keymaster::AuthorizationSet& /* input_params */,
+    const ::keymaster::AuthorizationSet& input_params,
     ::keymaster::AuthorizationSet* /* output_params */) {
-  MechanismDescription d = CreateOperationDescriptionFromOperation(*this);
+  MechanismDescription d = CreateOperationDescription(*this, input_params);
 
   base::Optional<uint64_t> handle = operation_->Begin(d);
 

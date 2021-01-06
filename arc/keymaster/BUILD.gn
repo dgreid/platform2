@@ -96,6 +96,7 @@ shared_library("libarckeymaster_context") {
   ]
   deps = [
     ":context_proto",
+    ":keymaster_mojo_bindings",
     ":libkeymaster",
   ]
 }

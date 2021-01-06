@@ -10,6 +10,8 @@
 #include <base/threading/platform_thread.h>
 #include <base/threading/thread_task_runner_handle.h>
 #include <keymaster/android_keymaster_messages.h>
+#include <mojo/cert_store.mojom.h>
+#include <mojo/keymaster.mojom.h>
 
 #include "arc/keymaster/conversion.h"
 
@@ -43,11 +45,38 @@ KeymasterServer::Backend::Backend()
 
 KeymasterServer::Backend::~Backend() = default;
 
-KeymasterServer::KeymasterServer() : backend_thread_("BackendKeymasterThread") {
+KeymasterServer::KeymasterServer()
+    : backend_thread_("BackendKeymasterThread"), weak_ptr_factory_(this) {
   CHECK(backend_thread_.Start()) << "Failed to start keymaster thread";
 }
 
 KeymasterServer::~KeymasterServer() = default;
+
+void KeymasterServer::UpdateContextPlaceholderKeys(
+    std::vector<mojom::ChromeOsKeyPtr> keys,
+    base::OnceCallback<void(bool)> callback) {
+  base::OnceCallback<void(bool)> callback_in_original_runner = base::BindOnce(
+      [](scoped_refptr<base::TaskRunner> original_task_runner,
+         base::OnceCallback<void(bool)> callback, bool success) {
+        original_task_runner->PostTask(
+            FROM_HERE, base::BindOnce(std::move(callback), success));
+      },
+      base::ThreadTaskRunnerHandle::Get(), std::move(callback));
+
+  backend_thread_.task_runner()->PostTask(
+      FROM_HERE, base::BindOnce(
+                     [](context::ArcKeymasterContext* context,
+                        std::vector<mojom::ChromeOsKeyPtr> keys,
+                        base::OnceCallback<void(bool)> callback) {
+                       // |context| is guaranteed valid here because it's owned
+                       // by |backend_|, which outlives the |backend_thread_|
+                       // this runs on.
+                       context->set_placeholder_keys(std::move(keys));
+                       std::move(callback).Run(/*success=*/true);
+                     },
+                     backend_.context(), std::move(keys),
+                     std::move(callback_in_original_runner)));
+}
 
 void KeymasterServer::SetSystemVersion(uint32_t os_version,
                                        uint32_t os_patchlevel) {
@@ -136,7 +165,7 @@ void KeymasterServer::GetKeyCharacteristics(
 }
 
 void KeymasterServer::GenerateKey(
-    std::vector<mojom::KeyParameterPtr> key_params,
+    std::vector<::arc::mojom::KeyParameterPtr> key_params,
     GenerateKeyCallback callback) {
   // Convert input |key_params| into |km_request|. All data is deep copied to
   // avoid use-after-free.

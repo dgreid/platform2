@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <array>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -159,6 +160,19 @@ const brillo::Blob kValidMaterial = {
     226, 135, 101, 108, 107, 44,  138, 151, 2,   11,  71,  55,  110, 36,  185,
     216, 173, 250, 125, 226, 236};
 
+// The base 64 SPKI of |kValidMaterial|.
+constexpr char kValidBase64Spki[] =
+    "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAqXJkLaWKHpVLzHwZzzL8DzI/BF+CAe"
+    "AcZdx/EWHbwk/4ruV2C8X91dG6U9dswkoe5MgmJD5VuD4rhPeJuTy4RzxKBfG2U+TGAhNe+LtE"
+    "s8o2d/D0xCm9/GHBS8fu1VmwCEL4khup9O5P8BEXNKw9HY8qY78SKpTtYklreSnD9ep2QWNWCm"
+    "+S2r9cxnIX/Soe8CIjyOZ0kSA4J6PguYMvd3K+sD8nSCksAB2X/GLrXUtlVP66cWTIe/OdOQ9U"
+    "aHwj5YLaCIYeQBEC9a7I3JWD5UmCpxXE13HTrSd8BXa+N3rLoyOqwXTU51lT3B9aWLNKRyrHii"
+    "V8D7n37igAeUDN/wIDAQAB";
+
+constexpr char kChapsKeyLabel[] = "chaps_key_label";
+constexpr std::array<uint8_t, 10> kChapsKeyId{61, 11, 8,  28, 36,
+                                              64, 69, 42, 96, 14};
+
 ::testing::AssertionResult KeyBlobEquals(
     const ::keymaster::KeymasterKeyBlob& a,
     const ::keymaster::KeymasterKeyBlob& b) {
@@ -241,6 +255,10 @@ class ContextTestPeer {
     return context.DeserializeKeyDataBlob(key_blob, hidden, key_material,
                                           hw_enforced, sw_enforced,
                                           /*key=*/nullptr);
+  }
+
+  static size_t PlaceholderKeysSize(ArcKeymasterContext* context) {
+    return context->placeholder_keys_.size();
   }
 
   static ContextAdaptor& context_adaptor(ArcKeymasterContext* context) {
@@ -339,6 +357,49 @@ TEST_F(ArcKeymasterContextTest, CreateThenParseKeyBlob) {
   // Verify parsing succeeds and |key| contains the right |key_material|.
   ASSERT_EQ(KM_ERROR_OK, error);
   EXPECT_TRUE(KeyBlobEquals(key_material, key->key_material()));
+}
+
+TEST_F(ArcKeymasterContextTest, CreateThenParseChapsKeyBlob) {
+  // Set up a Chaps placeholder key for the |kValidMaterial| we will install.
+  mojom::ChapsKeyDataPtr key_data = mojom::ChapsKeyData::New(
+      std::string(kChapsKeyLabel),
+      std::string(kChapsKeyId.begin(), kChapsKeyId.end()));
+  mojom::ChromeOsKeyPtr cros_key = mojom::ChromeOsKey::New(
+      kValidBase64Spki, mojom::KeyData::NewChapsKeyData(std::move(key_data)));
+  std::vector<mojom::ChromeOsKeyPtr> placeholders;
+  placeholders.push_back(std::move(cros_key));
+  context_->set_placeholder_keys(std::move(placeholders));
+
+  EXPECT_EQ(ContextTestPeer::PlaceholderKeysSize(context_), 1);
+
+  // Create a valid key blob.
+  ::keymaster::KeymasterKeyBlob key_material(kValidMaterial.data(),
+                                             kValidMaterial.size());
+  ::keymaster::AuthorizationSet description;
+  description.push_back(::keymaster::TAG_ALGORITHM, KM_ALGORITHM_RSA);
+  ::keymaster::KeymasterKeyBlob blob;
+  ::keymaster::AuthorizationSet hw_enforced;
+  ::keymaster::AuthorizationSet sw_enforced;
+  keymaster_error_t error =
+      context_->CreateKeyBlob(description, KM_ORIGIN_GENERATED, key_material,
+                              &blob, &hw_enforced, &sw_enforced);
+
+  // Verify creation succeeds and the placeholder key is consumed.
+  ASSERT_EQ(KM_ERROR_OK, error);
+  EXPECT_EQ(ContextTestPeer::PlaceholderKeysSize(context_), 0);
+
+  // Parse the created blob.
+  ::keymaster::AuthorizationSet additional;
+  ::keymaster::UniquePtr<::keymaster::Key> key;
+  error = context_->ParseKeyBlob(blob, additional, &key);
+
+  // Verify parsing succeeds and |key| contains the right ChapsKey.
+  ASSERT_EQ(KM_ERROR_OK, error);
+  ChapsKey* chaps_key = static_cast<ChapsKey*>(key.get());
+  ASSERT_NE(chaps_key, nullptr);
+  EXPECT_EQ(chaps_key->label(), kChapsKeyLabel);
+  EXPECT_EQ(chaps_key->id(),
+            brillo::Blob(kChapsKeyId.begin(), kChapsKeyId.end()));
 }
 
 TEST_F(ArcKeymasterContextTest, SerializeKeyDataBlob) {

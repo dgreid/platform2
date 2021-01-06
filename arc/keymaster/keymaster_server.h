@@ -13,6 +13,7 @@
 #include <base/memory/scoped_refptr.h>
 #include <base/threading/thread.h>
 #include <keymaster/android_keymaster.h>
+#include <mojo/cert_store.mojom.h>
 #include <mojo/keymaster.mojom.h>
 
 #include "arc/keymaster/context/arc_keymaster_context.h"
@@ -30,6 +31,14 @@ class KeymasterServer : public arc::mojom::KeymasterServer {
   KeymasterServer& operator=(const KeymasterServer&) = delete;
   ~KeymasterServer() override;
 
+  void UpdateContextPlaceholderKeys(std::vector<mojom::ChromeOsKeyPtr> keys,
+                                    base::OnceCallback<void(bool)> callback);
+
+  base::WeakPtr<KeymasterServer> GetWeakPtr() {
+    return weak_ptr_factory_.GetWeakPtr();
+  }
+
+  // mojom::KeymasterServer overrides.
   void SetSystemVersion(uint32_t osVersion, uint32_t osPatchLevel) override;
 
   void AddRngEntropy(const std::vector<uint8_t>& data,
@@ -39,7 +48,7 @@ class KeymasterServer : public arc::mojom::KeymasterServer {
       ::arc::mojom::GetKeyCharacteristicsRequestPtr request,
       GetKeyCharacteristicsCallback callback) override;
 
-  void GenerateKey(std::vector<mojom::KeyParameterPtr> key_params,
+  void GenerateKey(std::vector<::arc::mojom::KeyParameterPtr> key_params,
                    GenerateKeyCallback callback) override;
 
   void ImportKey(arc::mojom::ImportKeyRequestPtr request,
@@ -113,6 +122,9 @@ class KeymasterServer : public arc::mojom::KeymasterServer {
   // |base::Thread| guarantees that destruction waits until any leftover tasks
   // are executed, so this must be destroyed before |backend_| is.
   base::Thread backend_thread_;
+
+  // Must be last member to ensure weak pointers are invalidated first.
+  base::WeakPtrFactory<KeymasterServer> weak_ptr_factory_;
 };
 
 }  // namespace keymaster

@@ -5,6 +5,9 @@
 #ifndef ARC_KEYMASTER_CONTEXT_ARC_KEYMASTER_CONTEXT_H_
 #define ARC_KEYMASTER_CONTEXT_ARC_KEYMASTER_CONTEXT_H_
 
+#include <utility>
+#include <vector>
+
 #include <base/macros.h>
 #include <base/memory/scoped_refptr.h>
 #include <base/optional.h>
@@ -15,6 +18,7 @@
 #include <keymaster/key.h>
 #include <keymaster/key_factory.h>
 #include <keymaster/UniquePtr.h>
+#include <mojo/cert_store.mojom.h>
 
 #include "arc/keymaster/context/context_adaptor.h"
 #include "arc/keymaster/context/cros_key.h"
@@ -32,6 +36,15 @@ class ArcKeymasterContext : public ::keymaster::PureSoftKeymasterContext {
   // Not copyable nor assignable.
   ArcKeymasterContext(const ArcKeymasterContext&) = delete;
   ArcKeymasterContext& operator=(const ArcKeymasterContext&) = delete;
+
+  // Replaces the list of placeholders for Chrome OS keys.
+  void set_placeholder_keys(std::vector<mojom::ChromeOsKeyPtr> keys) {
+    placeholder_keys_ = std::move(keys);
+  }
+
+  // Returns the Chrome OS key correspponding to the given key blob, if any.
+  base::Optional<mojom::ChromeOsKeyPtr> FindPlaceholderKey(
+      const ::keymaster::KeymasterKeyBlob& key_material) const;
 
   // PureSoftKeymasterContext overrides.
   keymaster_error_t CreateKeyBlob(
@@ -100,9 +113,31 @@ class ArcKeymasterContext : public ::keymaster::PureSoftKeymasterContext {
       const ::keymaster::KeymasterKeyBlob& key_blob,
       const ::keymaster::AuthorizationSet& hidden) const;
 
+  // Parses the given parameter into an instance of KeyData.
+  //
+  // May return |base::nullopt| when the placeholder key correspponding to this
+  // |key_material| is invalid.
+  base::Optional<KeyData> PackToKeyData(
+      const ::keymaster::KeymasterKeyBlob& key_material,
+      const ::keymaster::AuthorizationSet& hw_enforced,
+      const ::keymaster::AuthorizationSet& sw_enforced) const;
+
+  // Removes the given |key| from the list of |placeholder_keys_|.
+  void DeletePlaceholderKey(const mojom::ChromeOsKeyPtr& key) const;
+
   mutable ContextAdaptor context_adaptor_;
 
   mutable CrosKeyFactory rsa_key_factory_;
+
+  // Holds placeholder keys that will be installed by ARC.
+  //
+  // Placeholders maintain information about keys owned by Chrome OS. When ARC
+  // tries to install a new key, arc-keymasterd checks if it is a placeholder,
+  // and if so, replaces it with a handle to the original Chrome OS key instead.
+  //
+  // From that point on, operation on that key will be executed on the original
+  // Chrome OS key.
+  mutable std::vector<mojom::ChromeOsKeyPtr> placeholder_keys_;
 
   // Friend class for testing.
   friend class ContextTestPeer;

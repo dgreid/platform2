@@ -57,7 +57,8 @@ bool ChapsCryptoOperation::IsSupportedMechanism(
 base::Optional<uint64_t> ChapsCryptoOperation::Begin(
     MechanismDescription mechanism_description) {
   if (!IsSupportedMechanism(mechanism_description)) {
-    LOG(ERROR) << "Mechanism not implemented for chaps keys: " << description();
+    LOG(ERROR) << "Mechanism not implemented for chaps keys: "
+               << mechanism_description;
     return base::nullopt;
   }
   set_description(mechanism_description);

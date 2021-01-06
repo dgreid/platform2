@@ -5,14 +5,21 @@
 #include "arc/keymaster/context/arc_keymaster_context.h"
 
 #include <algorithm>
+#include <cstdint>
+#include <memory>
 #include <string>
 #include <utility>
+#include <vector>
 
+#include <base/base64.h>
 #include <base/logging.h>
+#include <base/optional.h>
 #include <base/stl_util.h>
 #include <keymaster/android_keymaster_utils.h>
 #include <keymaster/key_blob_utils/integrity_assured_key_blob.h>
 #include <keymaster/key_blob_utils/software_keyblobs.h>
+#include <mojo/cert_store.mojom.h>
+#include <openssl/evp.h>
 
 #include "arc/keymaster/context/chaps_client.h"
 #include "arc/keymaster/context/openssl_utils.h"
@@ -108,10 +115,35 @@ KeyData PackToArcKeyData(const ::keymaster::KeymasterKeyBlob& key_material,
   return key_data;
 }
 
-bool UnpackFromArcKeyData(const KeyData& key_data,
-                          ::keymaster::KeymasterKeyBlob* key_material,
-                          ::keymaster::AuthorizationSet* hw_enforced,
-                          ::keymaster::AuthorizationSet* sw_enforced) {
+base::Optional<KeyData> PackToChromeOsKeyData(
+    const mojom::KeyDataPtr& mojo_key_data,
+    const ::keymaster::AuthorizationSet& hw_enforced,
+    const ::keymaster::AuthorizationSet& sw_enforced) {
+  KeyData key_data;
+
+  // Copy key data.
+  if (mojo_key_data->is_chaps_key_data()) {
+    key_data.mutable_chaps_key()->set_id(
+        mojo_key_data->get_chaps_key_data()->id);
+    key_data.mutable_chaps_key()->set_label(
+        mojo_key_data->get_chaps_key_data()->label);
+  } else {
+    return base::nullopt;
+  }
+
+  // Serialize hardware enforced authorization set.
+  SerializeAuthorizationSet(hw_enforced, key_data.mutable_hw_enforced_tags());
+
+  // Serialize software enforced authorization set.
+  SerializeAuthorizationSet(sw_enforced, key_data.mutable_sw_enforced_tags());
+
+  return key_data;
+}
+
+bool UnpackFromKeyData(const KeyData& key_data,
+                       ::keymaster::KeymasterKeyBlob* key_material,
+                       ::keymaster::AuthorizationSet* hw_enforced,
+                       ::keymaster::AuthorizationSet* sw_enforced) {
   // For ARC keys, deserialize the actual key material into |key_material|.
   if (key_data.data_case() == KeyData::DataCase::kArcKey &&
       !DeserializeKeyMaterialToBlob(key_data.arc_key().key_material(),
@@ -142,12 +174,87 @@ base::Optional<keymaster_algorithm_t> FindAlgorithmTag(
   return algorithm;
 }
 
+base::Optional<std::string> ExtractBase64Spki(
+    const ::keymaster::KeymasterKeyBlob& key_material) {
+  // Parse key material.
+  const uint8_t* material = key_material.key_material;
+  EVP_PKEY* pkey = d2i_PrivateKey(EVP_PKEY_RSA, /*pkey=*/nullptr, &material,
+                                  key_material.key_material_size);
+  if (!pkey)
+    return base::nullopt;
+  std::unique_ptr<EVP_PKEY, decltype(&::EVP_PKEY_free)> pkey_deleter(
+      pkey, EVP_PKEY_free);
+
+  // Retrieve DER subject public key info.
+  int der_spki_length = i2d_PUBKEY(pkey, /*outp=*/nullptr);
+  if (der_spki_length <= 0)
+    return base::nullopt;
+
+  brillo::Blob der_spki(der_spki_length);
+  uint8_t* der_spki_buffer = std::data(der_spki);
+  int written_bytes = i2d_PUBKEY(pkey, &der_spki_buffer);
+  if (written_bytes != der_spki_length)
+    return base::nullopt;
+
+  // Encode subject public key info to base 64.
+  std::string der_spki_string(der_spki.begin(), der_spki.end());
+  std::string base64_spki;
+  base::Base64Encode(der_spki_string, &base64_spki);
+  return base64_spki;
+}
+
 }  // anonymous namespace
 
 ArcKeymasterContext::ArcKeymasterContext()
     : rsa_key_factory_(context_adaptor_.GetWeakPtr(), KM_ALGORITHM_RSA) {}
 
 ArcKeymasterContext::~ArcKeymasterContext() = default;
+
+void ArcKeymasterContext::DeletePlaceholderKey(
+    const mojom::ChromeOsKeyPtr& key) const {
+  std::vector<mojom::ChromeOsKeyPtr>::iterator position =
+      std::find(placeholder_keys_.begin(), placeholder_keys_.end(), key);
+  if (position != placeholder_keys_.end())
+    placeholder_keys_.erase(position);
+}
+
+base::Optional<mojom::ChromeOsKeyPtr> ArcKeymasterContext::FindPlaceholderKey(
+    const ::keymaster::KeymasterKeyBlob& key_material) const {
+  if (placeholder_keys_.empty())
+    return base::nullopt;
+
+  base::Optional<std::string> base64_spki = ExtractBase64Spki(key_material);
+  if (!base64_spki.has_value())
+    return base::nullopt;
+
+  for (const auto& cros_key : placeholder_keys_) {
+    if (base64_spki.value() == cros_key->base64_subject_public_key_info) {
+      LOG(INFO) << "Found placeholder key: " << base64_spki.value();
+      return cros_key->Clone();
+    }
+  }
+
+  return base::nullopt;
+}
+
+base::Optional<KeyData> ArcKeymasterContext::PackToKeyData(
+    const ::keymaster::KeymasterKeyBlob& key_material,
+    const ::keymaster::AuthorizationSet& hw_enforced,
+    const ::keymaster::AuthorizationSet& sw_enforced) const {
+  base::Optional<mojom::ChromeOsKeyPtr> cros_key =
+      FindPlaceholderKey(key_material);
+  if (!cros_key.has_value())
+    return PackToArcKeyData(key_material, hw_enforced, sw_enforced);
+
+  base::Optional<KeyData> key_data = PackToChromeOsKeyData(
+      cros_key.value()->key_data->Clone(), hw_enforced, sw_enforced);
+
+  // Ensure the placeholder of a Chrome OS key is only used once.
+  if (key_data.has_value())
+    DeletePlaceholderKey(cros_key.value());
+
+  return key_data;
+}
 
 keymaster_error_t ArcKeymasterContext::CreateKeyBlob(
     const ::keymaster::AuthorizationSet& key_description,
@@ -274,10 +381,15 @@ keymaster_error_t ArcKeymasterContext::SerializeKeyDataBlob(
   if (!key_blob)
     return KM_ERROR_OUTPUT_PARAMETER_NULL;
 
-  KeyData key_data = PackToArcKeyData(key_material, hw_enforced, sw_enforced);
+  base::Optional<KeyData> key_data =
+      PackToKeyData(key_material, hw_enforced, sw_enforced);
+  if (!key_data.has_value()) {
+    LOG(ERROR) << "Failed to package KeyData.";
+    return KM_ERROR_UNKNOWN_ERROR;
+  }
 
   // Serialize key data into the output |key_blob|.
-  if (!SerializeKeyData(key_data, hidden, key_blob)) {
+  if (!SerializeKeyData(key_data.value(), hidden, key_blob)) {
     LOG(ERROR) << "Failed to serialize KeyData.";
     return KM_ERROR_UNKNOWN_ERROR;
   }
@@ -303,8 +415,8 @@ keymaster_error_t ArcKeymasterContext::DeserializeKeyDataBlob(
   }
 
   // Unpack Keymaster structures from KeyData.
-  if (!UnpackFromArcKeyData(key_data.value(), key_material, hw_enforced,
-                            sw_enforced)) {
+  if (!UnpackFromKeyData(key_data.value(), key_material, hw_enforced,
+                         sw_enforced)) {
     LOG(ERROR) << "Failed to unpack key blob.";
     return KM_ERROR_INVALID_KEY_BLOB;
   }
