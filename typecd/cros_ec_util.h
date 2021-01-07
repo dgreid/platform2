@@ -24,7 +24,7 @@ class CrosECUtil : public ECUtil {
   CrosECUtil& operator=(const CrosECUtil&) = delete;
 
   bool ModeEntrySupported() override;
-  bool EnterMode(int port, TypeCMode mode) override { return true; };
+  bool EnterMode(int port, TypeCMode mode) override;
   bool ExitMode(int port) override { return true; };
 
  private:

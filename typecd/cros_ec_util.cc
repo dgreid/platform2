@@ -48,4 +48,22 @@ bool CrosECUtil::ModeEntrySupported() {
   return CheckInventoryForModeEntry(inventory);
 }
 
+bool CrosECUtil::EnterMode(int port, TypeCMode mode) {
+  brillo::ErrorPtr error;
+  std::string result;
+
+  if (!debugd_proxy_->EcTypeCEnterMode(port, mode, &result, &error)) {
+    LOG(ERROR) << "Failed to call D-Bus GetInventory: " << error->GetMessage();
+    return false;
+  }
+
+  if (!result.empty()) {
+    LOG(ERROR) << "Enter mode command for port " << port
+               << " failed: " << result;
+    return false;
+  }
+
+  return true;
+}
+
 }  // namespace typecd
