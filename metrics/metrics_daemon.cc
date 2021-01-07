@@ -106,6 +106,7 @@ const int kMemuseIntervals[] = {
 };
 
 constexpr char kDailyUseTimeName[] = "Platform.DailyUseTime";
+constexpr char kUnaggregatedUseTimeName[] = "Platform.UnaggregatedUsageTime";
 constexpr char kCumulativeUseTimeName[] = "Platform.CumulativeUseTime";
 constexpr char kCumulativeCpuTimeName[] = "Platform.CumulativeCpuTime";
 constexpr char kKernelCrashIntervalName[] = "Platform.KernelCrashInterval";
@@ -1625,6 +1626,14 @@ void MetricsDaemon::UpdateStats(TimeTicks now_ticks, Time now_wall_time) {
   const TimeDelta since_epoch = now_wall_time - Time::UnixEpoch();
   const int day = since_epoch.InDays();
   const int week = day / 7;
+
+  // Allow some slack time above the expected max of 5 minutes.
+  const int max_time =
+      kUpdateStatsIntervalMs / kMillisPerSecond + kSecondsPerMinute;
+  SendSample(kUnaggregatedUseTimeName, elapsed_seconds,
+             1,         // value of first bucket
+             max_time,  // value of last bucket
+             50);       // number of buckets
 
   if (daily_cycle_->Get() != day) {
     daily_cycle_->Set(day);

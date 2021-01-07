@@ -110,6 +110,9 @@ class MetricsDaemonTest : public testing::Test {
   // Adds active use aggregation counters update expectations that a count no
   // larger than the specified upper bound will be added.
   void ExpectActiveUseUpdate(int upper_bound) {
+    EXPECT_CALL(metrics_lib_, SendToUMA("Platform.UnaggregatedUsageTime",
+                                        Le(upper_bound), 1, 360, 50));
+
     EXPECT_CALL(*daily_active_use_mock_, GetAndClear())
         .Times(1)
         .RetiresOnSaturation();
