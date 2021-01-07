@@ -7,12 +7,15 @@
 #include <string>
 
 #include <base/strings/string_split.h>
+#include <base/threading/platform_thread.h>
+#include <base/time/time.h>
 #include <re2/re2.h>
 
 namespace {
 
 constexpr char kECInventoryFeatureRegex[] = R"((\d+)\ +:\ +[\S\ ]+)";
 constexpr int kAPModeEntryFeatureNumber = 42;
+constexpr uint32_t kTypeCControlWaitMs = 20;
 
 bool CheckInventoryForModeEntry(const std::string& inventory) {
   for (const auto& line : base::SplitString(
@@ -51,19 +54,20 @@ bool CrosECUtil::ModeEntrySupported() {
 bool CrosECUtil::EnterMode(int port, TypeCMode mode) {
   brillo::ErrorPtr error;
   std::string result;
+  int retries = 5;
 
-  if (!debugd_proxy_->EcTypeCEnterMode(port, mode, &result, &error)) {
-    LOG(ERROR) << "Failed to call D-Bus GetInventory: " << error->GetMessage();
-    return false;
+  while (retries--) {
+    if (debugd_proxy_->EcTypeCEnterMode(port, mode, &result, &error))
+      return true;
+
+    LOG(INFO) << "Enter mode attempts remaining: " << retries;
+    base::PlatformThread::Sleep(
+        base::TimeDelta::FromMilliseconds(kTypeCControlWaitMs));
   }
 
-  if (!result.empty()) {
-    LOG(ERROR) << "Enter mode command for port " << port
-               << " failed: " << result;
-    return false;
-  }
+  LOG(ERROR) << "Failed to call D-Bus TypeCEnterMode: " << error->GetMessage();
 
-  return true;
+  return false;
 }
 
 }  // namespace typecd
