@@ -83,3 +83,5 @@ nanosleep: 1
 ioctl: return 1
 prctl: return 1
 
+# Allow metrics sending.
+flock: 1

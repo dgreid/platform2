@@ -79,3 +79,6 @@ nanosleep: 1
 # These are attempted but apparently not necessary; return EPERM.
 ioctl: return 1
 prctl: return 1
+
+# Allow metrics sending.
+flock: 1

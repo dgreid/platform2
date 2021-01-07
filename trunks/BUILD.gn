@@ -33,6 +33,7 @@ pkg_config("target_default_pkg_deps") {
   pkg_deps = [
     "libbrillo",
     "libchrome",
+    "libmetrics",
     "openssl",
   ]
   if (use.fuzzer) {
@@ -156,6 +157,7 @@ static_library("trunksd_lib") {
     "tpm_handle.cc",
     "tpm_simulator_handle.cc",
     "trunks_dbus_service.cc",
+    "trunks_metrics.cc",
   ]
   deps = [ ":trunks" ]
 }

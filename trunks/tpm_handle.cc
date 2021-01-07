@@ -11,6 +11,8 @@
 #include <base/logging.h>
 #include <base/posix/eintr_wrapper.h>
 
+#include "trunks/trunks_metrics.h"
+
 namespace {
 
 const char kTpmDevice[] = "/dev/tpm0";
@@ -55,6 +57,15 @@ std::string TpmHandle::SendCommandAndWait(const std::string& command) {
   TPM_RC result = SendCommandInternal(command, &response);
   if (result != TPM_RC_SUCCESS) {
     response = CreateErrorResponse(result);
+    // Send the command code and system uptime of the first timeout command
+    if (errno == ETIME) {
+      static bool has_reported = false;
+      if (!has_reported) {
+        TrunksMetrics metrics;
+        if (metrics.ReportTpmHandleTimeoutCommandAndTime(result, command))
+          has_reported = true;
+      }
+    }
   }
   return response;
 }
