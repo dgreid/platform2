@@ -11,6 +11,9 @@
 #include <base/files/file_path.h>
 #include <base/time/time.h>
 #include <brillo/cryptohome.h>
+#if USE_LVM_STATEFUL_PARTITION
+#include <brillo/blkdev_utils/mock_lvm.h>
+#endif  // USE_LVM_STATEFUL_PARTITION
 #include <brillo/secure_blob.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -523,6 +526,35 @@ class HomeDirsVaultTest : public ::testing::Test {
             std::unique_ptr<policy::MockDevicePolicy>(mock_device_policy_)));
   }
 
+#if USE_LVM_STATEFUL_PARTITION
+  void ExpectLogicalVolumeStatefulPartition(
+      const std::string& obfuscated_username, bool existing_cryptohome) {
+    brillo::PhysicalVolume pv(base::FilePath("/dev/mmcblk0p1"), nullptr);
+    brillo::VolumeGroup vg("stateful", nullptr);
+    brillo::Thinpool thinpool("thinpool", "stateful", nullptr);
+    brillo::LogicalVolume lv(LogicalVolumePrefix(obfuscated_username)
+                                 .append(kDmcryptDataContainerSuffix),
+                             "stateful", nullptr);
+    std::unique_ptr<brillo::MockLogicalVolumeManager> lvm(
+        new brillo::MockLogicalVolumeManager());
+
+    EXPECT_CALL(platform_, GetStatefulDevice())
+        .WillRepeatedly(Return(base::FilePath("/dev/mmcblk0")));
+    EXPECT_CALL(platform_, GetBlkSize(_, _))
+        .WillRepeatedly(
+            DoAll(SetArgPointee<1>(1024 * 1024 * 1024), Return(true)));
+    EXPECT_CALL(*lvm.get(), GetPhysicalVolume(_)).WillRepeatedly(Return(pv));
+    EXPECT_CALL(*lvm.get(), GetVolumeGroup(_)).WillRepeatedly(Return(vg));
+    EXPECT_CALL(*lvm.get(), GetThinpool(_, _)).WillRepeatedly(Return(thinpool));
+    if (existing_cryptohome) {
+      EXPECT_CALL(*lvm.get(), GetLogicalVolume(_, _))
+          .WillRepeatedly(Return(lv));
+    }
+
+    homedirs_->SetLogicalVolumeManagerForTesting(std::move(lvm));
+  }
+#endif  // USE_LVM_STATEFUL_PARTITION
+
  protected:
   const UserInfo user_;
   const FileSystemKeyReference key_reference_;
@@ -535,6 +567,42 @@ class HomeDirsVaultTest : public ::testing::Test {
   std::unique_ptr<KeysetManagement> keyset_management_;
   std::unique_ptr<HomeDirs> homedirs_;
 };
+
+#if USE_LVM_STATEFUL_PARTITION
+TEST_F(HomeDirsVaultTest, PristineVaultLvmStatefulSupport) {
+  ExpectLogicalVolumeStatefulPartition(user_.obfuscated,
+                                       /*existing_cryptohome=*/false);
+
+  CryptohomeVault::Options options;
+  MountError mount_error = MOUNT_ERROR_NONE;
+
+  auto vault = homedirs_->GenerateCryptohomeVault(
+      user_.obfuscated, key_reference_, options, /*is_pristine=*/true,
+      &mount_error);
+  EXPECT_EQ(vault->GetContainerType(), EncryptedContainerType::kDmcrypt);
+  EXPECT_EQ(vault->GetMigratingContainerType(),
+            EncryptedContainerType::kUnknown);
+  EXPECT_EQ(vault->GetCacheContainerType(), EncryptedContainerType::kDmcrypt);
+  EXPECT_EQ(mount_error, MOUNT_ERROR_NONE);
+}
+
+TEST_F(HomeDirsVaultTest, ExistingDmcryptContainer) {
+  ExpectLogicalVolumeStatefulPartition(user_.obfuscated,
+                                       /*existing_cryptohome=*/true);
+
+  CryptohomeVault::Options options;
+  MountError mount_error = MOUNT_ERROR_NONE;
+
+  auto vault = homedirs_->GenerateCryptohomeVault(
+      user_.obfuscated, key_reference_, options, /*is_pristine=*/false,
+      &mount_error);
+  EXPECT_EQ(vault->GetContainerType(), EncryptedContainerType::kDmcrypt);
+  EXPECT_EQ(vault->GetMigratingContainerType(),
+            EncryptedContainerType::kUnknown);
+  EXPECT_EQ(vault->GetCacheContainerType(), EncryptedContainerType::kDmcrypt);
+  EXPECT_EQ(mount_error, MOUNT_ERROR_NONE);
+}
+#endif
 
 // Tests cryptohome vault generation with fscrypt support.
 TEST_F(HomeDirsVaultTest, PristineVault) {

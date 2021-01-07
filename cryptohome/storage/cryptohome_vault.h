@@ -40,6 +40,7 @@ class CryptohomeVault {
   CryptohomeVault(const std::string& obfuscated_username,
                   std::unique_ptr<EncryptedContainer> container,
                   std::unique_ptr<EncryptedContainer> migrating_container,
+                  std::unique_ptr<EncryptedContainer> cache_container,
                   Platform* platform);
   ~CryptohomeVault();
 
@@ -62,6 +63,10 @@ class CryptohomeVault {
     return migrating_container_ ? migrating_container_->GetType()
                                 : EncryptedContainerType::kUnknown;
   }
+  EncryptedContainerType GetCacheContainerType() {
+    return cache_container_ ? cache_container_->GetType()
+                            : EncryptedContainerType::kUnknown;
+  }
 
  private:
   friend class CryptohomeVaultTest;
@@ -73,6 +78,9 @@ class CryptohomeVault {
   // During migration, we set up the target migration container as
   // |migrating_container_|.
   std::unique_ptr<EncryptedContainer> migrating_container_;
+  // For dm-crypt based vaults, we set up an additional cache container that
+  // serves as the backing store for temporary data.
+  std::unique_ptr<EncryptedContainer> cache_container_;
 
   Platform* platform_;
 };

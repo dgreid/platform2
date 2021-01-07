@@ -394,6 +394,21 @@ void HomeDirs::AddUserTimestampToCache(const std::string& obfuscated) {
 }
 
 EncryptedContainerType HomeDirs::ChooseVaultType() {
+#if USE_LVM_STATEFUL_PARTITION
+  // Validate stateful partition thinpool.
+  base::Optional<brillo::PhysicalVolume> pv =
+      lvm_->GetPhysicalVolume(platform_->GetStatefulDevice());
+  if (pv && pv->IsValid()) {
+    base::Optional<brillo::VolumeGroup> vg = lvm_->GetVolumeGroup(*pv);
+    if (vg && vg->IsValid()) {
+      base::Optional<brillo::Thinpool> thinpool =
+          lvm_->GetThinpool(*vg, "thinpool");
+      if (thinpool && thinpool->IsValid())
+        return EncryptedContainerType::kDmcrypt;
+    }
+  }
+#endif
+
   dircrypto::KeyState state = platform_->GetDirCryptoKeyState(ShadowRoot());
   switch (state) {
     case dircrypto::KeyState::NOT_SUPPORTED:
@@ -478,8 +493,8 @@ std::unique_ptr<CryptohomeVault> HomeDirs::CreateMigratingVault(
   if (EcryptfsCryptohomeExists(obfuscated_username)) {
     container_type = EncryptedContainerType::kEcryptfs;
     migrating_container_type = EncryptedContainerType::kFscrypt;
-  } else if (DircryptoCryptohomeExists(obfuscated_username)) {
-    LOG(ERROR) << "Mount attempt with migration on fscrypt.";
+  } else {
+    LOG(ERROR) << "Mount attempt with migration on non-eCryptfs mount";
     *mount_error = MOUNT_ERROR_UNEXPECTED_MOUNT_TYPE;
     return nullptr;
   }
