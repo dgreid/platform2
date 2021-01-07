@@ -16,6 +16,9 @@
 
 #include "cryptohome/storage/encrypted_container/backing_device.h"
 
+using ::testing::_;
+using ::testing::DoAll;
+
 namespace cryptohome {
 
 namespace {

@@ -57,6 +57,7 @@ using brillo::cryptohome::home::SanitizeUserNameWithSalt;
 using ::testing::_;
 using ::testing::AtLeast;
 using ::testing::ByMove;
+using ::testing::DoAll;
 using ::testing::ElementsAre;
 using ::testing::ElementsAreArray;
 using ::testing::EndsWith;

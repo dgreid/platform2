@@ -25,6 +25,7 @@
 #include "cryptohome/storage/mock_homedirs.h"
 
 using ::testing::_;
+using ::testing::DoAll;
 using ::testing::EndsWith;
 using ::testing::HasSubstr;
 using ::testing::InvokeWithoutArgs;
