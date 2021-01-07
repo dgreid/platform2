@@ -222,6 +222,12 @@ const std::vector<Log> kCommandLogs {
     "/usr/bin/xz -c /sys/kernel/debug/dri/0/i915_error_state 2>/dev/null",
     SandboxedProcess::kDefaultUser, kDebugfsGroup, Log::kDefaultMaxBytes,
     LogTool::Encoding::kBase64},
+  {kFile, "amdgpu_gem_info", "/sys/kernel/debug/dri/0/amdgpu_gem_info",
+    SandboxedProcess::kDefaultUser, kDebugfsGroup},
+  {kFile, "amdgpu_gtt_mm", "/sys/kernel/debug/dri/0/amdgpu_gtt_mm",
+    SandboxedProcess::kDefaultUser, kDebugfsGroup},
+  {kFile, "amdgpu_vram_mm", "/sys/kernel/debug/dri/0/amdgpu_vram_mm",
+    SandboxedProcess::kDefaultUser, kDebugfsGroup},
   {kCommand, "ifconfig", "/bin/ifconfig -a"},
   {kFile, "input_devices", "/proc/bus/input/devices"},
   // Hardware capabilities of the wiphy device.
