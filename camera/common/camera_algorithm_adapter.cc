@@ -65,8 +65,7 @@ void CameraAlgorithmAdapter::Run(std::string pipe_name,
       base::Bind(&CameraAlgorithmAdapter::InitializeOnIpcThread,
                  base::Unretained(this), pipe_name, base::Passed(&channel)));
   future->Wait(-1);
-  ipc_thread_.Stop();
-  VLOGF_EXIT();
+  exit(EXIT_FAILURE);
 }
 
 void CameraAlgorithmAdapter::InitializeOnIpcThread(std::string pipe_name,
