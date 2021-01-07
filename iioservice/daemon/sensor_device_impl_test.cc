@@ -129,6 +129,10 @@ TEST_F(SensorDeviceImplTest, SetFrequency) {
 }
 
 TEST_F(SensorDeviceImplTest, StartAndStopReadingSamples) {
+  // No samples in this test, as the sample index may not match due to the
+  // potential missed samples between reconnections.
+  device_->SetPauseCallbackAtKthSamples(0, base::BindOnce([]() {}));
+
   double frequency = libmems::fakes::kFakeSamplingFrequency;
   remote_->SetFrequency(frequency, base::BindOnce([](double result_freq) {
                           EXPECT_EQ(result_freq,
