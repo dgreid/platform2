@@ -377,4 +377,22 @@ MaybeCrashReport TerminaParser::ParseLogEntry(int cid,
   return base::nullopt;
 }
 
+constexpr LazyRE2 cryptohome_mount_failure = {
+    R"(Failed to mount cryptohome, error = (\d+))"};
+
+MaybeCrashReport CryptohomeParser::ParseLogEntry(const std::string& line) {
+  uint64_t error_code;
+  if (!RE2::PartialMatch(line, *cryptohome_mount_failure, &error_code)) {
+    return base::nullopt;
+  }
+
+  // Failure to mount non-existent users returns 32. Avoid creating crash
+  // reports in this case for now.
+  if (error_code == 32)
+    return base::nullopt;
+
+  return CrashReport("", {std::move("--mount_failure"),
+                          std::move("--mount_device=cryptohome")});
+}
+
 }  // namespace anomaly

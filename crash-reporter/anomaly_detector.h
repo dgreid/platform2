@@ -134,6 +134,11 @@ class TerminaParser {
   scoped_refptr<dbus::Bus> dbus_;
 };
 
+class CryptohomeParser : public Parser {
+ public:
+  MaybeCrashReport ParseLogEntry(const std::string& line) override;
+};
+
 }  // namespace anomaly
 
 #endif  // CRASH_REPORTER_ANOMALY_DETECTOR_H_

@@ -79,6 +79,7 @@ Service::Service(base::OnceClosure shutdown_callback, bool testonly_send_all)
   parsers_["crash_reporter"] = std::make_unique<anomaly::CrashReporterParser>(
       std::make_unique<base::DefaultClock>(),
       std::make_unique<MetricsLibrary>(), testonly_send_all);
+  parsers_["cryptohomed"] = std::make_unique<anomaly::CryptohomeParser>();
 
   // If any log file is missing, the LogReader will try to reopen the file on
   // GetNextEntry method call. After multiple attempts however LogReader will

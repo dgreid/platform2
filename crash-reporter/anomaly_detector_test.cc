@@ -22,6 +22,7 @@ using ::testing::Eq;
 using ::testing::IsEmpty;
 using ::testing::Return;
 
+using ::anomaly::CryptohomeParser;
 using ::anomaly::KernelParser;
 using ::anomaly::ParserRun;
 using ::anomaly::ParserTest;
@@ -428,4 +429,17 @@ TEST(AnomalyDetectorTest, BTRFSTreeCorruption) {
   parser.ParseLogEntry(3,
                        "BTRFS warning (device vdb): vdb checksum verify failed "
                        "on 122798080 wanted 4E5B4C99 found 5F261FEB level 0");
+}
+
+TEST(AnomalyDetectorTest, CryptohomeMountFailure) {
+  ParserRun cryptohome_mount_failure = {
+      .expected_flags = {{"--mount_failure", "--mount_device=cryptohome"}}};
+  ParserTest<CryptohomeParser>("TEST_CRYPTOHOME_MOUNT_FAILURE",
+                               {cryptohome_mount_failure});
+}
+
+TEST(AnomalyDetectorTest, CryptohomeIgnoreMountFailure) {
+  ParserRun cryptohome_mount_failure = {.expected_size = 0};
+  ParserTest<CryptohomeParser>("TEST_CRYPTOHOME_MOUNT_FAILURE_IGNORE",
+                               {cryptohome_mount_failure});
 }
