@@ -960,4 +960,28 @@ TEST(ArcSetupUtil, SafeCopyFile) {
                             brillo::SafeFD::Root().first));
 }
 
+TEST(ArcSetupUtil, GenerateFirstStageFstab) {
+  constexpr const char kFakeCombinedBuildPropPath[] = "/path/to/build.prop";
+  constexpr const char kAnotherFakeCombinedBuildPropPath[] =
+      "/foo/bar/baz.prop";
+
+  std::string content;
+  base::ScopedTempDir dir;
+  ASSERT_TRUE(dir.CreateUniqueTempDir());
+  const base::FilePath fstab(dir.GetPath().Append("fstab"));
+
+  // Generate the fstab and verify the content.
+  EXPECT_TRUE(GenerateFirstStageFstab(
+      base::FilePath(kFakeCombinedBuildPropPath), fstab));
+  EXPECT_TRUE(base::ReadFileToString(fstab, &content));
+  EXPECT_NE(std::string::npos, content.find(kFakeCombinedBuildPropPath));
+
+  // Generate the fstab again with the other prop file and verify the content.
+  EXPECT_TRUE(GenerateFirstStageFstab(
+      base::FilePath(kAnotherFakeCombinedBuildPropPath), fstab));
+  EXPECT_TRUE(base::ReadFileToString(fstab, &content));
+  EXPECT_EQ(std::string::npos, content.find(kFakeCombinedBuildPropPath));
+  EXPECT_NE(std::string::npos, content.find(kAnotherFakeCombinedBuildPropPath));
+}
+
 }  // namespace arc

@@ -283,6 +283,12 @@ bool SafeCopyFile(const base::FilePath& src_path,
                   uid_t uid = getuid(),
                   gid_t gid = getgid());
 
+// Generates a file called first stage fstab at |fstab_path| which is exported
+// by crosvm to the guest via the device tree so the guest can read certain
+// files in its init's first stage.
+bool GenerateFirstStageFstab(const base::FilePath& combined_property_file_name,
+                             const base::FilePath& fstab_path);
+
 }  // namespace arc
 
 #endif  // ARC_SETUP_ARC_SETUP_UTIL_H_
