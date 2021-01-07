@@ -4,7 +4,6 @@
 
 #include "crash-reporter/chrome_collector.h"
 
-#include <pcrecpp.h>
 #include <stdint.h>
 
 #include <limits>
@@ -18,6 +17,7 @@
 #include <brillo/data_encoding.h>
 #include <brillo/process/process.h>
 #include <brillo/syslog_logging.h>
+#include <re2/re2.h>
 
 #include "crash-reporter/constants.h"
 #include "crash-reporter/util.h"
@@ -256,8 +256,8 @@ bool ChromeCollector::ParseCrashLog(const std::string& data,
       // Descriptive name will be upload_file_minidump for minidumps or
       // upload_file_js_stack for JavaScript stack traces.
       std::string desc, filename;
-      pcrecpp::RE re("(.*)\" *; *filename=\"(.*)\"");
-      if (!re.FullMatch(name.c_str(), &desc, &filename)) {
+      RE2 re("(.*)\" *; *filename=\"(.*)\"");
+      if (!RE2::FullMatch(name.c_str(), re, &desc, &filename)) {
         LOG(ERROR) << "Filename was not in expected format: " << name;
         break;
       }
