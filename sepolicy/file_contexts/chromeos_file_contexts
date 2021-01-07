@@ -143,6 +143,7 @@ include(sepolicy/file_contexts/sysfs_contexts)
 /usr/sbin/p2p-http-server       u:object_r:cros_p2p_http_server_exec:s0
 /usr/sbin/p2p-server            u:object_r:cros_p2p_server_exec:s0
 /usr/sbin/pca_agentd            u:object_r:cros_pca_agentd_exec:s0
+/usr/sbin/pciguard              u:object_r:cros_pciguard_exec:s0
 /usr/sbin/rsyslogd              u:object_r:cros_rsyslogd_exec:s0
 /usr/sbin/sshd                  u:object_r:cros_sshd_exec:s0
 /usr/sbin/sslh(-fork|-select)?  u:object_r:cros_sslh_exec:s0

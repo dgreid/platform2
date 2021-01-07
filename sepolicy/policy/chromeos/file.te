@@ -109,6 +109,7 @@ type cros_patchpaneld_exec, exec_type, file_type, cros_file_type, cros_system_fi
 type cros_p2p_http_server_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_p2p_server_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_pca_agentd_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
+type cros_pciguard_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_periodic_scheduler_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_permission_broker_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_powerd_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
