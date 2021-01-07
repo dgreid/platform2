@@ -9,6 +9,7 @@ group("all") {
     ":arc-apply-per-board-config",
     ":arc-create-data",
     ":arc-handle-upgrade",
+    ":arc-prepare-host-generated-dir",
     ":arc-remove-data",
     ":arc-remove-stale-data",
     ":arc-setup",
@@ -108,6 +109,12 @@ executable("arc-create-data") {
 
 executable("arc-handle-upgrade") {
   sources = [ "arc_handle_upgrade_main.cc" ]
+  configs += [ ":target_defaults" ]
+  deps = [ ":libarc_setup" ]
+}
+
+executable("arc-prepare-host-generated-dir") {
+  sources = [ "arc_prepare_host_generated_dir_main.cc" ]
   configs += [ ":target_defaults" ]
   deps = [ ":libarc_setup" ]
 }

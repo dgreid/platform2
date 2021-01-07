@@ -67,6 +67,7 @@ enum class Mode {
   ONETIME_STOP,
 
   PRE_CHROOT,
+  PREPARE_HOST_GENERATED_DIR,
   APPLY_PER_BOARD_CONFIG,  // for ARCVM
   CREATE_DATA,             // for ARCVM
   REMOVE_DATA,
@@ -359,6 +360,9 @@ class ArcSetup {
 
   // Called when arc-setup is called with --mode=pre-chroot.
   void OnPreChroot();
+
+  // Called when arc-prepare-host-generated-dir is executed.
+  void OnPrepareHostGeneratedDir();
 
   // Called when arc-apply-per-board-config is executed.
   void OnApplyPerBoardConfig();

@@ -49,6 +49,7 @@
 #include <metrics/bootstat.h>
 #include <metrics/metrics_library.h>
 
+#include "arc/setup/arc_property_util.h"
 #include "arc/setup/art_container.h"
 
 #define EXIT_IF(f)                            \
@@ -149,6 +150,12 @@ constexpr char kSystemLibArm64DirectoryRelative[] = "system/lib64/arm64";
 constexpr char kSystemImage[] = "/opt/google/containers/android/system.raw.img";
 constexpr char kUsbDevicesDirectory[] = "/dev/bus/usb";
 constexpr char kZygotePreloadDoneFile[] = ".preload_done";
+
+constexpr const char kPropertyFilesPathVm[] = "/usr/share/arcvm/properties";
+constexpr const char kPropertyFilesPath[] = "/usr/share/arc/properties";
+constexpr const char kGeneratedPropertyFilesPathVm[] =
+    "/run/arcvm/host_generated";
+constexpr const char kGeneratedPropertyFilesPath[] = "/run/arc/host_generated";
 
 // Names for possible binfmt_misc entries.
 constexpr const char* kBinFmtMiscEntryNames[] = {"arm_dyn", "arm_exe",
@@ -485,6 +492,7 @@ bool IsChromeOSUserAvailable(Mode mode) {
     case Mode::REMOVE_STALE_DATA:
     case Mode::HANDLE_UPGRADE:
       return true;
+    case Mode::PREPARE_HOST_GENERATED_DIR:
     case Mode::APPLY_PER_BOARD_CONFIG:
     case Mode::SETUP:
     case Mode::STOP:
@@ -616,7 +624,8 @@ ArcSetup::ArcSetup(Mode mode, const base::FilePath& config_json)
       arc_mounter_(GetDefaultMounter()),
       arc_paths_(ArcPaths::Create(mode_, config_)),
       arc_setup_metrics_(std::make_unique<ArcSetupMetrics>()) {
-  CHECK(mode == Mode::APPLY_PER_BOARD_CONFIG || mode == Mode::CREATE_DATA ||
+  CHECK(mode == Mode::PREPARE_HOST_GENERATED_DIR ||
+        mode == Mode::APPLY_PER_BOARD_CONFIG || mode == Mode::CREATE_DATA ||
         mode == Mode::REMOVE_DATA || mode == Mode::REMOVE_STALE_DATA ||
         mode == Mode::HANDLE_UPGRADE || !config_json.empty());
 }
@@ -2294,6 +2303,31 @@ void ArcSetup::OnRemoveStaleData() {
   }
 }
 
+void ArcSetup::OnPrepareHostGeneratedDir() {
+  const bool add_native_bridge_64bit_support =
+      config_.GetBoolOrDie("ADD_NATIVE_BRIDGE_64BIT_SUPPORT");
+  const bool is_arcvm = config_.GetBoolOrDie("IS_ARCVM");
+
+  const base::FilePath property_files_source_dir(
+      base::FilePath(is_arcvm ? kPropertyFilesPathVm : kPropertyFilesPath));
+  const base::FilePath property_files_dest_path(
+      is_arcvm ? base::FilePath(kGeneratedPropertyFilesPathVm)
+                     .Append("combined.prop")
+               : base::FilePath(kGeneratedPropertyFilesPath));
+
+  EXIT_IF(!ExpandPropertyFiles(
+      property_files_source_dir, property_files_dest_path,
+      /*single_file=*/is_arcvm, add_native_bridge_64bit_support));
+
+  if (!is_arcvm)
+    return;
+
+  // For ARCVM, the first stage fstab file needs to be generated.
+  EXIT_IF(!GenerateFirstStageFstab(
+      property_files_dest_path,
+      base::FilePath(kGeneratedPropertyFilesPathVm).Append("fstab")));
+}
+
 void ArcSetup::OnApplyPerBoardConfig() {
   ApplyPerBoardConfigurationsInternal(base::FilePath(kArcVmPerBoardConfigPath));
   SetUpCameraProperty(base::FilePath(kBuildPropFileVm));
@@ -2412,6 +2446,9 @@ void ArcSetup::Run() {
       break;
     case Mode::PRE_CHROOT:
       OnPreChroot();
+      break;
+    case Mode::PREPARE_HOST_GENERATED_DIR:
+      OnPrepareHostGeneratedDir();
       break;
     case Mode::APPLY_PER_BOARD_CONFIG:
       OnApplyPerBoardConfig();
