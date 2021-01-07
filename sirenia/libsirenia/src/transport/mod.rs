@@ -483,6 +483,10 @@ impl PartialEq for PipeTransportState {
     }
 }
 
+/// # Safety
+///
+/// Safe if called from an Only. Needs to be guaranteed to be only called once
+/// from a process.
 pub unsafe fn create_transport_from_default_fds() -> Result<Transport> {
     let (r, w): (RawFd, RawFd) = (DEFAULT_CONNECTION_R_FD, DEFAULT_CONNECTION_W_FD);
     let id = (r, w);

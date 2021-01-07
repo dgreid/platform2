@@ -27,6 +27,8 @@ pub enum Error {
     InvalidIdForStorage(String),
     #[error("failed to cast data from '{from}' to '{to}'")]
     CastData { from: String, to: String },
+    // TODO: We may want to change this to not have an argument since it is not
+    // used anyways
     #[error("failed to read data")]
     ReadData(Option<Box<dyn StdError>>),
     #[error("id not written yet")]

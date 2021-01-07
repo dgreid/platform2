@@ -17,6 +17,15 @@ pub struct AppInfo {
     pub port_number: u32,
 }
 
+/// Definition for the rpc between TEEs and Trichechus
+#[sirenia_rpc]
+pub trait TEEStorage {
+    type Error;
+
+    fn read_data(&self, id: String) -> StdResult<Vec<u8>, Self::Error>;
+    fn write_data(&self, id: String, data: Vec<u8>) -> StdResult<(), Self::Error>;
+}
+
 #[sirenia_rpc]
 pub trait Trichechus {
     type Error;
