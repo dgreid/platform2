@@ -143,11 +143,15 @@ void PortManager::RunModeEntry(int port_num) {
     return;
   }
 
-  if (!port->IsPartnerDiscoveryComplete() ||
-      !port->IsCableDiscoveryComplete()) {
-    LOG(WARNING)
-        << "Can't switch modes Partner/Cable discovery not complete for port "
-        << port_num;
+  if (!port->IsPartnerDiscoveryComplete()) {
+    LOG(INFO) << "Can't enter mode; partner discovery not complete for port "
+              << port_num;
+    return;
+  }
+
+  if (!port->IsCableDiscoveryComplete()) {
+    LOG(INFO) << "Can't enter mode; cable discovery not complete for port "
+              << port_num;
     return;
   }
 
