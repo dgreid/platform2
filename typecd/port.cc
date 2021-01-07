@@ -13,7 +13,7 @@
 
 namespace {
 
-constexpr char kDataRoleDRPRegex[] = R"(.*\[(\w+)\].*)";
+constexpr char kDataRoleDRPRegex[] = R"(\[(\w+)\])";
 constexpr uint16_t kDPAltModeSID = 0xff01;
 constexpr uint16_t kTBTAltModeVID = 0x8087;
 
@@ -130,7 +130,7 @@ std::string Port::GetDataRole() {
 
   // First check for a dual role port, in which case the current role is in
   // box-brackets. For example: [host] device
-  if (!RE2::FullMatch(sysfs_str, kDataRoleDRPRegex, &data_role)) {
+  if (!RE2::PartialMatch(sysfs_str, kDataRoleDRPRegex, &data_role)) {
     LOG(INFO)
         << "Couldn't determine role, assuming DRP(Dual Role Port) for port "
         << port_num_;
