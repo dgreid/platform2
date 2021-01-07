@@ -45,8 +45,10 @@ void PortManager::OnPartnerAddedOrRemoved(const base::FilePath& path,
   auto port = it->second.get();
   if (added) {
     port->AddPartner(path);
+    RunModeEntry(port_num);
   } else {
     port->RemovePartner();
+    port->SetCurrentMode(TYPEC_MODE_NONE);
   }
 }
 
@@ -63,6 +65,8 @@ void PortManager::OnPartnerAltModeAddedOrRemoved(const base::FilePath& path,
 
   auto port = it->second.get();
   port->AddRemovePartnerAltMode(path, added);
+  if (added)
+    RunModeEntry(port_num);
 }
 
 void PortManager::OnCableAddedOrRemoved(const base::FilePath& path,
@@ -93,6 +97,7 @@ void PortManager::OnCablePlugAdded(const base::FilePath& path, int port_num) {
 
   auto port = it->second.get();
   port->AddCablePlug(path);
+  RunModeEntry(port_num);
 }
 
 void PortManager::OnCableAltModeAdded(const base::FilePath& path,
@@ -106,6 +111,7 @@ void PortManager::OnCableAltModeAdded(const base::FilePath& path,
 
   auto port = it->second.get();
   port->AddCableAltMode(path);
+  RunModeEntry(port_num);
 }
 
 void PortManager::OnPartnerChanged(int port_num) {
@@ -118,6 +124,7 @@ void PortManager::OnPartnerChanged(int port_num) {
 
   auto port = it->second.get();
   port->PartnerChanged();
+  RunModeEntry(port_num);
 }
 
 void PortManager::RunModeEntry(int port_num) {
@@ -155,22 +162,43 @@ void PortManager::RunModeEntry(int port_num) {
     return;
   }
 
+  if (port->GetCurrentMode() != TYPEC_MODE_NONE) {
+    LOG(INFO) << "Mode entry already executed for port " << port_num
+              << ", mode: " << port->GetCurrentMode();
+    return;
+  }
+
   // If the host supports USB4 and we can enter USB4 in this partner, do so.
   if (port->CanEnterUSB4()) {
-    if (!ec_util_->EnterMode(port_num, TYPEC_MODE_USB4))
+    if (ec_util_->EnterMode(port_num, TYPEC_MODE_USB4)) {
+      port->SetCurrentMode(TYPEC_MODE_USB4);
+      LOG(INFO) << "Entered USB4 mode on port " << port_num;
+    } else {
       LOG(ERROR) << "Attempt to call Enter USB4 failed for port " << port_num;
+    }
+
     return;
   }
 
   if (port->CanEnterTBTCompatibilityMode()) {
-    if (!ec_util_->EnterMode(port_num, TYPEC_MODE_TBT))
+    if (ec_util_->EnterMode(port_num, TYPEC_MODE_TBT)) {
+      port->SetCurrentMode(TYPEC_MODE_TBT);
+      LOG(INFO) << "Entered TBT compat mode on port " << port_num;
+    } else {
       LOG(ERROR) << "Attempt to call Enter TBT failed for port " << port_num;
+    }
+
     return;
   }
 
   if (port->CanEnterDPAltMode()) {
-    if (!ec_util_->EnterMode(port_num, TYPEC_MODE_DP))
+    if (ec_util_->EnterMode(port_num, TYPEC_MODE_DP)) {
+      port->SetCurrentMode(TYPEC_MODE_DP);
+      LOG(INFO) << "Entered DP mode on port " << port_num;
+    } else {
       LOG(ERROR) << "Attempt to call Enter DP failed for port " << port_num;
+    }
+
     return;
   }
 }
