@@ -16,7 +16,6 @@
 #include <base/strings/string_split.h>
 #include <base/strings/string_util.h>
 #include <base/strings/stringprintf.h>
-#include <base/system/sys_info.h>
 #include <chromeos-config/libcros_config/cros_config.h>
 
 namespace arc {
@@ -140,7 +139,7 @@ std::string ComputeOEMKey(brillo::CrosConfigInterface* config,
 
   // Check to see if region code is in the list of regions that should be
   // included in the property.
-  std::vector<std::string> region_vector =
+  const std::vector<std::string> region_vector =
       base::SplitString(regions, ",", base::WhitespaceHandling::TRIM_WHITESPACE,
                         base::SplitResult::SPLIT_WANT_NONEMPTY);
   for (const auto& region : region_vector) {
@@ -291,23 +290,22 @@ bool ExpandPropertyFile(const base::FilePath& input,
   std::string content;
   std::string expanded;
   if (!base::ReadFileToString(input, &content)) {
-    if (base::SysInfo::IsRunningOnChromeOS())
-      PLOG(ERROR) << "Failed to read " << input;
+    PLOG(ERROR) << "Failed to read " << input;
     return false;
   }
   if (!ExpandPropertyContents(content, config, &expanded,
                               /*filter_non_ro_props=*/append,
                               add_native_bridge_64bit_support,
-                              append_dalvik_isa, partition_name))
+                              append_dalvik_isa, partition_name)) {
     return false;
+  }
   if (append && base::PathExists(output)) {
     if (!base::AppendToFile(output, expanded.data(), expanded.size())) {
       PLOG(ERROR) << "Failed to append to " << output;
       return false;
     }
   } else {
-    if (base::WriteFile(output, expanded.data(), expanded.size()) !=
-        static_cast<int>(expanded.size())) {
+    if (!base::WriteFile(output, expanded)) {
       PLOG(ERROR) << "Failed to write to " << output;
       return false;
     }
@@ -368,16 +366,16 @@ bool ExpandPropertyFiles(const base::FilePath& source_path,
     // Search for ro.<partition_name>product.cpu.abilist* properties.
     const char* partition_name = std::get<3>(tuple);
 
-    if (is_optional && !base::PathExists(source_path.Append(file)))
+    const base::FilePath source_file = source_path.Append(file);
+    if (is_optional && !base::PathExists(source_file))
       continue;
 
     if (!ExpandPropertyFile(
-            source_path.Append(file),
-            single_file ? dest_path : dest_path.Append(file), &config,
+            source_file, single_file ? dest_path : dest_path.Append(file),
+            &config,
             /*append=*/single_file, add_native_bridge_64bit_support,
             append_dalvik_isa, partition_name)) {
-      if (base::SysInfo::IsRunningOnChromeOS())
-        LOG(ERROR) << "Failed to expand " << source_path.Append(file);
+      LOG(ERROR) << "Failed to expand " << source_file;
       return false;
     }
   }
