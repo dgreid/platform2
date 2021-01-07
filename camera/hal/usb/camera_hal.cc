@@ -9,10 +9,12 @@
 #include <utility>
 
 #include <base/bind.h>
+#include <base/files/file_util.h>
 #include <base/strings/string_util.h>
 #include <base/threading/thread_task_runner_handle.h>
 
 #include "cros-camera/common.h"
+#include "cros-camera/constants.h"
 #include "cros-camera/udev_watcher.h"
 #include "hal/usb/camera_characteristics.h"
 #include "hal/usb/common_types.h"
@@ -272,20 +274,28 @@ int CameraHal::Init() {
     num_builtin_cameras_ = 1;
   }
 
+  bool enough_camera_probed = true;
   if (cros_device_config_ != nullptr &&
       cros_device_config_->IsUsbCameraCountAvailable()) {
     if (num_builtin_cameras_ != cros_device_config_->GetUsbCameraCount()) {
       LOGF(ERROR) << "Expected " << cros_device_config_->GetUsbCameraCount()
                   << " cameras from Chrome OS config, found "
                   << num_builtin_cameras_;
-      return -ENODEV;
+      enough_camera_probed = false;
     }
-  } else {
+  } else if (CameraCharacteristics::ConfigFileExists() &&
+             num_builtin_cameras_ == 0) {
     // TODO(shik): possible race here. We may have 2 built-in cameras but just
     // detect one.
-    if (CameraCharacteristics::ConfigFileExists() &&
-        num_builtin_cameras_ == 0) {
-      LOGF(ERROR) << "Expect to find at least one camera if config file exists";
+    LOGF(ERROR) << "Expect to find at least one camera if config file exists";
+    enough_camera_probed = false;
+  }
+  if (!enough_camera_probed) {
+    if (base::PathExists(
+            base::FilePath(constants::kForceStartCrosCameraPath))) {
+      LOGF(WARNING) << "Force starting cros-camera: Ignore missing built-in "
+                    << "camera error to allow external camera usage";
+    } else {
       return -ENODEV;
     }
   }

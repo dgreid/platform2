@@ -19,6 +19,10 @@ const char kCrosCameraTestConfigPathString[] =
     "/var/cache/camera/test_config.json";
 const char kCrosCameraConfigPathString[] = "/run/camera/camera_config.json";
 
+// Special file to force start cros-camera service regardless of individual
+// camera HAL initialization failures.
+const char kForceStartCrosCameraPath[] = "/run/camera/force_start_cros_camera";
+
 // ------Configuration for |kCrosCameraTestConfigPathString|-------
 // boolean value used in test mode for forcing hardware jpeg encode/decode in
 // USB HAL (won't fallback to SW encode/decode).

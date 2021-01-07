@@ -15,6 +15,7 @@
 
 #include <base/bind.h>
 #include <base/bind_helpers.h>
+#include <base/files/file_util.h>
 #include <base/logging.h>
 #include <base/threading/thread_task_runner_handle.h>
 #include <camera/camera_metadata.h>
@@ -23,6 +24,7 @@
 #include "common/utils/cros_camera_mojo_utils.h"
 #include "cros-camera/camera_metrics.h"
 #include "cros-camera/common.h"
+#include "cros-camera/constants.h"
 #include "cros-camera/future.h"
 #include "hal_adapter/camera_device_adapter.h"
 #include "hal_adapter/camera_module_callbacks_associated_delegate.h"
@@ -527,17 +529,28 @@ void CameraHalAdapter::StartOnThread(base::Callback<void(bool)> callback) {
     LOGF(ERROR) << "Failed to set vendor ops to camera metadata";
   }
 
-  for (const auto& m : camera_modules_) {
-    if (m->init) {
-      int ret = m->init();
+  const bool force_start =
+      base::PathExists(base::FilePath(constants::kForceStartCrosCameraPath));
+  for (auto iter = camera_modules_.begin(); iter != camera_modules_.end();) {
+    if ((*iter)->init) {
+      int ret = (*iter)->init();
       if (ret != 0) {
+        if (force_start) {
+          LOGF(WARNING) << "Disabled camera module "
+                        << std::quoted((*iter)->common.name)
+                        << " to force start cros-camera";
+          iter = camera_modules_.erase(iter);
+          continue;
+        }
         LOGF(ERROR) << "Failed to init camera module "
-                    << std::quoted(m->common.name);
+                    << std::quoted((*iter)->common.name);
         callback.Run(false);
         return;
       }
     }
+    iter++;
   }
+  CHECK_GT(camera_modules_.size(), 0);
 
   std::vector<std::tuple<int, int, int>> cameras;
   std::vector<std::vector<bool>> has_flash_unit(camera_modules_.size());
