@@ -13,6 +13,7 @@
 #include <gtest/gtest_prod.h>
 
 #include "typecd/cable.h"
+#include "typecd/ec_util.h"
 #include "typecd/partner.h"
 
 namespace typecd {
@@ -38,6 +39,10 @@ class Port {
   void AddCableAltMode(const base::FilePath& path);
 
   void PartnerChanged();
+
+  void SetCurrentMode(TypeCMode mode) { current_mode_ = mode; }
+
+  TypeCMode GetCurrentMode() { return current_mode_; }
 
   // Read and return the current port data role from sysfs.
   // Returns either "host" or "device" on success, empty string on failure.
@@ -97,6 +102,7 @@ class Port {
   int port_num_;
   std::unique_ptr<Cable> cable_;
   std::unique_ptr<Partner> partner_;
+  TypeCMode current_mode_;
 };
 
 }  // namespace typecd

@@ -10,6 +10,7 @@ namespace typecd {
 // List of possible Type C Operating modes. These are selected by typecd based
 // on connected peripheral(s) and device policy.
 enum TypeCMode {
+  TYPEC_MODE_NONE = -1,
   TYPEC_MODE_DP = 0,
   TYPEC_MODE_TBT,
   TYPEC_MODE_USB4,
