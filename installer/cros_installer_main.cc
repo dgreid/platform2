@@ -20,9 +20,7 @@ constexpr char usage[] =
     "   --help\n"
     "   --debug\n"
     "   cros_installer postinst <install_dev> <mount_point> [ args ]\n"
-    "     --bios [ secure | legacy | efi | uboot ]\n"
-    "     --legacy\n"
-    "     --postcommit\n";
+    "     --bios [ secure | legacy | efi | uboot ]\n";
 
 int showHelp() {
   printf("%s", usage);
@@ -32,9 +30,7 @@ int showHelp() {
 int main(int argc, char** argv) {
   struct option long_options[] = {
       {"bios", required_argument, NULL, 'b'},
-      {"debug", no_argument, NULL, 'd'},
       {"help", no_argument, NULL, 'h'},
-      {"postcommit", no_argument, NULL, 'p'},
       {NULL, 0, NULL, 0},
   };
 
@@ -63,17 +59,6 @@ int main(int argc, char** argv) {
         if (!StrToBiosType(optarg, &bios_type))
           return 1;
         break;
-
-      case 'd':
-        // I don't think this is used, but older update engines might
-        // in some cases. So, it's present but ignored.
-        break;
-
-      case 'p':
-        // This is an outdated argument. When we receive it, we just
-        // exit with success right away.
-        LOG(INFO) << "Received --postcommit. This is a successful no-op.";
-        return 0;
 
       default:
         LOG(INFO) << "Unknown argument " << c
