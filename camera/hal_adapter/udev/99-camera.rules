@@ -7,5 +7,5 @@ ACTION=="add", SUBSYSTEM=="video4linux", ENV{ID_USB_DRIVER}=="uvcvideo", \
   RUN+="/sbin/initctl emit --no-wait camera-device-added"
 
 # New MIPI camera sensor detected.
-ACTION=="add", SUBSYSTEM=="video4linux", SUBSYSTEM="i2c", \
+ACTION=="add", SUBSYSTEM=="video4linux", SUBSYSTEMS=="i2c", \
   RUN+="/sbin/initctl emit --no-wait camera-device-added"
