@@ -286,6 +286,10 @@ void CameraHalServerImpl::ExitOnMainThread(int exit_status) {
                                               std::move(delete_ipc_bridge));
   future->Wait(-1);
 
+  // To make sure all the devices are properly closed before triggering the exit
+  // handlers on Camera HALs side, we explicitly reset the CameraHalAdapter.
+  camera_hal_adapter_.reset();
+
   exit(exit_status);
 }
 
