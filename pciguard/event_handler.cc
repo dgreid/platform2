@@ -9,7 +9,9 @@ namespace pciguard {
 
 // TODO(b/176184431): Don't assume NO_USER_LOGGED_IN on init.
 EventHandler::EventHandler()
-    : state_(NO_USER_LOGGED_IN), authorizer_(nullptr) {}
+    : state_(NO_USER_LOGGED_IN),
+      authorizer_(nullptr),
+      user_permission_(false) {}
 
 void EventHandler::LogEvent(const char ev[]) {
   const char* states[] = {
@@ -18,7 +20,9 @@ void EventHandler::LogEvent(const char ev[]) {
       [USER_LOGGED_IN_SCREEN_UNLOCKED] = "USER_LOGGED_IN_SCREEN_UNLOCKED",
   };
 
-  LOG(INFO) << "CurrentState= " << states[state_] << ", received event=" << ev;
+  LOG(INFO) << "CurrentState=" << states[state_]
+            << ", UserPermission=" << user_permission_
+            << ", received event=" << ev;
 }
 
 // In a multiuser login scenario, session manager sends session-starting once
@@ -26,24 +30,27 @@ void EventHandler::LogEvent(const char ev[]) {
 // multiple times before a single call to OnUserLogout() logs out all the users.
 void EventHandler::OnUserLogin() {
   DCHECK(!authorizer_);
-  bool user_permission = UserPermissionOK();
 
-  std::lock_guard<std::mutex> lock(lock_);
-  LogEvent("User-Login");
-  LOG(INFO) << "User-Permission = " << user_permission;
+  bool valid_user_login = false;
+  {
+    std::lock_guard<std::mutex> lock(lock_);
+    LogEvent("User-Login");
 
-  // It is important to have this state check, whenever we go from a more
-  // restrictive state to a less restrictive state to ensure that we always
-  // err on the cautious side should the events arrive out of order or are
-  // processed out of order.
-  if (state_ == NO_USER_LOGGED_IN) {
-    state_ = USER_LOGGED_IN_SCREEN_UNLOCKED;
-    if (user_permission) {
-      authorizer_ = std::make_unique<Authorizer>();
-      authorizer_->SubmitJob(Authorizer::AUTHORIZE_ALL_DEVICES,
-                             base::FilePath(""));
+    // It is important to have this state check, whenever we go from a more
+    // restrictive state to a less restrictive state to ensure that we always
+    // err on the cautious side should the events arrive out of order or are
+    // processed out of order.
+    if (state_ == NO_USER_LOGGED_IN) {
+      state_ = USER_LOGGED_IN_SCREEN_UNLOCKED;
+      valid_user_login = true;
     }
   }
+
+  // TODO(b/172397647): Once chrome flag implementation is complete, that
+  // allows the user to flip the permission for external PCI devices, there
+  // shall be no need for this.
+  if (valid_user_login)
+    OnUserPermissionChanged(true);
 }
 
 void EventHandler::OnUserLogout() {
@@ -53,6 +60,7 @@ void EventHandler::OnUserLogout() {
   // Don't check for current state when going to a super restrictive state.
   state_ = NO_USER_LOGGED_IN;
   authorizer_.reset();
+  user_permission_ = false;
 
   DeauthorizeAllDevices();
 }
@@ -73,11 +81,9 @@ void EventHandler::OnScreenLocked() {
 
 void EventHandler::OnScreenUnlocked() {
   DCHECK(!authorizer_);
-  bool user_permission = UserPermissionOK();
 
   std::lock_guard<std::mutex> lock(lock_);
   LogEvent("Screen-Unlocked");
-  LOG(INFO) << "User-Permission = " << user_permission;
 
   // It is important to have this state check, whenever we go from a more
   // restrictive state to a less restrictive state to ensure that we always
@@ -85,7 +91,7 @@ void EventHandler::OnScreenUnlocked() {
   // of order.
   if (state_ == USER_LOGGED_IN_BUT_SCREEN_LOCKED) {
     state_ = USER_LOGGED_IN_SCREEN_UNLOCKED;
-    if (user_permission) {
+    if (user_permission_) {
       authorizer_ = std::make_unique<Authorizer>();
       authorizer_->SubmitJob(Authorizer::AUTHORIZE_ALL_DEVICES,
                              base::FilePath(""));
@@ -102,18 +108,22 @@ void EventHandler::OnNewThunderboltDev(base::FilePath path) {
     authorizer_->SubmitJob(Authorizer::AUTHORIZE_1_DEVICE, path);
 }
 
-void EventHandler::OnUserPermissionChanged() {
-  bool user_permission = UserPermissionOK();
-
+void EventHandler::OnUserPermissionChanged(bool new_permission) {
   std::lock_guard<std::mutex> lock(lock_);
 
-  if (user_permission) {
+  if (new_permission == user_permission_) {
+    LOG(INFO) << "UserPermissionChange notification, but no change. Ignoring.";
+    return;
+  }
+
+  if (new_permission) {
     LogEvent("User-Permission-Allowed");
     // It is important to have this state check, whenever we go from a more
     // restrictive state to a less restrictive state to ensure that we always
     // err on the cautious side should the events arrive or are processed out
     // of order.
     if (state_ == USER_LOGGED_IN_SCREEN_UNLOCKED) {
+      user_permission_ = true;
       if (!authorizer_) {
         authorizer_ = std::make_unique<Authorizer>();
         authorizer_->SubmitJob(Authorizer::AUTHORIZE_ALL_DEVICES,
@@ -125,13 +135,8 @@ void EventHandler::OnUserPermissionChanged() {
     // No state check needed.
     authorizer_.reset();
     DeauthorizeAllDevices();
+    user_permission_ = false;
   }
-}
-
-bool EventHandler::UserPermissionOK() {
-  // TODO(b/172397647): Actually talk to chrome to determine chrome flag value
-  // after chrome flag is implemented.
-  return true;
 }
 
 }  // namespace pciguard

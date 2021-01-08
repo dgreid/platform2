@@ -13,20 +13,24 @@
 
 namespace pciguard {
 
-class Daemon : public brillo::DBusDaemon {
+class Daemon : public brillo::DBusServiceDaemon {
  public:
-  Daemon() = default;
+  Daemon();
   Daemon(const Daemon&) = delete;
   Daemon& operator=(const Daemon&) = delete;
   ~Daemon() = default;
 
  protected:
   int OnInit() override;
+  void RegisterDBusObjectsAsync(
+      brillo::dbus_utils::AsyncEventSequencer* sequencer) override;
+  void HandleUserPermissionChanged(bool ext_pci_allowed);
 
  private:
   std::shared_ptr<EventHandler> event_handler_;
   std::unique_ptr<SessionMonitor> session_monitor_;
   std::unique_ptr<TbtUdevMonitor> tbt_udev_monitor_;
+  std::unique_ptr<brillo::dbus_utils::DBusObject> dbus_object_;
 };
 
 }  // namespace pciguard

@@ -5,22 +5,25 @@
 #include "pciguard/daemon.h"
 #include "pciguard/pciguard_utils.h"
 
+#include <dbus/pciguard/dbus-constants.h>
 #include <sysexits.h>
 
 namespace pciguard {
 
+Daemon::Daemon() : DBusServiceDaemon(kPciguardServiceName) {}
+
 int Daemon::OnInit() {
   LOG(INFO) << "pciguard daemon starting...";
 
-  int exit_code = DBusDaemon::OnInit();
-  if (exit_code != EX_OK)
-    return exit_code;
-
-  exit_code = pciguard::OnInit();
+  int exit_code = pciguard::OnInit();
   if (exit_code != EX_OK)
     return exit_code;
 
   event_handler_ = std::make_shared<EventHandler>();
+
+  exit_code = DBusServiceDaemon::OnInit();
+  if (exit_code != EX_OK)
+    return exit_code;
 
   // Begin monitoring the session events
   session_monitor_ = std::make_unique<SessionMonitor>(bus_, event_handler_);
@@ -33,4 +36,25 @@ int Daemon::OnInit() {
   return EX_OK;
 }
 
+void Daemon::RegisterDBusObjectsAsync(
+    brillo::dbus_utils::AsyncEventSequencer* sequencer) {
+  DCHECK(!dbus_object_);
+  dbus_object_ = std::make_unique<brillo::dbus_utils::DBusObject>(
+      nullptr, bus_, dbus::ObjectPath(kPciguardServicePath));
+
+  brillo::dbus_utils::DBusInterface* dbus_interface =
+      dbus_object_->AddOrGetInterface(kPciguardServiceInterface);
+  CHECK(dbus_interface) << "Couldn't get dbus_interface";
+
+  dbus_interface->AddSimpleMethodHandler(kSetExternalPciDevicesPermissionMethod,
+                                         base::Unretained(this),
+                                         &Daemon::HandleUserPermissionChanged);
+  dbus_object_->RegisterAsync(sequencer->GetHandler(
+      "Failed to register D-Bus object", true /* failure_is_fatal */));
+}
+
+void Daemon::HandleUserPermissionChanged(bool ext_pci_allowed) {
+  DCHECK(event_handler_);
+  event_handler_->OnUserPermissionChanged(ext_pci_allowed);
+}
 }  // namespace pciguard

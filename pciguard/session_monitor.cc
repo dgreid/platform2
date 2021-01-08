@@ -48,10 +48,23 @@ void SessionMonitor::OnScreenIsUnlocked() {
 
 void SessionMonitor::OnSessionStateChanged(const std::string& state) {
   LOG(INFO) << __func__ << "Session state changed, new state = " << state;
-  if (state == "started")
+
+  if (state == "started") {
+    // Ignore Guest sessions.
+    bool is_guest;
+    brillo::ErrorPtr error;
+    proxy_.IsGuestSessionActive(&is_guest, &error);
+    if (error || is_guest) {
+      LOG(INFO) << "Ignoring Guest session (error=" << error
+                << ", is_guest=" << is_guest << ")";
+      return;
+    }
+
     event_handler_->OnUserLogin();
-  else if (state == "stopping")
+
+  } else if (state == "stopping") {
     event_handler_->OnUserLogout();
+  }
 }
 
 }  // namespace pciguard

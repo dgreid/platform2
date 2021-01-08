@@ -27,7 +27,7 @@ class EventHandler {
 
   void OnScreenUnlocked();
 
-  void OnUserPermissionChanged();
+  void OnUserPermissionChanged(bool new_permission);
 
   void OnNewThunderboltDev(base::FilePath path);
 
@@ -43,8 +43,8 @@ class EventHandler {
   // Protects concurrent access to state_ and authorizer_
   std::mutex lock_;
 
-  // Checks for the User Permission from chrome browser
-  bool UserPermissionOK();
+  // User Permission from chrome browser, to allow external PCI devices.
+  bool user_permission_;
 
   // Logs the event
   void LogEvent(const char ev[]);
