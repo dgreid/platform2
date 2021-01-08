@@ -12,6 +12,7 @@ from __future__ import print_function
 
 import os
 import shutil
+import subprocess
 import sys
 
 
@@ -19,8 +20,6 @@ def main(argv):
   if len(argv) > 0:
     sys.exit('Test takes no args!')
   iterations = 1
-  output_to_stdout = ' 2>&1 | tee '
-  python_prefix = 'python3 '
   test_list = ['transfer_touchpad_works']
 
   for test in test_list:
@@ -35,11 +34,9 @@ def main(argv):
       print('ITERATION ' + str(iteration_num) + ' OF ' +
             str(iterations))
       print('==========================================================')
-      cmd = '{0}{1}{2}{3}{4}{5}{6}{7}{8}'.format(python_prefix, test,
-                                                 '.py', output_to_stdout,
-                                                 logs_dir, '/', test,
-                                                 iteration_num, '.log')
-      os.system(cmd)
+      cmd = f'set -o pipefail; python3 "{test}.py" 2>&1 '
+      cmd += f'| tee "{logs_dir}/{test}{iteration_num}.log"'
+      subprocess.check_call(['/bin/bash', '-c', cmd])
 
 if __name__ == '__main__':
   sys.exit(main(sys.argv[1:]))
