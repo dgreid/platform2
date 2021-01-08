@@ -219,24 +219,18 @@ mod test {
     fn integer_decode() {
         let buf: [u8; 8] = [0xef, 0xbe, 0xad, 0xde, 0x0d, 0xf0, 0xad, 0x8b];
 
+        assert_eq!(0xef_u8, WireFormat::decode(&mut Cursor::new(&buf)).unwrap());
+        assert_eq!(0xbeef_u16, u16::decode(&mut Cursor::new(&buf)).unwrap());
+        assert_eq!(0xdeadbeef_u32, u32::decode(&mut Cursor::new(&buf)).unwrap());
         assert_eq!(
-            0xef as u8,
-            WireFormat::decode(&mut Cursor::new(&buf)).unwrap()
-        );
-        assert_eq!(0xbeef as u16, u16::decode(&mut Cursor::new(&buf)).unwrap());
-        assert_eq!(
-            0xdeadbeef as u32,
-            u32::decode(&mut Cursor::new(&buf)).unwrap()
-        );
-        assert_eq!(
-            0x8badf00d_deadbeef as u64,
+            0x8bad_f00d_dead_beef_u64,
             u64::decode(&mut Cursor::new(&buf)).unwrap()
         );
     }
 
     #[test]
     fn integer_encode() {
-        let value: u64 = 0x8badf00d_deadbeef;
+        let value: u64 = 0x8bad_f00d_dead_beef;
         let expected: [u8; 8] = [0xef, 0xbe, 0xad, 0xde, 0x0d, 0xf0, 0xad, 0x8b];
 
         let mut buf = vec![0; 8];
@@ -502,7 +496,7 @@ mod test {
         while long_str.len() < std::u16::MAX as usize {
             long_str.push_str("long");
         }
-        long_str.push_str("!");
+        long_str.push('!');
 
         let count = long_str.len() + mem::size_of::<u16>();
         let mut buf = vec![0; count];
@@ -535,7 +529,7 @@ mod test {
     #[test]
     fn struct_encode() {
         let item = Item {
-            a: 0xdead10cc_00bab10c,
+            a: 0xdead_10cc_00ba_b10c,
             b: String::from("冻住，不许走!"),
             c: vec![359, 492, 8891],
             buf: Data(vec![254, 129, 0, 62, 49, 172]),

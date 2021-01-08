@@ -9,5 +9,5 @@ use crate::protocol::{Tframe, WireFormat};
 pub fn tframe_decode(bytes: &[u8]) {
     let mut cursor = Cursor::new(bytes);
 
-    while let Ok(_) = Tframe::decode(&mut cursor) {}
+    while Tframe::decode(&mut cursor).is_ok() {}
 }
