@@ -34,9 +34,6 @@ See [Typography conventions] to understand what `(outside)`, `(inside)`,
         (inside) $ USE=fpstudy ./build_packages --board=$BOARD
         (inside) $ ./build_image --board=$BOARD --noenable_rootfs_verification \
                    base
-        # TODO(b/175894362): If the following line errors out, you may
-        # need to specify ../build/images/hatch/latest/chromiumos_base_image.bin
-        # instead of $BOARD/latest. Remove this comment when the bug is fixed.
         (inside) $ cros flash usb:// $BOARD/latest
         ```
 
