@@ -15,12 +15,14 @@ pkg_config("target_defaults") {
   pkg_deps = [
     "libbrillo",
     "libchrome",
+    "xkbcommon",
   ]
 }
 
 static_library("libminios") {
   configs += [ ":target_defaults" ]
   sources = [
+    "key_reader.cc",
     "minios.cc",
     "process_manager.cc",
     "screens.cc",
@@ -47,6 +49,9 @@ if (use.test) {
       ":libminios",
       "//common-mk/testrunner:testrunner",
     ]
-    sources = [ "screens_test.cc" ]
+    sources = [
+      "key_reader_test.cc",
+      "screens_test.cc",
+    ]
   }
 }

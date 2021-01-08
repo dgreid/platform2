@@ -4,7 +4,7 @@
 
 #include <gtest/gtest.h>
 
-#include "installer/util/key_reader.h"
+#include "minios/key_reader.h"
 
 class KeyReaderTest : public ::testing::Test {
  public:
