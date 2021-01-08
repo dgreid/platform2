@@ -1,4 +1,4 @@
-// Copyright 2020 The Chromium OS Authors. All rights reserved.
+// Copyright 2021 The Chromium OS Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -10,6 +10,7 @@
 #include <sys/epoll.h>
 #include <unistd.h>
 
+#include <algorithm>
 #include <utility>
 #include <vector>
 
@@ -27,6 +28,9 @@ constexpr char kXkbPathName[] = "/usr/share/X11/xkb";
 
 // Offset between xkb layout codes and ev key codes.
 constexpr int kXkbOffset = 8;
+
+constexpr int kFdsMax = 10;
+constexpr int kKeyMax = 200;
 
 // Determines if the given |bit| is set in the |bitmask| array.
 bool TestBit(const int bit, const uint8_t* bitmask) {
@@ -60,12 +64,29 @@ bool IsKeyboardDevice(const int fd) {
 
 KeyReader::~KeyReader() {
   // Release xkb references.
-  xkb_state_unref(state_);
-  xkb_keymap_unref(keymap_);
-  xkb_context_unref(ctx_);
+  if (ctx_ != nullptr) {
+    xkb_state_unref(state_);
+    xkb_keymap_unref(keymap_);
+    xkb_context_unref(ctx_);
+  }
 }
 
-bool KeyReader::KeyEventStart() {
+bool KeyReader::SupportsAllKeys(const int fd) {
+  uint8_t key_bitmask[KEY_MAX / 8 + 1];
+  if (ioctl(fd, EVIOCGBIT(EV_KEY, sizeof(key_bitmask)), key_bitmask) == -1) {
+    PLOG(ERROR) << "Failed to ioctl to determine supported key events";
+    return false;
+  }
+
+  for (const auto& key : keys_) {
+    if (!TestBit(key, key_bitmask))
+      return false;
+  }
+  return true;
+}
+
+bool KeyReader::GetValidFds(bool check_supported_keys) {
+  fds_.clear();
   base::FileEnumerator file_enumerator(base::FilePath(kDevInputEvent), true,
                                        base::FileEnumerator::FILES,
                                        FILE_PATH_LITERAL(kEventDevName));
@@ -74,22 +95,50 @@ bool KeyReader::KeyEventStart() {
        dir_path = file_enumerator.Next()) {
     base::ScopedFD fd(open(dir_path.value().c_str(), O_RDONLY | O_CLOEXEC));
     if (!fd.is_valid()) {
-      PLOG(INFO) << "Failed to open event device: " << fd.get();
       continue;
     }
 
     if ((include_usb_ || !IsUsbDevice(fd.get())) &&
         IsKeyboardDevice(fd.get())) {
-      fds_.push_back(std::move(fd));
+      if (!check_supported_keys || SupportsAllKeys(fd.get())) {
+        fds_.push_back(std::move(fd));
+      }
     }
   }
+  return !fds_.empty();
+}
 
-  // At least one valid keyboard.
-  if (!fds_.empty()) {
-    return GetInput();
+bool KeyReader::EpollCreate(base::ScopedFD* epfd) {
+  *epfd = base::ScopedFD(epoll_create1(EPOLL_CLOEXEC));
+  if (epfd->get() < 0) {
+    PLOG(ERROR) << "Epoll_create failed";
+    return false;
   }
 
-  return false;
+  for (int i = 0; i < fds_.size(); ++i) {
+    struct epoll_event ep_event {
+      .events = EPOLLIN, .data.u32 = static_cast<uint32_t>(i),
+    };
+    if (epoll_ctl(epfd->get(), EPOLL_CTL_ADD, fds_[i].get(), &ep_event) < 0) {
+      PLOG(ERROR) << "Epoll_ctl failed";
+      return false;
+    }
+  }
+  return true;
+}
+
+bool KeyReader::GetEpEvent(int epfd, struct input_event* ev, int* index) {
+  struct epoll_event ep_event;
+  if (epoll_wait(epfd, &ep_event, 1, -1) <= 0) {
+    PLOG(ERROR) << "epoll_wait failed";
+    return false;
+  }
+  *index = ep_event.data.u32;
+  if (read(fds_[*index].get(), ev, sizeof(*ev)) != sizeof(*ev)) {
+    PLOG(ERROR) << "Could not read event";
+    return false;
+  }
+  return true;
 }
 
 bool KeyReader::SetKeyboardContext() {
@@ -120,20 +169,20 @@ bool KeyReader::SetKeyboardContext() {
 }
 
 bool KeyReader::GetInput() {
-  int epfd = epoll_create1(EPOLL_CLOEXEC);
-  if (epfd < 0) {
-    PLOG(ERROR) << "Epoll_create failed";
+  if (use_only_evwaitkey_) {
+    LOG(ERROR) << "Please construct the class with include_usb, print_length, "
+                  "and country_code in order to correctly use this function.";
     return false;
   }
 
-  for (int i = 0; i < fds_.size(); ++i) {
-    struct epoll_event ep_event;
-    ep_event.data.u32 = i;
-    ep_event.events = EPOLLIN;
-    if (epoll_ctl(epfd, EPOLL_CTL_ADD, fds_[i].get(), &ep_event) < 0) {
-      PLOG(ERROR) << "Epoll_ctl failed";
-      return false;
-    }
+  if (!GetValidFds(/*check_supported_keys=*/false)) {
+    LOG(ERROR) << "No valid input devices found.";
+    return false;
+  }
+
+  base::ScopedFD epfd;
+  if (!EpollCreate(&epfd)) {
+    return false;
   }
 
   if (!SetKeyboardContext()) {
@@ -141,22 +190,16 @@ bool KeyReader::GetInput() {
   }
 
   while (true) {
-    struct epoll_event ep_event;
-    if (epoll_wait(epfd, &ep_event, 1, -1) <= 0) {
-      PLOG(ERROR) << "epoll_wait failed";
-      return false;
-    }
     struct input_event ev;
-    int rd = read(fds_[ep_event.data.u32].get(), &ev, sizeof(ev));
-    if (rd != sizeof(ev)) {
-      PLOG(ERROR) << "Could not read event";
+    int index = 0;
+    if (!GetEpEvent(epfd.get(), &ev, &index)) {
+      LOG(ERROR) << "Could not get event";
       return false;
     }
 
     if (ev.type != EV_KEY || ev.code > KEY_MAX) {
       continue;
     }
-
     // Take in ev event and add to user input as appropriate.
     // Returns false to exit.
     if (!GetChar(ev)) {
@@ -224,6 +267,48 @@ bool KeyReader::GetChar(const struct input_event& ev) {
     }
   }
   return true;
+}
+
+bool KeyReader::EvWaitForKeys(const std::vector<int>& keys, int* key_pressed) {
+  if (keys.empty()) {
+    LOG(ERROR) << "No keys given.";
+    return false;
+  }
+  keys_ = keys;
+
+  if (!GetValidFds(/*check_supported_keys=*/true)) {
+    LOG(ERROR) << "No valid input devices found.";
+    return false;
+  }
+
+  base::ScopedFD epfd;
+  if (!EpollCreate(&epfd)) {
+    return false;
+  }
+
+  bool key_states[kFdsMax][kKeyMax] = {{}};
+
+  while (true) {
+    struct input_event ev;
+    int index = 0;
+    if (!GetEpEvent(epfd.get(), &ev, &index)) {
+      LOG(ERROR) << "Could not get event.";
+      return false;
+    }
+
+    if (ev.type != EV_KEY || ev.code > KEY_MAX) {
+      continue;
+    }
+
+    if (std::find(keys_.begin(), keys_.end(), ev.code) != keys_.end()) {
+      if (ev.value == 0 && key_states[index][ev.code]) {
+        *key_pressed = ev.code;
+        return true;
+      } else if (ev.value == 1) {
+        key_states[index][ev.code] = true;
+      }
+    }
+  }
 }
 
 std::string KeyReader::GetUserInputForTest() {

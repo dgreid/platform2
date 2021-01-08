@@ -2,14 +2,26 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include "minios/key_reader.h"
+
+using testing::_;
 
 class KeyReaderTest : public ::testing::Test {
  public:
   void SetUp() override { ev_.value = 0; }
   struct input_event ev_;
+};
+
+class MockKeyReader : public key_reader::KeyReader {
+ public:
+  MockKeyReader() : KeyReader(true) {}
+  explicit MockKeyReader(bool include_usb) : KeyReader(include_usb) {}
+  MOCK_METHOD(bool, GetEpEvent, (int epfd, struct input_event* ev, int* index));
+  MOCK_METHOD(bool, GetValidFds, (bool check_supported_keys));
+  MOCK_METHOD(bool, EpollCreate, (base::ScopedFD * epfd));
 };
 
 TEST_F(KeyReaderTest, BasicKeyTest) {
@@ -58,7 +70,6 @@ TEST_F(KeyReaderTest, BasicKeyTest) {
 }
 
 TEST_F(KeyReaderTest, PrintableKeyTest) {
-  //  key_reader.SetKeyboardContext("us");
   key_reader::KeyReader key_reader(true, false, "us");
   EXPECT_TRUE(key_reader.SetKeyboardContext());
 
@@ -279,4 +290,77 @@ TEST_F(KeyReaderTest, JapaneseKeyTest) {
   ev_.value = 0;
   key_reader.GetChar(ev_);
   EXPECT_EQ("qw#$W", key_reader.GetUserInputForTest());
+}
+
+TEST_F(KeyReaderTest, EvWaitKeyEnter) {
+  MockKeyReader key_reader;
+
+  testing::InSequence s;
+  EXPECT_CALL(key_reader, GetValidFds(true)).WillOnce(testing::Return(true));
+  EXPECT_CALL(key_reader, EpollCreate(_)).WillOnce(testing::Return(true));
+
+  // Records both key press and key release before returning. Other calls are
+  // ignored
+  struct input_event ev_press {
+    .type = EV_KEY, .code = 28, .value = 1,
+  };
+  EXPECT_CALL(key_reader, GetEpEvent(_, _, _))
+      .WillOnce(
+          DoAll(testing::SetArgPointee<1>(ev_press), testing::Return(true)));
+
+  // Other key presses are ignored.
+  ev_press.code = 45;
+  EXPECT_CALL(key_reader, GetEpEvent(_, _, _))
+      .WillOnce(
+          DoAll(testing::SetArgPointee<1>(ev_press), testing::Return(true)));
+
+  // Non EV_KEY calls are ignored
+  struct input_event ev_input {
+    .type = EV_LED, .code = 28, .value = 0,
+  };
+  EXPECT_CALL(key_reader, GetEpEvent(_, _, _))
+      .WillOnce(
+          DoAll(testing::SetArgPointee<1>(ev_input), testing::Return(true)));
+
+  // Key release recorded.
+  struct input_event ev_release {
+    .type = EV_KEY, .code = 28, .value = 0,
+  };
+  EXPECT_CALL(key_reader, GetEpEvent(_, _, _))
+      .WillOnce(
+          DoAll(testing::SetArgPointee<1>(ev_release), testing::Return(true)));
+
+  int index;
+  EXPECT_TRUE(key_reader.EvWaitForKeys({28, 103}, &index));
+}
+
+TEST_F(KeyReaderTest, EvWaitKeyFileError) {
+  MockKeyReader key_reader;
+  EXPECT_CALL(key_reader, GetValidFds(true)).WillOnce(testing::Return(false));
+
+  int index;
+  EXPECT_FALSE(key_reader.EvWaitForKeys({28, 103}, &index));
+}
+
+TEST_F(KeyReaderTest, EvWaitKeyEpollError) {
+  MockKeyReader key_reader;
+
+  EXPECT_CALL(key_reader, GetValidFds(true)).WillOnce(testing::Return(true));
+  EXPECT_CALL(key_reader, EpollCreate(_)).WillOnce(testing::Return(true));
+  EXPECT_CALL(key_reader, GetEpEvent(_, _, _)).WillOnce(testing::Return(false));
+
+  int index;
+  EXPECT_FALSE(key_reader.EvWaitForKeys({28, 103}, &index));
+}
+
+TEST_F(KeyReaderTest, OnlyEvWaitKeyFunction) {
+  MockKeyReader key_reader;
+  // Cannot access password functions.
+  EXPECT_FALSE(key_reader.GetInput());
+}
+
+TEST_F(KeyReaderTest, OnlyEvWaitKeyFunctionFalse) {
+  MockKeyReader key_reader(false);
+  // Cannot access password functions when include usb is false.
+  EXPECT_FALSE(key_reader.GetInput());
 }
