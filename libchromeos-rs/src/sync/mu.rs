@@ -640,7 +640,7 @@ impl RawMutex {
             || waiters
                 .front()
                 .get()
-                .map(|front| front as *const Waiter == waiter as *const Waiter)
+                .map(|front| std::ptr::eq(front, waiter))
                 .unwrap_or(false)
         {
             clear |= LONG_WAIT;

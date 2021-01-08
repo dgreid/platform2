@@ -43,7 +43,7 @@ impl ArcWake for Waker {
                     libc::INT_MAX,                        // val
                     ptr::null() as *const libc::timespec, // timeout
                     ptr::null() as *const libc::c_int,    // uaddr2
-                    0 as libc::c_int,                     // val3
+                    0_i32,                                // val3
                 )
             };
             if res < 0 {
@@ -83,7 +83,7 @@ pub fn block_on<F: Future>(f: F) -> F::Output {
                         state,
                         ptr::null() as *const libc::timespec, // timeout
                         ptr::null() as *const libc::c_int,    // uaddr2
-                        0 as libc::c_int,                     // val3
+                        0_i32,                                // val3
                     )
                 };
 

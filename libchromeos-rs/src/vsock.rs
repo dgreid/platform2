@@ -222,10 +222,12 @@ impl VsockSocket {
         // The compiler should optimize this out since these are both compile-time constants.
         assert_eq!(size_of::<sockaddr_vm>(), size_of::<sockaddr>());
 
-        let mut svm: sockaddr_vm = Default::default();
-        svm.svm_family = AF_VSOCK;
-        svm.svm_cid = sockaddr.cid.into();
-        svm.svm_port = sockaddr.port;
+        let svm = sockaddr_vm {
+            svm_family: AF_VSOCK,
+            svm_cid: sockaddr.cid.into(),
+            svm_port: sockaddr.port,
+            ..Default::default()
+        };
 
         // Safe because this doesn't modify any memory and we check the return value.
         let ret = unsafe {
@@ -248,10 +250,12 @@ impl VsockSocket {
             .to_socket_addr()
             .map_err(|_| io::Error::from_raw_os_error(libc::EINVAL))?;
 
-        let mut svm: sockaddr_vm = Default::default();
-        svm.svm_family = AF_VSOCK;
-        svm.svm_cid = sockaddr.cid.into();
-        svm.svm_port = sockaddr.port;
+        let svm = sockaddr_vm {
+            svm_family: AF_VSOCK,
+            svm_cid: sockaddr.cid.into(),
+            svm_port: sockaddr.port,
+            ..Default::default()
+        };
 
         // Safe because this just connects a vsock socket, and the return value is checked.
         let ret = unsafe {

@@ -552,8 +552,7 @@ mod test {
 
         threads
             .into_iter()
-            .map(JoinHandle::join)
-            .collect::<thread::Result<()>>()
+            .try_for_each(JoinHandle::join)
             .expect("Failed to join threads");
 
         // Now use the Condvar with a different mutex.
