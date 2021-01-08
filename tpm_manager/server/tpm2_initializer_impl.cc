@@ -168,7 +168,7 @@ DictionaryAttackResetStatus Tpm2InitializerImpl::ResetDictionaryAttackLock() {
     LOG(ERROR) << __func__ << ": Error reading local data.";
     return DictionaryAttackResetStatus::kResetAttemptFailed;
   }
-  if (!local_data.has_lockout_password()) {
+  if (local_data.lockout_password().empty()) {
     LOG(ERROR) << __func__ << ": Lockout password not available.";
     return DictionaryAttackResetStatus::kResetAttemptFailed;
   }
