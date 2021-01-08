@@ -105,8 +105,10 @@ TEST_F(CableTest, TestAltModeManualAddition) {
   auto mode1_path = sop_plug_path.Append(mode1_dirname);
   ASSERT_TRUE(CreateFakeAltMode(mode1_path, kTBTSVID, kTBTVDO, kTBTVDOIndex));
   EXPECT_TRUE(cable.AddAltMode(mode1_path));
-  // Trying to add an existing alt mode again should fail.
-  EXPECT_FALSE(cable.AddAltMode(mode1_path));
+
+  // Trying to add an existing alt mode again should also return true; an INFO
+  // log message is displayed but nothing is added.
+  EXPECT_TRUE(cable.AddAltMode(mode1_path));
 }
 
 }  // namespace typecd

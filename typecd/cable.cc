@@ -59,7 +59,7 @@ bool Cable::AddAltMode(const base::FilePath& mode_syspath) {
 
   if (IsAltModePresent(index)) {
     LOG(INFO) << "Alt mode already registered for syspath " << mode_syspath;
-    return false;
+    return true;
   }
 
   auto alt_mode = AltMode::CreateAltMode(mode_syspath);

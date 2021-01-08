@@ -39,8 +39,8 @@ bool Partner::AddAltMode(const base::FilePath& mode_syspath) {
     return false;
 
   if (IsAltModePresent(index)) {
-    LOG(ERROR) << "Alt mode already registered for syspath " << mode_syspath;
-    return false;
+    LOG(INFO) << "Alt mode already registered for syspath " << mode_syspath;
+    return true;
   }
 
   auto alt_mode = AltMode::CreateAltMode(mode_syspath);

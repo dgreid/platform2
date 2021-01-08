@@ -84,8 +84,9 @@ TEST_F(PartnerTest, TestAltModeManualAddition) {
   // Discovery can now be considered complete.
   EXPECT_TRUE(p.DiscoveryComplete());
 
-  // Trying to add an existing alt mode again should fail.
-  EXPECT_FALSE(p.AddAltMode(mode1_path));
+  // Trying to add an existing alt mode again should also return true; an INFO
+  // log message is displayed but nothing is added.
+  EXPECT_TRUE(p.AddAltMode(mode1_path));
 }
 
 // Verify that partner PD identity VDOs get scanned and stored correctly.
