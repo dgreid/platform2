@@ -201,3 +201,9 @@ impl Crossystem {
         check_return(unsafe { VbSetSystemPropertyString(name.as_ptr(), value.as_ptr()) }).map(drop)
     }
 }
+
+impl Default for Crossystem {
+    fn default() -> Self {
+        Crossystem::new()
+    }
+}
