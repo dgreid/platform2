@@ -19,6 +19,7 @@
 #include <base/files/file_util.h>
 #include <base/logging.h>
 #include <base/strings/string_number_conversions.h>
+#include <brillo/flag_helper.h>
 #include <brillo/secure_blob.h>
 #include <cryptohome/cryptolib.h>
 #include <cryptohome/mount_encrypted/encrypted_fs.h>
@@ -83,7 +84,7 @@ static int has_chromefw(void) {
 static result_code finalize_from_cmdline(
     const mount_encrypted::EncryptedFs& encrypted_fs,
     const base::FilePath& rootdir,
-    char* key) {
+    const char* key) {
   // Load the system key.
   brillo::SecureBlob system_key;
   if (!brillo::SecureBlob::HexStringToSecureBlob(std::string(key),
@@ -260,41 +261,16 @@ bool SendSecretToBiodTmpFile(const mount_encrypted::EncryptionKey& key) {
   return true;
 }
 
-int main(int argc, char* argv[]) {
+static result_code mount_encrypted_partition(
+    mount_encrypted::EncryptedFs* encrypted_fs, const base::FilePath& rootdir) {
   result_code rc;
-  char* rootdir_env = getenv("MOUNT_ENCRYPTED_ROOT");
-  base::FilePath rootdir = base::FilePath(rootdir_env ? rootdir_env : "/");
-  cryptohome::Platform platform;
-  brillo::LoopDeviceManager loopdev_manager;
-  brillo::DeviceMapper device_mapper;
-  mount_encrypted::EncryptedFs encrypted_fs(rootdir, &platform,
-                                            &loopdev_manager, &device_mapper);
 
   mount_encrypted::ScopedMountEncryptedMetricsSingleton scoped_metrics(
       kMountEncryptedMetricsPath);
 
-  LOG(INFO) << "Starting.";
-
-  if (argc > 1) {
-    if (!strcmp(argv[1], "umount")) {
-      return encrypted_fs.Teardown();
-    } else if (!strcmp(argv[1], "info")) {
-      // Report info from the encrypted mount.
-      return report_info(encrypted_fs, rootdir);
-    } else if (!strcmp(argv[1], "finalize")) {
-      return finalize_from_cmdline(encrypted_fs, rootdir,
-                                   argc > 2 ? argv[2] : NULL);
-    } else if (!strcmp(argv[1], "set")) {
-      return set_system_key(rootdir, argc > 2 ? argv[2] : NULL, &platform);
-    } else {
-      fprintf(stderr, "Usage: %s [info|finalize|umount|set]\n", argv[0]);
-      return RESULT_FAIL_FATAL;
-    }
-  }
-
   // For the mount operation at boot, return RESULT_FAIL_FATAL to trigger
   // chromeos_startup do the stateful wipe.
-  rc = encrypted_fs.CheckStates();
+  rc = encrypted_fs->CheckStates();
   if (rc != RESULT_SUCCESS)
     return rc;
 
@@ -334,7 +310,7 @@ int main(int argc, char* argv[]) {
     LOG(ERROR) << "Failed to load system key, biod won't get a TPM seed.";
   }
 
-  rc = encrypted_fs.Setup(key.encryption_key(), key.is_fresh());
+  rc = encrypted_fs->Setup(key.encryption_key(), key.is_fresh());
   if (rc == RESULT_SUCCESS) {
     bool lockbox_valid = false;
     if (loader->CheckLockbox(&lockbox_valid) == RESULT_SUCCESS) {
@@ -352,4 +328,48 @@ int main(int argc, char* argv[]) {
 
   // Continue boot.
   return rc;
+}
+
+static void print_usage(const char process_name[]) {
+  fprintf(stderr, "Usage: %s [info|finalize|umount|set|mount]\n", process_name);
+}
+
+int main(int argc, const char* argv[]) {
+  brillo::FlagHelper::Init(argc, argv, "mount-encrypted");
+
+  auto commandline = base::CommandLine::ForCurrentProcess();
+  auto args = commandline->GetArgs();
+
+  char* rootdir_env = getenv("MOUNT_ENCRYPTED_ROOT");
+  base::FilePath rootdir = base::FilePath(rootdir_env ? rootdir_env : "/");
+  cryptohome::Platform platform;
+  brillo::LoopDeviceManager loopdev_manager;
+  brillo::DeviceMapper device_mapper;
+  mount_encrypted::EncryptedFs encrypted_fs(rootdir, &platform,
+                                            &loopdev_manager, &device_mapper);
+
+  LOG(INFO) << "Starting.";
+
+  if (args.size() >= 1) {
+    if (args[0] == "umount") {
+      return encrypted_fs.Teardown();
+    } else if (args[0] == "info") {
+      // Report info from the encrypted mount.
+      return report_info(encrypted_fs, rootdir);
+    } else if (args[0] == "finalize") {
+      return finalize_from_cmdline(encrypted_fs, rootdir,
+                                   args.size() >= 2 ? args[1].c_str() : NULL);
+    } else if (args[0] == "set") {
+      return set_system_key(rootdir, args.size() >= 2 ? args[1].c_str() : NULL,
+                            &platform);
+    } else if (args[0] == "mount") {
+      return mount_encrypted_partition(&encrypted_fs, rootdir);
+    } else {
+      print_usage(argv[0]);
+      return RESULT_FAIL_FATAL;
+    }
+  }
+
+  // default operation is mount encrypted partition.
+  return mount_encrypted_partition(&encrypted_fs, rootdir);
 }
