@@ -32,6 +32,13 @@ int Daemon::OnInit() {
   cros_ec_util_ = std::make_unique<CrosECUtil>(bus_);
   port_manager_->SetECUtil(cros_ec_util_.get());
 
+  // Stash whether mode entry is supported at init, instead of querying it
+  // repeatedly.
+  bool mode_entry_supported = cros_ec_util_->ModeEntrySupported();
+  if (!mode_entry_supported)
+    LOG(INFO) << "Mode entry not supported on this device.";
+  port_manager_->SetModeEntrySupported(mode_entry_supported);
+
   // TODO(b/171839508): Get the initial screen state at boot.
   // TODO(b/171839508): Register the PortManager with |session_manager_proxy_|.
 

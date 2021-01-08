@@ -9,6 +9,8 @@
 
 namespace typecd {
 
+PortManager::PortManager() : mode_entry_supported_(true) {}
+
 void PortManager::OnPortAddedOrRemoved(const base::FilePath& path,
                                        int port_num,
                                        bool added) {
@@ -124,10 +126,8 @@ void PortManager::RunModeEntry(int port_num) {
     return;
   }
 
-  if (!ec_util_->ModeEntrySupported()) {
-    LOG(INFO) << "Mode entry not supported on this device.";
+  if (!GetModeEntrySupported())
     return;
-  }
 
   auto it = ports_.find(port_num);
   if (it == ports_.end()) {

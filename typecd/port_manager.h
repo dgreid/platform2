@@ -23,11 +23,16 @@ namespace typecd {
 // means to change this state according to policy defined in the daemon.
 class PortManager : public UdevMonitor::Observer {
  public:
-  PortManager() = default;
+  PortManager();
   PortManager(const PortManager&) = delete;
   PortManager& operator=(const PortManager&) = delete;
 
   void SetECUtil(ECUtil* ec_util) { ec_util_ = ec_util; }
+
+  bool GetModeEntrySupported() { return mode_entry_supported_; }
+  void SetModeEntrySupported(bool supported) {
+    mode_entry_supported_ = supported;
+  }
 
  private:
   friend class PortManagerTest;
@@ -57,6 +62,7 @@ class PortManager : public UdevMonitor::Observer {
   void RunModeEntry(int port_num);
 
   std::map<int, std::unique_ptr<Port>> ports_;
+  bool mode_entry_supported_;
   ECUtil* ec_util_;
 };
 
