@@ -81,7 +81,7 @@ impl VdaInstance {
     }
 
     /// Opens a new `Session` for a given `Profile`.
-    pub fn open_session<'a>(&'a self, profile: Profile) -> Result<Session<'a>> {
+    pub fn open_session(&self, profile: Profile) -> Result<Session> {
         // Safe because `self.raw_ptr` is a non-NULL pointer obtained from `bindings::initialize`
         // in `VdaInstance::new`.
         unsafe { Session::new(self.raw_ptr, profile).ok_or(Error::SessionInitFailure(profile)) }

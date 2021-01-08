@@ -127,7 +127,7 @@ impl VeaInstance {
     }
 
     /// Opens a new `Session` for a given `Config`.
-    pub fn open_session<'a>(&'a self, config: Config) -> Result<Session<'a>> {
+    pub fn open_session(&self, config: Config) -> Result<Session> {
         // Safe because `self.raw_ptr` is a non-NULL pointer obtained from
         // `decode_bindings::initialize` in `VdaInstance::new`.
         unsafe { Session::new(self.raw_ptr, config).ok_or(Error::EncodeSessionInitFailure(config)) }
