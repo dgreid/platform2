@@ -14,7 +14,7 @@ import sys
 import time
 
 import common
-import hammerd_api
+import hammerd_api # pylint: disable=import-error
 
 
 FLASH_PROTECT_INIT = (common.EC_FLASH_PROTECT_RO_AT_BOOT |

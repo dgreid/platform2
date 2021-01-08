@@ -11,7 +11,7 @@ import sys
 import time
 
 import common
-import hammerd_api
+import hammerd_api # pylint: disable=import-error
 
 
 WRONG_ADDRR_KEY_RO = '0x0000ac00'

@@ -11,7 +11,7 @@ import sys
 import time
 
 import common
-import hammerd_api
+import hammerd_api # pylint: disable=import-error
 
 
 # Before this test, please flash MP-signed locked image (staff.bin)

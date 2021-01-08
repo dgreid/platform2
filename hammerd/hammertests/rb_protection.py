@@ -11,7 +11,7 @@ import sys
 import time
 
 import common
-import hammerd_api
+import hammerd_api # pylint: disable=import-error
 
 # Before this test, please flash staff.dev.rb1 using servo
 # This test can only be run once, then the image needs to be reflashed using

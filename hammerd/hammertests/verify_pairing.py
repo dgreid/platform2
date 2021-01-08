@@ -19,7 +19,7 @@ import sys
 import time
 
 import common
-import hammerd_api
+import hammerd_api # pylint: disable=import-error
 
 PAIRING_RUNS = 10
 INJECTION_RUNS = 10
