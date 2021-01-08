@@ -114,7 +114,7 @@ def transfer_rw(updater, image):
 
 
 def init_tp_transfer(updater):
-  updater.LoadTouchpadImage('\x00')
+  updater.LoadTouchpadImage(b'\x00')
   assert updater.SendFirstPdu() is True, 'Error sending first PDU'
   updater.SendDone()
   unlock_rw(updater)
