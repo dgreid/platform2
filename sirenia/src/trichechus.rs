@@ -8,14 +8,16 @@ use std::cell::RefCell;
 use std::collections::{HashMap, VecDeque};
 use std::env;
 use std::fmt::Debug;
+use std::mem::swap;
 use std::os::unix::io::RawFd;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::result::Result as StdResult;
-use std::string::String;
 
+use getopts::Options;
+use libchromeos::linux::{getpid, getsid, setsid};
 use libsirenia::linux::events::{AddEventSourceMutator, EventMultiplexer, Mutator};
-use libsirenia::linux::syslog::{Syslog, SyslogReceiverMut};
+use libsirenia::linux::syslog::{Syslog, SyslogReceiverMut, SYSLOG_PATH};
 use libsirenia::rpc::{ConnectionHandler, RpcDispatcher, TransportServer};
 use libsirenia::sandbox::{self, Sandbox};
 use libsirenia::to_sys_util;
@@ -29,6 +31,8 @@ use sirenia::cli::initialize_common_arguments;
 use sirenia::communication::{AppInfo, Trichechus, TrichechusServer};
 use sys_util::{self, error, info, syslog};
 use thiserror::Error as ThisError;
+
+const SYSLOG_PATH_SHORT_NAME: &str = "L";
 
 #[derive(ThisError, Debug)]
 pub enum Error {
@@ -133,6 +137,12 @@ impl Trichechus for TrichechusServerImpl {
         );
         Ok(())
     }
+
+    fn get_logs(&self) -> StdResult<Vec<String>, ()> {
+        let mut replacement: VecDeque<String> = VecDeque::new();
+        swap(&mut self.state.borrow_mut().log_queue, &mut replacement);
+        Ok(replacement.into())
+    }
 }
 
 struct DugongConnectionHandler {
@@ -221,14 +231,26 @@ fn main() -> Result<()> {
     // Handle the arguments first since "-h" shouldn't have any side effects on the system such as
     // creating /dev/log.
     let args: Vec<String> = env::args().collect();
-    let config = initialize_common_arguments(&args[1..]).unwrap();
+    let mut opts = Options::new();
+    opts.optopt(
+        SYSLOG_PATH_SHORT_NAME,
+        "syslog-path",
+        "connect to trichechus, get and print logs, then exit.",
+        SYSLOG_PATH,
+    );
+    let (config, matches) = initialize_common_arguments(opts, &args[1..]).unwrap();
     let state = Rc::new(RefCell::new(TrichechusState::new()));
 
     // Create /dev/log if it doesn't already exist since trichechus is the first thing to run after
     // the kernel on the hypervisor.
-    let syslog: Option<Syslog> = if !Syslog::is_syslog_present() {
+    let log_path = PathBuf::from(
+        matches
+            .opt_str(SYSLOG_PATH_SHORT_NAME)
+            .unwrap_or(SYSLOG_PATH.to_string()),
+    );
+    let syslog: Option<Syslog> = if !log_path.exists() {
         eprintln!("Creating syslog.");
-        Some(Syslog::new(state.clone()).unwrap())
+        Some(Syslog::new(log_path, state.clone()).unwrap())
     } else {
         eprintln!("Syslog exists.");
         None
@@ -242,6 +264,12 @@ fn main() -> Result<()> {
     }
     info!("starting trichechus: {}", BUILD_TIMESTAMP);
 
+    if getpid() != getsid(None).unwrap() {
+        // This is safe because we expect to be our own process group leader.
+        if let Err(err) = unsafe { setsid() } {
+            error!("Unable to start new process group: {}", err);
+        }
+    }
     to_sys_util::block_all_signals();
     // This is safe because no additional file descriptors have been opened (except syslog which
     // cannot be dropped until we are ready to clean up /dev/log).

@@ -113,38 +113,34 @@ impl EventSource for SyslogClient {
 
 /// Encapsulates a unix socket listener for a syslog server that accepts client connections.
 pub struct Syslog {
+    log_path: PathBuf,
     listener: UnixListener,
     receiver: Rc<dyn SyslogReceiver>,
 }
 
 impl Syslog {
-    pub fn get_log_path() -> PathBuf {
-        if cfg!(test) {
-            // NOTE this changes based on thread id, so it should be different across concurrent
-            // test cases.
-            let path = get_temp_path(None).join(&SYSLOG_PATH[1..]);
-            // Max Unix socket path is >100 and varies between OSes.
-            if path.to_string_lossy().len() <= 100 {
-                path
-            } else {
-                Path::new("/tmp")
-                    .join(format!("test-{}-{}", getpid(), gettid()))
-                    .join(&SYSLOG_PATH[1..])
-            }
+    pub fn get_test_log_path() -> PathBuf {
+        // NOTE this changes based on thread id, so it should be different across concurrent
+        // test cases.
+        let path = get_temp_path(None).join(&SYSLOG_PATH[1..]);
+        // Max Unix socket path is >100 and varies between OSes.
+        if path.to_string_lossy().len() <= 100 {
+            path
         } else {
-            Path::new(SYSLOG_PATH).to_path_buf()
+            Path::new("/tmp")
+                .join(format!("test-{}-{}", getpid(), gettid()))
+                .join(&SYSLOG_PATH[1..])
         }
     }
 
-    /// Return true if there is already a syslog socket open at SYSLOG_PATH.
-    pub fn is_syslog_present() -> bool {
-        Self::get_log_path().exists()
-    }
-
     /// Binds a new unix socket listener at the SYSLOG_PATH.
-    pub fn new(receiver: Rc<dyn SyslogReceiver>) -> Result<Self, IoError> {
+    pub fn new<P: AsRef<Path>>(
+        log_path: P,
+        receiver: Rc<dyn SyslogReceiver>,
+    ) -> Result<Self, IoError> {
         Ok(Syslog {
-            listener: UnixListener::bind(Self::get_log_path())?,
+            log_path: log_path.as_ref().to_path_buf(),
+            listener: UnixListener::bind(log_path)?,
             receiver,
         })
     }
@@ -153,7 +149,7 @@ impl Syslog {
 /// Cleanup the unix socket by removing SYSLOG_PATH whenever the Syslog is dropped.
 impl Drop for Syslog {
     fn drop(&mut self) {
-        if let Err(e) = remove_file(Self::get_log_path()) {
+        if let Err(e) = remove_file(&self.log_path) {
             if e.kind() != std::io::ErrorKind::NotFound {
                 eprintln!("Failed to cleanup syslog: {:?}", e);
             }
@@ -214,12 +210,13 @@ pub(crate) mod tests {
     }
 
     fn get_test_client(receiver: Rc<RefCell<TestReciever>>) -> SyslogClient {
-        let connect_path = Syslog::get_log_path();
+        let connect_path = Syslog::get_test_log_path();
         let test_path = ScopedPath::create(connect_path.parent().unwrap()).unwrap();
         assert!(test_path.exists());
         let listener = UnixListener::bind(&connect_path).unwrap();
         let server = spawn(move || {
             let mut syslog = Syslog {
+                log_path: Syslog::get_test_log_path(),
                 listener,
                 receiver: get_test_receiver(),
             };
@@ -231,39 +228,27 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn syslog_issyslogpresent_false() {
-        assert!(!Syslog::is_syslog_present());
-    }
-
-    #[test]
-    fn syslog_issyslogpresent_true() {
-        let test_path = ScopedPath::create(Syslog::get_log_path()).unwrap();
-        assert!(test_path.exists());
-        assert!(Syslog::is_syslog_present());
-    }
-
-    #[test]
     fn syslog_new_fail() {
-        let test_path = ScopedPath::create(Syslog::get_log_path()).unwrap();
+        let test_path = ScopedPath::create(Syslog::get_test_log_path()).unwrap();
         assert!(test_path.exists());
 
         let receiver = get_test_receiver();
-        assert!(Syslog::new(receiver).is_err());
+        assert!(Syslog::new(Syslog::get_test_log_path(), receiver).is_err());
     }
 
     #[test]
     fn syslog_new_drop() {
-        let log_path = Syslog::get_log_path();
+        let log_path = Syslog::get_test_log_path();
         let test_path = ScopedPath::create(log_path.parent().unwrap()).unwrap();
         assert!(test_path.exists());
-        assert!(!Syslog::is_syslog_present());
+        assert!(!log_path.exists());
 
         let receiver = get_test_receiver();
         {
-            let _syslog = Syslog::new(receiver).unwrap();
-            assert!(Syslog::is_syslog_present());
+            let syslog = Syslog::new(Syslog::get_test_log_path(), receiver).unwrap();
+            assert!(syslog.log_path.exists());
         }
-        assert!(!Syslog::is_syslog_present());
+        assert!(!log_path.exists());
     }
 
     #[test]
@@ -324,14 +309,14 @@ pub(crate) mod tests {
 
     #[test]
     fn syslog_eventmultiplexer_integration() {
-        let log_path = Syslog::get_log_path();
+        let log_path = Syslog::get_test_log_path();
         let test_path = ScopedPath::create(log_path.parent().unwrap()).unwrap();
         assert!(test_path.exists());
-        assert!(!Syslog::is_syslog_present());
+        assert!(!log_path.exists());
 
         let receiver = get_test_receiver();
-        let syslog = Syslog::new(receiver.clone()).unwrap();
-        assert!(Syslog::is_syslog_present());
+        let syslog = Syslog::new(Syslog::get_test_log_path(), receiver.clone()).unwrap();
+        assert!(log_path.exists());
         let mut context = EventMultiplexer::new().unwrap();
         context.add_event(Box::new(syslog)).unwrap();
 

@@ -10,12 +10,11 @@ pub use file_storage::FileStorage;
 use std::any::{type_name, Any};
 use std::borrow::Borrow;
 use std::error::Error as StdError;
-use std::fmt::{self, Debug};
+use std::fmt::{self, Debug, Formatter};
 use std::result::Result as StdResult;
 
 use flexbuffers::{from_slice, FlexbufferSerializer};
 use serde::de::{Deserialize, DeserializeOwned, Visitor};
-use serde::export::Formatter;
 use serde::{Deserializer, Serialize, Serializer};
 use thiserror::Error as ThisError;
 

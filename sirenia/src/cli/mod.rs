@@ -7,7 +7,7 @@
 
 use std::env::current_exe;
 
-use getopts::{self, Options};
+use getopts::{self, Matches, Options};
 use libchromeos::vsock::{SocketAddr as VSocketAddr, VsockCid};
 use libsirenia::cli::{self, HelpOption, TransportTypeOption};
 use libsirenia::transport::{TransportType, DEFAULT_SERVER_PORT};
@@ -49,7 +49,10 @@ pub fn get_name_and_version_string() -> String {
 
 /// Sets up command line argument parsing and generates a CommonConfig based on
 /// the command line entry.
-pub fn initialize_common_arguments(args: &[String]) -> Result<CommonConfig> {
+pub fn initialize_common_arguments(
+    mut opts: Options,
+    args: &[String],
+) -> Result<(CommonConfig, Matches)> {
     // Vsock is used as the default because it is the transport used in production.
     // IP is provided for testing and development.
     // Not sure yet what cid default makes sense or if a default makes sense at
@@ -62,7 +65,6 @@ pub fn initialize_common_arguments(args: &[String]) -> Result<CommonConfig> {
         connection_type: default_connection,
     };
 
-    let mut opts = Options::new();
     let help_option = HelpOption::new(&mut opts);
     let url_option = TransportTypeOption::default(&mut opts);
 
@@ -74,7 +76,7 @@ pub fn initialize_common_arguments(args: &[String]) -> Result<CommonConfig> {
     {
         config.connection_type = value;
     };
-    Ok(config)
+    Ok((config, matches))
 }
 
 #[cfg(test)]
@@ -90,7 +92,7 @@ mod tests {
             connection_type: TransportType::IpConnection(exp_socket),
         };
         let value: [String; 2] = ["-U".to_string(), get_test_ip_uri().to_string()];
-        let act_result = initialize_common_arguments(&value).unwrap();
+        let (act_result, _) = initialize_common_arguments(Options::new(), &value).unwrap();
         assert_eq!(act_result, exp_result);
     }
 
@@ -104,7 +106,7 @@ mod tests {
             connection_type: vsock,
         };
         let value: [String; 2] = ["-U".to_string(), get_test_vsock_uri()];
-        let act_result = initialize_common_arguments(&value).unwrap();
+        let (act_result, _) = initialize_common_arguments(Options::new(), &value).unwrap();
         assert_eq!(act_result, exp_result);
     }
 
@@ -118,7 +120,7 @@ mod tests {
             connection_type: default_connection,
         };
         let value: [String; 0] = [];
-        let act_result = initialize_common_arguments(&value).unwrap();
+        let (act_result, _) = initialize_common_arguments(Options::new(), &value).unwrap();
         assert_eq!(act_result, exp_result);
     }
 }

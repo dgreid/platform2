@@ -6,24 +6,26 @@
 
 use std::cell::RefCell;
 use std::env;
-use std::fmt::{self, Debug};
+use std::fmt::{self, Debug, Formatter};
 use std::rc::Rc;
 use std::time::Duration;
 
 use dbus::arg::OwnedFd;
 use dbus::blocking::LocalConnection;
 use dbus::tree::{self, Interface, MTFn};
+use getopts::Options;
 use libsirenia::rpc;
 use libsirenia::transport::{
     self, Transport, TransportType, DEFAULT_CLIENT_PORT, DEFAULT_SERVER_PORT,
 };
-use serde::export::Formatter;
 use sirenia::build_info::BUILD_TIMESTAMP;
 use sirenia::cli::initialize_common_arguments;
 use sirenia::communication::{AppInfo, Trichechus, TrichechusClient};
 use sirenia::server::{org_chromium_mana_teeinterface_server, OrgChromiumManaTEEInterface};
 use sys_util::{error, info, syslog};
 use thiserror::Error as ThisError;
+
+const GET_LOGS_SHORT_NAME: &str = "l";
 
 #[derive(ThisError, Debug)]
 pub enum Error {
@@ -145,8 +147,16 @@ pub fn start_dbus_handler(
 
 fn main() -> Result<()> {
     let args: Vec<String> = env::args().collect();
-    let config = initialize_common_arguments(&args[1..]).unwrap();
+    let mut opts = Options::new();
+    opts.optflag(
+        GET_LOGS_SHORT_NAME,
+        "get-logs",
+        "connect to trichechus, get and print logs, then exit.",
+    );
+    let (config, matches) = initialize_common_arguments(opts, &args[1..]).unwrap();
+    let get_logs = matches.opt_present(GET_LOGS_SHORT_NAME);
     let transport_type = config.connection_type.clone();
+
     if let Err(e) = syslog::init() {
         eprintln!("failed to initialize syslog: {}", e);
         return Err(e).map_err(Error::SysLog);
@@ -167,9 +177,14 @@ fn main() -> Result<()> {
     })?;
     info!("Starting rpc");
     let client = TrichechusClient::new(transport);
-
-    start_dbus_handler(client, config.connection_type).unwrap();
-
-    // TODO: If it gets here is something screwed up?
+    if get_logs {
+        let logs = client.get_logs().unwrap();
+        for entry in &logs[..] {
+            print!("{}", entry);
+        }
+    } else {
+        start_dbus_handler(client, config.connection_type).unwrap();
+        unreachable!()
+    }
     Ok(())
 }
