@@ -19,7 +19,6 @@ import subprocess
 import sys
 
 import six
-import yaml  # pylint: disable=import-error
 
 # pylint: disable=wrong-import-position
 this_dir = os.path.dirname(__file__)
@@ -267,7 +266,7 @@ def TransformConfig(config, model_filter_regex=None):
   Returns:
     Resulting JSON output from the transform.
   """
-  config_yaml = yaml.load(config, Loader=yaml.CLoader)
+  config_yaml = libcros_schema.LoadYaml(config)
   configs = []
   if DEVICES in config_yaml[CHROMEOS]:
     for device in config_yaml[CHROMEOS][DEVICES]:
@@ -487,7 +486,7 @@ def GetValidSchemaProperties(
   """
   schema_yaml = ReadSchema(schema)
   root_path = 'properties/chromeos/properties/configs/items/properties'
-  schema_node = yaml.load(schema_yaml, Loader=yaml.CLoader)
+  schema_node = libcros_schema.LoadYaml(schema_yaml)
   for element in root_path.split('/'):
     schema_node = schema_node[element]
 
@@ -817,7 +816,7 @@ def Main(schema,
   libcros_schema.ValidateConfigSchema(schema_contents, json_transform)
   ValidateConfig(json_transform)
   schema_attrs = libcros_schema.GetSchemaPropertyAttrs(
-      yaml.load(schema_contents, Loader=yaml.CLoader))
+      libcros_schema.LoadYaml(schema_contents))
 
   if filter_build_details:
     build_only_elements = []

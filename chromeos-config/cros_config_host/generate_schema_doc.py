@@ -14,8 +14,6 @@ import os.path
 import re
 import sys
 
-import yaml  # pylint: disable=import-error
-
 import libcros_schema
 
 
@@ -164,8 +162,7 @@ def Main(schema, output):
     schema: Schema file.
     output: Output file.
   """
-  schema_yaml = yaml.load(
-      libcros_schema.ApplyImports(schema), Loader=yaml.CLoader)
+  schema_yaml = libcros_schema.LoadYaml(libcros_schema.ApplyImports(schema))
   ref_types = {}
   for type_def in schema_yaml.get('typeDefs', []):
     ref_types['#/typeDefs/%s' % type_def] = schema_yaml['typeDefs'][type_def]

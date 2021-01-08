@@ -50,6 +50,30 @@ def FormatJson(config):
   return json.dumps(config, sort_keys=True, indent=2, separators=(',', ': '))
 
 
+def LoadYaml(stream):
+  """Load the first YAML document in a stream.
+
+  Args:
+    stream: A file-like object or string which contains a YAML
+      document.
+
+  Returns:
+    A Python object which corresponds to the YAML source.
+  """
+
+  # Prefer libyaml, as it's significantly faster than the default
+  # Python loader, but fallback to the Python loader when unavailable.
+  # While libyaml is available in the chroot, this supports execution
+  # in non-chroot environments like LUCI builders.
+  if yaml.__with_libyaml__:
+    loader = yaml.CLoader
+  else:
+    loader = yaml.SafeLoader
+
+  return yaml.load(stream, Loader=loader)
+
+
+
 def ValidateConfigSchema(schema, config):
   """Validates a transformed config against the schema specified.
 
@@ -60,9 +84,7 @@ def ValidateConfigSchema(schema, config):
     config: Config (transformed) that will be verified.
   """
   json_config = json.loads(config)
-  schema_yaml = yaml.load(schema, Loader=yaml.CLoader)
-  schema_json_from_yaml = json.dumps(schema_yaml, sort_keys=True, indent=2)
-  schema_json = json.loads(schema_json_from_yaml)
+  schema_json = LoadYaml(schema)
   validate(json_config, schema_json)
 
 
@@ -92,8 +114,7 @@ def FindImports(config_file, includes):
           break
 
     if yaml_import_lines:
-      yaml_import = yaml.load(
-          '\n'.join(yaml_import_lines), Loader=yaml.CLoader)
+      yaml_import = LoadYaml('\n'.join(yaml_import_lines))
 
       for import_file in yaml_import.get('imports', []):
         full_path = os.path.join(working_dir, import_file)

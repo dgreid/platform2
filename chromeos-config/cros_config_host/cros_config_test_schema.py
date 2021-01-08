@@ -9,11 +9,8 @@
 from __future__ import print_function
 
 import argparse
-import json
 import os
 import sys
-
-import yaml  # pylint: disable=import-error
 
 # pylint: disable=wrong-import-position
 this_dir = os.path.dirname(__file__)
@@ -78,9 +75,7 @@ def TransformConfig(config, device_filter=None):
   Returns:
     Resulting JSON output from the transform.
   """
-  config_yaml = yaml.load(config, Loader=yaml.CLoader)
-  json_from_yaml = json.dumps(config_yaml, sort_keys=True, indent=2)
-  json_config = json.loads(json_from_yaml)
+  json_config = libcros_schema.LoadYaml(config)
   configs = []
   if DEVICES in json_config[CHROMEOS]:
     for device in json_config[CHROMEOS][DEVICES]:

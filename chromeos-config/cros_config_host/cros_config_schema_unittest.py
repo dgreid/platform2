@@ -15,7 +15,6 @@ import textwrap
 
 import jsonschema  # pylint: disable=import-error
 from six.moves import zip_longest
-import yaml  # pylint: disable=import-error
 from packaging import version  # pylint: disable=import-error
 
 import cros_config_schema
@@ -660,7 +659,7 @@ class MainTests(cros_test_lib.TempDirTestCase):
     with open(os.path.join(
         this_dir, 'cros_config_schema.yaml')) as schema_stream:
       schema_contents = schema_stream.read()
-      return yaml.load(schema_contents, Loader=yaml.CLoader)
+      return libcros_schema.LoadYaml(schema_contents)
 
   def assertFileEqual(self, file_expected, file_actual, regen_cmd=''):
     self.assertTrue(os.path.isfile(file_expected),
