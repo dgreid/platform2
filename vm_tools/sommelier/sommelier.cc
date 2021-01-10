@@ -441,7 +441,8 @@ void sl_restack_windows(struct sl_context* ctx, uint32_t focus_resource_id) {
 }
 
 void sl_roundtrip(struct sl_context* ctx) {
-  TRACE_EVENT("other", "sl_roundtrip", "id", ctx->application_id);
+  TRACE_EVENT("other", "sl_roundtrip", "id",
+              ctx->application_id != nullptr ? ctx->application_id : "<null>");
   free(xcb_get_input_focus_reply(ctx->connection,
                                  xcb_get_input_focus(ctx->connection), NULL));
 }
