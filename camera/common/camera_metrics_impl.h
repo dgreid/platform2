@@ -36,6 +36,7 @@ class CameraMetricsImpl : public CameraMetrics {
                                      int height,
                                      int format) override;
   void SendConfigureStreamsLatency(base::TimeDelta latency) override;
+  void SendOpenDeviceClientType(int client_type) override;
   void SendOpenDeviceLatency(base::TimeDelta latency) override;
   void SendError(int error_code) override;
   void SendCameraFacing(int facing) override;

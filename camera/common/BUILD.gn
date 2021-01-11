@@ -24,6 +24,7 @@ static_library("libcamera_metrics") {
     "libcamera_metadata",
     "libchrome",
   ]
+  deps = [ "//camera/common/libcamera_ipc" ]
 }
 
 config("libcamera_jpeg_config") {

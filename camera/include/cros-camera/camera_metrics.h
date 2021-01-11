@@ -43,6 +43,9 @@ class CROS_CAMERA_EXPORT CameraMetrics {
                                              int height,
                                              int format) = 0;
 
+  // Records the type of the client that called OpenDevice().
+  virtual void SendOpenDeviceClientType(int client_type) = 0;
+
   // Records the process time of OpenDevice().
   virtual void SendOpenDeviceLatency(base::TimeDelta latency) = 0;
 

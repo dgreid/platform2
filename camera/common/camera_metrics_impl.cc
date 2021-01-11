@@ -22,6 +22,7 @@
 #include <system/graphics.h>
 
 #include "cros-camera/common.h"
+#include "mojo/cros_camera_service.mojom.h"
 
 namespace cros {
 
@@ -44,6 +45,11 @@ constexpr char kCameraConfigureStreamsLatency[] =
 
 constexpr char kCameraConfigureStreamsResolution[] =
     "ChromeOS.Camera.ConfigureStreams.Output.Resolution.%s";
+
+constexpr char kCameraOpenDeviceClientType[] =
+    "ChromeOS.Camera.OpenDeviceClientType";
+constexpr char kNumClientTypes =
+    static_cast<int32_t>(mojom::CameraClientType::kMaxValue) + 1;
 
 constexpr char kCameraOpenDeviceLatency[] = "ChromeOS.Camera.OpenDeviceLatency";
 
@@ -145,6 +151,11 @@ void CameraMetricsImpl::SendConfigureStreamResolution(int width,
       base::StringPrintf(kCameraConfigureStreamsResolution, format_str.c_str());
   metrics_lib_->SendToUMA(action_name, width * height, kMinResolutionInPixels,
                           kMaxResolutionInPixels, kBucketResolutionInPixels);
+}
+
+void CameraMetricsImpl::SendOpenDeviceClientType(int client_type) {
+  metrics_lib_->SendEnumToUMA(kCameraOpenDeviceClientType, client_type,
+                              kNumClientTypes);
 }
 
 void CameraMetricsImpl::SendOpenDeviceLatency(base::TimeDelta latency) {

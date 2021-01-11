@@ -193,6 +193,8 @@ int32_t CameraHalAdapter::OpenDevice(
   }
   device_adapters_.at(camera_id)->Bind(std::move(device_ops_request));
   camera_metrics_->SendCameraFacing(info.facing);
+  camera_metrics_->SendOpenDeviceClientType(
+      static_cast<int>(camera_client_type));
   camera_metrics_->SendOpenDeviceLatency(
       session_timer_map_[camera_id].Elapsed());
 
