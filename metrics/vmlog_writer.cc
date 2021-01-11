@@ -31,6 +31,7 @@
 #include <base/strings/stringprintf.h>
 #include <base/system/sys_info.h>
 #include <brillo/daemons/daemon.h>
+#include <re2/re2.h>
 
 namespace chromeos_metrics {
 namespace {
@@ -218,14 +219,14 @@ bool GpuInfo::GetCurrentFrequency(std::ostream& out) {
   static const char* amdgpu_sclk_expression = R"(^\d: (\d{2,4})Mhz \*$)";
   static const char* intelgpu_curr_freq_expression =
       R"(^Actual freq: (\d{2,4}) MHz$)";
-  const pcrecpp::RE gpu_freq_matcher(gpu_type_ == GpuType::kAmd
-                                         ? amdgpu_sclk_expression
-                                         : intelgpu_curr_freq_expression);
+  const RE2 gpu_freq_matcher(gpu_type_ == GpuType::kAmd
+                                 ? amdgpu_sclk_expression
+                                 : intelgpu_curr_freq_expression);
 
   std::string line;
   while (std::getline(*gpu_freq_stream_, line)) {
     std::string frequency_mhz;
-    if (gpu_freq_matcher.FullMatch(line, &frequency_mhz)) {
+    if (RE2::FullMatch(line, gpu_freq_matcher, &frequency_mhz)) {
       out << " " << frequency_mhz;
       return true;
     }

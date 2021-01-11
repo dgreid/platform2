@@ -70,7 +70,7 @@ pkg_config("target_defaults_pkg_deps") {
     "dbus-1",
     "libbrillo",
     "libchrome",
-    "libpcrecpp",
+    "re2",
   ]
 }
 

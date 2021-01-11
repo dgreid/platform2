@@ -17,7 +17,6 @@
 #include <base/time/time.h>
 #include <base/timer/timer.h>
 #include <gtest/gtest_prod.h>  // for FRIEND_TEST
-#include <pcrecpp.h>
 
 namespace chromeos_metrics {
 

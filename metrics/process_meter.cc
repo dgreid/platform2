@@ -4,7 +4,6 @@
 
 #include "metrics/process_meter.h"
 
-#include <pcrecpp.h>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -19,6 +18,7 @@
 #include <base/strings/string_util.h>
 #include <base/strings/stringprintf.h>
 #include <gtest/gtest_prod.h>  // for FRIEND_TEST
+#include <re2/re2.h>
 
 #include "metrics/metrics_library.h"
 
@@ -268,8 +268,8 @@ bool ProcessNode::RetrieveProcessData(const base::FilePath& procfs_root) {
   }
   // stat: pid (comm) run_state ppid etc. The only parentheses in the file
   // are around <comm>.
-  pcrecpp::RE re(R"(.*\((.*)\) \w+ (\d+)(.|\n)*)");
-  if (!re.FullMatch(file_content, &name_, &ppid_))
+  RE2 re(R"(.*\((.*)\) \w+ (\d+)(.|\n)*)");
+  if (!RE2::FullMatch(file_content, re, &name_, &ppid_))
     LOG(FATAL) << "cannot parse /proc/pid/stat: " << file_content;
 
   // Get command line from /proc/#/cmdline and parse it.
