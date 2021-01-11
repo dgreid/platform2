@@ -992,7 +992,7 @@ mod test {
 
         // All readers should now be able to complete.
         for r in &mut readers {
-            if let Poll::Pending = r.as_mut().poll(&mut cx) {
+            if r.as_mut().poll(&mut cx).is_pending() {
                 panic!("reader unable to complete");
             }
         }
@@ -1036,7 +1036,7 @@ mod test {
         // fut2 should now be ready to complete.
         assert_eq!(cv.state.load(Ordering::Relaxed), 0);
 
-        if let Poll::Pending = fut2.as_mut().poll(&mut cx) {
+        if fut2.as_mut().poll(&mut cx).is_pending() {
             panic!("future unable to complete");
         }
 
@@ -1080,7 +1080,7 @@ mod test {
         mem::drop(fut1);
         assert_eq!(cv.state.load(Ordering::Relaxed), 0);
 
-        if let Poll::Pending = fut2.as_mut().poll(&mut cx) {
+        if fut2.as_mut().poll(&mut cx).is_pending() {
             panic!("future unable to complete");
         }
 
@@ -1135,7 +1135,7 @@ mod test {
 
         // Now wake up fut2.  Since the lock isn't held, it should wake up immediately.
         cv.notify_one();
-        if let Poll::Pending = fut2.as_mut().poll(&mut cx) {
+        if fut2.as_mut().poll(&mut cx).is_pending() {
             panic!("future unable to complete");
         }
 
@@ -1184,7 +1184,7 @@ mod test {
 
         mem::drop(fut1);
 
-        if let Poll::Pending = fut2.as_mut().poll(&mut cx) {
+        if fut2.as_mut().poll(&mut cx).is_pending() {
             panic!("future unable to complete");
         }
 
@@ -1240,7 +1240,7 @@ mod test {
         tx.send(()).expect("Failed to send wakeup");
 
         // Wait for the timer to run out.
-        if let Poll::Pending = wait.as_mut().poll(&mut cx) {
+        if wait.as_mut().poll(&mut cx).is_pending() {
             panic!("wait_deadline unable to complete in time");
         }
 

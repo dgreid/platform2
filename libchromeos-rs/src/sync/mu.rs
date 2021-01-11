@@ -1562,9 +1562,10 @@ mod test {
             }
         }
 
-        if let Poll::Pending = futures[needs_poll.expect("Writer unexpectedly able to complete")]
+        if futures[needs_poll.expect("Writer unexpectedly able to complete")]
             .as_mut()
             .poll(&mut cx)
+            .is_pending()
         {
             panic!("Writer unable to complete");
         }
@@ -1617,12 +1618,12 @@ mod test {
         }
 
         // Which will finally allow the mark_ready function to make progress.
-        if let Poll::Pending = mark.as_mut().poll(&mut cx) {
+        if mark.as_mut().poll(&mut cx).is_pending() {
             panic!("mark_ready not able to make progress");
         }
 
         // Now the tight loop will finish.
-        if let Poll::Pending = tl.as_mut().poll(&mut cx) {
+        if tl.as_mut().poll(&mut cx).is_pending() {
             panic!("tight_loop not able to finish");
         }
 
@@ -1729,7 +1730,7 @@ mod test {
         block_on(mark_ready(mu.clone()));
 
         // Now the tight loop will finish.
-        if let Poll::Pending = tl.as_mut().poll(&mut cx) {
+        if tl.as_mut().poll(&mut cx).is_pending() {
             panic!("tight_loop not able to finish");
         }
 
@@ -1780,7 +1781,7 @@ mod test {
         );
 
         // Now poll the third future.  It should be able to acquire the lock immediately.
-        if let Poll::Pending = futures[2].as_mut().poll(&mut cx) {
+        if futures[2].as_mut().poll(&mut cx).is_pending() {
             panic!("future unable to complete");
         }
         assert_eq!(*block_on(mu.lock()), 1);
@@ -1797,12 +1798,12 @@ mod test {
         );
 
         // Now let the future that was woken up run.
-        if let Poll::Pending = futures[0].as_mut().poll(&mut cx) {
+        if futures[0].as_mut().poll(&mut cx).is_pending() {
             panic!("future unable to complete");
         }
         assert_eq!(*block_on(mu.lock()), 2);
 
-        if let Poll::Pending = futures[1].as_mut().poll(&mut cx) {
+        if futures[1].as_mut().poll(&mut cx).is_pending() {
             panic!("future unable to complete");
         }
         assert_eq!(*block_on(mu.lock()), 3);
@@ -2004,7 +2005,7 @@ mod test {
         tx.send(()).expect("Failed to send wakeup");
 
         // Now the future should have completed without acquiring the lock.
-        if let Poll::Pending = timeout.as_mut().poll(&mut cx) {
+        if timeout.as_mut().poll(&mut cx).is_pending() {
             panic!("timed_lock not ready after timeout");
         }
 
@@ -2075,16 +2076,16 @@ mod test {
             2 * READ_LOCK
         );
 
-        if let Poll::Pending = r1.as_mut().poll(&mut cx) {
+        if r1.as_mut().poll(&mut cx).is_pending() {
             panic!("read_zero unable to complete");
         }
-        if let Poll::Pending = r2.as_mut().poll(&mut cx) {
+        if r2.as_mut().poll(&mut cx).is_pending() {
             panic!("read_zero unable to complete");
         }
-        if let Poll::Pending = w.as_mut().poll(&mut cx) {
+        if w.as_mut().poll(&mut cx).is_pending() {
             panic!("inc unable to complete");
         }
-        if let Poll::Pending = r3.as_mut().poll(&mut cx) {
+        if r3.as_mut().poll(&mut cx).is_pending() {
             panic!("read_one unable to complete");
         }
 
@@ -2156,12 +2157,12 @@ mod test {
         );
 
         for r in &mut readers {
-            if let Poll::Pending = r.as_mut().poll(&mut cx) {
+            if r.as_mut().poll(&mut cx).is_pending() {
                 panic!("reader unable to complete");
             }
         }
 
-        if let Poll::Pending = writer.as_mut().poll(&mut cx) {
+        if writer.as_mut().poll(&mut cx).is_pending() {
             panic!("writer unable to complete");
         }
 
@@ -2208,7 +2209,7 @@ mod test {
         assert_eq!(mu.raw.state.load(Ordering::Relaxed) & HAS_WAITERS, 0);
 
         for f in &mut futures {
-            if let Poll::Pending = f.as_mut().poll(&mut cx) {
+            if f.as_mut().poll(&mut cx).is_pending() {
                 panic!("future unexpectedly ready");
             }
         }
@@ -2288,7 +2289,7 @@ mod test {
         // Drop the lock.  This should wake up the lock function.
         mem::drop(count);
 
-        if let Poll::Pending = l.as_mut().poll(&mut cx) {
+        if l.as_mut().poll(&mut cx).is_pending() {
             panic!("lock() unable to complete");
         }
 
@@ -2324,9 +2325,10 @@ mod test {
             }
         }
 
-        if let Poll::Pending = futures[needs_poll.expect("Writer unexpectedly able to complete")]
+        if futures[needs_poll.expect("Writer unexpectedly able to complete")]
             .as_mut()
             .poll(&mut cx)
+            .is_pending()
         {
             panic!("Writer unable to complete");
         }
@@ -2390,7 +2392,7 @@ mod test {
         );
 
         for f in &mut futures {
-            if let Poll::Pending = f.as_mut().poll(&mut cx) {
+            if f.as_mut().poll(&mut cx).is_pending() {
                 panic!("future unable to complete");
             }
         }
