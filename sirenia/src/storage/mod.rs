@@ -15,7 +15,7 @@ use libsirenia::transport::{create_transport_from_default_fds, Transport};
 
 /// Holds the rpc client for the specific instance of the TEE App.
 pub struct TrichechusStorage {
-    rpc: TEEStorageClient,
+    rpc: Arc<Mutex<TEEStorageClient>>,
 }
 
 impl TrichechusStorage {
@@ -28,25 +28,18 @@ impl TrichechusStorage {
      */
     pub fn new() -> Self {
         static INIT: Once = Once::new();
-        static mut TRANSPORT: Option<Arc<Mutex<Transport>>> = None;
+        static mut RPC: Option<Arc<Mutex<TEEStorageClient>>> = None;
         // Safe because it is protected by Once
         INIT.call_once(|| unsafe {
-            let transport = Some(Arc::new(Mutex::new(
+            let transport = Some(Arc::new(Mutex::new(TEEStorageClient::new(
                 create_transport_from_default_fds().unwrap(),
-            )));
-            TRANSPORT = transport;
+            ))));
+            RPC = transport;
         });
 
-        // TODO(allenwebb@): Make an option in the generator that allows using
-        // a reference transport for the client
-        // Safe because TRANSPORT is only written inside the Once
-        unsafe {
-            let transport: Transport = Arc::try_unwrap(TRANSPORT.as_ref().unwrap().clone())
-                .unwrap()
-                .into_inner();
-            TrichechusStorage {
-                rpc: TEEStorageClient::new(transport),
-            }
+        TrichechusStorage {
+            // Safe because RPC is only written inside the Once
+            rpc: unsafe { RPC.as_ref().unwrap().clone() },
         }
     }
 }
@@ -60,7 +53,7 @@ impl Default for TrichechusStorage {
 impl From<Transport> for TrichechusStorage {
     fn from(transport: Transport) -> Self {
         TrichechusStorage {
-            rpc: TEEStorageClient::new(transport),
+            rpc: Arc::new(Mutex::new(TEEStorageClient::new(transport))),
         }
     }
 }
@@ -69,7 +62,7 @@ impl Storage for TrichechusStorage {
     /// Read without deserializing.
     fn read_raw(&mut self, id: &str) -> Result<Vec<u8>> {
         // TODO: Log the rpc error.
-        match self.rpc.read_data(id.to_string()) {
+        match self.rpc.lock().read_data(id.to_string()) {
             Ok(res) => Ok(res),
             Err(err) => Err(to_read_data_error(err)),
         }
@@ -77,7 +70,7 @@ impl Storage for TrichechusStorage {
 
     /// Write without serializing.
     fn write_raw(&mut self, id: &str, data: &[u8]) -> Result<()> {
-        match self.rpc.write_data(id.to_string(), data.to_vec()) {
+        match self.rpc.lock().write_data(id.to_string(), data.to_vec()) {
             Ok(_) => Ok(()),
             Err(err) => Err(to_write_data_error(err)),
         }
@@ -168,7 +161,7 @@ pub mod tests {
 
         let client_thread = spawn(move || {
             let error = trichechus_storage.read_data::<String>(TEST_ID).unwrap_err();
-            print!("{}", error);
+            println!("Client thread: {}", error);
             assert!(matches!(error, StorageError::ReadData(_)));
         });
 
