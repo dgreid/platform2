@@ -16,12 +16,12 @@ The general structure of the classes is best illustrated by a few diagrams:
                            |
                            |
                            |
-        ------------------------------------------
-        |                                         |
-        |                                         |
-        |                                         |
-        |                                         |
-   UdevMonitor    ---typec- udev- events--->   PortManager
+        ------------------------------------------------------------------
+        |                                         |                       |
+        |                                         |                       |
+        |                                         |                       |
+        |                                         |                       |
+   UdevMonitor    ---typec- udev- events--->   PortManager    ------>   ECUtil
 ```
 
 ### UdevMonitor
@@ -105,8 +105,9 @@ since the Chrome OS Embedded Controller (EC) only enumerates SOP' alt modes, we 
 the Alternate Modes of SOP' as belonging to the associated `Cable`.
 
 When `UdevMonitor` receives an `add` event for a SOP' plug device, the `Cable` code searches through the corresponding sysfs file and adds all
-the Alternate Modes associated with that file. We do this because the Type C connector class doesn't generate udev events for individual
-SOP' cable plug alternate mode additions. TODO(b/174703000): Investigate why this is happening and fix it in the kernel.
+the alternate Modes associated with that file. It also reacts to individual SOP' plug altmode device add udev events and registers those,
+in case they weren't already registered during SOP' plug registration.
+
 
 ```
                      Cable
@@ -120,3 +121,39 @@ SOP' cable plug alternate mode additions. TODO(b/174703000): Investigate why thi
 
 There are getters and setters to access the PD identity information (for example, `{Get,Set}ProductVDO()`).
 There are also functions to retrieve information associated with partner altmodes, like getting a pointer to an altmode (`GetAltMode()`).
+
+### ECUtil
+
+Since there is no consistent sysfs interface to trigger alternate (or USB4) mode entry/exit, typecd uses the EC to accomplish this.
+`PortManager` possesses a pointer to an object implementing this interface. In production code, this interface is implemented by
+`CrosECUtil`, which communicates with the EC via `debugd` by means of D-Bus IPC. debugd in turn uses `ectool` to send the relevant
+command to the EC.
+
+The `debugd` API used by `CrosECUtil` is protected by D-Bus policy files that only allow users of type `typecd` to call it.
+
+```
+
+        PortManager
+            |
+            |                           CrosECUtil
+            |---------------------> (implements ECUtil)
+                                             |
+                                             |
+                                             |
+                                          (D-Bus)
+                                             |
+                                             |
+                                             |------------> debugd
+                                                              |
+                                                              |
+                                                              |
+                                                           (ectool)
+                                                              |
+                                                              |
+                                                             \|/
+                                                         Chrome OS EC
+
+```
+
+For unit tests, a mock implementation of the interface is used (`MockECUtil`) and its behaviour can be controlled based
+on what is being tested.
