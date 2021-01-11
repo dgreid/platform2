@@ -22,7 +22,7 @@ use libsirenia::to_sys_util;
 use libsirenia::transport::{
     self, create_transport_from_pipes, Transport, TransportType, CROS_CONNECTION_ERR_FD,
     CROS_CONNECTION_R_FD, CROS_CONNECTION_W_FD, DEFAULT_CLIENT_PORT, DEFAULT_CONNECTION_R_FD,
-    DEFAULT_CONNECTION_W_FD,
+    DEFAULT_CONNECTION_W_FD, DEFAULT_SERVER_PORT,
 };
 use sirenia::build_info::BUILD_TIMESTAMP;
 use sirenia::cli::initialize_common_arguments;
@@ -68,6 +68,7 @@ struct TEEApp {
 }
 
 struct TrichechusState {
+    expected_port: u32,
     pending_apps: HashMap<TransportType, String>,
     running_apps: HashMap<TransportType, TEEApp>,
     log_queue: VecDeque<String>,
@@ -76,6 +77,7 @@ struct TrichechusState {
 impl TrichechusState {
     fn new() -> Self {
         TrichechusState {
+            expected_port: DEFAULT_CLIENT_PORT,
             pending_apps: HashMap::new(),
             running_apps: HashMap::new(),
             log_queue: VecDeque::new(),
@@ -157,29 +159,26 @@ impl DugongConnectionHandler {
 
 impl ConnectionHandler for DugongConnectionHandler {
     fn handle_incoming_connection(&mut self, connection: Transport) -> Option<Box<dyn Mutator>> {
+        let expected_port = self.state.borrow().expected_port;
         // Check if the incoming connection is expected and associated with a TEE
         // application.
         let reservation = self.state.borrow_mut().pending_apps.remove(&connection.id);
-        match reservation {
-            Some(app_id) => {
-                self.connect_tee_app(&app_id, connection);
-                // TODO return a AddEventSourceMutator that cleans up the sandboxed app when
-                // dropped.
-                None
-            }
-            None => {
-                // Check if it is a control connection.
-                if matches!(connection.id.get_port(), Ok(DEFAULT_CLIENT_PORT)) {
-                    Some(Box::new(AddEventSourceMutator(Some(Box::new(
-                        RpcDispatcher::new(
-                            TrichechusServerImpl::new(self.state.clone(), connection.id.clone())
-                                .box_clone(),
-                            connection,
-                        ),
-                    )))))
-                } else {
-                    None
-                }
+        if let Some(app_id) = reservation {
+            self.connect_tee_app(&app_id, connection);
+            // TODO return a AddEventSourceMutator that cleans up the sandboxed app when
+            // dropped.
+            None
+        } else {
+            // Check if it is a control connection.
+            match connection.id.get_port() {
+                Ok(port) if port == expected_port => Some(Box::new(AddEventSourceMutator(Some(
+                    Box::new(RpcDispatcher::new(
+                        TrichechusServerImpl::new(self.state.clone(), connection.id.clone())
+                            .box_clone(),
+                        connection,
+                    )),
+                )))),
+                _ => None,
             }
         }
     }
@@ -264,13 +263,27 @@ fn main() -> Result<()> {
         ctx.add_event(Box::new(event_source)).unwrap();
     }
 
-    ctx.add_event(Box::new(
-        TransportServer::new(&config.connection_type, DugongConnectionHandler::new(state)).unwrap(),
-    ))
+    let server = TransportServer::new(
+        &config.connection_type,
+        DugongConnectionHandler::new(state.clone()),
+    )
     .unwrap();
+    let listen_addr = server.bound_to();
+    ctx.add_event(Box::new(server)).unwrap();
 
     // Handle parent dugong connection.
-    info!("waiting for connection");
+    if let Ok(addr) = listen_addr {
+        // Adjust the expected port when binding to an ephemeral port to facilitate testing.
+        match addr.get_port() {
+            Ok(DEFAULT_SERVER_PORT) | Err(_) => {}
+            Ok(port) => {
+                state.borrow_mut().expected_port = port + 1;
+            }
+        }
+        info!("waiting for connection at: {}", addr);
+    } else {
+        info!("waiting for connection");
+    }
     while !ctx.is_empty() {
         if let Err(e) = ctx.run_once() {
             error!("{}", e);

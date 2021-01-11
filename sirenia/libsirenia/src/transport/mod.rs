@@ -10,7 +10,7 @@
 
 use std::boxed::Box;
 use std::convert::TryInto;
-use std::fmt::{self, Debug, Display};
+use std::fmt::{self, Debug, Display, Formatter};
 use std::fs::File;
 use std::io::{self, Read, Write};
 use std::iter::Iterator;
@@ -24,6 +24,7 @@ use std::os::unix::io::{AsRawFd, FromRawFd, IntoRawFd, RawFd};
 use std::str::FromStr;
 
 use core::mem::replace;
+use libchromeos::linux::getpid;
 use libchromeos::net::{InetVersion, TcpSocket};
 use libchromeos::vsock::{
     AddrParseError, SocketAddr as VSocketAddr, ToSocketAddr, VsockCid, VsockListener, VsockSocket,
@@ -145,6 +146,16 @@ impl TransportType {
             TransportType::IpConnection(addr) => Ok(addr.port() as u32),
             TransportType::VsockConnection(addr) => Ok(addr.port),
             _ => Err(Error::UnknownTransportType),
+        }
+    }
+}
+
+impl Display for TransportType {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            TransportType::IpConnection(addr) => write!(f, "ip://{}", addr),
+            TransportType::VsockConnection(addr) => write!(f, "vsock://{}", addr),
+            TransportType::Pipe(a, b) => write!(f, "pipe://{}/{}:{}", getpid(), a, b),
         }
     }
 }
@@ -282,6 +293,7 @@ fn vsockstream_to_transport(stream: VsockStream, id: VSocketAddr) -> Result<Tran
 
 /// Abstracts transport methods that accept incoming connections.
 pub trait ServerTransport: AsRawFd {
+    fn bound_to(&self) -> Result<TransportType>;
     fn accept(&mut self) -> Result<Transport>;
 }
 
@@ -315,6 +327,10 @@ impl AsRawFd for IPServerTransport {
 }
 
 impl ServerTransport for IPServerTransport {
+    fn bound_to(&self) -> Result<TransportType> {
+        self.local_addr().map(TransportType::from)
+    }
+
     fn accept(&mut self) -> Result<Transport> {
         let (stream, addr) = handle_eintr!(self.0.accept()).map_err(Error::Accept)?;
         tcpstream_to_transport(stream, addr)
@@ -388,6 +404,16 @@ impl VsockServerTransport {
         let listener = VsockListener::bind(address).map_err(Error::Bind)?;
         Ok(VsockServerTransport(listener))
     }
+
+    pub fn local_addr(&self) -> Result<VSocketAddr> {
+        match self.0.local_port() {
+            Ok(port) => Ok(VSocketAddr {
+                cid: VsockCid::Any,
+                port,
+            }),
+            Err(err) => Err(Error::GetAddress(err)),
+        }
+    }
 }
 
 impl AsRawFd for VsockServerTransport {
@@ -397,6 +423,10 @@ impl AsRawFd for VsockServerTransport {
 }
 
 impl ServerTransport for VsockServerTransport {
+    fn bound_to(&self) -> Result<TransportType> {
+        self.local_addr().map(TransportType::from)
+    }
+
     fn accept(&mut self) -> Result<Transport> {
         let (stream, addr) = handle_eintr!(self.0.accept()).map_err(Error::Accept)?;
         vsockstream_to_transport(stream, addr)
@@ -555,6 +585,11 @@ impl AsRawFd for PipeTransport {
 }
 
 impl ServerTransport for PipeTransport {
+    /// This doesn't make sense for a PipeTransport so always return an error.
+    fn bound_to(&self) -> Result<TransportType> {
+        Err(Error::UnknownTransportType)
+    }
+
     fn accept(&mut self) -> Result<Transport> {
         match replace(&mut self.state, PipeTransportState::UnBound) {
             PipeTransportState::Bound(t1, t2) => {

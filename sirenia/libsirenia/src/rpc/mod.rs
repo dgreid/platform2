@@ -28,6 +28,8 @@ pub enum Error {
     // This is used by sirenia-rpc-macros
     #[error("communication failed: {0:?}")]
     Communication(communication::Error),
+    #[error("failed to add event source to multiplexer: {0}")]
+    MultiplexerAddEvent(EventsError),
     #[error("got the wrong response")]
     ResponseMismatch,
 }
@@ -41,11 +43,14 @@ pub fn register_server<H: MessageHandler + 'static>(
     event_multiplexer: &mut EventMultiplexer,
     transport: &TransportType,
     handler: H,
-) -> StdResult<(), EventsError> {
-    let boxed: Box<dyn EventSource> = Box::new(
-        TransportServer::new(&transport, SingleRpcConnectionHandler::new(handler)).unwrap(),
-    );
-    event_multiplexer.add_event(boxed)
+) -> Result<Option<TransportType>> {
+    let server = TransportServer::new(&transport, SingleRpcConnectionHandler::new(handler))?;
+    let listen_addr = server.bound_to().ok();
+    let boxed: Box<dyn EventSource> = Box::new(server);
+    event_multiplexer
+        .add_event(boxed)
+        .map_err(Error::MultiplexerAddEvent)?;
+    Ok(listen_addr)
 }
 
 /// A paring between request and response messages. Define this trait for the desired
@@ -156,6 +161,11 @@ impl<H: ConnectionHandler> TransportServer<H> {
             transport: bind_addr.try_into().map_err(Error::NewTransport)?,
         })
     }
+
+    // Make it possible to bind to an ephemeral port and get the port number later.
+    pub fn bound_to(&self) -> StdResult<TransportType, transport::Error> {
+        self.transport.bound_to()
+    }
 }
 
 impl<H: ConnectionHandler> AsRawFd for TransportServer<H> {
@@ -183,11 +193,12 @@ mod test {
     use super::*;
 
     use std::i32;
+    use std::str::FromStr;
     use std::thread::spawn;
 
     use serde::Deserialize;
 
-    use crate::transport::{self, ClientTransport, IPClientTransport, IPServerTransport};
+    use crate::transport::{ClientTransport, IPClientTransport};
 
     #[derive(Serialize, Deserialize)]
     enum Request {
@@ -220,29 +231,20 @@ mod test {
         }
     }
 
-    fn get_ip_transport() -> StdResult<(IPServerTransport, IPClientTransport), transport::Error> {
-        const BIND_ADDRESS: &str = "127.0.0.1:0";
-        let server = IPServerTransport::new(BIND_ADDRESS)?;
-        // Bind to an ephemeral port (denoted by port 0).
-        let client = IPClientTransport::new(&server.local_addr()?, 0)?;
-        Ok((server, client))
-    }
-
     #[test]
     fn smoke_test() {
-        let (server_transport, mut client_transport) = get_ip_transport().unwrap();
-
         let mut ctx = EventMultiplexer::new().unwrap();
+        let server_addr = if let Ok(Some(TransportType::IpConnection(addr))) = register_server(
+            &mut ctx,
+            &TransportType::from_str("127.0.0.1:0").unwrap(),
+            TestHandler {},
+        ) {
+            addr
+        } else {
+            panic!();
+        };
 
-        // This would use register_server(ctx, &server_transport, TestHandler{}), but for testing
-        // this sets up an IP connection a head of time on an ephemeral port to avoid port
-        // conflicts.
-        let boxed: Box<dyn EventSource> = Box::new(TransportServer {
-            transport: Box::new(server_transport),
-            handler: SingleRpcConnectionHandler::new(TestHandler {}),
-        });
-        ctx.add_event(boxed).unwrap();
-
+        let mut client_transport = IPClientTransport::new(server_addr, 0).unwrap();
         let handle = spawn(move || {
             // Queue the client RPC:
             let mut connection = client_transport.connect().unwrap();

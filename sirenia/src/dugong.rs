@@ -14,7 +14,9 @@ use dbus::arg::OwnedFd;
 use dbus::blocking::LocalConnection;
 use dbus::tree::{self, Interface, MTFn};
 use libsirenia::rpc;
-use libsirenia::transport::{self, Transport, TransportType, DEFAULT_CLIENT_PORT};
+use libsirenia::transport::{
+    self, Transport, TransportType, DEFAULT_CLIENT_PORT, DEFAULT_SERVER_PORT,
+};
 use serde::export::Formatter;
 use sirenia::build_info::BUILD_TIMESTAMP;
 use sirenia::cli::initialize_common_arguments;
@@ -152,16 +154,21 @@ fn main() -> Result<()> {
 
     info!("Starting dugong: {}", BUILD_TIMESTAMP);
     info!("Opening connection to trichechus");
-    let mut transport = transport_type
-        .try_into_client(Some(DEFAULT_CLIENT_PORT))
-        .unwrap();
+    // Adjust the source port when connecting to a non-standard port to facilitate testing.
+    let bind_port = match transport_type.get_port() {
+        Ok(DEFAULT_SERVER_PORT) | Err(_) => DEFAULT_CLIENT_PORT,
+        Ok(port) => port + 1,
+    };
+    let mut transport = transport_type.try_into_client(Some(bind_port)).unwrap();
 
-    if let Ok(transport) = transport.connect() {
-        info!("Starting rpc");
-        start_dbus_handler(TrichechusClient::new(transport), config.connection_type).unwrap();
-    } else {
+    let transport = transport.connect().map_err(|e| {
         error!("transport connect failed");
-    }
+        Error::TransportConnection(e)
+    })?;
+    info!("Starting rpc");
+    let client = TrichechusClient::new(transport);
+
+    start_dbus_handler(client, config.connection_type).unwrap();
 
     // TODO: If it gets here is something screwed up?
     Ok(())
