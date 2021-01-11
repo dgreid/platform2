@@ -89,6 +89,10 @@ class DiagActions final {
   void ForceCancelAtPercent(uint32_t percent);
 
  private:
+  // Helper function to check the response initially returned when starting the
+  // routine. This ensures the routine started correctly and is supported.
+  bool CheckInitialResponse(
+      const chromeos::cros_healthd::mojom::RunRoutineResponsePtr& response);
   // Helper function to determine when a routine has finished. Also does any
   // necessary cleanup.
   bool PollRoutineAndProcessResult();
@@ -105,6 +109,10 @@ class DiagActions final {
           noninteractive_result);
   // Attempts to remove the routine corresponding to |id_|.
   void RemoveRoutine();
+  // Helper function to print a routine |status| to stdout. Returns true if
+  // |status| is known and false otherwise.
+  bool PrintStatus(
+      chromeos::cros_healthd::mojom::DiagnosticRoutineStatusEnum status);
 
   // Used to send mojo requests to cros_healthd.
   std::unique_ptr<CrosHealthdMojoAdapter> adapter_;
