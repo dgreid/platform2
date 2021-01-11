@@ -8,8 +8,6 @@
 use serde::{Deserialize, Serialize};
 use sirenia_rpc_macros::sirenia_rpc;
 
-use crate::storage::StorableMember;
-
 /// Represents the possible status codes from an RPC.
 /// Values are assigned to make it easier to interface with D-Bus.
 #[derive(Debug, Deserialize, Serialize)]
@@ -37,12 +35,12 @@ pub trait Cronista {
         scope: Scope,
         domain: String,
         identifier: String,
-        data: StorableMember,
+        data: Vec<u8>,
     ) -> std::result::Result<Status, Self::Error>;
     fn retrieve(
         &self,
         scope: Scope,
         domain: String,
         identifier: String,
-    ) -> std::result::Result<(Status, StorableMember), Self::Error>;
+    ) -> std::result::Result<(Status, Vec<u8>), Self::Error>;
 }

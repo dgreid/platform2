@@ -16,6 +16,8 @@ use std::result::Result as StdResult;
 
 use getopts::Options;
 use libchromeos::linux::{getpid, getsid, setsid};
+use libsirenia::cli::TransportTypeOption;
+use libsirenia::communication::persistence::{Cronista, CronistaClient, Scope};
 use libsirenia::linux::events::{AddEventSourceMutator, EventMultiplexer, Mutator};
 use libsirenia::linux::syslog::{Syslog, SyslogReceiverMut, SYSLOG_PATH};
 use libsirenia::rpc::{ConnectionHandler, RpcDispatcher, TransportServer};
@@ -28,10 +30,12 @@ use libsirenia::transport::{
 };
 use sirenia::build_info::BUILD_TIMESTAMP;
 use sirenia::cli::initialize_common_arguments;
-use sirenia::communication::{AppInfo, Trichechus, TrichechusServer};
+use sirenia::communication::{AppInfo, TEEStorage, TEEStorageServer, Trichechus, TrichechusServer};
 use sys_util::{self, error, info, syslog};
 use thiserror::Error as ThisError;
 
+const CRONISTA_URI_SHORT_NAME: &str = "C";
+const CRONISTA_URI_LONG_NAME: &str = "cronista";
 const SYSLOG_PATH_SHORT_NAME: &str = "L";
 
 #[derive(ThisError, Debug)]
@@ -67,15 +71,53 @@ pub type Result<T> = StdResult<T, Error>;
 
 /* Holds the trichechus-relevant information for a TEEApp. */
 struct TEEApp {
-    sandbox: Sandbox,
-    transport: Transport,
+    _sandbox: Sandbox,
+}
+
+#[derive(Clone)]
+struct TEEAppHandler {
+    state: Rc<RefCell<TrichechusState>>,
+    tee_app: Rc<RefCell<TEEApp>>,
+}
+
+impl TEEStorage for TEEAppHandler {
+    type Error = ();
+
+    fn read_data(&self, id: String) -> StdResult<Vec<u8>, Self::Error> {
+        // TODO implement proper scope and domain based on TEEApp once the app manifest entry is
+        // available.
+        self.state
+            .borrow()
+            .persistence
+            .as_ref()
+            .unwrap()
+            .retrieve(Scope::Test, "test".to_string(), id)
+            .map(|x| x.1)
+            .map_err(|err| {
+                error!("failed to retrieve data: {}", err);
+            })
+    }
+
+    fn write_data(&self, id: String, data: Vec<u8>) -> StdResult<(), Self::Error> {
+        self.state
+            .borrow()
+            .persistence
+            .as_ref()
+            .unwrap()
+            .persist(Scope::Test, "test".to_string(), id, data)
+            .map(drop)
+            .map_err(|err| {
+                error!("failed to persist data: {}", err);
+            })
+    }
 }
 
 struct TrichechusState {
     expected_port: u32,
     pending_apps: HashMap<TransportType, String>,
-    running_apps: HashMap<TransportType, TEEApp>,
+    running_apps: HashMap<TransportType, Rc<RefCell<TEEApp>>>,
     log_queue: VecDeque<String>,
+    persistence: Option<CronistaClient>,
 }
 
 impl TrichechusState {
@@ -85,6 +127,7 @@ impl TrichechusState {
             pending_apps: HashMap::new(),
             running_apps: HashMap::new(),
             log_queue: VecDeque::new(),
+            persistence: None,
         }
     }
 }
@@ -154,14 +197,27 @@ impl DugongConnectionHandler {
         DugongConnectionHandler { state }
     }
 
-    fn connect_tee_app(&mut self, app_id: &str, connection: Transport) {
+    fn connect_tee_app(&mut self, app_id: &str, connection: Transport) -> Option<Box<dyn Mutator>> {
         let id = connection.id.clone();
         match spawn_tee_app(app_id, connection) {
-            Ok(s) => {
-                self.state.borrow_mut().running_apps.insert(id, s).unwrap();
+            Ok((app, transport)) => {
+                let tee_app = Rc::new(RefCell::new(app));
+                self.state
+                    .borrow_mut()
+                    .running_apps
+                    .insert(id, tee_app.clone())
+                    .unwrap();
+                let storage_server: Box<dyn TEEStorageServer> = Box::new(TEEAppHandler {
+                    state: self.state.clone(),
+                    tee_app,
+                });
+                Some(Box::new(AddEventSourceMutator(Some(Box::new(
+                    RpcDispatcher::new(storage_server, transport),
+                )))))
             }
             Err(e) => {
                 error!("failed to start tee app: {}", e);
+                None
             }
         }
     }
@@ -174,10 +230,7 @@ impl ConnectionHandler for DugongConnectionHandler {
         // application.
         let reservation = self.state.borrow_mut().pending_apps.remove(&connection.id);
         if let Some(app_id) = reservation {
-            self.connect_tee_app(&app_id, connection);
-            // TODO return a AddEventSourceMutator that cleans up the sandboxed app when
-            // dropped.
-            None
+            self.connect_tee_app(&app_id, connection)
         } else {
             // Check if it is a control connection.
             match connection.id.get_port() {
@@ -201,7 +254,7 @@ fn get_app_path(id: &str) -> Result<&str> {
     }
 }
 
-fn spawn_tee_app(app_id: &str, transport: Transport) -> Result<TEEApp> {
+fn spawn_tee_app(app_id: &str, transport: Transport) -> Result<(TEEApp, Transport)> {
     let mut sandbox = Sandbox::new(None).map_err(Error::NewSandbox)?;
     let (trichechus_transport, tee_transport) =
         create_transport_from_pipes().map_err(Error::NewTransport)?;
@@ -218,10 +271,7 @@ fn spawn_tee_app(app_id: &str, transport: Transport) -> Result<TEEApp> {
         .run(Path::new(process_path), &[process_path], &keep_fds)
         .map_err(Error::RunSandbox)?;
 
-    Ok(TEEApp {
-        sandbox,
-        transport: trichechus_transport,
-    })
+    Ok((TEEApp { _sandbox: sandbox }, trichechus_transport))
 }
 
 // TODO: Figure out how to clean up TEEs that are no longer in use
@@ -237,6 +287,13 @@ fn main() -> Result<()> {
         "syslog-path",
         "connect to trichechus, get and print logs, then exit.",
         SYSLOG_PATH,
+    );
+    let cronista_uri_option = TransportTypeOption::new(
+        CRONISTA_URI_SHORT_NAME,
+        CRONISTA_URI_LONG_NAME,
+        "URI to connect to cronista",
+        "vsock://3:5554",
+        &mut opts,
     );
     let (config, matches) = initialize_common_arguments(opts, &args[1..]).unwrap();
     let state = Rc::new(RefCell::new(TrichechusState::new()));
@@ -285,6 +342,12 @@ fn main() -> Result<()> {
     // Unblock signals for the process that spawns the children. It might make sense to fork
     // again here for each child to avoid them blocking each other.
     to_sys_util::unblock_all_signals();
+
+    if let Some(uri) = cronista_uri_option.from_matches(&matches).unwrap() {
+        state.borrow_mut().persistence = Some(CronistaClient::new(
+            uri.try_into_client(None).unwrap().connect().unwrap(),
+        ));
+    }
 
     let mut ctx = EventMultiplexer::new().unwrap();
     if let Some(event_source) = syslog {
