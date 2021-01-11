@@ -12,7 +12,7 @@
 #include <unistd.h>
 #include <xf86drm.h>
 
-#include "virtgpu_drm.h"  // NOLINT(build/include_directory)
+#include "virtualization/linux-headers/virtgpu_drm.h"  // NOLINT(build/include_directory)
 
 #include "drm-server-protocol.h"  // NOLINT(build/include_directory)
 #include "linux-dmabuf-unstable-v1-client-protocol.h"  // NOLINT(build/include_directory)
@@ -127,14 +127,14 @@ static void sl_drm_create_prime_buffer(struct wl_client* client,
     prime_handle.fd = name;
     ret = drmIoctl(drm_fd, DRM_IOCTL_PRIME_FD_TO_HANDLE, &prime_handle);
     if (!ret) {
-      struct drm_virtgpu_resource_info info_arg;
+      struct drm_virtgpu_resource_info_cros info_arg;
       struct drm_gem_close gem_close;
 
       // Then attempts to get resource information. This will fail silently if
       // the drm device passed to sommelier is not a virtio-gpu device.
       memset(&info_arg, 0, sizeof(info_arg));
       info_arg.bo_handle = prime_handle.handle;
-      ret = drmIoctl(drm_fd, DRM_IOCTL_VIRTGPU_RESOURCE_INFO, &info_arg);
+      ret = drmIoctl(drm_fd, DRM_IOCTL_VIRTGPU_RESOURCE_INFO_CROS, &info_arg);
       // Correct stride0 if we are able to get proper resource info.
       if (!ret) {
         stride0 = info_arg.stride;
