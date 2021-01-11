@@ -19,6 +19,8 @@ namespace cryptohome {
 constexpr char kEcryptfsVaultDir[] = "vault";
 // Name of the mount directory.
 constexpr char kMountDir[] = "mount";
+// Name of the temporary mount directory used during migration.
+constexpr char kTemporaryMountDir[] = "temporary_mount";
 
 constexpr mode_t kKeyFilePermissions = 0600;
 constexpr int kKeyFileMax = 100;  // master.0 ... master.99
@@ -37,6 +39,8 @@ base::FilePath UserActivityTimestampPath(const std::string& obfuscated,
 
 base::FilePath GetEcryptfsUserVaultPath(const std::string& obfuscated_username);
 base::FilePath GetUserMountDirectory(const std::string& obfuscated_username);
+base::FilePath GetUserTemporaryMountDirectory(
+    const std::string& obfuscated_username);
 
 bool InitializeFilesystemLayout(Platform* platform,
                                 Crypto* crypto,

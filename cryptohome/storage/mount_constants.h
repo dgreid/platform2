@@ -38,9 +38,6 @@ extern const char kGCacheBlobsDir[];
 extern const char kUserHomeSuffix[];
 extern const char kRootHomeSuffix[];
 
-// Name of the temporary mount directory.
-extern const char kTemporaryMountDir[];
-
 extern const char kUserHomeSuffix[];
 extern const char kRootHomeSuffix[];
 

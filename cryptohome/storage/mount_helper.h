@@ -105,13 +105,6 @@ class MountHelper : public MountHelperInterface {
   // Returns false if the mountpoints were not present and could not be created.
   bool EnsureUserMountPoints(const std::string& username) const;
 
-  // Gets the directory to temporarily mount the user's cryptohome at.
-  //
-  // Parameters
-  //   obfuscated_username - Obfuscated username field of the credentials.
-  FilePath GetUserTemporaryMountDirectory(
-      const std::string& obfuscated_username) const;
-
   // Creates the tracked subdirectories in a user's cryptohome.
   // If the cryptohome did not have tracked directories, but had them untracked,
   // migrate their contents.

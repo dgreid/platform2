@@ -236,13 +236,6 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   base::FilePath GetUserEphemeralMountDirectory(
       const std::string& obfuscated_username) const;
 
-  // Gets the directory to temporarily mount the user's cryptohome at.
-  //
-  // Parameters
-  //   obfuscated_username - Obfuscated username field of the credentials.
-  base::FilePath GetUserTemporaryMountDirectory(
-      const std::string& obfuscated_username) const;
-
   // Returns the path of a user passthrough inside a vault
   //
   // Parameters

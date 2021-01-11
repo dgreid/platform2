@@ -20,8 +20,6 @@ constexpr char kGCacheVersion2Dir[] = "v2";
 constexpr char kGCacheBlobsDir[] = "blobs";
 constexpr char kGCacheTmpDir[] = "tmp";
 
-constexpr char kTemporaryMountDir[] = "temporary_mount";
-
 constexpr char kUserHomeSuffix[] = "user";
 constexpr char kRootHomeSuffix[] = "root";
 

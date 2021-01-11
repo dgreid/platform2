@@ -125,11 +125,6 @@ FilePath MountHelper::GetEphemeralSparseFile(
       .Append(obfuscated_username);
 }
 
-FilePath MountHelper::GetUserTemporaryMountDirectory(
-    const std::string& obfuscated_username) const {
-  return ShadowRoot().Append(obfuscated_username).Append(kTemporaryMountDir);
-}
-
 FilePath MountHelper::GetMountedUserHomePath(
     const std::string& obfuscated_username) const {
   return GetUserMountDirectory(obfuscated_username).Append(kUserHomeSuffix);

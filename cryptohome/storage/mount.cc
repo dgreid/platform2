@@ -628,11 +628,6 @@ FilePath Mount::GetUserDirectoryForUser(
   return ShadowRoot().Append(obfuscated_username);
 }
 
-FilePath Mount::GetUserTemporaryMountDirectory(
-    const std::string& obfuscated_username) const {
-  return mounter_->GetUserTemporaryMountDirectory(obfuscated_username);
-}
-
 bool Mount::CheckChapsDirectory(const FilePath& dir) {
   const Platform::Permissions kChapsDirPermissions = {
       chaps_user_,                 // chaps

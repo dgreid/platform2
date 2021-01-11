@@ -55,6 +55,11 @@ base::FilePath GetUserMountDirectory(const std::string& obfuscated_username) {
   return ShadowRoot().Append(obfuscated_username).Append(kMountDir);
 }
 
+base::FilePath GetUserTemporaryMountDirectory(
+    const std::string& obfuscated_username) {
+  return ShadowRoot().Append(obfuscated_username).Append(kTemporaryMountDir);
+}
+
 bool InitializeFilesystemLayout(Platform* platform,
                                 Crypto* crypto,
                                 brillo::SecureBlob* salt) {
