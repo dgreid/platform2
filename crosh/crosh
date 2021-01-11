@@ -400,18 +400,6 @@ help_borealis() (
   cmd_borealis --help
 )
 
-# Set the vars to pass the unittests ...
-USAGE_ssh=''
-HELP_ssh=''
-# ... then unset them to hide the command from "help" output.
-unset USAGE_ssh HELP_ssh
-cmd_ssh() (
-  cat <<EOF
-The 'ssh' command has been removed.  Please install the official SSH extension:
-https://chrome.google.com/webstore/detail/pnhechapfaindjhompbnflcldabbghjo
-EOF
-)
-
 USAGE_swap='[ enable <size (MB)> | disable | start | stop | status
  | set_margin <discard threshold (MB)> | set_extra_free <amount (MB)>
  | set_min_filelist <amount (MB)> ]'

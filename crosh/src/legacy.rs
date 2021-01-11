@@ -45,7 +45,6 @@ const BASE_COMMANDS: &[&str] = &[
     "set_arpgw",
     "set_cellular_ppp",
     "set_wake_on_lan",
-    "ssh",
     "storage_test_1",
     "storage_test_2",
     "swap",
