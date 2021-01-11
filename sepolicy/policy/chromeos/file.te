@@ -79,6 +79,7 @@ type cros_gdbus_exec, exec_type, file_type, cros_file_type, cros_system_file_typ
 type cros_healthd_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_hermes_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_hotlined_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
+type cros_hotlog_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_huddly_monitor_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_hwclock_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_imageloader_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
