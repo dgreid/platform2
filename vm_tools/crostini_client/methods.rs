@@ -345,6 +345,7 @@ pub struct UserDisks {
 pub struct Methods {
     connection: ConnectionProxy,
     crostini_enabled: Option<bool>,
+    crostini_dlc: Option<bool>,
     plugin_vm_enabled: Option<bool>,
 }
 
@@ -355,6 +356,7 @@ impl Methods {
         Ok(Methods {
             connection: connection.into(),
             crostini_enabled: None,
+            crostini_dlc: None,
             plugin_vm_enabled: None,
         })
     }
@@ -364,6 +366,7 @@ impl Methods {
         Methods {
             connection: ConnectionProxy::dummy(),
             crostini_enabled: Some(true),
+            crostini_dlc: Some(true),
             plugin_vm_enabled: Some(true),
         }
     }
@@ -468,18 +471,37 @@ impl Methods {
         Ok(())
     }
 
-    fn is_chrome_feature_enabled(
+    fn is_vm_type_enabled(
         &mut self,
         user_id_hash: &str,
-        feature_name: &str,
+        method_name: &str,
     ) -> Result<bool, Box<dyn Error>> {
         let method = Message::new_method_call(
             CHROME_FEATURES_SERVICE_NAME,
             CHROME_FEATURES_SERVICE_PATH,
             CHROME_FEATURES_SERVICE_INTERFACE,
-            feature_name,
+            method_name,
         )?
         .append1(user_id_hash);
+
+        let message = self
+            .connection
+            .send_with_reply_and_block(method, DEFAULT_TIMEOUT_MS)?;
+        match message.get1() {
+            Some(true) => Ok(true),
+            Some(false) => Ok(false),
+            _ => Err(BadChromeFeatureStatus.into()),
+        }
+    }
+
+    fn is_chrome_feature_enabled(&mut self, feature_name: &str) -> Result<bool, Box<dyn Error>> {
+        let method = Message::new_method_call(
+            CHROME_FEATURES_SERVICE_NAME,
+            CHROME_FEATURES_SERVICE_PATH,
+            CHROME_FEATURES_SERVICE_INTERFACE,
+            CHROME_FEATURES_SERVICE_IS_FEATURE_ENABLED_METHOD,
+        )?
+        .append1(feature_name);
 
         let message = self
             .connection
@@ -505,11 +527,23 @@ impl Methods {
         Ok(())
     }
 
+    fn does_crostini_use_dlc(&mut self) -> Result<bool, Box<dyn Error>> {
+        let enabled = match self.crostini_dlc {
+            Some(value) => value,
+            None => {
+                let value = self.is_chrome_feature_enabled("CrostiniUseDlc")?;
+                self.crostini_dlc = Some(value);
+                value
+            }
+        };
+        Ok(enabled)
+    }
+
     fn is_crostini_enabled(&mut self, user_id_hash: &str) -> Result<bool, Box<dyn Error>> {
         let enabled = match self.crostini_enabled {
             Some(value) => value,
             None => {
-                let value = self.is_chrome_feature_enabled(
+                let value = self.is_vm_type_enabled(
                     user_id_hash,
                     CHROME_FEATURES_SERVICE_IS_CROSTINI_ENABLED_METHOD,
                 )?;
@@ -524,7 +558,7 @@ impl Methods {
         let enabled = match self.plugin_vm_enabled {
             Some(value) => value,
             None => {
-                let value = self.is_chrome_feature_enabled(
+                let value = self.is_vm_type_enabled(
                     user_id_hash,
                     CHROME_FEATURES_SERVICE_IS_PLUGIN_VM_ENABLED_METHOD,
                 )?;
@@ -1042,6 +1076,11 @@ impl Methods {
         user_disks: UserDisks,
     ) -> Result<(), Box<dyn Error>> {
         let mut request = StartVmRequest::new();
+        if self.does_crostini_use_dlc()? {
+            let mut vm = VirtualMachineSpec::new();
+            vm.dlc_id = "termina-dlc".to_owned();
+            request.vm = protobuf::SingularPtrField::some(vm);
+        }
         request.start_termina = true;
         request.owner_id = user_id_hash.to_owned();
         request.enable_gpu = features.gpu;
