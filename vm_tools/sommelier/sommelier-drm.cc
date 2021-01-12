@@ -134,6 +134,7 @@ static void sl_drm_create_prime_buffer(struct wl_client* client,
       // the drm device passed to sommelier is not a virtio-gpu device.
       memset(&info_arg, 0, sizeof(info_arg));
       info_arg.bo_handle = prime_handle.handle;
+      info_arg.type = VIRTGPU_RESOURCE_INFO_TYPE_EXTENDED;
       ret = drmIoctl(drm_fd, DRM_IOCTL_VIRTGPU_RESOURCE_INFO_CROS, &info_arg);
       // Correct stride0 if we are able to get proper resource info.
       if (!ret) {
