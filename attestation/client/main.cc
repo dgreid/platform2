@@ -10,6 +10,7 @@
 
 #include <attestation/proto_bindings/attestation_ca.pb.h>
 #include <attestation/proto_bindings/interface.pb.h>
+#include <attestation-client/attestation/dbus-proxies.h>
 #include <base/bind.h>
 #include <base/command_line.h>
 #include <base/files/file_util.h>
@@ -18,9 +19,12 @@
 #include <brillo/daemons/daemon.h>
 #include <brillo/syslog_logging.h>
 
-#include "attestation/client/dbus_proxy.h"
 #include "attestation/common/crypto_utility_impl.h"
 #include "attestation/common/print_interface_proto.h"
+
+namespace {
+constexpr base::TimeDelta kDefaultTimeout = base::TimeDelta::FromMinutes(2);
+}  // namespace
 
 namespace attestation {
 
@@ -158,10 +162,13 @@ class ClientLoop : public ClientLoopBase {
     if (exit_code != EX_OK) {
       return exit_code;
     }
-    attestation_.reset(new attestation::DBusProxy());
-    if (!attestation_->Initialize()) {
-      return EX_UNAVAILABLE;
-    }
+
+    dbus::Bus::Options options;
+    options.bus_type = dbus::Bus::SYSTEM;
+    bus_ = base::MakeRefCounted<dbus::Bus>(options);
+    CHECK(bus_->Connect()) << "Failed to connect to system D-Bus";
+    attestation_ = std::make_unique<org::chromium::AttestationProxy>(bus_);
+
     exit_code = ScheduleCommand();
     if (exit_code == EX_USAGE) {
       printf("%s", kUsage);
@@ -585,21 +592,32 @@ class ClientLoop : public ClientLoopBase {
     }
   }
 
+  void PrintErrorAndQuit(brillo::Error* error) {
+    printf("Error: %s\n", error->GetMessage().c_str());
+    Quit();
+  }
+
   void CallGetStatus(bool extended_status) {
     GetStatusRequest request;
     request.set_extended_status(extended_status);
-    attestation_->GetStatus(
-        request, base::Bind(&ClientLoop::PrintReplyAndQuit<GetStatusReply>,
-                            weak_factory_.GetWeakPtr()));
+    attestation_->GetStatusAsync(
+        request,
+        base::Bind(&ClientLoop::PrintReplyAndQuit<GetStatusReply>,
+                   weak_factory_.GetWeakPtr()),
+        base::Bind(&ClientLoop::PrintErrorAndQuit, weak_factory_.GetWeakPtr()),
+        kDefaultTimeout.InMilliseconds());
   }
 
   void CallGetKeyInfo(const std::string& label, const std::string& username) {
     GetKeyInfoRequest request;
     request.set_key_label(label);
     request.set_username(username);
-    attestation_->GetKeyInfo(
-        request, base::Bind(&ClientLoop::PrintReplyAndQuit<GetKeyInfoReply>,
-                            weak_factory_.GetWeakPtr()));
+    attestation_->GetKeyInfoAsync(
+        request,
+        base::Bind(&ClientLoop::PrintReplyAndQuit<GetKeyInfoReply>,
+                   weak_factory_.GetWeakPtr()),
+        base::Bind(&ClientLoop::PrintErrorAndQuit, weak_factory_.GetWeakPtr()),
+        kDefaultTimeout.InMilliseconds());
   }
 
   void CallSetKeyPayload(const std::string& payload,
@@ -609,9 +627,12 @@ class ClientLoop : public ClientLoopBase {
     request.set_key_label(label);
     request.set_username(username);
     request.set_payload(payload);
-    attestation_->SetKeyPayload(
-        request, base::Bind(&ClientLoop::PrintReplyAndQuit<SetKeyPayloadReply>,
-                            weak_factory_.GetWeakPtr()));
+    attestation_->SetKeyPayloadAsync(
+        request,
+        base::Bind(&ClientLoop::PrintReplyAndQuit<SetKeyPayloadReply>,
+                   weak_factory_.GetWeakPtr()),
+        base::Bind(&ClientLoop::PrintErrorAndQuit, weak_factory_.GetWeakPtr()),
+        kDefaultTimeout.InMilliseconds());
   }
 
   void CallDeleteKeys(const std::string& prefix,
@@ -627,35 +648,45 @@ class ClientLoop : public ClientLoopBase {
       request.set_match_behavior(DeleteKeysRequest::MATCH_BEHAVIOR_PREFIX);
     }
     request.set_username(username);
-    attestation_->DeleteKeys(
-        request, base::Bind(&ClientLoop::PrintReplyAndQuit<DeleteKeysReply>,
-                            weak_factory_.GetWeakPtr()));
+    attestation_->DeleteKeysAsync(
+        request,
+        base::Bind(&ClientLoop::PrintReplyAndQuit<DeleteKeysReply>,
+                   weak_factory_.GetWeakPtr()),
+        base::Bind(&ClientLoop::PrintErrorAndQuit, weak_factory_.GetWeakPtr()),
+        kDefaultTimeout.InMilliseconds());
   }
 
   void CallGetEndorsementInfo() {
     GetEndorsementInfoRequest request;
-    attestation_->GetEndorsementInfo(
+    attestation_->GetEndorsementInfoAsync(
         request,
         base::Bind(&ClientLoop::PrintReplyAndQuit<GetEndorsementInfoReply>,
-                   weak_factory_.GetWeakPtr()));
+                   weak_factory_.GetWeakPtr()),
+        base::Bind(&ClientLoop::PrintErrorAndQuit, weak_factory_.GetWeakPtr()),
+        kDefaultTimeout.InMilliseconds());
   }
 
   void CallGetAttestationKeyInfo(ACAType aca_type) {
     GetAttestationKeyInfoRequest request;
     request.set_aca_type(aca_type);
-    attestation_->GetAttestationKeyInfo(
+    attestation_->GetAttestationKeyInfoAsync(
         request,
         base::Bind(&ClientLoop::PrintReplyAndQuit<GetAttestationKeyInfoReply>,
-                   weak_factory_.GetWeakPtr()));
+                   weak_factory_.GetWeakPtr()),
+        base::Bind(&ClientLoop::PrintErrorAndQuit, weak_factory_.GetWeakPtr()),
+        kDefaultTimeout.InMilliseconds());
   }
 
   void CallVerifyAttestation(bool cros_core, bool ek_only) {
     VerifyRequest request;
     request.set_cros_core(cros_core);
     request.set_ek_only(ek_only);
-    attestation_->Verify(request,
-                         base::Bind(&ClientLoop::PrintReplyAndQuit<VerifyReply>,
-                                    weak_factory_.GetWeakPtr()));
+    attestation_->VerifyAsync(
+        request,
+        base::Bind(&ClientLoop::PrintReplyAndQuit<VerifyReply>,
+                   weak_factory_.GetWeakPtr()),
+        base::Bind(&ClientLoop::PrintErrorAndQuit, weak_factory_.GetWeakPtr()),
+        kDefaultTimeout.InMilliseconds());
   }
 
   void CallActivateAttestationKey(ACAType aca_type,
@@ -665,17 +696,22 @@ class ClientLoop : public ClientLoopBase {
     request.set_aca_type(aca_type);
     request.mutable_encrypted_certificate()->ParseFromString(input);
     request.set_save_certificate(save_certificate);
-    attestation_->ActivateAttestationKey(
+    attestation_->ActivateAttestationKeyAsync(
         request,
         base::Bind(&ClientLoop::PrintReplyAndQuit<ActivateAttestationKeyReply>,
-                   weak_factory_.GetWeakPtr()));
+                   weak_factory_.GetWeakPtr()),
+        base::Bind(&ClientLoop::PrintErrorAndQuit, weak_factory_.GetWeakPtr()),
+        kDefaultTimeout.InMilliseconds());
   }
 
   void EncryptForActivate(const std::string& input) {
     GetEndorsementInfoRequest request;
-    attestation_->GetEndorsementInfo(
-        request, base::Bind(&ClientLoop::EncryptForActivate2,
-                            weak_factory_.GetWeakPtr(), input));
+    attestation_->GetEndorsementInfoAsync(
+        request,
+        base::Bind(&ClientLoop::EncryptForActivate2, weak_factory_.GetWeakPtr(),
+                   input),
+        base::Bind(&ClientLoop::PrintErrorAndQuit, weak_factory_.GetWeakPtr()),
+        kDefaultTimeout.InMilliseconds());
   }
 
   void EncryptForActivate2(const std::string& input,
@@ -684,10 +720,12 @@ class ClientLoop : public ClientLoopBase {
       PrintReplyAndQuit(endorsement_info);
     }
     GetAttestationKeyInfoRequest request;
-    attestation_->GetAttestationKeyInfo(
+    attestation_->GetAttestationKeyInfoAsync(
         request,
         base::Bind(&ClientLoop::EncryptForActivate3, weak_factory_.GetWeakPtr(),
-                   input, endorsement_info));
+                   input, endorsement_info),
+        base::Bind(&ClientLoop::PrintErrorAndQuit, weak_factory_.GetWeakPtr()),
+        kDefaultTimeout.InMilliseconds());
   }
 
   void EncryptForActivate3(
@@ -723,10 +761,12 @@ class ClientLoop : public ClientLoopBase {
     request.set_username(username);
     request.set_key_type(KEY_TYPE_RSA);
     request.set_key_usage(usage);
-    attestation_->CreateCertifiableKey(
+    attestation_->CreateCertifiableKeyAsync(
         request,
         base::Bind(&ClientLoop::PrintReplyAndQuit<CreateCertifiableKeyReply>,
-                   weak_factory_.GetWeakPtr()));
+                   weak_factory_.GetWeakPtr()),
+        base::Bind(&ClientLoop::PrintErrorAndQuit, weak_factory_.GetWeakPtr()),
+        kDefaultTimeout.InMilliseconds());
   }
 
   void Encrypt(const std::string& label,
@@ -735,9 +775,11 @@ class ClientLoop : public ClientLoopBase {
     GetKeyInfoRequest request;
     request.set_key_label(label);
     request.set_username(username);
-    attestation_->GetKeyInfo(
+    attestation_->GetKeyInfoAsync(
         request,
-        base::Bind(&ClientLoop::Encrypt2, weak_factory_.GetWeakPtr(), input));
+        base::Bind(&ClientLoop::Encrypt2, weak_factory_.GetWeakPtr(), input),
+        base::Bind(&ClientLoop::PrintErrorAndQuit, weak_factory_.GetWeakPtr()),
+        kDefaultTimeout.InMilliseconds());
   }
 
   void Encrypt2(const std::string& input, const GetKeyInfoReply& key_info) {
@@ -757,9 +799,12 @@ class ClientLoop : public ClientLoopBase {
     request.set_key_label(label);
     request.set_username(username);
     request.set_encrypted_data(input);
-    attestation_->Decrypt(
-        request, base::Bind(&ClientLoop::PrintReplyAndQuit<DecryptReply>,
-                            weak_factory_.GetWeakPtr()));
+    attestation_->DecryptAsync(
+        request,
+        base::Bind(&ClientLoop::PrintReplyAndQuit<DecryptReply>,
+                   weak_factory_.GetWeakPtr()),
+        base::Bind(&ClientLoop::PrintErrorAndQuit, weak_factory_.GetWeakPtr()),
+        kDefaultTimeout.InMilliseconds());
   }
 
   void CallSign(const std::string& label,
@@ -769,8 +814,11 @@ class ClientLoop : public ClientLoopBase {
     request.set_key_label(label);
     request.set_username(username);
     request.set_data_to_sign(input);
-    attestation_->Sign(request, base::Bind(&ClientLoop::OnSignComplete,
-                                           weak_factory_.GetWeakPtr()));
+    attestation_->SignAsync(
+        request,
+        base::Bind(&ClientLoop::OnSignComplete, weak_factory_.GetWeakPtr()),
+        base::Bind(&ClientLoop::PrintErrorAndQuit, weak_factory_.GetWeakPtr()),
+        kDefaultTimeout.InMilliseconds());
   }
 
   void OnSignComplete(const SignReply& reply) {
@@ -788,9 +836,12 @@ class ClientLoop : public ClientLoopBase {
     GetKeyInfoRequest request;
     request.set_key_label(label);
     request.set_username(username);
-    attestation_->GetKeyInfo(
-        request, base::Bind(&ClientLoop::VerifySignature2,
-                            weak_factory_.GetWeakPtr(), input, signature));
+    attestation_->GetKeyInfoAsync(
+        request,
+        base::Bind(&ClientLoop::VerifySignature2, weak_factory_.GetWeakPtr(),
+                   input, signature),
+        base::Bind(&ClientLoop::PrintErrorAndQuit, weak_factory_.GetWeakPtr()),
+        kDefaultTimeout.InMilliseconds());
   }
 
   void VerifySignature2(const std::string& input,
@@ -810,19 +861,24 @@ class ClientLoop : public ClientLoopBase {
     RegisterKeyWithChapsTokenRequest request;
     request.set_key_label(label);
     request.set_username(username);
-    attestation_->RegisterKeyWithChapsToken(
+    attestation_->RegisterKeyWithChapsTokenAsync(
         request,
         base::Bind(
             &ClientLoop::PrintReplyAndQuit<RegisterKeyWithChapsTokenReply>,
-            weak_factory_.GetWeakPtr()));
+            weak_factory_.GetWeakPtr()),
+        base::Bind(&ClientLoop::PrintErrorAndQuit, weak_factory_.GetWeakPtr()),
+        kDefaultTimeout.InMilliseconds());
   }
 
   void CallCreateEnrollRequest(ACAType aca_type) {
     CreateEnrollRequestRequest request;
     request.set_aca_type(aca_type);
-    attestation_->CreateEnrollRequest(
-        request, base::Bind(&ClientLoop::OnCreateEnrollRequestComplete,
-                            weak_factory_.GetWeakPtr()));
+    attestation_->CreateEnrollRequestAsync(
+        request,
+        base::Bind(&ClientLoop::OnCreateEnrollRequestComplete,
+                   weak_factory_.GetWeakPtr()),
+        base::Bind(&ClientLoop::PrintErrorAndQuit, weak_factory_.GetWeakPtr()),
+        kDefaultTimeout.InMilliseconds());
   }
 
   void OnCreateEnrollRequestComplete(const CreateEnrollRequestReply& reply) {
@@ -837,18 +893,24 @@ class ClientLoop : public ClientLoopBase {
     FinishEnrollRequest request;
     request.set_aca_type(aca_type);
     request.set_pca_response(pca_response);
-    attestation_->FinishEnroll(
-        request, base::Bind(&ClientLoop::PrintReplyAndQuit<FinishEnrollReply>,
-                            weak_factory_.GetWeakPtr()));
+    attestation_->FinishEnrollAsync(
+        request,
+        base::Bind(&ClientLoop::PrintReplyAndQuit<FinishEnrollReply>,
+                   weak_factory_.GetWeakPtr()),
+        base::Bind(&ClientLoop::PrintErrorAndQuit, weak_factory_.GetWeakPtr()),
+        kDefaultTimeout.InMilliseconds());
   }
 
   void CallEnroll(ACAType aca_type, bool forced) {
     EnrollRequest request;
     request.set_aca_type(aca_type);
     request.set_forced(forced);
-    attestation_->Enroll(request,
-                         base::Bind(&ClientLoop::PrintReplyAndQuit<EnrollReply>,
-                                    weak_factory_.GetWeakPtr()));
+    attestation_->EnrollAsync(
+        request,
+        base::Bind(&ClientLoop::PrintReplyAndQuit<EnrollReply>,
+                   weak_factory_.GetWeakPtr()),
+        base::Bind(&ClientLoop::PrintErrorAndQuit, weak_factory_.GetWeakPtr()),
+        kDefaultTimeout.InMilliseconds());
   }
 
   void CallCreateCertRequest(ACAType aca_type,
@@ -860,9 +922,12 @@ class ClientLoop : public ClientLoopBase {
     request.set_certificate_profile(profile);
     request.set_username(username);
     request.set_request_origin(origin);
-    attestation_->CreateCertificateRequest(
-        request, base::Bind(&ClientLoop::OnCreateCertRequestComplete,
-                            weak_factory_.GetWeakPtr()));
+    attestation_->CreateCertificateRequestAsync(
+        request,
+        base::Bind(&ClientLoop::OnCreateCertRequestComplete,
+                   weak_factory_.GetWeakPtr()),
+        base::Bind(&ClientLoop::PrintErrorAndQuit, weak_factory_.GetWeakPtr()),
+        kDefaultTimeout.InMilliseconds());
   }
 
   void OnCreateCertRequestComplete(const CreateCertificateRequestReply& reply) {
@@ -880,11 +945,13 @@ class ClientLoop : public ClientLoopBase {
     request.set_pca_response(pca_response);
     request.set_key_label(label);
     request.set_username(username);
-    attestation_->FinishCertificateRequest(
+    attestation_->FinishCertificateRequestAsync(
         request,
         base::Bind(
             &ClientLoop::PrintReplyAndQuit<FinishCertificateRequestReply>,
-            weak_factory_.GetWeakPtr()));
+            weak_factory_.GetWeakPtr()),
+        base::Bind(&ClientLoop::PrintErrorAndQuit, weak_factory_.GetWeakPtr()),
+        kDefaultTimeout.InMilliseconds());
   }
 
   void CallGetCert(ACAType aca_type,
@@ -904,9 +971,12 @@ class ClientLoop : public ClientLoopBase {
     request.set_key_type(key_type);
     request.set_forced(forced);
     request.set_shall_trigger_enrollment(shall_trigger_enrollment);
-    attestation_->GetCertificate(
-        request, base::Bind(&ClientLoop::PrintReplyAndQuit<GetCertificateReply>,
-                            weak_factory_.GetWeakPtr()));
+    attestation_->GetCertificateAsync(
+        request,
+        base::Bind(&ClientLoop::PrintReplyAndQuit<GetCertificateReply>,
+                   weak_factory_.GetWeakPtr()),
+        base::Bind(&ClientLoop::PrintErrorAndQuit, weak_factory_.GetWeakPtr()),
+        kDefaultTimeout.InMilliseconds());
   }
 
   void CallSignEnterpriseChallenge(VAType va_type,
@@ -924,9 +994,12 @@ class ClientLoop : public ClientLoopBase {
     request.set_device_id(device_id);
     request.set_include_signed_public_key(include_spkac);
     request.set_challenge(input);
-    attestation_->SignEnterpriseChallenge(
-        request, base::Bind(&ClientLoop::OnSignEnterpriseChallengeComplete,
-                            weak_factory_.GetWeakPtr()));
+    attestation_->SignEnterpriseChallengeAsync(
+        request,
+        base::Bind(&ClientLoop::OnSignEnterpriseChallengeComplete,
+                   weak_factory_.GetWeakPtr()),
+        base::Bind(&ClientLoop::PrintErrorAndQuit, weak_factory_.GetWeakPtr()),
+        kDefaultTimeout.InMilliseconds());
   }
 
   void OnSignEnterpriseChallengeComplete(
@@ -945,9 +1018,12 @@ class ClientLoop : public ClientLoopBase {
     request.set_key_label(label);
     request.set_username(username);
     request.set_challenge(input);
-    attestation_->SignSimpleChallenge(
-        request, base::Bind(&ClientLoop::OnSignSimpleChallengeComplete,
-                            weak_factory_.GetWeakPtr()));
+    attestation_->SignSimpleChallengeAsync(
+        request,
+        base::Bind(&ClientLoop::OnSignSimpleChallengeComplete,
+                   weak_factory_.GetWeakPtr()),
+        base::Bind(&ClientLoop::PrintErrorAndQuit, weak_factory_.GetWeakPtr()),
+        kDefaultTimeout.InMilliseconds());
   }
 
   void OnSignSimpleChallengeComplete(const SignSimpleChallengeReply& reply) {
@@ -961,9 +1037,12 @@ class ClientLoop : public ClientLoopBase {
   void GetEnrollmentId(bool ignore_cache) {
     GetEnrollmentIdRequest request;
     request.set_ignore_cache(ignore_cache);
-    attestation_->GetEnrollmentId(
-        request, base::Bind(&ClientLoop::OnGetEnrollmentIdComplete,
-                            weak_factory_.GetWeakPtr()));
+    attestation_->GetEnrollmentIdAsync(
+        request,
+        base::Bind(&ClientLoop::OnGetEnrollmentIdComplete,
+                   weak_factory_.GetWeakPtr()),
+        base::Bind(&ClientLoop::PrintErrorAndQuit, weak_factory_.GetWeakPtr()),
+        kDefaultTimeout.InMilliseconds());
   }
 
   void OnGetEnrollmentIdComplete(const GetEnrollmentIdReply& reply) {
@@ -986,9 +1065,12 @@ class ClientLoop : public ClientLoopBase {
     request.set_nv_size(parsed_size);
     request.set_key_label(key_label);
 
-    attestation_->GetCertifiedNvIndex(
-        request, base::Bind(&ClientLoop::OnGetCertifiedNvIndexComplete,
-                            weak_factory_.GetWeakPtr()));
+    attestation_->GetCertifiedNvIndexAsync(
+        request,
+        base::Bind(&ClientLoop::OnGetCertifiedNvIndexComplete,
+                   weak_factory_.GetWeakPtr()),
+        base::Bind(&ClientLoop::PrintErrorAndQuit, weak_factory_.GetWeakPtr()),
+        kDefaultTimeout.InMilliseconds());
   }
 
   void OnGetCertifiedNvIndexComplete(const GetCertifiedNvIndexReply& reply) {
@@ -999,7 +1081,9 @@ class ClientLoop : public ClientLoopBase {
     PrintReplyAndQuit<GetCertifiedNvIndexReply>(reply);
   }
 
-  std::unique_ptr<attestation::AttestationInterface> attestation_;
+  scoped_refptr<dbus::Bus> bus_;
+
+  std::unique_ptr<org::chromium::AttestationProxy> attestation_;
 
   // Declare this last so weak pointers will be destroyed first.
   base::WeakPtrFactory<ClientLoop> weak_factory_{this};
