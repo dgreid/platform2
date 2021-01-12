@@ -29,11 +29,13 @@ SpeechRecognizerEventFromProto(const SodaResponse& soda_response) {
     } else if (rec_result.result_type() == SodaRecognitionResult::FINAL) {
       speech_recognizer_event->set_final_result(
           internal::FinalResultFromProto(soda_response));
+    } else if (rec_result.result_type() == SodaRecognitionResult::PREFETCH) {
+      speech_recognizer_event->set_partial_result(
+          internal::PartialResultFromPrefetchProto(soda_response));
     } else {
-      LOG(DFATAL)
-          << "Only partial/final results are supported, not "
-          << speech::soda::chrome::SodaRecognitionResult_ResultType_Name(
-                 rec_result.result_type());
+      LOG(ERROR) << "Only partial/prefetch/final results are supported, not "
+                 << speech::soda::chrome::SodaRecognitionResult_ResultType_Name(
+                        rec_result.result_type());
     }
   } else if (soda_response.soda_type() == SodaResponse::ENDPOINT) {
     speech_recognizer_event->set_endpointer_event(
@@ -74,6 +76,23 @@ chromeos::machine_learning::mojom::AudioLevelEventPtr AudioLevelEventFromProto(
   return audio_level_event;
 }
 
+chromeos::machine_learning::mojom::PartialResultPtr
+PartialResultFromPrefetchProto(
+    const speech::soda::chrome::SodaResponse& soda_response) {
+  auto partial_result = chromeos::machine_learning::mojom::PartialResult::New();
+  if (!soda_response.has_recognition_result() ||
+      soda_response.soda_type() != SodaResponse::RECOGNITION ||
+      soda_response.recognition_result().result_type() !=
+          SodaRecognitionResult::PREFETCH) {
+    LOG(DFATAL) << "Should only be called when there's a prefetch result.";
+  }
+  for (const std::string& hyp :
+       soda_response.recognition_result().hypothesis()) {
+    partial_result->partial_text.push_back(hyp);
+  }
+  return partial_result;
+}
+
 chromeos::machine_learning::mojom::PartialResultPtr PartialResultFromProto(
     const SodaResponse& soda_response) {
   auto partial_result = chromeos::machine_learning::mojom::PartialResult::New();
@@ -99,8 +118,7 @@ chromeos::machine_learning::mojom::FinalResultPtr FinalResultFromProto(
       soda_response.soda_type() != SodaResponse::RECOGNITION ||
       soda_response.recognition_result().result_type() !=
           SodaRecognitionResult::FINAL) {
-    LOG(DFATAL)
-        << "Should only call when there's a partial recognition result.";
+    LOG(DFATAL) << "Should only call when there's a final recognition result.";
     return final_result;
   }
   for (const std::string& hyp :

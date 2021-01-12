@@ -67,6 +67,35 @@ TEST(SodaProtoMojomConversionTest, PartialResultsTest) {
   EXPECT_FALSE(IsShutdownSodaResponse(response));
 }
 
+TEST(SodaProtoMojomConversionTest, PrefetchResultsTest) {
+  // We decided to treat a PREFETCH as a Partial.
+  SodaResponse response;
+  response.set_soda_type(SodaResponse::RECOGNITION);
+  auto* rec = response.mutable_recognition_result();
+  rec->add_hypothesis("first hyp");
+  rec->add_hypothesis("second hyp");
+  rec->set_result_type(speech::soda::chrome::SodaRecognitionResult::PREFETCH);
+
+  auto expected_rec_mojom =
+      chromeos::machine_learning::mojom::PartialResult::New();
+  expected_rec_mojom->partial_text.push_back("first hyp");
+  expected_rec_mojom->partial_text.push_back("second hyp");
+  auto actual_rec_mojom = internal::PartialResultFromPrefetchProto(response);
+  EXPECT_TRUE(actual_rec_mojom.Equals(expected_rec_mojom));
+
+  // now for the full mojom
+  auto actual_mojom = SpeechRecognizerEventFromProto(response);
+  chromeos::machine_learning::mojom::SpeechRecognizerEventPtr expected_mojom =
+      chromeos::machine_learning::mojom::SpeechRecognizerEvent::New();
+  expected_mojom->set_partial_result(std::move(actual_rec_mojom));
+  EXPECT_TRUE(actual_mojom.Equals(expected_mojom));
+
+  // Let's check the other tests.
+  EXPECT_FALSE(IsStopSodaResponse(response));
+  EXPECT_FALSE(IsStartSodaResponse(response));
+  EXPECT_FALSE(IsShutdownSodaResponse(response));
+}
+
 TEST(SodaProtoMojomConversionTest, FinalResultsTest) {
   SodaResponse response;
   response.set_soda_type(SodaResponse::RECOGNITION);

@@ -28,6 +28,10 @@ chromeos::machine_learning::mojom::AudioLevelEventPtr AudioLevelEventFromProto(
 chromeos::machine_learning::mojom::PartialResultPtr PartialResultFromProto(
     const speech::soda::chrome::SodaResponse& soda_response);
 
+chromeos::machine_learning::mojom::PartialResultPtr
+PartialResultFromPrefetchProto(
+    const speech::soda::chrome::SodaResponse& soda_response);
+
 chromeos::machine_learning::mojom::FinalResultPtr FinalResultFromProto(
     const speech::soda::chrome::SodaResponse& soda_response);
 

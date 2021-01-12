@@ -6,7 +6,9 @@
 
 #include "ml/soda.h"
 
-TEST(SodaLibraryTest, CanLoadLibraryAndLookupFunction) {
+TEST(SodaLibraryTest, CannotLoadLibraryAndLookupFunction) {
+  // By default, the default instance shouldn't be instantiable since we're in a
+  // test and the file shouldn't exist, etc.
   auto* const instance = ml::SodaLibrary::GetInstance();
-  EXPECT_EQ(instance->GetStatus(), ml::SodaLibrary::Status::kOk);
+  EXPECT_EQ(instance->GetStatus(), ml::SodaLibrary::Status::kLoadLibraryFailed);
 }
