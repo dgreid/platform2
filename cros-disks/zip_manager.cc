@@ -30,6 +30,7 @@ std::unique_ptr<ArchiveMounter> CreateZipMounter(
   OwnerUser run_as;
   PCHECK(platform->GetUserAndGroupId("fuse-zip", &run_as.uid, &run_as.gid))
       << "Cannot resolve required user fuse-zip";
+  run_as.gid = kChronosAccessGID;
 
   const SandboxedExecutable executable = {
       base::FilePath("/usr/bin/fuse-zip"),

@@ -30,6 +30,7 @@ OwnerUser GetRarUserOrDie(const Platform* platform) {
   OwnerUser run_as;
   PCHECK(platform->GetUserAndGroupId("fuse-rar2fs", &run_as.uid, &run_as.gid))
       << "Cannot resolve required user fuse-rar2fs";
+  run_as.gid = kChronosAccessGID;
   return run_as;
 }
 
