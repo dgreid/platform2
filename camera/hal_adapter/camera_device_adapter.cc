@@ -515,6 +515,17 @@ int32_t CameraDeviceAdapter::RegisterBuffer(
 int32_t CameraDeviceAdapter::Close() {
   // Close the device.
   VLOGF_ENTER();
+
+  // Close() can be called on the module thread inside
+  // CameraHalAdapter::OpenDevice() (b/155830039).
+  if (!camera_device_ops_thread_.task_runner()->BelongsToCurrentThread()) {
+    camera_device_ops_thread_.task_runner()->PostTask(
+        FROM_HERE,
+        base::BindOnce(base::IgnoreResult(&CameraDeviceAdapter::Close),
+                       base::Unretained(this)));
+    return 0;
+  }
+
   if (device_closed_) {
     return 0;
   }

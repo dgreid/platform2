@@ -143,6 +143,10 @@ int32_t CameraHalAdapter::OpenDevice(
 
   if (device_adapters_.find(camera_id) != device_adapters_.end()) {
     LOGF(WARNING) << "Multiple calls to OpenDevice on device " << camera_id;
+    if (camera_client_type == mojom::CameraClientType::CHROME) {
+      LOGF(WARNING) << "Close device to recover from bad state (b/155830039)";
+      device_adapters_[camera_id]->Close();
+    }
     return -EBUSY;
   }
 
