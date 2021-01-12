@@ -9,8 +9,6 @@
 #include <base/macros.h>
 #include <brillo/daemons/daemon.h>
 
-#include "patchpanel/datapath.h"
-#include "patchpanel/firewall.h"
 #include "patchpanel/minijailed_process_runner.h"
 #include "patchpanel/ndproxy.h"
 
@@ -18,12 +16,11 @@ void OnSocketReadReady(patchpanel::NDProxy* proxy, int fd) {
   proxy->ReadAndProcessOneFrame(fd);
 }
 
-void OnGuestIpDiscovery(patchpanel::Datapath* datapath,
+void OnGuestIpDiscovery(patchpanel::MinijailedProcessRunner* runner,
                         const std::string& ifname,
                         const std::string& ip6addr) {
-  if (!datapath->AddIPv6HostRoute(ifname, ip6addr, 128)) {
+  if (runner->ip6("route", "replace", {ip6addr + "/128", "dev", ifname}) != 0)
     LOG(WARNING) << "Failed to setup the IPv6 route for interface " << ifname;
-  }
 }
 
 // Stand-alone daemon to proxy ND frames between a pair of interfaces
@@ -40,7 +37,6 @@ int main(int argc, char* argv[]) {
   brillo::Daemon daemon;
 
   patchpanel::MinijailedProcessRunner runner;
-  patchpanel::Firewall firewall;
   char accept_ra_sysctl_cmd[40] = {0};
   snprintf(accept_ra_sysctl_cmd, sizeof(accept_ra_sysctl_cmd),
            "net.ipv6.conf.%s.accept_ra", args[0].c_str());
@@ -52,7 +48,6 @@ int main(int argc, char* argv[]) {
     LOG(ERROR) << "Failed to enable net.ipv6.conf.all.forwarding.";
     return EXIT_FAILURE;
   }
-  patchpanel::Datapath datapath(&runner, &firewall);
 
   patchpanel::NDProxy proxy;
   if (!proxy.Init()) {
@@ -77,7 +72,7 @@ int main(int argc, char* argv[]) {
   }
 
   proxy.RegisterOnGuestIpDiscoveryHandler(
-      base::Bind(&OnGuestIpDiscovery, &datapath));
+      base::Bind(&OnGuestIpDiscovery, &runner));
 
   base::ScopedFD fd = patchpanel::NDProxy::PreparePacketSocket();
   if (!fd.is_valid()) {

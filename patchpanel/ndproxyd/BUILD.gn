@@ -31,14 +31,9 @@ proto_library("protos") {
 
 executable("ndproxyd") {
   sources = [
-    "../datapath.cc",
-    "../firewall.cc",
     "../minijailed_process_runner.cc",
     "../ndproxy.cc",
     "../net_util.cc",
-    "../routing_service.cc",
-    "../scoped_ns.cc",
-    "../subnet.cc",
     "main.cc",
   ]
   configs += [ ":target_defaults" ]
