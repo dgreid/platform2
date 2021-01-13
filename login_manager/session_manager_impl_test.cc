@@ -499,6 +499,11 @@ class SessionManagerImplTest : public ::testing::Test,
       return *this;
     }
 
+    StartArcInstanceExpectationsBuilder& SetArcGeneratePai(bool v) {
+      arc_generate_pai_ = v;
+      return *this;
+    }
+
     StartArcInstanceExpectationsBuilder& SetPlayStoreAutoUpdate(
         StartArcMiniContainerRequest_PlayStoreAutoUpdate v) {
       play_store_auto_update_ = v;
@@ -532,6 +537,9 @@ class SessionManagerImplTest : public ::testing::Test,
 
       if (disable_media_store_maintenance_)
         result.emplace_back("DISABLE_MEDIA_STORE_MAINTENANCE=1");
+
+      if (arc_generate_pai_)
+        result.emplace_back("ARC_GENERATE_PAI=1");
 
       if (arc_lcd_density_ >= 0) {
         result.emplace_back(
@@ -578,6 +586,7 @@ class SessionManagerImplTest : public ::testing::Test,
 
     bool disable_system_default_app_ = false;
     bool disable_media_store_maintenance_ = false;
+    bool arc_generate_pai_ = false;
     StartArcMiniContainerRequest_PlayStoreAutoUpdate play_store_auto_update_ =
         StartArcMiniContainerRequest_PlayStoreAutoUpdate_AUTO_UPDATE_DEFAULT;
     int arc_lcd_density_ = -1;
@@ -2916,6 +2925,23 @@ TEST_F(SessionManagerImplTest, ArcCustomTabsExperiment) {
   brillo::ErrorPtr error;
   StartArcMiniContainerRequest request;
   request.set_arc_custom_tabs_experiment(true);
+  // Use for login screen mode for minimalistic test.
+  EXPECT_TRUE(impl_->StartArcMiniContainer(&error, SerializeAsBlob(request)));
+  EXPECT_FALSE(error.get());
+}
+
+TEST_F(SessionManagerImplTest, ArcGeneratePai) {
+  EXPECT_CALL(
+      *init_controller_,
+      TriggerImpulse(
+          SessionManagerImpl::kStartArcInstanceImpulse,
+          StartArcInstanceExpectationsBuilder().SetArcGeneratePai(true).Build(),
+          InitDaemonController::TriggerMode::ASYNC))
+      .WillOnce(Return(ByMove(dbus::Response::CreateEmpty())));
+
+  brillo::ErrorPtr error;
+  StartArcMiniContainerRequest request;
+  request.set_arc_generate_pai(true);
   // Use for login screen mode for minimalistic test.
   EXPECT_TRUE(impl_->StartArcMiniContainer(&error, SerializeAsBlob(request)));
   EXPECT_FALSE(error.get());

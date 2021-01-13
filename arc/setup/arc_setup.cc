@@ -524,6 +524,11 @@ std::string GetDisableMediaStoreMaintenance(
   return "androidboot.disable_media_store_maintenance=1 ";
 }
 
+// Converts Generate PAI bool to androidboot property if applicable.
+std::string GetGeneratePaiParam(bool arc_generate_pai) {
+  return arc_generate_pai ? "androidboot.arc_generate_pai=1 " : std::string();
+}
+
 }  // namespace
 
 // A struct that holds all the FilePaths ArcSetup uses.
@@ -1155,6 +1160,11 @@ void ArcSetup::CreateAndroidCmdlineFile(
   LOG(INFO) << "System default app is " << !disable_system_default_app;
   LOG(INFO) << "MediaStore maintenance is " << !disable_media_store_maintenance;
 
+  bool arc_generate_pai;
+  if (!config_.GetBool("ARC_GENERATE_PAI", &arc_generate_pai))
+    arc_generate_pai = false;
+  LOG(INFO) << "arc_generate_pai is " << arc_generate_pai;
+
   std::string native_bridge;
   switch (IdentifyBinaryTranslationType()) {
     case ArcBinaryTranslationType::NONE:
@@ -1208,6 +1218,7 @@ void ArcSetup::CreateAndroidCmdlineFile(
       "%s" /* Dalvik memory profile */
       "%s" /* Disable MediaStore maintenance */
       "androidboot.disable_system_default_app=%d "
+      "%s" /* PAI Generation */
       "androidboot.boottime_offset=%" PRId64 "\n" /* in nanoseconds */,
       is_dev_mode, !is_dev_mode, is_inside_vm, is_debuggable, arc_lcd_density,
       native_bridge.c_str(), arc_file_picker, arc_custom_tabs,
@@ -1215,7 +1226,7 @@ void ArcSetup::CreateAndroidCmdlineFile(
       GetPlayStoreAutoUpdateParam(play_store_auto_update).c_str(),
       GetDalvikMemoryProfileParam(dalvik_memory_profile).c_str(),
       GetDisableMediaStoreMaintenance(disable_media_store_maintenance).c_str(),
-      disable_system_default_app,
+      disable_system_default_app, GetGeneratePaiParam(arc_generate_pai).c_str(),
       ts.tv_sec * base::Time::kNanosecondsPerSecond + ts.tv_nsec);
 
   EXIT_IF(!WriteToFile(arc_paths_->android_cmdline, 0644, content));

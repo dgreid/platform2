@@ -66,7 +66,11 @@ message StartArcMiniContainerRequest {
   // to prevent unreliable performance measurements and CPU not idle failures.
   optional bool disable_media_store_maintenance = 10 [default = false];
 
-  // Next ID to use: 11
+  // Enables additional debug settings used when generating Play Auto Install
+  // rosters.
+  optional bool arc_generate_pai = 11 [default = false];
+
+  // Next ID to use: 12
 }
 
 // ARC upgrade options sent from Chrome to session manager. This message is used

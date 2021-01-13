@@ -1259,6 +1259,9 @@ bool SessionManagerImpl::StartArcMiniContainer(
   if (request.disable_media_store_maintenance())
     env_vars.push_back("DISABLE_MEDIA_STORE_MAINTENANCE=1");
 
+  if (request.arc_generate_pai())
+    env_vars.push_back("ARC_GENERATE_PAI=1");
+
   if (request.lcd_density() > 0) {
     env_vars.push_back(
         base::StringPrintf("ARC_LCD_DENSITY=%d", request.lcd_density()));
