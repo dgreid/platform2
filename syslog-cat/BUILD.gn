@@ -19,18 +19,17 @@ pkg_config("target_defaults") {
 }
 
 static_library("syslogcat_lib") {
-  configs += [ ":target_defaults" ]
   sources = [
     "syslogcat.cc",
     "syslogcat.h",
   ]
+  configs += [ ":target_defaults" ]
 }
 
 executable("syslog-cat") {
-  configs += [ ":target_defaults" ]
-
   sources = [ "main.cc" ]
   install_path = "sbin"
+  configs += [ ":target_defaults" ]
   deps = [ ":syslogcat_lib" ]
 }
 
@@ -40,6 +39,7 @@ if (use.test) {
   }
 
   executable("syslogcat_testrunner") {
+    sources = [ "syslogcat_test.cc" ]
     configs += [
       "//common-mk:test",
       ":syslogcat_testrunner_config",
@@ -47,7 +47,6 @@ if (use.test) {
     ]
     run_test = true
     defines = [ "UNIT_TEST" ]
-    sources = [ "syslogcat_test.cc" ]
     deps = [
       ":syslogcat_lib",
       "//common-mk/testrunner",

@@ -56,10 +56,9 @@ pkg_config("target_defaults") {
 }
 
 executable("croslog") {
-  configs += [ ":target_defaults" ]
-
   sources = [ "main.cc" ]
   install_path = "sbin"
+  configs += [ ":target_defaults" ]
   deps = [ ":libcroslog_static" ]
 }
 

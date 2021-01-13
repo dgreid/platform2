@@ -16,16 +16,16 @@ pkg_config("target_defaults") {
 }
 
 static_library("bootid_logger_lib") {
-  configs += [ ":target_defaults" ]
   sources = [
     "bootid_logger.cc",
     "bootid_logger.h",
   ]
+  configs += [ ":target_defaults" ]
 }
 
 executable("bootid-logger") {
-  configs += [ ":target_defaults" ]
   sources = [ "main.cc" ]
+  configs += [ ":target_defaults" ]
   deps = [ ":bootid_logger_lib" ]
   install_path = "sbin"
 }
