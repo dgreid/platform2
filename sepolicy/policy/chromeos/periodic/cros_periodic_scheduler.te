@@ -20,6 +20,9 @@ allow cros_periodic_scheduler cros_periodic_scheduler_cache_t:dir create_dir_per
 # but the stamp directory looks in good label. this workaround has pitfalls see crbug above too.
 allow cros_periodic_scheduler unlabeled:file { rw_file_perms unlink };
 
+# https://crbug.com/1166208: Allow for now to improve the SNR of SELinux violations.
+allow cros_periodic_scheduler unlabeled:dir search;
+
 domain_auto_trans({ cros_init cros_init_scripts }, cros_periodic_scheduler_exec, cros_periodic_scheduler);
 
 # signal and kill for timeout
@@ -27,4 +30,3 @@ allow cros_periodic_scheduler cros_launched_by_periodic_scheduler_domain:process
 allow cros_periodic_scheduler self:capability sys_admin;
 # modprobe, and cros_browser is some process that doesn't have caller path cleared yet.
 neverallow cros_periodic_scheduler { domain - cros_launched_by_periodic_scheduler_domain -modprobe -cros_browser }:process transition;
-
