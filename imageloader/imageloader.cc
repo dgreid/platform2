@@ -13,6 +13,7 @@
 
 #include <base/files/file_path.h>
 #include <base/threading/thread_task_runner_handle.h>
+#include <base/time/time.h>
 #include <chromeos/dbus/service_constants.h>
 
 namespace imageloader {
@@ -25,7 +26,7 @@ constexpr char kSeccompFilterPath[] =
 // static
 const char ImageLoader::kImageLoaderGroupName[] = "imageloaderd";
 const char ImageLoader::kImageLoaderUserName[] = "imageloaderd";
-const int ImageLoader::kShutdownTimeoutMilliseconds = 20000;
+constexpr base::TimeDelta kShutdownTimeout = base::TimeDelta::FromSeconds(20);
 const char ImageLoader::kLoadedMountsBase[] = "/run/imageloader";
 
 ImageLoader::ImageLoader(ImageLoaderConfig config,
@@ -92,8 +93,7 @@ void ImageLoader::PostponeShutdown() {
   shutdown_callback_.Reset(
       base::Bind(&brillo::Daemon::Quit, base::Unretained(this)));
   base::ThreadTaskRunnerHandle::Get()->PostDelayedTask(
-      FROM_HERE, shutdown_callback_.callback(),
-      base::TimeDelta::FromMilliseconds(kShutdownTimeoutMilliseconds));
+      FROM_HERE, shutdown_callback_.callback(), kShutdownTimeout);
 }
 
 bool ImageLoader::RegisterComponent(
