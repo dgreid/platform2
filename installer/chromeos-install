@@ -207,6 +207,7 @@ write_partition() {
   local dst="$6"
   local chunk_num="$7"
   local total_chunks="$8"
+  local cache_input="$9"
   local format fs_format
 
   if [ "${user_count}" -eq 0 ]; then
@@ -269,8 +270,30 @@ write_partition() {
     ;;
 
   *)
+    # The "dd" command can be used to advise Linux to drop caches and we use
+    # this feature to maximize available cache for future transfers. We deal
+    # with the input and output block devices differently. Here's why:
+    # - For the input block device there are some cases where we know we'll
+    #   want the input to stay in cache (because we're going to use it again)
+    #   and other cases where we know we're done with it. Also note that we
+    #   are likely running from the input block device, so it's good not to
+    #   be too liberal about dropping the cache.
+    # - For the output block we never need the cache kept. We won't be reading
+    #   it again. We can just tell Linux to drop the cache for the whole
+    #   device each time. It should also be noted that it appears most
+    #   efficient not to drop the cache on the output as part of the same "dd"
+    #   doing the transfer (presumably it makes write buffers less efficient).
+    local dd_cache_arg="";
+    if ! "${cache_input}"; then
+      dd_cache_arg="iflag=nocache"
+    fi
+
     fast_dd "${user_count}" "${user_seek}" "${user_skip}" \
-      "${chunk_num}" "${total_chunks}" if="${src}" of="${dst}" conv=notrunc
+      "${chunk_num}" "${total_chunks}" if="${src}" of="${dst}" conv=notrunc \
+      ${dd_cache_arg}
+
+    # Incantation to advise the kernel to drop cache on the whole dst.
+    dd if="${dst}" iflag=nocache count=0 status=none
     ;;
   esac
 }
@@ -790,12 +813,14 @@ install_stateful() {
 # $3 - dst image.
 # $4 - chunk_num
 # $5 - total_chunks
+# $6 - cache_input
 copy_partition() {
   local part_num=$1
   local src=$2
   local dst=$3
   local chunk_num=$4
   local total_chunks=$5
+  local cache_input=$6
   local part_size
   local src_offset
   local dst_offset
@@ -820,14 +845,16 @@ copy_partition() {
     part_size=$(partsize "${src}" "${PARTITION_NUM_ROOT_A}")
     src_offset=$(partoffset "${src}" "${PARTITION_NUM_ROOT_A}")
     write_partition "${part_num}" "${part_size}" "${dst_offset}" \
-      "${src_offset}" "${src}" "${dst}" "${chunk_num}" "${total_chunks}"
+      "${src_offset}" "${src}" "${dst}" "${chunk_num}" "${total_chunks}" \
+      "${cache_input}"
     ;;
   "${PARTITION_NUM_KERN_A}"|"${PARTITION_NUM_KERN_B}")
     # Use kernel B from the source into both kernel A and B in the destination.
     part_size="$(partsize "${src}" "${PARTITION_NUM_KERN_B}")"
     src_offset="$(partoffset "${src}" "${PARTITION_NUM_KERN_B}")"
     write_partition "${part_num}" "${part_size}" "${dst_offset}" \
-      "${src_offset}" "${src}" "${dst}" "${chunk_num}" "${total_chunks}"
+      "${src_offset}" "${src}" "${dst}" "${chunk_num}" "${total_chunks}" \
+      "${cache_input}"
     ;;
   *)
     local src_part_size
@@ -842,7 +869,8 @@ copy_partition() {
       return
     fi
     write_partition "${part_num}" "${part_size}" "${dst_offset}" \
-      "${src_offset}" "${src}" "${dst}" "${chunk_num}" "${total_chunks}"
+      "${src_offset}" "${src}" "${dst}" "${chunk_num}" "${total_chunks}" \
+      "${cache_input}"
     ;;
   esac
 }
@@ -1100,15 +1128,15 @@ main() {
   # First do the easy ones.  Do so in reverse order to have stateful
   # get installed last. The order shouldn't matter but legacy behavior has
   # us go in reverse order.
-  copy_partition "${PARTITION_NUM_EFI_SYSTEM}" "${SRC}" "${DST}" 1 1 # 12
-  copy_partition "${PARTITION_NUM_RWFW}" "${SRC}" "${DST}" 1 1       # 11
-  copy_partition 10 "${SRC}" "${DST}" 1 1                            # 10
-  copy_partition 9 "${SRC}" "${DST}" 1 1                             # 9
-  copy_partition "${PARTITION_NUM_OEM}" "${SRC}" "${DST}" 1 1        # 8
-  copy_partition "${PARTITION_NUM_ROOT_C}" "${SRC}" "${DST}" 1 1     # 7
-  copy_partition "${PARTITION_NUM_KERN_C}" "${SRC}" "${DST}" 1 1     # 6
-  copy_partition "${PARTITION_NUM_KERN_B}" "${SRC}" "${DST}" 1 1     # 4
-  copy_partition "${PARTITION_NUM_KERN_A}" "${SRC}" "${DST}" 1 1     # 2
+  copy_partition "${PARTITION_NUM_EFI_SYSTEM}" "${SRC}" "${DST}" 1 1 false # 12
+  copy_partition "${PARTITION_NUM_RWFW}" "${SRC}" "${DST}" 1 1 false       # 11
+  copy_partition 10 "${SRC}" "${DST}" 1 1 false                            # 10
+  copy_partition 9 "${SRC}" "${DST}" 1 1 false                             # 9
+  copy_partition "${PARTITION_NUM_OEM}" "${SRC}" "${DST}" 1 1 false        # 8
+  copy_partition "${PARTITION_NUM_ROOT_C}" "${SRC}" "${DST}" 1 1 false     # 7
+  copy_partition "${PARTITION_NUM_KERN_C}" "${SRC}" "${DST}" 1 1 false     # 6
+  copy_partition "${PARTITION_NUM_KERN_B}" "${SRC}" "${DST}" 1 1 false     # 4
+  copy_partition "${PARTITION_NUM_KERN_A}" "${SRC}" "${DST}" 1 1 false     # 2
 
   # We want to chunk up the root filesystem.  We do this because we're
   # going to read the source once and write it to the destination twice.
@@ -1119,13 +1147,13 @@ main() {
   local chunk_num
   for chunk_num in $(seq "${NUM_ROOTFS_CHUNKS}"); do
     copy_partition "${PARTITION_NUM_ROOT_B}" "${SRC}" "${DST}" \
-       "${chunk_num}" "${NUM_ROOTFS_CHUNKS}"                         # 5
+       "${chunk_num}" "${NUM_ROOTFS_CHUNKS}" true                          # 5
     copy_partition "${PARTITION_NUM_ROOT_A}" "${SRC}" "${DST}" \
-       "${chunk_num}" "${NUM_ROOTFS_CHUNKS}"                         # 3
+       "${chunk_num}" "${NUM_ROOTFS_CHUNKS}" false                         # 3
   done
 
   # Last is stateful.
-  copy_partition "${PARTITION_NUM_STATE}" "${SRC}" "${DST}" 1 1      # 1
+  copy_partition "${PARTITION_NUM_STATE}" "${SRC}" "${DST}" 1 1 false      # 1
 
   do_post_install
 
