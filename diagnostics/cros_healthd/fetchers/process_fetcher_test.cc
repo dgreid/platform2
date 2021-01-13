@@ -334,9 +334,9 @@ TEST_F(ProcessFetcherTest, MissingProcPidStatmFile) {
 
 // Test that we handle a missing /proc/|kPid|/io file.
 TEST_F(ProcessFetcherTest, MissingProcPidIOFile) {
-  ASSERT_TRUE(base::DeleteFile(
-      GetProcProcessDirectoryPath(temp_dir_path(), kPid).Append(kProcessIOFile),
-      false));
+  ASSERT_TRUE(
+      base::DeleteFile(GetProcProcessDirectoryPath(temp_dir_path(), kPid)
+                           .Append(kProcessIOFile)));
   ExpectAndSetExecutorGetProcessIOContentsResponse("");
 
   auto process_result = FetchProcessInfo();
