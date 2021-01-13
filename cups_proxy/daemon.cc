@@ -4,6 +4,7 @@
 
 #include "cups_proxy/daemon.h"
 
+#include <stdlib.h>
 #include <sysexits.h>
 
 #include <string>
@@ -180,7 +181,7 @@ void Daemon::OnConnectionError() {
   // Die upon Mojo error. Reconnection can occur when the daemon is restarted.
   // (A future Mojo API may enable Mojo re-bootstrap without a process restart.)
   LOG(ERROR) << "CupsProxyDaemon MojoConnectionError; quitting.";
-  Quit();
+  quick_exit(0);
 }
 
 }  // namespace cups_proxy
