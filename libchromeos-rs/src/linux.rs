@@ -13,6 +13,7 @@ use std::time::{Duration, SystemTime};
 use libc::{syscall, waitpid, SYS_gettid, ECHILD, WNOHANG};
 
 pub type Pid = libc::pid_t;
+pub type Uid = libc::uid_t;
 
 const POLL_RATE: Duration = Duration::from_millis(50);
 
@@ -48,6 +49,11 @@ pub fn getsid(pid: Option<Pid>) -> Result<Pid> {
     } else {
         Ok(ret)
     }
+}
+
+pub fn getuid() -> Uid {
+    // Calling the getuid() is always safe and is always successful.
+    unsafe { libc::getuid() as Uid }
 }
 
 /// # Safety
