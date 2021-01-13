@@ -202,6 +202,12 @@ impl<'a, 'b, 'c> Command<'a, 'b, 'c> {
         );
         opts.optopt(
             "",
+            "dlc-id",
+            "Identifier for the DLC used to boot this VM.",
+            "ID",
+        );
+        opts.optopt(
+            "",
             "kernel",
             "path to a custom kernel image. Only valid on untrusted VMs.",
             "PATH",
@@ -231,6 +237,7 @@ impl<'a, 'b, 'c> Command<'a, 'b, 'c> {
             software_tpm: matches.opt_present("software-tpm"),
             audio_capture: matches.opt_present("enable-audio-capture"),
             run_as_untrusted: matches.opt_present("untrusted"),
+            dlc: matches.opt_str("dlc-id"),
         };
 
         let user_disks = UserDisks {
@@ -913,6 +920,7 @@ mod tests {
                 "--enable-gpu",
             ],
             &["vmc", "start", "termina", "--no-start-lxd"],
+            &["vmc", "start", "termina", "--dlc-id=foo"],
             &["vmc", "stop", "termina"],
             &["vmc", "create", "termina"],
             &["vmc", "create", "-p", "termina"],
@@ -1008,6 +1016,7 @@ mod tests {
             &["vmc", "start", "--i-made-this-up", "termina"],
             &["vmc", "start", "termina", "extra args"],
             &["vmc", "start", "termina", "--extra-disk"],
+            &["vmc", "start", "termina", "--dlc-id"],
             &["vmc", "stop"],
             &["vmc", "stop", "termina", "extra args"],
             &["vmc", "create"],

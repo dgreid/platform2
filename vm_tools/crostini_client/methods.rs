@@ -79,6 +79,7 @@ enum ChromeOSError {
     RetrieveActiveSessions,
     SourcePathDoesNotExist,
     TpmOnStable,
+    DlcIdNotSupplied,
 }
 
 use self::ChromeOSError::*;
@@ -158,6 +159,7 @@ impl fmt::Display for ChromeOSError {
             RetrieveActiveSessions => write!(f, "failed to retrieve active sessions"),
             SourcePathDoesNotExist => write!(f, "source media path does not exist"),
             TpmOnStable => write!(f, "TPM device is not available on stable channel"),
+            DlcIdNotSupplied => write!(f, "non-termina VMs must have a DLC ID"),
         }
     }
 }
@@ -183,6 +185,7 @@ pub struct VmFeatures {
     pub software_tpm: bool,
     pub audio_capture: bool,
     pub run_as_untrusted: bool,
+    pub dlc: Option<String>,
 }
 
 pub enum ContainerSource {
@@ -1066,6 +1069,36 @@ impl Methods {
         Ok(images.len() != 0)
     }
 
+    /// Gets the id of the dlc to be used to boot a VM, or None if DLC should not be used.
+    fn get_dlc_id_or_none(
+        &mut self,
+        dlc_param: Option<String>,
+        is_termina: bool,
+    ) -> Result<Option<String>, Box<dyn Error>> {
+        if let Some(id) = dlc_param {
+            if id.is_empty() {
+                // Explicitly passing the empty string means "don't use DLC".
+                if is_termina {
+                    Ok(None)
+                } else {
+                    Err(DlcIdNotSupplied.into())
+                }
+            } else {
+                Ok(Some(id))
+            }
+        } else {
+            if is_termina {
+                if self.does_crostini_use_dlc()? {
+                    Ok(Some("termina-dlc".to_owned()))
+                } else {
+                    Ok(None)
+                }
+            } else {
+                Err(DlcIdNotSupplied.into())
+            }
+        }
+    }
+
     /// Request that concierge start a vm with the given disk image.
     fn start_vm_with_disk(
         &mut self,
@@ -1074,14 +1107,13 @@ impl Methods {
         features: VmFeatures,
         stateful_disk_path: String,
         user_disks: UserDisks,
+        start_termina: bool,
     ) -> Result<(), Box<dyn Error>> {
         let mut request = StartVmRequest::new();
-        if self.does_crostini_use_dlc()? {
-            let mut vm = VirtualMachineSpec::new();
-            vm.dlc_id = "termina-dlc".to_owned();
-            request.vm = protobuf::SingularPtrField::some(vm);
+        if let Some(dlc_id) = self.get_dlc_id_or_none(features.dlc, start_termina)? {
+            request.mut_vm().dlc_id = dlc_id;
         }
-        request.start_termina = true;
+        request.start_termina = start_termina;
         request.owner_id = user_id_hash.to_owned();
         request.enable_gpu = features.gpu;
         request.software_tpm = features.software_tpm;
@@ -1158,10 +1190,14 @@ impl Methods {
         match response.status {
             VmStatus::VM_STATUS_STARTING => {
                 assert!(response.success);
-                tremplin_started
-                    .wait_with_filter(DEFAULT_TIMEOUT_MS, |s: &TremplinStartedSignal| {
-                        s.vm_name == vm_name && s.owner_id == user_id_hash
-                    })?;
+                if start_termina {
+                    tremplin_started.wait_with_filter(
+                        DEFAULT_TIMEOUT_MS,
+                        |s: &TremplinStartedSignal| {
+                            s.vm_name == vm_name && s.owner_id == user_id_hash
+                        },
+                    )?;
+                }
                 Ok(())
             }
             VmStatus::VM_STATUS_RUNNING => {
@@ -1758,7 +1794,14 @@ impl Methods {
             }
 
             let disk_image_path = self.create_disk_image(name, user_id_hash)?;
-            self.start_vm_with_disk(name, user_id_hash, features, disk_image_path, user_disks)?;
+            self.start_vm_with_disk(
+                name,
+                user_id_hash,
+                features,
+                disk_image_path,
+                user_disks,
+                start_lxd,
+            )?;
             if start_lxd {
                 self.start_lxd(name, user_id_hash)?;
             }
