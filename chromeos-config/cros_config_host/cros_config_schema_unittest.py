@@ -394,6 +394,7 @@ chromeos:
           $brand-code: 'WL1_BRAND_CODE'
           $stylus-category: 'none'
           $test-label: 'WL1_TEST_LABEL'
+          $marketing-name: 'BRAND1_MARKETING_NAME1'
         - $key-id: 'WL2'
           $wallpaper: 'WL2_WALLPAPER'
           $regulatory-label: 'WL2_LABEL'
@@ -401,6 +402,7 @@ chromeos:
           $brand-code: 'WL2_BRAND_CODE'
           $stylus-category: 'external'
           $test-label: 'WL2_TEST_LABEL'
+          $marketing-name: 'BRAND2_MARKETING_NAME2'
       skus:
         - config:
             identity:
@@ -412,6 +414,10 @@ chromeos:
             regulatory-label: '{{$regulatory-label}}'
             hardware-properties:
               stylus-category: '{{$stylus-category}}'
+            arc:
+              build-properties:
+                $marketing-name: ''
+                marketing-name: '{{$marketing-name}}'
 """
 
 INVALID_WHITELABEL_CONFIG = """
