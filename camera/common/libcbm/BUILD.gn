@@ -14,7 +14,6 @@ group("all") {
 pkg_config("target_defaults_pkg_config") {
   pkg_deps = [
     "cros-camera-android-headers",
-    "gbm",
     "libdrm",
   ]
 }
@@ -32,6 +31,7 @@ shared_library("libcbm") {
     "//camera/common/camera_buffer_manager_internal.cc",
   ]
   configs += [ ":target_defaults" ]
+  pkg_deps = [ "gbm" ]
 }
 
 if (use.test) {
