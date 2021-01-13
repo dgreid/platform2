@@ -189,18 +189,15 @@ bool Thinpool::Remove() {
   return ret;
 }
 
-// For unittests, don't initialize the lvm2 handle.
-LvmCommandRunner::LvmCommandRunner() : lvm_handle_(lvm2_init()) {}
+LvmCommandRunner::LvmCommandRunner() {}
 
-LvmCommandRunner::~LvmCommandRunner() {
-  lvm2_exit(lvm_handle_);
-}
+LvmCommandRunner::~LvmCommandRunner() {}
 
 bool LvmCommandRunner::RunCommand(const std::vector<std::string>& cmd) {
   // lvm2_run() does not exec/fork a separate process, instead it parses the
   // command line and calls the relevant functions within liblvm2cmd directly.
   std::string lvm_cmd = base::JoinString(cmd, " ");
-  int rc = lvm2_run(lvm_handle_, lvm_cmd.c_str());
+  int rc = lvm2_run(nullptr, lvm_cmd.c_str());
   LogLvmError(rc, lvm_cmd);
 
   return rc == LVM2_COMMAND_SUCCEEDED;

@@ -28,9 +28,6 @@ class BRILLO_EXPORT LvmCommandRunner {
   // lvm2_log_fn to access the output of a command, we prefer to use a process.
   virtual bool RunProcess(const std::vector<std::string>& cmd,
                           std::string* output = nullptr);
-
- private:
-  void* lvm_handle_ = nullptr;
 };
 
 // LVM objects are short-lived objects that represent the state of the system
