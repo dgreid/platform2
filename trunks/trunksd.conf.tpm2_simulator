@@ -14,6 +14,8 @@ pre-start script
   chown trunks:trunks /var/lib/trunks
 end script
 
+expect fork
+
 exec trunksd --simulator
 
 # init_tpm would lock down the platform hierarchy. This is normally

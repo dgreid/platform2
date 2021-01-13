@@ -9,4 +9,6 @@ start on started boot-services and stopped cr50-result and started dbus
 stop on stopping boot-services and stopped chapsd
 respawn
 
+expect fork
+
 exec trunksd

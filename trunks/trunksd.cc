@@ -24,6 +24,14 @@
 
 namespace {
 
+namespace switches {
+
+constexpr char kNoCloseOnDaemonize[] = "noclose";
+constexpr char kNoDaemonize[] = "nodaemonize";
+constexpr char kLogToStderr[] = "log_to_stderr";
+
+}  // namespace switches
+
 const uid_t kRootUID = 0;
 const char kTrunksUser[] = "trunks";
 const char kTrunksGroup[] = "trunks";
@@ -67,14 +75,13 @@ int main(int argc, char** argv) {
   base::CommandLine::Init(argc, argv);
   base::CommandLine* cl = base::CommandLine::ForCurrentProcess();
   int flags = brillo::kLogToSyslog;
-  if (cl->HasSwitch("log_to_stderr")) {
+  if (cl->HasSwitch(switches::kLogToStderr)) {
     flags |= brillo::kLogToStderr;
   }
   brillo::InitLog(flags);
 
-  // Create a service instance before anything else so objects like
-  // AtExitManager exist.
-  trunks::TrunksDBusService service;
+  bool noclose = cl->HasSwitch(switches::kNoCloseOnDaemonize);
+  bool daemonize = !cl->HasSwitch(switches::kNoDaemonize);
 
   // Chain together command transceivers:
   //   [IPC] --> BackgroundCommandTransceiver
@@ -93,6 +100,15 @@ int main(int argc, char** argv) {
   }
   CHECK(low_level_transceiver->Init())
       << "Error initializing TPM communication.";
+
+  // Upstart would know trunksd is ready after trunksd daemonized.
+  if (daemonize) {
+    PLOG_IF(FATAL, daemon(0, noclose) == -1) << "Failed to daemonize";
+  }
+
+  // Create a service instance so objects like AtExitManager exist.
+  trunks::TrunksDBusService service;
+
   // This needs to be *after* opening the TPM handle and *before* starting the
   // background thread.
   InitMinijailSandbox();
