@@ -10,6 +10,7 @@
 
 #include "cros-disks/metrics.h"
 #include "cros-disks/platform.h"
+#include "cros-disks/user.h"
 
 namespace cros_disks {
 namespace {
@@ -37,6 +38,8 @@ class MockPlatform : public Platform {
               (const, override));
 };
 
+}  // namespace
+
 class ArchiveManagerUnderTest : public ArchiveManager {
  public:
   using ArchiveManager::ArchiveManager;
@@ -52,9 +55,9 @@ class ArchiveManagerUnderTest : public ArchiveManager {
                bool*,
                MountErrorType*),
               (override));
-};
 
-}  // namespace
+  using ArchiveManager::CreateSandboxFactory;
+};
 
 class ArchiveManagerTest : public testing::Test {
  protected:
@@ -159,6 +162,21 @@ TEST_F(ArchiveManagerTest, GetSupplementaryGroupsCannotGetGroupId) {
   EXPECT_CALL(platform_, GetGroupId("android-everybody", _))
       .WillOnce(Return(false));
   EXPECT_THAT(manager_.GetSupplementaryGroups(), IsEmpty());
+}
+
+TEST_F(ArchiveManagerTest, CreateSandboxFactory) {
+  EXPECT_CALL(platform_, GetUserAndGroupId("fuse-zip", _, _))
+      .WillOnce(
+          DoAll(SetArgPointee<1>(300), SetArgPointee<2>(301), Return(true)));
+  auto zip_sandbox =
+      manager_.CreateSandboxFactory({base::FilePath("/foo")}, "fuse-zip");
+  EXPECT_EQ(kChronosAccessGID, zip_sandbox->run_as().gid);
+  EXPECT_CALL(platform_, GetUserAndGroupId("fuse-rar2fs", _, _))
+      .WillOnce(
+          DoAll(SetArgPointee<1>(400), SetArgPointee<2>(401), Return(true)));
+  auto rar_sandbox =
+      manager_.CreateSandboxFactory({base::FilePath("/foo")}, "fuse-rar2fs");
+  EXPECT_EQ(kChronosAccessGID, rar_sandbox->run_as().gid);
 }
 
 }  // namespace cros_disks

@@ -32,30 +32,13 @@ bool ArchiveManager::Initialize() {
   if (!MountManager::Initialize())
     return false;
 
-  // To access Play Files.
-  std::vector<gid_t> groups;
-  gid_t gid;
-  if (platform()->GetGroupId("android-everybody", &gid))
-    groups.push_back(gid);
-
   {
-    OwnerUser run_as;
-    if (!platform()->GetUserAndGroupId("fuse-zip", &run_as.uid, &run_as.gid)) {
-      PLOG(ERROR) << "Cannot resolve required user fuze-zip";
-      return false;
-    }
-    // Archivers need to run in chronos-access group to be able to access
-    // user's files.
-    run_as.gid = kChronosAccessGID;
-
-    const SandboxedExecutable executable = {
+    SandboxedExecutable executable = {
         base::FilePath("/usr/bin/fuse-zip"),
         base::FilePath("/usr/share/policy/fuse-zip-seccomp.policy")};
 
-    auto sandbox_factory = std::make_unique<FUSESandboxedProcessFactory>(
-        platform(), std::move(executable), std::move(run_as),
-        /* has_network_access= */ false, groups);
-
+    auto sandbox_factory =
+        CreateSandboxFactory(std::move(executable), "fuse-zip");
     std::vector<int> password_needed_codes = {
         23,   // ZIP_ER_BASE + ZIP_ER_ZLIB
         36,   // ZIP_ER_BASE + ZIP_ER_NOPASSWD
@@ -67,23 +50,12 @@ bool ArchiveManager::Initialize() {
   }
 
   {
-    OwnerUser run_as;
-    if (!platform()->GetUserAndGroupId("fuse-rar2fs", &run_as.uid,
-                                       &run_as.gid)) {
-      PLOG(ERROR) << "Cannot resolve required user fuse-rar2fs";
-      return false;
-    }
-    // Archivers need to run in chronos-access group to be able to access
-    // user's files.
-    run_as.gid = kChronosAccessGID;
-
-    const SandboxedExecutable executable = {
+    SandboxedExecutable executable = {
         base::FilePath("/usr/bin/rar2fs"),
         base::FilePath("/usr/share/policy/rar2fs-seccomp.policy")};
 
-    auto sandbox_factory = std::make_unique<FUSESandboxedProcessFactory>(
-        platform(), std::move(executable), std::move(run_as),
-        /* has_network_access= */ false, groups);
+    auto sandbox_factory =
+        CreateSandboxFactory(std::move(executable), "fuse-rar2fs");
 
     mounters_.push_back(std::make_unique<RarMounter>(
         platform(), process_reaper(), metrics(), std::move(sandbox_factory)));
@@ -186,6 +158,29 @@ std::unique_ptr<MountPoint> ArchiveManager::DoMount(
   LOG(ERROR) << "Cannot find mounter for archive " << quote(source_path);
   *error = MOUNT_ERROR_UNKNOWN_FILESYSTEM;
   return nullptr;
+}
+
+std::unique_ptr<FUSESandboxedProcessFactory>
+ArchiveManager::CreateSandboxFactory(SandboxedExecutable executable,
+                                     const std::string& user_name) const {
+  // To access Play Files.
+  std::vector<gid_t> groups;
+  gid_t gid;
+  if (platform()->GetGroupId("android-everybody", &gid))
+    groups.push_back(gid);
+
+  OwnerUser run_as;
+  if (!platform()->GetUserAndGroupId(user_name, &run_as.uid, &run_as.gid)) {
+    PLOG(ERROR) << "Cannot resolve required user " << quote(user_name);
+    return nullptr;
+  }
+  // Archivers need to run in chronos-access group to be able to access
+  // user's files.
+  run_as.gid = kChronosAccessGID;
+
+  return std::make_unique<FUSESandboxedProcessFactory>(
+      platform(), std::move(executable), std::move(run_as),
+      /* has_network_access= */ false, std::move(groups));
 }
 
 }  // namespace cros_disks

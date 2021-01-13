@@ -36,6 +36,8 @@ class ArchiveMounter : public FUSEMounter {
                 const std::vector<std::string>& params,
                 base::FilePath* suggested_dir_name) const override;
 
+  OwnerUser GetDaemonUser() const;
+
  protected:
   // FUSEMounter overrides:
   MountErrorType InterpretReturnCode(int return_code) const override;

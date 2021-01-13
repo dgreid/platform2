@@ -13,6 +13,7 @@
 #include <brillo/scoped_mount_namespace.h>
 #include <gtest/gtest_prod.h>
 
+#include "cros-disks/fuse_mounter.h"
 #include "cros-disks/mount_manager.h"
 #include "cros-disks/mount_options.h"
 
@@ -69,6 +70,11 @@ class ArchiveManager : public MountManager {
                                       MountErrorType* error) override;
 
  private:
+  friend class ArchiveManagerUnderTest;
+
+  std::unique_ptr<FUSESandboxedProcessFactory> CreateSandboxFactory(
+      SandboxedExecutable executable, const std::string& user_name) const;
+
   std::vector<std::unique_ptr<ArchiveMounter>> mounters_;
 };
 
