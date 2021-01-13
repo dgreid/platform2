@@ -38,7 +38,6 @@ const uint8_t kIppUsbInterfaceProtocol = 0x04;
 // as soon as this function is done.  Returns an invalid fd if the connection
 // fails.
 base::ScopedFD ConnectIppusbManager() {
-  LOG(INFO) << "Creating socket for ippusb_manager";
   int raw_fd = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
   if (raw_fd < 0) {
     PLOG(ERROR) << "Unable to create AF_UNIX socket";
@@ -71,7 +70,6 @@ base::ScopedFD ConnectIppusbManager() {
 // is not included in the length, but the trailing null byte is.
 bool SendDeviceRequest(int fd, const std::string& vid, const std::string& pid) {
   std::string payload = base::JoinString({vid, pid}, "_");
-  LOG(INFO) << "Sending " << payload << " to ippusb_manager on fd " << fd;
   size_t payload_len = payload.length() + 1;  // +1 to include NULL byte.
   if (payload_len > UINT8_MAX) {
     LOG(ERROR) << "Message '" << payload << "' is too long for ippusb_manager";
@@ -93,9 +91,7 @@ bool SendDeviceRequest(int fd, const std::string& vid, const std::string& pid) {
     }
     sent += bytes;
     remaining -= bytes;
-    LOG(INFO) << "Sent " << bytes << " bytes";
   }
-  LOG(INFO) << "Sent " << sent << " total payload bytes";
 
   return true;
 }
@@ -110,7 +106,6 @@ bool SendDeviceRequest(int fd, const std::string& vid, const std::string& pid) {
 std::string ReadDeviceResponse(int fd) {
   // Set a timeout so we don't wait indefinitely if ippusb_manager has crashed
   // before writing its response.
-  LOG(INFO) << "Reading ippusb_manager response from fd " << fd;
   struct timeval timeout;
   memset(&timeout, 0, sizeof(timeout));
   timeout.tv_sec = kSocketCreationTimeout.InSeconds();
@@ -124,7 +119,6 @@ std::string ReadDeviceResponse(int fd) {
     PLOG(ERROR) << "Failed to read response length";
     return "";
   }
-  LOG(INFO) << "Message length is " << msg_len;
 
   // It's not clear if ippusb_manager will always include a trailing null in the
   // response, so append an extra one just in case.
@@ -135,7 +129,6 @@ std::string ReadDeviceResponse(int fd) {
     return "";
   }
   response[msg_len] = '\0';
-  LOG(INFO) << "Response body: " << response.data();
 
   // ippusb_manager will return a socket name of "Device not found" if it can't
   // find the requested USB device.  Validate the path to make sure we don't try

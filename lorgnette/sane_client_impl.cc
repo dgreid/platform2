@@ -50,7 +50,6 @@ base::Optional<std::vector<ScannerInfo>> SaneClientImpl::ListDevices(
     brillo::ErrorPtr* error) {
   base::AutoLock auto_lock(lock_);
   const SANE_Device** device_list;
-  LOG(INFO) << "Calling sane_get_devices";
   SANE_Status status = sane_get_devices(&device_list, SANE_FALSE);
   if (status != SANE_STATUS_GOOD) {
     brillo::Error::AddTo(error, FROM_HERE, kDbusDomain, kManagerServiceError,
@@ -101,7 +100,6 @@ std::unique_ptr<SaneDevice> SaneClientImpl::ConnectToDeviceInternal(
   base::AutoLock auto_lock(lock_);
   SANE_Handle handle;
   {
-    LOG(INFO) << "Locking open_devices";
     base::AutoLock auto_lock(open_devices_->first);
     if (open_devices_->second.count(device_name) != 0) {
       brillo::Error::AddToPrintf(
@@ -110,7 +108,6 @@ std::unique_ptr<SaneDevice> SaneClientImpl::ConnectToDeviceInternal(
       return nullptr;
     }
 
-    LOG(INFO) << "Calling sane_open";
     SANE_Status status = sane_open(device_name.c_str(), &handle);
     if (status != SANE_STATUS_GOOD) {
       brillo::Error::AddToPrintf(error, FROM_HERE, kDbusDomain,
@@ -122,7 +119,6 @@ std::unique_ptr<SaneDevice> SaneClientImpl::ConnectToDeviceInternal(
 
     open_devices_->second.insert(device_name);
   }
-  LOG(INFO) << "SANE handle opened successfully";
 
   // Cannot use make_unique() with a private constructor.
   auto device = std::unique_ptr<SaneDeviceImpl>(

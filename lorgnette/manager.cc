@@ -355,10 +355,8 @@ bool Manager::ListScanners(brillo::ErrorPtr* error,
     return false;
   }
 
-  LOG(INFO) << "Requesting port access";
   PortToken token = firewall_manager_->RequestPixmaPortAccess();
 
-  LOG(INFO) << "Initializing libusb";
   libusb_context* context;
   if (libusb_init(&context) != 0) {
     LOG(ERROR) << "Error initializing libusb";
@@ -407,16 +405,12 @@ bool Manager::ListScanners(brillo::ErrorPtr* error,
     // access and open a device given its ScannerInfo
     // It returns the first device matching the vid:pid
     // but doesn't handle multiple devices with same vid:pid but dif bus:dev
-    LOG(INFO) << "Opening libusb handle for " << vid_str;
     libusb_device_handle* dev_handle =
         libusb_open_device_with_vid_pid(context, vid, pid);
     if (dev_handle) {
-      LOG(INFO) << "Opening libusb device for " << vid_str;
       libusb_device* open_dev = libusb_get_device(dev_handle);
       uint8_t bus = libusb_get_bus_number(open_dev);
       uint8_t dev = libusb_get_device_address(open_dev);
-      LOG(INFO) << "Found " << vid_str << " at "
-                << base::StringPrintf("%03d:%03d", bus, dev);
       seen_busdev.insert(base::StringPrintf("%03d:%03d", bus, dev));
       libusb_close(dev_handle);
     } else {
@@ -465,7 +459,6 @@ bool Manager::ListScanners(brillo::ErrorPtr* error,
   serialized.resize(response.ByteSizeLong());
   response.SerializeToArray(serialized.data(), serialized.size());
 
-  LOG(INFO) << "Returning scanner list";
   *scanner_list_out = std::move(serialized);
   return true;
 }
@@ -492,7 +485,6 @@ bool Manager::GetScannerCapabilities(brillo::ErrorPtr* error,
       sane_client_->ConnectToDevice(error, device_name);
   if (!device)
     return false;
-  LOG(INFO) << "Connected to device";
 
   base::Optional<ValidOptionValues> options =
       device->GetValidOptionValues(error);
@@ -530,7 +522,6 @@ bool Manager::GetScannerCapabilities(brillo::ErrorPtr* error,
   serialized.resize(capabilities.ByteSizeLong());
   capabilities.SerializeToArray(serialized.data(), serialized.size());
 
-  LOG(INFO) << "Returning scanner capabilities";
   *capabilities_out = std::move(serialized);
   return true;
 }
@@ -774,8 +765,6 @@ bool Manager::StartScanInternal(brillo::ErrorPtr* error,
     return false;
   }
 
-  LOG(INFO) << "Scanning image from device " << request.device_name();
-
   base::Optional<PortToken> token =
       RequestPortAccessIfNeeded(request.device_name(), firewall_manager_.get());
   std::unique_ptr<SaneDevice> device =
@@ -783,7 +772,6 @@ bool Manager::StartScanInternal(brillo::ErrorPtr* error,
   if (!device) {
     return false;
   }
-  LOG(INFO) << "Connected to device";
 
   ReportScanRequested(request.device_name());
 
@@ -829,7 +817,6 @@ bool Manager::StartScanInternal(brillo::ErrorPtr* error,
     }
   }
 
-  LOG(INFO) << "All settings applied.  Starting scan.";
   SANE_Status status = device->StartScan(error);
   if (status != SANE_STATUS_GOOD) {
     brillo::Error::AddToPrintf(error, FROM_HERE, kDbusDomain,
