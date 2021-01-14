@@ -12,6 +12,8 @@
 #include <base/strings/string_split.h>
 #include <gtest/gtest_prod.h>
 
+#include "minios/key_reader.h"
+
 namespace screens {
 
 extern const char kScreens[];
@@ -21,6 +23,14 @@ extern const char kMenuBlack[];
 extern const char kMenuBlue[];
 extern const char kMenuGrey[];
 extern const char kMenuButtonFrameGrey[];
+
+// Key values.
+extern const int kKeyUp;
+extern const int kKeyDown;
+extern const int kKeyEnter;
+extern const int kKeyVolUp;
+extern const int kKeyVolDown;
+extern const int kKeyPower;
 
 class Screens {
  public:
@@ -73,6 +83,12 @@ class Screens {
   // Clears screen including the footer.
   void ClearScreen();
 
+  // Waits on evwaitkey and registers key events up/down/enter. Changes index
+  // and enter variables according to the key event, evwaitkey may block
+  // indefinitely. Function modifies the index based on up and down arrow key
+  // input. The enter bool is changed to true if enter key input is recorded.
+  void WaitMenuInput(int menu_count, int* index, bool* enter);
+
   // Show button, focus changes the button color to indicate selection. Returns
   // false on error.
   void ShowButton(const std::string& message_token,
@@ -92,6 +108,15 @@ class Screens {
   // Shows footer with basic instructions and chromebook model.
   void ShowFooter();
 
+  // Clears screen and shows footer and language drop down menu.
+  void MessageBaseScreen();
+
+  // First screen.
+  void MiniOsWelcomeOnSelect();
+
+  // Changes button focus based on index selected.
+  void MiniOsWelcomeOnChange(int index);
+
   // Override the root directory for testing. Default is '/'.
   void SetRootForTest(const std::string& test_root);
 
@@ -105,6 +130,11 @@ class Screens {
  private:
   FRIEND_TEST(ScreensTest, ReadDimension);
   FRIEND_TEST(ScreensTest, GetDimension);
+  FRIEND_TEST(ScreensTest, UpdateButtons);
+  FRIEND_TEST(ScreensTest, UpdateButtonsIsDetachable);
+
+  key_reader::KeyReader key_reader_ =
+      key_reader::KeyReader(/*include_usb=*/true);
 
   // Read dimension constants for current locale into memory. Must be updated
   // every time the language changes.
@@ -112,6 +142,10 @@ class Screens {
 
   // Gets the height or width of an image given the token. Returns -1 on error.
   int GetDimension(const std::string& token);
+
+  // Changes the index and enter value based on the given key. Unknown keys are
+  // ignored and index is kept within the range of menu items.
+  void UpdateButtons(int menu_count, int key, int* index, bool* enter);
 
   // Whether the locale is read from right to left.
   bool right_to_left_{false};

@@ -15,6 +15,8 @@
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_util.h>
 #include <base/strings/stringprintf.h>
+#include <base/threading/platform_thread.h>
+#include <base/time/time.h>
 
 namespace screens {
 
@@ -25,6 +27,14 @@ const char kMenuBlack[] = "0x202124";
 const char kMenuBlue[] = "0x8AB4F8";
 const char kMenuGrey[] = "0x3F4042";
 const char kMenuButtonFrameGrey[] = "0x9AA0A6";
+
+// Key values.
+const int kKeyUp = 103;
+const int kKeyDown = 108;
+const int kKeyEnter = 28;
+const int kKeyVolUp = 115;
+const int kKeyVolDown = 114;
+const int kKeyPower = 116;
 
 namespace {
 constexpr char kConsole0[] = "dev/pts/0";
@@ -38,8 +48,12 @@ constexpr int kMonospaceGlyphHeight = 20;
 constexpr int kMonospaceGlyphWidth = 10;
 constexpr int kDefaultMessageWidth = 720;
 constexpr int kButtonHeight = 32;
+constexpr int kButtonMargin = 8;
+constexpr int kDefaultButtonWidth = 10;
 
 constexpr int kNewLineChar = 10;
+
+constexpr char kButtonWidthToken[] = "DEBUG_OPTIONS_BTN_WIDTH";
 }  // namespace
 
 bool Screens::Init() {
@@ -182,6 +196,21 @@ void Screens::ClearScreen() {
     LOG(WARNING) << "Could not clear screen.";
 }
 
+void Screens::WaitMenuInput(int menu_count, int* index, bool* enter) {
+  std::vector<int> wait_keys;
+  if (!is_detachable_)
+    wait_keys = {kKeyUp, kKeyDown, kKeyEnter};
+  else
+    wait_keys = {kKeyVolDown, kKeyVolUp, kKeyPower};
+  int key;
+  while (!key_reader_.EvWaitForKeys(wait_keys, &key)) {
+    LOG(WARNING) << "Error while waiting for keys, trying again.";
+    // Sleep and try again.
+    base::PlatformThread::Sleep(base::TimeDelta::FromSeconds(1));
+  }
+  return UpdateButtons(menu_count, key, index, enter);
+}
+
 void Screens::ShowButton(const std::string& message_token,
                          int offset_y,
                          bool is_selected,
@@ -238,10 +267,10 @@ void Screens::ShowStepper(const std::vector<std::string>& steps) {
   for (const auto& step : steps) {
     base::FilePath stepper_image = screens_path_.Append("ic_" + step + ".png");
     if (!base::PathExists(stepper_image)) {
-      stepper_image = screens_path_.Append("ic_done.png");
       // TODO(vyshu): Create a new generic icon to be used instead of done.
       LOG(WARNING) << "Stepper icon " << stepper_image
                    << " not found. Defaulting to the done icon.";
+      stepper_image = screens_path_.Append("ic_done.png");
       if (!base::PathExists(stepper_image)) {
         LOG(ERROR) << "Could not find stepper icon done. Cannot show stepper.";
         return;
@@ -341,6 +370,60 @@ void Screens::ShowFooter() {
   ShowBox(kSeparatorX, kSeparatorY, 1, kQrCodeSize, kMenuGrey);
 }
 
+void Screens::MessageBaseScreen() {
+  ClearMainArea();
+  ShowLanguageMenu(false);
+  ShowFooter();
+}
+
+void Screens::MiniOsWelcomeOnSelect() {
+  int index = 1;
+  bool enter = false;
+  MiniOsWelcomeOnChange(index);
+  while (true) {
+    // Get key events from evwaitkey.
+    WaitMenuInput(3, &index, &enter);
+    if (enter) {
+      // TODO(vyshu): Create screen functions below to replace the LOG messages.
+      switch (index) {
+        case 0:
+          LOG(INFO) << "Message language_menu.";
+          break;
+        case 1:
+          LOG(INFO) << "Message minios_dropdown.";
+          break;
+        case 2:
+          LOG(INFO) << "Message minios_welcome.";
+          break;
+      }
+      return;
+    } else {
+      // If not entered, update MiniOS Screen with new button selections.
+      MiniOsWelcomeOnChange(index);
+    }
+  }
+}
+
+void Screens::MiniOsWelcomeOnChange(int index) {
+  MessageBaseScreen();
+  InstructionsWithTitle("MiniOS_welcome");
+  ShowStepper({"1", "2", "3"});
+  ShowLanguageMenu(index == 0);
+
+  constexpr int kTitleY = (-kCanvasSize / 2) + 238;
+  constexpr int kBtnYStep = kButtonHeight + kButtonMargin;
+  constexpr int kBtnY = kTitleY + 80 + kBtnYStep * 2;
+  int debug_btn_width = GetDimension(kButtonWidthToken);
+  if (debug_btn_width == -1) {
+    debug_btn_width = kDefaultButtonWidth;
+    LOG(WARNING) << "Unable to get dimension for " << kButtonWidthToken
+                 << ". Defaulting to width " << kDefaultButtonWidth;
+  }
+
+  ShowButton("btn_next", kBtnY, (index == 1), debug_btn_width);
+  ShowButton("btn_back", kBtnY + kBtnYStep, (index == 2), debug_btn_width);
+}
+
 void Screens::ReadDimensionConstants() {
   image_dimensions_.clear();
   base::FilePath path = screens_path_.Append(locale_).Append("constants.sh");
@@ -375,6 +458,29 @@ int Screens::GetDimension(const std::string& token) {
     }
   }
   return -1;
+}
+
+void Screens::UpdateButtons(int menu_count, int key, int* index, bool* enter) {
+  int starting_index = *index;
+  // Make sure index is in range, if not reset to 0.
+  if (starting_index < 0 || starting_index >= menu_count)
+    starting_index = 0;
+
+  // Modify selected index and enter state based on user key input.
+  if (key == kKeyUp || key == kKeyVolUp) {
+    if (starting_index > 0) {
+      starting_index--;
+    }
+  } else if (key == kKeyDown || key == kKeyVolDown) {
+    if (starting_index < (menu_count - 1)) {
+      starting_index++;
+    }
+  } else if (key == kKeyEnter || key == kKeyPower) {
+    *enter = true;
+  } else {
+    LOG(ERROR) << "Unknown key value: " << key;
+  }
+  *index = starting_index;
 }
 
 void Screens::SetRootForTest(const std::string& test_root) {

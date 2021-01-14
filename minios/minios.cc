@@ -16,7 +16,7 @@ int MiniOs::Run() {
     LOG(ERROR) << "Screens init failed. Exiting.";
     return 1;
   }
-  screens_.ShowStepper({"done", "done", "done"});
+  screens_.MiniOsWelcomeOnSelect();
 
   // Start the shell on DEBUG console.
   return ProcessManager().RunCommand({"/bin/sh"}, kDebugConsole, kDebugConsole);

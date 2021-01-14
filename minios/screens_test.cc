@@ -203,6 +203,65 @@ TEST_F(ScreensTest, GetDimension) {
   EXPECT_EQ(38, screens_.GetDimension("TITLE_minios_token_HEIGHT"));
 }
 
+TEST_F(ScreensTest, UpdateButtons) {
+  int index = 1;
+  bool enter = false;
+  int menu_items = 4;
+
+  screens_.UpdateButtons(menu_items, kKeyUp, &index, &enter);
+  EXPECT_EQ(0, index);
+
+  // Test range.
+  screens_.UpdateButtons(menu_items, kKeyUp, &index, &enter);
+  EXPECT_EQ(0, index);
+  // Move to last item.
+  index = menu_items - 1;
+  screens_.UpdateButtons(menu_items, kKeyDown, &index, &enter);
+  EXPECT_EQ(menu_items - 1, index);
+  EXPECT_FALSE(enter);
+  // Enter key pressed.
+  index = 1;
+  screens_.UpdateButtons(menu_items, kKeyEnter, &index, &enter);
+  EXPECT_EQ(1, index);
+  EXPECT_TRUE(enter);
+
+  // Unknown key, no action taken.
+  index = 2;
+  enter = false;
+  screens_.UpdateButtons(menu_items, 89, &index, &enter);
+  EXPECT_EQ(2, index);
+  EXPECT_FALSE(enter);
+
+  // If index somehow goes out of range, reset to 0.
+  index = menu_items + 5;
+  enter = false;
+  screens_.UpdateButtons(menu_items, kKeyEnter, &index, &enter);
+  EXPECT_EQ(0, index);
+}
+
+TEST_F(ScreensTest, UpdateButtonsIsDetachable) {
+  int index = 1;
+  bool enter = false;
+  int menu_items = 4;
+
+  screens_.UpdateButtons(menu_items, kKeyVolUp, &index, &enter);
+  EXPECT_EQ(0, index);
+
+  // Test range.
+  screens_.UpdateButtons(menu_items, kKeyVolUp, &index, &enter);
+  EXPECT_EQ(0, index);
+  // Move to last item.
+  index = menu_items - 1;
+  screens_.UpdateButtons(menu_items, kKeyVolDown, &index, &enter);
+  EXPECT_EQ(3, index);
+  EXPECT_FALSE(enter);
+  // Enter key pressed.
+  index = 1;
+  screens_.UpdateButtons(menu_items, kKeyPower, &index, &enter);
+  EXPECT_EQ(1, index);
+  EXPECT_TRUE(enter);
+}
+
 class MockScreens : public Screens {
  public:
   MockScreens() = default;
