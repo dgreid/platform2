@@ -121,9 +121,10 @@ class WebAuthnHandler {
 
   bool Initialized();
 
-  // Fetches auth-time WebAuthn secret and keep the hash of it. Returns true on
-  // success, false otherwise.
-  bool GetWebAuthnSecret(const std::string& account_id);
+  // Fetches auth-time WebAuthn secret and keep the hash of it.
+  void GetWebAuthnSecretAsync(const std::string& account_id);
+  void OnGetWebAuthnSecretResp(const cryptohome::BaseReply& reply);
+  void OnGetWebAuthnSecretCallFailed(brillo::Error* error);
 
   // Callbacks invoked when UI completes user verification flow.
   void HandleUVFlowResultMakeCredential(dbus::Response* flow_response);
