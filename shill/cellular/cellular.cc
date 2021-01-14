@@ -297,6 +297,22 @@ string Cellular::GetModemStateString(ModemState modem_state) {
   return StringPrintf("CellularModemStateUnknown-%d", modem_state);
 }
 
+string Cellular::GetCapabilityStateString(CapabilityState capability_state) {
+  switch (capability_state) {
+    case CapabilityState::kCellularStopped:
+      return "CellularStopped";
+    case CapabilityState::kCellularStarted:
+      return "CellularStarted";
+    case CapabilityState::kModemStarting:
+      return "ModemStarting";
+    case CapabilityState::kModemStarted:
+      return "ModemStarted";
+    case CapabilityState::kModemStopping:
+      return "ModemStopping";
+  }
+  return StringPrintf("CellularCapabilityStateUnknown-%d", capability_state);
+}
+
 string Cellular::GetTechnologyFamily(Error* error) {
   return capability_ ? capability_->GetTypeString() : "";
 }
@@ -760,7 +776,6 @@ void Cellular::HandleNewRegistrationState() {
       metrics()->NotifyCellularDeviceDrop(
           capability_->GetNetworkTechnologyString(), service_->strength());
     }
-    DestroyService();
     if (state_ == kStateLinked || state_ == kStateConnected ||
         state_ == kStateRegistered) {
       SetState(kStateEnabled);
@@ -1106,28 +1121,38 @@ bool Cellular::IsDefaultFriendlyServiceName(const string& service_name) const {
 }
 
 void Cellular::OnModemStateChanged(ModemState new_state) {
-  CHECK(capability_);
-
-  if (capability_state_ == CapabilityState::kModemStarting ||
-      capability_state_ == CapabilityState::kModemStopping) {
-    SLOG(this, 2) << "Ignoring modem state change while starting or stopping."
-                  << " CapabilityState: " << static_cast<int>(capability_state_)
-                  << " ModemState: " << GetModemStateString(new_state);
+  ModemState old_state = modem_state_;
+  if (old_state == new_state) {
+    SLOG(this, 3) << "The new state matches the old state. Nothing to do.";
     return;
   }
 
-  ModemState old_state = modem_state_;
+  CHECK(capability_);
   SLOG(this, 1) << __func__ << ": " << GetModemStateString(old_state) << " -> "
                 << GetModemStateString(new_state);
-  if (old_state == new_state) {
-    SLOG(this, 2) << "The new state matches the old state. Nothing to do.";
+  set_modem_state(new_state);
+
+  // Skip calls to OnDisabled|Enabled|Connected|Disconnected while the
+  // capability is starting or stopping the modem since ModemState transitions
+  // may be invalid while in those states.
+  if (capability_state_ == CapabilityState::kModemStarting) {
+    SLOG(this, 2) << "Modem state change while capability starting, "
+                  << " ModemState: " << GetModemStateString(new_state);
+    UpdateScanning();
     return;
   }
-  set_modem_state(new_state);
+  if (capability_state_ == CapabilityState::kModemStopping) {
+    SLOG(this, 2) << "Modem state change while capability stopping, "
+                  << " ModemState: " << GetModemStateString(new_state);
+    UpdateScanning();
+    return;
+  }
+
   if (old_state >= kModemStateRegistered && new_state < kModemStateRegistered) {
     capability_->SetUnregistered(new_state == kModemStateSearching);
     HandleNewRegistrationState();
   }
+
   if (new_state == kModemStateDisabled) {
     OnDisabled();
   } else if (new_state >= kModemStateEnabled) {
@@ -1135,17 +1160,19 @@ void Cellular::OnModemStateChanged(ModemState new_state) {
       // Just became enabled, update enabled state.
       OnEnabled();
     }
-    if ((new_state == kModemStateEnabled || new_state == kModemStateSearching ||
-         new_state == kModemStateRegistered) &&
-        (old_state == kModemStateConnected ||
-         old_state == kModemStateConnecting ||
-         old_state == kModemStateDisconnecting))
-      OnDisconnected();
-    else if (new_state == kModemStateConnecting)
+    if (new_state == kModemStateEnabled || new_state == kModemStateSearching ||
+        new_state == kModemStateRegistered) {
+      if (old_state == kModemStateConnected ||
+          old_state == kModemStateConnecting ||
+          old_state == kModemStateDisconnecting) {
+        OnDisconnected();
+      }
+    } else if (new_state == kModemStateConnecting) {
       OnConnecting();
-    else if (new_state == kModemStateConnected &&
-             old_state == kModemStateConnecting)
-      OnConnected();
+    } else if (new_state == kModemStateConnected) {
+      if (old_state == kModemStateConnecting)
+        OnConnected();
+    }
   }
 
   // Update the kScanningProperty property after we've handled the current state
@@ -1261,14 +1288,12 @@ void Cellular::OnTerminationCompleted(const Error& error) {
 }
 
 bool Cellular::DisconnectCleanup() {
-  bool succeeded = false;
-  if (state_ == kStateConnected || state_ == kStateLinked) {
-    SetState(kStateRegistered);
-    SetServiceFailureSilent(Service::kFailureNone);
-    DestroyIPConfig();
-    succeeded = true;
-  }
-  return succeeded;
+  if (state_ != kStateConnected && state_ != kStateLinked)
+    return false;
+  SetState(kStateRegistered);
+  SetServiceFailureSilent(Service::kFailureNone);
+  DestroyIPConfig();
+  return true;
 }
 
 // static
@@ -1941,7 +1966,8 @@ void Cellular::OnOperatorChanged() {
 
 void Cellular::SetCapabilityState(CapabilityState capability_state) {
   // TODO(stevenjb): Lower this SLOG to 2 once b/172064665 is thoroughly vetted.
-  SLOG(this, 1) << __func__ << ": " << static_cast<int>(capability_state);
+  SLOG(this, 1) << __func__ << ": "
+                << GetCapabilityStateString(capability_state);
   capability_state_ = capability_state;
 }
 

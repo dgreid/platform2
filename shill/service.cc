@@ -343,12 +343,15 @@ void Service::Connect(Error* error, const char* reason) {
   // This cannot be called until here because |explicitly_disconnected_| is
   // used in determining whether or not this Service can be AutoConnected.
   ClearExplicitlyDisconnected();
-  // Clear any failure state from a previous connect attempt.
-  if (IsInFailState())
-    SetState(kStateIdle);
+
   // Note: this log is parsed by logprocessor.
   LOG(INFO) << "Connecting to " << technology() << " Service " << log_name()
             << ": " << reason;
+
+  // Clear any failure state from a previous connect attempt.
+  if (IsInFailState())
+    SetState(kStateIdle);
+
   // Perform connection logic defined by children. This logic will
   // drive the state from kStateIdle.
   OnConnect(error);

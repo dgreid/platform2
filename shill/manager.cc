@@ -1108,6 +1108,7 @@ void Manager::SetEnabledStateForTechnology(const std::string& technology_name,
     return;
   }
 
+  SLOG(this, 2) << __func__ << ": " << technology_name << ": " << enabled_state;
   auto result_aggregator(base::MakeRefCounted<ResultAggregator>(callback));
   for (auto& device : devices_) {
     if (device->technology() != id)

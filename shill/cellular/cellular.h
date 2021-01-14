@@ -158,6 +158,7 @@ class Cellular : public Device,
 
   static std::string GetStateString(State state);
   static std::string GetModemStateString(ModemState modem_state);
+  std::string GetCapabilityStateString(CapabilityState capability_state);
 
   std::string CreateDefaultFriendlyServiceName();
   bool IsDefaultFriendlyServiceName(const std::string& service_name) const;
