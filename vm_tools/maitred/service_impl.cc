@@ -797,9 +797,14 @@ grpc::Status ServiceImpl::ResizeFilesystem(
     return grpc::Status::OK;
   }
 
+#if USE_VM_BOREALIS
+  // For borealis, the stateful device is hard-coded by init.
+  stateful_device_ = "/dev/vda";
+#else
   if (stateful_device_.empty()) {
     return grpc::Status(grpc::INTERNAL, "unknown stateful device");
   }
+#endif
 
   base::ScopedFD stateful_fd(
       open(stateful_device_.c_str(), O_RDONLY | O_CLOEXEC));

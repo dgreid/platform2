@@ -704,7 +704,11 @@ bool TerminaVm::ResizeFilesystem(uint64_t new_size) {
   vm_tools::ResizeFilesystemResponse response;
   request.set_size(new_size);
   grpc::Status status = stub_->ResizeFilesystem(&ctx, request, &response);
-  return status.ok();
+  if (status.ok())
+    return true;
+  LOG(ERROR) << "Resize filesystem failed (" << status.error_code()
+             << "): " << status.error_message();
+  return false;
 }
 
 vm_tools::concierge::DiskImageStatus TerminaVm::ResizeDisk(
