@@ -31,8 +31,6 @@ namespace {
 // Permissions to set on the mount root directory (u+rwx,og+rx).
 const mode_t kMountRootDirectoryPermissions =
     S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH;
-// Permissions to set on the mount directory (u+rwx,g+rwx).
-const mode_t kMountDirectoryPermissions = S_IRWXU | S_IRWXG;
 // Prefix of the mount label option.
 const char kMountOptionMountLabelPrefix[] = "mountlabel=";
 // Literal for mount option: "remount".
@@ -204,17 +202,6 @@ MountErrorType MountManager::MountNewSource(
   if (!mount_path_created) {
     LOG(ERROR) << "Cannot create directory " << quote(actual_mount_path)
                << " to mount " << quote(source_path);
-    return MOUNT_ERROR_DIRECTORY_CREATION_FAILED;
-  }
-
-  if (!platform_->SetOwnership(actual_mount_path, getuid(),
-                               platform_->mount_group_id()) ||
-      !platform_->SetPermissions(actual_mount_path,
-                                 kMountDirectoryPermissions)) {
-    LOG(ERROR) << "Cannot set ownership and permissions of directory "
-               << quote(actual_mount_path) << " to mount "
-               << quote(source_path);
-    platform_->RemoveEmptyDirectory(actual_mount_path);
     return MOUNT_ERROR_DIRECTORY_CREATION_FAILED;
   }
 
