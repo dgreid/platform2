@@ -14,17 +14,28 @@ from __future__ import print_function
 
 import io
 import os
+import sys
 import unittest
-import logging
+import yaml  # pylint: disable=import-error
 
+# Find chromite!
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)),
+                                '..', '..', '..'))
+
+# pylint: disable=wrong-import-position
+from chromite.lib import cros_logging as logging
 import regions
-import yaml
+# pylint: enable=wrong-import-position
 
 
 _WARN_UNKNOWN_DATA_IN_UNCONFIRMED_REGION = (
     'Missing %s %r; does this new data need to be added to CrOS, or '
     'does testdata need to be updated? (just a warning, since region '
     '%r is not a confirmed region)')
+
+CustomLoader = yaml.SafeLoader
+CustomLoader.add_constructor('tag:yaml.org,2002:python/tuple',
+    CustomLoader.construct_yaml_seq)
 
 class RegionTest(unittest.TestCase):
   """Tests for the Region class."""
@@ -41,7 +52,7 @@ class RegionTest(unittest.TestCase):
     """
     with open(os.path.join(os.path.dirname(__file__),
                            'testdata', name + '.yaml')) as f:
-      return yaml.load(f, Loader=yaml.SafeLoader)
+      return yaml.load(f, Loader=CustomLoader)
 
   @classmethod
   def setUpClass(cls):
@@ -105,8 +116,8 @@ class RegionTest(unittest.TestCase):
                 'to CrOS, or does testdata need to be updated?' % tz)
           else:
             # This is an unconfirmed region; just print a warning.
-            logging.warn(_WARN_UNKNOWN_DATA_IN_UNCONFIRMED_REGION, 'time zone',
-                         tz, r.region_code)
+            logging.warning(_WARN_UNKNOWN_DATA_IN_UNCONFIRMED_REGION,
+                            'time zone', tz, r.region_code)
 
   def testLocales(self):
     missing = []
@@ -116,8 +127,8 @@ class RegionTest(unittest.TestCase):
           if r.region_code in regions.REGIONS:
             missing.append(l)
           else:
-            logging.warn(_WARN_UNKNOWN_DATA_IN_UNCONFIRMED_REGION, 'locale', l,
-                         r.region_code)
+            logging.warning(_WARN_UNKNOWN_DATA_IN_UNCONFIRMED_REGION, 'locale',
+                            l, r.region_code)
     self.assertFalse(missing,
                      ('Missing locale; does testdata need to be updated?: %r' %
                       missing))
@@ -134,8 +145,8 @@ class RegionTest(unittest.TestCase):
                 resolved_method, k))
           else:
             # This is an unconfirmed region; just print a warning.
-            logging.warn(_WARN_UNKNOWN_DATA_IN_UNCONFIRMED_REGION, 'keyboard',
-                         k, r.region_code)
+            logging.warning(_WARN_UNKNOWN_DATA_IN_UNCONFIRMED_REGION,
+                            'keyboard', k, r.region_code)
 
   def testFirmwareLocales(self):
     # This file is probably in src/platform2/regions
@@ -144,8 +155,8 @@ class RegionTest(unittest.TestCase):
                                            '..', '..'))
     bmpblk_dir = os.path.join(src_root, 'src', 'platform', 'bmpblk')
     if not os.path.exists(bmpblk_dir):
-      logging.warn('Skipping testFirmwareLocales, since %r is missing',
-                   bmpblk_dir)
+      logging.warning('Skipping testFirmwareLocales, since %r is missing',
+                      bmpblk_dir)
       return
 
     bmp_locale_dir = os.path.join(bmpblk_dir, 'strings', 'locale')
@@ -164,14 +175,14 @@ class RegionTest(unittest.TestCase):
               'For region %r, none of %r exists' % (r.region_code,
                                                     checked_paths))
         else:
-          logging.warn('For region %r, none of %r exists; '
-                       'just a warning since this region is not confirmed',
-                       r.region_code, checked_paths)
+          logging.warning('For region %r, none of %r exists; '
+                          'just a warning since this region is not confirmed',
+                          r.region_code, checked_paths)
 
   def testYAMLOutput(self):
     output = io.StringIO()
     regions.main(['--format', 'yaml'], output)
-    data = yaml.load(output.getvalue(), Loader=yaml.SafeLoader)
+    data = yaml.load(output.getvalue(), Loader=CustomLoader)
     self.assertEqual(
         {'keyboards': ['xkb:us::eng'],
          'keyboard_mechanical_layout': 'ANSI',
