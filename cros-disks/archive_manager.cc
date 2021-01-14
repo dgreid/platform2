@@ -72,8 +72,9 @@ bool ArchiveManager::ResolvePath(const std::string& path,
     mount_ns = brillo::ScopedMountNamespace::CreateFromPath(
         base::FilePath(ArchiveMounter::kChromeNamespace));
     if (!mount_ns) {
-      PLOG(ERROR) << "Could not look for archive " << quote(path)
-                  << " in the Chrome's namespace";
+      PLOG(ERROR) << "Cannot find archive " << redact(path)
+                  << " in mount namespace "
+                  << quote(ArchiveMounter::kChromeNamespace);
       return false;
     }
   }
@@ -136,7 +137,7 @@ bool ArchiveManager::CanMount(const std::string& source_path) const {
 
 std::unique_ptr<MountPoint> ArchiveManager::DoMount(
     const std::string& source_path,
-    const std::string& /*filesystem_type*/,
+    const std::string& filesystem_type,
     const std::vector<std::string>& options,
     const base::FilePath& mount_path,
     bool* mounted_as_read_only,
@@ -144,7 +145,7 @@ std::unique_ptr<MountPoint> ArchiveManager::DoMount(
   // Here source_path is already resolved and free from symlinks and '..' by
   // the base class.
   if (!IsInAllowedFolder(source_path)) {
-    LOG(ERROR) << "Source path " << quote(source_path) << " is not allowed";
+    LOG(ERROR) << "Source path " << redact(source_path) << " is not allowed";
     *error = MOUNT_ERROR_INVALID_DEVICE_PATH;
     return nullptr;
   }
@@ -155,7 +156,8 @@ std::unique_ptr<MountPoint> ArchiveManager::DoMount(
       return m->Mount(source_path, mount_path, options, error);
     }
   }
-  LOG(ERROR) << "Cannot find mounter for archive " << quote(source_path);
+  LOG(ERROR) << "Cannot find mounter for archive " << redact(source_path)
+             << " of type " << quote(filesystem_type);
   *error = MOUNT_ERROR_UNKNOWN_FILESYSTEM;
   return nullptr;
 }

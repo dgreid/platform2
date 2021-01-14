@@ -20,6 +20,13 @@ std::string ToString(const T& t) {
   return out.str();
 }
 
+template <typename T>
+std::string Redacted(const T& t) {
+  std::ostringstream out;
+  out << redact(t, true) << std::flush;
+  return out.str();
+}
+
 TEST(Quote, StringLiteral) {
   EXPECT_EQ(ToString<char[1]>(""), "''");
   EXPECT_EQ(ToString<char[8]>(R"(a\b"c'd)"), R"('a\\b"c\'d')");
@@ -60,6 +67,35 @@ TEST(Quote, VectorOfStrings) {
   EXPECT_EQ(ToString<std::vector<std::string>>(
                 {"", R"(")", R"(\)", "'", "a", R"(a\b"c'd)"}),
             R"(['', '"', '\\', '\'', 'a', 'a\\b"c\'d'])");
+}
+
+TEST(Redact, StringLiteral) {
+  EXPECT_EQ(Redacted<char[1]>(""), "(redacted)");
+  EXPECT_EQ(Redacted<char[8]>(R"(a\b"c'd)"), "(redacted)");
+}
+
+TEST(Redact, CStyleString) {
+  EXPECT_EQ(Redacted<const char*>(nullptr), "(null)");
+  EXPECT_EQ(Redacted<const char*>(""), "(redacted)");
+  EXPECT_EQ(Redacted<const char*>("a"), "(redacted)");
+}
+
+TEST(Redact, StdString) {
+  EXPECT_EQ(Redacted<std::string>(""), "(redacted)");
+  EXPECT_EQ(Redacted<std::string>("a"), "(redacted)");
+}
+
+TEST(Redact, FilePath) {
+  EXPECT_EQ(Redacted(base::FilePath("")), "(redacted)");
+  EXPECT_EQ(Redacted(base::FilePath("a")), "(redacted)");
+}
+
+TEST(Redact, VectorOfStrings) {
+  EXPECT_EQ(Redacted<std::vector<std::string>>({}), "[]");
+  EXPECT_EQ(Redacted<std::vector<std::string>>({""}), "[(redacted)]");
+  EXPECT_EQ(Redacted<std::vector<std::string>>({"a"}), "[(redacted)]");
+  EXPECT_EQ(Redacted<std::vector<std::string>>({"", "'", "a"}),
+            R"([(redacted), (redacted), (redacted)])");
 }
 
 }  // namespace

@@ -8,16 +8,30 @@
 
 namespace cros_disks {
 
+static const char kRedacted[] = "(redacted)";
+
 std::ostream& operator<<(std::ostream& out, Quoter<const char*> quoter) {
   const char* const s = quoter.ref;
-  return s ? out << std::quoted(s, '\'') : out << "(null)";
+  if (!s)
+    return out << "(null)";
+
+  if (quoter.redacted)
+    return out << kRedacted;
+
+  return out << std::quoted(s, '\'');
 }
 
 std::ostream& operator<<(std::ostream& out, Quoter<std::string> quoter) {
+  if (quoter.redacted)
+    return out << kRedacted;
+
   return out << std::quoted(quoter.ref, '\'');
 }
 
 std::ostream& operator<<(std::ostream& out, Quoter<base::FilePath> quoter) {
+  if (quoter.redacted)
+    return out << kRedacted;
+
   return out << std::quoted(quoter.ref.value(), '\'');
 }
 

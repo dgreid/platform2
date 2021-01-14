@@ -80,8 +80,8 @@ std::unique_ptr<MountPoint> FUSEMountManager::DoMount(
   }
 
   if (!selected_helper) {
-    LOG(ERROR) << "Cannot find suitable FUSE module for type "
-               << quote(fuse_type) << " and source " << quote(source);
+    LOG(ERROR) << "Cannot find FUSE module for " << redact(source)
+               << " of type " << quote(fuse_type);
     *error = MOUNT_ERROR_UNKNOWN_FILESYSTEM;
     return nullptr;
   }
@@ -89,7 +89,9 @@ std::unique_ptr<MountPoint> FUSEMountManager::DoMount(
   *mounted_as_read_only = IsReadOnlyMount(options);
   auto mountpoint = selected_helper->Mount(source, mount_path, options, error);
   LOG_IF(ERROR, *error != MOUNT_ERROR_NONE)
-      << "Mounting failed for source " << quote(source) << ": " << *error;
+      << "Cannot mount " << redact(source) << " of type " << quote(fuse_type)
+      << ": " << *error;
+
   return mountpoint;
 }
 

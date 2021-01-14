@@ -224,7 +224,8 @@ MountErrorType MountManager::MountNewSource(
     ReserveMountPath(actual_mount_path, error_type);
     mount_point = MountPoint::CreateLeaking(base::FilePath(actual_mount_path));
   } else {
-    LOG(ERROR) << "Cannot mount " << quote(source_path) << ": " << error_type;
+    LOG(ERROR) << "Cannot mount " << redact(source_path) << " of type "
+               << quote(filesystem_type) << ": " << error_type;
     platform_->RemoveEmptyDirectory(actual_mount_path);
     return error_type;
   }

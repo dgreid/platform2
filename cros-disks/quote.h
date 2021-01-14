@@ -10,6 +10,7 @@
 #include <utility>
 
 #include <base/files/file_path.h>
+#include <base/logging.h>
 
 namespace cros_disks {
 
@@ -20,6 +21,7 @@ namespace cros_disks {
 template <typename T>
 struct Quoter {
   const T& ref;
+  const bool redacted = false;
 };
 
 // Allows to print a quoted version of its argument to an output stream for
@@ -35,6 +37,22 @@ struct Quoter {
 template <typename T>
 Quoter<T> quote(const T& ref) {
   return {ref};
+}
+
+// Allows to print a quoted version of its argument to an output stream for
+// logging purpose, or a redacted version if the current log level is less than
+// INFO.
+//
+// T must be a quotable type, ie a string, a FilePath or a vector of quotable
+// elements.
+//
+// The returned Quoter should be streamed directly without being stored.
+// The typical usage pattern is:
+//
+// LOG(ERROR) << "Cannot do something with " << redact(stuff) << ": Reason why";
+template <typename T>
+Quoter<T> redact(const T& ref, const bool redacted = !LOG_IS_ON(INFO)) {
+  return {ref, redacted};
 }
 
 // Outputs a quoted C-style string, or (null) for a null pointer.
@@ -53,7 +71,7 @@ std::ostream& operator<<(std::ostream& out, Quoter<base::FilePath> quoter);
 template <size_t N>
 std::ostream& operator<<(std::ostream& out, Quoter<char[N]> quoter) {
   const char* const s = quoter.ref;
-  return out << quote(s);
+  return out << redact(s, quoter.redacted);
 }
 
 // Outputs a sequence of quoted items.
@@ -62,7 +80,7 @@ std::ostream& operator<<(std::ostream& out, Quoter<T> quoter) {
   out << '[';
   const char* sep = "";
   for (const auto& item : quoter.ref) {
-    out << std::exchange(sep, ", ") << quote(item);
+    out << std::exchange(sep, ", ") << redact(item, quoter.redacted);
   }
   return out << ']';
 }

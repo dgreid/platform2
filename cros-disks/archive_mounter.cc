@@ -67,7 +67,7 @@ std::unique_ptr<SandboxedProcess> ArchiveMounter::PrepareSandbox(
 
   base::FilePath path(source);
   if (!path.IsAbsolute() || path.ReferencesParent()) {
-    LOG(ERROR) << "Invalid archive path " << quote(path);
+    LOG(ERROR) << "Invalid archive path " << redact(path);
     *error = MOUNT_ERROR_INVALID_ARGUMENT;
     return nullptr;
   }
@@ -80,8 +80,9 @@ std::unique_ptr<SandboxedProcess> ArchiveMounter::PrepareSandbox(
     mount_ns = brillo::ScopedMountNamespace::CreateFromPath(
         base::FilePath(kChromeNamespace));
     if (!mount_ns) {
-      PLOG(ERROR) << "Could not look for archive " << quote(path)
-                  << " in the Chrome's namespace";
+      PLOG(ERROR) << "Cannot find archive " << redact(path)
+                  << " in mount namespace " << quote(kChromeNamespace);
+
       // TODO(dats): These probably should be MOUNT_ERROR_INVALID_DEVICE_PATH or
       //             something like that, but tast tests expect
       //             MOUNT_ERROR_MOUNT_PROGRAM_FAILED.
@@ -89,7 +90,7 @@ std::unique_ptr<SandboxedProcess> ArchiveMounter::PrepareSandbox(
       return nullptr;
     }
     if (!platform()->PathExists(path.value())) {
-      PLOG(ERROR) << "Could not find archive " << quote(path);
+      PLOG(ERROR) << "Cannot find archive " << redact(path);
       *error = MOUNT_ERROR_MOUNT_PROGRAM_FAILED;
       return nullptr;
     }
@@ -135,7 +136,7 @@ MountErrorType ArchiveMounter::FormatInvocationCommand(
   if (!sandbox->BindMount(archive.value(), archive.value(),
                           /* writeable= */ false,
                           /* recursive= */ false)) {
-    LOG(ERROR) << "Cannot bind the source archive " << quote(archive);
+    LOG(ERROR) << "Cannot bind-mount archive " << redact(archive);
     return MOUNT_ERROR_INTERNAL;
   }
 

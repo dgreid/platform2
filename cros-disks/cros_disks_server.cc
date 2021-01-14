@@ -138,7 +138,8 @@ void CrosDisksServer::Mount(const std::string& source,
   }
 
   if (error_type != MOUNT_ERROR_NONE) {
-    LOG(ERROR) << "Failed to mount " << quote(source) << ": " << error_type;
+    LOG(ERROR) << "Cannot mount " << redact(source) << " of type "
+               << quote(filesystem_type) << ": " << error_type;
   }
   SendMountCompletedSignal(error_type, source, source_type, mount_path);
 }
