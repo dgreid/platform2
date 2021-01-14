@@ -76,19 +76,25 @@ class FakeClient : public Client {
   ServiceProxyMock* default_service() { return service_mock_; }
   dbus::ObjectPath default_service_path() { return service_path_; }
 
-  DeviceProxyMock* PreMakeDevice(const dbus::ObjectPath device_path) {
+  DeviceProxyMock* PreMakeDevice(const dbus::ObjectPath& device_path) {
     auto* mock = new DeviceProxyMock();
     device_mocks_[device_path.value()] = mock;
-    // Set this default since this method will always be called in the
-    // DeviceWrapper destructor.
-    EXPECT_CALL(*mock, GetObjectPath).WillRepeatedly(ReturnRef(device_path));
+    // We need to keep these objects around all the way until the client is
+    // destructed.
+    static std::vector<dbus::ObjectPath> paths;
+    paths.emplace_back(device_path);
+    EXPECT_CALL(*mock, GetObjectPath).WillRepeatedly(ReturnRef(paths.back()));
     return mock;
   }
 
-  ServiceProxyMock* PreMakeService(const dbus::ObjectPath service_path) {
+  ServiceProxyMock* PreMakeService(const dbus::ObjectPath& service_path) {
     auto* mock = new ServiceProxyMock();
     service_mocks_[service_path.value()] = mock;
-    EXPECT_CALL(*mock, GetObjectPath).WillRepeatedly(ReturnRef(service_path));
+    // We need to keep these objects around all the way until the client is
+    // destructed.
+    static std::vector<dbus::ObjectPath> paths;
+    paths.emplace_back(service_path);
+    EXPECT_CALL(*mock, GetObjectPath).WillRepeatedly(ReturnRef(paths.back()));
     return mock;
   }
 

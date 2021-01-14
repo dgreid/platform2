@@ -35,7 +35,7 @@ class BRILLO_EXPORT Client {
   // - IPv6 search domains
   // - MTU (one only per network)
   struct IPConfig {
-    bool operator==(const IPConfig& that) {
+    bool operator==(const IPConfig& that) const {
       return this->ipv4_prefix_length == that.ipv4_prefix_length &&
              this->ipv4_address == that.ipv4_address &&
              this->ipv4_gateway == that.ipv4_gateway &&
@@ -100,7 +100,7 @@ class BRILLO_EXPORT Client {
       kActivationFailure,
     };
 
-    bool operator==(const Device& that) {
+    bool operator==(const Device& that) const {
       return this->type == that.type && this->ifname == that.ifname &&
              this->ipconfig == that.ipconfig;
     }

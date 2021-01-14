@@ -457,7 +457,6 @@ void Client::OnDevicePropertyChangeRegistration(const std::string& device_path,
   // them as if they are instrinsically characteristic of the device itself.
   const auto service_path = brillo::GetVariantValueOrDefault<dbus::ObjectPath>(
       properties, kSelectedServiceProperty);
-  LOG(INFO) << "New device - doing selected svc";
   HandleSelectedServiceChanged(device_path, service_path);
 
   // Set |device_added| to true here so it invokes the corresponding handler, if
@@ -482,7 +481,6 @@ void Client::OnDevicePropertyChange(bool device_added,
     device = it->second->device();
     device->ipconfig = ParseIPConfigsProperty(device_path, property_value);
   } else if (property_name == kSelectedServiceProperty) {
-    LOG(INFO) << "Selected svc prop change";
     device = HandleSelectedServiceChanged(device_path, property_value);
     if (!device)
       return;
