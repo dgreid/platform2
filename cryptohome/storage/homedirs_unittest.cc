@@ -22,6 +22,7 @@
 #include "cryptohome/filesystem_layout.h"
 #include "cryptohome/keyset_management.h"
 #include "cryptohome/mock_platform.h"
+#include "cryptohome/storage/cryptohome_vault_factory.h"
 #include "cryptohome/storage/encrypted_container/encrypted_container.h"
 #include "cryptohome/storage/encrypted_container/encrypted_container_factory.h"
 #include "cryptohome/storage/encrypted_container/fake_backing_device.h"
@@ -95,13 +96,17 @@ class HomeDirsTest
     keyset_management_ = std::make_unique<KeysetManagement>(
         &platform_, &crypto_, system_salt_,
         std::make_unique<VaultKeysetFactory>());
+
+    std::unique_ptr<EncryptedContainerFactory> container_factory =
+        std::make_unique<EncryptedContainerFactory>(
+            &platform_, std::make_unique<FakeBackingDeviceFactory>(&platform_));
+
     homedirs_ = std::make_unique<HomeDirs>(
         &platform_, keyset_management_.get(), system_salt_, &timestamp_cache_,
         std::make_unique<policy::PolicyProvider>(
             std::unique_ptr<policy::MockDevicePolicy>(mock_device_policy_)),
-        std::make_unique<EncryptedContainerFactory>(
-            &platform_,
-            std::make_unique<FakeBackingDeviceFactory>(&platform_)));
+        std::make_unique<CryptohomeVaultFactory>(&platform_,
+                                                 std::move(container_factory)));
 
     platform_.GetFake()->SetSystemSaltForLibbrillo(system_salt_);
 

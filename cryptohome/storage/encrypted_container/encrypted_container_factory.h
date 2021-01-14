@@ -13,6 +13,7 @@
 
 #include "cryptohome/platform.h"
 #include "cryptohome/storage/encrypted_container/backing_device_factory.h"
+#include "cryptohome/storage/encrypted_container/filesystem_key.h"
 
 namespace cryptohome {
 

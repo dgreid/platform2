@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include <string.h>  // For memset(), memcpy()
 #include <sys/types.h>
+#include <utility>
 #include <vector>
 
 #include <base/bind.h>
@@ -158,13 +159,17 @@ class MountTest
     InitializeFilesystemLayout(&platform_, &crypto_, nullptr);
     keyset_management_ = std::make_unique<KeysetManagement>(
         &platform_, &crypto_, helper_.system_salt, nullptr);
+
+    std::unique_ptr<EncryptedContainerFactory> container_factory =
+        std::make_unique<EncryptedContainerFactory>(
+            &platform_, std::make_unique<FakeBackingDeviceFactory>(&platform_));
+
     homedirs_ = std::make_unique<HomeDirs>(
         &platform_, keyset_management_.get(), helper_.system_salt, nullptr,
         std::make_unique<policy::PolicyProvider>(
             std::unique_ptr<policy::MockDevicePolicy>(mock_device_policy_)),
-        std::make_unique<EncryptedContainerFactory>(
-            &platform_,
-            std::make_unique<FakeBackingDeviceFactory>(&platform_)));
+        std::make_unique<CryptohomeVaultFactory>(&platform_,
+                                                 std::move(container_factory)));
 
     platform_.GetFake()->SetStandardUsersAndGroups();
 

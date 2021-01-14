@@ -34,6 +34,8 @@
 #include "cryptohome/platform.h"
 #include "cryptohome/rpc.pb.h"
 #include "cryptohome/storage/cryptohome_vault.h"
+#include "cryptohome/storage/cryptohome_vault_factory.h"
+#include "cryptohome/storage/encrypted_container/encrypted_container.h"
 #include "cryptohome/storage/encrypted_container/encrypted_container_factory.h"
 #include "cryptohome/storage/user_oldest_activity_timestamp_cache.h"
 
@@ -62,13 +64,12 @@ class HomeDirs {
            const brillo::SecureBlob& system_salt,
            UserOldestActivityTimestampCache* timestamp_cache,
            std::unique_ptr<policy::PolicyProvider> policy_provider);
-  HomeDirs(
-      Platform* platform,
-      KeysetManagement* keyset_management,
-      const brillo::SecureBlob& system_salt,
-      UserOldestActivityTimestampCache* timestamp_cache,
-      std::unique_ptr<policy::PolicyProvider> policy_provider,
-      std::unique_ptr<EncryptedContainerFactory> encrypted_container_factory);
+  HomeDirs(Platform* platform,
+           KeysetManagement* keyset_management,
+           const brillo::SecureBlob& system_salt,
+           UserOldestActivityTimestampCache* timestamp_cache,
+           std::unique_ptr<policy::PolicyProvider> policy_provider,
+           std::unique_ptr<CryptohomeVaultFactory> vault_factory);
   HomeDirs(const HomeDirs&) = delete;
   HomeDirs& operator=(const HomeDirs&) = delete;
 
@@ -183,23 +184,8 @@ class HomeDirs {
   virtual void set_enterprise_owned(bool value) { enterprise_owned_ = value; }
   virtual bool enterprise_owned() const { return enterprise_owned_; }
 
-  // Generate encrypted container for a user cryptohome.
-  virtual std::unique_ptr<EncryptedContainer> GenerateEncryptedContainer(
-      EncryptedContainerType type,
-      const std::string& obfuscated_username,
-      const FileSystemKeyReference& key_reference);
-
   // Choose the vault type for new vaults.
   virtual EncryptedContainerType ChooseVaultType();
-
-  // Creates the cryptohome vault with given |container_type| and
-  // |migrating_container_type|.
-  virtual std::unique_ptr<CryptohomeVault> CreateVault(
-      const std::string& obfuscated_username,
-      const FileSystemKeyReference& key_reference,
-      EncryptedContainerType container_type,
-      EncryptedContainerType migrating_container_type,
-      MountError* mount_error);
 
   // Generates the cryptohome vault for a newly created home directory.
   virtual std::unique_ptr<CryptohomeVault> CreatePristineVault(
@@ -301,7 +287,7 @@ class HomeDirs {
   std::unique_ptr<policy::PolicyProvider> policy_provider_;
   bool enterprise_owned_;
   chaps::TokenManagerClient chaps_client_;
-  std::unique_ptr<EncryptedContainerFactory> encrypted_container_factory_;
+  std::unique_ptr<CryptohomeVaultFactory> vault_factory_;
 
   // The container a not-shifted system UID in ARC++ container (AID_SYSTEM).
   static constexpr uid_t kAndroidSystemUid = 1000;

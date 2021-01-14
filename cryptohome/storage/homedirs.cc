@@ -38,8 +38,8 @@
 #include "cryptohome/platform.h"
 #include "cryptohome/signed_secret.pb.h"
 #include "cryptohome/storage/cryptohome_vault.h"
+#include "cryptohome/storage/cryptohome_vault_factory.h"
 #include "cryptohome/storage/encrypted_container/encrypted_container.h"
-#include "cryptohome/storage/encrypted_container/encrypted_container_factory.h"
 #include "cryptohome/storage/mount_helper.h"
 #include "cryptohome/storage/user_oldest_activity_timestamp_cache.h"
 #include "cryptohome/vault_keyset.h"
@@ -69,22 +69,21 @@ HomeDirs::HomeDirs(Platform* platform,
                system_salt,
                timestamp_cache,
                std::move(policy_provider),
-               std::make_unique<EncryptedContainerFactory>(platform)) {}
+               std::make_unique<CryptohomeVaultFactory>(platform)) {}
 
-HomeDirs::HomeDirs(
-    Platform* platform,
-    KeysetManagement* keyset_management,
-    const brillo::SecureBlob& system_salt,
-    UserOldestActivityTimestampCache* timestamp_cache,
-    std::unique_ptr<policy::PolicyProvider> policy_provider,
-    std::unique_ptr<EncryptedContainerFactory> encrypted_container_factory)
+HomeDirs::HomeDirs(Platform* platform,
+                   KeysetManagement* keyset_management,
+                   const brillo::SecureBlob& system_salt,
+                   UserOldestActivityTimestampCache* timestamp_cache,
+                   std::unique_ptr<policy::PolicyProvider> policy_provider,
+                   std::unique_ptr<CryptohomeVaultFactory> vault_factory)
     : platform_(platform),
       keyset_management_(keyset_management),
       system_salt_(system_salt),
       timestamp_cache_(timestamp_cache),
       policy_provider_(std::move(policy_provider)),
       enterprise_owned_(false),
-      encrypted_container_factory_(std::move(encrypted_container_factory)) {
+      vault_factory_(std::move(vault_factory)) {
 #if USE_LVM_STATEFUL_PARTITION
   lvm_ = std::make_unique<brillo::LogicalVolumeManager>();
 #endif
@@ -394,27 +393,6 @@ void HomeDirs::AddUserTimestampToCache(const std::string& obfuscated) {
   }
 }
 
-std::unique_ptr<EncryptedContainer> HomeDirs::GenerateEncryptedContainer(
-    EncryptedContainerType type,
-    const std::string& obfuscated_username,
-    const FileSystemKeyReference& key_reference) {
-  EncryptedContainerConfig config;
-  switch (type) {
-    case EncryptedContainerType::kEcryptfs:
-      config.backing_dir = GetEcryptfsUserVaultPath(obfuscated_username);
-      config.type = EncryptedContainerType::kEcryptfs;
-      break;
-    case EncryptedContainerType::kFscrypt:
-      config.backing_dir = GetUserMountDirectory(obfuscated_username);
-      config.type = EncryptedContainerType::kFscrypt;
-      break;
-    default:
-      return nullptr;
-  }
-
-  return encrypted_container_factory_->Generate(config, key_reference);
-}
-
 EncryptedContainerType HomeDirs::ChooseVaultType() {
   dircrypto::KeyState state = platform_->GetDirCryptoKeyState(ShadowRoot());
   switch (state) {
@@ -429,29 +407,6 @@ EncryptedContainerType HomeDirs::ChooseVaultType() {
   }
 }
 
-std::unique_ptr<CryptohomeVault> HomeDirs::CreateVault(
-    const std::string& obfuscated_username,
-    const FileSystemKeyReference& key_reference,
-    EncryptedContainerType container_type,
-    EncryptedContainerType migrating_container_type,
-    MountError* mount_error) {
-  if (container_type == EncryptedContainerType::kUnknown) {
-    *mount_error = MOUNT_ERROR_UNEXPECTED_MOUNT_TYPE;
-    return nullptr;
-  }
-
-  // Generate containers for the vault.
-  std::unique_ptr<EncryptedContainer> container = GenerateEncryptedContainer(
-      container_type, obfuscated_username, key_reference);
-  std::unique_ptr<EncryptedContainer> migrating_container =
-      GenerateEncryptedContainer(migrating_container_type, obfuscated_username,
-                                 key_reference);
-
-  return std::make_unique<CryptohomeVault>(
-      obfuscated_username, std::move(container), std::move(migrating_container),
-      platform_);
-}
-
 std::unique_ptr<CryptohomeVault> HomeDirs::CreatePristineVault(
     const std::string& obfuscated_username,
     const FileSystemKeyReference& key_reference,
@@ -462,8 +417,15 @@ std::unique_ptr<CryptohomeVault> HomeDirs::CreatePristineVault(
           ? ChooseVaultType()
           : options.force_type;
 
-  return CreateVault(obfuscated_username, key_reference, container_type,
-                     EncryptedContainerType::kUnknown, mount_error);
+  if (container_type == EncryptedContainerType::kUnknown) {
+    LOG(ERROR) << "Pristine mount attempted with unknown vault type";
+    *mount_error = MOUNT_ERROR_UNEXPECTED_MOUNT_TYPE;
+    return nullptr;
+  }
+
+  return vault_factory_->Generate(obfuscated_username, key_reference,
+                                  container_type,
+                                  EncryptedContainerType::kUnknown);
 }
 
 std::unique_ptr<CryptohomeVault> HomeDirs::CreateNonMigratingVault(
@@ -492,10 +454,17 @@ std::unique_ptr<CryptohomeVault> HomeDirs::CreateNonMigratingVault(
     container_type = EncryptedContainerType::kEcryptfs;
   } else if (DircryptoCryptohomeExists(obfuscated_username)) {
     container_type = EncryptedContainerType::kFscrypt;
+  } else if (DmcryptCryptohomeExists(obfuscated_username)) {
+    container_type = EncryptedContainerType::kDmcrypt;
+  } else {
+    LOG(ERROR) << "Non-migrating mount attempted with unknown vault type";
+    *mount_error = MOUNT_ERROR_UNEXPECTED_MOUNT_TYPE;
+    return nullptr;
   }
 
-  return CreateVault(obfuscated_username, key_reference, container_type,
-                     EncryptedContainerType::kUnknown, mount_error);
+  return vault_factory_->Generate(obfuscated_username, key_reference,
+                                  container_type,
+                                  EncryptedContainerType::kUnknown);
 }
 
 std::unique_ptr<CryptohomeVault> HomeDirs::CreateMigratingVault(
@@ -515,8 +484,8 @@ std::unique_ptr<CryptohomeVault> HomeDirs::CreateMigratingVault(
     return nullptr;
   }
 
-  return CreateVault(obfuscated_username, key_reference, container_type,
-                     migrating_container_type, mount_error);
+  return vault_factory_->Generate(obfuscated_username, key_reference,
+                                  container_type, migrating_container_type);
 }
 
 std::unique_ptr<CryptohomeVault> HomeDirs::GenerateCryptohomeVault(
