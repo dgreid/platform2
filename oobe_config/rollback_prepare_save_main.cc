@@ -33,12 +33,13 @@ int main(int argc, char* argv[]) {
   const bool should_save = oobe_config::OobeConfig().ShouldSaveRollbackData();
   const bool force = cl->HasSwitch(kForce);
   if (should_save || force) {
+    LOG(INFO) << "Cleaning up rollback save flag file.";
+    oobe_config::OobeConfig().DeleteRollbackSaveFlagFile();
+
     LOG(INFO) << "Saving rollback data. forced=" << force;
     const bool save_succeeded = oobe_config::PrepareSave(
         base::FilePath(), false /* ignore_permissions_for_testing */);
 
-    LOG(INFO) << "Cleaning up rollback save flag file.";
-    oobe_config::OobeConfig().DeleteRollbackSaveFlagFile();
     if (!save_succeeded) {
       LOG(ERROR) << "Rollback prepare save failed.";
       metrics.RecordSaveResult(
