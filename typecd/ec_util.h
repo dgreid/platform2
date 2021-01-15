@@ -9,11 +9,18 @@ namespace typecd {
 
 // List of possible Type C Operating modes. These are selected by typecd based
 // on connected peripheral(s) and device policy.
-enum TypeCMode {
-  kTypeCModeNone = -1,
-  kTypeCModeDP = 0,
-  kTypeCModeTBT,
-  kTypeCModeUSB4,
+//
+// NOTE:
+// These values are set according to the values used by the ectool command which
+// triggers USB Type-C mode entry (see "cmd_typec_control()" inside
+// https://chromium.googlesource.com/chromiumos/platform/ec/+/refs/heads/main/util/ectool.c)
+// As such, these values should only be changed if the corresponding ectool
+// values do.
+enum class TypeCMode {
+  kNone = -1,
+  kDP = 0,
+  kTBT = 1,
+  kUSB4 = 2,
 };
 
 // Interface used by Type C daemon to communicate with Chrome EC for

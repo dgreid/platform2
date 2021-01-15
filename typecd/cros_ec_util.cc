@@ -57,7 +57,8 @@ bool CrosECUtil::EnterMode(int port, TypeCMode mode) {
   int retries = 5;
 
   while (retries--) {
-    if (debugd_proxy_->EcTypeCEnterMode(port, mode, &result, &error))
+    if (debugd_proxy_->EcTypeCEnterMode(port, static_cast<int>(mode), &result,
+                                        &error))
       return true;
 
     LOG(INFO) << "Enter mode attempts remaining: " << retries;

@@ -4,8 +4,29 @@
 
 #include "typecd/port_manager.h"
 
+#include <string>
+
 #include <base/logging.h>
 #include <re2/re2.h>
+
+namespace {
+
+// Helper function to print the TypeCMode.
+std::string ModeToString(typecd::TypeCMode mode) {
+  int val = static_cast<int>(mode);
+  switch (val) {
+    case 0:
+      return "DP";
+    case 1:
+      return "TBT";
+    case 2:
+      return "USB4";
+    default:
+      return "none";
+  }
+}
+
+}  // namespace
 
 namespace typecd {
 
@@ -48,7 +69,7 @@ void PortManager::OnPartnerAddedOrRemoved(const base::FilePath& path,
     RunModeEntry(port_num);
   } else {
     port->RemovePartner();
-    port->SetCurrentMode(kTypeCModeNone);
+    port->SetCurrentMode(TypeCMode::kNone);
   }
 }
 
@@ -162,16 +183,16 @@ void PortManager::RunModeEntry(int port_num) {
     return;
   }
 
-  if (port->GetCurrentMode() != kTypeCModeNone) {
+  if (port->GetCurrentMode() != TypeCMode::kNone) {
     LOG(INFO) << "Mode entry already executed for port " << port_num
-              << ", mode: " << port->GetCurrentMode();
+              << ", mode: " << ModeToString(port->GetCurrentMode());
     return;
   }
 
   // If the host supports USB4 and we can enter USB4 in this partner, do so.
   if (port->CanEnterUSB4()) {
-    if (ec_util_->EnterMode(port_num, kTypeCModeUSB4)) {
-      port->SetCurrentMode(kTypeCModeUSB4);
+    if (ec_util_->EnterMode(port_num, TypeCMode::kUSB4)) {
+      port->SetCurrentMode(TypeCMode::kUSB4);
       LOG(INFO) << "Entered USB4 mode on port " << port_num;
     } else {
       LOG(ERROR) << "Attempt to call Enter USB4 failed for port " << port_num;
@@ -181,8 +202,8 @@ void PortManager::RunModeEntry(int port_num) {
   }
 
   if (port->CanEnterTBTCompatibilityMode()) {
-    if (ec_util_->EnterMode(port_num, kTypeCModeTBT)) {
-      port->SetCurrentMode(kTypeCModeTBT);
+    if (ec_util_->EnterMode(port_num, TypeCMode::kTBT)) {
+      port->SetCurrentMode(TypeCMode::kTBT);
       LOG(INFO) << "Entered TBT compat mode on port " << port_num;
     } else {
       LOG(ERROR) << "Attempt to call Enter TBT failed for port " << port_num;
@@ -192,8 +213,8 @@ void PortManager::RunModeEntry(int port_num) {
   }
 
   if (port->CanEnterDPAltMode()) {
-    if (ec_util_->EnterMode(port_num, kTypeCModeDP)) {
-      port->SetCurrentMode(kTypeCModeDP);
+    if (ec_util_->EnterMode(port_num, TypeCMode::kDP)) {
+      port->SetCurrentMode(TypeCMode::kDP);
       LOG(INFO) << "Entered DP mode on port " << port_num;
     } else {
       LOG(ERROR) << "Attempt to call Enter DP failed for port " << port_num;

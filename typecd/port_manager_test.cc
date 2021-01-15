@@ -49,7 +49,7 @@ TEST_F(PortManagerTest, SimpleModeEntry) {
   // Create the MockECUtil and set the expectations (enter DP called once).
   auto ec_util = std::make_unique<MockECUtil>();
   EXPECT_CALL(*ec_util, ModeEntrySupported()).Times(0);
-  EXPECT_CALL(*ec_util, EnterMode(0, kTypeCModeDP))
+  EXPECT_CALL(*ec_util, EnterMode(0, TypeCMode::kDP))
       .WillOnce(testing::Return(true));
   EXPECT_CALL(*ec_util, ExitMode(_)).Times(0);
   port_manager->SetECUtil(ec_util.get());
