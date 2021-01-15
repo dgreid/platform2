@@ -37,6 +37,7 @@ class PortManager : public UdevMonitor::Observer {
  private:
   friend class PortManagerTest;
   FRIEND_TEST(PortManagerTest, ModeEntryNotSupported);
+  FRIEND_TEST(PortManagerTest, SimpleModeEntry);
 
   // UdevMonitor::Observer overrides.
   void OnPortAddedOrRemoved(const base::FilePath& path,
