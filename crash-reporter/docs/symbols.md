@@ -176,11 +176,61 @@ off, which means stack unwinding won't work well.
 
 If the symbol addresses don't line up, then symbolizing will fail.
 
+## FAQ
+
+### How are symbols for prebuilt binaries handled?
+
+If you have a package that is installing programs compiled outside of CrOS
+(e.g. from Google prod systems), then keep the debugging information intact and
+do not strip them before installing them.
+The pipeline described in this document will pick them up correctly.
+
+Shipping the debug information directly has the advantage of allowing direct
+debugging by developers with test images e.g. using GDB.
+
+If the package is internal-only (e.g. archives are in [localmirror-private]),
+then you should be all set.
+
+If the package is made available publicly (e.g. on [localmirror]), you have to
+decide whether the debug information will leak details.
+If it's all open source code, then you shouldn't have to worry about it, but if
+it's proprietary code, you will need to take a different approach.
+See the next section.
+
+The increased size of the debug files isn't usually an issue as we'd generate
+them normally anyways.
+As long as it's under O(100's MB), don't sweat it.
+
+#### Splitdebug handling
+
+If you need to make prebuilt binaries public, but keep the debug symbols
+private, then you will need separate archives.
+One will contain the stripped release programs while the other will contain
+splitdebug information.
+
+You'll have to create two packages: the public one that installs the release
+programs like normal, and a private one that only installs the symbols into
+the `/usr/lib/debug` path.
+
+You can create the splitdebug files using `objcopy`.
+See portage's [estrip] for an example.
+
+### How are symbols for non-ELF binaries handled?
+
+Short answer: they aren't!
+
+We haven't had any requests yet for supporting anything other than [ELF] files.
+If you need this, please reach out to [chromeos-build-discuss] for help.
+This includes NaCl, WASM, JS, or other programs.
+
 
 [chromite]: https://chromium.googlesource.com/chromiumos/chromite/
 [Crashpad]: https://chromium.googlesource.com/crashpad/crashpad/
 [cros_generate_breakpad_symbols]: https://chromium.googlesource.com/chromiumos/chromite/+/HEAD/scripts/cros_generate_breakpad_symbols.py
 [DWARF]: https://en.wikipedia.org/wiki/DWARF
+[ELF]: https://en.wikipedia.org/wiki/Executable_and_Linkable_Format
 [estrip]: https://chromium.googlesource.com/chromiumos/third_party/portage_tool/+/refs/tags/portage-2.3.49/bin/estrip#192
 [Google Breakpad]: https://chromium.googlesource.com/breakpad/breakpad/
+[localmirror]: https://chromium.googlesource.com/chromiumos/docs/+/HEAD/archive_mirrors.md#Public-mirrors
+[localmirror-private]: https://chromium.googlesource.com/chromiumos/docs/+/HEAD/archive_mirrors.md#Private-mirrors
 [upload_symbols]: https://chromium.googlesource.com/chromiumos/chromite/+/HEAD/scripts/upload_symbols.py
