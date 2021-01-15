@@ -48,7 +48,7 @@ void PortManager::OnPartnerAddedOrRemoved(const base::FilePath& path,
     RunModeEntry(port_num);
   } else {
     port->RemovePartner();
-    port->SetCurrentMode(TYPEC_MODE_NONE);
+    port->SetCurrentMode(kTypeCModeNone);
   }
 }
 
@@ -162,7 +162,7 @@ void PortManager::RunModeEntry(int port_num) {
     return;
   }
 
-  if (port->GetCurrentMode() != TYPEC_MODE_NONE) {
+  if (port->GetCurrentMode() != kTypeCModeNone) {
     LOG(INFO) << "Mode entry already executed for port " << port_num
               << ", mode: " << port->GetCurrentMode();
     return;
@@ -170,8 +170,8 @@ void PortManager::RunModeEntry(int port_num) {
 
   // If the host supports USB4 and we can enter USB4 in this partner, do so.
   if (port->CanEnterUSB4()) {
-    if (ec_util_->EnterMode(port_num, TYPEC_MODE_USB4)) {
-      port->SetCurrentMode(TYPEC_MODE_USB4);
+    if (ec_util_->EnterMode(port_num, kTypeCModeUSB4)) {
+      port->SetCurrentMode(kTypeCModeUSB4);
       LOG(INFO) << "Entered USB4 mode on port " << port_num;
     } else {
       LOG(ERROR) << "Attempt to call Enter USB4 failed for port " << port_num;
@@ -181,8 +181,8 @@ void PortManager::RunModeEntry(int port_num) {
   }
 
   if (port->CanEnterTBTCompatibilityMode()) {
-    if (ec_util_->EnterMode(port_num, TYPEC_MODE_TBT)) {
-      port->SetCurrentMode(TYPEC_MODE_TBT);
+    if (ec_util_->EnterMode(port_num, kTypeCModeTBT)) {
+      port->SetCurrentMode(kTypeCModeTBT);
       LOG(INFO) << "Entered TBT compat mode on port " << port_num;
     } else {
       LOG(ERROR) << "Attempt to call Enter TBT failed for port " << port_num;
@@ -192,8 +192,8 @@ void PortManager::RunModeEntry(int port_num) {
   }
 
   if (port->CanEnterDPAltMode()) {
-    if (ec_util_->EnterMode(port_num, TYPEC_MODE_DP)) {
-      port->SetCurrentMode(TYPEC_MODE_DP);
+    if (ec_util_->EnterMode(port_num, kTypeCModeDP)) {
+      port->SetCurrentMode(kTypeCModeDP);
       LOG(INFO) << "Entered DP mode on port " << port_num;
     } else {
       LOG(ERROR) << "Attempt to call Enter DP failed for port " << port_num;

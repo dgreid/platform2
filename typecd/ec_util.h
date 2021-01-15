@@ -10,10 +10,10 @@ namespace typecd {
 // List of possible Type C Operating modes. These are selected by typecd based
 // on connected peripheral(s) and device policy.
 enum TypeCMode {
-  TYPEC_MODE_NONE = -1,
-  TYPEC_MODE_DP = 0,
-  TYPEC_MODE_TBT,
-  TYPEC_MODE_USB4,
+  kTypeCModeNone = -1,
+  kTypeCModeDP = 0,
+  kTypeCModeTBT,
+  kTypeCModeUSB4,
 };
 
 // Interface used by Type C daemon to communicate with Chrome EC for
