@@ -138,6 +138,14 @@ typeDefs:
     enum:
     - default
     - old
+  form-factor: &form-factor
+    description: "Denotes the form factor of the device."
+    type: string
+    enum:
+     - CHROMEBASE
+     - CHROMEBIT
+     - CHROMEBOOK
+     - CHROMEBOX
   ath10k-wifi-transmit-power-chain: &ath10k-wifi-transmit-power-chain
     description: "[ath10k] WiFi power chain for use with QCA ath10k drivers. Limits
       in units of 0.25 dBm. 5g band power limit applies to all 5g bands."
@@ -900,6 +908,7 @@ properties:
                 display-type: *display-type
                 stylus-category: *stylus-category
                 psu-type: *psu-type
+                form-factor: *form-factor
               additionalProperties: false
             cros-healthd:
               type: object
