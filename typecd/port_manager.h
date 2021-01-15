@@ -13,6 +13,7 @@
 
 #include "typecd/ec_util.h"
 #include "typecd/port.h"
+#include "typecd/session_manager_observer_interface.h"
 #include "typecd/udev_monitor.h"
 
 namespace typecd {
@@ -21,7 +22,8 @@ namespace typecd {
 // provide the daemon with an accurate view of the Type C state (after reading
 // from the Type C connector class framework sysfs files), as well as provide a
 // means to change this state according to policy defined in the daemon.
-class PortManager : public UdevMonitor::Observer {
+class PortManager : public UdevMonitor::Observer,
+                    public SessionManagerObserverInterface {
  public:
   PortManager();
   PortManager(const PortManager&) = delete;
@@ -33,6 +35,9 @@ class PortManager : public UdevMonitor::Observer {
   void SetModeEntrySupported(bool supported) {
     mode_entry_supported_ = supported;
   }
+
+  bool GetUserActive() { return user_active_; }
+  void SetUserActive(bool active) { user_active_ = active; }
 
  private:
   friend class PortManagerTest;
@@ -56,6 +61,12 @@ class PortManager : public UdevMonitor::Observer {
   void OnCableAltModeAdded(const base::FilePath& path, int port_num) override;
   void OnPartnerChanged(int port_num) override;
 
+  // SessionManagerObserverInterface overrides.
+  void OnScreenIsLocked() override;
+  void OnScreenIsUnlocked() override;
+  void OnSessionStarted() override;
+  void OnSessionStopped() override;
+
   // The central function which contains the main mode entry logic. This decides
   // which partner mode we select, based on partner/cable characteristics as
   // well as host properties and any other device specific policy we choose to
@@ -65,6 +76,13 @@ class PortManager : public UdevMonitor::Observer {
   std::map<int, std::unique_ptr<Port>> ports_;
   bool mode_entry_supported_;
   ECUtil* ec_util_;
+
+  // Variable that is used to determine what alt mode should be entered. It is
+  // updated in response to session manager events. It is set to false when the
+  // screen is locked, and true when unlocked. In addition to that, it is also
+  // set to true when a session starts i.e when a user logs in, and false when a
+  // session ends i.e the user logs out.
+  bool user_active_;
 };
 
 }  // namespace typecd

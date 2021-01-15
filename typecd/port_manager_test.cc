@@ -73,6 +73,9 @@ TEST_F(PortManagerTest, SimpleModeEntry) {
   // flag.
   port_manager->SetModeEntrySupported(true);
 
+  // For one-shot entry, assume that the user is active.
+  port_manager->SetUserActive(true);
+
   port_manager->RunModeEntry(0);
 
   // There is no explicit test here, just that the Mock expectations should be

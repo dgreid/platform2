@@ -30,7 +30,7 @@ std::string ModeToString(typecd::TypeCMode mode) {
 
 namespace typecd {
 
-PortManager::PortManager() : mode_entry_supported_(true) {}
+PortManager::PortManager() : mode_entry_supported_(true), user_active_(false) {}
 
 void PortManager::OnPortAddedOrRemoved(const base::FilePath& path,
                                        int port_num,
@@ -146,6 +146,22 @@ void PortManager::OnPartnerChanged(int port_num) {
   auto port = it->second.get();
   port->PartnerChanged();
   RunModeEntry(port_num);
+}
+
+void PortManager::OnScreenIsLocked() {
+  // TODO(b/177628378): Update |user_active_| when this happens.
+}
+
+void PortManager::OnScreenIsUnlocked() {
+  // TODO(b/177628378): Potentially switch device alt modes.
+}
+
+void PortManager::OnSessionStarted() {
+  // TODO(b/177628378): Potentially switch device alt modes.
+}
+
+void PortManager::OnSessionStopped() {
+  // TODO(b/177628378): Potentially switch device alt modes.
 }
 
 void PortManager::RunModeEntry(int port_num) {

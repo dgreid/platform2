@@ -40,7 +40,8 @@ int Daemon::OnInit() {
   port_manager_->SetModeEntrySupported(mode_entry_supported);
 
   // TODO(b/171839508): Get the initial screen state at boot.
-  // TODO(b/171839508): Register the PortManager with |session_manager_proxy_|.
+  port_manager_->SetUserActive(true);
+  session_manager_proxy_->AddObserver(port_manager_.get());
 
   // Add any observers to |udev_monitor_| here.
   udev_monitor_->AddObserver(port_manager_.get());
