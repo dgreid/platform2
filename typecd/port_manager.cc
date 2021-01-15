@@ -145,7 +145,7 @@ void PortManager::RunModeEntry(int port_num) {
   auto port = it->second.get();
 
   if (port->GetDataRole() != "host") {
-    LOG(WARNING) << "Can't switch modes because data role is not DFP on port "
+    LOG(WARNING) << "Can't enter mode; data role is not DFP on port "
                  << port_num;
     return;
   }
