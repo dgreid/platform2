@@ -25,7 +25,6 @@ class Port {
  public:
   static std::unique_ptr<Port> CreatePort(const base::FilePath& syspath);
   Port(const base::FilePath& syspath, int port_num);
-  virtual ~Port() = default;
 
   void AddPartner(const base::FilePath& path);
   void RemovePartner();
@@ -47,37 +46,37 @@ class Port {
 
   // Read and return the current port data role from sysfs.
   // Returns either "host" or "device" on success, empty string on failure.
-  virtual std::string GetDataRole();
+  std::string GetDataRole();
 
   // Check whether we can enter DP Alt Mode. This should check for the presence
   // of required attributes on the Partner and (if applicable) Cable.
-  virtual bool CanEnterDPAltMode();
+  bool CanEnterDPAltMode();
 
   // Check whether we can enter Thunderbolt Compatibility Alt Mode. This should
   // check for the presence of required attributes on the Partner and
   // (if applicable) Cable.
-  virtual bool CanEnterTBTCompatibilityMode();
+  bool CanEnterTBTCompatibilityMode();
 
   // Returns whether the partner can enter USB4. This should check the following
   // attributes for USB4 support:
   // - Partner(SOP) PD identity.
   // - Cable speed.
   // - Cable type.
-  virtual bool CanEnterUSB4();
+  bool CanEnterUSB4();
 
   // Returns true when all PD discovery information (PD Identity VDOs, all
   // Discover Mode data) for a partner has been processed.
   //
   // NOTE: Any mode entry decision logic should only run if this function
   // returns true.
-  virtual bool IsPartnerDiscoveryComplete();
+  bool IsPartnerDiscoveryComplete();
 
   // Return true when all PD discovery information (PD Identity VDOs, all
   // Discover Mode data) for a cable has been processed.
   //
   // NOTE: Any mode entry decision logic should only run if this function
   // returns true.
-  virtual bool IsCableDiscoveryComplete();
+  bool IsCableDiscoveryComplete();
 
  private:
   friend class PortTest;
