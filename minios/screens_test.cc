@@ -65,21 +65,21 @@ TEST_F(ScreensTest, ShowText) {
   EXPECT_TRUE(ReadFileToString(console_, &written_command));
   std::string expected_command =
       "\x1B]image:file=" + test_root_ + "/etc/screens/glyphs/" +
-      "white/99.png;offset=200,-100;scale=1/a\x1B]image:file=" + test_root_ +
+      "white/99.png;offset=200,-100;scale=1\a\x1B]image:file=" + test_root_ +
       "/etc/screens/glyphs/white/"
-      "104.png;offset=210,-100;scale=1/a\x1B]image:file=" +
+      "104.png;offset=210,-100;scale=1\a\x1B]image:file=" +
       test_root_ +
       "/etc/screens/glyphs/white/"
-      "114.png;offset=220,-100;scale=1/a\x1B]image:file=" +
+      "114.png;offset=220,-100;scale=1\a\x1B]image:file=" +
       test_root_ +
       "/etc/screens/glyphs/white/"
-      "111.png;offset=230,-100;scale=1/a\x1B]image:file=" +
+      "111.png;offset=230,-100;scale=1\a\x1B]image:file=" +
       test_root_ +
       "/etc/screens/glyphs/white/"
-      "109.png;offset=240,-100;scale=1/a\x1B]image:file=" +
+      "109.png;offset=240,-100;scale=1\a\x1B]image:file=" +
       test_root_ +
       "/etc/screens/glyphs/white/"
-      "101.png;offset=250,-100;scale=1/a";
+      "101.png;offset=250,-100;scale=1\a";
   EXPECT_EQ(expected_command, written_command);
 }
 
@@ -90,7 +90,7 @@ TEST_F(ScreensTest, ShowImageTest) {
   std::string written_command;
   EXPECT_TRUE(ReadFileToString(console_, &written_command));
   EXPECT_EQ(
-      "\x1B]image:file=" + test_root_ + "/image.png;offset=50,20;scale=1/a",
+      "\x1B]image:file=" + test_root_ + "/image.png;offset=50,20;scale=1\a",
       written_command);
 }
 
@@ -102,7 +102,7 @@ TEST_F(ScreensTest, ShowImageRtl) {
   std::string written_command;
   EXPECT_TRUE(ReadFileToString(console_, &written_command));
   EXPECT_EQ(
-      "\x1B]image:file=" + test_root_ + "/image.png;offset=-50,10;scale=1/a",
+      "\x1B]image:file=" + test_root_ + "/image.png;offset=-50,10;scale=1\a",
       written_command);
 }
 
@@ -135,7 +135,7 @@ TEST_F(ScreensTest, ShowMessage) {
   std::string written_command;
   EXPECT_TRUE(ReadFileToString(console_, &written_command));
   EXPECT_EQ("\x1B]image:file=" + test_root_ +
-                "/etc/screens/fr/minios_token.png;offset=0,20;scale=1/a",
+                "/etc/screens/fr/minios_token.png;offset=0,20;scale=1\a",
             written_command);
 }
 
@@ -152,7 +152,7 @@ TEST_F(ScreensTest, ShowMessageFallback) {
   std::string written_command;
   EXPECT_TRUE(ReadFileToString(console_, &written_command));
   EXPECT_EQ("\x1B]image:file=" + test_root_ +
-                "/etc/screens/en-US/minios_token.png;offset=0,20;scale=1/a",
+                "/etc/screens/en-US/minios_token.png;offset=0,20;scale=1\a",
             written_command);
 }
 
@@ -169,10 +169,10 @@ TEST_F(ScreensTest, InstructionsWithTitle) {
   EXPECT_TRUE(ReadFileToString(console_, &written_command));
   std::string expected_command =
       "\x1B]image:file=" + test_root_ +
-      "/etc/screens/en-US/title_minios_token.png;offset=-180,-301;scale=1/"
-      "a\x1B]image:file=" +
+      "/etc/screens/en-US/"
+      "title_minios_token.png;offset=-180,-301;scale=1\a\x1B]image:file=" +
       test_root_ +
-      "/etc/screens/en-US/desc_minios_token.png;offset=-180,-244;scale=1/a";
+      "/etc/screens/en-US/desc_minios_token.png;offset=-180,-244;scale=1\a";
 
   EXPECT_EQ(expected_command, written_command);
 }

@@ -98,7 +98,7 @@ bool Screens::ShowImage(const base::FilePath& image_name,
   if (right_to_left_)
     offset_x = -offset_x;
   std::string command = base::StringPrintf(
-      "\033]image:file=%s;offset=%d,%d;scale=%d/a", image_name.value().c_str(),
+      "\033]image:file=%s;offset=%d,%d;scale=%d\a", image_name.value().c_str(),
       offset_x, offset_y, kFreconScalingFactor);
   if (!base::AppendToFile(base::FilePath(root_).Append(kConsole0),
                           command.c_str(), command.size())) {
