@@ -1255,5 +1255,23 @@
       </arg>
       <annotation name="org.chromium.DBus.Method.Kind" value="normal"/>
     </method>
+    <method name="EcTypeCExitMode">
+      <tp:docstring>
+        Runs the 'ectool typeccontrol' command with pre-defined
+        sandbox options in rootfs to exit a USB Type-C mode on the
+        specified port.
+      </tp:docstring>
+      <arg name="port_num" type="u" direction="in">
+        <tp:docstring>
+          The index number of the port for which the exit mode
+          command will be run. This wil be used in the ectool command
+          without changes.
+        </tp:docstring>
+      </arg>
+      <arg name="output" type="s" direction="out">
+        Returns the output of the 'ectool typeccontrol' command.
+      </arg>
+      <annotation name="org.chromium.DBus.Method.Kind" value="normal"/>
+    </method>
   </interface>
 </node>

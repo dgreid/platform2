@@ -60,4 +60,22 @@ bool EcTypeCTool::EnterMode(brillo::ErrorPtr* error,
   return true;
 }
 
+bool EcTypeCTool::ExitMode(brillo::ErrorPtr* error,
+                           uint32_t port_num,
+                           std::string* output) {
+  const auto seccomp_policy_path =
+      base::FilePath(kSandboxDirPath).Append(GetEctoolPolicyFile("typec"));
+
+  std::vector<std::string> ectool_args = {"typeccontrol"};
+  ectool_args.push_back(base::StringPrintf("%u", port_num));
+  // 2nd argument is '0' for exit mode.
+  ectool_args.push_back("0");
+
+  if (!RunEctoolWithArgs(error, seccomp_policy_path, ectool_args, kRunAs,
+                         output))
+    return false;
+
+  return true;
+}
+
 }  // namespace debugd

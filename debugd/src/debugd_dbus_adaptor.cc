@@ -624,4 +624,10 @@ bool DebugdDBusAdaptor::EcTypeCEnterMode(brillo::ErrorPtr* error,
   return ec_typec_tool_->EnterMode(error, port_num, mode, output);
 }
 
+bool DebugdDBusAdaptor::EcTypeCExitMode(brillo::ErrorPtr* error,
+                                        uint32_t port_num,
+                                        std::string* output) {
+  return ec_typec_tool_->ExitMode(error, port_num, output);
+}
+
 }  // namespace debugd

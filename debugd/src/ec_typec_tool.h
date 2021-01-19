@@ -25,6 +25,9 @@ class EcTypeCTool {
                  uint32_t port_num,
                  uint32_t mode,
                  std::string* output);
+  bool ExitMode(brillo::ErrorPtr* error,
+                uint32_t port_num,
+                std::string* output);
 };
 
 }  // namespace debugd
