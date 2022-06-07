@@ -11,7 +11,7 @@ dbus = "~0.6.1"
 env_logger = { version = "^0.6", default-features = false }
 libc = "~0.2.40"
 log = "~0.4.1"
-protobuf = "^2.3"
+protobuf = "^3.0"
 syslog = "~4.0.0"
 tempfile = "^3.0"
 time = "~0.1.40"
